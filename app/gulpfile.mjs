@@ -50,9 +50,13 @@ async function buildApp() {
 
 export default series(
     clean,
-    copyAssets,
-    buildApp,
-    injectManifest
+    parallel(
+        copyAssets,
+        series(
+            buildApp,
+            injectManifest
+        )
+    )
 );
 
 
