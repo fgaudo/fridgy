@@ -23,7 +23,7 @@ jobs:
         run: pnpm install
         
       - name: Vite Build
-        run: pnpm run build -- --base=${{ github.event.repository.name }}
+        run: pnpm run build --base=${{ github.event.repository.name }}
         
       - name: GitHub Pages action
         uses: peaceiris/actions-gh-pages@v3
