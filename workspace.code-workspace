@@ -12,8 +12,5 @@
 			"path": "./app",
 			"name": "app"
 		}
-	],
-	"settings": {
-		"workbench.colorTheme": "Groovy Lambda"
-	}
+	]
 }
