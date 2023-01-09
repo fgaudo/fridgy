@@ -22,19 +22,6 @@ async function copyAssets() {
         .pipe(dest(outDir));
 }
 
-async function buildServiceWorker() {
-    return build({
-        platform: 'browser',
-        logLevel: "info",
-        sourcemap: true,
-        entryPoints: ["src/sw.ts"],
-        bundle: true,
-        target,
-        minify,
-        outdir: outDir
-    });
-}
-
 async function injectManifest() {
     return inject({
         globDirectory: outDir,
@@ -53,7 +40,7 @@ async function buildApp() {
         platform: 'browser',
         logLevel: "info",
         sourcemap: true,
-        entryPoints: ["src/app.ts"],
+        entryPoints: ["src/app.ts", "src/sw.ts"],
         bundle: true,
         target,
         minify,
@@ -64,13 +51,8 @@ async function buildApp() {
 export default series(
     clean,
     copyAssets,
-    parallel(
-        buildApp,
-        series(
-            buildServiceWorker,
-            injectManifest
-        )
-    )
+    buildApp,
+    injectManifest
 );
 
 
