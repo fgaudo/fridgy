@@ -8,10 +8,8 @@
   },
   "author": "",
   "license": "ISC",
-  "dependencies": {
-    "workbox-precaching": "^6.5.4"
-  },
   "devDependencies": {
+    "workbox-precaching": "^6.5.4",
     "workbox-build": "^6.5.4",
     "@types/gulp": "^4.0.10",
     "del": "^7.0.0",
