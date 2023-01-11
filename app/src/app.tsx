@@ -1,6 +1,7 @@
 import * as React from 'react'
 import * as ReactDOM from 'react-dom/client'
 
+
 const root = ReactDOM.createRoot(
     document.getElementById('root') as HTMLElement
 );
@@ -10,3 +11,9 @@ root.render(
         <div className='text-blue-600'>ciao♥</div>
     </React.StrictMode>
 );
+
+if (!DEBUG && 'serviceWorker' in navigator) {
+    navigator.serviceWorker.register(
+        '/sw.js'
+    );
+}

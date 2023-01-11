@@ -13,7 +13,7 @@ specifiers:
   react: '*'
   react-dom: '*'
   tailwindcss: '*'
-  typescript: '*'
+  typescript: ^4.9.4
   workbox-build: '*'
   workbox-precaching: '*'
 

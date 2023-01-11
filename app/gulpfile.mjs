@@ -1,4 +1,4 @@
-import { build } from "esbuild";
+import esbuild from "esbuild";
 import postcss from "esbuild-postcss";
 import { injectManifest as inject } from 'workbox-build';
 import { deleteAsync } from 'del';
@@ -37,7 +37,7 @@ async function injectManifest() {
 }
 
 async function buildCss() {
-    return build({
+    return esbuild.build({
         entryPoints: ['src/style.css'],
         bundle: true,
         outdir: outDir,
@@ -47,12 +47,13 @@ async function buildCss() {
 }
 
 async function buildApp() {
-    return build({
+    return esbuild.build({
         charset: 'utf8',
         platform: 'browser',
         logLevel: "info",
-        sourcemap: 'linked',
+        sourcemap: false,
         legalComments: 'eof',
+        define: { DEBUG: 'false' },
         entryPoints: ["src/app.tsx", "src/sw.ts"],
         bundle: true,
         target,
@@ -60,6 +61,25 @@ async function buildApp() {
         outdir: outDir
     });
 }
+
+async function serveApp() {
+    return esbuild.build(
+        {
+            charset: 'utf8',
+            platform: 'browser',
+            logLevel: "info",
+            sourcemap: 'linked',
+            legalComments: 'none',
+            define: { DEBUG: 'true' },
+            entryPoints: ["src/app.tsx", "src/style.css"],
+            bundle: true,
+            watch: true,
+            plugins: [postcss()],
+            target,
+            outdir: outDir
+        });
+}
+
 
 
 export default series(
@@ -72,4 +92,10 @@ export default series(
         ),
         buildCss
     )
+);
+
+export const serve = series(
+    clean,
+    copyAssets,
+    serveApp
 );

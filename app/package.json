@@ -5,26 +5,25 @@
   "main": "src/app.ts",
   "scripts": {
     "build": "gulp",
-    "serve": "gulp watch",
-    "install": "tailwind init"
+    "serve": "gulp serve"
   },
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "workbox-precaching": "*",
-    "workbox-build": "*",
     "@types/gulp": "*",
-    "del": "*",
-    "esbuild": "*",
-    "gulp": "*",
-    "typescript": "*",
-    "react": "*",
-    "react-dom": "*",
     "@types/react": "*",
     "@types/react-dom": "*",
-    "tailwindcss": "*",
+    "autoprefixer": "*",
+    "del": "*",
+    "esbuild": "*",
     "esbuild-postcss": "*",
+    "gulp": "*",
     "postcss": "*",
-    "autoprefixer": "*"
+    "react": "*",
+    "react-dom": "*",
+    "tailwindcss": "*",
+    "typescript": "^4.9.4",
+    "workbox-build": "*",
+    "workbox-precaching": "*"
   }
 }
