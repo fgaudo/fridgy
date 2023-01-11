@@ -17,13 +17,11 @@
 
   <!-- Imports the manifest to represent the web application. A web app must have a manifest to be a PWA. -->
   <link rel="manifest" href="/manifest.json" />
-
-  <script type="module" src="/src/app-index.ts"></script>
 </head>
 
 <body>
   <!-- Our app-index web component. This component is defined in src/pages/app-index.ts-->
-  <app-index></app-index>
+  <div id="root"></div>
 
   <script>
     if ('serviceWorker' in navigator) {
@@ -32,6 +30,9 @@
       );
     }
   </script>
+
+  <script src="/app.js"></script>
+
 </body>
 
 </html>

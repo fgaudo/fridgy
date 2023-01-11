@@ -4,17 +4,27 @@
   "description": "A starter kit for building PWAs!",
   "main": "src/app.ts",
   "scripts": {
-    "build": "gulp"
+    "build": "gulp",
+    "serve": "gulp watch",
+    "install": "tailwind init"
   },
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "workbox-precaching": "^6.5.4",
-    "workbox-build": "^6.5.4",
-    "@types/gulp": "^4.0.10",
-    "del": "^7.0.0",
-    "esbuild": "^0.16.16",
-    "gulp": "^4.0.2",
-    "typescript": "^4.9.4"
+    "workbox-precaching": "*",
+    "workbox-build": "*",
+    "@types/gulp": "*",
+    "del": "*",
+    "esbuild": "*",
+    "gulp": "*",
+    "typescript": "*",
+    "react": "*",
+    "react-dom": "*",
+    "@types/react": "*",
+    "@types/react-dom": "*",
+    "tailwindcss": "*",
+    "esbuild-postcss": "*",
+    "postcss": "*",
+    "autoprefixer": "*"
   }
 }

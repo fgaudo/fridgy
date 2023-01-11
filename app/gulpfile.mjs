@@ -1,4 +1,5 @@
 import { build } from "esbuild";
+import postcss from "esbuild-postcss";
 import { injectManifest as inject } from 'workbox-build';
 import { deleteAsync } from 'del';
 import { promisify } from 'util';
@@ -35,18 +36,31 @@ async function injectManifest() {
 
 }
 
+async function buildCss() {
+    return build({
+        entryPoints: ['src/style.css'],
+        bundle: true,
+        outdir: outDir,
+        minify,
+        plugins: [postcss()],
+    });
+}
+
 async function buildApp() {
     return build({
+        charset: 'utf8',
         platform: 'browser',
         logLevel: "info",
-        sourcemap: true,
-        entryPoints: ["src/app.ts", "src/sw.ts"],
+        sourcemap: 'linked',
+        legalComments: 'eof',
+        entryPoints: ["src/app.tsx", "src/sw.ts"],
         bundle: true,
         target,
         minify,
         outdir: outDir
     });
 }
+
 
 export default series(
     clean,
@@ -55,9 +69,7 @@ export default series(
         series(
             buildApp,
             injectManifest
-        )
+        ),
+        buildCss
     )
 );
-
-
-
