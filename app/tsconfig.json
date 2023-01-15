@@ -1,11 +1,19 @@
 {
   "compilerOptions": {
-    "target": "es2016",
-    "module": "commonjs",
-    "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "strict": true,
+    "jsx": "react-jsx",
     "skipLibCheck": true,
-    "jsx": "react"
+    "baseUrl": "./",
+    "paths": {
+      "@/domain/*": ["src/domain/*"],
+      "@/application/*": ["src/application/*"],
+      "@/presentation/*": ["src/presentation/*"],
+      "@/infrastructure/*": ["src/infrastructure/*"],
+      "react": ["./node_modules/preact/compat/"],
+      "react-dom": ["./node_modules/preact/compat/"],
+      "react/jsx-runtime": ["./node_modules/preact/jsx-runtime"],
+      "react/test-utils": ["./node_modules/preact/test-utils"]
+    }
   }
 }
