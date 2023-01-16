@@ -4,12 +4,21 @@
     "strict": true,
     "jsx": "react-jsx",
     "skipLibCheck": true,
+    "lib": ["ESNext"],
     "baseUrl": "./",
     "paths": {
+      "@/domain": ["src/domain/index"],
       "@/domain/*": ["src/domain/*"],
+
+      "@/application": ["src/application/index"],
       "@/application/*": ["src/application/*"],
+
+      "@/presentation": ["src/presentation/index"],
       "@/presentation/*": ["src/presentation/*"],
+
+      "@/infrastructure": ["src/infrastructure/index"],
       "@/infrastructure/*": ["src/infrastructure/*"],
+      
       "react": ["./node_modules/preact/compat/"],
       "react-dom": ["./node_modules/preact/compat/"],
       "react/jsx-runtime": ["./node_modules/preact/jsx-runtime"],

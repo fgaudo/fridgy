@@ -1,6 +1,6 @@
-import { FridgyDatabase } from './infrastructure/dexie'
-import { foodsPageObservable as foodsPageObservableFromDexie } from './infrastructure/dexie/get-foods'
-import { renderApp } from './presentation/app'
+// import { FridgyDatabase } from './infrastructure/dexie'
+import { foodsPage$ } from '@/infrastructure/mock/foods-page'
+import { renderApp } from '@/presentation/preact'
 
 const root = document.getElementById('root')
 
@@ -8,11 +8,11 @@ if (root == null) {
   throw new Error('No #root element in DOM')
 }
 
-const db = new FridgyDatabase()
+// const db = new FridgyDatabase()
 
 renderApp(root, {
   useCases: {
-    getFoodsPage: foodsPageObservableFromDexie({ db })
+    foodsPageData$: foodsPage$
   }
 })
 

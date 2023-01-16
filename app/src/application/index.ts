@@ -1,5 +1,5 @@
-import { FoodsPageDataObservable } from './read/get-foods'
+import { FoodsPageDataObservable } from './read/foods-page'
 
 export interface UseCases {
-  getFoodsPage: FoodsPageDataObservable
+  readonly foodsPageData$: FoodsPageDataObservable
 }
