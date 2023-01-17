@@ -5,6 +5,9 @@
     "jsx": "react-jsx",
     "skipLibCheck": true,
     "lib": ["ESNext"],
+    "moduleResolution": "node",
+    "target": "esnext",
+    "esModuleInterop":true,
     "baseUrl": "./",
     "paths": {
       "@/domain": ["src/domain/index"],

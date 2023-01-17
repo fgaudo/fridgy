@@ -3,12 +3,7 @@ import { FoodsPageData, FoodsPageDataObservable } from '@/application/read/foods
 import { ReplaySubject } from 'rxjs'
 
 const map: FoodsPageData = {
-  foods: {
-    1: { name: 'Milk', id: '1' },
-    2: { name: 'Meat', id: '2' },
-    3: { name: 'Yogurt', id: '3' },
-    4: { name: 'Egg', id: '4' }
-  }
+  foods: Object.fromEntries([...Array(1000).keys()].map(k => [`${k}`, { name: `${k}`, id: `${k}` }]))
 }
 
 const subject = new ReplaySubject<FoodsPageData>()
