@@ -4,11 +4,11 @@ import { liveQuery } from 'dexie'
 import * as RO from 'fp-ts-rxjs/ReaderObservable'
 import { pipe } from 'fp-ts/function'
 import * as R from 'fp-ts/Reader'
-import { catchError, from, Observable } from 'rxjs'
+import { catchError, from } from 'rxjs'
 
 interface Config { readonly db: FridgyDatabase }
 
-export const foodsPageData$: R.Reader<Config, Observable<FoodsPageData>> =
+export const foodsPageData$: RO.ReaderObservable<Config, FoodsPageData> =
       pipe(
         R.ask<Config>(),
         R.map(({ db }) =>

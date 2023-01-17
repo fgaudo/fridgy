@@ -4,6 +4,7 @@ import * as O from 'fp-ts-rxjs/Observable'
 import { flow, pipe } from 'fp-ts/function'
 import { isExpired } from '@/domain/food'
 import * as D from 'fp-ts/Date'
+import * as RO from 'fp-ts-rxjs/ReaderObservable'
 
 export interface FoodsPageModel {
   readonly foods: RR.ReadonlyRecord<string, Readonly<{
@@ -22,11 +23,10 @@ export interface FoodsPageData {
   }>>
 }
 
-export const foodsPageTransformer:
-(foodsPageData$: Observable<FoodsPageData>) => Observable<FoodsPageModel> =
+export const foodsPageTransformer: RO.ReaderObservable<Observable<FoodsPageData>, FoodsPageModel> =
    flow(
      O.bindTo('data'),
-     O.bind('now', _ => pipe(
+     O.bind('now', () => pipe(
        O.fromIO(D.now),
        O.map(num => new Date(num))
      )),
