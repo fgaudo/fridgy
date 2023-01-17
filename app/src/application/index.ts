@@ -1,5 +1,6 @@
-import { FoodsPageDataObservable } from './read/foods-page'
+import { Observable } from 'rxjs'
+import { FoodsPageModel } from './read/foods-page'
 
 export interface UseCases {
-  readonly foodsPageData$: FoodsPageDataObservable
+  readonly foodsPageModel$: Observable<FoodsPageModel>
 }

@@ -1,14 +1,14 @@
-import { FoodsPageDataObservable } from '@/application/read/foods-page'
+import { FoodsPageData } from '@/application/read/foods-page'
 import { FridgyDatabase } from '@/infrastructure/dexie'
 import { liveQuery } from 'dexie'
 import * as RO from 'fp-ts-rxjs/ReaderObservable'
 import { pipe } from 'fp-ts/function'
 import * as R from 'fp-ts/Reader'
-import { catchError, from } from 'rxjs'
+import { catchError, from, Observable } from 'rxjs'
 
 interface Config { readonly db: FridgyDatabase }
 
-export const foodsPage$: R.Reader<Config, FoodsPageDataObservable> =
+export const foodsPageData$: R.Reader<Config, Observable<FoodsPageData>> =
       pipe(
         R.ask<Config>(),
         R.map(({ db }) =>

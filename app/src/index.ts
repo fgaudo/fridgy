@@ -1,5 +1,7 @@
 // import { FridgyDatabase } from './infrastructure/dexie'
-import { foodsPage$ } from '@/infrastructure/mock/foods-page'
+import { foodsPageData$ } from '@/infrastructure/mock/foods-page'
+import { foodsPageTransformer } from '@/application/read/foods-page'
+
 import { renderApp } from '@/presentation/preact'
 
 const root = document.getElementById('root')
@@ -12,7 +14,7 @@ if (root == null) {
 
 renderApp(root, {
   useCases: {
-    foodsPageData$: foodsPage$
+    foodsPageModel$: foodsPageTransformer(foodsPageData$)
   }
 })
 

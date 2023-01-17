@@ -1,4 +1,4 @@
-import { FoodsPageData } from '@/application/read/foods-page'
+import { FoodsPageModel } from '@/application/read/foods-page'
 import { useGlobalContext } from '@/presentation/preact'
 import { flow, pipe } from 'fp-ts/function'
 import * as RA from 'fp-ts/ReadonlyArray'
@@ -9,9 +9,11 @@ import { useSubscription } from 'observable-hooks'
 import { useState } from 'preact/hooks'
 import { JSX } from 'preact/jsx-runtime'
 import { route } from 'preact-router'
-import classnames from 'classnames'
+import { AddFab } from '@/presentation/preact/ui/fab-add-button'
+import { Title } from '@/presentation/preact/ui/title'
+import { Transition } from '../ui/transition'
 
-interface FoodElementState {
+interface FoodItemState {
   readonly name: string
   readonly id: string
   readonly selected: boolean
@@ -21,11 +23,11 @@ interface FoodElementState {
 interface FoodsPageState {
   readonly loading: boolean
   readonly selected: ReadonlySet<string>
-  readonly foods: RR.ReadonlyRecord<string, FoodElementState>
+  readonly foods: RR.ReadonlyRecord<string, FoodItemState>
 }
 
 const combineState:
-(data: FoodsPageData) =>
+(data: FoodsPageModel) =>
 (state: FoodsPageState) =>
 FoodsPageState = data =>
   prevState => ({
@@ -52,8 +54,8 @@ const init: FoodsPageState = {
 }
 
 const mapFoods:
-(toJsx: (state: FoodElementState) => JSX.Element)
-=> (record: RR.ReadonlyRecord<string, FoodElementState>)
+(toJsx: (state: FoodItemState) => JSX.Element)
+=> (record: RR.ReadonlyRecord<string, FoodItemState>)
 => readonly JSX.Element[] =
 toJsx => flow(
   RR.toEntries,
@@ -61,7 +63,7 @@ toJsx => flow(
   RA.map(toJsx)
 )
 
-const Item = ({ food }: { food: FoodElementState }): JSX.Element =>
+const FoodItem = ({ food }: { food: FoodItemState }): JSX.Element =>
   <li key={food.id} class='p-3 sm:pb-4 bg-white mx-2 mb-2 shadow-md'>
     <div class='flex items-center space-x-4'>
       <div class='flex-1 min-w-0'>
@@ -75,37 +77,33 @@ const Item = ({ food }: { food: FoodElementState }): JSX.Element =>
     </div>
   </li>
 
-export function FoodsPage (): JSX.Element {
-  const [state, setState] = useState<FoodsPageState>(init)
+const openAddFoodPage = (): void => {
+  route('/add-food')
+}
 
-  const { useCases: { foodsPageData$ } } = useGlobalContext()
+export function FoodsPage (): JSX.Element {
+  const [state, setState] = useState<FoodsPageState>(() => init)
+
+  const { useCases: { foodsPageModel$ } } = useGlobalContext()
 
   useSubscription(
-    foodsPageData$,
+    foodsPageModel$,
     data => setState(combineState(data))
   )
 
-  const routeAway = (): void => {
-    route('/add-food')
-  }
-
   return (
-    <div class={classnames('bg-gray-100 h-full transition-opacity duration-500 ease-in-out', state.loading ? 'opacity-60' : 'opacity-100')}>
-      <div class='fixed w-full bg-gray-100 flex items-center p-3 text-2xl font-bold h-14'>
-        Fridgy
+    <Transition loading={state.loading}>
+      <div class='bg-gray-100 h-full'>
+        <Title text='Fridgy' />
+        <ul class='pt-14'>
+          {mapFoods(food =>
+            <FoodItem food={food} />
+          )(state.foods)}
+        </ul>
+        <div class='fixed right-7 bottom-12'>
+          <AddFab color='orange-700' onClick={openAddFoodPage} label='Add Food' />
+        </div>
       </div>
-      <ul class='pt-14'>
-        {mapFoods(food =>
-          <Item food={food} />
-        )(state.foods)}
-      </ul>
-      <button onClick={routeAway} type='button' class='fixed right-3 bottom-8 text-white bg-orange-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-full text-lg p-3 text-center inline-flex items-center mr-2 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800'>
-        <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='currentColor' class='w-6 h-6'>
-          <path fill-rule='evenodd' d='M12 3.75a.75.75 0 01.75.75v6.75h6.75a.75.75 0 010 1.5h-6.75v6.75a.75.75 0 01-1.5 0v-6.75H4.5a.75.75 0 010-1.5h6.75V4.5a.75.75 0 01.75-.75z' clip-rule='evenodd' />
-        </svg>
-
-        <span class='sr-only'>Add Food</span>
-      </button>
-    </div>
+    </Transition>
   )
 }
