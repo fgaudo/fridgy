@@ -1,8 +1,9 @@
 import * as RoR from 'fp-ts/ReadonlyRecord'
 import { useState } from 'preact/hooks'
 import { JSX } from 'preact/jsx-runtime'
-import { Title } from '../ui/title'
-import { Transition } from '../ui/transition'
+
+import { Title } from '@/presentation/preact/ui/title'
+import { Transition } from '@/presentation/preact/ui/transition'
 
 interface FoodElementState {
   readonly name: string

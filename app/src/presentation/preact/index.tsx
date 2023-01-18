@@ -1,10 +1,11 @@
-import { UseCases } from '@/application'
-import { FoodsPage } from '@/presentation/preact/pages/main'
+import { createHashHistory } from 'history'
 import { createContext, render } from 'preact'
 import { useContext } from 'preact/hooks'
 import { Route, Router } from 'preact-router'
-import { AddFoodPage } from './pages/add-food'
-import { createHashHistory } from 'history'
+
+import { UseCases } from '@/application'
+import { AddFoodPage } from '@/presentation/preact/pages/add-food'
+import { FoodsPage } from '@/presentation/preact/pages/main'
 
 interface Config {
   readonly useCases: UseCases

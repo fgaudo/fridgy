@@ -1,5 +1,6 @@
-import { Food } from '@/domain/food'
 import { Dexie } from 'dexie'
+
+import { Food } from '@/domain/food'
 
 export class FridgyDatabase extends Dexie {
   foods!: Dexie.Table<Food, string>

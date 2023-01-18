@@ -1,10 +1,11 @@
-import * as RoM from 'fp-ts/ReadonlyMap'
-import { Observable } from 'rxjs'
-import * as O from 'fp-ts-rxjs/Observable'
-import { flow, pipe } from 'fp-ts/function'
-import { isExpired } from '@/domain/food'
 import * as D from 'fp-ts/Date'
+import { flow, pipe } from 'fp-ts/function'
+import * as RoM from 'fp-ts/ReadonlyMap'
+import * as O from 'fp-ts-rxjs/Observable'
 import * as RO from 'fp-ts-rxjs/ReaderObservable'
+import { Observable } from 'rxjs'
+
+import { isExpired } from '@/domain/food'
 
 export interface FoodsPageModel {
   readonly foods: ReadonlyMap<string, Readonly<{
