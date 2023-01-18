@@ -5,7 +5,7 @@ import { Observable, ReplaySubject } from 'rxjs'
 const foods = ['Milk', 'Meat', 'Yogurt', 'Eggs', 'Salad', 'Carrots']
 
 const map: FoodsPageData = {
-  foods: Object.fromEntries([...Array(1000).keys()]
+  foods: new Map([...Array(1000).keys()]
     .map(k => [
       `${k}`,
       {

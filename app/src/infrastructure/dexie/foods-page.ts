@@ -22,6 +22,6 @@ export const foodsPageData$: RO.ReaderObservable<Config, FoodsPageData> =
           )
         ),
         RO.map(
-          response => ({ foods: {} })
+          response => ({ foods: new Map() })
         )
       )
