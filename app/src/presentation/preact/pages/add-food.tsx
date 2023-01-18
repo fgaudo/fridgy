@@ -1,4 +1,4 @@
-import * as RR from 'fp-ts/ReadonlyRecord'
+import * as RoR from 'fp-ts/ReadonlyRecord'
 import { useState } from 'preact/hooks'
 import { JSX } from 'preact/jsx-runtime'
 import { Title } from '../ui/title'
@@ -14,7 +14,7 @@ interface FoodElementState {
 interface FoodsPageState {
   readonly loading: boolean
   readonly selected: ReadonlySet<string>
-  readonly foods: RR.ReadonlyRecord<string, FoodElementState>
+  readonly foods: RoR.ReadonlyRecord<string, FoodElementState>
 }
 
 const init: FoodsPageState = {

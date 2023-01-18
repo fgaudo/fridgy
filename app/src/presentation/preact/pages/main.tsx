@@ -1,11 +1,11 @@
 import { FoodsPageModel } from '@/application/read/foods-page'
 import { useGlobalContext } from '@/presentation/preact'
 import { flow, pipe } from 'fp-ts/function'
-import * as RA from 'fp-ts/ReadonlyArray'
-import * as O from 'fp-ts/Ord'
-import * as RM from 'fp-ts/ReadonlyMap'
-import * as RS from 'fp-ts/ReadonlySet'
-import * as T from 'fp-ts/ReadonlyTuple'
+import * as RoA from 'fp-ts/ReadonlyArray'
+import * as Ord from 'fp-ts/Ord'
+import * as RoM from 'fp-ts/ReadonlyMap'
+import * as RoS from 'fp-ts/ReadonlySet'
+import * as RoT from 'fp-ts/ReadonlyTuple'
 import * as S from 'fp-ts/string'
 
 import { useSubscription } from 'observable-hooks'
@@ -14,8 +14,8 @@ import { JSX } from 'preact/jsx-runtime'
 import { route } from 'preact-router'
 import { AddFab } from '@/presentation/preact/ui/fab-add-button'
 import { Title } from '@/presentation/preact/ui/title'
-import { Transition } from '../ui/transition'
-import { LazyContainer } from '../ui/lazy-container'
+import { Transition } from '@/presentation/preact/ui/transition'
+import { LazyContainer } from '@/presentation/preact/ui/lazy-container'
 
 interface FoodItemState {
   readonly name: string
@@ -38,11 +38,11 @@ FoodsPageState = data =>
     loading: false,
     selected: pipe(
       prevState.selected,
-      RS.filter(id => RM.member(S.Eq)(id)(data.foods))
+      RoS.filter(id => RoM.member(S.Eq)(id)(data.foods))
     ),
     foods: pipe(
       data.foods,
-      RM.map(({ name, id }) => ({
+      RoM.map(({ name, id }) => ({
         name,
         id,
         selected: false,
@@ -58,13 +58,13 @@ const init: FoodsPageState = {
 }
 
 const mapFoods:
-(toJsx: (state: FoodItemState) => JSX.Element)
+<A>(f: (state: FoodItemState) => A)
 => (record: ReadonlyMap<string, FoodItemState>)
-=> readonly JSX.Element[] =
-toJsx => flow(
-  RM.toReadonlyArray(O.trivial),
-  RA.map(T.snd),
-  RA.map(toJsx)
+=> readonly A[] =
+f => flow(
+  RoM.toReadonlyArray(Ord.trivial),
+  RoA.map(RoT.snd),
+  RoA.map(f)
 )
 
 const FoodItem = ({ food }: { food: FoodItemState }): JSX.Element =>

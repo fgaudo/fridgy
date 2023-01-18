@@ -1,7 +1,6 @@
 // import { FridgyDatabase } from './infrastructure/dexie'
 import { foodsPageData$ } from '@/infrastructure/mock/foods-page'
 import { foodsPageTransformer } from '@/application/read/foods-page'
-
 import { renderApp } from '@/presentation/preact'
 
 const root = document.getElementById('root')

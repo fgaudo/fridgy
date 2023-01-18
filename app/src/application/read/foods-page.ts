@@ -1,5 +1,4 @@
-import * as RM from 'fp-ts/ReadonlyMap'
-
+import * as RoM from 'fp-ts/ReadonlyMap'
 import { Observable } from 'rxjs'
 import * as O from 'fp-ts-rxjs/Observable'
 import { flow, pipe } from 'fp-ts/function'
@@ -33,7 +32,7 @@ export const foodsPageTransformer: RO.ReaderObservable<Observable<FoodsPageData>
      )),
      O.map(({ data, now }) => pipe(
        data.foods,
-       RM.map(food => {
+       RoM.map(food => {
          const isFoodExpired = isExpired(now)(food)
          return { ...food, isFoodExpired }
        })
