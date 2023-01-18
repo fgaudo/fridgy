@@ -6,5 +6,5 @@ export interface Food {
   readonly expDate: Date
 }
 
-export const isExpired = (date: Date) => (food: Food): boolean =>
-  D.Ord.compare(food.expDate, date) < 0
+export const expirationStatus = (date: Date) => (food: Food): 'ok' | 'expired' | 'check' =>
+  D.Ord.compare(food.expDate, date) < 0 ? 'expired' : 'ok'

@@ -5,14 +5,14 @@ import * as O from 'fp-ts-rxjs/Observable'
 import * as RO from 'fp-ts-rxjs/ReaderObservable'
 import { Observable } from 'rxjs'
 
-import { isExpired } from '@/domain/food'
+import { expirationStatus } from '@/domain/food'
 
 export interface FoodsPageModel {
   readonly foods: ReadonlyMap<string, Readonly<{
     id: string
     name: string
     expDate: Date
-    isFoodExpired: boolean
+    foodState: 'expired' | 'ok' | 'check'
   }>>
 }
 
@@ -30,10 +30,10 @@ export const foodsPageTransformer: RO.ReaderObservable<Observable<FoodsPageData>
      O.bind('now', () => O.fromIO(D.create)),
      O.map(({ data, now }) => pipe(
        data.foods,
-       RoM.map(food => {
-         const isFoodExpired = isExpired(now)(food)
-         return { ...food, isFoodExpired }
-       })
+       RoM.map(food => ({
+         ...food,
+         foodState: expirationStatus(now)(food)
+       }))
      )),
      O.map(foods => ({ foods }))
    )
