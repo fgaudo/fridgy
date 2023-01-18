@@ -2,14 +2,14 @@ import { useEffect, useRef, useState } from 'preact/hooks'
 import { JSX } from 'react/jsx-runtime'
 
 export const Swipable = (props: { onRight?: () => void, onLeft?: () => void, children: JSX.Element | JSX.Element[] }): JSX.Element => {
-  const [state, setState] = useState(() => ({ mouseX: 0, dragPosX: 0, dragging: false, transition: false }))
+  const [state, setState] = useState(() => ({ mouseX: 0, dragPosX: 0, dragging: false }))
 
   const box = useRef<HTMLDivElement>(null)
 
   const down = (e: MouseEvent): void => {
     e.preventDefault()
 
-    setState(state => ({ ...state, mouseX: e.x, dragPosX: 0, dragging: true, transition: false }))
+    setState(state => ({ ...state, mouseX: e.x, dragPosX: 0, dragging: true }))
   }
 
   useEffect(() => {
@@ -47,7 +47,7 @@ export const Swipable = (props: { onRight?: () => void, onLeft?: () => void, chi
         props.onLeft?.()
       }
 
-      setState(state => ({ ...state, dragPosX: 0, dragging: false, transition: true }))
+      setState(state => ({ ...state, dragPosX: 0, dragging: false }))
       document.removeEventListener('mousemove', drag)
     }
 
@@ -64,7 +64,7 @@ export const Swipable = (props: { onRight?: () => void, onLeft?: () => void, chi
     <div
       ref={box}
       style={`transform: translateX(${state.dragPosX}px)`}
-      class={state.transition ? 'transition-all duration-300' : ''}
+      class={state.dragging ? '' : 'transition-all duration-300'}
       onMouseDown={down}
     >
       {props.children}
