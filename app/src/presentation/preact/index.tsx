@@ -9,6 +9,7 @@ import { FoodsPage } from '@/presentation/preact/pages/main'
 
 interface Config {
   readonly useCases: UseCases
+  readonly title: string
 }
 
 export const GlobalContext = createContext<Config>(null as any)

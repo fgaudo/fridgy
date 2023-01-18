@@ -12,7 +12,7 @@ export interface FoodsPageModel {
     id: string
     name: string
     expDate: Date
-    foodState: 'expired' | 'ok' | 'check'
+    state: 'expired' | 'ok' | 'check'
   }>>
 }
 
@@ -32,7 +32,7 @@ export const foodsPageTransformer: RO.ReaderObservable<Observable<FoodsPageData>
        data.foods,
        RoM.map(food => ({
          ...food,
-         foodState: expirationStatus(now)(food)
+         state: expirationStatus(now)(food)
        }))
      )),
      O.map(foods => ({ foods }))

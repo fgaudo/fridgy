@@ -14,7 +14,8 @@ if (root == null) {
 renderApp(root, {
   useCases: {
     foodsPageModel$: foodsPageTransformer(foodsPageData$)
-  }
+  },
+  title: 'Fridgy'
 })
 
 if (!DEBUG && 'serviceWorker' in navigator) {
