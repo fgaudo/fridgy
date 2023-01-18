@@ -27,10 +27,7 @@ export interface FoodsPageData {
 export const foodsPageTransformer: RO.ReaderObservable<Observable<FoodsPageData>, FoodsPageModel> =
    flow(
      O.bindTo('data'),
-     O.bind('now', () => pipe(
-       O.fromIO(D.now),
-       O.map(num => new Date(num))
-     )),
+     O.bind('now', () => O.fromIO(D.create)),
      O.map(({ data, now }) => pipe(
        data.foods,
        RoM.map(food => {
