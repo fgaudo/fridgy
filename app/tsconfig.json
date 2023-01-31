@@ -1,31 +1,32 @@
 {
-  "compilerOptions": {
-    "forceConsistentCasingInFileNames": true,
-    "strict": true,
-    "jsx": "react-jsx",
-    "skipLibCheck": true,
-    "lib": ["ESNext"],
-    "moduleResolution": "node",
-    "target": "esnext",
-    "esModuleInterop":true,
-    "baseUrl": "./",
-    "paths": {
-      "@/domain": ["src/domain/index"],
-      "@/domain/*": ["src/domain/*"],
+	"compilerOptions": {
+		"forceConsistentCasingInFileNames": true,
+		"strict": true,
+		"jsx": "react-jsx",
+		"skipLibCheck": true,
+		"lib": ["ESNext", "DOM"],
+		"moduleResolution": "node",
+		"target": "esnext",
+		"esModuleInterop": true,
+		"baseUrl": "./",
+		"noUncheckedIndexedAccess": true,
+		"paths": {
+			"@/domain": ["src/domain/index"],
+			"@/domain/*": ["src/domain/*"],
 
-      "@/application": ["src/application/index"],
-      "@/application/*": ["src/application/*"],
+			"@/application": ["src/application/index"],
+			"@/application/*": ["src/application/*"],
 
-      "@/presentation": ["src/presentation/index"],
-      "@/presentation/*": ["src/presentation/*"],
+			"@/presentation": ["src/presentation/index"],
+			"@/presentation/*": ["src/presentation/*"],
 
-      "@/infrastructure": ["src/infrastructure/index"],
-      "@/infrastructure/*": ["src/infrastructure/*"],
-      
-      "react": ["./node_modules/preact/compat/"],
-      "react-dom": ["./node_modules/preact/compat/"],
-      "react/jsx-runtime": ["./node_modules/preact/jsx-runtime"],
-      "react/test-utils": ["./node_modules/preact/test-utils"]
-    }
-  }
+			"@/infrastructure": ["src/infrastructure/index"],
+			"@/infrastructure/*": ["src/infrastructure/*"],
+
+			"react": ["./node_modules/preact/compat/"],
+			"react-dom": ["./node_modules/preact/compat/"],
+			"react/jsx-runtime": ["./node_modules/preact/jsx-runtime"],
+			"react/test-utils": ["./node_modules/preact/test-utils"]
+		}
+	}
 }
