@@ -24,14 +24,12 @@
 		"postcss": "*",
 		"prettier": "*",
 		"prettier-plugin-tailwindcss": "*",
-		"tailwindcss": "*",
 		"typescript": "*"
 	},
 	"dependencies": {
 		"@headlessui/react": "*",
 		"@heroicons/react": "*",
 		"@tanstack/react-router": "0.0.1-beta.62",
-		"classnames": "*",
 		"dexie": "*",
 		"fp-ts": "*",
 		"fp-ts-rxjs": "*",
@@ -41,6 +39,7 @@
 		"react-router-dom": "*",
 		"rxjs": "*",
 		"workbox-build": "*",
-		"workbox-precaching": "*"
+		"workbox-precaching": "*",
+		"tailwindcss": "*"
 	}
 }

@@ -1,11 +1,10 @@
-import classnames from 'classnames'
 import * as Opt from 'fp-ts/Option'
 import * as Ord from 'fp-ts/Ord'
 import * as RoA from 'fp-ts/ReadonlyArray'
 import * as RoM from 'fp-ts/ReadonlyMap'
 import * as RoS from 'fp-ts/ReadonlySet'
 import * as RoT from 'fp-ts/ReadonlyTuple'
-import { flow, pipe } from 'fp-ts/function'
+import { pipe } from 'fp-ts/function'
 import * as S from 'fp-ts/string'
 import { useSubscription } from 'observable-hooks'
 import { useEffect, useState } from 'react'
@@ -61,11 +60,6 @@ const init: FoodsPageState = {
 	foods: new Map()
 }
 
-const mapFoods: <A>(
-	f: (state: FoodItemState) => A
-) => (record: ReadonlyMap<string, FoodItemState>) => readonly A[] = f =>
-	flow(RoM.toReadonlyArray(Ord.trivial), RoA.map(RoT.snd), RoA.map(f))
-
 export function FoodsPage(): JSX.Element {
 	const [state, setState] = useState<FoodsPageState>(() => init)
 
@@ -106,59 +100,67 @@ export function FoodsPage(): JSX.Element {
 		return () => clearTimeout(timeout)
 	}, state.deleting)
 
+	const foods: readonly FoodItemState[] = pipe(
+		state.foods,
+		RoM.toReadonlyArray(Ord.trivial),
+		RoA.map(RoT.snd)
+	)
+
 	return (
 		<Transition loading={state.loading}>
-			<div className="h-full bg-gray-100">
+			<div className="h-full bg-gray-100 ">
 				<Title text={title} />
 				<ul className="overflow-hidden pt-14">
-					{mapFoods(food => (
-						<li
-							key={food.id}
-							className={classnames(
-								'transition-height duration-500',
-								food.deleting ? 'max-h-0' : 'max-h-64'
-							)}
-						>
-							<div
-								style={{
-									transform: `translateX(${food.deleting ? '2000' : '0'}px)`
-								}}
-								className={classnames('transition-transform duration-500')}
-							>
-								<Swipable onRight={onSwipeRight(food.id)}>
+					{foods.map(food =>
+						food.deleting ? (
+							<li
+								key={food.id}
+								className="max-h-0 transition-height duration-500">
+								<div className="translate-x-[2000px] transition-transform duration-500">
 									<li
 										key={food.id}
-										className="mx-2 mb-2 bg-white p-3 shadow-md sm:pb-4"
-										style={{
-											height: '70px'
-										}}
-									>
+										className="mx-2 mb-2 h-[70px] bg-white p-3 shadow-md sm:pb-4">
 										<div className="flex items-center space-x-4">
 											<div className="min-w-0 flex-1">
 												<p className="truncate pb-2 text-sm font-medium text-gray-900 dark:text-white">
 													{food.name}
 												</p>
 												<div className="h-2.5 w-full rounded-full bg-gray-200 dark:bg-gray-700">
-													<div
-														className="h-2.5 rounded-full bg-blue-600"
-														style={{
-															width: '45%'
-														}}
-													/>
+													<div className="h-2.5 w-[45%] rounded-full bg-blue-600" />
 												</div>
 											</div>
 										</div>
 									</li>
-								</Swipable>
-							</div>
-						</li>
-					))(state.foods)}
+								</div>
+							</li>
+						) : (
+							<li
+								key={food.id}
+								className="max-h-64 transition-height duration-500">
+								<div className="translate-x-0 transition-transform duration-500 ">
+									<Swipable onRight={onSwipeRight?.(food.id)}>
+										<li
+											key={food.id}
+											className="mx-2 mb-2 h-[70px] bg-white p-3 shadow-md sm:pb-4">
+											<div className="flex items-center space-x-4">
+												<div className="min-w-0 flex-1">
+													<p className="truncate pb-2 text-sm font-medium text-gray-900 dark:text-white">
+														{food.name}
+													</p>
+													<div className="h-2.5 w-full rounded-full bg-gray-200 dark:bg-gray-700">
+														<div className="h-2.5 w-[45%] rounded-full bg-blue-600" />
+													</div>
+												</div>
+											</div>
+										</li>
+									</Swipable>
+								</div>
+							</li>
+						)
+					)}
 				</ul>
-				<div className="">
-					<AddFab
-						onClick={() => null}
-						label="Add Food"
-					/>
+				<div>
+					<AddFab onClick={() => null} label="Add Food" />
 				</div>
 			</div>
 		</Transition>
