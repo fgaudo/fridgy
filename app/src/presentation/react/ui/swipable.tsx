@@ -13,10 +13,15 @@ export const Swipable = (props: {
 
 	const box = useRef<HTMLDivElement>(null)
 
-	const down = (e: MouseEvent): void => {
+	const down = (e: React.MouseEvent<HTMLDivElement, MouseEvent>): void => {
 		e.preventDefault()
 
-		setState(state => ({ ...state, mouseX: e.x, dragPosX: 0, dragging: true }))
+		setState(state => ({
+			...state,
+			mouseX: e.clientX,
+			dragPosX: 0,
+			dragging: true
+		}))
 	}
 
 	useEffect(() => {
@@ -82,8 +87,7 @@ export const Swipable = (props: {
 				ref={box}
 				style={{ transform: `translateX(${state.dragPosX}px)` }}
 				className={state.dragging ? '' : 'transition-transform duration-300'}
-				onMouseDown={() => down}
-			>
+				onMouseDown={down}>
 				{props.children}
 			</div>
 		</>

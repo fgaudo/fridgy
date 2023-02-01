@@ -1,7 +1,7 @@
 module.exports = {
 	plugins: [
-		require('prettier-plugin-tailwindcss'),
-		require.resolve('@trivago/prettier-plugin-sort-imports')
+		require.resolve('@trivago/prettier-plugin-sort-imports'),
+		require('prettier-plugin-tailwindcss')
 	],
 	semi: false,
 	printWidth: 80,

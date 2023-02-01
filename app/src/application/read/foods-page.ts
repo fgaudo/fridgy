@@ -30,10 +30,9 @@ export interface FoodsPageData {
 	>
 }
 
-export const foodsPageTransformer: RO.ReaderObservable<
-	Observable<FoodsPageData>,
-	FoodsPageModel
-> = flow(
+export const foodsPageTransformer: (
+	obs: Observable<FoodsPageData>
+) => Observable<FoodsPageModel> = flow(
 	O.bindTo('data'),
 	O.bind('now', () => O.fromIO(D.create)),
 	O.map(({ data, now }) =>

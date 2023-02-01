@@ -6,7 +6,7 @@ import {
 	RouterProvider
 } from '@tanstack/react-router'
 import { StrictMode, createContext, useContext } from 'react'
-import { render } from 'react-dom'
+import { Root, createRoot } from 'react-dom/client'
 
 import { UseCases } from '@/application'
 
@@ -40,13 +40,12 @@ const routeTree = rootRoute.addChildren([
 
 const router = new ReactRouter({ routeTree })
 
-export function renderApp(element: Element, config: Config): void {
-	render(
+export function renderApp(element: Root, config: Config): void {
+	element.render(
 		<StrictMode>
 			<GlobalContext.Provider value={config}>
 				<RouterProvider router={router} />
 			</GlobalContext.Provider>
-		</StrictMode>,
-		element
+		</StrictMode>
 	)
 }

@@ -30,6 +30,8 @@
 		"@headlessui/react": "*",
 		"@heroicons/react": "*",
 		"@tanstack/react-router": "0.0.1-beta.62",
+		"@tanstack/react-virtual": "3.0.0-beta.41",
+		"@tanstack/virtual-core": "3.0.0-beta.41",
 		"dexie": "*",
 		"fp-ts": "*",
 		"fp-ts-rxjs": "*",
@@ -38,8 +40,8 @@
 		"react-dom": "*",
 		"react-router-dom": "*",
 		"rxjs": "*",
+		"tailwindcss": "*",
 		"workbox-build": "*",
-		"workbox-precaching": "*",
-		"tailwindcss": "*"
+		"workbox-precaching": "*"
 	}
 }
