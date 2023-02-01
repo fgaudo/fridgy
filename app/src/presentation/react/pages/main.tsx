@@ -1,10 +1,5 @@
-import {
-	VirtualItem,
-	useVirtualizer,
-	useWindowVirtualizer
-} from '@tanstack/react-virtual'
+import { useWindowVirtualizer } from '@tanstack/react-virtual'
 import * as Opt from 'fp-ts/Option'
-import * as Ord from 'fp-ts/Ord'
 import * as RoA from 'fp-ts/ReadonlyArray'
 import * as RoM from 'fp-ts/ReadonlyMap'
 import * as RoS from 'fp-ts/ReadonlySet'
@@ -12,7 +7,7 @@ import * as RoT from 'fp-ts/ReadonlyTuple'
 import { flow, pipe } from 'fp-ts/function'
 import * as S from 'fp-ts/string'
 import { useSubscription } from 'observable-hooks'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import { FoodsPageModel } from '@/application/read/foods-page'
 
@@ -34,35 +29,100 @@ interface FoodsPageState {
 	readonly deleting: ReadonlySet<string>
 	readonly loading: boolean
 	readonly selected: ReadonlySet<string>
-	readonly foods: ReadonlyMap<string, FoodItemState>
+	readonly foods: {
+		readonly indexed: ReadonlyMap<FoodItemState['id'], FoodItemState>
+		readonly sorted: ReadonlyArray<FoodItemState['id']>
+	}
 }
 
-const combineState: (
-	model: FoodsPageModel
-) => (state: FoodsPageState) => FoodsPageState = model => state => ({
-	deleting: state.deleting,
-	loading: false,
-	selected: pipe(
-		state.selected,
-		RoS.filter(id => RoM.member(S.Eq)(id)(model.foods))
-	),
-	foods: pipe(
-		model.foods,
-		RoM.map(({ name, id }) => ({
-			name,
-			id,
-			deleting: false,
-			selected: false,
-			removed: false
-		}))
-	)
-})
+const loadFoodPage =
+	(model: FoodsPageModel) =>
+	(state: FoodsPageState): FoodsPageState => {
+		const foods = pipe(
+			model.foods,
+			RoM.map(({ name, id }) => ({
+				name,
+				id,
+				deleting: false,
+				selected: false,
+				removed: false
+			}))
+		)
+
+		const foodsIndexed = pipe(
+			foods,
+			RoM.toReadonlyArray(S.Ord),
+			RoA.map(RoT.fst)
+		)
+
+		return {
+			deleting: state.deleting,
+			loading: false,
+			selected: pipe(
+				state.selected,
+				RoS.filter(id => RoM.member(S.Eq)(id)(model.foods))
+			),
+			foods: {
+				indexed: foods,
+				sorted: foodsIndexed
+			}
+		}
+	}
 
 const init: FoodsPageState = {
 	deleting: new Set(),
 	loading: true,
 	selected: new Set(),
-	foods: new Map()
+	foods: {
+		indexed: new Map(),
+		sorted: []
+	}
+}
+
+const enqueueDeleteFoodItem =
+	(id: string) =>
+	(state: FoodsPageState): FoodsPageState => {
+		const indexed = pipe(
+			state.foods.indexed,
+			RoM.modifyAt(S.Eq)(id, item => ({
+				...item,
+				deleting: true
+			})),
+			Opt.getOrElse(() => state.foods.indexed)
+		)
+
+		const sorted = pipe(indexed, RoM.toReadonlyArray(S.Ord), RoA.map(RoT.fst))
+
+		return {
+			...state,
+			deleting: pipe(state.deleting, RoS.insert(S.Eq)(id)),
+			foods: {
+				...state.foods,
+				indexed,
+				sorted
+			}
+		}
+	}
+
+const deleteFoodItems = (state: FoodsPageState): FoodsPageState => {
+	const indexed = pipe(
+		state.deleting,
+		RoS.reduce(S.Ord)(state.foods.indexed, (map, id) =>
+			pipe(map, RoM.deleteAt(S.Eq)(id))
+		)
+	)
+
+	const sorted = pipe(indexed, RoM.toReadonlyArray(S.Ord), RoA.map(RoT.fst))
+
+	return {
+		...state,
+		deleting: new Set(),
+		foods: {
+			...state.foods,
+			indexed,
+			sorted
+		}
+	}
 }
 
 export function FoodsPage(): JSX.Element {
@@ -73,66 +133,43 @@ export function FoodsPage(): JSX.Element {
 		title
 	} = useGlobalContext()
 
-	useSubscription(foodsPageModel$, flow(combineState, setState))
+	useSubscription(foodsPageModel$, flow(loadFoodPage, setState))
 
 	const rowVirtualizer = useWindowVirtualizer({
-		count: state.foods.size,
-		estimateSize: () => 90
+		count: state.foods.indexed.size,
+		estimateSize: () => 90,
+		overscan: 10
 	})
 
-	const onSwipeRight: (id: string) => () => void = id => () => {
-		setState(state => ({
-			...state,
-			deleting: pipe(state.deleting, RoS.insert(S.Eq)(id)),
-			foods: pipe(
-				state.foods,
-				RoM.modifyAt(S.Eq)(id, item => ({
-					...item,
-					deleting: true
-				})),
-				Opt.getOrElse(() => state.foods)
-			)
-		}))
-	}
+	const onSwipeRight = flow(enqueueDeleteFoodItem, setState)
 
 	useEffect(() => {
 		if (RoS.size(state.deleting) <= 0) {
 			return
 		}
 
-		const timeout = setTimeout(() => {
-			setState(state => ({
-				...state,
-				foods: pipe(
-					state.deleting,
-					RoS.reduce(S.Ord)(state.foods, (map, id) =>
-						pipe(map, RoM.deleteAt(S.Eq)(id))
-					)
-				)
-			}))
-		}, 1000)
+		const timeout = setTimeout(() => pipe(deleteFoodItems, setState), 1000)
 
 		return () => clearTimeout(timeout)
-	}, [state.deleting])
+	}, [state.deleting.size > 0])
 
-	const foods = pipe(
-		state.foods,
-		RoM.toReadonlyArray(Ord.trivial),
-		RoA.map(RoT.snd)
-	)
-
-	const partitionedFoods: readonly {
-		virtual: VirtualItem
-		food: FoodItemState
-	}[] = pipe(
+	let times = 0
+	const partitionedFoods = pipe(
 		rowVirtualizer.getVirtualItems(),
-		RoA.filterMap(item =>
-			pipe(
-				foods,
+		RoA.filterMap(item => {
+			const foodItem = pipe(
+				state.foods.sorted,
 				RoA.lookup(item.index),
-				Opt.map(food => ({ virtual: item, food }))
+				Opt.chain(id => pipe(state.foods.indexed, RoM.lookup(S.Eq)(id))),
+				Opt.map(food => ({
+					virtual: item,
+					food,
+					times: food.deleting ? ++times : times
+				}))
 			)
-		)
+
+			return foodItem
+		})
 	)
 
 	return (
@@ -144,32 +181,61 @@ export function FoodsPage(): JSX.Element {
 						height: rowVirtualizer.getTotalSize()
 					}}
 					className={`relative w-full overflow-hidden pt-14`}>
-					{partitionedFoods.map(element => (
-						<li
-							key={element.virtual.key}
-							style={{
-								height: element.virtual.size,
-								transform: `translateY(${element.virtual.start}px)`
-							}}
-							className={`absolute top-0 left-0 w-full transition-height duration-1000`}>
-							<div className="translate-x-0 transition-transform duration-500 ">
-								<Swipable onRight={onSwipeRight?.(element.food.id)}>
-									<div className="mx-2 mb-2 h-[70px] bg-white p-3 shadow-md sm:pb-4">
-										<div className="flex items-center space-x-4">
-											<div className="min-w-0 flex-1">
-												<p className="truncate pb-2 text-sm font-medium text-gray-900 dark:text-white">
-													{element.food.name}
-												</p>
-												<div className="h-2.5 w-full rounded-full bg-gray-200 dark:bg-gray-700">
-													<div className="h-2.5 w-[45%] rounded-full bg-blue-600" />
+					{partitionedFoods.map(element =>
+						element.food.deleting ? (
+							<li
+								key={element.food.id}
+								style={{
+									height: 0,
+									transform: `translateY(${element.virtual.start}px)`
+								}}
+								className={`absolute top-0 left-0 w-full transition duration-1000`}>
+								<div className="translate-x-[2000px] transition-transform duration-500 ">
+									<Swipable>
+										<div className="mx-2 mb-2 h-[70px] bg-white p-3 shadow-md sm:pb-4">
+											<div className="flex items-center space-x-4">
+												<div className="min-w-0 flex-1">
+													<p className="truncate pb-2 text-sm font-medium text-gray-900 dark:text-white">
+														{element.food.name}
+													</p>
+													<div className="h-2.5 w-full rounded-full bg-gray-200 dark:bg-gray-700">
+														<div className="h-2.5 w-[45%] rounded-full bg-blue-600" />
+													</div>
 												</div>
 											</div>
 										</div>
-									</div>
-								</Swipable>
-							</div>
-						</li>
-					))}
+									</Swipable>
+								</div>
+							</li>
+						) : (
+							<li
+								key={element.food.id}
+								style={{
+									height: element.virtual.size,
+									transform: `translateY(${
+										element.virtual.start - element.times * element.virtual.size
+									}px)`
+								}}
+								className={`absolute top-0 left-0 w-full transition duration-1000`}>
+								<div className="translate-x-0 transition-transform duration-500 ">
+									<Swipable onRight={() => onSwipeRight?.(element.food.id)}>
+										<div className="mx-2 mb-2 h-[70px] bg-white p-3 shadow-md sm:pb-4">
+											<div className="flex items-center space-x-4">
+												<div className="min-w-0 flex-1">
+													<p className="truncate pb-2 text-sm font-medium text-gray-900 dark:text-white">
+														{element.food.name}
+													</p>
+													<div className="h-2.5 w-full rounded-full bg-gray-200 dark:bg-gray-700">
+														<div className="h-2.5 w-[45%] rounded-full bg-blue-600" />
+													</div>
+												</div>
+											</div>
+										</div>
+									</Swipable>
+								</div>
+							</li>
+						)
+					)}
 				</ul>
 				<div>
 					<AddFab onClick={() => null} label="Add Food" />

@@ -11,6 +11,10 @@
 		{
 			"path": "./app",
 			"name": "app"
+		},
+		{
+			"path": "./test",
+			"name": "test"
 		}
 	],
 	"settings": {}
