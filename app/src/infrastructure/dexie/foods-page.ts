@@ -4,7 +4,7 @@ import * as R from 'fp-ts/Reader'
 import { pipe } from 'fp-ts/function'
 import { catchError, from } from 'rxjs'
 
-import { FoodsPageData } from '@/application/read/foods-page'
+import { FoodsPageData } from '@/application/read/food-page'
 
 import { FridgyDatabase } from '@/infrastructure/dexie'
 

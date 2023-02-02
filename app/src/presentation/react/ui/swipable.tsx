@@ -81,14 +81,16 @@ export const Swipable = (props: {
 			document.removeEventListener('mousemove', drag)
 			document.removeEventListener('mouseup', up)
 		}
-	}, [state.dragging])
+	}, [state.dragging, props, state.mouseX])
 
 	return (
 		<>
 			<div
 				ref={box}
 				style={{ transform: `translateX(${state.dragPosX}px)` }}
-				className={state.dragging ? '' : 'transition-transform duration-300'}
+				className={
+					state.dragging ? 'bg-blue-300' : 'transition-transform duration-300'
+				}
 				onMouseDown={down}>
 				{props.children}
 			</div>

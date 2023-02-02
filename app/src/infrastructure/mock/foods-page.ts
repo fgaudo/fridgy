@@ -1,6 +1,6 @@
 import { Observable, ReplaySubject } from 'rxjs'
 
-import { FoodsPageData } from '@/application/read/foods-page'
+import { FoodsPageData } from '@/application/read/food-page'
 
 const foods = ['Milk', 'Meat', 'Yogurt', 'Eggs', 'Salad', 'Carrots']
 

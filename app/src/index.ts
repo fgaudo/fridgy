@@ -1,7 +1,7 @@
 // import { FridgyDatabase } from './infrastructure/dexie'
 import { createRoot } from 'react-dom/client'
 
-import { foodsPageTransformer } from '@/application/read/foods-page'
+import { foodsPageTransformer } from '@/application/read/food-page'
 
 import { renderApp } from '@/presentation/react'
 

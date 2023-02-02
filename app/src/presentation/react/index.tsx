@@ -6,19 +6,19 @@ import {
 	RouterProvider
 } from '@tanstack/react-router'
 import { StrictMode, createContext, useContext } from 'react'
-import { Root, createRoot } from 'react-dom/client'
+import { Root } from 'react-dom/client'
 
 import { UseCases } from '@/application'
 
-import { AddFoodPage } from '@/presentation/react/pages/add-food'
-import { FoodsPage } from '@/presentation/react/pages/main'
+import { AddFoodPage } from '@/presentation/react/pages/add-food-page'
+import { FoodsPage } from '@/presentation/react/pages/food-page'
 
 interface Config {
 	readonly useCases: UseCases
 	readonly title: string
 }
 
-export const GlobalContext = createContext<Config>(null as any)
+export const GlobalContext = createContext<Config>(null as never)
 export const useGlobalContext: () => Config = () => useContext(GlobalContext)
 
 const rootRoute = new RootRoute({

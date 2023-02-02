@@ -15,7 +15,7 @@ export interface FoodModel {
 	readonly state: 'expired' | 'ok' | 'check'
 }
 
-export interface FoodsPageModel {
+export interface FoodPageModel {
 	readonly foods: ReadonlyMap<FoodModel['id'], FoodModel>
 }
 
@@ -32,7 +32,7 @@ export interface FoodsPageData {
 
 export const foodsPageTransformer: (
 	obs: Observable<FoodsPageData>
-) => Observable<FoodsPageModel> = flow(
+) => Observable<FoodPageModel> = flow(
 	O.bindTo('data'),
 	O.bind('now', () => O.fromIO(D.create)),
 	O.map(({ data, now }) =>

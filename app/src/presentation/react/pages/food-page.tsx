@@ -12,8 +12,8 @@ import {
 	FoodIdEq,
 	FoodIdOrd,
 	FoodModel,
-	FoodsPageModel
-} from '@/application/read/foods-page'
+	FoodPageModel
+} from '@/application/read/food-page'
 
 import { useGlobalContext } from '@/presentation/react'
 import { AddFab } from '@/presentation/react/ui/fab-add-button'
@@ -26,7 +26,7 @@ interface FoodState {
 	readonly id: FoodModel['id']
 }
 
-interface FoodsPageState {
+interface FoodPageState {
 	readonly loading: boolean
 	readonly foods: {
 		readonly byId: ReadonlyMap<FoodState['id'], FoodState>
@@ -37,8 +37,8 @@ interface FoodsPageState {
 }
 
 const loadFoodPage =
-	(model: FoodsPageModel) =>
-	(state: FoodsPageState): FoodsPageState => {
+	(model: FoodPageModel) =>
+	(state: FoodPageState): FoodPageState => {
 		const foods = pipe(
 			model.foods,
 			RoM.map(({ name, id }) => ({
@@ -67,7 +67,7 @@ const loadFoodPage =
 		}
 	}
 
-const init: FoodsPageState = {
+const init: FoodPageState = {
 	loading: true,
 	foods: {
 		byId: new Map(),
@@ -79,7 +79,7 @@ const init: FoodsPageState = {
 
 const enqueueDeleteFoodItem =
 	(id: FoodState['id']) =>
-	(state: FoodsPageState): FoodsPageState => {
+	(state: FoodPageState): FoodPageState => {
 		const indexed = pipe(
 			state.foods.byId,
 			RoM.modifyAt(FoodIdEq)(id, item => ({
@@ -106,7 +106,7 @@ const enqueueDeleteFoodItem =
 		}
 	}
 
-const deleteFoodItems = (state: FoodsPageState): FoodsPageState => {
+const deleteFoodItems = (state: FoodPageState): FoodPageState => {
 	if (state.foods.deleting.size <= 0) {
 		return state
 	}
@@ -191,7 +191,7 @@ interface VirtualFoodState {
 }
 
 export function FoodsPage(): JSX.Element {
-	const [state, setState] = useState<FoodsPageState>(() => init)
+	const [state, setState] = useState<FoodPageState>(() => init)
 
 	const {
 		useCases: { foodsPageModel$ },
