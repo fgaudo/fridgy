@@ -9,7 +9,7 @@
 	"author": "",
 	"license": "ISC",
 	"devDependencies": {
-		"@trivago/prettier-plugin-sort-imports": "^4.0.0",
+		"@trivago/prettier-plugin-sort-imports": "*",
 		"@types/react": "*",
 		"@types/react-dom": "*",
 		"@typescript-eslint/eslint-plugin": "*",
@@ -29,9 +29,9 @@
 	"dependencies": {
 		"@headlessui/react": "*",
 		"@heroicons/react": "*",
-		"@tanstack/react-router": "0.0.1-beta.62",
-		"@tanstack/react-virtual": "3.0.0-beta.41",
-		"@tanstack/virtual-core": "3.0.0-beta.41",
+		"@tanstack/react-router": "beta",
+		"@tanstack/react-virtual": "beta",
+		"@tanstack/virtual-core": "beta",
 		"dexie": "*",
 		"fp-ts": "*",
 		"fp-ts-rxjs": "*",

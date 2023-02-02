@@ -1,5 +1,4 @@
 import * as O from 'fp-ts-rxjs/Observable'
-import * as RO from 'fp-ts-rxjs/ReaderObservable'
 import * as D from 'fp-ts/Date'
 import * as RoM from 'fp-ts/ReadonlyMap'
 import { flow, pipe } from 'fp-ts/function'

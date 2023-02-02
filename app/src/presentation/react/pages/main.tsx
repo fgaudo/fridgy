@@ -20,18 +20,15 @@ import { Transition } from '@/presentation/react/ui/transition'
 interface FoodItemState {
 	readonly name: string
 	readonly id: string
-	readonly selected: boolean
-	readonly removed: boolean
-	readonly deleting: boolean
 }
 
 interface FoodsPageState {
-	readonly deleting: ReadonlySet<string>
 	readonly loading: boolean
-	readonly selected: ReadonlySet<string>
 	readonly foods: {
-		readonly indexed: ReadonlyMap<FoodItemState['id'], FoodItemState>
+		readonly byId: ReadonlyMap<FoodItemState['id'], FoodItemState>
 		readonly sorted: ReadonlyArray<FoodItemState['id']>
+		readonly deleting: ReadonlySet<FoodItemState['id']>
+		readonly selected: ReadonlySet<FoodItemState['id']>
 	}
 }
 
@@ -44,8 +41,7 @@ const loadFoodPage =
 				name,
 				id,
 				deleting: false,
-				selected: false,
-				removed: false
+				selected: false
 			}))
 		)
 
@@ -56,26 +52,26 @@ const loadFoodPage =
 		)
 
 		return {
-			deleting: state.deleting,
 			loading: false,
-			selected: pipe(
-				state.selected,
-				RoS.filter(id => RoM.member(S.Eq)(id)(model.foods))
-			),
 			foods: {
-				indexed: foods,
-				sorted: foodsIndexed
+				byId: foods,
+				sorted: foodsIndexed,
+				selected: pipe(
+					state.foods.selected,
+					RoS.filter(id => RoM.member(S.Eq)(id)(model.foods))
+				),
+				deleting: state.foods.deleting
 			}
 		}
 	}
 
 const init: FoodsPageState = {
-	deleting: new Set(),
 	loading: true,
-	selected: new Set(),
 	foods: {
-		indexed: new Map(),
-		sorted: []
+		byId: new Map(),
+		sorted: [],
+		deleting: new Set(),
+		selected: new Set()
 	}
 }
 
@@ -83,31 +79,31 @@ const enqueueDeleteFoodItem =
 	(id: string) =>
 	(state: FoodsPageState): FoodsPageState => {
 		const indexed = pipe(
-			state.foods.indexed,
+			state.foods.byId,
 			RoM.modifyAt(S.Eq)(id, item => ({
 				...item,
 				deleting: true
 			})),
-			Opt.getOrElse(() => state.foods.indexed)
+			Opt.getOrElse(() => state.foods.byId)
 		)
 
 		const sorted = pipe(indexed, RoM.toReadonlyArray(S.Ord), RoA.map(RoT.fst))
 
 		return {
 			...state,
-			deleting: pipe(state.deleting, RoS.insert(S.Eq)(id)),
 			foods: {
 				...state.foods,
-				indexed,
-				sorted
+				byId: indexed,
+				sorted,
+				deleting: pipe(state.foods.deleting, RoS.insert(S.Eq)(id))
 			}
 		}
 	}
 
 const deleteFoodItems = (state: FoodsPageState): FoodsPageState => {
 	const indexed = pipe(
-		state.deleting,
-		RoS.reduce(S.Ord)(state.foods.indexed, (map, id) =>
+		state.foods.deleting,
+		RoS.reduce(S.Ord)(state.foods.byId, (map, id) =>
 			pipe(map, RoM.deleteAt(S.Eq)(id))
 		)
 	)
@@ -116,19 +112,20 @@ const deleteFoodItems = (state: FoodsPageState): FoodsPageState => {
 
 	return {
 		...state,
-		deleting: new Set(),
 		foods: {
 			...state.foods,
-			indexed,
-			sorted
+			byId: indexed,
+			sorted,
+			deleting: new Set()
 		}
 	}
 }
 
-type VirtualItemState = {
-	virtual: VirtualItem
-	food: FoodItemState
-	deletingItemsNumber: number
+interface VirtualFoodState {
+	readonly food: FoodItemState
+	readonly size: number
+	readonly position: number
+	readonly isDeleting: boolean
 }
 
 export function FoodsPage(): JSX.Element {
@@ -142,7 +139,7 @@ export function FoodsPage(): JSX.Element {
 	useSubscription(foodsPageModel$, flow(loadFoodPage, setState))
 
 	const rowVirtualizer = useWindowVirtualizer({
-		count: state.foods.indexed.size,
+		count: state.foods.byId.size,
 		estimateSize: () => 90,
 		overscan: 10
 	})
@@ -150,48 +147,58 @@ export function FoodsPage(): JSX.Element {
 	const onSwipeRight = flow(enqueueDeleteFoodItem, setState)
 
 	useEffect(() => {
-		if (RoS.size(state.deleting) <= 0) {
+		if (RoS.size(state.foods.deleting) <= 0) {
 			return
 		}
 
 		const timeout = setTimeout(() => pipe(deleteFoodItems, setState), 1000)
 
 		return () => clearTimeout(timeout)
-	}, [state.deleting.size > 0])
+	}, [state.foods.deleting.size > 0])
 
 	const partitionedFoods = pipe(
 		rowVirtualizer.getVirtualItems(),
-		RoA.reduce<VirtualItem, [number, VirtualItemState[]]>(
+		RoA.reduce<VirtualItem, [number, readonly VirtualFoodState[]]>(
 			[0, []],
 			([deletingItemsNumber, items], item) =>
 				pipe(
 					state.foods.sorted,
 					RoA.lookup(item.index),
-					Opt.chain(id => pipe(state.foods.indexed, RoM.lookup(S.Eq)(id))),
-					Opt.map(food =>
-						food.deleting
+					Opt.chain(id => pipe(state.foods.byId, RoM.lookup(S.Eq)(id))),
+					Opt.map(
+						food =>
+							[
+								food,
+								pipe(state.foods.deleting, RoS.elem(S.Eq)(food.id))
+							] as const
+					),
+					Opt.map(([food, isDeleting]) =>
+						isDeleting
 							? ([
 									deletingItemsNumber + 1,
-									[
-										...items,
-										{
-											virtual: item,
+									pipe(
+										items,
+										RoA.append({
+											isDeleting: isDeleting as boolean,
+											size: item.start,
 											food,
-											deletingItemsNumber: deletingItemsNumber + 1
-										}
-									]
-							  ] as [number, VirtualItemState[]])
+											position:
+												item.start - item.size * (deletingItemsNumber + 1)
+										})
+									)
+							  ] as [number, readonly VirtualFoodState[]])
 							: ([
 									deletingItemsNumber,
-									[
-										...items,
-										{
-											virtual: item,
+									pipe(
+										items,
+										RoA.append({
+											isDeleting: isDeleting as boolean,
+											size: item.start,
 											food,
-											deletingItemsNumber
-										}
-									]
-							  ] as [number, VirtualItemState[]])
+											position: item.start - item.size * deletingItemsNumber
+										})
+									)
+							  ] as [number, readonly VirtualFoodState[]])
 					),
 					Opt.getOrElse(() => [deletingItemsNumber, items])
 				)
@@ -209,14 +216,11 @@ export function FoodsPage(): JSX.Element {
 					}}
 					className={`relative w-full overflow-hidden pt-14`}>
 					{partitionedFoods.map(element =>
-						element.food.deleting ? (
+						element.isDeleting ? (
 							<li
 								key={element.food.id}
 								style={{
-									transform: `translateY(${
-										element.virtual.start -
-										element.deletingItemsNumber * element.virtual.size
-									}px)`
+									transform: `translateY(${element.position}px)`
 								}}
 								className="absolute top-0 left-0 h-0 w-full transition-transform duration-1000">
 								<div className="translate-x-[2000px] transition-transform duration-[1200ms] ">
@@ -240,11 +244,8 @@ export function FoodsPage(): JSX.Element {
 							<li
 								key={element.food.id}
 								style={{
-									height: element.virtual.size,
-									transform: `translateY(${
-										element.virtual.start -
-										element.deletingItemsNumber * element.virtual.size
-									}px)`
+									height: element.size,
+									transform: `translateY(${element.position}px)`
 								}}
 								className={`absolute top-0 left-0 w-full transition-transform duration-1000`}>
 								<div className="translate-x-0 transition-transform duration-500 ">
