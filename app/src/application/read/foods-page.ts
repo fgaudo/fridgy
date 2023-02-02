@@ -4,25 +4,26 @@ import * as RoM from 'fp-ts/ReadonlyMap'
 import { flow, pipe } from 'fp-ts/function'
 import { Observable } from 'rxjs'
 
-import { expirationStatus } from '@/domain/food'
+import { Food, expirationStatus } from '@/domain/food'
+
+export { FoodIdEq, FoodIdOrd } from '@/domain/food'
+
+export interface FoodModel {
+	readonly id: Food['id']
+	readonly name: string
+	readonly expDate: Date
+	readonly state: 'expired' | 'ok' | 'check'
+}
 
 export interface FoodsPageModel {
-	readonly foods: ReadonlyMap<
-		string,
-		Readonly<{
-			id: string
-			name: string
-			expDate: Date
-			state: 'expired' | 'ok' | 'check'
-		}>
-	>
+	readonly foods: ReadonlyMap<FoodModel['id'], FoodModel>
 }
 
 export interface FoodsPageData {
 	readonly foods: ReadonlyMap<
-		string,
+		Food['id'],
 		Readonly<{
-			id: string
+			id: Food['id']
 			name: string
 			expDate: Date
 		}>

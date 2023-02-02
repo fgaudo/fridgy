@@ -5,11 +5,15 @@ import * as RoM from 'fp-ts/ReadonlyMap'
 import * as RoS from 'fp-ts/ReadonlySet'
 import * as RoT from 'fp-ts/ReadonlyTuple'
 import { flow, pipe } from 'fp-ts/function'
-import * as S from 'fp-ts/string'
 import { useSubscription } from 'observable-hooks'
-import { useEffect, useState } from 'react'
+import { useMemo, useState } from 'react'
 
-import { FoodsPageModel } from '@/application/read/foods-page'
+import {
+	FoodIdEq,
+	FoodIdOrd,
+	FoodModel,
+	FoodsPageModel
+} from '@/application/read/foods-page'
 
 import { useGlobalContext } from '@/presentation/react'
 import { AddFab } from '@/presentation/react/ui/fab-add-button'
@@ -17,18 +21,18 @@ import { Swipable } from '@/presentation/react/ui/swipable'
 import { Title } from '@/presentation/react/ui/title'
 import { Transition } from '@/presentation/react/ui/transition'
 
-interface FoodItemState {
+interface FoodState {
 	readonly name: string
-	readonly id: string
+	readonly id: FoodModel['id']
 }
 
 interface FoodsPageState {
 	readonly loading: boolean
 	readonly foods: {
-		readonly byId: ReadonlyMap<FoodItemState['id'], FoodItemState>
-		readonly sorted: ReadonlyArray<FoodItemState['id']>
-		readonly deleting: ReadonlySet<FoodItemState['id']>
-		readonly selected: ReadonlySet<FoodItemState['id']>
+		readonly byId: ReadonlyMap<FoodState['id'], FoodState>
+		readonly sorted: ReadonlyArray<FoodState['id']>
+		readonly deleting: ReadonlySet<FoodState['id']>
+		readonly selected: ReadonlySet<FoodState['id']>
 	}
 }
 
@@ -39,15 +43,13 @@ const loadFoodPage =
 			model.foods,
 			RoM.map(({ name, id }) => ({
 				name,
-				id,
-				deleting: false,
-				selected: false
+				id
 			}))
 		)
 
 		const foodsIndexed = pipe(
 			foods,
-			RoM.toReadonlyArray(S.Ord),
+			RoM.toReadonlyArray(FoodIdOrd),
 			RoA.map(RoT.fst)
 		)
 
@@ -58,7 +60,7 @@ const loadFoodPage =
 				sorted: foodsIndexed,
 				selected: pipe(
 					state.foods.selected,
-					RoS.filter(id => RoM.member(S.Eq)(id)(model.foods))
+					RoS.filter(id => RoM.member(FoodIdEq)(id)(model.foods))
 				),
 				deleting: state.foods.deleting
 			}
@@ -76,18 +78,22 @@ const init: FoodsPageState = {
 }
 
 const enqueueDeleteFoodItem =
-	(id: string) =>
+	(id: FoodState['id']) =>
 	(state: FoodsPageState): FoodsPageState => {
 		const indexed = pipe(
 			state.foods.byId,
-			RoM.modifyAt(S.Eq)(id, item => ({
+			RoM.modifyAt(FoodIdEq)(id, item => ({
 				...item,
 				deleting: true
 			})),
 			Opt.getOrElse(() => state.foods.byId)
 		)
 
-		const sorted = pipe(indexed, RoM.toReadonlyArray(S.Ord), RoA.map(RoT.fst))
+		const sorted = pipe(
+			indexed,
+			RoM.toReadonlyArray(FoodIdOrd),
+			RoA.map(RoT.fst)
+		)
 
 		return {
 			...state,
@@ -95,20 +101,24 @@ const enqueueDeleteFoodItem =
 				...state.foods,
 				byId: indexed,
 				sorted,
-				deleting: pipe(state.foods.deleting, RoS.insert(S.Eq)(id))
+				deleting: pipe(state.foods.deleting, RoS.insert(FoodIdEq)(id))
 			}
 		}
 	}
 
 const deleteFoodItems = (state: FoodsPageState): FoodsPageState => {
+	if (state.foods.deleting.size <= 0) {
+		return state
+	}
+
 	const indexed = pipe(
 		state.foods.deleting,
-		RoS.reduce(S.Ord)(state.foods.byId, (map, id) =>
-			pipe(map, RoM.deleteAt(S.Eq)(id))
+		RoS.reduce(FoodIdOrd)(state.foods.byId, (map, id) =>
+			pipe(map, RoM.deleteAt(FoodIdEq)(id))
 		)
 	)
 
-	const sorted = pipe(indexed, RoM.toReadonlyArray(S.Ord), RoA.map(RoT.fst))
+	const sorted = pipe(indexed, RoM.toReadonlyArray(FoodIdOrd), RoA.map(RoT.fst))
 
 	return {
 		...state,
@@ -121,56 +131,23 @@ const deleteFoodItems = (state: FoodsPageState): FoodsPageState => {
 	}
 }
 
-interface VirtualFoodState {
-	readonly food: FoodItemState
-	readonly size: number
-	readonly position: number
-	readonly isDeleting: boolean
-}
-
-export function FoodsPage(): JSX.Element {
-	const [state, setState] = useState<FoodsPageState>(() => init)
-
-	const {
-		useCases: { foodsPageModel$ },
-		title
-	} = useGlobalContext()
-
-	useSubscription(foodsPageModel$, flow(loadFoodPage, setState))
-
-	const rowVirtualizer = useWindowVirtualizer({
-		count: state.foods.byId.size,
-		estimateSize: () => 90,
-		overscan: 10
-	})
-
-	const onSwipeRight = flow(enqueueDeleteFoodItem, setState)
-
-	useEffect(() => {
-		if (RoS.size(state.foods.deleting) <= 0) {
-			return
-		}
-
-		const timeout = setTimeout(() => pipe(deleteFoodItems, setState), 1000)
-
-		return () => clearTimeout(timeout)
-	}, [state.foods.deleting.size > 0])
-
-	const partitionedFoods = pipe(
-		rowVirtualizer.getVirtualItems(),
+const createVirtualFoodItems = (
+	items: readonly VirtualItem[],
+	sorted: ReadonlyArray<FoodState['id']>,
+	deleting: ReadonlySet<FoodState['id']>,
+	byId: ReadonlyMap<FoodState['id'], FoodState>
+): readonly VirtualFoodState[] =>
+	pipe(
+		items,
 		RoA.reduce<VirtualItem, [number, readonly VirtualFoodState[]]>(
 			[0, []],
 			([deletingItemsNumber, items], item) =>
 				pipe(
-					state.foods.sorted,
+					sorted,
 					RoA.lookup(item.index),
-					Opt.chain(id => pipe(state.foods.byId, RoM.lookup(S.Eq)(id))),
+					Opt.chain(id => pipe(byId, RoM.lookup(FoodIdEq)(id))),
 					Opt.map(
-						food =>
-							[
-								food,
-								pipe(state.foods.deleting, RoS.elem(S.Eq)(food.id))
-							] as const
+						food => [food, pipe(deleting, RoS.elem(FoodIdEq)(food.id))] as const
 					),
 					Opt.map(([food, isDeleting]) =>
 						isDeleting
@@ -204,6 +181,49 @@ export function FoodsPage(): JSX.Element {
 				)
 		),
 		RoT.snd
+	)
+
+interface VirtualFoodState {
+	readonly food: FoodState
+	readonly size: number
+	readonly position: number
+	readonly isDeleting: boolean
+}
+
+export function FoodsPage(): JSX.Element {
+	const [state, setState] = useState<FoodsPageState>(() => init)
+
+	const {
+		useCases: { foodsPageModel$ },
+		title
+	} = useGlobalContext()
+
+	useSubscription(foodsPageModel$, flow(loadFoodPage, setState))
+
+	const rowVirtualizer = useWindowVirtualizer({
+		count: state.foods.byId.size,
+		estimateSize: () => 90,
+		overscan: 10 + state.foods.deleting.size
+	})
+
+	const onSwipeRight = (id: FoodState['id']) => {
+		pipe(id, enqueueDeleteFoodItem, setState)
+
+		// @TODO needed for the time being
+		setTimeout(() => pipe(deleteFoodItems, setState), 1000)
+	}
+
+	const items = rowVirtualizer.getVirtualItems()
+
+	const partitionedFoods = useMemo(
+		() =>
+			createVirtualFoodItems(
+				items,
+				state.foods.sorted,
+				state.foods.deleting,
+				state.foods.byId
+			),
+		[items, state.foods.sorted, state.foods.deleting, state.foods.byId]
 	)
 
 	return (

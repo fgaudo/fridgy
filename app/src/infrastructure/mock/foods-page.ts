@@ -6,7 +6,7 @@ const foods = ['Milk', 'Meat', 'Yogurt', 'Eggs', 'Salad', 'Carrots']
 
 const map: FoodsPageData = {
 	foods: new Map(
-		[...Array(10000).keys()].map(k => [
+		[...Array(100000).keys()].map(k => [
 			`${k}`,
 			{
 				name: `${foods[Math.floor(Math.random() * 6)]}`,
