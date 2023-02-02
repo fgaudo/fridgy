@@ -1,4 +1,4 @@
-import { useWindowVirtualizer } from '@tanstack/react-virtual'
+import { VirtualItem, useWindowVirtualizer } from '@tanstack/react-virtual'
 import * as Opt from 'fp-ts/Option'
 import * as RoA from 'fp-ts/ReadonlyArray'
 import * as RoM from 'fp-ts/ReadonlyMap'
@@ -125,6 +125,12 @@ const deleteFoodItems = (state: FoodsPageState): FoodsPageState => {
 	}
 }
 
+type VirtualItemState = {
+	virtual: VirtualItem
+	food: FoodItemState
+	deletingItemsNumber: number
+}
+
 export function FoodsPage(): JSX.Element {
 	const [state, setState] = useState<FoodsPageState>(() => init)
 
@@ -153,23 +159,44 @@ export function FoodsPage(): JSX.Element {
 		return () => clearTimeout(timeout)
 	}, [state.deleting.size > 0])
 
-	let times = 0
 	const partitionedFoods = pipe(
 		rowVirtualizer.getVirtualItems(),
-		RoA.filterMap(item => {
-			const foodItem = pipe(
-				state.foods.sorted,
-				RoA.lookup(item.index),
-				Opt.chain(id => pipe(state.foods.indexed, RoM.lookup(S.Eq)(id))),
-				Opt.map(food => ({
-					virtual: item,
-					food,
-					times: food.deleting ? ++times : times
-				}))
-			)
-
-			return foodItem
-		})
+		RoA.reduce<VirtualItem, [number, VirtualItemState[]]>(
+			[0, []],
+			([deletingItemsNumber, items], item) =>
+				pipe(
+					state.foods.sorted,
+					RoA.lookup(item.index),
+					Opt.chain(id => pipe(state.foods.indexed, RoM.lookup(S.Eq)(id))),
+					Opt.map(food =>
+						food.deleting
+							? ([
+									deletingItemsNumber + 1,
+									[
+										...items,
+										{
+											virtual: item,
+											food,
+											deletingItemsNumber: deletingItemsNumber + 1
+										}
+									]
+							  ] as [number, VirtualItemState[]])
+							: ([
+									deletingItemsNumber,
+									[
+										...items,
+										{
+											virtual: item,
+											food,
+											deletingItemsNumber
+										}
+									]
+							  ] as [number, VirtualItemState[]])
+					),
+					Opt.getOrElse(() => [deletingItemsNumber, items])
+				)
+		),
+		RoT.snd
 	)
 
 	return (
@@ -186,11 +213,13 @@ export function FoodsPage(): JSX.Element {
 							<li
 								key={element.food.id}
 								style={{
-									height: 0,
-									transform: `translateY(${element.virtual.start}px)`
+									transform: `translateY(${
+										element.virtual.start -
+										element.deletingItemsNumber * element.virtual.size
+									}px)`
 								}}
-								className={`absolute top-0 left-0 w-full transition duration-1000`}>
-								<div className="translate-x-[2000px] transition-transform duration-500 ">
+								className="absolute top-0 left-0 h-0 w-full transition-transform duration-1000">
+								<div className="translate-x-[2000px] transition-transform duration-[1200ms] ">
 									<Swipable>
 										<div className="mx-2 mb-2 h-[70px] bg-white p-3 shadow-md sm:pb-4">
 											<div className="flex items-center space-x-4">
@@ -213,10 +242,11 @@ export function FoodsPage(): JSX.Element {
 								style={{
 									height: element.virtual.size,
 									transform: `translateY(${
-										element.virtual.start - element.times * element.virtual.size
+										element.virtual.start -
+										element.deletingItemsNumber * element.virtual.size
 									}px)`
 								}}
-								className={`absolute top-0 left-0 w-full transition duration-1000`}>
+								className={`absolute top-0 left-0 w-full transition-transform duration-1000`}>
 								<div className="translate-x-0 transition-transform duration-500 ">
 									<Swipable onRight={() => onSwipeRight?.(element.food.id)}>
 										<div className="mx-2 mb-2 h-[70px] bg-white p-3 shadow-md sm:pb-4">

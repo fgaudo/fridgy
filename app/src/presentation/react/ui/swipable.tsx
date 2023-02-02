@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 
+const TRIGGER_PERCENTAGE = 0.3
+
 export const Swipable = (props: {
 	onRight?: () => void
 	onLeft?: () => void
@@ -52,7 +54,7 @@ export const Swipable = (props: {
 				return
 			}
 
-			if (e.x - state.mouseX > rect.width * 0.35) {
+			if (e.x - state.mouseX > rect.width * TRIGGER_PERCENTAGE) {
 				setState(state => ({ ...state, dragging: false }))
 				document.removeEventListener('mousemove', drag)
 
@@ -60,7 +62,7 @@ export const Swipable = (props: {
 				return
 			}
 
-			if (state.mouseX - e.x > rect.width * 0.35) {
+			if (state.mouseX - e.x > rect.width * TRIGGER_PERCENTAGE) {
 				setState(state => ({ ...state, dragging: false }))
 				document.removeEventListener('mousemove', drag)
 
