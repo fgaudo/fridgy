@@ -1,10 +1,11 @@
 import * as D from 'fp-ts/Date'
-import * as S from 'fp-ts/string'
 import * as Ord from 'fp-ts/Ord'
+import { Eq } from 'fp-ts/lib/Eq'
+import * as S from 'fp-ts/string'
 
-export const FoodIdEq = S.Eq
-export const FoodIdOrd = <Ord.Ord<string>>Ord.trivial
 type FoodId = string
+export const FoodIdEq: Eq<FoodId> = S.Eq
+export const FoodIdOrd: Ord.Ord<FoodId> = Ord.trivial
 
 export interface Food {
 	readonly id: FoodId

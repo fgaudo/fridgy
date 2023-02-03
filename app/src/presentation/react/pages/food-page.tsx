@@ -131,6 +131,13 @@ const deleteFoodItems = (state: FoodPageState): FoodPageState => {
 	}
 }
 
+interface VirtualFoodState {
+	readonly food: FoodState
+	readonly size: number
+	readonly position: number
+	readonly isDeleting: boolean
+}
+
 const createVirtualFoodItems = (
 	items: readonly VirtualItem[],
 	sorted: ReadonlyArray<FoodState['id']>,
@@ -139,56 +146,53 @@ const createVirtualFoodItems = (
 ): readonly VirtualFoodState[] =>
 	pipe(
 		items,
-		RoA.reduce<VirtualItem, [number, readonly VirtualFoodState[]]>(
-			[0, []],
-			([deletingItemsNumber, items], item) =>
-				pipe(
-					sorted,
-					RoA.lookup(item.index),
-					Opt.chain(id => pipe(byId, RoM.lookup(FoodIdEq)(id))),
-					Opt.map(
-						food => [food, pipe(deleting, RoS.elem(FoodIdEq)(food.id))] as const
-					),
-					Opt.map(([food, isDeleting]) =>
-						isDeleting
-							? ([
-									deletingItemsNumber + 1,
-									pipe(
-										items,
-										RoA.append({
-											isDeleting: isDeleting as boolean,
-											size: item.start,
-											food,
-											position:
-												item.start - item.size * (deletingItemsNumber + 1)
-										})
-									)
-							  ] as [number, readonly VirtualFoodState[]])
-							: ([
-									deletingItemsNumber,
-									pipe(
-										items,
-										RoA.append({
-											isDeleting: isDeleting as boolean,
-											size: item.start,
-											food,
-											position: item.start - item.size * deletingItemsNumber
-										})
-									)
-							  ] as [number, readonly VirtualFoodState[]])
-					),
-					Opt.getOrElse(() => [deletingItemsNumber, items])
-				)
+		RoA.reduce<
+			VirtualItem,
+			Readonly<{
+				itemsToBeDeleted: number
+				items: readonly VirtualFoodState[]
+			}>
+		>({ itemsToBeDeleted: 0, items: [] }, (state, item) =>
+			pipe(
+				sorted,
+				RoA.lookup(item.index),
+				Opt.bind('food', id => pipe(byId, RoM.lookup(FoodIdEq)(id))),
+				Opt.bind('isDeleting', ({ food }) =>
+					pipe(deleting, RoS.elem(FoodIdEq)(food.id), Opt.of)
+				),
+				Opt.map(({ food, isDeleting }) =>
+					isDeleting
+						? {
+								itemsToBeDeleted: state.itemsToBeDeleted + 1,
+								items: pipe(
+									state.items,
+									RoA.append({
+										isDeleting: isDeleting as boolean,
+										size: item.start,
+										food,
+										position:
+											item.start - item.size * (state.itemsToBeDeleted + 1)
+									})
+								)
+						  }
+						: {
+								itemsToBeDeleted: state.itemsToBeDeleted,
+								items: pipe(
+									state.items,
+									RoA.append({
+										isDeleting: isDeleting as boolean,
+										size: item.start,
+										food,
+										position: item.start - item.size * state.itemsToBeDeleted
+									})
+								)
+						  }
+				),
+				Opt.getOrElse(() => state)
+			)
 		),
-		RoT.snd
+		({ items }) => items
 	)
-
-interface VirtualFoodState {
-	readonly food: FoodState
-	readonly size: number
-	readonly position: number
-	readonly isDeleting: boolean
-}
 
 export function FoodsPage(): JSX.Element {
 	const [state, setState] = useState<FoodPageState>(() => init)
@@ -215,7 +219,7 @@ export function FoodsPage(): JSX.Element {
 
 	const items = rowVirtualizer.getVirtualItems()
 
-	const partitionedFoods = useMemo(
+	const virtualFoods = useMemo(
 		() =>
 			createVirtualFoodItems(
 				items,
@@ -235,7 +239,7 @@ export function FoodsPage(): JSX.Element {
 						height: rowVirtualizer.getTotalSize()
 					}}
 					className={`relative w-full overflow-hidden pt-14`}>
-					{partitionedFoods.map(element =>
+					{virtualFoods.map(element =>
 						element.isDeleting ? (
 							<li
 								key={element.food.id}
