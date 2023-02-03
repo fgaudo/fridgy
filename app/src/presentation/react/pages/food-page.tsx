@@ -7,7 +7,7 @@ import * as RoS from 'fp-ts/ReadonlySet'
 import * as RoT from 'fp-ts/ReadonlyTuple'
 import { flow, pipe } from 'fp-ts/function'
 import { useSubscription } from 'observable-hooks'
-import { Reducer, useMemo, useReducer } from 'react'
+import { useMemo, useReducer } from 'react'
 
 import {
 	FoodIdEq,
@@ -108,18 +108,18 @@ const createVirtualFoodItems = (
 type Action =
 	| { type: 'loadPage'; model: FoodPageModel }
 	| { type: 'enqueueFoodDeletion'; id: FoodState['id'] }
-	| { type: 'deleteFood' }
+	| { type: 'deleteFoods' }
 
-const reducer = (prev: FoodPageState, action: Action): FoodPageState => {
+const reducer = (state: FoodPageState, action: Action): FoodPageState => {
 	switch (action.type) {
-		case 'deleteFood':
+		case 'deleteFoods':
 			return pipe(
-				prev.foods.deleting,
-				Opt.fromPredicate(deleting => deleting.size <= 0),
+				state.foods.deleting,
+				Opt.fromPredicate(deleting => deleting.size > 0),
 				Opt.bind(
 					'byId',
 					flow(
-						RoS.reduce(FoodIdOrd)(prev.foods.byId, (map, id) =>
+						RoS.reduce(FoodIdOrd)(state.foods.byId, (map, id) =>
 							pipe(map, RoM.deleteAt(FoodIdEq)(id))
 						),
 						Opt.of
@@ -129,27 +129,27 @@ const reducer = (prev: FoodPageState, action: Action): FoodPageState => {
 					pipe(byId, RoM.toReadonlyArray(FoodIdOrd), RoA.map(RoT.fst), Opt.of)
 				),
 				Opt.map(({ byId, sorted }) => ({
-					loading: prev.loading,
+					loading: state.loading,
 					foods: {
 						byId,
 						sorted,
 						deleting: new Set<string>(),
-						selected: prev.foods.selected
+						selected: state.foods.selected
 					}
 				})),
-				Opt.getOrElse(() => prev)
+				Opt.getOrElse(() => state)
 			)
 		case 'enqueueFoodDeletion':
 			return pipe(
-				I.of(prev.foods.deleting),
+				I.of(state.foods.deleting),
 				I.map(RoS.insert(FoodIdEq)(action.id)),
 				I.map(deleting => ({
-					loading: prev.loading,
+					loading: state.loading,
 					foods: {
-						byId: prev.foods.byId,
-						sorted: prev.foods.sorted,
+						byId: state.foods.byId,
+						sorted: state.foods.sorted,
 						deleting,
-						selected: prev.foods.selected
+						selected: state.foods.selected
 					}
 				}))
 			)
@@ -170,7 +170,7 @@ const reducer = (prev: FoodPageState, action: Action): FoodPageState => {
 				),
 				I.bind('selected', () =>
 					pipe(
-						prev.foods.selected,
+						state.foods.selected,
 						RoS.filter(id => RoM.member(FoodIdEq)(id)(action.model.foods))
 					)
 				),
@@ -180,7 +180,7 @@ const reducer = (prev: FoodPageState, action: Action): FoodPageState => {
 						byId,
 						sorted,
 						selected,
-						deleting: prev.foods.deleting
+						deleting: state.foods.deleting
 					}
 				}))
 			)
@@ -188,11 +188,7 @@ const reducer = (prev: FoodPageState, action: Action): FoodPageState => {
 }
 
 export function FoodsPage(): JSX.Element {
-	const [state, dispatch] = useReducer<Reducer<FoodPageState, Action>, null>(
-		reducer,
-		null,
-		() => init
-	)
+	const [state, dispatch] = useReducer(reducer, null, () => init)
 
 	const {
 		useCases: { foodsPageModel$ },
@@ -213,7 +209,7 @@ export function FoodsPage(): JSX.Element {
 		dispatch({ type: 'enqueueFoodDeletion', id })
 
 		// @TODO needed for the time being
-		setTimeout(() => dispatch({ type: 'deleteFood' }), 1000)
+		setTimeout(() => dispatch({ type: 'deleteFoods' }), 1000)
 	}
 
 	const items = rowVirtualizer.getVirtualItems()
