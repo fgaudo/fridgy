@@ -8,7 +8,7 @@ import * as RoS from 'fp-ts/ReadonlySet'
 import * as RoT from 'fp-ts/ReadonlyTuple'
 import { flow, pipe } from 'fp-ts/function'
 import { useSubscription } from 'observable-hooks'
-import { useMemo, useState } from 'react'
+import { Reducer, useMemo, useReducer, useState } from 'react'
 
 import {
 	FoodIdEq,
@@ -38,40 +38,6 @@ interface FoodPageState {
 	}
 }
 
-const loadFoodPage =
-	(model: FoodPageModel) =>
-	(state: FoodPageState): FoodPageState =>
-		pipe(
-			I.Do,
-			I.bind('byId', () =>
-				pipe(
-					model.foods,
-					RoM.map(({ name, id }) => ({
-						name,
-						id
-					}))
-				)
-			),
-			I.bind('sorted', ({ byId }) =>
-				pipe(byId, RoM.toReadonlyArray(FoodIdOrd), RoA.map(RoT.fst))
-			),
-			I.bind('selected', () =>
-				pipe(
-					state.foods.selected,
-					RoS.filter(id => RoM.member(FoodIdEq)(id)(model.foods))
-				)
-			),
-			I.map(({ byId, sorted, selected }) => ({
-				loading: false,
-				foods: {
-					byId,
-					sorted,
-					selected,
-					deleting: state.foods.deleting
-				}
-			}))
-		)
-
 const init: FoodPageState = {
 	loading: true,
 	foods: {
@@ -82,50 +48,6 @@ const init: FoodPageState = {
 	}
 }
 
-const enqueueDeleteFoodItem =
-	(id: FoodState['id']) =>
-	(state: FoodPageState): FoodPageState =>
-		pipe(
-			I.of(state.foods.deleting),
-			I.map(RoS.insert(FoodIdEq)(id)),
-			I.map(deleting => ({
-				loading: state.loading,
-				foods: {
-					byId: state.foods.byId,
-					sorted: state.foods.sorted,
-					deleting,
-					selected: state.foods.selected
-				}
-			}))
-		)
-
-const deleteFoodItems = (state: FoodPageState): FoodPageState =>
-	pipe(
-		state.foods.deleting,
-		Opt.fromPredicate(deleting => deleting.size <= 0),
-		Opt.bind(
-			'byId',
-			flow(
-				RoS.reduce(FoodIdOrd)(state.foods.byId, (map, id) =>
-					pipe(map, RoM.deleteAt(FoodIdEq)(id))
-				),
-				Opt.of
-			)
-		),
-		Opt.bind('sorted', ({ byId }) =>
-			pipe(byId, RoM.toReadonlyArray(FoodIdOrd), RoA.map(RoT.fst), Opt.of)
-		),
-		Opt.map(({ byId, sorted }) => ({
-			loading: state.loading,
-			foods: {
-				byId,
-				sorted,
-				deleting: new Set<string>(),
-				selected: state.foods.selected
-			}
-		})),
-		Opt.getOrElse(() => state)
-	)
 interface VirtualFoodState {
 	readonly food: FoodState
 	readonly size: number
@@ -184,15 +106,103 @@ const createVirtualFoodItems = (
 		I.map(({ items }) => items)
 	)
 
+type Action =
+	| { type: 'loadPage'; model: FoodPageModel }
+	| { type: 'enqueueFoodDeletion'; id: string }
+	| { type: 'deleteFood' }
+
+const reducer = (prev: FoodPageState, action: Action): FoodPageState => {
+	switch (action.type) {
+		case 'deleteFood':
+			return pipe(
+				prev.foods.deleting,
+				Opt.fromPredicate(deleting => deleting.size <= 0),
+				Opt.bind(
+					'byId',
+					flow(
+						RoS.reduce(FoodIdOrd)(prev.foods.byId, (map, id) =>
+							pipe(map, RoM.deleteAt(FoodIdEq)(id))
+						),
+						Opt.of
+					)
+				),
+				Opt.bind('sorted', ({ byId }) =>
+					pipe(byId, RoM.toReadonlyArray(FoodIdOrd), RoA.map(RoT.fst), Opt.of)
+				),
+				Opt.map(({ byId, sorted }) => ({
+					loading: prev.loading,
+					foods: {
+						byId,
+						sorted,
+						deleting: new Set<string>(),
+						selected: prev.foods.selected
+					}
+				})),
+				Opt.getOrElse(() => prev)
+			)
+		case 'enqueueFoodDeletion':
+			return pipe(
+				I.of(prev.foods.deleting),
+				I.map(RoS.insert(FoodIdEq)(action.id)),
+				I.map(deleting => ({
+					loading: prev.loading,
+					foods: {
+						byId: prev.foods.byId,
+						sorted: prev.foods.sorted,
+						deleting,
+						selected: prev.foods.selected
+					}
+				}))
+			)
+		case 'loadPage':
+			return pipe(
+				I.Do,
+				I.bind('byId', () =>
+					pipe(
+						action.model.foods,
+						RoM.map(({ name, id }) => ({
+							name,
+							id
+						}))
+					)
+				),
+				I.bind('sorted', ({ byId }) =>
+					pipe(byId, RoM.toReadonlyArray(FoodIdOrd), RoA.map(RoT.fst))
+				),
+				I.bind('selected', () =>
+					pipe(
+						prev.foods.selected,
+						RoS.filter(id => RoM.member(FoodIdEq)(id)(action.model.foods))
+					)
+				),
+				I.map(({ byId, sorted, selected }) => ({
+					loading: false,
+					foods: {
+						byId,
+						sorted,
+						selected,
+						deleting: prev.foods.deleting
+					}
+				}))
+			)
+	}
+}
+
 export function FoodsPage(): JSX.Element {
-	const [state, setState] = useState<FoodPageState>(() => init)
+	const [state, dispatch] = useReducer<Reducer<FoodPageState, Action>, null>(
+		reducer,
+		null,
+		() => init
+	)
 
 	const {
 		useCases: { foodsPageModel$ },
 		title
 	} = useGlobalContext()
 
-	useSubscription(foodsPageModel$, flow(loadFoodPage, setState))
+	useSubscription(foodsPageModel$, model =>
+		dispatch({ type: 'loadPage', model })
+	)
 
 	const rowVirtualizer = useWindowVirtualizer({
 		count: state.foods.byId.size,
@@ -201,10 +211,10 @@ export function FoodsPage(): JSX.Element {
 	})
 
 	const onSwipeRight = (id: FoodState['id']) => {
-		pipe(id, enqueueDeleteFoodItem, setState)
+		dispatch({ type: 'enqueueFoodDeletion', id })
 
 		// @TODO needed for the time being
-		setTimeout(() => pipe(deleteFoodItems, setState), 1000)
+		setTimeout(() => dispatch({ type: 'deleteFood' }), 1000)
 	}
 
 	const items = rowVirtualizer.getVirtualItems()
