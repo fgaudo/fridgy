@@ -1,5 +1,6 @@
 import { VirtualItem, useWindowVirtualizer } from '@tanstack/react-virtual'
 import * as Opt from 'fp-ts/Option'
+import * as R from 'fp-ts/Reader'
 import * as RoA from 'fp-ts/ReadonlyArray'
 import * as RoM from 'fp-ts/ReadonlyMap'
 import * as RoS from 'fp-ts/ReadonlySet'
@@ -139,19 +140,14 @@ interface VirtualFoodState {
 }
 
 const createVirtualFoodItems = (
-	items: readonly VirtualItem[],
 	sorted: ReadonlyArray<FoodState['id']>,
 	deleting: ReadonlySet<FoodState['id']>,
 	byId: ReadonlyMap<FoodState['id'], FoodState>
-): readonly VirtualFoodState[] =>
-	pipe(
-		items,
+): ((items: readonly VirtualItem[]) => readonly VirtualFoodState[]) =>
+	flow(
 		RoA.reduce<
 			VirtualItem,
-			Readonly<{
-				itemsToBeDeleted: number
-				items: readonly VirtualFoodState[]
-			}>
+			{ itemsToBeDeleted: number; items: readonly VirtualFoodState[] }
 		>({ itemsToBeDeleted: 0, items: [] }, (state, item) =>
 			pipe(
 				sorted,
@@ -221,11 +217,13 @@ export function FoodsPage(): JSX.Element {
 
 	const virtualFoods = useMemo(
 		() =>
-			createVirtualFoodItems(
+			pipe(
 				items,
-				state.foods.sorted,
-				state.foods.deleting,
-				state.foods.byId
+				createVirtualFoodItems(
+					state.foods.sorted,
+					state.foods.deleting,
+					state.foods.byId
+				)
 			),
 		[items, state.foods.sorted, state.foods.deleting, state.foods.byId]
 	)
