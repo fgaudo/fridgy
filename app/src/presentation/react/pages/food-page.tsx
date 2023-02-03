@@ -1,14 +1,13 @@
 import { VirtualItem, useWindowVirtualizer } from '@tanstack/react-virtual'
 import * as I from 'fp-ts/Identity'
 import * as Opt from 'fp-ts/Option'
-import * as R from 'fp-ts/Reader'
 import * as RoA from 'fp-ts/ReadonlyArray'
 import * as RoM from 'fp-ts/ReadonlyMap'
 import * as RoS from 'fp-ts/ReadonlySet'
 import * as RoT from 'fp-ts/ReadonlyTuple'
 import { flow, pipe } from 'fp-ts/function'
 import { useSubscription } from 'observable-hooks'
-import { Reducer, useMemo, useReducer, useState } from 'react'
+import { Reducer, useMemo, useReducer } from 'react'
 
 import {
 	FoodIdEq,
@@ -108,7 +107,7 @@ const createVirtualFoodItems = (
 
 type Action =
 	| { type: 'loadPage'; model: FoodPageModel }
-	| { type: 'enqueueFoodDeletion'; id: string }
+	| { type: 'enqueueFoodDeletion'; id: FoodState['id'] }
 	| { type: 'deleteFood' }
 
 const reducer = (prev: FoodPageState, action: Action): FoodPageState => {
