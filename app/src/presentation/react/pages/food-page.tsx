@@ -1,4 +1,5 @@
 import { VirtualItem, useWindowVirtualizer } from '@tanstack/react-virtual'
+import * as I from 'fp-ts/Identity'
 import * as Opt from 'fp-ts/Option'
 import * as R from 'fp-ts/Reader'
 import * as RoA from 'fp-ts/ReadonlyArray'
@@ -39,34 +40,37 @@ interface FoodPageState {
 
 const loadFoodPage =
 	(model: FoodPageModel) =>
-	(state: FoodPageState): FoodPageState => {
-		const foods = pipe(
-			model.foods,
-			RoM.map(({ name, id }) => ({
-				name,
-				id
-			}))
-		)
-
-		const foodsIndexed = pipe(
-			foods,
-			RoM.toReadonlyArray(FoodIdOrd),
-			RoA.map(RoT.fst)
-		)
-
-		return {
-			loading: false,
-			foods: {
-				byId: foods,
-				sorted: foodsIndexed,
-				selected: pipe(
+	(state: FoodPageState): FoodPageState =>
+		pipe(
+			I.Do,
+			I.bind('byId', () =>
+				pipe(
+					model.foods,
+					RoM.map(({ name, id }) => ({
+						name,
+						id
+					}))
+				)
+			),
+			I.bind('sorted', ({ byId }) =>
+				pipe(byId, RoM.toReadonlyArray(FoodIdOrd), RoA.map(RoT.fst))
+			),
+			I.bind('selected', () =>
+				pipe(
 					state.foods.selected,
 					RoS.filter(id => RoM.member(FoodIdEq)(id)(model.foods))
-				),
-				deleting: state.foods.deleting
-			}
-		}
-	}
+				)
+			),
+			I.map(({ byId, sorted, selected }) => ({
+				loading: false,
+				foods: {
+					byId,
+					sorted,
+					selected,
+					deleting: state.foods.deleting
+				}
+			}))
+		)
 
 const init: FoodPageState = {
 	loading: true,
@@ -80,58 +84,48 @@ const init: FoodPageState = {
 
 const enqueueDeleteFoodItem =
 	(id: FoodState['id']) =>
-	(state: FoodPageState): FoodPageState => {
-		const indexed = pipe(
-			state.foods.byId,
-			RoM.modifyAt(FoodIdEq)(id, item => ({
-				...item,
-				deleting: true
-			})),
-			Opt.getOrElse(() => state.foods.byId)
+	(state: FoodPageState): FoodPageState =>
+		pipe(
+			I.of(state.foods.deleting),
+			I.map(RoS.insert(FoodIdEq)(id)),
+			I.map(deleting => ({
+				loading: state.loading,
+				foods: {
+					byId: state.foods.byId,
+					sorted: state.foods.sorted,
+					deleting,
+					selected: state.foods.selected
+				}
+			}))
 		)
 
-		const sorted = pipe(
-			indexed,
-			RoM.toReadonlyArray(FoodIdOrd),
-			RoA.map(RoT.fst)
-		)
-
-		return {
-			...state,
-			foods: {
-				...state.foods,
-				byId: indexed,
-				sorted,
-				deleting: pipe(state.foods.deleting, RoS.insert(FoodIdEq)(id))
-			}
-		}
-	}
-
-const deleteFoodItems = (state: FoodPageState): FoodPageState => {
-	if (state.foods.deleting.size <= 0) {
-		return state
-	}
-
-	const indexed = pipe(
+const deleteFoodItems = (state: FoodPageState): FoodPageState =>
+	pipe(
 		state.foods.deleting,
-		RoS.reduce(FoodIdOrd)(state.foods.byId, (map, id) =>
-			pipe(map, RoM.deleteAt(FoodIdEq)(id))
-		)
+		Opt.fromPredicate(deleting => deleting.size <= 0),
+		Opt.bind(
+			'byId',
+			flow(
+				RoS.reduce(FoodIdOrd)(state.foods.byId, (map, id) =>
+					pipe(map, RoM.deleteAt(FoodIdEq)(id))
+				),
+				Opt.of
+			)
+		),
+		Opt.bind('sorted', ({ byId }) =>
+			pipe(byId, RoM.toReadonlyArray(FoodIdOrd), RoA.map(RoT.fst), Opt.of)
+		),
+		Opt.map(({ byId, sorted }) => ({
+			loading: state.loading,
+			foods: {
+				byId,
+				sorted,
+				deleting: new Set<string>(),
+				selected: state.foods.selected
+			}
+		})),
+		Opt.getOrElse(() => state)
 	)
-
-	const sorted = pipe(indexed, RoM.toReadonlyArray(FoodIdOrd), RoA.map(RoT.fst))
-
-	return {
-		...state,
-		foods: {
-			...state.foods,
-			byId: indexed,
-			sorted,
-			deleting: new Set()
-		}
-	}
-}
-
 interface VirtualFoodState {
 	readonly food: FoodState
 	readonly size: number
@@ -187,7 +181,7 @@ const createVirtualFoodItems = (
 				Opt.getOrElse(() => state)
 			)
 		),
-		({ items }) => items
+		I.map(({ items }) => items)
 	)
 
 export function FoodsPage(): JSX.Element {
