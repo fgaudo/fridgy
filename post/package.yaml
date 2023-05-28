@@ -29,10 +29,15 @@ dependencies:
 - mtl
 - nonempty-containers
 
+cc-options: -static
+ld-options: -static -pthread
+
 ghc-options:
 # For details on warnings: https://downloads.haskell.org/~ghc/master/users-guide/using-warnings.html
 # This list taken from https://medium.com/mercury-bank/enable-all-the-warnings-a0517bc081c3
 # Enable all warnings with -Weverything, then disable the ones we don’t care about
+- -O2
+- -static
 - -Weverything
 - -Wno-implicit-prelude
 - -Wno-missing-exported-signatures # missing-exported-signatures turns off the more strict -Wmissing-signatures. See https://ghc.haskell.org/trac/ghc/ticket/14794#ticket

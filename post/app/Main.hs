@@ -3,4 +3,4 @@
 module Main (main) where
 
 main :: IO ()
-main = pure ()
+main = putStrLn "ciao"

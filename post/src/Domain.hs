@@ -1,4 +1,5 @@
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE Safe #-}
 {-# LANGUAGE StandaloneKindSignatures #-}
@@ -23,14 +24,30 @@ type AccountId :: Type
 newtype AccountId = AccountId Text
   deriving stock (Eq)
 
-type PostBody :: Type
 newtype PostBody = PostBody Text
 
-type IsAccountActive :: Type
-newtype IsAccountActive = IsAccountActive Bool
+type AccountStatus :: Type
+data AccountStatus = Active | Inactive
 
-type IsAccountMod :: Type
-newtype IsAccountMod = IsAccountMod Bool
+type AccountType :: Type
+data AccountType = Mod | Normal
+
+type Account :: Type
+data Account = Account
+  { status :: AccountStatus,
+    id :: AccountId,
+    accountType :: AccountType
+  }
+
+type PostBody :: Type
+
+type AccountEvent :: Type
+data AccountEvent
+  = AccountCreated
+      { accountId :: AccountId,
+        accountType :: AccountType
+      }
+  | AccountDisabled {accountId :: AccountId}
 
 type PostEvent :: Type
 data PostEvent
@@ -42,33 +59,35 @@ data CreatePostError = AccountHasInvalidState
 
 createPost ::
   MonadError CreatePostError m =>
-  AccountId ->
-  IsAccountActive ->
+  NonEmpty AccountEvent ->
   PostBody ->
   m PostEvent
-createPost userId (IsAccountActive isAccountActive) text
-  | isAccountActive = return $ PostCreated userId text
-  | otherwise = throwError AccountHasInvalidState
+createPost events text =
+  let id' = id account
+      status' = status account
+   in return $ PostCreated id' text
+  where
+    account = foldAccountState events
 
 type RemovePostError :: Type
 data RemovePostError = Unauthorized
 
 removePost ::
   MonadError RemovePostError m =>
-  AccountId ->
-  IsAccountMod ->
-  IsAccountActive ->
+  Account ->
   NonEmpty PostEvent ->
   m (Maybe PostEvent)
-removePost id (IsAccountMod isAccountMod) (IsAccountActive isAccountActive) postEvents
-  | isAccountActive = do
-      folded <- return $ foldPostState postEvents
-      case folded of
-        ActivePost id' _
-          | isAccountMod || id == id' -> return $ Just $ PostRemoved id
-          | otherwise -> throwError Unauthorized
-        _ -> return Nothing
-  | otherwise = throwError Unauthorized
+removePost Account {accountType = Mod, id, status = Active} _ =
+  return $ Just $ PostRemoved id
+removePost Account {accountType = Normal, id, status = Active} postEvents =
+  do
+    folded <- return $ foldPostState postEvents
+    case folded of
+      ActivePost id' _
+        | id == id' -> return $ Just $ PostRemoved id
+        | otherwise -> throwError Unauthorized
+      _ -> return Nothing
+removePost Account {status = Inactive} _ = throwError Unauthorized
 
 type PostFoldedState :: Type
 data PostFoldedState
@@ -82,3 +101,6 @@ foldPostState = foldl' reduce InitialPost
     reduce InitialPost (PostCreated uid text) = ActivePost uid text
     reduce (ActivePost creator text) (PostRemoved remover) = RemovedPost creator remover text
     reduce state _ = state
+
+foldAccountState :: Foldable m => m AccountEvent -> Account
+foldAccountState = undefined

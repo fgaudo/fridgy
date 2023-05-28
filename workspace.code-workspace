@@ -1,10 +1,6 @@
 {
 	"folders": [
 		{
-			"path": "./account",
-			"name": "account"
-		},
-		{
 			"path": "./post",
 			"name": "post"
 		},
