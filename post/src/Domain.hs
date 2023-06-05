@@ -77,9 +77,9 @@ removePost ::
   Account ->
   NonEmpty PostEvent ->
   m (Maybe PostEvent)
-removePost Account {accountType = Mod, id, status = Active} _ =
+removePost Account {accountType = Mod, id = id, status = Active} _ =
   return $ Just $ PostRemoved id
-removePost Account {accountType = Normal, id, status = Active} postEvents =
+removePost Account {accountType = Normal, id = id, status = Active} postEvents =
   do
     folded <- return $ foldPostState postEvents
     case folded of
