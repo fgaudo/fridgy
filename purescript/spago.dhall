@@ -15,16 +15,17 @@ to generate this file without the comments in this block.
   [ "aff"
   , "checked-exceptions"
   , "console"
+  , "datetime"
   , "effect"
   , "flame"
   , "maybe"
+  , "newtype"
   , "ordered-collections"
   , "prelude"
   , "transformers"
-  , "typelevel-prelude",
-  "datetime",
-  "newtype",
-  "variant"
+  , "typelevel-prelude"
+  , "unordered-collections"
+  , "variant"
   ]
 , packages = ./packages.dhall
 , sources = [ "src/**/*.purs", "test/**/*.purs" ]

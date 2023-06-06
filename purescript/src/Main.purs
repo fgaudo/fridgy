@@ -10,12 +10,14 @@ import Flame (QuerySelector(..))
 import Infrastructure.GetHomeData (GetHomeDataProd)
 import Presentation.Home (app)
 
-main ∷ Effect Unit
-main = app
-  { useCases:
-      { refreshHome: runReaderT (unwrap getHome') { param: "" }
-      }
-  , selector: QuerySelector "body"
-  }
+main :: Effect Unit
+main =
+  app
+    { useCases:
+        { refreshHome:
+            runReaderT getHome' { param: "" }
+        }
+    , selector: QuerySelector "body"
+    }
   where
-  getHome' = (getHome :: GetHomeDataProd HomeModel)
+  getHome' = unwrap (getHome :: GetHomeDataProd HomeModel)

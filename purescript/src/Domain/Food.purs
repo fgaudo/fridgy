@@ -1,4 +1,11 @@
-module Domain.Food (Food, id, name, isExpired, Expiration, create) where
+module Domain.Food
+  ( Food
+  , id
+  , name
+  , isExpired
+  , Expiration(..)
+  , makeFood
+  ) where
 
 import Prelude
 
@@ -23,10 +30,10 @@ isExpired now (Food food) =
   if now > food.expiration then NotExpired
   else Expired
 
-create
+makeFood
   :: { name :: String
      , id :: String
      , expiration :: Instant
      }
   -> Food
-create = Food
+makeFood = Food

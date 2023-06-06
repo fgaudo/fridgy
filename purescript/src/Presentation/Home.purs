@@ -17,7 +17,7 @@ view _ =
     [ HE.div_ "Not Fetched..."
     ]
 
-update ∷ Aff HomeModel -> (AffUpdate String String)
+update :: Aff HomeModel -> (AffUpdate String String)
 update asd state =
   do
     (HomeModel lol) <- asd

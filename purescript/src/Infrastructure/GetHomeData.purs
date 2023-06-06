@@ -2,7 +2,7 @@ module Infrastructure.GetHomeData (GetHomeDataProd(..), Env) where
 
 import Prelude
 
-import Application.GetHome (class GetHomeData, retrievalError)
+import Application.GetHome (class GetHomeData, makeRetrievalError)
 import Control.Monad.Error.Class (throwError)
 import Control.Monad.Reader (class MonadAsk, ReaderT, ask)
 import Data.Newtype (class Newtype)
@@ -14,7 +14,8 @@ type Env =
   { param :: String
   }
 
-newtype GetHomeDataProd a = GetHomeDataProd (ReaderT Env Aff a)
+newtype GetHomeDataProd a = GetHomeDataProd
+  (ReaderT Env Aff a)
 
 derive newtype instance Functor (GetHomeDataProd)
 derive newtype instance Apply (GetHomeDataProd)
@@ -29,4 +30,4 @@ derive instance Newtype (GetHomeDataProd a) _
 instance GetHomeData GetHomeDataProd where
   getHomeData = do
     { param } <- ask
-    throwError $ retrievalError param
+    throwError $ makeRetrievalError param
