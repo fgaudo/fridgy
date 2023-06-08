@@ -2,22 +2,19 @@ module Main where
 
 import Prelude
 
-import Application.GetHome (HomeModel, getHome)
-import Control.Monad.Reader (runReaderT)
-import Data.Newtype (unwrap)
+import Application.UseCase.GetHome (getHomeModel)
+import Control.Monad.Reader (ReaderT(..), runReaderT)
+import Data.HashMap (empty)
 import Effect (Effect)
+import Effect.Aff (Aff)
+import Effect.Aff.Class (liftAff)
 import Flame (QuerySelector(..))
-import Infrastructure.GetHomeData (GetHomeDataProd)
+import Infrastructure.Dexie.GetFoods
+  ( DexieGetFoodsT(..)
+  , Env
+  )
+import Infrastructure.Generic.GetNow (GenericGetNowT(..))
 import Presentation.Home (app)
 
 main :: Effect Unit
-main =
-  app
-    { useCases:
-        { refreshHome:
-            runReaderT getHome' { param: "" }
-        }
-    , selector: QuerySelector "body"
-    }
-  where
-  getHome' = unwrap (getHome :: GetHomeDataProd HomeModel)
+main = pure unit

@@ -2,7 +2,7 @@ module Core.App where
 
 import Prelude
 
-import Application.GetHome (HomeModel)
+import Application.UseCase.GetHome (HomeModel)
 import Effect (Effect)
 import Effect.Aff (Aff)
 import Flame (QuerySelector)

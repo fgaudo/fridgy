@@ -2,7 +2,7 @@ module Presentation.Home (app) where
 
 import Prelude
 
-import Application.GetHome (HomeModel(..))
+import Application.UseCase.GetHome (HomeModel)
 import Core.App (App)
 import Data.Maybe (Maybe(..))
 import Effect.Aff (Aff)
@@ -20,7 +20,7 @@ view _ =
 update :: Aff HomeModel -> (AffUpdate String String)
 update asd state =
   do
-    (HomeModel lol) <- asd
+    lol <- asd
     pure $ identity
 
 init :: String
