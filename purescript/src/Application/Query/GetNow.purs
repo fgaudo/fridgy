@@ -1,4 +1,4 @@
-module Application.Query.GetNow
+module MyApp.Application.Query.GetNow
   ( RetrievalError(..)
   , class GetNow
   , NowData

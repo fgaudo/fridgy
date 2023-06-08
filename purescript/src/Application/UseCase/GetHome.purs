@@ -1,4 +1,4 @@
-module Application.UseCase.GetHome
+module MyApp.Application.UseCase.GetHome
   ( getHomeModel
   , FoodModel
   , HomeModel
@@ -7,9 +7,12 @@ module Application.UseCase.GetHome
 
 import Prelude
 
-import Application.Query.GetFoods (class GetFoods)
-import Application.Query.GetNow (class GetNow)
+import Control.Monad.Except (runExceptT)
+import Data.Either (Either(..))
 import Data.HashMap (HashMap, empty)
+import Data.Tuple (Tuple(..))
+import MyApp.Application.Query.GetFoods (class GetFoods, getFoods)
+import MyApp.Application.Query.GetNow (class GetNow, getNow)
 
 data Expiration = Expired | NotExpired
 
@@ -25,11 +28,15 @@ type HomeModel =
 
 getHomeModel
   :: forall m. GetFoods m => GetNow m => m HomeModel
-getHomeModel =
-  ( pure
-      { foods: empty
-      }
-  )
+getHomeModel = do
+  x <- ado
+    now <- runExceptT getNow
+    foods <- runExceptT getFoods
+    in Tuple now foods
+  case x of
+    Tuple (Left x) _ -> pure { foods: empty }
+    Tuple _ (Left y) -> pure { foods: empty }
+    Tuple _ _ -> pure { foods: empty }
 
 homeDataToModel :: HomeModel
 homeDataToModel =

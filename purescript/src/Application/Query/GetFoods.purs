@@ -1,4 +1,4 @@
-module Application.Query.GetFoods
+module MyApp.Application.Query.GetFoods
   ( FoodData
   , RetrievalError(..)
   , class GetFoods

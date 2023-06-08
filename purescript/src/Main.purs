@@ -1,13 +1,13 @@
-module Main where
+module MyApp.Main where
 
 import Prelude
 
-import Application.UseCase.GetHome (HomeModel, getHomeModel)
-import Core.App (App)
 import Data.Newtype (unwrap)
 import Effect (Effect)
 import Flame (QuerySelector(..))
-import Presentation.Home (app)
+import MyApp.Application.UseCase.GetHome (HomeModel, getHomeModel)
+import MyApp.Core.App (App)
+import MyApp.Presentation.Home (app)
 
 main :: Effect Unit
 main = app

@@ -1,12 +1,12 @@
-module Infrastructure.Dexie.GetFoods
+module MyApp.Infrastructure.Dexie.GetFoods
   ( dexieGetFoods
   ) where
 
 import Prelude
 
-import Application.Query.GetFoods (FoodData)
 import Data.HashMap (empty)
 import Effect.Aff.Class (class MonadAff)
+import MyApp.Application.Query.GetFoods (FoodData)
 
 dexieGetFoods
   :: forall m

@@ -1,15 +1,15 @@
-module Core.App where
+module MyApp.Core.App (App(..)) where
 
 import Prelude
 
-import Application.Query.GetFoods (class GetFoods)
-import Application.Query.GetNow (class GetNow)
 import Data.Newtype (class Newtype)
 import Effect.Aff (Aff)
 import Effect.Aff.Class (class MonadAff)
 import Effect.Class (class MonadEffect)
-import Infrastructure.Dexie.GetFoods (dexieGetFoods)
-import Infrastructure.Generic.GetNow (genericGetNow)
+import MyApp.Application.Query.GetFoods (class GetFoods)
+import MyApp.Application.Query.GetNow (class GetNow)
+import MyApp.Infrastructure.Dexie.GetFoods (dexieGetFoods)
+import MyApp.Infrastructure.Generic.GetNow (genericGetNow)
 
 newtype App a = App (Aff a)
 

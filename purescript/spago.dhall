@@ -13,19 +13,19 @@ to generate this file without the comments in this block.
 { name = "my-project"
 , dependencies =
   [ "aff"
-  , "checked-exceptions"
   , "console"
   , "datetime"
   , "effect"
   , "flame"
   , "maybe"
+  , "either"
+  , "exceptions"
+  , "tuples"
+  , "now"
   , "newtype"
-  , "ordered-collections"
   , "prelude"
   , "transformers"
-  , "typelevel-prelude"
   , "unordered-collections"
-  , "variant"
   ]
 , packages = ./packages.dhall
 , sources = [ "src/**/*.purs", "test/**/*.purs" ]

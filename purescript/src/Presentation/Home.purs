@@ -1,16 +1,15 @@
-module Presentation.Home (app) where
+module MyApp.Presentation.Home (app) where
 
 import Prelude
 
-import Application.UseCase.GetHome (HomeModel)
-import Core.App (App)
 import Data.Maybe (Maybe(..))
 import Effect (Effect)
 import Effect.Aff (Aff)
-import Flame (Html, QuerySelector(..), (:>))
+import Flame (Html, QuerySelector, (:>))
 import Flame.Application.Effectful (AffUpdate)
 import Flame.Application.Effectful as FAE
 import Flame.Html.Element as HE
+import MyApp.Application.UseCase.GetHome (HomeModel)
 
 view :: String -> Html String
 view _ =
@@ -19,9 +18,9 @@ view _ =
     ]
 
 update :: Aff HomeModel -> (AffUpdate String String)
-update asd state =
+update asd _ =
   do
-    lol <- asd
+    _ <- asd
     pure $ identity
 
 init :: String

@@ -1,4 +1,4 @@
-module Core.MonadError where
+module MyApp.Core.MonadError (modifyError) where
 
 import Prelude
 
