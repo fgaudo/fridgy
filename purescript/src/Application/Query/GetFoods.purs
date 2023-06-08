@@ -1,14 +1,28 @@
-module Application.Query.GetFoods where
+module Application.Query.GetFoods
+  ( FoodData
+  , RetrievalError(..)
+  , class GetFoods
+  , getFoods
+  ) where
 
 import Control.Monad (class Monad)
-import Data.Either (Either)
+import Control.Monad.Except (ExceptT)
+import Data.DateTime.Instant (Instant)
 import Data.HashMap (HashMap)
-import Domain.Food (Food)
 
 data RetrievalError = RetrievalError String
+
+type FoodData m = ExceptT RetrievalError m
+  ( HashMap String
+      { name :: String
+      , id :: String
+      , expiration :: Instant
+      }
+  )
 
 class
   Monad m <=
   GetFoods m where
-  getFoods :: m (Either RetrievalError (HashMap String Food))
+  getFoods
+    :: FoodData m
 

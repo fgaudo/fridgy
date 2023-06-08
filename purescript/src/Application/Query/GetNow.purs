@@ -1,11 +1,16 @@
-module Application.Query.GetNow (RetrievalError(..), class GetNow, getNow) where
+module Application.Query.GetNow
+  ( RetrievalError(..)
+  , class GetNow
+  , NowData
+  , getNow
+  ) where
 
-import Prelude
-
+import Control.Monad.Except (ExceptT)
 import Data.DateTime.Instant (Instant)
-import Data.Either (Either)
 
 data RetrievalError = RetrievalError String
 
-class Monad m <= GetNow m where
-  getNow :: m (Either RetrievalError Instant)
+type NowData m = ExceptT RetrievalError m Instant
+
+class GetNow m where
+  getNow :: NowData m

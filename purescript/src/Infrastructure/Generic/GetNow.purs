@@ -2,23 +2,14 @@ module Infrastructure.Generic.GetNow where
 
 import Prelude
 
-import Application.Query.GetNow (class GetNow)
-import Data.Either (Either(..))
+import Application.Query.GetNow (NowData, RetrievalError(..))
+import Core.MonadError (modifyError)
 import Effect.Class (class MonadEffect, liftEffect)
+import Effect.Exception (Error)
 import Effect.Now (now)
 
-newtype GenericGetNowT :: forall k. (k -> Type) -> k -> Type
-newtype GenericGetNowT m a = GenericGetNowT (m a)
+genericGetNow
+  :: forall m. MonadEffect m => NowData m
+genericGetNow =
+  modifyError (\(e :: Error) -> RetrievalError $ show e) (liftEffect now)
 
-derive newtype instance Functor m => Functor (GenericGetNowT m)
-derive newtype instance Apply m => Apply (GenericGetNowT m)
-derive newtype instance Applicative m => Applicative (GenericGetNowT m)
-derive newtype instance Bind m => Bind (GenericGetNowT m)
-derive newtype instance Monad m => Monad (GenericGetNowT m)
-derive newtype instance MonadEffect m => MonadEffect (GenericGetNowT m)
-
-instance
-  ( MonadEffect m
-  ) =>
-  GetNow (GenericGetNowT m) where
-  getNow = liftEffect $ map Right now
