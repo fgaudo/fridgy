@@ -33,8 +33,11 @@ getHomeModel
   => GetNow m
   => m HomeModel
 getHomeModel = do
-  y <- sequential $ Tuple <$> (parallel getNow) <*> (parallel getFoods)
-  case y of
+  result <- sequential ado
+    now <- (parallel getNow)
+    foods <- (parallel getFoods)
+    in Tuple now foods
+  case result of
     Tuple (Left x) _ -> pure { foods: empty }
     Tuple _ (Left y) -> pure { foods: empty }
     Tuple _ _ -> pure { foods: empty }
