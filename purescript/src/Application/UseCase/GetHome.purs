@@ -7,7 +7,7 @@ module MyApp.Application.UseCase.GetHome
 
 import Prelude
 
-import Control.Monad.Except (runExceptT)
+import Control.Parallel (class Parallel, parallel, sequential)
 import Data.Either (Either(..))
 import Data.HashMap (HashMap, empty)
 import Data.Tuple (Tuple(..))
@@ -27,13 +27,14 @@ type HomeModel =
   }
 
 getHomeModel
-  :: forall m. GetFoods m => GetNow m => m HomeModel
+  :: forall f m
+   . GetFoods m
+  => Parallel f m
+  => GetNow m
+  => m HomeModel
 getHomeModel = do
-  x <- ado
-    now <- runExceptT getNow
-    foods <- runExceptT getFoods
-    in Tuple now foods
-  case x of
+  y <- sequential $ Tuple <$> (parallel getNow) <*> (parallel getFoods)
+  case y of
     Tuple (Left x) _ -> pure { foods: empty }
     Tuple _ (Left y) -> pure { foods: empty }
     Tuple _ _ -> pure { foods: empty }

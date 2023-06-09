@@ -4,6 +4,7 @@ module MyApp.Infrastructure.Dexie.GetFoods
 
 import Prelude
 
+import Data.Either (Either(..))
 import Data.HashMap (empty)
 import Effect.Aff.Class (class MonadAff)
 import MyApp.Application.Query.GetFoods (FoodData)
@@ -11,8 +12,6 @@ import MyApp.Application.Query.GetFoods (FoodData)
 dexieGetFoods
   :: forall m
    . MonadAff m
-  => FoodData m
-dexieGetFoods =
-  do
-    pure empty
+  => m FoodData
+dexieGetFoods = pure $ Right empty
 

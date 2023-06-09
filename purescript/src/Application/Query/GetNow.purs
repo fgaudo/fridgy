@@ -5,12 +5,12 @@ module MyApp.Application.Query.GetNow
   , getNow
   ) where
 
-import Control.Monad.Except (ExceptT)
 import Data.DateTime.Instant (Instant)
+import Data.Either (Either)
 
 data RetrievalError = RetrievalError String
 
-type NowData m = ExceptT RetrievalError m Instant
+type NowData = Either RetrievalError Instant
 
 class GetNow m where
-  getNow :: NowData m
+  getNow :: m NowData
