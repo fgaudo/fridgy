@@ -1,4 +1,4 @@
-module MyApp.Main where
+module MyApp.Main (main) where
 
 import Prelude
 
@@ -13,10 +13,8 @@ import MyApp.Presentation.Home (app)
 main :: Effect Unit
 main = app
   { useCases:
-      { refreshHome: getHomeModel'
+      { refreshHome: unwrap (getHomeModel :: App Aff HomeModel)
       }
   , selector: QuerySelector "body"
   }
-  where
-  getHomeModel' = unwrap (getHomeModel :: App Aff HomeModel)
 

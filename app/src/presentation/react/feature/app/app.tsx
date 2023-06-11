@@ -8,10 +8,7 @@ import {
 import { StrictMode, createContext, useContext } from 'react'
 import { Root } from 'react-dom/client'
 
-import { UseCases } from '@/application'
-
-import { AddFoodPage } from '@/presentation/react/pages/add-food-page'
-import { FoodsPage } from '@/presentation/react/pages/food-page'
+import { FoodsPage } from '../home/home'
 
 interface Config {
 	readonly useCases: UseCases
@@ -30,11 +27,6 @@ const routeTree = rootRoute.addChildren([
 		getParentRoute: () => rootRoute,
 		path: '/',
 		component: FoodsPage
-	}),
-	new Route({
-		getParentRoute: () => rootRoute,
-		path: '/about',
-		component: AddFoodPage
 	})
 ])
 

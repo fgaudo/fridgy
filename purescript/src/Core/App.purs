@@ -4,6 +4,7 @@ import Prelude
 
 import Control.Parallel (class Parallel, parallel, sequential)
 import Data.Newtype (class Newtype)
+import Effect.Aff (Aff, ParAff)
 import Effect.Aff.Class (class MonadAff)
 import Effect.Class (class MonadEffect)
 import MyApp.Application.Query.GetFoods (class GetFoods)
@@ -24,12 +25,12 @@ derive newtype instance MonadAff m => MonadAff (App m)
 
 derive instance Newtype (App m a) _
 
-instance Parallel f m => Parallel (App f) (App m) where
+instance Parallel (App ParAff) (App Aff) where
   parallel (App a) = App (parallel a)
   sequential (App a) = App (sequential a)
 
 instance MonadAff m => GetFoods (App m) where
   getFoods = dexieGetFoods
 
-instance MonadEffect m => GetNow (App m) where
+instance MonadAff m => GetNow (App m) where
   getNow = genericGetNow

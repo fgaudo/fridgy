@@ -1,7 +1,11 @@
+import { Task } from 'fp-ts/Task'
 import { Observable } from 'rxjs'
 
-import { FoodPageModel } from '@/application/read/food-page'
+import {
+	FoodOverviewViewModel,
+	GetFoodOverview
+} from '@/application/food-overview'
 
-export interface UseCases {
-	readonly foodsPageModel$: Observable<FoodPageModel>
+export type UseCases = {
+	foodOverview: GetFoodOverview
 }
