@@ -1,16 +1,17 @@
+import { fromTaskEither } from 'fp-ts-rxjs/lib/ObservableEither'
 import * as RoM from 'fp-ts/ReadonlyMap'
 import * as E from 'fp-ts/lib/Either'
-import { Functor, Functor1 } from 'fp-ts/lib/Functor'
-import { HKT, Kind, URIS } from 'fp-ts/lib/HKT'
-import * as O from 'fp-ts/lib/Option'
+import * as TE from 'fp-ts/lib/TaskEither'
 import {
-	GetNow,
-	GetNow1,
-	SwitchMap,
-	SwitchMap1,
-	Take,
-	Take1
-} from 'src/core/types'
+	Observable,
+	catchError,
+	map,
+	of,
+	retry,
+	startWith,
+	switchMap,
+	zipWith
+} from 'rxjs'
 
 export { FoodIdEq, FoodIdOrd } from '@/domain/food'
 
@@ -26,46 +27,73 @@ export interface FoodData {
 	readonly name: string
 	readonly expDate: Date
 }
-export interface FoodOverviewViewModel {
-	readonly foods: ReadonlyMap<FoodModel['id'], FoodModel>
-	readonly error: O.Option<string>
+
+type Sorting = 'date' | 'name'
+export type FoodOverviewViewModel =
+	| Readonly<{
+			_tag: 'Ready'
+			readonly sort: Sorting
+			readonly page: number
+			readonly total: number
+			readonly foods: ReadonlyMap<FoodModel['id'], FoodModel>
+			readonly now: number
+	  }>
+	| Readonly<{ _tag: 'Error'; error: string; sort: Sorting }>
+	| Readonly<{ _tag: 'Loading'; sort: Sorting }>
+
+export type FoodOverviewData = ReadonlyMap<FoodData['id'], FoodData>
+
+export type FoodOverviewCmd = Readonly<{
+	limit: number
+	sort: 'name' | 'date'
+	page: number
+}>
+
+type FoodOverviewDep = {
+	getNow: TE.TaskEither<string, number>
+	foods: (sort: 'name' | 'date') => Observable<FoodOverviewData>
 }
 
-type FoodOverviewData = ReadonlyMap<FoodData['id'], FoodData>
-
-export interface GetFoodOverview1<M extends URIS> {
-	foods: Kind<M, FoodOverviewData>
-}
-
-export interface GetFoodOverview<M> {
-	foods: HKT<M, FoodOverviewData>
-}
-
-export type FoodOverviewType1<M extends URIS> = Functor1<M> &
-	GetNow1<M> &
-	GetFoodOverview1<M> &
-	Take1<M> &
-	SwitchMap1<M>
-
-export type FoodOverviewType<M> = Functor<M> &
-	GetNow<M> &
-	GetFoodOverview<M> &
-	Take<M> &
-	SwitchMap<M>
-
-export function foodOverview<M extends URIS>(
-	M: FoodOverviewType1<M>
-): Kind<M, FoodOverviewViewModel>
-export function foodOverview<M>(
-	M: FoodOverviewType<M>
-): HKT<M, FoodOverviewViewModel> {
-	return M.switchMap(M.foods, () =>
-		M.map(
-			M.take(M.getNow, 1),
-			E.fold(
-				error => ({ foods: RoM.empty, error: O.some(error) }),
-				() => ({ foods: RoM.empty, error: O.none })
-			)
+export const foodOverview =
+	({ getNow, foods }: FoodOverviewDep) =>
+	(cmds: Observable<FoodOverviewCmd>): Observable<FoodOverviewViewModel> =>
+		cmds.pipe(
+			startWith<FoodOverviewCmd>({ limit: 10, sort: 'name', page: 0 } as const),
+			switchMap(cmd =>
+				foods(cmd.sort).pipe(
+					zipWith(
+						fromTaskEither(getNow).pipe(
+							map(either => {
+								if (E.isLeft(either)) {
+									throw either.left
+								}
+								return either.right
+							}),
+							retry({ delay: 2000 })
+						)
+					),
+					map(
+						([, now]) =>
+							({
+								_tag: 'Ready',
+								foods: RoM.empty,
+								now,
+								page: 1,
+								total: 0,
+								sort: cmd.sort
+							} as const)
+					),
+					catchError(() =>
+						of({
+							_tag: 'Error',
+							error: 'Unexpected error',
+							sort: cmd.sort
+						} as const)
+					)
+				)
+			),
+			startWith<FoodOverviewViewModel>({
+				_tag: 'Loading',
+				sort: 'name' as const
+			} as const)
 		)
-	)
-}

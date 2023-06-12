@@ -8,6 +8,8 @@ import {
 import { StrictMode, createContext, useContext } from 'react'
 import { Root } from 'react-dom/client'
 
+import { UseCases } from '@/application'
+
 import { FoodsPage } from '../home/home'
 
 interface Config {

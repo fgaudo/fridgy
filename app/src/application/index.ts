@@ -1,11 +1,10 @@
-import { Task } from 'fp-ts/Task'
-import { Observable } from 'rxjs'
+import { Pipe } from 'src/core/pipe'
 
 import {
-	FoodOverviewViewModel,
-	GetFoodOverview
+	FoodOverviewCmd,
+	FoodOverviewViewModel
 } from '@/application/food-overview'
 
 export type UseCases = {
-	foodOverview: GetFoodOverview
+	foodOverview: Pipe<FoodOverviewCmd, FoodOverviewViewModel>
 }

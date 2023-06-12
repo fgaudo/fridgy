@@ -1,11 +1,12 @@
 // import { FridgyDatabase } from './infrastructure/dexie'
+import { now } from 'fp-ts/lib/Date'
+import { fromIO } from 'fp-ts/lib/TaskEither'
 import { createRoot } from 'react-dom/client'
+import { of } from 'rxjs'
 
-import { foodsPageTransformer } from '@/application/read/food-page'
-
-import { renderApp } from '@/presentation/react'
-
-import { foodsPageData$ } from '@/infrastructure/mock/foods-page'
+import { foodOverview } from './application/food-overview'
+import { Pipe } from './core/pipe'
+import { renderApp } from './presentation/react/feature/app/app'
 
 const container = document.getElementById('root')
 
@@ -18,7 +19,9 @@ const root = createRoot(container)
 
 renderApp(root, {
 	useCases: {
-		foodsPageModel$: foodsPageTransformer(foodsPageData$)
+		foodOverview: new Pipe(
+			foodOverview({ getNow: fromIO(now), foods: () => of() })
+		)
 	},
 	title: 'Fridgy'
 })
