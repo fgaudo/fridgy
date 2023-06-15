@@ -20,21 +20,21 @@ interface Config {
 export const GlobalContext = createContext<Config>(null as never)
 export const useGlobalContext: () => Config = () => useContext(GlobalContext)
 
-const rootRoute = new RootRoute({
-	component: () => <Outlet />
-})
-
-const routeTree = rootRoute.addChildren([
-	new Route({
-		getParentRoute: () => rootRoute,
-		path: '/',
-		component: FoodsPage
-	})
-])
-
-const router = new ReactRouter({ routeTree })
-
 export function renderApp(element: Root, config: Config): void {
+	const rootRoute = new RootRoute({
+		component: () => <Outlet />
+	})
+
+	const routeTree = rootRoute.addChildren([
+		new Route({
+			getParentRoute: () => rootRoute,
+			path: '/',
+			component: FoodsPage
+		})
+	])
+
+	const router = new ReactRouter({ routeTree })
+
 	element.render(
 		<StrictMode>
 			<GlobalContext.Provider value={config}>

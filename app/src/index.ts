@@ -1,11 +1,9 @@
 // import { FridgyDatabase } from './infrastructure/dexie'
-import { now } from 'fp-ts/lib/Date'
-import { fromIO } from 'fp-ts/lib/TaskEither'
+import { left } from 'fp-ts/lib/Either'
 import { createRoot } from 'react-dom/client'
 import { of } from 'rxjs'
 
-import { foodOverview } from './application/food-overview'
-import { Pipe } from './core/pipe'
+import { App } from './application'
 import { renderApp } from './presentation/react/feature/app/app'
 
 const container = document.getElementById('root')
@@ -17,15 +15,13 @@ if (container == null) {
 // const db = new FridgyDatabase()
 const root = createRoot(container)
 
-renderApp(root, {
-	useCases: {
-		foodOverview: new Pipe(
-			foodOverview({ getNow: fromIO(now), foods: () => of() })
-		)
-	},
-	title: 'Fridgy'
+new App({
+	foodOverviewDep: { getNow: async () => left(''), foods: () => of() }
+}).subscribe({
+	next: useCases => {
+		renderApp(root, {
+			useCases,
+			title: 'Fridgy'
+		})
+	}
 })
-
-if (!DEBUG && 'serviceWorker' in navigator) {
-	void navigator.serviceWorker.register('/sw.js')
-}

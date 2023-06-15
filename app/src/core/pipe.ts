@@ -4,13 +4,12 @@ import {
 	Subject,
 	Subscribable,
 	SubscriptionLike,
-	Unsubscribable,
-	of
+	Unsubscribable
 } from 'rxjs'
 
-export class Pipe<IN, OUT>
-	implements Observer<IN>, Subscribable<OUT>, SubscriptionLike
-{
+export interface PipeNoUnsub<IN, OUT> extends Observer<IN>, Subscribable<OUT> {}
+
+export class Pipe<IN, OUT> implements PipeNoUnsub<IN, OUT>, SubscriptionLike {
 	constructor(convert: (obs: Observable<IN>) => Observable<OUT>) {
 		this._convert = convert
 	}

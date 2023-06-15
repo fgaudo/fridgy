@@ -9,13 +9,6 @@ import { flow, pipe } from 'fp-ts/function'
 import { useSubscription } from 'observable-hooks'
 import { useMemo, useReducer } from 'react'
 
-import {
-	FoodIdEq,
-	FoodIdOrd,
-	FoodModel,
-	FoodPageModel
-} from '@/application/read/food-page'
-
 import { useGlobalContext } from '@/presentation/react'
 import { AddFab } from '@/presentation/react/ui/fab-add-button'
 import { Swipable } from '@/presentation/react/ui/swipable'
