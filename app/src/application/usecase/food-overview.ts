@@ -50,7 +50,11 @@ export const foodOverview =
 				pipe(
 					Rx.zip(
 						foods(bind.cmd.sort),
-						pipe(getNow, OE.fromTaskEither, OE.fold(Rx.throwError, O.of)) // we need to throw the error in order to signal the .zip to cancel other observables.
+						pipe(
+							getNow,
+							OE.fromTaskEither,
+							OE.getOrElse<string, number>(e => Rx.throwError(() => e))
+						)
 					),
 					O.map(([data, now]) => E.right({ ...bind, data, now })),
 					Rx.catchError((error: string) => OE.left({ ...bind, error }))
