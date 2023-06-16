@@ -1,11 +1,7 @@
 import { Observable } from 'rxjs'
 
-import { Sorting } from '../usecase/food-overview'
+import { FoodData } from '@/domain/food'
 
-export interface FoodData {
-	readonly id: string
-	readonly name: string
-	readonly expDate: Date
-}
+import { Sorting } from '../usecase/food-overview'
 
 export type Foods = (sort: Sorting) => Observable<ReadonlyArray<FoodData>>

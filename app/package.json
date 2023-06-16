@@ -36,6 +36,8 @@
 		"dexie": "*",
 		"fp-ts": "*",
 		"fp-ts-rxjs": "*",
+		"monocle-ts": "^2.3.13",
+		"newtype-ts": "^0.3.5",
 		"observable-hooks": "*",
 		"react": "*",
 		"react-dom": "*",

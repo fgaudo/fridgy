@@ -1,21 +1,14 @@
-import { fromTaskEither } from 'fp-ts-rxjs/lib/ObservableEither'
+import * as O from 'fp-ts-rxjs/lib/Observable'
+import * as OE from 'fp-ts-rxjs/lib/ObservableEither'
 import * as RoA from 'fp-ts/ReadonlyArray'
 import * as E from 'fp-ts/lib/Either'
-import {
-	Observable,
-	catchError,
-	map,
-	of,
-	retry,
-	startWith,
-	switchMap,
-	zipWith
-} from 'rxjs'
+import { pipe } from 'fp-ts/lib/function'
+import * as Rx from 'rxjs'
+
+import { FoodData } from '@/domain/food'
 
 import { GetNow } from '@/application/query/get-now'
 import { Foods } from '@/application/stream/foods'
-
-export { FoodIdEq, FoodIdOrd } from '@/domain/food'
 
 export interface FoodModel {
 	readonly id: string
@@ -44,47 +37,49 @@ export type FoodOverviewCmd = Readonly<{
 }>
 
 export type FoodOverviewDep = { getNow: GetNow; foods: Foods }
-
 export const foodOverview =
-	({ getNow, foods }: { getNow: GetNow; foods: Foods }) =>
-	(cmds: Observable<FoodOverviewCmd>): Observable<FoodOverviewViewModel> =>
-		cmds.pipe(
-			startWith<FoodOverviewCmd>({ sort: 'name', page: 0 } as const),
-			switchMap(cmd =>
-				foods(cmd.sort).pipe(
-					zipWith(
-						fromTaskEither(getNow).pipe(
-							map(either => {
-								if (E.isLeft(either)) {
-									throw either.left
-								}
-								return either.right
-							}),
-							retry({ delay: 2000 })
-						)
+	({ getNow, foods }: FoodOverviewDep) =>
+	(
+		cmds: Rx.Observable<FoodOverviewCmd>
+	): Rx.Observable<FoodOverviewViewModel> =>
+		pipe(
+			cmds,
+			Rx.startWith<FoodOverviewCmd>({ sort: 'name', page: 0 } as const),
+			O.bindTo('cmd'),
+			Rx.switchMap(bind =>
+				pipe(
+					Rx.zip(
+						foods(bind.cmd.sort),
+						pipe(getNow, OE.fromTaskEither, OE.fold(Rx.throwError, O.of)) // we need to throw the error in order to signal the .zip to cancel other observables.
 					),
-					map(
-						([, now]) =>
-							({
-								_tag: 'Ready',
-								foods: RoA.empty,
-								now,
-								page: 1,
-								total: 0,
-								sort: cmd.sort
-							} as const)
-					),
-					catchError(() =>
-						of({
-							_tag: 'Error',
-							error: 'Unexpected error',
-							sort: cmd.sort
-						} as const)
-					)
+					O.map(([data, now]) => E.right({ ...bind, data, now })),
+					Rx.catchError((error: string) => OE.left({ ...bind, error }))
 				)
 			),
-			startWith<FoodOverviewViewModel>({
+			OE.bind('foodModels', ({ data }) =>
+				OE.of(pipe(data, RoA.map(foodToModel)))
+			),
+			OE.fold(
+				({ cmd, error }): Rx.Observable<FoodOverviewViewModel> =>
+					O.of({
+						_tag: 'Error',
+						error: error,
+						sort: cmd.sort
+					} as const),
+				({ foodModels, now, cmd }): Rx.Observable<FoodOverviewViewModel> =>
+					O.of({
+						_tag: 'Ready',
+						foods: foodModels,
+						now,
+						page: 1,
+						total: 0,
+						sort: cmd.sort
+					} as const)
+			),
+			Rx.startWith<FoodOverviewViewModel>({
 				_tag: 'Loading',
 				sort: 'name'
 			} as const)
 		)
+
+declare function foodToModel(f: FoodData): FoodModel
