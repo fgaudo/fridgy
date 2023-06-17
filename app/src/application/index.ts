@@ -3,13 +3,13 @@ import { Pipe, PipeNoUnsub } from 'src/core/pipe'
 
 import {
 	FoodOverviewCmd,
-	FoodOverviewDep,
+	FoodOverviewDeps,
 	FoodOverviewViewModel,
 	foodOverview
 } from '@/application/usecase/food-overview'
 
 export type Deps = {
-	foodOverviewDep: FoodOverviewDep
+	foodOverviewDep: FoodOverviewDeps
 }
 
 export type UseCases = {
