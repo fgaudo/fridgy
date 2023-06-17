@@ -15,8 +15,8 @@ export type Food = Newtype<{ readonly Food: unique symbol }, FoodData>
 
 const isoFood = iso<Food>()
 
-export const deserialize = (f: FoodData): Either<string, Food> => {
-	return right(isoFood.wrap(f))
+export const deserialize = (f: FoodData): Food => {
+	return isoFood.wrap(f)
 }
 export const serialize = (f: Food) => isoFood.unwrap(f)
 

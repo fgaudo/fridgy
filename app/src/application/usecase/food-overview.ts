@@ -83,27 +83,19 @@ export const foodOverview: FoodOverview =
 					)
 				)
 			),
-			OE.bind('foodModels', ({ data, now, cmd }) =>
-				pipe(
-					data,
-					RoA.map(flow(deserialize)),
-					RoA.sequence(E.Applicative),
-					OE.fromEither,
-					OE.bimap(
-						error =>
-							({
-								_tag: 'Error',
-								error,
-								sort: cmd.sort
-							} as const),
-						flow(
-							RoA.map(food => ({
+			OE.bind('foodModels', ({ data, now }) =>
+				OE.right(
+					pipe(
+						data,
+						RoA.map(foodData => {
+							const food = deserialize(foodData)
+							return {
 								id: id(food),
 								name: name(food),
 								expDate: expDate(food),
 								state: expirationStatus(now)(food)
-							}))
-						)
+							}
+						})
 					)
 				)
 			),
