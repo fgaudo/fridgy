@@ -16,7 +16,7 @@ if (container == null) {
 const root = createRoot(container)
 
 new App({
-	foodOverviewDep: { getNow: async () => left(''), foods: () => of() }
+	foodOverviewDep: { now$: async () => left(''), getFoods: () => of() }
 }).subscribe({
 	next: useCases => {
 		renderApp(root, {

@@ -1,3 +1,3 @@
-import { TaskEither } from 'fp-ts/lib/TaskEither'
+import { ObservableEither } from 'fp-ts-rxjs/lib/ObservableEither'
 
-export type GetNow = TaskEither<string, number>
+export type Now$ = ObservableEither<string, number>

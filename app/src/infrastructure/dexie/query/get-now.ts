@@ -1,5 +1,5 @@
 import { right } from 'fp-ts/lib/TaskEither'
 
-import { GetNow } from '@/application/query/get-now'
+import { Now$ } from '@/application/query/get-now'
 
-export const dexieFoodOverview: GetNow = right(0)
+export const dexieFoodOverview: Now$ = right(0)

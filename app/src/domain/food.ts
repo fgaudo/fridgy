@@ -1,4 +1,3 @@
-import { Either, right } from 'fp-ts/lib/Either'
 import * as N from 'fp-ts/number'
 import { Newtype, iso } from 'newtype-ts'
 
@@ -15,9 +14,7 @@ export type Food = Newtype<{ readonly Food: unique symbol }, FoodData>
 
 const isoFood = iso<Food>()
 
-export const deserialize = (f: FoodData): Food => {
-	return isoFood.wrap(f)
-}
+export const deserialize = (f: FoodData): Food => isoFood.wrap(f)
 export const serialize = (f: Food) => isoFood.unwrap(f)
 
 export const name = (f: Food): FoodData['name'] => isoFood.unwrap(f).name

@@ -2,20 +2,13 @@ import * as O from 'fp-ts-rxjs/lib/Observable'
 import * as OE from 'fp-ts-rxjs/lib/ObservableEither'
 import * as RoA from 'fp-ts/ReadonlyArray'
 import * as E from 'fp-ts/lib/Either'
-import { flow, pipe } from 'fp-ts/lib/function'
+import { pipe } from 'fp-ts/lib/function'
 import * as Rx from 'rxjs'
 
-import {
-	FoodData,
-	deserialize,
-	expDate,
-	expirationStatus,
-	id,
-	name
-} from '@/domain/food'
+import * as Food from '@/domain/food'
 
-import { GetNow } from '@/application/query/get-now'
-import { Foods } from '@/application/stream/foods'
+import { Now$ } from '@/application/query/get-now'
+import { GetFoods } from '@/application/stream/foods'
 
 export interface FoodModel {
 	readonly id: string
@@ -43,7 +36,7 @@ export type FoodOverviewCmd = Readonly<{
 	page: number
 }>
 
-export type FoodOverviewDeps = { getNow: GetNow; foods: Foods }
+export type FoodOverviewDeps = { now$: Now$; getFoods: GetFoods }
 
 type FoodOverview = (
 	deps: FoodOverviewDeps
@@ -52,26 +45,39 @@ type FoodOverview = (
 ) => Rx.Observable<FoodOverviewViewModel>
 
 export const foodOverview: FoodOverview =
-	({ getNow, foods }) =>
-	cmds => {
-		const cmdsWithInit = pipe(
-			cmds,
-			Rx.startWith<FoodOverviewCmd>({ sort: 'name', page: 0 } as const)
-		)
-
-		const periodicRefresh = pipe(
-			Rx.timer(10000),
-			Rx.takeUntil(cmdsWithInit),
-			Rx.repeat(),
-			O.chain(() => pipe(cmdsWithInit, Rx.last()))
-		)
-
-		return pipe(
-			Rx.merge(cmdsWithInit, periodicRefresh),
+	({ now$, getFoods }) =>
+	cmds$ =>
+		pipe(
+			cmds$,
+			Rx.startWith<FoodOverviewCmd>({ sort: 'name', page: 0 } as const),
 			O.bindTo('cmd'),
-			Rx.switchMap(bind =>
-				pipe(
-					getFoodDataParallel(foods(bind.cmd.sort), getNow),
+			Rx.switchMap(bind => {
+				const foods$ = getFoods(bind.cmd.sort)
+
+				const periodicRefresh$ = pipe(
+					foods$,
+					Rx.switchMap(foods =>
+						pipe(
+							Rx.timer(10000),
+							Rx.repeat(),
+							O.map(() => foods)
+						)
+					)
+				)
+
+				const foodData$ = pipe(
+					Rx.merge(foods$, periodicRefresh$),
+					Rx.zipWith(pipe(now$, Rx.take(1))),
+					O.map(([data, either]) =>
+						pipe(
+							either,
+							E.fold(E.left, now => E.right([data, now] as const))
+						)
+					)
+				)
+
+				return pipe(
+					foodData$,
 					OE.bimap(
 						error =>
 							({
@@ -82,18 +88,19 @@ export const foodOverview: FoodOverview =
 						([data, now]) => ({ ...bind, data, now })
 					)
 				)
-			),
+			}),
 			OE.bind('foodModels', ({ data, now }) =>
 				OE.right(
 					pipe(
 						data,
 						RoA.map(foodData => {
-							const food = deserialize(foodData)
+							const food = Food.deserialize(foodData)
+
 							return {
-								id: id(food),
-								name: name(food),
-								expDate: expDate(food),
-								state: expirationStatus(now)(food)
+								id: Food.id(food),
+								name: Food.name(food),
+								expDate: Food.expDate(food),
+								state: Food.expirationStatus(now)(food)
 							}
 						})
 					)
@@ -116,20 +123,3 @@ export const foodOverview: FoodOverview =
 				sort: 'name'
 			} as const)
 		)
-	}
-const getFoodDataParallel = (
-	foods: ReturnType<Foods>,
-	now: GetNow
-): OE.ObservableEither<string, readonly [readonly FoodData[], number]> =>
-	pipe(
-		Rx.zip(
-			foods,
-			pipe(
-				now,
-				OE.fromTaskEither,
-				OE.getOrElse<string, number>(e => Rx.throwError(() => e))
-			)
-		),
-		O.map(([data, now]) => E.right([data, now] as const)),
-		Rx.catchError((error: string) => OE.left(error))
-	)
