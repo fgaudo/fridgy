@@ -21,9 +21,9 @@ const testScheduler = new TestScheduler((actual, expected) => {
 // This test runs synchronously.
 it('generates the stream correctly', () => {
 	testScheduler.run(({ expectObservable, cold, hot }) => {
-		const cmdsM = '  ---b------a-----b---'
+		const cmdsM = '  ---b-----a----b-----'
 		const subM = '   ^------------------!'
-		const expectM = 'l-----blb-l--alal---'
+		const expectM = 'l-al-b-lbl-a-l--b-l'
 		const foodsM = ' --a-a----a--a-a---a'
 		const nowM = '     -a|'
 

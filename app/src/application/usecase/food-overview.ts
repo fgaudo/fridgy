@@ -52,57 +52,28 @@ export const foodOverview: FoodOverview = ({ now$, getFoods }) =>
 		Rx.startWith<FoodOverviewCmd>({ sort: 'name', page: 0 } as const),
 		Rx.switchMap(cmd =>
 			pipe(
-				getFoods(cmd.sort),
-				Rx.switchMap(foods =>
-					pipe(
-						now$,
-						O.map(either =>
-							pipe(
-								either,
-								E.bimap(
-									error =>
-										({
-											_tag: 'Error',
-											error,
-											sort: cmd.sort
-										} as const),
-									now => [foods, now] as const
-								)
-							)
-						),
-						OE.fold(
-							O.of,
-							([data, now]): Rx.Observable<FoodOverviewViewModel> =>
-								pipe(
-									data,
-									RoA.map(foodData => {
-										const food = Food.deserialize(foodData)
-
-										return {
-											id: Food.id(food),
-											name: Food.name(food),
-											expDate: Food.expDate(food),
-											state: Food.expirationStatus(now)(food)
-										}
-									}),
-									O.of,
-									O.map(
-										models =>
-											({
-												_tag: 'Ready',
-												foods: models,
-												now,
-												page: 1,
-												total: 0,
-												sort: cmd.sort
-											} as const)
-									)
-								)
-						),
-						Rx.startWith<FoodOverviewViewModel>({ _tag: 'Loading' } as const)
-					)
+				Rx.combineLatest([getFoods(cmd.sort), now$]), // optimization. Not sure if there’s a simpler way
+				Rx.switchMap(([foods, firstNowEither], index) =>
+					index === 0
+						? pipe(
+								firstNowEither,
+								E.fold(
+									error => errorViewModel(error, cmd.sort),
+									now => dataViewModel(foods, now, cmd.sort)
+								),
+								O.of,
+								Rx.startWith(loadingViewModel)
+						  )
+						: pipe(
+								now$,
+								OE.fold(
+									error => O.of(errorViewModel(error, cmd.sort)),
+									now => O.of(dataViewModel(foods, now, cmd.sort))
+								),
+								Rx.startWith(loadingViewModel)
+						  )
 				),
-				Rx.startWith<FoodOverviewViewModel>({ _tag: 'Loading' } as const)
+				Rx.startWith(loadingViewModel)
 			)
 		),
 		Rx.distinctUntilChanged(
@@ -114,22 +85,39 @@ export const foodOverview: FoodOverview = ({ now$, getFoods }) =>
 					Equ.equals(a.foods, b.foods))
 		)
 	)
-/*
-foodOverview({
-	getFoods: () =>
-		Rx.interval(2000)
-			.pipe(
-				Rx.tap(a => console.log(JSON.stringify(a))),
-				Rx.map(() => [])
-			)
-			.pipe(
-				Rx.finalize(() => {
-					console.log('FINITO')
-				})
-			),
-	now$: OE.right(4)
-})(new Rx.Subject()).subscribe()
 
-setInterval(() => {
-	console.log('ciao')
-}, 3000)*/
+const errorViewModel: (
+	error: string,
+	sort: Sorting
+) => FoodOverviewViewModel = (error, sort) =>
+	({
+		_tag: 'Error',
+		error,
+		sort
+	} as const)
+
+const dataViewModel: (
+	data: readonly Food.FoodData[],
+	now: number,
+	sort: Sorting
+) => FoodOverviewViewModel = (data, now, sort) => ({
+	now,
+	page: 1,
+	total: 0,
+	sort,
+	_tag: 'Ready',
+	foods: pipe(
+		data,
+		RoA.map(foodData => {
+			const food = Food.deserialize(foodData)
+			return {
+				id: Food.id(food),
+				name: Food.name(food),
+				expDate: Food.expDate(food),
+				state: Food.expirationStatus(now)(food)
+			}
+		})
+	)
+})
+
+const loadingViewModel: FoodOverviewViewModel = { _tag: 'Loading' } as const
