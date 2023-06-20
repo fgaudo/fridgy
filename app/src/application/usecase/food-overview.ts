@@ -2,13 +2,16 @@ import * as O from 'fp-ts-rxjs/lib/Observable'
 import * as OE from 'fp-ts-rxjs/lib/ObservableEither'
 import * as RoA from 'fp-ts/ReadonlyArray'
 import * as E from 'fp-ts/lib/Either'
-import { pipe } from 'fp-ts/lib/function'
+import { fromEquals } from 'fp-ts/lib/Eq'
+import { flow, pipe } from 'fp-ts/lib/function'
 import * as Rx from 'rxjs'
 
 import * as Food from '@/domain/food'
 
 import { Now$ } from '@/application/query/get-now'
 import { GetFoods } from '@/application/stream/foods'
+
+const Equ = RoA.getEq(fromEquals<FoodModel>((a, b) => a.id === b.id))
 
 export interface FoodModel {
 	readonly id: string
@@ -29,7 +32,7 @@ export type FoodOverviewViewModel =
 			now: number
 	  }>
 	| Readonly<{ _tag: 'Error'; error: string; sort: Sorting }>
-	| Readonly<{ _tag: 'Loading'; sort: Sorting }>
+	| Readonly<{ _tag: 'Loading' }>
 
 export type FoodOverviewCmd = Readonly<{
 	sort: Sorting
@@ -44,82 +47,89 @@ type FoodOverview = (
 	cmds: Rx.Observable<FoodOverviewCmd>
 ) => Rx.Observable<FoodOverviewViewModel>
 
-export const foodOverview: FoodOverview =
-	({ now$, getFoods }) =>
-	cmds$ =>
-		pipe(
-			cmds$,
-			Rx.startWith<FoodOverviewCmd>({ sort: 'name', page: 0 } as const),
-			O.bindTo('cmd'),
-			Rx.switchMap(bind => {
-				const foods$ = getFoods(bind.cmd.sort)
-
-				const periodicRefresh$ = pipe(
-					foods$,
-					Rx.switchMap(foods =>
-						pipe(
-							Rx.timer(10000),
-							Rx.repeat(),
-							O.map(() => foods)
-						)
-					)
-				)
-
-				const foodData$ = pipe(
-					Rx.merge(foods$, periodicRefresh$),
-					Rx.zipWith(pipe(now$, Rx.take(1))),
-					O.map(([data, either]) =>
-						pipe(
-							either,
-							E.fold(E.left, now => E.right([data, now] as const))
-						)
-					)
-				)
-
-				return pipe(
-					foodData$,
-					OE.bimap(
-						error =>
-							({
-								_tag: 'Error',
-								error,
-								sort: bind.cmd.sort
-							} as const),
-						([data, now]) => ({ ...bind, data, now })
-					)
-				)
-			}),
-			OE.bind('foodModels', ({ data, now }) =>
-				OE.right(
+export const foodOverview: FoodOverview = ({ now$, getFoods }) =>
+	flow(
+		Rx.startWith<FoodOverviewCmd>({ sort: 'name', page: 0 } as const),
+		Rx.switchMap(cmd =>
+			pipe(
+				getFoods(cmd.sort),
+				Rx.switchMap(foods =>
 					pipe(
-						data,
-						RoA.map(foodData => {
-							const food = Food.deserialize(foodData)
+						now$,
+						O.map(either =>
+							pipe(
+								either,
+								E.bimap(
+									error =>
+										({
+											_tag: 'Error',
+											error,
+											sort: cmd.sort
+										} as const),
+									now => [foods, now] as const
+								)
+							)
+						),
+						OE.fold(
+							O.of,
+							([data, now]): Rx.Observable<FoodOverviewViewModel> =>
+								pipe(
+									data,
+									RoA.map(foodData => {
+										const food = Food.deserialize(foodData)
 
-							return {
-								id: Food.id(food),
-								name: Food.name(food),
-								expDate: Food.expDate(food),
-								state: Food.expirationStatus(now)(food)
-							}
-						})
+										return {
+											id: Food.id(food),
+											name: Food.name(food),
+											expDate: Food.expDate(food),
+											state: Food.expirationStatus(now)(food)
+										}
+									}),
+									O.of,
+									O.map(
+										models =>
+											({
+												_tag: 'Ready',
+												foods: models,
+												now,
+												page: 1,
+												total: 0,
+												sort: cmd.sort
+											} as const)
+									)
+								)
+						),
+						Rx.startWith<FoodOverviewViewModel>({ _tag: 'Loading' } as const)
 					)
-				)
-			),
-			OE.fold(
-				O.of,
-				({ foodModels, now, cmd }): Rx.Observable<FoodOverviewViewModel> =>
-					O.of({
-						_tag: 'Ready',
-						foods: foodModels,
-						now,
-						page: 1,
-						total: 0,
-						sort: cmd.sort
-					} as const)
-			),
-			Rx.startWith<FoodOverviewViewModel>({
-				_tag: 'Loading',
-				sort: 'name'
-			} as const)
+				),
+				Rx.startWith<FoodOverviewViewModel>({ _tag: 'Loading' } as const)
+			)
+		),
+		Rx.distinctUntilChanged(
+			(a, b) =>
+				(a._tag === 'Loading' && b._tag === 'Loading') ||
+				(a._tag === 'Ready' &&
+					b._tag === 'Ready' &&
+					a.total === b.total &&
+					Equ.equals(a.foods, b.foods))
 		)
+	)
+/*
+foodOverview({
+	getFoods: () =>
+		Rx.interval(2000)
+			.pipe(
+				Rx.tap(a => console.log(JSON.stringify(a))),
+				Rx.map(() => [])
+			)
+			.pipe(
+				Rx.finalize(() => {
+					console.log('FINITO')
+				})
+			),
+	now$: OE.right(4)
+})(new Rx.Subject()).subscribe()
+
+setInterval(() => {
+	console.log('ciao')
+}, 3000)*/

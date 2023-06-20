@@ -1,5 +1,6 @@
 {
 	"compilerOptions": {
+		"types": ["mocha"],
 		"forceConsistentCasingInFileNames": true,
 		"strict": true,
 		"jsx": "react-jsx",

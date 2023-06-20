@@ -1,5 +1,5 @@
 // import { FridgyDatabase } from './infrastructure/dexie'
-import { left } from 'fp-ts/lib/Either'
+import * as OE from 'fp-ts-rxjs/ObservableEither'
 import { createRoot } from 'react-dom/client'
 import { of } from 'rxjs'
 
@@ -16,7 +16,10 @@ if (container == null) {
 const root = createRoot(container)
 
 new App({
-	foodOverviewDep: { now$: async () => left(''), getFoods: () => of() }
+	foodOverviewDep: {
+		now$: OE.right(new Date().getDate()),
+		getFoods: () => of()
+	}
 }).subscribe({
 	next: useCases => {
 		renderApp(root, {

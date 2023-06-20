@@ -1,3 +1,4 @@
-import { ObservableEither } from 'fp-ts-rxjs/lib/ObservableEither'
+import { Either } from 'fp-ts/lib/Either'
+import { Single } from 'src/core/rxjs'
 
-export type Now$ = ObservableEither<string, number>
+export type Now$ = Single<Either<string, number>>
