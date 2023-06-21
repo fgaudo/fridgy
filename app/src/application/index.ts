@@ -1,3 +1,4 @@
+/* eslint-disable functional/no-expression-statements */
 import { Observer, Subscribable, Subscription, Unsubscribable } from 'rxjs'
 import { Pipe, PipeNoUnsub } from 'src/core/pipe'
 
@@ -8,29 +9,25 @@ import {
 	foodOverview
 } from '@/application/usecase/food-overview'
 
-export type Deps = {
+export type Deps = Readonly<{
 	foodOverviewDep: FoodOverviewDeps
-}
+}>
 
-export type UseCases = {
+export type UseCases = Readonly<{
 	foodOverview: PipeNoUnsub<FoodOverviewCmd, FoodOverviewViewModel>
-}
+}>
 
 export class App implements Subscribable<UseCases> {
-	constructor(deps: Deps) {
-		this._deps = deps
-	}
+	constructor(private readonly deps: Deps) {}
 
 	subscribe(observer: Partial<Observer<UseCases>>): Unsubscribable {
 		const sub = new Subscription()
 
-		const foodOverviewPipe = new Pipe(foodOverview(this._deps.foodOverviewDep))
+		const foodOverviewPipe = new Pipe(foodOverview(this.deps.foodOverviewDep))
 
 		sub.add(foodOverviewPipe)
 		observer.next?.({ foodOverview: foodOverviewPipe })
 
 		return sub
 	}
-
-	private readonly _deps: Deps
 }

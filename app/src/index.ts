@@ -1,3 +1,10 @@
+/* eslint-disable functional/no-return-void */
+
+/* eslint-disable functional/no-expression-statements */
+
+/* eslint-disable functional/no-throw-statements */
+
+/* eslint-disable functional/no-conditional-statements */
 // import { FridgyDatabase } from './infrastructure/dexie'
 import * as OE from 'fp-ts-rxjs/ObservableEither'
 import { createRoot } from 'react-dom/client'
@@ -17,8 +24,8 @@ const root = createRoot(container)
 
 new App({
 	foodOverviewDep: {
-		now$: OE.right(new Date().getDate()),
-		getFoods: () => of()
+		onceNow: OE.right(new Date().getDate()),
+		onFoods: () => of()
 	}
 }).subscribe({
 	next: useCases => {

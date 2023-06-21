@@ -2,44 +2,47 @@ import * as O from 'fp-ts-rxjs/lib/Observable'
 import * as OE from 'fp-ts-rxjs/lib/ObservableEither'
 import * as RoA from 'fp-ts/ReadonlyArray'
 import * as E from 'fp-ts/lib/Either'
-import { fromEquals } from 'fp-ts/lib/Eq'
 import { flow, pipe } from 'fp-ts/lib/function'
 import * as Rx from 'rxjs'
 
-import * as Food from '@/domain/food'
+import * as D from '@/domain/food'
 
-import { Now$ } from '@/application/query/get-now'
-import { GetFoods } from '@/application/stream/foods'
+import { OnceNow } from '@/application/query/get-now'
+import { OnFoods } from '@/application/stream/foods'
 
-const Equ = RoA.getEq(fromEquals<FoodModel>((a, b) => a.id === b.id))
+import { FoodEntity } from '../types/food'
 
-export interface FoodModel {
-	readonly id: string
-	readonly name: string
-	readonly expDate: number
-	readonly state: 'expired' | 'ok' | 'check'
-}
+export type FoodModel = Readonly<{
+	id: string
+	name: string
+	expDate: number
+	state: 'expired' | 'ok' | 'check'
+}>
 
 export type Sorting = 'date' | 'name'
 
-export type FoodOverviewViewModel =
-	| Readonly<{
+export type FoodOverviewViewModel = Readonly<
+	| {
 			_tag: 'Ready'
 			sort: Sorting
 			page: number
 			total: number
 			foods: ReadonlyArray<FoodModel>
 			now: number
-	  }>
-	| Readonly<{ _tag: 'Error'; error: string; sort: Sorting }>
-	| Readonly<{ _tag: 'Loading' }>
+	  }
+	| { _tag: 'Error'; error: string; sort: Sorting }
+	| { _tag: 'Loading' }
+>
 
 export type FoodOverviewCmd = Readonly<{
 	sort: Sorting
 	page: number
 }>
 
-export type FoodOverviewDeps = { now$: Now$; getFoods: GetFoods }
+export type FoodOverviewDeps = Readonly<{
+	onceNow: OnceNow
+	onFoods: OnFoods
+}>
 
 type FoodOverview = (
 	deps: FoodOverviewDeps
@@ -47,12 +50,12 @@ type FoodOverview = (
 	cmds: Rx.Observable<FoodOverviewCmd>
 ) => Rx.Observable<FoodOverviewViewModel>
 
-export const foodOverview: FoodOverview = ({ now$, getFoods }) =>
+export const foodOverview: FoodOverview = ({ onceNow, onFoods }) =>
 	flow(
 		Rx.startWith<FoodOverviewCmd>({ sort: 'name', page: 0 } as const),
 		Rx.switchMap(cmd =>
 			pipe(
-				Rx.combineLatest([getFoods(cmd.sort), now$]), // optimization. Not sure if there’s a simpler way
+				Rx.combineLatest([onFoods(cmd.sort), onceNow]), // optimization. Not sure if there’s a simpler way
 				Rx.switchMap(([foods, firstNowEither], index) =>
 					index === 0
 						? pipe(
@@ -61,11 +64,10 @@ export const foodOverview: FoodOverview = ({ now$, getFoods }) =>
 									error => errorViewModel(error, cmd.sort),
 									now => dataViewModel(foods, now, cmd.sort)
 								),
-								O.of,
-								Rx.startWith(loadingViewModel)
+								O.of
 						  )
 						: pipe(
-								now$,
+								onceNow,
 								OE.fold(
 									error => O.of(errorViewModel(error, cmd.sort)),
 									now => O.of(dataViewModel(foods, now, cmd.sort))
@@ -77,12 +79,8 @@ export const foodOverview: FoodOverview = ({ now$, getFoods }) =>
 			)
 		),
 		Rx.distinctUntilChanged(
-			(a, b) =>
-				(a._tag === 'Loading' && b._tag === 'Loading') ||
-				(a._tag === 'Ready' &&
-					b._tag === 'Ready' &&
-					a.total === b.total &&
-					Equ.equals(a.foods, b.foods))
+			(previous, current) =>
+				previous._tag === 'Loading' && current._tag === 'Loading'
 		)
 	)
 
@@ -97,7 +95,7 @@ const errorViewModel: (
 	} as const)
 
 const dataViewModel: (
-	data: readonly Food.FoodData[],
+	data: ReadonlyArray<FoodEntity>,
 	now: number,
 	sort: Sorting
 ) => FoodOverviewViewModel = (data, now, sort) => ({
@@ -108,13 +106,13 @@ const dataViewModel: (
 	_tag: 'Ready',
 	foods: pipe(
 		data,
-		RoA.map(foodData => {
-			const food = Food.deserialize(foodData)
+		RoA.map(({ id, ...foodData }) => {
+			const food = D.fromExisting(foodData)
 			return {
-				id: Food.id(food),
-				name: Food.name(food),
-				expDate: Food.expDate(food),
-				state: Food.expirationStatus(now)(food)
+				id,
+				name: D.name(food),
+				expDate: D.expDate(food),
+				state: D.expirationStatus(now)(food)
 			}
 		})
 	)

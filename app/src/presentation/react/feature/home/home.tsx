@@ -9,11 +9,11 @@ import { flow, pipe } from 'fp-ts/function'
 import { useSubscription } from 'observable-hooks'
 import { useMemo, useReducer } from 'react'
 
-import { useGlobalContext } from '@/presentation/react'
-import { AddFab } from '@/presentation/react/ui/fab-add-button'
-import { Swipable } from '@/presentation/react/ui/swipable'
-import { Title } from '@/presentation/react/ui/title'
-import { Transition } from '@/presentation/react/ui/transition'
+import { useGlobalContext } from '@/presentation/react/feature/app/app'
+import { AddFab } from '@/presentation/react/feature/shared/fab-add-button'
+import { Swipable } from '@/presentation/react/feature/shared/swipable'
+import { Title } from '@/presentation/react/feature/shared/title'
+import { Transition } from '@/presentation/react/feature/shared/transition'
 
 interface FoodState {
 	readonly name: string
@@ -22,12 +22,12 @@ interface FoodState {
 
 interface FoodPageState {
 	readonly loading: boolean
-	readonly foods: {
-		readonly byId: ReadonlyMap<FoodState['id'], FoodState>
-		readonly sorted: ReadonlyArray<FoodState['id']>
-		readonly deleting: ReadonlySet<FoodState['id']>
-		readonly selected: ReadonlySet<FoodState['id']>
-	}
+	readonly foods: Readonly<{
+		byId: ReadonlyMap<FoodState['id'], FoodState>
+		sorted: ReadonlyArray<FoodState['id']>
+		deleting: ReadonlySet<FoodState['id']>
+		selected: ReadonlySet<FoodState['id']>
+	}>
 }
 
 const init: FoodPageState = {
@@ -99,14 +99,13 @@ const createVirtualFoodItems = (
 	)
 
 type Action =
-	| { type: 'loadPage'; model: FoodPageModel }
-	| { type: 'enqueueFoodDeletion'; id: FoodState['id'] }
-	| { type: 'deleteFoods' }
+	| Readonly<{ type: 'loadPage'; model: FoodPageModel }>
+	| Readonly<{ type: 'enqueueFoodDeletion'; id: FoodState['id'] }>
+	| Readonly<{ type: 'deleteFoods' }>
 
-const reducer = (state: FoodPageState, action: Action): FoodPageState => {
-	switch (action.type) {
-		case 'deleteFoods':
-			return pipe(
+const reducer = (state: FoodPageState, action: Action): FoodPageState =>
+	action.type === 'deleteFoods'
+		? pipe(
 				state.foods.deleting,
 				Opt.fromPredicate(deleting => deleting.size > 0),
 				Opt.bind(
@@ -131,9 +130,9 @@ const reducer = (state: FoodPageState, action: Action): FoodPageState => {
 					}
 				})),
 				Opt.getOrElse(() => state)
-			)
-		case 'enqueueFoodDeletion':
-			return pipe(
+		  )
+		: action.type === 'enqueueFoodDeletion'
+		? pipe(
 				I.of(state.foods.deleting),
 				I.map(RoS.insert(FoodIdEq)(action.id)),
 				I.map(deleting => ({
@@ -145,9 +144,8 @@ const reducer = (state: FoodPageState, action: Action): FoodPageState => {
 						selected: state.foods.selected
 					}
 				}))
-			)
-		case 'loadPage':
-			return pipe(
+		  )
+		: pipe(
 				I.Do,
 				I.bind('byId', () =>
 					pipe(
@@ -176,9 +174,7 @@ const reducer = (state: FoodPageState, action: Action): FoodPageState => {
 						deleting: state.foods.deleting
 					}
 				}))
-			)
-	}
-}
+		  )
 
 export function FoodsPage(): JSX.Element {
 	const [state, dispatch] = useReducer(reducer, null, () => init)
@@ -236,7 +232,7 @@ export function FoodsPage(): JSX.Element {
 								style={{
 									transform: `translateY(${element.position}px)`
 								}}
-								className="absolute top-0 left-0 h-0 w-full transition-transform duration-1000">
+								className="absolute left-0 top-0 h-0 w-full transition-transform duration-1000">
 								<div className="translate-x-[2000px] transition-transform duration-[1200ms] ">
 									<Swipable>
 										<div className="mx-2 mb-2 h-[70px] bg-white p-3 shadow-md sm:pb-4">
@@ -261,7 +257,7 @@ export function FoodsPage(): JSX.Element {
 									height: element.size,
 									transform: `translateY(${element.position}px)`
 								}}
-								className={`absolute top-0 left-0 w-full transition-transform duration-1000`}>
+								className={`absolute left-0 top-0 w-full transition-transform duration-1000`}>
 								<div className="translate-x-0 transition-transform duration-500 ">
 									<Swipable onRight={() => onSwipeRight?.(element.food.id)}>
 										<div className="mx-2 mb-2 h-[70px] bg-white p-3 shadow-md sm:pb-4">

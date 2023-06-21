@@ -22,7 +22,10 @@
 			"@/presentation/*": ["src/presentation/*"],
 
 			"@/infrastructure": ["src/infrastructure/index"],
-			"@/infrastructure/*": ["src/infrastructure/*"]
+			"@/infrastructure/*": ["src/infrastructure/*"],
+
+			"@/core": ["src/core/index"],
+			"@/core/*": ["src/core/*"]
 		}
 	}
 }

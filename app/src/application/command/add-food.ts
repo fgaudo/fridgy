@@ -1,5 +1,6 @@
-import { TaskEither } from 'fp-ts/lib/TaskEither'
+import { Either } from 'fp-ts/lib/Either'
+import { Single } from 'src/core/rxjs'
 
-import { FoodData } from '@/domain/food'
+import { FoodEntity } from '../types/food'
 
-export type AddFood = (food: FoodData) => TaskEither<string, void>
+export type AddFood = (food: FoodEntity) => Single<Either<string, void>>

@@ -20,8 +20,9 @@ module.exports = {
 	parser: '@typescript-eslint/parser',
 	parserOptions: {
 		ecmaVersion: 'latest',
-		sourceType: 'module'
+		sourceType: 'module',
+		project: './tsconfig.json'
 	},
-	plugins: ['react', 'react-hooks', '@typescript-eslint'],
+	plugins: ['react', 'react-hooks', '@typescript-eslint', 'functional'],
 	rules: {}
 }

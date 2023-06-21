@@ -3,11 +3,11 @@ import * as E from 'fp-ts/lib/Either'
 import { throttleTime } from 'rxjs'
 import { TestScheduler } from 'rxjs/testing'
 
-import { FoodData } from '@/domain/food'
+import { My_FoodData } from '@/domain/food'
 
 import {
-	FoodOverviewCmd,
-	Sorting,
+	My_FoodOverviewCmd,
+	My_Sorting,
 	foodOverview
 } from '@/application/usecase/food-overview'
 
@@ -28,19 +28,19 @@ it('generates the stream correctly', () => {
 		const nowM = '     -a|'
 
 		const getFoods = () =>
-			cold<readonly FoodData[]>(foodsM, {
+			cold<readonly My_FoodData[]>(foodsM, {
 				a: [
 					{ name: '1', expDate: 3, id: '1', isBestBefore: true, type: 'dairy' }
 				]
 			})
 
-		const cmds$ = hot<FoodOverviewCmd>(cmdsM, {
+		const cmds$ = hot<My_FoodOverviewCmd>(cmdsM, {
 			b: { sort: 'date', page: 0 },
 			a: { sort: 'name', page: 1 }
 		})
 		const now$ = cold<E.Either<string, number>>(nowM, { a: E.right(1) })
 
-		const source$ = foodOverview({ getFoods, now$ })(cmds$)
+		const source$ = foodOverview({ onFoods: getFoods, onceNow: now$ })(cmds$)
 
 		expectObservable(source$, subM).toBe(expectM, {
 			a: {

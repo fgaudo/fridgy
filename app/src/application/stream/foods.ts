@@ -1,7 +1,6 @@
 import { Observable } from 'rxjs'
 
-import { FoodData } from '@/domain/food'
-
+import { FoodEntity } from '../types/food'
 import { Sorting } from '../usecase/food-overview'
 
-export type GetFoods = (sort: Sorting) => Observable<ReadonlyArray<FoodData>>
+export type OnFoods = (sort: Sorting) => Observable<ReadonlyArray<FoodEntity>>
