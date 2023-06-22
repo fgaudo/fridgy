@@ -1,7 +1,8 @@
+import * as Log from '@/core/log'
+import { Single } from '@/core/rxjs'
 import * as O from 'fp-ts-rxjs/lib/Observable'
 import * as OE from 'fp-ts-rxjs/lib/ObservableEither'
 import * as RoA from 'fp-ts/ReadonlyArray'
-import * as E from 'fp-ts/lib/Either'
 import { flow, pipe } from 'fp-ts/lib/function'
 import * as Rx from 'rxjs'
 
@@ -42,42 +43,110 @@ export type FoodOverviewCmd = Readonly<{
 export type FoodOverviewDeps = Readonly<{
 	onceNow: OnceNow
 	onFoods: OnFoods
+	onceInfo: typeof Log.info
+	onceError: typeof Log.error
+	onceFlow: Single<string>
 }>
 
-type FoodOverview = (
-	deps: FoodOverviewDeps
-) => (
-	cmds: Rx.Observable<FoodOverviewCmd>
-) => Rx.Observable<FoodOverviewViewModel>
+type FoodOverviewReturn = FoodOverviewViewModel | Log.LogEntry
 
-export const foodOverview: FoodOverview = ({ onceNow, onFoods }) =>
+export type FoodOverview = (
+	deps: FoodOverviewDeps
+) => (cmds: Rx.Observable<FoodOverviewCmd>) => Rx.Observable<FoodOverviewReturn>
+
+export const foodOverview: FoodOverview = ({
+	onceNow,
+	onFoods,
+	onceInfo,
+	onceError,
+	onceFlow
+}) =>
 	flow(
 		Rx.startWith<FoodOverviewCmd>({ sort: 'name', page: 0 } as const),
 		Rx.switchMap(cmd =>
 			pipe(
-				Rx.combineLatest([onFoods(cmd.sort), onceNow]), // optimization. Not sure if there’s a simpler way
-				Rx.switchMap(([foods, firstNowEither], index) =>
-					index === 0
-						? pipe(
-								firstNowEither,
-								E.fold(
-									error => errorViewModel(error, cmd.sort),
-									now => dataViewModel(foods, now, cmd.sort)
-								),
-								O.of
-						  )
-						: pipe(
-								onceNow,
-								OE.fold(
-									error => O.of(errorViewModel(error, cmd.sort)),
-									now => O.of(dataViewModel(foods, now, cmd.sort))
-								),
-								Rx.startWith(loadingViewModel)
-						  )
-				),
-				Rx.startWith(loadingViewModel)
+				onceFlow,
+				O.map(flow1 => [cmd, flow1] as const)
 			)
 		),
+		Rx.switchMap(([cmd, flow1]) =>
+			Rx.concat(
+				onceInfo(`Received command ${JSON.stringify(cmd)}`, [flow1]),
+				pipe(
+					Rx.combineLatest([onFoods(cmd.sort), onceNow]),
+					Rx.switchMap(([foods, firstNowEither], index) =>
+						pipe(
+							index === 0
+								? pipe(
+										firstNowEither,
+										OE.fromEither,
+										OE.fold(
+											error =>
+												Rx.concat(
+													onceError(
+														`Received ${foods.length} food elements but there was a problem retrieving the current timestamp. ${error}`,
+														[flow1, index.toString(10)]
+													),
+													O.of(errorViewModel(error, cmd.sort))
+												),
+											now =>
+												Rx.concat(
+													onceInfo(
+														`Received ${
+															foods.length
+														} food elements together with the current timestamp ${now.toString(
+															10
+														)}`,
+														[flow1, index.toString(10)]
+													),
+													O.of(dataViewModel(foods, now, cmd.sort)),
+													onceInfo('Emitted viewmodel', [
+														flow1,
+														index.toString(10)
+													])
+												)
+										)
+								  )
+								: Rx.concat(
+										onceInfo(`Received ${foods.length} food elements`, [
+											flow1,
+											index.toString(10)
+										]),
+										pipe(
+											onceNow,
+											OE.fold(
+												error =>
+													Rx.concat(
+														onceError(
+															`There was a problem retrieving the current timestamp. ${error}`,
+															[flow1, index.toString(10)]
+														),
+														O.of(errorViewModel(error, cmd.sort))
+													),
+												now =>
+													Rx.concat(
+														onceInfo(
+															`Received the current timestamp ${now.toString(
+																10
+															)}`,
+															[flow1, index.toString(10)]
+														),
+														O.of(dataViewModel(foods, now, cmd.sort)),
+														onceInfo('Emitted viewmodel', [
+															flow1,
+															index.toString(10)
+														])
+													)
+											)
+										)
+								  )
+						)
+					),
+					Rx.startWith<FoodOverviewReturn>(loadingViewModel)
+				)
+			)
+		),
+		Rx.startWith<FoodOverviewReturn>(loadingViewModel),
 		Rx.distinctUntilChanged(
 			(previous, current) =>
 				previous._tag === 'Loading' && current._tag === 'Loading'

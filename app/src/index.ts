@@ -22,6 +22,16 @@ if (container == null) {
 // const db = new FridgyDatabase()
 const root = createRoot(container)
 
+window.addEventListener('error', function (e) {
+	alert('Error occurred: ' + e.error.message)
+	return false
+})
+
+window.addEventListener('unhandledrejection', function (e) {
+	alert('Error occurred: ' + e.error.message)
+	return false
+})
+
 new App({
 	foodOverviewDep: {
 		onceNow: OE.right(new Date().getDate()),

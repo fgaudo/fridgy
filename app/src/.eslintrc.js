@@ -29,6 +29,7 @@ module.exports = {
 	},
 	plugins: ['react', 'react-hooks', '@typescript-eslint', 'functional'],
 	rules: {
+		'no-shadow': 'error',
 		'functional/prefer-immutable-types': [
 			'error',
 			{
@@ -37,6 +38,7 @@ module.exports = {
 				ignoreTypePattern: ['Observable', 'Single']
 			}
 		],
+		'functional/functional-parameters': 'off',
 		'functional/no-promise-reject': 'error',
 		'functional/type-declaration-immutability': 'off'
 	}

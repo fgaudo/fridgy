@@ -43,6 +43,7 @@
 		"dexie": "^3.2.4",
 		"fp-ts": "^2.16.0",
 		"fp-ts-rxjs": "^0.6.15",
+		"logging-ts": "^0.3.4",
 		"monocle-ts": "^2.3.13",
 		"newtype-ts": "^0.3.5",
 		"observable-hooks": "^4.2.2",

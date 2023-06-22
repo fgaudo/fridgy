@@ -22,6 +22,9 @@ dependencies:
   fp-ts-rxjs:
     specifier: ^0.6.15
     version: 0.6.15(fp-ts@2.16.0)(rxjs@7.8.1)
+  logging-ts:
+    specifier: ^0.3.4
+    version: 0.3.4(fp-ts@2.16.0)
   monocle-ts:
     specifier: ^2.3.13
     version: 2.3.13(fp-ts@2.16.0)
@@ -3570,6 +3573,14 @@ packages:
       chalk: 4.1.2
       is-unicode-supported: 0.1.0
     dev: true
+
+  /logging-ts@0.3.4(fp-ts@2.16.0):
+    resolution: {integrity: sha512-TJYaSB88h8N9/ojruoGZgJeQEwpLmDNWpGf03hDgjPNo5QnwO28vkSH/H8/9aMoX8zeShVJUOnKRM6zs5ifR0A==}
+    peerDependencies:
+      fp-ts: ^2.0.5
+    dependencies:
+      fp-ts: 2.16.0
+    dev: false
 
   /loose-envify@1.4.0:
     resolution: {integrity: sha512-lyuxPGr/Wfhrlem2CL/UcnUc1zcqKAImBDzukY7Y5F/yQiNdko6+fRLevlw1HgMySw7f611UIY408EtxRSoK3Q==}
