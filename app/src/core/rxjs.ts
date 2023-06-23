@@ -8,43 +8,14 @@
 
 /* eslint-disable functional/no-expression-statements */
 import * as O from 'fp-ts-rxjs/Observable'
-import { pipe } from 'fp-ts/lib/function'
 import { Observable, first } from 'rxjs'
 
-export class Single<T> implements Observable<T> {
+export class Single<T> extends Observable<T> {
 	constructor(source$: Observable<T>) {
-		this.source = pipe(source$, first())
+		super(source$.pipe(first()).subscribe)
 	}
 
-	get subscribe() {
-		return this.source.subscribe
-	}
-
-	get pipe() {
-		return this.source.pipe
-	}
-
-	/** @deprecated **/
-	get toPromise() {
-		return this.source.toPromise
-	}
-
-	get forEach() {
-		return this.source.forEach
-	}
-
-	/** @deprecated **/
-	get lift() {
-		return this.source.lift
-	}
-
-	/** @deprecated **/
-	get operator() {
-		return this.source.operator
-	}
-
-	/** @deprecated **/
-	readonly source: Observable<T>
+	private readonly _tag = 'CORE.Single'
 }
 
 export type Completable = Observable<never>

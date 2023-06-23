@@ -1,13 +1,12 @@
+import { LogEntry } from '@/core/log'
+import { Single } from '@/core/rxjs'
 import { expect } from 'chai'
 import * as E from 'fp-ts/lib/Either'
-import { throttleTime } from 'rxjs'
 import { TestScheduler } from 'rxjs/testing'
 
-import { My_FoodData } from '@/domain/food'
-
+import { FoodEntity } from '@/application/types/food'
 import {
-	My_FoodOverviewCmd,
-	My_Sorting,
+	FoodOverviewCmd,
 	foodOverview
 } from '@/application/usecase/food-overview'
 
@@ -23,24 +22,54 @@ it('generates the stream correctly', () => {
 	testScheduler.run(({ expectObservable, cold, hot }) => {
 		const cmdsM = '  ---b-----a----b-----'
 		const subM = '   ^------------------!'
-		const expectM = 'l-al-b-lbl-a-l--b-l'
-		const foodsM = ' --a-a----a--a-a---a'
-		const nowM = '     -a|'
+		const expectM = '---------------------'
+		const foodsM = ' --a---------a-a---a'
 
 		const getFoods = () =>
-			cold<readonly My_FoodData[]>(foodsM, {
+			cold<readonly FoodEntity[]>(foodsM, {
 				a: [
 					{ name: '1', expDate: 3, id: '1', isBestBefore: true, type: 'dairy' }
 				]
 			})
 
-		const cmds$ = hot<My_FoodOverviewCmd>(cmdsM, {
+		const cmds$ = hot<FoodOverviewCmd>(cmdsM, {
 			b: { sort: 'date', page: 0 },
 			a: { sort: 'name', page: 1 }
 		})
-		const now$ = cold<E.Either<string, number>>(nowM, { a: E.right(1) })
 
-		const source$ = foodOverview({ onFoods: getFoods, onceNow: now$ })(cmds$)
+		const now$ = cold<E.Either<string, number>>('-a|', {
+			a: E.right(1)
+		}) as unknown as Single<E.Either<string, number>>
+
+		const flow$ = cold<string>('-a|', { a: '' }) as unknown as Single<string>
+
+		const error$ = () =>
+			cold<LogEntry>('-a|', {
+				a: {
+					_tag: 'CORE.Logging',
+					message: 'messageResult',
+					timestamp: '0',
+					level: 'error'
+				} as const
+			}) as unknown as Single<LogEntry>
+
+		const info$ = () =>
+			cold<LogEntry>('-a|', {
+				a: {
+					_tag: 'CORE.Logging',
+					message: 'messageResult',
+					timestamp: '0',
+					level: 'info'
+				} as const
+			}) as unknown as Single<LogEntry>
+
+		const source$ = foodOverview({
+			onFoods: getFoods,
+			onceNow: now$,
+			onceError: error$,
+			onceFlow: flow$,
+			onceInfo: info$
+		})(cmds$)
 
 		expectObservable(source$, subM).toBe(expectM, {
 			a: {

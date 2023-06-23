@@ -74,74 +74,68 @@ export const foodOverview: FoodOverview = ({
 				onceInfo(`Received command ${JSON.stringify(cmd)}`, [flow1]),
 				pipe(
 					Rx.combineLatest([onFoods(cmd.sort), onceNow]),
-					Rx.switchMap(([foods, firstNowEither], index) =>
-						pipe(
-							index === 0
-								? pipe(
-										firstNowEither,
-										OE.fromEither,
-										OE.fold(
-											error =>
-												Rx.concat(
-													onceError(
-														`Received ${foods.length} food elements but there was a problem retrieving the current timestamp. ${error}`,
-														[flow1, index.toString(10)]
-													),
-													O.of(errorViewModel(error, cmd.sort))
-												),
-											now =>
-												Rx.concat(
-													onceInfo(
-														`Received ${
-															foods.length
-														} food elements together with the current timestamp ${now.toString(
-															10
-														)}`,
-														[flow1, index.toString(10)]
-													),
-													O.of(dataViewModel(foods, now, cmd.sort)),
-													onceInfo('Emitted viewmodel', [
-														flow1,
-														index.toString(10)
-													])
-												)
-										)
-								  )
-								: Rx.concat(
-										onceInfo(`Received ${foods.length} food elements`, [
-											flow1,
-											index.toString(10)
-										]),
-										pipe(
-											onceNow,
-											OE.fold(
-												error =>
-													Rx.concat(
-														onceError(
-															`There was a problem retrieving the current timestamp. ${error}`,
-															[flow1, index.toString(10)]
-														),
-														O.of(errorViewModel(error, cmd.sort))
-													),
-												now =>
-													Rx.concat(
-														onceInfo(
-															`Received the current timestamp ${now.toString(
-																10
-															)}`,
-															[flow1, index.toString(10)]
-														),
-														O.of(dataViewModel(foods, now, cmd.sort)),
-														onceInfo('Emitted viewmodel', [
-															flow1,
-															index.toString(10)
-														])
-													)
-											)
-										)
-								  )
+					Rx.switchMap(([foods, firstNowEither], index) => {
+						const indexString = index.toString(10)
+
+						const firstLoad = pipe(
+							firstNowEither,
+							OE.fromEither,
+							OE.fold(
+								error =>
+									Rx.concat(
+										onceError(
+											`Received ${foods.length} food elements but there was a problem retrieving the current timestamp. ${error}`,
+											[flow1, indexString]
+										),
+										O.of(errorViewModel(error, cmd.sort))
+									),
+								now =>
+									Rx.concat(
+										onceInfo(
+											`Received ${
+												foods.length
+											} food elements together with the current timestamp ${now.toString(
+												10
+											)}`,
+											[flow1, indexString]
+										),
+										O.of(dataViewModel(foods, now, cmd.sort)),
+										onceInfo('Emitted viewmodel', [flow1, indexString])
+									)
+							)
 						)
-					),
+
+						const nextLoads = Rx.concat(
+							onceInfo(`Received ${foods.length} food elements`, [
+								flow1,
+								indexString
+							]),
+							pipe(
+								onceNow,
+								OE.fold(
+									error =>
+										Rx.concat(
+											onceError(
+												`There was a problem retrieving the current timestamp. ${error}`,
+												[flow1, indexString]
+											),
+											O.of(errorViewModel(error, cmd.sort))
+										),
+									now =>
+										Rx.concat(
+											onceInfo(
+												`Received the current timestamp ${now.toString(10)}`,
+												[flow1, indexString]
+											),
+											O.of(dataViewModel(foods, now, cmd.sort)),
+											onceInfo('Emitted viewmodel', [flow1, indexString])
+										)
+								)
+							)
+						)
+
+						return index === 0 ? firstLoad : nextLoads
+					}),
 					Rx.startWith<FoodOverviewReturn>(loadingViewModel)
 				)
 			)

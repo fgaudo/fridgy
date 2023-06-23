@@ -4,7 +4,6 @@ import * as IO from 'fp-ts/lib/IO'
 import * as R from 'fp-ts/lib/Random'
 import { match } from 'fp-ts/lib/ReadonlyArray'
 import { pipe } from 'fp-ts/lib/function'
-import { Observable } from 'rxjs'
 
 import { Single, fromObservable } from './rxjs'
 
@@ -30,7 +29,7 @@ export const info: (
 export const error: (
 	message: string,
 	flows: readonly string[]
-) => Single<LogEntry> = (message, flows = ['']) =>
+) => Single<LogEntry> = (message, flows = [''] as const) =>
 	fromObservable(
 		pipe(
 			createLog(message, flows),
