@@ -17,7 +17,7 @@ export type LogEntry = Readonly<{
 
 export const info: (
 	message: string,
-	flows: readonly string[]
+	flows?: readonly string[]
 ) => Single<LogEntry> = (message, flows = []) =>
 	fromObservable(
 		pipe(
@@ -28,7 +28,7 @@ export const info: (
 
 export const error: (
 	message: string,
-	flows: readonly string[]
+	flows?: readonly string[]
 ) => Single<LogEntry> = (message, flows = [''] as const) =>
 	fromObservable(
 		pipe(
