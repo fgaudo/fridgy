@@ -1,3 +1,7 @@
+/* eslint-disable functional/no-this-expressions */
+
+/* eslint-disable functional/no-classes */
+
 /* eslint-disable functional/no-expression-statements */
 import { Observer, Subscribable, Subscription, Unsubscribable } from 'rxjs'
 import { Pipe, PipeNoUnsub } from 'src/core/pipe'
@@ -7,7 +11,7 @@ import {
 	FoodOverviewDeps,
 	FoodOverviewViewModel,
 	foodOverview
-} from '@/application/usecase/food-overview'
+} from '@/application/usecases/food-overview'
 
 export type Deps = Readonly<{
 	foodOverviewDep: FoodOverviewDeps

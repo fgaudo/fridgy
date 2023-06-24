@@ -1,4 +1,4 @@
-import * as Log from '@/core/log'
+import * as Log from '@/core/logging'
 import { Single } from '@/core/rxjs'
 import * as O from 'fp-ts-rxjs/lib/Observable'
 import * as OE from 'fp-ts-rxjs/lib/ObservableEither'
@@ -8,10 +8,8 @@ import * as Rx from 'rxjs'
 
 import * as D from '@/domain/food'
 
-import { OnceNow } from '@/application/query/get-now'
-import { OnFoods } from '@/application/stream/foods'
-
-import { FoodEntity } from '../types/food'
+import { OnceNow } from '@/application/queries/now'
+import { FoodEntry, OnFoods } from '@/application/streams/foods'
 
 export type FoodModel = Readonly<{
 	id: string
@@ -40,6 +38,7 @@ export type FoodOverviewCmd = Readonly<{
 	page: number
 }>
 
+type FoodOverviewReturn = FoodOverviewViewModel | Log.LogEntry
 export type FoodOverviewDeps = Readonly<{
 	onceNow: OnceNow
 	onFoods: OnFoods
@@ -47,8 +46,6 @@ export type FoodOverviewDeps = Readonly<{
 	onceError: typeof Log.error
 	onceFlow: Single<string>
 }>
-
-type FoodOverviewReturn = FoodOverviewViewModel | Log.LogEntry
 
 export type FoodOverview = (
 	deps: FoodOverviewDeps
@@ -158,7 +155,7 @@ const errorViewModel: (
 	} as const)
 
 const dataViewModel: (
-	data: ReadonlyArray<FoodEntity>,
+	data: ReadonlyArray<FoodEntry>,
 	now: number,
 	sort: Sorting
 ) => FoodOverviewViewModel = (data, now, sort) => ({

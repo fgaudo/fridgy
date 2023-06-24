@@ -7,20 +7,44 @@
 /* eslint-disable functional/no-classes */
 
 /* eslint-disable functional/no-expression-statements */
-import * as O from 'fp-ts-rxjs/Observable'
-import { Observable, first } from 'rxjs'
 
-export class Single<T> extends Observable<T> {
-	constructor(source$: Observable<T>) {
-		super(source$.pipe(first()).subscribe)
+/* eslint-disable functional/prefer-immutable-types */
+import * as O from 'fp-ts-rxjs/Observable'
+import * as Rx from 'rxjs'
+
+export class Single<T> implements Rx.Observable<T> {
+	constructor(source: Rx.Observable<T>) {
+		this.source = source.pipe(Rx.first())
+
+		this.subscribe = this.source.subscribe
+		this.forEach = this.source.forEach
+		this.pipe = this.source.pipe
+
+		this.operator = this.source.operator
+		this.toPromise = this.source.toPromise
+		this.lift = this.source.lift
 	}
 
-	private readonly _tag = 'CORE.Single'
+	subscribe: typeof this.source.subscribe
+	forEach: typeof this.source.forEach
+	pipe: typeof this.source.pipe
+
+	/** @deprecated make private in v8 */
+	source: Rx.Observable<T>
+
+	/** @deprecated remove in v8 */
+	lift: typeof this.source.lift
+
+	/** @deprecated remove in v8 */
+	operator: typeof this.source.operator
+
+	/** @deprecated remove in v8 */
+	toPromise: typeof this.source.toPromise
 }
 
-export type Completable = Observable<never>
+export type Completable = Rx.Observable<never>
 
-export const fromObservable: <T>(obs: Observable<T>) => Single<T> = obs =>
+export const fromObservable: <T>(obs: Rx.Observable<T>) => Single<T> = obs =>
 	obs instanceof Single ? obs : new Single(obs)
 
 export const of: <A>(a: A) => Single<A> = a => fromObservable(O.of(a))

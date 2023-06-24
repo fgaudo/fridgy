@@ -6,7 +6,7 @@ import * as Rx from 'rxjs'
 
 import * as D from '@/domain/food'
 
-import { AddFood } from '../command/add-food'
+import { AddFood } from '../commands/add-food'
 
 export type FoodAddDeps = Readonly<{
 	addFood: AddFood

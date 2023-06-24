@@ -1,8 +1,13 @@
+/* eslint-disable functional/no-this-expressions */
+
+/* eslint-disable functional/no-classes */
+
 /* eslint-disable functional/no-return-void */
 
 /* eslint-disable functional/prefer-immutable-types */
 
 /* eslint-disable functional/type-declaration-immutability */
+import { pipe } from 'fp-ts/lib/function'
 import {
 	Observable,
 	Observer,
@@ -16,30 +21,30 @@ export interface PipeNoUnsub<IN, OUT> extends Observer<IN>, Subscribable<OUT> {}
 
 export class Pipe<IN, OUT> implements PipeNoUnsub<IN, OUT>, SubscriptionLike {
 	constructor(
-		private readonly convert: (obs: Observable<IN>) => Observable<OUT>
+		private readonly transform: (obs: Observable<IN>) => Observable<OUT>
 	) {}
 
 	unsubscribe(): void {
-		return this._subject.unsubscribe()
+		return this.subject.unsubscribe()
 	}
 
 	get closed() {
-		return this._subject.closed
+		return this.subject.closed
 	}
 
 	subscribe(observer: Partial<Observer<OUT>>): Unsubscribable {
-		return this.convert(this._subject).subscribe(observer)
+		return pipe(this.subject, this.transform).subscribe(observer)
 	}
 
 	next(value: IN) {
-		return this._subject.next(value)
+		return this.subject.next(value)
 	}
 	error(err: unknown) {
-		return this._subject.error(err)
+		return this.subject.error(err)
 	}
 	complete() {
-		return this._subject.complete()
+		return this.subject.complete()
 	}
 
-	private readonly _subject: Subject<IN> = new Subject<IN>()
+	private readonly subject: Subject<IN> = new Subject<IN>()
 }
