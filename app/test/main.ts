@@ -1,14 +1,14 @@
-import { LogEntry } from '@/core/log'
+import { LogEntry } from '@/core/logging'
 import { Single } from '@/core/rxjs'
 import { expect } from 'chai'
 import * as E from 'fp-ts/lib/Either'
 import { TestScheduler } from 'rxjs/testing'
 
-import { FoodEntity } from '@/application/types/food'
+import { FoodEntry } from '@/application/streams/foods'
 import {
 	FoodOverviewCmd,
 	foodOverview
-} from '@/application/usecase/food-overview'
+} from '@/application/usecases/food-overview'
 
 const testScheduler = new TestScheduler((actual, expected) => {
 	// asserting the two objects are equal - required
@@ -26,7 +26,7 @@ it('generates the stream correctly', () => {
 		const foodsM = ' --a---------a-a---a'
 
 		const getFoods = () =>
-			cold<readonly FoodEntity[]>(foodsM, {
+			cold<readonly FoodEntry[]>(foodsM, {
 				a: [
 					{ name: '1', expDate: 3, id: '1', isBestBefore: true, type: 'dairy' }
 				]
@@ -63,13 +63,13 @@ it('generates the stream correctly', () => {
 				} as const
 			}) as unknown as Single<LogEntry>
 
-		const source$ = foodOverview({
+		const source$ = foodOverview(cmds$)({
 			onFoods: getFoods,
 			onceNow: now$,
 			onceError: error$,
 			onceFlow: flow$,
 			onceInfo: info$
-		})(cmds$)
+		})
 
 		expectObservable(source$, subM).toBe(expectM, {
 			a: {
