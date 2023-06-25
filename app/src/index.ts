@@ -11,8 +11,11 @@ import { createRoot } from 'react-dom/client'
 import * as Rx from 'rxjs'
 
 import { App } from './application'
-import { error, info } from './core/logging'
 import { Single } from './core/single'
+import {
+	nativeOnceError,
+	nativeOnceInfo
+} from './infrastructure/native/queries/logging'
 import { renderApp } from './presentation/react/feature/app/app'
 
 const container = document.getElementById('root')
@@ -38,8 +41,8 @@ new App({
 	foodOverviewDep: {
 		onceNow: new Single(OE.right(new Date().getDate())),
 		onFoods: () => Rx.of(),
-		onceInfo: info,
-		onceError: error,
+		onceInfo: nativeOnceInfo,
+		onceError: nativeOnceError,
 		onceFlow: new Single(Rx.of())
 	}
 }).subscribe(useCases => {

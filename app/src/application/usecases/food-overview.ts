@@ -1,5 +1,3 @@
-import * as Log from '@/core/logging'
-import { Single } from '@/core/single'
 import * as ROE from 'fp-ts-rxjs/ReaderObservableEither'
 import * as O from 'fp-ts-rxjs/lib/Observable'
 import * as OE from 'fp-ts-rxjs/lib/ObservableEither'
@@ -10,8 +8,12 @@ import * as Rx from 'rxjs'
 
 import * as D from '@/domain/food'
 
+import * as Log from '@/application/queries/logging'
 import { OnceNow } from '@/application/queries/now'
 import { FoodEntry, OnFoods } from '@/application/streams/foods'
+
+import { OnceFlow } from '../queries/flow'
+import { OnceError, OnceInfo } from '../queries/logging'
 
 export type FoodModel = Readonly<{
 	id: string
@@ -45,9 +47,9 @@ export type FoodOverviewReturn = Log.WithLogging<FoodOverviewViewModel>
 export type FoodOverviewDeps = Readonly<{
 	onceNow: OnceNow
 	onFoods: OnFoods
-	onceInfo: typeof Log.info<FoodOverviewViewModel>
-	onceError: typeof Log.error<FoodOverviewViewModel>
-	onceFlow: Single<string>
+	onceInfo: OnceInfo<FoodOverviewViewModel>
+	onceError: OnceError<FoodOverviewViewModel>
+	onceFlow: OnceFlow
 }>
 
 type HandleNewCommand = (
@@ -72,10 +74,21 @@ const handleNewCommand: HandleNewCommand = f => command$ => deps =>
 				loadingViewModel(deps),
 				pipe(
 					deps.onceFlow,
-					Rx.switchMap(requestFlow =>
-						Rx.concat(
-							deps.onceInfo(`Created request flow ${requestFlow}`),
-							f(command, requestFlow)(deps)
+					Rx.switchMap(either =>
+						pipe(
+							either,
+							OE.fromEither,
+							OE.fold(
+								exception =>
+									deps.onceInfo(
+										`Could not create request flow: ${exception.message}`
+									),
+								requestFlow =>
+									Rx.concat(
+										deps.onceInfo(`Created request flow ${requestFlow}`),
+										f(command, requestFlow)(deps)
+									)
+							)
 						)
 					)
 				)
@@ -124,13 +137,13 @@ const onFoodData: OnFoodData = (command, requestFlow, success) => deps =>
 							either,
 							OE.fromEither,
 							OE.fold(
-								error =>
+								exception =>
 									Rx.concat(
 										deps.onceError(
-											`Received ${foods.length} food elements but there was a problem retrieving the current timestamp. ${error}`,
+											`Received ${foods.length} food elements but there was a problem retrieving the current timestamp. ${exception}`,
 											[requestFlow, indexString]
 										),
-										errorViewModel(error, command.sort)(deps)
+										errorViewModel(exception.message, command.sort)(deps)
 									),
 								now => success(foods, now, command.sort)(deps)
 							)
@@ -144,13 +157,13 @@ const onFoodData: OnFoodData = (command, requestFlow, success) => deps =>
 							pipe(
 								deps.onceNow,
 								OE.fold(
-									error =>
+									exception =>
 										Rx.concat(
 											deps.onceError(
-												`There was a problem retrieving the current timestamp. ${error}`,
+												`There was a problem retrieving the current timestamp. ${exception}`,
 												[requestFlow, indexString]
 											),
-											errorViewModel(error, command.sort)(deps)
+											errorViewModel(exception.message, command.sort)(deps)
 										),
 									now => success(foods, now, command.sort)(deps)
 								)

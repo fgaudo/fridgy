@@ -35,7 +35,7 @@ module.exports = {
 			{
 				enforcement: 'ReadonlyDeep',
 				ignoreInferredTypes: true,
-				ignoreTypePattern: ['Observable', 'Single']
+				ignoreTypePattern: ['Observable', 'Single', 'Once[A-Z]', 'On[A-Z]']
 			}
 		],
 		'functional/functional-parameters': 'off',
