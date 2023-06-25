@@ -1,3 +1,7 @@
+/* eslint-disable functional/immutable-data */
+
+/* eslint-disable functional/no-expression-statements */
+
 /* eslint-disable functional/no-this-expressions */
 
 /* eslint-disable functional/no-classes */
@@ -8,43 +12,40 @@
 
 /* eslint-disable functional/type-declaration-immutability */
 import { pipe } from 'fp-ts/lib/function'
-import {
-	Observable,
-	Observer,
-	Subject,
-	Subscribable,
-	SubscriptionLike,
-	Unsubscribable
-} from 'rxjs'
+import * as Rx from 'rxjs'
 
-export interface PipeNoUnsub<IN, OUT> extends Observer<IN>, Subscribable<OUT> {}
+export interface PipeNoUnsub<in IN, out OUT> extends Rx.Observable<OUT> {
+	next: (value: IN) => void
+}
 
-export class Pipe<IN, OUT> implements PipeNoUnsub<IN, OUT>, SubscriptionLike {
-	constructor(
-		private readonly transform: (obs: Observable<IN>) => Observable<OUT>
-	) {}
-
-	unsubscribe(): void {
-		return this.subject.unsubscribe()
+export class Pipe<in out IN, in out OUT> implements PipeNoUnsub<IN, OUT> {
+	constructor(transform: (obs: Rx.Observable<IN>) => Rx.Observable<OUT>) {
+		const obs = this.source.pipe(transform)
+		this.subscribe = obs.subscribe
+		this.forEach = obs.forEach
+		this.pipe = obs.pipe
+		this.operator = obs.operator
+		this.lift = obs.lift
+		this.toPromise = obs.toPromise
+		this.next = this.source.next
+		this.unsubscribe = this.source.unsubscribe
 	}
 
-	get closed() {
-		return this.subject.closed
-	}
+	subscribe: Rx.Observable<OUT>['subscribe']
+	forEach: Rx.Observable<OUT>['forEach']
+	pipe: Rx.Observable<OUT>['pipe']
+	unsubscribe: Rx.Subject<IN>['unsubscribe']
+	next: Rx.Subject<IN>['next']
 
-	subscribe(observer: Partial<Observer<OUT>>): Unsubscribable {
-		return pipe(this.subject, this.transform).subscribe(observer)
-	}
+	/** @deprecated will be made private in v8 */
+	source: Rx.Subject<IN> = new Rx.Subject<IN>()
 
-	next(value: IN) {
-		return this.subject.next(value)
-	}
-	error(err: unknown) {
-		return this.subject.error(err)
-	}
-	complete() {
-		return this.subject.complete()
-	}
+	/** @deprecated will be removed in v8 */
+	operator: Rx.Observable<OUT>['operator']
 
-	private readonly subject: Subject<IN> = new Subject<IN>()
+	/** @deprecated will be removed in v8 */
+	lift: Rx.Observable<OUT>['lift']
+
+	/** @deprecated will be removed in v8 */
+	toPromise: Rx.Observable<OUT>['toPromise']
 }

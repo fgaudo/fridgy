@@ -1,5 +1,5 @@
 import { Option } from 'fp-ts/lib/Option'
-import { Single } from 'src/core/rxjs'
+import { Single } from 'src/core/single'
 
 import { FoodData } from '@/domain/food'
 

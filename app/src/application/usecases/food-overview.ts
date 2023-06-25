@@ -1,11 +1,10 @@
 import * as Log from '@/core/logging'
-import { Single } from '@/core/rxjs'
+import { Single } from '@/core/single'
+import * as ROE from 'fp-ts-rxjs/ReaderObservableEither'
 import * as O from 'fp-ts-rxjs/lib/Observable'
 import * as OE from 'fp-ts-rxjs/lib/ObservableEither'
 import * as RO from 'fp-ts-rxjs/lib/ReaderObservable'
 import * as RoA from 'fp-ts/ReadonlyArray'
-import * as E from 'fp-ts/lib/Either'
-import * as R from 'fp-ts/lib/Reader'
 import { flow, pipe } from 'fp-ts/lib/function'
 import * as Rx from 'rxjs'
 
@@ -41,33 +40,32 @@ export type FoodOverviewCmd = Readonly<{
 	page: number
 }>
 
-type FoodOverviewReturn = FoodOverviewViewModel | Log.LogEntry
+export type FoodOverviewReturn = Log.WithLogging<FoodOverviewViewModel>
+
 export type FoodOverviewDeps = Readonly<{
 	onceNow: OnceNow
 	onFoods: OnFoods
-	onceInfo: typeof Log.info
-	onceError: typeof Log.error
+	onceInfo: typeof Log.info<FoodOverviewViewModel>
+	onceError: typeof Log.error<FoodOverviewViewModel>
 	onceFlow: Single<string>
 }>
 
-export type FoodOverview = (
-	command$: Rx.Observable<FoodOverviewCmd>
-) => RO.ReaderObservable<FoodOverviewDeps, FoodOverviewReturn>
-
-type StartCommandFlow = (
+type HandleNewCommand = (
 	f: (
-		command: Readonly<{
-			command: FoodOverviewCmd
-			requestFlow: string
-		}>
+		command: FoodOverviewCmd,
+		requestFlow: string
 	) => RO.ReaderObservable<FoodOverviewDeps, FoodOverviewReturn>
 ) => (
 	r: Rx.Observable<FoodOverviewCmd>
-) => RO.ReaderObservable<FoodOverviewDeps, FoodOverviewReturn>
+) => ROE.ReaderObservableEither<
+	FoodOverviewDeps,
+	Log.LogEntry,
+	FoodOverviewViewModel
+>
 
-const startCommandFlow: StartCommandFlow = f => cmd$ => deps =>
+const handleNewCommand: HandleNewCommand = f => command$ => deps =>
 	pipe(
-		cmd$,
+		command$,
 		Rx.switchMap(command =>
 			Rx.concat(
 				deps.onceInfo(`Received command ${JSON.stringify(command)}`),
@@ -77,34 +75,48 @@ const startCommandFlow: StartCommandFlow = f => cmd$ => deps =>
 					Rx.switchMap(requestFlow =>
 						Rx.concat(
 							deps.onceInfo(`Created request flow ${requestFlow}`),
-							f({ requestFlow, command })(deps)
+							f(command, requestFlow)(deps)
 						)
 					)
 				)
+			)
+		),
+		OE.chain(viewModel =>
+			pipe(
+				O.of(viewModel),
+				Rx.distinctUntilChanged(
+					(previous, current) =>
+						previous._tag === 'Loading' && current._tag === 'Loading'
+				),
+				OE.fromObservable<Log.LogEntry, FoodOverviewViewModel>
 			)
 		)
 	)
 
 type OnFoodData = (
-	sorting: Sorting,
+	command: FoodOverviewCmd,
 	requestFlow: string,
 	success: (
 		entries: ReadonlyArray<FoodEntry>,
 		now: number,
 		s: Sorting
-	) => RO.ReaderObservable<FoodOverviewDeps, FoodOverviewReturn>,
-	error: (
-		err: string,
-		s: Sorting
-	) => RO.ReaderObservable<FoodOverviewDeps, FoodOverviewReturn>
-) => RO.ReaderObservable<FoodOverviewDeps, FoodOverviewReturn>
+	) => ROE.ReaderObservableEither<
+		FoodOverviewDeps,
+		Log.LogEntry,
+		FoodOverviewViewModel
+	>
+) => ROE.ReaderObservableEither<
+	FoodOverviewDeps,
+	Log.LogEntry,
+	FoodOverviewViewModel
+>
 
-const onFoodData: OnFoodData = (sorting, requestFlow, success, error) => deps =>
+const onFoodData: OnFoodData = (command, requestFlow, success) => deps =>
 	Rx.concat(
 		deps.onceInfo(`Starting listening to foods`, [requestFlow]),
 		loadingViewModel(deps),
 		pipe(
-			Rx.combineLatest([deps.onFoods(sorting), deps.onceNow]),
+			Rx.combineLatest([deps.onFoods(command.sort), deps.onceNow]),
 			Rx.switchMap(([foods, either], index) => {
 				const indexString = index.toString(10)
 				return index === 0
@@ -112,15 +124,15 @@ const onFoodData: OnFoodData = (sorting, requestFlow, success, error) => deps =>
 							either,
 							OE.fromEither,
 							OE.fold(
-								err =>
+								error =>
 									Rx.concat(
 										deps.onceError(
 											`Received ${foods.length} food elements but there was a problem retrieving the current timestamp. ${error}`,
 											[requestFlow, indexString]
 										),
-										error(err, sorting)(deps)
+										errorViewModel(error, command.sort)(deps)
 									),
-								now => success(foods, now, sorting)(deps)
+								now => success(foods, now, command.sort)(deps)
 							)
 					  )
 					: Rx.concat(
@@ -132,15 +144,15 @@ const onFoodData: OnFoodData = (sorting, requestFlow, success, error) => deps =>
 							pipe(
 								deps.onceNow,
 								OE.fold(
-									err =>
+									error =>
 										Rx.concat(
 											deps.onceError(
 												`There was a problem retrieving the current timestamp. ${error}`,
 												[requestFlow, indexString]
 											),
-											error(err, sorting)(deps)
+											errorViewModel(error, command.sort)(deps)
 										),
-									now => success(foods, now, sorting)(deps)
+									now => success(foods, now, command.sort)(deps)
 								)
 							)
 					  )
@@ -151,11 +163,12 @@ const onFoodData: OnFoodData = (sorting, requestFlow, success, error) => deps =>
 const errorViewModel: (
 	error: string,
 	sort: Sorting
-) => RO.ReaderObservable<FoodOverviewDeps, FoodOverviewReturn> = (
-	error,
-	sort
-) =>
-	RO.of({
+) => ROE.ReaderObservableEither<
+	FoodOverviewDeps,
+	Log.LogEntry,
+	FoodOverviewViewModel
+> = (error, sort) =>
+	ROE.of({
 		_tag: 'Error',
 		error,
 		sort
@@ -165,12 +178,12 @@ const successViewModel: (
 	data: ReadonlyArray<FoodEntry>,
 	now: number,
 	sort: Sorting
-) => RO.ReaderObservable<FoodOverviewDeps, FoodOverviewReturn> = (
-	data,
-	now,
-	sort
-) =>
-	RO.of({
+) => ROE.ReaderObservableEither<
+	FoodOverviewDeps,
+	Log.LogEntry,
+	FoodOverviewViewModel
+> = (data, now, sort) =>
+	ROE.of({
 		now,
 		page: 1,
 		total: 0,
@@ -193,18 +206,18 @@ const successViewModel: (
 const loadingViewModel: RO.ReaderObservable<
 	FoodOverviewDeps,
 	FoodOverviewReturn
-> = RO.of({ _tag: 'Loading' } as const)
+> = ROE.of({ _tag: 'Loading' } as const)
+
+export type FoodOverview = (
+	command$: Rx.Observable<FoodOverviewCmd>
+) => ROE.ReaderObservableEither<
+	FoodOverviewDeps,
+	Log.LogEntry,
+	FoodOverviewViewModel
+>
 
 export const foodOverview: FoodOverview = flow(
-	startCommandFlow(({ command, requestFlow }) =>
-		onFoodData(command.sort, requestFlow, successViewModel, errorViewModel)
-	),
-	R.map(
-		flow(
-			Rx.distinctUntilChanged(
-				(previous, current) =>
-					previous._tag === 'Loading' && current._tag === 'Loading'
-			)
-		)
+	handleNewCommand((command, requestFlow) =>
+		onFoodData(command, requestFlow, successViewModel)
 	)
 )

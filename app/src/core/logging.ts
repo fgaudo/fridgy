@@ -1,39 +1,41 @@
 import * as O from 'fp-ts-rxjs/Observable'
 import * as D from 'fp-ts/lib/Date'
+import * as E from 'fp-ts/lib/Either'
 import * as IO from 'fp-ts/lib/IO'
 import * as R from 'fp-ts/lib/Random'
 import { match } from 'fp-ts/lib/ReadonlyArray'
 import { pipe } from 'fp-ts/lib/function'
 
-import { Single, fromObservable } from './rxjs'
+import { Single, fromObservable } from './single'
+
+export type WithLogging<A> = E.Either<LogEntry, A>
 
 type LoggingLevel = 'debug' | 'error' | 'info' | 'warn'
 export type LogEntry = Readonly<{
-	_tag: 'CORE.Logging'
 	timestamp: string
 	level: LoggingLevel
 	message: string
 }>
 
-export const info: (
+export const info: <A>(
 	message: string,
 	flows?: readonly string[]
-) => Single<LogEntry> = (message, flows = []) =>
+) => Single<WithLogging<A>> = (message, flows = []) =>
 	fromObservable(
 		pipe(
 			createLog(message, flows),
-			O.map(log => ({ ...log, level: 'info' }))
+			O.map(log => E.left({ ...log, level: 'info' }))
 		)
 	)
 
-export const error: (
+export const error: <A>(
 	message: string,
 	flows?: readonly string[]
-) => Single<LogEntry> = (message, flows = [''] as const) =>
+) => Single<WithLogging<A>> = (message, flows = [''] as const) =>
 	fromObservable(
 		pipe(
 			createLog(message, flows),
-			O.map(log => ({ ...log, level: 'error' }))
+			O.map(log => E.left({ ...log, level: 'error' }))
 		)
 	)
 
@@ -47,7 +49,6 @@ const createLog: (
 	flows: readonly string[]
 ) => Single<
 	Readonly<{
-		_tag: 'CORE.Logging'
 		timestamp: string
 		message: string
 	}>
@@ -71,7 +72,6 @@ const createLog: (
 			O.map(
 				({ date, messageResult }) =>
 					({
-						_tag: 'CORE.Logging',
 						message: messageResult,
 						timestamp: date
 					} as const)

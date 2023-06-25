@@ -1,14 +1,27 @@
+/* eslint-disable @typescript-eslint/no-empty-interface */
+
+/* eslint-disable functional/no-throw-statements */
+
+/* eslint-disable @typescript-eslint/no-empty-function */
+
+/* eslint-disable functional/no-return-void */
+
+/* eslint-disable @typescript-eslint/no-unused-vars */
+
+/* eslint-disable functional/prefer-immutable-types */
+
 /* eslint-disable functional/no-this-expressions */
 
 /* eslint-disable functional/no-classes */
 
 /* eslint-disable functional/no-expression-statements */
-import { Observer, Subscribable, Subscription, Unsubscribable } from 'rxjs'
+import * as Rx from 'rxjs'
 import { Pipe, PipeNoUnsub } from 'src/core/pipe'
 
 import {
 	FoodOverviewCmd,
 	FoodOverviewDeps,
+	FoodOverviewReturn,
 	FoodOverviewViewModel,
 	foodOverview
 } from '@/application/usecases/food-overview'
@@ -18,19 +31,22 @@ export type Deps = Readonly<{
 }>
 
 export type UseCases = Readonly<{
-	foodOverview: PipeNoUnsub<FoodOverviewCmd, FoodOverviewViewModel>
+	foodOverview: PipeNoUnsub<FoodOverviewCmd, FoodOverviewReturn>
 }>
 
-export class App implements Subscribable<UseCases> {
+export class App {
 	constructor(private readonly deps: Deps) {}
 
-	subscribe(observer: Partial<Observer<UseCases>>): Unsubscribable {
-		const sub = new Subscription()
+	subscribe(next: (f: UseCases) => void): Rx.Unsubscribable {
+		const sub = new Rx.Subscription()
 
-		const foodOverviewPipe = new Pipe(foodOverview(this.deps.foodOverviewDep))
+		const foodOverviewPipe = new Pipe((cmd$: Rx.Observable<FoodOverviewCmd>) =>
+			foodOverview(cmd$)(this.deps.foodOverviewDep)
+		)
 
 		sub.add(foodOverviewPipe)
-		observer.next?.({ foodOverview: foodOverviewPipe })
+
+		next({ foodOverview: foodOverviewPipe })
 
 		return sub
 	}

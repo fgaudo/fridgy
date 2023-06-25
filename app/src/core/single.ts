@@ -42,8 +42,6 @@ export class Single<T> implements Rx.Observable<T> {
 	toPromise: typeof this.source.toPromise
 }
 
-export type Completable = Rx.Observable<never>
-
 export const fromObservable: <T>(obs: Rx.Observable<T>) => Single<T> = obs =>
 	obs instanceof Single ? obs : new Single(obs)
 

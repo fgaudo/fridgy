@@ -8,9 +8,11 @@
 // import { FridgyDatabase } from './infrastructure/dexie'
 import * as OE from 'fp-ts-rxjs/ObservableEither'
 import { createRoot } from 'react-dom/client'
-import { of } from 'rxjs'
+import * as Rx from 'rxjs'
 
 import { App } from './application'
+import { error, info } from './core/logging'
+import { Single } from './core/single'
 import { renderApp } from './presentation/react/feature/app/app'
 
 const container = document.getElementById('root')
@@ -28,20 +30,21 @@ window.addEventListener('error', function (e) {
 })
 
 window.addEventListener('unhandledrejection', function (e) {
-	alert('Error occurred: ' + e.error.message)
+	alert('Error occurred: ' + e.reason)
 	return false
 })
 
 new App({
 	foodOverviewDep: {
-		onceNow: OE.right(new Date().getDate()),
-		onFoods: () => of()
+		onceNow: new Single(OE.right(new Date().getDate())),
+		onFoods: () => Rx.of(),
+		onceInfo: info,
+		onceError: error,
+		onceFlow: new Single(Rx.of())
 	}
-}).subscribe({
-	next: useCases => {
-		renderApp(root, {
-			useCases,
-			title: 'Fridgy'
-		})
-	}
+}).subscribe(useCases => {
+	renderApp(root, {
+		useCases,
+		title: 'Fridgy'
+	})
 })
