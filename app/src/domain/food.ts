@@ -1,5 +1,4 @@
 import * as E from 'fp-ts/Either'
-import * as Opt from 'fp-ts/Option'
 import { flow } from 'fp-ts/lib/function'
 import * as N from 'fp-ts/number'
 import { Iso } from 'monocle-ts'
