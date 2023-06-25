@@ -1,5 +1,5 @@
-import { Option } from 'fp-ts/lib/Option'
-import { Single } from 'src/core/single'
+import { Exception } from '@/core/exception'
+import { Maybe } from '@/core/maybe'
 
 import { FoodData } from '@/domain/food'
 
@@ -10,4 +10,4 @@ export type FoodEntry = Readonly<
 >
 
 /** Returns an error if the computation fails */
-export type AddFood = (food: FoodEntry) => Single<Option<string>>
+export type AddFood = (food: FoodEntry) => Maybe<Exception>

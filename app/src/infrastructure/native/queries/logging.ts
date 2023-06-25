@@ -5,11 +5,11 @@ import * as IO from 'fp-ts/lib/IO'
 import { match } from 'fp-ts/lib/ReadonlyArray'
 import { pipe } from 'fp-ts/lib/function'
 
-import { OnceError } from '@/application/queries/logging'
+import { OnceError, OnceInfo } from '@/application/queries/logging'
 
 import { Single, fromObservable } from '../../../core/single'
 
-export const nativeOnceInfo: OnceError<unknown> = (message, flows = []) =>
+export const nativeOnceInfo: OnceInfo<unknown> = (message, flows = []) =>
 	fromObservable(
 		pipe(
 			createLog(message, flows),
