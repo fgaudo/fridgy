@@ -26,6 +26,7 @@
 		"eslint-plugin-functional": "^5.0.8",
 		"eslint-plugin-react": "^7.32.2",
 		"eslint-plugin-react-hooks": "^4.6.0",
+		"eslint-plugin-tsdoc": "^0.2.17",
 		"mocha": "^10.2.0",
 		"postcss": "^8.4.24",
 		"prettier": "^2.8.8",

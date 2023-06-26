@@ -9,7 +9,7 @@ import { OnceError, OnceInfo } from '@/application/queries/logging'
 
 import { Single, fromObservable } from '../../../core/single'
 
-export const nativeOnceInfo: OnceInfo<unknown> = (message, flows = []) =>
+export const nativeOnceInfo: OnceInfo = (message, flows = []) =>
 	fromObservable(
 		pipe(
 			createLog(message, flows),
@@ -17,7 +17,7 @@ export const nativeOnceInfo: OnceInfo<unknown> = (message, flows = []) =>
 		)
 	)
 
-export const nativeOnceError: OnceError<unknown> = (message, flows = ['']) =>
+export const nativeOnceError: OnceError = (message, flows = ['']) =>
 	fromObservable(
 		pipe(
 			createLog(message, flows),

@@ -12,6 +12,8 @@ module.exports = {
 		'eslint:recommended',
 		'plugin:react/recommended',
 		'plugin:@typescript-eslint/recommended',
+		'plugin:@typescript-eslint/recommended-requiring-type-checking',
+		'plugin:@typescript-eslint/strict',
 		'plugin:react/jsx-runtime',
 		'plugin:react-hooks/recommended',
 
@@ -27,7 +29,14 @@ module.exports = {
 		sourceType: 'module',
 		project: './tsconfig.json'
 	},
-	plugins: ['react', 'react-hooks', '@typescript-eslint', 'functional'],
+	root: true,
+	plugins: [
+		'react',
+		'react-hooks',
+		'@typescript-eslint',
+		'functional',
+		'eslint-plugin-tsdoc'
+	],
 	rules: {
 		'no-shadow': 'error',
 		'functional/prefer-immutable-types': [
@@ -44,8 +53,11 @@ module.exports = {
 				]
 			}
 		],
+		'@typescript-eslint/no-unnecessary-type-assertion': 'error',
 		'functional/functional-parameters': 'off',
 		'functional/no-promise-reject': 'error',
-		'functional/type-declaration-immutability': 'off'
+		'functional/type-declaration-immutability': 'off',
+
+		'tsdoc/syntax': 'warn'
 	}
 }
