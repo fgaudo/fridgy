@@ -38,21 +38,7 @@ module.exports = {
 		'eslint-plugin-tsdoc'
 	],
 	rules: {
-		'no-shadow': 'error',
-		'functional/prefer-immutable-types': [
-			'error',
-			{
-				enforcement: 'ReadonlyDeep',
-				ignoreInferredTypes: true,
-				ignoreTypePattern: [
-					'Observable',
-					'Maybe',
-					'Single',
-					'Once[A-Z]',
-					'On[A-Z]'
-				]
-			}
-		],
+		'functional/prefer-immutable-types': 'off',
 		'@typescript-eslint/no-unnecessary-type-assertion': 'error',
 		'functional/functional-parameters': 'off',
 		'functional/no-promise-reject': 'error',

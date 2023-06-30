@@ -5,7 +5,7 @@ import * as Rx from 'rxjs'
 
 import { OnceFlow } from '../queries/flow'
 import { LogEntry, OnceError, OnceInfo } from '../queries/logging'
-import { logError, logInfo } from './create-logging'
+import { logError, logInfo } from './logging'
 
 type OnceFlowDeps = Readonly<{
 	onceInfo: OnceInfo

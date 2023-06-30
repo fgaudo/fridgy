@@ -21,14 +21,14 @@ export interface PipeNoUnsub<in IN, out OUT> extends Rx.Observable<OUT> {
 export class Pipe<in out IN, in out OUT> implements PipeNoUnsub<IN, OUT> {
 	constructor(transform: (obs: Rx.Observable<IN>) => Rx.Observable<OUT>) {
 		const obs = this.source.pipe(transform)
-		this.subscribe = obs.subscribe
-		this.forEach = obs.forEach
-		this.pipe = obs.pipe
+		this.subscribe = obs.subscribe.bind(this)
+		this.forEach = obs.forEach.bind(this)
+		this.pipe = obs.pipe.bind(this)
 		this.operator = obs.operator
-		this.lift = obs.lift
-		this.toPromise = obs.toPromise
-		this.next = this.source.next
-		this.unsubscribe = this.source.unsubscribe
+		this.lift = obs.lift.bind(this)
+		this.toPromise = obs.toPromise.bind(this)
+		this.next = this.source.next.bind(this)
+		this.unsubscribe = this.source.unsubscribe.bind(this)
 	}
 
 	subscribe: Rx.Observable<OUT>['subscribe']

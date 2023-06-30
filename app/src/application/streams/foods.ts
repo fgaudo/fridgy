@@ -10,4 +10,4 @@ export type FoodEntry = Readonly<
 	}
 >
 
-export type OnFoods = (sort: Sorting) => Observable<ReadonlyArray<FoodEntry>>
+export type OnFoods = (sort: Sorting) => Observable<readonly FoodEntry[]>

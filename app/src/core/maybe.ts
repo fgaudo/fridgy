@@ -11,13 +11,13 @@ export class Maybe<T> implements Rx.Observable<T> {
 	constructor(source: Rx.Observable<T>) {
 		this.source = source.pipe(Rx.take(1))
 
-		this.subscribe = this.source.subscribe
-		this.forEach = this.source.forEach
-		this.pipe = this.source.pipe
+		this.subscribe = this.source.subscribe.bind(this)
+		this.forEach = this.source.forEach.bind(this)
+		this.pipe = this.source.pipe.bind(this)
 
 		this.operator = this.source.operator
-		this.toPromise = this.source.toPromise
-		this.lift = this.source.lift
+		this.toPromise = this.source.toPromise.bind(this)
+		this.lift = this.source.lift.bind(this)
 	}
 
 	subscribe: typeof this.source.subscribe

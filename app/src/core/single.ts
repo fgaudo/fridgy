@@ -10,19 +10,20 @@
 
 /* eslint-disable functional/prefer-immutable-types */
 import * as O from 'fp-ts-rxjs/Observable'
+import { pipe } from 'fp-ts/lib/function'
 import * as Rx from 'rxjs'
 
 export class Single<T> implements Rx.Observable<T> {
 	constructor(source: Rx.Observable<T>) {
 		this.source = source.pipe(Rx.first())
 
-		this.subscribe = this.source.subscribe
-		this.forEach = this.source.forEach
-		this.pipe = this.source.pipe
+		this.subscribe = this.source.subscribe.bind(this)
+		this.forEach = this.source.forEach.bind(this)
+		this.pipe = this.source.pipe.bind(this)
 
 		this.operator = this.source.operator
-		this.toPromise = this.source.toPromise
-		this.lift = this.source.lift
+		this.toPromise = this.source.toPromise.bind(this)
+		this.lift = this.source.lift.bind(this)
 	}
 
 	subscribe: typeof this.source.subscribe
@@ -42,7 +43,10 @@ export class Single<T> implements Rx.Observable<T> {
 	toPromise: typeof this.source.toPromise
 }
 
-export const fromObservable: <T>(obs: Rx.Observable<T>) => Single<T> = obs =>
-	obs instanceof Single ? obs : new Single(obs)
+export function fromObservable<T>(obs: Rx.Observable<T>): Single<T> {
+	return obs instanceof Single ? (obs as Single<T>) : new Single<T>(obs)
+}
 
-export const of: <A>(a: A) => Single<A> = a => fromObservable(O.of(a))
+export function of<A>(a: A): Single<A> {
+	return pipe(a, O.of, fromObservable)
+}
