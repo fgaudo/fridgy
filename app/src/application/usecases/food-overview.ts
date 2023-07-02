@@ -1,14 +1,11 @@
 import { Exception } from '@/core/exception'
+import * as OEx from '@/core/observableEither'
 import * as ROx from '@/core/readerObservable'
-import * as ROEx from '@/core/readerObservableEither'
 import * as ROE from 'fp-ts-rxjs/ReaderObservableEither'
-import * as O from 'fp-ts-rxjs/lib/Observable'
 import * as OE from 'fp-ts-rxjs/lib/ObservableEither'
 import * as RO from 'fp-ts-rxjs/lib/ReaderObservable'
-import * as Opt from 'fp-ts/Option'
 import * as RoA from 'fp-ts/ReadonlyArray'
-import * as E from 'fp-ts/lib/Either'
-import { fromEquals } from 'fp-ts/lib/Eq'
+import { sequenceT } from 'fp-ts/lib/Apply'
 import * as R from 'fp-ts/lib/Reader'
 import { flow, pipe } from 'fp-ts/lib/function'
 import * as Rx from 'rxjs'
@@ -16,11 +13,8 @@ import * as Rx from 'rxjs'
 import * as D from '@/domain/food'
 
 import * as Log from '@/application/helpers/logging'
-import { OnceNow } from '@/application/queries/now'
-import { FoodEntry, OnFoods } from '@/application/streams/foods'
-
-import { onceRequestFlow } from '../helpers/create-flow'
-import { OnceFlow } from '../queries/flow'
+import { Interface } from '@/application/interfaces'
+import { Sorting } from '@/application/interfaces/streams/foods'
 
 export type FoodModel = Readonly<{
 	id: string
@@ -28,8 +22,6 @@ export type FoodModel = Readonly<{
 	expDate: number
 	state: 'expired' | 'ok' | 'check'
 }>
-
-export type Sorting = 'date' | 'name'
 
 export type FoodOverviewViewModel = Readonly<
 	| {
@@ -49,38 +41,51 @@ export type FoodOverviewCmd = Readonly<{
 	page: number
 }>
 
-export type FoodOverviewReturn = Log.LogEntry | FoodOverviewViewModel
+export type FoodOverviewReturn = FoodOverviewViewModel
 
-export type FoodOverviewDeps = Readonly<{
-	onceNow: OnceNow
-	onFoods: OnFoods
-	onceFlow: OnceFlow
-}>
-
-type LogInfo = (...p: Parameters<Log.LogInfo>) => ReturnType<FoodOverview>
-
-const logInfo: LogInfo = (message, flows) =>
-	RO.local((deps: FoodOverviewDeps) => deps.onceNow)(
-		pipe(
-			Log.logInfo(message, flows),
-			RO.chain(entry => ROE.left(entry))
-		)
-	)
+export type FoodOverviewDeps = Interface['onceNow']
 
 //////////////
 
+type OnFoodDataDeps = Interface['onceNow'] & Interface['onFoods']
+
 type OnFoodData = (
 	command: FoodOverviewCmd,
-	requestFlow: string,
-	success: (
-		entries: readonly FoodEntry[],
-		now: number,
-		s: Sorting
-	) => ReturnType<FoodOverview>
-) => ReturnType<FoodOverview>
+	requestFlow: string
+) => ROE.ReaderObservableEither<
+	OnFoodDataDeps,
+	Log.LogEntry,
+	readonly [readonly FoodEntry[], number]
+>
 
-const onFoodData: OnFoodData = (command, requestFlow) =>
-	ROx.combineLatest2(logInfo('message'), logInfo('message'))
+const onFoodData: OnFoodData =
+	(command, requestFlow) =>
+	({ onceNow, onFoods }) => {
+		const onFoodsOE = pipe(
+			onFoods(command.sort),
+			OE.rightObservable<Exception, readonly FoodEntry[]>
+		)
+
+		return Rx.concat(
+			Log.logInfo('Starting listening to food entries')({ onceNow }),
+			pipe(
+				sequenceT(OEx.Apply)(onFoodsOE, onceNow),
+				OEx.switchMap(([foods, now], index) =>
+					index === 0
+						? OE.right([foods, now] as const)
+						: pipe(
+								onceNow,
+								OE.map(now => [foods, now] as const)
+						  )
+				),
+				OE.fold(
+					err =>
+						Log.logInfo(`There was a problem: ${err.message}`)({ onceNow }),
+					data => OE.right(data)
+				)
+			)
+		)
+	}
 
 //////////////
 

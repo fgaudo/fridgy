@@ -1,6 +1,7 @@
 import * as RO from 'fp-ts-rxjs/lib/ReaderObservable'
 import { pipe } from 'fp-ts/lib/function'
 import * as Rx from 'rxjs'
+import { UnionToIntersection } from 'simplytyped'
 
 //////////////
 
@@ -35,38 +36,37 @@ export const distinctUntilChanged: DistinctUntilChanged = f => ro => env =>
 
 //////////////
 
-type Concat2W = <ENV1, ENV2, A>(
-	roe1: RO.ReaderObservable<ENV1, A>,
-	roe2: RO.ReaderObservable<ENV2, A>
-) => RO.ReaderObservable<ENV1 & ENV2, A>
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type ConcatW = <T extends readonly RO.ReaderObservable<any, any>[]>(
+	...ros: T
+) => RO.ReaderObservable<
+	UnionToIntersection<
+		{
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			[K in keyof T]: T[K] extends RO.ReaderObservable<infer A, any> ? A : never
+		}[number]
+	>,
+	{
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		[K in keyof T]: T[K] extends RO.ReaderObservable<any, infer A> ? A : never
+	}[number]
+>
 
-export const concat2W: Concat2W = (ro1, ro2) => env =>
-	Rx.concat(ro1(env), ro2(env))
+export const concatW: ConcatW =
+	(...ros) =>
+	env =>
+		// eslint-disable-next-line @typescript-eslint/no-unsafe-return
+		pipe(
+			ros.map(ro => ro(env)),
+			Rx.concat
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		) as any
 
 //////////////
 
-type Concat2 = <ENV, A>(
-	roe1: RO.ReaderObservable<ENV, A>,
-	roe2: RO.ReaderObservable<ENV, A>
+type Concat = <ENV, A>(
+	...ros: readonly RO.ReaderObservable<ENV, A>[]
 ) => RO.ReaderObservable<ENV, A>
 
-export const concat2: Concat2 = concat2W
-
-//////////////
-
-type CombineLatest2W = <ENV1, ENV2, A, B>(
-	roe1: RO.ReaderObservable<ENV1, A>,
-	roe2: RO.ReaderObservable<ENV2, B>
-) => RO.ReaderObservable<ENV1 & ENV2, readonly [A, B]>
-
-export const combineLatest2W: CombineLatest2W = (roe1, roe2) => env =>
-	Rx.combineLatest([roe1(env), roe2(env)])
-
-//////////////
-
-type CombineLatest2 = <ENV, A, B>(
-	roe1: RO.ReaderObservable<ENV, A>,
-	roe2: RO.ReaderObservable<ENV, B>
-) => RO.ReaderObservable<ENV, readonly [A, B]>
-
-export const combineLatest2: CombineLatest2 = combineLatest2W
+// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any
+export const concat: Concat = concatW as any
