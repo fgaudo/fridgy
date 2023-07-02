@@ -1,20 +1,26 @@
-import { Exception } from '@/core/exception'
-import * as OEx from '@/core/observableEither'
 import * as ROx from '@/core/readerObservable'
+import * as ROEx from '@/core/readerObservableEither'
 import * as ROE from 'fp-ts-rxjs/ReaderObservableEither'
+import * as O from 'fp-ts-rxjs/lib/Observable'
 import * as OE from 'fp-ts-rxjs/lib/ObservableEither'
 import * as RO from 'fp-ts-rxjs/lib/ReaderObservable'
 import * as RoA from 'fp-ts/ReadonlyArray'
-import { sequenceT } from 'fp-ts/lib/Apply'
+import { sequenceS } from 'fp-ts/lib/Apply'
 import * as R from 'fp-ts/lib/Reader'
-import { flow, pipe } from 'fp-ts/lib/function'
+import { flow, identity, pipe } from 'fp-ts/lib/function'
 import * as Rx from 'rxjs'
 
 import * as D from '@/domain/food'
 
 import * as Log from '@/application/helpers/logging'
 import { Interface } from '@/application/interfaces'
-import { Sorting } from '@/application/interfaces/streams/foods'
+import {
+	FoodEntry,
+	OnFoods,
+	Sorting
+} from '@/application/interfaces/streams/foods'
+
+import { OnceNow } from '../interfaces/queries/now'
 
 export type FoodModel = Readonly<{
 	id: string
@@ -55,37 +61,36 @@ type OnFoodData = (
 ) => ROE.ReaderObservableEither<
 	OnFoodDataDeps,
 	Log.LogEntry,
-	readonly [readonly FoodEntry[], number]
+	{ foods: readonly FoodEntry[]; now: number }
 >
 
-const onFoodData: OnFoodData =
-	(command, requestFlow) =>
-	({ onceNow, onFoods }) => {
-		const onFoodsOE = pipe(
-			onFoods(command.sort),
-			OE.rightObservable<Exception, readonly FoodEntry[]>
-		)
-
-		return Rx.concat(
-			Log.logInfo('Starting listening to food entries')({ onceNow }),
+const onFoodData: OnFoodData = (command, requestFlow) =>
+	flow(
+		ROx.concat(
+			Log.logInfo('Starting listening to food entries'),
 			pipe(
-				sequenceT(OEx.Apply)(onFoodsOE, onceNow),
-				OEx.switchMap(([foods, now], index) =>
-					index === 0
-						? OE.right([foods, now] as const)
-						: pipe(
-								onceNow,
-								OE.map(now => [foods, now] as const)
-						  )
+				sequenceS(RO.Apply)({
+					foods: pipe(
+						R.asks<OnFoodDataDeps, OnFoods>(deps => deps.onFoods),
+						R.map(onFoods => onFoods(command.sort))
+					),
+					nowEither: R.asks<OnFoodDataDeps, OnceNow>(deps => deps.onceNow)
+				}),
+				ROx.switchMap(({ foods, nowEither }, index) =>
+					pipe(
+						index === 0
+							? RO.of(nowEither)
+							: R.asks<OnFoodDataDeps, OnceNow>(deps => deps.onceNow),
+						ROE.map(now => ({ foods, now } as const))
+					)
 				),
-				OE.fold(
-					err =>
-						Log.logInfo(`There was a problem: ${err.message}`)({ onceNow }),
-					data => OE.right(data)
+				ROEx.fold(
+					err => Log.logInfo(`There was a problem: ${err.message}`),
+					data => ROE.right(data)
 				)
 			)
 		)
-	}
+	)
 
 //////////////
 

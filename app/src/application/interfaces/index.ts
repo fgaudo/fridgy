@@ -1,5 +1,3 @@
-import { ObjectType } from 'simplytyped'
-
 import { OnceNow } from './queries/now'
 import { OnFoods } from './streams/foods'
 

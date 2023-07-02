@@ -1,22 +1,26 @@
 {
   "folders": [
     {
-      "path": "./post",
+      "path": "../post",
       "name": "post"
     },
     {
-      "path": "./app",
+      "path": "../app",
       "name": "app"
     },
     {
-      "path": "./test",
+      "path": "../test",
       "name": "test"
     },
     {
-      "path": "elm"
+      "path": "../elm"
     },
     {
-      "path": "purescript"
+      "path": "../purescript"
+    },
+    {
+      "path": "../",
+      "name": "root"
     }
   ],
   "settings": {

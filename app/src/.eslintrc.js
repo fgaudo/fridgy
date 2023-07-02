@@ -38,6 +38,7 @@ module.exports = {
 		'eslint-plugin-tsdoc'
 	],
 	rules: {
+		'functional/no-conditional-statements': 'off',
 		'functional/prefer-immutable-types': 'off',
 		'@typescript-eslint/no-unnecessary-type-assertion': 'error',
 		'functional/functional-parameters': 'off',
