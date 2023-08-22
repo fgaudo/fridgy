@@ -1,13 +1,16 @@
-import * as ROx from '@/core/readerObservable'
-import * as ROEx from '@/core/readerObservableEither'
+import {
+	readerObservableEither as ROEx,
+	readerObservable as ROx
+} from '@fgaudo/fp-ts-rxjs-extension'
 import * as ROE from 'fp-ts-rxjs/ReaderObservableEither'
 import * as O from 'fp-ts-rxjs/lib/Observable'
 import * as OE from 'fp-ts-rxjs/lib/ObservableEither'
 import * as RO from 'fp-ts-rxjs/lib/ReaderObservable'
 import * as RoA from 'fp-ts/ReadonlyArray'
 import { sequenceS } from 'fp-ts/lib/Apply'
+import * as E from 'fp-ts/lib/Either'
 import * as R from 'fp-ts/lib/Reader'
-import { flow, identity, pipe } from 'fp-ts/lib/function'
+import { flow, pipe } from 'fp-ts/lib/function'
 import * as Rx from 'rxjs'
 
 import * as D from '@/domain/food'
@@ -49,7 +52,7 @@ export type FoodOverviewCmd = Readonly<{
 
 export type FoodOverviewReturn = FoodOverviewViewModel
 
-export type FoodOverviewDeps = Interface['onceNow']
+export type FoodOverviewDeps = Interface['onceNow'] & Interface['onFoods']
 
 //////////////
 
@@ -156,12 +159,9 @@ export type FoodOverview = (
  * @returns A function returning a stream of either log entries or view-models.
  */
 export const foodOverview: FoodOverview = flow(
-	R.chainW(
-		flow(
-			R.of,
-			ROx.switchMapW(c => RO.of({ _tag: 'Loading' } as const))
-		)
-	)
+	ROE.fromObservable,
+	ROEx.switchMap(cmd => onFoodData(cmd, '')),
+	ROE.chain(result => successViewModel(result.foods, 3, 'date'))
 )
 
 //////////////

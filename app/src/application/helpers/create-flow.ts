@@ -3,8 +3,7 @@ import * as ROE from 'fp-ts-rxjs/ReaderObservableEither'
 import { pipe } from 'fp-ts/lib/function'
 import * as Rx from 'rxjs'
 
-import { OnceFlow } from '../queries/flow'
-import { LogEntry, OnceError, OnceInfo } from '../queries/logging'
+import { OnceFlow } from '../interfaces/queries/flow'
 import { logError, logInfo } from './logging'
 
 type OnceFlowDeps = Readonly<{

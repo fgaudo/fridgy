@@ -1,5 +1,7 @@
-import * as ROx from '@/core/readerObservable'
-import * as ROEx from '@/core/readerObservableEither'
+import {
+	readerObservableEither as ROEx,
+	readerObservable as ROx
+} from '@fgaudo/fp-ts-rxjs-extension'
 import * as OE from 'fp-ts-rxjs/lib/ObservableEither'
 import * as RO from 'fp-ts-rxjs/lib/ReaderObservable'
 import * as ROE from 'fp-ts-rxjs/lib/ReaderObservableEither'
@@ -52,7 +54,7 @@ export const logError: LogError = (message, flows) =>
 		onceNowData,
 		ROEx.fold(
 			entry =>
-				ROx.concat2(
+				ROx.concat(
 					RO.of(entry),
 					RO.of({
 						level: 'error',
@@ -82,7 +84,7 @@ const logInfo_: LogInfo_ = (message, flows) =>
 		onceNowData,
 		ROEx.fold(
 			entry =>
-				ROx.concat2(
+				ROx.concat(
 					RO.of(entry),
 					RO.of({
 						level: 'info',

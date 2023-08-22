@@ -1,12 +1,6 @@
-import {
-	Outlet,
-	ReactRouter,
-	RootRoute,
-	Route,
-	RouterProvider
-} from '@tanstack/react-router'
 import { StrictMode, createContext, useContext } from 'react'
 import { Root } from 'react-dom/client'
+import { RouterProvider, createHashRouter } from 'react-router-dom'
 
 import { UseCases } from '@/application'
 
@@ -21,19 +15,12 @@ export const GlobalContext = createContext<Config>(null as never)
 export const useGlobalContext: () => Config = () => useContext(GlobalContext)
 
 export function renderApp(element: Root, config: Config): void {
-	const rootRoute = new RootRoute({
-		component: () => <Outlet />
-	})
-
-	const routeTree = rootRoute.addChildren([
-		new Route({
-			getParentRoute: () => rootRoute,
+	const router = createHashRouter([
+		{
 			path: '/',
-			component: FoodsPage
-		})
+			element: <FoodsPage></FoodsPage>
+		}
 	])
-
-	const router = new ReactRouter({ routeTree })
 
 	element.render(
 		<StrictMode>

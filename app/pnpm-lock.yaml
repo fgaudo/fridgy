@@ -1,12 +1,22 @@
 lockfileVersion: '6.0'
 
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
+
 dependencies:
+  '@fgaudo/fp-ts-rxjs-extension':
+    specifier: ^0.0.1
+    version: 0.0.1(fp-ts-rxjs@0.6.15)(fp-ts@2.16.0)(rxjs@7.8.1)
   '@headlessui/react':
     specifier: ^1.7.15
     version: 1.7.15(react-dom@18.2.0)(react@18.2.0)
   '@heroicons/react':
     specifier: ^2.0.18
     version: 2.0.18(react@18.2.0)
+  '@tanstack/react-virtual':
+    specifier: 3.0.0-beta.54
+    version: 3.0.0-beta.54(react@18.2.0)
   dexie:
     specifier: ^3.2.4
     version: 3.2.4
@@ -1635,6 +1645,18 @@ packages:
     engines: {node: ^12.22.0 || ^14.17.0 || >=16.0.0}
     dev: true
 
+  /@fgaudo/fp-ts-rxjs-extension@0.0.1(fp-ts-rxjs@0.6.15)(fp-ts@2.16.0)(rxjs@7.8.1):
+    resolution: {integrity: sha512-An0jNefXGfnHVt6aYQIxgCRYzVYxBeQ++JaT44HAnhYCmS5FwOi4/tZ7l+HkR/DdCtNlet3ssjK5DlE1AguBfw==}
+    peerDependencies:
+      fp-ts: ^2.4.4
+      fp-ts-rxjs: ^0.6.15
+      rxjs: ^6.0.0
+    dependencies:
+      fp-ts: 2.16.0
+      fp-ts-rxjs: 0.6.15(fp-ts@2.16.0)(rxjs@7.8.1)
+      rxjs: 7.8.1
+    dev: false
+
   /@headlessui/react@1.7.15(react-dom@18.2.0)(react@18.2.0):
     resolution: {integrity: sha512-OTO0XtoRQ6JPB1cKNFYBZv2Q0JMqMGNhYP1CjPvcJvjz8YGokz8oAj89HIYZGN0gZzn/4kk9iUpmMF4Q21Gsqw==}
     engines: {node: '>=10'}
@@ -1821,6 +1843,19 @@ packages:
       string.prototype.matchall: 4.0.8
     dev: false
 
+  /@tanstack/react-virtual@3.0.0-beta.54(react@18.2.0):
+    resolution: {integrity: sha512-D1mDMf4UPbrtHRZZriCly5bXTBMhylslm4dhcHqTtDJ6brQcgGmk8YD9JdWBGWfGSWPKoh2x1H3e7eh+hgPXtQ==}
+    peerDependencies:
+      react: ^16.8.0 || ^17.0.0 || ^18.0.0
+    dependencies:
+      '@tanstack/virtual-core': 3.0.0-beta.54
+      react: 18.2.0
+    dev: false
+
+  /@tanstack/virtual-core@3.0.0-beta.54:
+    resolution: {integrity: sha512-jtkwqdP2rY2iCCDVAFuaNBH3fiEi29aTn2RhtIoky8DTTiCdc48plpHHreLwmv1PICJ4AJUUESaq3xa8fZH8+g==}
+    dev: false
+
   /@trivago/prettier-plugin-sort-imports@4.1.1(prettier@2.8.8):
     resolution: {integrity: sha512-dQ2r2uzNr1x6pJsuh/8x0IRA3CBUB+pWEW3J/7N98axqt7SQSm+2fy0FLNXvXGg77xEDC7KHxJlHfLYyi7PDcw==}
     peerDependencies:
@@ -1867,6 +1902,7 @@ packages:
 
   /@types/json5@0.0.29:
     resolution: {integrity: sha512-dRLjCWHYg4oaA77cxO64oO+7JwCwnIzkZPdrrC71jQmQtlhM556pwKo5bUzqvZndkVbeFLIIi+9TC40JNF5hNQ==}
+    requiresBuild: true
     dev: true
     optional: true
 
@@ -3473,6 +3509,7 @@ packages:
   /json5@1.0.2:
     resolution: {integrity: sha512-g1MWMLBiz8FKi1e4w0UyVL3w+iJceWAFBAaBnnGKOpNa5f8TLktkbre1+s6oICydWAm+HRUGTmI+//xv2hvXYA==}
     hasBin: true
+    requiresBuild: true
     dependencies:
       minimist: 1.2.8
     dev: true

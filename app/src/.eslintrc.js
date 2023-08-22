@@ -44,7 +44,8 @@ module.exports = {
 		'functional/functional-parameters': 'off',
 		'functional/no-promise-reject': 'error',
 		'functional/type-declaration-immutability': 'off',
-
+		'functional/no-expression-statements': 'off',
+		'functional/no-return-void': 'off',
 		'tsdoc/syntax': 'warn'
 	}
 }
