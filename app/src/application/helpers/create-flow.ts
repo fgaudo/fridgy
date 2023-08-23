@@ -4,7 +4,7 @@ import { pipe } from 'fp-ts/lib/function'
 import * as Rx from 'rxjs'
 
 import { OnceFlow } from '../interfaces/queries/flow'
-import { logError, logInfo } from './logging'
+import { log, logError } from './logging'
 
 type OnceFlowDeps = Readonly<{
 	onceInfo: OnceInfo
@@ -30,7 +30,7 @@ export const onceRequestFlow =
 							)(deps),
 						requestFlow =>
 							Rx.concat(
-								logInfo<A>(`Created request flow ${requestFlow}`)(deps),
+								log<A>(`Created request flow ${requestFlow}`)(deps),
 								f(requestFlow)(deps)
 							)
 					)

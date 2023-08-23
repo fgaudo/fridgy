@@ -1,51 +1,14 @@
 import { VirtualItem, useWindowVirtualizer } from '@tanstack/react-virtual'
-import * as I from 'fp-ts/Identity'
-import * as Opt from 'fp-ts/Option'
 import * as RoA from 'fp-ts/ReadonlyArray'
-import * as RoM from 'fp-ts/ReadonlyMap'
-import * as RoS from 'fp-ts/ReadonlySet'
-import * as RoT from 'fp-ts/ReadonlyTuple'
-import { flow, pipe } from 'fp-ts/function'
-import { useObservableState, useSubscription } from 'observable-hooks'
-import { useMemo, useReducer } from 'react'
-
-import { FoodModel } from '@/application/usecases/food-overview'
+import { pipe } from 'fp-ts/function'
+import { useObservableState } from 'observable-hooks'
+import { useMemo } from 'react'
 
 import { useGlobalContext } from '@/presentation/react/feature/app/app'
 import { AddFab } from '@/presentation/react/feature/shared/fab-add-button'
 import { Swipable } from '@/presentation/react/feature/shared/swipable'
 import { Title } from '@/presentation/react/feature/shared/title'
 import { Transition } from '@/presentation/react/feature/shared/transition'
-
-interface FoodState {
-	readonly name: string
-	readonly id: FoodModel['id']
-}
-
-interface FoodPageState {
-	readonly loading: boolean
-	readonly foods: Readonly<{
-		byId: ReadonlyMap<FoodState['id'], FoodState>
-		sorted: ReadonlyArray<FoodState['id']>
-		deleting: ReadonlySet<FoodState['id']>
-		selected: ReadonlySet<FoodState['id']>
-	}>
-}
-
-const init: FoodPageState = {
-	loading: true,
-	foods: {
-		byId: new Map(),
-		sorted: [],
-		deleting: new Set(),
-		selected: new Set()
-	}
-}
-
-type Action =
-	| Readonly<{ type: 'loadPage' }>
-	| Readonly<{ type: 'enqueueFoodDeletion'; id: FoodState['id'] }>
-	| Readonly<{ type: 'deleteFoods' }>
 
 export function FoodsPage(): JSX.Element {
 	const {
@@ -70,9 +33,12 @@ export function FoodsPage(): JSX.Element {
 			  }
 	)
 
-	const onSwipeRight = (id: FoodState['id']) => {
-		foodOverview.next({ sort: 'name', page: 0 })
-	}
+	const onSwipeRight = useMemo(
+		() => (id: string) => {
+			foodOverview.next({ sort: 'name', page: 0 })
+		},
+		[foodOverview]
+	)
 
 	const items: readonly VirtualItem[] = rowVirtualizer.getVirtualItems()
 
@@ -114,7 +80,7 @@ export function FoodsPage(): JSX.Element {
 							}}
 							className={`absolute left-0 top-0 w-full transition-transform duration-1000`}>
 							<div className="translate-x-0 transition-transform duration-500 ">
-								<Swipable onRight={() => onSwipeRight?.(element.food.id)}>
+								<Swipable onRight={() => onSwipeRight(element.food.id)}>
 									<div className="mx-2 mb-2 h-[70px] bg-white p-3 shadow-md sm:pb-4">
 										<div className="flex items-center space-x-4">
 											<div className="min-w-0 flex-1">

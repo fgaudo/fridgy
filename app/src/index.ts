@@ -12,10 +12,6 @@ import * as Rx from 'rxjs'
 
 import { App } from './application'
 import { Single } from './core/single'
-import {
-	nativeOnceError,
-	nativeOnceInfo
-} from './infrastructure/native/queries/logging'
 import { renderApp } from './presentation/react/feature/app/app'
 
 const container = document.getElementById('root')
@@ -28,22 +24,19 @@ if (container == null) {
 const root = createRoot(container)
 
 window.addEventListener('error', function (e) {
-	alert('Error occurred: ' + e.error.message)
+	console.error('Error occurred: ', e.error)
 	return false
 })
 
 window.addEventListener('unhandledrejection', function (e) {
-	alert('Error occurred: ' + e.reason)
+	console.error('Error occurred: ', e.reason)
 	return false
 })
 
 new App({
 	foodOverviewDep: {
 		onceNow: new Single(OE.right(new Date().getDate())),
-		onFoods: () => Rx.of(),
-		onceInfo: nativeOnceInfo,
-		onceError: nativeOnceError,
-		onceFlow: new Single(Rx.of())
+		onFoods: () => Rx.of()
 	}
 }).subscribe(useCases => {
 	renderApp(root, {

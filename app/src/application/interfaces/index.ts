@@ -1,3 +1,4 @@
+import { Log } from './commands/log'
 import { OnceNow } from './queries/now'
 import { OnFoods } from './streams/foods'
 
@@ -5,4 +6,4 @@ type Divide<T> = {
 	[K in keyof T]: { [P in K]: T[K] }
 }
 
-export type Interface = Divide<{ onceNow: OnceNow; onFoods: OnFoods }>
+export type Interface = Divide<{ onceNow: OnceNow; onFoods: OnFoods; log: Log }>

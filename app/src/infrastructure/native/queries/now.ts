@@ -4,7 +4,7 @@ import * as OE from 'fp-ts-rxjs/ObservableEither'
 import { now } from 'fp-ts/lib/Date'
 import { pipe } from 'fp-ts/lib/function'
 
-import { OnceNow } from '@/application/queries/now'
+import { OnceNow } from '@/application/interfaces/queries/now'
 
 export const nativeOnceNow: OnceNow = new Single(
 	pipe(now, OE.fromIO<number, Exception>)

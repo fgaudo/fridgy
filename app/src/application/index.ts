@@ -15,6 +15,9 @@
 /* eslint-disable functional/no-classes */
 
 /* eslint-disable functional/no-expression-statements */
+import * as O from 'fp-ts-rxjs/Observable'
+import * as E from 'fp-ts/lib/Either'
+import { pipe } from 'fp-ts/lib/function'
 import * as Rx from 'rxjs'
 import { Pipe, PipeNoUnsub } from 'src/core/pipe'
 
@@ -40,8 +43,13 @@ export class App {
 	subscribe(next: (f: UseCases) => void): Rx.Unsubscribable {
 		const sub = new Rx.Subscription()
 
-		const foodOverviewPipe = new Pipe((cmd$: Rx.Observable<FoodOverviewCmd>) =>
-			foodOverview(cmd$)(this.deps.foodOverviewDep)
+		const foodOverviewPipe = new Pipe(
+			(cmd$: Rx.Observable<FoodOverviewCmd>) => {
+				const { left: logs, right: events } = O.separate(
+					foodOverview(cmd$)(this.deps.foodOverviewDep)
+				)
+				return events
+			}
 		)
 
 		sub.add(foodOverviewPipe)

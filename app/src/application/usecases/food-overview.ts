@@ -2,10 +2,9 @@ import {
 	readerObservableEither as ROEx,
 	readerObservable as ROx
 } from '@fgaudo/fp-ts-rxjs-extension'
-import * as ROE from 'fp-ts-rxjs/ReaderObservableEither'
 import * as O from 'fp-ts-rxjs/lib/Observable'
-import * as OE from 'fp-ts-rxjs/lib/ObservableEither'
 import * as RO from 'fp-ts-rxjs/lib/ReaderObservable'
+import * as ROE from 'fp-ts-rxjs/lib/ReaderObservableEither'
 import * as RoA from 'fp-ts/ReadonlyArray'
 import { sequenceS } from 'fp-ts/lib/Apply'
 import * as E from 'fp-ts/lib/Either'
@@ -15,7 +14,6 @@ import * as Rx from 'rxjs'
 
 import * as D from '@/domain/food'
 
-import * as Log from '@/application/helpers/logging'
 import { Interface } from '@/application/interfaces'
 import {
 	FoodEntry,
@@ -23,6 +21,7 @@ import {
 	Sorting
 } from '@/application/interfaces/streams/foods'
 
+import { log } from '../helpers/logging'
 import { OnceNow } from '../interfaces/queries/now'
 
 export type FoodModel = Readonly<{
@@ -52,46 +51,47 @@ export type FoodOverviewCmd = Readonly<{
 
 export type FoodOverviewReturn = FoodOverviewViewModel
 
-export type FoodOverviewDeps = Interface['onceNow'] & Interface['onFoods']
+export type FoodOverviewDeps = Interface['onceNow'] &
+	Interface['onFoods'] &
+	Interface['log']
 
 //////////////
 
-type OnFoodDataDeps = Interface['onceNow'] & Interface['onFoods']
+type OnFoodDataDeps = Interface['onceNow'] &
+	Interface['onFoods'] &
+	Interface['log']
 
 type OnFoodData = (
 	command: FoodOverviewCmd,
 	requestFlow: string
-) => ROE.ReaderObservableEither<
+) => RO.ReaderObservable<
 	OnFoodDataDeps,
-	Log.LogEntry,
 	{ foods: readonly FoodEntry[]; now: number }
 >
 
 const onFoodData: OnFoodData = (command, requestFlow) =>
-	flow(
+	pipe(
 		ROx.concat(
-			Log.logInfo('Starting listening to food entries'),
-			pipe(
-				sequenceS(RO.Apply)({
-					foods: pipe(
-						R.asks<OnFoodDataDeps, OnFoods>(deps => deps.onFoods),
-						R.map(onFoods => onFoods(command.sort))
-					),
-					nowEither: R.asks<OnFoodDataDeps, OnceNow>(deps => deps.onceNow)
-				}),
-				ROx.switchMap(({ foods, nowEither }, index) =>
-					pipe(
-						index === 0
-							? RO.of(nowEither)
-							: R.asks<OnFoodDataDeps, OnceNow>(deps => deps.onceNow),
-						ROE.map(now => ({ foods, now } as const))
-					)
+			log('Start food data use case'),
+			sequenceS(RO.Apply)({
+				foods: pipe(
+					R.asks<OnFoodDataDeps, OnFoods>(deps => deps.onFoods),
+					R.map(onFoods => onFoods(command.sort))
 				),
-				ROEx.fold(
-					err => Log.logInfo(`There was a problem: ${err.message}`),
-					data => ROE.right(data)
-				)
+				nowEither: R.asks<OnFoodDataDeps, OnceNow>(deps => deps.onceNow)
+			})
+		),
+		ROx.switchMap(({ foods, nowEither }, index) =>
+			pipe(
+				index === 0
+					? RO.of(nowEither)
+					: R.asks<OnFoodDataDeps, OnceNow>(deps => deps.onceNow),
+				ROE.map(now => ({ foods, now } as const))
 			)
+		),
+		ROEx.fold(
+			err => log(err.message),
+			data => RO.of(data)
 		)
 	)
 
@@ -147,11 +147,7 @@ const loadingViewModel: LoadingViewModel = ROE.right({
 
 export type FoodOverview = (
 	command$: Rx.Observable<FoodOverviewCmd>
-) => ROE.ReaderObservableEither<
-	FoodOverviewDeps,
-	Log.LogEntry,
-	FoodOverviewReturn
->
+) => RO.ReaderObservable<FoodOverviewDeps, FoodOverviewReturn>
 
 /**
  * Represents the entire "Food Overview" usecase.
