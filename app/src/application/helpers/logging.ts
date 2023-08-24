@@ -1,4 +1,3 @@
-import { Single } from '@/core/single'
 import * as O from 'fp-ts-rxjs/lib/Observable'
 import * as OE from 'fp-ts-rxjs/lib/ObservableEither'
 import { NonEmptyArray } from 'fp-ts/lib/NonEmptyArray'
@@ -20,7 +19,7 @@ export type LogEntry = Readonly<{
 export type Log = (
 	message: string,
 	flows?: Readonly<NonEmptyArray<string>>
-) => (deps: Interface['onceNow'] & Interface['log']) => Single<never>
+) => (deps: Interface['onceNow'] & Interface['log']) => Rx.Observable<never>
 
 export const log: Log =
 	message =>
@@ -32,6 +31,5 @@ export const log: Log =
 				now => log(message, now)
 			),
 			O.map(flow(Opt.fold(() => undefined, console.error))),
-			Rx.ignoreElements(),
-			obs => new Single(obs)
+			Rx.ignoreElements()
 		)

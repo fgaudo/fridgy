@@ -97,7 +97,10 @@ const onFoodData: OnFoodData = (command, requestFlow) =>
 
 //////////////
 
-type ErrorViewModel = (error: string, sort: Sorting) => ReturnType<FoodOverview>
+type ErrorViewModel = (
+	error: string,
+	sort: Sorting
+) => RO.ReaderObservable<FoodOverviewDeps, FoodOverviewReturn>
 
 const errorViewModel: ErrorViewModel = (error, sort) =>
 	RO.of({
@@ -112,7 +115,7 @@ type SuccessViewModel = (
 	data: readonly FoodEntry[],
 	now: number,
 	sort: Sorting
-) => ReturnType<FoodOverview>
+) => RO.ReaderObservable<FoodOverviewDeps, FoodOverviewReturn>
 
 const successViewModel: SuccessViewModel = (data, now, sort) =>
 	RO.of({
@@ -137,28 +140,35 @@ const successViewModel: SuccessViewModel = (data, now, sort) =>
 
 //////////////
 
-type LoadingViewModel = ReturnType<FoodOverview>
-
-const loadingViewModel: LoadingViewModel = RO.of({
+const loadingViewModel: RO.ReaderObservable<
+	FoodOverviewDeps,
+	FoodOverviewReturn
+> = RO.of({
 	_tag: 'Loading'
 } as const)
 
 //////////////
 
-export type FoodOverview = (
-	command$: Rx.Observable<FoodOverviewCmd>
-) => RO.ReaderObservable<FoodOverviewDeps, FoodOverviewReturn>
+export type FoodOverview = RO.ReaderObservable<
+	FoodOverviewDeps,
+	FoodOverviewReturn
+>
+
+const subject: Rx.Subject<FoodOverviewCmd> = new Rx.Subject()
 
 /**
  * Represents the entire "Food Overview" usecase.
  * @param command$ - Stream of commands
  * @returns A function returning a stream of either log entries or view-models.
  */
-export const foodOverview: FoodOverview = flow(
+export const foodOverview: FoodOverview = pipe(
+	subject,
 	RO.fromObservable,
 	ROx.switchMap(cmd => onFoodData(cmd, '')),
-	RO.chain(result => successViewModel(result.foods, 3, 'date'))
+	ROx.switchMap(result => successViewModel(result.foods, 3, 'date'))
 )
+
+export const next: (cmd: FoodOverviewCmd) => void = cmd => subject.next(cmd)
 
 //////////////
 

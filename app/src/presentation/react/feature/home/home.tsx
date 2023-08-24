@@ -2,7 +2,7 @@ import { VirtualItem, useWindowVirtualizer } from '@tanstack/react-virtual'
 import * as RoA from 'fp-ts/ReadonlyArray'
 import { pipe } from 'fp-ts/function'
 import { useObservableState } from 'observable-hooks'
-import { useMemo } from 'react'
+import { useEffect, useMemo } from 'react'
 
 import { useGlobalContext } from '@/presentation/react/feature/app/app'
 import { AddFab } from '@/presentation/react/feature/shared/fab-add-button'
@@ -16,7 +16,9 @@ export function FoodsPage(): JSX.Element {
 		title
 	} = useGlobalContext()
 
-	const output = useObservableState(foodOverview)
+	const output = useObservableState(foodOverview.observable)
+	useEffect(() => foodOverview.next({ sort: 'date', page: 0 }), [])
+
 	const isLoading = !output || output._tag === 'Loading'
 
 	const rowVirtualizer = useWindowVirtualizer(

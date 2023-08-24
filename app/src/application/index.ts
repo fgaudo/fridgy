@@ -19,7 +19,6 @@ import * as O from 'fp-ts-rxjs/Observable'
 import * as E from 'fp-ts/lib/Either'
 import { pipe } from 'fp-ts/lib/function'
 import * as Rx from 'rxjs'
-import { Pipe, PipeNoUnsub } from 'src/core/pipe'
 
 import {
 	FoodOverviewCmd,
@@ -34,23 +33,8 @@ export type Deps = Readonly<{
 }>
 
 export type UseCases = Readonly<{
-	foodOverview: PipeNoUnsub<FoodOverviewCmd, FoodOverviewReturn>
-}>
-
-export class App {
-	constructor(private readonly deps: Deps) {}
-
-	subscribe(next: (f: UseCases) => void): Rx.Unsubscribable {
-		const sub = new Rx.Subscription()
-
-		const foodOverviewPipe = new Pipe((cmd$: Rx.Observable<FoodOverviewCmd>) =>
-			foodOverview(cmd$)(this.deps.foodOverviewDep)
-		)
-
-		sub.add(foodOverviewPipe)
-
-		next({ foodOverview: foodOverviewPipe })
-
-		return sub
+	foodOverview: {
+		next: (cmd: FoodOverviewCmd) => void
+		observable: Rx.Observable<FoodOverviewReturn>
 	}
-}
+}>

@@ -13,8 +13,7 @@ import { pipe } from 'fp-ts/lib/function'
 import { createRoot } from 'react-dom/client'
 import * as Rx from 'rxjs'
 
-import { App } from './application'
-import { Single } from './core/single'
+import { foodOverview, next } from './application/usecases/food-overview'
 import { renderApp } from './presentation/react/feature/app/app'
 
 const container = document.getElementById('root')
@@ -36,24 +35,36 @@ window.addEventListener('unhandledrejection', function (e) {
 	return false
 })
 
-new App({
-	foodOverviewDep: {
-		log: message =>
-			pipe(
-				O.of(Opt.none),
-				Rx.tap(() => console.log(message)),
-				a => new Single(a)
-			),
-		onceNow: new Single(OE.right(new Date().getDate())),
-		onFoods: () =>
-			Rx.of([
-				{ name: 'asd', id: '', expDate: 0, type: 'dairy', isBestBefore: true },
-				{ name: 'asd1', id: '1', expDate: 0, type: 'dairy', isBestBefore: true }
-			])
-	}
-}).subscribe(useCases => {
-	renderApp(root, {
-		useCases,
-		title: 'Fridgy'
-	})
+renderApp(root, {
+	useCases: {
+		foodOverview: {
+			next: next,
+			observable: foodOverview({
+				log: message =>
+					pipe(
+						O.of(Opt.none),
+						Rx.tap(() => console.log(message))
+					),
+				onceNow: OE.right(new Date().getDate()),
+				onFoods: () =>
+					Rx.of([
+						{
+							name: 'asd',
+							id: '',
+							expDate: 0,
+							type: 'dairy',
+							isBestBefore: true
+						},
+						{
+							name: 'asd1',
+							id: '1',
+							expDate: 0,
+							type: 'dairy',
+							isBestBefore: true
+						}
+					])
+			})
+		}
+	},
+	title: 'Fridgy'
 })
