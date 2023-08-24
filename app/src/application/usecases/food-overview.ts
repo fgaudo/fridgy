@@ -100,7 +100,7 @@ const onFoodData: OnFoodData = (command, requestFlow) =>
 type ErrorViewModel = (error: string, sort: Sorting) => ReturnType<FoodOverview>
 
 const errorViewModel: ErrorViewModel = (error, sort) =>
-	ROE.right({
+	RO.of({
 		_tag: 'Error',
 		error,
 		sort
@@ -115,7 +115,7 @@ type SuccessViewModel = (
 ) => ReturnType<FoodOverview>
 
 const successViewModel: SuccessViewModel = (data, now, sort) =>
-	ROE.right({
+	RO.of({
 		now,
 		page: 1,
 		total: 0,
@@ -139,7 +139,7 @@ const successViewModel: SuccessViewModel = (data, now, sort) =>
 
 type LoadingViewModel = ReturnType<FoodOverview>
 
-const loadingViewModel: LoadingViewModel = ROE.right({
+const loadingViewModel: LoadingViewModel = RO.of({
 	_tag: 'Loading'
 } as const)
 
@@ -155,9 +155,9 @@ export type FoodOverview = (
  * @returns A function returning a stream of either log entries or view-models.
  */
 export const foodOverview: FoodOverview = flow(
-	ROE.fromObservable,
-	ROEx.switchMap(cmd => onFoodData(cmd, '')),
-	ROE.chain(result => successViewModel(result.foods, 3, 'date'))
+	RO.fromObservable,
+	ROx.switchMap(cmd => onFoodData(cmd, '')),
+	RO.chain(result => successViewModel(result.foods, 3, 'date'))
 )
 
 //////////////

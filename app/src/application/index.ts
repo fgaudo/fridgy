@@ -43,13 +43,8 @@ export class App {
 	subscribe(next: (f: UseCases) => void): Rx.Unsubscribable {
 		const sub = new Rx.Subscription()
 
-		const foodOverviewPipe = new Pipe(
-			(cmd$: Rx.Observable<FoodOverviewCmd>) => {
-				const { left: logs, right: events } = O.separate(
-					foodOverview(cmd$)(this.deps.foodOverviewDep)
-				)
-				return events
-			}
+		const foodOverviewPipe = new Pipe((cmd$: Rx.Observable<FoodOverviewCmd>) =>
+			foodOverview(cmd$)(this.deps.foodOverviewDep)
 		)
 
 		sub.add(foodOverviewPipe)

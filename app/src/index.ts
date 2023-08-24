@@ -6,7 +6,10 @@
 
 /* eslint-disable functional/no-conditional-statements */
 // import { FridgyDatabase } from './infrastructure/dexie'
+import * as O from 'fp-ts-rxjs/Observable'
 import * as OE from 'fp-ts-rxjs/ObservableEither'
+import * as Opt from 'fp-ts/Option'
+import { pipe } from 'fp-ts/lib/function'
 import { createRoot } from 'react-dom/client'
 import * as Rx from 'rxjs'
 
@@ -35,8 +38,18 @@ window.addEventListener('unhandledrejection', function (e) {
 
 new App({
 	foodOverviewDep: {
+		log: message =>
+			pipe(
+				O.of(Opt.none),
+				Rx.tap(() => console.log(message)),
+				a => new Single(a)
+			),
 		onceNow: new Single(OE.right(new Date().getDate())),
-		onFoods: () => Rx.of()
+		onFoods: () =>
+			Rx.of([
+				{ name: 'asd', id: '', expDate: 0, type: 'dairy', isBestBefore: true },
+				{ name: 'asd1', id: '1', expDate: 0, type: 'dairy', isBestBefore: true }
+			])
 	}
 }).subscribe(useCases => {
 	renderApp(root, {
