@@ -1,8 +1,7 @@
 import { Exception } from '@/core/exception'
-import { Option } from 'fp-ts/lib/Option'
-import { Observable } from 'rxjs'
+import { ObservableOption } from 'fp-ts-rxjs/lib/ObservableOption'
 
 export type Log = (
 	message: string,
 	timestamp: number
-) => Observable<Option<Exception>>
+) => ObservableOption<Exception>

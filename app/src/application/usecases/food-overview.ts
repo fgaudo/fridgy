@@ -1,8 +1,6 @@
-import {
-	readerObservableEither as ROEx,
-	readerObservable as ROx
-} from '@fgaudo/fp-ts-rxjs-extension'
+import { switchMapFirst } from '@/core/observable'
 import * as O from 'fp-ts-rxjs/lib/Observable'
+import * as OE from 'fp-ts-rxjs/lib/ObservableEither'
 import * as RO from 'fp-ts-rxjs/lib/ReaderObservable'
 import * as ROE from 'fp-ts-rxjs/lib/ReaderObservableEither'
 import * as RoA from 'fp-ts/ReadonlyArray'
@@ -15,14 +13,9 @@ import * as Rx from 'rxjs'
 import * as D from '@/domain/food'
 
 import { Interface } from '@/application/interfaces'
-import {
-	FoodEntry,
-	OnFoods,
-	Sorting
-} from '@/application/interfaces/streams/foods'
+import { FoodEntry, Sorting } from '@/application/interfaces/streams/foods'
 
 import { log } from '../helpers/logging'
-import { OnceNow } from '../interfaces/queries/now'
 
 export type FoodModel = Readonly<{
 	id: string
@@ -68,32 +61,6 @@ type OnFoodData = (
 	OnFoodDataDeps,
 	{ foods: readonly FoodEntry[]; now: number }
 >
-
-const onFoodData: OnFoodData = (command, requestFlow) =>
-	pipe(
-		ROx.concat(
-			log('Start food data use case'),
-			sequenceS(RO.Apply)({
-				foods: pipe(
-					R.asks<OnFoodDataDeps, OnFoods>(deps => deps.onFoods),
-					R.map(onFoods => onFoods(command.sort))
-				),
-				nowEither: R.asks<OnFoodDataDeps, OnceNow>(deps => deps.onceNow)
-			})
-		),
-		ROx.switchMap(({ foods, nowEither }, index) =>
-			pipe(
-				index === 0
-					? RO.of(nowEither)
-					: R.asks<OnFoodDataDeps, OnceNow>(deps => deps.onceNow),
-				ROE.map(now => ({ foods, now } as const))
-			)
-		),
-		ROEx.fold(
-			err => log(err.message),
-			data => RO.of(data)
-		)
-	)
 
 //////////////
 
@@ -161,12 +128,32 @@ const subject: Rx.Subject<FoodOverviewCmd> = new Rx.Subject()
  * @param command$ - Stream of commands
  * @returns A function returning a stream of either log entries or view-models.
  */
-export const foodOverview: FoodOverview = pipe(
-	subject,
-	RO.fromObservable,
-	ROx.switchMap(cmd => onFoodData(cmd, '')),
-	ROx.switchMap(result => successViewModel(result.foods, 3, 'date'))
-)
+
+export const foodOverview: FoodOverview = deps =>
+	pipe(
+		subject,
+		switchMapFirst(() => log('Start food data use case')(deps)),
+		Rx.switchMap(command =>
+			sequenceS(O.Apply)({
+				foods: deps.onFoods(command.sort),
+				nowEither: deps.onceNow
+			})
+		),
+		Rx.switchMap(({ foods, nowEither }, index) =>
+			pipe(
+				index === 0 ? O.of(nowEither) : deps.onceNow,
+				OE.map(now => ({ foods, now } as const))
+			)
+		),
+		OE.fold(
+			err =>
+				pipe(
+					log(err.message)(deps),
+					Rx.switchMap(() => errorViewModel(err.message, 'name')(deps))
+				),
+			data => successViewModel(data.foods, 3, 'date')(deps)
+		)
+	)
 
 export const next: (cmd: FoodOverviewCmd) => void = cmd => subject.next(cmd)
 
@@ -176,6 +163,5 @@ export const next: (cmd: FoodOverviewCmd) => void = cmd => subject.next(cmd)
 export const _private = {
 	loadingViewModel,
 	successViewModel,
-	errorViewModel,
-	onFoodData
+	errorViewModel
 } as const

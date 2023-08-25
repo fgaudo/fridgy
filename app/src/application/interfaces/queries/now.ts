@@ -1,5 +1,4 @@
 import { Exception } from '@/core/exception'
-import { Either } from 'fp-ts/lib/Either'
-import { Observable } from 'rxjs'
+import { ObservableEither } from 'fp-ts-rxjs/lib/ObservableEither'
 
-export type OnceNow = NonNullable<Observable<Either<Exception, number>>>
+export type OnceNow = NonNullable<ObservableEither<Exception, number>>

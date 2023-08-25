@@ -1,5 +1,5 @@
 import { Exception } from '@/core/exception'
-import { Single } from '@/core/single'
+import { ObservableEither } from 'fp-ts-rxjs/lib/ObservableEither'
 import { Either } from 'fp-ts/lib/Either'
 
-export type OnceFlow = Single<Either<Exception, string>>
+export type OnceFlow = ObservableEither<Exception, string>

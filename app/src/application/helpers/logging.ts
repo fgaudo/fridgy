@@ -1,5 +1,6 @@
 import * as O from 'fp-ts-rxjs/lib/Observable'
 import * as OE from 'fp-ts-rxjs/lib/ObservableEither'
+import * as R from 'fp-ts/Reader'
 import { NonEmptyArray } from 'fp-ts/lib/NonEmptyArray'
 import * as Opt from 'fp-ts/lib/Option'
 import { flow, pipe } from 'fp-ts/lib/function'
@@ -19,7 +20,7 @@ export type LogEntry = Readonly<{
 export type Log = (
 	message: string,
 	flows?: Readonly<NonEmptyArray<string>>
-) => (deps: Interface['onceNow'] & Interface['log']) => Rx.Observable<never>
+) => (deps: Interface['onceNow'] & Interface['log']) => Rx.Observable<void>
 
 export const log: Log =
 	message =>
@@ -30,6 +31,13 @@ export const log: Log =
 				entry => log(message + entry.message, 0),
 				now => log(message, now)
 			),
-			O.map(flow(Opt.fold(() => undefined, console.error))),
-			Rx.ignoreElements()
+			O.map(flow(Opt.fold(() => undefined, console.error)))
 		)
+
+export type LogIgnore = (
+	message: string,
+	flows?: Readonly<NonEmptyArray<string>>
+) => (deps: Interface['onceNow'] & Interface['log']) => Rx.Observable<never>
+
+export const logIgnore: LogIgnore = message =>
+	pipe(log(message), R.map(flow(Rx.ignoreElements())))
