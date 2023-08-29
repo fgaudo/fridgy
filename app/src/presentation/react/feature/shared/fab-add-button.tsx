@@ -5,7 +5,7 @@ export const AddFab = (props: {
 	<button
 		onClick={props.onClick}
 		type="button"
-		className="fixed right-7 bottom-12 z-10 inline-flex items-center rounded-full bg-primary p-3 text-center text-lg font-medium text-white focus:outline-none focus:ring-4">
+		className="fixed bottom-12 right-7 z-10 inline-flex items-center rounded-full bg-primary p-3 text-center text-lg font-medium text-white focus:outline-none focus:ring-4">
 		<svg
 			xmlns="http://www.w3.org/2000/svg"
 			viewBox="0 0 24 24"

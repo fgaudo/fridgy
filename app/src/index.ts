@@ -14,7 +14,7 @@ import { createRoot } from 'react-dom/client'
 import * as Rx from 'rxjs'
 
 import { foodOverview, next } from './application/usecases/food-overview'
-import { renderApp } from './presentation/react/feature/app/app'
+import { renderApp } from './presentation/react/feature/app'
 
 const container = document.getElementById('root')
 
@@ -35,6 +35,17 @@ window.addEventListener('unhandledrejection', function (e) {
 	return false
 })
 
+const foods = [...Array(200).keys()].map(
+	a =>
+		({
+			name: 'asd',
+			id: a.toString(10),
+			expDate: 0,
+			type: 'dairy',
+			isBestBefore: true
+		} as const)
+)
+
 renderApp(root, {
 	useCases: {
 		foodOverview: {
@@ -46,23 +57,7 @@ renderApp(root, {
 						Rx.tap(() => console.log(message))
 					),
 				onceNow: OE.right(new Date().getDate()),
-				onFoods: () =>
-					Rx.of([
-						{
-							name: 'asd',
-							id: '',
-							expDate: 0,
-							type: 'dairy',
-							isBestBefore: true
-						},
-						{
-							name: 'asd1',
-							id: '1',
-							expDate: 0,
-							type: 'dairy',
-							isBestBefore: true
-						}
-					])
+				onFoods: () => Rx.of(foods)
 			})
 		}
 	},

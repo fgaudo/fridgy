@@ -50,20 +50,6 @@ export type FoodOverviewDeps = Interface['onceNow'] &
 
 //////////////
 
-type OnFoodDataDeps = Interface['onceNow'] &
-	Interface['onFoods'] &
-	Interface['log']
-
-type OnFoodData = (
-	command: FoodOverviewCmd,
-	requestFlow: string
-) => RO.ReaderObservable<
-	OnFoodDataDeps,
-	{ foods: readonly FoodEntry[]; now: number }
->
-
-//////////////
-
 type ErrorViewModel = (
 	error: string,
 	sort: Sorting
