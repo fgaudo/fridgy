@@ -10,7 +10,6 @@ import * as O from 'fp-ts-rxjs/Observable'
 import * as OE from 'fp-ts-rxjs/ObservableEither'
 import * as Opt from 'fp-ts/Option'
 import { pipe } from 'fp-ts/lib/function'
-import { createRoot } from 'react-dom/client'
 import * as Rx from 'rxjs'
 
 import { foodOverview, next } from './application/usecases/food-overview'
@@ -23,7 +22,6 @@ if (container == null) {
 }
 
 // const db = new FridgyDatabase()
-const root = createRoot(container)
 
 window.addEventListener('error', function (e) {
 	console.error('Error occurred: ', e.error)
@@ -46,7 +44,7 @@ const foods = [...Array(200).keys()].map(
 		} as const)
 )
 
-renderApp(root, {
+renderApp(container, {
 	useCases: {
 		foodOverview: {
 			next: next,

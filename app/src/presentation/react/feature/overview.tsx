@@ -1,4 +1,3 @@
-import { Tab, Tabs, TabsHeader } from '@material-tailwind/react'
 import { VirtualItem, useWindowVirtualizer } from '@tanstack/react-virtual'
 import * as RoA from 'fp-ts/ReadonlyArray'
 import { pipe } from 'fp-ts/function'

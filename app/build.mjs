@@ -55,7 +55,7 @@ async function serveApp() {
 		loader: { '.html': 'copy' },
 		target,
 		assetNames: '[name]',
-		minify: false,
+		minify: true,
 		outdir: outDir
 	})
 
