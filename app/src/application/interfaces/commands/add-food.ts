@@ -1,5 +1,4 @@
 import { Exception } from '@/core/exception'
-import { Maybe } from '@/core/maybe'
 
 import { FoodData } from '@/domain/food'
 

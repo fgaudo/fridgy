@@ -1,8 +1,6 @@
-import { switchMapFirst } from '@/core/observable'
 import * as O from 'fp-ts-rxjs/lib/Observable'
 import * as OE from 'fp-ts-rxjs/lib/ObservableEither'
 import * as RO from 'fp-ts-rxjs/lib/ReaderObservable'
-import * as ROE from 'fp-ts-rxjs/lib/ReaderObservableEither'
 import * as RoA from 'fp-ts/ReadonlyArray'
 import { sequenceS } from 'fp-ts/lib/Apply'
 import * as E from 'fp-ts/lib/Either'
@@ -46,7 +44,8 @@ export type FoodOverviewReturn = FoodOverviewViewModel
 
 export type FoodOverviewDeps = Interface['onceNow'] &
 	Interface['onFoods'] &
-	Interface['log']
+	Interface['log'] &
+	Interface['flow']
 
 //////////////
 
@@ -102,12 +101,36 @@ const loadingViewModel: RO.ReaderObservable<
 
 //////////////
 
+const subject: Rx.Subject<FoodOverviewCmd> = new Rx.Subject()
+
 export type FoodOverview = RO.ReaderObservable<
 	FoodOverviewDeps,
 	FoodOverviewReturn
 >
 
-const subject: Rx.Subject<FoodOverviewCmd> = new Rx.Subject()
+export const switchBind = <K extends string, A, B>(
+	name: Exclude<K, keyof A>,
+	f: (a: A) => Rx.Observable<B>
+): ((
+	fa: Rx.Observable<A>
+) => Rx.Observable<{ [P in keyof A | K]: P extends keyof A ? A[P] : B }>) =>
+	Rx.switchMap(a =>
+		pipe(
+			f(a),
+			// eslint-disable-next-line @typescript-eslint/no-unsafe-return
+			O.map(b => ({ ...a, [name]: b } as any))
+		)
+	)
+
+export const switchFirst: <A, B>(
+	f: (a: A) => Rx.Observable<B>
+) => (ma: Rx.Observable<A>) => Rx.Observable<A> = f =>
+	Rx.switchMap(a =>
+		pipe(
+			f(a),
+			O.map(() => a)
+		)
+	)
 
 /**
  * Represents the entire "Food Overview" usecase.
@@ -118,26 +141,44 @@ const subject: Rx.Subject<FoodOverviewCmd> = new Rx.Subject()
 export const foodOverview: FoodOverview = deps =>
 	pipe(
 		subject,
-		switchMapFirst(() => log('Start food data use case')(deps)),
-		Rx.switchMap(command =>
-			sequenceS(O.Apply)({
-				foods: deps.onFoods(command.sort),
-				nowEither: deps.onceNow
-			})
-		),
-		Rx.switchMap(({ foods, nowEither }, index) =>
+		O.bindTo('cmd'),
+		switchBind('flow', () =>
 			pipe(
-				index === 0 ? O.of(nowEither) : deps.onceNow,
-				OE.map(now => ({ foods, now } as const))
+				deps.flow,
+				OE.fromTaskEither,
+				OE.fold(
+					() => O.of('error'),
+					flow => O.of(flow)
+				)
 			)
 		),
-		OE.fold(
-			err =>
-				pipe(
-					log(err.message)(deps),
-					Rx.switchMap(() => errorViewModel(err.message, 'name')(deps))
-				),
-			data => successViewModel(data.foods, 3, 'date')(deps)
+		switchFirst(data => log('Start food data use case', [data.flow])(deps)),
+		switchBind('foodData', data =>
+			pipe(
+				sequenceS(O.Apply)({
+					foods: deps.onFoods(data.cmd.sort),
+					nowEither: OE.fromTaskEither(deps.onceNow)
+				}),
+				Rx.switchMap(({ foods, nowEither }, index) =>
+					pipe(
+						index === 0 ? O.of(nowEither) : OE.fromTaskEither(deps.onceNow),
+						OE.map(now => ({ foods, now } as const))
+					)
+				)
+			)
+		),
+		Rx.switchMap(({ foodData }) =>
+			pipe(
+				foodData,
+				E.fold(
+					err =>
+						pipe(
+							log(err.message)(deps),
+							Rx.switchMap(() => errorViewModel(err.message, 'name')(deps))
+						),
+					data => successViewModel(data.foods, 3, 'date')(deps)
+				)
+			)
 		)
 	)
 

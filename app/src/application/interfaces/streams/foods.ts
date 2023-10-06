@@ -10,6 +10,6 @@ export type FoodEntry = Readonly<
 
 export type Sorting = 'name' | 'date'
 
-export type OnFoods = NonNullable<
+export type OnFoods = 
 	(sort: Sorting) => Observable<readonly FoodEntry[]>
->
+
