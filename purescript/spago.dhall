@@ -18,15 +18,12 @@ to generate this file without the comments in this block.
   , "effect"
   , "either"
   , "exceptions"
-  , "flame"
+  , "halogen"
   , "maybe"
   , "newtype"
   , "now"
-  , "parallel"
-  , "pipes"
   , "prelude"
   , "transformers"
-  , "tuples"
   , "unordered-collections"
   ]
 , packages = ./packages.dhall

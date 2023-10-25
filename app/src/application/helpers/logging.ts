@@ -4,7 +4,7 @@ import * as OO from 'fp-ts-rxjs/lib/ObservableOption'
 import { NonEmptyArray } from 'fp-ts/lib/NonEmptyArray'
 import * as Opt from 'fp-ts/lib/Option'
 import { pipe } from 'fp-ts/lib/function'
-import * as Rx from 'rxjs'
+import { tapIO } from 'fp-ts/lib/Task'
 
 import { Interface } from '../interfaces'
 
@@ -20,7 +20,7 @@ export type LogEntry = Readonly<{
 export type Log = (
 	message: string,
 	flows?: Readonly<NonEmptyArray<string>>
-) => (deps: Interface['onceNow'] & Interface['log']) => Rx.Observable<void>
+) => (deps: Interface['onceNow'] & Interface['log']) => void
 
 export const log: Log =
 	message =>

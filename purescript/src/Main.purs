@@ -5,7 +5,6 @@ import Prelude
 import Data.Newtype (unwrap)
 import Effect (Effect)
 import Effect.Aff (Aff)
-import Flame (QuerySelector(..))
 import MyApp.Application.UseCase.GetHome (HomeModel, getHomeModel)
 import MyApp.Core.App (App)
 import MyApp.Presentation.Home (app)
