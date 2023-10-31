@@ -1,3 +1,5 @@
+import 'package:fridgy/src/core/common.dart';
+
 sealed class Either<L, R> {}
 
 final class Left<L, R> implements Either<L, R> {
@@ -25,7 +27,7 @@ A Function<A>({
 Either<L2, R2> Function<L2, R2>({
   required L2 Function(L1) left,
   required R2 Function(R1) right,
-}) map<L1, R1>(Either<L1, R1> either) => <L2, R2>({
+}) bimap<L1, R1>(Either<L1, R1> either) => <L2, R2>({
       required left,
       required right,
     }) =>
@@ -33,3 +35,13 @@ Either<L2, R2> Function<L2, R2>({
           left: (value) => Left(left(value)),
           right: (value) => Right(right(value)),
         );
+
+Either<L, R2> Function<R2>(
+  R2 Function(R1) right,
+) map<L, R1>(Either<L, R1> either) =>
+    <R2>(right) => bimap(either)(left: identity1, right: right);
+
+Either<L2, R> Function<L2>(
+  L2 Function(L1) left,
+) mapLeft<L1, R>(Either<L1, R> either) =>
+    <L2>(left) => bimap(either)(left: left, right: identity1);
