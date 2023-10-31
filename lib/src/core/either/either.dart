@@ -10,10 +10,10 @@ final class Right<L, R> implements Either<L, R> {
   final R value;
 }
 
-B Function<B>({
-  required B Function(L) left,
-  required B Function(R) right,
-}) fold<L, R>(Either<L, R> either) => <B>({
+A Function<A>({
+  required A Function(L) left,
+  required A Function(R) right,
+}) fold<L, R>(Either<L, R> either) => <A>({
       required left,
       required right,
     }) =>
