@@ -1,4 +1,4 @@
-import 'package:fridgy/src/core/common.dart';
+import '../common.dart';
 
 sealed class Either<L, R> {}
 
