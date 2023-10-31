@@ -3,7 +3,7 @@ import 'package:rxdart/rxdart.dart';
 
 import 'src/app.dart';
 import 'src/application/food_overview.dart';
-import 'src/core/either.dart';
+import 'src/core/either/either.dart';
 import 'src/settings/settings_controller.dart';
 import 'src/settings/settings_service.dart';
 

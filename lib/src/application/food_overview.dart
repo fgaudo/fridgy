@@ -2,9 +2,10 @@ import 'dart:async';
 
 import 'package:rxdart/rxdart.dart';
 
-import '../core/stream_either.dart' as SE;
-import '../core/task.dart' as T;
-import '../core/task_either.dart' as TE;
+import '../core/stream_either/extensions/fold_either.dart';
+import '../core/stream_either/stream_either.dart' as SE;
+import '../core/task/task.dart' as T;
+import '../core/task_either/task_either.dart' as TE;
 import '../domain/food.dart';
 
 sealed class FoodOverviewModel {}
