@@ -11,6 +11,8 @@ environment:
 
 dependencies:
   async: ^2.11.0
+  fgaudo_functional:
+    path: '../fgaudo_functional'
   flutter:
     sdk: flutter
   flutter_localizations:

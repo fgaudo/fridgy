@@ -1,11 +1,11 @@
 import 'dart:async';
 
+import 'package:fgaudo_functional/extensions/stream_either/fold.dart';
+import 'package:fgaudo_functional/stream_either.dart' as SE;
+import 'package:fgaudo_functional/task.dart' as T;
+import 'package:fgaudo_functional/task_either.dart' as TE;
 import 'package:rxdart/rxdart.dart';
 
-import '../core/stream_either/extensions/fold_either.dart';
-import '../core/stream_either/stream_either.dart' as SE;
-import '../core/task/task.dart' as T;
-import '../core/task_either/task_either.dart' as TE;
 import '../domain/food.dart';
 
 sealed class FoodOverviewModel {}
