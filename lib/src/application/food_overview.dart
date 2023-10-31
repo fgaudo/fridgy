@@ -2,10 +2,9 @@ import 'dart:async';
 
 import 'package:rxdart/rxdart.dart';
 
-import '../core/reader.dart';
-import '../core/stream_either.dart' as se;
-import '../core/task.dart' as t;
-import '../core/task_either.dart' as te;
+import '../core/stream_either.dart' as SE;
+import '../core/task.dart' as T;
+import '../core/task_either.dart' as TE;
 import '../domain/food.dart';
 
 sealed class FoodOverviewModel {}
@@ -13,13 +12,18 @@ sealed class FoodOverviewModel {}
 final class Loading implements FoodOverviewModel {}
 
 final class Error implements FoodOverviewModel {
-  const Error();
+  const Error(this.message);
+  final String message;
+}
+
+final class FoodView {
+  const FoodView(this.name);
+  final String name;
 }
 
 final class Ready implements FoodOverviewModel {
-  final Iterable<FoodView> foods;
-
   const Ready({required this.foods});
+  final Iterable<FoodView> foods;
 }
 
 sealed class Command {
@@ -27,61 +31,47 @@ sealed class Command {
 }
 
 final class Refresh implements Command {
-  final int page;
   const Refresh(this.page);
+  final int page;
 }
 
 final class Delete implements Command {
-  final int page;
   const Delete(this.page);
-}
-
-final class FoodView {
-  final String name;
-
-  const FoodView(this.name);
+  final int page;
 }
 
 final class FoodOverviewDependencies {
-  final t.Task<void> delete;
-  final te.TaskEither<Exception, Iterable<Food>> Function(int page) fetchFoods;
-
   const FoodOverviewDependencies({
     required this.delete,
     required this.fetchFoods,
   });
+  final T.Task<void> delete;
+  final TE.TaskEither<Exception, Iterable<Food>> Function(int page) fetchFoods;
 }
 
-typedef RefreshUseCase = Reader<FoodOverviewDependencies,
-    StreamTransformer<Refresh, FoodOverviewModel>>;
-
-final RefreshUseCase _refresh =
-    (deps) => SwitchMapStreamTransformer((refresh) => se
-        .fromTaskEither(
-          te.sequenceTuple2(
-            deps.fetchFoods(3),
-            deps.fetchFoods(3),
-          ),
-        )
-        .transform(
-          se.FoldEitherStreamTransformer(
-            onRight: (event) => const Ready(foods: []),
-            onLeft: (event) => const Error(),
-          ),
-        ));
-
-typedef DeleteUseCase = Reader<FoodOverviewDependencies,
-    StreamTransformer<Delete, FoodOverviewModel>>;
-
-final DeleteUseCase _delete =
-    (deps) => FlatMapStreamTransformer((delete) => const Stream.empty());
-
-typedef FoodOverviewUseCase = Reader<FoodOverviewDependencies,
-    StreamTransformer<Command, FoodOverviewModel>>;
-
-final FoodOverviewUseCase init = (deps) => StreamTransformer.fromBind(
+StreamTransformer<Command, FoodOverviewModel> init(
+  FoodOverviewDependencies deps,
+) =>
+    StreamTransformer.fromBind(
       (command$) => MergeStream([
         _refresh(deps).bind(command$.whereType<Refresh>()),
         _delete(deps).bind(command$.whereType<Delete>()),
       ]),
     );
+
+StreamTransformer<Refresh, FoodOverviewModel> _refresh(
+  FoodOverviewDependencies deps,
+) =>
+    SwitchMapStreamTransformer(
+      (refresh) => SE.fromTaskEither(deps.fetchFoods(3)).transform(
+            SE.FoldEitherStreamTransformer(
+              right: (event) => const Ready(foods: []),
+              left: (event) => const Error(''),
+            ),
+          ),
+    );
+
+StreamTransformer<Delete, FoodOverviewModel> _delete(
+  FoodOverviewDependencies deps,
+) =>
+    FlatMapStreamTransformer((delete) => const Stream.empty());

@@ -2,25 +2,49 @@ import 'package:fridgy/src/core/either.dart';
 
 typedef TaskEither<E, A> = Future<Either<E, A>> Function();
 
+final class _FailFastException<T> implements Exception {
+  const _FailFastException(this.value);
+
+  final T value;
+}
+
 TaskEither<E, (A, B)> sequenceTuple2<E, A, B>(
   TaskEither<E, A> te1,
   TaskEither<E, B> te2,
 ) =>
     () async {
       try {
-        final result = await Future.wait([
-          te1().then((value) => switch (value) {
-                Right(value: final value) => Right<E, A>(value),
-                Left(value: final value) => throw Left<E, (A, B)>(value)
-              }),
-          te2().then((value) => switch (value) {
-                Right(value: final value) => Right<E, B>(value),
-                Left(value: final value) => throw Left<E, (A, B)>(value)
-              })
-        ], eagerError: true);
+        final result = await Future.wait(
+          [
+            () async {
+              final res1 = await te1();
+              switch (res1) {
+                case Right(value: final value):
+                  return value;
+                case Left(value: final value):
+                  throw _FailFastException(value);
+              }
+            }(),
+            () async {
+              final res2 = await te2();
+              switch (res2) {
+                case Right(value: final value):
+                  return value;
+                case Left(value: final value):
+                  throw _FailFastException(value);
+              }
+            }(),
+          ],
+          eagerError: true,
+        );
 
-        return Right((result[0] as A, result[1] as B));
-      } on Left<E, (A, B)> catch (e) {
-        return e;
+        return Right(
+          (
+            result[0] as A,
+            result[1] as B,
+          ),
+        );
+      } on _FailFastException<E> catch (e) {
+        return Left(e.value);
       }
     };
