@@ -63,11 +63,13 @@ StreamTransformer<Refresh, FoodOverviewModel> _refresh(
   FoodOverviewDependencies deps,
 ) =>
     SwitchMapStreamTransformer(
-      (refresh) => SE.fromTaskEither(deps.fetchFoods(3)).transform(
-            SE.FoldEitherStreamTransformer(
-              right: (event) => const Ready(foods: []),
-              left: (event) => const Error(''),
-            ),
+      (refresh) => SE
+          .fromTaskEither(
+            deps.fetchFoods(3),
+          )
+          .foldEither(
+            right: (foods) => const Ready(foods: []),
+            left: (error) => const Error(''),
           ),
     );
 

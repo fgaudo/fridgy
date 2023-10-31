@@ -11,20 +11,17 @@ environment:
 
 dependencies:
   async: ^2.11.0
-  build: ^2.4.1
   flutter:
     sdk: flutter
   flutter_localizations:
     sdk: flutter
   rxdart: ^0.27.7
-  source_gen: ^1.4.0
   stream_transform: ^2.1.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
 
-  flutter_lints: ^2.0.0
   very_good_analysis: ^5.1.0
 
 flutter:

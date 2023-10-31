@@ -5,6 +5,26 @@ import 'task_either.dart';
 
 typedef StreamEither<E, A> = Stream<Either<E, A>>;
 
+extension StreamEitherExtension<E, A> on StreamEither<E, A> {
+  StreamEither<E2, B> mapEither<E2, B>({
+    required E2 Function(E) left,
+    required B Function(A) right,
+  }) =>
+      MapEitherStreamTransformer(
+        right: right,
+        left: left,
+      ).bind(this);
+
+  Stream<B> foldEither<B>({
+    required B Function(E) left,
+    required B Function(A) right,
+  }) =>
+      FoldEitherStreamTransformer(
+        right: right,
+        left: left,
+      ).bind(this);
+}
+
 StreamEither<E, A> fromTaskEither<E, A>(TaskEither<E, A> t) =>
     Stream.fromFuture(t());
 

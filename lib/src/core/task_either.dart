@@ -2,12 +2,6 @@ import 'package:fridgy/src/core/either.dart';
 
 typedef TaskEither<E, A> = Future<Either<E, A>> Function();
 
-final class _FailFastException<T> implements Exception {
-  const _FailFastException(this.value);
-
-  final T value;
-}
-
 TaskEither<E, (A, B)> sequenceTuple2<E, A, B>(
   TaskEither<E, A> te1,
   TaskEither<E, B> te2,
@@ -48,3 +42,9 @@ TaskEither<E, (A, B)> sequenceTuple2<E, A, B>(
         return Left(e.value);
       }
     };
+
+final class _FailFastException<T> implements Exception {
+  const _FailFastException(this.value);
+
+  final T value;
+}
