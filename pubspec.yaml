@@ -13,6 +13,7 @@ dependencies:
   async: 
   fgaudo_functional:
     path: '../fgaudo_functional'
+  logging:
   flutter:
     sdk: flutter
   flutter_localizations:

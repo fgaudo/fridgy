@@ -1,5 +1,6 @@
 import 'package:fgaudo_functional/either.dart';
 import 'package:flutter/material.dart';
+import 'package:logging/logging.dart';
 import 'package:rxdart/rxdart.dart';
 
 import 'src/app.dart';
@@ -8,15 +9,22 @@ import 'src/settings/settings_controller.dart';
 import 'src/settings/settings_service.dart';
 
 void main() async {
-  final commandSubject = PublishSubject<Command>();
+  Logger.root.level = Level.ALL; // defaults to Level.INFO
+  Logger.root.onRecord.listen((record) {
+    print('${record.level.name}: ${record.time}: ${record.message}');
+  });
 
   final foodOverview = init(
     FoodOverviewDependencies(
+      logError: (message) => () async => Logger.root.severe(message),
+      logInfo: (message) => () async => Logger.root.fine(message),
       foods: Stream.value([]),
-      delete: () async {},
+      delete: () async => const Right(null),
       fetchFoods: (page) => () async => const Right([]),
     ),
   );
+
+  final commandSubject = PublishSubject<Command>();
   commandSubject.transform(foodOverview).listen((model) {});
 
   // Set up the SettingsController, which will glue user settings to multiple
