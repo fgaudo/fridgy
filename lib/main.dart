@@ -16,8 +16,8 @@ void main() async {
 
   final foodOverview = init(
     FoodOverviewDependencies(
-      logError: (message) => () async => Logger.root.severe(message),
-      logInfo: (message) => () async => Logger.root.fine(message),
+      logError: (message) => () => Logger.root.severe(message),
+      logInfo: (message) => () => Logger.root.fine(message),
       foods: Stream.value([]),
       delete: () async => const Right(null),
       fetchFoods: (page) => () async => const Right([]),
