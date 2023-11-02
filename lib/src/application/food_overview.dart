@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:fgaudo_functional/extensions/stream_either/fold.dart';
-import 'package:fgaudo_functional/stream_either.dart' as SE;
+import 'package:fgaudo_functional/stream.dart' as S;
 import 'package:fgaudo_functional/task.dart' as T;
 import 'package:fgaudo_functional/task_either.dart' as TE;
 import 'package:rxdart/rxdart.dart';
@@ -43,10 +43,12 @@ final class Delete implements Command {
 
 final class FoodOverviewDependencies {
   const FoodOverviewDependencies({
+    required this.foods,
     required this.delete,
     required this.fetchFoods,
   });
   final T.Task<void> delete;
+  final Stream<Iterable<Food>> foods;
   final TE.TaskEither<Exception, Iterable<Food>> Function(int page) fetchFoods;
 }
 
@@ -55,26 +57,24 @@ StreamTransformer<Command, FoodOverviewModel> init(
 ) =>
     StreamTransformer.fromBind(
       (command$) => MergeStream([
-        _refresh(deps).bind(command$.whereType<Refresh>()),
-        _delete(deps).bind(command$.whereType<Delete>()),
+        deps.foods.switchMap(
+          (value) => command$
+              .whereType<Refresh>()
+              .exhaustMap(
+                (refresh) => S
+                    .fromTask(
+                      deps.fetchFoods(3),
+                    )
+                    .foldEither(
+                      right: (foods) => const Ready(foods: []),
+                      left: (error) => const Error(''),
+                    )
+                    .startWith(Loading()),
+              )
+              .startWith(const Ready(foods: [])),
+        ),
+        command$.whereType<Delete>().flatMap(
+              (delete) => const Stream.empty(),
+            ),
       ]),
     );
-
-StreamTransformer<Refresh, FoodOverviewModel> _refresh(
-  FoodOverviewDependencies deps,
-) =>
-    SwitchMapStreamTransformer(
-      (refresh) => SE
-          .fromTaskEither(
-            deps.fetchFoods(3),
-          )
-          .foldEither(
-            right: (foods) => const Ready(foods: []),
-            left: (error) => const Error(''),
-          ),
-    );
-
-StreamTransformer<Delete, FoodOverviewModel> _delete(
-  FoodOverviewDependencies deps,
-) =>
-    FlatMapStreamTransformer((delete) => const Stream.empty());

@@ -12,6 +12,7 @@ void main() async {
 
   final foodOverview = init(
     FoodOverviewDependencies(
+      foods: Stream.value([]),
       delete: () async {},
       fetchFoods: (page) => () async => const Right([]),
     ),

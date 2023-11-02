@@ -10,22 +10,19 @@ environment:
   sdk: '>=3.1.4 <4.0.0'
 
 dependencies:
-  async: ^2.11.0
+  async: 
   fgaudo_functional:
     path: '../fgaudo_functional'
   flutter:
     sdk: flutter
   flutter_localizations:
     sdk: flutter
-  rxdart: ^0.27.7
-  stream_transform: ^2.1.0
+  rxdart: 
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-
-  very_good_analysis: ^5.1.0
-
+  flutter_lints: 
 flutter:
   uses-material-design: true
 
