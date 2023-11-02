@@ -68,33 +68,37 @@ StreamTransformer<Command, FoodOverviewModel> init(
 ) =>
     StreamTransformer.fromBind(
       (command$) => MergeStream([
-        deps.foods.switchMap(
-          (foods) => command$
-              .whereType<Refresh>()
-              .exhaustMap(
-                (refresh) => S
-                    .fromTask(deps.fetchFoods(3))
-                    .doOnListen(() {
-                      deps.logInfo('Start fetching foods');
-                    })
-                    .doOnEither(
-                      left: (error) => deps.logError(error.toString()),
-                      right: (foods) =>
-                          deps.logInfo('Fetched ${foods.length} foods'),
-                    )
-                    .matchEither(
-                      right: (foods) => Ready.fromData(foods: foods),
-                      left: (error) => const Error(''),
-                    )
-                    .startWith(Loading()),
-              )
-              .startWith(
-                Ready.fromData(foods: foods),
-              ),
-        ),
-        command$.whereType<Delete>().flatMap(
-              (delete) => const Stream.empty(),
+        deps.foods
+            .doOnListen(() => deps.logInfo('Initial load of foods'))
+            .doOnData(
+                (foods) => deps.logInfo('Received ${foods.length} new foods'))
+            .switchMap(
+              (foods) => command$
+                  .whereType<Refresh>()
+                  .doOnData((event) => deps.logInfo('Received refresh command'))
+                  .exhaustMap(
+                    (refresh) => S
+                        .fromTask(deps.fetchFoods(3))
+                        .doOnEither(
+                          left: (error) => deps.logError(error.toString()),
+                          right: (foods) =>
+                              deps.logInfo('Fetched ${foods.length} foods'),
+                        )
+                        .matchEither(
+                          left: (_) => const Error(''),
+                          right: (foods) => Ready.fromData(foods: foods),
+                        )
+                        .doOnListen(() => deps.logInfo('Start fetching foods'))
+                        .startWith(Loading()),
+                  )
+                  .startWith(
+                    Ready.fromData(foods: foods),
+                  ),
             ),
+        command$
+            .whereType<Delete>()
+            .doOnData((event) => deps.logInfo('Received delete command'))
+            .flatMap((delete) => const Stream.empty()),
       ]),
     );
 
