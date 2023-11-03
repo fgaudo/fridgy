@@ -1,4 +1,3 @@
-import 'package:fgaudo_functional/either.dart';
 import 'package:flutter/material.dart';
 import 'package:logging/logging.dart';
 import 'package:rxdart/rxdart.dart';
@@ -16,11 +15,11 @@ void main() async {
 
   final foodOverview = init(
     FoodOverviewDependencies(
+      pending: Stream.value(0),
       logError: (message) => () => Logger.root.severe(message),
       logInfo: (message) => () => Logger.root.fine(message),
       foods: Stream.value([]),
-      delete: () async => const Right(null),
-      fetchFoods: (page) => () async => const Right([]),
+      deleteByIds: (ids) => () async {},
     ),
   );
 

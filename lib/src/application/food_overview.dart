@@ -1,11 +1,8 @@
 import 'dart:async';
 
-import 'package:fgaudo_functional/extensions/stream_either/do_on_either.dart';
-import 'package:fgaudo_functional/extensions/stream_either/match.dart';
 import 'package:fgaudo_functional/io.dart';
-import 'package:fgaudo_functional/stream.dart' as S;
-import 'package:fgaudo_functional/task_either.dart' as TE;
 import 'package:rxdart/rxdart.dart';
+import 'package:uuid/uuid.dart';
 
 import '../domain/food.dart';
 
@@ -24,12 +21,17 @@ final class FoodView {
 }
 
 final class Ready implements FoodOverviewModel {
-  const Ready({required this.foods});
+  const Ready({
+    required this.foods,
+    required this.pending,
+  });
 
   Ready.fromData({
     required Iterable<Food> foods,
+    required this.pending,
   }) : foods = _listToView(foods);
 
+  final int pending;
   final Iterable<FoodView> foods;
 }
 
@@ -43,24 +45,25 @@ final class Refresh implements Command {
 }
 
 final class Delete implements Command {
-  const Delete(this.page);
-  final int page;
+  const Delete(this.ids);
+
+  final Set<Uuid> ids;
 }
 
 final class FoodOverviewDependencies {
   const FoodOverviewDependencies({
+    required this.pending,
     required this.foods,
-    required this.delete,
-    required this.fetchFoods,
+    required this.deleteByIds,
     required this.logInfo,
     required this.logError,
   });
 
   final IO<void> Function(String) logInfo;
   final IO<void> Function(String) logError;
-  final TE.TaskEither<Exception, void> delete;
+  final IO<void> Function(Set<Uuid> ids) deleteByIds;
   final Stream<Iterable<Food>> foods;
-  final TE.TaskEither<Exception, Iterable<Food>> Function(int page) fetchFoods;
+  final Stream<int> pending;
 }
 
 StreamTransformer<Command, FoodOverviewModel> init(
@@ -68,37 +71,27 @@ StreamTransformer<Command, FoodOverviewModel> init(
 ) =>
     StreamTransformer.fromBind(
       (command$) => MergeStream([
-        deps.foods
+        CombineLatestStream(
+          [deps.foods, deps.pending],
+          (values) => (
+            foods: values[0] as Iterable<Food>,
+            pending: values[1] as int,
+          ),
+        )
             .doOnListen(() => deps.logInfo('Initial load of foods'))
-            .doOnData(
-                (foods) => deps.logInfo('Received ${foods.length} new foods'))
-            .switchMap(
-              (foods) => command$
-                  .whereType<Refresh>()
-                  .doOnData((event) => deps.logInfo('Received refresh command'))
-                  .exhaustMap(
-                    (refresh) => S
-                        .fromTask(deps.fetchFoods(3))
-                        .doOnEither(
-                          left: (error) => deps.logError(error.toString()),
-                          right: (foods) =>
-                              deps.logInfo('Fetched ${foods.length} foods'),
-                        )
-                        .matchEither(
-                          left: (_) => const Error(''),
-                          right: (foods) => Ready.fromData(foods: foods),
-                        )
-                        .doOnListen(() => deps.logInfo('Start fetching foods'))
-                        .startWith(Loading()),
-                  )
-                  .startWith(
-                    Ready.fromData(foods: foods),
-                  ),
-            ),
-        command$
-            .whereType<Delete>()
-            .doOnData((event) => deps.logInfo('Received delete command'))
-            .flatMap((delete) => const Stream.empty()),
+            .doOnData((record) =>
+                deps.logInfo('Received ${record.foods.length} new foods'))
+            .map<FoodOverviewModel>((record) => Ready.fromData(
+                  foods: record.foods,
+                  pending: record.pending,
+                ))
+            .startWith(Loading()),
+        command$.whereType<Delete>().doOnData(
+          (delete) {
+            deps.logInfo('Received delete command');
+            deps.deleteByIds(delete.ids);
+          },
+        ).ignoreElements()
       ]),
     );
 
