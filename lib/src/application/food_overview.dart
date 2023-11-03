@@ -68,7 +68,7 @@ final class FoodOverviewDependencies {
   final Stream<int> pending;
 }
 
-StreamTransformer<Command, FoodOverviewModel> init(
+StreamTransformer<Command, FoodOverviewModel> createFoodOverviewTransformer(
   FoodOverviewDependencies deps,
 ) =>
     StreamTransformer.fromBind(

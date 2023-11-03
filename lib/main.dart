@@ -2,10 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:logging/logging.dart';
 import 'package:rxdart/rxdart.dart';
 
-import 'src/app.dart';
 import 'src/application/food_overview.dart';
-import 'src/settings/settings_controller.dart';
-import 'src/settings/settings_service.dart';
+import 'src/presentation/app.dart';
+
+final class Pipe<C, S> {
+  const Pipe({required this.sink, required this.stream});
+
+  final Sink<C> sink;
+  final Stream<S> stream;
+}
 
 void main() async {
   Logger.root.level = Level.ALL; // defaults to Level.INFO
@@ -13,7 +18,7 @@ void main() async {
     print('${record.level.name}: ${record.time}: ${record.message}');
   });
 
-  final foodOverview = init(
+  final foodOverviewTransformer = createFoodOverviewTransformer(
     FoodOverviewDependencies(
       pending: Stream.value(0),
       logError: (message) => () => Logger.root.severe(message),
@@ -23,21 +28,14 @@ void main() async {
     ),
   );
 
-  final commandSubject = PublishSubject<Command>();
-  commandSubject.transform(foodOverview).listen((model) {});
-
-  // Set up the SettingsController, which will glue user settings to multiple
-  // Flutter Widgets.
-  final settingsController = SettingsController(SettingsService());
-
-  // Load the user's preferred theme while the splash screen is displayed.
-  // This prevents a sudden theme change when the app is first displayed.
-  await settingsController.loadSettings();
+  const subject = PublishSubject.new;
 
   // Run the app and pass in the SettingsController. The app listens to the
   // SettingsController for changes, then passes it further down to the
   // SettingsView.
   runApp(
-    MyApp(settingsController: settingsController),
+    MyApp(
+      foodOverviewTransformer: foodOverviewTransformer,
+    ),
   );
 }
