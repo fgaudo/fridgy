@@ -13,18 +13,18 @@ dependencies:
   async: 
   fgaudo_functional:
     path: '../fgaudo_functional'
-  logging:
   flutter:
     sdk: flutter
   flutter_localizations:
     sdk: flutter
+  logging:
   rxdart: 
   uuid: ^4.1.0
 
 dev_dependencies:
+  flutter_lints: 
   flutter_test:
     sdk: flutter
-  flutter_lints: 
 flutter:
   uses-material-design: true
 

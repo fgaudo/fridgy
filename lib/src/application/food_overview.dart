@@ -81,19 +81,23 @@ StreamTransformer<Command, FoodOverviewModel> init(
           ),
         )
             .doOnListen(() => deps.logInfo('Initial load of foods'))
-            .doOnData((record) =>
-                deps.logInfo('Received ${record.foods.length} new foods'))
-            .map<FoodOverviewModel>((record) => Ready.fromData(
-                  foods: record.foods,
-                  pending: record.pending,
-                ))
+            .doOnData(
+              (record) =>
+                  deps.logInfo('Received ${record.foods.length} new foods'),
+            )
+            .map<FoodOverviewModel>(
+              (record) => Ready.fromData(
+                foods: record.foods,
+                pending: record.pending,
+              ),
+            )
             .startWith(const Loading()),
         command$.whereType<Delete>().doOnData(
           (delete) {
             deps.logInfo('Received delete command');
             deps.deleteByIds(delete.ids);
           },
-        ).ignoreElements()
+        ).ignoreElements(),
       ]),
     );
 
