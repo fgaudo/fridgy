@@ -8,7 +8,9 @@ import '../domain/food.dart';
 
 sealed class FoodOverviewModel {}
 
-final class Loading implements FoodOverviewModel {}
+final class Loading implements FoodOverviewModel {
+  const Loading();
+}
 
 final class Error implements FoodOverviewModel {
   const Error(this.message);
@@ -85,7 +87,7 @@ StreamTransformer<Command, FoodOverviewModel> init(
                   foods: record.foods,
                   pending: record.pending,
                 ))
-            .startWith(Loading()),
+            .startWith(const Loading()),
         command$.whereType<Delete>().doOnData(
           (delete) {
             deps.logInfo('Received delete command');
