@@ -3,9 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
-import '../application/food_overview.dart';
+import '../application/overview.dart';
 import '../core/pipe.dart';
-import 'food_overview.dart';
+import 'overview.dart';
 
 final class MyApp extends StatelessWidget {
   const MyApp({
@@ -13,7 +13,7 @@ final class MyApp extends StatelessWidget {
     super.key,
   });
 
-  final IO<Pipe<Command, FoodOverviewModel>> createPipe;
+  final IO<Pipe<Command, OverviewModel>> createPipe;
 
   @override
   Widget build(
@@ -35,7 +35,7 @@ final class MyApp extends StatelessWidget {
         darkTheme: ThemeData.dark(),
         onGenerateRoute: (routeSettings) => MaterialPageRoute<void>(
           settings: routeSettings,
-          builder: (context) => FoodOverviewView(
+          builder: (context) => OverviewView(
             createPipe: createPipe,
             key: key,
           ),

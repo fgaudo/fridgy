@@ -7,23 +7,23 @@ import 'package:uuid/uuid.dart';
 import '../core/pipe.dart';
 import '../domain/food.dart';
 
-sealed class FoodOverviewModel {}
+sealed class OverviewModel {}
 
-final class Loading implements FoodOverviewModel {
+final class Loading implements OverviewModel {
   const Loading();
 }
 
-final class Error implements FoodOverviewModel {
+final class Error implements OverviewModel {
   const Error(this.message);
   final String message;
 }
 
-final class FoodView {
-  const FoodView({required this.name});
+final class FoodModel {
+  const FoodModel({required this.name});
   final String name;
 }
 
-final class Ready implements FoodOverviewModel {
+final class Ready implements OverviewModel {
   const Ready({
     required this.foods,
     required this.pending,
@@ -35,7 +35,7 @@ final class Ready implements FoodOverviewModel {
   }) : foods = _listToView(foods);
 
   final int pending;
-  final Iterable<FoodView> foods;
+  final Iterable<FoodModel> foods;
 }
 
 sealed class Command {
@@ -53,8 +53,8 @@ final class Delete implements Command {
   final Set<Uuid> ids;
 }
 
-final class FoodOverviewDependencies {
-  const FoodOverviewDependencies({
+final class OverviewDependencies {
+  const OverviewDependencies({
     required this.pending,
     required this.foods,
     required this.deleteByIds,
@@ -69,8 +69,8 @@ final class FoodOverviewDependencies {
   final Stream<int> pending;
 }
 
-IO<Pipe<Command, FoodOverviewModel>> preparePipe(
-  FoodOverviewDependencies deps,
+IO<Pipe<Command, OverviewModel>> preparePipe(
+  OverviewDependencies deps,
 ) =>
     () => Pipe(
           subject: PublishSubject(),
@@ -88,7 +88,7 @@ IO<Pipe<Command, FoodOverviewModel>> preparePipe(
                     (record) => deps
                         .logInfo('Received ${record.foods.length} new foods'),
                   )
-                  .map<FoodOverviewModel>(
+                  .map<OverviewModel>(
                     (record) => Ready.fromData(
                       foods: record.foods,
                       pending: record.pending,
@@ -105,5 +105,5 @@ IO<Pipe<Command, FoodOverviewModel>> preparePipe(
           ),
         );
 
-Iterable<FoodView> _listToView(Iterable<Food> foods) =>
-    foods.map((food) => FoodView(name: food.name));
+Iterable<FoodModel> _listToView(Iterable<Food> foods) =>
+    foods.map((food) => FoodModel(name: food.name));

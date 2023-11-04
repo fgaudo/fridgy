@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:logging/logging.dart';
 
-import 'src/application/food_overview.dart';
+import 'src/application/overview.dart';
 import 'src/presentation/app.dart';
 
 void main() async {
@@ -11,7 +11,7 @@ void main() async {
   });
 
   final createPipe = preparePipe(
-    FoodOverviewDependencies(
+    OverviewDependencies(
       pending: Stream.value(0),
       logError: (message) => () => Logger.root.severe(message),
       logInfo: (message) => () => Logger.root.fine(message),
