@@ -1,3 +1,4 @@
+import 'package:fgaudo_functional/extensions/option/match.dart';
 import 'package:fgaudo_functional/io.dart';
 import 'package:flutter/material.dart';
 
@@ -18,13 +19,15 @@ final class OverviewView extends StatelessWidget {
   @override
   Widget build(BuildContext context) => PipeBuilder(
         createPipe: createPipe,
-        builder: (ctx, snapshot) => snapshot.hasData
-            ? ColoredBox(
-                color: switch (snapshot.data!) {
-                  Ready() => Colors.black,
-                  _ => Colors.white
-                },
-              )
-            : const SizedBox.shrink(),
+        builder: (_, snapshot, dispatch) => snapshot.match(
+          onNone: const SizedBox.shrink(),
+          onSome: (data) => ColoredBox(
+            color: switch (data) {
+              Ready() => Colors.black,
+              Error() => Colors.white,
+              Loading() => Colors.white
+            },
+          ),
+        ),
       );
 }
