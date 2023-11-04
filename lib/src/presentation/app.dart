@@ -1,20 +1,19 @@
-import 'dart:async';
-
-import 'package:flutter/foundation.dart';
+import 'package:fgaudo_functional/io.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 import '../application/food_overview.dart';
+import '../core/pipe.dart';
 import 'food_overview.dart';
 
 final class MyApp extends StatelessWidget {
   const MyApp({
-    required this.foodOverviewTransformer,
+    required this.createPipe,
     super.key,
   });
 
-  final StreamTransformer<Command, FoodOverviewModel> foodOverviewTransformer;
+  final IO<Pipe<Command, FoodOverviewModel>> createPipe;
 
   @override
   Widget build(
@@ -37,19 +36,9 @@ final class MyApp extends StatelessWidget {
         onGenerateRoute: (routeSettings) => MaterialPageRoute<void>(
           settings: routeSettings,
           builder: (context) => FoodOverviewView(
-            foodOverviewTransformer: foodOverviewTransformer,
+            createPipe: createPipe,
             key: key,
           ),
         ),
       );
-  @override
-  void debugFillProperties(DiagnosticPropertiesBuilder properties) {
-    super.debugFillProperties(properties);
-    properties.add(
-      DiagnosticsProperty<StreamTransformer<Command, FoodOverviewModel>>(
-        'foodOverviewTransformer',
-        foodOverviewTransformer,
-      ),
-    );
-  }
 }

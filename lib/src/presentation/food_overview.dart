@@ -1,53 +1,47 @@
-import 'dart:async';
-
+import 'package:fgaudo_functional/io.dart';
 import 'package:flutter/material.dart';
-import 'package:rxdart/rxdart.dart';
 
 import '../application/food_overview.dart';
+import '../core/pipe.dart';
 
 final class FoodOverviewView extends StatefulWidget {
   const FoodOverviewView({
-    required this.foodOverviewTransformer,
+    required this.createPipe,
     super.key,
   });
 
   static const routeName = '/settings';
 
-  final StreamTransformer<Command, FoodOverviewModel> foodOverviewTransformer;
+  final IO<Pipe<Command, FoodOverviewModel>> createPipe;
 
   @override
   State<StatefulWidget> createState() => _FoodOverviewState();
 }
 
 final class _FoodOverviewState extends State<FoodOverviewView> {
-  late final PublishSubject<Command> _subject;
-  late final Stream<FoodOverviewModel> _model$;
+  late final Pipe<Command, FoodOverviewModel> _pipe;
 
   @override
   void initState() {
     super.initState();
 
-    _subject = PublishSubject();
-    _model$ = widget.foodOverviewTransformer.bind(_subject);
+    _pipe = widget.createPipe();
   }
 
   @override
   void dispose() {
     super.dispose();
 
-    _subject.close();
+    _pipe.close();
   }
 
   void _add(Command command) {
-    if (_subject.isClosed) {
-      return;
-    }
-    _subject.add(command);
+    _pipe.add(command);
   }
 
   @override
   Widget build(BuildContext context) => StreamBuilder(
-        stream: _model$,
+        stream: _pipe.stream,
         builder: (ctx, snapshot) => snapshot.hasData
             ? ColoredBox(
                 color: switch (snapshot.data!) {

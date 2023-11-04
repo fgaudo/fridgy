@@ -4,6 +4,7 @@ import 'package:fgaudo_functional/io.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:uuid/uuid.dart';
 
+import '../core/pipe.dart';
 import '../domain/food.dart';
 
 sealed class FoodOverviewModel {}
@@ -68,38 +69,41 @@ final class FoodOverviewDependencies {
   final Stream<int> pending;
 }
 
-StreamTransformer<Command, FoodOverviewModel> createFoodOverviewTransformer(
+IO<Pipe<Command, FoodOverviewModel>> preparePipe(
   FoodOverviewDependencies deps,
 ) =>
-    StreamTransformer.fromBind(
-      (command$) => MergeStream([
-        CombineLatestStream(
-          [deps.foods, deps.pending],
-          (values) => (
-            foods: values[0] as Iterable<Food>,
-            pending: values[1] as int,
+    () => Pipe(
+          subject: PublishSubject(),
+          transformer: StreamTransformer.fromBind(
+            (command$) => MergeStream([
+              CombineLatestStream(
+                [deps.foods, deps.pending],
+                (values) => (
+                  foods: values[0] as Iterable<Food>,
+                  pending: values[1] as int,
+                ),
+              )
+                  .doOnListen(() => deps.logInfo('Initial load of foods'))
+                  .doOnData(
+                    (record) => deps
+                        .logInfo('Received ${record.foods.length} new foods'),
+                  )
+                  .map<FoodOverviewModel>(
+                    (record) => Ready.fromData(
+                      foods: record.foods,
+                      pending: record.pending,
+                    ),
+                  )
+                  .startWith(const Loading()),
+              command$.whereType<Delete>().doOnData(
+                (delete) {
+                  deps.logInfo('Received delete command');
+                  deps.deleteByIds(delete.ids);
+                },
+              ).ignoreElements(),
+            ]),
           ),
-        )
-            .doOnListen(() => deps.logInfo('Initial load of foods'))
-            .doOnData(
-              (record) =>
-                  deps.logInfo('Received ${record.foods.length} new foods'),
-            )
-            .map<FoodOverviewModel>(
-              (record) => Ready.fromData(
-                foods: record.foods,
-                pending: record.pending,
-              ),
-            )
-            .startWith(const Loading()),
-        command$.whereType<Delete>().doOnData(
-          (delete) {
-            deps.logInfo('Received delete command');
-            deps.deleteByIds(delete.ids);
-          },
-        ).ignoreElements(),
-      ]),
-    );
+        );
 
 Iterable<FoodView> _listToView(Iterable<Food> foods) =>
     foods.map((food) => FoodView(name: food.name));
