@@ -4,8 +4,13 @@ import 'package:fgaudo_functional/io.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:uuid/uuid.dart';
 
-import '../core/pipe.dart';
-import '../domain/food.dart';
+import '../../core/pipe.dart';
+import '../../domain/food.dart';
+import '../commands/delete_foods_by_ids.dart';
+import '../commands/log.dart';
+import '../helpers/foods.dart';
+import '../streams/foods.dart';
+import '../streams/pending.dart';
 
 sealed class OverviewModel {}
 
@@ -57,28 +62,28 @@ typedef OverviewPipe = Pipe<Command, OverviewModel>;
 typedef OverviewPipeFactory = IO<OverviewPipe>;
 
 OverviewPipeFactory preparePipeFactory({
-  required IO<void> Function(String) logInfo,
-  required IO<void> Function(String) logError,
-  required IO<void> Function(Set<Uuid> ids) deleteByIds,
-  required Stream<Iterable<Food>> foods,
-  required Stream<int> pending,
+  required Log log,
+  required DeleteFoodsByIds deleteByIds,
+  required Foods foods$,
+  required Pending pending,
 }) =>
     () => Pipe(
           subject: PublishSubject(),
           transformer: StreamTransformer.fromBind(
             (command$) => MergeStream([
               CombineLatestStream(
-                [foods, pending],
+                [foods$.transform(foods), pending],
                 (values) => (
                   foods: values[0] as Iterable<Food>,
                   pending: values[1] as int,
                 ),
               )
                   .doOnListen(
-                    () => logInfo('Initial load of foods'),
+                    () => log(LogType.info, 'Initial load of foods'),
                   )
                   .doOnData(
-                    (record) => logInfo(
+                    (record) => log(
+                      LogType.info,
                       'Received ${record.foods.length} new foods',
                     ),
                   )
@@ -93,7 +98,7 @@ OverviewPipeFactory preparePipeFactory({
                   ),
               command$.whereType<Delete>().doOnData(
                 (delete) {
-                  logInfo('Received delete command');
+                  log(LogType.info, 'Received delete command');
                   deleteByIds(delete.ids);
                 },
               ).ignoreElements(),

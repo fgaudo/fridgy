@@ -1,7 +1,7 @@
 import 'package:fgaudo_functional/extensions/option/match.dart';
 import 'package:flutter/material.dart';
 
-import '../../application/overview.dart';
+import '../../application/use_cases/overview.dart';
 import '../../core/pipe_builder.dart';
 
 final class OverviewView extends StatelessWidget {
