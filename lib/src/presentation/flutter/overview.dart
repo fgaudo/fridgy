@@ -1,25 +1,26 @@
 import 'package:fgaudo_functional/extensions/option/match.dart';
-import 'package:fgaudo_functional/io.dart';
 import 'package:flutter/material.dart';
 
-import '../application/overview.dart';
-import '../core/pipe.dart';
-import '../core/pipe_builder.dart';
+import '../../application/overview.dart';
+import '../../core/pipe_builder.dart';
 
 final class OverviewView extends StatelessWidget {
   const OverviewView({
-    required this.createPipe,
+    required this.pipeFactory,
     super.key,
   });
 
-  static const routeName = '/overview';
+  static const String routeName = '/overview';
 
-  final IO<Pipe<Command, OverviewModel>> createPipe;
+  final OverviewPipeFactory pipeFactory;
 
   @override
-  Widget build(BuildContext context) => PipeBuilder(
-        createPipe: createPipe,
-        builder: (_, snapshot, dispatch) => snapshot.match(
+  Widget build(
+    BuildContext context,
+  ) =>
+      PipeBuilder(
+        createPipe: pipeFactory,
+        builder: (_, modelOption, __) => modelOption.match(
           onNone: const SizedBox.shrink(),
           onSome: (data) => ColoredBox(
             color: switch (data) {

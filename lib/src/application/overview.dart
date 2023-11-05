@@ -53,40 +53,34 @@ final class Delete implements Command {
   final Set<Uuid> ids;
 }
 
-final class OverviewDependencies {
-  const OverviewDependencies({
-    required this.pending,
-    required this.foods,
-    required this.deleteByIds,
-    required this.logInfo,
-    required this.logError,
-  });
+typedef OverviewPipe = Pipe<Command, OverviewModel>;
+typedef OverviewPipeFactory = IO<OverviewPipe>;
 
-  final IO<void> Function(String) logInfo;
-  final IO<void> Function(String) logError;
-  final IO<void> Function(Set<Uuid> ids) deleteByIds;
-  final Stream<Iterable<Food>> foods;
-  final Stream<int> pending;
-}
-
-IO<Pipe<Command, OverviewModel>> preparePipe(
-  OverviewDependencies deps,
-) =>
+OverviewPipeFactory preparePipeFactory({
+  required IO<void> Function(String) logInfo,
+  required IO<void> Function(String) logError,
+  required IO<void> Function(Set<Uuid> ids) deleteByIds,
+  required Stream<Iterable<Food>> foods,
+  required Stream<int> pending,
+}) =>
     () => Pipe(
           subject: PublishSubject(),
           transformer: StreamTransformer.fromBind(
             (command$) => MergeStream([
               CombineLatestStream(
-                [deps.foods, deps.pending],
+                [foods, pending],
                 (values) => (
                   foods: values[0] as Iterable<Food>,
                   pending: values[1] as int,
                 ),
               )
-                  .doOnListen(() => deps.logInfo('Initial load of foods'))
+                  .doOnListen(
+                    () => logInfo('Initial load of foods'),
+                  )
                   .doOnData(
-                    (record) => deps
-                        .logInfo('Received ${record.foods.length} new foods'),
+                    (record) => logInfo(
+                      'Received ${record.foods.length} new foods',
+                    ),
                   )
                   .map<OverviewModel>(
                     (record) => Ready.fromData(
@@ -94,11 +88,13 @@ IO<Pipe<Command, OverviewModel>> preparePipe(
                       pending: record.pending,
                     ),
                   )
-                  .startWith(const Loading()),
+                  .startWith(
+                    const Loading(),
+                  ),
               command$.whereType<Delete>().doOnData(
                 (delete) {
-                  deps.logInfo('Received delete command');
-                  deps.deleteByIds(delete.ids);
+                  logInfo('Received delete command');
+                  deleteByIds(delete.ids);
                 },
               ).ignoreElements(),
             ]),

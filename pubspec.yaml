@@ -19,7 +19,7 @@ dependencies:
     sdk: flutter
   logging:
   rxdart: 
-  uuid: ^4.1.0
+  uuid: 
 
 dev_dependencies:
   flutter_lints: 
@@ -33,4 +33,4 @@ flutter:
 
   assets:
     # Add assets from the images directory to the application.
-    - assets/images/
+    - lib/src/presentation/assets/images/

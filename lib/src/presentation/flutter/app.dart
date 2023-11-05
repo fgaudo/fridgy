@@ -1,19 +1,17 @@
-import 'package:fgaudo_functional/io.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
-import '../application/overview.dart';
-import '../core/pipe.dart';
+import '../../application/overview.dart';
 import 'overview.dart';
 
 final class MyApp extends StatelessWidget {
   const MyApp({
-    required this.createPipe,
+    required this.overviewPipeFactory,
     super.key,
   });
 
-  final IO<Pipe<Command, OverviewModel>> createPipe;
+  final OverviewPipeFactory overviewPipeFactory;
 
   @override
   Widget build(
@@ -36,9 +34,18 @@ final class MyApp extends StatelessWidget {
         onGenerateRoute: (routeSettings) => MaterialPageRoute<void>(
           settings: routeSettings,
           builder: (context) => OverviewView(
-            createPipe: createPipe,
+            pipeFactory: overviewPipeFactory,
             key: key,
           ),
         ),
       );
 }
+
+void runFlutterApp({
+  required OverviewPipeFactory overviewPipeFactory,
+}) =>
+    runApp(
+      MyApp(
+        overviewPipeFactory: overviewPipeFactory,
+      ),
+    );
