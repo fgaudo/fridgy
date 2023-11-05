@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:fgaudo_functional/io.dart';
+import 'package:fgaudo_functional/stream.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:uuid/uuid.dart';
 
@@ -64,46 +65,47 @@ typedef OverviewPipeFactory = IO<OverviewPipe>;
 OverviewPipeFactory preparePipeFactory({
   required Log log,
   required DeleteFoodsByIds deleteByIds,
-  required Foods foods$,
-  required Pending pending,
+  required Foods$ foods$,
+  required Pending$ pending,
 }) =>
     () => Pipe(
           subject: PublishSubject(),
-          transformer: StreamTransformer.fromBind(
-            (command$) => MergeStream([
-              CombineLatestStream(
-                [foods$.transform(foods), pending],
-                (values) => (
-                  foods: values[0] as Iterable<Food>,
-                  pending: values[1] as int,
-                ),
-              )
-                  .doOnListen(
-                    () => log(LogType.info, 'Initial load of foods'),
-                  )
-                  .doOnData(
-                    (record) => log(
-                      LogType.info,
-                      'Received ${record.foods.length} new foods',
-                    ),
-                  )
-                  .map<OverviewModel>(
-                    (record) => Ready.fromData(
-                      foods: record.foods,
-                      pending: record.pending,
-                    ),
-                  )
-                  .startWith(
-                    const Loading(),
+          transformer: (command$) => MergeStream([
+            combineLatest2(
+              foods$.transform(
+                StreamTransformer.fromBind(foods),
+              ),
+              pending,
+              (foods, pending) => (
+                foods: foods,
+                pending: pending,
+              ),
+            )
+                .doOnListen(
+                  () => log(LogType.info, 'Initial load of foods'),
+                )
+                .doOnData(
+                  (record) => log(
+                    LogType.info,
+                    'Received ${record.foods.length} new foods',
                   ),
-              command$.whereType<Delete>().doOnData(
-                (delete) {
-                  log(LogType.info, 'Received delete command');
-                  deleteByIds(delete.ids);
-                },
-              ).ignoreElements(),
-            ]),
-          ),
+                )
+                .map<OverviewModel>(
+                  (record) => Ready.fromData(
+                    foods: record.foods,
+                    pending: record.pending,
+                  ),
+                )
+                .startWith(
+                  const Loading(),
+                ),
+            command$.whereType<Delete>().doOnData(
+              (delete) {
+                log(LogType.info, 'Received delete command');
+                deleteByIds(delete.ids);
+              },
+            ).ignoreElements(),
+          ]),
         );
 
 Iterable<FoodModel> _listToView(Iterable<Food> foods) =>

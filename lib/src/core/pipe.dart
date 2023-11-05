@@ -5,9 +5,9 @@ import 'package:rxdart/rxdart.dart';
 final class Pipe<A, B> {
   Pipe({
     required Subject<A> subject,
-    required StreamTransformer<A, B> transformer,
+    required Stream<B> Function(Stream<A>) transformer,
   })  : _subject = subject,
-        stream = subject.transform(transformer);
+        stream = subject.transform(StreamTransformer.fromBind(transformer));
 
   final Stream<B> stream;
 

@@ -1,3 +1,3 @@
 final class FoodData {}
 
-typedef Foods = Stream<Iterable<FoodData>>;
+typedef Foods$ = Stream<Iterable<FoodData>>;

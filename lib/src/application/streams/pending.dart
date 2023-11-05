@@ -1,1 +1,1 @@
-typedef Pending = Stream<int>;
+typedef Pending$ = Stream<int>;

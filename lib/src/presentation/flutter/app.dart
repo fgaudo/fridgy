@@ -40,12 +40,3 @@ final class MyApp extends StatelessWidget {
         ),
       );
 }
-
-void runFlutterApp({
-  required OverviewPipeFactory overviewPipeFactory,
-}) =>
-    runApp(
-      MyApp(
-        overviewPipeFactory: overviewPipeFactory,
-      ),
-    );
