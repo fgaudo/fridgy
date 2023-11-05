@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:fgaudo_functional/io.dart';
 import 'package:fgaudo_functional/stream.dart';
 import 'package:rxdart/rxdart.dart';
@@ -72,9 +70,7 @@ OverviewPipeFactory preparePipeFactory({
           subject: PublishSubject(),
           transformer: (command$) => MergeStream([
             combineLatest2(
-              foods$.transform(
-                StreamTransformer.fromBind(foods),
-              ),
+              toFoodEntities(foods$),
               pending,
               (foods, pending) => (
                 foods: foods,

@@ -3,7 +3,7 @@ import 'dart:async';
 import '../../domain/food.dart';
 import '../streams/foods.dart';
 
-Stream<Iterable<Food>> foods(
+Stream<Iterable<Food>> toFoodEntities(
   Foods$ foods$,
 ) =>
     foods$.map(
