@@ -6,16 +6,16 @@ import '../../../core/common.dart';
 import '../bootstrap.dart';
 import '../helpers/transaction.dart';
 
-DeleteFoodsByIds prepareDeleteFoodsByIds(
-  CommonSqlite3 sqlite3,
-  Log log,
-) =>
+DeleteFoodsByIds prepareDeleteFoodsByIds({
+  required CommonSqlite3 sqlite3,
+  required Log log,
+}) =>
     (ids) => acquireResource(
           resourceTask: () async => sqlite3.open(DATABASE),
           release: (db) => () async => db.dispose(),
           use: (db) => transaction(
-            db,
-            (db) => acquireResource(
+            database: db,
+            run: (db) => acquireResource(
               resourceTask: () async => db.prepare(
                 'DELETE FROM $FOODS_TABLE WHERE $FOODS_TABLE_NAME = ?;',
               ),

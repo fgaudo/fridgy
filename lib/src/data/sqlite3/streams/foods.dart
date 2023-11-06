@@ -6,10 +6,10 @@ import '../../../application/commands/log.dart';
 import '../../../application/streams/foods.dart';
 import '../bootstrap.dart';
 
-Foods$ foods$(
-  CommonSqlite3 sqlite3,
-  Log log,
-) {
+Foods$ prepareFoodsStream({
+  required CommonSqlite3 sqlite3,
+  required Log log,
+}) {
   CommonDatabase? db;
   return FromCallableStream(
     () async => db = sqlite3.open(DATABASE, mode: OpenMode.readOnly),
@@ -21,7 +21,7 @@ Foods$ foods$(
         .map((event) => null)
         .startWith(null)
         .switchMap(
-          (_) => fromIO(() => db.select('SELECT * FROM $FOODS_TABLE')),
+          (_) => fromIO(() => db.select('SELECT * FROM $FOODS_TABLE;')),
         )
         .map(
           (resultSet) => resultSet.map(

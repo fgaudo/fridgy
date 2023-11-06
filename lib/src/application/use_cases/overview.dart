@@ -6,7 +6,7 @@ import '../../core/pipe.dart';
 import '../../domain/food.dart';
 import '../commands/delete_foods_by_ids.dart';
 import '../commands/log.dart';
-import '../helpers/foods.dart';
+import '../helpers/to_food_entities.dart';
 import '../streams/foods.dart';
 import '../streams/pending.dart';
 
