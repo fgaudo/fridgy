@@ -1,7 +1,6 @@
 import 'package:fgaudo_functional/io.dart';
 import 'package:fgaudo_functional/stream.dart';
 import 'package:rxdart/rxdart.dart';
-import 'package:uuid/uuid.dart';
 
 import '../../core/pipe.dart';
 import '../../domain/food.dart';
@@ -54,7 +53,7 @@ final class Refresh implements Command {
 final class Delete implements Command {
   const Delete(this.ids);
 
-  final Set<Uuid> ids;
+  final Set<String> ids;
 }
 
 typedef OverviewPipe = Pipe<Command, OverviewModel>;

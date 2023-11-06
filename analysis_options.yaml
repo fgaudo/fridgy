@@ -102,5 +102,6 @@ linter:
     prefer_mixin: true
     prefer_null_aware_method_calls: true
     sized_box_shrink_expand: true
+    constant_identifier_names: false
 # Additional information about this file can be found at
 # https://dart.dev/guides/language/analysis-options
