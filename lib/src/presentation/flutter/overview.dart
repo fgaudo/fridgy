@@ -6,20 +6,20 @@ import '../../core/pipe_builder.dart';
 
 final class OverviewView extends StatelessWidget {
   const OverviewView({
-    required this.pipeFactory,
+    required this.pipeIO,
     super.key,
   });
 
   static const String routeName = '/overview';
 
-  final OverviewPipeFactory pipeFactory;
+  final OverviewPipeFactory pipeIO;
 
   @override
   Widget build(
     BuildContext context,
   ) =>
       PipeBuilder(
-        createPipe: pipeFactory,
+        createPipe: pipeIO,
         builder: (_, modelOption, __) => modelOption.match(
           onNone: const SizedBox.shrink(),
           onSome: (data) => ColoredBox(

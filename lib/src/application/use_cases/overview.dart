@@ -59,7 +59,7 @@ final class Delete implements Command {
 typedef OverviewPipe = Pipe<Command, OverviewModel>;
 typedef OverviewPipeFactory = IO<OverviewPipe>;
 
-OverviewPipeFactory preparePipeFactory({
+OverviewPipeFactory preparePipeIO({
   required Log log,
   required DeleteFoodsByIds deleteByIds,
   required Foods$ foods$,
