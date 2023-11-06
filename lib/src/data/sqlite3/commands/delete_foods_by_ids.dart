@@ -1,8 +1,9 @@
-import 'package:sqlite3/sqlite3.dart';
+import 'package:fgaudo_functional/extensions/task/bracket.dart';
+import 'package:fgaudo_functional/task.dart';
+import 'package:sqlite3/wasm.dart';
 
 import '../../../application/commands/delete_foods_by_ids.dart';
 import '../../../application/commands/log.dart';
-import '../../../core/common.dart';
 import '../bootstrap.dart';
 import '../helpers/transaction.dart';
 
@@ -10,15 +11,10 @@ DeleteFoodsByIds prepareDeleteFoodsByIds({
   required CommonSqlite3 sqlite3,
   required Log log,
 }) =>
-    (ids) => acquireResource(
-          resourceTask: () async => sqlite3.open(DATABASE),
+    (ids) => _openDatabase(sqlite3).bracket(
           release: (db) => () async => db.dispose(),
-          use: (db) => transaction(
-            database: db,
-            run: (db) => acquireResource(
-              resourceTask: () async => db.prepare(
-                'DELETE FROM $FOODS_TABLE WHERE $FOODS_TABLE_NAME = ?;',
-              ),
+          use: transaction(
+            (db) => _prepareDeletes(db).bracket(
               release: (delete) => () async => delete.dispose(),
               use: (delete) => () async {
                 for (final id in ids) {
@@ -28,3 +24,11 @@ DeleteFoodsByIds prepareDeleteFoodsByIds({
             ),
           ),
         );
+
+Task<CommonPreparedStatement> _prepareDeletes(CommonDatabase db) =>
+    () async => db.prepare(
+          'DELETE FROM $FOODS_TABLE WHERE $FOODS_TABLE_NAME = ?;',
+        );
+
+Task<CommonDatabase> _openDatabase(CommonSqlite3 sqlite3) =>
+    () async => sqlite3.open(DATABASE, mode: OpenMode.readWrite);
