@@ -7,21 +7,18 @@ import '../../../application/streams/foods.dart';
 import '../bootstrap.dart';
 
 Foods$ prepareFoodsStream({
-  required CommonSqlite3 sqlite3,
+  required CommonDatabase database,
   required Log log,
-}) {
-  CommonDatabase? db;
-  return FromCallableStream(
-    () async => db = sqlite3.open(DATABASE, mode: OpenMode.readOnly),
-  ).doOnDone(() {
-    db?.dispose();
-  }).flatMap(
-    (db) => db.updates
+}) =>
+    database.updates
         .where((event) => event.tableName == FOODS_TABLE)
         .map((event) => null)
         .startWith(null)
+        .doOnData((event) {
+          log(LogType.info, 'Taking all foods');
+        })
         .switchMap(
-          (_) => fromIO(() => db.select('SELECT * FROM $FOODS_TABLE;')),
+          (_) => fromIO(() => database.select('SELECT * FROM $FOODS_TABLE;')),
         )
         .map(
           (resultSet) => resultSet.map(
@@ -29,6 +26,4 @@ Foods$ prepareFoodsStream({
               name: (row[FOODS_TABLE_NAME] as String?) ?? '[UNDEFINED]',
             ),
           ),
-        ),
-  );
-}
+        );

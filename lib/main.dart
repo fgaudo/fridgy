@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:logging/logging.dart';
+import 'package:sqlite3/common.dart';
 
 import 'src/application/use_cases/overview.dart' as overview;
 import 'src/data/generic/commands/log.dart';
@@ -14,21 +15,24 @@ void main() async {
     dbName: 'fridgy',
   );
 
+  final database = sqlite3.open(DATABASE, mode: OpenMode.readWrite);
+  final readonlyDatabase = sqlite3.open(DATABASE, mode: OpenMode.readOnly);
+
   runApp(
     MyApp(
       overviewPipeIO: overview.preparePipeIO(
-        pending: Stream.value(0),
+        pending: Stream.value(0).asBroadcastStream(),
         log: prepareLog(
           Logger('APPLICATION Overview'),
         ),
         foods$: prepareFoodsStream(
-          sqlite3: sqlite3,
+          database: readonlyDatabase,
           log: prepareLog(
             Logger(r'DATA Foods$'),
           ),
         ),
         deleteByIds: prepareDeleteFoodsByIds(
-          sqlite3: sqlite3,
+          database: database,
           log: prepareLog(
             Logger('DATA DeleteByIds'),
           ),

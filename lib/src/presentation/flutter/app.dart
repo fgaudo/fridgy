@@ -31,6 +31,7 @@ final class MyApp extends StatelessWidget {
         onGenerateTitle: (context) => AppLocalizations.of(context)!.appTitle,
         theme: ThemeData(),
         darkTheme: ThemeData.dark(),
+        initialRoute: OverviewView.routeName,
         onGenerateRoute: (routeSettings) => MaterialPageRoute<void>(
           settings: routeSettings,
           builder: (context) => OverviewView(
