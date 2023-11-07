@@ -28,6 +28,5 @@ void createTables(CommonDatabase db) {
     ..execute('pragma user_version = 1')
     ..execute(
       'CREATE TABLE IF NOT EXISTS $FOODS_TABLE (id INTEGER PRIMARY KEY AUTOINCREMENT, $FOODS_TABLE_NAME TEXT NOT NULL);',
-    )
-    ..dispose();
+    );
 }
