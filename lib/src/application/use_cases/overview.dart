@@ -65,11 +65,13 @@ IO<OverviewController> prepareControllerIO<LOG, DELETE, FOODS>({
   required ({FOODS env, Foods$<FOODS> stream}) foods,
 }) {
   final logInfo = (String s) => log.function(LogType.info, s)(log.env);
+  final foods$ = foods.stream(foods.env).asBroadcastStream();
+  final deleteFoodsByIds =
+      (Set<String> ids) => deleteByIds.function(ids)(deleteByIds.env);
 
   return () => Controller.publishSubject(
         (command$) => MergeStream([
-          foods
-              .stream(foods.env)
+          foods$
               .transform(
                 StreamTransformer.fromBind(toFoodEntities),
               )
@@ -97,7 +99,7 @@ IO<OverviewController> prepareControllerIO<LOG, DELETE, FOODS>({
               )
               .flatMap(
                 (delete) => fromIO(
-                  deleteByIds.function(delete.ids)(deleteByIds.env),
+                  deleteFoodsByIds(delete.ids),
                 ),
               )
               .ignoreElements(),
