@@ -7,21 +7,19 @@ import '../../../application/commands/log.dart';
 import '../../../application/streams/foods.dart';
 import '../bootstrap.dart';
 
-final Foods$<({CommonDatabase dbEnv, Log<Logger> logEnv, Logger loggerEnv})>
-    foods$ = (deps) => deps.dbEnv.updates
+final Foods$<({CommonDatabase db, Log<Logger> log, Logger logger})> foods$ =
+    (deps) => deps.db.updates
         .doOnData(
-          (event) =>
-              deps.logEnv(LogType.info, 'received update')(deps.loggerEnv),
+          (event) => deps.log(LogType.info, 'received update')(deps.logger),
         )
         .where((event) => event.tableName == FOODS_TABLE)
         .map((event) => null)
         .startWith(null)
         .doOnData(
-          (event) =>
-              deps.logEnv(LogType.info, 'Taking all foods')(deps.loggerEnv),
+          (event) => deps.log(LogType.info, 'Taking all foods')(deps.logger),
         )
         .switchMap(
-          (_) => fromIO(() => deps.dbEnv.select('SELECT * FROM $FOODS_TABLE;')),
+          (_) => fromIO(() => deps.db.select('SELECT * FROM $FOODS_TABLE;')),
         )
         .map(
           (resultSet) => resultSet.map(

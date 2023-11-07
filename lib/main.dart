@@ -65,27 +65,33 @@ void main() async {
     select(readDB),
   );
 
+  final overviewControllerIO = overview.prepareControllerIO(
+    log: (
+      function: log,
+      env: appLogger,
+    ),
+    deleteByIds: (
+      function: deleteFoodsByIds,
+      env: (
+        db: readWriteDB,
+        logger: dataLogger,
+        log: log,
+      )
+    ),
+    foods: (
+      env: (
+        db: readWriteDB,
+        log: log,
+        logger: dataLogger,
+      ),
+      stream: foods$,
+    ),
+  );
+
   runApp(
     MyApp(
       log: (type, message) => log(type, message)(presentationLogger),
-      createOverviewController: overview.prepareControllerIO(
-        log: log,
-        foods$: foods$,
-        deleteByIds: deleteFoodsByIds,
-      )(
-        (
-          logEnv: appLogger,
-          deleteByIdsEnv: (
-            dbEnv: readWriteDB,
-            loggerEnv: dataLogger,
-          ),
-          foodsEnv: (
-            dbEnv: readWriteDB,
-            logEnv: log,
-            loggerEnv: dataLogger,
-          ),
-        ),
-      ),
+      createOverviewController: overviewControllerIO,
     ),
   );
 }
