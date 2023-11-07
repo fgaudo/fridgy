@@ -19,12 +19,15 @@ external set _populateDB(void Function() f);
 @JS('clearDB')
 external set _clearDB(void Function() f);
 
-void main() async {
-  final sqlite3 = await bootstrap(
-    pathToWasm: 'sqlite3.wasm',
-    dbName: 'fridgy',
-  );
+@JS('execute')
+external set _execute(void Function(String, List<dynamic>?) f);
 
+@JS('select')
+external set _select(
+  List<dynamic> Function(String, List<dynamic>?) f,
+);
+
+void main() async {
   final appLog = prepareLog(Logger('APP'));
   final dataLog = prepareLog(Logger('DATA'));
   final presentationLog = prepareLog(Logger('UI'));
@@ -36,6 +39,11 @@ void main() async {
     );
   });
 
+  final sqlite3 = await bootstrap(
+    pathToWasm: 'sqlite3.wasm',
+    dbName: 'fridgy',
+  );
+
   final database = sqlite3.open(DATABASE, mode: OpenMode.readWrite);
 
   _populateDB = allowInterop(
@@ -44,6 +52,14 @@ void main() async {
 
   _clearDB = allowInterop(
     clearDB(database),
+  );
+
+  _execute = allowInterop(
+    execute(database),
+  );
+
+  _select = allowInterop(
+    select(database),
   );
 
   runApp(
