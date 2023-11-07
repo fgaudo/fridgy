@@ -20,7 +20,7 @@ dependencies:
   js:
   logging:
   rxdart: 
-  sqlite3: '>=2.1.0 <2.2.0'
+  sqlite3: 2.1.0
   uuid:
 
 dev_dependencies:

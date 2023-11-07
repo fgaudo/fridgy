@@ -1,11 +1,11 @@
-import 'package:fgaudo_functional/task.dart';
+import 'package:fgaudo_functional/io.dart';
 import 'package:sqlite3/common.dart';
 
-Task<void> Function(CommonDatabase) transaction<A>(
-  Task<A> Function(CommonDatabase) run,
+IO<void> Function(CommonDatabase) transaction(
+  IO<void> Function(CommonDatabase) run,
 ) =>
-    (database) => () async {
+    (database) => () {
           database.execute('BEGIN;');
-          await run(database)();
+          run(database)();
           database.execute('COMMIT;');
         };
