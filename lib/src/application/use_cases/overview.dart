@@ -66,9 +66,8 @@ IO<OverviewController> prepareControllerIO<LOG, DELETE, FOODS>({
 }) {
   final logInfo = (String s) => log.function(LogType.info, s)(log.env);
 
-  return () => Controller(
-        subject: PublishSubject(),
-        transformer: (command$) => MergeStream([
+  return () => Controller.publishSubject(
+        (command$) => MergeStream([
           foods
               .stream(foods.env)
               .transform(
