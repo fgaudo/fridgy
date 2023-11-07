@@ -21,6 +21,12 @@ final Foods$<({CommonDatabase db, Log<Logger> log, Logger logger})> foods$ =
         .switchMap(
           (_) => fromIO(() => deps.db.select('SELECT * FROM $FOODS_TABLE;')),
         )
+        .doOnData(
+          (event) => deps.log(
+            LogType.info,
+            'Retrieved ${event.length} records',
+          )(deps.logger),
+        )
         .map(
           (resultSet) => resultSet.map(
             (row) => FoodData(
