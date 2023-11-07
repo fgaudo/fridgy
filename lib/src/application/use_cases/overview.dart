@@ -63,27 +63,29 @@ OverviewPipeFactory preparePipeIO({
   required Log log,
   required DeleteFoodsByIds deleteByIds,
   required Foods$ foods$,
-  required Pending$ pending,
+  required Pending$ pending$,
 }) =>
     () => Pipe(
           subject: PublishSubject(),
           transformer: (command$) => MergeStream([
             combineLatest2(
-              toFoodEntities(foods$),
-              pending,
+              toFoodEntities(
+                foods$.isBroadcast ? foods$ : foods$.asBroadcastStream(),
+              ),
+              pending$.isBroadcast ? pending$ : pending$.asBroadcastStream(),
               (foods, pending) => (
                 foods: foods,
                 pending: pending,
               ),
             )
                 .doOnListen(
-                  () => log(LogType.info, 'Initial load of foods'),
+                  log(LogType.info, 'Initial load of foods'),
                 )
                 .doOnData(
                   (record) => log(
                     LogType.info,
                     'Received ${record.foods.length} new foods',
-                  ),
+                  )(),
                 )
                 .map<OverviewModel>(
                   (record) => Ready.fromData(
@@ -94,13 +96,14 @@ OverviewPipeFactory preparePipeIO({
                 .startWith(
                   const Loading(),
                 ),
-            command$.whereType<Delete>().doOnData(
-              (delete) {
-                log(LogType.info, 'Received delete command');
-                deleteByIds(delete.ids);
-              },
-            ).ignoreElements(),
-          ]),
+            command$
+                .whereType<Delete>()
+                .doOnData(
+                  (delete) => log(LogType.info, 'Received delete command')(),
+                )
+                .flatMap((delete) => fromIO(deleteByIds(delete.ids)))
+                .ignoreElements(),
+          ]).asBroadcastStream(),
         );
 
 Iterable<FoodModel> _listToView(Iterable<Food> foods) =>

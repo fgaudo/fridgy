@@ -15,27 +15,38 @@ void main() async {
     dbName: 'fridgy',
   );
 
+  final appLogger = Logger('APP');
+  final dataLogger = Logger('DATA');
+  final presentationLogger = Logger('UI');
+  final domain = Logger('DOMAIN');
+
+  final appLog = prepareLog(appLogger);
+  final dataLog = prepareLog(dataLogger);
+  final presentationLog = prepareLog(presentationLogger);
+
+  Logger.root.level = Level.ALL;
+  Logger.root.onRecord.listen((record) {
+    print(
+      '${record.level.name} [${record.loggerName}] : ${record.message}',
+    );
+  });
+
   final database = sqlite3.open(DATABASE, mode: OpenMode.readWrite);
   final readonlyDatabase = sqlite3.open(DATABASE, mode: OpenMode.readOnly);
 
   runApp(
     MyApp(
+      log: presentationLog,
       overviewPipeIO: overview.preparePipeIO(
-        pending: Stream.value(0).asBroadcastStream(),
-        log: prepareLog(
-          Logger('APPLICATION Overview'),
-        ),
+        pending$: Stream.value(0).asBroadcastStream(),
+        log: appLog,
         foods$: prepareFoodsStream(
           database: readonlyDatabase,
-          log: prepareLog(
-            Logger(r'DATA Foods$'),
-          ),
+          log: dataLog,
         ),
         deleteByIds: prepareDeleteFoodsByIds(
           database: database,
-          log: prepareLog(
-            Logger('DATA DeleteByIds'),
-          ),
+          log: dataLog,
         ),
       ),
     ),

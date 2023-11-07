@@ -14,9 +14,9 @@ Foods$ prepareFoodsStream({
         .where((event) => event.tableName == FOODS_TABLE)
         .map((event) => null)
         .startWith(null)
-        .doOnData((event) {
-          log(LogType.info, 'Taking all foods');
-        })
+        .doOnData(
+          (event) => log(LogType.info, 'Taking all foods')(),
+        )
         .switchMap(
           (_) => fromIO(() => database.select('SELECT * FROM $FOODS_TABLE;')),
         )
@@ -26,4 +26,5 @@ Foods$ prepareFoodsStream({
               name: (row[FOODS_TABLE_NAME] as String?) ?? '[UNDEFINED]',
             ),
           ),
-        );
+        )
+        .asBroadcastStream();
