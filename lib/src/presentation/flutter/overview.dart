@@ -3,24 +3,24 @@ import 'package:fgaudo_functional/io.dart';
 import 'package:flutter/material.dart';
 
 import '../../application/use_cases/overview.dart';
-import '../../core/pipe_builder.dart';
+import '../../core/controller_builder.dart';
 
 final class OverviewView extends StatelessWidget {
   const OverviewView({
-    required this.pipeIO,
+    required this.createController,
     super.key,
   });
 
   static const String routeName = '/overview';
 
-  final IO<OverviewPipe> pipeIO;
+  final IO<OverviewController> createController;
 
   @override
   Widget build(
     BuildContext context,
   ) =>
-      PipeBuilder(
-        createPipe: pipeIO,
+      ControllerBuilder(
+        createController: createController,
         builder: (_, modelOption, __) => modelOption.match(
           onNone: const ColoredBox(color: Colors.black),
           onSome: (data) => Scaffold(

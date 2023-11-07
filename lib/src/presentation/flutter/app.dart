@@ -10,11 +10,11 @@ import 'overview.dart';
 final class MyApp extends StatelessWidget {
   const MyApp({
     required this.log,
-    required this.overviewPipeIO,
+    required this.createOverviewController,
     super.key,
   });
 
-  final IO<OverviewPipe> overviewPipeIO;
+  final IO<OverviewController> createOverviewController;
   final void Function(LogType, String) log;
 
   @override
@@ -39,7 +39,7 @@ final class MyApp extends StatelessWidget {
         onGenerateRoute: (routeSettings) => MaterialPageRoute<void>(
           settings: routeSettings,
           builder: (context) => OverviewView(
-            pipeIO: overviewPipeIO,
+            createController: createOverviewController,
             key: key,
           ),
         ),

@@ -68,7 +68,7 @@ void main() async {
   runApp(
     MyApp(
       log: (type, message) => log(type, message)(presentationLogger),
-      overviewPipeIO: overview.preparePipeIO(
+      createOverviewController: overview.prepareControllerIO(
         log: log,
         foods$: foods$,
         deleteByIds: deleteFoodsByIds,

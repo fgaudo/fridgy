@@ -2,17 +2,17 @@ import 'package:fgaudo_functional/io.dart';
 import 'package:fgaudo_functional/option.dart';
 import 'package:flutter/material.dart';
 
-import 'pipe.dart';
+import 'controller.dart';
 
-final class PipeBuilder<A, B> extends StatefulWidget {
-  const PipeBuilder({
-    required this.createPipe,
+final class ControllerBuilder<A, B> extends StatefulWidget {
+  const ControllerBuilder({
+    required this.createController,
     required this.builder,
     this.initialData,
     super.key,
   });
 
-  final IO<Pipe<A, B>> createPipe;
+  final IO<Controller<A, B>> createController;
   final Widget Function(
     BuildContext context,
     Option<B> b,
@@ -21,31 +21,32 @@ final class PipeBuilder<A, B> extends StatefulWidget {
   final B? initialData;
 
   @override
-  State<StatefulWidget> createState() => _PipeBuilderState<A, B>();
+  State<StatefulWidget> createState() => _ControllerBuilderState<A, B>();
 }
 
-final class _PipeBuilderState<A, B> extends State<PipeBuilder<A, B>> {
-  late final Pipe<A, B> _pipe;
+final class _ControllerBuilderState<A, B>
+    extends State<ControllerBuilder<A, B>> {
+  late final Controller<A, B> _controller;
 
   @override
   void initState() {
     super.initState();
 
-    _pipe = widget.createPipe();
+    _controller = widget.createController();
   }
 
   @override
   void dispose() {
     super.dispose();
 
-    _pipe.close();
+    _controller.close();
   }
 
   @override
   Widget build(BuildContext context) => StreamBuilder(
-        stream: _pipe.stream,
+        stream: _controller.stream,
         builder: (ctx, snapshot) =>
-            widget.builder(ctx, fromNullable(snapshot.data), _pipe.add),
+            widget.builder(ctx, fromNullable(snapshot.data), _controller.add),
         initialData: widget.initialData,
         key: widget.key,
       );
