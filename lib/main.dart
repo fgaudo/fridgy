@@ -28,9 +28,9 @@ external set _select(
 );
 
 void main() async {
-  final appLog = prepareLog(Logger('APP'));
-  final dataLog = prepareLog(Logger('DATA'));
-  final presentationLog = prepareLog(Logger('UI'));
+  final appLogger = Logger('APP');
+  final dataLogger = Logger('DATA');
+  final presentationLogger = Logger('UI');
 
   Logger.root.level = Level.ALL;
   Logger.root.onRecord.listen((record) {
@@ -39,42 +39,51 @@ void main() async {
     );
   });
 
-  final database = await loadDB(
+  final (
+    read: readDB,
+    write: readWriteDB,
+  ) = await loadDB(
     pathToWasm: 'sqlite3.wasm',
     dbName: 'fridgy',
   );
 
-  createTables(database);
+  createTables(readWriteDB);
 
   _populateDB = allowInterop(
-    populateDB(database),
+    populateDB(readWriteDB),
   );
 
   _clearDB = allowInterop(
-    clearDB(database),
+    clearDB(readWriteDB),
   );
 
   _execute = allowInterop(
-    execute(database),
+    execute(readWriteDB),
   );
 
   _select = allowInterop(
-    select(database),
+    select(readDB),
   );
 
   runApp(
     MyApp(
-      log: presentationLog,
+      log: (type, message) => log(type, message)(presentationLogger),
       overviewPipeIO: overview.preparePipeIO(
-        pending$: Stream.value(0).asBroadcastStream(),
-        log: appLog,
-        foods$: prepareFoodsStream(
-          database: database,
-          log: dataLog,
-        ),
-        deleteByIds: prepareDeleteFoodsByIds(
-          database: database,
-          log: dataLog,
+        log: log,
+        foods$: foods$,
+        deleteByIds: deleteFoodsByIds,
+      )(
+        (
+          logEnv: appLogger,
+          deleteByIdsEnv: (
+            dbEnv: readWriteDB,
+            loggerEnv: dataLogger,
+          ),
+          foodsEnv: (
+            dbEnv: readWriteDB,
+            logEnv: log,
+            loggerEnv: dataLogger,
+          ),
         ),
       ),
     ),

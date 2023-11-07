@@ -1,3 +1,4 @@
+import 'package:fgaudo_functional/io.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -13,8 +14,8 @@ final class MyApp extends StatelessWidget {
     super.key,
   });
 
-  final OverviewPipeFactory overviewPipeIO;
-  final Log log;
+  final IO<OverviewPipe> overviewPipeIO;
+  final void Function(LogType, String) log;
 
   @override
   Widget build(

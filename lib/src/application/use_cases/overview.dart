@@ -1,4 +1,6 @@
-import 'package:fgaudo_functional/io.dart';
+import 'dart:async';
+
+import 'package:fgaudo_functional/reader_io.dart';
 import 'package:fgaudo_functional/stream.dart';
 import 'package:rxdart/rxdart.dart';
 
@@ -8,7 +10,6 @@ import '../commands/delete_foods_by_ids.dart';
 import '../commands/log.dart';
 import '../helpers/to_food_entities.dart';
 import '../streams/foods.dart';
-import '../streams/pending.dart';
 
 sealed class OverviewModel {}
 
@@ -57,47 +58,54 @@ final class Delete implements Command {
 }
 
 typedef OverviewPipe = Pipe<Command, OverviewModel>;
-typedef OverviewPipeFactory = IO<OverviewPipe>;
 
-OverviewPipeFactory preparePipeIO({
-  required Log log,
-  required DeleteFoodsByIds deleteByIds,
-  required Foods$ foods$,
-  required Pending$ pending$,
+ReaderIO<({LOG logEnv, DELETE deleteByIdsEnv, FOODS foodsEnv}), OverviewPipe>
+    preparePipeIO<LOG, DELETE, FOODS>({
+  required Log<LOG> log,
+  required DeleteFoodsByIds<DELETE> deleteByIds,
+  required Foods$<FOODS> foods$,
 }) =>
-    () => Pipe(
-          subject: PublishSubject(),
-          transformer: (command$) => MergeStream([
-            toFoodEntities(
-              foods$.isBroadcast ? foods$ : foods$.asBroadcastStream(),
-            )
-                .doOnListen(
-                  () => log(LogType.info, 'Initial load of foods'),
-                )
-                .doOnData(
-                  (foods) => log(
-                    LogType.info,
-                    'Received ${foods.length} new foods',
-                  ),
-                )
-                .map<OverviewModel>(
-                  (foods) => Ready.fromData(
-                    foods: foods,
-                    pending: 0,
-                  ),
-                )
-                .startWith(
-                  const Loading(),
-                ),
-            command$
-                .whereType<Delete>()
-                .doOnData(
-                  (delete) => log(LogType.info, 'Received delete command'),
-                )
-                .flatMap((delete) => fromIO(deleteByIds(delete.ids)))
-                .ignoreElements(),
-          ]).asBroadcastStream(),
-        );
+        (env) {
+          final logInfo = (String s) => log(LogType.info, s)(env.logEnv);
+
+          return () => Pipe(
+                subject: PublishSubject(),
+                transformer: (command$) => MergeStream([
+                  foods$(env.foodsEnv)
+                      .transform(
+                        StreamTransformer.fromBind(toFoodEntities),
+                      )
+                      .doOnListen(
+                        () => logInfo('Initial load of foods'),
+                      )
+                      .doOnData(
+                        (foods) => logInfo(
+                          'Received ${foods.length} new foods',
+                        ),
+                      )
+                      .map<OverviewModel>(
+                        (foods) => Ready.fromData(
+                          foods: foods,
+                          pending: 0,
+                        ),
+                      )
+                      .startWith(
+                        const Loading(),
+                      ),
+                  command$
+                      .whereType<Delete>()
+                      .doOnData(
+                        (delete) => logInfo('Received delete command'),
+                      )
+                      .flatMap(
+                        (delete) => fromIO(
+                          deleteByIds(delete.ids)(env.deleteByIdsEnv),
+                        ),
+                      )
+                      .ignoreElements(),
+                ]).asBroadcastStream(),
+              );
+        };
 
 Iterable<FoodModel> _listToView(Iterable<Food> foods) =>
     foods.map((food) => FoodModel(name: food.name));

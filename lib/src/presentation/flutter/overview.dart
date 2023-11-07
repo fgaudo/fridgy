@@ -1,4 +1,5 @@
 import 'package:fgaudo_functional/extensions/option/match.dart';
+import 'package:fgaudo_functional/io.dart';
 import 'package:flutter/material.dart';
 
 import '../../application/use_cases/overview.dart';
@@ -12,7 +13,7 @@ final class OverviewView extends StatelessWidget {
 
   static const String routeName = '/overview';
 
-  final OverviewPipeFactory pipeIO;
+  final IO<OverviewPipe> pipeIO;
 
   @override
   Widget build(

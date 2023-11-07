@@ -5,7 +5,7 @@ const String DATABASE = '/database';
 const String FOODS_TABLE = 'foods';
 const String FOODS_TABLE_NAME = 'name';
 
-Future<CommonDatabase> loadDB({
+Future<({CommonDatabase read, CommonDatabase write})> loadDB({
   required String pathToWasm,
   required String dbName,
 }) async {
@@ -17,7 +17,10 @@ Future<CommonDatabase> loadDB({
       makeDefault: true,
     );
 
-  return sqlite3.open(DATABASE);
+  return (
+    read: sqlite3.open(DATABASE, mode: OpenMode.readOnly),
+    write: sqlite3.open(DATABASE, mode: OpenMode.readWrite)
+  );
 }
 
 void createTables(CommonDatabase db) {

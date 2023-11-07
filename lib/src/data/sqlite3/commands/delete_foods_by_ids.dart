@@ -1,18 +1,15 @@
 import 'package:fgaudo_functional/extensions/io/bracket.dart';
 import 'package:fgaudo_functional/io.dart';
+import 'package:logging/logging.dart';
 import 'package:sqlite3/wasm.dart';
 
 import '../../../application/commands/delete_foods_by_ids.dart';
-import '../../../application/commands/log.dart';
 import '../bootstrap.dart';
 import '../helpers/transaction.dart';
 
-DeleteFoodsByIds prepareDeleteFoodsByIds({
-  required CommonDatabase database,
-  required Log log,
-}) =>
-    (ids) => transaction(
-          (db) => _prepareDeletes(db).bracket(
+final DeleteFoodsByIds<({CommonDatabase dbEnv, Logger loggerEnv})>
+    deleteFoodsByIds = (ids) => (env) => transaction(
+          (db) => _prepareDeletes(env.dbEnv).bracket(
             release: (delete) => () => delete.dispose(),
             use: (delete) => () {
               for (final id in ids) {
@@ -20,7 +17,7 @@ DeleteFoodsByIds prepareDeleteFoodsByIds({
               }
             },
           ),
-        )(database);
+        )(env.dbEnv);
 
 IO<CommonPreparedStatement> _prepareDeletes(CommonDatabase db) =>
     () => db.prepare(

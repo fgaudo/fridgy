@@ -1,11 +1,17 @@
-import 'package:fgaudo_functional/io.dart';
+import 'package:fgaudo_functional/extensions/reader_io/flat_map.dart';
+import 'package:fgaudo_functional/reader_io.dart';
 import 'package:sqlite3/common.dart';
 
-IO<void> Function(CommonDatabase) transaction(
-  IO<void> Function(CommonDatabase) run,
+ReaderIO<CommonDatabase, void> transaction(
+  ReaderIO<CommonDatabase, void> run,
 ) =>
-    (database) => () {
-          database.execute('BEGIN;');
-          run(database)();
-          database.execute('COMMIT;');
-        };
+    execute('BEGIN;')
+        .flatMap(
+          (_) => run,
+        )
+        .flatMap(
+          (_) => execute('COMMIT;'),
+        );
+
+ReaderIO<CommonDatabase, void> execute(String s) =>
+    (database) => () => database.execute(s);
