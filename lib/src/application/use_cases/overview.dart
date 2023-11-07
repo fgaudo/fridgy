@@ -72,13 +72,13 @@ OverviewPipeFactory preparePipeIO({
               foods$.isBroadcast ? foods$ : foods$.asBroadcastStream(),
             )
                 .doOnListen(
-                  log(LogType.info, 'Initial load of foods'),
+                  () => log(LogType.info, 'Initial load of foods'),
                 )
                 .doOnData(
                   (foods) => log(
                     LogType.info,
                     'Received ${foods.length} new foods',
-                  )(),
+                  ),
                 )
                 .map<OverviewModel>(
                   (foods) => Ready.fromData(
@@ -92,7 +92,7 @@ OverviewPipeFactory preparePipeIO({
             command$
                 .whereType<Delete>()
                 .doOnData(
-                  (delete) => log(LogType.info, 'Received delete command')(),
+                  (delete) => log(LogType.info, 'Received delete command'),
                 )
                 .flatMap((delete) => fromIO(deleteByIds(delete.ids)))
                 .ignoreElements(),

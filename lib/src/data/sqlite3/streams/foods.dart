@@ -11,12 +11,12 @@ Foods$ prepareFoodsStream({
   required Log log,
 }) =>
     database.updates
-        .doOnData((event) => log(LogType.info, 'received update')())
+        .doOnData((event) => log(LogType.info, 'received update'))
         .where((event) => event.tableName == FOODS_TABLE)
         .map((event) => null)
         .startWith(null)
         .doOnData(
-          (event) => log(LogType.info, 'Taking all foods')(),
+          (event) => log(LogType.info, 'Taking all foods'),
         )
         .switchMap(
           (_) => fromIO(() => database.select('SELECT * FROM $FOODS_TABLE;')),
