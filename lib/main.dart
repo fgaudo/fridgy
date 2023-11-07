@@ -1,4 +1,8 @@
+@JS()
+library callable_function;
+
 import 'package:flutter/material.dart';
+import 'package:js/js.dart';
 import 'package:logging/logging.dart';
 import 'package:sqlite3/common.dart';
 
@@ -9,20 +13,21 @@ import 'src/data/sqlite3/commands/delete_foods_by_ids.dart';
 import 'src/data/sqlite3/streams/foods.dart';
 import 'src/presentation/flutter/app.dart';
 
+@JS('populateDB')
+external set _populateDB(void Function() f);
+
+@JS('clearDB')
+external set _clearDB(void Function() f);
+
 void main() async {
   final sqlite3 = await bootstrap(
     pathToWasm: 'sqlite3.wasm',
     dbName: 'fridgy',
   );
 
-  final appLogger = Logger('APP');
-  final dataLogger = Logger('DATA');
-  final presentationLogger = Logger('UI');
-  final domain = Logger('DOMAIN');
-
-  final appLog = prepareLog(appLogger);
-  final dataLog = prepareLog(dataLogger);
-  final presentationLog = prepareLog(presentationLogger);
+  final appLog = prepareLog(Logger('APP'));
+  final dataLog = prepareLog(Logger('DATA'));
+  final presentationLog = prepareLog(Logger('UI'));
 
   Logger.root.level = Level.ALL;
   Logger.root.onRecord.listen((record) {
@@ -32,7 +37,14 @@ void main() async {
   });
 
   final database = sqlite3.open(DATABASE, mode: OpenMode.readWrite);
-  final readonlyDatabase = sqlite3.open(DATABASE, mode: OpenMode.readOnly);
+
+  _populateDB = allowInterop(
+    populateDB(database),
+  );
+
+  _clearDB = allowInterop(
+    clearDB(database),
+  );
 
   runApp(
     MyApp(
@@ -41,7 +53,7 @@ void main() async {
         pending$: Stream.value(0).asBroadcastStream(),
         log: appLog,
         foods$: prepareFoodsStream(
-          database: readonlyDatabase,
+          database: database,
           log: dataLog,
         ),
         deleteByIds: prepareDeleteFoodsByIds(

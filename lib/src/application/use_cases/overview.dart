@@ -68,29 +68,22 @@ OverviewPipeFactory preparePipeIO({
     () => Pipe(
           subject: PublishSubject(),
           transformer: (command$) => MergeStream([
-            combineLatest2(
-              toFoodEntities(
-                foods$.isBroadcast ? foods$ : foods$.asBroadcastStream(),
-              ),
-              pending$.isBroadcast ? pending$ : pending$.asBroadcastStream(),
-              (foods, pending) => (
-                foods: foods,
-                pending: pending,
-              ),
+            toFoodEntities(
+              foods$.isBroadcast ? foods$ : foods$.asBroadcastStream(),
             )
                 .doOnListen(
                   log(LogType.info, 'Initial load of foods'),
                 )
                 .doOnData(
-                  (record) => log(
+                  (foods) => log(
                     LogType.info,
-                    'Received ${record.foods.length} new foods',
+                    'Received ${foods.length} new foods',
                   )(),
                 )
                 .map<OverviewModel>(
-                  (record) => Ready.fromData(
-                    foods: record.foods,
-                    pending: record.pending,
+                  (foods) => Ready.fromData(
+                    foods: foods,
+                    pending: 0,
                   ),
                 )
                 .startWith(

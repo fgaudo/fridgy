@@ -11,6 +11,7 @@ Foods$ prepareFoodsStream({
   required Log log,
 }) =>
     database.updates
+        .doOnData((event) => log(LogType.info, 'received update')())
         .where((event) => event.tableName == FOODS_TABLE)
         .map((event) => null)
         .startWith(null)
