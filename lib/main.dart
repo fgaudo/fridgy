@@ -72,7 +72,7 @@ void main() async {
     ),
     deleteByIds: (
       function: deleteFoodsByIds,
-      env: (
+      env: DeleteFoodsByIdsDeps(
         db: readWriteDB,
         logger: dataLogger,
         log: log,
