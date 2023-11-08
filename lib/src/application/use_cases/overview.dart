@@ -68,13 +68,18 @@ final class Delete implements Command {
 }
 
 typedef OverviewController = Controller<Command, OverviewModel>;
+
 typedef OverviewDeps<LOG, DELETE, FOODS> = ({
   LOG logDeps,
   DELETE deleteDeps,
   FOODS foodsDeps
 });
-ReaderIO<OverviewDeps<LOG, DELETE, FOODS>, OverviewController>
-    prepareControllerIO<LOG, DELETE, FOODS>({
+
+typedef OverviewControllerBuilder<LOG, DELETE, FOODS>
+    = ReaderIO<OverviewDeps<LOG, DELETE, FOODS>, OverviewController>;
+
+OverviewControllerBuilder<LOG, DELETE, FOODS>
+    prepareControllerBuilder<LOG, DELETE, FOODS>({
   required Log<LOG> log,
   required DeleteFoodsByIds<DELETE> deleteByIds,
   required Foods<FOODS> foods,
@@ -82,11 +87,14 @@ ReaderIO<OverviewDeps<LOG, DELETE, FOODS>, OverviewController>
         (env) => () => Controller.withPublishSubject(
               (command$) => MergeStream(
                 [
-                  foodsCase(foods: foods, log: log).local(
+                  _foodsCase(
+                    foods: foods,
+                    log: log,
+                  ).local(
                     (OverviewDeps<LOG, DELETE, FOODS> deps) =>
                         (logDeps: deps.logDeps, foodsDeps: deps.foodsDeps),
                   )(env),
-                  deleteCase(
+                  _deleteCase(
                     command$: command$,
                     deleteByIds: deleteByIds,
                     log: log,
@@ -95,11 +103,11 @@ ReaderIO<OverviewDeps<LOG, DELETE, FOODS>, OverviewController>
                         (logDeps: env.logDeps, deleteDeps: env.deleteDeps),
                   )(env),
                 ],
-              ),
+              ).asBroadcastStream(),
             );
 
 ReaderStream<({LOG logDeps, FOODS foodsDeps}), OverviewModel>
-    foodsCase<LOG, FOODS>({
+    _foodsCase<LOG, FOODS>({
   required Foods<FOODS> foods,
   required Log<LOG> log,
 }) =>
@@ -130,18 +138,17 @@ ReaderStream<({LOG logDeps, FOODS foodsDeps}), OverviewModel>
             .startWith(const Loading());
 
 ReaderStream<({LOG logDeps, DELETE deleteDeps}), Never>
-    deleteCase<LOG, DELETE>({
+    _deleteCase<LOG, DELETE>({
   required Stream<Command> command$,
   required DeleteFoodsByIds<DELETE> deleteByIds,
   required Log<LOG> log,
 }) =>
-        ((({LOG logDeps, DELETE deleteDeps}) env) => command$)
+        ((LOG env) => command$)
             .whereType<Delete>()
             .doOnDataReader(
-              (delete) => log(LogType.info, 'Received delete command').local(
-                (deps) => deps.logDeps,
-              ),
+              (delete) => log(LogType.info, 'Received delete command'),
             )
+            .local((({LOG logDeps, DELETE deleteDeps}) deps) => deps.logDeps)
             .flatMap(
               (delete) => fromReaderIO(
                 deleteByIds(delete.ids).local(

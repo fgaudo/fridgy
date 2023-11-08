@@ -5,12 +5,11 @@ import 'package:flutter/material.dart';
 import 'package:js/js.dart';
 import 'package:logging/logging.dart';
 
-import 'src/application/use_cases/overview.dart' as overview;
 import 'src/data/generic/commands/log.dart';
+import 'src/data/overview_controller.dart';
 import 'src/data/sqlite3/bootstrap.dart';
 import 'src/data/sqlite3/commands/delete_foods_by_ids.dart';
 import 'src/data/sqlite3/interop.dart';
-import 'src/data/sqlite3/streams/foods.dart';
 import 'src/presentation/flutter/app.dart';
 
 @JS('populateDB')
@@ -65,21 +64,15 @@ void main() async {
     select(readDB),
   );
 
-  final overviewControllerIO = overview.prepareControllerIO(
-    log: log,
-    deleteByIds: deleteFoodsByIds,
-    foods: foods,
-  )(
+  final overviewControllerIO = controllerIOBuilder(
     (
       logDeps: appLogger,
       deleteDeps: DeleteFoodsByIdsDeps(
         db: readWriteDB,
         logger: dataLogger,
-        log: log,
       ),
       foodsDeps: (
         db: readWriteDB, // write permission needed for listening to writes
-        log: log,
         logger: dataLogger,
       )
     ),

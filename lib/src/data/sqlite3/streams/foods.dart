@@ -1,37 +1,52 @@
+import 'package:fgaudo_functional/extensions/reader/local.dart';
+import 'package:fgaudo_functional/extensions/reader_stream/do_on_data_reader.dart';
+import 'package:fgaudo_functional/extensions/reader_stream/flat_map.dart';
+import 'package:fgaudo_functional/extensions/reader_stream/map.dart';
+import 'package:fgaudo_functional/extensions/reader_stream/start_with.dart';
+import 'package:fgaudo_functional/extensions/reader_stream/switch_map.dart';
+import 'package:fgaudo_functional/extensions/reader_stream/where.dart';
+import 'package:fgaudo_functional/reader_stream.dart';
 import 'package:fgaudo_functional/stream.dart';
 import 'package:logging/logging.dart';
-import 'package:rxdart/rxdart.dart';
 import 'package:sqlite3/wasm.dart';
 
 import '../../../application/commands/log.dart';
 import '../../../application/streams/foods.dart';
+import '../../generic/commands/log.dart';
 import '../bootstrap.dart';
 
-final Foods<({CommonDatabase db, Log<Logger> log, Logger logger})> foods =
-    (deps) => deps.db.updates
-        .doOnData(
-          (event) => deps.log(LogType.info, 'received update')(deps.logger),
-        )
-        .where((event) => event.tableName == FOODS_TABLE)
-        .map((event) => null)
-        .startWith(null)
-        .doOnData(
-          (event) => deps.log(LogType.info, 'Taking all foods')(deps.logger),
-        )
-        .switchMap(
-          (_) => fromIO(() => deps.db.select('SELECT * FROM $FOODS_TABLE;')),
-        )
-        .doOnData(
-          (event) => deps.log(
-            LogType.info,
-            'Retrieved ${event.length} records',
-          )(deps.logger),
-        )
-        .map(
-          (resultSet) => resultSet.map(
-            (row) => FoodData(
-              name: (row[FOODS_TABLE_NAME] as String?) ?? '[UNDEFINED]',
-            ),
+typedef FoodsDeps = ({CommonDatabase db, Logger logger});
+
+final Foods<FoodsDeps> foods = Do<FoodsDeps>()
+    .flatMap(
+      (_) => asksReaderStream((deps) => deps.db.updates.asBroadcastStream()),
+    )
+    .doOnDataReader(
+      (event) =>
+          log(LogType.info, 'received update').local((deps) => deps.logger),
+    )
+    .where((event) => event.tableName == FOODS_TABLE)
+    .map((event) => null)
+    .startWith(null)
+    .doOnDataReader(
+      (event) =>
+          log(LogType.info, 'Taking all foods').local((deps) => deps.logger),
+    )
+    .switchMap(
+      (_) => (deps) => fromIO(
+            () => deps.db.select('SELECT * FROM $FOODS_TABLE;'),
           ),
-        )
-        .asBroadcastStream();
+    )
+    .doOnDataReader(
+      (event) => log(
+        LogType.info,
+        'Retrieved ${event.length} records',
+      ).local((FoodsDeps deps) => deps.logger),
+    )
+    .map(
+      (resultSet) => resultSet.map(
+        (row) => FoodData(
+          name: (row[FOODS_TABLE_NAME] as String?) ?? '[UNDEFINED]',
+        ),
+      ),
+    );

@@ -4,9 +4,10 @@ import 'package:logging/logging.dart';
 import 'package:sqlite3/common.dart';
 
 import '../../../application/commands/log.dart';
+import '../../generic/commands/log.dart';
 
 abstract class HasTransactionDeps {
-  ({CommonDatabase db, Logger logger, Log<Logger> log}) get TRANSACTION_DEPS;
+  ({CommonDatabase db, Logger logger}) get TRANSACTION_DEPS;
 }
 
 ReaderIO<A, void> transaction<A extends HasTransactionDeps>(
@@ -23,6 +24,5 @@ ReaderIO<A, void> transaction<A extends HasTransactionDeps>(
 ReaderIO<A, void> _execute<A extends HasTransactionDeps>(String string) =>
     (deps) => () {
           deps.TRANSACTION_DEPS.db.execute(string);
-          deps.TRANSACTION_DEPS
-              .log(LogType.info, 'SQL: $string')(deps.TRANSACTION_DEPS.logger);
+          log(LogType.info, 'SQL: $string')(deps.TRANSACTION_DEPS.logger);
         };
