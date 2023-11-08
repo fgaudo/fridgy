@@ -4,9 +4,11 @@ import 'package:sqlite3/wasm.dart';
 import '../../../application/commands/delete_foods_by_ids.dart';
 import '../../../application/commands/log.dart';
 import '../bootstrap.dart';
+import '../helpers/prepared_statement.dart';
 import '../helpers/transaction.dart';
 
-final class DeleteFoodsByIdsDeps implements HasTransactionDeps {
+final class DeleteFoodsByIdsDeps
+    implements HasTransactionDeps, HasPreparedStatementDeps {
   const DeleteFoodsByIdsDeps({
     required this.db,
     required this.logger,
@@ -15,14 +17,17 @@ final class DeleteFoodsByIdsDeps implements HasTransactionDeps {
 
   final CommonDatabase db;
 
-  @override
   final Logger logger;
 
-  @override
   final Log<Logger> log;
 
   @override
-  CommonDatabase get writeDB => db;
+  ({CommonDatabase db, Log<Logger> log, Logger logger})
+      get PREPARED_STATEMENT_DEPS => (log: log, logger: logger, db: db);
+
+  @override
+  ({CommonDatabase db, Log<Logger> log, Logger logger}) get TRANSACTION_DEPS =>
+      (log: log, logger: logger, db: db);
 }
 
 const String deleteQuery =
