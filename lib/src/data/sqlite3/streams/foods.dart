@@ -7,7 +7,7 @@ import '../../../application/commands/log.dart';
 import '../../../application/streams/foods.dart';
 import '../bootstrap.dart';
 
-final Foods$<({CommonDatabase db, Log<Logger> log, Logger logger})> foods$ =
+final Foods<({CommonDatabase db, Log<Logger> log, Logger logger})> foods =
     (deps) => deps.db.updates
         .doOnData(
           (event) => deps.log(LogType.info, 'received update')(deps.logger),

@@ -66,25 +66,22 @@ void main() async {
   );
 
   final overviewControllerIO = overview.prepareControllerIO(
-    log: (
-      function: log,
-      env: appLogger,
-    ),
-    deleteByIds: (
-      function: deleteFoodsByIds,
-      env: DeleteFoodsByIdsDeps(
+    log: log,
+    deleteByIds: deleteFoodsByIds,
+    foods: foods,
+  )(
+    (
+      logDeps: appLogger,
+      deleteDeps: DeleteFoodsByIdsDeps(
         db: readWriteDB,
         logger: dataLogger,
         log: log,
-      )
-    ),
-    foods: (
-      env: (
+      ),
+      foodsDeps: (
         db: readWriteDB, // write permission needed for listening to writes
         log: log,
         logger: dataLogger,
-      ),
-      stream: foods$,
+      )
     ),
   );
 

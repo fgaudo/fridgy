@@ -6,4 +6,4 @@ final class FoodData {
   final String name;
 }
 
-typedef Foods$<ENV> = Reader<ENV, Stream<Iterable<FoodData>>>;
+typedef Foods<ENV> = Reader<ENV, Stream<Iterable<FoodData>>>;

@@ -1,5 +1,5 @@
-import 'package:fgaudo_functional/reader.dart';
+import 'package:fgaudo_functional/reader_io.dart';
 
 enum LogType { error, info }
 
-typedef Log<ENV> = Reader<ENV, void> Function(LogType, String);
+typedef Log<ENV> = ReaderIO<ENV, void> Function(LogType, String);
