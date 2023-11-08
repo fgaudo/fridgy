@@ -9,7 +9,7 @@ final class Controller<A, B> {
   })  : _subject = subject,
         stream = subject.transform(StreamTransformer.fromBind(transformer));
 
-  factory Controller.publishSubject(
+  factory Controller.withPublishSubject(
     Stream<B> Function(Stream<A>) transformer,
   ) =>
       Controller(

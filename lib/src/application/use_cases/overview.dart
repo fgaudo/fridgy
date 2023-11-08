@@ -69,7 +69,7 @@ IO<OverviewController> prepareControllerIO<LOG, DELETE, FOODS>({
   final deleteFoodsByIds =
       (Set<String> ids) => deleteByIds.function(ids)(deleteByIds.env);
 
-  return () => Controller.publishSubject(
+  return () => Controller.withPublishSubject(
         (command$) => MergeStream([
           foods$
               .transform(
