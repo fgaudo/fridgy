@@ -144,9 +144,10 @@ OverviewControllerBuilder<LOG, DELETE, FOODS>
             )
             .flatMap(
               (streams) => (env) => () => Controller.withPublishSubject(
-                    (command$) => MergeStream(
-                      [streams.$1(env), streams.$2(command$)(env)],
-                    ),
+                    (command$) => MergeStream([
+                      streams.$1(env),
+                      streams.$2(command$)(env),
+                    ]),
                   ),
             );
 
