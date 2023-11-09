@@ -1,36 +1,37 @@
-import 'package:fgaudo_functional/extensions/reader/local.dart';
 import 'package:fgaudo_functional/extensions/reader_io/bracket.dart';
 import 'package:fgaudo_functional/extensions/reader_io/flat_map.dart';
+import 'package:fgaudo_functional/extensions/reader_io/flat_map_io.dart';
+import 'package:fgaudo_functional/io.dart';
 import 'package:fgaudo_functional/reader_io.dart';
-import 'package:logging/logging.dart';
 import 'package:sqlite3/common.dart';
 
-import '../../../application/commands/log.dart';
-import '../../generic/commands/log.dart';
+typedef PreparedLog = IO<void> Function(String);
 
 abstract class HasPreparedStatementDeps {
-  ({CommonDatabase db, Logger logger}) get PREPARED_STATEMENT_DEPS;
+  ({CommonDatabase db, PreparedLog log}) get PREPARED_STATEMENT_DEPS;
 }
 
-ReaderIO<A, void> preparedStatement<A extends HasPreparedStatementDeps>({
+ReaderIO<DEPS, void> preparedStatement<DEPS extends HasPreparedStatementDeps>({
   required String sql,
-  required ReaderIO<A, void> Function(CommonPreparedStatement ps) use,
+  required ReaderIO<DEPS, void> Function(CommonPreparedStatement ps) use,
 }) =>
-    Do<A>()
-        .flatMap(
-          (_) => (deps) => () => deps.PREPARED_STATEMENT_DEPS.db.prepare(sql),
+    Do<DEPS>()
+        .flatMap((_) => asks((deps) => deps.PREPARED_STATEMENT_DEPS.db))
+        .flatMapIO(
+          (db) => () => db.prepare(sql),
         )
         .bracket(
-          release: (ps) => ((A _) => ps.dispose).flatMap(
-            (_) => log(
-              LogType.info,
-              'Prepared statement closed',
-            ).local((deps) => deps.PREPARED_STATEMENT_DEPS.logger),
-          ),
-          use: (ps) => ((A deps) => () => use(ps)(deps)()).flatMap(
-            (_) => log(
-              LogType.info,
-              'Prepared statement closed',
-            ).local((deps) => deps.PREPARED_STATEMENT_DEPS.logger),
-          ),
+          release: (ps) => Do<DEPS>()
+              .flatMapIO((_) => ps.dispose)
+              .flatMap((_) => asks((deps) => deps.PREPARED_STATEMENT_DEPS.log))
+              .flatMapIO(
+                (log) => log('Prepared statement closed'),
+              ),
+          use: (ps) => Do<DEPS>()
+              .flatMap((_) => ask())
+              .flatMapIO(use(ps))
+              .flatMap((_) => asks((deps) => deps.PREPARED_STATEMENT_DEPS.log))
+              .flatMapIO(
+                (log) => log('Prepared statement opened'),
+              ),
         );

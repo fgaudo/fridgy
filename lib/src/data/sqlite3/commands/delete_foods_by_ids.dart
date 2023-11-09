@@ -23,12 +23,12 @@ final class DeleteFoodsByIdsDeps
   final Logger logger;
 
   @override
-  ({CommonDatabase db, Logger logger}) get PREPARED_STATEMENT_DEPS =>
-      (logger: logger, db: db);
+  ({CommonDatabase db, PreparedLog log}) get PREPARED_STATEMENT_DEPS =>
+      (db: db, log: (string) => log(LogType.info, string)(logger));
 
   @override
-  ({CommonDatabase db, Logger logger}) get TRANSACTION_DEPS =>
-      (logger: logger, db: db);
+  ({CommonDatabase db, TransactionLog log}) get TRANSACTION_DEPS =>
+      (db: db, log: (string) => log(LogType.info, string)(logger));
 }
 
 const String deleteQuery =
