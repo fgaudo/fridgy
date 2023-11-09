@@ -1,5 +1,7 @@
 import 'package:fgaudo_functional/extensions/reader_io/flat_map.dart';
+import 'package:fgaudo_functional/extensions/reader_io/flat_map_io.dart';
 import 'package:fgaudo_functional/extensions/reader_io/map.dart';
+import 'package:fgaudo_functional/extensions/reader_io/sequence_array.dart';
 import 'package:fgaudo_functional/reader_io.dart';
 import 'package:sqlite3/wasm.dart';
 
@@ -45,17 +47,23 @@ DeleteFoodsByIds<DeleteFoodsByIdsDeps<LOG>> deleteFoodsByIds<LOG>(
                   (_) => ids.map((id) => [id]),
                 )
                 .flatMap(
-                  (ids) => (deps) => () {
-                        for (final id in ids) {
-                          ps.execute(id);
-                          log(
-                            LogType.info,
-                            'SQL: "$deleteQuery" with $id',
-                          )(
-                            deps.logEnv,
-                          );
-                        }
-                      },
+                  (ids) => ids
+                      .map(
+                        (id) => Do<DeleteFoodsByIdsDeps<LOG>>()
+                            .flatMapIO(
+                              (_) => () => ps.execute(id),
+                            )
+                            .flatMap(
+                              (_) => asks((deps) => deps.logEnv),
+                            )
+                            .flatMapIO(
+                              log(
+                                LogType.info,
+                                'SQL: "$deleteQuery" with $id',
+                              ),
+                            ),
+                      )
+                      .sequenceArray(),
                 ),
           ),
         );
