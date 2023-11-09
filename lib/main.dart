@@ -66,12 +66,12 @@ void main() async {
 
   final overviewControllerIO = controllerIOBuilder(
     (
-      logDeps: appLogger,
-      deleteDeps: DeleteFoodsByIdsDeps(
+      logEnv: appLogger,
+      deleteEnv: DeleteFoodsByIdsDeps(
         db: readWriteDB,
-        logger: dataLogger,
+        logEnv: dataLogger,
       ),
-      foodsDeps: (
+      foodsEnv: (
         db: readWriteDB, // write permission needed for listening to writes
         logger: dataLogger,
       )

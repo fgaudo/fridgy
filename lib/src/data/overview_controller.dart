@@ -5,6 +5,6 @@ import 'sqlite3/streams/foods.dart';
 
 final controllerIOBuilder = prepareControllerBuilder(
   log: log,
-  deleteByIds: deleteFoodsByIds,
+  deleteByIds: deleteFoodsByIds(log),
   foods: foods,
 );

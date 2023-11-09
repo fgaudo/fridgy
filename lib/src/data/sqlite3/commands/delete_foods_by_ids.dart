@@ -1,44 +1,46 @@
 import 'package:fgaudo_functional/extensions/reader_io/flat_map.dart';
 import 'package:fgaudo_functional/extensions/reader_io/map.dart';
 import 'package:fgaudo_functional/reader_io.dart';
-import 'package:logging/logging.dart';
 import 'package:sqlite3/wasm.dart';
 
 import '../../../application/commands/delete_foods_by_ids.dart';
 import '../../../application/commands/log.dart';
-import '../../generic/commands/log.dart';
 import '../bootstrap.dart';
 import '../helpers/prepared_statement.dart';
 import '../helpers/transaction.dart';
 
-final class DeleteFoodsByIdsDeps
-    implements HasTransactionDeps, HasPreparedStatementDeps {
+final class DeleteFoodsByIdsDeps<LOG>
+    implements HasPreparedStatementDeps<LOG>, HasTransactionDeps<LOG> {
   const DeleteFoodsByIdsDeps({
     required this.db,
-    required this.logger,
+    required this.logEnv,
   });
 
   final CommonDatabase db;
 
-  final Logger logger;
+  final LOG logEnv;
 
   @override
-  ({CommonDatabase db, PreparedLog log}) get PREPARED_STATEMENT_DEPS =>
-      (db: db, log: (string) => log(LogType.info, string)(logger));
+  ({CommonDatabase db, LOG logEnv}) get PREPARED_STATEMENT_DEPS =>
+      (db: db, logEnv: logEnv);
 
   @override
-  ({CommonDatabase db, TransactionLog log}) get TRANSACTION_DEPS =>
-      (db: db, log: (string) => log(LogType.info, string)(logger));
+  ({CommonDatabase db, LOG logEnv}) get TRANSACTION_DEPS =>
+      (db: db, logEnv: logEnv);
 }
 
 const String deleteQuery =
     'DELETE FROM $FOODS_TABLE WHERE $FOODS_TABLE_NAME = ?;';
 
-final DeleteFoodsByIds<DeleteFoodsByIdsDeps> deleteFoodsByIds =
+DeleteFoodsByIds<DeleteFoodsByIdsDeps<LOG>> deleteFoodsByIds<LOG>(
+  Log<LOG> log,
+) =>
     (ids) => transaction(
-          preparedStatement(
+          log: log,
+          run: preparedStatement(
+            log: log,
             sql: deleteQuery,
-            use: (ps) => Do<DeleteFoodsByIdsDeps>()
+            use: (ps) => Do<DeleteFoodsByIdsDeps<LOG>>()
                 .map(
                   (_) => ids.map((id) => [id]),
                 )
@@ -46,8 +48,11 @@ final DeleteFoodsByIds<DeleteFoodsByIdsDeps> deleteFoodsByIds =
                   (ids) => (deps) => () {
                         for (final id in ids) {
                           ps.execute(id);
-                          log(LogType.info, 'SQL: "$deleteQuery" with $id')(
-                            deps.logger,
+                          log(
+                            LogType.info,
+                            'SQL: "$deleteQuery" with $id',
+                          )(
+                            deps.logEnv,
                           );
                         }
                       },

@@ -4,31 +4,35 @@ import 'package:fgaudo_functional/io.dart';
 import 'package:fgaudo_functional/reader_io.dart';
 import 'package:sqlite3/common.dart';
 
+import '../../../application/commands/log.dart';
+
 typedef TransactionLog = IO<void> Function(String);
 
-abstract class HasTransactionDeps {
-  ({CommonDatabase db, TransactionLog log}) get TRANSACTION_DEPS;
+abstract class HasTransactionDeps<LOG> {
+  ({CommonDatabase db, LOG logEnv}) get TRANSACTION_DEPS;
 }
 
-ReaderIO<A, void> transaction<A extends HasTransactionDeps>(
-  ReaderIO<A, void> run,
-) =>
-    _execute<A>('BEGIN;')
+const String beginSQL = 'BEGIN;';
+const String commitSQL = 'COMMIT;';
+
+ReaderIO<A, void> transaction<LOG, A extends HasTransactionDeps<LOG>>({
+  required Log<LOG> log,
+  required ReaderIO<A, void> run,
+}) =>
+    asks((A deps) => deps.TRANSACTION_DEPS.db)
+        .flatMapIO((db) => () => db.execute(beginSQL))
+        .flatMap((_) => asks((deps) => deps.TRANSACTION_DEPS.logEnv))
+        .flatMapIO(
+          log(LogType.info, 'SQL: $beginSQL'),
+        )
         .flatMap(
           (_) => run,
         )
         .flatMap(
-          (_) => _execute('COMMIT;'),
-        );
-
-ReaderIO<A, void> _execute<A extends HasTransactionDeps>(String sql) =>
-    asks((A deps) => deps.TRANSACTION_DEPS.db)
-        .flatMapIO((db) => () => db.execute(sql))
-        .flatMap(
-          (_) => asks(
-            (env) => env.TRANSACTION_DEPS.log,
-          ),
+          (_) => asks((A deps) => deps.TRANSACTION_DEPS.db),
         )
+        .flatMapIO((db) => () => db.execute(commitSQL))
+        .flatMap((_) => asks((deps) => deps.TRANSACTION_DEPS.logEnv))
         .flatMapIO(
-          (log) => log('SQL: $sql'),
+          log(LogType.info, 'SQL: $commitSQL'),
         );

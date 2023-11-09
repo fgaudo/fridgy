@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:fgaudo_functional/extensions/reader/local.dart';
 import 'package:fgaudo_functional/extensions/reader_stream/do_on_data.dart';
 import 'package:fgaudo_functional/extensions/reader_stream/do_on_listen.dart';
@@ -69,13 +67,17 @@ final class Delete implements Command {
 typedef OverviewController = Controller<Command, OverviewModel>;
 
 typedef OverviewDeps<LOG, DELETE, FOODS> = ({
-  LOG logDeps,
-  DELETE deleteDeps,
-  FOODS foodsDeps
+  LOG logEnv,
+  DELETE deleteEnv,
+  FOODS foodsEnv
 });
 
 typedef OverviewControllerBuilder<LOG, DELETE, FOODS>
     = ReaderIO<OverviewDeps<LOG, DELETE, FOODS>, OverviewController>;
+
+typedef FoodsDeps<LOG, FOODS> = ({LOG logDeps, FOODS foodsDeps});
+
+typedef DeleteDeps<LOG, DELETE> = ({LOG logDeps, DELETE deleteDeps});
 
 OverviewControllerBuilder<LOG, DELETE, FOODS>
     prepareControllerBuilder<LOG, DELETE, FOODS>({
@@ -86,74 +88,53 @@ OverviewControllerBuilder<LOG, DELETE, FOODS>
         (env) => () => Controller.withPublishSubject(
               (command$) => MergeStream(
                 [
-                  _foodsCase(
-                    foods: foods,
-                    log: log,
-                  ).local(
-                    (OverviewDeps<LOG, DELETE, FOODS> deps) =>
-                        (logDeps: deps.logDeps, foodsDeps: deps.foodsDeps),
-                  )(env),
-                  _deleteCase(
-                    command$: command$,
-                    deleteByIds: deleteByIds,
-                    log: log,
-                  ).local(
-                    (OverviewDeps<LOG, DELETE, FOODS> env) =>
-                        (logDeps: env.logDeps, deleteDeps: env.deleteDeps),
-                  )(env),
+                  foods
+                      .local((FoodsDeps<LOG, FOODS> deps) => deps.foodsDeps)
+                      .transformStream(
+                        (foods$) => foods$.asBroadcastStream(),
+                      )
+                      .doOnListen(
+                        log(LogType.info, 'ciao').local((deps) => deps.logDeps),
+                      )
+                      .doOnData(
+                        (foods) => log(
+                          LogType.info,
+                          'Received ${foods.length} new foods',
+                        ).local((deps) => deps.logDeps),
+                      )
+                      .transformStream(toFoodEntities)
+                      .map<OverviewModel>(
+                        (foods) => Ready.fromData(
+                          foods: foods,
+                          pending: 0,
+                        ),
+                      )
+                      .startWith(const Loading())
+                      .local(
+                        (OverviewDeps<LOG, DELETE, FOODS> deps) =>
+                            (logDeps: deps.logEnv, foodsDeps: deps.foodsEnv),
+                      )(env),
+                  RS.Do<DeleteDeps<LOG, DELETE>>()
+                      .whereType<Delete>()
+                      .doOnData(
+                        (delete) => log(LogType.info, 'Received delete command')
+                            .local((deps) => deps.logDeps),
+                      )
+                      .flatMap(
+                        (delete) => RS.fromReaderIO(
+                          deleteByIds(delete.ids).local(
+                            (deps) => deps.deleteDeps,
+                          ),
+                        ),
+                      )
+                      .ignoreElements()
+                      .local(
+                        (OverviewDeps<LOG, DELETE, FOODS> env) =>
+                            (logDeps: env.logEnv, deleteDeps: env.deleteEnv),
+                      )(env),
                 ],
               ).asBroadcastStream(),
             );
-
-typedef FoodsDeps<LOG, FOODS> = ({LOG logDeps, FOODS foodsDeps});
-RS.ReaderStream<FoodsDeps<LOG, FOODS>, OverviewModel> _foodsCase<LOG, FOODS>({
-  required Foods<FOODS> foods,
-  required Log<LOG> log,
-}) =>
-    foods
-        .local((FoodsDeps<LOG, FOODS> deps) => deps.foodsDeps)
-        .transformStream(
-          (foods$) => foods$.asBroadcastStream(),
-        )
-        .doOnListen(
-          log(LogType.info, 'ciao').local((deps) => deps.logDeps),
-        )
-        .doOnData(
-          (foods) => log(
-            LogType.info,
-            'Received ${foods.length} new foods',
-          ).local((deps) => deps.logDeps),
-        )
-        .transformStream(toFoodEntities)
-        .map<OverviewModel>(
-          (foods) => Ready.fromData(
-            foods: foods,
-            pending: 0,
-          ),
-        )
-        .startWith(const Loading());
-
-typedef DeleteDeps<LOG, DELETE> = ({LOG logDeps, DELETE deleteDeps});
-RS.ReaderStream<({LOG logDeps, DELETE deleteDeps}), Never>
-    _deleteCase<LOG, DELETE>({
-  required Stream<Command> command$,
-  required DeleteFoodsByIds<DELETE> deleteByIds,
-  required Log<LOG> log,
-}) =>
-        RS.Do<DeleteDeps<LOG, DELETE>>()
-            .whereType<Delete>()
-            .doOnData(
-              (delete) => log(LogType.info, 'Received delete command')
-                  .local((deps) => deps.logDeps),
-            )
-            .flatMap(
-              (delete) => RS.fromReaderIO(
-                deleteByIds(delete.ids).local(
-                  (deps) => deps.deleteDeps,
-                ),
-              ),
-            )
-            .ignoreElements();
 
 Iterable<FoodModel> _listToView(Iterable<Food> foods) =>
     foods.map((food) => FoodModel(name: food.name));
