@@ -1,9 +1,8 @@
 import 'dart:async';
 
 import 'package:fgaudo_functional/extensions/reader/local.dart';
-import 'package:fgaudo_functional/extensions/reader/map.dart';
-import 'package:fgaudo_functional/extensions/reader_stream/do_on_data_reader.dart';
-import 'package:fgaudo_functional/extensions/reader_stream/do_on_listen_reader.dart';
+import 'package:fgaudo_functional/extensions/reader_stream/do_on_data.dart';
+import 'package:fgaudo_functional/extensions/reader_stream/do_on_listen.dart';
 import 'package:fgaudo_functional/extensions/reader_stream/flat_map.dart';
 import 'package:fgaudo_functional/extensions/reader_stream/ignore_elements.dart';
 import 'package:fgaudo_functional/extensions/reader_stream/map.dart';
@@ -11,7 +10,7 @@ import 'package:fgaudo_functional/extensions/reader_stream/start_with.dart';
 import 'package:fgaudo_functional/extensions/reader_stream/transform_stream.dart';
 import 'package:fgaudo_functional/extensions/reader_stream/where_type.dart';
 import 'package:fgaudo_functional/reader_io.dart';
-import 'package:fgaudo_functional/reader_stream.dart';
+import 'package:fgaudo_functional/reader_stream.dart' as RS;
 import 'package:rxdart/rxdart.dart';
 
 import '../../core/controller.dart';
@@ -106,51 +105,49 @@ OverviewControllerBuilder<LOG, DELETE, FOODS>
               ).asBroadcastStream(),
             );
 
-ReaderStream<({LOG logDeps, FOODS foodsDeps}), OverviewModel>
-    _foodsCase<LOG, FOODS>({
+typedef FoodsDeps<LOG, FOODS> = ({LOG logDeps, FOODS foodsDeps});
+RS.ReaderStream<FoodsDeps<LOG, FOODS>, OverviewModel> _foodsCase<LOG, FOODS>({
   required Foods<FOODS> foods,
   required Log<LOG> log,
 }) =>
-        MapReaderExtension(
-          foods.local(
-            (({LOG logDeps, FOODS foodsDeps}) deps) => deps.foodsDeps,
+    foods
+        .local((FoodsDeps<LOG, FOODS> deps) => deps.foodsDeps)
+        .transformStream(
+          (foods$) => foods$.asBroadcastStream(),
+        )
+        .doOnListen(
+          log(LogType.info, 'ciao').local((deps) => deps.logDeps),
+        )
+        .doOnData(
+          (foods) => log(
+            LogType.info,
+            'Received ${foods.length} new foods',
+          ).local((deps) => deps.logDeps),
+        )
+        .transformStream(toFoodEntities)
+        .map<OverviewModel>(
+          (foods) => Ready.fromData(
+            foods: foods,
+            pending: 0,
           ),
         )
-            .map((foods$) => foods$.asBroadcastStream())
-            .doOnListenReader(
-              log(LogType.info, 'ciao').local((deps) => deps.logDeps),
-            )
-            .doOnDataReader(
-              (foods) => log(
-                LogType.info,
-                'Received ${foods.length} new foods',
-              ).local((deps) => deps.logDeps),
-            )
-            .transformStream(
-              StreamTransformer.fromBind(toFoodEntities),
-            )
-            .map<OverviewModel>(
-              (foods) => Ready.fromData(
-                foods: foods,
-                pending: 0,
-              ),
-            )
-            .startWith(const Loading());
+        .startWith(const Loading());
 
-ReaderStream<({LOG logDeps, DELETE deleteDeps}), Never>
+typedef DeleteDeps<LOG, DELETE> = ({LOG logDeps, DELETE deleteDeps});
+RS.ReaderStream<({LOG logDeps, DELETE deleteDeps}), Never>
     _deleteCase<LOG, DELETE>({
   required Stream<Command> command$,
   required DeleteFoodsByIds<DELETE> deleteByIds,
   required Log<LOG> log,
 }) =>
-        ((LOG env) => command$)
+        RS.Do<DeleteDeps<LOG, DELETE>>()
             .whereType<Delete>()
-            .doOnDataReader(
-              (delete) => log(LogType.info, 'Received delete command'),
+            .doOnData(
+              (delete) => log(LogType.info, 'Received delete command')
+                  .local((deps) => deps.logDeps),
             )
-            .local((({LOG logDeps, DELETE deleteDeps}) deps) => deps.logDeps)
             .flatMap(
-              (delete) => fromReaderIO(
+              (delete) => RS.fromReaderIO(
                 deleteByIds(delete.ids).local(
                   (deps) => deps.deleteDeps,
                 ),

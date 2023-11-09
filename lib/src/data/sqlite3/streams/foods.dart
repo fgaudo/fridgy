@@ -1,5 +1,5 @@
 import 'package:fgaudo_functional/extensions/reader/local.dart';
-import 'package:fgaudo_functional/extensions/reader_stream/do_on_data_reader.dart';
+import 'package:fgaudo_functional/extensions/reader_stream/do_on_data.dart';
 import 'package:fgaudo_functional/extensions/reader_stream/flat_map.dart';
 import 'package:fgaudo_functional/extensions/reader_stream/map.dart';
 import 'package:fgaudo_functional/extensions/reader_stream/start_with.dart';
@@ -19,16 +19,16 @@ typedef FoodsDeps = ({CommonDatabase db, Logger logger});
 
 final Foods<FoodsDeps> foods = Do<FoodsDeps>()
     .flatMap(
-      (_) => asksReaderStream((deps) => deps.db.updates.asBroadcastStream()),
+      (_) => (deps) => deps.db.updates.asBroadcastStream(),
     )
-    .doOnDataReader(
+    .doOnData(
       (event) =>
           log(LogType.info, 'received update').local((deps) => deps.logger),
     )
     .where((event) => event.tableName == FOODS_TABLE)
     .map((event) => null)
     .startWith(null)
-    .doOnDataReader(
+    .doOnData(
       (event) =>
           log(LogType.info, 'Taking all foods').local((deps) => deps.logger),
     )
@@ -37,7 +37,7 @@ final Foods<FoodsDeps> foods = Do<FoodsDeps>()
             () => deps.db.select('SELECT * FROM $FOODS_TABLE;'),
           ),
     )
-    .doOnDataReader(
+    .doOnData(
       (event) => log(
         LogType.info,
         'Retrieved ${event.length} records',
