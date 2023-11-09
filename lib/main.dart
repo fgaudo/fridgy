@@ -72,7 +72,7 @@ void main() async {
       ),
       foodsEnv: (
         db: readWriteDB, // write permission needed for listening to writes
-        logger: dataLogger,
+        logEnv: dataLogger,
       )
     ),
   );

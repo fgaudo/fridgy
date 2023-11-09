@@ -82,7 +82,7 @@ typedef DeleteDeps<LOG, DELETE> = ({LOG logDeps, DELETE deleteDeps});
 OverviewControllerBuilder<LOG, DELETE, FOODS>
     getControllerReaderIO<LOG, DELETE, FOODS>({
   required Log<LOG> logReaderIO,
-  required DeleteFoodsByIds<DELETE> deleteByIdsReaderIO,
+  required DeleteFoodsByIds<DELETE> deleteFoodsByIdsReaderIO,
   required Foods<FOODS> foodsReaderStream,
 }) =>
         (env) => () => Controller.withPublishSubject(
@@ -124,7 +124,7 @@ OverviewControllerBuilder<LOG, DELETE, FOODS>
                       )
                       .flatMap(
                         (delete) => RS.fromReaderIO(
-                          deleteByIdsReaderIO(delete.ids).local(
+                          deleteFoodsByIdsReaderIO(delete.ids).local(
                             (deps) => deps.deleteDeps,
                           ),
                         ),

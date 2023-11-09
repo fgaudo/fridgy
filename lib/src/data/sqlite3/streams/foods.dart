@@ -7,46 +7,45 @@ import 'package:fgaudo_functional/extensions/reader_stream/switch_map.dart';
 import 'package:fgaudo_functional/extensions/reader_stream/where.dart';
 import 'package:fgaudo_functional/reader_stream.dart';
 import 'package:fgaudo_functional/stream.dart';
-import 'package:logging/logging.dart';
 import 'package:sqlite3/wasm.dart';
 
 import '../../../application/streams/foods.dart';
 import '../../../core/commands/log.dart';
-import '../../logger/commands/log.dart';
 import '../bootstrap.dart';
 
-typedef FoodsDeps = ({CommonDatabase db, Logger logger});
+typedef FoodsDeps<LOG> = ({CommonDatabase db, LOG logEnv});
 
-final Foods<FoodsDeps> foodsReaderStream = Do<FoodsDeps>()
-    .flatMap(
-      (_) => (deps) => deps.db.updates.asBroadcastStream(),
-    )
-    .doOnData(
-      (event) => logReaderIO(LogType.info, 'received update')
-          .local((deps) => deps.logger),
-    )
-    .where((event) => event.tableName == FOODS_TABLE)
-    .map((event) => null)
-    .startWith(null)
-    .doOnData(
-      (event) => logReaderIO(LogType.info, 'Taking all foods')
-          .local((deps) => deps.logger),
-    )
-    .switchMap(
-      (_) => (deps) => fromIO(
-            () => deps.db.select('SELECT * FROM $FOODS_TABLE;'),
+Foods<FoodsDeps<LOG>> foodsReaderStream<LOG>(Log<LOG> log) =>
+    Do<FoodsDeps<LOG>>()
+        .flatMap(
+          (_) => (deps) => deps.db.updates.asBroadcastStream(),
+        )
+        .doOnData(
+          (event) =>
+              log(LogType.info, 'received update').local((deps) => deps.logEnv),
+        )
+        .where((event) => event.tableName == FOODS_TABLE)
+        .map((event) => null)
+        .startWith(null)
+        .doOnData(
+          (event) => log(LogType.info, 'Taking all foods')
+              .local((deps) => deps.logEnv),
+        )
+        .switchMap(
+          (_) => (deps) => fromIO(
+                () => deps.db.select('SELECT * FROM $FOODS_TABLE;'),
+              ),
+        )
+        .doOnData(
+          (event) => log(
+            LogType.info,
+            'Retrieved ${event.length} records',
+          ).local((FoodsDeps<LOG> deps) => deps.logEnv),
+        )
+        .map(
+          (resultSet) => resultSet.map(
+            (row) => FoodData(
+              name: (row[FOODS_TABLE_NAME] as String?) ?? '[UNDEFINED]',
+            ),
           ),
-    )
-    .doOnData(
-      (event) => logReaderIO(
-        LogType.info,
-        'Retrieved ${event.length} records',
-      ).local((FoodsDeps deps) => deps.logger),
-    )
-    .map(
-      (resultSet) => resultSet.map(
-        (row) => FoodData(
-          name: (row[FOODS_TABLE_NAME] as String?) ?? '[UNDEFINED]',
-        ),
-      ),
-    );
+        );
