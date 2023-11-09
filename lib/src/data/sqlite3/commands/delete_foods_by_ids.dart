@@ -1,3 +1,4 @@
+import 'package:fgaudo_functional/extensions/reader/local.dart';
 import 'package:fgaudo_functional/extensions/reader_io/asks.dart';
 import 'package:fgaudo_functional/extensions/reader_io/flat_map.dart';
 import 'package:fgaudo_functional/extensions/reader_io/flat_map_io.dart';
@@ -12,25 +13,7 @@ import '../bootstrap.dart';
 import '../helpers/prepared_statement.dart';
 import '../helpers/transaction.dart';
 
-final class DeleteFoodsByIdsDeps<LOG>
-    implements HasPreparedStatementDeps<LOG>, HasTransactionDeps<LOG> {
-  const DeleteFoodsByIdsDeps({
-    required this.db,
-    required this.logEnv,
-  });
-
-  final CommonDatabase db;
-
-  final LOG logEnv;
-
-  @override
-  ({CommonDatabase db, LOG logEnv}) get PREPARED_STATEMENT_DEPS =>
-      (db: db, logEnv: logEnv);
-
-  @override
-  ({CommonDatabase db, LOG logEnv}) get TRANSACTION_DEPS =>
-      (db: db, logEnv: logEnv);
-}
+typedef DeleteFoodsByIdsDeps<LOG> = ({CommonDatabase db, LOG logEnv});
 
 const String deleteQuery =
     'DELETE FROM $FOODS_TABLE WHERE $FOODS_TABLE_NAME = ?;';
@@ -39,8 +22,10 @@ DeleteFoodsByIds<DeleteFoodsByIdsDeps<LOG>> getDeleteFoodsByIdsReaderIO<LOG>(
   Log<LOG> log,
 ) =>
     (ids) => transaction(
+          log: log,
           preparedStatement(
             sql: deleteQuery,
+            log: log,
             use: (ps) => Do<DeleteFoodsByIdsDeps<LOG>>()
                 .map(
                   (_) => ids.map((id) => [id]),
@@ -62,7 +47,17 @@ DeleteFoodsByIds<DeleteFoodsByIdsDeps<LOG>> getDeleteFoodsByIdsReaderIO<LOG>(
                       )
                       .sequenceArray(),
                 ),
-            log: log,
+          ).local(
+            (DeleteFoodsByIdsDeps<LOG> deps) => (
+              env: deps,
+              logEnv: deps.logEnv,
+              db: deps.db,
+            ),
           ),
-          log: log,
+        ).local(
+          (deps) => (
+            env: deps,
+            logEnv: deps.logEnv,
+            db: deps.db,
+          ),
         );

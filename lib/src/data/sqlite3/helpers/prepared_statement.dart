@@ -1,43 +1,40 @@
+import 'package:fgaudo_functional/extensions/reader/local.dart';
 import 'package:fgaudo_functional/extensions/reader_io/asks.dart';
 import 'package:fgaudo_functional/extensions/reader_io/bracket.dart';
 import 'package:fgaudo_functional/extensions/reader_io/flat_map_io.dart';
-import 'package:fgaudo_functional/io.dart';
 import 'package:fgaudo_functional/reader_io.dart';
 import 'package:sqlite3/common.dart';
 
 import '../../../core/commands/log.dart';
 
-typedef PreparedLog = IO<void> Function(String);
+typedef Deps<LOG, ENV> = ({LOG logEnv, CommonDatabase db, ENV env});
 
-abstract class HasPreparedStatementDeps<LOG> {
-  ({CommonDatabase db, LOG logEnv}) get PREPARED_STATEMENT_DEPS;
-}
-
-ReaderIO<DEPS, void>
-    preparedStatement<LOG, DEPS extends HasPreparedStatementDeps<LOG>>({
+ReaderIO<Deps<LOG, ENV>, void> preparedStatement<ENV, LOG>({
   required String sql,
-  required ReaderIO<DEPS, void> Function(CommonPreparedStatement ps) use,
+  required ReaderIO<ENV, void> Function(CommonPreparedStatement ps) use,
   Log<LOG>? log,
 }) =>
-        asks((DEPS deps) => deps.PREPARED_STATEMENT_DEPS.db)
-            .flatMapIO(
-              (db) => () => db.prepare(sql),
-            )
-            .bracket(
-              release: (ps) => Do<DEPS>()
-                  .flatMapIO(
-                    (_) => ps.dispose,
-                  )
-                  .asks((deps) => deps.PREPARED_STATEMENT_DEPS.logEnv)
-                  .flatMapIO(
-                    log?.call(LogType.info, 'Prepared statement closed') ??
-                        (_) => () {},
-                  ),
-              use: (ps) => ask<DEPS>()
-                  .flatMapIO(use(ps))
-                  .asks((deps) => deps.PREPARED_STATEMENT_DEPS.logEnv)
-                  .flatMapIO(
-                    log?.call(LogType.info, 'Prepared statement opened') ??
-                        (_) => () {},
-                  ),
-            );
+    asks((Deps<LOG, ENV> deps) => deps.db)
+        .flatMapIO(
+          (db) => () => db.prepare(sql),
+        )
+        .bracket(
+          release: (ps) => Do<Deps<LOG, ENV>>()
+              .flatMapIO(
+                (_) => ps.dispose,
+              )
+              .asks((deps) => deps.logEnv)
+              .flatMapIO(
+                log?.call(LogType.info, 'Prepared statement closed') ??
+                    (_) => () {},
+              ),
+          use: (ps) => ask<Deps<LOG, ENV>>()
+              .flatMapIO(
+                use(ps).local((deps) => deps.env),
+              )
+              .asks((deps) => deps.logEnv)
+              .flatMapIO(
+                log?.call(LogType.info, 'Prepared statement opened') ??
+                    (_) => () {},
+              ),
+        );

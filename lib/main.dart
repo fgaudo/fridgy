@@ -8,7 +8,6 @@ import 'package:logging/logging.dart';
 import 'src/data/controllers.dart';
 import 'src/data/logger/commands/log.dart';
 import 'src/data/sqlite3/bootstrap.dart';
-import 'src/data/sqlite3/commands/delete_foods_by_ids.dart';
 import 'src/data/sqlite3/interop.dart';
 import 'src/presentation/flutter/app.dart';
 
@@ -67,7 +66,7 @@ void main() async {
   final overviewControllerIO = overviewControllerReaderIO(
     (
       logEnv: appLogger,
-      deleteEnv: DeleteFoodsByIdsDeps(
+      deleteEnv: (
         db: readWriteDB,
         logEnv: dataLogger,
       ),
