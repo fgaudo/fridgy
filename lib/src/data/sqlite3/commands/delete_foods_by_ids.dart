@@ -1,3 +1,4 @@
+import 'package:fgaudo_functional/extensions/reader_io/asks.dart';
 import 'package:fgaudo_functional/extensions/reader_io/flat_map.dart';
 import 'package:fgaudo_functional/extensions/reader_io/flat_map_io.dart';
 import 'package:fgaudo_functional/extensions/reader_io/map.dart';
@@ -6,7 +7,7 @@ import 'package:fgaudo_functional/reader_io.dart';
 import 'package:sqlite3/wasm.dart';
 
 import '../../../application/commands/delete_foods_by_ids.dart';
-import '../../../application/commands/log.dart';
+import '../../../core/commands/log.dart';
 import '../bootstrap.dart';
 import '../helpers/prepared_statement.dart';
 import '../helpers/transaction.dart';
@@ -34,13 +35,11 @@ final class DeleteFoodsByIdsDeps<LOG>
 const String deleteQuery =
     'DELETE FROM $FOODS_TABLE WHERE $FOODS_TABLE_NAME = ?;';
 
-DeleteFoodsByIds<DeleteFoodsByIdsDeps<LOG>> deleteFoodsByIds<LOG>(
+DeleteFoodsByIds<DeleteFoodsByIdsDeps<LOG>> getDeleteFoodsByIdsReaderIO<LOG>(
   Log<LOG> log,
 ) =>
     (ids) => transaction(
-          log: log,
-          run: preparedStatement(
-            log: log,
+          preparedStatement(
             sql: deleteQuery,
             use: (ps) => Do<DeleteFoodsByIdsDeps<LOG>>()
                 .map(
@@ -53,9 +52,7 @@ DeleteFoodsByIds<DeleteFoodsByIdsDeps<LOG>> deleteFoodsByIds<LOG>(
                             .flatMapIO(
                               (_) => () => ps.execute(id),
                             )
-                            .flatMap(
-                              (_) => asks((deps) => deps.logEnv),
-                            )
+                            .asks((deps) => deps.logEnv)
                             .flatMapIO(
                               log(
                                 LogType.info,
@@ -65,5 +62,7 @@ DeleteFoodsByIds<DeleteFoodsByIdsDeps<LOG>> deleteFoodsByIds<LOG>(
                       )
                       .sequenceArray(),
                 ),
+            log: log,
           ),
+          log: log,
         );

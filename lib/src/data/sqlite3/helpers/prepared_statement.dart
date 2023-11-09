@@ -1,12 +1,11 @@
-import 'package:fgaudo_functional/extensions/reader/local.dart';
+import 'package:fgaudo_functional/extensions/reader_io/asks.dart';
 import 'package:fgaudo_functional/extensions/reader_io/bracket.dart';
-import 'package:fgaudo_functional/extensions/reader_io/flat_map.dart';
 import 'package:fgaudo_functional/extensions/reader_io/flat_map_io.dart';
 import 'package:fgaudo_functional/io.dart';
 import 'package:fgaudo_functional/reader_io.dart';
 import 'package:sqlite3/common.dart';
 
-import '../../../application/commands/log.dart';
+import '../../../core/commands/log.dart';
 
 typedef PreparedLog = IO<void> Function(String);
 
@@ -16,12 +15,11 @@ abstract class HasPreparedStatementDeps<LOG> {
 
 ReaderIO<DEPS, void>
     preparedStatement<LOG, DEPS extends HasPreparedStatementDeps<LOG>>({
-  required Log<LOG> log,
   required String sql,
   required ReaderIO<DEPS, void> Function(CommonPreparedStatement ps) use,
+  Log<LOG>? log,
 }) =>
-        Do<DEPS>()
-            .flatMap((_) => asks((deps) => deps.PREPARED_STATEMENT_DEPS.db))
+        asks((DEPS deps) => deps.PREPARED_STATEMENT_DEPS.db)
             .flatMapIO(
               (db) => () => db.prepare(sql),
             )
@@ -30,15 +28,16 @@ ReaderIO<DEPS, void>
                   .flatMapIO(
                     (_) => ps.dispose,
                   )
-                  .flatMap(
-                    (_) => log(LogType.info, 'Prepared statement closed')
-                        .local((deps) => deps.PREPARED_STATEMENT_DEPS.logEnv),
+                  .asks((deps) => deps.PREPARED_STATEMENT_DEPS.logEnv)
+                  .flatMapIO(
+                    log?.call(LogType.info, 'Prepared statement closed') ??
+                        (_) => () {},
                   ),
-              use: (ps) => Do<DEPS>()
-                  .flatMap((_) => ask())
+              use: (ps) => ask<DEPS>()
                   .flatMapIO(use(ps))
-                  .flatMap(
-                    (_) => log(LogType.info, 'Prepared statement opened')
-                        .local((deps) => deps.PREPARED_STATEMENT_DEPS.logEnv),
+                  .asks((deps) => deps.PREPARED_STATEMENT_DEPS.logEnv)
+                  .flatMapIO(
+                    log?.call(LogType.info, 'Prepared statement opened') ??
+                        (_) => () {},
                   ),
             );

@@ -11,10 +11,10 @@ import 'package:fgaudo_functional/reader_io.dart';
 import 'package:fgaudo_functional/reader_stream.dart' as RS;
 import 'package:rxdart/rxdart.dart';
 
+import '../../core/commands/log.dart';
 import '../../core/controller.dart';
 import '../../domain/food.dart';
 import '../commands/delete_foods_by_ids.dart';
-import '../commands/log.dart';
 import '../helpers/to_food_entities.dart';
 import '../streams/foods.dart';
 
@@ -80,24 +80,25 @@ typedef FoodsDeps<LOG, FOODS> = ({LOG logDeps, FOODS foodsDeps});
 typedef DeleteDeps<LOG, DELETE> = ({LOG logDeps, DELETE deleteDeps});
 
 OverviewControllerBuilder<LOG, DELETE, FOODS>
-    prepareControllerBuilder<LOG, DELETE, FOODS>({
-  required Log<LOG> log,
-  required DeleteFoodsByIds<DELETE> deleteByIds,
-  required Foods<FOODS> foods,
+    getControllerReaderIO<LOG, DELETE, FOODS>({
+  required Log<LOG> logReaderIO,
+  required DeleteFoodsByIds<DELETE> deleteByIdsReaderIO,
+  required Foods<FOODS> foodsReaderStream,
 }) =>
         (env) => () => Controller.withPublishSubject(
               (command$) => MergeStream(
                 [
-                  foods
+                  foodsReaderStream
                       .local((FoodsDeps<LOG, FOODS> deps) => deps.foodsDeps)
                       .transformStream(
                         (foods$) => foods$.asBroadcastStream(),
                       )
                       .doOnListen(
-                        log(LogType.info, 'ciao').local((deps) => deps.logDeps),
+                        logReaderIO(LogType.info, 'ciao')
+                            .local((deps) => deps.logDeps),
                       )
                       .doOnData(
-                        (foods) => log(
+                        (foods) => logReaderIO(
                           LogType.info,
                           'Received ${foods.length} new foods',
                         ).local((deps) => deps.logDeps),
@@ -117,12 +118,13 @@ OverviewControllerBuilder<LOG, DELETE, FOODS>
                   RS.Do<DeleteDeps<LOG, DELETE>>()
                       .whereType<Delete>()
                       .doOnData(
-                        (delete) => log(LogType.info, 'Received delete command')
-                            .local((deps) => deps.logDeps),
+                        (delete) =>
+                            logReaderIO(LogType.info, 'Received delete command')
+                                .local((deps) => deps.logDeps),
                       )
                       .flatMap(
                         (delete) => RS.fromReaderIO(
-                          deleteByIds(delete.ids).local(
+                          deleteByIdsReaderIO(delete.ids).local(
                             (deps) => deps.deleteDeps,
                           ),
                         ),
