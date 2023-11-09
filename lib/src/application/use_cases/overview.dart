@@ -1,12 +1,16 @@
+import 'package:fgaudo_functional/extensions/reader/flat_map.dart';
 import 'package:fgaudo_functional/extensions/reader/local.dart';
+import 'package:fgaudo_functional/extensions/reader/map.dart';
 import 'package:fgaudo_functional/extensions/reader_stream/do_on_data.dart';
 import 'package:fgaudo_functional/extensions/reader_stream/do_on_listen.dart';
 import 'package:fgaudo_functional/extensions/reader_stream/flat_map.dart';
+import 'package:fgaudo_functional/extensions/reader_stream/flat_map_stream.dart';
 import 'package:fgaudo_functional/extensions/reader_stream/ignore_elements.dart';
 import 'package:fgaudo_functional/extensions/reader_stream/map.dart';
 import 'package:fgaudo_functional/extensions/reader_stream/start_with.dart';
 import 'package:fgaudo_functional/extensions/reader_stream/transform_stream.dart';
 import 'package:fgaudo_functional/extensions/reader_stream/where_type.dart';
+import 'package:fgaudo_functional/reader.dart' as R;
 import 'package:fgaudo_functional/reader_io.dart';
 import 'package:fgaudo_functional/reader_stream.dart' as RS;
 import 'package:rxdart/rxdart.dart';
@@ -85,57 +89,65 @@ OverviewControllerBuilder<LOG, DELETE, FOODS>
   required DeleteFoodsByIds<DELETE> deleteFoodsByIdsReaderIO,
   required Foods<FOODS> foodsReaderStream,
 }) =>
-        (env) => () => Controller.withPublishSubject(
-              (command$) => MergeStream(
-                [
-                  foodsReaderStream
-                      .local((FoodsDeps<LOG, FOODS> deps) => deps.foodsDeps)
-                      .transformStream(
-                        (foods$) => foods$.asBroadcastStream(),
-                      )
-                      .doOnListen(
-                        logReaderIO(LogType.info, 'ciao')
-                            .local((deps) => deps.logDeps),
-                      )
-                      .doOnData(
-                        (foods) => logReaderIO(
-                          LogType.info,
-                          'Received ${foods.length} new foods',
-                        ).local((deps) => deps.logDeps),
-                      )
-                      .transformStream(toFoodEntities)
-                      .map<OverviewModel>(
-                        (foods) => Ready.fromData(
-                          foods: foods,
-                          pending: 0,
+        R.Do<OverviewDeps<LOG, DELETE, FOODS>>()
+            .map(
+              (_) => (
+                foodsReaderStream
+                    .local((FoodsDeps<LOG, FOODS> deps) => deps.foodsDeps)
+                    .transformStream(
+                      (foods$) => foods$.asBroadcastStream(),
+                    )
+                    .doOnListen(
+                      logReaderIO(LogType.info, 'ciao')
+                          .local((deps) => deps.logDeps),
+                    )
+                    .doOnData(
+                      (foods) => logReaderIO(
+                        LogType.info,
+                        'Received ${foods.length} new foods',
+                      ).local((deps) => deps.logDeps),
+                    )
+                    .transformStream(toFoodEntities)
+                    .map<OverviewModel>(
+                      (foods) => Ready.fromData(
+                        foods: foods,
+                        pending: 0,
+                      ),
+                    )
+                    .startWith(const Loading())
+                    .local(
+                      (OverviewDeps<LOG, DELETE, FOODS> deps) =>
+                          (logDeps: deps.logEnv, foodsDeps: deps.foodsEnv),
+                    ),
+                (Stream<Command> command$) => RS.Do<DeleteDeps<LOG, DELETE>>()
+                    .flatMapStream((_) => command$)
+                    .whereType<Delete>()
+                    .doOnData(
+                      (delete) => logReaderIO(
+                        LogType.info,
+                        'Received delete command',
+                      ).local((deps) => deps.logDeps),
+                    )
+                    .flatMap(
+                      (delete) => RS.fromReaderIO(
+                        deleteFoodsByIdsReaderIO(delete.ids).local(
+                          (deps) => deps.deleteDeps,
                         ),
-                      )
-                      .startWith(const Loading())
-                      .local(
-                        (OverviewDeps<LOG, DELETE, FOODS> deps) =>
-                            (logDeps: deps.logEnv, foodsDeps: deps.foodsEnv),
-                      )(env),
-                  RS.Do<DeleteDeps<LOG, DELETE>>()
-                      .whereType<Delete>()
-                      .doOnData(
-                        (delete) =>
-                            logReaderIO(LogType.info, 'Received delete command')
-                                .local((deps) => deps.logDeps),
-                      )
-                      .flatMap(
-                        (delete) => RS.fromReaderIO(
-                          deleteFoodsByIdsReaderIO(delete.ids).local(
-                            (deps) => deps.deleteDeps,
-                          ),
-                        ),
-                      )
-                      .ignoreElements()
-                      .local(
-                        (OverviewDeps<LOG, DELETE, FOODS> env) =>
-                            (logDeps: env.logEnv, deleteDeps: env.deleteEnv),
-                      )(env),
-                ],
-              ).asBroadcastStream(),
+                      ),
+                    )
+                    .ignoreElements()
+                    .local(
+                      (OverviewDeps<LOG, DELETE, FOODS> env) =>
+                          (logDeps: env.logEnv, deleteDeps: env.deleteEnv),
+                    )
+              ),
+            )
+            .flatMap(
+              (streams) => (env) => () => Controller.withPublishSubject(
+                    (command$) => MergeStream(
+                      [streams.$1(env), streams.$2(command$)(env)],
+                    ),
+                  ),
             );
 
 Iterable<FoodModel> _listToView(Iterable<Food> foods) =>
