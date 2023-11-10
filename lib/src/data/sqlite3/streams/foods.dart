@@ -15,37 +15,36 @@ import '../bootstrap.dart';
 
 typedef FoodsDeps<LOG> = ({CommonDatabase db, LOG logEnv});
 
-Foods<FoodsDeps<LOG>> foodsReaderStream<LOG>(Log<LOG> log) =>
-    Do<FoodsDeps<LOG>>()
-        .flatMap(
-          (_) => (deps) => deps.db.updates.asBroadcastStream(),
-        )
-        .doOnData(
-          (event) =>
-              log(LogType.info, 'received update').local((deps) => deps.logEnv),
-        )
-        .where((event) => event.tableName == FOODS_TABLE)
-        .map((event) => null)
-        .startWith(null)
-        .doOnData(
-          (event) => log(LogType.info, 'Taking all foods')
-              .local((deps) => deps.logEnv),
-        )
-        .switchMap(
-          (_) => (deps) => fromIO(
-                () => deps.db.select('SELECT * FROM $FOODS_TABLE;'),
-              ),
-        )
-        .doOnData(
-          (event) => log(
-            LogType.info,
-            'Retrieved ${event.length} records',
-          ).local((FoodsDeps<LOG> deps) => deps.logEnv),
-        )
-        .map(
-          (resultSet) => resultSet.map(
-            (row) => FoodData(
-              name: (row[FOODS_TABLE_NAME] as String?) ?? '[UNDEFINED]',
-            ),
+Foods<FoodsDeps<LOG>> prepareFoods$R<LOG>(Log<LOG> log) => Do<FoodsDeps<LOG>>()
+    .flatMap(
+      (_) => (deps) => deps.db.updates.asBroadcastStream(),
+    )
+    .doOnData(
+      (event) =>
+          log(LogType.info, 'received update').local((deps) => deps.logEnv),
+    )
+    .where((event) => event.tableName == FOODS_TABLE)
+    .map((event) => null)
+    .startWith(null)
+    .doOnData(
+      (event) =>
+          log(LogType.info, 'Taking all foods').local((deps) => deps.logEnv),
+    )
+    .switchMap(
+      (_) => (deps) => fromIO(
+            () => deps.db.select('SELECT * FROM $FOODS_TABLE;'),
           ),
-        );
+    )
+    .doOnData(
+      (event) => log(
+        LogType.info,
+        'Retrieved ${event.length} records',
+      ).local((FoodsDeps<LOG> deps) => deps.logEnv),
+    )
+    .map(
+      (resultSet) => resultSet.map(
+        (row) => FoodData(
+          name: (row[FOODS_TABLE_NAME] as String?) ?? '[UNDEFINED]',
+        ),
+      ),
+    );

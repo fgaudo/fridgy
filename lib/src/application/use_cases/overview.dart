@@ -85,26 +85,26 @@ typedef DeleteDeps<LOG, DELETE> = ({LOG logDeps, DELETE deleteDeps});
 
 OverviewControllerBuilder<LOG, DELETE, FOODS>
     getControllerReaderIO<LOG, DELETE, FOODS>({
-  required Log<LOG> logReaderIO,
-  required DeleteFoodsByIds<DELETE> deleteFoodsByIdsReaderIO,
-  required Foods<FOODS> foodsReaderStream,
+  required Log<LOG> log,
+  required DeleteFoodsByIds<DELETE> deleteFoodsByIds,
+  required Foods<FOODS> foods$R,
 }) =>
         R.Do<OverviewDeps<LOG, DELETE, FOODS>>()
             .map(
               (_) => (
-                foodsReaderStream
+                foods$R
                     .local((FoodsDeps<LOG, FOODS> deps) => deps.foodsDeps)
                     .transformStream(
                       (foods$) => foods$.asBroadcastStream(),
                     )
                     .doOnListen(
-                      logReaderIO(LogType.info, 'ciao')
+                      log(LogType.info, 'Started listening to foods')
                           .local((deps) => deps.logDeps),
                     )
                     .doOnData(
-                      (foods) => logReaderIO(
+                      (foods) => log(
                         LogType.info,
-                        'Received ${foods.length} new foods',
+                        'Received ${foods.length} food entries',
                       ).local((deps) => deps.logDeps),
                     )
                     .transformStream(toFoodEntities)
@@ -123,17 +123,18 @@ OverviewControllerBuilder<LOG, DELETE, FOODS>
                     .flatMapStream((_) => command$)
                     .whereType<Delete>()
                     .doOnData(
-                      (delete) => logReaderIO(
-                        LogType.info,
-                        'Received delete command',
-                      ).local((deps) => deps.logDeps),
+                      (delete) => log(LogType.info, 'Received delete command')
+                          .local((deps) => deps.logDeps),
                     )
                     .flatMap(
                       (delete) => RS.fromReaderIO(
-                        deleteFoodsByIdsReaderIO(delete.ids).local(
-                          (deps) => deps.deleteDeps,
-                        ),
+                        deleteFoodsByIds(delete.ids)
+                            .local((deps) => deps.deleteDeps),
                       ),
+                    )
+                    .doOnData(
+                      (_) => log(LogType.info, 'Delete command executed')
+                          .local((deps) => deps.logDeps),
                     )
                     .ignoreElements()
                     .local(

@@ -18,7 +18,7 @@ typedef DeleteFoodsByIdsDeps<LOG> = ({CommonDatabase db, LOG logEnv});
 const String deleteQuery =
     'DELETE FROM $FOODS_TABLE WHERE $FOODS_TABLE_NAME = ?;';
 
-DeleteFoodsByIds<DeleteFoodsByIdsDeps<LOG>> getDeleteFoodsByIdsReaderIO<LOG>(
+DeleteFoodsByIds<DeleteFoodsByIdsDeps<LOG>> prepareDeleteFoodsByIds<LOG>(
   Log<LOG> log,
 ) =>
     (ids) => transaction(

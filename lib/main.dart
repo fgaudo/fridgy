@@ -79,7 +79,7 @@ void main() async {
 
   runApp(
     MyApp(
-      log: (type, message) => logReaderIO(type, message)(presentationLogger),
+      log: (type, message) => log(type, message)(presentationLogger),
       createOverviewController: overviewControllerIO,
     ),
   );
