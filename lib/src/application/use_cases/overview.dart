@@ -8,7 +8,6 @@ import 'package:fgaudo_functional/extensions/reader_stream/flat_map_stream.dart'
 import 'package:fgaudo_functional/extensions/reader_stream/ignore_elements.dart';
 import 'package:fgaudo_functional/extensions/reader_stream/map.dart';
 import 'package:fgaudo_functional/extensions/reader_stream/start_with.dart';
-import 'package:fgaudo_functional/extensions/reader_stream/transform_stream.dart';
 import 'package:fgaudo_functional/extensions/reader_stream/where_type.dart';
 import 'package:fgaudo_functional/reader.dart' as R;
 import 'package:fgaudo_functional/reader_io.dart';
@@ -94,7 +93,7 @@ OverviewControllerBuilder<LOG, DELETE, FOODS>
               (_) => (
                 foods$R
                     .local((FoodsDeps<LOG, FOODS> deps) => deps.foodsDeps)
-                    .transformStream(
+                    .reader_map(
                       (foods$) => foods$.asBroadcastStream(),
                     )
                     .doOnListen(
@@ -107,7 +106,7 @@ OverviewControllerBuilder<LOG, DELETE, FOODS>
                         'Received ${foods.length} food entries',
                       ).local((deps) => deps.logDeps),
                     )
-                    .transformStream(toFoodEntities)
+                    .reader_map(toFoodEntities)
                     .map<OverviewModel>(
                       (foods) => Ready.fromData(
                         foods: foods,
