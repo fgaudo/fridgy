@@ -1,12 +1,12 @@
-import 'package:fgaudo_functional/extensions/reader/local.dart';
-import 'package:fgaudo_functional/extensions/reader_stream/do_on_data.dart';
-import 'package:fgaudo_functional/extensions/reader_stream/flat_map.dart';
-import 'package:fgaudo_functional/extensions/reader_stream/map.dart';
-import 'package:fgaudo_functional/extensions/reader_stream/start_with.dart';
-import 'package:fgaudo_functional/extensions/reader_stream/switch_map.dart';
-import 'package:fgaudo_functional/extensions/reader_stream/where.dart';
-import 'package:fgaudo_functional/reader_stream.dart';
-import 'package:fgaudo_functional/stream.dart';
+import 'package:functionally/extensions/reader/local.dart';
+import 'package:functionally/extensions/reader_stream/do_on_data.dart';
+import 'package:functionally/extensions/reader_stream/flat_map.dart';
+import 'package:functionally/extensions/reader_stream/map.dart';
+import 'package:functionally/extensions/reader_stream/start_with.dart';
+import 'package:functionally/extensions/reader_stream/switch_map.dart';
+import 'package:functionally/extensions/reader_stream/where.dart';
+import 'package:functionally/reader_stream.dart';
+import 'package:functionally/stream.dart';
 import 'package:sqlite3/wasm.dart';
 
 import '../../../application/streams/foods.dart';

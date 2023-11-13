@@ -1,8 +1,8 @@
-import 'package:fgaudo_functional/extensions/reader/local.dart';
-import 'package:fgaudo_functional/extensions/reader_io/asks.dart';
-import 'package:fgaudo_functional/extensions/reader_io/bracket.dart';
-import 'package:fgaudo_functional/extensions/reader_io/flat_map_io.dart';
-import 'package:fgaudo_functional/reader_io.dart';
+import 'package:functionally/extensions/reader/local.dart';
+import 'package:functionally/extensions/reader_io/asks.dart';
+import 'package:functionally/extensions/reader_io/bracket.dart';
+import 'package:functionally/extensions/reader_io/flat_map_io.dart';
+import 'package:functionally/reader_io.dart';
 import 'package:sqlite3/common.dart';
 
 import '../../../core/commands/log.dart';

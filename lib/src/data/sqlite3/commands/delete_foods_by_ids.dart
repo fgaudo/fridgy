@@ -1,10 +1,10 @@
-import 'package:fgaudo_functional/extensions/reader/local.dart';
-import 'package:fgaudo_functional/extensions/reader_io/asks.dart';
-import 'package:fgaudo_functional/extensions/reader_io/flat_map.dart';
-import 'package:fgaudo_functional/extensions/reader_io/flat_map_io.dart';
-import 'package:fgaudo_functional/extensions/reader_io/map.dart';
-import 'package:fgaudo_functional/extensions/reader_io/sequence_array.dart';
-import 'package:fgaudo_functional/reader_io.dart';
+import 'package:functionally/extensions/reader/local.dart';
+import 'package:functionally/extensions/reader_io/asks.dart';
+import 'package:functionally/extensions/reader_io/flat_map.dart';
+import 'package:functionally/extensions/reader_io/flat_map_io.dart';
+import 'package:functionally/extensions/reader_io/map.dart';
+import 'package:functionally/extensions/reader_io/sequence_array.dart';
+import 'package:functionally/reader_io.dart';
 import 'package:sqlite3/wasm.dart';
 
 import '../../../application/commands/delete_foods_by_ids.dart';

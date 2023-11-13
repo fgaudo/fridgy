@@ -1,5 +1,5 @@
-import 'package:fgaudo_functional/extensions/option/match.dart';
-import 'package:fgaudo_functional/io.dart';
+import 'package:functionally/extensions/option/match.dart';
+import 'package:functionally/io.dart';
 import 'package:flutter/material.dart';
 
 import '../../application/use_cases/overview.dart';

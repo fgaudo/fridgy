@@ -1,3 +1,3 @@
-import 'package:fgaudo_functional/reader_io.dart';
+import 'package:functionally/io.dart';
 
-typedef DeleteFoodsByIds<ENV> = ReaderIO<ENV, void> Function(Set<String> ids);
+typedef DeleteFoodsByIds = IO<void> Function(Set<String> ids);

@@ -1,4 +1,4 @@
-import 'package:fgaudo_functional/io.dart';
+import 'package:functionally/io.dart';
 import 'package:js/js_util.dart';
 import 'package:sqlite3/common.dart';
 

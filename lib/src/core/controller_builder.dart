@@ -1,5 +1,5 @@
-import 'package:fgaudo_functional/io.dart';
-import 'package:fgaudo_functional/option.dart';
+import 'package:functionally/io.dart';
+import 'package:functionally/option.dart';
 import 'package:flutter/material.dart';
 
 import 'controller.dart';

@@ -1,17 +1,19 @@
-import 'package:fgaudo_functional/extensions/reader/flat_map.dart';
-import 'package:fgaudo_functional/extensions/reader/local.dart';
-import 'package:fgaudo_functional/extensions/reader/map.dart';
-import 'package:fgaudo_functional/extensions/reader_stream/do_on_data.dart';
-import 'package:fgaudo_functional/extensions/reader_stream/do_on_listen.dart';
-import 'package:fgaudo_functional/extensions/reader_stream/flat_map.dart';
-import 'package:fgaudo_functional/extensions/reader_stream/flat_map_stream.dart';
-import 'package:fgaudo_functional/extensions/reader_stream/ignore_elements.dart';
-import 'package:fgaudo_functional/extensions/reader_stream/map.dart';
-import 'package:fgaudo_functional/extensions/reader_stream/start_with.dart';
-import 'package:fgaudo_functional/extensions/reader_stream/where_type.dart';
-import 'package:fgaudo_functional/reader.dart' as R;
-import 'package:fgaudo_functional/reader_io.dart';
-import 'package:fgaudo_functional/reader_stream.dart' as RS;
+import 'package:functionally/extensions/reader/map.dart';
+import 'package:functionally/extensions/reader/to_reader_stream.dart';
+import 'package:functionally/extensions/reader_io/flat_map.dart';
+import 'package:functionally/extensions/reader_io/flat_map_io.dart';
+import 'package:functionally/extensions/reader_io/map.dart';
+import 'package:functionally/extensions/reader_stream/do_on_data.dart';
+import 'package:functionally/extensions/reader_stream/do_on_listen.dart';
+import 'package:functionally/extensions/reader_stream/flat_map.dart';
+import 'package:functionally/extensions/reader_stream/flat_map_stream.dart';
+import 'package:functionally/extensions/reader_stream/ignore_elements.dart';
+import 'package:functionally/extensions/reader_stream/map.dart';
+import 'package:functionally/extensions/reader_stream/start_with.dart';
+import 'package:functionally/extensions/reader_stream/where_type.dart';
+import 'package:functionally/reader.dart' as R;
+import 'package:functionally/reader_io.dart' as RIO;
+import 'package:functionally/reader_stream.dart' as RS;
 import 'package:rxdart/rxdart.dart';
 
 import '../../core/commands/log.dart';
@@ -69,87 +71,100 @@ final class Delete implements Command {
 
 typedef OverviewController = Controller<Command, OverviewModel>;
 
-typedef OverviewDeps<LOG, DELETE, FOODS> = ({
-  LOG logEnv,
-  DELETE deleteEnv,
-  FOODS foodsEnv
+typedef OverviewDeps = ({
+  Log log,
+  DeleteFoodsByIds deleteFoodsByIds,
+  Foods foods$
 });
 
-typedef OverviewControllerBuilder<LOG, DELETE, FOODS>
-    = ReaderIO<OverviewDeps<LOG, DELETE, FOODS>, OverviewController>;
+typedef OverviewControllerBuilder
+    = RIO.ReaderIO<OverviewDeps, OverviewController>;
 
-typedef FoodsDeps<LOG, FOODS> = ({LOG logDeps, FOODS foodsDeps});
-
-typedef DeleteDeps<LOG, DELETE> = ({LOG logDeps, DELETE deleteDeps});
-
-OverviewControllerBuilder<LOG, DELETE, FOODS>
-    getControllerReaderIO<LOG, DELETE, FOODS>({
-  required Log<LOG> log,
-  required DeleteFoodsByIds<DELETE> deleteFoodsByIds,
-  required Foods<FOODS> foods$R,
-}) =>
-        R.Do<OverviewDeps<LOG, DELETE, FOODS>>()
+final OverviewControllerBuilder getControllerReaderIO = RIO
+    .ask<OverviewDeps>()
+    .map(
+      (_) => (
+        R
+            .asks((OverviewDeps deps) => deps.foods$)
             .map(
-              (_) => (
-                foods$R
-                    .local((FoodsDeps<LOG, FOODS> deps) => deps.foodsDeps)
-                    .reader_map(
-                      (foods$) => foods$.asBroadcastStream(),
-                    )
-                    .doOnListen(
-                      log(LogType.info, 'Started listening to foods')
-                          .local((deps) => deps.logDeps),
-                    )
-                    .doOnData(
-                      (foods) => log(
-                        LogType.info,
-                        'Received ${foods.length} food entries',
-                      ).local((deps) => deps.logDeps),
-                    )
-                    .reader_map(toFoodEntities)
-                    .map<OverviewModel>(
-                      (foods) => Ready.fromData(
-                        foods: foods,
-                        pending: 0,
-                      ),
-                    )
-                    .startWith(const Loading())
-                    .local(
-                      (OverviewDeps<LOG, DELETE, FOODS> deps) =>
-                          (logDeps: deps.logEnv, foodsDeps: deps.foodsEnv),
+              (foods$) => foods$.asBroadcastStream(),
+            )
+            .toReaderStream()
+            .doOnListen(
+              RIO
+                  .asks(
+                    (OverviewDeps deps) => deps.log,
+                  )
+                  .flatMapIO(
+                    (log) => log(LogType.info, 'Started listening to foods'),
+                  ),
+            )
+            .doOnData(
+              (foods) => RIO
+                  .asks(
+                    (OverviewDeps deps) => deps.log,
+                  )
+                  .flatMapIO(
+                    (log) => log(
+                      LogType.info,
+                      'Received ${foods.length} food entries',
                     ),
-                (Stream<Command> command$) => RS.Do<DeleteDeps<LOG, DELETE>>()
-                    .flatMapStream((_) => command$)
-                    .whereType<Delete>()
-                    .doOnData(
-                      (delete) => log(LogType.info, 'Received delete command')
-                          .local((deps) => deps.logDeps),
-                    )
-                    .flatMap(
-                      (delete) => RS.fromReaderIO(
-                        deleteFoodsByIds(delete.ids)
-                            .local((deps) => deps.deleteDeps),
-                      ),
-                    )
-                    .doOnData(
-                      (_) => log(LogType.info, 'Delete command executed')
-                          .local((deps) => deps.logDeps),
-                    )
-                    .ignoreElements()
-                    .local(
-                      (OverviewDeps<LOG, DELETE, FOODS> env) =>
-                          (logDeps: env.logEnv, deleteDeps: env.deleteEnv),
-                    )
+                  ),
+            )
+            .map((foods) => foods.map(toFoodEntity))
+            .map<OverviewModel>(
+              (foods) => Ready.fromData(
+                foods: foods,
+                pending: 0,
               ),
             )
-            .flatMap(
-              (streams) => (env) => () => Controller.withPublishSubject(
-                    (command$) => MergeStream([
-                      streams.$1(env),
-                      streams.$2(command$)(env),
-                    ]),
+            .startWith(const Loading()),
+        (Stream<Command> command$) => RS
+            .ask<OverviewDeps>()
+            .flatMapStream((_) => command$)
+            .whereType<Delete>()
+            .doOnData(
+              (delete) => RIO
+                  .asks(
+                    (OverviewDeps deps) => deps.log,
+                  )
+                  .flatMapIO(
+                    (log) => log(LogType.info, 'Received delete command'),
                   ),
-            );
+            )
+            .flatMap(
+              (delete) => RS.fromReaderIO(
+                RIO
+                    .asks(
+                      (OverviewDeps deps) => deps.deleteFoodsByIds,
+                    )
+                    .flatMapIO(
+                      (deleteFoodsByIds) => deleteFoodsByIds(delete.ids),
+                    ),
+              ),
+            )
+            .doOnData(
+              (_) => RIO
+                  .asks(
+                    (OverviewDeps deps) => deps.log,
+                  )
+                  .flatMapIO(
+                    (log) => log(LogType.info, 'Delete command executed'),
+                  ),
+            )
+            .ignoreElements(),
+      ),
+    )
+    .flatMap(
+      (streams) => RIO.ReaderIO(
+        (env) => () => Controller.withPublishSubject(
+              (command$) => MergeStream([
+                streams.$1(env),
+                streams.$2(command$)(env),
+              ]),
+            ),
+      ),
+    );
 
 Iterable<FoodModel> _listToView(Iterable<Food> foods) =>
     foods.map((food) => FoodModel(name: food.name));
