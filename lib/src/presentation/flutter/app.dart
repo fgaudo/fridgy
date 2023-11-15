@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:functionally/io.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../application/commands/log.dart';
 import '../../application/use_cases/overview.dart';
@@ -21,7 +22,7 @@ final class MyApp extends StatelessWidget {
   Widget build(
     BuildContext context,
   ) =>
-      MaterialApp(
+      MaterialApp.router(
         restorationScopeId: 'app',
         localizationsDelegates: const [
           AppLocalizations.delegate,
@@ -35,13 +36,18 @@ final class MyApp extends StatelessWidget {
         onGenerateTitle: (context) => AppLocalizations.of(context)!.appTitle,
         theme: ThemeData(),
         darkTheme: ThemeData.dark(),
-        initialRoute: OverviewView.routeName,
-        onGenerateRoute: (routeSettings) => MaterialPageRoute<void>(
-          settings: routeSettings,
-          builder: (context) => OverviewView(
-            createController: createOverviewController,
-            key: key,
-          ),
+        routerConfig: GoRouter(
+          onException: (context, state, router) =>
+              router.go(OverviewView.routeName),
+          initialLocation: OverviewView.routeName,
+          routes: [
+            GoRoute(
+              path: OverviewView.routeName,
+              builder: (context, state) => OverviewView(
+                createController: createOverviewController,
+              ),
+            ),
+          ],
         ),
       );
 }

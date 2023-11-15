@@ -20,6 +20,7 @@ final class OverviewView extends StatelessWidget {
     BuildContext context,
   ) =>
       ControllerBuilder(
+        key: key,
         createController: createController,
         builder: (_, modelOption, __) => modelOption.match(
           onNone: const ColoredBox(color: Colors.black),

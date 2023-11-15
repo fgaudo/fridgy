@@ -1,6 +1,6 @@
+import 'package:flutter/material.dart';
 import 'package:functionally/io.dart';
 import 'package:functionally/option.dart';
-import 'package:flutter/material.dart';
 
 import 'controller.dart';
 
