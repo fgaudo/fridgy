@@ -1,40 +1,45 @@
-import 'package:functionally/extensions/reader/local.dart';
-import 'package:functionally/extensions/reader_io/asks.dart';
-import 'package:functionally/extensions/reader_io/bracket.dart';
-import 'package:functionally/extensions/reader_io/flat_map_io.dart';
-import 'package:functionally/reader_io.dart';
+import 'package:functionally/extensions/reader_io.dart';
+import 'package:functionally/reader_io.dart' as RIO;
 import 'package:sqlite3/common.dart';
 
 import '../../../core/commands/log.dart';
 
-typedef Deps<LOG, ENV> = ({LOG logEnv, CommonDatabase db, ENV env});
+typedef PreparedStatementDeps<ENV, LOG> = ({
+  LOG logEnv,
+  CommonDatabase db,
+  ENV env
+});
 
-ReaderIO<Deps<LOG, ENV>, void> preparedStatement<ENV, LOG>({
+RIO.ReaderIO<PreparedStatementDeps<ENV, LOG>, void>
+    preparedStatement<ENV, LOG>({
   required String sql,
-  required ReaderIO<ENV, void> Function(CommonPreparedStatement ps) use,
-  Log<LOG>? log,
+  required Log<LOG> log,
+  required RIO.ReaderIO<ENV, void> Function(CommonPreparedStatement ps) use,
 }) =>
-    asks((Deps<LOG, ENV> deps) => deps.db)
-        .flatMapIO(
-          (db) => () => db.prepare(sql),
-        )
-        .bracket(
-          release: (ps) => Do<Deps<LOG, ENV>>()
-              .flatMapIO(
-                (_) => ps.dispose,
-              )
-              .asks((deps) => deps.logEnv)
-              .flatMapIO(
-                log?.call(LogType.info, 'Prepared statement closed') ??
-                    (_) => () {},
-              ),
-          use: (ps) => ask<Deps<LOG, ENV>>()
-              .flatMapIO(
-                use(ps).local((deps) => deps.env),
-              )
-              .asks((deps) => deps.logEnv)
-              .flatMapIO(
-                log?.call(LogType.info, 'Prepared statement opened') ??
-                    (_) => () {},
-              ),
-        );
+        RIO
+            .asks((PreparedStatementDeps<ENV, LOG> deps) => deps.db)
+            .flatMapIO(
+              (db) => () => db.prepare(sql),
+            )
+            .bracket(
+              release: (ps) => RIO
+                  .ask<PreparedStatementDeps<ENV, LOG>>()
+                  .flatMapIO(
+                    (_) => ps.dispose,
+                  )
+                  .flatMap(
+                    (_) => log(LogType.info, 'Prepared statement closed')
+                        .local((deps) => deps.logEnv),
+                  ),
+              use: (ps) => RIO
+                  .ask<PreparedStatementDeps<ENV, LOG>>()
+                  .flatMap(
+                    (_) => log(LogType.info, 'Prepared statement opened')
+                        .local((deps) => deps.logEnv),
+                  )
+                  .flatMap(
+                    (_) => use(ps).local(
+                      (PreparedStatementDeps<ENV, LOG> deps) => deps.env,
+                    ),
+                  ),
+            );

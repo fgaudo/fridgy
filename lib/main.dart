@@ -66,14 +66,8 @@ void main() async {
   final overviewControllerIO = overviewControllerReaderIO(
     (
       logEnv: appLogger,
-      deleteEnv: (
-        db: readWriteDB,
-        logEnv: dataLogger,
-      ),
-      foodsEnv: (
-        db: readWriteDB, // write permission needed for listening to writes
-        logEnv: dataLogger,
-      )
+      deleteEnv: (db: readWriteDB, logEnv: dataLogger),
+      foodsEnv: (db: readWriteDB, logEnv: dataLogger),
     ),
   );
 

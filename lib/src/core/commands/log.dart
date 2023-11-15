@@ -1,5 +1,5 @@
-import 'package:functionally/io.dart';
+import 'package:functionally/reader_io.dart';
 
 enum LogType { error, info }
 
-typedef Log = IO<void> Function(LogType, String);
+typedef Log<LOG> = ReaderIO<LOG, void> Function(LogType, String);
