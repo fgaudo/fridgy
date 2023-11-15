@@ -21,8 +21,8 @@ DeleteFoodsByIds<DeleteFoodsByIdsDeps<LOG>> prepareDeleteFoodsByIds<LOG>({
           preparedStatement(
             log: log,
             sql: deleteQuery,
-            use: (ps) => RIO
-                .ask<DeleteFoodsByIdsDeps<LOG>>()
+            use: (preparedStatement) => RIO
+                .make<DeleteFoodsByIdsDeps<LOG>>()
                 .map(
                   (_) => ids.map((id) => [id]),
                 )
@@ -30,9 +30,9 @@ DeleteFoodsByIds<DeleteFoodsByIdsDeps<LOG>> prepareDeleteFoodsByIds<LOG>({
                   (ids) => RIO.sequenceArray(
                     ids.map(
                       (id) => RIO
-                          .ask<DeleteFoodsByIdsDeps<LOG>>()
+                          .make<DeleteFoodsByIdsDeps<LOG>>()
                           .flatMapIO(
-                            (_) => () => ps.execute(id),
+                            (_) => () => preparedStatement.execute(id),
                           )
                           .flatMap(
                             (_) => log

@@ -23,25 +23,31 @@ RIO.ReaderIO<PreparedStatementDeps<ENV, LOG>, void>
             )
             .bracket(
               release: (ps) => RIO
-                  .ask<PreparedStatementDeps<ENV, LOG>>()
+                  .make<PreparedStatementDeps<ENV, LOG>>()
                   .flatMapIO(
                     (_) => ps.dispose,
                   )
                   .flatMap(
                     (_) => log
-                        .info('Prepared statement closed')
-                        .local((deps) => deps.logEnv),
+                        .info(
+                          'Prepared statement closed',
+                        )
+                        .local(
+                          (deps) => deps.logEnv,
+                        ),
                   ),
               use: (ps) => RIO
-                  .ask<PreparedStatementDeps<ENV, LOG>>()
+                  .make<PreparedStatementDeps<ENV, LOG>>()
                   .flatMap(
                     (_) => log
-                        .info('Prepared statement opened')
-                        .local((deps) => deps.logEnv),
+                        .info(
+                          'Prepared statement opened',
+                        )
+                        .local(
+                          (deps) => deps.logEnv,
+                        ),
                   )
                   .flatMap(
-                    (_) => use(ps).local(
-                      (PreparedStatementDeps<ENV, LOG> deps) => deps.env,
-                    ),
+                    (_) => use(ps).local((deps) => deps.env),
                   ),
             );
