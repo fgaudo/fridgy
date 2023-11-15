@@ -5,7 +5,7 @@ import 'package:functionally/reader_io.dart' as RIO;
 import 'package:functionally/reader_stream.dart' as RS;
 import 'package:rxdart/rxdart.dart';
 
-import '../../core/commands/log.dart';
+import '../commands/log.dart';
 import '../../core/controller.dart';
 import '../../domain/food.dart';
 import '../commands/delete_foods_by_ids.dart';

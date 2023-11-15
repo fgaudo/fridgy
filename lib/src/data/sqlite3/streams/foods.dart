@@ -5,7 +5,7 @@ import 'package:functionally/stream.dart';
 import 'package:sqlite3/wasm.dart';
 
 import '../../../application/streams/foods.dart';
-import '../../../core/commands/log.dart';
+import '../../../application/commands/log.dart';
 import '../bootstrap.dart';
 
 typedef FoodsDeps<LOG> = ({CommonDatabase db, LOG logEnv});

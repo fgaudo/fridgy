@@ -2,7 +2,7 @@ import 'package:functionally/extensions/reader_io.dart';
 import 'package:functionally/reader_io.dart' as RIO;
 import 'package:sqlite3/common.dart';
 
-import '../../../core/commands/log.dart';
+import '../../../application/commands/log.dart';
 
 typedef PreparedStatementDeps<ENV, LOG> = ({
   LOG logEnv,
