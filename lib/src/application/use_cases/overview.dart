@@ -5,10 +5,10 @@ import 'package:functionally/reader_io.dart' as RIO;
 import 'package:functionally/reader_stream.dart' as RS;
 import 'package:rxdart/rxdart.dart';
 
-import '../commands/log.dart';
 import '../../core/controller.dart';
 import '../../domain/food.dart';
 import '../commands/delete_foods_by_ids.dart';
+import '../commands/log.dart';
 import '../helpers/to_food_entities.dart';
 import '../streams/foods.dart';
 
@@ -84,16 +84,18 @@ RIO.ReaderIO<OverviewDeps<DELETE, LOG, FOODS>,
                 )
                 .toReaderStream()
                 .doOnListen(
-                  log(LogType.info, 'Started listening to foods')
+                  log
+                      .info('Started listening to foods')
                       .local((deps) => deps.logEnv),
                 )
                 .doOnData(
                   (foods) =>
                       RIO.ask<OverviewDeps<DELETE, LOG, FOODS>>().flatMap(
-                            (_) => log(
-                              LogType.info,
-                              'Received ${foods.length} food entries',
-                            ).local((deps) => deps.logEnv),
+                            (_) => log
+                                .info(
+                                  'Received ${foods.length} food entries',
+                                )
+                                .local((deps) => deps.logEnv),
                           ),
                 )
                 .map((foods) => foods.map(toFoodEntity))
@@ -111,12 +113,13 @@ RIO.ReaderIO<OverviewDeps<DELETE, LOG, FOODS>,
                 .doOnData(
                   (delete) =>
                       RIO.ask<OverviewDeps<DELETE, LOG, FOODS>>().flatMap(
-                            (_) => log(
-                              LogType.info,
-                              'Received delete command',
-                            ).local(
-                              (deps) => deps.logEnv,
-                            ),
+                            (_) => log
+                                .info(
+                                  'Received delete command',
+                                )
+                                .local(
+                                  (deps) => deps.logEnv,
+                                ),
                           ),
                 )
                 .flatMap(
@@ -130,12 +133,13 @@ RIO.ReaderIO<OverviewDeps<DELETE, LOG, FOODS>,
                 )
                 .doOnData(
                   (_) => RIO.ask<OverviewDeps<DELETE, LOG, FOODS>>().flatMap(
-                        (_) => log(
-                          LogType.info,
-                          'Delete command executed',
-                        ).local(
-                          (deps) => deps.logEnv,
-                        ),
+                        (_) => log
+                            .info(
+                              'Delete command executed',
+                            )
+                            .local(
+                              (deps) => deps.logEnv,
+                            ),
                       ),
                 )
                 .ignoreElements(),

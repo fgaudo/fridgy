@@ -28,13 +28,15 @@ RIO.ReaderIO<PreparedStatementDeps<ENV, LOG>, void>
                     (_) => ps.dispose,
                   )
                   .flatMap(
-                    (_) => log(LogType.info, 'Prepared statement closed')
+                    (_) => log
+                        .info('Prepared statement closed')
                         .local((deps) => deps.logEnv),
                   ),
               use: (ps) => RIO
                   .ask<PreparedStatementDeps<ENV, LOG>>()
                   .flatMap(
-                    (_) => log(LogType.info, 'Prepared statement opened')
+                    (_) => log
+                        .info('Prepared statement opened')
                         .local((deps) => deps.logEnv),
                   )
                   .flatMap(

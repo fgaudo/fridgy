@@ -16,7 +16,7 @@ final class MyApp extends StatelessWidget {
   });
 
   final IO<OverviewController> createOverviewController;
-  final void Function(LogType, String) log;
+  final void Function(LogLevel, String) log;
 
   @override
   Widget build(

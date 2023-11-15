@@ -35,10 +35,11 @@ DeleteFoodsByIds<DeleteFoodsByIdsDeps<LOG>> prepareDeleteFoodsByIds<LOG>({
                             (_) => () => ps.execute(id),
                           )
                           .flatMap(
-                            (_) => log(
-                              LogType.info,
-                              'SQL: "$deleteQuery" with $id',
-                            ).local((deps) => deps.logEnv),
+                            (_) => log
+                                .info(
+                                  'SQL: "$deleteQuery" with $id',
+                                )
+                                .local((deps) => deps.logEnv),
                           ),
                     ),
                   ),

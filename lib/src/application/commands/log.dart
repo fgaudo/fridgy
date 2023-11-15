@@ -1,5 +1,9 @@
 import 'package:functionally/reader_io.dart';
 
-enum LogType { error, info }
+enum LogLevel { error, info, debug }
 
-typedef Log<LOG> = ReaderIO<LOG, void> Function(LogType, String);
+typedef Log<LOG> = ({
+  ReaderIO<LOG, void> Function(String) debug,
+  ReaderIO<LOG, void> Function(String) info,
+  ReaderIO<LOG, void> Function(String) error
+});
