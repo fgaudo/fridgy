@@ -18,8 +18,8 @@ Future<({CommonDatabase read, CommonDatabase write})> loadDB({
     );
 
   return (
+    write: sqlite3.open(DATABASE, mode: OpenMode.readWriteCreate),
     read: sqlite3.open(DATABASE, mode: OpenMode.readOnly),
-    write: sqlite3.open(DATABASE, mode: OpenMode.readWrite)
   );
 }
 
