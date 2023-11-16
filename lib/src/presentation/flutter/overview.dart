@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:functionally/extensions/option/match.dart';
 import 'package:functionally/io.dart';
 
-import '../../application/use_cases/overview.dart';
+import '../../application/controllers/overview.dart';
 import '../../core/controller_builder.dart';
 
 final class OverviewView extends StatelessWidget {

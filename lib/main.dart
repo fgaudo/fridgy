@@ -5,10 +5,10 @@ import 'package:flutter/material.dart';
 import 'package:js/js.dart';
 import 'package:logging/logging.dart';
 
+import 'src/data/bootstrap.dart';
 import 'src/data/controllers.dart';
-import 'src/data/logger/commands/log.dart';
-import 'src/data/sqlite3/bootstrap.dart';
-import 'src/data/sqlite3/interop.dart';
+import 'src/data/interop.dart';
+import 'src/data/commands/log.dart';
 import 'src/presentation/flutter/app.dart';
 
 @JS('populateDB')

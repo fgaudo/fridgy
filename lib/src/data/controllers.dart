@@ -1,7 +1,7 @@
-import '../application/use_cases/overview.dart';
-import 'logger/commands/log.dart';
-import 'sqlite3/commands/delete_foods_by_ids.dart';
-import 'sqlite3/streams/foods.dart';
+import '../application/controllers/overview.dart';
+import 'commands/delete_foods_by_ids.dart';
+import 'commands/log.dart';
+import 'streams/foods.dart';
 
 final overviewControllerReaderIO = getControllerReaderIO(
   deleteByIds: prepareDeleteFoodsByIds,

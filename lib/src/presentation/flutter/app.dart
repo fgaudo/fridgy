@@ -5,7 +5,7 @@ import 'package:functionally/io.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../application/commands/log.dart';
-import '../../application/use_cases/overview.dart';
+import '../../application/controllers/overview.dart';
 import 'overview.dart';
 
 final class MyApp extends StatelessWidget {
