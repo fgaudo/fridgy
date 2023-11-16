@@ -6,9 +6,9 @@ import 'package:js/js.dart';
 import 'package:logging/logging.dart';
 
 import 'src/data/bootstrap.dart';
+import 'src/data/commands/log.dart';
 import 'src/data/controllers.dart';
 import 'src/data/interop.dart';
-import 'src/data/commands/log.dart';
 import 'src/presentation/flutter/app.dart';
 
 @JS('populateDB')
@@ -73,9 +73,7 @@ void main() async {
 
   runApp(
     MyApp(
-      log: (type, message) => log.info(
-        message,
-      )(presentationLogger),
+      log: (message) => log.info(message)(presentationLogger),
       createOverviewController: overviewControllerIO,
     ),
   );

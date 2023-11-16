@@ -4,7 +4,6 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:functionally/io.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../application/commands/log.dart';
 import '../../application/controllers/overview.dart';
 import 'overview.dart';
 
@@ -16,7 +15,7 @@ final class MyApp extends StatelessWidget {
   });
 
   final IO<OverviewController> createOverviewController;
-  final void Function(LogLevel, String) log;
+  final void Function(String) log;
 
   @override
   Widget build(
