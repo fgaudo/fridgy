@@ -7,7 +7,7 @@ import 'package:sqlite3/wasm.dart';
 
 import '../../application/use_cases/foods.dart';
 import '../bootstrap.dart';
-import '../use_cases/log.dart';
+import 'log.dart';
 
 typedef FoodsDeps = ({CommonDatabase db, Logger logEnv});
 
