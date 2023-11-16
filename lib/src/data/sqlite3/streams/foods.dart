@@ -10,7 +10,7 @@ import '../bootstrap.dart';
 
 typedef FoodsDeps<LOG> = ({CommonDatabase db, LOG logEnv});
 
-Foods<FoodsDeps<LOG>> prepareFoods<LOG>(Log<LOG> log) => RS
+Foods<FoodsDeps<LOG>> prepareFoods<LOG>({required Log<LOG> log}) => RS
     .asks((FoodsDeps<LOG> deps) => deps.db)
     .flatMapStream(
       (db) => db.updates.asBroadcastStream(),

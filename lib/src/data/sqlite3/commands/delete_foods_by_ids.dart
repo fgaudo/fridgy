@@ -21,7 +21,7 @@ DeleteFoodsByIds<DeleteFoodsByIdsDeps<LOG>> prepareDeleteFoodsByIds<LOG>({
           preparedStatement(
             log: log,
             sql: deleteQuery,
-            use: (preparedStatement) => RIO
+            run: (preparedStatement) => RIO
                 .make<DeleteFoodsByIdsDeps<LOG>>()
                 .map(
                   (_) => ids.map((id) => [id]),
@@ -44,17 +44,24 @@ DeleteFoodsByIds<DeleteFoodsByIdsDeps<LOG>> prepareDeleteFoodsByIds<LOG>({
                     ),
                   ),
                 ),
-          ).local(
-            (DeleteFoodsByIdsDeps<LOG> deps) => (
-              env: deps,
-              logEnv: deps.logEnv,
-              db: deps.db,
-            ),
-          ),
-        ).local(
-          (DeleteFoodsByIdsDeps<LOG> deps) => (
-            env: deps,
-            logEnv: deps.logEnv,
-            db: deps.db,
-          ),
+          ).local(_toPreparedStatementDeps),
+        ).local(_toTransactionDeps);
+
+TransactionDeps<DeleteFoodsByIdsDeps<LOG>, LOG> _toTransactionDeps<LOG>(
+  DeleteFoodsByIdsDeps<LOG> deps,
+) =>
+    (
+      env: deps,
+      logEnv: deps.logEnv,
+      db: deps.db,
+    );
+
+PreparedStatementDeps<DeleteFoodsByIdsDeps<LOG>, LOG>
+    _toPreparedStatementDeps<LOG>(
+  DeleteFoodsByIdsDeps<LOG> deps,
+) =>
+        (
+          env: deps,
+          logEnv: deps.logEnv,
+          db: deps.db,
         );

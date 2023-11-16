@@ -14,7 +14,7 @@ RIO.ReaderIO<PreparedStatementDeps<ENV, LOG>, void>
     preparedStatement<ENV, LOG>({
   required String sql,
   required Log<LOG> log,
-  required RIO.ReaderIO<ENV, void> Function(CommonPreparedStatement ps) use,
+  required RIO.ReaderIO<ENV, void> Function(CommonPreparedStatement ps) run,
 }) =>
         RIO
             .asks((PreparedStatementDeps<ENV, LOG> deps) => deps.db)
@@ -48,6 +48,6 @@ RIO.ReaderIO<PreparedStatementDeps<ENV, LOG>, void>
                         ),
                   )
                   .flatMap(
-                    (_) => use(ps).local((deps) => deps.env),
+                    (_) => run(ps).local((deps) => deps.env),
                   ),
             );
