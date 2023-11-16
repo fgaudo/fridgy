@@ -2,16 +2,17 @@ import 'package:functionally/extensions/reader_io.dart';
 import 'package:functionally/extensions/reader_stream.dart';
 import 'package:functionally/reader_stream.dart' as RS;
 import 'package:functionally/stream.dart';
+import 'package:logging/logging.dart';
 import 'package:sqlite3/wasm.dart';
 
-import '../../../application/commands/log.dart';
 import '../../../application/streams/foods.dart';
+import '../../logger/commands/log.dart';
 import '../bootstrap.dart';
 
-typedef FoodsDeps<LOG> = ({CommonDatabase db, LOG logEnv});
+typedef FoodsDeps = ({CommonDatabase db, Logger logEnv});
 
-Foods<FoodsDeps<LOG>> prepareFoods<LOG>({required Log<LOG> log}) => RS
-    .asks((FoodsDeps<LOG> deps) => deps.db)
+final Foods<FoodsDeps> prepareFoods = RS
+    .asks((FoodsDeps deps) => deps.db)
     .flatMapStream(
       (db) => db.updates.asBroadcastStream(),
     )
@@ -33,7 +34,7 @@ Foods<FoodsDeps<LOG>> prepareFoods<LOG>({required Log<LOG> log}) => RS
           .local((deps) => deps.logEnv),
     )
     .switchMap(
-      (_) => RS.ask<FoodsDeps<LOG>>().flatMapStream(
+      (_) => RS.ask<FoodsDeps>().flatMapStream(
             (deps) => fromIO(
               () => deps.db.select('SELECT * FROM $FOODS_TABLE;'),
             ),
@@ -44,7 +45,7 @@ Foods<FoodsDeps<LOG>> prepareFoods<LOG>({required Log<LOG> log}) => RS
           .info(
             'Retrieved ${event.length} records',
           )
-          .local((FoodsDeps<LOG> deps) => deps.logEnv),
+          .local((FoodsDeps deps) => deps.logEnv),
     )
     .map(
       (resultSet) => resultSet.map(

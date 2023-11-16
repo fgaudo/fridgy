@@ -1,28 +1,25 @@
 import 'package:functionally/extensions/reader_io.dart';
 import 'package:functionally/reader_io.dart' as RIO;
+import 'package:logging/logging.dart';
 import 'package:sqlite3/wasm.dart';
 
 import '../../../application/commands/delete_foods_by_ids.dart';
-import '../../../application/commands/log.dart';
+import '../../logger/commands/log.dart';
 import '../bootstrap.dart';
 import '../helpers/prepared_statement.dart';
 import '../helpers/transaction.dart';
 
-typedef DeleteFoodsByIdsDeps<LOG> = ({CommonDatabase db, LOG logEnv});
+typedef DeleteFoodsByIdsDeps = ({CommonDatabase db, Logger logEnv});
 
 const String deleteQuery =
     'DELETE FROM $FOODS_TABLE WHERE $FOODS_TABLE_NAME = ?;';
 
-DeleteFoodsByIds<DeleteFoodsByIdsDeps<LOG>> prepareDeleteFoodsByIds<LOG>({
-  required Log<LOG> log,
-}) =>
+DeleteFoodsByIds<DeleteFoodsByIdsDeps> prepareDeleteFoodsByIds =
     (ids) => transaction(
-          log: log,
           preparedStatement(
-            log: log,
             sql: deleteQuery,
             run: (preparedStatement) => RIO
-                .make<DeleteFoodsByIdsDeps<LOG>>()
+                .make<DeleteFoodsByIdsDeps>()
                 .map(
                   (_) => ids.map((id) => [id]),
                 )
@@ -30,7 +27,7 @@ DeleteFoodsByIds<DeleteFoodsByIdsDeps<LOG>> prepareDeleteFoodsByIds<LOG>({
                   (ids) => RIO.sequenceArray(
                     ids.map(
                       (id) => RIO
-                          .make<DeleteFoodsByIdsDeps<LOG>>()
+                          .make<DeleteFoodsByIdsDeps>()
                           .flatMapIO(
                             (_) => () => preparedStatement.execute(id),
                           )
@@ -47,8 +44,8 @@ DeleteFoodsByIds<DeleteFoodsByIdsDeps<LOG>> prepareDeleteFoodsByIds<LOG>({
           ).local(_toPreparedStatementDeps),
         ).local(_toTransactionDeps);
 
-TransactionDeps<DeleteFoodsByIdsDeps<LOG>, LOG> _toTransactionDeps<LOG>(
-  DeleteFoodsByIdsDeps<LOG> deps,
+TransactionDeps<DeleteFoodsByIdsDeps> _toTransactionDeps(
+  DeleteFoodsByIdsDeps deps,
 ) =>
     (
       env: deps,
@@ -56,12 +53,11 @@ TransactionDeps<DeleteFoodsByIdsDeps<LOG>, LOG> _toTransactionDeps<LOG>(
       db: deps.db,
     );
 
-PreparedStatementDeps<DeleteFoodsByIdsDeps<LOG>, LOG>
-    _toPreparedStatementDeps<LOG>(
-  DeleteFoodsByIdsDeps<LOG> deps,
+PreparedStatementDeps<DeleteFoodsByIdsDeps> _toPreparedStatementDeps(
+  DeleteFoodsByIdsDeps deps,
 ) =>
-        (
-          env: deps,
-          logEnv: deps.logEnv,
-          db: deps.db,
-        );
+    (
+      env: deps,
+      logEnv: deps.logEnv,
+      db: deps.db,
+    );

@@ -1,20 +1,20 @@
 import 'package:functionally/extensions/reader_io.dart';
 import 'package:functionally/reader_io.dart' as RI;
+import 'package:logging/logging.dart';
 import 'package:sqlite3/common.dart';
 
-import '../../../application/commands/log.dart';
+import '../../logger/commands/log.dart';
 
-typedef TransactionDeps<ENV, LOG> = ({CommonDatabase db, LOG logEnv, ENV env});
+typedef TransactionDeps<ENV> = ({CommonDatabase db, Logger logEnv, ENV env});
 
 const String beginSQL = 'BEGIN;';
 const String commitSQL = 'COMMIT;';
 
-RI.ReaderIO<TransactionDeps<ENV, LOG>, void> transaction<ENV, LOG>(
-  RI.ReaderIO<ENV, void> run, {
-  required Log<LOG> log,
-}) =>
+RI.ReaderIO<TransactionDeps<ENV>, void> transaction<ENV>(
+  RI.ReaderIO<ENV, void> run,
+) =>
     RI
-        .asks((TransactionDeps<ENV, LOG> deps) => deps.db)
+        .asks((TransactionDeps<ENV> deps) => deps.db)
         .flatMapIO((db) => () => db.execute(beginSQL))
         .flatMap(
           (_) => log.info('SQL: $beginSQL').local((deps) => deps.logEnv),
