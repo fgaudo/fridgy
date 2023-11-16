@@ -8,9 +8,8 @@ import 'package:rxdart/rxdart.dart';
 import '../../core/controller.dart';
 import '../../domain/food.dart';
 import '../use_cases/delete_foods_by_ids.dart';
-import '../use_cases/log.dart';
-import '../helpers/to_food_entity.dart';
 import '../use_cases/foods.dart';
+import '../use_cases/log.dart';
 
 sealed class OverviewModel {}
 
