@@ -1,82 +1,39 @@
-@JS()
-library callable_function;
-
 import 'package:flutter/material.dart';
-import 'package:js/js.dart';
 import 'package:logging/logging.dart';
 
 import 'src/application/app.dart';
 import 'src/data/app.dart';
 import 'src/data/bootstrap.dart';
-import 'src/data/interop.dart';
-import 'src/data/use_cases/log.dart';
 import 'src/presentation/flutter/app.dart';
 
-@JS('populateDB')
-external set _populateDB(void Function() f);
-
-@JS('clearDB')
-external set _clearDB(void Function() f);
-
-@JS('execute')
-external set _execute(void Function(String, List<dynamic>?) f);
-
-@JS('select')
-external set _select(
-  List<dynamic> Function(String, List<dynamic>?) f,
-);
-
 void main() async {
-  final appLogger = Logger('APP');
-  final dataLogger = Logger('DATA');
-  final presentationLogger = Logger('UI');
-
-  Logger.root.level = Level.ALL;
-  Logger.root.onRecord.listen((record) {
-    print(
-      '${record.level.name} [${record.loggerName}] : ${record.message}',
-    );
-  });
-
   final (
-    read: readDB,
-    write: readWriteDB,
-  ) = await loadDB(
+    appLogger: appLogger,
+    uiLogger: uiLogger,
+    dataLogger: dataLogger,
+    readDB: _,
+    readWriteDB: readWriteDB,
+  ) = await bootstrap(
+    logLevel: Level.ALL,
     pathToWasm: 'sqlite3.wasm',
     dbName: 'fridgy',
   );
 
-  createTables(readWriteDB);
-
-  _populateDB = allowInterop(
-    populateDB(readWriteDB),
-  );
-
-  _clearDB = allowInterop(
-    clearDB(readWriteDB),
-  );
-
-  _execute = allowInterop(
-    execute(readWriteDB),
-  );
-
-  _select = allowInterop(
-    select(readDB),
-  );
-
   // ignore: omit_local_variable_types
-  final App appWithDeps = app(
+  final AppWithDeps appWithDeps = app(
     (
-      logEnv: appLogger,
-      deleteEnv: (db: readWriteDB, logEnv: dataLogger),
-      foodsEnv: (db: readWriteDB, logEnv: dataLogger),
+      overviewEnv: (
+        deleteEnv: (db: readWriteDB, logEnv: dataLogger),
+        foodsEnv: (db: readWriteDB, logEnv: dataLogger),
+        logEnv: appLogger
+      ),
+      logEnv: uiLogger,
     ),
   );
 
   runApp(
     MyApp(
-      log: (message) => log.info(message)(presentationLogger),
-      createOverviewController: appWithDeps.controller,
+      appWithDeps: appWithDeps,
     ),
   );
 }

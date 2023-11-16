@@ -14,3 +14,4 @@ Food toFoodEntity(
     const Food('');
 
 typedef Foods<FOODS> = ReaderStream<FOODS, Iterable<FoodData>>;
+typedef FoodsWithDeps = Iterable<FoodData>;

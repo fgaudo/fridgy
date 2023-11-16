@@ -1,21 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:functionally/io.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../application/controllers/overview.dart';
+import '../../application/app.dart';
 import 'overview.dart';
 
 final class MyApp extends StatelessWidget {
   const MyApp({
-    required this.log,
-    required this.createOverviewController,
+    required AppWithDeps appWithDeps,
     super.key,
-  });
+  }) : _appWithDeps = appWithDeps;
 
-  final IO<OverviewController> createOverviewController;
-  final void Function(String) log;
+  final AppWithDeps _appWithDeps;
 
   @override
   Widget build(
@@ -43,7 +40,7 @@ final class MyApp extends StatelessWidget {
             GoRoute(
               path: OverviewView.routeName,
               builder: (context, state) => OverviewView(
-                createController: createOverviewController,
+                createController: _appWithDeps.overview,
               ),
             ),
           ],

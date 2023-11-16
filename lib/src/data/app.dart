@@ -4,7 +4,10 @@ import 'use_cases/foods.dart';
 import 'use_cases/log.dart';
 
 final app = prepareApp(
-  deleteByIds: prepareDeleteFoodsByIds,
-  foods: prepareFoods,
+  overview: (
+    deleteByIds: prepareDeleteFoodsByIds,
+    foods: prepareFoods,
+    log: log,
+  ),
   log: log,
 );

@@ -1,6 +1,8 @@
 import 'package:functionally/extensions/reader.dart';
 import 'package:functionally/extensions/reader_io.dart';
 import 'package:functionally/extensions/reader_stream.dart';
+import 'package:functionally/io.dart';
+import 'package:functionally/reader.dart';
 import 'package:functionally/reader_io.dart' as RIO;
 import 'package:functionally/reader_stream.dart' as RS;
 import 'package:rxdart/rxdart.dart';
@@ -57,9 +59,9 @@ final class Delete implements Command {
   final Set<String> ids;
 }
 
-typedef OverviewController = Controller<Command, OverviewModel>;
-typedef Overview<DELETE, LOG, FOODS>
-    = RIO.ReaderIO<OverviewDeps<DELETE, LOG, FOODS>, OverviewController>;
+typedef OverviewControllerIOWithDeps = IO<Controller<Command, OverviewModel>>;
+typedef OverviewControllerIO<DELETE, LOG, FOODS>
+    = Reader<OverviewDeps<DELETE, LOG, FOODS>, OverviewControllerIOWithDeps>;
 
 typedef OverviewDeps<DELETE, LOG, FOODS> = ({
   LOG logEnv,
@@ -67,7 +69,8 @@ typedef OverviewDeps<DELETE, LOG, FOODS> = ({
   FOODS foodsEnv
 });
 
-Overview<DELETE, LOG, FOODS> getControllerReaderIO<DELETE, LOG, FOODS>({
+OverviewControllerIO<DELETE, LOG, FOODS> overviewControllerIO<DELETE, LOG,
+        FOODS>({
   required DeleteFoodsByIds<DELETE> deleteByIds,
   required Log<LOG> log,
   required Foods<FOODS> foods,
@@ -148,13 +151,14 @@ Overview<DELETE, LOG, FOODS> getControllerReaderIO<DELETE, LOG, FOODS>({
         .flatMap(
           (streams) => RIO.ReaderIO(
             (env) => () => Controller.withPublishSubject(
-                  (command$) => MergeStream([
+                  (Stream<Command> command$) => MergeStream([
                     streams.$1(env),
                     streams.$2(command$)(env),
                   ]),
                 ),
           ),
-        );
+        )
+        .toReader();
 
 Iterable<FoodModel> _listToView(Iterable<Food> foods) =>
     foods.map((food) => FoodModel(name: food.name));
