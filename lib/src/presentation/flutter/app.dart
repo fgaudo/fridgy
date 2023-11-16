@@ -6,8 +6,8 @@ import 'package:go_router/go_router.dart';
 import '../../application/app.dart';
 import 'overview.dart';
 
-final class MyApp extends StatelessWidget {
-  const MyApp({
+final class AppWidget extends StatelessWidget {
+  const AppWidget({
     required AppWithDeps appWithDeps,
     super.key,
   }) : _appWithDeps = appWithDeps;
