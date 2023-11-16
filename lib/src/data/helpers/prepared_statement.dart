@@ -3,7 +3,7 @@ import 'package:functionally/reader_io.dart' as RIO;
 import 'package:logging/logging.dart';
 import 'package:sqlite3/common.dart';
 
-import '../commands/log.dart';
+import '../use_cases/log.dart';
 
 typedef PreparedStatementDeps<ENV> = ({
   Logger logEnv,

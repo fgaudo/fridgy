@@ -58,6 +58,8 @@ final class Delete implements Command {
 }
 
 typedef OverviewController = Controller<Command, OverviewModel>;
+typedef Overview<DELETE, LOG, FOODS>
+    = RIO.ReaderIO<OverviewDeps<DELETE, LOG, FOODS>, OverviewController>;
 
 typedef OverviewDeps<DELETE, LOG, FOODS> = ({
   LOG logEnv,
@@ -65,8 +67,7 @@ typedef OverviewDeps<DELETE, LOG, FOODS> = ({
   FOODS foodsEnv
 });
 
-RIO.ReaderIO<OverviewDeps<DELETE, LOG, FOODS>,
-    OverviewController> getControllerReaderIO<DELETE, LOG, FOODS>({
+Overview<DELETE, LOG, FOODS> getControllerReaderIO<DELETE, LOG, FOODS>({
   required DeleteFoodsByIds<DELETE> deleteByIds,
   required Log<LOG> log,
   required Foods<FOODS> foods,

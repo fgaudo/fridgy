@@ -5,10 +5,11 @@ import 'package:flutter/material.dart';
 import 'package:js/js.dart';
 import 'package:logging/logging.dart';
 
+import 'src/application/app.dart';
+import 'src/data/app.dart';
 import 'src/data/bootstrap.dart';
-import 'src/data/commands/log.dart';
-import 'src/data/controllers.dart';
 import 'src/data/interop.dart';
+import 'src/data/use_cases/log.dart';
 import 'src/presentation/flutter/app.dart';
 
 @JS('populateDB')
@@ -63,7 +64,8 @@ void main() async {
     select(readDB),
   );
 
-  final overviewControllerIO = overviewControllerReaderIO(
+  // ignore: omit_local_variable_types
+  final App appWithDeps = app(
     (
       logEnv: appLogger,
       deleteEnv: (db: readWriteDB, logEnv: dataLogger),
@@ -74,7 +76,7 @@ void main() async {
   runApp(
     MyApp(
       log: (message) => log.info(message)(presentationLogger),
-      createOverviewController: overviewControllerIO,
+      createOverviewController: appWithDeps.controller,
     ),
   );
 }
