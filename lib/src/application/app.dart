@@ -1,5 +1,8 @@
 import 'package:functionally/reader.dart';
 
+import 'commands/delete_foods_by_ids.dart';
+import 'commands/foods.dart';
+import 'commands/log.dart';
 import 'use_cases/log.dart';
 import 'use_cases/overview.dart';
 
@@ -17,14 +20,17 @@ typedef AppDeps<DELETE_BY_IDS, FOODS, APP_LOG, UI_LOG> = ({
 
 Reader<AppDeps<DELETE_BY_IDS, FOODS, APP_LOG, UI_LOG>, AppWithDeps>
     prepareApp<DELETE_BY_IDS, FOODS, APP_LOG, UI_LOG>({
-  required OverviewControllerCommands<DELETE_BY_IDS, APP_LOG, FOODS>
-      overviewCommands,
-  required LogCommands<UI_LOG> logCommands,
+  required DeleteFoodsByIds<DELETE_BY_IDS> deleteFoodsByIds,
+  required Foods<FOODS> foods,
+  required LogCommand<APP_LOG> appLog,
+  required LogCommand<UI_LOG> uiLog,
 }) =>
         (env) {
-          final logF = prepareLog((log: logCommands.log));
+          final logF = prepareLog((log: uiLog));
           return (
-            overview: overviewControllerIO(overviewCommands)(
+            overview: overviewControllerIO(
+              (deleteByIds: deleteFoodsByIds, foods: foods, log: appLog),
+            )(
               (
                 deleteEnv: env.deleteByIdsEnv,
                 logEnv: env.appLogEnv,
