@@ -27,12 +27,10 @@ typedef AddFoodModelInput = ({
 typedef AddFood<ENV> = ReaderIO<ENV, AddFoodModel> Function(AddFoodModelInput);
 typedef AddFoodWithDeps = IO<AddFoodModel> Function(AddFoodModelInput);
 
-typedef AddFoodCommands<ENV> = ({
-  AddFoodCommand<ENV> addFood,
-});
-
-AddFood<ENV> prepareAddFood<ENV>(AddFoodCommands<ENV> commands) =>
-    (input) => commands.addFood(
+AddFood<ENV> prepareAddFood<ENV>({
+  required AddFoodCommand<ENV> addFood,
+}) =>
+    (input) => addFood(
           (
             name: input.name ?? 'undefined',
             expDate: input.expDate,

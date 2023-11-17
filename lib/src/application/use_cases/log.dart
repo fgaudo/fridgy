@@ -17,6 +17,4 @@ typedef Log<LOG> = ({
 
 typedef LogDeps<LOG> = ({LOG logEnv});
 
-typedef LogCommands<LOG> = ({LogCommand<LOG> log});
-
-Log<LOG> prepareLog<LOG>(LogCommands<LOG> commands) => commands.log;
+Log<LOG> prepareLog<LOG>({required LogCommand<LOG> log}) => log;

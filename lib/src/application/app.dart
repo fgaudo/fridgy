@@ -26,10 +26,17 @@ Reader<AppDeps<DELETE_BY_IDS, FOODS, APP_LOG, UI_LOG>, AppWithDeps>
   required LogCommand<UI_LOG> uiLog,
 }) =>
         (env) {
-          final logF = prepareLog((log: uiLog));
+          final (
+            debug: debug,
+            info: info,
+            error: error,
+          ) = prepareLog(log: uiLog);
+
           return (
             overview: overviewControllerIO(
-              (deleteByIds: deleteFoodsByIds, foods: foods, log: appLog),
+              deleteByIds: deleteFoodsByIds,
+              foods: foods,
+              log: appLog,
             )(
               (
                 deleteEnv: env.deleteByIdsEnv,
@@ -38,9 +45,9 @@ Reader<AppDeps<DELETE_BY_IDS, FOODS, APP_LOG, UI_LOG>, AppWithDeps>
               ),
             ),
             log: (
-              debug: (message) => logF.debug(message)(env.uiLogEnv),
-              error: (message) => logF.error(message)(env.uiLogEnv),
-              info: (message) => logF.info(message)(env.uiLogEnv)
+              debug: (message) => debug(message)(env.uiLogEnv),
+              error: (message) => error(message)(env.uiLogEnv),
+              info: (message) => info(message)(env.uiLogEnv)
             )
           );
         };
