@@ -1,12 +1,11 @@
-import 'package:functionally/io.dart';
 import 'package:functionally/reader_io.dart';
 
 import '../commands/log.dart';
 
 typedef LogWithDeps = ({
-  IO<void> Function(String) debug,
-  IO<void> Function(String) info,
-  IO<void> Function(String) error
+  void Function(String) debug,
+  void Function(String) info,
+  void Function(String) error
 });
 
 typedef Log<LOG> = ({

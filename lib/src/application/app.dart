@@ -45,9 +45,9 @@ Reader<AppDeps<DELETE_BY_IDS, FOODS, APP_LOG, UI_LOG>, AppWithDeps>
               ),
             ),
             log: (
-              debug: (message) => debug(message)(env.uiLogEnv),
-              error: (message) => error(message)(env.uiLogEnv),
-              info: (message) => info(message)(env.uiLogEnv)
+              debug: (message) => debug(message)(env.uiLogEnv)(),
+              error: (message) => error(message)(env.uiLogEnv)(),
+              info: (message) => info(message)(env.uiLogEnv)()
             )
           );
         };
