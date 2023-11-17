@@ -8,36 +8,33 @@ typedef AppWithDeps = ({
   LogWithDeps log,
 });
 
-typedef AppDeps<OVERVIEW_FOODS, OVERVIEW_DELETE, OVERVIEW_LOG, LOG> = ({
-  OverviewDeps<OVERVIEW_DELETE, OVERVIEW_LOG, OVERVIEW_FOODS> overviewEnv,
-  LOG logEnv
+typedef AppDeps<DELETE_BY_IDS, FOODS, APP_LOG, UI_LOG> = ({
+  DELETE_BY_IDS deleteByIdsEnv,
+  FOODS foodsEnv,
+  APP_LOG appLogEnv,
+  UI_LOG uiLogEnv,
 });
 
-typedef App<OVERVIEW_FOODS, OVERVIEW_DELETE, OVERVIEW_LOG, LOG> = Reader<
-    AppDeps<OVERVIEW_FOODS, OVERVIEW_DELETE, OVERVIEW_LOG, LOG>, AppWithDeps>;
-
-App<OVERVIEW_FOODS, OVERVIEW_DELETE, OVERVIEW_LOG, LOG>
-    prepareApp<OVERVIEW_FOODS, OVERVIEW_DELETE, OVERVIEW_LOG, LOG>({
-  required OverviewControllerCommands<OVERVIEW_DELETE, OVERVIEW_LOG,
-          OVERVIEW_FOODS>
+Reader<AppDeps<DELETE_BY_IDS, FOODS, APP_LOG, UI_LOG>, AppWithDeps>
+    prepareApp<DELETE_BY_IDS, FOODS, APP_LOG, UI_LOG>({
+  required OverviewControllerCommands<DELETE_BY_IDS, APP_LOG, FOODS>
       overviewCommands,
-  required LogCommands<LOG> logCommands,
+  required LogCommands<UI_LOG> logCommands,
 }) =>
         (env) {
-          final log = prepareLog((log: logCommands.log));
-
+          final logF = prepareLog((log: logCommands.log));
           return (
-            overview: overviewControllerIO(
+            overview: overviewControllerIO(overviewCommands)(
               (
-                foods: overviewCommands.foods,
-                deleteByIds: overviewCommands.deleteByIds,
-                log: overviewCommands.log,
+                deleteEnv: env.deleteByIdsEnv,
+                logEnv: env.appLogEnv,
+                foodsEnv: env.foodsEnv
               ),
-            )(env.overviewEnv),
+            ),
             log: (
-              debug: (s) => log.debug(s)(env.logEnv),
-              info: (s) => log.info(s)(env.logEnv),
-              error: (s) => log.error(s)(env.logEnv),
+              debug: (message) => logF.debug(message)(env.uiLogEnv),
+              error: (message) => logF.error(message)(env.uiLogEnv),
+              info: (message) => logF.info(message)(env.uiLogEnv)
             )
           );
         };

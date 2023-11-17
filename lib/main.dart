@@ -27,12 +27,10 @@ void main() async {
   // ignore: omit_local_variable_types
   final AppWithDeps appWithDeps = app(
     (
-      overviewEnv: (
-        deleteEnv: (db: readWriteDB, logEnv: dataLogger),
-        foodsEnv: (db: readWriteDB, logEnv: dataLogger),
-        logEnv: appLogger
-      ),
-      logEnv: uiLogger,
+      deleteByIdsEnv: (db: readWriteDB, logEnv: dataLogger),
+      foodsEnv: (db: readWriteDB, logEnv: dataLogger),
+      appLogEnv: appLogger,
+      uiLogEnv: uiLogger,
     ),
   );
 

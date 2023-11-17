@@ -15,6 +15,8 @@ typedef Log<LOG> = ({
   ReaderIO<LOG, void> Function(String) error
 });
 
+typedef LogDeps<LOG> = ({LOG logEnv});
+
 typedef LogCommands<LOG> = ({LogCommand<LOG> log});
 
 Log<LOG> prepareLog<LOG>(LogCommands<LOG> commands) => commands.log;
