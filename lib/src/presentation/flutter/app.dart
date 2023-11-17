@@ -4,6 +4,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../application/app.dart';
+import 'add_food.dart';
 import 'overview.dart';
 
 final class AppWidget extends StatelessWidget {
@@ -42,6 +43,10 @@ final class AppWidget extends StatelessWidget {
               builder: (context, state) => OverviewView(
                 createController: _appWithDeps.overview,
               ),
+            ),
+            GoRoute(
+              path: AddFoodView.routeName,
+              builder: (context, state) => const AddFoodView(),
             ),
           ],
         ),

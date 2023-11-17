@@ -9,9 +9,9 @@ import 'package:rxdart/rxdart.dart';
 
 import '../../core/controller.dart';
 import '../../domain/food.dart';
-import '../use_cases/delete_foods_by_ids.dart';
-import '../use_cases/foods.dart';
-import '../use_cases/log.dart';
+import '../commands/delete_foods_by_ids.dart';
+import '../commands/foods.dart';
+import '../commands/log.dart';
 
 sealed class OverviewModel {}
 
@@ -69,17 +69,21 @@ typedef OverviewDeps<DELETE, LOG, FOODS> = ({
   FOODS foodsEnv
 });
 
+typedef OverviewControllerCommands<DELETE, LOG, FOODS> = ({
+  DeleteFoodsByIds<DELETE> deleteByIds,
+  LogCommand<LOG> log,
+  Foods<FOODS> foods,
+});
+
 OverviewControllerIO<DELETE, LOG, FOODS> overviewControllerIO<DELETE, LOG,
-        FOODS>({
-  required DeleteFoodsByIds<DELETE> deleteByIds,
-  required Log<LOG> log,
-  required Foods<FOODS> foods,
-}) =>
+        FOODS>(
+  OverviewControllerCommands<DELETE, LOG, FOODS> commands,
+) =>
     RIO
         .ask<OverviewDeps<DELETE, LOG, FOODS>>()
         .map(
           (_) => (
-            foods
+            commands.foods
                 .local((OverviewDeps<DELETE, LOG, FOODS> deps) => deps.foodsEnv)
                 .toReader()
                 .map(
@@ -87,14 +91,14 @@ OverviewControllerIO<DELETE, LOG, FOODS> overviewControllerIO<DELETE, LOG,
                 )
                 .toReaderStream()
                 .doOnListen(
-                  log
+                  commands.log
                       .info('Started listening to foods')
                       .local((deps) => deps.logEnv),
                 )
                 .doOnData(
                   (foods) =>
                       RIO.ask<OverviewDeps<DELETE, LOG, FOODS>>().flatMap(
-                            (_) => log
+                            (_) => commands.log
                                 .info(
                                   'Received ${foods.length} food entries',
                                 )
@@ -116,7 +120,7 @@ OverviewControllerIO<DELETE, LOG, FOODS> overviewControllerIO<DELETE, LOG,
                 .doOnData(
                   (delete) =>
                       RIO.ask<OverviewDeps<DELETE, LOG, FOODS>>().flatMap(
-                            (_) => log
+                            (_) => commands.log
                                 .info(
                                   'Received delete command',
                                 )
@@ -128,15 +132,16 @@ OverviewControllerIO<DELETE, LOG, FOODS> overviewControllerIO<DELETE, LOG,
                 .flatMap(
                   (delete) => RS.fromReaderIO(
                     RIO.ask<OverviewDeps<DELETE, LOG, FOODS>>().flatMap(
-                          (deleteFoodsByIds) => deleteByIds(delete.ids).local(
-                            (deps) => deps.deleteEnv,
-                          ),
+                          (deleteFoodsByIds) =>
+                              commands.deleteByIds(delete.ids).local(
+                                    (deps) => deps.deleteEnv,
+                                  ),
                         ),
                   ),
                 )
                 .doOnData(
                   (_) => RIO.ask<OverviewDeps<DELETE, LOG, FOODS>>().flatMap(
-                        (_) => log
+                        (_) => commands.log
                             .info(
                               'Delete command executed',
                             )

@@ -1,0 +1,40 @@
+import 'package:functionally/extensions/reader_io.dart';
+import 'package:functionally/io.dart';
+import 'package:functionally/option.dart';
+import 'package:functionally/reader_io.dart';
+
+import '../commands/add_food.dart';
+
+sealed class AddFoodModel {}
+
+final class Empty implements AddFoodModel {}
+
+final class ValidationError implements AddFoodModel {
+  const ValidationError({
+    required this.nameError,
+    required this.expDateError,
+  });
+
+  final Option<String> nameError;
+  final Option<String> expDateError;
+}
+
+typedef AddFoodModelInput = ({
+  String? name,
+  String? expDate,
+});
+
+typedef AddFood<ENV> = ReaderIO<ENV, AddFoodModel> Function(AddFoodModelInput);
+typedef AddFoodWithDeps = IO<AddFoodModel> Function(AddFoodModelInput);
+
+typedef AddFoodCommands<ENV> = ({
+  AddFoodCommand<ENV> addFood,
+});
+
+AddFood<ENV> prepareAddFood<ENV>(AddFoodCommands<ENV> commands) =>
+    (input) => commands.addFood(
+          (
+            name: input.name ?? 'undefined',
+            expDate: input.expDate,
+          ),
+        ).map((_) => Empty());

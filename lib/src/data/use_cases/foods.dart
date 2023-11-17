@@ -5,7 +5,7 @@ import 'package:functionally/stream.dart';
 import 'package:logging/logging.dart';
 import 'package:sqlite3/wasm.dart';
 
-import '../../application/use_cases/foods.dart';
+import '../../application/commands/foods.dart';
 import '../bootstrap.dart';
 import 'log.dart';
 

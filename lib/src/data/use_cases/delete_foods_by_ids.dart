@@ -3,7 +3,7 @@ import 'package:functionally/reader_io.dart' as RIO;
 import 'package:logging/logging.dart';
 import 'package:sqlite3/wasm.dart';
 
-import '../../application/use_cases/delete_foods_by_ids.dart';
+import '../../application/commands/delete_foods_by_ids.dart';
 import '../bootstrap.dart';
 import '../helpers/prepared_statement.dart';
 import '../helpers/transaction.dart';

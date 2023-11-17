@@ -1,9 +1,7 @@
 import 'package:functionally/reader.dart';
 
-import 'controllers/overview.dart';
-import 'use_cases/delete_foods_by_ids.dart';
-import 'use_cases/foods.dart';
 import 'use_cases/log.dart';
+import 'use_cases/overview.dart';
 
 typedef AppWithDeps = ({
   OverviewControllerIOWithDeps overview,
@@ -20,22 +18,26 @@ typedef App<OVERVIEW_FOODS, OVERVIEW_DELETE, OVERVIEW_LOG, LOG> = Reader<
 
 App<OVERVIEW_FOODS, OVERVIEW_DELETE, OVERVIEW_LOG, LOG>
     prepareApp<OVERVIEW_FOODS, OVERVIEW_DELETE, OVERVIEW_LOG, LOG>({
-  required ({
-    DeleteFoodsByIds<OVERVIEW_DELETE> deleteByIds,
-    Log<OVERVIEW_LOG> log,
-    Foods<OVERVIEW_FOODS> foods,
-  }) overview,
-  required Log<LOG> log,
+  required OverviewControllerCommands<OVERVIEW_DELETE, OVERVIEW_LOG,
+          OVERVIEW_FOODS>
+      overviewCommands,
+  required LogCommands<LOG> logCommands,
 }) =>
-        (env) => (
-              overview: overviewControllerIO(
-                foods: overview.foods,
-                deleteByIds: overview.deleteByIds,
-                log: overview.log,
-              )(env.overviewEnv),
-              log: (
-                info: (s) => log.info(s)(env.logEnv),
-                error: (s) => log.error(s)(env.logEnv),
-                debug: (s) => log.debug(s)(env.logEnv),
-              )
-            );
+        (env) {
+          final log = prepareLog((log: logCommands.log));
+
+          return (
+            overview: overviewControllerIO(
+              (
+                foods: overviewCommands.foods,
+                deleteByIds: overviewCommands.deleteByIds,
+                log: overviewCommands.log,
+              ),
+            )(env.overviewEnv),
+            log: (
+              debug: (s) => log.debug(s)(env.logEnv),
+              info: (s) => log.info(s)(env.logEnv),
+              error: (s) => log.error(s)(env.logEnv),
+            )
+          );
+        };

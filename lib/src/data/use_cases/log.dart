@@ -1,9 +1,9 @@
 import 'package:functionally/reader_io.dart';
 import 'package:logging/logging.dart';
 
-import '../../application/use_cases/log.dart';
+import '../../application/commands/log.dart';
 
-final Log<Logger> log = (
+final LogCommand<Logger> log = (
   info: (message) => ReaderIO(
         (logger) => () => logger.info(message),
       ),
