@@ -4,7 +4,7 @@ import 'package:logging/logging.dart';
 import 'package:sqlite3/wasm.dart';
 
 import '../../application/commands/delete_foods_by_ids.dart';
-import '../bootstrap.dart';
+import '../app.dart';
 import '../helpers/prepared_statement.dart';
 import '../helpers/transaction.dart';
 import 'log.dart';
