@@ -23,7 +23,7 @@ App prepareApp<DELETE_BY_IDS, FOODS, APP_LOG, UI_LOG>({
     info: info,
     error: error,
   ) = prepareLog(
-    log: (
+    (
       info: (s) => uiLog.execute.info(s)(uiLog.env),
       error: (s) => uiLog.execute.error(s)(uiLog.env),
       debug: (s) => uiLog.execute.debug(s)(uiLog.env),
@@ -32,12 +32,14 @@ App prepareApp<DELETE_BY_IDS, FOODS, APP_LOG, UI_LOG>({
 
   return (
     overview: overviewControllerIO(
-      deleteByIds: (s) => deleteFoodsByIds.execute(s)(deleteFoodsByIds.env),
-      foods: foods.execute(foods.env),
-      log: (
-        info: (s) => appLog.execute.info(s)(appLog.env),
-        error: (s) => appLog.execute.error(s)(appLog.env),
-        debug: (s) => appLog.execute.debug(s)(appLog.env),
+      (
+        deleteByIds: (s) => deleteFoodsByIds.execute(s)(deleteFoodsByIds.env),
+        foods: foods.execute(foods.env),
+        log: (
+          info: (s) => appLog.execute.info(s)(appLog.env),
+          error: (s) => appLog.execute.error(s)(appLog.env),
+          debug: (s) => appLog.execute.debug(s)(appLog.env),
+        ),
       ),
     ),
     log: (debug: debug, error: error, info: info)

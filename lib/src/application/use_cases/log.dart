@@ -1,3 +1,5 @@
+import 'package:functionally/reader.dart' as R;
+
 import '../commands/log.dart';
 
 typedef Log = ({
@@ -6,4 +8,4 @@ typedef Log = ({
   void Function(String) error
 });
 
-Log prepareLog({required LogCommand log}) => log;
+final R.Reader<LogCommand, Log> prepareLog = R.ask<LogCommand>();

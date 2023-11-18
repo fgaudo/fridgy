@@ -32,17 +32,20 @@ DeleteFoodsByIdsReader<DeleteFoodsByIdsDeps> prepareDeleteFoodsByIds =
                             (_) => () => preparedStatement.execute(id),
                           )
                           .flatMap(
-                            (_) => log
-                                .info(
-                                  'SQL: "$deleteQuery" with $id',
-                                )
-                                .local((deps) => deps.logEnv),
+                            (_) => _info(
+                              'SQL: "$deleteQuery" with $id',
+                            ),
                           ),
                     ),
                   ),
                 ),
           ).local(_toPreparedStatementDeps),
         ).local(_toTransactionDeps);
+
+RIO.ReaderIO<DeleteFoodsByIdsDeps, void> _info(String message) =>
+    RIO.asks((DeleteFoodsByIdsDeps deps) => deps.logEnv).flatMapIO(
+          log.info(message),
+        );
 
 TransactionDeps<DeleteFoodsByIdsDeps> _toTransactionDeps(
   DeleteFoodsByIdsDeps deps,

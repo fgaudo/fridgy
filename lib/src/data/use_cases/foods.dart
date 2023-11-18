@@ -1,5 +1,6 @@
 import 'package:functionally/extensions/reader_io.dart';
 import 'package:functionally/extensions/reader_stream.dart';
+import 'package:functionally/reader_io.dart' as RIO;
 import 'package:functionally/reader_stream.dart' as RS;
 import 'package:functionally/stream.dart';
 import 'package:logging/logging.dart';
@@ -17,21 +18,13 @@ final FoodsReader<FoodsDeps> prepareFoods = RS
       (db) => db.updates.asBroadcastStream(),
     )
     .doOnData(
-      (event) => log
-          .info(
-            'received update',
-          )
-          .local((deps) => deps.logEnv),
+      (event) => _info('received update'),
     )
     .where((event) => event.tableName == FOODS_TABLE)
     .map((event) => null)
     .startWith(null)
     .doOnData(
-      (event) => log
-          .info(
-            'Taking all foods',
-          )
-          .local((deps) => deps.logEnv),
+      (event) => _info('Taking all foods'),
     )
     .switchMap(
       (_) => RS.ask<FoodsDeps>().flatMapStream(
@@ -41,11 +34,9 @@ final FoodsReader<FoodsDeps> prepareFoods = RS
           ),
     )
     .doOnData(
-      (event) => log
-          .info(
-            'Retrieved ${event.length} records',
-          )
-          .local((FoodsDeps deps) => deps.logEnv),
+      (event) => _info(
+        'Retrieved ${event.length} records',
+      ),
     )
     .map(
       (resultSet) => resultSet.map(
@@ -54,3 +45,8 @@ final FoodsReader<FoodsDeps> prepareFoods = RS
         ),
       ),
     );
+
+RIO.ReaderIO<FoodsDeps, void> _info(String message) =>
+    RIO.asks((FoodsDeps deps) => deps.logEnv).flatMapIO(
+          log.info(message),
+        );
