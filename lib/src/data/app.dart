@@ -77,16 +77,27 @@ Future<AppWithDeps> app({
   );
 
   return prepareApp(
-    deleteFoodsByIds: prepareDeleteFoodsByIds,
-    foods: prepareFoods,
-    appLog: log,
-    uiLog: log,
-  )(
-    (
-      appLogEnv: appLogger,
-      deleteByIdsEnv: (db: readWriteDB, logEnv: dataLogger),
-      foodsEnv: (db: readWriteDB, logEnv: dataLogger),
-      uiLogEnv: uiLogger
+    deleteFoodsByIds: (
+      execute: prepareDeleteFoodsByIds,
+      env: (
+        db: readWriteDB,
+        logEnv: dataLogger,
+      )
+    ),
+    foods: (
+      execute: prepareFoods,
+      env: (
+        db: readWriteDB,
+        logEnv: dataLogger,
+      )
+    ),
+    appLog: (
+      execute: log,
+      env: appLogger,
+    ),
+    uiLog: (
+      execute: log,
+      env: uiLogger,
     ),
   );
 }

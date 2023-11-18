@@ -1,5 +1,3 @@
-import 'package:functionally/reader_io.dart';
-
 import '../commands/log.dart';
 
 typedef LogWithDeps = ({
@@ -8,12 +6,4 @@ typedef LogWithDeps = ({
   void Function(String) error
 });
 
-typedef Log<LOG> = ({
-  ReaderIO<LOG, void> Function(String) debug,
-  ReaderIO<LOG, void> Function(String) info,
-  ReaderIO<LOG, void> Function(String) error
-});
-
-typedef LogDeps<LOG> = ({LOG logEnv});
-
-Log<LOG> prepareLog<LOG>({required LogCommand<LOG> log}) => log;
+LogWithDeps prepareLog({required LogCommandWithDeps log}) => log;

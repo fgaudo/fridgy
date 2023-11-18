@@ -1,10 +1,6 @@
-import 'package:functionally/extensions/reader.dart';
-import 'package:functionally/extensions/reader_io.dart';
-import 'package:functionally/extensions/reader_stream.dart';
+import 'package:functionally/extensions/io/flat_map.dart';
+import 'package:functionally/extensions/io/map.dart';
 import 'package:functionally/io.dart';
-import 'package:functionally/reader.dart';
-import 'package:functionally/reader_io.dart' as RIO;
-import 'package:functionally/reader_stream.dart' as RS;
 import 'package:rxdart/rxdart.dart';
 
 import '../../core/controller.dart';
@@ -60,46 +56,24 @@ final class Delete implements Command {
 }
 
 typedef OverviewControllerIOWithDeps = IO<Controller<Command, OverviewModel>>;
-typedef OverviewControllerIO<DELETE, LOG, FOODS>
-    = Reader<OverviewDeps<DELETE, LOG, FOODS>, OverviewControllerIOWithDeps>;
 
-typedef OverviewDeps<DELETE, LOG, FOODS> = ({
-  LOG logEnv,
-  DELETE deleteEnv,
-  FOODS foodsEnv
-});
-
-OverviewControllerIO<DELETE, LOG, FOODS> overviewControllerIO<DELETE, LOG,
-        FOODS>({
-  required DeleteFoodsByIds<DELETE> deleteByIds,
-  required LogCommand<LOG> log,
-  required Foods<FOODS> foods,
+OverviewControllerIOWithDeps overviewControllerIO({
+  required DeleteFoodsByIdsWithDeps deleteByIds,
+  required LogCommandWithDeps log,
+  required FoodsWithDeps foods,
 }) =>
-    RIO
-        .make<OverviewDeps<DELETE, LOG, FOODS>>()
+    (() {})
         .map(
           (_) => (
             foods
-                .local((OverviewDeps<DELETE, LOG, FOODS> deps) => deps.foodsEnv)
-                .toReader()
-                .map(
-                  (foods$) => foods$.asBroadcastStream(),
-                )
-                .toReaderStream()
+                .asBroadcastStream()
                 .doOnListen(
-                  log
-                      .info('Started listening to foods')
-                      .local((deps) => deps.logEnv),
+                  log.info('Started listening to foods'),
                 )
                 .doOnData(
-                  (foods) =>
-                      RIO.make<OverviewDeps<DELETE, LOG, FOODS>>().flatMap(
-                            (_) => log
-                                .info(
-                                  'Received ${foods.length} food entries',
-                                )
-                                .local((deps) => deps.logEnv),
-                          ),
+                  (foods) => log.info(
+                    'Received ${foods.length} food entries',
+                  )(),
                 )
                 .map((foods) => foods.map(toFoodEntity))
                 .map<OverviewModel>(
@@ -109,56 +83,34 @@ OverviewControllerIO<DELETE, LOG, FOODS> overviewControllerIO<DELETE, LOG,
                   ),
                 )
                 .startWith(const Loading()),
-            (Stream<Command> command$) => RS
-                .ask<OverviewDeps<DELETE, LOG, FOODS>>()
-                .flatMapStream((_) => command$)
+            (Stream<Command> command$) => command$
                 .whereType<Delete>()
                 .doOnData(
-                  (delete) =>
-                      RIO.make<OverviewDeps<DELETE, LOG, FOODS>>().flatMap(
-                            (_) => log
-                                .info(
-                                  'Received delete command',
-                                )
-                                .local(
-                                  (deps) => deps.logEnv,
-                                ),
-                          ),
+                  (delete) => log.info(
+                    'Received delete command',
+                  )(),
                 )
                 .flatMap(
-                  (delete) => RS.fromReaderIO(
-                    RIO.make<OverviewDeps<DELETE, LOG, FOODS>>().flatMap(
-                          (deleteFoodsByIds) => deleteByIds(delete.ids).local(
-                            (deps) => deps.deleteEnv,
-                          ),
-                        ),
+                  (delete) => FromCallableStream(
+                    deleteByIds(delete.ids),
                   ),
                 )
                 .doOnData(
-                  (_) => RIO.make<OverviewDeps<DELETE, LOG, FOODS>>().flatMap(
-                        (_) => log
-                            .info(
-                              'Delete command executed',
-                            )
-                            .local(
-                              (deps) => deps.logEnv,
-                            ),
-                      ),
+                  (_) => log.info(
+                    'Delete command executed',
+                  )(),
                 )
                 .ignoreElements(),
           ),
         )
         .flatMap(
-          (streams) => RIO.ReaderIO(
-            (env) => () => Controller.withPublishSubject(
-                  (Stream<Command> command$) => MergeStream([
-                    streams.$1(env),
-                    streams.$2(command$)(env),
-                  ]),
-                ),
-          ),
-        )
-        .toReader();
+          (streams) => () => Controller.withPublishSubject(
+                (Stream<Command> command$) => MergeStream([
+                  streams.$1,
+                  streams.$2(command$),
+                ]),
+              ),
+        );
 
 Iterable<FoodModel> _listToView(Iterable<Food> foods) =>
     foods.map((food) => FoodModel(name: food.name));
