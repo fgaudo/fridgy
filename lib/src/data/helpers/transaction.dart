@@ -17,7 +17,7 @@ RI.ReaderIO<TransactionDeps<ENV>, void> transaction<ENV>(
         .asks((TransactionDeps<ENV> deps) => deps.db)
         .flatMapIO((db) => () => db.execute(beginSQL))
         .flatMap(
-          (_) => log.info('SQL: $beginSQL').local((deps) => deps.logEnv),
+          (_) => _info('SQL: $beginSQL'),
         )
         .flatMap(
           (_) => run.local((deps) => deps.env),
@@ -25,5 +25,10 @@ RI.ReaderIO<TransactionDeps<ENV>, void> transaction<ENV>(
         .asks((deps) => deps.db)
         .flatMapIO((db) => () => db.execute(commitSQL))
         .flatMap(
-          (_) => log.info('SQL: $beginSQL').local((deps) => deps.logEnv),
+          (_) => _info('SQL: $beginSQL'),
+        );
+
+RI.ReaderIO<TransactionDeps<ENV>, void> _info<ENV>(String message) =>
+    RI.asks((TransactionDeps<ENV> deps) => deps.logEnv).flatMapIO(
+          log.info(message),
         );
