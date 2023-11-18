@@ -13,7 +13,7 @@ final class OverviewView extends StatefulWidget {
 
   static const String routeName = '/overview';
 
-  final OverviewControllerIOWithDeps createController;
+  final OverviewControllerIO createController;
 
   @override
   State<StatefulWidget> createState() => _OverviewViewState();

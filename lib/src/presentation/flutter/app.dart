@@ -10,11 +10,11 @@ import 'overview.dart';
 
 final class AppWidget extends StatelessWidget {
   const AppWidget({
-    required AppWithDeps appWithDeps,
+    required App appWithDeps,
     super.key,
   }) : _appWithDeps = appWithDeps;
 
-  final AppWithDeps _appWithDeps;
+  final App _appWithDeps;
 
   @override
   Widget build(
@@ -54,7 +54,7 @@ final class AppWidget extends StatelessWidget {
       );
 }
 
-void run(AppWithDeps appWithDeps) {
+void run(App appWithDeps) {
   runApp(
     AppWidget(appWithDeps: appWithDeps),
   );

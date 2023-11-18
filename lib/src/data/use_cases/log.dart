@@ -3,7 +3,7 @@ import 'package:logging/logging.dart';
 
 import '../../application/commands/log.dart';
 
-final LogCommand<Logger> log = (
+final LogCommandReader<Logger> log = (
   info: (message) => ReaderIO(
         (logger) => () => logger.info(message),
       ),

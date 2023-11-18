@@ -14,7 +14,7 @@ typedef DeleteFoodsByIdsDeps = ({CommonDatabase db, Logger logEnv});
 const String deleteQuery =
     'DELETE FROM $FOODS_TABLE WHERE $FOODS_TABLE_NAME = ?;';
 
-DeleteFoodsByIds<DeleteFoodsByIdsDeps> prepareDeleteFoodsByIds =
+DeleteFoodsByIdsReader<DeleteFoodsByIdsDeps> prepareDeleteFoodsByIds =
     (ids) => transaction(
           preparedStatement(
             sql: deleteQuery,

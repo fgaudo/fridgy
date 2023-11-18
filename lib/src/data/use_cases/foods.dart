@@ -11,7 +11,7 @@ import 'log.dart';
 
 typedef FoodsDeps = ({CommonDatabase db, Logger logEnv});
 
-final Foods<FoodsDeps> prepareFoods = RS
+final FoodsReader<FoodsDeps> prepareFoods = RS
     .asks((FoodsDeps deps) => deps.db)
     .flatMapStream(
       (db) => db.updates.asBroadcastStream(),

@@ -31,7 +31,7 @@ external set _select(
   List<dynamic> Function(String, List<dynamic>?) f,
 );
 
-Future<AppWithDeps> app({
+Future<App> app({
   required bool debugMode,
 }) async {
   final logLevel = debugMode ? Level.ALL : Level.INFO;

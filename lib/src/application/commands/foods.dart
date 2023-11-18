@@ -8,11 +8,11 @@ final class FoodData {
   final String name;
 }
 
+typedef FoodsReader<FOODS> = ReaderStream<FOODS, Iterable<FoodData>>;
+
+typedef Foods = Stream<Iterable<FoodData>>;
+
 Food toFoodEntity(
   FoodData foodData,
 ) =>
     const Food('');
-
-typedef Foods<FOODS> = ReaderStream<FOODS, Iterable<FoodData>>;
-
-typedef FoodsWithDeps = Stream<Iterable<FoodData>>;

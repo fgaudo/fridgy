@@ -1,10 +1,10 @@
 import 'package:functionally/io.dart';
 import 'package:functionally/reader_io.dart';
 
-typedef DeleteFoodsByIds<ENV> = ReaderIO<ENV, void> Function(
+typedef DeleteFoodsByIdsReader<ENV> = ReaderIO<ENV, void> Function(
   Set<String> ids,
 );
 
-typedef DeleteFoodsByIdsWithDeps = IO<void> Function(
+typedef DeleteFoodsByIds = IO<void> Function(
   Set<String> ids,
 );

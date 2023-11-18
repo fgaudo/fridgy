@@ -4,26 +4,19 @@ import 'commands/log.dart';
 import 'use_cases/log.dart';
 import 'use_cases/overview.dart';
 
-typedef AppWithDeps = ({
-  OverviewControllerIOWithDeps overview,
-  LogWithDeps log,
+typedef App = ({
+  OverviewControllerIO overview,
+  Log log,
 });
 
-typedef AppDeps<DELETE_BY_IDS, FOODS, APP_LOG, UI_LOG> = ({
-  DELETE_BY_IDS deleteByIdsEnv,
-  FOODS foodsEnv,
-  APP_LOG appLogEnv,
-  UI_LOG uiLogEnv,
-});
-
-AppWithDeps prepareApp<DELETE_BY_IDS, FOODS, APP_LOG, UI_LOG>({
+App prepareApp<DELETE_BY_IDS, FOODS, APP_LOG, UI_LOG>({
   required ({
-    DeleteFoodsByIds<DELETE_BY_IDS> execute,
+    DeleteFoodsByIdsReader<DELETE_BY_IDS> execute,
     DELETE_BY_IDS env
   }) deleteFoodsByIds,
-  required ({Foods<FOODS> execute, FOODS env}) foods,
-  required ({LogCommand<APP_LOG> execute, APP_LOG env}) appLog,
-  required ({LogCommand<UI_LOG> execute, UI_LOG env}) uiLog,
+  required ({FoodsReader<FOODS> execute, FOODS env}) foods,
+  required ({LogCommandReader<APP_LOG> execute, APP_LOG env}) appLog,
+  required ({LogCommandReader<UI_LOG> execute, UI_LOG env}) uiLog,
 }) {
   final (
     debug: debug,

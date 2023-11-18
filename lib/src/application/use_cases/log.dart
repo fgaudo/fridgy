@@ -1,9 +1,9 @@
 import '../commands/log.dart';
 
-typedef LogWithDeps = ({
+typedef Log = ({
   void Function(String) debug,
   void Function(String) info,
   void Function(String) error
 });
 
-LogWithDeps prepareLog({required LogCommandWithDeps log}) => log;
+Log prepareLog({required LogCommand log}) => log;

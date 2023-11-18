@@ -55,12 +55,12 @@ final class Delete implements Command {
   final Set<String> ids;
 }
 
-typedef OverviewControllerIOWithDeps = IO<Controller<Command, OverviewModel>>;
+typedef OverviewControllerIO = IO<Controller<Command, OverviewModel>>;
 
-OverviewControllerIOWithDeps overviewControllerIO({
-  required DeleteFoodsByIdsWithDeps deleteByIds,
-  required LogCommandWithDeps log,
-  required FoodsWithDeps foods,
+OverviewControllerIO overviewControllerIO({
+  required DeleteFoodsByIds deleteByIds,
+  required LogCommand log,
+  required Foods foods,
 }) =>
     (() {})
         .map(
