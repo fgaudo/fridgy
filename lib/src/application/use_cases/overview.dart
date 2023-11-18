@@ -76,7 +76,7 @@ OverviewControllerIO<DELETE, LOG, FOODS> overviewControllerIO<DELETE, LOG,
   required Foods<FOODS> foods,
 }) =>
     RIO
-        .ask<OverviewDeps<DELETE, LOG, FOODS>>()
+        .make<OverviewDeps<DELETE, LOG, FOODS>>()
         .map(
           (_) => (
             foods
@@ -93,7 +93,7 @@ OverviewControllerIO<DELETE, LOG, FOODS> overviewControllerIO<DELETE, LOG,
                 )
                 .doOnData(
                   (foods) =>
-                      RIO.ask<OverviewDeps<DELETE, LOG, FOODS>>().flatMap(
+                      RIO.make<OverviewDeps<DELETE, LOG, FOODS>>().flatMap(
                             (_) => log
                                 .info(
                                   'Received ${foods.length} food entries',
@@ -115,7 +115,7 @@ OverviewControllerIO<DELETE, LOG, FOODS> overviewControllerIO<DELETE, LOG,
                 .whereType<Delete>()
                 .doOnData(
                   (delete) =>
-                      RIO.ask<OverviewDeps<DELETE, LOG, FOODS>>().flatMap(
+                      RIO.make<OverviewDeps<DELETE, LOG, FOODS>>().flatMap(
                             (_) => log
                                 .info(
                                   'Received delete command',
@@ -127,7 +127,7 @@ OverviewControllerIO<DELETE, LOG, FOODS> overviewControllerIO<DELETE, LOG,
                 )
                 .flatMap(
                   (delete) => RS.fromReaderIO(
-                    RIO.ask<OverviewDeps<DELETE, LOG, FOODS>>().flatMap(
+                    RIO.make<OverviewDeps<DELETE, LOG, FOODS>>().flatMap(
                           (deleteFoodsByIds) => deleteByIds(delete.ids).local(
                             (deps) => deps.deleteEnv,
                           ),
@@ -135,7 +135,7 @@ OverviewControllerIO<DELETE, LOG, FOODS> overviewControllerIO<DELETE, LOG,
                   ),
                 )
                 .doOnData(
-                  (_) => RIO.ask<OverviewDeps<DELETE, LOG, FOODS>>().flatMap(
+                  (_) => RIO.make<OverviewDeps<DELETE, LOG, FOODS>>().flatMap(
                         (_) => log
                             .info(
                               'Delete command executed',
