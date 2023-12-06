@@ -7,7 +7,7 @@ publish_to: 'none'
 version: 0.0.1
 
 environment:
-  sdk: '>=3.2.0 <4.0.0'
+  sdk: '>=3.2.2 <4.0.0'
 
 dependencies:
   async: 
@@ -16,12 +16,12 @@ dependencies:
   flutter_localizations:
     sdk: flutter
   functionally:
-    path: '../fgaudo_functional'
+    path: '../functionally'
   go_router:
   js:
   logging:
   rxdart: 
-  sqlite3: 2.1.0
+  sqlite3: 2.2.0
   uuid:
 
 dev_dependencies:

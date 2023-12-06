@@ -3,6 +3,7 @@ import 'package:functionally/reader_io.dart' as RI;
 import 'package:logging/logging.dart';
 import 'package:sqlite3/common.dart';
 
+import '../../application/commands/log.dart';
 import '../use_cases/log.dart';
 
 typedef TransactionDeps<ENV> = ({CommonDatabase db, Logger logEnv, ENV env});
@@ -30,5 +31,5 @@ RI.ReaderIO<TransactionDeps<ENV>, void> transaction<ENV>(
 
 RI.ReaderIO<TransactionDeps<ENV>, void> _info<ENV>(String message) =>
     RI.asks((TransactionDeps<ENV> deps) => deps.logEnv).flatMapIO(
-          log.info(message),
+          log(LogType.info, message),
         );

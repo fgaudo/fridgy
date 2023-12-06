@@ -1,47 +1,41 @@
+import 'package:functionally/reader.dart';
+
 import 'commands/delete_foods_by_ids.dart';
 import 'commands/foods.dart';
-import 'commands/log.dart';
-import 'use_cases/log.dart';
+import 'commands/log.dart' as logCommand;
+import 'use_cases/log.dart' as logUsecase;
 import 'use_cases/overview.dart';
 
 typedef App = ({
   OverviewControllerIO overview,
-  Log log,
+  logUsecase.Log log,
 });
 
-App prepareApp<DELETE_BY_IDS, FOODS, APP_LOG, UI_LOG>({
-  required ({
-    DeleteFoodsByIdsReader<DELETE_BY_IDS> execute,
-    DELETE_BY_IDS env
-  }) deleteFoodsByIds,
-  required ({FoodsReader<FOODS> execute, FOODS env}) foods,
-  required ({LogCommandReader<APP_LOG> execute, APP_LOG env}) appLog,
-  required ({LogCommandReader<UI_LOG> execute, UI_LOG env}) uiLog,
-}) {
-  final (
-    debug: debug,
-    info: info,
-    error: error,
-  ) = prepareLog(
-    (
-      info: (s) => uiLog.execute.info(s)(uiLog.env),
-      error: (s) => uiLog.execute.error(s)(uiLog.env),
-      debug: (s) => uiLog.execute.debug(s)(uiLog.env),
-    ),
-  );
-
-  return (
-    overview: overviewControllerIO(
-      (
-        deleteByIds: (s) => deleteFoodsByIds.execute(s)(deleteFoodsByIds.env),
-        foods: foods.execute(foods.env),
-        log: (
-          info: (s) => appLog.execute.info(s)(appLog.env),
-          error: (s) => appLog.execute.error(s)(appLog.env),
-          debug: (s) => appLog.execute.debug(s)(appLog.env),
-        ),
-      ),
-    ),
-    log: (debug: debug, error: error, info: info)
-  );
-}
+Reader<
+    ({
+      DELETE_BY_IDS deleteByIds,
+      FOODS foods,
+      APP_LOG appLog,
+      UI_LOG uiLog,
+    }),
+    App> prepareApp<DELETE_BY_IDS, FOODS, APP_LOG, UI_LOG>({
+  required DeleteFoodsByIdsReader<DELETE_BY_IDS> deleteFoodsByIds,
+  required FoodsReader<FOODS> foods,
+  required logCommand.LogCommandReader<APP_LOG> appLog,
+  required logCommand.LogCommandReader<UI_LOG> uiLog,
+}) =>
+    (env) => (
+          overview: overviewControllerIO(
+            (
+              deleteByIds: (ids) => deleteFoodsByIds(ids)(env.deleteByIds),
+              foods: foods(env.foods),
+              log: (type, message) => appLog(type, message)(env.appLog),
+            ),
+          ),
+          log: (type, message) => logUsecase.prepareLog(
+                type,
+                message,
+              )(
+                (type, message) => uiLog(type, message)(env.uiLog),
+              )()
+        );

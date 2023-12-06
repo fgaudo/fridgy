@@ -7,7 +7,8 @@ import 'package:logging/logging.dart';
 import 'package:sqlite3/wasm.dart';
 
 import '../../application/commands/foods.dart';
-import '../app.dart';
+import '../../application/commands/log.dart';
+import '../schema.dart';
 import 'log.dart';
 
 typedef FoodsDeps = ({CommonDatabase db, Logger logEnv});
@@ -48,5 +49,5 @@ final FoodsReader<FoodsDeps> prepareFoods = RS
 
 RIO.ReaderIO<FoodsDeps, void> _info(String message) =>
     RIO.asks((FoodsDeps deps) => deps.logEnv).flatMapIO(
-          log.info(message),
+          log(LogType.info, message),
         );

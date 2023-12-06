@@ -134,7 +134,8 @@ Iterable<FoodModel> _listToView(Iterable<Food> foods) =>
 
 RIO.ReaderIO<OverviewControllerDeps, void> _info(String message) =>
     RIO.asks((OverviewControllerDeps deps) => deps.log).flatMapIO(
-          (log) => log.info(
+          (log) => log(
+            LogType.info,
             message,
           ),
         );

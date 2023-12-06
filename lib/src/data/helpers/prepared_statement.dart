@@ -3,6 +3,7 @@ import 'package:functionally/reader_io.dart' as RIO;
 import 'package:logging/logging.dart';
 import 'package:sqlite3/common.dart';
 
+import '../../application/commands/log.dart';
 import '../use_cases/log.dart';
 
 typedef PreparedStatementDeps<ENV> = ({
@@ -43,5 +44,5 @@ RIO.ReaderIO<PreparedStatementDeps<ENV>, void> preparedStatement<ENV>({
 
 RIO.ReaderIO<PreparedStatementDeps<ENV>, void> _info<ENV>(String message) =>
     RIO.asks((PreparedStatementDeps<ENV> deps) => deps.logEnv).flatMapIO(
-          log.info(message),
+          log(LogType.info, message),
         );

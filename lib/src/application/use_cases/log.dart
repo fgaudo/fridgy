@@ -1,11 +1,23 @@
-import 'package:functionally/reader.dart' as R;
+import 'package:functionally/extensions/reader_io.dart';
+import 'package:functionally/reader_io.dart' as RIO;
 
-import '../commands/log.dart';
+import '../commands/log.dart' as logCommand;
 
-typedef Log = ({
-  void Function(String) debug,
-  void Function(String) info,
-  void Function(String) error
-});
+enum LogType { debug, info, error }
 
-final R.Reader<LogCommand, Log> prepareLog = R.ask<LogCommand>();
+typedef Log = void Function(LogType, String);
+
+RIO.ReaderIO<logCommand.LogCommand, void> prepareLog(
+  LogType type,
+  String message,
+) =>
+    RIO.ask<logCommand.LogCommand>().flatMapIO(
+          (log) => log(
+            switch (type) {
+              LogType.debug => logCommand.LogType.debug,
+              LogType.error => logCommand.LogType.error,
+              LogType.info => logCommand.LogType.info
+            },
+            message,
+          ),
+        );

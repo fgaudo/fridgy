@@ -4,9 +4,10 @@ import 'package:logging/logging.dart';
 import 'package:sqlite3/wasm.dart';
 
 import '../../application/commands/delete_foods_by_ids.dart';
-import '../app.dart';
+import '../../application/commands/log.dart';
 import '../helpers/prepared_statement.dart';
 import '../helpers/transaction.dart';
+import '../schema.dart';
 import 'log.dart';
 
 typedef DeleteFoodsByIdsDeps = ({CommonDatabase db, Logger logEnv});
@@ -44,7 +45,7 @@ DeleteFoodsByIdsReader<DeleteFoodsByIdsDeps> prepareDeleteFoodsByIds =
 
 RIO.ReaderIO<DeleteFoodsByIdsDeps, void> _info(String message) =>
     RIO.asks((DeleteFoodsByIdsDeps deps) => deps.logEnv).flatMapIO(
-          log.info(message),
+          log(LogType.info, message),
         );
 
 TransactionDeps<DeleteFoodsByIdsDeps> _toTransactionDeps(

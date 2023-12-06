@@ -3,14 +3,10 @@ import 'package:logging/logging.dart';
 
 import '../../application/commands/log.dart';
 
-final LogCommandReader<Logger> log = (
-  info: (message) => ReaderIO(
-        (logger) => () => logger.info(message),
-      ),
-  debug: (message) => ReaderIO(
-        (logger) => () => logger.fine(message),
-      ),
-  error: (message) => ReaderIO(
-        (logger) => () => logger.severe(message),
-      )
-);
+final LogCommandReader<Logger> log = (type, message) => ReaderIO(
+      (logger) => () => switch (type) {
+            LogType.debug => logger.fine(message),
+            LogType.error => logger.severe(message),
+            LogType.info => logger.info(message)
+          },
+    );
