@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:functionally/extensions/option/match.dart';
 
-import '../../application/use_cases/overview.dart';
+import '../../application/flow/overview.dart';
 import '../../core/controller_builder.dart';
 
 final class OverviewView extends StatefulWidget {
