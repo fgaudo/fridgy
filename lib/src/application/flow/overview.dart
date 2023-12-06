@@ -64,7 +64,7 @@ typedef OverviewController = Controller<Command, OverviewModel>;
 
 typedef OverviewControllerDeps = ({
   DeleteFoodsByIds deleteByIds,
-  LogCommand log,
+  Log log,
   Foods foods,
 });
 

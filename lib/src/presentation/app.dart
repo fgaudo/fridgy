@@ -1,0 +1,27 @@
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:js/js.dart';
+
+import '../application/app.dart';
+import 'flutter/app.dart';
+
+@JS('execute')
+external set _execute(void Function(String, List<dynamic>?) f);
+
+@JS('select')
+external set _select(
+  List<dynamic> Function(String, List<dynamic>?) f,
+);
+
+Future<void> run(
+  Future<App> Function({required bool debugMode}) createApp,
+) async {
+  final app = await createApp(debugMode: kDebugMode);
+
+  _select = allowInterop((query, values) => app.retrieve(query, values)());
+  _execute = allowInterop((query, values) => app.execute(query, values)());
+
+  runApp(
+    AppWidget(appWithDeps: app),
+  );
+}
