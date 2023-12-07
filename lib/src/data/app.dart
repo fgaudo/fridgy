@@ -4,7 +4,7 @@ import 'package:sqlite3/wasm.dart';
 import '../application/app.dart';
 import 'commands/execute.dart';
 import 'commands/retrieve.dart';
-import 'commands_impl/enqueue_delete_foods_by_ids.dart';
+import 'commands_impl/delete_foods_by_ids.dart';
 import 'commands_impl/execute.dart';
 import 'commands_impl/foods.dart';
 import 'commands_impl/log.dart';

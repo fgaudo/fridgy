@@ -3,7 +3,7 @@ import 'package:functionally/reader_io.dart' as RIO;
 import 'package:logging/logging.dart';
 import 'package:sqlite3/wasm.dart';
 
-import '../../application/commands/enqueue_delete_foods_by_ids.dart';
+import '../../application/commands/delete_foods_by_ids.dart';
 import '../../application/commands/log.dart';
 import '../helpers/prepared_statement.dart';
 import '../helpers/transaction.dart';
@@ -15,7 +15,7 @@ typedef DeleteFoodsByIdsDeps = ({CommonDatabase db, Logger logEnv});
 const String deleteQuery =
     'DELETE FROM $FOODS_TABLE WHERE $FOODS_TABLE_NAME = ?;';
 
-EnqueueDeleteFoodsByIdsReader<DeleteFoodsByIdsDeps> prepareDeleteFoodsByIds =
+DeleteFoodsByIdsReader<DeleteFoodsByIdsDeps> prepareDeleteFoodsByIds =
     (ids) => transaction(
           preparedStatement(
             sql: deleteQuery,

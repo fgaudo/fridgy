@@ -1,11 +1,11 @@
-import 'commands/enqueue_delete_foods_by_ids.dart';
+import 'commands/delete_foods_by_ids.dart';
 import 'commands/foods.dart';
 import 'commands/log.dart';
 import 'flow/overview.dart';
 
 abstract class App {
   App({
-    required EnqueueDeleteFoodsByIds deleteFoodsByIds,
+    required DeleteFoodsByIds deleteFoodsByIds,
     required Foods foods,
     required Log appLog,
     required Log uiLog,
