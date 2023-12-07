@@ -2,18 +2,34 @@ import 'package:logging/logging.dart';
 import 'package:sqlite3/wasm.dart';
 
 import '../application/app.dart';
-import 'commands/delete_foods_by_ids.dart';
 import 'commands/execute.dart';
-import 'commands/foods.dart';
-import 'commands/log.dart';
 import 'commands/retrieve.dart';
+import 'commands_impl/delete_foods_by_ids.dart';
+import 'commands_impl/execute.dart';
+import 'commands_impl/foods.dart';
+import 'commands_impl/log.dart';
+import 'commands_impl/retrieve.dart';
 import 'schema.dart';
 
 const _SQLITE_WASM_PATH = 'sqlite3.wasm';
 const _INDEXEDDB_DB_NAME = 'fridgy';
 const String _DATABASE = '/database';
 
-Future<App> app({
+final class AppImpl extends App {
+  AppImpl({
+    required super.appLog,
+    required super.deleteFoodsByIds,
+    required super.foods,
+    required super.uiLog,
+    required this.retrieve,
+    required this.execute,
+  });
+
+  final Retrieve retrieve;
+  final Execute execute;
+}
+
+Future<AppImpl> app({
   required bool debugMode,
 }) async {
   final logLevel = debugMode ? Level.ALL : Level.INFO;
@@ -42,7 +58,7 @@ Future<App> app({
 
   _createTables(readWriteDB);
 
-  return prepareApp(
+  return AppImpl(
     deleteFoodsByIds: (ids) => prepareDeleteFoodsByIds(ids)(
       (
         db: readWriteDB,

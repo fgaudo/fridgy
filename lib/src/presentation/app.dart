@@ -2,7 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:js/js.dart';
 
-import '../application/app.dart';
+import '../data/app.dart';
 import 'flutter/app.dart';
 
 @JS('execute')
@@ -14,7 +14,7 @@ external set _select(
 );
 
 Future<void> run(
-  Future<App> Function({required bool debugMode}) createApp,
+  Future<AppImpl> Function({required bool debugMode}) createApp,
 ) async {
   final app = await createApp(debugMode: kDebugMode);
 

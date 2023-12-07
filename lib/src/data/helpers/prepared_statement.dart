@@ -4,7 +4,7 @@ import 'package:logging/logging.dart';
 import 'package:sqlite3/common.dart';
 
 import '../../application/commands/log.dart';
-import '../commands/log.dart';
+import '../commands_impl/log.dart';
 
 typedef PreparedStatementDeps<ENV> = ({
   Logger logEnv,
