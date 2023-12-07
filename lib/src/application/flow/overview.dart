@@ -9,7 +9,7 @@ import 'package:rxdart/rxdart.dart';
 
 import '../../core/controller.dart';
 import '../../domain/food.dart';
-import '../commands/delete_foods_by_ids.dart';
+import '../commands/enqueue_delete_foods_by_ids.dart';
 import '../commands/foods.dart';
 import '../commands/log.dart';
 
@@ -63,7 +63,7 @@ typedef OverviewControllerIO = IO<Controller<Command, OverviewModel>>;
 typedef OverviewController = Controller<Command, OverviewModel>;
 
 typedef OverviewControllerDeps = ({
-  DeleteFoodsByIds deleteByIds,
+  EnqueueDeleteFoodsByIds deleteByIds,
   Log log,
   Foods foods,
 });
