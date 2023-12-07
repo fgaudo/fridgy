@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:functionally/io.dart';
 import 'package:functionally/option.dart';
 
-import 'controller.dart';
+import '../../core/controller.dart';
 
 final class ControllerBuilder<A, B> extends StatefulWidget {
   const ControllerBuilder({

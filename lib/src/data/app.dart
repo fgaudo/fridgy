@@ -11,9 +11,12 @@ import 'commands_impl/log.dart';
 import 'commands_impl/retrieve.dart';
 import 'schema.dart';
 
-const _SQLITE_WASM_PATH = 'sqlite3.wasm';
-const _INDEXEDDB_DB_NAME = 'fridgy';
+const String _SQLITE_WASM_PATH = 'sqlite3.wasm';
+const String _INDEXEDDB_DB_NAME = 'fridgy';
 const String _DATABASE = '/database';
+const String _APP_LOGGER_NAME = 'APP';
+const String _UI_LOGGER_NAME = 'UI';
+const String _DATA_LOGGER_NAME = 'DATA';
 
 final class AppImpl extends App {
   AppImpl({
@@ -34,9 +37,9 @@ Future<AppImpl> app({
 }) async {
   final logLevel = debugMode ? Level.ALL : Level.INFO;
 
-  final appLogger = Logger('APP');
-  final dataLogger = Logger('DATA');
-  final uiLogger = Logger('UI');
+  final appLogger = Logger(_APP_LOGGER_NAME);
+  final dataLogger = Logger(_DATA_LOGGER_NAME);
+  final uiLogger = Logger(_UI_LOGGER_NAME);
 
   Logger.root.level = logLevel;
   Logger.root.onRecord.listen((record) {
