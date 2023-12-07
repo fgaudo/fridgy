@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../application/app.dart';
 import 'add_food.dart';
+import 'app_inherited.dart';
 import 'overview.dart';
 
 final class AppWidget extends StatelessWidget {
@@ -19,36 +20,37 @@ final class AppWidget extends StatelessWidget {
   Widget build(
     BuildContext context,
   ) =>
-      MaterialApp.router(
-        restorationScopeId: 'app',
-        localizationsDelegates: const [
-          AppLocalizations.delegate,
-          GlobalMaterialLocalizations.delegate,
-          GlobalWidgetsLocalizations.delegate,
-          GlobalCupertinoLocalizations.delegate,
-        ],
-        supportedLocales: const [
-          Locale('en', ''),
-        ],
-        onGenerateTitle: (context) => AppLocalizations.of(context)!.appTitle,
-        theme: ThemeData(),
-        darkTheme: ThemeData.dark(),
-        routerConfig: GoRouter(
-          onException: (context, state, router) =>
-              router.go(OverviewView.routeName),
-          initialLocation: OverviewView.routeName,
-          routes: [
-            GoRoute(
-              path: OverviewView.routeName,
-              builder: (context, state) => OverviewView(
-                createController: _appWithDeps.overview,
-              ),
-            ),
-            GoRoute(
-              path: AddFoodView.routeName,
-              builder: (context, state) => const AddFoodView(),
-            ),
+      AppInheritedWidget(
+        app: _appWithDeps,
+        child: MaterialApp.router(
+          restorationScopeId: 'app',
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
           ],
+          supportedLocales: const [
+            Locale('en', ''),
+          ],
+          onGenerateTitle: (context) => AppLocalizations.of(context)!.appTitle,
+          theme: ThemeData(),
+          darkTheme: ThemeData.dark(),
+          routerConfig: GoRouter(
+            onException: (context, state, router) =>
+                router.go(OverviewView.routeName),
+            initialLocation: OverviewView.routeName,
+            routes: [
+              GoRoute(
+                path: OverviewView.routeName,
+                builder: (context, state) => const OverviewView(),
+              ),
+              GoRoute(
+                path: AddFoodView.routeName,
+                builder: (context, state) => const AddFoodView(),
+              ),
+            ],
+          ),
         ),
       );
 }

@@ -2,18 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:functionally/extensions/option/match.dart';
 
-import '../../application/flow/overview.dart';
+import 'app_inherited.dart';
 import 'controller_builder.dart';
 
 final class OverviewView extends StatefulWidget {
   const OverviewView({
-    required this.createController,
     super.key,
   });
 
   static const String routeName = '/overview';
-
-  final OverviewControllerIO createController;
 
   @override
   State<StatefulWidget> createState() => _OverviewViewState();
@@ -50,7 +47,7 @@ final class _OverviewViewState extends State<OverviewView> {
   @override
   Widget build(BuildContext context) => ControllerBuilder(
         key: widget.key,
-        createController: widget.createController,
+        createController: AppInheritedWidget.of(context).app.overview,
         builder: (_, modelOption, __) => modelOption.match(
           onNone: const ColoredBox(color: Colors.black),
           onSome: (data) => Scaffold(
