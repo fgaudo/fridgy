@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:functionally/io.dart';
 import 'package:functionally/option.dart';
@@ -39,7 +41,7 @@ final class _ControllerBuilderState<A, B>
   void dispose() {
     super.dispose();
 
-    _controller.close();
+    unawaited(_controller.close());
   }
 
   @override

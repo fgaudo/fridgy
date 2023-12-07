@@ -26,9 +26,7 @@ final class Controller<A, B> {
     _subject.add(a);
   }
 
-  void close() {
-    _subject.close();
-  }
+  Future<void> close() => _subject.close();
 
   final Subject<A> _subject;
 }
