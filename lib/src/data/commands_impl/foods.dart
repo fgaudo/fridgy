@@ -16,8 +16,9 @@ typedef FoodsDeps = ({CommonDatabase db, Logger logEnv});
 final FoodsReader<FoodsDeps> prepareFoods = RS
     .asks((FoodsDeps deps) => deps.db)
     .flatMapStream(
-      (db) => db.updates.asBroadcastStream(),
+      (db) => db.updates,
     )
+    .asBroadcastStream()
     .doOnData(
       (event) => _info('received update'),
     )
@@ -28,11 +29,14 @@ final FoodsReader<FoodsDeps> prepareFoods = RS
       (event) => _info('Taking all foods'),
     )
     .switchMap(
-      (_) => RS.ask<FoodsDeps>().flatMapStream(
+      (_) => RS
+          .ask<FoodsDeps>()
+          .flatMapStream(
             (deps) => fromIO(
               () => deps.db.select('SELECT * FROM $FOODS_TABLE;'),
             ),
-          ),
+          )
+          .asBroadcastStream(),
     )
     .doOnData(
       (event) => _info(

@@ -1,10 +1,12 @@
 import 'package:functionally/extensions/reader.dart';
 import 'package:functionally/extensions/reader_io.dart';
 import 'package:functionally/extensions/reader_stream.dart';
+import 'package:functionally/extensions/reader_task.dart';
 import 'package:functionally/io.dart';
 import 'package:functionally/reader.dart' as R;
 import 'package:functionally/reader_io.dart' as RIO;
 import 'package:functionally/reader_stream.dart' as RS;
+import 'package:functionally/reader_task.dart' as RT;
 import 'package:rxdart/rxdart.dart';
 
 import '../../core/controller.dart';
@@ -75,10 +77,10 @@ final RIO.ReaderIO<OverviewControllerDeps, OverviewController>
           (_) => (
             R
                 .asks(
-                  (OverviewControllerDeps deps) =>
-                      deps.foods.asBroadcastStream(),
+                  (OverviewControllerDeps deps) => deps.foods,
                 )
                 .toReaderStream()
+                .asBroadcastStream()
                 .doOnListen(
                   _info('Started listening to foods'),
                 )
@@ -95,7 +97,7 @@ final RIO.ReaderIO<OverviewControllerDeps, OverviewController>
                 .startWith(const Loading()),
             (Stream<Command> command$) => RS
                 .ask<OverviewControllerDeps>()
-                .flatMapStream((_) => command$)
+                .asBroadcastStream()
                 .whereType<Delete>()
                 .doOnData(
                   (delete) => _info(
@@ -103,12 +105,13 @@ final RIO.ReaderIO<OverviewControllerDeps, OverviewController>
                   ),
                 )
                 .flatMap(
-                  (delete) => RIO
+                  (delete) => RT
                       .asks((OverviewControllerDeps deps) => deps.deleteByIds)
-                      .flatMapIO(
+                      .flatMapTask(
                         (deleteByIds) => deleteByIds(delete.ids),
                       )
-                      .toReaderStream(),
+                      .toReaderStream()
+                      .asBroadcastStream(),
                 )
                 .doOnData(
                   (_) => _info(
