@@ -3,11 +3,7 @@ import 'src/data/app.dart';
 import 'src/presentation/app.dart';
 
 void main() async {
-  const a = app;
+  assert(app is! App, 'Application does not implement correct interface');
 
-  if (a is! App) {
-    throw Exception('Application does not implement correct interface');
-  }
-
-  return run(a);
+  return run(app);
 }
