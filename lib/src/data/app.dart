@@ -27,7 +27,7 @@ final class AppImpl extends App<RetrieveParams, ExecuteParams> {
   });
 }
 
-Future<AppImpl> app({
+Future<AppImpl> createApp({
   required bool debugMode,
 }) async {
   final logLevel = debugMode ? Level.ALL : Level.INFO;

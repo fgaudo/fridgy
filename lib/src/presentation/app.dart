@@ -5,6 +5,8 @@ import 'package:js/js.dart';
 import '../data/app.dart';
 import 'flutter/app.dart';
 
+const debugMode = kDebugMode;
+
 @JS('execute')
 external set _execute(void Function(String, List<dynamic>?) f);
 
@@ -14,10 +16,8 @@ external set _select(
 );
 
 Future<void> run(
-  Future<AppImpl> Function({required bool debugMode}) createApp,
+  AppImpl app,
 ) async {
-  final app = await createApp(debugMode: kDebugMode);
-
   _select = allowInterop(
     (query, values) => app.retrieve((query: query, params: values))(),
   );
