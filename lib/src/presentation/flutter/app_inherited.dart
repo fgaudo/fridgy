@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../application/app.dart';
+import '../../data/app.dart';
 
 class AppInheritedWidget extends InheritedWidget {
   const AppInheritedWidget({
@@ -9,7 +9,7 @@ class AppInheritedWidget extends InheritedWidget {
     super.key,
   });
 
-  final App app;
+  final AppImpl app;
 
   static AppInheritedWidget? maybeOf(BuildContext context) =>
       context.dependOnInheritedWidgetOfExactType<AppInheritedWidget>();

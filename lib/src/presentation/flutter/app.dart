@@ -3,18 +3,18 @@ import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../application/app.dart';
+import '../../data/app.dart';
 import 'add_food.dart';
 import 'app_inherited.dart';
 import 'overview.dart';
 
 final class AppWidget extends StatelessWidget {
   const AppWidget({
-    required App appWithDeps,
+    required AppImpl appWithDeps,
     super.key,
   }) : _appWithDeps = appWithDeps;
 
-  final App _appWithDeps;
+  final AppImpl _appWithDeps;
 
   @override
   Widget build(
