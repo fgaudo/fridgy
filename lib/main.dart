@@ -11,5 +11,5 @@ void main() async {
     'Application does not implement correct interface',
   );
 
-  return run(app);
+  await run(app);
 }
