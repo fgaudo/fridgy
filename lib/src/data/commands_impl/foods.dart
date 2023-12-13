@@ -46,7 +46,7 @@ final FoodsReader<FoodsDeps> prepareFoods = RS
     .map(
       (resultSet) => resultSet.map(
         (row) => FoodData(
-          name: (row[FOODS_TABLE_NAME] as String?) ?? '[UNDEFINED]',
+          name: (row[FOODS_TABLE] as String?) ?? '[UNDEFINED]',
         ),
       ),
     );

@@ -18,8 +18,12 @@ Future<void> run(
 ) async {
   final app = await createApp(debugMode: kDebugMode);
 
-  _select = allowInterop((query, values) => app.retrieve(query, values)());
-  _execute = allowInterop((query, values) => app.execute(query, values)());
+  _select = allowInterop(
+    (query, values) => app.retrieve((query: query, params: values))(),
+  );
+  _execute = allowInterop(
+    (query, values) => app.execute((query: query, params: values))(),
+  );
 
   runApp(
     AppWidget(appWithDeps: app),
