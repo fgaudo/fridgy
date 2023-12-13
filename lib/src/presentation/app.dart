@@ -7,9 +7,17 @@ import 'flutter/app.dart';
 
 const debugMode = kDebugMode;
 
+/// Executes some [query] with [params]
+///
+/// This is used in the devtools to directly alter data.
+/// (Mostly for support or debugging)
 @JS('execute')
-external set _execute(void Function(String, List<dynamic>?) f);
+external set _execute(void Function(String query, List<dynamic>? params) f);
 
+/// Returns data from a [query] with [params]
+///
+/// This is used in the devtools to directly retrieve data.
+/// (Mostly for support or debugging)
 @JS('select')
 external set _select(
   List<dynamic> Function(String, List<dynamic>?) f,
