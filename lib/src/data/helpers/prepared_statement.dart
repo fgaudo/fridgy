@@ -27,18 +27,18 @@ RIO.ReaderIO<PreparedStatementDeps<ENV>, void> preparedStatement<ENV>({
               .flatMapIO(
                 (_) => ps.dispose,
               )
-              .flatMap(
-                (_) => _info(
+              .apFirst(
+                _info(
                   'Prepared statement closed',
                 ),
               ),
           use: (ps) => RIO
               .make<PreparedStatementDeps<ENV>>()
-              .flatMap(
-                (_) => _info('Prepared statement opened'),
+              .apFirst(
+                _info('Prepared statement opened'),
               )
-              .flatMap(
-                (_) => run(ps).local((deps) => deps.env),
+              .apSecond(
+                run(ps).local((deps) => deps.env),
               ),
         );
 

@@ -32,8 +32,8 @@ DeleteFoodsByIdsReader<DeleteFoodsByIdsDeps> prepareDeleteFoodsByIds =
                           .flatMapIO(
                             (_) => () => preparedStatement.execute(id),
                           )
-                          .flatMap(
-                            (_) => _info(
+                          .apFirst(
+                            _info(
                               'SQL: "$deleteQuery" with $id',
                             ),
                           ),
