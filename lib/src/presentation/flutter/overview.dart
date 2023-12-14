@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
-import 'package:functionally/extensions/option/match.dart';
+import 'package:functionally/extensions/option.dart';
 
 import 'app_inherited.dart';
 import 'controller_builder.dart';

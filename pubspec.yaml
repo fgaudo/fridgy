@@ -16,7 +16,6 @@ dependencies:
   flutter_localizations:
     sdk: flutter
   functionally:
-    path: '../functionally'
   go_router:
   js:
   logging:
