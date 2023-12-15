@@ -1,5 +1,6 @@
-import 'package:functionally/extensions/reader_io.dart';
 import 'package:functionally/reader_io.dart' as RI;
+import 'package:functionally/oo/reader_io.dart' as RIOX;
+
 import 'package:logging/logging.dart';
 import 'package:sqlite3/common.dart';
 
@@ -14,22 +15,32 @@ const String commitSQL = 'COMMIT;';
 RI.ReaderIO<TransactionDeps<ENV>, void> transaction<ENV>(
   RI.ReaderIO<ENV, void> run,
 ) =>
-    RI
+    RIOX
         .asks((TransactionDeps<ENV> deps) => deps.db)
         .flatMapIO((db) => () => db.execute(beginSQL))
-        .apFirst(
+        .apSecond(
           _info('SQL: $beginSQL'),
         )
         .apSecond(
-          run.local((deps) => deps.env),
+          run
+              .toReaderIOBuilder()
+              .local((TransactionDeps<ENV> deps) => deps.env)
+              .build(),
         )
-        .asks((deps) => deps.db)
-        .flatMapIO((db) => () => db.execute(commitSQL))
-        .apFirst(
-          _info('SQL: $beginSQL'),
-        );
+        .apSecond(
+          RIOX
+              .asks((TransactionDeps<ENV> deps) => deps.db)
+              .flatMapIO((db) => () => db.execute(commitSQL))
+              .apFirst(
+                _info('SQL: $beginSQL'),
+              )
+              .build(),
+        )
+        .build();
 
-RI.ReaderIO<TransactionDeps<ENV>, void> _info<ENV>(String message) =>
-    RI.asks((TransactionDeps<ENV> deps) => deps.logEnv).flatMapIO(
-          log(LogType.info, message),
-        );
+RI.ReaderIO<TransactionDeps<ENV>, void> _info<ENV>(String message) => RIOX
+    .asks((TransactionDeps<ENV> deps) => deps.logEnv)
+    .flatMapIO(
+      log(LogType.info, message),
+    )
+    .build();

@@ -1,12 +1,9 @@
-import 'package:functionally/extensions/reader.dart';
-import 'package:functionally/extensions/reader_io.dart';
-import 'package:functionally/extensions/reader_stream.dart';
-import 'package:functionally/extensions/reader_task.dart';
-import 'package:functionally/io.dart';
-import 'package:functionally/reader.dart' as R;
+import 'package:functionally/io.dart' as I;
+import 'package:functionally/oo/reader.dart' as RX;
+import 'package:functionally/oo/reader_io.dart' as RIOX;
+import 'package:functionally/oo/reader_stream.dart' as RSX;
+import 'package:functionally/oo/reader_task.dart' as RTX;
 import 'package:functionally/reader_io.dart' as RIO;
-import 'package:functionally/reader_stream.dart' as RS;
-import 'package:functionally/reader_task.dart' as RT;
 import 'package:rxdart/rxdart.dart';
 
 import '../../core/controller.dart';
@@ -61,7 +58,7 @@ final class Delete implements Command {
   final Set<String> ids;
 }
 
-typedef OverviewControllerIO = IO<Controller<Command, OverviewModel>>;
+typedef OverviewControllerIO = I.IO<Controller<Command, OverviewModel>>;
 typedef OverviewController = Controller<Command, OverviewModel>;
 
 typedef OverviewControllerDeps = ({
@@ -71,11 +68,11 @@ typedef OverviewControllerDeps = ({
 });
 
 final RIO.ReaderIO<OverviewControllerDeps, OverviewController>
-    overviewControllerIO = RIO
+    overviewControllerIO = RIOX
         .make<OverviewControllerDeps>()
         .map(
           (_) => (
-            R
+            RX
                 .asks(
                   (OverviewControllerDeps deps) => deps.foods,
                 )
@@ -94,8 +91,9 @@ final RIO.ReaderIO<OverviewControllerDeps, OverviewController>
                     pending: 0,
                   ),
                 )
-                .startWith(const Loading()),
-            (Stream<Command> command$) => RS
+                .startWith(const Loading())
+                .build(),
+            (Stream<Command> command$) => RSX
                 .ask<OverviewControllerDeps>()
                 .asBroadcastStream()
                 .whereType<Delete>()
@@ -105,40 +103,48 @@ final RIO.ReaderIO<OverviewControllerDeps, OverviewController>
                   ),
                 )
                 .flatMap(
-                  (delete) => RT
+                  (delete) => RTX
                       .asks((OverviewControllerDeps deps) => deps.deleteByIds)
                       .flatMapTask(
                         (deleteByIds) => deleteByIds(delete.ids),
                       )
                       .toReaderStream()
-                      .asBroadcastStream(),
+                      .asBroadcastStream()
+                      .build(),
                 )
                 .doOnData(
                   (_) => _info(
                     'Delete command executed',
                   ),
                 )
-                .ignoreElements(),
+                .ignoreElements()
+                .build(),
           ),
         )
         .flatMap(
-          (streams) => RIO.ReaderIO(
-            (OverviewControllerDeps env) => () => Controller.withPublishSubject(
-                  (Stream<Command> command$) => MergeStream([
-                    streams.$1(env),
-                    streams.$2(command$)(env),
-                  ]),
-                ),
-          ),
-        );
+          (streams) => RIOX
+              .ask<OverviewControllerDeps>()
+              .flatMapIO(
+                (env) => () => Controller.withPublishSubject(
+                      (Stream<Command> command$) => MergeStream([
+                        streams.$1(env),
+                        streams.$2(command$)(env),
+                      ]),
+                    ),
+              )
+              .build(),
+        )
+        .build();
 
 Iterable<FoodModel> _listToView(Iterable<Food> foods) =>
     foods.map((food) => FoodModel(name: food.name));
 
-RIO.ReaderIO<OverviewControllerDeps, void> _info(String message) =>
-    RIO.asks((OverviewControllerDeps deps) => deps.log).flatMapIO(
-          (log) => log(
-            LogType.info,
-            message,
-          ),
-        );
+RIO.ReaderIO<OverviewControllerDeps, void> _info(String message) => RIOX
+    .asks((OverviewControllerDeps deps) => deps.log)
+    .flatMapIO(
+      (log) => log(
+        LogType.info,
+        message,
+      ),
+    )
+    .build();

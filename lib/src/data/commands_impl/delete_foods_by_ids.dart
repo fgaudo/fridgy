@@ -1,5 +1,6 @@
-import 'package:functionally/extensions/reader_io.dart';
+import 'package:functionally/oo/reader_io.dart' as RIOX;
 import 'package:functionally/reader_io.dart' as RIO;
+
 import 'package:logging/logging.dart';
 import 'package:sqlite3/wasm.dart';
 
@@ -19,7 +20,7 @@ DeleteFoodsByIdsReader<DeleteFoodsByIdsDeps> prepareDeleteFoodsByIds =
     (ids) => transaction(
           preparedStatement(
             sql: deleteQuery,
-            run: (preparedStatement) => RIO
+            run: (preparedStatement) => RIOX
                 .make<DeleteFoodsByIdsDeps>()
                 .map(
                   (_) => ids.map((id) => [id]),
@@ -27,7 +28,7 @@ DeleteFoodsByIdsReader<DeleteFoodsByIdsDeps> prepareDeleteFoodsByIds =
                 .flatMap(
                   (ids) => RIO.sequenceArray(
                     ids.map(
-                      (id) => RIO
+                      (id) => RIOX
                           .make<DeleteFoodsByIdsDeps>()
                           .flatMapIO(
                             (_) => () => preparedStatement.execute(id),
@@ -36,17 +37,31 @@ DeleteFoodsByIdsReader<DeleteFoodsByIdsDeps> prepareDeleteFoodsByIds =
                             _info(
                               'SQL: "$deleteQuery" with $id',
                             ),
-                          ),
+                          )
+                          .build(),
                     ),
                   ),
-                ),
-          ).local(_toPreparedStatementDeps),
-        ).local(_toTransactionDeps).toReaderTask();
+                )
+                .build(),
+          )
+              .toReaderIOBuilder()
+              .local(
+                _toPreparedStatementDeps,
+              )
+              .build(),
+        )
+            .toReaderIOBuilder()
+            .local(
+              _toTransactionDeps,
+            )
+            .toReaderTask()
+            .build();
 
 RIO.ReaderIO<DeleteFoodsByIdsDeps, void> _info(String message) =>
-    RIO.asks((DeleteFoodsByIdsDeps deps) => deps.logEnv).flatMapIO(
-          log(LogType.info, message),
-        );
+    log(LogType.info, message)
+        .toReaderIOBuilder()
+        .local((DeleteFoodsByIdsDeps deps) => deps.logEnv)
+        .build();
 
 TransactionDeps<DeleteFoodsByIdsDeps> _toTransactionDeps(
   DeleteFoodsByIdsDeps deps,

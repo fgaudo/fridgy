@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
-import 'package:functionally/extensions/option.dart';
+import 'package:functionally/oo/option.dart';
 
 import 'app_inherited.dart';
 import 'controller_builder.dart';
@@ -48,182 +48,183 @@ final class _OverviewViewState extends State<OverviewView> {
   Widget build(BuildContext context) => ControllerBuilder(
         key: widget.key,
         createController: AppInheritedWidget.of(context).app.overview,
-        builder: (_, modelOption, __) => modelOption.match(
-          onNone: const ColoredBox(color: Colors.black),
-          onSome: (data) => Scaffold(
-            appBar: AppBar(
-              automaticallyImplyLeading: false,
-              title: const Text('Bottom App Bar Demo'),
-            ),
-            body: ListView(
-              padding: const EdgeInsets.only(bottom: 70),
-              controller: _scrollController,
-              children: const <Widget>[
-                Material(
-                  child: ListTile(
-                    title: Text('Cheese'),
-                    subtitle: Text('Two days left'),
-                    leading: Icon(Icons.ac_unit),
-                  ),
+        builder: (_, modelOption, __) => modelOption.toOptionBuilder().match(
+              onNone: const ColoredBox(color: Colors.black),
+              onSome: (data) => Scaffold(
+                appBar: AppBar(
+                  automaticallyImplyLeading: false,
+                  title: const Text('Bottom App Bar Demo'),
                 ),
-                Material(
-                  child: ListTile(
-                    title: Text('Cheese'),
-                    subtitle: Text('Two days left'),
-                    leading: Icon(Icons.ac_unit),
-                  ),
-                ),
-                Material(
-                  child: ListTile(
-                    title: Text('Cheese'),
-                    subtitle: Text('Two days left'),
-                    leading: Icon(Icons.ac_unit),
-                  ),
-                ),
-                Material(
-                  child: ListTile(
-                    title: Text('Cheese'),
-                    subtitle: Text('Two days left'),
-                    leading: Icon(Icons.ac_unit),
-                  ),
-                ),
-                Material(
-                  child: ListTile(
-                    title: Text('Cheese'),
-                    subtitle: Text('Two days left'),
-                    leading: Icon(Icons.ac_unit),
-                  ),
-                ),
-                Material(
-                  child: ListTile(
-                    title: Text('Cheese'),
-                    subtitle: Text('Two days left'),
-                    leading: Icon(Icons.ac_unit),
-                  ),
-                ),
-                Material(
-                  child: ListTile(
-                    title: Text('Cheese'),
-                    subtitle: Text('Two days left'),
-                    leading: Icon(Icons.ac_unit),
-                  ),
-                ),
-                Material(
-                  child: ListTile(
-                    title: Text('Cheese'),
-                    subtitle: Text('Two days left'),
-                    leading: Icon(Icons.ac_unit),
-                  ),
-                ),
-                Material(
-                  child: ListTile(
-                    title: Text('Cheese'),
-                    subtitle: Text('Two days left'),
-                    leading: Icon(Icons.ac_unit),
-                  ),
-                ),
-                Material(
-                  child: ListTile(
-                    title: Text('Cheese'),
-                    subtitle: Text('Two days left'),
-                    leading: Icon(Icons.ac_unit),
-                  ),
-                ),
-                Material(
-                  child: ListTile(
-                    title: Text('Cheese'),
-                    subtitle: Text('Two days left'),
-                    leading: Icon(Icons.ac_unit),
-                  ),
-                ),
-                Material(
-                  child: ListTile(
-                    title: Text('Cheese'),
-                    subtitle: Text('Two days left'),
-                    leading: Icon(Icons.ac_unit),
-                  ),
-                ),
-                Material(
-                  child: ListTile(
-                    title: Text('Cheese'),
-                    subtitle: Text('Two days left'),
-                    leading: Icon(Icons.ac_unit),
-                  ),
-                ),
-                Material(
-                  child: ListTile(
-                    title: Text('Cheese'),
-                    subtitle: Text('Two days left'),
-                    leading: Icon(Icons.ac_unit),
-                  ),
-                ),
-                Material(
-                  child: ListTile(
-                    title: Text('Cheese'),
-                    subtitle: Text('Two days left'),
-                    leading: Icon(Icons.ac_unit),
-                  ),
-                ),
-                Material(
-                  child: ListTile(
-                    title: Text('Cheese'),
-                    subtitle: Text('Two days left'),
-                    leading: Icon(Icons.ac_unit),
-                  ),
-                ),
-              ],
-            ),
-            floatingActionButton: FloatingActionButton.extended(
-              onPressed: () {},
-              extendedIconLabelSpacing: _extended ? 10 : 0,
-              extendedPadding:
-                  _extended ? null : const EdgeInsets.symmetric(horizontal: 16),
-              icon: const Icon(Icons.add),
-              label: AnimatedOpacity(
-                opacity: _extended ? 1 : 0,
-                duration: Durations.long1,
-                curve: Curves.fastEaseInToSlowEaseOut,
-                child: AnimatedSize(
-                  duration: Durations.medium3,
-                  curve: Curves.fastEaseInToSlowEaseOut,
-                  child: _extended ? const Text('Add Food') : Container(),
-                ),
-              ),
-            ),
-            bottomNavigationBar: BottomAppBar(
-              child: Row(
-                children: <Widget>[
-                  PopupMenuButton<String>(
-                    itemBuilder: (BuildContext context) =>
-                        <PopupMenuEntry<String>>[
-                      const PopupMenuItem<String>(
-                        value: '1',
-                        child: Text('Item 1'),
+                body: ListView(
+                  padding: const EdgeInsets.only(bottom: 70),
+                  controller: _scrollController,
+                  children: const <Widget>[
+                    Material(
+                      child: ListTile(
+                        title: Text('Cheese'),
+                        subtitle: Text('Two days left'),
+                        leading: Icon(Icons.ac_unit),
                       ),
-                      const PopupMenuItem<String>(
-                        value: '2',
-                        child: Text('Item 2'),
+                    ),
+                    Material(
+                      child: ListTile(
+                        title: Text('Cheese'),
+                        subtitle: Text('Two days left'),
+                        leading: Icon(Icons.ac_unit),
                       ),
-                      const PopupMenuItem<String>(
-                        value: '3',
-                        child: Text('Item 3'),
+                    ),
+                    Material(
+                      child: ListTile(
+                        title: Text('Cheese'),
+                        subtitle: Text('Two days left'),
+                        leading: Icon(Icons.ac_unit),
+                      ),
+                    ),
+                    Material(
+                      child: ListTile(
+                        title: Text('Cheese'),
+                        subtitle: Text('Two days left'),
+                        leading: Icon(Icons.ac_unit),
+                      ),
+                    ),
+                    Material(
+                      child: ListTile(
+                        title: Text('Cheese'),
+                        subtitle: Text('Two days left'),
+                        leading: Icon(Icons.ac_unit),
+                      ),
+                    ),
+                    Material(
+                      child: ListTile(
+                        title: Text('Cheese'),
+                        subtitle: Text('Two days left'),
+                        leading: Icon(Icons.ac_unit),
+                      ),
+                    ),
+                    Material(
+                      child: ListTile(
+                        title: Text('Cheese'),
+                        subtitle: Text('Two days left'),
+                        leading: Icon(Icons.ac_unit),
+                      ),
+                    ),
+                    Material(
+                      child: ListTile(
+                        title: Text('Cheese'),
+                        subtitle: Text('Two days left'),
+                        leading: Icon(Icons.ac_unit),
+                      ),
+                    ),
+                    Material(
+                      child: ListTile(
+                        title: Text('Cheese'),
+                        subtitle: Text('Two days left'),
+                        leading: Icon(Icons.ac_unit),
+                      ),
+                    ),
+                    Material(
+                      child: ListTile(
+                        title: Text('Cheese'),
+                        subtitle: Text('Two days left'),
+                        leading: Icon(Icons.ac_unit),
+                      ),
+                    ),
+                    Material(
+                      child: ListTile(
+                        title: Text('Cheese'),
+                        subtitle: Text('Two days left'),
+                        leading: Icon(Icons.ac_unit),
+                      ),
+                    ),
+                    Material(
+                      child: ListTile(
+                        title: Text('Cheese'),
+                        subtitle: Text('Two days left'),
+                        leading: Icon(Icons.ac_unit),
+                      ),
+                    ),
+                    Material(
+                      child: ListTile(
+                        title: Text('Cheese'),
+                        subtitle: Text('Two days left'),
+                        leading: Icon(Icons.ac_unit),
+                      ),
+                    ),
+                    Material(
+                      child: ListTile(
+                        title: Text('Cheese'),
+                        subtitle: Text('Two days left'),
+                        leading: Icon(Icons.ac_unit),
+                      ),
+                    ),
+                    Material(
+                      child: ListTile(
+                        title: Text('Cheese'),
+                        subtitle: Text('Two days left'),
+                        leading: Icon(Icons.ac_unit),
+                      ),
+                    ),
+                    Material(
+                      child: ListTile(
+                        title: Text('Cheese'),
+                        subtitle: Text('Two days left'),
+                        leading: Icon(Icons.ac_unit),
+                      ),
+                    ),
+                  ],
+                ),
+                floatingActionButton: FloatingActionButton.extended(
+                  onPressed: () {},
+                  extendedIconLabelSpacing: _extended ? 10 : 0,
+                  extendedPadding: _extended
+                      ? null
+                      : const EdgeInsets.symmetric(horizontal: 16),
+                  icon: const Icon(Icons.add),
+                  label: AnimatedOpacity(
+                    opacity: _extended ? 1 : 0,
+                    duration: Durations.long1,
+                    curve: Curves.fastEaseInToSlowEaseOut,
+                    child: AnimatedSize(
+                      duration: Durations.medium3,
+                      curve: Curves.fastEaseInToSlowEaseOut,
+                      child: _extended ? const Text('Add Food') : Container(),
+                    ),
+                  ),
+                ),
+                bottomNavigationBar: BottomAppBar(
+                  child: Row(
+                    children: <Widget>[
+                      PopupMenuButton<String>(
+                        itemBuilder: (BuildContext context) =>
+                            <PopupMenuEntry<String>>[
+                          const PopupMenuItem<String>(
+                            value: '1',
+                            child: Text('Item 1'),
+                          ),
+                          const PopupMenuItem<String>(
+                            value: '2',
+                            child: Text('Item 2'),
+                          ),
+                          const PopupMenuItem<String>(
+                            value: '3',
+                            child: Text('Item 3'),
+                          ),
+                        ],
+                      ),
+                      IconButton(
+                        tooltip: 'Search',
+                        icon: const Icon(Icons.search),
+                        onPressed: () {},
+                      ),
+                      IconButton(
+                        tooltip: 'Favorite',
+                        icon: const Icon(Icons.favorite),
+                        onPressed: () {},
                       ),
                     ],
                   ),
-                  IconButton(
-                    tooltip: 'Search',
-                    icon: const Icon(Icons.search),
-                    onPressed: () {},
-                  ),
-                  IconButton(
-                    tooltip: 'Favorite',
-                    icon: const Icon(Icons.favorite),
-                    onPressed: () {},
-                  ),
-                ],
+                ),
               ),
             ),
-          ),
-        ),
       );
 }

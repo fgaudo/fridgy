@@ -1,4 +1,3 @@
-import 'package:functionally/reader_io.dart';
 import 'package:sqlite3/wasm.dart';
 
 import '../../application/commands/execute.dart';
@@ -8,8 +7,6 @@ typedef ExecuteParams = ({
   List<dynamic>? params,
 });
 
-ExecuteReader<CommonDatabase, ExecuteParams> execute = (params) => ReaderIO(
-      (db) => () {
-        db.execute(params.query, params.params ?? []);
-      },
-    );
+ExecuteReader<CommonDatabase, ExecuteParams> execute = (params) => (db) => () {
+      db.execute(params.query, params.params ?? []);
+    };

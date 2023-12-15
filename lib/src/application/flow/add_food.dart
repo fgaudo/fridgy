@@ -1,5 +1,5 @@
-import 'package:functionally/extensions/reader_io.dart';
 import 'package:functionally/io.dart';
+import 'package:functionally/oo/reader_io.dart' as RIOX;
 import 'package:functionally/option.dart';
 import 'package:functionally/reader_io.dart';
 
@@ -35,4 +35,9 @@ AddFood<ENV> prepareAddFood<ENV>({
             name: input.name ?? 'undefined',
             expDate: input.expDate,
           ),
-        ).map((_) => Empty());
+        )
+            .toReaderIOBuilder()
+            .map(
+              (_) => Empty(),
+            )
+            .build();
