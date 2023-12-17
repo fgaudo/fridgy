@@ -1,4 +1,4 @@
-import 'package:functionally/oo/reader_io.dart' as RIOX;
+import 'package:functionally/builders.dart';
 import 'package:functionally/reader_io.dart' as RIO;
 
 import 'package:logging/logging.dart';
@@ -16,46 +16,44 @@ typedef DeleteFoodsByIdsDeps = ({CommonDatabase db, Logger logEnv});
 const String deleteQuery =
     'DELETE FROM $FOODS_TABLE WHERE $FOODS_TABLE_NAME = ?;';
 
-DeleteFoodsByIdsReader<DeleteFoodsByIdsDeps> prepareDeleteFoodsByIds =
-    (ids) => transaction(
-          preparedStatement(
-            sql: deleteQuery,
-            run: (preparedStatement) => RIOX
-                .make<DeleteFoodsByIdsDeps>()
-                .map(
-                  (_) => ids.map((id) => [id]),
-                )
-                .flatMap(
-                  (ids) => RIO.sequenceArray(
-                    ids.map(
-                      (id) => RIOX
-                          .make<DeleteFoodsByIdsDeps>()
-                          .flatMapIO(
-                            (_) => () => preparedStatement.execute(id),
-                          )
-                          .apFirst(
-                            _info(
-                              'SQL: "$deleteQuery" with $id',
-                            ),
-                          )
-                          .build(),
-                    ),
-                  ),
-                )
-                .build(),
-          )
-              .toReaderIOBuilder()
-              .local(
-                _toPreparedStatementDeps,
-              )
-              .build(),
-        )
-            .toReaderIOBuilder()
-            .local(
-              _toTransactionDeps,
+DeleteFoodsByIdsReader<DeleteFoodsByIdsDeps> prepareDeleteFoodsByIds = (ids) =>
+    transaction(
+      preparedStatement(
+        sql: deleteQuery,
+        run: (preparedStatement) => ReaderIOBuilder.make<DeleteFoodsByIdsDeps>()
+            .map(
+              (_) => ids.map((id) => [id]),
             )
-            .toReaderTask()
-            .build();
+            .flatMap(
+              (ids) => RIO.sequenceArray(
+                ids.map(
+                  (id) => ReaderIOBuilder.make<DeleteFoodsByIdsDeps>()
+                      .flatMapIO(
+                        (_) => () => preparedStatement.execute(id),
+                      )
+                      .apFirst(
+                        _info(
+                          'SQL: "$deleteQuery" with $id',
+                        ),
+                      )
+                      .build(),
+                ),
+              ),
+            )
+            .build(),
+      )
+          .toReaderIOBuilder()
+          .local(
+            _toPreparedStatementDeps,
+          )
+          .build(),
+    )
+        .toReaderIOBuilder()
+        .local(
+          _toTransactionDeps,
+        )
+        .toReaderTask()
+        .build();
 
 RIO.ReaderIO<DeleteFoodsByIdsDeps, void> _info(String message) =>
     log(LogType.info, message)

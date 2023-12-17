@@ -1,6 +1,5 @@
+import 'package:functionally/builders.dart';
 import 'package:functionally/reader_io.dart' as RI;
-import 'package:functionally/oo/reader_io.dart' as RIOX;
-
 import 'package:logging/logging.dart';
 import 'package:sqlite3/common.dart';
 
@@ -15,8 +14,7 @@ const String commitSQL = 'COMMIT;';
 RI.ReaderIO<TransactionDeps<ENV>, void> transaction<ENV>(
   RI.ReaderIO<ENV, void> run,
 ) =>
-    RIOX
-        .asks((TransactionDeps<ENV> deps) => deps.db)
+    ReaderIOBuilder.asks((TransactionDeps<ENV> deps) => deps.db)
         .flatMapIO((db) => () => db.execute(beginSQL))
         .apSecond(
           _info('SQL: $beginSQL'),
@@ -28,8 +26,7 @@ RI.ReaderIO<TransactionDeps<ENV>, void> transaction<ENV>(
               .build(),
         )
         .apSecond(
-          RIOX
-              .asks((TransactionDeps<ENV> deps) => deps.db)
+          ReaderIOBuilder.asks((TransactionDeps<ENV> deps) => deps.db)
               .flatMapIO((db) => () => db.execute(commitSQL))
               .apFirst(
                 _info('SQL: $beginSQL'),
@@ -38,9 +35,9 @@ RI.ReaderIO<TransactionDeps<ENV>, void> transaction<ENV>(
         )
         .build();
 
-RI.ReaderIO<TransactionDeps<ENV>, void> _info<ENV>(String message) => RIOX
-    .asks((TransactionDeps<ENV> deps) => deps.logEnv)
-    .flatMapIO(
-      log(LogType.info, message),
-    )
-    .build();
+RI.ReaderIO<TransactionDeps<ENV>, void> _info<ENV>(String message) =>
+    ReaderIOBuilder.asks((TransactionDeps<ENV> deps) => deps.logEnv)
+        .flatMapIO(
+          log(LogType.info, message),
+        )
+        .build();

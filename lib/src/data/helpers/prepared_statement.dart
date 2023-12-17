@@ -1,4 +1,4 @@
-import 'package:functionally/oo/reader_io.dart' as RIOX;
+import 'package:functionally/builders.dart';
 import 'package:functionally/reader_io.dart' as RIO;
 import 'package:logging/logging.dart';
 import 'package:sqlite3/common.dart';
@@ -16,14 +16,12 @@ RIO.ReaderIO<PreparedStatementDeps<ENV>, void> preparedStatement<ENV>({
   required String sql,
   required RIO.ReaderIO<ENV, void> Function(CommonPreparedStatement ps) run,
 }) =>
-    RIOX
-        .asks((PreparedStatementDeps<ENV> deps) => deps.db)
+    ReaderIOBuilder.asks((PreparedStatementDeps<ENV> deps) => deps.db)
         .flatMapIO(
           (db) => () => db.prepare(sql),
         )
         .bracket(
-          release: (ps) => RIOX
-              .make<PreparedStatementDeps<ENV>>()
+          release: (ps) => ReaderIOBuilder.make<PreparedStatementDeps<ENV>>()
               .flatMapIO(
                 (_) => ps.dispose,
               )
@@ -33,8 +31,7 @@ RIO.ReaderIO<PreparedStatementDeps<ENV>, void> preparedStatement<ENV>({
                 ),
               )
               .build(),
-          use: (ps) => RIOX
-              .make<PreparedStatementDeps<ENV>>()
+          use: (ps) => ReaderIOBuilder.make<PreparedStatementDeps<ENV>>()
               .apFirst(
                 _info('Prepared statement opened'),
               )
