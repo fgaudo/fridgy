@@ -29,7 +29,11 @@ export function FoodView(): JSX.Element {
 			</Navbar>
 			<div className="px-3 py-5">
 				<div className="p-3 sm:col-span-3">
-					<Input variant="static" label="Name" crossOrigin="anonymous" />
+					<Input
+						variant="static"
+						label="Name"
+						crossOrigin="anonymous"
+					/>
 				</div>
 
 				<div className="p-3 sm:col-span-3">

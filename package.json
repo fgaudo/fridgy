@@ -9,6 +9,7 @@
 	"author": "",
 	"license": "ISC",
 	"devDependencies": {
+		"postcss-load-config": "^5.0.2",
 		"@capacitor/cli": "^5.6.0",
 		"@trivago/prettier-plugin-sort-imports": "^4.3.0",
 		"@types/chai": "^4.3.11",

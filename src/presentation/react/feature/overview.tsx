@@ -94,7 +94,10 @@ export function FoodOverview(): JSX.Element {
 					</li>
 				))}
 			</ul>
-			<AddFab onClick={() => null} label="Add Food" />
+			<AddFab
+				onClick={() => null}
+				label="Add Food"
+			/>
 		</div>
 	)
 }
