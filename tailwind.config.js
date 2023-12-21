@@ -3,7 +3,7 @@ const defaultTheme = require('tailwindcss/defaultTheme')
 const withMT = require('@material-tailwind/react/utils/withMT')
 
 module.exports = withMT({
-	content: ['./src/**/index.html', './src/**/*.{jsx,tsx}'],
+	content: ['./public/**/index.html', './src/**/*.{jsx,tsx}'],
 	theme: {
 		extend: {
 			transitionProperty: {
