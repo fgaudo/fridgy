@@ -3,7 +3,6 @@ import esbuild from 'esbuild'
 import postcss from 'esbuild-postcss'
 import fs from 'fs'
 import { promisify } from 'util'
-import { injectManifest as inject } from 'workbox-build'
 
 const mkdir = promisify(fs.mkdir)
 
@@ -15,15 +14,6 @@ async function clean() {
 	await mkdir(outDir)
 }
 
-async function injectManifest() {
-	return inject({
-		globDirectory: outDir,
-		globPatterns: ['**/*.js', '**/*.css'],
-		swDest: outDir + '/sw.js',
-		swSrc: outDir + '/sw.js'
-	})
-}
-
 async function buildApp() {
 	return esbuild.build({
 		charset: 'utf8',
@@ -32,7 +22,7 @@ async function buildApp() {
 		sourcemap: false,
 		legalComments: 'eof',
 		define: { DEBUG: 'false', BASE_URL: '"http://127.0.0.1:35000"' },
-		entryPoints: ['src/index.ts', 'src/sw.ts'],
+		entryPoints: ['src/index.ts', 'src/style.css', 'src/index.html'],
 		bundle: true,
 		plugins: [postcss()],
 		target,
@@ -49,7 +39,7 @@ async function serveApp() {
 		sourcemap: 'linked',
 		legalComments: 'none',
 		define: { DEBUG: 'true', BASE_URL: '"http://127.0.0.1:35000"' },
-		entryPoints: ['src/index.ts', 'src/style.css', 'src/index.html'],
+		entryPoints: ['src/index.ts', 'public/style.css', 'public/index.html'],
 		bundle: true,
 		plugins: [postcss()],
 		loader: { '.html': 'copy' },

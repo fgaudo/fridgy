@@ -26,12 +26,12 @@ export function FoodOverview(): JSX.Element {
 					count: output.foods.length,
 					estimateSize: () => 90,
 					overscan: 10
-			  }
+				}
 			: {
 					count: 0,
 					estimateSize: () => 0,
 					overscan: 0
-			  }
+				}
 	)
 
 	const items: readonly VirtualItem[] = rowVirtualizer.getVirtualItems()
@@ -51,7 +51,7 @@ export function FoodOverview(): JSX.Element {
 								state: 'expired' as const
 							}
 						}))
-				  )
+					)
 				: [],
 		[output, items]
 	)
@@ -64,7 +64,7 @@ export function FoodOverview(): JSX.Element {
 					height: rowVirtualizer.getTotalSize()
 				}}
 				className={`relative top-14 w-full overflow-hidden pt-14`}>
-				{virtualFoods.map((element, index) => (
+				{virtualFoods.map(element => (
 					<li
 						key={element.food.id}
 						style={{

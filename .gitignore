@@ -6,3 +6,5 @@ build
 types
 .idea
 .github
+
+.vscode/settings.json
