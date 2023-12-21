@@ -41,7 +41,7 @@ const foods = [...Array(200).keys()].map(
 			expDate: 0,
 			type: 'dairy',
 			isBestBefore: true
-		} as const)
+		}) as const
 )
 
 renderApp(container, {

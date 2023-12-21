@@ -1,1 +1,5 @@
-dist
+/*
+!/src
+!/test
+!/*.mjs
+!/*.js

@@ -3,8 +3,8 @@ import * as OE from 'fp-ts-rxjs/lib/ObservableEither'
 import * as OO from 'fp-ts-rxjs/lib/ObservableOption'
 import { NonEmptyArray } from 'fp-ts/lib/NonEmptyArray'
 import * as Opt from 'fp-ts/lib/Option'
-import { pipe } from 'fp-ts/lib/function'
 import { tapIO } from 'fp-ts/lib/Task'
+import { pipe } from 'fp-ts/lib/function'
 
 import { Interface } from '../interfaces'
 

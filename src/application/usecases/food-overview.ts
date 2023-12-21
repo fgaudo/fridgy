@@ -118,7 +118,7 @@ export const switchBind = <K extends string, A, B>(
 		pipe(
 			f(a),
 			// eslint-disable-next-line @typescript-eslint/no-unsafe-return
-			O.map(b => ({ ...a, [name]: b } as any))
+			O.map(b => ({ ...a, [name]: b }) as any)
 		)
 	)
 
@@ -162,7 +162,7 @@ export const foodOverview: FoodOverview = deps =>
 				Rx.switchMap(({ foods, nowEither }, index) =>
 					pipe(
 						index === 0 ? O.of(nowEither) : OE.fromTaskEither(deps.onceNow),
-						OE.map(now => ({ foods, now } as const))
+						OE.map(now => ({ foods, now }) as const)
 					)
 				)
 			)

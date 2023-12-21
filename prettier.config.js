@@ -10,6 +10,8 @@ module.exports = {
 	jsxBracketSameLine: true,
 	useTabs: true,
 	importOrder: [
+		'<THIRD_PARTY_MODULES>',
+		'^@/core',
 		'^@/domain',
 		'^@/application',
 		'^@/presentation',

@@ -1,8 +1,9 @@
-import { LogEntry } from '@/core/logging'
-import { Single } from '@/core/rxjs'
 import { expect } from 'chai'
 import * as E from 'fp-ts/lib/Either'
 import { TestScheduler } from 'rxjs/testing'
+
+import { LogEntry } from '@/core/logging'
+import { Single } from '@/core/rxjs'
 
 import { FoodEntry } from '@/application/streams/foods'
 import {

@@ -20,7 +20,8 @@ export function FoodView(): JSX.Element {
 					<IconButton
 						variant="text"
 						className="h-6 w-6 text-inherit hover:bg-transparent focus:bg-transparent active:bg-transparent lg:hidden"
-						ripple={false}>
+						ripple={false}
+					>
 						<ArrowLeftIcon className="h-6 w-6 font-bold" />
 					</IconButton>
 					<Typography variant="h5">Add Food</Typography>

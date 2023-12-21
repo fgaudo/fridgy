@@ -63,7 +63,8 @@ export function FoodOverview(): JSX.Element {
 				style={{
 					height: rowVirtualizer.getTotalSize()
 				}}
-				className={`relative top-14 w-full overflow-hidden pt-14`}>
+				className={`relative top-14 w-full overflow-hidden pt-14`}
+			>
 				{virtualFoods.map(element => (
 					<li
 						key={element.food.id}
@@ -72,7 +73,8 @@ export function FoodOverview(): JSX.Element {
 							height: element.size,
 							transform: `translateY(${element.position}px)`
 						}}
-						className={`absolute left-0 top-0 w-full`}>
+						className={`absolute left-0 top-0 w-full`}
+					>
 						<Link to={`/foods/${element.food.id}`}>
 							<div className="translate-x-0">
 								<div className="mx-2 mb-2 h-[70px] bg-white p-3 shadow-md sm:pb-4">

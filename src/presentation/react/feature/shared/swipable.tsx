@@ -91,7 +91,8 @@ export const Swipable = (props: {
 				className={
 					state.dragging ? 'bg-blue-300' : 'transition-transform duration-300'
 				}
-				onMouseDown={down}>
+				onMouseDown={down}
+			>
 				{props.children}
 			</div>
 		</>
