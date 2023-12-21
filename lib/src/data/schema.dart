@@ -1,4 +1,4 @@
-import 'package:sqlite3/wasm.dart';
+import 'package:sqlite3/common.dart';
 
 const String FOODS_TABLE = 'foods';
 const String FOODS_TABLE_NAME = 'name';

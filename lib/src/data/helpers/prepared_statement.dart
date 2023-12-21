@@ -1,4 +1,4 @@
-import 'package:functionally/builders.dart';
+import 'package:functionally/common.dart';
 import 'package:functionally/reader_io.dart' as RIO;
 import 'package:logging/logging.dart';
 import 'package:sqlite3/common.dart';
@@ -16,37 +16,46 @@ RIO.ReaderIO<PreparedStatementDeps<ENV>, void> preparedStatement<ENV>({
   required String sql,
   required RIO.ReaderIO<ENV, void> Function(CommonPreparedStatement ps) run,
 }) =>
-    ReaderIOBuilder.asks((PreparedStatementDeps<ENV> deps) => deps.db)
-        .flatMapIO(
-          (db) => () => db.prepare(sql),
+    Builder(RIO.asks((PreparedStatementDeps<ENV> deps) => deps.db))
+        .transform(
+          RIO.flatMapIO_(
+            (db) => () => db.prepare(sql),
+          ),
         )
-        .bracket(
-          release: (ps) => ReaderIOBuilder.make<PreparedStatementDeps<ENV>>()
-              .flatMapIO(
-                (_) => ps.dispose,
-              )
-              .apFirst(
-                _info(
-                  'Prepared statement closed',
-                ),
-              )
-              .build(),
-          use: (ps) => ReaderIOBuilder.make<PreparedStatementDeps<ENV>>()
-              .apFirst(
-                _info('Prepared statement opened'),
-              )
-              .apSecond(
-                run(ps)
-                    .toReaderIOBuilder()
-                    .local((PreparedStatementDeps<ENV> deps) => deps.env)
-                    .build(),
-              )
-              .build(),
+        .transform(
+          RIO.bracket(
+            release: (ps) => Builder(RIO.make<PreparedStatementDeps<ENV>>())
+                .transform(
+                  RIO.flatMapIO(
+                    (_) => ps.dispose,
+                  ),
+                )
+                .transform(
+                  RIO.apFirst_(
+                    (deps) => log(
+                      LogType.info,
+                      'Prepared statement closed',
+                    )(deps.logEnv),
+                  ),
+                )
+                .build(),
+            use: (ps) => Builder(
+              RIO.make<PreparedStatementDeps<ENV>>(),
+            )
+                .transform(
+                  RIO.apFirst_(
+                    (deps) => log(
+                      LogType.info,
+                      'Prepared statement opened',
+                    )(deps.logEnv),
+                  ),
+                )
+                .transform(
+                  RIO.apSecond_(
+                    (deps) => run(ps)(deps.env),
+                  ),
+                )
+                .build(),
+          ),
         )
-        .build();
-
-RIO.ReaderIO<PreparedStatementDeps<ENV>, void> _info<ENV>(String message) =>
-    log(LogType.info, message)
-        .toReaderIOBuilder()
-        .local((PreparedStatementDeps<ENV> deps) => deps.logEnv)
         .build();

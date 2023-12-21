@@ -20,13 +20,8 @@ final class Controller<A, B> {
   final Stream<B> stream;
 
   void add(A a) {
-    if (_subject.isClosed) {
-      return;
-    }
     _subject.add(a);
   }
-
-  Future<void> close() => _subject.close();
 
   final Subject<A> _subject;
 }

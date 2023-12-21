@@ -16,11 +16,12 @@ dependencies:
   flutter_localizations:
     sdk: flutter
   functionally:
+    path: ../functionally
   go_router:
-  js:
   logging:
-  rxdart: 
-  sqlite3: 2.2.0
+  sqlite3:
+  rxdart:
+  sqlite3_flutter_libs :
   uuid:
 
 dev_dependencies:

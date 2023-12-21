@@ -1,7 +1,7 @@
-import 'package:functionally/builders.dart';
+import 'package:functionally/common.dart';
 import 'package:functionally/io.dart';
 import 'package:functionally/option.dart';
-import 'package:functionally/reader_io.dart';
+import 'package:functionally/reader_io.dart' as RIO;
 
 import '../commands/add_food.dart';
 
@@ -24,20 +24,24 @@ typedef AddFoodModelInput = ({
   String? expDate,
 });
 
-typedef AddFood<ENV> = ReaderIO<ENV, AddFoodModel> Function(AddFoodModelInput);
+typedef AddFood<ENV> = RIO.ReaderIO<ENV, AddFoodModel> Function(
+    AddFoodModelInput);
 typedef AddFoodWithDeps = IO<AddFoodModel> Function(AddFoodModelInput);
 
 AddFood<ENV> prepareAddFood<ENV>({
   required AddFoodCommand<ENV> addFood,
 }) =>
-    (input) => addFood(
-          (
-            name: input.name ?? 'undefined',
-            expDate: input.expDate,
+    (input) => Builder(
+          addFood(
+            (
+              name: input.name ?? 'undefined',
+              expDate: input.expDate,
+            ),
           ),
         )
-            .toReaderIOBuilder()
-            .map(
-              (_) => Empty(),
+            .transform(
+              RIO.map(
+                (_) => Empty(),
+              ),
             )
             .build();

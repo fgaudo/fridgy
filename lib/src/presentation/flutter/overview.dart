@@ -47,7 +47,7 @@ final class _OverviewViewState extends State<OverviewView> {
   @override
   Widget build(BuildContext context) => ControllerBuilder(
         key: widget.key,
-        createController: AppInheritedWidget.of(context).app.overview,
+        controller: AppInheritedWidget.of(context).app.overview,
         builder: (_, modelOption, __) => modelOption.toOptionBuilder().match(
               onNone: const ColoredBox(color: Colors.black),
               onSome: (data) => Scaffold(

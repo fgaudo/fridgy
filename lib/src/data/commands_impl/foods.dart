@@ -1,8 +1,10 @@
-import 'package:functionally/builders.dart';
-import 'package:functionally/reader_io.dart' as RIO;
+import 'package:functionally/common.dart';
+import 'package:functionally/reader.dart' as R;
+import 'package:functionally/reader_stream.dart' as RS;
 import 'package:functionally/stream.dart';
 import 'package:logging/logging.dart';
-import 'package:sqlite3/wasm.dart';
+import 'package:rxdart/rxdart.dart';
+import 'package:sqlite3/common.dart';
 
 import '../../application/commands/foods.dart';
 import '../../application/commands/log.dart';
@@ -12,46 +14,66 @@ import 'log.dart';
 typedef FoodsDeps = ({CommonDatabase db, Logger logEnv});
 
 final FoodsReader<FoodsDeps> prepareFoods =
-    ReaderStreamBuilder.asks((FoodsDeps deps) => deps.db)
-        .flatMapStream(
-          (db) => db.updates,
-        )
-        .asBroadcastStream()
-        .doOnData(
-          (event) => _info('received update'),
-        )
-        .where((event) => event.tableName == FOODS_TABLE)
-        .map((event) => null)
-        .startWith(null)
-        .doOnData(
-          (event) => _info('Taking all foods'),
-        )
-        .switchMap(
-          (_) => ReaderStreamBuilder.ask<FoodsDeps>()
-              .flatMapStream(
-                (deps) => fromIO(
-                  () => deps.db.select('SELECT * FROM $FOODS_TABLE;'),
-                ),
-              )
-              .asBroadcastStream()
-              .build(),
-        )
-        .doOnData(
-          (event) => _info(
-            'Retrieved ${event.length} records',
+    Builder(RS.asks((FoodsDeps deps) => deps.db))
+        .transform(
+          R.map_(
+            (db$) => db$.flatMap((db) => db.updates).asBroadcastStream(),
           ),
         )
-        .map(
-          (resultSet) => resultSet.map(
-            (row) => FoodData(
-              name: (row[FOODS_TABLE] as String?) ?? '[UNDEFINED]',
+        .transform(
+          R.flatMap(
+            (updates$) => (deps) => updates$.doOnData(
+                  (_) => log(LogType.info, 'received update')(deps.logEnv),
+                ),
+          ),
+        )
+        .transform(
+          R.map_(
+            (event$) => event$.where((event) => event.tableName == FOODS_TABLE),
+          ),
+        )
+        .transform(
+          RS.map_((_) => null),
+        )
+        .transform(
+          R.map_(
+            (event$) => event$.startWith(null),
+          ),
+        )
+        .transform(
+          R.flatMap(
+            (updates$) => (deps) => updates$.doOnData(
+                  (_) => log(LogType.info, 'Taking all foods')(deps.logEnv),
+                ),
+          ),
+        )
+        .transform(
+          R.flatMap(
+            (updates$) => (deps) => updates$.switchMap(
+                  (_) => fromIO(
+                    () => deps.db.select('SELECT * FROM $FOODS_TABLE;'),
+                    reusable: true,
+                  ),
+                ),
+          ),
+        )
+        .transform(
+          R.flatMap(
+            (updates$) => (deps) => updates$.doOnData(
+                  (event) =>
+                      log(LogType.info, 'Retrieved ${event.length} records')(
+                    deps.logEnv,
+                  ),
+                ),
+          ),
+        )
+        .transform(
+          RS.map_(
+            (resultSet) => resultSet.map(
+              (row) => FoodData(
+                name: (row[FOODS_TABLE] as String?) ?? '[UNDEFINED]',
+              ),
             ),
           ),
         )
-        .build();
-
-RIO.ReaderIO<FoodsDeps, void> _info(String message) =>
-    log(LogType.info, message)
-        .toReaderIOBuilder()
-        .local((FoodsDeps deps) => deps.logEnv)
         .build();

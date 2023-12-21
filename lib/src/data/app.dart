@@ -1,29 +1,24 @@
+import 'package:flutter/foundation.dart';
 import 'package:logging/logging.dart';
-import 'package:sqlite3/wasm.dart';
+import 'package:sqlite3/sqlite3.dart';
 
 import '../application/app.dart';
 import 'commands_impl/delete_foods_by_ids.dart';
-import 'commands_impl/execute.dart';
 import 'commands_impl/foods.dart';
 import 'commands_impl/log.dart';
-import 'commands_impl/retrieve.dart';
 import 'schema.dart';
 
-const String _SQLITE_WASM_PATH = 'sqlite3.wasm';
-const String _INDEXEDDB_DB_NAME = 'fridgy';
-const String _DATABASE = '/database';
+const String _DATABASE = 'fridgy';
 const String _APP_LOGGER_NAME = 'APP';
 const String _UI_LOGGER_NAME = 'UI';
 const String _DATA_LOGGER_NAME = 'DATA';
 
-final class AppImpl extends App<RetrieveParams, ExecuteParams> {
+final class AppImpl extends App {
   AppImpl({
     required super.appLog,
     required super.deleteFoodsByIds,
     required super.foods,
     required super.uiLog,
-    required super.retrieve,
-    required super.execute,
   });
 }
 
@@ -38,21 +33,13 @@ Future<AppImpl> createApp({
 
   Logger.root.level = logLevel;
   Logger.root.onRecord.listen((record) {
-    print(
+    debugPrint(
       '${record.level.name} [${record.loggerName}] : ${record.message}',
     );
   });
 
-  final sqlite3 = await WasmSqlite3.loadFromUrl(
-    Uri.parse(_SQLITE_WASM_PATH),
-  )
-    ..registerVirtualFileSystem(
-      await IndexedDbFileSystem.open(dbName: _INDEXEDDB_DB_NAME),
-      makeDefault: true,
-    );
-
   final readWriteDB = sqlite3.open(_DATABASE, mode: OpenMode.readWriteCreate);
-  final readDB = sqlite3.open(_DATABASE, mode: OpenMode.readOnly);
+  final _ = sqlite3.open(_DATABASE, mode: OpenMode.readOnly);
 
   initTables(readWriteDB);
 
@@ -71,7 +58,5 @@ Future<AppImpl> createApp({
     ),
     appLog: (type, message) => log(type, message)(appLogger),
     uiLog: (type, message) => log(type, message)(uiLogger),
-    retrieve: (params) => retrieve(params)(readDB),
-    execute: (params) => execute(params)(readWriteDB),
   );
 }

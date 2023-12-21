@@ -1,5 +1,5 @@
-import 'package:functionally/builders.dart';
-import 'package:functionally/reader_io.dart' as RI;
+import 'package:functionally/common.dart';
+import 'package:functionally/reader_io.dart' as RIO;
 import 'package:logging/logging.dart';
 import 'package:sqlite3/common.dart';
 
@@ -11,33 +11,37 @@ typedef TransactionDeps<ENV> = ({CommonDatabase db, Logger logEnv, ENV env});
 const String beginSQL = 'BEGIN;';
 const String commitSQL = 'COMMIT;';
 
-RI.ReaderIO<TransactionDeps<ENV>, void> transaction<ENV>(
-  RI.ReaderIO<ENV, void> run,
+RIO.ReaderIO<TransactionDeps<ENV>, void> transaction<ENV>(
+  RIO.ReaderIO<ENV, void> run,
 ) =>
-    ReaderIOBuilder.asks((TransactionDeps<ENV> deps) => deps.db)
-        .flatMapIO((db) => () => db.execute(beginSQL))
-        .apSecond(
-          _info('SQL: $beginSQL'),
+    Builder(
+      RIO.asks((TransactionDeps<ENV> deps) => deps.db),
+    )
+        .transform(
+          RIO.flatMapIO_((db) => () => db.execute(beginSQL)),
         )
-        .apSecond(
-          run
-              .toReaderIOBuilder()
-              .local((TransactionDeps<ENV> deps) => deps.env)
-              .build(),
+        .transform(
+          RIO.apSecond_(
+            (deps) => log(LogType.info, 'SQL: $beginSQL')(deps.logEnv),
+          ),
         )
-        .apSecond(
-          ReaderIOBuilder.asks((TransactionDeps<ENV> deps) => deps.db)
-              .flatMapIO((db) => () => db.execute(commitSQL))
-              .apFirst(
-                _info('SQL: $beginSQL'),
-              )
-              .build(),
+        .transform(
+          RIO.apSecond_(
+            (deps) => run(deps.env),
+          ),
         )
-        .build();
-
-RI.ReaderIO<TransactionDeps<ENV>, void> _info<ENV>(String message) =>
-    ReaderIOBuilder.asks((TransactionDeps<ENV> deps) => deps.logEnv)
-        .flatMapIO(
-          log(LogType.info, message),
+        .transform(
+          RIO.apSecond_(
+            Builder(RIO.asks((TransactionDeps<ENV> deps) => deps.db))
+                .transform(
+                  RIO.flatMapIO_((db) => () => db.execute(commitSQL)),
+                )
+                .transform(
+                  RIO.apFirst_(
+                    (deps) => log(LogType.info, 'SQL: $beginSQL')(deps.logEnv),
+                  ),
+                )
+                .build(),
+          ),
         )
         .build();

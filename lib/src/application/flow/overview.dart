@@ -1,6 +1,7 @@
-import 'package:functionally/builders.dart';
-import 'package:functionally/io.dart' as I;
-import 'package:functionally/reader_io.dart' as RIO;
+import 'package:functionally/common.dart';
+import 'package:functionally/reader.dart' as R;
+import 'package:functionally/reader_stream.dart' as RS;
+import 'package:functionally/stream.dart';
 import 'package:rxdart/rxdart.dart';
 
 import '../../core/controller.dart';
@@ -55,7 +56,6 @@ final class Delete implements Command {
   final Set<String> ids;
 }
 
-typedef OverviewControllerIO = I.IO<Controller<Command, OverviewModel>>;
 typedef OverviewController = Controller<Command, OverviewModel>;
 
 typedef OverviewControllerDeps = ({
@@ -64,82 +64,111 @@ typedef OverviewControllerDeps = ({
   Foods foods,
 });
 
-final RIO.ReaderIO<OverviewControllerDeps, OverviewController>
-    overviewControllerIO = ReaderIOBuilder.make<OverviewControllerDeps>()
-        .map(
-          (_) => (
-            ReaderBuilder.asks(
-              (OverviewControllerDeps deps) => deps.foods,
-            )
-                .toReaderStream()
-                .asBroadcastStream()
-                .doOnListen(
-                  _info('Started listening to foods'),
-                )
-                .doOnData(
-                  (foods) => _info('Received ${foods.length} food entries'),
-                )
-                .map((foods) => foods.map(toFoodEntity))
-                .map<OverviewModel>(
-                  (foods) => Ready.fromData(
-                    foods: foods,
-                    pending: 0,
-                  ),
-                )
-                .startWith(const Loading())
-                .build(),
-            (Stream<Command> command$) =>
-                ReaderStreamBuilder.ask<OverviewControllerDeps>()
-                    .asBroadcastStream()
-                    .whereType<Delete>()
-                    .doOnData(
-                      (delete) => _info(
-                        'Received delete command',
-                      ),
-                    )
-                    .flatMap(
-                      (delete) => ReaderTaskBuilder.asks(
-                        (OverviewControllerDeps deps) => deps.deleteByIds,
+final R.Reader<OverviewControllerDeps, OverviewController> overviewController =
+    Builder(R.ask<OverviewControllerDeps>())
+        .transform(
+          R.map_(
+            (_) => (
+              Builder(
+                R.asks(
+                  (OverviewControllerDeps deps) => deps.foods,
+                ),
+              )
+                  .transform(
+                    R.flatMap(
+                      (stream) => (deps) => stream.doOnListen(
+                            deps.log(
+                              LogType.info,
+                              'Started listening to foods',
+                            ),
+                          ),
+                    ),
+                  )
+                  .transform(
+                    R.flatMap(
+                      (stream) => (deps) => stream.doOnData(
+                            (foods) => deps.log(
+                              LogType.info,
+                              'Received ${foods.length} food entries',
+                            ),
+                          ),
+                    ),
+                  )
+                  .transform(
+                    RS.map_(
+                      (foods) => foods.map(toFoodEntity),
+                    ),
+                  )
+                  .transform(
+                    RS.map_(
+                      // ignore: unnecessary_cast
+                      (foods) => Ready.fromData(
+                        foods: foods,
+                        pending: 0,
+                      ) as OverviewModel,
+                    ),
+                  )
+                  .transform(
+                    R.map_(
+                      (stream) => stream.startWith(const Loading()),
+                    ),
+                  )
+                  .build(),
+              (Stream<Command> command$) =>
+                  Builder(RS.ask<OverviewControllerDeps>())
+                      .transform(
+                        R.map_(
+                          (_) =>
+                              command$.asBroadcastStream().whereType<Delete>(),
+                        ),
                       )
-                          .flatMapTask(
-                            (deleteByIds) => deleteByIds(delete.ids),
-                          )
-                          .toReaderStream()
-                          .asBroadcastStream()
-                          .build(),
-                    )
-                    .doOnData(
-                      (_) => _info(
-                        'Delete command executed',
-                      ),
-                    )
-                    .ignoreElements()
-                    .build(),
+                      .transform(
+                        R.flatMap(
+                          (stream) => (deps) => stream.doOnData(
+                                (_) => deps.log(
+                                  LogType.info,
+                                  'Received delete command',
+                                ),
+                              ),
+                        ),
+                      )
+                      .transform(
+                        R.flatMap(
+                          (stream) => (deps) => stream.flatMap(
+                                (delete) => fromTask(
+                                  deps.deleteByIds(delete.ids),
+                                ),
+                              ),
+                        ),
+                      )
+                      .transform(
+                        R.flatMap(
+                          (stream) => (deps) => stream.doOnData(
+                                (_) => deps.log(
+                                  LogType.info,
+                                  'Delete command executed',
+                                ),
+                              ),
+                        ),
+                      )
+                      .transform(
+                        R.map_((stream) => stream.ignoreElements()),
+                      )
+                      .build(),
+            ),
           ),
         )
-        .flatMap(
-          (streams) => ReaderIOBuilder.ask<OverviewControllerDeps>()
-              .flatMapIO(
-                (env) => () => Controller.withPublishSubject(
-                      (Stream<Command> command$) => MergeStream([
-                        streams.$1(env),
-                        streams.$2(command$)(env),
-                      ]),
-                    ),
-              )
-              .build(),
+        .transform(
+          R.flatMap(
+            (streams) => (env) => Controller.withPublishSubject(
+                  (Stream<Command> command$) => MergeStream([
+                    streams.$1(env),
+                    streams.$2(command$)(env),
+                  ]),
+                ),
+          ),
         )
         .build();
 
 Iterable<FoodModel> _listToView(Iterable<Food> foods) =>
     foods.map((food) => FoodModel(name: food.name));
-
-RIO.ReaderIO<OverviewControllerDeps, void> _info(String message) =>
-    ReaderIOBuilder.asks((OverviewControllerDeps deps) => deps.log)
-        .flatMapIO(
-          (log) => log(
-            LogType.info,
-            message,
-          ),
-        )
-        .build();
