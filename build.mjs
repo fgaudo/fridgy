@@ -22,7 +22,7 @@ async function buildApp() {
 		sourcemap: false,
 		legalComments: 'eof',
 		define: { DEBUG: 'false', BASE_URL: '"http://127.0.0.1:35000"' },
-		entryPoints: ['src/index.ts', 'src/style.css', 'src/index.html'],
+		entryPoints: ['src/index.ts', 'public/style.css', 'public/index.html'],
 		bundle: true,
 		plugins: [postcss()],
 		target,
