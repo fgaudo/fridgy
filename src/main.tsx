@@ -1,17 +1,13 @@
-import React from 'react'
-import ReactDOM from 'react-dom/client'
+import { App } from '@/application/app.ts'
 
-import App from './App.tsx'
-import './index.css'
+import { render } from '@/presentation/main.tsx'
 
-const root = document.getElementById('root')
+import { createApp } from '@/data/app.ts'
 
-if (!root) {
-	throw new Error('No #root in html')
-}
+;(async () => {
+	const app: App = await createApp()
 
-ReactDOM.createRoot(root).render(
-	<React.StrictMode>
-		<App />
-	</React.StrictMode>
-)
+	render(app)
+})().catch(e => {
+	console.error(e)
+})

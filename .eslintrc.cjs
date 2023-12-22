@@ -24,6 +24,8 @@ module.exports = {
 			'warn',
 			{ allowConstantExport: true }
 		],
-		'react/jsx-filename-extension': [1, { extensions: ['.tsx'] }]
+		'react/jsx-filename-extension': [1, { extensions: ['.tsx'] }],
+		'@typescript-eslint/no-unused-vars': ['warn'],
+		'@typescript-eslint/no-empty-interface': ['off']
 	}
 }

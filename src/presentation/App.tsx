@@ -1,9 +1,5 @@
 import { useState } from 'react'
 
-import './App.css'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-
 function App() {
 	const [count, setCount] = useState(0)
 
@@ -15,7 +11,6 @@ function App() {
 					rel="noreferrer"
 					target="_blank">
 					<img
-						src={viteLogo}
 						className="logo"
 						alt="Vite logo"
 					/>
@@ -25,7 +20,6 @@ function App() {
 					rel="noreferrer"
 					target="_blank">
 					<img
-						src={reactLogo}
 						className="logo react"
 						alt="React logo"
 					/>

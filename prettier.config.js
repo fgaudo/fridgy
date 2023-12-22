@@ -16,7 +16,7 @@ export default {
 		'^@/domain',
 		'^@/application',
 		'^@/presentation',
-		'@/infrastructure',
+		'@/data',
 		'^[./]'
 	],
 	singleAttributePerLine: true,
