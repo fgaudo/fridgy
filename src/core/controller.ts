@@ -1,30 +1,16 @@
-import { Observable, Subject, SubscriptionLike } from 'rxjs'
+import { Observable, Subject } from 'rxjs'
 
-export interface Controller<A, B> {
-	readonly stream: Observable<B>
-	next(a: A): void
-}
-
-export class CloseableController<A, B>
-	implements SubscriptionLike, Controller<A, B>
-{
+export class Controller<A, B> {
 	constructor(transformer: (a: Observable<A>) => Observable<B>) {
-		this.subject = new Subject()
+		this.subject = new Subject<A>()
 		this.stream = this.subject.pipe(transformer)
 	}
 
 	readonly stream: Observable<B>
-	private readonly subject: Subject<A>
-
-	unsubscribe(): void {
-		this.subject.unsubscribe()
-	}
-
-	get closed(): boolean {
-		return this.subject.closed
-	}
 
 	next(a: A): void {
 		this.subject.next(a)
 	}
+
+	private readonly subject: Subject<A>
 }

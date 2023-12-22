@@ -20,6 +20,9 @@ dependencies:
   fp-ts:
     specifier: ^2.16.1
     version: 2.16.1
+  fp-ts-rxjs:
+    specifier: ^0.6.15
+    version: 0.6.15(fp-ts@2.16.1)(rxjs@7.8.1)
   observable-hooks:
     specifier: ^4.2.3
     version: 4.2.3(react-dom@18.2.0)(react@18.2.0)(rxjs@7.8.1)
@@ -2133,6 +2136,16 @@ packages:
     dependencies:
       is-callable: 1.2.7
     dev: true
+
+  /fp-ts-rxjs@0.6.15(fp-ts@2.16.1)(rxjs@7.8.1):
+    resolution: {integrity: sha512-5fD4a/439l0aUkSkPq7xnznXYsD7YwGyYANO3v6dkkZJTta36et3bNJ2tzq28UcVR6bS9nTDbP7kMjgQqFFxYQ==}
+    peerDependencies:
+      fp-ts: ^2.4.4
+      rxjs: ^6.0.0
+    dependencies:
+      fp-ts: 2.16.1
+      rxjs: 7.8.1
+    dev: false
 
   /fp-ts@2.16.1:
     resolution: {integrity: sha512-by7U5W8dkIzcvDofUcO42yl9JbnHTEDBrzu3pt5fKT+Z4Oy85I21K80EYJYdjQGC2qum4Vo55Ag57iiIK4FYuA==}

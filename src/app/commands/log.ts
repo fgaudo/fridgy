@@ -1,4 +1,4 @@
-import { readerTask as RT, task as T } from 'fp-ts'
+import { io as I, readerIO as RIO } from 'fp-ts'
 
 export enum LogType {
 	info,
@@ -6,9 +6,9 @@ export enum LogType {
 	error
 }
 
-export type Log = (type: LogType, message: string) => T.Task<void>
+export type Log = (type: LogType, message: string) => I.IO<void>
 
 export type LogWithDeps<ENV> = (
 	type: LogType,
 	message: string
-) => RT.ReaderTask<ENV, void>
+) => RIO.ReaderIO<ENV, void>
