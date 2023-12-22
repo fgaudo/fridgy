@@ -1,6 +1,6 @@
-import { App } from '@/application/app.ts'
+import { App } from '@/app/app.ts'
 
-import { render } from '@/presentation/main.tsx'
+import { render } from '@/ui/main.tsx'
 
 import { createApp } from '@/data/app.ts'
 

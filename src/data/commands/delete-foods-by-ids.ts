@@ -1,7 +1,6 @@
-import * as R from 'fp-ts/Reader'
-import * as TE from 'fp-ts/TaskEither'
+import { reader as R, taskEither as TE } from 'fp-ts'
 
-import { DeleteFoodsByIdsWithDeps } from '@/application/commands/delete-foods-by-ids'
+import { DeleteFoodsByIdsWithDeps } from '@/app/commands/delete-foods-by-ids'
 
 export const deleteFoodsByIds: DeleteFoodsByIdsWithDeps<unknown> = () =>
 	R.of(TE.right(undefined))

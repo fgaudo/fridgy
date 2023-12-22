@@ -1,4 +1,4 @@
-import * as R from 'fp-ts/Reader'
+import { reader as R } from 'fp-ts'
 import { flow, pipe } from 'fp-ts/function'
 import { map } from 'rxjs'
 
@@ -6,9 +6,9 @@ import { CloseableController } from '@/core/controller'
 
 import { Food } from '@/domain/food'
 
-import { DeleteFoodsByIds } from '../commands/delete-foods-by-ids'
-import { Foods, toFoodEntity } from '../commands/foods'
-import { Log } from '../commands/log'
+import { DeleteFoodsByIds } from '@/app/commands/delete-foods-by-ids'
+import { Foods, toFoodEntity } from '@/app/commands/foods'
+import { Log } from '@/app/commands/log'
 
 interface Deps {
 	readonly deleteFoodsByIds: DeleteFoodsByIds

@@ -1,8 +1,8 @@
-import { App } from '@/application/app'
+import { App } from '@/app/app'
 
-import { deleteFoodsByIds } from './commands/delete-foods-by-ids'
-import { foods } from './commands/foods'
-import { log } from './commands/log'
+import { deleteFoodsByIds } from '@/data/commands/delete-foods-by-ids'
+import { foods } from '@/data/commands/foods'
+import { log } from '@/data/commands/log'
 
 export async function createApp(): Promise<App> {
 	return Promise.resolve(

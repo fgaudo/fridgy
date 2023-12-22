@@ -1,7 +1,7 @@
-import { DeleteFoodsByIds } from './commands/delete-foods-by-ids'
-import { Foods } from './commands/foods'
-import { Log } from './commands/log'
-import { OverviewController, overview } from './controllers/overview'
+import { DeleteFoodsByIds } from '@/app/commands/delete-foods-by-ids'
+import { Foods } from '@/app/commands/foods'
+import { Log } from '@/app/commands/log'
+import { OverviewController, overview } from '@/app/controllers/overview'
 
 export class App {
 	constructor({

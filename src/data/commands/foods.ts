@@ -1,6 +1,6 @@
-import * as R from 'fp-ts/Reader'
+import { reader as R } from 'fp-ts'
 import { of } from 'rxjs'
 
-import { FoodsWithDeps } from '@/application/commands/foods'
+import { FoodsWithDeps } from '@/app/commands/foods'
 
 export const foods: FoodsWithDeps<unknown> = R.of(of([]))

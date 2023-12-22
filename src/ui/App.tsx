@@ -9,7 +9,8 @@ function App() {
 				<a
 					href="https://vitejs.dev"
 					rel="noreferrer"
-					target="_blank">
+					target="_blank"
+				>
 					<img
 						className="logo"
 						alt="Vite logo"
@@ -18,7 +19,8 @@ function App() {
 				<a
 					href="https://react.dev"
 					rel="noreferrer"
-					target="_blank">
+					target="_blank"
+				>
 					<img
 						className="logo react"
 						alt="React logo"
@@ -32,7 +34,8 @@ function App() {
 					className="text-red-500"
 					onClick={() => {
 						setCount(count => count + 1)
-					}}>
+					}}
+				>
 					count is {count}
 				</button>
 				<p>

@@ -1,9 +1,10 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 
-import { App } from '@/application/app'
+import { App } from '@/app/app'
 
-import AppUI from './App'
+import AppUI from '@/ui/App'
+
 import './index.css'
 
 export function render(app: App): void {

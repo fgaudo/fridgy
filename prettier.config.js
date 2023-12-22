@@ -14,8 +14,8 @@ export default {
 		'<THIRD_PARTY_MODULES>',
 		'^@/core',
 		'^@/domain',
-		'^@/application',
-		'^@/presentation',
+		'^@/app',
+		'^@/ui',
 		'@/data',
 		'^[./]'
 	],
