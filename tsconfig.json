@@ -1,31 +1,25 @@
 {
 	"compilerOptions": {
-		"types": ["mocha"],
-		"forceConsistentCasingInFileNames": true,
-		"strict": true,
-		"jsx": "react-jsx",
+		"target": "ES2020",
+		"useDefineForClassFields": true,
+		"lib": ["ES2020", "DOM", "DOM.Iterable"],
+		"module": "ESNext",
 		"skipLibCheck": true,
-		"lib": ["ESNext", "DOM"],
-		"moduleResolution": "node",
-		"target": "esnext",
-		"esModuleInterop": true,
-		"baseUrl": "./",
-		"noUncheckedIndexedAccess": true,
-		"paths": {
-			"@/domain": ["src/domain/index"],
-			"@/domain/*": ["src/domain/*"],
 
-			"@/application": ["src/application/index"],
-			"@/application/*": ["src/application/*"],
+		/* Bundler mode */
+		"moduleResolution": "bundler",
+		"allowImportingTsExtensions": true,
+		"resolveJsonModule": true,
+		"isolatedModules": true,
+		"noEmit": true,
+		"jsx": "react-jsx",
 
-			"@/presentation": ["src/presentation/index"],
-			"@/presentation/*": ["src/presentation/*"],
-
-			"@/infrastructure": ["src/infrastructure/index"],
-			"@/infrastructure/*": ["src/infrastructure/*"],
-
-			"@/core": ["src/core/index"],
-			"@/core/*": ["src/core/*"]
-		}
-	}
+		/* Linting */
+		"strict": true,
+		"noUnusedLocals": true,
+		"noUnusedParameters": true,
+		"noFallthroughCasesInSwitch": true
+	},
+	"include": ["src"],
+	"references": [{ "path": "./tsconfig.node.json" }]
 }
