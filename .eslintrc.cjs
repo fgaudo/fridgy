@@ -11,7 +11,9 @@ module.exports = {
 		'prettier'
 	],
 	parserOptions: {
-		project: true,
+		ecmaVersion: 'latest',
+		sourceType: 'module',
+		project: ['./tsconfig.json', './tsconfig.node.json'],
 		tsconfigRootDir: __dirname
 	},
 	ignorePatterns: ['dist', '.eslintrc.cjs'],
