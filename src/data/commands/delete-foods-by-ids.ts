@@ -1,18 +1,18 @@
-import { SQLiteDBConnection, capSQLiteSet } from '@capacitor-community/sqlite'
+import { SQLiteDBConnection } from '@capacitor-community/sqlite'
 import {
 	reader as R,
 	readonlyArray as ROA,
 	readonlySet as ROS,
-	readerTaskEither as RTE
+	readerTaskEither as RTE,
+	taskEither as TE
 } from 'fp-ts'
 import { pipe } from 'fp-ts/function'
-import { tryCatch } from 'fp-ts/lib/TaskEither'
 import { Ord } from 'fp-ts/string'
 
 import { DeleteFoodsByIdsWithDeps } from '@/app/commands/delete-foods-by-ids'
 
-type Deps = {
-	db: SQLiteDBConnection
+interface Deps {
+	readonly db: SQLiteDBConnection
 }
 
 export const deleteFoodsByIds: DeleteFoodsByIdsWithDeps<Deps> = idSet =>
@@ -22,16 +22,16 @@ export const deleteFoodsByIds: DeleteFoodsByIdsWithDeps<Deps> = idSet =>
 		R.map(
 			ROA.map(i => ({
 				statement: 'DELETE * FROM foods where id=?',
-				values: [i] as any[]
+				values: [i]
 			}))
 		),
 		R.map(ROA.toArray), // the api wants a mutable array..
 		R.chain(
 			set =>
 				({ db }: Deps) =>
-					tryCatch(
+					TE.tryCatch(
 						() => db.executeSet(set),
-						e => (e instanceof Error ? e : Error('Unknown error'))
+						e => (e instanceof Error ? e : new Error('Unknown error'))
 					)
 		),
 		RTE.map(() => undefined)

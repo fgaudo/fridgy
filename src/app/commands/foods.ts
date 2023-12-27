@@ -7,9 +7,9 @@ export interface FoodData {
 	readonly name: string
 }
 
-export type Foods = Observable<FoodData[]>
-export type FoodsWithDeps<ENV> = R.Reader<ENV, Observable<FoodData[]>>
+export type Foods = Observable<readonly FoodData[]>
+export type FoodsWithDeps<ENV> = R.Reader<ENV, Observable<readonly FoodData[]>>
 
-export function toFoodEntity(foodDatas: FoodData[]): Food[] {
+export function toFoodEntity(foodDatas: readonly FoodData[]): Food[] {
 	return [{ name: 'asd' }]
 }

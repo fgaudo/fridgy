@@ -40,6 +40,9 @@ devDependencies:
   '@capacitor/cli':
     specifier: ^5.6.0
     version: 5.6.0
+  '@fsouza/prettierd':
+    specifier: ^0.25.2
+    version: 0.25.2(typescript@5.3.3)
   '@trivago/prettier-plugin-sort-imports':
     specifier: ^4.3.0
     version: 4.3.0(prettier@3.1.1)
@@ -82,9 +85,6 @@ devDependencies:
   postcss:
     specifier: ^8.4.32
     version: 8.4.32
-  prettier:
-    specifier: 3.1.1
-    version: 3.1.1
   prettier-plugin-tailwindcss:
     specifier: ^0.5.9
     version: 0.5.9(@trivago/prettier-plugin-sort-imports@4.3.0)(prettier@3.1.1)
@@ -530,6 +530,20 @@ packages:
   /@eslint/js@8.56.0:
     resolution: {integrity: sha512-gMsVel9D7f2HLkBma9VbtzZRehRogVRfbr++f06nL2vnCGCNlzOD+/MUov/F4p8myyAHspEhVobgjpX64q5m6A==}
     engines: {node: ^12.22.0 || ^14.17.0 || >=16.0.0}
+    dev: true
+
+  /@fsouza/prettierd@0.25.2(typescript@5.3.3):
+    resolution: {integrity: sha512-WVflCLhe6b5QnJxgOxo0yyZ9XI1xkqY8i1C8+mMm2rQ/pu4paGTtpT5aR76dP0JR5T4qU+aiepveUqITjJYVlA==}
+    hasBin: true
+    dependencies:
+      core_d: 6.1.0
+      prettier: 3.1.1
+    optionalDependencies:
+      '@babel/parser': 7.23.6
+      '@typescript-eslint/typescript-estree': 6.15.0(typescript@5.3.3)
+    transitivePeerDependencies:
+      - supports-color
+      - typescript
     dev: true
 
   /@humanwhocodes/config-array@0.11.13:
@@ -1538,6 +1552,12 @@ packages:
   /core-util-is@1.0.3:
     resolution: {integrity: sha512-ZQBvi1DcpJ4GDqanjucZ2Hj3wEO5pZDS89BWbkcrvdxksJorwUDDZamX9ldFkp9aw2lmBDLgkObEA4DWNJ9FYQ==}
     dev: false
+
+  /core_d@6.1.0:
+    resolution: {integrity: sha512-vYgenhJ8CYCj+7LPbPdyFo2u0Doavfbi/vhFpR/BsW9/iUAhuKd+sw2l4CHXhaXIo4/058p2nlsAtbL7iswm5A==}
+    dependencies:
+      supports-color: 8.1.1
+    dev: true
 
   /cross-spawn@7.0.3:
     resolution: {integrity: sha512-iRDPJKUPVEND7dHPO8rkbOnPpyDygcDFtWjpeWNCgy8WP2rXcxXL8TskReQl6OrB2G7+UJrags1q15Fudc7G6w==}
@@ -3940,6 +3960,13 @@ packages:
   /supports-color@7.2.0:
     resolution: {integrity: sha512-qpCAvRl9stuOHveKsn7HncJRvv501qIacKzQlO/+Lwxc9+0q2wLyv4Dfvt80/DPn2pqOBsJdDiogXGR9+OvwRw==}
     engines: {node: '>=8'}
+    dependencies:
+      has-flag: 4.0.0
+    dev: true
+
+  /supports-color@8.1.1:
+    resolution: {integrity: sha512-MpUEN2OodtUzxvKQl72cUF7RQ5EiHsGvSsVG0ia9c5RbWGL2CI4C7EpPS8UTBIplnlzZiNuV56w+FuNxy3ty2Q==}
+    engines: {node: '>=10'}
     dependencies:
       has-flag: 4.0.0
     dev: true
