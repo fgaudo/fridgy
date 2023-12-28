@@ -25,11 +25,12 @@ export const foods: FoodsWithDeps<Deps> = pipe(
 		pipe(
 			events,
 			Rx.switchMap(() =>
-				OE.fromTaskEither(
+				pipe(
 					TE.tryCatch(
 						() => db.query('SELECT * FROM foods'),
-						e => (e instanceof Error ? e : new Error('ciasd'))
-					)
+						e => (e instanceof Error ? e : new Error('Unknown error'))
+					),
+					OE.fromTaskEither
 				)
 			),
 			filterMap(OPT.getRight)
@@ -40,6 +41,12 @@ export const foods: FoodsWithDeps<Deps> = pipe(
 )
 
 function mapData(row: unknown): FoodData {
-	const rowObj = (row as Record<string, unknown> | undefined) ?? {}
-	return { name: (rowObj.name as string | undefined) ?? 'undefined' }
+	if (typeof row !== 'object' || row === null) {
+		return { name: '[undefined]' }
+	}
+
+	const typedRow = row as Record<string, unknown>
+	const name = typeof typedRow.name === 'string' ? typedRow.name : '[undefined]'
+
+	return { name }
 }
