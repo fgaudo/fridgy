@@ -1,16 +1,21 @@
-import { reader as R, taskEither as TE } from 'fp-ts'
+import { reader as R, readonlySet as RoS, taskEither as TE } from 'fp-ts'
 import { observable as O, readerObservable as RO } from 'fp-ts-rxjs'
+import { fromIO } from 'fp-ts-rxjs/lib/Observable'
 import { flow, pipe } from 'fp-ts/function'
+import { isLeft } from 'fp-ts/lib/Either'
 import { none, some } from 'fp-ts/lib/Option'
-import { Observable, merge, startWith } from 'rxjs'
+import { trivial } from 'fp-ts/lib/Ord'
+import { Observable, ignoreElements, merge, startWith } from 'rxjs'
 
 import { Controller } from '@/core/controller'
 
-import { Food } from '@/domain/food'
+import { Eq, Food } from '@/domain/food'
 
 import { DeleteFoodsByIds } from '@/app/commands/delete-foods-by-ids'
 import { Foods, toFoodEntity } from '@/app/commands/foods'
 import { Log, LogType } from '@/app/commands/log'
+
+import { addFailure } from '../commands/errors'
 
 interface Deps {
 	readonly deleteFoodsByIds: DeleteFoodsByIds
@@ -24,7 +29,6 @@ export type OverviewModel = Readonly<
 			foods: Food[]
 	  }
 	| { type: 'loading' }
-	| { type: 'error'; message: string }
 >
 
 export type Command = Readonly<{ type: 'delete'; ids: ReadonlySet<string> }>
@@ -35,9 +39,10 @@ export const overview: R.Reader<Deps, OverviewController> = pipe(
 	[
 		pipe(
 			R.asks((deps: Deps) => deps.foods),
-			RO.chainFirst(foods => info(`Received ${foods.length} food entries`)),
-			RO.map(toFoodEntity),
-			RO.map(foods => ({ foods }) as OverviewModel),
+			RO.chainFirst(foods => info(`Received ${foods.size} food entries`)),
+			RO.map(RoS.map(Eq)(toFoodEntity)),
+			RO.map(RoS.toReadonlyArray(trivial)),
+			RO.map(foods => ({ foods, type: 'ready' }) as OverviewModel),
 			R.map(startWith({ type: 'loading' } as OverviewModel))
 		),
 		(command$: Observable<Command>) =>
@@ -53,17 +58,24 @@ export const overview: R.Reader<Deps, OverviewController> = pipe(
 					)
 				),
 				RO.apFirst(info(`Delete command executed`)),
-				RO.filterMap(either =>
-					either._tag === 'Left' ? some(either.left) : none
-				),
+				RO.filterMap(either => (isLeft(either) ? some(either.left) : none)),
 				RO.chainFirst(err => error(`Delete command failed: ${err.message}`)),
-				RO.map(error => ({ message: error.message }) as OverviewModel)
+				RO.chain(err =>
+					pipe(
+						() => {
+							addFailure({ name: err.name, message: err.message })
+						},
+						fromIO,
+						ignoreElements
+					)
+				)
 			)
 	] as const,
 
 	streams => deps =>
-		new Controller(command =>
-			merge(streams[0](deps), streams[1](command)(deps))
+		new Controller(
+			command => merge(streams[0](deps), streams[1](command)(deps)),
+			{ type: 'loading' } as const
 		)
 )
 

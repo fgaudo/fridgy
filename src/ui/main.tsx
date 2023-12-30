@@ -3,8 +3,9 @@ import ReactDOM from 'react-dom/client'
 
 import { App } from '@/app/app'
 
-import AppUI from '@/ui/App'
+import Overview from '@/ui/Overview'
 
+import { AppContext } from './context'
 import './index.css'
 
 export function render(app: App): void {
@@ -16,7 +17,9 @@ export function render(app: App): void {
 
 	ReactDOM.createRoot(root).render(
 		<React.StrictMode>
-			<AppUI />
+			<AppContext.Provider value={app}>
+				<Overview />
+			</AppContext.Provider>
 		</React.StrictMode>
 	)
 }

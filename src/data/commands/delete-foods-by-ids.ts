@@ -21,8 +21,8 @@ export const deleteFoodsByIds: DeleteFoodsByIdsWithDeps<Deps> = flow(
 		statement: 'DELETE * FROM foods where id=?',
 		values: [id]
 	})),
-	ROA.toArray,
-	R.of, // the api wants a mutable array..
+	ROA.toArray, // the api wants a mutable array..
+	R.of,
 	R.chain(
 		set =>
 			({ db }: Deps) =>
