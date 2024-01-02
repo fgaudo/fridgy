@@ -5,11 +5,11 @@ import { Observable } from 'rxjs'
 
 import { Food } from '@/domain/food'
 
-export type Foods = Observable<ReadonlySet<FoodData>>
+export type OnFoods = Observable<ReadonlySet<FoodData>>
 export type FoodsWithDeps<ENV> = RO.ReaderObservable<ENV, ReadonlySet<FoodData>>
 
 export function toFoodEntity(foodDatas: FoodData): Food {
-	return { name: 'asd' }
+	return { id: 'id', name: 'asd' }
 }
 
 export const FoodData = t.type({

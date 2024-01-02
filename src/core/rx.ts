@@ -6,8 +6,8 @@ export function filterMap<A, B>(
 	f: (a: A) => OPT.Option<B>
 ): (obs: Rx.Observable<A>) => Rx.Observable<B> {
 	return flow(
-		Rx.map(a => f(a)),
-		Rx.filter(b => b._tag === 'Some'),
-		Rx.map(b => (b._tag === 'Some' ? b.value : (undefined as never)))
+		Rx.map(f),
+		Rx.filter(OPT.isSome),
+		Rx.map(b => (OPT.isSome(b) ? b.value : (undefined as never)))
 	)
 }

@@ -5,4 +5,4 @@ export interface Food {
 	readonly name: string
 }
 
-export const Eq: E.Eq<Food> = E.fromEquals((a, b) => a.id === b.id)
+export const foodEq: E.Eq<Food> = E.fromEquals((a, b) => a.id === b.id)
