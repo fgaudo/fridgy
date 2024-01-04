@@ -41,14 +41,14 @@ export const foods: FoodsWithDeps<Deps> = pipe(
 		)
 	),
 	RO.map(columns => (columns.values ?? []) as unknown[]),
-	RO.map(mapData)
+	RO.map(element => mapData(element))
 )
 
 function mapData(rows: unknown[]): ReadonlySet<FoodData> {
 	return pipe(
 		rows,
 		RA.reduce<unknown, ReadonlySet<FoodData>>(RoS.empty, (set, row) => {
-			const id = FoodData.props.id.decode(row.id)
+			const id = FoodData.props.id.decode((row as { id: unknown }).id)
 			if (isLeft(id)) {
 				log(LogType.error, 'Row could not be parsed entirely')
 				return set

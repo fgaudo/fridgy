@@ -1,13 +1,11 @@
-import { App } from '@/app/app.ts'
+import { App } from '@/app/app'
 
-import { render } from '@/ui/main.tsx'
+import { createApp } from '@/data/app'
 
-import { createApp } from '@/data/app.ts'
+import { render } from '@/ui/main'
 
-;(async () => {
-	const app: App = await createApp()
-
-	render(app)
-})().catch(e => {
-	console.error(e)
-})
+try {
+	render((await createApp()) satisfies App)
+} catch (error) {
+	console.error(error)
+}

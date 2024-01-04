@@ -4,7 +4,7 @@ import { deleteFoodsByIds } from '@/data/commands/delete-foods-by-ids'
 import { foods } from '@/data/commands/foods'
 import { log } from '@/data/commands/log'
 
-export async function createApp(): Promise<App> {
+export function createApp(): Promise<App> {
 	return Promise.resolve(
 		new App({
 			deleteFoodsByIds: ids => deleteFoodsByIds(ids)(undefined),

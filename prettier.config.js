@@ -8,15 +8,15 @@ export default {
 	printWidth: 80,
 	singleQuote: true,
 	trailingComma: 'none',
-	jsxBracketSameLine: true,
+	bracketSameLine: true,
 	useTabs: true,
 	importOrder: [
 		'<THIRD_PARTY_MODULES>',
 		'^@/core',
 		'^@/domain',
 		'^@/app',
+		'^@/data',
 		'^@/ui',
-		'@/data',
 		'^[./]'
 	],
 	singleAttributePerLine: true,

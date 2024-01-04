@@ -9,6 +9,7 @@ import { pipe } from 'fp-ts/lib/function'
 import * as Rx from 'rxjs'
 
 import { DeleteFoodsByIds } from '@/app/commands/delete-foods-by-ids'
+import { AddFailure } from '@/app/commands/failures'
 import { OnFoods } from '@/app/commands/foods'
 import { Log } from '@/app/commands/log'
 import {
@@ -20,9 +21,7 @@ import {
 } from '@/app/commands/processes'
 import { OverviewController, overview } from '@/app/controllers/overview'
 
-import { AddFailure } from './commands/failures'
-
-type AppParams = Readonly<{
+type AppParameters = Readonly<{
 	deleteFoodsByIds: DeleteFoodsByIds
 	enqueueProcess: EnqueueProcess
 	getProcesses: GetProcesses
@@ -50,7 +49,7 @@ export class App {
 		getProcesses,
 		addFailure,
 		enqueueProcess
-	}: AppParams) {
+	}: AppParameters) {
 		this.overview = overview({
 			enqueueProcess,
 			addFailure,
@@ -58,6 +57,8 @@ export class App {
 			processes$,
 			log: appLog
 		})
+
+		this.processes$ = processes$
 		this.log = uiLog
 		this.removeProcess = removeProcess
 		this.getProcesses = getProcesses
@@ -72,16 +73,9 @@ export class App {
 		this.isRunning = true
 
 		pipe(
-			Rx.interval(3000),
-			Rx.exhaustMap(() => O.fromTask(this.runProcesses())),
-			Rx.catchError(() =>
-				O.fromTask(
-					this.addFailure({
-						name: 'critical error',
-						message: 'This is a bug. Please send a report'
-					})
-				)
-			)
+			Rx.interval(5000),
+			Rx.mergeWith(this.processes$),
+			Rx.exhaustMap(() => O.fromTask(this.runProcesses()))
 		).subscribe()
 	}
 
@@ -106,8 +100,8 @@ export class App {
 		)
 	}
 
-	private readonly addFailure: AddFailure
 	private readonly removeProcess: RemoveProcess
 	private readonly deleteFoodsByIds: DeleteFoodsByIds
 	private readonly getProcesses: GetProcesses
+	private readonly processes$: OnChangeProcesses
 }
