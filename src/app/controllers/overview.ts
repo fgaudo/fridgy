@@ -8,6 +8,7 @@ import {
 } from 'fp-ts'
 import { observable as O, readerObservable as RO } from 'fp-ts-rxjs'
 import { flip, flow, pipe } from 'fp-ts/function'
+import { none } from 'fp-ts/lib/Option'
 import * as Rx from 'rxjs'
 
 import { Controller } from '@/core/controller'
@@ -18,12 +19,16 @@ import { Food, foodEq } from '@/domain/food'
 import { AddFailure } from '@/app/commands/failures'
 import { OnFoods, toFoodEntity } from '@/app/commands/foods'
 import { Log, LogType } from '@/app/commands/log'
-import { AddProcess, OnProcesses, Processes } from '@/app/commands/processes'
+import {
+	EnqueueProcess,
+	OnChangeProcesses,
+	Processes
+} from '@/app/commands/processes'
 
 interface Deps {
-	readonly process$: OnProcesses
-	readonly addProcess: AddProcess
-	readonly food$: OnFoods
+	readonly processes$: OnChangeProcesses
+	readonly enqueueProcess: EnqueueProcess
+	readonly foods$: OnFoods
 	readonly log: Log
 	readonly addFailure: AddFailure
 }
@@ -39,7 +44,9 @@ export type OverviewModel = Readonly<
 			type: 'ready'
 			foods: readonly FoodModel[]
 	  }
-	| { type: 'loading' }
+	| {
+			type: 'loading'
+	  }
 >
 
 export type Command = Readonly<{ type: 'delete'; ids: ReadonlySet<string> }>
@@ -51,7 +58,7 @@ const foodModelEq: Eq.Eq<FoodModel> = Eq.fromEquals((a, b) => a.id === b.id)
 export const overview: R.Reader<Deps, OverviewController> = pipe(
 	[
 		pipe(
-			R.asks((deps: Deps) => deps.food$),
+			R.asks((deps: Deps) => deps.foods$),
 			ROX.tap(
 				foods => deps =>
 					deps.log(LogType.info, `Received ${foods.size} food entries`)
@@ -60,16 +67,16 @@ export const overview: R.Reader<Deps, OverviewController> = pipe(
 				// We convert all food data into food entities in order to enforce business constraints.
 				RoS.map(foodEq)(toFoodEntity)
 			),
-			R.chain(flip(deps => Rx.combineLatestWith(deps.process$))),
+			R.chain(flip(deps => Rx.combineLatestWith(deps.processes$))),
 			RO.map(([foods, processes]) =>
 				// We create the food model by merging the entity with the queued processes
 				RoS.map(foodModelEq)((food: Food) => toFoodModel(food, processes))(
 					foods
 				)
 			),
-			RO.map(RoS.toReadonlyArray(Ord.trivial)),
-			RO.map(foods => ({ foods, type: 'ready' }) as OverviewModel),
-			R.map(Rx.startWith({ type: 'loading' } as OverviewModel))
+			RO.map(RoS.toReadonlyArray(Ord.fromCompare(() => 0))),
+			RO.map(foods => ({ foods, type: 'ready' }) satisfies OverviewModel),
+			R.map(Rx.startWith({ type: 'loading' } satisfies OverviewModel))
 		),
 		flow(
 			R.of<Deps, Rx.Observable<Command>>,
@@ -77,7 +84,9 @@ export const overview: R.Reader<Deps, OverviewController> = pipe(
 				flip(deps => Rx.tap(deps.log(LogType.info, `Received delete command`)))
 			),
 			RO.map(del => ({ type: 'delete', ids: del.ids }) as const),
-			R.chain(flip(deps => Rx.switchMap(flow(deps.addProcess, O.fromTask)))),
+			R.chain(
+				flip(deps => Rx.switchMap(flow(deps.enqueueProcess, O.fromTask)))
+			),
 			R.chain(
 				flip(deps => Rx.tap(deps.log(LogType.info, `Delete command executed`)))
 			),
