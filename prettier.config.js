@@ -5,7 +5,7 @@ export default {
 		'prettier-plugin-tailwindcss',
 	],
 	semi: false,
-	printWidth: 80,
+	printWidth: 50,
 	singleQuote: true,
 	trailingComma: 'all',
 	bracketSpacing: true,
@@ -21,7 +21,7 @@ export default {
 		'^[./]',
 	],
 	singleAttributePerLine: true,
-	importOrderSeparation: false,
+	importOrderSeparation: true,
 	importOrderSortSpecifiers: true,
 	arrowParens: 'avoid',
 }

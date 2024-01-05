@@ -2,7 +2,9 @@ import { Observable, Subject } from 'rxjs'
 
 export class Controller<A, B> {
 	constructor(
-		transformer: (a: Observable<A>) => Observable<B>,
+		transformer: (
+			a: Observable<A>,
+		) => Observable<B>,
 		public readonly init: B,
 	) {
 		this.subject = new Subject<A>()

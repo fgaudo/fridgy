@@ -1,4 +1,7 @@
-import { readerTaskEither as RE, taskEither as TE } from 'fp-ts'
+import {
+	readerTaskEither as RE,
+	taskEither as TE,
+} from 'fp-ts'
 
 export type DeleteFoodsByIds = (
 	ids: ReadonlySet<string> | string,

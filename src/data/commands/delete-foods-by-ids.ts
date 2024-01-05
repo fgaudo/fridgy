@@ -8,27 +8,32 @@ import {
 	taskEither as TE,
 } from 'fp-ts'
 import { flow } from 'fp-ts/function'
+
 import { DeleteFoodsByIdsWithDeps } from '@/app/commands/delete-foods-by-ids'
 
 interface Deps {
 	readonly db: SQLiteDBConnection
 }
 
-export const deleteFoodsByIds: DeleteFoodsByIdsWithDeps<Deps> = flow(
-	ROS.toReadonlyArray(Ord.fromCompare(() => 0)),
-	ROA.map(id => ({
-		statement: 'DELETE * FROM foods where id=?',
-		values: [id],
-	})),
-	ROA.toArray, // the api wants a mutable array..
-	R.of,
-	R.chain(
-		set =>
-			({ db }: Deps) =>
-				TE.tryCatch(
-					() => db.executeSet(set),
-					e => (e instanceof Error ? e : new Error('Unknown error')),
-				),
-	),
-	RTE.map(() => undefined),
-)
+export const deleteFoodsByIds: DeleteFoodsByIdsWithDeps<Deps> =
+	flow(
+		ROS.toReadonlyArray(Ord.fromCompare(() => 0)),
+		ROA.map(id => ({
+			statement: 'DELETE * FROM foods where id=?',
+			values: [id],
+		})),
+		ROA.toArray, // the api wants a mutable array..
+		R.of,
+		R.chain(
+			set =>
+				({ db }: Deps) =>
+					TE.tryCatch(
+						() => db.executeSet(set),
+						e =>
+							e instanceof Error
+								? e
+								: new Error('Unknown error'),
+					),
+		),
+		RTE.map(() => undefined),
+	)

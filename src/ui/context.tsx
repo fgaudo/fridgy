@@ -1,6 +1,7 @@
 import { Context, createContext } from 'react'
+
 import { App } from '@/app/app'
 
-export const AppContext: Context<App | undefined> = createContext<
+export const AppContext: Context<
 	App | undefined
->(undefined)
+> = createContext<App | undefined>(undefined)

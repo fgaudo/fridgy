@@ -7,12 +7,16 @@ import {
 import { observable as O } from 'fp-ts-rxjs'
 import { pipe } from 'fp-ts/lib/function'
 import * as Rx from 'rxjs'
+
 import { AddFailure } from '@/app/commands/add-failure'
 import { DeleteFoodsByIds } from '@/app/commands/delete-foods-by-ids'
 import { EnqueueProcess } from '@/app/commands/enqueue-process'
 import { Log } from '@/app/commands/log'
 import { RemoveProcess } from '@/app/commands/remove-process'
-import { OverviewController, overview } from '@/app/controllers/overview'
+import {
+	OverviewController,
+	overview,
+} from '@/app/controllers/overview'
 import { GetProcesses } from '@/app/queries/get-processes'
 import { OnChangeProcesses } from '@/app/streams/on-change-processes'
 import { OnFoods } from '@/app/streams/on-foods'
@@ -72,7 +76,9 @@ export class App {
 		pipe(
 			Rx.interval(5000),
 			Rx.mergeWith(this.processes$),
-			Rx.exhaustMap(() => O.fromTask(this.runProcesses())),
+			Rx.exhaustMap(() =>
+				O.fromTask(this.runProcesses()),
+			),
 		).subscribe()
 	}
 
@@ -89,7 +95,9 @@ export class App {
 				RoA.map(process =>
 					pipe(
 						this.deleteFoodsByIds(process.ids),
-						TE.flatMap(() => this.removeProcess(process.id)),
+						TE.flatMap(() =>
+							this.removeProcess(process.id),
+						),
 					),
 				),
 			),

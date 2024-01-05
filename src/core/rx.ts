@@ -8,6 +8,10 @@ export function filterMap<A, B>(
 	return flow(
 		Rx.map(f),
 		Rx.filter(OPT.isSome),
-		Rx.map(b => (OPT.isSome(b) ? b.value : (undefined as never))),
+		Rx.map(b =>
+			OPT.isSome(b)
+				? b.value
+				: (undefined as never),
+		),
 	)
 }
