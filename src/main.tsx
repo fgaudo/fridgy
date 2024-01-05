@@ -1,7 +1,5 @@
 import { App } from '@/app/app'
-
 import { createApp } from '@/data/app'
-
 import { render } from '@/ui/main'
 
 try {

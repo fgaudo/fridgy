@@ -2,24 +2,21 @@ import {
 	readonlyArray as RoA,
 	readonlySet as RoS,
 	task as T,
-	taskEither as TE
+	taskEither as TE,
 } from 'fp-ts'
 import { observable as O } from 'fp-ts-rxjs'
 import { pipe } from 'fp-ts/lib/function'
 import * as Rx from 'rxjs'
-
+import { AddFailure } from '@/app/commands/add-failure'
 import { DeleteFoodsByIds } from '@/app/commands/delete-foods-by-ids'
-import { AddFailure } from '@/app/commands/failures'
-import { OnFoods } from '@/app/commands/foods'
+import { EnqueueProcess } from '@/app/commands/enqueue-process'
 import { Log } from '@/app/commands/log'
-import {
-	EnqueueProcess,
-	GetProcesses,
-	OnChangeProcesses,
-	RemoveProcess,
-	processesOrd
-} from '@/app/commands/processes'
+import { RemoveProcess } from '@/app/commands/remove-process'
 import { OverviewController, overview } from '@/app/controllers/overview'
+import { GetProcesses } from '@/app/queries/get-processes'
+import { OnChangeProcesses } from '@/app/streams/on-change-processes'
+import { OnFoods } from '@/app/streams/on-foods'
+import { processesOrd } from '@/app/types/process'
 
 type AppParameters = Readonly<{
 	deleteFoodsByIds: DeleteFoodsByIds
@@ -48,14 +45,14 @@ export class App {
 		removeProcess,
 		getProcesses,
 		addFailure,
-		enqueueProcess
+		enqueueProcess,
 	}: AppParameters) {
 		this.overview = overview({
 			enqueueProcess,
 			addFailure,
 			foods$,
 			processes$,
-			log: appLog
+			log: appLog,
 		})
 
 		this.processes$ = processes$
@@ -75,7 +72,7 @@ export class App {
 		pipe(
 			Rx.interval(5000),
 			Rx.mergeWith(this.processes$),
-			Rx.exhaustMap(() => O.fromTask(this.runProcesses()))
+			Rx.exhaustMap(() => O.fromTask(this.runProcesses())),
 		).subscribe()
 	}
 
@@ -92,11 +89,11 @@ export class App {
 				RoA.map(process =>
 					pipe(
 						this.deleteFoodsByIds(process.ids),
-						TE.flatMap(() => this.removeProcess(process.id))
-					)
-				)
+						TE.flatMap(() => this.removeProcess(process.id)),
+					),
+				),
 			),
-			TE.flatMapTask(T.sequenceArray)
+			TE.flatMapTask(T.sequenceArray),
 		)
 	}
 

@@ -1,29 +1,53 @@
 import { SQLiteDBConnection } from '@capacitor-community/sqlite'
 import {
+	either as E,
 	option as OPT,
 	reader as R,
-	readonlyArray as RA,
+	readonlyArray as RoA,
 	readonlySet as RoS,
-	taskEither as TE
+	taskEither as TE,
 } from 'fp-ts'
 import { observableEither as OE, readerObservable as RO } from 'fp-ts-rxjs'
-import { isLeft } from 'fp-ts/lib/Either'
 import { pipe } from 'fp-ts/lib/function'
 import * as Rx from 'rxjs'
-
 import { filterMap } from '@/core/rx'
-
-import { Eq, FoodData, FoodsWithDeps } from '@/app/commands/foods'
-import { LogType } from '@/app/commands/log'
-
-import { log } from './log'
+import { OnFoodsWithDeps } from '@/app/streams/on-foods'
+import { FoodData, foodDataEq } from '@/app/types/food'
+import { error } from '@/app/types/log'
+import { log } from '@/data/commands/log'
 
 interface Deps {
 	readonly db: SQLiteDBConnection
 	readonly events: Rx.Observable<void>
 }
 
-export const foods: FoodsWithDeps<Deps> = pipe(
+const mapData = RoA.reduce<unknown, ReadonlySet<FoodData>>(
+	RoS.empty,
+	(set, row) => {
+		const foodRowEither = FoodData.decode(row)
+
+		if (E.isLeft(foodRowEither)) {
+			log(error('Row could not be parsed'))
+
+			return set
+		}
+
+		const foodRow = foodRowEither.right
+
+		if (foodRow.name === undefined) {
+			log(error('Could not parse name of row ' + foodRow.id))
+		}
+
+		const foodData = {
+			id: foodRow.id,
+			name: foodRow.name ?? '[undefined]',
+		}
+
+		return pipe(set, RoS.insert(foodDataEq)(foodData))
+	},
+)
+
+export const foods: OnFoodsWithDeps<Deps> = pipe(
 	R.ask<Deps>(),
 	R.map(({ db, events }) =>
 		pipe(
@@ -32,37 +56,14 @@ export const foods: FoodsWithDeps<Deps> = pipe(
 				pipe(
 					TE.tryCatch(
 						() => db.query('SELECT * FROM foods'),
-						e => (e instanceof Error ? e : new Error('Unknown error'))
+						e => (e instanceof Error ? e : new Error('Unknown error')),
 					),
-					OE.fromTaskEither
-				)
+					OE.fromTaskEither,
+				),
 			),
-			filterMap(OPT.getRight)
-		)
+			filterMap(OPT.getRight),
+		),
 	),
 	RO.map(columns => (columns.values ?? []) as unknown[]),
-	RO.map(element => mapData(element))
+	RO.map(mapData),
 )
-
-function mapData(rows: unknown[]): ReadonlySet<FoodData> {
-	return pipe(
-		rows,
-		RA.reduce<unknown, ReadonlySet<FoodData>>(RoS.empty, (set, row) => {
-			const id = FoodData.props.id.decode((row as { id: unknown }).id)
-			if (isLeft(id)) {
-				log(LogType.error, 'Row could not be parsed entirely')
-				return set
-			}
-
-			const foodData = FoodData.decode(row)
-
-			if (isLeft(foodData)) {
-				log(LogType.error, 'Row could not be parsed entirely')
-
-				return pipe(set, RoS.insert(Eq)({ id: id.right, name: '[undefined]' }))
-			}
-
-			return pipe(set, RoS.insert(Eq)(foodData.right))
-		})
-	)
-}

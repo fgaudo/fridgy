@@ -1,10 +1,7 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-
 import { App } from '@/app/app'
-
 import Overview from '@/ui/Overview'
-
 import { AppContext } from './context'
 import './index.css'
 
@@ -20,6 +17,6 @@ export function render(app: App): void {
 			<AppContext.Provider value={app}>
 				<Overview />
 			</AppContext.Provider>
-		</React.StrictMode>
+		</React.StrictMode>,
 	)
 }

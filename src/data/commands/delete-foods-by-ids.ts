@@ -1,14 +1,13 @@
 import { SQLiteDBConnection } from '@capacitor-community/sqlite'
 import {
+	ord as Ord,
 	reader as R,
 	readonlyArray as ROA,
 	readonlySet as ROS,
 	readerTaskEither as RTE,
-	taskEither as TE
+	taskEither as TE,
 } from 'fp-ts'
-import * as Ord from 'fp-ts/Ord'
 import { flow } from 'fp-ts/function'
-
 import { DeleteFoodsByIdsWithDeps } from '@/app/commands/delete-foods-by-ids'
 
 interface Deps {
@@ -16,10 +15,10 @@ interface Deps {
 }
 
 export const deleteFoodsByIds: DeleteFoodsByIdsWithDeps<Deps> = flow(
-	ROS.toReadonlyArray(Ord.trivial),
+	ROS.toReadonlyArray(Ord.fromCompare(() => 0)),
 	ROA.map(id => ({
 		statement: 'DELETE * FROM foods where id=?',
-		values: [id]
+		values: [id],
 	})),
 	ROA.toArray, // the api wants a mutable array..
 	R.of,
@@ -28,8 +27,8 @@ export const deleteFoodsByIds: DeleteFoodsByIdsWithDeps<Deps> = flow(
 			({ db }: Deps) =>
 				TE.tryCatch(
 					() => db.executeSet(set),
-					e => (e instanceof Error ? e : new Error('Unknown error'))
-				)
+					e => (e instanceof Error ? e : new Error('Unknown error')),
+				),
 	),
-	RTE.map(() => undefined)
+	RTE.map(() => undefined),
 )

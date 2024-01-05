@@ -29,6 +29,9 @@ dependencies:
   io-ts:
     specifier: ^2.2.21
     version: 2.2.21(fp-ts@2.16.2)
+  io-ts-types:
+    specifier: ^0.5.19
+    version: 0.5.19(fp-ts@2.16.2)(io-ts@2.2.21)(monocle-ts@2.3.13)(newtype-ts@0.3.5)
   observable-hooks:
     specifier: ^4.2.3
     version: 4.2.3(react-dom@18.2.0)(react@18.2.0)(rxjs@7.8.1)
@@ -2457,6 +2460,20 @@ packages:
       side-channel: 1.0.4
     dev: true
 
+  /io-ts-types@0.5.19(fp-ts@2.16.2)(io-ts@2.2.21)(monocle-ts@2.3.13)(newtype-ts@0.3.5):
+    resolution: {integrity: sha512-kQOYYDZG5vKre+INIDZbLeDJe+oM+4zLpUkjXyTMyUfoCpjJNyi29ZLkuEAwcPufaYo3yu/BsemZtbdD+NtRfQ==}
+    peerDependencies:
+      fp-ts: ^2.0.0
+      io-ts: ^2.0.0
+      monocle-ts: ^2.0.0
+      newtype-ts: ^0.3.2
+    dependencies:
+      fp-ts: 2.16.2
+      io-ts: 2.2.21(fp-ts@2.16.2)
+      monocle-ts: 2.3.13(fp-ts@2.16.2)
+      newtype-ts: 0.3.5(fp-ts@2.16.2)(monocle-ts@2.3.13)
+    dev: false
+
   /io-ts@2.2.21(fp-ts@2.16.2):
     resolution: {integrity: sha512-zz2Z69v9ZIC3mMLYWIeoUcwWD6f+O7yP92FMVVaXEOSZH1jnVBmET/urd/uoarD1WGBY4rCj8TAyMPzsGNzMFQ==}
     peerDependencies:
@@ -2923,6 +2940,14 @@ packages:
     hasBin: true
     dev: true
 
+  /monocle-ts@2.3.13(fp-ts@2.16.2):
+    resolution: {integrity: sha512-D5Ygd3oulEoAm3KuGO0eeJIrhFf1jlQIoEVV2DYsZUMz42j4tGxgct97Aq68+F8w4w4geEnwFa8HayTS/7lpKQ==}
+    peerDependencies:
+      fp-ts: ^2.5.0
+    dependencies:
+      fp-ts: 2.16.2
+    dev: false
+
   /ms@2.1.2:
     resolution: {integrity: sha512-sGkPx+VjMtmA6MX27oA4FBFELFCZZ4S4XqeGOXCv68tT+jb3vk/RyaKWP0PTKyWtmLSM0b+adUTEvbs1PEaH2w==}
     dev: true
@@ -2964,6 +2989,16 @@ packages:
   /natural-compare@1.4.0:
     resolution: {integrity: sha512-OWND8ei3VtNC9h7V60qff3SVobHr996CTwgxubgyQYEpg290h9J0buyECNNJexkFm5sOajh5G116RYA1c8ZMSw==}
     dev: true
+
+  /newtype-ts@0.3.5(fp-ts@2.16.2)(monocle-ts@2.3.13):
+    resolution: {integrity: sha512-v83UEQMlVR75yf1OUdoSFssjitxzjZlqBAjiGQ4WJaML8Jdc68LJ+BaSAXUmKY4bNzp7hygkKLYTsDi14PxI2g==}
+    peerDependencies:
+      fp-ts: ^2.0.0
+      monocle-ts: ^2.0.0
+    dependencies:
+      fp-ts: 2.16.2
+      monocle-ts: 2.3.13(fp-ts@2.16.2)
+    dev: false
 
   /node-releases@2.0.14:
     resolution: {integrity: sha512-y10wOWt8yZpqXmOgRo77WaHEmhYQYGNA6y421PKsKYWEK8aW+cqAphborZDhqfyKrbZEN92CN1X2KbafY2s7Yw==}

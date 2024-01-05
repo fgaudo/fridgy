@@ -2,12 +2,13 @@
 export default {
 	plugins: [
 		'@trivago/prettier-plugin-sort-imports',
-		'prettier-plugin-tailwindcss'
+		'prettier-plugin-tailwindcss',
 	],
 	semi: false,
 	printWidth: 80,
 	singleQuote: true,
-	trailingComma: 'none',
+	trailingComma: 'all',
+	bracketSpacing: true,
 	bracketSameLine: true,
 	useTabs: true,
 	importOrder: [
@@ -17,10 +18,10 @@ export default {
 		'^@/app',
 		'^@/data',
 		'^@/ui',
-		'^[./]'
+		'^[./]',
 	],
 	singleAttributePerLine: true,
-	importOrderSeparation: true,
+	importOrderSeparation: false,
 	importOrderSortSpecifiers: true,
-	arrowParens: 'avoid'
+	arrowParens: 'avoid',
 }
