@@ -47,6 +47,18 @@ module.exports = {
 		'import',
 	],
 	rules: {
+		'no-restricted-imports': [
+			'error',
+			{
+				patterns: [
+					{
+						group: ['../*'],
+						message:
+							'Usage of relative parent imports is not allowed.',
+					},
+				],
+			},
+		],
 		'import/no-restricted-paths': [
 			'error',
 			{
@@ -92,7 +104,17 @@ module.exports = {
 				],
 			},
 		],
+		'import/no-self-import': 'error',
+		'import/no-useless-path-segments': 'error',
+		'import/no-unused-modules': [
+			1,
+			{
+				unusedExports: true,
+				missingExports: true,
+			},
+		],
 		'import/no-unresolved': 'error',
+		'import/no-cycle': 'error',
 		'react-refresh/only-export-components': [
 			'warn',
 			{ allowConstantExport: true },
@@ -101,7 +123,7 @@ module.exports = {
 			1,
 			{ extensions: ['.tsx'] },
 		],
-		'@typescript-eslint/no-unused-vars': ['warn'],
+		'@typescript-eslint/no-unused-vars': 'off',
 		'@typescript-eslint/no-empty-interface': [
 			'off',
 		],
