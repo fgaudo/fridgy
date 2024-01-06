@@ -6,10 +6,7 @@ import {
 	reader as R,
 	readonlySet as RoS,
 } from 'fp-ts'
-import {
-	observable as O,
-	readerObservable as RO,
-} from 'fp-ts-rxjs'
+import { readerObservable as RO } from 'fp-ts-rxjs'
 import { flip, flow, pipe } from 'fp-ts/function'
 import * as Rx from 'rxjs'
 
@@ -156,9 +153,9 @@ export const overview: R.Reader<
 						deps.addFailure(failure),
 					),
 					RO.fromReaderTask,
-					R.map(Rx.ignoreElements()),
 				),
 			),
+			R.map(Rx.ignoreElements()),
 		),
 	] as const,
 
