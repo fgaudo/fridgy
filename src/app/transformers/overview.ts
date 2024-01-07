@@ -19,21 +19,25 @@ import { filterMap } from '@/core/rx'
 
 import { Food, foodEq } from '@/domain/food'
 
-import { AddFailureWithDeps } from '@/app/commands/add-failure'
-import { EnqueueProcessWithDeps } from '@/app/commands/enqueue-process'
-import { LogWithDeps } from '@/app/commands/log'
-import { OnChangeProcessesWithDeps } from '@/app/streams/on-change-processes'
-import { OnFoodsWithDeps } from '@/app/streams/on-foods'
+import {
+	AddFailure,
+	EnqueueProcess,
+	Log,
+} from '@/app/actions/commands'
+import {
+	OnChangeProcesses,
+	OnFoods,
+} from '@/app/actions/streams'
 import { toFoodEntity } from '@/app/types/food'
 import { info } from '@/app/types/log'
 import { Processes } from '@/app/types/process'
 
-interface UseCases<DEPS> {
-	readonly processes$: OnChangeProcessesWithDeps<DEPS>
-	readonly enqueueProcess: EnqueueProcessWithDeps<DEPS>
-	readonly foods$: OnFoodsWithDeps<DEPS>
-	readonly log: LogWithDeps<DEPS>
-	readonly addFailure: AddFailureWithDeps<DEPS>
+interface UseCases<ENV> {
+	readonly processes$: OnChangeProcesses<ENV>
+	readonly enqueueProcess: EnqueueProcess<ENV>
+	readonly foods$: OnFoods<ENV>
+	readonly log: Log<ENV>
+	readonly addFailure: AddFailure<ENV>
 }
 
 interface FoodModel {
@@ -65,14 +69,15 @@ export type OverviewController = Controller<
 	OverviewModel
 >
 
-type Overview = <DEPS>(
-	useCases: UseCases<DEPS>,
+type Overview = <ENV>(
+	useCases: UseCases<ENV>,
 ) => (
 	cmd$: Rx.Observable<Command>,
-) => R.Reader<DEPS, Rx.Observable<OverviewModel>>
+) => R.Reader<ENV, Rx.Observable<OverviewModel>>
 
 export const overview: Overview =
-	useCases => cmd$ =>
+	<ENV>(useCases: UseCases<ENV>) =>
+	(cmd$: Rx.Observable<Command>) =>
 		pipe(
 			[
 				pipe(
@@ -120,7 +125,7 @@ export const overview: Overview =
 					),
 				),
 				flow(
-					R.of<unknown, Rx.Observable<Command>>,
+					R.of<ENV, Rx.Observable<Command>>,
 					tap(() =>
 						useCases.log(
 							info(`Received delete command`),
@@ -134,10 +139,12 @@ export const overview: Overview =
 							}) as const,
 					),
 					switchMap(
-						flow(
-							useCases.enqueueProcess,
-							R.map(Rx.defer),
-						),
+						process => deps =>
+							Rx.defer(
+								useCases.enqueueProcess(process)(
+									deps,
+								),
+							),
 					),
 					tap(() =>
 						useCases.log(
@@ -162,7 +169,7 @@ export const overview: Overview =
 				),
 			] as const,
 
-			streams => deps =>
+			streams => (deps: ENV) =>
 				Rx.merge(
 					streams[0](deps),
 					streams[1](cmd$)(deps),

@@ -9,14 +9,18 @@ import {
 } from 'fp-ts'
 import { flow } from 'fp-ts/function'
 
-import { DeleteFoodsByIdsWithDeps } from '@/app/commands/delete-foods-by-ids'
+import { DeleteFoodsByIds } from '@/app'
 
 interface Deps {
 	readonly db: SQLiteDBConnection
 }
 
-export const deleteFoodsByIds: DeleteFoodsByIdsWithDeps<Deps> =
+export const deleteFoodsByIds: DeleteFoodsByIds<Deps> =
 	flow(
+		ids =>
+			typeof ids === 'string'
+				? ROS.singleton(ids)
+				: ids,
 		ROS.toReadonlyArray(Ord.fromCompare(() => 0)),
 		ROA.map(id => ({
 			statement: 'DELETE * FROM foods where id=?',

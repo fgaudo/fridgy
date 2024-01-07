@@ -13,7 +13,7 @@ import * as Rx from 'rxjs'
 import { map } from '@/core/helpers'
 import { filterMap } from '@/core/rx'
 
-import { OnFoodsWithDeps } from '@/app/streams/on-foods'
+import { OnFoods } from '@/app'
 import {
 	FoodData,
 	foodDataEq,
@@ -61,7 +61,7 @@ const mapData = RoA.reduce<
 	)
 })
 
-export const foods: OnFoodsWithDeps<Deps> = pipe(
+export const foods: OnFoods<Deps> = pipe(
 	R.ask<Deps>(),
 	R.map(({ db, events }) =>
 		pipe(
@@ -75,7 +75,7 @@ export const foods: OnFoodsWithDeps<Deps> = pipe(
 								? e
 								: new Error('Unknown error'),
 					),
-					OE.fromTaskEither,
+					Rx.defer,
 				),
 			),
 			filterMap(OPT.getRight),

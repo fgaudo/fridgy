@@ -106,13 +106,6 @@ module.exports = {
 		],
 		'import/no-self-import': 'error',
 		'import/no-useless-path-segments': 'error',
-		'import/no-unused-modules': [
-			1,
-			{
-				unusedExports: true,
-				missingExports: true,
-			},
-		],
 		'import/no-unresolved': 'error',
 		'import/no-cycle': 'error',
 		'react-refresh/only-export-components': [

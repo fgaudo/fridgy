@@ -1,14 +1,21 @@
-import React from 'react'
-import ReactDOM from 'react-dom/client'
+import * as React from 'react'
+import * as ReactDOM from 'react-dom/client'
 
-import { App } from '@/app/app'
+import { Controller } from '@/core/controller'
+
+import {
+	Command as AppCommand,
+	Model as AppModel,
+} from '@/app'
 
 import Overview from '@/ui/Overview'
 
 import { AppContext } from './context'
 import './index.css'
 
-export function render(app: App): void {
+export function render(
+	appController: Controller<AppCommand, AppModel>,
+): void {
 	const root = document.getElementById('root')
 
 	if (!root) {
@@ -17,7 +24,7 @@ export function render(app: App): void {
 
 	ReactDOM.createRoot(root).render(
 		<React.StrictMode>
-			<AppContext.Provider value={app}>
+			<AppContext.Provider value={appController}>
 				<Overview />
 			</AppContext.Provider>
 		</React.StrictMode>,

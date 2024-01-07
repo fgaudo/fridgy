@@ -24,17 +24,32 @@
 			"@/domain/*": [
 				"src/domain/*"
 			],
+			"@/domain": [
+				"src/domain/index"
+			],
 			"@/app/*": [
 				"src/app/*"
+			],
+			"@/app": [
+				"src/app/index"
 			],
 			"@/ui/*": [
 				"src/ui/*"
 			],
+			"@/ui": [
+				"src/ui/index"
+			],
 			"@/data/*": [
 				"src/data/*"
 			],
+			"@/data": [
+				"src/data/index"
+			],
 			"@/core/*": [
 				"src/core/*"
+			],
+			"@/core": [
+				"src/core/index"
 			]
 		}
 	},
