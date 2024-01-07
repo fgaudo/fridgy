@@ -1,112 +1,103 @@
-import {
-	readonlyArray as RoA,
-	readonlySet as RoS,
-	task as T,
-	taskEither as TE,
-} from 'fp-ts'
-import { observable as O } from 'fp-ts-rxjs'
-import { pipe } from 'fp-ts/lib/function'
+import { none, some } from 'fp-ts/lib/Option'
+import * as R from 'fp-ts/lib/Reader'
+import { flow, pipe } from 'fp-ts/lib/function'
 import * as Rx from 'rxjs'
 
-import { AddFailure } from '@/app/commands/add-failure'
-import { DeleteFoodsByIds } from '@/app/commands/delete-foods-by-ids'
-import { EnqueueProcess } from '@/app/commands/enqueue-process'
-import { Log } from '@/app/commands/log'
-import { RemoveProcess } from '@/app/commands/remove-process'
-import {
-	OverviewController,
-	overview,
-} from '@/app/controllers/overview'
-import { GetProcesses } from '@/app/queries/get-processes'
-import { OnChangeProcesses } from '@/app/streams/on-change-processes'
-import { OnFoods } from '@/app/streams/on-foods'
-import { processesOrd } from '@/app/types/process'
+import { map, mergeMap } from '@/core/helpers'
+import { filterMap } from '@/core/rx'
 
-type AppParameters = Readonly<{
-	deleteFoodsByIds: DeleteFoodsByIds
-	enqueueProcess: EnqueueProcess
-	getProcesses: GetProcesses
-	processes$: OnChangeProcesses
-	addFailure: AddFailure
-	removeProcess: RemoveProcess
-	foods$: OnFoods
-	uiLog: Log
-	appLog: Log
+import { AddFailureWithDeps } from '@/app/commands/add-failure'
+import { DeleteFoodsByIdsWithDeps } from '@/app/commands/delete-foods-by-ids'
+import { EnqueueProcessWithDeps } from '@/app/commands/enqueue-process'
+import { LogWithDeps } from '@/app/commands/log'
+import { RemoveProcessWithDeps } from '@/app/commands/remove-process'
+import * as Overview from '@/app/controllers/overview'
+import { GetProcessesWithDeps } from '@/app/queries/get-processes'
+import { OnChangeProcessesWithDeps } from '@/app/streams/on-change-processes'
+import { OnFoodsWithDeps } from '@/app/streams/on-foods'
+import * as L from '@/app/types/log'
+
+type Command =
+	| {
+			useCase: 'overview'
+			command: Overview.Command
+	  }
+	| { useCase: 'log'; log: L.Log }
+
+interface Model {
+	useCase: 'overview'
+	model: Overview.OverviewModel
+}
+
+type AppParams<APP> = Readonly<{
+	deleteFoodsByIds: DeleteFoodsByIdsWithDeps<APP>
+	enqueueProcess: EnqueueProcessWithDeps<APP>
+	getProcesses: GetProcessesWithDeps<APP>
+	processes$: OnChangeProcessesWithDeps<APP>
+	addFailure: AddFailureWithDeps<APP>
+	removeProcess: RemoveProcessWithDeps<APP>
+	foods$: OnFoodsWithDeps<APP>
+	uiLog: LogWithDeps<APP>
+	appLog: LogWithDeps<APP>
 }>
 
-/**
- * This is the main entrypoint of our App. It encapsules all the features needed for our app to work.
- * The data layer instantiates this class with the specific implementations of the features.
- * The ui layer then uses the instance in order to provide the features to the users.
- */
-export class App {
-	constructor({
-		deleteFoodsByIds,
-		foods$,
-		uiLog,
-		processes$,
-		appLog,
-		removeProcess,
-		getProcesses,
-		addFailure,
-		enqueueProcess,
-	}: AppParameters) {
-		this.overview = overview({
-			enqueueProcess,
-			addFailure,
-			foods$,
-			processes$,
-			log: appLog,
-		})
+type App = <APP>(
+	params: AppParams<APP>,
+) => (
+	command$: Rx.Observable<Command>,
+) => R.Reader<APP, Rx.Observable<Model>>
 
-		this.processes$ = processes$
-		this.log = uiLog
-		this.removeProcess = removeProcess
-		this.getProcesses = getProcesses
-		this.deleteFoodsByIds = deleteFoodsByIds
-	}
-
-	init(): void {
-		if (this.isRunning) {
-			return
-		}
-
-		this.isRunning = true
-
+export const app: App =
+	<APP>(useCases: AppParams<APP>) =>
+	cmd$ =>
 		pipe(
-			Rx.interval(5000),
-			Rx.mergeWith(this.processes$),
-			Rx.exhaustMap(() =>
-				O.fromTask(this.runProcesses()),
-			),
-		).subscribe()
-	}
-
-	readonly overview: OverviewController
-	readonly log: Log
-
-	private isRunning = false
-
-	private runProcesses(): T.Task<unknown> {
-		return pipe(
-			this.getProcesses,
-			TE.map(RoS.toReadonlyArray(processesOrd)),
-			TE.map(
-				RoA.map(process =>
-					pipe(
-						this.deleteFoodsByIds(process.ids),
-						TE.flatMap(() =>
-							this.removeProcess(process.id),
-						),
+			[
+				pipe(
+					cmd$,
+					filterMap(cmd =>
+						cmd.useCase === 'overview'
+							? some(cmd.command)
+							: none,
+					),
+					Overview.overview({
+						log: useCases.appLog,
+						enqueueProcess:
+							useCases.enqueueProcess,
+						processes$: useCases.processes$,
+						addFailure: useCases.addFailure,
+						foods$: useCases.foods$,
+					}),
+					map(
+						model =>
+							({
+								useCase: 'overview',
+								model,
+							}) satisfies Model,
 					),
 				),
-			),
-			TE.flatMapTask(T.sequenceArray),
+				pipe(
+					cmd$,
+					filterMap(cmd =>
+						cmd.useCase === 'log'
+							? some(cmd.log)
+							: none,
+					),
+					R.of,
+					mergeMap(
+						flow(
+							useCases.appLog,
+							R.map(io =>
+								Rx.defer(() => {
+									io()
+									return Rx.of()
+								}),
+							),
+						),
+					),
+					R.map(Rx.ignoreElements()),
+				),
+			] as const,
+			([overview, log]) =>
+				(deps: APP) =>
+					Rx.merge(overview(deps), log(deps)),
 		)
-	}
-
-	private readonly removeProcess: RemoveProcess
-	private readonly deleteFoodsByIds: DeleteFoodsByIds
-	private readonly getProcesses: GetProcesses
-	private readonly processes$: OnChangeProcesses
-}

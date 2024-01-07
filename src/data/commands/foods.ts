@@ -7,13 +7,10 @@ import {
 	readonlySet as RoS,
 	taskEither as TE,
 } from 'fp-ts'
-import {
-	observableEither as OE,
-	readerObservable as RO,
-} from 'fp-ts-rxjs'
 import { pipe } from 'fp-ts/lib/function'
 import * as Rx from 'rxjs'
 
+import { map } from '@/core/helpers'
 import { filterMap } from '@/core/rx'
 
 import { OnFoodsWithDeps } from '@/app/streams/on-foods'
@@ -84,9 +81,9 @@ export const foods: OnFoodsWithDeps<Deps> = pipe(
 			filterMap(OPT.getRight),
 		),
 	),
-	RO.map(
+	map(
 		columns =>
 			(columns.values ?? []) as unknown[],
 	),
-	RO.map(mapData),
+	map(mapData),
 )

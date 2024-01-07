@@ -1,9 +1,7 @@
-import { ReaderObservable } from 'fp-ts-rxjs/lib/ReaderObservable'
+import { Reader } from 'fp-ts/lib/Reader'
 import { Observable } from 'rxjs'
 
 import { Processes } from '@/app/types/process'
 
 export type OnChangeProcessesWithDeps<ENV> =
-	ReaderObservable<ENV, Processes>
-export type OnChangeProcesses =
-	Observable<Processes>
+	Reader<ENV, Observable<Processes>>

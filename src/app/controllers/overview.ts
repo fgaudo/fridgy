@@ -1,4 +1,3 @@
-import { readerObservable as ROX } from '@fgaudo/fp-ts-rxjs-extension'
 import {
 	eq as Eq,
 	option as OPT,
@@ -6,30 +5,35 @@ import {
 	reader as R,
 	readonlySet as RoS,
 } from 'fp-ts'
-import { readerObservable as RO } from 'fp-ts-rxjs'
 import { flip, flow, pipe } from 'fp-ts/function'
 import * as Rx from 'rxjs'
 
 import { Controller } from '@/core/controller'
+import {
+	map,
+	mergeMap,
+	switchMap,
+	tap,
+} from '@/core/helpers'
 import { filterMap } from '@/core/rx'
 
 import { Food, foodEq } from '@/domain/food'
 
-import { AddFailure } from '@/app/commands/add-failure'
-import { EnqueueProcess } from '@/app/commands/enqueue-process'
-import { Log } from '@/app/commands/log'
-import { OnChangeProcesses } from '@/app/streams/on-change-processes'
-import { OnFoods } from '@/app/streams/on-foods'
+import { AddFailureWithDeps } from '@/app/commands/add-failure'
+import { EnqueueProcessWithDeps } from '@/app/commands/enqueue-process'
+import { LogWithDeps } from '@/app/commands/log'
+import { OnChangeProcessesWithDeps } from '@/app/streams/on-change-processes'
+import { OnFoodsWithDeps } from '@/app/streams/on-foods'
 import { toFoodEntity } from '@/app/types/food'
 import { info } from '@/app/types/log'
 import { Processes } from '@/app/types/process'
 
-interface Deps {
-	readonly processes$: OnChangeProcesses
-	readonly enqueueProcess: EnqueueProcess
-	readonly foods$: OnFoods
-	readonly log: Log
-	readonly addFailure: AddFailure
+interface UseCases<DEPS> {
+	readonly processes$: OnChangeProcessesWithDeps<DEPS>
+	readonly enqueueProcess: EnqueueProcessWithDeps<DEPS>
+	readonly foods$: OnFoodsWithDeps<DEPS>
+	readonly log: LogWithDeps<DEPS>
+	readonly addFailure: AddFailureWithDeps<DEPS>
 }
 
 interface FoodModel {
@@ -61,116 +65,109 @@ export type OverviewController = Controller<
 	OverviewModel
 >
 
-export const overview: R.Reader<
-	Deps,
-	OverviewController
-> = pipe(
-	[
-		pipe(
-			R.asks((deps: Deps) => deps.foods$),
-			ROX.tap(
-				foods => deps =>
-					deps.log(
-						info(
-							`Received ${foods.size} food entries`,
-						),
-					),
-			),
-			RO.map(
-				// We convert all food data into food entities in order to enforce business constraints.
-				RoS.map(foodEq)(toFoodEntity),
-			),
-			R.chain(
-				flip(deps =>
-					Rx.combineLatestWith(deps.processes$),
-				),
-			),
-			RO.map(([foods, processes]) =>
-				// We create the food model by merging the entity with the queued processes
-				RoS.map(foodModelEq)((food: Food) =>
-					toFoodModel(food, processes),
-				)(foods),
-			),
-			RO.map(
-				RoS.toReadonlyArray(
-					Ord.fromCompare(() => 0),
-				),
-			),
-			RO.map(
-				foods =>
-					({
-						foods,
-						type: 'ready',
-					}) satisfies OverviewModel,
-			),
-			R.map(
-				Rx.startWith({
-					type: 'loading',
-				} satisfies OverviewModel),
-			),
-		),
-		flow(
-			R.of<Deps, Rx.Observable<Command>>,
-			ROX.tap(
-				() => deps =>
-					deps.log(
-						info(`Received delete command`),
-					),
-			),
-			RO.map(
-				del =>
-					({
-						type: 'delete',
-						ids: del.ids,
-					}) as const,
-			),
-			ROX.switchMap(process =>
-				pipe(
-					R.asks((deps: Deps) =>
-						deps.enqueueProcess(process),
-					),
-					RO.fromReaderTask,
-				),
-			),
-			ROX.tap(
-				() => deps =>
-					deps.log(
-						info(`Delete command executed`),
-					),
-			),
-			R.map(filterMap(OPT.getLeft)),
-			ROX.tap(
-				error => deps =>
-					deps.log(
-						info(
-							`Delete command failed: ${error.message}`,
-						),
-					),
-			),
-			ROX.mergeMap(failure =>
-				pipe(
-					R.asks((deps: Deps) =>
-						deps.addFailure(failure),
-					),
-					RO.fromReaderTask,
-				),
-			),
-			R.map(Rx.ignoreElements()),
-		),
-	] as const,
+type Overview = <DEPS>(
+	useCases: UseCases<DEPS>,
+) => (
+	cmd$: Rx.Observable<Command>,
+) => R.Reader<DEPS, Rx.Observable<OverviewModel>>
 
-	streams => deps =>
-		new Controller(
-			command$ =>
+export const overview: Overview =
+	useCases => cmd$ =>
+		pipe(
+			[
+				pipe(
+					R.asks(useCases.foods$),
+					tap(foods =>
+						useCases.log(
+							info(
+								`Received ${foods.size} food entries`,
+							),
+						),
+					),
+					map(
+						// We convert all food data into food entities in order to enforce business constraints.
+						RoS.map(foodEq)(toFoodEntity),
+					),
+					R.chain(
+						flip(deps =>
+							Rx.combineLatestWith(
+								useCases.processes$(deps),
+							),
+						),
+					),
+					map(([foods, processes]) =>
+						// We create the food model by merging the entity with the queued processes
+						RoS.map(foodModelEq)((food: Food) =>
+							toFoodModel(food, processes),
+						)(foods),
+					),
+					map(
+						RoS.toReadonlyArray(
+							Ord.fromCompare(() => 0),
+						),
+					),
+					map(
+						foods =>
+							({
+								foods,
+								type: 'ready',
+							}) satisfies OverviewModel,
+					),
+					R.map(
+						Rx.startWith({
+							type: 'loading',
+						} satisfies OverviewModel),
+					),
+				),
+				flow(
+					R.of<unknown, Rx.Observable<Command>>,
+					tap(() =>
+						useCases.log(
+							info(`Received delete command`),
+						),
+					),
+					map(
+						del =>
+							({
+								type: 'delete',
+								ids: del.ids,
+							}) as const,
+					),
+					switchMap(
+						flow(
+							useCases.enqueueProcess,
+							R.map(Rx.defer),
+						),
+					),
+					tap(() =>
+						useCases.log(
+							info(`Delete command executed`),
+						),
+					),
+					R.map(filterMap(OPT.getLeft)),
+					tap(error =>
+						useCases.log(
+							info(
+								`Delete command failed: ${error.message}`,
+							),
+						),
+					),
+					mergeMap(
+						flow(
+							useCases.addFailure,
+							R.map(Rx.defer),
+						),
+					),
+					R.map(Rx.ignoreElements()),
+				),
+			] as const,
+
+			streams => deps =>
 				Rx.merge(
 					streams[0](deps),
-					streams[1](command$)(deps),
+					streams[1](cmd$)(deps),
 				),
-			{
-				type: 'loading',
-			} as const,
-		),
-)
+		)
 
 function toFoodModel(
 	food: Food,

@@ -14,18 +14,12 @@ dependencies:
   '@capacitor/core':
     specifier: ^5.6.0
     version: 5.6.0
-  '@fgaudo/fp-ts-rxjs-extension':
-    specifier: link:../../fp-ts-rxjs-extension/main
-    version: link:../../fp-ts-rxjs-extension/main
   '@tanstack/react-virtual':
     specifier: ^3.0.1
     version: 3.0.1(react-dom@18.2.0)(react@18.2.0)
   fp-ts:
     specifier: ^2.16.2
     version: 2.16.2
-  fp-ts-rxjs:
-    specifier: ^0.6.15
-    version: 0.6.15(fp-ts@2.16.2)(rxjs@7.8.1)
   io-ts:
     specifier: ^2.2.21
     version: 2.2.21(fp-ts@2.16.2)
@@ -2333,16 +2327,6 @@ packages:
       cross-spawn: 7.0.3
       signal-exit: 4.1.0
     dev: true
-
-  /fp-ts-rxjs@0.6.15(fp-ts@2.16.2)(rxjs@7.8.1):
-    resolution: {integrity: sha512-5fD4a/439l0aUkSkPq7xnznXYsD7YwGyYANO3v6dkkZJTta36et3bNJ2tzq28UcVR6bS9nTDbP7kMjgQqFFxYQ==}
-    peerDependencies:
-      fp-ts: ^2.4.4
-      rxjs: ^6.0.0
-    dependencies:
-      fp-ts: 2.16.2
-      rxjs: 7.8.1
-    dev: false
 
   /fp-ts@2.16.2:
     resolution: {integrity: sha512-CkqAjnIKFqvo3sCyoBTqgJvF+bHrSik584S9nhTjtBESLx26cbtVMR/T9a6ApChOcSDAaM3JydDmWDUn4EEXng==}
