@@ -1,6 +1,6 @@
 import { reader as R, task as T } from 'fp-ts'
 
-import { Log } from '@/app'
+import { R_Log } from '@/app'
 
-export const log: Log<unknown> = () =>
+export const log: R_Log<unknown> = () =>
 	R.of(T.of(undefined))

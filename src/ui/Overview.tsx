@@ -4,8 +4,8 @@ import { useContext } from 'react'
 import { AppContext } from './context'
 
 function Overview() {
-	// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 	const overview =
+		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 		useContext(AppContext)!.overview
 	const model = useObservableState(
 		overview.stream,

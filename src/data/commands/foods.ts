@@ -1,4 +1,3 @@
-import { SQLiteDBConnection } from '@capacitor-community/sqlite'
 import {
 	either as E,
 	option as OPT,
@@ -13,7 +12,7 @@ import * as Rx from 'rxjs'
 import { map } from '@/core/helpers'
 import { filterMap } from '@/core/rx'
 
-import { OnFoods } from '@/app'
+import { R_OnFoods } from '@/app'
 import {
 	FoodData,
 	foodDataEq,
@@ -23,7 +22,7 @@ import { error } from '@/app/types/log'
 import { log } from '@/data/commands/log'
 
 interface Deps {
-	readonly db: SQLiteDBConnection
+	readonly db: SQLitePlugin.Database
 	readonly events: Rx.Observable<void>
 }
 
@@ -61,15 +60,17 @@ const mapData = RoA.reduce<
 	)
 })
 
-export const foods: OnFoods<Deps> = pipe(
+export const foods: R_OnFoods<Deps> = pipe(
 	R.ask<Deps>(),
-	R.map(({ db, events }) =>
+	R.map(({ events }) =>
 		pipe(
 			events,
 			Rx.switchMap(() =>
 				pipe(
 					TE.tryCatch(
-						() => db.query('SELECT * FROM foods'),
+						() => {
+							throw new Error('asd')
+						},
 						e =>
 							e instanceof Error
 								? e
@@ -83,7 +84,11 @@ export const foods: OnFoods<Deps> = pipe(
 	),
 	map(
 		columns =>
-			(columns.values ?? []) as unknown[],
+			(
+				columns as
+					| { values: unknown[] }
+					| undefined
+			)?.values ?? [],
 	),
 	map(mapData),
 )

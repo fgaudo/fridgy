@@ -1,29 +1,60 @@
 import {
+	io as IO,
 	readerIO as RIO,
 	readerTask as RT,
 	readerTaskEither as RTE,
+	task as T,
+	taskEither as TE,
 } from 'fp-ts'
 
 import { Failure } from '@/app/types/failure'
 import * as L from '@/app/types/log'
 import { Process } from '@/app/types/process'
 
-export type AddFailure<ENV> = (
+// ===============
+
+export type AddFailure = (
+	failure: Failure,
+) => T.Task<void>
+
+export type R_AddFailure<ENV> = (
 	failure: Failure,
 ) => RT.ReaderTask<ENV, void>
 
-export type DeleteFoodsByIds<ENV> = (
+// ===============
+
+export type DeleteFoodsByIds = (
+	ids: ReadonlySet<string> | string,
+) => TE.TaskEither<Error, void>
+
+export type R_DeleteFoodsByIds<ENV> = (
 	ids: ReadonlySet<string> | string,
 ) => RTE.ReaderTaskEither<ENV, Error, void>
 
-export type EnqueueProcess<ENV> = (
+// ===============
+
+export type EnqueueProcess = (
+	process: Omit<Process, 'id' | 'timestamp'>,
+) => TE.TaskEither<Error, void>
+
+export type R_EnqueueProcess<ENV> = (
 	process: Omit<Process, 'id' | 'timestamp'>,
 ) => RTE.ReaderTaskEither<ENV, Error, void>
 
-export type Log<ENV> = (
+// ===============
+
+export type Log = (log: L.Log) => IO.IO<void>
+
+export type R_Log<ENV> = (
 	log: L.Log,
 ) => RIO.ReaderIO<ENV, void>
 
-export type RemoveProcess<ENV> = (
+// ===============
+
+export type RemoveProcess = (
+	id: Process['id'],
+) => TE.TaskEither<Error, void>
+
+export type R_RemoveProcess<ENV> = (
 	id: Process['id'],
 ) => RTE.ReaderTaskEither<ENV, Error, void>

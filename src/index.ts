@@ -1,19 +1,25 @@
-import { flip } from 'fp-ts/lib/function'
+import { pipe } from 'fp-ts/lib/function'
 
-import { Controller } from '@/core/controller'
-
-import { app } from '@/app'
+import { App } from '@/app'
 
 import { appUseCases } from '@/data'
 
 import { render } from '@/ui'
 
-try {
-	const controller = new Controller(
-		flip(app(appUseCases)),
-	)
+document.addEventListener(
+	'deviceready',
+	function () {
+		const db = window.sqlitePlugin.openDatabase({
+			name: 'my.db',
+			location: 'default',
+		})
 
-	render(controller)
-} catch (error) {
-	console.error(error)
-}
+		const app = pipe(
+			{ db },
+			appUseCases,
+			useCases => new App(useCases),
+		)
+
+		render(app)
+	},
+)

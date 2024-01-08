@@ -1,4 +1,3 @@
-import { SQLiteDBConnection } from '@capacitor-community/sqlite'
 import {
 	ord as Ord,
 	reader as R,
@@ -9,13 +8,13 @@ import {
 } from 'fp-ts'
 import { flow } from 'fp-ts/function'
 
-import { DeleteFoodsByIds } from '@/app'
+import { R_DeleteFoodsByIds } from '@/app'
 
 interface Deps {
-	readonly db: SQLiteDBConnection
+	readonly db: SQLitePlugin.Database
 }
 
-export const deleteFoodsByIds: DeleteFoodsByIds<Deps> =
+export const deleteFoodsByIds: R_DeleteFoodsByIds<Deps> =
 	flow(
 		ids =>
 			typeof ids === 'string'
@@ -29,15 +28,16 @@ export const deleteFoodsByIds: DeleteFoodsByIds<Deps> =
 		ROA.toArray, // the api wants a mutable array..
 		R.of,
 		R.chain(
-			set =>
-				({ db }: Deps) =>
-					TE.tryCatch(
-						() => db.executeSet(set),
-						e =>
-							e instanceof Error
-								? e
-								: new Error('Unknown error'),
-					),
+			set => (deps: Deps) =>
+				TE.tryCatch(
+					() => {
+						throw new Error('asd')
+					},
+					e =>
+						e instanceof Error
+							? e
+							: new Error('Unknown error'),
+				),
 		),
 		RTE.map(() => undefined),
 	)

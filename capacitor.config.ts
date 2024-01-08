@@ -5,8 +5,8 @@ const config: CapacitorConfig = {
 	appName: 'fridgy',
 	webDir: 'dist',
 	server: {
-		androidScheme: 'https'
-	}
+		androidScheme: 'https',
+	},
 }
 
 export default config
