@@ -22,9 +22,7 @@ export const appUseCases: Reader<
 	Deps,
 	AppUseCases
 > = ({ db }: Deps) => ({
-	processes$: R.of(
-		Rx.of({ delete: RoS.singleton('') } as const),
-	)(undefined),
+	processes$: R.of(Rx.of(RoS.empty))(undefined),
 	getProcesses: RTE.of(RoS.empty)(undefined),
 	removeProcess: () => RTE.of(void 1)(undefined),
 	enqueueProcess: () => RTE.of(void 1)(undefined),

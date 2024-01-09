@@ -1,3 +1,11 @@
+import {
+	Avatar,
+	Card,
+	List,
+	ListItem,
+	ListItemPrefix,
+	Typography,
+} from '@material-tailwind/react'
 import { useObservableState } from 'observable-hooks'
 import { useContext } from 'react'
 
@@ -5,8 +13,8 @@ import { AppContext } from './context'
 
 function Overview() {
 	const overview =
-		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 		useContext(AppContext)!.overview
+
 	const model = useObservableState(
 		overview.stream,
 		overview.init,
@@ -17,11 +25,35 @@ function Overview() {
 	}
 
 	return (
-		<div>
-			{model.foods.map(food => (
-				<div key={food.id}>{food.name}</div>
-			))}
-		</div>
+		<Card className="w-96">
+			<List>
+				{model.foods.map(food => (
+					<ListItem key={food.id}>
+						<ListItemPrefix>
+							<Avatar
+								variant="circular"
+								alt="candice"
+								src="https://docs.material-tailwind.com/img/face-1.jpg"
+							/>
+						</ListItemPrefix>
+						<div>
+							<Typography
+								variant="h6"
+								color="blue-gray">
+								Tania Andrew
+							</Typography>
+							<Typography
+								variant="small"
+								color="gray"
+								className="font-normal">
+								Software Engineer @ Material
+								Tailwind
+							</Typography>
+						</div>
+					</ListItem>
+				))}
+			</List>
+		</Card>
 	)
 }
 

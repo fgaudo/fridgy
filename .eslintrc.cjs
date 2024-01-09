@@ -104,6 +104,8 @@ module.exports = {
 				],
 			},
 		],
+		'@typescript-eslint/no-non-null-assertion':
+			'off',
 		'import/no-self-import': 'error',
 		'import/no-useless-path-segments': 'error',
 		'import/no-unresolved': 'error',
