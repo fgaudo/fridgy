@@ -4,8 +4,8 @@ import {
 	readerTaskEither as RTE,
 	readonlySet as RoS,
 } from 'fp-ts'
-import { Reader } from 'fp-ts/lib/Reader'
-import { flip } from 'fp-ts/lib/function'
+import { Reader } from 'fp-ts/Reader'
+import { flip } from 'fp-ts/function'
 import * as Rx from 'rxjs'
 
 import { AppUseCases } from '@/app'

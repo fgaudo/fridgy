@@ -5,17 +5,12 @@ import {
 	reader as R,
 	readonlySet as RoS,
 } from 'fp-ts'
+import { Reader } from 'fp-ts/Reader'
 import { flip, flow, pipe } from 'fp-ts/function'
-import { Reader } from 'fp-ts/lib/Reader'
 import * as Rx from 'rxjs'
 
 import { Controller } from '@/core/controller'
-import {
-	map,
-	mergeMap,
-	switchMap,
-	tap,
-} from '@/core/helpers'
+import * as RO from '@/core/reader-observable'
 import { filterMap } from '@/core/rx'
 
 import { Food, areEqual } from '@/domain/food'
@@ -78,7 +73,7 @@ export const overview: Overview = pipe(
 	[
 		pipe(
 			R.asks(({ foods$ }: UseCases) => foods$),
-			tap(
+			RO.tap(
 				foods =>
 					({ log }) =>
 						pipe(
@@ -88,7 +83,7 @@ export const overview: Overview = pipe(
 							log,
 						),
 			),
-			map(
+			RO.map(
 				// We convert all food data into food entities in order to enforce business constraints.
 				RoS.map(Eq.fromEquals(areEqual))(
 					toFoodEntity,
@@ -99,18 +94,18 @@ export const overview: Overview = pipe(
 					Rx.combineLatestWith(processes$),
 				),
 			),
-			map(([foods, processes]) =>
+			RO.map(([foods, processes]) =>
 				// We create the food model by merging the entity with the queued processes
 				RoS.map(foodModelEq)((food: Food) =>
 					toFoodModel(food, processes),
 				)(foods),
 			),
-			map(
+			RO.map(
 				RoS.toReadonlyArray(
 					Ord.fromCompare(() => 0),
 				),
 			),
-			map(
+			RO.map(
 				foods =>
 					({
 						foods,
@@ -125,7 +120,7 @@ export const overview: Overview = pipe(
 		),
 		flow(
 			R.of<UseCases, Rx.Observable<Command>>,
-			tap(
+			RO.tap(
 				() =>
 					({ log }) =>
 						pipe(
@@ -133,19 +128,19 @@ export const overview: Overview = pipe(
 							log,
 						),
 			),
-			map(
+			RO.map(
 				del =>
 					({
 						type: 'delete',
 						ids: del.ids,
 					}) as const,
 			),
-			switchMap(
+			RO.mergeMap(
 				flip(({ enqueueProcess }) =>
 					flow(enqueueProcess, Rx.defer),
 				),
 			),
-			tap(
+			RO.tap(
 				() =>
 					({ log }) =>
 						pipe(
@@ -154,7 +149,7 @@ export const overview: Overview = pipe(
 						),
 			),
 			R.map(filterMap(OPT.getLeft)),
-			tap(
+			RO.tap(
 				error =>
 					({ log }) =>
 						pipe(
@@ -164,7 +159,7 @@ export const overview: Overview = pipe(
 							log,
 						),
 			),
-			mergeMap(
+			RO.mergeMap(
 				error =>
 					({ addFailure }) =>
 						pipe(addFailure(error), Rx.defer),

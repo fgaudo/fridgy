@@ -1,5 +1,5 @@
-import * as E from 'fp-ts/lib/Either'
-import { flow } from 'fp-ts/lib/function'
+import * as E from 'fp-ts/Either'
+import { flow } from 'fp-ts/function'
 import * as Rx from 'rxjs'
 
 export const mergeMapW: <E2, A, B>(

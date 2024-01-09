@@ -6,10 +6,10 @@ import {
 	readonlySet as RoS,
 	taskEither as TE,
 } from 'fp-ts'
-import { pipe } from 'fp-ts/lib/function'
+import { pipe } from 'fp-ts/function'
 import * as Rx from 'rxjs'
 
-import { map } from '@/core/helpers'
+import { map } from '@/core/reader-observable'
 import { filterMap } from '@/core/rx'
 
 import { R_OnFoods } from '@/app'
