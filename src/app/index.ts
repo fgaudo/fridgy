@@ -2,8 +2,10 @@ import {
 	either as E,
 	readonlySet as RoS,
 } from 'fp-ts'
-import { flow, pipe } from 'fp-ts/lib/function'
+import { pipe } from 'fp-ts/lib/function'
 import * as Rx from 'rxjs'
+
+import * as OE from '@/core/observable-either'
 
 import * as C from '@/app/actions/commands'
 import * as Q from '@/app/actions/queries'
@@ -51,28 +53,20 @@ export class App {
 			Rx.map(
 				E.map(RoS.toReadonlyArray(processesOrd)),
 			),
-			Rx.mergeMap(
-				E.foldW(flow(E.left, Rx.of), process =>
-					pipe(Rx.from(process), Rx.map(E.right)),
+			OE.mergeMapW(processes =>
+				pipe(Rx.from(processes), Rx.map(E.right)),
+			),
+			OE.mergeMapW(process =>
+				pipe(
+					useCases.deleteFoodsByIds(process.ids),
+					Rx.defer,
+					Rx.map(() => E.right(process)),
 				),
 			),
-			Rx.mergeMap(
-				E.foldW(flow(E.left, Rx.of), process =>
-					pipe(
-						useCases.deleteFoodsByIds(
-							process.ids,
-						),
-						Rx.defer,
-						Rx.map(() => E.right(process)),
-					),
-				),
-			),
-			Rx.mergeMap(
-				E.foldW(flow(E.left, Rx.of), process =>
-					pipe(
-						useCases.removeProcess(process.id),
-						Rx.defer,
-					),
+			OE.mergeMap(process =>
+				pipe(
+					useCases.removeProcess(process.id),
+					Rx.defer,
 				),
 			),
 		)

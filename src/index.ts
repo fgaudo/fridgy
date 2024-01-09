@@ -15,8 +15,7 @@ document.addEventListener(
 		})
 
 		const app = pipe(
-			{ db },
-			appUseCases,
+			appUseCases({ db }),
 			useCases => new App(useCases),
 		)
 
