@@ -9,7 +9,7 @@ import {
 import { pipe } from 'fp-ts/function'
 import * as Rx from 'rxjs'
 
-import { map } from '@/core/reader-observable'
+import * as RO from '@/core/reader-observable'
 import { filterMap } from '@/core/rx'
 
 import { R_OnFoods } from '@/app'
@@ -82,7 +82,7 @@ export const foods: R_OnFoods<Deps> = pipe(
 			filterMap(OPT.getRight),
 		),
 	),
-	map(
+	RO.map(
 		columns =>
 			(
 				columns as
@@ -90,5 +90,5 @@ export const foods: R_OnFoods<Deps> = pipe(
 					| undefined
 			)?.values ?? [],
 	),
-	map(mapData),
+	RO.map(mapData),
 )

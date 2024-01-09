@@ -47,9 +47,11 @@ export class App {
 		this.scheduler = pipe(
 			Rx.interval(5000),
 			Rx.mergeWith(useCases.processes$),
-			Rx.exhaustMap(() =>
+			Rx.exhaustMap(p =>
 				pipe(
-					Rx.defer(useCases.getProcesses),
+					typeof p === 'number'
+						? Rx.defer(useCases.getProcesses)
+						: pipe(Rx.of(p), Rx.map(E.right)),
 					Rx.map(
 						E.map(
 							RoS.toReadonlyArray(processesOrd),

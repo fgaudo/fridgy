@@ -23,10 +23,7 @@ export const foodDataEq: Eq.Eq<FoodData> =
 	Eq.fromEquals((a, b) => a.id === b.id)
 
 export function toFoodEntity(
-	foodDatas: FoodData,
+	foodData: FoodData,
 ): Food {
-	return {
-		id: 'id',
-		name: 'asd',
-	}
+	return foodData
 }

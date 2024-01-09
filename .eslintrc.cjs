@@ -117,6 +117,8 @@ module.exports = {
 			{ extensions: ['.tsx'] },
 		],
 		'@typescript-eslint/no-unused-vars': 'off',
+		'@typescript-eslint/no-unnecessary-condition':
+			'warn',
 		'@typescript-eslint/no-empty-interface': [
 			'off',
 		],

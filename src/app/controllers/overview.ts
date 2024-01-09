@@ -26,7 +26,11 @@ import {
 } from '@/app/actions/streams'
 import { toFoodEntity } from '@/app/types/food'
 import { info } from '@/app/types/log'
-import { Processes } from '@/app/types/process'
+import {
+	Process,
+	Processes,
+	processesEq,
+} from '@/app/types/process'
 
 interface UseCases {
 	readonly processes$: OnChangeProcesses
@@ -184,10 +188,21 @@ export const overview: Overview = pipe(
 
 function toFoodModel(
 	food: Food,
-	processes: Processes,
+	processes: ReadonlySet<Process>,
 ): FoodModel {
 	return {
 		...food,
-		deleting: processes.delete.has(food.id),
+		deleting: pipe(
+			processes,
+			RoS.filter(
+				process => process.type === 'delete',
+			),
+			RoS.some(
+				process =>
+					process.ids === food.id ||
+					(!(typeof process.ids === 'string') &&
+						process.ids.has(food.id)),
+			),
+		),
 	}
 }

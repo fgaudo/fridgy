@@ -1,4 +1,4 @@
-import { ord as Ord } from 'fp-ts'
+import { eq as Eq, ord as Ord } from 'fp-ts'
 
 export interface Processes {
 	readonly delete: ReadonlySet<string>
@@ -20,3 +20,6 @@ export const processesOrd: Ord.Ord<Process> =
 
 		return 0
 	})
+
+export const processesEq: Eq.Eq<Process> =
+	Eq.fromEquals((a, b) => a.id === b.id)
