@@ -11,6 +11,7 @@ import * as Rx from 'rxjs'
 
 import { Controller } from '@/core/controller'
 import * as RO from '@/core/reader-observable'
+import * as RoNeS from '@/core/readonly-non-empty-set'
 import { filterMap } from '@/core/rx'
 
 import { Food, areEqual } from '@/domain/food'
@@ -26,11 +27,7 @@ import {
 } from '@/app/actions/streams'
 import { toFoodEntity } from '@/app/types/food'
 import { info } from '@/app/types/log'
-import {
-	Process,
-	Processes,
-	processesEq,
-} from '@/app/types/process'
+import { Process } from '@/app/types/process'
 
 interface UseCases {
 	readonly processes$: OnChangeProcesses
@@ -61,7 +58,7 @@ export type OverviewModel = Readonly<
 
 export type Command = Readonly<{
 	type: 'delete'
-	ids: ReadonlySet<string>
+	ids: RoNeS.ReadonlyNonEmptySet<string>
 }>
 
 export type OverviewController = Controller<
@@ -197,11 +194,11 @@ function toFoodModel(
 			RoS.filter(
 				process => process.type === 'delete',
 			),
-			RoS.some(
-				process =>
-					process.ids === food.id ||
-					(!(typeof process.ids === 'string') &&
-						process.ids.has(food.id)),
+			RoS.some(process =>
+				pipe(
+					process.ids,
+					RoNeS.toReadonlySet,
+				).has(food.id),
 			),
 		),
 	}

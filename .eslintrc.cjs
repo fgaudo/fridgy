@@ -124,5 +124,7 @@ module.exports = {
 		'@typescript-eslint/no-empty-interface': [
 			'off',
 		],
+		'@typescript-eslint/switch-exhaustiveness-check':
+			'error',
 	},
 }

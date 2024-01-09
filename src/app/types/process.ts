@@ -1,5 +1,7 @@
 import { eq as Eq, ord as Ord } from 'fp-ts'
 
+import { ReadonlyNonEmptySet } from '@/core/readonly-non-empty-set'
+
 export interface Processes {
 	readonly delete: ReadonlySet<string>
 }
@@ -9,7 +11,7 @@ export type Process = {
 	readonly timestamp: number
 } & {
 	readonly type: 'delete'
-	readonly ids: ReadonlySet<string> | string
+	readonly ids: ReadonlyNonEmptySet<string>
 }
 
 export const processesOrd: Ord.Ord<Process> =

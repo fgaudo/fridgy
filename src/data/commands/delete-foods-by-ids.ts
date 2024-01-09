@@ -1,14 +1,16 @@
 import {
-	ord as Ord,
 	reader as R,
-	readonlyArray as ROA,
-	readonlySet as ROS,
 	readerTaskEither as RTE,
-	taskEither as TE,
+	readonlyNonEmptyArray as RoNeA,
+	string as S,
 } from 'fp-ts'
-import { flow } from 'fp-ts/function'
+import { flow, pipe } from 'fp-ts/function'
+
+import * as RoNeS from '@/core/readonly-non-empty-set'
 
 import { R_DeleteFoodsByIds } from '@/app'
+
+import { executeSql } from '@/data/helpers'
 
 interface Deps {
 	readonly db: SQLitePlugin.Database
@@ -16,28 +18,23 @@ interface Deps {
 
 export const deleteFoodsByIds: R_DeleteFoodsByIds<Deps> =
 	flow(
-		ids =>
-			typeof ids === 'string'
-				? ROS.singleton(ids)
-				: ids,
-		ROS.toReadonlyArray(Ord.fromCompare(() => 0)),
-		ROA.map(id => ({
-			statement: 'DELETE * FROM foods where id=?',
-			values: [id],
-		})),
-		ROA.toArray, // the api wants a mutable array..
+		RoNeS.toReadonlyNonEmptyArray(S.Ord),
+		ids => ({
+			tokens: pipe(
+				ids,
+				RoNeA.map(() => '?'),
+				arr => arr.join(','),
+			),
+			values: ids,
+		}),
 		R.of,
 		R.chain(
-			set => (deps: Deps) =>
-				TE.tryCatch(
-					() => {
-						throw new Error('asd')
-					},
-					e =>
-						e instanceof Error
-							? e
-							: new Error('Unknown error'),
-				),
+			({ values, tokens }) =>
+				({ db }: Deps) =>
+					executeSql(
+						`DELETE * FROM foods WHERE id IN (${tokens})`,
+						values,
+					)(db),
 		),
 		RTE.map(() => undefined),
 	)

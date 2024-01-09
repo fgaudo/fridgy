@@ -4,7 +4,6 @@ import {
 	reader as R,
 	readonlyArray as RoA,
 	readonlySet as RoS,
-	taskEither as TE,
 } from 'fp-ts'
 import { pipe } from 'fp-ts/function'
 import * as Rx from 'rxjs'
@@ -20,6 +19,7 @@ import {
 import { error } from '@/app/types/log'
 
 import { log } from '@/data/commands/log'
+import { executeSql } from '@/data/helpers'
 
 interface Deps {
 	readonly db: SQLitePlugin.Database
@@ -33,7 +33,9 @@ const mapData = RoA.reduce<
 	const foodRowEither = FoodData.decode(row)
 
 	if (E.isLeft(foodRowEither)) {
-		log(error('Row could not be parsed'))
+		log(error('Row could not be parsed'))(
+			undefined,
+		)()
 
 		return set
 	}
@@ -46,7 +48,7 @@ const mapData = RoA.reduce<
 				'Could not parse name of row ' +
 					foodRow.id,
 			),
-		)
+		)(undefined)()
 	}
 
 	const foodData = {
@@ -62,33 +64,27 @@ const mapData = RoA.reduce<
 
 export const foods: R_OnFoods<Deps> = pipe(
 	R.ask<Deps>(),
-	R.map(({ events }) =>
+	R.map(({ events, db }) =>
 		pipe(
 			events,
 			Rx.switchMap(() =>
 				pipe(
-					TE.tryCatch(
-						() => {
-							throw new Error('asd')
-						},
-						e =>
-							e instanceof Error
-								? e
-								: new Error('Unknown error'),
-					),
+					executeSql('SELECT * FROM foods')(db),
 					Rx.defer,
 				),
 			),
 			filterMap(OPT.getRight),
 		),
 	),
-	RO.map(
-		columns =>
-			(
-				columns as
-					| { values: unknown[] }
-					| undefined
-			)?.values ?? [],
+	RO.map(columns =>
+		pipe(
+			Array(columns.rows.length).keys(),
+			Array.from<number>,
+			RoA.fromArray,
+			RoA.map(
+				n => columns.rows.item(n) as unknown,
+			),
+		),
 	),
 	RO.map(mapData),
 )
