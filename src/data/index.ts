@@ -11,8 +11,8 @@ import * as Rx from 'rxjs'
 import { AppUseCases } from '@/app'
 
 import { deleteFoodsByIds } from '@/data/commands/delete-foods-by-ids'
-import { foods } from '@/data/commands/foods'
 import { log } from '@/data/commands/log'
+import { foods } from '@/data/streams/foods'
 
 interface Deps {
 	readonly db: SQLitePlugin.Database

@@ -14,10 +14,7 @@ document.addEventListener(
 			location: 'default',
 		})
 
-		const app = pipe(
-			appUseCases({ db }),
-			useCases => new App(useCases),
-		)
+		const app: App = new App(appUseCases({ db }))
 
 		render(app)
 	},
