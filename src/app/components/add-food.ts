@@ -1,6 +1,6 @@
 import * as Rx from 'rxjs'
 
-import { R_Transformer } from '@/core/controller'
+import { R_Transformer } from '@/core/transformer'
 
 interface FoodData {
 	readonly name: string
@@ -23,11 +23,16 @@ export type Model = Readonly<
 
 interface Deps {}
 
-export const addFood: R_Transformer<
-	Deps,
-	Command,
-	Model
-> = {
+export interface AddFood {
+	readonly transformer: R_Transformer<
+		Deps,
+		Command,
+		Model
+	>
+	readonly init: Model
+}
+
+export const addFood: AddFood = {
 	init: { type: 'loading' } satisfies Model,
 	transformer: cmd$ => deps =>
 		Rx.of({ type: 'loading' }),

@@ -8,10 +8,10 @@ import {
 import { flip, flow, pipe } from 'fp-ts/function'
 import * as Rx from 'rxjs'
 
-import { R_Transformer } from '@/core/controller'
 import * as RO from '@/core/reader-observable'
 import * as RoNeS from '@/core/readonly-non-empty-set'
 import { filterMap } from '@/core/rx'
+import { R_Transformer } from '@/core/transformer'
 
 import { Food, areEqual } from '@/domain/food'
 
@@ -59,6 +59,27 @@ export type Command = Readonly<{
 	type: 'delete'
 	ids: RoNeS.ReadonlyNonEmptySet<string>
 }>
+
+interface Overview {
+	readonly transformer: R_Transformer<
+		UseCases,
+		Command,
+		Model
+	>
+	readonly init: Model
+}
+
+export const component: Overview = {
+	transformer: cmd$ => deps =>
+		Rx.merge(
+			onFoods(deps),
+			deleteByIds(cmd$)(deps),
+		),
+
+	init: {
+		type: 'loading',
+	} satisfies Model,
+}
 
 const onFoods = pipe(
 	R.asks(({ foods$ }: UseCases) => foods$),
@@ -154,24 +175,6 @@ const deleteByIds = flow(
 	),
 	R.map(Rx.ignoreElements()),
 )
-
-type Overview = R_Transformer<
-	UseCases,
-	Command,
-	Model
->
-
-export const overview: Overview = {
-	transformer: cmd$ => deps =>
-		Rx.merge(
-			onFoods(deps),
-			deleteByIds(cmd$)(deps),
-		),
-
-	init: {
-		type: 'loading',
-	} satisfies Model,
-}
 
 function toFoodModel(
 	food: Food,

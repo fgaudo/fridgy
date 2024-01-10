@@ -2,19 +2,16 @@ import {
 	either as E,
 	readonlySet as RoS,
 } from 'fp-ts'
-import { pipe } from 'fp-ts/function'
+import { flip, pipe } from 'fp-ts/function'
 import * as Rx from 'rxjs'
 
-import {
-	Controller,
-	controller,
-} from '@/core/controller'
+import { Controller } from '@/core/controller'
 import * as OE from '@/core/observable-either'
 
 import * as C from '@/app/actions/commands'
 import * as Q from '@/app/actions/queries'
 import * as S from '@/app/actions/streams'
-import * as Overview from '@/app/transformers/overview'
+import * as Overview from '@/app/components/overview'
 import { processesOrd } from '@/app/types/process'
 
 export * from '@/app/actions/queries'
@@ -35,14 +32,15 @@ export type AppUseCases = Readonly<{
 
 export class App {
 	constructor(useCases: AppUseCases) {
-		this.overview = controller(Overview.overview)(
-			{
+		this.overview = new Controller(
+			flip(Overview.component.transformer)({
 				enqueueProcess: useCases.enqueueProcess,
 				addFailure: useCases.addFailure,
 				foods$: useCases.foods$,
 				processes$: useCases.processes$,
 				log: useCases.appLog,
-			},
+			}),
+			Overview.component.init,
 		)
 
 		this.log = useCases.uiLog
