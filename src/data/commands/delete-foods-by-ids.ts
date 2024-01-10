@@ -8,7 +8,7 @@ import { flow, pipe } from 'fp-ts/function'
 
 import * as RoNeS from '@/core/readonly-non-empty-set'
 
-import { R_DeleteFoodsByIds } from '@/app'
+import { R_DeleteFoodsByIds } from '@/app/commands/delete-foods-by-ids'
 
 import { executeSql } from '@/data/helpers'
 

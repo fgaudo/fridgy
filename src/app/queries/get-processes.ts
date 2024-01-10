@@ -5,8 +5,6 @@ import {
 
 import { ProcessDTO } from '@/app/types/process'
 
-// ==================
-
 export type GetProcesses = TE.TaskEither<
 	Error,
 	ReadonlySet<ProcessDTO>

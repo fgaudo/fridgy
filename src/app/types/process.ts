@@ -2,10 +2,6 @@ import { eq as Eq, ord as Ord } from 'fp-ts'
 
 import { ReadonlyNonEmptySet } from '@/core/readonly-non-empty-set'
 
-export interface Processes {
-	readonly delete: ReadonlySet<string>
-}
-
 export type ProcessDTO = {
 	readonly id: string
 	readonly timestamp: number

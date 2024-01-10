@@ -1,43 +1,36 @@
-import {
-	either as E,
-	readonlySet as RoS,
-} from 'fp-ts'
-import { flip, pipe } from 'fp-ts/function'
+import { flip } from 'fp-ts/function'
 import * as Rx from 'rxjs'
 
 import { Controller } from '@/core/controller'
-import * as OE from '@/core/observable-either'
 
-import * as C from '@/app/actions/commands'
-import * as Q from '@/app/actions/queries'
-import * as S from '@/app/actions/streams'
-import * as Overview from '@/app/components/overview'
-import { processesOrd } from '@/app/types/process'
-
-export * from '@/app/actions/queries'
-export * from '@/app/actions/commands'
-export * from '@/app/actions/streams'
+import { AddFailure } from './commands/add-failure'
+import { DeleteFoodsByIds } from './commands/delete-foods-by-ids'
+import { EnqueueProcess } from './commands/enqueue-process'
+import { Log } from './commands/log'
+import { RemoveProcess } from './commands/remove-process'
+import { GetProcesses } from './queries/get-processes'
+import { scheduler } from './schedulers/process'
+import { OnChangeProcesses } from './streams/on-change-processes'
+import { OnFoods } from './streams/on-foods'
+import * as Overview from './view-models/overview'
 
 export type AppUseCases = Readonly<{
-	deleteFoodsByIds: C.DeleteFoodsByIds
-	enqueueProcess: C.EnqueueProcess
-	getProcesses: Q.GetProcesses
-	processes$: S.OnChangeProcesses
-	addFailure: C.AddFailure
-	removeProcess: C.RemoveProcess
-	foods$: S.OnFoods
-	uiLog: C.Log
-	appLog: C.Log
+	deleteFoodsByIds: DeleteFoodsByIds
+	enqueueProcess: EnqueueProcess
+	getProcesses: GetProcesses
+	processes$: OnChangeProcesses
+	addFailure: AddFailure
+	removeProcess: RemoveProcess
+	foods$: OnFoods
+	uiLog: Log
+	appLog: Log
 }>
 
 export class App {
 	constructor(useCases: AppUseCases) {
 		this.overview = new Controller(
 			flip(Overview.component.transformer)({
-				enqueueProcess: useCases.enqueueProcess,
-				addFailure: useCases.addFailure,
-				foods$: useCases.foods$,
-				processes$: useCases.processes$,
+				...useCases,
 				log: useCases.appLog,
 			}),
 			Overview.component.init,
@@ -45,43 +38,10 @@ export class App {
 
 		this.log = useCases.uiLog
 
-		this.scheduler = pipe(
-			Rx.interval(5000),
-			Rx.mergeWith(useCases.processes$),
-			Rx.exhaustMap(p =>
-				pipe(
-					typeof p === 'number'
-						? Rx.defer(useCases.getProcesses)
-						: pipe(Rx.of(p), Rx.map(E.right)),
-					Rx.map(
-						E.map(
-							RoS.toReadonlyArray(processesOrd),
-						),
-					),
-					OE.mergeMapW(processes =>
-						pipe(
-							Rx.from(processes),
-							Rx.map(E.right),
-						),
-					),
-					OE.mergeMapW(process =>
-						pipe(
-							useCases.deleteFoodsByIds(
-								process.ids,
-							),
-							Rx.defer,
-							Rx.map(() => E.right(process)),
-						),
-					),
-					OE.mergeMap(process =>
-						pipe(
-							useCases.removeProcess(process.id),
-							Rx.defer,
-						),
-					),
-				),
-			),
-		)
+		this.scheduler = scheduler({
+			interval: 5000,
+			...useCases,
+		})
 	}
 
 	init(): void {
@@ -98,7 +58,8 @@ export class App {
 		Overview.Command,
 		Overview.Model
 	>
-	readonly log: C.Log
+
+	readonly log: Log
 
 	private isRunning = false
 

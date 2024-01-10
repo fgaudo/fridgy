@@ -11,7 +11,7 @@ import * as Rx from 'rxjs'
 import * as RO from '@/core/reader-observable'
 import { filterMap } from '@/core/rx'
 
-import { R_OnFoods } from '@/app'
+import { R_OnFoods } from '@/app/streams/on-foods'
 import {
 	FoodDTO,
 	foodDataEq,

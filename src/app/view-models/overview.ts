@@ -15,15 +15,11 @@ import { R_Transformer } from '@/core/transformer'
 
 import { Food, areEqual } from '@/domain/food'
 
-import {
-	AddFailure,
-	EnqueueProcess,
-	Log,
-} from '@/app/actions/commands'
-import {
-	OnChangeProcesses,
-	OnFoods,
-} from '@/app/actions/streams'
+import { AddFailure } from '@/app/commands/add-failure'
+import { EnqueueProcess } from '@/app/commands/enqueue-process'
+import { Log } from '@/app/commands/log'
+import { OnChangeProcesses } from '@/app/streams/on-change-processes'
+import { OnFoods } from '@/app/streams/on-foods'
 import { toFoodEntity } from '@/app/types/food'
 import { info } from '@/app/types/log'
 import { ProcessDTO } from '@/app/types/process'
@@ -55,10 +51,12 @@ export type Model = Readonly<
 	  }
 >
 
-export type Command = Readonly<{
+type DeleteByIds = Readonly<{
 	type: 'delete'
 	ids: RoNeS.ReadonlyNonEmptySet<string>
 }>
+
+export type Command = DeleteByIds
 
 interface Overview {
 	readonly transformer: R_Transformer<
@@ -70,10 +68,13 @@ interface Overview {
 }
 
 export const component: Overview = {
-	transformer: cmd$ => deps =>
-		Rx.merge(
-			onFoods(deps),
-			deleteByIds(cmd$)(deps),
+	transformer: cmd$ =>
+		RO.merge(
+			pipe(
+				R.asks((deps: UseCases) => deps.foods$),
+				R.chain(handleOnFoods),
+			),
+			pipe(cmd$, handleDeleteByIds),
 		),
 
 	init: {
@@ -81,17 +82,12 @@ export const component: Overview = {
 	} satisfies Model,
 }
 
-const onFoods = pipe(
-	R.asks(({ foods$ }: UseCases) => foods$),
-	RO.tap(
-		foods =>
-			({ log }) =>
-				pipe(
-					info(
-						`Received ${foods.size} food entries`,
-					),
-					log,
-				),
+const handleOnFoods = flow(
+	R.of<UseCases, UseCases['foods$']>,
+	RO.tap(foods =>
+		logInfo(
+			`Received ${foods.size} food entries`,
+		),
 	),
 	RO.map(
 		// We convert all food data into food entities in order to enforce business constraints.
@@ -127,15 +123,10 @@ const onFoods = pipe(
 	),
 )
 
-const deleteByIds = flow(
-	R.of<UseCases, Rx.Observable<Command>>,
-	RO.tap(
-		() =>
-			({ log }) =>
-				pipe(
-					info(`Received delete command`),
-					log,
-				),
+const handleDeleteByIds = flow(
+	R.of<UseCases, Rx.Observable<DeleteByIds>>,
+	RO.tap(() =>
+		logInfo(`Received delete command`),
 	),
 	RO.map(
 		del =>
@@ -149,24 +140,14 @@ const deleteByIds = flow(
 			flow(enqueueProcess, Rx.defer),
 		),
 	),
-	RO.tap(
-		() =>
-			({ log }) =>
-				pipe(
-					info(`Delete command executed`),
-					log,
-				),
+	RO.tap(() =>
+		logInfo(`Delete command executed`),
 	),
 	R.map(filterMap(OPT.getLeft)),
-	RO.tap(
-		error =>
-			({ log }) =>
-				pipe(
-					info(
-						`Delete command failed: ${error.message}`,
-					),
-					log,
-				),
+	RO.tap(error =>
+		logInfo(
+			`Delete command failed: ${error.message}`,
+		),
 	),
 	RO.mergeMap(
 		error =>
@@ -175,6 +156,11 @@ const deleteByIds = flow(
 	),
 	R.map(Rx.ignoreElements()),
 )
+
+const logInfo =
+	(s: string) =>
+	({ log }: UseCases) =>
+		log(info(s))
 
 function toFoodModel(
 	food: Food,
