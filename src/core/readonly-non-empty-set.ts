@@ -28,10 +28,12 @@ export function fromValues<A>(
 ): (
 	...a: RoNeA.ReadonlyNonEmptyArray<A>
 ) => ReadonlyNonEmptySet<A> {
-	return (...values) =>
-		iso<ReadonlyNonEmptySet<A>>().wrap(
+	const f = iso<ReadonlyNonEmptySet<A>>()
+	return (...values) => {
+		return f.wrap(
 			RoS.fromReadonlyArray(eq)(values),
 		)
+	}
 }
 
 export function fromSet<A>(
@@ -55,9 +57,10 @@ export function toReadonlyNonEmptyArray<A>(
 ): (
 	set: ReadonlyNonEmptySet<A>,
 ) => RoNeA.ReadonlyNonEmptyArray<A> {
+	const f = iso<ReadonlyNonEmptySet<A>>()
 	return set =>
 		pipe(
-			iso<ReadonlyNonEmptySet<A>>().unwrap(set),
+			f.unwrap(set),
 			RoS.toReadonlyArray(ord),
 		) as RoNeA.ReadonlyNonEmptyArray<A>
 }

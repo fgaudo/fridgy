@@ -2,18 +2,18 @@ import { reader as R } from 'fp-ts'
 import { Observable } from 'rxjs'
 
 import { Failure } from '@/app/types/failure'
-import { FoodData } from '@/app/types/food'
-import { Process } from '@/app/types/process'
+import { FoodDTO } from '@/app/types/food'
+import { ProcessDTO } from '@/app/types/process'
 
 // =============
 
 export type OnChangeProcesses = Observable<
-	ReadonlySet<Process>
+	ReadonlySet<ProcessDTO>
 >
 
 export type R_OnChangeProcesses<ENV> = R.Reader<
 	ENV,
-	Observable<ReadonlySet<Process>>
+	Observable<ReadonlySet<ProcessDTO>>
 >
 
 // =============
@@ -28,10 +28,10 @@ export type R_OnFailure<ENV> = R.Reader<
 // ============
 
 export type OnFoods = Observable<
-	ReadonlySet<FoodData>
+	ReadonlySet<FoodDTO>
 >
 
 export type R_OnFoods<ENV> = R.Reader<
 	ENV,
-	Observable<ReadonlySet<FoodData>>
+	Observable<ReadonlySet<FoodDTO>>
 >

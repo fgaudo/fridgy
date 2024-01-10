@@ -6,7 +6,7 @@ export interface Processes {
 	readonly delete: ReadonlySet<string>
 }
 
-export type Process = {
+export type ProcessDTO = {
 	readonly id: string
 	readonly timestamp: number
 } & {
@@ -14,7 +14,7 @@ export type Process = {
 	readonly ids: ReadonlyNonEmptySet<string>
 }
 
-export const processesOrd: Ord.Ord<Process> =
+export const processesOrd: Ord.Ord<ProcessDTO> =
 	Ord.fromCompare((a, b) => {
 		if (a.timestamp > b.timestamp) return 1
 
@@ -23,5 +23,5 @@ export const processesOrd: Ord.Ord<Process> =
 		return 0
 	})
 
-export const processesEq: Eq.Eq<Process> =
+export const processesEq: Eq.Eq<ProcessDTO> =
 	Eq.fromEquals((a, b) => a.id === b.id)

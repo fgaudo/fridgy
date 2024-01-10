@@ -13,7 +13,7 @@ import { filterMap } from '@/core/rx'
 
 import { R_OnFoods } from '@/app'
 import {
-	FoodData,
+	FoodDTO,
 	foodDataEq,
 } from '@/app/types/food'
 import { error } from '@/app/types/log'
@@ -28,9 +28,9 @@ interface Deps {
 
 const mapData = RoA.reduce<
 	unknown,
-	ReadonlySet<FoodData>
+	ReadonlySet<FoodDTO>
 >(RoS.empty, (set, row) => {
-	const foodRowEither = FoodData.decode(row)
+	const foodRowEither = FoodDTO.decode(row)
 
 	if (E.isLeft(foodRowEither)) {
 		log(error('Row could not be parsed'))(

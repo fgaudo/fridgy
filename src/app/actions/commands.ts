@@ -11,7 +11,7 @@ import { ReadonlyNonEmptySet } from '@/core/readonly-non-empty-set'
 
 import { Failure } from '@/app/types/failure'
 import * as L from '@/app/types/log'
-import { Process } from '@/app/types/process'
+import { ProcessDTO } from '@/app/types/process'
 
 // ===============
 
@@ -36,27 +36,27 @@ export type R_DeleteFoodsByIds<ENV> = (
 // ===============
 
 export type EnqueueProcess = (
-	process: Omit<Process, 'id' | 'timestamp'>,
+	process: Omit<ProcessDTO, 'id' | 'timestamp'>,
 ) => TE.TaskEither<Error, void>
 
 export type R_EnqueueProcess<ENV> = (
-	process: Omit<Process, 'id' | 'timestamp'>,
+	process: Omit<ProcessDTO, 'id' | 'timestamp'>,
 ) => RTE.ReaderTaskEither<ENV, Error, void>
 
 // ===============
 
-export type Log = (log: L.Log) => IO.IO<void>
+export type Log = (log: L.LogDTO) => IO.IO<void>
 
 export type R_Log<ENV> = (
-	log: L.Log,
+	log: L.LogDTO,
 ) => RIO.ReaderIO<ENV, void>
 
 // ===============
 
 export type RemoveProcess = (
-	id: Process['id'],
+	id: ProcessDTO['id'],
 ) => TE.TaskEither<Error, void>
 
 export type R_RemoveProcess<ENV> = (
-	id: Process['id'],
+	id: ProcessDTO['id'],
 ) => RTE.ReaderTaskEither<ENV, Error, void>
