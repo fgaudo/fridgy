@@ -1,4 +1,8 @@
 import {
+	observable as O,
+	readerObservable as RO,
+} from '@fgaudo/fp-ts-rxjs'
+import {
 	either as E,
 	option as OPT,
 	reader as R,
@@ -7,9 +11,6 @@ import {
 } from 'fp-ts'
 import { pipe } from 'fp-ts/function'
 import * as Rx from 'rxjs'
-
-import * as RO from '@/core/reader-observable'
-import { filterMap } from '@/core/rx'
 
 import { R_OnFoods } from '@/app/streams/on-foods'
 import {
@@ -73,7 +74,7 @@ export const foods: R_OnFoods<Deps> = pipe(
 					Rx.defer,
 				),
 			),
-			filterMap(OPT.getRight),
+			O.filterMap(OPT.getRight),
 		),
 	),
 	RO.map(columns =>

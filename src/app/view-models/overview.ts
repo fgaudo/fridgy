@@ -1,4 +1,8 @@
 import {
+	observable as O,
+	readerObservable as RO,
+} from '@fgaudo/fp-ts-rxjs'
+import {
 	eq as Eq,
 	option as OPT,
 	ord as Ord,
@@ -8,9 +12,7 @@ import {
 import { flip, flow, pipe } from 'fp-ts/function'
 import * as Rx from 'rxjs'
 
-import * as RO from '@/core/reader-observable'
 import * as RoNeS from '@/core/readonly-non-empty-set'
-import { filterMap } from '@/core/rx'
 import { R_Transformer } from '@/core/transformer'
 
 import { Food, areEqual } from '@/domain/food'
@@ -143,7 +145,7 @@ const handleDeleteByIds = flow(
 	RO.tap(() =>
 		logInfo(`Delete command executed`),
 	),
-	R.map(filterMap(OPT.getLeft)),
+	R.map(O.filterMap(OPT.getLeft)),
 	RO.tap(error =>
 		logInfo(
 			`Delete command failed: ${error.message}`,
