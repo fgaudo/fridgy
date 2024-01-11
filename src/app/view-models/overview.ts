@@ -1,28 +1,27 @@
-import {
-	observable as O,
-	readerObservable as RO,
-} from '@fgaudo/fp-ts-rxjs'
+import { readerObservable as RO } from '@fgaudo/fp-ts-rxjs'
 import {
 	eq as Eq,
-	option as OPT,
 	ord as Ord,
 	reader as R,
+	readerIO as RIO,
 	readonlySet as RoS,
+	task as T,
 } from 'fp-ts'
 import { flip, flow, pipe } from 'fp-ts/function'
 import * as Rx from 'rxjs'
 
 import * as RoNeS from '@/core/readonly-non-empty-set'
-import { R_Transformer } from '@/core/transformer'
+import { ViewModel } from '@/core/view-model'
 
 import { Food, areEqual } from '@/domain/food'
 
 import { AddFailure } from '@/app/commands/add-failure'
 import { EnqueueProcess } from '@/app/commands/enqueue-process'
 import { Log } from '@/app/commands/log'
+import { GenerateUUID } from '@/app/queries/generate-uuid'
+import { GetTimestamp } from '@/app/queries/get-timestamp'
 import { OnChangeProcesses } from '@/app/streams/on-change-processes'
 import { OnFoods } from '@/app/streams/on-foods'
-import { toFoodEntity } from '@/app/types/food'
 import { info } from '@/app/types/log'
 import { ProcessDTO } from '@/app/types/process'
 
@@ -32,6 +31,8 @@ interface UseCases {
 	readonly foods$: OnFoods
 	readonly log: Log
 	readonly addFailure: AddFailure
+	readonly getTimestamp: GetTimestamp
+	readonly generateUUID: GenerateUUID
 }
 
 interface FoodModel {
@@ -60,16 +61,11 @@ type DeleteByIds = Readonly<{
 
 export type Command = DeleteByIds
 
-interface Overview {
-	readonly transformer: R_Transformer<
-		UseCases,
-		Command,
-		Model
-	>
-	readonly init: Model
-}
-
-export const component: Overview = {
+export const viewModel: ViewModel<
+	UseCases,
+	Command,
+	Model
+> = {
 	transformer: cmd$ =>
 		RO.merge(
 			pipe(
@@ -93,9 +89,7 @@ const handleOnFoods = flow(
 	),
 	RO.map(
 		// We convert all food data into food entities in order to enforce business constraints.
-		RoS.map(Eq.fromEquals(areEqual))(
-			toFoodEntity,
-		),
+		RoS.map(Eq.fromEquals(areEqual))(f => f),
 	),
 	R.chain(
 		flip(({ processes$ }) =>
@@ -125,39 +119,50 @@ const handleOnFoods = flow(
 	),
 )
 
-const handleDeleteByIds = flow(
-	R.of<UseCases, Rx.Observable<DeleteByIds>>,
-	RO.tap(() =>
-		logInfo(`Received delete command`),
-	),
-	RO.map(
-		del =>
-			({
-				type: 'delete',
-				ids: del.ids,
-			}) as const,
-	),
-	RO.mergeMap(
-		flip(({ enqueueProcess }) =>
-			flow(enqueueProcess, Rx.defer),
+const handleDeleteByIds = (
+	cmd$: Rx.Observable<DeleteByIds>,
+) =>
+	pipe(
+		cmd$,
+		R.of,
+		RO.tap(() =>
+			logInfo(`Received delete command`),
 		),
-	),
-	RO.tap(() =>
-		logInfo(`Delete command executed`),
-	),
-	R.map(O.filterMap(OPT.getLeft)),
-	RO.tap(error =>
-		logInfo(
-			`Delete command failed: ${error.message}`,
+		RO.mergeMap(del =>
+			pipe(
+				RIO.Do,
+				RIO.bind('timestamp', () =>
+					R.asks(
+						(deps: UseCases) => deps.getTimestamp,
+					),
+				),
+				RIO.bind('uuid', () =>
+					R.asks(
+						(deps: UseCases) => deps.generateUUID,
+					),
+				),
+				R.map(flow(T.fromIO, Rx.defer)),
+				RO.map(
+					({ timestamp, uuid }) =>
+						({
+							timestamp,
+							id: uuid,
+							type: 'delete',
+							ids: del.ids,
+						}) satisfies ProcessDTO,
+				),
+			),
 		),
-	),
-	RO.mergeMap(
-		error =>
-			({ addFailure }) =>
-				pipe(addFailure(error), Rx.defer),
-	),
-	R.map(Rx.ignoreElements()),
-)
+		RO.mergeMap(
+			flip(({ enqueueProcess }) =>
+				flow(enqueueProcess, Rx.defer),
+			),
+		),
+		RO.tap(() =>
+			logInfo(`Delete command enqueued`),
+		),
+		R.map(Rx.ignoreElements()),
+	)
 
 const logInfo =
 	(s: string) =>

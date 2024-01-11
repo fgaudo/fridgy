@@ -6,9 +6,9 @@ import {
 import { ProcessDTO } from '@/app/types/process'
 
 export type EnqueueProcess = (
-	process: Omit<ProcessDTO, 'id' | 'timestamp'>,
+	process: ProcessDTO,
 ) => TE.TaskEither<Error, void>
 
 export type R_EnqueueProcess<ENV> = (
-	process: Omit<ProcessDTO, 'id' | 'timestamp'>,
+	process: ProcessDTO,
 ) => RTE.ReaderTaskEither<ENV, Error, void>

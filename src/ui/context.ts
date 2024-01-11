@@ -1,4 +1,4 @@
-import { Context, createContext } from 'react'
+import { Context, createContext } from 'solid-js'
 
 import { App } from '@/app'
 

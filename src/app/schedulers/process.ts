@@ -29,7 +29,10 @@ export const scheduler: R.Reader<
 	Rx.Observable<unknown>
 > = pipe(
 	R.asks((deps: Deps) =>
-		Rx.interval(deps.interval),
+		pipe(
+			Rx.interval(deps.interval),
+			Rx.startWith(0),
+		),
 	),
 	R.chain(
 		flip(deps => Rx.mergeWith(deps.processes$)),

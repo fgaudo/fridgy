@@ -2,9 +2,6 @@ module.exports = {
 	root: true,
 	env: { browser: true, es2020: true },
 	settings: {
-		react: {
-			version: 'detect',
-		},
 		'import/parsers': {
 			'@typescript-eslint/parser': [
 				'.ts',
@@ -20,13 +17,11 @@ module.exports = {
 	},
 	extends: [
 		'eslint:recommended',
-		'plugin:react/recommended',
 		'plugin:@typescript-eslint/strict-type-checked',
 		'plugin:@typescript-eslint/stylistic-type-checked',
-		'plugin:react/jsx-runtime',
-		'plugin:react-hooks/recommended',
 		'plugin:import/recommended',
 		'plugin:import/typescript',
+		'plugin:solid/typescript',
 		'prettier',
 	],
 	parserOptions: {
@@ -40,12 +35,7 @@ module.exports = {
 	},
 	ignorePatterns: ['dist', '.eslintrc.cjs'],
 	parser: '@typescript-eslint/parser',
-	plugins: [
-		'@typescript-eslint',
-		'react-refresh',
-		'react',
-		'import',
-	],
+	plugins: ['@typescript-eslint', 'import', 'solid'],
 	rules: {
 		'no-restricted-imports': [
 			'error',
@@ -110,14 +100,6 @@ module.exports = {
 		'import/no-useless-path-segments': 'error',
 		'import/no-unresolved': 'error',
 		'import/no-cycle': 'error',
-		'react-refresh/only-export-components': [
-			'warn',
-			{ allowConstantExport: true },
-		],
-		'react/jsx-filename-extension': [
-			1,
-			{ extensions: ['.tsx'] },
-		],
 		'@typescript-eslint/no-unused-vars': 'off',
 		'@typescript-eslint/no-unnecessary-condition':
 			'warn',

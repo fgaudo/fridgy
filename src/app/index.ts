@@ -1,14 +1,18 @@
-import { flip } from 'fp-ts/function'
 import * as Rx from 'rxjs'
 
-import { Controller } from '@/core/controller'
+import {
+	Controller,
+	fromViewModel,
+} from '@/core/controller'
 
 import { AddFailure } from './commands/add-failure'
 import { DeleteFoodsByIds } from './commands/delete-foods-by-ids'
 import { EnqueueProcess } from './commands/enqueue-process'
 import { Log } from './commands/log'
 import { RemoveProcess } from './commands/remove-process'
+import { GenerateUUID } from './queries/generate-uuid'
 import { GetProcesses } from './queries/get-processes'
+import { GetTimestamp } from './queries/get-timestamp'
 import { scheduler } from './schedulers/process'
 import { OnChangeProcesses } from './streams/on-change-processes'
 import { OnFoods } from './streams/on-foods'
@@ -24,17 +28,18 @@ export type AppUseCases = Readonly<{
 	foods$: OnFoods
 	uiLog: Log
 	appLog: Log
+	generateUUID: GenerateUUID
+	getTimestamp: GetTimestamp
 }>
 
 export class App {
 	constructor(useCases: AppUseCases) {
-		this.overview = new Controller(
-			flip(Overview.component.transformer)({
-				...useCases,
-				log: useCases.appLog,
-			}),
-			Overview.component.init,
-		)
+		this.overview = fromViewModel(
+			Overview.viewModel,
+		)({
+			...useCases,
+			log: useCases.appLog,
+		})
 
 		this.log = useCases.uiLog
 

@@ -1,7 +1,21 @@
+import { Reader } from 'fp-ts/lib/Reader'
+import { flip } from 'fp-ts/lib/function'
 import { Observable, Subject } from 'rxjs'
 
+import { ViewModel } from './view-model'
+
+export function fromViewModel<ENV, A, B>(
+	viewModel: ViewModel<ENV, A, B>,
+): Reader<ENV, Controller<A, B>> {
+	return env =>
+		new Controller(
+			flip(viewModel.transformer)(env),
+			viewModel.init,
+		)
+}
+
 export class Controller<A, B> {
-	constructor(
+	public constructor(
 		transformer: (
 			a: Observable<A>,
 		) => Observable<B>,
