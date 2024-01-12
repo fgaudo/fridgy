@@ -11,7 +11,7 @@ import { EnqueueProcess } from './commands/enqueue-process'
 import { Log } from './commands/log'
 import { RemoveProcess } from './commands/remove-process'
 import { GetProcesses } from './queries/get-processes'
-import { scheduler } from './schedulers/process'
+import { createScheduler } from './schedulers/process'
 import { OnChangeProcesses } from './streams/on-change-processes'
 import { OnFoods } from './streams/on-foods'
 import * as Overview from './view-models/overview'
@@ -31,7 +31,7 @@ export type AppUseCases<ID> = Readonly<{
 export class App<ID> {
 	constructor(useCases: AppUseCases<ID>) {
 		this.overview = fromViewModel(
-			Overview.viewModel<ID>(),
+			Overview.createViewModel<ID>(),
 		)({
 			...useCases,
 			log: useCases.appLog,
@@ -39,7 +39,7 @@ export class App<ID> {
 
 		this.log = useCases.uiLog
 
-		this.scheduler = scheduler({
+		this.scheduler = createScheduler<ID>()({
 			interval: 5000,
 			...useCases,
 		})

@@ -14,61 +14,68 @@ import { DeleteFoodsByIds } from '@/app/commands/delete-foods-by-ids'
 import { RemoveProcess } from '@/app/commands/remove-process'
 import { GetProcesses } from '@/app/queries/get-processes'
 import { OnChangeProcesses } from '@/app/streams/on-change-processes'
-import { processesOrd } from '@/app/types/process'
+import {
+	ProcessDTO,
+	createProcessesOrd,
+} from '@/app/types/process'
 
-interface Deps {
+interface Deps<ID> {
 	readonly interval: number
-	readonly processes$: OnChangeProcesses
-	readonly getProcesses: GetProcesses
-	readonly deleteFoodsByIds: DeleteFoodsByIds
-	readonly removeProcess: RemoveProcess
+	readonly processes$: OnChangeProcesses<ID>
+	readonly getProcesses: GetProcesses<ID>
+	readonly deleteFoodsByIds: DeleteFoodsByIds<ID>
+	readonly removeProcess: RemoveProcess<ID>
 }
 
-export const scheduler: R.Reader<
-	Deps,
+export function createScheduler<ID>(): R.Reader<
+	Deps<ID>,
 	Rx.Observable<unknown>
-> = pipe(
-	R.asks((deps: Deps) =>
-		pipe(
-			Rx.interval(deps.interval),
-			Rx.startWith(0),
-		),
-	),
-	R.chain(
-		flip(deps => Rx.mergeWith(deps.processes$)),
-	),
-	RO.exhaustMap(
-		p => (useCases: Deps) =>
+> {
+	return pipe(
+		R.asks((deps: Deps<ID>) =>
 			pipe(
-				typeof p === 'number'
-					? Rx.defer(useCases.getProcesses)
-					: pipe(Rx.of(p), Rx.map(E.right)),
-				Rx.map(
-					E.map(
-						RoS.toReadonlyArray(processesOrd),
-					),
-				),
-				OE.mergeMapW(processes =>
-					pipe(
-						Rx.from(processes),
-						Rx.map(E.right),
-					),
-				),
-				OE.mergeMapW(process =>
-					pipe(
-						useCases.deleteFoodsByIds(
-							process.ids,
-						),
-						Rx.defer,
-						Rx.map(() => E.right(process)),
-					),
-				),
-				OE.mergeMap(process =>
-					pipe(
-						useCases.removeProcess(process.id),
-						Rx.defer,
-					),
-				),
+				Rx.interval(deps.interval),
+				Rx.startWith(0),
 			),
-	),
-)
+		),
+		R.chain(
+			flip(deps => Rx.mergeWith(deps.processes$)),
+		),
+		RO.exhaustMap(
+			p => (useCases: Deps<ID>) =>
+				pipe(
+					typeof p === 'number'
+						? Rx.defer(useCases.getProcesses)
+						: pipe(Rx.of(p), Rx.map(E.right)),
+					Rx.map(
+						E.map(
+							RoS.toReadonlyArray(
+								createProcessesOrd(),
+							),
+						),
+					),
+					OE.mergeMapW(processes =>
+						pipe(
+							Rx.from(processes),
+							Rx.map(E.right),
+						),
+					),
+					OE.mergeMapW(process =>
+						pipe(
+							useCases.deleteFoodsByIds(
+								process.ids,
+							),
+							Rx.defer,
+							Rx.map(() => E.right(process)),
+						),
+					),
+					OE.mergeMap(process =>
+						pipe(
+							useCases.removeProcess(process.id),
+							Rx.defer,
+						),
+					),
+				),
+		),
+	)
+}

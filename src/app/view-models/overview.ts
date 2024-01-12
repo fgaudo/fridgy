@@ -12,11 +12,7 @@ import * as Rx from 'rxjs'
 import * as RoNeS from '@/core/readonly-non-empty-set'
 import { ViewModel } from '@/core/view-model'
 
-import {
-	Food,
-	createFood,
-	name,
-} from '@/domain/food'
+import { createFood, name } from '@/domain/food'
 
 import { AddFailure } from '@/app/commands/add-failure'
 import { EnqueueProcess } from '@/app/commands/enqueue-process'
@@ -25,10 +21,7 @@ import { OnChangeProcesses } from '@/app/streams/on-change-processes'
 import { OnFoods } from '@/app/streams/on-foods'
 import { foodDataEq } from '@/app/types/food'
 import { info } from '@/app/types/log'
-import {
-	ProcessDTO,
-	ProcessInputDTO,
-} from '@/app/types/process'
+import { ProcessInputDTO } from '@/app/types/process'
 
 interface UseCases<ID> {
 	readonly processes$: OnChangeProcesses<ID>
@@ -44,7 +37,9 @@ interface FoodModel<ID> {
 	readonly deleting: boolean
 }
 
-function foodModelEq<ID>(): Eq.Eq<FoodModel<ID>> {
+function createFoodModelEq<ID>(): Eq.Eq<
+	FoodModel<ID>
+> {
 	return Eq.fromEquals((a, b) => a.id === b.id)
 }
 
@@ -65,7 +60,7 @@ type DeleteByIds<ID> = Readonly<{
 
 export type Command<ID> = DeleteByIds<ID>
 
-export function viewModel<ID>(): ViewModel<
+export function createViewModel<ID>(): ViewModel<
 	UseCases<ID>,
 	Command<ID>,
 	Model<ID>
@@ -77,14 +72,14 @@ export function viewModel<ID>(): ViewModel<
 					R.asks(
 						(deps: UseCases<ID>) => deps.foods$,
 					),
-					R.chain(handleOnFoods<ID>),
+					R.chain(handleOnFoods),
 				),
-				pipe(cmd$, handleDeleteByIds<ID>),
+				pipe(cmd$, handleDeleteByIds),
 			),
 
 		init: {
 			type: 'loading',
-		} satisfies Model<ID>,
+		},
 	}
 }
 
@@ -99,6 +94,18 @@ function handleOnFoods<ID>(
 				`Received ${foods.size} food entries`,
 			),
 		),
+		RO.map(
+			RoS.filterMap(foodDataEq<ID>())(foodDTO =>
+				pipe(
+					foodDTO,
+					createFood,
+					OPT.map(food => ({
+						id: foodDTO.id,
+						name: name(food),
+					})),
+				),
+			),
+		),
 		R.chain(
 			flip(({ processes$ }: UseCases<ID>) =>
 				Rx.combineLatestWith(processes$),
@@ -107,33 +114,25 @@ function handleOnFoods<ID>(
 		RO.map(([foods, processes]) =>
 			pipe(
 				foods,
-				RoS.filterMap(foodDataEq<ID>())(foodDTO =>
-					pipe(
-						foodDTO,
-						createFood,
-						OPT.map(food => ({
-							id: foodDTO.id,
-							name: name(food),
-						})),
-					),
-				),
-				RoS.map(foodModelEq<ID>())(food => ({
-					...food,
-					deleting: pipe(
-						processes,
-						RoS.filter(
-							process =>
-								process.type === 'delete',
-						),
-						RoS.some(process =>
-							pipe(
-								process.ids,
-								RoNeS.toReadonlySet,
-								RoS.some(id => food.id === id),
+				RoS.map(createFoodModelEq<ID>())(
+					food => ({
+						...food,
+						deleting: pipe(
+							processes,
+							RoS.filter(
+								process =>
+									process.type === 'delete',
+							),
+							RoS.some(process =>
+								pipe(
+									process.ids,
+									RoNeS.toReadonlySet,
+									RoS.some(id => food.id === id),
+								),
 							),
 						),
-					),
-				})),
+					}),
+				),
 			),
 		),
 		RO.map(
@@ -188,6 +187,6 @@ function handleDeleteByIds<ID>(
 }
 
 const logInfo =
-	<ID>(s: string) =>
-	({ log }: UseCases<ID>) =>
+	(s: string) =>
+	<ID>({ log }: UseCases<ID>) =>
 		log(info(s))

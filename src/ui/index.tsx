@@ -1,4 +1,3 @@
-import * as Solid from 'solid-js'
 import { render as solidRender } from 'solid-js/web'
 
 import { App } from '@/app'
@@ -13,9 +12,11 @@ export function render(
 	root: HTMLElement,
 ): void {
 	solidRender(
-		<AppContext.Provider value={app}>
-			<Overview />
-		</AppContext.Provider>,
+		() => (
+			<AppContext.Provider value={app}>
+				<Overview />
+			</AppContext.Provider>
+		),
 
 		root,
 	)

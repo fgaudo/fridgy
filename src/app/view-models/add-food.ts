@@ -1,7 +1,6 @@
 import { pipe } from 'fp-ts/lib/function'
 import * as Rx from 'rxjs'
 
-import { R_Transformer } from '@/core/transformer'
 import { ViewModel } from '@/core/view-model'
 
 import { AddFood as AddFoodCommand } from '@/app/commands/add-food'

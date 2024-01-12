@@ -1,17 +1,8 @@
-import {
-	Accessor,
-	from,
-	useContext,
-} from 'solid-js'
+import { from, useContext } from 'solid-js'
+
+import { withDefault } from '@/ui/core/solid-js'
 
 import { AppContext } from './context'
-
-function withDefault<T>(
-	accessor: Accessor<T | undefined>,
-	init: T,
-): Accessor<T> {
-	return () => accessor() ?? init
-}
 
 function Overview() {
 	const app = useContext(AppContext)!

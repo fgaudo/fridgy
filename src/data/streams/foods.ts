@@ -10,6 +10,8 @@ import {
 	readonlySet as RoS,
 } from 'fp-ts'
 import { pipe } from 'fp-ts/function'
+import * as t from 'io-ts'
+import { withFallback } from 'io-ts-types'
 import * as Rx from 'rxjs'
 
 import { R_OnFoods } from '@/app/streams/on-foods'
@@ -27,11 +29,20 @@ interface Deps {
 	readonly events: Rx.Observable<void>
 }
 
+export const foodDecoder = t.readonly(
+	t.type({
+		id: t.string,
+		name: withFallback(
+			t.union([t.string, t.undefined]),
+			undefined,
+		),
+	}),
+)
 const mapData = RoA.reduce<
 	unknown,
 	ReadonlySet<FoodDTO<string>>
 >(RoS.empty, (set, row) => {
-	const foodRowEither = FoodDTO.decode(row)
+	const foodRowEither = foodDecoder.decode(row)
 
 	if (E.isLeft(foodRowEither)) {
 		log(error('Row could not be parsed'))(

@@ -5,10 +5,10 @@ import {
 
 import { ProcessInputDTO } from '@/app/types/process'
 
-export type EnqueueProcess<FOOD_ID> = (
-	process: ProcessInputDTO<FOOD_ID>,
+export type EnqueueProcess<ID> = (
+	process: ProcessInputDTO<ID>,
 ) => TE.TaskEither<Error, void>
 
-export type R_EnqueueProcess<ENV, FOOD_ID> = (
-	process: ProcessInputDTO<FOOD_ID>,
+export type R_EnqueueProcess<ENV, ID> = (
+	process: ProcessInputDTO<ID>,
 ) => RTE.ReaderTaskEither<ENV, Error, void>

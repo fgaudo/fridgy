@@ -15,15 +15,17 @@ export type ProcessDTO<ID> = {
 export type ProcessInputDTO<FOOD_ID> =
 	Action<FOOD_ID>
 
-export const processesOrd: Ord.Ord<
-	ProcessDTO<unknown>
-> = Ord.fromCompare((a, b) => {
-	if (a.timestamp > b.timestamp) return 1
+export function createProcessesOrd<ID>(): Ord.Ord<
+	ProcessDTO<ID>
+> {
+	return Ord.fromCompare((a, b) => {
+		if (a.timestamp > b.timestamp) return 1
 
-	if (a.timestamp < b.timestamp) return -1
+		if (a.timestamp < b.timestamp) return -1
 
-	return 0
-})
+		return 0
+	})
+}
 
 export function processesEq<ID>(): Eq.Eq<
 	ProcessDTO<ID>
