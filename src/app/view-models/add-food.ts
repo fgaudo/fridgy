@@ -1,6 +1,10 @@
+import { pipe } from 'fp-ts/lib/function'
 import * as Rx from 'rxjs'
 
 import { R_Transformer } from '@/core/transformer'
+import { ViewModel } from '@/core/view-model'
+
+import { AddFood as AddFoodCommand } from '@/app/commands/add-food'
 
 interface FoodData {
 	readonly name: string
@@ -21,19 +25,15 @@ export type Model = Readonly<
 	  }
 >
 
-interface Deps {}
-
-export interface AddFood {
-	readonly transformer: R_Transformer<
-		Deps,
-		Command,
-		Model
-	>
-	readonly init: Model
+interface Deps {
+	addFood: AddFoodCommand
 }
 
-export const addFood: AddFood = {
+export const addFood: ViewModel<
+	Deps,
+	Command,
+	Model
+> = {
 	init: { type: 'loading' } satisfies Model,
-	transformer: cmd$ => deps =>
-		Rx.of({ type: 'loading' }),
+	transformer: cmd$ => pipe(cmd$),
 }

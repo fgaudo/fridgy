@@ -2,22 +2,31 @@ import { eq as Eq, ord as Ord } from 'fp-ts'
 
 import { ReadonlyNonEmptySet } from '@/core/readonly-non-empty-set'
 
-export type ProcessDTO = {
-	readonly id: string
-	readonly timestamp: number
-} & {
+interface Action<ID> {
 	readonly type: 'delete'
-	readonly ids: ReadonlyNonEmptySet<string>
+	readonly ids: ReadonlyNonEmptySet<ID>
 }
 
-export const processesOrd: Ord.Ord<ProcessDTO> =
-	Ord.fromCompare((a, b) => {
-		if (a.timestamp > b.timestamp) return 1
+export type ProcessDTO<ID> = {
+	readonly id: ID
+	readonly timestamp: number
+} & Action<ID>
 
-		if (a.timestamp < b.timestamp) return -1
+export type ProcessInputDTO<FOOD_ID> =
+	Action<FOOD_ID>
 
-		return 0
-	})
+export const processesOrd: Ord.Ord<
+	ProcessDTO<unknown>
+> = Ord.fromCompare((a, b) => {
+	if (a.timestamp > b.timestamp) return 1
 
-export const processesEq: Eq.Eq<ProcessDTO> =
-	Eq.fromEquals((a, b) => a.id === b.id)
+	if (a.timestamp < b.timestamp) return -1
+
+	return 0
+})
+
+export function processesEq<ID>(): Eq.Eq<
+	ProcessDTO<ID>
+> {
+	return Eq.fromEquals((a, b) => a.id === b.id)
+}

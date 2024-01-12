@@ -29,7 +29,7 @@ interface Deps {
 
 const mapData = RoA.reduce<
 	unknown,
-	ReadonlySet<FoodDTO>
+	ReadonlySet<FoodDTO<string>>
 >(RoS.empty, (set, row) => {
 	const foodRowEither = FoodDTO.decode(row)
 
@@ -59,33 +59,34 @@ const mapData = RoA.reduce<
 
 	return pipe(
 		set,
-		RoS.insert(foodDataEq)(foodData),
+		RoS.insert(foodDataEq<string>())(foodData),
 	)
 })
 
-export const foods: R_OnFoods<Deps> = pipe(
-	R.ask<Deps>(),
-	R.map(({ events, db }) =>
-		pipe(
-			events,
-			Rx.switchMap(() =>
-				pipe(
-					executeSql('SELECT * FROM foods')(db),
-					Rx.defer,
+export const foods: R_OnFoods<Deps, string> =
+	pipe(
+		R.ask<Deps>(),
+		R.map(({ events, db }) =>
+			pipe(
+				events,
+				Rx.switchMap(() =>
+					pipe(
+						executeSql('SELECT * FROM foods')(db),
+						Rx.defer,
+					),
+				),
+				O.filterMap(OPT.getRight),
+			),
+		),
+		RO.map(columns =>
+			pipe(
+				Array(columns.rows.length).keys(),
+				Array.from<number>,
+				RoA.fromArray,
+				RoA.map(
+					n => columns.rows.item(n) as unknown,
 				),
 			),
-			O.filterMap(OPT.getRight),
 		),
-	),
-	RO.map(columns =>
-		pipe(
-			Array(columns.rows.length).keys(),
-			Array.from<number>,
-			RoA.fromArray,
-			RoA.map(
-				n => columns.rows.item(n) as unknown,
-			),
-		),
-	),
-	RO.map(mapData),
-)
+		RO.map(mapData),
+	)

@@ -5,14 +5,14 @@ import {
 
 import { ProcessDTO } from '@/app/types/process'
 
-export type GetProcesses = TE.TaskEither<
+export type GetProcesses<ID> = TE.TaskEither<
 	Error,
-	ReadonlySet<ProcessDTO>
+	ReadonlySet<ProcessDTO<ID>>
 >
 
-export type R_GetProcesses<ENV> =
+export type R_GetProcesses<ENV, ID> =
 	RTE.ReaderTaskEither<
 		ENV,
 		Error,
-		ReadonlySet<ProcessDTO>
+		ReadonlySet<ProcessDTO<ID>>
 	>

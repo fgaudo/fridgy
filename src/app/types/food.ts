@@ -2,8 +2,6 @@ import { eq as Eq } from 'fp-ts'
 import * as t from 'io-ts'
 import { withFallback } from 'io-ts-types'
 
-import { Food } from '@/domain/food'
-
 export const FoodDTO = t.readonly(
 	t.type({
 		id: t.string,
@@ -14,16 +12,16 @@ export const FoodDTO = t.readonly(
 	}),
 )
 
-export interface FoodDTO {
-	readonly id: string
+export interface FoodInputDTO {
 	readonly name: string
 }
 
-export const foodDataEq: Eq.Eq<FoodDTO> =
-	Eq.fromEquals((a, b) => a.id === b.id)
+export type FoodDTO<ID> = {
+	readonly id: ID
+} & FoodInputDTO
 
-export function toFoodEntity(
-	foodData: FoodDTO,
-): Food {
-	return foodData
+export function foodDataEq<ID>(): Eq.Eq<
+	FoodDTO<ID>
+> {
+	return Eq.fromEquals((a, b) => a.id === b.id)
 }

@@ -3,11 +3,12 @@ import { Observable } from 'rxjs'
 
 import { ProcessDTO } from '@/app/types/process'
 
-export type OnChangeProcesses = Observable<
-	ReadonlySet<ProcessDTO>
+export type OnChangeProcesses<ID> = Observable<
+	ReadonlySet<ProcessDTO<ID>>
 >
 
-export type R_OnChangeProcesses<ENV> = R.Reader<
-	ENV,
-	Observable<ReadonlySet<ProcessDTO>>
->
+export type R_OnChangeProcesses<ENV, ID> =
+	R.Reader<
+		ENV,
+		Observable<ReadonlySet<ProcessDTO<ID>>>
+	>

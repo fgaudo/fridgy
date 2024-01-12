@@ -14,19 +14,14 @@ import { deleteFoodsByIds } from '@/data/commands/delete-foods-by-ids'
 import { log } from '@/data/commands/log'
 import { foods } from '@/data/streams/foods'
 
-import { generateUUID } from './queries/generate-uuid'
-import { getTimestamp } from './queries/get-timestamp'
-
 interface Deps {
 	readonly db: SQLitePlugin.Database
 }
 
 export const appUseCases: Reader<
 	Deps,
-	AppUseCases
+	AppUseCases<string>
 > = ({ db }: Deps) => ({
-	getTimestamp: getTimestamp({}),
-	generateUUID: generateUUID({}),
 	processes$: R.of(Rx.of(RoS.empty))(undefined),
 	getProcesses: RTE.of(RoS.empty)(undefined),
 	removeProcess: () => RTE.of(void 1)(undefined),
@@ -35,7 +30,7 @@ export const appUseCases: Reader<
 	deleteFoodsByIds: flip(deleteFoodsByIds)({
 		db,
 	}),
-	foods$: foods({ events: Rx.of(), db }),
+	foods$: foods({ events: Rx.EMPTY, db }),
 	appLog: flip(log)(undefined),
 	uiLog: flip(log)(undefined),
 })

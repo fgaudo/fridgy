@@ -5,10 +5,10 @@ import {
 
 import { ReadonlyNonEmptySet } from '@/core/readonly-non-empty-set'
 
-export type DeleteFoodsByIds = (
-	ids: ReadonlyNonEmptySet<string>,
+export type DeleteFoodsByIds<ID> = (
+	ids: ReadonlyNonEmptySet<ID>,
 ) => TE.TaskEither<Error, void>
 
-export type R_DeleteFoodsByIds<ENV> = (
-	ids: ReadonlyNonEmptySet<string>,
+export type R_DeleteFoodsByIds<ENV, ID> = (
+	ids: ReadonlyNonEmptySet<ID>,
 ) => RTE.ReaderTaskEither<ENV, Error, void>

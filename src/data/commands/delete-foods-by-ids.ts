@@ -16,25 +16,27 @@ interface Deps {
 	readonly db: SQLitePlugin.Database
 }
 
-export const deleteFoodsByIds: R_DeleteFoodsByIds<Deps> =
-	flow(
-		RoNeS.toReadonlyNonEmptyArray(S.Ord),
-		ids => ({
-			tokens: pipe(
-				ids,
-				RoNeA.map(() => '?'),
-				arr => arr.join(','),
-			),
-			values: ids,
-		}),
-		R.of,
-		R.chain(
-			({ values, tokens }) =>
-				({ db }: Deps) =>
-					executeSql(
-						`DELETE * FROM foods WHERE id IN (${tokens})`,
-						values,
-					)(db),
+export const deleteFoodsByIds: R_DeleteFoodsByIds<
+	Deps,
+	string
+> = flow(
+	RoNeS.toReadonlyNonEmptyArray(S.Ord),
+	ids => ({
+		tokens: pipe(
+			ids,
+			RoNeA.map(() => '?'),
+			arr => arr.join(','),
 		),
-		RTE.map(() => undefined),
-	)
+		values: ids,
+	}),
+	R.of,
+	R.chain(
+		({ values, tokens }) =>
+			({ db }: Deps) =>
+				executeSql(
+					`DELETE * FROM foods WHERE id IN (${tokens})`,
+					values,
+				)(db),
+	),
+	RTE.map(() => undefined),
+)

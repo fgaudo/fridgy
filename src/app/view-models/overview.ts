@@ -3,155 +3,177 @@ import {
 	eq as Eq,
 	ord as Ord,
 	reader as R,
-	readerIO as RIO,
 	readonlySet as RoS,
-	task as T,
 } from 'fp-ts'
 import { flip, flow, pipe } from 'fp-ts/function'
+import * as OPT from 'fp-ts/lib/Option'
 import * as Rx from 'rxjs'
 
 import * as RoNeS from '@/core/readonly-non-empty-set'
 import { ViewModel } from '@/core/view-model'
 
-import { Food, areEqual } from '@/domain/food'
+import {
+	Food,
+	createFood,
+	name,
+} from '@/domain/food'
 
 import { AddFailure } from '@/app/commands/add-failure'
 import { EnqueueProcess } from '@/app/commands/enqueue-process'
 import { Log } from '@/app/commands/log'
-import { GenerateUUID } from '@/app/queries/generate-uuid'
-import { GetTimestamp } from '@/app/queries/get-timestamp'
 import { OnChangeProcesses } from '@/app/streams/on-change-processes'
 import { OnFoods } from '@/app/streams/on-foods'
+import { foodDataEq } from '@/app/types/food'
 import { info } from '@/app/types/log'
-import { ProcessDTO } from '@/app/types/process'
+import {
+	ProcessDTO,
+	ProcessInputDTO,
+} from '@/app/types/process'
 
-interface UseCases {
-	readonly processes$: OnChangeProcesses
-	readonly enqueueProcess: EnqueueProcess
-	readonly foods$: OnFoods
+interface UseCases<ID> {
+	readonly processes$: OnChangeProcesses<ID>
+	readonly enqueueProcess: EnqueueProcess<ID>
+	readonly foods$: OnFoods<ID>
 	readonly log: Log
 	readonly addFailure: AddFailure
-	readonly getTimestamp: GetTimestamp
-	readonly generateUUID: GenerateUUID
 }
 
-interface FoodModel {
-	readonly id: string
+interface FoodModel<ID> {
+	readonly id: ID
 	readonly name: string
 	readonly deleting: boolean
 }
 
-const foodModelEq: Eq.Eq<FoodModel> =
-	Eq.fromEquals((a, b) => a.id === b.id)
+function foodModelEq<ID>(): Eq.Eq<FoodModel<ID>> {
+	return Eq.fromEquals((a, b) => a.id === b.id)
+}
 
-export type Model = Readonly<
+export type Model<ID> = Readonly<
 	| {
 			type: 'ready'
-			foods: readonly FoodModel[]
+			foods: readonly FoodModel<ID>[]
 	  }
 	| {
 			type: 'loading'
 	  }
 >
 
-type DeleteByIds = Readonly<{
+type DeleteByIds<ID> = Readonly<{
 	type: 'delete'
-	ids: RoNeS.ReadonlyNonEmptySet<string>
+	ids: RoNeS.ReadonlyNonEmptySet<ID>
 }>
 
-export type Command = DeleteByIds
+export type Command<ID> = DeleteByIds<ID>
 
-export const viewModel: ViewModel<
-	UseCases,
-	Command,
-	Model
-> = {
-	transformer: cmd$ =>
-		RO.merge(
-			pipe(
-				R.asks((deps: UseCases) => deps.foods$),
-				R.chain(handleOnFoods),
+export function viewModel<ID>(): ViewModel<
+	UseCases<ID>,
+	Command<ID>,
+	Model<ID>
+> {
+	return {
+		transformer: cmd$ =>
+			RO.merge(
+				pipe(
+					R.asks(
+						(deps: UseCases<ID>) => deps.foods$,
+					),
+					R.chain(handleOnFoods<ID>),
+				),
+				pipe(cmd$, handleDeleteByIds<ID>),
 			),
-			pipe(cmd$, handleDeleteByIds),
-		),
 
-	init: {
-		type: 'loading',
-	} satisfies Model,
+		init: {
+			type: 'loading',
+		} satisfies Model<ID>,
+	}
 }
 
-const handleOnFoods = flow(
-	R.of<UseCases, UseCases['foods$']>,
-	RO.tap(foods =>
-		logInfo(
-			`Received ${foods.size} food entries`,
+function handleOnFoods<ID>(
+	obs: OnFoods<ID>,
+): RO.ReaderObservable<UseCases<ID>, Model<ID>> {
+	return pipe(
+		obs,
+		R.of<UseCases<ID>, OnFoods<ID>>,
+		RO.tap(foods =>
+			logInfo(
+				`Received ${foods.size} food entries`,
+			),
 		),
-	),
-	RO.map(
-		// We convert all food data into food entities in order to enforce business constraints.
-		RoS.map(Eq.fromEquals(areEqual))(f => f),
-	),
-	R.chain(
-		flip(({ processes$ }) =>
-			Rx.combineLatestWith(processes$),
+		R.chain(
+			flip(({ processes$ }: UseCases<ID>) =>
+				Rx.combineLatestWith(processes$),
+			),
 		),
-	),
-	RO.map(([foods, processes]) =>
-		// We create the food model by merging the entity with the queued processes
-		RoS.map(foodModelEq)((food: Food) =>
-			toFoodModel(food, processes),
-		)(foods),
-	),
-	RO.map(
-		RoS.toReadonlyArray(Ord.fromCompare(() => 0)),
-	),
-	RO.map(
-		foods =>
-			({
+		RO.map(([foods, processes]) =>
+			pipe(
 				foods,
-				type: 'ready',
-			}) satisfies Model,
-	),
-	R.map(
-		Rx.startWith({
-			type: 'loading',
-		} satisfies Model),
-	),
-)
+				RoS.filterMap(foodDataEq<ID>())(foodDTO =>
+					pipe(
+						foodDTO,
+						createFood,
+						OPT.map(food => ({
+							id: foodDTO.id,
+							name: name(food),
+						})),
+					),
+				),
+				RoS.map(foodModelEq<ID>())(food => ({
+					...food,
+					deleting: pipe(
+						processes,
+						RoS.filter(
+							process =>
+								process.type === 'delete',
+						),
+						RoS.some(process =>
+							pipe(
+								process.ids,
+								RoNeS.toReadonlySet,
+								RoS.some(id => food.id === id),
+							),
+						),
+					),
+				})),
+			),
+		),
+		RO.map(
+			RoS.toReadonlyArray(
+				Ord.fromCompare(() => 0),
+			),
+		),
+		RO.map(
+			foods =>
+				({
+					foods,
+					type: 'ready',
+				}) satisfies Model<ID>,
+		),
+		R.map(
+			Rx.startWith({
+				type: 'loading',
+			} satisfies Model<ID>),
+		),
+	)
+}
 
-const handleDeleteByIds = (
-	cmd$: Rx.Observable<DeleteByIds>,
-) =>
-	pipe(
+function handleDeleteByIds<ID>(
+	cmd$: Rx.Observable<DeleteByIds<ID>>,
+): RO.ReaderObservable<UseCases<ID>, never> {
+	return pipe(
 		cmd$,
-		R.of,
+		R.of<
+			UseCases<ID>,
+			Rx.Observable<DeleteByIds<ID>>
+		>,
 		RO.tap(() =>
 			logInfo(`Received delete command`),
 		),
-		RO.mergeMap(del =>
-			pipe(
-				RIO.Do,
-				RIO.bind('timestamp', () =>
-					R.asks(
-						(deps: UseCases) => deps.getTimestamp,
-					),
-				),
-				RIO.bind('uuid', () =>
-					R.asks(
-						(deps: UseCases) => deps.generateUUID,
-					),
-				),
-				R.map(flow(T.fromIO, Rx.defer)),
-				RO.map(
-					({ timestamp, uuid }) =>
-						({
-							timestamp,
-							id: uuid,
-							type: 'delete',
-							ids: del.ids,
-						}) satisfies ProcessDTO,
-				),
-			),
+		RO.map(
+			del =>
+				({
+					type: 'delete',
+					ids: del.ids,
+				}) satisfies ProcessInputDTO<ID>,
 		),
 		RO.mergeMap(
 			flip(({ enqueueProcess }) =>
@@ -163,29 +185,9 @@ const handleDeleteByIds = (
 		),
 		R.map(Rx.ignoreElements()),
 	)
+}
 
 const logInfo =
-	(s: string) =>
-	({ log }: UseCases) =>
+	<ID>(s: string) =>
+	({ log }: UseCases<ID>) =>
 		log(info(s))
-
-function toFoodModel(
-	food: Food,
-	processes: ReadonlySet<ProcessDTO>,
-): FoodModel {
-	return {
-		...food,
-		deleting: pipe(
-			processes,
-			RoS.filter(
-				process => process.type === 'delete',
-			),
-			RoS.some(process =>
-				pipe(
-					process.ids,
-					RoNeS.toReadonlySet,
-				).has(food.id),
-			),
-		),
-	}
-}

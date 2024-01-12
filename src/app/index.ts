@@ -10,32 +10,28 @@ import { DeleteFoodsByIds } from './commands/delete-foods-by-ids'
 import { EnqueueProcess } from './commands/enqueue-process'
 import { Log } from './commands/log'
 import { RemoveProcess } from './commands/remove-process'
-import { GenerateUUID } from './queries/generate-uuid'
 import { GetProcesses } from './queries/get-processes'
-import { GetTimestamp } from './queries/get-timestamp'
 import { scheduler } from './schedulers/process'
 import { OnChangeProcesses } from './streams/on-change-processes'
 import { OnFoods } from './streams/on-foods'
 import * as Overview from './view-models/overview'
 
-export type AppUseCases = Readonly<{
-	deleteFoodsByIds: DeleteFoodsByIds
-	enqueueProcess: EnqueueProcess
-	getProcesses: GetProcesses
-	processes$: OnChangeProcesses
+export type AppUseCases<ID> = Readonly<{
+	deleteFoodsByIds: DeleteFoodsByIds<ID>
+	enqueueProcess: EnqueueProcess<ID>
+	getProcesses: GetProcesses<ID>
+	processes$: OnChangeProcesses<ID>
 	addFailure: AddFailure
-	removeProcess: RemoveProcess
-	foods$: OnFoods
+	removeProcess: RemoveProcess<ID>
+	foods$: OnFoods<ID>
 	uiLog: Log
 	appLog: Log
-	generateUUID: GenerateUUID
-	getTimestamp: GetTimestamp
 }>
 
-export class App {
-	constructor(useCases: AppUseCases) {
+export class App<ID> {
+	constructor(useCases: AppUseCases<ID>) {
 		this.overview = fromViewModel(
-			Overview.viewModel,
+			Overview.viewModel<ID>(),
 		)({
 			...useCases,
 			log: useCases.appLog,
@@ -60,8 +56,8 @@ export class App {
 	}
 
 	readonly overview: Controller<
-		Overview.Command,
-		Overview.Model
+		Overview.Command<ID>,
+		Overview.Model<ID>
 	>
 
 	readonly log: Log

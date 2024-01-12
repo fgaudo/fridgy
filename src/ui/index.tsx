@@ -9,7 +9,7 @@ import { AppContext } from './context'
 import './index.css'
 
 export function render(
-	app: App,
+	app: App<string>,
 	root: HTMLElement,
 ): void {
 	solidRender(
