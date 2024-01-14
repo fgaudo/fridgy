@@ -1,8 +1,10 @@
+import { Route, Router } from '@solidjs/router'
 import { render as solidRender } from 'solid-js/web'
 
 import { App } from '@/app'
 
-import Overview from '@/ui/Overview'
+import AddFood from '@/ui/pages/AddFood'
+import Overview from '@/ui/pages/Overview'
 
 import { AppContext } from './context'
 import './index.css'
@@ -14,7 +16,16 @@ export function render(
 	solidRender(
 		() => (
 			<AppContext.Provider value={app}>
-				<Overview />
+				<Router>
+					<Route
+						path="/"
+						component={Overview}
+					/>{' '}
+					<Route
+						path="/add-food"
+						component={AddFood}
+					/>
+				</Router>
 			</AppContext.Provider>
 		),
 

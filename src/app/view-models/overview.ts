@@ -20,7 +20,6 @@ import { Log } from '@/app/commands/log'
 import { OnChangeProcesses } from '@/app/streams/on-change-processes'
 import { OnFoods } from '@/app/streams/on-foods'
 import { foodDataEq } from '@/app/types/food'
-import { info } from '@/app/types/log'
 import { ProcessInputDTO } from '@/app/types/process'
 
 interface UseCases<ID> {
@@ -43,14 +42,17 @@ function createFoodModelEq<ID>(): Eq.Eq<
 	return Eq.fromEquals((a, b) => a.id === b.id)
 }
 
+export type Ready<ID> = Readonly<{
+	type: 'ready'
+	foods: readonly FoodModel<ID>[]
+}>
+
+export type Loading = Readonly<{
+	type: 'loading'
+}>
+
 export type Model<ID> = Readonly<
-	| {
-			type: 'ready'
-			foods: readonly FoodModel<ID>[]
-	  }
-	| {
-			type: 'loading'
-	  }
+	Ready<ID> | Loading
 >
 
 type DeleteByIds<ID> = Readonly<{
@@ -147,11 +149,6 @@ function handleOnFoods<ID>(
 					type: 'ready',
 				}) satisfies Model<ID>,
 		),
-		R.map(
-			Rx.startWith({
-				type: 'loading',
-			} satisfies Model<ID>),
-		),
 	)
 }
 
@@ -187,6 +184,6 @@ function handleDeleteByIds<ID>(
 }
 
 const logInfo =
-	(s: string) =>
+	(message: string) =>
 	<ID>({ log }: UseCases<ID>) =>
-		log(info(s))
+		log('info', message)

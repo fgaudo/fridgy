@@ -1,4 +1,9 @@
-import { pipe } from 'fp-ts/lib/function'
+import { reader as R, task as T } from 'fp-ts'
+import {
+	flip,
+	flow,
+	pipe,
+} from 'fp-ts/lib/function'
 import * as Rx from 'rxjs'
 
 import { ViewModel } from '@/core/view-model'
@@ -22,17 +27,45 @@ export type Model = Readonly<
 				readonly name: string
 			}
 	  }
+	| { type: 'adding' }
 >
 
 interface Deps {
-	addFood: AddFoodCommand
+	readonly addFood: AddFoodCommand
 }
 
-export const addFood: ViewModel<
+export const viewModel: ViewModel<
 	Deps,
 	Command,
 	Model
 > = {
-	init: { type: 'loading' } satisfies Model,
-	transformer: cmd$ => pipe(cmd$),
+	init: { type: 'loading' },
+	transformer: flow(
+		R.of,
+		R.chain(
+			flip((deps: Deps) =>
+				Rx.exhaustMap(cmd =>
+					pipe(
+						deps.addFood(cmd.food),
+						T.map(
+							() =>
+								({
+									type: 'ready',
+									model: cmd.food,
+								}) satisfies Model,
+						),
+						Rx.defer,
+						Rx.startWith({
+							type: 'adding',
+						} satisfies Model),
+					),
+				),
+			),
+		),
+		R.map(
+			Rx.startWith({
+				type: 'loading',
+			} satisfies Model),
+		),
+	),
 }

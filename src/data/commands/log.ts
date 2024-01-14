@@ -1,27 +1,50 @@
-import { reader as R, task as T } from 'fp-ts'
-
 import { R_Log } from '@/app/commands/log'
 
-export const log: R_Log<unknown> = log =>
-	R.of(
-		T.fromIO(() => {
-			switch (log.type) {
-				case 'info': {
-					console.info(log.message)
-					return
-				}
-				case 'error': {
-					console.error(log.message)
-					return
-				}
-				case 'warn': {
-					console.warn(log.message)
-					return
-				}
-				case 'debug': {
-					console.debug(log.message)
-					return
-				}
+export function tidy(object: unknown): string {
+	return JSON.stringify(object, null, 3)
+}
+
+interface Deps {
+	readonly prefix: string
+}
+
+export const log: R_Log<Deps> =
+	(type, message) =>
+	({ prefix }) =>
+	() => {
+		switch (type) {
+			case 'info': {
+				console.info(
+					`[%c${prefix}]`,
+					'font-weight: bold',
+					message,
+				)
+				return
 			}
-		}),
-	)
+			case 'error': {
+				console.error(
+					`[%c${prefix}]`,
+					'font-weight: bold',
+					message,
+				)
+				return
+			}
+			case 'warning': {
+				console.warn(
+					`[%c${prefix}]`,
+					'font-weight: bold',
+					message,
+				)
+				return
+			}
+			case 'debug': {
+				console.debug(
+					`[%c${prefix}]`,
+					'font-weight: bold',
+					message,
+				)
+
+				return
+			}
+		}
+	}

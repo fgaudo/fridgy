@@ -1,3 +1,5 @@
+import { flip } from 'fp-ts/lib/function'
+import { TypeOf } from 'io-ts'
 import * as Rx from 'rxjs'
 
 import {
@@ -6,14 +8,16 @@ import {
 } from '@/core/controller'
 
 import { AddFailure } from './commands/add-failure'
+import { AddFood as AddFoodCommand } from './commands/add-food'
 import { DeleteFoodsByIds } from './commands/delete-foods-by-ids'
 import { EnqueueProcess } from './commands/enqueue-process'
-import { Log } from './commands/log'
+import { Log, LogType } from './commands/log'
 import { RemoveProcess } from './commands/remove-process'
 import { GetProcesses } from './queries/get-processes'
 import { createScheduler } from './schedulers/process'
 import { OnChangeProcesses } from './streams/on-change-processes'
 import { OnFoods } from './streams/on-foods'
+import * as AddFood from './view-models/add-food'
 import * as Overview from './view-models/overview'
 
 export type AppUseCases<ID> = Readonly<{
@@ -21,6 +25,7 @@ export type AppUseCases<ID> = Readonly<{
 	enqueueProcess: EnqueueProcess<ID>
 	getProcesses: GetProcesses<ID>
 	processes$: OnChangeProcesses<ID>
+	addFood: AddFoodCommand
 	addFailure: AddFailure
 	removeProcess: RemoveProcess<ID>
 	foods$: OnFoods<ID>
@@ -37,7 +42,13 @@ export class App<ID> {
 			log: useCases.appLog,
 		})
 
-		this.log = useCases.uiLog
+		this.addFood = fromViewModel(
+			AddFood.viewModel,
+		)({ ...useCases })
+
+		this.log = (type, message) => {
+			useCases.uiLog(type, message)()
+		}
 
 		this.scheduler = createScheduler<ID>()({
 			interval: 5000,
@@ -60,7 +71,15 @@ export class App<ID> {
 		Overview.Model<ID>
 	>
 
-	readonly log: Log
+	readonly addFood: Controller<
+		AddFood.Command,
+		AddFood.Model
+	>
+
+	readonly log: (
+		type: LogType,
+		message: string,
+	) => void
 
 	private isRunning = false
 

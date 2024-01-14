@@ -14,10 +14,7 @@ import { DeleteFoodsByIds } from '@/app/commands/delete-foods-by-ids'
 import { RemoveProcess } from '@/app/commands/remove-process'
 import { GetProcesses } from '@/app/queries/get-processes'
 import { OnChangeProcesses } from '@/app/streams/on-change-processes'
-import {
-	ProcessDTO,
-	createProcessesOrd,
-} from '@/app/types/process'
+import { createProcessesOrd } from '@/app/types/process'
 
 interface Deps<ID> {
 	readonly interval: number

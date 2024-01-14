@@ -12,15 +12,18 @@
 	"dependencies": {
 		"@capacitor/android": "^5.6.0",
 		"@capacitor/core": "^5.6.0",
-		"@fgaudo/fp-ts-rxjs": "link:../../fp-ts-rxjs/main",
+		"@fgaudo/fp-ts-rxjs": "file:../../fp-ts-rxjs/main",
 		"@material-tailwind/html": "^2.2.2",
+		"@material/web": "^1.1.1",
+		"@solidjs/router": "^0.10.9",
 		"cordova-sqlite-storage": "^6.1.0",
 		"fp-ts": "^2.16.2",
 		"io-ts": "^2.2.21",
 		"io-ts-types": "^0.5.19",
+		"monocle-ts": "^2.3.13",
 		"newtype-ts": "^0.3.5",
 		"rxjs": "^7.8.1",
-		"solid-js": "^1.8.10",
+		"solid-js": "^1.8.11",
 		"uuid": "^9.0.1"
 	},
 	"devDependencies": {
@@ -39,13 +42,14 @@
 		"eslint-plugin-import": "^2.29.1",
 		"eslint-plugin-solid": "^0.13.1",
 		"postcss": "^8.4.33",
-		"prettier": "^3.1.1",
+		"prettier": "^3.2.1",
 		"prettier-plugin-tailwindcss": "^0.5.11",
+		"rollup-plugin-analyzer": "^4.0.0",
 		"tailwindcss": "^3.4.1",
 		"typescript": "^5.3.3",
 		"vite": "^5.0.11",
 		"vite-plugin-solid": "^2.8.0",
 		"vite-tsconfig-paths": "^4.2.3"
 	},
-	"packageManager": "pnpm@8.14.0+sha256.9cebf61abd83f68177b29484da72da9751390eaad46dfc3072d266bfbb1ba7bf"
+	"packageManager": "npm@10.3.0+sha256.ec92e7332e3f7aef6feb2b3c9585fde534cd56905cf26e77debc69e4e2b44892"
 }

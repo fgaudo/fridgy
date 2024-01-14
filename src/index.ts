@@ -4,9 +4,9 @@ import { appUseCases } from '@/data'
 
 import { render } from '@/ui'
 
-document.addEventListener(
+/*document.addEventListener(
 	'deviceready',
-	function () {
+	function() {
 		const root = document.getElementById('root')
 
 		if (root === null) {
@@ -24,4 +24,10 @@ document.addEventListener(
 
 		render(app, root)
 	},
+)*/
+
+const app: App<string> = new App<string>(
+	appUseCases({}),
 )
+
+render(app, document.getElementById('root')!)
