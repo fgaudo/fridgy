@@ -1,4 +1,4 @@
-import { Reader } from 'fp-ts/lib/Reader'
+import { Reader } from 'fp-ts/Reader'
 import { Observable } from 'rxjs'
 
 export type R_Transformer<ENV, A, B> = (

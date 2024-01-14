@@ -1,10 +1,8 @@
-import {
-	reader as R,
-	readerTaskEither as RTE,
-	readonlyNonEmptyArray as RoNeA,
-	string as S,
-} from 'fp-ts'
+import * as R from 'fp-ts/Reader'
+import * as RTE from 'fp-ts/ReaderTaskEither'
+import * as RoNeA from 'fp-ts/ReadonlyNonEmptyArray'
 import { flow, pipe } from 'fp-ts/function'
+import * as S from 'fp-ts/string'
 
 import * as RoNeS from '@/core/readonly-non-empty-set'
 

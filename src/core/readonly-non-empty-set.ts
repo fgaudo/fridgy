@@ -1,13 +1,9 @@
-import { readonlySet as RoS } from 'fp-ts'
-import { Eq } from 'fp-ts/lib/Eq'
-import {
-	Option,
-	none,
-	some,
-} from 'fp-ts/lib/Option'
-import { Ord } from 'fp-ts/lib/Ord'
-import * as RoNeA from 'fp-ts/lib/ReadonlyNonEmptyArray'
-import { pipe } from 'fp-ts/lib/function'
+import { Eq } from 'fp-ts/Eq'
+import { Option, none, some } from 'fp-ts/Option'
+import { Ord } from 'fp-ts/Ord'
+import * as RoNeA from 'fp-ts/ReadonlyNonEmptyArray'
+import * as RoS from 'fp-ts/ReadonlySet'
+import { pipe } from 'fp-ts/function'
 import { Newtype, iso } from 'newtype-ts'
 
 export type ReadonlyNonEmptySet<A> = Newtype<

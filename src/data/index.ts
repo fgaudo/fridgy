@@ -1,12 +1,10 @@
-import {
-	reader as R,
-	readerTask as RT,
-	readerTaskEither as RTE,
-	readonlySet as RoS,
-} from 'fp-ts'
+import { fromEquals } from 'fp-ts/Eq'
+import * as R from 'fp-ts/Reader'
 import { Reader } from 'fp-ts/Reader'
-import { flip, pipe } from 'fp-ts/function'
-import { fromEquals } from 'fp-ts/lib/Eq'
+import * as RT from 'fp-ts/ReaderTask'
+import * as RTE from 'fp-ts/ReaderTaskEither'
+import * as RoS from 'fp-ts/ReadonlySet'
+import { pipe } from 'fp-ts/function'
 import * as Rx from 'rxjs'
 
 import { AppUseCases } from '@/app'

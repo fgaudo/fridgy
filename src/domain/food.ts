@@ -1,4 +1,4 @@
-import { Option, some } from 'fp-ts/lib/Option'
+import { Option, some } from 'fp-ts/Option'
 import { Newtype, iso } from 'newtype-ts'
 
 const isoFood = iso<Food>()

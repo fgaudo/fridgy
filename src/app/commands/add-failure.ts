@@ -1,7 +1,5 @@
-import {
-	readerTask as RT,
-	task as T,
-} from 'fp-ts'
+import * as RT from 'fp-ts/ReaderTask'
+import * as T from 'fp-ts/Task'
 
 import { Failure } from '@/app/types/failure'
 

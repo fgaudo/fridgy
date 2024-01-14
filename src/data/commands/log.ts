@@ -15,35 +15,38 @@ export const log: R_Log<Deps> =
 		switch (type) {
 			case 'info': {
 				console.info(
-					`[%c${prefix}]`,
+					`[%c${prefix}%c]`,
 					'font-weight: bold',
+					'font-weight: normal',
 					message,
 				)
 				return
 			}
 			case 'error': {
 				console.error(
-					`[%c${prefix}]`,
+					`[%c${prefix}%c]`,
 					'font-weight: bold',
+					'font-weight: normal',
 					message,
 				)
 				return
 			}
 			case 'warning': {
 				console.warn(
-					`[%c${prefix}]`,
+					`[%c${prefix}%c]`,
 					'font-weight: bold',
+					'font-weight: normal',
 					message,
 				)
 				return
 			}
 			case 'debug': {
 				console.debug(
-					`[%c${prefix}]`,
+					`[%c${prefix}%c]`,
 					'font-weight: bold',
+					'font-weight: normal',
 					message,
 				)
-
 				return
 			}
 		}

@@ -1,5 +1,3 @@
-import { flip } from 'fp-ts/lib/function'
-import { TypeOf } from 'io-ts'
 import * as Rx from 'rxjs'
 
 import {

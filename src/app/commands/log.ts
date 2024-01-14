@@ -1,4 +1,5 @@
-import { io as IO, readerIO as RIO } from 'fp-ts'
+import * as IO from 'fp-ts/IO'
+import * as RIO from 'fp-ts/ReaderIO'
 
 export type LogType =
 	| 'debug'

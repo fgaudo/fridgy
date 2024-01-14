@@ -1,9 +1,6 @@
-import { reader as R, task as T } from 'fp-ts'
-import {
-	flip,
-	flow,
-	pipe,
-} from 'fp-ts/lib/function'
+import * as R from 'fp-ts/Reader'
+import * as T from 'fp-ts/Task'
+import { flip, flow, pipe } from 'fp-ts/function'
 import * as Rx from 'rxjs'
 
 import { ViewModel } from '@/core/view-model'

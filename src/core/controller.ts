@@ -1,5 +1,5 @@
-import { Reader } from 'fp-ts/lib/Reader'
-import { flip } from 'fp-ts/lib/function'
+import { Reader } from 'fp-ts/Reader'
+import { flip } from 'fp-ts/function'
 import { Observable, Subject } from 'rxjs'
 
 import { ViewModel } from './view-model'

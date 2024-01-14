@@ -1,13 +1,9 @@
-import {
-	observableEither as OE,
-	readerObservable as RO,
-} from '@fgaudo/fp-ts-rxjs'
-import {
-	either as E,
-	reader as R,
-	readonlySet as RoS,
-} from 'fp-ts'
-import { flip, pipe } from 'fp-ts/lib/function'
+import * as OE from '@fgaudo/fp-ts-rxjs/ObservableEither'
+import * as RO from '@fgaudo/fp-ts-rxjs/ReaderObservable'
+import * as E from 'fp-ts/Either'
+import * as R from 'fp-ts/Reader'
+import * as RoS from 'fp-ts/ReadonlySet'
+import { flip, pipe } from 'fp-ts/function'
 import * as Rx from 'rxjs'
 
 import { DeleteFoodsByIds } from '@/app/commands/delete-foods-by-ids'

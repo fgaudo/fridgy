@@ -1,7 +1,5 @@
-import {
-	readerTaskEither as RTE,
-	taskEither as TE,
-} from 'fp-ts'
+import * as RTE from 'fp-ts/ReaderTaskEither'
+import * as TE from 'fp-ts/TaskEither'
 
 export type RemoveProcess<ID> = (
 	id: ID,

@@ -1,4 +1,5 @@
-import { eq as Eq, ord as Ord } from 'fp-ts'
+import * as Eq from 'fp-ts/Eq'
+import * as Ord from 'fp-ts/Ord'
 
 import { ReadonlyNonEmptySet } from '@/core/readonly-non-empty-set'
 

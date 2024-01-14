@@ -1,4 +1,4 @@
-import { reader as R } from 'fp-ts'
+import * as R from 'fp-ts/Reader'
 import { Observable } from 'rxjs'
 
 import { FoodDTO } from '@/app/types/food'

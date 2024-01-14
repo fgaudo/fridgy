@@ -1,4 +1,4 @@
-import { eq as Eq } from 'fp-ts'
+import * as Eq from 'fp-ts/Eq'
 
 export interface FoodInputDTO {
 	readonly name: string

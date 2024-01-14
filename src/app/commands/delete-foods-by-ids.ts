@@ -1,7 +1,5 @@
-import {
-	readerTaskEither as RTE,
-	taskEither as TE,
-} from 'fp-ts'
+import * as RTE from 'fp-ts/ReaderTaskEither'
+import * as TE from 'fp-ts/TaskEither'
 
 import { ReadonlyNonEmptySet } from '@/core/readonly-non-empty-set'
 

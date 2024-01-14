@@ -1,12 +1,10 @@
-import { readerObservable as RO } from '@fgaudo/fp-ts-rxjs'
-import {
-	eq as Eq,
-	ord as Ord,
-	reader as R,
-	readonlySet as RoS,
-} from 'fp-ts'
+import * as RO from '@fgaudo/fp-ts-rxjs/ReaderObservable'
+import * as Eq from 'fp-ts/Eq'
+import * as OPT from 'fp-ts/Option'
+import * as Ord from 'fp-ts/Ord'
+import * as R from 'fp-ts/Reader'
+import * as RoS from 'fp-ts/ReadonlySet'
 import { flip, flow, pipe } from 'fp-ts/function'
-import * as OPT from 'fp-ts/lib/Option'
 import * as Rx from 'rxjs'
 
 import * as RoNeS from '@/core/readonly-non-empty-set'
