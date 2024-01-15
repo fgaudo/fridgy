@@ -4,14 +4,11 @@ import { appUseCases } from '@/data'
 
 import { render } from '@/ui'
 
-/*document.addEventListener(
+/*
+document.addEventListener(
 	'deviceready',
-	function() {
-		const root = document.getElementById('root')
-
-		if (root === null) {
-			throw new Error('No #root element found')
-		}
+	function () {
+		const root = document.getElementById('root')!
 
 		const db = window.sqlitePlugin.openDatabase({
 			name: 'my.db',
@@ -19,15 +16,17 @@ import { render } from '@/ui'
 		})
 
 		const app: App<string> = new App<string>(
-			appUseCases({ db }),
+			appUseCases({}),
 		)
 
 		render(app, root)
 	},
-)*/
+)
+*/
+const root = document.getElementById('root')!
 
 const app: App<string> = new App<string>(
 	appUseCases({}),
 )
 
-render(app, document.getElementById('root')!)
+render(app, root)

@@ -1,14 +1,10 @@
-import {
-	observable as O,
-	readerObservable as RO,
-} from '@fgaudo/fp-ts-rxjs'
-import {
-	either as E,
-	option as OPT,
-	reader as R,
-	readonlyArray as RoA,
-	readonlySet as RoS,
-} from 'fp-ts'
+import * as O from '@fgaudo/fp-ts-rxjs/Observable'
+import * as RO from '@fgaudo/fp-ts-rxjs/ReaderObservable'
+import * as E from 'fp-ts/Either'
+import * as OPT from 'fp-ts/Option'
+import * as R from 'fp-ts/Reader'
+import * as RoA from 'fp-ts/ReadonlyArray'
+import * as RoS from 'fp-ts/ReadonlySet'
 import { pipe } from 'fp-ts/function'
 import * as t from 'io-ts'
 import { withFallback } from 'io-ts-types'
@@ -19,7 +15,6 @@ import {
 	FoodDTO,
 	foodDataEq,
 } from '@/app/types/food'
-import { error } from '@/app/types/log'
 
 import { log } from '@/data/commands/log'
 import { executeSql } from '@/data/helpers'
@@ -27,6 +22,7 @@ import { executeSql } from '@/data/helpers'
 interface Deps {
 	readonly db: SQLitePlugin.Database
 	readonly events: Rx.Observable<void>
+	readonly prefix: string
 }
 
 export const foodDecoder = t.readonly(
@@ -45,9 +41,10 @@ const mapData = RoA.reduce<
 	const foodRowEither = foodDecoder.decode(row)
 
 	if (E.isLeft(foodRowEither)) {
-		log(error('Row could not be parsed'))(
-			undefined,
-		)()
+		log(
+			'error',
+			'Row could not be parsed',
+		)({ prefix: 'D' })()
 
 		return set
 	}
@@ -56,11 +53,9 @@ const mapData = RoA.reduce<
 
 	if (foodRow.name === undefined) {
 		log(
-			error(
-				'Could not parse name of row ' +
-					foodRow.id,
-			),
-		)(undefined)()
+			'error',
+			'Could not parse name of row ' + foodRow.id,
+		)({ prefix: 'D' })()
 	}
 
 	const foodData = {

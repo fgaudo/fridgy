@@ -7,7 +7,14 @@ export default withMT({
 		'./src/**/*.{js,ts,jsx,tsx}',
 	],
 	theme: {
-		extend: {},
+		extend: {
+			textColor: {
+				cta: 'var(--color-text-cta)',
+			},
+			backgroundColor: {
+				cta: 'var(--color-bg-cta)',
+			},
+		},
 	},
 	plugins: [],
 })
