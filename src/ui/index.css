@@ -1,7 +1,3 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
 * {
 	min-width: 0;
 }
@@ -10,5 +6,15 @@ html {
 	font-size: 16px;
 }
 body {
-	--md-icon-font: 'Material Symbols Rounded';
+	font-family: 'Roboto Flex Variable';
+	background-color: var(
+		--md-sys-color-background
+	);
+	--md-icon-font: 'Material Symbols Rounded Variable';
+	--md-ref-typeface-brand: 'Roboto Flex Variable';
+	--md-ref-typeface-plain: 'Roboto Flex Variable';
 }
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;

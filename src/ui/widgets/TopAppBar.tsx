@@ -9,6 +9,7 @@ export const TopAppBar: Component<{
 			style={{
 				'background-color':
 					'var(--md-sys-color-surface)',
+				color: 'var(--md-sys-color-on-surface)',
 			}}>
 			{props.children}
 			<md-elevation />

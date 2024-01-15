@@ -9,7 +9,6 @@ export const Title: Component<{
 			style={{
 				'font-size': '22px',
 				'line-height': '28px',
-				color: 'var(--md-sys-color-on-surface)',
 			}}>
 			{props.children}
 		</div>

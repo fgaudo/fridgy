@@ -1,6 +1,7 @@
 import {
 	For,
 	Match,
+	Show,
 	Switch,
 	from,
 	useContext,
@@ -55,31 +56,37 @@ function Overview() {
 									more_vert
 								</LeadingIcon>
 							</TopAppBar>
+							<md-list>
+								<For each={onReady().foods}>
+									{(f, i) => (
+										<>
+											<md-list-item>
+												<md-icon slot="start">
+													ac_unit
+												</md-icon>
 
-							<For each={onReady().foods}>
-								{f => (
-									<md-list>
-										<md-list-item>
-											<div class="flex items-center justify-between">
-												<div
-													class="flex h-10 w-10 items-center justify-center rounded-full"
-													style={{
-														'background-color':
-															'var(--md-sys-color-tertiary-container)',
-														color:
-															'var(--md-sys-color-tertiary-on-container)',
-													}}>
-													<md-icon slot="icon">
-														add
-													</md-icon>
+												<div slot="headline">
+													Banana
 												</div>
-												<div>{f.name}</div>
-											</div>
-										</md-list-item>
-									</md-list>
-								)}
-							</For>
-
+												<div slot="supporting-text">
+													In stock
+												</div>
+												<div slot="trailing-supporting-text">
+													56
+												</div>
+											</md-list-item>
+											<Show
+												when={
+													onReady().foods.length -
+														1 !==
+													i()
+												}>
+												<md-divider />
+											</Show>
+										</>
+									)}
+								</For>
+							</md-list>
 							<BottomAppBar>
 								<md-icon-button>
 									<md-icon>search</md-icon>

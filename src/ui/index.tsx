@@ -1,7 +1,9 @@
+import '@fontsource-variable/material-symbols-rounded/full.css'
+import '@fontsource-variable/roboto-flex/full.css'
 import {
-	applyTheme,
+	Hct,
+	SchemeTonalSpot,
 	argbFromHex,
-	themeFromSourceColor,
 } from '@material/material-color-utilities'
 import { Route, Router } from '@solidjs/router'
 import { render as solidRender } from 'solid-js/web'
@@ -13,22 +15,21 @@ import Overview from '@/ui/pages/Overview'
 
 import { AppContext } from './context'
 import './index.css'
-import './material-web'
+import { applyTheme } from './material-web'
 
-const MAIN_COLOR = '#EF6461'
+const MAIN_COLOR = '#FF5154'
 
 export function render(
 	app: App<string>,
 	root: HTMLElement,
 ): void {
-	// Get the theme from a hex color
-	const theme = themeFromSourceColor(
-		argbFromHex(MAIN_COLOR),
+	const scheme = new SchemeTonalSpot(
+		Hct.fromInt(argbFromHex(MAIN_COLOR)),
+		false,
+		0.0,
 	)
 
-	applyTheme(theme, {
-		target: document.body,
-	})
+	applyTheme(document.body, scheme)
 
 	solidRender(
 		() => (

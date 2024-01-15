@@ -13,6 +13,8 @@
 		"@capacitor/android": "^5.6.0",
 		"@capacitor/core": "^5.6.0",
 		"@fgaudo/fp-ts-rxjs": "^0.1.0",
+		"@fontsource-variable/material-symbols-rounded": "^5.0.21",
+		"@fontsource-variable/roboto-flex": "^5.0.8",
 		"@material-tailwind/html": "^2.2.2",
 		"@material/material-color-utilities": "^0.2.7",
 		"@material/web": "^1.1.1",

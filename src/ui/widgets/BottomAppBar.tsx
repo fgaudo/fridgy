@@ -9,7 +9,7 @@ export const BottomAppBar: Component<{
 			style={{
 				'--md-elevation-level': '2',
 				'background-color':
-					'var(--md-sys-color-surface)',
+					'var(--md-sys-color-surface-container)',
 			}}>
 			{props.children}
 			<md-elevation />
