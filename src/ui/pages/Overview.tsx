@@ -1,8 +1,11 @@
+import { useWindowScrollPosition } from '@solid-primitives/scroll'
 import {
 	For,
 	Match,
 	Show,
 	Switch,
+	createEffect,
+	createSignal,
 	from,
 	useContext,
 } from 'solid-js'
@@ -16,11 +19,12 @@ import { TopAppBar } from '@/ui/widgets/TopAppBar'
 
 function Overview() {
 	const app = useContext(AppContext)!
-
 	const model = withDefault(
 		from(app.overview.stream),
 		app.overview.init,
 	)
+
+	const [visible, setVisible] = createSignal(true)
 
 	const ready = () => {
 		const val = model()
@@ -48,13 +52,12 @@ function Overview() {
 					return (
 						<div class="pb-20 pt-14">
 							<TopAppBar>
-								<LeadingIcon>
-									arrow_back
-								</LeadingIcon>
-								<Title>Fridgy</Title>
-								<LeadingIcon>
-									more_vert
-								</LeadingIcon>
+								<div class="ml-[16px]">
+									<Title>Overview</Title>
+								</div>
+								<md-icon-button class="ml-auto mr-[8px]">
+									<md-icon>more_vert</md-icon>
+								</md-icon-button>
 							</TopAppBar>
 							<md-list>
 								<For each={onReady().foods}>
@@ -66,7 +69,7 @@ function Overview() {
 												</md-icon>
 
 												<div slot="headline">
-													Banana
+													{f.name}
 												</div>
 												<div slot="supporting-text">
 													In stock
@@ -87,20 +90,12 @@ function Overview() {
 									)}
 								</For>
 							</md-list>
-							<BottomAppBar>
-								<md-icon-button>
-									<md-icon>search</md-icon>
-								</md-icon-button>
-
-								<md-fab
-									prop:variant="primary"
-									class="ml-auto"
-									prop:size="medium">
-									<md-icon slot="icon">
-										add
-									</md-icon>
-								</md-fab>
-							</BottomAppBar>
+							<md-fab
+								prop:variant="primary"
+								class="fixed bottom-[16px] right-[16px]"
+								prop:size="medium">
+								<md-icon slot="icon">add</md-icon>
+							</md-fab>
 						</div>
 					)
 				}}

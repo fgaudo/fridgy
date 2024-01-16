@@ -11,7 +11,7 @@ import { AppUseCases } from '@/app'
 
 import { deleteFoodsByIds } from '@/data/commands/delete-foods-by-ids'
 import { log } from '@/data/commands/log'
-import { foods } from '@/data/streams/foods'
+import { foods } from '@/data/streams/mock-foods'
 
 interface Deps {
 	//	readonly db: SQLitePlugin.Database
@@ -33,34 +33,8 @@ export const appUseCases: Reader<
 	enqueueProcess: () => RTE.of(void 1)(undefined),
 	addFailure: () => RT.of(void 1)(undefined),
 	deleteFoodsByIds: RTE.of(undefined),
-	foods$: pipe(
-		Rx.timer(2000),
-		Rx.map(() =>
-			RoS.fromReadonlyArray(
-				fromEquals(
-					(
-						a: { name: string; id: string },
-						b: { name: string; id: string },
-					) => a.id === b.id,
-				),
-			)([
-				{ id: '1', name: 'ciao' },
-				{ id: '2', name: 'lol' },
-				{ id: '3', name: 'ciao' },
-				{ id: '4', name: 'lol' },
-				{ id: '5', name: 'ciao' },
-				{ id: '6', name: 'lol' },
-				{ id: '7', name: 'ciao' },
-				{ id: '8', name: 'lol' },
-				{ id: '9', name: 'ciao' },
-				{ id: '10', name: 'lol' },
-				{ id: '11', name: 'ciao' },
-				{ id: '12', name: 'lol' },
-				{ id: '13', name: 'ciao' },
-				{ id: '14', name: 'fine' },
-			]),
-		),
-	),
+	foods$: foods({}),
+
 	appLog: (type, message) =>
 		log(type, message)({ prefix: 'A' }),
 	uiLog: (type, message) =>

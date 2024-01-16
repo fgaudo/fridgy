@@ -17,7 +17,7 @@ import { AppContext } from './context'
 import './index.css'
 import { applyTheme } from './material-web'
 
-const MAIN_COLOR = '#FF5154'
+const MAIN_COLOR = '#DD7230'
 
 export function render(
 	app: App<string>,
@@ -26,7 +26,7 @@ export function render(
 	const scheme = new SchemeTonalSpot(
 		Hct.fromInt(argbFromHex(MAIN_COLOR)),
 		false,
-		0.0,
+		0.1,
 	)
 
 	applyTheme(document.body, scheme)
