@@ -1,19 +1,16 @@
-import { useWindowScrollPosition } from '@solid-primitives/scroll'
 import {
 	For,
 	Match,
 	Show,
 	Switch,
-	createEffect,
-	createSignal,
+	createRenderEffect,
 	from,
+	onCleanup,
 	useContext,
 } from 'solid-js'
 
 import { AppContext } from '@/ui/context'
 import { withDefault } from '@/ui/core/solid-js'
-import { BottomAppBar } from '@/ui/widgets/BottomAppBar'
-import { LeadingIcon } from '@/ui/widgets/LeadingIcon'
 import { Title } from '@/ui/widgets/Title'
 import { TopAppBar } from '@/ui/widgets/TopAppBar'
 
@@ -23,8 +20,6 @@ function Overview() {
 		from(app.overview.stream),
 		app.overview.init,
 	)
-
-	const [visible, setVisible] = createSignal(true)
 
 	const ready = () => {
 		const val = model()
@@ -40,17 +35,22 @@ function Overview() {
 			return val
 		}
 	}
-
 	return (
-		<Switch fallback={<div>asd</div>}>
+		<Switch>
 			<Match when={ready()}>
 				{onReady => {
-					app.log(
-						'debug',
-						`Rendering entire array with ${onReady().foods.length} food elements`,
-					)
+					createRenderEffect(() => {
+						app.log(
+							'debug',
+							`Ready model received with ${onReady().foods.length} food elements`,
+						)
+					})
+					onCleanup(() => {
+						console.log('ciao')
+					})
+
 					return (
-						<div class="pb-20 pt-14">
+						<div class="pb-[128px] pt-[56px]">
 							<TopAppBar>
 								<div class="ml-[16px]">
 									<Title>Overview</Title>
@@ -61,39 +61,43 @@ function Overview() {
 							</TopAppBar>
 							<md-list>
 								<For each={onReady().foods}>
-									{(f, i) => (
-										<>
-											<md-list-item>
-												<md-icon slot="start">
-													ac_unit
-												</md-icon>
+									{(foodModel, i) => {
+										createRenderEffect(() => {
+											app.log(
+												'debug',
+												`Received change for element ${i()} \n${JSON.stringify(foodModel, null, 2)}`,
+											)
+										})
+										return (
+											<>
+												<Show when={i() !== 0}>
+													<md-divider />
+												</Show>
+												<md-list-item prop:type="button">
+													<md-icon slot="start">
+														ac_unit
+													</md-icon>
 
-												<div slot="headline">
-													{f.name}
-												</div>
-												<div slot="supporting-text">
-													In stock
-												</div>
-												<div slot="trailing-supporting-text">
-													56
-												</div>
-											</md-list-item>
-											<Show
-												when={
-													onReady().foods.length -
-														1 !==
-													i()
-												}>
-												<md-divider />
-											</Show>
-										</>
-									)}
+													<div slot="headline">
+														{foodModel.name}
+													</div>
+													<div slot="supporting-text">
+														In stock
+													</div>
+													<div slot="trailing-supporting-text">
+														56
+													</div>
+												</md-list-item>
+											</>
+										)
+									}}
 								</For>
 							</md-list>
+
 							<md-fab
 								prop:variant="primary"
 								class="fixed bottom-[16px] right-[16px]"
-								prop:size="medium">
+								prop:size="large">
 								<md-icon slot="icon">add</md-icon>
 							</md-fab>
 						</div>

@@ -2,7 +2,10 @@ import {
 	Component,
 	JSXElement,
 	createSignal,
+	onCleanup,
 } from 'solid-js'
+
+import { joinClasses } from '@/ui/core/utils'
 
 export const TopAppBar: Component<{
 	children: JSXElement
@@ -10,7 +13,7 @@ export const TopAppBar: Component<{
 	const [isScrolledTop, setScrolledTop] =
 		createSignal(true)
 
-	document.addEventListener('scroll', () => {
+	const callback = () => {
 		if (isScrolledTop() && window.scrollY !== 0) {
 			setScrolledTop(false)
 		} else if (
@@ -19,18 +22,31 @@ export const TopAppBar: Component<{
 		) {
 			setScrolledTop(true)
 		}
+	}
+
+	document.addEventListener('scroll', callback)
+
+	onCleanup(() => {
+		document.removeEventListener(
+			'scroll',
+			callback,
+		)
 	})
 
 	return (
 		<div
-			class="fixed left-0 right-0 top-0 z-50 box-content flex h-[56px] items-center transition-colors duration-300 ease-out"
-			style={{
-				'background-color': isScrolledTop()
-					? 'var(--md-sys-color-surface)'
-					: 'var(--md-sys-color-surface-variant)',
-				color: isScrolledTop()
-					? 'var(--md-sys-color-on-surface)'
-					: 'var(--md-sys-color-on-surface-variant)',
+			class="fixed left-0 right-0 top-0 z-50 box-content flex h-[56px] items-center transition-colors duration-500 ease-in-out"
+			classList={{
+				[joinClasses([
+					'delay-0',
+					'bg-[var(--md-sys-color-surface)]',
+					'text-[var(--md-sys-color-on-surface)]',
+				])]: isScrolledTop(),
+				[joinClasses([
+					'delay-100',
+					'bg-[var(--md-sys-color-surface-variant)]',
+					'text-[var(--md-sys-color-on-surface-variant)]',
+				])]: !isScrolledTop(),
 			}}>
 			{props.children}
 			<md-elevation />

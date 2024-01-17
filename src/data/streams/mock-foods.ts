@@ -21,7 +21,7 @@ export const foods: R_OnFoods<
 	string
 > = () =>
 	pipe(
-		Rx.timer(1000),
+		Rx.timer(2000),
 		Rx.map(() =>
 			RoS.fromReadonlyArray(
 				fromEquals(

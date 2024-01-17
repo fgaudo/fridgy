@@ -28,7 +28,7 @@ interface UseCases<ID> {
 	readonly addFailure: AddFailure
 }
 
-interface FoodModel<ID> {
+export interface FoodModel<ID> {
 	readonly id: ID
 	readonly name: string
 	readonly deleting: boolean
