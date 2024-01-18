@@ -17,7 +17,6 @@ export type Command = Readonly<{
 }>
 
 export type Model = Readonly<
-	| { type: 'loading' }
 	| {
 			type: 'ready'
 			model: {
@@ -27,6 +26,8 @@ export type Model = Readonly<
 	| { type: 'adding' }
 >
 
+export type Init = Readonly<{ type: 'init' }>
+
 interface Deps {
 	readonly addFood: AddFoodCommand
 }
@@ -34,9 +35,10 @@ interface Deps {
 export const viewModel: ViewModel<
 	Deps,
 	Command,
-	Model
+	Model,
+	Init
 > = {
-	init: { type: 'loading' },
+	init: { type: 'init' },
 	transformer: flow(
 		R.of,
 		R.chain(
@@ -58,11 +60,6 @@ export const viewModel: ViewModel<
 					),
 				),
 			),
-		),
-		R.map(
-			Rx.startWith({
-				type: 'loading',
-			} satisfies Model),
 		),
 	),
 }

@@ -1,38 +1,58 @@
-import { from, useContext } from 'solid-js'
-
-import { Model } from '@/app/view-models/add-food'
+import { A } from '@solidjs/router'
+import {
+	createRenderEffect,
+	useContext,
+} from 'solid-js'
 
 import { AppContext } from '@/ui/context'
-import { withDefault } from '@/ui/core/solid-js'
+import { Title } from '@/ui/widgets/Title'
+import { TopAppBar } from '@/ui/widgets/TopAppBar'
 
-const model: (m: Model) =>
-	| Readonly<{
-			type: 'loading'
-	  }>
-	| Readonly<{
-			type: 'ready'
-			model: {
-				readonly name: string
-			}
-	  }>
-	| Readonly<{
-			type: 'adding'
-	  }> = m => m
-
-function AddFood() {
+const AddFood = () => {
 	const app = useContext(AppContext)!
 
-	const model = from(app.addFood.stream)
+	createRenderEffect(() => {
+		app.log('debug', 'Opened add-food page')
+	})
+
 	return (
-		<button
-			class="middle none rounded-lg bg-gray-900
-			px-6 py-3 text-center align-middle font-sans text-xs font-bold
-			uppercase text-white shadow-md shadow-gray-900/10 transition-all hover:shadow-lg
-			hover:shadow-gray-900/20 focus:opacity-[0.85] focus:shadow-none active:opacity-[0.85]
-			active:shadow-none disabled:pointer-events-none disabled:opacity-50 disabled:shadow-none"
-			data-ripple-light="true">
-			Button
-		</button>
+		<div
+			style={{
+				animation: 'opacityIn 0.25s ease-in-out',
+			}}
+			class="transition-opacity duration-[3s]">
+			<TopAppBar>
+				<A href="/">
+					<md-icon-button class="pl-[8px]">
+						<md-icon>arrow_back</md-icon>
+					</md-icon-button>
+				</A>
+				<Title>Add a new product</Title>
+			</TopAppBar>
+			<div class="flex h-screen flex-col place-content-around gap-6 pb-4 pl-4 pr-4 pt-[70px]">
+				<md-outlined-text-field
+					prop:type="text"
+					prop:label="Product name"
+					prop:placeholder="Example: Milk"
+				/>
+
+				<div class="flex items-center gap-3">
+					<md-outlined-text-field
+						class="basis-full"
+						prop:type="date"
+						prop:label="Expiration date"
+						prop:placeholder="Example: Milk"
+					/>
+					<md-icon-button class="min-w-[40px]">
+						<md-icon>document_scanner</md-icon>
+					</md-icon-button>
+				</div>
+
+				<md-filled-button class="mt-auto">
+					Add product
+				</md-filled-button>
+			</div>
+		</div>
 	)
 }
 

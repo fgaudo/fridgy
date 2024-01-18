@@ -66,12 +66,14 @@ export class App<ID> {
 
 	readonly overview: Controller<
 		Overview.Command<ID>,
-		Overview.Model<ID>
+		Overview.Model<ID>,
+		Overview.Init
 	>
 
 	readonly addFood: Controller<
 		AddFood.Command,
-		AddFood.Model
+		AddFood.Model,
+		AddFood.Init
 	>
 
 	readonly log: (

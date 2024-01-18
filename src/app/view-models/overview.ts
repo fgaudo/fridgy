@@ -45,13 +45,9 @@ export type Ready<ID> = Readonly<{
 	foods: readonly FoodModel<ID>[]
 }>
 
-export type Loading = Readonly<{
-	type: 'loading'
-}>
+export type Init = Readonly<{ type: 'init' }>
 
-export type Model<ID> = Readonly<
-	Ready<ID> | Loading
->
+export type Model<ID> = Readonly<Ready<ID>>
 
 type DeleteByIds<ID> = Readonly<{
 	type: 'delete'
@@ -63,7 +59,8 @@ export type Command<ID> = DeleteByIds<ID>
 export function createViewModel<ID>(): ViewModel<
 	UseCases<ID>,
 	Command<ID>,
-	Model<ID>
+	Model<ID>,
+	Init
 > {
 	return {
 		transformer: cmd$ =>
@@ -78,7 +75,7 @@ export function createViewModel<ID>(): ViewModel<
 			),
 
 		init: {
-			type: 'loading',
+			type: 'init',
 		},
 	}
 }

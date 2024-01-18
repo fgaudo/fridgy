@@ -1,20 +1,9 @@
-import withMT from '@material-tailwind/html/utils/withMT'
 
 /** @type {import('tailwindcss').Config} */
-export default withMT({
+export default {
 	content: [
 		'./index.html',
 		'./src/**/*.{js,ts,jsx,tsx}',
 	],
-	theme: {
-		extend: {
-			textColor: {
-				cta: 'var(--color-text-cta)',
-			},
-			backgroundColor: {
-				cta: 'var(--color-bg-cta)',
-			},
-		},
-	},
 	plugins: [],
-})
+}
