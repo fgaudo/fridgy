@@ -1,9 +1,4 @@
-import {
-	createEffect,
-	createSignal,
-	onCleanup,
-	onMount,
-} from 'solid-js'
+import { createSignal, onCleanup } from 'solid-js'
 
 export const createWindowScrolledTopListener =
 	() => {
@@ -73,18 +68,3 @@ export const createOnWindowScrollListener =
 
 		return scrollValues
 	}
-
-export const delayed = () => {
-	const [isMounted, setMounted] =
-		createSignal(false)
-	console.log(isMounted())
-	onMount(() => {
-		console.log(isMounted())
-
-		setTimeout(() => {
-			setMounted(true)
-		})
-	})
-
-	return isMounted
-}

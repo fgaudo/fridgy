@@ -2,6 +2,7 @@ import * as Eq from 'fp-ts/Eq'
 
 export interface FoodInputDTO {
 	readonly name: string
+	readonly expDate: number
 }
 
 export type FoodDTO<ID> = {

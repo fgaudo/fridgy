@@ -4,17 +4,7 @@ import {
 	MaterialDynamicColors,
 	hexFromArgb,
 } from '@material/material-color-utilities'
-import '@material/web/button/filled-button'
-import '@material/web/checkbox/checkbox'
-import '@material/web/divider/divider'
-import '@material/web/elevation/elevation'
-import '@material/web/fab/fab'
-import '@material/web/icon/icon'
-import '@material/web/iconbutton/icon-button'
-import '@material/web/list/list'
-import '@material/web/list/list-item'
-import '@material/web/progress/circular-progress'
-import '@material/web/textfield/outlined-text-field'
+import '@material/web/all'
 
 const snakeCaseToKebab = (str: string) =>
 	str.replace(/_/g, '-')

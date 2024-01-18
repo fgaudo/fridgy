@@ -5,12 +5,9 @@ export const BottomAppBar: Component<{
 }> = props => {
 	return (
 		<div
-			class="fixed bottom-0 left-0 right-0 z-50 box-content flex h-[56px] items-center py-[12px] pl-[4px] pr-[16px]"
+			class="fixed bottom-0 left-0 right-0 z-50 box-content flex h-[56px] items-center bg-[var(--md-sys-color-surface-container)] py-[12px] pl-[4px] pr-[16px] text-[var(--md-sys-color-on-surface)]"
 			style={{
 				'--md-elevation-level': '2',
-				color: 'var(--md-sys-color-on-surface)',
-				'background-color':
-					'var(--md-sys-color-surface-container)',
 			}}>
 			{props.children}
 			<md-elevation />

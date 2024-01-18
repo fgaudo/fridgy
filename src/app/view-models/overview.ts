@@ -1,4 +1,5 @@
 import * as RO from '@fgaudo/fp-ts-rxjs/ReaderObservable'
+import * as E from 'fp-ts/Either'
 import * as Eq from 'fp-ts/Eq'
 import * as OPT from 'fp-ts/Option'
 import * as Ord from 'fp-ts/Ord'
@@ -10,7 +11,11 @@ import * as Rx from 'rxjs'
 import * as RoNeS from '@/core/readonly-non-empty-set'
 import { ViewModel } from '@/core/view-model'
 
-import { createFood, name } from '@/domain/food'
+import {
+	createFood,
+	expDate,
+	name,
+} from '@/domain/food'
 
 import { AddFailure } from '@/app/commands/add-failure'
 import { EnqueueProcess } from '@/app/commands/enqueue-process'
@@ -94,12 +99,13 @@ function handleOnFoods<ID>(
 		RO.map(
 			RoS.filterMap(foodDataEq<ID>())(foodDTO =>
 				pipe(
-					foodDTO,
-					createFood,
-					OPT.map(food => ({
+					createFood(foodDTO),
+					E.map(food => ({
 						id: foodDTO.id,
 						name: name(food),
+						expDate: expDate(food),
 					})),
+					OPT.getRight,
 				),
 			),
 		),

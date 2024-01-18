@@ -12,6 +12,7 @@ import {
 
 import { AppContext } from '@/ui/context'
 import { createOnWindowScrollListener } from '@/ui/core/helpers'
+import { joinClasses } from '@/ui/core/utils'
 import { Title } from '@/ui/widgets/Title'
 import { TopAppBar } from '@/ui/widgets/TopAppBar'
 
@@ -103,12 +104,22 @@ function Overview() {
 			<div
 				class="fixed transition-all duration-[0.25s]"
 				classList={{
-					'bg-transparent bottom-[16px] right-[16px] h-[96px] w-[96px]':
-						!isOpeningAddFood(),
+					[joinClasses([
+						'bg-transparent',
+						'bottom-[16px]',
+						'right-[16px]',
+						'h-[96px]',
+						'w-[96px]',
+					])]: !isOpeningAddFood(),
 					'opacity-50': scroll().isScrolling,
 					'opacity-100': !scroll().isScrolling,
-					'bg-[var(--md-sys-color-surface)]  h-screen w-screen right-0 bottom-0':
-						isOpeningAddFood(),
+					[joinClasses([
+						'bg-[var(--md-sys-color-surface)]',
+						'h-screen',
+						'w-screen',
+						'right-0',
+						'bottom-0',
+					])]: isOpeningAddFood(),
 				}}>
 				<md-fab
 					classList={{
