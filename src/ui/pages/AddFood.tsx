@@ -39,19 +39,17 @@ const AddFood = () => {
 						class="basis-full"
 						prop:type="date"
 						prop:label="Expiration date"
-						prop:placeholder="Example: Milk"
 					/>
 					<md-outlined-icon-button class="min-w-[40px]">
 						<md-icon>document_scanner</md-icon>
 					</md-outlined-icon-button>
 				</div>
-				<div class="flex gap-6">
+				<div class="flex gap-7">
 					<label
-						class="flex  items-center gap-3"
+						class="flex items-center gap-3"
 						for="before">
 						Before
 						<md-radio
-							prop:disabled={true}
 							id="before"
 							prop:name="group"
 							prop:value="Best Before"
@@ -62,7 +60,6 @@ const AddFood = () => {
 						for="best-before">
 						Best before
 						<md-radio
-							prop:disabled={true}
 							id="best-before"
 							prop:name="group"
 							prop:value="Before"

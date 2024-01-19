@@ -1,13 +1,13 @@
 import { fromEquals } from 'fp-ts/Eq'
 import * as R from 'fp-ts/Reader'
-import { Reader } from 'fp-ts/Reader'
+import type { Reader } from 'fp-ts/Reader'
 import * as RT from 'fp-ts/ReaderTask'
 import * as RTE from 'fp-ts/ReaderTaskEither'
 import * as RoS from 'fp-ts/ReadonlySet'
 import { pipe } from 'fp-ts/function'
 import * as Rx from 'rxjs'
 
-import { AppUseCases } from '@/app'
+import type { AppUseCases } from '@/app'
 
 import { deleteFoodsByIds } from '@/data/commands/delete-foods-by-ids'
 import { log } from '@/data/commands/log'

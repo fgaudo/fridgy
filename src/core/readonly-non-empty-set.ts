@@ -1,10 +1,10 @@
-import { Eq } from 'fp-ts/Eq'
-import { Option, none, some } from 'fp-ts/Option'
-import { Ord } from 'fp-ts/Ord'
+import type { Eq } from 'fp-ts/Eq'
+import * as OPT from 'fp-ts/Option'
+import type { Ord } from 'fp-ts/Ord'
 import * as RoNeA from 'fp-ts/ReadonlyNonEmptyArray'
 import * as RoS from 'fp-ts/ReadonlySet'
 import { pipe } from 'fp-ts/function'
-import { Newtype, iso } from 'newtype-ts'
+import { type Newtype, iso } from 'newtype-ts'
 
 export type ReadonlyNonEmptySet<A> = Newtype<
 	{ readonly ReadonlyNonEmptySet: unique symbol },
@@ -34,10 +34,10 @@ export function fromValues<A>(
 
 export function fromSet<A>(
 	set: ReadonlySet<A>,
-): Option<ReadonlyNonEmptySet<A>> {
+): OPT.Option<ReadonlyNonEmptySet<A>> {
 	return set.size === 0
-		? none
-		: some(
+		? OPT.none
+		: OPT.some(
 				iso<ReadonlyNonEmptySet<A>>().wrap(set),
 			)
 }

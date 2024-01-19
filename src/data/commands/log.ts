@@ -1,4 +1,4 @@
-import { R_Log } from '@/app/commands/log'
+import type { R_Log } from '@/app/commands/log'
 
 export function tidy(object: unknown): string {
 	return JSON.stringify(object, null, 3)

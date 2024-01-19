@@ -1,7 +1,7 @@
 import * as RTE from 'fp-ts/ReaderTaskEither'
 import * as TE from 'fp-ts/TaskEither'
 
-import { ProcessInputDTO } from '@/app/types/process'
+import type { ProcessInputDTO } from '@/app/types/process'
 
 export type EnqueueProcess<ID> = (
 	process: ProcessInputDTO<ID>,

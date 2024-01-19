@@ -1,4 +1,7 @@
-import { Component, JSXElement } from 'solid-js'
+import type {
+	Component,
+	JSXElement,
+} from 'solid-js'
 
 import { createWindowScrolledTopListener } from '@/ui/core/helpers'
 import { joinClasses } from '@/ui/core/utils'

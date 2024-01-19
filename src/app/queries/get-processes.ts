@@ -1,7 +1,7 @@
 import * as RTE from 'fp-ts/ReaderTaskEither'
 import * as TE from 'fp-ts/TaskEither'
 
-import { ProcessDTO } from '@/app/types/process'
+import type { ProcessDTO } from '@/app/types/process'
 
 export type GetProcesses<ID> = TE.TaskEither<
 	Error,

@@ -4,7 +4,7 @@ import { fromEquals } from 'fp-ts/lib/Eq'
 import { pipe } from 'fp-ts/lib/function'
 import * as Rx from 'rxjs'
 
-import { R_OnFoods } from '@/app/streams/on-foods'
+import type { R_OnFoods } from '@/app/streams/on-foods'
 
 const foodSamples = [
 	'Milk',

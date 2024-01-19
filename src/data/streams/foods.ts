@@ -10,9 +10,9 @@ import * as t from 'io-ts'
 import { withFallback } from 'io-ts-types'
 import * as Rx from 'rxjs'
 
-import { R_OnFoods } from '@/app/streams/on-foods'
+import type { R_OnFoods } from '@/app/streams/on-foods'
 import {
-	FoodDTO,
+	type FoodDTO,
 	foodDataEq,
 } from '@/app/types/food'
 

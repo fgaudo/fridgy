@@ -12,16 +12,16 @@ import {
 	name,
 } from '@/domain/food'
 
-import { AddFailure } from '@/app/commands/add-failure'
-import { EnqueueProcess } from '@/app/commands/enqueue-process'
-import { Log } from '@/app/commands/log'
-import { OnChangeProcesses } from '@/app/streams/on-change-processes'
-import { OnFoods } from '@/app/streams/on-foods'
+import type { AddFailure } from '@/app/commands/add-failure'
+import type { EnqueueProcess } from '@/app/commands/enqueue-process'
+import type { Log } from '@/app/commands/log'
+import type { OnChangeProcesses } from '@/app/streams/on-change-processes'
+import type { OnFoods } from '@/app/streams/on-foods'
 import {
-	FoodDTO,
+	type FoodDTO,
 	foodDataEq,
 } from '@/app/types/food'
-import { ProcessDTO } from '@/app/types/process'
+import type { ProcessDTO } from '@/app/types/process'
 import type { FoodModel } from '@/app/view-models/overview'
 
 export interface UseCases<ID> {

@@ -1,4 +1,7 @@
-import { Context, createContext } from 'solid-js'
+import {
+	type Context,
+	createContext,
+} from 'solid-js'
 
 import { App } from '@/app'
 

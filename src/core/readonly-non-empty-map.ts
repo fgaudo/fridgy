@@ -1,6 +1,10 @@
-import { Option, none, some } from 'fp-ts/Option'
+import {
+	type Option,
+	none,
+	some,
+} from 'fp-ts/Option'
 import * as RoM from 'fp-ts/ReadonlyMap'
-import { Newtype, iso } from 'newtype-ts'
+import { type Newtype, iso } from 'newtype-ts'
 
 export type ReadonlyNonEmptyMap<A, B> = Newtype<
 	{ readonly ReadonlyNonEmptyMap: unique symbol },

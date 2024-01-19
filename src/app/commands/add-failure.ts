@@ -1,7 +1,7 @@
 import * as RT from 'fp-ts/ReaderTask'
 import * as T from 'fp-ts/Task'
 
-import { Failure } from '@/app/types/failure'
+import type { Failure } from '@/app/types/failure'
 
 export type AddFailure = (
 	failure: Failure,

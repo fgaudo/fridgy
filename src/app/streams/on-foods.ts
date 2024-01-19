@@ -1,7 +1,7 @@
 import * as R from 'fp-ts/Reader'
 import { Observable } from 'rxjs'
 
-import { FoodDTO } from '@/app/types/food'
+import type { FoodDTO } from '@/app/types/food'
 
 export type OnFoods<ID> = Observable<
 	ReadonlySet<FoodDTO<ID>>

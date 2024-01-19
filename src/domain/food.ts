@@ -1,13 +1,11 @@
 import {
-	Either,
+	type Either,
 	left,
 	right,
 } from 'fp-ts/lib/Either'
-import { match } from 'fp-ts/lib/Option'
-import { pipe } from 'fp-ts/lib/function'
-import { Newtype, iso } from 'newtype-ts'
+import { type Newtype, iso } from 'newtype-ts'
 
-import * as RoNeM from '@/core/readonly-non-empty-map'
+import type { AtLeastOne } from '@/core/types'
 
 const isoFood = iso<Food>()
 
@@ -27,35 +25,32 @@ export const expDate: (
 export const areEqual = (_f1: Food, _f2: Food) =>
 	false
 
-type ValidationError = RoNeM.ReadonlyNonEmptyMap<
-	'name' | 'expDate',
-	string
->
+export const enum NameError {
+	missingName = 0,
+}
+
+interface Errors {
+	name: NameError
+}
+
 export const createFood: (f: {
 	name: string
 	expDate: number
 }) => Either<
-	ValidationError,
+	AtLeastOne<Errors>,
 	Food
 > = foodData => {
-	const map = new Map<
-		'name' | 'expDate',
-		string
-	>()
+	let errors: Partial<Errors> = {}
 
-	if (foodData.name.trim().length === 0) {
-		map.set(
-			'name',
-			'Product name cannot be empty',
-		)
+	if (foodData.name.trim().length > 0) {
+		errors = {
+			...errors,
+			name: NameError.missingName,
+		}
 	}
 
-	return pipe(
-		map,
-		RoNeM.fromMap,
-		match(
-			() => right(isoFood.wrap(foodData)),
-			left,
-		),
-	)
+	if (Object.keys(errors).length > 0) {
+		return left(errors as AtLeastOne<Errors>)
+	}
+	return right(isoFood.wrap(foodData))
 }

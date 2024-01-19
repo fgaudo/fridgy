@@ -9,9 +9,9 @@ import * as T from 'fp-ts/Task'
 import { flip, flow, pipe } from 'fp-ts/function'
 import * as Rx from 'rxjs'
 
-import { ViewModel } from '@/core/view-model'
+import type { ViewModel } from '@/core/view-model'
 
-import { AddFood as AddFoodCommand } from '@/app/commands/add-food'
+import type { AddFood as AddFoodCommand } from '@/app/commands/add-food'
 
 interface FoodData {
 	name: string

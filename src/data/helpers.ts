@@ -1,7 +1,7 @@
 import * as E from 'fp-ts/Either'
 import * as RTE from 'fp-ts/ReaderTaskEither'
 import * as RoA from 'fp-ts/ReadonlyArray'
-import { ReadonlyNonEmptyArray } from 'io-ts-types'
+import type { ReadonlyNonEmptyArray } from 'io-ts-types'
 
 type ExecuteSql = (
 	sql: string,

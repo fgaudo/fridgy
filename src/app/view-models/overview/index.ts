@@ -6,16 +6,19 @@ import { flip, flow, pipe } from 'fp-ts/function'
 import * as Rx from 'rxjs'
 
 import * as RoNeS from '@/core/readonly-non-empty-set'
-import { ViewModel } from '@/core/view-model'
+import { type ViewModel } from '@/core/view-model'
 
-import { ProcessInputDTO } from '@/app/types/process'
+import { type ProcessInputDTO } from '@/app/types/process'
 
+/* eslint-disable import/no-restricted-paths */
 import {
-	UseCases,
+	type UseCases,
 	logInfo,
-	toFoodEntitiesOrFilter,
-	toFoodModels, // eslint-disable-next-line import/no-restricted-paths
+	toFoodEntitiesOrFilter as toFoodEntitiesOrFilterOut,
+	toFoodModels,
 } from './_impl'
+
+/* eslint-enable import/no-restricted-paths */
 
 export interface FoodModel<ID> {
 	id: ID
@@ -56,7 +59,7 @@ export function createViewModel<ID>(): ViewModel<
 							`Received ${foods.size} food entries`,
 						),
 					),
-					RO.map(toFoodEntitiesOrFilter),
+					RO.map(toFoodEntitiesOrFilterOut),
 					R.chain(
 						flip(({ processes$ }: UseCases<ID>) =>
 							Rx.combineLatestWith(processes$),

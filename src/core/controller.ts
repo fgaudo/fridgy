@@ -1,8 +1,8 @@
-import { Reader } from 'fp-ts/Reader'
+import type { Reader } from 'fp-ts/Reader'
 import { flip } from 'fp-ts/function'
 import { Observable, Subject } from 'rxjs'
 
-import { ViewModel } from './view-model'
+import type { ViewModel } from './view-model'
 
 export function fromViewModel<ENV, IN, OUT, INIT>(
 	viewModel: ViewModel<ENV, IN, OUT, INIT>,

@@ -1,4 +1,7 @@
-import { Component, JSXElement } from 'solid-js'
+import type {
+	Component,
+	JSXElement,
+} from 'solid-js'
 
 export const BottomAppBar: Component<{
 	children: JSXElement

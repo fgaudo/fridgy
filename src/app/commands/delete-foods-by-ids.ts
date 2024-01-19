@@ -1,7 +1,7 @@
 import * as RTE from 'fp-ts/ReaderTaskEither'
 import * as TE from 'fp-ts/TaskEither'
 
-import { ReadonlyNonEmptySet } from '@/core/readonly-non-empty-set'
+import type { ReadonlyNonEmptySet } from '@/core/readonly-non-empty-set'
 
 export type DeleteFoodsByIds<ID> = (
 	ids: ReadonlyNonEmptySet<ID>,

@@ -6,10 +6,10 @@ import * as RoS from 'fp-ts/ReadonlySet'
 import { flip, pipe } from 'fp-ts/function'
 import * as Rx from 'rxjs'
 
-import { DeleteFoodsByIds } from '@/app/commands/delete-foods-by-ids'
-import { RemoveProcess } from '@/app/commands/remove-process'
-import { GetProcesses } from '@/app/queries/get-processes'
-import { OnChangeProcesses } from '@/app/streams/on-change-processes'
+import type { DeleteFoodsByIds } from '@/app/commands/delete-foods-by-ids'
+import type { RemoveProcess } from '@/app/commands/remove-process'
+import type { GetProcesses } from '@/app/queries/get-processes'
+import type { OnChangeProcesses } from '@/app/streams/on-change-processes'
 import { createProcessesOrd } from '@/app/types/process'
 
 interface Deps<ID> {

@@ -1,7 +1,7 @@
 import * as RTE from 'fp-ts/ReaderTaskEither'
 import * as TE from 'fp-ts/TaskEither'
 
-import { FoodInputDTO } from '@/app/types/food'
+import type { FoodInputDTO } from '@/app/types/food'
 
 export type AddFood = (
 	food: FoodInputDTO,

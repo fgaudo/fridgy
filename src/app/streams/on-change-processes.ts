@@ -1,7 +1,7 @@
 import * as R from 'fp-ts/Reader'
 import { Observable } from 'rxjs'
 
-import { ProcessDTO } from '@/app/types/process'
+import type { ProcessDTO } from '@/app/types/process'
 
 export type OnChangeProcesses<ID> = Observable<
 	ReadonlySet<ProcessDTO<ID>>

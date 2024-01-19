@@ -1,7 +1,7 @@
 import * as R from 'fp-ts/Reader'
 import { Observable } from 'rxjs'
 
-import { Failure } from '@/app/types/failure'
+import type { Failure } from '@/app/types/failure'
 
 export type OnFailure = Observable<Failure>
 
