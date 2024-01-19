@@ -11,9 +11,9 @@ import * as Rx from 'rxjs'
 
 import type { ViewModel } from '@/core/view-model'
 
-import type { AddFood as AddFoodCommand } from '@/app/commands/add-food'
+import type { AddProduct as AddProductCommand } from '@/app/commands/add-product'
 
-interface FoodData {
+interface ProductData {
 	name: string
 	expDate: {
 		timestamp: number
@@ -24,11 +24,11 @@ interface FoodData {
 export type Command =
 	| {
 			type: 'add'
-			food: FoodData
+			product: ProductData
 	  }
 	| {
 			type: 'fieldsChange'
-			fields: FoodData
+			fields: ProductData
 	  }
 
 interface FieldsModel {
@@ -66,11 +66,11 @@ export interface Init {
 }
 
 interface Deps {
-	addFood: AddFoodCommand
+	addProduct: AddProductCommand
 }
 
 const validateInput = (
-	fields: FoodData,
+	fields: ProductData,
 	timestamp: number,
 ): FieldsModel => ({
 	expDate:
@@ -136,7 +136,7 @@ export const viewModel: ViewModel<
 						),
 
 						R.asks((deps: Deps) =>
-							deps.addFood(cmd.food),
+							deps.addProduct(cmd.product),
 						),
 						R.map(Rx.defer),
 						R.map(

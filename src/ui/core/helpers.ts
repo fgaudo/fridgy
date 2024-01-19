@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unnecessary-boolean-literal-compare */
 import { createSignal, onCleanup } from 'solid-js'
 
 export const createWindowScrolledTopListener =
@@ -6,15 +7,11 @@ export const createWindowScrolledTopListener =
 			createSignal(true)
 
 		const callback = () => {
-			if (
-				isScrolledTop() &&
-				window.scrollY !== 0
-			) {
+			const top = isScrolledTop()
+			const scrollY = window.scrollY
+			if (top && scrollY !== 0) {
 				setScrolledTop(false)
-			} else if (
-				!isScrolledTop() &&
-				window.scrollY === 0
-			) {
+			} else if (!top && scrollY === 0) {
 				setScrolledTop(true)
 			}
 		}

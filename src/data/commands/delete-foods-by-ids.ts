@@ -6,7 +6,7 @@ import * as S from 'fp-ts/string'
 
 import * as RoNeS from '@/core/readonly-non-empty-set'
 
-import type { R_DeleteFoodsByIds } from '@/app/commands/delete-foods-by-ids'
+import type { R_DeleteProductsByIds } from '@/app/commands/delete-products-by-ids'
 
 import { executeSql } from '@/data/helpers'
 
@@ -14,7 +14,7 @@ interface Deps {
 	db: SQLitePlugin.Database
 }
 
-export const deleteFoodsByIds: R_DeleteFoodsByIds<
+export const deleteProductsByIds: R_DeleteProductsByIds<
 	Deps,
 	string
 > = flow(
@@ -32,7 +32,7 @@ export const deleteFoodsByIds: R_DeleteFoodsByIds<
 		({ values, tokens }) =>
 			({ db }: Deps) =>
 				executeSql(
-					`DELETE * FROM foods WHERE id IN (${tokens})`,
+					`DELETE * FROM products WHERE id IN (${tokens})`,
 					values,
 				)(db),
 	),

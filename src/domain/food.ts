@@ -7,23 +7,27 @@ import { type Newtype, iso } from 'newtype-ts'
 
 import type { AtLeastOne } from '@/core/types'
 
-const isoFood = iso<Food>()
+const isoProduct = iso<Product>()
 
-export type Food = Newtype<
-	{ readonly Food: unique symbol },
+export type Product = Newtype<
+	{ readonly Product: unique symbol },
 	{ name: string; expDate: number }
 >
 
 export const name: (
-	food: Food,
-) => string = food => isoFood.unwrap(food).name
+	product: Product,
+) => string = product =>
+	isoProduct.unwrap(product).name
 
 export const expDate: (
-	food: Food,
-) => number = food => isoFood.unwrap(food).expDate
+	product: Product,
+) => number = product =>
+	isoProduct.unwrap(product).expDate
 
-export const areEqual = (_f1: Food, _f2: Food) =>
-	false
+export const areEqual = (
+	_p1: Product,
+	_p2: Product,
+) => false
 
 export const enum NameError {
 	missingName = 0,
@@ -33,16 +37,16 @@ interface Errors {
 	name: NameError
 }
 
-export const createFood: (f: {
+export const createProduct: (f: {
 	name: string
 	expDate: number
 }) => Either<
 	AtLeastOne<Errors>,
-	Food
-> = foodData => {
+	Product
+> = productData => {
 	let errors: Partial<Errors> = {}
 
-	if (foodData.name.trim().length > 0) {
+	if (productData.name.trim().length > 0) {
 		errors = {
 			...errors,
 			name: NameError.missingName,
@@ -52,5 +56,5 @@ export const createFood: (f: {
 	if (Object.keys(errors).length > 0) {
 		return left(errors as AtLeastOne<Errors>)
 	}
-	return right(isoFood.wrap(foodData))
+	return right(isoProduct.wrap(productData))
 }

@@ -9,9 +9,9 @@ import * as Rx from 'rxjs'
 
 import type { AppUseCases } from '@/app'
 
-import { deleteFoodsByIds } from '@/data/commands/delete-foods-by-ids'
+import { deleteProductsByIds } from '@/data/commands/delete-products-by-ids'
 import { log } from '@/data/commands/log'
-import { foods } from '@/data/streams/mock-foods'
+import { products } from '@/data/streams/mock-products'
 
 interface Deps {
 	//	readonly db: SQLitePlugin.Database
@@ -21,7 +21,7 @@ export const appUseCases: Reader<
 	Deps,
 	AppUseCases<string>
 > = () => ({
-	addFood: () => RTE.of(undefined)(undefined),
+	addProduct: () => RTE.of(undefined)(undefined),
 	processes$: R.of(
 		Rx.scheduled(
 			Rx.of(RoS.empty),
@@ -32,8 +32,8 @@ export const appUseCases: Reader<
 	removeProcess: () => RTE.of(void 1)(undefined),
 	enqueueProcess: () => RTE.of(void 1)(undefined),
 	addFailure: () => RT.of(void 1)(undefined),
-	deleteFoodsByIds: RTE.of(undefined),
-	foods$: foods({}),
+	deleteProductsByIds: RTE.of(undefined),
+	products$: products({}),
 
 	appLog: (type, message) =>
 		log(type, message)({ prefix: 'A' }),

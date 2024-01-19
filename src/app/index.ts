@@ -6,27 +6,27 @@ import {
 } from '@/core/controller'
 
 import type { AddFailure } from './commands/add-failure'
-import type { AddFood as AddFoodCommand } from './commands/add-food'
-import type { DeleteFoodsByIds } from './commands/delete-foods-by-ids'
+import type { AddProduct as AddProductCommand } from './commands/add-product'
+import type { DeleteProductsByIds } from './commands/delete-products-by-ids'
 import type { EnqueueProcess } from './commands/enqueue-process'
 import type { Log, LogType } from './commands/log'
 import type { RemoveProcess } from './commands/remove-process'
 import type { GetProcesses } from './queries/get-processes'
 import { createScheduler } from './schedulers/process'
 import type { OnChangeProcesses } from './streams/on-change-processes'
-import type { OnFoods } from './streams/on-foods'
+import type { OnProducts } from './streams/on-products'
 import * as AddProduct from './view-models/add-product'
 import * as Overview from './view-models/overview'
 
 export interface AppUseCases<ID> {
-	deleteFoodsByIds: DeleteFoodsByIds<ID>
+	deleteProductsByIds: DeleteProductsByIds<ID>
 	enqueueProcess: EnqueueProcess<ID>
 	getProcesses: GetProcesses<ID>
 	processes$: OnChangeProcesses<ID>
-	addFood: AddFoodCommand
+	addProduct: AddProductCommand
 	addFailure: AddFailure
 	removeProcess: RemoveProcess<ID>
-	foods$: OnFoods<ID>
+	products$: OnProducts<ID>
 	uiLog: Log
 	appLog: Log
 }
@@ -40,7 +40,7 @@ export class App<ID> {
 			log: useCases.appLog,
 		})
 
-		this.addFood = fromViewModel(
+		this.addProduct = fromViewModel(
 			AddProduct.viewModel,
 		)({ ...useCases })
 
@@ -70,7 +70,7 @@ export class App<ID> {
 		Overview.Init
 	>
 
-	readonly addFood: Controller<
+	readonly addProduct: Controller<
 		AddProduct.Command,
 		AddProduct.Model,
 		AddProduct.Init

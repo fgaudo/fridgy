@@ -7,64 +7,65 @@ import { pipe } from 'fp-ts/function'
 import * as RoNeS from '@/core/readonly-non-empty-set'
 
 import {
-	createFood,
+	createProduct,
 	expDate,
 	name,
-} from '@/domain/food'
+} from '@/domain/product'
 
 import type { AddFailure } from '@/app/commands/add-failure'
 import type { EnqueueProcess } from '@/app/commands/enqueue-process'
 import type { Log } from '@/app/commands/log'
 import type { OnChangeProcesses } from '@/app/streams/on-change-processes'
-import type { OnFoods } from '@/app/streams/on-foods'
-import {
-	type FoodDTO,
-	foodDataEq,
-} from '@/app/types/food'
+import type { OnProducts } from '@/app/streams/on-products'
 import type { ProcessDTO } from '@/app/types/process'
-import type { FoodModel } from '@/app/view-models/overview'
+import {
+	type ProductDTO,
+	productDataEq,
+} from '@/app/types/product'
+import type { ProductModel } from '@/app/view-models/overview'
 
 export interface UseCases<ID> {
 	processes$: OnChangeProcesses<ID>
 	enqueueProcess: EnqueueProcess<ID>
-	foods$: OnFoods<ID>
+	products$: OnProducts<ID>
 	log: Log
 	addFailure: AddFailure
 }
 
-export const toFoodEntitiesOrFilter = <ID>(
-	set: ReadonlySet<FoodDTO<ID>>,
+export const toProductEntitiesOrFilterOut = <ID>(
+	set: ReadonlySet<ProductDTO<ID>>,
 ) =>
 	pipe(
 		set,
-		RoS.filterMap(foodDataEq<ID>())(foodDTO =>
-			pipe(
-				createFood(foodDTO),
-				E.map(food => ({
-					id: foodDTO.id,
-					name: name(food),
-					expDate: expDate(food),
-				})),
-				OPT.getRight,
-			),
+		RoS.filterMap(productDataEq<ID>())(
+			productDTO =>
+				pipe(
+					createProduct(productDTO),
+					E.map(product => ({
+						id: productDTO.id,
+						name: name(product),
+						expDate: expDate(product),
+					})),
+					OPT.getRight,
+				),
 		),
 	)
 
-export const toFoodModels = <ID>([
-	foods,
+export const toProductModels = <ID>([
+	products,
 	processes,
 ]: readonly [
-	ReadonlySet<FoodDTO<ID>>,
+	ReadonlySet<ProductDTO<ID>>,
 	ReadonlySet<ProcessDTO<ID>>,
 ]) =>
 	pipe(
-		foods,
+		products,
 		RoS.map(
-			Eq.fromEquals<FoodModel<ID>>(
+			Eq.fromEquals<ProductModel<ID>>(
 				(a, b) => a.id === b.id,
 			),
-		)(food => ({
-			...food,
+		)(product => ({
+			...product,
 			deleting: pipe(
 				processes,
 				RoS.filter(
@@ -74,7 +75,7 @@ export const toFoodModels = <ID>([
 					pipe(
 						process.ids,
 						RoNeS.toReadonlySet,
-						RoS.some(id => food.id === id),
+						RoS.some(id => product.id === id),
 					),
 				),
 			),

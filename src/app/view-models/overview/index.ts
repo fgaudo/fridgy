@@ -14,13 +14,13 @@ import { type ProcessInputDTO } from '@/app/types/process'
 import {
 	type UseCases,
 	logInfo,
-	toFoodEntitiesOrFilter as toFoodEntitiesOrFilterOut,
-	toFoodModels,
+	toProductEntitiesOrFilterOut,
+	toProductModels,
 } from './_impl'
 
 /* eslint-enable import/no-restricted-paths */
 
-export interface FoodModel<ID> {
+export interface ProductModel<ID> {
 	id: ID
 	name: string
 	deleting: boolean
@@ -32,7 +32,7 @@ export interface Init {
 
 export interface Model<ID> {
 	type: 'ready'
-	foods: readonly FoodModel<ID>[]
+	products: readonly ProductModel<ID>[]
 }
 
 export interface Command<ID> {
@@ -49,32 +49,33 @@ export function createViewModel<ID>(): ViewModel<
 	return {
 		transformer: cmd$ =>
 			RO.merge(
-				// On foods case
+				// On products case
 				pipe(
 					R.asks(
-						(deps: UseCases<ID>) => deps.foods$,
+						(deps: UseCases<ID>) =>
+							deps.products$,
 					),
-					RO.tap(foods =>
+					RO.tap(products =>
 						logInfo(
-							`Received ${foods.size} food entries`,
+							`Received ${products.size} product entries`,
 						),
 					),
-					RO.map(toFoodEntitiesOrFilterOut),
+					RO.map(toProductEntitiesOrFilterOut),
 					R.chain(
 						flip(({ processes$ }: UseCases<ID>) =>
 							Rx.combineLatestWith(processes$),
 						),
 					),
-					RO.map(toFoodModels),
+					RO.map(toProductModels),
 					RO.map(
 						RoS.toReadonlyArray(
 							Ord.fromCompare(() => 0),
 						),
 					),
 					RO.map(
-						foods =>
+						products =>
 							({
-								foods,
+								products: products,
 								type: 'ready',
 							}) satisfies Model<ID>,
 					),

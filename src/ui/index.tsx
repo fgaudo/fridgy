@@ -10,7 +10,7 @@ import { render as solidRender } from 'solid-js/web'
 
 import { App } from '@/app'
 
-import AddFood from '@/ui/pages/AddFood'
+import AddProduct from '@/ui/pages/AddProduct'
 import Overview from '@/ui/pages/Overview'
 
 import { AppContext } from './context'
@@ -40,8 +40,8 @@ export function render(
 						component={Overview}
 					/>
 					<Route
-						path="/add-food"
-						component={AddFood}
+						path="/add-product"
+						component={AddProduct}
 					/>
 				</Router>
 			</AppContext.Provider>

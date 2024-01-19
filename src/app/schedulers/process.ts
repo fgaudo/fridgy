@@ -6,7 +6,7 @@ import * as RoS from 'fp-ts/ReadonlySet'
 import { flip, pipe } from 'fp-ts/function'
 import * as Rx from 'rxjs'
 
-import type { DeleteFoodsByIds } from '@/app/commands/delete-foods-by-ids'
+import type { DeleteProductsByIds } from '@/app/commands/delete-products-by-ids'
 import type { RemoveProcess } from '@/app/commands/remove-process'
 import type { GetProcesses } from '@/app/queries/get-processes'
 import type { OnChangeProcesses } from '@/app/streams/on-change-processes'
@@ -16,7 +16,7 @@ interface Deps<ID> {
 	interval: number
 	processes$: OnChangeProcesses<ID>
 	getProcesses: GetProcesses<ID>
-	deleteFoodsByIds: DeleteFoodsByIds<ID>
+	deleteProductsByIds: DeleteProductsByIds<ID>
 	removeProcess: RemoveProcess<ID>
 }
 
@@ -55,7 +55,7 @@ export function createScheduler<ID>(): R.Reader<
 					),
 					OE.mergeMapW(process =>
 						pipe(
-							useCases.deleteFoodsByIds(
+							useCases.deleteProductsByIds(
 								process.ids,
 							),
 							Rx.defer,

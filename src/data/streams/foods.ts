@@ -10,11 +10,11 @@ import * as t from 'io-ts'
 import { withFallback } from 'io-ts-types'
 import * as Rx from 'rxjs'
 
-import type { R_OnFoods } from '@/app/streams/on-foods'
+import type { R_OnProducts } from '@/app/streams/on-products'
 import {
-	type FoodDTO,
-	foodDataEq,
-} from '@/app/types/food'
+	type ProductDTO,
+	productDataEq,
+} from '@/app/types/product'
 
 import { log } from '@/data/commands/log'
 import { executeSql } from '@/data/helpers'
@@ -25,7 +25,7 @@ interface Deps {
 	prefix: string
 }
 
-export const foodDecoder = t.readonly(
+export const productDecoder = t.readonly(
 	t.type({
 		id: t.string,
 		name: withFallback(
@@ -36,11 +36,12 @@ export const foodDecoder = t.readonly(
 )
 const mapData = RoA.reduce<
 	unknown,
-	ReadonlySet<FoodDTO<string>>
+	ReadonlySet<ProductDTO<string>>
 >(RoS.empty, (set, row) => {
-	const foodRowEither = foodDecoder.decode(row)
+	const productRowEither =
+		productDecoder.decode(row)
 
-	if (E.isLeft(foodRowEither)) {
+	if (E.isLeft(productRowEither)) {
 		log(
 			'error',
 			'Row could not be parsed',
@@ -49,50 +50,57 @@ const mapData = RoA.reduce<
 		return set
 	}
 
-	const foodRow = foodRowEither.right
+	const productRow = productRowEither.right
 
-	if (foodRow.name === undefined) {
+	if (productRow.name === undefined) {
 		log(
 			'error',
-			'Could not parse name of row ' + foodRow.id,
+			'Could not parse name of row ' +
+				productRow.id,
 		)({ prefix: 'D' })()
 	}
 
-	const foodData = {
-		id: foodRow.id,
-		name: foodRow.name ?? '[undefined]',
+	const productData = {
+		id: productRow.id,
+		name: productRow.name ?? '[undefined]',
 	}
 
 	return pipe(
 		set,
-		RoS.insert(foodDataEq<string>())(foodData),
+		RoS.insert(productDataEq<string>())(
+			productData,
+		),
 	)
 })
 
-export const foods: R_OnFoods<Deps, string> =
-	pipe(
-		R.ask<Deps>(),
-		R.map(({ events, db }) =>
-			pipe(
-				events,
-				Rx.switchMap(() =>
-					pipe(
-						executeSql('SELECT * FROM foods')(db),
-						Rx.defer,
+export const products: R_OnProducts<
+	Deps,
+	string
+> = pipe(
+	R.ask<Deps>(),
+	R.map(({ events, db }) =>
+		pipe(
+			events,
+			Rx.switchMap(() =>
+				pipe(
+					executeSql('SELECT * FROM products')(
+						db,
 					),
-				),
-				O.filterMap(OPT.getRight),
-			),
-		),
-		RO.map(columns =>
-			pipe(
-				Array(columns.rows.length).keys(),
-				Array.from<number>,
-				RoA.fromArray,
-				RoA.map(
-					n => columns.rows.item(n) as unknown,
+					Rx.defer,
 				),
 			),
+			O.filterMap(OPT.getRight),
 		),
-		RO.map(mapData),
-	)
+	),
+	RO.map(columns =>
+		pipe(
+			Array(columns.rows.length).keys(),
+			Array.from<number>,
+			RoA.fromArray,
+			RoA.map(
+				n => columns.rows.item(n) as unknown,
+			),
+		),
+	),
+	RO.map(mapData),
+)

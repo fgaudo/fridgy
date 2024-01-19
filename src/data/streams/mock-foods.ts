@@ -4,9 +4,9 @@ import { fromEquals } from 'fp-ts/lib/Eq'
 import { pipe } from 'fp-ts/lib/function'
 import * as Rx from 'rxjs'
 
-import type { R_OnFoods } from '@/app/streams/on-foods'
+import type { R_OnProducts } from '@/app/streams/on-products'
 
-const foodSamples = [
+const productSamples = [
 	'Milk',
 	'Eggs',
 	'Philadelphia',
@@ -16,7 +16,7 @@ const foodSamples = [
 
 interface Deps {}
 
-export const foods: R_OnFoods<
+export const products: R_OnProducts<
 	Deps,
 	string
 > = () =>
@@ -39,10 +39,10 @@ export const foods: R_OnFoods<
 						id =>
 							({
 								id: id.toString(10),
-								name: foodSamples[
+								name: productSamples[
 									Math.floor(
 										Math.random() *
-											foodSamples.length,
+											productSamples.length,
 									)
 								],
 							}) as const,

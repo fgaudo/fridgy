@@ -1,7 +1,7 @@
 import * as Eq from 'fp-ts/Eq'
 import * as Ord from 'fp-ts/Ord'
 
-import { ReadonlyNonEmptySet } from '@/core/readonly-non-empty-set'
+import type { ReadonlyNonEmptySet } from '@/core/readonly-non-empty-set'
 
 interface Action<ID> {
 	type: 'delete'
@@ -13,8 +13,7 @@ export type ProcessDTO<ID> = {
 	timestamp: number
 } & Action<ID>
 
-export type ProcessInputDTO<FOOD_ID> =
-	Action<FOOD_ID>
+export type ProcessInputDTO<ID> = Action<ID>
 
 export function createProcessesOrd<ID>(): Ord.Ord<
 	ProcessDTO<ID>

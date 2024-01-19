@@ -8,11 +8,11 @@ import { AppContext } from '@/ui/context'
 import { Title } from '@/ui/widgets/Title'
 import { TopAppBar } from '@/ui/widgets/TopAppBar'
 
-const AddFood = () => {
+const AddProduct = () => {
 	const app = useContext(AppContext)!
 
 	createRenderEffect(() => {
-		app.log('debug', 'Opened add-food page')
+		app.log('debug', 'Opened add-product page')
 	})
 
 	return (
@@ -74,4 +74,4 @@ const AddFood = () => {
 	)
 }
 
-export default AddFood
+export default AddProduct

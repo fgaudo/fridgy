@@ -3,6 +3,8 @@ import * as RTE from 'fp-ts/ReaderTaskEither'
 import * as RoA from 'fp-ts/ReadonlyArray'
 import type { ReadonlyNonEmptyArray } from 'io-ts-types'
 
+import type { LogType } from '@/app/commands/log'
+
 type ExecuteSql = (
 	sql: string,
 	values?: ReadonlyNonEmptyArray<unknown>,

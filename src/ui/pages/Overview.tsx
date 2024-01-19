@@ -22,13 +22,15 @@ function Overview() {
 	const scroll = createOnWindowScrollListener()
 	const navigate = useNavigate()
 
-	const [isOpeningAddFood, setOpeningAddFood] =
-		createSignal(false)
+	const [
+		isOpeningAddProduct,
+		setOpeningAddProduct,
+	] = createSignal(false)
 
-	const openAddFoods = () => {
-		setOpeningAddFood(true)
+	const openAddProducts = () => {
+		setOpeningAddProduct(true)
 		setTimeout(() => {
-			navigate('/add-food')
+			navigate('/add-product')
 		}, 250)
 	}
 
@@ -64,12 +66,12 @@ function Overview() {
 				<Match when={ready()}>
 					{onReady => (
 						<md-list>
-							<For each={onReady().foods}>
-								{(foodModel, i) => {
+							<For each={onReady().products}>
+								{(productModel, i) => {
 									createRenderEffect(() => {
 										app.log(
 											'debug',
-											`Received change for element ${i()} \n${JSON.stringify(foodModel, null, 2)}`,
+											`Received change for element ${i()} \n${JSON.stringify(productModel, null, 2)}`,
 										)
 									})
 									return (
@@ -83,7 +85,7 @@ function Overview() {
 												</md-icon>
 
 												<div slot="headline">
-													{foodModel.name}
+													{productModel.name}
 												</div>
 												<div slot="supporting-text">
 													In stock
@@ -110,7 +112,7 @@ function Overview() {
 						'right-[16px]',
 						'h-[96px]',
 						'w-[96px]',
-					])]: !isOpeningAddFood(),
+					])]: !isOpeningAddProduct(),
 					'opacity-50': scroll().isScrolling,
 					'opacity-100': !scroll().isScrolling,
 					[joinClasses([
@@ -119,13 +121,13 @@ function Overview() {
 						'w-screen',
 						'right-0',
 						'bottom-0',
-					])]: isOpeningAddFood(),
+					])]: isOpeningAddProduct(),
 				}}>
 				<md-fab
 					classList={{
-						'opacity-0': isOpeningAddFood(),
+						'opacity-0': isOpeningAddProduct(),
 					}}
-					onClick={openAddFoods}
+					onClick={openAddProducts}
 					prop:variant="primary"
 					prop:size="large">
 					<md-icon slot="icon">add</md-icon>
