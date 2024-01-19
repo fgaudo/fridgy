@@ -34,12 +34,10 @@ export const createWindowScrolledTopListener =
 export const createOnWindowScrollListener =
 	() => {
 		const [scrollValues, setScroll] =
-			createSignal<
-				Readonly<{
-					isScrolling: boolean
-					scrollY: number
-				}>
-			>({
+			createSignal<{
+				isScrolling: boolean
+				scrollY: number
+			}>({
 				isScrolling: false,
 				scrollY: window.scrollY,
 			})

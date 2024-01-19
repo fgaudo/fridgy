@@ -13,11 +13,11 @@ import { OnChangeProcesses } from '@/app/streams/on-change-processes'
 import { createProcessesOrd } from '@/app/types/process'
 
 interface Deps<ID> {
-	readonly interval: number
-	readonly processes$: OnChangeProcesses<ID>
-	readonly getProcesses: GetProcesses<ID>
-	readonly deleteFoodsByIds: DeleteFoodsByIds<ID>
-	readonly removeProcess: RemoveProcess<ID>
+	interval: number
+	processes$: OnChangeProcesses<ID>
+	getProcesses: GetProcesses<ID>
+	deleteFoodsByIds: DeleteFoodsByIds<ID>
+	removeProcess: RemoveProcess<ID>
 }
 
 export function createScheduler<ID>(): R.Reader<

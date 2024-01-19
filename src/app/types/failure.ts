@@ -1,4 +1,4 @@
 export interface Failure {
-	readonly name: string
-	readonly message: string
+	name: string
+	message: string
 }

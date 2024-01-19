@@ -1,12 +1,12 @@
 import * as Eq from 'fp-ts/Eq'
 
 export interface FoodInputDTO {
-	readonly name: string
-	readonly expDate: number
+	name: string
+	expDate: number
 }
 
 export type FoodDTO<ID> = {
-	readonly id: ID
+	id: ID
 } & FoodInputDTO
 
 export function foodDataEq<ID>(): Eq.Eq<

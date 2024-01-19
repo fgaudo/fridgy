@@ -11,7 +11,7 @@ import { R_DeleteFoodsByIds } from '@/app/commands/delete-foods-by-ids'
 import { executeSql } from '@/data/helpers'
 
 interface Deps {
-	readonly db: SQLitePlugin.Database
+	db: SQLitePlugin.Database
 }
 
 export const deleteFoodsByIds: R_DeleteFoodsByIds<

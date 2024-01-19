@@ -14,14 +14,14 @@ import { ViewModel } from '@/core/view-model'
 import { AddFood as AddFoodCommand } from '@/app/commands/add-food'
 
 interface FoodData {
-	readonly name: string
-	readonly expDate: {
+	name: string
+	expDate: {
 		timestamp: number
 		isBestBefore: boolean
 	}
 }
 
-export type Command = Readonly<
+export type Command =
 	| {
 			type: 'add'
 			food: FoodData
@@ -30,7 +30,6 @@ export type Command = Readonly<
 			type: 'fieldsChange'
 			fields: FoodData
 	  }
->
 
 interface FieldsModel {
 	name:
@@ -62,10 +61,12 @@ export type Model =
 	  }
 	| { type: 'adding' }
 
-export type Init = Readonly<{ type: 'init' }>
+export interface Init {
+	type: 'init'
+}
 
 interface Deps {
-	readonly addFood: AddFoodCommand
+	addFood: AddFoodCommand
 }
 
 const validateInput = (

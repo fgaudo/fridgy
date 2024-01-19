@@ -35,7 +35,11 @@ module.exports = {
 	},
 	ignorePatterns: ['dist', '.eslintrc.cjs'],
 	parser: '@typescript-eslint/parser',
-	plugins: ['@typescript-eslint', 'import', 'solid'],
+	plugins: [
+		'@typescript-eslint',
+		'import',
+		'solid',
+	],
 	rules: {
 		'no-restricted-imports': [
 			'error',
@@ -53,6 +57,10 @@ module.exports = {
 			'error',
 			{
 				zones: [
+					{
+						target: ['./src'],
+						from: ['./src/**/_impl.ts'],
+					},
 					{
 						target: [
 							'./src/app',

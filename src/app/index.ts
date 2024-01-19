@@ -18,7 +18,7 @@ import { OnFoods } from './streams/on-foods'
 import * as AddFood from './view-models/add-food'
 import * as Overview from './view-models/overview'
 
-export type AppUseCases<ID> = Readonly<{
+export interface AppUseCases<ID> {
 	deleteFoodsByIds: DeleteFoodsByIds<ID>
 	enqueueProcess: EnqueueProcess<ID>
 	getProcesses: GetProcesses<ID>
@@ -29,7 +29,7 @@ export type AppUseCases<ID> = Readonly<{
 	foods$: OnFoods<ID>
 	uiLog: Log
 	appLog: Log
-}>
+}
 
 export class App<ID> {
 	constructor(useCases: AppUseCases<ID>) {

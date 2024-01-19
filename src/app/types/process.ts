@@ -4,13 +4,13 @@ import * as Ord from 'fp-ts/Ord'
 import { ReadonlyNonEmptySet } from '@/core/readonly-non-empty-set'
 
 interface Action<ID> {
-	readonly type: 'delete'
-	readonly ids: ReadonlyNonEmptySet<ID>
+	type: 'delete'
+	ids: ReadonlyNonEmptySet<ID>
 }
 
 export type ProcessDTO<ID> = {
-	readonly id: ID
-	readonly timestamp: number
+	id: ID
+	timestamp: number
 } & Action<ID>
 
 export type ProcessInputDTO<FOOD_ID> =

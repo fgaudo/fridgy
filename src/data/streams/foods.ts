@@ -20,9 +20,9 @@ import { log } from '@/data/commands/log'
 import { executeSql } from '@/data/helpers'
 
 interface Deps {
-	readonly db: SQLitePlugin.Database
-	readonly events: Rx.Observable<void>
-	readonly prefix: string
+	db: SQLitePlugin.Database
+	events: Rx.Observable<void>
+	prefix: string
 }
 
 export const foodDecoder = t.readonly(
