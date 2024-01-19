@@ -1,8 +1,10 @@
 import * as RTE from 'fp-ts/ReaderTaskEither'
 import * as TE from 'fp-ts/TaskEither'
 
-import type { ProductInputDTO } from '@/app/types/product'
-
+export interface ProductInputDTO {
+	name: string
+	expDate: number
+}
 export type AddProduct = (
 	product: ProductInputDTO,
 ) => TE.TaskEither<Error, void>

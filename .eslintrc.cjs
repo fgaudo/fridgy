@@ -58,8 +58,8 @@ module.exports = {
 			{
 				zones: [
 					{
-						target: ['./src'],
-						from: ['./src/**/_impl.ts'],
+						target: './src',
+						from: './src/**/_impl.ts',
 					},
 					{
 						target: [

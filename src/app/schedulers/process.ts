@@ -1,16 +1,17 @@
 import * as OE from '@fgaudo/fp-ts-rxjs/ObservableEither'
 import * as RO from '@fgaudo/fp-ts-rxjs/ReaderObservable'
 import * as E from 'fp-ts/Either'
+import * as ORD from 'fp-ts/Ord'
 import * as R from 'fp-ts/Reader'
 import * as RoS from 'fp-ts/ReadonlySet'
 import { flip, pipe } from 'fp-ts/function'
 import * as Rx from 'rxjs'
 
-import type { DeleteProductsByIds } from '@/app/commands/delete-products-by-ids'
-import type { RemoveProcess } from '@/app/commands/remove-process'
-import type { GetProcesses } from '@/app/queries/get-processes'
-import type { OnChangeProcesses } from '@/app/streams/on-change-processes'
-import { createProcessesOrd } from '@/app/types/process'
+import type { GetProcesses } from '@/app/contract/read/get-processes'
+import type { OnChangeProcesses } from '@/app/contract/read/on-change-processes'
+import type { DeleteProductsByIds } from '@/app/contract/write/delete-products-by-ids'
+import type { RemoveProcess } from '@/app/contract/write/remove-process'
+import { processesCompare } from '@/app/types/process'
 
 interface Deps<ID> {
 	interval: number
@@ -43,7 +44,7 @@ export function createScheduler<ID>(): R.Reader<
 					Rx.map(
 						E.map(
 							RoS.toReadonlyArray(
-								createProcessesOrd(),
+								ORD.fromCompare(processesCompare),
 							),
 						),
 					),

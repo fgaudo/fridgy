@@ -8,7 +8,7 @@ import * as Rx from 'rxjs'
 import * as RoNeS from '@/core/readonly-non-empty-set'
 import { type ViewModel } from '@/core/view-model'
 
-import { type ProcessInputDTO } from '@/app/types/process'
+import type { ProcessInputDTO } from '@/app/contract/write/enqueue-process'
 
 /* eslint-disable import/no-restricted-paths */
 import {
@@ -60,7 +60,9 @@ export function createViewModel<ID>(): ViewModel<
 							`Received ${products.size} product entries`,
 						),
 					),
-					RO.map(toProductEntitiesOrFilterOut),
+					RO.map(
+						toProductEntitiesOrFilterOut<ID>,
+					),
 					R.chain(
 						flip(({ processes$ }: UseCases<ID>) =>
 							Rx.combineLatestWith(processes$),

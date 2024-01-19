@@ -1,8 +1,10 @@
 import * as RT from 'fp-ts/ReaderTask'
 import * as T from 'fp-ts/Task'
 
-import type { Failure } from '@/app/types/failure'
-
+export interface Failure {
+	name: string
+	message: string
+}
 export type AddFailure = (
 	failure: Failure,
 ) => T.Task<void>

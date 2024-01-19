@@ -6,14 +6,15 @@ import * as R from 'fp-ts/Reader'
 import * as RoA from 'fp-ts/ReadonlyArray'
 import * as RoS from 'fp-ts/ReadonlySet'
 import { pipe } from 'fp-ts/function'
+import { fromEquals } from 'fp-ts/lib/Eq'
 import * as t from 'io-ts'
 import { withFallback } from 'io-ts-types'
 import * as Rx from 'rxjs'
 
-import type { R_OnProducts } from '@/app/streams/on-products'
+import type { R_OnProducts } from '@/app/contract/read/on-products'
 import {
 	type ProductDTO,
-	productDataEq,
+	productDataEquals,
 } from '@/app/types/product'
 
 import { log } from '@/data/commands/log'
@@ -67,9 +68,9 @@ const mapData = RoA.reduce<
 
 	return pipe(
 		set,
-		RoS.insert(productDataEq<string>())(
-			productData,
-		),
+		RoS.insert(
+			fromEquals(productDataEquals<string>),
+		)(productData),
 	)
 })
 

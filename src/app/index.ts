@@ -5,18 +5,21 @@ import {
 	fromViewModel,
 } from '@/core/controller'
 
-import type { AddFailure } from './commands/add-failure'
-import type { AddProduct as AddProductCommand } from './commands/add-product'
-import type { DeleteProductsByIds } from './commands/delete-products-by-ids'
-import type { EnqueueProcess } from './commands/enqueue-process'
-import type { Log, LogType } from './commands/log'
-import type { RemoveProcess } from './commands/remove-process'
-import type { GetProcesses } from './queries/get-processes'
-import { createScheduler } from './schedulers/process'
-import type { OnChangeProcesses } from './streams/on-change-processes'
-import type { OnProducts } from './streams/on-products'
-import * as AddProduct from './view-models/add-product'
-import * as Overview from './view-models/overview'
+import type { GetProcesses } from '@/app/contract/read/get-processes'
+import type { OnChangeProcesses } from '@/app/contract/read/on-change-processes'
+import type { OnProducts } from '@/app/contract/read/on-products'
+import type { AddFailure } from '@/app/contract/write/add-failure'
+import type { AddProduct as AddProductCommand } from '@/app/contract/write/add-product'
+import type { DeleteProductsByIds } from '@/app/contract/write/delete-products-by-ids'
+import type { EnqueueProcess } from '@/app/contract/write/enqueue-process'
+import type {
+	Log,
+	LogType,
+} from '@/app/contract/write/log'
+import type { RemoveProcess } from '@/app/contract/write/remove-process'
+import { createScheduler } from '@/app/schedulers/process'
+import * as AddProduct from '@/app/view-models/add-product'
+import * as Overview from '@/app/view-models/overview'
 
 export interface AppUseCases<ID> {
 	deleteProductsByIds: DeleteProductsByIds<ID>

@@ -4,7 +4,8 @@ import { fromEquals } from 'fp-ts/lib/Eq'
 import { pipe } from 'fp-ts/lib/function'
 import * as Rx from 'rxjs'
 
-import type { R_OnProducts } from '@/app/streams/on-products'
+import type { R_OnProducts } from '@/app/contract/read/on-products'
+import { productDataEquals } from '@/app/types/product'
 
 const productSamples = [
 	'Milk',
@@ -24,12 +25,7 @@ export const products: R_OnProducts<
 		Rx.timer(2000),
 		Rx.map(() =>
 			RoS.fromReadonlyArray(
-				fromEquals(
-					(
-						a: { name: string; id: string },
-						b: { name: string; id: string },
-					) => a.id === b.id,
-				),
+				fromEquals(productDataEquals<string>),
 			)(
 				pipe(
 					Array(20).keys(),

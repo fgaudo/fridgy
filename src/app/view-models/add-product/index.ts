@@ -11,7 +11,7 @@ import * as Rx from 'rxjs'
 
 import type { ViewModel } from '@/core/view-model'
 
-import type { AddProduct as AddProductCommand } from '@/app/commands/add-product'
+import type { AddProduct as AddProductCommand } from '@/app/contract/write/add-product'
 
 interface ProductData {
 	name: string

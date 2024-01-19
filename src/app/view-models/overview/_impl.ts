@@ -12,16 +12,16 @@ import {
 	name,
 } from '@/domain/product'
 
-import type { AddFailure } from '@/app/commands/add-failure'
-import type { EnqueueProcess } from '@/app/commands/enqueue-process'
-import type { Log } from '@/app/commands/log'
-import type { OnChangeProcesses } from '@/app/streams/on-change-processes'
-import type { OnProducts } from '@/app/streams/on-products'
-import type { ProcessDTO } from '@/app/types/process'
+import type { OnChangeProcesses } from '@/app/contract/read/on-change-processes'
+import type { OnProducts } from '@/app/contract/read/on-products'
+import type { ProcessDTO } from '@/app/contract/read/types/process'
 import {
 	type ProductDTO,
-	productDataEq,
-} from '@/app/types/product'
+	productDataEquals,
+} from '@/app/contract/read/types/product'
+import type { AddFailure } from '@/app/contract/write/add-failure'
+import type { EnqueueProcess } from '@/app/contract/write/enqueue-process'
+import type { Log } from '@/app/contract/write/log'
 import type { ProductModel } from '@/app/view-models/overview'
 
 export interface UseCases<ID> {
@@ -37,17 +37,18 @@ export const toProductEntitiesOrFilterOut = <ID>(
 ) =>
 	pipe(
 		set,
-		RoS.filterMap(productDataEq<ID>())(
-			productDTO =>
-				pipe(
-					createProduct(productDTO),
-					E.map(product => ({
-						id: productDTO.id,
-						name: name(product),
-						expDate: expDate(product),
-					})),
-					OPT.getRight,
-				),
+		RoS.filterMap(
+			Eq.fromEquals(productDataEquals<ID>),
+		)(productDTO =>
+			pipe(
+				createProduct(productDTO),
+				E.map(product => ({
+					id: productDTO.id,
+					name: name(product),
+					expDate: expDate(product),
+				})),
+				OPT.getRight,
+			),
 		),
 	)
 
