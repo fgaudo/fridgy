@@ -47,10 +47,7 @@ export class App<ID> {
 			AddProduct.viewModel,
 		)({ ...useCases })
 
-		this.log = (type, message) => {
-			useCases.uiLog(type, message)()
-		}
-
+		this.log = useCases.uiLog
 		this.scheduler = createScheduler<ID>()({
 			interval: 5000,
 			...useCases,
@@ -79,10 +76,7 @@ export class App<ID> {
 		AddProduct.Init
 	>
 
-	readonly log: (
-		type: LogType,
-		message: string,
-	) => void
+	readonly log: Log
 
 	private isRunning = false
 

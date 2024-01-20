@@ -9,9 +9,9 @@ import * as Rx from 'rxjs'
 
 import type { GetProcesses } from '@/app/contract/read/get-processes'
 import type { OnChangeProcesses } from '@/app/contract/read/on-change-processes'
+import { processesCompare } from '@/app/contract/read/types/process'
 import type { DeleteProductsByIds } from '@/app/contract/write/delete-products-by-ids'
 import type { RemoveProcess } from '@/app/contract/write/remove-process'
-import { processesCompare } from '@/app/types/process'
 
 interface Deps<ID> {
 	interval: number

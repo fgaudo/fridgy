@@ -1,24 +1,35 @@
 import * as RO from '@fgaudo/fp-ts-rxjs/ReaderObservable'
+import * as E from 'fp-ts/Either'
+import * as OPT from 'fp-ts/Option'
 import * as Ord from 'fp-ts/Ord'
 import * as R from 'fp-ts/Reader'
 import * as RoS from 'fp-ts/ReadonlySet'
 import { flip, flow, pipe } from 'fp-ts/function'
+import * as EQ from 'fp-ts/lib/Eq'
 import * as Rx from 'rxjs'
 
 import * as RoNeS from '@/core/readonly-non-empty-set'
 import { type ViewModel } from '@/core/view-model'
 
-import type { ProcessInputDTO } from '@/app/contract/write/enqueue-process'
-
-/* eslint-disable import/no-restricted-paths */
 import {
-	type UseCases,
-	logInfo,
-	toProductEntitiesOrFilterOut,
-	toProductModels,
-} from './_impl'
+	createProduct,
+	expDate,
+	name,
+} from '@/domain/product'
 
-/* eslint-enable import/no-restricted-paths */
+import type { OnChangeProcesses } from '@/app/contract/read/on-change-processes'
+import type { OnProducts } from '@/app/contract/read/on-products'
+import type { ProcessDTO } from '@/app/contract/read/types/process'
+import {
+	type ProductDTO,
+	productDataEquals,
+} from '@/app/contract/read/types/product'
+import type { AddFailure } from '@/app/contract/write/add-failure'
+import type {
+	EnqueueProcess,
+	ProcessInputDTO,
+} from '@/app/contract/write/enqueue-process'
+import type { Log } from '@/app/contract/write/log'
 
 export interface ProductModel<ID> {
 	id: ID
@@ -39,7 +50,69 @@ export interface Command<ID> {
 	type: 'delete'
 	ids: RoNeS.ReadonlyNonEmptySet<ID>
 }
+export interface UseCases<ID> {
+	processes$: OnChangeProcesses<ID>
+	enqueueProcess: EnqueueProcess<ID>
+	products$: OnProducts<ID>
+	log: Log
+	addFailure: AddFailure
+}
 
+const toProductEntitiesOrFilterOut = <ID>(
+	set: ReadonlySet<ProductDTO<ID>>,
+) =>
+	pipe(
+		set,
+		RoS.filterMap(
+			EQ.fromEquals(productDataEquals<ID>),
+		)(productDTO =>
+			pipe(
+				createProduct(productDTO),
+				E.map(product => ({
+					id: productDTO.id,
+					name: name(product),
+					expDate: expDate(product),
+				})),
+				OPT.getRight,
+			),
+		),
+	)
+
+const toProductModels = <ID>([
+	products,
+	processes,
+]: readonly [
+	ReadonlySet<ProductDTO<ID>>,
+	ReadonlySet<ProcessDTO<ID>>,
+]) =>
+	pipe(
+		products,
+		RoS.map(
+			EQ.fromEquals<ProductModel<ID>>(
+				(a, b) => a.id === b.id,
+			),
+		)(product => ({
+			...product,
+			deleting: pipe(
+				processes,
+				RoS.filter(
+					process => process.type === 'delete',
+				),
+				RoS.some(process =>
+					pipe(
+						process.ids,
+						RoNeS.toReadonlySet,
+						RoS.some(id => product.id === id),
+					),
+				),
+			),
+		})),
+	)
+
+export const logInfo =
+	(message: string) =>
+	<ID>({ log }: UseCases<ID>) =>
+		log('info', message)
 export function createViewModel<ID>(): ViewModel<
 	UseCases<ID>,
 	Command<ID>,
