@@ -1,65 +1,62 @@
 /* eslint-disable @typescript-eslint/no-unnecessary-boolean-literal-compare */
 import { createSignal, onCleanup } from 'solid-js'
 
-export const createWindowScrolledTopListener =
-	() => {
-		const [isScrolledTop, setScrolledTop] =
-			createSignal(true)
+export const useWindowScrollTop = () => {
+	const [isScrolledTop, setScrolledTop] =
+		createSignal(true)
 
-		const callback = () => {
-			const top = isScrolledTop()
-			const scrollY = window.scrollY
-			if (top && scrollY !== 0) {
-				setScrolledTop(false)
-			} else if (!top && scrollY === 0) {
-				setScrolledTop(true)
-			}
+	const callback = () => {
+		const top = isScrolledTop()
+		const scrollY = window.scrollY
+		if (top && scrollY !== 0) {
+			setScrolledTop(false)
+		} else if (!top && scrollY === 0) {
+			setScrolledTop(true)
 		}
-
-		document.addEventListener('scroll', callback)
-
-		onCleanup(() => {
-			document.removeEventListener(
-				'scroll',
-				callback,
-			)
-		})
-
-		return isScrolledTop
 	}
 
-export const createOnWindowScrollListener =
-	() => {
-		const [scrollValues, setScroll] =
-			createSignal<{
-				isScrolling: boolean
-				scrollY: number
-			}>({
-				isScrolling: false,
-				scrollY: window.scrollY,
-			})
+	document.addEventListener('scroll', callback)
 
-		const start = () => {
-			setScroll({
-				isScrolling: true,
-				scrollY: window.scrollY,
-			} as const)
-		}
+	onCleanup(() => {
+		document.removeEventListener(
+			'scroll',
+			callback,
+		)
+	})
 
-		const end = () => {
-			setScroll({
-				isScrolling: false,
-				scrollY: window.scrollY,
-			} as const)
-		}
+	return isScrolledTop
+}
 
-		window.addEventListener('scroll', start)
-		window.addEventListener('scrollend', end)
+export const useWindowScroll = () => {
+	const [scrollValues, setScroll] = createSignal<{
+		isScrolling: boolean
+		scrollY: number
+	}>({
+		isScrolling: false,
+		scrollY: window.scrollY,
+	})
 
-		onCleanup(() => {
-			window.removeEventListener('scroll', start)
-			window.removeEventListener('scrollend', end)
-		})
-
-		return scrollValues
+	const start = () => {
+		setScroll({
+			isScrolling: true,
+			scrollY: window.scrollY,
+		} as const)
 	}
+
+	const end = () => {
+		setScroll({
+			isScrolling: false,
+			scrollY: window.scrollY,
+		} as const)
+	}
+
+	window.addEventListener('scroll', start)
+	window.addEventListener('scrollend', end)
+
+	onCleanup(() => {
+		window.removeEventListener('scroll', start)
+		window.removeEventListener('scrollend', end)
+	})
+
+	return scrollValues
+}

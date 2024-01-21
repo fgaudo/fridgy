@@ -3,14 +3,13 @@ import type {
 	JSXElement,
 } from 'solid-js'
 
-import { createWindowScrolledTopListener } from '@/ui/core/helpers'
+import { useWindowScrollTop } from '@/ui/core/helpers'
 import { joinClasses } from '@/ui/core/utils'
 
 export const TopAppBar: Component<{
 	children: JSXElement
 }> = props => {
-	const isScrolledTop =
-		createWindowScrolledTopListener()
+	const isScrolledTop = useWindowScrollTop()
 	return (
 		<div
 			class="fixed left-0 right-0 top-0 z-40 box-content flex h-[56px] items-center gap-[24px] transition-colors duration-500 ease-in-out"

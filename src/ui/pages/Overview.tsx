@@ -1,4 +1,7 @@
 import { useNavigate } from '@solidjs/router'
+import { fromIO } from 'fp-ts/lib/Task'
+import { flow, pipe } from 'fp-ts/lib/function'
+import * as Rx from 'rxjs'
 import {
 	For,
 	Match,
@@ -11,15 +14,19 @@ import {
 } from 'solid-js'
 
 import { AppContext } from '@/ui/context'
-import { createOnWindowScrollListener } from '@/ui/core/helpers'
+import { useWindowScroll } from '@/ui/core/helpers'
+import { useDispatcher } from '@/ui/core/solid-js'
 import { joinClasses } from '@/ui/core/utils'
 import { Title } from '@/ui/widgets/Title'
 import { TopAppBar } from '@/ui/widgets/TopAppBar'
 
+// eslint-disable-next-line @typescript-eslint/consistent-type-definitions
+type Command = { type: 'openAddProduct' }
+
 function Overview() {
 	const app = useContext(AppContext)!
 	const model = from(app.overview.stream)
-	const scroll = createOnWindowScrollListener()
+	const scroll = useWindowScroll()
 	const navigate = useNavigate()
 
 	const [
@@ -27,12 +34,26 @@ function Overview() {
 		setOpeningAddProduct,
 	] = createSignal(false)
 
-	const openAddProducts = () => {
-		setOpeningAddProduct(true)
-		setTimeout(() => {
-			navigate('/add-product')
-		}, 250)
-	}
+	const dispatch = useDispatcher<Command>(
+		flow(
+			Rx.tap(
+				cmd => `Dispatched '${cmd.type}' command`,
+			),
+			Rx.exhaustMap(() =>
+				pipe(
+					fromIO(() => {
+						setOpeningAddProduct(true)
+					}),
+					Rx.defer,
+					Rx.delay(250),
+					Rx.tap(() => {
+						navigate('/add-product')
+					}),
+				),
+			),
+			Rx.ignoreElements(),
+		),
+	)
 
 	const ready = () => {
 		const val = model()
@@ -87,12 +108,6 @@ function Overview() {
 												<div slot="headline">
 													{productModel.name}
 												</div>
-												<div slot="supporting-text">
-													In stock
-												</div>
-												<div slot="trailing-supporting-text">
-													56
-												</div>
 											</md-list-item>
 										</>
 									)
@@ -127,7 +142,11 @@ function Overview() {
 					classList={{
 						'opacity-0': isOpeningAddProduct(),
 					}}
-					onClick={openAddProducts}
+					onClick={() => {
+						dispatch({
+							type: 'openAddProduct',
+						})
+					}}
 					prop:variant="primary"
 					prop:size="large">
 					<md-icon slot="icon">add</md-icon>

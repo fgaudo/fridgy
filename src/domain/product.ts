@@ -24,6 +24,12 @@ export const expDate: (
 ) => number = product =>
 	isoProduct.unwrap(product).expDate
 
+export const isExpired: (
+	product: Product,
+	timestamp: number,
+) => boolean = (product, timestamp) =>
+	isoProduct.unwrap(product).expDate >= timestamp
+
 export const areEqual = (
 	_p1: Product,
 	_p2: Product,
