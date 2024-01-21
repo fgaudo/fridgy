@@ -31,3 +31,15 @@ body {
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+.MD-title-large {
+	@apply text-mdTitleLarge leading-mdTitleLarge;
+}
+
+.MD-surface-container {
+	@apply bg-mdSurface-container text-mdOnSurface-container;
+}
+
+.MD-surface {
+	@apply bg-mdSurface text-mdOnSurface;
+}

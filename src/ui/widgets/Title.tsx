@@ -4,12 +4,7 @@ export const Title: Component<{
 	children: string
 }> = props => {
 	return (
-		<div
-			class="font-normal"
-			style={{
-				'font-size': '22px',
-				'line-height': '28px',
-			}}>
+		<div class="MD-title-large font-normal">
 			{props.children}
 		</div>
 	)
