@@ -1,3 +1,4 @@
+import '@fontsource-variable/comfortaa'
 import '@fontsource-variable/material-symbols-rounded/full.css'
 import '@fontsource-variable/roboto-flex/full.css'
 import {
@@ -13,7 +14,6 @@ import { App } from '@/app'
 import AddProduct from '@/ui/pages/AddProduct'
 import Overview from '@/ui/pages/Overview'
 
-import { AppContext } from './context'
 import './index.css'
 import { applyTheme } from './material-web'
 
@@ -33,18 +33,16 @@ export function render(
 
 	solidRender(
 		() => (
-			<AppContext.Provider value={app}>
-				<Router>
-					<Route
-						path="/"
-						component={Overview}
-					/>
-					<Route
-						path="/add-product"
-						component={AddProduct}
-					/>
-				</Router>
-			</AppContext.Provider>
+			<Router>
+				<Route
+					path="/"
+					component={Overview(app.overview)}
+				/>
+				<Route
+					path="/add-product"
+					component={AddProduct}
+				/>
+			</Router>
 		),
 
 		root,

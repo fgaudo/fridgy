@@ -6,19 +6,29 @@ export default {
 	],
 	plugins: [],
 	theme: {
+		fontWeight: {
+			titleLarge:
+				'var(--md-sys-typescale-title-large-weight)',
+		},
+		fontFamily: {
+			titleLarge:
+				'var(--md-sys-typescale-title-large-font)',
+		},
 		lineHeight: {
-			mdTitleLarge: '28px',
+			titleLarge:
+				'var(--md-sys-typescale-title-large-line-height)',
 		},
 		fontSize: {
-			mdTitleLarge: '22px',
+			titleLarge:
+				'var(--md-sys-typescale-title-large-size)',
 		},
 		colors: {
-			mdOnSurface: {
+			onSurface: {
 				DEFAULT: 'var(--md-sys-color-on-surface)',
 				container:
 					'var(--md-sys-color-on-surface-container)',
 			},
-			mdSurface: {
+			surface: {
 				DEFAULT: 'var(--md-sys-color-surface)',
 				container:
 					'var(--md-sys-color-surface-container)',

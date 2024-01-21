@@ -1,3 +1,4 @@
+import * as O from '@fgaudo/fp-ts-rxjs/Observable'
 import * as RO from '@fgaudo/fp-ts-rxjs/ReaderObservable'
 import { ordering } from 'fp-ts'
 import * as E from 'fp-ts/Either'
@@ -15,6 +16,7 @@ import {
 	pipe,
 } from 'fp-ts/function'
 import * as Eq from 'fp-ts/lib/Eq'
+import type { ReadonlyRecord } from 'fp-ts/lib/ReadonlyRecord'
 import * as Rx from 'rxjs'
 
 import * as RoNeS from '@/core/readonly-non-empty-set'
@@ -41,7 +43,10 @@ import type {
 	EnqueueProcess,
 	ProcessInputDTO,
 } from '@/app/contract/write/enqueue-process'
-import type { Log } from '@/app/contract/write/log'
+import type {
+	Log,
+	LogType,
+} from '@/app/contract/write/log'
 
 export interface ProductModel<ID> {
 	id: ID
@@ -64,6 +69,7 @@ export interface Command<ID> {
 	type: 'delete'
 	ids: RoNeS.ReadonlyNonEmptySet<ID>
 }
+
 export interface UseCases<ID> {
 	processes$: OnChangeProcesses<ID>
 	enqueueProcess: EnqueueProcess<ID>
@@ -234,6 +240,11 @@ export function createViewModel<ID>(): ViewModel<
 				// On Delete command case
 				pipe(
 					cmd$,
+					O.filterMap(cmd =>
+						cmd.type === 'delete'
+							? OPT.some(cmd)
+							: OPT.none,
+					),
 					R.of,
 					RO.tap(
 						() =>

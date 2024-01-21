@@ -1,25 +1,28 @@
-import { fromEquals } from 'fp-ts/Eq'
 import * as R from 'fp-ts/Reader'
 import type { Reader } from 'fp-ts/Reader'
 import * as RT from 'fp-ts/ReaderTask'
 import * as RTE from 'fp-ts/ReaderTaskEither'
 import * as RoS from 'fp-ts/ReadonlySet'
-import { pipe } from 'fp-ts/function'
 import * as Rx from 'rxjs'
 
-import type { AppUseCases } from '@/app'
+import type * as App from '@/app'
 
-import { deleteProductsByIds } from '@/data/commands/delete-products-by-ids'
-import { log } from '@/data/commands/log'
-import { products } from '@/data/streams/mock-products'
+import { products } from '@/data/read/mock-products'
+import { deleteProductsByIds } from '@/data/write/delete-products-by-ids'
+import { log } from '@/data/write/log'
 
 interface Deps {
 	//	readonly db: SQLitePlugin.Database
 }
 
+type ID = string
+
+export type OverviewController =
+	App.OverviewController<ID>
+
 export const appUseCases: Reader<
 	Deps,
-	AppUseCases<string>
+	App.UseCases<ID>
 > = () => ({
 	addProduct: () => RTE.of(undefined)(undefined),
 	processes$: R.of(
@@ -37,6 +40,4 @@ export const appUseCases: Reader<
 
 	appLog: (type, message) =>
 		log(type, message)({ prefix: 'A' }),
-	uiLog: (type, message) =>
-		log(type, message)({ prefix: 'U' }),
 })

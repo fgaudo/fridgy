@@ -15,10 +15,10 @@ import type { R_OnProducts } from '@/app/contract/read/on-products'
 import {
 	type ProductDTO,
 	productDataEquals,
-} from '@/app/types/product'
+} from '@/app/contract/read/types/product'
 
-import { log } from '@/data/commands/log'
 import { executeSql } from '@/data/helpers'
+import { log } from '@/data/write/log'
 
 interface Deps {
 	db: SQLitePlugin.Database

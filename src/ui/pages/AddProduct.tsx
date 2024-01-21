@@ -4,15 +4,14 @@ import {
 	useContext,
 } from 'solid-js'
 
-import { AppContext } from '@/ui/context'
-import { Title } from '@/ui/widgets/Title'
-import { TopAppBar } from '@/ui/widgets/TopAppBar'
+import { AddProductContext } from '@/ui/context'
+import { SmallTopAppBar } from '@/ui/widgets/SmallTopAppBar'
 
 const AddProduct = () => {
-	const app = useContext(AppContext)!
+	const app = useContext(AddProductContext)!
 
 	createRenderEffect(() => {
-		app.log('debug', 'Opened add-product page')
+		console.debug('Opened add-product page')
 	})
 
 	return (
@@ -20,14 +19,16 @@ const AddProduct = () => {
 			style={{
 				animation: 'opacityIn 0.25s ease-in-out',
 			}}>
-			<TopAppBar>
+			<SmallTopAppBar>
 				<A href="/">
 					<md-icon-button class="pl-[8px]">
 						<md-icon>arrow_back</md-icon>
 					</md-icon-button>
 				</A>
-				<Title>Add a new product</Title>
-			</TopAppBar>
+				<div class="font-titleLarge text-titleLarge leading-titleLarge">
+					Add a new product
+				</div>
+			</SmallTopAppBar>
 			<div class="flex h-screen flex-col place-content-around gap-[24px] pb-[16px] pl-[16px] pr-[16px] pt-[70px]">
 				<md-outlined-text-field
 					prop:type="text"

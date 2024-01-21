@@ -3,10 +3,16 @@ import {
 	createContext,
 } from 'solid-js'
 
-import { App } from '@/app'
+import type { OverviewController } from '@/data'
 
-export const AppContext: Context<
-	App<string> | undefined
-> = createContext<App<string> | undefined>(
+export const OverviewContext: Context<
+	OverviewController | undefined
+> = createContext<OverviewController | undefined>(
+	undefined,
+)
+
+export const AddProductContext: Context<
+	OverviewController | undefined
+> = createContext<OverviewController | undefined>(
 	undefined,
 )

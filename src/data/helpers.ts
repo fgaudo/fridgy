@@ -3,7 +3,7 @@ import * as RTE from 'fp-ts/ReaderTaskEither'
 import * as RoA from 'fp-ts/ReadonlyArray'
 import type { ReadonlyNonEmptyArray } from 'io-ts-types'
 
-import type { LogType } from '@/app/commands/log'
+import type { LogType } from '@/app/contract/write/log'
 
 type ExecuteSql = (
 	sql: string,

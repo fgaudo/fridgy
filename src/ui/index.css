@@ -1,3 +1,7 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 * {
 	min-width: 0;
 }
@@ -9,13 +13,25 @@ body {
 }
 
 :root {
+	--md-icon-font: 'Material Symbols Rounded Variable';
+	--md-ref-typeface-brand: 'Comfortaa Variable';
+	--md-ref-typeface-plain: 'Roboto Flex Variable';
+	--md-ref-typeface-weight-regular: 400;
+
+	--md-sys-typescale-title-large-line-height: 28px;
+	--md-sys-typescale-title-large-size: 22px;
+	--md-sys-typescale-title-large-weight: var(
+		--md-ref-typeface-weight-regular
+	);
+	--md-sys-typescale-title-large-font: var(
+		--md-ref-typeface-brand
+	);
+	--md-sys-elevation-level0: 0;
+	--md-sys-elevation-level2: 2;
+
 	user-select: none;
 	font-size: 16px;
-	font-family: 'Roboto Flex Variable';
-
-	--md-icon-font: 'Material Symbols Rounded Variable';
-	--md-ref-typeface-brand: 'Roboto Flex Variable';
-	--md-ref-typeface-plain: 'Roboto Flex Variable';
+	font-family: var(--md-ref-typeface-plain);
 }
 
 @keyframes opacityIn {
@@ -26,20 +42,4 @@ body {
 	to {
 		opacity: 1;
 	}
-}
-
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
-.MD-title-large {
-	@apply text-mdTitleLarge leading-mdTitleLarge;
-}
-
-.MD-surface-container {
-	@apply bg-mdSurface-container text-mdOnSurface-container;
-}
-
-.MD-surface {
-	@apply bg-mdSurface text-mdOnSurface;
 }

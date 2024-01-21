@@ -5,7 +5,7 @@ import { pipe } from 'fp-ts/lib/function'
 import * as Rx from 'rxjs'
 
 import type { R_OnProducts } from '@/app/contract/read/on-products'
-import { productDataEquals } from '@/app/types/product'
+import { productDataEquals } from '@/app/contract/read/types/product'
 
 const productSamples = [
 	'Milk',
