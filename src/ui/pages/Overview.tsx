@@ -17,7 +17,7 @@ import type { OverviewController } from '@/data'
 
 import { useWindowScroll } from '@/ui/core/helpers'
 import { useDispatcher } from '@/ui/core/solid-js'
-import { TopAppBar } from '@/ui/widgets/TopAppBar'
+import { SmallTopAppBar } from '@/ui/widgets/SmallTopAppBar'
 
 // eslint-disable-next-line @typescript-eslint/consistent-type-definitions
 type Command = { type: 'openAddProduct' }
@@ -36,21 +36,23 @@ const Overview =
 
 		const dispatch = useDispatcher<Command>(
 			flow(
-				Rx.exhaustMap(cmd =>
-					pipe(
-						fromIO(() => {
-							console.debug(
-								`Dispatched '${cmd.type}' command`,
-							)
-							setOpeningAddProduct(true)
-						}),
-						Rx.defer,
-						Rx.delay(250),
-						Rx.tap(() => {
-							navigate('/add-product')
-						}),
-					),
-				),
+				Rx.observeOn(Rx.asyncScheduler),
+				Rx.filter(() => {
+					/* eslint-disable solid/reactivity */
+					if (isOpeningAddProduct()) return false
+					/* eslint-enable solid/reactivity */
+					setOpeningAddProduct(true)
+					return true
+				}),
+				Rx.tap(cmd => {
+					console.debug(
+						`Dispatched '${cmd.type}' command`,
+					)
+				}),
+				Rx.delay(250),
+				Rx.tap(() => {
+					navigate('/add-product')
+				}),
 				Rx.ignoreElements(),
 			),
 		)
@@ -71,14 +73,14 @@ const Overview =
 
 		return (
 			<div class="pb-[128px] pt-[56px]">
-				<TopAppBar>
+				<SmallTopAppBar>
 					<div class="font-titleLarge text-titleLarge leading-titleLarge">
 						Overview
 					</div>
 					<md-icon-button class="ml-auto mr-[8px]">
 						<md-icon>more_vert</md-icon>
 					</md-icon-button>
-				</TopAppBar>
+				</SmallTopAppBar>
 				<Switch
 					fallback={
 						<md-circular-progress
@@ -134,9 +136,10 @@ const Overview =
 							'opacity-0': isOpeningAddProduct(),
 						}}
 						onClick={() => {
-							dispatch({
-								type: 'openAddProduct',
-							})
+							if (!isOpeningAddProduct())
+								dispatch({
+									type: 'openAddProduct',
+								})
 						}}
 						prop:variant="primary"
 						prop:size="large">

@@ -41,6 +41,12 @@ export const products: R_OnProducts<
 											productSamples.length,
 									)
 								],
+								expDate:
+									new Date().getDate() +
+									100000 +
+									Math.floor(
+										Math.random() * 26967228,
+									),
 							}) as const,
 					),
 				),

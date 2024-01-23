@@ -52,7 +52,7 @@ export class App<ID> {
 		})
 
 		this.addProduct = fromViewModel(
-			AddProduct.viewModel,
+			AddProduct.createViewModel,
 		)({ ...useCases })
 
 		this.scheduler = createScheduler<ID>()({

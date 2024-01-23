@@ -65,8 +65,8 @@ export interface Init {
 	type: 'init'
 }
 
-interface Deps {
-	addProduct: AddProductCommand
+interface Deps<ID> {
+	addProduct: AddProductCommand<ID>
 }
 
 const validateInput = (
@@ -94,12 +94,12 @@ const initFields: FieldsModel = {
 	expDate: { status: 'init' },
 }
 
-export const viewModel: ViewModel<
-	Deps,
+export const createViewModel: <ID>() => ViewModel<
+	Deps<ID>,
 	Command,
 	Model,
 	Init
-> = {
+> = () => ({
 	init: { type: 'init' },
 	transformer: flow(
 		R.of,
@@ -168,4 +168,4 @@ export const viewModel: ViewModel<
 			}
 		}),
 	),
-}
+})

@@ -1,3 +1,4 @@
+import { pipe } from 'fp-ts/lib/function'
 import * as Rx from 'rxjs'
 import {
 	type Accessor,
@@ -18,8 +19,10 @@ export const useDispatcher = <CMD>(
 ) => {
 	const subject = new Rx.Subject<CMD>()
 
-	const subscription =
-		transformer(subject).subscribe()
+	const subscription = pipe(
+		subject,
+		transformer,
+	).subscribe()
 
 	onCleanup(() => {
 		subject.unsubscribe()

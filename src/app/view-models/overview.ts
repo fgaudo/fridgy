@@ -1,22 +1,18 @@
 import * as O from '@fgaudo/fp-ts-rxjs/Observable'
 import * as RO from '@fgaudo/fp-ts-rxjs/ReaderObservable'
-import { ordering } from 'fp-ts'
 import * as E from 'fp-ts/Either'
 import * as OPT from 'fp-ts/Option'
 import * as Ord from 'fp-ts/Ord'
 import * as Ordering from 'fp-ts/Ordering'
 import * as R from 'fp-ts/Reader'
-import * as RT from 'fp-ts/ReaderTask'
 import * as RoS from 'fp-ts/ReadonlySet'
 import * as T from 'fp-ts/Task'
 import {
 	flip,
-	flow,
 	identity,
 	pipe,
 } from 'fp-ts/function'
 import * as Eq from 'fp-ts/lib/Eq'
-import type { ReadonlyRecord } from 'fp-ts/lib/ReadonlyRecord'
 import * as Rx from 'rxjs'
 
 import * as RoNeS from '@/core/readonly-non-empty-set'
@@ -24,7 +20,6 @@ import { type ViewModel } from '@/core/view-model'
 
 import {
 	type Product,
-	areEqual,
 	createProduct,
 	expDate,
 	isExpired,
@@ -34,19 +29,13 @@ import {
 import type { OnChangeProcesses } from '@/app/contract/read/on-change-processes'
 import type { OnProducts } from '@/app/contract/read/on-products'
 import type { ProcessDTO } from '@/app/contract/read/types/process'
-import {
-	type ProductDTO,
-	productDataEquals,
-} from '@/app/contract/read/types/product'
+import { type ProductDTO } from '@/app/contract/read/types/product'
 import type { AddFailure } from '@/app/contract/write/add-failure'
 import type {
 	EnqueueProcess,
 	ProcessInputDTO,
 } from '@/app/contract/write/enqueue-process'
-import type {
-	Log,
-	LogType,
-} from '@/app/contract/write/log'
+import type { Log } from '@/app/contract/write/log'
 
 export interface ProductModel<ID> {
 	id: ID
@@ -65,10 +54,12 @@ export interface Model<ID> {
 	products: readonly ProductModel<ID>[]
 }
 
-export interface Command<ID> {
+interface Delete<ID> {
 	type: 'delete'
 	ids: RoNeS.ReadonlyNonEmptySet<ID>
 }
+
+export type Command<ID> = Delete<ID>
 
 export interface UseCases<ID> {
 	processes$: OnChangeProcesses<ID>
@@ -181,6 +172,103 @@ const logInfo =
 	<ID>({ log }: UseCases<ID>) =>
 		log('info', message)
 
+interface OnProductsDeps<ID> {
+	processes$: OnChangeProcesses<ID>
+	products$: OnProducts<ID>
+	log: Log
+}
+
+const onProducts = <ID>() =>
+	pipe(
+		R.asks(
+			({ products$ }: OnProductsDeps<ID>) =>
+				products$,
+		),
+		RO.tap(
+			products =>
+				logInfo(
+					`Received ${products.size} product entries`,
+				)<ID>,
+		),
+		RO.map(toProducts),
+		RO.map(filterInvalid),
+		R.chain(
+			flip(({ processes$ }: UseCases<ID>) =>
+				Rx.combineLatestWith(processes$),
+			),
+		),
+		R.map(
+			Rx.switchMap(([products, processes]) =>
+				pipe(
+					T.fromIO(() => new Date().getDate()),
+					Rx.defer,
+					Rx.map(
+						timestamp =>
+							({
+								products,
+								processes,
+								timestamp,
+							}) as const,
+					),
+				),
+			),
+		),
+		RO.map(toProductModels),
+		RO.map(sortByExpDate),
+		RO.map(
+			products =>
+				({
+					products: products,
+					type: 'ready',
+				}) satisfies Model<ID>,
+		),
+	)
+
+const onDelete = <ID>(
+	cmd$: Rx.Observable<Delete<ID>>,
+) =>
+	pipe(
+		R.of(cmd$),
+		RO.tap(
+			() =>
+				logInfo(`Received delete command`)<ID>,
+		),
+		RO.map(
+			del =>
+				({
+					type: 'delete',
+					ids: del.ids,
+				}) satisfies ProcessInputDTO<ID>,
+		),
+		RO.mergeMap(process =>
+			pipe(
+				R.asks(
+					({ enqueueProcess }: UseCases<ID>) =>
+						enqueueProcess(process),
+				),
+				R.map(Rx.defer),
+			),
+		),
+		RO.tap(() =>
+			logInfo(`Delete command enqueued`),
+		),
+		R.map(Rx.ignoreElements()),
+	)
+
+const commands = {
+	delete: <ID>(
+		cmd$: Rx.Observable<Command<ID>>,
+	) =>
+		pipe(
+			cmd$,
+			O.filterMap((cmd: Command<ID>) =>
+				cmd.type === 'delete'
+					? OPT.some(cmd)
+					: OPT.none,
+			),
+		),
+}
+
 export function createViewModel<ID>(): ViewModel<
 	UseCases<ID>,
 	Command<ID>,
@@ -188,88 +276,38 @@ export function createViewModel<ID>(): ViewModel<
 	Init
 > {
 	return {
-		transformer: cmd$ =>
-			RO.merge(
-				// On products case
-				pipe(
-					R.asks(
-						(deps: UseCases<ID>) =>
-							deps.products$,
-					),
-					RO.tap(products =>
-						logInfo(
-							`Received ${products.size} product entries`,
-						),
-					),
-					RO.map(toProducts),
-					RO.map(filterInvalid),
-					R.chain(
-						flip(({ processes$ }: UseCases<ID>) =>
-							Rx.combineLatestWith(processes$),
-						),
-					),
-					R.map(
-						Rx.switchMap(
-							([products, processes]) =>
-								pipe(
-									T.fromIO(() =>
-										new Date().getDate(),
-									),
-									Rx.defer,
-									Rx.map(
-										timestamp =>
-											({
-												products,
-												processes,
-												timestamp,
-											}) as const,
-									),
-								),
-						),
-					),
-					RO.map(toProductModels),
-					RO.map(sortByExpDate),
-					RO.map(
-						products =>
-							({
-								products: products,
-								type: 'ready',
-							}) satisfies Model<ID>,
-					),
+		transformer: cmd$ => {
+			cmd$ = pipe(
+				cmd$,
+				Rx.observeOn(Rx.asyncScheduler),
+			)
+
+			return pipe(
+				RO.merge<
+					UseCases<ID>,
+					[Model<ID>, never]
+				>(
+					onProducts(),
+					onDelete(commands.delete(cmd$)),
 				),
-				// On Delete command case
-				pipe(
-					cmd$,
-					O.filterMap(cmd =>
-						cmd.type === 'delete'
-							? OPT.some(cmd)
-							: OPT.none,
-					),
-					R.of,
-					RO.tap(
-						() =>
-							logInfo(
-								`Received delete command`,
-							)<ID>,
-					),
-					RO.map(
-						del =>
-							({
-								type: 'delete',
-								ids: del.ids,
-							}) satisfies ProcessInputDTO<ID>,
-					),
-					RO.mergeMap(
-						flip(({ enqueueProcess }) =>
-							flow(enqueueProcess, Rx.defer),
-						),
-					),
-					RO.tap(() =>
-						logInfo(`Delete command enqueued`),
-					),
-					R.map(Rx.ignoreElements()),
+				R.local(
+					deps =>
+						({
+							products$: Rx.scheduled(
+								deps.products$,
+								Rx.asapScheduler,
+							),
+							processes$: Rx.scheduled(
+								deps.processes$,
+								Rx.asapScheduler,
+							),
+							enqueueProcess: deps.enqueueProcess,
+							log: deps.log,
+							addFailure: deps.addFailure,
+						}) satisfies UseCases<ID>,
 				),
-			),
+			)
+		},
 
 		init: {
 			type: 'init',
