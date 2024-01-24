@@ -5,9 +5,9 @@ import {
 	fromViewModel,
 } from '@/core/controller'
 
-import type { GetProcesses } from '@/app/contract/read/get-processes'
 import type { OnChangeProcesses } from '@/app/contract/read/on-change-processes'
 import type { OnProducts } from '@/app/contract/read/on-products'
+import type { OnceProcesses } from '@/app/contract/read/once-processes'
 import type { AddFailure } from '@/app/contract/write/add-failure'
 import type { AddProduct as AddProductCommand } from '@/app/contract/write/add-product'
 import type { DeleteProductsByIds } from '@/app/contract/write/delete-products-by-ids'
@@ -21,7 +21,7 @@ import * as Overview from '@/app/view-models/overview'
 export interface UseCases<ID> {
 	deleteProductsByIds: DeleteProductsByIds<ID>
 	enqueueProcess: EnqueueProcess<ID>
-	getProcesses: GetProcesses<ID>
+	getProcesses: OnceProcesses<ID>
 	processes$: OnChangeProcesses<ID>
 	addProduct: AddProductCommand
 	addFailure: AddFailure
@@ -32,14 +32,12 @@ export interface UseCases<ID> {
 
 export type OverviewController<ID> = Controller<
 	Overview.Command<ID>,
-	Overview.Model<ID>,
-	Overview.Init
+	Overview.Model<ID>
 >
 
 export type AddProductController = Controller<
 	AddProduct.Command,
-	AddProduct.Model,
-	AddProduct.Init
+	AddProduct.Model
 >
 
 export class App<ID> {

@@ -1,4 +1,4 @@
-import '@fontsource-variable/comfortaa'
+import '@fontsource-variable/comfortaa/index.css'
 import '@fontsource-variable/material-symbols-rounded/full.css'
 import '@fontsource-variable/roboto-flex/full.css'
 import {

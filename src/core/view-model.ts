@@ -1,9 +1,6 @@
-import * as RO from '@fgaudo/fp-ts-rxjs/ReaderObservable'
+import * as RO from '@fgaudo/fp-ts-rxjs/ReaderObservable.js'
 import { Observable } from 'rxjs'
 
-export interface ViewModel<ENV, IN, OUT, INIT> {
-	init: INIT
-	transformer: (
-		obs: Observable<IN>,
-	) => RO.ReaderObservable<ENV, OUT>
-}
+export type ViewModel<ENV, IN, OUT> = (
+	obs: Observable<IN>,
+) => RO.ReaderObservable<ENV, OUT>

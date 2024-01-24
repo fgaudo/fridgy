@@ -1,7 +1,7 @@
+import { fromEquals } from 'fp-ts/Eq'
 import * as RoA from 'fp-ts/ReadonlyArray'
 import * as RoS from 'fp-ts/ReadonlySet'
-import { fromEquals } from 'fp-ts/lib/Eq'
-import { pipe } from 'fp-ts/lib/function'
+import { pipe } from 'fp-ts/function'
 import * as Rx from 'rxjs'
 
 import type { R_OnProducts } from '@/app/contract/read/on-products'

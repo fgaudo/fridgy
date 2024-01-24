@@ -1,6 +1,5 @@
 import { useNavigate } from '@solidjs/router'
-import { fromIO } from 'fp-ts/lib/Task'
-import { flow, pipe } from 'fp-ts/lib/function'
+import { flow, pipe } from 'fp-ts/function'
 import * as Rx from 'rxjs'
 import {
 	type Component,

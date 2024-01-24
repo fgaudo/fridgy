@@ -2,7 +2,7 @@ import type { ProductInputDTO } from '@/app/contract/write/add-product'
 
 export type ProductDTO<ID> = {
 	id: ID
-} & ProductInputDTO
+} & ProductInputDTO<ID>
 
 export const productDataEquals: <ID>(
 	a: ProductDTO<ID>,

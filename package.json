@@ -4,6 +4,7 @@
 	"version": "0.0.0",
 	"type": "module",
 	"scripts": {
+		"test": "node --test --require ts-node/register **/*.spec.ts",
 		"dev": "vite",
 		"build": "tsc && vite build",
 		"lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
@@ -12,7 +13,7 @@
 	"dependencies": {
 		"@capacitor/android": "^5.6.0",
 		"@capacitor/core": "^5.6.0",
-		"@fgaudo/fp-ts-rxjs": "^0.1.0",
+		"@fgaudo/fp-ts-rxjs": "^0.1.2-3",
 		"@fontsource-variable/comfortaa": "^5.0.18",
 		"@fontsource-variable/material-symbols-rounded": "^5.0.21",
 		"@fontsource-variable/roboto-flex": "^5.0.8",
@@ -43,15 +44,19 @@
 		"eslint-import-resolver-typescript": "^3.6.1",
 		"eslint-plugin-import": "^2.29.1",
 		"eslint-plugin-solid": "^0.13.1",
+		"jsdom": "^24.0.0",
 		"postcss": "^8.4.33",
 		"prettier": "^3.2.1",
 		"prettier-plugin-tailwindcss": "^0.5.11",
 		"rollup-plugin-analyzer": "^4.0.0",
+		"rx-sandbox": "^2.0.5",
 		"tailwindcss": "^3.4.1",
+		"ts-node": "^10.9.2",
 		"typescript": "^5.3.3",
 		"vite": "^5.0.11",
 		"vite-plugin-solid": "^2.8.0",
-		"vite-tsconfig-paths": "^4.2.3"
+		"vite-tsconfig-paths": "^4.2.3",
+		"vitest": "^1.2.1"
 	},
 	"packageManager": "npm@10.3.0+sha256.ec92e7332e3f7aef6feb2b3c9585fde534cd56905cf26e77debc69e4e2b44892"
 }

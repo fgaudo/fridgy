@@ -1,6 +1,7 @@
-import * as O from '@fgaudo/fp-ts-rxjs/Observable'
-import * as RO from '@fgaudo/fp-ts-rxjs/ReaderObservable'
+import * as O from '@fgaudo/fp-ts-rxjs/Observable.js'
+import * as RO from '@fgaudo/fp-ts-rxjs/ReaderObservable.js'
 import * as E from 'fp-ts/Either'
+import * as Eq from 'fp-ts/Eq'
 import * as OPT from 'fp-ts/Option'
 import * as Ord from 'fp-ts/Ord'
 import * as Ordering from 'fp-ts/Ordering'
@@ -12,7 +13,6 @@ import {
 	identity,
 	pipe,
 } from 'fp-ts/function'
-import * as Eq from 'fp-ts/lib/Eq'
 import * as Rx from 'rxjs'
 
 import * as RoNeS from '@/core/readonly-non-empty-set'
@@ -29,7 +29,7 @@ import {
 import type { OnChangeProcesses } from '@/app/contract/read/on-change-processes'
 import type { OnProducts } from '@/app/contract/read/on-products'
 import type { ProcessDTO } from '@/app/contract/read/types/process'
-import { type ProductDTO } from '@/app/contract/read/types/product'
+import type { ProductDTO } from '@/app/contract/read/types/product'
 import type { AddFailure } from '@/app/contract/write/add-failure'
 import type {
 	EnqueueProcess,
@@ -43,10 +43,6 @@ export interface ProductModel<ID> {
 	expDate: number
 	deleting: boolean
 	isExpired: boolean
-}
-
-export interface Init {
-	type: 'init'
 }
 
 export interface Model<ID> {
@@ -272,45 +268,11 @@ const commands = {
 export function createViewModel<ID>(): ViewModel<
 	UseCases<ID>,
 	Command<ID>,
-	Model<ID>,
-	Init
+	Model<ID>
 > {
-	return {
-		transformer: cmd$ => {
-			cmd$ = pipe(
-				cmd$,
-				Rx.observeOn(Rx.asyncScheduler),
-			)
-
-			return pipe(
-				RO.merge<
-					UseCases<ID>,
-					[Model<ID>, never]
-				>(
-					onProducts(),
-					onDelete(commands.delete(cmd$)),
-				),
-				R.local(
-					deps =>
-						({
-							products$: Rx.scheduled(
-								deps.products$,
-								Rx.asapScheduler,
-							),
-							processes$: Rx.scheduled(
-								deps.processes$,
-								Rx.asapScheduler,
-							),
-							enqueueProcess: deps.enqueueProcess,
-							log: deps.log,
-							addFailure: deps.addFailure,
-						}) satisfies UseCases<ID>,
-				),
-			)
-		},
-
-		init: {
-			type: 'init',
-		},
-	}
+	return cmd$ =>
+		RO.merge<UseCases<ID>, [Model<ID>, never]>(
+			onProducts(),
+			onDelete(commands.delete(cmd$)),
+		)
 }

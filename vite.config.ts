@@ -1,3 +1,4 @@
+/// <reference types="vitest" />
 import analyze from 'rollup-plugin-analyzer'
 import { defineConfig } from 'vite'
 import solid from 'vite-plugin-solid'
@@ -9,5 +10,8 @@ export default defineConfig({
 		rollupOptions: {
 			plugins: [analyze()],
 		},
+	},
+	test: {
+		dir: './src',
 	},
 })

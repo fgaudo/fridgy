@@ -2,7 +2,7 @@ import {
 	type Either,
 	left,
 	right,
-} from 'fp-ts/lib/Either'
+} from 'fp-ts/Either'
 import { type Newtype, iso } from 'newtype-ts'
 
 import type { AtLeastOne } from '@/core/types'
