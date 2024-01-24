@@ -1,4 +1,4 @@
-import * as R from 'fp-ts/Reader'
+import { reader as R } from 'fp-ts'
 import { Observable } from 'rxjs'
 
 import type { ProcessDTO } from '@/app/contract/read/types/process'

@@ -1,17 +1,22 @@
 import * as OE from '@fgaudo/fp-ts-rxjs/ObservableEither.js'
 import * as RO from '@fgaudo/fp-ts-rxjs/ReaderObservable.js'
 import * as ROE from '@fgaudo/fp-ts-rxjs/ReaderObservableEither.js'
-import * as E from 'fp-ts/Either'
-import * as IO from 'fp-ts/IO'
-import * as R from 'fp-ts/Reader'
-import * as RT from 'fp-ts/ReaderTask'
-import * as T from 'fp-ts/Task'
-import { flip, flow, pipe } from 'fp-ts/function'
+import {
+	either as E,
+	function as F,
+	io as IO,
+	reader as R,
+	readerTask as RT,
+	task as T,
+} from 'fp-ts'
 import * as Rx from 'rxjs'
 
 import type { ViewModel } from '@/core/view-model'
 
 import type { AddProduct as AddProductCommand } from '@/app/contract/write/add-product'
+
+const pipe = F.pipe
+const flow = F.flow
 
 interface ProductData {
 	name: string

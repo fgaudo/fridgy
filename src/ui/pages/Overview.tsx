@@ -1,5 +1,5 @@
 import { useNavigate } from '@solidjs/router'
-import { flow, pipe } from 'fp-ts/function'
+import { function as F } from 'fp-ts'
 import * as Rx from 'rxjs'
 import {
 	type Component,
@@ -20,6 +20,8 @@ import { SmallTopAppBar } from '@/ui/widgets/SmallTopAppBar'
 
 // eslint-disable-next-line @typescript-eslint/consistent-type-definitions
 type Command = { type: 'openAddProduct' }
+
+const flow = F.flow
 
 const Overview =
 	(controller: OverviewController): Component =>

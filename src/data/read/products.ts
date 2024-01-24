@@ -1,12 +1,14 @@
 import * as O from '@fgaudo/fp-ts-rxjs/Observable.js'
 import * as RO from '@fgaudo/fp-ts-rxjs/ReaderObservable.js'
-import * as E from 'fp-ts/Either'
-import { fromEquals } from 'fp-ts/Eq'
-import * as OPT from 'fp-ts/Option'
-import * as R from 'fp-ts/Reader'
-import * as RoA from 'fp-ts/ReadonlyArray'
-import * as RoS from 'fp-ts/ReadonlySet'
-import { pipe } from 'fp-ts/function'
+import {
+	either as E,
+	eq as Eq,
+	function as F,
+	option as OPT,
+	reader as R,
+	readonlyArray as RoA,
+	readonlySet as RoS,
+} from 'fp-ts'
 import * as t from 'io-ts'
 import { withFallback } from 'io-ts-types'
 import * as Rx from 'rxjs'
@@ -19,6 +21,8 @@ import {
 
 import { executeSql } from '@/data/helpers'
 import { log } from '@/data/write/log'
+
+const pipe = F.pipe
 
 interface Deps {
 	db: SQLitePlugin.Database
@@ -69,7 +73,7 @@ const mapData = RoA.reduce<
 	return pipe(
 		set,
 		RoS.insert(
-			fromEquals(productDataEquals<string>),
+			Eq.fromEquals(productDataEquals<string>),
 		)(productData),
 	)
 })

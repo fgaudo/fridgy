@@ -1,11 +1,15 @@
-import { fromEquals } from 'fp-ts/Eq'
-import * as RoA from 'fp-ts/ReadonlyArray'
-import * as RoS from 'fp-ts/ReadonlySet'
-import { pipe } from 'fp-ts/function'
+import {
+	eq as Eq,
+	function as F,
+	readonlyArray as RoA,
+	readonlySet as RoS,
+} from 'fp-ts'
 import * as Rx from 'rxjs'
 
 import type { R_OnProducts } from '@/app/contract/read/on-products'
 import { productDataEquals } from '@/app/contract/read/types/product'
+
+const pipe = F.pipe
 
 const productSamples = [
 	'Milk',
@@ -25,7 +29,7 @@ export const products: R_OnProducts<
 		Rx.timer(2000),
 		Rx.map(() =>
 			RoS.fromReadonlyArray(
-				fromEquals(productDataEquals<string>),
+				Eq.fromEquals(productDataEquals<string>),
 			)(
 				pipe(
 					Array(20).keys(),

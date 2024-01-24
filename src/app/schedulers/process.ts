@@ -1,10 +1,12 @@
 import * as OE from '@fgaudo/fp-ts-rxjs/ObservableEither.js'
 import * as RO from '@fgaudo/fp-ts-rxjs/ReaderObservable.js'
-import * as E from 'fp-ts/Either'
-import * as ORD from 'fp-ts/Ord'
-import * as R from 'fp-ts/Reader'
-import * as RoS from 'fp-ts/ReadonlySet'
-import { flip, pipe } from 'fp-ts/function'
+import {
+	either as E,
+	function as F,
+	ord as ORD,
+	reader as R,
+	readonlySet as RoS,
+} from 'fp-ts'
 import * as Rx from 'rxjs'
 
 import type { OnChangeProcesses } from '@/app/contract/read/on-change-processes'
@@ -12,6 +14,8 @@ import type { OnceProcesses } from '@/app/contract/read/once-processes'
 import { processesCompare } from '@/app/contract/read/types/process'
 import type { DeleteProductsByIds } from '@/app/contract/write/delete-products-by-ids'
 import type { RemoveProcess } from '@/app/contract/write/remove-process'
+
+const pipe = F.pipe
 
 interface Deps<ID> {
 	interval: number

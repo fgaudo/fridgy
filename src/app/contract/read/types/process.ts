@@ -1,4 +1,4 @@
-import type { Ordering } from 'fp-ts/Ordering'
+import type { Ordering } from 'fp-ts'
 
 import type { ProcessInputDTO } from '@/app/contract/write/enqueue-process'
 

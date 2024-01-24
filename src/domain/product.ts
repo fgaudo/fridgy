@@ -1,8 +1,4 @@
-import {
-	type Either,
-	left,
-	right,
-} from 'fp-ts/Either'
+import { either as E } from 'fp-ts'
 import { type Newtype, iso } from 'newtype-ts'
 
 import type { AtLeastOne } from '@/core/types'
@@ -46,7 +42,7 @@ interface Errors {
 export const createProduct: (f: {
 	name: string
 	expDate: number
-}) => Either<
+}) => E.Either<
 	AtLeastOne<Errors>,
 	Product
 > = productData => {
@@ -60,7 +56,7 @@ export const createProduct: (f: {
 	}
 
 	if (Object.keys(errors).length > 0) {
-		return left(errors as AtLeastOne<Errors>)
+		return E.left(errors as AtLeastOne<Errors>)
 	}
-	return right(isoProduct.wrap(productData))
+	return E.right(isoProduct.wrap(productData))
 }

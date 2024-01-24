@@ -23,7 +23,7 @@ export interface UseCases<ID> {
 	enqueueProcess: EnqueueProcess<ID>
 	getProcesses: OnceProcesses<ID>
 	processes$: OnChangeProcesses<ID>
-	addProduct: AddProductCommand
+	addProduct: AddProductCommand<ID>
 	addFailure: AddFailure
 	removeProcess: RemoveProcess<ID>
 	products$: OnProducts<ID>
@@ -50,7 +50,7 @@ export class App<ID> {
 		})
 
 		this.addProduct = fromViewModel(
-			AddProduct.createViewModel,
+			AddProduct.createViewModel<ID>(),
 		)({ ...useCases })
 
 		this.scheduler = createScheduler<ID>()({

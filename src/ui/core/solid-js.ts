@@ -1,9 +1,11 @@
-import { pipe } from 'fp-ts/function'
+import { function as F } from 'fp-ts'
 import * as Rx from 'rxjs'
 import {
 	type Accessor,
 	onCleanup,
 } from 'solid-js'
+
+const pipe = F.pipe
 
 export function withDefault<T>(
 	accessor: Accessor<T | undefined>,

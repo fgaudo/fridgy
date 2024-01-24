@@ -1,5 +1,7 @@
-import * as RTE from 'fp-ts/ReaderTaskEither'
-import * as TE from 'fp-ts/TaskEither'
+import {
+	readerTaskEither as RTE,
+	taskEither as TE,
+} from 'fp-ts'
 
 export interface ProductInputDTO<ID> {
 	id: ID

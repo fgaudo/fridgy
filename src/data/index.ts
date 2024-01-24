@@ -1,8 +1,9 @@
-import * as R from 'fp-ts/Reader'
-import type { Reader } from 'fp-ts/Reader'
-import * as RT from 'fp-ts/ReaderTask'
-import * as RTE from 'fp-ts/ReaderTaskEither'
-import * as RoS from 'fp-ts/ReadonlySet'
+import {
+	reader as R,
+	readerTask as RT,
+	readerTaskEither as RTE,
+	readonlySet as RoS,
+} from 'fp-ts'
 import * as Rx from 'rxjs'
 
 import type * as App from '@/app'
@@ -20,7 +21,7 @@ type ID = string
 export type OverviewController =
 	App.OverviewController<ID>
 
-export const appUseCases: Reader<
+export const appUseCases: R.Reader<
 	Deps,
 	App.UseCases<ID>
 > = () => ({

@@ -1,10 +1,14 @@
-import type { Eq } from 'fp-ts/Eq'
-import * as OPT from 'fp-ts/Option'
-import type { Ord } from 'fp-ts/Ord'
-import * as RoNeA from 'fp-ts/ReadonlyNonEmptyArray'
-import * as RoS from 'fp-ts/ReadonlySet'
-import { pipe } from 'fp-ts/function'
+import {
+	type eq as Eq,
+	function as F,
+	option as OPT,
+	type ord as Ord,
+	readonlyNonEmptyArray as RoNeA,
+	readonlySet as RoS,
+} from 'fp-ts'
 import { type Newtype, iso } from 'newtype-ts'
+
+const pipe = F.pipe
 
 export type ReadonlyNonEmptySet<A> = Newtype<
 	{ readonly ReadonlyNonEmptySet: unique symbol },
@@ -20,7 +24,7 @@ export function singleton<A>(
 }
 
 export function fromValues<A>(
-	eq: Eq<A>,
+	eq: Eq.Eq<A>,
 ): (
 	...a: RoNeA.ReadonlyNonEmptyArray<A>
 ) => ReadonlyNonEmptySet<A> {
@@ -49,7 +53,7 @@ export function toReadonlySet<A>(
 }
 
 export function toReadonlyNonEmptyArray<A>(
-	ord: Ord<A>,
+	ord: Ord.Ord<A>,
 ): (
 	set: ReadonlyNonEmptySet<A>,
 ) => RoNeA.ReadonlyNonEmptyArray<A> {

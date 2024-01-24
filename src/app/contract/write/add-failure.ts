@@ -1,5 +1,7 @@
-import * as RT from 'fp-ts/ReaderTask'
-import * as T from 'fp-ts/Task'
+import {
+	readerTask as RT,
+	task as T,
+} from 'fp-ts'
 
 export interface Failure {
 	name: string

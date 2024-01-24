@@ -1,1 +1,1 @@
-import { type ReaderObservable } from '@fgaudo/fp-ts-rxjs/ReaderObservable.js'
+import * as L from 'fp-ts'

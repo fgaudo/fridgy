@@ -1,18 +1,16 @@
 import * as O from '@fgaudo/fp-ts-rxjs/Observable.js'
 import * as RO from '@fgaudo/fp-ts-rxjs/ReaderObservable.js'
-import * as E from 'fp-ts/Either'
-import * as Eq from 'fp-ts/Eq'
-import * as OPT from 'fp-ts/Option'
-import * as Ord from 'fp-ts/Ord'
-import * as Ordering from 'fp-ts/Ordering'
-import * as R from 'fp-ts/Reader'
-import * as RoS from 'fp-ts/ReadonlySet'
-import * as T from 'fp-ts/Task'
 import {
-	flip,
-	identity,
-	pipe,
-} from 'fp-ts/function'
+	either as E,
+	eq as Eq,
+	function as F,
+	option as OPT,
+	ord as Ord,
+	ordering as Ordering,
+	reader as R,
+	readonlySet as RoS,
+	task as T,
+} from 'fp-ts'
 import * as Rx from 'rxjs'
 
 import * as RoNeS from '@/core/readonly-non-empty-set'
@@ -36,6 +34,8 @@ import type {
 	ProcessInputDTO,
 } from '@/app/contract/write/enqueue-process'
 import type { Log } from '@/app/contract/write/log'
+
+const pipe = F.pipe
 
 export interface ProductModel<ID> {
 	id: ID

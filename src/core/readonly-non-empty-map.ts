@@ -1,9 +1,7 @@
 import {
-	type Option,
-	none,
-	some,
-} from 'fp-ts/Option'
-import * as RoM from 'fp-ts/ReadonlyMap'
+	option as OPT,
+	readonlyMap as RoM,
+} from 'fp-ts'
 import { type Newtype, iso } from 'newtype-ts'
 
 export type ReadonlyNonEmptyMap<A, B> = Newtype<
@@ -22,10 +20,10 @@ export function singleton<A, B>(
 
 export function fromMap<A, B>(
 	map: ReadonlyMap<A, B>,
-): Option<ReadonlyNonEmptyMap<A, B>> {
+): OPT.Option<ReadonlyNonEmptyMap<A, B>> {
 	return map.size === 0
-		? none
-		: some(
+		? OPT.none
+		: OPT.some(
 				iso<ReadonlyNonEmptyMap<A, B>>().wrap(
 					map,
 				),

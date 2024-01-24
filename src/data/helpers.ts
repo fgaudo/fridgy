@@ -1,6 +1,8 @@
-import * as E from 'fp-ts/Either'
-import * as RTE from 'fp-ts/ReaderTaskEither'
-import * as RoA from 'fp-ts/ReadonlyArray'
+import {
+	either as E,
+	readerTaskEither as RTE,
+	readonlyArray as RoA,
+} from 'fp-ts'
 import type { ReadonlyNonEmptyArray } from 'io-ts-types'
 
 import type { LogType } from '@/app/contract/write/log'
