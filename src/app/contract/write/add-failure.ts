@@ -1,7 +1,5 @@
-import {
-	readerTask as RT,
-	task as T,
-} from 'fp-ts'
+import type { ReaderObservable } from '@fgaudo/fp-ts-rxjs/ReaderObservable.js'
+import type { Observable } from 'rxjs'
 
 export interface Failure {
 	name: string
@@ -9,8 +7,8 @@ export interface Failure {
 }
 export type AddFailure = (
 	failure: Failure,
-) => T.Task<void>
+) => Observable<void>
 
 export type R_AddFailure<ENV> = (
 	failure: Failure,
-) => RT.ReaderTask<ENV, void>
+) => ReaderObservable<ENV, void>

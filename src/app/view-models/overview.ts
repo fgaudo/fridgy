@@ -24,18 +24,13 @@ import {
 	name,
 } from '@/domain/product'
 
-import type { OnChangeProcesses } from '@/app/contract/read/on-change-processes'
 import type { OnProducts } from '@/app/contract/read/on-products'
-import type { ProcessDTO } from '@/app/contract/read/types/process'
 import type { ProductDTO } from '@/app/contract/read/types/product'
 import type { AddFailure } from '@/app/contract/write/add-failure'
-import type {
-	EnqueueProcess,
-	ProcessInputDTO,
-} from '@/app/contract/write/enqueue-process'
 import type { Log } from '@/app/contract/write/log'
 
 const pipe = F.pipe
+const flip = F.flip
 
 export interface ProductModel<ID> {
 	id: ID
@@ -58,8 +53,6 @@ interface Delete<ID> {
 export type Command<ID> = Delete<ID>
 
 export interface UseCases<ID> {
-	processes$: OnChangeProcesses<ID>
-	enqueueProcess: EnqueueProcess<ID>
 	products$: OnProducts<ID>
 	log: Log
 	addFailure: AddFailure
@@ -104,7 +97,7 @@ const filterInvalid = <ID>(
 				id: ID
 				product: Product
 			}>((a, b) => a.id === b.id),
-		)(identity),
+		)(F.identity),
 	)
 
 const sortByExpDate = <ID>(
@@ -124,14 +117,12 @@ const sortByExpDate = <ID>(
 
 const toProductModels = <ID>({
 	products,
-	processes,
 	timestamp,
 }: {
 	products: ReadonlySet<{
 		id: ID
 		product: Product
 	}>
-	processes: ReadonlySet<ProcessDTO<ID>>
 	timestamp: number
 }) =>
 	pipe(
@@ -169,7 +160,6 @@ const logInfo =
 		log('info', message)
 
 interface OnProductsDeps<ID> {
-	processes$: OnChangeProcesses<ID>
 	products$: OnProducts<ID>
 	log: Log
 }
@@ -236,13 +226,9 @@ const onDelete = <ID>(
 					ids: del.ids,
 				}) satisfies ProcessInputDTO<ID>,
 		),
-		RO.mergeMap(process =>
-			pipe(
-				R.asks(
-					({ enqueueProcess }: UseCases<ID>) =>
-						enqueueProcess(process),
-				),
-				R.map(Rx.defer),
+		RO.mergeMap(
+			flip(
+				({ enqueueProcess }) => enqueueProcess,
 			),
 		),
 		RO.tap(() =>

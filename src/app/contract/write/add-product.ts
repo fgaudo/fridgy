@@ -1,17 +1,18 @@
-import {
-	readerTaskEither as RTE,
-	taskEither as TE,
-} from 'fp-ts'
+import type { Reader } from 'fp-ts/lib/Reader'
+import type { TaskOption } from 'fp-ts/lib/TaskOption'
 
 export interface ProductInputDTO<ID> {
 	id: ID
 	name: string
-	expDate: number
+	expDate: {
+		timestamp: number
+		isBestBefore: boolean
+	}
 }
 export type AddProduct<ID> = (
 	product: ProductInputDTO<ID>,
-) => TE.TaskEither<Error, void>
+) => TaskOption<Error>
 
 export type R_AddProduct<ENV, ID> = (
 	product: ProductInputDTO<ID>,
-) => RTE.ReaderTaskEither<ENV, Error, void>
+) => Reader<ENV, TaskOption<Error>>

@@ -1,14 +1,12 @@
-import {
-	readerTaskEither as RTE,
-	taskEither as TE,
-} from 'fp-ts'
+import type { Reader } from 'fp-ts/lib/Reader'
+import type { TaskOption } from 'fp-ts/lib/TaskOption'
 
 import type { ReadonlyNonEmptySet } from '@/core/readonly-non-empty-set'
 
 export type DeleteProductsByIds<ID> = (
 	ids: ReadonlyNonEmptySet<ID>,
-) => TE.TaskEither<Error, void>
+) => TaskOption<Error>
 
 export type R_DeleteProductsByIds<ENV, ID> = (
 	ids: ReadonlyNonEmptySet<ID>,
-) => RTE.ReaderTaskEither<ENV, Error, void>
+) => Reader<ENV, TaskOption<Error>>

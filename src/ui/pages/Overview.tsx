@@ -78,7 +78,7 @@ const Overview =
 					<div class="font-titleLarge text-titleLarge leading-titleLarge">
 						Overview
 					</div>
-					<md-icon-button class="ml-auto mr-[8px]">
+					<md-icon-button class="ml-auto mr-[-8px]">
 						<md-icon>more_vert</md-icon>
 					</md-icon-button>
 				</SmallTopAppBar>
