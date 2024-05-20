@@ -1,18 +1,17 @@
 import type { Reader } from 'fp-ts/lib/Reader'
 import type { TaskOption } from 'fp-ts/lib/TaskOption'
 
-export interface ProductInputDTO<ID> {
-	id: ID
+export interface ProductInputDTO {
 	name: string
 	expDate: {
 		timestamp: number
 		isBestBefore: boolean
 	}
 }
-export type AddProduct<ID> = (
-	product: ProductInputDTO<ID>,
+export type AddProduct = (
+	product: ProductInputDTO,
 ) => TaskOption<Error>
 
-export type R_AddProduct<ENV, ID> = (
-	product: ProductInputDTO<ID>,
+export type R_AddProduct<ENV> = (
+	product: ProductInputDTO,
 ) => Reader<ENV, TaskOption<Error>>

@@ -11,39 +11,39 @@ import type { Log } from '@/app/contract/write/log'
 import * as AddProduct from '@/app/view-models/add-product'
 import * as Overview from '@/app/view-models/overview'
 
-export interface UseCases<ID> {
-	deleteProductsByIds: DeleteProductsByIds<ID>
-	addProduct: AddProductCommand<ID>
+export interface UseCases {
+	deleteProductsByIds: DeleteProductsByIds
+	addProduct: AddProductCommand
 	addFailure: AddFailure
-	products$: OnProducts<ID>
+	products$: OnProducts
 	appLog: Log
 }
 
-export type OverviewController<ID> = Controller<
-	Overview.Command<ID>,
-	Overview.Model<ID>
+export type OverviewController = Controller<
+	Overview.Command,
+	Overview.Model
 >
 
-export type AddProductController<ID> = Controller<
-	AddProduct.Command<ID>,
+export type AddProductController = Controller<
+	AddProduct.Command,
 	AddProduct.Model
 >
 
-export class App<ID> {
-	constructor(useCases: UseCases<ID>) {
+export class App {
+	constructor(useCases: UseCases) {
 		this.overview = fromViewModel(
-			Overview.createViewModel<ID>(),
+			Overview.createViewModel(),
 		)({
 			...useCases,
 			log: useCases.appLog,
 		})
 
 		this.addProduct = fromViewModel(
-			AddProduct.createViewModel<ID>(),
+			AddProduct.createViewModel(),
 		)({ ...useCases })
 	}
 
-	readonly overview: OverviewController<ID>
+	readonly overview: OverviewController
 
-	readonly addProduct: AddProductController<ID>
+	readonly addProduct: AddProductController
 }

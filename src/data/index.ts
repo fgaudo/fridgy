@@ -17,14 +17,12 @@ interface Deps {
 	//	readonly db: SQLitePlugin.Database
 }
 
-type ID = string
-
 export type OverviewController =
-	App.OverviewController<ID>
+	App.OverviewController
 
 export const appUseCases: R.Reader<
 	Deps,
-	App.UseCases<ID>
+	App.UseCases
 > = () => ({
 	addProduct: () => RTE.of(undefined)(undefined),
 	processes$: R.of(

@@ -3,11 +3,11 @@ import { Observable } from 'rxjs'
 
 import type { ProductDTO } from '@/app/contract/read/types/product'
 
-export type OnProducts<ID> = Observable<
-	ReadonlySet<ProductDTO<ID>>
+export type OnProducts = Observable<
+	ReadonlySet<ProductDTO>
 >
 
-export type R_OnProducts<ENV, ID> = R.Reader<
+export type R_OnProducts<ENV> = R.Reader<
 	ENV,
-	Observable<ReadonlySet<ProductDTO<ID>>>
+	Observable<ReadonlySet<ProductDTO>>
 >

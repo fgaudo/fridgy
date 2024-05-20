@@ -13,6 +13,7 @@ import {
 } from 'fp-ts'
 import * as Rx from 'rxjs'
 
+import type { Id } from '@/core/id'
 import type { ViewModel } from '@/core/view-model'
 
 import type {
@@ -23,8 +24,8 @@ import type {
 const pipe = F.pipe
 const flow = F.flow
 
-interface ProductData<ID> {
-	id: ID
+interface ProductData {
+	id: Id
 	name: string
 	expDate: {
 		timestamp: number
@@ -32,14 +33,14 @@ interface ProductData<ID> {
 	}
 }
 
-export type Command<ID> =
+export type Command =
 	| {
 			type: 'add'
-			product: ProductData<ID>
+			product: ProductData
 	  }
 	| {
 			type: 'fieldsChange'
-			fields: ProductData<ID>
+			fields: ProductData
 	  }
 
 interface FieldsModel {
@@ -72,12 +73,12 @@ export type Model =
 	  }
 	| { type: 'adding' }
 
-interface Deps<ID> {
-	addProduct: AddProductCommand<ID>
+interface Deps {
+	addProduct: AddProductCommand
 }
 
-const validateInput = <ID>(
-	fields: ProductData<ID>,
+const validateInput = (
+	fields: ProductData,
 	timestamp: number,
 ): FieldsModel => ({
 	expDate:
@@ -101,79 +102,77 @@ const initFields: FieldsModel = {
 	expDate: { status: 'init' },
 }
 
-export const createViewModel: <ID>() => ViewModel<
-	Deps<ID>,
-	Command<ID>,
+export const createViewModel: () => ViewModel<
+	Deps,
+	Command,
 	Model
-> =
-	<ID>() =>
-	(cmd$: Rx.Observable<Command<ID>>) =>
-		pipe(
-			R.of(cmd$),
-			RO.exhaustMap(cmd => {
-				switch (cmd.type) {
-					case 'fieldsChange':
-						return pipe(
-							Rx.defer(() =>
-								Rx.of(new Date().getDate()),
+> = () => (cmd$: Rx.Observable<Command>) =>
+	pipe(
+		R.of(cmd$),
+		RO.exhaustMap(cmd => {
+			switch (cmd.type) {
+				case 'fieldsChange':
+					return pipe(
+						Rx.defer(() =>
+							Rx.of(new Date().getDate()),
+						),
+						Rx.map(timestamp =>
+							validateInput(
+								cmd.fields,
+								timestamp,
 							),
-							Rx.map(timestamp =>
-								validateInput(
-									cmd.fields,
-									timestamp,
-								),
-							),
-							Rx.map(
-								fields =>
+						),
+						Rx.map(
+							fields =>
+								({
+									type: 'ready',
+									model: fields,
+								}) satisfies Model,
+						),
+						R.of,
+					)
+				case 'add':
+					return pipe(
+						R.asks((deps: Deps) =>
+							deps.addProduct(cmd.product),
+						),
+						R.map(
+							TO.match(
+								() =>
 									({
 										type: 'ready',
-										model: fields,
+										model: {
+											name: {
+												status: 'ok',
+											},
+											expDate: {
+												status: 'ok',
+											},
+										},
+									}) satisfies Model,
+								() =>
+									({
+										type: 'ready',
+										model: initFields,
 									}) satisfies Model,
 							),
-							R.of,
-						)
-					case 'add':
-						return pipe(
-							R.asks((deps: Deps<ID>) =>
-								deps.addProduct(cmd.product),
-							),
-							R.map(
-								TO.match(
-									() =>
-										({
-											type: 'ready',
-											model: {
-												name: {
-													status: 'ok',
-												},
-												expDate: {
-													status: 'ok',
-												},
-											},
-										}) satisfies Model,
-									() =>
-										({
-											type: 'ready',
-											model: initFields,
-										}) satisfies Model,
-								),
-							),
-							R.map(Rx.defer),
-							R.map(
-								Rx.startWith({
-									type: 'adding',
-								} satisfies Model),
-							),
-						)
-				}
-			}),
-			R.local(
-				(deps: Deps<ID>) =>
-					({
-						addProduct: flow(
-							deps.addProduct,
-							Rx.first(),
 						),
-					}) satisfies Deps<ID>,
-			),
-		)
+						R.map(Rx.defer),
+						R.map(
+							Rx.startWith({
+								type: 'adding',
+							} satisfies Model),
+						),
+					)
+			}
+		}),
+		R.local(
+			(deps: Deps) =>
+				({
+					addProduct: flow(
+						deps.addProduct,
+						Rx.first(),
+					),
+				}) satisfies Deps,
+		),
+	)

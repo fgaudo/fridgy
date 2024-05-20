@@ -4,15 +4,24 @@ import {
 	either as E,
 	eq as Eq,
 	function as F,
+	io as IO,
+	number as N,
 	option as OPT,
 	ord as Ord,
 	ordering as Ordering,
 	reader as R,
+	readerIO as RIO,
+	readonlyArray as RoA,
 	readonlySet as RoS,
+	string as S,
+	separated as SEP,
 	task as T,
 } from 'fp-ts'
+import { sequenceArray } from 'fp-ts/lib/IO'
+import { fromOptionK } from 'fp-ts/lib/Refinement'
 import * as Rx from 'rxjs'
 
+import * as I from '@/core/id'
 import * as RoNeS from '@/core/readonly-non-empty-set'
 import { type ViewModel } from '@/core/view-model'
 
@@ -25,240 +34,228 @@ import {
 } from '@/domain/product'
 
 import type { OnProducts } from '@/app/contract/read/on-products'
-import type { ProductDTO } from '@/app/contract/read/types/product'
+import { type ProductDTO } from '@/app/contract/read/types/product'
 import type { AddFailure } from '@/app/contract/write/add-failure'
 import type { Log } from '@/app/contract/write/log'
 
 const pipe = F.pipe
 const flip = F.flip
+const flow = F.flow
 
-export interface ProductModel<ID> {
-	id: ID
+export interface ProductModel {
+	id: I.Id
 	name: string
 	expDate: number
 	deleting: boolean
 	isExpired: boolean
 }
 
-export interface Model<ID> {
-	type: 'ready'
-	products: readonly ProductModel<ID>[]
+const ProductModel = {
+	Eq: Eq.contramap((a: ProductModel) => a.id)(
+		I.Eq,
+	),
+	OrdOldest: pipe(
+		N.Ord,
+		Ord.contramap(
+			(model: ProductModel) => model.expDate,
+		),
+	),
+	OrdNewest: pipe(
+		N.Ord,
+		Ord.contramap(
+			(model: ProductModel) => model.expDate,
+		),
+		Ord.reverse,
+	),
+} as const
+
+export interface Model {
+	type: 'ready' | 'deleting'
+	products: readonly ProductModel[]
 }
 
-interface Delete<ID> {
+interface Delete {
 	type: 'delete'
-	ids: RoNeS.ReadonlyNonEmptySet<ID>
+	ids: RoNeS.ReadonlyNonEmptySet<I.Id>
 }
 
-export type Command<ID> = Delete<ID>
+export type Command = Delete
 
-export interface UseCases<ID> {
-	products$: OnProducts<ID>
+export interface UseCases {
+	products$: OnProducts
 	log: Log
 	addFailure: AddFailure
 }
 
-const toProducts = <ID>(
-	foodDTOs: ReadonlySet<ProductDTO<ID>>,
-) =>
-	pipe(
-		foodDTOs,
-		RoS.map(
-			OPT.getEq(
-				Eq.fromEquals<{
-					id: ID
-					product: Product
-				}>((a, b) => a.id === b.id),
-			),
-		)(foodDTO =>
-			pipe(
-				createProduct(foodDTO),
-				E.map(
-					product =>
-						({
-							id: foodDTO.id,
-							product: product,
-						}) as const,
-				),
-				OPT.getRight,
-			),
-		),
-	)
+interface ProductEntity {
+	id: I.Id
+	product: Product
+}
 
-const filterInvalid = <ID>(
-	set: ReadonlySet<
-		OPT.Option<{ id: ID; product: Product }>
+const ProductEntity = {
+	Eq: Eq.contramap(({ id }: ProductEntity) => id)(
+		I.Eq,
+	),
+} as const
+
+const toProductEntitiesWithInvalid: (
+	foodDTOs: ReadonlySet<ProductDTO>,
+) => SEP.Separated<
+	ReadonlySet<I.Id>,
+	ReadonlySet<ProductEntity>
+> = RoS.partitionMap(
+	I.Eq,
+	ProductEntity.Eq,
+)(foodDTO =>
+	pipe(
+		createProduct({
+			name: foodDTO.name,
+			expDate: foodDTO.expDate.timestamp,
+		}),
+		E.bimap(
+			() => foodDTO.id,
+			product =>
+				({
+					id: foodDTO.id,
+					product,
+				}) as const,
+		),
+	),
+)
+
+const discardInvalid: (
+	set: SEP.Separated<
+		ReadonlySet<I.Id>,
+		ReadonlySet<ProductEntity>
 	>,
-) =>
-	pipe(
-		set,
-		RoS.filterMap(
-			Eq.fromEquals<{
-				id: ID
-				product: Product
-			}>((a, b) => a.id === b.id),
-		)(F.identity),
-	)
+) => ReadonlySet<ProductEntity> = SEP.right
 
-const sortByExpDate = <ID>(
-	set: ReadonlySet<ProductModel<ID>>,
-) =>
-	pipe(
-		set,
-		RoS.toReadonlyArray(
-			Ord.fromCompare(
-				(
-					a: ProductModel<ID>,
-					b: ProductModel<ID>,
-				) => Ordering.sign(a.expDate - b.expDate),
-			),
-		),
-	)
+const sortByExpDate: (
+	set: ReadonlySet<ProductModel>,
+) => readonly ProductModel[] =
+	RoS.toReadonlyArray(ProductModel.OrdNewest)
 
-const toProductModels = <ID>({
+const toProductModels = ({
 	products,
 	timestamp,
 }: {
-	products: ReadonlySet<{
-		id: ID
-		product: Product
-	}>
+	products: ReadonlySet<ProductEntity>
 	timestamp: number
 }) =>
 	pipe(
 		products,
-		RoS.map(
-			Eq.fromEquals<ProductModel<ID>>(
-				(a, b) => a.id === b.id,
-			),
-		)(({ id, product }) => ({
-			id,
-			name: name(product),
-			isExpired: isExpired(product, timestamp),
-			expDate: expDate(product),
-			deleting: pipe(
-				processes,
-				RoS.filter(
-					process => process.type === 'delete',
-				),
-				RoS.some(process =>
-					pipe(
-						process.ids,
-						RoNeS.toReadonlySet,
-						RoS.some(
-							productId => productId === id,
+		RoS.map(ProductModel.Eq)(
+			({ id, product }) => ({
+				id,
+				name: name(product),
+				isExpired: isExpired(product, timestamp),
+				expDate: expDate(product),
+				deleting: pipe(
+					RoS.some(process =>
+						pipe(
+							process.ids,
+							RoNeS.toReadonlySet,
+							RoS.some(
+								productId => productId === id,
+							),
 						),
 					),
 				),
-			),
-		})),
+			}),
+		),
 	)
 
 const logInfo =
 	(message: string) =>
-	<ID>({ log }: UseCases<ID>) =>
+	({ log }: UseCases) =>
 		log('info', message)
 
-interface OnProductsDeps<ID> {
-	products$: OnProducts<ID>
-	log: Log
+function combineLatest2<ENV, A, B>(
+	a: RO.ReaderObservable<ENV, A>,
+	b: RO.ReaderObservable<ENV, B>,
+): R.Reader<ENV, Rx.Observable<[A, B]>> {
+	return env => Rx.combineLatest([a(env), b(env)])
 }
 
-const onProducts = <ID>() =>
-	pipe(
-		R.asks(
-			({ products$ }: OnProductsDeps<ID>) =>
-				products$,
-		),
-		RO.tap(
-			products =>
-				logInfo(
-					`Received ${products.size} product entries`,
-				)<ID>,
-		),
-		RO.map(toProducts),
-		RO.map(filterInvalid),
-		R.chain(
-			flip(({ processes$ }: UseCases<ID>) =>
-				Rx.combineLatestWith(processes$),
-			),
-		),
-		R.map(
-			Rx.switchMap(([products, processes]) =>
-				pipe(
-					T.fromIO(() => new Date().getDate()),
-					Rx.defer,
-					Rx.map(
-						timestamp =>
-							({
-								products,
-								processes,
-								timestamp,
-							}) as const,
-					),
-				),
-			),
-		),
-		RO.map(toProductModels),
-		RO.map(sortByExpDate),
-		RO.map(
-			products =>
-				({
-					products: products,
-					type: 'ready',
-				}) satisfies Model<ID>,
-		),
-	)
-
-const onDelete = <ID>(
-	cmd$: Rx.Observable<Delete<ID>>,
-) =>
-	pipe(
-		R.of(cmd$),
-		RO.tap(
-			() =>
-				logInfo(`Received delete command`)<ID>,
-		),
-		RO.map(
-			del =>
-				({
-					type: 'delete',
-					ids: del.ids,
-				}) satisfies ProcessInputDTO<ID>,
-		),
-		RO.mergeMap(
-			flip(
-				({ enqueueProcess }) => enqueueProcess,
-			),
-		),
-		RO.tap(() =>
-			logInfo(`Delete command enqueued`),
-		),
-		R.map(Rx.ignoreElements()),
-	)
-
-const commands = {
-	delete: <ID>(
-		cmd$: Rx.Observable<Command<ID>>,
-	) =>
-		pipe(
-			cmd$,
-			O.filterMap((cmd: Command<ID>) =>
-				cmd.type === 'delete'
-					? OPT.some(cmd)
-					: OPT.none,
-			),
-		),
-}
-
-export function createViewModel<ID>(): ViewModel<
-	UseCases<ID>,
-	Command<ID>,
-	Model<ID>
+export function createViewModel(): ViewModel<
+	UseCases,
+	Command,
+	Model
 > {
 	return cmd$ =>
-		RO.merge<UseCases<ID>, [Model<ID>, never]>(
-			onProducts(),
-			onDelete(commands.delete(cmd$)),
+		// ON PRODUCTS
+		pipe(
+			combineLatest2(
+				pipe(
+					R.asks(
+						({ products$ }: UseCases) =>
+							products$,
+					),
+					RO.tap(
+						flow(
+							RoS.size,
+							size => size.toString(10),
+							size =>
+								logInfo(
+									`Received ${size} product entries`,
+								),
+						),
+					),
+					RO.map(toProductEntitiesWithInvalid),
+					RO.tap(
+						flow(
+							SEP.left,
+							RoS.toReadonlyArray<I.Id>(
+								Ord.trivial,
+							),
+							RoA.map(I.toString),
+							RoA.map(id =>
+								logInfo(
+									`Unable to load entity with id ${id}`,
+								),
+							),
+							RIO.sequenceArray,
+						),
+					),
+					RO.map(discardInvalid),
+					R.map(
+						Rx.switchMap(products =>
+							pipe(
+								T.fromIO(() =>
+									new Date().getDate(),
+								),
+								Rx.defer,
+								Rx.map(
+									timestamp =>
+										({
+											products,
+											timestamp,
+										}) as const,
+								),
+							),
+						),
+					),
+					RO.map(toProductModels),
+					RO.map(sortByExpDate),
+				),
+				pipe(
+					R.of(cmd$),
+					RO.exhaustMap(() =>
+						pipe(
+							Rx.of('ready' as const),
+							Rx.startWith('deleting' as const),
+							R.of,
+						),
+					),
+					R.map(Rx.startWith('ready' as const)),
+				),
+			),
+			RO.map(
+				([products, type]) =>
+					({
+						products,
+						type,
+					}) satisfies Model,
+			),
 		)
 }
