@@ -2,7 +2,7 @@ apply plugin: 'com.android.application'
 
 android {
     namespace "net.gaudo.fridgy"
-    compileSdkVersion rootProject.ext.compileSdkVersion
+    compileSdk rootProject.ext.compileSdkVersion
     defaultConfig {
         applicationId "net.gaudo.fridgy"
         minSdkVersion rootProject.ext.minSdkVersion

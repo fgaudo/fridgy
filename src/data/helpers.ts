@@ -49,9 +49,9 @@ export const executeSql: ExecuteSql =
 				resolve(
 					E.left(
 						new Error(
-							`Unexpected error ${sql} [${values?.join(
-								',',
-							)}]`,
+							`Unexpected error ${sql} [${
+								values?.join(',') ?? ''
+							}]`,
 						),
 					),
 				)

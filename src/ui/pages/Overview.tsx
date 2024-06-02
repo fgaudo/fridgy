@@ -96,7 +96,7 @@ const Overview =
 									{(productModel, i) => {
 										createRenderEffect(() => {
 											console.debug(
-												`Received change for element ${i()} \n${JSON.stringify(productModel, null, 2)}`,
+												`Received change for element ${i().toString(10)} \n${JSON.stringify(productModel, null, 2)}`,
 											)
 										})
 										return (

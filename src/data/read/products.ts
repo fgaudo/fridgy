@@ -41,7 +41,7 @@ export const productDecoder = t.readonly(
 )
 const mapData = RoA.reduce<
 	unknown,
-	ReadonlySet<ProductDTO<string>>
+	ReadonlySet<ProductDTO>
 >(RoS.empty, (set, row) => {
 	const productRowEither =
 		productDecoder.decode(row)

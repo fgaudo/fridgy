@@ -1,24 +1,17 @@
-import * as O from '@fgaudo/fp-ts-rxjs/Observable.js'
 import * as RO from '@fgaudo/fp-ts-rxjs/ReaderObservable.js'
 import {
 	either as E,
 	eq as Eq,
 	function as F,
-	io as IO,
 	number as N,
-	option as OPT,
 	ord as Ord,
-	ordering as Ordering,
 	reader as R,
 	readerIO as RIO,
 	readonlyArray as RoA,
 	readonlySet as RoS,
-	string as S,
 	separated as SEP,
 	task as T,
 } from 'fp-ts'
-import { sequenceArray } from 'fp-ts/lib/IO'
-import { fromOptionK } from 'fp-ts/lib/Refinement'
 import * as Rx from 'rxjs'
 
 import * as I from '@/core/id'
@@ -39,14 +32,12 @@ import type { AddFailure } from '@/app/contract/write/add-failure'
 import type { Log } from '@/app/contract/write/log'
 
 const pipe = F.pipe
-const flip = F.flip
 const flow = F.flow
 
 export interface ProductModel {
 	id: I.Id
 	name: string
 	expDate: number
-	deleting: boolean
 	isExpired: boolean
 }
 
@@ -130,7 +121,7 @@ const discardInvalid: (
 	>,
 ) => ReadonlySet<ProductEntity> = SEP.right
 
-const sortByExpDate: (
+const sortByNewest: (
 	set: ReadonlySet<ProductModel>,
 ) => readonly ProductModel[] =
 	RoS.toReadonlyArray(ProductModel.OrdNewest)
@@ -150,17 +141,6 @@ const toProductModels = ({
 				name: name(product),
 				isExpired: isExpired(product, timestamp),
 				expDate: expDate(product),
-				deleting: pipe(
-					RoS.some(process =>
-						pipe(
-							process.ids,
-							RoNeS.toReadonlySet,
-							RoS.some(
-								productId => productId === id,
-							),
-						),
-					),
-				),
 			}),
 		),
 	)
@@ -236,7 +216,7 @@ export function createViewModel(): ViewModel<
 						),
 					),
 					RO.map(toProductModels),
-					RO.map(sortByExpDate),
+					RO.map(sortByNewest),
 				),
 				pipe(
 					R.of(cmd$),
