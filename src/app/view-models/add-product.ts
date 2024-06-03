@@ -92,11 +92,11 @@ const initFields: FieldsModel = {
 	expDate: { status: 'init' },
 }
 
-export const createViewModel: () => ViewModel<
+export const viewModel: ViewModel<
 	Deps,
 	Command,
 	Model
-> = () => (cmd$: Rx.Observable<Command>) =>
+> = cmd$ =>
 	pipe(
 		R.of(cmd$),
 		RO.exhaustMap(cmd => {

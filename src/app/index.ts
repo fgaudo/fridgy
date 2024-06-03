@@ -32,14 +32,14 @@ export type AddProductController = Controller<
 export class App {
 	constructor(useCases: UseCases) {
 		this.overview = fromViewModel(
-			Overview.createViewModel(),
+			Overview.viewModel,
 		)({
 			...useCases,
 			log: useCases.appLog,
 		})
 
 		this.addProduct = fromViewModel(
-			AddProduct.createViewModel(),
+			AddProduct.viewModel,
 		)({ ...useCases })
 	}
 

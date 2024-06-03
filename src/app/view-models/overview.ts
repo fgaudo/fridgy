@@ -157,85 +157,82 @@ function combineLatest2<ENV, A, B>(
 	return env => Rx.combineLatest([a(env), b(env)])
 }
 
-export function createViewModel(): ViewModel<
+export const viewModel: ViewModel<
 	UseCases,
 	Command,
 	Model
-> {
-	return cmd$ =>
-		// ON PRODUCTS
-		pipe(
-			combineLatest2(
-				pipe(
-					R.asks(
-						({ products$ }: UseCases) =>
-							products$,
-					),
-					RO.tap(
-						flow(
-							RoS.size,
-							size => size.toString(10),
-							size =>
-								logInfo(
-									`Received ${size} product entries`,
-								),
-						),
-					),
-					RO.map(toProductEntitiesWithInvalid),
-					RO.tap(
-						flow(
-							SEP.left,
-							RoS.toReadonlyArray<I.Id>(
-								Ord.trivial,
-							),
-							RoA.map(I.toString),
-							RoA.map(id =>
-								logInfo(
-									`Unable to load entity with id ${id}`,
-								),
-							),
-							RIO.sequenceArray,
-						),
-					),
-					RO.map(discardInvalid),
-					R.map(
-						Rx.switchMap(products =>
-							pipe(
-								T.fromIO(() =>
-									new Date().getDate(),
-								),
-								Rx.defer,
-								Rx.map(
-									timestamp =>
-										({
-											products,
-											timestamp,
-										}) as const,
-								),
-							),
-						),
-					),
-					RO.map(toProductModels),
-					RO.map(sortByNewest),
+> = cmd$ =>
+	// ON PRODUCTS
+	pipe(
+		combineLatest2(
+			pipe(
+				R.asks(
+					({ products$ }: UseCases) => products$,
 				),
-				pipe(
-					R.of(cmd$),
-					RO.exhaustMap(() =>
+				RO.tap(
+					flow(
+						RoS.size,
+						size => size.toString(10),
+						size =>
+							logInfo(
+								`Received ${size} product entries`,
+							),
+					),
+				),
+				RO.map(toProductEntitiesWithInvalid),
+				RO.tap(
+					flow(
+						SEP.left,
+						RoS.toReadonlyArray<I.Id>(
+							Ord.trivial,
+						),
+						RoA.map(I.toString),
+						RoA.map(id =>
+							logInfo(
+								`Unable to load entity with id ${id}`,
+							),
+						),
+						RIO.sequenceArray,
+					),
+				),
+				RO.map(discardInvalid),
+				R.map(
+					Rx.switchMap(products =>
 						pipe(
-							Rx.of('ready' as const),
-							Rx.startWith('deleting' as const),
-							R.of,
+							T.fromIO(() =>
+								new Date().getDate(),
+							),
+							Rx.defer,
+							Rx.map(
+								timestamp =>
+									({
+										products,
+										timestamp,
+									}) as const,
+							),
 						),
 					),
-					R.map(Rx.startWith('ready' as const)),
 				),
+				RO.map(toProductModels),
+				RO.map(sortByNewest),
 			),
-			RO.map(
-				([products, type]) =>
-					({
-						products,
-						type,
-					}) satisfies Model,
+			pipe(
+				R.of(cmd$),
+				RO.exhaustMap(() =>
+					pipe(
+						Rx.of('ready' as const),
+						Rx.startWith('deleting' as const),
+						R.of,
+					),
+				),
+				R.map(Rx.startWith('ready' as const)),
 			),
-		)
-}
+		),
+		RO.map(
+			([products, type]) =>
+				({
+					products,
+					type,
+				}) satisfies Model,
+		),
+	)

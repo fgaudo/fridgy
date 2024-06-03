@@ -13,11 +13,12 @@ import * as t from 'io-ts'
 import { withFallback } from 'io-ts-types'
 import * as Rx from 'rxjs'
 
+import { fromString } from '@/core/id'
+
+import { expDate } from '@/domain/product'
+
 import type { R_OnProducts } from '@/app/contract/read/on-products'
-import {
-	type ProductDTO,
-	productDataEquals,
-} from '@/app/contract/read/types/product'
+import { ProductDTO } from '@/app/contract/read/types/product'
 
 import { executeSql } from '@/data/helpers'
 import { log } from '@/data/write/log'
@@ -37,6 +38,22 @@ export const productDecoder = t.readonly(
 			t.union([t.string, t.undefined]),
 			undefined,
 		),
+		expDate: t.union([
+			withFallback(
+				t.union([
+					t.readonly(
+						t.type({
+							isBestBefore: t.boolean,
+							timestamp: t.number,
+						}),
+					),
+
+					t.null,
+				]),
+				null,
+			),
+			t.undefined,
+		]),
 	}),
 )
 const mapData = RoA.reduce<
@@ -65,23 +82,26 @@ const mapData = RoA.reduce<
 		)({ prefix: 'D' })()
 	}
 
+	if (productRow.expDate === null) {
+		log(
+			'error',
+			`Could not parse expiration date of row ${productRow.id}`,
+		)({ prefix: 'D' })()
+	}
+
 	const productData = {
-		id: productRow.id,
+		id: fromString(productRow.id),
 		name: productRow.name ?? '[undefined]',
+		expDate: productRow.expDate ?? undefined,
 	}
 
 	return pipe(
 		set,
-		RoS.insert(
-			Eq.fromEquals(productDataEquals<string>),
-		)(productData),
+		RoS.insert(ProductDTO.Eq)(productData),
 	)
 })
 
-export const products: R_OnProducts<
-	Deps,
-	string
-> = pipe(
+export const products: R_OnProducts<Deps> = pipe(
 	R.ask<Deps>(),
 	R.map(({ events, db }) =>
 		pipe(

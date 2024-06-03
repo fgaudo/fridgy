@@ -3,10 +3,12 @@ import type { TaskOption } from 'fp-ts/lib/TaskOption'
 
 export interface ProductInputDTO {
 	name: string
-	expDate: {
-		timestamp: number
-		isBestBefore: boolean
-	}
+	expDate:
+		| {
+				timestamp: number
+				isBestBefore: boolean
+		  }
+		| undefined
 }
 export type AddProduct = (
 	product: ProductInputDTO,
