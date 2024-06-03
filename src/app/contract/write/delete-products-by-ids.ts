@@ -1,13 +1,13 @@
 import type { Reader } from 'fp-ts/lib/Reader'
 import type { TaskOption } from 'fp-ts/lib/TaskOption'
 
-import type { Id } from '@/core/id'
+import type { Base64 } from '@/core/id'
 import type { ReadonlyNonEmptySet } from '@/core/readonly-non-empty-set'
 
 export type DeleteProductsByIds = (
-	ids: ReadonlyNonEmptySet<Id>,
+	ids: ReadonlyNonEmptySet<Base64>,
 ) => TaskOption<Error>
 
 export type R_DeleteProductsByIds<ENV> = (
-	ids: ReadonlyNonEmptySet<Id>,
+	ids: ReadonlyNonEmptySet<Base64>,
 ) => Reader<ENV, TaskOption<Error>>

@@ -35,7 +35,7 @@ const pipe = F.pipe
 const flow = F.flow
 
 export interface ProductModel {
-	id: I.Id
+	id: I.Base64
 	name: string
 	expDate: number
 	isExpired: boolean
@@ -67,7 +67,7 @@ export interface Model {
 
 interface Delete {
 	type: 'delete'
-	ids: RoNeS.ReadonlyNonEmptySet<I.Id>
+	ids: RoNeS.ReadonlyNonEmptySet<I.Base64>
 }
 
 export type Command = Delete
@@ -79,7 +79,7 @@ export interface UseCases {
 }
 
 interface ProductEntity {
-	id: I.Id
+	id: I.Base64
 	product: Product
 }
 
@@ -92,7 +92,7 @@ const ProductEntity = {
 const toProductEntitiesWithInvalid: (
 	foodDTOs: ReadonlySet<ProductDTO>,
 ) => SEP.Separated<
-	ReadonlySet<I.Id>,
+	ReadonlySet<I.Base64>,
 	ReadonlySet<ProductEntity>
 > = RoS.partitionMap(
 	I.Eq,
@@ -116,7 +116,7 @@ const toProductEntitiesWithInvalid: (
 
 const discardInvalid: (
 	set: SEP.Separated<
-		ReadonlySet<I.Id>,
+		ReadonlySet<I.Base64>,
 		ReadonlySet<ProductEntity>
 	>,
 ) => ReadonlySet<ProductEntity> = SEP.right
@@ -183,7 +183,7 @@ export const viewModel: ViewModel<
 				RO.tap(
 					flow(
 						SEP.left,
-						RoS.toReadonlyArray<I.Id>(
+						RoS.toReadonlyArray<I.Base64>(
 							Ord.trivial,
 						),
 						RoA.map(I.toString),

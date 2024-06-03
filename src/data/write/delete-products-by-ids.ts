@@ -19,27 +19,25 @@ interface Deps {
 	db: SQLitePlugin.Database
 }
 
-export const deleteProductsByIds: R_DeleteProductsByIds<
-	Deps,
-	string
-> = flow(
-	RoNeS.toReadonlyNonEmptyArray(S.Ord),
-	ids => ({
-		tokens: pipe(
-			ids,
-			RoNeA.map(() => '?'),
-			arr => arr.join(','),
+export const deleteProductsByIds: R_DeleteProductsByIds<Deps> =
+	flow(
+		RoNeS.toReadonlyNonEmptyArray(S.Ord),
+		ids => ({
+			tokens: pipe(
+				ids,
+				RoNeA.map(() => '?'),
+				arr => arr.join(','),
+			),
+			values: ids,
+		}),
+		R.of,
+		R.chain(
+			({ values, tokens }) =>
+				({ db }: Deps) =>
+					executeSql(
+						`DELETE * FROM products WHERE id IN (${tokens})`,
+						values,
+					)(db),
 		),
-		values: ids,
-	}),
-	R.of,
-	R.chain(
-		({ values, tokens }) =>
-			({ db }: Deps) =>
-				executeSql(
-					`DELETE * FROM products WHERE id IN (${tokens})`,
-					values,
-				)(db),
-	),
-	RTE.map(() => undefined),
-)
+		RTE.map(() => undefined),
+	)

@@ -6,7 +6,7 @@ import {
 } from 'fp-ts'
 import * as Rx from 'rxjs'
 
-import type { Id } from '@/core/id'
+import type { Base64 } from '@/core/id'
 import type { ViewModel } from '@/core/view-model'
 
 import type { AddProduct as AddProductCommand } from '@/app/contract/write/add-product'
@@ -15,7 +15,7 @@ const pipe = F.pipe
 const flow = F.flow
 
 interface ProductData {
-	id: Id
+	id: Base64
 	name: string
 	expDate: {
 		timestamp: number

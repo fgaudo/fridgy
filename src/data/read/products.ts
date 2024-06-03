@@ -2,7 +2,6 @@ import * as O from '@fgaudo/fp-ts-rxjs/Observable.js'
 import * as RO from '@fgaudo/fp-ts-rxjs/ReaderObservable.js'
 import {
 	either as E,
-	eq as Eq,
 	function as F,
 	option as OPT,
 	reader as R,
@@ -13,9 +12,7 @@ import * as t from 'io-ts'
 import { withFallback } from 'io-ts-types'
 import * as Rx from 'rxjs'
 
-import { fromString } from '@/core/id'
-
-import { expDate } from '@/domain/product'
+import { fromUTF8 } from '@/core/id'
 
 import type { R_OnProducts } from '@/app/contract/read/on-products'
 import { ProductDTO } from '@/app/contract/read/types/product'
@@ -90,7 +87,7 @@ const mapData = RoA.reduce<
 	}
 
 	const productData = {
-		id: fromString(productRow.id),
+		id: fromUTF8(productRow.id),
 		name: productRow.name ?? '[undefined]',
 		expDate: productRow.expDate ?? undefined,
 	}

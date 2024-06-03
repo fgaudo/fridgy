@@ -1,13 +1,16 @@
-import { contramap } from 'fp-ts/lib/Eq'
+import { type Newtype } from 'newtype-ts'
 
-import * as I from '@/core/id'
+export type Id = Newtype<
+	{ readonly Id: unique symbol },
+	string
+>
 
-import type { ProductInputDTO } from '@/app/contract/write/add-product'
-
-export type ProductDTO = {
-	id: I.Id
-} & ProductInputDTO
-
-export const ProductDTO = {
-	Eq: contramap(({ id }: ProductDTO) => id)(I.Eq),
+export interface ProductDTO {
+	name: string
+	expDate:
+		| {
+				timestamp: number
+				isBestBefore: boolean
+		  }
+		| undefined
 }
