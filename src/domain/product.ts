@@ -1,4 +1,6 @@
-import { either as E } from 'fp-ts'
+import { either as E, option as OPT } from 'fp-ts'
+import { fromEquals } from 'fp-ts/lib/Eq'
+import { pipe } from 'fp-ts/lib/function'
 import { type Newtype, iso } from 'newtype-ts'
 
 import type { AtLeastOne } from '@/core/types'
@@ -7,7 +9,15 @@ const isoProduct = iso<Product>()
 
 export type Product = Newtype<
 	{ readonly Product: unique symbol },
-	{ name: string; expDate: number }
+	{
+		name: string
+		expDate: OPT.Option<
+			Readonly<{
+				isBestBefore: boolean
+				timestamp: number
+			}>
+		>
+	}
 >
 
 export const name: (
@@ -17,19 +27,36 @@ export const name: (
 
 export const expDate: (
 	product: Product,
-) => number = product =>
-	isoProduct.unwrap(product).expDate
+) => OPT.Option<number> = product =>
+	pipe(
+		isoProduct.unwrap(product).expDate,
+		OPT.map(exp => exp.timestamp),
+	)
 
 export const isExpired: (
 	product: Product,
 	timestamp: number,
 ) => boolean = (product, timestamp) =>
-	isoProduct.unwrap(product).expDate >= timestamp
+	pipe(
+		isoProduct.unwrap(product).expDate,
+		OPT.match(
+			() => false,
+			expDate => expDate.timestamp >= timestamp,
+		),
+	)
 
-export const areEqual = (
-	_p1: Product,
-	_p2: Product,
-) => false
+export const isBestBefore: (
+	product: Product,
+) => boolean = product =>
+	pipe(
+		isoProduct.unwrap(product).expDate,
+		OPT.match(
+			() => false,
+			exp => exp.isBestBefore,
+		),
+	)
+
+export const Eq = fromEquals(() => false)
 
 export const enum NameError {
 	missingName = 0,
@@ -41,7 +68,12 @@ interface Errors {
 
 export const createProduct: (f: {
 	name: string
-	expDate: number
+	expDate?:
+		| {
+				isBestBefore: boolean
+				timestamp: number
+		  }
+		| undefined
 }) => E.Either<
 	AtLeastOne<Errors>,
 	Product
@@ -58,5 +90,13 @@ export const createProduct: (f: {
 	if (Object.keys(errors).length > 0) {
 		return E.left(errors as AtLeastOne<Errors>)
 	}
-	return E.right(isoProduct.wrap(productData))
+
+	return E.right(
+		isoProduct.wrap({
+			name: productData.name,
+			expDate: OPT.fromNullable(
+				productData.expDate,
+			),
+		}),
+	)
 }

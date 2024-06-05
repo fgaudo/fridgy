@@ -6,7 +6,7 @@ import {
 } from 'fp-ts'
 import * as Rx from 'rxjs'
 
-import type { Base64 } from '@/core/id'
+import type { Base64 } from '@/core/base64'
 import type { ViewModel } from '@/core/view-model'
 
 import type { AddProduct as AddProductCommand } from '@/app/contract/write/add-product'

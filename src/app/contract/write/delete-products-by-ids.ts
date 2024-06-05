@@ -1,7 +1,7 @@
 import type { Reader } from 'fp-ts/lib/Reader'
 import type { TaskOption } from 'fp-ts/lib/TaskOption'
 
-import type { Base64 } from '@/core/id'
+import type { Base64 } from '@/core/base64'
 import type { ReadonlyNonEmptySet } from '@/core/readonly-non-empty-set'
 
 export type DeleteProductsByIds = (

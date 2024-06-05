@@ -4,17 +4,20 @@ import {
 	eq as Eq,
 	function as F,
 	number as N,
+	option as OPT,
 	ord as Ord,
 	reader as R,
 	readerIO as RIO,
 	readonlyArray as RoA,
 	readonlySet as RoS,
+	string as S,
 	separated as SEP,
 	task as T,
 } from 'fp-ts'
+import { concatAll } from 'fp-ts/lib/Monoid'
 import * as Rx from 'rxjs'
 
-import * as I from '@/core/id'
+import * as B from '@/core/base64'
 import * as RoNeS from '@/core/readonly-non-empty-set'
 import { type ViewModel } from '@/core/view-model'
 
@@ -26,8 +29,10 @@ import {
 	name,
 } from '@/domain/product'
 
-import type { OnProducts } from '@/app/contract/read/on-products'
-import { type ProductDTO } from '@/app/contract/read/types/product'
+import type {
+	OnProducts,
+	ProductEntityDTO,
+} from '@/app/contract/read/on-products'
 import type { AddFailure } from '@/app/contract/write/add-failure'
 import type { Log } from '@/app/contract/write/log'
 
@@ -35,29 +40,60 @@ const pipe = F.pipe
 const flow = F.flow
 
 export interface ProductModel {
-	id: I.Base64
+	id: B.Base64
 	name: string
-	expDate: number
+	expDate: OPT.Option<
+		Readonly<{
+			expDate: number
+			isBestBefore: boolean
+		}>
+	>
 	isExpired: boolean
 }
 
+const M = Ord.getMonoid<ProductModel>()
+
 const ProductModel = {
 	Eq: Eq.contramap((a: ProductModel) => a.id)(
-		I.Eq,
+		B.Base64.Eq,
 	),
-	OrdOldest: pipe(
-		N.Ord,
-		Ord.contramap(
-			(model: ProductModel) => model.expDate,
+	OrdOldest: concatAll(M)([
+		pipe(
+			N.Ord,
+			OPT.getOrd,
+			Ord.contramap((model: ProductModel) =>
+				pipe(
+					model.expDate,
+					OPT.map(exp => exp.expDate),
+				),
+			),
 		),
-	),
-	OrdNewest: pipe(
-		N.Ord,
-		Ord.contramap(
-			(model: ProductModel) => model.expDate,
+		pipe(
+			S.Ord,
+			Ord.contramap(
+				(model: ProductModel) => model.name,
+			),
 		),
-		Ord.reverse,
-	),
+	]),
+	OrdNewest: concatAll(M)([
+		pipe(
+			N.Ord,
+			OPT.getOrd,
+			Ord.contramap((model: ProductModel) =>
+				pipe(
+					model.expDate,
+					OPT.map(exp => exp.expDate),
+				),
+			),
+			Ord.reverse,
+		),
+		pipe(
+			S.Ord,
+			Ord.contramap(
+				(model: ProductModel) => model.name,
+			),
+		),
+	]),
 } as const
 
 export interface Model {
@@ -67,7 +103,7 @@ export interface Model {
 
 interface Delete {
 	type: 'delete'
-	ids: RoNeS.ReadonlyNonEmptySet<I.Base64>
+	ids: RoNeS.ReadonlyNonEmptySet<B.Base64>
 }
 
 export type Command = Delete
@@ -79,35 +115,35 @@ export interface UseCases {
 }
 
 interface ProductEntity {
-	id: I.Base64
+	id: B.Base64
 	product: Product
 }
 
 const ProductEntity = {
 	Eq: Eq.contramap(({ id }: ProductEntity) => id)(
-		I.Eq,
+		B.Base64.Eq,
 	),
 } as const
 
 const toProductEntitiesWithInvalid: (
-	foodDTOs: ReadonlySet<ProductDTO>,
+	foodDTOs: ReadonlySet<ProductEntityDTO>,
 ) => SEP.Separated<
-	ReadonlySet<I.Base64>,
+	ReadonlySet<B.Base64>,
 	ReadonlySet<ProductEntity>
 > = RoS.partitionMap(
-	I.Eq,
+	B.Base64.Eq,
 	ProductEntity.Eq,
-)(foodDTO =>
+)(entityDTO =>
 	pipe(
 		createProduct({
-			name: foodDTO.name,
-			expDate: foodDTO.expDate.timestamp,
+			name: entityDTO.product.name,
+			expDate: entityDTO.product.expDate,
 		}),
 		E.bimap(
-			() => foodDTO.id,
+			() => entityDTO.id,
 			product =>
 				({
-					id: foodDTO.id,
+					id: entityDTO.id,
 					product,
 				}) as const,
 		),
@@ -116,7 +152,7 @@ const toProductEntitiesWithInvalid: (
 
 const discardInvalid: (
 	set: SEP.Separated<
-		ReadonlySet<I.Base64>,
+		ReadonlySet<B.Base64>,
 		ReadonlySet<ProductEntity>
 	>,
 ) => ReadonlySet<ProductEntity> = SEP.right
@@ -183,10 +219,10 @@ export const viewModel: ViewModel<
 				RO.tap(
 					flow(
 						SEP.left,
-						RoS.toReadonlyArray<I.Base64>(
+						RoS.toReadonlyArray<B.Base64>(
 							Ord.trivial,
 						),
-						RoA.map(I.toString),
+						RoA.map(B.toString),
 						RoA.map(id =>
 							logInfo(
 								`Unable to load entity with id ${id}`,
