@@ -9,6 +9,7 @@ import {
 import { type Newtype, iso } from 'newtype-ts'
 
 const pipe = F.pipe
+const flow = F.flow
 
 export type ReadonlyNonEmptySet<A> = Newtype<
 	{ readonly ReadonlyNonEmptySet: unique symbol },
@@ -21,6 +22,18 @@ export function singleton<A>(
 	return iso<ReadonlyNonEmptySet<A>>().wrap(
 		RoS.singleton(a),
 	)
+}
+
+export const map = <B>(eq: Eq.Eq<B>) => {
+	const j = iso<ReadonlyNonEmptySet<B>>()
+	return <A>(
+		f: (a: A) => B,
+	): ((
+		a: ReadonlyNonEmptySet<A>,
+	) => ReadonlyNonEmptySet<B>) => {
+		const i = iso<ReadonlyNonEmptySet<A>>()
+		return flow(i.unwrap, RoS.map(eq)(f), j.wrap)
+	}
 }
 
 export function fromValues<A>(

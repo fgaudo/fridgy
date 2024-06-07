@@ -1,11 +1,14 @@
 import {
 	function as F,
+	option as OPT,
 	reader as R,
+	readerTask as RT,
 	readerTaskEither as RTE,
 	readonlyNonEmptyArray as RoNeA,
 	string as S,
 } from 'fp-ts'
 
+import { toString } from '@/core/base64'
 import * as RoNeS from '@/core/readonly-non-empty-set'
 
 import type { R_DeleteProductsByIds } from '@/app/contract/write/delete-products-by-ids'
@@ -21,6 +24,7 @@ interface Deps {
 
 export const deleteProductsByIds: R_DeleteProductsByIds<Deps> =
 	flow(
+		RoNeS.map(S.Eq)(toString),
 		RoNeS.toReadonlyNonEmptyArray(S.Ord),
 		ids => ({
 			tokens: pipe(
@@ -39,5 +43,5 @@ export const deleteProductsByIds: R_DeleteProductsByIds<Deps> =
 						values,
 					)(db),
 		),
-		RTE.map(() => undefined),
+		RT.map(OPT.getLeft),
 	)

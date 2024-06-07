@@ -12,10 +12,12 @@ import * as t from 'io-ts'
 import { withFallback } from 'io-ts-types'
 import * as Rx from 'rxjs'
 
-import { fromUTF8 } from '@/core/id'
+import * as B from '@/core/base64'
 
-import type { R_OnProducts } from '@/app/contract/read/on-products'
-import { ProductDTO } from '@/app/contract/read/types/product'
+import {
+	ProductEntityDTO,
+	type R_OnProducts,
+} from '@/app/contract/read/on-products'
 
 import { executeSql } from '@/data/helpers'
 import { log } from '@/data/write/log'
@@ -55,7 +57,7 @@ export const productDecoder = t.readonly(
 )
 const mapData = RoA.reduce<
 	unknown,
-	ReadonlySet<ProductDTO>
+	ReadonlySet<ProductEntityDTO>
 >(RoS.empty, (set, row) => {
 	const productRowEither =
 		productDecoder.decode(row)
@@ -87,14 +89,16 @@ const mapData = RoA.reduce<
 	}
 
 	const productData = {
-		id: fromUTF8(productRow.id),
-		name: productRow.name ?? '[undefined]',
-		expDate: productRow.expDate ?? undefined,
+		id: B.encodeText(productRow.id),
+		product: {
+			name: productRow.name ?? '[undefined]',
+			expDate: productRow.expDate ?? undefined,
+		},
 	}
 
 	return pipe(
 		set,
-		RoS.insert(ProductDTO.Eq)(productData),
+		RoS.insert(ProductEntityDTO.Eq)(productData),
 	)
 })
 

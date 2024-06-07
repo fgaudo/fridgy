@@ -1,5 +1,5 @@
-import * as ROE from '@fgaudo/fp-ts-rxjs/ReaderObservableEither.js'
 import {
+	option as OPT,
 	reader as R,
 	readerTask as RT,
 	readerTaskEither as RTE,
@@ -10,7 +10,6 @@ import * as Rx from 'rxjs'
 import type * as App from '@/app'
 
 import { products } from '@/data/read/mock-products'
-import { deleteProductsByIds } from '@/data/write/delete-products-by-ids'
 import { log } from '@/data/write/log'
 
 interface Deps {
@@ -24,7 +23,7 @@ export const appUseCases: R.Reader<
 	Deps,
 	App.UseCases
 > = () => ({
-	addProduct: () => RTE.of(undefined)(undefined),
+	addProduct: () => RT.of(OPT.none)(undefined),
 	processes$: R.of(
 		Rx.scheduled(
 			Rx.of(RoS.empty),
@@ -35,7 +34,7 @@ export const appUseCases: R.Reader<
 	removeProcess: () => RTE.of(void 1)(undefined),
 	enqueueProcess: () => RTE.of(void 1)(undefined),
 	addFailure: () => RT.of(void 1)(undefined),
-	deleteProductsByIds: RTE.of(undefined),
+	deleteProductsByIds: RT.of(OPT.none),
 	products$: products({}),
 
 	appLog: (type, message) =>

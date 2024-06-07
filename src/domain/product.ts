@@ -1,11 +1,15 @@
-import { either as E, option as OPT } from 'fp-ts'
-import { fromEquals } from 'fp-ts/lib/Eq'
-import { pipe } from 'fp-ts/lib/function'
+import {
+	either as E,
+	eq as Eq,
+	function as F,
+	option as OPT,
+} from 'fp-ts'
 import { type Newtype, iso } from 'newtype-ts'
 
 import type { AtLeastOne } from '@/core/types'
 
 const isoProduct = iso<Product>()
+const pipe = F.pipe
 
 export type Product = Newtype<
 	{ readonly Product: unique symbol },
@@ -27,11 +31,12 @@ export const name: (
 
 export const expDate: (
 	product: Product,
-) => OPT.Option<number> = product =>
-	pipe(
-		isoProduct.unwrap(product).expDate,
-		OPT.map(exp => exp.timestamp),
-	)
+) => OPT.Option<
+	Readonly<{
+		isBestBefore: boolean
+		timestamp: number
+	}>
+> = product => isoProduct.unwrap(product).expDate
 
 export const isExpired: (
 	product: Product,
@@ -45,18 +50,9 @@ export const isExpired: (
 		),
 	)
 
-export const isBestBefore: (
-	product: Product,
-) => boolean = product =>
-	pipe(
-		isoProduct.unwrap(product).expDate,
-		OPT.match(
-			() => false,
-			exp => exp.isBestBefore,
-		),
-	)
-
-export const Eq = fromEquals(() => false)
+export const Product = {
+	Eq: Eq.fromEquals(() => false),
+} as const
 
 export const enum NameError {
 	missingName = 0,

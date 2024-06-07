@@ -4,7 +4,6 @@ import {
 } from '@/core/controller'
 
 import type { OnProducts } from '@/app/contract/read/on-products'
-import type { AddFailure } from '@/app/contract/write/add-failure'
 import type { AddProduct as AddProductCommand } from '@/app/contract/write/add-product'
 import type { DeleteProductsByIds } from '@/app/contract/write/delete-products-by-ids'
 import type { Log } from '@/app/contract/write/log'
@@ -14,7 +13,6 @@ import * as Overview from '@/app/view-models/overview'
 export interface UseCases {
 	deleteProductsByIds: DeleteProductsByIds
 	addProduct: AddProductCommand
-	addFailure: AddFailure
 	products$: OnProducts
 	appLog: Log
 }

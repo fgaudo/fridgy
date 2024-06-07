@@ -1,13 +1,14 @@
-import * as EQ from 'fp-ts/lib/Eq'
 import {
-	type Option,
-	none,
-	some,
-} from 'fp-ts/lib/Option'
-import { flow, pipe } from 'fp-ts/lib/function'
+	eq as EQ,
+	function as F,
+	option as OPT,
+} from 'fp-ts'
 import * as S from 'fp-ts/string'
 import * as B from 'js-base64'
 import { type Newtype, iso } from 'newtype-ts'
+
+const pipe = F.pipe
+const flow = F.flow
 
 export type Base64 = Newtype<
 	{ readonly Id: unique symbol },
@@ -35,10 +36,10 @@ export const decodeText: (
 
 export const fromBase64String: (
 	base64: string,
-) => Option<Base64> = base64 =>
+) => OPT.Option<Base64> = base64 =>
 	B.Base64.isValid(base64)
-		? some(idIso.wrap(base64))
-		: none
+		? OPT.some(idIso.wrap(base64))
+		: OPT.none
 
 export const toString: (id: Base64) => string =
 	idIso.unwrap

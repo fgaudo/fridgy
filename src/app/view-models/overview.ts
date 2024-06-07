@@ -3,6 +3,7 @@ import {
 	either as E,
 	eq as Eq,
 	function as F,
+	monoid as MO,
 	number as N,
 	option as OPT,
 	ord as Ord,
@@ -14,7 +15,6 @@ import {
 	separated as SEP,
 	task as T,
 } from 'fp-ts'
-import { concatAll } from 'fp-ts/lib/Monoid'
 import * as Rx from 'rxjs'
 
 import * as B from '@/core/base64'
@@ -33,7 +33,6 @@ import type {
 	OnProducts,
 	ProductEntityDTO,
 } from '@/app/contract/read/on-products'
-import type { AddFailure } from '@/app/contract/write/add-failure'
 import type { Log } from '@/app/contract/write/log'
 
 const pipe = F.pipe
@@ -44,7 +43,7 @@ export interface ProductModel {
 	name: string
 	expDate: OPT.Option<
 		Readonly<{
-			expDate: number
+			timestamp: number
 			isBestBefore: boolean
 		}>
 	>
@@ -57,35 +56,17 @@ const ProductModel = {
 	Eq: Eq.contramap((a: ProductModel) => a.id)(
 		B.Base64.Eq,
 	),
-	OrdOldest: concatAll(M)([
+	OrdOldest: MO.concatAll(M)([
 		pipe(
 			N.Ord,
 			OPT.getOrd,
-			Ord.contramap((model: ProductModel) =>
-				pipe(
-					model.expDate,
-					OPT.map(exp => exp.expDate),
-				),
-			),
-		),
-		pipe(
-			S.Ord,
-			Ord.contramap(
-				(model: ProductModel) => model.name,
-			),
-		),
-	]),
-	OrdNewest: concatAll(M)([
-		pipe(
-			N.Ord,
-			OPT.getOrd,
-			Ord.contramap((model: ProductModel) =>
-				pipe(
-					model.expDate,
-					OPT.map(exp => exp.expDate),
-				),
-			),
 			Ord.reverse,
+			Ord.contramap((model: ProductModel) =>
+				pipe(
+					model.expDate,
+					OPT.map(exp => exp.timestamp),
+				),
+			),
 		),
 		pipe(
 			S.Ord,
@@ -111,7 +92,6 @@ export type Command = Delete
 export interface UseCases {
 	products$: OnProducts
 	log: Log
-	addFailure: AddFailure
 }
 
 interface ProductEntity {
@@ -150,17 +130,17 @@ const toProductEntitiesWithInvalid: (
 	),
 )
 
+const sortByOldest: (
+	set: ReadonlySet<ProductModel>,
+) => readonly ProductModel[] =
+	RoS.toReadonlyArray(ProductModel.OrdOldest)
+
 const discardInvalid: (
 	set: SEP.Separated<
 		ReadonlySet<B.Base64>,
 		ReadonlySet<ProductEntity>
 	>,
 ) => ReadonlySet<ProductEntity> = SEP.right
-
-const sortByNewest: (
-	set: ReadonlySet<ProductModel>,
-) => readonly ProductModel[] =
-	RoS.toReadonlyArray(ProductModel.OrdNewest)
 
 const toProductModels = ({
 	products,
@@ -250,7 +230,7 @@ export const viewModel: ViewModel<
 					),
 				),
 				RO.map(toProductModels),
-				RO.map(sortByNewest),
+				RO.map(sortByOldest),
 			),
 			pipe(
 				R.of(cmd$),
