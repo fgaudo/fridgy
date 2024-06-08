@@ -49,21 +49,13 @@ const AddProduct = () => {
 					<label
 						class="flex items-center gap-3"
 						for="before">
-						Before
-						<md-radio
+						Best Before
+						<md-switch
+							prop:showOnlySelectedIcon={true}
+							prop:icons={true}
 							id="before"
 							prop:name="group"
 							prop:value="Best Before"
-						/>
-					</label>
-					<label
-						class="flex items-center gap-3"
-						for="best-before">
-						Best before
-						<md-radio
-							id="best-before"
-							prop:name="group"
-							prop:value="Before"
 						/>
 					</label>
 				</div>

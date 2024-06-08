@@ -64,19 +64,17 @@ interface Errors {
 
 export const createProduct: (f: {
 	name: string
-	expDate?:
-		| {
-				isBestBefore: boolean
-				timestamp: number
-		  }
-		| undefined
+	expDate?: OPT.Option<{
+		isBestBefore: boolean
+		timestamp: number
+	}>
 }) => E.Either<
 	AtLeastOne<Errors>,
 	Product
 > = productData => {
 	let errors: Partial<Errors> = {}
 
-	if (productData.name.trim().length > 0) {
+	if (productData.name.trim().length <= 0) {
 		errors = {
 			...errors,
 			name: NameError.missingName,
@@ -90,9 +88,7 @@ export const createProduct: (f: {
 	return E.right(
 		isoProduct.wrap({
 			name: productData.name,
-			expDate: OPT.fromNullable(
-				productData.expDate,
-			),
+			expDate: productData.expDate ?? OPT.none,
 		}),
 	)
 }

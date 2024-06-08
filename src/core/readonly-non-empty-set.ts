@@ -3,11 +3,13 @@ import {
 	function as F,
 	option as OPT,
 	type ord as Ord,
+	predicate as P,
 	readonlyNonEmptyArray as RoNeA,
 	readonlySet as RoS,
 } from 'fp-ts'
 import { type Newtype, iso } from 'newtype-ts'
 
+const identity = F.identity
 const pipe = F.pipe
 const flow = F.flow
 
@@ -42,21 +44,21 @@ export function fromValues<A>(
 	...a: RoNeA.ReadonlyNonEmptyArray<A>
 ) => ReadonlyNonEmptySet<A> {
 	const f = iso<ReadonlyNonEmptySet<A>>()
-	return (...values) => {
-		return f.wrap(
+	return (...values) =>
+		pipe(
 			RoS.fromReadonlyArray(eq)(values),
+			f.wrap,
 		)
-	}
 }
 
 export function fromSet<A>(
 	set: ReadonlySet<A>,
 ): OPT.Option<ReadonlyNonEmptySet<A>> {
-	return set.size === 0
-		? OPT.none
-		: OPT.some(
-				iso<ReadonlyNonEmptySet<A>>().wrap(set),
-			)
+	return pipe(
+		set,
+		OPT.fromPredicate(pipe(RoS.isEmpty, P.not)),
+		OPT.map(iso<ReadonlyNonEmptySet<A>>().wrap),
+	)
 }
 
 export function toReadonlySet<A>(
@@ -71,9 +73,12 @@ export function toReadonlyNonEmptyArray<A>(
 	set: ReadonlyNonEmptySet<A>,
 ) => RoNeA.ReadonlyNonEmptyArray<A> {
 	const f = iso<ReadonlyNonEmptySet<A>>()
-	return set =>
-		pipe(
-			f.unwrap(set),
-			RoS.toReadonlyArray(ord),
-		) as RoNeA.ReadonlyNonEmptyArray<A>
+	return flow(
+		f.unwrap,
+		RoS.toReadonlyArray(ord),
+		RoNeA.fromReadonlyArray,
+		OPT.match(() => {
+			throw new Error('Array should be non-empty')
+		}, identity),
+	)
 }

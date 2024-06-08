@@ -20,7 +20,7 @@ import { applyTheme } from './material-web'
 const MAIN_COLOR = '#DD7230'
 
 export function render(
-	app: App<string>,
+	app: App,
 	root: HTMLElement,
 ): void {
 	const scheme = new SchemeTonalSpot(

@@ -1,5 +1,6 @@
 import {
 	function as F,
+	option as OPT,
 	readonlyArray as RoA,
 	readonlySet as RoS,
 } from 'fp-ts'
@@ -26,7 +27,7 @@ interface Deps {}
 
 export const products: R_OnProducts<Deps> = () =>
 	pipe(
-		Rx.timer(2000),
+		Rx.timer(1000),
 		Rx.map(() =>
 			RoS.fromReadonlyArray(ProductEntityDTO.Eq)(
 				pipe(
@@ -44,7 +45,7 @@ export const products: R_OnProducts<Deps> = () =>
 												productSamples.length,
 										)
 									],
-									expDate: {
+									expDate: OPT.some({
 										isBestBefore: false,
 										timestamp:
 											new Date().getDate() +
@@ -52,7 +53,7 @@ export const products: R_OnProducts<Deps> = () =>
 											Math.floor(
 												Math.random() * 26967228,
 											),
-									},
+									}),
 								},
 							}) as const,
 					),

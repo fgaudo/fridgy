@@ -2,10 +2,7 @@ import {
 	option as OPT,
 	reader as R,
 	readerTask as RT,
-	readerTaskEither as RTE,
-	readonlySet as RoS,
 } from 'fp-ts'
-import * as Rx from 'rxjs'
 
 import type * as App from '@/app'
 
@@ -24,16 +21,6 @@ export const appUseCases: R.Reader<
 	App.UseCases
 > = () => ({
 	addProduct: () => RT.of(OPT.none)(undefined),
-	processes$: R.of(
-		Rx.scheduled(
-			Rx.of(RoS.empty),
-			Rx.asapScheduler,
-		),
-	)(undefined),
-	getProcesses: RTE.of(RoS.empty)(undefined),
-	removeProcess: () => RTE.of(void 1)(undefined),
-	enqueueProcess: () => RTE.of(void 1)(undefined),
-	addFailure: () => RT.of(void 1)(undefined),
 	deleteProductsByIds: RT.of(OPT.none),
 	products$: products({}),
 

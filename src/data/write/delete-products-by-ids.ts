@@ -3,7 +3,6 @@ import {
 	option as OPT,
 	reader as R,
 	readerTask as RT,
-	readerTaskEither as RTE,
 	readonlyNonEmptyArray as RoNeA,
 	string as S,
 } from 'fp-ts'

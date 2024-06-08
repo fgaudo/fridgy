@@ -1,36 +1,27 @@
 import * as RO from '@fgaudo/fp-ts-rxjs/ReaderObservable.js'
 import {
 	function as F,
+	option as OPT,
 	reader as R,
 	taskOption as TO,
 } from 'fp-ts'
 import * as Rx from 'rxjs'
 
-import type { Base64 } from '@/core/base64'
 import type { ViewModel } from '@/core/view-model'
 
+import type { ProductDTO } from '@/app/contract/read/types/product'
 import type { AddProduct as AddProductCommand } from '@/app/contract/write/add-product'
 
 const pipe = F.pipe
-const flow = F.flow
-
-interface ProductData {
-	id: Base64
-	name: string
-	expDate: {
-		timestamp: number
-		isBestBefore: boolean
-	}
-}
 
 export type Command =
 	| {
 			type: 'add'
-			product: ProductData
+			product: ProductDTO
 	  }
 	| {
 			type: 'fieldsChange'
-			fields: ProductData
+			fields: ProductDTO
 	  }
 
 interface FieldsModel {
@@ -68,18 +59,24 @@ interface Deps {
 }
 
 const validateInput = (
-	fields: ProductData,
+	product: ProductDTO,
 	timestamp: number,
 ): FieldsModel => ({
-	expDate:
-		timestamp > fields.expDate.timestamp
-			? {
-					status: 'error',
-					message: 'Invalid date',
-				}
-			: { status: 'ok' },
+	expDate: pipe(
+		product.expDate,
+		OPT.matchW(
+			() => ({ status: 'ok' }),
+			expDate =>
+				timestamp > expDate.timestamp
+					? {
+							status: 'error',
+							message: 'Invalid date',
+						}
+					: { status: 'ok' },
+		),
+	),
 	name:
-		fields.name === ''
+		product.name === ''
 			? {
 					status: 'error',
 					message: 'Cannot be empty',
@@ -156,13 +153,4 @@ export const viewModel: ViewModel<
 					)
 			}
 		}),
-		R.local(
-			(deps: Deps) =>
-				({
-					addProduct: flow(
-						deps.addProduct,
-						Rx.first(),
-					),
-				}) satisfies Deps,
-		),
 	)

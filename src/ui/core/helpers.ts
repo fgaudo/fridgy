@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unnecessary-boolean-literal-compare */
 import { createSignal, onCleanup } from 'solid-js'
 
 export const useWindowScrollTop = () => {

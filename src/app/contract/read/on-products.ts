@@ -23,6 +23,16 @@ export const ProductEntityDTO = {
 			(product: ProductEntityDTO) => product.id,
 		),
 	),
+	create: ({
+		id,
+		product,
+	}: {
+		id: Base64
+		product: ProductDTO
+	}): ProductEntityDTO => ({
+		id,
+		product,
+	}),
 } as const
 
 export type OnProducts = Observable<
