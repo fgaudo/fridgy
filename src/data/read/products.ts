@@ -37,22 +37,19 @@ export const productDecoder = t.readonly(
 			t.union([t.string, t.undefined]),
 			undefined,
 		),
-		expDate: t.union([
-			withFallback(
-				t.union([
-					t.readonly(
-						t.type({
-							isBestBefore: t.boolean,
-							timestamp: t.number,
-						}),
-					),
+		expDate: withFallback(
+			t.union([
+				t.readonly(
+					t.type({
+						isBestBefore: t.boolean,
+						timestamp: t.number,
+					}),
+				),
 
-					t.null,
-				]),
-				null,
-			),
-			t.undefined,
-		]),
+				t.undefined,
+			]),
+			undefined,
+		),
 	}),
 )
 const mapData = RoA.reduce<
@@ -81,18 +78,13 @@ const mapData = RoA.reduce<
 		)({ prefix: 'D' })()
 	}
 
-	if (productRow.expDate === null) {
-		log(
-			'error',
-			`Could not parse expiration date of row ${productRow.id}`,
-		)({ prefix: 'D' })()
-	}
-
 	const productData = {
 		id: B.encodeText(productRow.id),
 		product: {
 			name: productRow.name ?? '[undefined]',
-			expDate: productRow.expDate ?? undefined,
+			expDate: OPT.fromNullable(
+				productRow.expDate,
+			),
 		},
 	}
 

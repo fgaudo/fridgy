@@ -7,6 +7,7 @@ import {
 import type * as App from '@/app'
 
 import { products } from '@/data/read/mock-products'
+import { addProduct } from '@/data/write/add-product'
 import { log } from '@/data/write/log'
 
 interface Deps {
@@ -20,7 +21,7 @@ export const appUseCases: R.Reader<
 	Deps,
 	App.UseCases
 > = () => ({
-	addProduct: () => RT.of(OPT.none)(undefined),
+	addProduct: addProduct,
 	deleteProductsByIds: RT.of(OPT.none),
 	products$: products({}),
 
