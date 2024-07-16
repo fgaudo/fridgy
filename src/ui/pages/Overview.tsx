@@ -39,9 +39,7 @@ const Overview =
 			flow(
 				Rx.observeOn(Rx.asyncScheduler),
 				Rx.filter(() => {
-					/* eslint-disable solid/reactivity */
 					if (isOpeningAddProduct()) return false
-					/* eslint-enable solid/reactivity */
 					setOpeningAddProduct(true)
 					return true
 				}),

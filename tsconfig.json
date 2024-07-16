@@ -10,7 +10,6 @@
 		"module": "ESNext",
 		"skipLibCheck": true,
 		"moduleResolution": "bundler",
-		"allowImportingTsExtensions": true,
 		"resolveJsonModule": true,
 		"isolatedModules": true,
 		"noEmit": true,
@@ -22,43 +21,40 @@
 		"noUnusedLocals": false,
 		"noUnusedParameters": false,
 		"noFallthroughCasesInSwitch": true,
-		"baseUrl": "./",
+		"baseUrl": "./src",
 		"paths": {
 			"@/domain/*": [
-				"src/domain/*"
+				"domain/*"
 			],
 			"@/domain": [
-				"src/domain/index"
+				"domain/index"
 			],
 			"@/app/*": [
-				"src/app/*"
+				"app/*"
 			],
 			"@/app": [
-				"src/app/index"
+				"app/index"
 			],
 			"@/ui/*": [
-				"src/ui/*"
+				"ui/*"
 			],
 			"@/ui": [
-				"src/ui/index"
+				"ui/index"
 			],
 			"@/data/*": [
-				"src/data/*"
+				"data/*"
 			],
 			"@/data": [
-				"src/data/index"
+				"data/index"
 			],
 			"@/core/*": [
-				"src/core/*"
+				"core/*"
 			],
 			"@/core": [
-				"src/core/index"
+				"core/index"
 			]
 		}
 	},
-	"include": [
-		"src"
-	],
 	"references": [
 		{
 			"path": "./tsconfig.node.json"

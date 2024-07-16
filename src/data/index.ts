@@ -10,9 +10,7 @@ import { products } from '@/data/read/mock-products'
 import { addProduct } from '@/data/write/add-product'
 import { log } from '@/data/write/log'
 
-interface Deps {
-	//	readonly db: SQLitePlugin.Database
-}
+type Deps = undefined
 
 export type OverviewController =
 	App.OverviewController

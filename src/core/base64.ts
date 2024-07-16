@@ -2,14 +2,13 @@ import {
 	eq as EQ,
 	function as F,
 	option as OPT,
+	string as S,
 } from 'fp-ts'
-import * as S from 'fp-ts/string'
 import * as B from 'js-base64'
 import { type Newtype, iso } from 'newtype-ts'
 
 const pipe = F.pipe
 const flow = F.flow
-
 export type Base64 = Newtype<
 	{ readonly Id: unique symbol },
 	string
