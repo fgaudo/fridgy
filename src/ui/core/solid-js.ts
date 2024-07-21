@@ -2,6 +2,7 @@ import { function as F } from 'fp-ts'
 import * as Rx from 'rxjs'
 import {
 	type Accessor,
+	createEffect,
 	onCleanup,
 } from 'solid-js'
 
@@ -21,14 +22,16 @@ export const useDispatcher = <CMD>(
 ) => {
 	const subject = new Rx.Subject<CMD>()
 
-	const subscription = pipe(
-		subject,
-		transformer,
-	).subscribe()
+	createEffect(() => {
+		const subscription = pipe(
+			subject,
+			transformer,
+		).subscribe()
 
-	onCleanup(() => {
-		subject.unsubscribe()
-		subscription.unsubscribe()
+		onCleanup(() => {
+			subject.unsubscribe()
+			subscription.unsubscribe()
+		})
 	})
 
 	return (cmd: CMD) => {

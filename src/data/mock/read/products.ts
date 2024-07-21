@@ -1,6 +1,7 @@
 import {
 	function as F,
 	option as OPT,
+	reader as R,
 	readonlyArray as RoA,
 	readonlySet as RoS,
 } from 'fp-ts'
@@ -9,8 +10,8 @@ import * as Rx from 'rxjs'
 import * as B from '@/core/base64'
 
 import {
+	type OnProducts,
 	ProductEntityDTO,
-	type R_OnProducts,
 } from '@/app/contract/read/on-products'
 
 const pipe = F.pipe
@@ -25,7 +26,10 @@ const productSamples = [
 
 type Deps = object
 
-export const products: R_OnProducts<Deps> = () =>
+export const products: R.Reader<
+	Deps,
+	OnProducts
+> = () =>
 	pipe(
 		Rx.timer(1000),
 		Rx.map(() =>

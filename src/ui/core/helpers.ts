@@ -1,4 +1,8 @@
-import { createSignal, onCleanup } from 'solid-js'
+import {
+	createEffect,
+	createSignal,
+	onCleanup,
+} from 'solid-js'
 
 export const useWindowScrollTop = () => {
 	const [isScrolledTop, setScrolledTop] =
@@ -49,12 +53,14 @@ export const useWindowScroll = () => {
 		} as const)
 	}
 
-	window.addEventListener('scroll', start)
-	window.addEventListener('scrollend', end)
+	createEffect(() => {
+		window.addEventListener('scroll', start)
+		window.addEventListener('scrollend', end)
 
-	onCleanup(() => {
-		window.removeEventListener('scroll', start)
-		window.removeEventListener('scrollend', end)
+		onCleanup(() => {
+			window.removeEventListener('scroll', start)
+			window.removeEventListener('scrollend', end)
+		})
 	})
 
 	return scrollValues

@@ -1,8 +1,4 @@
-import {
-	eq as Eq,
-	function as F,
-	reader as R,
-} from 'fp-ts'
+import { eq as Eq, function as F } from 'fp-ts'
 import { Observable } from 'rxjs'
 
 import { Base64 } from '@/core/base64'
@@ -34,9 +30,4 @@ export const ProductEntityDTO = {
 
 export type OnProducts = Observable<
 	ReadonlySet<ProductEntityDTO>
->
-
-export type R_OnProducts<ENV> = R.Reader<
-	ENV,
-	Observable<ReadonlySet<ProductEntityDTO>>
 >

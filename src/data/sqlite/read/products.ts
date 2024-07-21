@@ -15,12 +15,12 @@ import * as Rx from 'rxjs'
 import * as B from '@/core/base64'
 
 import {
+	type OnProducts,
 	ProductEntityDTO,
-	type R_OnProducts,
 } from '@/app/contract/read/on-products'
 
-import { log } from '@/data/mock/write/log'
 import { executeSql } from '@/data/sqlite/helpers'
+import { log } from '@/data/system/write/log'
 
 const pipe = F.pipe
 
@@ -60,10 +60,10 @@ const mapData = RoA.reduce<
 		productDecoder.decode(row)
 
 	if (E.isLeft(productRowEither)) {
-		log({
+		log({ prefix: 'D' })({
 			type: 'error',
 			message: 'Row could not be parsed',
-		})({ prefix: 'D' })()
+		})()
 
 		return set
 	}
@@ -71,10 +71,10 @@ const mapData = RoA.reduce<
 	const productRow = productRowEither.right
 
 	if (productRow.name === undefined) {
-		log({
+		log({ prefix: 'D' })({
 			type: 'error',
 			message: `Could not parse name of row ${productRow.id}`,
-		})({ prefix: 'D' })()
+		})()
 	}
 
 	const productData = {
@@ -93,31 +93,32 @@ const mapData = RoA.reduce<
 	)
 })
 
-export const products: R_OnProducts<Deps> = pipe(
-	R.ask<Deps>(),
-	R.map(({ events, db }) =>
-		pipe(
-			events,
-			Rx.switchMap(() =>
-				pipe(
-					executeSql('SELECT * FROM products')(
-						db,
+export const products: (d: Deps) => OnProducts =
+	pipe(
+		R.ask<Deps>(),
+		R.map(({ events, db }) =>
+			pipe(
+				events,
+				Rx.switchMap(() =>
+					pipe(
+						executeSql('SELECT * FROM products')(
+							db,
+						),
+						Rx.defer,
 					),
-					Rx.defer,
+				),
+				O.filterMap(OPT.getRight),
+			),
+		),
+		RO.map(columns =>
+			pipe(
+				Array(columns.rows.length).keys(),
+				Array.from<number>,
+				RoA.fromArray,
+				RoA.map(
+					n => columns.rows.item(n) as unknown,
 				),
 			),
-			O.filterMap(OPT.getRight),
 		),
-	),
-	RO.map(columns =>
-		pipe(
-			Array(columns.rows.length).keys(),
-			Array.from<number>,
-			RoA.fromArray,
-			RoA.map(
-				n => columns.rows.item(n) as unknown,
-			),
-		),
-	),
-	RO.map(mapData),
-)
+		RO.map(mapData),
+	)

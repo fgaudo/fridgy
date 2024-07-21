@@ -5,7 +5,6 @@ import {
 
 import type { OnProducts } from '@/app/contract/read/on-products'
 import type { AddProduct as AddProductCommand } from '@/app/contract/write/add-product'
-import type { DeleteProductsByIds } from '@/app/contract/write/delete-products-by-ids'
 import type { Log } from '@/app/contract/write/log'
 import * as AddProduct from '@/app/use-cases/add-product'
 import * as ProductList from '@/app/use-cases/product-list'
@@ -14,6 +13,7 @@ export interface UseCases {
 	addProduct: AddProductCommand
 	products$: OnProducts
 	appLog: Log
+	uiLog: Log
 }
 
 export type ProductListController = Controller<
@@ -38,9 +38,13 @@ export class App {
 		this.addProduct = fromTransformer(
 			AddProduct.transformer,
 		)({ ...useCases })
+
+		this.log = useCases.uiLog
 	}
 
 	readonly productList: ProductListController
 
 	readonly addProduct: AddProductController
+
+	readonly log: Log
 }

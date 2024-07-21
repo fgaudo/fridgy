@@ -35,8 +35,6 @@ import type {
 } from '@/app/contract/read/on-products'
 import type { Log } from '@/app/contract/write/log'
 
-import { products } from '@/data/mock/read/mock-products'
-
 const pipe = F.pipe
 const flow = F.flow
 

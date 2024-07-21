@@ -1,4 +1,4 @@
-import { io as IO, readerIO as RIO } from 'fp-ts'
+import { io as IO } from 'fp-ts'
 
 export type LogType =
 	| 'debug'
@@ -10,8 +10,3 @@ export type Log = (data: {
 	type: LogType
 	message: string
 }) => IO.IO<void>
-
-export type R_Log<ENV> = (data: {
-	type: LogType
-	message: string
-}) => RIO.ReaderIO<ENV, void>
