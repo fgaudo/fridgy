@@ -15,7 +15,7 @@ import { AppContext } from '@/ui/context'
 import '@/ui/index.css'
 import { applyTheme } from '@/ui/material-web'
 import AddProduct from '@/ui/pages/AddProduct'
-import Overview from '@/ui/pages/Overview/index'
+import Overview from '@/ui/pages/Overview'
 
 const MAIN_COLOR = '#DD7230'
 

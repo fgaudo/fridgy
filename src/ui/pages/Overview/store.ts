@@ -2,14 +2,22 @@ import { useNavigate } from '@solidjs/router'
 import {
 	function as F,
 	predicate as P,
+	readonlySet as RoS,
 } from 'fp-ts'
+import { fromReadonlyArray } from 'fp-ts/lib/ReadonlySet'
 import * as Rx from 'rxjs'
 import {
+	batch,
 	createEffect,
 	from,
 	useContext,
 } from 'solid-js'
-import { createStore } from 'solid-js/store'
+import {
+	createStore,
+	produce,
+} from 'solid-js/store'
+
+import { Base64 } from '@/core/base64'
 
 import type { LogType } from '@/app/contract/write/log'
 import type { ProductModel } from '@/app/use-cases/product-list'
@@ -22,9 +30,13 @@ const pipe = F.pipe
 const flow = F.flow
 
 export interface OverviewStore {
+	isMenuOpen: boolean
 	isReady: boolean
 	products: ProductModel[]
 	selectMode: boolean
+	selectedProducts: ReadonlySet<
+		ProductModel['id']
+	>
 	isOpeningAddProduct: boolean
 	isScrolling: boolean
 	scrollY: number
@@ -32,18 +44,22 @@ export interface OverviewStore {
 
 export type Command =
 	| {
+			type: 'toggleMenu'
+	  }
+	| {
 			type: 'openAddProduct'
 	  }
 	| {
-			type: 'toggleSelectMode'
+			type: 'disableSelectMode'
 	  }
+	| { type: 'toggleItem'; id: Base64 }
 	| {
 			type: 'log'
 			severity: LogType
 			message: string
 	  }
 
-export const createOverviewStore: () => [
+export const useOverviewStore: () => [
 	OverviewStore,
 	(command: Command) => void,
 ] = () => {
@@ -53,9 +69,11 @@ export const createOverviewStore: () => [
 
 	const [store, setStore] =
 		createStore<OverviewStore>({
+			isMenuOpen: false,
 			isReady: false,
 			products: [],
 			selectMode: false,
+			selectedProducts: new Set([]),
 			isOpeningAddProduct: false,
 			isScrolling: false,
 			scrollY: window.scrollY,
@@ -65,20 +83,25 @@ export const createOverviewStore: () => [
 
 	createEffect(() => {
 		const m = model()
-		setStore(
-			'isReady',
-			m === undefined || m.type === 'loading'
-				? false
-				: true,
-		)
-		setStore(
-			'products',
-			m !== undefined && m.type === 'ready'
-				? m.products
-				: [],
-		)
-		setStore('scrollY', scroll().scrollY)
-		setStore('isScrolling', scroll().isScrolling)
+		batch(() => {
+			setStore(
+				'isReady',
+				m === undefined || m.type === 'loading'
+					? false
+					: true,
+			)
+			setStore(
+				'products',
+				m !== undefined && m.type === 'ready'
+					? m.products
+					: [],
+			)
+			setStore('scrollY', scroll().scrollY)
+			setStore(
+				'isScrolling',
+				scroll().isScrolling,
+			)
+		})
 	})
 
 	const navigate = useNavigate()
@@ -101,8 +124,46 @@ export const createOverviewStore: () => [
 				cmd,
 				Rx.observeOn(Rx.asyncScheduler),
 				Rx.filter(
+					cmd => cmd.type === 'toggleMenu',
+				),
+				Rx.tap(cmd => {
+					setStore(
+						'isMenuOpen',
+						!store.isMenuOpen,
+					)
+				}),
+				Rx.ignoreElements(),
+			),
+			pipe(
+				cmd,
+				Rx.observeOn(Rx.asyncScheduler),
+				Rx.filter(
+					cmd => cmd.type === 'toggleItem',
+				),
+				Rx.tap(cmd => {
+					batch(() => {
+						if (!store.selectMode) {
+							setStore('selectMode', true)
+						}
+						setStore(
+							'selectedProducts',
+							RoS.toggle(Base64.Eq)(cmd.id),
+						)
+						if (
+							store.selectedProducts.size === 0
+						) {
+							setStore('selectMode', false)
+						}
+					})
+				}),
+				Rx.ignoreElements(),
+			),
+			pipe(
+				cmd,
+				Rx.observeOn(Rx.asyncScheduler),
+				Rx.filter(
 					cmd =>
-						cmd.type === 'toggleSelectMode' &&
+						cmd.type === 'disableSelectMode' &&
 						!store.isOpeningAddProduct,
 				),
 				Rx.tap(cmd => {
@@ -112,7 +173,13 @@ export const createOverviewStore: () => [
 					})()
 				}),
 				Rx.tap(() => {
-					setStore('selectMode', prev => !prev)
+					batch(() => {
+						setStore('selectMode', false)
+						setStore(
+							'selectedProducts',
+							new Set(),
+						)
+					})
 				}),
 				Rx.ignoreElements(),
 			),

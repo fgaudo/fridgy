@@ -34,7 +34,7 @@ const AddProduct = () => {
 			}}>
 			<SmallTopAppBar>
 				<A href="/">
-					<md-icon-button class="pl-[8px]">
+					<md-icon-button class="pl-[4px]">
 						<md-icon>arrow_back</md-icon>
 					</md-icon-button>
 				</A>
