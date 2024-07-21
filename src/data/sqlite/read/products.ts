@@ -19,8 +19,8 @@ import {
 	type R_OnProducts,
 } from '@/app/contract/read/on-products'
 
-import { executeSql } from '@/data/helpers'
 import { log } from '@/data/mock/write/log'
+import { executeSql } from '@/data/sqlite/helpers'
 
 const pipe = F.pipe
 
@@ -60,10 +60,10 @@ const mapData = RoA.reduce<
 		productDecoder.decode(row)
 
 	if (E.isLeft(productRowEither)) {
-		log(
-			'error',
-			'Row could not be parsed',
-		)({ prefix: 'D' })()
+		log({
+			type: 'error',
+			message: 'Row could not be parsed',
+		})({ prefix: 'D' })()
 
 		return set
 	}
@@ -71,11 +71,10 @@ const mapData = RoA.reduce<
 	const productRow = productRowEither.right
 
 	if (productRow.name === undefined) {
-		log(
-			'error',
-			'Could not parse name of row ' +
-				productRow.id,
-		)({ prefix: 'D' })()
+		log({
+			type: 'error',
+			message: `Could not parse name of row ${productRow.id}`,
+		})({ prefix: 'D' })()
 	}
 
 	const productData = {

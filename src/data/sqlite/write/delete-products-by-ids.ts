@@ -12,7 +12,7 @@ import * as RoNeS from '@/core/readonly-non-empty-set'
 
 import type { R_DeleteProductsByIds } from '@/app/contract/write/delete-products-by-ids'
 
-import { executeSql } from '@/data/helpers'
+import { executeSql } from '@/data/sqlite/helpers'
 
 const pipe = F.pipe
 const flow = F.flow

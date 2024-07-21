@@ -23,7 +23,7 @@ const productSamples = [
 	'Broccoli',
 ]
 
-interface Deps {}
+type Deps = object
 
 export const products: R_OnProducts<Deps> = () =>
 	pipe(

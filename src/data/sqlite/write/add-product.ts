@@ -10,7 +10,7 @@ import {
 
 import type { R_AddProduct } from '@/app/contract/write/add-product'
 
-import { executeSql } from '@/data/helpers'
+import { executeSql } from '@/data/sqlite/helpers'
 
 const pipe = F.pipe
 
