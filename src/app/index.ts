@@ -1,25 +1,24 @@
 import {
 	Controller,
-	fromViewModel,
+	fromTransformer,
 } from '@/core/controller'
 
 import type { OnProducts } from '@/app/contract/read/on-products'
 import type { AddProduct as AddProductCommand } from '@/app/contract/write/add-product'
 import type { DeleteProductsByIds } from '@/app/contract/write/delete-products-by-ids'
 import type { Log } from '@/app/contract/write/log'
-import * as AddProduct from '@/app/view-models/add-product'
-import * as Overview from '@/app/view-models/overview'
+import * as AddProduct from '@/app/use-cases/add-product'
+import * as ProductList from '@/app/use-cases/product-list'
 
 export interface UseCases {
-	deleteProductsByIds: DeleteProductsByIds
 	addProduct: AddProductCommand
 	products$: OnProducts
 	appLog: Log
 }
 
-export type OverviewController = Controller<
-	Overview.Command,
-	Overview.Model
+export type ProductListController = Controller<
+	ProductList.Command,
+	ProductList.Model
 >
 
 export type AddProductController = Controller<
@@ -29,19 +28,19 @@ export type AddProductController = Controller<
 
 export class App {
 	constructor(useCases: UseCases) {
-		this.overview = fromViewModel(
-			Overview.viewModel,
+		this.productList = fromTransformer(
+			ProductList.transformer,
 		)({
 			...useCases,
 			log: useCases.appLog,
 		})
 
-		this.addProduct = fromViewModel(
-			AddProduct.viewModel,
+		this.addProduct = fromTransformer(
+			AddProduct.transformer,
 		)({ ...useCases })
 	}
 
-	readonly overview: OverviewController
+	readonly productList: ProductListController
 
 	readonly addProduct: AddProductController
 }

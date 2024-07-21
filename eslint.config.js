@@ -1,5 +1,6 @@
 import eslint from '@eslint/js'
 import eslintConfig from 'eslint-config-prettier'
+import solid from 'eslint-plugin-solid/configs/typescript.js'
 import tseslint from 'typescript-eslint'
 
 export default [
@@ -23,8 +24,6 @@ export default [
 		rules: {
 			'@typescript-eslint/no-non-null-assertion':
 				'off',
-			'@typescript-eslint/no-unnecessary-type-assertion':
-				'error',
 		},
 	},
 	{
@@ -32,7 +31,13 @@ export default [
 			'@typescript-eslint/no-unnecessary-type-assertion':
 				'error',
 			'@typescript-eslint/no-unused-vars': 'off',
+			'@typescript-eslint/no-confusing-void-expression':
+				'error',
 		},
+	},
+	{
+		files: ['**/*.{ts,tsx}'],
+		...solid,
 	},
 	eslintConfig,
 	{ ignores: ['*.js', '*.ts'] },

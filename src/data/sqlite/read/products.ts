@@ -20,7 +20,7 @@ import {
 } from '@/app/contract/read/on-products'
 
 import { executeSql } from '@/data/helpers'
-import { log } from '@/data/write/log'
+import { log } from '@/data/mock/write/log'
 
 const pipe = F.pipe
 

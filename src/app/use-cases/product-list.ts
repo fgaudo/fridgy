@@ -19,7 +19,7 @@ import * as Rx from 'rxjs'
 
 import * as B from '@/core/base64'
 import * as RoNeS from '@/core/readonly-non-empty-set'
-import { type ViewModel } from '@/core/view-model'
+import { type R_Transformer } from '@/core/transformer'
 
 import {
 	type Product,
@@ -34,6 +34,8 @@ import type {
 	ProductEntityDTO,
 } from '@/app/contract/read/on-products'
 import type { Log } from '@/app/contract/write/log'
+
+import { products } from '@/data/mock/read/mock-products'
 
 const pipe = F.pipe
 const flow = F.flow
@@ -77,17 +79,14 @@ const ProductModel = {
 	]),
 } as const
 
-export interface Model {
-	type: 'ready' | 'deleting'
-	products: readonly ProductModel[]
-}
+export type Model =
+	| { type: 'loading' }
+	| {
+			type: 'ready'
+			products: readonly ProductModel[]
+	  }
 
-interface Delete {
-	type: 'delete'
-	ids: RoNeS.ReadonlyNonEmptySet<B.Base64>
-}
-
-export type Command = Delete
+export type Command = undefined
 
 export interface UseCases {
 	products$: OnProducts
@@ -164,91 +163,66 @@ const toProductModels = ({
 const logInfo =
 	(message: string) =>
 	({ log }: UseCases) =>
-		log('info', message)
+		log({ type: 'info', message })
 
-function combineLatest2<ENV, A, B>(
-	a: RO.ReaderObservable<ENV, A>,
-	b: RO.ReaderObservable<ENV, B>,
-): R.Reader<ENV, Rx.Observable<[A, B]>> {
-	return env => Rx.combineLatest([a(env), b(env)])
-}
-
-export const viewModel: ViewModel<
+export const transformer: R_Transformer<
 	UseCases,
 	Command,
 	Model
-> = cmd$ =>
-	// ON PRODUCTS
+> = () =>
 	pipe(
-		combineLatest2(
-			pipe(
-				R.asks(
-					({ products$ }: UseCases) => products$,
-				),
-				RO.tap(
-					flow(
-						RoS.size,
-						size => size.toString(10),
-						size =>
-							logInfo(
-								`Received ${size} product entries`,
-							),
+		R.asks(
+			({ products$ }: UseCases) => products$,
+		),
+		RO.tap(
+			flow(
+				RoS.size,
+				size => size.toString(10),
+				size =>
+					logInfo(
+						`Received ${size} product entries`,
 					),
-				),
-				RO.map(toProductEntitiesWithInvalid),
-				RO.tap(
-					flow(
-						SEP.left,
-						RoS.toReadonlyArray<B.Base64>(
-							Ord.trivial,
-						),
-						RoA.map(B.toString),
-						RoA.map(id =>
-							logInfo(
-								`Unable to load entity with id ${id}`,
-							),
-						),
-						RIO.sequenceArray,
-					),
-				),
-				RO.map(discardInvalid),
-				R.map(
-					Rx.switchMap(products =>
-						pipe(
-							T.fromIO(() =>
-								new Date().getDate(),
-							),
-							Rx.defer,
-							Rx.map(
-								timestamp =>
-									({
-										products,
-										timestamp,
-									}) as const,
-							),
-						),
-					),
-				),
-				RO.map(toProductModels),
-				RO.map(sortByOldest),
-			),
-			pipe(
-				R.of(cmd$),
-				RO.exhaustMap(() =>
-					pipe(
-						Rx.of('ready' as const),
-						Rx.startWith('deleting' as const),
-						R.of,
-					),
-				),
-				R.map(Rx.startWith('ready' as const)),
 			),
 		),
+		RO.map(toProductEntitiesWithInvalid),
+		RO.tap(
+			flow(
+				SEP.left,
+				RoS.toReadonlyArray<B.Base64>(
+					Ord.trivial,
+				),
+				RoA.map(B.toString),
+				RoA.map(id =>
+					logInfo(
+						`Unable to load entity with id ${id}`,
+					),
+				),
+				RIO.sequenceArray,
+			),
+		),
+		RO.map(discardInvalid),
+		R.map(
+			Rx.switchMap(products =>
+				pipe(
+					T.fromIO(() => new Date().getDate()),
+					Rx.defer,
+					Rx.map(
+						timestamp =>
+							({
+								products,
+								timestamp,
+							}) as const,
+					),
+				),
+			),
+		),
+		RO.map(toProductModels),
+		RO.map(sortByOldest),
 		RO.map(
-			([products, type]) =>
+			models =>
 				({
-					products,
-					type,
-				}) satisfies Model,
+					type: 'ready',
+					products: models,
+				}) as const,
 		),
 	)

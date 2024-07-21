@@ -7,7 +7,7 @@ import {
 } from 'fp-ts'
 import * as Rx from 'rxjs'
 
-import type { ViewModel } from '@/core/view-model'
+import type { R_Transformer } from '@/core/transformer'
 
 import type { ProductDTO } from '@/app/contract/read/types/product'
 import type { AddProduct as AddProductCommand } from '@/app/contract/write/add-product'
@@ -89,7 +89,7 @@ const initFields: FieldsModel = {
 	expDate: { status: 'init' },
 }
 
-export const viewModel: ViewModel<
+export const transformer: R_Transformer<
 	Deps,
 	Command,
 	Model

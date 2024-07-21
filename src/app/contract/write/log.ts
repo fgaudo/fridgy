@@ -6,12 +6,12 @@ export type LogType =
 	| 'warning'
 	| 'error'
 
-export type Log = (
-	type: LogType,
-	message: string,
-) => IO.IO<void>
+export type Log = (data: {
+	type: LogType
+	message: string
+}) => IO.IO<void>
 
-export type R_Log<ENV> = (
-	type: LogType,
-	message: string,
-) => RIO.ReaderIO<ENV, void>
+export type R_Log<ENV> = (data: {
+	type: LogType
+	message: string
+}) => RIO.ReaderIO<ENV, void>

@@ -9,7 +9,7 @@ interface Deps {
 }
 
 export const log: R_Log<Deps> =
-	(type, message) =>
+	({ type, message }) =>
 	({ prefix }) =>
 	() => {
 		switch (type) {

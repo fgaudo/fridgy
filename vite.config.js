@@ -14,4 +14,5 @@ export default defineConfig({
 	test: {
 		dir: './src',
 	},
+	server: { host: '0.0.0.0' },
 })

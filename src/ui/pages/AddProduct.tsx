@@ -7,11 +7,11 @@ import {
 	useContext,
 } from 'solid-js'
 
-import { AddProductContext } from '@/ui/context'
+import { AppContext } from '@/ui/context'
 import { SmallTopAppBar } from '@/ui/widgets/SmallTopAppBar'
 
 const AddProduct = () => {
-	const app = useContext(AddProductContext)!
+	const app = useContext(AppContext)!
 
 	createRenderEffect(() => {
 		console.debug('Opened add-product page')

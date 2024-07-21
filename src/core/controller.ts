@@ -1,15 +1,15 @@
 import { function as F, reader as R } from 'fp-ts'
 import { Observable, Subject } from 'rxjs'
 
-import type { ViewModel } from './view-model'
+import type { R_Transformer } from './transformer'
 
 const flip = F.flip
 
-export function fromViewModel<ENV, IN, OUT>(
-	viewModel: ViewModel<ENV, IN, OUT>,
+export function fromTransformer<ENV, IN, OUT>(
+	transformer: R_Transformer<ENV, IN, OUT>,
 ): R.Reader<ENV, Controller<IN, OUT>> {
 	return env =>
-		new Controller(flip(viewModel)(env))
+		new Controller(flip(transformer)(env))
 }
 
 export class Controller<IN, OUT> {
