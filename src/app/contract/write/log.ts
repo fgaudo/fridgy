@@ -1,12 +1,12 @@
 import { io as IO } from 'fp-ts'
 
-export type LogType =
+export type LogSeverity =
 	| 'debug'
 	| 'info'
 	| 'warning'
 	| 'error'
 
 export type Log = (data: {
-	type: LogType
+	severity: LogSeverity
 	message: string
 }) => IO.IO<void>

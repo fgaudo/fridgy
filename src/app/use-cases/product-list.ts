@@ -78,9 +78,9 @@ const ProductModel = {
 } as const
 
 export type Model =
-	| { type: 'loading' }
+	| { status: 'loading' }
 	| {
-			type: 'ready'
+			status: 'ready'
 			products: readonly ProductModel[]
 	  }
 
@@ -161,7 +161,7 @@ const toProductModels = ({
 const logInfo =
 	(message: string) =>
 	({ log }: UseCases) =>
-		log({ type: 'info', message })
+		log({ severity: 'info', message })
 
 export const transformer: R_Transformer<
 	UseCases,
@@ -219,8 +219,8 @@ export const transformer: R_Transformer<
 		RO.map(
 			models =>
 				({
-					type: 'ready',
+					status: 'ready',
 					products: models,
-				}) as const,
+				}) satisfies Model,
 		),
 	)

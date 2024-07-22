@@ -11,7 +11,7 @@ interface Deps {
 }
 
 export const log: (d: Deps) => Log = F.flip(
-	({ type, message }) =>
+	({ severity: type, message }) =>
 		({ prefix }) =>
 		() => {
 			switch (type) {

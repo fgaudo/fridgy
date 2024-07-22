@@ -5,7 +5,7 @@ import {
 } from 'fp-ts'
 import type { ReadonlyNonEmptyArray } from 'io-ts-types'
 
-import type { LogType } from '@/app/contract/write/log'
+import type { LogSeverity } from '@/app/contract/write/log'
 
 type ExecuteSql = (
 	sql: string,

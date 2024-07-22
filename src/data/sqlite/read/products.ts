@@ -61,7 +61,7 @@ const mapData = RoA.reduce<
 
 	if (E.isLeft(productRowEither)) {
 		log({ prefix: 'D' })({
-			type: 'error',
+			severity: 'error',
 			message: 'Row could not be parsed',
 		})()
 
@@ -72,7 +72,7 @@ const mapData = RoA.reduce<
 
 	if (productRow.name === undefined) {
 		log({ prefix: 'D' })({
-			type: 'error',
+			severity: 'error',
 			message: `Could not parse name of row ${productRow.id}`,
 		})()
 	}

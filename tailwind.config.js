@@ -23,10 +23,13 @@ export default {
 				'var(--md-sys-typescale-title-large-size)',
 		},
 		colors: {
+			primary: 'var(--md-sys-color-primary)',
 			onSurface: {
 				DEFAULT: 'var(--md-sys-color-on-surface)',
 				container:
 					'var(--md-sys-color-on-surface-container)',
+				variant:
+					'var(--md-sys-color-on-surface-variant)',
 			},
 			surface: {
 				DEFAULT: 'var(--md-sys-color-surface)',

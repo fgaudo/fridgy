@@ -19,7 +19,7 @@ import {
 
 import { Base64 } from '@/core/base64'
 
-import type { LogType } from '@/app/contract/write/log'
+import type { LogSeverity } from '@/app/contract/write/log'
 import type { ProductModel } from '@/app/use-cases/product-list'
 
 import { AppContext } from '@/ui/context'
@@ -29,7 +29,7 @@ import { useDispatcher } from '@/ui/core/solid-js'
 const pipe = F.pipe
 const flow = F.flow
 
-export interface OverviewStore {
+interface OverviewStore {
 	isMenuOpen: boolean
 	isReady: boolean
 	products: ProductModel[]
@@ -42,7 +42,8 @@ export interface OverviewStore {
 	scrollY: number
 }
 
-export type Command =
+type Command =
+	| { type: 'deleteProducts' }
 	| {
 			type: 'toggleMenu'
 	  }
@@ -55,7 +56,7 @@ export type Command =
 	| { type: 'toggleItem'; id: Base64 }
 	| {
 			type: 'log'
-			severity: LogType
+			severity: LogSeverity
 			message: string
 	  }
 
@@ -86,13 +87,13 @@ export const useOverviewStore: () => [
 		batch(() => {
 			setStore(
 				'isReady',
-				m === undefined || m.type === 'loading'
+				m === undefined || m.status === 'loading'
 					? false
 					: true,
 			)
 			setStore(
 				'products',
-				m !== undefined && m.type === 'ready'
+				m !== undefined && m.status === 'ready'
 					? m.products
 					: [],
 			)
@@ -113,10 +114,7 @@ export const useOverviewStore: () => [
 				Rx.observeOn(Rx.asyncScheduler),
 				Rx.filter(cmd => cmd.type === 'log'),
 				Rx.tap(cmd => {
-					context.log({
-						type: cmd.severity,
-						message: cmd.message,
-					})()
+					context.log(cmd)()
 				}),
 				Rx.ignoreElements(),
 			),
@@ -168,7 +166,7 @@ export const useOverviewStore: () => [
 				),
 				Rx.tap(cmd => {
 					context.log({
-						type: 'debug',
+						severity: 'debug',
 						message: `Dispatched '${cmd.type}' command`,
 					})()
 				}),
@@ -192,7 +190,7 @@ export const useOverviewStore: () => [
 				Rx.tap(cmd => {
 					context.log({
 						message: `Dispatched '${cmd.type}' command`,
-						type: 'debug',
+						severity: 'debug',
 					})()
 				}),
 				Rx.map(() => store.isOpeningAddProduct),
@@ -205,6 +203,15 @@ export const useOverviewStore: () => [
 				Rx.tap(() => {
 					navigate('/add-product')
 				}),
+				Rx.ignoreElements(),
+			),
+			pipe(
+				cmd,
+				Rx.observeOn(Rx.asyncScheduler),
+				Rx.filter(
+					cmd => cmd.type === 'deleteProducts',
+				),
+
 				Rx.ignoreElements(),
 			),
 		),
