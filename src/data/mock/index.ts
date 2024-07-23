@@ -1,7 +1,4 @@
-import {
-	reader as R,
-	taskOption as TO,
-} from 'fp-ts'
+import { reader as R } from 'fp-ts'
 
 import type { UseCases } from '@/app/index'
 

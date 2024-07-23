@@ -1,7 +1,6 @@
 import { function as F } from 'fp-ts'
 import * as Rx from 'rxjs'
 import {
-	createEffect,
 	createRenderEffect,
 	useContext,
 } from 'solid-js'

@@ -11,4 +11,4 @@ type Deps = undefined
 export const addProduct: R.Reader<
 	Deps,
 	AddProduct
-> = F.flip(product => R.of(TO.none))
+> = F.flip(() => R.of(TO.none))

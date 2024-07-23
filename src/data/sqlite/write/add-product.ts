@@ -1,18 +1,13 @@
 import {
 	function as F,
 	option as OPT,
-	reader as R,
 	readerTask as RT,
 	readerTaskEither as RTE,
-	task as T,
-	taskOption as TO,
 } from 'fp-ts'
 
 import type { AddProduct } from '@/app/contract/write/add-product'
 
 import { executeSql } from '@/data/sqlite/helpers'
-
-const pipe = F.pipe
 
 const flow = F.flow
 

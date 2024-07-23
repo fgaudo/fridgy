@@ -1,5 +1,3 @@
-import { function as F } from 'fp-ts'
-
 import { App } from '@/app'
 
 import { useCases as mockUseCases } from '@/data/mock'

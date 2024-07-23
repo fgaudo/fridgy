@@ -13,10 +13,7 @@ import {
 	from,
 	useContext,
 } from 'solid-js'
-import {
-	createStore,
-	produce,
-} from 'solid-js/store'
+import { createStore } from 'solid-js/store'
 
 import { Base64 } from '@/core/base64'
 import * as RoNeS from '@/core/readonly-non-empty-set'
@@ -29,7 +26,6 @@ import { useWindowScroll } from '@/ui/core/helpers'
 import { useDispatcher } from '@/ui/core/solid-js'
 
 const pipe = F.pipe
-const flow = F.flow
 
 interface OverviewStore {
 	isMenuOpen: boolean

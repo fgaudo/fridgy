@@ -4,7 +4,7 @@ export type AtLeastOne<
 	U = { [K in keyof T]: Pick<T, K> },
 > = Partial<T> & U[keyof U]
 
-type Flipped<
+export type Flipped<
 	T extends (a: any) => (b: any) => any,
 > = T extends (
 	a: infer A,

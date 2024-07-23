@@ -1,4 +1,3 @@
-import * as RO from '@fgaudo/fp-ts-rxjs/ReaderObservable.js'
 import {
 	function as F,
 	option as OPT,

@@ -1,5 +1,3 @@
-import { Controller } from '@/core/controller'
-
 import type { OnProducts } from '@/app/contract/read/on-products'
 import type { AddProduct as AddProductCommand } from '@/app/contract/write/add-product'
 import type { DeleteProductsByIds as DeleteProductsByIdsCommand } from '@/app/contract/write/delete-products-by-ids'

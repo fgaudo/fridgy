@@ -10,7 +10,7 @@ import {
 import { toString } from '@/core/base64'
 import * as RoNeS from '@/core/readonly-non-empty-set'
 
-import type { R_DeleteProductsByIds } from '@/app/contract/write/delete-products-by-ids'
+import type { DeleteProductsByIds } from '@/app/contract/write/delete-products-by-ids'
 
 import { executeSql } from '@/data/sqlite/helpers'
 
@@ -21,7 +21,9 @@ interface Deps {
 	db: SQLitePlugin.Database
 }
 
-export const deleteProductsByIds: R_DeleteProductsByIds<Deps> =
+export const deleteProductsByIds: (
+	deps: Deps,
+) => DeleteProductsByIds = F.flip(
 	flow(
 		RoNeS.map(S.Eq)(toString),
 		RoNeS.toReadonlyNonEmptyArray(S.Ord),
@@ -43,4 +45,5 @@ export const deleteProductsByIds: R_DeleteProductsByIds<Deps> =
 					)(db),
 		),
 		RT.map(OPT.getLeft),
-	)
+	),
+)
