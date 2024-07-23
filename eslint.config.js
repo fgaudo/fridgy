@@ -33,6 +33,8 @@ export default [
 			'@typescript-eslint/no-unused-vars': 'off',
 			'@typescript-eslint/no-confusing-void-expression':
 				'error',
+			'@typescript-eslint/switch-exhaustiveness-check':
+				'error',
 		},
 	},
 	{

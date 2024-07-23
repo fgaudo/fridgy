@@ -24,6 +24,16 @@ const Overview: Component = () => {
 	return (
 		<>
 			<div
+				class="fixed bottom-0 left-0 right-0 top-0 z-[99] bg-[#00000023] backdrop-blur-[1px]"
+				classList={{
+					hidden: !store.isLoading,
+				}}>
+				<md-circular-progress
+					class="relative left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
+					prop:indeterminate={true}
+				/>
+			</div>
+			<div
 				class="fixed bottom-0 left-0 right-0 top-0 z-50 h-full w-full overflow-auto transition-all"
 				classList={{
 					'bg-[#00000076]': store.isMenuOpen,
@@ -96,7 +106,13 @@ const Overview: Component = () => {
 						</md-icon-button>
 						{store.selectedProducts.size}
 						<Show when={store.selectMode}>
-							<md-icon-button class="ml-auto mr-[-8px]">
+							<md-icon-button
+								class="ml-auto mr-[-8px]"
+								onClick={() => {
+									dispatch({
+										type: 'deleteProducts',
+									})
+								}}>
 								<md-icon>delete</md-icon>
 							</md-icon-button>
 						</Show>
@@ -109,7 +125,7 @@ const Overview: Component = () => {
 							class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
 						/>
 					}>
-					<Match when={store.isReady}>
+					<Match when={store.products.length > 0}>
 						<md-list>
 							<For each={store.products}>
 								{(productModel, i) => {

@@ -1,9 +1,13 @@
-import { reader as R } from 'fp-ts'
+import {
+	reader as R,
+	taskOption as TO,
+} from 'fp-ts'
 
 import type { UseCases } from '@/app/index'
 
 import { products } from './read/products'
 import { addProduct } from './write/add-product'
+import { deleteProductByIds } from './write/delete-products-by-ids'
 
 export interface Deps {
 	dataLogPrefix: string
@@ -11,10 +15,16 @@ export interface Deps {
 
 export const useCases: R.Reader<
 	Deps,
-	Pick<UseCases, 'products$' | 'addProduct'>
+	Pick<
+		UseCases,
+		| 'products$'
+		| 'addProduct'
+		| 'deleteProductsByIds'
+	>
 > = ({ dataLogPrefix: prefix }) => ({
 	addProduct: addProduct(undefined),
 	products$: products({
 		prefix,
 	}),
+	deleteProductsByIds: deleteProductByIds({}),
 })

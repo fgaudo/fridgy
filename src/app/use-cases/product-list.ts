@@ -1,4 +1,5 @@
 import * as RO from '@fgaudo/fp-ts-rxjs/ReaderObservable.js'
+import type { ReaderObservable } from '@fgaudo/fp-ts-rxjs/ReaderObservable.js'
 import {
 	either as E,
 	eq as Eq,
@@ -18,6 +19,7 @@ import {
 import * as Rx from 'rxjs'
 
 import * as B from '@/core/base64'
+import { Controller } from '@/core/controller'
 import * as RoNeS from '@/core/readonly-non-empty-set'
 import { type R_Transformer } from '@/core/transformer'
 
@@ -163,7 +165,7 @@ const logInfo =
 	({ log }: UseCases) =>
 		log({ severity: 'info', message })
 
-export const transformer: R_Transformer<
+const transformer: R_Transformer<
 	UseCases,
 	Command,
 	Model
@@ -224,3 +226,11 @@ export const transformer: R_Transformer<
 				}) satisfies Model,
 		),
 	)
+
+export type ProductListController = Controller<
+	Command,
+	Model
+>
+
+export const controller = (deps: UseCases) =>
+	new Controller(F.flip(transformer)(deps))

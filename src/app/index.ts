@@ -1,50 +1,44 @@
-import {
-	Controller,
-	fromTransformer,
-} from '@/core/controller'
+import { Controller } from '@/core/controller'
 
 import type { OnProducts } from '@/app/contract/read/on-products'
 import type { AddProduct as AddProductCommand } from '@/app/contract/write/add-product'
+import type { DeleteProductsByIds as DeleteProductsByIdsCommand } from '@/app/contract/write/delete-products-by-ids'
 import type { Log } from '@/app/contract/write/log'
-import * as AddProduct from '@/app/use-cases/add-product'
-import * as ProductList from '@/app/use-cases/product-list'
+import * as AP from '@/app/use-cases/add-product'
+import * as DPBY from '@/app/use-cases/delete-products-by-ids'
+import * as PL from '@/app/use-cases/product-list'
 
 export interface UseCases {
 	addProduct: AddProductCommand
 	products$: OnProducts
+	deleteProductsByIds: DeleteProductsByIdsCommand
 	appLog: Log
 	uiLog: Log
 }
 
-export type ProductListController = Controller<
-	ProductList.Command,
-	ProductList.Model
->
-
-export type AddProductController = Controller<
-	AddProduct.Command,
-	AddProduct.Model
->
-
 export class App {
 	constructor(useCases: UseCases) {
-		this.productList = fromTransformer(
-			ProductList.transformer,
-		)({
+		this.productList = PL.controller({
 			...useCases,
 			log: useCases.appLog,
 		})
 
-		this.addProduct = fromTransformer(
-			AddProduct.transformer,
-		)({ ...useCases })
+		this.addProduct = AP.command({
+			...useCases,
+		})
 
 		this.log = useCases.uiLog
+
+		this.deleteProductsByIds = DPBY.command({
+			...useCases,
+		})
 	}
 
-	readonly productList: ProductListController
+	readonly productList: PL.ProductListController
 
-	readonly addProduct: AddProductController
+	readonly addProduct: AP.AddProduct
+
+	readonly deleteProductsByIds: DPBY.DeleteProductsByIds
 
 	readonly log: Log
 }
