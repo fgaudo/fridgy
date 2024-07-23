@@ -105,10 +105,10 @@ export const useOverviewStore: () => [
 
 	const navigate = useNavigate()
 
-	const dispatch = useDispatcher<Command>(cmd =>
+	const dispatch = useDispatcher<Command>(cmd$ =>
 		Rx.merge(
 			pipe(
-				cmd,
+				cmd$,
 				Rx.observeOn(Rx.asyncScheduler),
 				Rx.filter(cmd => cmd.type === 'log'),
 				Rx.tap(cmd => {
@@ -117,7 +117,7 @@ export const useOverviewStore: () => [
 				Rx.ignoreElements(),
 			),
 			pipe(
-				cmd,
+				cmd$,
 				Rx.observeOn(Rx.asyncScheduler),
 				Rx.filter(
 					cmd =>

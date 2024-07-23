@@ -24,7 +24,7 @@ const Overview: Component = () => {
 	return (
 		<>
 			<div
-				class="fixed bottom-0 left-0 right-0 top-0 z-[99] bg-[#00000023] backdrop-blur-[1px]"
+				class="fixed bottom-0 left-0 right-0 top-0 z-[99] bg-[#00000023]"
 				classList={{
 					hidden: !store.isLoading,
 				}}>
@@ -57,14 +57,6 @@ const Overview: Component = () => {
 							Fridgy
 						</p>
 						<md-list>
-							<md-list-item prop:type="button">
-								<md-icon slot="start">
-									settings
-								</md-icon>
-								<div slot="headline">
-									Settings
-								</div>
-							</md-list-item>
 							<md-list-item prop:type="button">
 								<md-icon slot="start">
 									info
