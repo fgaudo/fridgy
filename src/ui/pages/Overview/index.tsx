@@ -24,16 +24,6 @@ const Overview: Component = () => {
 	return (
 		<>
 			<div
-				class="fixed bottom-0 left-0 right-0 top-0 z-[99] bg-[#00000023]"
-				classList={{
-					hidden: !store.isLoading,
-				}}>
-				<md-circular-progress
-					class="relative left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
-					prop:indeterminate={true}
-				/>
-			</div>
-			<div
 				class="fixed bottom-0 left-0 right-0 top-0 z-50 h-full w-full overflow-auto transition-all"
 				classList={{
 					'bg-[#00000076]': store.isMenuOpen,
@@ -110,13 +100,13 @@ const Overview: Component = () => {
 						</Show>
 					</Show>
 				</SmallTopAppBar>
-				<Switch
-					fallback={
+				<Switch>
+					<Match when={store.isLoading}>
 						<md-circular-progress
 							prop:indeterminate={true}
 							class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
 						/>
-					}>
+					</Match>
 					<Match when={store.products.length > 0}>
 						<md-list>
 							<For each={store.products}>
@@ -193,10 +183,16 @@ const Overview: Component = () => {
 				<div
 					class="fixed transition-all duration-[0.25s]"
 					classList={{
+						'opacity-0 pointer-events-none':
+							store.selectMode,
 						'bg-transparent bottom-[16px] right-[16px] h-[96px] w-[96px]':
 							!store.isOpeningAddProduct,
-						'opacity-50': store.isScrolling,
-						'opacity-100': !store.isScrolling,
+						'opacity-50':
+							store.isScrolling &&
+							!store.selectMode,
+						'opacity-100':
+							!store.isScrolling &&
+							!store.selectMode,
 						'bg-surface h-screen w-screen right-0 bottom-0':
 							store.isOpeningAddProduct,
 					}}>
@@ -206,9 +202,11 @@ const Overview: Component = () => {
 								store.isOpeningAddProduct,
 						}}
 						onClick={() => {
-							dispatch({
-								type: 'openAddProduct',
-							})
+							if (!store.selectMode) {
+								dispatch({
+									type: 'openAddProduct',
+								})
+							}
 						}}
 						prop:variant="primary"
 						prop:size="large">

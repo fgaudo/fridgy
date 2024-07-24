@@ -36,6 +36,14 @@ export default {
 				container:
 					'var(--md-sys-color-surface-container)',
 			},
+			inverse: {
+				onSurface:
+					'var(--md-sys-color-inverse-on-surface)',
+				primary:
+					'var(--md-sys-color-inverse-primary)',
+				surface:
+					'var(--md-sys-color-inverse-surface)',
+			},
 		},
 	},
 }

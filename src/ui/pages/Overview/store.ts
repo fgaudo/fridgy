@@ -21,7 +21,10 @@ import * as RoNeS from '@/core/readonly-non-empty-set'
 import type { LogSeverity } from '@/app/contract/write/log'
 import type { ProductModel } from '@/app/use-cases/product-list'
 
-import { AppContext } from '@/ui/context'
+import {
+	AppContext,
+	useAppContext,
+} from '@/ui/context'
 import { useWindowScroll } from '@/ui/core/helpers'
 import { useDispatcher } from '@/ui/core/solid-js'
 
@@ -62,9 +65,11 @@ export const useOverviewStore: () => [
 	OverviewStore,
 	(command: Command) => void,
 ] = () => {
-	const context = useContext(AppContext)!
+	const context = useAppContext(AppContext)
 
-	const model = from(context.productList.stream)
+	const model = from(
+		context.app.productList.stream,
+	)
 
 	const [store, setStore] =
 		createStore<OverviewStore>({
@@ -112,7 +117,7 @@ export const useOverviewStore: () => [
 				Rx.observeOn(Rx.asyncScheduler),
 				Rx.filter(cmd => cmd.type === 'log'),
 				Rx.tap(cmd => {
-					context.log(cmd)()
+					context.app.log(cmd)()
 				}),
 				Rx.ignoreElements(),
 			),
@@ -152,7 +157,7 @@ export const useOverviewStore: () => [
 														)
 													}),
 													TO.chain(() =>
-														context.deleteProductsByIds(
+														context.app.deleteProductsByIds(
 															products,
 														),
 													),

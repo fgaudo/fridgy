@@ -1,7 +1,3 @@
-import type {
-	MdCheckbox,
-	MdOutlinedTextField,
-} from '@material/web/all'
 import {
 	function as F,
 	option as OPT,
@@ -10,18 +6,19 @@ import * as Rx from 'rxjs'
 import {
 	batch,
 	createRenderEffect,
-	onMount,
-	useContext,
+	onCleanup,
 } from 'solid-js'
 import {
 	createStore,
 	produce,
 } from 'solid-js/store'
 
-import type { ProductDTO } from '@/app/contract/read/types/product'
 import type { LogSeverity } from '@/app/contract/write/log'
 
-import { AppContext } from '@/ui/context'
+import {
+	AppContext,
+	useAppContext,
+} from '@/ui/context'
 import { useDispatcher } from '@/ui/core/solid-js'
 
 const pipe = F.pipe
@@ -33,7 +30,7 @@ interface Store {
 		isBestBefore: boolean
 	}
 	isOk: boolean
-	isAdding: boolean
+	toastMessage: string
 	currentDate:
 		| { status: 'loading' }
 		| { status: 'ready'; date: string }
@@ -57,22 +54,41 @@ type Command =
 				| { name: 'isBestBefore'; value: boolean }
 	  }
 
+const defaultFields = () => ({
+	name: '',
+	expDate: OPT.none,
+	isBestBefore: false,
+})
+
 export const useStore: () => [
 	Store,
 	(command: Command) => void,
 ] = () => {
-	const app = useContext(AppContext)!
+	const context = useAppContext(AppContext)
 
 	const [store, setStore] = createStore<Store>({
-		formFields: {
-			name: '',
-			expDate: OPT.none,
-			isBestBefore: false,
-		},
+		formFields: defaultFields(),
 		isOk: false,
-		isAdding: false,
 		currentDate: { status: 'loading' },
+		toastMessage: '',
 	})
+
+	const validateFields = () => {
+		setStore(
+			'isOk',
+			store.formFields.name.length > 0,
+		)
+	}
+
+	const resetFields = () => {
+		setStore(
+			produce(state => {
+				state.formFields = defaultFields()
+			}),
+		)
+
+		validateFields()
+	}
 
 	createRenderEffect(() => {
 		setStore('currentDate', {
@@ -83,13 +99,17 @@ export const useStore: () => [
 		})
 	})
 
+	onCleanup(() => {
+		context.showLoading(false)
+	})
+
 	const dispatch = useDispatcher<Command>(cmd$ =>
 		Rx.merge(
 			pipe(
 				cmd$,
 				Rx.filter(cmd => cmd.type === 'log'),
 				Rx.tap(cmd => {
-					app.log(cmd)()
+					context.app.log(cmd)()
 				}),
 				Rx.ignoreElements(),
 			),
@@ -99,11 +119,11 @@ export const useStore: () => [
 					cmd => cmd.type === 'addProduct',
 				),
 				Rx.tap(() => {
-					setStore('isAdding', true)
+					context.showLoading(true)
 				}),
 				Rx.mergeMap(() =>
 					Rx.defer(
-						app.addProduct({
+						context.app.addProduct({
 							name: store.formFields.name,
 							expDate: pipe(
 								store.formFields.expDate,
@@ -118,19 +138,21 @@ export const useStore: () => [
 				),
 				Rx.tap(result => {
 					batch(() => {
-						setStore('isAdding', false)
+						context.showLoading(false)
 
 						if (OPT.isNone(result)) {
 							setStore(
-								'formFields',
-								produce(fields => {
-									fields.expDate = OPT.none
-									fields.isBestBefore = false
-									fields.name = ''
-								}),
+								'toastMessage',
+								'Product added succesfully',
 							)
+
+							resetFields()
 						}
 					})
+				}),
+				Rx.delay(2500),
+				Rx.tap(() => {
+					setStore('toastMessage', '')
 				}),
 				Rx.ignoreElements(),
 			),
@@ -169,10 +191,7 @@ export const useStore: () => [
 								)
 						}
 
-						setStore(
-							'isOk',
-							store.formFields.name.length > 0,
-						)
+						validateFields()
 					})
 				}),
 				Rx.ignoreElements(),
