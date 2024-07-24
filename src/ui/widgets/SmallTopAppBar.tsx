@@ -11,7 +11,7 @@ export const SmallTopAppBar: Component<{
 	const isScrolledTop = useWindowScrollTop()
 	return (
 		<div
-			class="fixed left-0 right-0 top-0 z-40 box-content flex h-[64px] items-center gap-[24px] px-[16px] transition-colors duration-500 ease-in-out"
+			class="fixed left-0 right-0 top-0 z-40 h-[64px] transition-colors duration-1000 ease-in-out"
 			classList={{
 				'delay-0 bg-surface text-onSurface':
 					isScrolledTop(),

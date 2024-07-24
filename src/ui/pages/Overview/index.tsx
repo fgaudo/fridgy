@@ -9,6 +9,7 @@ import {
 } from 'solid-js'
 
 import { SmallTopAppBar } from '@/ui/widgets/SmallTopAppBar'
+import { SnackBar } from '@/ui/widgets/SnackBar'
 
 import { useOverviewStore } from './store'
 
@@ -23,6 +24,16 @@ const Overview: Component = () => {
 
 	return (
 		<>
+			<div
+				class="fixed z-50 transition-all"
+				classList={{
+					'bottom-[128px] left-[16px] right-[16px]':
+						!store.selectMode,
+					'bottom-[16px] left-[16px] right-[16px]':
+						store.selectMode,
+				}}>
+				<SnackBar message={store.toastMessage} />
+			</div>
 			<div
 				class="fixed bottom-0 left-0 right-0 top-0 z-50 h-full w-full overflow-auto transition-all"
 				classList={{
@@ -59,24 +70,31 @@ const Overview: Component = () => {
 			</div>
 			<div class="pb-[128px] pt-[56px]">
 				<SmallTopAppBar>
-					<Show
-						when={store.selectMode}
-						fallback={
-							<>
-								<md-icon-button
-									class="pr-[8px]"
-									onClick={() => {
-										dispatch({
-											type: 'toggleMenu',
-										})
-									}}>
-									<md-icon>menu</md-icon>
-								</md-icon-button>
-								<div class="font-titleLarge text-titleLarge leading-titleLarge">
-									Overview
-								</div>
-							</>
-						}>
+					<div
+						class="absolute flex h-full w-full items-center gap-[24px] px-[16px] transition-all"
+						classList={{
+							'opacity-0 pointer-events-none':
+								store.selectMode,
+						}}>
+						<md-icon-button
+							class="pr-[8px]"
+							onClick={() => {
+								dispatch({
+									type: 'toggleMenu',
+								})
+							}}>
+							<md-icon>menu</md-icon>
+						</md-icon-button>
+						<div class="font-titleLarge text-titleLarge leading-titleLarge">
+							Overview
+						</div>
+					</div>
+					<div
+						class="absolute flex h-full w-full items-center gap-[24px] px-[16px] transition-all"
+						classList={{
+							'opacity-0 pointer-events-none':
+								!store.selectMode,
+						}}>
 						<md-icon-button
 							class="pr-[8px]"
 							onClick={() => {
@@ -87,18 +105,16 @@ const Overview: Component = () => {
 							<md-icon>close</md-icon>
 						</md-icon-button>
 						{store.selectedProducts.size}
-						<Show when={store.selectMode}>
-							<md-icon-button
-								class="ml-auto mr-[-8px]"
-								onClick={() => {
-									dispatch({
-										type: 'deleteProducts',
-									})
-								}}>
-								<md-icon>delete</md-icon>
-							</md-icon-button>
-						</Show>
-					</Show>
+						<md-icon-button
+							class="ml-auto mr-[-8px]"
+							onClick={() => {
+								dispatch({
+									type: 'deleteProducts',
+								})
+							}}>
+							<md-icon>delete</md-icon>
+						</md-icon-button>
+					</div>
 				</SmallTopAppBar>
 				<Switch>
 					<Match when={store.isLoading}>

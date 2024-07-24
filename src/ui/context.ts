@@ -9,7 +9,6 @@ import type { App } from '@/app'
 
 export interface FridgyContext {
 	app: App
-	showToast: (nessage: string) => void
 	showLoading: (show: boolean) => void
 }
 

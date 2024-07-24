@@ -1,8 +1,5 @@
 import { A } from '@solidjs/router'
-import {
-	function as F,
-	option as OPT,
-} from 'fp-ts'
+import { option as OPT } from 'fp-ts'
 import {
 	Match,
 	Switch,
@@ -10,10 +7,9 @@ import {
 } from 'solid-js'
 
 import { SmallTopAppBar } from '@/ui/widgets/SmallTopAppBar'
+import { SnackBar } from '@/ui/widgets/SnackBar'
 
 import { useStore } from './store'
-
-const pipe = F.pipe
 
 const AddProduct = () => {
 	const [store, dispatch] = useStore()
@@ -28,19 +24,8 @@ const AddProduct = () => {
 
 	return (
 		<>
-			<div
-				class="bg-inverse-surface text-inverse-onSurface fixed bottom-[16px] left-[16px] right-[16px] flex items-center rounded-md px-[16px] transition-all"
-				classList={{
-					'h-[50px]':
-						store.toastMessage.length > 0,
-					'h-0': store.toastMessage.length === 0,
-				}}
-				style={{
-					'--md-elevation-level':
-						'var(--md-sys-elevation-level3)',
-				}}>
-				{store.toastMessage}
-				<md-elevation />
+			<div class="fixed bottom-[16px] left-[16px] right-[16px] z-50">
+				<SnackBar message={store.toastMessage} />
 			</div>
 			<div
 				style={{
@@ -48,13 +33,15 @@ const AddProduct = () => {
 						'opacityIn 0.25s ease-in-out',
 				}}>
 				<SmallTopAppBar>
-					<A href="/">
-						<md-icon-button class="pl-[4px]">
-							<md-icon>arrow_back</md-icon>
-						</md-icon-button>
-					</A>
-					<div class="font-titleLarge text-titleLarge leading-titleLarge">
-						Add a new product
+					<div class="absolute flex h-full w-full items-center gap-[24px] px-[16px] transition-all">
+						<A href="/">
+							<md-icon-button class="pl-[4px]">
+								<md-icon>arrow_back</md-icon>
+							</md-icon-button>
+						</A>
+						<div class="font-titleLarge text-titleLarge leading-titleLarge">
+							Add a new product
+						</div>
 					</div>
 				</SmallTopAppBar>
 				<Switch

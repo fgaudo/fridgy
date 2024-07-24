@@ -11,7 +11,6 @@ import {
 	batch,
 	createEffect,
 	from,
-	useContext,
 } from 'solid-js'
 import { createStore } from 'solid-js/store'
 
@@ -31,6 +30,7 @@ import { useDispatcher } from '@/ui/core/solid-js'
 const pipe = F.pipe
 
 interface OverviewStore {
+	toastMessage: string
 	isMenuOpen: boolean
 	isLoading: boolean
 	products: ProductModel[]
@@ -73,6 +73,7 @@ export const useOverviewStore: () => [
 
 	const [store, setStore] =
 		createStore<OverviewStore>({
+			toastMessage: '',
 			isMenuOpen: false,
 			isLoading: false,
 			products: [],
@@ -111,65 +112,58 @@ export const useOverviewStore: () => [
 	const navigate = useNavigate()
 
 	const dispatch = useDispatcher<Command>(cmd$ =>
-		Rx.merge(
-			pipe(
-				cmd$,
-				Rx.observeOn(Rx.asyncScheduler),
-				Rx.filter(cmd => cmd.type === 'log'),
-				Rx.tap(cmd => {
-					context.app.log(cmd)()
-				}),
-				Rx.ignoreElements(),
-			),
-			pipe(
-				cmd$,
-				Rx.observeOn(Rx.asyncScheduler),
-				Rx.filter(
-					cmd =>
-						cmd.type === 'toggleMenu' ||
-						cmd.type === 'deleteProducts' ||
-						cmd.type === 'toggleItem' ||
-						cmd.type === 'openAddProduct' ||
-						cmd.type === 'disableSelectMode',
-				),
-				Rx.exhaustMap(cmd => {
-					switch (cmd.type) {
-						case 'deleteProducts':
-							return pipe(
-								Rx.scheduled(
-									Rx.of(
-										RoNeS.fromSet(
-											store.selectedProducts,
-										),
+		pipe(
+			cmd$,
+			Rx.mergeMap(cmd => {
+				switch (cmd.type) {
+					case 'log':
+						return pipe(
+							Rx.of(cmd),
+							Rx.tap(cmd => {
+								context.app.log(cmd)()
+							}),
+							Rx.ignoreElements(),
+						)
+					case 'deleteProducts':
+						return pipe(
+							Rx.scheduled(
+								Rx.of(
+									RoNeS.fromSet(
+										store.selectedProducts,
 									),
-									Rx.asyncScheduler,
 								),
-								Rx.mergeMap(
-									OPT.match(
-										() => Rx.defer(TO.none),
-										products =>
-											Rx.defer(
-												pipe(
-													TO.fromIO(() => {
-														setStore(
-															'isLoading',
-															true,
-														)
-													}),
-													TO.chain(() =>
-														context.app.deleteProductsByIds(
-															products,
-														),
+								Rx.asyncScheduler,
+							),
+							Rx.mergeMap(
+								OPT.match(
+									() => Rx.defer(TO.none),
+									products =>
+										Rx.defer(
+											pipe(
+												TO.fromIO(() => {
+													context.showLoading(
+														true,
+													)
+												}),
+												TO.chain(() =>
+													context.app.deleteProductsByIds(
+														products,
 													),
 												),
 											),
-									),
+										),
 								),
-								Rx.tap(opt => {
-									batch(() => {
-										setStore('isLoading', false)
+							),
+							Rx.tap(opt => {
+								batch(() => {
+									context.showLoading(false)
 
-										if (OPT.isNone(opt)) {
+									if (OPT.isNone(opt)) {
+										batch(() => {
+											setStore(
+												'toastMessage',
+												'Products deleted succesfully',
+											)
 											setStore(
 												'selectedProducts',
 												new Set(),
@@ -178,96 +172,93 @@ export const useOverviewStore: () => [
 												'selectMode',
 												false,
 											)
-										}
-									})
-								}),
-								Rx.ignoreElements(),
-							)
-						case 'toggleMenu':
-							return pipe(
-								Rx.scheduled(
-									Rx.of(undefined),
-									Rx.asyncScheduler,
-								),
-								Rx.tap(() => {
+										})
+									}
+								})
+							}),
+							Rx.delay(2500),
+							Rx.tap(() => {
+								setStore('toastMessage', '')
+							}),
+							Rx.ignoreElements(),
+						)
+					case 'toggleMenu':
+						return pipe(
+							Rx.scheduled(
+								Rx.of(undefined),
+								Rx.asyncScheduler,
+							),
+							Rx.tap(() => {
+								setStore(
+									'isMenuOpen',
+									!store.isMenuOpen,
+								)
+							}),
+							Rx.ignoreElements(),
+						)
+					case 'openAddProduct':
+						return pipe(
+							Rx.scheduled(
+								Rx.of(store.isOpeningAddProduct),
+								Rx.asyncScheduler,
+							),
+							Rx.filter(P.not(F.identity)),
+							Rx.tap(() => {
+								setStore(
+									'isOpeningAddProduct',
+									true,
+								)
+							}),
+							Rx.delay(250),
+							Rx.tap(() => {
+								navigate('/add-product')
+							}),
+							Rx.ignoreElements(),
+						)
+					case 'disableSelectMode':
+						return pipe(
+							Rx.scheduled(
+								Rx.of(undefined),
+								Rx.asyncScheduler,
+							),
+							Rx.tap(() => {
+								batch(() => {
+									setStore('selectMode', false)
 									setStore(
-										'isMenuOpen',
-										!store.isMenuOpen,
+										'selectedProducts',
+										new Set(),
 									)
-								}),
-								Rx.ignoreElements(),
-							)
-						case 'openAddProduct':
-							return pipe(
-								Rx.scheduled(
-									Rx.of(
-										store.isOpeningAddProduct,
-									),
-									Rx.asyncScheduler,
-								),
-								Rx.filter(P.not(F.identity)),
-								Rx.tap(() => {
+								})
+							}),
+							Rx.ignoreElements(),
+						)
+					case 'toggleItem':
+						return pipe(
+							Rx.scheduled(
+								Rx.of(undefined),
+								Rx.asyncScheduler,
+							),
+							Rx.tap(() => {
+								batch(() => {
+									if (!store.selectMode) {
+										setStore('selectMode', true)
+									}
 									setStore(
-										'isOpeningAddProduct',
-										true,
+										'selectedProducts',
+										RoS.toggle(Base64.Eq)(cmd.id),
 									)
-								}),
-								Rx.delay(250),
-								Rx.tap(() => {
-									navigate('/add-product')
-								}),
-								Rx.ignoreElements(),
-							)
-						case 'disableSelectMode':
-							return pipe(
-								Rx.scheduled(
-									Rx.of(undefined),
-									Rx.asyncScheduler,
-								),
-								Rx.tap(() => {
-									batch(() => {
+									if (
+										store.selectedProducts
+											.size === 0
+									) {
 										setStore('selectMode', false)
-										setStore(
-											'selectedProducts',
-											new Set(),
-										)
-									})
-								}),
-								Rx.ignoreElements(),
-							)
-						case 'toggleItem':
-							return pipe(
-								Rx.scheduled(
-									Rx.of(undefined),
-									Rx.asyncScheduler,
-								),
-								Rx.tap(() => {
-									batch(() => {
-										if (!store.selectMode) {
-											setStore('selectMode', true)
-										}
-										setStore(
-											'selectedProducts',
-											RoS.toggle(Base64.Eq)(
-												cmd.id,
-											),
-										)
-										if (
-											store.selectedProducts
-												.size === 0
-										) {
-											setStore(
-												'selectMode',
-												false,
-											)
-										}
-									})
-								}),
-								Rx.ignoreElements(),
-							)
-					}
-				}),
-			),
+									}
+								})
+							}),
+							Rx.ignoreElements(),
+						)
+				}
+			}),
 		),
 	)
 

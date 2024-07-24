@@ -7,8 +7,6 @@ import {
 	argbFromHex,
 } from '@material/material-color-utilities'
 import { Route, Router } from '@solidjs/router'
-import { flow, pipe } from 'fp-ts/lib/function'
-import * as Rx from 'rxjs'
 import { createSignal } from 'solid-js'
 import { render as solidRender } from 'solid-js/web'
 
@@ -22,8 +20,6 @@ import '@/ui/index.css'
 import { applyTheme } from '@/ui/material-web'
 import AddProduct from '@/ui/pages/AddProduct'
 import Overview from '@/ui/pages/Overview'
-
-import { useDispatcher } from './core/solid-js'
 
 const MAIN_COLOR = '#DD7230'
 
@@ -43,29 +39,10 @@ export function render(
 		() => {
 			const [isLoading, setLoading] =
 				createSignal(false)
-			const [hasToast, setToast] =
-				createSignal('')
-
-			const showToast = useDispatcher<string>(
-				flow(
-					Rx.switchMap(message =>
-						pipe(
-							Rx.of(message),
-							Rx.tap(setToast),
-							Rx.delay(2500),
-							Rx.tap(() => {
-								setToast('')
-							}),
-						),
-					),
-					Rx.ignoreElements(),
-				),
-			)
 
 			const context: FridgyContext = {
 				app,
 				showLoading: setLoading,
-				showToast,
 			}
 
 			return (
