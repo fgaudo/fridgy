@@ -7,7 +7,7 @@ import {
 import type { Base64 } from '@/core/base64'
 import type { ReadonlyNonEmptySet } from '@/core/readonly-non-empty-set'
 
-import type { DeleteProductsByIds as DeleteProductsByIdsCommand } from '@/app/contract/write/delete-products-by-ids'
+import type { DeleteProductsByIds as DeleteProductsByIdsCommand } from '@/app/interfaces/write/delete-products-by-ids'
 
 const flow = F.flow
 

@@ -5,8 +5,8 @@ import {
 	task as T,
 } from 'fp-ts'
 
-import type { ProductDTO } from '@/app/contract/read/types/product'
-import type { AddProduct as AddProductCommand } from '@/app/contract/write/add-product'
+import type { ProductDTO } from '@/app/interfaces/read/types/product'
+import type { AddProduct as AddProductCommand } from '@/app/interfaces/write/add-product'
 
 const pipe = F.pipe
 const flow = F.flow

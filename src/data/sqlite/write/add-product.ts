@@ -5,7 +5,7 @@ import {
 	readerTaskEither as RTE,
 } from 'fp-ts'
 
-import type { AddProduct } from '@/app/contract/write/add-product'
+import type { AddProduct } from '@/app/interfaces/write/add-product'
 
 import { executeSql } from '@/data/sqlite/helpers'
 

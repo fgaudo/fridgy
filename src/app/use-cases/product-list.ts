@@ -31,8 +31,8 @@ import type {
 	OnProducts,
 	Options,
 	ProductEntityDTO,
-} from '@/app/contract/read/on-products'
-import type { Log } from '@/app/contract/write/log'
+} from '@/app/interfaces/read/on-products'
+import type { Log } from '@/app/interfaces/write/log'
 
 const pipe = F.pipe
 const flow = F.flow

@@ -3,7 +3,7 @@ import { Observable } from 'rxjs'
 
 import { Base64 } from '@/core/base64'
 
-import type { ProductDTO } from '@/app/contract/read/types/product'
+import type { ProductDTO } from '@/app/interfaces/read/types/product'
 
 const pipe = F.pipe
 

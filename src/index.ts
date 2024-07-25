@@ -1,7 +1,7 @@
 import { App } from '@/app'
 
 import { useCases as mockUseCases } from '@/data/mock'
-import { useCases as systemUseCases } from '@/data/system'
+import { implementations as systemUseCases } from '@/data/system'
 
 import { render } from '@/ui'
 

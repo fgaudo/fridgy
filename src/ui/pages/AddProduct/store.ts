@@ -10,7 +10,7 @@ import {
 } from 'solid-js'
 import { createStore } from 'solid-js/store'
 
-import type { LogSeverity } from '@/app/contract/write/log'
+import type { LogSeverity } from '@/app/interfaces/write/log'
 
 import {
 	AppContext,

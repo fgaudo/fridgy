@@ -10,7 +10,7 @@ import {
 import { toString } from '@/core/base64'
 import * as RoNeS from '@/core/readonly-non-empty-set'
 
-import type { DeleteProductsByIds } from '@/app/contract/write/delete-products-by-ids'
+import type { DeleteProductsByIds } from '@/app/interfaces/write/delete-products-by-ids'
 
 import { executeSql } from '@/data/sqlite/helpers'
 

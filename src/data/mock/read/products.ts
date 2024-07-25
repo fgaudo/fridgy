@@ -8,7 +8,7 @@ import * as Rx from 'rxjs'
 
 import * as B from '@/core/base64'
 
-import { type OnProducts } from '@/app/contract/read/on-products'
+import { type OnProducts } from '@/app/interfaces/read/on-products'
 
 const pipe = F.pipe
 

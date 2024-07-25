@@ -21,7 +21,7 @@ import { createStore } from 'solid-js/store'
 import { Base64 } from '@/core/base64'
 import * as RoNeS from '@/core/readonly-non-empty-set'
 
-import type { LogSeverity } from '@/app/contract/write/log'
+import type { LogSeverity } from '@/app/interfaces/write/log'
 import type {
 	ProductModel,
 	Sortings,

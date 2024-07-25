@@ -5,7 +5,7 @@ import {
 } from 'fp-ts'
 import { delay } from 'fp-ts/lib/Task'
 
-import type { AddProduct } from '@/app/contract/write/add-product'
+import type { AddProduct } from '@/app/interfaces/write/add-product'
 
 type Deps = undefined
 

@@ -9,7 +9,7 @@ export interface Deps {
 	uiLogPrefix: string
 }
 
-export const useCases: R.Reader<
+export const implementations: R.Reader<
 	Deps,
 	Pick<UseCases, 'appLog' | 'uiLog'>
 > = ({ appLogPrefix: prefix, uiLogPrefix }) => ({
