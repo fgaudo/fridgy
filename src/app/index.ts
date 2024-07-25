@@ -8,7 +8,7 @@ import * as PL from '@/app/use-cases/product-list'
 
 export interface UseCases {
 	addProduct: AddProductCommand
-	products$: OnProducts
+	products: OnProducts
 	deleteProductsByIds: DeleteProductsByIdsCommand
 	appLog: Log
 	uiLog: Log

@@ -22,7 +22,10 @@ import { Base64 } from '@/core/base64'
 import * as RoNeS from '@/core/readonly-non-empty-set'
 
 import type { LogSeverity } from '@/app/contract/write/log'
-import type { ProductModel } from '@/app/use-cases/product-list'
+import type {
+	ProductModel,
+	Sortings,
+} from '@/app/use-cases/product-list'
 
 import {
 	AppContext,
@@ -34,6 +37,7 @@ import { useDispatcher } from '@/ui/core/solid-js'
 const pipe = F.pipe
 
 interface OverviewStore {
+	sorting: Sortings
 	toastMessage: string
 	isMenuOpen: boolean
 	isLoading: boolean
@@ -64,6 +68,10 @@ type Command =
 			severity: LogSeverity
 			message: string
 	  }
+	| {
+			type: 'sortList'
+			by: 'date' | 'a-z'
+	  }
 
 export const useOverviewStore: () => [
 	OverviewStore,
@@ -71,12 +79,9 @@ export const useOverviewStore: () => [
 ] = () => {
 	const context = useAppContext(AppContext)
 
-	const model = from(
-		context.app.productList.stream,
-	)
-
 	const [store, setStore] =
 		createStore<OverviewStore>({
+			sorting: 'date',
 			toastMessage: '',
 			isMenuOpen: false,
 			isLoading: false,
@@ -87,6 +92,12 @@ export const useOverviewStore: () => [
 			isScrolling: false,
 			scrollY: window.scrollY,
 		})
+
+	const controller = context.app.productList({
+		sortBy: store.sorting,
+	})
+
+	const model = from(controller.stream)
 
 	const scroll = useWindowScroll()
 
@@ -115,11 +126,23 @@ export const useOverviewStore: () => [
 
 	const navigate = useNavigate()
 
+	createEffect(() => {
+		controller.next({ sortBy: store.sorting })
+	})
+
 	const dispatch = useDispatcher<Command>(cmd$ =>
 		pipe(
 			cmd$,
 			Rx.mergeMap(cmd => {
 				switch (cmd.type) {
+					case 'sortList':
+						return pipe(
+							Rx.of(cmd),
+							Rx.tap(() => {
+								setStore('sorting', cmd.by)
+							}),
+							Rx.ignoreElements(),
+						)
 					case 'log':
 						return pipe(
 							Rx.of(cmd),

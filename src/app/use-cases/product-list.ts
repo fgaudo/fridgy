@@ -10,7 +10,6 @@ import {
 	reader as R,
 	readerIO as RIO,
 	readonlyArray as RoA,
-	readonlySet as RoS,
 	string as S,
 	separated as SEP,
 	task as T,
@@ -19,7 +18,6 @@ import * as Rx from 'rxjs'
 
 import * as B from '@/core/base64'
 import { Controller } from '@/core/controller'
-import { type R_Transformer } from '@/core/transformer'
 
 import {
 	type Product,
@@ -31,6 +29,7 @@ import {
 
 import type {
 	OnProducts,
+	Options,
 	ProductEntityDTO,
 } from '@/app/contract/read/on-products'
 import type { Log } from '@/app/contract/write/log'
@@ -82,12 +81,12 @@ export type Model =
 	| {
 			status: 'ready'
 			products: readonly ProductModel[]
+			total: number
+			offset: number
 	  }
 
-export type Command = undefined
-
 export interface UseCases {
-	products$: OnProducts
+	products: OnProducts
 	log: Log
 }
 
@@ -103,14 +102,11 @@ const ProductEntity = {
 } as const
 
 const toProductEntitiesWithInvalid: (
-	foodDTOs: ReadonlySet<ProductEntityDTO>,
+	foodDTOs: readonly ProductEntityDTO[],
 ) => SEP.Separated<
-	ReadonlySet<B.Base64>,
-	ReadonlySet<ProductEntity>
-> = RoS.partitionMap(
-	B.Base64.Eq,
-	ProductEntity.Eq,
-)(entityDTO =>
+	readonly B.Base64[],
+	readonly ProductEntity[]
+> = RoA.partitionMap(entityDTO =>
 	pipe(
 		createProduct({
 			name: entityDTO.product.name,
@@ -127,108 +123,123 @@ const toProductEntitiesWithInvalid: (
 	),
 )
 
-const sortByOldest: (
-	set: ReadonlySet<ProductModel>,
-) => readonly ProductModel[] =
-	RoS.toReadonlyArray(ProductModel.OrdOldest)
-
 const discardInvalid: (
 	set: SEP.Separated<
-		ReadonlySet<B.Base64>,
-		ReadonlySet<ProductEntity>
+		readonly B.Base64[],
+		readonly ProductEntity[]
 	>,
-) => ReadonlySet<ProductEntity> = SEP.right
+) => readonly ProductEntity[] = SEP.right
 
-const toProductModels = ({
-	products,
-	timestamp,
-}: {
-	products: ReadonlySet<ProductEntity>
-	timestamp: number
-}) =>
+const toProductModels = (
+	products: readonly ProductEntity[],
+) =>
 	pipe(
-		products,
-		RoS.map(ProductModel.Eq)(
-			({ id, product }) => ({
-				id,
-				name: name(product),
-				isExpired: isExpired(product, timestamp),
-				expDate: expDate(product),
-			}),
+		T.fromIO(() => new Date().getDate()),
+		Rx.defer,
+		Rx.map(timestamp =>
+			pipe(
+				products,
+				RoA.map(({ id, product }) => ({
+					id,
+					name: name(product),
+					isExpired: isExpired(
+						product,
+						timestamp,
+					),
+					expDate: expDate(product),
+				})),
+			),
 		),
 	)
+
+export type Sortings = Options['sortBy']
 
 const logInfo =
 	(message: string) =>
 	({ log }: UseCases) =>
 		log({ severity: 'info', message })
 
-const transformer: R_Transformer<
-	UseCases,
-	Command,
-	Model
-> = () =>
-	pipe(
-		R.asks(
-			({ products$ }: UseCases) => products$,
-		),
-		RO.tap(
-			flow(
-				RoS.size,
-				size => size.toString(10),
-				size =>
-					logInfo(
-						`Received ${size} product entries`,
+type ProductList = (
+	init: Options,
+) => (
+	options: Rx.Observable<Options>,
+) => Rx.Observable<Model>
+
+const transformer: (
+	deps: UseCases,
+) => ProductList = F.flip(init =>
+	F.flip(
+		flow(
+			Rx.startWith(init),
+			R.of<UseCases, Rx.Observable<Options>>,
+			RO.switchMap(
+				flow(
+					options => (useCases: UseCases) =>
+						useCases.products(options),
+					RO.map(result => ({
+						result,
+					})),
+					RO.tap(vars =>
+						logInfo(
+							`Received ${vars.result.items.length.toString(10)} product entries out of ${vars.result.total.toString(10)}`,
+						),
 					),
-			),
-		),
-		RO.map(toProductEntitiesWithInvalid),
-		RO.tap(
-			flow(
-				SEP.left,
-				RoS.toReadonlyArray<B.Base64>(
-					Ord.trivial,
-				),
-				RoA.map(B.toString),
-				RoA.map(id =>
-					logInfo(
-						`Unable to load entity with id ${id}`,
+					RO.map(vars => ({
+						...vars,
+						entitiesWithInvalid:
+							toProductEntitiesWithInvalid(
+								vars.result.items,
+							),
+					})),
+					RO.tap(
+						flow(
+							vars => vars.entitiesWithInvalid,
+							SEP.left,
+							RoA.map(B.toString),
+							RoA.map(id =>
+								logInfo(
+									`Unable to load entity with id ${id}`,
+								),
+							),
+							RIO.sequenceArray,
+						),
 					),
-				),
-				RIO.sequenceArray,
-			),
-		),
-		RO.map(discardInvalid),
-		R.map(
-			Rx.switchMap(products =>
-				pipe(
-					T.fromIO(() => new Date().getDate()),
-					Rx.defer,
-					Rx.map(
-						timestamp =>
+					RO.map(vars => ({
+						...vars,
+						entities: discardInvalid(
+							vars.entitiesWithInvalid,
+						),
+					})),
+					R.map(
+						Rx.switchMap(vars =>
+							pipe(
+								toProductModels(vars.entities),
+								Rx.map(models => ({
+									...vars,
+									models,
+								})),
+							),
+						),
+					),
+					RO.map(
+						vars =>
 							({
-								products,
-								timestamp,
-							}) as const,
+								status: 'ready',
+								products: vars.models,
+								total: vars.result.total,
+								offset: vars.result.offset,
+							}) satisfies Model,
 					),
 				),
 			),
 		),
-		RO.map(toProductModels),
-		RO.map(sortByOldest),
-		RO.map(
-			models =>
-				({
-					status: 'ready',
-					products: models,
-				}) satisfies Model,
-		),
-	)
+	),
+)
 
-export type ProductListController = Controller<
-	Command,
-	Model
->
+export type ProductListController = (
+	options: Options,
+) => Controller<Options, Model>
 
-export const controller = (deps: UseCases) =>
-	new Controller(F.flip(transformer)(deps))
+export const controller =
+	(deps: UseCases) => (options: Options) =>
+		new Controller(transformer(deps)(options))

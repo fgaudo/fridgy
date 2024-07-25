@@ -3,16 +3,12 @@ import {
 	option as OPT,
 	reader as R,
 	readonlyArray as RoA,
-	readonlySet as RoS,
 } from 'fp-ts'
 import * as Rx from 'rxjs'
 
 import * as B from '@/core/base64'
 
-import {
-	type OnProducts,
-	ProductEntityDTO,
-} from '@/app/contract/read/on-products'
+import { type OnProducts } from '@/app/contract/read/on-products'
 
 const pipe = F.pipe
 
@@ -29,12 +25,14 @@ type Deps = object
 export const products: R.Reader<
 	Deps,
 	OnProducts
-> = () =>
-	pipe(
-		Rx.timer(1000),
-		Rx.map(() =>
-			RoS.fromReadonlyArray(ProductEntityDTO.Eq)(
-				pipe(
+> = F.flip(
+	() => () =>
+		pipe(
+			Rx.timer(1000),
+			Rx.map(() => ({
+				offset: 0,
+				total: 20,
+				items: pipe(
 					Array(20).keys(),
 					Array.from<number>,
 					RoA.fromArray,
@@ -62,6 +60,6 @@ export const products: R.Reader<
 							}) as const,
 					),
 				),
-			),
+			})),
 		),
-	)
+)

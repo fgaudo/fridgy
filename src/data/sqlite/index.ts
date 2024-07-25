@@ -13,10 +13,10 @@ export interface Deps {
 
 export const useCases: R.Reader<
 	Deps,
-	Partial<UseCases>
+	Pick<UseCases, 'products' | 'addProduct'>
 > = ({ db, prefix }) => ({
 	addProduct: addProduct({ db }),
-	products$: products({
+	products: products({
 		db,
 		events: Rx.of(undefined),
 		prefix,

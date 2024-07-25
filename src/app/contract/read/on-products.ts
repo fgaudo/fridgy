@@ -28,6 +28,14 @@ export const ProductEntityDTO = {
 	}) => ({ id, product }),
 } as const
 
-export type OnProducts = Observable<
-	ReadonlySet<ProductEntityDTO>
->
+export interface Options {
+	sortBy: 'date' | 'a-z'
+}
+
+export type OnProducts = (
+	options: Options,
+) => Observable<{
+	items: readonly ProductEntityDTO[]
+	offset: number
+	total: number
+}>

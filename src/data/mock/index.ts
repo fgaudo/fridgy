@@ -14,13 +14,13 @@ export const useCases: R.Reader<
 	Deps,
 	Pick<
 		UseCases,
-		| 'products$'
+		| 'products'
 		| 'addProduct'
 		| 'deleteProductsByIds'
 	>
 > = ({ dataLogPrefix: prefix }) => ({
 	addProduct: addProduct(undefined),
-	products$: products({
+	products: products({
 		prefix,
 	}),
 	deleteProductsByIds: deleteProductByIds({}),
