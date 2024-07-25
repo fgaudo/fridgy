@@ -11,8 +11,9 @@ export default defineConfig({
 			plugins: [analyze()],
 		},
 	},
+
 	test: {
 		dir: './src',
 	},
-	server: { host: '0.0.0.0' },
+	server: { host: '::' },
 })

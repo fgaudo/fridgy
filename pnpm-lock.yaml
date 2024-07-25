@@ -11,6 +11,9 @@ dependencies:
   '@capacitor/core':
     specifier: ^6.1.1
     version: 6.1.1
+  '@capacitor/haptics':
+    specifier: ^6.0.0
+    version: 6.0.0(@capacitor/core@6.1.1)
   '@fgaudo/fp-ts-rxjs':
     specifier: ^0.1.2-6
     version: 0.1.2-6(fp-ts@2.16.8)(rxjs@7.8.1)
@@ -505,6 +508,14 @@ packages:
     resolution: {integrity: sha512-b1s4WDMy3Y1/owTG2/XNGCI6G5SDpF2NT1JMAgcShue13fiAuHA+Ans7Wfei6McvR0KdopAE6tMHmDAfL5PM8Q==}
     dependencies:
       tslib: 2.6.3
+    dev: false
+
+  /@capacitor/haptics@6.0.0(@capacitor/core@6.1.1):
+    resolution: {integrity: sha512-z2TmB+pTbd98Il2I1xpZGClCFwORxxP2m9f1a0rh70c2ubj2atVyZctgxrx1fuoExZTNGSxHaylWfrmjmtelVg==}
+    peerDependencies:
+      '@capacitor/core': ^6.0.0
+    dependencies:
+      '@capacitor/core': 6.1.1
     dev: false
 
   /@cspotcode/source-map-support@0.8.1:

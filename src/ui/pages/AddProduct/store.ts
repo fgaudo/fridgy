@@ -8,10 +8,7 @@ import {
 	createRenderEffect,
 	onCleanup,
 } from 'solid-js'
-import {
-	createStore,
-	produce,
-} from 'solid-js/store'
+import { createStore } from 'solid-js/store'
 
 import type { LogSeverity } from '@/app/contract/write/log'
 
@@ -46,12 +43,18 @@ type Command =
 	| {
 			type: 'updateField'
 			field:
-				| { name: 'name'; value: string }
+				| {
+						name: 'name'
+						value: Store['formFields']['name']
+				  }
 				| {
 						name: 'expDate'
-						value: OPT.Option<number>
+						value: Store['formFields']['expDate']
 				  }
-				| { name: 'isBestBefore'; value: boolean }
+				| {
+						name: 'isBestBefore'
+						value: Store['formFields']['isBestBefore']
+				  }
 	  }
 
 const defaultFields = () => ({
@@ -81,11 +84,10 @@ export const useStore: () => [
 	}
 
 	const resetFields = () => {
-		setStore(
-			produce(state => {
-				state.formFields = defaultFields()
-			}),
-		)
+		setStore(state => ({
+			...state,
+			formFields: defaultFields(),
+		}))
 
 		validateFields()
 	}
@@ -104,98 +106,81 @@ export const useStore: () => [
 	})
 
 	const dispatch = useDispatcher<Command>(cmd$ =>
-		Rx.merge(
-			pipe(
-				cmd$,
-				Rx.filter(cmd => cmd.type === 'log'),
-				Rx.tap(cmd => {
-					context.app.log(cmd)()
-				}),
-				Rx.ignoreElements(),
-			),
-			pipe(
-				cmd$,
-				Rx.filter(
-					cmd => cmd.type === 'addProduct',
-				),
-				Rx.tap(() => {
-					context.showLoading(true)
-				}),
-				Rx.mergeMap(() =>
-					Rx.defer(
-						context.app.addProduct({
-							name: store.formFields.name,
-							expDate: pipe(
-								store.formFields.expDate,
-								OPT.map(expDate => ({
-									isBestBefore:
-										store.formFields.isBestBefore,
-									timestamp: expDate,
-								})),
+		pipe(
+			cmd$,
+			Rx.mergeMap(cmd => {
+				switch (cmd.type) {
+					case 'log':
+						return pipe(
+							Rx.of(undefined),
+							Rx.tap(() => {
+								context.app.log(cmd)()
+							}),
+							Rx.ignoreElements(),
+						)
+					case 'addProduct':
+						return pipe(
+							Rx.of(undefined),
+
+							Rx.tap(() => {
+								context.showLoading(true)
+							}),
+							Rx.mergeMap(() =>
+								Rx.defer(
+									context.app.addProduct({
+										name: store.formFields.name,
+										expDate: pipe(
+											store.formFields.expDate,
+											OPT.map(expDate => ({
+												isBestBefore:
+													store.formFields
+														.isBestBefore,
+												timestamp: expDate,
+											})),
+										),
+									}),
+								),
 							),
-						}),
-					),
-				),
-				Rx.tap(result => {
-					batch(() => {
-						context.showLoading(false)
+							Rx.tap(result => {
+								batch(() => {
+									context.showLoading(false)
 
-						if (OPT.isNone(result)) {
-							setStore(
-								'toastMessage',
-								'Product added succesfully',
-							)
+									if (OPT.isNone(result)) {
+										setStore(
+											'toastMessage',
+											'Product added succesfully',
+										)
 
-							resetFields()
-						}
-					})
-				}),
-				Rx.delay(2500),
-				Rx.tap(() => {
-					setStore('toastMessage', '')
-				}),
-				Rx.ignoreElements(),
-			),
-			pipe(
-				cmd$,
-				Rx.filter(
-					cmd => cmd.type === 'updateField',
-				),
-				Rx.map(cmd => cmd.field),
-				Rx.tap(field => {
-					batch(() => {
-						switch (field.name) {
-							case 'name':
-								setStore(
-									'formFields',
-									produce(fields => {
-										fields.name = field.value
-									}),
-								)
-								break
-							case 'expDate':
-								setStore(
-									'formFields',
-									produce(fields => {
-										fields.expDate = field.value
-									}),
-								)
-								break
-							case 'isBestBefore':
-								setStore(
-									'formFields',
-									produce(fields => {
-										fields.isBestBefore =
-											field.value
-									}),
-								)
-						}
+										resetFields()
+									}
+								})
+							}),
+							Rx.delay(2500),
+							Rx.tap(() => {
+								setStore('toastMessage', '')
+							}),
+							Rx.ignoreElements(),
+						)
+					case 'updateField':
+						return pipe(
+							Rx.of(cmd.field),
+							Rx.tap(field => {
+								batch(() => {
+									setStore(
+										'formFields',
+										fields => ({
+											...fields,
+											[field.name]: field.value,
+										}),
+									)
 
-						validateFields()
-					})
-				}),
-				Rx.ignoreElements(),
-			),
+									validateFields()
+								})
+							}),
+							Rx.ignoreElements(),
+						)
+				}
+			}),
 		),
 	)
 

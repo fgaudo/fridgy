@@ -1,3 +1,7 @@
+import {
+	Haptics,
+	ImpactStyle,
+} from '@capacitor/haptics'
 import { useNavigate } from '@solidjs/router'
 import {
 	function as F,
@@ -127,12 +131,17 @@ export const useOverviewStore: () => [
 					case 'deleteProducts':
 						return pipe(
 							Rx.scheduled(
-								Rx.of(
-									RoNeS.fromSet(
-										store.selectedProducts,
-									),
+								Rx.from(
+									Haptics.impact({
+										style: ImpactStyle.Light,
+									}),
 								),
 								Rx.asyncScheduler,
+							),
+							Rx.map(() =>
+								RoNeS.fromSet(
+									store.selectedProducts,
+								),
 							),
 							Rx.mergeMap(
 								OPT.match(
@@ -235,7 +244,13 @@ export const useOverviewStore: () => [
 					case 'toggleItem':
 						return pipe(
 							Rx.scheduled(
-								Rx.of(undefined),
+								!store.selectMode
+									? Rx.from(
+											Haptics.impact({
+												style: ImpactStyle.Medium,
+											}),
+										)
+									: Rx.of(undefined),
 								Rx.asyncScheduler,
 							),
 							Rx.tap(() => {
