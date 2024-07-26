@@ -19,7 +19,7 @@ import {
 import '@/ui/index.css'
 import { applyTheme } from '@/ui/material-web'
 import AddProduct from '@/ui/pages/AddProduct'
-import Overview from '@/ui/pages/Overview'
+import Home from '@/ui/pages/Home'
 
 const MAIN_COLOR = '#DD7230'
 
@@ -61,7 +61,7 @@ export function render(
 						<Router>
 							<Route
 								path="/"
-								component={Overview}
+								component={Home}
 							/>
 							<Route
 								path="/add-product"

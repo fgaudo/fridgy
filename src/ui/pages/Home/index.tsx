@@ -5,6 +5,7 @@ import {
 	Show,
 	Switch,
 	createEffect,
+	createMemo,
 	createRenderEffect,
 } from 'solid-js'
 
@@ -13,13 +14,19 @@ import { SnackBar } from '@/ui/widgets/SnackBar'
 
 import { useOverviewStore } from './store'
 
-const Overview: Component = () => {
+const Home: Component = () => {
 	const [store, dispatch] = useOverviewStore()
 
 	createEffect(() => {
 		if (store.isMenuOpen)
 			document.body.style.overflow = 'hidden'
 		else document.body.style.overflow = 'auto'
+	})
+
+	const size = createMemo<number>(prev => {
+		return store.selectMode
+			? store.selectedProducts.size
+			: (prev ?? 0)
 	})
 
 	return (
@@ -70,50 +77,54 @@ const Overview: Component = () => {
 			</div>
 			<div class="pb-[128px] pt-[56px]">
 				<SmallTopAppBar>
-					<div
-						class="absolute flex h-full w-full items-center gap-[24px] px-[16px] transition-all"
-						classList={{
-							'opacity-0 pointer-events-none':
-								store.selectMode,
-						}}>
-						<md-icon-button
-							class="pr-[8px]"
-							onClick={() => {
-								dispatch({
-									type: 'toggleMenu',
-								})
+					<div class="relative h-full w-full">
+						<div
+							class="absolute flex h-full w-full items-center gap-[24px] px-[16px] transition-all duration-300"
+							classList={{
+								'opacity-0 pointer-events-none':
+									store.selectMode,
 							}}>
-							<md-icon>menu</md-icon>
-						</md-icon-button>
-						<div class="font-titleLarge text-titleLarge leading-titleLarge">
-							Overview
+							<md-icon-button
+								class="ml-[-8px] shrink-0"
+								onClick={() => {
+									dispatch({
+										type: 'toggleMenu',
+									})
+								}}>
+								<md-icon>menu</md-icon>
+							</md-icon-button>
+							<div class="font-titleLarge text-titleLarge leading-titleLarge">
+								Home
+							</div>
 						</div>
-					</div>
-					<div
-						class="absolute flex h-full w-full items-center gap-[24px] px-[16px] transition-all"
-						classList={{
-							'opacity-0 pointer-events-none':
-								!store.selectMode,
-						}}>
-						<md-icon-button
-							class="pr-[8px]"
-							onClick={() => {
-								dispatch({
-									type: 'disableSelectMode',
-								})
+						<div
+							class="absolute flex h-full w-full items-center gap-[24px] px-[16px] transition-all duration-300"
+							classList={{
+								'opacity-0 pointer-events-none':
+									!store.selectMode,
 							}}>
-							<md-icon>close</md-icon>
-						</md-icon-button>
-						{store.selectedProducts.size}
-						<md-icon-button
-							class="ml-auto mr-[-8px]"
-							onClick={() => {
-								dispatch({
-									type: 'deleteProducts',
-								})
-							}}>
-							<md-icon>delete</md-icon>
-						</md-icon-button>
+							<md-icon-button
+								class="ml-[-8px] shrink-0"
+								onClick={() => {
+									dispatch({
+										type: 'disableSelectMode',
+									})
+								}}>
+								<md-icon>close</md-icon>
+							</md-icon-button>
+
+							{size()}
+
+							<md-icon-button
+								class="ml-auto mr-[-8px] shrink-0"
+								onClick={() => {
+									dispatch({
+										type: 'deleteProducts',
+									})
+								}}>
+								<md-icon>delete</md-icon>
+							</md-icon-button>
+						</div>
 					</div>
 				</SmallTopAppBar>
 				<Switch>
@@ -161,12 +172,6 @@ const Overview: Component = () => {
 													</md-list-item>
 												}>
 												<md-list-item
-													classList={{
-														'bg-surface-container':
-															store.selectedProducts.has(
-																productModel.id,
-															),
-													}}
 													prop:type="button"
 													onClick={e => {
 														e.preventDefault()
@@ -177,6 +182,19 @@ const Overview: Component = () => {
 													}}>
 													<md-icon slot="start">
 														ac_unit
+													</md-icon>
+													<md-icon
+														style={{
+															'font-variation-settings':
+																"'FILL' 1",
+														}}
+														slot="end"
+														class="text-primary">
+														{store.selectedProducts.has(
+															productModel.id,
+														)
+															? 'check_box'
+															: 'check_box_outline_blank'}
 													</md-icon>
 
 													<div slot="headline">
@@ -206,9 +224,6 @@ const Overview: Component = () => {
 						'opacity-50':
 							store.isScrolling &&
 							!store.selectMode,
-						'opacity-100':
-							!store.isScrolling &&
-							!store.selectMode,
 						'bg-surface h-screen w-screen right-0 bottom-0':
 							store.isOpeningAddProduct,
 					}}>
@@ -234,4 +249,4 @@ const Overview: Component = () => {
 	)
 }
 
-export default Overview
+export default Home
