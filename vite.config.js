@@ -11,7 +11,7 @@ export default defineConfig({
 			plugins: [analyze()],
 		},
 	},
-
+	
 	test: {
 		dir: './src',
 	},

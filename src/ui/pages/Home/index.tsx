@@ -8,7 +8,6 @@ import {
 	createMemo,
 	createRenderEffect,
 } from 'solid-js'
-import { Transition } from 'solid-transition-group'
 
 import { SmallTopAppBar } from '@/ui/widgets/SmallTopAppBar'
 import { SnackBar } from '@/ui/widgets/SnackBar'

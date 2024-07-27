@@ -43,27 +43,3 @@ body {
 		opacity: 1;
 	}
 }
-
-.synced-opacity-fade-enter {
-	opacity: 0;
-	position: absolute;
-}
-
-.synced-opacity-fade-enter-to {
-	position: static;
-	opacity: 1;
-}
-
-.synced-opacity-fade-enter-active {
-	transition-delay: 150ms;
-	transition-duration: 150ms;
-	transition-property: opacity;
-}
-
-.synced-opacity-fade-exit-active {
-	transition-property: opacity;
-	transition-duration: 150ms;
-}
-.synced-opacity-fade-exit-to {
-	opacity: 0;
-}
