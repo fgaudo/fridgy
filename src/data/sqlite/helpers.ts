@@ -22,9 +22,7 @@ export const executeSql: ExecuteSql =
 			try {
 				db.executeSql(
 					sql,
-					values === undefined
-						? undefined
-						: RoA.toArray(values),
+					values && RoA.toArray(values),
 					results => {
 						resolve(E.right(results))
 					},
@@ -54,4 +52,62 @@ export const executeSql: ExecuteSql =
 					),
 				)
 			}
+		})
+
+type InputTuple = readonly [
+	sql: string,
+	values?: ReadonlyNonEmptyArray<unknown>,
+]
+
+type InputToOutput<T extends InputTuple[]> = {
+	[K in keyof T]: SQLitePlugin.Results
+}
+
+type ReadTransaction = <T extends InputTuple[]>(
+	...params: [...T]
+) => RTE.ReaderTaskEither<
+	SQLitePlugin.Database,
+	readonly [readonly Error[], Error],
+	InputToOutput<T>
+>
+
+export const readTransaction: ReadTransaction =
+	(...params) =>
+	db =>
+	() =>
+		new Promise(resolve => {
+			const results: SQLitePlugin.Results[] = []
+
+			const errors: Error[] = []
+
+			db.readTransaction(
+				tx => {
+					for (const [sql, values] of params) {
+						tx.executeSql(
+							sql,
+							values && Array.from(values),
+							(_tx, result) => {
+								results.push(result)
+							},
+							(_tx, error) => {
+								errors.push(error)
+							},
+						)
+					}
+				},
+				error => {
+					resolve(
+						E.left([errors, error] as const),
+					)
+				},
+				() => {
+					resolve(
+						E.right(
+							results as InputToOutput<
+								typeof params
+							>,
+						),
+					)
+				},
+			)
 		})

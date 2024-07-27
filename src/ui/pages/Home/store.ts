@@ -37,6 +37,7 @@ import { useDispatcher } from '@/ui/core/solid-js'
 const pipe = F.pipe
 
 interface OverviewStore {
+	offset: number
 	sorting: Sortings
 	toastMessage: string
 	isMenuOpen: boolean
@@ -81,6 +82,7 @@ export const useOverviewStore: () => [
 
 	const [store, setStore] =
 		createStore<OverviewStore>({
+			offset: 0,
 			sorting: 'date',
 			toastMessage: '',
 			isMenuOpen: false,
@@ -95,6 +97,7 @@ export const useOverviewStore: () => [
 
 	const controller = context.app.productList({
 		sortBy: store.sorting,
+		offset: store.offset,
 	})
 
 	const model = from(controller.stream)
@@ -125,10 +128,6 @@ export const useOverviewStore: () => [
 	})
 
 	const navigate = useNavigate()
-
-	createEffect(() => {
-		controller.next({ sortBy: store.sorting })
-	})
 
 	const dispatch = useDispatcher<Command>(cmd$ =>
 		pipe(

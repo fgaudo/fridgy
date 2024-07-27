@@ -30,6 +30,7 @@ export const ProductEntityDTO = {
 
 export interface Options {
 	sortBy: 'date' | 'a-z'
+	offset: number
 }
 
 export type OnProducts = (

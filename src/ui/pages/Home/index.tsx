@@ -8,6 +8,7 @@ import {
 	createMemo,
 	createRenderEffect,
 } from 'solid-js'
+import { Transition } from 'solid-transition-group'
 
 import { SmallTopAppBar } from '@/ui/widgets/SmallTopAppBar'
 import { SnackBar } from '@/ui/widgets/SnackBar'
@@ -150,58 +151,76 @@ const Home: Component = () => {
 											<Show when={i() !== 0}>
 												<md-divider />
 											</Show>
-											<Show
-												when={store.selectMode}
-												fallback={
-													<md-list-item
-														prop:type="button"
-														onContextMenu={e => {
-															e.preventDefault()
-															dispatch({
-																type: 'toggleItem',
-																id: productModel.id,
-															})
-														}}>
-														<md-icon slot="start">
-															ac_unit
-														</md-icon>
 
-														<div slot="headline">
-															{productModel.name}
-														</div>
-													</md-list-item>
-												}>
-												<md-list-item
-													prop:type="button"
-													onClick={e => {
-														e.preventDefault()
-														dispatch({
-															type: 'toggleItem',
-															id: productModel.id,
-														})
-													}}>
-													<md-icon slot="start">
-														ac_unit
+											<md-list-item
+												prop:type="button"
+												classList={{
+													'bg-surface-variant':
+														store.selectedProducts.has(
+															productModel.id,
+														),
+												}}
+												onClick={e => {
+													if (!store.selectMode) {
+														return
+													}
+													e.preventDefault()
+													dispatch({
+														type: 'toggleItem',
+														id: productModel.id,
+													})
+												}}
+												onContextMenu={e => {
+													if (store.selectMode) {
+														return
+													}
+													e.preventDefault()
+													dispatch({
+														type: 'toggleItem',
+														id: productModel.id,
+													})
+												}}>
+												<md-icon slot="start">
+													ac_unit
+												</md-icon>
+
+												<div
+													classList={{
+														'opacity-0':
+															!store.selectMode,
+													}}
+													slot="end"
+													class="relative flex h-[24px] w-[24px] items-center justify-center transition-all duration-300">
+													<md-icon
+														classList={{
+															'opacity-0':
+																store.selectedProducts.has(
+																	productModel.id,
+																),
+														}}
+														class="absolute text-primary transition-all duration-300">
+														check_box_outline_blank
 													</md-icon>
 													<md-icon
+														classList={{
+															'opacity-0':
+																!store.selectedProducts.has(
+																	productModel.id,
+																),
+														}}
 														style={{
 															'font-variation-settings':
 																"'FILL' 1",
 														}}
-														slot="end"
-														class="text-primary">
-														{store.selectedProducts.has(
-															productModel.id,
-														)
-															? 'check_box'
-															: 'check_box_outline_blank'}
+														class="absolute text-primary transition-all duration-300">
+														check_box
 													</md-icon>
+												</div>
 
-													<div slot="headline">
-														{productModel.name}
-													</div>
-												</md-list-item>
-											</Show>
+												<div slot="headline">
+													{productModel.name}
+												</div>
+											</md-list-item>
 										</>
 									)
 								}}
@@ -215,7 +234,7 @@ const Home: Component = () => {
 				</Switch>
 
 				<div
-					class="fixed transition-all duration-[0.25s]"
+					class="fixed transition-all duration-300"
 					classList={{
 						'opacity-0 pointer-events-none':
 							store.selectMode,

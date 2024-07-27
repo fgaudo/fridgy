@@ -6,7 +6,6 @@ import {
 	option as OPT,
 	reader as R,
 	readonlyArray as RoA,
-	readonlySet as RoS,
 } from 'fp-ts'
 import * as t from 'io-ts'
 import { withFallback } from 'io-ts-types'
@@ -17,9 +16,9 @@ import * as B from '@/core/base64'
 import {
 	type OnProducts,
 	ProductEntityDTO,
-} from '@/app/contract/read/on-products'
+} from '@/app/interfaces/read/on-products'
 
-import { executeSql } from '@/data/sqlite/helpers'
+import { readTransaction } from '@/data/sqlite/helpers'
 import { log } from '@/data/system/write/log'
 
 const pipe = F.pipe
@@ -54,8 +53,8 @@ export const productDecoder = t.readonly(
 )
 const mapData = RoA.reduce<
 	unknown,
-	ReadonlySet<ProductEntityDTO>
->(RoS.empty, (set, row) => {
+	readonly ProductEntityDTO[]
+>(RoA.empty, (set, row) => {
 	const productRowEither =
 		productDecoder.decode(row)
 
@@ -87,38 +86,74 @@ const mapData = RoA.reduce<
 		},
 	}
 
-	return pipe(
-		set,
-		RoS.insert(ProductEntityDTO.Eq)(productData),
-	)
+	return pipe(set, RoA.append(productData))
 })
 
-export const products: (d: Deps) => OnProducts =
-	pipe(
-		R.ask<Deps>(),
-		R.map(({ events, db }) =>
+export const products: (
+	deps: Deps,
+) => OnProducts = F.flip(
+	F.flow(
+		options => (deps: Deps) =>
 			pipe(
-				events,
-				Rx.switchMap(() =>
-					pipe(
-						executeSql('SELECT * FROM products')(
-							db,
-						),
-						Rx.defer,
+				deps.events,
+				Rx.map(() => ({
+					options,
+				})),
+			),
+		RO.switchMap(vars =>
+			pipe(
+				readTransaction(
+					[
+						'SELECT *, c.total_rows FROM products (SELECT count(*) FROM products) c LIMIT ? OFFSET ? ORDER BY expDate',
+						[30, vars.options.offset],
+					],
+					['SELECT count(*) FROM products'],
+				),
+				R.local((deps: Deps) => deps.db),
+				R.map(Rx.defer),
+				RO.map(result => ({
+					...vars,
+					result,
+				})),
+			),
+		),
+		R.map(
+			O.filterMap(vars =>
+				pipe(
+					vars.result,
+					OPT.getRight,
+					OPT.map(rows => ({
+						...vars,
+						result: rows,
+					})),
+				),
+			),
+		),
+		RO.map(vars => ({
+			...vars,
+			result: {
+				rows: pipe(
+					Array(
+						vars.result[0].rows.length,
+					).keys(),
+					Array.from<number>,
+					RoA.fromArray,
+					RoA.map(
+						n =>
+							vars.result[0].rows.item(
+								n,
+							) as unknown,
 					),
 				),
-				O.filterMap(OPT.getRight),
-			),
-		),
-		RO.map(columns =>
-			pipe(
-				Array(columns.rows.length).keys(),
-				Array.from<number>,
-				RoA.fromArray,
-				RoA.map(
-					n => columns.rows.item(n) as unknown,
-				),
-			),
-		),
-		RO.map(mapData),
-	)
+				total: vars.result[1].rows.item(
+					0,
+				) as unknown,
+			},
+		})),
+		RO.map(vars => ({
+			items: mapData(vars.rows),
+			offset: vars.options.offset,
+			total: vars.total,
+		})),
+	),
+)

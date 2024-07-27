@@ -1,6 +1,6 @@
 import { function as F } from 'fp-ts'
 
-import type { Log } from '@/app/contract/write/log'
+import type { Log } from '@/app/interfaces/write/log'
 
 export function tidy(object: unknown): string {
 	return JSON.stringify(object, null, 3)
