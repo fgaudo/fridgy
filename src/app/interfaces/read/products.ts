@@ -1,20 +1,22 @@
-import { eq as Eq, function as F } from 'fp-ts'
-import { Observable } from 'rxjs'
-
-import { Base64 } from '@/core/base64'
+import {
+	eq as Eq,
+	function as F,
+	string as S,
+	taskEither as TE,
+} from 'fp-ts'
 
 import type { ProductDTO } from '@/app/interfaces/read/types/product'
 
 const pipe = F.pipe
 
 export type ProductEntityDTO = Readonly<{
-	id: Base64
+	id: string
 	product: ProductDTO
 }>
 
 export const ProductEntityDTO = {
 	Eq: pipe(
-		Base64.Eq,
+		S.Eq,
 		Eq.contramap(
 			(product: ProductEntityDTO) => product.id,
 		),
@@ -23,7 +25,7 @@ export const ProductEntityDTO = {
 		id,
 		product,
 	}: {
-		id: Base64
+		id: string
 		product: ProductDTO
 	}) => ({ id, product }),
 } as const
@@ -33,10 +35,12 @@ export interface Options {
 	offset: number
 }
 
-export type OnProducts = (
+export type Products = (
 	options: Options,
-) => Observable<{
-	items: readonly ProductEntityDTO[]
-	offset: number
-	total: number
-}>
+) => TE.TaskEither<
+	Error,
+	{
+		items: readonly ProductEntityDTO[]
+		total: number
+	}
+>

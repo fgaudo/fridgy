@@ -5,20 +5,23 @@ import {
 	function as F,
 	option as OPT,
 	reader as R,
+	readerTaskEither as RTE,
 	readonlyArray as RoA,
 } from 'fp-ts'
+import {
+	sequenceS,
+	sequenceT,
+} from 'fp-ts/lib/Apply'
 import * as t from 'io-ts'
 import { withFallback } from 'io-ts-types'
 import * as Rx from 'rxjs'
-
-import * as B from '@/core/base64'
 
 import {
 	type OnProducts,
 	ProductEntityDTO,
 } from '@/app/interfaces/read/on-products'
 
-import { readTransaction } from '@/data/sqlite/helpers'
+import * as H from '@/data/sqlite/helpers'
 import { log } from '@/data/system/write/log'
 
 const pipe = F.pipe
@@ -31,7 +34,7 @@ interface Deps {
 
 export const productDecoder = t.readonly(
 	t.type({
-		id: t.string,
+		id: t.bigint,
 		name: withFallback(
 			t.union([t.string, t.undefined]),
 			undefined,
@@ -51,10 +54,10 @@ export const productDecoder = t.readonly(
 		),
 	}),
 )
-const mapData = RoA.reduce<
+const decodeData = RoA.reduce<
 	unknown,
 	readonly ProductEntityDTO[]
->(RoA.empty, (set, row) => {
+>(RoA.empty, (productDTOs, row) => {
 	const productRowEither =
 		productDecoder.decode(row)
 
@@ -64,7 +67,7 @@ const mapData = RoA.reduce<
 			message: 'Row could not be parsed',
 		})()
 
-		return set
+		return productDTOs
 	}
 
 	const productRow = productRowEither.right
@@ -72,12 +75,12 @@ const mapData = RoA.reduce<
 	if (productRow.name === undefined) {
 		log({ prefix: 'D' })({
 			severity: 'error',
-			message: `Could not parse name of row ${productRow.id}`,
+			message: `Could not parse name of row ${productRow.id.toString(10)}`,
 		})()
 	}
 
 	const productData = {
-		id: B.encodeText(productRow.id),
+		id: productRow.id.toString(10),
 		product: {
 			name: productRow.name ?? '[undefined]',
 			expDate: OPT.fromNullable(
@@ -86,8 +89,22 @@ const mapData = RoA.reduce<
 		},
 	}
 
-	return pipe(set, RoA.append(productData))
+	return pipe(
+		productDTOs,
+		RoA.append(productData),
+	)
 })
+
+const decodeTotal = (total: unknown) => {
+	const decoded = t.number.decode(total)
+	if (E.isLeft(decoded)) {
+		log({ prefix: 'D' })({
+			severity: 'error',
+			message: `Could not parse the total amount of products`,
+		})()
+		return 0
+	} else return decoded.right
+}
 
 export const products: (
 	deps: Deps,
@@ -100,60 +117,80 @@ export const products: (
 					options,
 				})),
 			),
-		RO.switchMap(vars =>
-			pipe(
-				readTransaction(
-					[
-						'SELECT *, c.total_rows FROM products (SELECT count(*) FROM products) c LIMIT ? OFFSET ? ORDER BY expDate',
-						[30, vars.options.offset],
-					],
-					['SELECT count(*) FROM products'],
-				),
-				R.local((deps: Deps) => deps.db),
+		RO.switchMap(
+			F.flow(
+				vars =>
+					pipe(
+						H.readTransaction(
+							[
+								'SELECT * FROM products LIMIT ? OFFSET ? ORDER BY expDate',
+								[30, vars.options.offset],
+							],
+							['SELECT count(*) FROM products'],
+						),
+
+						RTE.match(
+							F.flow(
+								errors =>
+									[
+										errors[0].map(
+											error => error.message,
+										),
+										errors[1].message,
+									] as const,
+								errors =>
+									E.left({
+										...vars,
+										error: new Error(
+											`${errors[1]} # ${errors[0].join(' # ')}`,
+										),
+									}),
+							),
+							([products, total]) =>
+								pipe(
+									total.rows,
+									E.fromPredicate(
+										rows => rows.length === 1,
+										rows => ({
+											...vars,
+											error: new Error(
+												`total has ${rows.length.toString(10)} rows`,
+											),
+										}),
+									),
+									E.map(total => ({
+										...vars,
+										total: total.item(
+											0,
+										) as unknown,
+										products: pipe(
+											Array(
+												products.rows.length,
+											).keys(),
+											Array.from<number>,
+											RoA.fromArray,
+											RoA.map(
+												n =>
+													products.rows.item(
+														n,
+													) as unknown,
+											),
+										),
+									})),
+								),
+						),
+					),
+				RTE.local((deps: Deps) => deps.db),
 				R.map(Rx.defer),
-				RO.map(result => ({
-					...vars,
-					result,
-				})),
-			),
-		),
-		R.map(
-			O.filterMap(vars =>
-				pipe(
-					vars.result,
-					OPT.getRight,
-					OPT.map(rows => ({
-						...vars,
-						result: rows,
+				RO.map(
+					E.map(vars => ({
+						items: decodeData(vars.products),
+						offset: vars.options.offset,
+						total: decodeTotal(vars.total),
 					})),
 				),
+				RO.map(E.mapLeft(error => error.error)),
 			),
 		),
-		RO.map(vars => ({
-			...vars,
-			result: {
-				rows: pipe(
-					Array(
-						vars.result[0].rows.length,
-					).keys(),
-					Array.from<number>,
-					RoA.fromArray,
-					RoA.map(
-						n =>
-							vars.result[0].rows.item(
-								n,
-							) as unknown,
-					),
-				),
-				total: vars.result[1].rows.item(
-					0,
-				) as unknown,
-			},
-		})),
-		RO.map(vars => ({
-			items: mapData(vars.rows),
-			offset: vars.options.offset,
-			total: vars.total,
-		})),
 	),
 )

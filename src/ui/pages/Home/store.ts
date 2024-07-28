@@ -8,6 +8,7 @@ import {
 	option as OPT,
 	predicate as P,
 	readonlySet as RoS,
+	string as S,
 	taskOption as TO,
 } from 'fp-ts'
 import * as Rx from 'rxjs'
@@ -15,10 +16,10 @@ import {
 	batch,
 	createEffect,
 	from,
+	onCleanup,
 } from 'solid-js'
 import { createStore } from 'solid-js/store'
 
-import { Base64 } from '@/core/base64'
 import * as RoNeS from '@/core/readonly-non-empty-set'
 
 import type { LogSeverity } from '@/app/interfaces/write/log'
@@ -63,7 +64,7 @@ type Command =
 	| {
 			type: 'disableSelectMode'
 	  }
-	| { type: 'toggleItem'; id: Base64 }
+	| { type: 'toggleItem'; id: string }
 	| {
 			type: 'log'
 			severity: LogSeverity
@@ -99,13 +100,36 @@ export const useOverviewStore: () => [
 		sortBy: store.sorting,
 		offset: store.offset,
 	})
-
+	console.log('ciao')
 	const model = from(controller.stream)
 
 	const scroll = useWindowScroll()
 
+	const showToast = new Rx.Subject<string>()
+	const toastSub = showToast
+		.pipe(
+			Rx.tap(error => {
+				setStore('toastMessage', error)
+			}),
+			Rx.delay(2500),
+			Rx.tap(() => {
+				setStore('toastMessage', '')
+			}),
+		)
+		.subscribe()
+
+	onCleanup(() => {
+		showToast.unsubscribe()
+		toastSub.unsubscribe()
+	})
+
 	createEffect(() => {
 		const m = model()
+
+		if (m !== undefined && m.status === 'error') {
+			showToast.next(m.error.message)
+		}
+
 		batch(() => {
 			setStore(
 				'isLoading',
@@ -282,7 +306,7 @@ export const useOverviewStore: () => [
 									}
 									setStore(
 										'selectedProducts',
-										RoS.toggle(Base64.Eq)(cmd.id),
+										RoS.toggle(S.Eq)(cmd.id),
 									)
 									if (
 										store.selectedProducts

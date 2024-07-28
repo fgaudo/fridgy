@@ -42,3 +42,27 @@ export const fromBase64String: (
 
 export const toString: (id: Base64) => string =
 	idIso.unwrap
+
+export const fromBigint: (
+	number: bigint,
+) => Base64 = number => {
+	const uint8array = new Uint8Array(8)
+
+	new DataView(
+		uint8array.buffer,
+		0,
+		8,
+	).setBigInt64(0, number)
+	return idIso.wrap(
+		B.fromUint8Array(uint8array, true),
+	)
+}
+
+export const toBigInt: (
+	base64: Base64,
+) => bigint = base64 => {
+	const b = B.toUint8Array(idIso.unwrap(base64))
+	return new DataView(b.buffer, 0, 8).getBigInt64(
+		0,
+	)
+}

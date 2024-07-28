@@ -1,4 +1,3 @@
-import * as RO from '@fgaudo/fp-ts-rxjs/ReaderObservable.js'
 import {
 	either as E,
 	eq as Eq,
@@ -9,15 +8,13 @@ import {
 	ord as Ord,
 	reader as R,
 	readerIO as RIO,
+	readerTaskEither as RTE,
 	readonlyArray as RoA,
 	string as S,
 	separated as SEP,
 	task as T,
+	taskEither as TE,
 } from 'fp-ts'
-import * as Rx from 'rxjs'
-
-import * as B from '@/core/base64'
-import { Controller } from '@/core/controller'
 
 import {
 	type Product,
@@ -28,17 +25,17 @@ import {
 } from '@/domain/product'
 
 import type {
-	OnProducts,
 	Options,
 	ProductEntityDTO,
-} from '@/app/interfaces/read/on-products'
+	Products,
+} from '@/app/interfaces/read/products'
 import type { Log } from '@/app/interfaces/write/log'
 
 const pipe = F.pipe
 const flow = F.flow
 
 export interface ProductModel {
-	id: B.Base64
+	id: string
 	name: string
 	expDate: OPT.Option<
 		Readonly<{
@@ -53,7 +50,7 @@ const M = Ord.getMonoid<ProductModel>()
 
 const ProductModel = {
 	Eq: Eq.contramap((a: ProductModel) => a.id)(
-		B.Base64.Eq,
+		S.Eq,
 	),
 	OrdOldest: MO.concatAll(M)([
 		pipe(
@@ -76,35 +73,20 @@ const ProductModel = {
 	]),
 } as const
 
-export type Model =
-	| { status: 'loading' }
-	| {
-			status: 'ready'
-			products: readonly ProductModel[]
-			total: number
-			offset: number
-	  }
-
 export interface UseCases {
-	products: OnProducts
+	products: Products
 	log: Log
 }
 
 interface ProductEntity {
-	id: B.Base64
+	id: string
 	product: Product
 }
-
-const ProductEntity = {
-	Eq: Eq.contramap(({ id }: ProductEntity) => id)(
-		B.Base64.Eq,
-	),
-} as const
 
 const toProductEntitiesWithInvalid: (
 	foodDTOs: readonly ProductEntityDTO[],
 ) => SEP.Separated<
-	readonly B.Base64[],
+	readonly string[],
 	readonly ProductEntity[]
 > = RoA.partitionMap(entityDTO =>
 	pipe(
@@ -125,18 +107,17 @@ const toProductEntitiesWithInvalid: (
 
 const discardInvalid: (
 	set: SEP.Separated<
-		readonly B.Base64[],
+		readonly string[],
 		readonly ProductEntity[]
 	>,
 ) => readonly ProductEntity[] = SEP.right
 
-const toProductModels = (
+const toProductModels: (
 	products: readonly ProductEntity[],
-) =>
+) => T.Task<readonly ProductModel[]> = products =>
 	pipe(
 		T.fromIO(() => new Date().getDate()),
-		Rx.defer,
-		Rx.map(timestamp =>
+		T.map(timestamp =>
 			pipe(
 				products,
 				RoA.map(({ id, product }) => ({
@@ -154,92 +135,87 @@ const toProductModels = (
 
 export type Sortings = Options['sortBy']
 
-const logInfo =
+const logInfo: (
+	message: string,
+) => RIO.ReaderIO<UseCases, void> =
+	message =>
+	({ log }) =>
+		log({ severity: 'info', message })
+
+const logError =
 	(message: string) =>
 	({ log }: UseCases) =>
-		log({ severity: 'info', message })
+		log({ severity: 'error', message })
 
 type ProductList = (
 	init: Options,
-) => (
-	options: Rx.Observable<Options>,
-) => Rx.Observable<Model>
+) => TE.TaskEither<
+	string,
+	{
+		total: number
+		products: readonly ProductModel[]
+	}
+>
 
-const transformer: (
+export const useCase: (
 	deps: UseCases,
-) => ProductList = F.flip(init =>
-	F.flip(
-		flow(
-			Rx.startWith(init),
-			R.of<UseCases, Rx.Observable<Options>>,
-			RO.switchMap(
-				flow(
-					options => (useCases: UseCases) =>
-						useCases.products(options),
-					RO.map(result => ({
-						result,
-					})),
-					RO.tap(vars =>
-						logInfo(
-							`Received ${vars.result.items.length.toString(10)} product entries out of ${vars.result.total.toString(10)}`,
-						),
-					),
-					RO.map(vars => ({
-						...vars,
-						entitiesWithInvalid:
-							toProductEntitiesWithInvalid(
-								vars.result.items,
-							),
-					})),
-					RO.tap(
-						flow(
-							vars => vars.entitiesWithInvalid,
-							SEP.left,
-							RoA.map(B.toString),
-							RoA.map(id =>
-								logInfo(
-									`Unable to load entity with id ${id}`,
-								),
-							),
-							RIO.sequenceArray,
-						),
-					),
-					RO.map(vars => ({
-						...vars,
-						entities: discardInvalid(
-							vars.entitiesWithInvalid,
-						),
-					})),
-					R.map(
-						Rx.switchMap(vars =>
-							pipe(
-								toProductModels(vars.entities),
-								Rx.map(models => ({
-									...vars,
-									models,
-								})),
-							),
-						),
-					),
-					RO.map(
-						vars =>
-							({
-								status: 'ready',
-								products: vars.models,
-								total: vars.result.total,
-								offset: vars.result.offset,
-							}) satisfies Model,
+) => ProductList = F.flip(options =>
+	pipe(
+		RTE.Do,
+		RTE.apS(
+			'result',
+			R.asks((useCases: UseCases) =>
+				useCases.products(options),
+			),
+		),
+		RTE.tapReaderIO(({ result }) =>
+			logInfo(
+				`Received ${result.items.length.toString(10)} product entries out of ${result.total.toString(10)}`,
+			),
+		),
+		RTE.bindW(
+			'entitiesWithInvalid',
+			({ result }) =>
+				pipe(
+					result.items,
+					toProductEntitiesWithInvalid,
+					RTE.right,
+				),
+		),
+		RTE.tapReaderIO(
+			flow(
+				result => result.entitiesWithInvalid,
+				SEP.left,
+				RoA.map(id =>
+					logInfo(
+						`Unable to load entity with id ${id}`,
 					),
 				),
+				RIO.sequenceArray,
 			),
+		),
+		RTE.bindW(
+			'entities',
+			({ entitiesWithInvalid }) =>
+				pipe(
+					entitiesWithInvalid,
+					discardInvalid,
+					RTE.right,
+				),
+		),
+		RTE.bindW('products', ({ entities }) =>
+			pipe(
+				entities,
+				toProductModels,
+				RTE.fromTask,
+			),
+		),
+		RTE.bimap(
+			error => error.message,
+			({ result: { total }, products }) => ({
+				total,
+				products,
+			}),
 		),
 	),
 )
-
-export type ProductListController = (
-	options: Options,
-) => Controller<Options, Model>
-
-export const controller =
-	(deps: UseCases) => (options: Options) =>
-		new Controller(transformer(deps)(options))

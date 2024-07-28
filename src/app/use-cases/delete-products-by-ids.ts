@@ -4,7 +4,6 @@ import {
 	task as T,
 } from 'fp-ts'
 
-import type { Base64 } from '@/core/base64'
 import type { ReadonlyNonEmptySet } from '@/core/readonly-non-empty-set'
 
 import type { DeleteProductsByIds as DeleteProductsByIdsCommand } from '@/app/interfaces/write/delete-products-by-ids'
@@ -16,7 +15,7 @@ interface Deps {
 }
 
 export type DeleteProductsByIds = (
-	ids: ReadonlyNonEmptySet<Base64>,
+	ids: ReadonlyNonEmptySet<string>,
 ) => T.Task<OPT.Option<Error>>
 
 export const command: (

@@ -1,13 +1,14 @@
 import {
 	function as F,
 	option as OPT,
+	ord as Ord,
 	reader as R,
 	readerTask as RT,
+	readerTaskEither as RTE,
 	readonlyNonEmptyArray as RoNeA,
-	string as S,
 } from 'fp-ts'
+import { toUint8Array } from 'js-base64'
 
-import { toString } from '@/core/base64'
 import * as RoNeS from '@/core/readonly-non-empty-set'
 
 import type { DeleteProductsByIds } from '@/app/interfaces/write/delete-products-by-ids'
@@ -25,8 +26,10 @@ export const deleteProductsByIds: (
 	deps: Deps,
 ) => DeleteProductsByIds = F.flip(
 	flow(
-		RoNeS.map(S.Eq)(toString),
-		RoNeS.toReadonlyNonEmptyArray(S.Ord),
+		RoNeS.toReadonlyNonEmptyArray<string>(
+			Ord.trivial,
+		),
+		RoNeA.map(BigInt),
 		ids => ({
 			tokens: pipe(
 				ids,
@@ -36,13 +39,14 @@ export const deleteProductsByIds: (
 			values: ids,
 		}),
 		R.of,
-		R.chain(
-			({ values, tokens }) =>
-				({ db }: Deps) =>
-					executeSql(
-						`DELETE * FROM products WHERE id IN (${tokens})`,
-						values,
-					)(db),
+		R.chain(({ values, tokens }) =>
+			pipe(
+				executeSql(
+					`DELETE * FROM products WHERE id IN (${tokens})`,
+					values,
+				),
+				R.local((deps: Deps) => deps.db),
+			),
 		),
 		RT.map(OPT.getLeft),
 	),
