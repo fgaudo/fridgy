@@ -2,14 +2,11 @@ import {
 	either as E,
 	function as F,
 	option as OPT,
-	reader as R,
-	readerTask as RT,
 	readerTaskEither as RTE,
 	readonlyArray as RoA,
 } from 'fp-ts'
 import * as t from 'io-ts'
 import { withFallback } from 'io-ts-types'
-import * as Rx from 'rxjs'
 
 import {
 	ProductEntityDTO,

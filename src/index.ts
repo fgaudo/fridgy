@@ -21,7 +21,7 @@ if (DEVELOPMENT) {
 		}),
 	})
 
-	await render(app, root)
+	render(app, root)
 } else {
 	document.addEventListener(
 		'deviceready',
@@ -48,7 +48,7 @@ if (DEVELOPMENT) {
 				}).deleteProductsByIds,
 			})
 
-			void render(app, root)
+			render(app, root)
 		},
 	)
 }

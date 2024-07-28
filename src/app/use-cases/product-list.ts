@@ -142,6 +142,7 @@ const logInfo: (
 	({ log }) =>
 		log({ severity: 'info', message })
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const logError =
 	(message: string) =>
 	({ log }: UseCases) =>

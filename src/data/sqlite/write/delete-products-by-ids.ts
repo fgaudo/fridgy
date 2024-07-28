@@ -4,10 +4,8 @@ import {
 	ord as Ord,
 	reader as R,
 	readerTask as RT,
-	readerTaskEither as RTE,
 	readonlyNonEmptyArray as RoNeA,
 } from 'fp-ts'
-import { toUint8Array } from 'js-base64'
 
 import * as RoNeS from '@/core/readonly-non-empty-set'
 

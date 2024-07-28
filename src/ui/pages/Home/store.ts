@@ -74,15 +74,15 @@ type Command =
 			type: 'sortList'
 			by: 'date' | 'a-z'
 	  }
+	| {
+			type: 'log'
+			severity: LogSeverity
+			message: string
+	  }
 
 type InternalCommand =
 	| { type: '_refreshList' }
 	| { type: '_showToast'; message: string }
-	| {
-			type: '_log'
-			severity: LogSeverity
-			message: string
-	  }
 
 export const useOverviewStore: () => [
 	OverviewStore,
@@ -185,7 +185,7 @@ export const useOverviewStore: () => [
 							}),
 							Rx.ignoreElements(),
 						)
-					case '_log':
+					case 'log':
 						return pipe(
 							Rx.of(cmd),
 							Rx.tap(cmd => {

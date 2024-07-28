@@ -1,14 +1,11 @@
 import {
 	array as A,
-	either as E,
 	function as F,
 	option as OPT,
 	reader as R,
-	readerTask as RT,
 	readerTaskEither as RTE,
 	readonlyArray as RoA,
 	task as T,
-	taskEither as TE,
 } from 'fp-ts'
 
 import { type Products } from '@/app/interfaces/read/products'
