@@ -1,3 +1,4 @@
+import * as Rx from 'rxjs'
 import {
 	createEffect,
 	createSignal,
@@ -64,4 +65,22 @@ export const useWindowScroll = () => {
 	})
 
 	return scrollValues
+}
+
+export const createSubject = <CMD>(): [
+	Rx.Observable<CMD>,
+	(cmd: CMD) => void,
+] => {
+	const subject = new Rx.Subject<CMD>()
+
+	onCleanup(() => {
+		subject.unsubscribe()
+	})
+
+	return [
+		subject,
+		(cmd: CMD) => {
+			if (!subject.closed) subject.next(cmd)
+		},
+	]
 }

@@ -67,7 +67,7 @@ type ReadTransaction = <T extends InputTuple[]>(
 	...params: [...T]
 ) => RTE.ReaderTaskEither<
 	SQLitePlugin.Database,
-	readonly [readonly Error[], Error],
+	Error,
 	InputToOutput<T>
 >
 
@@ -97,7 +97,11 @@ export const readTransaction: ReadTransaction =
 				},
 				error => {
 					resolve(
-						E.left([errors, error] as const),
+						E.left(
+							new Error(
+								`${error.message} # ${errors.map(error => error.message).join(' # ')}`,
+							),
+						),
 					)
 				},
 				() => {

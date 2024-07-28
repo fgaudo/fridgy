@@ -16,7 +16,8 @@ import {
 	AppContext,
 	useAppContext,
 } from '@/ui/context'
-import { useDispatcher } from '@/ui/core/solid-js'
+import { TOAST_DELAY_MS } from '@/ui/core/constants'
+import { createDispatcher } from '@/ui/core/solid-js'
 
 const pipe = F.pipe
 
@@ -63,6 +64,11 @@ const defaultFields = () => ({
 	isBestBefore: false,
 })
 
+interface InternalCommand {
+	type: 'showToast'
+	message: string
+}
+
 export const useStore: () => [
 	Store,
 	(command: Command) => void,
@@ -105,83 +111,84 @@ export const useStore: () => [
 		context.showLoading(false)
 	})
 
-	const dispatch = useDispatcher<Command>(cmd$ =>
-		pipe(
-			cmd$,
-			Rx.mergeMap(cmd => {
-				switch (cmd.type) {
-					case 'log':
-						return pipe(
-							Rx.of(undefined),
-							Rx.tap(() => {
-								context.app.log(cmd)()
-							}),
-							Rx.ignoreElements(),
-						)
-					case 'addProduct':
-						return pipe(
-							Rx.of(undefined),
+	const dispatch = createDispatcher<Command>(
+		cmd$ =>
+			pipe(
+				cmd$,
+				Rx.mergeMap(cmd => {
+					switch (cmd.type) {
+						case 'log':
+							return pipe(
+								Rx.of(undefined),
+								Rx.tap(() => {
+									context.app.log(cmd)()
+								}),
+								Rx.ignoreElements(),
+							)
+						case 'addProduct':
+							return pipe(
+								Rx.of(undefined),
 
-							Rx.tap(() => {
-								context.showLoading(true)
-							}),
-							Rx.mergeMap(() =>
-								Rx.defer(
-									context.app.addProduct({
-										name: store.formFields.name,
-										expDate: pipe(
-											store.formFields.expDate,
-											OPT.map(expDate => ({
-												isBestBefore:
-													store.formFields
-														.isBestBefore,
-												timestamp: expDate,
-											})),
-										),
-									}),
+								Rx.tap(() => {
+									context.showLoading(true)
+								}),
+								Rx.mergeMap(() =>
+									Rx.defer(
+										context.app.addProduct({
+											name: store.formFields.name,
+											expDate: pipe(
+												store.formFields.expDate,
+												OPT.map(expDate => ({
+													isBestBefore:
+														store.formFields
+															.isBestBefore,
+													timestamp: expDate,
+												})),
+											),
+										}),
+									),
 								),
-							),
-							Rx.tap(result => {
-								batch(() => {
-									context.showLoading(false)
+								Rx.tap(result => {
+									batch(() => {
+										context.showLoading(false)
 
-									if (OPT.isNone(result)) {
+										if (OPT.isNone(result)) {
+											setStore(
+												'toastMessage',
+												'Product added succesfully',
+											)
+
+											resetFields()
+										}
+									})
+								}),
+								Rx.delay(TOAST_DELAY_MS),
+								Rx.tap(() => {
+									setStore('toastMessage', '')
+								}),
+								Rx.ignoreElements(),
+							)
+						case 'updateField':
+							return pipe(
+								Rx.of(cmd.field),
+								Rx.tap(field => {
+									batch(() => {
 										setStore(
-											'toastMessage',
-											'Product added succesfully',
+											'formFields',
+											fields => ({
+												...fields,
+												[field.name]: field.value,
+											}),
 										)
 
-										resetFields()
-									}
-								})
-							}),
-							Rx.delay(2500),
-							Rx.tap(() => {
-								setStore('toastMessage', '')
-							}),
-							Rx.ignoreElements(),
-						)
-					case 'updateField':
-						return pipe(
-							Rx.of(cmd.field),
-							Rx.tap(field => {
-								batch(() => {
-									setStore(
-										'formFields',
-										fields => ({
-											...fields,
-											[field.name]: field.value,
-										}),
-									)
-
-									validateFields()
-								})
-							}),
-							Rx.ignoreElements(),
-						)
-				}
-			}),
-		),
+										validateFields()
+									})
+								}),
+								Rx.ignoreElements(),
+							)
+					}
+				}),
+			),
 	)
 
 	return [store, dispatch]

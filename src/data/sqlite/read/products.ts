@@ -1,25 +1,20 @@
-import * as O from '@fgaudo/fp-ts-rxjs/Observable.js'
-import * as RO from '@fgaudo/fp-ts-rxjs/ReaderObservable.js'
 import {
 	either as E,
 	function as F,
 	option as OPT,
 	reader as R,
+	readerTask as RT,
 	readerTaskEither as RTE,
 	readonlyArray as RoA,
 } from 'fp-ts'
-import {
-	sequenceS,
-	sequenceT,
-} from 'fp-ts/lib/Apply'
 import * as t from 'io-ts'
 import { withFallback } from 'io-ts-types'
 import * as Rx from 'rxjs'
 
 import {
-	type OnProducts,
 	ProductEntityDTO,
-} from '@/app/interfaces/read/on-products'
+	type Products,
+} from '@/app/interfaces/read/products'
 
 import * as H from '@/data/sqlite/helpers'
 import { log } from '@/data/system/write/log'
@@ -28,7 +23,6 @@ const pipe = F.pipe
 
 interface Deps {
 	db: SQLitePlugin.Database
-	events: Rx.Observable<void>
 	prefix: string
 }
 
@@ -106,91 +100,52 @@ const decodeTotal = (total: unknown) => {
 	} else return decoded.right
 }
 
-export const products: (
-	deps: Deps,
-) => OnProducts = F.flip(
-	F.flow(
-		options => (deps: Deps) =>
-			pipe(
-				deps.events,
-				Rx.map(() => ({
-					options,
-				})),
+export const products: (deps: Deps) => Products =
+	F.flip(
+		F.flow(
+			RTE.of,
+			RTE.bindTo('options'),
+			RTE.bind('results', ({ options }) =>
+				H.readTransaction(
+					[
+						'SELECT * FROM products LIMIT ? OFFSET ? ORDER BY expDate',
+						[30, options.offset],
+					],
+					['SELECT count(*) FROM products'],
+				),
 			),
-		RO.switchMap(
-			F.flow(
-				vars =>
+			RTE.local((deps: Deps) => deps.db),
+			RTE.bindW(
+				'total',
+				({ results: [, { rows }] }) =>
 					pipe(
-						H.readTransaction(
-							[
-								'SELECT * FROM products LIMIT ? OFFSET ? ORDER BY expDate',
-								[30, vars.options.offset],
-							],
-							['SELECT count(*) FROM products'],
-						),
-
-						RTE.match(
-							F.flow(
-								errors =>
-									[
-										errors[0].map(
-											error => error.message,
-										),
-										errors[1].message,
-									] as const,
-								errors =>
-									E.left({
-										...vars,
-										error: new Error(
-											`${errors[1]} # ${errors[0].join(' # ')}`,
-										),
-									}),
-							),
-							([products, total]) =>
-								pipe(
-									total.rows,
-									E.fromPredicate(
-										rows => rows.length === 1,
-										rows => ({
-											...vars,
-											error: new Error(
-												`total has ${rows.length.toString(10)} rows`,
-											),
-										}),
-									),
-									E.map(total => ({
-										...vars,
-										total: total.item(
-											0,
-										) as unknown,
-										products: pipe(
-											Array(
-												products.rows.length,
-											).keys(),
-											Array.from<number>,
-											RoA.fromArray,
-											RoA.map(
-												n =>
-													products.rows.item(
-														n,
-													) as unknown,
-											),
-										),
-									})),
+						rows,
+						RTE.fromPredicate(
+							rows => rows.length === 1,
+							rows =>
+								new Error(
+									`total has ${rows.length.toString(10)} rows`,
 								),
 						),
+						RTE.map(
+							total => total.item(0) as unknown,
+						),
 					),
-				RTE.local((deps: Deps) => deps.db),
-				R.map(Rx.defer),
-				RO.map(
-					E.map(vars => ({
-						items: decodeData(vars.products),
-						offset: vars.options.offset,
-						total: decodeTotal(vars.total),
-					})),
-				),
-				RO.map(E.mapLeft(error => error.error)),
 			),
+			RTE.bindW(
+				'products',
+				({ results: [{ rows }] }) =>
+					pipe(
+						Array(rows.length).keys(),
+						Array.from<number>,
+						RoA.fromArray,
+						RoA.map(n => rows.item(n) as unknown),
+						RTE.right,
+					),
+			),
+			RTE.map(vars => ({
+				items: decodeData(vars.products),
+				total: decodeTotal(vars.total),
+			})),
 		),
-	),
-)
+	)

@@ -1,4 +1,4 @@
-import type { OnProducts } from '@/app/interfaces/read/on-products'
+import type { Products } from '@/app/interfaces/read/products'
 import type { AddProduct as AddProductCommand } from '@/app/interfaces/write/add-product'
 import type { DeleteProductsByIds as DeleteProductsByIdsCommand } from '@/app/interfaces/write/delete-products-by-ids'
 import type { Log } from '@/app/interfaces/write/log'
@@ -8,7 +8,7 @@ import * as PL from '@/app/use-cases/product-list'
 
 export interface UseCases {
 	addProduct: AddProductCommand
-	products: OnProducts
+	products: Products
 	deleteProductsByIds: DeleteProductsByIdsCommand
 	appLog: Log
 	uiLog: Log
@@ -16,7 +16,7 @@ export interface UseCases {
 
 export class App {
 	constructor(useCases: UseCases) {
-		this.productList = PL.controller({
+		this.productList = PL.useCase({
 			...useCases,
 			log: useCases.appLog,
 		})
@@ -32,7 +32,7 @@ export class App {
 		})
 	}
 
-	readonly productList: PL.ProductListController
+	readonly productList: PL.ProductList
 
 	readonly addProduct: AP.AddProduct
 

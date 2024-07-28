@@ -1,5 +1,3 @@
-import { Subject } from 'rxjs'
-
 import { App } from '@/app'
 
 import { useCases as mockUseCases } from '@/data/mock'
@@ -23,7 +21,7 @@ if (DEVELOPMENT) {
 		}),
 	})
 
-	render(app, root)
+	await render(app, root)
 } else {
 	document.addEventListener(
 		'deviceready',
@@ -50,7 +48,7 @@ if (DEVELOPMENT) {
 				}).deleteProductsByIds,
 			})
 
-			render(app, root)
+			void render(app, root)
 		},
 	)
 }

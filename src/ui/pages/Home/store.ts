@@ -4,6 +4,7 @@ import {
 } from '@capacitor/haptics'
 import { useNavigate } from '@solidjs/router'
 import {
+	either as E,
 	function as F,
 	option as OPT,
 	predicate as P,
@@ -15,10 +16,12 @@ import * as Rx from 'rxjs'
 import {
 	batch,
 	createEffect,
-	from,
-	onCleanup,
+	onMount,
 } from 'solid-js'
-import { createStore } from 'solid-js/store'
+import {
+	createStore,
+	produce,
+} from 'solid-js/store'
 
 import * as RoNeS from '@/core/readonly-non-empty-set'
 
@@ -32,19 +35,21 @@ import {
 	AppContext,
 	useAppContext,
 } from '@/ui/context'
+import { onResume } from '@/ui/core/capacitor'
+import { TOAST_DELAY_MS } from '@/ui/core/constants'
 import { useWindowScroll } from '@/ui/core/helpers'
-import { useDispatcher } from '@/ui/core/solid-js'
+import { createDispatcher } from '@/ui/core/solid-js'
 
 const pipe = F.pipe
 
 interface OverviewStore {
 	offset: number
-	sorting: Sortings
+	sortBy: Sortings
 	toastMessage: string
 	isMenuOpen: boolean
-	isLoading: boolean
-	products: ProductModel[]
 	selectMode: boolean
+	products: ProductModel[]
+	isLoading: boolean
 	selectedProducts: ReadonlySet<
 		ProductModel['id']
 	>
@@ -66,13 +71,17 @@ type Command =
 	  }
 	| { type: 'toggleItem'; id: string }
 	| {
-			type: 'log'
-			severity: LogSeverity
-			message: string
-	  }
-	| {
 			type: 'sortList'
 			by: 'date' | 'a-z'
+	  }
+
+type InternalCommand =
+	| { type: '_refreshList' }
+	| { type: '_showToast'; message: string }
+	| {
+			type: '_log'
+			severity: LogSeverity
+			message: string
 	  }
 
 export const useOverviewStore: () => [
@@ -84,11 +93,11 @@ export const useOverviewStore: () => [
 	const [store, setStore] =
 		createStore<OverviewStore>({
 			offset: 0,
-			sorting: 'date',
+			sortBy: 'date',
 			toastMessage: '',
-			isMenuOpen: false,
-			isLoading: false,
 			products: [],
+			isLoading: true,
+			isMenuOpen: false,
 			selectMode: false,
 			selectedProducts: new Set([]),
 			isOpeningAddProduct: false,
@@ -96,77 +105,87 @@ export const useOverviewStore: () => [
 			scrollY: window.scrollY,
 		})
 
-	const controller = context.app.productList({
-		sortBy: store.sorting,
-		offset: store.offset,
-	})
-	console.log('ciao')
-	const model = from(controller.stream)
-
 	const scroll = useWindowScroll()
 
-	const showToast = new Rx.Subject<string>()
-	const toastSub = showToast
-		.pipe(
-			Rx.tap(error => {
-				setStore('toastMessage', error)
-			}),
-			Rx.delay(2500),
-			Rx.tap(() => {
-				setStore('toastMessage', '')
+	createEffect(() => {
+		setStore(
+			produce(state => {
+				state.scrollY = scroll().scrollY
+				state.isScrolling = scroll().isScrolling
 			}),
 		)
-		.subscribe()
-
-	onCleanup(() => {
-		showToast.unsubscribe()
-		toastSub.unsubscribe()
-	})
-
-	createEffect(() => {
-		const m = model()
-
-		if (m !== undefined && m.status === 'error') {
-			showToast.next(m.error.message)
-		}
-
-		batch(() => {
-			setStore(
-				'isLoading',
-				m === undefined || m.status === 'loading'
-					? true
-					: false,
-			)
-			setStore(
-				'products',
-				m !== undefined && m.status === 'ready'
-					? m.products
-					: [],
-			)
-			setStore('scrollY', scroll().scrollY)
-			setStore(
-				'isScrolling',
-				scroll().isScrolling,
-			)
-		})
 	})
 
 	const navigate = useNavigate()
 
-	const dispatch = useDispatcher<Command>(cmd$ =>
-		pipe(
-			cmd$,
+	const dispatch = createDispatcher<
+		Command | InternalCommand
+	>(
+		F.flow(
 			Rx.mergeMap(cmd => {
 				switch (cmd.type) {
+					case '_refreshList':
+						return pipe(
+							Rx.scheduled(
+								Rx.of(cmd),
+								Rx.asyncScheduler,
+							),
+							Rx.tap(() => {
+								setStore('isLoading', true)
+							}),
+							Rx.mergeMap(() =>
+								pipe(
+									context.app.productList({
+										offset: store.offset,
+										sortBy: store.sortBy,
+									}),
+									Rx.defer,
+								),
+							),
+							Rx.tap(result => {
+								if (E.isLeft(result)) {
+									dispatch({
+										type: '_showToast',
+										message: result.left,
+									})
+									return
+								}
+
+								setStore(
+									produce(state => {
+										state.products = result.right
+											.models as ProductModel[]
+										state.isLoading = false
+									}),
+								)
+							}),
+							Rx.ignoreElements(),
+						)
+					case '_showToast':
+						return pipe(
+							Rx.scheduled(
+								Rx.of(cmd.message),
+								Rx.asyncScheduler,
+							),
+							Rx.tap(message => {
+								setStore('toastMessage', message)
+							}),
+							Rx.delay(TOAST_DELAY_MS),
+							Rx.tap(() => {
+								setStore('toastMessage', '')
+							}),
+							Rx.ignoreElements(),
+						)
+
 					case 'sortList':
 						return pipe(
 							Rx.of(cmd),
 							Rx.tap(() => {
-								setStore('sorting', cmd.by)
+								setStore('sortBy', cmd.by)
 							}),
 							Rx.ignoreElements(),
 						)
-					case 'log':
+					case '_log':
 						return pipe(
 							Rx.of(cmd),
 							Rx.tap(cmd => {
@@ -190,50 +209,38 @@ export const useOverviewStore: () => [
 								),
 							),
 							Rx.mergeMap(
-								OPT.match(
-									() => Rx.defer(TO.none),
-									products =>
-										Rx.defer(
-											pipe(
-												TO.fromIO(() => {
-													context.showLoading(
-														true,
-													)
-												}),
-												TO.chain(() =>
-													context.app.deleteProductsByIds(
-														products,
-													),
-												),
-											),
+								F.flow(
+									TO.fromOption,
+									TO.tapTask(() =>
+										TO.fromIO(() => {
+											context.showLoading(true)
+										}),
+									),
+									TO.chain(products =>
+										context.app.deleteProductsByIds(
+											products,
 										),
+									),
+									Rx.defer,
 								),
 							),
-							Rx.tap(opt => {
-								batch(() => {
-									context.showLoading(false)
-
-									if (OPT.isNone(opt)) {
-										batch(() => {
-											setStore(
-												'toastMessage',
-												'Products deleted succesfully',
-											)
-											setStore(
-												'selectedProducts',
-												new Set(),
-											)
-											setStore(
-												'selectMode',
-												false,
-											)
-										})
-									}
-								})
-							}),
-							Rx.delay(2500),
-							Rx.tap(() => {
-								setStore('toastMessage', '')
+							Rx.tap(result => {
+								context.showLoading(false)
+								if (OPT.isNone(result)) {
+									dispatch({
+										type: '_refreshList',
+									})
+									dispatch({
+										type: '_showToast',
+										message:
+											'Products deleted succesfully',
+									})
+									setStore(state => ({
+										...state,
+										selectedProducts: new Set(),
+										selectMode: false,
+									}))
+								}
 							}),
 							Rx.ignoreElements(),
 						)
@@ -277,13 +284,11 @@ export const useOverviewStore: () => [
 								Rx.asyncScheduler,
 							),
 							Rx.tap(() => {
-								batch(() => {
-									setStore('selectMode', false)
-									setStore(
-										'selectedProducts',
-										new Set(),
-									)
-								})
+								setStore(state => ({
+									...state,
+									selectMode: false,
+									selectedProducts: new Set(),
+								}))
 							}),
 							Rx.ignoreElements(),
 						)
@@ -301,19 +306,16 @@ export const useOverviewStore: () => [
 							),
 							Rx.tap(() => {
 								batch(() => {
-									if (!store.selectMode) {
-										setStore('selectMode', true)
-									}
 									setStore(
 										'selectedProducts',
 										RoS.toggle(S.Eq)(cmd.id),
 									)
-									if (
-										store.selectedProducts
-											.size === 0
-									) {
-										setStore('selectMode', false)
-									}
+									setStore(state => ({
+										...state,
+										selectMode:
+											state.selectedProducts
+												.size > 0,
+									}))
 								})
 							}),
 							Rx.ignoreElements(),
@@ -323,5 +325,16 @@ export const useOverviewStore: () => [
 		),
 	)
 
-	return [store, dispatch]
+	onMount(() => {
+		onResume(() => {
+			dispatch({ type: '_refreshList' })
+		})
+
+		dispatch({ type: '_refreshList' })
+	})
+
+	return [
+		store,
+		dispatch as (cmd: Command) => void,
+	]
 }

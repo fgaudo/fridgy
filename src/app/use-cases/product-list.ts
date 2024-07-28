@@ -147,23 +147,23 @@ const logError =
 	({ log }: UseCases) =>
 		log({ severity: 'error', message })
 
-type ProductList = (
+export type ProductList = (
 	init: Options,
 ) => TE.TaskEither<
 	string,
 	{
 		total: number
-		products: readonly ProductModel[]
+		models: readonly ProductModel[]
 	}
 >
 
 export const useCase: (
 	deps: UseCases,
-) => ProductList = F.flip(options =>
-	pipe(
-		RTE.Do,
-		RTE.apS(
-			'result',
+) => ProductList = F.flip(
+	flow(
+		RTE.of,
+		RTE.bindTo('options'),
+		RTE.bind('result', ({ options }) =>
 			R.asks((useCases: UseCases) =>
 				useCases.products(options),
 			),
@@ -187,9 +187,7 @@ export const useCase: (
 				result => result.entitiesWithInvalid,
 				SEP.left,
 				RoA.map(id =>
-					logInfo(
-						`Unable to load entity with id ${id}`,
-					),
+					logInfo(`Corrupt entity with id ${id}`),
 				),
 				RIO.sequenceArray,
 			),
@@ -203,7 +201,7 @@ export const useCase: (
 					RTE.right,
 				),
 		),
-		RTE.bindW('products', ({ entities }) =>
+		RTE.bindW('models', ({ entities }) =>
 			pipe(
 				entities,
 				toProductModels,
@@ -212,9 +210,9 @@ export const useCase: (
 		),
 		RTE.bimap(
 			error => error.message,
-			({ result: { total }, products }) => ({
+			({ result: { total }, models }) => ({
 				total,
-				products,
+				models,
 			}),
 		),
 	),
