@@ -169,18 +169,15 @@ export const useStore: () => [
 									context.showLoading(false)
 
 									if (OPT.isNone(result)) {
-										setStore(
-											'toastMessage',
-											'Product added succesfully',
-										)
+										dispatch({
+											type: '_showToast',
+											message:
+												'Product added succesfully',
+										})
 
 										resetFields()
 									}
 								})
-							}),
-							Rx.delay(TOAST_DELAY_MS),
-							Rx.tap(() => {
-								setStore('toastMessage', '')
 							}),
 							Rx.ignoreElements(),
 						)

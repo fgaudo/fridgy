@@ -14,10 +14,10 @@ const DEVELOPMENT = true
 // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 if (DEVELOPMENT) {
 	const app: App = new App({
-		...mockUseCases({ dataLogPrefix: 'data' }),
+		...mockUseCases({ dataLogPrefix: 'DATA' }),
 		...systemUseCases({
-			appLogPrefix: 'app',
-			uiLogPrefix: 'ui',
+			appLogPrefix: 'APP',
+			uiLogPrefix: 'UI',
 		}),
 	})
 
@@ -32,6 +32,8 @@ if (DEVELOPMENT) {
 					location: 'default',
 				},
 			)
+
+			createOrUpdateSchema()
 
 			const app: App = new App({
 				...sqliteImplementations({

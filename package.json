@@ -23,6 +23,7 @@
 		"@material/web": "^2.0.0",
 		"@solidjs/router": "^0.14.1",
 		"cordova-sqlite-storage": "^6.1.0",
+		"dexie": "^4.0.8",
 		"fp-ts": "^2.16.9",
 		"io-ts": "^2.2.21",
 		"io-ts-types": "^0.5.19",
