@@ -1,3 +1,10 @@
+import type {
+	Table,
+	TransactionMode,
+} from 'dexie'
+import type Dexie from 'dexie'
+import { taskEither as TE } from 'fp-ts'
+
 async function tryPersistWithoutPromtingUser() {
 	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 	if (!navigator.storage?.persisted) {

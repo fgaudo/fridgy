@@ -1,18 +1,20 @@
+import type Dexie from 'dexie'
 import {
 	function as F,
 	readerTaskEither as RTE,
 	readonlyArray as RoA,
-	taskEither as TE,
+	task as T,
 } from 'fp-ts'
+import { sequenceS } from 'fp-ts/lib/Apply'
 
 import { type Products } from '@/app/interfaces/read/products'
 
-import type { FridgyDexie } from '../dexie'
+import { productsTable } from '../schema'
 
 const pipe = F.pipe
 
 interface Deps {
-	db: FridgyDexie
+	db: Dexie
 	prefix: string
 }
 
@@ -24,44 +26,34 @@ export const products: (deps: Deps) => Products =
 			RTE.bind('results', ({ options }) =>
 				RTE.asksReaderTaskEither((deps: Deps) =>
 					pipe(
-						TE.tryCatch(
-							() =>
-								deps.db.transaction(
-									'r',
-									deps.db.products,
-									() => {
-										return Promise.all([
-											deps.db.products.count(),
-											deps.db.products
-												.limit(30)
-												.offset(options.offset)
-												.sortBy('expDate'),
-										])
-									},
-								),
-							e => e,
-						),
-						RTE.fromTaskEither,
+						() =>
+							deps.db.transaction(
+								'r',
+								deps.db.table(productsTable.name),
+								sequenceS(T.ApplyPar)({
+									total: () =>
+										deps.db
+											.table(productsTable.name)
+											.count(),
+									products: () =>
+										deps.db
+											.table(productsTable.name)
+											.limit(25)
+											.offset(options.offset)
+											.sortBy(
+												options.sortBy === 'date'
+													? productsTable.columns
+															.expirationDate
+													: productsTable.columns
+															.name,
+											),
+								}),
+							),
+						RTE.fromTask,
 					),
 				),
 			),
-			RTE.bindW(
-				'total',
-				({ results: [, { rows }] }) =>
-					pipe(
-						rows,
-						RTE.fromPredicate(
-							rows => rows.length === 1,
-							rows =>
-								new Error(
-									`total has ${rows.length.toString(10)} rows`,
-								),
-						),
-						RTE.map(
-							total => total.item(0) as unknown,
-						),
-					),
-			),
+
 			RTE.bindW(
 				'products',
 				({ results: [{ rows }] }) =>
