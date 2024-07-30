@@ -1,5 +1,6 @@
 import {
 	task as T,
+	taskEither as TE,
 	taskOption as TO,
 } from 'fp-ts'
 
@@ -10,4 +11,4 @@ type Deps = object
 export const deleteProductByIds: (
 	deps: Deps,
 ) => DeleteProductsByIds = () => () =>
-	T.delay(250)(TO.none)
+	T.delay(250)(TE.right(undefined))

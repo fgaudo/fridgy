@@ -15,7 +15,7 @@ const pipe = F.pipe
 
 export const productDecoder = t.readonly(
 	t.type({
-		id: t.bigint,
+		id: t.number,
 		name: withFallback(
 			t.union([t.string, t.undefined]),
 			undefined,

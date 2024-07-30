@@ -75,7 +75,7 @@ const Home: Component = () => {
 					</div>
 				</div>
 			</div>
-			<div class="pb-[128px] pt-[56px]">
+			<div class="pb-[128px] pt-[64px]">
 				<SmallTopAppBar>
 					<div class="relative h-full w-full">
 						<div
@@ -135,103 +135,127 @@ const Home: Component = () => {
 						/>
 					</Match>
 					<Match when={store.products.length > 0}>
-						<md-list>
-							<For each={store.products}>
-								{(productModel, i) => {
-									createRenderEffect(() => {
-										dispatch({
-											type: 'log',
-											severity: 'debug',
-											message: `Received change for element ${i().toString(10)} \n${JSON.stringify(productModel, null, 2)}`,
+						<>
+							<p class="px-[14px] pt-[10px] text-xs">
+								{store.total} products in your
+								fridge
+							</p>
+							<md-list>
+								<For each={store.products}>
+									{(productModel, i) => {
+										createRenderEffect(() => {
+											dispatch({
+												type: 'log',
+												severity: 'debug',
+												message: `Received change for element ${i().toString(10)} \n${JSON.stringify(productModel, null, 2)}`,
+											})
 										})
-									})
-									return (
-										<>
-											<Show when={i() !== 0}>
-												<md-divider />
-											</Show>
+										return (
+											<>
+												<Show when={i() !== 0}>
+													<md-divider />
+												</Show>
 
-											<md-list-item
-												prop:type="button"
-												classList={{
-													'bg-surface-variant':
-														store.selectedProducts.has(
-															productModel.id,
-														),
-												}}
-												onClick={e => {
-													if (!store.selectMode) {
-														return
-													}
-													e.preventDefault()
-													dispatch({
-														type: 'toggleItem',
-														id: productModel.id,
-													})
-												}}
-												onContextMenu={e => {
-													if (store.selectMode) {
-														return
-													}
-													e.preventDefault()
-													dispatch({
-														type: 'toggleItem',
-														id: productModel.id,
-													})
-												}}>
-												<md-icon slot="start">
-													ac_unit
-												</md-icon>
-
-												<div
+												<md-list-item
+													prop:type="button"
 													classList={{
-														'opacity-0':
-															!store.selectMode,
+														'bg-surface-variant':
+															store.selectedProducts.has(
+																productModel.id,
+															),
 													}}
-													slot="end"
-													class="relative flex h-[24px] w-[24px] items-center justify-center transition-all duration-300">
-													<md-icon
-														classList={{
-															'opacity-0':
-																store.selectedProducts.has(
-																	productModel.id,
-																),
-														}}
-														class="absolute text-primary transition-all duration-300">
-														check_box_outline_blank
+													onClick={e => {
+														if (
+															!store.selectMode
+														) {
+															return
+														}
+														e.preventDefault()
+														dispatch({
+															type: 'toggleItem',
+															id: productModel.id,
+														})
+													}}
+													onContextMenu={e => {
+														if (
+															store.selectMode
+														) {
+															return
+														}
+														e.preventDefault()
+														dispatch({
+															type: 'toggleItem',
+															id: productModel.id,
+														})
+													}}>
+													<md-icon slot="start">
+														ac_unit
 													</md-icon>
-													<md-icon
-														classList={{
-															'opacity-0':
-																!store.selectedProducts.has(
-																	productModel.id,
-																),
-														}}
-														style={{
-															'font-variation-settings':
-																"'FILL' 1",
-														}}
-														class="absolute text-primary transition-all duration-300">
-														check_box
-													</md-icon>
-												</div>
 
-												<div slot="headline">
-													{productModel.name}
-												</div>
-											</md-list-item>
-										</>
-									)
-								}}
-							</For>
-							<Show
-								when={store.products.length > 0}>
-								<md-divider />
-							</Show>
-						</md-list>
+													<div
+														classList={{
+															'opacity-0':
+																!store.selectMode,
+														}}
+														slot="end"
+														class="relative flex h-[24px] w-[24px] items-center justify-center transition-all duration-300">
+														<md-icon
+															classList={{
+																'opacity-0':
+																	store.selectedProducts.has(
+																		productModel.id,
+																	),
+															}}
+															class="absolute text-primary transition-all duration-300">
+															check_box_outline_blank
+														</md-icon>
+														<md-icon
+															classList={{
+																'opacity-0':
+																	!store.selectedProducts.has(
+																		productModel.id,
+																	),
+															}}
+															style={{
+																'font-variation-settings':
+																	"'FILL' 1",
+															}}
+															class="absolute text-primary transition-all duration-300">
+															check_box
+														</md-icon>
+													</div>
+
+													<div slot="headline">
+														{productModel.name}
+													</div>
+												</md-list-item>
+											</>
+										)
+									}}
+								</For>
+								<Show
+									when={
+										store.products.length > 0
+									}>
+									<md-divider />
+								</Show>
+							</md-list>
+						</>
 					</Match>
 				</Switch>
 
+				<div
+					classList={{
+						'opacity-0 pointer-events-none':
+							store.products.length > 0,
+					}}
+					class="fixed bottom-[150px] left-0 right-0 flex flex-col items-end font-titleLarge">
+					<div class="w-full p-[20px] text-center">
+						Your fridge looks a bit empty. <br />{' '}
+						Here’s the button to add some food.
+					</div>
+					<div class="relative right-[70px] top-[30px] h-[160px] w-[160px] bg-[url(arrow.svg)] bg-contain bg-no-repeat" />
+				</div>
 				<div
 					class="fixed transition-all duration-300"
 					classList={{

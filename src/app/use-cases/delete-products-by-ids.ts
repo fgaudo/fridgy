@@ -2,6 +2,7 @@ import {
 	function as F,
 	option as OPT,
 	task as T,
+	taskEither as TE,
 } from 'fp-ts'
 
 import type { ReadonlyNonEmptySet } from '@/core/readonly-non-empty-set'
@@ -16,7 +17,7 @@ interface Deps {
 
 export type DeleteProductsByIds = (
 	ids: ReadonlyNonEmptySet<string>,
-) => T.Task<OPT.Option<Error>>
+) => TE.TaskEither<Error, void>
 
 export const command: (
 	deps: Deps,

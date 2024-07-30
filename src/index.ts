@@ -1,15 +1,18 @@
+import { either as E } from 'fp-ts'
+
 import { App } from '@/app'
 
 import { useCases as mockUseCases } from '@/data/mock'
 import { implementations as systemUseCases } from '@/data/system'
 
-import { render } from '@/ui'
+import { render, renderError } from '@/ui'
 
-import { useCases as sqliteImplementations } from './data/sqlite'
+import { useCases as dexieUseCases } from './data/dexie'
+import { createDB } from './data/dexie/dexie'
 
 const root = document.getElementById('root')!
 
-const DEVELOPMENT = true
+const DEVELOPMENT = false
 
 // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 if (DEVELOPMENT) {
@@ -23,34 +26,22 @@ if (DEVELOPMENT) {
 
 	render(app, root)
 } else {
-	document.addEventListener(
-		'deviceready',
-		function () {
-			const db = window.sqlitePlugin.openDatabase(
-				{
-					name: 'my.db',
-					location: 'default',
-				},
-			)
+	const result = await createDB()
 
-			createOrUpdateSchema()
+	if (E.isLeft(result)) {
+		renderError(root, result.left)
+	} else {
+		const app: App = new App({
+			...dexieUseCases({
+				db: result.right,
+				prefix: 'data',
+			}),
+			...systemUseCases({
+				appLogPrefix: 'app',
+				uiLogPrefix: 'ui',
+			}),
+		})
 
-			const app: App = new App({
-				...sqliteImplementations({
-					prefix: 'data',
-					db,
-				}),
-				...systemUseCases({
-					appLogPrefix: 'app',
-					uiLogPrefix: 'ui',
-				}),
-
-				deleteProductsByIds: mockUseCases({
-					dataLogPrefix: 'data',
-				}).deleteProductsByIds,
-			})
-
-			render(app, root)
-		},
-	)
+		render(app, root)
+	}
 }

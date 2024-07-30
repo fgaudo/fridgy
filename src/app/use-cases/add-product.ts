@@ -2,7 +2,9 @@ import {
 	function as F,
 	option as OPT,
 	readerTask as RT,
+	readerTaskEither as RTE,
 	task as T,
+	taskEither as TE,
 } from 'fp-ts'
 
 import type { ProductDTO } from '@/app/interfaces/read/types/product'
@@ -19,7 +21,7 @@ interface Deps {
 
 export type AddProduct = (
 	p: Product,
-) => T.Task<OPT.Option<Error>>
+) => TE.TaskEither<Error, void>
 
 export const command: (deps: Deps) => AddProduct =
 	F.flip(
@@ -37,11 +39,9 @@ export const command: (deps: Deps) => AddProduct =
 							deps.addProduct(product),
 						date =>
 							timestamp > date.timestamp
-								? RT.of(
-										OPT.of(
-											new Error(
-												'Date is in the past',
-											),
+								? RTE.left(
+										new Error(
+											'Date is in the past',
 										),
 									)
 								: deps =>

@@ -1,4 +1,5 @@
 import {
+	either as E,
 	function as F,
 	option as OPT,
 } from 'fp-ts'
@@ -114,93 +115,110 @@ export const useStore: () => [
 	const dispatch = createDispatcher<
 		Command | InternalCommand
 	>(cmd$ =>
-		pipe(
-			cmd$,
-			Rx.mergeMap(cmd => {
-				switch (cmd.type) {
-					case '_showToast':
-						return pipe(
-							Rx.scheduled(
-								Rx.of(cmd.message),
-								Rx.asyncScheduler,
-							),
-							Rx.tap(message => {
-								setStore('toastMessage', message)
-							}),
-							Rx.delay(TOAST_DELAY_MS),
-							Rx.tap(() => {
-								setStore('toastMessage', '')
-							}),
-							Rx.ignoreElements(),
-						)
-					case 'log':
-						return pipe(
-							Rx.of(undefined),
-							Rx.tap(() => {
-								context.app.log(cmd)()
-							}),
-							Rx.ignoreElements(),
-						)
-					case 'addProduct':
-						return pipe(
-							Rx.of(undefined),
+		Rx.merge(
+			pipe(
+				cmd$,
+				Rx.filter(
+					cmd => cmd.type === '_showToast',
+				),
+				Rx.switchMap(cmd => {
+					return pipe(
+						Rx.scheduled(
+							Rx.of(cmd.message),
+							Rx.asyncScheduler,
+						),
+						Rx.tap(() => {
+							setStore('toastMessage', '')
+						}),
+						Rx.delay(100),
+						Rx.tap(message => {
+							setStore('toastMessage', message)
+						}),
+						Rx.delay(TOAST_DELAY_MS),
+						Rx.tap(() => {
+							setStore('toastMessage', '')
+						}),
+						Rx.ignoreElements(),
+					)
+				}),
+			),
+			pipe(
+				cmd$,
+				Rx.filter(
+					cmd => cmd.type !== '_showToast',
+				),
+				Rx.mergeMap(cmd => {
+					switch (cmd.type) {
+						case 'log':
+							return pipe(
+								Rx.of(undefined),
+								Rx.tap(() => {
+									context.app.log(cmd)()
+								}),
+								Rx.ignoreElements(),
+							)
+						case 'addProduct':
+							return pipe(
+								Rx.of(undefined),
 
-							Rx.tap(() => {
-								context.showLoading(true)
-							}),
-							Rx.mergeMap(() =>
-								Rx.defer(
-									context.app.addProduct({
-										name: store.formFields.name,
-										expDate: pipe(
-											store.formFields.expDate,
-											OPT.map(expDate => ({
-												isBestBefore:
-													store.formFields
-														.isBestBefore,
-												timestamp: expDate,
-											})),
-										),
-									}),
-								),
-							),
-							Rx.tap(result => {
-								batch(() => {
-									context.showLoading(false)
-
-									if (OPT.isNone(result)) {
-										dispatch({
-											type: '_showToast',
-											message:
-												'Product added succesfully',
-										})
-
-										resetFields()
-									}
-								})
-							}),
-							Rx.ignoreElements(),
-						)
-					case 'updateField':
-						return pipe(
-							Rx.of(cmd.field),
-							Rx.tap(field => {
-								batch(() => {
-									setStore(
-										'formFields',
-										fields => ({
-											...fields,
-											[field.name]: field.value,
+								Rx.tap(() => {
+									context.showLoading(true)
+								}),
+								Rx.delay(300),
+								Rx.mergeMap(() =>
+									Rx.defer(
+										context.app.addProduct({
+											name: store.formFields.name,
+											expDate: pipe(
+												store.formFields.expDate,
+												OPT.map(expDate => ({
+													isBestBefore:
+														store.formFields
+															.isBestBefore,
+													timestamp: expDate,
+												})),
+											),
 										}),
-									)
+									),
+								),
+								Rx.tap(result => {
+									batch(() => {
+										context.showLoading(false)
 
-									validateFields()
-								})
-							}),
-							Rx.ignoreElements(),
-						)
-				}
-			}),
+										if (E.isRight(result)) {
+											dispatch({
+												type: '_showToast',
+												message:
+													'Product added succesfully',
+											})
+
+											resetFields()
+										}
+									})
+								}),
+								Rx.ignoreElements(),
+							)
+						case 'updateField':
+							return pipe(
+								Rx.of(cmd.field),
+								Rx.tap(field => {
+									batch(() => {
+										setStore(
+											'formFields',
+											fields => ({
+												...fields,
+												[field.name]: field.value,
+											}),
+										)
+
+										validateFields()
+									})
+								}),
+								Rx.ignoreElements(),
+							)
+					}
+				}),
+			),
 		),
 	)
 

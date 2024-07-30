@@ -124,7 +124,7 @@ const AddProduct = () => {
 										</md-filled-icon-button>
 									</div>
 								</div>
-								<label class="flex items-center gap-3 text-onSurface">
+								<label class="hidden items-center gap-3 text-onSurface">
 									<md-checkbox
 										prop:disabled={OPT.isNone(
 											store.formFields.expDate,

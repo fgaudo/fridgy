@@ -10,6 +10,8 @@ import {
 	predicate as P,
 	readonlySet as RoS,
 	string as S,
+	task as T,
+	taskEither as TE,
 	taskOption as TO,
 } from 'fp-ts'
 import * as Rx from 'rxjs'
@@ -43,6 +45,7 @@ import { createDispatcher } from '@/ui/core/solid-js'
 const pipe = F.pipe
 
 interface OverviewStore {
+	total: number
 	offset: number
 	sortBy: Sortings
 	toastMessage: string
@@ -92,6 +95,7 @@ export const useOverviewStore: () => [
 
 	const [store, setStore] =
 		createStore<OverviewStore>({
+			total: 0,
 			offset: 0,
 			sortBy: 'date',
 			toastMessage: '',
@@ -120,208 +124,234 @@ export const useOverviewStore: () => [
 
 	const dispatch = createDispatcher<
 		Command | InternalCommand
-	>(
-		F.flow(
-			Rx.mergeMap(cmd => {
-				switch (cmd.type) {
-					case '_refreshList':
-						return pipe(
-							Rx.scheduled(
+	>(cmd$ =>
+		Rx.merge(
+			pipe(
+				cmd$,
+				Rx.filter(
+					cmd => cmd.type === '_showToast',
+				),
+				Rx.switchMap(cmd =>
+					pipe(
+						Rx.scheduled(
+							Rx.of(cmd.message),
+							Rx.asyncScheduler,
+						),
+						Rx.tap(() => {
+							setStore('toastMessage', '')
+						}),
+						Rx.delay(100),
+						Rx.tap(message => {
+							setStore('toastMessage', message)
+						}),
+						Rx.delay(TOAST_DELAY_MS),
+						Rx.tap(() => {
+							setStore('toastMessage', '')
+						}),
+					),
+				),
+				Rx.ignoreElements(),
+			),
+			pipe(
+				cmd$,
+				Rx.filter(
+					cmd => cmd.type !== '_showToast',
+				),
+				Rx.mergeMap(cmd => {
+					switch (cmd.type) {
+						case '_refreshList':
+							return pipe(
+								Rx.scheduled(
+									Rx.of(cmd),
+									Rx.asyncScheduler,
+								),
+								Rx.tap(() => {
+									setStore('isLoading', true)
+								}),
+								Rx.mergeMap(() =>
+									pipe(
+										context.app.productList({
+											offset: store.offset,
+											sortBy: store.sortBy,
+										}),
+										Rx.defer,
+									),
+								),
+								Rx.tap(result => {
+									if (E.isLeft(result)) {
+										dispatch({
+											type: '_showToast',
+											message: result.left,
+										})
+										return
+									}
+
+									setStore(
+										produce(state => {
+											state.products = result
+												.right
+												.models as ProductModel[]
+											state.total =
+												result.right.total
+											state.isLoading = false
+										}),
+									)
+								}),
+							)
+
+						case 'sortList':
+							return pipe(
 								Rx.of(cmd),
-								Rx.asyncScheduler,
-							),
-							Rx.tap(() => {
-								setStore('isLoading', true)
-							}),
-							Rx.mergeMap(() =>
-								pipe(
-									context.app.productList({
-										offset: store.offset,
-										sortBy: store.sortBy,
-									}),
-									Rx.defer,
-								),
-							),
-							Rx.tap(result => {
-								if (E.isLeft(result)) {
-									dispatch({
-										type: '_showToast',
-										message: result.left,
-									})
-									return
-								}
-
-								setStore(
-									produce(state => {
-										state.products = result.right
-											.models as ProductModel[]
-										state.isLoading = false
-									}),
-								)
-							}),
-							Rx.ignoreElements(),
-						)
-					case '_showToast':
-						return pipe(
-							Rx.scheduled(
-								Rx.of(cmd.message),
-								Rx.asyncScheduler,
-							),
-							Rx.tap(message => {
-								setStore('toastMessage', message)
-							}),
-							Rx.delay(TOAST_DELAY_MS),
-							Rx.tap(() => {
-								setStore('toastMessage', '')
-							}),
-							Rx.ignoreElements(),
-						)
-
-					case 'sortList':
-						return pipe(
-							Rx.of(cmd),
-							Rx.tap(() => {
-								setStore('sortBy', cmd.by)
-							}),
-							Rx.ignoreElements(),
-						)
-					case 'log':
-						return pipe(
-							Rx.of(cmd),
-							Rx.tap(cmd => {
-								context.app.log(cmd)()
-							}),
-							Rx.ignoreElements(),
-						)
-					case 'deleteProducts':
-						return pipe(
-							Rx.scheduled(
-								Rx.from(
-									Haptics.impact({
-										style: ImpactStyle.Light,
-									}),
-								),
-								Rx.asyncScheduler,
-							),
-							Rx.map(() =>
-								RoNeS.fromSet(
-									store.selectedProducts,
-								),
-							),
-							Rx.mergeMap(
-								F.flow(
-									TO.fromOption,
-									TO.tapTask(() =>
-										TO.fromIO(() => {
-											context.showLoading(true)
+								Rx.tap(() => {
+									setStore('sortBy', cmd.by)
+								}),
+							)
+						case 'log':
+							return pipe(
+								Rx.of(cmd),
+								Rx.tap(cmd => {
+									context.app.log(cmd)()
+								}),
+							)
+						case 'deleteProducts':
+							return pipe(
+								Rx.scheduled(
+									Rx.from(
+										Haptics.impact({
+											style: ImpactStyle.Light,
 										}),
 									),
-									TO.chain(products =>
-										context.app.deleteProductsByIds(
-											products,
-										),
-									),
-									Rx.defer,
+									Rx.asyncScheduler,
 								),
-							),
-							Rx.tap(result => {
-								context.showLoading(false)
-								if (OPT.isNone(result)) {
-									dispatch({
-										type: '_refreshList',
-									})
-									dispatch({
-										type: '_showToast',
-										message:
-											'Products deleted succesfully',
-									})
-									setStore(state => ({
-										...state,
-										selectedProducts: new Set(),
-										selectMode: false,
-									}))
-								}
-							}),
-							Rx.ignoreElements(),
-						)
-					case 'toggleMenu':
-						return pipe(
-							Rx.scheduled(
-								Rx.of(undefined),
-								Rx.asyncScheduler,
-							),
-							Rx.tap(() => {
-								setStore(
-									'isMenuOpen',
-									!store.isMenuOpen,
-								)
-							}),
-							Rx.ignoreElements(),
-						)
-					case 'openAddProduct':
-						return pipe(
-							Rx.scheduled(
-								Rx.of(store.isOpeningAddProduct),
-								Rx.asyncScheduler,
-							),
-							Rx.filter(P.not(F.identity)),
-							Rx.tap(() => {
-								setStore(
-									'isOpeningAddProduct',
-									true,
-								)
-							}),
-							Rx.delay(250),
-							Rx.tap(() => {
-								navigate('/add-product')
-							}),
-							Rx.ignoreElements(),
-						)
-					case 'disableSelectMode':
-						return pipe(
-							Rx.scheduled(
-								Rx.of(undefined),
-								Rx.asyncScheduler,
-							),
-							Rx.tap(() => {
-								setStore(state => ({
-									...state,
-									selectMode: false,
-									selectedProducts: new Set(),
-								}))
-							}),
-							Rx.ignoreElements(),
-						)
-					case 'toggleItem':
-						return pipe(
-							Rx.scheduled(
-								!store.selectMode
-									? Rx.from(
-											Haptics.impact({
-												style: ImpactStyle.Medium,
+								Rx.map(() =>
+									RoNeS.fromSet(
+										store.selectedProducts,
+									),
+								),
+								Rx.map(
+									E.fromOption(
+										() =>
+											new Error(
+												'No item selected',
+											),
+									),
+								),
+								Rx.mergeMap(
+									F.flow(
+										TE.fromEither,
+										TE.tapTask(() =>
+											T.fromIO(() => {
+												context.showLoading(true)
 											}),
-										)
-									: Rx.of(undefined),
-								Rx.asyncScheduler,
-							),
-							Rx.tap(() => {
-								batch(() => {
+										),
+										TE.chainFirstTaskK(
+											F.flow(T.of, T.delay(300)),
+										),
+										TE.chain(
+											context.app
+												.deleteProductsByIds,
+										),
+										Rx.defer,
+									),
+								),
+								Rx.tap(result => {
+									context.showLoading(false)
+									if (E.isRight(result)) {
+										dispatch({
+											type: '_refreshList',
+										})
+										dispatch({
+											type: '_showToast',
+											message:
+												'Products deleted succesfully',
+										})
+										setStore(state => ({
+											...state,
+											selectedProducts: new Set(),
+											selectMode: false,
+										}))
+									}
+								}),
+							)
+						case 'toggleMenu':
+							return pipe(
+								Rx.scheduled(
+									Rx.of(undefined),
+									Rx.asyncScheduler,
+								),
+								Rx.tap(() => {
 									setStore(
-										'selectedProducts',
-										RoS.toggle(S.Eq)(cmd.id),
+										'isMenuOpen',
+										!store.isMenuOpen,
 									)
+								}),
+							)
+						case 'openAddProduct':
+							return pipe(
+								Rx.scheduled(
+									Rx.of(
+										store.isOpeningAddProduct,
+									),
+									Rx.asyncScheduler,
+								),
+								Rx.filter(P.not(F.identity)),
+								Rx.tap(() => {
+									setStore(
+										'isOpeningAddProduct',
+										true,
+									)
+								}),
+								Rx.delay(250),
+								Rx.tap(() => {
+									navigate('/add-product')
+								}),
+							)
+						case 'disableSelectMode':
+							return pipe(
+								Rx.scheduled(
+									Rx.of(undefined),
+									Rx.asyncScheduler,
+								),
+								Rx.tap(() => {
 									setStore(state => ({
 										...state,
-										selectMode:
-											state.selectedProducts
-												.size > 0,
+										selectMode: false,
+										selectedProducts: new Set(),
 									}))
-								})
-							}),
-							Rx.ignoreElements(),
-						)
-				}
-			}),
+								}),
+							)
+						case 'toggleItem':
+							return pipe(
+								Rx.scheduled(
+									!store.selectMode
+										? Rx.from(
+												Haptics.impact({
+													style:
+														ImpactStyle.Medium,
+												}),
+											)
+										: Rx.of(undefined),
+									Rx.asyncScheduler,
+								),
+								Rx.tap(() => {
+									batch(() => {
+										setStore(
+											'selectedProducts',
+											RoS.toggle(S.Eq)(cmd.id),
+										)
+										setStore(state => ({
+											...state,
+											selectMode:
+												state.selectedProducts
+													.size > 0,
+										}))
+									})
+								}),
+							)
+					}
+				}),
+				Rx.ignoreElements(),
+			),
 		),
 	)
 

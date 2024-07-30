@@ -1,51 +1,64 @@
+import type Dexie from 'dexie'
 import {
+	array as A,
 	function as F,
+	number as N,
+	nonEmptyArray as NeA,
 	option as OPT,
 	ord as Ord,
 	reader as R,
 	readerTask as RT,
-	readonlyNonEmptyArray as RoNeA,
+	readerTaskEither as RTE,
+	taskEither as TE,
 } from 'fp-ts'
 
 import * as RoNeS from '@/core/readonly-non-empty-set'
 
 import type { DeleteProductsByIds } from '@/app/interfaces/write/delete-products-by-ids'
 
-import { executeSql } from '@/data/sqlite/helpers'
+import { productsTable } from '../schema'
 
 const pipe = F.pipe
 const flow = F.flow
 
 interface Deps {
-	db: SQLitePlugin.Database
+	db: Dexie
 }
 
 export const deleteProductsByIds: (
 	deps: Deps,
 ) => DeleteProductsByIds = F.flip(
 	flow(
-		RoNeS.toReadonlyNonEmptyArray<string>(
-			Ord.trivial,
-		),
-		RoNeA.map(BigInt),
-		ids => ({
-			tokens: pipe(
-				ids,
-				RoNeA.map(() => '?'),
-				arr => arr.join(','),
-			),
-			values: ids,
-		}),
-		R.of,
-		R.chain(({ values, tokens }) =>
+		RTE.of,
+		RTE.bindTo('ids'),
+		RTE.bind('array', ({ ids }) =>
 			pipe(
-				executeSql(
-					`DELETE * FROM products WHERE id IN (${tokens})`,
-					values,
+				ids,
+				RoNeS.toReadonlyNonEmptyArray<string>(
+					Ord.trivial,
 				),
-				R.local((deps: Deps) => deps.db),
+				NeA.fromReadonlyNonEmptyArray,
+				NeA.map(number => parseInt(number, 10)),
+				RTE.of,
 			),
 		),
-		RT.map(OPT.getLeft),
+		RTE.chain(({ array }) =>
+			pipe(
+				R.asks((deps: Deps) =>
+					TE.tryCatch(
+						() =>
+							deps.db
+								.table(productsTable.name)
+								.bulkDelete(array),
+						error =>
+							error instanceof Error
+								? error
+								: new Error(
+										'There was a problem deleting all products',
+									),
+					),
+				),
+			),
+		),
 	),
 )

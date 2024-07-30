@@ -1,31 +1,48 @@
+import type Dexie from 'dexie'
 import {
 	function as F,
-	option as OPT,
-	readerTask as RT,
+	reader as R,
 	readerTaskEither as RTE,
+	taskEither as TE,
 } from 'fp-ts'
 
 import type { AddProduct } from '@/app/interfaces/write/add-product'
 
-import { executeSql } from '@/data/sqlite/helpers'
+import { productsTable } from '../schema'
 
 const flow = F.flow
 
 interface Deps {
-	db: SQLitePlugin.Database
+	db: Dexie
 }
 
 export const addProduct: (d: Deps) => AddProduct =
 	F.flip(
 		flow(
 			RTE.of,
-			RTE.chain(
-				product => (deps: Deps) =>
-					executeSql(
-						'INSERT INTO products(id, name, expDate) VALUES(id, ?, ?)',
-						[product.name, product.expDate],
-					)(deps.db),
+			RTE.bindTo('product'),
+			RTE.chain(({ product }) =>
+				R.asks((deps: Deps) =>
+					TE.tryCatch(
+						() =>
+							deps.db
+								.table(productsTable.name)
+								.add({
+									[productsTable.columns.name]:
+										product.name,
+									[productsTable.columns
+										.expirationDate]:
+										product.expDate,
+								}),
+						error =>
+							error instanceof Error
+								? error
+								: new Error(
+										'Could not add product',
+									),
+					),
+				),
 			),
-			RT.map(OPT.getLeft),
+			RTE.map(() => undefined),
 		),
 	)
