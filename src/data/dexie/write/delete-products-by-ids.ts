@@ -1,13 +1,9 @@
 import type Dexie from 'dexie'
 import {
-	array as A,
 	function as F,
-	number as N,
 	nonEmptyArray as NeA,
-	option as OPT,
 	ord as Ord,
 	reader as R,
-	readerTask as RT,
 	readerTaskEither as RTE,
 	taskEither as TE,
 } from 'fp-ts'

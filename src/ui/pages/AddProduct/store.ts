@@ -1,23 +1,22 @@
+import * as Match from '@effect/match'
 import {
 	either as E,
 	function as F,
 	option as OPT,
+	task as T,
 } from 'fp-ts'
 import * as Rx from 'rxjs'
-import {
-	batch,
-	createRenderEffect,
-	onCleanup,
-} from 'solid-js'
-import { createStore } from 'solid-js/store'
+import * as Solid from 'solid-js'
+import * as SolidStore from 'solid-js/store'
 
 import type { LogSeverity } from '@/app/interfaces/write/log'
 
 import {
 	AppContext,
+	type FridgyContext,
 	useAppContext,
 } from '@/ui/context'
-import { TOAST_DELAY_MS } from '@/ui/core/constants'
+import * as H from '@/ui/core/helpers'
 import { createDispatcher } from '@/ui/core/solid-js'
 
 const pipe = F.pipe
@@ -70,36 +69,33 @@ const defaultFields = () => ({
 	isBestBefore: false,
 })
 
+const validateFields = (
+	formFields: Store['formFields'],
+) => ({ isOk: formFields.name.length > 0 })
+
+const resetFields = () => {
+	const fields = defaultFields()
+	return {
+		formFields: fields,
+		...validateFields(fields),
+	}
+}
+
 export const useStore: () => [
 	Store,
 	(command: Command) => void,
 ] = () => {
 	const context = useAppContext(AppContext)
 
-	const [store, setStore] = createStore<Store>({
-		formFields: defaultFields(),
-		isOk: false,
-		currentDate: { status: 'loading' },
-		toastMessage: '',
-	})
-
-	const validateFields = () => {
-		setStore(
-			'isOk',
-			store.formFields.name.length > 0,
-		)
-	}
-
-	const resetFields = () => {
-		setStore(state => ({
-			...state,
+	const [store, setStore] =
+		SolidStore.createStore<Store>({
 			formFields: defaultFields(),
-		}))
+			currentDate: { status: 'loading' },
+			toastMessage: '',
+			...validateFields(defaultFields()),
+		})
 
-		validateFields()
-	}
-
-	createRenderEffect(() => {
+	Solid.createRenderEffect(() => {
 		setStore('currentDate', {
 			status: 'ready',
 			date: new Date()
@@ -108,116 +104,51 @@ export const useStore: () => [
 		})
 	})
 
-	onCleanup(() => {
-		context.showLoading(false)
-	})
-
 	const dispatch = createDispatcher<
-		Command | InternalCommand
-	>(cmd$ =>
+		Command | InternalCommand,
+		Store
+	>(setStore, cmd$ =>
 		Rx.merge(
 			pipe(
 				cmd$,
 				Rx.filter(
 					cmd => cmd.type === '_showToast',
 				),
-				Rx.switchMap(cmd => {
-					return pipe(
-						Rx.scheduled(
-							Rx.of(cmd.message),
-							Rx.asyncScheduler,
-						),
-						Rx.tap(() => {
-							setStore('toastMessage', '')
+				Rx.switchMap(cmd =>
+					pipe(
+						cmd.message,
+						H.handleShowToast({
+							hide: () => ({
+								...store,
+								toastMessage: '',
+							}),
+							show: message => ({
+								...store,
+								toastMessage: message,
+							}),
 						}),
-						Rx.delay(100),
-						Rx.tap(message => {
-							setStore('toastMessage', message)
-						}),
-						Rx.delay(TOAST_DELAY_MS),
-						Rx.tap(() => {
-							setStore('toastMessage', '')
-						}),
-						Rx.ignoreElements(),
-					)
-				}),
+					),
+				),
 			),
 			pipe(
 				cmd$,
 				Rx.filter(
-					cmd => cmd.type !== '_showToast',
+					cmd => cmd.type === 'addProduct',
 				),
-				Rx.mergeMap(cmd => {
-					switch (cmd.type) {
-						case 'log':
-							return pipe(
-								Rx.of(undefined),
-								Rx.tap(() => {
-									context.app.log(cmd)()
-								}),
-								Rx.ignoreElements(),
-							)
-						case 'addProduct':
-							return pipe(
-								Rx.of(undefined),
-
-								Rx.tap(() => {
-									context.showLoading(true)
-								}),
-								Rx.delay(300),
-								Rx.mergeMap(() =>
-									Rx.defer(
-										context.app.addProduct({
-											name: store.formFields.name,
-											expDate: pipe(
-												store.formFields.expDate,
-												OPT.map(expDate => ({
-													isBestBefore:
-														store.formFields
-															.isBestBefore,
-													timestamp: expDate,
-												})),
-											),
-										}),
-									),
-								),
-								Rx.tap(result => {
-									batch(() => {
-										context.showLoading(false)
-
-										if (E.isRight(result)) {
-											dispatch({
-												type: '_showToast',
-												message:
-													'Product added succesfully',
-											})
-
-											resetFields()
-										}
-									})
-								}),
-								Rx.ignoreElements(),
-							)
-						case 'updateField':
-							return pipe(
-								Rx.of(cmd.field),
-								Rx.tap(field => {
-									batch(() => {
-										setStore(
-											'formFields',
-											fields => ({
-												...fields,
-												[field.name]: field.value,
-											}),
-										)
-
-										validateFields()
-									})
-								}),
-								Rx.ignoreElements(),
-							)
-					}
-				}),
+				Rx.exhaustMap(
+					handleAddProduct(store, context),
+				),
+			),
+			pipe(
+				cmd$,
+				Rx.filter(
+					cmd =>
+						cmd.type === 'log' ||
+						cmd.type === 'updateField',
+				),
+				Rx.mergeMap(
+					handleLogAndUpdateField(store, context),
+				),
 			),
 		),
 	)
@@ -226,4 +157,109 @@ export const useStore: () => [
 		store,
 		dispatch as (command: Command) => void,
 	]
+}
+
+function handleLogAndUpdateField(
+	store: Store,
+	context: FridgyContext,
+) {
+	return F.flow(
+		Match.value<
+			Command &
+				(
+					| { type: 'updateField' }
+					| { type: 'log' }
+				)
+		>,
+		Match.when(
+			{ type: 'updateField' },
+			({ field }) =>
+				pipe(
+					Rx.scheduled(
+						Rx.of(field),
+						Rx.asyncScheduler,
+					),
+					Rx.map(field => {
+						const newFields = {
+							...store.formFields,
+							[field.name]: field.value,
+						}
+
+						return {
+							state: {
+								...store,
+								formFields: newFields,
+								...validateFields(newFields),
+							},
+						}
+					}),
+				),
+		),
+		Match.when({ type: 'log' }, cmd =>
+			pipe(
+				context.app.log(cmd),
+				T.fromIO,
+				Rx.defer,
+				Rx.ignoreElements(),
+			),
+		),
+		Match.exhaustive,
+	)
+}
+
+function handleAddProduct(
+	store: Store,
+	context: FridgyContext,
+) {
+	return (_: Command & { type: 'addProduct' }) =>
+		pipe(
+			Rx.scheduled(
+				Rx.of(undefined),
+				Rx.asyncScheduler,
+			),
+			Rx.delay(300),
+			Rx.mergeMap(() =>
+				pipe(
+					context.app.addProduct({
+						name: store.formFields.name,
+						expDate: pipe(
+							store.formFields.expDate,
+							OPT.map(expDate => ({
+								isBestBefore:
+									store.formFields.isBestBefore,
+								timestamp: expDate,
+							})),
+						),
+					}),
+					Rx.defer,
+				),
+			),
+			Rx.map(
+				E.matchW(
+					() =>
+						({
+							cmds: [
+								{
+									type: '_showToast',
+									message:
+										'There was a problem adding the product',
+								},
+							],
+						}) as const,
+					() => ({
+						state: {
+							...store,
+							...resetFields(),
+						},
+						cmds: [
+							{
+								type: '_showToast',
+								message:
+									'Product added succesfully',
+							},
+						],
+					}),
+				),
+			),
+		)
 }

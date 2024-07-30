@@ -14,24 +14,44 @@ export function withDefault<T>(
 	return () => accessor() ?? init
 }
 
-export const createDispatcher = <CMD>(
+export type DispatcherValue<CMD, STATE> =
+	| {
+			state: STATE
+	  }
+	| { cmds: readonly CMD[] }
+	| {
+			state: STATE
+			cmds: readonly CMD[]
+	  }
+
+export const createDispatcher = <CMD, STATE>(
+	mutate: (store: STATE) => void,
 	transformer: (
 		obs: Rx.Observable<CMD>,
-	) => Rx.Observable<never>,
+	) => Rx.Observable<DispatcherValue<CMD, STATE>>,
 ) => {
 	const subject = new Rx.Subject<CMD>()
+
+	const dispatch = (cmd: CMD) => {
+		if (!subject.closed) subject.next(cmd)
+	}
 
 	const subscription = pipe(
 		subject,
 		transformer,
-	).subscribe()
+	).subscribe(params => {
+		if ('state' in params) mutate(params.state)
+		if ('cmds' in params) {
+			for (const cmd of params.cmds) {
+				dispatch(cmd)
+			}
+		}
+	})
 
 	onCleanup(() => {
 		subject.unsubscribe()
 		subscription.unsubscribe()
 	})
 
-	return (cmd: CMD) => {
-		if (!subject.closed) subject.next(cmd)
-	}
+	return dispatch
 }

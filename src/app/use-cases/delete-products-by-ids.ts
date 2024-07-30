@@ -1,7 +1,5 @@
 import {
 	function as F,
-	option as OPT,
-	task as T,
 	taskEither as TE,
 } from 'fp-ts'
 

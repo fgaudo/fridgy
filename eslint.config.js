@@ -36,7 +36,14 @@ export default [
 		rules: {
 			'@typescript-eslint/no-unnecessary-type-assertion':
 				'error',
-			'@typescript-eslint/no-unused-vars': 'warn',
+			'@typescript-eslint/no-unused-vars': [
+				'warn', // or "error"
+				{
+					argsIgnorePattern: '^_$',
+					varsIgnorePattern: '^_$',
+					caughtErrorsIgnorePattern: '^_$',
+				},
+			],
 			'@typescript-eslint/no-confusing-void-expression':
 				'error',
 			'@typescript-eslint/switch-exhaustiveness-check':

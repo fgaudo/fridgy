@@ -2,28 +2,23 @@ import {
 	Haptics,
 	ImpactStyle,
 } from '@capacitor/haptics'
-import { useNavigate } from '@solidjs/router'
+import * as Match from '@effect/match'
+import {
+	type Navigator,
+	useNavigate,
+} from '@solidjs/router'
 import {
 	either as E,
 	function as F,
-	option as OPT,
 	predicate as P,
 	readonlySet as RoS,
 	string as S,
 	task as T,
 	taskEither as TE,
-	taskOption as TO,
 } from 'fp-ts'
 import * as Rx from 'rxjs'
-import {
-	batch,
-	createEffect,
-	onMount,
-} from 'solid-js'
-import {
-	createStore,
-	produce,
-} from 'solid-js/store'
+import * as Solid from 'solid-js'
+import * as SolidStore from 'solid-js/store'
 
 import * as RoNeS from '@/core/readonly-non-empty-set'
 
@@ -35,16 +30,19 @@ import type {
 
 import {
 	AppContext,
+	type FridgyContext,
 	useAppContext,
 } from '@/ui/context'
 import { onResume } from '@/ui/core/capacitor'
-import { TOAST_DELAY_MS } from '@/ui/core/constants'
-import { useWindowScroll } from '@/ui/core/helpers'
-import { createDispatcher } from '@/ui/core/solid-js'
+import * as H from '@/ui/core/helpers'
+import {
+	type DispatcherValue,
+	createDispatcher,
+} from '@/ui/core/solid-js'
 
 const pipe = F.pipe
 
-interface OverviewStore {
+interface Store {
 	total: number
 	offset: number
 	sortBy: Sortings
@@ -87,14 +85,19 @@ type InternalCommand =
 	| { type: '_refreshList' }
 	| { type: '_showToast'; message: string }
 
+type OverviewDispatchValue = DispatcherValue<
+	Command | InternalCommand,
+	Store
+>
+
 export const useOverviewStore: () => [
-	OverviewStore,
+	Store,
 	(command: Command) => void,
 ] = () => {
 	const context = useAppContext(AppContext)
 
 	const [store, setStore] =
-		createStore<OverviewStore>({
+		SolidStore.createStore<Store>({
 			total: 0,
 			offset: 0,
 			sortBy: 'date',
@@ -109,11 +112,11 @@ export const useOverviewStore: () => [
 			scrollY: window.scrollY,
 		})
 
-	const scroll = useWindowScroll()
+	const scroll = H.useWindowScroll()
 
-	createEffect(() => {
+	Solid.createEffect(() => {
 		setStore(
-			produce(state => {
+			SolidStore.produce(state => {
 				state.scrollY = scroll().scrollY
 				state.isScrolling = scroll().isScrolling
 			}),
@@ -123,8 +126,9 @@ export const useOverviewStore: () => [
 	const navigate = useNavigate()
 
 	const dispatch = createDispatcher<
-		Command | InternalCommand
-	>(cmd$ =>
+		Command | InternalCommand,
+		Store
+	>(setStore, cmd$ =>
 		Rx.merge(
 			pipe(
 				cmd$,
@@ -133,229 +137,74 @@ export const useOverviewStore: () => [
 				),
 				Rx.switchMap(cmd =>
 					pipe(
-						Rx.scheduled(
-							Rx.of(cmd.message),
-							Rx.asyncScheduler,
-						),
-						Rx.tap(() => {
-							setStore('toastMessage', '')
-						}),
-						Rx.delay(100),
-						Rx.tap(message => {
-							setStore('toastMessage', message)
-						}),
-						Rx.delay(TOAST_DELAY_MS),
-						Rx.tap(() => {
-							setStore('toastMessage', '')
+						cmd.message,
+						H.handleShowToast({
+							hide: () => ({
+								...store,
+								toastMessage: '',
+							}),
+							show: message => ({
+								...store,
+								toastMessage: message,
+							}),
 						}),
 					),
 				),
-				Rx.ignoreElements(),
 			),
 			pipe(
 				cmd$,
 				Rx.filter(
 					cmd => cmd.type !== '_showToast',
 				),
-				Rx.mergeMap(cmd => {
-					switch (cmd.type) {
-						case '_refreshList':
-							return pipe(
-								Rx.scheduled(
-									Rx.of(cmd),
-									Rx.asyncScheduler,
-								),
-								Rx.tap(() => {
-									setStore('isLoading', true)
-								}),
-								Rx.mergeMap(() =>
-									pipe(
-										context.app.productList({
-											offset: store.offset,
-											sortBy: store.sortBy,
-										}),
-										Rx.defer,
-									),
-								),
-								Rx.tap(result => {
-									if (E.isLeft(result)) {
-										dispatch({
-											type: '_showToast',
-											message: result.left,
-										})
-										return
-									}
-
-									setStore(
-										produce(state => {
-											state.products = result
-												.right
-												.models as ProductModel[]
-											state.total =
-												result.right.total
-											state.isLoading = false
-										}),
-									)
-								}),
-							)
-
-						case 'sortList':
-							return pipe(
-								Rx.of(cmd),
-								Rx.tap(() => {
-									setStore('sortBy', cmd.by)
-								}),
-							)
-						case 'log':
-							return pipe(
-								Rx.of(cmd),
-								Rx.tap(cmd => {
-									context.app.log(cmd)()
-								}),
-							)
-						case 'deleteProducts':
-							return pipe(
-								Rx.scheduled(
-									Rx.from(
-										Haptics.impact({
-											style: ImpactStyle.Light,
-										}),
-									),
-									Rx.asyncScheduler,
-								),
-								Rx.map(() =>
-									RoNeS.fromSet(
-										store.selectedProducts,
-									),
-								),
-								Rx.map(
-									E.fromOption(
-										() =>
-											new Error(
-												'No item selected',
-											),
-									),
-								),
-								Rx.mergeMap(
-									F.flow(
-										TE.fromEither,
-										TE.tapTask(() =>
-											T.fromIO(() => {
-												context.showLoading(true)
-											}),
-										),
-										TE.chainFirstTaskK(
-											F.flow(T.of, T.delay(300)),
-										),
-										TE.chain(
-											context.app
-												.deleteProductsByIds,
-										),
-										Rx.defer,
-									),
-								),
-								Rx.tap(result => {
-									context.showLoading(false)
-									if (E.isRight(result)) {
-										dispatch({
-											type: '_refreshList',
-										})
-										dispatch({
-											type: '_showToast',
-											message:
-												'Products deleted succesfully',
-										})
-										setStore(state => ({
-											...state,
-											selectedProducts: new Set(),
-											selectMode: false,
-										}))
-									}
-								}),
-							)
-						case 'toggleMenu':
-							return pipe(
-								Rx.scheduled(
-									Rx.of(undefined),
-									Rx.asyncScheduler,
-								),
-								Rx.tap(() => {
-									setStore(
-										'isMenuOpen',
-										!store.isMenuOpen,
-									)
-								}),
-							)
-						case 'openAddProduct':
-							return pipe(
-								Rx.scheduled(
-									Rx.of(
-										store.isOpeningAddProduct,
-									),
-									Rx.asyncScheduler,
-								),
-								Rx.filter(P.not(F.identity)),
-								Rx.tap(() => {
-									setStore(
-										'isOpeningAddProduct',
-										true,
-									)
-								}),
-								Rx.delay(250),
-								Rx.tap(() => {
-									navigate('/add-product')
-								}),
-							)
-						case 'disableSelectMode':
-							return pipe(
-								Rx.scheduled(
-									Rx.of(undefined),
-									Rx.asyncScheduler,
-								),
-								Rx.tap(() => {
-									setStore(state => ({
-										...state,
-										selectMode: false,
-										selectedProducts: new Set(),
-									}))
-								}),
-							)
-						case 'toggleItem':
-							return pipe(
-								Rx.scheduled(
-									!store.selectMode
-										? Rx.from(
-												Haptics.impact({
-													style:
-														ImpactStyle.Medium,
-												}),
-											)
-										: Rx.of(undefined),
-									Rx.asyncScheduler,
-								),
-								Rx.tap(() => {
-									batch(() => {
-										setStore(
-											'selectedProducts',
-											RoS.toggle(S.Eq)(cmd.id),
-										)
-										setStore(state => ({
-											...state,
-											selectMode:
-												state.selectedProducts
-													.size > 0,
-										}))
-									})
-								}),
-							)
-					}
-				}),
-				Rx.ignoreElements(),
+				Rx.mergeMap(cmd =>
+					pipe(
+						Match.value(cmd),
+						Match.when(
+							{ type: 'openAddProduct' },
+							handleOpenAddProduct(
+								store,
+								navigate,
+							),
+						),
+						Match.when(
+							{ type: '_refreshList' },
+							handleRefreshList(store, context),
+						),
+						Match.when(
+							{ type: 'sortList' },
+							handleSortList(store),
+						),
+						Match.when(
+							{ type: 'log' },
+							handleLog(context),
+						),
+						Match.when(
+							{ type: 'deleteProducts' },
+							handleDeleteProducts(
+								store,
+								context,
+							),
+						),
+						Match.when(
+							{ type: 'toggleMenu' },
+							handleToggleMenu(store),
+						),
+						Match.when(
+							{ type: 'disableSelectMode' },
+							handleDisableSelectMode(store),
+						),
+						Match.when(
+							{ type: 'toggleItem' },
+							handleToggleItem(store),
+						),
+						Match.exhaustive,
+					),
+				),
 			),
 		),
 	)
 
-	onMount(() => {
+	Solid.onMount(() => {
 		onResume(() => {
 			dispatch({ type: '_refreshList' })
 		})
@@ -367,4 +216,258 @@ export const useOverviewStore: () => [
 		store,
 		dispatch as (cmd: Command) => void,
 	]
+}
+
+function handleRefreshList(
+	store: Store,
+	context: FridgyContext,
+) {
+	return (
+		cmd: InternalCommand & {
+			type: '_refreshList'
+		},
+	) =>
+		pipe(
+			Rx.scheduled(Rx.of(cmd), Rx.asyncScheduler),
+			Rx.mergeMap(() =>
+				pipe(
+					context.app.productList({
+						offset: store.offset,
+						sortBy: store.sortBy,
+					}),
+					Rx.defer,
+				),
+			),
+
+			Rx.map(
+				E.matchW(
+					error =>
+						({
+							cmds: [
+								{
+									type: '_showToast',
+									message: error,
+								},
+							],
+						}) as const,
+					result =>
+						({
+							state: {
+								...store,
+								products:
+									result.models as ProductModel[],
+								total: result.total,
+								isLoading: false,
+							},
+						}) as const,
+				),
+			),
+			Rx.startWith({
+				state: {
+					...store,
+					isLoading: true,
+				},
+			}),
+		)
+}
+
+function handleSortList(store: Store) {
+	return (cmd: Command & { type: 'sortList' }) =>
+		pipe(
+			Rx.of(cmd),
+			Rx.map(
+				() =>
+					({
+						state: {
+							...store,
+							sortBy: cmd.by,
+						},
+					}) satisfies OverviewDispatchValue,
+			),
+		)
+}
+
+function handleLog(context: FridgyContext) {
+	return (cmd: Command & { type: 'log' }) =>
+		pipe(
+			context.app.log(cmd),
+			T.fromIO,
+			Rx.defer,
+			Rx.ignoreElements(),
+		)
+}
+
+function handleToggleMenu(store: Store) {
+	return (_: Command & { type: 'toggleMenu' }) =>
+		pipe(
+			Rx.scheduled(
+				Rx.of(undefined),
+				Rx.asyncScheduler,
+			),
+			Rx.map(() => ({
+				state: {
+					...store,
+					isMenuOpen: !store.isMenuOpen,
+				},
+			})),
+		)
+}
+
+function handleDisableSelectMode(store: Store) {
+	return (
+		_: Command & { type: 'disableSelectMode' },
+	) =>
+		pipe(
+			Rx.scheduled(
+				Rx.of(undefined),
+				Rx.asyncScheduler,
+			),
+			Rx.map(
+				() =>
+					({
+						state: {
+							...store,
+							selectMode: false,
+							selectedProducts: new Set(),
+						},
+					}) satisfies OverviewDispatchValue,
+			),
+		)
+}
+
+function handleToggleItem(store: Store) {
+	return (
+		cmd: Command & { type: 'toggleItem' },
+	) =>
+		pipe(
+			Rx.scheduled(
+				!store.selectMode
+					? Rx.from(
+							Haptics.impact({
+								style: ImpactStyle.Medium,
+							}),
+						)
+					: Rx.of(undefined),
+				Rx.asyncScheduler,
+			),
+			Rx.map(() => ({
+				state: {
+					...store,
+					selectedProducts: RoS.toggle(S.Eq)(
+						cmd.id,
+					)(store.selectedProducts),
+
+					selectMode:
+						RoS.elem(S.Eq)(cmd.id)(
+							store.selectedProducts,
+						) && store.selectedProducts.size <= 1
+							? false
+							: true,
+				},
+			})),
+		)
+}
+
+function handleOpenAddProduct(
+	store: Store,
+	navigate: Navigator,
+) {
+	return (
+		_: Command & { type: 'openAddProduct' },
+	) =>
+		pipe(
+			Rx.scheduled(
+				Rx.of(store.isOpeningAddProduct),
+				Rx.asyncScheduler,
+			),
+			Rx.filter(P.not(F.identity)),
+			Rx.delay(250),
+			Rx.mergeMap(() =>
+				pipe(
+					() => {
+						navigate('/add-product')
+					},
+					T.fromIO,
+					Rx.defer,
+				),
+			),
+			Rx.ignoreElements(),
+			Rx.startWith({
+				state: {
+					...store,
+					isOpeningAddProduct: true,
+				},
+			}),
+		)
+}
+
+function handleDeleteProducts(
+	store: Store,
+	context: FridgyContext,
+) {
+	return (
+		_: Command & { type: 'deleteProducts' },
+	) =>
+		pipe(
+			Rx.scheduled(
+				Rx.from(
+					Haptics.impact({
+						style: ImpactStyle.Light,
+					}),
+				),
+				Rx.asyncScheduler,
+			),
+			Rx.map(() =>
+				RoNeS.fromSet(store.selectedProducts),
+			),
+			Rx.map(
+				E.fromOption(
+					() => new Error('No item selected'),
+				),
+			),
+			Rx.mergeMap(
+				F.flow(
+					TE.fromEither,
+					TE.chainFirstTaskK(
+						F.flow(T.of, T.delay(300)),
+					),
+					TE.chain(
+						context.app.deleteProductsByIds,
+					),
+					Rx.defer,
+				),
+			),
+			Rx.map(
+				E.matchW(
+					() =>
+						({
+							cmds: [
+								{
+									type: '_showToast',
+									message:
+										'There was a problem deleting the products',
+								},
+							],
+						}) as const,
+					() =>
+						({
+							state: {
+								...store,
+								selectedProducts: new Set(),
+								selectMode: false,
+							},
+							cmds: [
+								{
+									type: '_refreshList',
+								},
+								{
+									type: '_showToast',
+									message:
+										'Products deleted succesfully',
+								},
+							],
+						}) as const,
+				),
+			),
+		)
 }

@@ -1,9 +1,12 @@
+import { function as F } from 'fp-ts'
 import * as Rx from 'rxjs'
 import {
 	createEffect,
 	createSignal,
 	onCleanup,
 } from 'solid-js'
+
+import { TOAST_DELAY_MS } from './constants'
 
 export const useWindowScrollTop = () => {
 	const [isScrolledTop, setScrolledTop] =
@@ -83,4 +86,39 @@ export const createSubject = <CMD>(): [
 			if (!subject.closed) subject.next(cmd)
 		},
 	]
+}
+
+export function handleShowToast<STATE>({
+	hide,
+	show,
+}: {
+	hide: () => STATE
+	show: (message: string) => STATE
+}) {
+	return F.flow(
+		(message: string) =>
+			Rx.scheduled(
+				Rx.of(message),
+				Rx.asyncScheduler,
+			),
+		Rx.delay(100),
+		Rx.mergeMap(message =>
+			F.pipe(
+				Rx.scheduled(
+					Rx.of(message),
+					Rx.asyncScheduler,
+				),
+				Rx.map(() => ({
+					state: hide(),
+				})),
+				Rx.delay(TOAST_DELAY_MS),
+				Rx.startWith({
+					state: show(message),
+				}),
+			),
+		),
+		Rx.startWith({
+			state: hide(),
+		}),
+	)
 }

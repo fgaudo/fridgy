@@ -3,7 +3,6 @@ import {
 	option as OPT,
 	readerTask as RT,
 	readerTaskEither as RTE,
-	task as T,
 	taskEither as TE,
 } from 'fp-ts'
 

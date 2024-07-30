@@ -15,6 +15,7 @@
 		"@capacitor/app": "^6.0.0",
 		"@capacitor/core": "^6.1.1",
 		"@capacitor/haptics": "^6.0.0",
+		"@effect/match": "^0.40.0",
 		"@fgaudo/fp-ts-rxjs": "0.1.2-6",
 		"@fontsource-variable/comfortaa": "^5.0.20",
 		"@fontsource-variable/material-symbols-rounded": "^5.0.36",

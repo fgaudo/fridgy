@@ -17,6 +17,9 @@ dependencies:
   '@capacitor/haptics':
     specifier: ^6.0.0
     version: 6.0.0(@capacitor/core@6.1.1)
+  '@effect/match':
+    specifier: ^0.40.0
+    version: 0.40.0(effect@2.0.0-next.47)
   '@fgaudo/fp-ts-rxjs':
     specifier: 0.1.2-6
     version: 0.1.2-6(fp-ts@2.16.9)(rxjs@7.8.1)
@@ -537,6 +540,14 @@ packages:
     dependencies:
       '@jridgewell/trace-mapping': 0.3.9
     dev: true
+
+  /@effect/match@0.40.0(effect@2.0.0-next.47):
+    resolution: {integrity: sha512-1v2UpVxbUybx6zmN0R1uraRkCju15xLmHquoNQxPFGrQABq2dRI0nSsVM+/yibggUnQ9QAEx2MxQ6xdrQR+8hg==}
+    peerDependencies:
+      effect: 2.0.0-next.47
+    dependencies:
+      effect: 2.0.0-next.47
+    dev: false
 
   /@esbuild/aix-ppc64@0.21.5:
     resolution: {integrity: sha512-1SDgH6ZSPTlggy1yI6+Dbkiz8xzpHJEVAlF/AM1tHPLsf5STom9rwtjE4hKAF20FfXXNTFqEYXyJNWh1GiZedQ==}
@@ -2933,6 +2944,10 @@ packages:
   /eastasianwidth@0.2.0:
     resolution: {integrity: sha512-I88TYZWc9XiYHRQ4/3c5rjjfgkjhLyW2luGIheGERbNQ6OY7yTybanSpDXZa8y7VUP9YmDcYa+eyq4ca7iLqWA==}
     dev: true
+
+  /effect@2.0.0-next.47:
+    resolution: {integrity: sha512-H2L1xoaOblZbrTHuUo/ppWVr9R34FyigxXkEn9iD9TMYgCJqSS9RIUOGCTdT4ATyCgVf7dWlJxOtLFSpirVWqA==}
+    dev: false
 
   /electron-to-chromium@1.5.2:
     resolution: {integrity: sha512-kc4r3U3V3WLaaZqThjYz/Y6z8tJe+7K0bbjUVo3i+LWIypVdMx5nXCkwRe6SWbY6ILqLdc1rKcKmr3HoH7wjSQ==}

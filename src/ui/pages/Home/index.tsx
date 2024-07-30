@@ -225,8 +225,13 @@ const Home: Component = () => {
 														</md-icon>
 													</div>
 
-													<div slot="headline">
+													<div
+														slot="headline"
+														class="capitalize">
 														{productModel.name}
+													</div>
+													<div slot="supporting-text">
+														<div />
 													</div>
 												</md-list-item>
 											</>

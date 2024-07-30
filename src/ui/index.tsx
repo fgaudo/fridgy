@@ -7,7 +7,7 @@ import {
 	argbFromHex,
 } from '@material/material-color-utilities'
 import { Route, Router } from '@solidjs/router'
-import { createSignal, onMount } from 'solid-js'
+import { onMount } from 'solid-js'
 import { render as solidRender } from 'solid-js/web'
 
 import type { App } from '@/app'
@@ -37,7 +37,7 @@ export function renderError(
 		return (
 			<dialog
 				ref={dialog!}
-				class="text-red-800 border-red-300 bg-red-50 dark:bg-gray-800 dark:text-red-400 dark:border-red-800 rounded-lg border p-4"
+				class="rounded-lg border border-red-300 bg-red-50 p-4 text-red-800 dark:border-red-800 dark:bg-gray-800 dark:text-red-400"
 				role="alert">
 				<div class="flex items-center">
 					<svg
@@ -53,7 +53,7 @@ export function renderError(
 						Something went wrong! :(
 					</h3>
 				</div>
-				<div class="text-sm mb-4 mt-2">
+				<div class="mb-4 mt-2 text-sm">
 					{message}
 				</div>
 			</dialog>
@@ -75,27 +75,12 @@ export function render(
 
 	solidRender(
 		() => {
-			const [isLoading, setLoading] =
-				createSignal(false)
-
 			const context: FridgyContext = {
 				app,
-				showLoading: setLoading,
 			}
 
 			return (
 				<>
-					<div
-						class="fixed bottom-0 left-0 right-0 top-0 z-[99] bg-[#00000023] transition-all"
-						classList={{
-							'opacity-0 pointer-events-none':
-								!isLoading(),
-						}}>
-						<md-circular-progress
-							class="relative left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
-							prop:indeterminate={true}
-						/>
-					</div>
 					<AppContext.Provider value={context}>
 						<Router>
 							<Route
