@@ -1,24 +1,27 @@
 import {
 	eq as Eq,
 	function as F,
+	option as OPT,
 	string as S,
 	taskEither as TE,
 } from 'fp-ts'
 
-import type { ProductDTO } from '@/app/interfaces/read/types/product'
-
 const pipe = F.pipe
 
-export type ProductEntityDTO = Readonly<{
+export interface ProductDTO {
 	id: string
-	product: ProductDTO
-}>
+	name: string
+	expiration: OPT.Option<{
+		date: number
+		isBestBefore: boolean
+	}>
+}
 
-export const ProductEntityDTO = {
+export const ProductDTO = {
 	Eq: pipe(
 		S.Eq,
 		Eq.contramap(
-			(product: ProductEntityDTO) => product.id,
+			(product: ProductDTO) => product.id,
 		),
 	),
 	create: ({
@@ -31,7 +34,10 @@ export const ProductEntityDTO = {
 } as const
 
 export interface Options {
-	sortBy: 'date' | 'a-z'
+	sortBy:
+		| 'expirationDate'
+		| 'a-z'
+		| 'creationDate'
 	offset: number
 }
 
@@ -40,7 +46,7 @@ export type Products = (
 ) => TE.TaskEither<
 	Error,
 	{
-		items: readonly ProductEntityDTO[]
+		items: readonly ProductDTO[]
 		total: number
 	}
 >

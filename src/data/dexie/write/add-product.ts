@@ -1,6 +1,7 @@
 import type Dexie from 'dexie'
 import {
 	function as F,
+	option as OPT,
 	reader as R,
 	readerTaskEither as RTE,
 	taskEither as TE,
@@ -11,6 +12,7 @@ import type { AddProduct } from '@/app/interfaces/write/add-product'
 import { productsTable } from '../schema'
 
 const flow = F.flow
+const pipe = F.pipe
 
 interface Deps {
 	db: Dexie
@@ -30,9 +32,34 @@ export const addProduct: (d: Deps) => AddProduct =
 								.add({
 									[productsTable.columns.name]:
 										product.name,
+
+									...pipe(
+										product.expiration,
+										OPT.match(
+											() => ({}),
+											expiration => ({
+												[productsTable.columns
+													.expirationDate]:
+													expiration.date,
+											}),
+										),
+									),
+
+									...pipe(
+										product.expiration,
+										OPT.match(
+											() => ({}),
+											expiration => ({
+												[productsTable.columns
+													.isBestBefore]:
+													expiration.isBestBefore,
+											}),
+										),
+									),
+
 									[productsTable.columns
-										.expirationDate]:
-										product.expDate,
+										.creationDate]:
+										new Date().getDate(),
 								}),
 						error =>
 							error instanceof Error

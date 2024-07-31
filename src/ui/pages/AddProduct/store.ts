@@ -254,8 +254,7 @@ function handleAddProduct(
 						cmds: [
 							{
 								type: '_showToast',
-								message:
-									'Product added succesfully',
+								message: `"${store.formFields.name}" added`,
 							},
 						],
 					}),

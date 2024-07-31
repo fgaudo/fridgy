@@ -7,14 +7,13 @@ import tsconfigPaths from 'vite-tsconfig-paths'
 
 export default defineConfig({
 	plugins: [solid(), tsconfigPaths(), basicSsl()],
+	root: 'src',
+	publicDir: '../public',
 	build: {
+		outDir: '../dist',
 		rollupOptions: {
 			plugins: [analyze()],
 		},
-	},
-
-	test: {
-		dir: './src',
 	},
 	server: { host: '::' },
 })

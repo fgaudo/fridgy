@@ -19,14 +19,14 @@ import {
 import {
 	type Product,
 	createProduct,
-	expDate,
+	expiration,
 	isExpired,
 	name,
 } from '@/domain/product'
 
 import type {
 	Options,
-	ProductEntityDTO,
+	ProductDTO,
 	Products,
 } from '@/app/interfaces/read/products'
 import type { Log } from '@/app/interfaces/write/log'
@@ -37,12 +37,10 @@ const flow = F.flow
 export interface ProductModel {
 	id: string
 	name: string
-	expDate: OPT.Option<
-		Readonly<{
-			timestamp: number
-			isBestBefore: boolean
-		}>
-	>
+	expiration: OPT.Option<{
+		date: number
+		isBestBefore: boolean
+	}>
 	isExpired: boolean
 }
 
@@ -59,8 +57,8 @@ const ProductModel = {
 			Ord.reverse,
 			Ord.contramap((model: ProductModel) =>
 				pipe(
-					model.expDate,
-					OPT.map(exp => exp.timestamp),
+					model.expiration,
+					OPT.map(exp => exp.date),
 				),
 			),
 		),
@@ -84,15 +82,15 @@ interface ProductEntity {
 }
 
 const toProductEntitiesWithInvalid: (
-	foodDTOs: readonly ProductEntityDTO[],
+	foodDTOs: readonly ProductDTO[],
 ) => SEP.Separated<
 	readonly string[],
 	readonly ProductEntity[]
 > = RoA.partitionMap(entityDTO =>
 	pipe(
 		createProduct({
-			name: entityDTO.product.name,
-			expDate: entityDTO.product.expDate,
+			name: entityDTO.name,
+			expiration: entityDTO.expiration,
 		}),
 		E.bimap(
 			() => entityDTO.id,
@@ -127,7 +125,7 @@ const toProductModels: (
 						product,
 						timestamp,
 					),
-					expDate: expDate(product),
+					expiration: expiration(product),
 				})),
 			),
 		),

@@ -22,6 +22,7 @@ import * as SolidStore from 'solid-js/store'
 
 import * as RoNeS from '@/core/readonly-non-empty-set'
 
+import type { Options } from '@/app/interfaces/read/products'
 import type { LogSeverity } from '@/app/interfaces/write/log'
 import type {
 	ProductModel,
@@ -73,7 +74,7 @@ type Command =
 	| { type: 'toggleItem'; id: string }
 	| {
 			type: 'sortList'
-			by: 'date' | 'a-z'
+			by: Options['sortBy']
 	  }
 	| {
 			type: 'log'
@@ -100,7 +101,7 @@ export const useOverviewStore: () => [
 		SolidStore.createStore<Store>({
 			total: 0,
 			offset: 0,
-			sortBy: 'date',
+			sortBy: 'expirationDate',
 			toastMessage: '',
 			products: [],
 			isLoading: true,
@@ -462,8 +463,7 @@ function handleDeleteProducts(
 								},
 								{
 									type: '_showToast',
-									message:
-										'Products deleted succesfully',
+									message: `${store.selectedProducts.size.toString(10)} Products deleted`,
 								},
 							],
 						}) as const,

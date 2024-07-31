@@ -7,7 +7,7 @@ import {
 import * as t from 'io-ts'
 import { withFallback } from 'io-ts-types'
 
-import { ProductEntityDTO } from '@/app/interfaces/read/products'
+import { ProductDTO } from '@/app/interfaces/read/products'
 
 import { log } from '@/data/system/write/log'
 
@@ -37,7 +37,7 @@ export const productDecoder = t.readonly(
 )
 export const decodeData = RoA.reduce<
 	unknown,
-	readonly ProductEntityDTO[]
+	readonly ProductDTO[]
 >(RoA.empty, (productDTOs, row) => {
 	const productRowEither =
 		productDecoder.decode(row)

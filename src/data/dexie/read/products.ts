@@ -1,3 +1,4 @@
+import * as Match from '@effect/match'
 import type Dexie from 'dexie'
 import {
 	function as F,
@@ -43,16 +44,34 @@ export const products: (deps: Deps) => Products =
 										products: () =>
 											deps.db
 												.table(productsTable.name)
-												.limit(25)
 												.offset(options.offset)
 												.sortBy(
-													options.sortBy ===
-														'date'
-														? productsTable
-																.columns
-																.expirationDate
-														: productsTable
-																.columns.name,
+													pipe(
+														Match.value(
+															options.sortBy,
+														),
+														Match.when(
+															'a-z',
+															() =>
+																productsTable
+																	.columns.name,
+														),
+														Match.when(
+															'creationDate',
+															() =>
+																productsTable
+																	.columns
+																	.creationDate,
+														),
+														Match.when(
+															'expirationDate',
+															() =>
+																productsTable
+																	.columns
+																	.expirationDate,
+														),
+														Match.exhaustive,
+													),
 												),
 									}),
 								),

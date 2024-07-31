@@ -9,6 +9,7 @@ import {
 	createRenderEffect,
 } from 'solid-js'
 
+import imgUrl from '@/ui/assets/arrow.svg'
 import { SmallTopAppBar } from '@/ui/widgets/SmallTopAppBar'
 import { SnackBar } from '@/ui/widgets/SnackBar'
 
@@ -259,7 +260,12 @@ const Home: Component = () => {
 						Your fridge looks a bit empty. <br />{' '}
 						Here’s the button to add some food.
 					</div>
-					<div class="relative right-[70px] top-[30px] h-[160px] w-[160px] bg-[url(arrow.svg)] bg-contain bg-no-repeat" />
+					<div
+						style={{
+							'background-image': `url("${imgUrl}")`,
+						}}
+						class={`relative right-[70px] top-[30px] h-[160px] w-[160px] bg-contain bg-no-repeat`}
+					/>
 				</div>
 				<div
 					class="fixed transition-all duration-300"

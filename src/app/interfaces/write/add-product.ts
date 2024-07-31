@@ -1,6 +1,16 @@
-import type { taskEither as TE } from 'fp-ts'
+import type {
+	option as OPT,
+	taskEither as TE,
+} from 'fp-ts'
 
-import type { ProductDTO } from '@/app/interfaces/read/types/product'
+export interface ProductDTO {
+	id: string
+	name: string
+	expiration: OPT.Option<{
+		date: number
+		isBestBefore: boolean
+	}>
+}
 
 export type AddProduct = (
 	product: ProductDTO,
