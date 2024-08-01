@@ -60,7 +60,7 @@ export const products: R.Reader<Deps, Products> =
 								expiration: OPT.some({
 									isBestBefore: false,
 									date:
-										new Date().getDate() +
+										Date.now() +
 										100000 +
 										Math.floor(
 											Math.random() * 26967228,

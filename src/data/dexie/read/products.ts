@@ -43,10 +43,7 @@ export const decodeData: (
 	readonly E.Either<Errors, ProductDTO>[]
 > = RIO.traverseArray(
 	flow(
-		data => {
-			console.log('ciao')
-			return productCodec.decode(data)
-		},
+		data => productCodec.decode(data),
 		RIO.of,
 		RIO.bindTo('result'),
 		RIO.bind('log', () => RIO.ask<Log>()),
@@ -57,15 +54,13 @@ export const decodeData: (
 				IOE.matchEW(
 					flow(
 						IOE.right,
-						IOE.tapIO(errors => {
-							console.log('ciao')
-
-							return log({
+						IOE.tapIO(errors =>
+							log({
 								severity: 'error',
 								message:
 									failure(errors).join('\n'),
-							})
-						}),
+							}),
+						),
 						IOE.chain(IOE.left),
 					),
 					flow(
@@ -111,24 +106,19 @@ export const decodeData: (
 								IO.of,
 							),
 						),
-						IO.tap(vars => {
-							console.log('ciao')
-
-							return pipe(
+						IO.tap(vars =>
+							pipe(
 								vars.messages,
 								OPT.match(
-									() => () => {
-										console.log('ciao')
-										return undefined
-									},
+									() => IO.of(undefined),
 									messages =>
 										log({
 											message: `Product ${messages.join(', ')}`,
 											severity: 'warning',
 										}),
 								),
-							)
-						}),
+							),
+						),
 						IO.map(
 							({ product }) =>
 								({
@@ -186,16 +176,14 @@ export const products: (deps: Deps) => Products =
 					RTE.fromTaskEither,
 				),
 			),
-			RTE.bindW('items', ({ results }) => {
-				console.log('ciao')
-
-				return pipe(
+			RTE.bindW('items', ({ results }) =>
+				pipe(
 					decodeData(results.products),
 					RIO.local((deps: Deps) => deps.log),
 					R.map(TE.fromIO),
 					RTE.map(RoA.filterMap(OPT.getRight)),
-				)
-			}),
+				),
+			),
 			RTE.map(({ items, results }) => ({
 				items,
 				total: results.total,
@@ -213,7 +201,8 @@ const getProducts: (
 	(options: Options) => (db: Dexie) => () =>
 		db
 			.table(PRODUCTS_TABLE.name)
-			.orderBy(
+			.offset(options.offset)
+			.sortBy(
 				pipe(
 					Match.value(options.sortBy),
 					Match.when(
@@ -239,5 +228,3 @@ const getProducts: (
 					Match.exhaustive,
 				),
 			)
-			.offset(options.offset)
-			.toArray()

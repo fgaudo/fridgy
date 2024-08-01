@@ -29,22 +29,8 @@ export const addProduct: (d: Deps) => AddProduct =
 			RTE.chain(({ product }) =>
 				R.asks((deps: Deps) =>
 					TE.tryCatch(
-						() => {
-							console.log({
-								name: product.name,
-								expiration: pipe(
-									product.expiration,
-									OPT.map(expiration => ({
-										is_best_before:
-											expiration.isBestBefore,
-										date: expiration.date,
-									})),
-									OPT.toUndefined,
-								),
-								creation_date:
-									new Date().getDate(),
-							})
-							return deps.db
+						() =>
+							deps.db
 								.table(PRODUCTS_TABLE.name)
 								.add({
 									name: product.name,
@@ -58,13 +44,11 @@ export const addProduct: (d: Deps) => AddProduct =
 										OPT.toUndefined,
 									),
 									creation_date:
-										new Date().getDate(),
+										product.creationDate,
 								} satisfies Omit<
 									ProductRow,
 									'id'
-								>)
-						},
-
+								>),
 						error =>
 							error instanceof Error
 								? error

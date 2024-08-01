@@ -86,9 +86,8 @@ const toProductEntitiesWithInvalid: (
 ) => SEP.Separated<
 	readonly string[],
 	readonly ProductEntity[]
-> = RoA.partitionMap(entityDTO => {
-	console.log(entityDTO.name)
-	return pipe(
+> = RoA.partitionMap(entityDTO =>
+	pipe(
 		createProduct({
 			name: entityDTO.name,
 			expiration: entityDTO.expiration,
@@ -101,8 +100,8 @@ const toProductEntitiesWithInvalid: (
 					product,
 				}) as const,
 		),
-	)
-})
+	),
+)
 
 const discardInvalid: (
 	set: SEP.Separated<
@@ -115,7 +114,7 @@ const toProductModels: (
 	products: readonly ProductEntity[],
 ) => T.Task<readonly ProductModel[]> = products =>
 	pipe(
-		T.fromIO(() => new Date().getDate()),
+		T.fromIO(() => Date.now()),
 		T.map(timestamp =>
 			pipe(
 				products,

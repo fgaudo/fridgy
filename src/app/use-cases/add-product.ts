@@ -33,7 +33,7 @@ export const command: (deps: Deps) => AddProduct =
 			RT.of,
 			RT.bindTo('product'),
 			RT.bind('timestamp', () =>
-				RT.fromIO(() => new Date().getDate()),
+				RT.fromIO(() => Date.now()),
 			),
 			RT.chain(({ product, timestamp }) =>
 				pipe(
