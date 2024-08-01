@@ -6,20 +6,25 @@ import {
 	taskEither as TE,
 } from 'fp-ts'
 
-import type { ProductDTO } from '@/app/interfaces/read/products'
 import type { AddProduct as AddProductCommand } from '@/app/interfaces/write/add-product'
 
 const pipe = F.pipe
 const flow = F.flow
 
-type Product = ProductDTO
+export interface ProductDTO {
+	name: string
+	expiration: OPT.Option<{
+		date: number
+		isBestBefore: boolean
+	}>
+}
 
 interface Deps {
 	addProduct: AddProductCommand
 }
 
 export type AddProduct = (
-	p: Product,
+	p: ProductDTO,
 ) => TE.TaskEither<Error, void>
 
 export const command: (deps: Deps) => AddProduct =
@@ -35,7 +40,10 @@ export const command: (deps: Deps) => AddProduct =
 					product.expiration,
 					OPT.match(
 						() => (deps: Deps) =>
-							deps.addProduct(product),
+							deps.addProduct({
+								...product,
+								creationDate: timestamp,
+							}),
 						expiration =>
 							timestamp > expiration.date
 								? RTE.left(
@@ -44,7 +52,10 @@ export const command: (deps: Deps) => AddProduct =
 										),
 									)
 								: deps =>
-										deps.addProduct(product),
+										deps.addProduct({
+											...product,
+											creationDate: timestamp,
+										}),
 					),
 				),
 			),

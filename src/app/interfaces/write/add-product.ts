@@ -4,12 +4,12 @@ import type {
 } from 'fp-ts'
 
 export interface ProductDTO {
-	id: string
 	name: string
 	expiration: OPT.Option<{
 		date: number
 		isBestBefore: boolean
 	}>
+	creationDate: number
 }
 
 export type AddProduct = (

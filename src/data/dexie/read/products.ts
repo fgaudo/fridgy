@@ -43,7 +43,10 @@ export const decodeData: (
 	readonly E.Either<Errors, ProductDTO>[]
 > = RIO.traverseArray(
 	flow(
-		data => productCodec.decode(data),
+		data => {
+			console.log('ciao')
+			return productCodec.decode(data)
+		},
 		RIO.of,
 		RIO.bindTo('result'),
 		RIO.bind('log', () => RIO.ask<Log>()),
@@ -54,13 +57,15 @@ export const decodeData: (
 				IOE.matchEW(
 					flow(
 						IOE.right,
-						IOE.tapIO(errors =>
-							log({
+						IOE.tapIO(errors => {
+							console.log('ciao')
+
+							return log({
 								severity: 'error',
 								message:
 									failure(errors).join('\n'),
-							}),
-						),
+							})
+						}),
 						IOE.chain(IOE.left),
 					),
 					flow(
@@ -106,19 +111,24 @@ export const decodeData: (
 								IO.of,
 							),
 						),
-						IO.tap(vars =>
-							pipe(
+						IO.tap(vars => {
+							console.log('ciao')
+
+							return pipe(
 								vars.messages,
 								OPT.match(
-									() => IO.of(undefined),
+									() => () => {
+										console.log('ciao')
+										return undefined
+									},
 									messages =>
 										log({
 											message: `Product ${messages.join(', ')}`,
 											severity: 'warning',
 										}),
 								),
-							),
-						),
+							)
+						}),
 						IO.map(
 							({ product }) =>
 								({
@@ -176,14 +186,16 @@ export const products: (deps: Deps) => Products =
 					RTE.fromTaskEither,
 				),
 			),
-			RTE.bindW('items', ({ results }) =>
-				pipe(
+			RTE.bindW('items', ({ results }) => {
+				console.log('ciao')
+
+				return pipe(
 					decodeData(results.products),
 					RIO.local((deps: Deps) => deps.log),
 					R.map(TE.fromIO),
 					RTE.map(RoA.filterMap(OPT.getRight)),
-				),
-			),
+				)
+			}),
 			RTE.map(({ items, results }) => ({
 				items,
 				total: results.total,
@@ -216,8 +228,13 @@ const getProducts: (
 					Match.when(
 						'expirationDate',
 						() =>
-							PRODUCTS_TABLE.columns.expiration
-								.value.date,
+							`${
+								PRODUCTS_TABLE.columns.expiration
+									.name
+							}.${
+								PRODUCTS_TABLE.columns.expiration
+									.value.date
+							}`,
 					),
 					Match.exhaustive,
 				),

@@ -222,12 +222,12 @@ function handleAddProduct(
 				pipe(
 					context.app.addProduct({
 						name: store.formFields.name,
-						expDate: pipe(
+						expiration: pipe(
 							store.formFields.expDate,
 							OPT.map(expDate => ({
 								isBestBefore:
 									store.formFields.isBestBefore,
-								timestamp: expDate,
+								date: expDate,
 							})),
 						),
 					}),

@@ -8,7 +8,10 @@ import {
 	task as T,
 } from 'fp-ts'
 
-import { type Products } from '@/app/interfaces/read/products'
+import {
+	ProductDTO,
+	type Products,
+} from '@/app/interfaces/read/products'
 
 const pipe = F.pipe
 const flow = F.flow
@@ -47,24 +50,23 @@ export const products: R.Reader<Deps, Products> =
 						id =>
 							({
 								id: id.toString(10),
-								product: {
-									name: productSamples[
+
+								name: productSamples[
+									Math.floor(
+										Math.random() *
+											productSamples.length,
+									)
+								],
+								expiration: OPT.some({
+									isBestBefore: false,
+									date:
+										new Date().getDate() +
+										100000 +
 										Math.floor(
-											Math.random() *
-												productSamples.length,
-										)
-									],
-									expDate: OPT.some({
-										isBestBefore: false,
-										timestamp:
-											new Date().getDate() +
-											100000 +
-											Math.floor(
-												Math.random() * 26967228,
-											),
-									}),
-								},
-							}) as const,
+											Math.random() * 26967228,
+										),
+								}),
+							}) satisfies ProductDTO,
 					),
 					RTE.of,
 				),

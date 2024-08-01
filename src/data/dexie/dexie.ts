@@ -22,7 +22,12 @@ export const createDB = async (): Promise<
 	const db = new Dexie('Fridgy')
 
 	db.version(1).stores({
-		[PRODUCTS_TABLE.name]: `++${PRODUCTS_TABLE.columns.id}, ${PRODUCTS_TABLE.columns.name}`,
+		[PRODUCTS_TABLE.name]: [
+			`++${PRODUCTS_TABLE.columns.id}`,
+			PRODUCTS_TABLE.columns.name,
+			`${PRODUCTS_TABLE.columns.expiration.name}.${PRODUCTS_TABLE.columns.expiration.value.date}`,
+			PRODUCTS_TABLE.columns.creationDate,
+		].join(','),
 	})
 
 	return E.right(db)
