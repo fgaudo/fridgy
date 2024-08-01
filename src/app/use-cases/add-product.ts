@@ -6,7 +6,7 @@ import {
 	taskEither as TE,
 } from 'fp-ts'
 
-import type { ProductDTO } from '@/app/interfaces/read/types/product'
+import type { ProductDTO } from '@/app/interfaces/read/products'
 import type { AddProduct as AddProductCommand } from '@/app/interfaces/write/add-product'
 
 const pipe = F.pipe
@@ -25,19 +25,19 @@ export type AddProduct = (
 export const command: (deps: Deps) => AddProduct =
 	F.flip(
 		flow(
-			RT.of<Deps, Product>,
+			RT.of,
 			RT.bindTo('product'),
 			RT.bind('timestamp', () =>
 				RT.fromIO(() => new Date().getDate()),
 			),
 			RT.chain(({ product, timestamp }) =>
 				pipe(
-					product.expDate,
+					product.expiration,
 					OPT.match(
 						() => (deps: Deps) =>
 							deps.addProduct(product),
-						date =>
-							timestamp > date.timestamp
+						expiration =>
+							timestamp > expiration.date
 								? RTE.left(
 										new Error(
 											'Date is in the past',

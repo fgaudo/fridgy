@@ -2,13 +2,13 @@ import { either as E } from 'fp-ts'
 
 import { App } from '@/app'
 
+import { implementations as dexieUseCases } from '@/data/dexie'
+import { createDB } from '@/data/dexie/dexie'
 import { useCases as mockUseCases } from '@/data/mock'
 import { implementations as systemUseCases } from '@/data/system'
+import { log } from '@/data/system/write/log'
 
 import { render, renderError } from '@/ui'
-
-import { useCases as dexieUseCases } from './data/dexie'
-import { createDB } from './data/dexie/dexie'
 
 const root = document.getElementById('root')!
 
@@ -34,7 +34,7 @@ if (DEVELOPMENT) {
 		const app: App = new App({
 			...dexieUseCases({
 				db: result.right,
-				prefix: 'data',
+				log: log({ prefix: 'data' }),
 			}),
 			...systemUseCases({
 				appLogPrefix: 'app',

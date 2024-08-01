@@ -1,7 +1,8 @@
 import type Dexie from 'dexie'
 import { reader as R } from 'fp-ts'
 
-import type { UseCases } from '@/app/index'
+import type { Contracts } from '@/app/index'
+import type { Log } from '@/app/interfaces/write/log'
 
 import { products } from './read/products'
 import { addProduct } from './write/add-product'
@@ -9,24 +10,25 @@ import { deleteProductsByIds } from './write/delete-products-by-ids'
 
 export interface Deps {
 	db: Dexie
-	prefix: string
+	log: Log
 }
 
-export const useCases: R.Reader<
+export const implementations: R.Reader<
 	Deps,
 	Pick<
-		UseCases,
+		Contracts,
 		| 'products'
 		| 'addProduct'
 		| 'deleteProductsByIds'
 	>
-> = ({ db, prefix }) => ({
-	addProduct: addProduct({ db }),
+> = ({ db, log }) => ({
+	addProduct: addProduct({ db, log }),
 	products: products({
 		db,
-		prefix,
+		log,
 	}),
 	deleteProductsByIds: deleteProductsByIds({
 		db,
+		log,
 	}),
 })

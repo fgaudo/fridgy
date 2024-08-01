@@ -1,10 +1,15 @@
-export const productsTable = {
+export const PRODUCTS_TABLE = {
 	name: 'products',
 	columns: {
 		id: 'id',
 		name: 'name',
-		expirationDate: 'expiration_date',
+		expiration: {
+			name: 'expiration',
+			value: {
+				date: 'date',
+				isBestBefore: 'is_best_before',
+			},
+		},
 		creationDate: 'creation_date',
-		isBestBefore: 'is_best_before',
 	},
-}
+} as const

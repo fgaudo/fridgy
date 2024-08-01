@@ -1,6 +1,8 @@
 import Dexie from 'dexie'
 import { either as E } from 'fp-ts'
 
+import { PRODUCTS_TABLE } from './schema'
+
 async function persistStorage() {
 	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 	return navigator.storage?.persist?.()
@@ -20,7 +22,7 @@ export const createDB = async (): Promise<
 	const db = new Dexie('Fridgy')
 
 	db.version(1).stores({
-		products: '++id, name',
+		[PRODUCTS_TABLE.name]: `++${PRODUCTS_TABLE.columns.id}, ${PRODUCTS_TABLE.columns.name}`,
 	})
 
 	return E.right(db)

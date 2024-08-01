@@ -1,6 +1,6 @@
 import { reader as R } from 'fp-ts'
 
-import type { UseCases } from '@/app/index'
+import type { Contracts } from '@/app/index'
 
 import { log } from './write/log'
 
@@ -11,7 +11,7 @@ export interface Deps {
 
 export const implementations: R.Reader<
 	Deps,
-	Pick<UseCases, 'appLog' | 'uiLog'>
+	Pick<Contracts, 'appLog' | 'uiLog'>
 > = ({ appLogPrefix: prefix, uiLogPrefix }) => ({
 	appLog: log({ prefix }),
 	uiLog: log({ prefix: uiLogPrefix }),

@@ -8,14 +8,17 @@ import {
 } from 'fp-ts'
 
 import type { AddProduct } from '@/app/interfaces/write/add-product'
+import type { Log } from '@/app/interfaces/write/log'
 
-import { productsTable } from '../schema'
+import { type ProductRow } from '../codec'
+import { PRODUCTS_TABLE } from '../schema'
 
 const flow = F.flow
 const pipe = F.pipe
 
 interface Deps {
 	db: Dexie
+	log: Log
 }
 
 export const addProduct: (d: Deps) => AddProduct =
@@ -28,39 +31,25 @@ export const addProduct: (d: Deps) => AddProduct =
 					TE.tryCatch(
 						() =>
 							deps.db
-								.table(productsTable.name)
+								.table(PRODUCTS_TABLE.name)
 								.add({
-									[productsTable.columns.name]:
-										product.name,
-
-									...pipe(
+									name: product.name,
+									expiration: pipe(
 										product.expiration,
-										OPT.match(
-											() => ({}),
-											expiration => ({
-												[productsTable.columns
-													.expirationDate]:
-													expiration.date,
-											}),
-										),
+										OPT.map(expiration => ({
+											is_best_before:
+												expiration.isBestBefore,
+											date: expiration.date,
+										})),
+										OPT.toUndefined,
 									),
-
-									...pipe(
-										product.expiration,
-										OPT.match(
-											() => ({}),
-											expiration => ({
-												[productsTable.columns
-													.isBestBefore]:
-													expiration.isBestBefore,
-											}),
-										),
-									),
-
-									[productsTable.columns
-										.creationDate]:
+									creation_date:
 										new Date().getDate(),
-								}),
+								} satisfies Omit<
+									ProductRow,
+									'id'
+								>),
+
 						error =>
 							error instanceof Error
 								? error

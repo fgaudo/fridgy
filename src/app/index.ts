@@ -6,7 +6,7 @@ import * as AP from '@/app/use-cases/add-product'
 import * as DPBY from '@/app/use-cases/delete-products-by-ids'
 import * as PL from '@/app/use-cases/product-list'
 
-export interface UseCases {
+export interface Contracts {
 	addProduct: AddProductCommand
 	products: Products
 	deleteProductsByIds: DeleteProductsByIdsCommand
@@ -15,20 +15,20 @@ export interface UseCases {
 }
 
 export class App {
-	constructor(useCases: UseCases) {
+	constructor(contracts: Contracts) {
 		this.productList = PL.useCase({
-			...useCases,
-			log: useCases.appLog,
+			...contracts,
+			log: contracts.appLog,
 		})
 
 		this.addProduct = AP.command({
-			...useCases,
+			...contracts,
 		})
 
-		this.log = useCases.uiLog
+		this.log = contracts.uiLog
 
 		this.deleteProductsByIds = DPBY.command({
-			...useCases,
+			...contracts,
 		})
 	}
 

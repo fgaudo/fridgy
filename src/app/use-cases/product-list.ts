@@ -24,10 +24,10 @@ import {
 	name,
 } from '@/domain/product'
 
-import type {
-	Options,
+import {
+	type Options,
 	ProductDTO,
-	Products,
+	type Products,
 } from '@/app/interfaces/read/products'
 import type { Log } from '@/app/interfaces/write/log'
 
@@ -86,8 +86,9 @@ const toProductEntitiesWithInvalid: (
 ) => SEP.Separated<
 	readonly string[],
 	readonly ProductEntity[]
-> = RoA.partitionMap(entityDTO =>
-	pipe(
+> = RoA.partitionMap(entityDTO => {
+	console.log(entityDTO.name)
+	return pipe(
 		createProduct({
 			name: entityDTO.name,
 			expiration: entityDTO.expiration,
@@ -100,8 +101,8 @@ const toProductEntitiesWithInvalid: (
 					product,
 				}) as const,
 		),
-	),
-)
+	)
+})
 
 const discardInvalid: (
 	set: SEP.Separated<

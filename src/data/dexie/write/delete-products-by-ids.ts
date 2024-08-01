@@ -11,14 +11,16 @@ import {
 import * as RoNeS from '@/core/readonly-non-empty-set'
 
 import type { DeleteProductsByIds } from '@/app/interfaces/write/delete-products-by-ids'
+import type { Log } from '@/app/interfaces/write/log'
 
-import { productsTable } from '../schema'
+import { PRODUCTS_TABLE } from '../schema'
 
 const pipe = F.pipe
 const flow = F.flow
 
 interface Deps {
 	db: Dexie
+	log: Log
 }
 
 export const deleteProductsByIds: (
@@ -44,7 +46,7 @@ export const deleteProductsByIds: (
 					TE.tryCatch(
 						() =>
 							deps.db
-								.table(productsTable.name)
+								.table(PRODUCTS_TABLE.name)
 								.bulkDelete(array),
 						error =>
 							error instanceof Error
