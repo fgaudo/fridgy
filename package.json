@@ -20,6 +20,7 @@
 		"@fontsource-variable/comfortaa": "^5.0.20",
 		"@fontsource-variable/material-symbols-rounded": "^5.0.36",
 		"@fontsource-variable/roboto-flex": "^5.0.15",
+		"@fp-ts/schema": "^0.3.2",
 		"@material/material-color-utilities": "^0.3.0",
 		"@material/web": "^2.0.0",
 		"@solidjs/router": "^0.14.1",

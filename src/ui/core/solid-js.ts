@@ -42,9 +42,11 @@ export const createDispatcher = <CMD, STATE>(
 	).subscribe(params => {
 		if ('state' in params) mutate(params.state)
 		if ('cmds' in params) {
-			for (const cmd of params.cmds) {
-				dispatch(cmd)
-			}
+			setTimeout(() => {
+				for (const cmd of params.cmds) {
+					dispatch(cmd)
+				}
+			})
 		}
 	})
 

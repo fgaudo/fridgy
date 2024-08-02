@@ -11,3 +11,15 @@ export type Flipped<
 ) => (b: infer B) => infer D
 	? (b: B) => (a: A) => D
 	: never
+
+export type AssertEqual<T, U> = T extends U
+	? U extends T
+		? true
+		: never
+	: never
+
+export type Exact<A, B> = A extends B
+	? B extends A
+		? A
+		: never
+	: never

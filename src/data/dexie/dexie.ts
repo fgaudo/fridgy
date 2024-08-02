@@ -25,7 +25,7 @@ export const createDB = async (): Promise<
 		[PRODUCTS_TABLE.name]: [
 			`++${PRODUCTS_TABLE.columns.id}`,
 			PRODUCTS_TABLE.columns.name,
-			`${PRODUCTS_TABLE.columns.expiration.name}.${PRODUCTS_TABLE.columns.expiration.value.date}`,
+			PRODUCTS_TABLE.columns.expirationDate,
 			PRODUCTS_TABLE.columns.creationDate,
 		].join(','),
 	})

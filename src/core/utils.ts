@@ -7,3 +7,9 @@ export const generateHexColor = () => {
 		]
 	return `#${randomize()}${randomize()}${randomize()}${randomize()}${randomize()}${randomize()}`
 }
+
+export const useOrCreateError =
+	(message: string) => (error: unknown) =>
+		error instanceof Error
+			? error
+			: new Error(message)

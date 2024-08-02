@@ -2,11 +2,7 @@
 	"compilerOptions": {
 		"target": "ES2020",
 		"useDefineForClassFields": true,
-		"lib": [
-			"ES2020",
-			"DOM",
-			"DOM.Iterable"
-		],
+		"lib": ["ES2020", "DOM", "DOM.Iterable"],
 		"module": "ESNext",
 		"skipLibCheck": true,
 		"moduleResolution": "bundler",
@@ -23,36 +19,16 @@
 		"noFallthroughCasesInSwitch": true,
 		"baseUrl": "./src",
 		"paths": {
-			"@/domain/*": [
-				"domain/*"
-			],
-			"@/domain": [
-				"domain/index"
-			],
-			"@/app/*": [
-				"app/*"
-			],
-			"@/app": [
-				"app/index"
-			],
-			"@/ui/*": [
-				"ui/*"
-			],
-			"@/ui": [
-				"ui/index"
-			],
-			"@/data/*": [
-				"data/*"
-			],
-			"@/data": [
-				"data/index"
-			],
-			"@/core/*": [
-				"core/*"
-			],
-			"@/core": [
-				"core/index"
-			]
+			"@/domain/*": ["domain/*"],
+			"@/domain": ["domain/index"],
+			"@/app/*": ["app/*"],
+			"@/app": ["app/index"],
+			"@/ui/*": ["ui/*"],
+			"@/ui": ["ui/index"],
+			"@/data/*": ["data/*"],
+			"@/data": ["data/index"],
+			"@/core/*": ["core/*"],
+			"@/core": ["core/index"]
 		}
 	},
 	"references": [

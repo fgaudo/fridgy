@@ -4,7 +4,6 @@ import {
 	apply as APPLY,
 	either as E,
 	function as F,
-	io as IO,
 	ioEither as IOE,
 	option as OPT,
 	reader as R,
@@ -15,8 +14,10 @@ import {
 	task as T,
 	taskEither as TE,
 } from 'fp-ts'
-import type { Errors } from 'io-ts'
-import { failure } from 'io-ts/PathReporter'
+import { sequenceArray } from 'fp-ts/lib/IO'
+import { PathReporter } from 'io-ts/PathReporter'
+
+import { useOrCreateError } from '@/core/utils'
 
 import {
 	type Options,
@@ -25,7 +26,12 @@ import {
 } from '@/app/interfaces/read/products'
 import type { Log } from '@/app/interfaces/write/log'
 
-import { productCodec } from '../codec'
+import {
+	type ProductRow,
+	decodeProduct,
+	fallbackProductCodec,
+	productCodec,
+} from '../codec'
 import { PRODUCTS_TABLE } from '../schema'
 
 const pipe = F.pipe
@@ -36,195 +42,221 @@ interface Deps {
 	log: Log
 }
 
+const fallbackDecode = (data: unknown) =>
+	pipe(
+		() => fallbackProductCodec.decode(data),
+		IOE.chainW(flow(decodeProduct, IOE.right)),
+	)
+
 export const decodeData: (
 	data: readonly unknown[],
-) => RIO.ReaderIO<
-	Log,
-	readonly E.Either<Errors, ProductDTO>[]
-> = RIO.traverseArray(
+) => RIO.ReaderIO<Log, readonly ProductRow[]> =
 	flow(
-		data => productCodec.decode(data),
-		RIO.of,
-		RIO.bindTo('result'),
-		RIO.bind('log', () => RIO.ask<Log>()),
-		RIO.chainIOK(({ result, log }) =>
+		RIO.traverseArray(data =>
 			pipe(
-				result,
-				IOE.fromEither,
-				IOE.matchEW(
-					flow(
-						IOE.right,
-						IOE.tapIO(errors =>
-							log({
-								severity: 'error',
-								message:
-									failure(errors).join('\n'),
-							}),
-						),
-						IOE.chain(IOE.left),
-					),
-					flow(
-						IO.of,
-						IO.bindTo('product'),
-						IO.bind('messages', ({ product }) =>
-							pipe(
-								[
-									pipe(
-										product.name,
-										OPT.fromPredicate(
-											value =>
-												value === undefined,
+				productCodec.decode(data),
+				RIO.of,
+				RIO.chain(encoded =>
+					pipe(
+						encoded,
+						IOE.fromEither,
+						R.of,
+						R.chain(
+							F.flip((log: Log) =>
+								IOE.matchEW(
+									flow(
+										E.left,
+										PathReporter.report,
+										IOE.of,
+										IOE.tapIO(report =>
+											log({
+												message:
+													report.join('.\n '),
+												severity: 'warning',
+											}),
 										),
-										OPT.map(
-											() => 'name is undefined',
+										IOE.apSecond(
+											fallbackDecode(data),
 										),
 									),
-									pipe(
-										product.expiration,
-										OPT.fromPredicate(
-											value =>
-												value === undefined,
-										),
-										OPT.map(
-											() =>
-												'expiration is undefined',
-										),
-									),
-									pipe(
-										product.creation_date,
-										OPT.fromPredicate(
-											value =>
-												value === undefined,
-										),
-										OPT.map(
-											() =>
-												'creation_date is undefined',
-										),
-									),
-								],
-								OPT.sequenceArray,
-								IO.of,
-							),
-						),
-						IO.tap(vars =>
-							pipe(
-								vars.messages,
-								OPT.match(
-									() => IO.of(undefined),
-									messages =>
-										log({
-											message: `Product ${messages.join(', ')}`,
-											severity: 'warning',
-										}),
+									flow(decodeProduct, IOE.right),
 								),
 							),
 						),
-						IO.map(
-							({ product }) =>
-								({
-									id: product.id.toString(10),
-									name:
-										product.name ?? '[UNDEFINED]',
-									expiration: pipe(
-										OPT.fromNullable(
-											product.expiration,
-										),
-										OPT.map(expiration => ({
-											isBestBefore:
-												expiration.is_best_before,
-											date: expiration.date,
-										})),
-									),
-								}) satisfies ProductDTO,
-						),
-						IOE.fromIO,
 					),
 				),
 			),
 		),
+		RIO.tap(
+			F.flip((log: Log) =>
+				flow(
+					RoA.filterMap(OPT.getLeft),
+					RoA.map(
+						flow(E.left, PathReporter.report),
+					),
+					RoA.map(array =>
+						log({
+							severity: 'error',
+							message: array.join('\n. '),
+						}),
+					),
+					sequenceArray,
+				),
+			),
+		),
+		RIO.map(RoA.filterMap(OPT.getRight)),
+	)
+
+const decodeProductRow = (
+	product: ProductRow,
+): ProductDTO => ({
+	id: product.id.toString(10),
+	name: product.name,
+	expiration: pipe(
+		product.is_best_before,
+		OPT.fromNullable,
+		OPT.map(isBestBefore => ({
+			isBestBefore,
+			date: product.expiration_date,
+		})),
+	),
+})
+
+const logErrors = flow(
+	(error: Error) => RTE.right(error),
+	RTE.tapReaderIO(error =>
+		R.asks(({ log }: Deps) =>
+			log({
+				message: error.message,
+				severity: 'error',
+			}),
+		),
+	),
+	RTE.chainW(RTE.left),
+)
+
+const logResults = flow(
+	(results: {
+		total: number
+		products: unknown[]
+	}) => RTE.right(results),
+	RTE.tapReaderIO(results =>
+		R.asks(({ log }: Deps) =>
+			log({
+				message: `Received ${results.products.length.toString(10)} products out of ${results.total.toString(10)}`,
+				severity: 'info',
+			}),
+		),
+	),
+	RTE.tapReaderIO(
+		results => (deps: Deps) =>
+			deps.log({
+				message: `Products: ${JSON.stringify(
+					results.products,
+					null,
+					2,
+				)}`,
+				severity: 'debug',
+			}),
 	),
 )
+
+const getTotalAndProducts = (options: Options) =>
+	pipe(
+		R.ask<Deps>(),
+		R.map(({ db }) =>
+			TE.tryCatch(
+				pipe(() =>
+					db.transaction(
+						'r',
+						db.table(PRODUCTS_TABLE.name),
+						APPLY.sequenceS(T.ApplyPar)({
+							total: () =>
+								db
+									.table(PRODUCTS_TABLE.name)
+									.count(),
+							products: () =>
+								db
+									.table(PRODUCTS_TABLE.name)
+									.reverse()
+									.offset(options.offset)
+									.sortBy(
+										pipe(
+											Match.value(options.sortBy),
+											Match.when(
+												'a-z',
+												() =>
+													PRODUCTS_TABLE.columns
+														.name,
+											),
+											Match.when(
+												'creationDate',
+												() =>
+													PRODUCTS_TABLE.columns
+														.creationDate,
+											),
+											Match.when(
+												'expirationDate',
+												() => `name`,
+											),
+											Match.exhaustive,
+										),
+									),
+						}),
+					),
+				),
+				useOrCreateError(
+					'There was an error while getting the products and total',
+				),
+			),
+		),
+		RT.tap(
+			flow(
+				RTE.fromEither,
+				RTE.matchEW(logErrors, logResults),
+			),
+		),
+	)
 
 export const products: (deps: Deps) => Products =
 	F.flip(
 		F.flow(
 			RTE.of,
 			RTE.bindTo('options'),
-			RTE.bind('db', () =>
-				RTE.asks((deps: Deps) => deps.db),
-			),
-			RTE.bindW('results', ({ options, db }) =>
+			RTE.bindW('results', ({ options }) =>
 				pipe(
-					TE.tryCatch(
-						() =>
-							db.transaction(
-								'r',
-								db.table(PRODUCTS_TABLE.name),
-								APPLY.sequenceS(T.ApplyPar)({
-									total: getTotal(db),
-									products:
-										getProducts(options)(db),
-								}),
-							),
-						error =>
-							error instanceof Error
-								? error
-								: new Error(
-										'Transaction failed while getting product list',
-									),
-					),
-					RTE.fromTaskEither,
+					getTotalAndProducts(options),
+					RTE.local((deps: Deps) => deps),
 				),
 			),
 			RTE.bindW('items', ({ results }) =>
 				pipe(
 					decodeData(results.products),
-					RIO.local((deps: Deps) => deps.log),
 					R.map(TE.fromIO),
-					RTE.map(RoA.filterMap(OPT.getRight)),
+					RTE.tapReaderIO(items =>
+						pipe(
+							R.ask<Log>(),
+							R.map(log =>
+								log({
+									message: `Decoded items: ${JSON.stringify(
+										items,
+										null,
+										2,
+									)}`,
+									severity: 'debug',
+								}),
+							),
+						),
+					),
+					RTE.local((deps: Deps) => deps.log),
 				),
 			),
 			RTE.map(({ items, results }) => ({
-				items,
+				items: pipe(
+					items,
+					RoA.map(decodeProductRow),
+				),
 				total: results.total,
 			})),
 		),
 	)
-
-const getTotal: RT.ReaderTask<Dexie, number> =
-	db => () =>
-		db.table(PRODUCTS_TABLE.name).count()
-
-const getProducts: (
-	options: Options,
-) => RT.ReaderTask<Dexie, unknown[]> =
-	(options: Options) => (db: Dexie) => () =>
-		db
-			.table(PRODUCTS_TABLE.name)
-			.offset(options.offset)
-			.sortBy(
-				pipe(
-					Match.value(options.sortBy),
-					Match.when(
-						'a-z',
-						() => PRODUCTS_TABLE.columns.name,
-					),
-					Match.when(
-						'creationDate',
-						() =>
-							PRODUCTS_TABLE.columns.creationDate,
-					),
-					Match.when(
-						'expirationDate',
-						() =>
-							`${
-								PRODUCTS_TABLE.columns.expiration
-									.name
-							}.${
-								PRODUCTS_TABLE.columns.expiration
-									.value.date
-							}`,
-					),
-					Match.exhaustive,
-				),
-			)

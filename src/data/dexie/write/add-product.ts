@@ -34,17 +34,25 @@ export const addProduct: (d: Deps) => AddProduct =
 								.table(PRODUCTS_TABLE.name)
 								.add({
 									name: product.name,
-									expiration: pipe(
+									creation_date: Date.now(),
+									expiration_date: pipe(
 										product.expiration,
-										OPT.map(expiration => ({
-											is_best_before:
-												expiration.isBestBefore,
-											date: expiration.date,
-										})),
-										OPT.toUndefined,
+										OPT.match(
+											() => 0,
+											expiration =>
+												expiration.date,
+										),
 									),
-									creation_date:
-										product.creationDate,
+									...pipe(
+										product.expiration,
+										OPT.match(
+											() => ({}),
+											expiration => ({
+												is_best_before:
+													expiration.isBestBefore,
+											}),
+										),
+									),
 								} satisfies Omit<
 									ProductRow,
 									'id'
