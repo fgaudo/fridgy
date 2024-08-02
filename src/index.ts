@@ -26,22 +26,22 @@ if (DEVELOPMENT) {
 
 	render(app, root)
 } else {
-	const result = await createDB()
+	void createDB().then(result => {
+		if (E.isLeft(result)) {
+			renderError(root, result.left)
+		} else {
+			const app: App = new App({
+				...dexieUseCases({
+					db: result.right,
+					log: log({ prefix: 'data' }),
+				}),
+				...systemUseCases({
+					appLogPrefix: 'app',
+					uiLogPrefix: 'ui',
+				}),
+			})
 
-	if (E.isLeft(result)) {
-		renderError(root, result.left)
-	} else {
-		const app: App = new App({
-			...dexieUseCases({
-				db: result.right,
-				log: log({ prefix: 'data' }),
-			}),
-			...systemUseCases({
-				appLogPrefix: 'app',
-				uiLogPrefix: 'ui',
-			}),
-		})
-
-		render(app, root)
-	}
+			render(app, root)
+		}
+	})
 }

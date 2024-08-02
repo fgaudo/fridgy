@@ -8,9 +8,10 @@ import {
 	useNavigate,
 } from '@solidjs/router'
 import {
+	array as A,
 	either as E,
 	function as F,
-	predicate as P,
+	readonlyArray as RoA,
 	readonlySet as RoS,
 	string as S,
 	task as T,
@@ -18,7 +19,7 @@ import {
 } from 'fp-ts'
 import * as Rx from 'rxjs'
 import * as Solid from 'solid-js'
-import * as SolidStore from 'solid-js/store'
+import * as SS from 'solid-js/store'
 
 import * as RoNeS from '@/core/readonly-non-empty-set'
 
@@ -55,9 +56,6 @@ interface Store {
 	selectedProducts: ReadonlySet<
 		ProductModel['id']
 	>
-	isOpeningAddProduct: boolean
-	isScrolling: boolean
-	scrollY: number
 }
 
 type Command =
@@ -82,14 +80,14 @@ type Command =
 			message: string
 	  }
 
+type OverviewDispatcherValue = DispatcherValue<
+	Command | InternalCommand,
+	(s: Store) => Store
+>
+
 type InternalCommand =
 	| { type: '_refreshList' }
 	| { type: '_showToast'; message: string }
-
-type OverviewDispatchValue = DispatcherValue<
-	Command | InternalCommand,
-	Store
->
 
 export const useOverviewStore: () => [
 	Store,
@@ -97,8 +95,8 @@ export const useOverviewStore: () => [
 ] = () => {
 	const context = useAppContext(AppContext)
 
-	const [store, setStore] =
-		SolidStore.createStore<Store>({
+	const [store, setStore] = SS.createStore<Store>(
+		{
 			total: 0,
 			offset: 0,
 			sortBy: 'expirationDate',
@@ -108,21 +106,8 @@ export const useOverviewStore: () => [
 			isMenuOpen: false,
 			selectMode: false,
 			selectedProducts: new Set([]),
-			isOpeningAddProduct: false,
-			isScrolling: false,
-			scrollY: window.scrollY,
-		})
-
-	const scroll = H.useWindowScroll()
-
-	Solid.createEffect(() => {
-		setStore(
-			SolidStore.produce(state => {
-				state.scrollY = scroll().scrollY
-				state.isScrolling = scroll().isScrolling
-			}),
-		)
-	})
+		},
+	)
 
 	const navigate = useNavigate()
 
@@ -140,14 +125,15 @@ export const useOverviewStore: () => [
 					pipe(
 						cmd.message,
 						H.handleShowToast({
-							hide: () => ({
+							hide: () => (store: Store) => ({
 								...store,
 								toastMessage: '',
 							}),
-							show: message => ({
-								...store,
-								toastMessage: message,
-							}),
+							show:
+								message => (store: Store) => ({
+									...store,
+									toastMessage: message,
+								}),
 						}),
 					),
 				),
@@ -162,10 +148,7 @@ export const useOverviewStore: () => [
 						Match.value(cmd),
 						Match.when(
 							{ type: 'openAddProduct' },
-							handleOpenAddProduct(
-								store,
-								navigate,
-							),
+							handleOpenAddProduct(navigate),
 						),
 						Match.when(
 							{ type: '_refreshList' },
@@ -173,7 +156,7 @@ export const useOverviewStore: () => [
 						),
 						Match.when(
 							{ type: 'sortList' },
-							handleSortList(store),
+							handleSortList(),
 						),
 						Match.when(
 							{ type: 'log' },
@@ -188,11 +171,11 @@ export const useOverviewStore: () => [
 						),
 						Match.when(
 							{ type: 'toggleMenu' },
-							handleToggleMenu(store),
+							handleToggleMenu(),
 						),
 						Match.when(
 							{ type: 'disableSelectMode' },
-							handleDisableSelectMode(store),
+							handleDisableSelectMode(),
 						),
 						Match.when(
 							{ type: 'toggleItem' },
@@ -213,82 +196,101 @@ export const useOverviewStore: () => [
 		dispatch({ type: '_refreshList' })
 	})
 
+	function handleRefreshList(
+		store: Store,
+		context: FridgyContext,
+	): (
+		cmd: InternalCommand & {
+			type: '_refreshList'
+		},
+	) => Rx.Observable<OverviewDispatcherValue> {
+		return (
+			cmd: InternalCommand & {
+				type: '_refreshList'
+			},
+		) =>
+			pipe(
+				Rx.scheduled(
+					Rx.of(cmd),
+					Rx.asyncScheduler,
+				),
+				Rx.mergeMap(() =>
+					pipe(
+						context.app.productList({
+							offset: SS.unwrap(store).offset,
+							sortBy: SS.unwrap(store).sortBy,
+						}),
+						Rx.defer,
+					),
+				),
+
+				Rx.map(
+					E.matchW(
+						error =>
+							({
+								cmds: [
+									{
+										type: '_showToast',
+										message: error,
+									},
+								],
+							}) as const,
+						result => {
+							setStore(
+								'products',
+								SS.reconcile(
+									result.models as ProductModel[],
+									{ key: 'id' },
+								),
+							)
+
+							return {
+								mutation: (s: Store) => ({
+									...s,
+									total: result.total,
+									isLoading: false,
+								}),
+							}
+						},
+					),
+				),
+				Rx.startWith({
+					mutation: (store: Store) => ({
+						...store,
+						isLoading: true,
+					}),
+				} satisfies OverviewDispatcherValue),
+			)
+	}
+
 	return [
 		store,
 		dispatch as (cmd: Command) => void,
 	]
 }
 
-function handleRefreshList(
-	store: Store,
-	context: FridgyContext,
-) {
-	return (
-		cmd: InternalCommand & {
-			type: '_refreshList'
-		},
-	) =>
-		pipe(
-			Rx.scheduled(Rx.of(cmd), Rx.asyncScheduler),
-			Rx.mergeMap(() =>
-				pipe(
-					context.app.productList({
-						offset: store.offset,
-						sortBy: store.sortBy,
-					}),
-					Rx.defer,
-				),
-			),
-
-			Rx.map(
-				E.matchW(
-					error =>
-						({
-							cmds: [
-								{
-									type: '_showToast',
-									message: error,
-								},
-							],
-						}) as const,
-					result =>
-						({
-							state: {
-								...store,
-								products:
-									result.models as ProductModel[],
-								total: result.total,
-								isLoading: false,
-							},
-						}) as const,
-				),
-			),
-			Rx.startWith({
-				state: {
-					...store,
-					isLoading: true,
-				},
-			}),
-		)
-}
-
-function handleSortList(store: Store) {
+function handleSortList(): (
+	cmd: Command & {
+		type: 'sortList'
+	},
+) => Rx.Observable<OverviewDispatcherValue> {
 	return (cmd: Command & { type: 'sortList' }) =>
 		pipe(
 			Rx.of(cmd),
-			Rx.map(
-				() =>
-					({
-						state: {
-							...store,
-							sortBy: cmd.by,
-						},
-					}) satisfies OverviewDispatchValue,
-			),
+			Rx.map(() => ({
+				mutation: (store: Store) => ({
+					...store,
+					sortBy: cmd.by,
+				}),
+			})),
 		)
 }
 
-function handleLog(context: FridgyContext) {
+function handleLog(context: FridgyContext): (
+	cmd: Command & {
+		type: 'log'
+	},
+) => Rx.Observable<OverviewDispatcherValue> {
 	return (cmd: Command & { type: 'log' }) =>
 		pipe(
 			context.app.log(cmd),
@@ -298,7 +300,11 @@ function handleLog(context: FridgyContext) {
 		)
 }
 
-function handleToggleMenu(store: Store) {
+function handleToggleMenu(): (
+	cmd: Command & {
+		type: 'toggleMenu'
+	},
+) => Rx.Observable<OverviewDispatcherValue> {
 	return (_: Command & { type: 'toggleMenu' }) =>
 		pipe(
 			Rx.scheduled(
@@ -306,15 +312,19 @@ function handleToggleMenu(store: Store) {
 				Rx.asyncScheduler,
 			),
 			Rx.map(() => ({
-				state: {
+				mutation: (store: Store) => ({
 					...store,
 					isMenuOpen: !store.isMenuOpen,
-				},
+				}),
 			})),
 		)
 }
 
-function handleDisableSelectMode(store: Store) {
+function handleDisableSelectMode(): (
+	cmd: Command & {
+		type: 'disableSelectMode'
+	},
+) => Rx.Observable<OverviewDispatcherValue> {
 	return (
 		_: Command & { type: 'disableSelectMode' },
 	) =>
@@ -323,26 +333,27 @@ function handleDisableSelectMode(store: Store) {
 				Rx.of(undefined),
 				Rx.asyncScheduler,
 			),
-			Rx.map(
-				() =>
-					({
-						state: {
-							...store,
-							selectMode: false,
-							selectedProducts: new Set(),
-						},
-					}) satisfies OverviewDispatchValue,
-			),
+			Rx.map(() => ({
+				mutation: (store: Store) => ({
+					...store,
+					selectMode: false,
+					selectedProducts: new Set(),
+				}),
+			})),
 		)
 }
 
-function handleToggleItem(store: Store) {
+function handleToggleItem(store: Store): (
+	cmd: Command & {
+		type: 'toggleItem'
+	},
+) => Rx.Observable<OverviewDispatcherValue> {
 	return (
 		cmd: Command & { type: 'toggleItem' },
 	) =>
 		pipe(
 			Rx.scheduled(
-				!store.selectMode
+				!SS.unwrap(store).selectMode
 					? Rx.from(
 							Haptics.impact({
 								style: ImpactStyle.Medium,
@@ -352,7 +363,7 @@ function handleToggleItem(store: Store) {
 				Rx.asyncScheduler,
 			),
 			Rx.map(() => ({
-				state: {
+				mutation: (store: Store) => ({
 					...store,
 					selectedProducts: RoS.toggle(S.Eq)(
 						cmd.id,
@@ -364,48 +375,39 @@ function handleToggleItem(store: Store) {
 						) && store.selectedProducts.size <= 1
 							? false
 							: true,
-				},
+				}),
 			})),
 		)
 }
 
 function handleOpenAddProduct(
-	store: Store,
 	navigate: Navigator,
-) {
+): (
+	cmd: Command & {
+		type: 'openAddProduct'
+	},
+) => Rx.Observable<OverviewDispatcherValue> {
 	return (
 		_: Command & { type: 'openAddProduct' },
 	) =>
 		pipe(
-			Rx.scheduled(
-				Rx.of(store.isOpeningAddProduct),
-				Rx.asyncScheduler,
-			),
-			Rx.filter(P.not(F.identity)),
-			Rx.delay(250),
-			Rx.mergeMap(() =>
-				pipe(
-					() => {
-						navigate('/add-product')
-					},
-					T.fromIO,
-					Rx.defer,
-				),
-			),
+			() => {
+				navigate('/add-product')
+			},
+			T.fromIO,
+			Rx.defer,
 			Rx.ignoreElements(),
-			Rx.startWith({
-				state: {
-					...store,
-					isOpeningAddProduct: true,
-				},
-			}),
 		)
 }
 
 function handleDeleteProducts(
 	store: Store,
 	context: FridgyContext,
-) {
+): (
+	cmd: Command & {
+		type: 'deleteProducts'
+	},
+) => Rx.Observable<OverviewDispatcherValue> {
 	return (
 		_: Command & { type: 'deleteProducts' },
 	) =>
@@ -419,7 +421,9 @@ function handleDeleteProducts(
 				Rx.asyncScheduler,
 			),
 			Rx.map(() =>
-				RoNeS.fromSet(store.selectedProducts),
+				RoNeS.fromSet(
+					SS.unwrap(store).selectedProducts,
+				),
 			),
 			Rx.map(
 				E.fromOption(
@@ -452,18 +456,18 @@ function handleDeleteProducts(
 						}) as const,
 					() =>
 						({
-							state: {
+							mutation: (store: Store) => ({
 								...store,
 								selectedProducts: new Set(),
 								selectMode: false,
-							},
+							}),
 							cmds: [
 								{
 									type: '_refreshList',
 								},
 								{
 									type: '_showToast',
-									message: `${store.selectedProducts.size.toString(10)} Products deleted`,
+									message: `${SS.unwrap(store).selectedProducts.size.toString(10)} Products deleted`,
 								},
 							],
 						}) as const,

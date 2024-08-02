@@ -30,39 +30,37 @@ export type ProductRow = t.TypeOf<
 	typeof productCodec
 >
 
-export const fallbackProductCodec = t.exact(
-	t.partial({
-		[PRODUCTS_TABLE.columns.id]: withFallback(
+export const fallbackProductCodec = t.partial({
+	[PRODUCTS_TABLE.columns.id]: withFallback(
+		t.number,
+		defaultValues[PRODUCTS_TABLE.columns.id],
+	),
+	[PRODUCTS_TABLE.columns.name]: withFallback(
+		t.string,
+		defaultValues[PRODUCTS_TABLE.columns.name],
+	),
+	[PRODUCTS_TABLE.columns.creationDate]:
+		withFallback(
 			t.number,
-			defaultValues[PRODUCTS_TABLE.columns.id],
+			defaultValues[
+				PRODUCTS_TABLE.columns.creationDate
+			],
 		),
-		[PRODUCTS_TABLE.columns.name]: withFallback(
-			t.string,
-			defaultValues[PRODUCTS_TABLE.columns.name],
+	[PRODUCTS_TABLE.columns.expirationDate]:
+		withFallback(
+			t.number,
+			defaultValues[
+				PRODUCTS_TABLE.columns.expirationDate
+			],
 		),
-		[PRODUCTS_TABLE.columns.creationDate]:
-			withFallback(
-				t.number,
-				defaultValues[
-					PRODUCTS_TABLE.columns.creationDate
-				],
-			),
-		[PRODUCTS_TABLE.columns.expirationDate]:
-			withFallback(
-				t.number,
-				defaultValues[
-					PRODUCTS_TABLE.columns.expirationDate
-				],
-			),
-		[PRODUCTS_TABLE.columns.isBestBefore]:
-			withFallback(
-				t.boolean,
-				defaultValues[
-					PRODUCTS_TABLE.columns.isBestBefore
-				],
-			),
-	}),
-)
+	[PRODUCTS_TABLE.columns.isBestBefore]:
+		withFallback(
+			t.boolean,
+			defaultValues[
+				PRODUCTS_TABLE.columns.isBestBefore
+			],
+		),
+})
 
 type FallbackProductRaw = t.TypeOf<
 	typeof fallbackProductCodec

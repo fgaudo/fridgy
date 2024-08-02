@@ -24,6 +24,8 @@ export default {
 					'var(--md-sys-typescale-title-large-size)',
 			},
 			colors: {
+				background:
+					'var(--md-sys-color-background)',
 				primary: 'var(--md-sys-color-primary)',
 				onSurface: {
 					DEFAULT:

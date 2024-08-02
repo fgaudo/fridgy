@@ -4,6 +4,7 @@ import {
 	type Accessor,
 	onCleanup,
 } from 'solid-js'
+import type { SetStoreFunction } from 'solid-js/store'
 
 const pipe = F.pipe
 
@@ -16,19 +17,21 @@ export function withDefault<T>(
 
 export type DispatcherValue<CMD, STATE> =
 	| {
-			state: STATE
+			mutation: STATE
 	  }
 	| { cmds: readonly CMD[] }
 	| {
-			state: STATE
+			mutation: STATE
 			cmds: readonly CMD[]
 	  }
 
 export const createDispatcher = <CMD, STATE>(
-	mutate: (store: STATE) => void,
+	mutate: SetStoreFunction<STATE>,
 	transformer: (
 		obs: Rx.Observable<CMD>,
-	) => Rx.Observable<DispatcherValue<CMD, STATE>>,
+	) => Rx.Observable<
+		DispatcherValue<CMD, (s: STATE) => STATE>
+	>,
 ) => {
 	const subject = new Rx.Subject<CMD>()
 
@@ -40,13 +43,14 @@ export const createDispatcher = <CMD, STATE>(
 		subject,
 		transformer,
 	).subscribe(params => {
-		if ('state' in params) mutate(params.state)
+		if ('mutation' in params)
+			mutate(params.mutation)
 		if ('cmds' in params) {
-			setTimeout(() => {
-				for (const cmd of params.cmds) {
+			for (const cmd of params.cmds) {
+				setTimeout(() => {
 					dispatch(cmd)
-				}
-			})
+				})
+			}
 		}
 	})
 

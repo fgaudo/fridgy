@@ -4,6 +4,7 @@ import {
 	apply as APPLY,
 	either as E,
 	function as F,
+	io as IO,
 	ioEither as IOE,
 	option as OPT,
 	reader as R,
@@ -14,7 +15,6 @@ import {
 	task as T,
 	taskEither as TE,
 } from 'fp-ts'
-import { sequenceArray } from 'fp-ts/lib/IO'
 import { PathReporter } from 'io-ts/PathReporter'
 
 import { useOrCreateError } from '@/core/utils'
@@ -100,7 +100,7 @@ export const decodeData: (
 							message: array.join('\n. '),
 						}),
 					),
-					sequenceArray,
+					IO.sequenceArray,
 				),
 			),
 		),
@@ -153,8 +153,6 @@ const logResults = flow(
 			deps.log({
 				message: `Products: ${JSON.stringify(
 					results.products,
-					null,
-					2,
 				)}`,
 				severity: 'debug',
 			}),
@@ -240,8 +238,6 @@ export const products: (deps: Deps) => Products =
 								log({
 									message: `Decoded items: ${JSON.stringify(
 										items,
-										null,
-										2,
 									)}`,
 									severity: 'debug',
 								}),

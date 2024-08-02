@@ -7,8 +7,15 @@ import {
 	argbFromHex,
 } from '@material/material-color-utilities'
 import { Route, Router } from '@solidjs/router'
-import { onMount } from 'solid-js'
-import { render as solidRender } from 'solid-js/web'
+import {
+	Show,
+	createSignal,
+	onMount,
+} from 'solid-js'
+import {
+	Portal,
+	render as solidRender,
+} from 'solid-js/web'
 
 import type { App } from '@/app'
 
@@ -79,20 +86,61 @@ export function render(
 				app,
 			}
 
+			const [fontLoaded, setFontLoaded] =
+				createSignal(false)
+
+			onMount(() => {
+				void Promise.all([
+					document.fonts.ready,
+					new Promise(resolve =>
+						setTimeout(resolve, 300),
+					),
+				]).then(() => {
+					setFontLoaded(true)
+				})
+			})
+
 			return (
 				<>
-					<AppContext.Provider value={context}>
-						<Router>
-							<Route
-								path="/"
-								component={Home}
+					<Portal>
+						{/* quick fix to preload all fonts needed in the project..*/}
+
+						<div
+							class="invisible fixed"
+							aria-hidden={true}>
+							<div class="font-titleLarge">
+								quickfix
+							</div>
+							<md-icon>checkbox</md-icon>
+						</div>
+					</Portal>
+
+					<Portal>
+						<div
+							class="bg-background fixed bottom-0 left-0 right-0 top-0 z-[999] flex items-center justify-center duration-[300ms]"
+							classList={{
+								'opacity-0 pointer-events-none':
+									fontLoaded(),
+							}}>
+							<md-circular-progress
+								prop:indeterminate={true}
 							/>
-							<Route
-								path="/add-product"
-								component={AddProduct}
-							/>
-						</Router>
-					</AppContext.Provider>
+						</div>
+					</Portal>
+					<Show when={fontLoaded()}>
+						<AppContext.Provider value={context}>
+							<Router>
+								<Route
+									path="/"
+									component={Home}
+								/>
+								<Route
+									path="/add-product"
+									component={AddProduct}
+								/>
+							</Router>
+						</AppContext.Provider>
+					</Show>
 				</>
 			)
 		},

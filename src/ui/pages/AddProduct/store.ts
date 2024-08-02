@@ -7,7 +7,7 @@ import {
 } from 'fp-ts'
 import * as Rx from 'rxjs'
 import * as Solid from 'solid-js'
-import * as SolidStore from 'solid-js/store'
+import * as SS from 'solid-js/store'
 
 import type { LogSeverity } from '@/app/interfaces/write/log'
 
@@ -87,13 +87,14 @@ export const useStore: () => [
 ] = () => {
 	const context = useAppContext(AppContext)
 
-	const [store, setStore] =
-		SolidStore.createStore<Store>({
+	const [store, setStore] = SS.createStore<Store>(
+		{
 			formFields: defaultFields(),
 			currentDate: { status: 'loading' },
 			toastMessage: '',
 			...validateFields(defaultFields()),
-		})
+		},
+	)
 
 	Solid.createRenderEffect(() => {
 		setStore('currentDate', {
@@ -118,12 +119,12 @@ export const useStore: () => [
 					pipe(
 						cmd.message,
 						H.handleShowToast({
-							hide: () => ({
-								...store,
+							hide: () => (s: Store) => ({
+								...s,
 								toastMessage: '',
 							}),
-							show: message => ({
-								...store,
+							show: message => (s: Store) => ({
+								...s,
 								toastMessage: message,
 							}),
 						}),
@@ -181,16 +182,16 @@ function handleLogAndUpdateField(
 					),
 					Rx.map(field => {
 						const newFields = {
-							...store.formFields,
+							...SS.unwrap(store).formFields,
 							[field.name]: field.value,
 						}
 
 						return {
-							state: {
-								...store,
+							mutation: (s: Store) => ({
+								...s,
 								formFields: newFields,
 								...validateFields(newFields),
-							},
+							}),
 						}
 					}),
 				),
@@ -247,14 +248,14 @@ function handleAddProduct(
 							],
 						}) as const,
 					() => ({
-						state: {
-							...store,
+						mutation: (s: Store) => ({
+							...s,
 							...resetFields(),
-						},
+						}),
 						cmds: [
 							{
 								type: '_showToast',
-								message: `"${store.formFields.name}" added`,
+								message: `"${SS.unwrap(store).formFields.name}" added`,
 							},
 						],
 					}),

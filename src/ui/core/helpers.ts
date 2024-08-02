@@ -109,16 +109,16 @@ export function handleShowToast<STATE>({
 					Rx.asyncScheduler,
 				),
 				Rx.map(() => ({
-					state: hide(),
+					mutation: hide(),
 				})),
 				Rx.delay(TOAST_DELAY_MS),
 				Rx.startWith({
-					state: show(message),
+					mutation: show(message),
 				}),
 			),
 		),
 		Rx.startWith({
-			state: hide(),
+			mutation: hide(),
 		}),
 	)
 }
