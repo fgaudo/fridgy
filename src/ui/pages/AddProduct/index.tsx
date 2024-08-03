@@ -6,20 +6,25 @@ import {
 	Switch,
 	createRenderEffect,
 } from 'solid-js'
+import { Portal } from 'solid-js/web'
 
+import { type Navigator } from '@/ui/router'
+import { ROUTES } from '@/ui/router'
 import { SmallTopAppBar } from '@/ui/widgets/SmallTopAppBar'
 import { SnackBar } from '@/ui/widgets/SnackBar'
 
 import { type Command, type Store } from './store'
 
-export const AddProductPath = '/add-product'
 const AddProduct: (
-	createStore: () => [
-		Store,
-		(command: Command) => void,
-	],
-) => Component = createStore => () => {
-	const [store, dispatch] = createStore()
+	createContext: () => {
+		store: [Store, (command: Command) => void]
+		navigate: Navigator
+	},
+) => Component = createContext => () => {
+	const {
+		store: [store, dispatch],
+		navigate,
+	} = createContext()
 
 	createRenderEffect(() => {
 		dispatch({
@@ -28,12 +33,15 @@ const AddProduct: (
 			message: 'Opened add-product page',
 		})
 	})
-
 	return (
 		<>
-			<div class="fixed bottom-[16px] left-[16px] right-[16px] z-50">
-				<SnackBar message={store.toastMessage} />
-			</div>
+			<Portal>
+				<div class="fixed bottom-[16px] left-[16px] right-[16px] z-50">
+					<SnackBar
+						message={store.toastMessage}
+					/>
+				</div>
+			</Portal>
 			<div
 				style={{
 					animation:
@@ -41,8 +49,12 @@ const AddProduct: (
 				}}>
 				<SmallTopAppBar>
 					<div class="absolute flex h-full w-full items-center gap-[24px] px-[16px] transition-all">
-						<A href="/">
-							<md-icon-button class="pl-[4px]">
+						<A href={ROUTES.home}>
+							<md-icon-button
+								class="pl-[4px]"
+								onClick={() => {
+									navigate('home')
+								}}>
 								<md-icon>arrow_back</md-icon>
 							</md-icon-button>
 						</A>

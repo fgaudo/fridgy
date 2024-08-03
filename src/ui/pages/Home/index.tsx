@@ -4,7 +4,7 @@ import {
 } from 'solid-js'
 import * as SS from 'solid-js/store'
 
-import { useFridgyNavigate } from '@/ui/router'
+import { type Navigator } from '@/ui/router'
 
 import { Fab } from './components/Fab'
 import { List } from './components/List'
@@ -14,12 +14,15 @@ import { TopBar } from './components/TopBar'
 import { type Command, type Store } from './store'
 
 const Home: (
-	createStore: () => [
-		Store,
-		(command: Command) => void,
-	],
-) => Component = createStore => () => {
-	const [store, dispatch] = createStore()
+	createContext: () => {
+		store: [Store, (command: Command) => void]
+		navigate: Navigator
+	},
+) => Component = createContext => () => {
+	const {
+		store: [store, dispatch],
+		navigate,
+	} = createContext()
 
 	const [uiStore, setUistore] = SS.createStore({
 		get isSelectModeEnabled() {
@@ -28,8 +31,6 @@ const Home: (
 		isOpeningAddProduct: false,
 		isMenuOpen: false,
 	})
-
-	const navigate = useFridgyNavigate()
 
 	createEffect(() => {
 		if (uiStore.isMenuOpen)

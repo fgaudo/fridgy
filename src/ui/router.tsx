@@ -21,30 +21,38 @@ export const Router: Component<{
 		<SR.Router>
 			<SR.Route
 				path={ROUTES.home}
-				component={Home(() =>
-					createHomeStore(props.app),
-				)}
+				component={Home(() => ({
+					store: createHomeStore(props.app),
+					navigate: useFridgyNavigate(),
+				}))}
 			/>
 			<SR.Route
 				path={ROUTES.addProduct}
-				component={AddProduct(() =>
-					createAddProductStore(props.app),
-				)}
+				component={AddProduct(() => ({
+					store: createAddProductStore(props.app),
+					navigate: useFridgyNavigate(),
+				}))}
 			/>
 		</SR.Router>
 	)
 }
 
-export const useFridgyNavigate = () => {
-	const navigator =
-		useNavigate<
-			(typeof ROUTES)[keyof typeof ROUTES]
-		>()
+export type Navigator = (
+	route: keyof typeof ROUTES,
+	options?: Partial<SR.NavigateOptions>,
+) => void
 
-	return (
-		route: keyof typeof ROUTES,
-		options?: Partial<SR.NavigateOptions>,
-	) => {
-		navigator(ROUTES[route], options)
+export const useFridgyNavigate: () => Navigator =
+	() => {
+		const navigator =
+			useNavigate<
+				(typeof ROUTES)[keyof typeof ROUTES]
+			>()
+
+		return (
+			route: keyof typeof ROUTES,
+			options?: Partial<SR.NavigateOptions>,
+		) => {
+			navigator(ROUTES[route], options)
+		}
 	}
-}
