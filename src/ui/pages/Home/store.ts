@@ -8,10 +8,8 @@ import {
 	useNavigate,
 } from '@solidjs/router'
 import {
-	array as A,
 	either as E,
 	function as F,
-	readonlyArray as RoA,
 	readonlySet as RoS,
 	string as S,
 	task as T,
@@ -58,7 +56,7 @@ interface Store {
 	>
 }
 
-type Command =
+export type Command =
 	| { type: 'deleteProducts' }
 	| {
 			type: 'toggleMenu'
