@@ -194,77 +194,68 @@ export const useOverviewStore: () => [
 		dispatch({ type: '_refreshList' })
 	})
 
-	function handleRefreshList(
-		store: Store,
-		context: FridgyContext,
-	): (
-		cmd: InternalCommand & {
-			type: '_refreshList'
-		},
-	) => Rx.Observable<OverviewDispatcherValue> {
-		return (
-			cmd: InternalCommand & {
-				type: '_refreshList'
-			},
-		) =>
-			pipe(
-				Rx.scheduled(
-					Rx.of(cmd),
-					Rx.asyncScheduler,
-				),
-				Rx.mergeMap(() =>
-					pipe(
-						context.app.productList({
-							offset: SS.unwrap(store).offset,
-							sortBy: SS.unwrap(store).sortBy,
-						}),
-						Rx.defer,
-					),
-				),
-
-				Rx.map(
-					E.matchW(
-						error =>
-							({
-								cmds: [
-									{
-										type: '_showToast',
-										message: error,
-									},
-								],
-							}) as const,
-						result => {
-							setStore(
-								'products',
-								SS.reconcile(
-									result.models as ProductModel[],
-									{ key: 'id' },
-								),
-							)
-
-							return {
-								mutation: (s: Store) => ({
-									...s,
-									total: result.total,
-									isLoading: false,
-								}),
-							}
-						},
-					),
-				),
-				Rx.startWith({
-					mutation: (store: Store) => ({
-						...store,
-						isLoading: true,
-					}),
-				} satisfies OverviewDispatcherValue),
-			)
-	}
-
 	return [
 		store,
 		dispatch as (cmd: Command) => void,
 	]
+}
+
+function handleRefreshList(
+	store: Store,
+	context: FridgyContext,
+): (
+	cmd: InternalCommand & {
+		type: '_refreshList'
+	},
+) => Rx.Observable<OverviewDispatcherValue> {
+	return (
+		cmd: InternalCommand & {
+			type: '_refreshList'
+		},
+	) =>
+		pipe(
+			Rx.scheduled(Rx.of(cmd), Rx.asyncScheduler),
+			Rx.mergeMap(() =>
+				pipe(
+					context.app.productList({
+						offset: SS.unwrap(store).offset,
+						sortBy: SS.unwrap(store).sortBy,
+					}),
+					Rx.defer,
+				),
+			),
+
+			Rx.map(
+				E.matchW(
+					error =>
+						({
+							cmds: [
+								{
+									type: '_showToast',
+									message: error,
+								},
+							],
+						}) as const,
+					result => ({
+						mutation: (s: Store) => ({
+							...s,
+							products: SS.reconcile(
+								Array.from(result.models),
+								{ key: 'id' },
+							)(s.products),
+							total: result.total,
+							isLoading: false,
+						}),
+					}),
+				),
+			),
+			Rx.startWith({
+				mutation: (store: Store) => ({
+					...store,
+					isLoading: true,
+				}),
+			} satisfies OverviewDispatcherValue),
+		)
 }
 
 function handleSortList(): (
