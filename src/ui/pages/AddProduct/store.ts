@@ -18,7 +18,7 @@ import { createDispatcher } from '@/ui/core/solid-js'
 
 const pipe = F.pipe
 
-export interface Store {
+export interface State {
 	formFields: {
 		name: string
 		expDate: OPT.Option<number>
@@ -38,15 +38,15 @@ export type Command =
 			field:
 				| {
 						name: 'name'
-						value: Store['formFields']['name']
+						value: State['formFields']['name']
 				  }
 				| {
 						name: 'expDate'
-						value: Store['formFields']['expDate']
+						value: State['formFields']['expDate']
 				  }
 				| {
 						name: 'isBestBefore'
-						value: Store['formFields']['isBestBefore']
+						value: State['formFields']['isBestBefore']
 				  }
 	  }
 	| {
@@ -67,7 +67,7 @@ const defaultFields = () => ({
 })
 
 const validateFields = (
-	formFields: Store['formFields'],
+	formFields: State['formFields'],
 ) => ({ isOk: formFields.name.length > 0 })
 
 const resetFields = () => {
@@ -78,13 +78,15 @@ const resetFields = () => {
 	}
 }
 
+export type Store = [
+	State,
+	(command: Command) => void,
+]
+
 export const createStore: (
 	app: App,
-) => [
-	Store,
-	(command: Command) => void,
-] = context => {
-	const [store, setStore] = SS.createStore<Store>(
+) => Store = context => {
+	const [state, setState] = SS.createStore<State>(
 		{
 			formFields: defaultFields(),
 			currentDate: { status: 'loading' },
@@ -94,7 +96,7 @@ export const createStore: (
 	)
 
 	Solid.createRenderEffect(() => {
-		setStore('currentDate', {
+		setState('currentDate', {
 			status: 'ready',
 			date: new Date()
 				.toISOString()
@@ -104,8 +106,8 @@ export const createStore: (
 
 	const dispatch = createDispatcher<
 		Command | InternalCommand,
-		Store
-	>(setStore, cmd$ =>
+		State
+	>(setState, cmd$ =>
 		Rx.merge(
 			pipe(
 				cmd$,
@@ -116,11 +118,11 @@ export const createStore: (
 					pipe(
 						cmd.message,
 						H.handleShowToast({
-							hide: () => (s: Store) => ({
+							hide: () => (s: State) => ({
 								...s,
 								toastMessage: '',
 							}),
-							show: message => (s: Store) => ({
+							show: message => (s: State) => ({
 								...s,
 								toastMessage: message,
 							}),
@@ -134,7 +136,7 @@ export const createStore: (
 					cmd => cmd.type === 'addProduct',
 				),
 				Rx.exhaustMap(
-					handleAddProduct(store, context),
+					handleAddProduct(state, context),
 				),
 			),
 			pipe(
@@ -145,20 +147,20 @@ export const createStore: (
 						cmd.type === 'updateField',
 				),
 				Rx.mergeMap(
-					handleLogAndUpdateField(store, context),
+					handleLogAndUpdateField(state, context),
 				),
 			),
 		),
 	)
 
 	return [
-		store,
+		state,
 		dispatch as (command: Command) => void,
 	]
 }
 
 function handleLogAndUpdateField(
-	store: Store,
+	state: State,
 	app: App,
 ) {
 	return F.flow(
@@ -179,12 +181,12 @@ function handleLogAndUpdateField(
 					),
 					Rx.map(field => {
 						const newFields = {
-							...SS.unwrap(store).formFields,
+							...SS.unwrap(state).formFields,
 							[field.name]: field.value,
 						}
 
 						return {
-							mutation: (s: Store) => ({
+							mutation: (s: State) => ({
 								...s,
 								formFields: newFields,
 								...validateFields(newFields),
@@ -206,7 +208,7 @@ function handleLogAndUpdateField(
 }
 
 function handleAddProduct(
-	store: Store,
+	state: State,
 	app: App,
 ) {
 	return (_: Command & { type: 'addProduct' }) =>
@@ -219,12 +221,12 @@ function handleAddProduct(
 			Rx.mergeMap(() =>
 				pipe(
 					app.addProduct({
-						name: store.formFields.name,
+						name: state.formFields.name,
 						expiration: pipe(
-							store.formFields.expDate,
+							state.formFields.expDate,
 							OPT.map(expDate => ({
 								isBestBefore:
-									store.formFields.isBestBefore,
+									state.formFields.isBestBefore,
 								date: expDate,
 							})),
 						),
@@ -245,14 +247,14 @@ function handleAddProduct(
 							],
 						}) as const,
 					() => ({
-						mutation: (s: Store) => ({
+						mutation: (s: State) => ({
 							...s,
 							...resetFields(),
 						}),
 						cmds: [
 							{
 								type: '_showToast',
-								message: `"${SS.unwrap(store).formFields.name}" added`,
+								message: `"${SS.unwrap(state).formFields.name}" added`,
 							},
 						],
 					}),

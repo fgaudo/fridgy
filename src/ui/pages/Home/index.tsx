@@ -11,35 +11,35 @@ import { List } from './components/List'
 import { Menu } from './components/Menu'
 import { Snackbar } from './components/Snackbar'
 import { TopBar } from './components/TopBar'
-import { type Command, type Store } from './store'
+import { type Store } from './store'
 
 const Home: (
 	createContext: () => {
-		store: [Store, (command: Command) => void]
+		store: Store
 		navigate: Navigator
 	},
 ) => Component = createContext => () => {
 	const {
-		store: [store, dispatch],
+		store: [state, dispatch],
 		navigate,
 	} = createContext()
 
-	const [uiStore, setUistore] = SS.createStore({
+	const [uiState, setUistate] = SS.createStore({
 		get isSelectModeEnabled() {
-			return store.selectedProducts.size > 0
+			return state.selectedProducts.size > 0
 		},
 		isOpeningAddProduct: false,
 		isMenuOpen: false,
 	})
 
 	createEffect(() => {
-		if (uiStore.isMenuOpen)
+		if (uiState.isMenuOpen)
 			document.body.style.overflow = 'hidden'
 		else document.body.style.overflow = 'auto'
 	})
 
 	createEffect(() => {
-		if (uiStore.isOpeningAddProduct) {
+		if (uiState.isOpeningAddProduct) {
 			navigate('addProduct')
 		}
 	})
@@ -55,13 +55,13 @@ const Home: (
 					})
 				}}
 				isItemSelected={id =>
-					store.selectedProducts.has(id)
+					state.selectedProducts.has(id)
 				}
 				isSelectModeEnabled={
-					uiStore.isSelectModeEnabled
+					uiState.isSelectModeEnabled
 				}
 				onItemClick={id => {
-					if (!uiStore.isSelectModeEnabled) {
+					if (!uiState.isSelectModeEnabled) {
 						return
 					}
 
@@ -71,7 +71,7 @@ const Home: (
 					})
 				}}
 				onItemContextMenu={id => {
-					if (uiStore.isSelectModeEnabled) {
+					if (uiState.isSelectModeEnabled) {
 						return
 					}
 
@@ -80,8 +80,8 @@ const Home: (
 						id,
 					})
 				}}
-				products={store.products}
-				totalItems={store.total}
+				products={state.products}
+				totalItems={state.total}
 			/>
 
 			{/* *********** */}
@@ -90,10 +90,10 @@ const Home: (
 
 			<TopBar
 				isSelectModeEnabled={
-					uiStore.isSelectModeEnabled
+					uiState.isSelectModeEnabled
 				}
 				itemsSelected={
-					store.selectedProducts.size
+					state.selectedProducts.size
 				}
 				onCloseSelectMode={() => {
 					dispatch({
@@ -106,7 +106,7 @@ const Home: (
 					})
 				}}
 				onMenuClick={() => {
-					setUistore(
+					setUistate(
 						'isMenuOpen',
 						isMenuOpen => !isMenuOpen,
 					)
@@ -114,9 +114,9 @@ const Home: (
 			/>
 
 			<Menu
-				isMenuOpen={uiStore.isMenuOpen}
+				isMenuOpen={uiState.isMenuOpen}
 				onToggleMenu={() => {
-					setUistore(
+					setUistate(
 						'isMenuOpen',
 						isMenuOpen => !isMenuOpen,
 					)
@@ -124,23 +124,23 @@ const Home: (
 			/>
 
 			<Fab
-				isLoading={store.isLoading}
+				isLoading={state.isLoading}
 				isSelectModeEnabled={
-					uiStore.isSelectModeEnabled
+					uiState.isSelectModeEnabled
 				}
 				onOpenAddProduct={() => {
-					setUistore('isOpeningAddProduct', true)
+					setUistate('isOpeningAddProduct', true)
 				}}
 				atLeastOneProduct={
-					store.products.length > 0
+					state.products.length > 0
 				}
 			/>
 
 			<Snackbar
 				isSelectModeEnabled={
-					uiStore.isSelectModeEnabled
+					uiState.isSelectModeEnabled
 				}>
-				{store.toastMessage}
+				{state.toastMessage}
 			</Snackbar>
 		</>
 	)

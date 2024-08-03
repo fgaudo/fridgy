@@ -13,16 +13,16 @@ import { ROUTES } from '@/ui/router'
 import { SmallTopAppBar } from '@/ui/widgets/SmallTopAppBar'
 import { SnackBar } from '@/ui/widgets/SnackBar'
 
-import { type Command, type Store } from './store'
+import { type Command, type State } from './store'
 
 const AddProduct: (
 	createContext: () => {
-		store: [Store, (command: Command) => void]
+		store: [State, (command: Command) => void]
 		navigate: Navigator
 	},
 ) => Component = createContext => () => {
 	const {
-		store: [store, dispatch],
+		store: [state, dispatch],
 		navigate,
 	} = createContext()
 
@@ -38,7 +38,7 @@ const AddProduct: (
 			<Portal>
 				<div class="fixed bottom-[16px] left-[16px] right-[16px] z-50">
 					<SnackBar
-						message={store.toastMessage}
+						message={state.toastMessage}
 					/>
 				</div>
 			</Portal>
@@ -72,14 +72,14 @@ const AddProduct: (
 					}>
 					<Match
 						when={
-							store.currentDate.status ===
-								'ready' && store.currentDate.date
+							state.currentDate.status ===
+								'ready' && state.currentDate.date
 						}>
 						{date => (
 							<div class="mt-[-50px] flex h-screen flex-col place-content-center gap-[28px] pb-[16px] pl-[16px] pr-[16px] pt-[70px]">
 								<md-outlined-text-field
 									prop:value={
-										store.formFields.name
+										state.formFields.name
 									}
 									prop:type="text"
 									prop:label="Product name*"
@@ -105,11 +105,11 @@ const AddProduct: (
 											type="date"
 											value={
 												OPT.isSome(
-													store.formFields
+													state.formFields
 														.expDate,
 												)
 													? new Date(
-															store.formFields.expDate.value,
+															state.formFields.expDate.value,
 														)
 															.toISOString()
 															.substring(0, 10)
@@ -146,7 +146,7 @@ const AddProduct: (
 								<label class="hidden items-center gap-3 text-onSurface">
 									<md-checkbox
 										prop:disabled={OPT.isNone(
-											store.formFields.expDate,
+											state.formFields.expDate,
 										)}
 										onInput={e => {
 											dispatch({
@@ -165,7 +165,7 @@ const AddProduct: (
 									Best Before
 								</label>
 								<md-filled-button
-									prop:disabled={!store.isOk}
+									prop:disabled={!state.isOk}
 									class="mt-[20px]"
 									onClick={() => {
 										dispatch({

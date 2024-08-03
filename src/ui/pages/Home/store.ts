@@ -35,7 +35,7 @@ import {
 
 const pipe = F.pipe
 
-export interface Store {
+export interface State {
 	total: number
 	offset: number
 	sortBy: Sortings
@@ -65,20 +65,22 @@ export type Command =
 
 type OverviewDispatcherValue = DispatcherValue<
 	Command | InternalCommand,
-	(s: Store) => Store
+	(s: State) => State
 >
 
 type InternalCommand =
 	| { type: '_refreshList' }
 	| { type: '_showToast'; message: string }
 
+export type Store = [
+	State,
+	(command: Command) => void,
+]
+
 export const createStore: (
 	context: App,
-) => [
-	Store,
-	(command: Command) => void,
-] = context => {
-	const [store, setStore] = SS.createStore<Store>(
+) => Store = context => {
+	const [state, setState] = SS.createStore<State>(
 		{
 			total: 0,
 			offset: 0,
@@ -92,8 +94,8 @@ export const createStore: (
 
 	const dispatch = createDispatcher<
 		Command | InternalCommand,
-		Store
-	>(setStore, cmd$ =>
+		State
+	>(setState, cmd$ =>
 		Rx.merge(
 			pipe(
 				cmd$,
@@ -104,13 +106,13 @@ export const createStore: (
 					pipe(
 						cmd.message,
 						H.handleShowToast({
-							hide: () => (store: Store) => ({
-								...store,
+							hide: () => (state: State) => ({
+								...state,
 								toastMessage: '',
 							}),
 							show:
-								message => (store: Store) => ({
-									...store,
+								message => (state: State) => ({
+									...state,
 									toastMessage: message,
 								}),
 						}),
@@ -131,7 +133,7 @@ export const createStore: (
 						),
 						Match.when(
 							{ type: '_refreshList' },
-							handleRefreshList(store, context),
+							handleRefreshList(state, context),
 						),
 						Match.when(
 							{ type: 'sortList' },
@@ -144,7 +146,7 @@ export const createStore: (
 						Match.when(
 							{ type: 'deleteProducts' },
 							handleDeleteProducts(
-								store,
+								state,
 								context,
 							),
 						),
@@ -168,13 +170,13 @@ export const createStore: (
 	})
 
 	return [
-		store,
+		state,
 		dispatch as (cmd: Command) => void,
 	]
 }
 
 function handleRefreshList(
-	store: Store,
+	state: State,
 	app: App,
 ): (
 	cmd: InternalCommand & {
@@ -191,8 +193,8 @@ function handleRefreshList(
 			Rx.mergeMap(() =>
 				pipe(
 					app.productList({
-						offset: SS.unwrap(store).offset,
-						sortBy: SS.unwrap(store).sortBy,
+						offset: SS.unwrap(state).offset,
+						sortBy: SS.unwrap(state).sortBy,
 					}),
 					Rx.defer,
 				),
@@ -210,7 +212,7 @@ function handleRefreshList(
 							],
 						}) as const,
 					result => ({
-						mutation: (s: Store) => ({
+						mutation: (s: State) => ({
 							...s,
 							products: SS.reconcile(
 								Array.from(result.models),
@@ -223,8 +225,8 @@ function handleRefreshList(
 				),
 			),
 			Rx.startWith({
-				mutation: (store: Store) => ({
-					...store,
+				mutation: (state: State) => ({
+					...state,
 					isLoading: true,
 				}),
 			}),
@@ -240,8 +242,8 @@ function handleSortList(): (
 		pipe(
 			Rx.of(cmd),
 			Rx.map(() => ({
-				mutation: (store: Store) => ({
-					...store,
+				mutation: (state: State) => ({
+					...state,
 					sortBy: cmd.by,
 				}),
 			})),
@@ -261,8 +263,8 @@ function clearSelectedProducts(): (
 		pipe(
 			Rx.of(cmd),
 			Rx.map(() => ({
-				mutation: (store: Store) => ({
-					...store,
+				mutation: (state: State) => ({
+					...state,
 					selectedProducts: new Set(),
 				}),
 			})),
@@ -297,16 +299,16 @@ function handleToggleItem(): (
 				Rx.asyncScheduler,
 			),
 			Rx.map(() => ({
-				mutation: (store: Store) => ({
-					...store,
+				mutation: (state: State) => ({
+					...state,
 					selectedProducts: RoS.toggle(S.Eq)(
 						cmd.id,
-					)(store.selectedProducts),
+					)(state.selectedProducts),
 
 					selectMode:
 						RoS.elem(S.Eq)(cmd.id)(
-							store.selectedProducts,
-						) && store.selectedProducts.size <= 1
+							state.selectedProducts,
+						) && state.selectedProducts.size <= 1
 							? false
 							: true,
 				}),
@@ -315,7 +317,7 @@ function handleToggleItem(): (
 }
 
 function handleDeleteProducts(
-	store: Store,
+	state: State,
 	app: App,
 ): (
 	cmd: Command & {
@@ -336,7 +338,7 @@ function handleDeleteProducts(
 			),
 			Rx.map(() =>
 				RoNeS.fromSet(
-					SS.unwrap(store).selectedProducts,
+					SS.unwrap(state).selectedProducts,
 				),
 			),
 			Rx.map(
@@ -371,8 +373,8 @@ function handleDeleteProducts(
 						}) as const,
 					() =>
 						({
-							mutation: (store: Store) => ({
-								...store,
+							mutation: (state: State) => ({
+								...state,
 								selectedProducts: new Set(),
 								selectMode: false,
 							}),
@@ -382,7 +384,7 @@ function handleDeleteProducts(
 								},
 								{
 									type: '_showToast',
-									message: `${SS.unwrap(store).selectedProducts.size.toString(10)} Products deleted`,
+									message: `${SS.unwrap(state).selectedProducts.size.toString(10)} Products deleted`,
 								},
 							],
 						}) as const,
