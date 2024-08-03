@@ -3,7 +3,6 @@ import type { Component } from 'solid-js'
 
 import type { App } from '@/app'
 
-import { useNavigate } from './core/helpers'
 import AddProduct from './pages/AddProduct'
 import { createStore as createAddProductStore } from './pages/AddProduct/store'
 import Home from './pages/Home'
@@ -44,10 +43,7 @@ export type Navigator = (
 
 export const useFridgyNavigate: () => Navigator =
 	() => {
-		const navigator =
-			useNavigate<
-				(typeof ROUTES)[keyof typeof ROUTES]
-			>()
+		const navigator = SR.useNavigate()
 
 		return (
 			route: keyof typeof ROUTES,

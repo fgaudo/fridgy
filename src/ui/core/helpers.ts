@@ -1,4 +1,3 @@
-import * as SR from '@solidjs/router'
 import { function as F } from 'fp-ts'
 import * as Rx from 'rxjs'
 import {
@@ -87,16 +86,6 @@ export const createSubject = <CMD>(): [
 			if (!subject.closed) subject.next(cmd)
 		},
 	]
-}
-
-export function useNavigate<A extends string>() {
-	const navigator = SR.useNavigate()
-	return (
-		path: A,
-		options?: Partial<SR.NavigateOptions>,
-	) => {
-		navigator(path, options)
-	}
 }
 
 export function handleShowToast<STATE>({
