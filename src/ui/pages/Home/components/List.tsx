@@ -1,6 +1,7 @@
 import {
 	type Component,
 	For,
+	createMemo,
 	createRenderEffect,
 } from 'solid-js'
 
@@ -15,10 +16,20 @@ export const List: Component<{
 	onItemClick: (id: string) => void
 	onItemContextMenu: (id: string) => void
 }> = props => {
+	const totalItems = createMemo<number>(prev => {
+		return props.totalItems > 0
+			? props.totalItems
+			: (prev ?? 0)
+	})
 	return (
-		<div class="pb-[128px] pt-[64px]">
+		<div
+			class="duration-fade pb-[128px] pt-[64px] transition-all"
+			classList={{
+				'opacity-0 pointer-events-none':
+					props.totalItems <= 0,
+			}}>
 			<p class="px-[14px] pt-[10px] text-xs">
-				{props.totalItems} items
+				{totalItems()} items
 			</p>
 			<md-list>
 				<For each={props.products}>
@@ -30,7 +41,7 @@ export const List: Component<{
 						})
 						return (
 							<div
-								class="absolute transition-all duration-300"
+								class="duration-fade absolute transition-all"
 								style={{
 									top: `${(i() * 73 + 9).toString(10)}px`,
 									left: 0,
@@ -66,7 +77,7 @@ export const List: Component<{
 												!props.isSelectModeEnabled,
 										}}
 										slot="end"
-										class="relative flex h-[24px] w-[24px] items-center justify-center transition-all duration-300">
+										class="duration-fade relative flex h-[24px] w-[24px] items-center justify-center transition-all">
 										<md-icon
 											classList={{
 												'opacity-0':
@@ -74,7 +85,7 @@ export const List: Component<{
 														model.id,
 													),
 											}}
-											class="absolute text-primary transition-all duration-300">
+											class="duration-fade absolute text-primary transition-all">
 											check_box_outline_blank
 										</md-icon>
 										<md-icon
@@ -88,7 +99,7 @@ export const List: Component<{
 												'font-variation-settings':
 													"'FILL' 1",
 											}}
-											class="absolute text-primary transition-all duration-300">
+											class="duration-fade absolute text-primary transition-all">
 											check_box
 										</md-icon>
 									</div>

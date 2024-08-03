@@ -23,7 +23,7 @@ export const TopBar: Component<{
 			<SmallTopAppBar>
 				<div class="relative h-full w-full">
 					<div
-						class="absolute flex h-full w-full items-center gap-[24px] px-[16px] transition-all duration-300"
+						class="duration-fade absolute flex h-full w-full items-center gap-[24px] px-[16px] transition-all"
 						classList={{
 							'opacity-0 pointer-events-none':
 								props.isSelectModeEnabled,
@@ -40,7 +40,7 @@ export const TopBar: Component<{
 						</div>
 					</div>
 					<div
-						class="absolute flex h-full w-full items-center gap-[24px] px-[16px] transition-all duration-300"
+						class="duration-fade absolute flex h-full w-full items-center gap-[24px] px-[16px] transition-all"
 						classList={{
 							'opacity-0 pointer-events-none':
 								!props.isSelectModeEnabled,

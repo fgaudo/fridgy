@@ -9,19 +9,16 @@ import * as Rx from 'rxjs'
 import * as Solid from 'solid-js'
 import * as SS from 'solid-js/store'
 
+import type { App } from '@/app'
 import type { LogSeverity } from '@/app/interfaces/write/log'
 
-import {
-	AppContext,
-	type FridgyContext,
-	useAppContext,
-} from '@/ui/context'
+import { DEFAULT_FADE_MS } from '@/ui/core/constants'
 import * as H from '@/ui/core/helpers'
 import { createDispatcher } from '@/ui/core/solid-js'
 
 const pipe = F.pipe
 
-interface Store {
+export interface Store {
 	formFields: {
 		name: string
 		expDate: OPT.Option<number>
@@ -34,7 +31,7 @@ interface Store {
 		| { status: 'ready'; date: string }
 }
 
-type Command =
+export type Command =
 	| { type: 'addProduct' }
 	| {
 			type: 'updateField'
@@ -81,12 +78,12 @@ const resetFields = () => {
 	}
 }
 
-export const useStore: () => [
+export const createStore: (
+	app: App,
+) => [
 	Store,
 	(command: Command) => void,
-] = () => {
-	const context = useAppContext(AppContext)
-
+] = context => {
 	const [store, setStore] = SS.createStore<Store>(
 		{
 			formFields: defaultFields(),
@@ -162,7 +159,7 @@ export const useStore: () => [
 
 function handleLogAndUpdateField(
 	store: Store,
-	context: FridgyContext,
+	app: App,
 ) {
 	return F.flow(
 		Match.value<
@@ -198,7 +195,7 @@ function handleLogAndUpdateField(
 		),
 		Match.when({ type: 'log' }, cmd =>
 			pipe(
-				context.app.log(cmd),
+				app.log(cmd),
 				T.fromIO,
 				Rx.defer,
 				Rx.ignoreElements(),
@@ -210,7 +207,7 @@ function handleLogAndUpdateField(
 
 function handleAddProduct(
 	store: Store,
-	context: FridgyContext,
+	app: App,
 ) {
 	return (_: Command & { type: 'addProduct' }) =>
 		pipe(
@@ -218,10 +215,10 @@ function handleAddProduct(
 				Rx.of(undefined),
 				Rx.asyncScheduler,
 			),
-			Rx.delay(300),
+			Rx.delay(DEFAULT_FADE_MS),
 			Rx.mergeMap(() =>
 				pipe(
-					context.app.addProduct({
+					app.addProduct({
 						name: store.formFields.name,
 						expiration: pipe(
 							store.formFields.expDate,

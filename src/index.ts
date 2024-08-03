@@ -8,7 +8,8 @@ import { useCases as mockUseCases } from '@/data/mock'
 import { implementations as systemUseCases } from '@/data/system'
 import { log } from '@/data/system/write/log'
 
-import { render, renderError } from '@/ui'
+import { render } from '@/ui'
+import { renderError } from '@/ui/index-error'
 
 const root = document.getElementById('root')!
 

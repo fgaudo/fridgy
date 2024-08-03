@@ -1,6 +1,5 @@
 /// <reference types="vitest" />
 import basicSsl from '@vitejs/plugin-basic-ssl'
-import analyze from 'rollup-plugin-analyzer'
 import { defineConfig } from 'vite'
 import { viteSingleFile } from 'vite-plugin-singlefile'
 import solid from 'vite-plugin-solid'

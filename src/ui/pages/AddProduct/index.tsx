@@ -1,6 +1,7 @@
 import { A } from '@solidjs/router'
 import { option as OPT } from 'fp-ts'
 import {
+	type Component,
 	Match,
 	Switch,
 	createRenderEffect,
@@ -9,10 +10,16 @@ import {
 import { SmallTopAppBar } from '@/ui/widgets/SmallTopAppBar'
 import { SnackBar } from '@/ui/widgets/SnackBar'
 
-import { useStore } from './store'
+import { type Command, type Store } from './store'
 
-const AddProduct = () => {
-	const [store, dispatch] = useStore()
+export const AddProductPath = '/add-product'
+const AddProduct: (
+	createStore: () => [
+		Store,
+		(command: Command) => void,
+	],
+) => Component = createStore => () => {
+	const [store, dispatch] = createStore()
 
 	createRenderEffect(() => {
 		dispatch({

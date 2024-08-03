@@ -7,6 +7,9 @@ export default {
 	plugins: [],
 	theme: {
 		extend: {
+			transitionDuration: {
+				fade: '300ms',
+			},
 			fontWeight: {
 				titleLarge:
 					'var(--md-sys-typescale-title-large-weight)',

@@ -2,21 +2,45 @@ import {
 	type Component,
 	createEffect,
 } from 'solid-js'
+import * as SS from 'solid-js/store'
 
-import { Fab } from './Fab'
-import { List } from './List'
-import { Menu } from './Menu'
-import { Snackbar } from './Snackbar'
-import { TopBar } from './TopBar'
-import { useOverviewStore } from './store'
+import { useFridgyNavigate } from '@/ui/router'
 
-const Home: Component = () => {
-	const [store, dispatch] = useOverviewStore()
+import { Fab } from './components/Fab'
+import { List } from './components/List'
+import { Menu } from './components/Menu'
+import { Snackbar } from './components/Snackbar'
+import { TopBar } from './components/TopBar'
+import { type Command, type Store } from './store'
+
+const Home: (
+	createStore: () => [
+		Store,
+		(command: Command) => void,
+	],
+) => Component = createStore => () => {
+	const [store, dispatch] = createStore()
+
+	const [uiStore, setUistore] = SS.createStore({
+		get isSelectModeEnabled() {
+			return store.selectedProducts.size > 0
+		},
+		isOpeningAddProduct: false,
+		isMenuOpen: false,
+	})
+
+	const navigate = useFridgyNavigate()
 
 	createEffect(() => {
-		if (store.isMenuOpen)
+		if (uiStore.isMenuOpen)
 			document.body.style.overflow = 'hidden'
 		else document.body.style.overflow = 'auto'
+	})
+
+	createEffect(() => {
+		if (uiStore.isOpeningAddProduct) {
+			navigate('addProduct')
+		}
 	})
 
 	return (
@@ -32,20 +56,24 @@ const Home: Component = () => {
 				isItemSelected={id =>
 					store.selectedProducts.has(id)
 				}
-				isSelectModeEnabled={store.selectMode}
+				isSelectModeEnabled={
+					uiStore.isSelectModeEnabled
+				}
 				onItemClick={id => {
-					if (!store.selectMode) {
+					if (!uiStore.isSelectModeEnabled) {
 						return
 					}
+
 					dispatch({
 						type: 'toggleItem',
 						id,
 					})
 				}}
 				onItemContextMenu={id => {
-					if (store.selectMode) {
+					if (uiStore.isSelectModeEnabled) {
 						return
 					}
+
 					dispatch({
 						type: 'toggleItem',
 						id,
@@ -60,13 +88,15 @@ const Home: Component = () => {
 			{/* *********** */}
 
 			<TopBar
-				isSelectModeEnabled={store.selectMode}
+				isSelectModeEnabled={
+					uiStore.isSelectModeEnabled
+				}
 				itemsSelected={
 					store.selectedProducts.size
 				}
 				onCloseSelectMode={() => {
 					dispatch({
-						type: 'disableSelectMode',
+						type: 'clearSelectedProducts',
 					})
 				}}
 				onDeleteClick={() => {
@@ -75,22 +105,30 @@ const Home: Component = () => {
 					})
 				}}
 				onMenuClick={() => {
-					dispatch({ type: 'toggleMenu' })
+					setUistore(
+						'isMenuOpen',
+						isMenuOpen => !isMenuOpen,
+					)
 				}}
 			/>
 
 			<Menu
-				isMenuOpen={store.isMenuOpen}
+				isMenuOpen={uiStore.isMenuOpen}
 				onToggleMenu={() => {
-					dispatch({ type: 'toggleMenu' })
+					setUistore(
+						'isMenuOpen',
+						isMenuOpen => !isMenuOpen,
+					)
 				}}
 			/>
 
 			<Fab
 				isLoading={store.isLoading}
-				isSelectModeEnabled={store.selectMode}
+				isSelectModeEnabled={
+					uiStore.isSelectModeEnabled
+				}
 				onOpenAddProduct={() => {
-					dispatch({ type: 'openAddProduct' })
+					setUistore('isOpeningAddProduct', true)
 				}}
 				atLeastOneProduct={
 					store.products.length > 0
@@ -98,7 +136,9 @@ const Home: Component = () => {
 			/>
 
 			<Snackbar
-				isSelectModeEnabled={store.selectMode}>
+				isSelectModeEnabled={
+					uiStore.isSelectModeEnabled
+				}>
 				{store.toastMessage}
 			</Snackbar>
 		</>

@@ -4,10 +4,6 @@ import {
 } from '@capacitor/haptics'
 import * as Match from '@effect/match'
 import {
-	type Navigator,
-	useNavigate,
-} from '@solidjs/router'
-import {
 	either as E,
 	function as F,
 	readonlySet as RoS,
@@ -21,6 +17,7 @@ import * as SS from 'solid-js/store'
 
 import * as RoNeS from '@/core/readonly-non-empty-set'
 
+import type { App } from '@/app'
 import type { Options } from '@/app/interfaces/read/products'
 import type { LogSeverity } from '@/app/interfaces/write/log'
 import type {
@@ -28,12 +25,8 @@ import type {
 	Sortings,
 } from '@/app/use-cases/product-list'
 
-import {
-	AppContext,
-	type FridgyContext,
-	useAppContext,
-} from '@/ui/context'
 import { onResume } from '@/ui/core/capacitor'
+import { DEFAULT_FADE_MS } from '@/ui/core/constants'
 import * as H from '@/ui/core/helpers'
 import {
 	type DispatcherValue,
@@ -42,13 +35,11 @@ import {
 
 const pipe = F.pipe
 
-interface Store {
+export interface Store {
 	total: number
 	offset: number
 	sortBy: Sortings
 	toastMessage: string
-	isMenuOpen: boolean
-	selectMode: boolean
 	products: ProductModel[]
 	isLoading: boolean
 	selectedProducts: ReadonlySet<
@@ -59,13 +50,7 @@ interface Store {
 export type Command =
 	| { type: 'deleteProducts' }
 	| {
-			type: 'toggleMenu'
-	  }
-	| {
-			type: 'openAddProduct'
-	  }
-	| {
-			type: 'disableSelectMode'
+			type: 'clearSelectedProducts'
 	  }
 	| { type: 'toggleItem'; id: string }
 	| {
@@ -87,12 +72,12 @@ type InternalCommand =
 	| { type: '_refreshList' }
 	| { type: '_showToast'; message: string }
 
-export const useOverviewStore: () => [
+export const createStore: (
+	context: App,
+) => [
 	Store,
 	(command: Command) => void,
-] = () => {
-	const context = useAppContext(AppContext)
-
+] = context => {
 	const [store, setStore] = SS.createStore<Store>(
 		{
 			total: 0,
@@ -101,13 +86,9 @@ export const useOverviewStore: () => [
 			toastMessage: '',
 			products: [],
 			isLoading: true,
-			isMenuOpen: false,
-			selectMode: false,
 			selectedProducts: new Set([]),
 		},
 	)
-
-	const navigate = useNavigate()
 
 	const dispatch = createDispatcher<
 		Command | InternalCommand,
@@ -145,8 +126,8 @@ export const useOverviewStore: () => [
 					pipe(
 						Match.value(cmd),
 						Match.when(
-							{ type: 'openAddProduct' },
-							handleOpenAddProduct(navigate),
+							{ type: 'clearSelectedProducts' },
+							clearSelectedProducts(),
 						),
 						Match.when(
 							{ type: '_refreshList' },
@@ -168,16 +149,8 @@ export const useOverviewStore: () => [
 							),
 						),
 						Match.when(
-							{ type: 'toggleMenu' },
-							handleToggleMenu(),
-						),
-						Match.when(
-							{ type: 'disableSelectMode' },
-							handleDisableSelectMode(),
-						),
-						Match.when(
 							{ type: 'toggleItem' },
-							handleToggleItem(store),
+							handleToggleItem(),
 						),
 						Match.exhaustive,
 					),
@@ -202,7 +175,7 @@ export const useOverviewStore: () => [
 
 function handleRefreshList(
 	store: Store,
-	context: FridgyContext,
+	app: App,
 ): (
 	cmd: InternalCommand & {
 		type: '_refreshList'
@@ -217,7 +190,7 @@ function handleRefreshList(
 			Rx.scheduled(Rx.of(cmd), Rx.asyncScheduler),
 			Rx.mergeMap(() =>
 				pipe(
-					context.app.productList({
+					app.productList({
 						offset: SS.unwrap(store).offset,
 						sortBy: SS.unwrap(store).sortBy,
 					}),
@@ -275,64 +248,42 @@ function handleSortList(): (
 		)
 }
 
-function handleLog(context: FridgyContext): (
+function clearSelectedProducts(): (
 	cmd: Command & {
-		type: 'log'
-	},
-) => Rx.Observable<OverviewDispatcherValue> {
-	return (cmd: Command & { type: 'log' }) =>
-		pipe(
-			context.app.log(cmd),
-			T.fromIO,
-			Rx.defer,
-			Rx.ignoreElements(),
-		)
-}
-
-function handleToggleMenu(): (
-	cmd: Command & {
-		type: 'toggleMenu'
-	},
-) => Rx.Observable<OverviewDispatcherValue> {
-	return (_: Command & { type: 'toggleMenu' }) =>
-		pipe(
-			Rx.scheduled(
-				Rx.of(undefined),
-				Rx.asyncScheduler,
-			),
-			Rx.map(() => ({
-				mutation: (store: Store) => ({
-					...store,
-					isMenuOpen: !store.isMenuOpen,
-				}),
-			})),
-		)
-}
-
-function handleDisableSelectMode(): (
-	cmd: Command & {
-		type: 'disableSelectMode'
+		type: 'clearSelectedProducts'
 	},
 ) => Rx.Observable<OverviewDispatcherValue> {
 	return (
-		_: Command & { type: 'disableSelectMode' },
+		cmd: Command & {
+			type: 'clearSelectedProducts'
+		},
 	) =>
 		pipe(
-			Rx.scheduled(
-				Rx.of(undefined),
-				Rx.asyncScheduler,
-			),
+			Rx.of(cmd),
 			Rx.map(() => ({
 				mutation: (store: Store) => ({
 					...store,
-					selectMode: false,
 					selectedProducts: new Set(),
 				}),
 			})),
 		)
 }
 
-function handleToggleItem(store: Store): (
+function handleLog(app: App): (
+	cmd: Command & {
+		type: 'log'
+	},
+) => Rx.Observable<OverviewDispatcherValue> {
+	return (cmd: Command & { type: 'log' }) =>
+		pipe(
+			app.log(cmd),
+			T.fromIO,
+			Rx.defer,
+			Rx.ignoreElements(),
+		)
+}
+
+function handleToggleItem(): (
 	cmd: Command & {
 		type: 'toggleItem'
 	},
@@ -342,13 +293,7 @@ function handleToggleItem(store: Store): (
 	) =>
 		pipe(
 			Rx.scheduled(
-				!SS.unwrap(store).selectMode
-					? Rx.from(
-							Haptics.impact({
-								style: ImpactStyle.Medium,
-							}),
-						)
-					: Rx.of(undefined),
+				Rx.of(undefined),
 				Rx.asyncScheduler,
 			),
 			Rx.map(() => ({
@@ -369,29 +314,9 @@ function handleToggleItem(store: Store): (
 		)
 }
 
-function handleOpenAddProduct(
-	navigate: Navigator,
-): (
-	cmd: Command & {
-		type: 'openAddProduct'
-	},
-) => Rx.Observable<OverviewDispatcherValue> {
-	return (
-		_: Command & { type: 'openAddProduct' },
-	) =>
-		pipe(
-			() => {
-				navigate('/add-product')
-			},
-			T.fromIO,
-			Rx.defer,
-			Rx.ignoreElements(),
-		)
-}
-
 function handleDeleteProducts(
 	store: Store,
-	context: FridgyContext,
+	app: App,
 ): (
 	cmd: Command & {
 		type: 'deleteProducts'
@@ -423,11 +348,12 @@ function handleDeleteProducts(
 				F.flow(
 					TE.fromEither,
 					TE.chainFirstTaskK(
-						F.flow(T.of, T.delay(300)),
+						F.flow(
+							T.of,
+							T.delay(DEFAULT_FADE_MS),
+						),
 					),
-					TE.chain(
-						context.app.deleteProductsByIds,
-					),
+					TE.chain(app.deleteProductsByIds),
 					Rx.defer,
 				),
 			),
