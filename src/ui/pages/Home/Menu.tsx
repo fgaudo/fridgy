@@ -14,7 +14,9 @@ export const Menu: Component<{
 					'pointer-events-none':
 						!props.isMenuOpen,
 				}}
-				onClick={props.onToggleMenu}>
+				onClick={() => {
+					props.onToggleMenu()
+				}}>
 				<div
 					onClick={e => {
 						e.stopPropagation()

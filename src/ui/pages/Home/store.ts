@@ -254,7 +254,7 @@ function handleRefreshList(
 					...store,
 					isLoading: true,
 				}),
-			} satisfies OverviewDispatcherValue),
+			}),
 		)
 }
 

@@ -30,7 +30,9 @@ export const TopBar: Component<{
 						}}>
 						<md-icon-button
 							class="ml-[-8px] shrink-0"
-							onClick={props.onMenuClick}>
+							onClick={() => {
+								props.onMenuClick()
+							}}>
 							<md-icon>menu</md-icon>
 						</md-icon-button>
 						<div class="font-titleLarge text-titleLarge leading-titleLarge">
@@ -45,7 +47,9 @@ export const TopBar: Component<{
 						}}>
 						<md-icon-button
 							class="ml-[-8px] shrink-0"
-							onClick={props.onCloseSelectMode}>
+							onClick={() => {
+								props.onCloseSelectMode()
+							}}>
 							<md-icon>close</md-icon>
 						</md-icon-button>
 
@@ -53,7 +57,9 @@ export const TopBar: Component<{
 
 						<md-icon-button
 							class="ml-auto mr-[-8px] shrink-0"
-							onClick={props.onDeleteClick}>
+							onClick={() => {
+								props.onDeleteClick()
+							}}>
 							<md-icon>delete</md-icon>
 						</md-icon-button>
 					</div>

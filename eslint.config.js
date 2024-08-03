@@ -48,7 +48,7 @@ export default [
 				'error',
 			'@typescript-eslint/switch-exhaustiveness-check':
 				'error',
-			'solid/reactivity': 'off',
+			'solid/reactivity': 'warn',
 		},
 	},
 ]

@@ -43,7 +43,9 @@ export const Fab: Component<{
 						!props.isSelectModeEnabled,
 				}}>
 				<md-fab
-					onClick={props.onOpenAddProduct}
+					onClick={() => {
+						props.onOpenAddProduct()
+					}}
 					prop:variant="primary"
 					prop:size="large">
 					<md-icon slot="icon">add</md-icon>
