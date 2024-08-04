@@ -1,16 +1,13 @@
-import { A } from '@solidjs/router'
 import { option as OPT } from 'fp-ts'
 import {
 	type Component,
 	Match,
 	Switch,
 } from 'solid-js'
-import { Portal } from 'solid-js/web'
 
-import { ROUTES } from '@/ui/router'
-import { SmallTopAppBar } from '@/ui/widgets/SmallTopAppBar'
-import { SnackBar } from '@/ui/widgets/SnackBar'
-
+import { Snackbar } from './components/Snackbar'
+import { TopBar } from './components/TopBar'
+import { AddProductContext } from './context'
 import { type Command, type State } from './store'
 import { createStore as createUiStore } from './ui-store'
 
@@ -21,41 +18,19 @@ const AddProduct: (
 	],
 ) => Component = createStore => () => {
 	const [state, dispatch] = createStore()
-	const [, setUiState] = createUiStore()
+	const [uiState, setUiState] = createUiStore()
 
 	return (
-		<>
-			<Portal>
-				<div class="fixed bottom-[16px] left-[16px] right-[16px] z-50">
-					<SnackBar
-						message={state.toastMessage}
-					/>
-				</div>
-			</Portal>
+		<AddProductContext.Provider
+			value={{
+				store: [state, dispatch],
+				uiStore: [uiState, setUiState],
+			}}>
 			<div
 				style={{
-					animation:
-						'opacityIn 0.25s ease-in-out',
+					animation: 'opacityIn 0.5s ease-in-out',
 				}}>
-				<SmallTopAppBar>
-					<div class="absolute flex h-full w-full items-center gap-[24px] px-[16px] transition-all">
-						<A href={ROUTES.home}>
-							<md-icon-button
-								class="pl-[4px]"
-								onClick={() => {
-									setUiState(
-										'isOpeningHome',
-										true,
-									)
-								}}>
-								<md-icon>arrow_back</md-icon>
-							</md-icon-button>
-						</A>
-						<div class="font-titleLarge text-titleLarge leading-titleLarge">
-							Add a new product
-						</div>
-					</div>
-				</SmallTopAppBar>
+				<TopBar />
 				<Switch
 					fallback={
 						<md-circular-progress
@@ -172,7 +147,8 @@ const AddProduct: (
 					</Match>
 				</Switch>
 			</div>
-		</>
+			<Snackbar />
+		</AddProductContext.Provider>
 	)
 }
 

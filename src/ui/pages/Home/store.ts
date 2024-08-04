@@ -12,7 +12,7 @@ import {
 	taskEither as TE,
 } from 'fp-ts'
 import * as Rx from 'rxjs'
-import * as Solid from 'solid-js'
+import { onMount } from 'solid-js'
 import * as SS from 'solid-js/store'
 
 import * as RoNeS from '@/core/readonly-non-empty-set'
@@ -48,6 +48,7 @@ export interface State {
 }
 
 export type Command =
+	| { type: 'refreshList' }
 	| { type: 'deleteProducts' }
 	| {
 			type: 'clearSelectedProducts'
@@ -68,9 +69,10 @@ type OverviewDispatcherValue = DispatcherValue<
 	(s: State) => State
 >
 
-type InternalCommand =
-	| { type: '_refreshList' }
-	| { type: '_showToast'; message: string }
+interface InternalCommand {
+	type: '_showToast'
+	message: string
+}
 
 export type Store = [
 	State,
@@ -132,7 +134,7 @@ export const createStore: (
 							clearSelectedProducts(),
 						),
 						Match.when(
-							{ type: '_refreshList' },
+							{ type: 'refreshList' },
 							handleRefreshList(state, context),
 						),
 						Match.when(
@@ -161,12 +163,12 @@ export const createStore: (
 		),
 	)
 
-	Solid.onMount(() => {
+	onMount(() => {
 		onResume(() => {
-			dispatch({ type: '_refreshList' })
+			dispatch({ type: 'refreshList' })
 		})
 
-		dispatch({ type: '_refreshList' })
+		dispatch({ type: 'refreshList' })
 	})
 
 	return [
@@ -179,13 +181,13 @@ function handleRefreshList(
 	state: State,
 	app: App,
 ): (
-	cmd: InternalCommand & {
-		type: '_refreshList'
+	cmd: Command & {
+		type: 'refreshList'
 	},
 ) => Rx.Observable<OverviewDispatcherValue> {
 	return (
-		cmd: InternalCommand & {
-			type: '_refreshList'
+		cmd: Command & {
+			type: 'refreshList'
 		},
 	) =>
 		pipe(
@@ -380,7 +382,7 @@ function handleDeleteProducts(
 							}),
 							cmds: [
 								{
-									type: '_refreshList',
+									type: 'refreshList',
 								},
 								{
 									type: '_showToast',

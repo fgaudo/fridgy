@@ -44,8 +44,8 @@ export const List: Component = () => {
 								class="absolute transition-all duration-fade"
 								style={{
 									top: `${(i() * 73 + 9).toString(10)}px`,
-									left: 0,
-									right: 0,
+									left: '0',
+									right: '0',
 								}}>
 								<md-list-item
 									prop:type="button"
@@ -79,10 +79,6 @@ export const List: Component = () => {
 											})
 										}
 									}}>
-									<md-icon slot="start">
-										ac_unit
-									</md-icon>
-
 									<div
 										classList={{
 											'opacity-0':
@@ -118,11 +114,13 @@ export const List: Component = () => {
 
 									<div
 										slot="headline"
-										class="capitalize">
-										{model.name}
+										class="text-ellipsis whitespace-nowrap">
+										{model.name} asd s ads dafsf
+										sffsssfdf sfd fds fsffsds asd
+										fss fssf sffsf sffffsdsfd ads
 									</div>
 									<div slot="supporting-text">
-										<div />
+										<div>asd</div>
 									</div>
 								</md-list-item>
 								<md-divider />

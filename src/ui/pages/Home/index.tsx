@@ -5,7 +5,7 @@ import { List } from './components/List'
 import { Menu } from './components/Menu'
 import { Snackbar } from './components/Snackbar'
 import { TopBar } from './components/TopBar'
-import { UiStateContext } from './context'
+import { HomeContext } from './context'
 import { type Store } from './store'
 import { createStore as createUiStore } from './ui-store'
 
@@ -16,20 +16,18 @@ const Home: (
 	const uiStore = createUiStore(store)
 
 	return (
-		<>
-			<UiStateContext.Provider
-				value={{ uiStore, store }}>
-				<TopBar />
+		<HomeContext.Provider
+			value={{ uiStore, store }}>
+			<TopBar />
 
-				<Menu />
+			<Menu />
 
-				<List />
+			<List />
 
-				<Fab />
+			<Fab />
 
-				<Snackbar />
-			</UiStateContext.Provider>
-		</>
+			<Snackbar />
+		</HomeContext.Provider>
 	)
 }
 
