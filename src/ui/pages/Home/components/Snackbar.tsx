@@ -3,21 +3,25 @@ import { Portal } from 'solid-js/web'
 
 import { SnackBar } from '@/ui/widgets/SnackBar'
 
-export const Snackbar: Component<{
-	isSelectModeEnabled: boolean
-	children: string
-}> = props => {
+import { useUiStateContext } from '../context'
+
+export const Snackbar: Component = () => {
+	const {
+		store: [state],
+		uiStore: [uiState],
+	} = useUiStateContext()!
+
 	return (
 		<Portal>
 			<div
 				class="fixed z-50 transition-all"
 				classList={{
 					'bottom-[128px] left-[16px] right-[16px]':
-						!props.isSelectModeEnabled,
+						!uiState.isSelectModeEnabled,
 					'bottom-[16px] left-[16px] right-[16px]':
-						props.isSelectModeEnabled,
+						uiState.isSelectModeEnabled,
 				}}>
-				<SnackBar message={props.children} />
+				<SnackBar message={state.toastMessage} />
 			</div>
 		</Portal>
 	)

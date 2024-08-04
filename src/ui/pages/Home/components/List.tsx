@@ -5,43 +5,43 @@ import {
 	createRenderEffect,
 } from 'solid-js'
 
-import type { ProductModel } from '@/app/use-cases/product-list'
+import { useUiStateContext } from '../context'
 
-export const List: Component<{
-	products: ProductModel[]
-	totalItems: number
-	isItemSelected: (id: string) => boolean
-	isSelectModeEnabled: boolean
-	logItemRender: (message: string) => void
-	onItemClick: (id: string) => void
-	onItemContextMenu: (id: string) => void
-}> = props => {
+export const List: Component = () => {
+	const {
+		store: [state, dispatch],
+		uiStore: [uiState],
+	} = useUiStateContext()!
+
 	const totalItems = createMemo<number>(prev => {
-		return props.totalItems > 0
-			? props.totalItems
+		return state.total > 0
+			? state.total
 			: (prev ?? 0)
 	})
+
 	return (
 		<div
-			class="duration-fade pb-[128px] pt-[64px] transition-all"
+			class="pb-[128px] pt-[64px] transition-all duration-fade"
 			classList={{
 				'opacity-0 pointer-events-none':
-					props.totalItems <= 0,
+					state.total <= 0,
 			}}>
 			<p class="px-[14px] pt-[10px] text-xs">
 				{totalItems()} items
 			</p>
 			<md-list>
-				<For each={props.products}>
+				<For each={state.products}>
 					{(model, i) => {
 						createRenderEffect(() => {
-							props.logItemRender(
-								`Rendered item ${model.name} on position ${i().toString(10)}`,
-							)
+							dispatch({
+								type: 'log',
+								severity: 'debug',
+								message: `Rendered item ${model.name} on position ${i().toString(10)}`,
+							})
 						})
 						return (
 							<div
-								class="duration-fade absolute transition-all"
+								class="absolute transition-all duration-fade"
 								style={{
 									top: `${(i() * 73 + 9).toString(10)}px`,
 									left: 0,
@@ -51,21 +51,33 @@ export const List: Component<{
 									prop:type="button"
 									classList={{
 										'bg-surface-variant':
-											props.isItemSelected(
+											state.selectedProducts.has(
 												model.id,
 											),
 									}}
 									onClick={e => {
 										e.preventDefault()
 
-										props.onItemClick(model.id)
+										if (
+											uiState.isSelectModeEnabled
+										) {
+											dispatch({
+												type: 'toggleItem',
+												id: model.id,
+											})
+										}
 									}}
 									onContextMenu={e => {
 										e.preventDefault()
 
-										props.onItemContextMenu(
-											model.id,
-										)
+										if (
+											!uiState.isSelectModeEnabled
+										) {
+											dispatch({
+												type: 'toggleItem',
+												id: model.id,
+											})
+										}
 									}}>
 									<md-icon slot="start">
 										ac_unit
@@ -74,24 +86,24 @@ export const List: Component<{
 									<div
 										classList={{
 											'opacity-0':
-												!props.isSelectModeEnabled,
+												!uiState.isSelectModeEnabled,
 										}}
 										slot="end"
-										class="duration-fade relative flex h-[24px] w-[24px] items-center justify-center transition-all">
+										class="relative flex h-[24px] w-[24px] items-center justify-center transition-all duration-fade">
 										<md-icon
 											classList={{
 												'opacity-0':
-													props.isItemSelected(
+													state.selectedProducts.has(
 														model.id,
 													),
 											}}
-											class="duration-fade absolute text-primary transition-all">
+											class="absolute text-primary transition-all duration-fade">
 											check_box_outline_blank
 										</md-icon>
 										<md-icon
 											classList={{
 												'opacity-0':
-													!props.isItemSelected(
+													!state.selectedProducts.has(
 														model.id,
 													),
 											}}
@@ -99,7 +111,7 @@ export const List: Component<{
 												'font-variation-settings':
 													"'FILL' 1",
 											}}
-											class="duration-fade absolute text-primary transition-all">
+											class="absolute text-primary transition-all duration-fade">
 											check_box
 										</md-icon>
 									</div>

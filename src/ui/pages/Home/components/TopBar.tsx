@@ -6,16 +6,21 @@ import { Portal } from 'solid-js/web'
 
 import { SmallTopAppBar } from '@/ui/widgets/SmallTopAppBar'
 
-export const TopBar: Component<{
-	isSelectModeEnabled: boolean
-	itemsSelected: number
-	onMenuClick: () => void
-	onDeleteClick: () => void
-	onCloseSelectMode: () => void
-}> = props => {
+import { useUiStateContext } from '../context'
+
+export const TopBar: Component = () => {
+	const {
+		store: [state, dispatch],
+		uiStore: [
+			uiState,
+			setUiState,
+			{ disableSelectMode },
+		],
+	} = useUiStateContext()!
+
 	const size = createMemo<number>(prev => {
-		return props.isSelectModeEnabled
-			? props.itemsSelected
+		return uiState.isSelectModeEnabled
+			? state.selectedProducts.size
 			: (prev ?? 0)
 	})
 	return (
@@ -23,15 +28,18 @@ export const TopBar: Component<{
 			<SmallTopAppBar>
 				<div class="relative h-full w-full">
 					<div
-						class="duration-fade absolute flex h-full w-full items-center gap-[24px] px-[16px] transition-all"
+						class="absolute flex h-full w-full items-center gap-[24px] px-[16px] transition-all duration-fade"
 						classList={{
 							'opacity-0 pointer-events-none':
-								props.isSelectModeEnabled,
+								uiState.isSelectModeEnabled,
 						}}>
 						<md-icon-button
 							class="ml-[-8px] shrink-0"
 							onClick={() => {
-								props.onMenuClick()
+								setUiState(
+									'isMenuOpen',
+									isMenuOpen => !isMenuOpen,
+								)
 							}}>
 							<md-icon>menu</md-icon>
 						</md-icon-button>
@@ -40,15 +48,15 @@ export const TopBar: Component<{
 						</div>
 					</div>
 					<div
-						class="duration-fade absolute flex h-full w-full items-center gap-[24px] px-[16px] transition-all"
+						class="absolute flex h-full w-full items-center gap-[24px] px-[16px] transition-all duration-fade"
 						classList={{
 							'opacity-0 pointer-events-none':
-								!props.isSelectModeEnabled,
+								!uiState.isSelectModeEnabled,
 						}}>
 						<md-icon-button
 							class="ml-[-8px] shrink-0"
 							onClick={() => {
-								props.onCloseSelectMode()
+								disableSelectMode()
 							}}>
 							<md-icon>close</md-icon>
 						</md-icon-button>
@@ -58,7 +66,9 @@ export const TopBar: Component<{
 						<md-icon-button
 							class="ml-auto mr-[-8px] shrink-0"
 							onClick={() => {
-								props.onDeleteClick()
+								dispatch({
+									type: 'deleteProducts',
+								})
 							}}>
 							<md-icon>delete</md-icon>
 						</md-icon-button>

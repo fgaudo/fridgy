@@ -4,21 +4,22 @@ import { Portal } from 'solid-js/web'
 import imgUrl from '@/ui/assets/arrow.svg'
 import * as H from '@/ui/core/helpers'
 
-export const Fab: Component<{
-	atLeastOneProduct: boolean
-	isLoading: boolean
-	isSelectModeEnabled: boolean
-	onOpenAddProduct: () => void
-}> = props => {
+import { useUiStateContext } from '../context'
+
+export const Fab: Component = () => {
 	const scroll = H.useWindowScroll()
+
+	const {
+		store: [state],
+		uiStore: [uiState, setUiState],
+	} = useUiStateContext()!
 
 	return (
 		<Portal>
 			<div
 				classList={{
 					'opacity-0 pointer-events-none':
-						props.atLeastOneProduct ||
-						props.isLoading,
+						state.total > 0 || state.isLoading,
 				}}
 				class="fixed bottom-[150px] left-0 right-0 flex flex-col items-end font-titleLarge transition-all duration-[fade]">
 				<div class="w-full p-[20px] text-center">
@@ -35,18 +36,21 @@ export const Fab: Component<{
 				/>
 			</div>
 			<div
-				class="duration-fade fixed bottom-[16px] right-[16px] h-[96px] w-[96px] bg-transparent transition-all"
+				class="fixed bottom-[16px] right-[16px] h-[96px] w-[96px] bg-transparent transition-all duration-fade"
 				classList={{
 					'opacity-0 pointer-events-none':
-						props.isSelectModeEnabled,
+						uiState.isSelectModeEnabled,
 
 					'opacity-50':
 						scroll().isScrolling &&
-						!props.isSelectModeEnabled,
+						!uiState.isSelectModeEnabled,
 				}}>
 				<md-fab
 					onClick={() => {
-						props.onOpenAddProduct()
+						setUiState(
+							'isOpeningAddProduct',
+							true,
+						)
 					}}
 					prop:variant="primary"
 					prop:size="large">

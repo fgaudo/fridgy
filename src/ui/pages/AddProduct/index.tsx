@@ -4,35 +4,25 @@ import {
 	type Component,
 	Match,
 	Switch,
-	createRenderEffect,
 } from 'solid-js'
 import { Portal } from 'solid-js/web'
 
-import { type Navigator } from '@/ui/router'
 import { ROUTES } from '@/ui/router'
 import { SmallTopAppBar } from '@/ui/widgets/SmallTopAppBar'
 import { SnackBar } from '@/ui/widgets/SnackBar'
 
 import { type Command, type State } from './store'
+import { createStore as createUiStore } from './ui-store'
 
 const AddProduct: (
-	createContext: () => {
-		store: [State, (command: Command) => void]
-		navigate: Navigator
-	},
-) => Component = createContext => () => {
-	const {
-		store: [state, dispatch],
-		navigate,
-	} = createContext()
+	createStore: () => [
+		State,
+		(command: Command) => void,
+	],
+) => Component = createStore => () => {
+	const [state, dispatch] = createStore()
+	const [, setUiState] = createUiStore()
 
-	createRenderEffect(() => {
-		dispatch({
-			type: 'log',
-			severity: 'debug',
-			message: 'Opened add-product page',
-		})
-	})
 	return (
 		<>
 			<Portal>
@@ -53,7 +43,10 @@ const AddProduct: (
 							<md-icon-button
 								class="pl-[4px]"
 								onClick={() => {
-									navigate('home')
+									setUiState(
+										'isOpeningHome',
+										true,
+									)
 								}}>
 								<md-icon>arrow_back</md-icon>
 							</md-icon-button>

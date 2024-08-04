@@ -20,17 +20,15 @@ export const Router: Component<{
 		<SR.Router>
 			<SR.Route
 				path={ROUTES.home}
-				component={Home(() => ({
-					store: createHomeStore(props.app),
-					navigate: useFridgyNavigate(),
-				}))}
+				component={Home(() =>
+					createHomeStore(props.app),
+				)}
 			/>
 			<SR.Route
 				path={ROUTES.addProduct}
-				component={AddProduct(() => ({
-					store: createAddProductStore(props.app),
-					navigate: useFridgyNavigate(),
-				}))}
+				component={AddProduct(() =>
+					createAddProductStore(props.app),
+				)}
 			/>
 		</SR.Router>
 	)
