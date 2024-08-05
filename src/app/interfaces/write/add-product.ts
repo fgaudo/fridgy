@@ -5,10 +5,7 @@ import type {
 
 export interface ProductDTO {
 	name: string
-	expiration: OPT.Option<{
-		date: number
-		isBestBefore: boolean
-	}>
+	expirationDate: OPT.Option<number>
 	creationDate: number
 }
 

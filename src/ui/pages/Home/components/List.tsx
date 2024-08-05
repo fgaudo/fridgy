@@ -1,11 +1,17 @@
+import { format } from 'date-fns'
+import { option as OPT } from 'fp-ts'
 import {
 	type Component,
 	For,
+	Show,
 	createMemo,
 	createRenderEffect,
 } from 'solid-js'
 
+import { formatRemainingTime } from '@/ui/core/helpers'
+
 import { useUiStateContext } from '../context'
+import { ExpirationBar } from './ExpirationBar'
 
 export const List: Component = () => {
 	const {
@@ -49,6 +55,9 @@ export const List: Component = () => {
 								}}>
 								<md-list-item
 									prop:type="button"
+									style={{
+										'content-visibility': 'auto',
+									}}
 									classList={{
 										'bg-surface-variant':
 											state.selectedProducts.has(
@@ -79,51 +88,90 @@ export const List: Component = () => {
 											})
 										}
 									}}>
-									<div
-										classList={{
-											'opacity-0':
-												!uiState.isSelectModeEnabled,
-										}}
-										slot="end"
-										class="relative flex h-[24px] w-[24px] items-center justify-center transition-all duration-fade">
-										<md-icon
-											classList={{
-												'opacity-0':
-													state.selectedProducts.has(
-														model.id,
-													),
-											}}
-											class="absolute text-primary transition-all duration-fade">
-											check_box_outline_blank
-										</md-icon>
-										<md-icon
-											classList={{
-												'opacity-0':
-													!state.selectedProducts.has(
-														model.id,
-													),
-											}}
-											style={{
-												'font-variation-settings':
-													"'FILL' 1",
-											}}
-											class="absolute text-primary transition-all duration-fade">
-											check_box
-										</md-icon>
-									</div>
+									<Show
+										fallback={
+											<div slot="supporting-text" />
+										}
+										when={
+											OPT.isSome(
+												model.expirationDate,
+											) &&
+											model.expirationDate.value
+										}>
+										{expiration => (
+											<>
+												<div
+													slot="end"
+													class="relative flex h-[24px] w-[24px] items-center justify-center text-sm transition-all duration-fade">
+													<md-icon
+														classList={{
+															'opacity-0':
+																state.selectedProducts.has(
+																	model.id,
+																) ||
+																!uiState.isSelectModeEnabled,
+														}}
+														class="absolute text-primary transition-all duration-fade">
+														check_box_outline_blank
+													</md-icon>
+													<md-icon
+														classList={{
+															'opacity-0':
+																!state.selectedProducts.has(
+																	model.id,
+																) ||
+																!uiState.isSelectModeEnabled,
+														}}
+														style={{
+															'font-variation-settings':
+																"'FILL' 1",
+														}}
+														class="absolute text-primary transition-all duration-fade">
+														check_box
+													</md-icon>
+													<div
+														class="absolute text-xs text-primary transition-all duration-fade"
+														classList={{
+															'opacity-0':
+																uiState.isSelectModeEnabled,
+														}}>
+														{formatRemainingTime(
+															uiState.currentTimestamp,
+															expiration(),
+														)}
+													</div>
+												</div>
+												<div
+													slot="start"
+													class="flex flex-col items-center">
+													<div class="text-sm">
+														{format(
+															expiration(),
+															'd',
+														)}
+													</div>
+													<div class="text-sm">
+														{format(
+															expiration(),
+															'LLL',
+														)}
+													</div>
+												</div>
 
+												<div slot="supporting-text">
+													<ExpirationBar
+														id={model.id}
+													/>
+												</div>
+											</>
+										)}
+									</Show>
 									<div
 										slot="headline"
-										class="text-ellipsis whitespace-nowrap">
-										{model.name} asd s ads dafsf
-										sffsssfdf sfd fds fsffsds asd
-										fss fssf sffsf sffffsdsfd ads
-									</div>
-									<div slot="supporting-text">
-										<div>asd</div>
+										class="text-ellipsis whitespace-nowrap capitalize">
+										{model.name}
 									</div>
 								</md-list-item>
-								<md-divider />
 							</div>
 						)
 					}}

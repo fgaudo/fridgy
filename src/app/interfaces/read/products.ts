@@ -11,10 +11,7 @@ const pipe = F.pipe
 export interface ProductDTO {
 	id: string
 	name: string
-	expiration: OPT.Option<{
-		date: number
-		isBestBefore: boolean
-	}>
+	expirationDate: OPT.Option<number>
 }
 
 export const ProductDTO = {
@@ -33,17 +30,7 @@ export const ProductDTO = {
 	}) => ({ id, product }),
 } as const
 
-export interface Options {
-	sortBy:
-		| 'expirationDate'
-		| 'a-z'
-		| 'creationDate'
-	offset: number
-}
-
-export type Products = (
-	options: Options,
-) => TE.TaskEither<
+export type Products = TE.TaskEither<
 	Error,
 	{
 		items: readonly ProductDTO[]

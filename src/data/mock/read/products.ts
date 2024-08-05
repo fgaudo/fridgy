@@ -27,49 +27,44 @@ const productSamples = [
 type Deps = object
 
 export const products: R.Reader<Deps, Products> =
-	F.flip(
-		flow(
-			RTE.of,
-			RTE.bindTo('options'),
-			R.tap(T.delay(1000)),
-			RTE.bind('total', () => RTE.of(20)),
-			RTE.bind('array', ({ total }) =>
-				pipe(
-					Array(total).keys(),
-					Array.from<number>,
-					A.map(BigInt),
-					RoA.fromArray,
-					RTE.of,
-				),
+	pipe(
+		RTE.Do,
+		R.tap(T.delay(1000)),
+		RTE.bind('total', () => RTE.of(20)),
+		RTE.bind('array', ({ total }) =>
+			pipe(
+				Array(total).keys(),
+				Array.from<number>,
+				A.map(BigInt),
+				RoA.fromArray,
+				RTE.of,
 			),
-			RTE.bind(
-				'items',
-				flow(
-					({ array }) => array,
-					RoA.map(
-						id =>
-							({
-								id: id.toString(10),
+		),
+		RTE.bind(
+			'items',
+			flow(
+				({ array }) => array,
+				RoA.map(
+					id =>
+						({
+							id: id.toString(10),
 
-								name: productSamples[
+							name: productSamples[
+								Math.floor(
+									Math.random() *
+										productSamples.length,
+								)
+							],
+							expirationDate: OPT.some(
+								Date.now() +
+									100000 +
 									Math.floor(
-										Math.random() *
-											productSamples.length,
-									)
-								],
-								expiration: OPT.some({
-									isBestBefore: false,
-									date:
-										Date.now() +
-										100000 +
-										Math.floor(
-											Math.random() * 26967228,
-										),
-								}),
-							}) satisfies ProductDTO,
-					),
-					RTE.of,
+										Math.random() * 26967228,
+									),
+							),
+						}) satisfies ProductDTO,
 				),
+				RTE.of,
 			),
 		),
 	)

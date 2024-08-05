@@ -1,3 +1,7 @@
+import {
+	differenceInDays,
+	differenceInHours,
+} from 'date-fns'
 import { function as F } from 'fp-ts'
 import * as Rx from 'rxjs'
 import {
@@ -121,4 +125,27 @@ export function handleShowToast<STATE>({
 			mutation: hide(),
 		}),
 	)
+}
+
+export const formatRemainingTime = (
+	from: number,
+	to: number,
+): string => {
+	const remaining = to - from
+
+	if (remaining < 0) {
+		return 'EXP'
+	}
+
+	const days = differenceInDays(to, from)
+
+	if (days === 0) {
+		return `${differenceInHours(to, from).toString(10)}h`
+	}
+
+	if (days <= 7) {
+		return `${days.toString(10)}d`
+	}
+
+	return `> 1w`
 }

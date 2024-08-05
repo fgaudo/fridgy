@@ -2,10 +2,7 @@ import {
 	either as E,
 	eq as Eq,
 	function as F,
-	monoid as MO,
-	number as N,
 	option as OPT,
-	ord as Ord,
 	reader as R,
 	readerIO as RIO,
 	readerTaskEither as RTE,
@@ -25,7 +22,6 @@ import {
 } from '@/domain/product'
 
 import {
-	type Options,
 	ProductDTO,
 	type Products,
 } from '@/app/interfaces/read/products'
@@ -37,38 +33,14 @@ const flow = F.flow
 export interface ProductModel {
 	id: string
 	name: string
-	expiration: OPT.Option<{
-		date: number
-		isBestBefore: boolean
-	}>
+	expirationDate: OPT.Option<number>
 	isExpired: boolean
 }
-
-const M = Ord.getMonoid<ProductModel>()
 
 const ProductModel = {
 	Eq: Eq.contramap((a: ProductModel) => a.id)(
 		S.Eq,
 	),
-	OrdOldest: MO.concatAll(M)([
-		pipe(
-			N.Ord,
-			OPT.getOrd,
-			Ord.reverse,
-			Ord.contramap((model: ProductModel) =>
-				pipe(
-					model.expiration,
-					OPT.map(exp => exp.date),
-				),
-			),
-		),
-		pipe(
-			S.Ord,
-			Ord.contramap(
-				(model: ProductModel) => model.name,
-			),
-		),
-	]),
 } as const
 
 export interface UseCases {
@@ -90,7 +62,7 @@ const toProductEntitiesWithInvalid: (
 	pipe(
 		createProduct({
 			name: entityDTO.name,
-			expiration: entityDTO.expiration,
+			expiration: entityDTO.expirationDate,
 		}),
 		E.bimap(
 			() => entityDTO.id,
@@ -125,13 +97,11 @@ const toProductModels: (
 						product,
 						timestamp,
 					),
-					expiration: expiration(product),
+					expirationDate: expiration(product),
 				})),
 			),
 		),
 	)
-
-export type Sortings = Options['sortBy']
 
 const logInfo: (
 	message: string,
@@ -146,9 +116,7 @@ const logError =
 	({ log }: UseCases) =>
 		log({ severity: 'error', message })
 
-export type ProductList = (
-	init: Options,
-) => TE.TaskEither<
+export type ProductList = TE.TaskEither<
 	string,
 	{
 		total: number
@@ -158,61 +126,52 @@ export type ProductList = (
 
 export const useCase: (
 	deps: UseCases,
-) => ProductList = F.flip(
-	flow(
-		RTE.of,
-		RTE.bindTo('options'),
-		RTE.bind('result', ({ options }) =>
-			R.asks((useCases: UseCases) =>
-				useCases.products(options),
+) => ProductList = pipe(
+	RTE.Do,
+	RTE.bind('result', () =>
+		R.asks(
+			(useCases: UseCases) => useCases.products,
+		),
+	),
+	RTE.tapReaderIO(({ result }) =>
+		logInfo(
+			`Received ${result.items.length.toString(10)} product entries out of ${result.total.toString(10)}`,
+		),
+	),
+	RTE.bindW('entitiesWithInvalid', ({ result }) =>
+		pipe(
+			result.items,
+			toProductEntitiesWithInvalid,
+			RTE.right,
+		),
+	),
+	RTE.tapReaderIO(
+		flow(
+			result => result.entitiesWithInvalid,
+			SEP.left,
+			RoA.map(id =>
+				logInfo(`Corrupt entity with id ${id}`),
 			),
+			RIO.sequenceArray,
 		),
-		RTE.tapReaderIO(({ result }) =>
-			logInfo(
-				`Received ${result.items.length.toString(10)} product entries out of ${result.total.toString(10)}`,
-			),
-		),
-		RTE.bindW(
-			'entitiesWithInvalid',
-			({ result }) =>
-				pipe(
-					result.items,
-					toProductEntitiesWithInvalid,
-					RTE.right,
-				),
-		),
-		RTE.tapReaderIO(
-			flow(
-				result => result.entitiesWithInvalid,
-				SEP.left,
-				RoA.map(id =>
-					logInfo(`Corrupt entity with id ${id}`),
-				),
-				RIO.sequenceArray,
-			),
-		),
-		RTE.bindW(
-			'entities',
-			({ entitiesWithInvalid }) =>
-				pipe(
-					entitiesWithInvalid,
-					discardInvalid,
-					RTE.right,
-				),
-		),
-		RTE.bindW('models', ({ entities }) =>
+	),
+	RTE.bindW(
+		'entities',
+		({ entitiesWithInvalid }) =>
 			pipe(
-				entities,
-				toProductModels,
-				RTE.fromTask,
+				entitiesWithInvalid,
+				discardInvalid,
+				RTE.right,
 			),
-		),
-		RTE.bimap(
-			error => error.message,
-			({ result: { total }, models }) => ({
-				total,
-				models,
-			}),
-		),
+	),
+	RTE.bindW('models', ({ entities }) =>
+		pipe(entities, toProductModels, RTE.fromTask),
+	),
+	RTE.bimap(
+		error => error.message,
+		({ result: { total }, models }) => ({
+			total,
+			models,
+		}),
 	),
 )

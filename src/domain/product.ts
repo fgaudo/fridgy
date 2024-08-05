@@ -15,10 +15,7 @@ export type Product = Newtype<
 	{ readonly Product: unique symbol },
 	{
 		name: string
-		expiration: OPT.Option<{
-			isBestBefore: boolean
-			date: number
-		}>
+		expiration: OPT.Option<number>
 	}
 >
 
@@ -29,10 +26,7 @@ export const name: (
 
 export const expiration: (
 	product: Product,
-) => OPT.Option<{
-	isBestBefore: boolean
-	date: number
-}> = product =>
+) => OPT.Option<number> = product =>
 	isoProduct.unwrap(product).expiration
 
 export const isExpired: (
@@ -43,7 +37,7 @@ export const isExpired: (
 		isoProduct.unwrap(product).expiration,
 		OPT.match(
 			() => false,
-			expDate => expDate.date >= timestamp,
+			expDate => expDate >= timestamp,
 		),
 	)
 
@@ -61,10 +55,7 @@ interface Errors {
 
 export const createProduct: (f: {
 	name: string
-	expiration?: OPT.Option<{
-		isBestBefore: boolean
-		date: number
-	}>
+	expiration?: OPT.Option<number>
 }) => E.Either<
 	AtLeastOne<Errors>,
 	Product

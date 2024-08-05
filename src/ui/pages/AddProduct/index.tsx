@@ -111,27 +111,7 @@ const AddProduct: (
 										</md-filled-icon-button>
 									</div>
 								</div>
-								<label class="hidden items-center gap-3 text-onSurface">
-									<md-checkbox
-										prop:disabled={OPT.isNone(
-											state.formFields.expDate,
-										)}
-										onInput={e => {
-											dispatch({
-												type: 'updateField',
-												field: {
-													name: 'isBestBefore',
-													value:
-														e.currentTarget
-															.checked,
-												},
-											})
-										}}
-										prop:name="group"
-										prop:value="Best Before"
-									/>
-									Best Before
-								</label>
+
 								<md-filled-button
 									prop:disabled={!state.isOk}
 									class="mt-[20px]"

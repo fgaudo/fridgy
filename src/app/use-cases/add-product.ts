@@ -13,10 +13,7 @@ const flow = F.flow
 
 export interface ProductDTO {
 	name: string
-	expiration: OPT.Option<{
-		date: number
-		isBestBefore: boolean
-	}>
+	expirationDate: OPT.Option<number>
 }
 
 interface Deps {
@@ -37,7 +34,7 @@ export const command: (deps: Deps) => AddProduct =
 			),
 			RT.chain(({ product, timestamp }) =>
 				pipe(
-					product.expiration,
+					product.expirationDate,
 					OPT.match(
 						() => (deps: Deps) =>
 							deps.addProduct({
@@ -45,7 +42,7 @@ export const command: (deps: Deps) => AddProduct =
 								creationDate: timestamp,
 							}),
 						expiration =>
-							timestamp > expiration.date
+							timestamp > expiration
 								? RTE.left(
 										new Error(
 											'Date is in the past',

@@ -1,11 +1,20 @@
+/* eslint-disable @typescript-eslint/no-unnecessary-condition */
 import Dexie from 'dexie'
 import { either as E } from 'fp-ts'
 
 import { PRODUCTS_TABLE } from './schema'
 
 async function persistStorage() {
-	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-	return navigator.storage?.persist?.()
+	const result =
+		await navigator.storage?.persist?.()
+
+	if (!result) {
+		return E.left(
+			'This app needs persistent storage to work. Please restart the app and make sure to give storage permissions',
+		)
+	}
+
+	return E.right(undefined)
 }
 
 export const createDB = async (): Promise<
@@ -13,10 +22,8 @@ export const createDB = async (): Promise<
 > => {
 	const result = await persistStorage()
 
-	if (!result) {
-		return E.left(
-			'This app needs persistent storage to work. Please restart the app and make sure to give storage permissions',
-		)
+	if (E.isLeft(result)) {
+		return result
 	}
 
 	const db = new Dexie('Fridgy')

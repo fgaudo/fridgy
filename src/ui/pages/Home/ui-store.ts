@@ -1,6 +1,7 @@
 import { createEffect } from 'solid-js'
 import * as SS from 'solid-js/store'
 
+import { onResume } from '@/ui/core/capacitor'
 import { useFridgyNavigate } from '@/ui/router'
 
 import type { Store } from './store'
@@ -9,6 +10,7 @@ export interface UiState {
 	readonly isSelectModeEnabled: boolean
 	isOpeningAddProduct: boolean
 	isMenuOpen: boolean
+	currentTimestamp: number
 }
 
 export type UiStore = [
@@ -26,9 +28,14 @@ export const createStore: (
 		},
 		isOpeningAddProduct: false,
 		isMenuOpen: false,
+		currentTimestamp: Date.now(),
 	})
 
 	const navigate = useFridgyNavigate()
+
+	onResume(() => {
+		setUiState('currentTimestamp', Date.now())
+	})
 
 	createEffect(() => {
 		if (uiState.isMenuOpen)

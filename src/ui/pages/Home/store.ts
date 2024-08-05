@@ -18,12 +18,8 @@ import * as SS from 'solid-js/store'
 import * as RoNeS from '@/core/readonly-non-empty-set'
 
 import type { App } from '@/app'
-import type { Options } from '@/app/interfaces/read/products'
 import type { LogSeverity } from '@/app/interfaces/write/log'
-import type {
-	ProductModel,
-	Sortings,
-} from '@/app/use-cases/product-list'
+import type { ProductModel } from '@/app/use-cases/product-list'
 
 import { onResume } from '@/ui/core/capacitor'
 import { DEFAULT_FADE_MS } from '@/ui/core/constants'
@@ -37,8 +33,6 @@ const pipe = F.pipe
 
 export interface State {
 	total: number
-	offset: number
-	sortBy: Sortings
 	toastMessage: string
 	products: ProductModel[]
 	isLoading: boolean
@@ -54,10 +48,6 @@ export type Command =
 			type: 'clearSelectedProducts'
 	  }
 	| { type: 'toggleItem'; id: string }
-	| {
-			type: 'sortList'
-			by: Options['sortBy']
-	  }
 	| {
 			type: 'log'
 			severity: LogSeverity
@@ -85,8 +75,6 @@ export const createStore: (
 	const [state, setState] = SS.createStore<State>(
 		{
 			total: 0,
-			offset: 0,
-			sortBy: 'expirationDate',
 			toastMessage: '',
 			products: [],
 			isLoading: true,
@@ -136,10 +124,6 @@ export const createStore: (
 						Match.when(
 							{ type: 'refreshList' },
 							handleRefreshList(state, context),
-						),
-						Match.when(
-							{ type: 'sortList' },
-							handleSortList(),
 						),
 						Match.when(
 							{ type: 'log' },
@@ -193,13 +177,7 @@ function handleRefreshList(
 		pipe(
 			Rx.scheduled(Rx.of(cmd), Rx.asyncScheduler),
 			Rx.mergeMap(() =>
-				pipe(
-					app.productList({
-						offset: SS.unwrap(state).offset,
-						sortBy: SS.unwrap(state).sortBy,
-					}),
-					Rx.defer,
-				),
+				pipe(app.productList, Rx.defer),
 			),
 
 			Rx.map(
@@ -232,23 +210,6 @@ function handleRefreshList(
 					isLoading: true,
 				}),
 			}),
-		)
-}
-
-function handleSortList(): (
-	cmd: Command & {
-		type: 'sortList'
-	},
-) => Rx.Observable<OverviewDispatcherValue> {
-	return (cmd: Command & { type: 'sortList' }) =>
-		pipe(
-			Rx.of(cmd),
-			Rx.map(() => ({
-				mutation: (state: State) => ({
-					...state,
-					sortBy: cmd.by,
-				}),
-			})),
 		)
 }
 

@@ -1,4 +1,3 @@
-import * as Match from '@effect/match'
 import type Dexie from 'dexie'
 import {
 	apply as APPLY,
@@ -6,7 +5,9 @@ import {
 	function as F,
 	io as IO,
 	ioEither as IOE,
+	number as N,
 	option as OPT,
+	ord as ORD,
 	reader as R,
 	readerIO as RIO,
 	readerTask as RT,
@@ -20,7 +21,6 @@ import { PathReporter } from 'io-ts/PathReporter'
 import { useOrCreateError } from '@/core/utils'
 
 import {
-	type Options,
 	ProductDTO,
 	type Products,
 } from '@/app/interfaces/read/products'
@@ -112,13 +112,9 @@ const decodeProductRow = (
 ): ProductDTO => ({
 	id: product.id.toString(10),
 	name: product.name,
-	expiration: pipe(
-		product.is_best_before,
+	expirationDate: pipe(
+		product.expiration_date,
 		OPT.fromNullable,
-		OPT.map(isBestBefore => ({
-			isBestBefore,
-			date: product.expiration_date,
-		})),
 	),
 })
 
@@ -159,100 +155,85 @@ const logResults = flow(
 	),
 )
 
-const getTotalAndProducts = (options: Options) =>
-	pipe(
-		R.ask<Deps>(),
-		R.map(({ db }) =>
-			TE.tryCatch(
-				pipe(() =>
-					db.transaction(
-						'r',
-						db.table(PRODUCTS_TABLE.name),
-						APPLY.sequenceS(T.ApplyPar)({
-							total: () =>
-								db
-									.table(PRODUCTS_TABLE.name)
-									.count(),
-							products: () =>
-								db
-									.table(PRODUCTS_TABLE.name)
-									.reverse()
-									.offset(options.offset)
-									.sortBy(
-										pipe(
-											Match.value(options.sortBy),
-											Match.when(
-												'a-z',
-												() =>
-													PRODUCTS_TABLE.columns
-														.name,
-											),
-											Match.when(
-												'creationDate',
-												() =>
-													PRODUCTS_TABLE.columns
-														.creationDate,
-											),
-											Match.when(
-												'expirationDate',
-												() => `name`,
-											),
-											Match.exhaustive,
-										),
-									),
-						}),
-					),
-				),
-				useOrCreateError(
-					'There was an error while getting the products and total',
+const getTotalAndProducts = pipe(
+	R.ask<Deps>(),
+	R.map(({ db }) =>
+		TE.tryCatch(
+			pipe(() =>
+				db.transaction(
+					'r',
+					db.table(PRODUCTS_TABLE.name),
+					APPLY.sequenceS(T.ApplyPar)({
+						total: () =>
+							db
+								.table(PRODUCTS_TABLE.name)
+								.count(),
+						products: () =>
+							db
+								.table(PRODUCTS_TABLE.name)
+								.toArray(),
+					}),
 				),
 			),
-		),
-		RT.tap(
-			flow(
-				RTE.fromEither,
-				RTE.matchEW(logErrors, logResults),
+			useOrCreateError(
+				'There was an error while getting the products and total',
 			),
 		),
-	)
+	),
+	RT.tap(
+		flow(
+			RTE.fromEither,
+			RTE.matchEW(logErrors, logResults),
+		),
+	),
+)
 
 export const products: (deps: Deps) => Products =
-	F.flip(
-		F.flow(
-			RTE.of,
-			RTE.bindTo('options'),
-			RTE.bindW('results', ({ options }) =>
-				pipe(
-					getTotalAndProducts(options),
-					RTE.local((deps: Deps) => deps),
-				),
+	pipe(
+		RTE.Do,
+		RTE.bindW('results', () =>
+			pipe(
+				getTotalAndProducts,
+				RTE.local((deps: Deps) => deps),
 			),
-			RTE.bindW('items', ({ results }) =>
-				pipe(
-					decodeData(results.products),
-					R.map(TE.fromIO),
-					RTE.tapReaderIO(items =>
-						pipe(
-							R.ask<Log>(),
-							R.map(log =>
-								log({
-									message: `Decoded items: ${JSON.stringify(
-										items,
-									)}`,
-									severity: 'debug',
-								}),
-							),
+		),
+		RTE.bindW('items', ({ results }) =>
+			pipe(
+				decodeData(results.products),
+				R.map(TE.fromIO),
+				RTE.tapReaderIO(items =>
+					pipe(
+						R.ask<Log>(),
+						R.map(log =>
+							log({
+								message: `Decoded items: ${JSON.stringify(
+									items,
+								)}`,
+								severity: 'debug',
+							}),
 						),
 					),
-					RTE.local((deps: Deps) => deps.log),
+				),
+				RTE.local((deps: Deps) => deps.log),
+			),
+		),
+		RTE.map(({ items, results }) => ({
+			items: pipe(
+				items,
+				RoA.map(decodeProductRow),
+				RoA.sort(
+					pipe(
+						N.Ord,
+						ORD.reverse,
+						OPT.getOrd,
+						ORD.reverse,
+						ORD.contramap(
+							(product: ProductDTO) =>
+								product.expirationDate,
+						),
+					),
 				),
 			),
-			RTE.map(({ items, results }) => ({
-				items: pipe(
-					items,
-					RoA.map(decodeProductRow),
-				),
-				total: results.total,
-			})),
-		),
+			total: results.total,
+		})),
 	)

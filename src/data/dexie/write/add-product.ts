@@ -14,7 +14,6 @@ import { type ProductRow } from '../codec'
 import { PRODUCTS_TABLE } from '../schema'
 
 const flow = F.flow
-const pipe = F.pipe
 
 interface Deps {
 	db: Dexie
@@ -35,24 +34,15 @@ export const addProduct: (d: Deps) => AddProduct =
 								.add({
 									name: product.name,
 									creation_date: Date.now(),
-									expiration_date: pipe(
-										product.expiration,
-										OPT.match(
-											() => 0,
-											expiration =>
-												expiration.date,
-										),
-									),
-									...pipe(
-										product.expiration,
-										OPT.match(
-											() => ({}),
-											expiration => ({
-												is_best_before:
-													expiration.isBestBefore,
-											}),
-										),
-									),
+									...(OPT.isSome(
+										product.expirationDate,
+									)
+										? {
+												expiration_date:
+													product.expirationDate
+														.value,
+											}
+										: {}),
 								} satisfies Omit<
 									ProductRow,
 									'id'

@@ -22,7 +22,6 @@ export interface State {
 	formFields: {
 		name: string
 		expDate: OPT.Option<number>
-		isBestBefore: boolean
 	}
 	isOk: boolean
 	toastMessage: string
@@ -44,10 +43,6 @@ export type Command =
 						name: 'expDate'
 						value: State['formFields']['expDate']
 				  }
-				| {
-						name: 'isBestBefore'
-						value: State['formFields']['isBestBefore']
-				  }
 	  }
 	| {
 			type: 'log'
@@ -63,7 +58,6 @@ interface InternalCommand {
 const defaultFields = () => ({
 	name: '',
 	expDate: OPT.none,
-	isBestBefore: false,
 })
 
 const validateFields = (
@@ -222,14 +216,8 @@ function handleAddProduct(
 				pipe(
 					app.addProduct({
 						name: state.formFields.name,
-						expiration: pipe(
+						expirationDate:
 							state.formFields.expDate,
-							OPT.map(expDate => ({
-								isBestBefore:
-									state.formFields.isBestBefore,
-								date: expDate,
-							})),
-						),
 					}),
 					Rx.defer,
 				),
