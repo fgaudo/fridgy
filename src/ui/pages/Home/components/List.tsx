@@ -34,7 +34,12 @@ export const List: Component = () => {
 					state.total <= 0,
 			}}>
 			<Portal>
-				<p class="fixed top-[64px] w-full bg-background px-[14px] pb-[8px] pt-[10px] text-xs">
+				<p
+					class="fixed top-[64px] w-full bg-background px-[14px] pb-[8px] pt-[10px] text-xs transition-all"
+					classList={{
+						'opacity-0 pointer-events-none':
+							state.total <= 0,
+					}}>
 					{totalItems()} items
 				</p>
 			</Portal>
