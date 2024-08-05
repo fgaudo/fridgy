@@ -57,7 +57,7 @@ export function render(
 						resourcesAreLoaded={isFontLoaded}
 					/>
 					<div
-						class="duration-fade transition-all"
+						class="transition-all duration-fade"
 						classList={{
 							'opacity-0 invisible':
 								!isFontLoaded(),

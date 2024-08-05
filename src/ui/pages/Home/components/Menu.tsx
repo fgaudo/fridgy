@@ -1,5 +1,8 @@
+import { A } from '@solidjs/router'
 import { type Component } from 'solid-js'
 import { Portal } from 'solid-js/web'
+
+import { ROUTES } from '@/ui/router'
 
 import { useUiStateContext } from '../context'
 
@@ -37,12 +40,14 @@ export const Menu: Component = () => {
 							Fridgy
 						</p>
 						<md-list>
-							<md-list-item prop:type="button">
-								<md-icon slot="start">
-									info
-								</md-icon>
-								<div slot="headline">About</div>
-							</md-list-item>
+							<A href={ROUTES.about}>
+								<md-list-item prop:type="button">
+									<md-icon slot="start">
+										info
+									</md-icon>
+									<div slot="headline">About</div>
+								</md-list-item>
+							</A>
 						</md-list>
 					</div>
 				</div>
