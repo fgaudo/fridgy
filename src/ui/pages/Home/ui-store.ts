@@ -1,4 +1,8 @@
-import { createEffect } from 'solid-js'
+import {
+	Haptics,
+	ImpactStyle,
+} from '@capacitor/haptics'
+import { createEffect, on } from 'solid-js'
 import * as SS from 'solid-js/store'
 
 import { onResume } from '@/ui/core/capacitor'
@@ -32,6 +36,28 @@ export const createStore: (
 	})
 
 	const navigate = useFridgyNavigate()
+
+	createEffect(
+		on(
+			[
+				() => uiState.isSelectModeEnabled,
+				() => state.selectedProducts.size,
+			],
+			([isSelectModeEnabled], previous) => {
+				if (!previous) {
+					return
+				}
+				const prevSelect = previous[0]
+
+				if (!prevSelect && isSelectModeEnabled) {
+					void Haptics.impact({
+						style: ImpactStyle.Light,
+					})
+					return
+				}
+			},
+		),
+	)
 
 	onResume(() => {
 		setUiState('currentTimestamp', Date.now())

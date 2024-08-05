@@ -1,8 +1,9 @@
 {
 	"name": "fridgy",
-	"version": "0.0.0",
 	"license": "AGPL-3.0-or-later",
+	"private": true,
 	"type": "module",
+	"author": "Francesco Gaudenzi <fgaudo@gmail.com>",
 	"scripts": {
 		"test": "node --test --require ts-node/register **/*.spec.ts",
 		"dev": "vite",
@@ -17,7 +18,7 @@
 		"@capacitor/haptics": "^6.0.0",
 		"@effect/match": "^0.40.0",
 		"@fontsource-variable/comfortaa": "^5.0.20",
-		"@fontsource-variable/material-symbols-rounded": "^5.0.36",
+		"@fontsource-variable/material-symbols-rounded": "^5.0.37",
 		"@fontsource-variable/roboto-flex": "^5.0.15",
 		"@material/material-color-utilities": "^0.3.0",
 		"@material/web": "^2.0.0",
@@ -39,11 +40,10 @@
 		"@trivago/prettier-plugin-sort-imports": "^4.3.0",
 		"@types/eslint__js": "^8.42.3",
 		"@vitejs/plugin-basic-ssl": "^1.1.0",
-		"autoprefixer": "^10.4.19",
+		"autoprefixer": "^10.4.20",
 		"cssnano": "^7.0.4",
 		"eslint": "^9.8.0",
 		"eslint-config-prettier": "^9.1.0",
-		"eslint-plugin-import": "^2.29.1",
 		"eslint-plugin-solid": "^0.14.1",
 		"jsdom": "^24.1.1",
 		"postcss": "^8.4.40",
@@ -51,12 +51,12 @@
 		"prettier-plugin-tailwindcss": "^0.6.5",
 		"tailwindcss": "^3.4.7",
 		"typescript": "^5.5.4",
-		"typescript-eslint": "8.0.0-alpha.54",
+		"typescript-eslint": "8.0.0",
 		"vite": "^5.3.5",
 		"vite-plugin-singlefile": "^2.0.2",
 		"vite-plugin-solid": "^2.10.2",
 		"vite-tsconfig-paths": "^4.3.2",
 		"vitest": "^2.0.4"
 	},
-	"packageManager": "pnpm@8.14.0+sha512.5d4bf97b349faf1a51318aa1ba887e99d9c36e203dbcb55938a91fddd2454246cb00723d6642f54d463a0f52a2701dadf8de002a37fc613c9cdc94ed5675ddce"
+	"packageManager": "pnpm@9.6.0+sha512.38dc6fba8dba35b39340b9700112c2fe1e12f10b17134715a4aa98ccf7bb035e76fd981cf0bb384dfa98f8d6af5481c2bef2f4266a24bfa20c34eb7147ce0b5e"
 }

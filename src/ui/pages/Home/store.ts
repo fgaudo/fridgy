@@ -1,7 +1,3 @@
-import {
-	Haptics,
-	ImpactStyle,
-} from '@capacitor/haptics'
 import * as Match from '@effect/match'
 import {
 	either as E,
@@ -292,17 +288,12 @@ function handleDeleteProducts(
 	) =>
 		pipe(
 			Rx.scheduled(
-				Rx.from(
-					Haptics.impact({
-						style: ImpactStyle.Light,
-					}),
+				Rx.of(
+					RoNeS.fromSet(
+						SS.unwrap(state).selectedProducts,
+					),
 				),
 				Rx.asyncScheduler,
-			),
-			Rx.map(() =>
-				RoNeS.fromSet(
-					SS.unwrap(state).selectedProducts,
-				),
 			),
 			Rx.map(
 				E.fromOption(

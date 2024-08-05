@@ -8,11 +8,12 @@ export function tidy(object: unknown): string {
 
 interface Deps {
 	readonly prefix: string
+	isDev: boolean
 }
 
 export const log: (d: Deps) => Log = F.flip(
 	({ severity: type, message }) =>
-		({ prefix }) =>
+		({ prefix, isDev }) =>
 		() => {
 			switch (type) {
 				case 'info': {
@@ -43,12 +44,15 @@ export const log: (d: Deps) => Log = F.flip(
 					return
 				}
 				case 'debug': {
-					console.debug(
-						`[%c${prefix}%c]`,
-						'font-weight: bold',
-						'font-weight: normal',
-						message,
-					)
+					if (isDev) {
+						console.debug(
+							`[%c${prefix}%c]`,
+							'font-weight: bold',
+							'font-weight: normal',
+							message,
+						)
+					}
+
 					return
 				}
 			}

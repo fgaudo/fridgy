@@ -7,8 +7,7 @@ export const ExpirationBar: Component<{
 	creation: number
 }> = props => {
 	const {
-		store: [state],
-		uiStore: [uiState, setUiState],
+		uiStore: [uiState],
 	} = useUiStateContext()!
 
 	const isExpired = () =>

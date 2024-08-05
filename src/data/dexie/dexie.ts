@@ -1,31 +1,8 @@
-/* eslint-disable @typescript-eslint/no-unnecessary-condition */
 import Dexie from 'dexie'
-import { either as E } from 'fp-ts'
 
 import { PRODUCTS_TABLE } from './schema'
 
-async function persistStorage() {
-	const result =
-		await navigator.storage?.persist?.()
-
-	if (!result) {
-		return E.left(
-			'This app needs persistent storage to work. Please restart the app and make sure to give storage permissions',
-		)
-	}
-
-	return E.right(undefined)
-}
-
-export const createDB = async (): Promise<
-	E.Either<string, Dexie>
-> => {
-	const result = await persistStorage()
-
-	if (E.isLeft(result)) {
-		return result
-	}
-
+export const createDB = (): Dexie => {
 	const db = new Dexie('Fridgy')
 
 	db.version(1).stores({
@@ -37,5 +14,5 @@ export const createDB = async (): Promise<
 		].join(','),
 	})
 
-	return E.right(db)
+	return db
 }
