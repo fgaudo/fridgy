@@ -5,7 +5,7 @@ import type { ProductModel } from '@/app/use-cases/product-list'
 import { useUiStateContext } from '../context'
 
 export const ExpirationBar: Component<{
-	id: ProductModel['id']
+	expiration: () => number
 }> = props => {
 	const {
 		store: [state],

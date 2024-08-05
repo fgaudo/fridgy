@@ -49,7 +49,7 @@ export const List: Component = () => {
 							<div
 								class="absolute transition-all duration-fade"
 								style={{
-									top: `${(i() * 73 + 9).toString(10)}px`,
+									top: `${(i() * 72 + 9).toString(10)}px`,
 									left: '0',
 									right: '0',
 								}}>
@@ -88,62 +88,96 @@ export const List: Component = () => {
 											})
 										}
 									}}>
-									<Show
-										fallback={
-											<div slot="supporting-text" />
-										}
-										when={
-											OPT.isSome(
-												model.expirationDate,
-											) &&
-											model.expirationDate.value
-										}>
-										{expiration => (
-											<>
+									<div
+										slot="end"
+										class="relative flex h-[24px] w-[24px] items-center justify-center text-sm transition-all duration-fade">
+										<md-icon
+											classList={{
+												'opacity-0':
+													state.selectedProducts.has(
+														model.id,
+													) ||
+													!uiState.isSelectModeEnabled,
+											}}
+											class="absolute text-primary transition-all duration-fade">
+											check_box_outline_blank
+										</md-icon>
+										<md-icon
+											classList={{
+												'opacity-0':
+													!state.selectedProducts.has(
+														model.id,
+													) ||
+													!uiState.isSelectModeEnabled,
+											}}
+											style={{
+												'font-variation-settings':
+													"'FILL' 1",
+											}}
+											class="absolute text-primary transition-all duration-fade">
+											check_box
+										</md-icon>
+										<Show
+											when={
+												OPT.isSome(
+													model.expirationDate,
+												) &&
+												model.expirationDate.value
+											}>
+											{expiration => (
 												<div
-													slot="end"
-													class="relative flex h-[24px] w-[24px] items-center justify-center text-sm transition-all duration-fade">
-													<md-icon
-														classList={{
-															'opacity-0':
-																state.selectedProducts.has(
-																	model.id,
-																) ||
-																!uiState.isSelectModeEnabled,
-														}}
-														class="absolute text-primary transition-all duration-fade">
-														check_box_outline_blank
-													</md-icon>
-													<md-icon
-														classList={{
-															'opacity-0':
-																!state.selectedProducts.has(
-																	model.id,
-																) ||
-																!uiState.isSelectModeEnabled,
-														}}
-														style={{
-															'font-variation-settings':
-																"'FILL' 1",
-														}}
-														class="absolute text-primary transition-all duration-fade">
-														check_box
-													</md-icon>
-													<div
-														class="absolute text-xs text-primary transition-all duration-fade"
-														classList={{
-															'opacity-0':
-																uiState.isSelectModeEnabled,
-														}}>
-														{formatRemainingTime(
-															uiState.currentTimestamp,
-															expiration(),
-														)}
-													</div>
+													class="absolute text-xs text-primary transition-all duration-fade"
+													classList={{
+														'opacity-0':
+															uiState.isSelectModeEnabled,
+													}}>
+													{formatRemainingTime(
+														uiState.currentTimestamp,
+														expiration(),
+													)}
 												</div>
-												<div
-													slot="start"
-													class="flex flex-col items-center">
+											)}
+										</Show>
+									</div>
+
+									<div slot="supporting-text">
+										<Show
+											when={
+												OPT.isSome(
+													model.expirationDate,
+												) &&
+												model.expirationDate.value
+											}>
+											{expiration => (
+												<ExpirationBar
+													expiration={expiration}
+												/>
+											)}
+										</Show>
+									</div>
+
+									<div
+										slot="start"
+										class="flex flex-col items-center">
+										<Show
+											fallback={
+												<>
+													<div class="text-sm">
+														No
+													</div>
+													<div class="text-sm">
+														EXP
+													</div>
+												</>
+											}
+											when={
+												OPT.isSome(
+													model.expirationDate,
+												) &&
+												model.expirationDate.value
+											}>
+											{expiration => (
+												<>
 													<div class="text-sm">
 														{format(
 															expiration(),
@@ -156,16 +190,10 @@ export const List: Component = () => {
 															'LLL',
 														)}
 													</div>
-												</div>
-
-												<div slot="supporting-text">
-													<ExpirationBar
-														id={model.id}
-													/>
-												</div>
-											</>
-										)}
-									</Show>
+												</>
+											)}
+										</Show>
+									</div>
 									<div
 										slot="headline"
 										class="text-ellipsis whitespace-nowrap capitalize">
