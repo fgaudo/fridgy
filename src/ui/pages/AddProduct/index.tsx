@@ -1,3 +1,4 @@
+import { endOfDay } from 'date-fns'
 import { option as OPT } from 'fp-ts'
 import {
 	type Component,
@@ -93,9 +94,12 @@ const AddProduct: (
 																.valueAsNumber,
 														)
 															? OPT.none
-															: OPT.fromNullable(
-																	e.currentTarget
-																		.valueAsNumber,
+															: OPT.some(
+																	endOfDay(
+																		e
+																			.currentTarget
+																			.valueAsNumber,
+																	).getTime(),
 																),
 													},
 												})

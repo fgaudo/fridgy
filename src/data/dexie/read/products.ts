@@ -5,6 +5,7 @@ import {
 	function as F,
 	io as IO,
 	ioEither as IOE,
+	monoid as MO,
 	number as N,
 	option as OPT,
 	ord as ORD,
@@ -13,6 +14,7 @@ import {
 	readerTask as RT,
 	readerTaskEither as RTE,
 	readonlyArray as RoA,
+	string as S,
 	task as T,
 	taskEither as TE,
 } from 'fp-ts'
@@ -167,7 +169,7 @@ const getTotalAndProducts = pipe(
 						total: () =>
 							db
 								.table(PRODUCTS_TABLE.name)
-								.count(),
+								.count(), // for future pagination
 						products: () =>
 							db
 								.table(PRODUCTS_TABLE.name)
@@ -187,6 +189,8 @@ const getTotalAndProducts = pipe(
 		),
 	),
 )
+
+const M = ORD.getMonoid<ProductDTO>()
 
 export const products: (deps: Deps) => Products =
 	pipe(
@@ -222,16 +226,25 @@ export const products: (deps: Deps) => Products =
 				items,
 				RoA.map(decodeProductRow),
 				RoA.sort(
-					pipe(
-						N.Ord,
-						ORD.reverse,
-						OPT.getOrd,
-						ORD.reverse,
-						ORD.contramap(
-							(product: ProductDTO) =>
-								product.expirationDate,
+					MO.concatAll(M)([
+						pipe(
+							N.Ord,
+							ORD.reverse,
+							OPT.getOrd,
+							ORD.reverse,
+							ORD.contramap(
+								(product: ProductDTO) =>
+									product.expirationDate,
+							),
 						),
-					),
+						pipe(
+							S.Ord,
+							ORD.contramap(
+								(product: ProductDTO) =>
+									product.name,
+							),
+						),
+					]),
 				),
 			),
 			total: results.total,

@@ -224,13 +224,12 @@ function handleAddProduct(
 			),
 			Rx.map(
 				E.matchW(
-					() =>
+					error =>
 						({
 							cmds: [
 								{
 									type: '_showToast',
-									message:
-										'There was a problem adding the product',
+									message: `Error: ${error.message}`,
 								},
 							],
 						}) as const,
