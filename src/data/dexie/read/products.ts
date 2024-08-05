@@ -118,6 +118,7 @@ const decodeProductRow = (
 		product.expiration_date,
 		OPT.fromNullable,
 	),
+	creationDate: product.creation_date,
 })
 
 const logErrors = flow(

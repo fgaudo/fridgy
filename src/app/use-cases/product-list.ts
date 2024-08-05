@@ -34,6 +34,7 @@ export interface ProductModel {
 	id: string
 	name: string
 	expirationDate: OPT.Option<number>
+	creationDate: number
 	isExpired: boolean
 }
 
@@ -50,6 +51,7 @@ export interface UseCases {
 
 interface ProductEntity {
 	id: string
+	creationDate: number
 	product: Product
 }
 
@@ -70,6 +72,7 @@ const toProductEntitiesWithInvalid: (
 				({
 					id: entityDTO.id,
 					product,
+					creationDate: entityDTO.creationDate,
 				}) as const,
 		),
 	),
@@ -90,15 +93,18 @@ const toProductModels: (
 		T.map(timestamp =>
 			pipe(
 				products,
-				RoA.map(({ id, product }) => ({
-					id,
-					name: name(product),
-					isExpired: isExpired(
-						product,
-						timestamp,
-					),
-					expirationDate: expiration(product),
-				})),
+				RoA.map(
+					({ id, product, creationDate }) => ({
+						id,
+						name: name(product),
+						isExpired: isExpired(
+							product,
+							timestamp,
+						),
+						expirationDate: expiration(product),
+						creationDate,
+					}),
+				),
 			),
 		),
 	)

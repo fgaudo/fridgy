@@ -143,9 +143,9 @@ export const formatRemainingTime = (
 		return `${differenceInHours(to, from).toString(10)}h`
 	}
 
-	if (days <= 31) {
+	if (days <= 28) {
 		return `${days.toString(10)}d`
 	}
 
-	return `>1m`
+	return `>4w`
 }

@@ -12,6 +12,7 @@ export interface ProductDTO {
 	id: string
 	name: string
 	expirationDate: OPT.Option<number>
+	creationDate: number
 }
 
 export const ProductDTO = {
