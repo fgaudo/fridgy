@@ -51,11 +51,11 @@ export const About: () => Component =
 					<md-divider class="my-[12px]" />
 					<p>
 						For any issues, requests or feedback
-						you can open a ticket at{' '}
+						you can{' '}
 						<a
 							class="text-primary underline"
 							href="https://github.com/fgaudo/fridgy/issues">
-							https://github.com/fgaudo/fridgy/issues
+							open a ticket
 						</a>{' '}
 						or send me an email at{' '}
 						<a
@@ -63,6 +63,7 @@ export const About: () => Component =
 							href="mailto:fgaudo@gmail.com">
 							fgaudo@gmail.com
 						</a>
+						.
 					</p>
 				</div>
 			</>
