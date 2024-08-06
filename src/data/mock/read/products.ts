@@ -55,6 +55,7 @@ export const products: R.Reader<Deps, Products> =
 										productSamples.length,
 								)
 							],
+							creationDate: Date.now(),
 							expirationDate: OPT.some(
 								Date.now() +
 									100000 +

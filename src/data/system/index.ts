@@ -7,12 +7,17 @@ import { log } from './write/log'
 export interface Deps {
 	appLogPrefix: string
 	uiLogPrefix: string
+	isDev: boolean
 }
 
 export const implementations: R.Reader<
 	Deps,
 	Pick<Contracts, 'appLog' | 'uiLog'>
-> = ({ appLogPrefix: prefix, uiLogPrefix }) => ({
-	appLog: log({ prefix }),
-	uiLog: log({ prefix: uiLogPrefix }),
+> = ({
+	appLogPrefix: prefix,
+	uiLogPrefix,
+	isDev,
+}) => ({
+	appLog: log({ prefix, isDev }),
+	uiLog: log({ prefix: uiLogPrefix, isDev }),
 })

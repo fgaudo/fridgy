@@ -41,7 +41,7 @@ export const Router: Component<{
 }
 
 export type Navigator = (
-	route: keyof typeof ROUTES,
+	route: keyof typeof ROUTES | number,
 	options?: Partial<SR.NavigateOptions>,
 ) => void
 
@@ -50,9 +50,13 @@ export const useFridgyNavigate: () => Navigator =
 		const navigator = SR.useNavigate()
 
 		return (
-			route: keyof typeof ROUTES,
+			route: keyof typeof ROUTES | number,
 			options?: Partial<SR.NavigateOptions>,
 		) => {
+			if (typeof route === 'number') {
+				navigator(route)
+				return
+			}
 			navigator(ROUTES[route], options)
 		}
 	}

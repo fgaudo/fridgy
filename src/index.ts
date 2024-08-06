@@ -17,16 +17,27 @@ const isDev = import.meta.env.DEV
 
 const db = createDB()
 
-void onResumeInit().then(() => {
-	const app: App = new App({
-		...dexieUseCases({
-			db,
-			log: log({ prefix: 'data', isDev }),
+void onResumeInit()
+	.then(() =>
+		CAP.addListener('backButton', e => {
+			if (!e.canGoBack) {
+				void CAP.exitApp()
+				return
+			}
+			window.history.back()
 		}),
-		...systemUseCases({
-			appLogPrefix: 'app',
-			uiLogPrefix: 'ui',
-		}),
+	)
+	.then(() => {
+		const app: App = new App({
+			...dexieUseCases({
+				db,
+				log: log({ prefix: 'data', isDev }),
+			}),
+			...systemUseCases({
+				isDev,
+				appLogPrefix: 'app',
+				uiLogPrefix: 'ui',
+			}),
+		})
+		render(app, root)
 	})
-	render(app, root)
-})
