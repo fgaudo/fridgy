@@ -32,7 +32,7 @@ export const ProductDTO = {
 } as const
 
 export type Products = TE.TaskEither<
-	Error,
+	string,
 	{
 		items: readonly ProductDTO[]
 		total: number

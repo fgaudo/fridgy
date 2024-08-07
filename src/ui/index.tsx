@@ -1,3 +1,4 @@
+import { App as CAP } from '@capacitor/app'
 import '@fontsource-variable/comfortaa/index.css'
 import '@fontsource-variable/material-symbols-rounded/full.css'
 import '@fontsource-variable/roboto-flex/full.css'
@@ -25,15 +26,16 @@ import type { App } from '@/app'
 import '@/ui/index.css'
 import { applyTheme } from '@/ui/material-web'
 
+import { onResumeInit } from './core/capacitor'
 import { DEFAULT_FADE_MS } from './core/constants'
 import { Router } from './router'
 
 const MAIN_COLOR = '#DD7230'
 
-export function render(
+export async function render(
 	app: App,
 	root: HTMLElement,
-): void {
+): Promise<void> {
 	const scheme = new SchemeTonalSpot(
 		Hct.fromInt(argbFromHex(MAIN_COLOR)),
 		false,
@@ -41,6 +43,17 @@ export function render(
 	)
 
 	applyTheme(document.body, scheme)
+
+	await Promise.all([
+		onResumeInit(),
+		CAP.addListener('backButton', e => {
+			if (!e.canGoBack) {
+				void CAP.exitApp()
+				return
+			}
+			window.history.back()
+		}),
+	])
 
 	solidRender(
 		() => {

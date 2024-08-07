@@ -1,6 +1,11 @@
 apply plugin: 'com.android.application'
+apply plugin: 'kotlin-android'
 
 android {
+
+    kotlinOptions {
+        jvmTarget = '17'
+    }
     namespace "net.gaudo.fridgy"
     compileSdk rootProject.ext.compileSdkVersion
     defaultConfig {
@@ -30,6 +35,7 @@ repositories {
     }
 }
 
+
 dependencies {
     implementation fileTree(include: ['*.jar'], dir: 'libs')
     implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
@@ -43,6 +49,7 @@ dependencies {
 }
 
 apply from: 'capacitor.build.gradle'
+apply plugin: 'org.jetbrains.kotlin.android'
 
 try {
     def servicesJSON = file('google-services.json')
