@@ -58,5 +58,6 @@ export const deleteProductsByIds: (
 				),
 			),
 		),
+		RTE.mapLeft(e => e.message),
 	),
 )

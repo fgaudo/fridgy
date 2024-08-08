@@ -5,6 +5,8 @@ import type { Log } from '@/app/interfaces/write/log'
 
 import type { FridgySqlitePlugin } from './fridgy-sqlite-plugin'
 import { products } from './read/products'
+import { addProduct } from './write/add-product'
+import { deleteProductsByIds } from './write/delete-products-by-ids'
 
 export interface Deps {
 	db: FridgySqlitePlugin

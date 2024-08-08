@@ -15,7 +15,7 @@ interface Deps {
 
 export type DeleteProductsByIds = (
 	ids: ReadonlyNonEmptySet<string>,
-) => TE.TaskEither<Error, void>
+) => TE.TaskEither<string, void>
 
 export const command: (
 	deps: Deps,

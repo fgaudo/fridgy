@@ -8,6 +8,7 @@ import com.getcapacitor.PluginMethod
 import com.getcapacitor.annotation.CapacitorPlugin
 import net.gaudo.fridgy.data.EitherJS
 import net.gaudo.fridgy.data.FridgySqliteOpenHelper
+import net.gaudo.fridgy.data.Product
 import net.gaudo.fridgy.data.Result
 
 @CapacitorPlugin(name = "FridgySqlitePlugin")
@@ -35,6 +36,36 @@ class DatabasePlugin : Plugin() {
         } catch (e: Exception) {
             call.resolve(
                 EitherJS.left("There was a problem opening the database: ${e.message}")
+            )
+            return
+        }
+    }
+
+
+    @PluginMethod
+    fun addProduct(call: PluginCall) {
+        val db = helper
+        if (db == null) {
+            call.resolve(
+                EitherJS.left("Db already open")
+            )
+            return
+        }
+        try {
+            val product = call.getObject("product")
+            val name = product.getString("name")!!
+            val creationDate = product.getLong("creationDate")
+            val expirationDate = product.optLong("expirationDate")
+
+            db.addProduct(Product(name, creationDate, expirationDate))
+
+            call.resolve(
+                EitherJS.right(null)
+            )
+            return
+        } catch (e: Exception) {
+            call.resolve(
+                EitherJS.left("There was a problem: ${e.message}")
             )
             return
         }

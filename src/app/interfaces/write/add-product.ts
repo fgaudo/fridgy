@@ -11,4 +11,4 @@ export interface ProductDTO {
 
 export type AddProduct = (
 	product: ProductDTO,
-) => TE.TaskEither<Error, void>
+) => TE.TaskEither<string, void>

@@ -296,9 +296,7 @@ function handleDeleteProducts(
 				Rx.asyncScheduler,
 			),
 			Rx.map(
-				E.fromOption(
-					() => new Error('No item selected'),
-				),
+				E.fromOption(() => 'No item selected'),
 			),
 			Rx.mergeMap(
 				F.flow(

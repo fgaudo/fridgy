@@ -22,7 +22,7 @@ interface Deps {
 
 export type AddProduct = (
 	p: ProductDTO,
-) => TE.TaskEither<Error, void>
+) => TE.TaskEither<string, void>
 
 export const command: (deps: Deps) => AddProduct =
 	F.flip(
@@ -32,7 +32,7 @@ export const command: (deps: Deps) => AddProduct =
 			RT.bind('timestamp', () =>
 				RT.fromIO(Date.now),
 			),
-			RT.chain(({ product, timestamp }) =>
+			RT.chainW(({ product, timestamp }) =>
 				pipe(
 					product.expirationDate,
 					OPT.match(
@@ -43,11 +43,7 @@ export const command: (deps: Deps) => AddProduct =
 							}),
 						expiration =>
 							timestamp > expiration
-								? RTE.left(
-										new Error(
-											'Date is in the past',
-										),
-									)
+								? RTE.left('Date is in the past')
 								: deps =>
 										deps.addProduct({
 											...product,

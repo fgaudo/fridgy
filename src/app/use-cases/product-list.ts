@@ -173,11 +173,8 @@ export const useCase: (
 	RTE.bindW('models', ({ entities }) =>
 		pipe(entities, toProductModels, RTE.fromTask),
 	),
-	RTE.bimap(
-		error => error.message,
-		({ result: { total }, models }) => ({
-			total,
-			models,
-		}),
-	),
+	RTE.map(({ result: { total }, models }) => ({
+		total,
+		models,
+	})),
 )

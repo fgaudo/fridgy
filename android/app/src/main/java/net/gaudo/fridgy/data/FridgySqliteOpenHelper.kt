@@ -6,6 +6,9 @@ import android.database.sqlite.SQLiteOpenHelper
 import androidx.core.database.getLongOrNull
 import androidx.core.database.sqlite.transaction
 
+private val lock = Any()
+
+
 class FridgySqliteOpenHelper(
     context: Context?, name: String?, version: Int
 ) : SQLiteOpenHelper(context, name, null, version) {
@@ -19,11 +22,12 @@ class FridgySqliteOpenHelper(
         val db = readableDatabase
 
         try {
-            db.transaction {
-                val products = db.rawQuery(getAllProductsSql, null).use {
-                    if (!it.moveToFirst()) return@use emptyList<Product>()
+            db.transaction(false) {
 
-                    val list = mutableListOf<Product>()
+                val products = db.rawQuery(getAllProductsSql, null).use {
+                    if (!it.moveToFirst()) return@use emptyList<ProductEntity>()
+
+                    val list = mutableListOf<ProductEntity>()
                     do {
                         val id = run {
                             val index = it.getColumnIndex(Schema.ProductsTable.Columns.id)
@@ -51,7 +55,7 @@ class FridgySqliteOpenHelper(
                         }
 
                         list.add(
-                            Product(id, name, expirationDate, creationDate)
+                            ProductEntity(id, name, expirationDate, creationDate)
                         )
                     } while (it.moveToNext())
 
@@ -86,6 +90,33 @@ class FridgySqliteOpenHelper(
         }
     }
 
+    fun addProduct(product: Product): Result<String, Unit> {
+        val db = writableDatabase
+
+        try {
+            if (product.expirationDate == null) {
+                db.execSQL(
+                    addProductSql, arrayOf(product.name, product.creationDate)
+                )
+            } else {
+                db.transaction {
+                    db.execSQL(
+                        addProductSql, arrayOf(product.name, product.creationDate)
+                    )
+                    db.execSQL(
+                        addExpirationSql, arrayOf(product.expirationDate)
+                    )
+                }
+            }
+
+            return Result.Success(Unit)
+
+        } catch (e: Exception) {
+            return Result.Error("There was an error: ${e.message}")
+        }
+
+    }
+
     override fun onCreate(db: SQLiteDatabase) {
         db.transaction {
             db.execSQL(createProductsTableSql)
@@ -109,11 +140,12 @@ private val getAllProductsSql = run {
         "${EXPIRATION_DATES}.${Schema.ExpirationDateTable.Columns.productId}"
 
 
-    """
+   """
         SELECT ${PRODUCT_ID}, ${PRODUCT_NAME}, ${PRODUCT_CREATION_DATE}, ${EXPIRATION_DATE}
             FROM ${PRODUCTS} 
             LEFT JOIN ${EXPIRATION_DATES}
                 ON ${PRODUCT_ID} = ${EXPIRATION_DATE_PRODUCT_ID}
+            ORDER BY ${EXPIRATION_DATE} IS NULL, ${EXPIRATION_DATE}
     """.trimIndent()
 }
 
@@ -129,12 +161,26 @@ private val deleteProductsByIds = { numberOfTokens: Int ->
     """.trimIndent()
 }
 
+private val addProductSql = """
+      INSERT INTO ${Schema.ProductsTable.name}
+            (${Schema.ProductsTable.Columns.name}, ${Schema.ProductsTable.Columns.creationDate}) 
+              VALUES (?, ?)
+
+    """.trimIndent()
+
+private val addExpirationSql = """
+      INSERT INTO ${Schema.ExpirationDateTable.name}
+            (${Schema.ExpirationDateTable.Columns.productId}, ${Schema.ExpirationDateTable.Columns.expirationDate})  
+               VALUES (last_insert_rowid(), ?)
+    """.trimIndent()
+
+
 private val createProductsTableSql = """
         CREATE TABLE ${Schema.ProductsTable.name}(
             ${Schema.ProductsTable.Columns.id} INTEGER PRIMARY KEY ASC,
             ${Schema.ProductsTable.Columns.name} TEXT,
             ${Schema.ProductsTable.Columns.creationDate} Long
-        );
+        )
     """.trimIndent()
 
 private val createExpirationDatesTableSql = """
@@ -144,5 +190,5 @@ private val createExpirationDatesTableSql = """
             FOREIGN KEY(${Schema.ExpirationDateTable.Columns.productId})
                 REFERENCES ${Schema.ProductsTable.name}(${Schema.ProductsTable.Columns.id})
                 ON DELETE CASCADE
-        );
+        )
     """.trimIndent()

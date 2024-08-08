@@ -229,7 +229,7 @@ function handleAddProduct(
 							cmds: [
 								{
 									type: '_showToast',
-									message: `Error: ${error.message}`,
+									message: `Error: ${error}`,
 								},
 							],
 						}) as const,

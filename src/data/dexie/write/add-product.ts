@@ -56,6 +56,9 @@ export const addProduct: (d: Deps) => AddProduct =
 					),
 				),
 			),
-			RTE.map(() => undefined),
+			RTE.bimap(
+				e => e.message,
+				() => undefined,
+			),
 		),
 	)

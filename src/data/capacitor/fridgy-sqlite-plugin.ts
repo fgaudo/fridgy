@@ -10,7 +10,15 @@ export interface FridgySqlitePlugin {
 		E.Either<string, unknown>
 	>
 
+	addProduct(data: {
+		product: {
+			name: string
+			creationDate: number
+			expirationDate?: number
+		}
+	}): Promise<E.Either<string, void>>
+
 	deleteProductsByIds(data: {
-		ids: number[]
+		ids: readonly number[]
 	}): Promise<E.Either<string, void>>
 }

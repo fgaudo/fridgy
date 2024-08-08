@@ -1,6 +1,7 @@
 package net.gaudo.fridgy.data
 
-data class Product(
+data class ProductEntity(
+    val id: Long,
     val name: String,
     val expirationDate: Long?,
     val creationDate: Long

@@ -250,4 +250,5 @@ export const products: (deps: Deps) => Products =
 			),
 			total: results.total,
 		})),
+		RTE.mapLeft(e => e.message),
 	)
