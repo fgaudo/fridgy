@@ -1,14 +1,10 @@
-import { either as E } from 'fp-ts'
-
 export interface FridgySqlitePlugin {
 	openDB(data: {
 		version: string
 		name: string
-	}): Promise<E.Either<string, void>>
+	}): Promise<unknown>
 
-	getAllProductsWithTotal(): Promise<
-		E.Either<string, unknown>
-	>
+	getAllProductsWithTotal(): Promise<unknown>
 
 	addProduct(data: {
 		product: {
@@ -16,9 +12,9 @@ export interface FridgySqlitePlugin {
 			creationDate: number
 			expirationDate?: number
 		}
-	}): Promise<E.Either<string, void>>
+	}): Promise<unknown>
 
 	deleteProductsByIds(data: {
 		ids: readonly number[]
-	}): Promise<E.Either<string, void>>
+	}): Promise<unknown>
 }
