@@ -18,16 +18,20 @@ const db = registerPlugin<FridgySqlitePlugin>(
 	'FridgySqlitePlugin',
 )
 
-const app: App = new App({
-	...capacitorUsecases({
-		db,
-		log: log({ prefix: 'data', isDev }),
-	}),
-	...systemUseCases({
-		isDev,
-		appLogPrefix: 'app',
-		uiLogPrefix: 'ui',
-	}),
-})
+void db
+	.openDB({ version: 1, name: 'fridgy' })
+	.then(() => {
+		const app: App = new App({
+			...capacitorUsecases({
+				db,
+				log: log({ prefix: 'data', isDev }),
+			}),
+			...systemUseCases({
+				isDev,
+				appLogPrefix: 'app',
+				uiLogPrefix: 'ui',
+			}),
+		})
 
-void render(app, root)
+		void render(app, root)
+	})

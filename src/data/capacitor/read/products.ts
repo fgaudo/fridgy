@@ -3,6 +3,7 @@ import {
 	function as F,
 	option as OPT,
 	reader as R,
+	readerTask as RT,
 	readerTaskEither as RTE,
 } from 'fp-ts'
 import * as t from 'io-ts'
@@ -128,10 +129,11 @@ export const fallbackProductsCodec = withFallback(
 
 export const products: R.Reader<Deps, Products> =
 	pipe(
-		R.asks((deps: Deps) =>
-			deps.db.getAllProductsWithTotal(),
+		R.asks(
+			(deps: Deps) => () =>
+				deps.db.getAllProductsWithTotal(),
 		),
-		R.flatMap(
+		RT.flatMap(
 			flow(
 				decodeData(
 					productCodec,

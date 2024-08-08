@@ -1,6 +1,6 @@
 export interface FridgySqlitePlugin {
 	openDB(data: {
-		version: string
+		version: number
 		name: string
 	}): Promise<unknown>
 

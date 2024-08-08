@@ -3,11 +3,8 @@ package net.gaudo.fridgy.data
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
-import androidx.core.database.getLongOrNull
+import androidx.core.database.getIntOrNull
 import androidx.core.database.sqlite.transaction
-
-private val lock = Any()
-
 
 class FridgySqliteOpenHelper(
     context: Context?, name: String?, version: Int
@@ -32,7 +29,7 @@ class FridgySqliteOpenHelper(
                         val id = run {
                             val index = it.getColumnIndex(Schema.ProductsTable.Columns.id)
                             if (index < 0) return Result.Error("index id not found")
-                            it.getLong(index)
+                            it.getInt(index)
                         }
 
                         val name = run {
@@ -44,14 +41,14 @@ class FridgySqliteOpenHelper(
                         val creationDate = run {
                             val index = it.getColumnIndex(Schema.ProductsTable.Columns.creationDate)
                             if (index < 0) return Result.Error("index creation_date not found")
-                            it.getLong(index)
+                            it.getInt(index)
                         }
 
                         val expirationDate = run {
                             val index =
                                 it.getColumnIndex(Schema.ExpirationDateTable.Columns.expirationDate)
                             if (index < 0) return Result.Error("index expirationDate not found")
-                            it.getLongOrNull(index)
+                            it.getIntOrNull(index)
                         }
 
                         list.add(
@@ -64,7 +61,7 @@ class FridgySqliteOpenHelper(
 
                 val total = db.rawQuery(getTotalSql, null).use {
                     if (!it.moveToFirst()) return Result.Error("No total available")
-                    it.getLong(0)
+                    it.getInt(0)
                 }
 
                 return Result.Success(ProductsWithTotal(products, total))
@@ -75,7 +72,7 @@ class FridgySqliteOpenHelper(
         }
     }
 
-    fun deleteProductsByIds(ids: List<Long>): Result<String, Unit> {
+    fun deleteProductsByIds(ids: List<Int>): Result<String, Unit> {
         val db = writableDatabase
         try {
             db.execSQL(
@@ -149,16 +146,18 @@ private val getAllProductsSql = run {
     """.trimIndent()
 }
 
-private val getTotalSql = "SELECT COUNT(*) FROM ${Schema.ProductsTable.Columns.name}"
+private val getTotalSql = "SELECT COUNT(*) FROM ${Schema.ProductsTable.name}"
 
 private val deleteProductsByIds = { numberOfTokens: Int ->
     val tokens = List(numberOfTokens) { "?" }.joinToString()
 
-    """
+    val asd = """
         DELETE FROM ${Schema.ProductsTable.name}
             WHERE ${Schema.ProductsTable.Columns.id}
                 IN (${tokens})
     """.trimIndent()
+
+    asd
 }
 
 private val addProductSql = """
@@ -179,7 +178,7 @@ private val createProductsTableSql = """
         CREATE TABLE ${Schema.ProductsTable.name}(
             ${Schema.ProductsTable.Columns.id} INTEGER PRIMARY KEY ASC,
             ${Schema.ProductsTable.Columns.name} TEXT,
-            ${Schema.ProductsTable.Columns.creationDate} Long
+            ${Schema.ProductsTable.Columns.creationDate} INTEGER
         )
     """.trimIndent()
 
