@@ -54,10 +54,14 @@ class DatabasePlugin : Plugin() {
         try {
             val product = call.getObject("product")
             val name = product.getString("name")!!
-            val creationDate = product.getInt("creationDate")
-            val expirationDate = product.optInt("expirationDate")
+            val creationDate = product.getLong("creationDate")
+            val expirationDate =
+                if (!product.has("expirationDate"))
+                    null
+                else
+                    product.getLong("expirationDate")
 
-            db.addProduct(Product(name, creationDate, expirationDate))
+            db.addProduct(Product(name, expirationDate, creationDate))
 
             call.resolve(
                 EitherJS.right(null)
@@ -120,7 +124,7 @@ class DatabasePlugin : Plugin() {
                 return
             }
             try {
-                it.toList<Int>().toList()
+                return@let it.toList<Long>().toList()
             } catch (e: Exception) {
                 call.resolve(EitherJS.left("Wrong type for ids given"))
                 return

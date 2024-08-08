@@ -4,6 +4,7 @@ import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 import androidx.core.database.getIntOrNull
+import androidx.core.database.getLongOrNull
 import androidx.core.database.sqlite.transaction
 
 class FridgySqliteOpenHelper(
@@ -29,7 +30,7 @@ class FridgySqliteOpenHelper(
                         val id = run {
                             val index = it.getColumnIndex(Schema.ProductsTable.Columns.id)
                             if (index < 0) return Result.Error("index id not found")
-                            it.getInt(index)
+                            it.getLong(index)
                         }
 
                         val name = run {
@@ -41,14 +42,14 @@ class FridgySqliteOpenHelper(
                         val creationDate = run {
                             val index = it.getColumnIndex(Schema.ProductsTable.Columns.creationDate)
                             if (index < 0) return Result.Error("index creation_date not found")
-                            it.getInt(index)
+                            it.getLong(index)
                         }
 
                         val expirationDate = run {
                             val index =
                                 it.getColumnIndex(Schema.ExpirationDateTable.Columns.expirationDate)
                             if (index < 0) return Result.Error("index expirationDate not found")
-                            it.getIntOrNull(index)
+                            it.getLongOrNull(index)
                         }
 
                         list.add(
@@ -72,11 +73,11 @@ class FridgySqliteOpenHelper(
         }
     }
 
-    fun deleteProductsByIds(ids: List<Int>): Result<String, Unit> {
+    fun deleteProductsByIds(ids: List<Long>): Result<String, Unit> {
         val db = writableDatabase
         try {
             db.execSQL(
-                deleteProductsByIds(ids.size), ids.toTypedArray()
+                deleteProductsByIds(ids.size), ids.map { it as Any }.toTypedArray()
             )
 
             return Result.Success(Unit)
@@ -137,12 +138,13 @@ private val getAllProductsSql = run {
         "${EXPIRATION_DATES}.${Schema.ExpirationDateTable.Columns.productId}"
 
 
-   """
+    """
         SELECT ${PRODUCT_ID}, ${PRODUCT_NAME}, ${PRODUCT_CREATION_DATE}, ${EXPIRATION_DATE}
             FROM ${PRODUCTS} 
             LEFT JOIN ${EXPIRATION_DATES}
                 ON ${PRODUCT_ID} = ${EXPIRATION_DATE_PRODUCT_ID}
-            ORDER BY ${EXPIRATION_DATE} IS NULL, ${EXPIRATION_DATE}
+            ORDER BY
+               ${EXPIRATION_DATE} IS NULL, ${EXPIRATION_DATE}
     """.trimIndent()
 }
 
