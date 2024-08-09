@@ -10,7 +10,7 @@ import {
 
 import * as RoNeS from '@/core/readonly-non-empty-set'
 
-import type { DeleteProductsByIds } from '@/app/interfaces/write/delete-products-by-ids'
+import type { DeleteProductsByIdsService } from '@/app/interfaces/write/delete-products-by-ids'
 import type { Log } from '@/app/interfaces/write/log'
 
 import { PRODUCTS_TABLE } from '../schema'
@@ -25,7 +25,7 @@ interface Deps {
 
 export const deleteProductsByIds: (
 	deps: Deps,
-) => DeleteProductsByIds = F.flip(
+) => DeleteProductsByIdsService = F.flip(
 	flow(
 		RTE.of,
 		RTE.bindTo('ids'),

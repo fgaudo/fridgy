@@ -24,7 +24,7 @@ import { useOrCreateError } from '@/core/utils'
 
 import {
 	ProductDTO,
-	type Products,
+	type ProductsService,
 } from '@/app/interfaces/read/products'
 import type { Log } from '@/app/interfaces/write/log'
 
@@ -193,62 +193,63 @@ const getTotalAndProducts = pipe(
 
 const M = ORD.getMonoid<ProductDTO>()
 
-export const products: (deps: Deps) => Products =
-	pipe(
-		RTE.Do,
-		RTE.bindW('results', () =>
-			pipe(
-				getTotalAndProducts,
-				RTE.local((deps: Deps) => deps),
-			),
+export const products: (
+	deps: Deps,
+) => ProductsService = pipe(
+	RTE.Do,
+	RTE.bindW('results', () =>
+		pipe(
+			getTotalAndProducts,
+			RTE.local((deps: Deps) => deps),
 		),
-		RTE.bindW('items', ({ results }) =>
-			pipe(
-				decodeData(results.products),
-				R.map(TE.fromIO),
-				RTE.tapReaderIO(items =>
-					pipe(
-						R.ask<Log>(),
-						R.map(log =>
-							log({
-								message: `Decoded items: ${JSON.stringify(
-									items,
-								)}`,
-								severity: 'debug',
-							}),
-						),
+	),
+	RTE.bindW('items', ({ results }) =>
+		pipe(
+			decodeData(results.products),
+			R.map(TE.fromIO),
+			RTE.tapReaderIO(items =>
+				pipe(
+					R.ask<Log>(),
+					R.map(log =>
+						log({
+							message: `Decoded items: ${JSON.stringify(
+								items,
+							)}`,
+							severity: 'debug',
+						}),
 					),
 				),
-				RTE.local((deps: Deps) => deps.log),
+			),
+			RTE.local((deps: Deps) => deps.log),
+		),
+	),
+	RTE.map(({ items, results }) => ({
+		items: pipe(
+			items,
+			RoA.map(decodeProductRow),
+			RoA.sort(
+				MO.concatAll(M)([
+					pipe(
+						N.Ord,
+						ORD.reverse,
+						OPT.getOrd,
+						ORD.reverse,
+						ORD.contramap(
+							(product: ProductDTO) =>
+								product.expirationDate,
+						),
+					),
+					pipe(
+						S.Ord,
+						ORD.contramap(
+							(product: ProductDTO) =>
+								product.name,
+						),
+					),
+				]),
 			),
 		),
-		RTE.map(({ items, results }) => ({
-			items: pipe(
-				items,
-				RoA.map(decodeProductRow),
-				RoA.sort(
-					MO.concatAll(M)([
-						pipe(
-							N.Ord,
-							ORD.reverse,
-							OPT.getOrd,
-							ORD.reverse,
-							ORD.contramap(
-								(product: ProductDTO) =>
-									product.expirationDate,
-							),
-						),
-						pipe(
-							S.Ord,
-							ORD.contramap(
-								(product: ProductDTO) =>
-									product.name,
-							),
-						),
-					]),
-				),
-			),
-			total: results.total,
-		})),
-		RTE.mapLeft(e => e.message),
-	)
+		total: results.total,
+	})),
+	RTE.mapLeft(e => e.message),
+)

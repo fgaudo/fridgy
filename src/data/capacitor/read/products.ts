@@ -1,171 +1,116 @@
-import {
-	either as E,
-	function as F,
-	option as OPT,
-	reader as R,
-	readerTask as RT,
-	readerTaskEither as RTE,
-} from 'fp-ts'
-import * as t from 'io-ts'
-import { withFallback } from 'io-ts-types'
+import { pipe } from 'effect'
 
-import type { Products } from '@/app/interfaces/read/products'
-import type { Log } from '@/app/interfaces/write/log'
+import { E, Eff, O, Sc } from '@/core/imports'
 
-import { decodeData } from '../common'
-import type { FridgySqlitePlugin } from '../fridgy-sqlite-plugin'
+import { CapacitorService } from '..'
+import { fallback } from '../helper'
 
-interface Deps {
-	db: FridgySqlitePlugin
-	log: Log
-}
-
-const pipe = F.pipe
-const flow = F.flow
-
-const PRODUCT_ID = 'id'
-const PRODUCT_NAME = 'name'
-const PRODUCT_EXPIRATION_DATE = 'expirationDate'
-const PRODUCT_CREATION_DATE = 'creationDate'
-
-const defaultValues = {
-	[PRODUCT_ID]: -1,
-	[PRODUCT_NAME]: '[UNDEFINED]',
-	[PRODUCT_CREATION_DATE]: 0,
-}
-
-export const productCodec = t.union([
-	t.type({
-		_tag: t.literal('Right'),
-		right: t.type({
-			products: t.array(
-				t.intersection([
-					t.type({
-						[PRODUCT_ID]: t.number,
-						[PRODUCT_NAME]: t.string,
-						[PRODUCT_CREATION_DATE]: t.number,
-					}),
-					t.partial({
-						[PRODUCT_EXPIRATION_DATE]: t.number,
-					}),
-				]),
-			),
-			total: t.number,
+const ProductsListSchema = Sc.Union(
+	Sc.Struct({
+		_tag: Sc.Literal('Left'),
+		left: Sc.String.annotations({
+			decodingFallback: fallback('Unknown error'),
 		}),
 	}),
-	t.type({
-		_tag: t.literal('Left'),
-		left: t.string,
-	}),
-])
-
-export const fallbackProductsCodec = withFallback(
-	t.union([
-		t.type({
-			_tag: t.literal('Right'),
-			right: withFallback(
-				t.partial({
-					products: withFallback(
-						t.array(
-							withFallback(
-								t.partial({
-									[PRODUCT_ID]: withFallback(
-										t.number,
-										defaultValues[PRODUCT_ID],
-									),
-									[PRODUCT_NAME]: withFallback(
-										t.string,
-										defaultValues[PRODUCT_NAME],
-									),
-									[PRODUCT_CREATION_DATE]:
-										withFallback(
-											t.number,
-											defaultValues[
-												PRODUCT_CREATION_DATE
-											],
-										),
-
-									[PRODUCT_EXPIRATION_DATE]:
-										withFallback(
-											t.union([
-												t.number,
-												t.undefined,
-											]),
-											undefined,
-										),
-								}),
-								{
-									[PRODUCT_ID]:
-										defaultValues[PRODUCT_ID],
-									[PRODUCT_NAME]:
-										defaultValues[PRODUCT_NAME],
-									[PRODUCT_CREATION_DATE]:
-										defaultValues[
-											PRODUCT_CREATION_DATE
-										],
-								},
-							),
+	Sc.Struct({
+		_tag: Sc.Literal('Right'),
+		right: Sc.Struct({
+			total: Sc.Number.annotations({
+				decodingFallback: fallback(0),
+			}),
+			items: Sc.Array(
+				Sc.Struct({
+					id: Sc.Number,
+					name: Sc.String.annotations({
+						decodingFallback: fallback(
+							'[UNDEFINED]',
 						),
-						[],
+					}),
+					expirationDate: Sc.optional(
+						Sc.Number.annotations({
+							decodingFallback: fallback(0),
+						}),
 					),
-					total: withFallback(t.number, 0),
+					creationDate: Sc.Number.annotations({
+						decodingFallback: fallback(0),
+					}),
 				}),
-				{
-					products: [],
-					total: 0,
-				},
-			),
+			).annotations({
+				decodingFallback: fallback([]),
+			}),
+		}).annotations({
+			decodingFallback: fallback({
+				total: 0,
+				items: [],
+			}),
 		}),
-		t.type({
-			_tag: t.literal('Left'),
-			left: withFallback(
-				t.string,
-				'Unknown error',
-			),
-		}),
-	]),
-	{ _tag: 'Left', left: 'Error while decoding' },
-)
+	}),
+).annotations({
+	decodingFallback: fallback({
+		_tag: 'Left',
+		left: 'Bad response',
+	}),
+})
 
-export const products: R.Reader<Deps, Products> =
-	pipe(
-		R.asks(
-			(deps: Deps) => () =>
-				deps.db.getAllProductsWithTotal(),
+export const products = Eff.gen(function* () {
+	const { db } = yield* CapacitorService
+
+	const result = yield* pipe(
+		Eff.tryPromise(() =>
+			db.getAllProductsWithTotal(),
 		),
-		RT.flatMap(
-			flow(
-				decodeData(
-					productCodec,
-					fallbackProductsCodec,
-				),
-				R.local((deps: Deps) => deps.log),
-			),
-		),
-		RTE.map(
-			flow(
-				E.map(result => ({
-					total: result.total ?? 0,
-					items:
-						result.products?.map(product => ({
-							creationDate:
-								product.creationDate ??
-								defaultValues[
-									PRODUCT_CREATION_DATE
-								],
-							expirationDate: OPT.fromNullable(
-								product.expirationDate,
-							),
-							name:
-								product.name ??
-								defaultValues[PRODUCT_NAME],
-							id: (
-								product.id ??
-								defaultValues[PRODUCT_ID]
-							).toString(10),
-						})) ?? [],
-				})),
-			),
-		),
-		RTE.chainW(RTE.fromEither),
+		Eff.either,
 	)
+
+	const data = E.isRight(result)
+		? result.right
+		: yield* pipe(
+				Eff.logError(result.left.toString()),
+				Eff.andThen(
+					Eff.fail(
+						'There was an error while getting the data',
+					),
+				),
+			)
+
+	const decodeResult = yield* Sc.decodeUnknown(
+		ProductsListSchema,
+	)(data).pipe(Eff.either)
+
+	const decoded = E.isRight(decodeResult)
+		? decodeResult.right
+		: yield* pipe(
+				Eff.logError(
+					decodeResult.left.toString(),
+				),
+				Eff.andThen(
+					Eff.fail(
+						'There was an error while decoding the data',
+					),
+				),
+			)
+
+	const response =
+		decoded._tag === 'Right'
+			? decoded.right
+			: yield* pipe(
+					Eff.logError(decoded.left),
+					Eff.andThen(
+						Eff.fail(
+							'There was a problem in the data-fetching',
+						),
+					),
+				)
+
+	return {
+		total: response.total,
+		products: response.items.map(product => ({
+			id: product.id.toString(10),
+			name: product.name,
+			creationDate: product.creationDate,
+			expirationDate: O.fromNullable(
+				product.expirationDate,
+			),
+		})),
+	}
+})

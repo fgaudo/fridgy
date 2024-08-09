@@ -20,9 +20,9 @@ importers:
       '@capacitor/haptics':
         specifier: ^6.0.0
         version: 6.0.0(@capacitor/core@6.1.1)
-      '@effect/match':
-        specifier: ^0.40.0
-        version: 0.40.0(effect@2.0.0-next.47)
+      '@effect/schema':
+        specifier: ^0.70.3
+        version: 0.70.3(effect@3.6.1)
       '@fontsource-variable/comfortaa':
         specifier: ^5.0.20
         version: 5.0.20
@@ -47,18 +47,9 @@ importers:
       dexie:
         specifier: ^4.0.8
         version: 4.0.8
-      fp-ts:
-        specifier: ^2.16.9
-        version: 2.16.9
-      io-ts:
-        specifier: ^2.2.21
-        version: 2.2.21(fp-ts@2.16.9)
-      io-ts-types:
-        specifier: ^0.5.19
-        version: 0.5.19(fp-ts@2.16.9)(io-ts@2.2.21(fp-ts@2.16.9))(monocle-ts@2.3.13(fp-ts@2.16.9))(newtype-ts@0.3.5(fp-ts@2.16.9)(monocle-ts@2.3.13(fp-ts@2.16.9)))
-      newtype-ts:
-        specifier: ^0.3.5
-        version: 0.3.5(fp-ts@2.16.9)(monocle-ts@2.3.13(fp-ts@2.16.9))
+      effect:
+        specifier: ^3.6.1
+        version: 3.6.1
       rxjs:
         specifier: ^7.8.1
         version: 7.8.1
@@ -102,6 +93,9 @@ importers:
       eslint-plugin-solid:
         specifier: ^0.14.1
         version: 0.14.1(eslint@9.8.0)(typescript@5.5.4)
+      eslint-plugin-sonarjs:
+        specifier: ^1.0.4
+        version: 1.0.4(eslint@9.8.0)
       jsdom:
         specifier: ^24.1.1
         version: 24.1.1
@@ -299,10 +293,10 @@ packages:
     resolution: {integrity: sha512-IchNf6dN4tHoMFIn/7OE8LWZ19Y6q/67Bmf6vnGREv8RSbBVb9LPJxEcnwrcwX6ixSvaiGoomAUvu4YSxXrVgw==}
     engines: {node: '>=12'}
 
-  '@effect/match@0.40.0':
-    resolution: {integrity: sha512-1v2UpVxbUybx6zmN0R1uraRkCju15xLmHquoNQxPFGrQABq2dRI0nSsVM+/yibggUnQ9QAEx2MxQ6xdrQR+8hg==}
+  '@effect/schema@0.70.3':
+    resolution: {integrity: sha512-9JG3x3oTWUERrFgFDNvOHtITRRm+GuooYeckJkUnjylE++aGDQbWzaKlfvKBXfi+LEqrJsl7rCkxxr3akRMq1g==}
     peerDependencies:
-      effect: 2.0.0-next.47
+      effect: ^3.6.2
 
   '@esbuild/aix-ppc64@0.21.5':
     resolution: {integrity: sha512-1SDgH6ZSPTlggy1yI6+Dbkiz8xzpHJEVAlF/AM1tHPLsf5STom9rwtjE4hKAF20FfXXNTFqEYXyJNWh1GiZedQ==}
@@ -1477,8 +1471,8 @@ packages:
   eastasianwidth@0.2.0:
     resolution: {integrity: sha512-I88TYZWc9XiYHRQ4/3c5rjjfgkjhLyW2luGIheGERbNQ6OY7yTybanSpDXZa8y7VUP9YmDcYa+eyq4ca7iLqWA==}
 
-  effect@2.0.0-next.47:
-    resolution: {integrity: sha512-H2L1xoaOblZbrTHuUo/ppWVr9R34FyigxXkEn9iD9TMYgCJqSS9RIUOGCTdT4ATyCgVf7dWlJxOtLFSpirVWqA==}
+  effect@3.6.1:
+    resolution: {integrity: sha512-RdHsRMuEUKgkhs3z2d5XI5SDADX0THDx6GjP1oJAAAM/w+oT5/3BpKZyg/05VHy7YfOUdaQbcDzFO6YowkqsSQ==}
 
   electron-to-chromium@1.5.2:
     resolution: {integrity: sha512-kc4r3U3V3WLaaZqThjYz/Y6z8tJe+7K0bbjUVo3i+LWIypVdMx5nXCkwRe6SWbY6ILqLdc1rKcKmr3HoH7wjSQ==}
@@ -1546,6 +1540,12 @@ packages:
     peerDependencies:
       eslint: ^6.0.0 || ^7.0.0 || ^8.0.0 || ^9.0.0
 
+  eslint-plugin-sonarjs@1.0.4:
+    resolution: {integrity: sha512-jF0eGCUsq/HzMub4ExAyD8x1oEgjOyB9XVytYGyWgSFvdiJQJp6IuP7RmtauCf06o6N/kZErh+zW4b10y1WZ+Q==}
+    engines: {node: '>=16'}
+    peerDependencies:
+      eslint: ^8.0.0 || ^9.0.0
+
   eslint-scope@8.0.2:
     resolution: {integrity: sha512-6E4xmrTw5wtxnLA5wYL3WDfhZ/1bUBGOXV0zQvVRDOtrR8D0p6W7fs3JweNYhwRYeGvd/1CKX2se0/2s7Q/nJA==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
@@ -1593,6 +1593,10 @@ packages:
   expand-template@2.0.3:
     resolution: {integrity: sha512-XYfuKMvj4O35f/pOXLObndIRvyQ+/+6AhODh+OKWj9S9498pHHn/IMszH+gt0fBCRWMNfk1ZSp5x3AifmnI2vg==}
     engines: {node: '>=6'}
+
+  fast-check@3.21.0:
+    resolution: {integrity: sha512-QpmbiqRFRZ+SIlBJh6xi5d/PgXciUc/xWKc4Vi2RWEHHIRx6oM3f0fWNna++zP9VB5HUBTObUK9gTKQP3vVcrQ==}
+    engines: {node: '>=8.0.0'}
 
   fast-deep-equal@3.1.3:
     resolution: {integrity: sha512-f3qQ9oQy9j2AhBe/H9VC91wLmKBCCU/gDOnKNAYG5hswO7BLKj09Hc5HYNz9cGI++xlpDCIgDaitVs03ATR84Q==}
@@ -1653,9 +1657,6 @@ packages:
 
   formidable@3.5.1:
     resolution: {integrity: sha512-WJWKelbRHN41m5dumb0/k8TeAx7Id/y3a+Z7QfhxP/htI9Js5zYaEDtG8uMgG0vM0lOlqnmjE99/kfpOYi/0Og==}
-
-  fp-ts@2.16.9:
-    resolution: {integrity: sha512-+I2+FnVB+tVaxcYyQkHUq7ZdKScaBlX53A41mxQtpIccsfyv8PzdzP7fzp2AY832T4aoK6UZ5WRX/ebGd8uZuQ==}
 
   fraction.js@4.3.7:
     resolution: {integrity: sha512-ZsDfxO51wGAXREY55a7la9LScWpwv9RxIrYABrlvOFBlH/ShPnrtsXeuUIfXKKOVicNxQ+o8JTbJvjS4M89yew==}
@@ -1876,19 +1877,6 @@ packages:
 
   inline-style-parser@0.2.3:
     resolution: {integrity: sha512-qlD8YNDqyTKTyuITrDOffsl6Tdhv+UC4hcdAVuQsK4IMQ99nSgd1MIA/Q+jQYoh9r3hVUXhYh7urSRmXPkW04g==}
-
-  io-ts-types@0.5.19:
-    resolution: {integrity: sha512-kQOYYDZG5vKre+INIDZbLeDJe+oM+4zLpUkjXyTMyUfoCpjJNyi29ZLkuEAwcPufaYo3yu/BsemZtbdD+NtRfQ==}
-    peerDependencies:
-      fp-ts: ^2.0.0
-      io-ts: ^2.0.0
-      monocle-ts: ^2.0.0
-      newtype-ts: ^0.3.2
-
-  io-ts@2.2.21:
-    resolution: {integrity: sha512-zz2Z69v9ZIC3mMLYWIeoUcwWD6f+O7yP92FMVVaXEOSZH1jnVBmET/urd/uoarD1WGBY4rCj8TAyMPzsGNzMFQ==}
-    peerDependencies:
-      fp-ts: ^2.5.0
 
   is-arrayish@0.2.1:
     resolution: {integrity: sha512-zz06S8t0ozoDXMG+ube26zeCTNXcKIPJZJi8hBrF4idCLms4CG9QtK7qBl1boi5ODzFpjswb5JPmHCbMpjaYzg==}
@@ -2243,11 +2231,6 @@ packages:
     resolution: {integrity: sha512-xV2bxeN6F7oYjZWTe/YPAy6MN2M+sL4u/Rlm2AHCIVGfo2p1yGmBHQ6vHehl4bRTZBdHu3TSkWdYgkwpYzAGSw==}
     engines: {node: '>=0.10.0'}
 
-  monocle-ts@2.3.13:
-    resolution: {integrity: sha512-D5Ygd3oulEoAm3KuGO0eeJIrhFf1jlQIoEVV2DYsZUMz42j4tGxgct97Aq68+F8w4w4geEnwFa8HayTS/7lpKQ==}
-    peerDependencies:
-      fp-ts: ^2.5.0
-
   ms@2.1.2:
     resolution: {integrity: sha512-sGkPx+VjMtmA6MX27oA4FBFELFCZZ4S4XqeGOXCv68tT+jb3vk/RyaKWP0PTKyWtmLSM0b+adUTEvbs1PEaH2w==}
 
@@ -2275,12 +2258,6 @@ packages:
 
   neo-async@2.6.2:
     resolution: {integrity: sha512-Yd3UES5mWCSqR+qNT93S3UoYUkqAZ9lLg8a7g9rimsWmYGK8cVToA4/sF3RrshdyV3sAGMXVUmpMYOw+dLpOuw==}
-
-  newtype-ts@0.3.5:
-    resolution: {integrity: sha512-v83UEQMlVR75yf1OUdoSFssjitxzjZlqBAjiGQ4WJaML8Jdc68LJ+BaSAXUmKY4bNzp7hygkKLYTsDi14PxI2g==}
-    peerDependencies:
-      fp-ts: ^2.0.0
-      monocle-ts: ^2.0.0
 
   node-abi@3.65.0:
     resolution: {integrity: sha512-ThjYBfoDNr08AWx6hGaRbfPwxKV9kVzAzOzlLKbk2CuqXE2xnCh+cbAGnwM3t8Lq4v9rUB7VfondlkBckcJrVA==}
@@ -2776,6 +2753,9 @@ packages:
   punycode@2.3.1:
     resolution: {integrity: sha512-vYt7UD1U9Wg6138shLtLOvdAu+8DsC/ilFtEVHcH+wydcSpNE20AfSOduf6MkRFahL5FY7X1oU7nKVZFtfq8Fg==}
     engines: {node: '>=6'}
+
+  pure-rand@6.1.0:
+    resolution: {integrity: sha512-bVWawvoZoBYpp6yIoQtQXHZjmz35RSVHnUOTefl8Vcjr8snTPY1wnpSPMWekcFwbxI6gtmT7rSYPFvz71ldiOA==}
 
   q@1.5.1:
     resolution: {integrity: sha512-kV/CThkXo6xyFEZUugw/+pIOywXcDbFYgSct5cT3gqlbkBE1SJdwy6UQoZvodiWF/ckQLZyDE/Bu1M6gVu5lVw==}
@@ -3880,9 +3860,10 @@ snapshots:
     dependencies:
       '@jridgewell/trace-mapping': 0.3.9
 
-  '@effect/match@0.40.0(effect@2.0.0-next.47)':
+  '@effect/schema@0.70.3(effect@3.6.1)':
     dependencies:
-      effect: 2.0.0-next.47
+      effect: 3.6.1
+      fast-check: 3.21.0
 
   '@esbuild/aix-ppc64@0.21.5':
     optional: true
@@ -5203,7 +5184,7 @@ snapshots:
 
   eastasianwidth@0.2.0: {}
 
-  effect@2.0.0-next.47: {}
+  effect@3.6.1: {}
 
   electron-to-chromium@1.5.2: {}
 
@@ -5281,6 +5262,10 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
       - typescript
+
+  eslint-plugin-sonarjs@1.0.4(eslint@9.8.0):
+    dependencies:
+      eslint: 9.8.0
 
   eslint-scope@8.0.2:
     dependencies:
@@ -5366,6 +5351,10 @@ snapshots:
 
   expand-template@2.0.3: {}
 
+  fast-check@3.21.0:
+    dependencies:
+      pure-rand: 6.1.0
+
   fast-deep-equal@3.1.3: {}
 
   fast-fifo@1.3.2: {}
@@ -5435,8 +5424,6 @@ snapshots:
       dezalgo: 1.0.4
       hexoid: 1.0.0
       once: 1.4.0
-
-  fp-ts@2.16.9: {}
 
   fraction.js@4.3.7: {}
 
@@ -5647,17 +5634,6 @@ snapshots:
   ini@4.1.3: {}
 
   inline-style-parser@0.2.3: {}
-
-  io-ts-types@0.5.19(fp-ts@2.16.9)(io-ts@2.2.21(fp-ts@2.16.9))(monocle-ts@2.3.13(fp-ts@2.16.9))(newtype-ts@0.3.5(fp-ts@2.16.9)(monocle-ts@2.3.13(fp-ts@2.16.9))):
-    dependencies:
-      fp-ts: 2.16.9
-      io-ts: 2.2.21(fp-ts@2.16.9)
-      monocle-ts: 2.3.13(fp-ts@2.16.9)
-      newtype-ts: 0.3.5(fp-ts@2.16.9)(monocle-ts@2.3.13(fp-ts@2.16.9))
-
-  io-ts@2.2.21(fp-ts@2.16.9):
-    dependencies:
-      fp-ts: 2.16.9
 
   is-arrayish@0.2.1: {}
 
@@ -5974,10 +5950,6 @@ snapshots:
 
   modify-values@1.0.1: {}
 
-  monocle-ts@2.3.13(fp-ts@2.16.9):
-    dependencies:
-      fp-ts: 2.16.9
-
   ms@2.1.2: {}
 
   ms@2.1.3: {}
@@ -6011,11 +5983,6 @@ snapshots:
   natural-compare@1.4.0: {}
 
   neo-async@2.6.2: {}
-
-  newtype-ts@0.3.5(fp-ts@2.16.9)(monocle-ts@2.3.13(fp-ts@2.16.9)):
-    dependencies:
-      fp-ts: 2.16.9
-      monocle-ts: 2.3.13(fp-ts@2.16.9)
 
   node-abi@3.65.0:
     dependencies:
@@ -6437,6 +6404,8 @@ snapshots:
       once: 1.4.0
 
   punycode@2.3.1: {}
+
+  pure-rand@6.1.0: {}
 
   q@1.5.1: {}
 

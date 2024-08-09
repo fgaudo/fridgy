@@ -1,7 +1,10 @@
-import type { taskEither as TE } from 'fp-ts'
+import { Context } from 'effect'
+import type { Effect } from 'effect/Effect'
+import type { HashSet } from 'effect/HashSet'
 
-import type { ReadonlyNonEmptySet } from '@/core/readonly-non-empty-set'
-
-export type DeleteProductsByIds = (
-	ids: ReadonlyNonEmptySet<string>,
-) => TE.TaskEither<string, void>
+export class DeleteProductsByIdsService extends Context.Tag(
+	'DeleteProductsByIdsService',
+)<
+	DeleteProductsByIdsService,
+	(ids: HashSet<string>) => Effect<void, string>
+>() {}

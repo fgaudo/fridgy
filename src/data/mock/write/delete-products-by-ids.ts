@@ -3,11 +3,11 @@ import {
 	taskEither as TE,
 } from 'fp-ts'
 
-import type { DeleteProductsByIds } from '@/app/interfaces/write/delete-products-by-ids'
+import type { DeleteProductsByIdsService } from '@/app/interfaces/write/delete-products-by-ids'
 
 type Deps = object
 
 export const deleteProductByIds: (
 	deps: Deps,
-) => DeleteProductsByIds = () => () =>
+) => DeleteProductsByIdsService = () => () =>
 	T.delay(250)(TE.right(undefined))

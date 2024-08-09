@@ -1,14 +1,18 @@
-import type {
-	option as OPT,
-	taskEither as TE,
-} from 'fp-ts'
+import { Context } from 'effect'
+import type * as Eff from 'effect/Effect'
+import type * as OPT from 'effect/Option'
 
-export interface ProductDTO {
+export interface AddProductDTO {
 	name: string
 	expirationDate: OPT.Option<number>
 	creationDate: number
 }
 
-export type AddProduct = (
-	product: ProductDTO,
-) => TE.TaskEither<string, void>
+export class AddProductService extends Context.Tag(
+	'AddProductService',
+)<
+	AddProductService,
+	(
+		product: AddProductDTO,
+	) => Eff.Effect<void, string>
+>() {}

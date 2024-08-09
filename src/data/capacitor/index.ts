@@ -1,34 +1,34 @@
-import { reader as R } from 'fp-ts'
+import { Context, pipe } from 'effect'
+
+import { Eff } from '@/core/imports'
 
 import type { Contracts } from '@/app/index'
-import type { Log } from '@/app/interfaces/write/log'
 
 import type { FridgySqlitePlugin } from './fridgy-sqlite-plugin'
 import { products } from './read/products'
 import { addProduct } from './write/add-product'
 import { deleteProductsByIds } from './write/delete-products-by-ids'
 
-export interface Deps {
+interface Deps {
 	db: FridgySqlitePlugin
-	log: Log
 }
 
-export const implementations: R.Reader<
-	Deps,
-	Pick<
-		Contracts,
-		| 'products'
-		| 'addProduct'
-		| 'deleteProductsByIds'
-	>
-> = ({ db, log }) => ({
-	addProduct: addProduct({ db, log }),
-	products: products({
-		db,
-		log,
-	}),
+export class CapacitorService extends Context.Tag(
+	'CapacitorService',
+)<CapacitorService, Deps>() {}
+
+export const implementations: Pick<
+	Contracts,
+	| 'products'
+	| 'addProduct'
+	| 'deleteProductsByIds'
+> = (deps: Deps) => ({
+	addProduct: addProduct({ db }),
+	products: pipe(
+		products,
+		Eff.provideService(CapacitorService, deps),
+	),
 	deleteProductsByIds: deleteProductsByIds({
 		db,
-		log,
 	}),
 })

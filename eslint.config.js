@@ -1,6 +1,7 @@
 import eslint from '@eslint/js'
 import eslintConfig from 'eslint-config-prettier'
 import solid from 'eslint-plugin-solid/configs/typescript.js'
+import sonarjs from 'eslint-plugin-sonarjs'
 import tseslint from 'typescript-eslint'
 
 export default [
@@ -32,10 +33,12 @@ export default [
 				'off',
 		},
 	},
+	sonarjs.configs.recommended,
 	{
 		rules: {
 			'@typescript-eslint/no-unnecessary-type-assertion':
 				'error',
+
 			'@typescript-eslint/no-unused-vars': [
 				'warn', // or "error"
 				{

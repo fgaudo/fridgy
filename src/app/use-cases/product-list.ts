@@ -1,52 +1,22 @@
-import {
-	either as E,
-	eq as Eq,
-	function as F,
-	option as OPT,
-	reader as R,
-	readerIO as RIO,
-	readerTaskEither as RTE,
-	readonlyArray as RoA,
-	string as S,
-	separated as SEP,
-	task as T,
-	taskEither as TE,
-} from 'fp-ts'
+import { pipe } from 'effect/Function'
+
+import { A, E, Eff, type O } from '@/core/imports'
 
 import {
 	type Product,
 	createProduct,
-	expiration,
-	isExpired,
-	name,
 } from '@/domain/product'
 
 import {
-	ProductDTO,
-	type Products,
-} from '@/app/interfaces/read/products'
-import type { Log } from '@/app/interfaces/write/log'
-
-const pipe = F.pipe
-const flow = F.flow
+	type ProductDTO,
+	ProductsService,
+} from '../interfaces/read/products'
 
 export interface ProductModel {
 	id: string
 	name: string
-	expirationDate: OPT.Option<number>
+	expirationDate: O.Option<number>
 	creationDate: number
-	isExpired: boolean
-}
-
-const ProductModel = {
-	Eq: Eq.contramap((a: ProductModel) => a.id)(
-		S.Eq,
-	),
-} as const
-
-export interface UseCases {
-	products: Products
-	log: Log
 }
 
 interface ProductEntity {
@@ -57,124 +27,69 @@ interface ProductEntity {
 
 const toProductEntitiesWithInvalid: (
 	foodDTOs: readonly ProductDTO[],
-) => SEP.Separated<
-	readonly string[],
-	readonly ProductEntity[]
-> = RoA.partitionMap(entityDTO =>
+) => readonly [
+	readonly ProductDTO[],
+	readonly ProductEntity[],
+] = A.partitionMap(entityDTO =>
 	pipe(
-		createProduct({
-			name: entityDTO.name,
-			expiration: entityDTO.expirationDate,
-		}),
-		E.bimap(
-			() => entityDTO.id,
-			product =>
+		createProduct(entityDTO),
+		E.mapBoth({
+			onLeft: () => entityDTO,
+			onRight: product =>
 				({
 					id: entityDTO.id,
 					product,
 					creationDate: entityDTO.creationDate,
 				}) as const,
-		),
+		}),
 	),
 )
 
-const discardInvalid: (
-	set: SEP.Separated<
-		readonly string[],
-		readonly ProductEntity[]
-	>,
-) => readonly ProductEntity[] = SEP.right
-
 const toProductModels: (
 	products: readonly ProductEntity[],
-) => T.Task<readonly ProductModel[]> = products =>
-	pipe(
-		T.fromIO(() => Date.now()),
-		T.map(timestamp =>
-			pipe(
-				products,
-				RoA.map(
-					({ id, product, creationDate }) => ({
-						id,
-						name: name(product),
-						isExpired: isExpired(
-							product,
-							timestamp,
-						),
-						expirationDate: expiration(product),
-						creationDate,
-					}),
-				),
-			),
-		),
-	)
+) => readonly ProductModel[] = A.map(
+	({ id, product, creationDate }) => ({
+		name: product.name,
+		expirationDate: product.expiration,
+		id,
+		creationDate,
+	}),
+)
 
-const logInfo: (
-	message: string,
-) => RIO.ReaderIO<UseCases, void> =
-	message =>
-	({ log }) =>
-		log({ severity: 'info', message })
-
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const logError =
-	(message: string) =>
-	({ log }: UseCases) =>
-		log({ severity: 'error', message })
-
-export type ProductList = TE.TaskEither<
-	string,
+export type ProductList = Eff.Effect<
 	{
 		total: number
 		models: readonly ProductModel[]
-	}
+	},
+	string,
+	ProductsService
 >
 
-export const useCase: (
-	deps: UseCases,
-) => ProductList = pipe(
-	RTE.Do,
-	RTE.bind('result', () =>
-		R.asks(
-			(useCases: UseCases) => useCases.products,
-		),
-	),
-	RTE.tapReaderIO(({ result }) =>
-		logInfo(
-			`Received ${result.items.length.toString(10)} product entries out of ${result.total.toString(10)}`,
-		),
-	),
-	RTE.bindW('entitiesWithInvalid', ({ result }) =>
-		pipe(
-			result.items,
-			toProductEntitiesWithInvalid,
-			RTE.right,
-		),
-	),
-	RTE.tapReaderIO(
-		flow(
-			result => result.entitiesWithInvalid,
-			SEP.left,
-			RoA.map(id =>
-				logInfo(`Corrupt entity with id ${id}`),
-			),
-			RIO.sequenceArray,
-		),
-	),
-	RTE.bindW(
-		'entities',
-		({ entitiesWithInvalid }) =>
-			pipe(
-				entitiesWithInvalid,
-				discardInvalid,
-				RTE.right,
-			),
-	),
-	RTE.bindW('models', ({ entities }) =>
-		pipe(entities, toProductModels, RTE.fromTask),
-	),
-	RTE.map(({ result: { total }, models }) => ({
-		total,
-		models,
-	})),
+export const useCase: ProductList = Eff.gen(
+	function* () {
+		const getProductListWithTotal =
+			yield* ProductsService
+
+		const { total, products } =
+			yield* getProductListWithTotal
+
+		yield* Eff.log(
+			`Received ${products.length.toString(10)} products out of ${total.toString(10)}`,
+		)
+
+		const [invalids, productEntities] =
+			toProductEntitiesWithInvalid(products)
+
+		if (invalids.length > 0) {
+			yield* Eff.logWarning(
+				'Invalid data found',
+			).pipe(Eff.annotateLogs('data', invalids))
+		}
+
+		const models = toProductModels(
+			productEntities,
+		)
+
+		return { models, total }
+	},
 )
