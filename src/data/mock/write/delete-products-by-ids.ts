@@ -1,13 +1,13 @@
-import {
-	task as T,
-	taskEither as TE,
-} from 'fp-ts'
+import { Eff, type H } from '@/core/imports'
 
-import type { DeleteProductsByIdsService } from '@/app/interfaces/write/delete-products-by-ids'
+import type { DeleteProductsByIdsServiceError } from '@/app/interfaces/write/delete-products-by-ids'
 
-type Deps = object
-
-export const deleteProductByIds: (
-	deps: Deps,
-) => DeleteProductsByIdsService = () => () =>
-	T.delay(250)(TE.right(undefined))
+export const deleteProductsByIds: (
+	ids: H.HashSet<string>,
+) => Eff.Effect<
+	void,
+	DeleteProductsByIdsServiceError
+> = () =>
+	Eff.gen(function* () {
+		yield* Eff.sleep(250)
+	})

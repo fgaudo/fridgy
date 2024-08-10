@@ -1,17 +1,16 @@
-import {
-	function as F,
-	reader as R,
-	task as T,
-	taskEither as TE,
-} from 'fp-ts'
+import { Eff } from '@/core/imports'
 
-import type { AddProduct } from '@/app/interfaces/write/add-product'
+import type {
+	AddProductDTO,
+	AddProductServiceError,
+} from '@/app/interfaces/write/add-product'
 
-type Deps = undefined
-
-export const addProduct: R.Reader<
-	Deps,
-	AddProduct
-> = F.flip(() =>
-	R.of(T.delay(650)(TE.right(undefined))),
-)
+export const addProduct: (
+	product: AddProductDTO,
+) => Eff.Effect<
+	void,
+	AddProductServiceError
+> = () =>
+	Eff.gen(function* () {
+		yield* Eff.sleep(250)
+	})
