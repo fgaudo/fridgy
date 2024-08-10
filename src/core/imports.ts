@@ -8,14 +8,6 @@ export * as Ord from 'effect/Order'
 export * as L from 'effect/Layer'
 export * as C from 'effect/Context'
 export * as Sc from '@effect/schema/Schema'
-
-export const BrandTypeId: unique symbol =
-	Symbol.for('effect/Brand')
-
-export interface Brand<
-	in out ID extends string | symbol,
-> {
-	readonly [BrandTypeId]: {
-		readonly [id in ID]: ID
-	}
-}
+export * as H from 'effect/HashSet'
+export * as B from 'effect/Brand'
+export * as M from 'effect/Match'

@@ -92,7 +92,7 @@ export const decodeData: (
 		RIO.tap(
 			F.flip((log: Log) =>
 				flow(
-					RoA.filterMap(OPT.getLeft),
+					RoA.filterMap(O.getLeft),
 					RoA.map(
 						flow(E.left, PathReporter.report),
 					),
@@ -106,7 +106,7 @@ export const decodeData: (
 				),
 			),
 		),
-		RIO.map(RoA.filterMap(OPT.getRight)),
+		RIO.map(RoA.filterMap(O.getRight)),
 	)
 
 const decodeProductRow = (
@@ -116,7 +116,7 @@ const decodeProductRow = (
 	name: product.name,
 	expirationDate: pipe(
 		product.expiration_date,
-		OPT.fromNullable,
+		O.fromNullable,
 	),
 	creationDate: product.creation_date,
 })
@@ -232,7 +232,7 @@ export const products: (
 					pipe(
 						N.Ord,
 						ORD.reverse,
-						OPT.getOrd,
+						O.getOrd,
 						ORD.reverse,
 						ORD.contramap(
 							(product: ProductDTO) =>

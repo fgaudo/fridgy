@@ -58,7 +58,7 @@ export const products: R.Reader<
 							)
 						],
 						creationDate: Date.now(),
-						expirationDate: OPT.some(
+						expirationDate: O.some(
 							Date.now() +
 								100000 +
 								Math.floor(

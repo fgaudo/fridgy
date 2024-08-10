@@ -1,89 +1,102 @@
+import { fallback } from '@/core/helper'
 import {
-	function as F,
-	ord as Ord,
-	readerTask as RT,
-	readerTaskEither as RTE,
-	readonlyNonEmptyArray as RoNeA,
-} from 'fp-ts'
-import * as t from 'io-ts'
-import { withFallback } from 'io-ts-types'
+	A,
+	E,
+	Eff,
+	H,
+	Sc,
+	pipe,
+} from '@/core/imports'
 
-import * as RoNeS from '@/core/readonly-non-empty-set'
+import { DeleteProductsByIdsServiceError } from '@/app/interfaces/write/delete-products-by-ids'
 
-import type { Log } from '@/app/interfaces/write/log'
-import type { DeleteProductsByIds } from '@/app/use-cases/delete-products-by-ids'
+import { CapacitorService } from '..'
 
-import { decodeData } from '../common'
-import type { FridgySqlitePlugin } from '../fridgy-sqlite-plugin'
-
-interface Deps {
-	db: FridgySqlitePlugin
-	log: Log
-}
-
-const flow = F.flow
-
-export const resultCodec = t.union([
-	t.type({
-		_tag: t.literal('Right'),
-		right: t.undefined,
+export const DeleteProductsSchema = Sc.Union(
+	Sc.Struct({
+		_tag: Sc.Literal('Right'),
+		right: Sc.optional(Sc.Unknown),
 	}),
-	t.type({
-		_tag: t.literal('Left'),
-		left: t.string,
+	Sc.Struct({
+		_tag: Sc.Literal('Left'),
+		left: Sc.String.annotations({
+			decodingFallback: fallback('Unknown Error'),
+		}),
 	}),
-])
-
-export const fallbackResultCodec = withFallback(
-	t.union([
-		t.type({
-			_tag: t.literal('Right'),
-			right: withFallback(t.undefined, undefined),
-		}),
-		t.type({
-			_tag: t.literal('Left'),
-			left: withFallback(
-				t.string,
-				'Unknown error',
-			),
-		}),
-	]),
-	{ _tag: 'Left', left: 'Error while decoding' },
-)
-
-const deleteProductsByIdsCommand =
-	(ids: readonly number[]) =>
-	(deps: Deps) =>
-	() =>
-		deps.db.deleteProductsByIds({ ids })
+).annotations({
+	decodingFallback: fallback({
+		_tag: 'Left',
+		left: 'Bad response given',
+	}),
+})
 
 export const deleteProductsByIds: (
-	deps: Deps,
-) => DeleteProductsByIds = F.flip(
-	flow(
-		RT.of,
-		RT.bind(
-			'ids',
-			flow(
-				RoNeS.toReadonlyNonEmptyArray<string>(
-					Ord.trivial,
+	ids: H.HashSet<string>,
+) => Eff.Effect<
+	void,
+	DeleteProductsByIdsServiceError,
+	CapacitorService
+> = ids =>
+	Eff.gen(function* () {
+		const { db } = yield* CapacitorService
+
+		const idsArray = pipe(
+			A.fromIterable(ids),
+			A.map(id => parseInt(id, 10)),
+		)
+
+		yield* Eff.log(
+			`About to delete ${idsArray.length.toString(
+				10,
+			)} products`,
+		)
+
+		const result = yield* Eff.tryPromise(() =>
+			db.deleteProductsByIds({ ids: idsArray }),
+		).pipe(Eff.either)
+
+		const data = E.isRight(result)
+			? result.right
+			: yield* pipe(
+					Eff.logError(result.left),
+					Eff.andThen(
+						Eff.fail(
+							DeleteProductsByIdsServiceError(
+								'There was a problem while performing the request',
+							),
+						),
+					),
+				)
+
+		const decodeResult = yield* Sc.decodeUnknown(
+			DeleteProductsSchema,
+		)(data).pipe(Eff.either)
+
+		const decoded = E.isRight(decodeResult)
+			? decodeResult.right
+			: yield* pipe(
+					Eff.logError(
+						decodeResult.left.toString(),
+					),
+					Eff.andThen(
+						Eff.fail(
+							DeleteProductsByIdsServiceError(
+								'There was an error while decoding the response',
+							),
+						),
+					),
+				)
+
+		if (decoded._tag === 'Left') {
+			yield* Eff.logError(decoded.left)
+			return yield* Eff.fail(
+				DeleteProductsByIdsServiceError(
+					'There was a problem while deleting the products',
 				),
-				RoNeA.map(id => parseInt(id, 10)),
-				RT.of,
-			),
-		),
-		RT.chain(({ ids }) =>
-			deleteProductsByIdsCommand(ids),
-		),
-		RT.chain(
-			flow(
-				decodeData(
-					resultCodec,
-					fallbackResultCodec,
-				),
-				RTE.local((deps: Deps) => deps.log),
-			),
-		),
-		RTE.chainW(RTE.fromEither),
-	),
-)
+			)
+		}
+
+		yield* Eff.log(
+			'No problems while deleting products',
+		)
+	})

@@ -2,12 +2,21 @@ import { Context } from 'effect'
 import type { Effect } from 'effect/Effect'
 import type { Option } from 'effect/Option'
 
-export interface ProductDTO {
-	id: string
-	name: string
-	expirationDate: Option<number>
-	creationDate: number
-}
+import { B } from '@/core/imports'
+
+export type ProductDTO =
+	| {
+			isValid: true
+			id: string
+			name: string
+			expirationDate: Option<number>
+			creationDate: number
+	  }
+	| {
+			isValid: false
+			id: Option<string>
+			name: Option<string>
+	  }
 
 export class ProductsService extends Context.Tag(
 	'ProductsService',
@@ -16,8 +25,14 @@ export class ProductsService extends Context.Tag(
 	Effect<
 		{
 			total: number
-			products: readonly ProductDTO[]
+			products: ProductDTO[]
 		},
-		string
+		ProductsServiceError
 	>
 >() {}
+
+export type ProductsServiceError = string &
+	B.Brand<'ProductsServiceError'>
+
+export const ProductsServiceError =
+	B.nominal<ProductsServiceError>()

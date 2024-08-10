@@ -1,93 +1,106 @@
-import { pipe } from 'effect/Function'
+import { B, E, Eff, O } from '@/core/imports'
 
-import { A, E, Eff, type O } from '@/core/imports'
+import { createProduct } from '@/domain/product'
 
-import {
-	type Product,
-	createProduct,
-} from '@/domain/product'
+import { ProductsService } from '../interfaces/read/products'
 
-import {
-	type ProductDTO,
-	ProductsService,
-} from '../interfaces/read/products'
-
-export interface ProductModel {
-	id: string
-	name: string
-	expirationDate: O.Option<number>
-	creationDate: number
-}
-
-interface ProductEntity {
-	id: string
-	creationDate: number
-	product: Product
-}
-
-const toProductEntitiesWithInvalid: (
-	foodDTOs: readonly ProductDTO[],
-) => readonly [
-	readonly ProductDTO[],
-	readonly ProductEntity[],
-] = A.partitionMap(entityDTO =>
-	pipe(
-		createProduct(entityDTO),
-		E.mapBoth({
-			onLeft: () => entityDTO,
-			onRight: product =>
-				({
-					id: entityDTO.id,
-					product,
-					creationDate: entityDTO.creationDate,
-				}) as const,
-		}),
-	),
-)
-
-const toProductModels: (
-	products: readonly ProductEntity[],
-) => readonly ProductModel[] = A.map(
-	({ id, product, creationDate }) => ({
-		name: product.name,
-		expirationDate: product.expiration,
-		id,
-		creationDate,
-	}),
-)
+export type ProductModel =
+	| {
+			isValid: true
+			id: string
+			name: string
+			expirationDate: O.Option<number>
+			creationDate: number
+	  }
+	| {
+			isValid: false
+			id: O.Option<string>
+	  }
 
 export type ProductList = Eff.Effect<
 	{
 		total: number
 		models: readonly ProductModel[]
 	},
-	string,
+	ProductListError,
 	ProductsService
 >
+
+export type ProductListError = string &
+	B.Brand<'ProductListError'>
+
+const ProductListError =
+	B.nominal<ProductListError>()
 
 export const useCase: ProductList = Eff.gen(
 	function* () {
 		const getProductListWithTotal =
 			yield* ProductsService
 
-		const { total, products } =
-			yield* getProductListWithTotal
+		const result =
+			yield* getProductListWithTotal.pipe(
+				Eff.either,
+			)
 
-		yield* Eff.log(
-			`Received ${products.length.toString(10)} products out of ${total.toString(10)}`,
-		)
-
-		const [invalids, productEntities] =
-			toProductEntitiesWithInvalid(products)
-
-		if (invalids.length > 0) {
-			yield* Eff.logWarning(
-				'Invalid data found',
-			).pipe(Eff.annotateLogs('data', invalids))
+		if (E.isLeft(result)) {
+			yield* Eff.logError(result)
+			return yield* Eff.fail(
+				ProductListError(
+					'There was a problem retrieving the list',
+				),
+			)
 		}
 
-		const models = toProductModels(
-			productEntities,
+		const { total, products: rawProducts } =
+			result.right
+
+		yield* Eff.log(
+			`Received ${rawProducts.length.toString(10)} products out of ${total.toString(10)}`,
+		)
+
+		const models: ProductModel[] = yield* Eff.all(
+			rawProducts.map(rawProduct =>
+				Eff.gen(function* () {
+					if (!rawProduct.isValid) {
+						yield* Eff.logError(
+							'Invalid raw product supplied',
+						).pipe(
+							Eff.annotateLogs({
+								p: rawProduct,
+							}),
+						)
+
+						return rawProduct
+					}
+
+					const result = createProduct(rawProduct)
+
+					if (E.isLeft(result)) {
+						yield* Eff.logError(
+							'Raw product failed business validation rules',
+						).pipe(
+							Eff.annotateLogs({
+								p: rawProduct,
+							}),
+						)
+						return {
+							id: O.some(rawProduct.id),
+							name: O.some(rawProduct.name),
+							isValid: false,
+						} as const
+					}
+
+					const product = result.right
+
+					return {
+						name: product.name,
+						expirationDate: product.expiration,
+						id: rawProduct.id,
+						creationDate: rawProduct.creationDate,
+						isValid: true,
+					} as const
+				}),
+			),
 		)
 
 		return { models, total }

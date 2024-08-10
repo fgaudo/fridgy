@@ -26,7 +26,6 @@
 		"date-fns": "^3.6.0",
 		"dexie": "^4.0.8",
 		"effect": "^3.6.1",
-		"rxjs": "^7.8.1",
 		"solid-js": "^1.8.19",
 		"solidjs-hooks": "^1.1.2"
 	},

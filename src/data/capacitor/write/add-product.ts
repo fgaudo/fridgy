@@ -1,41 +1,64 @@
-import { Sc } from '@/core/imports'
+import { fallback } from '@/core/helper'
+import { E, Eff, O, Sc } from '@/core/imports'
+
+import {
+	type AddProductDTO,
+	AddProductServiceError,
+} from '@/app/interfaces/write/add-product'
+
+import { CapacitorService } from '..'
 
 export const addProductSchema = Sc.Union(
 	Sc.Struct({
 		_tag: Sc.Literal('Right'),
-		right: Sc.optional(Sc.Undefined),
+		right: Sc.optional(Sc.Unknown),
 	}),
 	Sc.Struct({
 		_tag: Sc.Literal('Left'),
-		left: Sc.String,
+		left: Sc.String.annotations({
+			decodingFallback: fallback('Unknown Error'),
+		}),
 	}),
-)
+).annotations({
+	decodingFallback: fallback({
+		_tag: 'Left',
+		left: 'Bad response given',
+	}),
+})
 
-export const addProduct = F.flip(
-	flow(
-		RT.of,
-		RT.bindTo('product'),
-		RT.chain(({ product }) =>
-			addProductCommand({
-				name: product.name,
-				creationDate: product.creationDate,
-				...(OPT.isSome(product.expirationDate)
-					? {
-							expirationDate:
-								product.expirationDate.value,
-						}
-					: {}),
+export const addProduct: (
+	product: AddProductDTO,
+) => Eff.Effect<
+	void,
+	AddProductServiceError,
+	CapacitorService
+> = product =>
+	Eff.gen(function* () {
+		const { db } = yield* CapacitorService
+
+		const result = yield* Eff.tryPromise(() =>
+			db.addProduct({
+				product: {
+					name: product.name,
+					creationDate: product.creationDate,
+					...(O.isSome(product.expirationDate)
+						? {
+								expirationDate:
+									product.expirationDate.value,
+							}
+						: {}),
+				},
 			}),
-		),
-		RT.chain(
-			flow(
-				decodeData(
-					addProductSchema,
-					fallbackResultCodec,
+		).pipe(Eff.either)
+
+		if (E.isLeft(result)) {
+			yield* Eff.logError(result.left)
+			return yield* Eff.fail(
+				AddProductServiceError(
+					'There was a problem with the request',
 				),
-				RTE.local((deps: Deps) => deps.log),
-			),
-		),
-		RTE.chainW(RTE.fromEither),
-	),
-)
+			)
+		}
+
+		yield* Eff.log('No errors adding the product')
+	})

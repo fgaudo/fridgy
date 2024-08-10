@@ -134,7 +134,7 @@ export const List: Component = () => {
 										</md-icon>
 										<Show
 											when={
-												OPT.isSome(
+												O.isSome(
 													model.expirationDate,
 												) &&
 												model.expirationDate
@@ -165,7 +165,7 @@ export const List: Component = () => {
 									<div slot="supporting-text">
 										<Show
 											when={
-												OPT.isSome(
+												O.isSome(
 													model.expirationDate,
 												) &&
 												model.expirationDate.value
@@ -196,7 +196,7 @@ export const List: Component = () => {
 												</>
 											}
 											when={
-												OPT.isSome(
+												O.isSome(
 													model.expirationDate,
 												) &&
 												model.expirationDate.value

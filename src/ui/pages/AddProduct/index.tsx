@@ -73,7 +73,7 @@ const AddProduct: (
 										<input
 											type="date"
 											value={
-												OPT.isSome(
+												O.isSome(
 													state.formFields
 														.expDate,
 												)
@@ -93,8 +93,8 @@ const AddProduct: (
 															e.currentTarget
 																.valueAsNumber,
 														)
-															? OPT.none
-															: OPT.some(
+															? O.none
+															: O.some(
 																	endOfDay(
 																		e
 																			.currentTarget

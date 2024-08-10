@@ -1,27 +1,19 @@
-import * as Match from '@effect/match'
-import {
-	either as E,
-	function as F,
-	option as OPT,
-	task as T,
-} from 'fp-ts'
 import * as Rx from 'rxjs'
 import * as Solid from 'solid-js'
 import * as SS from 'solid-js/store'
 
+import { O } from '@/core/imports'
+
 import type { App } from '@/app'
-import type { LogSeverity } from '@/app/interfaces/write/log'
 
 import { DEFAULT_FADE_MS } from '@/ui/core/constants'
 import * as H from '@/ui/core/helpers'
 import { createDispatcher } from '@/ui/core/solid-js'
 
-const pipe = F.pipe
-
 export interface State {
 	formFields: {
 		name: string
-		expDate: OPT.Option<number>
+		expDate: O.Option<number>
 	}
 	isOk: boolean
 	toastMessage: string
@@ -44,11 +36,6 @@ export type Command =
 						value: State['formFields']['expDate']
 				  }
 	  }
-	| {
-			type: 'log'
-			severity: LogSeverity
-			message: string
-	  }
 
 interface InternalCommand {
 	type: '_showToast'
@@ -57,7 +44,7 @@ interface InternalCommand {
 
 const defaultFields = () => ({
 	name: '',
-	expDate: OPT.none,
+	expDate: O.none,
 })
 
 const validateFields = (

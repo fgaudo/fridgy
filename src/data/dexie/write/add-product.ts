@@ -34,7 +34,7 @@ export const addProduct: (d: Deps) => AddProduct =
 								.add({
 									name: product.name,
 									creation_date: Date.now(),
-									...(OPT.isSome(
+									...(O.isSome(
 										product.expirationDate,
 									)
 										? {

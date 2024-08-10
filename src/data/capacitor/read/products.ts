@@ -1,9 +1,14 @@
 import { pipe } from 'effect'
 
+import { fallback } from '@/core/helper'
 import { E, Eff, O, Sc } from '@/core/imports'
 
+import {
+	type ProductDTO,
+	ProductsServiceError,
+} from '@/app/interfaces/read/products'
+
 import { CapacitorService } from '..'
-import { fallback } from '../helper'
 
 const ProductsListSchema = Sc.Union(
 	Sc.Struct({
@@ -15,34 +20,45 @@ const ProductsListSchema = Sc.Union(
 	Sc.Struct({
 		_tag: Sc.Literal('Right'),
 		right: Sc.Struct({
-			total: Sc.Number.annotations({
-				decodingFallback: fallback(0),
-			}),
+			total: Sc.Number,
 			items: Sc.Array(
 				Sc.Struct({
-					id: Sc.Number,
-					name: Sc.String.annotations({
-						decodingFallback: fallback(
-							'[UNDEFINED]',
+					id: Sc.optional(
+						Sc.UndefinedOr(Sc.Number).annotations(
+							{
+								decodingFallback:
+									fallback(undefined),
+							},
 						),
-					}),
-					expirationDate: Sc.optional(
-						Sc.Number.annotations({
-							decodingFallback: fallback(0),
-						}),
 					),
-					creationDate: Sc.Number.annotations({
-						decodingFallback: fallback(0),
-					}),
+					name: Sc.optional(
+						Sc.UndefinedOr(Sc.String).annotations(
+							{
+								decodingFallback:
+									fallback(undefined),
+							},
+						),
+					),
+					expirationDate: Sc.optional(
+						Sc.UndefinedOr(Sc.Number).annotations(
+							{
+								decodingFallback:
+									fallback(undefined),
+							},
+						),
+					),
+					creationDate: Sc.optional(
+						Sc.UndefinedOr(Sc.Number).annotations(
+							{
+								decodingFallback:
+									fallback(undefined),
+							},
+						),
+					),
+				}).annotations({
+					decodingFallback: fallback({}),
 				}),
-			).annotations({
-				decodingFallback: fallback([]),
-			}),
-		}).annotations({
-			decodingFallback: fallback({
-				total: 0,
-				items: [],
-			}),
+			),
 		}),
 	}),
 ).annotations({
@@ -52,7 +68,14 @@ const ProductsListSchema = Sc.Union(
 	}),
 })
 
-export const products = Eff.gen(function* () {
+export const products: Eff.Effect<
+	{
+		total: number
+		products: ProductDTO[]
+	},
+	ProductsServiceError,
+	CapacitorService
+> = Eff.gen(function* () {
 	const { db } = yield* CapacitorService
 
 	const result = yield* pipe(
@@ -68,7 +91,9 @@ export const products = Eff.gen(function* () {
 				Eff.logError(result.left.toString()),
 				Eff.andThen(
 					Eff.fail(
-						'There was an error while getting the data',
+						ProductsServiceError(
+							'There was an error while getting the data',
+						),
 					),
 				),
 			)
@@ -85,7 +110,9 @@ export const products = Eff.gen(function* () {
 				),
 				Eff.andThen(
 					Eff.fail(
-						'There was an error while decoding the data',
+						ProductsServiceError(
+							'There was an error while decoding the data',
+						),
 					),
 				),
 			)
@@ -97,20 +124,49 @@ export const products = Eff.gen(function* () {
 					Eff.logError(decoded.left),
 					Eff.andThen(
 						Eff.fail(
-							'There was a problem in the data-fetching',
+							ProductsServiceError(
+								'There was a problem in the data-fetching',
+							),
 						),
 					),
 				)
 
-	return {
-		total: response.total,
-		products: response.items.map(product => ({
-			id: product.id.toString(10),
-			name: product.name,
-			creationDate: product.creationDate,
-			expirationDate: O.fromNullable(
-				product.expirationDate,
-			),
-		})),
-	}
+	const products = yield* Eff.all(
+		response.items.map(product =>
+			Eff.gen(function* () {
+				const { id, name, creationDate } = product
+
+				if (
+					id == undefined ||
+					creationDate == undefined ||
+					name == undefined
+				) {
+					yield* Eff.logError(
+						'Product is corrupt',
+					).pipe(Eff.annotateLogs({ product }))
+
+					return {
+						isValid: false,
+						id: pipe(
+							O.fromNullable(product.id),
+							O.map(id => id.toString(10)),
+						),
+						name: O.fromNullable(product.name),
+					} as const
+				}
+
+				return {
+					isValid: true,
+					id: id.toString(10),
+					name,
+					creationDate,
+					expirationDate: O.fromNullable(
+						product.expirationDate,
+					),
+				} as const
+			}),
+		),
+	)
+
+	return { total: response.total, products }
 })

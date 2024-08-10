@@ -1,20 +1,9 @@
-import * as Match from '@effect/match'
-import {
-	either as E,
-	function as F,
-	readonlySet as RoS,
-	string as S,
-	task as T,
-	taskEither as TE,
-} from 'fp-ts'
-import * as Rx from 'rxjs'
 import { onMount } from 'solid-js'
 import * as SS from 'solid-js/store'
 
-import * as RoNeS from '@/core/readonly-non-empty-set'
+import { M } from '@/core/imports'
 
 import type { App } from '@/app'
-import type { LogSeverity } from '@/app/interfaces/write/log'
 import type { ProductModel } from '@/app/use-cases/product-list'
 
 import { onResume } from '@/ui/core/capacitor'
@@ -24,8 +13,6 @@ import {
 	type DispatcherValue,
 	createDispatcher,
 } from '@/ui/core/solid-js'
-
-const pipe = F.pipe
 
 export interface State {
 	total: number
@@ -112,31 +99,31 @@ export const createStore: (
 				),
 				Rx.mergeMap(cmd =>
 					pipe(
-						Match.value(cmd),
-						Match.when(
+						M.value(cmd),
+						M.when(
 							{ type: 'clearSelectedProducts' },
 							clearSelectedProducts(),
 						),
-						Match.when(
+						M.when(
 							{ type: 'refreshList' },
 							handleRefreshList(state, context),
 						),
-						Match.when(
+						M.when(
 							{ type: 'log' },
 							handleLog(context),
 						),
-						Match.when(
+						M.when(
 							{ type: 'deleteProducts' },
 							handleDeleteProducts(
 								state,
 								context,
 							),
 						),
-						Match.when(
+						M.when(
 							{ type: 'toggleItem' },
 							handleToggleItem(),
 						),
-						Match.exhaustive,
+						M.exhaustive,
 					),
 				),
 			),
