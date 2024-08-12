@@ -137,9 +137,10 @@ export const query: Eff.Effect<
 				const { id, name, creationDate } = product
 
 				if (
-					id == undefined ||
-					creationDate == undefined ||
-					name == undefined
+					id === undefined ||
+					!Number.isInteger(id) ||
+					creationDate === undefined ||
+					name === undefined
 				) {
 					yield* Eff.logError(
 						'Product is corrupt',
@@ -148,7 +149,7 @@ export const query: Eff.Effect<
 					return {
 						isValid: false,
 						id: pipe(
-							O.fromNullable(product.id),
+							O.fromNullable(id),
 							O.map(id => id.toString(10)),
 						),
 						name: O.fromNullable(product.name),

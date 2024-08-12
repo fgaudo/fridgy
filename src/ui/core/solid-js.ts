@@ -4,7 +4,13 @@ import {
 } from 'solid-js'
 import type { SetStoreFunction } from 'solid-js/store'
 
-import { Eff, Q, Str } from '@/core/imports'
+import {
+	C,
+	Eff,
+	Q,
+	Str,
+	pipe,
+} from '@/core/imports'
 
 export function withDefault<T>(
 	accessor: Accessor<T | undefined>,
@@ -14,13 +20,13 @@ export function withDefault<T>(
 }
 
 export type DispatcherValue<STATE, CMD> =
+	| { cmds: readonly CMD[] }
 	| {
-			mutation: STATE
+			mutation: (s: STATE) => STATE
 	  }
-	| { cmds: CMD[] }
 	| {
-			mutation: STATE
-			cmds: CMD[]
+			mutation: (s: STATE) => STATE
+			cmds: readonly CMD[]
 	  }
 
 export const useQueue = <STATE, COMMAND>(

@@ -4,6 +4,8 @@ import {
 	E,
 	Eff,
 	HS,
+	N,
+	O,
 	Sc,
 	pipe,
 } from '@/core/imports'
@@ -40,9 +42,32 @@ export const command: (
 	Eff.gen(function* () {
 		const { db } = yield* CapacitorService
 
-		const idsArray = pipe(
-			A.fromIterable(ids),
-			A.map(id => parseInt(id, 10)),
+		const idsArray = yield* Eff.all(
+			pipe(
+				A.fromIterable(ids),
+				A.map(id =>
+					Eff.gen(function* () {
+						const parsed = N.parse(id)
+
+						if (
+							O.isSome(parsed) &&
+							Number.isInteger(parsed.value)
+						) {
+							return parsed.value
+						}
+
+						yield* Eff.logError(
+							'Id has incorrect format',
+						).pipe(Eff.annotateLogs({ id }))
+
+						return yield* Eff.fail(
+							DeleteProductsByIdsServiceError(
+								'Id has incorrect format',
+							),
+						)
+					}),
+				),
+			),
 		)
 
 		yield* Eff.log(

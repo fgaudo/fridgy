@@ -9,7 +9,6 @@ import { render } from '@/ui'
 
 import type { FridgySqlitePlugin } from './data/capacitor/fridgy-sqlite-plugin'
 
-// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 const root = document.getElementById('root')!
 
 /// const isDev = import.meta.env.DEV

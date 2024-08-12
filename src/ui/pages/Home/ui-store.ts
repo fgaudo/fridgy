@@ -53,7 +53,6 @@ export const createStore: (
 					void Haptics.impact({
 						style: ImpactStyle.Light,
 					})
-					return
 				}
 			},
 		),

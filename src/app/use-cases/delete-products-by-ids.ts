@@ -25,7 +25,7 @@ export const useCase: DeleteProductsByIds = ids =>
 			yield* DeleteProductsByIdsService
 
 		if (HS.size(ids) <= 0) {
-			yield* Effect.fail(
+			return yield* Effect.fail(
 				DeleteProductsByIdsError(
 					'No ids provided',
 				),

@@ -17,6 +17,7 @@
 		"noUnusedLocals": false,
 		"noUnusedParameters": false,
 		"noFallthroughCasesInSwitch": true,
+		"noPropertyAccessFromIndexSignature": true,
 		"baseUrl": "./src",
 		"paths": {
 			"@/domain/*": ["domain/*"],

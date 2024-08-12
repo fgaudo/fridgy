@@ -2,7 +2,7 @@ import { B, E, Eff, O } from '@/core/imports'
 
 import { createProduct } from '@/domain/product'
 
-import { ProductsService } from '../interfaces/read/sorted-products'
+import { ProductsService } from '../interfaces/read/get-sorted-products'
 
 export type ProductModel =
 	| {
