@@ -1,14 +1,13 @@
-import { Context, pipe } from 'effect'
+import { Context, flow, pipe } from 'effect'
 
-import { Eff, H } from '@/core/imports'
+import { Eff } from '@/core/imports'
 
 import type { Contracts } from '@/app/index'
-import type { AddProductDTO } from '@/app/interfaces/write/add-product'
 
 import type { FridgySqlitePlugin } from './fridgy-sqlite-plugin'
-import { products } from './read/products'
-import { addProduct } from './write/add-product'
-import { deleteProductsByIds } from './write/delete-products-by-ids'
+import { query as getSortedProducts } from './read/get-sorted-products'
+import { command as addProduct } from './write/add-product'
+import { command as deleteProductByIds } from './write/delete-products-by-ids'
 
 interface Deps {
 	db: FridgySqlitePlugin
@@ -22,22 +21,20 @@ export const implementations: (
 	deps: Deps,
 ) => Pick<
 	Contracts,
-	| 'products'
+	| 'getSortedProducts'
 	| 'addProduct'
 	| 'deleteProductsByIds'
 > = (deps: Deps) => ({
-	addProduct: (product: AddProductDTO) =>
-		pipe(
-			addProduct(product),
-			Eff.provideService(CapacitorService, deps),
-		),
-	products: pipe(
-		products,
+	addProduct: flow(
+		addProduct,
 		Eff.provideService(CapacitorService, deps),
 	),
-	deleteProductsByIds: (ids: H.HashSet<string>) =>
-		pipe(
-			deleteProductsByIds(ids),
-			Eff.provideService(CapacitorService, deps),
-		),
+	getSortedProducts: pipe(
+		getSortedProducts,
+		Eff.provideService(CapacitorService, deps),
+	),
+	deleteProductsByIds: flow(
+		deleteProductByIds,
+		Eff.provideService(CapacitorService, deps),
+	),
 })

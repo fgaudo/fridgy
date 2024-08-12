@@ -19,7 +19,7 @@ export type DeleteProductsByIdsError = string &
 const DeleteProductsByIdsError =
 	B.nominal<DeleteProductsByIdsError>()
 
-export const command: DeleteProductsByIds = ids =>
+export const useCase: DeleteProductsByIds = ids =>
 	Effect.gen(function* () {
 		const deleteProductsByIds =
 			yield* DeleteProductsByIdsService

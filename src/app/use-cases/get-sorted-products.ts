@@ -2,7 +2,7 @@ import { B, E, Eff, O } from '@/core/imports'
 
 import { createProduct } from '@/domain/product'
 
-import { ProductsService } from '../interfaces/read/products'
+import { ProductsService } from '../interfaces/read/sorted-products'
 
 export type ProductModel =
 	| {
@@ -20,7 +20,7 @@ export type ProductModel =
 export type ProductList = Eff.Effect<
 	{
 		total: number
-		models: readonly ProductModel[]
+		models: ProductModel[]
 	},
 	ProductListError,
 	ProductsService

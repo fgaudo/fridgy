@@ -1,7 +1,8 @@
+import { PubSub, Queue } from 'effect'
 import { onMount } from 'solid-js'
 import * as SS from 'solid-js/store'
 
-import { M } from '@/core/imports'
+import { Eff, M, Q } from '@/core/imports'
 
 import type { App } from '@/app'
 import type { ProductModel } from '@/app/use-cases/product-list'
@@ -65,74 +66,9 @@ export const createStore: (
 		},
 	)
 
-	const dispatch = createDispatcher<
-		Command | InternalCommand,
-		State
-	>(setState, cmd$ =>
-		Rx.merge(
-			pipe(
-				cmd$,
-				Rx.filter(
-					cmd => cmd.type === '_showToast',
-				),
-				Rx.switchMap(cmd =>
-					pipe(
-						cmd.message,
-						H.handleShowToast({
-							hide: () => (state: State) => ({
-								...state,
-								toastMessage: '',
-							}),
-							show:
-								message => (state: State) => ({
-									...state,
-									toastMessage: message,
-								}),
-						}),
-					),
-				),
-			),
-			pipe(
-				cmd$,
-				Rx.filter(
-					cmd => cmd.type !== '_showToast',
-				),
-				Rx.mergeMap(cmd =>
-					pipe(
-						M.value(cmd),
-						M.when(
-							{ type: 'clearSelectedProducts' },
-							clearSelectedProducts(),
-						),
-						M.when(
-							{ type: 'refreshList' },
-							handleRefreshList(state, context),
-						),
-						M.when(
-							{ type: 'log' },
-							handleLog(context),
-						),
-						M.when(
-							{ type: 'deleteProducts' },
-							handleDeleteProducts(
-								state,
-								context,
-							),
-						),
-						M.when(
-							{ type: 'toggleItem' },
-							handleToggleItem(),
-						),
-						M.exhaustive,
-					),
-				),
-			),
-		),
-	)
-
 	onMount(() => {
 		onResume(() => {
-			dispatch({ type: 'refreshList' })
+			queue.offer({ type: 'refreshList' })
 		})
 
 		dispatch({ type: 'refreshList' })

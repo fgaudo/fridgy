@@ -3,7 +3,7 @@ import { A, Eff, O } from '@/core/imports'
 import {
 	type ProductDTO,
 	type ProductsServiceError,
-} from '@/app/interfaces/read/products'
+} from '@/app/interfaces/read/get-sorted-products'
 
 const productSamples = [
 	'Milk',
@@ -13,7 +13,7 @@ const productSamples = [
 	'Broccoli',
 ]
 
-export const products: Eff.Effect<
+export const query: Eff.Effect<
 	{
 		total: number
 		products: ProductDTO[]

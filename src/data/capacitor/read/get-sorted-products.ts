@@ -6,7 +6,7 @@ import { E, Eff, O, Sc } from '@/core/imports'
 import {
 	type ProductDTO,
 	ProductsServiceError,
-} from '@/app/interfaces/read/products'
+} from '@/app/interfaces/read/get-sorted-products'
 
 import { CapacitorService } from '..'
 
@@ -68,7 +68,7 @@ const ProductsListSchema = Sc.Union(
 	}),
 })
 
-export const products: Eff.Effect<
+export const query: Eff.Effect<
 	{
 		total: number
 		products: ProductDTO[]

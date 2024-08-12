@@ -23,7 +23,7 @@ export type AddProductError = string &
 const AddProductError =
 	B.nominal<AddProductError>()
 
-export const program: AddProduct = product =>
+export const useCase: AddProduct = product =>
 	Eff.gen(function* () {
 		const addProduct = yield* AddProductService
 

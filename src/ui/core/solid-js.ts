@@ -1,12 +1,10 @@
-import { function as F } from 'fp-ts'
-import * as Rx from 'rxjs'
 import {
 	type Accessor,
 	onCleanup,
 } from 'solid-js'
 import type { SetStoreFunction } from 'solid-js/store'
 
-const pipe = F.pipe
+import { Eff, Q, Str } from '@/core/imports'
 
 export function withDefault<T>(
 	accessor: Accessor<T | undefined>,
@@ -15,49 +13,53 @@ export function withDefault<T>(
 	return () => accessor() ?? init
 }
 
-export type DispatcherValue<CMD, STATE> =
+export type DispatcherValue<STATE, CMD> =
 	| {
 			mutation: STATE
 	  }
-	| { cmds: readonly CMD[] }
+	| { cmds: CMD[] }
 	| {
 			mutation: STATE
-			cmds: readonly CMD[]
+			cmds: CMD[]
 	  }
 
-export const createDispatcher = <CMD, STATE>(
+export const useQueue = <STATE, COMMAND>(
 	mutate: SetStoreFunction<STATE>,
 	transformer: (
-		obs: Rx.Observable<CMD>,
-	) => Rx.Observable<
-		DispatcherValue<CMD, (s: STATE) => STATE>
+		stream: Str.Stream<COMMAND>,
+	) => Str.Stream<
+		DispatcherValue<STATE, COMMAND>
 	>,
 ) => {
-	const subject = new Rx.Subject<CMD>()
+	const queue = Eff.runSync(
+		Q.unbounded<COMMAND>(),
+	)
 
-	const dispatch = (cmd: CMD) => {
-		if (!subject.closed) subject.next(cmd)
-	}
-
-	const subscription = pipe(
-		subject,
-		transformer,
-	).subscribe(params => {
-		if ('mutation' in params)
-			mutate(params.mutation)
-		if ('cmds' in params) {
-			for (const cmd of params.cmds) {
-				setTimeout(() => {
-					dispatch(cmd)
-				})
-			}
-		}
-	})
+	Eff.runFork(
+		transformer(Str.fromQueue(queue)).pipe(
+			Str.runForEach(params =>
+				Eff.gen(function* () {
+					if ('mutation' in params)
+						yield* Eff.sync(() => {
+							mutate(params.mutation)
+						})
+					if ('cmds' in params) {
+						for (const cmd of params.cmds) {
+							yield* Eff.sleep(2000)
+							yield* Q.offer(queue, cmd)
+						}
+					}
+				}),
+			),
+		),
+		{ immediate: false },
+	)
 
 	onCleanup(() => {
-		subject.unsubscribe()
-		subscription.unsubscribe()
+		Eff.runFork(Q.shutdown(queue))
 	})
 
-	return dispatch
+	return (command: COMMAND) => {
+		Eff.runFork(Q.offer(queue, command))
+	}
 }

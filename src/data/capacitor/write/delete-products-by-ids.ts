@@ -3,7 +3,7 @@ import {
 	A,
 	E,
 	Eff,
-	H,
+	HS,
 	Sc,
 	pipe,
 } from '@/core/imports'
@@ -30,8 +30,8 @@ export const DeleteProductsSchema = Sc.Union(
 	}),
 })
 
-export const deleteProductsByIds: (
-	ids: H.HashSet<string>,
+export const command: (
+	ids: HS.HashSet<string>,
 ) => Eff.Effect<
 	void,
 	DeleteProductsByIdsServiceError,

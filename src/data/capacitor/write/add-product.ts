@@ -26,7 +26,7 @@ export const addProductSchema = Sc.Union(
 	}),
 })
 
-export const addProduct: (
+export const command: (
 	product: AddProductDTO,
 ) => Eff.Effect<
 	void,

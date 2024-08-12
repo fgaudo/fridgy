@@ -1,45 +1,46 @@
-import { Eff } from '@/core/imports'
+import { Eff, HS } from '@/core/imports'
 
-import { ProductsService } from '@/app/interfaces/read/products'
-import * as AP from '@/app/use-cases/add-product'
-import * as DPBY from '@/app/use-cases/delete-products-by-ids'
-import * as PL from '@/app/use-cases/product-list'
+import { ProductsService } from '@/app/interfaces/read/get-sorted-products'
+import {
+	type AddProductDTO,
+	useCase as addProduct,
+} from '@/app/use-cases/add-product'
+import { useCase as deleteProductsByIds } from '@/app/use-cases/delete-products-by-ids'
+import { useCase as getSortedProducts } from '@/app/use-cases/get-sorted-products'
 
 import { AddProductService } from './interfaces/write/add-product'
 import { DeleteProductsByIdsService } from './interfaces/write/delete-products-by-ids'
 
 export interface Contracts {
 	addProduct: AddProductService['Type']
-	products: ProductsService['Type']
+	getSortedProducts: ProductsService['Type']
 	deleteProductsByIds: DeleteProductsByIdsService['Type']
 }
 
-export class App {
-	constructor(contracts: Contracts) {
-		this.productList = Eff.provideService(
-			PL.useCase,
-			ProductsService,
-			contracts.products,
-		)
+export type App = ReturnType<typeof createApp>
 
-		this.addProduct = product =>
-			Eff.provideService(
-				AP.program(product),
-				AddProductService,
-				contracts.addProduct,
-			)
+export const createApp = (
+	contracts: Contracts,
+) => ({
+	productList: Eff.provideService(
+		getSortedProducts,
+		ProductsService,
+		contracts.getSortedProducts,
+	),
 
-		this.deleteProductsByIds = ids =>
-			Eff.provideService(
-				DPBY.command(ids),
-				DeleteProductsByIdsService,
-				contracts.deleteProductsByIds,
-			)
-	}
+	addProduct: (product: AddProductDTO) =>
+		Eff.provideService(
+			addProduct(product),
+			AddProductService,
+			contracts.addProduct,
+		),
 
-	readonly productList: PL.ProductList
-
-	readonly addProduct: AP.AddProduct
-
-	readonly deleteProductsByIds: DPBY.DeleteProductsByIds
-}
+	deleteProductsByIds: (
+		ids: HS.HashSet<string>,
+	) =>
+		Eff.provideService(
+			deleteProductsByIds(ids),
+			DeleteProductsByIdsService,
+			contracts.deleteProductsByIds,
+		),
+})

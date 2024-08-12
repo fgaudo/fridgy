@@ -5,7 +5,7 @@ import type {
 	AddProductServiceError,
 } from '@/app/interfaces/write/add-product'
 
-export const addProduct: (
+export const command: (
 	product: AddProductDTO,
 ) => Eff.Effect<
 	void,
