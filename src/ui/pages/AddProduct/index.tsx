@@ -1,25 +1,38 @@
 import { endOfDay } from 'date-fns'
-import { option as OPT } from 'fp-ts'
 import {
 	type Component,
 	Match,
 	Switch,
 } from 'solid-js'
 
+import { O } from '@/core/imports'
+
 import { Snackbar } from './components/Snackbar'
 import { TopBar } from './components/TopBar'
 import { AddProductContext } from './context'
-import { type Command, type State } from './store'
+import { type State } from './store'
+import { Message } from './store/actions'
 import { createStore as createUiStore } from './ui-store'
 
 const AddProduct: (
 	createStore: () => [
 		State,
-		(command: Command) => void,
+		(message: Message) => void,
 	],
 ) => Component = createStore => () => {
 	const [state, dispatch] = createStore()
 	const [uiState, setUiState] = createUiStore()
+
+	const updateExpDate = (number: number) => {
+		dispatch(
+			Message.UpdateField({
+				name: 'expDate',
+				value: !Number.isInteger(number)
+					? O.none()
+					: O.some(endOfDay(number).getTime()),
+			}),
+		)
+	}
 
 	return (
 		<AddProductContext.Provider
@@ -41,8 +54,8 @@ const AddProduct: (
 					}>
 					<Match
 						when={
-							state.currentDate.status ===
-								'ready' && state.currentDate.date
+							O.isSome(state.currentDate) &&
+							state.currentDate.value
 						}>
 						{date => (
 							<div class="mt-[-50px] flex h-screen flex-col place-content-center gap-[28px] pb-[16px] pl-[16px] pr-[16px] pt-[70px]">
@@ -53,14 +66,13 @@ const AddProduct: (
 									prop:type="text"
 									prop:label="Product name*"
 									onInput={e => {
-										dispatch({
-											type: 'updateField',
-											field: {
+										dispatch(
+											Message.UpdateField({
 												name: 'name',
 												value:
 													e.currentTarget.value,
-											},
-										})
+											}),
+										)
 									}}
 								/>
 								<div class="flex flex-col rounded-xl align-middle text-onSurface">
@@ -75,34 +87,20 @@ const AddProduct: (
 											value={
 												O.isSome(
 													state.formFields
-														.expDate,
+														.expirationDate,
 												)
 													? new Date(
-															state.formFields.expDate.value,
+															state.formFields.expirationDate.value,
 														)
 															.toISOString()
 															.substring(0, 10)
 													: ''
 											}
 											onInput={e => {
-												dispatch({
-													type: 'updateField',
-													field: {
-														name: 'expDate',
-														value: Number.isNaN(
-															e.currentTarget
-																.valueAsNumber,
-														)
-															? O.none
-															: O.some(
-																	endOfDay(
-																		e
-																			.currentTarget
-																			.valueAsNumber,
-																	).getTime(),
-																),
-													},
-												})
+												updateExpDate(
+													e.currentTarget
+														.valueAsNumber,
+												)
 											}}
 											id="expdate"
 											class="flex-1 rounded-[4px] border-[1px] border-[rgb(82,68,61)] bg-surface p-4 focus:outline focus:outline-2 focus:outline-primary"
@@ -120,9 +118,7 @@ const AddProduct: (
 									prop:disabled={!state.isOk}
 									class="mt-[20px]"
 									onClick={() => {
-										dispatch({
-											type: 'addProduct',
-										})
+										dispatch(Message.AddProduct())
 									}}>
 									Add product
 								</md-filled-button>

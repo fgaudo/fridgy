@@ -4,9 +4,12 @@ import {
 } from 'solid-js'
 import { Portal } from 'solid-js/web'
 
+import { HS } from '@/core/imports'
+
 import { SmallTopAppBar } from '@/ui/widgets/SmallTopAppBar'
 
 import { useUiStateContext } from '../context'
+import { Message } from '../store/actions'
 
 export const TopBar: Component = () => {
 	const {
@@ -20,7 +23,7 @@ export const TopBar: Component = () => {
 
 	const size = createMemo<number>(prev => {
 		return uiState.isSelectModeEnabled
-			? state.selectedProducts.size
+			? HS.size(state.selectedProducts)
 			: (prev ?? 0)
 	})
 	return (
@@ -66,9 +69,7 @@ export const TopBar: Component = () => {
 						<md-icon-button
 							class="ml-auto mr-[-8px] shrink-0"
 							onClick={() => {
-								dispatch({
-									type: 'deleteProducts',
-								})
+								dispatch(Message.DeleteProducts())
 							}}>
 							<md-icon>delete</md-icon>
 						</md-icon-button>

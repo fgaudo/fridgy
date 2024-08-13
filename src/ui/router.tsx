@@ -5,7 +5,7 @@ import type { App } from '@/app'
 
 import { About } from './pages/About'
 import AddProduct from './pages/AddProduct'
-import { createStore as createAddProductStore } from './pages/AddProduct/store'
+import { createStore as createAddProductStore } from './pages/AddProduct/store/store'
 import Home from './pages/Home'
 import { createStore as createHomeStore } from './pages/Home/store'
 

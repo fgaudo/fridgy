@@ -6,7 +6,7 @@ import { Menu } from './components/Menu'
 import { Snackbar } from './components/Snackbar'
 import { TopBar } from './components/TopBar'
 import { HomeContext } from './context'
-import { type Store } from './store'
+import type { Store } from './store'
 import { createStore as createUiStore } from './ui-store'
 
 const Home: (

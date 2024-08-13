@@ -5,10 +5,13 @@ import {
 import { createEffect, on } from 'solid-js'
 import * as SS from 'solid-js/store'
 
+import { HS } from '@/core/imports'
+
 import { onResume } from '@/ui/core/capacitor'
 import { useFridgyNavigate } from '@/ui/router'
 
 import type { Store } from './store'
+import { Message } from './store/actions'
 
 export interface UiState {
 	readonly isSelectModeEnabled: boolean
@@ -28,7 +31,7 @@ export const createStore: (
 ) => UiStore = ([state, dispatch]) => {
 	const [uiState, setUiState] = SS.createStore({
 		get isSelectModeEnabled() {
-			return state.selectedProducts.size > 0
+			return HS.size(state.selectedProducts) > 0
 		},
 		isOpeningAddProduct: false,
 		isMenuOpen: false,
@@ -41,7 +44,7 @@ export const createStore: (
 		on(
 			[
 				() => uiState.isSelectModeEnabled,
-				() => state.selectedProducts.size,
+				() => HS.size(state.selectedProducts),
 			],
 			([isSelectModeEnabled], previous) => {
 				if (!previous) {
@@ -75,7 +78,7 @@ export const createStore: (
 	})
 
 	const disableSelectMode = () => {
-		dispatch({ type: 'clearSelectedProducts' })
+		dispatch(Message.ClearSelectedProducts())
 	}
 
 	return [
