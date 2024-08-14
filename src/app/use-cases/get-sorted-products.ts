@@ -15,6 +15,7 @@ export type ProductModel =
 	| {
 			isValid: false
 			id: O.Option<string>
+			name: O.Option<string>
 	  }
 
 export type ProductList = Eff.Effect<
@@ -94,7 +95,8 @@ export const useCase: ProductList = Eff.gen(
 
 					return {
 						name: product.name,
-						expirationDate: product.expiration,
+						expirationDate:
+							product.expirationDate,
 						id: rawProduct.id,
 						creationDate: rawProduct.creationDate,
 						isValid: true,

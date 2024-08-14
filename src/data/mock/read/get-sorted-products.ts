@@ -35,15 +35,51 @@ export const query: Eff.Effect<
 						Math.random() * productSamples.length,
 					)
 				],
-				creationDate: Date.now(),
+				creationDate:
+					Date.now() -
+					Math.floor(Math.random() * 26967228),
 				expirationDate: O.some(
 					Date.now() +
 						100000 +
 						Math.floor(Math.random() * 26967228),
 				),
-			} as const,
-		]
+			},
+		] satisfies ProductDTO[]
 	}
 
-	return { total: 20, products: array }
+	array = [
+		...array,
+		{
+			isValid: false,
+			id: O.some('59'),
+			name: O.some('Corrupt'),
+		},
+		{
+			isValid: false,
+			id: O.none(),
+			name: O.none(),
+		},
+		{
+			isValid: false,
+			id: O.none(),
+			name: O.none(),
+		},
+		{
+			isValid: false,
+			id: O.none(),
+			name: O.none(),
+		},
+		{
+			isValid: false,
+			id: O.none(),
+			name: O.none(),
+		},
+		{
+			isValid: false,
+			id: O.none(),
+			name: O.none(),
+		},
+	]
+
+	return { total: array.length, products: array }
 })

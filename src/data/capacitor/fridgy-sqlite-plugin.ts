@@ -10,7 +10,7 @@ export interface FridgySqlitePlugin {
 		product: {
 			name: string
 			creationDate: number
-			expirationDate?: number
+			expirationDate: number | undefined
 		}
 	}): Promise<unknown>
 

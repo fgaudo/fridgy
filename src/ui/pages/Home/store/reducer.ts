@@ -149,7 +149,26 @@ export const reducer: (
 			),
 			M.when(
 				{ _tag: 'DeleteProductsSucceeded' },
-				() => Da.tuple(state, [] as const),
+				() =>
+					Da.tuple(
+						{
+							...state,
+							selectedProducts: HS.empty(),
+						},
+						[
+							{
+								type: 'message',
+								message:
+									InternalMessage.ShowToast({
+										message: 'Products deleted',
+									}),
+							} as const,
+							{
+								type: 'message',
+								message: Message.RefreshList(),
+							} as const,
+						] as const,
+					),
 			),
 			M.when(
 				{ _tag: 'ShowToast' },

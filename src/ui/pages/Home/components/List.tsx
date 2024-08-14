@@ -6,7 +6,7 @@ import {
 } from 'solid-js'
 import { Portal } from 'solid-js/web'
 
-import { Eff } from '@/core/imports'
+import { Eff, O } from '@/core/imports'
 
 import { useUiStateContext } from '../context'
 import { Item } from './Item'
@@ -26,9 +26,10 @@ export const List: Component = () => {
 		<>
 			<Portal>
 				<div
-					class="fixed bottom-0 left-0 right-0 top-0 flex items-center justify-center"
+					class="fixed bottom-0 left-0 right-0 top-0 flex items-center justify-center bg-background transition-all"
 					classList={{
 						'opacity-0 pointer-events-none':
+							O.isNone(state.runningRefreshing) &&
 							!state.isLoading,
 					}}>
 					<md-circular-progress
@@ -40,14 +41,18 @@ export const List: Component = () => {
 				class="pb-[128px] pt-[100px] transition-all duration-fade"
 				classList={{
 					'opacity-0 pointer-events-none':
-						state.total <= 0 && state.isLoading,
+						state.total <= 0 ||
+						state.isLoading ||
+						O.isSome(state.runningRefreshing),
 				}}>
 				<Portal>
 					<p
 						class="fixed top-[64px] w-full bg-background px-[14px] pb-[8px] pt-[10px] text-xs transition-all"
 						classList={{
 							'opacity-0 pointer-events-none':
-								state.total <= 0,
+								state.total <= 0 ||
+								state.isLoading ||
+								O.isSome(state.runningRefreshing),
 						}}>
 						{totalItems()} items
 					</p>

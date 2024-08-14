@@ -2,8 +2,6 @@ import { E, Eff, F, HS, O } from '@/core/imports'
 
 import type { App } from '@/app/index'
 
-import { DEFAULT_FADE_MS } from '@/ui/core/constants'
-
 import { InternalMessage } from './actions'
 
 export const refreshListTask = (
@@ -64,8 +62,6 @@ export const deleteTask = (
 					}),
 				)
 			}
-
-			yield* Eff.sleep(DEFAULT_FADE_MS)
 
 			const result = yield* deleteProducts(
 				selectedProducts,

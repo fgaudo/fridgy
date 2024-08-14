@@ -80,10 +80,16 @@ export const formatRemainingTime = (
 		return 'EXP'
 	}
 
+	const hours = differenceInHours(to, from)
+
+	if (hours < 1) {
+		return '<1h'
+	}
+
 	const days = differenceInDays(to, from)
 
-	if (days === 0) {
-		return `${differenceInHours(to, from).toString(10)}h`
+	if (days < 1) {
+		return `${hours.toString(10)}h`
 	}
 
 	if (days <= 28) {

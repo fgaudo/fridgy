@@ -2,12 +2,12 @@ import { E, O } from '@/core/imports'
 
 export interface Product {
 	name: string
-	expiration: O.Option<number>
+	expirationDate: O.Option<number>
 }
 
 export const createProduct: (f: {
 	name: string
-	expiration?: O.Option<number>
+	expirationDate: O.Option<number>
 }) => E.Either<
 	Product,
 	string[]
@@ -21,8 +21,8 @@ export const createProduct: (f: {
 		return errors.length <= 0
 			? {
 					name: productDummy.name,
-					expiration:
-						productDummy.expiration ?? O.none(),
+					expirationDate:
+						productDummy.expirationDate,
 				}
 			: yield* E.left(errors)
 	})

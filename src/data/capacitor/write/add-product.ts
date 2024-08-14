@@ -41,12 +41,11 @@ export const command: (
 				product: {
 					name: product.name,
 					creationDate: product.creationDate,
-					...(O.isSome(product.expirationDate)
-						? {
-								expirationDate:
-									product.expirationDate.value,
-							}
-						: {}),
+					expirationDate: O.isSome(
+						product.expirationDate,
+					)
+						? product.expirationDate.value
+						: undefined,
 				},
 			}),
 		).pipe(Eff.either)
