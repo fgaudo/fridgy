@@ -5,6 +5,7 @@ import {
 	Match,
 	Show,
 	Switch,
+	createEffect,
 } from 'solid-js'
 
 import { HS, O } from '@/core/imports'
@@ -24,131 +25,158 @@ export const Item: Component<{
 		uiStore: [uiState],
 	} = useUiStateContext()!
 
+	createEffect(() => {
+		console.log(
+			'item ' +
+				props.index().toString(10) +
+				' repainted',
+		)
+	})
+
 	return (
-		<Switch>
-			<Match
-				when={
-					!props.model.isValid && props.model
-				}>
-				{model => (
-					<Button
-						index={props.index}
-						model={model}>
-						<Show
-							when={(() => {
-								const m = model()
-								return (
-									O.isSome(m.id) && m.id.value
-								)
-							})()}>
-							{id => (
-								<div
-									slot="end"
-									class="relative flex h-[24px] w-[24px] items-center justify-center text-sm transition-all duration-fade">
-									<CheckBoxes id={id} />
-								</div>
-							)}
-						</Show>
-					</Button>
-				)}
-			</Match>
-			<Match
-				when={props.model.isValid && props.model}>
-				{model => (
-					<Button
-						index={props.index}
-						model={model}>
-						<div
-							slot="end"
-							class="relative flex h-[24px] w-[24px] items-center justify-center text-sm transition-all duration-fade">
-							<CheckBoxes id={() => model().id} />
+		<div
+			class="absolute transition-all duration-[3000ms]"
+			style={{
+				top: `${(props.index() * 72).toString(10)}px`,
+				left: '0',
+				right: '0',
+			}}>
+			<Switch>
+				<Match
+					when={
+						!props.model.isValid && props.model
+					}>
+					{model => (
+						<Button
+							index={props.index}
+							model={model}>
 							<Show
 								when={(() => {
-									const exp =
-										model().expirationDate
+									const m = model()
 									return (
-										O.isSome(exp) &&
-										exp.value >
-											uiState.currentTimestamp &&
-										exp.value
+										O.isSome(m.id) && m.id.value
 									)
 								})()}>
-								{expiration => (
+								{id => (
 									<div
-										class="absolute text-xs text-primary transition-all duration-fade"
-										classList={{
-											'opacity-0':
-												uiState.isSelectModeEnabled,
-											'text-red-500 font-bold':
-												expiration() <
-												uiState.currentTimestamp -
-													0,
-										}}>
-										{formatRemainingTime(
-											uiState.currentTimestamp,
-											expiration(),
-										)}
+										slot="end"
+										class="relative flex h-[24px] w-[24px] items-center justify-center text-sm transition-all duration-fade">
+										<CheckBoxes id={id} />
 									</div>
 								)}
 							</Show>
-						</div>
-
-						<div slot="supporting-text">
-							<Show
-								when={(() => {
-									const exp =
-										model().expirationDate
-									return (
-										O.isSome(exp) && exp.value
-									)
-								})()}>
-								{expiration => (
-									<ExpirationBar
-										expiration={expiration}
-										creation={
-											model().creationDate
-										}
-									/>
-								)}
-							</Show>
-						</div>
-
-						<div
-							slot="start"
-							class="flex flex-col items-center">
-							<Show
-								fallback={
-									<>
-										<div class="text-sm">No</div>
-										<div class="text-sm">EXP</div>
-									</>
-								}
-								when={(() => {
-									const exp =
-										model().expirationDate
-									return (
-										O.isSome(exp) && exp.value
-									)
-								})()}>
-								{expiration => (
-									<>
-										<div class="text-sm">
-											{format(expiration(), 'd')}
-										</div>
-										<div class="text-sm">
-											{format(
+						</Button>
+					)}
+				</Match>
+				<Match
+					when={
+						props.model.isValid && props.model
+					}>
+					{model => (
+						<Button
+							index={props.index}
+							model={model}>
+							<div
+								slot="end"
+								class="relative flex h-[24px] w-[24px] items-center justify-center text-sm transition-all duration-fade">
+								<CheckBoxes
+									id={() => model().id}
+								/>
+								<Show
+									when={(() => {
+										const exp =
+											model().expirationDate
+										return (
+											O.isSome(exp) &&
+											exp.value >
+												uiState.currentTimestamp &&
+											exp.value
+										)
+									})()}>
+									{expiration => (
+										<div
+											class="absolute text-xs text-primary transition-all duration-fade"
+											classList={{
+												'opacity-0':
+													uiState.isSelectModeEnabled,
+												'text-red-500 font-bold':
+													expiration() <
+													uiState.currentTimestamp -
+														0,
+											}}>
+											{formatRemainingTime(
+												uiState.currentTimestamp,
 												expiration(),
-												'LLL',
 											)}
 										</div>
-									</>
-								)}
-							</Show>
-						</div>
-					</Button>
-				)}
-			</Match>
-		</Switch>
+									)}
+								</Show>
+							</div>
+
+							<div slot="supporting-text">
+								<Show
+									when={(() => {
+										const exp =
+											model().expirationDate
+										return (
+											O.isSome(exp) && exp.value
+										)
+									})()}>
+									{expiration => (
+										<ExpirationBar
+											expiration={expiration}
+											creation={
+												model().creationDate
+											}
+										/>
+									)}
+								</Show>
+							</div>
+
+							<div
+								slot="start"
+								class="flex flex-col items-center">
+								<Show
+									fallback={
+										<>
+											<div class="text-sm">
+												No
+											</div>
+											<div class="text-sm">
+												EXP
+											</div>
+										</>
+									}
+									when={(() => {
+										const exp =
+											model().expirationDate
+										return (
+											O.isSome(exp) && exp.value
+										)
+									})()}>
+									{expiration => (
+										<>
+											<div class="text-sm">
+												{format(
+													expiration(),
+													'd',
+												)}
+											</div>
+											<div class="text-sm">
+												{format(
+													expiration(),
+													'LLL',
+												)}
+											</div>
+										</>
+									)}
+								</Show>
+							</div>
+						</Button>
+					)}
+				</Match>
+			</Switch>
+		</div>
 	)
 }
 
@@ -254,71 +282,60 @@ const Button: Component<{
 	}
 
 	return (
-		<div
-			class="absolute transition-all duration-fade"
+		<md-list-item
+			class="h-[72px]"
+			prop:type="button"
 			style={{
-				top: `${(props.index() * 72).toString(10)}px`,
-				left: '0',
-				right: '0',
+				'content-visibility': 'auto',
+			}}
+			classList={{
+				'bg-surface-variant': (() => {
+					const id = parsedId()
+					return id
+						? HS.has(id)(state.selectedProducts)
+						: false
+				})(),
+			}}
+			onClick={e => {
+				e.preventDefault()
+
+				const id = parsedId()
+				if (id && uiState.isSelectModeEnabled) {
+					dispatch(
+						Message.ToggleItem({
+							id,
+						}),
+					)
+				}
+			}}
+			onContextMenu={e => {
+				e.preventDefault()
+
+				const id = parsedId()
+
+				if (id && !uiState.isSelectModeEnabled) {
+					dispatch(
+						Message.ToggleItem({
+							id,
+						}),
+					)
+				}
 			}}>
-			<md-list-item
-				class="h-[72px]"
-				prop:type="button"
-				style={{
-					'content-visibility': 'auto',
-				}}
-				classList={{
-					'bg-surface-variant': (() => {
-						const id = parsedId()
-						return id
-							? HS.has(id)(state.selectedProducts)
-							: false
-					})(),
-				}}
-				onClick={e => {
-					e.preventDefault()
-
-					const id = parsedId()
-					if (id && uiState.isSelectModeEnabled) {
-						dispatch(
-							Message.ToggleItem({
-								id,
-							}),
-						)
-					}
-				}}
-				onContextMenu={e => {
-					e.preventDefault()
-
-					const id = parsedId()
-
-					if (
-						id &&
-						!uiState.isSelectModeEnabled
-					) {
-						dispatch(
-							Message.ToggleItem({
-								id,
-							}),
-						)
-					}
-				}}>
-				{props.children}
-				<div
-					slot="headline"
-					class="text-ellipsis whitespace-nowrap capitalize">
-					<Show
-						when={(() => {
-							const name = props.model().name
-							if (typeof name === 'string')
-								return name
-							return O.isSome(name) && name.value
-						})()}
-						fallback="CORRUPTED">
-						{name => name()}
-					</Show>
-				</div>
-			</md-list-item>
-		</div>
+			{props.children}
+			<div
+				slot="headline"
+				class="text-ellipsis whitespace-nowrap capitalize">
+				<Show
+					when={(() => {
+						const name = props.model().name
+						if (typeof name === 'string')
+							return name
+						return O.isSome(name) && name.value
+					})()}
+					fallback="CORRUPTED">
+					{name => name()}
+				</Show>
+			</div>
+		</md-list-item>
 	)
 }

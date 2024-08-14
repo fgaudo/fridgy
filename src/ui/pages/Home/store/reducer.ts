@@ -194,7 +194,9 @@ export const reducer: (
 							...state,
 							selectedProducts: HS.empty(),
 							runningDeleting: O.none(),
-							products: models,
+							products: reconcile(models)(
+								state.products,
+							),
 							total: total,
 						},
 						[
