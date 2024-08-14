@@ -20,6 +20,7 @@ import {
 import {
 	deleteTask,
 	refreshListTask,
+	removeToast,
 } from './tasks'
 
 export const reducer: (
@@ -73,14 +74,7 @@ export const reducer: (
 					[],
 				),
 			),
-			M.when(
-				{ _tag: 'ShowToast' },
-				({ message }) =>
-					Da.tuple(
-						{ ...state, toastMessage: message },
-						[],
-					),
-			),
+
 			M.when({ _tag: 'DeleteProducts' }, () =>
 				Da.tuple(
 					state,
@@ -156,6 +150,43 @@ export const reducer: (
 			M.when(
 				{ _tag: 'DeleteProductsSucceeded' },
 				() => Da.tuple(state, [] as const),
+			),
+			M.when(
+				{ _tag: 'ShowToast' },
+				({ message }) =>
+					Da.tuple(
+						{
+							...state,
+							toastMessage: message,
+							runningRemoveToast: O.none(),
+						},
+						[
+							removeToast(
+								state.runningRemoveToast,
+							),
+						],
+					),
+			),
+			M.when({ _tag: 'RemoveToast' }, () =>
+				Da.tuple(
+					{
+						...state,
+						toastMessage: '',
+						runningRemoveToast: O.none(),
+					},
+					[],
+				),
+			),
+			M.when(
+				{ _tag: 'RemoveToastStarted' },
+				({ id }) =>
+					Da.tuple(
+						{
+							...state,
+							runningRemoveToast: O.some(id),
+						},
+						[],
+					),
 			),
 			M.exhaustive,
 		)

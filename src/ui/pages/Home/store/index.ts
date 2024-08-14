@@ -21,6 +21,7 @@ export interface State {
 	isLoading: boolean
 	selectedProducts: HS.HashSet<string>
 	runningRefreshing: O.Option<F.Fiber<unknown>>
+	runningRemoveToast: O.Option<F.Fiber<unknown>>
 }
 
 export type Store = readonly [
@@ -42,6 +43,7 @@ export const createStore: (
 			isLoading: true,
 			runningRefreshing: O.none(),
 			selectedProducts: HS.empty(),
+			runningRemoveToast: O.none(),
 		},
 		reducer(context),
 	)

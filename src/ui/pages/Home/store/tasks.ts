@@ -84,3 +84,20 @@ export const deleteTask = (
 			return InternalMessage.DeleteProductsSucceeded()
 		}),
 	}) as const
+
+export const removeToast = (
+	fiber: O.Option<F.Fiber<unknown>>,
+) =>
+	({
+		type: 'task',
+		onStart: (id: F.Fiber<unknown>) =>
+			InternalMessage.RemoveToastStarted({ id }),
+		effect: Eff.gen(function* () {
+			if (O.isSome(fiber)) {
+				yield* F.interrupt(fiber.value)
+			}
+
+			yield* Eff.sleep(3000)
+			return InternalMessage.RemoveToast()
+		}),
+	}) as const
