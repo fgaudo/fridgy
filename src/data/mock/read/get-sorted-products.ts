@@ -2,7 +2,7 @@ import { A, Eff, O } from '@/core/imports'
 
 import {
 	type ProductDTO,
-	type ProductsServiceError,
+	ProductsServiceError,
 } from '@/app/interfaces/read/get-sorted-products'
 
 const productSamples = [
@@ -20,18 +20,21 @@ export const query: Eff.Effect<
 	},
 	ProductsServiceError
 > = Eff.gen(function* () {
-	yield* Eff.sleep(0)
+	if (Math.random() < 0.5)
+		return yield* Eff.fail(
+			ProductsServiceError('ciao'),
+		)
 
 	let array: ProductDTO[] = []
 
-	for (const _ of A.range(0, 19)) {
+	const number = Math.floor(Math.random() * 20)
+
+	for (const id of A.range(0, number)) {
 		array = [
 			...array,
 			{
 				isValid: true,
-				id: Math.floor(
-					Math.random() * 2696722838291372,
-				).toString(10),
+				id: id.toString(10),
 				name: productSamples[
 					Math.floor(
 						Math.random() * productSamples.length,
@@ -49,6 +52,31 @@ export const query: Eff.Effect<
 		] satisfies ProductDTO[]
 	}
 
-	array = [...array]
+	array = [
+		...array,
+		{
+			isValid: false,
+			id: O.some('-1'),
+			name: O.none(),
+		},
+
+		{
+			isValid: false,
+			id: O.some('-2'),
+			name: O.some('Corrupt1'),
+		},
+
+		{
+			isValid: false,
+			id: O.none(),
+			name: O.some('Corrupt2'),
+		},
+
+		{
+			isValid: false,
+			id: O.none(),
+			name: O.none(),
+		},
+	]
 	return { total: array.length, products: array }
 })

@@ -2,13 +2,10 @@ import { type Component } from 'solid-js'
 import { Portal } from 'solid-js/web'
 
 import imgUrl from '@/ui/assets/arrow.svg'
-import * as H from '@/ui/core/helpers'
 
 import { useUiStateContext } from '../context'
 
 export const Fab: Component = () => {
-	const scroll = H.useWindowScroll()
-
 	const {
 		store: [state],
 		uiStore: [uiState, setUiState],
@@ -19,7 +16,9 @@ export const Fab: Component = () => {
 			<div
 				classList={{
 					'opacity-0 pointer-events-none':
-						state.total > 0 || state.isLoading,
+						state.total > 0 ||
+						state.isLoading ||
+						state.receivedError,
 				}}
 				class="fixed bottom-[150px] left-0 right-0 flex flex-col items-end font-titleLarge transition-all duration-[fade]">
 				<div class="w-full p-[20px] text-center">
@@ -40,10 +39,6 @@ export const Fab: Component = () => {
 				classList={{
 					'opacity-0 pointer-events-none':
 						uiState.isSelectModeEnabled,
-
-					'opacity-50':
-						scroll().isScrolling &&
-						!uiState.isSelectModeEnabled,
 				}}>
 				<md-fab
 					onClick={() => {

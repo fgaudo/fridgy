@@ -2,6 +2,8 @@ import { E, Eff, F, O } from '@/core/imports'
 
 import type { App } from '@/app/index'
 
+import { MINIMUM_LAG_MS } from '@/ui/core/constants'
+
 import { InternalMessage } from './actions'
 
 export const addProductTask = (
@@ -13,11 +15,15 @@ export const addProductTask = (
 ) =>
 	({
 		type: 'task',
-
+		onStart: (fiber: F.Fiber<unknown>) =>
+			InternalMessage.AddProductStarted({
+				fiber,
+			}),
 		effect: Eff.gen(function* () {
-			const result = yield* addProduct(
-				formFields,
-			).pipe(Eff.either)
+			const [result] = yield* Eff.all([
+				addProduct(formFields).pipe(Eff.either),
+				Eff.sleep(MINIMUM_LAG_MS),
+			])
 
 			if (E.isLeft(result)) {
 				Eff.logError(result.left)

@@ -1,7 +1,7 @@
 import { Eff } from '@/core/imports'
 
-import type {
-	AddProductDTO,
+import {
+	type AddProductDTO,
 	AddProductServiceError,
 } from '@/app/interfaces/write/add-product'
 
@@ -12,5 +12,9 @@ export const command: (
 	AddProductServiceError
 > = () =>
 	Eff.gen(function* () {
-		yield* Eff.sleep(250)
+		if (Math.random() < 0.5) {
+			return yield* Eff.fail(
+				AddProductServiceError('ciao'),
+			)
+		}
 	})

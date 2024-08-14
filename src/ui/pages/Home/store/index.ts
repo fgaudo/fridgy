@@ -18,6 +18,7 @@ export interface State {
 	total: number
 	toastMessage: string
 	products: ProductModel[]
+	receivedError: boolean
 	isLoading: boolean
 	selectedProducts: HS.HashSet<string>
 	runningRefreshing: O.Option<F.Fiber<unknown>>
@@ -41,6 +42,7 @@ export const createStore: (
 			total: 0,
 			toastMessage: '',
 			products: [],
+			receivedError: false,
 			isLoading: true,
 			runningRefreshing: O.none(),
 			selectedProducts: HS.empty(),

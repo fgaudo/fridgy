@@ -71,14 +71,45 @@ export const reducer: (
 					),
 				]),
 			),
-			M.when({ _tag: 'AddProductFailed' }, () =>
-				Da.tuple(state, []),
+			M.when(
+				{ _tag: 'AddProductStarted' },
+				({ fiber }) =>
+					Da.tuple(
+						{
+							...state,
+							runningAddProduct: O.some(fiber),
+						},
+						[],
+					),
+			),
+			M.when(
+				{ _tag: 'AddProductFailed' },
+				({ message }) =>
+					Da.tuple(
+						{
+							...state,
+							runningAddProduct: O.none(),
+						},
+						[
+							{
+								type: 'message',
+								message:
+									InternalMessage.ShowToast({
+										message,
+									}),
+							} as const,
+						],
+					),
 			),
 			M.when(
 				{ _tag: 'AddProductSucceeded' },
 				() =>
 					Da.tuple(
-						{ ...state, ...resetFields() },
+						{
+							...state,
+							runningAddProduct: O.none(),
+							...resetFields(),
+						},
 						[
 							{
 								type: 'message',

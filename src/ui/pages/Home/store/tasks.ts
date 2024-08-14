@@ -42,10 +42,8 @@ export const refreshListTask = (
 
 			return InternalMessage.RefreshListSucceeded(
 				{
-					data: {
-						total: result.right.total,
-						models: result.right.models,
-					},
+					total: result.right.total,
+					models: result.right.models,
 				},
 			)
 		}),
@@ -88,7 +86,9 @@ export const deleteTask = (
 			}
 
 			return InternalMessage.DeleteProductsSucceeded(
-				{ items: HS.size(selectedProducts) },
+				{
+					deletedItems: HS.size(selectedProducts),
+				},
 			)
 		}),
 	}) as const

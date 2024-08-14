@@ -20,6 +20,7 @@ export type InternalMessage = Da.TaggedEnum<{
 	RefreshDateSucceeded: { date: string }
 	AddProductFailed: { message: string }
 	AddProductSucceeded: { name: string }
+	AddProductStarted: { fiber: F.Fiber<unknown> }
 	ShowToast: { message: string }
 	RemoveToast: object
 	RemoveToastStarted: { fiber: F.Fiber<unknown> }

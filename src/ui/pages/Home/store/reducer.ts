@@ -90,7 +90,7 @@ export const reducer: (
 			),
 			M.when(
 				{ _tag: 'RefreshListSucceeded' },
-				({ data: { total, models } }) =>
+				({ total, models }) =>
 					Da.tuple(
 						{
 							...state,
@@ -100,6 +100,7 @@ export const reducer: (
 							total,
 							isLoading: false,
 							runningRefreshing: O.none(),
+							receivedError: false,
 						},
 						[],
 					),
@@ -121,7 +122,10 @@ export const reducer: (
 					Da.tuple(
 						{
 							...state,
+							products: [],
 							runningRefreshing: O.none(),
+							receivedError: true,
+							isLoading: false,
 						},
 						[
 							{
@@ -155,7 +159,7 @@ export const reducer: (
 			),
 			M.when(
 				{ _tag: 'DeleteProductsSucceeded' },
-				({ items }) =>
+				({ deletedItems }) =>
 					Da.tuple(
 						{
 							...state,
@@ -167,7 +171,7 @@ export const reducer: (
 								type: 'message',
 								message:
 									InternalMessage.ShowToast({
-										message: `${items.toString(10)} products deleted`,
+										message: `${deletedItems.toString(10)} products deleted`,
 									}),
 							} as const,
 							{

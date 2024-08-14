@@ -26,6 +26,7 @@ export interface State {
 	toastMessage: string
 	currentDate: O.Option<string>
 	runningRemoveToast: O.Option<F.Fiber<unknown>>
+	runningAddProduct: O.Option<F.Fiber<unknown>>
 }
 
 export type Store = [
@@ -45,6 +46,7 @@ export const createStore: (
 			currentDate: O.none(),
 			toastMessage: '',
 			runningRemoveToast: O.none(),
+			runningAddProduct: O.none(),
 			...validateFields(defaultFields()),
 		},
 		reducer(context),

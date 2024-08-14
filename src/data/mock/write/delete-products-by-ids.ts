@@ -1,6 +1,6 @@
 import { Eff, type HS } from '@/core/imports'
 
-import type { DeleteProductsByIdsServiceError } from '@/app/interfaces/write/delete-products-by-ids'
+import { DeleteProductsByIdsServiceError } from '@/app/interfaces/write/delete-products-by-ids'
 
 export const command: (
 	ids: HS.HashSet<string>,
@@ -9,5 +9,9 @@ export const command: (
 	DeleteProductsByIdsServiceError
 > = () =>
 	Eff.gen(function* () {
-		yield* Eff.sleep(0)
+		if (Math.random() < 0.5) {
+			return yield* Eff.fail(
+				DeleteProductsByIdsServiceError('ciao'),
+			)
+		}
 	})

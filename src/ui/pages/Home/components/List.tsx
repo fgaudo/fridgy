@@ -1,19 +1,21 @@
 import {
 	type Component,
 	For,
+	createEffect,
 	createMemo,
-	createRenderEffect,
+	on,
 } from 'solid-js'
 import { Portal } from 'solid-js/web'
 
 import { Eff, O } from '@/core/imports'
 
 import { useUiStateContext } from '../context'
+import { Message } from '../store/actions'
 import { Item } from './Item'
 
 export const List: Component = () => {
 	const {
-		store: [state],
+		store: [state, dispatch],
 	} = useUiStateContext()!
 
 	const totalItems = createMemo<number>(prev => {
@@ -28,7 +30,12 @@ export const List: Component = () => {
 				<div
 					class="pointer-events-none fixed bottom-0 left-0 right-0 top-0 z-[999] flex items-center justify-center transition-all"
 					classList={{
-						'opacity-0': !state.isLoading,
+						'opacity-0':
+							!state.isLoading &&
+							!(
+								state.receivedError &&
+								O.isSome(state.runningRefreshing)
+							),
 					}}>
 					<md-circular-progress
 						prop:indeterminate={true}
@@ -52,7 +59,7 @@ export const List: Component = () => {
 				class="pb-[128px] pt-[100px] transition-all duration-fade"
 				classList={{
 					'opacity-0 pointer-events-none':
-						state.total <= 0 || state.isLoading,
+						state.isLoading,
 				}}>
 				<Portal>
 					<p
@@ -61,7 +68,10 @@ export const List: Component = () => {
 							'opacity-0 pointer-events-none':
 								state.total <= 0 ||
 								state.isLoading ||
-								O.isSome(state.runningRefreshing),
+								O.isSome(
+									state.runningRefreshing,
+								) ||
+								state.receivedError,
 						}}>
 						{totalItems()} items
 					</p>
@@ -72,29 +82,38 @@ export const List: Component = () => {
 							'opacity-0 pointer-events-none':
 								O.isNone(
 									state.runningRefreshing,
-								) || state.isLoading,
+								) ||
+								state.isLoading ||
+								state.receivedError,
 						}}
 					/>
 				</Portal>
 				<md-list
+					classList={{
+						'opacity-0 pointer-events-none':
+							state.receivedError,
+					}}
 					class="relative"
 					style={{
 						height:
-							state.total > 0
+							state.total > 0 &&
+							!state.receivedError
 								? `${((state.total - 1) * 72 + 80).toString(10)}px`
 								: 'auto',
 					}}>
 					<For each={state.products}>
 						{(model, i) => {
-							createRenderEffect(() => {
-								Eff.runFork(
-									Eff.logDebug(
-										`Rendered item on position ${i().toString(10)}`,
-									).pipe(
-										Eff.annotateLogs({ model }),
-									),
-								)
-							})
+							createEffect(
+								on(i, i => {
+									Eff.runFork(
+										Eff.logDebug(
+											`Rendered item on position ${i.toString(10)}`,
+										).pipe(
+											Eff.annotateLogs({ model }),
+										),
+									)
+								}),
+							)
 							return (
 								<Item
 									model={model}
@@ -104,6 +123,25 @@ export const List: Component = () => {
 						}}
 					</For>
 				</md-list>
+				<div
+					class="absolute bottom-0 left-0 right-0 top-0 flex h-full w-full items-center justify-center text-center text-lg"
+					classList={{
+						'opacity-0 pointer-events-none':
+							!state.receivedError ||
+							O.isSome(state.runningRefreshing),
+					}}>
+					<p>
+						Could not load the list! :(
+						<br />
+						<span
+							class="text-primary underline"
+							onClick={() => {
+								dispatch(Message.RefreshList())
+							}}>
+							Try again
+						</span>
+					</p>
+				</div>
 			</div>
 		</>
 	)

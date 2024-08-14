@@ -7,6 +7,7 @@ import {
 
 import { O } from '@/core/imports'
 
+import { InvisibleWall } from './components/InvisibleWall'
 import { Snackbar } from './components/Snackbar'
 import { TopBar } from './components/TopBar'
 import { AddProductContext } from './context'
@@ -40,6 +41,7 @@ const AddProduct: (
 				store: [state, dispatch],
 				uiStore: [uiState, setUiState],
 			}}>
+			<InvisibleWall />
 			<div
 				style={{
 					animation: 'opacityIn 0.5s ease-in-out',
@@ -115,7 +117,12 @@ const AddProduct: (
 								</div>
 
 								<md-filled-button
-									prop:disabled={!state.isOk}
+									prop:disabled={
+										!state.isOk ||
+										O.isSome(
+											state.runningAddProduct,
+										)
+									}
 									class="mt-[20px]"
 									onClick={() => {
 										dispatch(Message.AddProduct())
