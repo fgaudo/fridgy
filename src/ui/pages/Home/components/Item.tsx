@@ -5,7 +5,6 @@ import {
 	Match,
 	Show,
 	Switch,
-	createEffect,
 } from 'solid-js'
 
 import { HS, O } from '@/core/imports'
@@ -25,17 +24,9 @@ export const Item: Component<{
 		uiStore: [uiState],
 	} = useUiStateContext()!
 
-	createEffect(() => {
-		console.log(
-			'item ' +
-				props.index().toString(10) +
-				' repainted',
-		)
-	})
-
 	return (
 		<div
-			class="absolute transition-all duration-[3000ms]"
+			class="absolute transition-all duration-fade"
 			style={{
 				top: `${(props.index() * 72).toString(10)}px`,
 				left: '0',

@@ -20,10 +20,10 @@ export function withDefault<T>(
 }
 
 export type Reducer<STATE, MSG> = (
-	state: STATE,
+	snapshot: STATE,
 	msg: MSG,
 ) => readonly [
-	state: STATE,
+	mutation: (s: STATE) => STATE,
 	commands: readonly (
 		| {
 				type: 'task'
@@ -53,11 +53,11 @@ export const useQueueStore = <
 		Eff.gen(function* () {
 			for (;;) {
 				const msg = yield* Q.take(messages)
-				const [newState, commands] = reducer(
+				const [mutation, commands] = reducer(
 					SS.unwrap(state),
 					msg,
 				)
-				setState(newState)
+				setState(mutation)
 
 				for (const cmd of commands) {
 					if (cmd.type === 'message') {

@@ -26,51 +26,55 @@ import {
 export const reducer: (
 	app: App,
 ) => Reducer<State, Message | InternalMessage> =
-	app => (state, msg) =>
+	app => (snapshot, msg) =>
 		pipe(
 			M.value(msg),
 			M.when({ _tag: 'RefreshList' }, () => {
-				const newState = {
-					...state,
-					runningRefreshing: O.none(),
-				} as const
+				const mutation = (state: State) =>
+					({
+						...state,
+						runningRefreshing: O.none(),
+					}) as const
 
 				const commands = [
 					refreshListTask(
-						state.runningRefreshing,
+						snapshot.runningRefreshing,
 						app.productList,
 					),
 				] as const
 
-				return Da.tuple(newState, commands)
+				return Da.tuple(mutation, commands)
 			}),
 			M.when(
 				{ _tag: 'ClearSelectedProducts' },
 				() =>
 					Da.tuple(
-						{
-							...state,
-							selectedProducts: HS.empty(),
-						} as const,
+						(state: State) =>
+							({
+								...state,
+								selectedProducts: HS.empty(),
+							}) as const,
 						[],
 					),
 			),
 			M.when({ _tag: 'ToggleItem' }, ({ id }) =>
 				Da.tuple(
-					{
-						...state,
-						selectedProducts: HS.toggle(id)(
-							state.selectedProducts,
-						),
-
-						selectMode:
-							HS.has(id)(
+					(state: State) =>
+						({
+							...state,
+							selectedProducts: HS.toggle(id)(
 								state.selectedProducts,
-							) &&
-							HS.size(state.selectedProducts) <= 1
-								? false
-								: true,
-					} as const,
+							),
+
+							selectMode:
+								HS.has(id)(
+									state.selectedProducts,
+								) &&
+								HS.size(state.selectedProducts) <=
+									1
+									? false
+									: true,
+						}) as const,
 					[],
 				),
 			),
@@ -79,12 +83,13 @@ export const reducer: (
 				{ _tag: 'DeleteProductsAndRefresh' },
 				() =>
 					Da.tuple(
-						state,
-						HS.size(state.selectedProducts) <= 0
+						(state: State) => state,
+						HS.size(snapshot.selectedProducts) <=
+							0
 							? []
 							: [
 									deleteTask(
-										state.selectedProducts,
+										snapshot.selectedProducts,
 										app.deleteProductsByIds,
 										app.productList,
 									),
@@ -95,16 +100,16 @@ export const reducer: (
 				{ _tag: 'RefreshListSucceeded' },
 				({ total, models }) =>
 					Da.tuple(
-						{
+						(state: State) => ({
 							...state,
-							products: reconcile(models)(
-								state.products,
-							),
+							products: reconcile(models, {
+								key: 'id',
+							})(state.products),
 							total,
 							isLoading: false,
 							runningRefreshing: O.none(),
 							receivedError: false,
-						},
+						}),
 						[],
 					),
 			),
@@ -112,10 +117,10 @@ export const reducer: (
 				{ _tag: 'RefreshListStarted' },
 				({ fiber }) =>
 					Da.tuple(
-						{
+						(state: State) => ({
 							...state,
 							runningRefreshing: O.some(fiber),
-						},
+						}),
 						[],
 					),
 			),
@@ -123,13 +128,13 @@ export const reducer: (
 				{ _tag: 'RefreshListFailed' },
 				({ message }) =>
 					Da.tuple(
-						{
+						(state: State) => ({
 							...state,
 							products: [],
 							runningRefreshing: O.none(),
 							receivedError: true,
 							isLoading: false,
-						},
+						}),
 						[
 							{
 								type: 'message',
@@ -145,10 +150,10 @@ export const reducer: (
 				{ _tag: 'DeleteProductsFailed' },
 				({ message }) =>
 					Da.tuple(
-						{
+						(state: State) => ({
 							...state,
 							runningDeleting: O.none(),
-						},
+						}),
 						[
 							{
 								type: 'message',
@@ -166,13 +171,13 @@ export const reducer: (
 				},
 				({ message }) =>
 					Da.tuple(
-						{
+						(state: State) => ({
 							...state,
 							selectedProducts: HS.empty(),
 							receivedError: true,
 							runningDeleting: O.none(),
 							products: [],
-						},
+						}),
 						[
 							{
 								type: 'message',
@@ -190,15 +195,15 @@ export const reducer: (
 				},
 				({ deletedItems, total, models }) =>
 					Da.tuple(
-						{
+						(state: State) => ({
 							...state,
 							selectedProducts: HS.empty(),
 							runningDeleting: O.none(),
-							products: reconcile(models)(
-								state.products,
-							),
+							products: reconcile(models, {
+								key: 'id',
+							})(state.products),
 							total: total,
-						},
+						}),
 						[
 							{
 								type: 'message',
@@ -216,10 +221,10 @@ export const reducer: (
 				},
 				({ fiber }) =>
 					Da.tuple(
-						{
+						(state: State) => ({
 							...state,
 							runningDeleting: O.some(fiber),
-						},
+						}),
 						[],
 					),
 			),
@@ -227,25 +232,25 @@ export const reducer: (
 				{ _tag: 'ShowToast' },
 				({ message }) =>
 					Da.tuple(
-						{
+						(state: State) => ({
 							...state,
 							toastMessage: message,
 							runningRemoveToast: O.none(),
-						},
+						}),
 						[
 							removeToast(
-								state.runningRemoveToast,
+								snapshot.runningRemoveToast,
 							),
 						],
 					),
 			),
 			M.when({ _tag: 'RemoveToast' }, () =>
 				Da.tuple(
-					{
+					(state: State) => ({
 						...state,
 						toastMessage: '',
 						runningRemoveToast: O.none(),
-					},
+					}),
 					[],
 				),
 			),
@@ -253,10 +258,10 @@ export const reducer: (
 				{ _tag: 'RemoveToastStarted' },
 				({ fiber }) =>
 					Da.tuple(
-						{
+						(state: State) => ({
 							...state,
 							runningRemoveToast: O.some(fiber),
-						},
+						}),
 						[],
 					),
 			),
