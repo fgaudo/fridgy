@@ -44,7 +44,6 @@ export const Item: Component<{
 						}}
 						onClick={e => {
 							e.preventDefault()
-
 							if (uiState.isSelectModeEnabled) {
 								dispatch(
 									Message.ToggleItem({

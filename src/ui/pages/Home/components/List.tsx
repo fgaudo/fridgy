@@ -28,7 +28,8 @@ export const List: Component = () => {
 				<div
 					class="fixed bottom-0 left-0 right-0 top-0 flex items-center justify-center"
 					classList={{
-						'opacity-0': !state.isLoading,
+						'opacity-0 pointer-events-none':
+							!state.isLoading,
 					}}>
 					<md-circular-progress
 						prop:indeterminate={true}
