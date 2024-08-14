@@ -168,7 +168,10 @@ export const reducer: (
 					Da.tuple(
 						{
 							...state,
+							selectedProducts: HS.empty(),
+							receivedError: true,
 							runningDeleting: O.none(),
+							products: [],
 						},
 						[
 							{

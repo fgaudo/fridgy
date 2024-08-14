@@ -51,7 +51,8 @@ export const List: Component = () => {
 						classList={{
 							'opacity-0 pointer-events-none':
 								state.total <= 0 ||
-								state.isLoading,
+								state.isLoading ||
+								state.receivedError,
 						}}>
 						{totalItems()} items
 					</p>
