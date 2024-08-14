@@ -90,8 +90,10 @@ export const removeToast = (
 ) =>
 	({
 		type: 'task',
-		onStart: (id: F.Fiber<unknown>) =>
-			InternalMessage.RemoveToastStarted({ id }),
+		onStart: (fiber: F.Fiber<unknown>) =>
+			InternalMessage.RemoveToastStarted({
+				fiber,
+			}),
 		effect: Eff.gen(function* () {
 			if (O.isSome(fiber)) {
 				yield* F.interrupt(fiber.value)

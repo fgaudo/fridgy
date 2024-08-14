@@ -179,11 +179,11 @@ export const reducer: (
 			),
 			M.when(
 				{ _tag: 'RemoveToastStarted' },
-				({ id }) =>
+				({ fiber }) =>
 					Da.tuple(
 						{
 							...state,
-							runningRemoveToast: O.some(id),
+							runningRemoveToast: O.some(fiber),
 						},
 						[],
 					),

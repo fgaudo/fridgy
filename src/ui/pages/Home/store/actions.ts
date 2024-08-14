@@ -26,7 +26,7 @@ export type InternalMessage = Da.TaggedEnum<{
 	}
 	ShowToast: { message: string }
 	RemoveToast: object
-	RemoveToastStarted: { id: F.Fiber<unknown> }
+	RemoveToastStarted: { fiber: F.Fiber<unknown> }
 }>
 
 export const Message = Da.taggedEnum<Message>()
