@@ -178,16 +178,16 @@ private val addExpirationSql = """
 
 private val createProductsTableSql = """
         CREATE TABLE ${Schema.ProductsTable.name}(
-            ${Schema.ProductsTable.Columns.id} INTEGER PRIMARY KEY ASC,
-            ${Schema.ProductsTable.Columns.name} TEXT,
-            ${Schema.ProductsTable.Columns.creationDate} INTEGER
+            ${Schema.ProductsTable.Columns.id} INTEGER PRIMARY KEY ASC AUTOINCREMENT,
+            ${Schema.ProductsTable.Columns.name} TEXT NOT NULL,
+            ${Schema.ProductsTable.Columns.creationDate} INTEGER NOT NULL
         )
     """.trimIndent()
 
 private val createExpirationDatesTableSql = """
         CREATE TABLE ${Schema.ExpirationDateTable.name}(
-            ${Schema.ExpirationDateTable.Columns.expirationDate} INTEGER,
-            ${Schema.ExpirationDateTable.Columns.productId} INTEGER UNIQUE,
+            ${Schema.ExpirationDateTable.Columns.expirationDate} INTEGER NOT NULL,
+            ${Schema.ExpirationDateTable.Columns.productId} INTEGER UNIQUE NOT NULL,
             FOREIGN KEY(${Schema.ExpirationDateTable.Columns.productId})
                 REFERENCES ${Schema.ProductsTable.name}(${Schema.ProductsTable.Columns.id})
                 ON DELETE CASCADE
