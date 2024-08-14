@@ -5,9 +5,10 @@ import {
 import { createEffect, on } from 'solid-js'
 import * as SS from 'solid-js/store'
 
-import { HS, O } from '@/core/imports'
+import { Eff, HS } from '@/core/imports'
 
 import { onResume } from '@/ui/core/capacitor'
+import { useFiber } from '@/ui/core/solid-js'
 import { useFridgyNavigate } from '@/ui/router'
 
 import type { Store } from './store'
@@ -65,17 +66,14 @@ export const createStore: (
 		setUiState('currentTimestamp', Date.now())
 	})
 
-	createEffect(
-		on(
-			() => state.runningRefreshing,
-			runningRefreshing => {
-				if (O.isNone(runningRefreshing))
-					setUiState(
-						'currentTimestamp',
-						Date.now(),
-					)
-			},
-		),
+	useFiber(
+		Eff.gen(function* () {
+			for (;;) {
+				console.log('ciao')
+				yield* Eff.sleep(20000)
+				setUiState('currentTimestamp', Date.now())
+			}
+		}),
 	)
 
 	createEffect(() => {

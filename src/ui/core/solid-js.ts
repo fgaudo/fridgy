@@ -112,3 +112,13 @@ export const useQueueStore = <
 		},
 	] as const
 }
+
+export const useFiber = (
+	effect: Eff.Effect<unknown>,
+) => {
+	const fiber = Eff.runFork(effect)
+
+	onCleanup(() => {
+		Eff.runFork(F.interrupt(fiber))
+	})
+}
