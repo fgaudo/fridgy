@@ -180,7 +180,7 @@ const ExpirationBar: Component<{
 			fallback={
 				<div class="mt-[5px] h-[5px] w-full border-[1px] border-primary">
 					<div
-						class="h-full bg-primary"
+						class="h-full bg-primary transition-all"
 						style={{
 							width: `${(
 								currentProgress() * 100

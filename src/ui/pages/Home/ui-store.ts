@@ -5,7 +5,7 @@ import {
 import { createEffect, on } from 'solid-js'
 import * as SS from 'solid-js/store'
 
-import { HS } from '@/core/imports'
+import { HS, O } from '@/core/imports'
 
 import { onResume } from '@/ui/core/capacitor'
 import { useFridgyNavigate } from '@/ui/router'
@@ -64,6 +64,19 @@ export const createStore: (
 	onResume(() => {
 		setUiState('currentTimestamp', Date.now())
 	})
+
+	createEffect(
+		on(
+			() => state.runningRefreshing,
+			runningRefreshing => {
+				if (O.isNone(runningRefreshing))
+					setUiState(
+						'currentTimestamp',
+						Date.now(),
+					)
+			},
+		),
+	)
 
 	createEffect(() => {
 		if (uiState.isMenuOpen)

@@ -1,6 +1,7 @@
 import { type Component } from 'solid-js'
 
 import { Fab } from './components/Fab'
+import { InvisibleWall } from './components/InvisibleWall'
 import { List } from './components/List'
 import { Menu } from './components/Menu'
 import { Snackbar } from './components/Snackbar'
@@ -23,6 +24,8 @@ const Home: (
 			<Menu />
 
 			<List />
+
+			<InvisibleWall />
 
 			<Fab />
 

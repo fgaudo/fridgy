@@ -20,16 +20,18 @@ export const query: Eff.Effect<
 	},
 	ProductsServiceError
 > = Eff.gen(function* () {
-	yield* Eff.sleep(1000)
+	yield* Eff.sleep(0)
 
 	let array: ProductDTO[] = []
 
-	for (const id of A.range(0, 19)) {
+	for (const _ of A.range(0, 19)) {
 		array = [
 			...array,
 			{
 				isValid: true,
-				id: id.toString(10),
+				id: Math.floor(
+					Math.random() * 2696722838291372,
+				).toString(10),
 				name: productSamples[
 					Math.floor(
 						Math.random() * productSamples.length,
@@ -47,39 +49,6 @@ export const query: Eff.Effect<
 		] satisfies ProductDTO[]
 	}
 
-	array = [
-		...array,
-		{
-			isValid: false,
-			id: O.some('59'),
-			name: O.some('Corrupt'),
-		},
-		{
-			isValid: false,
-			id: O.none(),
-			name: O.none(),
-		},
-		{
-			isValid: false,
-			id: O.none(),
-			name: O.none(),
-		},
-		{
-			isValid: false,
-			id: O.none(),
-			name: O.none(),
-		},
-		{
-			isValid: false,
-			id: O.none(),
-			name: O.none(),
-		},
-		{
-			isValid: false,
-			id: O.none(),
-			name: O.none(),
-		},
-	]
-
+	array = [...array]
 	return { total: array.length, products: array }
 })

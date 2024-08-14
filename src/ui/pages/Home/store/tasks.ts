@@ -2,6 +2,8 @@ import { E, Eff, F, HS, O } from '@/core/imports'
 
 import type { App } from '@/app/index'
 
+import { MINIMUM_LAG_MS } from '@/ui/core/constants'
+
 import { InternalMessage } from './actions'
 
 export const refreshListTask = (
@@ -22,9 +24,10 @@ export const refreshListTask = (
 				)
 			}
 
-			const result = yield* refreshList.pipe(
-				Eff.either,
-			)
+			const [result] = yield* Eff.all([
+				refreshList.pipe(Eff.either),
+				Eff.sleep(MINIMUM_LAG_MS),
+			])
 
 			if (E.isLeft(result)) {
 				yield* Eff.logError(result.left)
@@ -54,6 +57,10 @@ export const deleteTask = (
 ) =>
 	({
 		type: 'task',
+		onStart: (fiber: F.Fiber<unknown>) =>
+			InternalMessage.DeleteProductsStarted({
+				fiber,
+			}),
 		effect: Eff.gen(function* () {
 			if (HS.size(selectedProducts) <= 0) {
 				return yield* Eff.fail(
@@ -63,9 +70,12 @@ export const deleteTask = (
 				)
 			}
 
-			const result = yield* deleteProducts(
-				selectedProducts,
-			).pipe(Eff.either)
+			const [result] = yield* Eff.all([
+				deleteProducts(selectedProducts).pipe(
+					Eff.either,
+				),
+				Eff.sleep(MINIMUM_LAG_MS),
+			])
 
 			if (E.isLeft(result)) {
 				yield* Eff.logError(result.left)
@@ -77,7 +87,9 @@ export const deleteTask = (
 				)
 			}
 
-			return InternalMessage.DeleteProductsSucceeded()
+			return InternalMessage.DeleteProductsSucceeded(
+				{ items: HS.size(selectedProducts) },
+			)
 		}),
 	}) as const
 

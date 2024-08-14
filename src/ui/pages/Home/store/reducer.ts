@@ -94,10 +94,9 @@ export const reducer: (
 					Da.tuple(
 						{
 							...state,
-							products: reconcile(
-								Array.from(models),
-								{ key: 'id' },
-							)(state.products),
+							products: reconcile(models)(
+								state.products,
+							),
 							total,
 							isLoading: false,
 							runningRefreshing: O.none(),
@@ -138,29 +137,37 @@ export const reducer: (
 			M.when(
 				{ _tag: 'DeleteProductsFailed' },
 				({ message }) =>
-					Da.tuple(state, [
-						{
-							type: 'message',
-							message: InternalMessage.ShowToast({
-								message,
-							}),
-						} as const,
-					] as const),
-			),
-			M.when(
-				{ _tag: 'DeleteProductsSucceeded' },
-				() =>
 					Da.tuple(
 						{
 							...state,
-							selectedProducts: HS.empty(),
+							runningDeleting: O.none(),
 						},
 						[
 							{
 								type: 'message',
 								message:
 									InternalMessage.ShowToast({
-										message: 'Products deleted',
+										message,
+									}),
+							} as const,
+						] as const,
+					),
+			),
+			M.when(
+				{ _tag: 'DeleteProductsSucceeded' },
+				({ items }) =>
+					Da.tuple(
+						{
+							...state,
+							selectedProducts: HS.empty(),
+							runningDeleting: O.none(),
+						},
+						[
+							{
+								type: 'message',
+								message:
+									InternalMessage.ShowToast({
+										message: `${items.toString(10)} products deleted`,
 									}),
 							} as const,
 							{
@@ -168,6 +175,17 @@ export const reducer: (
 								message: Message.RefreshList(),
 							} as const,
 						] as const,
+					),
+			),
+			M.when(
+				{ _tag: 'DeleteProductsStarted' },
+				({ fiber }) =>
+					Da.tuple(
+						{
+							...state,
+							runningDeleting: O.some(fiber),
+						},
+						[],
 					),
 			),
 			M.when(

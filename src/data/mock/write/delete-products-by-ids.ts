@@ -7,4 +7,7 @@ export const command: (
 ) => Eff.Effect<
 	void,
 	DeleteProductsByIdsServiceError
-> = () => Eff.void
+> = () =>
+	Eff.gen(function* () {
+		yield* Eff.sleep(0)
+	})

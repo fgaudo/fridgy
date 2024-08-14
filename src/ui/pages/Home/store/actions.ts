@@ -13,7 +13,10 @@ export type InternalMessage = Da.TaggedEnum<{
 	DeleteProductsFailed: {
 		message: string
 	}
-	DeleteProductsSucceeded: object
+	DeleteProductsStarted: {
+		fiber: F.Fiber<unknown>
+	}
+	DeleteProductsSucceeded: { items: number }
 	RefreshListStarted: { fiber: F.Fiber<unknown> }
 	RefreshListSucceeded: {
 		data: {

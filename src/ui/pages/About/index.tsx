@@ -12,7 +12,12 @@ export const About: () => Component =
 			<>
 				<Portal>
 					<SmallTopAppBar>
-						<div class="flex h-full w-full items-center gap-[24px] px-[16px] transition-all">
+						<div
+							class="flex h-full w-full items-center gap-[24px] px-[16px] transition-all"
+							style={{
+								animation:
+									'opacityIn 0.5s ease-in-out',
+							}}>
 							<md-icon-button
 								class="pl-[4px]"
 								onClick={() => {
@@ -26,7 +31,12 @@ export const About: () => Component =
 						</div>
 					</SmallTopAppBar>
 				</Portal>
-				<div class="flex flex-col justify-center gap-2 px-[24px] pt-[80px]">
+				<div
+					class="flex flex-col justify-center gap-2 px-[24px] pt-[80px]"
+					style={{
+						animation:
+							'opacityIn 0.5s ease-in-out',
+					}}>
 					<p class="text-titleLarge">Fridgy</p>
 					<p>version: {version}</p>
 					<p>© 2024 Francesco Gaudenzi</p>
