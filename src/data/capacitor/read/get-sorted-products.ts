@@ -21,7 +21,7 @@ const ProductsListSchema = Sc.Union(
 		_tag: Sc.Literal('Right'),
 		right: Sc.Struct({
 			total: Sc.Number,
-			items: Sc.Array(
+			products: Sc.Array(
 				Sc.Struct({
 					id: Sc.optional(
 						Sc.UndefinedOr(Sc.Number).annotations(
@@ -132,7 +132,7 @@ export const query: Eff.Effect<
 				)
 
 	const products = yield* Eff.all(
-		response.items.map(product =>
+		response.products.map(product =>
 			Eff.gen(function* () {
 				const { id, name, creationDate } = product
 

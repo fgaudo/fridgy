@@ -69,7 +69,9 @@ export const TopBar: Component = () => {
 						<md-icon-button
 							class="ml-auto mr-[-8px] shrink-0"
 							onClick={() => {
-								dispatch(Message.DeleteProducts())
+								dispatch(
+									Message.DeleteProductsAndRefresh(),
+								)
 							}}>
 							<md-icon>delete</md-icon>
 						</md-icon-button>

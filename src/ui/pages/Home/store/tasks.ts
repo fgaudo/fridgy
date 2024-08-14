@@ -52,13 +52,16 @@ export const refreshListTask = (
 export const deleteTask = (
 	selectedProducts: HS.HashSet<string>,
 	deleteProducts: App['deleteProductsByIds'],
+	refreshList: App['productList'],
 ) =>
 	({
 		type: 'task',
 		onStart: (fiber: F.Fiber<unknown>) =>
-			InternalMessage.DeleteProductsStarted({
-				fiber,
-			}),
+			InternalMessage.DeleteProductsAndRefreshStarted(
+				{
+					fiber,
+				},
+			),
 		effect: Eff.gen(function* () {
 			if (HS.size(selectedProducts) <= 0) {
 				return yield* Eff.fail(
@@ -85,9 +88,24 @@ export const deleteTask = (
 				)
 			}
 
-			return InternalMessage.DeleteProductsSucceeded(
+			const result2 = yield* refreshList.pipe(
+				Eff.either,
+			)
+
+			if (E.isLeft(result2)) {
+				yield* Eff.logError(result2.left)
+				return InternalMessage.DeleteProductsAndRefreshFailed(
+					{
+						message: `${HS.size(selectedProducts).toString(10)} deleted but couldn't refresh list`,
+					},
+				)
+			}
+
+			return InternalMessage.DeleteProductsAndRefreshSucceeded(
 				{
 					deletedItems: HS.size(selectedProducts),
+					total: result2.right.total,
+					models: result2.right.models,
 				},
 			)
 		}),

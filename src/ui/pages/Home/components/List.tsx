@@ -28,32 +28,16 @@ export const List: Component = () => {
 		<>
 			<Portal>
 				<div
-					class="pointer-events-none fixed bottom-0 left-0 right-0 top-0 z-[999] flex items-center justify-center transition-all"
-					classList={{
-						'opacity-0':
-							!state.isLoading &&
-							!(
-								state.receivedError &&
-								O.isSome(state.runningRefreshing)
-							),
-					}}>
-					<md-circular-progress
-						prop:indeterminate={true}
-					/>
-				</div>
-			</Portal>
-			<Portal>
-				<div
 					class="fixed bottom-0 left-0 right-0 top-0 flex items-center justify-center bg-background transition-all"
 					classList={{
 						'opacity-0 pointer-events-none':
 							!state.isLoading &&
 							O.isNone(state.runningRefreshing),
-						'opacity-[0.6]':
-							state.isLoading ||
-							O.isSome(state.runningRefreshing),
-					}}
-				/>
+					}}>
+					<md-circular-progress
+						prop:indeterminate={true}
+					/>
+				</div>
 			</Portal>
 			<div
 				class="pb-[128px] pt-[100px] transition-all duration-fade"
@@ -67,26 +51,10 @@ export const List: Component = () => {
 						classList={{
 							'opacity-0 pointer-events-none':
 								state.total <= 0 ||
-								state.isLoading ||
-								O.isSome(
-									state.runningRefreshing,
-								) ||
-								state.receivedError,
+								state.isLoading,
 						}}>
 						{totalItems()} items
 					</p>
-					<md-circular-progress
-						prop:indeterminate={true}
-						class="fixed top-[64px] mx-[14px] mt-[10px] h-[32px] w-[32px] bg-background pb-[8px] transition-all"
-						classList={{
-							'opacity-0 pointer-events-none':
-								O.isNone(
-									state.runningRefreshing,
-								) ||
-								state.isLoading ||
-								state.receivedError,
-						}}
-					/>
 				</Portal>
 				<md-list
 					classList={{
@@ -127,8 +95,7 @@ export const List: Component = () => {
 					class="absolute bottom-0 left-0 right-0 top-0 flex h-full w-full items-center justify-center text-center text-lg"
 					classList={{
 						'opacity-0 pointer-events-none':
-							!state.receivedError ||
-							O.isSome(state.runningRefreshing),
+							!state.receivedError,
 					}}>
 					<p>
 						Could not load the list! :(

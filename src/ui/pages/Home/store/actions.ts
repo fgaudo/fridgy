@@ -4,7 +4,7 @@ import type { ProductModel } from '@/app/use-cases/get-sorted-products'
 
 export type Message = Da.TaggedEnum<{
 	RefreshList: object
-	DeleteProducts: object
+	DeleteProductsAndRefresh: object
 	ClearSelectedProducts: object
 	ToggleItem: { id: string }
 }>
@@ -13,10 +13,15 @@ export type InternalMessage = Da.TaggedEnum<{
 	DeleteProductsFailed: {
 		message: string
 	}
-	DeleteProductsSucceeded: {
+	DeleteProductsAndRefreshSucceeded: {
 		deletedItems: number
+		total: number
+		models: ProductModel[]
 	}
-	DeleteProductsStarted: {
+	DeleteProductsAndRefreshFailed: {
+		message: string
+	}
+	DeleteProductsAndRefreshStarted: {
 		fiber: F.Fiber<unknown>
 	}
 	RefreshListStarted: { fiber: F.Fiber<unknown> }

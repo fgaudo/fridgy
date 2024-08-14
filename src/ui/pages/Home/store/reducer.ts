@@ -75,18 +75,21 @@ export const reducer: (
 				),
 			),
 
-			M.when({ _tag: 'DeleteProducts' }, () =>
-				Da.tuple(
-					state,
-					HS.size(state.selectedProducts) <= 0
-						? []
-						: [
-								deleteTask(
-									state.selectedProducts,
-									app.deleteProductsByIds,
-								),
-							],
-				),
+			M.when(
+				{ _tag: 'DeleteProductsAndRefresh' },
+				() =>
+					Da.tuple(
+						state,
+						HS.size(state.selectedProducts) <= 0
+							? []
+							: [
+									deleteTask(
+										state.selectedProducts,
+										app.deleteProductsByIds,
+										app.productList,
+									),
+								],
+					),
 			),
 			M.when(
 				{ _tag: 'RefreshListSucceeded' },
@@ -158,13 +161,38 @@ export const reducer: (
 					),
 			),
 			M.when(
-				{ _tag: 'DeleteProductsSucceeded' },
-				({ deletedItems }) =>
+				{
+					_tag: 'DeleteProductsAndRefreshFailed',
+				},
+				({ message }) =>
+					Da.tuple(
+						{
+							...state,
+							runningDeleting: O.none(),
+						},
+						[
+							{
+								type: 'message',
+								message:
+									InternalMessage.ShowToast({
+										message,
+									}),
+							} as const,
+						] as const,
+					),
+			),
+			M.when(
+				{
+					_tag: 'DeleteProductsAndRefreshSucceeded',
+				},
+				({ deletedItems, total, models }) =>
 					Da.tuple(
 						{
 							...state,
 							selectedProducts: HS.empty(),
 							runningDeleting: O.none(),
+							products: models,
+							total: total,
 						},
 						[
 							{
@@ -174,15 +202,13 @@ export const reducer: (
 										message: `${deletedItems.toString(10)} products deleted`,
 									}),
 							} as const,
-							{
-								type: 'message',
-								message: Message.RefreshList(),
-							} as const,
 						] as const,
 					),
 			),
 			M.when(
-				{ _tag: 'DeleteProductsStarted' },
+				{
+					_tag: 'DeleteProductsAndRefreshStarted',
+				},
 				({ fiber }) =>
 					Da.tuple(
 						{
