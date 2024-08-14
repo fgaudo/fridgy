@@ -127,19 +127,17 @@ const LoadingScreen: Component<{
 	)
 
 	return (
-		<Show when={!isFaded()}>
-			<Portal>
-				<div
-					class="fixed bottom-0 left-0 right-0 top-0 z-[999] flex items-center justify-center bg-background duration-[300ms]"
-					classList={{
-						'opacity-0 pointer-events-none':
-							props.resourcesAreLoaded(),
-					}}>
-					<md-circular-progress
-						prop:indeterminate={true}
-					/>
-				</div>
-			</Portal>
-		</Show>
+		<Portal>
+			<div
+				class="fixed bottom-0 left-0 right-0 top-0 z-[999] flex items-center justify-center bg-background duration-[300ms]"
+				classList={{
+					'opacity-0 pointer-events-none':
+						isFaded(),
+				}}>
+				<md-circular-progress
+					prop:indeterminate={true}
+				/>
+			</div>
+		</Portal>
 	)
 }

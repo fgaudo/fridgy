@@ -1,4 +1,3 @@
-import type { FiberId } from 'effect/FiberId'
 import {
 	type Accessor,
 	onCleanup,
@@ -28,7 +27,7 @@ export type Reducer<STATE, MSG> = (
 	commands: readonly (
 		| {
 				type: 'task'
-				onStart?: (id: FiberId) => MSG
+				onStart?: (id: F.Fiber<unknown>) => MSG
 				effect: Eff.Effect<MSG, MSG>
 		  }
 		| {
@@ -58,7 +57,6 @@ export const useQueueStore = <
 					SS.unwrap(state),
 					msg,
 				)
-
 				setState(newState)
 
 				for (const cmd of commands) {
@@ -81,7 +79,7 @@ export const useQueueStore = <
 					const fiber = yield* pipe(
 						effect,
 						Eff.tap(() => D.await(deferred)),
-						Eff.match({
+						Eff.matchEffect({
 							onSuccess: msg =>
 								Q.offer(messages, msg),
 							onFailure: msg =>
@@ -93,7 +91,7 @@ export const useQueueStore = <
 					if (onStart)
 						yield* Q.offer(
 							messages,
-							onStart(F.id(fiber)),
+							onStart(fiber),
 						)
 
 					yield* D.succeed(deferred, true)

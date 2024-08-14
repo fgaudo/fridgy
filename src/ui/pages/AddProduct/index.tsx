@@ -24,9 +24,10 @@ const AddProduct: (
 	const [uiState, setUiState] = createUiStore()
 
 	const updateExpDate = (number: number) => {
+		console.log(number)
 		dispatch(
 			Message.UpdateField({
-				name: 'expDate',
+				name: 'expirationDate',
 				value: !Number.isInteger(number)
 					? O.none()
 					: O.some(endOfDay(number).getTime()),

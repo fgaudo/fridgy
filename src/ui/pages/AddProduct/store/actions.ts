@@ -1,4 +1,4 @@
-import { Da, FId } from '@/core/imports'
+import { Da, F } from '@/core/imports'
 
 import type { State } from '.'
 
@@ -10,7 +10,7 @@ export type Message = Da.TaggedEnum<{
 				value: State['formFields']['name']
 		  }
 		| {
-				name: 'expDate'
+				name: 'expirationDate'
 				value: State['formFields']['expirationDate']
 		  }
 }>
@@ -22,7 +22,7 @@ export type InternalMessage = Da.TaggedEnum<{
 	AddProductSucceeded: { name: string }
 	ShowToast: { message: string }
 	RemoveToast: object
-	RemoveToastStarted: { id: FId.FiberId }
+	RemoveToastStarted: { id: F.Fiber<unknown> }
 }>
 
 export const Message = Da.taggedEnum<Message>()

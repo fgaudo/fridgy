@@ -93,29 +93,45 @@ export const reducer: (
 			),
 			M.when(
 				{ _tag: 'UpdateField' },
-				({ name, value }) =>
-					Da.tuple(
+				({ name, value }) => {
+					const formFields = {
+						...state.formFields,
+						[name]: value,
+					} satisfies State['formFields']
+
+					return Da.tuple(
 						{
 							...state,
-							formFields: {
-								...state.formFields,
-								[name]: value,
-							},
+							formFields,
+							...validateFields(formFields),
 						},
 						[],
-					),
+					)
+				},
 			),
 			M.when(
 				{ _tag: 'ShowToast' },
 				({ message }) =>
 					Da.tuple(
-						{ ...state, toastMessage: message },
-						[removeToast(state.toastId)],
+						{
+							...state,
+							toastMessage: message,
+							runningRemoveToast: O.none(),
+						},
+						[
+							removeToast(
+								state.runningRemoveToast,
+							),
+						],
 					),
 			),
 			M.when({ _tag: 'RemoveToast' }, () =>
 				Da.tuple(
-					{ ...state, toastMessage: '' },
+					{
+						...state,
+						toastMessage: '',
+						runningRemoveToast: O.none(),
+					},
 					[],
 				),
 			),
@@ -123,7 +139,10 @@ export const reducer: (
 				{ _tag: 'RemoveToastStarted' },
 				({ id }) =>
 					Da.tuple(
-						{ ...state, toastId: O.some(id) },
+						{
+							...state,
+							runningRemoveToast: O.some(id),
+						},
 						[],
 					),
 			),

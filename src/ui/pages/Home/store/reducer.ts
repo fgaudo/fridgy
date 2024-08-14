@@ -31,12 +31,12 @@ export const reducer: (
 			M.when({ _tag: 'RefreshList' }, () => {
 				const newState = {
 					...state,
-					refreshingId: O.none(),
+					runningRefreshing: O.none(),
 				} as const
 
 				const commands = [
 					refreshListTask(
-						state.refreshingId,
+						state.runningRefreshing,
 						app.productList,
 					),
 				] as const
@@ -106,18 +106,18 @@ export const reducer: (
 							)(state.products),
 							total,
 							isLoading: false,
-							refreshingId: O.none(),
+							runningRefreshing: O.none(),
 						},
 						[],
 					),
 			),
 			M.when(
 				{ _tag: 'RefreshListStarted' },
-				({ id }) =>
+				({ fiber }) =>
 					Da.tuple(
 						{
 							...state,
-							refreshingId: O.some(id),
+							runningRefreshing: O.some(fiber),
 						},
 						[],
 					),
@@ -128,7 +128,7 @@ export const reducer: (
 					Da.tuple(
 						{
 							...state,
-							refreshingId: O.none(),
+							runningRefreshing: O.none(),
 						},
 						[
 							{

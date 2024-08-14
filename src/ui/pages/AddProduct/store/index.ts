@@ -1,6 +1,6 @@
 import * as Sol from 'solid-js'
 
-import { FId, O } from '@/core/imports'
+import { F, O } from '@/core/imports'
 
 import type { App } from '@/app'
 
@@ -25,7 +25,7 @@ export interface State {
 	isOk: boolean
 	toastMessage: string
 	currentDate: O.Option<string>
-	toastId: O.Option<FId.FiberId>
+	runningRemoveToast: O.Option<F.Fiber<unknown>>
 }
 
 export type Store = [
@@ -44,7 +44,7 @@ export const createStore: (
 			formFields: defaultFields(),
 			currentDate: O.none(),
 			toastMessage: '',
-			toastId: O.none(),
+			runningRemoveToast: O.none(),
 			...validateFields(defaultFields()),
 		},
 		reducer(context),

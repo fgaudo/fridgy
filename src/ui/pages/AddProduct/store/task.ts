@@ -1,4 +1,4 @@
-import { E, Eff, FId, O } from '@/core/imports'
+import { E, Eff, F, O } from '@/core/imports'
 
 import type { App } from '@/app/index'
 
@@ -36,15 +36,15 @@ export const addProductTask = (
 	}) as const
 
 export const removeToast = (
-	id: O.Option<FId.FiberId>,
+	fiber: O.Option<F.Fiber<unknown>>,
 ) =>
 	({
 		type: 'task',
-		onStart: (id: FId.FiberId) =>
+		onStart: (id: F.Fiber<unknown>) =>
 			InternalMessage.RemoveToastStarted({ id }),
 		effect: Eff.gen(function* () {
-			if (O.isSome(id)) {
-				yield* Eff.interruptWith(id.value)
+			if (O.isSome(fiber)) {
+				yield* F.interrupt(fiber.value)
 			}
 
 			yield* Eff.sleep(3000)

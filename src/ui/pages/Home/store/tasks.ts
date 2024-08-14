@@ -1,12 +1,4 @@
-import type { FiberId } from 'effect/FiberId'
-
-import {
-	E,
-	Eff,
-	FId,
-	HS,
-	O,
-} from '@/core/imports'
+import { E, Eff, F, HS, O } from '@/core/imports'
 
 import type { App } from '@/app/index'
 
@@ -15,20 +7,20 @@ import { DEFAULT_FADE_MS } from '@/ui/core/constants'
 import { InternalMessage } from './actions'
 
 export const refreshListTask = (
-	refreshingId: O.Option<FiberId>,
+	runningRefreshing: O.Option<F.Fiber<unknown>>,
 	refreshList: App['productList'],
 ) =>
 	({
 		type: 'task',
-		onStart: (id: FId.FiberId) =>
+		onStart: (fiber: F.Fiber<unknown>) =>
 			InternalMessage.RefreshListStarted({
-				id,
+				fiber,
 			}),
 
 		effect: Eff.gen(function* () {
-			if (O.isSome(refreshingId)) {
-				yield* Eff.interruptWith(
-					refreshingId.value,
+			if (O.isSome(runningRefreshing)) {
+				yield* F.interrupt(
+					runningRefreshing.value,
 				)
 			}
 
@@ -64,10 +56,6 @@ export const deleteTask = (
 ) =>
 	({
 		type: 'task',
-		onStart: (id: FId.FiberId) =>
-			InternalMessage.RefreshListStarted({
-				id,
-			}),
 		effect: Eff.gen(function* () {
 			if (HS.size(selectedProducts) <= 0) {
 				return yield* Eff.fail(

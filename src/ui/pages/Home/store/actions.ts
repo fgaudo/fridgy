@@ -1,4 +1,4 @@
-import { Da, FId } from '@/core/imports'
+import { Da, F } from '@/core/imports'
 
 import type { ProductModel } from '@/app/use-cases/get-sorted-products'
 
@@ -14,7 +14,7 @@ export type InternalMessage = Da.TaggedEnum<{
 		message: string
 	}
 	DeleteProductsSucceeded: object
-	RefreshListStarted: { id: FId.FiberId }
+	RefreshListStarted: { fiber: F.Fiber<unknown> }
 	RefreshListSucceeded: {
 		data: {
 			total: number

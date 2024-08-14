@@ -1,7 +1,6 @@
-import type { FiberId } from 'effect/FiberId'
 import { onMount } from 'solid-js'
 
-import { HS, O } from '@/core/imports'
+import { F, HS, O } from '@/core/imports'
 
 import type { App } from '@/app'
 import type { ProductModel } from '@/app/use-cases/get-sorted-products'
@@ -21,7 +20,7 @@ export interface State {
 	products: ProductModel[]
 	isLoading: boolean
 	selectedProducts: HS.HashSet<string>
-	refreshingId: O.Option<FiberId>
+	runningRefreshing: O.Option<F.Fiber<unknown>>
 }
 
 export type Store = readonly [
@@ -41,7 +40,7 @@ export const createStore: (
 			toastMessage: '',
 			products: [],
 			isLoading: true,
-			refreshingId: O.none(),
+			runningRefreshing: O.none(),
 			selectedProducts: HS.empty(),
 		},
 		reducer(context),

@@ -179,7 +179,7 @@ export const Item: Component<{
 						<div
 							slot="headline"
 							class="text-ellipsis whitespace-nowrap capitalize">
-							{model.name}
+							{model().name}
 						</div>
 					</md-list-item>
 				</div>
