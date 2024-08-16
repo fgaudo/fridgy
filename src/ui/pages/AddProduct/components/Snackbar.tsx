@@ -1,7 +1,4 @@
 import type { Component } from 'solid-js'
-import { Portal } from 'solid-js/web'
-
-import { SnackBar } from '@/ui/widgets/SnackBar'
 
 import { useUiStateContext } from '../context'
 
@@ -11,10 +8,9 @@ export const Snackbar: Component = () => {
 	} = useUiStateContext()!
 
 	return (
-		<Portal>
-			<div class="fixed bottom-[16px] left-[16px] right-[16px] z-50">
-				<SnackBar message={state.toastMessage} />
-			</div>
-		</Portal>
+		<mdui-snackbar
+			prop:open={state.toastMessage.length > 0}>
+			{state.toastMessage}
+		</mdui-snackbar>
 	)
 }

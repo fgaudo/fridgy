@@ -32,7 +32,7 @@ export const Fab: Component = () => {
 						'background-image': `url("${imgUrl}")`,
 					}}
 					class={`relative right-[70px] top-[30px] h-[160px] w-[160px] bg-contain bg-no-repeat`}
-				/>
+			></div>
 			</div>
 			<div
 				class="fixed bottom-[16px] right-[16px] h-[96px] w-[96px] bg-transparent transition-all duration-fade"
@@ -40,7 +40,8 @@ export const Fab: Component = () => {
 					'opacity-0 pointer-events-none':
 						uiState.isSelectModeEnabled,
 				}}>
-				<md-fab
+				<mdui-fab
+					prop:icon="add"
 					onClick={() => {
 						setUiState(
 							'isOpeningAddProduct',
@@ -48,9 +49,8 @@ export const Fab: Component = () => {
 						)
 					}}
 					prop:variant="primary"
-					prop:size="large">
-					<md-icon slot="icon">add</md-icon>
-				</md-fab>
+					prop:size="large"
+			></mdui-fab>
 			</div>
 		</Portal>
 	)

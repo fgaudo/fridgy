@@ -153,13 +153,12 @@ private val getTotalSql = "SELECT COUNT(*) FROM ${Schema.ProductsTable.name}"
 private val deleteProductsByIds = { numberOfTokens: Int ->
     val tokens = List(numberOfTokens) { "?" }.joinToString()
 
-    val asd = """
+    """
         DELETE FROM ${Schema.ProductsTable.name}
             WHERE ${Schema.ProductsTable.Columns.id}
                 IN (${tokens})
     """.trimIndent()
 
-    asd
 }
 
 private val addProductSql = """

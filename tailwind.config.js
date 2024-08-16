@@ -10,48 +10,36 @@ export default {
 			transitionDuration: {
 				fade: '300ms',
 			},
-			fontWeight: {
-				titleLarge:
-					'var(--md-sys-typescale-title-large-weight)',
-			},
 			fontFamily: {
-				titleLarge:
-					'var(--md-sys-typescale-title-large-font)',
-			},
-			lineHeight: {
-				titleLarge:
-					'var(--md-sys-typescale-title-large-line-height)',
-			},
-			fontSize: {
-				titleLarge:
-					'var(--md-sys-typescale-title-large-size)',
+				titleLarge: 'var(--fridgy-title-font)',
 			},
 			colors: {
 				background:
-					'var(--md-sys-color-background)',
-				primary: 'var(--md-sys-color-primary)',
+					'rgb(var(--mdui-color-background))',
+				primary: 'rgb(var(--mdui-color-primary))',
 				onSurface: {
 					DEFAULT:
-						'var(--md-sys-color-on-surface)',
+						'rgb(var(--mdui-color-on-surface))',
 					container:
-						'var(--md-sys-color-on-surface-container)',
+						'rgb(var(--mdui-color-on-surface-container))',
 					variant:
-						'var(--md-sys-color-on-surface-variant)',
+						'rgb(var(--mdui-color-on-surface-variant))',
 				},
 				surface: {
 					variant:
-						'var(--md-sys-color-surface-variant)',
-					DEFAULT: 'var(--md-sys-color-surface)',
+						'rgb(var(--mdui-color-surface-variant))',
+					DEFAULT:
+						'rgb(var(--mdui-color-surface))',
 					container:
-						'var(--md-sys-color-surface-container)',
+						'rgb(var(--mdui-color-surface-container))',
 				},
 				inverse: {
 					onSurface:
-						'var(--md-sys-color-inverse-on-surface)',
+						'rgb(var(--mdui-color-inverse-on-surface))',
 					primary:
-						'var(--md-sys-color-inverse-primary)',
+						'rgb(var(--mdui-color-inverse-primary))',
 					surface:
-						'var(--md-sys-color-inverse-surface)',
+						'rgb(var(--mdui-color-inverse-surface))',
 				},
 			},
 		},

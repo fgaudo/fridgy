@@ -1,12 +1,12 @@
-import { App as CAP } from '@capacitor/app'
+import '@/ui/index.css'
 import '@fontsource-variable/comfortaa/index.css'
-import '@fontsource-variable/material-symbols-rounded/full.css'
 import '@fontsource-variable/roboto-flex/full.css'
-import {
-	Hct,
-	SchemeTonalSpot,
-	argbFromHex,
-} from '@material/material-color-utilities'
+import 'mdui/mdui.css'
+
+import { App as CAP } from '@capacitor/app'
+import '@fontsource/material-icons'
+import 'mdui'
+import { setColorScheme } from 'mdui/functions/setColorScheme.js'
 import {
 	type Component,
 	Show,
@@ -14,17 +14,16 @@ import {
 	createResource,
 	createSignal,
 	on,
+	onCleanup,
 } from 'solid-js'
 import {
 	Portal,
 	render as solidRender,
 } from 'solid-js/web'
-import { useTimeout } from 'solidjs-hooks'
+
+import { Eff, F } from '@/core/imports'
 
 import type { App } from '@/app'
-
-import '@/ui/index.css'
-import { applyTheme } from '@/ui/material-web'
 
 import { onResumeInit } from './core/capacitor'
 import { DEFAULT_FADE_MS } from './core/constants'
@@ -36,13 +35,7 @@ export async function render(
 	app: App,
 	root: HTMLElement,
 ): Promise<void> {
-	const scheme = new SchemeTonalSpot(
-		Hct.fromInt(argbFromHex(MAIN_COLOR)),
-		false,
-		0.1,
-	)
-
-	applyTheme(document.body, scheme)
+	setColorScheme(MAIN_COLOR)
 
 	await Promise.all([
 		onResumeInit(),
@@ -99,7 +92,7 @@ const FontLoad: Component<{
 					<div class="font-titleLarge">
 						quickfix
 					</div>
-					<md-icon>checkbox</md-icon>
+					<mdui-icon prop:name="check_box"></mdui-icon>
 				</div>
 			</Portal>
 		</Show>
@@ -116,10 +109,16 @@ const LoadingScreen: Component<{
 			() => props.resourcesAreLoaded(),
 			loaded => {
 				if (loaded) {
-					useTimeout(
-						() => fade(true),
-						DEFAULT_FADE_MS,
+					const fiber = Eff.runFork(
+						Eff.gen(function* () {
+							yield* Eff.sleep(DEFAULT_FADE_MS)
+							fade(true)
+						}),
 					)
+
+					onCleanup(() => {
+						Eff.runFork(F.interrupt(fiber))
+					})
 				}
 			},
 			{ defer: true },
@@ -129,14 +128,12 @@ const LoadingScreen: Component<{
 	return (
 		<Portal>
 			<div
-				class="fixed bottom-0 left-0 right-0 top-0 z-[999] flex items-center justify-center bg-background duration-[300ms]"
+				class="fixed bottom-0 left-0 right-0 top-0 z-[999] flex items-center justify-center duration-[300ms]"
 				classList={{
 					'opacity-0 pointer-events-none':
 						isFaded(),
 				}}>
-				<md-circular-progress
-					prop:indeterminate={true}
-				/>
+				<mdui-circular-progress></mdui-circular-progress>
 			</div>
 		</Portal>
 	)

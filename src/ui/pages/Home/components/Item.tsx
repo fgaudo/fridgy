@@ -28,7 +28,7 @@ export const Item: Component<{
 		<div
 			class="absolute transition-all duration-fade"
 			style={{
-				top: `${(props.index() * 72).toString(10)}px`,
+				top: `${(props.index() * 60).toString(10)}px`,
 				left: '0',
 				right: '0',
 			}}>
@@ -49,9 +49,7 @@ export const Item: Component<{
 									)
 								})()}>
 								{id => (
-									<div
-										slot="end"
-										class="relative flex h-[24px] w-[24px] items-center justify-center text-sm transition-all duration-fade">
+									<div slot="end-icon">
 										<CheckBoxes id={id} />
 									</div>
 								)}
@@ -68,7 +66,7 @@ export const Item: Component<{
 							index={props.index}
 							model={model}>
 							<div
-								slot="end"
+								slot="end-icon"
 								class="relative flex h-[24px] w-[24px] items-center justify-center text-sm transition-all duration-fade">
 								<CheckBoxes
 									id={() => model().id}
@@ -104,7 +102,7 @@ export const Item: Component<{
 								</Show>
 							</div>
 
-							<div slot="supporting-text">
+							<div slot="description">
 								<Show
 									when={(() => {
 										const exp =
@@ -125,17 +123,12 @@ export const Item: Component<{
 							</div>
 
 							<div
-								slot="start"
-								class="flex flex-col items-center">
+								slot="icon"
+								class="flex w-[26px] flex-col items-center text-primary">
 								<Show
 									fallback={
 										<>
-											<div class="text-sm">
-												No
-											</div>
-											<div class="text-sm">
-												EXP
-											</div>
+											<mdui-icon prop:name="all_inclusive"></mdui-icon>
 										</>
 									}
 									when={(() => {
@@ -204,8 +197,7 @@ const ExpirationBar: Component<{
 							width: `${(
 								currentProgress() * 100
 							).toString()}%`,
-						}}
-					/>
+						}}></div>
 				</div>
 			}
 			when={isExpired()}>
@@ -225,29 +217,24 @@ const CheckBoxes: Component<{
 	} = useUiStateContext()!
 	return (
 		<>
-			<md-icon
+			<mdui-icon
+				prop:name="check_box_outline_blank"
 				classList={{
 					'opacity-0':
 						HS.has(props.id())(
 							state.selectedProducts,
 						) || !uiState.isSelectModeEnabled,
 				}}
-				class="absolute text-primary transition-all duration-fade">
-				'check_box_outline_blank'
-			</md-icon>
-			<md-icon
+				class="absolute text-primary transition-all duration-fade"></mdui-icon>
+			<mdui-icon
+				prop:name="check_box"
 				classList={{
 					'opacity-0':
 						!HS.has(props.id())(
 							state.selectedProducts,
 						) || !uiState.isSelectModeEnabled,
 				}}
-				style={{
-					'font-variation-settings': "'FILL' 1",
-				}}
-				class="absolute text-primary transition-all duration-fade">
-				check_box
-			</md-icon>
+				class="absolute text-primary transition-all duration-fade"></mdui-icon>
 		</>
 	)
 }
@@ -273,60 +260,62 @@ const Button: Component<{
 	}
 
 	return (
-		<md-list-item
-			class="h-[72px]"
-			prop:type="button"
-			style={{
-				'content-visibility': 'auto',
-			}}
-			classList={{
-				'bg-surface-variant': (() => {
+		<>
+			<mdui-list-item
+				class="min-h-[60px] w-full"
+				style={{
+					'content-visibility': 'auto',
+				}}
+				classList={{
+					'bg-surface-variant': (() => {
+						const id = parsedId()
+						return id
+							? HS.has(id)(state.selectedProducts)
+							: false
+					})(),
+				}}
+				onClick={e => {
+					e.preventDefault()
+
 					const id = parsedId()
-					return id
-						? HS.has(id)(state.selectedProducts)
-						: false
-				})(),
-			}}
-			onClick={e => {
-				e.preventDefault()
+					if (id && uiState.isSelectModeEnabled) {
+						dispatch(
+							Message.ToggleItem({
+								id,
+							}),
+						)
+					}
+				}}
+				onContextMenu={e => {
+					e.preventDefault()
 
-				const id = parsedId()
-				if (id && uiState.isSelectModeEnabled) {
-					dispatch(
-						Message.ToggleItem({
-							id,
-						}),
-					)
-				}
-			}}
-			onContextMenu={e => {
-				e.preventDefault()
+					const id = parsedId()
 
-				const id = parsedId()
-
-				if (id && !uiState.isSelectModeEnabled) {
-					dispatch(
-						Message.ToggleItem({
-							id,
-						}),
-					)
-				}
-			}}>
-			{props.children}
-			<div
-				slot="headline"
-				class="text-ellipsis whitespace-nowrap capitalize">
-				<Show
-					when={(() => {
-						const name = props.model().name
-						if (typeof name === 'string')
-							return name
-						return O.isSome(name) && name.value
-					})()}
-					fallback="CORRUPTED">
-					{name => name()}
-				</Show>
-			</div>
-		</md-list-item>
+					if (
+						id &&
+						!uiState.isSelectModeEnabled
+					) {
+						dispatch(
+							Message.ToggleItem({
+								id,
+							}),
+						)
+					}
+				}}>
+				{props.children}
+				<div class="overflow-hidden text-ellipsis whitespace-nowrap capitalize">
+					<Show
+						when={(() => {
+							const name = props.model().name
+							if (typeof name === 'string')
+								return name
+							return O.isSome(name) && name.value
+						})()}
+						fallback="CORRUPTED">
+						{name => name()}
+					</Show>
+				</div>
+			</mdui-list-item>
+		</>
 	)
 }

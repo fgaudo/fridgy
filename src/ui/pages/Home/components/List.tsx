@@ -28,19 +28,17 @@ export const List: Component = () => {
 		<>
 			<Portal>
 				<div
-					class="fixed bottom-0 left-0 right-0 top-0 flex items-center justify-center bg-background transition-all"
+					class="fixed bottom-0 left-0 right-0 top-0 flex items-center justify-center transition-all"
 					classList={{
 						'opacity-0 pointer-events-none':
 							!state.isLoading &&
 							O.isNone(state.runningRefreshing),
 					}}>
-					<md-circular-progress
-						prop:indeterminate={true}
-					/>
+					<mdui-circular-progress></mdui-circular-progress>
 				</div>
 			</Portal>
 			<div
-				class="pb-[128px] pt-[100px] transition-all duration-fade"
+				class="transition-all duration-fade"
 				classList={{
 					'opacity-0 pointer-events-none':
 						state.isLoading,
@@ -57,17 +55,17 @@ export const List: Component = () => {
 						{totalItems()} items
 					</p>
 				</Portal>
-				<md-list
+				<mdui-list
+					class="relative mt-[34px]"
 					classList={{
 						'opacity-0 pointer-events-none':
 							state.receivedError,
 					}}
-					class="relative"
 					style={{
 						height:
 							state.total > 0 &&
 							!state.receivedError
-								? `${((state.total - 1) * 72 + 80).toString(10)}px`
+								? `${((state.total - 1) * 60 + 80).toString(10)}px`
 								: 'auto',
 					}}>
 					<For each={state.products}>
@@ -91,7 +89,7 @@ export const List: Component = () => {
 							)
 						}}
 					</For>
-				</md-list>
+				</mdui-list>
 				<div
 					class="absolute bottom-0 left-0 right-0 top-0 flex h-full w-full items-center justify-center text-center text-lg"
 					classList={{

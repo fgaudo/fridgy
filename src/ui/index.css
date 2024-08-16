@@ -7,31 +7,12 @@
 }
 
 body {
-	background-color: var(
-		--md-sys-color-background
-	);
+	font-family: 'Roboto Flex Variable',
+		'Courier New', Courier, monospace;
 }
 
 :root {
-	--md-icon-font: 'Material Symbols Rounded Variable';
-	--md-ref-typeface-brand: 'Comfortaa Variable';
-	--md-ref-typeface-plain: 'Roboto Flex Variable';
-	--md-ref-typeface-weight-regular: 400;
-
-	--md-sys-typescale-title-large-line-height: 28px;
-	--md-sys-typescale-title-large-size: 22px;
-	--md-sys-typescale-title-large-weight: var(
-		--md-ref-typeface-weight-regular
-	);
-	--md-sys-typescale-title-large-font: var(
-		--md-ref-typeface-brand
-	);
-	--md-sys-elevation-level0: 0;
-	--md-sys-elevation-level2: 2;
-
-	user-select: none;
-	font-size: 16px;
-	font-family: var(--md-ref-typeface-plain);
+	--fridgy-title-font: 'Comfortaa Variable';
 }
 
 @keyframes opacityIn {
@@ -42,4 +23,29 @@ body {
 	to {
 		opacity: 1;
 	}
+}
+
+.material-icons {
+	font-family: 'Material Icons';
+	font-weight: normal;
+	font-style: normal;
+	font-size: 24px; /* Preferred icon size */
+	display: inline-block;
+	line-height: 1;
+	text-transform: none;
+	letter-spacing: normal;
+	word-wrap: normal;
+	white-space: nowrap;
+	direction: ltr;
+
+	/* Support for all WebKit browsers. */
+	-webkit-font-smoothing: antialiased;
+	/* Support for Safari and Chrome. */
+	text-rendering: optimizeLegibility;
+
+	/* Support for Firefox. */
+	-moz-osx-font-smoothing: grayscale;
+
+	/* Support for IE. */
+	font-feature-settings: 'liga';
 }

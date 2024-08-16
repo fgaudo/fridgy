@@ -5,17 +5,12 @@ export const SnackBar: Component<{
 }> = props => {
 	return (
 		<div
-			class="bg-inverse-surface text-inverse-onSurface flex items-center rounded-md px-[16px] transition-all"
+			class="flex items-center rounded-md bg-inverse-surface px-[16px] text-inverse-onSurface transition-all"
 			classList={{
 				'h-[50px]': props.message.length > 0,
 				'h-0': props.message.length === 0,
-			}}
-			style={{
-				'--md-elevation-level':
-					'var(--md-sys-elevation-level3)',
 			}}>
 			{props.message}
-			<md-elevation />
 		</div>
 	)
 }

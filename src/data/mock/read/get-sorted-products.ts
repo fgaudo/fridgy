@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unnecessary-condition */
 import { Eff } from '@/core/imports'
 
 import {
@@ -6,7 +7,8 @@ import {
 } from '@/app/interfaces/read/get-sorted-products'
 import type { ProductModel } from '@/app/use-cases/get-sorted-products'
 
-import { array } from '../db'
+import { withErrors } from '../constants'
+import { map } from '../db'
 
 export const query: Eff.Effect<
 	{
@@ -15,18 +17,19 @@ export const query: Eff.Effect<
 	},
 	ProductsServiceError
 > = Eff.gen(function* () {
-	if (Math.random() < 0.5)
+	if (withErrors && Math.random() < 0.5)
 		return yield* Eff.fail(
 			ProductsServiceError('ciao'),
 		)
 
-	const total = array.length
-	const products: ProductModel[] = array.map(
-		elem => ({
-			...elem,
-			isValid: true,
-		}),
-	)
+	const total = map.size
+
+	const products: ProductModel[] = Array.from(
+		map.values(),
+	).map(elem => ({
+		...elem,
+		isValid: true,
+	}))
 
 	return { total, products }
 })

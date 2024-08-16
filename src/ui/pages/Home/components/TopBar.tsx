@@ -2,11 +2,8 @@ import {
 	type Component,
 	createMemo,
 } from 'solid-js'
-import { Portal } from 'solid-js/web'
 
 import { HS } from '@/core/imports'
-
-import { SmallTopAppBar } from '@/ui/widgets/SmallTopAppBar'
 
 import { useUiStateContext } from '../context'
 import { Message } from '../store/actions'
@@ -27,57 +24,59 @@ export const TopBar: Component = () => {
 			: (prev ?? 0)
 	})
 	return (
-		<Portal>
-			<SmallTopAppBar>
-				<div class="relative h-full w-full">
-					<div
-						class="absolute flex h-full w-full items-center gap-[24px] px-[16px] transition-all duration-fade"
-						classList={{
-							'opacity-0 pointer-events-none':
-								uiState.isSelectModeEnabled,
-						}}>
-						<md-icon-button
-							class="ml-[-8px] shrink-0"
-							onClick={() => {
-								setUiState(
-									'isMenuOpen',
-									isMenuOpen => !isMenuOpen,
-								)
-							}}>
-							<md-icon>menu</md-icon>
-						</md-icon-button>
-						<div class="font-titleLarge text-titleLarge leading-titleLarge">
-							Home
-						</div>
-					</div>
-					<div
-						class="absolute flex h-full w-full items-center gap-[24px] px-[16px] transition-all duration-fade"
-						classList={{
-							'opacity-0 pointer-events-none':
-								!uiState.isSelectModeEnabled,
-						}}>
-						<md-icon-button
-							class="ml-[-8px] shrink-0"
-							onClick={() => {
-								disableSelectMode()
-							}}>
-							<md-icon>close</md-icon>
-						</md-icon-button>
+		<mdui-top-app-bar prop:scrollBehavior="elevate">
+			<div class="w-[40px]">
+				<mdui-button-icon
+					class="absolute transition-all"
+					prop:icon="menu"
+					classList={{
+						'opacity-0 pointer-events-none':
+							uiState.isSelectModeEnabled,
+					}}
+					onClick={() => {
+						setUiState(
+							'isMenuOpen',
+							isMenuOpen => !isMenuOpen,
+						)
+					}}></mdui-button-icon>
 
-						{size()}
+				<mdui-button-icon
+					class="absolute transition-all"
+					prop:icon="close"
+					classList={{
+						'opacity-0 pointer-events-none':
+							!uiState.isSelectModeEnabled,
+					}}
+					onClick={() => {
+						disableSelectMode()
+					}}></mdui-button-icon>
+			</div>
 
-						<md-icon-button
-							class="ml-auto mr-[-8px] shrink-0"
-							onClick={() => {
-								dispatch(
-									Message.DeleteProductsAndRefresh(),
-								)
-							}}>
-							<md-icon>delete</md-icon>
-						</md-icon-button>
-					</div>
-				</div>
-			</SmallTopAppBar>
-		</Portal>
+			<mdui-top-app-bar-title class="font-titleLarge">
+				Home
+			</mdui-top-app-bar-title>
+			<div class="flex-grow"></div>
+			<div
+				class="flex h-full items-center text-lg transition-all"
+				classList={{
+					'opacity-0 pointer-events-none':
+						!uiState.isSelectModeEnabled,
+				}}>
+				{size()}
+			</div>
+
+			<mdui-button-icon
+				class="transition-all"
+				classList={{
+					'opacity-0 pointer-events-none':
+						!uiState.isSelectModeEnabled,
+				}}
+				prop:icon="delete"
+				onClick={() => {
+					dispatch(
+						Message.DeleteProductsAndRefresh(),
+					)
+				}}></mdui-button-icon>
+		</mdui-top-app-bar>
 	)
 }

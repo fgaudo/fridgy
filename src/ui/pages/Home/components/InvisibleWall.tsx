@@ -21,9 +21,7 @@ export const InvisibleWall: Component = () => {
 					'opacity-0 pointer-events-none':
 						O.isNone(state.runningDeleting),
 				}}>
-				<md-circular-progress
-					prop:indeterminate={true}
-				/>
+				<mdui-circular-progress></mdui-circular-progress>
 			</div>
 		</Portal>
 	)

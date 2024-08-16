@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unnecessary-condition */
 import { Eff } from '@/core/imports'
 
 import {
@@ -5,7 +6,8 @@ import {
 	AddProductServiceError,
 } from '@/app/interfaces/write/add-product'
 
-import { array } from '../db'
+import { withErrors } from '../constants'
+import { map } from '../db'
 
 let i = 0
 
@@ -16,14 +18,15 @@ export const command: (
 	AddProductServiceError
 > = product =>
 	Eff.gen(function* () {
-		if (Math.random() < 0.5) {
+		if (withErrors && Math.random() < 0.5) {
 			return yield* Eff.fail(
 				AddProductServiceError('ciao'),
 			)
 		}
 
-		array.push({
+		const index = (i++).toString(10)
+		map.set(index, {
 			...product,
-			id: (i++).toString(10),
+			id: index,
 		})
 	})

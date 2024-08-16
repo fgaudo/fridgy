@@ -69,7 +69,6 @@ export const createStore: (
 	useFiber(
 		Eff.gen(function* () {
 			for (;;) {
-				console.log('ciao')
 				yield* Eff.sleep(20000)
 				setUiState('currentTimestamp', Date.now())
 			}

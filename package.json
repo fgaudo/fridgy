@@ -16,18 +16,16 @@
 		"@capacitor/app": "^6.0.0",
 		"@capacitor/core": "^6.1.1",
 		"@capacitor/haptics": "^6.0.0",
-		"@effect/schema": "^0.70.3",
+		"@effect/schema": "^0.71.0",
 		"@fontsource-variable/comfortaa": "^5.0.20",
 		"@fontsource-variable/material-symbols-rounded": "^5.0.37",
 		"@fontsource-variable/roboto-flex": "^5.0.15",
-		"@material/material-color-utilities": "^0.3.0",
-		"@material/web": "^2.0.0",
+		"@fontsource/material-icons": "^5.0.18",
 		"@solidjs/router": "^0.14.1",
 		"date-fns": "^3.6.0",
-		"dexie": "^4.0.8",
 		"effect": "^3.6.1",
-		"solid-js": "^1.8.19",
-		"solidjs-hooks": "^1.1.2"
+		"mdui": "^2.1.2",
+		"solid-js": "^1.8.19"
 	},
 	"devDependencies": {
 		"@capacitor/assets": "^3.0.5",

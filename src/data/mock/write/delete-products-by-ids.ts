@@ -1,8 +1,10 @@
+/* eslint-disable @typescript-eslint/no-unnecessary-condition */
 import { Eff, HS } from '@/core/imports'
 
 import { DeleteProductsByIdsServiceError } from '@/app/interfaces/write/delete-products-by-ids'
 
-import { array } from '../db'
+import { withErrors } from '../constants'
+import { map } from '../db'
 
 export const command: (
 	ids: HS.HashSet<string>,
@@ -11,15 +13,13 @@ export const command: (
 	DeleteProductsByIdsServiceError
 > = ids =>
 	Eff.gen(function* () {
-		if (Math.random() < 0.5) {
+		if (withErrors && Math.random() < 0.5) {
 			return yield* Eff.fail(
 				DeleteProductsByIdsServiceError('ciao'),
 			)
 		}
 
-		for (const [key, item] of array.entries()) {
-			if (HS.has(item.id)(ids)) {
-				array.splice(key, 1)
-			}
+		for (const id of ids) {
+			map.delete(id)
 		}
 	})

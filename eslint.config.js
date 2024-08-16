@@ -52,6 +52,14 @@ export default [
 			'@typescript-eslint/switch-exhaustiveness-check':
 				'error',
 			'solid/reactivity': 'warn',
+
+			'solid/self-closing-comp': [
+				'warn',
+				{
+					component: 'all', // "all" | "none"
+					html: 'void', // "all" | "void" | "none"
+				},
+			],
 		},
 	},
 ]

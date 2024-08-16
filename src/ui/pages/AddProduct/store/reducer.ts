@@ -37,33 +37,6 @@ export const reducer: (
 	app => (snapshot, message) =>
 		pipe(
 			M.value(message),
-			M.when({ _tag: 'RefreshDate' }, () =>
-				Da.tuple((state: State) => state, [
-					{
-						type: 'message',
-						message:
-							InternalMessage.RefreshDateSucceeded(
-								{
-									date: new Date()
-										.toISOString()
-										.split('T')[0],
-								},
-							),
-					},
-				] as const),
-			),
-			M.when(
-				{ _tag: 'RefreshDateSucceeded' },
-				({ date }) =>
-					Da.tuple(
-						(state: State) =>
-							({
-								...state,
-								currentDate: O.some(date),
-							}) as const,
-						[] as const,
-					),
-			),
 			M.when({ _tag: 'AddProduct' }, () =>
 				Da.tuple(
 					(state: State) => state,

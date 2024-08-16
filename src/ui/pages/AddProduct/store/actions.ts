@@ -16,8 +16,6 @@ export type Message = Da.TaggedEnum<{
 }>
 
 export type InternalMessage = Da.TaggedEnum<{
-	RefreshDate: object
-	RefreshDateSucceeded: { date: string }
 	AddProductFailed: { message: string }
 	AddProductSucceeded: { name: string }
 	AddProductStarted: { fiber: F.Fiber<unknown> }
