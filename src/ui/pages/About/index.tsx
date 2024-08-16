@@ -1,5 +1,4 @@
 import type { Component } from 'solid-js'
-import { Portal } from 'solid-js/web'
 
 import { version } from '@/ui/core/constants'
 import { useFridgyNavigate } from '@/ui/router'

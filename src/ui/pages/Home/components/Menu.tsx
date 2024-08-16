@@ -2,7 +2,6 @@ import { A } from '@solidjs/router'
 import type { NavigationDrawer } from 'mdui'
 import {
 	type Component,
-	createEffect,
 	onCleanup,
 	onMount,
 } from 'solid-js'
