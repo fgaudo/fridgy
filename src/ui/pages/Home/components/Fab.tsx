@@ -1,5 +1,4 @@
 import { type Component } from 'solid-js'
-import { Portal } from 'solid-js/web'
 
 import imgUrl from '@/ui/assets/arrow.svg'
 
@@ -12,7 +11,7 @@ export const Fab: Component = () => {
 	} = useUiStateContext()!
 
 	return (
-		<Portal>
+		<>
 			<div
 				classList={{
 					'opacity-0 pointer-events-none':
@@ -31,8 +30,7 @@ export const Fab: Component = () => {
 							'invert(16%) sepia(2%) saturate(24%) hue-rotate(336deg) brightness(97%) contrast(93%)',
 						'background-image': `url("${imgUrl}")`,
 					}}
-					class={`relative right-[70px] top-[30px] h-[160px] w-[160px] bg-contain bg-no-repeat`}
-			></div>
+					class={`relative right-[70px] top-[30px] h-[160px] w-[160px] bg-contain bg-no-repeat`}></div>
 			</div>
 			<div
 				class="fixed bottom-[16px] right-[16px] h-[96px] w-[96px] bg-transparent transition-all duration-fade"
@@ -49,9 +47,8 @@ export const Fab: Component = () => {
 						)
 					}}
 					prop:variant="primary"
-					prop:size="large"
-			></mdui-fab>
+					prop:size="large"></mdui-fab>
 			</div>
-		</Portal>
+		</>
 	)
 }

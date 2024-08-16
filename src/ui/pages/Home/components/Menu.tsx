@@ -38,6 +38,11 @@ export const Menu: Component = () => {
 					Fridgy
 				</p>
 				<mdui-list>
+					<A href="https://github.com/fgaudo/fridgy/wiki/Fridgy-%E2%80%90-Privacy-policy">
+						<mdui-list-item prop:icon="policy">
+							Privacy policy
+						</mdui-list-item>
+					</A>
 					<A href={ROUTES.about}>
 						<mdui-list-item prop:icon="info">
 							About

@@ -43,18 +43,16 @@ export const List: Component = () => {
 					'opacity-0 pointer-events-none':
 						state.isLoading,
 				}}>
-				<Portal>
-					<p
-						class="fixed top-[64px] w-full bg-background px-[14px] pb-[8px] pt-[10px] text-xs transition-all"
-						classList={{
-							'opacity-0 pointer-events-none':
-								state.total <= 0 ||
-								state.isLoading ||
-								state.receivedError,
-						}}>
-						{totalItems()} items
-					</p>
-				</Portal>
+				<p
+					class="fixed top-[64px] z-[999] w-full bg-background px-[14px] pb-[8px] pt-[10px] text-xs transition-all"
+					classList={{
+						'opacity-0 pointer-events-none':
+							state.total <= 0 ||
+							state.isLoading ||
+							state.receivedError,
+					}}>
+					{totalItems()} items
+				</p>
 				<mdui-list
 					class="relative mt-[34px]"
 					classList={{

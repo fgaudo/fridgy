@@ -1,0 +1,389 @@
+{
+  "@capacitor/android@6.1.1": {
+    "licenses": "MIT",
+    "repository": "https://github.com/ionic-team/capacitor",
+    "publisher": "Ionic Team",
+    "email": "hi@ionic.io",
+    "url": "https://ionic.io",
+    "path": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\@capacitor\\android",
+    "licenseFile": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\@capacitor\\android\\LICENSE"
+  },
+  "@capacitor/app@6.0.0": {
+    "licenses": "MIT",
+    "repository": "https://github.com/ionic-team/capacitor-plugins",
+    "publisher": "Ionic",
+    "email": "hi@ionicframework.com",
+    "path": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\@capacitor\\app",
+    "licenseFile": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\@capacitor\\app\\LICENSE"
+  },
+  "@capacitor/assets@3.0.5": {
+    "licenses": "MIT",
+    "repository": "https://github.com/ionic-team/capacitor-assets",
+    "publisher": "Ionic Team",
+    "email": "hi@ionicframework.com",
+    "path": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\@capacitor\\assets",
+    "licenseFile": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\@capacitor\\assets\\LICENSE"
+  },
+  "@capacitor/cli@6.1.1": {
+    "licenses": "MIT",
+    "repository": "https://github.com/ionic-team/capacitor",
+    "publisher": "Ionic Team",
+    "email": "hi@ionic.io",
+    "url": "https://ionic.io",
+    "path": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\@capacitor\\cli",
+    "licenseFile": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\@capacitor\\cli\\LICENSE"
+  },
+  "@capacitor/core@6.1.1": {
+    "licenses": "MIT",
+    "repository": "https://github.com/ionic-team/capacitor",
+    "publisher": "Ionic Team",
+    "email": "hi@ionic.io",
+    "url": "https://ionic.io",
+    "path": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\@capacitor\\core",
+    "licenseFile": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\@capacitor\\core\\LICENSE"
+  },
+  "@capacitor/haptics@6.0.0": {
+    "licenses": "MIT",
+    "repository": "https://github.com/ionic-team/capacitor-plugins",
+    "publisher": "Ionic",
+    "email": "hi@ionicframework.com",
+    "path": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\@capacitor\\haptics",
+    "licenseFile": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\@capacitor\\haptics\\LICENSE"
+  },
+  "@effect/schema@0.71.0": {
+    "licenses": "MIT",
+    "repository": "https://github.com/Effect-TS/effect",
+    "path": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\@effect\\schema",
+    "licenseFile": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\@effect\\schema\\LICENSE"
+  },
+  "@eslint-community/eslint-utils@4.4.0": {
+    "licenses": "MIT",
+    "repository": "https://github.com/eslint-community/eslint-utils",
+    "publisher": "Toru Nagashima",
+    "path": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\@eslint-community\\eslint-utils",
+    "licenseFile": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\@eslint-community\\eslint-utils\\LICENSE"
+  },
+  "@eslint-community/regexpp@4.11.0": {
+    "licenses": "MIT",
+    "repository": "https://github.com/eslint-community/regexpp",
+    "publisher": "Toru Nagashima",
+    "path": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\@eslint-community\\regexpp",
+    "licenseFile": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\@eslint-community\\regexpp\\LICENSE"
+  },
+  "@eslint/config-array@0.17.1": {
+    "licenses": "Apache-2.0",
+    "repository": "https://github.com/eslint/rewrite",
+    "publisher": "Nicholas C. Zakas",
+    "path": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\@eslint\\config-array",
+    "licenseFile": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\@eslint\\config-array\\LICENSE"
+  },
+  "@eslint/eslintrc@3.1.0": {
+    "licenses": "MIT",
+    "repository": "https://github.com/eslint/eslintrc",
+    "publisher": "Nicholas C. Zakas",
+    "path": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\@eslint\\eslintrc",
+    "licenseFile": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\@eslint\\eslintrc\\LICENSE"
+  },
+  "@eslint/js@9.8.0": {
+    "licenses": "MIT",
+    "repository": "https://github.com/eslint/eslint",
+    "path": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\@eslint\\js",
+    "licenseFile": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\@eslint\\js\\LICENSE"
+  },
+  "@eslint/object-schema@2.1.4": {
+    "licenses": "Apache-2.0",
+    "repository": "https://github.com/eslint/rewrite",
+    "publisher": "Nicholas C. Zakas",
+    "path": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\@eslint\\object-schema",
+    "licenseFile": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\@eslint\\object-schema\\LICENSE"
+  },
+  "@fontsource-variable/comfortaa@5.0.20": {
+    "licenses": "OFL-1.1",
+    "repository": "https://github.com/fontsource/font-files",
+    "publisher": "Google Inc.",
+    "path": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\@fontsource-variable\\comfortaa",
+    "licenseFile": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\@fontsource-variable\\comfortaa\\LICENSE"
+  },
+  "@fontsource-variable/roboto-flex@5.0.15": {
+    "licenses": "OFL-1.1",
+    "repository": "https://github.com/fontsource/font-files",
+    "publisher": "Google Inc.",
+    "path": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\@fontsource-variable\\roboto-flex",
+    "licenseFile": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\@fontsource-variable\\roboto-flex\\LICENSE"
+  },
+  "@fontsource/material-icons@5.0.18": {
+    "licenses": "Apache-2.0",
+    "repository": "https://github.com/fontsource/font-files",
+    "publisher": "Google Inc.",
+    "path": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\@fontsource\\material-icons",
+    "licenseFile": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\@fontsource\\material-icons\\LICENSE"
+  },
+  "@prettier/plugin-xml@2.2.0": {
+    "licenses": "MIT",
+    "repository": "https://github.com/prettier/plugin-xml",
+    "publisher": "Kevin Newton",
+    "path": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\@prettier\\plugin-xml",
+    "licenseFile": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\@prettier\\plugin-xml\\LICENSE"
+  },
+  "@solidjs/router@0.14.1": {
+    "licenses": "MIT",
+    "repository": "https://github.com/solidjs/solid-router",
+    "publisher": "Ryan Carniato",
+    "path": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\@solidjs\\router",
+    "licenseFile": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\@solidjs\\router\\LICENSE"
+  },
+  "@trivago/prettier-plugin-sort-imports@4.3.0": {
+    "licenses": "Apache-2.0",
+    "repository": "https://github.com/trivago/prettier-plugin-sort-imports",
+    "publisher": "Ayush Sharma",
+    "email": "ayush.sharma@trivago.com",
+    "url": "https://github.com/ayusharma",
+    "path": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\@trivago\\prettier-plugin-sort-imports",
+    "licenseFile": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\@trivago\\prettier-plugin-sort-imports\\LICENSE"
+  },
+  "@types/eslint@9.6.0": {
+    "licenses": "MIT",
+    "repository": "https://github.com/DefinitelyTyped/DefinitelyTyped",
+    "path": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\@types\\eslint",
+    "licenseFile": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\@types\\eslint\\LICENSE"
+  },
+  "@types/eslint__js@8.42.3": {
+    "licenses": "MIT",
+    "repository": "https://github.com/DefinitelyTyped/DefinitelyTyped",
+    "path": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\@types\\eslint__js",
+    "licenseFile": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\@types\\eslint__js\\LICENSE"
+  },
+  "@typescript-eslint/eslint-plugin@8.0.0": {
+    "licenses": "MIT",
+    "repository": "https://github.com/typescript-eslint/typescript-eslint",
+    "path": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\@typescript-eslint\\eslint-plugin",
+    "licenseFile": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\@typescript-eslint\\eslint-plugin\\LICENSE"
+  },
+  "@typescript-eslint/parser@8.0.0": {
+    "licenses": "BSD-2-Clause",
+    "repository": "https://github.com/typescript-eslint/typescript-eslint",
+    "path": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\@typescript-eslint\\parser",
+    "licenseFile": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\@typescript-eslint\\parser\\LICENSE"
+  },
+  "@typescript-eslint/scope-manager@8.0.0": {
+    "licenses": "MIT",
+    "repository": "https://github.com/typescript-eslint/typescript-eslint",
+    "path": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\@typescript-eslint\\scope-manager",
+    "licenseFile": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\@typescript-eslint\\scope-manager\\LICENSE"
+  },
+  "@typescript-eslint/type-utils@8.0.0": {
+    "licenses": "MIT",
+    "repository": "https://github.com/typescript-eslint/typescript-eslint",
+    "path": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\@typescript-eslint\\type-utils",
+    "licenseFile": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\@typescript-eslint\\type-utils\\LICENSE"
+  },
+  "@typescript-eslint/types@8.0.0": {
+    "licenses": "MIT",
+    "repository": "https://github.com/typescript-eslint/typescript-eslint",
+    "path": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\@typescript-eslint\\types",
+    "licenseFile": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\@typescript-eslint\\types\\LICENSE"
+  },
+  "@typescript-eslint/typescript-estree@8.0.0": {
+    "licenses": "BSD-2-Clause",
+    "repository": "https://github.com/typescript-eslint/typescript-eslint",
+    "path": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\@typescript-eslint\\typescript-estree",
+    "licenseFile": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\@typescript-eslint\\typescript-estree\\LICENSE"
+  },
+  "@typescript-eslint/utils@7.17.0": {
+    "licenses": "MIT",
+    "repository": "https://github.com/typescript-eslint/typescript-eslint",
+    "path": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\@typescript-eslint\\utils",
+    "licenseFile": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\@typescript-eslint\\utils\\LICENSE"
+  },
+  "@typescript-eslint/visitor-keys@8.0.0": {
+    "licenses": "MIT",
+    "repository": "https://github.com/typescript-eslint/typescript-eslint",
+    "path": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\@typescript-eslint\\visitor-keys",
+    "licenseFile": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\@typescript-eslint\\visitor-keys\\LICENSE"
+  },
+  "@vitejs/plugin-basic-ssl@1.1.0": {
+    "licenses": "MIT",
+    "repository": "https://github.com/vitejs/vite-plugin-basic-ssl",
+    "publisher": "Evan You and Vite Contributors",
+    "path": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\@vitejs\\plugin-basic-ssl",
+    "licenseFile": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\@vitejs\\plugin-basic-ssl\\LICENSE"
+  },
+  "autoprefixer@10.4.20": {
+    "licenses": "MIT",
+    "repository": "https://github.com/postcss/autoprefixer",
+    "publisher": "Andrey Sitnik",
+    "email": "andrey@sitnik.ru",
+    "path": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\autoprefixer",
+    "licenseFile": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\autoprefixer\\LICENSE"
+  },
+  "conventional-changelog-eslint@3.0.9": {
+    "licenses": "ISC",
+    "repository": "https://github.com/conventional-changelog/conventional-changelog",
+    "publisher": "Steve Mao",
+    "path": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\conventional-changelog-eslint",
+    "licenseFile": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\conventional-changelog-eslint\\LICENSE.md"
+  },
+  "cssnano@7.0.4": {
+    "licenses": "MIT",
+    "repository": "https://github.com/cssnano/cssnano",
+    "publisher": "Ben Briggs",
+    "email": "beneb.info@gmail.com",
+    "url": "http://beneb.info",
+    "path": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\cssnano",
+    "licenseFile": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\cssnano\\LICENSE-MIT"
+  },
+  "date-fns@3.6.0": {
+    "licenses": "MIT",
+    "repository": "https://github.com/date-fns/date-fns",
+    "path": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\date-fns",
+    "licenseFile": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\date-fns\\LICENSE.md"
+  },
+  "effect@3.6.1": {
+    "licenses": "MIT",
+    "repository": "https://github.com/Effect-TS/effect",
+    "path": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\effect",
+    "licenseFile": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\effect\\LICENSE"
+  },
+  "eslint-config-prettier@9.1.0": {
+    "licenses": "MIT",
+    "repository": "https://github.com/prettier/eslint-config-prettier",
+    "publisher": "Simon Lydell",
+    "path": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\eslint-config-prettier",
+    "licenseFile": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\eslint-config-prettier\\LICENSE"
+  },
+  "eslint-plugin-solid@0.14.1": {
+    "licenses": "MIT",
+    "repository": "https://github.com/solidjs-community/eslint-plugin-solid",
+    "publisher": "Josh Wilson",
+    "email": "joshwilsonvu@gmail.com",
+    "path": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\eslint-plugin-solid",
+    "licenseFile": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\eslint-plugin-solid\\LICENSE"
+  },
+  "eslint-plugin-sonarjs@1.0.4": {
+    "licenses": "LGPL-3.0-only",
+    "repository": "https://github.com/SonarSource/eslint-plugin-sonarjs",
+    "path": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\eslint-plugin-sonarjs",
+    "licenseFile": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\eslint-plugin-sonarjs\\LICENSE"
+  },
+  "eslint-scope@8.0.2": {
+    "licenses": "BSD-2-Clause",
+    "repository": "https://github.com/eslint/eslint-scope",
+    "path": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\eslint-scope",
+    "licenseFile": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\eslint-scope\\LICENSE"
+  },
+  "eslint-visitor-keys@4.0.0": {
+    "licenses": "Apache-2.0",
+    "repository": "https://github.com/eslint/eslint-visitor-keys",
+    "publisher": "Toru Nagashima",
+    "url": "https://github.com/mysticatea",
+    "path": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\eslint-visitor-keys",
+    "licenseFile": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\eslint-visitor-keys\\LICENSE"
+  },
+  "eslint@9.8.0": {
+    "licenses": "MIT",
+    "repository": "https://github.com/eslint/eslint",
+    "publisher": "Nicholas C. Zakas",
+    "email": "nicholas+npm@nczconsulting.com",
+    "path": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\eslint",
+    "licenseFile": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\eslint\\LICENSE"
+  },
+  "jsdom@24.1.1": {
+    "licenses": "MIT",
+    "repository": "https://github.com/jsdom/jsdom",
+    "path": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\jsdom",
+    "licenseFile": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\jsdom\\LICENSE.txt"
+  },
+  "mdui@2.1.2": {
+    "licenses": "MIT",
+    "repository": "https://github.com/zdhxiong/mdui",
+    "publisher": "zdhxiong",
+    "email": "zdhxiong@gmail.com",
+    "path": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\mdui",
+    "licenseFile": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\mdui\\LICENSE"
+  },
+  "postcss@8.4.40": {
+    "licenses": "MIT",
+    "repository": "https://github.com/postcss/postcss",
+    "publisher": "Andrey Sitnik",
+    "email": "andrey@sitnik.ru",
+    "path": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\postcss",
+    "licenseFile": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\postcss\\LICENSE"
+  },
+  "prettier-plugin-tailwindcss@0.6.5": {
+    "licenses": "MIT",
+    "repository": "https://github.com/tailwindlabs/prettier-plugin-tailwindcss",
+    "path": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\prettier-plugin-tailwindcss",
+    "licenseFile": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\prettier-plugin-tailwindcss\\LICENSE"
+  },
+  "prettier@3.3.3": {
+    "licenses": "MIT",
+    "repository": "https://github.com/prettier/prettier",
+    "publisher": "James Long",
+    "path": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\prettier",
+    "licenseFile": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\prettier\\LICENSE"
+  },
+  "solid-js@1.8.19": {
+    "licenses": "MIT",
+    "repository": "https://github.com/solidjs/solid",
+    "publisher": "Ryan Carniato",
+    "path": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\solid-js",
+    "licenseFile": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\solid-js\\LICENSE"
+  },
+  "tailwindcss@3.4.7": {
+    "licenses": "MIT",
+    "repository": "https://github.com/tailwindlabs/tailwindcss",
+    "path": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\tailwindcss",
+    "licenseFile": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\tailwindcss\\LICENSE"
+  },
+  "typescript-eslint@8.0.0": {
+    "licenses": "MIT",
+    "repository": "https://github.com/typescript-eslint/typescript-eslint",
+    "path": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\typescript-eslint",
+    "licenseFile": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\typescript-eslint\\LICENSE"
+  },
+  "typescript@5.5.4": {
+    "licenses": "Apache-2.0",
+    "repository": "https://github.com/Microsoft/TypeScript",
+    "publisher": "Microsoft Corp.",
+    "path": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\typescript",
+    "licenseFile": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\typescript\\LICENSE.txt"
+  },
+  "vite-plugin-singlefile@2.0.2": {
+    "licenses": "MIT",
+    "repository": "https://github.com/richardtallent/vite-plugin-singlefile",
+    "publisher": "richard@tallent.us",
+    "path": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\vite-plugin-singlefile",
+    "licenseFile": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\vite-plugin-singlefile\\LICENSE"
+  },
+  "vite-plugin-solid@2.10.2": {
+    "licenses": "MIT",
+    "repository": "https://github.com/solidjs/vite-plugin-solid",
+    "publisher": "Alexandre Mouton-Brady",
+    "email": "amoutonbrady@gmail.com",
+    "path": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\vite-plugin-solid",
+    "licenseFile": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\vite-plugin-solid\\README.md"
+  },
+  "vite-tsconfig-paths@4.3.2": {
+    "licenses": "MIT",
+    "repository": "https://github.com/aleclarson/vite-tsconfig-paths",
+    "publisher": "aleclarson",
+    "path": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\vite-tsconfig-paths",
+    "licenseFile": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\vite-tsconfig-paths\\LICENSE"
+  },
+  "vite@5.3.5": {
+    "licenses": "MIT",
+    "repository": "https://github.com/vitejs/vite",
+    "publisher": "Evan You",
+    "path": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\vite",
+    "licenseFile": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\vite\\LICENSE.md"
+  },
+  "vitest@2.0.4": {
+    "licenses": "MIT",
+    "repository": "https://github.com/vitest-dev/vitest",
+    "publisher": "Anthony Fu",
+    "email": "anthonyfu117@hotmail.com",
+    "path": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\vitest",
+    "licenseFile": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\vitest\\LICENSE.md"
+  }
+}
+
