@@ -76,12 +76,6 @@ export const createStore: (
 	)
 
 	createEffect(() => {
-		if (uiState.isMenuOpen)
-			document.body.style.overflow = 'hidden'
-		else document.body.style.overflow = 'auto'
-	})
-
-	createEffect(() => {
 		if (uiState.isOpeningAddProduct) {
 			navigate('addProduct')
 		}
