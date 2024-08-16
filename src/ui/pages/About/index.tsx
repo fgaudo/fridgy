@@ -19,7 +19,7 @@ export const About: () => Component =
 					</mdui-top-app-bar-title>
 				</mdui-top-app-bar>
 				<div
-					class="flex flex-col justify-center gap-2 px-[24px]"
+					class="relative flex flex-col justify-center gap-2 px-[24px]"
 					style={{
 						animation:
 							'opacityIn 0.5s ease-in-out',
