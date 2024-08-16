@@ -18,7 +18,6 @@
 		"@capacitor/haptics": "^6.0.0",
 		"@effect/schema": "^0.71.0",
 		"@fontsource-variable/comfortaa": "^5.0.20",
-		"@fontsource-variable/material-symbols-rounded": "^5.0.37",
 		"@fontsource-variable/roboto-flex": "^5.0.15",
 		"@fontsource/material-icons": "^5.0.18",
 		"@solidjs/router": "^0.14.1",
