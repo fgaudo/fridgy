@@ -128,7 +128,9 @@ export const Item: Component<{
 								<Show
 									fallback={
 										<>
-											<mdui-icon prop:name="all_inclusive"></mdui-icon>
+											<mdui-icon
+												class="scale-75"
+												prop:name="all_inclusive"></mdui-icon>
 										</>
 									}
 									when={(() => {
