@@ -201,13 +201,6 @@
     "path": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\@typescript-eslint\\visitor-keys",
     "licenseFile": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\@typescript-eslint\\visitor-keys\\LICENSE"
   },
-  "@vitejs/plugin-basic-ssl@1.1.0": {
-    "licenses": "MIT",
-    "repository": "https://github.com/vitejs/vite-plugin-basic-ssl",
-    "publisher": "Evan You and Vite Contributors",
-    "path": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\@vitejs\\plugin-basic-ssl",
-    "licenseFile": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\@vitejs\\plugin-basic-ssl\\LICENSE"
-  },
   "autoprefixer@10.4.20": {
     "licenses": "MIT",
     "repository": "https://github.com/postcss/autoprefixer",

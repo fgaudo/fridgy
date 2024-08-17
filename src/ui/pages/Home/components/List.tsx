@@ -63,7 +63,7 @@ export const List: Component = () => {
 						height:
 							state.total > 0 &&
 							!state.receivedError
-								? `${((state.total - 1) * 60 + 80).toString(10)}px`
+								? `${((state.total - 1) * 60 + 185).toString(10)}px`
 								: 'auto',
 					}}>
 					<For each={state.products}>

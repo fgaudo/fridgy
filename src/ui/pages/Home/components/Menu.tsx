@@ -33,22 +33,23 @@ export const Menu: Component = () => {
 					isMenuOpen => !isMenuOpen,
 				)
 			}}>
-			<div class="pl-2 pr-2 pt-8">
-				<p class="text-titleLarge leading-titleLarge pb-4 pl-4 font-titleLarge">
+			<div class="flex h-full flex-col">
+				<p class="text-titleLarge leading-titleLarge pb-4 pl-4 pt-8 font-titleLarge">
 					Fridgy
 				</p>
+
 				<mdui-list>
-					<A href="https://github.com/fgaudo/fridgy/wiki/Fridgy-%E2%80%90-Privacy-policy">
-						<mdui-list-item prop:icon="policy">
-							Privacy policy
-						</mdui-list-item>
-					</A>
 					<A href={ROUTES.about}>
 						<mdui-list-item prop:icon="info">
 							About
 						</mdui-list-item>
 					</A>
 				</mdui-list>
+				<a
+					class="mt-auto inline-block w-fit self-center p-4 text-center text-primary underline"
+					href="https://github.com/fgaudo/fridgy/wiki/Fridgy-%E2%80%90-Privacy-policy">
+					Privacy policy
+				</a>
 			</div>
 		</mdui-navigation-drawer>
 	)

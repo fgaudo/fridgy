@@ -13,8 +13,8 @@ export const About: () => Component =
 		const navigate = useFridgyNavigate()
 
 		return (
-			<>
-				<mdui-top-app-bar>
+			<div>
+				<mdui-top-app-bar prop:scrollBehavior="elevate">
 					<mdui-button-icon
 						prop:icon="arrow_back"
 						onClick={() => {
@@ -85,7 +85,11 @@ export const About: () => Component =
 
 					<For each={Object.entries(licenses)}>
 						{([name, license]) => (
-							<>
+							<div
+								class="overflow-x-scroll text-nowrap"
+								style={{
+									'content-visibility': 'auto',
+								}}>
 								<h1>{name}</h1>
 								<Show
 									when={
@@ -122,10 +126,10 @@ export const About: () => Component =
 									)}
 								</Show>
 								<mdui-divider class="my-[12px]"></mdui-divider>
-							</>
+							</div>
 						)}
 					</For>
 				</div>
-			</>
+			</div>
 		)
 	}
