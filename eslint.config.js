@@ -62,4 +62,10 @@ export default [
 			],
 		},
 	},
+	{
+		files: ['src/**/*.test.ts'],
+		rules: {
+			'sonarjs/no-duplicate-string': 'off',
+		},
+	},
 ]

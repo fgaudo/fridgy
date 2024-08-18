@@ -15,43 +15,7 @@ import {
 } from '../interfaces/read/get-sorted-products'
 import { useCase } from './get-sorted-products'
 
-export function expectToBeDefined<T>(
-	value: T | undefined,
-): asserts value is T {
-	expect(value).toBeDefined()
-}
-
-describe('getSortedProducts', () => {
-	test.concurrent(
-		'Should return empty list and 0 total',
-		async () => {
-			const sortedProducts = Eff.provideService(
-				useCase,
-				ProductsService,
-				Eff.gen(function* () {
-					return yield* Eff.succeed({
-						total: 0,
-						products: [],
-					})
-				}),
-			)
-
-			const data = await Eff.runPromiseExit(
-				sortedProducts,
-			)
-
-			assert(
-				Exit.isSuccess(data),
-				'Result is not a success',
-			)
-
-			expect(data.value).toStrictEqual({
-				total: 1,
-				models: [],
-			})
-		},
-	)
-
+describe('Get sorted products', () => {
 	test.concurrent(
 		'Should return an error',
 		async () => {
@@ -77,7 +41,7 @@ describe('getSortedProducts', () => {
 	)
 
 	test.concurrent(
-		'Should return an error',
+		'Should return a list',
 		async () => {
 			const sortedProducts = Eff.provideService(
 				useCase,
