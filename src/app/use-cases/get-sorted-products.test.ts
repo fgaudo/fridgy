@@ -7,6 +7,7 @@ import {
 } from 'vitest'
 
 import { Eff, O } from '@/core/imports'
+import { testRuntime } from '@/core/utils'
 
 import {
 	type ProductDTO,
@@ -29,9 +30,10 @@ describe('Get sorted products', () => {
 				}),
 			)
 
-			const data = await Eff.runPromiseExit(
-				sortedProducts,
-			)
+			const data =
+				await testRuntime.runPromiseExit(
+					sortedProducts,
+				)
 
 			assert(
 				Exit.isFailure(data),
@@ -74,9 +76,10 @@ describe('Get sorted products', () => {
 				}),
 			)
 
-			const data = await Eff.runPromiseExit(
-				sortedProducts,
-			)
+			const data =
+				await testRuntime.runPromiseExit(
+					sortedProducts,
+				)
 
 			assert(
 				Exit.isSuccess(data),

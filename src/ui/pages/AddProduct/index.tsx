@@ -5,6 +5,7 @@ import {
 } from 'solid-js'
 
 import { O } from '@/core/imports'
+import { isInteger } from '@/core/utils'
 
 import { onResume } from '@/ui/core/capacitor'
 
@@ -29,7 +30,7 @@ const AddProduct: (
 		dispatch(
 			Message.UpdateField({
 				name: 'expirationDate',
-				value: !Number.isInteger(number)
+				value: !isInteger(number)
 					? O.none()
 					: O.some(endOfDay(number).getTime()),
 			}),

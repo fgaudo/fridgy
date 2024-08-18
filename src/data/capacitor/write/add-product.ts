@@ -1,5 +1,5 @@
-import { fallback } from '@/core/helper'
-import { E, Eff, O, Sc } from '@/core/imports'
+import { E, Eff, O } from '@/core/imports'
+import { isInteger } from '@/core/utils'
 
 import {
 	type AddProductDTO,
@@ -7,24 +7,6 @@ import {
 } from '@/app/interfaces/write/add-product'
 
 import { CapacitorService } from '..'
-
-export const addProductSchema = Sc.Union(
-	Sc.Struct({
-		_tag: Sc.Literal('Right'),
-		right: Sc.optional(Sc.Unknown),
-	}),
-	Sc.Struct({
-		_tag: Sc.Literal('Left'),
-		left: Sc.String.annotations({
-			decodingFallback: fallback('Unknown Error'),
-		}),
-	}),
-).annotations({
-	decodingFallback: fallback({
-		_tag: 'Left',
-		left: 'Bad response given',
-	}),
-})
 
 export const command: (
 	product: AddProductDTO,
@@ -34,6 +16,25 @@ export const command: (
 	CapacitorService
 > = product =>
 	Eff.gen(function* () {
+		if (!isInteger(product.creationDate)) {
+			return yield* Eff.fail(
+				AddProductServiceError(
+					'Creation date must be an integer',
+				),
+			)
+		}
+
+		if (
+			O.isSome(product.expirationDate) &&
+			!isInteger(product.expirationDate.value)
+		) {
+			return yield* Eff.fail(
+				AddProductServiceError(
+					'Expiration date must be an integer',
+				),
+			)
+		}
+
 		const { db } = yield* CapacitorService
 
 		const result = yield* Eff.tryPromise(() =>

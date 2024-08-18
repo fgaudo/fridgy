@@ -6,7 +6,6 @@ import com.getcapacitor.Plugin
 import com.getcapacitor.PluginCall
 import com.getcapacitor.PluginMethod
 import com.getcapacitor.annotation.CapacitorPlugin
-import net.gaudo.fridgy.data.EitherJS
 import net.gaudo.fridgy.data.FridgySqliteOpenHelper
 import net.gaudo.fridgy.data.Product
 import net.gaudo.fridgy.data.Result
@@ -18,9 +17,7 @@ class DatabasePlugin : Plugin() {
     @PluginMethod
     fun openDB(call: PluginCall) {
         if (helper != null) {
-            call.resolve(
-                EitherJS.left("Db already open")
-            )
+            call.reject("Db already open")
             return
         }
         try {
@@ -29,14 +26,10 @@ class DatabasePlugin : Plugin() {
 
             helper = FridgySqliteOpenHelper(this.context.applicationContext, name, version)
 
-            call.resolve(
-                EitherJS.right(null)
-            )
+            call.resolve(null)
             return
         } catch (e: Exception) {
-            call.resolve(
-                EitherJS.left("There was a problem opening the database: ${e.message}")
-            )
+            call.reject("There was a problem opening the database: ${e.message}")
             return
         }
     }
@@ -46,9 +39,7 @@ class DatabasePlugin : Plugin() {
     fun addProduct(call: PluginCall) {
         val db = helper
         if (db == null) {
-            call.resolve(
-                EitherJS.left("Db not open")
-            )
+            call.reject("Db not open")
             return
         }
         try {
@@ -63,14 +54,10 @@ class DatabasePlugin : Plugin() {
 
             db.addProduct(Product(name, expirationDate, creationDate))
 
-            call.resolve(
-                EitherJS.right(null)
-            )
+            call.resolve(null)
             return
         } catch (e: Exception) {
-            call.resolve(
-                EitherJS.left("There was a problem: ${e.message}")
-            )
+            call.reject("There was a problem: ${e.message}")
             return
         }
     }
@@ -79,67 +66,71 @@ class DatabasePlugin : Plugin() {
     fun getAllProductsWithTotal(call: PluginCall) {
         val db = helper
         if (db == null) {
-            call.resolve(
-                EitherJS.left("Db not open")
-            )
+            call.reject("Db not open")
             return
         }
 
-        val result = db.getAllProductsWithTotal().let {
-            when (it) {
-                is Result.Success ->
-                    EitherJS.right(
-                        JSObject()
-                            .put("products", JSArray(it.data.list.map {
-                                JSObject()
-                                    .put("id", it.id)
-                                    .put("name", it.name)
-                                    .put("creationDate", it.creationDate)
-                                    .put("expirationDate", it.expirationDate)
-                            }))
-                            .put("total", it.data.total)
-                    )
+        val result = db.getAllProductsWithTotal()
 
-                is Result.Error -> EitherJS.left(it.error)
+        when (result) {
+            is Result.Success -> {
+                val data = JSObject()
+                    .put("products", JSArray(result.data.list.map {
+                        JSObject()
+                            .put("id", it.id)
+                            .put("name", it.name)
+                            .put("creationDate", it.creationDate)
+                            .put("expirationDate", it.expirationDate)
+                    }))
+                    .put("total", result.data.total)
+
+                call.resolve(data)
+                return
+            }
+
+            is Result.Error -> {
+                call.reject(result.error)
+                return
             }
         }
 
-        call.resolve(result)
-        return
     }
 
     @PluginMethod
     fun deleteProductsByIds(call: PluginCall) {
         val db = helper
         if (db == null) {
-            call.resolve(
-                EitherJS.left("Db not open")
-            )
+            call.reject("Db not open")
             return
         }
 
         val ids = call.getArray("ids", JSArray()).let {
             if (it == null || it.length() <= 0) {
-                call.resolve(EitherJS.left("No ids given"))
+                call.reject("No ids given")
                 return
             }
             try {
                 return@let it.toList<Long>().toList()
             } catch (e: Exception) {
-                call.resolve(EitherJS.left("Wrong type for ids given"))
+                call.reject("Wrong type for ids given")
                 return
             }
         }
 
 
-        val result = db.deleteProductsByIds(ids).let {
-            when (it) {
-                is Result.Success -> EitherJS.right(null)
-                is Result.Error -> EitherJS.left(it.error)
+        val result = db.deleteProductsByIds(ids)
+
+        when (result) {
+            is Result.Success -> {
+                call.resolve(null)
+                return
+            }
+
+            is Result.Error -> {
+                call.reject(result.error)
+                return
             }
         }
 
-        call.resolve(result)
-        return
     }
 }

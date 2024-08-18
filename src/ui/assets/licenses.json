@@ -97,6 +97,14 @@
     "path": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\@eslint\\object-schema",
     "licenseFile": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\@eslint\\object-schema\\LICENSE"
   },
+  "@fast-check/vitest@0.1.2": {
+    "licenses": "MIT",
+    "repository": "https://github.com/dubzzz/fast-check",
+    "publisher": "Nicolas DUBIEN",
+    "email": "github@dubien.org",
+    "path": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\@fast-check\\vitest",
+    "licenseFile": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\@fast-check\\vitest\\LICENSE"
+  },
   "@fontsource-variable/comfortaa@5.0.20": {
     "licenses": "OFL-1.1",
     "repository": "https://github.com/fontsource/font-files",

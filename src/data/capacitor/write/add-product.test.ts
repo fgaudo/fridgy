@@ -4,26 +4,26 @@ import { assert, describe, test } from 'vitest'
 import { Eff, O } from '@/core/imports'
 import { testRuntime } from '@/core/utils'
 
-import {
-	AddProductService,
-	AddProductServiceError,
-} from '../interfaces/write/add-product'
-import { useCase } from './add-product'
+import { CapacitorService } from '..'
+import type { FridgySqlitePlugin } from '../fridgy-sqlite-plugin'
+import { command } from './add-product'
 
 describe('Add product', () => {
 	test.concurrent(
 		'Should just work',
 		async () => {
 			const addProduct = Eff.provideService(
-				useCase({
+				command({
 					name: 'name',
 					expirationDate: O.none(),
+					creationDate: 0,
 				}),
-				AddProductService,
-				() =>
-					Eff.gen(function* () {
-						return yield* Eff.succeed(undefined)
-					}),
+				CapacitorService,
+				{
+					db: {
+						addProduct: () => Promise.resolve(),
+					} as unknown as FridgySqlitePlugin,
+				},
 			)
 
 			const data =
@@ -39,18 +39,20 @@ describe('Add product', () => {
 	)
 
 	test.concurrent(
-		'Should return error because of empty name',
+		'Should just work',
 		async () => {
 			const addProduct = Eff.provideService(
-				useCase({
-					name: '',
-					expirationDate: O.none(),
+				command({
+					name: 'name',
+					expirationDate: O.some(3),
+					creationDate: 0,
 				}),
-				AddProductService,
-				() =>
-					Eff.gen(function* () {
-						return yield* Eff.succeed(undefined)
-					}),
+				CapacitorService,
+				{
+					db: {
+						addProduct: () => Promise.resolve(),
+					} as unknown as FridgySqlitePlugin,
+				},
 			)
 
 			const data =
@@ -59,27 +61,28 @@ describe('Add product', () => {
 				)
 
 			assert(
-				Exit.isFailure(data),
-				'Result is not an error',
+				Exit.isSuccess(data),
+				'Result is not a success',
 			)
 		},
 	)
 
 	test.concurrent(
-		'Should return error',
+		'Should return an error',
 		async () => {
 			const addProduct = Eff.provideService(
-				useCase({
-					name: 'test',
+				command({
+					name: 'name',
 					expirationDate: O.none(),
+					creationDate: 0,
 				}),
-				AddProductService,
-				() =>
-					Eff.gen(function* () {
-						return yield* Eff.fail(
-							AddProductServiceError(''),
-						)
-					}),
+				CapacitorService,
+				{
+					db: {
+						addProduct: () =>
+							Promise.reject(new Error()),
+					} as unknown as FridgySqlitePlugin,
+				},
 			)
 
 			const data =

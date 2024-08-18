@@ -2,6 +2,7 @@ import { pipe } from 'effect'
 
 import { fallback } from '@/core/helper'
 import { E, Eff, O, Sc } from '@/core/imports'
+import { isInteger } from '@/core/utils'
 
 import {
 	type ProductDTO,
@@ -10,62 +11,34 @@ import {
 
 import { CapacitorService } from '..'
 
-const ProductsListSchema = Sc.Union(
-	Sc.Struct({
-		_tag: Sc.Literal('Left'),
-		left: Sc.String.annotations({
-			decodingFallback: fallback('Unknown error'),
-		}),
-	}),
-	Sc.Struct({
-		_tag: Sc.Literal('Right'),
-		right: Sc.Struct({
-			total: Sc.Number,
-			products: Sc.Array(
-				Sc.Struct({
-					id: Sc.optional(
-						Sc.UndefinedOr(Sc.Number).annotations(
-							{
-								decodingFallback:
-									fallback(undefined),
-							},
-						),
-					),
-					name: Sc.optional(
-						Sc.UndefinedOr(Sc.String).annotations(
-							{
-								decodingFallback:
-									fallback(undefined),
-							},
-						),
-					),
-					expirationDate: Sc.optional(
-						Sc.UndefinedOr(Sc.Number).annotations(
-							{
-								decodingFallback:
-									fallback(undefined),
-							},
-						),
-					),
-					creationDate: Sc.optional(
-						Sc.UndefinedOr(Sc.Number).annotations(
-							{
-								decodingFallback:
-									fallback(undefined),
-							},
-						),
-					),
-				}).annotations({
-					decodingFallback: fallback({}),
+const ProductsListSchema = Sc.Struct({
+	total: Sc.Number,
+	products: Sc.Array(
+		Sc.Struct({
+			id: Sc.optional(
+				Sc.UndefinedOr(Sc.Number).annotations({
+					decodingFallback: fallback(undefined),
 				}),
 			),
+			name: Sc.optional(
+				Sc.UndefinedOr(Sc.String).annotations({
+					decodingFallback: fallback(undefined),
+				}),
+			),
+			expirationDate: Sc.optional(
+				Sc.UndefinedOr(Sc.Number).annotations({
+					decodingFallback: fallback(undefined),
+				}),
+			),
+			creationDate: Sc.optional(
+				Sc.UndefinedOr(Sc.Number).annotations({
+					decodingFallback: fallback(undefined),
+				}),
+			),
+		}).annotations({
+			decodingFallback: fallback({}),
 		}),
-	}),
-).annotations({
-	decodingFallback: fallback({
-		_tag: 'Left',
-		left: 'Bad response',
-	}),
+	),
 })
 
 export const query: Eff.Effect<
@@ -117,57 +90,50 @@ export const query: Eff.Effect<
 				),
 			)
 
-	const response =
-		decoded._tag === 'Right'
-			? decoded.right
-			: yield* pipe(
-					Eff.logError(decoded.left),
-					Eff.andThen(
-						Eff.fail(
-							ProductsServiceError(
-								'There was a problem in the data-fetching',
-							),
-						),
-					),
-				)
-
 	const products = yield* Eff.all(
-		response.products.map(product =>
+		decoded.products.map(product =>
 			Eff.gen(function* () {
-				const { id, name, creationDate } = product
+				const {
+					id,
+					name,
+					creationDate,
+					expirationDate,
+				} = product
 
 				if (
-					id === undefined ||
-					!Number.isInteger(id) ||
-					creationDate === undefined ||
-					name === undefined
+					isInteger(id) &&
+					isInteger(creationDate) &&
+					(expirationDate === undefined ||
+						isInteger(expirationDate)) &&
+					name !== undefined
 				) {
-					yield* Eff.logError(
-						'Product is corrupt',
-					).pipe(Eff.annotateLogs({ product }))
-
 					return {
-						isValid: false,
-						id: pipe(
-							O.fromNullable(id),
-							O.map(id => id.toString(10)),
+						isValid: true,
+						id: id.toString(10),
+						name,
+						creationDate,
+						expirationDate: O.fromNullable(
+							product.expirationDate,
 						),
-						name: O.fromNullable(product.name),
 					} as const
 				}
 
+				yield* Eff.logError(
+					'Product is corrupt',
+				).pipe(Eff.annotateLogs({ product }))
+
 				return {
-					isValid: true,
-					id: id.toString(10),
-					name,
-					creationDate,
-					expirationDate: O.fromNullable(
-						product.expirationDate,
+					isValid: false,
+					id: pipe(
+						O.fromNullable(id),
+						O.filter(isInteger),
+						O.map(id => id.toString(10)),
 					),
+					name: O.fromNullable(product.name),
 				} as const
 			}),
 		),
 	)
 
-	return { total: response.total, products }
+	return { total: decoded.total, products }
 })

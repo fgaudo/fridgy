@@ -57,6 +57,9 @@ importers:
       '@eslint/js':
         specifier: ^9.8.0
         version: 9.8.0
+      '@fast-check/vitest':
+        specifier: ^0.1.2
+        version: 0.1.2(vitest@2.0.4(@types/node@20.14.12)(jsdom@24.1.1))
       '@trivago/prettier-plugin-sort-imports':
         specifier: ^4.3.0
         version: 4.3.0(prettier@3.3.3)
@@ -452,6 +455,11 @@ packages:
   '@eslint/object-schema@2.1.4':
     resolution: {integrity: sha512-BsWiH1yFGjXXS2yvrf5LyuoSIIbPrGUWob917o+BTKuZ7qJdxX8aJLRxs1fS9n6r7vESrq1OUqb68dANcFXuQQ==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
+
+  '@fast-check/vitest@0.1.2':
+    resolution: {integrity: sha512-oaWBsg3XI8UBbjmfEtZhv36ars89ljH1/PRjzcmQsVQK5EqWZRZpIDwO2QrnIROh8LuLRXFYb67qGe+cPxW5zg==}
+    peerDependencies:
+      vitest: '>=0.28.1 <1.0.0 || ^1 || ^2'
 
   '@floating-ui/utils@0.2.7':
     resolution: {integrity: sha512-X8R8Oj771YRl/w+c1HqAC1szL8zWQRwFvgDwT129k9ACdBoud/+/rX9V0qiMl6LWUdP9voC2nDVZYPMQQsb6eA==}
@@ -4003,6 +4011,11 @@ snapshots:
   '@eslint/js@9.8.0': {}
 
   '@eslint/object-schema@2.1.4': {}
+
+  '@fast-check/vitest@0.1.2(vitest@2.0.4(@types/node@20.14.12)(jsdom@24.1.1))':
+    dependencies:
+      fast-check: 3.21.0
+      vitest: 2.0.4(@types/node@20.14.12)(jsdom@24.1.1)
 
   '@floating-ui/utils@0.2.7': {}
 

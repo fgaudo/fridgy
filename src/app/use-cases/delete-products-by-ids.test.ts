@@ -2,6 +2,7 @@ import { Exit } from 'effect'
 import { assert, describe, test } from 'vitest'
 
 import { Eff, HS } from '@/core/imports'
+import { testRuntime } from '@/core/utils'
 
 import {
 	DeleteProductsByIdsService,
@@ -24,9 +25,10 @@ describe('Delete products by ids', () => {
 					}),
 			)
 
-			const data = await Eff.runPromiseExit(
-				deleteProducts,
-			)
+			const data =
+				await testRuntime.runPromiseExit(
+					deleteProducts,
+				)
 
 			assert(
 				Exit.isFailure(data),
@@ -47,9 +49,10 @@ describe('Delete products by ids', () => {
 					}),
 			)
 
-			const data = await Eff.runPromiseExit(
-				deleteProducts,
-			)
+			const data =
+				await testRuntime.runPromiseExit(
+					deleteProducts,
+				)
 
 			assert(
 				Exit.isFailure(data),
@@ -70,7 +73,7 @@ describe('Delete products by ids', () => {
 				}),
 		)
 
-		const data = await Eff.runPromiseExit(
+		const data = await testRuntime.runPromiseExit(
 			deleteProducts,
 		)
 
