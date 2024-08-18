@@ -1,5 +1,11 @@
 /* eslint-disable @typescript-eslint/no-unnecessary-condition */
-import { Eff } from '@/core/imports'
+import {
+	A,
+	Eff,
+	O,
+	Ord,
+	pipe,
+} from '@/core/imports'
 
 import {
 	type ProductDTO,
@@ -31,5 +37,44 @@ export const query: Eff.Effect<
 		isValid: true,
 	}))
 
-	return { total, products }
+	const ord = Ord.make(
+		(p1: ProductModel, p2: ProductModel) => {
+			if (p1.isValid && !p2.isValid) {
+				return -1
+			}
+
+			if (!p1.isValid && p2.isValid) {
+				return 1
+			}
+
+			if (p1.isValid && p2.isValid) {
+				return Ord.combineAll([
+					pipe(
+						Ord.number,
+						Ord.reverse,
+						O.getOrder,
+						Ord.reverse,
+						Ord.mapInput(
+							(product: typeof p1) =>
+								product.expirationDate,
+						),
+					),
+					pipe(
+						Ord.string,
+						Ord.mapInput(
+							(product: typeof p1) =>
+								product.name,
+						),
+					),
+				])(p1, p2)
+			}
+
+			return 0
+		},
+	)
+
+	return {
+		total,
+		products: A.sort(ord)(products),
+	}
 })
