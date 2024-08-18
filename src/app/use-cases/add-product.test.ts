@@ -1,6 +1,10 @@
-import { Exit } from 'effect'
-import { assert, describe, test } from 'vitest'
+import { fc, test } from '@fast-check/vitest'
+import { describe } from 'vitest'
 
+import {
+	assertExitIsFailure,
+	assertExitIsSuccess,
+} from '@/core/helper'
 import { Eff, O } from '@/core/imports'
 import { testRuntime } from '@/core/utils'
 
@@ -11,40 +15,36 @@ import {
 import { useCase } from './add-product'
 
 describe('Add product', () => {
-	test.concurrent(
-		'Should just work',
-		async () => {
-			const addProduct = Eff.provideService(
-				useCase({
-					name: 'name',
-					expirationDate: O.none(),
+	test.concurrent.prop([
+		fc.constantFrom(O.some(0), O.none()),
+	])('Should just work', async expDate => {
+		const addProduct = Eff.provideService(
+			useCase({
+				name: 'name',
+				expirationDate: expDate,
+			}),
+			AddProductService,
+			() =>
+				Eff.gen(function* () {
+					return yield* Eff.succeed(undefined)
 				}),
-				AddProductService,
-				() =>
-					Eff.gen(function* () {
-						return yield* Eff.succeed(undefined)
-					}),
-			)
+		)
 
-			const data =
-				await testRuntime.runPromiseExit(
-					addProduct,
-				)
+		const exit =
+			await testRuntime.runPromiseExit(addProduct)
 
-			assert(
-				Exit.isSuccess(data),
-				'Result is not a success',
-			)
-		},
-	)
+		assertExitIsSuccess(exit)
+	})
 
-	test.concurrent(
+	test.concurrent.prop([
+		fc.constantFrom(O.some(0), O.none()),
+	])(
 		'Should return error because of empty name',
-		async () => {
+		async expDate => {
 			const addProduct = Eff.provideService(
 				useCase({
 					name: '',
-					expirationDate: O.none(),
+					expirationDate: expDate,
 				}),
 				AddProductService,
 				() =>
@@ -53,44 +53,35 @@ describe('Add product', () => {
 					}),
 			)
 
-			const data =
+			const exit =
 				await testRuntime.runPromiseExit(
 					addProduct,
 				)
 
-			assert(
-				Exit.isFailure(data),
-				'Result is not an error',
-			)
+			assertExitIsFailure(exit)
 		},
 	)
 
-	test.concurrent(
-		'Should return error',
-		async () => {
-			const addProduct = Eff.provideService(
-				useCase({
-					name: 'test',
-					expirationDate: O.none(),
+	test.concurrent.prop([
+		fc.constantFrom(O.some(0), O.none()),
+	])('Should return error', async expDate => {
+		const addProduct = Eff.provideService(
+			useCase({
+				name: 'test',
+				expirationDate: expDate,
+			}),
+			AddProductService,
+			() =>
+				Eff.gen(function* () {
+					return yield* Eff.fail(
+						AddProductServiceError(''),
+					)
 				}),
-				AddProductService,
-				() =>
-					Eff.gen(function* () {
-						return yield* Eff.fail(
-							AddProductServiceError(''),
-						)
-					}),
-			)
+		)
 
-			const data =
-				await testRuntime.runPromiseExit(
-					addProduct,
-				)
+		const exit =
+			await testRuntime.runPromiseExit(addProduct)
 
-			assert(
-				Exit.isFailure(data),
-				'Result is not an error',
-			)
-		},
-	)
+		assertExitIsFailure(exit)
+	})
 })

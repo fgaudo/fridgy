@@ -1,4 +1,5 @@
 import { B, E, Eff, O } from '@/core/imports'
+import { isInteger } from '@/core/utils'
 
 import { createProduct } from '@/domain/product'
 
@@ -70,10 +71,8 @@ export const useCase: ProductList = Eff.gen(
 								p: rawProduct,
 							}),
 						)
-
 						return rawProduct
 					}
-
 					const result = createProduct(rawProduct)
 
 					if (E.isLeft(result)) {
@@ -85,13 +84,29 @@ export const useCase: ProductList = Eff.gen(
 							}),
 						)
 						return {
-							id: O.some(rawProduct.id),
-							name: O.some(rawProduct.name),
 							isValid: false,
+							name: O.some(rawProduct.name),
+							id: O.some(rawProduct.id),
 						} as const
 					}
 
 					const product = result.right
+
+					if (
+						!isInteger(rawProduct.creationDate) ||
+						(O.isSome(
+							rawProduct.expirationDate,
+						) &&
+							!isInteger(
+								rawProduct.expirationDate.value,
+							))
+					) {
+						return {
+							isValid: false,
+							name: O.some(rawProduct.name),
+							id: O.some(rawProduct.id),
+						} as const
+					}
 
 					return {
 						name: product.name,

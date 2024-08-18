@@ -1,6 +1,9 @@
-import { Exit } from 'effect'
-import { assert, describe, test } from 'vitest'
+import { describe, test } from 'vitest'
 
+import {
+	assertExitIsFailure,
+	assertExitIsSuccess,
+} from '@/core/helper'
 import { Eff, HS } from '@/core/imports'
 import { testRuntime } from '@/core/utils'
 
@@ -29,10 +32,7 @@ describe('Delete products by ids', () => {
 					deleteProductsByIds,
 				)
 
-			assert(
-				Exit.isSuccess(data),
-				'Result is not a success',
-			)
+			assertExitIsSuccess(data)
 		},
 	)
 
@@ -56,10 +56,7 @@ describe('Delete products by ids', () => {
 					deleteProductsByIds,
 				)
 
-			assert(
-				Exit.isSuccess(data),
-				'Result is not a success',
-			)
+			assertExitIsSuccess(data)
 		},
 	)
 
@@ -77,15 +74,12 @@ describe('Delete products by ids', () => {
 				},
 			)
 
-			const data =
+			const exit =
 				await testRuntime.runPromiseExit(
 					addProduct,
 				)
 
-			assert(
-				Exit.isFailure(data),
-				'Result is not an error',
-			)
+			assertExitIsFailure(exit)
 		},
 	)
 
@@ -103,15 +97,12 @@ describe('Delete products by ids', () => {
 				},
 			)
 
-			const data =
+			const exit =
 				await testRuntime.runPromiseExit(
 					addProduct,
 				)
 
-			assert(
-				Exit.isFailure(data),
-				'Result is not an error',
-			)
+			assertExitIsFailure(exit)
 		},
 	)
 })

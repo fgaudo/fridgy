@@ -126,7 +126,6 @@ export const query: Eff.Effect<
 					isValid: false,
 					id: pipe(
 						O.fromNullable(id),
-						O.filter(isInteger),
 						O.map(id => id.toString(10)),
 					),
 					name: O.fromNullable(product.name),

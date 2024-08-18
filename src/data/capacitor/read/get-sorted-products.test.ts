@@ -1,7 +1,10 @@
 import { fc, test } from '@fast-check/vitest'
-import { Exit } from 'effect'
-import { assert, describe, expect } from 'vitest'
+import { describe, expect } from 'vitest'
 
+import {
+	assertExitIsFailure,
+	assertExitIsSuccess,
+} from '@/core/helper'
 import { Eff, O } from '@/core/imports'
 import {
 	isInteger,
@@ -32,35 +35,35 @@ const record = fc.record({
 	name: fc.constantFrom(...strings),
 })
 
-function toModel(r: {
+function toModel(product: {
 	id: number | undefined
 	name: string | undefined
 	creationDate: number | undefined
 	expirationDate: number | undefined
 }): ProductDTO {
 	if (
-		r.id === 0 &&
-		(r.name === 'name' || r.name === '') &&
-		r.creationDate === 0 &&
-		(r.expirationDate === undefined ||
-			isInteger(r.expirationDate))
+		product.id === 0 &&
+		(product.name === 'name' ||
+			product.name === '') &&
+		product.creationDate === 0 &&
+		(product.expirationDate === undefined ||
+			isInteger(product.expirationDate))
 	) {
 		return {
 			isValid: true,
-			id: r.id.toString(10),
-			name: r.name,
-			creationDate: r.creationDate,
+			id: product.id.toString(10),
+			name: product.name,
+			creationDate: product.creationDate,
 			expirationDate: O.fromNullable(
-				r.expirationDate,
+				product.expirationDate,
 			),
 		}
 	}
 
 	return {
 		isValid: false,
-		name: O.fromNullable(r.name),
-		id: O.fromNullable(r.id).pipe(
-			O.filter(isInteger),
+		name: O.fromNullable(product.name),
+		id: O.fromNullable(product.id).pipe(
 			O.map(id => id.toString(10)),
 		),
 	}
@@ -68,7 +71,7 @@ function toModel(r: {
 
 describe('Get products', () => {
 	test.concurrent.prop([record, record, record])(
-		'Should just work',
+		'Should return a list',
 		async (a, b, c) => {
 			const products = [a, b, c]
 
@@ -86,17 +89,14 @@ describe('Get products', () => {
 				},
 			)
 
-			const data =
+			const exit =
 				await testRuntime.runPromiseExit(
 					addProduct,
 				)
 
-			assert(
-				Exit.isSuccess(data),
-				'Result is not a success',
-			)
+			assertExitIsSuccess(exit)
 
-			expect(data.value).toStrictEqual({
+			expect(exit.value).toStrictEqual({
 				total: products.length,
 				products: products.map(toModel),
 			})
@@ -117,15 +117,12 @@ describe('Get products', () => {
 				},
 			)
 
-			const data =
+			const exit =
 				await testRuntime.runPromiseExit(
 					addProduct,
 				)
 
-			assert(
-				Exit.isFailure(data),
-				'Result is not an error',
-			)
+			assertExitIsFailure(exit)
 		},
 	)
 
@@ -143,15 +140,12 @@ describe('Get products', () => {
 				},
 			)
 
-			const data =
+			const exit =
 				await testRuntime.runPromiseExit(
 					addProduct,
 				)
 
-			assert(
-				Exit.isFailure(data),
-				'Result is not an error',
-			)
+			assertExitIsFailure(exit)
 		},
 	)
 })

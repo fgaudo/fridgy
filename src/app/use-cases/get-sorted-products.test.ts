@@ -1,20 +1,94 @@
-import { Exit } from 'effect'
-import {
-	assert,
-	describe,
-	expect,
-	test,
-} from 'vitest'
+/* eslint-disable @typescript-eslint/no-unnecessary-type-assertion */
+import { fc, test } from '@fast-check/vitest'
+import { describe, expect } from 'vitest'
 
+import {
+	assertExitIsFailure,
+	assertExitIsSuccess,
+} from '@/core/helper'
 import { Eff, O } from '@/core/imports'
-import { testRuntime } from '@/core/utils'
+import {
+	isInteger,
+	testRuntime,
+} from '@/core/utils'
 
 import {
 	type ProductDTO,
 	ProductsService,
 	ProductsServiceError,
 } from '../interfaces/read/get-sorted-products'
-import { useCase } from './get-sorted-products'
+import {
+	type ProductModel,
+	useCase,
+} from './get-sorted-products'
+
+const numbers = [0, 3.5, NaN, Infinity, -Infinity]
+
+const names = ['', 'name']
+
+const record = fc.oneof(
+	fc.record({
+		isValid: fc.constant(
+			true,
+		) as fc.Arbitrary<true>,
+		id: fc.constantFrom('1'),
+		creationDate: fc.constantFrom(...numbers),
+		expirationDate: fc
+			.constantFrom(...numbers)
+			.chain(a =>
+				fc.constantFrom(O.some(a), O.none()),
+			),
+		name: fc.constantFrom(...names),
+	}),
+	fc.record({
+		isValid: fc.constant(
+			false,
+		) as fc.Arbitrary<false>,
+		id: fc.constantFrom(O.some('1'), O.none()),
+		name: fc
+			.constantFrom(...names)
+			.chain(name =>
+				fc.constantFrom(O.some(name), O.none()),
+			),
+	}),
+)
+
+const toModel = (
+	product: ProductDTO,
+): ProductModel => {
+	if (!product.isValid) {
+		return product
+	}
+
+	if (!isInteger(product.creationDate)) {
+		return {
+			isValid: false,
+			name: O.some(product.name),
+			id: O.some(product.id),
+		}
+	}
+
+	if (
+		O.isSome(product.expirationDate) &&
+		!isInteger(product.expirationDate.value)
+	) {
+		return {
+			isValid: false,
+			name: O.some(product.name),
+			id: O.some(product.id),
+		}
+	}
+
+	if (product.name === '') {
+		return {
+			isValid: false,
+			name: O.some(product.name),
+			id: O.some(product.id),
+		}
+	}
+
+	return product
+}
 
 describe('Get sorted products', () => {
 	test.concurrent(
@@ -30,83 +104,40 @@ describe('Get sorted products', () => {
 				}),
 			)
 
-			const data =
+			const exit =
 				await testRuntime.runPromiseExit(
 					sortedProducts,
 				)
 
-			assert(
-				Exit.isFailure(data),
-				'Result is not an error',
-			)
+			assertExitIsFailure(exit)
 		},
 	)
 
-	test.concurrent(
+	test.concurrent.prop([record, record, record])(
 		'Should return a list',
-		async () => {
+		async (a, b, c) => {
+			const products = [a, b, c]
 			const sortedProducts = Eff.provideService(
 				useCase,
 				ProductsService,
 				Eff.gen(function* () {
 					return yield* Eff.succeed({
-						total: 3,
-						products: [
-							{
-								isValid: true,
-								name: 'name',
-								id: 'id1',
-								expirationDate: O.some(0),
-								creationDate: 0,
-							},
-							{
-								isValid: true,
-								name: '',
-								id: 'id2',
-								expirationDate: O.some(0),
-								creationDate: 0,
-							},
-							{
-								isValid: false,
-								name: O.some('name3'),
-								id: O.some('id3'),
-							},
-						] satisfies ProductDTO[],
-					} as const)
+						total: products.length,
+						products,
+					})
 				}),
 			)
 
-			const data =
+			const exit =
 				await testRuntime.runPromiseExit(
 					sortedProducts,
 				)
 
-			assert(
-				Exit.isSuccess(data),
-				'Result is not a success',
-			)
+			assertExitIsSuccess(exit)
 
-			expect(data.value).toStrictEqual({
-				total: 3,
-				models: [
-					{
-						isValid: true,
-						name: 'name',
-						id: 'id1',
-						expirationDate: O.some(0),
-						creationDate: 0,
-					},
-					{
-						isValid: false,
-						name: O.some(''),
-						id: O.some('id2'),
-					},
-					{
-						isValid: false,
-						name: O.some('name3'),
-						id: O.some('id3'),
-					},
-				],
+			expect(exit.value).toStrictEqual({
+				total: products.length,
+				models: products.map(toModel),
 			})
 		},
 	)

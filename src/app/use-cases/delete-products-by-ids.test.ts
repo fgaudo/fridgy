@@ -1,6 +1,9 @@
-import { Exit } from 'effect'
-import { assert, describe, test } from 'vitest'
+import { describe, test } from 'vitest'
 
+import {
+	assertExitIsFailure,
+	assertExitIsSuccess,
+} from '@/core/helper'
 import { Eff, HS } from '@/core/imports'
 import { testRuntime } from '@/core/utils'
 
@@ -25,15 +28,12 @@ describe('Delete products by ids', () => {
 					}),
 			)
 
-			const data =
+			const exit =
 				await testRuntime.runPromiseExit(
 					deleteProducts,
 				)
 
-			assert(
-				Exit.isFailure(data),
-				'Result is not an error',
-			)
+			assertExitIsFailure(exit)
 		},
 	)
 
@@ -49,37 +49,35 @@ describe('Delete products by ids', () => {
 					}),
 			)
 
-			const data =
+			const exit =
 				await testRuntime.runPromiseExit(
 					deleteProducts,
 				)
 
-			assert(
-				Exit.isFailure(data),
-				'Result is not an error',
-			)
+			assertExitIsFailure(exit)
 		},
 	)
 
-	test.concurrent('Should work', async () => {
-		const deleteProducts = Eff.provideService(
-			useCase(
-				HS.fromIterable(['test1', 'test2']),
-			),
-			DeleteProductsByIdsService,
-			() =>
-				Eff.gen(function* () {
-					return yield* Eff.succeed(undefined)
-				}),
-		)
+	test.concurrent(
+		'Should just work',
+		async () => {
+			const deleteProducts = Eff.provideService(
+				useCase(
+					HS.fromIterable(['test1', 'test2']),
+				),
+				DeleteProductsByIdsService,
+				() =>
+					Eff.gen(function* () {
+						return yield* Eff.succeed(undefined)
+					}),
+			)
 
-		const data = await testRuntime.runPromiseExit(
-			deleteProducts,
-		)
+			const exit =
+				await testRuntime.runPromiseExit(
+					deleteProducts,
+				)
 
-		assert(
-			Exit.isSuccess(data),
-			'Result is not an error',
-		)
-	})
+			assertExitIsSuccess(exit)
+		},
+	)
 })
