@@ -14,13 +14,14 @@ export const createProduct: (f: {
 > = productDummy =>
 	E.gen(function* () {
 		let errors: string[] = []
-		if (productDummy.name.trim().length <= 0) {
+		const name = productDummy.name.trim()
+		if (name.length <= 0) {
 			errors = [...errors, 'Empty name given']
 		}
 
 		return errors.length <= 0
 			? {
-					name: productDummy.name,
+					name,
 					expirationDate:
 						productDummy.expirationDate,
 				}

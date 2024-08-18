@@ -21,7 +21,7 @@ export const defaultFields = () => ({
 
 export const validateFields = (
 	formFields: State['formFields'],
-) => ({ isOk: formFields.name.length > 0 })
+) => ({ isOk: formFields.name.trim().length > 0 })
 
 export const resetFields = () => {
 	const fields = defaultFields()

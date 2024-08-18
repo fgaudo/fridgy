@@ -2,6 +2,8 @@ import { Clock, Effect } from 'effect'
 
 import { B, E, Eff, O } from '@/core/imports'
 
+import { createProduct } from '@/domain/product'
+
 import { AddProductService } from '../interfaces/write/add-product'
 
 export interface AddProductDTO {
@@ -36,13 +38,25 @@ export const useCase: AddProduct = product =>
 			Effect.annotateLogs('product', product),
 		)
 
-		const result = yield* addProduct({
-			...product,
+		const result1 = createProduct({
+			name: product.name,
+			expirationDate: product.expirationDate,
+		})
+
+		if (E.isLeft(result1)) {
+			yield* Eff.logError(result1.left)
+			return yield* Eff.fail(
+				AddProductError('Bad product given'),
+			)
+		}
+
+		const result2 = yield* addProduct({
+			...result1.right,
 			creationDate: timestamp,
 		}).pipe(Eff.either)
 
-		if (E.isLeft(result)) {
-			yield* Eff.logError(result.left)
+		if (E.isLeft(result2)) {
+			yield* Eff.logError(result2.left)
 			return yield* Eff.fail(
 				AddProductError(
 					'There was a problem adding the product',

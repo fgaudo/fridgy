@@ -201,6 +201,14 @@
     "path": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\@typescript-eslint\\visitor-keys",
     "licenseFile": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\@typescript-eslint\\visitor-keys\\LICENSE"
   },
+  "@vitest/coverage-v8@2.0.5": {
+    "licenses": "MIT",
+    "repository": "https://github.com/vitest-dev/vitest",
+    "publisher": "Anthony Fu",
+    "email": "anthonyfu117@hotmail.com",
+    "path": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\@vitest\\coverage-v8",
+    "licenseFile": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\@vitest\\coverage-v8\\LICENSE"
+  },
   "autoprefixer@10.4.20": {
     "licenses": "MIT",
     "repository": "https://github.com/postcss/autoprefixer",
