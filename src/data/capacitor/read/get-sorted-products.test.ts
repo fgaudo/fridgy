@@ -1,11 +1,11 @@
 import { fc, test } from '@fast-check/vitest'
 import { describe, expect } from 'vitest'
 
+import { Eff, O } from '@/core/imports'
 import {
 	assertExitIsFailure,
 	assertExitIsSuccess,
-} from '@/core/helper'
-import { Eff, O } from '@/core/imports'
+} from '@/core/test-helpers'
 import {
 	isInteger,
 	testRuntime,

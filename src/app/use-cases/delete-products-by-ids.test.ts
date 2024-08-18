@@ -1,10 +1,10 @@
 import { describe, test } from 'vitest'
 
+import { Eff, HS } from '@/core/imports'
 import {
 	assertExitIsFailure,
 	assertExitIsSuccess,
-} from '@/core/helper'
-import { Eff, HS } from '@/core/imports'
+} from '@/core/test-helpers'
 import { testRuntime } from '@/core/utils'
 
 import {

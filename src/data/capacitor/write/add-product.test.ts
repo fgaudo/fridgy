@@ -1,11 +1,11 @@
 import { fc, test } from '@fast-check/vitest'
 import { describe } from 'vitest'
 
+import { Eff, O } from '@/core/imports'
 import {
 	assertExitIsFailure,
 	assertExitIsSuccess,
-} from '@/core/helper'
-import { Eff, O } from '@/core/imports'
+} from '@/core/test-helpers'
 import { testRuntime } from '@/core/utils'
 
 import { CapacitorService } from '..'
