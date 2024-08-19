@@ -9,8 +9,14 @@
 	</head>
 	<body>
 		<div id="root"></div>
+		<% if(isDev){ %>
 		<script
 			type="module"
-			src="/index.ts"></script>
+			src="/web.ts"></script>
+		<% } else { %>
+		<script
+			type="module"
+			src="/android.ts"></script>
+		<% } %>
 	</body>
 </html>

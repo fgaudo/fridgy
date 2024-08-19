@@ -1,9 +1,4 @@
 export interface FridgySqlitePlugin {
-	openDB(data: {
-		version: number
-		name: string
-	}): Promise<unknown>
-
 	getAllProductsWithTotal(): Promise<unknown>
 
 	addProduct(data: {

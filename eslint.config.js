@@ -24,7 +24,8 @@ export default [
 	{ ignores: ['*.js', '*.ts'] },
 	{
 		files: [
-			'src/index.ts',
+			'src/*.ts',
+			'src/*.ts',
 			'src/ui/**/*.ts',
 			'src/ui/**/*.tsx',
 		],

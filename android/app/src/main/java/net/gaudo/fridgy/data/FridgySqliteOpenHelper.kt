@@ -7,9 +7,25 @@ import androidx.core.database.getIntOrNull
 import androidx.core.database.getLongOrNull
 import androidx.core.database.sqlite.transaction
 
-class FridgySqliteOpenHelper(
+const val FRIDGY_VERSION = 1
+const val FRIDGY_DB_NAME = "fridgy"
+
+class FridgySqliteOpenHelper private constructor(
     context: Context?, name: String?, version: Int
 ) : SQLiteOpenHelper(context, name, null, version) {
+
+    companion object {
+        @Volatile
+        private var INSTANCE: FridgySqliteOpenHelper? = null
+        fun getInstance(context: Context): FridgySqliteOpenHelper =
+            INSTANCE ?: synchronized(this) {
+                INSTANCE ?: FridgySqliteOpenHelper(
+                    context.applicationContext,
+                    FRIDGY_DB_NAME,
+                    FRIDGY_VERSION
+                ).also { INSTANCE = it }
+            }
+    }
 
     override fun onConfigure(db: SQLiteDatabase?) {
         super.onConfigure(db)

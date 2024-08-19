@@ -12,36 +12,15 @@ import net.gaudo.fridgy.data.Result
 
 @CapacitorPlugin(name = "FridgySqlitePlugin")
 class DatabasePlugin : Plugin() {
-    private var helper: FridgySqliteOpenHelper? = null
 
-    @PluginMethod
-    fun openDB(call: PluginCall) {
-        if (helper != null) {
-            call.reject("Db already open")
-            return
-        }
-        try {
-            val name = call.getString("name")
-            val version = call.getInt("version")!!
-
-            helper = FridgySqliteOpenHelper(this.context.applicationContext, name, version)
-
-            call.resolve(null)
-            return
-        } catch (e: Exception) {
-            call.reject("There was a problem opening the database: ${e.message}")
-            return
-        }
+    private fun dbHelper(): FridgySqliteOpenHelper {
+        return FridgySqliteOpenHelper.getInstance(context.applicationContext)
     }
-
 
     @PluginMethod
     fun addProduct(call: PluginCall) {
-        val db = helper
-        if (db == null) {
-            call.reject("Db not open")
-            return
-        }
+        val db = dbHelper()
+
         try {
             val product = call.getObject("product")
             val name = product.getString("name")!!
@@ -64,11 +43,7 @@ class DatabasePlugin : Plugin() {
 
     @PluginMethod
     fun getAllProductsWithTotal(call: PluginCall) {
-        val db = helper
-        if (db == null) {
-            call.reject("Db not open")
-            return
-        }
+        val db = dbHelper()
 
         val result = db.getAllProductsWithTotal()
 
@@ -98,11 +73,7 @@ class DatabasePlugin : Plugin() {
 
     @PluginMethod
     fun deleteProductsByIds(call: PluginCall) {
-        val db = helper
-        if (db == null) {
-            call.reject("Db not open")
-            return
-        }
+        val db = dbHelper()
 
         val ids = call.getArray("ids", JSArray()).let {
             if (it == null || it.length() <= 0) {

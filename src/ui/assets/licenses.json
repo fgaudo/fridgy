@@ -357,6 +357,13 @@
     "path": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\typescript",
     "licenseFile": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\typescript\\LICENSE.txt"
   },
+  "vite-plugin-ejs@1.7.0": {
+    "licenses": "MIT",
+    "repository": "https://github.com/trapcodeio/vite-plugin-ejs",
+    "publisher": "trapcodeio",
+    "path": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\vite-plugin-ejs",
+    "licenseFile": "C:\\Users\\fgaud\\Projects\\fridgy\\node_modules\\vite-plugin-ejs\\readme.md"
+  },
   "vite-plugin-singlefile@2.0.2": {
     "licenses": "MIT",
     "repository": "https://github.com/richardtallent/vite-plugin-singlefile",
