@@ -86,11 +86,35 @@ export const About: () => Component =
 					<For each={Object.entries(licenses)}>
 						{([name, license]) => (
 							<div
-								class="overflow-x-scroll text-nowrap"
+								class="mb-[20px] overflow-x-scroll text-nowrap"
 								style={{
 									'content-visibility': 'auto',
 								}}>
-								<h1>{name}</h1>
+								<Show
+									fallback={
+										<h1 class="font-bold">
+											{name}
+										</h1>
+									}
+									when={
+										'name' in license &&
+										license.name.trim().length >
+											0 &&
+										license.name
+									}>
+									{value => (
+										<h1 class="font-bold">
+											{value()}
+										</h1>
+									)}
+								</Show>
+								<Show
+									when={
+										'description' in license &&
+										license.description
+									}>
+									{value => <p>{value()}</p>}
+								</Show>
 								<Show
 									when={
 										'publisher' in license &&
@@ -102,6 +126,13 @@ export const About: () => Component =
 									when={
 										'email' in license &&
 										license.email
+									}>
+									{value => <p>{value()}</p>}
+								</Show>
+								<Show
+									when={
+										'copyright' in license &&
+										license.copyright
 									}>
 									{value => <p>{value()}</p>}
 								</Show>
@@ -125,7 +156,6 @@ export const About: () => Component =
 										</a>
 									)}
 								</Show>
-								<mdui-divider class="my-[12px]"></mdui-divider>
 							</div>
 						)}
 					</For>
