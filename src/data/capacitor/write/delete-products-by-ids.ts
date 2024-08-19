@@ -1,3 +1,4 @@
+import { tryPromise } from '@/core/helper'
 import {
 	A,
 	E,
@@ -56,7 +57,7 @@ export const command: (
 			)} products`,
 		)
 
-		const result = yield* Eff.tryPromise(() =>
+		const result = yield* tryPromise(() =>
 			db.deleteProductsByIds({ ids: idsArray }),
 		).pipe(Eff.either)
 

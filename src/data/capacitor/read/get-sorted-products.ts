@@ -1,6 +1,9 @@
 import { pipe } from 'effect'
 
-import { fallback } from '@/core/helper'
+import {
+	fallback,
+	tryPromise,
+} from '@/core/helper'
 import { E, Eff, O, Sc } from '@/core/imports'
 import { isInteger } from '@/core/utils'
 
@@ -52,46 +55,39 @@ export const query: Eff.Effect<
 	const { db } = yield* CapacitorService
 
 	const result = yield* pipe(
-		Eff.tryPromise(() =>
+		tryPromise(() =>
 			db.getAllProductsWithTotal(),
 		),
 		Eff.either,
 	)
 
-	const data = E.isRight(result)
-		? result.right
-		: yield* pipe(
-				Eff.logError(result.left.toString()),
-				Eff.andThen(
-					Eff.fail(
-						ProductsServiceError(
-							'There was an error while getting the data',
-						),
-					),
-				),
-			)
+	if (E.isLeft(result)) {
+		yield* Eff.logError(result.left.toString())
+		return yield* Eff.fail(
+			ProductsServiceError(
+				'There was an error while getting the data',
+			),
+		)
+	}
 
 	const decodeResult = yield* Sc.decodeUnknown(
 		ProductsListSchema,
-	)(data).pipe(Eff.either)
+	)(result.right).pipe(Eff.either)
 
-	const decoded = E.isRight(decodeResult)
-		? decodeResult.right
-		: yield* pipe(
-				Eff.logError(
-					decodeResult.left.toString(),
-				),
-				Eff.andThen(
-					Eff.fail(
-						ProductsServiceError(
-							'There was an error while decoding the data',
-						),
-					),
-				),
-			)
+	if (E.isLeft(decodeResult)) {
+		yield* Eff.logError(
+			decodeResult.left.toString(),
+		)
+
+		return yield* Eff.fail(
+			ProductsServiceError(
+				'There was an error while decoding the data',
+			),
+		)
+	}
 
 	const products = yield* Eff.all(
-		decoded.products.map(product =>
+		decodeResult.right.products.map(product =>
 			Eff.gen(function* () {
 				const {
 					id,
@@ -134,5 +130,8 @@ export const query: Eff.Effect<
 		),
 	)
 
-	return { total: decoded.total, products }
+	return {
+		total: decodeResult.right.total,
+		products,
+	}
 })

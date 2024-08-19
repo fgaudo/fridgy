@@ -1,3 +1,4 @@
+import { tryPromise } from '@/core/helper'
 import { E, Eff, O } from '@/core/imports'
 import { isInteger } from '@/core/utils'
 
@@ -37,7 +38,7 @@ export const command: (
 
 		const { db } = yield* CapacitorService
 
-		const result = yield* Eff.tryPromise(() =>
+		const result = yield* tryPromise(() =>
 			db.addProduct({
 				product: {
 					name: product.name,

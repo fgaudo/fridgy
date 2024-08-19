@@ -1,4 +1,6 @@
 import type { ParseIssue } from '@effect/schema/ParseResult'
+import { UnknownException } from 'effect/Cause'
+import { fail, succeed } from 'effect/Exit'
 
 import { Eff } from '@/core/imports'
 
@@ -12,4 +14,20 @@ export const fallback: <A>(
 			'Problem decoding',
 		).pipe(Eff.annotateLogs({ issue }))
 		return yield* Eff.succeed(def)
+	})
+
+export const tryPromise = <A>(
+	evaluate: (
+		signal?: AbortSignal,
+	) => PromiseLike<A>,
+): Eff.Effect<A, UnknownException> =>
+	Eff.async((resolve, signal) => {
+		evaluate(signal).then(
+			a => {
+				resolve(succeed(a))
+			},
+			e => {
+				resolve(fail(new UnknownException(e)))
+			},
+		)
 	})

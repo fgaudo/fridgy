@@ -63,20 +63,18 @@ describe('Delete products by ids', () => {
 	test.concurrent(
 		'Should return an error',
 		async () => {
-			const addProduct = Eff.provideService(
-				command(HS.fromIterable(['id'])),
-				CapacitorService,
-				{
-					db: {
-						addProduct: () =>
-							Promise.resolve(undefined),
-					} as unknown as FridgySqlitePlugin,
-				},
-			)
+			const deleteProductsByIds =
+				Eff.provideService(
+					command(HS.fromIterable(['id'])),
+					CapacitorService,
+					{
+						db: {} as unknown as FridgySqlitePlugin,
+					},
+				)
 
 			const exit =
 				await testRuntime.runPromiseExit(
-					addProduct,
+					deleteProductsByIds,
 				)
 
 			assertExitIsFailure(exit)
@@ -86,20 +84,21 @@ describe('Delete products by ids', () => {
 	test.concurrent(
 		'Should return an error',
 		async () => {
-			const addProduct = Eff.provideService(
-				command(HS.fromIterable(['1'])),
-				CapacitorService,
-				{
-					db: {
-						addProduct: () =>
-							Promise.reject(new Error()),
-					} as unknown as FridgySqlitePlugin,
-				},
-			)
+			const deleteProductsByIds =
+				Eff.provideService(
+					command(HS.fromIterable(['1'])),
+					CapacitorService,
+					{
+						db: {
+							deleteProductsByIds: () =>
+								Promise.reject(new Error()),
+						} as unknown as FridgySqlitePlugin,
+					},
+				)
 
 			const exit =
 				await testRuntime.runPromiseExit(
-					addProduct,
+					deleteProductsByIds,
 				)
 
 			assertExitIsFailure(exit)
