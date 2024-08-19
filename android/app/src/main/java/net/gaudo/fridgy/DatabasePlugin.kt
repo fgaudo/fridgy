@@ -17,6 +17,13 @@ class DatabasePlugin : Plugin() {
         return FridgySqliteOpenHelper.getInstance(context.applicationContext)
     }
 
+    override fun load() {
+        super.load()
+
+        // We just create the db instance on load
+        val _empty = dbHelper()
+    }
+
     @PluginMethod
     fun addProduct(call: PluginCall) {
         val db = dbHelper()
