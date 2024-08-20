@@ -25,22 +25,11 @@ export type AddProductError = string &
 const AddProductError =
 	B.nominal<AddProductError>()
 
-export const useCase: AddProduct = product =>
+export const useCase: AddProduct = productData =>
 	Eff.gen(function* () {
-		const addProduct = yield* AddProductService
-
-		const timestamp =
-			yield* Clock.currentTimeMillis
-
-		yield* Effect.logDebug(
-			'About to add product',
-		).pipe(
-			Effect.annotateLogs('product', product),
-		)
-
 		const result1 = P.createProduct({
-			name: product.name,
-			expirationDate: product.expirationDate,
+			name: productData.name,
+			expirationDate: productData.expirationDate,
 		})
 
 		if (E.isLeft(result1)) {
@@ -50,11 +39,22 @@ export const useCase: AddProduct = product =>
 			)
 		}
 
+		const product = result1.right
+
+		const timestamp =
+			yield* Clock.currentTimeMillis
+
+		const addProduct = yield* AddProductService
+
+		yield* Effect.logDebug(
+			'About to add product',
+		).pipe(
+			Effect.annotateLogs('product', productData),
+		)
+
 		const result2 = yield* addProduct({
-			name: P.name(result1.right),
-			expirationDate: P.expirationDate(
-				result1.right,
-			),
+			name: P.name(product),
+			expirationDate: P.expirationDate(product),
 			creationDate: timestamp,
 		}).pipe(Eff.either)
 

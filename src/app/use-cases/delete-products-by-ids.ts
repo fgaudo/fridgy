@@ -21,9 +21,6 @@ const DeleteProductsByIdsError =
 
 export const useCase: DeleteProductsByIds = ids =>
 	Effect.gen(function* () {
-		const deleteProductsByIds =
-			yield* DeleteProductsByIdsService
-
 		if (HS.size(ids) <= 0) {
 			return yield* Effect.fail(
 				DeleteProductsByIdsError(
@@ -35,6 +32,9 @@ export const useCase: DeleteProductsByIds = ids =>
 		yield* Effect.logDebug(
 			'About to delete products',
 		).pipe(Effect.annotateLogs('ids', ids))
+
+		const deleteProductsByIds =
+			yield* DeleteProductsByIdsService
 
 		const result = yield* deleteProductsByIds(
 			ids,
