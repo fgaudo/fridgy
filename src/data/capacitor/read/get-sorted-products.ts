@@ -4,9 +4,14 @@ import {
 	fallback,
 	tryPromise,
 } from '@/core/helper'
-import { E, Eff, O, Sc } from '@/core/imports'
-import * as Int from '@/core/integer'
-import { fromString } from '@/core/non-empty-trimmed-string'
+import {
+	E,
+	Eff,
+	Int,
+	NETS,
+	O,
+	Sc,
+} from '@/core/imports'
 
 import {
 	type ProductDTO,
@@ -128,14 +133,14 @@ export const query: Eff.Effect<
 						),
 						name: O.fromNullable(name).pipe(
 							O.flatMap(
-								flow(fromString, O.getRight),
+								flow(NETS.fromString, O.getRight),
 							),
 						),
 					} as const
 				}
 
 				const result = E.all([
-					fromString(name),
+					NETS.fromString(name),
 					Int.fromNumber(id),
 					Int.fromNumber(creationDate),
 					E.gen(function* () {
@@ -162,7 +167,7 @@ export const query: Eff.Effect<
 						id: O.some(id.toString(10)),
 						name: pipe(
 							name,
-							fromString,
+							NETS.fromString,
 							O.getRight,
 						),
 					} as const

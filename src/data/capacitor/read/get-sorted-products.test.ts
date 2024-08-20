@@ -1,13 +1,13 @@
 import { fc, test } from '@fast-check/vitest'
 import { describe, expect } from 'vitest'
 
-import { Eff, Int, O, flow } from '@/core/imports'
-import { isInteger } from '@/core/integer'
 import {
-	fromString,
-	isNonBlank,
-	unsafe_fromString,
-} from '@/core/non-empty-trimmed-string'
+	Eff,
+	Int,
+	NETS,
+	O,
+	flow,
+} from '@/core/imports'
 import * as H from '@/core/test-helpers'
 import { testRuntime } from '@/core/utils'
 
@@ -31,17 +31,17 @@ function toModel(product: {
 	expirationDate: number | undefined
 }): ProductDTO {
 	if (
-		isInteger(product.id) &&
+		Int.isInteger(product.id) &&
 		product.name !== undefined &&
-		isNonBlank(product.name) &&
-		isInteger(product.creationDate) &&
+		NETS.isNonBlank(product.name) &&
+		Int.isInteger(product.creationDate) &&
 		(product.expirationDate === undefined ||
-			isInteger(product.expirationDate))
+			Int.isInteger(product.expirationDate))
 	) {
 		return {
 			isValid: true,
 			id: product.id.toString(10),
-			name: unsafe_fromString(product.name),
+			name: NETS.unsafe_fromString(product.name),
 			creationDate: Int.unsafe_fromNumber(
 				product.creationDate,
 			),
@@ -54,7 +54,9 @@ function toModel(product: {
 	return {
 		isValid: false,
 		name: O.fromNullable(product.name).pipe(
-			O.flatMap(flow(fromString, O.getRight)),
+			O.flatMap(
+				flow(NETS.fromString, O.getRight),
+			),
 		),
 		id: O.fromNullable(product.id).pipe(
 			O.map(id => id.toString(10)),

@@ -2,9 +2,7 @@ import { fc } from '@fast-check/vitest'
 import { Cause, Exit, flow } from 'effect'
 import { assert } from 'vitest'
 
-import { M, O } from './imports'
-import { unsafe_fromNumber } from './integer'
-import { unsafe_fromString } from './non-empty-trimmed-string'
+import { Int, M, NETS, O } from './imports'
 
 export function assertExitIsFailure<A, E>(
 	exit: Exit.Exit<A, E>,
@@ -39,7 +37,7 @@ export const maybeInteger = fc
 			M.when('some', () =>
 				fc
 					.integer()
-					.map(unsafe_fromNumber)
+					.map(Int.unsafe_fromNumber)
 					.map(O.some),
 			),
 			M.exhaustive,
@@ -48,7 +46,7 @@ export const maybeInteger = fc
 
 export const integer = fc
 	.integer()
-	.map(unsafe_fromNumber)
+	.map(Int.unsafe_fromNumber)
 
 export const nonBlankString =
 	fc.stringMatching(/\S/)
@@ -84,7 +82,7 @@ export const maybeString = fc
 	)
 
 export const nonEmptyTrimmedString =
-	nonBlankString.map(unsafe_fromString)
+	nonBlankString.map(NETS.unsafe_fromString)
 
 export const maybeNonEmptyTrimmedString = fc
 	.constantFrom('some' as const, 'none' as const)
