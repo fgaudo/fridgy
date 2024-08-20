@@ -2,13 +2,14 @@ import { Clock, Effect } from 'effect'
 
 import { B, E, Eff, O } from '@/core/imports'
 import * as Int from '@/core/integer'
+import type { NonEmptyTrimmedString } from '@/core/non-empty-trimmed-string'
 
 import * as P from '@/domain/product'
 
 import { AddProductService } from '../interfaces/write/add-product'
 
 export interface AddProductDTO {
-	name: string
+	name: NonEmptyTrimmedString
 	expirationDate: O.Option<Int.Integer>
 }
 
@@ -28,19 +29,7 @@ const AddProductError =
 
 export const useCase: AddProduct = productData =>
 	Eff.gen(function* () {
-		const result1 = P.createProduct({
-			name: productData.name,
-			expirationDate: productData.expirationDate,
-		})
-
-		if (E.isLeft(result1)) {
-			yield* Eff.logError(result1.left)
-			return yield* Eff.fail(
-				AddProductError('Bad product given'),
-			)
-		}
-
-		const product = result1.right
+		const product = P.createProduct(productData)
 
 		const resultTimestamp = Int.fromNumber(
 			yield* Clock.currentTimeMillis,

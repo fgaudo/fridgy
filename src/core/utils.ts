@@ -18,10 +18,6 @@ export const useOrCreateError =
 			? error
 			: new Error(message)
 
-export const isInteger = (
-	value: unknown,
-): value is number => Number.isInteger(value)
-
 export const testRuntime = MR.make(
 	Log.minimumLogLevel(LogLevel.None),
 )

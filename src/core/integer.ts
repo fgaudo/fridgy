@@ -1,5 +1,4 @@
 import { E, Ord } from './imports'
-import { isInteger } from './utils'
 
 const integerSymbol: unique symbol = Symbol()
 
@@ -38,3 +37,7 @@ export const order: Ord.Order<Integer> = (
 		self[integerSymbol],
 		that[integerSymbol],
 	)
+
+export const isInteger = (
+	value: unknown,
+): value is number => Number.isInteger(value)

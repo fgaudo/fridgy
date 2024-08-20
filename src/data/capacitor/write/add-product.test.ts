@@ -11,7 +11,7 @@ import { command } from './add-product'
 
 describe('Add product', () => {
 	test.concurrent.prop([
-		H.string,
+		H.nonEmptyTrimmedString,
 		H.maybeInteger,
 		H.integer,
 	])(
@@ -44,14 +44,11 @@ describe('Add product', () => {
 		},
 	)
 
-	test.concurrent.prop(
-		[H.string, H.maybeInteger, H.integer],
-		{
-			seed: 329882492,
-			path: '0:0:0:0:0',
-			endOnFailure: true,
-		},
-	)(
+	test.concurrent.prop([
+		H.nonEmptyTrimmedString,
+		H.maybeInteger,
+		H.integer,
+	])(
 		'Should just work',
 		async (
 			name,
@@ -82,7 +79,7 @@ describe('Add product', () => {
 	)
 
 	test.concurrent.prop([
-		H.string,
+		H.nonEmptyTrimmedString,
 		H.maybeInteger,
 		H.integer,
 	])(

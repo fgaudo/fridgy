@@ -4,19 +4,20 @@ import type { Option } from 'effect/Option'
 
 import { B } from '@/core/imports'
 import type { Integer } from '@/core/integer'
+import type { NonEmptyTrimmedString } from '@/core/non-empty-trimmed-string'
 
 export type ProductDTO =
 	| {
 			isValid: true
 			id: string
-			name: string
+			name: NonEmptyTrimmedString
 			expirationDate: Option<Integer>
 			creationDate: Integer
 	  }
 	| {
 			isValid: false
 			id: Option<string>
-			name: Option<string>
+			name: Option<NonEmptyTrimmedString>
 	  }
 
 export class ProductsService extends Context.Tag(

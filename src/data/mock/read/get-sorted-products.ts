@@ -7,6 +7,7 @@ import {
 	Ord,
 	pipe,
 } from '@/core/imports'
+import { order } from '@/core/non-empty-trimmed-string'
 
 import {
 	type ProductDTO,
@@ -61,7 +62,7 @@ export const query: Eff.Effect<
 						),
 					),
 					pipe(
-						Ord.string,
+						order,
 						Ord.mapInput(
 							(product: typeof p1) =>
 								product.name,

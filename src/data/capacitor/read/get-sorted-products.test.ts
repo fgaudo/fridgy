@@ -1,12 +1,15 @@
 import { fc, test } from '@fast-check/vitest'
 import { describe, expect } from 'vitest'
 
-import { Eff, Int, O } from '@/core/imports'
-import * as H from '@/core/test-helpers'
+import { Eff, Int, O, flow } from '@/core/imports'
+import { isInteger } from '@/core/integer'
 import {
-	isInteger,
-	testRuntime,
-} from '@/core/utils'
+	fromString,
+	isNonBlank,
+	unsafe_fromString,
+} from '@/core/non-empty-trimmed-string'
+import * as H from '@/core/test-helpers'
+import { testRuntime } from '@/core/utils'
 
 import type { ProductDTO } from '@/app/interfaces/read/get-sorted-products'
 
@@ -30,6 +33,7 @@ function toModel(product: {
 	if (
 		isInteger(product.id) &&
 		product.name !== undefined &&
+		isNonBlank(product.name) &&
 		isInteger(product.creationDate) &&
 		(product.expirationDate === undefined ||
 			isInteger(product.expirationDate))
@@ -37,7 +41,7 @@ function toModel(product: {
 		return {
 			isValid: true,
 			id: product.id.toString(10),
-			name: product.name,
+			name: unsafe_fromString(product.name),
 			creationDate: Int.unsafe_fromNumber(
 				product.creationDate,
 			),
@@ -49,7 +53,9 @@ function toModel(product: {
 
 	return {
 		isValid: false,
-		name: O.fromNullable(product.name),
+		name: O.fromNullable(product.name).pipe(
+			O.flatMap(flow(fromString, O.getRight)),
+		),
 		id: O.fromNullable(product.id).pipe(
 			O.map(id => id.toString(10)),
 		),
@@ -125,6 +131,32 @@ describe('Get products', () => {
 					db: {
 						getAllProductsWithTotal: () =>
 							Promise.reject(new Error()),
+					} as unknown as FridgySqlitePlugin,
+				},
+			)
+
+			const exit =
+				await testRuntime.runPromiseExit(
+					addProduct,
+				)
+
+			H.assertExitIsFailure(exit)
+		},
+	)
+
+	test.concurrent(
+		'Should return an error',
+		async () => {
+			const addProduct = Eff.provideService(
+				query,
+				CapacitorService,
+				{
+					db: {
+						getAllProductsWithTotal: () =>
+							Promise.resolve({
+								total: 3.5,
+								products: [],
+							}),
 					} as unknown as FridgySqlitePlugin,
 				},
 			)

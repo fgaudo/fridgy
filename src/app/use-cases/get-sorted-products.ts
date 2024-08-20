@@ -1,5 +1,6 @@
 import { B, E, Eff, O } from '@/core/imports'
 import * as Int from '@/core/integer'
+import type { NonEmptyTrimmedString } from '@/core/non-empty-trimmed-string'
 
 import * as P from '@/domain/product'
 
@@ -9,14 +10,14 @@ export type ProductModel =
 	| {
 			isValid: true
 			id: string
-			name: string
+			name: NonEmptyTrimmedString
 			expirationDate: O.Option<Int.Integer>
 			creationDate: Int.Integer
 	  }
 	| {
 			isValid: false
 			id: O.Option<string>
-			name: O.Option<string>
+			name: O.Option<NonEmptyTrimmedString>
 	  }
 
 export type ProductList = Eff.Effect<
@@ -74,25 +75,8 @@ export const useCase: ProductList = Eff.gen(
 						return rawProduct
 					}
 
-					const result =
+					const product =
 						P.createProduct(rawProduct)
-
-					if (E.isLeft(result)) {
-						yield* Eff.logError(
-							'Raw product failed business validation rules',
-						).pipe(
-							Eff.annotateLogs({
-								p: rawProduct,
-							}),
-						)
-						return {
-							isValid: false,
-							name: O.some(rawProduct.name),
-							id: O.some(rawProduct.id),
-						} as const
-					}
-
-					const product = result.right
 
 					return {
 						name: P.name(product),

@@ -4,6 +4,7 @@ import { assert } from 'vitest'
 
 import { M, O } from './imports'
 import { unsafe_fromNumber } from './integer'
+import { unsafe_fromString } from './non-empty-trimmed-string'
 
 export function assertExitIsFailure<A, E>(
 	exit: Exit.Exit<A, E>,
@@ -77,6 +78,22 @@ export const maybeString = fc
 		flow(
 			M.value,
 			M.when('some', () => string.map(O.some)),
+			M.when('none', () => fc.constant(O.none())),
+			M.exhaustive,
+		),
+	)
+
+export const nonEmptyTrimmedString =
+	nonBlankString.map(unsafe_fromString)
+
+export const maybeNonEmptyTrimmedString = fc
+	.constantFrom('some' as const, 'none' as const)
+	.chain(
+		flow(
+			M.value,
+			M.when('some', () =>
+				nonEmptyTrimmedString.map(O.some),
+			),
 			M.when('none', () => fc.constant(O.none())),
 			M.exhaustive,
 		),

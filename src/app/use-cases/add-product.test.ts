@@ -13,7 +13,7 @@ import { useCase } from './add-product'
 
 describe('Add product', () => {
 	test.concurrent.prop([
-		H.nonBlankString,
+		H.nonEmptyTrimmedString,
 		H.maybeInteger,
 	])(
 		'Should just work',
@@ -40,34 +40,7 @@ describe('Add product', () => {
 	)
 
 	test.concurrent.prop([
-		H.blankString,
-		H.maybeInteger,
-	])(
-		'Should return error because of empty name',
-		async (name, expirationDate) => {
-			const addProduct = Eff.provideService(
-				useCase({
-					name,
-					expirationDate,
-				}),
-				AddProductService,
-				() =>
-					Eff.gen(function* () {
-						return yield* Eff.succeed(undefined)
-					}),
-			)
-
-			const exit =
-				await testRuntime.runPromiseExit(
-					addProduct,
-				)
-
-			H.assertExitIsFailure(exit)
-		},
-	)
-
-	test.concurrent.prop([
-		H.nonBlankString,
+		H.nonEmptyTrimmedString,
 		H.maybeInteger,
 	])(
 		'Should return error',

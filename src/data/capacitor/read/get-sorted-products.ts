@@ -1,4 +1,4 @@
-import { pipe } from 'effect'
+import { flow, pipe } from 'effect'
 
 import {
 	fallback,
@@ -6,6 +6,7 @@ import {
 } from '@/core/helper'
 import { E, Eff, O, Sc } from '@/core/imports'
 import * as Int from '@/core/integer'
+import { fromString } from '@/core/non-empty-trimmed-string'
 
 import {
 	type ProductDTO,
@@ -125,11 +126,16 @@ export const query: Eff.Effect<
 							O.fromNullable(id),
 							O.map(id => id.toString(10)),
 						),
-						name: O.fromNullable(name),
+						name: O.fromNullable(name).pipe(
+							O.flatMap(
+								flow(fromString, O.getRight),
+							),
+						),
 					} as const
 				}
 
 				const result = E.all([
+					fromString(name),
 					Int.fromNumber(id),
 					Int.fromNumber(creationDate),
 					E.gen(function* () {
@@ -154,11 +160,16 @@ export const query: Eff.Effect<
 					return {
 						isValid: false,
 						id: O.some(id.toString(10)),
-						name: O.some(name),
+						name: pipe(
+							name,
+							fromString,
+							O.getRight,
+						),
 					} as const
 				}
 
 				const [
+					nameNonEmpty,
 					idInt,
 					creationTimestamp,
 					expirationTimestamp,
@@ -167,7 +178,7 @@ export const query: Eff.Effect<
 				return {
 					isValid: true,
 					id: Int.toNumber(idInt).toString(10),
-					name,
+					name: nameNonEmpty,
 					creationDate: creationTimestamp,
 					expirationDate: expirationTimestamp,
 				} as const
