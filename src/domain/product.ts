@@ -1,8 +1,12 @@
 import { E, O } from '@/core/imports'
 
+const productSymbol: unique symbol = Symbol()
+
 export interface Product {
-	name: string
-	expirationDate: O.Option<number>
+	[productSymbol]: {
+		name: string
+		expirationDate: O.Option<number>
+	}
 }
 
 export const createProduct: (f: {
@@ -21,9 +25,18 @@ export const createProduct: (f: {
 
 		return errors.length <= 0
 			? {
-					name,
-					expirationDate:
-						productDummy.expirationDate,
+					[productSymbol]: {
+						name,
+						expirationDate:
+							productDummy.expirationDate,
+					},
 				}
 			: yield* E.left(errors)
 	})
+
+export const name = (product: Product) =>
+	product[productSymbol].name
+
+export const expirationDate = (
+	product: Product,
+) => product[productSymbol].expirationDate

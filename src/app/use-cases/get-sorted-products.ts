@@ -1,7 +1,7 @@
 import { B, E, Eff, O } from '@/core/imports'
 import { isInteger } from '@/core/utils'
 
-import { createProduct } from '@/domain/product'
+import * as P from '@/domain/product'
 
 import { ProductsService } from '../interfaces/read/get-sorted-products'
 
@@ -73,7 +73,25 @@ export const useCase: ProductList = Eff.gen(
 						)
 						return rawProduct
 					}
-					const result = createProduct(rawProduct)
+
+					if (
+						!isInteger(rawProduct.creationDate) ||
+						(O.isSome(
+							rawProduct.expirationDate,
+						) &&
+							!isInteger(
+								rawProduct.expirationDate.value,
+							))
+					) {
+						return {
+							isValid: false,
+							name: O.some(rawProduct.name),
+							id: O.some(rawProduct.id),
+						} as const
+					}
+
+					const result =
+						P.createProduct(rawProduct)
 
 					if (E.isLeft(result)) {
 						yield* Eff.logError(
@@ -92,26 +110,10 @@ export const useCase: ProductList = Eff.gen(
 
 					const product = result.right
 
-					if (
-						!isInteger(rawProduct.creationDate) ||
-						(O.isSome(
-							rawProduct.expirationDate,
-						) &&
-							!isInteger(
-								rawProduct.expirationDate.value,
-							))
-					) {
-						return {
-							isValid: false,
-							name: O.some(rawProduct.name),
-							id: O.some(rawProduct.id),
-						} as const
-					}
-
 					return {
-						name: product.name,
+						name: P.name(product),
 						expirationDate:
-							product.expirationDate,
+							P.expirationDate(product),
 						id: rawProduct.id,
 						creationDate: rawProduct.creationDate,
 						isValid: true,

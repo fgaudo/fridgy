@@ -2,7 +2,7 @@ import { Clock, Effect } from 'effect'
 
 import { B, E, Eff, O } from '@/core/imports'
 
-import { createProduct } from '@/domain/product'
+import * as P from '@/domain/product'
 
 import { AddProductService } from '../interfaces/write/add-product'
 
@@ -38,7 +38,7 @@ export const useCase: AddProduct = product =>
 			Effect.annotateLogs('product', product),
 		)
 
-		const result1 = createProduct({
+		const result1 = P.createProduct({
 			name: product.name,
 			expirationDate: product.expirationDate,
 		})
@@ -51,7 +51,10 @@ export const useCase: AddProduct = product =>
 		}
 
 		const result2 = yield* addProduct({
-			...result1.right,
+			name: P.name(result1.right),
+			expirationDate: P.expirationDate(
+				result1.right,
+			),
 			creationDate: timestamp,
 		}).pipe(Eff.either)
 
