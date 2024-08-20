@@ -26,7 +26,7 @@ export const tryPromise = <A>(
 			a => {
 				resolve(succeed(a))
 			},
-			e => {
+			(e: unknown) => {
 				resolve(fail(new UnknownException(e)))
 			},
 		)
