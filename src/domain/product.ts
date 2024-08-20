@@ -1,17 +1,18 @@
 import { E, O } from '@/core/imports'
+import type { Integer } from '@/core/integer'
 
 const productSymbol: unique symbol = Symbol()
 
 export interface Product {
 	[productSymbol]: {
 		name: string
-		expirationDate: O.Option<number>
+		expirationDate: O.Option<Integer>
 	}
 }
 
 export const createProduct: (f: {
 	name: string
-	expirationDate: O.Option<number>
+	expirationDate: O.Option<Integer>
 }) => E.Either<
 	Product,
 	string[]

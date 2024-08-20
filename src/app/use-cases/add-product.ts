@@ -1,6 +1,7 @@
 import { Clock, Effect } from 'effect'
 
 import { B, E, Eff, O } from '@/core/imports'
+import * as Int from '@/core/integer'
 
 import * as P from '@/domain/product'
 
@@ -8,7 +9,7 @@ import { AddProductService } from '../interfaces/write/add-product'
 
 export interface AddProductDTO {
 	name: string
-	expirationDate: O.Option<number>
+	expirationDate: O.Option<Int.Integer>
 }
 
 export type AddProduct = (
@@ -41,8 +42,20 @@ export const useCase: AddProduct = productData =>
 
 		const product = result1.right
 
-		const timestamp =
-			yield* Clock.currentTimeMillis
+		const resultTimestamp = Int.fromNumber(
+			yield* Clock.currentTimeMillis,
+		)
+
+		if (E.isLeft(resultTimestamp)) {
+			yield* Eff.logError(resultTimestamp.left)
+			return yield* Eff.fail(
+				AddProductError(
+					'Unexpected error occurred',
+				),
+			)
+		}
+
+		const timestamp = resultTimestamp.right
 
 		const addProduct = yield* AddProductService
 

@@ -5,7 +5,7 @@ import {
 	tryPromise,
 } from '@/core/helper'
 import { E, Eff, O, Sc } from '@/core/imports'
-import { isInteger } from '@/core/utils'
+import * as Int from '@/core/integer'
 
 import {
 	type ProductDTO,
@@ -46,7 +46,7 @@ const ProductsListSchema = Sc.Struct({
 
 export const query: Eff.Effect<
 	{
-		total: number
+		total: Int.Integer
 		products: ProductDTO[]
 	},
 	ProductsServiceError,
@@ -86,6 +86,20 @@ export const query: Eff.Effect<
 		)
 	}
 
+	const totalResult = Int.fromNumber(
+		decodeResult.right.total,
+	)
+
+	if (E.isLeft(totalResult)) {
+		return yield* Eff.fail(
+			ProductsServiceError(
+				'There was an error while decoding the data',
+			),
+		)
+	}
+
+	const total = totalResult.right
+
 	const products = yield* Eff.all(
 		decodeResult.right.products.map(product =>
 			Eff.gen(function* () {
@@ -97,41 +111,72 @@ export const query: Eff.Effect<
 				} = product
 
 				if (
-					isInteger(id) &&
-					isInteger(creationDate) &&
-					(expirationDate === undefined ||
-						isInteger(expirationDate)) &&
-					name !== undefined
+					id === undefined ||
+					creationDate === undefined ||
+					name === undefined
 				) {
+					yield* Eff.logError(
+						'Product is corrupt',
+					).pipe(Eff.annotateLogs({ product }))
+
 					return {
-						isValid: true,
-						id: id.toString(10),
-						name,
-						creationDate,
-						expirationDate: O.fromNullable(
-							product.expirationDate,
+						isValid: false,
+						id: pipe(
+							O.fromNullable(id),
+							O.map(id => id.toString(10)),
 						),
+						name: O.fromNullable(name),
 					} as const
 				}
 
-				yield* Eff.logError(
-					'Product is corrupt',
-				).pipe(Eff.annotateLogs({ product }))
+				const result = E.all([
+					Int.fromNumber(id),
+					Int.fromNumber(creationDate),
+					E.gen(function* () {
+						if (expirationDate === undefined) {
+							return O.none()
+						}
+
+						const exirationTimestamp =
+							yield* Int.fromNumber(
+								expirationDate,
+							)
+
+						return O.some(exirationTimestamp)
+					}),
+				])
+
+				if (E.isLeft(result)) {
+					yield* Eff.logError(
+						'Product is corrupt',
+					).pipe(Eff.annotateLogs({ product }))
+
+					return {
+						isValid: false,
+						id: O.some(id.toString(10)),
+						name: O.some(name),
+					} as const
+				}
+
+				const [
+					idInt,
+					creationTimestamp,
+					expirationTimestamp,
+				] = result.right
 
 				return {
-					isValid: false,
-					id: pipe(
-						O.fromNullable(id),
-						O.map(id => id.toString(10)),
-					),
-					name: O.fromNullable(product.name),
+					isValid: true,
+					id: Int.toNumber(idInt).toString(10),
+					name,
+					creationDate: creationTimestamp,
+					expirationDate: expirationTimestamp,
 				} as const
 			}),
 		),
 	)
 
 	return {
-		total: decodeResult.right.total,
+		total,
 		products,
 	}
 })

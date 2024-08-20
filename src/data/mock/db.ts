@@ -1,11 +1,11 @@
-import type { O } from '@/core/imports'
+import type { Int, O } from '@/core/imports'
 
 export const map = new Map<
 	string,
 	{
 		id: string
 		name: string
-		expirationDate: O.Option<number>
-		creationDate: number
+		expirationDate: O.Option<Int.Integer>
+		creationDate: Int.Integer
 	}
 >()

@@ -1,11 +1,8 @@
 import { fc, test } from '@fast-check/vitest'
 import { describe, expect } from 'vitest'
 
-import { Eff, O } from '@/core/imports'
-import {
-	assertExitIsFailure,
-	assertExitIsSuccess,
-} from '@/core/test-helpers'
+import { Eff, Int, O } from '@/core/imports'
+import * as H from '@/core/test-helpers'
 import {
 	isInteger,
 	testRuntime,
@@ -17,22 +14,11 @@ import { CapacitorService } from '..'
 import type { FridgySqlitePlugin } from '../fridgy-sqlite-plugin'
 import { query } from './get-sorted-products'
 
-const numbers = [
-	0,
-	undefined,
-	3.5,
-	NaN,
-	Infinity,
-	-Infinity,
-]
-
-const strings = ['', 'name', undefined]
-
 const record = fc.record({
-	id: fc.constantFrom(...numbers),
-	creationDate: fc.constantFrom(...numbers),
-	expirationDate: fc.constantFrom(...numbers),
-	name: fc.constantFrom(...strings),
+	id: H.numberOrUndefined,
+	creationDate: H.numberOrUndefined,
+	expirationDate: H.numberOrUndefined,
+	name: H.stringOrUndefined,
 })
 
 function toModel(product: {
@@ -42,10 +28,9 @@ function toModel(product: {
 	expirationDate: number | undefined
 }): ProductDTO {
 	if (
-		product.id === 0 &&
-		(product.name === 'name' ||
-			product.name === '') &&
-		product.creationDate === 0 &&
+		isInteger(product.id) &&
+		product.name !== undefined &&
+		isInteger(product.creationDate) &&
 		(product.expirationDate === undefined ||
 			isInteger(product.expirationDate))
 	) {
@@ -53,10 +38,12 @@ function toModel(product: {
 			isValid: true,
 			id: product.id.toString(10),
 			name: product.name,
-			creationDate: product.creationDate,
+			creationDate: Int.unsafe_fromNumber(
+				product.creationDate,
+			),
 			expirationDate: O.fromNullable(
 				product.expirationDate,
-			),
+			).pipe(O.map(Int.unsafe_fromNumber)),
 		}
 	}
 
@@ -94,10 +81,12 @@ describe('Get products', () => {
 					addProduct,
 				)
 
-			assertExitIsSuccess(exit)
+			H.assertExitIsSuccess(exit)
 
 			expect(exit.value).toStrictEqual({
-				total: products.length,
+				total: Int.unsafe_fromNumber(
+					products.length,
+				),
 				products: products.map(toModel),
 			})
 		},
@@ -122,7 +111,7 @@ describe('Get products', () => {
 					addProduct,
 				)
 
-			assertExitIsFailure(exit)
+			H.assertExitIsFailure(exit)
 		},
 	)
 
@@ -145,7 +134,7 @@ describe('Get products', () => {
 					addProduct,
 				)
 
-			assertExitIsFailure(exit)
+			H.assertExitIsFailure(exit)
 		},
 	)
 })

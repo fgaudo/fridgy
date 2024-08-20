@@ -1,11 +1,8 @@
-import { fc, test } from '@fast-check/vitest'
+import { test } from '@fast-check/vitest'
 import { describe } from 'vitest'
 
-import { Eff, O } from '@/core/imports'
-import {
-	assertExitIsFailure,
-	assertExitIsSuccess,
-} from '@/core/test-helpers'
+import { Eff } from '@/core/imports'
+import * as H from '@/core/test-helpers'
 import { testRuntime } from '@/core/utils'
 
 import { CapacitorService } from '..'
@@ -14,16 +11,21 @@ import { command } from './add-product'
 
 describe('Add product', () => {
 	test.concurrent.prop([
-		fc.constantFrom('name', ''),
-		fc.constantFrom(O.some(0), O.none()),
+		H.string,
+		H.maybeInteger,
+		H.integer,
 	])(
 		'Should just work',
-		async (name, expDate) => {
+		async (
+			name,
+			expirationDate,
+			creationDate,
+		) => {
 			const addProduct = Eff.provideService(
 				command({
 					name,
-					expirationDate: expDate,
-					creationDate: 0,
+					expirationDate,
+					creationDate,
 				}),
 				CapacitorService,
 				{
@@ -38,21 +40,29 @@ describe('Add product', () => {
 					addProduct,
 				)
 
-			assertExitIsSuccess(exit)
+			H.assertExitIsSuccess(exit)
 		},
 	)
 
-	test.concurrent.prop([
-		fc.constantFrom('name', ''),
-		fc.constantFrom(O.some(0), O.none()),
-	])(
+	test.concurrent.prop(
+		[H.string, H.maybeInteger, H.integer],
+		{
+			seed: 329882492,
+			path: '0:0:0:0:0',
+			endOnFailure: true,
+		},
+	)(
 		'Should just work',
-		async (name, expDate) => {
+		async (
+			name,
+			expirationDate,
+			creationDate,
+		) => {
 			const addProduct = Eff.provideService(
 				command({
 					name,
-					expirationDate: expDate,
-					creationDate: 0,
+					expirationDate,
+					creationDate,
 				}),
 				CapacitorService,
 				{
@@ -67,21 +77,26 @@ describe('Add product', () => {
 					addProduct,
 				)
 
-			assertExitIsSuccess(exit)
+			H.assertExitIsSuccess(exit)
 		},
 	)
 
 	test.concurrent.prop([
-		fc.constantFrom('name', ''),
-		fc.constantFrom(O.some(0), O.none()),
+		H.string,
+		H.maybeInteger,
+		H.integer,
 	])(
 		'Should return an error',
-		async (name, expDate) => {
+		async (
+			name,
+			expirationDate,
+			creationDate,
+		) => {
 			const addProduct = Eff.provideService(
 				command({
 					name,
-					expirationDate: expDate,
-					creationDate: 0,
+					expirationDate,
+					creationDate,
 				}),
 				CapacitorService,
 				{
@@ -97,68 +112,7 @@ describe('Add product', () => {
 					addProduct,
 				)
 
-			assertExitIsFailure(data)
-		},
-	)
-
-	test.concurrent.prop([
-		fc.constantFrom('name', ''),
-		fc
-			.constantFrom(NaN, Infinity, -Infinity, 3.5)
-			.map(n => O.some(n)),
-	])(
-		'Should return an error',
-		async (name, expDate) => {
-			const addProduct = Eff.provideService(
-				command({
-					name,
-					expirationDate: expDate,
-					creationDate: 0,
-				}),
-				CapacitorService,
-				{
-					db: {} as unknown as FridgySqlitePlugin,
-				},
-			)
-
-			const exit =
-				await testRuntime.runPromiseExit(
-					addProduct,
-				)
-
-			assertExitIsFailure(exit)
-		},
-	)
-
-	test.concurrent.prop([
-		fc.constantFrom('name', ''),
-		fc.constantFrom(
-			NaN,
-			Infinity,
-			-Infinity,
-			3.5,
-		),
-	])(
-		'Should return an error',
-		async (name, creationDate) => {
-			const addProduct = Eff.provideService(
-				command({
-					name,
-					expirationDate: O.none(),
-					creationDate: creationDate,
-				}),
-				CapacitorService,
-				{
-					db: {} as unknown as FridgySqlitePlugin,
-				},
-			)
-
-			const exit =
-				await testRuntime.runPromiseExit(
-					addProduct,
-				)
-
-			assertExitIsFailure(exit)
+			H.assertExitIsFailure(data)
 		},
 	)
 })

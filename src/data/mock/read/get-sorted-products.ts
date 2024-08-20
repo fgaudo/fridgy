@@ -2,6 +2,7 @@
 import {
 	A,
 	Eff,
+	Int,
 	O,
 	Ord,
 	pipe,
@@ -18,7 +19,7 @@ import { map } from '../db'
 
 export const query: Eff.Effect<
 	{
-		total: number
+		total: Int.Integer
 		products: ProductDTO[]
 	},
 	ProductsServiceError
@@ -50,7 +51,7 @@ export const query: Eff.Effect<
 			if (p1.isValid && p2.isValid) {
 				return Ord.combineAll([
 					pipe(
-						Ord.number,
+						Int.order,
 						Ord.reverse,
 						O.getOrder,
 						Ord.reverse,
@@ -74,7 +75,7 @@ export const query: Eff.Effect<
 	)
 
 	return {
-		total,
+		total: Int.unsafe_fromNumber(total),
 		products: A.sort(ord)(products),
 	}
 })

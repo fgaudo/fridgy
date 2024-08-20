@@ -3,6 +3,7 @@ import { Cause, Exit, flow } from 'effect'
 import { assert } from 'vitest'
 
 import { M, O } from './imports'
+import { unsafe_fromNumber } from './integer'
 
 export function assertExitIsFailure<A, E>(
 	exit: Exit.Exit<A, E>,
@@ -35,11 +36,18 @@ export const maybeInteger = fc
 			M.value,
 			M.when('none', () => fc.constant(O.none())),
 			M.when('some', () =>
-				fc.integer().map(O.some),
+				fc
+					.integer()
+					.map(unsafe_fromNumber)
+					.map(O.some),
 			),
 			M.exhaustive,
 		),
 	)
+
+export const integer = fc
+	.integer()
+	.map(unsafe_fromNumber)
 
 export const nonBlankString =
 	fc.stringMatching(/\S/)
@@ -59,6 +67,17 @@ export const string = fc
 			M.when('blank', () => blankString),
 			M.when('empty', () => fc.constant('')),
 			M.when('non-blank', () => nonBlankString),
+			M.exhaustive,
+		),
+	)
+
+export const maybeString = fc
+	.constantFrom('some' as const, 'none' as const)
+	.chain(
+		flow(
+			M.value,
+			M.when('some', () => string.map(O.some)),
+			M.when('none', () => fc.constant(O.none())),
 			M.exhaustive,
 		),
 	)

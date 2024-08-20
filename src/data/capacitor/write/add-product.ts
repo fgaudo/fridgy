@@ -1,6 +1,6 @@
 import { tryPromise } from '@/core/helper'
 import { E, Eff, O } from '@/core/imports'
-import { isInteger } from '@/core/utils'
+import * as Int from '@/core/integer'
 
 import {
 	type AddProductDTO,
@@ -17,36 +17,21 @@ export const command: (
 	CapacitorService
 > = product =>
 	Eff.gen(function* () {
-		if (!isInteger(product.creationDate)) {
-			return yield* Eff.fail(
-				AddProductServiceError(
-					'Creation date must be an integer',
-				),
-			)
-		}
-
-		if (
-			O.isSome(product.expirationDate) &&
-			!isInteger(product.expirationDate.value)
-		) {
-			return yield* Eff.fail(
-				AddProductServiceError(
-					'Expiration date must be an integer',
-				),
-			)
-		}
-
 		const { db } = yield* CapacitorService
 
 		const result = yield* tryPromise(() =>
 			db.addProduct({
 				product: {
 					name: product.name,
-					creationDate: product.creationDate,
+					creationDate: Int.toNumber(
+						product.creationDate,
+					),
 					expirationDate: O.isSome(
 						product.expirationDate,
 					)
-						? product.expirationDate.value
+						? Int.toNumber(
+								product.expirationDate.value,
+							)
 						: undefined,
 				},
 			}),

@@ -1,5 +1,5 @@
 import { B, E, Eff, O } from '@/core/imports'
-import { isInteger } from '@/core/utils'
+import * as Int from '@/core/integer'
 
 import * as P from '@/domain/product'
 
@@ -10,8 +10,8 @@ export type ProductModel =
 			isValid: true
 			id: string
 			name: string
-			expirationDate: O.Option<number>
-			creationDate: number
+			expirationDate: O.Option<Int.Integer>
+			creationDate: Int.Integer
 	  }
 	| {
 			isValid: false
@@ -21,7 +21,7 @@ export type ProductModel =
 
 export type ProductList = Eff.Effect<
 	{
-		total: number
+		total: Int.Integer
 		models: ProductModel[]
 	},
 	ProductListError,
@@ -57,7 +57,7 @@ export const useCase: ProductList = Eff.gen(
 			result.right
 
 		yield* Eff.log(
-			`Received ${rawProducts.length.toString(10)} products out of ${total.toString(10)}`,
+			`Received ${rawProducts.length.toString(10)} products out of ${Int.toNumber(total).toString(10)}`,
 		)
 
 		const models: ProductModel[] = yield* Eff.all(
@@ -72,22 +72,6 @@ export const useCase: ProductList = Eff.gen(
 							}),
 						)
 						return rawProduct
-					}
-
-					if (
-						!isInteger(rawProduct.creationDate) ||
-						(O.isSome(
-							rawProduct.expirationDate,
-						) &&
-							!isInteger(
-								rawProduct.expirationDate.value,
-							))
-					) {
-						return {
-							isValid: false,
-							name: O.some(rawProduct.name),
-							id: O.some(rawProduct.id),
-						} as const
 					}
 
 					const result =

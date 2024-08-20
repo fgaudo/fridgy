@@ -3,11 +3,12 @@ import type * as Eff from 'effect/Effect'
 import type * as OPT from 'effect/Option'
 
 import { B } from '@/core/imports'
+import type { Integer } from '@/core/integer'
 
 export interface AddProductDTO {
 	name: string
-	expirationDate: OPT.Option<number>
-	creationDate: number
+	expirationDate: OPT.Option<Integer>
+	creationDate: Integer
 }
 
 export class AddProductService extends Context.Tag(

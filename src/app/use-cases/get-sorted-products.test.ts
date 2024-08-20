@@ -2,15 +2,9 @@
 import { fc, test } from '@fast-check/vitest'
 import { describe, expect } from 'vitest'
 
-import { Eff, O } from '@/core/imports'
-import {
-	assertExitIsFailure,
-	assertExitIsSuccess,
-} from '@/core/test-helpers'
-import {
-	isInteger,
-	testRuntime,
-} from '@/core/utils'
+import { Eff, Int, O } from '@/core/imports'
+import * as H from '@/core/test-helpers'
+import { testRuntime } from '@/core/utils'
 
 import {
 	type ProductDTO,
@@ -22,34 +16,22 @@ import {
 	useCase,
 } from './get-sorted-products'
 
-const numbers = [0, 3.5, NaN, Infinity, -Infinity]
-
-const names = ['', 'name']
-
 const record = fc.oneof(
 	fc.record({
 		isValid: fc.constant(
 			true,
 		) as fc.Arbitrary<true>,
-		id: fc.constantFrom('1'),
-		creationDate: fc.constantFrom(...numbers),
-		expirationDate: fc
-			.constantFrom(...numbers)
-			.chain(a =>
-				fc.constantFrom(O.some(a), O.none()),
-			),
-		name: fc.constantFrom(...names),
+		id: H.string,
+		creationDate: H.integer,
+		expirationDate: H.maybeInteger,
+		name: H.string,
 	}),
 	fc.record({
 		isValid: fc.constant(
 			false,
 		) as fc.Arbitrary<false>,
-		id: fc.constantFrom(O.some('1'), O.none()),
-		name: fc
-			.constantFrom(...names)
-			.chain(name =>
-				fc.constantFrom(O.some(name), O.none()),
-			),
+		id: H.maybeString,
+		name: H.maybeString,
 	}),
 )
 
@@ -60,7 +42,7 @@ const toModel = (
 		return product
 	}
 
-	if (!isInteger(product.creationDate)) {
+	if (product.name.trim().length <= 0) {
 		return {
 			isValid: false,
 			name: O.some(product.name),
@@ -68,26 +50,10 @@ const toModel = (
 		}
 	}
 
-	if (
-		O.isSome(product.expirationDate) &&
-		!isInteger(product.expirationDate.value)
-	) {
-		return {
-			isValid: false,
-			name: O.some(product.name),
-			id: O.some(product.id),
-		}
+	return {
+		...product,
+		name: product.name.trim(),
 	}
-
-	if (product.name === '') {
-		return {
-			isValid: false,
-			name: O.some(product.name),
-			id: O.some(product.id),
-		}
-	}
-
-	return product
 }
 
 describe('Get sorted products', () => {
@@ -109,7 +75,7 @@ describe('Get sorted products', () => {
 					sortedProducts,
 				)
 
-			assertExitIsFailure(exit)
+			H.assertExitIsFailure(exit)
 		},
 	)
 
@@ -122,7 +88,9 @@ describe('Get sorted products', () => {
 				ProductsService,
 				Eff.gen(function* () {
 					return yield* Eff.succeed({
-						total: products.length,
+						total: Int.unsafe_fromNumber(
+							products.length,
+						),
 						products,
 					})
 				}),
@@ -133,10 +101,14 @@ describe('Get sorted products', () => {
 					sortedProducts,
 				)
 
-			assertExitIsSuccess(exit)
+			H.assertExitIsSuccess(exit)
+			console.log(exit.value.models)
+			console.log(products.map(toModel))
 
 			expect(exit.value).toStrictEqual({
-				total: products.length,
+				total: Int.unsafe_fromNumber(
+					products.length,
+				),
 				models: products.map(toModel),
 			})
 		},

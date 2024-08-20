@@ -3,14 +3,15 @@ import type { Effect } from 'effect/Effect'
 import type { Option } from 'effect/Option'
 
 import { B } from '@/core/imports'
+import type { Integer } from '@/core/integer'
 
 export type ProductDTO =
 	| {
 			isValid: true
 			id: string
 			name: string
-			expirationDate: Option<number>
-			creationDate: number
+			expirationDate: Option<Integer>
+			creationDate: Integer
 	  }
 	| {
 			isValid: false
@@ -24,7 +25,7 @@ export class ProductsService extends Context.Tag(
 	ProductsService,
 	Effect<
 		{
-			total: number
+			total: Integer
 			products: ProductDTO[]
 		},
 		ProductsServiceError
