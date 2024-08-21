@@ -1,6 +1,11 @@
 import { tryPromise } from '@/core/helper'
-import { E, Eff, Int, O } from '@/core/imports'
-import { toString } from '@/core/non-empty-trimmed-string'
+import {
+	E,
+	Eff,
+	Int,
+	NETS,
+	O,
+} from '@/core/imports'
 
 import {
 	type AddProductDTO,
@@ -22,7 +27,7 @@ export const command: (
 		const result = yield* tryPromise(() =>
 			db.addProduct({
 				product: {
-					name: toString(product.name),
+					name: NETS.toString(product.name),
 					creationDate: Int.toNumber(
 						product.creationDate,
 					),

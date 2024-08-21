@@ -9,7 +9,8 @@ import { testRuntime } from '@/core/utils'
 import {
 	ProductsService,
 	ProductsServiceError,
-} from '../interfaces/read/get-sorted-products'
+} from '@/app/interfaces/read/get-sorted-products'
+
 import { useCase } from './get-sorted-products'
 
 const record = fc.oneof(

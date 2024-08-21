@@ -1,16 +1,12 @@
-import { Context } from 'effect'
-import type { Effect } from 'effect/Effect'
-import type { HashSet } from 'effect/HashSet'
+import { B, C, Eff, HS } from '@/core/imports'
 
-import { B } from '@/core/imports'
-
-export class DeleteProductsByIdsService extends Context.Tag(
+export class DeleteProductsByIdsService extends C.Tag(
 	'DeleteProductsByIdsService',
 )<
 	DeleteProductsByIdsService,
 	(
-		ids: HashSet<string>,
-	) => Effect<
+		ids: HS.HashSet<string>,
+	) => Eff.Effect<
 		void,
 		DeleteProductsByIdsServiceError
 	>

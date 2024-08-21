@@ -1,18 +1,19 @@
-import { Context } from 'effect'
-import type * as Eff from 'effect/Effect'
-import type * as OPT from 'effect/Option'
-
-import { B } from '@/core/imports'
-import type { Integer } from '@/core/integer'
-import type { NonEmptyTrimmedString } from '@/core/non-empty-trimmed-string'
+import {
+	B,
+	C,
+	Eff,
+	Int,
+	NETS,
+	O,
+} from '@/core/imports'
 
 export interface AddProductDTO {
-	name: NonEmptyTrimmedString
-	expirationDate: OPT.Option<Integer>
-	creationDate: Integer
+	name: NETS.NonEmptyTrimmedString
+	expirationDate: O.Option<Int.Integer>
+	creationDate: Int.Integer
 }
 
-export class AddProductService extends Context.Tag(
+export class AddProductService extends C.Tag(
 	'AddProductService',
 )<
 	AddProductService,

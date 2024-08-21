@@ -1,32 +1,34 @@
 import { Context } from 'effect'
-import type { Effect } from 'effect/Effect'
-import type { Option } from 'effect/Option'
 
-import { B } from '@/core/imports'
-import type { Integer } from '@/core/integer'
-import type { NonEmptyTrimmedString } from '@/core/non-empty-trimmed-string'
+import {
+	B,
+	Eff,
+	Int,
+	NETS,
+	O,
+} from '@/core/imports'
 
 export type ProductDTO =
 	| {
 			isValid: true
 			id: string
-			name: NonEmptyTrimmedString
-			expirationDate: Option<Integer>
-			creationDate: Integer
+			name: NETS.NonEmptyTrimmedString
+			expirationDate: O.Option<Int.Integer>
+			creationDate: Int.Integer
 	  }
 	| {
 			isValid: false
-			id: Option<string>
-			name: Option<NonEmptyTrimmedString>
+			id: O.Option<string>
+			name: O.Option<NETS.NonEmptyTrimmedString>
 	  }
 
 export class ProductsService extends Context.Tag(
 	'ProductsService',
 )<
 	ProductsService,
-	Effect<
+	Eff.Effect<
 		{
-			total: Integer
+			total: Int.Integer
 			products: ProductDTO[]
 		},
 		ProductsServiceError

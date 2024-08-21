@@ -10,7 +10,8 @@ import { testRuntime } from '@/core/utils'
 import {
 	DeleteProductsByIdsService,
 	DeleteProductsByIdsServiceError,
-} from '../interfaces/write/delete-products-by-ids'
+} from '@/app/interfaces/write/delete-products-by-ids'
+
 import { useCase } from './delete-products-by-ids'
 
 describe('Delete products by ids', () => {

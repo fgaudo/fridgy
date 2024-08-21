@@ -1,15 +1,19 @@
-import { Clock, Effect } from 'effect'
-
-import { B, E, Eff, O } from '@/core/imports'
-import * as Int from '@/core/integer'
-import type { NonEmptyTrimmedString } from '@/core/non-empty-trimmed-string'
+import {
+	B,
+	Cl,
+	E,
+	Eff,
+	Int,
+	NETS,
+	O,
+} from '@/core/imports'
 
 import * as P from '@/domain/product'
 
-import { AddProductService } from '../interfaces/write/add-product'
+import { AddProductService } from '@/app/interfaces/write/add-product'
 
 export interface AddProductDTO {
-	name: NonEmptyTrimmedString
+	name: NETS.NonEmptyTrimmedString
 	expirationDate: O.Option<Int.Integer>
 }
 
@@ -32,15 +36,15 @@ export const useCase: AddProduct = productData =>
 		const product = P.createProduct(productData)
 
 		const timestamp = Int.unsafe_fromNumber(
-			yield* Clock.currentTimeMillis,
+			yield* Cl.currentTimeMillis,
 		)
 
 		const addProduct = yield* AddProductService
 
-		yield* Effect.logDebug(
+		yield* Eff.logDebug(
 			'About to add product',
 		).pipe(
-			Effect.annotateLogs('product', productData),
+			Eff.annotateLogs('product', productData),
 		)
 
 		const result2 = yield* addProduct({
@@ -58,7 +62,7 @@ export const useCase: AddProduct = productData =>
 			)
 		}
 
-		yield* Effect.logDebug(
+		yield* Eff.logDebug(
 			'No errors adding product',
 		)
 	})

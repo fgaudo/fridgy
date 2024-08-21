@@ -1,5 +1,10 @@
-import { Da, F, NETS, O } from '@/core/imports'
-import type { Integer } from '@/core/integer'
+import {
+	Da,
+	F,
+	Int,
+	NETS,
+	O,
+} from '@/core/imports'
 
 export type Message = Da.TaggedEnum<{
 	AddProduct: object
@@ -7,7 +12,7 @@ export type Message = Da.TaggedEnum<{
 		value: string
 	}
 	UpdateExpirationDate: {
-		value: O.Option<Integer>
+		value: O.Option<Int.Integer>
 	}
 }>
 

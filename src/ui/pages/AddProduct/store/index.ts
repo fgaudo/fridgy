@@ -1,5 +1,4 @@
-import { F, Int, O } from '@/core/imports'
-import * as NETS from '@/core/non-empty-trimmed-string'
+import { F, Int, NETS, O } from '@/core/imports'
 
 import type { App } from '@/app'
 
