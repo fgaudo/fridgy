@@ -31,19 +31,9 @@ export const useCase: AddProduct = productData =>
 	Eff.gen(function* () {
 		const product = P.createProduct(productData)
 
-		const resultTimestamp = Int.fromNumber(
+		const timestamp = Int.unsafe_fromNumber(
 			yield* Clock.currentTimeMillis,
 		)
-
-		if (O.isNone(resultTimestamp)) {
-			return yield* Eff.fail(
-				AddProductError(
-					'Unexpected error occurred',
-				),
-			)
-		}
-
-		const timestamp = resultTimestamp.value
 
 		const addProduct = yield* AddProductService
 
