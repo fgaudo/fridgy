@@ -1,5 +1,5 @@
 {
-    "@capacitor/android@6.1.1": {
+    "@capacitor/android@6.1.2": {
         "licenses": "MIT",
         "repository": "https://github.com/ionic-team/capacitor",
         "publisher": "Ionic Team",
@@ -8,7 +8,7 @@
         "name": "@capacitor/android",
         "description": "Capacitor: Cross-platform apps with JavaScript and the web"
     },
-    "@capacitor/app@6.0.0": {
+    "@capacitor/app@6.0.1": {
         "licenses": "MIT",
         "repository": "https://github.com/ionic-team/capacitor-plugins",
         "publisher": "Ionic",
@@ -26,7 +26,7 @@
         "name": "@capacitor/assets",
         "description": "Generate icon and splash screen images for Capacitor apps"
     },
-    "@capacitor/cli@6.1.1": {
+    "@capacitor/cli@6.1.2": {
         "licenses": "MIT",
         "repository": "https://github.com/ionic-team/capacitor",
         "publisher": "Ionic Team",
@@ -35,7 +35,7 @@
         "name": "@capacitor/cli",
         "description": "Capacitor: Cross-platform apps with JavaScript and the web"
     },
-    "@capacitor/core@6.1.1": {
+    "@capacitor/core@6.1.2": {
         "licenses": "MIT",
         "repository": "https://github.com/ionic-team/capacitor",
         "publisher": "Ionic Team",
@@ -44,7 +44,7 @@
         "name": "@capacitor/core",
         "description": "Capacitor: Cross-platform apps with JavaScript and the web"
     },
-    "@capacitor/haptics@6.0.0": {
+    "@capacitor/haptics@6.0.1": {
         "licenses": "MIT",
         "repository": "https://github.com/ionic-team/capacitor-plugins",
         "publisher": "Ionic",
@@ -92,7 +92,7 @@
         "name": "@eslint/eslintrc",
         "description": "The legacy ESLintRC config file format for ESLint"
     },
-    "@eslint/js@9.8.0": {
+    "@eslint/js@9.9.0": {
         "licenses": "MIT",
         "repository": "https://github.com/eslint/eslint",
         "copyright": "Copyright OpenJS Foundation and other contributors, <www.openjsf.org>",
@@ -116,7 +116,7 @@
         "name": "@fast-check/vitest",
         "description": "Property based testing for Vitest based on fast-check"
     },
-    "@fontsource-variable/comfortaa@5.0.20": {
+    "@fontsource-variable/comfortaa@5.0.21": {
         "licenses": "OFL-1.1",
         "repository": "https://github.com/fontsource/font-files",
         "publisher": "Google Inc.",
@@ -124,7 +124,7 @@
         "name": "@fontsource-variable/comfortaa",
         "description": "Self-host the Comfortaa font in a neatly bundled NPM package."
     },
-    "@fontsource-variable/roboto-flex@5.0.15": {
+    "@fontsource-variable/roboto-flex@5.0.16": {
         "licenses": "OFL-1.1",
         "repository": "https://github.com/fontsource/font-files",
         "publisher": "Google Inc.",
@@ -132,7 +132,7 @@
         "name": "@fontsource-variable/roboto-flex",
         "description": "Self-host the Roboto Flex font in a neatly bundled NPM package."
     },
-    "@fontsource/material-icons@5.0.18": {
+    "@fontsource/material-icons@5.0.19": {
         "licenses": "Apache-2.0",
         "repository": "https://github.com/fontsource/font-files",
         "publisher": "Google Inc.",
@@ -148,13 +148,27 @@
         "name": "@prettier/plugin-xml",
         "description": "prettier plugin for XML"
     },
-    "@solidjs/router@0.14.1": {
+    "@solidjs/router@0.14.3": {
         "licenses": "MIT",
         "repository": "https://github.com/solidjs/solid-router",
         "publisher": "Ryan Carniato",
         "copyright": "Copyright (c) 2020-2022 Ryan Carniato",
         "name": "@solidjs/router",
         "description": "Universal router for SolidJS"
+    },
+    "@tailwindcss/forms@0.5.7": {
+        "licenses": "MIT",
+        "repository": "https://github.com/tailwindlabs/tailwindcss-forms",
+        "copyright": "Copyright (c) Tailwind Labs, Inc.",
+        "name": "@tailwindcss/forms",
+        "description": "A plugin that provides a basic reset for form styles that makes form elements easy to override with utilities."
+    },
+    "@tailwindcss/typography@0.5.14": {
+        "licenses": "MIT",
+        "repository": "https://github.com/tailwindlabs/tailwindcss-typography",
+        "copyright": "Copyright (c) Tailwind Labs, Inc.",
+        "name": "@tailwindcss/typography",
+        "description": "A Tailwind CSS plugin for automatically styling plain HTML content with beautiful typographic defaults."
     },
     "@trivago/prettier-plugin-sort-imports@4.3.0": {
         "licenses": "Apache-2.0",
@@ -179,56 +193,56 @@
         "description": "TypeScript definitions for @eslint/js",
         "copyright": ""
     },
-    "@typescript-eslint/eslint-plugin@8.0.0": {
+    "@typescript-eslint/eslint-plugin@8.2.0": {
         "licenses": "MIT",
         "repository": "https://github.com/typescript-eslint/typescript-eslint",
         "copyright": "Copyright (c) 2019 typescript-eslint and other contributors",
         "name": "@typescript-eslint/eslint-plugin",
         "description": "TypeScript plugin for ESLint"
     },
-    "@typescript-eslint/parser@8.0.0": {
+    "@typescript-eslint/parser@8.2.0": {
         "licenses": "BSD-2-Clause",
         "repository": "https://github.com/typescript-eslint/typescript-eslint",
         "name": "@typescript-eslint/parser",
         "description": "An ESLint custom parser which leverages TypeScript ESTree",
         "copyright": ""
     },
-    "@typescript-eslint/scope-manager@8.0.0": {
+    "@typescript-eslint/scope-manager@8.2.0": {
         "licenses": "MIT",
         "repository": "https://github.com/typescript-eslint/typescript-eslint",
         "copyright": "Copyright (c) 2019 typescript-eslint and other contributors",
         "name": "@typescript-eslint/scope-manager",
         "description": "TypeScript scope analyser for ESLint"
     },
-    "@typescript-eslint/type-utils@8.0.0": {
+    "@typescript-eslint/type-utils@8.2.0": {
         "licenses": "MIT",
         "repository": "https://github.com/typescript-eslint/typescript-eslint",
         "copyright": "Copyright (c) 2021 typescript-eslint and other contributors",
         "name": "@typescript-eslint/type-utils",
         "description": "Type utilities for working with TypeScript + ESLint together"
     },
-    "@typescript-eslint/types@8.0.0": {
+    "@typescript-eslint/types@8.2.0": {
         "licenses": "MIT",
         "repository": "https://github.com/typescript-eslint/typescript-eslint",
         "copyright": "Copyright (c) 2019 typescript-eslint and other contributors",
         "name": "@typescript-eslint/types",
         "description": "Types for the TypeScript-ESTree AST spec"
     },
-    "@typescript-eslint/typescript-estree@8.0.0": {
+    "@typescript-eslint/typescript-estree@8.2.0": {
         "licenses": "BSD-2-Clause",
         "repository": "https://github.com/typescript-eslint/typescript-eslint",
         "name": "@typescript-eslint/typescript-estree",
         "description": "A parser that converts TypeScript source code into an ESTree compatible form",
         "copyright": ""
     },
-    "@typescript-eslint/utils@7.17.0": {
+    "@typescript-eslint/utils@8.0.0": {
         "licenses": "MIT",
         "repository": "https://github.com/typescript-eslint/typescript-eslint",
         "copyright": "Copyright (c) 2019 typescript-eslint and other contributors",
         "name": "@typescript-eslint/utils",
         "description": "Utilities for working with TypeScript + ESLint together"
     },
-    "@typescript-eslint/visitor-keys@8.0.0": {
+    "@typescript-eslint/visitor-keys@8.2.0": {
         "licenses": "MIT",
         "repository": "https://github.com/typescript-eslint/typescript-eslint",
         "copyright": "Copyright (c) 2019 typescript-eslint and other contributors",
@@ -261,7 +275,7 @@
         "name": "conventional-changelog-eslint",
         "description": "conventional-changelog eslint preset"
     },
-    "cssnano@7.0.4": {
+    "cssnano@7.0.5": {
         "licenses": "MIT",
         "repository": "https://github.com/cssnano/cssnano",
         "publisher": "Ben Briggs",
@@ -277,7 +291,7 @@
         "name": "date-fns",
         "description": "Modern JavaScript date utility library"
     },
-    "effect@3.6.1": {
+    "effect@3.6.4": {
         "licenses": "MIT",
         "repository": "https://github.com/Effect-TS/effect",
         "copyright": "Copyright (c) 2023 Effectful Technologies Inc",
@@ -292,7 +306,7 @@
         "name": "eslint-config-prettier",
         "description": "Turns off all rules that are unnecessary or might conflict with Prettier."
     },
-    "eslint-plugin-solid@0.14.1": {
+    "eslint-plugin-solid@0.14.2": {
         "licenses": "MIT",
         "repository": "https://github.com/solidjs-community/eslint-plugin-solid",
         "publisher": "Josh Wilson",
@@ -323,7 +337,7 @@
         "description": "Constants and utilities about visitor keys to traverse AST.",
         "copyright": ""
     },
-    "eslint@9.8.0": {
+    "eslint@9.9.0": {
         "licenses": "MIT",
         "repository": "https://github.com/eslint/eslint",
         "publisher": "Nicholas C. Zakas",
@@ -357,7 +371,7 @@
         "name": "mdui",
         "description": "实现 material you 设计规范的 Web Components 组件库"
     },
-    "postcss@8.4.40": {
+    "postcss@8.4.41": {
         "licenses": "MIT",
         "repository": "https://github.com/postcss/postcss",
         "publisher": "Andrey Sitnik",
@@ -366,7 +380,7 @@
         "name": "postcss",
         "description": "Tool for transforming styles with JS plugins"
     },
-    "prettier-plugin-tailwindcss@0.6.5": {
+    "prettier-plugin-tailwindcss@0.6.6": {
         "licenses": "MIT",
         "repository": "https://github.com/tailwindlabs/prettier-plugin-tailwindcss",
         "copyright": "Copyright (c) Tailwind Labs Inc.",
@@ -381,7 +395,7 @@
         "name": "prettier",
         "description": "Prettier is an opinionated code formatter"
     },
-    "solid-js@1.8.19": {
+    "solid-js@1.8.21": {
         "licenses": "MIT",
         "repository": "https://github.com/solidjs/solid",
         "publisher": "Ryan Carniato",
@@ -389,14 +403,14 @@
         "name": "solid-js",
         "description": "A declarative JavaScript library for building user interfaces."
     },
-    "tailwindcss@3.4.7": {
+    "tailwindcss@3.4.10": {
         "licenses": "MIT",
         "repository": "https://github.com/tailwindlabs/tailwindcss",
         "copyright": "Copyright (c) Tailwind Labs, Inc.",
         "name": "tailwindcss",
         "description": "A utility-first CSS framework for rapidly building custom user interfaces."
     },
-    "typescript-eslint@8.0.0": {
+    "typescript-eslint@8.2.0": {
         "licenses": "MIT",
         "repository": "https://github.com/typescript-eslint/typescript-eslint",
         "copyright": "Copyright (c) 2019 typescript-eslint and other contributors",
@@ -436,7 +450,7 @@
         "description": "solid-js integration plugin for vite 3/4/5",
         "copyright": ""
     },
-    "vite-tsconfig-paths@4.3.2": {
+    "vite-tsconfig-paths@5.0.1": {
         "licenses": "MIT",
         "repository": "https://github.com/aleclarson/vite-tsconfig-paths",
         "publisher": "aleclarson",
@@ -444,7 +458,7 @@
         "name": "vite-tsconfig-paths",
         "description": "Vite resolver for TypeScript compilerOptions.paths"
     },
-    "vite@5.3.5": {
+    "vite@5.4.1": {
         "licenses": "MIT",
         "repository": "https://github.com/vitejs/vite",
         "publisher": "Evan You",
@@ -452,7 +466,7 @@
         "name": "vite",
         "description": "Native-ESM powered web dev build tool"
     },
-    "vitest@2.0.4": {
+    "vitest@2.0.5": {
         "licenses": "MIT",
         "repository": "https://github.com/vitest-dev/vitest",
         "publisher": "Anthony Fu",
