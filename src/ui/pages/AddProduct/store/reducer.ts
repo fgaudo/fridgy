@@ -18,21 +18,26 @@ import {
 import { addProductTask } from './task'
 
 export const defaultFields = () => ({
-	name: O.none(),
+	name: '',
 	expirationDate: O.none(),
 })
 
 export const validateFields = (
-	formFields: State['formFields'],
-) => ({ isOk: O.isSome(formFields.name) })
+	state: State,
+): State => ({
+	...state,
+	isOk: NETS.fromString(
+		state.formFields.name,
+	).pipe(O.isSome),
+})
 
-export const resetFields = () => {
-	const fields = defaultFields()
-	return {
-		formFields: fields,
-		...validateFields(fields),
-	}
-}
+export const resetFields = (
+	state: State,
+): State =>
+	validateFields({
+		...state,
+		formFields: defaultFields(),
+	})
 
 export const reducer: (
 	app: App,
@@ -41,7 +46,9 @@ export const reducer: (
 		pipe(
 			M.value(message),
 			M.when({ _tag: 'AddProduct' }, () => {
-				const name = snapshot.formFields.name
+				const name = NETS.fromString(
+					snapshot.formFields.name,
+				)
 
 				return Da.tuple(
 					(state: State) => state,
@@ -98,11 +105,11 @@ export const reducer: (
 				{ _tag: 'AddProductSucceeded' },
 				() =>
 					Da.tuple(
-						(state: State) => ({
-							...state,
-							runningAddProduct: O.none(),
-							...resetFields(),
-						}),
+						(state: State) =>
+							resetFields({
+								...state,
+								runningAddProduct: O.none(),
+							}),
 						[
 							{
 								type: 'message',
@@ -120,19 +127,38 @@ export const reducer: (
 					),
 			),
 			M.when(
-				{ _tag: 'UpdateField' },
-				({ name, value }) =>
-					Da.tuple((state: State) => {
-						const formFields = {
-							...state.formFields,
-							[name]: value,
-						} satisfies State['formFields']
-						return {
-							...state,
-							formFields,
-							...validateFields(formFields),
-						}
-					}, []),
+				{
+					_tag: 'UpdateName',
+				},
+				field =>
+					Da.tuple(
+						(state: State) =>
+							validateFields({
+								...state,
+								formFields: {
+									...state.formFields,
+									name: field.value,
+								},
+							}),
+						[],
+					),
+			),
+			M.when(
+				{
+					_tag: 'UpdateExpirationDate',
+				},
+				field =>
+					Da.tuple(
+						(state: State) =>
+							validateFields({
+								...state,
+								formFields: {
+									...state.formFields,
+									expirationDate: field.value,
+								},
+							}),
+						[],
+					),
 			),
 			M.when(
 				{ _tag: 'ShowSuccessMessage' },

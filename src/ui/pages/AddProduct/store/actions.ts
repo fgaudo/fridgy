@@ -1,18 +1,14 @@
-import { Da, F, NETS } from '@/core/imports'
-
-import type { State } from '.'
+import { Da, F, NETS, O } from '@/core/imports'
+import type { Integer } from '@/core/integer'
 
 export type Message = Da.TaggedEnum<{
 	AddProduct: object
-	UpdateField:
-		| {
-				name: 'name'
-				value: State['formFields']['name']
-		  }
-		| {
-				name: 'expirationDate'
-				value: State['formFields']['expirationDate']
-		  }
+	UpdateName: {
+		value: string
+	}
+	UpdateExpirationDate: {
+		value: O.Option<Integer>
+	}
 }>
 
 export type InternalMessage = Da.TaggedEnum<{

@@ -17,7 +17,7 @@ import {
 
 export interface State {
 	formFields: {
-		name: O.Option<NETS.NonEmptyTrimmedString>
+		name: string
 		expirationDate: O.Option<Int.Integer>
 	}
 	isOk: boolean
@@ -31,7 +31,6 @@ export interface State {
 				text: NETS.NonEmptyTrimmedString
 		  }
 	>
-	runningRemoveToast: O.Option<F.Fiber<unknown>>
 	runningAddProduct: O.Option<F.Fiber<unknown>>
 }
 
@@ -47,13 +46,12 @@ export const createStore: (
 		State,
 		Message | InternalMessage
 	>(
-		{
+		validateFields({
 			formFields: defaultFields(),
 			message: O.none(),
-			runningRemoveToast: O.none(),
 			runningAddProduct: O.none(),
-			...validateFields(defaultFields()),
-		},
+			isOk: false,
+		}),
 		reducer(context),
 	)
 

@@ -5,7 +5,7 @@ import {
 } from 'solid-js'
 import { Portal } from 'solid-js/web'
 
-import { Int, NETS, O } from '@/core/imports'
+import { Int, O } from '@/core/imports'
 
 import { onResume } from '@/ui/core/capacitor'
 import { Snackbar } from '@/ui/widgets/SnackBar'
@@ -28,8 +28,7 @@ const AddProduct: (
 
 	const updateExpDate = (number: number) => {
 		dispatch(
-			Message.UpdateField({
-				name: 'expirationDate',
+			Message.UpdateExpirationDate({
 				value: Int.fromNumber(
 					endOfDay(number).getTime(),
 				),
@@ -71,26 +70,17 @@ const AddProduct: (
 							<input
 								type="text"
 								placeholder="For example: Milk"
-								value={
-									O.isSome(state.formFields.name)
-										? NETS.toString(
-												state.formFields.name
-													.value,
-											)
-										: ''
-								}
+								value={state.formFields.name}
 								onInput={e => {
 									dispatch(
-										Message.UpdateField({
-											name: 'name',
-											value: NETS.fromString(
+										Message.UpdateName({
+											value:
 												e.currentTarget.value,
-											),
 										}),
 									)
 								}}
 								id="name"
-								class="ring-outline rounded-[4px] border-0 bg-surface p-4 ring-1 transition-all focus:border-0 focus:ring-2 focus:ring-primary"
+								class="w-full rounded-[4px] border-0 bg-surface p-4 ring-1 ring-outline transition-all focus:border-0 focus:ring-2 focus:ring-primary"
 								min={currentDate()}
 							/>
 						</div>
@@ -124,7 +114,7 @@ const AddProduct: (
 									)
 								}}
 								id="expdate"
-								class="ring-outline rounded-[4px] border-0 bg-surface p-4 ring-1 transition-all focus:border-0 focus:ring-2 focus:ring-primary"
+								class="w-full rounded-[4px] border-0 bg-surface p-4 ring-1 ring-outline transition-all focus:border-0 focus:ring-2 focus:ring-primary"
 								min={currentDate()}
 							/>
 						</div>
