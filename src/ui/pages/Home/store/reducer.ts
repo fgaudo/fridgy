@@ -3,6 +3,7 @@ import { reconcile } from 'solid-js/store'
 import {
 	Da,
 	HS,
+	Int,
 	M,
 	O,
 	pipe,
@@ -209,7 +210,7 @@ export const reducer: (
 								type: 'message',
 								message:
 									InternalMessage.ShowToast({
-										message: `${deletedItems.toString(10)} products deleted`,
+										message: `${Int.toNumber(deletedItems).toString(10)} products deleted`,
 									}),
 							} as const,
 						] as const,

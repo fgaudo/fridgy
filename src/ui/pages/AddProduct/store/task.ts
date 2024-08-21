@@ -1,4 +1,11 @@
-import { E, Eff, F, O } from '@/core/imports'
+import {
+	E,
+	Eff,
+	F,
+	Int,
+	NETS,
+	O,
+} from '@/core/imports'
 
 import type { App } from '@/app/index'
 
@@ -9,8 +16,8 @@ import { InternalMessage } from './actions'
 export const addProductTask = (
 	addProduct: App['addProduct'],
 	formFields: {
-		name: string
-		expirationDate: O.Option<number>
+		name: NETS.NonEmptyTrimmedString
+		expirationDate: O.Option<Int.Integer>
 	},
 ) =>
 	({

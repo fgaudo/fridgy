@@ -1,4 +1,4 @@
-import { Da, F } from '@/core/imports'
+import { Da, F, Int } from '@/core/imports'
 
 import type { ProductModel } from '@/app/use-cases/get-sorted-products'
 
@@ -14,8 +14,8 @@ export type InternalMessage = Da.TaggedEnum<{
 		message: string
 	}
 	DeleteProductsAndRefreshSucceeded: {
-		deletedItems: number
-		total: number
+		deletedItems: Int.Integer
+		total: Int.Integer
 		models: ProductModel[]
 	}
 	DeleteProductsAndRefreshFailed: {
@@ -26,7 +26,7 @@ export type InternalMessage = Da.TaggedEnum<{
 	}
 	RefreshListStarted: { fiber: F.Fiber<unknown> }
 	RefreshListSucceeded: {
-		total: number
+		total: Int.Integer
 		models: ProductModel[]
 	}
 	RefreshListFailed: {

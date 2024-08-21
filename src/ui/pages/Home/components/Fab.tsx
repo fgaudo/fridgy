@@ -1,5 +1,7 @@
 import { type Component } from 'solid-js'
 
+import { Int } from '@/core/imports'
+
 import imgUrl from '@/ui/assets/arrow.svg'
 
 import { useUiStateContext } from '../context'
@@ -15,7 +17,7 @@ export const Fab: Component = () => {
 			<div
 				classList={{
 					'opacity-0 pointer-events-none':
-						state.total > 0 ||
+						Int.toNumber(state.total) > 0 ||
 						state.isLoading ||
 						state.receivedError,
 				}}

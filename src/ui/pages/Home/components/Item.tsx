@@ -7,7 +7,7 @@ import {
 	Switch,
 } from 'solid-js'
 
-import { HS, O } from '@/core/imports'
+import { HS, Int, NETS, O } from '@/core/imports'
 
 import type { ProductModel } from '@/app/use-cases/get-sorted-products'
 
@@ -77,7 +77,7 @@ export const Item: Component<{
 											model().expirationDate
 										return (
 											O.isSome(exp) &&
-											exp.value >
+											Int.toNumber(exp.value) >
 												uiState.currentTimestamp &&
 											exp.value
 										)
@@ -89,13 +89,17 @@ export const Item: Component<{
 												'opacity-0':
 													uiState.isSelectModeEnabled,
 												'text-red-500 font-bold':
-													expiration() <
+													Int.toNumber(
+														expiration(),
+													) <
 													uiState.currentTimestamp -
 														0,
 											}}>
 											{formatRemainingTime(
 												uiState.currentTimestamp,
-												expiration(),
+												Int.toNumber(
+													expiration(),
+												),
 											)}
 										</div>
 									)}
@@ -144,13 +148,17 @@ export const Item: Component<{
 										<>
 											<div class="text-sm">
 												{format(
-													expiration(),
+													Int.toNumber(
+														expiration(),
+													),
 													'd',
 												)}
 											</div>
 											<div class="text-sm">
 												{format(
-													expiration(),
+													Int.toNumber(
+														expiration(),
+													),
 													'LLL',
 												)}
 											</div>
@@ -167,23 +175,24 @@ export const Item: Component<{
 }
 
 const ExpirationBar: Component<{
-	expiration: () => number
-	creation: number
+	expiration: () => Int.Integer
+	creation: Int.Integer
 }> = props => {
 	const {
 		uiStore: [uiState],
 	} = useUiStateContext()!
 
 	const isExpired = () =>
-		props.expiration() -
+		Int.toNumber(props.expiration()) -
 			uiState.currentTimestamp <
 		0
 
 	const currentProgress = () => {
 		const totalDuration =
-			props.expiration() - props.creation
+			Int.toNumber(props.expiration()) -
+			Int.toNumber(props.creation)
 		const remainingDuration =
-			props.expiration() -
+			Int.toNumber(props.expiration()) -
 			uiState.currentTimestamp
 
 		return remainingDuration / totalDuration
@@ -309,12 +318,12 @@ const Button: Component<{
 					<Show
 						when={(() => {
 							const name = props.model().name
-							if (typeof name === 'string')
-								return name
+							if (!O.isOption(name)) return name
+
 							return O.isSome(name) && name.value
 						})()}
 						fallback="CORRUPTED">
-						{name => name()}
+						{name => NETS.toString(name())}
 					</Show>
 				</div>
 			</mdui-list-item>

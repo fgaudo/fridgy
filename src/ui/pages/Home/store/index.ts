@@ -1,6 +1,6 @@
 import { onMount } from 'solid-js'
 
-import { F, HS, O } from '@/core/imports'
+import { F, HS, Int, O } from '@/core/imports'
 
 import type { App } from '@/app'
 import type { ProductModel } from '@/app/use-cases/get-sorted-products'
@@ -15,7 +15,7 @@ import {
 import { reducer } from './reducer'
 
 export interface State {
-	total: number
+	total: Int.Integer
 	toastMessage: string
 	products: ProductModel[]
 	receivedError: boolean
@@ -39,7 +39,7 @@ export const createStore: (
 		Message | InternalMessage
 	>(
 		{
-			total: 0,
+			total: Int.unsafe_fromNumber(0),
 			toastMessage: '',
 			products: [],
 			receivedError: false,

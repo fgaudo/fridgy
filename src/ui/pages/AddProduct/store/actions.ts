@@ -1,4 +1,4 @@
-import { Da, F } from '@/core/imports'
+import { Da, F, NETS } from '@/core/imports'
 
 import type { State } from '.'
 
@@ -17,7 +17,9 @@ export type Message = Da.TaggedEnum<{
 
 export type InternalMessage = Da.TaggedEnum<{
 	AddProductFailed: { message: string }
-	AddProductSucceeded: { name: string }
+	AddProductSucceeded: {
+		name: NETS.NonEmptyTrimmedString
+	}
 	AddProductStarted: { fiber: F.Fiber<unknown> }
 	ShowToast: { message: string }
 	RemoveToast: object

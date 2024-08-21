@@ -15,13 +15,13 @@ import {
 } from './task'
 
 export const defaultFields = () => ({
-	name: '',
+	name: O.none(),
 	expirationDate: O.none(),
 })
 
 export const validateFields = (
 	formFields: State['formFields'],
-) => ({ isOk: formFields.name.trim().length > 0 })
+) => ({ isOk: O.isSome(formFields.name) })
 
 export const resetFields = () => {
 	const fields = defaultFields()
@@ -37,17 +37,21 @@ export const reducer: (
 	app => (snapshot, message) =>
 		pipe(
 			M.value(message),
-			M.when({ _tag: 'AddProduct' }, () =>
-				Da.tuple(
+			M.when({ _tag: 'AddProduct' }, () => {
+				const name = snapshot.formFields.name
+
+				return Da.tuple(
 					(state: State) => state,
-					[
-						addProductTask(
-							app.addProduct,
-							snapshot.formFields,
-						),
-					],
-				),
-			),
+					O.isSome(name)
+						? [
+								addProductTask(app.addProduct, {
+									...snapshot.formFields,
+									name: name.value,
+								}),
+							]
+						: [],
+				)
+			}),
 			M.when(
 				{ _tag: 'AddProductStarted' },
 				({ fiber }) =>

@@ -4,8 +4,7 @@ import {
 	createSignal,
 } from 'solid-js'
 
-import { O } from '@/core/imports'
-import { isInteger } from '@/core/utils'
+import { Int, NETS, O } from '@/core/imports'
 
 import { onResume } from '@/ui/core/capacitor'
 
@@ -30,9 +29,9 @@ const AddProduct: (
 		dispatch(
 			Message.UpdateField({
 				name: 'expirationDate',
-				value: !isInteger(number)
-					? O.none()
-					: O.some(endOfDay(number).getTime()),
+				value: Int.fromNumber(
+					endOfDay(number).getTime(),
+				),
 			}),
 		)
 	}
@@ -64,14 +63,22 @@ const AddProduct: (
 					<div class="flex w-full max-w-lg flex-col place-content-center gap-[28px] pl-[16px] pr-[16px]">
 						<mdui-text-field
 							prop:variant="outlined"
-							prop:value={state.formFields.name}
+							prop:value={
+								O.isSome(state.formFields.name)
+									? NETS.toString(
+											state.formFields.name.value,
+										)
+									: ''
+							}
 							prop:type="text"
 							prop:label="Product name*"
 							onInput={e => {
 								dispatch(
 									Message.UpdateField({
 										name: 'name',
-										value: e.currentTarget.value,
+										value: NETS.fromString(
+											e.currentTarget.value,
+										),
 									}),
 								)
 							}}></mdui-text-field>
@@ -90,7 +97,11 @@ const AddProduct: (
 												.expirationDate,
 										)
 											? new Date(
-													state.formFields.expirationDate.value,
+													Int.toNumber(
+														state.formFields
+															.expirationDate
+															.value,
+													),
 												)
 													.toISOString()
 													.substring(0, 10)

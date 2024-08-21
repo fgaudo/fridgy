@@ -1,4 +1,5 @@
-import { F, O } from '@/core/imports'
+import { F, Int, O } from '@/core/imports'
+import * as NETS from '@/core/non-empty-trimmed-string'
 
 import type { App } from '@/app'
 
@@ -16,8 +17,8 @@ import {
 
 export interface State {
 	formFields: {
-		name: string
-		expirationDate: O.Option<number>
+		name: O.Option<NETS.NonEmptyTrimmedString>
+		expirationDate: O.Option<Int.Integer>
 	}
 	isOk: boolean
 	toastMessage: string

@@ -1,4 +1,11 @@
-import { E, Eff, F, HS, O } from '@/core/imports'
+import {
+	E,
+	Eff,
+	F,
+	HS,
+	Int,
+	O,
+} from '@/core/imports'
 
 import type { App } from '@/app/index'
 
@@ -103,7 +110,9 @@ export const deleteTask = (
 
 			return InternalMessage.DeleteProductsAndRefreshSucceeded(
 				{
-					deletedItems: HS.size(selectedProducts),
+					deletedItems: Int.unsafe_fromNumber(
+						HS.size(selectedProducts),
+					),
 					total: result2.right.total,
 					models: result2.right.models,
 				},
