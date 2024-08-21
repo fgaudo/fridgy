@@ -1,6 +1,12 @@
 import { onMount } from 'solid-js'
 
-import { F, HS, Int, O } from '@/core/imports'
+import {
+	F,
+	HS,
+	Int,
+	NETS,
+	O,
+} from '@/core/imports'
 
 import type { App } from '@/app'
 import type { ProductModel } from '@/app/use-cases/get-sorted-products'
@@ -16,14 +22,22 @@ import { reducer } from './reducer'
 
 export interface State {
 	total: Int.Integer
-	toastMessage: string
+	message: O.Option<
+		| {
+				type: 'error'
+				text: NETS.NonEmptyTrimmedString
+		  }
+		| {
+				type: 'success'
+				text: NETS.NonEmptyTrimmedString
+		  }
+	>
 	products: ProductModel[]
 	receivedError: boolean
 	isLoading: boolean
 	selectedProducts: HS.HashSet<string>
 	runningRefreshing: O.Option<F.Fiber<unknown>>
 	runningDeleting: O.Option<F.Fiber<unknown>>
-	runningRemoveToast: O.Option<F.Fiber<unknown>>
 }
 
 export type Store = readonly [
@@ -40,14 +54,13 @@ export const createStore: (
 	>(
 		{
 			total: Int.unsafe_fromNumber(0),
-			toastMessage: '',
+			message: O.none(),
 			products: [],
 			receivedError: false,
 			isLoading: true,
 			runningRefreshing: O.none(),
 			selectedProducts: HS.empty(),
 			runningDeleting: O.none(),
-			runningRemoveToast: O.none(),
 		},
 		reducer(context),
 	)

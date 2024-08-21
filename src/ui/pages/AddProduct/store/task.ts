@@ -36,8 +36,9 @@ export const addProductTask = (
 				Eff.logError(result.left)
 				return yield* Eff.fail(
 					InternalMessage.AddProductFailed({
-						message:
+						message: NETS.unsafe_fromString(
 							'There was a problem adding the product',
+						),
 					}),
 				)
 			}
@@ -45,24 +46,5 @@ export const addProductTask = (
 			return InternalMessage.AddProductSucceeded({
 				name: formFields.name,
 			})
-		}),
-	}) as const
-
-export const removeToast = (
-	fiber: O.Option<F.Fiber<unknown>>,
-) =>
-	({
-		type: 'task',
-		onStart: (fiber: F.Fiber<unknown>) =>
-			InternalMessage.RemoveToastStarted({
-				fiber,
-			}),
-		effect: Eff.gen(function* () {
-			if (O.isSome(fiber)) {
-				yield* F.interrupt(fiber.value)
-			}
-
-			yield* Eff.sleep(3000)
-			return InternalMessage.RemoveToast()
 		}),
 	}) as const

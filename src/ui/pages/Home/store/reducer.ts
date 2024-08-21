@@ -5,6 +5,7 @@ import {
 	HS,
 	Int,
 	M,
+	NETS,
 	O,
 	pipe,
 } from '@/core/imports'
@@ -21,7 +22,6 @@ import {
 import {
 	deleteTask,
 	refreshListTask,
-	removeToast,
 } from './tasks'
 
 export const reducer: (
@@ -38,6 +38,11 @@ export const reducer: (
 					}) as const
 
 				const commands = [
+					{
+						type: 'message',
+						message:
+							InternalMessage.ResetMessage(),
+					},
 					refreshListTask(
 						snapshot.runningRefreshing,
 						app.productList,
@@ -85,16 +90,24 @@ export const reducer: (
 				() =>
 					Da.tuple(
 						(state: State) => state,
-						HS.size(snapshot.selectedProducts) <=
-							0
-							? []
-							: [
-									deleteTask(
-										snapshot.selectedProducts,
-										app.deleteProductsByIds,
-										app.productList,
-									),
-								],
+						[
+							{
+								type: 'message',
+								message:
+									InternalMessage.ResetMessage(),
+							} as const,
+							...(HS.size(
+								snapshot.selectedProducts,
+							) <= 0
+								? []
+								: [
+										deleteTask(
+											snapshot.selectedProducts,
+											app.deleteProductsByIds,
+											app.productList,
+										),
+									]),
+						],
 					),
 			),
 			M.when(
@@ -140,9 +153,11 @@ export const reducer: (
 							{
 								type: 'message',
 								message:
-									InternalMessage.ShowToast({
-										message: message,
-									}),
+									InternalMessage.ShowErrorMessage(
+										{
+											message: message,
+										},
+									),
 							},
 						] as const,
 					),
@@ -159,9 +174,11 @@ export const reducer: (
 							{
 								type: 'message',
 								message:
-									InternalMessage.ShowToast({
-										message,
-									}),
+									InternalMessage.ShowErrorMessage(
+										{
+											message,
+										},
+									),
 							} as const,
 						] as const,
 					),
@@ -183,9 +200,11 @@ export const reducer: (
 							{
 								type: 'message',
 								message:
-									InternalMessage.ShowToast({
-										message,
-									}),
+									InternalMessage.ShowErrorMessage(
+										{
+											message,
+										},
+									),
 							} as const,
 						] as const,
 					),
@@ -209,9 +228,14 @@ export const reducer: (
 							{
 								type: 'message',
 								message:
-									InternalMessage.ShowToast({
-										message: `${Int.toNumber(deletedItems).toString(10)} products deleted`,
-									}),
+									InternalMessage.ShowSuccessMessage(
+										{
+											message:
+												NETS.unsafe_fromString(
+													`${Int.toNumber(deletedItems).toString(10)} products deleted`,
+												),
+										},
+									),
 							} as const,
 						] as const,
 					),
@@ -230,41 +254,42 @@ export const reducer: (
 					),
 			),
 			M.when(
-				{ _tag: 'ShowToast' },
+				{ _tag: 'ShowSuccessMessage' },
 				({ message }) =>
 					Da.tuple(
 						(state: State) => ({
 							...state,
-							toastMessage: message,
-							runningRemoveToast: O.none(),
-						}),
-						[
-							removeToast(
-								snapshot.runningRemoveToast,
-							),
-						],
-					),
-			),
-			M.when({ _tag: 'RemoveToast' }, () =>
-				Da.tuple(
-					(state: State) => ({
-						...state,
-						toastMessage: '',
-						runningRemoveToast: O.none(),
-					}),
-					[],
-				),
-			),
-			M.when(
-				{ _tag: 'RemoveToastStarted' },
-				({ fiber }) =>
-					Da.tuple(
-						(state: State) => ({
-							...state,
-							runningRemoveToast: O.some(fiber),
+							message: O.some({
+								type: 'success',
+								text: message,
+							} as const),
 						}),
 						[],
 					),
 			),
+			M.when(
+				{ _tag: 'ShowErrorMessage' },
+				({ message }) =>
+					Da.tuple(
+						(state: State) => ({
+							...state,
+							message: O.some({
+								type: 'error',
+								text: message,
+							} as const),
+						}),
+						[],
+					),
+			),
+			M.when({ _tag: 'ResetMessage' }, () =>
+				Da.tuple(
+					(state: State) => ({
+						...state,
+						message: O.none(),
+					}),
+					[],
+				),
+			),
+
 			M.exhaustive,
 		)

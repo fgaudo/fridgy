@@ -1,4 +1,4 @@
-import { Da, F, Int } from '@/core/imports'
+import { Da, F, Int, NETS } from '@/core/imports'
 
 import type { ProductModel } from '@/app/use-cases/get-sorted-products'
 
@@ -11,7 +11,7 @@ export type Message = Da.TaggedEnum<{
 
 export type InternalMessage = Da.TaggedEnum<{
 	DeleteProductsFailed: {
-		message: string
+		message: NETS.NonEmptyTrimmedString
 	}
 	DeleteProductsAndRefreshSucceeded: {
 		deletedItems: Int.Integer
@@ -19,7 +19,7 @@ export type InternalMessage = Da.TaggedEnum<{
 		models: ProductModel[]
 	}
 	DeleteProductsAndRefreshFailed: {
-		message: string
+		message: NETS.NonEmptyTrimmedString
 	}
 	DeleteProductsAndRefreshStarted: {
 		fiber: F.Fiber<unknown>
@@ -30,11 +30,15 @@ export type InternalMessage = Da.TaggedEnum<{
 		models: ProductModel[]
 	}
 	RefreshListFailed: {
-		message: string
+		message: NETS.NonEmptyTrimmedString
 	}
-	ShowToast: { message: string }
-	RemoveToast: object
-	RemoveToastStarted: { fiber: F.Fiber<unknown> }
+	ShowSuccessMessage: {
+		message: NETS.NonEmptyTrimmedString
+	}
+	ShowErrorMessage: {
+		message: NETS.NonEmptyTrimmedString
+	}
+	ResetMessage: object
 }>
 
 export const Message = Da.taggedEnum<Message>()

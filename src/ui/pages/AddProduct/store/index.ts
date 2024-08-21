@@ -21,7 +21,16 @@ export interface State {
 		expirationDate: O.Option<Int.Integer>
 	}
 	isOk: boolean
-	toastMessage: string
+	message: O.Option<
+		| {
+				type: 'error'
+				text: NETS.NonEmptyTrimmedString
+		  }
+		| {
+				type: 'success'
+				text: NETS.NonEmptyTrimmedString
+		  }
+	>
 	runningRemoveToast: O.Option<F.Fiber<unknown>>
 	runningAddProduct: O.Option<F.Fiber<unknown>>
 }
@@ -40,7 +49,7 @@ export const createStore: (
 	>(
 		{
 			formFields: defaultFields(),
-			toastMessage: '',
+			message: O.none(),
 			runningRemoveToast: O.none(),
 			runningAddProduct: O.none(),
 			...validateFields(defaultFields()),

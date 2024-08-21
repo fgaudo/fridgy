@@ -4,6 +4,7 @@ import {
 	F,
 	HS,
 	Int,
+	NETS,
 	O,
 } from '@/core/imports'
 
@@ -41,8 +42,9 @@ export const refreshListTask = (
 
 				return yield* Eff.fail(
 					InternalMessage.RefreshListFailed({
-						message:
+						message: NETS.unsafe_fromString(
 							'There was a problem loading the list',
+						),
 					}),
 				)
 			}
@@ -73,7 +75,9 @@ export const deleteTask = (
 			if (HS.size(selectedProducts) <= 0) {
 				return yield* Eff.fail(
 					InternalMessage.DeleteProductsFailed({
-						message: 'No products selected',
+						message: NETS.unsafe_fromString(
+							'No products selected',
+						),
 					}),
 				)
 			}
@@ -89,8 +93,9 @@ export const deleteTask = (
 				yield* Eff.logError(result.left)
 				return yield* Eff.fail(
 					InternalMessage.DeleteProductsFailed({
-						message:
+						message: NETS.unsafe_fromString(
 							'There was a problem deleting the products',
+						),
 					}),
 				)
 			}
@@ -103,7 +108,9 @@ export const deleteTask = (
 				yield* Eff.logError(result2.left)
 				return InternalMessage.DeleteProductsAndRefreshFailed(
 					{
-						message: `${HS.size(selectedProducts).toString(10)} deleted but couldn't refresh list`,
+						message: NETS.unsafe_fromString(
+							`${HS.size(selectedProducts).toString(10)} deleted but couldn't refresh list`,
+						),
 					},
 				)
 			}
@@ -117,24 +124,5 @@ export const deleteTask = (
 					models: result2.right.models,
 				},
 			)
-		}),
-	}) as const
-
-export const removeToast = (
-	fiber: O.Option<F.Fiber<unknown>>,
-) =>
-	({
-		type: 'task',
-		onStart: (fiber: F.Fiber<unknown>) =>
-			InternalMessage.RemoveToastStarted({
-				fiber,
-			}),
-		effect: Eff.gen(function* () {
-			if (O.isSome(fiber)) {
-				yield* F.interrupt(fiber.value)
-			}
-
-			yield* Eff.sleep(3000)
-			return InternalMessage.RemoveToast()
 		}),
 	}) as const

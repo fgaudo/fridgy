@@ -4,7 +4,10 @@ export default {
 		'./index.html',
 		'./src/**/*.{js,ts,jsx,tsx}',
 	],
-	plugins: [],
+	plugins: [
+		require('@tailwindcss/typography'),
+		require('@tailwindcss/forms'),
+	],
 	theme: {
 		extend: {
 			transitionDuration: {
@@ -14,6 +17,7 @@ export default {
 				titleLarge: 'var(--fridgy-title-font)',
 			},
 			colors: {
+				outline: 'rgb(var(--mdui-color-outline))',
 				background:
 					'rgb(var(--mdui-color-background))',
 				primary: 'rgb(var(--mdui-color-primary))',

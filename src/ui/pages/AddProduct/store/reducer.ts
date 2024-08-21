@@ -1,4 +1,10 @@
-import { Da, M, O, pipe } from '@/core/imports'
+import {
+	Da,
+	M,
+	NETS,
+	O,
+	pipe,
+} from '@/core/imports'
 
 import type { App } from '@/app'
 
@@ -9,10 +15,7 @@ import {
 	InternalMessage,
 	type Message,
 } from './actions'
-import {
-	addProductTask,
-	removeToast,
-} from './task'
+import { addProductTask } from './task'
 
 export const defaultFields = () => ({
 	name: O.none(),
@@ -42,14 +45,21 @@ export const reducer: (
 
 				return Da.tuple(
 					(state: State) => state,
-					O.isSome(name)
-						? [
-								addProductTask(app.addProduct, {
-									...snapshot.formFields,
-									name: name.value,
-								}),
-							]
-						: [],
+					[
+						{
+							type: 'message',
+							message:
+								InternalMessage.ResetMessage(),
+						} as const,
+						...(O.isSome(name)
+							? [
+									addProductTask(app.addProduct, {
+										...snapshot.formFields,
+										name: name.value,
+									}),
+								]
+							: []),
+					],
 				)
 			}),
 			M.when(
@@ -75,9 +85,11 @@ export const reducer: (
 							{
 								type: 'message',
 								message:
-									InternalMessage.ShowToast({
-										message,
-									}),
+									InternalMessage.ShowErrorMessage(
+										{
+											message,
+										},
+									),
 							} as const,
 						],
 					),
@@ -95,10 +107,14 @@ export const reducer: (
 							{
 								type: 'message',
 								message:
-									InternalMessage.ShowToast({
-										message:
-											'Product added succesfully',
-									}),
+									InternalMessage.ShowSuccessMessage(
+										{
+											message:
+												NETS.unsafe_fromString(
+													'Product added succesfully',
+												),
+										},
+									),
 							} as const,
 						],
 					),
@@ -119,41 +135,45 @@ export const reducer: (
 					}, []),
 			),
 			M.when(
-				{ _tag: 'ShowToast' },
+				{ _tag: 'ShowSuccessMessage' },
 				({ message }) =>
 					Da.tuple(
-						(state: State) => ({
-							...state,
-							toastMessage: message,
-							runningRemoveToast: O.none(),
-						}),
-						[
-							removeToast(
-								snapshot.runningRemoveToast,
-							),
-						],
-					),
-			),
-			M.when({ _tag: 'RemoveToast' }, () =>
-				Da.tuple(
-					(state: State) => ({
-						...state,
-						toastMessage: '',
-						runningRemoveToast: O.none(),
-					}),
-					[],
-				),
-			),
-			M.when(
-				{ _tag: 'RemoveToastStarted' },
-				({ fiber }) =>
-					Da.tuple(
-						(state: State) => ({
-							...state,
-							runningRemoveToast: O.some(fiber),
-						}),
+						(state: State) =>
+							({
+								...state,
+								message: O.some({
+									type: 'success',
+									text: message,
+								} as const),
+							}) as const,
 						[],
 					),
 			),
+			M.when(
+				{ _tag: 'ShowErrorMessage' },
+				({ message }) =>
+					Da.tuple(
+						(state: State) =>
+							({
+								...state,
+								message: O.some({
+									type: 'error',
+									text: message,
+								} as const),
+							}) as const,
+						[],
+					),
+			),
+			M.when({ _tag: 'ResetMessage' }, () =>
+				Da.tuple(
+					(state: State) =>
+						({
+							...state,
+							message: O.none(),
+						}) as const,
+					[],
+				),
+			),
+
 			M.exhaustive,
 		)

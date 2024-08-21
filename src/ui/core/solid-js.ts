@@ -4,13 +4,7 @@ import {
 } from 'solid-js'
 import * as SS from 'solid-js/store'
 
-import {
-	D,
-	Eff,
-	F,
-	Q,
-	pipe,
-} from '@/core/imports'
+import { Eff, F, Q, pipe } from '@/core/imports'
 
 export function withDefault<T>(
 	accessor: Accessor<T | undefined>,
@@ -57,28 +51,22 @@ export const useQueueStore = <
 					SS.unwrap(state),
 					msg,
 				)
+
 				setState(mutation)
 
 				for (const cmd of commands) {
 					if (cmd.type === 'message') {
 						const { message } = cmd
 
-						yield* Q.offer(
-							messages,
-							message,
-						).pipe(Eff.fork)
+						yield* Q.offer(messages, message)
 
 						continue
 					}
-
-					const deferred =
-						yield* D.make<boolean>()
 
 					const { onStart, effect } = cmd
 
 					const fiber = yield* pipe(
 						effect,
-						Eff.tap(() => D.await(deferred)),
 						Eff.matchEffect({
 							onSuccess: msg =>
 								Q.offer(messages, msg),
@@ -88,16 +76,16 @@ export const useQueueStore = <
 						Eff.fork,
 					)
 
-					if (onStart)
+					if (onStart) {
 						yield* Q.offer(
 							messages,
 							onStart(fiber),
 						)
-
-					yield* D.succeed(deferred, true)
+					}
 				}
 			}
 		}),
+
 		{ immediate: false },
 	)
 
