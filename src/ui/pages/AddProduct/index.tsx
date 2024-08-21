@@ -134,9 +134,10 @@ const AddProduct: (
 				</div>
 			</div>
 			<Portal>
-				<div class="fixed bottom-0 right-1/2 flex w-full translate-x-1/2 justify-center">
-					<Snackbar message={state.message} />
-				</div>
+				<Snackbar
+					class="fixed bottom-0 right-1/2 flex w-full translate-x-1/2 justify-center"
+					message={state.message}
+				/>
 			</Portal>
 		</AddProductContext.Provider>
 	)

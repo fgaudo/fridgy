@@ -13,16 +13,16 @@ export const Snackbar: Component = () => {
 
 	return (
 		<Portal>
-			<div
-				class="fixed bottom-0 right-1/2 flex w-full translate-x-1/2 justify-center"
+			<SnackbarWidget
+				class="fixed bottom-0 right-1/2 flex w-full translate-x-1/2 justify-center transition-all"
 				classList={{
 					'bottom-[128px]':
 						!uiState.isSelectModeEnabled,
 					'bottom-[16px]':
 						uiState.isSelectModeEnabled,
-				}}>
-				<SnackbarWidget message={state.message} />
-			</div>
+				}}
+				message={state.message}
+			/>
 		</Portal>
 	)
 }
