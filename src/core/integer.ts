@@ -1,4 +1,4 @@
-import { E, Ord } from './imports'
+import { O, Ord } from './imports'
 
 const integerSymbol: unique symbol = Symbol()
 
@@ -7,11 +7,9 @@ export interface Integer {
 }
 
 export const fromNumber = (number: number) =>
-	E.gen(function* () {
+	O.gen(function* () {
 		if (!isInteger(number)) {
-			return yield* E.left(
-				new Error('not an integer'),
-			)
+			return yield* O.none()
 		}
 
 		return { [integerSymbol]: number }

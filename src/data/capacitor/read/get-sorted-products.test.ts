@@ -1,13 +1,7 @@
 import { fc, test } from '@fast-check/vitest'
 import { describe, expect } from 'vitest'
 
-import {
-	Eff,
-	Int,
-	NETS,
-	O,
-	flow,
-} from '@/core/imports'
+import { Eff, Int, NETS, O } from '@/core/imports'
 import * as H from '@/core/test-helpers'
 import { testRuntime } from '@/core/utils'
 
@@ -54,9 +48,7 @@ function toModel(product: {
 	return {
 		isValid: false,
 		name: O.fromNullable(product.name).pipe(
-			O.flatMap(
-				flow(NETS.fromString, O.getRight),
-			),
+			O.flatMap(NETS.fromString),
 		),
 		id: O.fromNullable(product.id).pipe(
 			O.map(id => id.toString(10)),

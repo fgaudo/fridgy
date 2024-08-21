@@ -1,4 +1,4 @@
-import { E, Ord } from './imports'
+import { O, Ord } from './imports'
 
 const stringSymbol: unique symbol = Symbol()
 
@@ -7,12 +7,10 @@ export interface NonEmptyTrimmedString {
 }
 
 export const fromString = (string: string) =>
-	E.gen(function* () {
+	O.gen(function* () {
 		const str = string.trim()
 		if (!isNonBlank(str)) {
-			return yield* E.left(
-				new Error('Not a non-empty string'),
-			)
+			return yield* O.none()
 		}
 
 		return { [stringSymbol]: str }

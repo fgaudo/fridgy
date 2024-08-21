@@ -35,8 +35,7 @@ export const useCase: AddProduct = productData =>
 			yield* Clock.currentTimeMillis,
 		)
 
-		if (E.isLeft(resultTimestamp)) {
-			yield* Eff.logError(resultTimestamp.left)
+		if (O.isNone(resultTimestamp)) {
 			return yield* Eff.fail(
 				AddProductError(
 					'Unexpected error occurred',
@@ -44,7 +43,7 @@ export const useCase: AddProduct = productData =>
 			)
 		}
 
-		const timestamp = resultTimestamp.right
+		const timestamp = resultTimestamp.value
 
 		const addProduct = yield* AddProductService
 

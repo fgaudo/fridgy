@@ -1,4 +1,4 @@
-import { flow, pipe } from 'effect'
+import { pipe } from 'effect'
 
 import {
 	fallback,
@@ -96,7 +96,7 @@ export const query: Eff.Effect<
 		decodeResult.right.total,
 	)
 
-	if (E.isLeft(totalResult)) {
+	if (O.isNone(totalResult)) {
 		return yield* Eff.fail(
 			ProductsServiceError(
 				'There was an error while decoding the data',
@@ -104,7 +104,7 @@ export const query: Eff.Effect<
 		)
 	}
 
-	const total = totalResult.right
+	const total = totalResult.value
 
 	const products = yield* Eff.all(
 		decodeResult.right.products.map(product =>
@@ -132,32 +132,28 @@ export const query: Eff.Effect<
 							O.map(id => id.toString(10)),
 						),
 						name: O.fromNullable(name).pipe(
-							O.flatMap(
-								flow(NETS.fromString, O.getRight),
-							),
+							O.flatMap(NETS.fromString),
 						),
 					} as const
 				}
-
-				const result = E.all([
+				const result = O.all([
 					NETS.fromString(name),
 					Int.fromNumber(id),
 					Int.fromNumber(creationDate),
-					E.gen(function* () {
+					O.gen(function* () {
 						if (expirationDate === undefined) {
 							return O.none()
 						}
 
-						const exirationTimestamp =
-							yield* Int.fromNumber(
-								expirationDate,
-							)
+						const exp = yield* Int.fromNumber(
+							expirationDate,
+						)
 
-						return O.some(exirationTimestamp)
+						return O.some(exp)
 					}),
 				])
 
-				if (E.isLeft(result)) {
+				if (O.isNone(result)) {
 					yield* Eff.logError(
 						'Product is corrupt',
 					).pipe(Eff.annotateLogs({ product }))
@@ -165,11 +161,7 @@ export const query: Eff.Effect<
 					return {
 						isValid: false,
 						id: O.some(id.toString(10)),
-						name: pipe(
-							name,
-							NETS.fromString,
-							O.getRight,
-						),
+						name: NETS.fromString(name),
 					} as const
 				}
 
@@ -178,7 +170,7 @@ export const query: Eff.Effect<
 					idInt,
 					creationTimestamp,
 					expirationTimestamp,
-				] = result.right
+				] = result.value
 
 				return {
 					isValid: true,
