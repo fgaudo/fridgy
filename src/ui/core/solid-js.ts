@@ -43,7 +43,7 @@ export const useQueueStore = <
 
 	const messages = Eff.runSync(Q.unbounded<MSG>())
 
-	H.runForkWithLogs(
+	const fiber = H.runForkWithLogs(
 		pipe(
 			Eff.gen(function* () {
 				for (;;) {
@@ -82,7 +82,11 @@ export const useQueueStore = <
 	)
 
 	onCleanup(() => {
-		H.runForkWithLogs(Q.shutdown(messages))
+		H.runForkWithLogs(
+			F.interrupt(fiber).pipe(
+				Eff.andThen(Q.shutdown(messages)),
+			),
+		)
 	})
 
 	return [
