@@ -18,15 +18,8 @@ import {
 	InternalMessage,
 	type Message,
 } from './actions'
-import {
-	addProductFinishedMutation,
-	resetFields,
-	resetMessageMutation,
-	showErrorMessageMutation,
-	showSuccessMessageMutation,
-	validateFieldsMutation,
-} from './mutations'
-import { addProductTask } from './task'
+import * as Mu from './mutations'
+import * as Ta from './task'
 
 export const reducer: (
 	app: App,
@@ -41,7 +34,7 @@ export const reducer: (
 							snapshot.formFields.name,
 						)
 						if (O.isSome(name)) {
-							yield addProductTask(
+							yield Ta.addProduct(
 								app.addProduct,
 								{
 									...snapshot.formFields,
@@ -53,7 +46,7 @@ export const reducer: (
 				)
 
 				return Da.tuple(
-					HS.make(resetMessageMutation),
+					HS.make(Mu.resetMessage),
 					commands,
 				)
 			}),
@@ -73,8 +66,8 @@ export const reducer: (
 				({ message }) =>
 					Da.tuple(
 						HS.make(
-							addProductFinishedMutation,
-							showErrorMessageMutation(message),
+							Mu.addProductFinished,
+							Mu.showErrorMessage(message),
 						),
 						HS.empty(),
 					),
@@ -84,9 +77,9 @@ export const reducer: (
 				() =>
 					Da.tuple(
 						HS.make(
-							addProductFinishedMutation,
-							resetFields,
-							showSuccessMessageMutation(
+							Mu.addProductFinished,
+							Mu.resetFields,
+							Mu.showSuccessMessage(
 								NETS.unsafe_fromString(
 									'Product added succesfully',
 								),
@@ -106,7 +99,7 @@ export const reducer: (
 								state.formFields.name =
 									field.value
 							},
-							validateFieldsMutation({
+							Mu.validateFields({
 								...snapshot.formFields,
 								name: field.value,
 							}),
@@ -125,7 +118,7 @@ export const reducer: (
 								state.formFields.expirationDate =
 									field.value
 							},
-							validateFieldsMutation({
+							Mu.validateFields({
 								...snapshot.formFields,
 								expirationDate: field.value,
 							}),

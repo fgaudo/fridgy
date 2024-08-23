@@ -13,7 +13,7 @@ import { MINIMUM_LAG_MS } from '@/ui/core/constants'
 
 import { InternalMessage } from './actions'
 
-export const addProductTask = (
+export const addProduct = (
 	addProduct: App['addProduct'],
 	formFields: {
 		name: NETS.NonEmptyTrimmedString

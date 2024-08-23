@@ -18,7 +18,7 @@ import {
 } from './actions'
 import {
 	defaultFields,
-	validateFieldsMutation,
+	validateFields,
 } from './mutations'
 import { reducer } from './reducer'
 
@@ -60,9 +60,7 @@ export const createStore: (
 				runningAddProduct: O.none(),
 				isOk: false,
 			},
-			produce(
-				validateFieldsMutation(defaultFields()),
-			),
+			produce(validateFields(defaultFields())),
 		),
 		reducer(context),
 	)

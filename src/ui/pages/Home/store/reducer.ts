@@ -17,20 +17,8 @@ import {
 	InternalMessage,
 	Message,
 } from './actions'
-import {
-	deletingFinishedMutation,
-	deletingSucceededMutation,
-	refreshListFailedMutation,
-	refreshListFinishedMutation,
-	refreshListSucceededMutation,
-	resetMessageMutation,
-	showErrorMessageMutation,
-	showSuccessMessageMutation,
-} from './mutations'
-import {
-	deleteTask,
-	refreshListTask,
-} from './tasks'
+import * as Mu from './mutations'
+import * as Ta from './tasks'
 
 export const reducer: (
 	app: App,
@@ -41,11 +29,11 @@ export const reducer: (
 			M.when({ _tag: 'RefreshList' }, () =>
 				Da.tuple(
 					HS.make(
-						refreshListFinishedMutation,
-						resetMessageMutation,
+						Mu.refreshListFinished,
+						Mu.resetMessage,
 					),
 					HS.make(
-						refreshListTask(
+						Ta.refreshList(
 							snapshot.runningRefreshing,
 							app.productList,
 						),
@@ -83,7 +71,7 @@ export const reducer: (
 									snapshot.selectedProducts,
 								) > 0
 							) {
-								yield deleteTask(
+								yield Ta.deleteByIdsAndRefresh(
 									snapshot.selectedProducts,
 									app.deleteProductsByIds,
 									app.productList,
@@ -104,8 +92,8 @@ export const reducer: (
 								state.isLoading = false
 								state.receivedError = false
 							},
-							refreshListFinishedMutation,
-							refreshListSucceededMutation(
+							Mu.refreshListFinished,
+							Mu.refreshListSucceeded(
 								total,
 								snapshot.products,
 								models,
@@ -133,9 +121,9 @@ export const reducer: (
 							(state: State) => {
 								state.isLoading = false
 							},
-							refreshListFailedMutation,
-							refreshListFinishedMutation,
-							showErrorMessageMutation(message),
+							Mu.refreshListFailed,
+							Mu.refreshListFinished,
+							Mu.showErrorMessage(message),
 						),
 						HS.empty(),
 					),
@@ -145,8 +133,8 @@ export const reducer: (
 				({ message }) =>
 					Da.tuple(
 						HS.make(
-							deletingFinishedMutation,
-							showErrorMessageMutation(message),
+							Mu.deletingFinished,
+							Mu.showErrorMessage(message),
 						),
 						HS.empty(),
 					),
@@ -158,10 +146,10 @@ export const reducer: (
 				({ message }) =>
 					Da.tuple(
 						HS.make(
-							deletingSucceededMutation,
-							refreshListFailedMutation,
-							deletingFinishedMutation,
-							showErrorMessageMutation(message),
+							Mu.deletingSucceeded,
+							Mu.refreshListFailed,
+							Mu.deletingFinished,
+							Mu.showErrorMessage(message),
 						),
 						HS.empty(),
 					),
@@ -173,14 +161,14 @@ export const reducer: (
 				({ deletedItems, total, models }) =>
 					Da.tuple(
 						HS.make(
-							deletingSucceededMutation,
-							deletingFinishedMutation,
-							refreshListSucceededMutation(
+							Mu.deletingSucceeded,
+							Mu.deletingFinished,
+							Mu.refreshListSucceeded(
 								total,
 								snapshot.products,
 								models,
 							),
-							showSuccessMessageMutation(
+							Mu.showSuccessMessage(
 								NETS.unsafe_fromString(
 									`${Int.toNumber(deletedItems).toString(10)} products deleted`,
 								),

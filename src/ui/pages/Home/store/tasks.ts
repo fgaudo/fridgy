@@ -14,7 +14,7 @@ import { MINIMUM_LAG_MS } from '@/ui/core/constants'
 
 import { InternalMessage } from './actions'
 
-export const refreshListTask = (
+export const refreshList = (
 	runningRefreshing: O.Option<F.Fiber<unknown>>,
 	refreshList: App['productList'],
 ) => ({
@@ -49,7 +49,7 @@ export const refreshListTask = (
 	}),
 })
 
-export const deleteTask = (
+export const deleteByIdsAndRefresh = (
 	selectedProducts: HS.HashSet<string>,
 	deleteProducts: App['deleteProductsByIds'],
 	refreshList: App['productList'],

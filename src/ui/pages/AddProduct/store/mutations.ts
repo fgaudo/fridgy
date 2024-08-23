@@ -4,7 +4,7 @@ import { NETS, O } from '@/core/imports'
 
 import type { State } from '.'
 
-export const showSuccessMessageMutation =
+export const showSuccessMessage =
 	(message: NETS.NonEmptyTrimmedString) =>
 	(state: State) => {
 		state.message = O.some({
@@ -13,7 +13,7 @@ export const showSuccessMessageMutation =
 		} as const)
 	}
 
-export const showErrorMessageMutation =
+export const showErrorMessage =
 	(message: NETS.NonEmptyTrimmedString) =>
 	(state: State) => {
 		state.message = O.some({
@@ -22,19 +22,17 @@ export const showErrorMessageMutation =
 		} as const)
 	}
 
-export const addProductFinishedMutation = (
+export const addProductFinished = (
 	state: State,
 ) => {
 	state.runningAddProduct = O.none()
 }
 
-export const resetMessageMutation = (
-	state: State,
-) => {
+export const resetMessage = (state: State) => {
 	state.message = O.none()
 }
 
-export const validateFieldsMutation =
+export const validateFields =
 	(fields: State['formFields']) =>
 	(state: State) => {
 		state.isOk = NETS.fromString(
@@ -51,5 +49,5 @@ export const defaultFields: () => State['formFields'] =
 export const resetFields = (state: State) => {
 	state.formFields = defaultFields()
 
-	validateFieldsMutation(defaultFields())(state)
+	validateFields(defaultFields())(state)
 }

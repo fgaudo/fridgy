@@ -11,7 +11,7 @@ import type { ProductModel } from '@/app/use-cases/get-sorted-products'
 
 import type { State } from '.'
 
-export const refreshListSucceededMutation =
+export const refreshListSucceeded =
 	(
 		total: Int.Integer,
 		before: ProductModel[],
@@ -25,32 +25,32 @@ export const refreshListSucceededMutation =
 		state.total = total
 	}
 
-export const deletingFinishedMutation = (
+export const deletingFinished = (
 	state: State,
 ) => {
 	state.runningDeleting = O.none()
 }
 
-export const deletingSucceededMutation = (
+export const deletingSucceeded = (
 	state: State,
 ) => {
 	state.selectedProducts = HS.empty()
 }
 
-export const refreshListFinishedMutation = (
+export const refreshListFinished = (
 	state: State,
 ) => {
 	state.runningRefreshing = O.none()
 }
 
-export const refreshListFailedMutation = (
+export const refreshListFailed = (
 	state: State,
 ) => {
 	state.products = []
 	state.receivedError = true
 }
 
-export const showSuccessMessageMutation =
+export const showSuccessMessage =
 	(message: NETS.NonEmptyTrimmedString) =>
 	(state: State) => {
 		state.message = O.some({
@@ -59,7 +59,7 @@ export const showSuccessMessageMutation =
 		} as const)
 	}
 
-export const showErrorMessageMutation =
+export const showErrorMessage =
 	(message: NETS.NonEmptyTrimmedString) =>
 	(state: State) => {
 		state.message = O.some({
@@ -68,8 +68,6 @@ export const showErrorMessageMutation =
 		} as const)
 	}
 
-export const resetMessageMutation = (
-	state: State,
-) => {
+export const resetMessage = (state: State) => {
 	state.message = O.none()
 }
