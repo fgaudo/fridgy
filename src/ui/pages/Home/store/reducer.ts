@@ -1,5 +1,3 @@
-import { produce } from 'solid-js/store'
-
 import {
 	Da,
 	HS,
@@ -7,7 +5,6 @@ import {
 	M,
 	NETS,
 	O,
-	flow,
 	pipe,
 } from '@/core/imports'
 
@@ -43,7 +40,7 @@ export const reducer: (
 			M.value(msg),
 			M.when({ _tag: 'RefreshList' }, () =>
 				Da.tuple(
-					flow(
+					HS.make(
 						refreshListFinishedMutation,
 						resetMessageMutation,
 					),
@@ -59,7 +56,7 @@ export const reducer: (
 				{ _tag: 'ClearSelectedProducts' },
 				() =>
 					Da.tuple(
-						produce((state: State) => {
+						HS.make((state: State) => {
 							state.selectedProducts = HS.empty()
 						}),
 						[],
@@ -67,10 +64,10 @@ export const reducer: (
 			),
 			M.when({ _tag: 'ToggleItem' }, ({ id }) =>
 				Da.tuple(
-					produce((state: State) => {
+					HS.make((state: State) => {
 						state.selectedProducts = HS.toggle(
 							id,
-						)(state.selectedProducts)
+						)(snapshot.selectedProducts)
 					}),
 					[],
 				),
@@ -79,8 +76,6 @@ export const reducer: (
 			M.when(
 				{ _tag: 'DeleteProductsAndRefresh' },
 				() => {
-					const mutation = (state: State) => state
-
 					const commands = Array.from(
 						(function* () {
 							if (
@@ -97,18 +92,18 @@ export const reducer: (
 						})(),
 					)
 
-					return Da.tuple(mutation, commands)
+					return Da.tuple(HS.empty(), commands)
 				},
 			),
 			M.when(
 				{ _tag: 'RefreshListSucceeded' },
 				({ total, models }) =>
 					Da.tuple(
-						flow(
-							produce((state: State) => {
+						HS.make(
+							(state: State) => {
 								state.isLoading = false
 								state.receivedError = false
-							}),
+							},
 							refreshListFinishedMutation,
 							refreshListSucceededMutation(
 								total,
@@ -123,7 +118,7 @@ export const reducer: (
 				{ _tag: 'RefreshListStarted' },
 				({ fiber }) =>
 					Da.tuple(
-						produce((state: State) => {
+						HS.make((state: State) => {
 							state.runningRefreshing =
 								O.some(fiber)
 						}),
@@ -134,10 +129,10 @@ export const reducer: (
 				{ _tag: 'RefreshListFailed' },
 				({ message }) =>
 					Da.tuple(
-						flow(
-							produce((state: State) => {
+						HS.make(
+							(state: State) => {
 								state.isLoading = false
-							}),
+							},
 							refreshListFailedMutation,
 							refreshListFinishedMutation,
 							showErrorMessageMutation(message),
@@ -149,7 +144,7 @@ export const reducer: (
 				{ _tag: 'DeleteProductsFailed' },
 				({ message }) =>
 					Da.tuple(
-						flow(
+						HS.make(
 							deletingFinishedMutation,
 							showErrorMessageMutation(message),
 						),
@@ -162,7 +157,7 @@ export const reducer: (
 				},
 				({ message }) =>
 					Da.tuple(
-						flow(
+						HS.make(
 							deletingSucceededMutation,
 							refreshListFailedMutation,
 							deletingFinishedMutation,
@@ -177,7 +172,7 @@ export const reducer: (
 				},
 				({ deletedItems, total, models }) =>
 					Da.tuple(
-						flow(
+						HS.make(
 							deletingSucceededMutation,
 							deletingFinishedMutation,
 							refreshListSucceededMutation(
@@ -200,7 +195,7 @@ export const reducer: (
 				},
 				({ fiber }) =>
 					Da.tuple(
-						produce((state: State) => {
+						HS.make((state: State) => {
 							state.runningDeleting =
 								O.some(fiber)
 						}),

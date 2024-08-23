@@ -1,11 +1,11 @@
-import { produce } from 'solid-js/store'
+import 'solid-js/store'
 
 import {
 	Da,
+	HS,
 	M,
 	NETS,
 	O,
-	flow,
 	pipe,
 } from '@/core/imports'
 
@@ -53,7 +53,7 @@ export const reducer: (
 				)
 
 				return Da.tuple(
-					resetMessageMutation,
+					HS.make(resetMessageMutation),
 					commands,
 				)
 			}),
@@ -61,7 +61,7 @@ export const reducer: (
 				{ _tag: 'AddProductStarted' },
 				({ fiber }) =>
 					Da.tuple(
-						produce((state: State) => {
+						HS.make((state: State) => {
 							state.runningAddProduct =
 								O.some(fiber)
 						}),
@@ -72,7 +72,7 @@ export const reducer: (
 				{ _tag: 'AddProductFailed' },
 				({ message }) =>
 					Da.tuple(
-						flow(
+						HS.make(
 							addProductFinishedMutation,
 							showErrorMessageMutation(message),
 						),
@@ -83,7 +83,7 @@ export const reducer: (
 				{ _tag: 'AddProductSucceeded' },
 				() =>
 					Da.tuple(
-						flow(
+						HS.make(
 							addProductFinishedMutation,
 							resetFields,
 							showSuccessMessageMutation(
@@ -101,11 +101,11 @@ export const reducer: (
 				},
 				field =>
 					Da.tuple(
-						flow(
-							produce((state: State) => {
+						HS.make(
+							(state: State) => {
 								state.formFields.name =
 									field.value
-							}),
+							},
 							validateFieldsMutation({
 								...snapshot.formFields,
 								name: field.value,
@@ -120,11 +120,11 @@ export const reducer: (
 				},
 				field =>
 					Da.tuple(
-						flow(
-							produce((state: State) => {
+						HS.make(
+							(state: State) => {
 								state.formFields.expirationDate =
 									field.value
-							}),
+							},
 							validateFieldsMutation({
 								...snapshot.formFields,
 								expirationDate: field.value,

@@ -1,3 +1,5 @@
+import { produce } from 'solid-js/store'
+
 import {
 	F,
 	Int,
@@ -58,7 +60,9 @@ export const createStore: (
 				runningAddProduct: O.none(),
 				isOk: false,
 			},
-			validateFieldsMutation(defaultFields()),
+			produce(
+				validateFieldsMutation(defaultFields()),
+			),
 		),
 		reducer(context),
 	)

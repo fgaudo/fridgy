@@ -9,6 +9,7 @@ import {
 	Eff,
 	F,
 	H,
+	HS,
 	Q,
 	pipe,
 } from '@/core/imports'
@@ -24,7 +25,7 @@ export type Reducer<STATE, MSG> = (
 	snapshot: STATE,
 	msg: MSG,
 ) => readonly [
-	mutation: (s: STATE) => STATE,
+	mutation: HS.HashSet<(state: STATE) => void>,
 	commands: readonly {
 		onStart: (id: F.Fiber<unknown>) => MSG
 		effect: Eff.Effect<MSG>
@@ -48,12 +49,18 @@ export const useQueueStore = <
 			Eff.gen(function* () {
 				for (;;) {
 					const msg = yield* Q.take(messages)
-					const [mutation, commands] = reducer(
+					const [mutations, commands] = reducer(
 						SS.unwrap(state),
 						msg,
 					)
 
-					setState(mutation)
+					setState(
+						SS.produce((s: STATE) => {
+							for (const mutation of mutations) {
+								mutation(s)
+							}
+						}),
+					)
 
 					yield* pipe(
 						commands,
