@@ -5,7 +5,6 @@ import {
 import * as SS from 'solid-js/store'
 
 import {
-	A,
 	Eff,
 	F,
 	H,
@@ -26,10 +25,10 @@ export type Reducer<STATE, MSG> = (
 	msg: MSG,
 ) => readonly [
 	mutation: HS.HashSet<(state: STATE) => void>,
-	commands: readonly {
+	commands: HS.HashSet<{
 		onStart: (id: F.Fiber<unknown>) => MSG
 		effect: Eff.Effect<MSG>
-	}[],
+	}>,
 ]
 
 export const useQueueStore = <
@@ -66,7 +65,7 @@ export const useQueueStore = <
 
 					yield* pipe(
 						commands,
-						A.map(({ effect, onStart }) =>
+						HS.map(({ effect, onStart }) =>
 							Eff.gen(function* () {
 								const fiber = yield* pipe(
 									effect,

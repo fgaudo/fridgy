@@ -35,7 +35,7 @@ export const reducer: (
 		pipe(
 			M.value(message),
 			M.when({ _tag: 'AddProduct' }, () => {
-				const commands = Array.from(
+				const commands = HS.fromIterable(
 					(function* () {
 						const name = NETS.fromString(
 							snapshot.formFields.name,
@@ -65,7 +65,7 @@ export const reducer: (
 							state.runningAddProduct =
 								O.some(fiber)
 						}),
-						[],
+						HS.empty(),
 					),
 			),
 			M.when(
@@ -76,7 +76,7 @@ export const reducer: (
 							addProductFinishedMutation,
 							showErrorMessageMutation(message),
 						),
-						[],
+						HS.empty(),
 					),
 			),
 			M.when(
@@ -92,7 +92,7 @@ export const reducer: (
 								),
 							),
 						),
-						[],
+						HS.empty(),
 					),
 			),
 			M.when(
@@ -111,7 +111,7 @@ export const reducer: (
 								name: field.value,
 							}),
 						),
-						[],
+						HS.empty(),
 					),
 			),
 			M.when(
@@ -130,7 +130,7 @@ export const reducer: (
 								expirationDate: field.value,
 							}),
 						),
-						[],
+						HS.empty(),
 					),
 			),
 

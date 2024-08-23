@@ -44,12 +44,12 @@ export const reducer: (
 						refreshListFinishedMutation,
 						resetMessageMutation,
 					),
-					[
+					HS.make(
 						refreshListTask(
 							snapshot.runningRefreshing,
 							app.productList,
 						),
-					],
+					),
 				),
 			),
 			M.when(
@@ -59,7 +59,7 @@ export const reducer: (
 						HS.make((state: State) => {
 							state.selectedProducts = HS.empty()
 						}),
-						[],
+						HS.empty(),
 					),
 			),
 			M.when({ _tag: 'ToggleItem' }, ({ id }) =>
@@ -69,14 +69,14 @@ export const reducer: (
 							id,
 						)(snapshot.selectedProducts)
 					}),
-					[],
+					HS.empty(),
 				),
 			),
 
 			M.when(
 				{ _tag: 'DeleteProductsAndRefresh' },
 				() => {
-					const commands = Array.from(
+					const commands = HS.fromIterable(
 						(function* () {
 							if (
 								HS.size(
@@ -111,7 +111,7 @@ export const reducer: (
 								models,
 							),
 						),
-						[],
+						HS.empty(),
 					),
 			),
 			M.when(
@@ -122,7 +122,7 @@ export const reducer: (
 							state.runningRefreshing =
 								O.some(fiber)
 						}),
-						[],
+						HS.empty(),
 					),
 			),
 			M.when(
@@ -137,7 +137,7 @@ export const reducer: (
 							refreshListFinishedMutation,
 							showErrorMessageMutation(message),
 						),
-						[],
+						HS.empty(),
 					),
 			),
 			M.when(
@@ -148,7 +148,7 @@ export const reducer: (
 							deletingFinishedMutation,
 							showErrorMessageMutation(message),
 						),
-						[],
+						HS.empty(),
 					),
 			),
 			M.when(
@@ -163,7 +163,7 @@ export const reducer: (
 							deletingFinishedMutation,
 							showErrorMessageMutation(message),
 						),
-						[],
+						HS.empty(),
 					),
 			),
 			M.when(
@@ -186,7 +186,7 @@ export const reducer: (
 								),
 							),
 						),
-						[],
+						HS.empty(),
 					),
 			),
 			M.when(
@@ -199,7 +199,7 @@ export const reducer: (
 							state.runningDeleting =
 								O.some(fiber)
 						}),
-						[],
+						HS.empty(),
 					),
 			),
 
