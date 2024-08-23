@@ -35,13 +35,11 @@ export const refreshListTask = (
 		if (E.isLeft(result)) {
 			yield* Eff.logError(result.left)
 
-			return yield* Eff.fail(
-				InternalMessage.RefreshListFailed({
-					message: NETS.unsafe_fromString(
-						'There was a problem loading the list',
-					),
-				}),
-			)
+			return InternalMessage.RefreshListFailed({
+				message: NETS.unsafe_fromString(
+					'There was a problem loading the list',
+				),
+			})
 		}
 
 		return InternalMessage.RefreshListSucceeded({
@@ -62,12 +60,12 @@ export const deleteTask = (
 		),
 	effect: Eff.gen(function* () {
 		if (HS.size(selectedProducts) <= 0) {
-			return yield* Eff.fail(
-				InternalMessage.DeleteProductsFailed({
+			return InternalMessage.DeleteProductsFailed(
+				{
 					message: NETS.unsafe_fromString(
 						'No products selected',
 					),
-				}),
+				},
 			)
 		}
 
@@ -80,12 +78,12 @@ export const deleteTask = (
 
 		if (E.isLeft(result)) {
 			yield* Eff.logError(result.left)
-			return yield* Eff.fail(
-				InternalMessage.DeleteProductsFailed({
+			return InternalMessage.DeleteProductsFailed(
+				{
 					message: NETS.unsafe_fromString(
 						'There was a problem deleting the products',
 					),
-				}),
+				},
 			)
 		}
 

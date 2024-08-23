@@ -27,7 +27,7 @@ export type Reducer<STATE, MSG> = (
 	mutation: (s: STATE) => STATE,
 	commands: readonly {
 		onStart: (id: F.Fiber<unknown>) => MSG
-		effect: Eff.Effect<MSG, MSG>
+		effect: Eff.Effect<MSG>
 	}[],
 ]
 
@@ -61,12 +61,9 @@ export const useQueueStore = <
 							Eff.gen(function* () {
 								const fiber = yield* pipe(
 									effect,
-									Eff.matchEffect({
-										onSuccess: msg =>
-											Q.offer(messages, msg),
-										onFailure: msg =>
-											Q.offer(messages, msg),
-									}),
+									Eff.flatMap(msg =>
+										Q.offer(messages, msg),
+									),
 									Eff.forkScoped,
 								)
 

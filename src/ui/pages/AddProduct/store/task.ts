@@ -32,13 +32,11 @@ export const addProductTask = (
 
 		if (E.isLeft(result)) {
 			Eff.logError(result.left)
-			return yield* Eff.fail(
-				InternalMessage.AddProductFailed({
-					message: NETS.unsafe_fromString(
-						'There was a problem adding the product',
-					),
-				}),
-			)
+			return InternalMessage.AddProductFailed({
+				message: NETS.unsafe_fromString(
+					'There was a problem adding the product',
+				),
+			})
 		}
 
 		return InternalMessage.AddProductSucceeded({
