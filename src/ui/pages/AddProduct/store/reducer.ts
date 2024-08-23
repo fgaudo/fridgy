@@ -1,8 +1,11 @@
+import { produce } from 'solid-js/store'
+
 import {
 	Da,
 	M,
 	NETS,
 	O,
+	flow,
 	pipe,
 } from '@/core/imports'
 
@@ -15,29 +18,15 @@ import {
 	InternalMessage,
 	type Message,
 } from './actions'
+import {
+	addProductFinishedMutation,
+	resetFields,
+	resetMessageMutation,
+	showErrorMessageMutation,
+	showSuccessMessageMutation,
+	validateFieldsMutation,
+} from './mutations'
 import { addProductTask } from './task'
-
-export const defaultFields = () => ({
-	name: '',
-	expirationDate: O.none(),
-})
-
-export const validateFields = (
-	state: State,
-): State => ({
-	...state,
-	isOk: NETS.fromString(
-		state.formFields.name,
-	).pipe(O.isSome),
-})
-
-export const resetFields = (
-	state: State,
-): State =>
-	validateFields({
-		...state,
-		formFields: defaultFields(),
-	})
 
 export const reducer: (
 	app: App,
@@ -46,36 +35,35 @@ export const reducer: (
 		pipe(
 			M.value(message),
 			M.when({ _tag: 'AddProduct' }, () => {
-				const name = NETS.fromString(
-					snapshot.formFields.name,
+				const commands = Array.from(
+					(function* () {
+						const name = NETS.fromString(
+							snapshot.formFields.name,
+						)
+						if (O.isSome(name)) {
+							yield addProductTask(
+								app.addProduct,
+								{
+									...snapshot.formFields,
+									name: name.value,
+								},
+							)
+						}
+					})(),
 				)
 
 				return Da.tuple(
-					(state: State) => state,
-					[
-						{
-							type: 'message',
-							message:
-								InternalMessage.ResetMessage(),
-						} as const,
-						...(O.isSome(name)
-							? [
-									addProductTask(app.addProduct, {
-										...snapshot.formFields,
-										name: name.value,
-									}),
-								]
-							: []),
-					],
+					resetMessageMutation,
+					commands,
 				)
 			}),
 			M.when(
 				{ _tag: 'AddProductStarted' },
 				({ fiber }) =>
 					Da.tuple(
-						(state: State) => ({
-							...state,
-							runningAddProduct: O.some(fiber),
+						produce((state: State) => {
+							state.runningAddProduct =
+								O.some(fiber)
 						}),
 						[],
 					),
@@ -84,46 +72,27 @@ export const reducer: (
 				{ _tag: 'AddProductFailed' },
 				({ message }) =>
 					Da.tuple(
-						(state: State) => ({
-							...state,
-							runningAddProduct: O.none(),
-						}),
-						[
-							{
-								type: 'message',
-								message:
-									InternalMessage.ShowErrorMessage(
-										{
-											message,
-										},
-									),
-							} as const,
-						],
+						flow(
+							addProductFinishedMutation,
+							showErrorMessageMutation(message),
+						),
+						[],
 					),
 			),
 			M.when(
 				{ _tag: 'AddProductSucceeded' },
 				() =>
 					Da.tuple(
-						(state: State) =>
-							resetFields({
-								...state,
-								runningAddProduct: O.none(),
-							}),
-						[
-							{
-								type: 'message',
-								message:
-									InternalMessage.ShowSuccessMessage(
-										{
-											message:
-												NETS.unsafe_fromString(
-													'Product added succesfully',
-												),
-										},
-									),
-							} as const,
-						],
+						flow(
+							addProductFinishedMutation,
+							resetFields,
+							showSuccessMessageMutation(
+								NETS.unsafe_fromString(
+									'Product added succesfully',
+								),
+							),
+						),
+						[],
 					),
 			),
 			M.when(
@@ -132,14 +101,16 @@ export const reducer: (
 				},
 				field =>
 					Da.tuple(
-						(state: State) =>
-							validateFields({
-								...state,
-								formFields: {
-									...state.formFields,
-									name: field.value,
-								},
+						flow(
+							produce((state: State) => {
+								state.formFields.name =
+									field.value
 							}),
+							validateFieldsMutation({
+								...snapshot.formFields,
+								name: field.value,
+							}),
+						),
 						[],
 					),
 			),
@@ -149,56 +120,18 @@ export const reducer: (
 				},
 				field =>
 					Da.tuple(
-						(state: State) =>
-							validateFields({
-								...state,
-								formFields: {
-									...state.formFields,
-									expirationDate: field.value,
-								},
+						flow(
+							produce((state: State) => {
+								state.formFields.expirationDate =
+									field.value
 							}),
+							validateFieldsMutation({
+								...snapshot.formFields,
+								expirationDate: field.value,
+							}),
+						),
 						[],
 					),
-			),
-			M.when(
-				{ _tag: 'ShowSuccessMessage' },
-				({ message }) =>
-					Da.tuple(
-						(state: State) =>
-							({
-								...state,
-								message: O.some({
-									type: 'success',
-									text: message,
-								} as const),
-							}) as const,
-						[],
-					),
-			),
-			M.when(
-				{ _tag: 'ShowErrorMessage' },
-				({ message }) =>
-					Da.tuple(
-						(state: State) =>
-							({
-								...state,
-								message: O.some({
-									type: 'error',
-									text: message,
-								} as const),
-							}) as const,
-						[],
-					),
-			),
-			M.when({ _tag: 'ResetMessage' }, () =>
-				Da.tuple(
-					(state: State) =>
-						({
-							...state,
-							message: O.none(),
-						}) as const,
-					[],
-				),
 			),
 
 			M.exhaustive,

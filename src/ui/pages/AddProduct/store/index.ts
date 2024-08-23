@@ -1,4 +1,10 @@
-import { F, Int, NETS, O } from '@/core/imports'
+import {
+	F,
+	Int,
+	NETS,
+	O,
+	pipe,
+} from '@/core/imports'
 
 import type { App } from '@/app'
 
@@ -10,9 +16,9 @@ import {
 } from './actions'
 import {
 	defaultFields,
-	reducer,
-	validateFields,
-} from './reducer'
+	validateFieldsMutation,
+} from './mutations'
+import { reducer } from './reducer'
 
 export interface State {
 	formFields: {
@@ -45,12 +51,15 @@ export const createStore: (
 		State,
 		Message | InternalMessage
 	>(
-		validateFields({
-			formFields: defaultFields(),
-			message: O.none(),
-			runningAddProduct: O.none(),
-			isOk: false,
-		}),
+		pipe(
+			{
+				formFields: defaultFields(),
+				message: O.none(),
+				runningAddProduct: O.none(),
+				isOk: false,
+			},
+			validateFieldsMutation(defaultFields()),
+		),
 		reducer(context),
 	)
 

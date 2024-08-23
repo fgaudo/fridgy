@@ -4,7 +4,14 @@ import {
 } from 'solid-js'
 import * as SS from 'solid-js/store'
 
-import { Eff, F, Q, pipe } from '@/core/imports'
+import {
+	A,
+	Eff,
+	F,
+	H,
+	Q,
+	pipe,
+} from '@/core/imports'
 
 export function withDefault<T>(
 	accessor: Accessor<T | undefined>,
@@ -18,17 +25,10 @@ export type Reducer<STATE, MSG> = (
 	msg: MSG,
 ) => readonly [
 	mutation: (s: STATE) => STATE,
-	commands: readonly (
-		| {
-				type: 'task'
-				onStart?: (id: F.Fiber<unknown>) => MSG
-				effect: Eff.Effect<MSG, MSG>
-		  }
-		| {
-				type: 'message'
-				message: MSG
-		  }
-	)[],
+	commands: readonly {
+		onStart: (id: F.Fiber<unknown>) => MSG
+		effect: Eff.Effect<MSG, MSG>
+	}[],
 ]
 
 export const useQueueStore = <
@@ -43,60 +43,57 @@ export const useQueueStore = <
 
 	const messages = Eff.runSync(Q.unbounded<MSG>())
 
-	Eff.runFork(
-		Eff.gen(function* () {
-			for (;;) {
-				const msg = yield* Q.take(messages)
-				const [mutation, commands] = reducer(
-					SS.unwrap(state),
-					msg,
-				)
-
-				setState(mutation)
-
-				for (const cmd of commands) {
-					if (cmd.type === 'message') {
-						const { message } = cmd
-
-						yield* Q.offer(messages, message)
-
-						continue
-					}
-
-					const { onStart, effect } = cmd
-
-					const fiber = yield* pipe(
-						effect,
-						Eff.matchEffect({
-							onSuccess: msg =>
-								Q.offer(messages, msg),
-							onFailure: msg =>
-								Q.offer(messages, msg),
-						}),
-						Eff.fork,
+	H.runForkWithLogs(
+		pipe(
+			Eff.gen(function* () {
+				for (;;) {
+					const msg = yield* Q.take(messages)
+					const [mutation, commands] = reducer(
+						SS.unwrap(state),
+						msg,
 					)
 
-					if (onStart) {
-						yield* Q.offer(
-							messages,
-							onStart(fiber),
-						)
-					}
-				}
-			}
-		}),
+					setState(mutation)
 
-		{ immediate: false },
+					yield* pipe(
+						commands,
+						A.map(({ effect, onStart }) =>
+							Eff.gen(function* () {
+								const fiber = yield* pipe(
+									effect,
+									Eff.matchEffect({
+										onSuccess: msg =>
+											Q.offer(messages, msg),
+										onFailure: msg =>
+											Q.offer(messages, msg),
+									}),
+									Eff.forkScoped,
+								)
+
+								yield* Q.offer(
+									messages,
+									onStart(fiber),
+								)
+							}),
+						),
+						Eff.all,
+					)
+				}
+			}),
+			Eff.scoped,
+		),
 	)
 
 	onCleanup(() => {
-		Eff.runFork(Q.shutdown(messages))
+		H.runForkWithLogs(Q.shutdown(messages))
 	})
 
 	return [
 		state,
 		(command: MSG) => {
-			Eff.runFork(Q.offer(messages, command))
+			H.runForkWithLogs(
+				Q.offer(messages, command),
+			)
 		},
 	] as const
 }
@@ -104,9 +101,9 @@ export const useQueueStore = <
 export const useFiber = (
 	effect: Eff.Effect<unknown>,
 ) => {
-	const fiber = Eff.runFork(effect)
+	const fiber = H.runForkWithLogs(effect)
 
 	onCleanup(() => {
-		Eff.runFork(F.interrupt(fiber))
+		H.runForkWithLogs(F.interrupt(fiber))
 	})
 }

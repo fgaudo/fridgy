@@ -31,3 +31,15 @@ export const tryPromise = <A>(
 			},
 		)
 	})
+
+export const runForkWithLogs = (
+	effect: Eff.Effect<unknown, unknown>,
+) =>
+	Eff.runFork(
+		Eff.unsandbox(
+			Eff.catchTags(Eff.sandbox(effect), {
+				Die: defect =>
+					Eff.logError(defect.toString()),
+			}),
+		),
+	)

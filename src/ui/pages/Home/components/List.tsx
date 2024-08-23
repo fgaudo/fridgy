@@ -7,7 +7,7 @@ import {
 } from 'solid-js'
 import { Portal } from 'solid-js/web'
 
-import { Eff, Int, O } from '@/core/imports'
+import { Eff, H, Int, O } from '@/core/imports'
 
 import { useUiStateContext } from '../context'
 import { Message } from '../store/actions'
@@ -72,7 +72,7 @@ export const List: Component = () => {
 						{(model, i) => {
 							createEffect(
 								on(i, i => {
-									Eff.runFork(
+									H.runForkWithLogs(
 										Eff.logDebug(
 											`Rendered item on position ${i.toString(10)}`,
 										).pipe(

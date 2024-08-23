@@ -24,13 +24,6 @@ export type InternalMessage = Da.TaggedEnum<{
 		name: NETS.NonEmptyTrimmedString
 	}
 	AddProductStarted: { fiber: F.Fiber<unknown> }
-	ShowSuccessMessage: {
-		message: NETS.NonEmptyTrimmedString
-	}
-	ShowErrorMessage: {
-		message: NETS.NonEmptyTrimmedString
-	}
-	ResetMessage: object
 }>
 
 export const Message = Da.taggedEnum<Message>()

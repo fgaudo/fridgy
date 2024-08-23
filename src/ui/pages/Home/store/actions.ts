@@ -18,7 +18,7 @@ export type InternalMessage = Da.TaggedEnum<{
 		total: Int.Integer
 		models: ProductModel[]
 	}
-	DeleteProductsAndRefreshFailed: {
+	DeleteProductsSucceededAndRefreshFailed: {
 		message: NETS.NonEmptyTrimmedString
 	}
 	DeleteProductsAndRefreshStarted: {
@@ -32,13 +32,6 @@ export type InternalMessage = Da.TaggedEnum<{
 	RefreshListFailed: {
 		message: NETS.NonEmptyTrimmedString
 	}
-	ShowSuccessMessage: {
-		message: NETS.NonEmptyTrimmedString
-	}
-	ShowErrorMessage: {
-		message: NETS.NonEmptyTrimmedString
-	}
-	ResetMessage: object
 }>
 
 export const Message = Da.taggedEnum<Message>()

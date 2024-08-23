@@ -5,7 +5,13 @@ import {
 	on,
 } from 'solid-js'
 
-import { Eff, F, NETS, O } from '@/core/imports'
+import {
+	Eff,
+	F,
+	H,
+	NETS,
+	O,
+} from '@/core/imports'
 
 export const Snackbar: Component<{
 	class?: string | undefined
@@ -18,7 +24,7 @@ export const Snackbar: Component<{
 	const [toast, setToast] = createSignal<
 		O.Option<
 			readonly [
-				F.Fiber<unknown>,
+				F.Fiber<unknown, unknown>,
 				(
 					| readonly [
 							'error',
@@ -36,7 +42,9 @@ export const Snackbar: Component<{
 	const interruptToastRemoval = () => {
 		const toastOpt = toast()
 		if (O.isSome(toastOpt)) {
-			Eff.runFork(F.interrupt(toastOpt.value[0]))
+			H.runForkWithLogs(
+				F.interrupt(toastOpt.value[0]),
+			)
 		}
 	}
 
@@ -51,7 +59,7 @@ export const Snackbar: Component<{
 					return
 				}
 
-				const fiber = Eff.runFork(
+				const fiber = H.runForkWithLogs(
 					Eff.gen(function* () {
 						yield* Eff.sleep(3000)
 						setToast(O.none())

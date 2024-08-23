@@ -21,7 +21,7 @@ import {
 	render as solidRender,
 } from 'solid-js/web'
 
-import { Eff, F } from '@/core/imports'
+import { Eff, F, H } from '@/core/imports'
 
 import type { App } from '@/app'
 
@@ -109,15 +109,14 @@ const LoadingScreen: Component<{
 			() => props.resourcesAreLoaded(),
 			loaded => {
 				if (loaded) {
-					const fiber = Eff.runFork(
+					const fiber = H.runForkWithLogs(
 						Eff.gen(function* () {
 							yield* Eff.sleep(DEFAULT_FADE_MS)
 							fade(true)
 						}),
 					)
-
 					onCleanup(() => {
-						Eff.runFork(F.interrupt(fiber))
+						H.runForkWithLogs(F.interrupt(fiber))
 					})
 				}
 			},

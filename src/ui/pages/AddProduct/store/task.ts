@@ -19,32 +19,30 @@ export const addProductTask = (
 		name: NETS.NonEmptyTrimmedString
 		expirationDate: O.Option<Int.Integer>
 	},
-) =>
-	({
-		type: 'task',
-		onStart: (fiber: F.Fiber<unknown>) =>
-			InternalMessage.AddProductStarted({
-				fiber,
-			}),
-		effect: Eff.gen(function* () {
-			const [result] = yield* Eff.all([
-				addProduct(formFields).pipe(Eff.either),
-				Eff.sleep(MINIMUM_LAG_MS),
-			])
-
-			if (E.isLeft(result)) {
-				Eff.logError(result.left)
-				return yield* Eff.fail(
-					InternalMessage.AddProductFailed({
-						message: NETS.unsafe_fromString(
-							'There was a problem adding the product',
-						),
-					}),
-				)
-			}
-
-			return InternalMessage.AddProductSucceeded({
-				name: formFields.name,
-			})
+) => ({
+	onStart: (fiber: F.Fiber<unknown>) =>
+		InternalMessage.AddProductStarted({
+			fiber,
 		}),
-	}) as const
+	effect: Eff.gen(function* () {
+		const [result] = yield* Eff.all([
+			addProduct(formFields).pipe(Eff.either),
+			Eff.sleep(MINIMUM_LAG_MS),
+		])
+
+		if (E.isLeft(result)) {
+			Eff.logError(result.left)
+			return yield* Eff.fail(
+				InternalMessage.AddProductFailed({
+					message: NETS.unsafe_fromString(
+						'There was a problem adding the product',
+					),
+				}),
+			)
+		}
+
+		return InternalMessage.AddProductSucceeded({
+			name: formFields.name,
+		})
+	}),
+})
