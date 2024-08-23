@@ -54,13 +54,15 @@ export const useQueueStore = <
 						msg,
 					)
 
-					setState(
-						SS.produce((s: STATE) => {
-							for (const mutation of mutations) {
-								mutation(s)
-							}
-						}),
-					)
+					if (HS.size(mutations) > 0) {
+						setState(
+							SS.produce(state => {
+								for (const mutation of mutations) {
+									mutation(state)
+								}
+							}),
+						)
+					}
 
 					yield* pipe(
 						commands,
