@@ -26,7 +26,7 @@ export type Reducer<STATE, MSG> = (
 ) => readonly [
 	mutation: HS.HashSet<(state: STATE) => void>,
 	commands: HS.HashSet<{
-		onStart: (id: F.Fiber<unknown>) => MSG
+		onStart?: (id: F.Fiber<unknown>) => MSG
 		effect: Eff.Effect<MSG>
 	}>,
 ]
@@ -75,10 +75,12 @@ export const useQueueStore = <
 									Eff.forkScoped,
 								)
 
-								yield* Q.offer(
-									messages,
-									onStart(fiber),
-								)
+								if (onStart) {
+									yield* Q.offer(
+										messages,
+										onStart(fiber),
+									)
+								}
 							}),
 						),
 						Eff.all,
