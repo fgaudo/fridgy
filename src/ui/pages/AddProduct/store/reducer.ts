@@ -85,7 +85,7 @@ export const reducer: (
 					Da.tuple(
 						HS.make(
 							Mu.addProductFinished,
-							Mu.resetFields,
+							Mu.resetAndValidateFields,
 							Mu.showSuccessMessage(
 								NETS.unsafe_fromString(
 									'Product added succesfully',

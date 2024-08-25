@@ -46,7 +46,9 @@ export const defaultFields: () => State['formFields'] =
 		expirationDate: O.none(),
 	})
 
-export const resetFields = (state: State) => {
+export const resetAndValidateFields = (
+	state: State,
+) => {
 	state.formFields = defaultFields()
 
 	validateFields(defaultFields())(state)
