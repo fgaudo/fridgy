@@ -42,13 +42,13 @@ The arichitecture is influenced by the [DDD design pattern](https://en.wikipedia
 `Domain` and `App` represent the heart of the application. `Data` and `UI` are just implementations of that heart.  
 As a general rule of thumb, you should be able to rewrite the entire app by just looking at the `Domain` and `App` layers.
 
-Besides those layers, there are a couple more rules that the project follows, in order to mantain the code organized.
-
 The `src/core` directory contains mostly utilities and helpers which are used all over the project.  
 You could call it the `Core` layer, and it should not depend on this project at all.  
 In fact, you could possibly put `Core` in another library and make this project (and others) depend on it.
 
-### Philosophies and rules
+Besides those layers, there are a couple more rules that the project follows, in order to mantain the code organized.
+
+### Pure functional programming
 
 The project strives to have a clean code approach when solving problems. This means that the code should be as clean as possible following a [Purely functional programming](https://en.wikipedia.org/wiki/Purely_functional_programming) style, akin to Haskell.  
 This is achieved through the use of [Effect](https://effect.website/), and other libraries.
@@ -56,10 +56,11 @@ This is achieved through the use of [Effect](https://effect.website/), and other
 This rule is especially important for the `Domain` and `App` layers, where the core use-cases of the app are defined.  
 `Data` and `UI` can be more difficult to adapt, since they depend on external frameworks, architectures and apis. But an attempt should always be made.
 
+### "Making impossible states impossible"
+
 Another important rule is to avoid passing objects that may contain invalid data to functions that should not be responsible for validating such data.  
 For example, if you need a type to represent a post description, you wouldn't want to use a simple `string`.  
-A `string` could be composed entirely of blank characters or start and end with unnecessary spaces — none of which make sense for a description.
-
+A `string` could be composed entirely of blank characters or start and end with unnecessary spaces — none of which make sense for a description.  
 To ensure consistency, each function receiving that string would then need to validate its correctness, increasing the number of test cases.
 
 Instead, a more appropriate type would be `NonEmptyTrimmedString`, which makes sure that:
