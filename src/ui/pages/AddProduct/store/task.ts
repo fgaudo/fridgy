@@ -10,8 +10,12 @@ import {
 import type { App } from '@/app/index'
 
 import { MINIMUM_LAG_MS } from '@/ui/core/constants'
+import type { Task } from '@/ui/core/solid-js'
 
-import { InternalMessage } from './actions'
+import {
+	InternalMessage,
+	Message,
+} from './actions'
 
 export const addProduct = (
 	addProduct: App['addProduct'],
@@ -19,7 +23,7 @@ export const addProduct = (
 		name: NETS.NonEmptyTrimmedString
 		expirationDate: O.Option<Int.Integer>
 	},
-) => ({
+): Task<Message | InternalMessage> => ({
 	onStart: (fiber: F.Fiber<unknown>) =>
 		InternalMessage.AddProductStarted({
 			fiber,

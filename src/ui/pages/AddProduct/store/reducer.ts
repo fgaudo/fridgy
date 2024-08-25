@@ -11,7 +11,10 @@ import {
 
 import type { App } from '@/app'
 
-import type { Reducer } from '@/ui/core/solid-js'
+import type {
+	Reducer,
+	Task,
+} from '@/ui/core/solid-js'
 
 import type { State } from '.'
 import {
@@ -28,22 +31,26 @@ export const reducer: (
 		pipe(
 			M.value(message),
 			M.when({ _tag: 'AddProduct' }, () => {
-				const commands = HS.fromIterable(
-					(function* () {
-						const name = NETS.fromString(
-							snapshot.formFields.name,
-						)
-						if (O.isSome(name)) {
-							yield Ta.addProduct(
-								app.addProduct,
-								{
-									...snapshot.formFields,
-									name: name.value,
-								},
-							)
-						}
-					})(),
+				let commands =
+					HS.empty<
+						Task<InternalMessage | Message>
+					>()
+
+				const name = NETS.fromString(
+					snapshot.formFields.name,
 				)
+
+				if (O.isSome(name)) {
+					commands = pipe(
+						commands,
+						HS.add(
+							Ta.addProduct(app.addProduct, {
+								...snapshot.formFields,
+								name: name.value,
+							}),
+						),
+					)
+				}
 
 				return Da.tuple(
 					HS.make(Mu.resetMessage),

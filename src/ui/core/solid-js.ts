@@ -20,15 +20,17 @@ export function withDefault<T>(
 	return () => accessor() ?? init
 }
 
+export interface Task<MSG> {
+	onStart?: (id: F.Fiber<unknown>) => MSG
+	effect: Eff.Effect<MSG>
+}
+
 export type Reducer<STATE, MSG> = (
 	snapshot: STATE,
 	msg: MSG,
 ) => readonly [
 	mutation: HS.HashSet<(state: STATE) => void>,
-	commands: HS.HashSet<{
-		onStart?: (id: F.Fiber<unknown>) => MSG
-		effect: Eff.Effect<MSG>
-	}>,
+	commands: HS.HashSet<Task<MSG>>,
 ]
 
 export const useQueueStore = <

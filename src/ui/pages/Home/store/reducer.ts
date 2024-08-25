@@ -10,7 +10,10 @@ import {
 
 import type { App } from '@/app/index'
 
-import { type Reducer } from '@/ui/core/solid-js'
+import {
+	type Reducer,
+	type Task,
+} from '@/ui/core/solid-js'
 
 import type { State } from '.'
 import {
@@ -64,21 +67,25 @@ export const reducer: (
 			M.when(
 				{ _tag: 'DeleteProductsAndRefresh' },
 				() => {
-					const commands = HS.fromIterable(
-						(function* () {
-							if (
-								HS.size(
-									snapshot.selectedProducts,
-								) > 0
-							) {
-								yield Ta.deleteByIdsAndRefresh(
+					let commands =
+						HS.empty<
+							Task<Message | InternalMessage>
+						>()
+
+					if (
+						HS.size(snapshot.selectedProducts) > 0
+					) {
+						commands = pipe(
+							commands,
+							HS.add(
+								Ta.deleteByIdsAndRefresh(
 									snapshot.selectedProducts,
 									app.deleteProductsByIds,
 									app.productList,
-								)
-							}
-						})(),
-					)
+								),
+							),
+						)
+					}
 
 					return Da.tuple(HS.empty(), commands)
 				},

@@ -11,8 +11,12 @@ import {
 import type { App } from '@/app/index'
 
 import { MINIMUM_LAG_MS } from '@/ui/core/constants'
+import type { Task } from '@/ui/core/solid-js'
 
-import { InternalMessage } from './actions'
+import {
+	InternalMessage,
+	Message,
+} from './actions'
 
 export const refreshList = (
 	runningRefreshing: O.Option<F.Fiber<unknown>>,
@@ -53,7 +57,7 @@ export const deleteByIdsAndRefresh = (
 	selectedProducts: HS.HashSet<string>,
 	deleteProducts: App['deleteProductsByIds'],
 	refreshList: App['productList'],
-) => ({
+): Task<Message | InternalMessage> => ({
 	onStart: (fiber: F.Fiber<unknown>) =>
 		InternalMessage.DeleteProductsAndRefreshStarted(
 			{ fiber },
