@@ -56,6 +56,26 @@ This is achieved through the use of [Effect](https://effect.website/), and other
 This rule is especially important for the `Domain` and `App` layers, where the core use-cases of the app are defined.  
 `Data` and `UI` can be more difficult to adapt, since they depend on external frameworks, architectures and apis. But an attempt should always be made.
 
+Another important rule is to avoid passing objects that may contain invalid data to functions that should not be responsible for validating such data.  
+For example, if you need a type to represent a post description, you wouldn't want to use a simple `string`.  
+A `string` could be composed entirely of blank characters or start and end with unnecessary spaces — none of which make sense for a description.
+
+To ensure consistency, each function receiving that string would then need to validate its correctness, increasing the number of test cases.
+
+Instead, a more appropriate type would be `NonEmptyTrimmedString`, which makes sure that:
+
+1. The string is not empty
+2. It's not solely composed of blank characters
+3. It's not starting or ending with blank characters (trimmed)
+
+You would then validate and convert a normal string to a `NonEmptyTrimmedString` as soon as possible in the code, in order to avoid precondition checks all around.  
+If we then want to allow empty descriptions, we could wrap it in an `Option` type, resulting in `Option<NonEmptyTrimmedString>`.
+
+Another example would be an `age` field of a `Person` type, where `non-positive` or `decimal` numbers shouldn't be allowed.  
+Instead, creating a `Positive` number type would be more appropriate.
+
+You can view a very interesting [video](https://www.youtube.com/watch?v=IcgmSRJHu_8) on a similar subject. Even though it's explained in [Elm](https://elm-lang.org/), the core idea should be clear.
+
 ## Android
 
 Android specific functionalities are supported through the use of [Capacitor](https://capacitorjs.com/) and a custom-made plugin for creating an sqlite database to hold the data.
