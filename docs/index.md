@@ -26,10 +26,10 @@ The layers depend on each other following this simple diagram.
 
 ```mermaid
 flowchart TD
-    A[App Layer]
-    DA[Data Layer]
-    U[UI Layer]
-    DO[Domain Layer]
+    A[App]
+    DA[Data]
+    U[UI]
+    DO[Domain]
 
     A ---> DO
     DA -.-> A
