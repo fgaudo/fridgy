@@ -48,7 +48,7 @@ The `src/core` directory contains mostly utilities and helpers which are used al
 You could call it the `Core` layer, and it should not depend on this project at all.  
 In fact, you could possibly put `Core` in another library and make this project (and others) depend on it.
 
-### Philosofies and rules
+### Philosophies and rules
 
 The project strives to have a clean code approach when solving problems. This means that the code should be as clean as possible following a [Purely functional programming](https://en.wikipedia.org/wiki/Purely_functional_programming) style, akin to Haskell.  
 This is achieved through the use of [Effect](https://effect.website/), and other libraries.
