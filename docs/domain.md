@@ -9,14 +9,14 @@ nav_order: 2
 
 The domain layer is the one responsible of holding **all** business rules.
 
-If you need a place to put logic that answers to questions like "_What fields does a product have?_" or "_When can a banking account be considered as closed?_" or even "_Must the name be unique among all other entities?_", then this is the one.
+If you need a place to put logic that answers to questions like "_What fields does a product have?_" or "_When can a banking account be considered closed?_" or even "_Must the name be unique among all other entities?_", then this is the one.
 
 The domain layer solely provides functions and objects to the application layer and can only depend on external libraries or on the core layer.  
 In the domain layer it's **forbidden** to handle or return _effects_. Every function inside of it **must** be pure and deterministic.
 
 The domain objects returned by the domain layer must be _opaque values_, meaning they cannot be directly accessed by other layers. In order to get the data, special getters functions must be used on them.
 
-For example if we create a `Person` object with name and age, and we need to know if the person is old enough to watch some content, then the domain layer should have an `isAllowedToWatch` function which checks the given age and returns either true or false.  
+For example if we create a `Person` object with `name` and `age`, and we need to know if the person is old enough to watch some content, then the domain layer should have an `isAllowedToWatch` function which checks the given age and returns either `true` or `false`.  
 The application layer should be completely ignorant about these details and should always ask the domain layer for this information.
 
 It's also important to note that the domain layer is not concerned with where the data is stored or whether it is provided with real or mock data.  
