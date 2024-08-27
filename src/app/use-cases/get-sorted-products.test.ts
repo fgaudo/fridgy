@@ -2,7 +2,7 @@
 import { fc, test } from '@fast-check/vitest'
 import { describe, expect } from 'vitest'
 
-import { Eff, Int } from '@/core/imports'
+import { Eff, NNInt } from '@/core/imports'
 import * as H from '@/core/test-helpers'
 import { testRuntime } from '@/core/utils'
 
@@ -64,7 +64,7 @@ describe('Get sorted products', () => {
 				ProductsService,
 				Eff.gen(function* () {
 					return yield* Eff.succeed({
-						total: Int.unsafe_fromNumber(
+						total: NNInt.unsafe_fromNumber(
 							products.length,
 						),
 						products,
@@ -80,7 +80,7 @@ describe('Get sorted products', () => {
 			H.assertExitIsSuccess(exit)
 
 			expect(exit.value).toStrictEqual({
-				total: Int.unsafe_fromNumber(
+				total: NNInt.unsafe_fromNumber(
 					products.length,
 				),
 				models: products,

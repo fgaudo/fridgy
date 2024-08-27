@@ -1,4 +1,10 @@
-import { B, E, Eff, O } from '@/core/imports'
+import {
+	B,
+	E,
+	Eff,
+	NNInt,
+	O,
+} from '@/core/imports'
 import * as Int from '@/core/integer'
 import type { NonEmptyTrimmedString } from '@/core/non-empty-trimmed-string'
 
@@ -22,7 +28,7 @@ export type ProductModel =
 
 export type ProductList = Eff.Effect<
 	{
-		total: Int.Integer
+		total: NNInt.NonNegativeInteger
 		models: ProductModel[]
 	},
 	ProductListError,
@@ -58,7 +64,7 @@ export const useCase: ProductList = Eff.gen(
 			result.right
 
 		yield* Eff.log(
-			`Received ${rawProducts.length.toString(10)} products out of ${Int.toNumber(total).toString(10)}`,
+			`Received ${rawProducts.length.toString(10)} products out of ${NNInt.toNumber(total).toString(10)}`,
 		)
 
 		const models: ProductModel[] = yield* Eff.all(

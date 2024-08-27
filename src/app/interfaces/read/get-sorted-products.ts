@@ -5,6 +5,7 @@ import {
 	Eff,
 	Int,
 	NETS,
+	NNInt,
 	O,
 } from '@/core/imports'
 
@@ -28,7 +29,7 @@ export class ProductsService extends Context.Tag(
 	ProductsService,
 	Eff.Effect<
 		{
-			total: Int.Integer
+			total: NNInt.NonNegativeInteger
 			products: ProductDTO[]
 		},
 		ProductsServiceError

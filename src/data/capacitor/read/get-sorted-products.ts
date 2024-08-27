@@ -9,6 +9,7 @@ import {
 	Eff,
 	Int,
 	NETS,
+	NNInt,
 	O,
 	Sc,
 } from '@/core/imports'
@@ -52,7 +53,7 @@ const ProductsListSchema = Sc.Struct({
 
 export const query: Eff.Effect<
 	{
-		total: Int.Integer
+		total: NNInt.NonNegativeInteger
 		products: ProductDTO[]
 	},
 	ProductsServiceError,
@@ -92,7 +93,7 @@ export const query: Eff.Effect<
 		)
 	}
 
-	const totalResult = Int.fromNumber(
+	const totalResult = NNInt.fromNumber(
 		decodeResult.right.total,
 	)
 

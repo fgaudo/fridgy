@@ -2,8 +2,8 @@ import { reconcile } from 'solid-js/store'
 
 import {
 	HS,
-	type Int,
 	NETS,
+	NNInt,
 	O,
 } from '@/core/imports'
 
@@ -13,7 +13,7 @@ import type { State } from '.'
 
 export const refreshListSucceeded =
 	(
-		total: Int.Integer,
+		total: NNInt.NonNegativeInteger,
 		before: ProductModel[],
 		after: ProductModel[],
 	) =>

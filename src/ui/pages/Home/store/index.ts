@@ -3,8 +3,8 @@ import { onMount } from 'solid-js'
 import {
 	F,
 	HS,
-	Int,
 	NETS,
+	NNInt,
 	O,
 } from '@/core/imports'
 
@@ -21,7 +21,7 @@ import {
 import { reducer } from './reducer'
 
 export interface State {
-	total: Int.Integer
+	total: NNInt.NonNegativeInteger
 	message: O.Option<
 		| {
 				type: 'error'
@@ -53,7 +53,7 @@ export const createStore: (
 		Message | InternalMessage
 	>(
 		{
-			total: Int.unsafe_fromNumber(0),
+			total: NNInt.unsafe_fromNumber(0),
 			message: O.none(),
 			products: [],
 			receivedError: false,

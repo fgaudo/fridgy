@@ -1,7 +1,13 @@
 import { fc, test } from '@fast-check/vitest'
 import { describe, expect } from 'vitest'
 
-import { Eff, Int, NETS, O } from '@/core/imports'
+import {
+	Eff,
+	Int,
+	NETS,
+	NNInt,
+	O,
+} from '@/core/imports'
 import * as H from '@/core/test-helpers'
 import { testRuntime } from '@/core/utils'
 
@@ -84,7 +90,7 @@ describe('Get products', () => {
 			H.assertExitIsSuccess(exit)
 
 			expect(exit.value).toStrictEqual({
-				total: Int.unsafe_fromNumber(
+				total: NNInt.unsafe_fromNumber(
 					products.length,
 				),
 				products: products.map(toModel),

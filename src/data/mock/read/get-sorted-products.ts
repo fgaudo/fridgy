@@ -4,6 +4,7 @@ import {
 	Eff,
 	Int,
 	NETS,
+	NNInt,
 	O,
 	Ord,
 	pipe,
@@ -55,7 +56,7 @@ const ord = Ord.make(
 
 export const query: Eff.Effect<
 	{
-		total: Int.Integer
+		total: NNInt.NonNegativeInteger
 		products: ProductDTO[]
 	},
 	ProductsServiceError
@@ -75,7 +76,7 @@ export const query: Eff.Effect<
 	}))
 
 	return {
-		total: Int.unsafe_fromNumber(total),
+		total: NNInt.unsafe_fromNumber(total),
 		products: A.sort(ord)(products),
 	}
 })

@@ -3,8 +3,8 @@ import {
 	Eff,
 	F,
 	HS,
-	Int,
 	NETS,
+	NNInt,
 	O,
 } from '@/core/imports'
 
@@ -108,7 +108,7 @@ export const deleteByIdsAndRefresh = (
 
 		return InternalMessage.DeleteProductsAndRefreshSucceeded(
 			{
-				deletedItems: Int.unsafe_fromNumber(
+				deletedItems: NNInt.unsafe_fromNumber(
 					HS.size(selectedProducts),
 				),
 				total: result2.right.total,
