@@ -73,7 +73,7 @@ You would then validate and convert a normal string to a `NonEmptyTrimmedString`
 If we then want to allow empty descriptions, we could wrap it in an `Option` type, resulting in `Option<NonEmptyTrimmedString>`.
 
 Another example would be an `age` field of a `Person` type, where `non-positive` or `decimal` numbers shouldn't be allowed.  
-Instead, creating a `Positive` number type would be more appropriate.
+Instead, creating a `PositiveInteger` number type would be more appropriate.
 
 You can view a very interesting [video](https://www.youtube.com/watch?v=IcgmSRJHu_8) on a similar subject. Even though it's explained in [Elm](https://elm-lang.org/), the core idea should be clear.
 
