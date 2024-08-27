@@ -1,6 +1,6 @@
 import { type Component } from 'solid-js'
 
-import { Int } from '@/core/imports'
+import { NNInt } from '@/core/imports'
 
 import imgUrl from '@/ui/assets/arrow.svg'
 
@@ -17,7 +17,7 @@ export const Fab: Component = () => {
 			<div
 				classList={{
 					'opacity-0 pointer-events-none':
-						Int.toNumber(state.total) > 0 ||
+						NNInt.toNumber(state.total) > 0 ||
 						state.isLoading ||
 						state.receivedError,
 				}}

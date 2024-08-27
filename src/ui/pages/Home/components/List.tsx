@@ -7,7 +7,7 @@ import {
 } from 'solid-js'
 import { Portal } from 'solid-js/web'
 
-import { Eff, H, Int, O } from '@/core/imports'
+import { Eff, H, NNInt, O } from '@/core/imports'
 
 import { useUiStateContext } from '../context'
 import { Message } from '../store/actions'
@@ -18,13 +18,12 @@ export const List: Component = () => {
 		store: [state, dispatch],
 	} = useUiStateContext()!
 
-	const totalItems = createMemo<Int.Integer>(
-		prev => {
-			return Int.toNumber(state.total) > 0
+	const totalItems =
+		createMemo<NNInt.NonNegativeInteger>(prev => {
+			return NNInt.toNumber(state.total) > 0
 				? state.total
-				: (prev ?? Int.unsafe_fromNumber(0))
-		},
-	)
+				: (prev ?? NNInt.unsafe_fromNumber(0))
+		})
 
 	return (
 		<>
@@ -49,11 +48,11 @@ export const List: Component = () => {
 					class="fixed top-[64px] z-[999] w-full bg-background px-[14px] pb-[8px] pt-[10px] text-xs transition-all"
 					classList={{
 						'opacity-0 pointer-events-none':
-							Int.toNumber(state.total) <= 0 ||
+							NNInt.toNumber(state.total) <= 0 ||
 							state.isLoading ||
 							state.receivedError,
 					}}>
-					{Int.toNumber(totalItems())} items
+					{NNInt.toNumber(totalItems())} items
 				</p>
 				<mdui-list
 					class="relative mt-[34px]"
@@ -63,9 +62,9 @@ export const List: Component = () => {
 					}}
 					style={{
 						height:
-							Int.toNumber(state.total) > 0 &&
+							NNInt.toNumber(state.total) > 0 &&
 							!state.receivedError
-								? `${((Int.toNumber(state.total) - 1) * 60 + 185).toString(10)}px`
+								? `${((NNInt.toNumber(state.total) - 1) * 60 + 185).toString(10)}px`
 								: 'auto',
 					}}>
 					<For each={state.products}>

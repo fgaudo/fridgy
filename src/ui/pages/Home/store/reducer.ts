@@ -1,9 +1,9 @@
 import {
 	Da,
 	HS,
-	Int,
 	M,
 	NETS,
+	NNInt,
 	O,
 	pipe,
 } from '@/core/imports'
@@ -177,7 +177,7 @@ export const reducer: (
 							),
 							Mu.showSuccessMessage(
 								NETS.unsafe_fromString(
-									`${Int.toNumber(deletedItems).toString(10)} products deleted`,
+									`${NNInt.toNumber(deletedItems).toString(10)} products deleted`,
 								),
 							),
 						),
