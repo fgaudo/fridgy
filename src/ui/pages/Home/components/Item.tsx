@@ -7,14 +7,14 @@ import {
 	Switch,
 } from 'solid-js'
 
-import { HS, Int, O } from '@/core/imports'
+import { HS, Int, O } from '@/core/imports.js'
 
-import type { ProductModel } from '@/app/use-cases/get-sorted-products'
+import type { ProductModel } from '@/app/use-cases/get-sorted-products.js'
 
-import { formatRemainingTime } from '@/ui/core/helpers'
+import { formatRemainingTime } from '@/ui/core/helpers.js'
 
-import { useUiStateContext } from '../context'
-import { Message } from '../store/actions'
+import { useUiStateContext } from '../context.jsx'
+import { Message } from '../store/actions.js'
 
 export const Item: Component<{
 	model: ProductModel

@@ -1,18 +1,17 @@
 import { describe, test } from 'vitest'
 
-import { Eff, HS } from '@/core/imports'
+import { Eff, HS } from '@/core/imports.js'
 import {
 	assertExitIsFailure,
 	assertExitIsSuccess,
-} from '@/core/test-helpers'
-import { testRuntime } from '@/core/utils'
+} from '@/core/test-helpers.js'
+import { testRuntime } from '@/core/utils.js'
 
 import {
 	DeleteProductsByIdsService,
 	DeleteProductsByIdsServiceError,
-} from '@/app/interfaces/write/delete-products-by-ids'
-
-import { useCase } from './delete-products-by-ids'
+} from '../interfaces/write/delete-products-by-ids.js'
+import { useCase } from './delete-products-by-ids.js'
 
 describe('Delete products by ids', () => {
 	test.concurrent(

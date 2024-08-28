@@ -3,10 +3,10 @@ import {
 	createMemo,
 } from 'solid-js'
 
-import { HS } from '@/core/imports'
+import { HS } from '@/core/imports.js'
 
-import { useUiStateContext } from '../context'
-import { Message } from '../store/actions'
+import { useUiStateContext } from '../context.jsx'
+import { Message } from '../store/actions.js'
 
 export const TopBar: Component = () => {
 	const {

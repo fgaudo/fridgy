@@ -1,15 +1,14 @@
-import { Eff, HS } from '@/core/imports'
+import { Eff, HS } from '@/core/imports.js'
 
-import { ProductsService } from '@/app/interfaces/read/get-sorted-products'
+import { ProductsService } from './interfaces/read/get-sorted-products.js'
+import { AddProductService } from './interfaces/write/add-product.js'
+import { DeleteProductsByIdsService } from './interfaces/write/delete-products-by-ids.js'
 import {
 	type AddProductDTO,
 	useCase as addProduct,
-} from '@/app/use-cases/add-product'
-import { useCase as deleteProductsByIds } from '@/app/use-cases/delete-products-by-ids'
-import { useCase as getSortedProducts } from '@/app/use-cases/get-sorted-products'
-
-import { AddProductService } from './interfaces/write/add-product'
-import { DeleteProductsByIdsService } from './interfaces/write/delete-products-by-ids'
+} from './use-cases/add-product.js'
+import { useCase as deleteProductsByIds } from './use-cases/delete-products-by-ids.js'
+import { useCase as getSortedProducts } from './use-cases/get-sorted-products.js'
 
 export interface Contracts {
 	addProduct: AddProductService['Type']

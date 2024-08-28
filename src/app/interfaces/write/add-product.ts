@@ -5,7 +5,7 @@ import {
 	Int,
 	NETS,
 	O,
-} from '@/core/imports'
+} from '@/core/imports.js'
 
 export interface AddProductDTO {
 	name: NETS.NonEmptyTrimmedString

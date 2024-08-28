@@ -1,15 +1,15 @@
 import { test } from '@fast-check/vitest'
 import { describe } from 'vitest'
 
-import { Eff } from '@/core/imports'
-import * as H from '@/core/test-helpers'
-import { testRuntime } from '@/core/utils'
+import { Eff } from '@/core/imports.js'
+import * as H from '@/core/test-helpers.js'
+import { testRuntime } from '@/core/utils.js'
 
 import {
 	AddProductService,
 	AddProductServiceError,
-} from '../interfaces/write/add-product'
-import { useCase } from './add-product'
+} from '../interfaces/write/add-product.js'
+import { useCase } from './add-product.js'
 
 describe('Add product', () => {
 	test.concurrent.prop([

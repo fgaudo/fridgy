@@ -7,11 +7,16 @@ import {
 } from 'solid-js'
 import { Portal } from 'solid-js/web'
 
-import { Eff, H, NNInt, O } from '@/core/imports'
+import {
+	Eff,
+	H,
+	NNInt,
+	O,
+} from '@/core/imports.js'
 
-import { useUiStateContext } from '../context'
-import { Message } from '../store/actions'
-import { Item } from './Item'
+import { useUiStateContext } from '../context.jsx'
+import { Message } from '../store/actions.js'
+import { Item } from './Item.jsx'
 
 export const List: Component = () => {
 	const {

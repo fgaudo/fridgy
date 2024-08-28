@@ -1,13 +1,13 @@
 import { test } from '@fast-check/vitest'
 import { describe } from 'vitest'
 
-import { Eff } from '@/core/imports'
-import * as H from '@/core/test-helpers'
-import { testRuntime } from '@/core/utils'
+import { Eff } from '@/core/imports.js'
+import * as H from '@/core/test-helpers.js'
+import { testRuntime } from '@/core/utils.js'
 
-import { CapacitorService } from '..'
-import type { FridgySqlitePlugin } from '../fridgy-sqlite-plugin'
-import { command } from './add-product'
+import type { FridgySqlitePlugin } from '../fridgy-sqlite-plugin.js'
+import { CapacitorService } from '../index.js'
+import { command } from './add-product.js'
 
 describe('Add product', () => {
 	test.concurrent.prop([

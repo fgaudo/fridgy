@@ -3,23 +3,21 @@ import {
 	Eff,
 	F,
 	HS,
+	NEHS,
 	NETS,
 	O,
-} from '@/core/imports'
-import {
-	type NonEmptyHashSet,
-	size,
-} from '@/core/non-empty-hash-set'
+} from '@/core/imports.js'
+import type { NonEmptyHashSet } from '@/core/non-empty-hash-set.js'
 
-import type { App } from '@/app/index'
+import type { App } from '@/app/index.js'
 
-import { MINIMUM_LAG_MS } from '@/ui/core/constants'
-import type { Task } from '@/ui/core/solid-js'
+import { MINIMUM_LAG_MS } from '@/ui/core/constants.js'
+import type { Task } from '@/ui/core/solid-js.js'
 
 import {
 	InternalMessage,
 	Message,
-} from './actions'
+} from './actions.js'
 
 export const refreshList = (
 	runningRefreshing: O.Option<F.Fiber<unknown>>,
@@ -101,7 +99,7 @@ export const deleteByIdsAndRefresh = (
 
 		return InternalMessage.DeleteProductsAndRefreshSucceeded(
 			{
-				deletedItems: size(selectedProducts),
+				deletedItems: NEHS.size(selectedProducts),
 				total: result2.right.total,
 				models: result2.right.models,
 			},

@@ -11,7 +11,7 @@ import {
 	H,
 	NETS,
 	O,
-} from '@/core/imports'
+} from '@/core/imports.js'
 
 export const Snackbar: Component<{
 	class?: string | undefined

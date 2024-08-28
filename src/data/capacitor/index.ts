@@ -1,13 +1,13 @@
 import { Context, flow, pipe } from 'effect'
 
-import { Eff } from '@/core/imports'
+import { Eff } from '@/core/imports.js'
 
-import type { Contracts } from '@/app/index'
+import type { Contracts } from '@/app/index.js'
 
-import type { FridgySqlitePlugin } from './fridgy-sqlite-plugin'
-import { query as getSortedProducts } from './read/get-sorted-products'
-import { command as addProduct } from './write/add-product'
-import { command as deleteProductByIds } from './write/delete-products-by-ids'
+import type { FridgySqlitePlugin } from './fridgy-sqlite-plugin.js'
+import { query as getSortedProducts } from './read/get-sorted-products.js'
+import { command as addProduct } from './write/add-product.js'
+import { command as deleteProductByIds } from './write/delete-products-by-ids.js'
 
 interface Deps {
 	db: FridgySqlitePlugin

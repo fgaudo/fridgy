@@ -1,13 +1,13 @@
 /* eslint-disable @typescript-eslint/no-unnecessary-condition */
-import { Eff } from '@/core/imports'
+import { Eff } from '@/core/imports.js'
 
 import {
 	type AddProductDTO,
 	AddProductServiceError,
-} from '@/app/interfaces/write/add-product'
+} from '@/app/interfaces/write/add-product.js'
 
-import { withErrors } from '../constants'
-import { map } from '../db'
+import { withErrors } from '../constants.js'
+import { map } from '../db.js'
 
 let i = 0
 

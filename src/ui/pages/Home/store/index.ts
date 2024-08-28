@@ -6,19 +6,19 @@ import {
 	NETS,
 	NNInt,
 	O,
-} from '@/core/imports'
+} from '@/core/imports.js'
 
-import type { App } from '@/app'
-import type { ProductModel } from '@/app/use-cases/get-sorted-products'
+import type { App } from '@/app/index.js'
+import type { ProductModel } from '@/app/use-cases/get-sorted-products.js'
 
-import { onResume } from '@/ui/core/capacitor'
-import { useQueueStore } from '@/ui/core/solid-js'
+import { onResume } from '@/ui/core/capacitor.js'
+import { useQueueStore } from '@/ui/core/solid-js.js'
 
 import {
 	InternalMessage,
 	Message,
-} from './actions'
-import { reducer } from './reducer'
+} from './actions.js'
+import { reducer } from './reducer.js'
 
 export interface State {
 	total: NNInt.NonNegativeInteger

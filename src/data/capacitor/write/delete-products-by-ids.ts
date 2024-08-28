@@ -1,9 +1,16 @@
-import { tryPromise } from '@/core/helper'
-import { E, Eff, HS, N, O } from '@/core/imports'
+import { tryPromise } from 'effect/Effect'
 
-import { DeleteProductsByIdsServiceError } from '@/app/interfaces/write/delete-products-by-ids'
+import {
+	E,
+	Eff,
+	HS,
+	N,
+	O,
+} from '@/core/imports.js'
 
-import { CapacitorService } from '..'
+import { DeleteProductsByIdsServiceError } from '@/app/interfaces/write/delete-products-by-ids.js'
+
+import { CapacitorService } from '../index.js'
 
 export const command: (
 	ids: HS.HashSet<string>,

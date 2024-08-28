@@ -5,11 +5,11 @@ import {
 	NETS,
 	NNInt,
 	O,
-} from '@/core/imports'
+} from '@/core/imports.js'
 
-import type { ProductModel } from '@/app/use-cases/get-sorted-products'
+import type { ProductModel } from '@/app/use-cases/get-sorted-products.js'
 
-import type { State } from '.'
+import type { State } from './index.js'
 
 export const refreshListSucceeded =
 	(

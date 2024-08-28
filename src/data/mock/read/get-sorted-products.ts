@@ -1,21 +1,22 @@
 /* eslint-disable @typescript-eslint/no-unnecessary-condition */
+import { pipe } from 'effect'
+
 import {
 	A,
 	Eff,
 	NNInt,
 	O,
 	Ord,
-	pipe,
-} from '@/core/imports'
+} from '@/core/imports.js'
 
 import {
 	type ProductDTO,
 	ProductsServiceError,
-} from '@/app/interfaces/read/get-sorted-products'
-import type { ProductModel } from '@/app/use-cases/get-sorted-products'
+} from '@/app/interfaces/read/get-sorted-products.js'
+import type { ProductModel } from '@/app/use-cases/get-sorted-products.js'
 
-import { withErrors } from '../constants'
-import { map } from '../db'
+import { withErrors } from '../constants.js'
+import { map } from '../db.js'
 
 const ord = Ord.make(
 	(p1: ProductModel, p2: ProductModel) => {

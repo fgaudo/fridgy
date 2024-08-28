@@ -6,21 +6,21 @@ import {
 	NETS,
 	O,
 	pipe,
-} from '@/core/imports'
+} from '@/core/imports.js'
 
-import type { App } from '@/app'
+import type { App } from '@/app/index.js'
 
-import { useQueueStore } from '@/ui/core/solid-js'
+import { useQueueStore } from '@/ui/core/solid-js.js'
 
 import {
 	InternalMessage,
 	Message,
-} from './actions'
+} from './actions.js'
 import {
 	defaultFields,
 	validateFields,
-} from './mutations'
-import { reducer } from './reducer'
+} from './mutations.js'
+import { reducer } from './reducer.js'
 
 export interface State {
 	formFields: {

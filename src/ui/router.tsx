@@ -1,13 +1,13 @@
 import * as SR from '@solidjs/router'
 import type { Component } from 'solid-js'
 
-import type { App } from '@/app'
+import type { App } from '@/app/index.js'
 
-import { About } from './pages/About'
-import AddProduct from './pages/AddProduct'
-import { createStore as createAddProductStore } from './pages/AddProduct/store'
-import Home from './pages/Home'
-import { createStore as createHomeStore } from './pages/Home/store'
+import { About } from './pages/About/index.jsx'
+import AddProduct from './pages/AddProduct/index.jsx'
+import { createStore as createAddProductStore } from './pages/AddProduct/store/index.js'
+import Home from './pages/Home/index.jsx'
+import { createStore as createHomeStore } from './pages/Home/store/index.js'
 
 export const ROUTES = {
 	home: '/',

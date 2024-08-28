@@ -1,19 +1,17 @@
-import { O } from '@/core/imports'
-import type { Integer } from '@/core/integer'
-import type { NonEmptyTrimmedString } from '@/core/non-empty-trimmed-string'
+import { Int, NETS, O } from '@/core/imports.js'
 
 const productSymbol: unique symbol = Symbol()
 
 export interface Product {
 	[productSymbol]: {
-		name: NonEmptyTrimmedString
-		expirationDate: O.Option<Integer>
+		name: NETS.NonEmptyTrimmedString
+		expirationDate: O.Option<Int.Integer>
 	}
 }
 
 export const createProduct: (f: {
-	name: NonEmptyTrimmedString
-	expirationDate: O.Option<Integer>
+	name: NETS.NonEmptyTrimmedString
+	expirationDate: O.Option<Int.Integer>
 }) => Product = productDummy => ({
 	[productSymbol]: productDummy,
 })

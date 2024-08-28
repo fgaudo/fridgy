@@ -1,8 +1,8 @@
 import 'solid-js/store'
 
-import { NETS, O } from '@/core/imports'
+import { NETS, O } from '@/core/imports.js'
 
-import type { State } from '.'
+import type { State } from './index.js'
 
 export const showSuccessMessage =
 	(message: NETS.NonEmptyTrimmedString) =>

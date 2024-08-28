@@ -5,8 +5,8 @@ import {
 } from 'solid-js'
 
 import licenses from '@/ui/assets/licenses.json'
-import { version } from '@/ui/core/constants'
-import { useFridgyNavigate } from '@/ui/router'
+import { version } from '@/ui/core/constants.js'
+import { useFridgyNavigate } from '@/ui/router.js'
 
 export const About: () => Component =
 	() => () => {

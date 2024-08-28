@@ -1,7 +1,7 @@
 import * as S from 'solid-js'
 
-import type { Store } from './store'
-import type { UiStore } from './ui-store'
+import type { Store } from './store/index.js'
+import type { UiStore } from './ui-store.js'
 
 export const HomeContext = S.createContext<{
 	store: Store

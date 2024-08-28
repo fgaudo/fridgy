@@ -4,7 +4,7 @@ import {
 	Int,
 	NETS,
 	O,
-} from '@/core/imports'
+} from '@/core/imports.js'
 
 export type Message = Da.TaggedEnum<{
 	AddProduct: object

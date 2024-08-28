@@ -1,9 +1,7 @@
 import { pipe } from 'effect'
+import { tryPromise } from 'effect/Effect'
 
-import {
-	fallback,
-	tryPromise,
-} from '@/core/helper'
+import { fallback } from '@/core/helper.js'
 import {
 	E,
 	Eff,
@@ -12,14 +10,14 @@ import {
 	NNInt,
 	O,
 	Sc,
-} from '@/core/imports'
+} from '@/core/imports.js'
 
 import {
 	type ProductDTO,
 	ProductsServiceError,
-} from '@/app/interfaces/read/get-sorted-products'
+} from '@/app/interfaces/read/get-sorted-products.js'
 
-import { CapacitorService } from '..'
+import { CapacitorService } from '../index.js'
 
 const ProductsListSchema = Sc.Struct({
 	total: Sc.Number,

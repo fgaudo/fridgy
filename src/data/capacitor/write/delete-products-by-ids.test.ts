@@ -1,15 +1,12 @@
 import { describe, test } from 'vitest'
 
-import { Eff, HS } from '@/core/imports'
-import {
-	assertExitIsFailure,
-	assertExitIsSuccess,
-} from '@/core/test-helpers'
-import { testRuntime } from '@/core/utils'
+import { Eff, HS } from '@/core/imports.js'
+import * as H from '@/core/test-helpers.js'
+import { testRuntime } from '@/core/utils.js'
 
-import { CapacitorService } from '..'
-import type { FridgySqlitePlugin } from '../fridgy-sqlite-plugin'
-import { command } from './delete-products-by-ids'
+import type { FridgySqlitePlugin } from '../fridgy-sqlite-plugin.js'
+import { CapacitorService } from '../index.js'
+import { command } from './delete-products-by-ids.js'
 
 describe('Delete products by ids', () => {
 	test.concurrent(
@@ -32,7 +29,7 @@ describe('Delete products by ids', () => {
 					deleteProductsByIds,
 				)
 
-			assertExitIsSuccess(data)
+			H.assertExitIsSuccess(data)
 		},
 	)
 
@@ -56,7 +53,7 @@ describe('Delete products by ids', () => {
 					deleteProductsByIds,
 				)
 
-			assertExitIsSuccess(data)
+			H.assertExitIsSuccess(data)
 		},
 	)
 
@@ -77,7 +74,7 @@ describe('Delete products by ids', () => {
 					deleteProductsByIds,
 				)
 
-			assertExitIsFailure(exit)
+			H.assertExitIsFailure(exit)
 		},
 	)
 
@@ -101,7 +98,7 @@ describe('Delete products by ids', () => {
 					deleteProductsByIds,
 				)
 
-			assertExitIsFailure(exit)
+			H.assertExitIsFailure(exit)
 		},
 	)
 })

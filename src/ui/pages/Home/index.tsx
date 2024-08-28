@@ -1,14 +1,14 @@
 import { type Component } from 'solid-js'
 
-import { Fab } from './components/Fab'
-import { InvisibleWall } from './components/InvisibleWall'
-import { List } from './components/List'
-import { Menu } from './components/Menu'
-import { Snackbar } from './components/Snackbar'
-import { TopBar } from './components/TopBar'
-import { HomeContext } from './context'
-import type { Store } from './store'
-import { createStore as createUiStore } from './ui-store'
+import { Fab } from './components/Fab.jsx'
+import { InvisibleWall } from './components/InvisibleWall.jsx'
+import { List } from './components/List.jsx'
+import { Menu } from './components/Menu.jsx'
+import { Snackbar } from './components/Snackbar.jsx'
+import { TopBar } from './components/TopBar.jsx'
+import { HomeContext } from './context.jsx'
+import type { Store } from './store/index.js'
+import { createStore as createUiStore } from './ui-store.js'
 
 const Home: (
 	createStore: () => Store,

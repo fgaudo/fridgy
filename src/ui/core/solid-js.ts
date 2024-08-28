@@ -11,7 +11,7 @@ import {
 	HS,
 	Q,
 	pipe,
-} from '@/core/imports'
+} from '@/core/imports.js'
 
 export function withDefault<T>(
 	accessor: Accessor<T | undefined>,

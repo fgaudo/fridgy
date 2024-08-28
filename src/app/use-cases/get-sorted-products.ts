@@ -5,12 +5,12 @@ import {
 	Int,
 	NNInt,
 	O,
-} from '@/core/imports'
-import type { NonEmptyTrimmedString } from '@/core/non-empty-trimmed-string'
+} from '@/core/imports.js'
+import type { NonEmptyTrimmedString } from '@/core/non-empty-trimmed-string.js'
 
-import * as P from '@/domain/product'
+import * as P from '@/domain/product.js'
 
-import { ProductsService } from '../interfaces/read/get-sorted-products'
+import { ProductsService } from '@/app/interfaces/read/get-sorted-products.js'
 
 export type ProductModel =
 	| {

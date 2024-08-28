@@ -6,22 +6,22 @@ import {
 	NETS,
 	O,
 	pipe,
-} from '@/core/imports'
+} from '@/core/imports.js'
 
-import type { App } from '@/app/index'
+import type { App } from '@/app/index.js'
 
 import {
 	type Reducer,
 	type Task,
-} from '@/ui/core/solid-js'
+} from '@/ui/core/solid-js.js'
 
-import type { State } from '.'
 import {
 	InternalMessage,
 	Message,
-} from './actions'
-import * as Mu from './mutations'
-import * as Ta from './tasks'
+} from './actions.js'
+import type { State } from './index.js'
+import * as Mu from './mutations.js'
+import * as Ta from './tasks.js'
 
 export const reducer: (
 	app: App,

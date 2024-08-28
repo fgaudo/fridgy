@@ -1,12 +1,11 @@
-import { tryPromise } from '@/core/helper'
-import { E, Eff, O } from '@/core/imports'
+import { tryPromise } from 'effect/Effect'
 
-import {
-	type AddProductDTO,
-	AddProductServiceError,
-} from '@/app/interfaces/write/add-product'
+import { E, Eff, O } from '@/core/imports.js'
 
-import { CapacitorService } from '..'
+import { AddProductServiceError } from '@/app/interfaces/write/add-product.js'
+import type { AddProductDTO } from '@/app/interfaces/write/add-product.js'
+
+import { CapacitorService } from '../index.js'
 
 export const command: (
 	product: AddProductDTO,

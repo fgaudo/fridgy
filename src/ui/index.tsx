@@ -21,13 +21,13 @@ import {
 	render as solidRender,
 } from 'solid-js/web'
 
-import { Eff, F, H } from '@/core/imports'
+import { Eff, F, H } from '@/core/imports.js'
 
-import type { App } from '@/app'
+import type { App } from '@/app/index.js'
 
-import { onResumeInit } from './core/capacitor'
-import { DEFAULT_FADE_MS } from './core/constants'
-import { Router } from './router'
+import { onResumeInit } from './core/capacitor.js'
+import { DEFAULT_FADE_MS } from './core/constants.js'
+import { Router } from './router.jsx'
 
 const MAIN_COLOR = '#DD7230'
 

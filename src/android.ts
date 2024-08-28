@@ -1,11 +1,14 @@
 import { registerPlugin } from '@capacitor/core'
 
-import { type App, createApp } from '@/app'
+import {
+	type App,
+	createApp,
+} from '@/app/index.js'
 
-import { implementations as capacitorImplementations } from '@/data/capacitor'
-import type { FridgySqlitePlugin } from '@/data/capacitor/fridgy-sqlite-plugin'
+import { implementations as capacitorImplementations } from '@/data/capacitor/index.js'
 
-import { render } from '@/ui'
+import type { FridgySqlitePlugin } from './data/capacitor/fridgy-sqlite-plugin.js'
+import { render } from './ui/index.jsx'
 
 const root = document.getElementById('root')!
 

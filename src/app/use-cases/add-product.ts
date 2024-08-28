@@ -6,11 +6,11 @@ import {
 	Int,
 	NETS,
 	O,
-} from '@/core/imports'
+} from '@/core/imports.js'
 
-import * as P from '@/domain/product'
+import * as P from '@/domain/product.js'
 
-import { AddProductService } from '@/app/interfaces/write/add-product'
+import { AddProductService } from '@/app/interfaces/write/add-product.js'
 
 export interface AddProductDTO {
 	name: NETS.NonEmptyTrimmedString

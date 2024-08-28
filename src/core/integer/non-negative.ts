@@ -1,5 +1,5 @@
-import { isInteger } from '.'
-import { B, O } from '../imports'
+import { B, O } from '../imports.js'
+import { isInteger } from './index.js'
 
 const _: unique symbol = Symbol()
 
@@ -16,7 +16,7 @@ export const unsafe_fromNumber: (
 ) => NonNegativeInteger =
 	B.refined<NonNegativeInteger>(
 		isNonNegativeInteger,
-		() => B.error('Not a positive integer'),
+		() => B.error('Not a non-negative integer'),
 	)
 
 export const fromNumber: (

@@ -5,17 +5,17 @@ import {
 	Int,
 	NETS,
 	O,
-} from '@/core/imports'
+} from '@/core/imports.js'
 
-import type { App } from '@/app/index'
+import type { App } from '@/app/index.js'
 
-import { MINIMUM_LAG_MS } from '@/ui/core/constants'
-import type { Task } from '@/ui/core/solid-js'
+import { MINIMUM_LAG_MS } from '@/ui/core/constants.js'
+import type { Task } from '@/ui/core/solid-js.js'
 
 import {
 	InternalMessage,
 	Message,
-} from './actions'
+} from './actions.js'
 
 export const addProduct = (
 	addProduct: App['addProduct'],
