@@ -10,7 +10,7 @@ import {
 
 import type { App } from '@/app/index.js'
 
-import { useQueueStore } from '@/ui/core/solid-js.js'
+import { useQueueStore } from '@/ui/core/solid.js'
 
 import {
 	InternalMessage,

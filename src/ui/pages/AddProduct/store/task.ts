@@ -10,7 +10,7 @@ import {
 import type { App } from '@/app/index.js'
 
 import { MINIMUM_LAG_MS } from '@/ui/core/constants.js'
-import type { Task } from '@/ui/core/solid-js.js'
+import type { Task } from '@/ui/core/solid.js'
 
 import {
 	InternalMessage,

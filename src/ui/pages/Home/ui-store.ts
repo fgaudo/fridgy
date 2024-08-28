@@ -8,7 +8,7 @@ import * as SS from 'solid-js/store'
 import { Eff, HS } from '@/core/imports.js'
 
 import { onResume } from '@/ui/core/capacitor.js'
-import { useFiber } from '@/ui/core/solid-js.js'
+import { useFiber } from '@/ui/core/solid.js'
 import { useFridgyNavigate } from '@/ui/router.jsx'
 
 import { Message } from './store/actions.js'

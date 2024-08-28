@@ -14,7 +14,7 @@ import type { App } from '@/app/index.js'
 import type {
 	Reducer,
 	Task,
-} from '@/ui/core/solid-js.js'
+} from '@/ui/core/solid.js'
 
 import {
 	InternalMessage,

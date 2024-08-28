@@ -12,7 +12,7 @@ import type { App } from '@/app/index.js'
 import type { ProductModel } from '@/app/use-cases/get-sorted-products.js'
 
 import { onResume } from '@/ui/core/capacitor.js'
-import { useQueueStore } from '@/ui/core/solid-js.js'
+import { useQueueStore } from '@/ui/core/solid.js'
 
 import {
 	InternalMessage,

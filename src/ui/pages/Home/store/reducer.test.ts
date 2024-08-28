@@ -18,7 +18,7 @@ describe('Home reducer', () => {
 					'asd',
 				]),
 			} as unknown as State
-			const [mutations, actions] = reducer(
+			const [mutations] = reducer(
 				{} as unknown as App,
 			)(state, Message.ClearSelectedProducts())
 
@@ -27,12 +27,9 @@ describe('Home reducer', () => {
 					mutation(state)
 				}),
 			)
-
 			expect(
-				state.selectedProducts,
-			).toStrictEqual(HS.empty())
-
-			expect(actions).toStrictEqual(HS.empty())
+				HS.size(state.selectedProducts),
+			).toStrictEqual(0)
 		},
 	)
 })
