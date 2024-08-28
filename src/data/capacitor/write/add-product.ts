@@ -1,11 +1,5 @@
 import { tryPromise } from '@/core/helper'
-import {
-	E,
-	Eff,
-	Int,
-	NETS,
-	O,
-} from '@/core/imports'
+import { E, Eff, NETS, O } from '@/core/imports'
 
 import {
 	type AddProductDTO,
@@ -28,15 +22,11 @@ export const command: (
 			db.addProduct({
 				product: {
 					name: NETS.toString(product.name),
-					creationDate: Int.toNumber(
-						product.creationDate,
-					),
+					creationDate: product.creationDate,
 					expirationDate: O.isSome(
 						product.expirationDate,
 					)
-						? Int.toNumber(
-								product.expirationDate.value,
-							)
+						? product.expirationDate.value
 						: undefined,
 				},
 			}),

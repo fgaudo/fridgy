@@ -175,7 +175,7 @@ export const query: Eff.Effect<
 
 				return {
 					isValid: true,
-					id: Int.toNumber(idInt).toString(10),
+					id: idInt.toString(10),
 					name: nameNonEmpty,
 					creationDate: creationTimestamp,
 					expirationDate: expirationTimestamp,

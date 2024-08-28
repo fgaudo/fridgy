@@ -99,10 +99,7 @@ const AddProduct: (
 											.expirationDate,
 									)
 										? new Date(
-												Int.toNumber(
-													state.formFields
-														.expirationDate.value,
-												),
+												state.formFields.expirationDate.value,
 											)
 												.toISOString()
 												.substring(0, 10)

@@ -2,7 +2,6 @@
 import {
 	A,
 	Eff,
-	Int,
 	NETS,
 	NNInt,
 	O,
@@ -32,7 +31,7 @@ const ord = Ord.make(
 		if (p1.isValid && p2.isValid) {
 			return Ord.combineAll([
 				pipe(
-					Int.order,
+					Ord.number,
 					Ord.reverse,
 					O.getOrder,
 					Ord.reverse,

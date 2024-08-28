@@ -2,10 +2,10 @@ import {
 	B,
 	E,
 	Eff,
+	Int,
 	NNInt,
 	O,
 } from '@/core/imports'
-import * as Int from '@/core/integer'
 import type { NonEmptyTrimmedString } from '@/core/non-empty-trimmed-string'
 
 import * as P from '@/domain/product'
@@ -64,7 +64,7 @@ export const useCase: ProductList = Eff.gen(
 			result.right
 
 		yield* Eff.log(
-			`Received ${rawProducts.length.toString(10)} products out of ${NNInt.toNumber(total).toString(10)}`,
+			`Received ${rawProducts.length.toString(10)} products out of ${total.toString(10)}`,
 		)
 
 		const models: ProductModel[] = yield* Eff.all(

@@ -77,7 +77,7 @@ export const Item: Component<{
 											model().expirationDate
 										return (
 											O.isSome(exp) &&
-											Int.toNumber(exp.value) >
+											exp.value >
 												uiState.currentTimestamp &&
 											exp.value
 										)
@@ -89,17 +89,13 @@ export const Item: Component<{
 												'opacity-0':
 													uiState.isSelectModeEnabled,
 												'text-red-500 font-bold':
-													Int.toNumber(
-														expiration(),
-													) <
+													expiration() <
 													uiState.currentTimestamp -
 														0,
 											}}>
 											{formatRemainingTime(
 												uiState.currentTimestamp,
-												Int.toNumber(
-													expiration(),
-												),
+												expiration(),
 											)}
 										</div>
 									)}
@@ -148,17 +144,13 @@ export const Item: Component<{
 										<>
 											<div class="text-sm">
 												{format(
-													Int.toNumber(
-														expiration(),
-													),
+													expiration(),
 													'd',
 												)}
 											</div>
 											<div class="text-sm">
 												{format(
-													Int.toNumber(
-														expiration(),
-													),
+													expiration(),
 													'LLL',
 												)}
 											</div>
@@ -183,16 +175,15 @@ const ExpirationBar: Component<{
 	} = useUiStateContext()!
 
 	const isExpired = () =>
-		Int.toNumber(props.expiration()) -
+		props.expiration() -
 			uiState.currentTimestamp <
 		0
 
 	const currentProgress = () => {
 		const totalDuration =
-			Int.toNumber(props.expiration()) -
-			Int.toNumber(props.creation)
+			props.expiration() - props.creation
 		const remainingDuration =
-			Int.toNumber(props.expiration()) -
+			props.expiration() -
 			uiState.currentTimestamp
 
 		return remainingDuration / totalDuration

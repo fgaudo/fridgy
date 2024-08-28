@@ -2,8 +2,8 @@ import {
 	Da,
 	HS,
 	M,
+	NEHS,
 	NETS,
-	NNInt,
 	O,
 	pipe,
 } from '@/core/imports'
@@ -72,14 +72,15 @@ export const reducer: (
 							Task<Message | InternalMessage>
 						>()
 
-					if (
-						HS.size(snapshot.selectedProducts) > 0
-					) {
+					const result = NEHS.fromHashSet(
+						snapshot.selectedProducts,
+					)
+					if (O.isSome(result)) {
 						commands = pipe(
 							commands,
 							HS.add(
 								Ta.deleteByIdsAndRefresh(
-									snapshot.selectedProducts,
+									result.value,
 									app.deleteProductsByIds,
 									app.productList,
 								),
@@ -177,7 +178,7 @@ export const reducer: (
 							),
 							Mu.showSuccessMessage(
 								NETS.unsafe_fromString(
-									`${NNInt.toNumber(deletedItems).toString(10)} products deleted`,
+									`${deletedItems.toString(10)} products deleted`,
 								),
 							),
 						),

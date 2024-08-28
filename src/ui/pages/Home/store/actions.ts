@@ -3,6 +3,7 @@ import {
 	F,
 	NETS,
 	NNInt,
+	PInt,
 } from '@/core/imports'
 
 import type { ProductModel } from '@/app/use-cases/get-sorted-products'
@@ -19,7 +20,7 @@ export type InternalMessage = Da.TaggedEnum<{
 		message: NETS.NonEmptyTrimmedString
 	}
 	DeleteProductsAndRefreshSucceeded: {
-		deletedItems: NNInt.NonNegativeInteger
+		deletedItems: PInt.PositiveInteger
 		total: NNInt.NonNegativeInteger
 		models: ProductModel[]
 	}

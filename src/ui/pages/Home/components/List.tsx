@@ -20,7 +20,7 @@ export const List: Component = () => {
 
 	const totalItems =
 		createMemo<NNInt.NonNegativeInteger>(prev => {
-			return NNInt.toNumber(state.total) > 0
+			return state.total > 0
 				? state.total
 				: (prev ?? NNInt.unsafe_fromNumber(0))
 		})
@@ -48,11 +48,11 @@ export const List: Component = () => {
 					class="fixed top-[64px] z-[999] w-full bg-background px-[14px] pb-[8px] pt-[10px] text-xs transition-all"
 					classList={{
 						'opacity-0 pointer-events-none':
-							NNInt.toNumber(state.total) <= 0 ||
+							state.total <= 0 ||
 							state.isLoading ||
 							state.receivedError,
 					}}>
-					{NNInt.toNumber(totalItems())} items
+					{totalItems()} items
 				</p>
 				<mdui-list
 					class="relative mt-[34px]"
@@ -62,9 +62,9 @@ export const List: Component = () => {
 					}}
 					style={{
 						height:
-							NNInt.toNumber(state.total) > 0 &&
+							state.total > 0 &&
 							!state.receivedError
-								? `${((NNInt.toNumber(state.total) - 1) * 60 + 185).toString(10)}px`
+								? `${((state.total - 1) * 60 + 185).toString(10)}px`
 								: 'auto',
 					}}>
 					<For each={state.products}>

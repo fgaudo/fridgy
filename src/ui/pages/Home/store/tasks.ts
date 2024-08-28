@@ -4,9 +4,12 @@ import {
 	F,
 	HS,
 	NETS,
-	NNInt,
 	O,
 } from '@/core/imports'
+import {
+	type NonEmptyHashSet,
+	size,
+} from '@/core/non-empty-hash-set'
 
 import type { App } from '@/app/index'
 
@@ -54,7 +57,7 @@ export const refreshList = (
 })
 
 export const deleteByIdsAndRefresh = (
-	selectedProducts: HS.HashSet<string>,
+	selectedProducts: NonEmptyHashSet<string>,
 	deleteProducts: App['deleteProductsByIds'],
 	refreshList: App['productList'],
 ): Task<Message | InternalMessage> => ({
@@ -63,16 +66,6 @@ export const deleteByIdsAndRefresh = (
 			{ fiber },
 		),
 	effect: Eff.gen(function* () {
-		if (HS.size(selectedProducts) <= 0) {
-			return InternalMessage.DeleteProductsFailed(
-				{
-					message: NETS.unsafe_fromString(
-						'No products selected',
-					),
-				},
-			)
-		}
-
 		const [result] = yield* Eff.all([
 			deleteProducts(selectedProducts).pipe(
 				Eff.either,
@@ -108,9 +101,7 @@ export const deleteByIdsAndRefresh = (
 
 		return InternalMessage.DeleteProductsAndRefreshSucceeded(
 			{
-				deletedItems: NNInt.unsafe_fromNumber(
-					HS.size(selectedProducts),
-				),
+				deletedItems: size(selectedProducts),
 				total: result2.right.total,
 				models: result2.right.models,
 			},
