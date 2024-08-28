@@ -1,7 +1,6 @@
 import eslint from '@eslint/js'
 import eslintConfig from 'eslint-config-prettier'
 import solid from 'eslint-plugin-solid/configs/typescript.js'
-import sonarjs from 'eslint-plugin-sonarjs'
 import tseslint from 'typescript-eslint'
 
 export default [
@@ -34,7 +33,6 @@ export default [
 				'off',
 		},
 	},
-	sonarjs.configs.recommended,
 	{
 		rules: {
 			'@typescript-eslint/no-unnecessary-type-assertion':
@@ -61,12 +59,6 @@ export default [
 					html: 'void', // "all" | "void" | "none"
 				},
 			],
-		},
-	},
-	{
-		files: ['src/**/*.test.ts'],
-		rules: {
-			'sonarjs/no-duplicate-string': 'off',
 		},
 	},
 ]

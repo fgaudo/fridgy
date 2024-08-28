@@ -1,29 +1,27 @@
-import {
-	type NonEmptyIterable,
-	nonEmpty,
-} from 'effect/NonEmptyIterable'
+import { B, HS, O, PInt } from './imports'
 
-import { HS, O, PInt } from './imports'
+const _: unique symbol = Symbol()
 
 export type NonEmptyHashSet<A> = HS.HashSet<A> &
-	NonEmptyIterable<A>
+	B.Brand<typeof _>
+
+export const isNonEmptyHashSet = (
+	hs: HS.HashSet<unknown>,
+) => HS.size(hs) > 0
 
 export const size = <A>(
 	hashSet: NonEmptyHashSet<A>,
 ): PInt.PositiveInteger =>
 	PInt.unsafe_fromNumber(HS.size(hashSet))
 
-export const fromHashSet = <A>(
+export const unsafe_fromHashSet = <A>(
 	hashSet: HS.HashSet<A>,
-): O.Option<NonEmptyHashSet<A>> => {
-	const next = hashSet[Symbol.iterator]().next()
+) =>
+	B.refined<NonEmptyHashSet<A>>(
+		isNonEmptyHashSet,
+		() => B.error('Hashset is empty'),
+	)(hashSet)
 
-	if (next.done) {
-		return O.none()
-	}
-
-	return O.some({
-		...hashSet,
-		[nonEmpty]: next.value,
-	})
-}
+export const fromHashSet = O.liftThrowable(
+	unsafe_fromHashSet,
+)

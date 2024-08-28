@@ -29,5 +29,7 @@ export default defineConfig(({ mode }) => ({
 			plugins: [],
 		},
 	},
-	server: { host: '::' },
+	server: {
+		host: '::',
+	},
 }))
