@@ -1,43 +1,24 @@
-import { O, Ord } from './imports'
+import { B, O } from './imports'
 
-const stringSymbol: unique symbol = Symbol()
+const _: unique symbol = Symbol()
 
-export interface NonEmptyTrimmedString {
-	[stringSymbol]: string
-}
-
-export const fromString = (string: string) =>
-	O.gen(function* () {
-		const str = string.trim()
-		if (!isNonBlank(str)) {
-			return yield* O.none()
-		}
-
-		return { [stringSymbol]: str }
-	})
-
-export const toString = (
-	string: NonEmptyTrimmedString,
-) => string[stringSymbol]
-
-export const unsafe_fromString = (
-	string: string,
-) => {
-	const str = string.trim()
-
-	if (!isNonBlank(str)) {
-		throw new Error('Not a non-empty string')
-	}
-	return { [stringSymbol]: str }
-}
+export type NonEmptyTrimmedString = string &
+	B.Brand<typeof _>
 
 export const isNonBlank = (string: string) =>
 	/\S/.test(string)
 
-export const order: Ord.Order<
-	NonEmptyTrimmedString
-> = (self, that) =>
-	Ord.string(
-		self[stringSymbol],
-		that[stringSymbol],
-	)
+export const unsafe_fromString = (
+	value: string,
+) => {
+	const string = value.trim()
+
+	return B.refined<NonEmptyTrimmedString>(
+		isNonBlank,
+		() => B.error('String is blank'),
+	)(string)
+}
+
+export const fromString = O.liftThrowable(
+	unsafe_fromString,
+)

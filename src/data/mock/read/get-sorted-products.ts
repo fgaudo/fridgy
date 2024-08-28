@@ -2,7 +2,6 @@
 import {
 	A,
 	Eff,
-	NETS,
 	NNInt,
 	O,
 	Ord,
@@ -41,7 +40,7 @@ const ord = Ord.make(
 					),
 				),
 				pipe(
-					NETS.order,
+					Ord.string,
 					Ord.mapInput(
 						(product: typeof p1) => product.name,
 					),

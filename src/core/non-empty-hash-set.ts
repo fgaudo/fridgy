@@ -3,19 +3,15 @@ import {
 	nonEmpty,
 } from 'effect/NonEmptyIterable'
 
-import { HS, O } from './imports'
-import {
-	type PositiveInteger,
-	unsafe_fromNumber,
-} from './integer/positive'
+import { HS, O, PInt } from './imports'
 
 export type NonEmptyHashSet<A> = HS.HashSet<A> &
 	NonEmptyIterable<A>
 
 export const size = <A>(
 	hashSet: NonEmptyHashSet<A>,
-): PositiveInteger =>
-	unsafe_fromNumber(HS.size(hashSet))
+): PInt.PositiveInteger =>
+	PInt.unsafe_fromNumber(HS.size(hashSet))
 
 export const fromHashSet = <A>(
 	hashSet: HS.HashSet<A>,

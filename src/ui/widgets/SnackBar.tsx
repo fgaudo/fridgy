@@ -135,9 +135,7 @@ export const Snackbar: Component<{
 						{(() => {
 							const res = toast()
 							if (O.isSome(res)) {
-								return NETS.toString(
-									res.value[1][1],
-								)
+								return res.value[1][1]
 							}
 							return ''
 						})()}
@@ -169,9 +167,7 @@ export const Snackbar: Component<{
 						{(() => {
 							const res = toast()
 							if (O.isSome(res)) {
-								return NETS.toString(
-									res.value[1][1],
-								)
+								return res.value[1][1]
 							}
 							return ''
 						})()}

@@ -1,5 +1,5 @@
 import { tryPromise } from '@/core/helper'
-import { E, Eff, NETS, O } from '@/core/imports'
+import { E, Eff, O } from '@/core/imports'
 
 import {
 	type AddProductDTO,
@@ -21,7 +21,7 @@ export const command: (
 		const result = yield* tryPromise(() =>
 			db.addProduct({
 				product: {
-					name: NETS.toString(product.name),
+					name: product.name,
 					creationDate: product.creationDate,
 					expirationDate: O.isSome(
 						product.expirationDate,

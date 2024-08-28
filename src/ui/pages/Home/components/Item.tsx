@@ -7,7 +7,7 @@ import {
 	Switch,
 } from 'solid-js'
 
-import { HS, Int, NETS, O } from '@/core/imports'
+import { HS, Int, O } from '@/core/imports'
 
 import type { ProductModel } from '@/app/use-cases/get-sorted-products'
 
@@ -314,7 +314,7 @@ const Button: Component<{
 							return O.isSome(name) && name.value
 						})()}
 						fallback="CORRUPTED">
-						{name => NETS.toString(name())}
+						{name => name()}
 					</Show>
 				</div>
 			</mdui-list-item>
