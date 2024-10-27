@@ -1,6 +1,6 @@
 import eslint from '@eslint/js'
 import eslintConfig from 'eslint-config-prettier'
-import solid from 'eslint-plugin-solid/configs/typescript.js'
+import solid from 'eslint-plugin-solid'
 import tseslint from 'typescript-eslint'
 
 export default [
@@ -17,7 +17,7 @@ export default [
 	},
 	{
 		files: ['**/*.{ts,tsx}'],
-		...solid,
+		...solid.configs['flat/typescript'],
 	},
 	eslintConfig,
 	{ ignores: ['*.js', '*.ts'] },

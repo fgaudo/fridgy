@@ -14,12 +14,12 @@ export const isPositiveInteger = (
 export const unsafe_fromNumber: (
 	number: number,
 ) => PositiveInteger = B.refined<PositiveInteger>(
-	isPositiveInteger,
+	value => isPositiveInteger(value),
 	() => B.error('Not a positive integer'),
 )
 
 export const fromNumber: (
 	number: number,
 ) => O.Option<PositiveInteger> = O.liftThrowable(
-	unsafe_fromNumber,
+	number => unsafe_fromNumber(number),
 )

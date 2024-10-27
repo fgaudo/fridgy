@@ -15,11 +15,13 @@ export const unsafe_fromNumber: (
 	number: number,
 ) => NonNegativeInteger =
 	B.refined<NonNegativeInteger>(
-		isNonNegativeInteger,
+		value => isNonNegativeInteger(value),
 		() => B.error('Not a non-negative integer'),
 	)
 
 export const fromNumber: (
 	number: number,
 ) => O.Option<NonNegativeInteger> =
-	O.liftThrowable(unsafe_fromNumber)
+	O.liftThrowable(number =>
+		unsafe_fromNumber(number),
+	)
