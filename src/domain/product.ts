@@ -1,4 +1,4 @@
-import { Int, NETS, O } from '@/core/imports.js'
+import { Int, NETS, O } from '@/core/imports.ts'
 
 const productSymbol: unique symbol = Symbol()
 

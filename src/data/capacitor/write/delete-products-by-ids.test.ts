@@ -1,12 +1,12 @@
 import { describe, test } from 'vitest'
 
-import { Eff, HS } from '@/core/imports.js'
-import * as H from '@/core/test-helpers.js'
-import { testRuntime } from '@/core/utils.js'
+import { Eff, HS } from '@/core/imports.ts'
+import * as H from '@/core/test-helpers.ts'
+import { testRuntime } from '@/core/utils.ts'
 
-import type { FridgySqlitePlugin } from '../fridgy-sqlite-plugin.js'
-import { CapacitorService } from '../index.js'
-import { command } from './delete-products-by-ids.js'
+import type { FridgySqlitePlugin } from '../fridgy-sqlite-plugin.ts'
+import { CapacitorService } from '../index.ts'
+import { command } from './delete-products-by-ids.ts'
 
 describe('Delete products by ids', () => {
 	test.concurrent(

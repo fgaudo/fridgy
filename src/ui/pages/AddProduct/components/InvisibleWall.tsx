@@ -1,9 +1,9 @@
 import type { Component } from 'solid-js'
 import { Portal } from 'solid-js/web'
 
-import { O } from '@/core/imports.js'
+import { O } from '@/core/imports.ts'
 
-import { useUiStateContext } from '../context.js'
+import { useUiStateContext } from '../context.ts'
 
 export const InvisibleWall: Component = () => {
 	const {

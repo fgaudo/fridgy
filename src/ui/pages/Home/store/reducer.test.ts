@@ -1,13 +1,13 @@
 import { test } from '@fast-check/vitest'
 import { describe, expect } from 'vitest'
 
-import { HS } from '@/core/imports.js'
+import { HS } from '@/core/imports.ts'
 
-import type { App } from '@/app/index.js'
+import type { App } from '@/app/index.ts'
 
-import { Message } from './actions.js'
-import type { State } from './index.js'
-import { reducer } from './reducer.js'
+import { Message } from './actions.ts'
+import type { State } from './index.ts'
+import { reducer } from './reducer.ts'
 
 describe('Home reducer', () => {
 	test.concurrent(

@@ -7,7 +7,7 @@ import {
 	NETS,
 	NNInt,
 	O,
-} from '@/core/imports.js'
+} from '@/core/imports.ts'
 
 export type ProductDTO =
 	| {

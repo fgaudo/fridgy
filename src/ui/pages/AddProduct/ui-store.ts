@@ -1,7 +1,7 @@
 import { createEffect } from 'solid-js'
 import * as SS from 'solid-js/store'
 
-import { useFridgyNavigate } from '@/ui/router.js'
+import { useFridgyNavigate } from '@/ui/router.tsx'
 
 export interface UiState {
 	isOpeningHome: boolean

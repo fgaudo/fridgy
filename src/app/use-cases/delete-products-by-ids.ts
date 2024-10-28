@@ -1,8 +1,8 @@
 import { Effect } from 'effect'
 
-import { B, E, Eff, HS } from '@/core/imports.js'
+import { B, E, Eff, HS } from '@/core/imports.ts'
 
-import { DeleteProductsByIdsService } from '@/app/interfaces/write/delete-products-by-ids.js'
+import { DeleteProductsByIdsService } from '@/app/interfaces/write/delete-products-by-ids.ts'
 
 export type DeleteProductsByIds = (
 	ids: HS.HashSet<string>,

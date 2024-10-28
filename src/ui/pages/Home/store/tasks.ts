@@ -6,18 +6,18 @@ import {
 	NEHS,
 	NETS,
 	O,
-} from '@/core/imports.js'
-import type { NonEmptyHashSet } from '@/core/non-empty-hash-set.js'
+} from '@/core/imports.ts'
+import type { NonEmptyHashSet } from '@/core/non-empty-hash-set.ts'
 
-import type { App } from '@/app/index.js'
+import type { App } from '@/app/index.ts'
 
-import { MINIMUM_LAG_MS } from '@/ui/core/constants.js'
-import type { Task } from '@/ui/core/solid.js'
+import { MINIMUM_LAG_MS } from '@/ui/core/constants.ts'
+import type { Task } from '@/ui/core/solid.ts'
 
 import {
 	InternalMessage,
 	Message,
-} from './actions.js'
+} from './actions.ts'
 
 export const refreshList = (
 	runningRefreshing: O.Option<F.Fiber<unknown>>,

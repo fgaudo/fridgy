@@ -1,4 +1,4 @@
-import { B, C, Eff, HS } from '@/core/imports.js'
+import { B, C, Eff, HS } from '@/core/imports.ts'
 
 export class DeleteProductsByIdsService extends C.Tag(
 	'DeleteProductsByIdsService',

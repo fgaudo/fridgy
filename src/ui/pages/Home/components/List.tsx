@@ -12,11 +12,11 @@ import {
 	H,
 	NNInt,
 	O,
-} from '@/core/imports.js'
+} from '@/core/imports.ts'
 
-import { useUiStateContext } from '../context.jsx'
-import { Message } from '../store/actions.js'
-import { Item } from './Item.jsx'
+import { useUiStateContext } from '../context.tsx'
+import { Message } from '../store/actions.ts'
+import { Item } from './Item.tsx'
 
 export const List: Component = () => {
 	const {

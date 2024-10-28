@@ -1,6 +1,6 @@
 import type { Component } from 'solid-js'
 
-import { useFridgyNavigate } from '@/ui/router.js'
+import { useFridgyNavigate } from '@/ui/router.tsx'
 
 export const TopBar: Component = () => {
 	const navigate = useFridgyNavigate()

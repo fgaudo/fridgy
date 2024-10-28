@@ -1,5 +1,5 @@
-import { B, O } from '../imports.js'
-import { isInteger } from './index.js'
+import { B, O } from '../imports.ts'
+import { isInteger } from './index.ts'
 
 const _: unique symbol = Symbol()
 

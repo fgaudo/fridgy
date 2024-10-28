@@ -6,7 +6,7 @@ import 'mdui/mdui.css'
 import { App as CAP } from '@capacitor/app'
 import '@fontsource/material-icons'
 import 'mdui'
-import { setColorScheme } from 'mdui/functions/setColorScheme.js'
+import { setColorScheme } from 'mdui'
 import {
 	type Component,
 	Show,
@@ -21,13 +21,13 @@ import {
 	render as solidRender,
 } from 'solid-js/web'
 
-import { Eff, F, H } from '@/core/imports.js'
+import { Eff, F, H } from '@/core/imports.ts'
 
-import type { App } from '@/app/index.js'
+import type { App } from '@/app/index.ts'
 
-import { onResumeInit } from './core/capacitor.js'
-import { DEFAULT_FADE_MS } from './core/constants.js'
-import { Router } from './router.jsx'
+import { onResumeInit } from './core/capacitor.ts'
+import { DEFAULT_FADE_MS } from './core/constants.ts'
+import { Router } from './router.tsx'
 
 const MAIN_COLOR = '#DD7230'
 

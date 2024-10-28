@@ -6,9 +6,9 @@ import {
 	onMount,
 } from 'solid-js'
 
-import { ROUTES } from '@/ui/router.jsx'
+import { ROUTES } from '@/ui/router.tsx'
 
-import { useUiStateContext } from '../context.jsx'
+import { useUiStateContext } from '../context.tsx'
 
 export const Menu: Component = () => {
 	const {

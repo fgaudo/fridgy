@@ -4,9 +4,9 @@ import {
 	NETS,
 	NNInt,
 	PInt,
-} from '@/core/imports.js'
+} from '@/core/imports.ts'
 
-import type { ProductModel } from '@/app/use-cases/get-sorted-products.js'
+import type { ProductModel } from '@/app/use-cases/get-sorted-products.ts'
 
 export type Message = Da.TaggedEnum<{
 	RefreshList: object

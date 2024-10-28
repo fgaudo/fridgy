@@ -5,17 +5,17 @@ import {
 } from 'solid-js'
 import { Portal } from 'solid-js/web'
 
-import { Int, O } from '@/core/imports.js'
+import { Int, O } from '@/core/imports.ts'
 
-import { onResume } from '@/ui/core/capacitor.js'
-import { Snackbar } from '@/ui/widgets/SnackBar.jsx'
+import { onResume } from '@/ui/core/capacitor.ts'
+import { Snackbar } from '@/ui/widgets/SnackBar.tsx'
 
-import { InvisibleWall } from './components/InvisibleWall.jsx'
-import { TopBar } from './components/TopBar.jsx'
-import { AddProductContext } from './context.js'
-import { Message } from './store/actions.js'
-import type { State } from './store/index.js'
-import { createStore as createUiStore } from './ui-store.js'
+import { InvisibleWall } from './components/InvisibleWall.tsx'
+import { TopBar } from './components/TopBar.tsx'
+import { AddProductContext } from './context.ts'
+import { Message } from './store/actions.ts'
+import type { State } from './store/index.ts'
+import { createStore as createUiStore } from './ui-store.ts'
 
 const AddProduct: (
 	createStore: () => [

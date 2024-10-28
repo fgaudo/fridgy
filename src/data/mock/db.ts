@@ -1,4 +1,4 @@
-import { Int, NETS, O } from '@/core/imports.js'
+import { Int, NETS, O } from '@/core/imports.ts'
 
 export const map = new Map<
 	string,

@@ -1,14 +1,14 @@
-import { Eff, HS } from '@/core/imports.js'
+import { Eff, HS } from '@/core/imports.ts'
 
-import { ProductsService } from './interfaces/read/get-sorted-products.js'
-import { AddProductService } from './interfaces/write/add-product.js'
-import { DeleteProductsByIdsService } from './interfaces/write/delete-products-by-ids.js'
+import { ProductsService } from './interfaces/read/get-sorted-products.ts'
+import { AddProductService } from './interfaces/write/add-product.ts'
+import { DeleteProductsByIdsService } from './interfaces/write/delete-products-by-ids.ts'
 import {
 	type AddProductDTO,
 	useCase as addProduct,
-} from './use-cases/add-product.js'
-import { useCase as deleteProductsByIds } from './use-cases/delete-products-by-ids.js'
-import { useCase as getSortedProducts } from './use-cases/get-sorted-products.js'
+} from './use-cases/add-product.ts'
+import { useCase as deleteProductsByIds } from './use-cases/delete-products-by-ids.ts'
+import { useCase as getSortedProducts } from './use-cases/get-sorted-products.ts'
 
 export interface Contracts {
 	addProduct: AddProductService['Type']

@@ -1,6 +1,6 @@
 import { LogLevel } from 'effect'
 
-import { Log, MR } from './imports.js'
+import { Log, MR } from './imports.ts'
 
 export const generateHexColor = () => {
 	const alphabet = 'ABCDEF0123456789'

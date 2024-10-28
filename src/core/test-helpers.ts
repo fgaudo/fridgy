@@ -2,7 +2,7 @@ import { fc } from '@fast-check/vitest'
 import { Cause, Exit, flow } from 'effect'
 import { assert } from 'vitest'
 
-import { Int, M, NETS, O } from './imports.js'
+import { Int, M, NETS, O } from './imports.ts'
 
 export function assertExitIsFailure<A, E>(
 	exit: Exit.Exit<A, E>,

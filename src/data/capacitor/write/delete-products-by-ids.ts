@@ -6,11 +6,11 @@ import {
 	HS,
 	N,
 	O,
-} from '@/core/imports.js'
+} from '@/core/imports.ts'
 
-import { DeleteProductsByIdsServiceError } from '@/app/interfaces/write/delete-products-by-ids.js'
+import { DeleteProductsByIdsServiceError } from '@/app/interfaces/write/delete-products-by-ids.ts'
 
-import { CapacitorService } from '../index.js'
+import { CapacitorService } from '../index.ts'
 
 export const command: (
 	ids: HS.HashSet<string>,

@@ -7,16 +7,16 @@ import {
 	NNInt,
 	O,
 	Ord,
-} from '@/core/imports.js'
+} from '@/core/imports.ts'
 
 import {
 	type ProductDTO,
 	ProductsServiceError,
-} from '@/app/interfaces/read/get-sorted-products.js'
-import type { ProductModel } from '@/app/use-cases/get-sorted-products.js'
+} from '@/app/interfaces/read/get-sorted-products.ts'
+import type { ProductModel } from '@/app/use-cases/get-sorted-products.ts'
 
-import { withErrors } from '../constants.js'
-import { map } from '../db.js'
+import { withErrors } from '../constants.ts'
+import { map } from '../db.ts'
 
 const ord = Ord.make(
 	(p1: ProductModel, p2: ProductModel) => {

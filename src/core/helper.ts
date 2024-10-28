@@ -2,7 +2,7 @@ import { UnknownException } from 'effect/Cause'
 import { fail, succeed } from 'effect/Exit'
 import type { ParseIssue } from 'effect/ParseResult'
 
-import { Eff } from '@/core/imports.js'
+import { Eff } from '@/core/imports.ts'
 
 export const fallback: <A>(
 	def: A,

@@ -1,10 +1,10 @@
 /* eslint-disable @typescript-eslint/no-unnecessary-condition */
-import { Eff, HS } from '@/core/imports.js'
+import { Eff, HS } from '@/core/imports.ts'
 
-import { DeleteProductsByIdsServiceError } from '@/app/interfaces/write/delete-products-by-ids.js'
+import { DeleteProductsByIdsServiceError } from '@/app/interfaces/write/delete-products-by-ids.ts'
 
-import { withErrors } from '../constants.js'
-import { map } from '../db.js'
+import { withErrors } from '../constants.ts'
+import { map } from '../db.ts'
 
 export const command: (
 	ids: HS.HashSet<string>,

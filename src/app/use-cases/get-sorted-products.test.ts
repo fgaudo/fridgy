@@ -2,16 +2,16 @@
 import { fc, test } from '@fast-check/vitest'
 import { describe, expect } from 'vitest'
 
-import { Eff, NNInt } from '@/core/imports.js'
-import * as H from '@/core/test-helpers.js'
-import { testRuntime } from '@/core/utils.js'
+import { Eff, NNInt } from '@/core/imports.ts'
+import * as H from '@/core/test-helpers.ts'
+import { testRuntime } from '@/core/utils.ts'
 
 import {
 	ProductsService,
 	ProductsServiceError,
-} from '@/app/interfaces/read/get-sorted-products.js'
+} from '@/app/interfaces/read/get-sorted-products.ts'
 
-import { useCase } from './get-sorted-products.js'
+import { useCase } from './get-sorted-products.ts'
 
 const record = fc.oneof(
 	fc.record({

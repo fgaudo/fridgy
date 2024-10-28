@@ -7,15 +7,15 @@ import {
 	NETS,
 	NNInt,
 	O,
-} from '@/core/imports.js'
-import * as H from '@/core/test-helpers.js'
-import { testRuntime } from '@/core/utils.js'
+} from '@/core/imports.ts'
+import * as H from '@/core/test-helpers.ts'
+import { testRuntime } from '@/core/utils.ts'
 
-import type { ProductDTO } from '@/app/interfaces/read/get-sorted-products.js'
+import type { ProductDTO } from '@/app/interfaces/read/get-sorted-products.ts'
 
-import type { FridgySqlitePlugin } from '../fridgy-sqlite-plugin.js'
-import { CapacitorService } from '../index.js'
-import { query } from './get-sorted-products.js'
+import type { FridgySqlitePlugin } from '../fridgy-sqlite-plugin.ts'
+import { CapacitorService } from '../index.ts'
+import { query } from './get-sorted-products.ts'
 
 const record = fc.record({
 	id: H.numberOrUndefined,

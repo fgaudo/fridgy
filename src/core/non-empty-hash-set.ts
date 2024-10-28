@@ -1,4 +1,4 @@
-import { B, HS, O, PInt } from './imports.js'
+import { B, HS, O, PInt } from './imports.ts'
 
 const _: unique symbol = Symbol()
 

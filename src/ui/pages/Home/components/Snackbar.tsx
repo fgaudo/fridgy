@@ -1,9 +1,9 @@
 import type { Component } from 'solid-js'
 import { Portal } from 'solid-js/web'
 
-import { Snackbar as SnackbarWidget } from '@/ui/widgets/SnackBar.js'
+import { Snackbar as SnackbarWidget } from '@/ui/widgets/SnackBar.tsx'
 
-import { useUiStateContext } from '../context.js'
+import { useUiStateContext } from '../context.tsx'
 
 export const Snackbar: Component = () => {
 	const {

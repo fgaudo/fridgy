@@ -2,7 +2,7 @@ import { type Component } from 'solid-js'
 
 import imgUrl from '@/ui/assets/arrow.svg'
 
-import { useUiStateContext } from '../context.js'
+import { useUiStateContext } from '../context.tsx'
 
 export const Fab: Component = () => {
 	const {

@@ -3,12 +3,12 @@ import { registerPlugin } from '@capacitor/core'
 import {
 	type App,
 	createApp,
-} from '@/app/index.js'
+} from '@/app/index.ts'
 
-import { implementations as capacitorImplementations } from '@/data/capacitor/index.js'
+import { implementations as capacitorImplementations } from '@/data/capacitor/index.ts'
 
-import type { FridgySqlitePlugin } from './data/capacitor/fridgy-sqlite-plugin.js'
-import { render } from './ui/index.jsx'
+import type { FridgySqlitePlugin } from './data/capacitor/fridgy-sqlite-plugin.ts'
+import { render } from './ui/index.tsx'
 
 const root = document.getElementById('root')!
 

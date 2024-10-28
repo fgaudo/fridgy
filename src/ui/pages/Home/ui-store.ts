@@ -5,14 +5,14 @@ import {
 import { createEffect, on } from 'solid-js'
 import * as SS from 'solid-js/store'
 
-import { Eff, HS } from '@/core/imports.js'
+import { Eff, HS } from '@/core/imports.ts'
 
-import { onResume } from '@/ui/core/capacitor.js'
-import { useFiber } from '@/ui/core/solid.js'
-import { useFridgyNavigate } from '@/ui/router.jsx'
+import { onResume } from '@/ui/core/capacitor.ts'
+import { useFiber } from '@/ui/core/solid.ts'
+import { useFridgyNavigate } from '@/ui/router.tsx'
 
-import { Message } from './store/actions.js'
-import type { Store } from './store/index.js'
+import { Message } from './store/actions.ts'
+import type { Store } from './store/index.ts'
 
 export interface UiState {
 	readonly isSelectModeEnabled: boolean

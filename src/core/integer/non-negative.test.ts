@@ -4,7 +4,7 @@ import { assert, describe, expect } from 'vitest'
 import {
 	fromNumber,
 	unsafe_fromNumber,
-} from './non-negative.js'
+} from './non-negative.ts'
 
 describe('integer', () => {
 	test.concurrent.prop([fc.nat()])(

@@ -1,11 +1,11 @@
 import {
 	type App,
 	createApp,
-} from '@/app/index.js'
+} from '@/app/index.ts'
 
-import { implementations as mockImplementations } from '@/data/mock/index.js'
+import { implementations as mockImplementations } from '@/data/mock/index.ts'
 
-import { render } from '@/ui/index.jsx'
+import { render } from '@/ui/index.tsx'
 
 const root = document.getElementById('root')!
 
