@@ -3,6 +3,7 @@ import { pipe } from 'effect'
 
 import {
 	A,
+	E,
 	Eff,
 	NNInt,
 	O,
@@ -20,15 +21,15 @@ import { map } from '../db.ts'
 
 const ord = Ord.make(
 	(p1: ProductModel, p2: ProductModel) => {
-		if (p1.isValid && !p2.isValid) {
+		if (E.isRight(p1) && E.isLeft(p2)) {
 			return -1
 		}
 
-		if (!p1.isValid && p2.isValid) {
+		if (E.isLeft(p1) && E.isRight(p2)) {
 			return 1
 		}
 
-		if (p1.isValid && p2.isValid) {
+		if (E.isRight(p1) && E.isRight(p2)) {
 			return Ord.combineAll([
 				pipe(
 					Ord.number,
@@ -37,13 +38,14 @@ const ord = Ord.make(
 					Ord.reverse,
 					Ord.mapInput(
 						(product: typeof p1) =>
-							product.expirationDate,
+							product.right.expirationDate,
 					),
 				),
 				pipe(
 					Ord.string,
 					Ord.mapInput(
-						(product: typeof p1) => product.name,
+						(product: typeof p1) =>
+							product.right.name,
 					),
 				),
 			])(p1, p2)
@@ -69,10 +71,7 @@ export const query: Eff.Effect<
 
 	const products: ProductModel[] = Array.from(
 		map.values(),
-	).map(elem => ({
-		...elem,
-		isValid: true,
-	}))
+	).map(elem => E.right(elem))
 
 	return {
 		total: NNInt.unsafe_fromNumber(total),

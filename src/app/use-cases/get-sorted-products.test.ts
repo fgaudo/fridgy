@@ -1,8 +1,7 @@
-/* eslint-disable @typescript-eslint/no-unnecessary-type-assertion */
 import { fc, test } from '@fast-check/vitest'
 import { describe, expect } from 'vitest'
 
-import { Eff, NNInt } from '@/core/imports.ts'
+import { E, Eff, NNInt } from '@/core/imports.ts'
 import * as H from '@/core/test-helpers.ts'
 import { testRuntime } from '@/core/utils.ts'
 
@@ -14,22 +13,20 @@ import {
 import { useCase } from './get-sorted-products.ts'
 
 const record = fc.oneof(
-	fc.record({
-		isValid: fc.constant(
-			true,
-		) as fc.Arbitrary<true>,
-		id: H.string,
-		creationDate: H.integer,
-		expirationDate: H.maybeInteger,
-		name: H.nonEmptyTrimmedString,
-	}),
-	fc.record({
-		isValid: fc.constant(
-			false,
-		) as fc.Arbitrary<false>,
-		id: H.maybeString,
-		name: H.maybeNonEmptyTrimmedString,
-	}),
+	fc
+		.record({
+			id: H.string,
+			creationDate: H.integer,
+			expirationDate: H.maybeInteger,
+			name: H.nonEmptyTrimmedString,
+		})
+		.map(_ => E.right(_)),
+	fc
+		.record({
+			id: H.maybeString,
+			name: H.maybeNonEmptyTrimmedString,
+		})
+		.map(_ => E.left(_)),
 )
 
 describe('Get sorted products', () => {

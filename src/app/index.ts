@@ -31,7 +31,7 @@ export const createApp = (
 		Eff.provideService(
 			addProduct(product),
 			AddProductService,
-			contracts.addProduct,
+			_ => contracts.addProduct(_),
 		),
 
 	deleteProductsByIds: (
@@ -40,6 +40,6 @@ export const createApp = (
 		Eff.provideService(
 			deleteProductsByIds(ids),
 			DeleteProductsByIdsService,
-			contracts.deleteProductsByIds,
+			_ => contracts.deleteProductsByIds(_),
 		),
 })

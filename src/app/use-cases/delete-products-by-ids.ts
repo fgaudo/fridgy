@@ -30,16 +30,14 @@ export const useCase: DeleteProductsByIds = ids =>
 
 		yield* Effect.logDebug(
 			'About to delete products',
-		).pipe(eff =>
-			Effect.annotateLogs('ids', ids)(eff),
-		)
+		).pipe(Effect.annotateLogs('ids', ids))
 
 		const deleteProductsByIds =
 			yield* DeleteProductsByIdsService
 
 		const result = yield* deleteProductsByIds(
 			ids,
-		).pipe(eff => Eff.either(eff))
+		).pipe(Eff.either)
 
 		if (E.isLeft(result)) {
 			yield* Eff.logError(result.left)

@@ -7,7 +7,7 @@ import {
 	Switch,
 } from 'solid-js'
 
-import { HS, Int, O } from '@/core/imports.ts'
+import { E, HS, Int, O } from '@/core/imports.ts'
 
 import type { ProductModel } from '@/app/use-cases/get-sorted-products.ts'
 
@@ -35,7 +35,7 @@ export const Item: Component<{
 			<Switch>
 				<Match
 					when={
-						!props.model.isValid && props.model
+						E.isLeft(props.model) && props.model
 					}>
 					{model => (
 						<Button
@@ -45,7 +45,8 @@ export const Item: Component<{
 								when={(() => {
 									const m = model()
 									return (
-										O.isSome(m.id) && m.id.value
+										O.isSome(m.left.id) &&
+										m.left.id.value
 									)
 								})()}>
 								{id => (
@@ -59,7 +60,7 @@ export const Item: Component<{
 				</Match>
 				<Match
 					when={
-						props.model.isValid && props.model
+						E.isRight(props.model) && props.model
 					}>
 					{model => (
 						<Button
@@ -69,12 +70,12 @@ export const Item: Component<{
 								slot="end-icon"
 								class="relative flex h-[24px] w-[24px] items-center justify-center text-sm transition-all duration-fade">
 								<CheckBoxes
-									id={() => model().id}
+									id={() => model().right.id}
 								/>
 								<Show
 									when={(() => {
 										const exp =
-											model().expirationDate
+											model().right.expirationDate
 										return (
 											O.isSome(exp) &&
 											exp.value >
@@ -106,7 +107,7 @@ export const Item: Component<{
 								<Show
 									when={(() => {
 										const exp =
-											model().expirationDate
+											model().right.expirationDate
 										return (
 											O.isSome(exp) && exp.value
 										)
@@ -115,7 +116,7 @@ export const Item: Component<{
 										<ExpirationBar
 											expiration={expiration}
 											creation={
-												model().creationDate
+												model().right.creationDate
 											}
 										/>
 									)}
@@ -135,7 +136,7 @@ export const Item: Component<{
 									}
 									when={(() => {
 										const exp =
-											model().expirationDate
+											model().right.expirationDate
 										return (
 											O.isSome(exp) && exp.value
 										)
@@ -252,12 +253,11 @@ const Button: Component<{
 	} = useUiStateContext()!
 
 	const parsedId = () => {
-		const id = props.model().id
-
-		return typeof id === 'string'
-			? id
-			: O.isSome(id)
-				? id.value
+		const model = props.model()
+		return E.isRight(model)
+			? model.right.id
+			: O.isSome(model.left.id)
+				? model.left.id.value
 				: undefined
 	}
 
@@ -308,10 +308,14 @@ const Button: Component<{
 				<div class="overflow-hidden text-ellipsis whitespace-nowrap capitalize">
 					<Show
 						when={(() => {
-							const name = props.model().name
-							if (!O.isOption(name)) return name
+							const model = props.model()
+							if (E.isRight(model))
+								return model.right.name
 
-							return O.isSome(name) && name.value
+							return (
+								O.isSome(model.left.name) &&
+								model.left.name.value
+							)
 						})()}
 						fallback="CORRUPTED">
 						{name => name()}

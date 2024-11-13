@@ -2,6 +2,7 @@ import { Context } from 'effect'
 
 import {
 	B,
+	E,
 	Eff,
 	Int,
 	NETS,
@@ -9,19 +10,18 @@ import {
 	O,
 } from '@/core/imports.ts'
 
-export type ProductDTO =
-	| {
-			isValid: true
-			id: string
-			name: NETS.NonEmptyTrimmedString
-			expirationDate: O.Option<Int.Integer>
-			creationDate: Int.Integer
-	  }
-	| {
-			isValid: false
-			id: O.Option<string>
-			name: O.Option<NETS.NonEmptyTrimmedString>
-	  }
+export type ProductDTO = E.Either<
+	{
+		id: string
+		name: NETS.NonEmptyTrimmedString
+		expirationDate: O.Option<Int.Integer>
+		creationDate: Int.Integer
+	},
+	{
+		id: O.Option<string>
+		name: O.Option<NETS.NonEmptyTrimmedString>
+	}
+>
 
 export class ProductsService extends Context.Tag(
 	'ProductsService',
