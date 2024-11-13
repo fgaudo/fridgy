@@ -47,8 +47,8 @@ export const useCase: ProductList = Eff.gen(
 			yield* ProductsService
 
 		const result =
-			yield* getProductListWithTotal.pipe(eff =>
-				Eff.either(eff),
+			yield* getProductListWithTotal.pipe(
+				Eff.either,
 			)
 
 		if (E.isLeft(result)) {
@@ -73,10 +73,10 @@ export const useCase: ProductList = Eff.gen(
 					if (!rawProduct.isValid) {
 						yield* Eff.logError(
 							'Invalid raw product supplied',
-						).pipe(eff =>
+						).pipe(
 							Eff.annotateLogs({
 								p: rawProduct,
-							})(eff),
+							}),
 						)
 						return rawProduct
 					}
