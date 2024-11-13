@@ -2,7 +2,6 @@ import { fc, test } from '@fast-check/vitest'
 import { describe, expect } from 'vitest'
 
 import {
-	E,
 	Eff,
 	Int,
 	NETS,
@@ -39,7 +38,8 @@ function toModel(product: {
 		(product.expirationDate === undefined ||
 			Int.isInteger(product.expirationDate))
 	) {
-		return E.right({
+		return {
+			isValid: true,
 			id: product.id.toString(10),
 			name: NETS.unsafe_fromString(product.name),
 			creationDate: Int.unsafe_fromNumber(
@@ -48,17 +48,18 @@ function toModel(product: {
 			expirationDate: O.fromNullable(
 				product.expirationDate,
 			).pipe(O.map(Int.unsafe_fromNumber)),
-		})
+		}
 	}
 
-	return E.left({
+	return {
+		isValid: false,
 		name: O.fromNullable(product.name).pipe(
 			O.flatMap(NETS.fromString),
 		),
 		id: O.fromNullable(product.id).pipe(
 			O.map(id => id.toString(10)),
 		),
-	})
+	}
 }
 
 describe('Get products', () => {

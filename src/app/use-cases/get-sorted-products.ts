@@ -12,18 +12,19 @@ import * as P from '@/domain/product.ts'
 
 import { ProductsService } from '@/app/interfaces/read/get-sorted-products.ts'
 
-export type ProductModel = E.Either<
-	{
-		id: string
-		name: NonEmptyTrimmedString
-		expirationDate: O.Option<Int.Integer>
-		creationDate: Int.Integer
-	},
-	{
-		id: O.Option<string>
-		name: O.Option<NonEmptyTrimmedString>
-	}
->
+export type ProductModel =
+	| {
+			isValid: true
+			id: string
+			name: NonEmptyTrimmedString
+			expirationDate: O.Option<Int.Integer>
+			creationDate: Int.Integer
+	  }
+	| {
+			isValid: false
+			id: O.Option<string>
+			name: O.Option<NonEmptyTrimmedString>
+	  }
 
 export type ProductList = Eff.Effect<
 	{
@@ -45,12 +46,13 @@ export const useCase: ProductList = Eff.gen(
 		const getProductListWithTotal =
 			yield* ProductsService
 
-		const result = yield* Eff.either(
-			getProductListWithTotal,
-		)
+		const result =
+			yield* getProductListWithTotal.pipe(eff =>
+				Eff.either(eff),
+			)
 
 		if (E.isLeft(result)) {
-			yield* Eff.logError(result.left)
+			yield* Eff.logError(result)
 			return yield* Eff.fail(
 				ProductListError(
 					'There was a problem retrieving the list',
@@ -68,29 +70,28 @@ export const useCase: ProductList = Eff.gen(
 		const models: ProductModel[] = yield* Eff.all(
 			rawProducts.map(rawProduct =>
 				Eff.gen(function* () {
-					if (E.isLeft(rawProduct)) {
+					if (!rawProduct.isValid) {
 						yield* Eff.logError(
 							'Invalid raw product supplied',
-						).pipe(
+						).pipe(eff =>
 							Eff.annotateLogs({
 								p: rawProduct,
-							}),
+							})(eff),
 						)
 						return rawProduct
 					}
 
-					const product = P.createProduct(
-						rawProduct.right,
-					)
+					const product =
+						P.createProduct(rawProduct)
 
-					return E.right({
+					return {
 						name: P.name(product),
 						expirationDate:
 							P.expirationDate(product),
-						id: rawProduct.right.id,
-						creationDate:
-							rawProduct.right.creationDate,
-					} as const)
+						id: rawProduct.id,
+						creationDate: rawProduct.creationDate,
+						isValid: true,
+					} as const
 				}),
 			),
 		)

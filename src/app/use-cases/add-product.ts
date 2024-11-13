@@ -43,15 +43,18 @@ export const useCase: AddProduct = productData =>
 
 		yield* Eff.logDebug(
 			'About to add product',
-		).pipe(
-			Eff.annotateLogs('product', productData),
+		).pipe(eff =>
+			Eff.annotateLogs(
+				'product',
+				productData,
+			)(eff),
 		)
 
 		const result2 = yield* addProduct({
 			name: P.name(product),
 			expirationDate: P.expirationDate(product),
 			creationDate: timestamp,
-		}).pipe(Eff.either)
+		}).pipe(eff => Eff.either(eff))
 
 		if (E.isLeft(result2)) {
 			yield* Eff.logError(result2.left)

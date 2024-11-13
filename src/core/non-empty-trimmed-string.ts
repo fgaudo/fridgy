@@ -14,11 +14,11 @@ export const unsafe_fromString = (
 	const string = value.trim()
 
 	return B.refined<NonEmptyTrimmedString>(
-		_ => isNonBlank(_),
+		value => isNonBlank(value),
 		() => B.error('String is blank'),
 	)(string)
 }
 
 export const fromString = O.liftThrowable(
-	(_: string) => unsafe_fromString(_),
+	(value: string) => unsafe_fromString(value),
 )

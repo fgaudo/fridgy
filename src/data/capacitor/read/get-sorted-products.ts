@@ -123,7 +123,8 @@ export const query: Eff.Effect<
 						'Product is corrupt',
 					).pipe(Eff.annotateLogs({ product }))
 
-					return E.left({
+					return {
+						isValid: false,
 						id: pipe(
 							O.fromNullable(id),
 							O.map(id => id.toString(10)),
@@ -131,7 +132,7 @@ export const query: Eff.Effect<
 						name: O.fromNullable(name).pipe(
 							O.flatMap(NETS.fromString),
 						),
-					} as const)
+					} as const
 				}
 				const result = O.all([
 					NETS.fromString(name),
@@ -155,10 +156,11 @@ export const query: Eff.Effect<
 						'Product is corrupt',
 					).pipe(Eff.annotateLogs({ product }))
 
-					return E.left({
+					return {
+						isValid: false,
 						id: O.some(id.toString(10)),
 						name: NETS.fromString(name),
-					} as const)
+					} as const
 				}
 
 				const [
@@ -168,12 +170,13 @@ export const query: Eff.Effect<
 					expirationTimestamp,
 				] = result.value
 
-				return E.right({
+				return {
+					isValid: true,
 					id: idInt.toString(10),
 					name: nameNonEmpty,
 					creationDate: creationTimestamp,
 					expirationDate: expirationTimestamp,
-				} as const)
+				} as const
 			}),
 		),
 	)

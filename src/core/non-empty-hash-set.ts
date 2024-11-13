@@ -18,10 +18,11 @@ export const unsafe_fromHashSet = <A>(
 	hashSet: HS.HashSet<A>,
 ) =>
 	B.refined<NonEmptyHashSet<A>>(
-		_ => isNonEmptyHashSet(_),
+		value => isNonEmptyHashSet(value),
 		() => B.error('Hashset is empty'),
 	)(hashSet)
 
 export const fromHashSet = O.liftThrowable(
-	<A>(_: HS.HashSet<A>) => unsafe_fromHashSet(_),
+	<A>(value: HS.HashSet<A>) =>
+		unsafe_fromHashSet(value),
 )
