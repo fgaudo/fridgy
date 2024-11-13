@@ -16,7 +16,23 @@ export function assertExitIsFailure<A, E>(
 		(Cause.isDie(exit.cause) ||
 			Cause.isDieType(exit.cause))
 	) {
-		assert(false, exit.cause.toString())
+		assert(false, 'Exit is a Die')
+	}
+}
+
+export function assertExitIsDie<A, E>(
+	exit: Exit.Exit<A, E>,
+): asserts exit is Exit.Failure<A, E> {
+	if (Exit.isSuccess(exit)) {
+		assert(false, 'Exit is a success')
+	}
+
+	if (
+		Exit.isFailure(exit) &&
+		!Cause.isDie(exit.cause) &&
+		!Cause.isDieType(exit.cause)
+	) {
+		assert(false, 'Exit is not a Die')
 	}
 }
 

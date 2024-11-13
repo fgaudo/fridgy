@@ -168,4 +168,23 @@ describe('Get products', () => {
 			H.assertExitIsFailure(exit)
 		},
 	)
+
+	test.concurrent('Should crash', async () => {
+		const addProduct = Eff.provideService(
+			query,
+			CapacitorService,
+			{
+				db: {
+					getAllProductsWithTotal: () => {
+						throw new Error()
+					},
+				} as unknown as FridgySqlitePlugin,
+			},
+		)
+
+		const exit =
+			await testRuntime.runPromiseExit(addProduct)
+
+		H.assertExitIsDie(exit)
+	})
 })

@@ -112,4 +112,40 @@ describe('Add product', () => {
 			H.assertExitIsFailure(data)
 		},
 	)
+
+	test.concurrent.prop([
+		H.nonEmptyTrimmedString,
+		H.maybeInteger,
+		H.integer,
+	])(
+		'Should crash',
+		async (
+			name,
+			expirationDate,
+			creationDate,
+		) => {
+			const addProduct = Eff.provideService(
+				command({
+					name,
+					expirationDate,
+					creationDate,
+				}),
+				CapacitorService,
+				{
+					db: {
+						addProduct: () => {
+							throw new Error()
+						},
+					} as unknown as FridgySqlitePlugin,
+				},
+			)
+
+			const data =
+				await testRuntime.runPromiseExit(
+					addProduct,
+				)
+
+			H.assertExitIsDie(data)
+		},
+	)
 })

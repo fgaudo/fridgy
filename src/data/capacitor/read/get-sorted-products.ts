@@ -1,10 +1,9 @@
 import { pipe } from 'effect'
-import { tryPromise } from 'effect/Effect'
 
-import { fallback } from '@/core/helper.ts'
 import {
 	E,
 	Eff,
+	H,
 	Int,
 	NETS,
 	NNInt,
@@ -25,26 +24,26 @@ const ProductsListSchema = Sc.Struct({
 		Sc.Struct({
 			id: Sc.optional(
 				Sc.UndefinedOr(Sc.Number).annotations({
-					decodingFallback: fallback(undefined),
+					decodingFallback: H.fallback(undefined),
 				}),
 			),
 			name: Sc.optional(
 				Sc.UndefinedOr(Sc.String).annotations({
-					decodingFallback: fallback(undefined),
+					decodingFallback: H.fallback(undefined),
 				}),
 			),
 			expirationDate: Sc.optional(
 				Sc.UndefinedOr(Sc.Number).annotations({
-					decodingFallback: fallback(undefined),
+					decodingFallback: H.fallback(undefined),
 				}),
 			),
 			creationDate: Sc.optional(
 				Sc.UndefinedOr(Sc.Number).annotations({
-					decodingFallback: fallback(undefined),
+					decodingFallback: H.fallback(undefined),
 				}),
 			),
 		}).annotations({
-			decodingFallback: fallback({}),
+			decodingFallback: H.fallback({}),
 		}),
 	),
 })
@@ -60,7 +59,7 @@ export const query: Eff.Effect<
 	const { db } = yield* CapacitorService
 
 	const result = yield* pipe(
-		tryPromise(() =>
+		H.tryPromise(() =>
 			db.getAllProductsWithTotal(),
 		),
 		Eff.either,

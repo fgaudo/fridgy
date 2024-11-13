@@ -1,6 +1,4 @@
-import { tryPromise } from 'effect/Effect'
-
-import { E, Eff, O } from '@/core/imports.ts'
+import { E, Eff, H, O } from '@/core/imports.ts'
 
 import { AddProductServiceError } from '@/app/interfaces/write/add-product.ts'
 import type { AddProductDTO } from '@/app/interfaces/write/add-product.ts'
@@ -17,7 +15,7 @@ export const command: (
 	Eff.gen(function* () {
 		const { db } = yield* CapacitorService
 
-		const result = yield* tryPromise(() =>
+		const result = yield* H.tryPromise(() =>
 			db.addProduct({
 				product: {
 					name: product.name,

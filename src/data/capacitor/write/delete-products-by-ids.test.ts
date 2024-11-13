@@ -101,4 +101,25 @@ describe('Delete products by ids', () => {
 			H.assertExitIsFailure(exit)
 		},
 	)
+
+	test.concurrent('Should crash', async () => {
+		const deleteProductsByIds =
+			Eff.provideService(
+				command(HS.fromIterable(['1'])),
+				CapacitorService,
+				{
+					db: {
+						deleteProductsByIds: () => {
+							throw new Error()
+						},
+					} as unknown as FridgySqlitePlugin,
+				},
+			)
+
+		const exit = await testRuntime.runPromiseExit(
+			deleteProductsByIds,
+		)
+
+		H.assertExitIsDie(exit)
+	})
 })

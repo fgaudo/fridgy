@@ -1,8 +1,7 @@
-import { tryPromise } from 'effect/Effect'
-
 import {
 	E,
 	Eff,
+	H,
 	HS,
 	N,
 	O,
@@ -53,7 +52,7 @@ export const command: (
 			)} products`,
 		)
 
-		const result = yield* tryPromise(() =>
+		const result = yield* H.tryPromise(() =>
 			db.deleteProductsByIds({ ids: idsArray }),
 		).pipe(Eff.either)
 
