@@ -66,7 +66,7 @@ export const query: Eff.Effect<
 	)
 
 	if (E.isLeft(result)) {
-		yield* Eff.logError(result.left.toString())
+		yield* H.logError(result.left.toString())
 		return yield* Eff.fail(
 			ProductsServiceError(
 				'There was an error while getting the data',
@@ -79,7 +79,7 @@ export const query: Eff.Effect<
 	)(result.right).pipe(Eff.either)
 
 	if (E.isLeft(decodeResult)) {
-		yield* Eff.logError(
+		yield* H.logError(
 			decodeResult.left.toString(),
 		)
 
@@ -119,7 +119,7 @@ export const query: Eff.Effect<
 					creationDate === undefined ||
 					name === undefined
 				) {
-					yield* Eff.logError(
+					yield* H.logError(
 						'Product is corrupt',
 					).pipe(Eff.annotateLogs({ product }))
 
@@ -152,7 +152,7 @@ export const query: Eff.Effect<
 				])
 
 				if (O.isNone(result)) {
-					yield* Eff.logError(
+					yield* H.logError(
 						'Product is corrupt',
 					).pipe(Eff.annotateLogs({ product }))
 

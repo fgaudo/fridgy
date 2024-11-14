@@ -77,7 +77,7 @@ export const List: Component = () => {
 							createEffect(
 								on(i, i => {
 									H.runForkWithLogs(
-										Eff.logDebug(
+										H.logDebug(
 											`Rendered item on position ${i.toString(10)}`,
 										).pipe(
 											Eff.annotateLogs({ model }),

@@ -2,6 +2,7 @@ import {
 	B,
 	E,
 	Eff,
+	H,
 	Int,
 	NNInt,
 	O,
@@ -52,7 +53,7 @@ export const useCase: ProductList = Eff.gen(
 			)
 
 		if (E.isLeft(result)) {
-			yield* Eff.logError(result)
+			yield* H.logError(result)
 			return yield* Eff.fail(
 				ProductListError(
 					'There was a problem retrieving the list',
@@ -63,7 +64,7 @@ export const useCase: ProductList = Eff.gen(
 		const { total, products: rawProducts } =
 			result.right
 
-		yield* Eff.log(
+		yield* H.logInfo(
 			`Received ${rawProducts.length.toString(10)} products out of ${total.toString(10)}`,
 		)
 
@@ -71,7 +72,7 @@ export const useCase: ProductList = Eff.gen(
 			rawProducts.map(rawProduct =>
 				Eff.gen(function* () {
 					if (!rawProduct.isValid) {
-						yield* Eff.logError(
+						yield* H.logError(
 							'Invalid raw product supplied',
 						).pipe(
 							Eff.annotateLogs({

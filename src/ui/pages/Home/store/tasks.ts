@@ -2,6 +2,7 @@ import {
 	E,
 	Eff,
 	F,
+	H,
 	HS,
 	NEHS,
 	NETS,
@@ -38,7 +39,7 @@ export const refreshList = (
 		])
 
 		if (E.isLeft(result)) {
-			yield* Eff.logError(result.left)
+			yield* H.logError(result.left)
 
 			return InternalMessage.RefreshListFailed({
 				message: NETS.unsafe_fromString(
@@ -72,7 +73,7 @@ export const deleteByIdsAndRefresh = (
 		])
 
 		if (E.isLeft(result)) {
-			yield* Eff.logError(result.left)
+			yield* H.logError(result.left)
 			return InternalMessage.DeleteProductsFailed(
 				{
 					message: NETS.unsafe_fromString(
@@ -87,7 +88,7 @@ export const deleteByIdsAndRefresh = (
 		)
 
 		if (E.isLeft(result2)) {
-			yield* Eff.logError(result2.left)
+			yield* H.logError(result2.left)
 			return InternalMessage.DeleteProductsSucceededAndRefreshFailed(
 				{
 					message: NETS.unsafe_fromString(

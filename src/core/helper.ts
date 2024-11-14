@@ -1,3 +1,4 @@
+import { Logger, ParseResult } from 'effect'
 import { UnknownException } from 'effect/Cause'
 import { fail, succeed } from 'effect/Exit'
 import type { ParseIssue } from 'effect/ParseResult'
@@ -10,9 +11,11 @@ export const fallback: <A>(
 	issue: ParseIssue,
 ) => Eff.Effect<A, ParseIssue> = def => issue =>
 	Eff.gen(function* () {
-		yield* Eff.logWarning(
-			'Problem decoding',
-		).pipe(Eff.annotateLogs({ issue }))
+		logError(
+			yield* ParseResult.TreeFormatter.formatIssue(
+				issue,
+			),
+		)
 		return yield* Eff.succeed(def)
 	})
 
@@ -32,14 +35,48 @@ export const tryPromise = <A>(
 		)
 	})
 
+const loggerLayer = Logger.replace(
+	Logger.defaultLogger,
+	Logger.withLeveledConsole(
+		Logger.structuredLogger,
+	),
+)
+
 export const runForkWithLogs = (
 	effect: Eff.Effect<unknown, unknown>,
 ) =>
 	Eff.runFork(
 		Eff.unsandbox(
-			Eff.catchTags(Eff.sandbox(effect), {
-				Die: defect =>
-					Eff.logError(defect.toString()),
-			}),
+			Eff.catchTags(
+				Eff.sandbox(
+					effect.pipe(Eff.provide(loggerLayer)),
+				),
+				{
+					Die: defect =>
+						logError(defect.toString()),
+				},
+			),
 		),
 	)
+
+export const logInfo = (
+	...message: readonly unknown[]
+) =>
+	Eff.logInfo(...message).pipe(Eff.ignoreLogged)
+
+export const logWarning = (
+	...message: readonly unknown[]
+) =>
+	Eff.logWarning(...message).pipe(
+		Eff.ignoreLogged,
+	)
+
+export const logError = (
+	...message: readonly unknown[]
+) =>
+	Eff.logError(...message).pipe(Eff.ignoreLogged)
+
+export const logDebug = (
+	...message: readonly unknown[]
+) =>
+	Eff.logDebug(...message).pipe(Eff.ignoreLogged)

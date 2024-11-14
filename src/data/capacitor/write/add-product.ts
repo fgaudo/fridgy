@@ -30,7 +30,7 @@ export const command: (
 		).pipe(Eff.either)
 
 		if (E.isLeft(result)) {
-			yield* Eff.logError(result.left)
+			yield* H.logError(result.left)
 			return yield* Eff.fail(
 				AddProductServiceError(
 					'There was a problem with the request',
@@ -38,5 +38,7 @@ export const command: (
 			)
 		}
 
-		yield* Eff.log('No errors adding the product')
+		yield* H.logDebug(
+			'No errors adding the product',
+		)
 	})

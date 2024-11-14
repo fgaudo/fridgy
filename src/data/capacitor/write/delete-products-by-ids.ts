@@ -33,7 +33,7 @@ export const command: (
 						return parsed.value
 					}
 
-					yield* Eff.logError(
+					yield* H.logError(
 						'Id has incorrect format',
 					).pipe(Eff.annotateLogs({ id }))
 
@@ -46,7 +46,7 @@ export const command: (
 			),
 		)
 
-		yield* Eff.log(
+		yield* H.logDebug(
 			`About to delete ${idsArray.length.toString(
 				10,
 			)} products`,
@@ -57,7 +57,7 @@ export const command: (
 		).pipe(Eff.either)
 
 		if (E.isLeft(result)) {
-			yield* Eff.logError(result.left)
+			yield* H.logError(result.left)
 			return yield* Eff.fail(
 				DeleteProductsByIdsServiceError(
 					'There was a problem while performing the request',
@@ -65,7 +65,7 @@ export const command: (
 			)
 		}
 
-		yield* Eff.log(
+		yield* H.logDebug(
 			'No problems while deleting products',
 		)
 	})

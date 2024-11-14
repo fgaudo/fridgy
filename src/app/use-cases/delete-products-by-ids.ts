@@ -1,6 +1,13 @@
 import { Effect } from 'effect'
 
-import { B, E, Eff, HS } from '@/core/imports.ts'
+import {
+	A,
+	B,
+	E,
+	Eff,
+	H,
+	HS,
+} from '@/core/imports.ts'
 
 import { DeleteProductsByIdsService } from '@/app/interfaces/write/delete-products-by-ids.ts'
 
@@ -28,19 +35,21 @@ export const useCase: DeleteProductsByIds = ids =>
 			)
 		}
 
-		yield* Effect.logDebug(
-			'About to delete products',
-		).pipe(Effect.annotateLogs('ids', ids))
-
 		const deleteProductsByIds =
 			yield* DeleteProductsByIdsService
 
-		const result = yield* deleteProductsByIds(
-			ids,
-		).pipe(Eff.either)
+		const [, result] = yield* Eff.all([
+			H.logInfo('Deleting products').pipe(
+				Effect.annotateLogs(
+					'ids',
+					A.fromIterable(ids),
+				),
+			),
+			deleteProductsByIds(ids).pipe(Eff.either),
+		])
 
 		if (E.isLeft(result)) {
-			yield* Eff.logError(result.left)
+			yield* H.logError(result.left)
 			return yield* Eff.fail(
 				DeleteProductsByIdsError(
 					'There was a problem deleting the products',
@@ -48,7 +57,13 @@ export const useCase: DeleteProductsByIds = ids =>
 			)
 		}
 
-		yield* Effect.logDebug(
-			'No errors deleting products',
+		yield* H.logInfo(
+			'Products deleted succesfully',
+		).pipe(
+			Effect.annotateLogs(
+				'ids',
+				A.fromIterable(ids),
+			),
+			Effect.withLogSpan('myspan'),
 		)
 	})

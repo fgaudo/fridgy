@@ -2,6 +2,7 @@ import {
 	E,
 	Eff,
 	F,
+	H,
 	Int,
 	NETS,
 	O,
@@ -35,7 +36,7 @@ export const addProduct = (
 		])
 
 		if (E.isLeft(result)) {
-			Eff.logError(result.left)
+			H.logError(result.left)
 			return InternalMessage.AddProductFailed({
 				message: NETS.unsafe_fromString(
 					'There was a problem adding the product',

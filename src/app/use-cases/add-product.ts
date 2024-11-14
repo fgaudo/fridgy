@@ -3,6 +3,7 @@ import {
 	Cl,
 	E,
 	Eff,
+	H,
 	Int,
 	NETS,
 	O,
@@ -41,20 +42,19 @@ export const useCase: AddProduct = productData =>
 
 		const addProduct = yield* AddProductService
 
-		yield* Eff.logDebug(
-			'About to add product',
-		).pipe(
-			Eff.annotateLogs('product', productData),
-		)
-
-		const result2 = yield* addProduct({
-			name: P.name(product),
-			expirationDate: P.expirationDate(product),
-			creationDate: timestamp,
-		}).pipe(Eff.either)
+		const [, result2] = yield* Eff.all([
+			H.logInfo('Adding product').pipe(
+				Eff.annotateLogs('product', productData),
+			),
+			addProduct({
+				name: P.name(product),
+				expirationDate: P.expirationDate(product),
+				creationDate: timestamp,
+			}).pipe(Eff.either),
+		])
 
 		if (E.isLeft(result2)) {
-			yield* Eff.logError(result2.left)
+			yield* H.logError(result2.left)
 			return yield* Eff.fail(
 				AddProductError(
 					'There was a problem adding the product',
@@ -62,7 +62,9 @@ export const useCase: AddProduct = productData =>
 			)
 		}
 
-		yield* Eff.logDebug(
-			'No errors adding product',
+		yield* H.logInfo(
+			'Product added succesfully',
+		).pipe(
+			Eff.annotateLogs('product', productData),
 		)
 	})
