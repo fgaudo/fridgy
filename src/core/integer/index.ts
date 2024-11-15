@@ -1,8 +1,10 @@
-import { B, O } from '../imports.ts'
+import { O } from '../imports.ts'
 
 const _: unique symbol = Symbol()
 
-export type Integer = number & B.Brand<typeof _>
+export type Integer = number & {
+	[_]: true
+}
 
 export const isInteger = (
 	value: unknown,
@@ -10,9 +12,14 @@ export const isInteger = (
 
 export const unsafe_fromNumber: (
 	number: number,
-) => Integer = B.refined<Integer>(isInteger, () =>
-	B.error('Not an integer'),
-)
+) => Integer = number => {
+	if (!isInteger(number)) {
+		throw new Error('Not an integer')
+	}
+
+	// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+	return number as Integer
+}
 
 export const fromNumber: (
 	number: number,

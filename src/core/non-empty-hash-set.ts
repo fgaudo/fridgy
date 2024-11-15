@@ -1,9 +1,11 @@
-import { B, HS, O, PInt } from './imports.ts'
+/* eslint-disable @typescript-eslint/consistent-type-assertions */
+import { HS, O, PInt } from './imports.ts'
 
 const _: unique symbol = Symbol()
 
-export type NonEmptyHashSet<A> = HS.HashSet<A> &
-	B.Brand<typeof _>
+export type NonEmptyHashSet<A> = HS.HashSet<A> & {
+	[_]: true
+}
 
 export const isNonEmptyHashSet = (
 	hs: HS.HashSet<unknown>,
@@ -16,11 +18,13 @@ export const size = <A>(
 
 export const unsafe_fromHashSet = <A>(
 	hashSet: HS.HashSet<A>,
-) =>
-	B.refined<NonEmptyHashSet<A>>(
-		value => isNonEmptyHashSet(value),
-		() => B.error('Hashset is empty'),
-	)(hashSet)
+) => {
+	if (!isNonEmptyHashSet(hashSet)) {
+		throw new Error('Not a non-empty hashSet')
+	}
+
+	return hashSet as NonEmptyHashSet<A>
+}
 
 export const fromHashSet = O.liftThrowable(
 	<A>(value: HS.HashSet<A>) =>

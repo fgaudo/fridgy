@@ -1,10 +1,12 @@
-import { B, O } from '../imports.ts'
+/* eslint-disable @typescript-eslint/consistent-type-assertions */
+import { O } from '../imports.ts'
 import { isInteger } from './index.ts'
 
 const _: unique symbol = Symbol()
 
-export type PositiveInteger = number &
-	B.Brand<typeof _>
+export type PositiveInteger = number & {
+	[_]: true
+}
 
 export const isPositiveInteger = (
 	value: unknown,
@@ -13,10 +15,13 @@ export const isPositiveInteger = (
 
 export const unsafe_fromNumber: (
 	number: number,
-) => PositiveInteger = B.refined<PositiveInteger>(
-	value => isPositiveInteger(value),
-	() => B.error('Not a positive integer'),
-)
+) => PositiveInteger = number => {
+	if (!isPositiveInteger(number)) {
+		throw new Error('Not a positive integer')
+	}
+
+	return number as PositiveInteger
+}
 
 export const fromNumber: (
 	number: number,

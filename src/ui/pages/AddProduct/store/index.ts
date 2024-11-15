@@ -65,8 +65,5 @@ export const createStore: (
 		reducer(context),
 	)
 
-	return [
-		state,
-		dispatch as (message: Message) => void,
-	]
+	return [state, dispatch]
 }

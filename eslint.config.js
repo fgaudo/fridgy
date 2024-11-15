@@ -61,4 +61,29 @@ export default [
 			],
 		},
 	},
+	{
+		files: ['src/**/*.ts'],
+		rules: {
+			'@typescript-eslint/consistent-type-assertions':
+				[
+					'error',
+					{
+						assertionStyle: 'never',
+					},
+				],
+		},
+	},
+	{
+		files: ['src/**/*.test.ts'],
+		rules: {
+			'@typescript-eslint/consistent-type-assertions':
+				[
+					'error',
+					{
+						assertionStyle: 'as',
+						objectLiteralTypeAssertions: 'allow',
+					},
+				],
+		},
+	},
 ]

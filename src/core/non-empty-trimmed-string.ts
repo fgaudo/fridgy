@@ -1,9 +1,11 @@
-import { B, O } from './imports.ts'
+/* eslint-disable @typescript-eslint/consistent-type-assertions */
+import { O } from './imports.ts'
 
 const _: unique symbol = Symbol()
 
-export type NonEmptyTrimmedString = string &
-	B.Brand<typeof _>
+export type NonEmptyTrimmedString = string & {
+	[_]: true
+}
 
 export const isNonBlank = (string: string) =>
 	/\S/.test(string)
@@ -13,10 +15,11 @@ export const unsafe_fromString = (
 ) => {
 	const string = value.trim()
 
-	return B.refined<NonEmptyTrimmedString>(
-		value => isNonBlank(value),
-		() => B.error('String is blank'),
-	)(string)
+	if (!isNonBlank(string)) {
+		throw new Error('Not a non-empty string')
+	}
+
+	return string as NonEmptyTrimmedString
 }
 
 export const fromString = O.liftThrowable(
