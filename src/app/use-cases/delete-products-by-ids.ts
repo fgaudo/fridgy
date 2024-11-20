@@ -43,7 +43,6 @@ export const useCase: DeleteProductsByIds = ids =>
 				'ids',
 				A.fromIterable(ids),
 			),
-			Eff.forkDaemon,
 		)
 
 		const result = yield* deleteProductsByIds(
@@ -51,9 +50,7 @@ export const useCase: DeleteProductsByIds = ids =>
 		).pipe(Eff.either)
 
 		if (E.isLeft(result)) {
-			yield* H.logError(result.left).pipe(
-				Eff.forkDaemon,
-			)
+			yield* H.logError(result.left)
 
 			return yield* Eff.fail(
 				DeleteProductsByIdsError(
@@ -69,6 +66,5 @@ export const useCase: DeleteProductsByIds = ids =>
 				'ids',
 				A.fromIterable(ids),
 			),
-			Eff.forkDaemon,
 		)
 	})

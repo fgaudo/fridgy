@@ -44,7 +44,6 @@ export const useCase: AddProduct = productData =>
 
 		yield* H.logInfo('Adding product').pipe(
 			Eff.annotateLogs('product', productData),
-			Eff.forkDaemon,
 		)
 
 		const result2 = yield* addProduct({
@@ -54,9 +53,7 @@ export const useCase: AddProduct = productData =>
 		}).pipe(Eff.either)
 
 		if (E.isLeft(result2)) {
-			yield* H.logError(result2.left).pipe(
-				Eff.forkDaemon,
-			)
+			yield* H.logError(result2.left)
 
 			return yield* Eff.fail(
 				AddProductError(
@@ -69,6 +66,5 @@ export const useCase: AddProduct = productData =>
 			'Product added succesfully',
 		).pipe(
 			Eff.annotateLogs('product', productData),
-			Eff.forkDaemon,
 		)
 	})

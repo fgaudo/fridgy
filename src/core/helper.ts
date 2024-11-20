@@ -62,21 +62,31 @@ export const runForkWithLogs = (
 export const logInfo = (
 	...message: readonly unknown[]
 ) =>
-	Eff.logInfo(...message).pipe(Eff.ignoreLogged)
+	Eff.logInfo(...message).pipe(
+		Eff.ignoreLogged,
+		Eff.forkDaemon,
+	)
 
 export const logWarning = (
 	...message: readonly unknown[]
 ) =>
 	Eff.logWarning(...message).pipe(
 		Eff.ignoreLogged,
+		Eff.forkDaemon,
 	)
 
 export const logError = (
 	...message: readonly unknown[]
 ) =>
-	Eff.logError(...message).pipe(Eff.ignoreLogged)
+	Eff.logError(...message).pipe(
+		Eff.ignoreLogged,
+		Eff.forkDaemon,
+	)
 
 export const logDebug = (
 	...message: readonly unknown[]
 ) =>
-	Eff.logDebug(...message).pipe(Eff.ignoreLogged)
+	Eff.logDebug(...message).pipe(
+		Eff.ignoreLogged,
+		Eff.forkDaemon,
+	)

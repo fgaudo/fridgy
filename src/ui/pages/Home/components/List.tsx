@@ -81,7 +81,6 @@ export const List: Component = () => {
 											`Rendered item on position ${i.toString(10)}`,
 										).pipe(
 											Eff.annotateLogs({ model }),
-											Eff.forkDaemon,
 										),
 									)
 								}),

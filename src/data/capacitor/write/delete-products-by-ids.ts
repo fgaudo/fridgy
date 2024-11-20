@@ -35,10 +35,7 @@ export const command: (
 
 					yield* H.logError(
 						'Id has incorrect format',
-					).pipe(
-						Eff.annotateLogs({ id }),
-						Eff.forkDaemon,
-					)
+					).pipe(Eff.annotateLogs({ id }))
 
 					return yield* Eff.fail(
 						DeleteProductsByIdsServiceError(
@@ -53,7 +50,6 @@ export const command: (
 			`About to delete ${idsArray.length.toString(
 				10,
 			)} products`,
-			Eff.forkDaemon,
 		)
 
 		const result = yield* H.tryPromise(() =>
@@ -61,10 +57,7 @@ export const command: (
 		).pipe(Eff.either)
 
 		if (E.isLeft(result)) {
-			yield* H.logError(
-				result.left,
-				Eff.forkDaemon,
-			)
+			yield* H.logError(result.left)
 			return yield* Eff.fail(
 				DeleteProductsByIdsServiceError(
 					'There was a problem while performing the request',
@@ -74,6 +67,5 @@ export const command: (
 
 		yield* H.logDebug(
 			'No problems while deleting products',
-			Eff.forkDaemon,
 		)
 	})

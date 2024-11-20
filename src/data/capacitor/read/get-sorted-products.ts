@@ -66,10 +66,7 @@ export const query: Eff.Effect<
 	)
 
 	if (E.isLeft(result)) {
-		yield* H.logError(
-			result.left.toString(),
-			Eff.forkDaemon,
-		)
+		yield* H.logError(result.left.toString())
 		return yield* Eff.fail(
 			ProductsServiceError(
 				'There was an error while getting the data',
@@ -84,7 +81,6 @@ export const query: Eff.Effect<
 	if (E.isLeft(decodeResult)) {
 		yield* H.logError(
 			decodeResult.left.toString(),
-			Eff.forkDaemon,
 		)
 
 		return yield* Eff.fail(
@@ -125,10 +121,7 @@ export const query: Eff.Effect<
 				) {
 					yield* H.logError(
 						'Product is corrupt',
-					).pipe(
-						Eff.annotateLogs({ product }),
-						Eff.forkDaemon,
-					)
+					).pipe(Eff.annotateLogs({ product }))
 
 					return {
 						isValid: false,
@@ -161,10 +154,7 @@ export const query: Eff.Effect<
 				if (O.isNone(result)) {
 					yield* H.logError(
 						'Product is corrupt',
-					).pipe(
-						Eff.annotateLogs({ product }),
-						Eff.forkDaemon,
-					)
+					).pipe(Eff.annotateLogs({ product }))
 
 					return {
 						isValid: false,
