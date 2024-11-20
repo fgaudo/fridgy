@@ -36,7 +36,7 @@ export const addProduct = (
 		])
 
 		if (E.isLeft(result)) {
-			H.logError(result.left)
+			H.logError(result.left, Eff.forkDaemon)
 			return InternalMessage.AddProductFailed({
 				message: NETS.unsafe_fromString(
 					'There was a problem adding the product',

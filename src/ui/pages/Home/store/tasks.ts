@@ -39,7 +39,10 @@ export const refreshList = (
 		])
 
 		if (E.isLeft(result)) {
-			yield* H.logError(result.left)
+			yield* H.logError(
+				result.left,
+				Eff.forkDaemon,
+			)
 
 			return InternalMessage.RefreshListFailed({
 				message: NETS.unsafe_fromString(
@@ -73,7 +76,10 @@ export const deleteByIdsAndRefresh = (
 		])
 
 		if (E.isLeft(result)) {
-			yield* H.logError(result.left)
+			yield* H.logError(
+				result.left,
+				Eff.forkDaemon,
+			)
 			return InternalMessage.DeleteProductsFailed(
 				{
 					message: NETS.unsafe_fromString(
@@ -88,7 +94,10 @@ export const deleteByIdsAndRefresh = (
 		)
 
 		if (E.isLeft(result2)) {
-			yield* H.logError(result2.left)
+			yield* H.logError(
+				result2.left,
+				Eff.forkDaemon,
+			)
 			return InternalMessage.DeleteProductsSucceededAndRefreshFailed(
 				{
 					message: NETS.unsafe_fromString(

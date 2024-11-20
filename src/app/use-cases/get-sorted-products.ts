@@ -53,7 +53,9 @@ export const useCase: ProductList = Eff.gen(
 			)
 
 		if (E.isLeft(result)) {
-			yield* H.logError(result)
+			yield* H.logError(result).pipe(
+				Eff.forkDaemon,
+			)
 			return yield* Eff.fail(
 				ProductListError(
 					'There was a problem retrieving the list',
@@ -66,7 +68,7 @@ export const useCase: ProductList = Eff.gen(
 
 		yield* H.logInfo(
 			`Received ${rawProducts.length.toString(10)} products out of ${total.toString(10)}`,
-		)
+		).pipe(Eff.forkDaemon)
 
 		const models: ProductModel[] = yield* Eff.all(
 			rawProducts.map(rawProduct =>
@@ -78,6 +80,7 @@ export const useCase: ProductList = Eff.gen(
 							Eff.annotateLogs({
 								p: rawProduct,
 							}),
+							Eff.forkDaemon,
 						)
 						return rawProduct
 					}

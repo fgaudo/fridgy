@@ -38,18 +38,23 @@ export const useCase: DeleteProductsByIds = ids =>
 		const deleteProductsByIds =
 			yield* DeleteProductsByIdsService
 
-		const [, result] = yield* Eff.all([
-			H.logInfo('Deleting products').pipe(
-				Effect.annotateLogs(
-					'ids',
-					A.fromIterable(ids),
-				),
+		yield* H.logInfo('Deleting products').pipe(
+			Effect.annotateLogs(
+				'ids',
+				A.fromIterable(ids),
 			),
-			deleteProductsByIds(ids).pipe(Eff.either),
-		])
+			Eff.forkDaemon,
+		)
+
+		const result = yield* deleteProductsByIds(
+			ids,
+		).pipe(Eff.either)
 
 		if (E.isLeft(result)) {
-			yield* H.logError(result.left)
+			yield* H.logError(result.left).pipe(
+				Eff.forkDaemon,
+			)
+
 			return yield* Eff.fail(
 				DeleteProductsByIdsError(
 					'There was a problem deleting the products',
@@ -64,6 +69,6 @@ export const useCase: DeleteProductsByIds = ids =>
 				'ids',
 				A.fromIterable(ids),
 			),
-			Effect.withLogSpan('myspan'),
+			Eff.forkDaemon,
 		)
 	})

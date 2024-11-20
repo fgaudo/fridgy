@@ -42,19 +42,22 @@ export const useCase: AddProduct = productData =>
 
 		const addProduct = yield* AddProductService
 
-		const [, result2] = yield* Eff.all([
-			H.logInfo('Adding product').pipe(
-				Eff.annotateLogs('product', productData),
-			),
-			addProduct({
-				name: P.name(product),
-				expirationDate: P.expirationDate(product),
-				creationDate: timestamp,
-			}).pipe(Eff.either),
-		])
+		yield* H.logInfo('Adding product').pipe(
+			Eff.annotateLogs('product', productData),
+			Eff.forkDaemon,
+		)
+
+		const result2 = yield* addProduct({
+			name: P.name(product),
+			expirationDate: P.expirationDate(product),
+			creationDate: timestamp,
+		}).pipe(Eff.either)
 
 		if (E.isLeft(result2)) {
-			yield* H.logError(result2.left)
+			yield* H.logError(result2.left).pipe(
+				Eff.forkDaemon,
+			)
+
 			return yield* Eff.fail(
 				AddProductError(
 					'There was a problem adding the product',
@@ -66,5 +69,6 @@ export const useCase: AddProduct = productData =>
 			'Product added succesfully',
 		).pipe(
 			Eff.annotateLogs('product', productData),
+			Eff.forkDaemon,
 		)
 	})
