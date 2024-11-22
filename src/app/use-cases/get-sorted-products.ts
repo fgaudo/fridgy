@@ -1,9 +1,10 @@
 import {
-	B,
+	C,
 	E,
 	Eff,
 	H,
 	Int,
+	L,
 	NNInt,
 	O,
 } from '@/core/imports.ts'
@@ -11,7 +12,20 @@ import type { NonEmptyTrimmedString } from '@/core/non-empty-trimmed-string.ts'
 
 import * as P from '@/domain/product.ts'
 
-import { ProductsService } from '@/app/interfaces/read/get-sorted-products.ts'
+import { GetSortedProductsService } from '@/app/interfaces/get-sorted-products.ts'
+
+export class GetSortedProductsUseCase extends C.Tag(
+	'GetSortedProductsUseCase',
+)<
+	GetSortedProductsUseCase,
+	Eff.Effect<
+		{
+			models: ProductModel[]
+			total: NNInt.NonNegativeInteger
+		},
+		void
+	>
+>() {}
 
 export type ProductModel =
 	| {
@@ -27,76 +41,62 @@ export type ProductModel =
 			name: O.Option<NonEmptyTrimmedString>
 	  }
 
-export type ProductList = Eff.Effect<
-	{
-		total: NNInt.NonNegativeInteger
-		models: ProductModel[]
-	},
-	ProductListError,
-	ProductsService
->
-
-export type ProductListError = string &
-	B.Brand<'ProductListError'>
-
-const ProductListError =
-	B.nominal<ProductListError>()
-
-export const useCase: ProductList = Eff.gen(
-	function* () {
+export const useCase = L.effect(
+	GetSortedProductsUseCase,
+	Eff.gen(function* () {
 		const getProductListWithTotal =
-			yield* ProductsService
+			yield* GetSortedProductsService
 
-		const result =
-			yield* getProductListWithTotal.pipe(
-				Eff.either,
+		return Eff.gen(function* () {
+			const result =
+				yield* getProductListWithTotal.pipe(
+					Eff.either,
+				)
+
+			if (E.isLeft(result)) {
+				yield* H.logError(result)
+				return yield* Eff.fail(undefined)
+			}
+
+			const { total, products: rawProducts } =
+				result.right
+
+			yield* H.logInfo(
+				`Received ${rawProducts.length.toString(10)} products out of ${total.toString(10)}`,
 			)
 
-		if (E.isLeft(result)) {
-			yield* H.logError(result)
-			return yield* Eff.fail(
-				ProductListError(
-					'There was a problem retrieving the list',
-				),
-			)
-		}
+			const models: ProductModel[] =
+				yield* Eff.all(
+					rawProducts.map(rawProduct =>
+						Eff.gen(function* () {
+							if (!rawProduct.isValid) {
+								yield* H.logError(
+									'Invalid raw product supplied',
+								).pipe(
+									Eff.annotateLogs({
+										p: rawProduct,
+									}),
+								)
+								return rawProduct
+							}
 
-		const { total, products: rawProducts } =
-			result.right
+							const product =
+								P.createProduct(rawProduct)
 
-		yield* H.logInfo(
-			`Received ${rawProducts.length.toString(10)} products out of ${total.toString(10)}`,
-		)
+							return {
+								name: P.name(product),
+								expirationDate:
+									P.expirationDate(product),
+								id: rawProduct.id,
+								creationDate:
+									rawProduct.creationDate,
+								isValid: true,
+							} as const
+						}),
+					),
+				)
 
-		const models: ProductModel[] = yield* Eff.all(
-			rawProducts.map(rawProduct =>
-				Eff.gen(function* () {
-					if (!rawProduct.isValid) {
-						yield* H.logError(
-							'Invalid raw product supplied',
-						).pipe(
-							Eff.annotateLogs({
-								p: rawProduct,
-							}),
-						)
-						return rawProduct
-					}
-
-					const product =
-						P.createProduct(rawProduct)
-
-					return {
-						name: P.name(product),
-						expirationDate:
-							P.expirationDate(product),
-						id: rawProduct.id,
-						creationDate: rawProduct.creationDate,
-						isValid: true,
-					} as const
-				}),
-			),
-		)
-
-		return { models, total }
-	},
+			return { models, total }
+		})
+	}),
 )

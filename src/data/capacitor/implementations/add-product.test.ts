@@ -1,9 +1,14 @@
 import { test } from '@fast-check/vitest'
 import { describe } from 'vitest'
 
-import { Eff } from '@/core/imports.ts'
+import { Eff, L } from '@/core/imports.ts'
 import * as H from '@/core/test-helpers.ts'
 import { testRuntime } from '@/core/utils.ts'
+
+import {
+	AddProductUseCase,
+	useCase,
+} from '@/app/use-cases/add-product.ts'
 
 import type { FridgySqlitePlugin } from '../fridgy-sqlite-plugin.ts'
 import { CapacitorService } from '../index.ts'
@@ -21,18 +26,19 @@ describe('Add product', () => {
 			expirationDate,
 			creationDate,
 		) => {
-			const addProduct = Eff.provideService(
-				command({
-					name,
-					expirationDate,
-					creationDate,
-				}),
-				CapacitorService,
-				{
-					db: {
-						addProduct: () => Promise.resolve(),
-					} as unknown as FridgySqlitePlugin,
-				},
+			const addProduct = Eff.provide(
+				Eff.provideService(
+					AddProductUseCase,
+					useCase,
+				),
+
+				L.provide(
+					L.succeed(CapacitorService, {
+						db: {
+							addProduct: () => Promise.resolve(),
+						} as unknown as FridgySqlitePlugin,
+					}),
+				),
 			)
 
 			const exit =

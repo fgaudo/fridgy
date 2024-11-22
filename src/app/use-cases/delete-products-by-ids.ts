@@ -2,69 +2,64 @@ import { Effect } from 'effect'
 
 import {
 	A,
-	B,
+	C,
 	E,
 	Eff,
 	H,
 	HS,
+	L,
 } from '@/core/imports.ts'
 
-import { DeleteProductsByIdsService } from '@/app/interfaces/write/delete-products-by-ids.ts'
+import { DeleteProductsByIdsService } from '@/app/interfaces/delete-products-by-ids.ts'
 
-export type DeleteProductsByIds = (
-	ids: HS.HashSet<string>,
-) => Eff.Effect<
-	void,
-	DeleteProductsByIdsError,
-	DeleteProductsByIdsService
->
+export class DeleteProductsByIdsUseCase extends C.Tag(
+	'DeleteProductsByIdsUseCase',
+)<
+	DeleteProductsByIdsUseCase,
+	(
+		ids: HS.HashSet<string>,
+	) => Eff.Effect<void, void>
+>() {}
 
-export type DeleteProductsByIdsError = string &
-	B.Brand<'DeleteProductsByIdsError'>
-
-const DeleteProductsByIdsError =
-	B.nominal<DeleteProductsByIdsError>()
-
-export const useCase: DeleteProductsByIds = ids =>
-	Effect.gen(function* () {
-		if (HS.size(ids) <= 0) {
-			return yield* Effect.fail(
-				DeleteProductsByIdsError(
-					'No ids provided',
-				),
-			)
-		}
-
+export const useCase = L.effect(
+	DeleteProductsByIdsUseCase,
+	Eff.gen(function* () {
 		const deleteProductsByIds =
 			yield* DeleteProductsByIdsService
 
-		yield* H.logInfo('Deleting products').pipe(
-			Effect.annotateLogs(
-				'ids',
-				A.fromIterable(ids),
-			),
-		)
+		return ids =>
+			Effect.gen(function* () {
+				if (HS.size(ids) <= 0) {
+					return yield* Effect.fail(undefined)
+				}
 
-		const result = yield* deleteProductsByIds(
-			ids,
-		).pipe(Eff.either)
+				yield* H.logInfo(
+					'Deleting products',
+				).pipe(
+					Effect.annotateLogs(
+						'ids',
+						A.fromIterable(ids),
+					),
+				)
 
-		if (E.isLeft(result)) {
-			yield* H.logError(result.left)
+				const result = yield* deleteProductsByIds(
+					ids,
+				).pipe(Eff.either)
 
-			return yield* Eff.fail(
-				DeleteProductsByIdsError(
-					'There was a problem deleting the products',
-				),
-			)
-		}
+				if (E.isLeft(result)) {
+					yield* H.logError(result.left)
 
-		yield* H.logInfo(
-			'Products deleted succesfully',
-		).pipe(
-			Effect.annotateLogs(
-				'ids',
-				A.fromIterable(ids),
-			),
-		)
-	})
+					return yield* Eff.fail(undefined)
+				}
+
+				yield* H.logInfo(
+					'Products deleted succesfully',
+				).pipe(
+					Effect.annotateLogs(
+						'ids',
+						A.fromIterable(ids),
+					),
+				)
+			})
+	}),
+)

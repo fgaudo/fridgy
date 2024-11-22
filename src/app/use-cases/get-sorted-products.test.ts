@@ -6,10 +6,7 @@ import { Eff, NNInt } from '@/core/imports.ts'
 import * as H from '@/core/test-helpers.ts'
 import { testRuntime } from '@/core/utils.ts'
 
-import {
-	ProductsService,
-	ProductsServiceError,
-} from '@/app/interfaces/read/get-sorted-products.ts'
+import { GetSortedProductsService } from '@/app/interfaces/get-sorted-products.ts'
 
 import { useCase } from './get-sorted-products.ts'
 
@@ -38,11 +35,9 @@ describe('Get sorted products', () => {
 		async () => {
 			const sortedProducts = Eff.provideService(
 				useCase,
-				ProductsService,
+				GetSortedProductsService,
 				Eff.gen(function* () {
-					return yield* Eff.fail(
-						ProductsServiceError(''),
-					)
+					return yield* Eff.fail(undefined)
 				}),
 			)
 
@@ -61,7 +56,7 @@ describe('Get sorted products', () => {
 			const products = [a, b, c]
 			const sortedProducts = Eff.provideService(
 				useCase,
-				ProductsService,
+				GetSortedProductsService,
 				Eff.gen(function* () {
 					return yield* Eff.succeed({
 						total: NNInt.unsafe_fromNumber(

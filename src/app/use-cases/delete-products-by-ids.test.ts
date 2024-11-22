@@ -7,10 +7,7 @@ import {
 } from '@/core/test-helpers.ts'
 import { testRuntime } from '@/core/utils.ts'
 
-import {
-	DeleteProductsByIdsService,
-	DeleteProductsByIdsServiceError,
-} from '../interfaces/write/delete-products-by-ids.ts'
+import { DeleteProductsByIdsService } from '../interfaces/delete-products-by-ids.ts'
 import { useCase } from './delete-products-by-ids.ts'
 
 describe('Delete products by ids', () => {
@@ -22,9 +19,7 @@ describe('Delete products by ids', () => {
 				DeleteProductsByIdsService,
 				() =>
 					Eff.gen(function* () {
-						return yield* Eff.fail(
-							DeleteProductsByIdsServiceError(''),
-						)
+						return yield* Eff.fail(undefined)
 					}),
 			)
 

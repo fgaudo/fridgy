@@ -1,5 +1,4 @@
 import {
-	B,
 	C,
 	Eff,
 	Int,
@@ -19,11 +18,5 @@ export class AddProductService extends C.Tag(
 	AddProductService,
 	(
 		product: AddProductDTO,
-	) => Eff.Effect<void, AddProductServiceError>
+	) => Eff.Effect<void, void>
 >() {}
-
-export type AddProductServiceError = string &
-	B.Brand<'AddProductServiceError'>
-
-export const AddProductServiceError =
-	B.nominal<AddProductServiceError>()

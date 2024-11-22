@@ -1,15 +1,15 @@
 import { test } from '@fast-check/vitest'
 import { describe } from 'vitest'
 
-import { Eff } from '@/core/imports.ts'
+import { Eff, L } from '@/core/imports.ts'
 import * as H from '@/core/test-helpers.ts'
 import { testRuntime } from '@/core/utils.ts'
 
+import { AddProductService } from '../interfaces/add-product.ts'
 import {
-	AddProductService,
-	AddProductServiceError,
-} from '../interfaces/write/add-product.ts'
-import { useCase } from './add-product.ts'
+	AddProductUseCase,
+	useCase,
+} from './add-product.ts'
 
 describe('Add product', () => {
 	test.concurrent.prop([
@@ -18,18 +18,25 @@ describe('Add product', () => {
 	])(
 		'Should just work',
 		async (name, expirationDate) => {
-			const addProduct = Eff.provideService(
-				useCase({
-					name,
-					expirationDate,
+			const addProduct = Eff.provide(
+				Eff.gen(function* () {
+					yield* (yield* AddProductUseCase)({
+						name,
+						expirationDate,
+					})
 				}),
-				AddProductService,
-				() =>
-					Eff.gen(function* () {
-						return yield* Eff.succeed(undefined)
-					}),
+				useCase.pipe(
+					L.provide(
+						L.succeed(AddProductService, () =>
+							Eff.gen(function* () {
+								return yield* Eff.succeed(
+									undefined,
+								)
+							}),
+						),
+					),
+				),
 			)
-
 			const exit =
 				await testRuntime.runPromiseExit(
 					addProduct,
@@ -53,9 +60,7 @@ describe('Add product', () => {
 				AddProductService,
 				() =>
 					Eff.gen(function* () {
-						return yield* Eff.fail(
-							AddProductServiceError(''),
-						)
+						return yield* Eff.fail(null)
 					}),
 			)
 

@@ -11,7 +11,7 @@ import {
 import * as H from '@/core/test-helpers.ts'
 import { testRuntime } from '@/core/utils.ts'
 
-import type { ProductDTO } from '@/app/interfaces/read/get-sorted-products.ts'
+import type { ProductDTO } from '@/app/interfaces/get-sorted-products.ts'
 
 import type { FridgySqlitePlugin } from '../fridgy-sqlite-plugin.ts'
 import { CapacitorService } from '../index.ts'
@@ -68,7 +68,7 @@ describe('Get products', () => {
 		async (a, b, c) => {
 			const products = [a, b, c]
 
-			const addProduct = Eff.provideService(
+			const useCase = Eff.provideService(
 				query,
 				CapacitorService,
 				{
@@ -83,9 +83,7 @@ describe('Get products', () => {
 			)
 
 			const exit =
-				await testRuntime.runPromiseExit(
-					addProduct,
-				)
+				await testRuntime.runPromiseExit(useCase)
 
 			H.assertExitIsSuccess(exit)
 
@@ -101,7 +99,7 @@ describe('Get products', () => {
 	test.concurrent(
 		'Should return an error',
 		async () => {
-			const addProduct = Eff.provideService(
+			const useCase = Eff.provideService(
 				query,
 				CapacitorService,
 				{
@@ -113,9 +111,7 @@ describe('Get products', () => {
 			)
 
 			const exit =
-				await testRuntime.runPromiseExit(
-					addProduct,
-				)
+				await testRuntime.runPromiseExit(useCase)
 
 			H.assertExitIsFailure(exit)
 		},
@@ -124,7 +120,7 @@ describe('Get products', () => {
 	test.concurrent(
 		'Should return an error',
 		async () => {
-			const addProduct = Eff.provideService(
+			const useCase = Eff.provideService(
 				query,
 				CapacitorService,
 				{
@@ -136,9 +132,7 @@ describe('Get products', () => {
 			)
 
 			const exit =
-				await testRuntime.runPromiseExit(
-					addProduct,
-				)
+				await testRuntime.runPromiseExit(useCase)
 
 			H.assertExitIsFailure(exit)
 		},
@@ -147,7 +141,7 @@ describe('Get products', () => {
 	test.concurrent(
 		'Should return an error',
 		async () => {
-			const addProduct = Eff.provideService(
+			const useCase = Eff.provideService(
 				query,
 				CapacitorService,
 				{
@@ -162,16 +156,14 @@ describe('Get products', () => {
 			)
 
 			const exit =
-				await testRuntime.runPromiseExit(
-					addProduct,
-				)
+				await testRuntime.runPromiseExit(useCase)
 
 			H.assertExitIsFailure(exit)
 		},
 	)
 
 	test.concurrent('Should crash', async () => {
-		const addProduct = Eff.provideService(
+		const useCase = Eff.provideService(
 			query,
 			CapacitorService,
 			{
@@ -184,7 +176,7 @@ describe('Get products', () => {
 		)
 
 		const exit =
-			await testRuntime.runPromiseExit(addProduct)
+			await testRuntime.runPromiseExit(useCase)
 
 		H.assertExitIsDie(exit)
 	})

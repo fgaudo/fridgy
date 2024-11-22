@@ -4,15 +4,13 @@ import { pipe } from 'effect'
 import {
 	A,
 	Eff,
+	L,
 	NNInt,
 	O,
 	Ord,
 } from '@/core/imports.ts'
 
-import {
-	type ProductDTO,
-	ProductsServiceError,
-} from '@/app/interfaces/read/get-sorted-products.ts'
+import { GetSortedProductsService } from '@/app/interfaces/get-sorted-products.ts'
 import type { ProductModel } from '@/app/use-cases/get-sorted-products.ts'
 
 import { withErrors } from '../constants.ts'
@@ -53,29 +51,24 @@ const ord = Ord.make(
 	},
 )
 
-export const query: Eff.Effect<
-	{
-		total: NNInt.NonNegativeInteger
-		products: ProductDTO[]
-	},
-	ProductsServiceError
-> = Eff.gen(function* () {
-	if (withErrors && Math.random() < 0.5)
-		return yield* Eff.fail(
-			ProductsServiceError('ciao'),
-		)
+export const query = L.succeed(
+	GetSortedProductsService,
+	Eff.gen(function* () {
+		if (withErrors && Math.random() < 0.5)
+			return yield* Eff.fail(undefined)
 
-	const total = map.size
+		const total = map.size
 
-	const products: ProductModel[] = Array.from(
-		map.values(),
-	).map(elem => ({
-		...elem,
-		isValid: true,
-	}))
+		const products: ProductModel[] = Array.from(
+			map.values(),
+		).map(elem => ({
+			...elem,
+			isValid: true,
+		}))
 
-	return {
-		total: NNInt.unsafe_fromNumber(total),
-		products: A.sort(ord)(products),
-	}
-})
+		return {
+			total: NNInt.unsafe_fromNumber(total),
+			products: A.sort(ord)(products),
+		}
+	}),
+)

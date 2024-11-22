@@ -38,7 +38,7 @@ export const reducer: (
 					HS.make(
 						Ta.refreshList(
 							snapshot.runningRefreshing,
-							app.productList,
+							app,
 						),
 					),
 				),
@@ -81,8 +81,7 @@ export const reducer: (
 							HS.add(
 								Ta.deleteByIdsAndRefresh(
 									result.value,
-									app.deleteProductsByIds,
-									app.productList,
+									app,
 								),
 							),
 						)

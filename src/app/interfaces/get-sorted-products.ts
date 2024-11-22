@@ -1,7 +1,6 @@
 import { Context } from 'effect'
 
 import {
-	B,
 	Eff,
 	Int,
 	NETS,
@@ -23,21 +22,15 @@ export type ProductDTO =
 			name: O.Option<NETS.NonEmptyTrimmedString>
 	  }
 
-export class ProductsService extends Context.Tag(
+export class GetSortedProductsService extends Context.Tag(
 	'ProductsService',
 )<
-	ProductsService,
+	GetSortedProductsService,
 	Eff.Effect<
 		{
 			total: NNInt.NonNegativeInteger
 			products: ProductDTO[]
 		},
-		ProductsServiceError
+		void
 	>
 >() {}
-
-export type ProductsServiceError = string &
-	B.Brand<'ProductsServiceError'>
-
-export const ProductsServiceError =
-	B.nominal<ProductsServiceError>()

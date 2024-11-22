@@ -22,7 +22,7 @@ import {
 } from './actions.ts'
 import type { State } from './index.ts'
 import * as Mu from './mutations.ts'
-import * as Ta from './task.ts'
+import * as Ta from './tasks.ts'
 
 export const reducer: (
 	app: App,
@@ -44,7 +44,7 @@ export const reducer: (
 					commands = pipe(
 						commands,
 						HS.add(
-							Ta.addProduct(app.addProduct, {
+							Ta.addProduct(app, {
 								...snapshot.formFields,
 								name: name.value,
 							}),

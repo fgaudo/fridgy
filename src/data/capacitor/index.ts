@@ -1,40 +1,23 @@
-import { Context, flow, pipe } from 'effect'
+import { C, L } from '@/core/imports.ts'
 
-import { Eff } from '@/core/imports.ts'
-
-import type { Contracts } from '@/app/index.ts'
+import { app } from '@/app/index.ts'
 
 import type { FridgySqlitePlugin } from './fridgy-sqlite-plugin.ts'
-import { query as getSortedProducts } from './read/get-sorted-products.ts'
-import { command as addProduct } from './write/add-product.ts'
-import { command as deleteProductByIds } from './write/delete-products-by-ids.ts'
+import { command as addProduct } from './implementations/add-product.ts'
+import { command as deleteProductByIds } from './implementations/delete-products-by-ids.ts'
+import { query as getSortedProducts } from './implementations/get-sorted-products.ts'
 
-interface Deps {
-	db: FridgySqlitePlugin
-}
-
-export class CapacitorService extends Context.Tag(
+export class CapacitorService extends C.Tag(
 	'CapacitorService',
-)<CapacitorService, Deps>() {}
+)<
+	CapacitorService,
+	{
+		db: FridgySqlitePlugin
+	}
+>() {}
 
-export const implementations: (
-	deps: Deps,
-) => Pick<
-	Contracts,
-	| 'getSortedProducts'
-	| 'addProduct'
-	| 'deleteProductsByIds'
-> = (deps: Deps) => ({
-	addProduct: flow(
-		addProduct,
-		Eff.provideService(CapacitorService, deps),
-	),
-	getSortedProducts: pipe(
-		getSortedProducts,
-		Eff.provideService(CapacitorService, deps),
-	),
-	deleteProductsByIds: flow(
-		deleteProductByIds,
-		Eff.provideService(CapacitorService, deps),
-	),
-})
+export const appLive = app.pipe(
+	L.provide(addProduct),
+	L.provide(deleteProductByIds),
+	L.provide(getSortedProducts),
+)

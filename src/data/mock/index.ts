@@ -1,20 +1,13 @@
-import type { Contracts } from '@/app/index.ts'
+import { L } from '@/core/imports.ts'
 
-import { query as getSortedProducts } from './read/get-sorted-products.ts'
-import { command as addProduct } from './write/add-product.ts'
-import { command as deleteProductsByIds } from './write/delete-products-by-ids.ts'
+import { app } from '@/app/index.ts'
 
-type Deps = object
+import { command as addProduct } from './implementations/add-product.ts'
+import { command as deleteProductsByIds } from './implementations/delete-products-by-ids.ts'
+import { query as getSortedProducts } from './implementations/get-sorted-products.ts'
 
-export const implementations: (
-	deps: Deps,
-) => Pick<
-	Contracts,
-	| 'getSortedProducts'
-	| 'addProduct'
-	| 'deleteProductsByIds'
-> = () => ({
-	addProduct,
-	getSortedProducts,
-	deleteProductsByIds,
-})
+export const appMock = app.pipe(
+	L.provide(addProduct),
+	L.provide(getSortedProducts),
+	L.provide(deleteProductsByIds),
+)

@@ -1,70 +1,73 @@
 import {
-	B,
+	C,
 	Cl,
 	E,
 	Eff,
 	H,
 	Int,
+	L,
 	NETS,
 	O,
 } from '@/core/imports.ts'
 
 import * as P from '@/domain/product.ts'
 
-import { AddProductService } from '@/app/interfaces/write/add-product.ts'
+import { AddProductService } from '@/app/interfaces/add-product.ts'
 
-export interface AddProductDTO {
+export class AddProductUseCase extends C.Tag(
+	'AddProductUseCase',
+)<
+	AddProductUseCase,
+	(product: ProductDTO) => Eff.Effect<void, void>
+>() {}
+
+export interface ProductDTO {
 	name: NETS.NonEmptyTrimmedString
 	expirationDate: O.Option<Int.Integer>
 }
 
-export type AddProduct = (
-	product: AddProductDTO,
-) => Eff.Effect<
-	void,
-	AddProductError,
-	AddProductService
->
-
-export type AddProductError = string &
-	B.Brand<'AddProductError'>
-
-const AddProductError =
-	B.nominal<AddProductError>()
-
-export const useCase: AddProduct = productData =>
+export const useCase = L.effect(
+	AddProductUseCase,
 	Eff.gen(function* () {
-		const product = P.createProduct(productData)
-
-		const timestamp = Int.unsafe_fromNumber(
-			yield* Cl.currentTimeMillis,
-		)
-
 		const addProduct = yield* AddProductService
 
-		yield* H.logInfo('Adding product').pipe(
-			Eff.annotateLogs('product', productData),
-		)
+		return productData =>
+			Eff.gen(function* () {
+				const product =
+					P.createProduct(productData)
 
-		const result2 = yield* addProduct({
-			name: P.name(product),
-			expirationDate: P.expirationDate(product),
-			creationDate: timestamp,
-		}).pipe(Eff.either)
+				const timestamp = Int.unsafe_fromNumber(
+					yield* Cl.currentTimeMillis,
+				)
 
-		if (E.isLeft(result2)) {
-			yield* H.logError(result2.left)
+				yield* H.logInfo('Adding product').pipe(
+					Eff.annotateLogs(
+						'product',
+						productData,
+					),
+				)
 
-			return yield* Eff.fail(
-				AddProductError(
-					'There was a problem adding the product',
-				),
-			)
-		}
+				const result2 = yield* addProduct({
+					name: P.name(product),
+					expirationDate:
+						P.expirationDate(product),
+					creationDate: timestamp,
+				}).pipe(Eff.either)
 
-		yield* H.logInfo(
-			'Product added succesfully',
-		).pipe(
-			Eff.annotateLogs('product', productData),
-		)
-	})
+				if (E.isLeft(result2)) {
+					yield* H.logError(result2.left)
+
+					return yield* Eff.fail(undefined)
+				}
+
+				yield* H.logInfo(
+					'Product added succesfully',
+				).pipe(
+					Eff.annotateLogs(
+						'product',
+						productData,
+					),
+				)
+			})
+	}),
+)
