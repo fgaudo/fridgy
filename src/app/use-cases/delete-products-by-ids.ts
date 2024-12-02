@@ -1,16 +1,13 @@
-import { Effect } from 'effect'
-
 import {
 	A,
 	C,
-	E,
 	Eff,
 	H,
 	HS,
 	L,
 } from '@/core/imports.ts'
 
-import { DeleteProductsByIdsService } from '@/app/interfaces/delete-products-by-ids.ts'
+import { DeleteProductsByIdsService } from '../interfaces/delete-products-by-ids.ts'
 
 export class DeleteProductsByIdsUseCase extends C.Tag(
 	'DeleteProductsByIdsUseCase',
@@ -28,34 +25,21 @@ export const useCase = L.effect(
 			yield* DeleteProductsByIdsService
 
 		return ids =>
-			Effect.gen(function* () {
-				if (HS.size(ids) <= 0) {
-					return yield* Effect.fail(undefined)
-				}
-
-				yield* H.logInfo(
-					'Deleting products',
-				).pipe(
-					Effect.annotateLogs(
-						'ids',
-						A.fromIterable(ids),
-					),
+			Eff.gen(function* () {
+				H.logDebug(
+					'Delete products use-case started',
 				)
-
-				const result = yield* deleteProductsByIds(
-					ids,
-				).pipe(Eff.either)
-
-				if (E.isLeft(result)) {
-					yield* H.logError(result.left)
-
+				if (HS.size(ids) <= 0) {
+					H.logError(
+						'No ids provided. This is probably a bug',
+					)
 					return yield* Eff.fail(undefined)
 				}
 
-				yield* H.logInfo(
-					'Products deleted succesfully',
-				).pipe(
-					Effect.annotateLogs(
+				yield* deleteProductsByIds(ids)
+
+				yield* H.logInfo('Products deleted').pipe(
+					Eff.annotateLogs(
 						'ids',
 						A.fromIterable(ids),
 					),

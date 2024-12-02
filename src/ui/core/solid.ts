@@ -20,17 +20,22 @@ export function withDefault<T>(
 	return () => accessor() ?? init
 }
 
-export interface Task<MSG> {
-	onStart?: (id: F.Fiber<unknown>) => MSG
-	effect: Eff.Effect<MSG>
+export type Mutation<STATE> = (
+	state: STATE,
+) => STATE
+
+export interface Task<STATE, MSG> {
+	onStart?: (
+		id: F.Fiber<unknown>,
+	) => (state: STATE) => MSG
+	effect: (state: STATE) => Eff.Effect<MSG>
 }
 
 export type Reducer<STATE, MSG> = (
-	snapshot: STATE,
 	msg: MSG,
 ) => readonly [
-	mutation: HS.HashSet<(state: STATE) => void>,
-	commands: HS.HashSet<Task<MSG>>,
+	mutations: Mutation<STATE>,
+	commands: HS.HashSet<Task<STATE, MSG>>,
 ]
 
 export const useQueueStore = <
@@ -50,27 +55,20 @@ export const useQueueStore = <
 			Eff.gen(function* () {
 				for (;;) {
 					const msg = yield* Q.take(messages)
-					const [mutations, commands] = reducer(
-						SS.unwrap(state),
-						msg,
-					)
 
-					if (HS.size(mutations) > 0) {
-						setState(
-							SS.produce(state => {
-								for (const mutation of mutations) {
-									mutation(state)
-								}
-							}),
-						)
-					}
+					const snapshot = SS.unwrap(state)
+
+					const [mutation, commands] =
+						reducer(msg)
+
+					setState(state => mutation(state))
 
 					yield* pipe(
 						commands,
 						HS.map(({ effect, onStart }) =>
 							Eff.gen(function* () {
 								const fiber = yield* pipe(
-									effect,
+									effect(snapshot),
 									Eff.flatMap(msg =>
 										Q.offer(messages, msg),
 									),
@@ -80,7 +78,7 @@ export const useQueueStore = <
 								if (onStart) {
 									yield* Q.offer(
 										messages,
-										onStart(fiber),
+										onStart(fiber)(snapshot),
 									)
 								}
 							}),

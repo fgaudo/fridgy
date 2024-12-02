@@ -1,8 +1,14 @@
+import { logDebug } from 'effect/Effect'
+import {
+	produce,
+	reconcile,
+	unwrap,
+} from 'solid-js/store'
+
 import {
 	Da,
 	HS,
 	M,
-	NEHS,
 	NETS,
 	O,
 	pipe,
@@ -10,44 +16,35 @@ import {
 
 import type { App } from '@/app/index.ts'
 
-import {
-	type Reducer,
-	type Task,
-} from '@/ui/core/solid.ts'
+import { type Reducer } from '@/ui/core/solid.ts'
 
 import {
 	InternalMessage,
 	Message,
 } from './actions.ts'
 import type { State } from './index.ts'
-import * as Mu from './mutations.ts'
 import * as Ta from './tasks.ts'
 
 export const reducer: (
 	app: App,
 ) => Reducer<State, Message | InternalMessage> =
-	app => (snapshot, msg) =>
+	app => msg =>
 		pipe(
 			M.value(msg),
 			M.when({ _tag: 'RefreshList' }, () =>
 				Da.tuple(
-					HS.make(
-						Mu.refreshListFinished,
-						Mu.resetMessage,
-					),
-					HS.make(
-						Ta.refreshList(
-							snapshot.runningRefreshing,
-							app,
-						),
-					),
+					produce((state: State) => {
+						state.runningRefreshing = O.none()
+						state.message = O.none()
+					}),
+					HS.make(Ta.refreshList(app)),
 				),
 			),
 			M.when(
 				{ _tag: 'ClearSelectedProducts' },
 				() =>
 					Da.tuple(
-						HS.make((state: State) => {
+						produce((state: State) => {
 							state.selectedProducts = HS.empty()
 						}),
 						HS.empty(),
@@ -55,57 +52,37 @@ export const reducer: (
 			),
 			M.when({ _tag: 'ToggleItem' }, ({ id }) =>
 				Da.tuple(
-					HS.make((state: State) => {
+					produce((state: State) => {
 						state.selectedProducts = HS.toggle(
 							id,
-						)(snapshot.selectedProducts)
+						)(state.selectedProducts)
 					}),
 					HS.empty(),
 				),
 			),
-
 			M.when(
 				{ _tag: 'DeleteProductsAndRefresh' },
-				() => {
-					let commands =
-						HS.empty<
-							Task<Message | InternalMessage>
-						>()
-
-					const result = NEHS.fromHashSet(
-						snapshot.selectedProducts,
-					)
-					if (O.isSome(result)) {
-						commands = pipe(
-							commands,
-							HS.add(
-								Ta.deleteByIdsAndRefresh(
-									result.value,
-									app,
-								),
-							),
-						)
-					}
-
-					return Da.tuple(HS.empty(), commands)
-				},
+				() =>
+					Da.tuple(
+						(state: State) => state,
+						HS.make(
+							Ta.deleteByIdsAndRefresh(app),
+						),
+					),
 			),
 			M.when(
 				{ _tag: 'RefreshListSucceeded' },
 				({ total, models }) =>
 					Da.tuple(
-						HS.make(
-							(state: State) => {
-								state.isLoading = false
-								state.receivedError = false
-							},
-							Mu.refreshListFinished,
-							Mu.refreshListSucceeded(
-								total,
-								snapshot.products,
-								models,
-							),
-						),
+						produce((state: State) => {
+							state.isLoading = false
+							state.receivedError = false
+							state.runningRefreshing = O.none()
+							state.products = reconcile(models, {
+								key: 'id',
+							})(unwrap(state.products))
+							state.total = total
+						}),
 						HS.empty(),
 					),
 			),
@@ -113,7 +90,7 @@ export const reducer: (
 				{ _tag: 'RefreshListStarted' },
 				({ fiber }) =>
 					Da.tuple(
-						HS.make((state: State) => {
+						produce((state: State) => {
 							state.runningRefreshing =
 								O.some(fiber)
 						}),
@@ -124,14 +101,16 @@ export const reducer: (
 				{ _tag: 'RefreshListFailed' },
 				({ message }) =>
 					Da.tuple(
-						HS.make(
-							(state: State) => {
-								state.isLoading = false
-							},
-							Mu.refreshListFailed,
-							Mu.refreshListFinished,
-							Mu.showErrorMessage(message),
-						),
+						produce((state: State) => {
+							state.isLoading = false
+							state.products = []
+							state.receivedError = true
+							state.runningRefreshing = O.none()
+							state.message = O.some({
+								type: 'error',
+								text: message,
+							} as const)
+						}),
 						HS.empty(),
 					),
 			),
@@ -139,10 +118,14 @@ export const reducer: (
 				{ _tag: 'DeleteProductsFailed' },
 				({ message }) =>
 					Da.tuple(
-						HS.make(
-							Mu.deletingFinished,
-							Mu.showErrorMessage(message),
-						),
+						produce((state: State) => {
+							logDebug('ciao')
+							state.runningDeleting = O.none()
+							state.message = O.some({
+								type: 'error',
+								text: message,
+							} as const)
+						}),
 						HS.empty(),
 					),
 			),
@@ -152,12 +135,16 @@ export const reducer: (
 				},
 				({ message }) =>
 					Da.tuple(
-						HS.make(
-							Mu.deletingSucceeded,
-							Mu.refreshListFailed,
-							Mu.deletingFinished,
-							Mu.showErrorMessage(message),
-						),
+						produce((state: State) => {
+							state.selectedProducts = HS.empty()
+							state.products = []
+							state.receivedError = true
+							state.runningDeleting = O.none()
+							state.message = O.some({
+								type: 'error',
+								text: message,
+							} as const)
+						}),
 						HS.empty(),
 					),
 			),
@@ -167,20 +154,24 @@ export const reducer: (
 				},
 				({ deletedItems, total, models }) =>
 					Da.tuple(
-						HS.make(
-							Mu.deletingSucceeded,
-							Mu.deletingFinished,
-							Mu.refreshListSucceeded(
-								total,
-								snapshot.products,
-								models,
-							),
-							Mu.showSuccessMessage(
-								NETS.unsafe_fromString(
+						produce((state: State) => {
+							state.selectedProducts = HS.empty()
+
+							state.runningDeleting = O.none()
+
+							state.products = reconcile(models, {
+								key: 'id',
+							})(unwrap(state.products))
+
+							state.total = total
+
+							state.message = O.some({
+								type: 'success',
+								text: NETS.unsafe_fromString(
 									`${deletedItems.toString(10)} products deleted`,
 								),
-							),
-						),
+							} as const)
+						}),
 						HS.empty(),
 					),
 			),
@@ -190,7 +181,7 @@ export const reducer: (
 				},
 				({ fiber }) =>
 					Da.tuple(
-						HS.make((state: State) => {
+						produce((state: State) => {
 							state.runningDeleting =
 								O.some(fiber)
 						}),

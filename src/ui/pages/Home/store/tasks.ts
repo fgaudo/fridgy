@@ -8,7 +8,6 @@ import {
 	NETS,
 	O,
 } from '@/core/imports.ts'
-import type { NonEmptyHashSet } from '@/core/non-empty-hash-set.ts'
 
 import type { App } from '@/app/index.ts'
 import { DeleteProductsByIdsUseCase } from '@/app/use-cases/delete-products-by-ids.ts'
@@ -21,108 +20,123 @@ import {
 	InternalMessage,
 	Message,
 } from './actions.ts'
+import type { State } from './index.ts'
 
 export const refreshList = (
-	runningRefreshing: O.Option<F.Fiber<unknown>>,
 	app: App,
-) => ({
-	onStart: (fiber: F.Fiber<unknown>) =>
+): Task<State, Message | InternalMessage> => ({
+	onStart: (fiber: F.Fiber<unknown>) => () =>
 		InternalMessage.RefreshListStarted({
 			fiber,
 		}),
-	effect: Eff.provide(
-		Eff.gen(function* () {
-			if (O.isSome(runningRefreshing)) {
-				yield* F.interrupt(
-					runningRefreshing.value,
+	effect: ({ runningRefreshing }: State) =>
+		Eff.provide(
+			Eff.gen(function* () {
+				if (O.isSome(runningRefreshing)) {
+					yield* F.interrupt(
+						runningRefreshing.value,
+					)
+				}
+
+				const refreshList =
+					yield* GetSortedProductsUseCase
+
+				const [result] = yield* Eff.all([
+					refreshList.pipe(Eff.either),
+					Eff.sleep(MINIMUM_LAG_MS),
+				])
+
+				if (E.isLeft(result)) {
+					return InternalMessage.RefreshListFailed(
+						{
+							message: NETS.unsafe_fromString(
+								'There was a problem loading the list',
+							),
+						},
+					)
+				}
+
+				return InternalMessage.RefreshListSucceeded(
+					{
+						total: result.right.total,
+						models: result.right.models,
+					},
 				)
-			}
-
-			const refreshList =
-				yield* GetSortedProductsUseCase
-
-			const [result] = yield* Eff.all([
-				refreshList.pipe(Eff.either),
-				Eff.sleep(MINIMUM_LAG_MS),
-			])
-
-			if (E.isLeft(result)) {
-				return InternalMessage.RefreshListFailed({
-					message: NETS.unsafe_fromString(
-						'There was a problem loading the list',
-					),
-				})
-			}
-
-			return InternalMessage.RefreshListSucceeded(
-				{
-					total: result.right.total,
-					models: result.right.models,
-				},
-			)
-		}),
-		app,
-	),
+			}),
+			app,
+		),
 })
 
 export const deleteByIdsAndRefresh = (
-	selectedProducts: NonEmptyHashSet<string>,
 	app: App,
-): Task<Message | InternalMessage> => ({
-	onStart: (fiber: F.Fiber<unknown>) =>
+): Task<State, Message | InternalMessage> => ({
+	onStart: (fiber: F.Fiber<unknown>) => () =>
 		InternalMessage.DeleteProductsAndRefreshStarted(
 			{ fiber },
 		),
-	effect: Eff.provide(
-		Eff.gen(function* () {
-			const [deleteProducts, refreshList] =
-				yield* Eff.all([
-					DeleteProductsByIdsUseCase,
-					GetSortedProductsUseCase,
+	effect: ({ selectedProducts }: State) =>
+		Eff.provide(
+			Eff.gen(function* () {
+				const selected = NEHS.fromHashSet(
+					selectedProducts,
+				)
+				if (O.isNone(selected)) {
+					return InternalMessage.DeleteProductsFailed(
+						{
+							message: NETS.unsafe_fromString(
+								'No products provided',
+							),
+						},
+					)
+				}
+				const [deleteProducts, refreshList] =
+					yield* Eff.all([
+						DeleteProductsByIdsUseCase,
+						GetSortedProductsUseCase,
+					])
+
+				const [result] = yield* Eff.all([
+					deleteProducts(selectedProducts).pipe(
+						Eff.either,
+					),
+					Eff.sleep(MINIMUM_LAG_MS),
 				])
 
-			const [result] = yield* Eff.all([
-				deleteProducts(selectedProducts).pipe(
+				if (E.isLeft(result)) {
+					return InternalMessage.DeleteProductsFailed(
+						{
+							message: NETS.unsafe_fromString(
+								'There was a problem deleting the products',
+							),
+						},
+					)
+				}
+
+				const result2 = yield* refreshList.pipe(
 					Eff.either,
-				),
-				Eff.sleep(MINIMUM_LAG_MS),
-			])
+				)
 
-			if (E.isLeft(result)) {
-				return InternalMessage.DeleteProductsFailed(
+				if (E.isLeft(result2)) {
+					yield* H.logError(result2.left)
+					return InternalMessage.DeleteProductsSucceededAndRefreshFailed(
+						{
+							message: NETS.unsafe_fromString(
+								`${HS.size(selectedProducts).toString(10)} deleted but couldn't refresh list`,
+							),
+						},
+					)
+				}
+
+				return InternalMessage.DeleteProductsAndRefreshSucceeded(
 					{
-						message: NETS.unsafe_fromString(
-							'There was a problem deleting the products',
+						deletedItems: NEHS.size(
+							selected.value,
 						),
+						total: result2.right.total,
+						models: result2.right.models,
 					},
 				)
-			}
-
-			const result2 = yield* refreshList.pipe(
-				Eff.either,
-			)
-
-			if (E.isLeft(result2)) {
-				yield* H.logError(result2.left)
-				return InternalMessage.DeleteProductsSucceededAndRefreshFailed(
-					{
-						message: NETS.unsafe_fromString(
-							`${HS.size(selectedProducts).toString(10)} deleted but couldn't refresh list`,
-						),
-					},
-				)
-			}
-
-			return InternalMessage.DeleteProductsAndRefreshSucceeded(
-				{
-					deletedItems: NEHS.size(
-						selectedProducts,
-					),
-					total: result2.right.total,
-					models: result2.right.models,
-				},
-			)
-		}),
-		app,
-	),
+			}),
+			app,
+		),
 })

@@ -16,10 +16,6 @@ import {
 	InternalMessage,
 	Message,
 } from './actions.ts'
-import {
-	defaultFields,
-	validateFields,
-} from './mutations.ts'
 import { reducer } from './reducer.ts'
 
 export interface State {
@@ -55,12 +51,20 @@ export const createStore: (
 	>(
 		pipe(
 			{
-				formFields: defaultFields(),
+				formFields: {
+					name: '',
+					expirationDate: O.none(),
+				},
+
 				message: O.none(),
 				runningAddProduct: O.none(),
 				isOk: false,
 			},
-			produce(validateFields(defaultFields())),
+			produce((state: State) => {
+				state.isOk = NETS.fromString('').pipe(
+					O.isSome,
+				)
+			}),
 		),
 		reducer(context),
 	)

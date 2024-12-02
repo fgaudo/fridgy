@@ -1,7 +1,6 @@
 import {
 	C,
 	Cl,
-	E,
 	Eff,
 	H,
 	Int,
@@ -12,7 +11,7 @@ import {
 
 import * as P from '@/domain/product.ts'
 
-import { AddProductService } from '@/app/interfaces/add-product.ts'
+import { AddProductService } from '../interfaces/add-product.ts'
 
 export class AddProductUseCase extends C.Tag(
 	'AddProductUseCase',
@@ -47,18 +46,12 @@ export const useCase = L.effect(
 					),
 				)
 
-				const result2 = yield* addProduct({
+				yield* addProduct({
 					name: P.name(product),
 					expirationDate:
 						P.expirationDate(product),
 					creationDate: timestamp,
-				}).pipe(Eff.either)
-
-				if (E.isLeft(result2)) {
-					yield* H.logError(result2.left)
-
-					return yield* Eff.fail(undefined)
-				}
+				})
 
 				yield* H.logInfo(
 					'Product added succesfully',

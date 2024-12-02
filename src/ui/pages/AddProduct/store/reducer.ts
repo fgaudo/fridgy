@@ -1,4 +1,5 @@
 import 'solid-js/store'
+import { produce } from 'solid-js/store'
 
 import {
 	Da,
@@ -11,57 +12,35 @@ import {
 
 import type { App } from '@/app/index.ts'
 
-import type {
-	Reducer,
-	Task,
-} from '@/ui/core/solid.ts'
+import type { Reducer } from '@/ui/core/solid.ts'
 
 import {
 	InternalMessage,
 	type Message,
 } from './actions.ts'
 import type { State } from './index.ts'
-import * as Mu from './mutations.ts'
 import * as Ta from './tasks.ts'
 
 export const reducer: (
 	app: App,
 ) => Reducer<State, Message | InternalMessage> =
-	app => (snapshot, message) =>
+	app => message =>
 		pipe(
 			M.value(message),
-			M.when({ _tag: 'AddProduct' }, () => {
-				let commands =
-					HS.empty<
-						Task<InternalMessage | Message>
-					>()
+			M.when({ _tag: 'AddProduct' }, () =>
+				Da.tuple(
+					produce((state: State) => {
+						state.message = O.none()
+					}),
 
-				const name = NETS.fromString(
-					snapshot.formFields.name,
-				)
-
-				if (O.isSome(name)) {
-					commands = pipe(
-						commands,
-						HS.add(
-							Ta.addProduct(app, {
-								...snapshot.formFields,
-								name: name.value,
-							}),
-						),
-					)
-				}
-
-				return Da.tuple(
-					HS.make(Mu.resetMessage),
-					commands,
-				)
-			}),
+					HS.make(Ta.addProduct(app)),
+				),
+			),
 			M.when(
 				{ _tag: 'AddProductStarted' },
 				({ fiber }) =>
 					Da.tuple(
-						HS.make((state: State) => {
+						produce((state: State) => {
 							state.runningAddProduct =
 								O.some(fiber)
 						}),
@@ -72,10 +51,13 @@ export const reducer: (
 				{ _tag: 'AddProductFailed' },
 				({ message }) =>
 					Da.tuple(
-						HS.make(
-							Mu.addProductFinished,
-							Mu.showErrorMessage(message),
-						),
+						produce((state: State) => {
+							state.runningAddProduct = O.none()
+							state.message = O.some({
+								type: 'error',
+								text: message,
+							} as const)
+						}),
 						HS.empty(),
 					),
 			),
@@ -83,15 +65,23 @@ export const reducer: (
 				{ _tag: 'AddProductSucceeded' },
 				() =>
 					Da.tuple(
-						HS.make(
-							Mu.addProductFinished,
-							Mu.resetAndValidateFields,
-							Mu.showSuccessMessage(
-								NETS.unsafe_fromString(
+						produce((state: State) => {
+							state.runningAddProduct = O.none()
+							state.message = O.some({
+								type: 'success',
+								text: NETS.unsafe_fromString(
 									'Product added succesfully',
 								),
-							),
-						),
+							} as const)
+							state.formFields = {
+								name: '',
+								expirationDate: O.none(),
+							}
+
+							state.isOk = NETS.fromString(
+								state.formFields.name,
+							).pipe(O.isSome)
+						}),
 						HS.empty(),
 					),
 			),
@@ -101,16 +91,13 @@ export const reducer: (
 				},
 				field =>
 					Da.tuple(
-						HS.make(
-							(state: State) => {
-								state.formFields.name =
-									field.value
-							},
-							Mu.validateFields({
-								...snapshot.formFields,
-								name: field.value,
-							}),
-						),
+						produce((state: State) => {
+							state.formFields.name = field.value
+
+							state.isOk = NETS.fromString(
+								state.formFields.name,
+							).pipe(O.isSome)
+						}),
 						HS.empty(),
 					),
 			),
@@ -120,16 +107,14 @@ export const reducer: (
 				},
 				field =>
 					Da.tuple(
-						HS.make(
-							(state: State) => {
-								state.formFields.expirationDate =
-									field.value
-							},
-							Mu.validateFields({
-								...snapshot.formFields,
-								expirationDate: field.value,
-							}),
-						),
+						produce((state: State) => {
+							state.formFields.expirationDate =
+								field.value
+
+							state.isOk = NETS.fromString(
+								state.formFields.name,
+							).pipe(O.isSome)
+						}),
 						HS.empty(),
 					),
 			),

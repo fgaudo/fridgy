@@ -3,7 +3,6 @@ import {
 	Eff,
 	F,
 	H,
-	Int,
 	NETS,
 	O,
 } from '@/core/imports.ts'
@@ -18,40 +17,60 @@ import {
 	InternalMessage,
 	Message,
 } from './actions.ts'
+import type { State } from './index.ts'
 
 export const addProduct = (
 	app: App,
-	formFields: {
-		name: NETS.NonEmptyTrimmedString
-		expirationDate: O.Option<Int.Integer>
-	},
-): Task<Message | InternalMessage> => ({
-	onStart: (fiber: F.Fiber<unknown>) =>
+): Task<State, Message | InternalMessage> => ({
+	onStart: (fiber: F.Fiber<unknown>) => () =>
 		InternalMessage.AddProductStarted({
 			fiber,
 		}),
-	effect: Eff.provide(
-		Eff.gen(function* () {
-			const addProduct = yield* AddProductUseCase
+	effect: (state: State) =>
+		Eff.provide(
+			Eff.gen(function* () {
+				const addProduct =
+					yield* AddProductUseCase
 
-			const [result] = yield* Eff.all([
-				addProduct(formFields).pipe(Eff.either),
-				Eff.sleep(MINIMUM_LAG_MS),
-			])
+				const nameResult = NETS.fromString(
+					state.formFields.name,
+				)
 
-			if (E.isLeft(result)) {
-				H.logError(result.left)
-				return InternalMessage.AddProductFailed({
-					message: NETS.unsafe_fromString(
-						'There was a problem adding the product',
-					),
-				})
-			}
+				if (O.isNone(nameResult)) {
+					return InternalMessage.AddProductFailed(
+						{
+							message: NETS.unsafe_fromString(
+								'No name provided',
+							),
+						},
+					)
+				}
 
-			return InternalMessage.AddProductSucceeded({
-				name: formFields.name,
-			})
-		}),
-		app,
-	),
+				const [result] = yield* Eff.all([
+					addProduct({
+						...state.formFields,
+						name: nameResult.value,
+					}).pipe(Eff.either),
+					Eff.sleep(MINIMUM_LAG_MS),
+				])
+
+				if (E.isLeft(result)) {
+					H.logError(result.left)
+					return InternalMessage.AddProductFailed(
+						{
+							message: NETS.unsafe_fromString(
+								'There was a problem adding the product',
+							),
+						},
+					)
+				}
+
+				return InternalMessage.AddProductSucceeded(
+					{
+						name: nameResult.value,
+					},
+				)
+			}),
+			app,
+		),
 })

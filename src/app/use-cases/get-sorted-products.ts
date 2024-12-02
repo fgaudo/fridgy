@@ -12,7 +12,7 @@ import type { NonEmptyTrimmedString } from '@/core/non-empty-trimmed-string.ts'
 
 import * as P from '@/domain/product.ts'
 
-import { GetSortedProductsService } from '@/app/interfaces/get-sorted-products.ts'
+import { GetSortedProductsService } from '../interfaces/get-sorted-products.ts'
 
 export class GetSortedProductsUseCase extends C.Tag(
 	'GetSortedProductsUseCase',

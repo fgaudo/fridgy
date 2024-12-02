@@ -1,5 +1,4 @@
 import {
-	E,
 	Eff,
 	H,
 	L,
@@ -13,7 +12,6 @@ import { CapacitorService } from '../index.ts'
 
 export const command = L.effect(
 	DeleteProductsByIdsService,
-
 	Eff.gen(function* () {
 		const { db } = yield* CapacitorService
 
@@ -46,16 +44,11 @@ export const command = L.effect(
 					)} products`,
 				)
 
-				const result = yield* H.tryPromise(() =>
+				yield* H.tryPromise(() =>
 					db.deleteProductsByIds({
 						ids: idsArray,
 					}),
-				).pipe(Eff.either)
-
-				if (E.isLeft(result)) {
-					yield* H.logError(result.left)
-					return yield* Eff.fail(undefined)
-				}
+				)
 
 				yield* H.logDebug(
 					'No problems while deleting products',

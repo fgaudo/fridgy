@@ -1,10 +1,4 @@
-import {
-	E,
-	Eff,
-	H,
-	L,
-	O,
-} from '@/core/imports.ts'
+import { Eff, H, L, O } from '@/core/imports.ts'
 
 import { AddProductService } from '@/app/interfaces/add-product.ts'
 
@@ -18,7 +12,7 @@ export const command = L.effect(
 
 		return product =>
 			Eff.gen(function* () {
-				const result = yield* H.tryPromise(() =>
+				yield* H.tryPromise(() =>
 					db.addProduct({
 						product: {
 							name: product.name,
@@ -30,12 +24,7 @@ export const command = L.effect(
 								: undefined,
 						},
 					}),
-				).pipe(Eff.either)
-
-				if (E.isLeft(result)) {
-					yield* H.logError(result.left)
-					return yield* Eff.fail(undefined)
-				}
+				)
 
 				yield* H.logDebug(
 					'No errors adding the product',
