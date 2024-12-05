@@ -1,6 +1,11 @@
 import { describe, test } from 'vitest'
 
-import { Eff, HS } from '@/core/imports.ts'
+import {
+	Eff,
+	HS,
+	L,
+	NEHS,
+} from '@/core/imports.ts'
 import {
 	assertExitIsFailure,
 	assertExitIsSuccess,
@@ -8,40 +13,43 @@ import {
 import { testRuntime } from '@/core/utils.ts'
 
 import { DeleteProductsByIdsService } from '../interfaces/delete-products-by-ids.ts'
-import { useCase } from './delete-products-by-ids.ts'
+import {
+	DeleteProductsByIdsUseCase,
+	useCase,
+} from './delete-products-by-ids.ts'
+
+const mockMain = (
+	ids: NEHS.NonEmptyHashSet<string>,
+) =>
+	Eff.gen(function* () {
+		yield* (yield* DeleteProductsByIdsUseCase)(
+			ids,
+		)
+	})
 
 describe('Delete products by ids', () => {
 	test.concurrent(
 		'Should return an error',
 		async () => {
-			const deleteProducts = Eff.provideService(
-				useCase(HS.fromIterable(['test'])),
-				DeleteProductsByIdsService,
-				() =>
-					Eff.gen(function* () {
-						return yield* Eff.fail(undefined)
-					}),
-			)
-
-			const exit =
-				await testRuntime.runPromiseExit(
-					deleteProducts,
-				)
-
-			assertExitIsFailure(exit)
-		},
-	)
-
-	test.concurrent(
-		'Should return an error on empty ids',
-		async () => {
-			const deleteProducts = Eff.provideService(
-				useCase(HS.empty()),
-				DeleteProductsByIdsService,
-				() =>
-					Eff.gen(function* () {
-						return yield* Eff.succeed(undefined)
-					}),
+			const deleteProducts = Eff.provide(
+				mockMain(
+					NEHS.unsafe_fromHashSet(
+						HS.fromIterable(['test']),
+					),
+				),
+				useCase.pipe(
+					L.provide(
+						L.succeed(
+							DeleteProductsByIdsService,
+							() =>
+								Eff.gen(function* () {
+									return yield* Eff.fail(
+										undefined,
+									)
+								}),
+						),
+					),
+				),
 			)
 
 			const exit =
@@ -56,15 +64,25 @@ describe('Delete products by ids', () => {
 	test.concurrent(
 		'Should just work',
 		async () => {
-			const deleteProducts = Eff.provideService(
-				useCase(
-					HS.fromIterable(['test1', 'test2']),
+			const deleteProducts = Eff.provide(
+				mockMain(
+					NEHS.unsafe_fromHashSet(
+						HS.fromIterable(['test1', 'test2']),
+					),
 				),
-				DeleteProductsByIdsService,
-				() =>
-					Eff.gen(function* () {
-						return yield* Eff.succeed(undefined)
-					}),
+				useCase.pipe(
+					L.provide(
+						L.succeed(
+							DeleteProductsByIdsService,
+							() =>
+								Eff.gen(function* () {
+									return yield* Eff.succeed(
+										undefined,
+									)
+								}),
+						),
+					),
+				),
 			)
 
 			const exit =

@@ -62,7 +62,6 @@ export const useQueueStore = <
 						reducer(msg)
 
 					setState(state => mutation(state))
-
 					yield* pipe(
 						commands,
 						HS.map(({ effect, onStart }) =>

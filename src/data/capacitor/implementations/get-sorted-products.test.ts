@@ -4,6 +4,7 @@ import { describe, expect } from 'vitest'
 import {
 	Eff,
 	Int,
+	L,
 	NETS,
 	NNInt,
 	O,
@@ -11,7 +12,10 @@ import {
 import * as H from '@/core/test-helpers.ts'
 import { testRuntime } from '@/core/utils.ts'
 
-import type { ProductDTO } from '@/app/interfaces/get-sorted-products.ts'
+import {
+	GetSortedProductsService,
+	type ProductDTO,
+} from '@/app/interfaces/get-sorted-products.ts'
 
 import type { FridgySqlitePlugin } from '../fridgy-sqlite-plugin.ts'
 import { CapacitorService } from '../index.ts'
@@ -62,24 +66,31 @@ function toModel(product: {
 	}
 }
 
+const mockUsecase = Eff.gen(function* () {
+	return yield* yield* GetSortedProductsService
+})
+
 describe('Get products', () => {
 	test.concurrent.prop([record, record, record])(
 		'Should return a list',
 		async (a, b, c) => {
 			const products = [a, b, c]
 
-			const useCase = Eff.provideService(
-				query,
-				CapacitorService,
-				{
-					db: {
-						getAllProductsWithTotal: () =>
-							Promise.resolve({
-								total: products.length,
-								products,
-							}),
-					} as unknown as FridgySqlitePlugin,
-				},
+			const useCase = Eff.provide(
+				mockUsecase,
+				query.pipe(
+					L.provide(
+						L.succeed(CapacitorService, {
+							db: {
+								getAllProductsWithTotal: () =>
+									Promise.resolve({
+										total: products.length,
+										products,
+									}),
+							} as unknown as FridgySqlitePlugin,
+						}),
+					),
+				),
 			)
 
 			const exit =
@@ -99,15 +110,18 @@ describe('Get products', () => {
 	test.concurrent(
 		'Should return an error',
 		async () => {
-			const useCase = Eff.provideService(
-				query,
-				CapacitorService,
-				{
-					db: {
-						getAllProductsWithTotal: () =>
-							Promise.resolve({}),
-					} as unknown as FridgySqlitePlugin,
-				},
+			const useCase = Eff.provide(
+				mockUsecase,
+				query.pipe(
+					L.provide(
+						L.succeed(CapacitorService, {
+							db: {
+								getAllProductsWithTotal: () =>
+									Promise.resolve({}),
+							} as unknown as FridgySqlitePlugin,
+						}),
+					),
+				),
 			)
 
 			const exit =
@@ -120,15 +134,18 @@ describe('Get products', () => {
 	test.concurrent(
 		'Should return an error',
 		async () => {
-			const useCase = Eff.provideService(
-				query,
-				CapacitorService,
-				{
-					db: {
-						getAllProductsWithTotal: () =>
-							Promise.reject(new Error()),
-					} as unknown as FridgySqlitePlugin,
-				},
+			const useCase = Eff.provide(
+				mockUsecase,
+				query.pipe(
+					L.provide(
+						L.succeed(CapacitorService, {
+							db: {
+								getAllProductsWithTotal: () =>
+									Promise.reject(new Error()),
+							} as unknown as FridgySqlitePlugin,
+						}),
+					),
+				),
 			)
 
 			const exit =
@@ -141,18 +158,21 @@ describe('Get products', () => {
 	test.concurrent(
 		'Should return an error',
 		async () => {
-			const useCase = Eff.provideService(
-				query,
-				CapacitorService,
-				{
-					db: {
-						getAllProductsWithTotal: () =>
-							Promise.resolve({
-								total: 3.5,
-								products: [],
-							}),
-					} as unknown as FridgySqlitePlugin,
-				},
+			const useCase = Eff.provide(
+				mockUsecase,
+				query.pipe(
+					L.provide(
+						L.succeed(CapacitorService, {
+							db: {
+								getAllProductsWithTotal: () =>
+									Promise.resolve({
+										total: 3.5,
+										products: [],
+									}),
+							} as unknown as FridgySqlitePlugin,
+						}),
+					),
+				),
 			)
 
 			const exit =
@@ -163,16 +183,19 @@ describe('Get products', () => {
 	)
 
 	test.concurrent('Should crash', async () => {
-		const useCase = Eff.provideService(
-			query,
-			CapacitorService,
-			{
-				db: {
-					getAllProductsWithTotal: () => {
-						throw new Error()
-					},
-				} as unknown as FridgySqlitePlugin,
-			},
+		const useCase = Eff.provide(
+			mockUsecase,
+			query.pipe(
+				L.provide(
+					L.succeed(CapacitorService, {
+						db: {
+							getAllProductsWithTotal: () => {
+								throw new Error()
+							},
+						} as unknown as FridgySqlitePlugin,
+					}),
+				),
+			),
 		)
 
 		const exit =

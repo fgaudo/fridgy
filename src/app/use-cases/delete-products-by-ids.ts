@@ -3,8 +3,8 @@ import {
 	C,
 	Eff,
 	H,
-	HS,
 	L,
+	NEHS,
 } from '@/core/imports.ts'
 
 import { DeleteProductsByIdsService } from '../interfaces/delete-products-by-ids.ts'
@@ -14,7 +14,7 @@ export class DeleteProductsByIdsUseCase extends C.Tag(
 )<
 	DeleteProductsByIdsUseCase,
 	(
-		ids: HS.HashSet<string>,
+		ids: NEHS.NonEmptyHashSet<string>,
 	) => Eff.Effect<void, void>
 >() {}
 
@@ -29,12 +29,6 @@ export const useCase = L.effect(
 				H.logDebug(
 					'Delete products use-case started',
 				)
-				if (HS.size(ids) <= 0) {
-					H.logError(
-						'No ids provided. This is probably a bug',
-					)
-					return yield* Eff.fail(undefined)
-				}
 
 				yield* deleteProductsByIds(ids)
 

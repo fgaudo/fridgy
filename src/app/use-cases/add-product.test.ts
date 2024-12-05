@@ -1,7 +1,13 @@
 import { test } from '@fast-check/vitest'
 import { describe } from 'vitest'
 
-import { Eff, L } from '@/core/imports.ts'
+import {
+	Eff,
+	Int,
+	L,
+	NETS,
+	O,
+} from '@/core/imports.ts'
 import * as H from '@/core/test-helpers.ts'
 import { testRuntime } from '@/core/utils.ts'
 
@@ -11,6 +17,14 @@ import {
 	useCase,
 } from './add-product.ts'
 
+const mockMain = (product: {
+	name: NETS.NonEmptyTrimmedString
+	expirationDate: O.Option<Int.Integer>
+}) =>
+	Eff.gen(function* () {
+		yield* (yield* AddProductUseCase)(product)
+	})
+
 describe('Add product', () => {
 	test.concurrent.prop([
 		H.nonEmptyTrimmedString,
@@ -19,11 +33,9 @@ describe('Add product', () => {
 		'Should just work',
 		async (name, expirationDate) => {
 			const addProduct = Eff.provide(
-				Eff.gen(function* () {
-					yield* (yield* AddProductUseCase)({
-						name,
-						expirationDate,
-					})
+				mockMain({
+					name,
+					expirationDate,
 				}),
 				useCase.pipe(
 					L.provide(
@@ -52,16 +64,20 @@ describe('Add product', () => {
 	])(
 		'Should return error',
 		async (name, expirationDate) => {
-			const addProduct = Eff.provideService(
-				useCase({
+			const addProduct = Eff.provide(
+				mockMain({
 					name,
 					expirationDate,
 				}),
-				AddProductService,
-				() =>
-					Eff.gen(function* () {
-						return yield* Eff.fail(null)
-					}),
+				useCase.pipe(
+					L.provide(
+						L.succeed(AddProductService, () =>
+							Eff.gen(function* () {
+								return yield* Eff.fail(undefined)
+							}),
+						),
+					),
+				),
 			)
 
 			const exit =

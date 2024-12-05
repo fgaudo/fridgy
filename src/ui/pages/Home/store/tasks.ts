@@ -37,7 +37,6 @@ export const refreshList = (
 						runningRefreshing.value,
 					)
 				}
-
 				const refreshList =
 					yield* GetSortedProductsUseCase
 
@@ -96,7 +95,7 @@ export const deleteByIdsAndRefresh = (
 					])
 
 				const [result] = yield* Eff.all([
-					deleteProducts(selectedProducts).pipe(
+					deleteProducts(selected.value).pipe(
 						Eff.either,
 					),
 					Eff.sleep(MINIMUM_LAG_MS),
