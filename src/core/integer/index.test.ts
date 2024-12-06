@@ -26,4 +26,14 @@ describe('integer', () => {
 			expect(number).toStrictEqual(integer)
 		},
 	)
+
+	test.concurrent.prop([
+		fc
+			.oneof(fc.float(), fc.double())
+			.filter(value => !Number.isInteger(value)),
+	])('should crash', integer => {
+		expect(() =>
+			unsafe_fromNumber(integer),
+		).toThrowError()
+	})
 })

@@ -19,7 +19,6 @@ export const unsafe_fromNumber: (
 	if (!isPositiveInteger(number)) {
 		throw new Error('Not a positive integer')
 	}
-
 	return number as PositiveInteger
 }
 
