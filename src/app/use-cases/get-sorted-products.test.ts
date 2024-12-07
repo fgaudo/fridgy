@@ -42,14 +42,13 @@ describe('Get sorted products', () => {
 		async () => {
 			const sortedProducts = Eff.provide(
 				mockMain,
-				useCase.pipe(
-					L.provide(
-						L.succeed(
-							GetSortedProductsService,
-							Eff.gen(function* () {
-								return yield* Eff.fail(undefined)
-							}),
-						),
+				L.provide(
+					useCase,
+					L.succeed(
+						GetSortedProductsService,
+						Eff.gen(function* () {
+							return yield* Eff.fail(undefined)
+						}),
 					),
 				),
 			)

@@ -1,7 +1,8 @@
 import { test } from '@fast-check/vitest'
-import { describe } from 'vitest'
+import { describe, expect } from 'vitest'
 
 import {
+	Cl,
 	Eff,
 	Int,
 	L,
@@ -37,17 +38,22 @@ describe('Add product', () => {
 					name,
 					expirationDate,
 				}),
-				useCase.pipe(
-					L.provide(
-						L.succeed(AddProductService, () =>
-							Eff.gen(function* () {
-								return yield* Eff.succeed(
-									undefined,
-								)
-							}),
-						),
+				L.provide(useCase, [
+					L.succeed(AddProductService, product =>
+						Eff.gen(function* () {
+							expect(product).toStrictEqual({
+								name,
+								expirationDate,
+								creationDate: 0,
+							})
+
+							return yield* Eff.succeed(undefined)
+						}),
 					),
-				),
+					L.setClock({
+						currentTimeMillis: Eff.succeed(0),
+					} as Cl.Clock),
+				]),
 			)
 			const exit =
 				await testRuntime.runPromiseExit(
@@ -69,15 +75,14 @@ describe('Add product', () => {
 					name,
 					expirationDate,
 				}),
-				useCase.pipe(
-					L.provide(
-						L.succeed(AddProductService, () =>
-							Eff.gen(function* () {
-								return yield* Eff.fail(undefined)
-							}),
-						),
+
+				L.provide(useCase, [
+					L.succeed(AddProductService, () =>
+						Eff.gen(function* () {
+							return yield* Eff.fail(undefined)
+						}),
 					),
-				),
+				]),
 			)
 
 			const exit =

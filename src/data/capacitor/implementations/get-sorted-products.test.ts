@@ -78,18 +78,17 @@ describe('Get products', () => {
 
 			const useCase = Eff.provide(
 				mockUsecase,
-				query.pipe(
-					L.provide(
-						L.succeed(CapacitorService, {
-							db: {
-								getAllProductsWithTotal: () =>
-									Promise.resolve({
-										total: products.length,
-										products,
-									}),
-							} as unknown as FridgySqlitePlugin,
-						}),
-					),
+				L.provide(
+					query,
+					L.succeed(CapacitorService, {
+						db: {
+							getAllProductsWithTotal: () =>
+								Promise.resolve({
+									total: products.length,
+									products,
+								}),
+						} as unknown as FridgySqlitePlugin,
+					}),
 				),
 			)
 
@@ -112,15 +111,14 @@ describe('Get products', () => {
 		async () => {
 			const useCase = Eff.provide(
 				mockUsecase,
-				query.pipe(
-					L.provide(
-						L.succeed(CapacitorService, {
-							db: {
-								getAllProductsWithTotal: () =>
-									Promise.resolve({}),
-							} as unknown as FridgySqlitePlugin,
-						}),
-					),
+				L.provide(
+					query,
+					L.succeed(CapacitorService, {
+						db: {
+							getAllProductsWithTotal: () =>
+								Promise.resolve({}),
+						} as unknown as FridgySqlitePlugin,
+					}),
 				),
 			)
 
@@ -136,15 +134,14 @@ describe('Get products', () => {
 		async () => {
 			const useCase = Eff.provide(
 				mockUsecase,
-				query.pipe(
-					L.provide(
-						L.succeed(CapacitorService, {
-							db: {
-								getAllProductsWithTotal: () =>
-									Promise.reject(new Error()),
-							} as unknown as FridgySqlitePlugin,
-						}),
-					),
+				L.provide(
+					query,
+					L.succeed(CapacitorService, {
+						db: {
+							getAllProductsWithTotal: () =>
+								Promise.reject(new Error()),
+						} as unknown as FridgySqlitePlugin,
+					}),
 				),
 			)
 
@@ -160,18 +157,17 @@ describe('Get products', () => {
 		async () => {
 			const useCase = Eff.provide(
 				mockUsecase,
-				query.pipe(
-					L.provide(
-						L.succeed(CapacitorService, {
-							db: {
-								getAllProductsWithTotal: () =>
-									Promise.resolve({
-										total: 3.5,
-										products: [],
-									}),
-							} as unknown as FridgySqlitePlugin,
-						}),
-					),
+				L.provide(
+					query,
+					L.succeed(CapacitorService, {
+						db: {
+							getAllProductsWithTotal: () =>
+								Promise.resolve({
+									total: 3.5,
+									products: [],
+								}),
+						} as unknown as FridgySqlitePlugin,
+					}),
 				),
 			)
 
@@ -185,16 +181,15 @@ describe('Get products', () => {
 	test.concurrent('Should crash', async () => {
 		const useCase = Eff.provide(
 			mockUsecase,
-			query.pipe(
-				L.provide(
-					L.succeed(CapacitorService, {
-						db: {
-							getAllProductsWithTotal: () => {
-								throw new Error()
-							},
-						} as unknown as FridgySqlitePlugin,
-					}),
-				),
+			L.provide(
+				query,
+				L.succeed(CapacitorService, {
+					db: {
+						getAllProductsWithTotal: () => {
+							throw new Error()
+						},
+					} as unknown as FridgySqlitePlugin,
+				}),
 			),
 		)
 

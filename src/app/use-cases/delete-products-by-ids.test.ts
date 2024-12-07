@@ -37,17 +37,14 @@ describe('Delete products by ids', () => {
 						HS.fromIterable(['test']),
 					),
 				),
-				useCase.pipe(
-					L.provide(
-						L.succeed(
-							DeleteProductsByIdsService,
-							() =>
-								Eff.gen(function* () {
-									return yield* Eff.fail(
-										undefined,
-									)
-								}),
-						),
+				L.provide(
+					useCase,
+					L.succeed(
+						DeleteProductsByIdsService,
+						() =>
+							Eff.gen(function* () {
+								return yield* Eff.fail(undefined)
+							}),
 					),
 				),
 			)

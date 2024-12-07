@@ -34,15 +34,14 @@ describe('Delete products by ids', () => {
 						HS.fromIterable(['1', '2']),
 					),
 				),
-				command.pipe(
-					L.provide(
-						L.succeed(CapacitorService, {
-							db: {
-								deleteProductsByIds: () =>
-									Promise.resolve(undefined),
-							} as unknown as FridgySqlitePlugin,
-						}),
-					),
+				L.provide(
+					command,
+					L.succeed(CapacitorService, {
+						db: {
+							deleteProductsByIds: () =>
+								Promise.resolve(undefined),
+						} as unknown as FridgySqlitePlugin,
+					}),
 				),
 			)
 
@@ -64,12 +63,11 @@ describe('Delete products by ids', () => {
 						HS.fromIterable(['id']),
 					),
 				),
-				command.pipe(
-					L.provide(
-						L.succeed(CapacitorService, {
-							db: {} as unknown as FridgySqlitePlugin,
-						}),
-					),
+				L.provide(
+					command,
+					L.succeed(CapacitorService, {
+						db: {} as unknown as FridgySqlitePlugin,
+					}),
 				),
 			)
 
@@ -91,15 +89,14 @@ describe('Delete products by ids', () => {
 						HS.fromIterable(['1']),
 					),
 				),
-				command.pipe(
-					L.provide(
-						L.succeed(CapacitorService, {
-							db: {
-								deleteProductsByIds: () =>
-									Promise.reject(new Error()),
-							} as unknown as FridgySqlitePlugin,
-						}),
-					),
+				L.provide(
+					command,
+					L.succeed(CapacitorService, {
+						db: {
+							deleteProductsByIds: () =>
+								Promise.reject(new Error()),
+						} as unknown as FridgySqlitePlugin,
+					}),
 				),
 			)
 
@@ -119,16 +116,15 @@ describe('Delete products by ids', () => {
 					HS.fromIterable(['1']),
 				),
 			),
-			command.pipe(
-				L.provide(
-					L.succeed(CapacitorService, {
-						db: {
-							deleteProductsByIds: () => {
-								throw new Error()
-							},
-						} as unknown as FridgySqlitePlugin,
-					}),
-				),
+			L.provide(
+				command,
+				L.succeed(CapacitorService, {
+					db: {
+						deleteProductsByIds: () => {
+							throw new Error()
+						},
+					} as unknown as FridgySqlitePlugin,
+				}),
 			),
 		)
 
