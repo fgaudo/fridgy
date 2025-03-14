@@ -1,7 +1,8 @@
-import '@/ui/index.css'
+// sort-imports-ignore
 import '@fontsource-variable/comfortaa/index.css'
 import '@fontsource-variable/roboto-flex/full.css'
 import 'mdui/mdui.css'
+import '@/ui/index.css'
 
 import { App as CAP } from '@capacitor/app'
 import '@fontsource/material-icons'
@@ -63,7 +64,7 @@ export async function render(
 						resourcesAreLoaded={isFontLoaded}
 					/>
 					<div
-						class="transition-all duration-fade"
+						class="duration-fade transition-all"
 						classList={{
 							'opacity-0 invisible':
 								!isFontLoaded(),
@@ -127,7 +128,7 @@ const LoadingScreen: Component<{
 	return (
 		<Portal>
 			<div
-				class="fixed bottom-0 left-0 right-0 top-0 z-[999] flex items-center justify-center duration-[300ms]"
+				class="fixed top-0 right-0 bottom-0 left-0 z-[999] flex items-center justify-center duration-[300ms]"
 				classList={{
 					'opacity-0 pointer-events-none':
 						isFaded(),

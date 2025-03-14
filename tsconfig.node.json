@@ -7,5 +7,5 @@
 		"moduleResolution": "NodeNext",
 		"allowSyntheticDefaultImports": true
 	},
-	"include": ["vite.config.js"]
+	"include": ["vite.config.ts"]
 }

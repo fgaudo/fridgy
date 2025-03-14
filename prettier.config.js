@@ -12,7 +12,6 @@ export default {
 	bracketSameLine: true,
 	useTabs: true,
 	importOrder: [
-		'\\.css$',
 		'<THIRD_PARTY_MODULES>',
 		'^@/core',
 		'^@/domain',

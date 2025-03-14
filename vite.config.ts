@@ -8,6 +8,7 @@ import tsconfigPaths from 'vite-tsconfig-paths'
 export default defineConfig(({ mode }) => ({
 	test: {
 		coverage: {
+			provider: 'v8',
 			reportsDirectory: '../coverage',
 		},
 	},
