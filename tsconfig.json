@@ -1,43 +1,7 @@
 {
-	"compilerOptions": {
-		"target": "ES2020",
-		"useDefineForClassFields": true,
-		"lib": ["ES2020", "DOM", "DOM.Iterable"],
-		"module": "NodeNext",
-		"skipLibCheck": true,
-		"moduleResolution": "NodeNext",
-		"resolveJsonModule": true,
-		"isolatedModules": true,
-		"noEmit": true,
-		"jsx": "preserve",
-		"jsxImportSource": "solid-js",
-		"allowImportingTsExtensions": true,
-		"strict": true,
-		"verbatimModuleSyntax": true,
-		"noImplicitThis": true,
-		"exactOptionalPropertyTypes": true,
-		"noUnusedLocals": false,
-		"noUnusedParameters": false,
-		"noImplicitReturns": true,
-		"noFallthroughCasesInSwitch": true,
-		"noPropertyAccessFromIndexSignature": true,
-		"baseUrl": "./src",
-		"paths": {
-			"@/domain/*": ["domain/*"],
-			"@/domain": ["domain/index"],
-			"@/app/*": ["app/*"],
-			"@/app": ["app/index"],
-			"@/ui/*": ["ui/*"],
-			"@/ui": ["ui/index"],
-			"@/data/*": ["data/*"],
-			"@/data": ["data/index"],
-			"@/core/*": ["core/*"],
-			"@/core": ["core/index"]
-		}
-	},
+	"files": [],
 	"references": [
-		{
-			"path": "./tsconfig.node.json"
-		}
+		{ "path": "./tsconfig.app.json" },
+		{ "path": "./tsconfig.node.json" }
 	]
 }
