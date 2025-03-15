@@ -90,7 +90,7 @@ const FontLoad: Component<{
 				<div
 					class="invisible fixed"
 					aria-hidden={true}>
-					<div class="font-titleLarge">
+					<div class="font-title-large">
 						quickfix
 					</div>
 					<mdui-icon prop:name="check_box"></mdui-icon>
@@ -128,7 +128,7 @@ const LoadingScreen: Component<{
 	return (
 		<Portal>
 			<div
-				class="fixed top-0 right-0 bottom-0 left-0 z-[999] flex items-center justify-center duration-[300ms]"
+				class="fixed top-0 right-0 bottom-0 left-0 z-999 flex items-center justify-center duration-[300ms]"
 				classList={{
 					'opacity-0 pointer-events-none':
 						isFaded(),

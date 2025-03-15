@@ -1,14 +1,77 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
+
+@plugin '@tailwindcss/typography';
+@plugin '@tailwindcss/forms';
+
+@theme {
+	--transition-duration-fade: 300ms;
+
+	--font-title-large: var(--fridgy-title-font);
+
+	--color-outline: rgb(var(--mdui-color-outline));
+	--color-background: rgb(
+		var(--mdui-color-background)
+	);
+	--color-primary: rgb(var(--mdui-color-primary));
+
+	--color-on-surface: rgb(
+		var(--mdui-color-on-surface)
+	);
+	--color-on-surface-container: rgb(
+		var(--mdui-color-on-surface-container)
+	);
+	--color-on-surface-variant: rgb(
+		var(--mdui-color-on-surface-variant)
+	);
+
+	--color-surface-variant: rgb(
+		var(--mdui-color-surface-variant)
+	);
+	--color-surface: rgb(var(--mdui-color-surface));
+	--color-surface-container: rgb(
+		var(--mdui-color-surface-container)
+	);
+
+	--color-inverse-on-surface: rgb(
+		var(--mdui-color-inverse-on-surface)
+	);
+	--color-inverse-primary: rgb(
+		var(--mdui-color-inverse-primary)
+	);
+	--color-inverse-surface: rgb(
+		var(--mdui-color-inverse-surface)
+	);
+}
+
+/*
+  The default border color has changed to `currentColor` in Tailwind CSS v4,
+  so we've added these compatibility styles to make sure everything still
+  looks the same as it did with Tailwind CSS v3.
+
+  If we ever want to remove these styles, we need to add an explicit border
+  color utility to any element that depends on these defaults.
+*/
+@layer base {
+	*,
+	::after,
+	::before,
+	::backdrop,
+	::file-selector-button {
+		border-color: var(
+			--color-gray-200,
+			currentColor
+		);
+	}
+}
 
 * {
 	min-width: 0;
 }
 
 body {
-	font-family: 'Roboto Flex Variable',
-		'Courier New', Courier, monospace;
+	font-family:
+		'Roboto Flex Variable', 'Courier New',
+		Courier, monospace;
 }
 
 :root {

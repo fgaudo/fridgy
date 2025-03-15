@@ -15,17 +15,19 @@ export const Menu: Component = () => {
 		uiStore: [uiState, setUiState],
 	} = useUiStateContext()!
 
-	let drawer: NavigationDrawer
+	let drawer: NavigationDrawer | undefined
 
 	onMount(() => {
 		onCleanup(() => {
-			drawer.open = false
+			if (drawer) {
+				drawer.open = false
+			}
 		})
 	})
 
 	return (
 		<mdui-navigation-drawer
-			ref={drawer!}
+			ref={drawer}
 			prop:open={uiState.isMenuOpen}
 			onClick={() => {
 				setUiState(
@@ -34,7 +36,7 @@ export const Menu: Component = () => {
 				)
 			}}>
 			<div class="flex h-full flex-col">
-				<p class="text-titleLarge leading-titleLarge pb-4 pl-4 pt-8 font-titleLarge">
+				<p class="text-title-large leading-title-large font-title-large pt-8 pb-4 pl-4">
 					Fridgy
 				</p>
 
@@ -46,7 +48,7 @@ export const Menu: Component = () => {
 					</A>
 				</mdui-list>
 				<a
-					class="mt-auto inline-block w-fit self-center p-4 text-center text-primary underline"
+					class="text-primary mt-auto inline-block w-fit self-center p-4 text-center underline"
 					href="https://github.com/fgaudo/fridgy/wiki/Fridgy-%E2%80%90-Privacy-policy">
 					Privacy policy
 				</a>

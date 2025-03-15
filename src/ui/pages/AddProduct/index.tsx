@@ -59,12 +59,12 @@ const AddProduct: (
 				}}>
 				<TopBar />
 
-				<div class="absolute left-0 top-0 flex h-screen w-full justify-center">
-					<div class="flex w-full max-w-lg flex-col place-content-center gap-[28px] pl-[16px] pr-[16px]">
-						<div class="flex flex-col rounded-xl align-middle text-onSurface">
+				<div class="absolute top-0 left-0 flex h-screen w-full justify-center">
+					<div class="flex w-full max-w-lg flex-col place-content-center gap-[28px] pr-[16px] pl-[16px]">
+						<div class="text-on-surface flex flex-col rounded-xl align-middle">
 							<label
 								for="name"
-								class="relative left-[10px] top-[12px] inline-block flex-grow-0 self-start bg-surface p-[4px] text-[12px] text-primary">
+								class="bg-surface text-primary relative top-[12px] left-[10px] inline-block grow-0 self-start p-[4px] text-[12px]">
 								Product name
 							</label>
 							<input
@@ -80,15 +80,15 @@ const AddProduct: (
 									)
 								}}
 								id="name"
-								class="w-full rounded-[4px] border-0 bg-surface p-4 ring-1 ring-outline transition-all focus:border-0 focus:ring-2 focus:ring-primary"
+								class="bg-surface ring-outline focus:ring-primary w-full rounded-[4px] border-0 p-4 ring-1 transition-all focus:border-0 focus:ring-2"
 								min={currentDate()}
 							/>
 						</div>
 
-						<div class="flex flex-col rounded-xl align-middle text-onSurface">
+						<div class="text-on-surface flex flex-col rounded-xl align-middle">
 							<label
 								for="expdate"
-								class="relative left-[10px] top-[12px] inline-block flex-grow-0 self-start bg-surface p-[4px] text-[12px] text-primary">
+								class="bg-surface text-primary relative top-[12px] left-[10px] inline-block grow-0 self-start p-[4px] text-[12px]">
 								Expiration date
 							</label>
 							<input
@@ -111,7 +111,7 @@ const AddProduct: (
 									)
 								}}
 								id="expdate"
-								class="w-full rounded-[4px] border-0 bg-surface p-4 ring-1 ring-outline transition-all focus:border-0 focus:ring-2 focus:ring-primary"
+								class="bg-surface ring-outline focus:ring-primary w-full rounded-[4px] border-0 p-4 ring-1 transition-all focus:border-0 focus:ring-2"
 								min={currentDate()}
 							/>
 						</div>
@@ -132,7 +132,7 @@ const AddProduct: (
 			</div>
 			<Portal>
 				<Snackbar
-					class="fixed bottom-0 right-1/2 flex w-full translate-x-1/2 justify-center"
+					class="fixed right-1/2 bottom-0 flex w-full translate-x-1/2 justify-center"
 					message={state.message}
 				/>
 			</Portal>

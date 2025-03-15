@@ -14,18 +14,22 @@ export const About: () => Component =
 
 		return (
 			<div>
-				<mdui-top-app-bar prop:scrollBehavior="elevate">
+				<mdui-top-app-bar
+					prop:scrollBehavior="elevate"
+					class="items-center">
 					<mdui-button-icon
 						prop:icon="arrow_back"
 						onClick={() => {
 							navigate(-1)
 						}}></mdui-button-icon>
 					<mdui-top-app-bar-title>
-						About
+						<div class="font-title-large">
+							About
+						</div>
 					</mdui-top-app-bar-title>
 				</mdui-top-app-bar>
 				<div class="flex flex-col justify-center gap-2 px-[24px]">
-					<p class="font-titleLarge text-xl">
+					<p class="font-title-large text-xl">
 						Fridgy
 					</p>
 					<p>

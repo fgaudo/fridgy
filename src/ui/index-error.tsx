@@ -21,7 +21,7 @@ export function renderError(
 				role="alert">
 				<div class="flex items-center">
 					<svg
-						class="me-2 h-4 w-4 flex-shrink-0"
+						class="me-2 h-4 w-4 shrink-0"
 						aria-hidden="true"
 						xmlns="http://www.w3.org/2000/svg"
 						fill="currentColor"

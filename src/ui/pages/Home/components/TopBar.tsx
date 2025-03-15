@@ -24,10 +24,12 @@ export const TopBar: Component = () => {
 			: (prev ?? 0)
 	})
 	return (
-		<mdui-top-app-bar prop:scrollBehavior="elevate">
-			<div class="w-[40px]">
+		<mdui-top-app-bar
+			prop:scrollBehavior="elevate"
+			class="items-center">
+			<div class="relative w-[40px]">
 				<mdui-button-icon
-					class="absolute transition-all"
+					class="absolute top-[-20px] transition-all"
 					prop:icon="menu"
 					classList={{
 						'opacity-0 pointer-events-none':
@@ -41,7 +43,7 @@ export const TopBar: Component = () => {
 					}}></mdui-button-icon>
 
 				<mdui-button-icon
-					class="absolute transition-all"
+					class="absolute top-[-20px] transition-all"
 					prop:icon="close"
 					classList={{
 						'opacity-0 pointer-events-none':
@@ -52,10 +54,13 @@ export const TopBar: Component = () => {
 					}}></mdui-button-icon>
 			</div>
 
-			<mdui-top-app-bar-title class="font-titleLarge">
-				Home
+			<mdui-top-app-bar-title>
+				<div class="font-title-large pl-1">
+					Home
+				</div>
 			</mdui-top-app-bar-title>
-			<div class="flex-grow"></div>
+
+			<div class="grow"></div>
 			<div
 				class="flex h-full items-center text-lg transition-all"
 				classList={{

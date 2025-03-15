@@ -19,7 +19,7 @@ export const Fab: Component = () => {
 						state.isLoading ||
 						state.receivedError,
 				}}
-				class="fixed bottom-[150px] left-0 right-0 flex flex-col items-end font-titleLarge transition-all duration-[fade]">
+				class="font-title-large fixed right-0 bottom-[150px] left-0 flex flex-col items-end transition-all duration-[fade]">
 				<div class="w-full p-[20px] text-center">
 					Your fridge looks a bit empty. <br />
 					Here’s the button to add some food.
@@ -30,10 +30,10 @@ export const Fab: Component = () => {
 							'invert(16%) sepia(2%) saturate(24%) hue-rotate(336deg) brightness(97%) contrast(93%)',
 						'background-image': `url("${imgUrl}")`,
 					}}
-					class={`relative right-[70px] top-[30px] h-[160px] w-[160px] bg-contain bg-no-repeat`}></div>
+					class={`relative top-[30px] right-[70px] h-[160px] w-[160px] bg-contain bg-no-repeat`}></div>
 			</div>
 			<div
-				class="fixed bottom-[16px] right-[16px] h-[96px] w-[96px] bg-transparent transition-all duration-fade"
+				class="duration-fade fixed right-[16px] bottom-[16px] h-[96px] w-[96px] bg-transparent transition-all"
 				classList={{
 					'opacity-0 pointer-events-none':
 						uiState.isSelectModeEnabled,

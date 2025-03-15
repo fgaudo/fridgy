@@ -100,7 +100,7 @@ export const Snackbar: Component<{
 				interruptToastRemoval()
 				setToast(O.none())
 			}}
-			class="transition-all duration-fade"
+			class="duration-fade transition-all"
 			classList={{
 				'opacity-0 pointer-events-none': O.isNone(
 					props.message,
@@ -116,9 +116,9 @@ export const Snackbar: Component<{
 						'opacity-1': isErrorToast(),
 					}}
 					id="toast-danger"
-					class="mb-4 flex w-full max-w-xs items-center rounded-lg bg-inverse-surface p-4 text-gray-500 shadow transition-all duration-fade dark:bg-gray-800 dark:text-gray-400"
+					class="bg-inverse-surface duration-fade mb-4 flex w-full max-w-xs items-center rounded-lg p-4 text-gray-500 shadow-sm transition-all dark:bg-gray-800 dark:text-gray-400"
 					role="alert">
-					<div class="inline-flex h-8 w-8 flex-shrink-0 items-center justify-center text-red-500 dark:text-red-200">
+					<div class="inline-flex h-8 w-8 shrink-0 items-center justify-center text-red-500 dark:text-red-200">
 						<svg
 							class="h-5 w-5"
 							aria-hidden="true"
@@ -131,7 +131,7 @@ export const Snackbar: Component<{
 							Error icon
 						</span>
 					</div>
-					<div class="ms-3 text-sm font-normal text-inverse-onSurface">
+					<div class="text-inverse-on-surface ms-3 text-sm font-normal">
 						{(() => {
 							const res = toast()
 							if (O.isSome(res)) {
@@ -148,9 +148,9 @@ export const Snackbar: Component<{
 						'opacity-1': isSuccessToast(),
 					}}
 					id="toast-success"
-					class="fixed bottom-0 right-1/2 mb-4 flex w-full max-w-xs translate-x-1/2 items-center rounded-lg bg-inverse-surface p-4 text-gray-500 shadow transition-all duration-fade dark:bg-gray-800 dark:text-gray-400"
+					class="bg-inverse-surface duration-fade fixed right-1/2 bottom-0 mb-4 flex w-full max-w-xs translate-x-1/2 items-center rounded-lg p-4 text-gray-500 shadow-sm transition-all dark:bg-gray-800 dark:text-gray-400"
 					role="alert">
-					<div class="inline-flex h-8 w-8 flex-shrink-0 items-center justify-center text-green-500 dark:text-green-200">
+					<div class="inline-flex h-8 w-8 shrink-0 items-center justify-center text-green-500 dark:text-green-200">
 						<svg
 							class="h-5 w-5"
 							aria-hidden="true"
@@ -163,7 +163,7 @@ export const Snackbar: Component<{
 							Check icon
 						</span>
 					</div>
-					<div class="ms-3 text-sm font-normal text-inverse-onSurface">
+					<div class="text-inverse-on-surface ms-3 text-sm font-normal">
 						{(() => {
 							const res = toast()
 							if (O.isSome(res)) {

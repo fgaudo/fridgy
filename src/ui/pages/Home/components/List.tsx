@@ -50,7 +50,7 @@ export const List: Component = () => {
 						state.isLoading,
 				}}>
 				<p
-					class="fixed top-[64px] z-[999] w-full bg-background px-[14px] pb-[8px] pt-[10px] text-xs transition-all"
+					class="fixed top-[64px] z-999 w-full bg-background px-[14px] pb-[8px] pt-[10px] text-xs transition-all"
 					classList={{
 						'opacity-0 pointer-events-none':
 							state.total <= 0 ||
