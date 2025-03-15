@@ -4,7 +4,7 @@ apply plugin: 'kotlin-android'
 android {
 
     kotlinOptions {
-        jvmTarget = '17'
+        jvmTarget = '21'
     }
     namespace "net.gaudo.fridgy"
     compileSdk rootProject.ext.compileSdkVersion
