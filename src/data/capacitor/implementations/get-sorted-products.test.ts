@@ -21,12 +21,15 @@ import type { FridgySqlitePlugin } from '../fridgy-sqlite-plugin.ts'
 import { CapacitorService } from '../index.ts'
 import { query } from './get-sorted-products.ts'
 
-const record = fc.record({
-	id: H.numberOrUndefined,
-	creationDate: H.numberOrUndefined,
-	expirationDate: H.numberOrUndefined,
-	name: H.stringOrUndefined,
-})
+const record = fc.record(
+	{
+		id: H.numberOrUndefined,
+		creationDate: H.numberOrUndefined,
+		expirationDate: H.numberOrUndefined,
+		name: H.stringOrUndefined,
+	},
+	{ noNullPrototype: true },
+)
 
 function toModel(product: {
 	id: number | undefined

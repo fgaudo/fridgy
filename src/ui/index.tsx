@@ -1,11 +1,11 @@
 // sort-imports-ignore
 import '@fontsource-variable/comfortaa/index.css'
 import '@fontsource-variable/roboto-flex/full.css'
+import '@fontsource/material-icons/index.css'
 import 'mdui/mdui.css'
 import '@/ui/index.css'
 
 import { App as CAP } from '@capacitor/app'
-import '@fontsource/material-icons'
 import 'mdui'
 import { setColorScheme } from 'mdui'
 import {

@@ -14,22 +14,28 @@ import {
 } from './get-sorted-products.ts'
 
 const record = fc.oneof(
-	fc.record({
-		isValid: fc.constant(
-			true,
-		) as fc.Arbitrary<true>,
-		id: H.string,
-		creationDate: H.integer,
-		expirationDate: H.maybeInteger,
-		name: H.nonEmptyTrimmedString,
-	}),
-	fc.record({
-		isValid: fc.constant(
-			false,
-		) as fc.Arbitrary<false>,
-		id: H.maybeString,
-		name: H.maybeNonEmptyTrimmedString,
-	}),
+	fc.record(
+		{
+			isValid: fc.constant(
+				true,
+			) as fc.Arbitrary<true>,
+			id: H.string,
+			creationDate: H.integer,
+			expirationDate: H.maybeInteger,
+			name: H.nonEmptyTrimmedString,
+		},
+		{ noNullPrototype: true },
+	),
+	fc.record(
+		{
+			isValid: fc.constant(
+				false,
+			) as fc.Arbitrary<false>,
+			id: H.maybeString,
+			name: H.maybeNonEmptyTrimmedString,
+		},
+		{ noNullPrototype: true },
+	),
 )
 
 const mockMain = Eff.gen(function* () {
@@ -89,7 +95,6 @@ describe('Get sorted products', () => {
 				await testRuntime.runPromiseExit(
 					sortedProducts,
 				)
-
 			H.assertExitIsSuccess(exit)
 
 			expect(exit.value).toStrictEqual({

@@ -2,6 +2,7 @@ import eslint from '@eslint/js'
 import eslintConfig from 'eslint-config-prettier'
 import solid from 'eslint-plugin-solid'
 import tseslint from 'typescript-eslint'
+import { fileURLToPath } from 'url'
 
 export default [
 	eslint.configs.recommended,
@@ -11,7 +12,9 @@ export default [
 		languageOptions: {
 			parserOptions: {
 				project: true,
-				tsconfigRootDir: __dirname,
+				tsconfigRootDir: fileURLToPath(
+					import.meta.dirname,
+				),
 			},
 		},
 	},
