@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/consistent-type-assertions */
 import { O } from './imports.ts'
 
 const _: unique symbol = Symbol()
@@ -7,8 +6,11 @@ export type NonEmptyTrimmedString = string & {
 	[_]: true
 }
 
-export const isNonBlank = (string: string) =>
-	/\S/.test(string)
+export function isNonBlank(
+	string: string,
+): string is NonEmptyTrimmedString {
+	return /\S/.test(string)
+}
 
 export const unsafe_fromString = (
 	value: string,
@@ -19,7 +21,7 @@ export const unsafe_fromString = (
 		throw new Error('Not a non-empty string')
 	}
 
-	return string as NonEmptyTrimmedString
+	return string
 }
 
 export const fromString = O.liftThrowable(

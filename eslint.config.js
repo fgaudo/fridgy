@@ -11,16 +11,26 @@ export default [
 	{
 		languageOptions: {
 			parserOptions: {
-				project: true,
-				tsconfigRootDir: fileURLToPath(
-					import.meta.dirname,
-				),
+				projectService: true,
+				tsconfigRootDir: import.meta.dirname,
 			},
 		},
 	},
 	{
 		files: ['**/*.{ts,tsx}'],
 		...solid.configs['flat/typescript'],
+		rules: {
+			...solid.configs['flat/typescript'].rules,
+			'solid/reactivity': 'warn',
+
+			'solid/self-closing-comp': [
+				'warn',
+				{
+					component: 'all', // "all" | "none"
+					html: 'void', // "all" | "void" | "none"
+				},
+			],
+		},
 	},
 	eslintConfig,
 	{ ignores: ['*.js', '*.ts'] },
@@ -53,15 +63,6 @@ export default [
 				'error',
 			'@typescript-eslint/switch-exhaustiveness-check':
 				'error',
-			'solid/reactivity': 'warn',
-
-			'solid/self-closing-comp': [
-				'warn',
-				{
-					component: 'all', // "all" | "none"
-					html: 'void', // "all" | "void" | "none"
-				},
-			],
 		},
 	},
 	{

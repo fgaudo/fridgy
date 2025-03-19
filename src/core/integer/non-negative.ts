@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/consistent-type-assertions */
 import { O } from '../imports.ts'
 import { isInteger } from './index.ts'
 
@@ -6,7 +5,7 @@ const _: unique symbol = Symbol()
 
 export const isNonNegativeInteger = (
 	value: unknown,
-): value is number =>
+): value is NonNegativeInteger =>
 	isInteger(value) && value >= 0
 
 export type NonNegativeInteger = number & {
@@ -20,7 +19,7 @@ export const unsafe_fromNumber: (
 		throw new Error('Not a non-negative integer')
 	}
 
-	return number as NonNegativeInteger
+	return number
 }
 
 export const fromNumber: (

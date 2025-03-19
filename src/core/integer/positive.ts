@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/consistent-type-assertions */
 import { O } from '../imports.ts'
 import { isInteger } from './index.ts'
 
@@ -10,7 +9,7 @@ export type PositiveInteger = number & {
 
 export const isPositiveInteger = (
 	value: unknown,
-): value is number =>
+): value is PositiveInteger =>
 	isInteger(value) && value > 0
 
 export const unsafe_fromNumber: (
@@ -19,7 +18,7 @@ export const unsafe_fromNumber: (
 	if (!isPositiveInteger(number)) {
 		throw new Error('Not a positive integer')
 	}
-	return number as PositiveInteger
+	return number
 }
 
 export const fromNumber: (

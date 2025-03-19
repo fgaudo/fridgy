@@ -8,7 +8,7 @@ export type Integer = number & {
 
 export const isInteger = (
 	value: unknown,
-): value is number => Number.isInteger(value)
+): value is Integer => Number.isInteger(value)
 
 export const unsafe_fromNumber: (
 	number: number,
@@ -17,8 +17,7 @@ export const unsafe_fromNumber: (
 		throw new Error('Not an integer')
 	}
 
-	// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-	return number as Integer
+	return number
 }
 
 export const fromNumber: (
