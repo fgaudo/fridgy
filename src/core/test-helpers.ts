@@ -1,8 +1,16 @@
-import { fc } from '@fast-check/vitest'
-import { Cause, Exit, flow } from 'effect'
+import {
+	Cause,
+	Exit,
+	FastCheck,
+	flow,
+} from 'effect'
 import { assert } from 'vitest'
 
 import { Int, M, NETS, O } from './imports.ts'
+
+export * as FC from 'effect/FastCheck'
+
+const fc = FastCheck
 
 export function assertExitIsFailure<A, E>(
 	exit: Exit.Exit<A, E>,

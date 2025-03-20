@@ -1,5 +1,9 @@
-import { fc, test } from '@fast-check/vitest'
-import { describe, expect } from 'vitest'
+import {
+	describe,
+	effect,
+	layer,
+} from '@effect/vitest'
+import { FastCheck } from 'effect'
 
 import {
 	Eff,
@@ -10,7 +14,6 @@ import {
 	O,
 } from '@/core/imports.ts'
 import * as H from '@/core/test-helpers.ts'
-import { testRuntime } from '@/core/utils.ts'
 
 import {
 	GetSortedProductsService,
@@ -21,7 +24,7 @@ import type { FridgySqlitePlugin } from '../fridgy-sqlite-plugin.ts'
 import { CapacitorService } from '../index.ts'
 import { query } from './get-sorted-products.ts'
 
-const record = fc.record(
+const record = FastCheck.record(
 	{
 		id: H.numberOrUndefined,
 		creationDate: H.numberOrUndefined,
@@ -69,18 +72,26 @@ function toModel(product: {
 	}
 }
 
-const mockUsecase = Eff.gen(function* () {
-	return yield* yield* GetSortedProductsService
-})
-
 describe('Get products', () => {
-	test.concurrent.prop([record, record, record])(
+	effect.prop(
 		'Should return a list',
-		async (a, b, c) => {
-			const products = [a, b, c]
+		[record, record, record],
+		(products, { expect }) =>
+			Eff.provide(
+				Eff.gen(function* () {
+					const service =
+						yield* GetSortedProductsService
+					const exit = yield* Eff.exit(service)
 
-			const useCase = Eff.provide(
-				mockUsecase,
+					H.assertExitIsSuccess(exit)
+
+					expect(exit.value).toStrictEqual({
+						total: NNInt.unsafe_fromNumber(
+							products.length,
+						),
+						products: products.map(toModel),
+					})
+				}),
 				L.provide(
 					query,
 					L.succeed(CapacitorService, {
@@ -93,112 +104,102 @@ describe('Get products', () => {
 						} as unknown as FridgySqlitePlugin,
 					}),
 				),
-			)
-
-			const exit =
-				await testRuntime.runPromiseExit(useCase)
-
-			H.assertExitIsSuccess(exit)
-
-			expect(exit.value).toStrictEqual({
-				total: NNInt.unsafe_fromNumber(
-					products.length,
-				),
-				products: products.map(toModel),
-			})
-		},
-	)
-
-	test.concurrent(
-		'Should return an error',
-		async () => {
-			const useCase = Eff.provide(
-				mockUsecase,
-				L.provide(
-					query,
-					L.succeed(CapacitorService, {
-						db: {
-							getAllProductsWithTotal: () =>
-								Promise.resolve({}),
-						} as unknown as FridgySqlitePlugin,
-					}),
-				),
-			)
-
-			const exit =
-				await testRuntime.runPromiseExit(useCase)
-
-			H.assertExitIsFailure(exit)
-		},
-	)
-
-	test.concurrent(
-		'Should return an error',
-		async () => {
-			const useCase = Eff.provide(
-				mockUsecase,
-				L.provide(
-					query,
-					L.succeed(CapacitorService, {
-						db: {
-							getAllProductsWithTotal: () =>
-								Promise.reject(new Error()),
-						} as unknown as FridgySqlitePlugin,
-					}),
-				),
-			)
-
-			const exit =
-				await testRuntime.runPromiseExit(useCase)
-
-			H.assertExitIsFailure(exit)
-		},
-	)
-
-	test.concurrent(
-		'Should return an error',
-		async () => {
-			const useCase = Eff.provide(
-				mockUsecase,
-				L.provide(
-					query,
-					L.succeed(CapacitorService, {
-						db: {
-							getAllProductsWithTotal: () =>
-								Promise.resolve({
-									total: 3.5,
-									products: [],
-								}),
-						} as unknown as FridgySqlitePlugin,
-					}),
-				),
-			)
-
-			const exit =
-				await testRuntime.runPromiseExit(useCase)
-
-			H.assertExitIsFailure(exit)
-		},
-	)
-
-	test.concurrent('Should crash', async () => {
-		const useCase = Eff.provide(
-			mockUsecase,
-			L.provide(
-				query,
-				L.succeed(CapacitorService, {
-					db: {
-						getAllProductsWithTotal: () => {
-							throw new Error()
-						},
-					} as unknown as FridgySqlitePlugin,
-				}),
 			),
+	)
+
+	layer(
+		L.provide(
+			query,
+			L.succeed(CapacitorService, {
+				db: {
+					getAllProductsWithTotal: () =>
+						Promise.resolve({}),
+				} as unknown as FridgySqlitePlugin,
+			}),
+		),
+	)(({ effect }) => {
+		effect('Should return an error', () =>
+			Eff.gen(function* () {
+				const service =
+					yield* GetSortedProductsService
+
+				const exit = yield* Eff.exit(service)
+
+				H.assertExitIsFailure(exit)
+			}),
 		)
+	})
 
-		const exit =
-			await testRuntime.runPromiseExit(useCase)
+	layer(
+		L.provide(
+			query,
+			L.succeed(CapacitorService, {
+				db: {
+					getAllProductsWithTotal: () =>
+						Promise.reject(new Error()),
+				} as unknown as FridgySqlitePlugin,
+			}),
+		),
+	)(({ effect }) => {
+		effect('Should return an error', () =>
+			Eff.gen(function* () {
+				const service =
+					yield* GetSortedProductsService
 
-		H.assertExitIsDie(exit)
+				const exit = yield* Eff.exit(service)
+
+				H.assertExitIsFailure(exit)
+			}),
+		)
+	})
+
+	layer(
+		L.provide(
+			query,
+			L.succeed(CapacitorService, {
+				db: {
+					getAllProductsWithTotal: () =>
+						Promise.resolve({
+							total: 3.5,
+							products: [],
+						}),
+				} as unknown as FridgySqlitePlugin,
+			}),
+		),
+	)(({ effect }) => {
+		effect('Should return an error', () =>
+			Eff.gen(function* () {
+				const service =
+					yield* GetSortedProductsService
+
+				const exit = yield* Eff.exit(service)
+
+				H.assertExitIsFailure(exit)
+			}),
+		)
+	})
+
+	layer(
+		L.provide(
+			query,
+			L.succeed(CapacitorService, {
+				db: {
+					getAllProductsWithTotal: () => {
+						throw new Error()
+					},
+				} as unknown as FridgySqlitePlugin,
+			}),
+		),
+	)(({ effect }) => {
+		effect('Should crash', () =>
+			Eff.gen(function* () {
+				const service =
+					yield* GetSortedProductsService
+
+				const exit = yield* Eff.exit(service)
+
+				H.assertExitIsDie(exit)
+			}),
+		)
 	})
 })

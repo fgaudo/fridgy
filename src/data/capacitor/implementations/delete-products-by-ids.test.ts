@@ -1,4 +1,4 @@
-import { describe, test } from 'vitest'
+import { describe, layer } from '@effect/vitest'
 
 import {
 	Eff,
@@ -7,7 +7,6 @@ import {
 	NEHS,
 } from '@/core/imports.ts'
 import * as H from '@/core/test-helpers.ts'
-import { testRuntime } from '@/core/utils.ts'
 
 import { DeleteProductsByIdsService } from '@/app/interfaces/delete-products-by-ids.ts'
 
@@ -15,123 +14,118 @@ import type { FridgySqlitePlugin } from '../fridgy-sqlite-plugin.ts'
 import { CapacitorService } from '../index.ts'
 import { command } from './delete-products-by-ids.ts'
 
-const mockUsecase = (
-	ids: NEHS.NonEmptyHashSet<string>,
-) =>
-	Eff.gen(function* () {
-		return yield* (yield* DeleteProductsByIdsService)(
-			ids,
+describe('Delete products by ids', () => {
+	layer(
+		L.provide(
+			command,
+			L.succeed(CapacitorService, {
+				db: {
+					deleteProductsByIds: () =>
+						Promise.resolve(undefined),
+				} as unknown as FridgySqlitePlugin,
+			}),
+		),
+	)(({ effect }) => {
+		effect('Should just work', () =>
+			Eff.gen(function* () {
+				const service =
+					yield* DeleteProductsByIdsService
+
+				const exit = yield* Eff.exit(
+					service(
+						NEHS.unsafe_fromHashSet(
+							HS.fromIterable(['1', '2']),
+						),
+					),
+				)
+
+				H.assertExitIsSuccess(exit)
+			}),
 		)
 	})
 
-describe('Delete products by ids', () => {
-	test.concurrent(
-		'Should just work',
-		async () => {
-			const deleteProductsByIds = Eff.provide(
-				mockUsecase(
-					NEHS.unsafe_fromHashSet(
-						HS.fromIterable(['1', '2']),
-					),
-				),
-				L.provide(
-					command,
-					L.succeed(CapacitorService, {
-						db: {
-							deleteProductsByIds: () =>
-								Promise.resolve(undefined),
-						} as unknown as FridgySqlitePlugin,
-					}),
-				),
-			)
+	layer(
+		L.provide(
+			command,
+			L.succeed(CapacitorService, {
+				db: {} as unknown as FridgySqlitePlugin,
+			}),
+		),
+	)(({ effect }) => {
+		effect('Should return an error', () =>
+			Eff.gen(function* () {
+				const service =
+					yield* DeleteProductsByIdsService
 
-			const data =
-				await testRuntime.runPromiseExit(
-					deleteProductsByIds,
+				const exit = yield* Eff.exit(
+					service(
+						NEHS.unsafe_fromHashSet(
+							HS.fromIterable(['id']),
+						),
+					),
 				)
 
-			H.assertExitIsSuccess(data)
-		},
-	)
-
-	test.concurrent(
-		'Should return an error',
-		async () => {
-			const deleteProductsByIds = Eff.provide(
-				mockUsecase(
-					NEHS.unsafe_fromHashSet(
-						HS.fromIterable(['id']),
-					),
-				),
-				L.provide(
-					command,
-					L.succeed(CapacitorService, {
-						db: {} as unknown as FridgySqlitePlugin,
-					}),
-				),
-			)
-
-			const exit =
-				await testRuntime.runPromiseExit(
-					deleteProductsByIds,
-				)
-
-			H.assertExitIsFailure(exit)
-		},
-	)
-
-	test.concurrent(
-		'Should return an error',
-		async () => {
-			const deleteProductsByIds = Eff.provide(
-				mockUsecase(
-					NEHS.unsafe_fromHashSet(
-						HS.fromIterable(['1']),
-					),
-				),
-				L.provide(
-					command,
-					L.succeed(CapacitorService, {
-						db: {
-							deleteProductsByIds: () =>
-								Promise.reject(new Error()),
-						} as unknown as FridgySqlitePlugin,
-					}),
-				),
-			)
-
-			const exit =
-				await testRuntime.runPromiseExit(
-					deleteProductsByIds,
-				)
-
-			H.assertExitIsFailure(exit)
-		},
-	)
-
-	test.concurrent('Should crash', async () => {
-		const deleteProductsByIds = Eff.provide(
-			mockUsecase(
-				NEHS.unsafe_fromHashSet(
-					HS.fromIterable(['1']),
-				),
-			),
-			L.provide(
-				command,
-				L.succeed(CapacitorService, {
-					db: {
-						deleteProductsByIds: () => {
-							throw new Error()
-						},
-					} as unknown as FridgySqlitePlugin,
-				}),
-			),
+				H.assertExitIsFailure(exit)
+			}),
 		)
+	})
 
-		const exit = await testRuntime.runPromiseExit(
-			deleteProductsByIds,
+	layer(
+		L.provide(
+			command,
+			L.succeed(CapacitorService, {
+				db: {
+					deleteProductsByIds: () =>
+						Promise.reject(new Error()),
+				} as unknown as FridgySqlitePlugin,
+			}),
+		),
+	)(({ effect }) => {
+		effect('Should return an error', () =>
+			Eff.gen(function* () {
+				const service =
+					yield* DeleteProductsByIdsService
+
+				const exit = yield* Eff.exit(
+					service(
+						NEHS.unsafe_fromHashSet(
+							HS.fromIterable(['1']),
+						),
+					),
+				)
+
+				H.assertExitIsFailure(exit)
+			}),
 		)
+	})
 
-		H.assertExitIsDie(exit)
+	layer(
+		L.provide(
+			command,
+			L.succeed(CapacitorService, {
+				db: {
+					deleteProductsByIds: () => {
+						throw new Error()
+					},
+				} as unknown as FridgySqlitePlugin,
+			}),
+		),
+	)(({ effect }) => {
+		effect('Should crash', () =>
+			Eff.gen(function* () {
+				const service =
+					yield* DeleteProductsByIdsService
+
+				const exit = yield* Eff.exit(
+					service(
+						NEHS.unsafe_fromHashSet(
+							HS.fromIterable(['1']),
+						),
+					),
+				)
+
+				H.assertExitIsDie(exit)
+			}),
+		)
 	})
 })

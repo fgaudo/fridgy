@@ -1,152 +1,117 @@
-import { test } from '@fast-check/vitest'
-import { describe } from 'vitest'
+import { describe, layer } from '@effect/vitest'
 
-import {
-	Eff,
-	Int,
-	L,
-	NETS,
-	O,
-} from '@/core/imports.ts'
+import { Eff, L } from '@/core/imports.ts'
 import * as H from '@/core/test-helpers.ts'
-import { testRuntime } from '@/core/utils.ts'
 
 import { AddProductService } from '@/app/interfaces/add-product.ts'
 
 import type { FridgySqlitePlugin } from '../fridgy-sqlite-plugin.ts'
 import { CapacitorService } from '../index.ts'
-import { command } from './add-product.ts'
-
-const mockUsecase = ({
-	name,
-	expirationDate,
-	creationDate,
-}: {
-	name: NETS.NonEmptyTrimmedString
-	expirationDate: O.Option<Int.Integer>
-	creationDate: Int.Integer
-}) =>
-	Eff.gen(function* () {
-		return yield* (yield* AddProductService)({
-			name,
-			expirationDate,
-			creationDate,
-		})
-	})
+import { command as addProductCommand } from './add-product.ts'
 
 describe('Add product', () => {
-	test.concurrent.prop([
-		H.nonEmptyTrimmedString,
-		H.maybeInteger,
-		H.integer,
-	])(
-		'Should just work',
-		async (
-			name,
-			expirationDate,
-			creationDate,
-		) => {
-			const addProduct = Eff.provide(
-				mockUsecase({
-					name,
-					expirationDate,
-					creationDate,
-				}),
-				command.pipe(
-					L.provide(
-						L.succeed(CapacitorService, {
-							db: {
-								addProduct: () =>
-									Promise.resolve(),
-							} as unknown as FridgySqlitePlugin,
+	layer(
+		L.provide(
+			addProductCommand,
+			L.succeed(CapacitorService, {
+				db: {
+					addProduct: () => Promise.resolve(),
+				} as unknown as FridgySqlitePlugin,
+			}),
+		),
+	)(({ effect }) => {
+		effect.prop(
+			'Should just work',
+			{
+				name: H.nonEmptyTrimmedString,
+				expirationDate: H.maybeInteger,
+				creationDate: H.integer,
+			},
+			({ name, expirationDate, creationDate }) =>
+				Eff.gen(function* () {
+					const service = yield* AddProductService
+
+					const exit = yield* Eff.exit(
+						service({
+							name,
+							expirationDate,
+							creationDate,
 						}),
-					),
-				),
-			)
+					)
 
-			const exit =
-				await testRuntime.runPromiseExit(
-					addProduct,
-				)
-
-			H.assertExitIsSuccess(exit)
-		},
-	)
-
-	test.concurrent.prop([
-		H.nonEmptyTrimmedString,
-		H.maybeInteger,
-		H.integer,
-	])(
-		'Should return an error',
-		async (
-			name,
-			expirationDate,
-			creationDate,
-		) => {
-			const addProduct = Eff.provide(
-				mockUsecase({
-					name,
-					expirationDate,
-					creationDate,
+					H.assertExitIsSuccess(exit)
 				}),
-				command.pipe(
-					L.provide(
-						L.succeed(CapacitorService, {
-							db: {
-								addProduct: () =>
-									Promise.reject(new Error()),
-							} as unknown as FridgySqlitePlugin,
+		)
+	})
+
+	layer(
+		L.provide(
+			addProductCommand,
+			L.succeed(CapacitorService, {
+				db: {
+					addProduct: () =>
+						Promise.reject(new Error()),
+				} as unknown as FridgySqlitePlugin,
+			}),
+		),
+	)(({ effect }) => {
+		effect.prop(
+			'Should return an error',
+			{
+				name: H.nonEmptyTrimmedString,
+				expirationDate: H.maybeInteger,
+				creationDate: H.integer,
+			},
+			({ name, expirationDate, creationDate }) =>
+				Eff.gen(function* () {
+					const service = yield* AddProductService
+
+					const exit = yield* Eff.exit(
+						service({
+							name,
+							expirationDate,
+							creationDate,
 						}),
-					),
-				),
-			)
+					)
 
-			const data =
-				await testRuntime.runPromiseExit(
-					addProduct,
-				)
-
-			H.assertExitIsFailure(data)
-		},
-	)
-
-	test.concurrent.prop([
-		H.nonEmptyTrimmedString,
-		H.maybeInteger,
-		H.integer,
-	])(
-		'Should crash',
-		async (
-			name,
-			expirationDate,
-			creationDate,
-		) => {
-			const addProduct = Eff.provide(
-				mockUsecase({
-					name,
-					expirationDate,
-					creationDate,
+					H.assertExitIsFailure(exit)
 				}),
-				command.pipe(
-					L.provide(
-						L.succeed(CapacitorService, {
-							db: {
-								addProduct: () => {
-									throw new Error()
-								},
-							} as unknown as FridgySqlitePlugin,
+		)
+	})
+
+	layer(
+		L.provide(
+			addProductCommand,
+			L.succeed(CapacitorService, {
+				db: {
+					addProduct: () => {
+						throw new Error()
+					},
+				} as unknown as FridgySqlitePlugin,
+			}),
+		),
+	)(({ effect }) => {
+		effect.prop(
+			'Should crash',
+			{
+				name: H.nonEmptyTrimmedString,
+				expirationDate: H.maybeInteger,
+				creationDate: H.integer,
+			},
+			({ name, expirationDate, creationDate }) =>
+				Eff.gen(function* () {
+					const service = yield* AddProductService
+
+					const exit = yield* Eff.exit(
+						service({
+							name,
+							expirationDate,
+							creationDate,
 						}),
-					),
-				),
-			)
+					)
 
-			const data =
-				await testRuntime.runPromiseExit(
-					addProduct,
-				)
-
-			H.assertExitIsDie(data)
-		},
-	)
+					H.assertExitIsDie(exit)
+				}),
+		)
+	})
 })

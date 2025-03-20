@@ -1,16 +1,11 @@
-import { test } from '@fast-check/vitest'
-import { describe, expect } from 'vitest'
-
 import {
-	Cl,
-	Eff,
-	Int,
-	L,
-	NETS,
-	O,
-} from '@/core/imports.ts'
+	describe,
+	effect,
+	layer,
+} from '@effect/vitest'
+
+import { Cl, Eff, L } from '@/core/imports.ts'
 import * as H from '@/core/test-helpers.ts'
-import { testRuntime } from '@/core/utils.ts'
 
 import { AddProductService } from '../interfaces/add-product.ts'
 import {
@@ -18,25 +13,25 @@ import {
 	useCase,
 } from './add-product.ts'
 
-const mockMain = (product: {
-	name: NETS.NonEmptyTrimmedString
-	expirationDate: O.Option<Int.Integer>
-}) =>
-	Eff.gen(function* () {
-		yield* (yield* AddProductUseCase)(product)
-	})
-
 describe('Add product', () => {
-	test.concurrent.prop([
-		H.nonEmptyTrimmedString,
-		H.maybeInteger,
-	])(
+	effect.prop(
 		'Should just work',
-		async (name, expirationDate) => {
-			const addProduct = Eff.provide(
-				mockMain({
-					name,
-					expirationDate,
+		{
+			name: H.nonEmptyTrimmedString,
+			expirationDate: H.maybeInteger,
+		},
+		({ name, expirationDate }, { expect }) =>
+			Eff.provide(
+				Eff.gen(function* () {
+					const service = yield* AddProductUseCase
+					const exit = yield* Eff.exit(
+						service({
+							name,
+							expirationDate,
+						}),
+					)
+
+					H.assertExitIsSuccess(exit)
 				}),
 				L.provide(useCase, [
 					L.succeed(AddProductService, product =>
@@ -54,43 +49,35 @@ describe('Add product', () => {
 						currentTimeMillis: Eff.succeed(0),
 					} as Cl.Clock),
 				]),
-			)
-			const exit =
-				await testRuntime.runPromiseExit(
-					addProduct,
-				)
-
-			H.assertExitIsSuccess(exit)
-		},
+			),
 	)
 
-	test.concurrent.prop([
-		H.nonEmptyTrimmedString,
-		H.maybeInteger,
-	])(
-		'Should return error',
-		async (name, expirationDate) => {
-			const addProduct = Eff.provide(
-				mockMain({
-					name,
-					expirationDate,
-				}),
-
-				L.provide(useCase, [
-					L.succeed(AddProductService, () =>
-						Eff.gen(function* () {
-							return yield* Eff.fail(undefined)
+	layer(
+		L.provide(
+			useCase,
+			L.succeed(AddProductService, () =>
+				Eff.fail(undefined),
+			),
+		),
+	)(({ effect }) => {
+		effect.prop(
+			'Should return error',
+			{
+				name: H.nonEmptyTrimmedString,
+				expirationDate: H.maybeInteger,
+			},
+			({ name, expirationDate }) =>
+				Eff.gen(function* () {
+					const service = yield* AddProductUseCase
+					const exit = yield* Eff.exit(
+						service({
+							name,
+							expirationDate,
 						}),
-					),
-				]),
-			)
+					)
 
-			const exit =
-				await testRuntime.runPromiseExit(
-					addProduct,
-				)
-
-			H.assertExitIsFailure(exit)
-		},
-	)
+					H.assertExitIsFailure(exit)
+				}),
+		)
+	})
 })

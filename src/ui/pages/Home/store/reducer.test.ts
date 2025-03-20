@@ -1,7 +1,7 @@
-import { test } from '@fast-check/vitest'
+import { effect } from '@effect/vitest'
 import { describe, expect } from 'vitest'
 
-import { HS } from '@/core/imports.ts'
+import { Eff, HS } from '@/core/imports.ts'
 
 import type { App } from '@/app/index.ts'
 
@@ -10,9 +10,8 @@ import type { State } from './index.ts'
 import { reducer } from './reducer.ts'
 
 describe('Home reducer', () => {
-	test.concurrent(
-		'Should clear selected products',
-		() => {
+	effect('Should clear selected products', () =>
+		Eff.gen(function* () {
 			const state = {
 				selectedProducts: HS.fromIterable([
 					'asd',
@@ -27,6 +26,8 @@ describe('Home reducer', () => {
 			expect(
 				HS.size(state.selectedProducts),
 			).toStrictEqual(0)
-		},
+
+			yield* Eff.void
+		}),
 	)
 })

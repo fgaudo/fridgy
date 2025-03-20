@@ -1,39 +1,65 @@
-import { fc, test } from '@fast-check/vitest'
-import { assert, describe, expect } from 'vitest'
+import {
+	assert,
+	describe,
+	effect,
+} from '@effect/vitest'
 
+import * as H from '@/core/test-helpers.ts'
+
+import { Eff } from '../imports.ts'
 import {
 	fromNumber,
 	unsafe_fromNumber,
 } from './index.ts'
 
 describe('integer', () => {
-	test.concurrent.prop([fc.integer()])(
+	effect.prop(
 		'should be ok',
-		integer => {
-			const result = fromNumber(integer)
-			assert(
-				result._tag === 'Some',
-				'Could not parse number',
-			)
-			expect(result.value).toStrictEqual(integer)
-		},
+		[H.FC.integer()],
+		([integer], { expect }) =>
+			Eff.gen(function* () {
+				const result = fromNumber(integer)
+				assert(
+					result._tag === 'Some',
+					'Could not parse number',
+				)
+				expect(result.value).toStrictEqual(
+					integer,
+				)
+
+				yield* Eff.void
+			}),
 	)
 
-	test.concurrent.prop([fc.integer()])(
+	effect.prop(
 		'should be ok',
-		integer => {
-			const number = unsafe_fromNumber(integer)
-			expect(number).toStrictEqual(integer)
-		},
+		[H.FC.integer()],
+
+		([integer], { expect }) =>
+			Eff.gen(function* () {
+				const number = unsafe_fromNumber(integer)
+				expect(number).toStrictEqual(integer)
+
+				yield* Eff.void
+			}),
 	)
 
-	test.concurrent.prop([
-		fc
-			.oneof(fc.float(), fc.double())
-			.filter(value => !Number.isInteger(value)),
-	])('should crash', integer => {
-		expect(() =>
-			unsafe_fromNumber(integer),
-		).toThrowError()
-	})
+	effect.prop(
+		'should crash',
+		[
+			H.FC.oneof(
+				H.FC.float(),
+				H.FC.double(),
+			).filter(value => !Number.isInteger(value)),
+		],
+
+		([integer], { expect }) =>
+			Eff.gen(function* () {
+				expect(() =>
+					unsafe_fromNumber(integer),
+				).toThrowError()
+
+				yield* Eff.void
+			}),
+	)
 })

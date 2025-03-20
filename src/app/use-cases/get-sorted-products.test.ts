@@ -1,10 +1,12 @@
 /* eslint-disable @typescript-eslint/no-unnecessary-type-assertion */
-import { fc, test } from '@fast-check/vitest'
-import { describe, expect } from 'vitest'
+import {
+	describe,
+	effect,
+	layer,
+} from '@effect/vitest'
 
 import { Eff, L, NNInt } from '@/core/imports.ts'
 import * as H from '@/core/test-helpers.ts'
-import { testRuntime } from '@/core/utils.ts'
 
 import { GetSortedProductsService } from '@/app/interfaces/get-sorted-products.ts'
 
@@ -13,12 +15,12 @@ import {
 	useCase,
 } from './get-sorted-products.ts'
 
-const record = fc.oneof(
-	fc.record(
+const record = H.FC.oneof(
+	H.FC.record(
 		{
-			isValid: fc.constant(
+			isValid: H.FC.constant(
 				true,
-			) as fc.Arbitrary<true>,
+			) as H.FC.Arbitrary<true>,
 			id: H.string,
 			creationDate: H.integer,
 			expirationDate: H.maybeInteger,
@@ -26,11 +28,11 @@ const record = fc.oneof(
 		},
 		{ noNullPrototype: true },
 	),
-	fc.record(
+	H.FC.record(
 		{
-			isValid: fc.constant(
+			isValid: H.FC.constant(
 				false,
-			) as fc.Arbitrary<false>,
+			) as H.FC.Arbitrary<false>,
 			id: H.maybeString,
 			name: H.maybeNonEmptyTrimmedString,
 		},
@@ -38,71 +40,58 @@ const record = fc.oneof(
 	),
 )
 
-const mockMain = Eff.gen(function* () {
-	return yield* yield* GetSortedProductsUseCase
-})
-
 describe('Get sorted products', () => {
-	test.concurrent(
-		'Should return an error',
-		async () => {
-			const sortedProducts = Eff.provide(
-				mockMain,
+	layer(
+		L.provide(
+			useCase,
+			L.succeed(
+				GetSortedProductsService,
+				Eff.fail(undefined),
+			),
+		),
+	)(({ effect }) => {
+		effect('Should return an error', () =>
+			Eff.gen(function* () {
+				const service =
+					yield* GetSortedProductsUseCase
+				const exit = yield* Eff.exit(service)
+				H.assertExitIsFailure(exit)
+			}),
+		)
+	})
+
+	effect.prop(
+		'Should return a list',
+		[record, record, record],
+		(products, { expect }) =>
+			Eff.provide(
+				Eff.gen(function* () {
+					const service =
+						yield* GetSortedProductsUseCase
+
+					const exit = yield* Eff.exit(service)
+
+					H.assertExitIsSuccess(exit)
+
+					expect(exit.value).toStrictEqual({
+						total: NNInt.unsafe_fromNumber(
+							products.length,
+						),
+						models: products,
+					})
+				}),
 				L.provide(
 					useCase,
 					L.succeed(
 						GetSortedProductsService,
-						Eff.gen(function* () {
-							return yield* Eff.fail(undefined)
+						Eff.succeed({
+							total: NNInt.unsafe_fromNumber(
+								products.length,
+							),
+							products,
 						}),
 					),
 				),
-			)
-
-			const exit =
-				await testRuntime.runPromiseExit(
-					sortedProducts,
-				)
-
-			H.assertExitIsFailure(exit)
-		},
-	)
-
-	test.concurrent.prop([record, record, record])(
-		'Should return a list',
-		async (a, b, c) => {
-			const products = [a, b, c]
-			const sortedProducts = Eff.provide(
-				mockMain,
-				useCase.pipe(
-					L.provide(
-						L.succeed(
-							GetSortedProductsService,
-							Eff.gen(function* () {
-								return yield* Eff.succeed({
-									total: NNInt.unsafe_fromNumber(
-										products.length,
-									),
-									products,
-								})
-							}),
-						),
-					),
-				),
-			)
-
-			const exit =
-				await testRuntime.runPromiseExit(
-					sortedProducts,
-				)
-			H.assertExitIsSuccess(exit)
-
-			expect(exit.value).toStrictEqual({
-				total: NNInt.unsafe_fromNumber(
-					products.length,
-				),
-				models: products,
-			})
-		},
+			),
 	)
 })
