@@ -44,8 +44,8 @@ const loggerLayer = Logger.replace(
 
 export const runForkWithLogs = (
 	effect: Eff.Effect<unknown, unknown>,
-) =>
-	Eff.runFork(
+) => {
+	const fiber = Eff.runFork(
 		Eff.unsandbox(
 			Eff.catchTags(
 				Eff.sandbox(
@@ -58,6 +58,13 @@ export const runForkWithLogs = (
 			),
 		),
 	)
+
+	addEventListener('beforeunload', () => {
+		fiber.unsafeInterruptAsFork(fiber.id())
+	})
+
+	return fiber
+}
 
 export const logInfo = (
 	...message: readonly unknown[]

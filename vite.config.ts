@@ -1,4 +1,3 @@
-import { visualizer } from 'rollup-plugin-visualizer'
 import { defineConfig } from 'vite'
 import { ViteEjsPlugin } from 'vite-plugin-ejs'
 import { viteSingleFile } from 'vite-plugin-singlefile'
@@ -19,10 +18,6 @@ export default defineConfig(_params => ({
 			removeViteModuleLoader: true,
 		}),
 		ViteEjsPlugin(),
-		visualizer({
-			open: true,
-			template: 'network',
-		}),
 	],
 	root: 'src',
 	publicDir: '../public',
