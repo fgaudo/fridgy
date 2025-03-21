@@ -113,10 +113,10 @@ export const Snackbar: Component<{
 					classList={{
 						'opacity-0 pointer-events-none':
 							!isErrorToast(),
-						'opacity-1': isErrorToast(),
+						'opacity-100': isErrorToast(),
 					}}
 					id="toast-danger"
-					class="bg-inverse-surface duration-fade mb-4 flex w-full max-w-xs items-center rounded-lg p-4 text-gray-500 shadow-sm transition-all dark:bg-gray-800 dark:text-gray-400"
+					class="bg-inverse-surface duration-fade fixed right-1/2 bottom-0 mb-4 flex w-full max-w-xs translate-x-1/2 items-center rounded-lg p-4 text-gray-500 shadow-sm transition-all dark:bg-gray-800 dark:text-gray-400"
 					role="alert">
 					<div class="inline-flex h-8 w-8 shrink-0 items-center justify-center text-red-500 dark:text-red-200">
 						<svg
@@ -145,7 +145,7 @@ export const Snackbar: Component<{
 					classList={{
 						'opacity-0 pointer-events-none':
 							!isSuccessToast(),
-						'opacity-1': isSuccessToast(),
+						'opacity-100': isSuccessToast(),
 					}}
 					id="toast-success"
 					class="bg-inverse-surface duration-fade fixed right-1/2 bottom-0 mb-4 flex w-full max-w-xs translate-x-1/2 items-center rounded-lg p-4 text-gray-500 shadow-sm transition-all dark:bg-gray-800 dark:text-gray-400"

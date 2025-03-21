@@ -14,7 +14,7 @@ export const Snackbar: Component = () => {
 	return (
 		<Portal>
 			<SnackbarWidget
-				class="fixed bottom-0 right-1/2 flex w-full translate-x-1/2 justify-center transition-all"
+				class="fixed right-1/2 bottom-0 flex w-full translate-x-1/2 justify-center transition-all"
 				classList={{
 					'bottom-[128px]':
 						!uiState.isSelectModeEnabled,
