@@ -19,17 +19,19 @@ const Home: (
 	return (
 		<HomeContext.Provider
 			value={{ uiStore, store }}>
-			<TopBar />
+			<div class="bg-background min-h-screen">
+				<TopBar />
 
-			<Menu />
+				<Menu />
 
-			<List />
+				<List />
 
-			<InvisibleWall />
+				<InvisibleWall />
 
-			<Fab />
+				<Fab />
 
-			<Snackbar />
+				<Snackbar />
+			</div>
 		</HomeContext.Provider>
 	)
 }

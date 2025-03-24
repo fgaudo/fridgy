@@ -24,13 +24,10 @@ export const TopBar: Component = () => {
 			: (prev ?? 0)
 	})
 	return (
-		<mdui-top-app-bar
-			prop:scrollBehavior="elevate"
-			class="items-center">
-			<div class="relative w-[40px]">
-				<mdui-button-icon
-					class="absolute top-[-20px] transition-all"
-					prop:icon="menu"
+		<div class="bg-secondary flex h-16 w-full items-center shadow-md shadow-black/30">
+			<div class="justify-center0 relative flex h-14 w-14 items-center">
+				<button
+					class="material-icons duration-fade absolute top-0 right-0 bottom-0 left-0 text-2xl transition-all"
 					classList={{
 						'opacity-0 pointer-events-none':
 							uiState.isSelectModeEnabled,
@@ -40,26 +37,26 @@ export const TopBar: Component = () => {
 							'isMenuOpen',
 							isMenuOpen => !isMenuOpen,
 						)
-					}}></mdui-button-icon>
+					}}>
+					menu
+				</button>
 
-				<mdui-button-icon
-					class="absolute top-[-20px] transition-all"
-					prop:icon="close"
+				<button
+					class="material-icons duration-fade absolute top-0 right-0 bottom-0 left-0 transition-all"
 					classList={{
 						'opacity-0 pointer-events-none':
 							!uiState.isSelectModeEnabled,
 					}}
 					onClick={() => {
 						disableSelectMode()
-					}}></mdui-button-icon>
+					}}>
+					close
+				</button>
 			</div>
 
-			<mdui-top-app-bar-title>
-				<div class="font-title-large pl-1">
-					Home
-				</div>
-			</mdui-top-app-bar-title>
-
+			<div class="font-title-large pl-2 text-2xl">
+				Fridgy
+			</div>
 			<div class="grow"></div>
 			<div
 				class="flex h-full items-center text-lg transition-all"
@@ -70,18 +67,19 @@ export const TopBar: Component = () => {
 				{size()}
 			</div>
 
-			<mdui-button-icon
+			<span
 				class="transition-all"
 				classList={{
 					'opacity-0 pointer-events-none':
 						!uiState.isSelectModeEnabled,
 				}}
-				prop:icon="delete"
 				onClick={() => {
 					dispatch(
 						Message.DeleteProductsAndRefresh(),
 					)
-				}}></mdui-button-icon>
-		</mdui-top-app-bar>
+				}}>
+				face
+			</span>
+		</div>
 	)
 }

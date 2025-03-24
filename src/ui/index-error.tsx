@@ -8,7 +8,7 @@ export function renderError(
 	message: string,
 ): void {
 	solidRender(() => {
-		let dialog: HTMLDialogElement
+		let dialog!: HTMLDialogElement
 
 		onMount(() => {
 			dialog.showModal()
@@ -16,7 +16,7 @@ export function renderError(
 
 		return (
 			<dialog
-				ref={dialog!}
+				ref={dialog}
 				class="rounded-lg border border-red-300 bg-red-50 p-4 text-red-800 dark:border-red-800 dark:bg-gray-800 dark:text-red-400"
 				role="alert">
 				<div class="flex items-center">
@@ -33,7 +33,7 @@ export function renderError(
 						Something went wrong! :(
 					</h3>
 				</div>
-				<div class="mb-4 mt-2 text-sm">
+				<div class="mt-2 mb-4 text-sm">
 					{message}
 				</div>
 			</dialog>

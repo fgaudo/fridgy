@@ -1,3 +1,4 @@
+import tailwindcss from '@tailwindcss/vite'
 import { defineConfig } from 'vite'
 import { ViteEjsPlugin } from 'vite-plugin-ejs'
 import { viteSingleFile } from 'vite-plugin-singlefile'
@@ -18,6 +19,7 @@ export default defineConfig(_params => ({
 			removeViteModuleLoader: true,
 		}),
 		ViteEjsPlugin(),
+		tailwindcss(),
 	],
 	root: 'src',
 	publicDir: '../public',

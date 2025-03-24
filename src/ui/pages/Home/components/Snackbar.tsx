@@ -1,6 +1,6 @@
 import type { Component } from 'solid-js'
-import { Portal } from 'solid-js/web'
 
+import { SafePortal } from '@/ui/widgets/SafePortal.tsx'
 import { Snackbar as SnackbarWidget } from '@/ui/widgets/SnackBar.tsx'
 
 import { useUiStateContext } from '../context.tsx'
@@ -12,7 +12,7 @@ export const Snackbar: Component = () => {
 	} = useUiStateContext()!
 
 	return (
-		<Portal>
+		<SafePortal>
 			<SnackbarWidget
 				class="fixed right-1/2 bottom-0 flex w-full translate-x-1/2 justify-center transition-all"
 				classList={{
@@ -23,6 +23,6 @@ export const Snackbar: Component = () => {
 				}}
 				message={state.message}
 			/>
-		</Portal>
+		</SafePortal>
 	)
 }

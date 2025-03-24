@@ -14,20 +14,14 @@ export const About: () => Component =
 
 		return (
 			<div>
-				<mdui-top-app-bar
-					prop:scrollBehavior="elevate"
-					class="items-center">
-					<mdui-button-icon
-						prop:icon="arrow_back"
-						onClick={() => {
-							navigate(-1)
-						}}></mdui-button-icon>
-					<mdui-top-app-bar-title>
-						<div class="font-title-large">
-							About
-						</div>
-					</mdui-top-app-bar-title>
-				</mdui-top-app-bar>
+				<span
+					class="material-icons"
+					onClick={() => {
+						navigate(-1)
+					}}>
+					face
+				</span>
+
 				<div class="flex flex-col justify-center gap-2 px-[24px]">
 					<p class="font-title-large text-xl">
 						Fridgy
@@ -39,7 +33,6 @@ export const About: () => Component =
 						</span>
 					</p>
 					<p>© 2024 Francesco Gaudenzi</p>
-					<mdui-divider class="my-[12px] h-[5px]"></mdui-divider>
 					<p>
 						This app is open source and released
 						under the{' '}
@@ -76,16 +69,12 @@ export const About: () => Component =
 						.
 					</p>
 
-					<mdui-divider class="my-[12px] h-[5px]"></mdui-divider>
-
 					<p>
 						Fridgy uses many other open source
 						libraries.
 						<br /> Here's the complete list of
 						software.
 					</p>
-
-					<mdui-divider class="my-[12px]"></mdui-divider>
 
 					<For each={Object.entries(licenses)}>
 						{([name, license]) => (

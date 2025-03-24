@@ -26,7 +26,7 @@ export const Item: Component<{
 
 	return (
 		<div
-			class="absolute transition-all duration-fade"
+			class="duration-fade absolute transition-all"
 			style={{
 				top: `${(props.index() * 60).toString(10)}px`,
 				left: '0',
@@ -67,7 +67,7 @@ export const Item: Component<{
 							model={model}>
 							<div
 								slot="end-icon"
-								class="relative flex h-[24px] w-[24px] items-center justify-center text-sm transition-all duration-fade">
+								class="duration-fade relative flex h-[24px] w-[24px] items-center justify-center text-sm transition-all">
 								<CheckBoxes
 									id={() => model().id}
 								/>
@@ -84,7 +84,7 @@ export const Item: Component<{
 									})()}>
 									{expiration => (
 										<div
-											class="absolute text-xs text-primary transition-all duration-fade"
+											class="text-primary duration-fade absolute text-xs transition-all"
 											classList={{
 												'opacity-0':
 													uiState.isSelectModeEnabled,
@@ -124,13 +124,11 @@ export const Item: Component<{
 
 							<div
 								slot="icon"
-								class="flex w-[26px] flex-col items-center text-primary">
+								class="text-primary flex w-[26px] flex-col items-center">
 								<Show
 									fallback={
 										<>
-											<mdui-icon
-												class="scale-75"
-												prop:name="all_inclusive"></mdui-icon>
+											<span class="scale-75"></span>
 										</>
 									}
 									when={(() => {
@@ -192,9 +190,9 @@ const ExpirationBar: Component<{
 	return (
 		<Show
 			fallback={
-				<div class="mt-[5px] h-[5px] w-full border-[1px] border-primary">
+				<div class="border-primary mt-[5px] h-[5px] w-full border-[1px]">
 					<div
-						class="h-full bg-primary transition-all"
+						class="bg-primary h-full transition-all"
 						style={{
 							width: `${(
 								currentProgress() * 100
@@ -219,24 +217,22 @@ const CheckBoxes: Component<{
 	} = useUiStateContext()!
 	return (
 		<>
-			<mdui-icon
-				prop:name="check_box_outline_blank"
+			<span
 				classList={{
 					'opacity-0':
 						HS.has(props.id())(
 							state.selectedProducts,
 						) || !uiState.isSelectModeEnabled,
 				}}
-				class="absolute text-primary transition-all duration-fade"></mdui-icon>
-			<mdui-icon
-				prop:name="check_box"
+				class="material-icon text-primary duration-fade absolute transition-all"></span>
+			<span
 				classList={{
 					'opacity-0':
 						!HS.has(props.id())(
 							state.selectedProducts,
 						) || !uiState.isSelectModeEnabled,
 				}}
-				class="absolute text-primary transition-all duration-fade"></mdui-icon>
+				class="material-icon text-primary duration-fade absolute transition-all"></span>
 		</>
 	)
 }
@@ -263,7 +259,7 @@ const Button: Component<{
 
 	return (
 		<>
-			<mdui-list-item
+			<div
 				class="min-h-[60px] w-full"
 				style={{
 					'content-visibility': 'auto',
@@ -305,7 +301,7 @@ const Button: Component<{
 					}
 				}}>
 				{props.children}
-				<div class="overflow-hidden text-ellipsis whitespace-nowrap capitalize">
+				<div class="w-full overflow-hidden text-ellipsis whitespace-nowrap capitalize">
 					<Show
 						when={(() => {
 							const name = props.model().name
@@ -317,7 +313,7 @@ const Button: Component<{
 						{name => name()}
 					</Show>
 				</div>
-			</mdui-list-item>
+			</div>
 		</>
 	)
 }
