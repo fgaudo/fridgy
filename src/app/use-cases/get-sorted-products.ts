@@ -48,10 +48,9 @@ export const useCase = L.effect(
 			yield* GetSortedProductsService
 
 		return Eff.gen(function* () {
-			const result =
-				yield* getProductListWithTotal.pipe(
-					Eff.either,
-				)
+			const result = yield* Eff.either(
+				getProductListWithTotal,
+			)
 
 			if (E.isLeft(result)) {
 				yield* H.logError(result)
@@ -63,6 +62,8 @@ export const useCase = L.effect(
 
 			yield* H.logInfo(
 				`Received ${rawProducts.length.toString(10)} products out of ${total.toString(10)}`,
+			).pipe(
+				Eff.annotateLogs('products', rawProducts),
 			)
 
 			const models: ProductModel[] =

@@ -59,19 +59,19 @@ const AddProduct: (
 				style={{
 					animation: 'opacityIn 0.5s ease-in-out',
 				}}>
-				<div class="bg-secondary flex h-16 w-full items-center shadow-lg shadow-black/30">
+				<div class="bg-secondary shadow-secondary/50 flex h-16 w-full items-center shadow-md">
 					<button
-						class="material-icons h-[40px] w-[40px] pl-[4px]"
+						class="material-symbols flex h-14 w-14 items-center justify-center text-2xl"
 						onClick={() => {
 							navigate(-1)
 						}}>
 						arrow_back
 					</button>
-					<div class="font-title-large pl-2 text-2xl">
+					<div class="font-stylish pl-2 text-2xl">
 						Add a product
 					</div>
 				</div>
-				<figure class="font-title-large mx-auto max-w-screen-md p-8 text-center opacity-50">
+				<figure class="font-stylish mx-auto max-w-screen-md p-8 opacity-50">
 					<div class="mb-3 flex items-center justify-center">
 						<svg
 							class="mx-aut h-6 w-6"
@@ -81,14 +81,20 @@ const AddProduct: (
 							viewBox="0 0 18 14">
 							<path d="M6 0H2a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h4v1a3 3 0 0 1-3 3H2a1 1 0 0 0 0 2h1a5.006 5.006 0 0 0 5-5V2a2 2 0 0 0-2-2Zm10 0h-4a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h4v1a3 3 0 0 1-3 3h-1a1 1 0 0 0 0 2h1a5.006 5.006 0 0 0 5-5V2a2 2 0 0 0-2-2Z"></path>
 						</svg>
-						<p class="ml-3">Roman saying</p>
+						<p class="ml-5">
+							Italian Saying of the Day <br />{' '}
+							(Roman dialect)
+						</p>
 					</div>
 					<blockquote>
-						<p class="text-md italic">
-							Chi c'ha er pepe, lo mette alle
-							rape; <br /> chi nun ce l'ha, le
-							magna sciape.
-						</p>
+						<div class="flex items-center justify-center">
+							<p class="text-md mb-2 italic select-text">
+								Chi c'ha er pepe, lo mette alle
+								rape; <br /> chi nun ce l'ha, le
+								magna sciape.{' '}
+							</p>
+						</div>
+						<p class="text-right text-sm"></p>
 					</blockquote>
 				</figure>
 
@@ -113,7 +119,7 @@ const AddProduct: (
 									)
 								}}
 								id="name"
-								class="bg-background ring-outline focus:ring-primary w-full rounded-[4px] border-0 p-4 ring-1 transition-all focus:border-0 focus:ring-2"
+								class="bg-background ring-outline focus:ring-primary shadow-primary/70 ring-secondary w-full rounded-[4px] border-0 p-4 shadow-md ring-1 transition-all focus:border-0"
 								min={currentDate()}
 							/>
 						</div>
@@ -144,7 +150,7 @@ const AddProduct: (
 									)
 								}}
 								id="expdate"
-								class="bg-background ring-outline focus:ring-primary w-full rounded-[4px] border-0 p-4 ring-1 transition-all focus:border-0 focus:ring-2"
+								class="bg-background ring-outline focus:ring-primary shadow-primary/70 ring-secondary w-full rounded-[4px] border-0 p-4 shadow-md ring-1 transition-all focus:border-0"
 								min={currentDate()}
 							/>
 						</div>
@@ -156,7 +162,7 @@ const AddProduct: (
 										state.runningAddProduct,
 									)
 								}
-								class="bg-primary text-background h-12 w-48 rounded-2xl shadow-sm shadow-black/30 disabled:opacity-30"
+								class="bg-primary text-background shadow-primary/70 h-12 w-48 rounded-2xl shadow-md disabled:opacity-30"
 								onClick={() => {
 									dispatch(Message.AddProduct())
 								}}>

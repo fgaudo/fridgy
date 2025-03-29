@@ -1,5 +1,6 @@
 import {
 	type Component,
+	Show,
 	createMemo,
 } from 'solid-js'
 
@@ -24,37 +25,33 @@ export const TopBar: Component = () => {
 			: (prev ?? 0)
 	})
 	return (
-		<div class="bg-secondary flex h-16 w-full items-center shadow-md shadow-black/30">
-			<div class="justify-center0 relative flex h-14 w-14 items-center">
-				<button
-					class="material-icons duration-fade absolute top-0 right-0 bottom-0 left-0 text-2xl transition-all"
-					classList={{
-						'opacity-0 pointer-events-none':
-							uiState.isSelectModeEnabled,
-					}}
-					onClick={() => {
-						setUiState(
-							'isMenuOpen',
-							isMenuOpen => !isMenuOpen,
-						)
-					}}>
-					menu
-				</button>
-
-				<button
-					class="material-icons duration-fade absolute top-0 right-0 bottom-0 left-0 transition-all"
-					classList={{
-						'opacity-0 pointer-events-none':
-							!uiState.isSelectModeEnabled,
-					}}
-					onClick={() => {
-						disableSelectMode()
-					}}>
-					close
-				</button>
+		<div class="bg-secondary shadow-secondary/50 flex h-16 w-full items-center shadow-md">
+			<div class="relative flex h-14 w-14 items-center justify-center">
+				<Show
+					when={!uiState.isSelectModeEnabled}
+					fallback={
+						<button
+							class="material-symbols duration-fade absolute top-0 right-0 bottom-0 left-0 text-2xl transition-all"
+							onClick={() => {
+								disableSelectMode()
+							}}>
+							close
+						</button>
+					}>
+					<button
+						class="material-symbols duration-fade absolute top-0 right-0 bottom-0 left-0 text-2xl transition-all"
+						onClick={() => {
+							setUiState(
+								'isMenuOpen',
+								isMenuOpen => !isMenuOpen,
+							)
+						}}>
+						menu
+					</button>
+				</Show>
 			</div>
 
-			<div class="font-title-large pl-2 text-2xl">
+			<div class="font-stylish pl-2 text-2xl font-bold">
 				Fridgy
 			</div>
 			<div class="grow"></div>
@@ -67,8 +64,8 @@ export const TopBar: Component = () => {
 				{size()}
 			</div>
 
-			<span
-				class="transition-all"
+			<button
+				class="material-symbols text-2xl transition-all"
 				classList={{
 					'opacity-0 pointer-events-none':
 						!uiState.isSelectModeEnabled,
@@ -78,8 +75,8 @@ export const TopBar: Component = () => {
 						Message.DeleteProductsAndRefresh(),
 					)
 				}}>
-				face
-			</span>
+				delete
+			</button>
 		</div>
 	)
 }

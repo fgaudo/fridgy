@@ -11,12 +11,13 @@ import { onResume } from '@/ui/core/capacitor.ts'
 import { useFiber } from '@/ui/core/solid.ts'
 import { useFridgyNavigate } from '@/ui/router.tsx'
 
-import { Message } from './store/actions.ts'
-import type { Store } from './store/index.ts'
+import { Message } from '../store/actions.ts'
+import type { Store } from '../store/index.ts'
 
 export interface UiState {
 	readonly isSelectModeEnabled: boolean
 	isOpeningAddProduct: boolean
+	readonly isLeavingPage: boolean
 	isMenuOpen: boolean
 	currentTimestamp: number
 }
@@ -35,6 +36,9 @@ export const createStore: (
 			return HS.size(state.selectedProducts) > 0
 		},
 		isOpeningAddProduct: false,
+		get isLeavingPage() {
+			return this.isOpeningAddProduct
+		},
 		isMenuOpen: false,
 		currentTimestamp: Date.now(),
 	})
@@ -62,6 +66,24 @@ export const createStore: (
 		),
 	)
 
+	createEffect(
+		on(
+			() => uiState.isOpeningAddProduct,
+			(isOpeningAddProduct, previous) => {
+				if (!isOpeningAddProduct || previous) {
+					return
+				}
+
+				useFiber(
+					Eff.gen(function* () {
+						yield* Eff.sleep(75)
+						navigate('addProduct')
+					}),
+				)
+			},
+		),
+	)
+
 	onResume(() => {
 		setUiState('currentTimestamp', Date.now())
 	})
@@ -74,12 +96,6 @@ export const createStore: (
 			}
 		}),
 	)
-
-	createEffect(() => {
-		if (uiState.isOpeningAddProduct) {
-			navigate('addProduct')
-		}
-	})
 
 	const disableSelectMode = () => {
 		dispatch(Message.ClearSelectedProducts())

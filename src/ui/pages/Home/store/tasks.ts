@@ -16,20 +16,19 @@ import { GetSortedProductsUseCase } from '@/app/use-cases/get-sorted-products.ts
 import { MINIMUM_LAG_MS } from '@/ui/core/constants.ts'
 import type { Task } from '@/ui/core/solid.ts'
 
-import {
-	InternalMessage,
-	Message,
-} from './actions.ts'
+import { Message } from './actions.ts'
 import type { State } from './index.ts'
 
 export const refreshList = (
 	app: App,
-): Task<State, Message | InternalMessage> => ({
+): Task<State, Message> => ({
 	onStart: (fiber: F.Fiber<unknown>) => () =>
-		InternalMessage.RefreshListStarted({
+		Message.RefreshListStarted({
 			fiber,
 		}),
-	effect: ({ runningRefreshing }: State) =>
+	effect: ({
+		isRunningRefresh: runningRefreshing,
+	}: State) =>
 		Eff.provide(
 			Eff.gen(function* () {
 				if (O.isSome(runningRefreshing)) {
@@ -37,6 +36,7 @@ export const refreshList = (
 						runningRefreshing.value,
 					)
 				}
+
 				const refreshList =
 					yield* GetSortedProductsUseCase
 
@@ -46,21 +46,17 @@ export const refreshList = (
 				])
 
 				if (E.isLeft(result)) {
-					return InternalMessage.RefreshListFailed(
-						{
-							message: NETS.unsafe_fromString(
-								'There was a problem loading the list',
-							),
-						},
-					)
+					return Message.RefreshListFailed({
+						message: NETS.unsafe_fromString(
+							'There was a problem loading the list',
+						),
+					})
 				}
 
-				return InternalMessage.RefreshListSucceeded(
-					{
-						total: result.right.total,
-						models: result.right.models,
-					},
-				)
+				return Message.RefreshListSucceeded({
+					total: result.right.total,
+					models: result.right.models,
+				})
 			}),
 			app,
 		),
@@ -68,11 +64,11 @@ export const refreshList = (
 
 export const deleteByIdsAndRefresh = (
 	app: App,
-): Task<State, Message | InternalMessage> => ({
+): Task<State, Message> => ({
 	onStart: (fiber: F.Fiber<unknown>) => () =>
-		InternalMessage.DeleteProductsAndRefreshStarted(
-			{ fiber },
-		),
+		Message.DeleteProductsAndRefreshStarted({
+			fiber,
+		}),
 	effect: ({ selectedProducts }: State) =>
 		Eff.provide(
 			Eff.gen(function* () {
@@ -80,13 +76,11 @@ export const deleteByIdsAndRefresh = (
 					selectedProducts,
 				)
 				if (O.isNone(selected)) {
-					return InternalMessage.DeleteProductsFailed(
-						{
-							message: NETS.unsafe_fromString(
-								'No products provided',
-							),
-						},
-					)
+					return Message.DeleteProductsFailed({
+						message: NETS.unsafe_fromString(
+							'No products provided',
+						),
+					})
 				}
 				const [deleteProducts, refreshList] =
 					yield* Eff.all([
@@ -102,13 +96,11 @@ export const deleteByIdsAndRefresh = (
 				])
 
 				if (E.isLeft(result)) {
-					return InternalMessage.DeleteProductsFailed(
-						{
-							message: NETS.unsafe_fromString(
-								'There was a problem deleting the products',
-							),
-						},
-					)
+					return Message.DeleteProductsFailed({
+						message: NETS.unsafe_fromString(
+							'There was a problem deleting the products',
+						),
+					})
 				}
 
 				const result2 = yield* refreshList.pipe(
@@ -117,7 +109,7 @@ export const deleteByIdsAndRefresh = (
 
 				if (E.isLeft(result2)) {
 					yield* H.logError(result2.left)
-					return InternalMessage.DeleteProductsSucceededAndRefreshFailed(
+					return Message.DeleteProductsSucceededAndRefreshFailed(
 						{
 							message: NETS.unsafe_fromString(
 								`${HS.size(selectedProducts).toString(10)} deleted but couldn't refresh list`,
@@ -126,7 +118,7 @@ export const deleteByIdsAndRefresh = (
 					)
 				}
 
-				return InternalMessage.DeleteProductsAndRefreshSucceeded(
+				return Message.DeleteProductsAndRefreshSucceeded(
 					{
 						deletedItems: NEHS.size(
 							selected.value,

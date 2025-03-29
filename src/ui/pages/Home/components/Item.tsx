@@ -26,11 +26,11 @@ export const Item: Component<{
 
 	return (
 		<div
-			class="duration-fade absolute transition-all"
+			class="duration-fade absolute flex shadow-sm transition-all"
 			style={{
-				top: `${(props.index() * 60).toString(10)}px`,
-				left: '0',
-				right: '0',
+				top: `${(props.index() * 65).toString(10)}px`,
+				left: '4px',
+				right: '4px',
 			}}>
 			<Switch>
 				<Match
@@ -41,19 +41,7 @@ export const Item: Component<{
 						<Button
 							index={props.index}
 							model={model}>
-							<Show
-								when={(() => {
-									const m = model()
-									return (
-										O.isSome(m.id) && m.id.value
-									)
-								})()}>
-								{id => (
-									<div slot="end-icon">
-										<CheckBoxes id={id} />
-									</div>
-								)}
-							</Show>
+							<div></div>
 						</Button>
 					)}
 				</Match>
@@ -65,12 +53,7 @@ export const Item: Component<{
 						<Button
 							index={props.index}
 							model={model}>
-							<div
-								slot="end-icon"
-								class="duration-fade relative flex h-[24px] w-[24px] items-center justify-center text-sm transition-all">
-								<CheckBoxes
-									id={() => model().id}
-								/>
+							<div class="duration-fade relative flex h-[24px] w-[24px] items-center justify-center p-7 text-sm transition-all">
 								<Show
 									when={(() => {
 										const exp =
@@ -102,7 +85,7 @@ export const Item: Component<{
 								</Show>
 							</div>
 
-							<div slot="description">
+							<div>
 								<Show
 									when={(() => {
 										const exp =
@@ -122,13 +105,13 @@ export const Item: Component<{
 								</Show>
 							</div>
 
-							<div
-								slot="icon"
-								class="text-primary flex w-[26px] flex-col items-center">
+							<div class="text-secondary flex w-[26px] flex-col items-center">
 								<Show
 									fallback={
 										<>
-											<span class="scale-75"></span>
+											<span class="material-symbols text-4xl">
+												all_inclusive
+											</span>
 										</>
 									}
 									when={(() => {
@@ -208,35 +191,6 @@ const ExpirationBar: Component<{
 	)
 }
 
-const CheckBoxes: Component<{
-	id: () => string
-}> = props => {
-	const {
-		store: [state],
-		uiStore: [uiState],
-	} = useUiStateContext()!
-	return (
-		<>
-			<span
-				classList={{
-					'opacity-0':
-						HS.has(props.id())(
-							state.selectedProducts,
-						) || !uiState.isSelectModeEnabled,
-				}}
-				class="material-icon text-primary duration-fade absolute transition-all"></span>
-			<span
-				classList={{
-					'opacity-0':
-						!HS.has(props.id())(
-							state.selectedProducts,
-						) || !uiState.isSelectModeEnabled,
-				}}
-				class="material-icon text-primary duration-fade absolute transition-all"></span>
-		</>
-	)
-}
-
 const Button: Component<{
 	model: () => ProductModel
 	index: () => number
@@ -260,12 +214,12 @@ const Button: Component<{
 	return (
 		<>
 			<div
-				class="min-h-[60px] w-full"
+				class="bg-background flex min-h-[60px] w-full select-none"
 				style={{
 					'content-visibility': 'auto',
 				}}
 				classList={{
-					'bg-surface-variant': (() => {
+					'bg-secondary/10': (() => {
 						const id = parsedId()
 						return id
 							? HS.has(id)(state.selectedProducts)

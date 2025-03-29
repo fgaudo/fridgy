@@ -14,10 +14,7 @@ import type { ProductModel } from '@/app/use-cases/get-sorted-products.ts'
 import { onResume } from '@/ui/core/capacitor.ts'
 import { useQueueStore } from '@/ui/core/solid.ts'
 
-import {
-	InternalMessage,
-	Message,
-} from './actions.ts'
+import { Message } from './actions.ts'
 import { reducer } from './reducer.ts'
 
 export interface State {
@@ -36,8 +33,8 @@ export interface State {
 	receivedError: boolean
 	isLoading: boolean
 	selectedProducts: HS.HashSet<string>
-	runningRefreshing: O.Option<F.Fiber<unknown>>
-	runningDeleting: O.Option<F.Fiber<unknown>>
+	isRunningRefresh: O.Option<F.Fiber<unknown>>
+	isRunningDelete: O.Option<F.Fiber<unknown>>
 }
 
 export type Store = readonly [
@@ -50,7 +47,7 @@ export const createStore: (
 ) => Store = context => {
 	const [state, dispatch] = useQueueStore<
 		State,
-		Message | InternalMessage
+		Message
 	>(
 		{
 			total: NNInt.unsafe_fromNumber(0),
@@ -58,9 +55,9 @@ export const createStore: (
 			products: [],
 			receivedError: false,
 			isLoading: true,
-			runningRefreshing: O.none(),
+			isRunningRefresh: O.none(),
 			selectedProducts: HS.empty(),
-			runningDeleting: O.none(),
+			isRunningDelete: O.none(),
 		},
 		reducer(context),
 	)

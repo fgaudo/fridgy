@@ -11,11 +11,9 @@ import type { ProductModel } from '@/app/use-cases/get-sorted-products.ts'
 export type Message = Da.TaggedEnum<{
 	RefreshList: object
 	DeleteProductsAndRefresh: object
-	ClearSelectedProducts: object
+	DisableSelectMode: object
 	ToggleItem: { id: string }
-}>
-
-export type InternalMessage = Da.TaggedEnum<{
+	OpenAddProductPage: object
 	DeleteProductsFailed: {
 		message: NETS.NonEmptyTrimmedString
 	}
@@ -41,6 +39,3 @@ export type InternalMessage = Da.TaggedEnum<{
 }>
 
 export const Message = Da.taggedEnum<Message>()
-
-export const InternalMessage =
-	Da.taggedEnum<InternalMessage>()

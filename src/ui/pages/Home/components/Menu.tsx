@@ -23,7 +23,7 @@ export const Menu: Component = () => {
 				)
 			}}>
 			<div class="hidden h-full flex-col">
-				<p class="text-title-large leading-title-large font-title-large pt-8 pb-4 pl-4">
+				<p class="text-title-large leading-title-large font-stylish pt-8 pb-4 pl-4">
 					Fridgy
 				</p>
 

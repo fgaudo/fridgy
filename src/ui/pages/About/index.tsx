@@ -15,7 +15,7 @@ export const About: () => Component =
 		return (
 			<div>
 				<span
-					class="material-icons"
+					class="material-symbols"
 					onClick={() => {
 						navigate(-1)
 					}}>
@@ -23,7 +23,7 @@ export const About: () => Component =
 				</span>
 
 				<div class="flex flex-col justify-center gap-2 px-[24px]">
-					<p class="font-title-large text-xl">
+					<p class="font-stylish text-xl">
 						Fridgy
 					</p>
 					<p>

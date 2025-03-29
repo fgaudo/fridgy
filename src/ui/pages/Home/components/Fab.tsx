@@ -21,7 +21,7 @@ export const Fab: Component = () => {
 							state.isLoading ||
 							state.receivedError,
 					}}
-					class="font-title-large fixed right-0 bottom-[150px] left-0 flex flex-col items-end transition-all duration-[fade]">
+					class="font-stylish fixed right-0 bottom-[150px] left-0 flex flex-col items-end transition-all duration-[fade]">
 					<div class="w-full p-[20px] text-center">
 						Uh-oh, your fridge is looking a little
 						empty! <br />
@@ -36,19 +36,18 @@ export const Fab: Component = () => {
 						class={`relative top-[30px] right-[70px] h-[160px] w-[160px] bg-contain bg-no-repeat`}></div>
 				</div>
 				<div
-					class="bg-primary text-background duration-fade fixed right-[16px] bottom-[20px] flex h-[96px] w-[96px] items-center justify-center rounded-4xl shadow-lg shadow-black/30 transition-all"
+					class="bg-primary text-background duration-fade shadow-primary/70 fixed right-[16px] bottom-[20px] flex h-[96px] w-[96px] items-center justify-center rounded-4xl shadow-md transition-all"
 					classList={{
 						'opacity-0 pointer-events-none':
 							uiState.isSelectModeEnabled,
+					}}
+					onClick={() => {
+						setUiState(
+							'isOpeningAddProduct',
+							true,
+						)
 					}}>
-					<span
-						class="material-icons text-4xl"
-						onClick={() => {
-							setUiState(
-								'isOpeningAddProduct',
-								true,
-							)
-						}}>
+					<span class="material-symbols text-4xl">
 						add
 					</span>
 				</div>

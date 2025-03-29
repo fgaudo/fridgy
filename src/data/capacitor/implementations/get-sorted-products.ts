@@ -61,7 +61,9 @@ export const query = L.effect(
 
 			if (E.isLeft(result)) {
 				yield* H.logError(result.left.toString())
-				return yield* Eff.fail(undefined)
+				return yield* Eff.fail([
+					result.left.toString(),
+				])
 			}
 
 			const decodeResult =

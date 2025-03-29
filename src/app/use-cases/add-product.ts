@@ -39,7 +39,9 @@ export const useCase = L.effect(
 					yield* Cl.currentTimeMillis,
 				)
 
-				yield* H.logInfo('Adding product').pipe(
+				yield* H.logInfo(
+					'Product save attempt',
+				).pipe(
 					Eff.annotateLogs(
 						'product',
 						productData,
@@ -53,9 +55,7 @@ export const useCase = L.effect(
 					creationDate: timestamp,
 				})
 
-				yield* H.logInfo(
-					'Product added succesfully',
-				).pipe(
+				yield* H.logInfo('Product saved').pipe(
 					Eff.annotateLogs(
 						'product',
 						productData,
