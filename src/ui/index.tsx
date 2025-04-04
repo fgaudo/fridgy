@@ -1,12 +1,12 @@
 // sort-imports-ignore
 
-import '@fontsource-variable/comfortaa/index.css'
-import '@fontsource-variable/roboto-flex/full.css'
-import '@fontsource-variable/material-symbols-outlined/fill.css'
+import '@fontsource-variable/comfortaa/index.css';
+import '@fontsource-variable/roboto-flex/full.css';
+import '@fontsource-variable/material-symbols-outlined/fill.css';
 
-import '@/ui/index.css'
+import '$lib/ui/index.css';
 
-import { App as CAP } from '@capacitor/app'
+import { App as CAP } from '@capacitor/app';
 import {
 	type Component,
 	Show,
@@ -15,21 +15,21 @@ import {
 	createSignal,
 	on,
 	onCleanup,
-} from 'solid-js'
+} from 'solid-js';
 import {
 	Portal,
 	render as solidRender,
-} from 'solid-js/web'
+} from 'solid-js/web';
 
-import { Eff, F, H } from '@/core/imports.ts'
+import { Eff, F, H } from '$lib/core/imports.ts';
 
-import type { App } from '@/app/index.ts'
+import type { App } from '$lib/app/index.ts';
 
-import { onResumeInit } from './core/capacitor.ts'
-import { DEFAULT_FADE_MS } from './core/constants.ts'
-import { Router } from './router.tsx'
-import { SafePortal } from './widgets/SafePortal.tsx'
-import { Spinner } from './widgets/Spinner.tsx'
+import { onResumeInit } from './core/capacitor.ts';
+import { DEFAULT_FADE_MS } from './core/constants.ts';
+import { Router } from './router.tsx';
+import { SafePortal } from './widgets/SafePortal.tsx';
+import { Spinner } from './widgets/Spinner.tsx';
 
 export async function render(
 	app: App,
@@ -39,20 +39,22 @@ export async function render(
 		onResumeInit(),
 		CAP.addListener('backButton', e => {
 			if (!e.canGoBack) {
-				void CAP.exitApp()
-				return
+				void CAP.exitApp();
+				return;
 			}
-			window.history.back()
+			window.history.back();
 		}),
-	])
+	]);
 
 	solidRender(
 		() => {
 			const [isFontLoaded] = createResource(
 				() =>
 					document.fonts.ready.then(() => true),
-				{ initialValue: false },
-			)
+				{
+					initialValue: false,
+				},
+			);
 
 			return (
 				<>
@@ -65,19 +67,20 @@ export async function render(
 						classList={{
 							'opacity-0 invisible':
 								!isFontLoaded(),
-						}}>
+						}}
+					>
 						<Router app={app} />
 					</div>
 				</>
-			)
+			);
 		},
 
 		root,
-	)
+	);
 }
 
 const FontLoad: Component<{
-	isFontLoaded: () => boolean
+	isFontLoaded: () => boolean;
 }> = props => {
 	return (
 		<Show when={!props.isFontLoaded()}>
@@ -86,19 +89,20 @@ const FontLoad: Component<{
 
 				<div
 					class="invisible fixed"
-					aria-hidden={true}>
+					aria-hidden={true}
+				>
 					<div class="font-stylish">quickfix</div>
 					<span class="material-symbols"></span>
 				</div>
 			</Portal>
 		</Show>
-	)
-}
+	);
+};
 
 const LoadingScreen: Component<{
-	resourcesAreLoaded: () => boolean
+	resourcesAreLoaded: () => boolean;
 }> = props => {
-	const [isFaded, fade] = createSignal(false)
+	const [isFaded, fade] = createSignal(false);
 
 	createEffect(
 		on(
@@ -107,18 +111,18 @@ const LoadingScreen: Component<{
 				if (loaded) {
 					const fiber = H.runForkWithLogs(
 						Eff.gen(function* () {
-							yield* Eff.sleep(DEFAULT_FADE_MS)
-							fade(true)
+							yield* Eff.sleep(DEFAULT_FADE_MS);
+							fade(true);
 						}),
-					)
+					);
 					onCleanup(() => {
-						H.runForkWithLogs(F.interrupt(fiber))
-					})
+						H.runForkWithLogs(F.interrupt(fiber));
+					});
 				}
 			},
 			{ defer: true },
 		),
-	)
+	);
 
 	return (
 		<SafePortal>
@@ -127,9 +131,10 @@ const LoadingScreen: Component<{
 				classList={{
 					'opacity-0 pointer-events-none':
 						isFaded(),
-				}}>
+				}}
+			>
 				<Spinner />
 			</div>
 		</SafePortal>
-	)
-}
+	);
+};

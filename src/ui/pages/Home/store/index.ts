@@ -1,74 +1,80 @@
-import { onMount } from 'solid-js'
+import { onResume } from '$lib/ui/core/capacitor.ts';
+import { destructure } from '@solid-primitives/destructure';
+import {
+	createSignal,
+	onCleanup,
+	onMount,
+} from 'solid-js';
+import {
+	type SetStoreFunction,
+	createStore,
+	produce,
+} from 'solid-js/store';
 
 import {
+	Eff,
 	F,
+	H,
 	HS,
 	NETS,
 	NNInt,
 	O,
-} from '@/core/imports.ts'
+} from '$lib/core/imports.ts';
 
-import type { App } from '@/app/index.ts'
-import type { ProductModel } from '@/app/use-cases/get-sorted-products.ts'
+import type { App } from '$lib/app/index.ts';
+import {
+	GetSortedProductsUseCase,
+	type ProductModel,
+} from '$lib/app/use-cases/get-sorted-products.ts';
 
-import { onResume } from '@/ui/core/capacitor.ts'
-import { useQueueStore } from '@/ui/core/solid.ts'
+import { Message } from './messages.ts';
+import { reducer } from './reducer.ts';
 
-import { Message } from './actions.ts'
-import { reducer } from './reducer.ts'
+export type ProductUIModel = ProductModel & {
+	isSelected: boolean;
+};
 
 export interface State {
-	total: NNInt.NonNegativeInteger
-	message: O.Option<
+	total: number;
+	message?:
 		| {
-				type: 'error'
-				text: NETS.NonEmptyTrimmedString
+				type: 'error';
+				text: string;
 		  }
 		| {
-				type: 'success'
-				text: NETS.NonEmptyTrimmedString
-		  }
-	>
-	products: ProductModel[]
-	receivedError: boolean
-	isLoading: boolean
-	selectedProducts: HS.HashSet<string>
-	isRunningRefresh: O.Option<F.Fiber<unknown>>
-	isRunningDelete: O.Option<F.Fiber<unknown>>
+				type: 'success';
+				text: string;
+		  };
+
+	products: ProductUIModel[];
+	receivedError: boolean;
+	isLoading: boolean;
+	selectedProducts: HS.HashSet<string>;
+	isRunningRefresh?: F.Fiber<unknown>;
+	isRunningDelete?: F.Fiber<unknown>;
 }
 
 export type Store = readonly [
 	State,
 	(command: Message) => void,
-]
+];
 
-export const createStore: (
+export const useStore: (
 	context: App,
 ) => Store = context => {
-	const [state, dispatch] = useQueueStore<
-		State,
-		Message
-	>(
+	const [state, setState] = createStore<State>({
+		total: NNInt.unsafe_fromNumber(0),
+		products: [],
+		receivedError: false,
+		isLoading: true,
+		selectedProducts: HS.empty(),
+	});
+
+	xd.message();
+	return [
+		state,
 		{
-			total: NNInt.unsafe_fromNumber(0),
-			message: O.none(),
-			products: [],
-			receivedError: false,
-			isLoading: true,
-			isRunningRefresh: O.none(),
-			selectedProducts: HS.empty(),
-			isRunningDelete: O.none(),
+			refreshList,
 		},
-		reducer(context),
-	)
-
-	onMount(() => {
-		onResume(() => {
-			dispatch(Message.RefreshList())
-		})
-
-		dispatch(Message.RefreshList())
-	})
-
-	return [state, dispatch]
-}
+	];
+};

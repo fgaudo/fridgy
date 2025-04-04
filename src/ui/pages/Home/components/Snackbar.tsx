@@ -1,15 +1,14 @@
-import type { Component } from 'solid-js'
+import { SafePortal } from '$lib/ui/widgets/SafePortal.tsx';
+import { Snackbar as SnackbarWidget } from '$lib/ui/widgets/SnackBar.tsx';
+import type { Component } from 'solid-js';
 
-import { SafePortal } from '@/ui/widgets/SafePortal.tsx'
-import { Snackbar as SnackbarWidget } from '@/ui/widgets/SnackBar.tsx'
-
-import { useUiStateContext } from '../context.tsx'
+import { useUiStateContext } from '../context.tsx';
 
 export const Snackbar: Component = () => {
 	const {
 		store: [state],
 		uiStore: [uiState],
-	} = useUiStateContext()!
+	} = useUiStateContext()!;
 
 	return (
 		<SafePortal>
@@ -24,5 +23,5 @@ export const Snackbar: Component = () => {
 				message={state.message}
 			/>
 		</SafePortal>
-	)
-}
+	);
+};

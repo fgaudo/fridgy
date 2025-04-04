@@ -1,8 +1,8 @@
-import { Da } from '@/core/imports'
+import { Da } from '$lib/core/imports';
 
 export type InternalMessage = Da.TaggedEnum<{
-	OpenAddFoodPage: object
-}>
+	OpenAddFoodPage: object;
+}>;
 
 export const InternalMessage =
-	Da.taggedEnum<InternalMessage>()
+	Da.taggedEnum<InternalMessage>();

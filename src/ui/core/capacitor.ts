@@ -1,23 +1,23 @@
-import { App as CAP } from '@capacitor/app'
-import { onCleanup } from 'solid-js'
+import { App as CAP } from '@capacitor/app';
+import { onCleanup } from 'solid-js';
 
 const resumeCallbacks: Set<() => void> = new Set<
 	() => void
->()
+>();
 
 export const onResumeInit = async () =>
 	CAP.addListener('resume', () => {
 		for (const callback of resumeCallbacks) {
-			callback()
+			callback();
 		}
-	})
+	});
 
 export const onResume = (
 	callback: () => void,
 ) => {
-	resumeCallbacks.add(callback)
+	resumeCallbacks.add(callback);
 
 	onCleanup(() => {
-		resumeCallbacks.delete(callback)
-	})
-}
+		resumeCallbacks.delete(callback);
+	});
+};

@@ -1,5 +1,10 @@
+import type {
+	DeepDestructure,
+	Spread,
+} from '@solid-primitives/destructure'
 import { format } from 'date-fns'
 import {
+	type Accessor,
 	type Component,
 	type JSXElement,
 	Match,
@@ -7,23 +12,27 @@ import {
 	Switch,
 } from 'solid-js'
 
-import { HS, Int, O } from '@/core/imports.ts'
+import { HS, Int, O } from '$lib/core/imports.ts'
 
-import type { ProductModel } from '@/app/use-cases/get-sorted-products.ts'
-
-import { formatRemainingTime } from '@/ui/core/helpers.ts'
+import { formatRemainingTime } from '$lib/ui/core/helpers.ts'
 
 import { useUiStateContext } from '../context.tsx'
-import { Message } from '../store/actions.ts'
+import type { ProductUIModel } from '../store/index.ts'
+import { Message } from '../store/messages.ts'
 
 export const Item: Component<{
-	model: ProductModel
+	model: Spread<ProductUIModel>
 	index: () => number
 }> = props => {
 	const {
 		uiStore: [uiState],
 	} = useUiStateContext()!
+const asd = props.model
 
+if(asd.isValid()) {
+
+	asd.
+}
 	return (
 		<div
 			class="duration-fade absolute flex shadow-sm transition-all"
@@ -35,7 +44,7 @@ export const Item: Component<{
 			<Switch>
 				<Match
 					when={
-						!props.model.isValid && props.model
+						!props.model.isValid() && props.model
 					}>
 					{model => (
 						<Button
@@ -46,25 +55,25 @@ export const Item: Component<{
 					)}
 				</Match>
 				<Match
-					when={
-						props.model.isValid && props.model
-					}>
+					when={(model =>
+						model.isValid() && model)(
+						props.model,
+					)}>
 					{model => (
 						<Button
 							index={props.index}
 							model={model}>
 							<div class="duration-fade relative flex h-[24px] w-[24px] items-center justify-center p-7 text-sm transition-all">
 								<Show
-									when={(() => {
-										const exp =
-											model().expirationDate
-										return (
-											O.isSome(exp) &&
-											exp.value >
-												uiState.currentTimestamp &&
-											exp.value
-										)
-									})()}>
+									when={(model =>
+										O.isSome(
+											model.expirationDate,
+										) &&
+										model.expirationDate.value >
+											uiState.currentTimestamp &&
+										model.expirationDate.value)(
+										model(),
+									)}>
 									{expiration => (
 										<div
 											class="text-primary duration-fade absolute text-xs transition-all"
@@ -87,17 +96,17 @@ export const Item: Component<{
 
 							<div>
 								<Show
-									when={(() => {
-										const exp =
-											model().expirationDate
-										return (
-											O.isSome(exp) && exp.value
-										)
-									})()}>
-									{expiration => (
+									when={(model =>
+										O.isSome(
+											model.expirationDate,
+										) &&
+										model.expirationDate.value)(
+										props.model(),
+									)}>
+									{expirationDate => (
 										<ExpirationBar
-											expiration={expiration}
-											creation={
+											expiration={expirationDate}
+											creation={() =>
 												model().creationDate
 											}
 										/>
@@ -114,13 +123,13 @@ export const Item: Component<{
 											</span>
 										</>
 									}
-									when={(() => {
-										const exp =
-											model().expirationDate
-										return (
-											O.isSome(exp) && exp.value
-										)
-									})()}>
+									when={(model =>
+										O.isSome(
+											model.expirationDate,
+										) &&
+										model.expirationDate.value)(
+										model(),
+									)}>
 									{expiration => (
 										<>
 											<div class="text-sm">
@@ -149,7 +158,7 @@ export const Item: Component<{
 
 const ExpirationBar: Component<{
 	expiration: () => Int.Integer
-	creation: Int.Integer
+	creation: () => Int.Integer
 }> = props => {
 	const {
 		uiStore: [uiState],
@@ -161,11 +170,12 @@ const ExpirationBar: Component<{
 		0
 
 	const currentProgress = () => {
+		const expiration = props.expiration()
+
 		const totalDuration =
-			props.expiration() - props.creation
+			expiration - props.creation()
 		const remainingDuration =
-			props.expiration() -
-			uiState.currentTimestamp
+			expiration - uiState.currentTimestamp
 
 		return remainingDuration / totalDuration
 	}
@@ -192,7 +202,7 @@ const ExpirationBar: Component<{
 }
 
 const Button: Component<{
-	model: () => ProductModel
+	model: Spread<ProductUIModel>
 	index: () => number
 	children: JSXElement[] | JSXElement
 }> = props => {
@@ -202,7 +212,7 @@ const Button: Component<{
 	} = useUiStateContext()!
 
 	const parsedId = () => {
-		const id = props.model().id
+		const id = props.model.id()
 
 		return typeof id === 'string'
 			? id
@@ -219,12 +229,8 @@ const Button: Component<{
 					'content-visibility': 'auto',
 				}}
 				classList={{
-					'bg-secondary/10': (() => {
-						const id = parsedId()
-						return id
-							? HS.has(id)(state.selectedProducts)
-							: false
-					})(),
+					'bg-secondary/10':
+						props.model.isSelected(),
 				}}
 				onClick={e => {
 					e.preventDefault()
@@ -257,12 +263,12 @@ const Button: Component<{
 				{props.children}
 				<div class="w-full overflow-hidden text-ellipsis whitespace-nowrap capitalize">
 					<Show
-						when={(() => {
-							const name = props.model().name
-							if (!O.isOption(name)) return name
-
-							return O.isSome(name) && name.value
-						})()}
+						when={(name =>
+							!O.isOption(name)
+								? name
+								: O.isSome(name) && name.value)(
+							props.model.name(),
+						)}
 						fallback="CORRUPTED">
 						{name => name()}
 					</Show>

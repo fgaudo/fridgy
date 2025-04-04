@@ -1,9 +1,9 @@
-import { Eff } from '@/core/imports'
+import type { Task } from '$lib/ui/core/solid.ts';
 
-import type { Task } from '@/ui/core/solid.ts'
+import { Eff } from '$lib/core/imports';
 
-import type { State } from '../store'
-import { InternalMessage } from './actions'
+import type { State } from '../store';
+import { InternalMessage } from './actions';
 
 export const queueOpenAddFoodPage = (): Task<
 	State,
@@ -11,8 +11,8 @@ export const queueOpenAddFoodPage = (): Task<
 > => ({
 	effect: () =>
 		Eff.gen(function* () {
-			yield* Eff.sleep(75)
+			yield* Eff.sleep(75);
 
-			return InternalMessage.OpenAddFoodPage()
+			return InternalMessage.OpenAddFoodPage();
 		}),
-})
+});

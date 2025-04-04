@@ -1,13 +1,13 @@
-import { effect } from '@effect/vitest'
-import { describe, expect } from 'vitest'
+import { effect } from '@effect/vitest';
+import { describe, expect } from 'vitest';
 
-import { Eff, HS } from '@/core/imports.ts'
+import { Eff, HS } from '$lib/core/imports.ts';
 
-import type { App } from '@/app/index.ts'
+import type { App } from '$lib/app/index.ts';
 
-import { Message } from './actions.ts'
-import type { State } from './index.ts'
-import { reducer } from './reducer.ts'
+import type { State } from './index.ts';
+import { Message } from './messages.ts';
+import { reducer } from './reducer.ts';
 
 describe('Home reducer', () => {
 	effect('Should clear selected products', () =>
@@ -16,18 +16,18 @@ describe('Home reducer', () => {
 				selectedProducts: HS.fromIterable([
 					'asd',
 				]),
-			} as unknown as State
+			} as unknown as State;
 			const [mutation] = reducer(
 				{} as unknown as App,
-			)(Message.ClearSelectedProducts())
+			)(Message.ClearSelectedProducts());
 
-			mutation(state)
+			mutation(state);
 
 			expect(
 				HS.size(state.selectedProducts),
-			).toStrictEqual(0)
+			).toStrictEqual(0);
 
-			yield* Eff.void
+			yield* Eff.void;
 		}),
-	)
-})
+	);
+});

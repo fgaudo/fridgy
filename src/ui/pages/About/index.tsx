@@ -1,24 +1,24 @@
+import licenses from '$lib/ui/assets/licenses.json';
+import { version } from '$lib/ui/core/constants.ts';
+import { useFridgyNavigate } from '$lib/ui/router.tsx';
 import {
 	type Component,
 	For,
 	Show,
-} from 'solid-js'
-
-import licenses from '@/ui/assets/licenses.json'
-import { version } from '@/ui/core/constants.ts'
-import { useFridgyNavigate } from '@/ui/router.tsx'
+} from 'solid-js';
 
 export const About: () => Component =
 	() => () => {
-		const navigate = useFridgyNavigate()
+		const navigate = useFridgyNavigate();
 
 		return (
 			<div>
 				<span
 					class="material-symbols"
 					onClick={() => {
-						navigate(-1)
-					}}>
+						navigate(-1);
+					}}
+				>
 					face
 				</span>
 
@@ -38,7 +38,8 @@ export const About: () => Component =
 						under the{' '}
 						<a
 							class="text-primary underline"
-							href="https://www.gnu.org/licenses/agpl-3.0.en.html">
+							href="https://www.gnu.org/licenses/agpl-3.0.en.html"
+						>
 							AGPL-3.0 license
 						</a>
 						.
@@ -47,7 +48,8 @@ export const About: () => Component =
 						The entire source code is available at{' '}
 						<a
 							class="text-primary underline"
-							href="https://github.com/fgaudo/fridgy">
+							href="https://github.com/fgaudo/fridgy"
+						>
 							https://github.com/fgaudo/fridgy
 						</a>
 					</p>
@@ -57,13 +59,15 @@ export const About: () => Component =
 						you can{' '}
 						<a
 							class="text-primary underline"
-							href="https://github.com/fgaudo/fridgy/issues">
+							href="https://github.com/fgaudo/fridgy/issues"
+						>
 							open a ticket
 						</a>{' '}
 						or send me an email at{' '}
 						<a
 							class="text-primary underline"
-							href="mailto:fgaudo@gmail.com">
+							href="mailto:fgaudo@gmail.com"
+						>
 							fgaudo@gmail.com
 						</a>
 						.
@@ -82,7 +86,8 @@ export const About: () => Component =
 								class="mb-[20px] overflow-x-scroll text-nowrap"
 								style={{
 									'content-visibility': 'auto',
-								}}>
+								}}
+							>
 								<Show
 									fallback={
 										<h1 class="font-bold">
@@ -94,7 +99,8 @@ export const About: () => Component =
 										license.name.trim().length >
 											0 &&
 										license.name
-									}>
+									}
+								>
 									{value => (
 										<h1 class="font-bold">
 											{value()}
@@ -105,46 +111,53 @@ export const About: () => Component =
 									when={
 										'description' in license &&
 										license.description
-									}>
+									}
+								>
 									{value => <p>{value()}</p>}
 								</Show>
 								<Show
 									when={
 										'publisher' in license &&
 										license.publisher
-									}>
+									}
+								>
 									{value => <p>{value()}</p>}
 								</Show>
 								<Show
 									when={
 										'email' in license &&
 										license.email
-									}>
+									}
+								>
 									{value => <p>{value()}</p>}
 								</Show>
 								<Show
 									when={
 										'copyright' in license &&
 										license.copyright
-									}>
+									}
+								>
 									{value => <p>{value()}</p>}
 								</Show>
 								<Show
 									when={
 										'licenses' in license &&
 										license.licenses
-									}>
+									}
+								>
 									{value => <p>{value()}</p>}
 								</Show>
 								<Show
 									when={
 										'repository' in license &&
 										license.repository
-									}>
+									}
+								>
 									{value => (
 										<a
 											class="text-primary underline"
-											href={encodeURI(value())}>
+											href={encodeURI(value())}
+										>
 											{value()}
 										</a>
 									)}
@@ -154,5 +167,5 @@ export const About: () => Component =
 					</For>
 				</div>
 			</div>
-		)
-	}
+		);
+	};

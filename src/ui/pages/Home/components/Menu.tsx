@@ -1,18 +1,13 @@
-import { A } from '@solidjs/router'
-import {
-	type Component,
-	onCleanup,
-	onMount,
-} from 'solid-js'
+import { ROUTES } from '$lib/ui/router.tsx';
+import { A } from '@solidjs/router';
+import { type Component } from 'solid-js';
 
-import { ROUTES } from '@/ui/router.tsx'
-
-import { useUiStateContext } from '../context.tsx'
+import { useUiStateContext } from '../context.tsx';
 
 export const Menu: Component = () => {
 	const {
-		uiStore: [uiState, setUiState],
-	} = useUiStateContext()!
+		uiStore: [, setUiState],
+	} = useUiStateContext()!;
 
 	return (
 		<div
@@ -20,8 +15,9 @@ export const Menu: Component = () => {
 				setUiState(
 					'isMenuOpen',
 					isMenuOpen => !isMenuOpen,
-				)
-			}}>
+				);
+			}}
+		>
 			<div class="hidden h-full flex-col">
 				<p class="text-title-large leading-title-large font-stylish pt-8 pb-4 pl-4">
 					Fridgy
@@ -32,10 +28,11 @@ export const Menu: Component = () => {
 				</A>
 				<a
 					class="text-primary mt-auto inline-block w-fit self-center p-4 text-center underline"
-					href="https://github.com/fgaudo/fridgy/wiki/Fridgy-%E2%80%90-Privacy-policy">
+					href="https://github.com/fgaudo/fridgy/wiki/Fridgy-%E2%80%90-Privacy-policy"
+				>
 					Privacy policy
 				</a>
 			</div>
 		</div>
-	)
-}
+	);
+};

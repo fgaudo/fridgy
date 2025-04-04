@@ -1,37 +1,33 @@
+import { sveltekit } from '@sveltejs/kit/vite'
 import tailwindcss from '@tailwindcss/vite'
+import { svelteTesting } from '@testing-library/svelte/vite';
 import { defineConfig } from 'vite'
-import { ViteEjsPlugin } from 'vite-plugin-ejs'
-import { viteSingleFile } from 'vite-plugin-singlefile'
-import solid from 'vite-plugin-solid'
-import tsconfigPaths from 'vite-tsconfig-paths'
 
-export default defineConfig(_params => ({
+export default defineConfig(() => ({
+	plugins: [tailwindcss(), sveltekit()],
 	test: {
-		coverage: {
-			provider: 'v8',
-			reportsDirectory: '../coverage',
-		},
-	},
-	plugins: [
-		solid(),
-		tsconfigPaths(),
-		viteSingleFile({
-			removeViteModuleLoader: true,
-		}),
-		ViteEjsPlugin(),
-		tailwindcss(),
-	],
-	root: 'src',
-	publicDir: '../public',
-
-	build: {
-		emptyOutDir: true,
-		outDir: '../dist',
-		rollupOptions: {
-			plugins: [],
-		},
-	},
-	server: {
-		host: '::',
-	},
+		workspace: [
+			{
+				extends: './vite.config.ts',
+				plugins: [svelteTesting()],
+				test: {
+					name: 'client',
+					environment: 'jsdom',
+					clearMocks: true,
+					include: ['src/**/*.svelte.{test,spec}.{js,ts}'],
+					exclude: ['src/lib/server/**'],
+					setupFiles: ['./vitest-setup-client.ts']
+				}
+			},
+			{
+				extends: './vite.config.ts',
+				test: {
+					name: 'server',
+					environment: 'node',
+					include: ['src/**/*.{test,spec}.{js,ts}'],
+					exclude: ['src/**/*.svelte.{test,spec}.{js,ts}']
+				}
+			}
+		]
+	}
 }))

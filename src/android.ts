@@ -1,25 +1,23 @@
-import { registerPlugin } from '@capacitor/core'
-
-import { L } from '@/core/imports.ts'
-
-import type { FridgySqlitePlugin } from '@/data/capacitor/fridgy-sqlite-plugin.ts'
 import {
 	CapacitorService,
-	appLive,
-} from '@/data/capacitor/index.ts'
+	dependenciesLive,
+} from '$lib/business/data/capacitor';
+import type { FridgySqlitePlugin } from '$lib/business/data/capacitor/fridgy-sqlite-plugin';
+import { render } from '$lib/ui/index.tsx';
+import { registerPlugin } from '@capacitor/core';
 
-import { render } from '@/ui/index.tsx'
+import { L } from '$lib/core/imports.ts';
 
-const root = document.getElementById('root')!
+const root = document.getElementById('root')!;
 
 const db = registerPlugin<FridgySqlitePlugin>(
 	'FridgySqlitePlugin',
-)
+);
 
 void render(
 	L.provide(
-		appLive,
+		dependenciesLive,
 		L.succeed(CapacitorService, { db }),
 	),
 	root,
-)
+);

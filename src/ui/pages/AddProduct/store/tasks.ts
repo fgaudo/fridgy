@@ -1,3 +1,6 @@
+import { MINIMUM_LAG_MS } from '$lib/ui/core/constants.ts';
+import type { Task } from '$lib/ui/core/solid.ts';
+
 import {
 	E,
 	Eff,
@@ -5,19 +8,16 @@ import {
 	H,
 	NETS,
 	O,
-} from '@/core/imports.ts'
+} from '$lib/core/imports.ts';
 
-import type { App } from '@/app/index.ts'
-import { AddProductUseCase } from '@/app/use-cases/add-product.ts'
-
-import { MINIMUM_LAG_MS } from '@/ui/core/constants.ts'
-import type { Task } from '@/ui/core/solid.ts'
+import type { App } from '$lib/app/index.ts';
+import { AddProductUseCase } from '$lib/app/use-cases/add-product.ts';
 
 import {
 	InternalMessage,
 	Message,
-} from './actions.ts'
-import type { State } from './index.ts'
+} from './actions.ts';
+import type { State } from './index.ts';
 
 export const addProduct = (
 	app: App,
@@ -30,11 +30,11 @@ export const addProduct = (
 		Eff.provide(
 			Eff.gen(function* () {
 				const addProduct =
-					yield* AddProductUseCase
+					yield* AddProductUseCase;
 
 				const nameResult = NETS.fromString(
 					state.formFields.name,
-				)
+				);
 
 				if (O.isNone(nameResult)) {
 					return InternalMessage.AddProductFailed(
@@ -43,7 +43,7 @@ export const addProduct = (
 								'No name provided',
 							),
 						},
-					)
+					);
 				}
 
 				const [result] = yield* Eff.all([
@@ -52,25 +52,25 @@ export const addProduct = (
 						name: nameResult.value,
 					}).pipe(Eff.either),
 					Eff.sleep(MINIMUM_LAG_MS),
-				])
+				]);
 
 				if (E.isLeft(result)) {
-					H.logError(result.left)
+					H.logError(result.left);
 					return InternalMessage.AddProductFailed(
 						{
 							message: NETS.unsafe_fromString(
 								'There was a problem adding the product',
 							),
 						},
-					)
+					);
 				}
 
 				return InternalMessage.AddProductSucceeded(
 					{
 						name: nameResult.value,
 					},
-				)
+				);
 			}),
 			app,
 		),
-})
+});

@@ -1,100 +1,103 @@
 import {
 	differenceInDays,
 	differenceInHours,
-} from 'date-fns'
+} from 'date-fns';
 import {
 	createEffect,
 	createSignal,
 	onCleanup,
-} from 'solid-js'
+} from 'solid-js';
 
 export const useWindowScrollTop = () => {
 	const [isScrolledTop, setScrolledTop] =
-		createSignal(true)
+		createSignal(true);
 
 	const callback = () => {
-		const top = isScrolledTop()
-		const scrollY = window.scrollY
+		const top = isScrolledTop();
+		const scrollY = window.scrollY;
 		if (top && scrollY !== 0) {
-			setScrolledTop(false)
+			setScrolledTop(false);
 		} else if (!top && scrollY === 0) {
-			setScrolledTop(true)
+			setScrolledTop(true);
 		}
-	}
+	};
 
-	document.addEventListener('scroll', callback)
+	document.addEventListener('scroll', callback);
 
 	onCleanup(() => {
 		document.removeEventListener(
 			'scroll',
 			callback,
-		)
-	})
+		);
+	});
 
-	return isScrolledTop
-}
+	return isScrolledTop;
+};
 
 export const useWindowScroll = () => {
 	const [scrollValues, setScroll] = createSignal<{
-		isScrolling: boolean
-		scrollY: number
+		isScrolling: boolean;
+		scrollY: number;
 	}>({
 		isScrolling: false,
 		scrollY: window.scrollY,
-	})
+	});
 
 	const start = () => {
 		setScroll({
 			isScrolling: true,
 			scrollY: window.scrollY,
-		} as const)
-	}
+		} as const);
+	};
 
 	const end = () => {
 		setScroll({
 			isScrolling: false,
 			scrollY: window.scrollY,
-		} as const)
-	}
+		} as const);
+	};
 
 	createEffect(() => {
-		window.addEventListener('scroll', start)
-		window.addEventListener('scrollend', end)
+		window.addEventListener('scroll', start);
+		window.addEventListener('scrollend', end);
 
 		onCleanup(() => {
-			window.removeEventListener('scroll', start)
-			window.removeEventListener('scrollend', end)
-		})
-	})
+			window.removeEventListener('scroll', start);
+			window.removeEventListener(
+				'scrollend',
+				end,
+			);
+		});
+	});
 
-	return scrollValues
-}
+	return scrollValues;
+};
 
 export const formatRemainingTime = (
 	from: number,
 	to: number,
 ): string => {
-	const remaining = to - from
+	const remaining = to - from;
 
 	if (remaining < 0) {
-		return 'EXP'
+		return 'EXP';
 	}
 
-	const hours = differenceInHours(to, from)
+	const hours = differenceInHours(to, from);
 
 	if (hours < 1) {
-		return '<1h'
+		return '<1h';
 	}
 
-	const days = differenceInDays(to, from)
+	const days = differenceInDays(to, from);
 
 	if (days < 1) {
-		return `${hours.toString(10)}h`
+		return `${hours.toString(10)}h`;
 	}
 
 	if (days <= 28) {
-		return `${days.toString(10)}d`
+		return `${days.toString(10)}d`;
 	}
 
-	return `>4w`
-}
+	return `>4w`;
+};

@@ -1,8 +1,9 @@
+import { type Reducer } from '$lib/ui/core/solid.ts';
 import {
 	produce,
 	reconcile,
 	unwrap,
-} from 'solid-js/store'
+} from 'solid-js/store';
 
 import {
 	Da,
@@ -11,15 +12,13 @@ import {
 	NETS,
 	O,
 	pipe,
-} from '@/core/imports.ts'
+} from '$lib/core/imports.ts';
 
-import type { App } from '@/app/index.ts'
+import type { App } from '$lib/app/index.ts';
 
-import { type Reducer } from '@/ui/core/solid.ts'
-
-import { Message } from './actions.ts'
-import type { State } from './index.ts'
-import * as Ta from './tasks.ts'
+import type { State } from './index.ts';
+import { Message } from './messages.ts';
+import * as Ta from './tasks.ts';
 
 export const reducer: (
 	app: App,
@@ -29,8 +28,8 @@ export const reducer: (
 		M.when({ _tag: 'RefreshList' }, () =>
 			Da.tuple(
 				produce((state: State) => {
-					state.isRunningRefresh = O.none()
-					state.message = O.none()
+					state.isRunningRefresh = O.none();
+					state.message = O.none();
 				}),
 				HS.make(Ta.refreshList(app)),
 			),
@@ -38,7 +37,7 @@ export const reducer: (
 		M.when({ _tag: 'DisableSelectMode' }, () =>
 			Da.tuple(
 				produce((state: State) => {
-					state.selectedProducts = HS.empty()
+					state.selectedProducts = HS.empty();
 				}),
 				HS.empty(),
 			),
@@ -48,7 +47,7 @@ export const reducer: (
 				produce((state: State) => {
 					state.selectedProducts = HS.toggle(id)(
 						state.selectedProducts,
-					)
+					);
 				}),
 				HS.empty(),
 			),
@@ -66,13 +65,13 @@ export const reducer: (
 			({ total, models }) =>
 				Da.tuple(
 					produce((state: State) => {
-						state.isLoading = false
-						state.receivedError = false
-						state.isRunningRefresh = O.none()
+						state.isLoading = false;
+						state.receivedError = false;
+						state.isRunningRefresh = O.none();
 						state.products = reconcile(models, {
 							key: 'id',
-						})(unwrap(state.products))
-						state.total = total
+						})(unwrap(state.products));
+						state.total = total;
 					}),
 					HS.empty(),
 				),
@@ -82,7 +81,8 @@ export const reducer: (
 			({ fiber }) =>
 				Da.tuple(
 					produce((state: State) => {
-						state.isRunningRefresh = O.some(fiber)
+						state.isRunningRefresh =
+							O.some(fiber);
 					}),
 					HS.empty(),
 				),
@@ -92,14 +92,14 @@ export const reducer: (
 			({ message }) =>
 				Da.tuple(
 					produce((state: State) => {
-						state.isLoading = false
-						state.products = []
-						state.receivedError = true
-						state.isRunningRefresh = O.none()
+						state.isLoading = false;
+						state.products = [];
+						state.receivedError = true;
+						state.isRunningRefresh = O.none();
 						state.message = O.some({
 							type: 'error',
 							text: message,
-						} as const)
+						} as const);
 					}),
 					HS.empty(),
 				),
@@ -109,11 +109,11 @@ export const reducer: (
 			({ message }) =>
 				Da.tuple(
 					produce((state: State) => {
-						state.isRunningDelete = O.none()
+						state.isRunningDelete = O.none();
 						state.message = O.some({
 							type: 'error',
 							text: message,
-						} as const)
+						} as const);
 					}),
 					HS.empty(),
 				),
@@ -125,14 +125,14 @@ export const reducer: (
 			({ message }) =>
 				Da.tuple(
 					produce((state: State) => {
-						state.selectedProducts = HS.empty()
-						state.products = []
-						state.receivedError = true
-						state.isRunningDelete = O.none()
+						state.selectedProducts = HS.empty();
+						state.products = [];
+						state.receivedError = true;
+						state.isRunningDelete = O.none();
 						state.message = O.some({
 							type: 'error',
 							text: message,
-						} as const)
+						} as const);
 					}),
 					HS.empty(),
 				),
@@ -144,22 +144,22 @@ export const reducer: (
 			({ deletedItems, total, models }) =>
 				Da.tuple(
 					produce((state: State) => {
-						state.selectedProducts = HS.empty()
+						state.selectedProducts = HS.empty();
 
-						state.isRunningDelete = O.none()
+						state.isRunningDelete = O.none();
 
 						state.products = reconcile(models, {
 							key: 'id',
-						})(unwrap(state.products))
+						})(unwrap(state.products));
 
-						state.total = total
+						state.total = total;
 
 						state.message = O.some({
 							type: 'success',
 							text: NETS.unsafe_fromString(
 								`${deletedItems.toString(10)} products deleted`,
 							),
-						} as const)
+						} as const);
 					}),
 					HS.empty(),
 				),
@@ -171,7 +171,7 @@ export const reducer: (
 			({ fiber }) =>
 				Da.tuple(
 					produce((state: State) => {
-						state.isRunningDelete = O.some(fiber)
+						state.isRunningDelete = O.some(fiber);
 					}),
 					HS.empty(),
 				),
@@ -188,4 +188,4 @@ export const reducer: (
 		),
 
 		M.exhaustive,
-	)
+	);

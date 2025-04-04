@@ -1,27 +1,30 @@
 /** @type {import("prettier").Config} */
 export default {
-	plugins: [
-		'@trivago/prettier-plugin-sort-imports',
-		'prettier-plugin-tailwindcss',
-	],
-	semi: false,
-	printWidth: 50,
+	useTabs: true,
 	singleQuote: true,
 	trailingComma: 'all',
-	bracketSpacing: true,
-	bracketSameLine: true,
-	useTabs: true,
+	printWidth: 50,
+	plugins: [
+		'prettier-plugin-svelte',
+		'prettier-plugin-tailwindcss',
+		'@trivago/prettier-plugin-sort-imports',
+	],
+	arrowParens: 'avoid',
+	overrides: [
+		{
+			files: '*.svelte',
+			options: {
+				parser: 'svelte',
+			},
+		},
+	],
 	importOrder: [
-		'<THIRD_PARTY_MODULES>',
-		'^@/core',
-		'^@/domain',
-		'^@/app',
-		'^@/data',
-		'^@/ui',
+		'^\\$lib/core',
+		'^\\$lib/domain',
+		'^\\$lib/app',
+		'^\\$lib/data',
 		'^[./]',
 	],
-	singleAttributePerLine: true,
 	importOrderSeparation: true,
 	importOrderSortSpecifiers: true,
-	arrowParens: 'avoid',
-}
+};

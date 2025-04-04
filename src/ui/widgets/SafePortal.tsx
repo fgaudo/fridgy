@@ -1,8 +1,11 @@
-import type { FlowComponent, JSX } from 'solid-js'
-import { Portal } from 'solid-js/web'
+import type {
+	FlowComponent,
+	JSX,
+} from 'solid-js';
+import { Portal } from 'solid-js/web';
 
 export const SafePortal: FlowComponent = (props: {
-	children: JSX.Element
+	children: JSX.Element;
 }) => {
 	return (
 		<Portal>
@@ -12,5 +15,5 @@ export const SafePortal: FlowComponent = (props: {
 				</div>
 			</div>
 		</Portal>
-	)
-}
+	);
+};

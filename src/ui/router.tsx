@@ -1,22 +1,22 @@
-import * as SR from '@solidjs/router'
-import type { Component } from 'solid-js'
+import * as SR from '@solidjs/router';
+import type { Component } from 'solid-js';
 
-import type { App } from '@/app/index.ts'
+import type { App } from '$lib/app/index.ts';
 
-import { About } from './pages/About/index.tsx'
-import AddProduct from './pages/AddProduct/index.tsx'
-import { createStore as createAddProductStore } from './pages/AddProduct/store/index.ts'
-import Home from './pages/Home/index.tsx'
-import { createStore as createHomeStore } from './pages/Home/store/index.ts'
+import { About } from './pages/About/index.tsx';
+import AddProduct from './pages/AddProduct/index.tsx';
+import { createStore as createAddProductStore } from './pages/AddProduct/store/index.ts';
+import Home from './pages/Home/index.tsx';
+import { createStore as createHomeStore } from './pages/Home/store/index.ts';
 
 export const ROUTES = {
 	home: '/',
 	addProduct: '/add-product',
 	about: '/about',
-} as const
+} as const;
 
 export const Router: Component<{
-	app: App
+	app: App;
 }> = props => {
 	return (
 		<SR.Router>
@@ -37,26 +37,26 @@ export const Router: Component<{
 				component={About()}
 			/>
 		</SR.Router>
-	)
-}
+	);
+};
 
 export type Navigator = (
 	route: keyof typeof ROUTES | number,
 	options?: Partial<SR.NavigateOptions>,
-) => void
+) => void;
 
 export const useFridgyNavigate: () => Navigator =
 	() => {
-		const navigator = SR.useNavigate()
+		const navigator = SR.useNavigate();
 
 		return (
 			route: keyof typeof ROUTES | number,
 			options?: Partial<SR.NavigateOptions>,
 		) => {
 			if (typeof route === 'number') {
-				navigator(route)
-				return
+				navigator(route);
+				return;
 			}
-			navigator(ROUTES[route], options)
-		}
-	}
+			navigator(ROUTES[route], options);
+		};
+	};

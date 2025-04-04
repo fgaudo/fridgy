@@ -1,5 +1,6 @@
-import 'solid-js/store'
-import { produce } from 'solid-js/store'
+import type { Reducer } from '$lib/ui/core/solid.ts';
+import 'solid-js/store';
+import { produce } from 'solid-js/store';
 
 import {
 	Da,
@@ -8,18 +9,16 @@ import {
 	NETS,
 	O,
 	pipe,
-} from '@/core/imports.ts'
+} from '$lib/core/imports.ts';
 
-import type { App } from '@/app/index.ts'
-
-import type { Reducer } from '@/ui/core/solid.ts'
+import type { App } from '$lib/app/index.ts';
 
 import {
 	InternalMessage,
 	type Message,
-} from './actions.ts'
-import type { State } from './index.ts'
-import * as Ta from './tasks.ts'
+} from './actions.ts';
+import type { State } from './index.ts';
+import * as Ta from './tasks.ts';
 
 export const reducer: (
 	app: App,
@@ -30,7 +29,7 @@ export const reducer: (
 			M.when({ _tag: 'AddProduct' }, () =>
 				Da.tuple(
 					produce((state: State) => {
-						state.message = O.none()
+						state.message = O.none();
 					}),
 
 					HS.make(Ta.addProduct(app)),
@@ -42,7 +41,7 @@ export const reducer: (
 					Da.tuple(
 						produce((state: State) => {
 							state.runningAddProduct =
-								O.some(fiber)
+								O.some(fiber);
 						}),
 						HS.empty(),
 					),
@@ -52,11 +51,11 @@ export const reducer: (
 				({ message }) =>
 					Da.tuple(
 						produce((state: State) => {
-							state.runningAddProduct = O.none()
+							state.runningAddProduct = O.none();
 							state.message = O.some({
 								type: 'error',
 								text: message,
-							} as const)
+							} as const);
 						}),
 						HS.empty(),
 					),
@@ -66,21 +65,21 @@ export const reducer: (
 				() =>
 					Da.tuple(
 						produce((state: State) => {
-							state.runningAddProduct = O.none()
+							state.runningAddProduct = O.none();
 							state.message = O.some({
 								type: 'success',
 								text: NETS.unsafe_fromString(
 									'Product added succesfully',
 								),
-							} as const)
+							} as const);
 							state.formFields = {
 								name: '',
 								expirationDate: O.none(),
-							}
+							};
 
 							state.isOk = NETS.fromString(
 								state.formFields.name,
-							).pipe(O.isSome)
+							).pipe(O.isSome);
 						}),
 						HS.empty(),
 					),
@@ -92,11 +91,11 @@ export const reducer: (
 				field =>
 					Da.tuple(
 						produce((state: State) => {
-							state.formFields.name = field.value
+							state.formFields.name = field.value;
 
 							state.isOk = NETS.fromString(
 								state.formFields.name,
-							).pipe(O.isSome)
+							).pipe(O.isSome);
 						}),
 						HS.empty(),
 					),
@@ -109,15 +108,15 @@ export const reducer: (
 					Da.tuple(
 						produce((state: State) => {
 							state.formFields.expirationDate =
-								field.value
+								field.value;
 
 							state.isOk = NETS.fromString(
 								state.formFields.name,
-							).pipe(O.isSome)
+							).pipe(O.isSome);
 						}),
 						HS.empty(),
 					),
 			),
 
 			M.exhaustive,
-		)
+		);

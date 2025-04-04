@@ -1,4 +1,5 @@
-import { produce } from 'solid-js/store'
+import { useQueueStore } from '$lib/ui/core/solid.ts';
+import { produce } from 'solid-js/store';
 
 import {
 	F,
@@ -6,41 +7,39 @@ import {
 	NETS,
 	O,
 	pipe,
-} from '@/core/imports.ts'
+} from '$lib/core/imports.ts';
 
-import type { App } from '@/app/index.ts'
-
-import { useQueueStore } from '@/ui/core/solid.ts'
+import type { App } from '$lib/app/index.ts';
 
 import {
 	InternalMessage,
 	Message,
-} from './actions.ts'
-import { reducer } from './reducer.ts'
+} from './actions.ts';
+import { reducer } from './reducer.ts';
 
 export interface State {
 	formFields: {
-		name: string
-		expirationDate: O.Option<Int.Integer>
-	}
-	isOk: boolean
+		name: string;
+		expirationDate: O.Option<Int.Integer>;
+	};
+	isOk: boolean;
 	message: O.Option<
 		| {
-				type: 'error'
-				text: NETS.NonEmptyTrimmedString
+				type: 'error';
+				text: NETS.NonEmptyTrimmedString;
 		  }
 		| {
-				type: 'success'
-				text: NETS.NonEmptyTrimmedString
+				type: 'success';
+				text: NETS.NonEmptyTrimmedString;
 		  }
-	>
-	runningAddProduct: O.Option<F.Fiber<unknown>>
+	>;
+	runningAddProduct: O.Option<F.Fiber<unknown>>;
 }
 
 export type Store = [
 	State,
 	(message: Message) => void,
-]
+];
 
 export const createStore: (
 	app: App,
@@ -63,11 +62,11 @@ export const createStore: (
 			produce((state: State) => {
 				state.isOk = NETS.fromString('').pipe(
 					O.isSome,
-				)
+				);
 			}),
 		),
 		reducer(context),
-	)
+	);
 
-	return [state, dispatch]
-}
+	return [state, dispatch];
+};

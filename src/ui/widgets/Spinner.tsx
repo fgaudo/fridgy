@@ -1,5 +1,3 @@
-import type { VoidComponent } from 'solid-js'
-
 export const Spinner: VoidComponent = () => (
 	<div role="status">
 		<svg
@@ -7,7 +5,8 @@ export const Spinner: VoidComponent = () => (
 			class="fill-accent text-background h-8 w-8 animate-spin"
 			viewBox="0 0 100 101"
 			fill="none"
-			xmlns="http://www.w3.org/2000/svg">
+			xmlns="http://www.w3.org/2000/svg"
+		>
 			<path
 				d="M93.9676 39.0409C96.393 38.4038
                                 97.8624 35.9116 97.0079
@@ -28,8 +27,9 @@ export const Spinner: VoidComponent = () => (
                                 28.9121 86.7997 32.2913 88.1811
                                 35.8758C89.083 38.2158 91.5421
                                 39.6781 93.9676 39.0409Z"
-				fill="currentFill"></path>
+				fill="currentFill"
+			></path>
 		</svg>
 		<span class="sr-only">Loading...</span>
 	</div>
-)
+);

@@ -4,29 +4,29 @@ import {
 	Int,
 	NETS,
 	O,
-} from '@/core/imports.ts'
+} from '$lib/core/imports.ts';
 
 export type Message = Da.TaggedEnum<{
-	AddProduct: object
+	AddProduct: object;
 	UpdateName: {
-		value: string
-	}
+		value: string;
+	};
 	UpdateExpirationDate: {
-		value: O.Option<Int.Integer>
-	}
-}>
+		value: O.Option<Int.Integer>;
+	};
+}>;
 
 export type InternalMessage = Da.TaggedEnum<{
 	AddProductFailed: {
-		message: NETS.NonEmptyTrimmedString
-	}
+		message: NETS.NonEmptyTrimmedString;
+	};
 	AddProductSucceeded: {
-		name: NETS.NonEmptyTrimmedString
-	}
-	AddProductStarted: { fiber: F.Fiber<unknown> }
-}>
+		name: NETS.NonEmptyTrimmedString;
+	};
+	AddProductStarted: { fiber: F.Fiber<unknown> };
+}>;
 
-export const Message = Da.taggedEnum<Message>()
+export const Message = Da.taggedEnum<Message>();
 
 export const InternalMessage =
-	Da.taggedEnum<InternalMessage>()
+	Da.taggedEnum<InternalMessage>();

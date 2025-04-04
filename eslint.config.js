@@ -1,92 +1,37 @@
-import eslint from '@eslint/js'
-import eslintConfig from 'eslint-config-prettier'
-import solid from 'eslint-plugin-solid'
-import tseslint from 'typescript-eslint'
+import prettier from 'eslint-config-prettier';
+import js from '@eslint/js';
+import { includeIgnoreFile } from '@eslint/compat';
+import svelte from 'eslint-plugin-svelte';
+import globals from 'globals';
+import { fileURLToPath } from 'node:url';
+import ts from 'typescript-eslint';
+import svelteConfig from './svelte.config.js';
 
-export default [
-	eslint.configs.recommended,
-	...tseslint.configs.strictTypeChecked,
-	...tseslint.configs.stylisticTypeChecked,
+const gitignorePath = fileURLToPath(new URL('./.gitignore', import.meta.url));
+
+export default ts.config(
+	includeIgnoreFile(gitignorePath),
+	js.configs.recommended,
+	...ts.configs.recommended,
+	...svelte.configs.recommended,
+	prettier,
+	...svelte.configs.prettier,
 	{
+		languageOptions: {
+			globals: { ...globals.browser, ...globals.node }
+		},
+		rules: { 'no-undef': 'off' }
+	},
+	{
+		files: ['**/*.svelte', '**/*.svelte.ts', '**/*.svelte.js'],
+		ignores: ['eslint.config.js', 'svelte.config.js'],
 		languageOptions: {
 			parserOptions: {
 				projectService: true,
-				tsconfigRootDir: import.meta.dirname,
-			},
-		},
-	},
-	{
-		files: ['**/*.{ts,tsx}'],
-		...solid.configs['flat/typescript'],
-		rules: {
-			...solid.configs['flat/typescript'].rules,
-			'solid/reactivity': 'warn',
-
-			'solid/self-closing-comp': [
-				'warn',
-				{
-					component: 'all', // "all" | "none"
-					html: 'void', // "all" | "void" | "none"
-				},
-			],
-		},
-	},
-	eslintConfig,
-	{ ignores: ['*.js', '*.ts'] },
-	{
-		files: [
-			'src/*.ts',
-			'src/*.ts',
-			'src/ui/**/*.ts',
-			'src/ui/**/*.tsx',
-		],
-		rules: {
-			'@typescript-eslint/no-non-null-assertion':
-				'off',
-		},
-	},
-	{
-		rules: {
-			'@typescript-eslint/no-unnecessary-type-assertion':
-				'error',
-
-			'@typescript-eslint/no-unused-vars': [
-				'warn', // or "error"
-				{
-					argsIgnorePattern: '^_$',
-					varsIgnorePattern: '^_$',
-					caughtErrorsIgnorePattern: '^_$',
-				},
-			],
-			'@typescript-eslint/no-confusing-void-expression':
-				'error',
-			'@typescript-eslint/switch-exhaustiveness-check':
-				'error',
-		},
-	},
-	{
-		files: ['src/**/*.ts'],
-		rules: {
-			'@typescript-eslint/consistent-type-assertions':
-				[
-					'error',
-					{
-						assertionStyle: 'never',
-					},
-				],
-		},
-	},
-	{
-		files: ['src/**/*.test.ts'],
-		rules: {
-			'@typescript-eslint/consistent-type-assertions':
-				[
-					'error',
-					{
-						assertionStyle: 'as',
-						objectLiteralTypeAssertions: 'allow',
-					},
-				],
-		},
-	},
-]
+				extraFileExtensions: ['.svelte'],
+				parser: ts.parser,
+				svelteConfig
+			}
+		}
+	}
+);

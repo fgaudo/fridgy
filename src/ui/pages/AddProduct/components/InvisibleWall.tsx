@@ -1,16 +1,15 @@
-import type { Component } from 'solid-js'
+import { SafePortal } from '$lib/ui/widgets/SafePortal.tsx';
+import { Spinner } from '$lib/ui/widgets/Spinner.tsx';
+import type { Component } from 'solid-js';
 
-import { O } from '@/core/imports.ts'
+import { O } from '$lib/core/imports.ts';
 
-import { SafePortal } from '@/ui/widgets/SafePortal.tsx'
-import { Spinner } from '@/ui/widgets/Spinner.tsx'
-
-import { useUiStateContext } from '../context.ts'
+import { useUiStateContext } from '../context.ts';
 
 export const InvisibleWall: Component = () => {
 	const {
 		store: [state],
-	} = useUiStateContext()!
+	} = useUiStateContext()!;
 
 	return (
 		<SafePortal>
@@ -22,9 +21,10 @@ export const InvisibleWall: Component = () => {
 				classList={{
 					'opacity-0 pointer-events-none':
 						O.isNone(state.runningAddProduct),
-				}}>
+				}}
+			>
 				<Spinner />
 			</div>
 		</SafePortal>
-	)
-}
+	);
+};
