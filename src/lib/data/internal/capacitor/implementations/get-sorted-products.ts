@@ -20,28 +20,33 @@ const ProductsListSchema = Sc.Struct({
 	total: Sc.Number,
 	products: Sc.Array(
 		Sc.Struct({
-			id: Sc.optional(
-				Sc.UndefinedOr(Sc.Number).annotations({
-					decodingFallback: H.fallback(undefined),
-				}),
-			),
-			name: Sc.optional(
-				Sc.UndefinedOr(Sc.String).annotations({
-					decodingFallback: H.fallback(undefined),
-				}),
-			),
-			expirationDate: Sc.optional(
-				Sc.UndefinedOr(Sc.Number).annotations({
-					decodingFallback: H.fallback(undefined),
-				}),
-			),
-			creationDate: Sc.optional(
-				Sc.UndefinedOr(Sc.Number).annotations({
-					decodingFallback: H.fallback(undefined),
-				}),
-			),
+			id: Sc.OptionFromUndefinedOr(
+				Sc.Number,
+			).annotations({
+				decodingFallback: H.fallback(O.none()),
+			}),
+			name: Sc.OptionFromUndefinedOr(
+				Sc.String,
+			).annotations({
+				decodingFallback: H.fallback(O.none()),
+			}),
+			expirationDate: Sc.OptionFromUndefinedOr(
+				Sc.Number,
+			).annotations({
+				decodingFallback: H.fallback(O.none()),
+			}),
+			creationDate: Sc.OptionFromUndefinedOr(
+				Sc.Number,
+			).annotations({
+				decodingFallback: H.fallback(O.none()),
+			}),
 		}).annotations({
-			decodingFallback: H.fallback({}),
+			decodingFallback: H.fallback({
+				id: O.none(),
+				name: O.none(),
+				expirationDate: O.none(),
+				creationDate: O.none(),
+			}),
 		}),
 	),
 });
@@ -89,88 +94,30 @@ export const query = L.effect(
 
 			const total = totalResult.value;
 
-			const products = yield* Eff.all(
-				decodeResult.right.products.map(product =>
-					Eff.gen(function* () {
-						const {
-							id,
-							name,
-							creationDate,
-							expirationDate,
-						} = product;
+			const products =
+				decodeResult.right.products.map(
+					product =>
+						({
+							maybeId: pipe(
+								product.id,
+								O.map(id => id.toString(10)),
+							),
+							maybeName: pipe(
+								product.name,
+								O.flatMap(NETS.fromString),
+							),
 
-						if (
-							id === undefined ||
-							creationDate === undefined ||
-							name === undefined
-						) {
-							yield* H.logError(
-								'Product is corrupt',
-							).pipe(
-								Eff.annotateLogs({ product }),
-							);
+							maybeExpirationDate: pipe(
+								product.expirationDate,
+								O.flatMap(Int.fromNumber),
+							),
 
-							return {
-								isValid: false,
-								id: pipe(
-									O.fromNullable(id),
-									O.map(id => id.toString(10)),
-								),
-								name: O.fromNullable(name).pipe(
-									O.flatMap(NETS.fromString),
-								),
-							} as const;
-						}
-						const result = O.all([
-							NETS.fromString(name),
-							Int.fromNumber(id),
-							Int.fromNumber(creationDate),
-							O.gen(function* () {
-								if (
-									expirationDate === undefined
-								) {
-									return O.none();
-								}
-
-								const exp = yield* Int.fromNumber(
-									expirationDate,
-								);
-
-								return O.some(exp);
-							}),
-						]);
-
-						if (O.isNone(result)) {
-							yield* H.logError(
-								'Product is corrupt',
-							).pipe(
-								Eff.annotateLogs({ product }),
-							);
-
-							return {
-								isValid: false,
-								id: O.some(id.toString(10)),
-								name: NETS.fromString(name),
-							} as const;
-						}
-
-						const [
-							nameNonEmpty,
-							idInt,
-							creationTimestamp,
-							expirationTimestamp,
-						] = result.value;
-
-						return {
-							isValid: true,
-							id: idInt.toString(10),
-							name: nameNonEmpty,
-							creationDate: creationTimestamp,
-							expirationDate: expirationTimestamp,
-						} as const;
-					}),
-				),
-			);
+							maybeCreationDate: pipe(
+								product.creationDate,
+								O.flatMap(Int.fromNumber),
+							),
+						}) satisfies GetSortedProducts.ProductDTO,
+				);
 
 			return {
 				total,

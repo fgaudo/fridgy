@@ -1,15 +1,6 @@
-import {
-	Int,
-	NETS,
-	O,
-} from '$lib/core/imports.ts';
+import type { GetSortedProducts } from '$lib/app/queries.ts';
 
 export const map = new Map<
 	string,
-	{
-		id: string;
-		name: NETS.NonEmptyTrimmedString;
-		expirationDate: O.Option<Int.Integer>;
-		creationDate: Int.Integer;
-	}
+	GetSortedProducts.ProductDTO
 >();

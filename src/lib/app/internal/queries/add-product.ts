@@ -8,7 +8,7 @@ import {
 
 export interface ProductDTO {
 	name: NETS.NonEmptyTrimmedString;
-	expirationDate: O.Option<Int.Integer>;
+	maybeExpirationDate?: O.Option<Int.Integer>;
 	creationDate: Int.Integer;
 }
 

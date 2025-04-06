@@ -1,114 +1,375 @@
-<div
-	class={[
-		'bg-background min-h-screen duration-75',
-		{
-			'opacity-0': uiState.isLeavingPage,
+<script lang="ts">
+	import { App as CAP } from '@capacitor/app';
+	import { format } from 'date-fns';
+	import { onMount } from 'svelte';
+	import { SvelteSet } from 'svelte/reactivity';
+
+	import { HS, O } from '$lib/core/imports.ts';
+
+	import { maybeExpirationDate } from '$lib/domain/product.ts';
+
+	import imgUrl from '$lib/ui/assets/arrow.svg';
+	import * as Home from '$lib/ui/home.ts';
+	import Spinner from '$lib/ui/spinner.svelte';
+	import * as Utils from '$lib/ui/utils.ts';
+
+	let state = $state<Home.State>({
+		isMenuOpen: false,
+		isLoading: false,
+		selected: new SvelteSet(),
+		receivedError: false,
+		total: 0,
+		products: {
+			entries: [],
+			corrupts: [],
 		},
-	]}
->
+		currentTimestamp: Date.now(),
+	});
+
+	let isSelectModeEnabled = $derived(
+		state.selected.size > 0,
+	);
+
+	const fetchList = Utils.useEffect(
+		Home.fetchList(state),
+	);
+
+	const startRefreshTimeInterval =
+		Utils.useEffect(
+			Home.refreshTimeInterval(state),
+		);
+
+	const startResumeListener =
+		Utils.useCapacitorListener(() =>
+			CAP.addListener('resume', () => {
+				Home.refreshTime(state);
+			}),
+		);
+
+	onMount(() => {
+		fetchList();
+
+		startResumeListener();
+
+		startRefreshTimeInterval();
+	});
+</script>
+
+{#if state.isLoading}
+	<Spinner />
+{:else}
 	<div
-		class={[
-			'fixed top-0 right-0 bottom-0 left-0 flex items-center justify-center transition-all',
-			{
-				'pointer-events-none opacity-0':
-					!state.isLoading() &&
-					!state.isRunningRefresh(),
-			},
-		]}
+		role="button"
+		tabindex="0"
+		onclick={() => {
+			Home.toggleMenu(state);
+		}}
+		onkeydown={() => {
+			Home.toggleMenu(state);
+		}}
 	>
-		<div role="status">
-			<svg
-				aria-hidden="true"
-				class="fill-accent text-background h-8 w-8 animate-spin"
-				viewBox="0 0 100 101"
-				fill="none"
-				xmlns="http://www.w3.org/2000/svg"
+		<div class="hidden h-full flex-col">
+			<p
+				class="text-title-large leading-title-large font-stylish pt-8 pb-4 pl-4"
 			>
-				<path
-					d="M93.9676 39.0409C96.393 38.4038
-                                97.8624 35.9116 97.0079
-                                33.5539C95.2932 28.8227 92.871
-                                24.3692 89.8167 20.348C85.8452
-                                15.1192 80.8826 10.7238 75.2124
-                                7.41289C69.5422 4.10194 63.2754
-                                1.94025 56.7698 1.05124C51.7666
-                                0.367541 46.6976 0.446843 41.7345
-                                1.27873C39.2613 1.69328 37.813
-                                4.19778 38.4501 6.62326C39.0873
-                                9.04874 41.5694 10.4717 44.0505
-                                10.1071C47.8511 9.54855 51.7191
-                                9.52689 55.5402 10.0491C60.8642
-                                10.7766 65.9928 12.5457 70.6331
-                                15.2552C75.2735 17.9648 79.3347
-                                21.5619 82.5849 25.841C84.9175
-                                28.9121 86.7997 32.2913 88.1811
-                                35.8758C89.083 38.2158 91.5421
-                                39.6781 93.9676 39.0409Z"
-					fill="currentFill"
-				></path>
-			</svg>
-			<span class="sr-only">Loading...</span>
+				Fridgy
+			</p>
+
+			<a href="/about">
+				<div>About</div>
+			</a>
+			<a
+				class="text-primary mt-auto inline-block w-fit self-center p-4 text-center underline"
+				href="https://github.com/fgaudo/fridgy/wiki/Fridgy-%E2%80%90-Privacy-policy"
+			>
+				Privacy policy
+			</a>
 		</div>
-		)
 	</div>
 
 	<div
-		class="duration-fade transition-all"
-		classList={{
-			'opacity-0 pointer-events-none':
-				state.isLoading(),
-		}}
+		class="bg-secondary shadow-secondary/50 flex h-16 w-full items-center shadow-md"
 	>
-		<p
-			class="fixed top-[64px] z-999 w-full px-[14px] pt-[10px] pb-[8px] text-xs transition-all"
-			classList={{
-				'opacity-0 pointer-events-none':
-					state.total() <= 0 ||
-					state.isLoading() ||
-					state.receivedError(),
-			}}
-		>
-			{totalItems()} items
-		</p>
 		<div
-			class="relative mt-[34px] flex w-full items-center"
-			classList={{
-				'opacity-0 pointer-events-none':
-					state.receivedError(),
-			}}
-			style={{
-				height:
-					state.total() > 0 &&
-					!state.receivedError()
-						? `${((state.total() - 1) * 65 + 185).toString(10)}px`
-						: 'auto',
-			}}
+			class="relative flex h-14 w-14 items-center justify-center"
 		>
-			<div>
-				<!--  TODO LISTA QUI   -->
-			</div>
+			{#if isSelectModeEnabled}
+				<button
+					class="material-symbols duration-fade absolute top-0 right-0 bottom-0 left-0 text-2xl transition-all"
+					onclick={() => {
+						Home.disableSelectMode(state);
+					}}
+				>
+					close
+				</button>
+			{:else}
+				<button
+					class="material-symbols duration-fade absolute top-0 right-0 bottom-0 left-0 text-2xl transition-all"
+					onclick={() => {
+						Home.toggleMenu(state);
+					}}
+				>
+					menu
+				</button>
+			{/if}
 		</div>
+
 		<div
-			class={[
-				'absolute top-0 right-0 bottom-0 left-0 flex h-full w-full items-center justify-center text-center text-lg',
-				{
-					'pointer-events-none opacity-0':
-						!state.receivedError,
-				},
-			]}
+			class="font-stylish pl-2 text-2xl font-bold"
+		>
+			Fridgy
+		</div>
+		<div class="grow"></div>
+		{#if !isSelectModeEnabled}
+			<div
+				class="flex h-full items-center text-lg transition-all"
+			>
+				{state.selected.size}
+			</div>
+
+			<button
+				class="material-symbols text-2xl transition-all"
+				onclick={() => {
+					// TODO
+				}}
+			>
+				delete
+			</button>
+		{/if}
+	</div>
+	{#if state.receivedError}
+		<div
+			class="absolute top-0 right-0 bottom-0 left-0 flex h-full w-full items-center justify-center text-center text-lg"
 		>
 			<p>
 				Could not load the list! :(
 				<br />
-				<span
+				<button
 					class="text-primary underline"
-					onClick={() => {
-						dispatch(Message.RefreshList());
-					}}
+					onclick={fetchList}
 				>
 					Try again
-				</span>
+				</button>
 			</p>
 		</div>
-	</div>
-</div>
+	{:else}
+		{#if state.total > 0}
+			<p
+				class="fixed top-[64px] z-999 w-full px-[14px] pt-[10px] pb-[8px] text-xs transition-all"
+			>
+				{state.total} items
+			</p>
+
+			<div
+				class="relative mt-[34px] flex w-full items-center"
+				style:height={state.total > 0
+					? `${((state.total - 1) * 65 + 185).toString(10)}px`
+					: 'auto'}
+			>
+				{#each state.products.entries as product, index (product.id)}
+					{@const maybeExpiration =
+						product.maybeExpirationDate ??
+						O.none()}
+
+					{@const maybeCreation =
+						(product.isValid
+							? O.some(product.creationDate)
+							: product.maybeCreationDate) ??
+						O.none()}
+
+					{@const maybeName =
+						(product.isValid
+							? O.some(product.name)
+							: product.maybeName) ?? O.none()}
+					<div
+						class="duration-fade absolute flex shadow-sm transition-all left-1 right-1"
+						style:top={`${(index * 65).toString(10)}px`}
+					>
+						<button
+							class={[
+								'bg-background flex min-h-[60px] w-full select-none',
+								{
+									'bg-secondary/10':
+										product.isSelected,
+								},
+							]}
+							style="content-visibility: 'auto'"
+							onclick={e => {
+								e.preventDefault();
+
+								Home.toggleItemByTap(product.id)(
+									state,
+									isSelectModeEnabled,
+								);
+							}}
+							oncontextmenu={e => {
+								e.preventDefault();
+
+								Home.toggleItemByHold(product.id)(
+									state,
+									isSelectModeEnabled,
+								);
+							}}
+						>
+							<div
+								class="duration-fade relative flex h-[24px] w-[24px] items-center justify-center p-7 text-sm transition-all"
+							>
+								{#if !isSelectModeEnabled && O.isSome(maybeExpiration) && maybeExpiration.value > state.currentTimestamp}
+									<div
+										class={[
+											'text-primary duration-fade absolute text-xs transition-all',
+											{
+												'text-red-500 font-bold':
+													maybeExpiration.value <
+													state.currentTimestamp,
+											},
+										]}
+									>
+										{Utils.formatRemainingTime(
+											state.currentTimestamp,
+											maybeExpiration.value,
+										)}
+									</div>
+								{/if}
+							</div>
+
+							<div>
+								{#if O.isNone(maybeCreation)}
+									No creation date
+								{:else if O.isSome(maybeExpiration)}
+									{@const expiration =
+										maybeExpiration.value}
+									{@const creation =
+										maybeCreation.value}
+
+									{#if expiration < state.currentTimestamp}
+										<p
+											class="font-bold text-red-500"
+										>
+											Expired
+										</p>
+									{:else}
+										{@const totalDuration =
+											expiration - creation}
+										{@const remainingDuration =
+											expiration -
+											state.currentTimestamp}
+										{@const currentProgress =
+											remainingDuration /
+											totalDuration}
+
+										<div
+											class="border-primary mt-[5px] h-[5px] w-full border-[1px]"
+										>
+											<div
+												class="bg-primary h-full transition-all"
+												style:width={`${(
+													currentProgress * 100
+												).toString()}%`}
+											></div>
+										</div>
+									{/if}
+								{/if}
+							</div>
+
+							<div
+								class="text-secondary flex w-[26px] flex-col items-center"
+							>
+								{#if O.isSome(maybeExpiration)}
+									<div class="text-sm">
+										{format(
+											maybeExpiration.value,
+											'd',
+										)}
+									</div>
+									<div class="text-sm">
+										{format(
+											maybeExpiration.value,
+											'LLL',
+										)}
+									</div>
+								{:else}
+									<span
+										class="material-symbols text-4xl"
+									>
+										all_inclusive
+									</span>
+								{/if}
+							</div>
+
+							<div
+								class="w-full overflow-hidden text-ellipsis whitespace-nowrap capitalize"
+							>
+								{#if O.isSome(maybeName)}
+									{maybeName.value}
+								{:else}
+									[NO NAME]
+								{/if}
+							</div>
+						</button>
+					</div>
+				{/each}
+				{#each state.products.corrupts as product, index}
+					{@const maybeName =
+						product.maybeName ?? O.none()}
+					<div
+						class="duration-fade absolute flex shadow-sm transition-all left-1 right-1"
+						style:top={`${(state.products.entries.length + index * 65).toString(10)}px`}
+					>
+						<button
+							class="bg-background flex min-h-[60px] w-full select-none"
+							style="content-visibility: 'auto'"
+						>
+							<div
+								class="duration-fade relative flex h-[24px] w-[24px] items-center justify-center p-7 text-sm transition-all"
+							></div>
+
+							<div></div>
+
+							<div
+								class="text-secondary flex w-[26px] flex-col items-center"
+							></div>
+
+							<div
+								class="w-full overflow-hidden text-ellipsis whitespace-nowrap capitalize"
+							>
+								{#if O.isSome(maybeName)}
+									#CORRUPT# {maybeName.value}
+								{:else}
+									#CORRUPT# [NO NAME]
+								{/if}
+							</div>
+						</button>
+					</div>
+				{/each}
+			</div>
+		{:else}
+			<div
+				class="font-stylish fixed right-0 bottom-[150px] left-0 flex flex-col items-end transition-all duration-[fade]"
+			>
+				<div class="w-full p-[20px] text-center">
+					Uh-oh, your fridge is looking a little
+					empty! <br />
+					Let’s fill it up!
+				</div>
+				<div
+					style:filter={'invert(16%) sepia(2%) saturate(24%) hue-rotate(336deg) brightness(97%) contrast(93%)'}
+					style:background-image={`url(${imgUrl})`}
+					class="relative top-[30px] right-[70px] h-[160px] w-[160px] bg-contain bg-no-repeat"
+				></div>
+			</div>
+		{/if}
+
+		{#if !isSelectModeEnabled}
+			<a
+				role="button"
+				href="/add-product"
+				class="bg-primary text-background duration-fade shadow-primary/70 fixed right-[16px] bottom-[20px] flex h-[96px] w-[96px] items-center justify-center rounded-4xl shadow-md transition-all"
+			>
+				<span class="material-symbols text-4xl">
+					add
+				</span>
+			</a>
+		{/if}
+	{/if}
+{/if}

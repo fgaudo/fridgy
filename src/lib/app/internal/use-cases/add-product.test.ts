@@ -25,7 +25,7 @@ describe('Add product', () => {
 					const exit = yield* Eff.exit(
 						service({
 							name,
-							expirationDate,
+							maybeExpirationDate: expirationDate,
 						}),
 					);
 
@@ -72,7 +72,7 @@ describe('Add product', () => {
 					const exit = yield* Eff.exit(
 						service({
 							name,
-							expirationDate,
+							maybeExpirationDate: expirationDate,
 						}),
 					);
 

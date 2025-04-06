@@ -1,18 +1,18 @@
 import { L } from '$lib/core/imports.ts';
 
-import type { Dependencies } from '$lib/app/index.ts';
+import type { UseCases } from '$lib/app/use-cases.ts';
 
 import {
 	Capacitor,
 	Mock,
 } from '$lib/data/index.ts';
 
-export const dependencies: Dependencies =
-	import.meta.env.PROD
-		? L.provide(
-				Capacitor.dependencies,
-				L.succeed(Capacitor.Tag, {
-					db: Capacitor.registerSqlitePlugin(),
-				}),
-			)
-		: Mock.dependencies;
+export const useCases: UseCases = import.meta.env
+	.PROD
+	? L.provide(
+			Capacitor.useCases,
+			L.succeed(Capacitor.Tag, {
+				db: Capacitor.registerSqlitePlugin(),
+			}),
+		)
+	: Mock.useCases;

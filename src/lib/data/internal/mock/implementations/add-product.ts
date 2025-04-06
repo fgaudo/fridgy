@@ -1,4 +1,4 @@
-import { Eff, L } from '$lib/core/imports.ts';
+import { Eff, L, O } from '$lib/core/imports.ts';
 
 import { AddProduct } from '$lib/app/queries.ts';
 
@@ -17,8 +17,13 @@ export const command = L.succeed(
 
 			const index = (i++).toString(10);
 			map.set(index, {
-				...product,
-				id: index,
+				maybeName: O.some(product.name),
+				maybeExpirationDate:
+					product.maybeExpirationDate,
+				maybeCreationDate: O.some(
+					product.creationDate,
+				),
+				maybeId: O.some(index),
 			});
 		}),
 );

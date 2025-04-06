@@ -19,10 +19,12 @@ export default {
 		},
 	],
 	importOrder: [
+		'^\\./\\$types$',
 		'^\\$lib/core',
 		'^\\$lib/domain',
 		'^\\$lib/app',
 		'^\\$lib/data',
+		'^\\$lib/',
 		'^[./]',
 	],
 	importOrderSeparation: true,

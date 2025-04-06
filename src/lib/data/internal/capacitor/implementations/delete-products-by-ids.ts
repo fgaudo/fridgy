@@ -17,7 +17,7 @@ export const command = L.effect(
 
 		return ids =>
 			Eff.gen(function* () {
-				const idsArray = yield* Eff.all(
+				const idsArray = yield* Eff.allSuccesses(
 					Array.from(ids).map(id =>
 						Eff.gen(function* () {
 							const parsed = N.parse(id);
@@ -29,8 +29,8 @@ export const command = L.effect(
 								return parsed.value;
 							}
 
-							yield* H.logError(
-								'Id has incorrect format',
+							yield* H.logWarning(
+								'Id has incorrect format. Skipping.',
 							).pipe(Eff.annotateLogs({ id }));
 
 							return yield* Eff.fail(undefined);

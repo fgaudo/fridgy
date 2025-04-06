@@ -1,4 +1,5 @@
 import {
+	A,
 	C,
 	E,
 	Eff,
@@ -14,32 +15,41 @@ import * as P from '$lib/domain/product.ts';
 
 import { GetSortedProducts } from '$lib/app/queries.ts';
 
+export type Product =
+	| {
+			id: string;
+			name: NonEmptyTrimmedString;
+			maybeExpirationDate?: O.Option<Int.Integer>;
+			creationDate: Int.Integer;
+			isValid: true;
+	  }
+	| {
+			id: string;
+			maybeName?: O.Option<NonEmptyTrimmedString>;
+			maybeExpirationDate?: O.Option<Int.Integer>;
+			maybeCreationDate?: O.Option<Int.Integer>;
+			isValid: false;
+	  };
+
+export type CorruptProduct = {
+	maybeName?: O.Option<NonEmptyTrimmedString>;
+};
+
 export class Tag extends C.Tag(
 	'GetSortedProductsUseCase',
 )<
 	Tag,
 	Eff.Effect<
 		{
-			models: ProductModel[];
+			products: {
+				entries: Product[];
+				corrupts: CorruptProduct[];
+			};
 			total: NNInt.NonNegativeInteger;
 		},
 		void
 	>
 >() {}
-
-export type ProductModel =
-	| {
-			isValid: true;
-			id: string;
-			name: NonEmptyTrimmedString;
-			expirationDate: O.Option<Int.Integer>;
-			creationDate: Int.Integer;
-	  }
-	| {
-			isValid: false;
-			id: O.Option<string>;
-			name: O.Option<NonEmptyTrimmedString>;
-	  };
 
 export const useCase = L.effect(
 	Tag,
@@ -66,38 +76,54 @@ export const useCase = L.effect(
 				Eff.annotateLogs('products', rawProducts),
 			);
 
-			const models: ProductModel[] =
-				yield* Eff.all(
-					rawProducts.map(rawProduct =>
-						Eff.gen(function* () {
-							if (!rawProduct.isValid) {
-								yield* H.logError(
-									'Invalid raw product supplied',
-								).pipe(
-									Eff.annotateLogs({
-										p: rawProduct,
-									}),
-								);
-								return rawProduct;
-							}
+			const [corrupts, entries] = A.partitionMap(
+				rawProducts,
+				rawProduct =>
+					E.gen(function* () {
+						const maybeId =
+							rawProduct.maybeId ?? O.none();
 
-							const product =
-								P.createProduct(rawProduct);
+						if (O.isNone(maybeId)) {
+							return yield* E.left(rawProduct);
+						}
 
+						const product =
+							P.createProduct(rawProduct);
+
+						if (O.isNone(product)) {
 							return {
-								name: P.name(product),
-								expirationDate:
-									P.expirationDate(product),
-								id: rawProduct.id,
-								creationDate:
-									rawProduct.creationDate,
-								isValid: true,
-							} as const;
-						}),
-					),
-				);
+								maybeCreationDate:
+									rawProduct.maybeCreationDate,
+								maybeExpirationDate:
+									rawProduct.maybeExpirationDate,
+								maybeName: rawProduct.maybeName,
+								id: maybeId.value,
+								isValid: false,
+							} satisfies Product;
+						}
 
-			return { models, total };
+						return {
+							isValid: true,
+							id: maybeId.value,
+							name: P.name(product.value),
+							creationDate: P.creationDate(
+								product.value,
+							),
+							maybeExpirationDate:
+								P.maybeExpirationDate(
+									product.value,
+								),
+						} satisfies Product;
+					}),
+			);
+
+			return {
+				products: {
+					entries,
+					corrupts,
+				},
+				total,
+			};
 		});
 	}),
 );

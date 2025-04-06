@@ -1,6 +1,7 @@
-import { ROUTES } from '$lib/ui/router.tsx';
 import { A } from '@solidjs/router';
 import { type Component } from 'solid-js';
+
+import { ROUTES } from '$lib/ui/router.tsx';
 
 import { useUiStateContext } from '../context.tsx';
 

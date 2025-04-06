@@ -1,6 +1,6 @@
 import { C, L } from '$lib/core/imports.ts';
 
-import { dependencies as appDependencies } from '$lib/app/index.ts';
+import { useCases as appUseCases } from '$lib/app/use-cases.ts';
 
 import {
 	type FridgySqlitePlugin,
@@ -22,7 +22,7 @@ export class Tag extends C.Tag(
 	}
 >() {}
 
-export const dependencies = appDependencies.pipe(
+export const useCases = appUseCases.pipe(
 	L.provide(addProductLayer),
 	L.provide(deleteProductByIdsLayer),
 	L.provide(getSortedProductsLayer),

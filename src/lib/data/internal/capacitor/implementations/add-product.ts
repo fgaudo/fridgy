@@ -16,16 +16,16 @@ export const command = L.effect(
 
 		return product =>
 			Eff.gen(function* () {
+				const maybeExpirationDate =
+					product.maybeExpirationDate ?? O.none();
 				yield* H.tryPromise(() =>
 					db.addProduct({
 						product: {
 							name: product.name,
 							creationDate: product.creationDate,
-							expirationDate: O.isSome(
-								product.expirationDate,
-							)
-								? product.expirationDate.value
-								: undefined,
+							expirationDate: O.getOrUndefined(
+								maybeExpirationDate,
+							),
 						},
 					}),
 				);

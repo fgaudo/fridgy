@@ -8,19 +8,12 @@ import {
 	O,
 } from '$lib/core/imports.ts';
 
-export type ProductDTO =
-	| {
-			isValid: true;
-			id: string;
-			name: NETS.NonEmptyTrimmedString;
-			expirationDate: O.Option<Int.Integer>;
-			creationDate: Int.Integer;
-	  }
-	| {
-			isValid: false;
-			id: O.Option<string>;
-			name: O.Option<NETS.NonEmptyTrimmedString>;
-	  };
+export type ProductDTO = {
+	maybeId?: O.Option<string>;
+	maybeName?: O.Option<NETS.NonEmptyTrimmedString>;
+	maybeExpirationDate?: O.Option<Int.Integer>;
+	maybeCreationDate?: O.Option<Int.Integer>;
+};
 
 export class Tag extends Context.Tag(
 	'ProductsService',

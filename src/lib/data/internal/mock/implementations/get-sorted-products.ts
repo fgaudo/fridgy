@@ -10,46 +10,36 @@ import {
 } from '$lib/core/imports.ts';
 
 import { GetSortedProducts as Query } from '$lib/app/queries.ts';
-import type { GetSortedProducts as Usecase } from '$lib/app/use-cases.ts';
 
 import { withErrors } from '../constants.ts';
 import { map } from '../db.ts';
 
 const ord = Ord.make(
 	(
-		p1: Usecase.ProductModel,
-		p2: Usecase.ProductModel,
+		p1: Query.ProductDTO,
+		p2: Query.ProductDTO,
 	) => {
-		if (p1.isValid && !p2.isValid) {
-			return -1;
-		}
-
-		if (!p1.isValid && p2.isValid) {
-			return 1;
-		}
-
-		if (p1.isValid && p2.isValid) {
-			return Ord.combineAll([
-				pipe(
-					Ord.number,
-					Ord.reverse,
-					O.getOrder,
-					Ord.reverse,
-					Ord.mapInput(
-						(product: typeof p1) =>
-							product.expirationDate,
-					),
+		return Ord.combineAll([
+			pipe(
+				Ord.number,
+				Ord.reverse,
+				O.getOrder,
+				Ord.reverse,
+				Ord.mapInput(
+					(product: typeof p1) =>
+						product.maybeExpirationDate ??
+						O.none(),
 				),
-				pipe(
-					Ord.string,
-					Ord.mapInput(
-						(product: typeof p1) => product.name,
-					),
+			),
+			pipe(
+				Ord.string,
+				O.getOrder,
+				Ord.mapInput(
+					(product: typeof p1) =>
+						product.maybeName ?? O.none(),
 				),
-			])(p1, p2);
-		}
-
-		return 0;
+			),
+		])(p1, p2);
 	},
 );
 
@@ -61,10 +51,9 @@ export const query = L.succeed(
 
 		const total = map.size;
 
-		const products: Usecase.ProductModel[] =
+		const products: Query.ProductDTO[] =
 			Array.from(map.values()).map(elem => ({
 				...elem,
-				isValid: true,
 			}));
 
 		return {

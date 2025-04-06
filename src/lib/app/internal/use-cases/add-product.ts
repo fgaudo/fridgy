@@ -22,7 +22,7 @@ export class Tag extends C.Tag(
 
 export interface ProductDTO {
 	name: NETS.NonEmptyTrimmedString;
-	expirationDate: O.Option<Int.Integer>;
+	maybeExpirationDate: O.Option<Int.Integer>;
 }
 
 export const useCase = L.effect(
@@ -32,12 +32,20 @@ export const useCase = L.effect(
 
 		return productData =>
 			Eff.gen(function* () {
-				const product =
-					P.createProduct(productData);
-
 				const timestamp = Int.unsafe_fromNumber(
 					yield* Cl.currentTimeMillis,
 				);
+
+				const product = P.createProduct({
+					...productData,
+					maybeCreationDate: timestamp,
+				});
+
+				if (O.isNone(product)) {
+					return yield* Eff.fail(
+						'Product is not valid',
+					);
+				}
 
 				yield* H.logInfo(
 					'Product save attempt',
@@ -49,9 +57,9 @@ export const useCase = L.effect(
 				);
 
 				yield* addProduct({
-					name: P.name(product),
-					expirationDate:
-						P.expirationDate(product),
+					name: P.name(product.value),
+					maybeExpirationDate:
+						P.maybeExpirationDate(product.value),
 					creationDate: timestamp,
 				});
 
