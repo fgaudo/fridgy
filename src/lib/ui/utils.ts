@@ -1,41 +1,94 @@
+import {
+	type BackButtonListener,
+	App as CAP,
+} from '@capacitor/app';
 import type { PluginListenerHandle } from '@capacitor/core';
 import {
 	differenceInDays,
 	differenceInHours,
 } from 'date-fns';
-import { onDestroy } from 'svelte';
+import { onDestroy, onMount } from 'svelte';
 
 import { Eff, F, H } from '$lib/core/imports.ts';
+
+export function usePromise<T>(
+	promise: () => Promise<T>,
+	cb: (t: T) => void,
+) {
+	let destroyed = false;
+
+	onDestroy(() => {
+		destroyed = true;
+	});
+
+	return () => {
+		if (destroyed) {
+			return;
+		}
+
+		promise().then(t => {
+			if (destroyed) {
+				return;
+			}
+
+			cb(t);
+		});
+	};
+}
 
 export function useEffect(
 	effect: Eff.Effect<unknown, unknown>,
 ) {
-	let fiber: F.Fiber<unknown, unknown>;
+	let fiber: F.RuntimeFiber<unknown, unknown>;
 	let isDestroyed = false;
 
-	onDestroy(() => {
-		isDestroyed = true;
+	const listener = () => {
 		if (fiber) {
-			Eff.runFork(F.interrupt(fiber));
+			fiber.unsafeInterruptAsFork(fiber.id());
 		}
+	};
+
+	onMount(() => {
+		addEventListener('beforeunload', listener);
+
+		return () => {
+			isDestroyed = true;
+			removeEventListener(
+				'beforeunload',
+				listener,
+			);
+
+			if (fiber) {
+				fiber.unsafeInterruptAsFork(fiber.id());
+			}
+		};
 	});
 
 	return () => {
 		if (fiber) {
-			Eff.runFork(F.interrupt(fiber));
+			fiber.unsafeInterruptAsFork(fiber.id());
 		}
 
 		if (isDestroyed) {
 			return;
 		}
 
-		fiber = H.runForkWithLogs(effect);
+		fiber = Eff.runFork(H.effectWithLogs(effect));
 	};
 }
 
-export function useCapacitorListener(
-	handle: () => Promise<PluginListenerHandle>,
-) {
+export function useCapacitorListener({
+	event,
+	cb,
+}:
+	| {
+			event: 'resume';
+			cb: () => void;
+	  }
+	| {
+			event: 'backButton';
+			cb: BackButtonListener;
+	  }) {
 	let listener: PluginListenerHandle;
 	let isDestroyed = false;
 
@@ -47,11 +100,30 @@ export function useCapacitorListener(
 	});
 
 	return () => {
+		if (listener) {
+			listener.remove();
+		}
+
 		if (isDestroyed) {
 			return;
 		}
 
-		handle().then(l => {
+		const promise =
+			event === 'resume'
+				? CAP.addListener(event, () => {
+						if (isDestroyed) {
+							return;
+						}
+						cb();
+					})
+				: CAP.addListener(event, e => {
+						if (isDestroyed) {
+							return;
+						}
+						cb(e);
+					});
+
+		promise.then(l => {
 			if (isDestroyed) {
 				l.remove();
 				return;

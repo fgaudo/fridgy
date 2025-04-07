@@ -8,6 +8,7 @@ import {
 	NETS,
 	O,
 } from '$lib/core/imports.ts';
+import type { OptionOrValue } from '$lib/core/utils.ts';
 
 import * as P from '$lib/domain/product.ts';
 
@@ -22,7 +23,7 @@ export class Tag extends C.Tag(
 
 export interface ProductDTO {
 	name: NETS.NonEmptyTrimmedString;
-	maybeExpirationDate: O.Option<Int.Integer>;
+	maybeExpirationDate: OptionOrValue<Int.Integer>;
 }
 
 export const useCase = L.effect(
@@ -57,10 +58,12 @@ export const useCase = L.effect(
 				);
 
 				yield* addProduct({
-					name: P.name(product.value),
+					maybeName: P.name(product.value),
 					maybeExpirationDate:
 						P.maybeExpirationDate(product.value),
-					creationDate: timestamp,
+					maybeCreationDate: P.creationDate(
+						product.value,
+					),
 				});
 
 				yield* H.logInfo('Product saved').pipe(

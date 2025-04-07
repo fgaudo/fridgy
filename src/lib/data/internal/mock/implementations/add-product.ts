@@ -17,12 +17,11 @@ export const command = L.succeed(
 
 			const index = (i++).toString(10);
 			map.set(index, {
-				maybeName: O.some(product.name),
+				maybeName: product.maybeName,
 				maybeExpirationDate:
 					product.maybeExpirationDate,
-				maybeCreationDate: O.some(
-					product.creationDate,
-				),
+				maybeCreationDate:
+					product.maybeCreationDate,
 				maybeId: O.some(index),
 			});
 		}),

@@ -1,8 +1,10 @@
-import { E, Eff, O } from '$lib/core/imports.ts';
+import type { SvelteSet } from 'svelte/reactivity';
+
+import { E, Eff } from '$lib/core/imports.ts';
 
 import { GetSortedProducts } from '$lib/app/use-cases.ts';
 
-import { useCases } from '$lib/runtime.ts';
+import { useCases } from '$lib/bootstrap';
 
 export type ProductViewModel =
 	GetSortedProducts.Product & {
@@ -14,7 +16,7 @@ export type CorruptProductViewModel =
 
 export type State = {
 	isMenuOpen: boolean;
-	selected: Set<string>;
+	selected: SvelteSet<string>;
 	receivedError: boolean;
 	isLoading: boolean;
 	total: number;
@@ -62,55 +64,48 @@ export function toggleMenu(state: State) {
 	state.isMenuOpen = !state.isMenuOpen;
 }
 
-function toggleItem(
-	id: string | O.Option<string>,
-) {
-	return (state: State) => {
-		if (O.isOption(id) && O.isNone(id)) {
+function toggleItem(id: string) {
+	return (
+		state: State,
+		product: ProductViewModel,
+	) => {
+		if (state.selected.has(id)) {
+			product.isSelected = false;
+			state.selected.delete(id);
 			return;
 		}
 
-		const _id =
-			O.isOption(id) && O.isSome(id)
-				? id.value
-				: id;
-
-		if (state.selected.has(_id)) {
-			state.selected.delete(_id);
-			return;
-		}
-
-		state.selected.add(_id);
+		state.selected.add(id);
+		product.isSelected = true;
 	};
 }
 
-export function toggleItemByTap(
-	id: string | O.Option<string>,
-) {
+export function toggleItemByTap(id: string) {
 	return (
 		state: State,
+		product: ProductViewModel,
 		isSelectModeEnabled: boolean,
 	) => {
 		if (!isSelectModeEnabled) {
 			return;
 		}
 
-		toggleItem(id)(state);
+		toggleItem(id)(state, product);
 	};
 }
 
-export function toggleItemByHold(
-	id: string | O.Option<string>,
-) {
+export function toggleItemByHold(id: string) {
 	return (
 		state: State,
+		product: ProductViewModel,
+
 		isSelectModeEnabled: boolean,
 	) => {
 		if (isSelectModeEnabled) {
 			return;
 		}
 
-		toggleItem(id)(state);
+		toggleItem(id)(state, product);
 	};
 }
 

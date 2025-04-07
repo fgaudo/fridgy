@@ -42,28 +42,20 @@ const loggerLayer = Logger.replace(
 	),
 );
 
-export const runForkWithLogs = (
+export const effectWithLogs = (
 	effect: Eff.Effect<unknown, unknown>,
 ) => {
-	const fiber = Eff.runFork(
-		Eff.unsandbox(
-			Eff.catchTags(
-				Eff.sandbox(
-					effect.pipe(Eff.provide(loggerLayer)),
-				),
-				{
-					Die: defect =>
-						logError(defect.toString()),
-				},
+	return Eff.unsandbox(
+		Eff.catchTags(
+			Eff.sandbox(
+				effect.pipe(Eff.provide(loggerLayer)),
 			),
+			{
+				Die: defect =>
+					logError(defect.toString()),
+			},
 		),
 	);
-
-	addEventListener('beforeunload', () => {
-		fiber.unsafeInterruptAsFork(fiber.id());
-	});
-
-	return fiber;
 };
 
 export const logInfo = (

@@ -3,13 +3,13 @@ import {
 	Eff,
 	Int,
 	NETS,
-	O,
 } from '$lib/core/imports.ts';
+import type { OptionOrValue } from '$lib/core/utils.ts';
 
 export interface ProductDTO {
-	name: NETS.NonEmptyTrimmedString;
-	maybeExpirationDate?: O.Option<Int.Integer>;
-	creationDate: Int.Integer;
+	maybeName?: OptionOrValue<NETS.NonEmptyTrimmedString>;
+	maybeExpirationDate?: OptionOrValue<Int.Integer>;
+	maybeCreationDate?: OptionOrValue<Int.Integer>;
 }
 
 export class Tag extends C.Tag(

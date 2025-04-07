@@ -8,6 +8,7 @@ import {
 	O,
 	Ord,
 } from '$lib/core/imports.ts';
+import { asOption } from '$lib/core/utils.ts';
 
 import { GetSortedProducts as Query } from '$lib/app/queries.ts';
 
@@ -25,18 +26,15 @@ const ord = Ord.make(
 				Ord.reverse,
 				O.getOrder,
 				Ord.reverse,
-				Ord.mapInput(
-					(product: typeof p1) =>
-						product.maybeExpirationDate ??
-						O.none(),
+				Ord.mapInput((product: typeof p1) =>
+					asOption(product.maybeExpirationDate),
 				),
 			),
 			pipe(
 				Ord.string,
 				O.getOrder,
-				Ord.mapInput(
-					(product: typeof p1) =>
-						product.maybeName ?? O.none(),
+				Ord.mapInput((product: typeof p1) =>
+					asOption(product.maybeName),
 				),
 			),
 		])(p1, p2);

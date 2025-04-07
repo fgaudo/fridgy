@@ -1,6 +1,6 @@
 import { LogLevel } from 'effect';
 
-import { Log, MR } from './imports.ts';
+import { Log, MR, O } from './imports.ts';
 
 export const generateHexColor = () => {
 	const alphabet = 'ABCDEF0123456789';
@@ -21,3 +21,12 @@ export const useOrCreateError =
 export const testRuntime = MR.make(
 	Log.minimumLogLevel(LogLevel.None),
 );
+
+export type OptionOrValue<T> =
+	| T
+	| O.Option<T>
+	| undefined;
+
+export const asOption = <T>(
+	t: T | O.Option<T> | undefined,
+) => (O.isOption(t) ? t : O.fromNullable(t));

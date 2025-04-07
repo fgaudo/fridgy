@@ -5,14 +5,14 @@ import {
 	Int,
 	NETS,
 	NNInt,
-	O,
 } from '$lib/core/imports.ts';
+import type { OptionOrValue } from '$lib/core/utils.ts';
 
 export type ProductDTO = {
-	maybeId?: O.Option<string>;
-	maybeName?: O.Option<NETS.NonEmptyTrimmedString>;
-	maybeExpirationDate?: O.Option<Int.Integer>;
-	maybeCreationDate?: O.Option<Int.Integer>;
+	maybeId?: OptionOrValue<string>;
+	maybeName?: OptionOrValue<NETS.NonEmptyTrimmedString>;
+	maybeExpirationDate?: OptionOrValue<Int.Integer>;
+	maybeCreationDate?: OptionOrValue<Int.Integer>;
 };
 
 export class Tag extends Context.Tag(

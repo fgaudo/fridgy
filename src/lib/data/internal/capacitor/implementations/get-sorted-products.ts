@@ -20,8 +20,8 @@ const ProductsListSchema = Sc.Struct({
 	total: Sc.Number,
 	products: Sc.Array(
 		Sc.Struct({
-			id: Sc.OptionFromUndefinedOr(
-				Sc.Number,
+			id: Sc.OptionFromSelf(
+				Sc.Unknown,
 			).annotations({
 				decodingFallback: H.fallback(O.none()),
 			}),
@@ -94,14 +94,24 @@ export const query = L.effect(
 
 			const total = totalResult.value;
 
-			const products =
-				decodeResult.right.products.map(
-					product =>
-						({
-							maybeId: pipe(
+			const products = yield* Eff.all(
+				decodeResult.right.products.map(product =>
+					Eff.gen(function* () {
+						return {
+							maybeId: yield* O.match(
 								product.id,
-								O.map(id => id.toString(10)),
+								{
+									onNone: () =>
+										Eff.succeed(O.none<string>()),
+									onSome: id =>
+										Eff.option(
+											Eff.try(() =>
+												JSON.stringify(id),
+											),
+										),
+								},
 							),
+
 							maybeName: pipe(
 								product.name,
 								O.flatMap(NETS.fromString),
@@ -116,8 +126,10 @@ export const query = L.effect(
 								product.creationDate,
 								O.flatMap(Int.fromNumber),
 							),
-						}) satisfies GetSortedProducts.ProductDTO,
-				);
+						} satisfies GetSortedProducts.ProductDTO;
+					}),
+				),
+			);
 
 			return {
 				total,

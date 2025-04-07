@@ -2,7 +2,6 @@ import {
 	Eff,
 	H,
 	L,
-	N,
 	O,
 } from '$lib/core/imports.ts';
 
@@ -20,12 +19,11 @@ export const command = L.effect(
 				const idsArray = yield* Eff.allSuccesses(
 					Array.from(ids).map(id =>
 						Eff.gen(function* () {
-							const parsed = N.parse(id);
+							const parsed = yield* Eff.option(
+								Eff.try(() => JSON.parse(id)),
+							);
 
-							if (
-								O.isSome(parsed) &&
-								Number.isInteger(parsed.value)
-							) {
+							if (O.isSome(parsed)) {
 								return parsed.value;
 							}
 

@@ -4,6 +4,7 @@ import {
 	L,
 	O,
 } from '$lib/core/imports.ts';
+import { asOption } from '$lib/core/utils.ts';
 
 import { AddProduct } from '$lib/app/queries.ts';
 
@@ -16,13 +17,22 @@ export const command = L.effect(
 
 		return product =>
 			Eff.gen(function* () {
-				const maybeExpirationDate =
-					product.maybeExpirationDate ?? O.none();
+				const maybeExpirationDate = asOption(
+					product.maybeExpirationDate,
+				);
 				yield* H.tryPromise(() =>
 					db.addProduct({
 						product: {
-							name: product.name,
-							creationDate: product.creationDate,
+							name: O.getOrElse(
+								asOption(product.maybeName),
+								() => '[no name]',
+							),
+							creationDate: O.getOrElse(
+								asOption(
+									product.maybeCreationDate,
+								),
+								() => 0,
+							),
 							expirationDate: O.getOrUndefined(
 								maybeExpirationDate,
 							),

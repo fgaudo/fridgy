@@ -33,9 +33,9 @@ describe('Add product', () => {
 
 					const exit = yield* Eff.exit(
 						service({
-							name,
+							maybeName: name,
 							maybeExpirationDate: expirationDate,
-							creationDate,
+							maybeCreationDate: creationDate,
 						}),
 					);
 
@@ -68,9 +68,9 @@ describe('Add product', () => {
 
 					const exit = yield* Eff.exit(
 						service({
-							name,
+							maybeName: name,
 							maybeExpirationDate: expirationDate,
-							creationDate,
+							maybeCreationDate: creationDate,
 						}),
 					);
 
@@ -104,9 +104,9 @@ describe('Add product', () => {
 
 					const exit = yield* Eff.exit(
 						service({
-							name,
+							maybeName: name,
 							maybeExpirationDate: expirationDate,
-							creationDate,
+							maybeCreationDate: creationDate,
 						}),
 					);
 

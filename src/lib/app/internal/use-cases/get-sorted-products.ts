@@ -10,6 +10,10 @@ import {
 	O,
 } from '$lib/core/imports.ts';
 import type { NonEmptyTrimmedString } from '$lib/core/non-empty-trimmed-string.ts';
+import {
+	type OptionOrValue,
+	asOption,
+} from '$lib/core/utils.ts';
 
 import * as P from '$lib/domain/product.ts';
 
@@ -19,20 +23,20 @@ export type Product =
 	| {
 			id: string;
 			name: NonEmptyTrimmedString;
-			maybeExpirationDate?: O.Option<Int.Integer>;
+			maybeExpirationDate?: OptionOrValue<Int.Integer>;
 			creationDate: Int.Integer;
 			isValid: true;
 	  }
 	| {
 			id: string;
-			maybeName?: O.Option<NonEmptyTrimmedString>;
-			maybeExpirationDate?: O.Option<Int.Integer>;
-			maybeCreationDate?: O.Option<Int.Integer>;
+			maybeName?: OptionOrValue<NonEmptyTrimmedString>;
+			maybeExpirationDate?: OptionOrValue<Int.Integer>;
+			maybeCreationDate?: OptionOrValue<Int.Integer>;
 			isValid: false;
 	  };
 
 export type CorruptProduct = {
-	maybeName?: O.Option<NonEmptyTrimmedString>;
+	maybeName?: OptionOrValue<NonEmptyTrimmedString>;
 };
 
 export class Tag extends C.Tag(
@@ -80,8 +84,9 @@ export const useCase = L.effect(
 				rawProducts,
 				rawProduct =>
 					E.gen(function* () {
-						const maybeId =
-							rawProduct.maybeId ?? O.none();
+						const maybeId = asOption(
+							rawProduct.maybeId,
+						);
 
 						if (O.isNone(maybeId)) {
 							return yield* E.left(rawProduct);
@@ -92,11 +97,7 @@ export const useCase = L.effect(
 
 						if (O.isNone(product)) {
 							return {
-								maybeCreationDate:
-									rawProduct.maybeCreationDate,
-								maybeExpirationDate:
-									rawProduct.maybeExpirationDate,
-								maybeName: rawProduct.maybeName,
+								...rawProduct,
 								id: maybeId.value,
 								isValid: false,
 							} satisfies Product;

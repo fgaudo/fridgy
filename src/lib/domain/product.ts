@@ -3,6 +3,10 @@ import {
 	NETS,
 	O,
 } from '$lib/core/imports.ts';
+import {
+	type OptionOrValue,
+	asOption,
+} from '$lib/core/utils.ts';
 
 const productSymbol: unique symbol = Symbol();
 
@@ -15,38 +19,22 @@ export interface Product {
 }
 
 export const createProduct: (f: {
-	maybeName?:
-		| O.Option<NETS.NonEmptyTrimmedString>
-		| NETS.NonEmptyTrimmedString;
-	maybeCreationDate?:
-		| O.Option<Int.Integer>
-		| Int.Integer;
-	maybeExpirationDate?:
-		| O.Option<Int.Integer>
-		| Int.Integer;
-}) => O.Option<Product> = productDummy =>
+	maybeName?: OptionOrValue<NETS.NonEmptyTrimmedString>;
+	maybeCreationDate?: OptionOrValue<Int.Integer>;
+	maybeExpirationDate?: OptionOrValue<Int.Integer>;
+}) => O.Option<Product> = product =>
 	O.gen(function* () {
-		const name = yield* O.isOption(
-			productDummy.maybeName,
-		)
-			? productDummy.maybeName
-			: O.fromNullable(productDummy.maybeName);
+		const name = yield* asOption(
+			product.maybeName,
+		);
 
-		const creationDate = yield* O.isOption(
-			productDummy.maybeCreationDate,
-		)
-			? productDummy.maybeCreationDate
-			: O.fromNullable(
-					productDummy.maybeCreationDate,
-				);
+		const creationDate = yield* asOption(
+			product.maybeCreationDate,
+		);
 
-		const expirationDate = O.isOption(
-			productDummy.maybeExpirationDate,
-		)
-			? productDummy.maybeExpirationDate
-			: O.fromNullable(
-					productDummy.maybeExpirationDate,
-				);
+		const expirationDate = asOption(
+			product.maybeExpirationDate,
+		);
 
 		return {
 			[productSymbol]: {
