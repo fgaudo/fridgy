@@ -7,34 +7,9 @@ import {
 	differenceInDays,
 	differenceInHours,
 } from 'date-fns';
-import { onDestroy, onMount } from 'svelte';
+import { onDestroy } from 'svelte';
 
 import { Eff, F, H } from '$lib/core/imports.ts';
-
-export function usePromise<T>(
-	promise: () => Promise<T>,
-	cb: (t: T) => void,
-) {
-	let destroyed = false;
-
-	onDestroy(() => {
-		destroyed = true;
-	});
-
-	return () => {
-		if (destroyed) {
-			return;
-		}
-
-		promise().then(t => {
-			if (destroyed) {
-				return;
-			}
-
-			cb(t);
-		});
-	};
-}
 
 export function useEffect(
 	effect: Eff.Effect<unknown, unknown>,
@@ -42,26 +17,12 @@ export function useEffect(
 	let fiber: F.RuntimeFiber<unknown, unknown>;
 	let isDestroyed = false;
 
-	const listener = () => {
+	onDestroy(() => {
+		isDestroyed = true;
+
 		if (fiber) {
 			fiber.unsafeInterruptAsFork(fiber.id());
 		}
-	};
-
-	onMount(() => {
-		addEventListener('beforeunload', listener);
-
-		return () => {
-			isDestroyed = true;
-			removeEventListener(
-				'beforeunload',
-				listener,
-			);
-
-			if (fiber) {
-				fiber.unsafeInterruptAsFork(fiber.id());
-			}
-		};
 	});
 
 	return () => {

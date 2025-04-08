@@ -1,8 +1,14 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { App as CAP } from '@capacitor/app';
+	import {
+		Delete,
+		Info,
+		Menu,
+		Plus,
+		Trash,
+		Trash2,
+	} from '@lucide/svelte';
 	import { format } from 'date-fns';
-	import { duration } from 'effect/Config';
 	import { onMount } from 'svelte';
 	import { tap } from 'svelte-gestures';
 	import { expoIn, expoOut } from 'svelte/easing';
@@ -84,23 +90,18 @@
 				Fridgy
 			</p>
 
-			<button class="w-full p-4 block relative">
+			<div class="w-full p-4 block relative">
 				<Ripple
-					onClick={() => {
+					ontap={() => {
 						goto('/about');
 					}}
 				></Ripple>
 
 				<div class="flex items-center">
-					<div
-						class="material-symbols text-2xl mr-4"
-					>
-						info
-					</div>
-
+					<Info />
 					About
 				</div>
-			</button>
+			</div>
 			<a
 				class="text-primary block w-full pl-2 pr-2 pt-2 pb-4 text-center underline items-end mt-auto"
 				href="https://github.com/fgaudo/fridgy/wiki/Fridgy-%E2%80%90-Privacy-policy"
@@ -133,296 +134,279 @@
 			class="ml-2 relative h-12 w-12 flex items-center justify-center rounded-full overflow-hidden"
 		>
 			{#if isSelectModeEnabled}
-				<button
-					class="material-symbols duration-fade absolute top-0 right-0 bottom-0 left-0 text-2xl"
-				>
-					<Ripple
-						onClick={() => {
-							Home.disableSelectMode(state);
-						}}
-					></Ripple>
+				<Ripple
+					ontap={() => {
+						Home.disableSelectMode(state);
+					}}
+				></Ripple>
 
+				<span class="material-symbols text-2xl">
 					close
-				</button>
+				</span>
 			{:else}
-				<button
-					class="material-symbols duration-fade absolute top-0 right-0 bottom-0 left-0 text-2xl"
-				>
-					<Ripple
-						onClick={() => {
-							Home.toggleMenu(state);
-						}}
-					></Ripple>
-
-					menu
-				</button>
+				<Ripple
+					ontap={() => {
+						Home.toggleMenu(state);
+					}}
+				></Ripple>
+				<Menu />
 			{/if}
 		</div>
 
 		<div
-			class="font-stylish pl-2 text-2xl font-bold"
+			class="font-stylish pl-2 text-2xl font-bold translate-y-[2px]"
 		>
 			Fridgy
 		</div>
 		<div class="grow"></div>
 		{#if isSelectModeEnabled}
 			<div
-				class="flex h-full items-center text-lg"
+				class="flex h-full items-center text-lg font-stylish translate-y-[2px]"
 			>
 				{state.selected.size}
 			</div>
 
-			<button
-				class="material-symbols text-2xl"
-				onclick={() => {
-					// TODO
-				}}
+			<div
+				class="ml-2 mr-2 relative h-12 w-12 flex items-center justify-center rounded-full overflow-hidden"
 			>
-				delete
-			</button>
+				<Ripple ontap={() => {}}></Ripple>
+				<Trash2 />
+			</div>
 		{/if}
 	</div>
 	<div class="bg-background min-h-screen">
 		{#if state.receivedError}
 			<div
-				class="absolute top-0 right-0 bottom-0 left-0 flex h-full w-full items-center justify-center text-center text-lg"
+				class="flex h-screen w-screen items-center justify-center text-center text-lg"
 			>
-				<p>
+				<div>
 					Could not load the list! :(
 					<br />
-					<button
-						class="text-primary underline"
-						onclick={fetchList}
+					<div
+						class="text-primary underline relative overflow-hidden rounded-full py-1 px-2"
 					>
+						<Ripple ontap={fetchList}></Ripple>
 						Try again
-					</button>
-				</p>
+					</div>
+				</div>
+			</div>
+		{:else if state.total > 0}
+			<p
+				class="fixed top-[64px] z-999 w-full px-[14px] pt-[10px] pb-[8px] text-xs"
+			>
+				{state.total} items
+			</p>
+
+			<div
+				class="relative mt-[34px] flex w-full items-center"
+				style:height={state.total > 0
+					? `${((state.total - 1) * 65 + 185).toString(10)}px`
+					: 'auto'}
+			>
+				{#each state.products.entries as product, index (product.id)}
+					{@const maybeExpiration = asOption(
+						product.maybeExpirationDate,
+					)}
+
+					{@const maybeCreation = asOption(
+						product.isValid
+							? product.creationDate
+							: product.maybeCreationDate,
+					)}
+
+					{@const maybeName = asOption(
+						product.isValid
+							? product.name
+							: product.maybeName,
+					)}
+					<div
+						class="duration-fade absolute flex shadow-sm left-1 right-1"
+						style:top={`${(index * 65).toString(10)}px`}
+					>
+						<div
+							class={[
+								'bg-background flex min-h-[60px] w-full select-none',
+								{
+									'bg-secondary/10':
+										product.isSelected,
+								},
+							]}
+							style="content-visibility: 'auto'"
+							onclick={() => {
+								Home.toggleItemByTap(product.id)(
+									state,
+									product,
+									isSelectModeEnabled,
+								);
+							}}
+							oncontextmenu={() => {
+								Home.toggleItemByHold(product.id)(
+									state,
+									product,
+									isSelectModeEnabled,
+								);
+							}}
+						>
+							<div
+								class="duration-fade relative flex h-[24px] w-[24px] items-center justify-center p-7 text-sm"
+							>
+								{#if !isSelectModeEnabled && O.isSome(maybeExpiration) && maybeExpiration.value > state.currentTimestamp}
+									<div
+										class={[
+											'text-primary duration-fade absolute text-xs ',
+											{
+												'text-red-500 font-bold':
+													maybeExpiration.value <
+													state.currentTimestamp,
+											},
+										]}
+									>
+										{Utils.formatRemainingTime(
+											state.currentTimestamp,
+											maybeExpiration.value,
+										)}
+									</div>
+								{/if}
+							</div>
+
+							<div>
+								{#if O.isNone(maybeCreation)}
+									No creation date
+								{:else if O.isSome(maybeExpiration)}
+									{@const expiration =
+										maybeExpiration.value}
+									{@const creation =
+										maybeCreation.value}
+
+									{#if expiration < state.currentTimestamp}
+										<p
+											class="font-bold text-red-500"
+										>
+											Expired
+										</p>
+									{:else}
+										{@const totalDuration =
+											expiration - creation}
+										{@const remainingDuration =
+											expiration -
+											state.currentTimestamp}
+										{@const currentProgress =
+											remainingDuration /
+											totalDuration}
+
+										<div
+											class="border-primary mt-[5px] h-[5px] w-full border-[1px]"
+										>
+											<div
+												class="bg-primary h-full"
+												style:width={`${(
+													currentProgress * 100
+												).toString()}%`}
+											></div>
+										</div>
+									{/if}
+								{/if}
+							</div>
+
+							<div
+								class="text-secondary flex w-[26px] flex-col items-center"
+							>
+								{#if O.isSome(maybeExpiration)}
+									<div class="text-sm">
+										{format(
+											maybeExpiration.value,
+											'd',
+										)}
+									</div>
+									<div class="text-sm">
+										{format(
+											maybeExpiration.value,
+											'LLL',
+										)}
+									</div>
+								{:else}
+									<span
+										class="material-symbols text-4xl"
+									>
+										all_inclusive
+									</span>
+								{/if}
+							</div>
+
+							<div
+								class="w-full overflow-hidden text-ellipsis whitespace-nowrap capitalize"
+							>
+								{#if O.isSome(maybeName)}
+									{maybeName.value}
+								{:else}
+									[NO NAME]
+								{/if}
+							</div>
+						</div>
+					</div>
+				{/each}
+				{#each state.products.corrupts as product, index}
+					{@const maybeName = asOption(
+						product.maybeName,
+					)}
+					<div
+						class="duration-fade absolute flex shadow-sm left-1 right-1"
+						style:top={`${(state.products.entries.length + index * 65).toString(10)}px`}
+					>
+						<div
+							class="bg-background flex min-h-[60px] w-full select-none"
+							style="content-visibility: 'auto'"
+						>
+							<div
+								class="duration-fade relative flex h-[24px] w-[24px] items-center justify-center p-7 text-sm"
+							></div>
+
+							<div></div>
+
+							<div
+								class="text-secondary flex w-[26px] flex-col items-center"
+							></div>
+
+							<div
+								class="w-full overflow-hidden text-ellipsis whitespace-nowrap capitalize"
+							>
+								{#if O.isSome(maybeName)}
+									#CORRUPT# {maybeName.value}
+								{:else}
+									#CORRUPT# [NO NAME]
+								{/if}
+							</div>
+						</div>
+					</div>
+				{/each}
 			</div>
 		{:else}
-			{#if state.total > 0}
-				<p
-					class="fixed top-[64px] z-999 w-full px-[14px] pt-[10px] pb-[8px] text-xs"
-				>
-					{state.total} items
-				</p>
-
-				<div
-					class="relative mt-[34px] flex w-full items-center"
-					style:height={state.total > 0
-						? `${((state.total - 1) * 65 + 185).toString(10)}px`
-						: 'auto'}
-				>
-					{#each state.products.entries as product, index (product.id)}
-						{@const maybeExpiration = asOption(
-							product.maybeExpirationDate,
-						)}
-
-						{@const maybeCreation = asOption(
-							product.isValid
-								? product.creationDate
-								: product.maybeCreationDate,
-						)}
-
-						{@const maybeName = asOption(
-							product.isValid
-								? product.name
-								: product.maybeName,
-						)}
-						<div
-							class="duration-fade absolute flex shadow-sm left-1 right-1"
-							style:top={`${(index * 65).toString(10)}px`}
-						>
-							<button
-								class={[
-									'bg-background flex min-h-[60px] w-full select-none',
-									{
-										'bg-secondary/10':
-											product.isSelected,
-									},
-								]}
-								style="content-visibility: 'auto'"
-								onclick={() => {
-									Home.toggleItemByTap(
-										product.id,
-									)(
-										state,
-										product,
-										isSelectModeEnabled,
-									);
-								}}
-								oncontextmenu={() => {
-									Home.toggleItemByHold(
-										product.id,
-									)(
-										state,
-										product,
-										isSelectModeEnabled,
-									);
-								}}
-							>
-								<div
-									class="duration-fade relative flex h-[24px] w-[24px] items-center justify-center p-7 text-sm"
-								>
-									{#if !isSelectModeEnabled && O.isSome(maybeExpiration) && maybeExpiration.value > state.currentTimestamp}
-										<div
-											class={[
-												'text-primary duration-fade absolute text-xs ',
-												{
-													'text-red-500 font-bold':
-														maybeExpiration.value <
-														state.currentTimestamp,
-												},
-											]}
-										>
-											{Utils.formatRemainingTime(
-												state.currentTimestamp,
-												maybeExpiration.value,
-											)}
-										</div>
-									{/if}
-								</div>
-
-								<div>
-									{#if O.isNone(maybeCreation)}
-										No creation date
-									{:else if O.isSome(maybeExpiration)}
-										{@const expiration =
-											maybeExpiration.value}
-										{@const creation =
-											maybeCreation.value}
-
-										{#if expiration < state.currentTimestamp}
-											<p
-												class="font-bold text-red-500"
-											>
-												Expired
-											</p>
-										{:else}
-											{@const totalDuration =
-												expiration - creation}
-											{@const remainingDuration =
-												expiration -
-												state.currentTimestamp}
-											{@const currentProgress =
-												remainingDuration /
-												totalDuration}
-
-											<div
-												class="border-primary mt-[5px] h-[5px] w-full border-[1px]"
-											>
-												<div
-													class="bg-primary h-full"
-													style:width={`${(
-														currentProgress * 100
-													).toString()}%`}
-												></div>
-											</div>
-										{/if}
-									{/if}
-								</div>
-
-								<div
-									class="text-secondary flex w-[26px] flex-col items-center"
-								>
-									{#if O.isSome(maybeExpiration)}
-										<div class="text-sm">
-											{format(
-												maybeExpiration.value,
-												'd',
-											)}
-										</div>
-										<div class="text-sm">
-											{format(
-												maybeExpiration.value,
-												'LLL',
-											)}
-										</div>
-									{:else}
-										<span
-											class="material-symbols text-4xl"
-										>
-											all_inclusive
-										</span>
-									{/if}
-								</div>
-
-								<div
-									class="w-full overflow-hidden text-ellipsis whitespace-nowrap capitalize"
-								>
-									{#if O.isSome(maybeName)}
-										{maybeName.value}
-									{:else}
-										[NO NAME]
-									{/if}
-								</div>
-							</button>
-						</div>
-					{/each}
-					{#each state.products.corrupts as product, index}
-						{@const maybeName = asOption(
-							product.maybeName,
-						)}
-						<div
-							class="duration-fade absolute flex shadow-sm left-1 right-1"
-							style:top={`${(state.products.entries.length + index * 65).toString(10)}px`}
-						>
-							<button
-								class="bg-background flex min-h-[60px] w-full select-none"
-								style="content-visibility: 'auto'"
-							>
-								<div
-									class="duration-fade relative flex h-[24px] w-[24px] items-center justify-center p-7 text-sm"
-								></div>
-
-								<div></div>
-
-								<div
-									class="text-secondary flex w-[26px] flex-col items-center"
-								></div>
-
-								<div
-									class="w-full overflow-hidden text-ellipsis whitespace-nowrap capitalize"
-								>
-									{#if O.isSome(maybeName)}
-										#CORRUPT# {maybeName.value}
-									{:else}
-										#CORRUPT# [NO NAME]
-									{/if}
-								</div>
-							</button>
-						</div>
-					{/each}
+			<div
+				class="font-stylish fixed right-0 bottom-[150px] left-0 flex flex-col items-end duration-[fade]"
+			>
+				<div class="w-full p-[20px] text-center">
+					Uh-oh, your fridge is looking a little
+					empty! <br />
+					Let’s fill it up!
 				</div>
-			{:else}
 				<div
-					class="font-stylish fixed right-0 bottom-[150px] left-0 flex flex-col items-end duration-[fade]"
-				>
-					<div
-						class="w-full p-[20px] text-center"
-					>
-						Uh-oh, your fridge is looking a little
-						empty! <br />
-						Let’s fill it up!
-					</div>
-					<div
-						style:filter={'invert(16%) sepia(2%) saturate(24%) hue-rotate(336deg) brightness(97%) contrast(93%)'}
-						style:background-image={`url(${imgUrl})`}
-						class="relative top-[30px] right-[70px] h-[160px] w-[160px] bg-contain bg-no-repeat"
-					></div>
-				</div>
-			{/if}
-
-			{#if !isSelectModeEnabled}
-				<a
-					role="button"
-					href="/add-product"
-					class="bg-primary text-background duration-fade shadow-primary/70 fixed right-[16px] bottom-[20px] flex h-[96px] w-[96px] items-center justify-center rounded-4xl shadow-md"
-				>
-					<span class="material-symbols text-4xl">
-						add
-					</span>
-				</a>
-			{/if}
+					style:filter={'invert(16%) sepia(2%) saturate(24%) hue-rotate(336deg) brightness(97%) contrast(93%)'}
+					style:background-image={`url("${imgUrl}")`}
+					class="relative top-[30px] right-[70px] h-[160px] w-[160px] bg-contain bg-no-repeat"
+				></div>
+			</div>
+		{/if}
+		{#if !isSelectModeEnabled}
+			<div
+				class="bg-primary overflow-hidden text-background shadow-primary/70 fixed right-[16px] bottom-[20px] flex h-[96px] w-[96px] items-center justify-center rounded-4xl shadow-md"
+			>
+				<Ripple
+					ontap={() => {
+						goto('/add-product');
+					}}
+				></Ripple>
+				<Plus size="36" />
+			</div>
 		{/if}
 	</div>
 {/if}

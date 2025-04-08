@@ -13,7 +13,7 @@ export default {
 			// these options are set automatically — see below
 			pages: 'build',
 			assets: 'build',
-			fallback: '200.html',
+			fallback: undefined,
 			precompress: false,
 			strict: true,
 		}),
