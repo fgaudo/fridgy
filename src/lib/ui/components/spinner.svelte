@@ -1,16 +1,31 @@
-<div
-	class="fixed top-0 right-0 bottom-0 left-0 flex items-center justify-center transition-all"
+<script lang="ts">
+	let {
+		fill = 'var(--color-primary)',
+		height = '24px',
+		width = '24px',
+		backgroundColor = 'var(--color-background)',
+	}: {
+		fill?: string;
+		height?: string;
+		width?: string;
+		backgroundColor?: string;
+	} = $props();
+</script>
+
+<svg
+	aria-hidden="true"
+	style:fill
+	style:height
+	style:width
+	style:background-color={backgroundColor}
+	style:animation-duration={'400ms'}
+	class="text-background animate-spin"
+	viewBox="0 0 100 101"
+	fill="none"
+	xmlns="http://www.w3.org/2000/svg"
 >
-	<div role="status">
-		<svg
-			aria-hidden="true"
-			class="fill-accent text-background h-8 w-8 animate-spin"
-			viewBox="0 0 100 101"
-			fill="none"
-			xmlns="http://www.w3.org/2000/svg"
-		>
-			<path
-				d="M93.9676 39.0409C96.393 38.4038
+	<path
+		d="M93.9676 39.0409C96.393 38.4038
                                 97.8624 35.9116 97.0079
                                 33.5539C95.2932 28.8227 92.871
                                 24.3692 89.8167 20.348C85.8452
@@ -29,9 +44,6 @@
                                 28.9121 86.7997 32.2913 88.1811
                                 35.8758C89.083 38.2158 91.5421
                                 39.6781 93.9676 39.0409Z"
-				fill="currentFill"
-			></path>
-		</svg>
-		<span class="sr-only">Loading...</span>
-	</div>
-</div>
+		fill="currentFill"
+	></path>
+</svg>

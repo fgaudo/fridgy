@@ -65,10 +65,9 @@ export const query = L.effect(
 			);
 
 			if (E.isLeft(result)) {
-				yield* H.logError(result.left.toString());
-				return yield* Eff.fail([
-					result.left.toString(),
-				]);
+				return yield* new GetSortedProducts.Infrastructure(
+					{ message: result.left.toString() },
+				);
 			}
 
 			const decodeResult =
@@ -77,11 +76,11 @@ export const query = L.effect(
 				)(result.right).pipe(Eff.either);
 
 			if (E.isLeft(decodeResult)) {
-				yield* H.logError(
-					decodeResult.left.toString(),
+				return yield* new GetSortedProducts.Invalid(
+					{
+						message: decodeResult.left.toString(),
+					},
 				);
-
-				return yield* Eff.fail(undefined);
 			}
 
 			const totalResult = NNInt.fromNumber(
@@ -89,7 +88,12 @@ export const query = L.effect(
 			);
 
 			if (O.isNone(totalResult)) {
-				return yield* Eff.fail(undefined);
+				return yield* new GetSortedProducts.Invalid(
+					{
+						message:
+							'The total is a not a non-negative integer',
+					},
+				);
 			}
 
 			const total = totalResult.value;

@@ -27,7 +27,7 @@ export const command = L.effect(
 								return parsed.value;
 							}
 
-							yield* H.logWarning(
+							yield* Eff.logWarning(
 								'Id has incorrect format. Skipping.',
 							).pipe(Eff.annotateLogs({ id }));
 
@@ -36,7 +36,7 @@ export const command = L.effect(
 					),
 				);
 
-				yield* H.logDebug(
+				yield* Eff.logDebug(
 					`About to delete ${idsArray.length.toString(10)} products`,
 				);
 
@@ -44,9 +44,16 @@ export const command = L.effect(
 					db.deleteProductsByIds({
 						ids: idsArray,
 					}),
+				).pipe(
+					Eff.catchTags({
+						UnknownException: ({ message }) =>
+							new DeleteProductsByIds.Infrastructure(
+								{ message },
+							),
+					}),
 				);
 
-				yield* H.logDebug(
+				yield* Eff.logDebug(
 					'No problems while deleting products',
 				);
 			});

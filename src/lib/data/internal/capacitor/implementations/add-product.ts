@@ -38,9 +38,16 @@ export const command = L.effect(
 							),
 						},
 					}),
+				).pipe(
+					Eff.catchTags({
+						UnknownException: ({ message }) =>
+							new AddProduct.Infrastructure({
+								message,
+							}),
+					}),
 				);
 
-				yield* H.logDebug(
+				yield* Eff.logDebug(
 					'No errors adding the product',
 				);
 			});

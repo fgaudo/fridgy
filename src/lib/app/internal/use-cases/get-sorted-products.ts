@@ -1,13 +1,15 @@
+import { Duration } from 'effect';
+
 import {
 	A,
 	C,
 	E,
 	Eff,
-	H,
 	Int,
 	L,
 	NNInt,
 	O,
+	pipe,
 } from '$lib/core/imports.ts';
 import type { NonEmptyTrimmedString } from '$lib/core/non-empty-trimmed-string.ts';
 import {
@@ -23,20 +25,20 @@ export type Product =
 	| {
 			id: string;
 			name: NonEmptyTrimmedString;
-			maybeExpirationDate?: OptionOrValue<Int.Integer>;
+			maybeExpirationDate: OptionOrValue<Int.Integer>;
 			creationDate: Int.Integer;
 			isValid: true;
 	  }
 	| {
 			id: string;
-			maybeName?: OptionOrValue<NonEmptyTrimmedString>;
-			maybeExpirationDate?: OptionOrValue<Int.Integer>;
-			maybeCreationDate?: OptionOrValue<Int.Integer>;
+			maybeName: OptionOrValue<NonEmptyTrimmedString>;
+			maybeExpirationDate: OptionOrValue<Int.Integer>;
+			maybeCreationDate: OptionOrValue<Int.Integer>;
 			isValid: false;
 	  };
 
 export type CorruptProduct = {
-	maybeName?: OptionOrValue<NonEmptyTrimmedString>;
+	maybeName: OptionOrValue<NonEmptyTrimmedString>;
 };
 
 export class Tag extends C.Tag(
@@ -62,22 +64,26 @@ export const useCase = L.effect(
 			yield* GetSortedProducts.Tag;
 
 		return Eff.gen(function* () {
-			const result = yield* Eff.either(
-				getProductListWithTotal,
+			const [
+				duration,
+				{ total, products: rawProducts },
+			] = yield* pipe(
+				Eff.timed(getProductListWithTotal),
+				Eff.catchAll(({ message }) =>
+					Eff.logError(message).pipe(
+						Eff.andThen(Eff.fail(undefined)),
+					),
+				),
 			);
 
-			if (E.isLeft(result)) {
-				yield* H.logError(result);
-				return yield* Eff.fail(undefined);
-			}
-
-			const { total, products: rawProducts } =
-				result.right;
-
-			yield* H.logInfo(
+			yield* Eff.logInfo(
 				`Received ${rawProducts.length.toString(10)} products out of ${total.toString(10)}`,
 			).pipe(
 				Eff.annotateLogs('products', rawProducts),
+				Eff.annotateLogs(
+					'duration',
+					Duration.format(duration),
+				),
 			);
 
 			const [corrupts, entries] = A.partitionMap(
@@ -97,7 +103,11 @@ export const useCase = L.effect(
 
 						if (O.isNone(product)) {
 							return {
-								...rawProduct,
+								maybeName: rawProduct.maybeName,
+								maybeCreationDate:
+									rawProduct.maybeCreationDate,
+								maybeExpirationDate:
+									rawProduct.maybeExpirationDate,
 								id: maybeId.value,
 								isValid: false,
 							} satisfies Product;

@@ -19,9 +19,9 @@ export interface Product {
 }
 
 export const createProduct: (f: {
-	maybeName?: OptionOrValue<NETS.NonEmptyTrimmedString>;
-	maybeCreationDate?: OptionOrValue<Int.Integer>;
-	maybeExpirationDate?: OptionOrValue<Int.Integer>;
+	maybeName: OptionOrValue<NETS.NonEmptyTrimmedString>;
+	maybeCreationDate: OptionOrValue<Int.Integer>;
+	maybeExpirationDate: OptionOrValue<Int.Integer>;
 }) => O.Option<Product> = product =>
 	O.gen(function* () {
 		const name = yield* asOption(

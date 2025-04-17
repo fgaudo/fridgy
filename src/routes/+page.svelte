@@ -1,65 +1,60 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import {
-		Delete,
+		Infinity,
 		Info,
 		Menu,
 		Plus,
-		Trash,
 		Trash2,
 	} from '@lucide/svelte';
 	import { format } from 'date-fns';
-	import { onMount } from 'svelte';
+	import { onDestroy, onMount } from 'svelte';
 	import { tap } from 'svelte-gestures';
 	import { expoIn, expoOut } from 'svelte/easing';
-	import { SvelteSet } from 'svelte/reactivity';
-	import { fade, fly } from 'svelte/transition';
+	import {
+		fade,
+		fly,
+		scale,
+	} from 'svelte/transition';
 
-	import { O } from '$lib/core/imports.ts';
+	import {
+		Eff,
+		O,
+		pipe,
+	} from '$lib/core/imports.ts';
 	import { asOption } from '$lib/core/utils.ts';
 
 	import imgUrl from '$lib/ui/assets/arrow.svg';
 	import Ripple from '$lib/ui/components/ripple.svelte';
 	import Spinner from '$lib/ui/components/spinner.svelte';
-	import * as Home from '$lib/ui/home.ts';
+	import { getUsecasesContext } from '$lib/ui/context.ts';
+	import * as Store from '$lib/ui/pages/home/store.svelte';
+	import * as Tasks from '$lib/ui/pages/home/tasks';
 	import * as Utils from '$lib/ui/utils.ts';
 
-	let state = $state<Home.State>({
-		isMenuOpen: false,
-		isLoading: false,
-		selected: new SvelteSet(),
-		receivedError: false,
-		total: 0,
-		products: {
-			entries: [],
-			corrupts: [],
-		},
-		currentTimestamp: Date.now(),
-	});
+	const store = Store.createStore();
 
-	let isSelectModeEnabled = $derived(
-		state.selected.size > 0,
+	const useCases = getUsecasesContext();
+
+	const startRefreshList = pipe(
+		Tasks.refreshList(store),
+		Eff.provide(useCases),
+		Utils.createEffect,
 	);
-
-	const fetchList = Utils.useEffect(
-		Home.fetchList(state),
-	);
-
-	const startRefreshTimeInterval =
-		Utils.useEffect(
-			Home.refreshTimeInterval(state),
-		);
 
 	const startResumeListener =
-		Utils.useCapacitorListener({
+		Utils.createCapacitorListener({
 			event: 'resume',
-			cb: () => {
-				Home.refreshTime(state);
-			},
+			cb: store.actions.refreshTime,
 		});
 
+	const startRefreshTimeInterval =
+		Utils.createEffect(
+			Tasks.refreshTimeInterval(store),
+		);
+
 	onMount(() => {
-		fetchList();
+		startRefreshList();
 
 		startResumeListener();
 
@@ -67,10 +62,8 @@
 	});
 </script>
 
-{#if state.isLoading}
-	<Spinner />
-{:else}
-	{#if state.isMenuOpen}
+<div in:fade>
+	{#if store.state.isMenuOpen}
 		<div
 			in:fly={{
 				x: -256,
@@ -84,21 +77,21 @@
 				opacity: 1,
 				easing: expoIn,
 			}}
-			class="h-screen flex-col flex fixed bg-background z-50 rounded-r-2xl overflow-hidden w-64"
+			class="h-screen flex-col flex fixed bg-background z-50 rounded-r-2xl overflow-hidden w-64 will-change-transform"
 		>
 			<p class="font-stylish pt-8 pb-4 pl-4">
 				Fridgy
 			</p>
 
-			<div class="w-full p-4 block relative">
+			<div class="w-full p-4 flex relative">
 				<Ripple
 					ontap={() => {
 						goto('/about');
 					}}
 				></Ripple>
+				<Info />
 
-				<div class="flex items-center">
-					<Info />
+				<div class="ml-4 flex items-center">
 					About
 				</div>
 			</div>
@@ -120,9 +113,7 @@
 				easing: expoIn,
 			}}
 			use:tap={() => ({})}
-			ontap={() => {
-				Home.toggleMenu(state);
-			}}
+			ontap={store.actions.toggleMenu}
 			class="h-full z-40 flex-col fixed w-full bg-black/50 backdrop-blur-xs"
 		></div>
 	{/if}
@@ -133,21 +124,16 @@
 		<div
 			class="ml-2 relative h-12 w-12 flex items-center justify-center rounded-full overflow-hidden"
 		>
-			{#if isSelectModeEnabled}
+			{#if store.derived.isSelectModeEnabled}
 				<Ripple
-					ontap={() => {
-						Home.disableSelectMode(state);
-					}}
+					ontap={store.actions.disableSelectMode}
 				></Ripple>
 
 				<span class="material-symbols text-2xl">
 					close
 				</span>
 			{:else}
-				<Ripple
-					ontap={() => {
-						Home.toggleMenu(state);
-					}}
+				<Ripple ontap={store.actions.toggleMenu}
 				></Ripple>
 				<Menu />
 			{/if}
@@ -159,11 +145,11 @@
 			Fridgy
 		</div>
 		<div class="grow"></div>
-		{#if isSelectModeEnabled}
+		{#if store.derived.isSelectModeEnabled}
 			<div
 				class="flex h-full items-center text-lg font-stylish translate-y-[2px]"
 			>
-				{state.selected.size}
+				{store.state.selected.size}
 			</div>
 
 			<div
@@ -175,7 +161,7 @@
 		{/if}
 	</div>
 	<div class="bg-background min-h-screen">
-		{#if state.receivedError}
+		{#if store.state.receivedError}
 			<div
 				class="flex h-screen w-screen items-center justify-center text-center text-lg"
 			>
@@ -185,25 +171,26 @@
 					<div
 						class="text-primary underline relative overflow-hidden rounded-full py-1 px-2"
 					>
-						<Ripple ontap={fetchList}></Ripple>
+						<Ripple ontap={startRefreshList}
+						></Ripple>
 						Try again
 					</div>
 				</div>
 			</div>
-		{:else if state.total > 0}
+		{:else if store.state.total > 0}
 			<p
 				class="fixed top-[64px] z-999 w-full px-[14px] pt-[10px] pb-[8px] text-xs"
 			>
-				{state.total} items
+				{store.state.total} items
 			</p>
 
 			<div
 				class="relative mt-[34px] flex w-full items-center"
-				style:height={state.total > 0
-					? `${((state.total - 1) * 65 + 185).toString(10)}px`
+				style:height={store.state.total > 0
+					? `${((store.state.total - 1) * 65 + 185).toString(10)}px`
 					: 'auto'}
 			>
-				{#each state.products.entries as product, index (product.id)}
+				{#each store.state.products.entries as product, index (product.id)}
 					{@const maybeExpiration = asOption(
 						product.maybeExpirationDate,
 					)}
@@ -232,37 +219,25 @@
 								},
 							]}
 							style="content-visibility: 'auto'"
-							onclick={() => {
-								Home.toggleItemByTap(product.id)(
-									state,
-									product,
-									isSelectModeEnabled,
-								);
-							}}
-							oncontextmenu={() => {
-								Home.toggleItemByHold(product.id)(
-									state,
-									product,
-									isSelectModeEnabled,
-								);
-							}}
 						>
 							<div
 								class="duration-fade relative flex h-[24px] w-[24px] items-center justify-center p-7 text-sm"
 							>
-								{#if !isSelectModeEnabled && O.isSome(maybeExpiration) && maybeExpiration.value > state.currentTimestamp}
+								{#if !store.derived.isSelectModeEnabled && O.isSome(maybeExpiration) && maybeExpiration.value > store.state.currentTimestamp}
 									<div
 										class={[
 											'text-primary duration-fade absolute text-xs ',
 											{
 												'text-red-500 font-bold':
 													maybeExpiration.value <
-													state.currentTimestamp,
+													store.state
+														.currentTimestamp,
 											},
 										]}
 									>
 										{Utils.formatRemainingTime(
-											state.currentTimestamp,
+											store.state
+												.currentTimestamp,
 											maybeExpiration.value,
 										)}
 									</div>
@@ -278,7 +253,7 @@
 									{@const creation =
 										maybeCreation.value}
 
-									{#if expiration < state.currentTimestamp}
+									{#if expiration < store.state.currentTimestamp}
 										<p
 											class="font-bold text-red-500"
 										>
@@ -289,7 +264,8 @@
 											expiration - creation}
 										{@const remainingDuration =
 											expiration -
-											state.currentTimestamp}
+											store.state
+												.currentTimestamp}
 										{@const currentProgress =
 											remainingDuration /
 											totalDuration}
@@ -325,11 +301,7 @@
 										)}
 									</div>
 								{:else}
-									<span
-										class="material-symbols text-4xl"
-									>
-										all_inclusive
-									</span>
+									<Infinity />
 								{/if}
 							</div>
 
@@ -345,13 +317,13 @@
 						</div>
 					</div>
 				{/each}
-				{#each state.products.corrupts as product, index}
+				{#each store.state.products.corrupts as product, index}
 					{@const maybeName = asOption(
 						product.maybeName,
 					)}
 					<div
 						class="duration-fade absolute flex shadow-sm left-1 right-1"
-						style:top={`${(state.products.entries.length + index * 65).toString(10)}px`}
+						style:top={`${(store.state.products.entries.length + index * 65).toString(10)}px`}
 					>
 						<div
 							class="bg-background flex min-h-[60px] w-full select-none"
@@ -390,13 +362,13 @@
 					Let’s fill it up!
 				</div>
 				<div
-					style:filter={'invert(16%) sepia(2%) saturate(24%) hue-rotate(336deg) brightness(97%) contrast(93%)'}
+					style:filter={'invert(16%) sepia(2%) saturate(24%) hue-rotate(336deg) brightness(97%) contrast(53%)'}
 					style:background-image={`url("${imgUrl}")`}
 					class="relative top-[30px] right-[70px] h-[160px] w-[160px] bg-contain bg-no-repeat"
 				></div>
 			</div>
 		{/if}
-		{#if !isSelectModeEnabled}
+		{#if !store.derived.isSelectModeEnabled}
 			<div
 				class="bg-primary overflow-hidden text-background shadow-primary/70 fixed right-[16px] bottom-[20px] flex h-[96px] w-[96px] items-center justify-center rounded-4xl shadow-md"
 			>
@@ -409,4 +381,4 @@
 			</div>
 		{/if}
 	</div>
-{/if}
+</div>

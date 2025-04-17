@@ -7,28 +7,35 @@
 
 	import { Eff } from '$lib/core/imports.ts';
 
+	import { useCases } from '$lib/bootstrap.ts';
 	import '$lib/ui/assets/index.css';
 	import Spinner from '$lib/ui/components/spinner.svelte';
+	import { setUsecasesContext } from '$lib/ui/context.ts';
 	import * as Utils from '$lib/ui/utils.ts';
 
 	let { children } = $props();
 	let areFontsLoaded = $state(false);
 
 	const startBackButtonListener =
-		Utils.useCapacitorListener({
+		Utils.createCapacitorListener({
 			event: 'backButton',
 			cb: e => {
 				if (!e.canGoBack) {
 					void CAP.exitApp();
 					return;
 				}
-				window.history.back();
 			},
 		});
 
-	const awaitFonts = Utils.useEffect(
-		Eff.promise(async () => {
-			await document.fonts.ready;
+	setUsecasesContext(useCases);
+
+	const awaitFonts = Utils.createEffect(
+		Eff.gen(function* () {
+			yield* Eff.all([
+				Eff.promise(() => document.fonts.ready),
+				Eff.sleep(400),
+			]);
+
 			areFontsLoaded = true;
 		}),
 	);
@@ -47,12 +54,20 @@
 	style:padding-right={'env(safe-area-inset-right, 0)'}
 >
 	{#if areFontsLoaded}
-		<div in:scale={{ start: 0.7 }}>
+		<div in:fade={{ delay: 400 }}>
 			{@render children()}
 		</div>
 	{:else}
-		<div out:fade>
-			<Spinner></Spinner>
+		<div
+			out:fade
+			class="absolute top-0 bottom-0 left-0 right-0 flex items-center justify-center"
+		>
+			<Spinner
+				height="96px"
+				width="96px"
+				fill="var(--color-secondary)"
+				backgroundColor="transparent"
+			></Spinner>
 		</div>
 	{/if}
 </div>

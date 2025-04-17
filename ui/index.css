@@ -15,6 +15,13 @@
 
 * {
 	min-width: 0;
+	transition-duration: var(
+		--transition-duration-fade
+	);
+
+	@starting-style {
+		opacity: 0;
+	}
 }
 
 body {
@@ -33,14 +40,9 @@ html {
 	color: var(--color-on-background);
 }
 
-* {
-	transition-duration: var(
-		--transition-duration-fade
-	);
-
-	@starting-style {
-		opacity: 0;
-	}
+a {
+	white-space: nowrap;
+	color: green
 }
 
 .fridgy-safe-area {

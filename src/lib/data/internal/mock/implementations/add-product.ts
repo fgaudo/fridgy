@@ -12,7 +12,11 @@ export const command = L.succeed(
 	product =>
 		Eff.gen(function* () {
 			if (withErrors && Math.random() < 0.5) {
-				return yield* Eff.fail(undefined);
+				return yield* Eff.fail(
+					new AddProduct.Infrastructure({
+						message: 'infrastructure',
+					}),
+				);
 			}
 
 			const index = (i++).toString(10);

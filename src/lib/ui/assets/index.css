@@ -25,6 +25,10 @@ body {
 
 html {
 	user-select: none;
-	background-color: var(--color-secondary);
+	background-color: var(--color-background);
 	color: var(--color-on-background);
+}
+
+a {
+	white-space: nowrap;
 }

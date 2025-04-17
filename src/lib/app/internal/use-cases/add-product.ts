@@ -2,13 +2,15 @@ import {
 	C,
 	Cl,
 	Eff,
-	H,
 	Int,
 	L,
 	NETS,
 	O,
 } from '$lib/core/imports.ts';
-import type { OptionOrValue } from '$lib/core/utils.ts';
+import type {
+	OptionOrValue,
+	Value,
+} from '$lib/core/utils.ts';
 
 import * as P from '$lib/domain/product.ts';
 
@@ -22,7 +24,7 @@ export class Tag extends C.Tag(
 >() {}
 
 export interface ProductDTO {
-	name: NETS.NonEmptyTrimmedString;
+	name: Value<NETS.NonEmptyTrimmedString>;
 	maybeExpirationDate: OptionOrValue<Int.Integer>;
 }
 
@@ -38,7 +40,9 @@ export const useCase = L.effect(
 				);
 
 				const product = P.createProduct({
-					...productData,
+					maybeName: productData.name,
+					maybeExpirationDate:
+						productData.maybeExpirationDate,
 					maybeCreationDate: timestamp,
 				});
 
@@ -48,7 +52,7 @@ export const useCase = L.effect(
 					);
 				}
 
-				yield* H.logInfo(
+				yield* Eff.logInfo(
 					'Product save attempt',
 				).pipe(
 					Eff.annotateLogs(
@@ -66,7 +70,7 @@ export const useCase = L.effect(
 					),
 				});
 
-				yield* H.logInfo('Product saved').pipe(
+				yield* Eff.logInfo('Product saved').pipe(
 					Eff.annotateLogs(
 						'product',
 						productData,

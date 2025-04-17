@@ -10,7 +10,11 @@ export const command = L.succeed(
 	ids =>
 		Eff.gen(function* () {
 			if (withErrors && Math.random() < 0.5) {
-				return yield* Eff.fail(undefined);
+				return yield* Eff.fail(
+					new DeleteProductsByIds.Infrastructure({
+						message: 'infrastructure',
+					}),
+				);
 			}
 
 			for (const id of ids) {

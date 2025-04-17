@@ -10,7 +10,10 @@ import {
 } from '$lib/core/imports.ts';
 import { asOption } from '$lib/core/utils.ts';
 
-import { GetSortedProducts as Query } from '$lib/app/queries.ts';
+import {
+	GetSortedProducts,
+	GetSortedProducts as Query,
+} from '$lib/app/queries.ts';
 
 import { withErrors } from '../constants.ts';
 import { map } from '../db.ts';
@@ -45,14 +48,14 @@ export const query = L.succeed(
 	Query.Tag,
 	Eff.gen(function* () {
 		if (withErrors && Math.random() < 0.5)
-			return yield* Eff.fail(undefined);
+			return yield* new GetSortedProducts.Invalid(
+				{ message: 'error' },
+			);
 
 		const total = map.size;
 
 		const products: Query.ProductDTO[] =
-			Array.from(map.values()).map(elem => ({
-				...elem,
-			}));
+			Array.from(map.values());
 
 		return {
 			total: NNInt.unsafe_fromNumber(total),

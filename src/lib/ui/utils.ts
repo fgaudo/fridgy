@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import {
 	type BackButtonListener,
 	App as CAP,
@@ -7,38 +8,40 @@ import {
 	differenceInDays,
 	differenceInHours,
 } from 'date-fns';
+import type { Cancel } from 'effect/Runtime';
 import { onDestroy } from 'svelte';
 
-import { Eff, F, H } from '$lib/core/imports.ts';
+import { Eff, H } from '$lib/core/imports.ts';
 
-export function useEffect(
+export function createEffect(
 	effect: Eff.Effect<unknown, unknown>,
 ) {
-	let fiber: F.RuntimeFiber<unknown, unknown>;
+	let cancel:
+		| Cancel<unknown, unknown>
+		| undefined;
+
 	let isDestroyed = false;
 
 	onDestroy(() => {
 		isDestroyed = true;
 
-		if (fiber) {
-			fiber.unsafeInterruptAsFork(fiber.id());
-		}
+		cancel?.();
 	});
 
 	return () => {
-		if (fiber) {
-			fiber.unsafeInterruptAsFork(fiber.id());
-		}
+		cancel?.();
 
 		if (isDestroyed) {
 			return;
 		}
 
-		fiber = Eff.runFork(H.effectWithLogs(effect));
+		cancel = Eff.runCallback(
+			H.effectWithLogs(effect),
+		);
 	};
 }
 
-export function useCapacitorListener({
+export function createCapacitorListener({
 	event,
 	cb,
 }:
@@ -50,20 +53,16 @@ export function useCapacitorListener({
 			event: 'backButton';
 			cb: BackButtonListener;
 	  }) {
-	let listener: PluginListenerHandle;
+	let listener: PluginListenerHandle | undefined;
 	let isDestroyed = false;
 
 	onDestroy(() => {
 		isDestroyed = true;
-		if (listener) {
-			listener.remove();
-		}
+		listener?.remove();
 	});
 
 	return () => {
-		if (listener) {
-			listener.remove();
-		}
+		listener?.remove();
 
 		if (isDestroyed) {
 			return;
@@ -73,12 +72,14 @@ export function useCapacitorListener({
 			event === 'resume'
 				? CAP.addListener(event, () => {
 						if (isDestroyed) {
+							listener?.remove();
 							return;
 						}
 						cb();
 					})
 				: CAP.addListener(event, e => {
 						if (isDestroyed) {
+							listener?.remove();
 							return;
 						}
 						cb(e);

@@ -23,10 +23,33 @@ export const testRuntime = MR.make(
 );
 
 export type OptionOrValue<T> =
-	| T
-	| O.Option<T>
+	| Value<T>
+	| O.None<T>
 	| undefined;
 
 export const asOption = <T>(
-	t: T | O.Option<T> | undefined,
+	t: OptionOrValue<T>,
 ) => (O.isOption(t) ? t : O.fromNullable(t));
+
+export const asUnsafeOption = <T>(
+	t: OptionOrValue<T>,
+) => {
+	if (t === undefined) {
+		return undefined;
+	}
+
+	if (!O.isOption(t)) {
+		return t;
+	}
+
+	if (O.isNone(t)) {
+		return undefined;
+	}
+
+	return t.value;
+};
+
+export type Value<T> = T | O.Some<T>;
+
+export const asValue = <T>(t: Value<T>) =>
+	!O.isOption(t) ? t : (t as O.Some<T>).value;

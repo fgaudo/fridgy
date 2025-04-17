@@ -2,10 +2,13 @@ import {
 	A,
 	C,
 	Eff,
-	H,
 	L,
 	NEHS,
 } from '$lib/core/imports.ts';
+import {
+	type Value,
+	asValue,
+} from '$lib/core/utils.ts';
 
 import { DeleteProductsByIds } from '$lib/app/queries.ts';
 
@@ -14,7 +17,7 @@ export class Tag extends C.Tag(
 )<
 	Tag,
 	(
-		ids: NEHS.NonEmptyHashSet<string>,
+		ids: Value<NEHS.NonEmptyHashSet<string>>,
 	) => Eff.Effect<void, void>
 >() {}
 
@@ -26,16 +29,20 @@ export const useCase = L.effect(
 
 		return ids =>
 			Eff.gen(function* () {
-				H.logDebug(
+				Eff.logDebug(
 					'Delete products use-case started',
 				);
 
-				yield* deleteProductsByIds(ids);
+				const idsValue = asValue(ids);
 
-				yield* H.logInfo('Products deleted').pipe(
+				yield* deleteProductsByIds(idsValue);
+
+				yield* Eff.logInfo(
+					'Products deleted',
+				).pipe(
 					Eff.annotateLogs(
 						'ids',
-						A.fromIterable(ids),
+						A.fromIterable(idsValue),
 					),
 				);
 			});
