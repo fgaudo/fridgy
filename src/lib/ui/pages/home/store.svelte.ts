@@ -3,7 +3,7 @@ import type { ReadonlyDeep } from 'type-fest';
 
 import { E, NNInt } from '$lib/core/imports.ts';
 
-import { GetSortedProducts } from '$lib/app/use-cases.ts';
+import { GetSortedProducts } from '$lib/business/index.ts';
 
 export type ProductViewModel =
 	GetSortedProducts.Product & {

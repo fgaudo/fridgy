@@ -13,7 +13,7 @@ import { onDestroy } from 'svelte';
 
 import { Eff, H } from '$lib/core/imports.ts';
 
-export function createEffect(
+export function createRestartableEffect(
 	effect: Eff.Effect<unknown, unknown>,
 ) {
 	let cancel:
@@ -38,6 +38,40 @@ export function createEffect(
 		cancel = Eff.runCallback(
 			H.effectWithLogs(effect),
 		);
+	};
+}
+
+export function createEffect(
+	effect: Eff.Effect<unknown, unknown>,
+) {
+	let cancel:
+		| Cancel<unknown, unknown>
+		| undefined;
+
+	let isDestroyed = false;
+
+	onDestroy(() => {
+		isDestroyed = true;
+
+		cancel?.();
+	});
+
+	return () => {
+		if (isDestroyed) {
+			return;
+		}
+
+		cancel = Eff.runCallback(
+			H.effectWithLogs(effect),
+		);
+	};
+}
+
+export function createDetachedEffect(
+	effect: Eff.Effect<unknown, unknown>,
+) {
+	return () => {
+		Eff.runCallback(H.effectWithLogs(effect));
 	};
 }
 

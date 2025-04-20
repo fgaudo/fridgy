@@ -30,6 +30,6 @@ export * as PInt from './integer/positive.ts';
 export * as NEHS from './non-empty-hash-set.ts';
 export * as NETS from './non-empty-trimmed-string.ts';
 export * as Cl from 'effect/Clock';
-export * as PR from '$lib/domain/product.ts';
+export * as PR from '$lib/business/domain/product.ts';
 export * as H from './helper.ts';
 export * as DT from 'effect/DateTime';

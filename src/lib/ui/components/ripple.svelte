@@ -1,31 +1,34 @@
 <script lang="ts">
-	import { infinity } from 'effect/Duration';
-	import { press, tap } from 'svelte-gestures';
+	import { press } from 'svelte-gestures';
 	import { fade } from 'svelte/transition';
 
 	import { scale2 } from '../transitions.ts';
 
+	const ANIMATE_AFTER_ONHOLD_MS = 200;
+	const ANIMATE_AFTER_ONTAP_MS = 80;
+	const ONDOWN_DELAY_MS = 25;
+	const ONHOLD_DELAY_MS = 400;
+
 	let {
-		showRipple: isRippleShown,
-		isPressing,
+		isDown,
+		pressDelay,
 		isTapping,
+		lastPressDown,
 	} = $state<{
-		showRipple: boolean;
-		isPressing: boolean;
+		isDown: boolean;
+		pressDelay: NodeJS.Timeout | null;
 		isTapping: boolean;
+		lastPressDown: number;
 	}>({
-		showRipple: false,
-		isPressing: false,
+		isDown: false,
+		pressDelay: null,
+		lastPressDown: performance.now(),
 		isTapping: false,
 	});
 
-	const isAnimating = $derived(
-		isTapping || isPressing,
-	);
-
 	let {
 		ontap,
-		onpress,
+		onpress: onhold,
 		color = 'var(--color-secondary)',
 	}: {
 		color?: string;
@@ -40,72 +43,146 @@
 		  }
 	) = $props();
 
-	const showRipple = function () {
-		isRippleShown = true;
-	};
+	function handlePressDown() {
+		if (isTapping) {
+			return;
+		}
+		isDown = false;
+		pressDelay = setTimeout(() => {
+			isDown = true;
+			pressDelay = null;
+		}, ONDOWN_DELAY_MS);
+	}
 
-	const hideRipple = function () {
-		isRippleShown = false;
-	};
+	function handleTap() {
+		if (isTapping) {
+			return;
+		}
+		isTapping = true;
+		setTimeout(() => {
+			isDown = false;
+			isTapping = false;
+			ontap?.();
+		}, ANIMATE_AFTER_ONTAP_MS);
+	}
+
+	function handlePress() {
+		if (isTapping) {
+			return;
+		}
+		isDown = false;
+
+		onhold?.();
+	}
+
+	function handleOnUp() {
+		isDown = false;
+	}
+
+	function handleMove() {
+		if (pressDelay) {
+			clearTimeout(pressDelay);
+		}
+		isDown = false;
+	}
 </script>
 
-<button
-	use:tap={() => ({
-		timeframe: +Infinity,
-	})}
-	use:press={() => ({
-		timeframe: 500,
-		triggerBeforeFinished: true,
-	})}
-	onpressdown={() => {
-		if (isAnimating) return;
-		if (onpress && !ontap) return;
+{#if onhold && !ontap}
+	<button
+		use:press={() => ({
+			triggerBeforeFinished: true,
+			timeframe: ONHOLD_DELAY_MS,
+		})}
+		onpressdown={handlePressDown}
+		onpress={handlePress}
+		onpressmove={handleMove}
+		onpressup={handleOnUp}
+		class="absolute overflow-hidden h-full w-full top-0 left-0 z-30"
+	>
+		{@render content()}
+	</button>
+{:else if !onhold && ontap}
+	<button
+		use:press={() => ({ timeframe: 0 })}
+		onpressdown={() => {
+			if (isTapping) {
+				return;
+			}
+			pressDelay = setTimeout(() => {
+				isDown = true;
+				pressDelay = null;
+			}, ONDOWN_DELAY_MS);
+		}}
+		onpress={handleTap}
+		onpressmove={handleMove}
+		class="absolute overflow-hidden h-full w-full top-0 left-0 z-30"
+	>
+		{@render content()}
+	</button>
+{:else}
+	<button
+		use:press={() => ({
+			triggerBeforeFinished: true,
+			timeframe: ONHOLD_DELAY_MS,
+		})}
+		onpressdown={() => {
+			if (isTapping) {
+				return;
+			}
+			lastPressDown = performance.now();
+			pressDelay = setTimeout(() => {
+				isDown = true;
+				pressDelay = null;
+			}, ONDOWN_DELAY_MS);
+		}}
+		onpress={() => {
+			if (isTapping) {
+				return;
+			}
+			isTapping = true;
+			setTimeout(() => {
+				isDown = false;
+				isTapping = false;
 
-		showRipple();
-	}}
-	onpressup={() => {
-		if (isAnimating) return;
+				onhold?.();
+			}, ANIMATE_AFTER_ONHOLD_MS);
+		}}
+		onpressup={() => {
+			if (isTapping) {
+				return;
+			}
+			const now =
+				performance.now() - lastPressDown;
 
-		hideRipple();
-	}}
-	ontap={() => {
-		if (isAnimating) return;
-		if (onpress && !ontap) return;
+			if (now < ONHOLD_DELAY_MS) {
+				isTapping = true;
 
-		isTapping = true;
-		hideRipple();
-	}}
-	onpress={() => {
-		if (isAnimating) return;
-		if (!onpress) return;
+				setTimeout(() => {
+					isDown = false;
 
-		isPressing = true;
-		showRipple();
-		setTimeout(() => {
-			hideRipple();
-		});
-	}}
-	class="absolute overflow-hidden h-full w-full top-0 left-0 z-30"
->
-	{#if isRippleShown}
+					isTapping = false;
+					ontap?.();
+				}, ANIMATE_AFTER_ONTAP_MS);
+			}
+		}}
+		onpressmove={handleMove}
+		class="absolute overflow-hidden h-full w-full top-0 left-0 z-30"
+	>
+		{@render content()}
+	</button>
+{/if}
+
+{#snippet content()}
+	{#if isDown}
 		<div
 			in:scale2={{
 				start: 0,
-				duration: 550,
+				duration: 500,
 				opacity: 0.3,
 			}}
-			onoutrostart={() => {
-				if (isPressing) {
-					onpress?.();
-					isPressing = false;
-				} else if (isTapping) {
-					ontap?.();
-					isTapping = false;
-				}
-			}}
-			out:fade={{ duration: 450 }}
+			out:fade={{ duration: 200 }}
 			style:background-color={color}
-			class="aspect-square w-full absolute -translate-x-1/2 -translate-y-1/2 left-1/2 top-1/2 rounded-full scale-200 opacity-20 brightness-200"
+			class="aspect-square w-full absolute -translate-x-1/2 -translate-y-1/2 left-1/2 top-1/2 rounded-full scale-200 opacity-20 brightness-100"
 		></div>
 	{/if}
-</button>
+{/snippet}

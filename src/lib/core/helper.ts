@@ -35,24 +35,17 @@ export const tryPromise = <A>(
 		);
 	});
 
-const loggerLayer = Logger.replace(
-	Logger.defaultLogger,
-	Logger.withLeveledConsole(
-		Logger.structuredLogger,
-	),
-);
-
 export const effectWithLogs = (
 	effect: Eff.Effect<unknown, unknown>,
 ) => {
 	return Eff.unsandbox(
 		Eff.catchTags(
 			Eff.sandbox(
-				effect.pipe(Eff.provide(loggerLayer)),
+				effect.pipe(Eff.provide(Logger.pretty)),
 			),
 			{
 				Die: defect =>
-					Eff.logError(defect.toString()),
+					Eff.logFatal(defect.toString()),
 			},
 		),
 	);

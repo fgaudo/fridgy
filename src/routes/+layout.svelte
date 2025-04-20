@@ -7,7 +7,7 @@
 
 	import { Eff } from '$lib/core/imports.ts';
 
-	import { useCases } from '$lib/bootstrap.ts';
+	import { useCases } from '$lib/business/index.ts';
 	import '$lib/ui/assets/index.css';
 	import Spinner from '$lib/ui/components/spinner.svelte';
 	import { setUsecasesContext } from '$lib/ui/context.ts';

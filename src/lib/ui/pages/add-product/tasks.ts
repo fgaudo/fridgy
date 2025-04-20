@@ -8,8 +8,7 @@ import {
 } from '$lib/core/imports.ts';
 import { asOption } from '$lib/core/utils.ts';
 
-import { AddProduct } from '$lib/app/use-cases.ts';
-
+import { AddProduct } from '$lib/business/index.ts';
 import { MINIMUM_LAG_MS } from '$lib/ui/constants.ts';
 
 import type { Store } from './store.svelte.ts';
@@ -35,7 +34,8 @@ export const addProduct = (store: Store) =>
 				store.actions.addingStarted,
 			);
 
-			const addProduct = yield* AddProduct.Tag;
+			const addProduct =
+				yield* AddProduct.Service;
 			const [result] = yield* Eff.all([
 				Eff.either(
 					addProduct({

@@ -19,6 +19,7 @@
 
 	import {
 		Eff,
+		H,
 		O,
 		pipe,
 	} from '$lib/core/imports.ts';
@@ -39,7 +40,7 @@
 	const startRefreshList = pipe(
 		Tasks.refreshList(store),
 		Eff.provide(useCases),
-		Utils.createEffect,
+		Utils.createRestartableEffect,
 	);
 
 	const startResumeListener =
@@ -49,11 +50,17 @@
 		});
 
 	const startRefreshTimeInterval =
-		Utils.createEffect(
+		Utils.createRestartableEffect(
 			Tasks.refreshTimeInterval(store),
 		);
 
+	const logEntrance = Utils.createDetachedEffect(
+		Eff.logInfo('User opened home page'),
+	);
+
 	onMount(() => {
+		logEntrance();
+
 		startRefreshList();
 
 		startResumeListener();
@@ -77,7 +84,7 @@
 				opacity: 1,
 				easing: expoIn,
 			}}
-			class="h-screen flex-col flex fixed bg-background z-50 rounded-r-2xl overflow-hidden w-64 will-change-transform"
+			class="h-screen flex-col flex fixed bg-background z-999 rounded-r-2xl overflow-hidden w-64 will-change-transform"
 		>
 			<p class="font-stylish pt-8 pb-4 pl-4">
 				Fridgy
@@ -114,12 +121,12 @@
 			}}
 			use:tap={() => ({})}
 			ontap={store.actions.toggleMenu}
-			class="h-full z-40 flex-col fixed w-full bg-black/50 backdrop-blur-xs"
+			class="h-full z-998 flex-col fixed w-full bg-black/50 backdrop-blur-xs"
 		></div>
 	{/if}
 
 	<div
-		class="bg-secondary fixed shadow-secondary/40 flex h-16 w-full items-center shadow-md"
+		class="bg-secondary z-50 fixed shadow-secondary/40 flex h-16 w-full items-center shadow-md"
 	>
 		<div
 			class="ml-2 relative h-12 w-12 flex items-center justify-center rounded-full overflow-hidden"
@@ -160,6 +167,7 @@
 			</div>
 		{/if}
 	</div>
+
 	<div class="bg-background min-h-screen">
 		{#if store.state.receivedError}
 			<div
@@ -179,13 +187,13 @@
 			</div>
 		{:else if store.state.total > 0}
 			<p
-				class="fixed top-[64px] z-999 w-full px-[14px] pt-[10px] pb-[8px] text-xs"
+				class="bg-background fixed top-[64px] z-50 w-full px-[14px] pt-[10px] pb-[8px] text-xs"
 			>
 				{store.state.total} items
 			</p>
 
 			<div
-				class="relative mt-[34px] flex w-full items-center"
+				class="absolute top-[110px] flex w-full items-center"
 				style:height={store.state.total > 0
 					? `${((store.state.total - 1) * 65 + 185).toString(10)}px`
 					: 'auto'}
@@ -210,6 +218,14 @@
 						class="duration-fade absolute flex shadow-sm left-1 right-1"
 						style:top={`${(index * 65).toString(10)}px`}
 					>
+						<Ripple
+							ontap={() => {
+								console.log('tap');
+							}}
+							onpress={() => {
+								console.log('press');
+							}}
+						></Ripple>
 						<div
 							class={[
 								'bg-background flex min-h-[60px] w-full select-none',
@@ -370,7 +386,7 @@
 		{/if}
 		{#if !store.derived.isSelectModeEnabled}
 			<div
-				class="bg-primary overflow-hidden text-background shadow-primary/70 fixed right-[16px] bottom-[20px] flex h-[96px] w-[96px] items-center justify-center rounded-4xl shadow-md"
+				class="bg-primary z-50 overflow-hidden text-background shadow-primary/70 fixed right-[16px] bottom-[20px] flex h-[96px] w-[96px] items-center justify-center rounded-4xl shadow-md"
 			>
 				<Ripple
 					ontap={() => {

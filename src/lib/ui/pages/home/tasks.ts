@@ -1,6 +1,6 @@
 import { Eff, pipe } from '$lib/core/imports.ts';
 
-import { GetSortedProducts } from '$lib/app/use-cases.ts';
+import { GetSortedProducts } from '$lib/business/index.ts';
 
 import type { Store } from './store.svelte.ts';
 
@@ -16,7 +16,7 @@ export const refreshList = (store: Store) =>
 			);
 
 			const getProducts =
-				yield* GetSortedProducts.Tag;
+				yield* GetSortedProducts.Service;
 
 			const result =
 				yield* Eff.either(getProducts);

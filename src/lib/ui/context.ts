@@ -1,6 +1,6 @@
 import { getContext, setContext } from 'svelte';
 
-import type { UseCases } from '$lib/app/use-cases.ts';
+import type { UseCases } from '$lib/business/app/use-cases.ts';
 
 const key: unique symbol = Symbol();
 
