@@ -135,14 +135,15 @@ export const formatRemainingTime = (
 ): string => {
 	const remaining = to - from;
 
-	if (remaining < 0) {
-		return 'EXP';
+	if (remaining < -1) {
+		const hours = differenceInHours(to, from);
+		return `${hours.toString(10)}h`;
 	}
 
 	const hours = differenceInHours(to, from);
 
 	if (hours < 1) {
-		return '<1h';
+		return '1h';
 	}
 
 	const days = differenceInDays(to, from);

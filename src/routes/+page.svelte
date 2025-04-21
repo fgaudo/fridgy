@@ -8,64 +8,31 @@
 		Trash2,
 	} from '@lucide/svelte';
 	import { format } from 'date-fns';
-	import { onDestroy, onMount } from 'svelte';
+	import { onMount } from 'svelte';
 	import { tap } from 'svelte-gestures';
 	import { expoIn, expoOut } from 'svelte/easing';
-	import {
-		fade,
-		fly,
-		scale,
-	} from 'svelte/transition';
+	import { fade, fly } from 'svelte/transition';
 
-	import {
-		Eff,
-		H,
-		O,
-		pipe,
-	} from '$lib/core/imports.ts';
+	import { Eff, O } from '$lib/core/imports.ts';
 	import { asOption } from '$lib/core/utils.ts';
 
 	import imgUrl from '$lib/ui/assets/arrow.svg';
 	import Ripple from '$lib/ui/components/ripple.svelte';
-	import Spinner from '$lib/ui/components/spinner.svelte';
-	import { getUsecasesContext } from '$lib/ui/context.ts';
-	import * as Store from '$lib/ui/pages/home/store.svelte';
-	import * as Tasks from '$lib/ui/pages/home/tasks';
+	import * as Store from '$lib/ui/pages/home/store.ts';
 	import * as Utils from '$lib/ui/utils.ts';
 
 	const store = Store.createStore();
 
-	const useCases = getUsecasesContext();
-
-	const startRefreshList = pipe(
-		Tasks.refreshList(store),
-		Eff.provide(useCases),
-		Utils.createRestartableEffect,
-	);
-
-	const startResumeListener =
-		Utils.createCapacitorListener({
-			event: 'resume',
-			cb: store.actions.refreshTime,
-		});
-
-	const startRefreshTimeInterval =
-		Utils.createRestartableEffect(
-			Tasks.refreshTimeInterval(store),
-		);
-
-	const logEntrance = Utils.createDetachedEffect(
+	const logOpening = Utils.createDetachedEffect(
 		Eff.logInfo('User opened home page'),
 	);
 
 	onMount(() => {
-		logEntrance();
+		store.tasks.refreshList();
+		store.tasks.startRefreshTimeResumeListener();
+		store.tasks.startRefreshTimeInterval();
 
-		startRefreshList();
-
-		startResumeListener();
-
-		startRefreshTimeInterval();
+		logOpening();
 	});
 </script>
 
@@ -120,7 +87,7 @@
 				easing: expoIn,
 			}}
 			use:tap={() => ({})}
-			ontap={store.actions.toggleMenu}
+			ontap={store.tasks.toggleMenu}
 			class="h-full z-998 flex-col fixed w-full bg-black/50 backdrop-blur-xs"
 		></div>
 	{/if}
@@ -133,21 +100,23 @@
 		>
 			{#if store.derived.isSelectModeEnabled}
 				<Ripple
-					ontap={store.actions.disableSelectMode}
+					ontap={store.tasks.disableSelectMode}
 				></Ripple>
 
 				<span class="material-symbols text-2xl">
 					close
 				</span>
 			{:else}
-				<Ripple ontap={store.actions.toggleMenu}
+				<Ripple
+					color={'var(--color-background)'}
+					ontap={store.tasks.toggleMenu}
 				></Ripple>
-				<Menu />
+				<Menu color="var(--color-background)" />
 			{/if}
 		</div>
 
 		<div
-			class="font-stylish pl-2 text-2xl font-bold translate-y-[2px]"
+			class="font-stylish pl-2 text-2xl font-extrabold translate-y-[2px] text-background"
 		>
 			Fridgy
 		</div>
@@ -179,7 +148,8 @@
 					<div
 						class="text-primary underline relative overflow-hidden rounded-full py-1 px-2"
 					>
-						<Ripple ontap={startRefreshList}
+						<Ripple
+							ontap={store.tasks.refreshList}
 						></Ripple>
 						Try again
 					</div>
@@ -195,7 +165,7 @@
 			<div
 				class="absolute top-[110px] flex w-full items-center"
 				style:height={store.state.total > 0
-					? `${((store.state.total - 1) * 65 + 185).toString(10)}px`
+					? `${((store.state.total - 1) * 79 + 205).toString(10)}px`
 					: 'auto'}
 			>
 				{#each store.state.products.entries as product, index (product.id)}
@@ -215,8 +185,8 @@
 							: product.maybeName,
 					)}
 					<div
-						class="duration-fade absolute flex shadow-sm left-1 right-1"
-						style:top={`${(index * 65).toString(10)}px`}
+						class="duration-fade absolute flex left-2 right-2 shadow-sm rounded-lg py-1 overflow-hidden bg-secondary/5"
+						style:top={`${(index * 79).toString(10)}px`}
 					>
 						<Ripple
 							ontap={() => {
@@ -228,7 +198,7 @@
 						></Ripple>
 						<div
 							class={[
-								'bg-background flex min-h-[60px] w-full select-none',
+								' justify-between flex min-h-[60px] w-full gap-1 select-none items-center',
 								{
 									'bg-secondary/10':
 										product.isSelected,
@@ -237,14 +207,104 @@
 							style="content-visibility: 'auto'"
 						>
 							<div
-								class="duration-fade relative flex h-[24px] w-[24px] items-center justify-center p-7 text-sm"
+								class="p-2 h-full aspect-square"
 							>
-								{#if !store.derived.isSelectModeEnabled && O.isSome(maybeExpiration) && maybeExpiration.value > store.state.currentTimestamp}
+								<div
+									class="flex-col flex bg-secondary text-background shadow-xs rounded-full items-center justify-center text-center h-full aspect-square"
+								>
+									{#if O.isSome(maybeExpiration)}
+										<div
+											class="text-lg font-bold leading-4"
+										>
+											{format(
+												maybeExpiration.value,
+												'd',
+											)}
+										</div>
+										<div
+											class="text-sm leading-4"
+										>
+											{format(
+												maybeExpiration.value,
+												'LLL',
+											)}
+										</div>
+									{:else}
+										<Infinity
+											class="p-2 w-full h-full font-bold "
+										/>
+									{/if}
+								</div>
+							</div>
+
+							<div
+								class="flex-1 h-full flex justify-center flex-col leading-[16px] gap-2"
+							>
+								{#if O.isSome(maybeName)}
+									<div
+										class="overflow-ellipsis whitespace-nowrap overflow-hidden"
+									>
+										Pomodori de cristo dasads da
+										aa d dsaadsdas dasd
+									</div>
+								{:else}
+									<div>[NO NAME]</div>
+								{/if}
+
+								{#if O.isNone(maybeCreation)}
+									No creation date
+								{:else if O.isSome(maybeExpiration) && maybeExpiration.value > store.state.currentTimestamp}
+									{@const expiration =
+										maybeExpiration.value}
+									{@const creation =
+										maybeCreation.value}
+
+									{@const totalDuration =
+										expiration - creation}
+									{@const remainingDuration =
+										expiration -
+										store.state.currentTimestamp}
+									{@const currentProgress =
+										remainingDuration /
+										totalDuration}
+
+									{@const currentProgressOrZero =
+										totalDuration < 0
+											? 0
+											: currentProgress}
+
+									{@const color = `color-mix(in srgb, var(--color-secondary) ${currentProgressOrZero * 100}%, var(--color-primary) ${(1 - currentProgressOrZero) * 100}%)`}
+
+									<div
+										style:outline-color={color}
+										class="z-0 h-[4px] my-[2px] w-full outline-[1px]"
+									>
+										<div
+											class="bg-primary h-full"
+											style:background-color={color}
+											style:width={`${(
+												currentProgressOrZero *
+												100
+											).toString()}%`}
+										></div>
+									</div>
+								{:else if O.isSome(maybeExpiration)}
+									<div
+										class="text-[12px] leading-[8px] text-primary font-bold"
+									>
+										Expired
+									</div>
+								{/if}
+							</div>
+							<div
+								class="h-9/12 aspect-square flex items-center justify-center"
+							>
+								{#if !store.derived.isSelectModeEnabled && O.isSome(maybeExpiration)}
 									<div
 										class={[
-											'text-primary duration-fade absolute text-xs ',
+											'text-primary duration-fade absolute text-sm',
 											{
-												'text-red-500 font-bold':
+												'text-primary font-bold':
 													maybeExpiration.value <
 													store.state
 														.currentTimestamp,
@@ -257,77 +317,6 @@
 											maybeExpiration.value,
 										)}
 									</div>
-								{/if}
-							</div>
-
-							<div>
-								{#if O.isNone(maybeCreation)}
-									No creation date
-								{:else if O.isSome(maybeExpiration)}
-									{@const expiration =
-										maybeExpiration.value}
-									{@const creation =
-										maybeCreation.value}
-
-									{#if expiration < store.state.currentTimestamp}
-										<p
-											class="font-bold text-red-500"
-										>
-											Expired
-										</p>
-									{:else}
-										{@const totalDuration =
-											expiration - creation}
-										{@const remainingDuration =
-											expiration -
-											store.state
-												.currentTimestamp}
-										{@const currentProgress =
-											remainingDuration /
-											totalDuration}
-
-										<div
-											class="border-primary mt-[5px] h-[5px] w-full border-[1px]"
-										>
-											<div
-												class="bg-primary h-full"
-												style:width={`${(
-													currentProgress * 100
-												).toString()}%`}
-											></div>
-										</div>
-									{/if}
-								{/if}
-							</div>
-
-							<div
-								class="text-secondary flex w-[26px] flex-col items-center"
-							>
-								{#if O.isSome(maybeExpiration)}
-									<div class="text-sm">
-										{format(
-											maybeExpiration.value,
-											'd',
-										)}
-									</div>
-									<div class="text-sm">
-										{format(
-											maybeExpiration.value,
-											'LLL',
-										)}
-									</div>
-								{:else}
-									<Infinity />
-								{/if}
-							</div>
-
-							<div
-								class="w-full overflow-hidden text-ellipsis whitespace-nowrap capitalize"
-							>
-								{#if O.isSome(maybeName)}
-									{maybeName.value}
-								{:else}
-									[NO NAME]
 								{/if}
 							</div>
 						</div>
@@ -384,17 +373,17 @@
 				></div>
 			</div>
 		{/if}
-		{#if !store.derived.isSelectModeEnabled}
-			<div
-				class="bg-primary z-50 overflow-hidden text-background shadow-primary/70 fixed right-[16px] bottom-[20px] flex h-[96px] w-[96px] items-center justify-center rounded-4xl shadow-md"
-			>
-				<Ripple
-					ontap={() => {
-						goto('/add-product');
-					}}
-				></Ripple>
-				<Plus size="36" />
-			</div>
-		{/if}
 	</div>
+	{#if !store.derived.isSelectModeEnabled}
+		<div
+			class="bg-primary z-50 overflow-hidden text-background shadow-md shadow-on-background/30 fixed right-[16px] bottom-[20px] flex h-[96px] w-[96px] items-center justify-center rounded-4xl"
+		>
+			<Ripple
+				ontap={() => {
+					goto('/add-product');
+				}}
+			></Ripple>
+			<Plus size="36" />
+		</div>
+	{/if}
 </div>

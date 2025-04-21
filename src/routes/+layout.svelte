@@ -2,7 +2,7 @@
 	import { App as CAP } from '@capacitor/app';
 	import '@fontsource-variable/comfortaa/index.css';
 	import '@fontsource-variable/roboto-flex/full.css';
-	import { onMount } from 'svelte';
+	import { onDestroy, onMount } from 'svelte';
 	import { fade, scale } from 'svelte/transition';
 
 	import { Eff } from '$lib/core/imports.ts';
@@ -40,10 +40,21 @@
 		}),
 	);
 
+	const disableContextMenu = () => {
+		const f = (e: Event) => e.preventDefault();
+		window.addEventListener('contextmenu', f);
+		onDestroy(() =>
+			window.removeEventListener(
+				'contextmenu',
+				f,
+			),
+		);
+	};
+
 	onMount(() => {
 		startBackButtonListener();
-
 		awaitFonts();
+		disableContextMenu();
 	});
 </script>
 

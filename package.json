@@ -67,5 +67,8 @@
 		"test:unit": "vitest",
 		"licenses": "license-checker-rseidelsohn --json --customPath src/lib/ui/assets/custom-path.json --out src/lib/ui/assets/licenses.json --depth 0"
 	},
-	"type": "module"
+	"type": "module",
+	"dependencies": {
+		"interactjs": "^1.10.27"
+	}
 }
