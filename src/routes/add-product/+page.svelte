@@ -7,63 +7,23 @@
 	import { cubicOut } from 'svelte/easing';
 	import { fade, fly } from 'svelte/transition';
 
-	import {
-		Eff,
-		O,
-		pipe,
-	} from '$lib/core/imports.ts';
+	import { O } from '$lib/core/imports.ts';
 
 	import Ripple from '$lib/ui/components/ripple.svelte';
 	import Spinner from '$lib/ui/components/spinner.svelte';
 	import { PAGE_TRANSITION_Y } from '$lib/ui/constants.ts';
-	import { getUsecasesContext } from '$lib/ui/context.ts';
 	import * as AP from '$lib/ui/pages/add-product/store.svelte.ts';
-	import {
-		addProduct,
-		queueResetToast,
-	} from '$lib/ui/pages/add-product/tasks.ts';
-	import {
-		createCapacitorListener,
-		createEffect,
-	} from '$lib/ui/utils.ts';
+	import { createCapacitorListener } from '$lib/ui/utils.ts';
 
 	const store = AP.createStore();
-
-	const {
-		state,
-		derived,
-		actions: {
-			initNameIfNotSet,
-			setExpiration,
-			setName,
-		},
-	} = store;
-
-	const useCases = getUsecasesContext();
-
-	const startAddProduct = pipe(
-		addProduct(store),
-		Eff.provide(useCases),
-		createEffect,
-	);
 
 	const startBack = createCapacitorListener({
 		event: 'backButton',
 		cb: () => {
-			if (!derived.isOk) {
+			if (!store.state.isAdding) {
 				window.history.back();
 			}
 		},
-	});
-
-	const startQueueResetToast = createEffect(
-		queueResetToast(store),
-	);
-
-	$effect(() => {
-		if (store.derived.toastHasMessage) {
-			startQueueResetToast();
-		}
 	});
 
 	onMount(() => {
@@ -87,7 +47,9 @@
 		>
 			<Ripple
 				ontap={() => {
-					window.history.back();
+					if (!store.state.isAdding) {
+						window.history.back();
+					}
 				}}
 			></Ripple>
 			<ArrowLeft />
@@ -136,10 +98,11 @@
 				class={[
 					'bg-background inline-block p-[4px] text-sm duration-500',
 					{
-						'text-primary': !derived.isNameValid,
+						'text-primary':
+							!store.derived.isNameValid,
 						'text-secondary':
-							O.isNone(derived.maybeName) ||
-							derived.isNameValid,
+							O.isNone(store.derived.maybeName) ||
+							store.derived.isNameValid,
 					},
 				]}
 			>
@@ -150,18 +113,20 @@
 			<input
 				type="text"
 				bind:value={
-					derived.getNameOrEmpty, setName
+					() => store.derived.nameOrEmpty,
+					store.tasks.setName
 				}
-				onblur={initNameIfNotSet}
+				onblur={store.tasks.initNameIfNotSet}
 				placeholder="For example: Milk"
 				id="name"
 				class={[
 					'h-16 transition-all focus:ring-0 shadow-none placeholder:text-gray-400 p-4 w-full  duration-500 rounded-[4px] border-0',
 					{
-						'bg-primary/15': !derived.isNameValid,
+						'bg-primary/15':
+							!store.derived.isNameValid,
 						'bg-secondary/5':
-							O.isNone(derived.maybeName) ||
-							derived.isNameValid,
+							O.isNone(store.derived.maybeName) ||
+							store.derived.isNameValid,
 					},
 				]}
 			/>
@@ -179,7 +144,7 @@
 				Expiration date
 			</label>
 			<div class="relative h-16">
-				{#if O.isNone(derived.maybeExpirationDate)}
+				{#if O.isNone(store.derived.maybeExpirationDate)}
 					<div
 						class="h-full flex items-center text-gray-400 absolute focus:ring-0 bg-secondary/5 shadow-none p-4 w-full rounded-[4px] border-0 z-40 pointer-events-none"
 					>
@@ -190,18 +155,21 @@
 					type="date"
 					placeholder="Select a date"
 					bind:value={
-						derived.getExpiration, setExpiration
+						() =>
+							store.derived
+								.formattedExpirationDateOrEmpty,
+						store.tasks.setExpirationDate
 					}
 					id="expdate"
 					class={[
 						'absolute h-full focus:ring-0 bg-secondary/5 shadow-none p-4 w-full rounded-[4px] border-0',
 						{
 							'opacity-0': O.isNone(
-								derived.maybeExpirationDate,
+								store.derived.maybeExpirationDate,
 							),
 						},
 					]}
-					min={derived.formattedCurrentDate}
+					min={store.derived.formattedCurrentDate}
 				/>
 			</div>
 		</div>
@@ -214,12 +182,13 @@
 						'px-6 justify-center transition-all duration-500 overflow-hidden bg-primary h-full items-center flex  text-background shadow-primary/70 rounded-full shadow-md ',
 						{
 							'opacity-15 ':
-								!derived.isOk || state.isAdding,
+								!store.derived.isOk ||
+								store.state.isAdding,
 						},
 					]}
 				>
-					{#if !state.isAdding && derived.isOk}
-						<Ripple ontap={startAddProduct}
+					{#if !store.state.isAdding && store.derived.isOk}
+						<Ripple ontap={store.tasks.addProduct}
 						></Ripple>
 					{/if}
 					Add product
@@ -270,7 +239,7 @@
 							>
 						</div>
 						<div class="ms-3 text-sm font-normal">
-							{state.toastMessage}
+							{store.state.toastMessage}
 						</div>
 					</div>
 				</div>

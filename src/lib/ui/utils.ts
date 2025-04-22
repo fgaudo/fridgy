@@ -13,7 +13,7 @@ import { onDestroy } from 'svelte';
 
 import { Eff, H } from '$lib/core/imports.ts';
 
-export function createRestartableEffect(
+export function toRestartableCallback(
 	effect: Eff.Effect<unknown, unknown>,
 ) {
 	let cancel:
@@ -38,10 +38,12 @@ export function createRestartableEffect(
 		cancel = Eff.runCallback(
 			H.effectWithLogs(effect),
 		);
+
+		return cancel;
 	};
 }
 
-export function createEffect(
+export function toCallback(
 	effect: Eff.Effect<unknown, unknown>,
 ) {
 	let cancel:
@@ -64,10 +66,24 @@ export function createEffect(
 		cancel = Eff.runCallback(
 			H.effectWithLogs(effect),
 		);
+
+		return cancel;
 	};
 }
 
-export function createDetachedEffect(
+export function runEffect(
+	effect: Eff.Effect<unknown, unknown>,
+) {
+	toCallback(effect)();
+}
+
+export function runDetachedEffect(
+	effect: Eff.Effect<unknown, unknown>,
+) {
+	toDetachedCallback(effect)();
+}
+
+export function toDetachedCallback(
 	effect: Eff.Effect<unknown, unknown>,
 ) {
 	return () => {
@@ -126,6 +142,10 @@ export function createCapacitorListener({
 			}
 			listener = l;
 		});
+
+		return () => {
+			listener?.remove();
+		};
 	};
 }
 

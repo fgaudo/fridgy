@@ -1,94 +1,78 @@
-import { Eff, pipe } from '$lib/core/imports.ts';
-
-import type { UseCases } from '$lib/business/app/use-cases.ts';
-import { GetSortedProducts } from '$lib/business/index.ts';
 import {
-	createCapacitorListener,
-	createEffect,
-	createRestartableEffect,
-} from '$lib/ui/utils.ts';
+	Cl,
+	Eff,
+	pipe,
+} from '$lib/core/imports.ts';
 
-import type * as _Actions from './actions.ts';
-import type { InternalReadonlyStore } from './store.svelte.ts';
+import { GetSortedProducts } from '$lib/business/index.ts';
 
-export type Actions = {
-	[K in keyof typeof _Actions]: ReturnType<
-		(typeof _Actions)[K]
-	>;
-};
+import { Store } from './store.ts';
 
-type TaskRequirements = {
-	store: InternalReadonlyStore;
-	actions: Actions;
-	useCases: UseCases;
-};
+export const refreshList = pipe(
+	Eff.gen(function* () {
+		const store = yield* Store;
 
-export function refreshList({
-	store,
-	actions,
-	useCases,
-}: TaskRequirements) {
-	return pipe(
+		if (store.state.isLoading) {
+			return;
+		}
+
+		yield* Eff.sync(
+			store.actions.fetchListStarted,
+		);
+
+		const getProducts =
+			yield* GetSortedProducts.Service;
+
+		const result = yield* Eff.either(getProducts);
+
+		yield* Eff.sync(() =>
+			store.actions.fetchListFinished(result),
+		);
+	}),
+
+	Eff.onInterrupt(() =>
 		Eff.gen(function* () {
-			if (store.state.isLoading) {
-				return;
-			}
-
-			yield* Eff.sync(actions.fetchListStarted);
-
-			const getProducts =
-				yield* GetSortedProducts.Service;
-
-			const result =
-				yield* Eff.either(getProducts);
-
-			yield* Eff.sync(() =>
-				actions.fetchListFinished(result),
+			const store = yield* Store;
+			yield* Eff.sync(
+				store.actions.fetchListCancelled,
 			);
 		}),
+	),
+);
 
-		Eff.onInterrupt(() =>
-			Eff.sync(actions.fetchListCancelled),
-		),
-		Eff.provide(useCases),
-		createRestartableEffect,
+export const refreshTimeInterval = Eff.gen(
+	function* () {
+		while (true) {
+			const time = yield* Cl.currentTimeMillis;
+			const store = yield* Store;
+			console.log('interval', time);
+
+			yield* Eff.sync(() =>
+				store.actions.refreshTime(time),
+			);
+			yield* Eff.sleep(20000);
+		}
+	},
+);
+
+export const refreshTime = Eff.gen(function* () {
+	const time = yield* Cl.currentTimeMillis;
+	const store = yield* Store;
+	console.log('refresh', time);
+	yield* Eff.sync(() =>
+		store.actions.refreshTime(time),
 	);
-}
+});
 
-export function startRefreshTimeInterval({
-	actions,
-}: TaskRequirements) {
-	return pipe(
-		Eff.sync(actions.refreshTime),
-		Eff.andThen(Eff.sleep(20000)),
-		Eff.forever,
-		createRestartableEffect,
-	);
-}
+export const toggleMenu = Eff.gen(function* () {
+	const store = yield* Store;
 
-export function startRefreshTimeResumeListener({
-	actions,
-}: TaskRequirements) {
-	return createCapacitorListener({
-		event: 'resume',
-		cb: actions.refreshTime,
-	});
-}
+	Eff.sync(store.actions.toggleMenu);
+});
 
-export function toggleMenu({
-	actions,
-}: TaskRequirements) {
-	return pipe(
-		Eff.sync(actions.toggleMenu),
-		createEffect,
-	);
-}
-
-export function disableSelectMode({
-	actions,
-}: TaskRequirements) {
-	return pipe(
-		Eff.sync(actions.disableSelectMode),
-		createEffect,
-	);
-}
+export const disableSelectMode = Eff.gen(
+	function* () {
+		const store = yield* Store;
+		Eff.sync(store.actions.disableSelectMode);
+	},
+);

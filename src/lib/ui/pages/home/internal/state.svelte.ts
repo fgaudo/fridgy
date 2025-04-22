@@ -11,7 +11,7 @@ export type ProductViewModel =
 export type CorruptProductViewModel =
 	GetSortedProducts.CorruptProduct;
 
-export type State = {
+type State = {
 	isMenuOpen: boolean;
 	selected: SvelteSet<string>;
 	receivedError: boolean;
@@ -24,15 +24,14 @@ export type State = {
 	};
 };
 
-export type InternalStore = {
-	state: State;
-	derived: { isSelectModeEnabled: boolean };
-};
+export type InternalState = ReturnType<
+	typeof createState
+>;
 
-export type InternalReadonlyStore =
-	ReadonlyDeep<InternalStore>;
+export type InternalReadonlyState =
+	ReadonlyDeep<InternalState>;
 
-export function createStore() {
+export function createState() {
 	const state = $state<State>({
 		isMenuOpen: false,
 		isLoading: false,
@@ -50,11 +49,19 @@ export function createStore() {
 		state.selected.size > 0,
 	);
 
+	const hasProducts = $derived(
+		state.products.corrupts.length > 0 ||
+			state.products.entries.length > 0,
+	);
+
 	return {
 		state,
 		derived: {
 			get isSelectModeEnabled() {
 				return isSelectModeEnabled;
+			},
+			get hasProducts() {
+				return hasProducts;
 			},
 		},
 	};

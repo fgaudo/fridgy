@@ -29,7 +29,7 @@
 
 	setUsecasesContext(useCases);
 
-	const awaitFonts = Utils.createEffect(
+	const awaitFonts = Utils.toCallback(
 		Eff.gen(function* () {
 			yield* Eff.all([
 				Eff.promise(() => document.fonts.ready),

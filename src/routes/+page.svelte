@@ -18,21 +18,18 @@
 
 	import imgUrl from '$lib/ui/assets/arrow.svg';
 	import Ripple from '$lib/ui/components/ripple.svelte';
-	import * as Store from '$lib/ui/pages/home/store.ts';
+	import * as Store from '$lib/ui/pages/home/store.svelte';
 	import * as Utils from '$lib/ui/utils.ts';
 
 	const store = Store.createStore();
 
-	const logOpening = Utils.createDetachedEffect(
+	Utils.runDetachedEffect(
 		Eff.logInfo('User opened home page'),
 	);
 
 	onMount(() => {
 		store.tasks.refreshList();
-		store.tasks.startRefreshTimeResumeListener();
-		store.tasks.startRefreshTimeInterval();
-
-		logOpening();
+		store.tasks.enableRefreshTimeListeners();
 	});
 </script>
 
