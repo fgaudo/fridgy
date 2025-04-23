@@ -18,6 +18,7 @@ type State = {
 	isLoading: boolean;
 	total: number;
 	currentTimestamp: number;
+	refreshTimeListenersRegistered: boolean;
 	products: {
 		entries: ProductViewModel[];
 		corrupts: CorruptProductViewModel[];
@@ -38,6 +39,7 @@ export function createState() {
 		selected: new SvelteSet(),
 		receivedError: false,
 		total: 0,
+		refreshTimeListenersRegistered: false,
 		products: {
 			entries: [],
 			corrupts: [],
@@ -54,6 +56,11 @@ export function createState() {
 			state.products.entries.length > 0,
 	);
 
+	const refreshTimeListenersEnabled = $derived(
+		hasProducts &&
+			state.refreshTimeListenersRegistered,
+	);
+
 	return {
 		state,
 		derived: {
@@ -62,6 +69,9 @@ export function createState() {
 			},
 			get hasProducts() {
 				return hasProducts;
+			},
+			get refreshTimeListenersEnabled() {
+				return refreshTimeListenersEnabled;
 			},
 		},
 	};

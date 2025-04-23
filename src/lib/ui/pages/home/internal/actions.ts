@@ -91,4 +91,22 @@ export const actions = {
 			toggleItem(store)(product);
 		};
 	},
+
+	enableRefreshTimeListeners: (
+		store: InternalState,
+	) => {
+		return () => {
+			store.state.refreshTimeListenersRegistered =
+				true;
+		};
+	},
+
+	disableRefreshTimeListeners: (
+		store: InternalState,
+	) => {
+		return () => {
+			store.state.refreshTimeListenersRegistered =
+				false;
+		};
+	},
 };

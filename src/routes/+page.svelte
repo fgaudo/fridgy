@@ -29,7 +29,7 @@
 
 	onMount(() => {
 		store.tasks.refreshList();
-		store.tasks.enableRefreshTimeListeners();
+		store.tasks.registerRefreshTimeListeners();
 	});
 </script>
 

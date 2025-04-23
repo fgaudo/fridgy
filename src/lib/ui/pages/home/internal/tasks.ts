@@ -6,11 +6,12 @@ import {
 
 import { GetSortedProducts } from '$lib/business/index.ts';
 
-import { Store } from './store.ts';
+import { Config } from '../config.ts';
+import { StoreService } from './store.ts';
 
 export const refreshList = pipe(
 	Eff.gen(function* () {
-		const store = yield* Store;
+		const store = yield* StoreService;
 
 		if (store.state.isLoading) {
 			return;
@@ -32,7 +33,7 @@ export const refreshList = pipe(
 
 	Eff.onInterrupt(() =>
 		Eff.gen(function* () {
-			const store = yield* Store;
+			const store = yield* StoreService;
 			yield* Eff.sync(
 				store.actions.fetchListCancelled,
 			);
@@ -43,36 +44,22 @@ export const refreshList = pipe(
 export const refreshTimeInterval = Eff.gen(
 	function* () {
 		while (true) {
+			const intervalMs =
+				yield* Config.refreshIntervalMs;
 			const time = yield* Cl.currentTimeMillis;
-			const store = yield* Store;
-			console.log('interval', time);
-
+			const store = yield* StoreService;
 			yield* Eff.sync(() =>
 				store.actions.refreshTime(time),
 			);
-			yield* Eff.sleep(20000);
+			yield* Eff.sleep(intervalMs);
 		}
 	},
 );
 
 export const refreshTime = Eff.gen(function* () {
 	const time = yield* Cl.currentTimeMillis;
-	const store = yield* Store;
-	console.log('refresh', time);
+	const store = yield* StoreService;
 	yield* Eff.sync(() =>
 		store.actions.refreshTime(time),
 	);
 });
-
-export const toggleMenu = Eff.gen(function* () {
-	const store = yield* Store;
-
-	Eff.sync(store.actions.toggleMenu);
-});
-
-export const disableSelectMode = Eff.gen(
-	function* () {
-		const store = yield* Store;
-		Eff.sync(store.actions.disableSelectMode);
-	},
-);
