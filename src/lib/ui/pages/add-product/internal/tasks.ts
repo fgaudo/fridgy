@@ -11,11 +11,11 @@ import { asOption } from '$lib/core/utils.ts';
 import { AddProduct } from '$lib/business/index.ts';
 import { MINIMUM_LAG_MS } from '$lib/ui/constants.ts';
 
-import { Store } from './store.ts';
+import { StoreService } from './store.ts';
 
 export const addProduct = pipe(
 	Eff.gen(function* () {
-		const store = yield* Store;
+		const store = yield* StoreService;
 
 		if (store.state.isAdding) {
 			return;
@@ -31,7 +31,9 @@ export const addProduct = pipe(
 			O.flatMap(Int.fromNumber),
 		);
 
-		yield* Eff.sync(store.actions.addingStarted);
+		yield* store.dispatch({
+			type: 'addingStarted',
+		});
 
 		const addProduct = yield* AddProduct.Service;
 		const [result] = yield* Eff.all([
@@ -45,55 +47,61 @@ export const addProduct = pipe(
 		]);
 
 		if (E.isLeft(result)) {
-			return yield* Eff.sync(
-				store.actions.addingFailed,
-			);
+			return yield* store.dispatch({
+				type: 'addingFailed',
+			});
 		}
 
-		yield* Eff.sync(
-			store.actions.addingSucceeded,
-		);
+		yield* store.dispatch({
+			type: 'addingSucceeded',
+		});
 	}),
 
 	Eff.onInterrupt(() =>
 		Eff.gen(function* () {
-			const store = yield* Store;
-			yield* Eff.sync(
-				store.actions.addingCancelled,
-			);
+			const store = yield* StoreService;
+			yield* store.dispatch({
+				type: 'addingCancelled',
+			});
 		}),
 	),
 );
 
 export const queueResetToast = Eff.gen(
 	function* () {
-		const store = yield* Store;
+		const store = yield* StoreService;
 		yield* Eff.sleep(3000);
-		store.actions.cancelToast();
+		yield* store.dispatch({
+			type: 'cancelToast',
+		});
 	},
 );
 
 export const initNameIfNotSet = Eff.gen(
 	function* () {
-		const store = yield* Store;
-		yield* Eff.sync(
-			store.actions.initNameIfNotSet,
-		);
+		const store = yield* StoreService;
+		yield* store.dispatch({
+			type: 'initNameIfNotSet',
+		});
 	},
 );
 
 export const setName = (name: string) =>
 	Eff.gen(function* () {
-		const store = yield* Store;
-		yield* Eff.sync(store.actions.setName(name));
+		const store = yield* StoreService;
+		yield* store.dispatch({
+			type: 'setName',
+			param: name,
+		});
 	});
 
 export const setExpirationDate = (
 	value: string,
 ) =>
 	Eff.gen(function* () {
-		const store = yield* Store;
-		yield* Eff.sync(
-			store.actions.setExpirationDate(value),
-		);
+		const store = yield* StoreService;
+		yield* store.dispatch({
+			type: 'setExpirationDate',
+			param: value,
+		});
 	});

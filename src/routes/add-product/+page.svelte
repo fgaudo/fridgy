@@ -15,7 +15,7 @@
 	import * as AP from '$lib/ui/pages/add-product/store.svelte.ts';
 	import { createCapacitorListener } from '$lib/ui/utils.ts';
 
-	const store = AP.createStore();
+	const store = AP.createViewModel();
 
 	const startBack = createCapacitorListener({
 		event: 'backButton',

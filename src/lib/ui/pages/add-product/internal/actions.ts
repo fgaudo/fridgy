@@ -1,67 +1,66 @@
 import { O } from '$lib/core/imports.ts';
 
-import type { InternalState } from './state.svelte.ts';
+import type { StateContext } from './state.svelte.ts';
 
 export const actions = {
-	addingStarted({ state }: InternalState) {
-		return () => {
-			state.isAdding = true;
-			state.toastMessage = undefined;
-		};
-	},
+	addingStarted:
+		() =>
+		({ state }: StateContext) => {
+			{
+				state.isAdding = true;
+				state.toastMessage = undefined;
+			}
+		},
 
-	addingSucceeded({ state }: InternalState) {
-		return () => {
+	addingSucceeded:
+		() =>
+		({ state }: StateContext) => {
 			state.isAdding = false;
 			state.name = undefined;
 			state.expirationDate = undefined;
 
 			state.toastMessage = 'Product added';
-		};
-	},
+		},
 
-	addingFailed({ state }: InternalState) {
-		return () => {
+	addingFailed:
+		() =>
+		({ state }: StateContext) => {
 			state.isAdding = false;
-		};
-	},
+		},
 
-	addingCancelled({ state }: InternalState) {
-		return () => {
+	addingCancelled:
+		() =>
+		({ state }: StateContext) => {
 			state.isAdding = false;
-		};
-	},
+		},
 
-	cancelToast({ state }: InternalState) {
-		return () => {
+	cancelToast:
+		() =>
+		({ state }: StateContext) => {
 			state.toastMessage = undefined;
-		};
-	},
+		},
 
-	initNameIfNotSet({
-		state,
-		derived,
-	}: InternalState) {
-		return () => {
+	initNameIfNotSet:
+		() =>
+		({ state, derived }: StateContext) => {
 			if (O.isNone(derived.maybeName)) {
 				state.name = '';
 			}
-		};
-	},
+		},
 
-	setName({ state }: InternalState) {
-		return (name: string) => () => {
+	setName:
+		(name: string) =>
+		({ state }: StateContext) => {
 			state.name = name;
-		};
-	},
+		},
 
-	setExpirationDate({ state }: InternalState) {
-		return (value: string) => () => {
+	setExpirationDate:
+		(value: string) =>
+		({ state }: StateContext) => {
 			if (value.length <= 0) {
 				state.expirationDate = undefined;
 				return;
 			}
 			state.expirationDate = Date.parse(value);
-		};
-	},
+		},
 };

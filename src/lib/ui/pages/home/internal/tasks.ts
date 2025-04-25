@@ -17,26 +17,27 @@ export const refreshList = pipe(
 			return;
 		}
 
-		yield* Eff.sync(
-			store.actions.fetchListStarted,
-		);
+		yield* store.dispatch({
+			type: 'fetchListStarted',
+		});
 
 		const getProducts =
 			yield* GetSortedProducts.Service;
 
 		const result = yield* Eff.either(getProducts);
 
-		yield* Eff.sync(() =>
-			store.actions.fetchListFinished(result),
-		);
+		yield* store.dispatch({
+			type: 'fetchListFinished',
+			param: result,
+		});
 	}),
 
 	Eff.onInterrupt(() =>
 		Eff.gen(function* () {
 			const store = yield* StoreService;
-			yield* Eff.sync(
-				store.actions.fetchListCancelled,
-			);
+			yield* store.dispatch({
+				type: 'fetchListCancelled',
+			});
 		}),
 	),
 );
@@ -48,9 +49,10 @@ export const refreshTimeInterval = Eff.gen(
 				yield* Config.refreshIntervalMs;
 			const time = yield* Cl.currentTimeMillis;
 			const store = yield* StoreService;
-			yield* Eff.sync(() =>
-				store.actions.refreshTime(time),
-			);
+			yield* store.dispatch({
+				type: 'refreshTime',
+				param: time,
+			});
 			yield* Eff.sleep(intervalMs);
 		}
 	},
@@ -59,7 +61,8 @@ export const refreshTimeInterval = Eff.gen(
 export const refreshTime = Eff.gen(function* () {
 	const time = yield* Cl.currentTimeMillis;
 	const store = yield* StoreService;
-	yield* Eff.sync(() =>
-		store.actions.refreshTime(time),
-	);
+	yield* store.dispatch({
+		type: 'refreshTime',
+		param: time,
+	});
 });

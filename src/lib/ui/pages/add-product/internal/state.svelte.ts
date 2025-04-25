@@ -1,5 +1,3 @@
-import type { ReadonlyDeep } from 'type-fest';
-
 import { asOption } from '$lib/core/utils.ts';
 
 import { GetSortedProducts } from '$lib/business/index.ts';
@@ -20,14 +18,11 @@ type State = {
 	toastMessage?: string;
 };
 
-export type InternalState = ReturnType<
-	typeof createState
+export type StateContext = ReturnType<
+	typeof createStateContext
 >;
 
-export type InternalReadonlyState =
-	ReadonlyDeep<InternalState>;
-
-export function createState() {
+export function createStateContext() {
 	const state = $state<State>({
 		currentDate: Date.now(),
 		isAdding: false,

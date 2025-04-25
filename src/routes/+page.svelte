@@ -21,7 +21,7 @@
 	import * as Store from '$lib/ui/pages/home/store.svelte';
 	import * as Utils from '$lib/ui/utils.ts';
 
-	const store = Store.createStore();
+	const store = Store.createViewModel();
 
 	Utils.runDetachedEffect(
 		Eff.logInfo('User opened home page'),

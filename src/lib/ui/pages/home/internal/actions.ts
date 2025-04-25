@@ -6,19 +6,19 @@ import {
 import type { GetSortedProducts } from '$lib/business/index.ts';
 
 import type {
-	InternalState,
 	ProductViewModel,
+	StateContext,
 } from './state.svelte.ts';
 
-function toggleItem(store: InternalState) {
-	return (product: ProductViewModel) => {
-		if (store.state.selected.has(product.id)) {
+function toggleItem(product: ProductViewModel) {
+	return (context: StateContext) => {
+		if (context.state.selected.has(product.id)) {
 			product.isSelected = false;
-			store.state.selected.delete(product.id);
+			context.state.selected.delete(product.id);
 			return;
 		}
 
-		store.state.selected.add(product.id);
+		context.state.selected.add(product.id);
 		product.isSelected = true;
 	};
 }
@@ -35,78 +35,66 @@ type FetchListResult = E.Either<
 >;
 
 export const actions = {
-	toggleMenu: (store: InternalState) => {
-		return () => {
-			store.state.isMenuOpen =
-				!store.state.isMenuOpen;
-		};
+	toggleMenu: () => (context: StateContext) => {
+		context.state.isMenuOpen =
+			!context.state.isMenuOpen;
 	},
-	fetchListCancelled: (
+	fetchListCancelled:
+		() =>
 		// eslint-disable-next-line @typescript-eslint/no-unused-vars
-		_store: InternalState,
-	) => {
-		return () => {};
-	},
-	fetchListFinished: (store: InternalState) => {
-		return (result: FetchListResult) => {
+		(context: StateContext) => {},
+	fetchListFinished:
+		(result: FetchListResult) =>
+		(context: StateContext) => {
 			if (E.isLeft(result)) {
-				store.state.receivedError = true;
+				context.state.receivedError = true;
 				return;
 			}
 
-			store.state.products =
+			context.state.products =
 				result.right.products;
-			store.state.total = result.right.total;
-			store.state.isLoading = false;
-		};
-	},
-	fetchListStarted: (store: InternalState) => {
-		return () => {
-			store.state.isLoading = true;
-		};
-	},
-	disableSelectMode: (store: InternalState) => {
-		return () => store.state.selected.clear();
-	},
-	refreshTime: (store: InternalState) => {
-		return (timestamp: number) => {
-			store.state.currentTimestamp = timestamp;
-		};
-	},
-	toggleItemByHold: (store: InternalState) => {
-		return (product: ProductViewModel) => {
-			if (store.derived.isSelectModeEnabled) {
+			context.state.total = result.right.total;
+			context.state.isLoading = false;
+		},
+	fetchListStarted:
+		() => (context: StateContext) => {
+			context.state.isLoading = true;
+		},
+	disableSelectMode:
+		() => (context: StateContext) => {
+			context.state.selected.clear();
+		},
+	refreshTime:
+		(timestamp: number) =>
+		(context: StateContext) => {
+			context.state.currentTimestamp = timestamp;
+		},
+	toggleItemByHold:
+		(product: ProductViewModel) =>
+		(context: StateContext) => {
+			if (context.derived.isSelectModeEnabled) {
 				return;
 			}
 
-			toggleItem(store)(product);
-		};
-	},
-	toggleItemByTap: (store: InternalState) => {
-		return (product: ProductViewModel) => {
-			if (!store.derived.isSelectModeEnabled) {
+			toggleItem(product)(context);
+		},
+	toggleItemByTap:
+		(product: ProductViewModel) =>
+		(context: StateContext) => {
+			if (!context.derived.isSelectModeEnabled) {
 				return;
 			}
 
-			toggleItem(store)(product);
-		};
-	},
-
-	enableRefreshTimeListeners: (
-		store: InternalState,
-	) => {
-		return () => {
-			store.state.refreshTimeListenersRegistered =
+			toggleItem(product)(context);
+		},
+	enableRefreshTimeListeners:
+		() => (context: StateContext) => {
+			context.state.refreshTimeListenersRegistered =
 				true;
-		};
-	},
-
-	disableRefreshTimeListeners: (
-		store: InternalState,
-	) => {
-		return () => {
-			store.state.refreshTimeListenersRegistered =
+		},
+	disableRefreshTimeListeners:
+		() => (context: StateContext) => {
+			context.state.refreshTimeListenersRegistered =
 				false;
-		};
-	},
+		},
 };

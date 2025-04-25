@@ -1,5 +1,4 @@
 import { SvelteSet } from 'svelte/reactivity';
-import type { ReadonlyDeep } from 'type-fest';
 
 import { GetSortedProducts } from '$lib/business/index.ts';
 
@@ -25,14 +24,11 @@ type State = {
 	};
 };
 
-export type InternalState = ReturnType<
-	typeof createState
+export type StateContext = ReturnType<
+	typeof createStateContext
 >;
 
-export type InternalReadonlyState =
-	ReadonlyDeep<InternalState>;
-
-export function createState() {
+export function createStateContext() {
 	const state = $state<State>({
 		isMenuOpen: false,
 		isLoading: false,

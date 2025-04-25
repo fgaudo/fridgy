@@ -1,18 +1,28 @@
 import { C } from '$lib/core/imports.ts';
+import {
+	type Store as _Store,
+	createStore as _createStore,
+} from '$lib/core/store.ts';
 
 import { actions as internalActions } from './actions.ts';
-import type { InternalReadonlyState } from './state.svelte.ts';
+import type { StateContext } from './state.svelte.ts';
 
-type Actions = {
-	[K in keyof typeof internalActions]: ReturnType<
-		(typeof internalActions)[K]
-	>;
-};
-
-export type Store = InternalReadonlyState & {
-	actions: Actions;
-};
+export type Store = _Store<
+	StateContext['state'],
+	StateContext['derived'],
+	typeof internalActions
+>;
 
 export class StoreService extends C.Tag(
 	'ui/Home/Store',
 )<StoreService, Store>() {}
+
+export function createStore(
+	context: StateContext,
+): Store {
+	return _createStore(
+		context.state,
+		context.derived,
+		internalActions,
+	);
+}
