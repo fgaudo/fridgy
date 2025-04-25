@@ -1,4 +1,4 @@
-import { Eff } from '$lib/core/imports.ts';
+import { Eff } from '$lib/core/imports.ts'
 
 export class Config extends Eff.Service<Config>()(
 	'ui/Home/Config',

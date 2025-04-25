@@ -1,13 +1,13 @@
-import type { ReadonlyDeep } from 'type-fest';
+import type { ReadonlyDeep } from 'type-fest'
 
-import { Eff } from './imports.ts';
+import { Eff } from './imports.ts'
 
 type Actions<S, D> = {
 	[s: string]: (
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		arg: any,
-	) => (store: { state: S; derived: D }) => void;
-};
+	) => (store: { state: S; derived: D }) => void
+}
 
 export function createStore<
 	S,
@@ -30,7 +30,7 @@ export function createStore<
 						: undefined,
 				)(state),
 			),
-	};
+	}
 }
 
 export type Store<
@@ -38,16 +38,16 @@ export type Store<
 	D,
 	A extends Actions<S, D>,
 > = {
-	state: ReadonlyDeep<S>;
-	derived: ReadonlyDeep<D>;
+	state: ReadonlyDeep<S>
+	derived: ReadonlyDeep<D>
 	dispatch: (
 		action: {
 			[K in keyof A]: Parameters<A[K]> extends []
 				? { type: K }
 				: {
-						type: K;
-						param: Parameters<A[K]>[0];
-					};
+						type: K
+						param: Parameters<A[K]>[0]
+					}
 		}[keyof A],
-	) => Eff.Effect<void>;
-};
+	) => Eff.Effect<void>
+}

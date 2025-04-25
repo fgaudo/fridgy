@@ -1,10 +1,10 @@
-import { Data } from 'effect';
+import { Data } from 'effect'
 
 import {
 	C,
 	Eff,
 	NEHS,
-} from '$lib/core/imports.ts';
+} from '$lib/core/imports.ts'
 
 export class OperationFailed extends Data.TaggedError(
 	'OperationFailed',

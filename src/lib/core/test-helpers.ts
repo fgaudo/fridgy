@@ -3,20 +3,20 @@ import {
 	Exit,
 	FastCheck,
 	flow,
-} from 'effect';
-import { assert } from 'vitest';
+} from 'effect'
+import { assert } from 'vitest'
 
-import { Int, M, NETS, O } from './imports.ts';
+import { Int, M, NETS, O } from './imports.ts'
 
-export * as FC from 'effect/FastCheck';
+export * as FC from 'effect/FastCheck'
 
-const fc = FastCheck;
+const fc = FastCheck
 
 export function assertExitIsFailure<A, E>(
 	exit: Exit.Exit<A, E>,
 ): asserts exit is Exit.Failure<A, E> {
 	if (Exit.isSuccess(exit)) {
-		assert(false, 'Exit is a success');
+		assert(false, 'Exit is a success')
 	}
 
 	if (
@@ -24,7 +24,7 @@ export function assertExitIsFailure<A, E>(
 		(Cause.isDie(exit.cause) ||
 			Cause.isDieType(exit.cause))
 	) {
-		assert(false, 'Exit is a Die');
+		assert(false, 'Exit is a Die')
 	}
 }
 
@@ -32,7 +32,7 @@ export function assertExitIsDie<A, E>(
 	exit: Exit.Exit<A, E>,
 ): asserts exit is Exit.Failure<A, E> {
 	if (Exit.isSuccess(exit)) {
-		assert(false, 'Exit is a success');
+		assert(false, 'Exit is a success')
 	}
 
 	if (
@@ -40,7 +40,7 @@ export function assertExitIsDie<A, E>(
 		!Cause.isDie(exit.cause) &&
 		!Cause.isDieType(exit.cause)
 	) {
-		assert(false, 'Exit is not a Die');
+		assert(false, 'Exit is not a Die')
 	}
 }
 
@@ -48,7 +48,7 @@ export function assertExitIsSuccess<A, E>(
 	exit: Exit.Exit<A, E>,
 ): asserts exit is Exit.Success<A, E> {
 	if (Exit.isFailure(exit)) {
-		assert(false, exit.cause.toString());
+		assert(false, exit.cause.toString())
 	}
 }
 
@@ -66,17 +66,17 @@ export const maybeInteger = fc
 			),
 			M.exhaustive,
 		),
-	);
+	)
 
 export const integer = fc
 	.integer()
-	.map(Int.unsafe_fromNumber);
+	.map(Int.unsafe_fromNumber)
 
 export const nonBlankString =
-	fc.stringMatching(/\S/);
+	fc.stringMatching(/\S/)
 
 export const blankString =
-	fc.stringMatching(/^\s*$/);
+	fc.stringMatching(/^\s*$/)
 
 export const string = fc
 	.constantFrom(
@@ -92,7 +92,7 @@ export const string = fc
 			M.when('non-blank', () => nonBlankString),
 			M.exhaustive,
 		),
-	);
+	)
 
 export const maybeString = fc
 	.constantFrom('some' as const, 'none' as const)
@@ -103,10 +103,10 @@ export const maybeString = fc
 			M.when('none', () => fc.constant(O.none())),
 			M.exhaustive,
 		),
-	);
+	)
 
 export const nonEmptyTrimmedString =
-	nonBlankString.map(NETS.unsafe_fromString);
+	nonBlankString.map(NETS.unsafe_fromString)
 
 export const maybeNonEmptyTrimmedString = fc
 	.constantFrom('some' as const, 'none' as const)
@@ -119,7 +119,7 @@ export const maybeNonEmptyTrimmedString = fc
 			M.when('none', () => fc.constant(O.none())),
 			M.exhaustive,
 		),
-	);
+	)
 
 export const stringOrUndefined = fc
 	.constantFrom(
@@ -139,7 +139,7 @@ export const stringOrUndefined = fc
 			M.when('non-blank', () => nonBlankString),
 			M.exhaustive,
 		),
-	);
+	)
 
 export const nonInteger = fc
 	.constantFrom(
@@ -167,7 +167,7 @@ export const nonInteger = fc
 			),
 			M.exhaustive,
 		),
-	);
+	)
 
 export const nonIntegerOrUndefined = fc
 	.constantFrom(
@@ -199,7 +199,7 @@ export const nonIntegerOrUndefined = fc
 			),
 			M.exhaustive,
 		),
-	);
+	)
 
 export const numberOrUndefined = fc
 	.constantFrom(
@@ -233,4 +233,4 @@ export const numberOrUndefined = fc
 			),
 			M.exhaustive,
 		),
-	);
+	)

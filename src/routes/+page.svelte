@@ -1,36 +1,36 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
+	import { goto } from '$app/navigation'
 	import {
 		Infinity,
 		Info,
 		Menu,
 		Plus,
 		Trash2,
-	} from '@lucide/svelte';
-	import { format } from 'date-fns';
-	import { onMount } from 'svelte';
-	import { tap } from 'svelte-gestures';
-	import { expoIn, expoOut } from 'svelte/easing';
-	import { fade, fly } from 'svelte/transition';
+	} from '@lucide/svelte'
+	import { format } from 'date-fns'
+	import { onMount } from 'svelte'
+	import { tap } from 'svelte-gestures'
+	import { expoIn, expoOut } from 'svelte/easing'
+	import { fade, fly } from 'svelte/transition'
 
-	import { Eff, O } from '$lib/core/imports.ts';
-	import { asOption } from '$lib/core/utils.ts';
+	import { Eff, O } from '$lib/core/imports.ts'
+	import { asOption } from '$lib/core/utils.ts'
 
-	import imgUrl from '$lib/ui/assets/arrow.svg';
-	import Ripple from '$lib/ui/components/ripple.svelte';
-	import * as Store from '$lib/ui/pages/home/store.svelte';
-	import * as Utils from '$lib/ui/utils.ts';
+	import imgUrl from '$lib/ui/assets/arrow.svg'
+	import Ripple from '$lib/ui/components/ripple.svelte'
+	import * as Store from '$lib/ui/pages/home/store.svelte'
+	import * as Utils from '$lib/ui/utils.ts'
 
-	const store = Store.createViewModel();
+	const store = Store.createViewModel()
 
 	Utils.runDetachedEffect(
 		Eff.logInfo('User opened home page'),
-	);
+	)
 
 	onMount(() => {
-		store.tasks.refreshList();
-		store.tasks.registerRefreshTimeListeners();
-	});
+		store.tasks.refreshList()
+		store.tasks.registerRefreshTimeListeners()
+	})
 </script>
 
 <div in:fade>
@@ -57,7 +57,7 @@
 			<div class="w-full p-4 flex relative">
 				<Ripple
 					ontap={() => {
-						goto('/about');
+						goto('/about')
 					}}
 				></Ripple>
 				<Info />
@@ -105,7 +105,7 @@
 				</span>
 			{:else}
 				<Ripple
-					color={'var(--color-background)'}
+					color="var(--color-background)"
 					ontap={store.tasks.toggleMenu}
 				></Ripple>
 				<Menu color="var(--color-background)" />
@@ -187,10 +187,10 @@
 					>
 						<Ripple
 							ontap={() => {
-								console.log('tap');
+								console.log('tap')
 							}}
 							onpress={() => {
-								console.log('press');
+								console.log('press')
 							}}
 						></Ripple>
 						<div
@@ -364,7 +364,9 @@
 					Let’s fill it up!
 				</div>
 				<div
-					style:filter={'invert(16%) sepia(2%) saturate(24%) hue-rotate(336deg) brightness(97%) contrast(53%)'}
+					style:filter="invert(16%) sepia(2%)
+					saturate(24%) hue-rotate(336deg)
+					brightness(97%) contrast(53%)"
 					style:background-image={`url("${imgUrl}")`}
 					class="relative top-[30px] right-[70px] h-[160px] w-[160px] bg-contain bg-no-repeat"
 				></div>
@@ -377,7 +379,7 @@
 		>
 			<Ripple
 				ontap={() => {
-					goto('/add-product');
+					goto('/add-product')
 				}}
 			></Ripple>
 			<Plus size="36" />

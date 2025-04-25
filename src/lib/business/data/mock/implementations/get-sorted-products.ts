@@ -1,4 +1,4 @@
-import { pipe } from 'effect';
+import { pipe } from 'effect'
 
 import {
 	A,
@@ -7,16 +7,16 @@ import {
 	NNInt,
 	O,
 	Ord,
-} from '$lib/core/imports.ts';
-import { asOption } from '$lib/core/utils.ts';
+} from '$lib/core/imports.ts'
+import { asOption } from '$lib/core/utils.ts'
 
 import {
 	GetSortedProducts,
 	GetSortedProducts as Query,
-} from '$lib/business/app/queries.ts';
+} from '$lib/business/app/queries.ts'
 
-import { withErrors } from '../constants.ts';
-import { map } from '../db.ts';
+import { withErrors } from '../constants.ts'
+import { map } from '../db.ts'
 
 const ord = Ord.make(
 	(
@@ -40,9 +40,9 @@ const ord = Ord.make(
 					asOption(product.maybeName),
 				),
 			),
-		])(p1, p2);
+		])(p1, p2)
 	},
-);
+)
 
 export const query = L.succeed(
 	Query.Tag,
@@ -50,16 +50,16 @@ export const query = L.succeed(
 		if (withErrors && Math.random() < 0.5)
 			return yield* new GetSortedProducts.InvalidDataReceived(
 				{ message: 'error' },
-			);
+			)
 
-		const total = map.size;
+		const total = map.size
 
 		const products: Query.ProductDTO[] =
-			Array.from(map.values());
+			Array.from(map.values())
 
 		return {
 			total: NNInt.unsafe_fromNumber(total),
 			products: A.sort(ord)(products),
-		};
+		}
 	}),
-);
+)

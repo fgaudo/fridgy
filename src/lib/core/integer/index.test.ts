@@ -2,15 +2,15 @@ import {
 	assert,
 	describe,
 	effect,
-} from '@effect/vitest';
+} from '@effect/vitest'
 
-import * as H from '$lib/core/test-helpers.ts';
+import * as H from '$lib/core/test-helpers.ts'
 
-import { Eff } from '../imports.ts';
+import { Eff } from '../imports.ts'
 import {
 	fromNumber,
 	unsafe_fromNumber,
-} from './index.ts';
+} from './index.ts'
 
 describe('integer', () => {
 	effect.prop(
@@ -18,18 +18,18 @@ describe('integer', () => {
 		[H.FC.integer()],
 		([integer], { expect }) =>
 			Eff.gen(function* () {
-				const result = fromNumber(integer);
+				const result = fromNumber(integer)
 				assert(
 					result._tag === 'Some',
 					'Could not parse number',
-				);
+				)
 				expect(result.value).toStrictEqual(
 					integer,
-				);
+				)
 
-				yield* Eff.void;
+				yield* Eff.void
 			}),
-	);
+	)
 
 	effect.prop(
 		'should be ok',
@@ -37,12 +37,12 @@ describe('integer', () => {
 
 		([integer], { expect }) =>
 			Eff.gen(function* () {
-				const number = unsafe_fromNumber(integer);
-				expect(number).toStrictEqual(integer);
+				const number = unsafe_fromNumber(integer)
+				expect(number).toStrictEqual(integer)
 
-				yield* Eff.void;
+				yield* Eff.void
 			}),
-	);
+	)
 
 	effect.prop(
 		'should crash',
@@ -57,9 +57,9 @@ describe('integer', () => {
 			Eff.gen(function* () {
 				expect(() =>
 					unsafe_fromNumber(integer),
-				).toThrowError();
+				).toThrowError()
 
-				yield* Eff.void;
+				yield* Eff.void
 			}),
-	);
-});
+	)
+})

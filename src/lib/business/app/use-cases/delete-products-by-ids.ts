@@ -2,20 +2,20 @@ import {
 	A,
 	Eff,
 	NEHS,
-} from '$lib/core/imports.ts';
+} from '$lib/core/imports.ts'
 import {
 	type Value,
 	asValue,
-} from '$lib/core/utils.ts';
+} from '$lib/core/utils.ts'
 
-import { DeleteProductsByIds } from '$lib/business/app/queries';
+import { DeleteProductsByIds } from '$lib/business/app/queries'
 
 export class Service extends Eff.Service<Service>()(
 	'app/DeleteProductsByIds',
 	{
 		effect: Eff.gen(function* () {
 			const deleteProductsByIds =
-				yield* DeleteProductsByIds.Tag;
+				yield* DeleteProductsByIds.Tag
 
 			return (
 				ids: Value<NEHS.NonEmptyHashSet<string>>,
@@ -23,11 +23,11 @@ export class Service extends Eff.Service<Service>()(
 				Eff.gen(function* () {
 					Eff.logDebug(
 						'Delete products use-case started',
-					);
+					)
 
-					const idsValue = asValue(ids);
+					const idsValue = asValue(ids)
 
-					yield* deleteProductsByIds(idsValue);
+					yield* deleteProductsByIds(idsValue)
 
 					yield* Eff.logInfo(
 						'Products deleted',
@@ -36,8 +36,8 @@ export class Service extends Eff.Service<Service>()(
 							'ids',
 							A.fromIterable(idsValue),
 						),
-					);
-				});
+					)
+				})
 		}),
 	},
 ) {}

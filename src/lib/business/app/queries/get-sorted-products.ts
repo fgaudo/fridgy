@@ -1,19 +1,19 @@
-import { Context, Data } from 'effect';
+import { Context, Data } from 'effect'
 
 import {
 	Eff,
 	Int,
 	NETS,
 	NNInt,
-} from '$lib/core/imports.ts';
-import type { OptionOrValue } from '$lib/core/utils.ts';
+} from '$lib/core/imports.ts'
+import type { OptionOrValue } from '$lib/core/utils.ts'
 
 export type ProductDTO = {
-	maybeId: OptionOrValue<string>;
-	maybeName: OptionOrValue<NETS.NonEmptyTrimmedString>;
-	maybeExpirationDate: OptionOrValue<Int.Integer>;
-	maybeCreationDate: OptionOrValue<Int.Integer>;
-};
+	maybeId: OptionOrValue<string>
+	maybeName: OptionOrValue<NETS.NonEmptyTrimmedString>
+	maybeExpirationDate: OptionOrValue<Int.Integer>
+	maybeCreationDate: OptionOrValue<Int.Integer>
+}
 
 export class FetchingFailed extends Data.TaggedError(
 	'FetchingFailed',
@@ -29,8 +29,8 @@ export class Tag extends Context.Tag(
 	Tag,
 	Eff.Effect<
 		{
-			total: NNInt.NonNegativeInteger;
-			products: ProductDTO[];
+			total: NNInt.NonNegativeInteger
+			products: ProductDTO[]
 		},
 		FetchingFailed | InvalidDataReceived
 	>

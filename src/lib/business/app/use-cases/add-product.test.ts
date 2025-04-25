@@ -2,14 +2,14 @@ import {
 	describe,
 	effect,
 	layer,
-} from '@effect/vitest';
+} from '@effect/vitest'
 
-import { Cl, Eff, L } from '$lib/core/imports.ts';
-import * as H from '$lib/core/test-helpers.ts';
+import { Cl, Eff, L } from '$lib/core/imports.ts'
+import * as H from '$lib/core/test-helpers.ts'
 
-import { AddProduct as Query } from '$lib/business/app/queries.ts';
+import { AddProduct as Query } from '$lib/business/app/queries.ts'
 
-import * as Usecase from './add-product.ts';
+import * as Usecase from './add-product.ts'
 
 describe('Add product', () => {
 	effect.prop(
@@ -21,15 +21,15 @@ describe('Add product', () => {
 		({ name, expirationDate }, { expect }) =>
 			Eff.provide(
 				Eff.gen(function* () {
-					const service = yield* Usecase.Tag;
+					const service = yield* Usecase.Tag
 					const exit = yield* Eff.exit(
 						service({
 							name,
 							maybeExpirationDate: expirationDate,
 						}),
-					);
+					)
 
-					H.assertExitIsSuccess(exit);
+					H.assertExitIsSuccess(exit)
 				}),
 				L.provide(Usecase.useCase, [
 					L.succeed(Query.Tag, product =>
@@ -38,11 +38,9 @@ describe('Add product', () => {
 								name,
 								expirationDate,
 								creationDate: 0,
-							});
+							})
 
-							return yield* Eff.succeed(
-								undefined,
-							);
+							return yield* Eff.succeed(undefined)
 						}),
 					),
 					L.setClock({
@@ -50,7 +48,7 @@ describe('Add product', () => {
 					} as Cl.Clock),
 				]),
 			),
-	);
+	)
 
 	layer(
 		L.provide(
@@ -68,16 +66,16 @@ describe('Add product', () => {
 			},
 			({ name, expirationDate }) =>
 				Eff.gen(function* () {
-					const service = yield* Usecase.Tag;
+					const service = yield* Usecase.Tag
 					const exit = yield* Eff.exit(
 						service({
 							name,
 							maybeExpirationDate: expirationDate,
 						}),
-					);
+					)
 
-					H.assertExitIsFailure(exit);
+					H.assertExitIsFailure(exit)
 				}),
-		);
-	});
-});
+		)
+	})
+})

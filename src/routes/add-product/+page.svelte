@@ -2,33 +2,33 @@
 	import {
 		ArrowLeft,
 		Quote,
-	} from '@lucide/svelte';
-	import { onMount } from 'svelte';
-	import { cubicOut } from 'svelte/easing';
-	import { fade, fly } from 'svelte/transition';
+	} from '@lucide/svelte'
+	import { onMount } from 'svelte'
+	import { cubicOut } from 'svelte/easing'
+	import { fade, fly } from 'svelte/transition'
 
-	import { O } from '$lib/core/imports.ts';
+	import { O } from '$lib/core/imports.ts'
 
-	import Ripple from '$lib/ui/components/ripple.svelte';
-	import Spinner from '$lib/ui/components/spinner.svelte';
-	import { PAGE_TRANSITION_Y } from '$lib/ui/constants.ts';
-	import * as AP from '$lib/ui/pages/add-product/store.svelte.ts';
-	import { createCapacitorListener } from '$lib/ui/utils.ts';
+	import Ripple from '$lib/ui/components/ripple.svelte'
+	import Spinner from '$lib/ui/components/spinner.svelte'
+	import { PAGE_TRANSITION_Y } from '$lib/ui/constants.ts'
+	import * as AP from '$lib/ui/pages/add-product/store.svelte.ts'
+	import { createCapacitorListener } from '$lib/ui/utils.ts'
 
-	const store = AP.createViewModel();
+	const store = AP.createViewModel()
 
 	const startBack = createCapacitorListener({
 		event: 'backButton',
 		cb: () => {
 			if (!store.state.isAdding) {
-				window.history.back();
+				window.history.back()
 			}
 		},
-	});
+	})
 
 	onMount(() => {
-		startBack();
-	});
+		startBack()
+	})
 </script>
 
 <div
@@ -48,7 +48,7 @@
 			<Ripple
 				ontap={() => {
 					if (!store.state.isAdding) {
-						window.history.back();
+						window.history.back()
 					}
 				}}
 			></Ripple>

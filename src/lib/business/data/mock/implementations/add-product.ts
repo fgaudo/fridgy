@@ -1,11 +1,11 @@
-import { Eff, L, O } from '$lib/core/imports.ts';
+import { Eff, L, O } from '$lib/core/imports.ts'
 
-import { AddProduct } from '$lib/business/app/queries.ts';
+import { AddProduct } from '$lib/business/app/queries.ts'
 
-import { withErrors } from '../constants.ts';
-import { map } from '../db.ts';
+import { withErrors } from '../constants.ts'
+import { map } from '../db.ts'
 
-let i = 0;
+let i = 0
 
 export const command = L.succeed(
 	AddProduct.Tag,
@@ -16,10 +16,10 @@ export const command = L.succeed(
 					new AddProduct.OperationFailed({
 						message: 'infrastructure',
 					}),
-				);
+				)
 			}
 
-			const index = (i++).toString(10);
+			const index = (i++).toString(10)
 			map.set(index, {
 				maybeName: product.maybeName,
 				maybeExpirationDate:
@@ -27,6 +27,6 @@ export const command = L.succeed(
 				maybeCreationDate:
 					product.maybeCreationDate,
 				maybeId: O.some(index),
-			});
+			})
 		}),
-);
+)

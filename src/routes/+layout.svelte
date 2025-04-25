@@ -1,68 +1,70 @@
 <script lang="ts">
-	import { App as CAP } from '@capacitor/app';
-	import '@fontsource-variable/comfortaa/index.css';
-	import '@fontsource-variable/roboto-flex/full.css';
-	import { onDestroy, onMount } from 'svelte';
-	import { fade, scale } from 'svelte/transition';
+	import { App as CAP } from '@capacitor/app'
+	import '@fontsource-variable/comfortaa/index.css'
+	import '@fontsource-variable/roboto-flex/full.css'
+	import { onDestroy, onMount } from 'svelte'
+	import { fade, scale } from 'svelte/transition'
 
-	import { Eff } from '$lib/core/imports.ts';
+	import { Eff } from '$lib/core/imports.ts'
 
-	import { useCases } from '$lib/business/index.ts';
-	import '$lib/ui/assets/index.css';
-	import Spinner from '$lib/ui/components/spinner.svelte';
-	import { setUsecasesContext } from '$lib/ui/context.ts';
-	import * as Utils from '$lib/ui/utils.ts';
+	import { useCases } from '$lib/business/index.ts'
+	import '$lib/ui/assets/index.css'
+	import Spinner from '$lib/ui/components/spinner.svelte'
+	import { setUsecasesContext } from '$lib/ui/context.ts'
+	import * as Utils from '$lib/ui/utils.ts'
 
-	let { children } = $props();
-	let areFontsLoaded = $state(false);
+	let { children } = $props()
+	let areFontsLoaded = $state(false)
 
 	const startBackButtonListener =
 		Utils.createCapacitorListener({
 			event: 'backButton',
 			cb: e => {
 				if (!e.canGoBack) {
-					void CAP.exitApp();
-					return;
+					void CAP.exitApp()
+					return
 				}
 			},
-		});
+		})
 
-	setUsecasesContext(useCases);
+	setUsecasesContext(useCases)
 
 	const awaitFonts = Utils.toCallback(
 		Eff.gen(function* () {
 			yield* Eff.all([
 				Eff.promise(() => document.fonts.ready),
 				Eff.sleep(400),
-			]);
+			])
 
-			areFontsLoaded = true;
+			areFontsLoaded = true
 		}),
-	);
+	)
 
 	const disableContextMenu = () => {
-		const f = (e: Event) => e.preventDefault();
-		window.addEventListener('contextmenu', f);
+		const f = (e: Event) => e.preventDefault()
+		window.addEventListener('contextmenu', f)
 		onDestroy(() =>
 			window.removeEventListener(
 				'contextmenu',
 				f,
 			),
-		);
-	};
+		)
+	}
 
 	onMount(() => {
-		startBackButtonListener();
-		awaitFonts();
-		disableContextMenu();
-	});
+		startBackButtonListener()
+		awaitFonts()
+		disableContextMenu()
+	})
 </script>
 
 <div
-	style:padding-top={'env(safe-area-inset-top, 0)'}
-	style:padding-bottom={'env(safe-area-inset-bottom, 0)'}
-	style:padding-left={'env(safe-area-inset-left, 0)'}
-	style:padding-right={'env(safe-area-inset-right, 0)'}
+	style:padding-top="env(safe-area-inset-top, 0)"
+	style:padding-bottom="env(safe-area-inset-bottom,
+	0)"
+	style:padding-left="env(safe-area-inset-left, 0)"
+	style:padding-right="env(safe-area-inset-right,
+	0)"
 >
 	{#if areFontsLoaded}
 		<div in:fade={{ delay: 400 }}>

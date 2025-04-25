@@ -1,7 +1,7 @@
-import type { ReadonlyDeep } from 'type-fest';
+import type { ReadonlyDeep } from 'type-fest'
 
 export type Store<S, D, A> = ReadonlyDeep<{
-	state: S;
-	derived: D;
-	actions: A;
-}>;
+	state: S
+	derived: D
+	actions: A
+}>

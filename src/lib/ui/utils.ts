@@ -1,94 +1,89 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import {
 	type BackButtonListener,
 	App as CAP,
-} from '@capacitor/app';
-import type { PluginListenerHandle } from '@capacitor/core';
+} from '@capacitor/app'
+import type { PluginListenerHandle } from '@capacitor/core'
 import {
 	differenceInDays,
 	differenceInHours,
-} from 'date-fns';
-import type { Cancel } from 'effect/Runtime';
-import { onDestroy } from 'svelte';
+} from 'date-fns'
+import type { Cancel } from 'effect/Runtime'
+import { onDestroy } from 'svelte'
 
-import { Eff, H } from '$lib/core/imports.ts';
+import { Eff, H } from '$lib/core/imports.ts'
 
 export function toRestartableCallback(
 	effect: Eff.Effect<unknown, unknown>,
 ) {
-	let cancel:
-		| Cancel<unknown, unknown>
-		| undefined;
+	let cancel: Cancel<unknown, unknown> | undefined
 
-	let isDestroyed = false;
+	let isDestroyed = false
 
 	onDestroy(() => {
-		isDestroyed = true;
+		isDestroyed = true
 
-		cancel?.();
-	});
+		cancel?.()
+	})
 
 	return () => {
-		cancel?.();
+		cancel?.()
 
 		if (isDestroyed) {
-			return;
+			return
 		}
 
 		cancel = Eff.runCallback(
 			H.effectWithLogs(effect),
-		);
+		)
 
-		return cancel;
-	};
+		return cancel
+	}
 }
 
 export function toCallback(
 	effect: Eff.Effect<unknown, unknown>,
 ) {
-	let cancel:
-		| Cancel<unknown, unknown>
-		| undefined;
+	let cancel: Cancel<unknown, unknown> | undefined
 
-	let isDestroyed = false;
+	let isDestroyed = false
 
 	onDestroy(() => {
-		isDestroyed = true;
+		isDestroyed = true
 
-		cancel?.();
-	});
+		cancel?.()
+	})
 
 	return () => {
 		if (isDestroyed) {
-			return;
+			return
 		}
 
 		cancel = Eff.runCallback(
 			H.effectWithLogs(effect),
-		);
+		)
 
-		return cancel;
-	};
+		return cancel
+	}
 }
 
 export function runEffect(
 	effect: Eff.Effect<unknown, unknown>,
 ) {
-	toCallback(effect)();
+	toCallback(effect)()
 }
 
 export function runDetachedEffect(
 	effect: Eff.Effect<unknown, unknown>,
 ) {
-	toDetachedCallback(effect)();
+	toDetachedCallback(effect)()
 }
 
 export function toDetachedCallback(
 	effect: Eff.Effect<unknown, unknown>,
 ) {
 	return () => {
-		Eff.runCallback(H.effectWithLogs(effect));
-	};
+		Eff.runCallback(H.effectWithLogs(effect))
+	}
 }
 
 export function createCapacitorListener({
@@ -96,85 +91,85 @@ export function createCapacitorListener({
 	cb,
 }:
 	| {
-			event: 'resume';
-			cb: () => void;
+			event: 'resume'
+			cb: () => void
 	  }
 	| {
-			event: 'backButton';
-			cb: BackButtonListener;
+			event: 'backButton'
+			cb: BackButtonListener
 	  }) {
-	let listener: PluginListenerHandle | undefined;
-	let isDestroyed = false;
+	let listener: PluginListenerHandle | undefined
+	let isDestroyed = false
 
 	onDestroy(() => {
-		isDestroyed = true;
-		listener?.remove();
-	});
+		isDestroyed = true
+		listener?.remove()
+	})
 
 	return () => {
-		listener?.remove();
+		listener?.remove()
 
 		if (isDestroyed) {
-			return;
+			return
 		}
 
 		const promise =
 			event === 'resume'
 				? CAP.addListener(event, () => {
 						if (isDestroyed) {
-							listener?.remove();
-							return;
+							listener?.remove()
+							return
 						}
-						cb();
+						cb()
 					})
 				: CAP.addListener(event, e => {
 						if (isDestroyed) {
-							listener?.remove();
-							return;
+							listener?.remove()
+							return
 						}
-						cb(e);
-					});
+						cb(e)
+					})
 
 		promise.then(l => {
 			if (isDestroyed) {
-				l.remove();
-				return;
+				l.remove()
+				return
 			}
-			listener = l;
-		});
+			listener = l
+		})
 
 		return () => {
-			listener?.remove();
-		};
-	};
+			listener?.remove()
+		}
+	}
 }
 
 export const formatRemainingTime = (
 	from: number,
 	to: number,
 ): string => {
-	const remaining = to - from;
+	const remaining = to - from
 
 	if (remaining < -1) {
-		const hours = differenceInHours(to, from);
-		return `${hours.toString(10)}h`;
+		const hours = differenceInHours(to, from)
+		return `${hours.toString(10)}h`
 	}
 
-	const hours = differenceInHours(to, from);
+	const hours = differenceInHours(to, from)
 
 	if (hours < 1) {
-		return '1h';
+		return '1h'
 	}
 
-	const days = differenceInDays(to, from);
+	const days = differenceInDays(to, from)
 
 	if (days < 1) {
-		return `${hours.toString(10)}h`;
+		return `${hours.toString(10)}h`
 	}
 
 	if (days <= 28) {
-		return `${days.toString(10)}d`;
+		return `${days.toString(10)}d`
 	}
 
-	return `>4w`;
-};
+	return `>4w`
+}

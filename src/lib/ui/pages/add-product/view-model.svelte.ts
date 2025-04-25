@@ -1,32 +1,32 @@
-import { Eff, pipe } from '$lib/core/imports.ts';
+import { Eff, pipe } from '$lib/core/imports.ts'
 
-import { useCases } from '$lib/business/index.ts';
+import { useCases } from '$lib/business/index.ts'
 import {
 	runEffect,
 	toCallback,
-} from '$lib/ui/utils.ts';
+} from '$lib/ui/utils.ts'
 
-import { createStateContext } from './internal/state.svelte.ts';
+import { createStateContext } from './internal/state.svelte.ts'
 import {
 	StoreService,
 	createStore,
-} from './internal/store.ts';
-import * as internalTasks from './internal/tasks.ts';
+} from './internal/store.ts'
+import * as internalTasks from './internal/tasks.ts'
 
 export function createViewModel() {
-	const store = createStore(createStateContext());
+	const store = createStore(createStateContext())
 
 	const queueResetToast = pipe(
 		internalTasks.queueResetToast,
 		Eff.provideService(StoreService, store),
 		toCallback,
-	);
+	)
 
 	$effect(() => {
 		if (store.derived.toastHasMessage) {
-			queueResetToast();
+			queueResetToast()
 		}
-	});
+	})
 
 	return {
 		state: store.state,
@@ -58,5 +58,5 @@ export function createViewModel() {
 				toCallback,
 			),
 		},
-	};
+	}
 }

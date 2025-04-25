@@ -1,5 +1,5 @@
-import { cubicOut } from 'svelte/easing';
-import type { TransitionConfig } from 'svelte/transition';
+import { cubicOut } from 'svelte/easing'
+import type { TransitionConfig } from 'svelte/transition'
 
 export function scale2(
 	node: Element,
@@ -11,14 +11,14 @@ export function scale2(
 		opacity = 0,
 	} = {},
 ) {
-	const style = getComputedStyle(node);
-	const target_opacity = +style.opacity;
+	const style = getComputedStyle(node)
+	const target_opacity = +style.opacity
 	const transform =
 		style.transform === 'none'
 			? ''
-			: style.transform;
-	const sd = 1 - start;
-	const od = target_opacity - opacity;
+			: style.transform
+	const sd = 1 - start
+	const od = target_opacity - opacity
 
 	return {
 		delay,
@@ -28,7 +28,7 @@ export function scale2(
 			return `
         transform: ${transform} scale(${1 - sd * u});
         opacity: ${target_opacity - od * u}
-    `;
+    `
 		},
-	} satisfies TransitionConfig;
+	} satisfies TransitionConfig
 }

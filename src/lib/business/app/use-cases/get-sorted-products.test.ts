@@ -2,18 +2,18 @@ import {
 	describe,
 	effect,
 	layer,
-} from '@effect/vitest';
+} from '@effect/vitest'
 
 import {
 	Eff,
 	L,
 	NNInt,
-} from '$lib/core/imports.ts';
-import * as H from '$lib/core/test-helpers.ts';
+} from '$lib/core/imports.ts'
+import * as H from '$lib/core/test-helpers.ts'
 
-import { GetSortedProducts as Query } from '$lib/business/app/queries.ts';
+import { GetSortedProducts as Query } from '$lib/business/app/queries.ts'
 
-import * as Usecase from './get-sorted-products.ts';
+import * as Usecase from './get-sorted-products.ts'
 
 const record = H.FC.oneof(
 	H.FC.record(
@@ -38,7 +38,7 @@ const record = H.FC.oneof(
 		},
 		{ noNullPrototype: true },
 	),
-);
+)
 
 describe('Get sorted products', () => {
 	layer(
@@ -49,12 +49,12 @@ describe('Get sorted products', () => {
 	)(({ effect }) => {
 		effect('Should return an error', () =>
 			Eff.gen(function* () {
-				const service = yield* Usecase.Tag;
-				const exit = yield* Eff.exit(service);
-				H.assertExitIsFailure(exit);
+				const service = yield* Usecase.Tag
+				const exit = yield* Eff.exit(service)
+				H.assertExitIsFailure(exit)
 			}),
-		);
-	});
+		)
+	})
 
 	effect.prop(
 		'Should return a list',
@@ -62,18 +62,18 @@ describe('Get sorted products', () => {
 		(products, { expect }) =>
 			Eff.provide(
 				Eff.gen(function* () {
-					const service = yield* Usecase.Tag;
+					const service = yield* Usecase.Tag
 
-					const exit = yield* Eff.exit(service);
+					const exit = yield* Eff.exit(service)
 
-					H.assertExitIsSuccess(exit);
+					H.assertExitIsSuccess(exit)
 
 					expect(exit.value).toStrictEqual({
 						total: NNInt.unsafe_fromNumber(
 							products.length,
 						),
 						models: products,
-					});
+					})
 				}),
 				L.provide(
 					Usecase.useCase,
@@ -88,5 +88,5 @@ describe('Get sorted products', () => {
 					),
 				),
 			),
-	);
-});
+	)
+})

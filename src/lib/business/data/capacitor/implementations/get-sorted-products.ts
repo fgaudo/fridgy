@@ -1,4 +1,4 @@
-import { pipe } from 'effect';
+import { pipe } from 'effect'
 
 import {
 	E,
@@ -10,11 +10,11 @@ import {
 	NNInt,
 	O,
 	Sc,
-} from '$lib/core/imports.ts';
+} from '$lib/core/imports.ts'
 
-import { GetSortedProducts } from '$lib/business/app/queries.ts';
+import { GetSortedProducts } from '$lib/business/app/queries.ts'
 
-import { DbPlugin } from '../db-plugin.ts';
+import { DbPlugin } from '../db-plugin.ts'
 
 const ProductsListSchema = Sc.Struct({
 	total: Sc.Number,
@@ -49,12 +49,12 @@ const ProductsListSchema = Sc.Struct({
 			}),
 		}),
 	),
-});
+})
 
 export const query = L.effect(
 	GetSortedProducts.Tag,
 	Eff.gen(function* () {
-		const { db } = yield* DbPlugin;
+		const { db } = yield* DbPlugin
 
 		return Eff.gen(function* () {
 			const result = yield* pipe(
@@ -62,30 +62,30 @@ export const query = L.effect(
 					db.getAllProductsWithTotal(),
 				),
 				Eff.either,
-			);
+			)
 
 			if (E.isLeft(result)) {
 				return yield* new GetSortedProducts.FetchingFailed(
 					{ message: result.left.toString() },
-				);
+				)
 			}
 
 			const decodeResult =
 				yield* Sc.decodeUnknown(
 					ProductsListSchema,
-				)(result.right).pipe(Eff.either);
+				)(result.right).pipe(Eff.either)
 
 			if (E.isLeft(decodeResult)) {
 				return yield* new GetSortedProducts.InvalidDataReceived(
 					{
 						message: decodeResult.left.toString(),
 					},
-				);
+				)
 			}
 
 			const totalResult = NNInt.fromNumber(
 				decodeResult.right.total,
-			);
+			)
 
 			if (O.isNone(totalResult)) {
 				return yield* new GetSortedProducts.InvalidDataReceived(
@@ -93,10 +93,10 @@ export const query = L.effect(
 						message:
 							'The total is a not a non-negative integer',
 					},
-				);
+				)
 			}
 
-			const total = totalResult.value;
+			const total = totalResult.value
 
 			const products = yield* Eff.all(
 				decodeResult.right.products.map(product =>
@@ -130,15 +130,15 @@ export const query = L.effect(
 								product.creationDate,
 								O.flatMap(Int.fromNumber),
 							),
-						} satisfies GetSortedProducts.ProductDTO;
+						} satisfies GetSortedProducts.ProductDTO
 					}),
 				),
-			);
+			)
 
 			return {
 				total,
 				products,
-			};
-		});
+			}
+		})
 	}),
-);
+)

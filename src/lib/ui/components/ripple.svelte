@@ -1,50 +1,50 @@
 <script lang="ts">
-	import interact from 'interactjs';
-	import { onMount } from 'svelte';
-	import { fade } from 'svelte/transition';
+	import interact from 'interactjs'
+	import { onMount } from 'svelte'
+	import { fade } from 'svelte/transition'
 
-	import { scale2 } from '../transitions.ts';
+	import { scale2 } from '../transitions.ts'
 
-	let button: HTMLButtonElement | undefined;
+	let button: HTMLButtonElement | undefined
 
 	let { isDown, delayTimeout, downCoords } =
 		$state<{
-			isDown: boolean;
-			delayTimeout?: NodeJS.Timeout;
-			downCoords?: [number, number];
+			isDown: boolean
+			delayTimeout?: NodeJS.Timeout
+			downCoords?: [number, number]
 		}>({
 			isDown: false,
-		});
+		})
 
 	let {
 		ontap,
 		onpress: onhold,
 		color = 'var(--color-secondary)',
 	}: {
-		color?: string;
+		color?: string
 	} & (
 		| {
-				ontap: () => void;
-				onpress?: () => void;
+				ontap: () => void
+				onpress?: () => void
 		  }
 		| {
-				onpress: () => void;
-				ontap?: () => void;
+				onpress: () => void
+				ontap?: () => void
 		  }
-	) = $props();
+	) = $props()
 
-	onMount(() => {});
+	onMount(() => {})
 </script>
 
 <button
 	onpointerdown={() => {
-		isDown = true;
+		isDown = true
 	}}
 	onpointerup={() => {
-		isDown = false;
+		isDown = false
 	}}
 	onpointermove={() => {
-		console.log('move');
+		console.log('move')
 	}}
 	class="absolute overflow-hidden h-full w-full top-0 left-0 z-30"
 >

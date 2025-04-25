@@ -6,43 +6,43 @@ import {
 	NNInt,
 	O,
 	pipe,
-} from '$lib/core/imports.ts';
-import { unsafe_fromNumber } from '$lib/core/integer/non-negative.ts';
-import type { NonEmptyTrimmedString } from '$lib/core/non-empty-trimmed-string.ts';
+} from '$lib/core/imports.ts'
+import { unsafe_fromNumber } from '$lib/core/integer/non-negative.ts'
+import type { NonEmptyTrimmedString } from '$lib/core/non-empty-trimmed-string.ts'
 import {
 	type OptionOrValue,
 	asOption,
-} from '$lib/core/utils.ts';
+} from '$lib/core/utils.ts'
 
-import { GetSortedProducts } from '$lib/business/app/queries';
-import * as P from '$lib/business/domain/product';
+import { GetSortedProducts } from '$lib/business/app/queries'
+import * as P from '$lib/business/domain/product'
 
 export type Product =
 	| {
-			id: string;
-			name: NonEmptyTrimmedString;
-			maybeExpirationDate: OptionOrValue<Int.Integer>;
-			creationDate: Int.Integer;
-			isValid: true;
+			id: string
+			name: NonEmptyTrimmedString
+			maybeExpirationDate: OptionOrValue<Int.Integer>
+			creationDate: Int.Integer
+			isValid: true
 	  }
 	| {
-			id: string;
-			maybeName: OptionOrValue<NonEmptyTrimmedString>;
-			maybeExpirationDate: OptionOrValue<Int.Integer>;
-			maybeCreationDate: OptionOrValue<Int.Integer>;
-			isValid: false;
-	  };
+			id: string
+			maybeName: OptionOrValue<NonEmptyTrimmedString>
+			maybeExpirationDate: OptionOrValue<Int.Integer>
+			maybeCreationDate: OptionOrValue<Int.Integer>
+			isValid: false
+	  }
 
 export type CorruptProduct = {
-	maybeName: OptionOrValue<NonEmptyTrimmedString>;
-};
+	maybeName: OptionOrValue<NonEmptyTrimmedString>
+}
 
 export class Service extends Eff.Service<Service>()(
 	'app/GetSortedProducts',
 	{
 		effect: Eff.gen(function* () {
 			const getProductListWithTotal =
-				yield* GetSortedProducts.Tag;
+				yield* GetSortedProducts.Tag
 
 			return Eff.gen(function* () {
 				const [duration, errorOrData] =
@@ -50,7 +50,7 @@ export class Service extends Eff.Service<Service>()(
 						getProductListWithTotal,
 						Eff.either,
 						Eff.timed,
-					);
+					)
 
 				if (E.isLeft(errorOrData)) {
 					if (
@@ -64,7 +64,7 @@ export class Service extends Eff.Service<Service>()(
 								'duration',
 								duration,
 							),
-						);
+						)
 					} else {
 						yield* Eff.logError(
 							`Received invalid data.`,
@@ -73,13 +73,13 @@ export class Service extends Eff.Service<Service>()(
 								'duration',
 								duration,
 							),
-						);
+						)
 					}
 
-					return yield* Eff.fail(undefined);
+					return yield* Eff.fail(undefined)
 				}
 
-				const result = errorOrData.right;
+				const result = errorOrData.right
 
 				const total = yield* Eff.gen(
 					function* () {
@@ -94,11 +94,11 @@ export class Service extends Eff.Service<Service>()(
 									'duration',
 									duration,
 								),
-							);
+							)
 
 							return unsafe_fromNumber(
 								result.products.length,
-							);
+							)
 						}
 
 						yield* Eff.logInfo(
@@ -108,11 +108,11 @@ export class Service extends Eff.Service<Service>()(
 								'duration',
 								duration,
 							),
-						);
+						)
 
-						return result.total;
+						return result.total
 					},
-				);
+				)
 
 				const [corrupts, entries] =
 					A.partitionMap(
@@ -126,17 +126,17 @@ export class Service extends Eff.Service<Service>()(
 											E.left(rawProduct),
 										onSome: E.right,
 									}),
-								);
+								)
 
 								const product =
-									P.createProduct(rawProduct);
+									P.createProduct(rawProduct)
 
 								if (O.isNone(product)) {
 									return {
 										...rawProduct,
 										id,
 										isValid: false,
-									} satisfies Product;
+									} satisfies Product
 								}
 
 								return {
@@ -150,9 +150,9 @@ export class Service extends Eff.Service<Service>()(
 										P.maybeExpirationDate(
 											product.value,
 										),
-								} satisfies Product;
+								} satisfies Product
 							}),
-					);
+					)
 
 				return {
 					products: {
@@ -160,17 +160,17 @@ export class Service extends Eff.Service<Service>()(
 						corrupts,
 					},
 					total,
-				};
+				}
 			}) satisfies Eff.Effect<
 				{
 					products: {
-						entries: Product[];
-						corrupts: CorruptProduct[];
-					};
-					total: NNInt.NonNegativeInteger;
+						entries: Product[]
+						corrupts: CorruptProduct[]
+					}
+					total: NNInt.NonNegativeInteger
 				},
 				void
-			>;
+			>
 		}),
 	},
 ) {}

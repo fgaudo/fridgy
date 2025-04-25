@@ -1,16 +1,16 @@
-import { describe, layer } from '@effect/vitest';
+import { describe, layer } from '@effect/vitest'
 
 import {
 	Eff,
 	HS,
 	L,
 	NEHS,
-} from '$lib/core/imports.ts';
-import * as H from '$lib/core/test-helpers.ts';
+} from '$lib/core/imports.ts'
+import * as H from '$lib/core/test-helpers.ts'
 
-import { DeleteProductsByIds as Query } from '$lib/business/app/queries.ts';
+import { DeleteProductsByIds as Query } from '$lib/business/app/queries.ts'
 
-import * as Usecase from './delete-products-by-ids.ts';
+import * as Usecase from './delete-products-by-ids.ts'
 
 describe('Delete products by ids', () => {
 	layer(
@@ -26,7 +26,7 @@ describe('Delete products by ids', () => {
 			[H.FC.string()],
 			ids =>
 				Eff.gen(function* () {
-					const service = yield* Usecase.Tag;
+					const service = yield* Usecase.Tag
 
 					const exit = yield* Eff.exit(
 						service(
@@ -34,12 +34,12 @@ describe('Delete products by ids', () => {
 								HS.fromIterable(ids),
 							),
 						),
-					);
+					)
 
-					H.assertExitIsFailure(exit);
+					H.assertExitIsFailure(exit)
 				}),
-		);
-	});
+		)
+	})
 
 	layer(
 		L.provide(
@@ -54,7 +54,7 @@ describe('Delete products by ids', () => {
 			[H.FC.string(), H.FC.string()],
 			ids =>
 				Eff.gen(function* () {
-					const service = yield* Usecase.Tag;
+					const service = yield* Usecase.Tag
 
 					const exit = yield* Eff.exit(
 						service(
@@ -62,10 +62,10 @@ describe('Delete products by ids', () => {
 								HS.fromIterable(ids),
 							),
 						),
-					);
+					)
 
-					H.assertExitIsSuccess(exit);
+					H.assertExitIsSuccess(exit)
 				}),
-		);
-	});
-});
+		)
+	})
+})

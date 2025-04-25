@@ -1,52 +1,52 @@
-import { O } from './imports.ts';
+import { O } from './imports.ts'
 
 export const generateHexColor = () => {
-	const alphabet = 'ABCDEF0123456789';
+	const alphabet = 'ABCDEF0123456789'
 
 	const randomize = () =>
 		alphabet[
 			Math.floor(Math.random() * alphabet.length)
-		];
-	return `#${randomize()}${randomize()}${randomize()}${randomize()}${randomize()}${randomize()}`;
-};
+		]
+	return `#${randomize()}${randomize()}${randomize()}${randomize()}${randomize()}${randomize()}`
+}
 
 export const useOrCreateError =
 	(message: string) => (error: unknown) =>
 		error instanceof Error
 			? error
-			: new Error(message);
+			: new Error(message)
 
 export type OptionOrValue<T> =
 	| Value<T>
 	| O.None<T>
-	| undefined;
+	| undefined
 
 export const asOption = <T>(
 	t: OptionOrValue<T>,
-) => (O.isOption(t) ? t : O.fromNullable(t));
+) => (O.isOption(t) ? t : O.fromNullable(t))
 
 export const asUnsafeOption = <T>(
 	t: OptionOrValue<T>,
 ) => {
 	if (t === undefined) {
-		return undefined;
+		return undefined
 	}
 
 	if (!O.isOption(t)) {
-		return t;
+		return t
 	}
 
 	if (O.isNone(t)) {
-		return undefined;
+		return undefined
 	}
 
-	return t.value;
-};
+	return t.value
+}
 
-export type Value<T> = T | O.Some<T>;
+export type Value<T> = T | O.Some<T>
 
 export const asValue = <T>(t: Value<T>) =>
-	!O.isOption(t) ? t : (t as O.Some<T>).value;
+	!O.isOption(t) ? t : (t as O.Some<T>).value
 
 export const objectFromEntries = <
 	const T extends ReadonlyArray<
@@ -56,9 +56,9 @@ export const objectFromEntries = <
 	entries: T,
 ): { [K in T[number] as K[0]]: K[1] } => {
 	return Object.fromEntries(entries) as {
-		[K in T[number] as K[0]]: K[1];
-	};
-};
+		[K in T[number] as K[0]]: K[1]
+	}
+}
 
 export const objectEntries = <
 	T extends Record<PropertyKey, unknown>,
@@ -66,6 +66,6 @@ export const objectEntries = <
 	obj: T,
 ): { [K in keyof T]: [K, T[K]] }[keyof T][] => {
 	return Object.entries(obj) as {
-		[K in keyof T]: [K, T[K]];
-	}[keyof T][];
-};
+		[K in keyof T]: [K, T[K]]
+	}[keyof T][]
+}

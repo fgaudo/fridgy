@@ -3,18 +3,14 @@ import {
 	Console,
 	Queue,
 	pipe,
-} from 'effect';
+} from 'effect'
 
-import {
-	Eff,
-	Q,
-	Str,
-} from '$lib/core/imports.ts';
+import { Eff, Q, Str } from '$lib/core/imports.ts'
 
-import { getSortedProducts } from '$lib/business/data/mock/index.ts';
-import { GetSortedProducts } from '$lib/business/index.ts';
+import { getSortedProducts } from '$lib/business/data/mock/index.ts'
+import { GetSortedProducts } from '$lib/business/index.ts'
 
-import { StoreService } from './pages/home/internal/store.ts';
+import { StoreService } from './pages/home/internal/store.ts'
 
 export const stream1 = pipe(
 	Str.concatAll(
@@ -39,4 +35,4 @@ export const stream1 = pipe(
 		),
 	),
 	Str.ensuring(Eff.succeed(3)),
-);
+)

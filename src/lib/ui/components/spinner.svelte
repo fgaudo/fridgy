@@ -5,11 +5,11 @@
 		width = '24px',
 		backgroundColor = 'var(--color-background)',
 	}: {
-		fill?: string;
-		height?: string;
-		width?: string;
-		backgroundColor?: string;
-	} = $props();
+		fill?: string
+		height?: string
+		width?: string
+		backgroundColor?: string
+	} = $props()
 </script>
 
 <svg
@@ -18,7 +18,7 @@
 	style:height
 	style:width
 	style:background-color={backgroundColor}
-	style:animation-duration={'400ms'}
+	style:animation-duration="400ms"
 	class="text-background animate-spin"
 	viewBox="0 0 100 101"
 	fill="none"

@@ -1,9 +1,9 @@
-import { Logger, ParseResult } from 'effect';
-import { UnknownException } from 'effect/Cause';
-import { fail, succeed } from 'effect/Exit';
-import type { ParseIssue } from 'effect/ParseResult';
+import { Logger, ParseResult } from 'effect'
+import { UnknownException } from 'effect/Cause'
+import { fail, succeed } from 'effect/Exit'
+import type { ParseIssue } from 'effect/ParseResult'
 
-import { Eff } from '$lib/core/imports.ts';
+import { Eff } from '$lib/core/imports.ts'
 
 export const fallback: <A>(
 	def: A,
@@ -15,9 +15,9 @@ export const fallback: <A>(
 			yield* ParseResult.TreeFormatter.formatIssue(
 				issue,
 			),
-		);
-		return yield* Eff.succeed(def);
-	});
+		)
+		return yield* Eff.succeed(def)
+	})
 
 export const tryPromise = <A>(
 	evaluate: (
@@ -27,13 +27,13 @@ export const tryPromise = <A>(
 	Eff.async((resolve, signal) => {
 		evaluate(signal).then(
 			a => {
-				resolve(succeed(a));
+				resolve(succeed(a))
 			},
 			(e: unknown) => {
-				resolve(fail(new UnknownException(e)));
+				resolve(fail(new UnknownException(e)))
 			},
-		);
-	});
+		)
+	})
 
 export const effectWithLogs = (
 	effect: Eff.Effect<unknown, unknown>,
@@ -48,5 +48,5 @@ export const effectWithLogs = (
 					Eff.logFatal(defect.toString()),
 			},
 		),
-	);
-};
+	)
+}
