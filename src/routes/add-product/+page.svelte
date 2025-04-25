@@ -12,15 +12,15 @@
 	import Ripple from '$lib/ui/components/ripple.svelte'
 	import Spinner from '$lib/ui/components/spinner.svelte'
 	import { PAGE_TRANSITION_Y } from '$lib/ui/constants.ts'
-	import * as AP from '$lib/ui/pages/add-product/store.svelte.ts'
+	import { createViewModel } from '$lib/ui/pages/add-product/view-model.svelte.ts'
 	import { createCapacitorListener } from '$lib/ui/utils.ts'
 
-	const store = AP.createViewModel()
+	const viewModel = createViewModel()
 
 	const startBack = createCapacitorListener({
 		event: 'backButton',
 		cb: () => {
-			if (!store.state.isAdding) {
+			if (!viewModel.state.isAdding) {
 				window.history.back()
 			}
 		},
@@ -47,7 +47,7 @@
 		>
 			<Ripple
 				ontap={() => {
-					if (!store.state.isAdding) {
+					if (!viewModel.state.isAdding) {
 						window.history.back()
 					}
 				}}
@@ -99,10 +99,11 @@
 					'bg-background inline-block p-[4px] text-sm duration-500',
 					{
 						'text-primary':
-							!store.derived.isNameValid,
+							!viewModel.derived.isNameValid,
 						'text-secondary':
-							O.isNone(store.derived.maybeName) ||
-							store.derived.isNameValid,
+							O.isNone(
+								viewModel.derived.maybeName,
+							) || viewModel.derived.isNameValid,
 					},
 				]}
 			>
@@ -113,20 +114,21 @@
 			<input
 				type="text"
 				bind:value={
-					() => store.derived.nameOrEmpty,
-					store.tasks.setName
+					() => viewModel.derived.nameOrEmpty,
+					viewModel.tasks.setName
 				}
-				onblur={store.tasks.initNameIfNotSet}
+				onblur={viewModel.tasks.initNameIfNotSet}
 				placeholder="For example: Milk"
 				id="name"
 				class={[
 					'h-16 transition-all focus:ring-0 shadow-none placeholder:text-gray-400 p-4 w-full  duration-500 rounded-[4px] border-0',
 					{
 						'bg-primary/15':
-							!store.derived.isNameValid,
+							!viewModel.derived.isNameValid,
 						'bg-secondary/5':
-							O.isNone(store.derived.maybeName) ||
-							store.derived.isNameValid,
+							O.isNone(
+								viewModel.derived.maybeName,
+							) || viewModel.derived.isNameValid,
 					},
 				]}
 			/>
@@ -144,7 +146,7 @@
 				Expiration date
 			</label>
 			<div class="relative h-16">
-				{#if O.isNone(store.derived.maybeExpirationDate)}
+				{#if O.isNone(viewModel.derived.maybeExpirationDate)}
 					<div
 						class="h-full flex items-center text-gray-400 absolute focus:ring-0 bg-secondary/5 shadow-none p-4 w-full rounded-[4px] border-0 z-40 pointer-events-none"
 					>
@@ -156,20 +158,22 @@
 					placeholder="Select a date"
 					bind:value={
 						() =>
-							store.derived
+							viewModel.derived
 								.formattedExpirationDateOrEmpty,
-						store.tasks.setExpirationDate
+						viewModel.tasks.setExpirationDate
 					}
 					id="expdate"
 					class={[
 						'absolute h-full focus:ring-0 bg-secondary/5 shadow-none p-4 w-full rounded-[4px] border-0',
 						{
 							'opacity-0': O.isNone(
-								store.derived.maybeExpirationDate,
+								viewModel.derived
+									.maybeExpirationDate,
 							),
 						},
 					]}
-					min={store.derived.formattedCurrentDate}
+					min={viewModel.derived
+						.formattedCurrentDate}
 				/>
 			</div>
 		</div>
@@ -182,13 +186,14 @@
 						'px-6 justify-center transition-all duration-500 overflow-hidden bg-primary h-full items-center flex  text-background shadow-primary/70 rounded-full shadow-md ',
 						{
 							'opacity-15 ':
-								!store.derived.isOk ||
-								store.state.isAdding,
+								!viewModel.derived.isOk ||
+								viewModel.state.isAdding,
 						},
 					]}
 				>
-					{#if !store.state.isAdding && store.derived.isOk}
-						<Ripple ontap={store.tasks.addProduct}
+					{#if !viewModel.state.isAdding && viewModel.derived.isOk}
+						<Ripple
+							ontap={viewModel.tasks.addProduct}
 						></Ripple>
 					{/if}
 					Add product
@@ -197,7 +202,7 @@
 		</div>
 	</div>
 
-	{#if store.state.isAdding}
+	{#if viewModel.state.isAdding}
 		<div
 			class="z-50 scale-[175%] fixed left-0 top-0 right-0 bottom-0 backdrop-blur-[1px] flex items-center justify-center"
 		>
@@ -205,13 +210,13 @@
 		</div>
 	{/if}
 
-	{#key store.derived.toastHasMessage}
+	{#key viewModel.derived.toastHasMessage}
 		<div
 			in:fade
 			out:fade
 			class="z-90 fixed flex left-0 right-0 bottom-3 items-center justify-center"
 		>
-			{#if store.derived.toastHasMessage}
+			{#if viewModel.derived.toastHasMessage}
 				<div
 					class="flex justify-center items-center px-8 w-full max-w-lg"
 				>
@@ -239,7 +244,7 @@
 							>
 						</div>
 						<div class="ms-3 text-sm font-normal">
-							{store.state.toastMessage}
+							{viewModel.state.toastMessage}
 						</div>
 					</div>
 				</div>

@@ -18,23 +18,23 @@
 
 	import imgUrl from '$lib/ui/assets/arrow.svg'
 	import Ripple from '$lib/ui/components/ripple.svelte'
-	import * as Store from '$lib/ui/pages/home/view-model.svelte.ts'
+	import { createViewModel } from '$lib/ui/pages/home/view-model.svelte.ts'
 	import * as Utils from '$lib/ui/utils.ts'
 
-	const store = Store.createViewModel()
+	const viewModel = createViewModel()
 
 	Utils.runDetachedEffect(
 		Eff.logInfo('User opened home page'),
 	)
 
 	onMount(() => {
-		store.tasks.refreshList()
-		store.tasks.registerRefreshTimeListeners()
+		viewModel.tasks.refreshList()
+		viewModel.tasks.registerRefreshTimeListeners()
 	})
 </script>
 
 <div in:fade>
-	{#if store.state.isMenuOpen}
+	{#if viewModel.state.isMenuOpen}
 		<div
 			in:fly={{
 				x: -256,
@@ -84,7 +84,7 @@
 				easing: expoIn,
 			}}
 			use:tap={() => ({})}
-			ontap={store.tasks.toggleMenu}
+			ontap={viewModel.tasks.toggleMenu}
 			class="h-full z-998 flex-col fixed w-full bg-black/50 backdrop-blur-xs"
 		></div>
 	{/if}
@@ -95,9 +95,10 @@
 		<div
 			class="ml-2 relative h-12 w-12 flex items-center justify-center rounded-full overflow-hidden"
 		>
-			{#if store.derived.isSelectModeEnabled}
+			{#if viewModel.derived.isSelectModeEnabled}
 				<Ripple
-					ontap={store.tasks.disableSelectMode}
+					ontap={viewModel.tasks
+						.disableSelectMode}
 				></Ripple>
 
 				<span class="material-symbols text-2xl">
@@ -106,7 +107,7 @@
 			{:else}
 				<Ripple
 					color="var(--color-background)"
-					ontap={store.tasks.toggleMenu}
+					ontap={viewModel.tasks.toggleMenu}
 				></Ripple>
 				<Menu color="var(--color-background)" />
 			{/if}
@@ -118,11 +119,11 @@
 			Fridgy
 		</div>
 		<div class="grow"></div>
-		{#if store.derived.isSelectModeEnabled}
+		{#if viewModel.derived.isSelectModeEnabled}
 			<div
 				class="flex h-full items-center text-lg font-stylish translate-y-[2px]"
 			>
-				{store.state.selected.size}
+				{viewModel.state.selected.size}
 			</div>
 
 			<div
@@ -135,7 +136,7 @@
 	</div>
 
 	<div class="bg-background min-h-screen">
-		{#if store.state.receivedError}
+		{#if viewModel.state.receivedError}
 			<div
 				class="flex h-screen w-screen items-center justify-center text-center text-lg"
 			>
@@ -146,26 +147,26 @@
 						class="text-primary underline relative overflow-hidden rounded-full py-1 px-2"
 					>
 						<Ripple
-							ontap={store.tasks.refreshList}
+							ontap={viewModel.tasks.refreshList}
 						></Ripple>
 						Try again
 					</div>
 				</div>
 			</div>
-		{:else if store.state.total > 0}
+		{:else if viewModel.state.total > 0}
 			<p
 				class="bg-background fixed top-[64px] z-50 w-full px-[14px] pt-[10px] pb-[8px] text-xs"
 			>
-				{store.state.total} items
+				{viewModel.state.total} items
 			</p>
 
 			<div
 				class="absolute top-[110px] flex w-full items-center"
-				style:height={store.state.total > 0
-					? `${((store.state.total - 1) * 79 + 205).toString(10)}px`
+				style:height={viewModel.state.total > 0
+					? `${((viewModel.state.total - 1) * 79 + 205).toString(10)}px`
 					: 'auto'}
 			>
-				{#each store.state.products.entries as product, index (product.id)}
+				{#each viewModel.state.products.entries as product, index (product.id)}
 					{@const maybeExpiration = asOption(
 						product.maybeExpirationDate,
 					)}
@@ -250,7 +251,7 @@
 
 								{#if O.isNone(maybeCreation)}
 									No creation date
-								{:else if O.isSome(maybeExpiration) && maybeExpiration.value > store.state.currentTimestamp}
+								{:else if O.isSome(maybeExpiration) && maybeExpiration.value > viewModel.state.currentTimestamp}
 									{@const expiration =
 										maybeExpiration.value}
 									{@const creation =
@@ -260,7 +261,8 @@
 										expiration - creation}
 									{@const remainingDuration =
 										expiration -
-										store.state.currentTimestamp}
+										viewModel.state
+											.currentTimestamp}
 									{@const currentProgress =
 										remainingDuration /
 										totalDuration}
@@ -296,20 +298,20 @@
 							<div
 								class="h-9/12 aspect-square flex items-center justify-center"
 							>
-								{#if !store.derived.isSelectModeEnabled && O.isSome(maybeExpiration)}
+								{#if !viewModel.derived.isSelectModeEnabled && O.isSome(maybeExpiration)}
 									<div
 										class={[
 											'text-primary duration-fade absolute text-sm',
 											{
 												'text-primary font-bold':
 													maybeExpiration.value <
-													store.state
+													viewModel.state
 														.currentTimestamp,
 											},
 										]}
 									>
 										{Utils.formatRemainingTime(
-											store.state
+											viewModel.state
 												.currentTimestamp,
 											maybeExpiration.value,
 										)}
@@ -319,13 +321,13 @@
 						</div>
 					</div>
 				{/each}
-				{#each store.state.products.corrupts as product, index}
+				{#each viewModel.state.products.corrupts as product, index}
 					{@const maybeName = asOption(
 						product.maybeName,
 					)}
 					<div
 						class="duration-fade absolute flex shadow-sm left-1 right-1"
-						style:top={`${(store.state.products.entries.length + index * 65).toString(10)}px`}
+						style:top={`${(viewModel.state.products.entries.length + index * 65).toString(10)}px`}
 					>
 						<div
 							class="bg-background flex min-h-[60px] w-full select-none"
@@ -371,7 +373,7 @@
 			</div>
 		{/if}
 	</div>
-	{#if !store.derived.isSelectModeEnabled}
+	{#if !viewModel.derived.isSelectModeEnabled}
 		<div
 			class="bg-primary z-50 overflow-hidden text-background shadow-md shadow-on-background/30 fixed right-[16px] bottom-[20px] flex h-[96px] w-[96px] items-center justify-center rounded-4xl"
 		>
