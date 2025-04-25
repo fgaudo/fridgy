@@ -18,7 +18,7 @@
 
 	import imgUrl from '$lib/ui/assets/arrow.svg'
 	import Ripple from '$lib/ui/components/ripple.svelte'
-	import * as Store from '$lib/ui/pages/home/store.svelte'
+	import * as Store from '$lib/ui/pages/home/view-model.svelte.ts'
 	import * as Utils from '$lib/ui/utils.ts'
 
 	const store = Store.createViewModel()
@@ -364,9 +364,7 @@
 					Let’s fill it up!
 				</div>
 				<div
-					style:filter="invert(16%) sepia(2%)
-					saturate(24%) hue-rotate(336deg)
-					brightness(97%) contrast(53%)"
+					style:filter={'invert(16%) sepia(2%) saturate(24%) hue-rotate(336deg) brightness(97%) contrast(53%)'}
 					style:background-image={`url("${imgUrl}")`}
 					class="relative top-[30px] right-[70px] h-[160px] w-[160px] bg-contain bg-no-repeat"
 				></div>
