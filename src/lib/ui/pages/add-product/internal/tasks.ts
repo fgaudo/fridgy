@@ -17,17 +17,19 @@ export const addProduct = pipe(
 	Eff.gen(function* () {
 		const store = yield* StoreService
 
-		if (store.state.isAdding) {
+		if (store.context.state.isAdding) {
 			return
 		}
 
 		const name = yield* pipe(
-			asOption(store.state.name),
+			asOption(store.context.state.name),
 			O.flatMap(NETS.fromString),
 		)
 
 		const maybeExpirationDate = pipe(
-			asOption(store.state.expirationDate),
+			asOption(
+				store.context.state.expirationDate,
+			),
 			O.flatMap(Int.fromNumber),
 		)
 

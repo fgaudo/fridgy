@@ -2,44 +2,32 @@ import type { ReadonlyDeep } from 'type-fest'
 
 import { Eff } from './imports.ts'
 
-type Actions<S, D> = {
+type Actions<S> = {
 	[s: string]: (
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		arg: any,
-	) => (store: { state: S; derived: D }) => void
+	) => (context: S) => void
 }
 
 export function createStore<
 	S,
-	D,
-	A extends Actions<S, D>,
->(
-	state: S,
-	derived: D,
-	actions: A,
-): Store<S, D, A> {
+	A extends Actions<S>,
+>(context: S, actions: A): Store<S, A> {
 	return {
-		state: state as ReadonlyDeep<S>,
-		derived: derived as ReadonlyDeep<D>,
+		context: context as ReadonlyDeep<S>,
 		dispatch: action =>
 			Eff.sync(() =>
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any
-				(actions[action.type] as any)(
+				actions[action.type](
 					'params' in action
 						? action.params
 						: undefined,
-				)(state),
+				)(context),
 			),
 	}
 }
 
-export type Store<
-	S,
-	D,
-	A extends Actions<S, D>,
-> = {
-	state: ReadonlyDeep<S>
-	derived: ReadonlyDeep<D>
+export type Store<S, A extends Actions<S>> = {
+	context: ReadonlyDeep<S>
 	dispatch: (
 		action: {
 			[K in keyof A]: Parameters<A[K]> extends []

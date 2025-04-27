@@ -23,14 +23,14 @@ export function createViewModel() {
 	)
 
 	$effect(() => {
-		if (store.derived.toastHasMessage) {
+		if (store.context.derived.toastHasMessage) {
 			queueResetToast()
 		}
 	})
 
 	return {
-		state: store.state,
-		derived: store.derived,
+		state: store.context.state,
+		derived: store.context.derived,
 		tasks: {
 			addProduct: pipe(
 				internalTasks.addProduct,

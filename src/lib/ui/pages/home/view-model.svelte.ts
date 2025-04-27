@@ -10,7 +10,7 @@ import {
 	toRestartableCallback,
 } from '$lib/ui/utils.ts'
 
-import { Config } from './config.ts'
+import { Config } from './internal/config.ts'
 import { createStateContext } from './internal/state.svelte.ts'
 import {
 	type Store,
@@ -24,8 +24,8 @@ export function createViewModel() {
 
 	registerRefreshTimeListeners(store)
 	return {
-		state: store.state,
-		derived: store.derived,
+		state: store.context.state,
+		derived: store.context.derived,
 		tasks: {
 			disableSelectMode: pipe(
 				store.dispatch({
@@ -34,7 +34,7 @@ export function createViewModel() {
 				toCallback,
 			) as () => void,
 
-			refreshList: pipe(
+			fetchList: pipe(
 				internalTasks.refreshList,
 				Eff.provideService(StoreService, store),
 				Eff.provide(useCases),
@@ -96,7 +96,8 @@ function registerRefreshTimeListeners(
 		cancelRefreshTimeInterval?.()
 
 		if (
-			store.derived.refreshTimeListenersEnabled
+			store.context.derived
+				.refreshTimeListenersEnabled
 		) {
 			cancelRefreshTimeResumeListener =
 				startRefreshTimeResumeListener()

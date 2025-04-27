@@ -28,7 +28,7 @@
 	)
 
 	onMount(() => {
-		viewModel.tasks.refreshList()
+		viewModel.tasks.fetchList()
 		viewModel.tasks.registerRefreshTimeListeners()
 	})
 </script>
@@ -147,7 +147,7 @@
 						class="text-primary underline relative overflow-hidden rounded-full py-1 px-2"
 					>
 						<Ripple
-							ontap={viewModel.tasks.refreshList}
+							ontap={viewModel.tasks.fetchList}
 						></Ripple>
 						Try again
 					</div>

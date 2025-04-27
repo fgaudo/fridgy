@@ -4,63 +4,55 @@ import type { StateContext } from './state.svelte.ts'
 
 export const actions = {
 	addingStarted:
-		() =>
-		({ state }: StateContext) => {
+		() => (context: StateContext) => {
 			{
-				state.isAdding = true
-				state.toastMessage = undefined
+				context.state.isAdding = true
+				context.state.toastMessage = undefined
 			}
 		},
 
 	addingSucceeded:
-		() =>
-		({ state }: StateContext) => {
-			state.isAdding = false
-			state.name = undefined
-			state.expirationDate = undefined
+		() => (context: StateContext) => {
+			context.state.isAdding = false
+			context.state.name = undefined
+			context.state.expirationDate = undefined
 
-			state.toastMessage = 'Product added'
+			context.state.toastMessage = 'Product added'
 		},
 
-	addingFailed:
-		() =>
-		({ state }: StateContext) => {
-			state.isAdding = false
-		},
+	addingFailed: () => (context: StateContext) => {
+		context.state.isAdding = false
+	},
 
 	addingCancelled:
-		() =>
-		({ state }: StateContext) => {
-			state.isAdding = false
+		() => (context: StateContext) => {
+			context.state.isAdding = false
 		},
 
-	cancelToast:
-		() =>
-		({ state }: StateContext) => {
-			state.toastMessage = undefined
-		},
+	cancelToast: () => (context: StateContext) => {
+		context.state.toastMessage = undefined
+	},
 
 	initNameIfNotSet:
-		() =>
-		({ state, derived }: StateContext) => {
-			if (O.isNone(derived.maybeName)) {
-				state.name = ''
+		() => (context: StateContext) => {
+			if (O.isNone(context.derived.maybeName)) {
+				context.state.name = ''
 			}
 		},
 
 	setName:
-		(name: string) =>
-		({ state }: StateContext) => {
-			state.name = name
+		(name: string) => (context: StateContext) => {
+			context.state.name = name
 		},
 
 	setExpirationDate:
 		(value: string) =>
-		({ state }: StateContext) => {
+		(context: StateContext) => {
 			if (value.length <= 0) {
-				state.expirationDate = undefined
+				context.state.expirationDate = undefined
 				return
 			}
-			state.expirationDate = Date.parse(value)
+			context.state.expirationDate =
+				Date.parse(value)
 		},
 }

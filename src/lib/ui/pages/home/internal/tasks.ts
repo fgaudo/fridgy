@@ -6,14 +6,14 @@ import {
 
 import { GetSortedProducts } from '$lib/business/index.ts'
 
-import { Config } from '../config.ts'
+import { Config } from './config.ts'
 import { StoreService } from './store.ts'
 
 export const refreshList = pipe(
 	Eff.gen(function* () {
 		const store = yield* StoreService
 
-		if (store.state.isLoading) {
+		if (store.context.state.isLoading) {
 			return
 		}
 

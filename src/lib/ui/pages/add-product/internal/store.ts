@@ -8,8 +8,10 @@ import { actions as internalActions } from './actions.ts'
 import { type StateContext } from './state.svelte.ts'
 
 export type Store = _Store<
-	StateContext['state'],
-	StateContext['derived'],
+	{
+		state: StateContext['state']
+		derived: StateContext['derived']
+	},
 	typeof internalActions
 >
 
@@ -21,8 +23,10 @@ export function createStore(
 	context: StateContext,
 ): Store {
 	return _createStore(
-		context.state,
-		context.derived,
+		{
+			state: context.state,
+			derived: context.derived,
+		},
 		internalActions,
 	)
 }
