@@ -5,7 +5,10 @@ import {
 } from '$lib/core/store.ts'
 
 import { actions as internalActions } from './actions.ts'
-import type { StateContext } from './state.svelte.ts'
+import {
+	type StateContext,
+	createStateContext,
+} from './state.svelte.ts'
 
 export type Store = _Store<
 	{
@@ -19,9 +22,9 @@ export class StoreService extends C.Tag(
 	'ui/Home/Store',
 )<StoreService, Store>() {}
 
-export function createStore(
-	context: StateContext,
-): Store {
+export function createStore(): Store {
+	const context = createStateContext()
+
 	return _createStore(
 		{
 			state: context.state,

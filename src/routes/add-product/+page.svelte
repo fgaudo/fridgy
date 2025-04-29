@@ -97,14 +97,10 @@
 				for="name"
 				class={[
 					'bg-background inline-block p-[4px] text-sm duration-500',
-					{
-						'text-primary':
-							!viewModel.derived.isNameValid,
-						'text-secondary':
-							O.isNone(
-								viewModel.derived.maybeName,
-							) || viewModel.derived.isNameValid,
-					},
+					viewModel.state.isNameValidAndWasTouched
+						? 'text-secondary'
+						: 'text-primary',
+					,
 				]}
 			>
 				Product name <span
@@ -113,23 +109,15 @@
 			</label>
 			<input
 				type="text"
-				bind:value={
-					() => viewModel.derived.nameOrEmpty,
-					viewModel.tasks.setName
-				}
-				onblur={viewModel.tasks.initNameIfNotSet}
+				bind:value={viewModel.state.name}
+				onblur={viewModel.tasks.setNameInteracted}
 				placeholder="For example: Milk"
 				id="name"
 				class={[
 					'h-16 transition-all focus:ring-0 shadow-none placeholder:text-gray-400 p-4 w-full  duration-500 rounded-[4px] border-0',
-					{
-						'bg-primary/15':
-							!viewModel.derived.isNameValid,
-						'bg-secondary/5':
-							O.isNone(
-								viewModel.derived.maybeName,
-							) || viewModel.derived.isNameValid,
-					},
+					viewModel.state.isNameValidAndWasTouched
+						? 'bg-secondary/5'
+						: 'bg-primary/15',
 				]}
 			/>
 		</div>
@@ -146,7 +134,7 @@
 				Expiration date
 			</label>
 			<div class="relative h-16">
-				{#if O.isNone(viewModel.derived.maybeExpirationDate)}
+				{#if O.isNone(viewModel.state.maybeExpirationDate)}
 					<div
 						class="h-full flex items-center text-gray-400 absolute focus:ring-0 bg-secondary/5 shadow-none p-4 w-full rounded-[4px] border-0 z-40 pointer-events-none"
 					>
@@ -158,7 +146,7 @@
 					placeholder="Select a date"
 					bind:value={
 						() =>
-							viewModel.derived
+							viewModel.state
 								.formattedExpirationDateOrEmpty,
 						viewModel.tasks.setExpirationDate
 					}
@@ -167,12 +155,12 @@
 						'absolute h-full focus:ring-0 bg-secondary/5 shadow-none p-4 w-full rounded-[4px] border-0',
 						{
 							'opacity-0': O.isNone(
-								viewModel.derived
+								viewModel.state
 									.maybeExpirationDate,
 							),
 						},
 					]}
-					min={viewModel.derived
+					min={viewModel.state
 						.formattedCurrentDate}
 				/>
 			</div>
@@ -186,12 +174,11 @@
 						'px-6 justify-center transition-all duration-500 overflow-hidden bg-primary h-full items-center flex  text-background shadow-primary/70 rounded-full shadow-md ',
 						{
 							'opacity-15 ':
-								!viewModel.derived.isOk ||
-								viewModel.state.isAdding,
+								!viewModel.state.isSubmittable,
 						},
 					]}
 				>
-					{#if !viewModel.state.isAdding && viewModel.derived.isOk}
+					{#if viewModel.state.isSubmittable}
 						<Ripple
 							ontap={viewModel.tasks.addProduct}
 						></Ripple>
@@ -210,13 +197,13 @@
 		</div>
 	{/if}
 
-	{#key viewModel.derived.toastHasMessage}
+	{#key O.isSome(viewModel.state.maybeToastMessage)}
 		<div
 			in:fade
 			out:fade
 			class="z-90 fixed flex left-0 right-0 bottom-3 items-center justify-center"
 		>
-			{#if viewModel.derived.toastHasMessage}
+			{#if O.isSome(viewModel.state.maybeToastMessage)}
 				<div
 					class="flex justify-center items-center px-8 w-full max-w-lg"
 				>
@@ -244,7 +231,8 @@
 							>
 						</div>
 						<div class="ms-3 text-sm font-normal">
-							{viewModel.state.toastMessage}
+							{viewModel.state.maybeToastMessage
+								.value}
 						</div>
 					</div>
 				</div>

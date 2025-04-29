@@ -9,7 +9,6 @@
 	} from '@lucide/svelte'
 	import { format } from 'date-fns'
 	import { onMount } from 'svelte'
-	import { tap } from 'svelte-gestures'
 	import { expoIn, expoOut } from 'svelte/easing'
 	import { fade, fly } from 'svelte/transition'
 
@@ -83,8 +82,7 @@
 				duration: 400,
 				easing: expoIn,
 			}}
-			use:tap={() => ({})}
-			ontap={viewModel.tasks.toggleMenu}
+			onclick={viewModel.tasks.toggleMenu}
 			class="h-full z-998 flex-col fixed w-full bg-black/50 backdrop-blur-xs"
 		></div>
 	{/if}
@@ -95,7 +93,7 @@
 		<div
 			class="ml-2 relative h-12 w-12 flex items-center justify-center rounded-full overflow-hidden"
 		>
-			{#if viewModel.derived.isSelectModeEnabled}
+			{#if viewModel.state.isSelectModeEnabled}
 				<Ripple
 					ontap={viewModel.tasks
 						.disableSelectMode}
@@ -119,7 +117,7 @@
 			Fridgy
 		</div>
 		<div class="grow"></div>
-		{#if viewModel.derived.isSelectModeEnabled}
+		{#if viewModel.state.isSelectModeEnabled}
 			<div
 				class="flex h-full items-center text-lg font-stylish translate-y-[2px]"
 			>
@@ -298,7 +296,7 @@
 							<div
 								class="h-9/12 aspect-square flex items-center justify-center"
 							>
-								{#if !viewModel.derived.isSelectModeEnabled && O.isSome(maybeExpiration)}
+								{#if !viewModel.state.isSelectModeEnabled && O.isSome(maybeExpiration)}
 									<div
 										class={[
 											'text-primary duration-fade absolute text-sm',
@@ -373,7 +371,7 @@
 			</div>
 		{/if}
 	</div>
-	{#if !viewModel.derived.isSelectModeEnabled}
+	{#if !viewModel.state.isSelectModeEnabled}
 		<div
 			class="bg-primary z-50 overflow-hidden text-background shadow-md shadow-on-background/30 fixed right-[16px] bottom-[20px] flex h-[96px] w-[96px] items-center justify-center rounded-4xl"
 		>

@@ -11,7 +11,6 @@ import {
 } from '$lib/ui/utils.ts'
 
 import { Config } from './internal/config.ts'
-import { createStateContext } from './internal/state.svelte.ts'
 import {
 	type Store,
 	StoreService,
@@ -20,12 +19,22 @@ import {
 import * as internalTasks from './internal/tasks.ts'
 
 export function createViewModel() {
-	const store = createStore(createStateContext())
+	const store = createStore()
 
 	registerRefreshTimeListeners(store)
 	return {
-		state: store.context.state,
-		derived: store.context.derived,
+		state: {
+			receivedError:
+				store.context.state.receivedError,
+			selected: store.context.state.selected,
+			isSelectModeEnabled:
+				store.context.derived.isSelectModeEnabled,
+			total: store.context.state.total,
+			isMenuOpen: store.context.state.isMenuOpen,
+			products: store.context.state.products,
+			currentTimestamp:
+				store.context.state.currentTimestamp,
+		},
 		tasks: {
 			disableSelectMode: pipe(
 				store.dispatch({

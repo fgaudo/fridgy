@@ -1,12 +1,8 @@
 import {
 	E,
 	Eff,
-	Int,
-	NETS,
-	O,
 	pipe,
 } from '$lib/core/imports.ts'
-import { asOption } from '$lib/core/utils.ts'
 
 import { AddProduct } from '$lib/business/index.ts'
 import { MINIMUM_LAG_MS } from '$lib/ui/constants.ts'
@@ -21,17 +17,8 @@ export const addProduct = pipe(
 			return
 		}
 
-		const name = yield* pipe(
-			asOption(store.context.state.name),
-			O.flatMap(NETS.fromString),
-		)
-
-		const maybeExpirationDate = pipe(
-			asOption(
-				store.context.state.expirationDate,
-			),
-			O.flatMap(Int.fromNumber),
-		)
+		const name =
+			yield* store.context.derived.maybeName
 
 		yield* store.dispatch({
 			type: 'addingStarted',
@@ -42,7 +29,9 @@ export const addProduct = pipe(
 			Eff.either(
 				addProduct({
 					name: name,
-					maybeExpirationDate,
+					maybeExpirationDate:
+						store.context.derived
+							.maybeExpirationDate,
 				}),
 			),
 			Eff.sleep(MINIMUM_LAG_MS),
@@ -79,11 +68,11 @@ export const queueResetToast = Eff.gen(
 	},
 )
 
-export const initNameIfNotSet = Eff.gen(
+export const setNameInteracted = Eff.gen(
 	function* () {
 		const store = yield* StoreService
 		yield* store.dispatch({
-			type: 'initNameIfNotSet',
+			type: 'setNameInteracted',
 		})
 	},
 )

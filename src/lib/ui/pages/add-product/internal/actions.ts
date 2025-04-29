@@ -1,5 +1,3 @@
-import { O } from '$lib/core/imports.ts'
-
 import type { StateContext } from './state.svelte.ts'
 
 export const actions = {
@@ -14,7 +12,7 @@ export const actions = {
 	addingSucceeded:
 		() => (context: StateContext) => {
 			context.state.isAdding = false
-			context.state.name = undefined
+			context.state.hasInteractedWithName = false
 			context.state.expirationDate = undefined
 
 			context.state.toastMessage = 'Product added'
@@ -33,11 +31,9 @@ export const actions = {
 		context.state.toastMessage = undefined
 	},
 
-	initNameIfNotSet:
+	setNameInteracted:
 		() => (context: StateContext) => {
-			if (O.isNone(context.derived.maybeName)) {
-				context.state.name = ''
-			}
+			context.state.hasInteractedWithName = true
 		},
 
 	setName:

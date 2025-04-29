@@ -29,8 +29,25 @@ export function createViewModel() {
 	})
 
 	return {
-		state: store.context.state,
-		derived: store.context.derived,
+		state: {
+			isAdding: store.context.state.isAdding,
+			isNameValidAndWasTouched:
+				store.context.derived
+					.isNameValidAndWasTouched,
+			isSubmittable:
+				store.context.derived.isSubmittable,
+			name: store.context.state.name,
+			maybeExpirationDate:
+				store.context.derived.maybeExpirationDate,
+			formattedExpirationDateOrEmpty:
+				store.context.derived
+					.formattedExpirationDateOrEmpty,
+			formattedCurrentDate:
+				store.context.derived
+					.formattedCurrentDate,
+			maybeToastMessage:
+				store.context.derived.maybeToastMessage,
+		},
 		tasks: {
 			addProduct: pipe(
 				internalTasks.addProduct,
@@ -52,8 +69,8 @@ export function createViewModel() {
 					Eff.provideService(StoreService, store),
 					runEffect,
 				),
-			initNameIfNotSet: pipe(
-				internalTasks.initNameIfNotSet,
+			setNameInteracted: pipe(
+				internalTasks.setNameInteracted,
 				Eff.provideService(StoreService, store),
 				toCallback,
 			),

@@ -1,3 +1,9 @@
+import {
+	Int,
+	NETS,
+	O,
+	pipe,
+} from '$lib/core/imports.ts'
 import { asOption } from '$lib/core/utils.ts'
 
 import { GetSortedProducts } from '$lib/business/index.ts'
@@ -11,11 +17,12 @@ export type CorruptProductViewModel =
 	GetSortedProducts.CorruptProduct
 
 type State = {
-	name?: string
+	name: string
 	expirationDate?: number
 	currentDate: number
 	isAdding: boolean
 	toastMessage?: string
+	hasInteractedWithName: boolean
 }
 
 export type StateContext = ReturnType<
@@ -26,20 +33,36 @@ export function createStateContext() {
 	const state = $state<State>({
 		currentDate: Date.now(),
 		isAdding: false,
+		name: '',
+		hasInteractedWithName: false,
 	})
 
-	const isNameValid = $derived(
-		(state.name?.length ?? 0) > 0,
+	const maybeName = $derived(
+		NETS.fromString(state.name),
 	)
 
-	const isOk = $derived(isNameValid)
+	const isNameValid = $derived(
+		O.isSome(maybeName),
+	)
+
+	const isSubmittable = $derived(
+		isNameValid && !state.isAdding,
+	)
+
+	const isNameValidAndWasTouched = $derived(
+		isNameValid && state.hasInteractedWithName,
+	)
 
 	const maybeExpirationDate = $derived(
-		asOption(state.expirationDate),
+		pipe(
+			asOption(state.expirationDate),
+			O.flatMap(Int.fromNumber),
+		),
 	)
-	const maybeName = $derived(asOption(state.name))
 
-	const nameOrEmpty = $derived(state.name ?? '')
+	const maybeToastMessage = $derived(
+		NETS.fromString(state.toastMessage ?? ''),
+	)
 
 	const formattedCurrentDate = $derived(
 		new Date(state.currentDate)
@@ -65,12 +88,15 @@ export function createStateContext() {
 			get maybeExpirationDate() {
 				return maybeExpirationDate
 			},
+			get maybeToastMessage() {
+				return maybeToastMessage
+			},
 			get maybeName() {
 				return maybeName
 			},
 
-			get isOk() {
-				return isOk
+			get isSubmittable() {
+				return isSubmittable
 			},
 			get isNameValid() {
 				return isNameValid
@@ -81,9 +107,11 @@ export function createStateContext() {
 			get toastHasMessage() {
 				return toastHasMessage
 			},
-			get nameOrEmpty() {
-				return nameOrEmpty
+
+			get isNameValidAndWasTouched() {
+				return isNameValidAndWasTouched
 			},
+
 			get formattedExpirationDateOrEmpty() {
 				return formattedExpirationDateOrEmpty
 			},

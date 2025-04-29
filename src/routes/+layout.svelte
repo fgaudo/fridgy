@@ -10,7 +10,6 @@
 	import { useCases } from '$lib/business/index.ts'
 	import '$lib/ui/assets/index.css'
 	import Spinner from '$lib/ui/components/spinner.svelte'
-	import { setUsecasesContext } from '$lib/ui/context.ts'
 	import * as Utils from '$lib/ui/utils.ts'
 
 	let { children } = $props()
@@ -26,8 +25,6 @@
 				}
 			},
 		})
-
-	setUsecasesContext(useCases)
 
 	const awaitFonts = Utils.toCallback(
 		Eff.gen(function* () {
@@ -60,11 +57,9 @@
 
 <div
 	style:padding-top="env(safe-area-inset-top, 0)"
-	style:padding-bottom="env(safe-area-inset-bottom,
-	0)"
+	style:padding-bottom="env(safe-area-inset-bottom,0)"
 	style:padding-left="env(safe-area-inset-left, 0)"
-	style:padding-right="env(safe-area-inset-right,
-	0)"
+	style:padding-right="env(safe-area-inset-right,0)"
 >
 	{#if areFontsLoaded}
 		<div in:fade={{ delay: 400 }}>
