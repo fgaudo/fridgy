@@ -4,7 +4,7 @@ import {
 	createStore as _createStore,
 } from '$lib/core/store.ts'
 
-import { actions as internalActions } from './actions.ts'
+import * as Actions from './actions.ts'
 import {
 	type StateContext,
 	createStateContext,
@@ -15,12 +15,12 @@ export type Store = _Store<
 		state: StateContext['state']
 		derived: StateContext['derived']
 	},
-	typeof internalActions
+	typeof Actions
 >
 
-export class StoreService extends C.Tag(
+export class Service extends C.Tag(
 	'ui/Home/Store',
-)<StoreService, Store>() {}
+)<Service, Store>() {}
 
 export function createStore(): Store {
 	const context = createStateContext()
@@ -30,6 +30,6 @@ export function createStore(): Store {
 			state: context.state,
 			derived: context.derived,
 		},
-		internalActions,
+		Actions,
 	)
 }

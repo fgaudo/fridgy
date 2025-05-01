@@ -37,6 +37,14 @@ export type CorruptProduct = {
 	maybeName: OptionOrValue<NonEmptyTrimmedString>
 }
 
+export type ProductsPage = {
+	products: {
+		entries: Product[]
+		corrupts: CorruptProduct[]
+	}
+	total: NNInt.NonNegativeInteger
+}
+
 export class Service extends Eff.Service<Service>()(
 	'app/GetSortedProducts',
 	{

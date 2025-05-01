@@ -1,16 +1,60 @@
-import {
-	E,
-	type NNInt,
-} from '$lib/core/imports.ts'
-
-import type { GetSortedProducts } from '$lib/business/index.ts'
+import type { ProductsPage } from '$lib/business/app/use-cases/get-sorted-products.ts'
 
 import type {
 	ProductViewModel,
 	StateContext,
 } from './state.svelte.ts'
 
-function toggleItem(product: ProductViewModel) {
+export function toggleMenu() {
+	return (context: StateContext) => {
+		context.state.isMenuOpen =
+			!context.state.isMenuOpen
+	}
+}
+
+export function fetchListCancelled() {
+	// eslint-disable-next-line @typescript-eslint/no-unused-vars
+	return (context: StateContext) => {}
+}
+
+export function fetchListSucceeded(
+	page: ProductsPage,
+) {
+	return (context: StateContext) => {
+		context.state.products = page.products
+		context.state.total = page.total
+		context.state.isLoading = false
+	}
+}
+
+export function fetchListFailed() {
+	return (context: StateContext) => {
+		context.state.receivedError = true
+		context.state.isLoading = false
+	}
+}
+
+export function fetchListStarted() {
+	return (context: StateContext) => {
+		context.state.isLoading = true
+	}
+}
+
+export function disableSelectMode() {
+	return (context: StateContext) => {
+		context.state.selected.clear()
+	}
+}
+
+export function refreshTime(timestamp: number) {
+	return (context: StateContext) => {
+		context.state.currentTimestamp = timestamp
+	}
+}
+
+export function toggleItem(
+	product: ProductViewModel,
+) {
 	return (context: StateContext) => {
 		if (context.state.selected.has(product.id)) {
 			product.isSelected = false
@@ -23,78 +67,47 @@ function toggleItem(product: ProductViewModel) {
 	}
 }
 
-type FetchListResult = E.Either<
-	{
-		products: {
-			entries: GetSortedProducts.Product[]
-			corrupts: GetSortedProducts.CorruptProduct[]
-		}
-		total: NNInt.NonNegativeInteger
-	},
-	void
->
+export function enableRefreshTimeListeners() {
+	return (context: StateContext) => {
+		context.state.refreshTimeListenersRegistered =
+			true
+	}
+}
 
-export const actions = {
-	toggleMenu: () => (context: StateContext) => {
-		context.state.isMenuOpen =
-			!context.state.isMenuOpen
-	},
-	fetchListCancelled:
-		() =>
-		// eslint-disable-next-line @typescript-eslint/no-unused-vars
-		(context: StateContext) => {},
-	fetchListFinished:
-		(result: FetchListResult) =>
-		(context: StateContext) => {
-			if (E.isLeft(result)) {
-				context.state.receivedError = true
-				return
-			}
+export function disableRefreshTimeListeners() {
+	return (context: StateContext) => {
+		context.state.refreshTimeListenersRegistered =
+			false
+	}
+}
 
-			context.state.products =
-				result.right.products
-			context.state.total = result.right.total
-			context.state.isLoading = false
-		},
-	fetchListStarted:
-		() => (context: StateContext) => {
-			context.state.isLoading = true
-		},
-	disableSelectMode:
-		() => (context: StateContext) => {
-			context.state.selected.clear()
-		},
-	refreshTime:
-		(timestamp: number) =>
-		(context: StateContext) => {
-			context.state.currentTimestamp = timestamp
-		},
-	toggleItemByHold:
-		(product: ProductViewModel) =>
-		(context: StateContext) => {
-			if (context.derived.isSelectModeEnabled) {
-				return
-			}
+export function deleteSelectedAndRefreshStarted() {
+	return (context: StateContext) => {
+		context.state.isLoading = true
+	}
+}
 
-			toggleItem(product)(context)
-		},
-	toggleItemByTap:
-		(product: ProductViewModel) =>
-		(context: StateContext) => {
-			if (!context.derived.isSelectModeEnabled) {
-				return
-			}
+export function deleteSelectedFailed() {
+	return (context: StateContext) => {
+		context.state.isLoading = false
+	}
+}
 
-			toggleItem(product)(context)
-		},
-	enableRefreshTimeListeners:
-		() => (context: StateContext) => {
-			context.state.refreshTimeListenersRegistered =
-				true
-		},
-	disableRefreshTimeListeners:
-		() => (context: StateContext) => {
-			context.state.refreshTimeListenersRegistered =
-				false
-		},
+export function deleteSelectedAndRefreshSucceeded(
+	result: ProductsPage,
+) {
+	return (context: StateContext) => {
+		context.state.products = result.products
+		context.state.total = result.total
+		context.state.isLoading = false
+		context.state.selected.clear()
+	}
+}
+
+export function deleteSelectedSuccededAndRefreshFailed() {
+	return (context: StateContext) => {
+		context.state.selected.clear()
+		context.state.isLoading = false
+		context.state.receivedError = true
+	}
 }

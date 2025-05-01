@@ -1,50 +1,70 @@
 <script lang="ts">
-	import interact from 'interactjs'
-	import { onMount } from 'svelte'
 	import { fade } from 'svelte/transition'
 
 	import { scale2 } from '../transitions.ts'
 
-	let button: HTMLButtonElement | undefined
-
-	let { isDown, delayTimeout, downCoords } =
-		$state<{
-			isDown: boolean
-			delayTimeout?: NodeJS.Timeout
-			downCoords?: [number, number]
-		}>({
-			isDown: false,
-		})
-
-	let {
-		ontap,
-		onpress: onhold,
-		color = 'var(--color-secondary)',
-	}: {
+	type Props = {
 		color?: string
 	} & (
 		| {
 				ontap: () => void
-				onpress?: () => void
+				onhold?: () => void
 		  }
 		| {
-				onpress: () => void
+				onhold: () => void
 				ontap?: () => void
 		  }
-	) = $props()
+	)
+	let timeoudId: NodeJS.Timeout | undefined
+	let { isDown, downCoords } = $state<{
+		isDown: boolean
+		delayTimeout?: NodeJS.Timeout
+		downCoords?: [number, number]
+	}>({
+		isDown: false,
+	})
 
-	onMount(() => {})
+	let {
+		ontap,
+		onhold,
+		color = 'var(--color-secondary)',
+	}: Props = $props()
 </script>
 
 <button
-	onpointerdown={() => {
+	onpointerdown={e => {
+		clearTimeout(timeoudId)
 		isDown = true
+		downCoords = [e.pageX, e.pageY]
+
+		if (onhold)
+			timeoudId = setTimeout(() => {
+				isDown = false
+				onhold?.()
+			}, 400)
+	}}
+	onpointermove={e => {
+		if (downCoords === undefined) {
+			return
+		}
+
+		const distance = Math.sqrt(
+			Math.pow(downCoords[0] - e.pageX, 2) +
+				Math.pow(downCoords[1] - e.pageY, 2),
+		)
+
+		if (distance >= 8) {
+			isDown = false
+			clearTimeout(timeoudId)
+		}
 	}}
 	onpointerup={() => {
+		if (!isDown) {
+			return
+		}
+		ontap?.()
 		isDown = false
-	}}
-	onpointermove={() => {
-		console.log('move')
+		clearTimeout(timeoudId)
 	}}
 	class="absolute overflow-hidden h-full w-full top-0 left-0 z-30"
 >

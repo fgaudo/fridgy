@@ -1,77 +1,95 @@
-import { Eff, pipe } from '$lib/core/imports.ts'
+import {
+	Eff,
+	O,
+	pipe,
+} from '$lib/core/imports.ts'
 
 import { useCases } from '$lib/business/index.ts'
-import {
-	runEffect,
-	toCallback,
-} from '$lib/ui/utils.ts'
+import { toCallback } from '$lib/ui/utils.ts'
 
-import { createStateContext } from './internal/state.svelte.ts'
-import {
-	StoreService,
-	createStore,
-} from './internal/store.ts'
-import * as internalTasks from './internal/tasks.ts'
+import * as Store from './internal/store.ts'
+import * as Tasks from './internal/tasks.ts'
 
 export function createViewModel() {
-	const store = createStore(createStateContext())
+	const store = Store.createStore()
 
 	const queueResetToast = pipe(
-		internalTasks.queueResetToast,
-		Eff.provideService(StoreService, store),
+		Tasks.queueResetToast,
+		Eff.provideService(Store.Service, store),
 		toCallback,
 	)
 
 	$effect(() => {
-		if (store.context.derived.toastHasMessage) {
+		if (
+			O.isSome(
+				store.context.derived.maybeToastMessage,
+			)
+		) {
 			queueResetToast()
 		}
 	})
 
 	return {
 		state: {
-			isAdding: store.context.state.isAdding,
-			isNameValidAndWasTouched:
-				store.context.derived
-					.isNameValidAndWasTouched,
-			isSubmittable:
-				store.context.derived.isSubmittable,
-			name: store.context.state.name,
-			maybeExpirationDate:
-				store.context.derived.maybeExpirationDate,
-			formattedExpirationDateOrEmpty:
-				store.context.derived
-					.formattedExpirationDateOrEmpty,
-			formattedCurrentDate:
-				store.context.derived
-					.formattedCurrentDate,
-			maybeToastMessage:
-				store.context.derived.maybeToastMessage,
+			get isAdding() {
+				return store.context.state.isAdding
+			},
+			get isNameValidOrUntouched() {
+				return store.context.derived
+					.isNameValidOrUntouched
+			},
+			get isSubmittable() {
+				return store.context.derived.isSubmittable
+			},
+			get name() {
+				return store.context.state.name
+			},
+			get maybeExpirationDate() {
+				return store.context.derived
+					.maybeExpirationDate
+			},
+			get formattedExpirationDateOrEmpty() {
+				return store.context.derived
+					.formattedExpirationDateOrEmpty
+			},
+			get formattedCurrentDate() {
+				return store.context.derived
+					.formattedCurrentDate
+			},
+			get maybeToastMessage() {
+				return store.context.derived
+					.maybeToastMessage
+			},
 		},
 		tasks: {
 			addProduct: pipe(
-				internalTasks.addProduct,
+				Tasks.addProduct,
 				Eff.provide(useCases),
-				Eff.provideService(StoreService, store),
+				Eff.provideService(Store.Service, store),
 				toCallback,
 			),
-
-			setExpirationDate: (value: string) =>
+			setExpirationDate: toCallback(
+				(value: string) =>
+					pipe(
+						Tasks.setExpirationDate(value),
+						Eff.provideService(
+							Store.Service,
+							store,
+						),
+					),
+			),
+			setName: toCallback((name: string) =>
 				pipe(
-					internalTasks.setExpirationDate(value),
-					Eff.provideService(StoreService, store),
-					runEffect,
+					Tasks.setName(name),
+					Eff.provideService(
+						Store.Service,
+						store,
+					),
 				),
-
-			setName: (name: string) =>
-				pipe(
-					internalTasks.setName(name),
-					Eff.provideService(StoreService, store),
-					runEffect,
-				),
+			),
 			setNameInteracted: pipe(
-				internalTasks.setNameInteracted,
-				Eff.provideService(StoreService, store),
+				Tasks.setNameInteracted,
+				Eff.provideService(Store.Service, store),
 				toCallback,
 			),
 		},

@@ -18,8 +18,8 @@ export function createStore<
 		dispatch: action =>
 			Eff.sync(() =>
 				actions[action.type](
-					'params' in action
-						? action.params
+					'param' in action
+						? action.param
 						: undefined,
 				)(context),
 			),

@@ -7,11 +7,11 @@ import {
 import { AddProduct } from '$lib/business/index.ts'
 import { MINIMUM_LAG_MS } from '$lib/ui/constants.ts'
 
-import { StoreService } from './store.ts'
+import * as Store from './store.ts'
 
 export const addProduct = pipe(
 	Eff.gen(function* () {
-		const store = yield* StoreService
+		const store = yield* Store.Service
 
 		if (store.context.state.isAdding) {
 			return
@@ -50,7 +50,7 @@ export const addProduct = pipe(
 
 	Eff.onInterrupt(() =>
 		Eff.gen(function* () {
-			const store = yield* StoreService
+			const store = yield* Store.Service
 			yield* store.dispatch({
 				type: 'addingCancelled',
 			})
@@ -60,7 +60,7 @@ export const addProduct = pipe(
 
 export const queueResetToast = Eff.gen(
 	function* () {
-		const store = yield* StoreService
+		const store = yield* Store.Service
 		yield* Eff.sleep(3000)
 		yield* store.dispatch({
 			type: 'cancelToast',
@@ -70,7 +70,7 @@ export const queueResetToast = Eff.gen(
 
 export const setNameInteracted = Eff.gen(
 	function* () {
-		const store = yield* StoreService
+		const store = yield* Store.Service
 		yield* store.dispatch({
 			type: 'setNameInteracted',
 		})
@@ -79,7 +79,7 @@ export const setNameInteracted = Eff.gen(
 
 export const setName = (name: string) =>
 	Eff.gen(function* () {
-		const store = yield* StoreService
+		const store = yield* Store.Service
 		yield* store.dispatch({
 			type: 'setName',
 			param: name,
@@ -90,7 +90,7 @@ export const setExpirationDate = (
 	value: string,
 ) =>
 	Eff.gen(function* () {
-		const store = yield* StoreService
+		const store = yield* Store.Service
 		yield* store.dispatch({
 			type: 'setExpirationDate',
 			param: value,

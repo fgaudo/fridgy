@@ -40,9 +40,21 @@ export function toRestartableCallback(
 	}
 }
 
+export function toCallback<A>(
+	effect:
+		| Eff.Effect<unknown, unknown>
+		| ((a: A) => Eff.Effect<unknown, unknown>),
+): (a: A) => Cancel<unknown, unknown>
+
 export function toCallback(
 	effect: Eff.Effect<unknown, unknown>,
-) {
+): () => Cancel<unknown, unknown>
+
+export function toCallback<A>(
+	effect:
+		| Eff.Effect<unknown, unknown>
+		| ((a: A) => Eff.Effect<unknown, unknown>),
+): (a?: A) => Cancel<unknown, unknown> {
 	let cancel: Cancel<unknown, unknown> | undefined
 
 	let isDestroyed = false
@@ -53,29 +65,19 @@ export function toCallback(
 		cancel?.()
 	})
 
-	return () => {
+	return (a?: A) => {
 		if (isDestroyed) {
-			return
+			return () => {}
 		}
-
 		cancel = Eff.runCallback(
-			H.effectWithLogs(effect),
+			H.effectWithLogs(
+				typeof effect === 'function'
+					? effect(a as A)
+					: effect,
+			),
 		)
-
 		return cancel
 	}
-}
-
-export function runEffect(
-	effect: Eff.Effect<unknown, unknown>,
-) {
-	toCallback(effect)()
-}
-
-export function runDetachedEffect(
-	effect: Eff.Effect<unknown, unknown>,
-) {
-	toDetachedCallback(effect)()
 }
 
 export function toDetachedCallback(

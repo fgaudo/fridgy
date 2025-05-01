@@ -1,17 +1,33 @@
 import {
 	Cl,
+	E,
 	Eff,
+	HS,
+	NEHS,
+	O,
 	pipe,
 } from '$lib/core/imports.ts'
 
-import { GetSortedProducts } from '$lib/business/index.ts'
+import {
+	DeleteProductsByIds,
+	GetSortedProducts,
+} from '$lib/business/index.ts'
 
-import { Config } from './config.ts'
-import { StoreService } from './store.ts'
+import * as Store from './store.ts'
+
+export class Config extends Eff.Service<Config>()(
+	'ui/Home/Config',
+	{
+		accessors: true,
+		succeed: {
+			refreshIntervalMs: 20000,
+		},
+	},
+) {}
 
 export const refreshList = pipe(
 	Eff.gen(function* () {
-		const store = yield* StoreService
+		const store = yield* Store.Service
 
 		if (store.context.state.isLoading) {
 			return
@@ -26,15 +42,21 @@ export const refreshList = pipe(
 
 		const result = yield* Eff.either(getProducts)
 
+		if (E.isLeft(result)) {
+			return yield* store.dispatch({
+				type: 'fetchListFailed',
+			})
+		}
+
 		yield* store.dispatch({
-			type: 'fetchListFinished',
-			param: result,
+			type: 'fetchListSucceeded',
+			param: result.right,
 		})
 	}),
 
 	Eff.onInterrupt(() =>
 		Eff.gen(function* () {
-			const store = yield* StoreService
+			const store = yield* Store.Service
 			yield* store.dispatch({
 				type: 'fetchListCancelled',
 			})
@@ -44,11 +66,12 @@ export const refreshList = pipe(
 
 export const refreshTimeInterval = Eff.gen(
 	function* () {
+		const intervalMs =
+			yield* Config.refreshIntervalMs
+		const store = yield* Store.Service
+
 		while (true) {
-			const intervalMs =
-				yield* Config.refreshIntervalMs
 			const time = yield* Cl.currentTimeMillis
-			const store = yield* StoreService
 			yield* store.dispatch({
 				type: 'refreshTime',
 				param: time,
@@ -60,9 +83,63 @@ export const refreshTimeInterval = Eff.gen(
 
 export const refreshTime = Eff.gen(function* () {
 	const time = yield* Cl.currentTimeMillis
-	const store = yield* StoreService
+	const store = yield* Store.Service
 	yield* store.dispatch({
 		type: 'refreshTime',
 		param: time,
 	})
 })
+
+export const deleteSelectedAndRefresh = Eff.gen(
+	function* () {
+		const store = yield* Store.Service
+
+		const deleteProducts =
+			yield* DeleteProductsByIds.Service
+
+		const maybeIds = pipe(
+			HS.fromIterable(
+				store.context.state.selected,
+			),
+			NEHS.fromHashSet,
+		)
+
+		if (O.isNone(maybeIds)) {
+			return
+		}
+
+		yield* store.dispatch({
+			type: 'deleteSelectedAndRefreshStarted',
+		})
+
+		const deleteResult = yield* pipe(
+			deleteProducts(maybeIds.value),
+			Eff.either,
+		)
+
+		if (E.isLeft(deleteResult)) {
+			return yield* store.dispatch({
+				type: 'deleteSelectedFailed',
+			})
+		}
+
+		const refreshList =
+			yield* GetSortedProducts.Service
+
+		const refreshResult = yield* pipe(
+			refreshList,
+			Eff.either,
+		)
+
+		if (E.isLeft(refreshResult)) {
+			return yield* store.dispatch({
+				type: 'deleteSelectedSuccededAndRefreshFailed',
+			})
+		}
+
+		yield* store.dispatch({
+			type: 'deleteSelectedAndRefreshSucceeded',
+			param: refreshResult.right,
+		})
+	},
+)

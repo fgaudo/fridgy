@@ -97,7 +97,7 @@
 				for="name"
 				class={[
 					'bg-background inline-block p-[4px] text-sm duration-500',
-					viewModel.state.isNameValidAndWasTouched
+					viewModel.state.isNameValidOrUntouched
 						? 'text-secondary'
 						: 'text-primary',
 					,
@@ -109,13 +109,15 @@
 			</label>
 			<input
 				type="text"
-				bind:value={viewModel.state.name}
-				onblur={viewModel.tasks.setNameInteracted}
+				bind:value={
+					() => viewModel.state.name,
+					viewModel.tasks.setName
+				}
 				placeholder="For example: Milk"
 				id="name"
 				class={[
 					'h-16 transition-all focus:ring-0 shadow-none placeholder:text-gray-400 p-4 w-full  duration-500 rounded-[4px] border-0',
-					viewModel.state.isNameValidAndWasTouched
+					viewModel.state.isNameValidOrUntouched
 						? 'bg-secondary/5'
 						: 'bg-primary/15',
 				]}

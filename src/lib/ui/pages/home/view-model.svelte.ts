@@ -10,13 +10,13 @@ import {
 	toRestartableCallback,
 } from '$lib/ui/utils.ts'
 
-import { Config } from './internal/config.ts'
+import type { ProductViewModel } from './internal/state.svelte.ts'
 import {
+	Service,
 	type Store,
-	StoreService,
 	createStore,
 } from './internal/store.ts'
-import * as internalTasks from './internal/tasks.ts'
+import * as Tasks from './internal/tasks.ts'
 
 export function createViewModel() {
 	const store = createStore()
@@ -24,16 +24,29 @@ export function createViewModel() {
 	registerRefreshTimeListeners(store)
 	return {
 		state: {
-			receivedError:
-				store.context.state.receivedError,
-			selected: store.context.state.selected,
-			isSelectModeEnabled:
-				store.context.derived.isSelectModeEnabled,
-			total: store.context.state.total,
-			isMenuOpen: store.context.state.isMenuOpen,
-			products: store.context.state.products,
-			currentTimestamp:
-				store.context.state.currentTimestamp,
+			get receivedError() {
+				return store.context.state.receivedError
+			},
+			get selected() {
+				return store.context.state.selected
+			},
+			get isSelectModeEnabled() {
+				return store.context.derived
+					.isSelectModeEnabled
+			},
+			get total() {
+				return store.context.state.total
+			},
+			get isMenuOpen() {
+				return store.context.state.isMenuOpen
+			},
+			get products() {
+				return store.context.state.products
+			},
+			get currentTimestamp() {
+				return store.context.state
+					.currentTimestamp
+			},
 		},
 		tasks: {
 			disableSelectMode: pipe(
@@ -44,16 +57,30 @@ export function createViewModel() {
 			) as () => void,
 
 			fetchList: pipe(
-				internalTasks.refreshList,
-				Eff.provideService(StoreService, store),
+				Tasks.refreshList,
+				Eff.provideService(Service, store),
 				Eff.provide(useCases),
 				toRestartableCallback,
 			) as () => void,
 
 			toggleMenu: pipe(
-				store.dispatch({ type: 'toggleMenu' }),
+				Eff.gen(function* () {
+					yield* store.dispatch({
+						type: 'toggleMenu',
+					})
+				}),
 				toCallback,
 			) as () => void,
+
+			toggleItem: (product: ProductViewModel) =>
+				toCallback(
+					pipe(
+						store.dispatch({
+							type: 'toggleItem',
+							param: product,
+						}),
+					),
+				) as unknown as () => void,
 
 			registerRefreshTimeListeners: pipe(
 				store.dispatch({
@@ -68,6 +95,13 @@ export function createViewModel() {
 				}),
 				toCallback,
 			) as () => void,
+
+			deleteSelected: pipe(
+				Tasks.deleteSelectedAndRefresh,
+				Eff.provideService(Service, store),
+				Eff.provide(useCases),
+				toCallback,
+			),
 		},
 	}
 }
@@ -87,16 +121,16 @@ function registerRefreshTimeListeners(
 		createCapacitorListener({
 			event: 'resume',
 			cb: pipe(
-				internalTasks.refreshTime,
-				Eff.provideService(StoreService, store),
+				Tasks.refreshTime,
+				Eff.provideService(Service, store),
 				toDetachedCallback,
 			),
 		})
 
 	const startRefreshTimeInterval = pipe(
-		internalTasks.refreshTimeInterval,
-		Eff.provideService(StoreService, store),
-		Eff.provide(Config.Default),
+		Tasks.refreshTimeInterval,
+		Eff.provideService(Service, store),
+		Eff.provide(Tasks.Config.Default),
 		toCallback,
 	)
 

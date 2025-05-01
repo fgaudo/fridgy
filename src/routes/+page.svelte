@@ -2,10 +2,12 @@
 	import { goto } from '$app/navigation'
 	import {
 		Infinity,
+		Cross,
 		Info,
 		Menu,
 		Plus,
 		Trash2,
+		X,
 	} from '@lucide/svelte'
 	import { format } from 'date-fns'
 	import { onMount } from 'svelte'
@@ -22,9 +24,9 @@
 
 	const viewModel = createViewModel()
 
-	Utils.runDetachedEffect(
+	Utils.toDetachedCallback(
 		Eff.logInfo('User opened home page'),
-	)
+	)()
 
 	onMount(() => {
 		viewModel.tasks.fetchList()
@@ -82,7 +84,7 @@
 				duration: 400,
 				easing: expoIn,
 			}}
-			onclick={viewModel.tasks.toggleMenu}
+			onpointerup={viewModel.tasks.toggleMenu}
 			class="h-full z-998 flex-col fixed w-full bg-black/50 backdrop-blur-xs"
 		></div>
 	{/if}
@@ -99,20 +101,18 @@
 						.disableSelectMode}
 				></Ripple>
 
-				<span class="material-symbols text-2xl">
-					close
-				</span>
+				<X />
 			{:else}
 				<Ripple
 					color="var(--color-background)"
 					ontap={viewModel.tasks.toggleMenu}
 				></Ripple>
-				<Menu color="var(--color-background)" />
+				<Menu />
 			{/if}
 		</div>
 
 		<div
-			class="font-stylish pl-2 text-2xl font-extrabold translate-y-[2px] text-background"
+			class="font-stylish pl-2 text-2xl font-extrabold translate-y-[2px]"
 		>
 			Fridgy
 		</div>
@@ -127,7 +127,9 @@
 			<div
 				class="ml-2 mr-2 relative h-12 w-12 flex items-center justify-center rounded-full overflow-hidden"
 			>
-				<Ripple ontap={() => {}}></Ripple>
+				<Ripple
+					ontap={viewModel.tasks.deleteSelected}
+				></Ripple>
 				<Trash2 />
 			</div>
 		{/if}
@@ -181,24 +183,30 @@
 							: product.maybeName,
 					)}
 					<div
-						class="duration-fade absolute flex left-2 right-2 shadow-sm rounded-lg py-1 overflow-hidden bg-secondary/5"
+						class={[
+							'absolute flex left-2 right-2 shadow-sm rounded-lg py-1 overflow-hidden transition-all duration-250',
+							product.isSelected
+								? 'bg-accent/10 scale-[102%]'
+								: 'bg-secondary/5',
+						]}
 						style:top={`${(index * 79).toString(10)}px`}
 					>
-						<Ripple
-							ontap={() => {
-								console.log('tap')
-							}}
-							onpress={() => {
-								console.log('press')
-							}}
-						></Ripple>
+						{#if viewModel.state.isSelectModeEnabled}
+							<Ripple
+								ontap={viewModel.tasks.toggleItem(
+									product,
+								)}
+							></Ripple>
+						{:else}
+							<Ripple
+								onhold={viewModel.tasks.toggleItem(
+									product,
+								)}
+							></Ripple>
+						{/if}
 						<div
 							class={[
-								' justify-between flex min-h-[60px] w-full gap-1 select-none items-center',
-								{
-									'bg-secondary/10':
-										product.isSelected,
-								},
+								'justify-between flex min-h-[60px] w-full gap-1 select-none items-center',
 							]}
 							style="content-visibility: 'auto'"
 						>
@@ -238,10 +246,9 @@
 							>
 								{#if O.isSome(maybeName)}
 									<div
-										class="overflow-ellipsis whitespace-nowrap overflow-hidden"
+										class="overflow-ellipsis whitespace-nowrap overflow-hidden capitalize"
 									>
-										Pomodori de cristo dasads da
-										aa d dsaadsdas dasd
+										{maybeName.value}
 									</div>
 								{:else}
 									<div>[NO NAME]</div>
@@ -296,7 +303,7 @@
 							<div
 								class="h-9/12 aspect-square flex items-center justify-center"
 							>
-								{#if !viewModel.state.isSelectModeEnabled && O.isSome(maybeExpiration)}
+								{#if O.isSome(maybeExpiration)}
 									<div
 										class={[
 											'text-primary duration-fade absolute text-sm',

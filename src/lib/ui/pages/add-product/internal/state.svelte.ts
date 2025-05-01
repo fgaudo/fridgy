@@ -49,8 +49,8 @@ export function createStateContext() {
 		isNameValid && !state.isAdding,
 	)
 
-	const isNameValidAndWasTouched = $derived(
-		isNameValid && state.hasInteractedWithName,
+	const isNameValidOrUntouched = $derived(
+		isNameValid || !state.hasInteractedWithName,
 	)
 
 	const maybeExpirationDate = $derived(
@@ -61,7 +61,10 @@ export function createStateContext() {
 	)
 
 	const maybeToastMessage = $derived(
-		NETS.fromString(state.toastMessage ?? ''),
+		pipe(
+			asOption(state.toastMessage),
+			O.flatMap(NETS.fromString),
+		),
 	)
 
 	const formattedCurrentDate = $derived(
@@ -76,10 +79,6 @@ export function createStateContext() {
 					.toISOString()
 					.substring(0, 10)
 			: '',
-	)
-
-	const toastHasMessage = $derived(
-		(state.toastMessage?.length ?? 0) > 0,
 	)
 
 	return {
@@ -104,12 +103,9 @@ export function createStateContext() {
 			get formattedCurrentDate() {
 				return formattedCurrentDate
 			},
-			get toastHasMessage() {
-				return toastHasMessage
-			},
 
-			get isNameValidAndWasTouched() {
-				return isNameValidAndWasTouched
+			get isNameValidOrUntouched() {
+				return isNameValidOrUntouched
 			},
 
 			get formattedExpirationDateOrEmpty() {
