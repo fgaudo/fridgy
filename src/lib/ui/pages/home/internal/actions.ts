@@ -1,8 +1,10 @@
+import { asValue } from '$lib/core/utils.ts'
+
 import type { ProductsPage } from '$lib/business/app/use-cases/get-sorted-products.ts'
 
 import type {
-	ProductViewModel,
 	StateContext,
+	UncorruptProductViewModel,
 } from './state.svelte.ts'
 
 export function toggleMenu() {
@@ -21,8 +23,10 @@ export function fetchListSucceeded(
 	page: ProductsPage,
 ) {
 	return (context: StateContext) => {
-		context.state.products = page.products
-		context.state.total = page.total
+		context.state.productsState.pageEntries =
+			page.entries
+
+		context.state.productsState.total = page.total
 		context.state.isLoading = false
 	}
 }
@@ -42,7 +46,7 @@ export function fetchListStarted() {
 
 export function disableSelectMode() {
 	return (context: StateContext) => {
-		context.state.selected.clear()
+		context.state.productsState.selected.clear()
 	}
 }
 
@@ -53,16 +57,22 @@ export function refreshTime(timestamp: number) {
 }
 
 export function toggleItem(
-	product: ProductViewModel,
+	product: UncorruptProductViewModel,
 ) {
 	return (context: StateContext) => {
-		if (context.state.selected.has(product.id)) {
+		const id = asValue(product.maybeId)
+
+		if (
+			context.state.productsState.selected.has(id)
+		) {
 			product.isSelected = false
-			context.state.selected.delete(product.id)
+			context.state.productsState.selected.delete(
+				id,
+			)
 			return
 		}
 
-		context.state.selected.add(product.id)
+		context.state.productsState.selected.add(id)
 		product.isSelected = true
 	}
 }
@@ -97,16 +107,18 @@ export function deleteSelectedAndRefreshSucceeded(
 	result: ProductsPage,
 ) {
 	return (context: StateContext) => {
-		context.state.products = result.products
-		context.state.total = result.total
+		context.state.productsState.pageEntries =
+			result.entries
+		context.state.productsState.total =
+			result.total
 		context.state.isLoading = false
-		context.state.selected.clear()
+		context.state.productsState.selected.clear()
 	}
 }
 
 export function deleteSelectedSuccededAndRefreshFailed() {
 	return (context: StateContext) => {
-		context.state.selected.clear()
+		context.state.productsState.selected.clear()
 		context.state.isLoading = false
 		context.state.receivedError = true
 	}

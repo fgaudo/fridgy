@@ -50,7 +50,7 @@
 
 	onMount(() => {
 		startBackButtonListener()
-		awaitFonts()
+		awaitFonts(undefined)
 		disableContextMenu()
 	})
 </script>

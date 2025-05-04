@@ -8,12 +8,12 @@ import {
 
 export class OperationFailed extends Data.TaggedError(
 	'OperationFailed',
-)<{ message: string }> {}
+) {}
 
-export class Tag extends C.Tag(
+export class DeleteProductsByIds extends C.Tag(
 	'data/DeleteProductsByIds',
 )<
-	Tag,
+	DeleteProductsByIds,
 	(
 		ids: NEHS.NonEmptyHashSet<string>,
 	) => Eff.Effect<void, OperationFailed>

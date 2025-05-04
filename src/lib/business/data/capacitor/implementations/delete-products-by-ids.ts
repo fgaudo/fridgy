@@ -1,3 +1,5 @@
+import { LogLevel } from 'effect'
+
 import {
 	Eff,
 	H,
@@ -7,12 +9,14 @@ import {
 
 import { DeleteProductsByIds } from '$lib/business/app/queries.ts'
 
+import { Deps } from '../../deps.ts'
 import { DbPlugin } from '../db-plugin.ts'
 
 export const command = L.effect(
-	DeleteProductsByIds.Tag,
+	DeleteProductsByIds.DeleteProductsByIds,
 	Eff.gen(function* () {
 		const { db } = yield* DbPlugin
+		const { log } = yield* Deps
 
 		return ids =>
 			Eff.gen(function* () {
@@ -27,7 +31,8 @@ export const command = L.effect(
 								return parsed.value
 							}
 
-							yield* Eff.logWarning(
+							yield* log(
+								LogLevel.Warning,
 								'Id has incorrect format. Skipping.',
 							).pipe(Eff.annotateLogs({ id }))
 
@@ -36,7 +41,8 @@ export const command = L.effect(
 					),
 				)
 
-				yield* Eff.logDebug(
+				yield* log(
+					LogLevel.Debug,
 					`About to delete ${idsArray.length.toString(10)} products`,
 				)
 
@@ -46,14 +52,13 @@ export const command = L.effect(
 					}),
 				).pipe(
 					Eff.catchTags({
-						UnknownException: ({ message }) =>
-							new DeleteProductsByIds.OperationFailed(
-								{ message },
-							),
+						UnknownException: () =>
+							new DeleteProductsByIds.OperationFailed(),
 					}),
 				)
 
-				yield* Eff.logDebug(
+				yield* log(
+					LogLevel.Debug,
 					'No problems while deleting products',
 				)
 			})

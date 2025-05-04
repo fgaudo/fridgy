@@ -16,7 +16,7 @@ describe('Delete products by ids', () => {
 	layer(
 		L.provide(
 			Usecase.useCase,
-			L.succeed(Query.Tag, () =>
+			L.succeed(Query.DeleteProductsByIds, () =>
 				Eff.fail(undefined),
 			),
 		),
@@ -44,7 +44,7 @@ describe('Delete products by ids', () => {
 	layer(
 		L.provide(
 			Usecase.useCase,
-			L.succeed(Query.Tag, () =>
+			L.succeed(Query.DeleteProductsByIds, () =>
 				Eff.succeed(undefined),
 			),
 		),

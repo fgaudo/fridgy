@@ -44,7 +44,10 @@ describe('Get sorted products', () => {
 	layer(
 		L.provide(
 			Usecase.useCase,
-			L.succeed(Query.Tag, Eff.fail(undefined)),
+			L.succeed(
+				Query.GetSortedProducts,
+				Eff.fail(undefined),
+			),
 		),
 	)(({ effect }) => {
 		effect('Should return an error', () =>
@@ -78,7 +81,7 @@ describe('Get sorted products', () => {
 				L.provide(
 					Usecase.useCase,
 					L.succeed(
-						Query.Tag,
+						Query.GetSortedProducts,
 						Eff.succeed({
 							total: NNInt.unsafe_fromNumber(
 								products.length,

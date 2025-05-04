@@ -32,9 +32,7 @@ export function toRestartableCallback(
 			return
 		}
 
-		cancel = Eff.runCallback(
-			H.effectWithLogs(effect),
-		)
+		cancel = Eff.runCallback(effect)
 
 		return cancel
 	}
@@ -70,11 +68,9 @@ export function toCallback<A>(
 			return () => {}
 		}
 		cancel = Eff.runCallback(
-			H.effectWithLogs(
-				typeof effect === 'function'
-					? effect(a as A)
-					: effect,
-			),
+			typeof effect === 'function'
+				? effect(a as A)
+				: effect,
 		)
 		return cancel
 	}
@@ -84,7 +80,7 @@ export function toDetachedCallback(
 	effect: Eff.Effect<unknown, unknown>,
 ) {
 	return () => {
-		Eff.runCallback(H.effectWithLogs(effect))
+		Eff.runCallback(effect)
 	}
 }
 

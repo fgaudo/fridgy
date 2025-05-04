@@ -1,32 +1,49 @@
+import { HashMap, LogLevel, Ref } from 'effect'
+
 import { Eff, L, O } from '$lib/core/imports.ts'
 
 import { AddProduct } from '$lib/business/app/queries.ts'
 
-import { withErrors } from '../constants.ts'
-import { map } from '../db.ts'
+import { Deps } from '../../deps.ts'
+import { Config } from '../config.ts'
+import { Db } from '../db.ts'
 
-let i = 0
+export const command = L.effect(
+	AddProduct.AddProduct,
+	Eff.gen(function* () {
+		const withErrors = yield* Config.withErrors
+		const { log } = yield* Deps
+		const db = yield* Db
+		return product =>
+			Eff.gen(function* () {
+				if (withErrors && Math.random() < 0.5) {
+					return yield* Eff.fail(
+						new AddProduct.OperationFailed(),
+					)
+				}
 
-export const command = L.succeed(
-	AddProduct.Tag,
-	product =>
-		Eff.gen(function* () {
-			if (withErrors && Math.random() < 0.5) {
-				return yield* Eff.fail(
-					new AddProduct.OperationFailed({
-						message: 'infrastructure',
-					}),
-				)
-			}
+				yield* Ref.update(db, dbValues => {
+					const index = dbValues.index + 1
+					const indexString = index.toString(10)
+					return {
+						...dbValues,
+						index,
+						map: dbValues.map.pipe(
+							HashMap.set(indexString, {
+								maybeName: product.maybeName,
+								maybeExpirationDate:
+									product.maybeExpirationDate,
+								maybeCreationDate:
+									product.maybeCreationDate,
+								maybeId: O.some(indexString),
+							}),
+						),
+					}
+				})
 
-			const index = (i++).toString(10)
-			map.set(index, {
-				maybeName: product.maybeName,
-				maybeExpirationDate:
-					product.maybeExpirationDate,
-				maybeCreationDate:
-					product.maybeCreationDate,
-				maybeId: O.some(index),
+				yield* log(LogLevel.Info, 'Added product')
+
+				return yield* Eff.void
 			})
-		}),
+	}),
 )

@@ -1,26 +1,21 @@
 import { SvelteSet } from 'svelte/reactivity'
 
+import { O } from '$lib/core/imports.ts'
+import { unsafe_fromNumber } from '$lib/core/integer/index.ts'
+
 import { GetSortedProducts } from '$lib/business/index.ts'
 
 export type ProductViewModel =
-	GetSortedProducts.Product & {
-		isSelected?: boolean
-	}
-
-export type CorruptProductViewModel =
-	GetSortedProducts.CorruptProduct
+	GetSortedProducts.Product
 
 type State = {
 	isMenuOpen: boolean
-	selected: SvelteSet<string>
 	receivedError: boolean
-	isLoading: boolean
-	total: number
 	currentTimestamp: number
 	refreshTimeListenersRegistered: boolean
-	products: {
+	products?: {
 		entries: ProductViewModel[]
-		corrupts: CorruptProductViewModel[]
+		selected: SvelteSet<string>
 	}
 }
 
@@ -31,43 +26,65 @@ export type StateContext = ReturnType<
 export function createStateContext() {
 	const state = $state<State>({
 		isMenuOpen: false,
-		isLoading: false,
-		selected: new SvelteSet(),
 		receivedError: false,
-		total: 0,
 		refreshTimeListenersRegistered: false,
-		products: {
-			entries: [],
-			corrupts: [],
-		},
 		currentTimestamp: Date.now(),
 	})
 
-	const isSelectModeEnabled = $derived(
-		state.selected.size > 0,
+	const currentTimestamp = unsafe_fromNumber(
+		state.currentTimestamp,
 	)
 
-	const hasProducts = $derived(
-		state.products.corrupts.length > 0 ||
-			state.products.entries.length > 0,
+	const isSelectModeEnabled = $derived(
+		(state.products?.selected.size ?? 0) > 0,
+	)
+
+	const hasLoadedProducts = $derived(
+		state.products !== undefined,
+	)
+
+	const products = $derived(
+		O.fromNullable(state.products),
 	)
 
 	const refreshTimeListenersEnabled = $derived(
-		hasProducts &&
+		(state.products?.entries.findIndex(
+			product =>
+				product._tag === 'UncorruptProduct' &&
+				O.isSome(
+					asOption(product.maybeExpirationDate),
+				),
+		) ?? -1) >= 0 &&
 			state.refreshTimeListenersRegistered,
+	)
+
+	const isLoading = $derived(
+		state.products === undefined,
 	)
 
 	return {
 		state,
 		derived: {
+			get maybeTotal() {
+				return maybeTotal
+			},
+			get hasLoadedProducts() {
+				return hasLoadedProducts
+			},
 			get isSelectModeEnabled() {
 				return isSelectModeEnabled
 			},
+			get isLoading() {
+				return isLoading
+			},
 			get hasProducts() {
-				return hasProducts
+				return hasLoadedProducts
 			},
 			get refreshTimeListenersEnabled() {
 				return refreshTimeListenersEnabled
+			},
+			get currentTimestamp() {
+				return currentTimestamp
 			},
 		},
 	}

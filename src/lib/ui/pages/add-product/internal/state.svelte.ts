@@ -4,7 +4,6 @@ import {
 	O,
 	pipe,
 } from '$lib/core/imports.ts'
-import { asOption } from '$lib/core/utils.ts'
 
 import { GetSortedProducts } from '$lib/business/index.ts'
 
@@ -12,9 +11,6 @@ export type ProductViewModel =
 	GetSortedProducts.Product & {
 		isSelected?: boolean
 	}
-
-export type CorruptProductViewModel =
-	GetSortedProducts.CorruptProduct
 
 type State = {
 	name: string
@@ -55,14 +51,14 @@ export function createStateContext() {
 
 	const maybeExpirationDate = $derived(
 		pipe(
-			asOption(state.expirationDate),
+			O.fromNullable(state.expirationDate),
 			O.flatMap(Int.fromNumber),
 		),
 	)
 
 	const maybeToastMessage = $derived(
 		pipe(
-			asOption(state.toastMessage),
+			O.fromNullable(state.toastMessage),
 			O.flatMap(NETS.fromString),
 		),
 	)

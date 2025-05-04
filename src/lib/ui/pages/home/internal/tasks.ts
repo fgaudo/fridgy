@@ -38,7 +38,7 @@ export const refreshList = pipe(
 		})
 
 		const getProducts =
-			yield* GetSortedProducts.Service
+			yield* GetSortedProducts.GetSortedProducts
 
 		const result = yield* Eff.either(getProducts)
 
@@ -95,11 +95,12 @@ export const deleteSelectedAndRefresh = Eff.gen(
 		const store = yield* Store.Service
 
 		const deleteProducts =
-			yield* DeleteProductsByIds.Service
+			yield* DeleteProductsByIds.DeleteProductsByIds
 
 		const maybeIds = pipe(
 			HS.fromIterable(
-				store.context.state.selected,
+				store.context.state.productsState
+					.selected,
 			),
 			NEHS.fromHashSet,
 		)
@@ -124,7 +125,7 @@ export const deleteSelectedAndRefresh = Eff.gen(
 		}
 
 		const refreshList =
-			yield* GetSortedProducts.Service
+			yield* GetSortedProducts.GetSortedProducts
 
 		const refreshResult = yield* pipe(
 			refreshList,

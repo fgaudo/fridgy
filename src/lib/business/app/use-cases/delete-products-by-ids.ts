@@ -1,40 +1,42 @@
+import { LogLevel } from 'effect'
+
 import {
 	A,
 	Eff,
 	NEHS,
 } from '$lib/core/imports.ts'
+
 import {
-	type Value,
-	asValue,
-} from '$lib/core/utils.ts'
+	DeleteProductsByIds as DeleteProductsByIdsQuery,
+	LogWithLevel,
+} from '$lib/business/app/queries'
 
-import { DeleteProductsByIds } from '$lib/business/app/queries'
-
-export class Service extends Eff.Service<Service>()(
+export class DeleteProductsByIds extends Eff.Service<DeleteProductsByIds>()(
 	'app/DeleteProductsByIds',
 	{
 		effect: Eff.gen(function* () {
 			const deleteProductsByIds =
-				yield* DeleteProductsByIds.Tag
+				yield* DeleteProductsByIdsQuery.DeleteProductsByIds
 
+			const log = yield* LogWithLevel.LogWithLevel
 			return (
-				ids: Value<NEHS.NonEmptyHashSet<string>>,
+				ids: NEHS.NonEmptyHashSet<string>,
 			) =>
 				Eff.gen(function* () {
-					Eff.logDebug(
+					yield* log(
+						LogLevel.Debug,
 						'Delete products use-case started',
 					)
 
-					const idsValue = asValue(ids)
+					yield* deleteProductsByIds(ids)
 
-					yield* deleteProductsByIds(idsValue)
-
-					yield* Eff.logInfo(
+					yield* log(
+						LogLevel.Info,
 						'Products deleted',
 					).pipe(
 						Eff.annotateLogs(
 							'ids',
-							A.fromIterable(idsValue),
+							A.fromIterable(ids),
 						),
 					)
 				})

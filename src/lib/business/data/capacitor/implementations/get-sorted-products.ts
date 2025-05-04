@@ -52,7 +52,7 @@ const ProductsListSchema = Sc.Struct({
 })
 
 export const query = L.effect(
-	GetSortedProducts.Tag,
+	GetSortedProducts.GetSortedProducts,
 	Eff.gen(function* () {
 		const { db } = yield* DbPlugin
 
@@ -65,9 +65,7 @@ export const query = L.effect(
 			)
 
 			if (E.isLeft(result)) {
-				return yield* new GetSortedProducts.FetchingFailed(
-					{ message: result.left.toString() },
-				)
+				return yield* new GetSortedProducts.FetchingFailed()
 			}
 
 			const decodeResult =
@@ -76,11 +74,7 @@ export const query = L.effect(
 				)(result.right).pipe(Eff.either)
 
 			if (E.isLeft(decodeResult)) {
-				return yield* new GetSortedProducts.InvalidDataReceived(
-					{
-						message: decodeResult.left.toString(),
-					},
-				)
+				return yield* new GetSortedProducts.InvalidDataReceived()
 			}
 
 			const totalResult = NNInt.fromNumber(
@@ -88,12 +82,7 @@ export const query = L.effect(
 			)
 
 			if (O.isNone(totalResult)) {
-				return yield* new GetSortedProducts.InvalidDataReceived(
-					{
-						message:
-							'The total is a not a non-negative integer',
-					},
-				)
+				return yield* new GetSortedProducts.InvalidDataReceived()
 			}
 
 			const total = totalResult.value

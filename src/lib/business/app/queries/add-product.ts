@@ -5,21 +5,23 @@ import {
 	Eff,
 	Int,
 	NETS,
+	O,
 } from '$lib/core/imports.ts'
-import type { OptionOrValue } from '$lib/core/utils.ts'
 
 export interface ProductDTO {
-	maybeName: OptionOrValue<NETS.NonEmptyTrimmedString>
-	maybeExpirationDate: OptionOrValue<Int.Integer>
-	maybeCreationDate: OptionOrValue<Int.Integer>
+	maybeName: O.Option<NETS.NonEmptyTrimmedString>
+	maybeExpirationDate: O.Option<Int.Integer>
+	maybeCreationDate: O.Option<Int.Integer>
 }
 
 export class OperationFailed extends Data.TaggedError(
 	'OperationFailed',
-)<{ message: string }> {}
+) {}
 
-export class Tag extends C.Tag('data/AddProduct')<
-	Tag,
+export class AddProduct extends C.Tag(
+	'data/AddProduct',
+)<
+	AddProduct,
 	(
 		product: ProductDTO,
 	) => Eff.Effect<void, OperationFailed>

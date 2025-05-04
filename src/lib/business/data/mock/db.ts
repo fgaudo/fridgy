@@ -1,6 +1,18 @@
-import type { GetSortedProducts } from '$lib/business/app/queries'
+import { HashMap, Ref } from 'effect'
 
-export const map = new Map<
-	string,
-	GetSortedProducts.ProductDTO
->()
+import { Eff } from '$lib/core/imports.ts'
+
+import { GetSortedProducts } from '$lib/business/app/queries.ts'
+
+export class Db extends Eff.Service<Db>()(
+	'data/mock/Db',
+	{
+		effect: Ref.make({
+			index: 0,
+			map: HashMap.empty<
+				string,
+				GetSortedProducts.ProductDTO
+			>(),
+		}),
+	},
+) {}

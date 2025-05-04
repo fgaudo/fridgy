@@ -1,3 +1,5 @@
+import { Duration, LogLevel } from 'effect'
+
 import {
 	A,
 	E,
@@ -9,176 +11,207 @@ import {
 } from '$lib/core/imports.ts'
 import { unsafe_fromNumber } from '$lib/core/integer/non-negative.ts'
 import type { NonEmptyTrimmedString } from '$lib/core/non-empty-trimmed-string.ts'
-import {
-	type OptionOrValue,
-	asOption,
-} from '$lib/core/utils.ts'
 
-import { GetSortedProducts } from '$lib/business/app/queries'
+import {
+	GetSortedProducts as GetSortedProductsQuery,
+	LogWithLevel,
+} from '$lib/business/app/queries'
 import * as P from '$lib/business/domain/product'
 
 export type Product =
 	| {
+			isCorrupt: false
+			id: string
+			maybeName: O.Option<NonEmptyTrimmedString>
+			maybeExpirationDate: O.Option<Int.Integer>
+			maybeCreationDate: O.Option<Int.Integer>
+			isValid: false
+	  }
+	| {
+			isCorrupt: false
 			id: string
 			name: NonEmptyTrimmedString
-			maybeExpirationDate: OptionOrValue<Int.Integer>
+			maybeExpirationDate: O.Option<Int.Integer>
 			creationDate: Int.Integer
 			isValid: true
 	  }
 	| {
-			id: string
-			maybeName: OptionOrValue<NonEmptyTrimmedString>
-			maybeExpirationDate: OptionOrValue<Int.Integer>
-			maybeCreationDate: OptionOrValue<Int.Integer>
-			isValid: false
+			isCorrupt: true
+			maybeName: O.Option<NonEmptyTrimmedString>
 	  }
 
-export type CorruptProduct = {
-	maybeName: OptionOrValue<NonEmptyTrimmedString>
-}
-
 export type ProductsPage = {
-	products: {
-		entries: Product[]
-		corrupts: CorruptProduct[]
-	}
+	entries: Product[]
 	total: NNInt.NonNegativeInteger
 }
 
-export class Service extends Eff.Service<Service>()(
+export class GetSortedProducts extends Eff.Service<GetSortedProducts>()(
 	'app/GetSortedProducts',
 	{
 		effect: Eff.gen(function* () {
 			const getProductListWithTotal =
-				yield* GetSortedProducts.Tag
+				yield* GetSortedProductsQuery.GetSortedProducts
 
-			return Eff.gen(function* () {
-				const [duration, errorOrData] =
-					yield* pipe(
-						getProductListWithTotal,
-						Eff.either,
-						Eff.timed,
+			const log = yield* LogWithLevel.LogWithLevel
+
+			return pipe(
+				Eff.gen(function* () {
+					const [duration, errorOrData] =
+						yield* pipe(
+							getProductListWithTotal,
+							Eff.either,
+							Eff.timed,
+						)
+
+					yield* log(
+						LogLevel.Info,
+						`Fetching took ${Duration.format(duration)}`,
 					)
 
-				if (E.isLeft(errorOrData)) {
 					if (
+						E.isLeft(errorOrData) &&
 						errorOrData.left._tag ===
-						'FetchingFailed'
+							'FetchingFailed'
 					) {
-						yield* Eff.logError(
+						yield* log(
+							LogLevel.Error,
 							`Could not receive items.`,
-						).pipe(
-							Eff.annotateLogs(
-								'duration',
-								duration,
-							),
 						)
-					} else {
-						yield* Eff.logError(
-							`Received invalid data.`,
-						).pipe(
-							Eff.annotateLogs(
-								'duration',
-								duration,
-							),
-						)
+
+						return yield* Eff.fail(undefined)
 					}
 
-					return yield* Eff.fail(undefined)
-				}
-
-				const result = errorOrData.right
-
-				const total = yield* Eff.gen(
-					function* () {
-						if (
-							result.total <
-							result.products.length
-						) {
-							yield* Eff.logWarning(
-								`Received ${result.products.length.toString(10)} items, but they exceed the reported total (${result.total.toString(10)}).`,
-							).pipe(
-								Eff.annotateLogs(
-									'duration',
-									duration,
-								),
-							)
-
-							return unsafe_fromNumber(
-								result.products.length,
-							)
-						}
-
-						yield* Eff.logInfo(
-							`Received ${result.products.length.toString(10)} items out of ${result.total.toString(10)}`,
-						).pipe(
-							Eff.annotateLogs(
-								'duration',
-								duration,
-							),
+					if (E.isLeft(errorOrData)) {
+						yield* log(
+							LogLevel.Error,
+							`Received invalid data.`,
 						)
 
-						return result.total
-					},
-				)
+						return yield* Eff.fail(undefined)
+					}
 
-				const [corrupts, entries] =
-					A.partitionMap(
-						result.products,
-						rawProduct =>
-							E.gen(function* () {
-								const id = yield* pipe(
-									asOption(rawProduct.maybeId),
-									O.match({
-										onNone: () =>
-											E.left(rawProduct),
-										onSome: E.right,
-									}),
+					const result = errorOrData.right
+
+					const total = yield* Eff.gen(
+						function* () {
+							if (
+								result.total <
+								result.products.length
+							) {
+								yield* log(
+									LogLevel.Warning,
+									`Received ${result.products.length.toString(10)} items, but they exceed the reported total (${result.total.toString(10)}).`,
 								)
 
-								const product =
-									P.createProduct(rawProduct)
+								return unsafe_fromNumber(
+									result.products.length,
+								)
+							}
 
-								if (O.isNone(product)) {
-									return {
-										...rawProduct,
-										id,
-										isValid: false,
-									} satisfies Product
-								}
+							yield* log(
+								LogLevel.Info,
+								`Received ${result.products.length.toString(10)} items out of ${result.total.toString(10)}`,
+							)
 
-								return {
-									isValid: true,
-									id,
-									name: P.name(product.value),
-									creationDate: P.creationDate(
-										product.value,
-									),
-									maybeExpirationDate:
-										P.maybeExpirationDate(
-											product.value,
-										),
-								} satisfies Product
-							}),
+							return result.total
+						},
 					)
 
-				return {
-					products: {
+					const entries = yield* pipe(
+						result.products,
+						A.map(toProductResultWithEffect),
+						Eff.all,
+					)
+
+					return {
 						entries,
-						corrupts,
-					},
-					total,
-				}
-			}) satisfies Eff.Effect<
-				{
-					products: {
-						entries: Product[]
-						corrupts: CorruptProduct[]
+						total,
 					}
-					total: NNInt.NonNegativeInteger
-				},
-				void
-			>
+				}),
+				Eff.provideService(
+					LogWithLevel.LogWithLevel,
+					log,
+				),
+			) satisfies Eff.Effect<ProductsPage, void>
 		}),
 	},
 ) {}
+
+function toProductResultWithEffect({
+	maybeId,
+	maybeName,
+	maybeCreationDate,
+	maybeExpirationDate,
+}: GetSortedProductsQuery.ProductDTO): Eff.Effect<
+	Product,
+	never,
+	LogWithLevel.LogWithLevel
+> {
+	return Eff.gen(function* () {
+		const log = yield* LogWithLevel.LogWithLevel
+
+		if (O.isNone(maybeId)) {
+			yield* pipe(
+				log(
+					LogLevel.Warning,
+					`CORRUPTION - Product has no id. `,
+				),
+				Eff.annotateLogs('name', maybeName),
+			)
+			return {
+				isCorrupt: true,
+				maybeName,
+			}
+		}
+
+		const maybeProduct = O.gen(function* () {
+			const { name, creationDate } = yield* O.all(
+				{
+					name: maybeName,
+					creationDate: maybeCreationDate,
+				},
+			)
+
+			return yield* P.createProduct({
+				name,
+				creationDate,
+				maybeExpirationDate,
+			})
+		})
+
+		if (O.isNone(maybeProduct)) {
+			yield* pipe(
+				log(
+					LogLevel.Warning,
+					`Product is invalid. `,
+				),
+				Eff.annotateLogs({
+					id: maybeId.value,
+					name: maybeName,
+				}),
+			)
+
+			return {
+				id: maybeId.value,
+				maybeName,
+				maybeCreationDate,
+				maybeExpirationDate,
+				isCorrupt: false,
+				isValid: false,
+			}
+		}
+
+		return {
+			isCorrupt: false,
+			isValid: true,
+			id: maybeId.value,
+			name: P.name(maybeProduct.value),
+			creationDate: P.creationDate(
+				maybeProduct.value,
+			),
+			maybeExpirationDate: P.maybeExpirationDate(
+				maybeProduct.value,
+			),
+		}
+	})
+}

@@ -1,36 +1,37 @@
+import { LogLevel } from 'effect'
+
 import {
 	Eff,
 	H,
 	L,
 	O,
 } from '$lib/core/imports.ts'
-import { asOption } from '$lib/core/utils.ts'
 
 import { AddProduct } from '$lib/business/app/queries.ts'
 
+import { Deps } from '../../deps.ts'
 import { DbPlugin } from '../db-plugin.ts'
 
 export const command = L.effect(
-	AddProduct.Tag,
+	AddProduct.AddProduct,
 	Eff.gen(function* () {
 		const { db } = yield* DbPlugin
+		const { log } = yield* Deps
 
 		return product =>
 			Eff.gen(function* () {
-				const maybeExpirationDate = asOption(
-					product.maybeExpirationDate,
-				)
+				const maybeExpirationDate =
+					product.maybeExpirationDate
+
 				yield* H.tryPromise(() =>
 					db.addProduct({
 						product: {
 							name: O.getOrElse(
-								asOption(product.maybeName),
+								product.maybeName,
 								() => '[no name]',
 							),
 							creationDate: O.getOrElse(
-								asOption(
-									product.maybeCreationDate,
-								),
+								product.maybeCreationDate,
 								() => 0,
 							),
 							expirationDate: O.getOrUndefined(
@@ -40,14 +41,13 @@ export const command = L.effect(
 					}),
 				).pipe(
 					Eff.catchTags({
-						UnknownException: ({ message }) =>
-							new AddProduct.OperationFailed({
-								message,
-							}),
+						UnknownException: () =>
+							new AddProduct.OperationFailed(),
 					}),
 				)
 
-				yield* Eff.logDebug(
+				yield* log(
+					LogLevel.Debug,
 					'No errors adding the product',
 				)
 			})

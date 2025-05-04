@@ -1,4 +1,4 @@
-import { pipe } from 'effect'
+import { HashMap, Ref, pipe } from 'effect'
 
 import {
 	A,
@@ -8,15 +8,15 @@ import {
 	O,
 	Ord,
 } from '$lib/core/imports.ts'
-import { asOption } from '$lib/core/utils.ts'
 
 import {
 	GetSortedProducts,
 	GetSortedProducts as Query,
 } from '$lib/business/app/queries.ts'
 
-import { withErrors } from '../constants.ts'
-import { map } from '../db.ts'
+import { Deps } from '../../deps.ts'
+import { Config } from '../config.ts'
+import { Db } from '../db.ts'
 
 const ord = Ord.make(
 	(
@@ -29,37 +29,47 @@ const ord = Ord.make(
 				Ord.reverse,
 				O.getOrder,
 				Ord.reverse,
-				Ord.mapInput((product: typeof p1) =>
-					asOption(product.maybeExpirationDate),
+				Ord.mapInput(
+					(product: typeof p1) =>
+						product.maybeExpirationDate,
 				),
 			),
 			pipe(
 				Ord.string,
 				O.getOrder,
-				Ord.mapInput((product: typeof p1) =>
-					asOption(product.maybeName),
+				Ord.mapInput(
+					(product: typeof p1) =>
+						product.maybeName,
 				),
 			),
 		])(p1, p2)
 	},
 )
 
-export const query = L.succeed(
-	Query.Tag,
+export const query = L.effect(
+	Query.GetSortedProducts,
 	Eff.gen(function* () {
-		if (withErrors && Math.random() < 0.5)
-			return yield* new GetSortedProducts.InvalidDataReceived(
-				{ message: 'error' },
+		// eslint-disable-next-line @typescript-eslint/no-unused-vars
+		const { log } = yield* Deps
+		const withErrors = yield* Config.withErrors
+		const db = yield* Db
+		return Eff.gen(function* () {
+			if (withErrors && Math.random() < 0.5)
+				return yield* new GetSortedProducts.InvalidDataReceived()
+
+			const map = yield* Ref.get(db).pipe(
+				Eff.map(({ map }) => map),
 			)
 
-		const total = map.size
+			const total = map.pipe(HashMap.size)
 
-		const products: Query.ProductDTO[] =
-			Array.from(map.values())
+			const products: Query.ProductDTO[] =
+				map.pipe(HashMap.toValues)
 
-		return {
-			total: NNInt.unsafe_fromNumber(total),
-			products: A.sort(ord)(products),
-		}
+			return {
+				total: NNInt.unsafe_fromNumber(total),
+				products: A.sort(ord)(products),
+			}
+		})
 	}),
 )

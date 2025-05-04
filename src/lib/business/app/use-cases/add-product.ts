@@ -1,3 +1,6 @@
+import { Data, LogLevel } from 'effect'
+import { format } from 'effect/Inspectable'
+
 import {
 	Cl,
 	Eff,
@@ -5,24 +8,25 @@ import {
 	NETS,
 	O,
 } from '$lib/core/imports.ts'
-import type {
-	OptionOrValue,
-	Value,
-} from '$lib/core/utils.ts'
 
-import { AddProduct } from '$lib/business/app/queries'
+import {
+	AddProduct as AddProductQuery,
+	LogWithLevel,
+} from '$lib/business/app/queries'
 import * as P from '$lib/business/domain/product'
 
 export interface ProductDTO {
-	name: Value<NETS.NonEmptyTrimmedString>
-	maybeExpirationDate: OptionOrValue<Int.Integer>
+	name: NETS.NonEmptyTrimmedString
+	maybeExpirationDate: O.Option<Int.Integer>
 }
 
-export class Service extends Eff.Service<Service>()(
+export class AddProduct extends Eff.Service<AddProduct>()(
 	'app/AddProduct',
 	{
 		effect: Eff.gen(function* () {
-			const addProduct = yield* AddProduct.Tag
+			const addProduct =
+				yield* AddProductQuery.AddProduct
+			const log = yield* LogWithLevel.LogWithLevel
 
 			return (productData: ProductDTO) =>
 				Eff.gen(function* () {
@@ -31,10 +35,10 @@ export class Service extends Eff.Service<Service>()(
 					)
 
 					const product = P.createProduct({
-						maybeName: productData.name,
+						name: productData.name,
 						maybeExpirationDate:
 							productData.maybeExpirationDate,
-						maybeCreationDate: timestamp,
+						creationDate: timestamp,
 					})
 
 					if (O.isNone(product)) {
@@ -43,27 +47,31 @@ export class Service extends Eff.Service<Service>()(
 						)
 					}
 
-					yield* Eff.logInfo(
+					yield* log(
+						LogLevel.Info,
 						'Product save attempt',
 					).pipe(
 						Eff.annotateLogs(
 							'product',
-							productData,
+							format(Data.struct(productData)),
 						),
 					)
 
 					yield* addProduct({
-						maybeName: P.name(product.value),
+						maybeName: O.some(
+							P.name(product.value),
+						),
 						maybeExpirationDate:
 							P.maybeExpirationDate(
 								product.value,
 							),
-						maybeCreationDate: P.creationDate(
-							product.value,
+						maybeCreationDate: O.some(
+							P.creationDate(product.value),
 						),
 					})
 
-					yield* Eff.logInfo(
+					yield* log(
+						LogLevel.Info,
 						'Product saved',
 					).pipe(
 						Eff.annotateLogs(

@@ -15,7 +15,6 @@
 	import { fade, fly } from 'svelte/transition'
 
 	import { Eff, O } from '$lib/core/imports.ts'
-	import { asOption } from '$lib/core/utils.ts'
 
 	import imgUrl from '$lib/ui/assets/arrow.svg'
 	import Ripple from '$lib/ui/components/ripple.svelte'
@@ -153,17 +152,19 @@
 					</div>
 				</div>
 			</div>
-		{:else if viewModel.state.total > 0}
+		{:else if O.isSome(viewModel.state.maybeTotal)}
+			{@const total =
+				viewModel.state.maybeTotal.value}
 			<p
 				class="bg-background fixed top-[64px] z-50 w-full px-[14px] pt-[10px] pb-[8px] text-xs"
 			>
-				{viewModel.state.total} items
+				{total} items
 			</p>
 
 			<div
 				class="absolute top-[110px] flex w-full items-center"
-				style:height={viewModel.state.total > 0
-					? `${((viewModel.state.total - 1) * 79 + 205).toString(10)}px`
+				style:height={total > 0
+					? `${((total - 1) * 79 + 205).toString(10)}px`
 					: 'auto'}
 			>
 				{#each viewModel.state.products.entries as product, index (product.id)}
@@ -321,40 +322,6 @@
 											maybeExpiration.value,
 										)}
 									</div>
-								{/if}
-							</div>
-						</div>
-					</div>
-				{/each}
-				{#each viewModel.state.products.corrupts as product, index}
-					{@const maybeName = asOption(
-						product.maybeName,
-					)}
-					<div
-						class="duration-fade absolute flex shadow-sm left-1 right-1"
-						style:top={`${(viewModel.state.products.entries.length + index * 65).toString(10)}px`}
-					>
-						<div
-							class="bg-background flex min-h-[60px] w-full select-none"
-							style="content-visibility: 'auto'"
-						>
-							<div
-								class="duration-fade relative flex h-[24px] w-[24px] items-center justify-center p-7 text-sm"
-							></div>
-
-							<div></div>
-
-							<div
-								class="text-secondary flex w-[26px] flex-col items-center"
-							></div>
-
-							<div
-								class="w-full overflow-hidden text-ellipsis whitespace-nowrap capitalize"
-							>
-								{#if O.isSome(maybeName)}
-									#CORRUPT# {maybeName.value}
-								{:else}
-									#CORRUPT# [NO NAME]
 								{/if}
 							</div>
 						</div>
