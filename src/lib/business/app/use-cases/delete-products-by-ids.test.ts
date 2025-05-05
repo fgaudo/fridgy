@@ -8,7 +8,7 @@ import {
 } from '$lib/core/imports.ts'
 import * as H from '$lib/core/test-helpers.ts'
 
-import { DeleteProductsByIds as Query } from '$lib/business/app/queries.ts'
+import { DeleteProductsByIds as Query } from '$lib/business/app/operations.ts'
 
 import * as Usecase from './delete-products-by-ids.ts'
 

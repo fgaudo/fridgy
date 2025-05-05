@@ -7,7 +7,7 @@ import {
 import { Cl, Eff, L } from '$lib/core/imports.ts'
 import * as H from '$lib/core/test-helpers.ts'
 
-import { AddProduct as Query } from '$lib/business/app/queries.ts'
+import { AddProduct as Query } from '$lib/business/app/operations.ts'
 
 import * as Usecase from './add-product.ts'
 

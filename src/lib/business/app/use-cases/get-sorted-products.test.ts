@@ -11,7 +11,7 @@ import {
 } from '$lib/core/imports.ts'
 import * as H from '$lib/core/test-helpers.ts'
 
-import { GetSortedProducts as Query } from '$lib/business/app/queries.ts'
+import { GetSortedProducts as Query } from '$lib/business/app/operations.ts'
 
 import * as Usecase from './get-sorted-products.ts'
 

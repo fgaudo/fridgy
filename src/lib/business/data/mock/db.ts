@@ -2,7 +2,7 @@ import { HashMap, Ref } from 'effect'
 
 import { Eff } from '$lib/core/imports.ts'
 
-import { GetSortedProducts } from '$lib/business/app/queries.ts'
+import { GetSortedProducts } from '$lib/business/app/operations'
 
 export class Db extends Eff.Service<Db>()(
 	'data/mock/Db',

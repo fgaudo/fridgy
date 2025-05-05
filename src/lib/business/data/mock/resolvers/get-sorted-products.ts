@@ -1,4 +1,9 @@
-import { HashMap, Ref, pipe } from 'effect'
+import {
+	HashMap,
+	Ref,
+	RequestResolver,
+	pipe,
+} from 'effect'
 
 import {
 	A,
@@ -9,10 +14,7 @@ import {
 	Ord,
 } from '$lib/core/imports.ts'
 
-import {
-	GetSortedProducts,
-	GetSortedProducts as Query,
-} from '$lib/business/app/queries.ts'
+import { GetSortedProducts } from '$lib/business/app/operations.ts'
 
 import { Deps } from '../../deps.ts'
 import { Config } from '../config.ts'
@@ -20,8 +22,8 @@ import { Db } from '../db.ts'
 
 const ord = Ord.make(
 	(
-		p1: Query.ProductDTO,
-		p2: Query.ProductDTO,
+		p1: GetSortedProducts.ProductDTO,
+		p2: GetSortedProducts.ProductDTO,
 	) => {
 		return Ord.combineAll([
 			pipe(
@@ -47,29 +49,31 @@ const ord = Ord.make(
 )
 
 export const query = L.effect(
-	Query.GetSortedProducts,
+	GetSortedProducts.Resolver,
 	Eff.gen(function* () {
 		// eslint-disable-next-line @typescript-eslint/no-unused-vars
 		const { log } = yield* Deps
 		const withErrors = yield* Config.withErrors
 		const db = yield* Db
-		return Eff.gen(function* () {
-			if (withErrors && Math.random() < 0.5)
-				return yield* new GetSortedProducts.InvalidDataReceived()
+		return RequestResolver.fromEffect(() =>
+			Eff.gen(function* () {
+				if (withErrors && Math.random() < 0.5)
+					return yield* new GetSortedProducts.InvalidDataReceived()
 
-			const map = yield* Ref.get(db).pipe(
-				Eff.map(({ map }) => map),
-			)
+				const map = yield* Ref.get(db).pipe(
+					Eff.map(({ map }) => map),
+				)
 
-			const total = map.pipe(HashMap.size)
+				const total = map.pipe(HashMap.size)
 
-			const products: Query.ProductDTO[] =
-				map.pipe(HashMap.toValues)
+				const products: GetSortedProducts.ProductDTO[] =
+					map.pipe(HashMap.toValues)
 
-			return {
-				total: NNInt.unsafe_fromNumber(total),
-				products: A.sort(ord)(products),
-			}
-		})
+				return {
+					total: NNInt.unsafe_fromNumber(total),
+					products: A.sort(ord)(products),
+				}
+			}),
+		)
 	}),
 )

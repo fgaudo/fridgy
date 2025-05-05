@@ -5,7 +5,7 @@ export {
 	AddProduct,
 	DeleteProductsByIds,
 	GetSortedProducts,
-	UiLogWithLevel,
+	LogWithLevel,
 } from './app/use-cases.ts'
 
 export const useCases: UseCases = import.meta.env

@@ -47,27 +47,4 @@ export default ts.config(
 			},
 		},
 	},
-	{
-		rules: {
-			'no-restricted-imports': [
-				'error',
-				{
-					paths: [
-						{
-							name: 'effect',
-							importNames: ['log'],
-							message:
-								'Use the scoped logger wrapper instead of Effect.log',
-						},
-						{
-							name: 'effect/Logger',
-							importNames: ['log'],
-							message:
-								'Use your custom logger wrapper instead of Logger.log',
-						},
-					],
-				},
-			],
-		},
-	},
 )

@@ -6,8 +6,10 @@ import {
 	pipe,
 } from '$lib/core/imports.ts'
 
-import { UiLogWithLevel } from '$lib/business/app/queries.ts'
-import { AddProduct } from '$lib/business/index.ts'
+import {
+	AddProduct,
+	LogWithLevel,
+} from '$lib/business/index.ts'
 import { MINIMUM_LAG_MS } from '$lib/ui/constants.ts'
 
 import * as Store from './store.ts'
@@ -16,8 +18,8 @@ export const addProduct = Eff.withLogSpan(
 	pipe(
 		Eff.gen(function* () {
 			const store = yield* Store.Service
-			const log =
-				yield* UiLogWithLevel.UiLogWithLevel
+			const logResolver =
+				yield* LogWithLevel.Resolver
 
 			if (store.context.state.isAdding) {
 				return
@@ -30,7 +32,13 @@ export const addProduct = Eff.withLogSpan(
 				type: 'addingStarted',
 			})
 
-			yield* log(LogLevel.Info, 'Adding started')
+			yield* Eff.request(
+				LogWithLevel.Request({
+					level: LogLevel.Info,
+					message: ['Adding started'],
+				}),
+				logResolver,
+			)
 
 			const addProduct =
 				yield* AddProduct.AddProduct

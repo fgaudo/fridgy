@@ -2,9 +2,9 @@ import { HashMap, pipe } from 'effect'
 
 import { Log, O } from '$lib/core/imports.ts'
 
-export { appLogWithLevelLayer } from './implementations/log-with-level.ts'
+export { appLogWithLevelLayer } from './resolvers/log-with-level.ts'
 
-export { uiLogWithLevelLayer } from './implementations/ui-log-with-level.ts'
+export { uiLogWithLevelResolverLayer as uiLogWithLevelLayer } from './resolvers/ui-log-with-level.ts'
 
 export const logger = Log.replace(
 	Log.defaultLogger,

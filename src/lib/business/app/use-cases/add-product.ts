@@ -10,9 +10,9 @@ import {
 } from '$lib/core/imports.ts'
 
 import {
-	AddProduct as AddProductQuery,
+	AddProduct as AddProductOperation,
 	LogWithLevel,
-} from '$lib/business/app/queries'
+} from '$lib/business/app/operations'
 import * as P from '$lib/business/domain/product'
 
 export interface ProductDTO {
@@ -21,12 +21,13 @@ export interface ProductDTO {
 }
 
 export class AddProduct extends Eff.Service<AddProduct>()(
-	'app/AddProduct',
+	'app/useCases/AddProduct',
 	{
 		effect: Eff.gen(function* () {
-			const addProduct =
-				yield* AddProductQuery.AddProduct
-			const log = yield* LogWithLevel.LogWithLevel
+			const addProductResolver =
+				yield* AddProductOperation.Resolver
+			const logResolver =
+				yield* LogWithLevel.Resolver
 
 			return (productData: ProductDTO) =>
 				Eff.gen(function* () {
@@ -47,37 +48,46 @@ export class AddProduct extends Eff.Service<AddProduct>()(
 						)
 					}
 
-					yield* log(
-						LogLevel.Info,
-						'Product save attempt',
-					).pipe(
-						Eff.annotateLogs(
-							'product',
-							format(Data.struct(productData)),
-						),
+					yield* Eff.request(
+						LogWithLevel.Request({
+							level: LogLevel.Info,
+							message: ['Product save attempt'],
+							annotations: {
+								product: format(
+									Data.struct(productData),
+								),
+							},
+						}),
+						logResolver,
 					)
 
-					yield* addProduct({
-						maybeName: O.some(
-							P.name(product.value),
-						),
-						maybeExpirationDate:
-							P.maybeExpirationDate(
-								product.value,
-							),
-						maybeCreationDate: O.some(
-							P.creationDate(product.value),
-						),
-					})
+					yield* Eff.request(
+						AddProductOperation.Request({
+							product: {
+								maybeName: O.some(
+									P.name(product.value),
+								),
+								maybeExpirationDate:
+									P.maybeExpirationDate(
+										product.value,
+									),
+								maybeCreationDate: O.some(
+									P.creationDate(product.value),
+								),
+							},
+						}),
+						addProductResolver,
+					)
 
-					yield* log(
-						LogLevel.Info,
-						'Product saved',
-					).pipe(
-						Eff.annotateLogs(
-							'product',
-							productData,
-						),
+					yield* Eff.request(
+						LogWithLevel.Request({
+							level: LogLevel.Info,
+							message: ['Product saved'],
+							annotations: {
+								product: productData,
+							},
+						}),
+						logResolver,
 					)
 				})
 		}),

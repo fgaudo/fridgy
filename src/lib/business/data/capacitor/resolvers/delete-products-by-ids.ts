@@ -1,4 +1,4 @@
-import { LogLevel } from 'effect'
+import { LogLevel, RequestResolver } from 'effect'
 
 import {
 	Eff,
@@ -7,18 +7,18 @@ import {
 	O,
 } from '$lib/core/imports.ts'
 
-import { DeleteProductsByIds } from '$lib/business/app/queries.ts'
+import { DeleteProductsByIds } from '$lib/business/app/operations.ts'
 
 import { Deps } from '../../deps.ts'
 import { DbPlugin } from '../db-plugin.ts'
 
 export const command = L.effect(
-	DeleteProductsByIds.DeleteProductsByIds,
+	DeleteProductsByIds.Resolver,
 	Eff.gen(function* () {
 		const { db } = yield* DbPlugin
 		const { log } = yield* Deps
 
-		return ids =>
+		return RequestResolver.fromEffect(({ ids }) =>
 			Eff.gen(function* () {
 				const idsArray = yield* Eff.allSuccesses(
 					Array.from(ids).map(id =>
@@ -61,6 +61,7 @@ export const command = L.effect(
 					LogLevel.Debug,
 					'No problems while deleting products',
 				)
-			})
+			}),
+		)
 	}),
 )

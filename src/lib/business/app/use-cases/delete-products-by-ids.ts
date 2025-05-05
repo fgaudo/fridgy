@@ -7,37 +7,50 @@ import {
 } from '$lib/core/imports.ts'
 
 import {
-	DeleteProductsByIds as DeleteProductsByIdsQuery,
+	DeleteProductsByIds as DeleteProductsByIdsOperation,
 	LogWithLevel,
-} from '$lib/business/app/queries'
+} from '$lib/business/app/operations'
 
 export class DeleteProductsByIds extends Eff.Service<DeleteProductsByIds>()(
-	'app/DeleteProductsByIds',
+	'app/useCases/DeleteProductsByIds',
 	{
 		effect: Eff.gen(function* () {
-			const deleteProductsByIds =
-				yield* DeleteProductsByIdsQuery.DeleteProductsByIds
+			const deleteProductsResolver =
+				yield* DeleteProductsByIdsOperation.Resolver
 
-			const log = yield* LogWithLevel.LogWithLevel
+			const logResolver =
+				yield* LogWithLevel.Resolver
+
 			return (
 				ids: NEHS.NonEmptyHashSet<string>,
 			) =>
 				Eff.gen(function* () {
-					yield* log(
-						LogLevel.Debug,
-						'Delete products use-case started',
+					yield* Eff.request(
+						LogWithLevel.Request({
+							level: LogLevel.Debug,
+							message: [
+								'Delete products use-case started',
+							],
+						}),
+						logResolver,
 					)
 
-					yield* deleteProductsByIds(ids)
+					yield* Eff.request(
+						DeleteProductsByIdsOperation.Request({
+							ids,
+						}),
+						deleteProductsResolver,
+					)
 
-					yield* log(
-						LogLevel.Info,
-						'Products deleted',
-					).pipe(
-						Eff.annotateLogs(
-							'ids',
-							A.fromIterable(ids),
-						),
+					yield* Eff.request(
+						LogWithLevel.Request({
+							level: LogLevel.Info,
+							message: ['Products deleted'],
+							annotations: {
+								ids: A.fromIterable(ids),
+							},
+						}),
+						logResolver,
 					)
 				})
 		}),

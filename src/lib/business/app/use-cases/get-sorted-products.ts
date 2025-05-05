@@ -1,4 +1,4 @@
-import { Duration, LogLevel } from 'effect'
+import { LogLevel } from 'effect'
 
 import {
 	A,
@@ -13,9 +13,9 @@ import { unsafe_fromNumber } from '$lib/core/integer/non-negative.ts'
 import type { NonEmptyTrimmedString } from '$lib/core/non-empty-trimmed-string.ts'
 
 import {
-	GetSortedProducts as GetSortedProductsQuery,
+	GetSortedProducts as GetSortedProductsOperation,
 	LogWithLevel,
-} from '$lib/business/app/queries'
+} from '$lib/business/app/operations'
 import * as P from '$lib/business/domain/product'
 
 export type Product =
@@ -46,26 +46,22 @@ export type ProductsPage = {
 }
 
 export class GetSortedProducts extends Eff.Service<GetSortedProducts>()(
-	'app/GetSortedProducts',
+	'app/useCases/GetSortedProducts',
 	{
 		effect: Eff.gen(function* () {
-			const getProductListWithTotal =
-				yield* GetSortedProductsQuery.GetSortedProducts
+			const getSortedProducts = Eff.request(
+				GetSortedProductsOperation.Request({}),
+				yield* GetSortedProductsOperation.Resolver,
+			)
 
-			const log = yield* LogWithLevel.LogWithLevel
+			const logResolver =
+				yield* LogWithLevel.Resolver
 
 			return pipe(
 				Eff.gen(function* () {
-					const [duration, errorOrData] =
-						yield* pipe(
-							getProductListWithTotal,
-							Eff.either,
-							Eff.timed,
-						)
-
-					yield* log(
-						LogLevel.Info,
-						`Fetching took ${Duration.format(duration)}`,
+					const errorOrData = yield* pipe(
+						getSortedProducts,
+						Eff.either,
 					)
 
 					if (
@@ -73,18 +69,28 @@ export class GetSortedProducts extends Eff.Service<GetSortedProducts>()(
 						errorOrData.left._tag ===
 							'FetchingFailed'
 					) {
-						yield* log(
-							LogLevel.Error,
-							`Could not receive items.`,
+						yield* Eff.request(
+							LogWithLevel.Request({
+								level: LogLevel.Error,
+								message: [
+									`Could not receive items.`,
+								],
+							}),
+							logResolver,
 						)
 
 						return yield* Eff.fail(undefined)
 					}
 
 					if (E.isLeft(errorOrData)) {
-						yield* log(
-							LogLevel.Error,
-							`Received invalid data.`,
+						yield* Eff.request(
+							LogWithLevel.Request({
+								level: LogLevel.Error,
+								message: [
+									`Received invalid data.`,
+								],
+							}),
+							logResolver,
 						)
 
 						return yield* Eff.fail(undefined)
@@ -98,9 +104,14 @@ export class GetSortedProducts extends Eff.Service<GetSortedProducts>()(
 								result.total <
 								result.products.length
 							) {
-								yield* log(
-									LogLevel.Warning,
-									`Received ${result.products.length.toString(10)} items, but they exceed the reported total (${result.total.toString(10)}).`,
+								yield* Eff.request(
+									LogWithLevel.Request({
+										level: LogLevel.Warning,
+										message: [
+											`Received ${result.products.length.toString(10)} items, but they exceed the reported total (${result.total.toString(10)}).`,
+										],
+									}),
+									logResolver,
 								)
 
 								return unsafe_fromNumber(
@@ -108,9 +119,14 @@ export class GetSortedProducts extends Eff.Service<GetSortedProducts>()(
 								)
 							}
 
-							yield* log(
-								LogLevel.Info,
-								`Received ${result.products.length.toString(10)} items out of ${result.total.toString(10)}`,
+							yield* Eff.request(
+								LogWithLevel.Request({
+									level: LogLevel.Info,
+									message: [
+										`Received ${result.products.length.toString(10)} items out of ${result.total.toString(10)}`,
+									],
+								}),
+								logResolver,
 							)
 
 							return result.total
@@ -129,8 +145,8 @@ export class GetSortedProducts extends Eff.Service<GetSortedProducts>()(
 					}
 				}),
 				Eff.provideService(
-					LogWithLevel.LogWithLevel,
-					log,
+					LogWithLevel.Resolver,
+					logResolver,
 				),
 			) satisfies Eff.Effect<ProductsPage, void>
 		}),
@@ -142,22 +158,29 @@ function toProductResultWithEffect({
 	maybeName,
 	maybeCreationDate,
 	maybeExpirationDate,
-}: GetSortedProductsQuery.ProductDTO): Eff.Effect<
+}: GetSortedProductsOperation.ProductDTO): Eff.Effect<
 	Product,
 	never,
-	LogWithLevel.LogWithLevel
+	LogWithLevel.Resolver
 > {
 	return Eff.gen(function* () {
-		const log = yield* LogWithLevel.LogWithLevel
+		const logResolver =
+			yield* LogWithLevel.Resolver
 
 		if (O.isNone(maybeId)) {
-			yield* pipe(
-				log(
-					LogLevel.Warning,
-					`CORRUPTION - Product has no id. `,
-				),
-				Eff.annotateLogs('name', maybeName),
+			yield* Eff.request(
+				LogWithLevel.Request({
+					level: LogLevel.Warning,
+					message: [
+						`CORRUPTION - Product has no id.`,
+					],
+					annotations: {
+						name: maybeName,
+					},
+				}),
+				logResolver,
 			)
+
 			return {
 				isCorrupt: true,
 				maybeName,
@@ -180,15 +203,16 @@ function toProductResultWithEffect({
 		})
 
 		if (O.isNone(maybeProduct)) {
-			yield* pipe(
-				log(
-					LogLevel.Warning,
-					`Product is invalid. `,
-				),
-				Eff.annotateLogs({
-					id: maybeId.value,
-					name: maybeName,
+			yield* Eff.request(
+				LogWithLevel.Request({
+					level: LogLevel.Warning,
+					message: [`Product is invalid.`],
+					annotations: {
+						id: maybeId.value,
+						name: maybeName,
+					},
 				}),
+				logResolver,
 			)
 
 			return {

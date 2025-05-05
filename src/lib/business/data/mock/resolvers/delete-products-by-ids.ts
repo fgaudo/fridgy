@@ -1,18 +1,22 @@
-import { HashMap, Ref } from 'effect'
+import {
+	HashMap,
+	Ref,
+	RequestResolver,
+} from 'effect'
 
 import { Eff, L } from '$lib/core/imports.ts'
 
-import { DeleteProductsByIds } from '$lib/business/app/queries.ts'
+import { DeleteProductsByIds } from '$lib/business/app/operations.ts'
 
 import { Config } from '../config.ts'
 import { Db } from '../db.ts'
 
 export const command = L.effect(
-	DeleteProductsByIds.DeleteProductsByIds,
+	DeleteProductsByIds.Resolver,
 	Eff.gen(function* () {
 		const withErrors = yield* Config.withErrors
 		const db = yield* Db
-		return ids =>
+		return RequestResolver.fromEffect(({ ids }) =>
 			Eff.gen(function* () {
 				if (withErrors && Math.random() < 0.5) {
 					return yield* Eff.fail(
@@ -26,6 +30,7 @@ export const command = L.effect(
 						map: HashMap.remove(dbValues.map, id),
 					}))
 				}
-			})
+			}),
+		)
 	}),
 )
