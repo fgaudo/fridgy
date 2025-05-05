@@ -1,4 +1,4 @@
-import { Data, LogLevel } from 'effect'
+import { Fiber, LogLevel } from 'effect'
 import { format } from 'effect/Inspectable'
 
 import {
@@ -31,6 +31,19 @@ export class AddProduct extends Eff.Service<AddProduct>()(
 
 			return (productData: ProductDTO) =>
 				Eff.gen(function* () {
+					yield* Eff.request(
+						LogWithLevel.Request({
+							level: LogLevel.Info,
+							message: [
+								'AddProduct use case started',
+							],
+							annotations: {
+								product: format(productData),
+							},
+						}),
+						logResolver,
+					)
+
 					const timestamp = Int.unsafe_fromNumber(
 						yield* Cl.currentTimeMillis,
 					)
@@ -43,27 +56,27 @@ export class AddProduct extends Eff.Service<AddProduct>()(
 					})
 
 					if (O.isNone(product)) {
+						yield* Eff.request(
+							LogWithLevel.Request({
+								level: LogLevel.Error,
+								message: [
+									'The provided product is invalid',
+								],
+								annotations: {
+									product: format(productData),
+								},
+							}),
+							logResolver,
+						)
+
 						return yield* Eff.fail(
 							'Product is not valid',
 						)
 					}
 
-					yield* Eff.request(
-						LogWithLevel.Request({
-							level: LogLevel.Info,
-							message: ['Product save attempt'],
-							annotations: {
-								product: format(
-									Data.struct(productData),
-								),
-							},
-						}),
-						logResolver,
-					)
-
-					yield* Eff.request(
-						AddProductOperation.Request({
-							product: {
+					const addProductFiber = yield* Eff.fork(
+						Eff.request(
+							AddProductOperation.Request({
 								maybeName: O.some(
 									P.name(product.value),
 								),
@@ -74,10 +87,23 @@ export class AddProduct extends Eff.Service<AddProduct>()(
 								maybeCreationDate: O.some(
 									P.creationDate(product.value),
 								),
+							}),
+							addProductResolver,
+						),
+					)
+
+					yield* Eff.request(
+						LogWithLevel.Request({
+							level: LogLevel.Info,
+							message: ['Adding product started'],
+							annotations: {
+								product: format(productData),
 							},
 						}),
-						addProductResolver,
+						logResolver,
 					)
+
+					yield* Fiber.join(addProductFiber)
 
 					yield* Eff.request(
 						LogWithLevel.Request({

@@ -8,7 +8,7 @@ import { GetSortedProducts } from '$lib/business/index.ts'
 export type ProductViewModel =
 	GetSortedProducts.Product
 
-type State = {
+export type State = {
 	isMenuOpen: boolean
 	receivedError: boolean
 	currentTimestamp: number
@@ -48,14 +48,7 @@ export function createStateContext() {
 	)
 
 	const refreshTimeListenersEnabled = $derived(
-		(state.products?.entries.findIndex(
-			product =>
-				product._tag === 'UncorruptProduct' &&
-				O.isSome(
-					asOption(product.maybeExpirationDate),
-				),
-		) ?? -1) >= 0 &&
-			state.refreshTimeListenersRegistered,
+		(state.products?.entries.length ?? 0) > 0,
 	)
 
 	const isLoading = $derived(
@@ -65,9 +58,6 @@ export function createStateContext() {
 	return {
 		state,
 		derived: {
-			get maybeTotal() {
-				return maybeTotal
-			},
 			get hasLoadedProducts() {
 				return hasLoadedProducts
 			},

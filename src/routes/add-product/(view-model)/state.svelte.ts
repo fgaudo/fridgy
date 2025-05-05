@@ -12,7 +12,7 @@ export type ProductViewModel =
 		isSelected?: boolean
 	}
 
-type State = {
+export type State = {
 	name: string
 	expirationDate?: number
 	currentDate: number
@@ -20,10 +20,6 @@ type State = {
 	toastMessage?: string
 	hasInteractedWithName: boolean
 }
-
-export type StateContext = ReturnType<
-	typeof createStateContext
->
 
 export function createStateContext() {
 	const state = $state<State>({
@@ -89,7 +85,6 @@ export function createStateContext() {
 			get maybeName() {
 				return maybeName
 			},
-
 			get isSubmittable() {
 				return isSubmittable
 			},

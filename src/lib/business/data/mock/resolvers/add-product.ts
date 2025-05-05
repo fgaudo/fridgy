@@ -19,41 +19,37 @@ export const command = L.effect(
 		const withErrors = yield* Config.withErrors
 		const { log } = yield* Deps
 		const db = yield* Db
-		return RequestResolver.fromEffect(
-			({ product }) =>
-				Eff.gen(function* () {
-					if (withErrors && Math.random() < 0.5) {
-						return yield* Eff.fail(
-							new AddProduct.OperationFailed(),
-						)
-					}
-
-					yield* Ref.update(db, dbValues => {
-						const index = dbValues.index + 1
-						const indexString = index.toString(10)
-						return {
-							...dbValues,
-							index,
-							map: dbValues.map.pipe(
-								HashMap.set(indexString, {
-									maybeName: product.maybeName,
-									maybeExpirationDate:
-										product.maybeExpirationDate,
-									maybeCreationDate:
-										product.maybeCreationDate,
-									maybeId: O.some(indexString),
-								}),
-							),
-						}
-					})
-
-					yield* log(
-						LogLevel.Info,
-						'Added product',
+		return RequestResolver.fromEffect(product =>
+			Eff.gen(function* () {
+				if (withErrors && Math.random() < 0.5) {
+					return yield* Eff.fail(
+						new AddProduct.OperationFailed(),
 					)
+				}
 
-					return yield* Eff.void
-				}),
+				yield* Ref.update(db, dbValues => {
+					const index = dbValues.index + 1
+					const indexString = index.toString(10)
+					return {
+						...dbValues,
+						index,
+						map: dbValues.map.pipe(
+							HashMap.set(indexString, {
+								maybeName: product.maybeName,
+								maybeExpirationDate:
+									product.maybeExpirationDate,
+								maybeCreationDate:
+									product.maybeCreationDate,
+								maybeId: O.some(indexString),
+							}),
+						),
+					}
+				})
+
+				yield* log(LogLevel.Info, 'Added product')
+
+				return yield* Eff.void
+			}),
 		)
 	}),
 )

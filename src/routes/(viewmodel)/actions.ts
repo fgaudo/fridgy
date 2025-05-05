@@ -13,7 +13,7 @@ import {
 	GetSortedProducts,
 } from '$lib/business/index.ts'
 
-import * as Store from './store.ts'
+import * as Store from './store.svelte.ts'
 
 export class Config extends Eff.Service<Config>()(
 	'ui/Home/Config',
@@ -25,44 +25,38 @@ export class Config extends Eff.Service<Config>()(
 	},
 ) {}
 
-export const refreshList = pipe(
-	Eff.gen(function* () {
-		const store = yield* Store.Service
+export const refreshList = Eff.gen(function* () {
+	const store = yield* Store.Service
 
-		if (store.context.state.isLoading) {
-			return
-		}
+	let state = yield* store.getSnapshot
 
+	if (state.isLoading) {
+		return
+	}
+
+	state = yield* store.dispatch({
+		type: 'fetchListStarted',
+	})
+
+	state = yield* store.getSnapshot
+
+	const getProducts =
+		yield* GetSortedProducts.GetSortedProducts
+
+	const result = yield* Eff.either(getProducts)
+
+	if (E.isLeft(result)) {
 		yield* store.dispatch({
-			type: 'fetchListStarted',
+			type: 'fetchListFailed',
 		})
+		return
+	}
 
-		const getProducts =
-			yield* GetSortedProducts.GetSortedProducts
-
-		const result = yield* Eff.either(getProducts)
-
-		if (E.isLeft(result)) {
-			return yield* store.dispatch({
-				type: 'fetchListFailed',
-			})
-		}
-
-		yield* store.dispatch({
-			type: 'fetchListSucceeded',
-			param: result.right,
-		})
-	}),
-
-	Eff.onInterrupt(() =>
-		Eff.gen(function* () {
-			const store = yield* Store.Service
-			yield* store.dispatch({
-				type: 'fetchListCancelled',
-			})
-		}),
-	),
-)
+	yield* store.dispatch({
+		type: 'fetchListSucceeded',
+		param: result.right,
+	})
+})
 
 export const refreshTimeInterval = Eff.gen(
 	function* () {
@@ -97,10 +91,11 @@ export const deleteSelectedAndRefresh = Eff.gen(
 		const deleteProducts =
 			yield* DeleteProductsByIds.DeleteProductsByIds
 
+		let state = yield* store.getSnapshot
+
 		const maybeIds = pipe(
 			HS.fromIterable(
-				store.context.state.productsState
-					.selected,
+				state.productsState.selected,
 			),
 			NEHS.fromHashSet,
 		)
@@ -109,7 +104,7 @@ export const deleteSelectedAndRefresh = Eff.gen(
 			return
 		}
 
-		yield* store.dispatch({
+		state = yield* store.dispatch({
 			type: 'deleteSelectedAndRefreshStarted',
 		})
 

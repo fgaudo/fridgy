@@ -1,33 +1,34 @@
-import type { ReadonlyDeep } from 'type-fest'
+import { Eff, pipe } from './imports.ts'
 
-import { Eff } from './imports.ts'
-
-type Actions<S> = {
+type Actions = {
 	[s: string]: (
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		arg: any,
-	) => (context: S) => void
+	) => void
 }
 
-export function createStore<
-	S,
-	A extends Actions<S>,
->(context: S, actions: A): Store<S, A> {
+export function createStore<S, A extends Actions>(
+	getSnapshot: Eff.Effect<S>,
+	actions: A,
+): Store<S, A> {
 	return {
-		context: context as ReadonlyDeep<S>,
+		getSnapshot,
 		dispatch: action =>
-			Eff.sync(() =>
-				actions[action.type](
-					'param' in action
-						? action.param
-						: undefined,
-				)(context),
+			pipe(
+				Eff.sync(() =>
+					actions[action.type](
+						'param' in action
+							? action.param
+							: undefined,
+					),
+				),
+				Eff.andThen(getSnapshot),
 			),
 	}
 }
 
-export type Store<S, A extends Actions<S>> = {
-	context: ReadonlyDeep<S>
+export type Store<S, A extends Actions> = {
+	getSnapshot: Eff.Effect<S>
 	dispatch: (
 		action: {
 			[K in keyof A]: Parameters<A[K]> extends []
@@ -37,5 +38,5 @@ export type Store<S, A extends Actions<S>> = {
 						param: Parameters<A[K]>[0]
 					}
 		}[keyof A],
-	) => Eff.Effect<void>
+	) => Eff.Effect<S>
 }

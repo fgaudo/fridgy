@@ -20,9 +20,9 @@ export class OperationFailed extends Data.TaggedError(
 ) {}
 
 interface Request
-	extends R.Request<void, OperationFailed> {
+	extends R.Request<void, OperationFailed>,
+		ProductDTO {
 	readonly _tag: 'AddProduct'
-	readonly product: ProductDTO
 }
 
 export const Request =

@@ -18,18 +18,15 @@
 
 	import imgUrl from '$lib/ui/assets/arrow.svg'
 	import Ripple from '$lib/ui/components/ripple.svelte'
-	import { createViewModel } from '$lib/ui/pages/home/view-model.svelte.ts'
 	import * as Utils from '$lib/ui/utils.ts'
+
+	import { createViewModel } from './(viewmodel)/view-model.svelte.ts'
 
 	const viewModel = createViewModel()
 
-	Utils.toDetachedCallback(
-		Eff.logInfo('User opened home page'),
-	)()
-
 	onMount(() => {
-		viewModel.tasks.fetchList()
-		viewModel.tasks.registerRefreshTimeListeners()
+		viewModel.actions.fetchList()
+		viewModel.actions.registerRefreshTimeListeners()
 	})
 </script>
 
@@ -83,7 +80,7 @@
 				duration: 400,
 				easing: expoIn,
 			}}
-			onpointerup={viewModel.tasks.toggleMenu}
+			onpointerup={viewModel.actions.toggleMenu}
 			class="h-full z-998 flex-col fixed w-full bg-black/50 backdrop-blur-xs"
 		></div>
 	{/if}
@@ -94,9 +91,9 @@
 		<div
 			class="ml-2 relative h-12 w-12 flex items-center justify-center rounded-full overflow-hidden"
 		>
-			{#if viewModel.state.isSelectModeEnabled}
+			{#if viewModel.derived.isSelectModeEnabled}
 				<Ripple
-					ontap={viewModel.tasks
+					ontap={viewModel.actions
 						.disableSelectMode}
 				></Ripple>
 
@@ -104,7 +101,7 @@
 			{:else}
 				<Ripple
 					color="var(--color-background)"
-					ontap={viewModel.tasks.toggleMenu}
+					ontap={viewModel.actions.toggleMenu}
 				></Ripple>
 				<Menu />
 			{/if}
@@ -116,7 +113,7 @@
 			Fridgy
 		</div>
 		<div class="grow"></div>
-		{#if viewModel.state.isSelectModeEnabled}
+		{#if viewModel.derived.isSelectModeEnabled}
 			<div
 				class="flex h-full items-center text-lg font-stylish translate-y-[2px]"
 			>
@@ -127,7 +124,7 @@
 				class="ml-2 mr-2 relative h-12 w-12 flex items-center justify-center rounded-full overflow-hidden"
 			>
 				<Ripple
-					ontap={viewModel.tasks.deleteSelected}
+					ontap={viewModel.actions.deleteSelected}
 				></Ripple>
 				<Trash2 />
 			</div>
@@ -146,15 +143,15 @@
 						class="text-primary underline relative overflow-hidden rounded-full py-1 px-2"
 					>
 						<Ripple
-							ontap={viewModel.tasks.fetchList}
+							ontap={viewModel.actions.fetchList}
 						></Ripple>
 						Try again
 					</div>
 				</div>
 			</div>
-		{:else if O.isSome(viewModel.state.maybeTotal)}
+		{:else if O.isSome(viewModel.derived.maybeTotal)}
 			{@const total =
-				viewModel.state.maybeTotal.value}
+				viewModel.derived.maybeTotal.value}
 			<p
 				class="bg-background fixed top-[64px] z-50 w-full px-[14px] pt-[10px] pb-[8px] text-xs"
 			>
@@ -192,15 +189,15 @@
 						]}
 						style:top={`${(index * 79).toString(10)}px`}
 					>
-						{#if viewModel.state.isSelectModeEnabled}
+						{#if viewModel.derived.isSelectModeEnabled}
 							<Ripple
-								ontap={viewModel.tasks.toggleItem(
+								ontap={viewModel.actions.toggleItem(
 									product,
 								)}
 							></Ripple>
 						{:else}
 							<Ripple
-								onhold={viewModel.tasks.toggleItem(
+								onhold={viewModel.actions.toggleItem(
 									product,
 								)}
 							></Ripple>
@@ -345,7 +342,7 @@
 			</div>
 		{/if}
 	</div>
-	{#if !viewModel.state.isSelectModeEnabled}
+	{#if !viewModel.derived.isSelectModeEnabled}
 		<div
 			class="bg-primary z-50 overflow-hidden text-background shadow-md shadow-on-background/30 fixed right-[16px] bottom-[20px] flex h-[96px] w-[96px] items-center justify-center rounded-4xl"
 		>

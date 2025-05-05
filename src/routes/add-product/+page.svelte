@@ -9,25 +9,27 @@
 
 	import { O } from '$lib/core/imports.ts'
 
+	import { createCapacitorListener } from '$lib/ui/adapters.ts'
 	import Ripple from '$lib/ui/components/ripple.svelte'
 	import Spinner from '$lib/ui/components/spinner.svelte'
 	import { PAGE_TRANSITION_Y } from '$lib/ui/constants.ts'
-	import { createViewModel } from '$lib/ui/pages/add-product/view-model.svelte.ts'
-	import { createCapacitorListener } from '$lib/ui/utils.ts'
+
+	import { createViewModel } from './(view-model)/index.svelte.ts'
 
 	const viewModel = createViewModel()
 
-	const startBack = createCapacitorListener({
-		event: 'backButton',
-		cb: () => {
-			if (!viewModel.state.isAdding) {
-				window.history.back()
-			}
-		},
-	})
+	const startBackListener =
+		createCapacitorListener({
+			event: 'backButton',
+			cb: () => {
+				if (!viewModel.state.isAdding) {
+					window.history.back()
+				}
+			},
+		})
 
 	onMount(() => {
-		startBack()
+		startBackListener()
 	})
 </script>
 
@@ -97,7 +99,7 @@
 				for="name"
 				class={[
 					'bg-background inline-block p-[4px] text-sm duration-500',
-					viewModel.state.isNameValidOrUntouched
+					viewModel.derived.isNameValidOrUntouched
 						? 'text-secondary'
 						: 'text-primary',
 					,
@@ -111,13 +113,13 @@
 				type="text"
 				bind:value={
 					() => viewModel.state.name,
-					viewModel.tasks.setName
+					viewModel.actions.setName
 				}
 				placeholder="For example: Milk"
 				id="name"
 				class={[
 					'h-16 transition-all focus:ring-0 shadow-none placeholder:text-gray-400 p-4 w-full  duration-500 rounded-[4px] border-0',
-					viewModel.state.isNameValidOrUntouched
+					viewModel.derived.isNameValidOrUntouched
 						? 'bg-secondary/5'
 						: 'bg-primary/15',
 				]}
@@ -136,7 +138,7 @@
 				Expiration date
 			</label>
 			<div class="relative h-16">
-				{#if O.isNone(viewModel.state.maybeExpirationDate)}
+				{#if O.isNone(viewModel.derived.maybeExpirationDate)}
 					<div
 						class="h-full flex items-center text-gray-400 absolute focus:ring-0 bg-secondary/5 shadow-none p-4 w-full rounded-[4px] border-0 z-40 pointer-events-none"
 					>
@@ -148,21 +150,21 @@
 					placeholder="Select a date"
 					bind:value={
 						() =>
-							viewModel.state
+							viewModel.derived
 								.formattedExpirationDateOrEmpty,
-						viewModel.tasks.setExpirationDate
+						viewModel.actions.setExpirationDate
 					}
 					id="expdate"
 					class={[
 						'absolute h-full focus:ring-0 bg-secondary/5 shadow-none p-4 w-full rounded-[4px] border-0',
 						{
 							'opacity-0': O.isNone(
-								viewModel.state
+								viewModel.derived
 									.maybeExpirationDate,
 							),
 						},
 					]}
-					min={viewModel.state
+					min={viewModel.derived
 						.formattedCurrentDate}
 				/>
 			</div>
@@ -176,13 +178,13 @@
 						'px-6 justify-center transition-all duration-500 overflow-hidden bg-primary h-full items-center flex  text-background shadow-primary/70 rounded-full shadow-md ',
 						{
 							'opacity-15 ':
-								!viewModel.state.isSubmittable,
+								!viewModel.derived.isSubmittable,
 						},
 					]}
 				>
-					{#if viewModel.state.isSubmittable}
+					{#if viewModel.derived.isSubmittable}
 						<Ripple
-							ontap={viewModel.tasks.addProduct}
+							ontap={viewModel.actions.addProduct}
 						></Ripple>
 					{/if}
 					Add product
@@ -199,13 +201,13 @@
 		</div>
 	{/if}
 
-	{#key O.isSome(viewModel.state.maybeToastMessage)}
+	{#key O.isSome(viewModel.derived.maybeToastMessage)}
 		<div
 			in:fade
 			out:fade
 			class="z-90 fixed flex left-0 right-0 bottom-3 items-center justify-center"
 		>
-			{#if O.isSome(viewModel.state.maybeToastMessage)}
+			{#if O.isSome(viewModel.derived.maybeToastMessage)}
 				<div
 					class="flex justify-center items-center px-8 w-full max-w-lg"
 				>
@@ -233,7 +235,7 @@
 							>
 						</div>
 						<div class="ms-3 text-sm font-normal">
-							{viewModel.state.maybeToastMessage
+							{viewModel.derived.maybeToastMessage
 								.value}
 						</div>
 					</div>

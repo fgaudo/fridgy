@@ -3,14 +3,13 @@
 	import '@fontsource-variable/comfortaa/index.css'
 	import '@fontsource-variable/roboto-flex/full.css'
 	import { onDestroy, onMount } from 'svelte'
-	import { fade, scale } from 'svelte/transition'
+	import { fade } from 'svelte/transition'
 
 	import { Eff } from '$lib/core/imports.ts'
 
-	import { useCases } from '$lib/business/index.ts'
+	import * as Utils from '$lib/ui/adapters.ts'
 	import '$lib/ui/assets/index.css'
 	import Spinner from '$lib/ui/components/spinner.svelte'
-	import * as Utils from '$lib/ui/utils.ts'
 
 	let { children } = $props()
 	let areFontsLoaded = $state(false)
@@ -50,7 +49,7 @@
 
 	onMount(() => {
 		startBackButtonListener()
-		awaitFonts(undefined)
+		awaitFonts()
 		disableContextMenu()
 	})
 </script>
