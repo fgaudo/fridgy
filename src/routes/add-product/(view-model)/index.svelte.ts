@@ -1,66 +1,57 @@
-import {
-	Eff,
-	O,
-	pipe,
-} from '$lib/core/imports.ts'
+import { Ref } from 'effect'
+
+import { Eff, pipe } from '$lib/core/imports.ts'
+import { createDispatcher } from '$lib/core/store.ts'
 
 import {
 	toCallback,
 	toCallbackWithParam,
 } from '$lib/ui/adapters.ts'
 
-import * as Tasks from './actions.ts'
 import { createStateContext } from './state.svelte.ts'
-import * as Store from './store.svelte.ts'
+import {
+	Message,
+	update,
+} from './update.svelte.ts'
 
 export function createViewModel() {
 	const context = createStateContext()
 
-	const storeService = Store.createStoreService(
-		context.state,
+	const dispatch = createDispatcher(
+		Ref.unsafeMake(context.state),
+		update,
 	)
-
-	const queueCancelToast = pipe(
-		Tasks.queueCancelToast,
-		Eff.provide(storeService),
-		toCallback,
-	)
-
-	$effect(() => {
-		if (
-			O.isSome(context.derived.maybeToastMessage)
-		) {
-			queueCancelToast()
-		}
-	})
 
 	return {
 		state: context.state,
 		derived: context.derived,
 		actions: {
 			addProduct: pipe(
-				Tasks.addProduct,
-				Eff.provide(storeService),
-
+				dispatch(Message.AddProduct()),
+				Eff.provide(context.service),
 				toCallback,
 			),
 			setExpirationDate: toCallbackWithParam(
 				(value: string) =>
 					pipe(
-						Tasks.setExpirationDate(value),
-						Eff.provide(storeService),
+						dispatch(
+							Message.SetExpirationDate({
+								expirationDate: value,
+							}),
+						),
+						Eff.provide(context.service),
 					),
 			),
 			setName: toCallbackWithParam(
 				(name: string) =>
 					pipe(
-						Tasks.setName(name),
-						Eff.provide(storeService),
+						dispatch(Message.SetName({ name })),
+						Eff.provide(context.service),
 					),
 			),
 			setNameInteracted: pipe(
-				Tasks.setNameInteracted,
-				Eff.provide(storeService),
+				dispatch(Message.SetNameInteracted()),
+				Eff.provide(context.service),
 				toCallback,
 			),
 		},

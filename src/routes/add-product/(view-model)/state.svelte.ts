@@ -1,4 +1,5 @@
 import {
+	C,
 	Int,
 	NETS,
 	O,
@@ -20,6 +21,14 @@ export type State = {
 	toastMessage?: string
 	hasInteractedWithName: boolean
 }
+
+export type StateContext = ReturnType<
+	typeof createStateContext
+>
+
+export class StateService extends C.Tag(
+	'ui/AddProduct/State',
+)<StateService, State>() {}
 
 export function createStateContext() {
 	const state = $state<State>({
@@ -103,5 +112,6 @@ export function createStateContext() {
 				return formattedExpirationDateOrEmpty
 			},
 		},
+		service: C.make(StateService, state),
 	}
 }

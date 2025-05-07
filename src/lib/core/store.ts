@@ -1,42 +1,55 @@
-import { Eff, pipe } from './imports.ts'
+import * as R from 'effect/Ref'
 
-type Actions = {
-	[s: string]: (
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		arg: any,
-	) => void
+import { A, Eff } from './imports.ts'
+
+export type Update<S, M, R> = (
+	state: S,
+	message: M,
+) => {
+	state: S
+	tasks?: Task<M, R>[]
 }
 
-export function createStore<S, A extends Actions>(
-	getSnapshot: Eff.Effect<S>,
-	actions: A,
-): Store<S, A> {
-	return {
-		getSnapshot,
-		dispatch: action =>
-			pipe(
-				Eff.sync(() =>
-					actions[action.type](
-						'param' in action
-							? action.param
-							: undefined,
-					),
-				),
-				Eff.andThen(getSnapshot),
-			),
-	}
-}
+export type Task<M, R> = Eff.Effect<[M], never, R>
 
-export type Store<S, A extends Actions> = {
-	getSnapshot: Eff.Effect<S>
-	dispatch: (
-		action: {
-			[K in keyof A]: Parameters<A[K]> extends []
-				? { type: K }
-				: {
-						type: K
-						param: Parameters<A[K]>[0]
-					}
-		}[keyof A],
-	) => Eff.Effect<S>
+export function createDispatcher<S, M, R>(
+	ref: R.Ref<S>,
+	update: Update<S, M, R>,
+): (m: M) => Eff.Effect<void, never, R> {
+	return message =>
+		Eff.gen(function* () {
+			const tasks = yield* R.modify(
+				ref,
+				state => {
+					const { state: newState, tasks } =
+						update(state, message)
+					return [tasks, newState]
+				},
+			)
+
+			if (!tasks) return
+
+			const dispatchesPerTask = A.map(
+				tasks,
+				task =>
+					Eff.gen(function* () {
+						const messages = yield* task
+
+						const dispatches = A.map(
+							messages,
+							message =>
+								Eff.suspend(() =>
+									createDispatcher(
+										ref,
+										update,
+									)(message),
+								),
+						)
+
+						yield* Eff.all(dispatches)
+					}),
+			)
+
+			yield* Eff.all(dispatchesPerTask)
+		})
 }
