@@ -7,12 +7,15 @@
 
 	import { Eff } from '$lib/core/imports.ts'
 
+	import { useCases } from '$lib/business/index.ts'
 	import * as Utils from '$lib/ui/adapters.ts'
 	import '$lib/ui/assets/index.css'
 	import Spinner from '$lib/ui/components/spinner.svelte'
 
 	let { children } = $props()
 	let areFontsLoaded = $state(false)
+
+	const runEffect = Utils.createRuntime(useCases)
 
 	const startBackButtonListener =
 		Utils.createCapacitorListener({
@@ -25,16 +28,17 @@
 			},
 		})
 
-	const awaitFonts = Utils.toCallback(
-		Eff.gen(function* () {
-			yield* Eff.all([
-				Eff.promise(() => document.fonts.ready),
-				Eff.sleep(400),
-			])
+	const awaitFonts = () =>
+		runEffect(
+			Eff.gen(function* () {
+				yield* Eff.all([
+					Eff.promise(() => document.fonts.ready),
+					Eff.sleep(400),
+				])
 
-			areFontsLoaded = true
-		}),
-	)
+				areFontsLoaded = true
+			}),
+		)
 
 	const disableContextMenu = () => {
 		const f = (e: Event) => e.preventDefault()

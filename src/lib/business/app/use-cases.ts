@@ -12,12 +12,11 @@ export {
 	LogWithLevel,
 }
 
-export type UseCases = L.Layer<
+export type UseCases =
 	| AddProduct.AddProduct
 	| DeleteProductsByIds.DeleteProductsByIds
 	| GetSortedProducts.GetSortedProducts
 	| LogWithLevel.Resolver
->
 
 export const useCasesNoDeps = L.mergeAll(
 	AddProduct.AddProduct.Default,

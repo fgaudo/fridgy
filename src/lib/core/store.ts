@@ -10,46 +10,49 @@ export type Update<S, M, R> = (
 	tasks?: Task<M, R>[]
 }
 
-export type Task<M, R> = Eff.Effect<[M], never, R>
+export type Task<M, R> = Eff.Effect<M[], never, R>
 
 export function createDispatcher<S, M, R>(
 	ref: R.Ref<S>,
 	update: Update<S, M, R>,
-): (m: M) => Eff.Effect<void, never, R> {
-	return message =>
+): (m: M[] | M) => Eff.Effect<void, never, R> {
+	return arg =>
 		Eff.gen(function* () {
-			const tasks = yield* R.modify(
-				ref,
-				state => {
-					const { state: newState, tasks } =
-						update(state, message)
-					return [tasks, newState]
-				},
-			)
+			const messages = Array.isArray(arg)
+				? arg
+				: [arg]
 
-			if (!tasks) return
-
-			const dispatchesPerTask = A.map(
-				tasks,
-				task =>
+			yield* Eff.all(
+				A.map(messages, message =>
 					Eff.gen(function* () {
-						const messages = yield* task
-
-						const dispatches = A.map(
-							messages,
-							message =>
-								Eff.suspend(() =>
-									createDispatcher(
-										ref,
-										update,
-									)(message),
-								),
+						const { tasks } = yield* R.modify(
+							ref,
+							state => {
+								const { state: newState, tasks } =
+									update(state, message)
+								return [{ tasks }, newState]
+							},
 						)
 
-						yield* Eff.all(dispatches)
-					}),
-			)
+						if (tasks) {
+							const dispatchesPerTask = A.map(
+								tasks,
+								task =>
+									Eff.gen(function* () {
+										const messages = yield* task
 
-			yield* Eff.all(dispatchesPerTask)
+										yield* Eff.suspend(() =>
+											createDispatcher(
+												ref,
+												update,
+											)(messages),
+										)
+									}),
+							)
+							yield* Eff.all(dispatchesPerTask)
+						}
+					}),
+				),
+			)
 		})
 }

@@ -20,7 +20,7 @@
 	import Ripple from '$lib/ui/components/ripple.svelte'
 	import * as Utils from '$lib/ui/utils.ts'
 
-	import { createViewModel } from './(viewmodel)/view-model.svelte.ts'
+	import { createViewModel } from './(viewmodel)/index.svelte.ts'
 
 	const viewModel = createViewModel()
 
@@ -113,11 +113,11 @@
 			Fridgy
 		</div>
 		<div class="grow"></div>
-		{#if viewModel.derived.isSelectModeEnabled}
+		{#if viewModel.state.products?.selected}
 			<div
 				class="flex h-full items-center text-lg font-stylish translate-y-[2px]"
 			>
-				{viewModel.state.selected.size}
+				{viewModel.state.products.selected.size}
 			</div>
 
 			<div
@@ -149,9 +149,9 @@
 					</div>
 				</div>
 			</div>
-		{:else if O.isSome(viewModel.derived.maybeTotal)}
+		{:else if viewModel.state.products?.entries}
 			{@const total =
-				viewModel.derived.maybeTotal.value}
+				viewModel.state.products.entries.length}
 			<p
 				class="bg-background fixed top-[64px] z-50 w-full px-[14px] pt-[10px] pb-[8px] text-xs"
 			>
@@ -165,164 +165,172 @@
 					: 'auto'}
 			>
 				{#each viewModel.state.products.entries as product, index (product.id)}
-					{@const maybeExpiration = asOption(
-						product.maybeExpirationDate,
-					)}
+					{#if product.isCorrupt}
+						<div>asd</div>
+					{:else}
+						{@const maybeCreation =
+							product.isValid
+								? O.some(product.creationDate)
+								: product.maybeCreationDate}
 
-					{@const maybeCreation = asOption(
-						product.isValid
-							? product.creationDate
-							: product.maybeCreationDate,
-					)}
-
-					{@const maybeName = asOption(
-						product.isValid
-							? product.name
-							: product.maybeName,
-					)}
-					<div
-						class={[
-							'absolute flex left-2 right-2 shadow-sm rounded-lg py-1 overflow-hidden transition-all duration-250',
-							product.isSelected
-								? 'bg-accent/10 scale-[102%]'
-								: 'bg-secondary/5',
-						]}
-						style:top={`${(index * 79).toString(10)}px`}
-					>
-						{#if viewModel.derived.isSelectModeEnabled}
-							<Ripple
-								ontap={viewModel.actions.toggleItem(
-									product,
-								)}
-							></Ripple>
-						{:else}
-							<Ripple
-								onhold={viewModel.actions.toggleItem(
-									product,
-								)}
-							></Ripple>
-						{/if}
+						{@const maybeName = product.isValid
+							? O.some(product.name)
+							: product.maybeName}
 						<div
 							class={[
-								'justify-between flex min-h-[60px] w-full gap-1 select-none items-center',
+								'absolute flex left-2 right-2 shadow-sm rounded-lg py-1 overflow-hidden transition-all duration-250',
+								product.isSelected
+									? 'bg-accent/10 scale-[102%]'
+									: 'bg-secondary/5',
 							]}
-							style="content-visibility: 'auto'"
+							style:top={`${(index * 79).toString(10)}px`}
 						>
+							{#if viewModel.state.products.selected.size > 0}
+								<Ripple
+									ontap={() =>
+										viewModel.actions.toggleItem(
+											product,
+										)}
+								></Ripple>
+							{:else}
+								<Ripple
+									onhold={() =>
+										viewModel.actions.toggleItem(
+											product,
+										)}
+								></Ripple>
+							{/if}
 							<div
-								class="p-2 h-full aspect-square"
+								class={[
+									'justify-between flex min-h-[60px] w-full gap-1 select-none items-center',
+								]}
+								style="content-visibility: 'auto'"
 							>
 								<div
-									class="flex-col flex bg-secondary text-background shadow-xs rounded-full items-center justify-center text-center h-full aspect-square"
+									class="p-2 h-full aspect-square"
 								>
-									{#if O.isSome(maybeExpiration)}
+									<div
+										class="flex-col flex bg-secondary text-background shadow-xs rounded-full items-center justify-center text-center h-full aspect-square"
+									>
+										{#if O.isSome(product.maybeExpirationDate)}
+											<div
+												class="text-lg font-bold leading-4"
+											>
+												{format(
+													product
+														.maybeExpirationDate
+														.value,
+													'd',
+												)}
+											</div>
+											<div
+												class="text-sm leading-4"
+											>
+												{format(
+													product
+														.maybeExpirationDate
+														.value,
+													'LLL',
+												)}
+											</div>
+										{:else}
+											<Infinity
+												class="p-2 w-full h-full font-bold "
+											/>
+										{/if}
+									</div>
+								</div>
+
+								<div
+									class="flex-1 h-full flex justify-center flex-col leading-[16px] gap-2"
+								>
+									{#if O.isSome(maybeName)}
 										<div
-											class="text-lg font-bold leading-4"
+											class="overflow-ellipsis whitespace-nowrap overflow-hidden capitalize"
 										>
-											{format(
-												maybeExpiration.value,
-												'd',
-											)}
-										</div>
-										<div
-											class="text-sm leading-4"
-										>
-											{format(
-												maybeExpiration.value,
-												'LLL',
-											)}
+											{maybeName.value}
 										</div>
 									{:else}
-										<Infinity
-											class="p-2 w-full h-full font-bold "
-										/>
+										<div>[NO NAME]</div>
+									{/if}
+
+									{#if O.isNone(maybeCreation)}
+										No creation date
+									{:else if O.isSome(product.maybeExpirationDate) && product.maybeExpirationDate.value > viewModel.state.currentTimestamp}
+										{@const expiration =
+											product.maybeExpirationDate
+												.value}
+										{@const creation =
+											maybeCreation.value}
+
+										{@const totalDuration =
+											expiration - creation}
+										{@const remainingDuration =
+											expiration -
+											viewModel.state
+												.currentTimestamp}
+										{@const currentProgress =
+											remainingDuration /
+											totalDuration}
+
+										{@const currentProgressOrZero =
+											totalDuration < 0
+												? 0
+												: currentProgress}
+
+										{@const color = `color-mix(in srgb, var(--color-secondary) ${currentProgressOrZero * 100}%, var(--color-primary) ${(1 - currentProgressOrZero) * 100}%)`}
+
+										<div
+											style:outline-color={color}
+											class="z-0 h-[4px] my-[2px] w-full outline-[1px]"
+										>
+											<div
+												class="bg-primary h-full"
+												style:background-color={color}
+												style:width={`${(
+													currentProgressOrZero *
+													100
+												).toString()}%`}
+											></div>
+										</div>
+									{:else if O.isSome(product.maybeExpirationDate)}
+										<div
+											class="text-[12px] leading-[8px] text-primary font-bold"
+										>
+											Expired
+										</div>
+									{/if}
+								</div>
+								<div
+									class="h-9/12 aspect-square flex items-center justify-center"
+								>
+									{#if O.isSome(product.maybeExpirationDate)}
+										<div
+											class={[
+												'text-primary duration-fade absolute text-sm',
+												{
+													'text-primary font-bold':
+														product
+															.maybeExpirationDate
+															.value <
+														viewModel.state
+															.currentTimestamp,
+												},
+											]}
+										>
+											{Utils.formatRemainingTime(
+												viewModel.state
+													.currentTimestamp,
+												product
+													.maybeExpirationDate
+													.value,
+											)}
+										</div>
 									{/if}
 								</div>
 							</div>
-
-							<div
-								class="flex-1 h-full flex justify-center flex-col leading-[16px] gap-2"
-							>
-								{#if O.isSome(maybeName)}
-									<div
-										class="overflow-ellipsis whitespace-nowrap overflow-hidden capitalize"
-									>
-										{maybeName.value}
-									</div>
-								{:else}
-									<div>[NO NAME]</div>
-								{/if}
-
-								{#if O.isNone(maybeCreation)}
-									No creation date
-								{:else if O.isSome(maybeExpiration) && maybeExpiration.value > viewModel.state.currentTimestamp}
-									{@const expiration =
-										maybeExpiration.value}
-									{@const creation =
-										maybeCreation.value}
-
-									{@const totalDuration =
-										expiration - creation}
-									{@const remainingDuration =
-										expiration -
-										viewModel.state
-											.currentTimestamp}
-									{@const currentProgress =
-										remainingDuration /
-										totalDuration}
-
-									{@const currentProgressOrZero =
-										totalDuration < 0
-											? 0
-											: currentProgress}
-
-									{@const color = `color-mix(in srgb, var(--color-secondary) ${currentProgressOrZero * 100}%, var(--color-primary) ${(1 - currentProgressOrZero) * 100}%)`}
-
-									<div
-										style:outline-color={color}
-										class="z-0 h-[4px] my-[2px] w-full outline-[1px]"
-									>
-										<div
-											class="bg-primary h-full"
-											style:background-color={color}
-											style:width={`${(
-												currentProgressOrZero *
-												100
-											).toString()}%`}
-										></div>
-									</div>
-								{:else if O.isSome(maybeExpiration)}
-									<div
-										class="text-[12px] leading-[8px] text-primary font-bold"
-									>
-										Expired
-									</div>
-								{/if}
-							</div>
-							<div
-								class="h-9/12 aspect-square flex items-center justify-center"
-							>
-								{#if O.isSome(maybeExpiration)}
-									<div
-										class={[
-											'text-primary duration-fade absolute text-sm',
-											{
-												'text-primary font-bold':
-													maybeExpiration.value <
-													viewModel.state
-														.currentTimestamp,
-											},
-										]}
-									>
-										{Utils.formatRemainingTime(
-											viewModel.state
-												.currentTimestamp,
-											maybeExpiration.value,
-										)}
-									</div>
-								{/if}
-							</div>
 						</div>
-					</div>
+					{/if}
 				{/each}
 			</div>
 		{:else}

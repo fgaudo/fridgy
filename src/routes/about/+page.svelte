@@ -4,13 +4,13 @@
 	import { cubicOut } from 'svelte/easing'
 	import { fade, fly } from 'svelte/transition'
 
+	import { createCapacitorListener } from '$lib/ui/adapters.ts'
 	import licenses from '$lib/ui/assets/licenses.json' with { type: 'json' }
 	import Ripple from '$lib/ui/components/ripple.svelte'
 	import {
 		PAGE_TRANSITION_Y,
 		version,
 	} from '$lib/ui/constants'
-	import { createCapacitorListener } from '$lib/ui/utils.ts'
 
 	const startBack = createCapacitorListener({
 		event: 'backButton',
@@ -103,7 +103,7 @@
 
 		{#each Object.entries(licenses) as [name, license]}
 			<div
-				class="mb-[20px] overflow-x-scroll text-nowrap"
+				class="mb-[20px] overflow-x-auto text-nowrap"
 				style:content-visibility="auto"
 			>
 				{#if 'name' in license && license.name.trim().length > 0}

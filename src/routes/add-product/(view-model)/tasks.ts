@@ -4,7 +4,6 @@ import {
 	E,
 	Eff,
 	Int,
-	L,
 	NETS,
 	O,
 } from '$lib/core/imports.ts'
@@ -19,13 +18,15 @@ import { MINIMUM_LAG_MS } from '$lib/ui/constants.ts'
 
 import { Message } from './update.svelte.ts'
 
+type AddProductTask = Task<Message, UseCases>
+
 export const addProduct = ({
 	name,
 	maybeExpirationDate,
 }: {
 	name: NETS.NonEmptyTrimmedString
 	maybeExpirationDate: O.Option<Int.Integer>
-}): Task<Message, L.Layer.Success<UseCases>> =>
+}): AddProductTask =>
 	Eff.gen(function* () {
 		const logResolver =
 			yield* LogWithLevel.Resolver
@@ -58,22 +59,18 @@ export const addProduct = ({
 		return [Message.AddProductSucceeded()]
 	})
 
-export const queueRemoveToast: Task<
-	Message,
-	L.Layer.Success<UseCases>
-> = Eff.gen(function* () {
-	yield* Eff.sleep(3000)
-	return [Message.RemoveToast()]
-})
+export const queueRemoveToast: AddProductTask =
+	Eff.gen(function* () {
+		yield* Eff.sleep(3000)
+		return [Message.RemoveToast()]
+	})
 
-export const setNameInteracted: Task<
-	Message,
-	L.Layer.Success<UseCases>
-> = Eff.sync(() => [Message.SetNameInteracted()])
+export const setNameInteracted: AddProductTask =
+	Eff.sync(() => [Message.SetNameInteracted()])
 
 export const setName = (
 	name: string,
-): Task<Message, L.Layer.Success<UseCases>> =>
+): AddProductTask =>
 	Eff.sync(() => [
 		Message.SetName({
 			name,
@@ -82,7 +79,7 @@ export const setName = (
 
 export const setExpirationDate = (
 	expirationDate: string,
-): Task<Message, L.Layer.Success<UseCases>> =>
+): AddProductTask =>
 	Eff.sync(() => [
 		Message.SetExpirationDate({
 			expirationDate,

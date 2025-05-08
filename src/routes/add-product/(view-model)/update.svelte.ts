@@ -1,7 +1,6 @@
 import {
 	Da,
 	Int,
-	L,
 	M,
 	NETS,
 	O,
@@ -19,7 +18,6 @@ import {
 
 export type Message = Da.TaggedEnum<{
 	AddProduct: object
-	AddProductCancelled: object
 	AddProductSucceeded: object
 	AddProductFailed: object
 	RemoveToast: object
@@ -33,7 +31,7 @@ export const Message = Da.taggedEnum<Message>()
 export const update: Update<
 	State,
 	Message,
-	L.Layer.Success<UseCases>
+	UseCases
 > = (state, message) =>
 	M.type<Message>().pipe(
 		M.tag('AddProduct', () => {
@@ -103,11 +101,6 @@ export const update: Update<
 				return { state }
 			},
 		),
-		M.tag('AddProductCancelled', () => {
-			state.isAdding = false
-
-			return { state }
-		}),
 		M.tag('SetName', ({ name }) => {
 			state.hasInteractedWithName = true
 			state.name = name

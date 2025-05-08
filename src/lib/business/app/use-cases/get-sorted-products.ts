@@ -36,6 +36,7 @@ export type Product =
 			isValid: true
 	  }
 	| {
+			id: symbol
 			isCorrupt: true
 			maybeName: O.Option<NonEmptyTrimmedString>
 	  }
@@ -182,6 +183,7 @@ function toProductResultWithEffect({
 			)
 
 			return {
+				id: Symbol(),
 				isCorrupt: true,
 				maybeName,
 			}

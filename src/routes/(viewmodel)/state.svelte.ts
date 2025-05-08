@@ -1,21 +1,33 @@
 import { SvelteSet } from 'svelte/reactivity'
 
-import { O } from '$lib/core/imports.ts'
+import { B } from '$lib/core/imports.ts'
 import { unsafe_fromNumber } from '$lib/core/integer/index.ts'
 
 import { GetSortedProducts } from '$lib/business/index.ts'
 
 export type ProductViewModel =
-	GetSortedProducts.Product
+	| ((GetSortedProducts.Product & {
+			isCorrupt: false
+	  }) & { isSelected: boolean })
+	| (GetSortedProducts.Product & {
+			isCorrupt: true
+	  })
+
+export type FetchId = B.Branded<symbol, 'FetchId'>
+export const FetchId = () =>
+	B.nominal<FetchId>()(Symbol())
 
 export type State = {
 	isMenuOpen: boolean
 	receivedError: boolean
 	currentTimestamp: number
 	refreshTimeListenersRegistered: boolean
+	refreshingTaskId?: FetchId
+	deletingRunning: boolean
+	isLoading: boolean
 	products?: {
-		entries: ProductViewModel[]
 		selected: SvelteSet<string>
+		entries: ProductViewModel[]
 	}
 }
 
@@ -23,10 +35,23 @@ export type StateContext = ReturnType<
 	typeof createStateContext
 >
 
+export function hasProducts(
+	state: State,
+): state is State & {
+	products: {
+		selectedProducts: SvelteSet<string>
+		entries: ProductViewModel[]
+	}
+} {
+	return state.products !== undefined
+}
+
 export function createStateContext() {
 	const state = $state<State>({
 		isMenuOpen: false,
 		receivedError: false,
+		isLoading: true,
+		deletingRunning: false,
 		refreshTimeListenersRegistered: false,
 		currentTimestamp: Date.now(),
 	})
@@ -41,10 +66,6 @@ export function createStateContext() {
 
 	const hasLoadedProducts = $derived(
 		state.products !== undefined,
-	)
-
-	const products = $derived(
-		O.fromNullable(state.products),
 	)
 
 	const refreshTimeListenersEnabled = $derived(

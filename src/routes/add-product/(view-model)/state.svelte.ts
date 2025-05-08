@@ -6,18 +6,12 @@ import {
 	pipe,
 } from '$lib/core/imports.ts'
 
-import { GetSortedProducts } from '$lib/business/index.ts'
-
-export type ProductViewModel =
-	GetSortedProducts.Product & {
-		isSelected?: boolean
-	}
-
 export type State = {
 	name: string
 	expirationDate?: number
 	currentDate: number
 	isAdding: boolean
+	adding?: symbol
 	toastMessage?: string
 	hasInteractedWithName: boolean
 }
