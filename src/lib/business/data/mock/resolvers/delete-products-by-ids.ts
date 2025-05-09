@@ -23,7 +23,6 @@ export const command = L.effect(
 						new DeleteProductsByIds.OperationFailed(),
 					)
 				}
-
 				for (const id of ids) {
 					yield* Ref.update(db, dbValues => ({
 						...dbValues,

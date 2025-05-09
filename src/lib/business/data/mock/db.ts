@@ -7,12 +7,14 @@ import { GetSortedProducts } from '$lib/business/app/operations'
 export class Db extends Eff.Service<Db>()(
 	'data/mock/Db',
 	{
-		effect: Ref.make({
-			index: 0,
-			map: HashMap.empty<
-				string,
-				GetSortedProducts.ProductDTO
-			>(),
+		effect: Eff.gen(function* () {
+			return yield* Ref.make({
+				index: 0,
+				map: HashMap.empty<
+					string,
+					GetSortedProducts.ProductDTO
+				>(),
+			})
 		}),
 	},
 ) {}

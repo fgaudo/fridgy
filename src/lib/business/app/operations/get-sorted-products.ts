@@ -41,5 +41,5 @@ export const Request = R.tagged<Request>(
 )
 
 export class Resolver extends C.Tag(
-	'app/operations/DeleteProductsByIdsResolver',
+	'app/operations/GetSortedProductsResolver',
 )<Resolver, RequestResolver<Request>>() {}

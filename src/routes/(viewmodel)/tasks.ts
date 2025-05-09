@@ -2,9 +2,7 @@ import {
 	Cl,
 	E,
 	Eff,
-	HS,
 	NEHS,
-	O,
 	pipe,
 } from '$lib/core/imports.ts'
 import type { Task } from '$lib/core/store.ts'
@@ -52,39 +50,20 @@ export const refreshTime: HomeTask = Eff.gen(
 	},
 )
 
-export const deleteSelectedAndRefresh: HomeTask =
+export const deleteSelectedAndRefresh: (
+	ids: NEHS.NonEmptyHashSet<string>,
+) => HomeTask = ids =>
 	Eff.gen(function* () {
-		const store = yield* Store.Service
-
 		const deleteProducts =
 			yield* DeleteProductsByIds.DeleteProductsByIds
 
-		let state = yield* store.getSnapshot
-
-		const maybeIds = pipe(
-			HS.fromIterable(
-				state.productsState.selected,
-			),
-			NEHS.fromHashSet,
-		)
-
-		if (O.isNone(maybeIds)) {
-			return
-		}
-
-		state = yield* store.dispatch({
-			type: 'deleteSelectedAndRefreshStarted',
-		})
-
 		const deleteResult = yield* pipe(
-			deleteProducts(maybeIds.value),
+			deleteProducts(ids),
 			Eff.either,
 		)
 
 		if (E.isLeft(deleteResult)) {
-			return yield* store.dispatch({
-				type: 'deleteSelectedFailed',
-			})
+			return [Message.DeleteSelectedFailed()]
 		}
 
 		const refreshList =
@@ -96,13 +75,14 @@ export const deleteSelectedAndRefresh: HomeTask =
 		)
 
 		if (E.isLeft(refreshResult)) {
-			return yield* store.dispatch({
-				type: 'deleteSelectedSuccededAndRefreshFailed',
-			})
+			return [
+				Message.DeleteSelectedSucceededButRefreshFailed(),
+			]
 		}
 
-		yield* store.dispatch({
-			type: 'deleteSelectedAndRefreshSucceeded',
-			param: refreshResult.right,
-		})
+		return [
+			Message.DeleteSelectedAndRefreshSucceeded({
+				result: refreshResult.right,
+			}),
+		]
 	})

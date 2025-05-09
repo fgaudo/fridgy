@@ -70,7 +70,7 @@ export const query = L.effect(
 					map.pipe(HashMap.toValues)
 
 				return {
-					total: NNInt.unsafe_fromNumber(total),
+					total: NNInt.unsafeMake(total),
 					products: A.sort(ord)(products),
 				}
 			}),

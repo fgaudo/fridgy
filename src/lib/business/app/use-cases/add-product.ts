@@ -44,7 +44,7 @@ export class AddProduct extends Eff.Service<AddProduct>()(
 						logResolver,
 					)
 
-					const timestamp = Int.unsafe_fromNumber(
+					const timestamp = Int.unsafeMake(
 						yield* Cl.currentTimeMillis,
 					)
 

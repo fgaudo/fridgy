@@ -1,29 +1,33 @@
-import { O } from './imports.ts'
+import { B, flow } from './imports.ts'
 
-const _: unique symbol = Symbol()
+export type NonEmptyTrimmedString = B.Branded<
+	string,
+	'NonEmptyTrimmedString'
+>
 
-export type NonEmptyTrimmedString = string & {
-	[_]: true
-}
+/** @internal */
+export const NonEmptyTrimmedString =
+	B.refined<NonEmptyTrimmedString>(
+		string => /^\S.*\S$|^\S$/.test(string),
+		() =>
+			B.error(
+				`Provided string is either empty or non-trimmed`,
+			),
+	)
 
-export function isNonBlank(
-	string: string,
-): string is NonEmptyTrimmedString {
-	return /\S/.test(string)
-}
+export const isNonEmptyTrimmedString =
+	NonEmptyTrimmedString.is
 
-export const unsafe_fromString = (
-	value: string,
-) => {
-	const string = value.trim()
-
-	if (!isNonBlank(string)) {
-		throw new Error('Not a non-empty string')
-	}
-
-	return string
-}
-
-export const fromString = O.liftThrowable(
-	(value: string) => unsafe_fromString(value),
+export const makeWithTrimming = flow(
+	trim,
+	NonEmptyTrimmedString.option,
 )
+
+export const unsafeMakeWithTrimming = flow(
+	trim,
+	NonEmptyTrimmedString,
+)
+
+function trim(s: string): string {
+	return s.trim()
+}

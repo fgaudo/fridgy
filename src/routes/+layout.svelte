@@ -2,20 +2,35 @@
 	import { App as CAP } from '@capacitor/app'
 	import '@fontsource-variable/comfortaa/index.css'
 	import '@fontsource-variable/roboto-flex/full.css'
-	import { onDestroy, onMount } from 'svelte'
+	import {
+		onDestroy,
+		onMount,
+		setContext,
+	} from 'svelte'
 	import { fade } from 'svelte/transition'
 
-	import { Eff } from '$lib/core/imports.ts'
+	import { Eff, MR } from '$lib/core/imports.ts'
 
 	import { useCases } from '$lib/business/index.ts'
 	import * as Utils from '$lib/ui/adapters.ts'
 	import '$lib/ui/assets/index.css'
 	import Spinner from '$lib/ui/components/spinner.svelte'
+	import { setGlobalContext } from '$lib/ui/context.ts'
+
+	const runtime = MR.make(useCases)
+
+	onDestroy(() => {
+		runtime.dispose()
+	})
 
 	let { children } = $props()
 	let areFontsLoaded = $state(false)
 
-	const runEffect = Utils.createRuntime(useCases)
+	const runEffect = Utils.createRunEffect(runtime)
+
+	onMount(() => {
+		setContext('runtime', runEffect)
+	})
 
 	const startBackButtonListener =
 		Utils.createCapacitorListener({
@@ -52,6 +67,8 @@
 	}
 
 	onMount(() => {
+		setGlobalContext({ runtime })
+
 		startBackButtonListener()
 		awaitFonts()
 		disableContextMenu()

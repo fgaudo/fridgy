@@ -9,7 +9,6 @@ import {
 	O,
 	pipe,
 } from '$lib/core/imports.ts'
-import { unsafe_fromNumber } from '$lib/core/integer/non-negative.ts'
 import type { NonEmptyTrimmedString } from '$lib/core/non-empty-trimmed-string.ts'
 
 import {
@@ -115,7 +114,7 @@ export class GetSortedProducts extends Eff.Service<GetSortedProducts>()(
 									logResolver,
 								)
 
-								return unsafe_fromNumber(
+								return NNInt.unsafeMake(
 									result.products.length,
 								)
 							}

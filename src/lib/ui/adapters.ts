@@ -3,15 +3,19 @@ import {
 	App as CAP,
 } from '@capacitor/app'
 import type { PluginListenerHandle } from '@capacitor/core'
+import { ManagedRuntime } from 'effect'
 import type { Cancel } from 'effect/Runtime'
 import { onDestroy } from 'svelte'
 
-import { Eff, L } from '$lib/core/imports.ts'
+import { Eff } from '$lib/core/imports.ts'
 
 import type { UseCases } from '$lib/business/app/use-cases.ts'
 
-export function createRuntime(
-	useCases: L.Layer<UseCases>,
+export function createRunEffect(
+	runtime: ManagedRuntime.ManagedRuntime<
+		UseCases,
+		never
+	>,
 ) {
 	const set = new Set<Cancel<unknown, unknown>>()
 
@@ -32,15 +36,8 @@ export function createRuntime(
 			return () => {}
 		}
 
-		const cancel = Eff.runCallback(
-			eff
-				.pipe(Eff.tapDefect(Eff.logFatal))
-				.pipe(Eff.provide(useCases)),
-			{
-				onExit: () => {
-					set.delete(cancel)
-				},
-			},
+		const cancel = runtime.runCallback(
+			eff.pipe(Eff.tapDefect(Eff.logFatal)),
 		)
 		set.add(cancel)
 

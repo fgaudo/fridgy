@@ -4,11 +4,11 @@ import type { Cancel } from 'effect/Runtime'
 import { Eff } from '$lib/core/imports.ts'
 import { createDispatcher } from '$lib/core/store.ts'
 
-import { useCases } from '$lib/business/index.ts'
 import {
 	createCapacitorListener,
-	createRuntime,
+	createRunEffect,
 } from '$lib/ui/adapters.ts'
+import { getGlobalContext } from '$lib/ui/context.ts'
 
 import {
 	type ProductViewModel,
@@ -26,7 +26,10 @@ const refreshTimeIntervalFrequency =
 export function createViewModel() {
 	const context = createStateContext()
 
-	const runEffect = createRuntime(useCases)
+	const { runtime } = getGlobalContext()
+
+	const runEffect = createRunEffect(runtime)
+
 	const dispatchToEffect = createDispatcher(
 		Ref.unsafeMake(context.state),
 		update,
@@ -119,10 +122,11 @@ export function createViewModel() {
 					Message.DisableRefreshTimeListener(),
 				),
 
-			deleteSelected: () =>
+			deleteSelected: () => {
 				dispatchNoCancel(
 					Message.DeleteSelectedAndRefresh(),
-				),
+				)
+			},
 		},
 	}
 }

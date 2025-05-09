@@ -61,7 +61,7 @@ export const maybeInteger = fc
 			M.when('some', () =>
 				fc
 					.integer()
-					.map(Int.unsafe_fromNumber)
+					.map(Int.unsafeMake)
 					.map(O.some),
 			),
 			M.exhaustive,
@@ -106,7 +106,7 @@ export const maybeString = fc
 	)
 
 export const nonEmptyTrimmedString =
-	nonBlankString.map(NETS.unsafe_fromString)
+	nonBlankString.map(NETS.unsafeMakeWithTrimming)
 
 export const maybeNonEmptyTrimmedString = fc
 	.constantFrom('some' as const, 'none' as const)

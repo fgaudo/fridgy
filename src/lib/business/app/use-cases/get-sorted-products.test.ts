@@ -72,7 +72,7 @@ describe('Get sorted products', () => {
 					H.assertExitIsSuccess(exit)
 
 					expect(exit.value).toStrictEqual({
-						total: NNInt.unsafe_fromNumber(
+						total: NNInt.unsafeMake(
 							products.length,
 						),
 						models: products,
@@ -83,7 +83,7 @@ describe('Get sorted products', () => {
 					L.succeed(
 						Query.GetSortedProducts,
 						Eff.succeed({
-							total: NNInt.unsafe_fromNumber(
+							total: NNInt.unsafeMake(
 								products.length,
 							),
 							products,

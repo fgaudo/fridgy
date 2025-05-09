@@ -1,6 +1,13 @@
 import { SvelteSet } from 'svelte/reactivity'
 
-import { Da, M } from '$lib/core/imports.ts'
+import {
+	Da,
+	HS,
+	M,
+	NEHS,
+	O,
+	pipe,
+} from '$lib/core/imports.ts'
 import { type Update } from '$lib/core/store.ts'
 
 import type { UseCases } from '$lib/business/app/use-cases.ts'
@@ -47,8 +54,8 @@ export const update: Update<
 	State,
 	Message,
 	UseCases
-> = (state, message) =>
-	M.type<Message>().pipe(
+> = (state, message) => {
+	return M.type<Message>().pipe(
 		M.tag('RefreshTime', () => {
 			return { state, tasks: [refreshTime] }
 		}),
@@ -99,9 +106,23 @@ export const update: Update<
 
 			state.deletingRunning = true
 
+			const maybeIds = pipe(
+				O.fromNullable(state.products?.selected),
+				O.map(HS.fromIterable),
+				O.flatMap(NEHS.make),
+			)
+
+			if (O.isNone(maybeIds)) {
+				return { state }
+			}
+
 			return {
 				state,
-				tasks: [deleteSelectedAndRefresh],
+				tasks: [
+					deleteSelectedAndRefresh(
+						maybeIds.value,
+					),
+				],
 			}
 		}),
 		M.tag(
@@ -154,7 +175,10 @@ export const update: Update<
 				}
 
 			state.products.selected.clear()
-
+			state.products.entries.forEach(entry => {
+				if (entry.isCorrupt) return
+				entry.isSelected = false
+			})
 			return { state }
 		}),
 		M.tag('ToggleItem', ({ product }) => {
@@ -193,3 +217,4 @@ export const update: Update<
 		),
 		M.exhaustive,
 	)(message)
+}

@@ -41,7 +41,7 @@ export const update: Update<
 
 			const maybeName = pipe(
 				O.fromNullable(state.name),
-				O.flatMap(NETS.fromString),
+				O.flatMap(NETS.makeWithTrimming),
 			)
 
 			if (O.isNone(maybeName)) {
@@ -53,7 +53,7 @@ export const update: Update<
 
 			const maybeExpirationDate = pipe(
 				O.fromNullable(state.expirationDate),
-				O.flatMap(Int.fromNumber),
+				O.flatMap(Int.make),
 			)
 
 			return {

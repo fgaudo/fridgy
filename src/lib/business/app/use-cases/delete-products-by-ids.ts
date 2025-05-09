@@ -34,7 +34,6 @@ export class DeleteProductsByIds extends Eff.Service<DeleteProductsByIds>()(
 						}),
 						logResolver,
 					)
-
 					yield* Eff.request(
 						DeleteProductsByIdsOperation.Request({
 							ids,

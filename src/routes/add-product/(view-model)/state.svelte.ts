@@ -1,5 +1,4 @@
 import {
-	C,
 	Int,
 	NETS,
 	O,
@@ -20,10 +19,6 @@ export type StateContext = ReturnType<
 	typeof createStateContext
 >
 
-export class StateService extends C.Tag(
-	'ui/AddProduct/State',
-)<StateService, State>() {}
-
 export function createStateContext() {
 	const state = $state<State>({
 		currentDate: Date.now(),
@@ -33,7 +28,7 @@ export function createStateContext() {
 	})
 
 	const maybeName = $derived(
-		NETS.fromString(state.name),
+		NETS.makeWithTrimming(state.name),
 	)
 
 	const isNameValid = $derived(
@@ -51,14 +46,14 @@ export function createStateContext() {
 	const maybeExpirationDate = $derived(
 		pipe(
 			O.fromNullable(state.expirationDate),
-			O.flatMap(Int.fromNumber),
+			O.flatMap(Int.make),
 		),
 	)
 
 	const maybeToastMessage = $derived(
 		pipe(
 			O.fromNullable(state.toastMessage),
-			O.flatMap(NETS.fromString),
+			O.flatMap(NETS.makeWithTrimming),
 		),
 	)
 
@@ -106,6 +101,5 @@ export function createStateContext() {
 				return formattedExpirationDateOrEmpty
 			},
 		},
-		service: C.make(StateService, state),
 	}
 }

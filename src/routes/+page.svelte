@@ -2,7 +2,6 @@
 	import { goto } from '$app/navigation'
 	import {
 		Infinity,
-		Cross,
 		Info,
 		Menu,
 		Plus,
@@ -14,7 +13,7 @@
 	import { expoIn, expoOut } from 'svelte/easing'
 	import { fade, fly } from 'svelte/transition'
 
-	import { Eff, O } from '$lib/core/imports.ts'
+	import { O } from '$lib/core/imports.ts'
 
 	import imgUrl from '$lib/ui/assets/arrow.svg'
 	import Ripple from '$lib/ui/components/ripple.svelte'
@@ -113,7 +112,7 @@
 			Fridgy
 		</div>
 		<div class="grow"></div>
-		{#if viewModel.state.products?.selected}
+		{#if viewModel.state.products && viewModel.state.products.selected.size > 0}
 			<div
 				class="flex h-full items-center text-lg font-stylish translate-y-[2px]"
 			>
@@ -149,7 +148,7 @@
 					</div>
 				</div>
 			</div>
-		{:else if viewModel.state.products?.entries}
+		{:else if viewModel.state.products && viewModel.state.products.entries.length > 0}
 			{@const total =
 				viewModel.state.products.entries.length}
 			<p

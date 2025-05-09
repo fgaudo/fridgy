@@ -1,28 +1,16 @@
-import { O } from '../imports.ts'
-import { isInteger } from './index.ts'
+import { B, Int } from '../imports.ts'
+import * as Pos from '../number/positive.ts'
+import type { Integer } from './index.ts'
 
-const _: unique symbol = Symbol()
+export type PositiveInteger = Integer &
+	Pos.Positive
 
-export type PositiveInteger = number & {
-	[_]: true
-}
-
-export const isPositiveInteger = (
-	value: unknown,
-): value is PositiveInteger =>
-	isInteger(value) && value > 0
-
-export const unsafe_fromNumber: (
-	number: number,
-) => PositiveInteger = number => {
-	if (!isPositiveInteger(number)) {
-		throw new Error('Not a positive integer')
-	}
-	return number
-}
-
-export const fromNumber: (
-	number: number,
-) => O.Option<PositiveInteger> = O.liftThrowable(
-	number => unsafe_fromNumber(number),
+/** @internal */
+export const PositiveInteger = B.all(
+	Int.Integer,
+	Pos.Positive,
 )
+
+export const make = PositiveInteger.option
+export const unsafeMake = PositiveInteger
+export const isNonNegative = PositiveInteger.is

@@ -1,10 +1,10 @@
 import { Ref } from 'effect'
 
-import { Eff, pipe } from '$lib/core/imports.ts'
+import { pipe } from '$lib/core/imports.ts'
 import { createDispatcher } from '$lib/core/store.ts'
 
-import { useCases } from '$lib/business/index.ts'
-import { createRuntime } from '$lib/ui/adapters.ts'
+import { createRunEffect } from '$lib/ui/adapters.ts'
+import { getGlobalContext } from '$lib/ui/context.ts'
 
 import { createStateContext } from './state.svelte.ts'
 import {
@@ -15,12 +15,14 @@ import {
 export function createViewModel() {
 	const context = createStateContext()
 
-	const runEffect = createRuntime(useCases)
-
 	const dispatch = createDispatcher(
 		Ref.unsafeMake(context.state),
 		update,
 	)
+
+	const { runtime } = getGlobalContext()
+
+	const runEffect = createRunEffect(runtime)
 
 	return {
 		state: context.state,
@@ -29,7 +31,6 @@ export function createViewModel() {
 			addProduct: () =>
 				pipe(
 					dispatch(Message.AddProduct()),
-					Eff.provide(context.service),
 					runEffect,
 				),
 			setExpirationDate: (value: string) =>
@@ -39,21 +40,18 @@ export function createViewModel() {
 							expirationDate: value,
 						}),
 					),
-					Eff.provide(context.service),
 					runEffect,
 				),
 
 			setName: (name: string) =>
 				pipe(
 					dispatch(Message.SetName({ name })),
-					Eff.provide(context.service),
 					runEffect,
 				),
 
 			setNameInteracted: () =>
 				pipe(
 					dispatch(Message.SetNameInteracted()),
-					Eff.provide(context.service),
 					runEffect,
 				),
 		},

@@ -1,27 +1,13 @@
-import { O } from '../imports.ts'
+import { B } from '../imports.ts'
 
-const _: unique symbol = Symbol()
+export type Integer = B.Branded<number, 'Integer'>
 
-export type Integer = number & {
-	[_]: true
-}
-
-export const isInteger = (
-	value: unknown,
-): value is Integer => Number.isInteger(value)
-
-export const unsafe_fromNumber: (
-	number: number,
-) => Integer = number => {
-	if (!isInteger(number)) {
-		throw new Error('Not an integer')
-	}
-
-	return number
-}
-
-export const fromNumber: (
-	number: number,
-) => O.Option<Integer> = O.liftThrowable(
-	unsafe_fromNumber,
+/** @internal */
+export const Integer = B.refined<Integer>(
+	n => Number.isInteger(n),
+	n => B.error(`Expected ${n} to be an integer`),
 )
+
+export const make = Integer.option
+export const unsafeMake = Integer
+export const isNonNegative = Integer.is

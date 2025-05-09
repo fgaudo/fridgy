@@ -2,8 +2,8 @@ import {
 	describe,
 	effect,
 	layer,
-} from '@effect/vitest';
-import { FastCheck } from 'effect';
+} from '@effect/vitest'
+import { FastCheck } from 'effect'
 
 import {
 	Eff,
@@ -12,14 +12,12 @@ import {
 	NETS,
 	NNInt,
 	O,
-} from '$lib/core/imports.ts';
-import * as H from '$lib/core/test-helpers.ts';
+} from '$lib/core/imports.ts'
+import * as H from '$lib/core/test-helpers.ts'
 
-import { Capacitor } from '$lib/data/index.ts';
+import { Capacitor } from '$lib/data/index.ts'
 
-import { GetSortedProducts $lib/business/data/index.tsess/app/queries.ts';
-
-import { query } from './get-sorted-products.ts';
+import { query } from './get-sorted-products.ts'
 
 const record = FastCheck.record(
 	{
@@ -29,13 +27,13 @@ const record = FastCheck.record(
 		name: H.stringOrUndefined,
 	},
 	{ noNullPrototype: true },
-);
+)
 
 function toModel(product: {
-	id: number | undefined;
-	name: string | undefined;
-	creationDate: number | undefined;
-	expirationDate: number | undefined;
+	id: number | undefined
+	name: string | undefined
+	creationDate: number | undefined
+	expirationDate: number | undefined
 }): GetSortedProducts.ProductDTO {
 	if (
 		Int.isInteger(product.id) &&
@@ -48,14 +46,16 @@ function toModel(product: {
 		return {
 			isValid: true,
 			id: product.id.toString(10),
-			name: NETS.unsafe_fromString(product.name),
+			name: NETS.unsafeMakeWithTrimming(
+				product.name,
+			),
 			creationDate: Int.unsafe_fromNumber(
 				product.creationDate,
 			),
 			expirationDate: O.fromNullable(
 				product.expirationDate,
 			).pipe(O.map(Int.unsafe_fromNumber)),
-		};
+		}
 	}
 
 	return {
@@ -66,7 +66,7 @@ function toModel(product: {
 		id: O.fromNullable(product.id).pipe(
 			O.map(id => id.toString(10)),
 		),
-	};
+	}
 }
 
 describe('Get products', () => {
@@ -77,17 +77,17 @@ describe('Get products', () => {
 			Eff.provide(
 				Eff.gen(function* () {
 					const service =
-						yield* GetSortedProducts.Tag;
-					const exit = yield* Eff.exit(service);
+						yield* GetSortedProducts.Tag
+					const exit = yield* Eff.exit(service)
 
-					H.assertExitIsSuccess(exit);
+					H.assertExitIsSuccess(exit)
 
 					expect(exit.value).toStrictEqual({
-						total: NNInt.unsafe_fromNumber(
+						total: NNInt.unsafeMake(
 							products.length,
 						),
 						products: products.map(toModel),
-					});
+					})
 				}),
 				L.provide(
 					query,
@@ -102,7 +102,7 @@ describe('Get products', () => {
 					}),
 				),
 			),
-	);
+	)
 
 	layer(
 		L.provide(
@@ -118,14 +118,14 @@ describe('Get products', () => {
 		effect('Should return an error', () =>
 			Eff.gen(function* () {
 				const service =
-					yield* GetSortedProducts.Tag;
+					yield* GetSortedProducts.Tag
 
-				const exit = yield* Eff.exit(service);
+				const exit = yield* Eff.exit(service)
 
-				H.assertExitIsFailure(exit);
+				H.assertExitIsFailure(exit)
 			}),
-		);
-	});
+		)
+	})
 
 	layer(
 		L.provide(
@@ -141,14 +141,14 @@ describe('Get products', () => {
 		effect('Should return an error', () =>
 			Eff.gen(function* () {
 				const service =
-					yield* GetSortedProducts.Tag;
+					yield* GetSortedProducts.Tag
 
-				const exit = yield* Eff.exit(service);
+				const exit = yield* Eff.exit(service)
 
-				H.assertExitIsFailure(exit);
+				H.assertExitIsFailure(exit)
 			}),
-		);
-	});
+		)
+	})
 
 	layer(
 		L.provide(
@@ -167,14 +167,14 @@ describe('Get products', () => {
 		effect('Should return an error', () =>
 			Eff.gen(function* () {
 				const service =
-					yield* GetSortedProducts.Tag;
+					yield* GetSortedProducts.Tag
 
-				const exit = yield* Eff.exit(service);
+				const exit = yield* Eff.exit(service)
 
-				H.assertExitIsFailure(exit);
+				H.assertExitIsFailure(exit)
 			}),
-		);
-	});
+		)
+	})
 
 	layer(
 		L.provide(
@@ -182,7 +182,7 @@ describe('Get products', () => {
 			L.succeed(Capacitor.Tag, {
 				db: {
 					getAllProductsWithTotal: () => {
-						throw new Error();
+						throw new Error()
 					},
 				} as unknown as Capacitor.FridgySqlitePlugin,
 			}),
@@ -191,12 +191,12 @@ describe('Get products', () => {
 		effect('Should crash', () =>
 			Eff.gen(function* () {
 				const service =
-					yield* GetSortedProducts.Tag;
+					yield* GetSortedProducts.Tag
 
-				const exit = yield* Eff.exit(service);
+				const exit = yield* Eff.exit(service)
 
-				H.assertExitIsDie(exit);
+				H.assertExitIsDie(exit)
 			}),
-		);
-	});
-});
+		)
+	})
+})

@@ -1,7 +1,6 @@
 import { SvelteSet } from 'svelte/reactivity'
 
-import { B } from '$lib/core/imports.ts'
-import { unsafe_fromNumber } from '$lib/core/integer/index.ts'
+import { B, Int } from '$lib/core/imports.ts'
 
 import { GetSortedProducts } from '$lib/business/index.ts'
 
@@ -56,7 +55,7 @@ export function createStateContext() {
 		currentTimestamp: Date.now(),
 	})
 
-	const currentTimestamp = unsafe_fromNumber(
+	const currentTimestamp = Int.unsafeMake(
 		state.currentTimestamp,
 	)
 
