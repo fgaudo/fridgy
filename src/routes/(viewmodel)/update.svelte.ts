@@ -14,15 +14,16 @@ import type { UseCases } from '$lib/business/app/use-cases.ts'
 import type { ProductsPage } from '$lib/business/app/use-cases/get-sorted-products.ts'
 
 import {
+	deleteSelectedAndRefresh,
+	queueLoading,
+	refreshList,
+	refreshTime,
+} from './commands.ts'
+import {
 	FetchId,
 	type ProductViewModel,
 	type State,
 } from './state.svelte.ts'
-import {
-	deleteSelectedAndRefresh,
-	refreshList,
-	refreshTime,
-} from './tasks.ts'
 
 export type Message = Da.TaggedEnum<{
 	FetchList: object
@@ -32,7 +33,7 @@ export type Message = Da.TaggedEnum<{
 	}
 	FetchListFailed: { taskId: FetchId }
 	ToggleMenu: object
-	DisableSelectMode: object
+	ClearSelected: object
 	ToggleItem: {
 		product: ProductViewModel
 	}
@@ -46,6 +47,7 @@ export type Message = Da.TaggedEnum<{
 	}
 	RefreshTime: object
 	RefreshTimeResult: { timestamp: number }
+	ShowSpinner: { id: symbol }
 }>
 
 export const Message = Da.taggedEnum<Message>()
@@ -57,54 +59,54 @@ export const update: Update<
 > = (state, message) => {
 	return M.type<Message>().pipe(
 		M.tag('RefreshTime', () => {
-			return { state, tasks: [refreshTime] }
+			return { state, commands: [refreshTime] }
 		}),
 		M.tag('FetchList', () => {
-			state.isLoading = true
-
 			const taskId = FetchId()
 
 			state.refreshingTaskId = taskId
 
 			return {
 				state,
-				tasks: [refreshList(taskId)],
+				commands: [refreshList(taskId)],
 			}
 		}),
 		M.tag('FetchListFailed', ({ taskId }) => {
 			if (taskId !== state.refreshingTaskId) {
-				return { state }
+				return { state, commands: [] }
 			}
 			state.receivedError = true
-			state.isLoading = false
 
-			return { state }
+			return { state, commands: [] }
 		}),
 		M.tag(
 			'FetchListSucceeded',
 			({ result, taskId }) => {
 				if (taskId !== state.refreshingTaskId) {
-					return { state }
+					return { state, commands: [] }
 				}
 
 				state.products = {
-					entries: result.entries.map(entry => ({
-						...entry,
-						isSelected: false,
-					})),
+					entries: result.entries.map(entry => {
+						if (entry.isCorrupt) {
+							return { ...entry, id: Symbol() }
+						}
+
+						return {
+							...entry,
+							isSelected: false,
+						}
+					}),
 					selected: new SvelteSet(),
 				}
-				state.isLoading = false
 
-				return { state }
+				return { state, commands: [] }
 			},
 		),
 		M.tag('DeleteSelectedAndRefresh', () => {
-			if (state.deletingRunning) {
-				return { state }
+			if (state.isDeleteRunning) {
+				return { state, commands: [] }
 			}
-
-			state.deletingRunning = true
 
 			const maybeIds = pipe(
 				O.fromNullable(state.products?.selected),
@@ -113,108 +115,131 @@ export const update: Update<
 			)
 
 			if (O.isNone(maybeIds)) {
-				return { state }
+				return { state, commands: [] }
 			}
+
+			const id = Symbol()
+			state.spinnerTaskId = id
+			state.isDeleteRunning = true
 
 			return {
 				state,
-				tasks: [
+				commands: [
 					deleteSelectedAndRefresh(
 						maybeIds.value,
 					),
+					queueLoading(id),
 				],
 			}
 		}),
 		M.tag(
 			'DeleteSelectedAndRefreshSucceeded',
 			({ result }) => {
-				state.deletingRunning = false
+				state.isDeleteRunning = false
 				state.products = {
-					entries: result.entries.map(entry => ({
-						...entry,
-						isSelected: false,
-					})),
+					entries: result.entries.map(entry => {
+						if (entry.isCorrupt)
+							return {
+								...entry,
+								id: Symbol(),
+							}
+
+						return {
+							...entry,
+							isSelected: false,
+						}
+					}),
 					selected: new SvelteSet(),
 				}
-				state.isLoading = false
 				state.products.selected.clear()
+				state.isLoading = false
+				state.spinnerTaskId = undefined
 
-				return { state }
+				return { state, commands: [] }
 			},
 		),
 		M.tag('DeleteSelectedFailed', () => {
-			state.deletingRunning = false
+			state.isDeleteRunning = false
 			state.isLoading = false
+			state.spinnerTaskId = undefined
 
-			return { state }
+			return { state, commands: [] }
 		}),
 		M.tag(
 			'DeleteSelectedSucceededButRefreshFailed',
 			() => {
-				state.deletingRunning = false
+				state.isDeleteRunning = false
 				state.products = undefined
-				state.isLoading = false
 				state.receivedError = true
-				return { state }
+				state.spinnerTaskId = undefined
+
+				state.isLoading = false
+
+				return { state, commands: [] }
 			},
 		),
 		M.tag('DisableRefreshTimeListener', () => {
 			state.refreshTimeListenersRegistered = false
 
-			return { state }
+			return { state, commands: [] }
 		}),
 		M.tag('EnableRefreshTimeListener', () => {
 			state.refreshTimeListenersRegistered = true
 
-			return { state }
+			return { state, commands: [] }
 		}),
-		M.tag('DisableSelectMode', () => {
+		M.tag('ClearSelected', () => {
 			if (state.products === undefined)
-				return {
-					state,
-				}
+				return { state, commands: [] }
 
 			state.products.selected.clear()
 			state.products.entries.forEach(entry => {
 				if (entry.isCorrupt) return
 				entry.isSelected = false
 			})
-			return { state }
+			return { state, commands: [] }
 		}),
 		M.tag('ToggleItem', ({ product }) => {
 			if (product.isCorrupt) {
-				return { state }
+				return { state, commands: [] }
 			}
 
 			if (state.products === undefined)
-				return { state }
+				return { state, commands: [] }
 
 			if (
 				state.products.selected.has(product.id)
 			) {
 				product.isSelected = false
 				state.products.selected.delete(product.id)
-				return { state }
+				return { state, commands: [] }
 			}
 
 			state.products.selected.add(product.id)
 			product.isSelected = true
 
-			return { state }
+			return { state, commands: [] }
 		}),
 		M.tag('ToggleMenu', () => {
 			state.isMenuOpen = !state.isMenuOpen
 
-			return { state }
+			return { state, commands: [] }
 		}),
 		M.tag(
 			'RefreshTimeResult',
 			({ timestamp }) => {
 				state.currentTimestamp = timestamp
 
-				return { state }
+				return { state, commands: [] }
 			},
 		),
+		M.tag('ShowSpinner', ({ id }) => {
+			if (id !== state.spinnerTaskId) {
+				return { state, commands: [] }
+			}
+			state.isLoading = true
+			return { state, commands: [] }
+		}),
 		M.exhaustive,
 	)(message)
 }

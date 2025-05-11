@@ -18,40 +18,33 @@ export const command = L.effect(
 		const { db } = yield* DbPlugin
 		const { log } = yield* Deps
 
-		return RequestResolver.fromEffect(
-			({ product }) =>
-				Eff.gen(function* () {
-					const maybeExpirationDate =
-						product.maybeExpirationDate
+		return RequestResolver.fromEffect(product =>
+			Eff.gen(function* () {
+				const maybeExpirationDate =
+					product.maybeExpirationDate
 
-					yield* H.tryPromise(() =>
-						db.addProduct({
-							product: {
-								name: O.getOrElse(
-									product.maybeName,
-									() => '[no name]',
-								),
-								creationDate: O.getOrElse(
-									product.maybeCreationDate,
-									() => 0,
-								),
-								expirationDate: O.getOrUndefined(
-									maybeExpirationDate,
-								),
-							},
-						}),
-					).pipe(
-						Eff.catchTags({
-							UnknownException: () =>
-								new AddProduct.OperationFailed(),
-						}),
-					)
+				yield* H.tryPromise(() =>
+					db.addProduct({
+						product: {
+							name: product.name,
+							creationDate: product.creationDate,
+							expirationDate: O.getOrUndefined(
+								maybeExpirationDate,
+							),
+						},
+					}),
+				).pipe(
+					Eff.catchTags({
+						UnknownException: () =>
+							new AddProduct.OperationFailed(),
+					}),
+				)
 
-					yield* log(
-						LogLevel.Debug,
-						'No errors adding the product',
-					)
-				}),
+				yield* log(
+					LogLevel.Debug,
+					'No errors adding the product',
+				)
+			}),
 		)
 	}),
 )

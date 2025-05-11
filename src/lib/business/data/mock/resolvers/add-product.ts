@@ -35,11 +35,12 @@ export const command = L.effect(
 						index,
 						map: dbValues.map.pipe(
 							HashMap.set(indexString, {
-								maybeName: product.maybeName,
+								maybeName: O.some(product.name),
 								maybeExpirationDate:
 									product.maybeExpirationDate,
-								maybeCreationDate:
-									product.maybeCreationDate,
+								maybeCreationDate: O.some(
+									product.creationDate,
+								),
 								maybeId: O.some(indexString),
 							}),
 						),

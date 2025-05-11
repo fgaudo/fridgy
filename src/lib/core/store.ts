@@ -7,52 +7,48 @@ export type Update<S, M, R> = (
 	message: M,
 ) => {
 	state: S
-	tasks?: Task<M, R>[]
+	commands: Command<M, R>[]
 }
 
-export type Task<M, R> = Eff.Effect<M[], never, R>
+export type Command<M, R> = Eff.Effect<
+	M,
+	never,
+	R
+>
 
 export function createDispatcher<S, M, R>(
 	ref: R.Ref<S>,
 	update: Update<S, M, R>,
-): (m: M[] | M) => Eff.Effect<void, never, R> {
-	return arg =>
+): (
+	command: Command<M, R>,
+) => Eff.Effect<void, never, R> {
+	return command =>
 		Eff.gen(function* () {
-			const messages = Array.isArray(arg)
-				? arg
-				: [arg]
+			const message = yield* command
 
-			yield* Eff.all(
-				A.map(messages, message =>
-					Eff.gen(function* () {
-						const { tasks } = yield* R.modify(
-							ref,
-							state => {
-								const { state: newState, tasks } =
-									update(state, message)
-								return [{ tasks }, newState]
-							},
-						)
-
-						if (tasks) {
-							const dispatchesPerTask = A.map(
-								tasks,
-								task =>
-									Eff.gen(function* () {
-										const messages = yield* task
-
-										yield* Eff.suspend(() =>
-											createDispatcher(
-												ref,
-												update,
-											)(messages),
-										)
-									}),
-							)
-							yield* Eff.all(dispatchesPerTask)
-						}
-					}),
-				),
+			const { commands } = yield* R.modify(
+				ref,
+				state => {
+					const { state: newState, commands } =
+						update(state, message)
+					return [{ commands }, newState]
+				},
 			)
+
+			if (commands) {
+				const dispatchesPerTask = A.map(
+					commands,
+					task =>
+						Eff.forkDaemon(
+							Eff.suspend(() =>
+								createDispatcher(
+									ref,
+									update,
+								)(task),
+							),
+						),
+				)
+				yield* Eff.all(dispatchesPerTask)
+			}
 		})
 }

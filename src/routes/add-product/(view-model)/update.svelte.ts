@@ -10,11 +10,11 @@ import type { Update } from '$lib/core/store.ts'
 
 import type { UseCases } from '$lib/business/app/use-cases.ts'
 
-import type { State } from './state.svelte.ts'
 import {
 	addProduct,
 	queueRemoveToast,
-} from './tasks.ts'
+} from './commands.ts'
+import type { State } from './state.svelte.ts'
 
 export type Message = Da.TaggedEnum<{
 	AddProduct: object
@@ -36,7 +36,7 @@ export const update: Update<
 	M.type<Message>().pipe(
 		M.tag('AddProduct', () => {
 			if (state.isAdding) {
-				return { state }
+				return { state, commands: [] }
 			}
 
 			const maybeName = pipe(
@@ -45,7 +45,7 @@ export const update: Update<
 			)
 
 			if (O.isNone(maybeName)) {
-				return { state }
+				return { state, commands: [] }
 			}
 
 			state.isAdding = true
@@ -58,7 +58,7 @@ export const update: Update<
 
 			return {
 				state,
-				tasks: [
+				commands: [
 					addProduct({
 						name: maybeName.value,
 						maybeExpirationDate,
@@ -69,7 +69,7 @@ export const update: Update<
 		M.tag('AddProductFailed', () => {
 			state.isAdding = false
 
-			return { state }
+			return { state, commands: [] }
 		}),
 		M.tag('AddProductSucceeded', () => {
 			state.isAdding = false
@@ -80,36 +80,36 @@ export const update: Update<
 
 			return {
 				state,
-				tasks: [queueRemoveToast],
+				commands: [queueRemoveToast],
 			}
 		}),
 		M.tag('RemoveToast', () => {
 			state.toastMessage = undefined
 
-			return { state }
+			return { state, commands: [] }
 		}),
 		M.tag(
 			'SetExpirationDate',
 			({ expirationDate }) => {
 				if (expirationDate.length <= 0) {
 					state.expirationDate = undefined
-					return { state }
+					return { state, commands: [] }
 				}
 				state.expirationDate = Date.parse(
 					expirationDate,
 				)
-				return { state }
+				return { state, commands: [] }
 			},
 		),
 		M.tag('SetName', ({ name }) => {
 			state.hasInteractedWithName = true
 			state.name = name
 
-			return { state }
+			return { state, commands: [] }
 		}),
 		M.tag('SetNameInteracted', () => {
 			state.hasInteractedWithName = true
-			return { state }
+			return { state, commands: [] }
 		}),
 		M.exhaustive,
 	)(message)

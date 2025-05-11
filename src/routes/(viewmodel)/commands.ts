@@ -5,7 +5,7 @@ import {
 	NEHS,
 	pipe,
 } from '$lib/core/imports.ts'
-import type { Task } from '$lib/core/store.ts'
+import type { Command } from '$lib/core/store.ts'
 
 import type { UseCases } from '$lib/business/app/use-cases.ts'
 import {
@@ -16,11 +16,11 @@ import {
 import type { FetchId } from './state.svelte.ts'
 import { Message } from './update.svelte.ts'
 
-type HomeTask = Task<Message, UseCases>
+type HomeCommand = Command<Message, UseCases>
 
 export const refreshList: (
 	taskid: FetchId,
-) => HomeTask = taskId =>
+) => HomeCommand = taskId =>
 	Eff.gen(function* () {
 		const getProducts =
 			yield* GetSortedProducts.GetSortedProducts
@@ -28,31 +28,27 @@ export const refreshList: (
 		const result = yield* Eff.either(getProducts)
 
 		if (E.isLeft(result)) {
-			return [Message.FetchListFailed({ taskId })]
+			return Message.FetchListFailed({ taskId })
 		}
 
-		return [
-			Message.FetchListSucceeded({
-				taskId,
-				result: result.right,
-			}),
-		]
+		return Message.FetchListSucceeded({
+			taskId,
+			result: result.right,
+		})
 	})
 
-export const refreshTime: HomeTask = Eff.gen(
+export const refreshTime: HomeCommand = Eff.gen(
 	function* () {
 		const time = yield* Cl.currentTimeMillis
-		return [
-			Message.RefreshTimeResult({
-				timestamp: time,
-			}),
-		]
+		return Message.RefreshTimeResult({
+			timestamp: time,
+		})
 	},
 )
 
 export const deleteSelectedAndRefresh: (
 	ids: NEHS.NonEmptyHashSet<string>,
-) => HomeTask = ids =>
+) => HomeCommand = ids =>
 	Eff.gen(function* () {
 		const deleteProducts =
 			yield* DeleteProductsByIds.DeleteProductsByIds
@@ -63,7 +59,7 @@ export const deleteSelectedAndRefresh: (
 		)
 
 		if (E.isLeft(deleteResult)) {
-			return [Message.DeleteSelectedFailed()]
+			return Message.DeleteSelectedFailed()
 		}
 
 		const refreshList =
@@ -75,14 +71,20 @@ export const deleteSelectedAndRefresh: (
 		)
 
 		if (E.isLeft(refreshResult)) {
-			return [
-				Message.DeleteSelectedSucceededButRefreshFailed(),
-			]
+			return Message.DeleteSelectedSucceededButRefreshFailed()
 		}
 
-		return [
-			Message.DeleteSelectedAndRefreshSucceeded({
+		return Message.DeleteSelectedAndRefreshSucceeded(
+			{
 				result: refreshResult.right,
-			}),
-		]
+			},
+		)
+	})
+
+export const queueLoading: (
+	id: symbol,
+) => HomeCommand = id =>
+	Eff.gen(function* () {
+		yield* Eff.sleep('150 millis')
+		return Message.ShowSpinner({ id })
 	})

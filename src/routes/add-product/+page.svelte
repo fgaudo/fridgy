@@ -113,15 +113,17 @@
 				type="text"
 				bind:value={
 					() => viewModel.state.name,
-					viewModel.actions.setName
+					viewModel.tasks.setName
 				}
+				onfocusout={viewModel.tasks
+					.setNameInteracted}
 				placeholder="For example: Milk"
 				id="name"
 				class={[
 					'h-16 transition-all focus:ring-0 shadow-none placeholder:text-gray-400 p-4 w-full  duration-500 rounded-[4px] border-0',
 					viewModel.derived.isNameValidOrUntouched
 						? 'bg-secondary/5'
-						: 'bg-primary/15',
+						: 'bg-primary/15 ',
 				]}
 			/>
 		</div>
@@ -152,7 +154,7 @@
 						() =>
 							viewModel.derived
 								.formattedExpirationDateOrEmpty,
-						viewModel.actions.setExpirationDate
+						viewModel.tasks.setExpirationDate
 					}
 					id="expdate"
 					class={[
@@ -184,7 +186,7 @@
 				>
 					{#if viewModel.derived.isSubmittable}
 						<Ripple
-							ontap={viewModel.actions.addProduct}
+							ontap={viewModel.tasks.addProduct}
 						></Ripple>
 					{/if}
 					Add product

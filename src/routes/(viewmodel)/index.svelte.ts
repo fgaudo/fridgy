@@ -10,11 +10,11 @@ import {
 } from '$lib/ui/adapters.ts'
 import { getGlobalContext } from '$lib/ui/context.ts'
 
+import * as Tasks from './commands.ts'
 import {
 	type ProductViewModel,
 	createStateContext,
 } from './state.svelte.ts'
-import * as Tasks from './tasks.ts'
 import {
 	Message,
 	update,
@@ -56,16 +56,17 @@ export function createViewModel() {
 			createCapacitorListener({
 				event: 'resume',
 				cb: () =>
-					dispatchNoCancel(Message.RefreshTime()),
+					dispatchNoCancel(
+						Eff.succeed(Message.RefreshTime()),
+					),
 			})
 
 		const refreshTimeInterval = Eff.gen(
 			function* () {
 				while (true) {
-					const messages =
-						yield* Tasks.refreshTime
-
-					yield* dispatchToEffect(messages)
+					yield* dispatchToEffect(
+						Tasks.refreshTime,
+					)
 
 					yield* Eff.sleep(
 						refreshTimeIntervalFrequency,
@@ -95,36 +96,48 @@ export function createViewModel() {
 	return {
 		state: context.state,
 		derived: context.derived,
-		actions: {
+		tasks: {
 			disableSelectMode: () =>
 				dispatchNoCancel(
-					Message.DisableSelectMode(),
+					Eff.succeed(Message.ClearSelected()),
 				),
 
 			fetchList: () =>
-				dispatchNoCancel(Message.FetchList()),
+				dispatchNoCancel(
+					Eff.succeed(Message.FetchList()),
+				),
 
 			toggleMenu: () =>
-				dispatchNoCancel(Message.ToggleMenu()),
+				dispatchNoCancel(
+					Eff.succeed(Message.ToggleMenu()),
+				),
 
 			toggleItem: (product: ProductViewModel) =>
 				dispatchNoCancel(
-					Message.ToggleItem({ product }),
+					Eff.succeed(
+						Message.ToggleItem({ product }),
+					),
 				),
 
 			registerRefreshTimeListeners: () =>
 				dispatchNoCancel(
-					Message.EnableRefreshTimeListener(),
+					Eff.succeed(
+						Message.EnableRefreshTimeListener(),
+					),
 				),
 
 			unregisterRefreshTimeListeners: () =>
 				dispatchNoCancel(
-					Message.DisableRefreshTimeListener(),
+					Eff.succeed(
+						Message.DisableRefreshTimeListener(),
+					),
 				),
 
 			deleteSelected: () => {
 				dispatchNoCancel(
-					Message.DeleteSelectedAndRefresh(),
+					Eff.succeed(
+						Message.DeleteSelectedAndRefresh(),
+					),
 				)
 			},
 		},

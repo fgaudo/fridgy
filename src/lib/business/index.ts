@@ -7,7 +7,6 @@ export {
 	AddProduct,
 	DeleteProductsByIds,
 	GetSortedProducts,
-	LogWithLevel,
 } from './app/use-cases.ts'
 
 export const useCases: L.Layer<UseCases> =

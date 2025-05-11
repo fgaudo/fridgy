@@ -1,4 +1,4 @@
-import { Fiber, LogLevel } from 'effect'
+import { Fiber } from 'effect'
 import { format } from 'effect/Inspectable'
 
 import {
@@ -8,11 +8,9 @@ import {
 	NETS,
 	O,
 } from '$lib/core/imports.ts'
+import { withLayerLogging } from '$lib/core/logging.ts'
 
-import {
-	AddProduct as AddProductOperation,
-	LogWithLevel,
-} from '$lib/business/app/operations'
+import { AddProduct as AddProductOperation } from '$lib/business/app/operations'
 import * as P from '$lib/business/domain/product'
 
 export interface ProductDTO {
@@ -26,22 +24,11 @@ export class AddProduct extends Eff.Service<AddProduct>()(
 		effect: Eff.gen(function* () {
 			const addProductResolver =
 				yield* AddProductOperation.Resolver
-			const logResolver =
-				yield* LogWithLevel.Resolver
 
 			return (productData: ProductDTO) =>
 				Eff.gen(function* () {
-					yield* Eff.request(
-						LogWithLevel.Request({
-							level: LogLevel.Info,
-							message: [
-								'AddProduct use case started',
-							],
-							annotations: {
-								product: format(productData),
-							},
-						}),
-						logResolver,
+					yield* Eff.logInfo(
+						'User requested to add a product',
 					)
 
 					const timestamp = Int.unsafeMake(
@@ -56,17 +43,12 @@ export class AddProduct extends Eff.Service<AddProduct>()(
 					})
 
 					if (O.isNone(product)) {
-						yield* Eff.request(
-							LogWithLevel.Request({
-								level: LogLevel.Error,
-								message: [
-									'The provided product is invalid',
-								],
-								annotations: {
-									product: format(productData),
-								},
+						yield* Eff.logError(
+							'Attempted to add an invalid product.',
+						).pipe(
+							Eff.annotateLogs({
+								product: format(productData),
 							}),
-							logResolver,
 						)
 
 						return yield* Eff.fail(
@@ -77,45 +59,29 @@ export class AddProduct extends Eff.Service<AddProduct>()(
 					const addProductFiber = yield* Eff.fork(
 						Eff.request(
 							AddProductOperation.Request({
-								maybeName: O.some(
-									P.name(product.value),
-								),
+								name: P.name(product.value),
 								maybeExpirationDate:
 									P.maybeExpirationDate(
 										product.value,
 									),
-								maybeCreationDate: O.some(
-									P.creationDate(product.value),
+								creationDate: P.creationDate(
+									product.value,
 								),
 							}),
 							addProductResolver,
 						),
 					)
 
-					yield* Eff.request(
-						LogWithLevel.Request({
-							level: LogLevel.Info,
-							message: ['Adding product started'],
-							annotations: {
-								product: format(productData),
-							},
-						}),
-						logResolver,
+					yield* Eff.logInfo(
+						'Attempting to add product...',
 					)
 
 					yield* Fiber.join(addProductFiber)
 
-					yield* Eff.request(
-						LogWithLevel.Request({
-							level: LogLevel.Info,
-							message: ['Product saved'],
-							annotations: {
-								product: productData,
-							},
-						}),
-						logResolver,
+					yield* Eff.logInfo(
+						'User added a product',
 					)
-				})
+				}).pipe(withLayerLogging('A'))
 		}),
 	},
 ) {}

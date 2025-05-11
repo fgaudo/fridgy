@@ -10,9 +10,9 @@ import {
 } from '$lib/core/imports.ts'
 
 export interface ProductDTO {
-	readonly maybeName: O.Option<NETS.NonEmptyTrimmedString>
+	readonly name: NETS.NonEmptyTrimmedString
 	readonly maybeExpirationDate: O.Option<Int.Integer>
-	readonly maybeCreationDate: O.Option<Int.Integer>
+	readonly creationDate: Int.Integer
 }
 
 export class OperationFailed extends Data.TaggedError(

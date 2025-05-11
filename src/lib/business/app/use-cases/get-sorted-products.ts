@@ -1,5 +1,3 @@
-import { LogLevel } from 'effect'
-
 import {
 	A,
 	E,
@@ -9,12 +7,10 @@ import {
 	O,
 	pipe,
 } from '$lib/core/imports.ts'
+import { withLayerLogging } from '$lib/core/logging.ts'
 import type { NonEmptyTrimmedString } from '$lib/core/non-empty-trimmed-string.ts'
 
-import {
-	GetSortedProducts as GetSortedProductsOperation,
-	LogWithLevel,
-} from '$lib/business/app/operations'
+import { GetSortedProducts as GetSortedProductsOperation } from '$lib/business/app/operations'
 import * as P from '$lib/business/domain/product'
 
 export type Product =
@@ -35,7 +31,6 @@ export type Product =
 			isValid: true
 	  }
 	| {
-			id: symbol
 			isCorrupt: true
 			maybeName: O.Option<NonEmptyTrimmedString>
 	  }
@@ -54,100 +49,69 @@ export class GetSortedProducts extends Eff.Service<GetSortedProducts>()(
 				yield* GetSortedProductsOperation.Resolver,
 			)
 
-			const logResolver =
-				yield* LogWithLevel.Resolver
+			return Eff.gen(function* () {
+				const errorOrData = yield* pipe(
+					getSortedProducts,
+					Eff.either,
+				)
 
-			return pipe(
-				Eff.gen(function* () {
-					const errorOrData = yield* pipe(
-						getSortedProducts,
-						Eff.either,
+				if (
+					E.isLeft(errorOrData) &&
+					errorOrData.left._tag ===
+						'FetchingFailed'
+				) {
+					yield* Eff.logError(
+						`Could not receive items.`,
 					)
 
-					if (
-						E.isLeft(errorOrData) &&
-						errorOrData.left._tag ===
-							'FetchingFailed'
-					) {
-						yield* Eff.request(
-							LogWithLevel.Request({
-								level: LogLevel.Error,
-								message: [
-									`Could not receive items.`,
-								],
-							}),
-							logResolver,
-						)
+					return yield* Eff.fail(undefined)
+				}
 
-						return yield* Eff.fail(undefined)
-					}
+				if (E.isLeft(errorOrData)) {
+					yield* Eff.logError(
+						`Received invalid data.`,
+					)
 
-					if (E.isLeft(errorOrData)) {
-						yield* Eff.request(
-							LogWithLevel.Request({
-								level: LogLevel.Error,
-								message: [
-									`Received invalid data.`,
-								],
-							}),
-							logResolver,
-						)
+					return yield* Eff.fail(undefined)
+				}
 
-						return yield* Eff.fail(undefined)
-					}
+				const result = errorOrData.right
 
-					const result = errorOrData.right
-
-					const total = yield* Eff.gen(
-						function* () {
-							if (
-								result.total <
-								result.products.length
-							) {
-								yield* Eff.request(
-									LogWithLevel.Request({
-										level: LogLevel.Warning,
-										message: [
-											`Received ${result.products.length.toString(10)} items, but they exceed the reported total (${result.total.toString(10)}).`,
-										],
-									}),
-									logResolver,
-								)
-
-								return NNInt.unsafeMake(
-									result.products.length,
-								)
-							}
-
-							yield* Eff.request(
-								LogWithLevel.Request({
-									level: LogLevel.Info,
-									message: [
-										`Received ${result.products.length.toString(10)} items out of ${result.total.toString(10)}`,
-									],
-								}),
-								logResolver,
+				const total = yield* Eff.gen(
+					function* () {
+						if (
+							result.total <
+							result.products.length
+						) {
+							yield* Eff.logWarning(
+								`Received ${result.products.length.toString(10)} items, but they exceed the reported total (${result.total.toString(10)}).`,
 							)
 
-							return result.total
-						},
-					)
+							return NNInt.unsafeMake(
+								result.products.length,
+							)
+						}
 
-					const entries = yield* pipe(
-						result.products,
-						A.map(toProductResultWithEffect),
-						Eff.all,
-					)
+						yield* Eff.logInfo(
+							`Received ${result.products.length.toString(10)} items out of ${result.total.toString(10)}`,
+						)
 
-					return {
-						entries,
-						total,
-					}
-				}),
-				Eff.provideService(
-					LogWithLevel.Resolver,
-					logResolver,
-				),
+						return result.total
+					},
+				)
+
+				const entries = yield* pipe(
+					result.products,
+					A.map(toProductResultWithEffect),
+					Eff.all,
+				)
+
+				return {
+					entries,
+					total,
+				}
+			}).pipe(
+				withLayerLogging('A'),
 			) satisfies Eff.Effect<ProductsPage, void>
 		}),
 	},
@@ -158,27 +122,11 @@ function toProductResultWithEffect({
 	maybeName,
 	maybeCreationDate,
 	maybeExpirationDate,
-}: GetSortedProductsOperation.ProductDTO): Eff.Effect<
-	Product,
-	never,
-	LogWithLevel.Resolver
-> {
+}: GetSortedProductsOperation.ProductDTO): Eff.Effect<Product> {
 	return Eff.gen(function* () {
-		const logResolver =
-			yield* LogWithLevel.Resolver
-
 		if (O.isNone(maybeId)) {
-			yield* Eff.request(
-				LogWithLevel.Request({
-					level: LogLevel.Warning,
-					message: [
-						`CORRUPTION - Product has no id.`,
-					],
-					annotations: {
-						name: maybeName,
-					},
-				}),
-				logResolver,
+			yield* Eff.logWarning(
+				`CORRUPTION - Product has no id.`,
 			)
 
 			return {
@@ -204,17 +152,7 @@ function toProductResultWithEffect({
 		})
 
 		if (O.isNone(maybeProduct)) {
-			yield* Eff.request(
-				LogWithLevel.Request({
-					level: LogLevel.Warning,
-					message: [`Product is invalid.`],
-					annotations: {
-						id: maybeId.value,
-						name: maybeName,
-					},
-				}),
-				logResolver,
-			)
+			yield* Eff.logWarning(`Product is invalid.`)
 
 			return {
 				id: maybeId.value,

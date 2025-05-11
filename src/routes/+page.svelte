@@ -9,7 +9,9 @@
 		X,
 	} from '@lucide/svelte'
 	import { format } from 'date-fns'
+	import { product } from 'effect/Equivalence'
 	import { onMount } from 'svelte'
+	import { flip } from 'svelte/animate'
 	import { expoIn, expoOut } from 'svelte/easing'
 	import { fade, fly } from 'svelte/transition'
 
@@ -17,6 +19,7 @@
 
 	import imgUrl from '$lib/ui/assets/arrow.svg'
 	import Ripple from '$lib/ui/components/ripple.svelte'
+	import Spinner from '$lib/ui/components/spinner.svelte'
 	import * as Utils from '$lib/ui/utils.ts'
 
 	import { createViewModel } from './(viewmodel)/index.svelte.ts'
@@ -24,8 +27,8 @@
 	const viewModel = createViewModel()
 
 	onMount(() => {
-		viewModel.actions.fetchList()
-		viewModel.actions.registerRefreshTimeListeners()
+		viewModel.tasks.fetchList()
+		viewModel.tasks.registerRefreshTimeListeners()
 	})
 </script>
 
@@ -79,7 +82,7 @@
 				duration: 400,
 				easing: expoIn,
 			}}
-			onpointerup={viewModel.actions.toggleMenu}
+			onpointerup={viewModel.tasks.toggleMenu}
 			class="h-full z-998 flex-col fixed w-full bg-black/50 backdrop-blur-xs"
 		></div>
 	{/if}
@@ -90,19 +93,29 @@
 		<div
 			class="ml-2 relative h-12 w-12 flex items-center justify-center rounded-full overflow-hidden"
 		>
-			{#if viewModel.derived.isSelectModeEnabled}
-				<Ripple
-					ontap={viewModel.actions
-						.disableSelectMode}
-				></Ripple>
+			{#if O.isSome(viewModel.derived.maybeNonEmptySelected)}
+				<div
+					class="absolute"
+					transition:fade={{ duration: 200 }}
+				>
+					<Ripple
+						ontap={viewModel.tasks
+							.disableSelectMode}
+					></Ripple>
 
-				<X />
+					<X />
+				</div>
 			{:else}
-				<Ripple
-					color="var(--color-background)"
-					ontap={viewModel.actions.toggleMenu}
-				></Ripple>
-				<Menu />
+				<div
+					transition:fade={{ duration: 200 }}
+					class="absolute"
+				>
+					<Ripple
+						color="var(--color-background)"
+						ontap={viewModel.tasks.toggleMenu}
+					></Ripple>
+					<Menu />
+				</div>
 			{/if}
 		</div>
 
@@ -112,25 +125,46 @@
 			Fridgy
 		</div>
 		<div class="grow"></div>
-		{#if viewModel.state.products && viewModel.state.products.selected.size > 0}
+		{#if O.isSome(viewModel.derived.maybeNonEmptySelected)}
 			<div
-				class="flex h-full items-center text-lg font-stylish translate-y-[2px]"
+				transition:fade={{ duration: 200 }}
+				class="relative flex h-full items-center text-lg font-stylish translate-y-[2px]"
 			>
-				{viewModel.state.products.selected.size}
+				{#key viewModel.derived.maybeNonEmptySelected.value.size}
+					<div
+						class="absolute"
+						transition:fade={{ duration: 200 }}
+					>
+						{viewModel.derived
+							.maybeNonEmptySelected.value.size}
+					</div>
+				{/key}
 			</div>
 
 			<div
 				class="ml-2 mr-2 relative h-12 w-12 flex items-center justify-center rounded-full overflow-hidden"
+				transition:fade={{ duration: 200 }}
 			>
 				<Ripple
-					ontap={viewModel.actions.deleteSelected}
+					ontap={viewModel.tasks.deleteSelected}
 				></Ripple>
 				<Trash2 />
 			</div>
 		{/if}
 	</div>
 
-	<div class="bg-background min-h-screen">
+	{#if viewModel.state.isLoading}
+		<div
+			transition:fade={{ duration: 200 }}
+			class="z-50 scale-[175%] fixed left-0 top-0 right-0 bottom-0 backdrop-blur-[1px] flex items-center justify-center"
+		>
+			<Spinner />
+		</div>
+	{/if}
+
+	<div
+		class="bg-background min-h-screen flex flex-col"
+	>
 		{#if viewModel.state.receivedError}
 			<div
 				class="flex h-screen w-screen items-center justify-center text-center text-lg"
@@ -142,59 +176,72 @@
 						class="text-primary underline relative overflow-hidden rounded-full py-1 px-2"
 					>
 						<Ripple
-							ontap={viewModel.actions.fetchList}
+							ontap={viewModel.tasks.fetchList}
 						></Ripple>
 						Try again
 					</div>
 				</div>
 			</div>
-		{:else if viewModel.state.products && viewModel.state.products.entries.length > 0}
-			{@const total =
-				viewModel.state.products.entries.length}
-			<p
-				class="bg-background fixed top-[64px] z-50 w-full px-[14px] pt-[10px] pb-[8px] text-xs"
-			>
-				{total} items
-			</p>
+		{:else if O.isSome(viewModel.derived.maybeLoadedProducts)}
+			{@const products =
+				viewModel.derived.maybeLoadedProducts
+					.value}
+
+			{#if products.entries.length > 0}
+				<p
+					out:fade={{ duration: 200 }}
+					class="bg-background fixed top-[64px] z-50 w-full px-[14px] pt-[10px] pb-[8px] text-xs"
+				>
+					{products.entries.length} items
+				</p>
+			{/if}
 
 			<div
-				class="absolute top-[110px] flex w-full items-center"
-				style:height={total > 0
-					? `${((total - 1) * 79 + 205).toString(10)}px`
-					: 'auto'}
+				out:fade={{ duration: 200 }}
+				class="flex flex-1 gap-2 flex-col h-full pt-26 w-full pb-35"
 			>
-				{#each viewModel.state.products.entries as product, index (product.id)}
-					{#if product.isCorrupt}
-						<div>asd</div>
-					{:else}
-						{@const maybeCreation =
-							product.isValid
+				{#each products.entries as product (product.id)}
+					{@const maybeCreation =
+						product.isCorrupt
+							? O.none()
+							: product.isValid
 								? O.some(product.creationDate)
 								: product.maybeCreationDate}
 
-						{@const maybeName = product.isValid
+					{@const maybeName = product.isCorrupt
+						? product.maybeName
+						: product.isValid
 							? O.some(product.name)
 							: product.maybeName}
+
+					{@const maybeExpirationDate =
+						product.isCorrupt
+							? O.none()
+							: product.maybeExpirationDate}
+					<div
+						out:fade={{ duration: 200 }}
+						animate:flip={{ duration: 250 }}
+					>
 						<div
 							class={[
-								'absolute flex left-2 right-2 shadow-sm rounded-lg py-1 overflow-hidden transition-all duration-250',
+								'flex mx-2 relative transition-transform shadow-sm rounded-lg py-1 overflow-hidden',
+								!product.isCorrupt &&
 								product.isSelected
 									? 'bg-accent/10 scale-[102%]'
 									: 'bg-secondary/5',
 							]}
-							style:top={`${(index * 79).toString(10)}px`}
 						>
-							{#if viewModel.state.products.selected.size > 0}
+							{#if products.selected.size > 0}
 								<Ripple
 									ontap={() =>
-										viewModel.actions.toggleItem(
+										viewModel.tasks.toggleItem(
 											product,
 										)}
 								></Ripple>
 							{:else}
 								<Ripple
 									onhold={() =>
-										viewModel.actions.toggleItem(
+										viewModel.tasks.toggleItem(
 											product,
 										)}
 								></Ripple>
@@ -211,14 +258,12 @@
 									<div
 										class="flex-col flex bg-secondary text-background shadow-xs rounded-full items-center justify-center text-center h-full aspect-square"
 									>
-										{#if O.isSome(product.maybeExpirationDate)}
+										{#if O.isSome(maybeExpirationDate)}
 											<div
 												class="text-lg font-bold leading-4"
 											>
 												{format(
-													product
-														.maybeExpirationDate
-														.value,
+													maybeExpirationDate.value,
 													'd',
 												)}
 											</div>
@@ -226,9 +271,7 @@
 												class="text-sm leading-4"
 											>
 												{format(
-													product
-														.maybeExpirationDate
-														.value,
+													maybeExpirationDate.value,
 													'LLL',
 												)}
 											</div>
@@ -255,10 +298,9 @@
 
 									{#if O.isNone(maybeCreation)}
 										No creation date
-									{:else if O.isSome(product.maybeExpirationDate) && product.maybeExpirationDate.value > viewModel.state.currentTimestamp}
+									{:else if O.isSome(maybeExpirationDate) && maybeExpirationDate.value > viewModel.state.currentTimestamp}
 										{@const expiration =
-											product.maybeExpirationDate
-												.value}
+											maybeExpirationDate.value}
 										{@const creation =
 											maybeCreation.value}
 
@@ -292,7 +334,7 @@
 												).toString()}%`}
 											></div>
 										</div>
-									{:else if O.isSome(product.maybeExpirationDate)}
+									{:else if O.isSome(maybeExpirationDate)}
 										<div
 											class="text-[12px] leading-[8px] text-primary font-bold"
 										>
@@ -303,15 +345,13 @@
 								<div
 									class="h-9/12 aspect-square flex items-center justify-center"
 								>
-									{#if O.isSome(product.maybeExpirationDate)}
+									{#if O.isSome(maybeExpirationDate)}
 										<div
 											class={[
 												'text-primary duration-fade absolute text-sm',
 												{
 													'text-primary font-bold':
-														product
-															.maybeExpirationDate
-															.value <
+														maybeExpirationDate.value <
 														viewModel.state
 															.currentTimestamp,
 												},
@@ -320,20 +360,19 @@
 											{Utils.formatRemainingTime(
 												viewModel.state
 													.currentTimestamp,
-												product
-													.maybeExpirationDate
-													.value,
+												maybeExpirationDate.value,
 											)}
 										</div>
 									{/if}
 								</div>
 							</div>
 						</div>
-					{/if}
+					</div>
 				{/each}
 			</div>
 		{:else}
 			<div
+				in:fade={{ duration: 200 }}
 				class="font-stylish fixed right-0 bottom-[150px] left-0 flex flex-col items-end duration-[fade]"
 			>
 				<div class="w-full p-[20px] text-center">
@@ -349,8 +388,9 @@
 			</div>
 		{/if}
 	</div>
-	{#if !viewModel.derived.isSelectModeEnabled}
+	{#if O.isNone(viewModel.derived.maybeNonEmptySelected)}
 		<div
+			transition:fade={{ duration: 200 }}
 			class="bg-primary z-50 overflow-hidden text-background shadow-md shadow-on-background/30 fixed right-[16px] bottom-[20px] flex h-[96px] w-[96px] items-center justify-center rounded-4xl"
 		>
 			<Ripple

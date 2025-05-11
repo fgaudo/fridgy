@@ -1,6 +1,6 @@
 import { Ref } from 'effect'
 
-import { pipe } from '$lib/core/imports.ts'
+import { Eff, pipe } from '$lib/core/imports.ts'
 import { createDispatcher } from '$lib/core/store.ts'
 
 import { createRunEffect } from '$lib/ui/adapters.ts'
@@ -27,31 +27,43 @@ export function createViewModel() {
 	return {
 		state: context.state,
 		derived: context.derived,
-		actions: {
+		tasks: {
 			addProduct: () =>
 				pipe(
-					dispatch(Message.AddProduct()),
+					dispatch(
+						Eff.succeed(Message.AddProduct()),
+					),
 					runEffect,
 				),
 			setExpirationDate: (value: string) =>
 				pipe(
 					dispatch(
-						Message.SetExpirationDate({
-							expirationDate: value,
-						}),
+						Eff.succeed(
+							Message.SetExpirationDate({
+								expirationDate: value,
+							}),
+						),
 					),
 					runEffect,
 				),
 
 			setName: (name: string) =>
 				pipe(
-					dispatch(Message.SetName({ name })),
+					dispatch(
+						Eff.succeed(
+							Message.SetName({ name }),
+						),
+					),
 					runEffect,
 				),
 
 			setNameInteracted: () =>
 				pipe(
-					dispatch(Message.SetNameInteracted()),
+					dispatch(
+						Eff.succeed(
+							Message.SetNameInteracted(),
+						),
+					),
 					runEffect,
 				),
 		},
