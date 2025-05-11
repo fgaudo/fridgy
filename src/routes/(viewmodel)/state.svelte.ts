@@ -2,16 +2,30 @@ import { SvelteSet } from 'svelte/reactivity'
 
 import { B, Int, O } from '$lib/core/imports.ts'
 
-import type { GetSortedProducts } from '$lib/business/index.ts'
-
 export type ProductViewModel =
-	| ((GetSortedProducts.Product & {
+	| {
 			isCorrupt: false
-	  }) & { isSelected: boolean })
-	| (GetSortedProducts.Product & {
+			id: string
+			maybeName: string | undefined
+			maybeExpirationDate: number | undefined
+			maybeCreationDate: number | undefined
+			isValid: false
+			isSelected: boolean
+	  }
+	| {
+			isCorrupt: false
+			id: string
+			name: string
+			maybeExpirationDate: number | undefined
+			creationDate: number
+			isValid: true
+			isSelected: boolean
+	  }
+	| {
 			isCorrupt: true
 			id: symbol
-	  })
+			maybeName: string | undefined
+	  }
 
 export type FetchId = B.Branded<symbol, 'FetchId'>
 export const FetchId = () =>
@@ -22,14 +36,16 @@ export type State = {
 	receivedError: boolean
 	currentTimestamp: number
 	refreshTimeListenersRegistered: boolean
-	refreshingTaskId?: FetchId
+	refreshingTaskId: FetchId | undefined
 	isDeleteRunning: boolean
-	spinnerTaskId?: symbol
+	spinnerTaskId: symbol | undefined
 	isLoading: boolean
-	products?: {
-		selected: SvelteSet<string>
-		entries: ProductViewModel[]
-	}
+	products:
+		| {
+				selected: SvelteSet<string>
+				entries: ProductViewModel[]
+		  }
+		| undefined
 }
 
 export type StateContext = ReturnType<
@@ -55,6 +71,9 @@ export function createStateContext() {
 		isDeleteRunning: false,
 		refreshTimeListenersRegistered: false,
 		currentTimestamp: Date.now(),
+		products: undefined,
+		spinnerTaskId: undefined,
+		refreshingTaskId: undefined,
 	})
 
 	const currentTimestamp = $derived(
@@ -68,7 +87,12 @@ export function createStateContext() {
 	)
 
 	const refreshTimeListenersEnabled = $derived(
-		(state.products?.entries.length ?? 0) > 0,
+		state.products !== undefined &&
+			state.products.entries.findIndex(
+				e =>
+					!e.isCorrupt &&
+					e.maybeExpirationDate !== undefined,
+			) >= 0,
 	)
 
 	const maybeLoadedNonEmptyProducts = $derived(

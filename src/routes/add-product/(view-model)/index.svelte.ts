@@ -1,9 +1,11 @@
-import { Ref } from 'effect'
+import { Ref, flow } from 'effect'
 
 import { Eff, pipe } from '$lib/core/imports.ts'
-import { createDispatcher } from '$lib/core/store.ts'
 
-import { createRunEffect } from '$lib/ui/adapters.ts'
+import {
+	createDispatcherWithLogging,
+	createRunEffect,
+} from '$lib/ui/adapters.ts'
 import { getGlobalContext } from '$lib/ui/context.ts'
 
 import { createStateContext } from './state.svelte.ts'
@@ -15,7 +17,7 @@ import {
 export function createViewModel() {
 	const context = createStateContext()
 
-	const dispatch = createDispatcher(
+	const dispatch = createDispatcherWithLogging(
 		Ref.unsafeMake(context.state),
 		update,
 	)
@@ -24,47 +26,61 @@ export function createViewModel() {
 
 	const runEffect = createRunEffect(runtime)
 
+	const unsafeDispatch = flow(dispatch, runEffect)
+
 	return {
 		state: context.state,
 		derived: context.derived,
 		tasks: {
 			addProduct: () =>
 				pipe(
-					dispatch(
+					Eff.log(
+						'Received addProduct event from the ui',
+					),
+					Eff.andThen(
 						Eff.succeed(Message.AddProduct()),
 					),
-					runEffect,
+					unsafeDispatch,
 				),
 			setExpirationDate: (value: string) =>
 				pipe(
-					dispatch(
+					Eff.log(
+						'Received setExpirationDate event from the ui with value ' +
+							value,
+					),
+					Eff.andThen(
 						Eff.succeed(
 							Message.SetExpirationDate({
 								expirationDate: value,
 							}),
 						),
 					),
-					runEffect,
+					unsafeDispatch,
 				),
 
 			setName: (name: string) =>
 				pipe(
-					dispatch(
+					Eff.log(
+						'Received setName event from the ui with name ' +
+							name,
+					),
+					Eff.andThen(
 						Eff.succeed(
 							Message.SetName({ name }),
 						),
 					),
-					runEffect,
+					unsafeDispatch,
 				),
 
 			setNameInteracted: () =>
 				pipe(
-					dispatch(
-						Eff.succeed(
-							Message.SetNameInteracted(),
-						),
+					Eff.log(
+						'Received setNameInteracted event from the ui',
 					),
-					runEffect,
+					Eff.andThen(
+						Message.SetNameInteracted(),
+					),
+					unsafeDispatch,
 				),
 		},
 	}

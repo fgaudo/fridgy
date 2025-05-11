@@ -37,7 +37,6 @@
 		"prettier-plugin-tailwindcss": "^0.6.11",
 		"svelte": "^5.28.2",
 		"svelte-check": "^4.1.7",
-		"svelte-gestures": "^5.1.4",
 		"tailwindcss": "^4.1.6",
 		"type-fest": "^4.41.0",
 		"typescript": "^5.8.3",
@@ -67,8 +66,5 @@
 		"test:unit": "vitest",
 		"licenses": "license-checker-rseidelsohn --json --customPath src/lib/ui/assets/custom-path.json --out src/lib/ui/assets/licenses.json --depth 0"
 	},
-	"type": "module",
-	"dependencies": {
-		"interactjs": "^1.10.27"
-	}
+	"type": "module"
 }

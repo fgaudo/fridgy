@@ -3,9 +3,11 @@ import {
 	LogLevel,
 	Ref,
 	RequestResolver,
+	pipe,
 } from 'effect'
 
 import { Eff, L, O } from '$lib/core/imports.ts'
+import { withLayerLogging } from '$lib/core/logging.ts'
 
 import { AddProduct } from '$lib/business/app/operations.ts'
 
@@ -20,37 +22,50 @@ export const command = L.effect(
 		const { log } = yield* Deps
 		const db = yield* Db
 		return RequestResolver.fromEffect(product =>
-			Eff.gen(function* () {
-				if (withErrors && Math.random() < 0.5) {
-					return yield* Eff.fail(
-						new AddProduct.OperationFailed(),
-					)
-				}
-
-				yield* Ref.update(db, dbValues => {
-					const index = dbValues.index + 1
-					const indexString = index.toString(10)
-					return {
-						...dbValues,
-						index,
-						map: dbValues.map.pipe(
-							HashMap.set(indexString, {
-								maybeName: O.some(product.name),
-								maybeExpirationDate:
-									product.maybeExpirationDate,
-								maybeCreationDate: O.some(
-									product.creationDate,
-								),
-								maybeId: O.some(indexString),
-							}),
-						),
+			pipe(
+				Eff.gen(function* () {
+					if (withErrors && Math.random() < 0.5) {
+						yield* Eff.logInfo(
+							'Triggered fake error on mock AddProduct',
+						)
+						return yield* Eff.fail(
+							new AddProduct.OperationFailed(),
+						)
 					}
-				})
 
-				yield* log(LogLevel.Info, 'Added product')
+					yield* Eff.logInfo(
+						'Attempting to add product into mock database...',
+					)
 
-				return yield* Eff.void
-			}),
+					yield* Ref.update(db, dbValues => {
+						const index = dbValues.index + 1
+						const indexString = index.toString(10)
+						return {
+							...dbValues,
+							index,
+							map: dbValues.map.pipe(
+								HashMap.set(indexString, {
+									maybeName: O.some(product.name),
+									maybeExpirationDate:
+										product.maybeExpirationDate,
+									maybeCreationDate: O.some(
+										product.creationDate,
+									),
+									maybeId: O.some(indexString),
+								}),
+							),
+						}
+					})
+
+					yield* log(
+						LogLevel.Info,
+						`Added product ${product.name} into mock database`,
+					)
+
+					return yield* Eff.void
+				}),
+				withLayerLogging('I'),
+			),
 		)
 	}),
 )

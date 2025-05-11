@@ -1,3 +1,5 @@
+import { endOfDay } from 'date-fns'
+
 import {
 	Da,
 	Int,
@@ -74,8 +76,8 @@ export const update: Update<
 		}),
 		M.tag('AddProductFailed', () => {
 			state.isAdding = false
-			state.isLoading = false
 			state.spinnerId = undefined
+			state.isLoading = false
 
 			return { state, commands: [] }
 		}),
@@ -89,8 +91,8 @@ export const update: Update<
 				message: 'Product added',
 				id,
 			}
-			state.isLoading = false
 			state.spinnerId = undefined
+			state.isLoading = false
 
 			return {
 				state,
@@ -113,9 +115,10 @@ export const update: Update<
 					state.expirationDate = undefined
 					return { state, commands: [] }
 				}
-				state.expirationDate = Date.parse(
-					expirationDate,
-				)
+				state.expirationDate = endOfDay(
+					Date.parse(expirationDate),
+				).valueOf()
+
 				return { state, commands: [] }
 			},
 		),
@@ -134,7 +137,11 @@ export const update: Update<
 				return { state, commands: [] }
 			}
 			state.isLoading = true
-			return { state, commands: [] }
+
+			return {
+				state,
+				commands: [],
+			}
 		}),
 		M.exhaustive,
 	)(message)

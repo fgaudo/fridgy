@@ -7,6 +7,7 @@ import {
 import { Eff, L } from '$lib/core/imports.ts'
 
 import { DeleteProductsByIds } from '$lib/business/app/operations.ts'
+import { MINIMUM_LAG_MS } from '$lib/ui/constants.ts'
 
 import { Config } from '../config.ts'
 import { Db } from '../db.ts'
@@ -23,7 +24,7 @@ export const command = L.effect(
 						new DeleteProductsByIds.OperationFailed(),
 					)
 				}
-				yield* Eff.sleep('1 seconds')
+				yield* Eff.sleep(MINIMUM_LAG_MS)
 				for (const id of ids) {
 					yield* Ref.update(db, dbValues => ({
 						...dbValues,

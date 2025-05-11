@@ -7,23 +7,21 @@ export const formatRemainingTime = (
 	from: number,
 	to: number,
 ): string => {
-	const remaining = to - from
-
-	if (remaining < -1) {
-		const hours = differenceInHours(to, from)
-		return `${hours.toString(10)}h`
-	}
-
 	const hours = differenceInHours(to, from)
 
-	if (hours < 1) {
-		return '1h'
+	if (hours <= -24) {
+		const days = differenceInDays(to, from)
+		return `${days.toString(10)}d`
+	}
+
+	if (hours < 0) {
+		return `${hours.toString(10)}h`
 	}
 
 	const days = differenceInDays(to, from)
 
 	if (days < 1) {
-		return `${hours.toString(10)}h`
+		return `< 1d`
 	}
 
 	if (days <= 28) {

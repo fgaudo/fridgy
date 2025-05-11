@@ -89,11 +89,38 @@ export const update: Update<
 				state.products = {
 					entries: result.entries.map(entry => {
 						if (entry.isCorrupt) {
-							return { ...entry, id: Symbol() }
+							return {
+								...entry,
+								maybeName: O.getOrUndefined(
+									entry.maybeName,
+								),
+								id: Symbol(),
+							}
+						}
+
+						if (entry.isValid) {
+							return {
+								...entry,
+								maybeExpirationDate:
+									O.getOrUndefined(
+										entry.maybeExpirationDate,
+									),
+								isSelected: false,
+							}
 						}
 
 						return {
 							...entry,
+							maybeName: O.getOrUndefined(
+								entry.maybeName,
+							),
+							maybeCreationDate: O.getOrUndefined(
+								entry.maybeCreationDate,
+							),
+							maybeExpirationDate:
+								O.getOrUndefined(
+									entry.maybeExpirationDate,
+								),
 							isSelected: false,
 						}
 					}),
@@ -138,14 +165,39 @@ export const update: Update<
 				state.isDeleteRunning = false
 				state.products = {
 					entries: result.entries.map(entry => {
-						if (entry.isCorrupt)
+						if (entry.isCorrupt) {
 							return {
 								...entry,
+								maybeName: O.getOrUndefined(
+									entry.maybeName,
+								),
 								id: Symbol(),
 							}
+						}
+
+						if (entry.isValid) {
+							return {
+								...entry,
+								maybeExpirationDate:
+									O.getOrUndefined(
+										entry.maybeExpirationDate,
+									),
+								isSelected: false,
+							}
+						}
 
 						return {
 							...entry,
+							maybeName: O.getOrUndefined(
+								entry.maybeName,
+							),
+							maybeCreationDate: O.getOrUndefined(
+								entry.maybeCreationDate,
+							),
+							maybeExpirationDate:
+								O.getOrUndefined(
+									entry.maybeExpirationDate,
+								),
 							isSelected: false,
 						}
 					}),

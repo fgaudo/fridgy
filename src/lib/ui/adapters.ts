@@ -3,11 +3,24 @@ import {
 	App as CAP,
 } from '@capacitor/app'
 import type { PluginListenerHandle } from '@capacitor/core'
-import { ManagedRuntime } from 'effect'
+import {
+	LogLevel,
+	ManagedRuntime,
+	Ref,
+	pipe,
+} from 'effect'
+import { format } from 'effect/Inspectable'
+import { withMinimumLogLevel } from 'effect/Logger'
 import type { Cancel } from 'effect/Runtime'
 import { onDestroy } from 'svelte'
 
 import { Eff } from '$lib/core/imports.ts'
+import { withLayerLogging } from '$lib/core/logging.ts'
+import {
+	type Command,
+	type Update,
+	createDispatcher,
+} from '$lib/core/store.ts'
 
 import type { UseCases } from '$lib/business/app/use-cases.ts'
 
@@ -37,7 +50,13 @@ export function createRunEffect(
 		}
 
 		const cancel = runtime.runCallback(
-			eff.pipe(Eff.tapDefect(Eff.logFatal)),
+			eff.pipe(
+				withLayerLogging('P'),
+				import.meta.env.PROD
+					? eff => eff
+					: withMinimumLogLevel(LogLevel.Debug),
+				Eff.tapDefect(Eff.logFatal),
+			),
 		)
 		set.add(cancel)
 
@@ -102,3 +121,23 @@ export function createCapacitorListener({
 		}
 	}
 }
+
+export const createDispatcherWithLogging =
+	<S, M extends { _tag: string }, R>(
+		ref: Ref.Ref<S>,
+		update: Update<S, M, R>,
+	) =>
+	(command: Command<M, R>) =>
+		pipe(
+			command,
+			Eff.tap(message =>
+				Eff.logDebug(
+					'Dispatched message ' + message._tag,
+				).pipe(
+					Eff.annotateLogs({
+						message: format(message),
+					}),
+				),
+			),
+			createDispatcher(ref, update),
+		)

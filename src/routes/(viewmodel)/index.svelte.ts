@@ -1,11 +1,11 @@
-import { Duration, Ref, flow } from 'effect'
+import { Duration, Ref, flow, pipe } from 'effect'
 import type { Cancel } from 'effect/Runtime'
 
 import { Eff } from '$lib/core/imports.ts'
-import { createDispatcher } from '$lib/core/store.ts'
 
 import {
 	createCapacitorListener,
+	createDispatcherWithLogging,
 	createRunEffect,
 } from '$lib/ui/adapters.ts'
 import { getGlobalContext } from '$lib/ui/context.ts'
@@ -30,20 +30,14 @@ export function createViewModel() {
 
 	const runEffect = createRunEffect(runtime)
 
-	const dispatchToEffect = createDispatcher(
+	const dispatch = createDispatcherWithLogging(
 		Ref.unsafeMake(context.state),
 		update,
 	)
-	const dispatch = flow(
-		(message: Message) => Eff.succeed(message),
-		dispatchToEffect,
-		runEffect,
-	)
 
-	const dispatchNoCancel: (
-		...p: Parameters<typeof dispatch>
-	) => void = dispatch
+	const unsafeDispatch = flow(dispatch, runEffect)
 
+	/** Refresh time listeners */
 	{
 		let cancelRefreshTimeResumeListener:
 			| Cancel<unknown, unknown>
@@ -57,15 +51,15 @@ export function createViewModel() {
 			createCapacitorListener({
 				event: 'resume',
 				cb: () =>
-					dispatchNoCancel(Message.RefreshTime()),
+					unsafeDispatch(
+						Eff.succeed(Message.RefreshTime()),
+					),
 			})
 
 		const refreshTimeInterval = Eff.gen(
 			function* () {
 				while (true) {
-					yield* dispatchToEffect(
-						Tasks.refreshTime,
-					)
+					yield* dispatch(Tasks.refreshTime)
 
 					yield* Eff.sleep(
 						refreshTimeIntervalFrequency,
@@ -82,11 +76,22 @@ export function createViewModel() {
 				context.derived
 					.refreshTimeListenersEnabled
 			) {
+				runEffect(
+					Eff.log(
+						'Refresh time listeners enabled',
+					),
+				)
 				cancelRefreshTimeResumeListener =
 					startRefreshTimeResumeListener()
 
 				cancelRefreshTimeInterval = runEffect(
 					refreshTimeInterval,
+				)
+			} else {
+				runEffect(
+					Eff.log(
+						'Refresh time listeners disabled',
+					),
 				)
 			}
 		})
@@ -96,35 +101,90 @@ export function createViewModel() {
 		state: context.state,
 		derived: context.derived,
 		tasks: {
-			disableSelectMode: () =>
-				dispatchNoCancel(Message.ClearSelected()),
+			clearSelected: () =>
+				pipe(
+					Eff.log(
+						'Received clearSelected event from the ui',
+					),
+					Eff.andThen(
+						Eff.succeed(Message.ClearSelected()),
+					),
+					unsafeDispatch,
+				),
 
 			fetchList: () =>
-				dispatchNoCancel(Message.FetchList()),
+				pipe(
+					Eff.log(
+						'Received fetchList event from the ui',
+					),
+					Eff.andThen(
+						Eff.succeed(Message.FetchList()),
+					),
+					unsafeDispatch,
+				),
 
 			toggleMenu: () =>
-				dispatchNoCancel(Message.ToggleMenu()),
+				pipe(
+					Eff.log(
+						'Received toggleMenu event from the ui',
+					),
+					Eff.andThen(
+						Eff.succeed(Message.ToggleMenu()),
+					),
+					unsafeDispatch,
+				),
 
 			toggleItem: (product: ProductViewModel) =>
-				dispatchNoCancel(
-					Message.ToggleItem({ product }),
+				pipe(
+					Eff.log(
+						'Received toggleItem event from the ui',
+					),
+					Eff.andThen(
+						Eff.succeed(
+							Message.ToggleItem({ product }),
+						),
+					),
+					unsafeDispatch,
 				),
 
 			registerRefreshTimeListeners: () =>
-				dispatchNoCancel(
-					Message.EnableRefreshTimeListener(),
+				pipe(
+					Eff.log(
+						'Received registerRefreshTimeListeners event from the ui',
+					),
+					Eff.andThen(
+						Eff.succeed(
+							Message.EnableRefreshTimeListener(),
+						),
+					),
+					unsafeDispatch,
 				),
 
 			unregisterRefreshTimeListeners: () =>
-				dispatchNoCancel(
-					Message.DisableRefreshTimeListener(),
+				pipe(
+					Eff.log(
+						'Received unregisterRefreshTimeListeners event from the ui',
+					),
+					Eff.andThen(
+						Eff.succeed(
+							Message.DisableRefreshTimeListener(),
+						),
+					),
+					unsafeDispatch,
 				),
 
-			deleteSelected: () => {
-				dispatchNoCancel(
-					Message.DeleteSelectedAndRefresh(),
-				)
-			},
+			deleteSelected: () =>
+				pipe(
+					Eff.log(
+						'Received deleteSelected event from the ui',
+					),
+					Eff.andThen(
+						Eff.succeed(
+							Message.DeleteSelectedAndRefresh(),
+						),
+					),
+					unsafeDispatch,
+				),
 		},
 	}
 }

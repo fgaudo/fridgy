@@ -1,4 +1,3 @@
-import { Fiber } from 'effect'
 import { format } from 'effect/Inspectable'
 
 import {
@@ -28,7 +27,7 @@ export class AddProduct extends Eff.Service<AddProduct>()(
 			return (productData: ProductDTO) =>
 				Eff.gen(function* () {
 					yield* Eff.logInfo(
-						'User requested to add a product',
+						`Requested to add product "${productData.name}"`,
 					)
 
 					const timestamp = Int.unsafeFromNumber(
@@ -56,30 +55,26 @@ export class AddProduct extends Eff.Service<AddProduct>()(
 						)
 					}
 
-					const addProductFiber = yield* Eff.fork(
-						Eff.request(
-							AddProductOperation.Request({
-								name: P.name(product.value),
-								maybeExpirationDate:
-									P.maybeExpirationDate(
-										product.value,
-									),
-								creationDate: P.creationDate(
+					yield* Eff.logInfo(
+						`Attempting to add product "${productData.name}"...`,
+					)
+
+					yield* Eff.request(
+						AddProductOperation.Request({
+							name: P.name(product.value),
+							maybeExpirationDate:
+								P.maybeExpirationDate(
 									product.value,
 								),
-							}),
-							addProductResolver,
-						),
+							creationDate: P.creationDate(
+								product.value,
+							),
+						}),
+						addProductResolver,
 					)
 
 					yield* Eff.logInfo(
-						'Attempting to add product...',
-					)
-
-					yield* Fiber.join(addProductFiber)
-
-					yield* Eff.logInfo(
-						'User added a product',
+						'Successfully added a product',
 					)
 				}).pipe(withLayerLogging('A'))
 		}),

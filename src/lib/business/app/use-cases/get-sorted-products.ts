@@ -50,6 +50,14 @@ export class GetSortedProducts extends Eff.Service<GetSortedProducts>()(
 			)
 
 			return Eff.gen(function* () {
+				yield* Eff.log(
+					'Requested to fetch the list of products',
+				)
+
+				yield* Eff.log(
+					'Attempting to fetch the list of products...',
+				)
+
 				const errorOrData = yield* pipe(
 					getSortedProducts,
 					Eff.either,
@@ -84,7 +92,7 @@ export class GetSortedProducts extends Eff.Service<GetSortedProducts>()(
 							result.products.length
 						) {
 							yield* Eff.logWarning(
-								`Received ${result.products.length.toString(10)} items, but they exceed the reported total (${result.total.toString(10)}).`,
+								`Received ${result.products.length.toString(10)} products, but they exceed the reported total (${result.total.toString(10)}).`,
 							)
 
 							return NNInt.unsafeFromNumber(
@@ -93,7 +101,7 @@ export class GetSortedProducts extends Eff.Service<GetSortedProducts>()(
 						}
 
 						yield* Eff.logInfo(
-							`Received ${result.products.length.toString(10)} items out of ${result.total.toString(10)}`,
+							`Received ${result.products.length.toString(10)} products out of ${result.total.toString(10)}`,
 						)
 
 						return result.total

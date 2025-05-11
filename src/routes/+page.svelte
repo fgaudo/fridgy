@@ -99,8 +99,7 @@
 					transition:fade={{ duration: 200 }}
 				>
 					<Ripple
-						ontap={viewModel.tasks
-							.disableSelectMode}
+						ontap={viewModel.tasks.clearSelected}
 					></Ripple>
 
 					<X />
@@ -206,18 +205,22 @@
 							? O.none()
 							: product.isValid
 								? O.some(product.creationDate)
-								: product.maybeCreationDate}
+								: O.fromNullable(
+										product.maybeCreationDate,
+									)}
 
 					{@const maybeName = product.isCorrupt
-						? product.maybeName
+						? O.fromNullable(product.maybeName)
 						: product.isValid
 							? O.some(product.name)
-							: product.maybeName}
+							: O.fromNullable(product.maybeName)}
 
 					{@const maybeExpirationDate =
 						product.isCorrupt
 							? O.none()
-							: product.maybeExpirationDate}
+							: O.fromNullable(
+									product.maybeExpirationDate,
+								)}
 					<div
 						out:fade={{ duration: 200 }}
 						animate:flip={{ duration: 250 }}

@@ -1,6 +1,6 @@
 import {
+	E,
 	Eff,
-	F,
 	NEHS,
 } from '$lib/core/imports.ts'
 import { withLayerLogging } from '$lib/core/logging.ts'
@@ -19,10 +19,14 @@ export class DeleteProductsByIds extends Eff.Service<DeleteProductsByIds>()(
 			) =>
 				Eff.gen(function* () {
 					yield* Eff.logInfo(
-						'User requested to delete products',
+						'Requested to delete products',
 					)
 
-					const fork = yield* Eff.fork(
+					yield* Eff.logInfo(
+						'Attempting to delete products...',
+					)
+
+					const result = yield* Eff.either(
 						Eff.request(
 							DeleteProductsByIdsOperation.Request(
 								{
@@ -33,11 +37,13 @@ export class DeleteProductsByIds extends Eff.Service<DeleteProductsByIds>()(
 						),
 					)
 
-					yield* Eff.logInfo(
-						'Attempting to delete products...',
-					)
+					if (E.isLeft(result)) {
+						yield* Eff.logError(
+							'Could not delete the products',
+						)
 
-					yield* F.join(fork)
+						return yield* result.left
+					}
 
 					yield* Eff.logInfo('Products deleted')
 				}).pipe(withLayerLogging('A'))
