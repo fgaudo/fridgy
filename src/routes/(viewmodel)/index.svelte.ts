@@ -35,6 +35,7 @@ export function createViewModel() {
 		update,
 	)
 	const dispatch = flow(
+		(message: Message) => Eff.succeed(message),
 		dispatchToEffect,
 		runEffect,
 	)
@@ -56,9 +57,7 @@ export function createViewModel() {
 			createCapacitorListener({
 				event: 'resume',
 				cb: () =>
-					dispatchNoCancel(
-						Eff.succeed(Message.RefreshTime()),
-					),
+					dispatchNoCancel(Message.RefreshTime()),
 			})
 
 		const refreshTimeInterval = Eff.gen(
@@ -98,46 +97,32 @@ export function createViewModel() {
 		derived: context.derived,
 		tasks: {
 			disableSelectMode: () =>
-				dispatchNoCancel(
-					Eff.succeed(Message.ClearSelected()),
-				),
+				dispatchNoCancel(Message.ClearSelected()),
 
 			fetchList: () =>
-				dispatchNoCancel(
-					Eff.succeed(Message.FetchList()),
-				),
+				dispatchNoCancel(Message.FetchList()),
 
 			toggleMenu: () =>
-				dispatchNoCancel(
-					Eff.succeed(Message.ToggleMenu()),
-				),
+				dispatchNoCancel(Message.ToggleMenu()),
 
 			toggleItem: (product: ProductViewModel) =>
 				dispatchNoCancel(
-					Eff.succeed(
-						Message.ToggleItem({ product }),
-					),
+					Message.ToggleItem({ product }),
 				),
 
 			registerRefreshTimeListeners: () =>
 				dispatchNoCancel(
-					Eff.succeed(
-						Message.EnableRefreshTimeListener(),
-					),
+					Message.EnableRefreshTimeListener(),
 				),
 
 			unregisterRefreshTimeListeners: () =>
 				dispatchNoCancel(
-					Eff.succeed(
-						Message.DisableRefreshTimeListener(),
-					),
+					Message.DisableRefreshTimeListener(),
 				),
 
 			deleteSelected: () => {
 				dispatchNoCancel(
-					Eff.succeed(
-						Message.DeleteSelectedAndRefresh(),
-					),
+					Message.DeleteSelectedAndRefresh(),
 				)
 			},
 		},

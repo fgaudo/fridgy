@@ -87,7 +87,7 @@ export class GetSortedProducts extends Eff.Service<GetSortedProducts>()(
 								`Received ${result.products.length.toString(10)} items, but they exceed the reported total (${result.total.toString(10)}).`,
 							)
 
-							return NNInt.unsafeMake(
+							return NNInt.unsafeFromNumber(
 								result.products.length,
 							)
 						}

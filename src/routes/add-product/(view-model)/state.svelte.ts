@@ -7,12 +7,15 @@ import {
 
 export type State = {
 	name: string
-	expirationDate?: number
+	expirationDate: number | undefined
 	currentDate: number
 	isAdding: boolean
-	adding?: symbol
-	toastMessage?: string
+	isLoading: boolean
+	toastMessage:
+		| { message: string; id: symbol }
+		| undefined
 	hasInteractedWithName: boolean
+	spinnerId: symbol | undefined
 }
 
 export type StateContext = ReturnType<
@@ -23,12 +26,16 @@ export function createStateContext() {
 	const state = $state<State>({
 		currentDate: Date.now(),
 		isAdding: false,
+		isLoading: false,
 		name: '',
+		expirationDate: undefined,
+		toastMessage: undefined,
+		spinnerId: undefined,
 		hasInteractedWithName: false,
 	})
 
 	const maybeName = $derived(
-		NETS.makeWithTrimming(state.name),
+		NETS.fromString(state.name),
 	)
 
 	const isNameValid = $derived(
@@ -46,14 +53,15 @@ export function createStateContext() {
 	const maybeExpirationDate = $derived(
 		pipe(
 			O.fromNullable(state.expirationDate),
-			O.flatMap(Int.make),
+			O.flatMap(Int.fromNumber),
 		),
 	)
 
 	const maybeToastMessage = $derived(
 		pipe(
 			O.fromNullable(state.toastMessage),
-			O.flatMap(NETS.makeWithTrimming),
+			O.map(toast => toast.message),
+			O.flatMap(NETS.fromString),
 		),
 	)
 

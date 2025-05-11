@@ -46,9 +46,7 @@ function toModel(product: {
 		return {
 			isValid: true,
 			id: product.id.toString(10),
-			name: NETS.unsafeMakeWithTrimming(
-				product.name,
-			),
+			name: NETS.unsafeFromString(product.name),
 			creationDate: Int.unsafe_fromNumber(
 				product.creationDate,
 			),
@@ -83,7 +81,7 @@ describe('Get products', () => {
 					H.assertExitIsSuccess(exit)
 
 					expect(exit.value).toStrictEqual({
-						total: NNInt.unsafeMake(
+						total: NNInt.unsafeFromNumber(
 							products.length,
 						),
 						products: products.map(toModel),

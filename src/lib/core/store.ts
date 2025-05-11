@@ -1,6 +1,6 @@
 import * as R from 'effect/Ref'
 
-import { A, Eff } from './imports.ts'
+import { A, Eff, flow } from './imports.ts'
 
 export type Update<S, M, R> = (
 	state: S,
@@ -38,15 +38,16 @@ export function createDispatcher<S, M, R>(
 			if (commands) {
 				const dispatchesPerTask = A.map(
 					commands,
-					task =>
-						Eff.forkDaemon(
+					flow(
+						command =>
 							Eff.suspend(() =>
 								createDispatcher(
 									ref,
 									update,
-								)(task),
+								)(command),
 							),
-						),
+						Eff.forkDaemon,
+					),
 				)
 				yield* Eff.all(dispatchesPerTask)
 			}

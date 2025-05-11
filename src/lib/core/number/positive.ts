@@ -14,6 +14,6 @@ export const Positive = B.refined<Positive>(
 		),
 )
 
-export const make = Positive.option
-export const unsafeMake = Positive
+export const fromNumber = Positive.option
+export const unsafeFromNumber = Positive
 export const isNonNegative = Positive.is

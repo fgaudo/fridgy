@@ -30,7 +30,7 @@ describe('Delete products by ids', () => {
 
 					const exit = yield* Eff.exit(
 						service(
-							NEHS.unsafeMake(
+							NEHS.unsafeFromHashSet(
 								HS.fromIterable(ids),
 							),
 						),
@@ -58,7 +58,7 @@ describe('Delete products by ids', () => {
 
 					const exit = yield* Eff.exit(
 						service(
-							NEHS.unsafeMake(
+							NEHS.unsafeFromHashSet(
 								HS.fromIterable(ids),
 							),
 						),

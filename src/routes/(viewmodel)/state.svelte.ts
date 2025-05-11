@@ -58,7 +58,7 @@ export function createStateContext() {
 	})
 
 	const currentTimestamp = $derived(
-		Int.unsafeMake(state.currentTimestamp),
+		Int.unsafeFromNumber(state.currentTimestamp),
 	)
 
 	const maybeNonEmptySelected = $derived(

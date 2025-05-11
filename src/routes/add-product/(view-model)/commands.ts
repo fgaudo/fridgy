@@ -9,7 +9,6 @@ import type { Command } from '$lib/core/store.ts'
 
 import type { UseCases } from '$lib/business/app/use-cases.ts'
 import { AddProduct } from '$lib/business/index.ts'
-import { MINIMUM_LAG_MS } from '$lib/ui/constants.ts'
 
 import { Message } from './update.svelte.ts'
 
@@ -29,16 +28,12 @@ export const addProduct = ({
 		const addProduct =
 			yield* AddProduct.AddProduct
 
-		const [result] = yield* Eff.all([
-			Eff.either(
-				addProduct({
-					name,
-					maybeExpirationDate:
-						maybeExpirationDate,
-				}),
-			),
-			Eff.sleep(MINIMUM_LAG_MS),
-		])
+		const result = yield* Eff.either(
+			addProduct({
+				name,
+				maybeExpirationDate: maybeExpirationDate,
+			}),
+		)
 
 		if (E.isLeft(result)) {
 			return Message.AddProductFailed()
@@ -47,10 +42,12 @@ export const addProduct = ({
 		return Message.AddProductSucceeded()
 	})
 
-export const queueRemoveToast: AddProductCommand =
+export const queueRemoveToast: (
+	id: symbol,
+) => AddProductCommand = id =>
 	Eff.gen(function* () {
 		yield* Eff.sleep(3000)
-		return Message.RemoveToast()
+		return Message.RemoveToast({ id })
 	})
 
 export const setNameInteracted: AddProductCommand =
@@ -73,3 +70,11 @@ export const setExpirationDate = (
 			expirationDate,
 		}),
 	)
+
+export const queueLoading: (
+	id: symbol,
+) => AddProductCommand = id =>
+	Eff.gen(function* () {
+		yield* Eff.sleep('150 millis')
+		return Message.ShowSpinner({ id })
+	})

@@ -15,11 +15,12 @@ export const NonEmptyHashSet = <A>() =>
 export const size = <A>(
 	hashSet: NonEmptyHashSet<A>,
 ): PInt.PositiveInteger =>
-	PInt.unsafeMake(HS.size(hashSet))
+	PInt.unsafeFromNumber(HS.size(hashSet))
 
-export const unsafeMake = <A>(
+export const unsafeFromHashSet = <A>(
 	hashSet: HS.HashSet<A>,
 ) => NonEmptyHashSet<A>()(hashSet)
 
-export const make = <A>(hashSet: HS.HashSet<A>) =>
-	NonEmptyHashSet<A>().option(hashSet)
+export const fromHashSet = <A>(
+	hashSet: HS.HashSet<A>,
+) => NonEmptyHashSet<A>().option(hashSet)

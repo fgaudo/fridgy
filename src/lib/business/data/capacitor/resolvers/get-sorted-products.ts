@@ -78,7 +78,7 @@ export const query = L.effect(
 					return yield* new GetSortedProducts.InvalidDataReceived()
 				}
 
-				const totalResult = NNInt.make(
+				const totalResult = NNInt.fromNumber(
 					decodeResult.right.total,
 				)
 
@@ -111,19 +111,17 @@ export const query = L.effect(
 
 									maybeName: pipe(
 										product.name,
-										O.flatMap(
-											NETS.makeWithTrimming,
-										),
+										O.flatMap(NETS.fromString),
 									),
 
 									maybeExpirationDate: pipe(
 										product.expirationDate,
-										O.flatMap(Int.make),
+										O.flatMap(Int.fromNumber),
 									),
 
 									maybeCreationDate: pipe(
 										product.creationDate,
-										O.flatMap(Int.make),
+										O.flatMap(Int.fromNumber),
 									),
 								} satisfies GetSortedProducts.ProductDTO
 							}),

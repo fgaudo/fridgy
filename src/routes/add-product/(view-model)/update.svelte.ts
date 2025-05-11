@@ -12,6 +12,7 @@ import type { UseCases } from '$lib/business/app/use-cases.ts'
 
 import {
 	addProduct,
+	queueLoading,
 	queueRemoveToast,
 } from './commands.ts'
 import type { State } from './state.svelte.ts'
@@ -20,10 +21,11 @@ export type Message = Da.TaggedEnum<{
 	AddProduct: object
 	AddProductSucceeded: object
 	AddProductFailed: object
-	RemoveToast: object
+	RemoveToast: { id: symbol }
 	SetExpirationDate: { expirationDate: string }
 	SetName: { name: string }
 	SetNameInteracted: object
+	ShowSpinner: { id: symbol }
 }>
 
 export const Message = Da.taggedEnum<Message>()
@@ -41,24 +43,28 @@ export const update: Update<
 
 			const maybeName = pipe(
 				O.fromNullable(state.name),
-				O.flatMap(NETS.makeWithTrimming),
+				O.flatMap(NETS.fromString),
 			)
 
 			if (O.isNone(maybeName)) {
 				return { state, commands: [] }
 			}
 
-			state.isAdding = true
 			state.toastMessage = undefined
 
 			const maybeExpirationDate = pipe(
 				O.fromNullable(state.expirationDate),
-				O.flatMap(Int.make),
+				O.flatMap(Int.fromNumber),
 			)
+
+			const id = Symbol()
+			state.spinnerId = id
+			state.isAdding = true
 
 			return {
 				state,
 				commands: [
+					queueLoading(id),
 					addProduct({
 						name: maybeName.value,
 						maybeExpirationDate,
@@ -68,6 +74,8 @@ export const update: Update<
 		}),
 		M.tag('AddProductFailed', () => {
 			state.isAdding = false
+			state.isLoading = false
+			state.spinnerId = undefined
 
 			return { state, commands: [] }
 		}),
@@ -76,14 +84,24 @@ export const update: Update<
 			state.hasInteractedWithName = false
 			state.expirationDate = undefined
 			state.name = ''
-			state.toastMessage = 'Product added'
+			const id = Symbol()
+			state.toastMessage = {
+				message: 'Product added',
+				id,
+			}
+			state.isLoading = false
+			state.spinnerId = undefined
 
 			return {
 				state,
-				commands: [queueRemoveToast],
+				commands: [queueRemoveToast(id)],
 			}
 		}),
-		M.tag('RemoveToast', () => {
+		M.tag('RemoveToast', ({ id }) => {
+			if (id !== state.toastMessage?.id) {
+				return { state, commands: [] }
+			}
+
 			state.toastMessage = undefined
 
 			return { state, commands: [] }
@@ -109,6 +127,13 @@ export const update: Update<
 		}),
 		M.tag('SetNameInteracted', () => {
 			state.hasInteractedWithName = true
+			return { state, commands: [] }
+		}),
+		M.tag('ShowSpinner', ({ id }) => {
+			if (id !== state.spinnerId) {
+				return { state, commands: [] }
+			}
+			state.isLoading = true
 			return { state, commands: [] }
 		}),
 		M.exhaustive,

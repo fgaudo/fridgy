@@ -11,6 +11,6 @@ export const PositiveInteger = B.all(
 	Pos.Positive,
 )
 
-export const make = PositiveInteger.option
-export const unsafeMake = PositiveInteger
+export const fromNumber = PositiveInteger.option
+export const unsafeFromNumber = PositiveInteger
 export const isNonNegative = PositiveInteger.is

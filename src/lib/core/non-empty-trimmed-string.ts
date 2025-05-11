@@ -18,12 +18,12 @@ export const NonEmptyTrimmedString =
 export const isNonEmptyTrimmedString =
 	NonEmptyTrimmedString.is
 
-export const makeWithTrimming = flow(
+export const fromString = flow(
 	trim,
 	NonEmptyTrimmedString.option,
 )
 
-export const unsafeMakeWithTrimming = flow(
+export const unsafeFromString = flow(
 	trim,
 	NonEmptyTrimmedString,
 )

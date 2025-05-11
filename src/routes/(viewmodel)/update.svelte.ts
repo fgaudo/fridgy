@@ -111,7 +111,7 @@ export const update: Update<
 			const maybeIds = pipe(
 				O.fromNullable(state.products?.selected),
 				O.map(HS.fromIterable),
-				O.flatMap(NEHS.make),
+				O.flatMap(NEHS.fromHashSet),
 			)
 
 			if (O.isNone(maybeIds)) {

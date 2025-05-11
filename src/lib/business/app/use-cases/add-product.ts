@@ -31,7 +31,7 @@ export class AddProduct extends Eff.Service<AddProduct>()(
 						'User requested to add a product',
 					)
 
-					const timestamp = Int.unsafeMake(
+					const timestamp = Int.unsafeFromNumber(
 						yield* Cl.currentTimeMillis,
 					)
 

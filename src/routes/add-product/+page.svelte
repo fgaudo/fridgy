@@ -4,7 +4,10 @@
 		Quote,
 	} from '@lucide/svelte'
 	import { onMount } from 'svelte'
-	import { cubicOut } from 'svelte/easing'
+	import {
+		cubicIn,
+		cubicOut,
+	} from 'svelte/easing'
 	import { fade, fly } from 'svelte/transition'
 
 	import { O } from '$lib/core/imports.ts'
@@ -115,8 +118,6 @@
 					() => viewModel.state.name,
 					viewModel.tasks.setName
 				}
-				onfocusout={viewModel.tasks
-					.setNameInteracted}
 				placeholder="For example: Milk"
 				id="name"
 				class={[
@@ -195,7 +196,7 @@
 		</div>
 	</div>
 
-	{#if viewModel.state.isAdding}
+	{#if viewModel.state.isLoading}
 		<div
 			class="z-50 scale-[175%] fixed left-0 top-0 right-0 bottom-0 backdrop-blur-[1px] flex items-center justify-center"
 		>
@@ -205,8 +206,11 @@
 
 	{#key O.isSome(viewModel.derived.maybeToastMessage)}
 		<div
-			in:fade
-			out:fade
+			in:fade={{
+				duration: 300,
+				easing: cubicIn,
+			}}
+			out:fade={{ duration: 100 }}
 			class="z-90 fixed flex left-0 right-0 bottom-3 items-center justify-center"
 		>
 			{#if O.isSome(viewModel.derived.maybeToastMessage)}

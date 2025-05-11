@@ -11,6 +11,7 @@ export const NonNegativeInteger = B.all(
 	NNN.NonNegative,
 )
 
-export const make = NonNegativeInteger.option
-export const unsafeMake = NonNegativeInteger
+export const fromNumber =
+	NonNegativeInteger.option
+export const unsafeFromNumber = NonNegativeInteger
 export const isNonNegative = NonNegativeInteger.is
