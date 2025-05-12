@@ -1,7 +1,12 @@
+import {
+	Haptics,
+	ImpactStyle,
+} from '@capacitor/haptics'
 import { SvelteSet } from 'svelte/reactivity'
 
 import {
 	Da,
+	Eff,
 	HS,
 	M,
 	NEHS,
@@ -48,6 +53,7 @@ export type Message = Da.TaggedEnum<{
 	RefreshTime: object
 	RefreshTimeResult: { timestamp: number }
 	ShowSpinner: { id: symbol }
+	NoOp: object
 }>
 
 export const Message = Da.taggedEnum<Message>()
@@ -252,12 +258,18 @@ export const update: Update<
 			return { state, commands: [] }
 		}),
 		M.tag('ToggleItem', ({ product }) => {
+			if (state.isDeleteRunning)
+				return { state, commands: [] }
+
 			if (product.isCorrupt) {
 				return { state, commands: [] }
 			}
 
 			if (state.products === undefined)
 				return { state, commands: [] }
+
+			const hasSelectionStarted =
+				state.products.selected.size <= 0
 
 			if (
 				state.products.selected.has(product.id)
@@ -270,7 +282,20 @@ export const update: Update<
 			state.products.selected.add(product.id)
 			product.isSelected = true
 
-			return { state, commands: [] }
+			return {
+				state,
+				commands: [
+					...(hasSelectionStarted
+						? [
+								Eff.promise(() =>
+									Haptics.impact({
+										style: ImpactStyle.Light,
+									}),
+								).pipe(Eff.as(Message.NoOp())),
+							]
+						: []),
+				],
+			}
 		}),
 		M.tag('ToggleMenu', () => {
 			state.isMenuOpen = !state.isMenuOpen
@@ -292,6 +317,10 @@ export const update: Update<
 			state.isLoading = true
 			return { state, commands: [] }
 		}),
+		M.tag('NoOp', () => ({
+			state,
+			commands: [],
+		})),
 		M.exhaustive,
 	)(message)
 }

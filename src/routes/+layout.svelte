@@ -55,23 +55,11 @@
 			}),
 		)
 
-	const disableContextMenu = () => {
-		const f = (e: Event) => e.preventDefault()
-		window.addEventListener('contextmenu', f)
-		onDestroy(() =>
-			window.removeEventListener(
-				'contextmenu',
-				f,
-			),
-		)
-	}
-
 	onMount(() => {
 		setGlobalContext({ runtime })
 
 		startBackButtonListener()
 		awaitFonts()
-		disableContextMenu()
 	})
 </script>
 

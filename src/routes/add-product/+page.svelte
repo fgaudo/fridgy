@@ -92,7 +92,7 @@
 		</blockquote>
 	</figure>
 
-	<div
+	<form
 		class="flex w-full max-w-lg flex-col gap-5 px-8 pt-8 justify-center pb-32 mx-auto"
 	>
 		<div
@@ -119,6 +119,7 @@
 					viewModel.tasks.setName
 				}
 				placeholder="For example: Milk"
+				enterkeyhint="done"
 				id="name"
 				class={[
 					'h-16 transition-all focus:ring-0 shadow-none placeholder:text-gray-400 p-4 w-full  duration-500 rounded-[4px] border-0',
@@ -157,6 +158,7 @@
 								.formattedExpirationDateOrEmpty,
 						viewModel.tasks.setExpirationDate
 					}
+					tabindex="-1"
 					id="expdate"
 					class={[
 						'absolute h-full focus:ring-0 bg-secondary/5 shadow-none p-4 w-full rounded-[4px] border-0',
@@ -194,7 +196,7 @@
 				</div>
 			</div>
 		</div>
-	</div>
+	</form>
 
 	{#if viewModel.state.isLoading}
 		<div

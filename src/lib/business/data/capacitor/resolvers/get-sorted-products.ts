@@ -20,7 +20,7 @@ const ProductsListSchema = Sc.Struct({
 	total: Sc.Number,
 	products: Sc.Array(
 		Sc.Struct({
-			id: Sc.OptionFromSelf(
+			id: Sc.OptionFromUndefinedOr(
 				Sc.Unknown,
 			).annotations({
 				decodingFallback: H.fallback(O.none()),
@@ -77,7 +77,7 @@ export const query = L.effect(
 				if (E.isLeft(decodeResult)) {
 					return yield* new GetSortedProducts.InvalidDataReceived()
 				}
-
+				console.log(decodeResult)
 				const totalResult = NNInt.fromNumber(
 					decodeResult.right.total,
 				)
