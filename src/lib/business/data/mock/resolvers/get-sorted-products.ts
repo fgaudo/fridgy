@@ -1,17 +1,14 @@
 import {
-	HashMap,
-	Ref,
-	RequestResolver,
-	pipe,
-} from 'effect'
-
-import {
 	A,
 	Eff,
+	HM,
 	L,
 	NNInt,
 	O,
 	Ord,
+	RR,
+	Ref,
+	pipe,
 } from '$lib/core/imports.ts'
 
 import { GetSortedProducts } from '$lib/business/app/operations.ts'
@@ -55,7 +52,7 @@ export const query = L.effect(
 		const { log } = yield* Deps
 		const withErrors = yield* Config.withErrors
 		const db = yield* Db
-		return RequestResolver.fromEffect(() =>
+		return RR.fromEffect(() =>
 			Eff.gen(function* () {
 				if (withErrors && Math.random() < 0.5)
 					return yield* new GetSortedProducts.InvalidDataReceived()
@@ -64,10 +61,10 @@ export const query = L.effect(
 					Eff.map(({ map }) => map),
 				)
 
-				const total = map.pipe(HashMap.size)
+				const total = map.pipe(HM.size)
 
 				const products: GetSortedProducts.ProductDTO[] =
-					map.pipe(HashMap.toValues)
+					map.pipe(HM.toValues)
 
 				return {
 					total: NNInt.unsafeFromNumber(total),

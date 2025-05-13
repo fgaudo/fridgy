@@ -1,10 +1,6 @@
 package net.gaudo.fridgy
 
 import android.os.Bundle
-import android.os.StrictMode
-import android.os.StrictMode.VmPolicy
-import android.view.WindowManager
-import androidx.core.view.WindowCompat
 import com.getcapacitor.BridgeActivity
 
 class MainActivity : BridgeActivity() {
@@ -29,7 +25,5 @@ class MainActivity : BridgeActivity() {
         setTheme(R.style.AppTheme_NoActionBar)
         registerPlugin(DatabasePlugin::class.java)
         super.onCreate(savedInstanceState)
-
-
     }
 }

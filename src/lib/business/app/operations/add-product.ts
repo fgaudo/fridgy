@@ -1,8 +1,8 @@
-import { Data } from 'effect'
 import type { RequestResolver } from 'effect/RequestResolver'
 
 import {
 	C,
+	Da,
 	Int,
 	NETS,
 	O,
@@ -15,7 +15,7 @@ export interface ProductDTO {
 	readonly creationDate: Int.Integer
 }
 
-export class OperationFailed extends Data.TaggedError(
+export class OperationFailed extends Da.TaggedError(
 	'OperationFailed',
 ) {}
 

@@ -1,21 +1,11 @@
-import {
-	differenceInDays,
-	differenceInHours,
-} from 'date-fns'
+import { differenceInDays } from 'date-fns'
 
 export const formatRemainingTime = (
 	from: number,
 	to: number,
 ): string => {
-	const hours = differenceInHours(to, from)
-
-	if (hours <= -24) {
-		const days = differenceInDays(to, from)
-		return `${days.toString(10)}d`
-	}
-
-	if (hours < 0) {
-		return `${hours.toString(10)}h`
+	if (to - from <= 0) {
+		return 'EXP'
 	}
 
 	const days = differenceInDays(to, from)

@@ -1,10 +1,10 @@
-import { LogLevel, RequestResolver } from 'effect'
-
 import {
 	E,
 	Eff,
 	L,
+	LL,
 	O,
+	RR,
 } from '$lib/core/imports.ts'
 
 import { DeleteProductsByIds } from '$lib/business/app/operations.ts'
@@ -19,7 +19,7 @@ export const command = L.effect(
 			yield* DbPlugin
 		const { log } = yield* Deps
 
-		return RequestResolver.fromEffect(({ ids }) =>
+		return RR.fromEffect(({ ids }) =>
 			Eff.gen(function* () {
 				const idsArray = yield* Eff.allSuccesses(
 					Array.from(ids).map(id =>
@@ -33,7 +33,7 @@ export const command = L.effect(
 							}
 
 							yield* log(
-								LogLevel.Warning,
+								LL.Warning,
 								'Id has incorrect format. Skipping.',
 							).pipe(Eff.annotateLogs({ id }))
 
@@ -43,7 +43,7 @@ export const command = L.effect(
 				)
 
 				yield* log(
-					LogLevel.Debug,
+					LL.Debug,
 					`About to delete ${idsArray.length.toString(10)} products`,
 				)
 
@@ -59,7 +59,7 @@ export const command = L.effect(
 				}
 
 				yield* log(
-					LogLevel.Debug,
+					LL.Debug,
 					'No problems while deleting products',
 				)
 			}),

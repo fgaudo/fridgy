@@ -1,6 +1,10 @@
-import { HashMap } from 'effect'
-
-import { Eff, Log, O, pipe } from './imports.ts'
+import {
+	Eff,
+	HM,
+	Log,
+	O,
+	pipe,
+} from './imports.ts'
 
 const TAG = '_LAYER_'
 
@@ -17,7 +21,7 @@ export const withLayerLogger =
 			...options,
 			message: pipe(
 				options.annotations,
-				HashMap.get('_LAYER_'),
+				HM.get('_LAYER_'),
 				O.match({
 					onSome: layer =>
 						`[${layer}] ${options.message}`,

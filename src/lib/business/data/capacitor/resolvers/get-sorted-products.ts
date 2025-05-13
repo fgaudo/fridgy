@@ -1,5 +1,3 @@
-import { RequestResolver, pipe } from 'effect'
-
 import {
 	E,
 	Eff,
@@ -9,7 +7,9 @@ import {
 	NETS,
 	NNInt,
 	O,
+	RR,
 	Sc,
+	pipe,
 } from '$lib/core/imports.ts'
 
 import { GetSortedProducts } from '$lib/business/app/operations.ts'
@@ -57,7 +57,7 @@ export const query = L.effect(
 		const { getAllProductsWithTotal } =
 			yield* DbPlugin
 
-		return RequestResolver.fromEffect(() =>
+		return RR.fromEffect(() =>
 			Eff.gen(function* () {
 				const result = yield* pipe(
 					getAllProductsWithTotal,

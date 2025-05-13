@@ -1,8 +1,8 @@
-import { Data } from 'effect'
 import type { RequestResolver } from 'effect/RequestResolver'
 
 import {
 	C,
+	Da,
 	Int,
 	NETS,
 	NNInt,
@@ -17,11 +17,11 @@ export type ProductDTO = {
 	readonly maybeCreationDate: O.Option<Int.Integer>
 }
 
-export class FetchingFailed extends Data.TaggedError(
+export class FetchingFailed extends Da.TaggedError(
 	'FetchingFailed',
 ) {}
 
-export class InvalidDataReceived extends Data.TaggedError(
+export class InvalidDataReceived extends Da.TaggedError(
 	'InvalidDataReceived',
 ) {}
 

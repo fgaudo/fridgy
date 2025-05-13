@@ -1,14 +1,12 @@
 <script lang="ts">
 	import { goto } from '$app/navigation'
 	import { App as CAP } from '@capacitor/app'
-	import {
-		Infinity,
-		Info,
-		Menu,
-		Plus,
-		Trash2,
-		X,
-	} from '@lucide/svelte'
+	import Infinity from '@lucide/svelte/icons/infinity'
+	import Info from '@lucide/svelte/icons/info'
+	import Menu from '@lucide/svelte/icons/menu'
+	import Plus from '@lucide/svelte/icons/plus'
+	import Trash2 from '@lucide/svelte/icons/trash-2'
+	import X from '@lucide/svelte/icons/x'
 	import { format } from 'date-fns'
 	import { onMount } from 'svelte'
 	import { flip } from 'svelte/animate'

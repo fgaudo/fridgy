@@ -1,10 +1,10 @@
 import {
-	HashMap,
+	Eff,
+	HM,
+	L,
+	RR,
 	Ref,
-	RequestResolver,
-} from 'effect'
-
-import { Eff, L } from '$lib/core/imports.ts'
+} from '$lib/core/imports.ts'
 
 import { DeleteProductsByIds } from '$lib/business/app/operations.ts'
 import { MINIMUM_LAG_MS } from '$lib/ui/constants.ts'
@@ -17,7 +17,7 @@ export const command = L.effect(
 	Eff.gen(function* () {
 		const withErrors = yield* Config.withErrors
 		const db = yield* Db
-		return RequestResolver.fromEffect(({ ids }) =>
+		return RR.fromEffect(({ ids }) =>
 			Eff.gen(function* () {
 				if (withErrors && Math.random() < 0.5) {
 					return yield* Eff.fail(
@@ -28,7 +28,7 @@ export const command = L.effect(
 				for (const id of ids) {
 					yield* Ref.update(db, dbValues => ({
 						...dbValues,
-						map: HashMap.remove(dbValues.map, id),
+						map: HM.remove(dbValues.map, id),
 					}))
 				}
 			}),

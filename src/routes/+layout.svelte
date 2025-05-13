@@ -1,6 +1,6 @@
 <script lang="ts">
 	import '@fontsource-variable/comfortaa/index.css'
-	import '@fontsource-variable/roboto-flex/full.css'
+	import '@fontsource-variable/roboto-flex/index.css'
 	import {
 		onDestroy,
 		onMount,

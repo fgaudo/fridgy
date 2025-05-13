@@ -1,12 +1,13 @@
 import {
-	HashMap,
-	LogLevel,
+	Eff,
+	HM,
+	L,
+	LL,
+	O,
+	RR,
 	Ref,
-	RequestResolver,
 	pipe,
-} from 'effect'
-
-import { Eff, L, O } from '$lib/core/imports.ts'
+} from '$lib/core/imports.ts'
 import { withLayerLogging } from '$lib/core/logging.ts'
 
 import { AddProduct } from '$lib/business/app/operations.ts'
@@ -21,7 +22,7 @@ export const command = L.effect(
 		const withErrors = yield* Config.withErrors
 		const { log } = yield* Deps
 		const db = yield* Db
-		return RequestResolver.fromEffect(product =>
+		return RR.fromEffect(product =>
 			pipe(
 				Eff.gen(function* () {
 					if (withErrors && Math.random() < 0.5) {
@@ -44,7 +45,7 @@ export const command = L.effect(
 							...dbValues,
 							index,
 							map: dbValues.map.pipe(
-								HashMap.set(indexString, {
+								HM.set(indexString, {
 									maybeName: O.some(product.name),
 									maybeExpirationDate:
 										product.maybeExpirationDate,
@@ -58,7 +59,7 @@ export const command = L.effect(
 					})
 
 					yield* log(
-						LogLevel.Info,
+						LL.Info,
 						`Added product ${product.name} into mock database`,
 					)
 

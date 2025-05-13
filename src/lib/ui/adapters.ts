@@ -3,13 +3,18 @@ import {
 	App as CAP,
 } from '@capacitor/app'
 import type { PluginListenerHandle } from '@capacitor/core'
-import { LogLevel, Ref, pipe } from 'effect'
 import { format } from 'effect/Inspectable'
 import { withMinimumLogLevel } from 'effect/Logger'
 import type { Cancel } from 'effect/Runtime'
 import { onDestroy } from 'svelte'
 
-import { Eff, MR } from '$lib/core/imports.ts'
+import {
+	Eff,
+	LL,
+	MR,
+	Ref,
+	pipe,
+} from '$lib/core/imports.ts'
 import { withLayerLogging } from '$lib/core/logging.ts'
 import {
 	type Command,
@@ -46,7 +51,7 @@ export function createRunEffect(
 				withLayerLogging('P'),
 				import.meta.env.PROD
 					? eff => eff
-					: withMinimumLogLevel(LogLevel.Debug),
+					: withMinimumLogLevel(LL.Debug),
 				Eff.tapDefect(Eff.logFatal),
 			),
 		)

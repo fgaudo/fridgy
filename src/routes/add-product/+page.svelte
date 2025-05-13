@@ -1,8 +1,6 @@
 <script lang="ts">
-	import {
-		ArrowLeft,
-		Quote,
-	} from '@lucide/svelte'
+	import ArrowLeft from '@lucide/svelte/icons/arrow-left'
+	import Quote from '@lucide/svelte/icons/quote'
 	import {
 		cubicIn,
 		cubicOut,

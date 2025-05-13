@@ -1,9 +1,10 @@
-import { LogLevel, RequestResolver } from 'effect'
+import * as RR from 'effect/RequestResolver'
 
 import {
 	E,
 	Eff,
 	L,
+	LL,
 	O,
 } from '$lib/core/imports.ts'
 
@@ -18,7 +19,7 @@ export const command = L.effect(
 		const { addProduct } = yield* DbPlugin
 		const { log } = yield* Deps
 
-		return RequestResolver.fromEffect(product =>
+		return RR.fromEffect(product =>
 			Eff.gen(function* () {
 				const maybeExpirationDate =
 					product.maybeExpirationDate
@@ -41,7 +42,7 @@ export const command = L.effect(
 				}
 
 				yield* log(
-					LogLevel.Debug,
+					LL.Debug,
 					'No errors adding the product',
 				)
 			}),

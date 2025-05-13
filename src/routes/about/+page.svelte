@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { ArrowLeft } from '@lucide/svelte'
+	import ArrowLeft from '@lucide/svelte/icons/arrow-left'
 	import { cubicOut } from 'svelte/easing'
 	import { fly } from 'svelte/transition'
 

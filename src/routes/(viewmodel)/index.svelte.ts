@@ -1,7 +1,12 @@
-import { Duration, Ref, flow, pipe } from 'effect'
 import type { Cancel } from 'effect/Runtime'
 
-import { Eff } from '$lib/core/imports.ts'
+import {
+	D,
+	Eff,
+	Ref,
+	flow,
+	pipe,
+} from '$lib/core/imports.ts'
 
 import {
 	createCapacitorListener,
@@ -20,8 +25,7 @@ import {
 	update,
 } from './update.svelte.ts'
 
-const refreshTimeIntervalFrequency =
-	Duration.seconds(20)
+const refreshTimeIntervalFrequency = D.seconds(20)
 
 export function createViewModel() {
 	const context = createStateContext()
