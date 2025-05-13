@@ -2,7 +2,6 @@ package net.gaudo.fridgy.data
 
 import android.provider.BaseColumns
 
-
 object Schema {
     object Product : BaseColumns {
         const val TABLE_NAME = "product"

@@ -5,7 +5,6 @@ import android.provider.BaseColumns
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-
 fun deleteProductsByIds(ids: List<Long>): suspend (db: SQLiteOpenHelper) -> Unit {
     return { helper ->
         withContext(Dispatchers.IO) {

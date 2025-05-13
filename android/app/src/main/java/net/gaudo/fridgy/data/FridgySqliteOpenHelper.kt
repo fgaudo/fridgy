@@ -30,7 +30,7 @@ class FridgySqliteOpenHelper(
     }
 }
 
- val createProductTableSql = """
+private val createProductTableSql = """
         CREATE TABLE ${Schema.Product.TABLE_NAME}(
             ${BaseColumns._ID} INTEGER PRIMARY KEY ASC AUTOINCREMENT,
             ${Schema.Product.COLUMN_NAME} TEXT NOT NULL,
@@ -38,7 +38,7 @@ class FridgySqliteOpenHelper(
         )
     """.trimIndent()
 
- val createProductExpirationTableSql = """
+private val createProductExpirationTableSql = """
         CREATE TABLE ${Schema.ProductExpiration.TABLE_NAME}(
             ${Schema.ProductExpiration.COLUMN_DATE} INTEGER NOT NULL,
             ${Schema.ProductExpiration.COLUMN_PRODUCT_ID} INTEGER UNIQUE NOT NULL,

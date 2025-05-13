@@ -5,7 +5,6 @@ import android.os.StrictMode
 import android.os.StrictMode.VmPolicy
 import com.getcapacitor.BridgeActivity
 
-
 class MainActivity : BridgeActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         StrictMode.setThreadPolicy(

@@ -1,6 +1,5 @@
 package net.gaudo.fridgy
 
-import android.database.sqlite.SQLiteDatabase
 import android.util.Log
 import com.getcapacitor.JSArray
 import com.getcapacitor.JSObject
@@ -10,16 +9,10 @@ import com.getcapacitor.PluginMethod
 import com.getcapacitor.annotation.CapacitorPlugin
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import net.gaudo.fridgy.data.FridgySqliteOpenHelper
 import net.gaudo.fridgy.data.Product
-import net.gaudo.fridgy.data.createProductExpirationTableSql
-import net.gaudo.fridgy.data.createProductTableSql
 import net.gaudo.fridgy.data.getAllProductsWithTotal as getAllProductsWithTotalQuery
 import net.gaudo.fridgy.data.addProduct as addProductCommand
 import net.gaudo.fridgy.data.deleteProductsByIds as deleteProductsByIdsCommand
@@ -60,6 +53,7 @@ class DatabasePlugin : Plugin() {
                 call.resolve()
                 return@launch
             } catch (e: Exception) {
+                Log.e("FridgySqlitePlugin", e.message, e)
                 call.reject(e.message)
                 return@launch
             }
@@ -85,7 +79,7 @@ class DatabasePlugin : Plugin() {
                 return@launch
 
             } catch (e: Exception) {
-                Log.e("Plugin", e.message, e)
+                Log.e("FridgySqlitePlugin", e.message, e)
                 call.reject(e.message)
                 return@launch
             }
@@ -117,6 +111,7 @@ class DatabasePlugin : Plugin() {
                 call.resolve(null)
                 return@launch
             } catch (e: Exception) {
+                Log.e("FridgySqlitePlugin", e.message, e)
                 call.reject(e.message)
                 return@launch
             }
