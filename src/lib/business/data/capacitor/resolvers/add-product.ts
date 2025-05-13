@@ -1,8 +1,8 @@
 import { LogLevel, RequestResolver } from 'effect'
 
 import {
+	E,
 	Eff,
-	H,
 	L,
 	O,
 } from '$lib/core/imports.ts'
@@ -15,7 +15,7 @@ import { DbPlugin } from '../db-plugin.ts'
 export const command = L.effect(
 	AddProduct.Resolver,
 	Eff.gen(function* () {
-		const { db } = yield* DbPlugin
+		const { addProduct } = yield* DbPlugin
 		const { log } = yield* Deps
 
 		return RequestResolver.fromEffect(product =>
@@ -23,8 +23,8 @@ export const command = L.effect(
 				const maybeExpirationDate =
 					product.maybeExpirationDate
 
-				yield* H.tryPromise(() =>
-					db.addProduct({
+				const result = yield* Eff.either(
+					addProduct({
 						product: {
 							name: product.name,
 							creationDate: product.creationDate,
@@ -33,12 +33,12 @@ export const command = L.effect(
 							),
 						},
 					}),
-				).pipe(
-					Eff.catchTags({
-						UnknownException: () =>
-							new AddProduct.OperationFailed(),
-					}),
 				)
+
+				if (E.isLeft(result)) {
+					yield* Eff.logError(result.left.error)
+					return yield* new AddProduct.OperationFailed()
+				}
 
 				yield* log(
 					LogLevel.Debug,

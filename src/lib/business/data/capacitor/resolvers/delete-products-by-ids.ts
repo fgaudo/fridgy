@@ -1,8 +1,8 @@
 import { LogLevel, RequestResolver } from 'effect'
 
 import {
+	E,
 	Eff,
-	H,
 	L,
 	O,
 } from '$lib/core/imports.ts'
@@ -15,7 +15,8 @@ import { DbPlugin } from '../db-plugin.ts'
 export const command = L.effect(
 	DeleteProductsByIds.Resolver,
 	Eff.gen(function* () {
-		const { db } = yield* DbPlugin
+		const { deleteProductsByIds } =
+			yield* DbPlugin
 		const { log } = yield* Deps
 
 		return RequestResolver.fromEffect(({ ids }) =>
@@ -46,16 +47,16 @@ export const command = L.effect(
 					`About to delete ${idsArray.length.toString(10)} products`,
 				)
 
-				yield* H.tryPromise(() =>
-					db.deleteProductsByIds({
+				const result = yield* Eff.either(
+					deleteProductsByIds({
 						ids: idsArray,
 					}),
-				).pipe(
-					Eff.catchTags({
-						UnknownException: () =>
-							new DeleteProductsByIds.OperationFailed(),
-					}),
 				)
+
+				if (E.isLeft(result)) {
+					yield* Eff.logError(result.left.error)
+					return yield* new DeleteProductsByIds.OperationFailed()
+				}
 
 				yield* log(
 					LogLevel.Debug,

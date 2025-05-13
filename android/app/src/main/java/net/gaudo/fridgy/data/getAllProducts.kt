@@ -1,0 +1,80 @@
+package net.gaudo.fridgy.data
+
+import android.database.sqlite.SQLiteOpenHelper
+import android.provider.BaseColumns
+import androidx.core.database.getLongOrNull
+import androidx.core.database.sqlite.transaction
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+
+private val getAllProductsSql = run {
+    val product = Schema.Product.TABLE_NAME
+    val productExpiration = Schema.ProductExpiration.TABLE_NAME
+
+    val product_id = "${product}.${BaseColumns._ID}"
+    val product_name = "${product}.${Schema.Product.COLUMN_NAME}"
+    val product_creationDate = "${product}.${Schema.Product.COLUMN_CREATION_DATE}"
+    val productExpiration_date = "${productExpiration}.${Schema.ProductExpiration.COLUMN_DATE}"
+    val productExpiration_productId =
+        "${productExpiration}.${Schema.ProductExpiration.COLUMN_PRODUCT_ID}"
+
+    """
+        SELECT ${product_id}, ${product_name}, ${product_creationDate}, ${productExpiration_date}
+            FROM ${product} 
+            LEFT JOIN ${productExpiration}
+                ON ${product_id} = ${productExpiration_productId}
+            ORDER BY
+               ${productExpiration_date} IS NULL, ${productExpiration_date}
+    """.trimIndent()
+}
+
+suspend fun getAllProductsWithTotal(helper: SQLiteOpenHelper): ProductsWithTotal {
+    return withContext(Dispatchers.IO) {
+        val db = helper.readableDatabase
+        db.transaction(false) {
+            val products = db.rawQuery(getAllProductsSql, null).use { cursor ->
+                if (!cursor.moveToFirst()) return@use emptyList<ProductEntity>()
+
+                val list = mutableListOf<ProductEntity>()
+                do {
+                    val id = run {
+                        val index = cursor.getColumnIndex(BaseColumns._ID)
+                        if (index < 0) throw Exception("index ${BaseColumns._ID} not found")
+                        cursor.getLong(index)
+                    }
+
+                    val name = run {
+                        val index =
+                            cursor.getColumnIndex(Schema.Product.COLUMN_NAME)
+                        if (index < 0) throw Exception("index ${Schema.Product.COLUMN_NAME} not found")
+                        cursor.getString(index)
+                    }
+
+                    val creationDate = run {
+                        val index =
+                            cursor.getColumnIndex(Schema.Product.COLUMN_CREATION_DATE)
+                        if (index < 0) throw Exception("index ${Schema.Product.COLUMN_CREATION_DATE} not found")
+                        cursor.getLong(index)
+                    }
+
+                    val expirationDate = run {
+                        val index =
+                            cursor.getColumnIndex(Schema.ProductExpiration.COLUMN_DATE)
+                        if (index < 0) throw Exception("index ${Schema.ProductExpiration.COLUMN_DATE} not found")
+                        cursor.getLongOrNull(index)
+                    }
+
+                    list.add(
+                        ProductEntity(id, name, expirationDate, creationDate)
+                    )
+                } while (cursor.moveToNext())
+
+                list
+            }
+
+            ProductsWithTotal(products, products.size)
+        }
+
+    }
+}
+

@@ -1,6 +1,6 @@
 import { registerPlugin } from '@capacitor/core'
 
-import { Eff } from '$lib/core/imports.ts'
+import { Eff, H } from '$lib/core/imports.ts'
 
 interface FridgySqlitePlugin {
 	getAllProductsWithTotal(): Promise<unknown>
@@ -21,10 +21,31 @@ interface FridgySqlitePlugin {
 export class DbPlugin extends Eff.Service<DbPlugin>()(
 	'DbPlugin',
 	{
-		sync: () => ({
-			db: registerPlugin<FridgySqlitePlugin>(
-				'FridgySqlitePlugin',
-			),
-		}),
+		sync: () => {
+			const db =
+				registerPlugin<FridgySqlitePlugin>(
+					'FridgySqlitePlugin',
+				)
+
+			return {
+				addProduct: (
+					...p: Parameters<typeof db.addProduct>
+				) =>
+					H.tryPromise(() => db.addProduct(...p)),
+
+				deleteProductsByIds: (
+					...p: Parameters<
+						typeof db.deleteProductsByIds
+					>
+				) =>
+					H.tryPromise(() =>
+						db.deleteProductsByIds(...p),
+					),
+
+				getAllProductsWithTotal: H.tryPromise(
+					db.getAllProductsWithTotal,
+				),
+			}
+		},
 	},
 ) {}

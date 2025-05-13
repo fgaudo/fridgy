@@ -54,18 +54,18 @@ const ProductsListSchema = Sc.Struct({
 export const query = L.effect(
 	GetSortedProducts.Resolver,
 	Eff.gen(function* () {
-		const { db } = yield* DbPlugin
+		const { getAllProductsWithTotal } =
+			yield* DbPlugin
 
 		return RequestResolver.fromEffect(() =>
 			Eff.gen(function* () {
 				const result = yield* pipe(
-					H.tryPromise(() =>
-						db.getAllProductsWithTotal(),
-					),
+					getAllProductsWithTotal,
 					Eff.either,
 				)
 
 				if (E.isLeft(result)) {
+					yield* Eff.logError(result.left.error)
 					return yield* new GetSortedProducts.FetchingFailed()
 				}
 
@@ -75,9 +75,12 @@ export const query = L.effect(
 					)(result.right).pipe(Eff.either)
 
 				if (E.isLeft(decodeResult)) {
+					yield* Eff.logError(
+						decodeResult.left.message,
+					)
 					return yield* new GetSortedProducts.InvalidDataReceived()
 				}
-				console.log(decodeResult)
+
 				const totalResult = NNInt.fromNumber(
 					decodeResult.right.total,
 				)
