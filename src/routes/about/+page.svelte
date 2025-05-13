@@ -1,27 +1,14 @@
 <script lang="ts">
 	import { ArrowLeft } from '@lucide/svelte'
-	import { onMount } from 'svelte'
 	import { cubicOut } from 'svelte/easing'
-	import { fade, fly } from 'svelte/transition'
+	import { fly } from 'svelte/transition'
 
-	import { createCapacitorListener } from '$lib/ui/adapters.ts'
 	import licenses from '$lib/ui/assets/licenses.json' with { type: 'json' }
 	import Ripple from '$lib/ui/components/ripple.svelte'
 	import {
 		PAGE_TRANSITION_Y,
 		version,
 	} from '$lib/ui/constants'
-
-	const startBack = createCapacitorListener({
-		event: 'backButton',
-		cb: () => {
-			window.history.back()
-		},
-	})
-
-	onMount(() => {
-		startBack()
-	})
 </script>
 
 <div

@@ -3,7 +3,6 @@
 		ArrowLeft,
 		Quote,
 	} from '@lucide/svelte'
-	import { onMount } from 'svelte'
 	import {
 		cubicIn,
 		cubicOut,
@@ -12,7 +11,6 @@
 
 	import { O } from '$lib/core/imports.ts'
 
-	import { createCapacitorListener } from '$lib/ui/adapters.ts'
 	import Ripple from '$lib/ui/components/ripple.svelte'
 	import Spinner from '$lib/ui/components/spinner.svelte'
 	import { PAGE_TRANSITION_Y } from '$lib/ui/constants.ts'
@@ -20,32 +18,21 @@
 	import { createViewModel } from './(view-model)/index.svelte.ts'
 
 	const viewModel = createViewModel()
-
-	const startBackListener =
-		createCapacitorListener({
-			event: 'backButton',
-			cb: () => {
-				if (!viewModel.state.isAdding) {
-					window.history.back()
-				}
-			},
-		})
-
-	onMount(() => {
-		startBackListener()
-	})
 </script>
 
 <div
 	in:fly={{
 		y: PAGE_TRANSITION_Y,
 		opacity: 0,
+		duration: 600,
 		easing: cubicOut,
 	}}
-	class="bg-background flex h-screen flex-col justify-between opacity-100"
+	class="bg-background flex flex-col justify-between opacity-100"
 >
 	<div
-		class="bg-secondary shadow-secondary/40 flex h-16 w-full items-center shadow-md"
+		style:padding-top={'env(safe-area-inset-top)'}
+		style:height={'calc(64px + env(safe-area-inset-top))'}
+		class="bg-secondary z-50 shadow-secondary/40 flex w-full items-center shadow-md"
 	>
 		<div
 			class="ml-2 text-center flex h-12 w-12 items-center justify-center relative overflow-hidden rounded-full"
@@ -63,6 +50,7 @@
 			Add a product
 		</div>
 	</div>
+
 	<figure
 		class="font-stylish mx-auto max-w-screen-md p-8 opacity-50"
 	>
@@ -105,7 +93,6 @@
 					viewModel.derived.isNameValidOrUntouched
 						? 'text-secondary'
 						: 'text-primary',
-					,
 				]}
 			>
 				Product name <span

@@ -24,7 +24,6 @@ body {
 }
 
 html {
-	user-select: none;
 	background-color: var(--color-background);
 	color: var(--color-on-background);
 }

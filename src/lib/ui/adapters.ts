@@ -3,18 +3,13 @@ import {
 	App as CAP,
 } from '@capacitor/app'
 import type { PluginListenerHandle } from '@capacitor/core'
-import {
-	LogLevel,
-	ManagedRuntime,
-	Ref,
-	pipe,
-} from 'effect'
+import { LogLevel, Ref, pipe } from 'effect'
 import { format } from 'effect/Inspectable'
 import { withMinimumLogLevel } from 'effect/Logger'
 import type { Cancel } from 'effect/Runtime'
 import { onDestroy } from 'svelte'
 
-import { Eff } from '$lib/core/imports.ts'
+import { Eff, MR } from '$lib/core/imports.ts'
 import { withLayerLogging } from '$lib/core/logging.ts'
 import {
 	type Command,
@@ -25,10 +20,7 @@ import {
 import type { UseCases } from '$lib/business/app/use-cases.ts'
 
 export function createRunEffect(
-	runtime: ManagedRuntime.ManagedRuntime<
-		UseCases,
-		never
-	>,
+	runtime: MR.ManagedRuntime<UseCases, never>,
 ) {
 	const set = new Set<Cancel<unknown, unknown>>()
 

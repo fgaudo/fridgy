@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation'
+	import { App as CAP } from '@capacitor/app'
 	import {
 		Infinity,
 		Info,
@@ -9,7 +10,6 @@
 		X,
 	} from '@lucide/svelte'
 	import { format } from 'date-fns'
-	import { product } from 'effect/Equivalence'
 	import { onMount } from 'svelte'
 	import { flip } from 'svelte/animate'
 	import { expoIn, expoOut } from 'svelte/easing'
@@ -17,6 +17,7 @@
 
 	import { O } from '$lib/core/imports.ts'
 
+	import { createCapacitorListener } from '$lib/ui/adapters.ts'
 	import imgUrl from '$lib/ui/assets/arrow.svg'
 	import Ripple from '$lib/ui/components/ripple.svelte'
 	import Spinner from '$lib/ui/components/spinner.svelte'
@@ -26,7 +27,20 @@
 
 	const viewModel = createViewModel()
 
+	const startBackListener =
+		createCapacitorListener({
+			event: 'backButton',
+			cb: () => {
+				if (viewModel.state.isMenuOpen) {
+					viewModel.tasks.toggleMenu()
+				} else {
+					void CAP.exitApp()
+				}
+			},
+		})
+
 	onMount(() => {
+		startBackListener()
 		viewModel.tasks.fetchList()
 		viewModel.tasks.registerRefreshTimeListeners()
 	})
@@ -47,7 +61,9 @@
 				opacity: 1,
 				easing: expoIn,
 			}}
-			class="h-screen flex-col flex fixed bg-background z-999 rounded-r-2xl overflow-hidden w-64 will-change-transform"
+			style:padding-top="env(safe-area-inset-top)"
+			style:padding-bottom="env(safe-area-inset-bottom)"
+			class="touch-none pointer-events-auto h-screen flex-col flex fixed bg-background z-999 rounded-r-2xl overflow-hidden w-64 will-change-transform"
 		>
 			<p class="font-stylish pt-8 pb-4 pl-4">
 				Fridgy
@@ -83,75 +99,93 @@
 				easing: expoIn,
 			}}
 			onpointerup={viewModel.tasks.toggleMenu}
-			class="h-full z-998 flex-col fixed w-full bg-black/50 backdrop-blur-xs"
+			class="touch-none pointer-events-auto h-full z-998 flex-col fixed w-full bg-black/50 backdrop-blur-xs"
 		></div>
 	{/if}
 
-	<div
-		class="bg-secondary z-50 fixed shadow-secondary/40 flex h-16 w-full items-center shadow-md"
-	>
+	<div class="fixed w-full z-50 top-0">
 		<div
-			class="ml-2 relative h-12 w-12 flex items-center justify-center rounded-full overflow-hidden"
+			style:padding-top={'env(safe-area-inset-top)'}
+			style:height={'calc(64px + env(safe-area-inset-top))'}
+			class="bg-secondary shadow-secondary/40 flex w-full items-center shadow-md"
 		>
-			{#if O.isSome(viewModel.derived.maybeNonEmptySelected)}
-				<div
-					class="absolute"
-					transition:fade={{ duration: 200 }}
-				>
-					<Ripple
-						ontap={viewModel.tasks.clearSelected}
-					></Ripple>
-
-					<X />
-				</div>
-			{:else}
-				<div
-					transition:fade={{ duration: 200 }}
-					class="absolute"
-				>
-					<Ripple
-						color="var(--color-background)"
-						ontap={viewModel.tasks.toggleMenu}
-					></Ripple>
-					<Menu />
-				</div>
-			{/if}
-		</div>
-
-		<div
-			class="font-stylish pl-2 text-2xl font-extrabold translate-y-[2px]"
-		>
-			Fridgy
-		</div>
-		<div class="grow"></div>
-		{#if O.isSome(viewModel.derived.maybeNonEmptySelected)}
 			<div
-				transition:fade={{ duration: 200 }}
-				class="relative flex h-full items-center text-lg font-stylish translate-y-[2px]"
+				class="ml-2 relative h-12 w-12 flex items-center justify-center rounded-full overflow-hidden"
 			>
-				{#key viewModel.derived.maybeNonEmptySelected.value.size}
+				{#if O.isSome(viewModel.derived.maybeNonEmptySelected)}
 					<div
 						class="absolute"
 						transition:fade={{ duration: 200 }}
 					>
-						{viewModel.derived
-							.maybeNonEmptySelected.value.size}
+						<Ripple
+							ontap={viewModel.tasks
+								.clearSelected}
+						></Ripple>
+
+						<X />
 					</div>
-				{/key}
+				{:else}
+					<div
+						transition:fade={{ duration: 200 }}
+						class="absolute"
+					>
+						<Ripple
+							color="var(--color-background)"
+							ontap={viewModel.tasks.toggleMenu}
+						></Ripple>
+						<Menu />
+					</div>
+				{/if}
 			</div>
 
 			<div
-				class="ml-2 mr-2 relative h-12 w-12 flex items-center justify-center rounded-full overflow-hidden"
-				transition:fade={{ duration: 200 }}
+				class="font-stylish pl-2 text-2xl font-extrabold translate-y-[2px]"
 			>
-				<Ripple
-					ontap={viewModel.tasks.deleteSelected}
-				></Ripple>
-				<Trash2 />
+				Fridgy
 			</div>
+			<div class="grow"></div>
+			{#if O.isSome(viewModel.derived.maybeNonEmptySelected)}
+				<div
+					transition:fade={{ duration: 200 }}
+					class="relative flex h-full items-center text-lg font-stylish translate-y-[2px]"
+				>
+					{#key viewModel.derived.maybeNonEmptySelected.value.size}
+						<div
+							class="absolute"
+							transition:fade={{ duration: 200 }}
+						>
+							{viewModel.derived
+								.maybeNonEmptySelected.value.size}
+						</div>
+					{/key}
+				</div>
+
+				<div
+					class="ml-2 mr-2 relative h-12 w-12 flex items-center justify-center rounded-full overflow-hidden"
+					transition:fade={{ duration: 200 }}
+				>
+					<Ripple
+						ontap={viewModel.tasks.deleteSelected}
+					></Ripple>
+					<Trash2 />
+				</div>
+			{/if}
+		</div>
+		{#if O.isSome(viewModel.derived.maybeLoadedProducts)}
+			{@const products =
+				viewModel.derived.maybeLoadedProducts
+					.value}
+
+			{#if products.entries.length > 0}
+				<p
+					out:fade={{ duration: 200 }}
+					class="bg-background z-50 w-full px-[14px] pt-[10px] pb-[8px] text-xs"
+				>
+					{products.entries.length} items
+				</p>
+			{/if}
 		{/if}
 	</div>
-
 	{#if viewModel.state.isLoading}
 		<div
 			transition:fade={{ duration: 200 }}
@@ -161,9 +195,7 @@
 		</div>
 	{/if}
 
-	<div
-		class="bg-background min-h-screen flex flex-col"
-	>
+	<div class="bg-background flex flex-col">
 		{#if viewModel.state.receivedError}
 			<div
 				class="flex h-screen w-screen items-center justify-center text-center text-lg"
@@ -186,18 +218,10 @@
 				viewModel.derived.maybeLoadedProducts
 					.value}
 
-			{#if products.entries.length > 0}
-				<p
-					out:fade={{ duration: 200 }}
-					class="bg-background fixed top-[64px] z-50 w-full px-[14px] pt-[10px] pb-[8px] text-xs"
-				>
-					{products.entries.length} items
-				</p>
-			{/if}
-
 			<div
+				style:padding-top={'calc(env(safe-area-inset-top) + 64px + 42px)'}
 				out:fade={{ duration: 200 }}
-				class="flex flex-1 gap-2 flex-col h-full pt-26 w-full pb-35"
+				class="flex flex-1 gap-2 flex-col w-full pt-[98px] pb-35"
 			>
 				{#each products.entries as product (product.id)}
 					{@const maybeCreation =
@@ -394,7 +418,8 @@
 	{#if O.isNone(viewModel.derived.maybeNonEmptySelected)}
 		<div
 			transition:fade={{ duration: 200 }}
-			class="bg-primary z-50 overflow-hidden text-background shadow-md shadow-on-background/30 fixed right-[16px] bottom-[20px] flex h-[96px] w-[96px] items-center justify-center rounded-4xl"
+			style:bottom={'calc(env(safe-area-inset-bottom, 0) + 21px)'}
+			class="bg-primary z-50 overflow-hidden text-background shadow-md shadow-on-background/30 fixed right-[16px] flex h-[96px] w-[96px] items-center justify-center rounded-4xl"
 		>
 			<Ripple
 				ontap={() => {

@@ -57,7 +57,7 @@ suspend fun getAllProductsWithTotal(helper: SQLiteOpenHelper): ProductsWithTotal
                     val index =
                         cursor.getColumnIndex(Schema.ProductExpiration.COLUMN_DATE)
                     if(index < 0) return@run null
-                    cursor.getLong(index)
+                    cursor.getLongOrNull(index)
                 }
 
                 list.add(
