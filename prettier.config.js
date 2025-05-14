@@ -2,32 +2,32 @@
 export default {
 	useTabs: true,
 	singleQuote: true,
-	trailingComma: 'all',
+	trailingComma: `all`,
 	semi: false,
-	printWidth: 50,
+	printWidth: 80,
 	plugins: [
-		'prettier-plugin-svelte',
-		'prettier-plugin-tailwindcss',
-		'@trivago/prettier-plugin-sort-imports',
+		`prettier-plugin-svelte`,
+		`prettier-plugin-tailwindcss`,
+		`@trivago/prettier-plugin-sort-imports`,
 	],
-	arrowParens: 'avoid',
+	arrowParens: `avoid`,
 	overrides: [
 		{
-			files: '*.svelte',
+			files: `*.svelte`,
 			options: {
-				parser: 'svelte',
+				parser: `svelte`,
 			},
 		},
 	],
 	importOrder: [
-		'^\\./\\$types$',
-		'^\\$lib/core',
-		'^\\$lib/domain',
-		'^\\$lib/app',
-		'^\\$lib/data',
-		'^\\$lib/',
-		'^[./]',
+		`^\\./\\$types$`,
+		`^\\$lib/core`,
+		`^\\$lib/domain`,
+		`^\\$lib/app`,
+		`^\\$lib/data`,
+		`^\\$lib/`,
+		`^[./]`,
 	],
 	importOrderSeparation: true,
 	importOrderSortSpecifiers: true,
-};
+}

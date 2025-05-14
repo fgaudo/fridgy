@@ -13,39 +13,21 @@ interface FridgySqlitePlugin {
 		}
 	}): Promise<unknown>
 
-	deleteProductsByIds(data: {
-		ids: readonly number[]
-	}): Promise<unknown>
+	deleteProductsByIds(data: { ids: readonly number[] }): Promise<unknown>
 }
 
-export class DbPlugin extends Eff.Service<DbPlugin>()(
-	'DbPlugin',
-	{
-		sync: () => {
-			const db =
-				registerPlugin<FridgySqlitePlugin>(
-					'FridgySqlitePlugin',
-				)
+export class DbPlugin extends Eff.Service<DbPlugin>()(`DbPlugin`, {
+	sync: () => {
+		const db = registerPlugin<FridgySqlitePlugin>(`FridgySqlitePlugin`)
 
-			return {
-				addProduct: (
-					...p: Parameters<typeof db.addProduct>
-				) =>
-					H.tryPromise(() => db.addProduct(...p)),
+		return {
+			addProduct: (...p: Parameters<typeof db.addProduct>) =>
+				H.tryPromise(() => db.addProduct(...p)),
 
-				deleteProductsByIds: (
-					...p: Parameters<
-						typeof db.deleteProductsByIds
-					>
-				) =>
-					H.tryPromise(() =>
-						db.deleteProductsByIds(...p),
-					),
+			deleteProductsByIds: (...p: Parameters<typeof db.deleteProductsByIds>) =>
+				H.tryPromise(() => db.deleteProductsByIds(...p)),
 
-				getAllProductsWithTotal: H.tryPromise(
-					db.getAllProductsWithTotal,
-				),
-			}
-		},
+			getAllProductsWithTotal: H.tryPromise(db.getAllProductsWithTotal),
+		}
 	},
-) {}
+}) {}

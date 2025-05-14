@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation'
 	import { App as CAP } from '@capacitor/app'
-	import Infinity from '@lucide/svelte/icons/infinity'
+	import Inf from '@lucide/svelte/icons/infinity'
 	import Info from '@lucide/svelte/icons/info'
 	import Menu from '@lucide/svelte/icons/menu'
 	import Plus from '@lucide/svelte/icons/plus'
@@ -25,17 +25,16 @@
 
 	const viewModel = createViewModel()
 
-	const startBackListener =
-		createCapacitorListener({
-			event: 'backButton',
-			cb: () => {
-				if (viewModel.state.isMenuOpen) {
-					viewModel.tasks.toggleMenu()
-				} else {
-					void CAP.exitApp()
-				}
-			},
-		})
+	const startBackListener = createCapacitorListener({
+		event: `backButton`,
+		cb: () => {
+			if (viewModel.state.isMenuOpen) {
+				viewModel.tasks.toggleMenu()
+			} else {
+				void CAP.exitApp()
+			}
+		},
+	})
 
 	onMount(() => {
 		startBackListener()
@@ -59,25 +58,21 @@
 				opacity: 1,
 				easing: expoIn,
 			}}
-			style:padding-top="env(safe-area-inset-top)"
-			style:padding-bottom="env(safe-area-inset-bottom)"
+			style:padding-top={`env(safe-area-inset-top)`}
+			style:padding-bottom={`env(safe-area-inset-bottom)`}
 			class="touch-none pointer-events-auto h-screen flex-col flex fixed bg-background z-999 rounded-r-2xl overflow-hidden w-64 will-change-transform"
 		>
-			<p class="font-stylish pt-8 pb-4 pl-4">
-				Fridgy
-			</p>
+			<p class="font-stylish pt-8 pb-4 pl-4">Fridgy</p>
 
 			<div class="w-full p-4 flex relative">
 				<Ripple
 					ontap={() => {
-						goto('/about')
+						goto(`/about`)
 					}}
 				></Ripple>
 				<Info />
 
-				<div class="ml-4 flex items-center">
-					About
-				</div>
+				<div class="ml-4 flex items-center">About</div>
 			</div>
 			<a
 				class="text-primary block w-full pl-2 pr-2 pt-2 pb-4 text-center underline items-end mt-auto"
@@ -103,30 +98,21 @@
 
 	<div class="fixed w-full z-50 top-0">
 		<div
-			style:padding-top={'env(safe-area-inset-top)'}
-			style:height={'calc(64px + env(safe-area-inset-top))'}
+			style:padding-top={`env(safe-area-inset-top)`}
+			style:height={`calc(64px + env(safe-area-inset-top))`}
 			class="bg-secondary shadow-secondary/40 flex w-full items-center shadow-md"
 		>
 			<div
 				class="ml-2 relative h-12 w-12 flex items-center justify-center rounded-full overflow-hidden"
 			>
 				{#if O.isSome(viewModel.derived.maybeNonEmptySelected)}
-					<div
-						class="absolute"
-						transition:fade={{ duration: 200 }}
-					>
-						<Ripple
-							ontap={viewModel.tasks
-								.clearSelected}
-						></Ripple>
+					<div class="absolute" transition:fade={{ duration: 200 }}>
+						<Ripple ontap={viewModel.tasks.clearSelected}></Ripple>
 
 						<X />
 					</div>
 				{:else}
-					<div
-						transition:fade={{ duration: 200 }}
-						class="absolute"
-					>
+					<div transition:fade={{ duration: 200 }} class="absolute">
 						<Ripple
 							color="var(--color-background)"
 							ontap={viewModel.tasks.toggleMenu}
@@ -136,9 +122,7 @@
 				{/if}
 			</div>
 
-			<div
-				class="font-stylish pl-2 text-2xl font-extrabold translate-y-[2px]"
-			>
+			<div class="font-stylish pl-2 text-2xl font-extrabold translate-y-[2px]">
 				Fridgy
 			</div>
 			<div class="grow"></div>
@@ -148,12 +132,8 @@
 					class="relative flex h-full items-center text-lg font-stylish translate-y-[2px]"
 				>
 					{#key viewModel.derived.maybeNonEmptySelected.value.size}
-						<div
-							class="absolute"
-							transition:fade={{ duration: 200 }}
-						>
-							{viewModel.derived
-								.maybeNonEmptySelected.value.size}
+						<div class="absolute" transition:fade={{ duration: 200 }}>
+							{viewModel.derived.maybeNonEmptySelected.value.size}
 						</div>
 					{/key}
 				</div>
@@ -162,17 +142,13 @@
 					class="ml-2 mr-2 relative h-12 w-12 flex items-center justify-center rounded-full overflow-hidden"
 					transition:fade={{ duration: 200 }}
 				>
-					<Ripple
-						ontap={viewModel.tasks.deleteSelected}
-					></Ripple>
+					<Ripple ontap={viewModel.tasks.deleteSelected}></Ripple>
 					<Trash2 />
 				</div>
 			{/if}
 		</div>
 		{#if O.isSome(viewModel.derived.maybeLoadedProducts)}
-			{@const products =
-				viewModel.derived.maybeLoadedProducts
-					.value}
+			{@const products = viewModel.derived.maybeLoadedProducts.value}
 
 			{#if products.entries.length > 0}
 				<p
@@ -204,32 +180,25 @@
 					<div
 						class="text-primary underline relative overflow-hidden rounded-full py-1 px-2"
 					>
-						<Ripple
-							ontap={viewModel.tasks.fetchList}
-						></Ripple>
+						<Ripple ontap={viewModel.tasks.fetchList}></Ripple>
 						Try again
 					</div>
 				</div>
 			</div>
 		{:else if O.isSome(viewModel.derived.maybeLoadedProducts)}
-			{@const products =
-				viewModel.derived.maybeLoadedProducts
-					.value}
+			{@const products = viewModel.derived.maybeLoadedProducts.value}
 
 			<div
-				style:padding-top={'calc(env(safe-area-inset-top) + 64px + 42px)'}
+				style:padding-top={`calc(env(safe-area-inset-top) + 64px + 42px)`}
 				out:fade={{ duration: 200 }}
 				class="flex flex-1 gap-2 flex-col w-full pt-[98px] pb-35"
 			>
 				{#each products.entries as product (product.id)}
-					{@const maybeCreation =
-						product.isCorrupt
-							? O.none()
-							: product.isValid
-								? O.some(product.creationDate)
-								: O.fromNullable(
-										product.maybeCreationDate,
-									)}
+					{@const maybeCreation = product.isCorrupt
+						? O.none()
+						: product.isValid
+							? O.some(product.creationDate)
+							: O.fromNullable(product.maybeCreationDate)}
 
 					{@const maybeName = product.isCorrupt
 						? O.fromNullable(product.maybeName)
@@ -237,73 +206,44 @@
 							? O.some(product.name)
 							: O.fromNullable(product.maybeName)}
 
-					{@const maybeExpirationDate =
-						product.isCorrupt
-							? O.none()
-							: O.fromNullable(
-									product.maybeExpirationDate,
-								)}
-					<div
-						out:fade={{ duration: 200 }}
-						animate:flip={{ duration: 250 }}
-					>
+					{@const maybeExpirationDate = product.isCorrupt
+						? O.none()
+						: O.fromNullable(product.maybeExpirationDate)}
+					<div out:fade={{ duration: 200 }} animate:flip={{ duration: 250 }}>
 						<div
 							class={[
-								'flex mx-2 relative transition-transform shadow-sm rounded-lg py-1 overflow-hidden',
-								!product.isCorrupt &&
-								product.isSelected
-									? 'bg-accent/10 scale-[102%]'
-									: 'bg-secondary/5',
+								`flex mx-2 relative transition-transform shadow-sm rounded-lg py-1 overflow-hidden`,
+								!product.isCorrupt && product.isSelected
+									? `bg-accent/10 scale-[102%]`
+									: `bg-secondary/5`,
 							]}
 						>
 							{#if products.selected.size > 0}
-								<Ripple
-									ontap={() =>
-										viewModel.tasks.toggleItem(
-											product,
-										)}
+								<Ripple ontap={() => viewModel.tasks.toggleItem(product)}
 								></Ripple>
 							{:else}
-								<Ripple
-									onhold={() =>
-										viewModel.tasks.toggleItem(
-											product,
-										)}
+								<Ripple onhold={() => viewModel.tasks.toggleItem(product)}
 								></Ripple>
 							{/if}
 							<div
 								class={[
-									'justify-between flex min-h-[60px] w-full gap-1 select-none items-center',
+									`justify-between flex min-h-[60px] w-full gap-1 select-none items-center`,
 								]}
 								style="content-visibility: 'auto'"
 							>
-								<div
-									class="p-2 h-full aspect-square"
-								>
+								<div class="p-2 h-full aspect-square">
 									<div
 										class="flex-col flex bg-secondary text-background shadow-xs rounded-full items-center justify-center text-center h-full aspect-square"
 									>
 										{#if O.isSome(maybeExpirationDate)}
-											<div
-												class="text-lg font-bold leading-4"
-											>
-												{format(
-													maybeExpirationDate.value,
-													'd',
-												)}
+											<div class="text-lg font-bold leading-4">
+												{format(maybeExpirationDate.value, `d`)}
 											</div>
-											<div
-												class="text-sm leading-4"
-											>
-												{format(
-													maybeExpirationDate.value,
-													'LLL',
-												)}
+											<div class="text-sm leading-4">
+												{format(maybeExpirationDate.value, `LLL`)}
 											</div>
 										{:else}
-											<Infinity
-												class="p-2 w-full h-full font-bold "
-											/>
+											<Inf class="p-2 w-full h-full font-bold " />
 										{/if}
 									</div>
 								</div>
@@ -324,25 +264,16 @@
 									{#if O.isNone(maybeCreation)}
 										No creation date
 									{:else if O.isSome(maybeExpirationDate) && maybeExpirationDate.value > viewModel.state.currentTimestamp}
-										{@const expiration =
-											maybeExpirationDate.value}
-										{@const creation =
-											maybeCreation.value}
+										{@const expiration = maybeExpirationDate.value}
+										{@const creation = maybeCreation.value}
 
-										{@const totalDuration =
-											expiration - creation}
+										{@const totalDuration = expiration - creation}
 										{@const remainingDuration =
-											expiration -
-											viewModel.state
-												.currentTimestamp}
-										{@const currentProgress =
-											remainingDuration /
-											totalDuration}
+											expiration - viewModel.state.currentTimestamp}
+										{@const currentProgress = remainingDuration / totalDuration}
 
 										{@const currentProgressOrZero =
-											totalDuration < 0
-												? 0
-												: currentProgress}
+											totalDuration < 0 ? 0 : currentProgress}
 
 										{@const color = `color-mix(in srgb, var(--color-secondary) ${currentProgressOrZero * 100}%, var(--color-primary) ${(1 - currentProgressOrZero) * 100}%)`}
 
@@ -353,10 +284,7 @@
 											<div
 												class="bg-primary h-full"
 												style:background-color={color}
-												style:width={`${(
-													currentProgressOrZero *
-													100
-												).toString()}%`}
+												style:width={`${(currentProgressOrZero * 100).toString()}%`}
 											></div>
 										</div>
 									{:else if O.isSome(maybeExpirationDate)}
@@ -373,18 +301,16 @@
 									{#if O.isSome(maybeExpirationDate)}
 										<div
 											class={[
-												'text-primary duration-fade absolute text-sm',
+												`text-primary duration-fade absolute text-sm`,
 												{
 													'text-primary font-bold':
 														maybeExpirationDate.value <
-														viewModel.state
-															.currentTimestamp,
+														viewModel.state.currentTimestamp,
 												},
 											]}
 										>
 											{Utils.formatRemainingTime(
-												viewModel.state
-													.currentTimestamp,
+												viewModel.state.currentTimestamp,
 												maybeExpirationDate.value,
 											)}
 										</div>
@@ -401,12 +327,11 @@
 				class="font-stylish fixed right-0 bottom-[150px] left-0 flex flex-col items-end duration-[fade]"
 			>
 				<div class="w-full p-[20px] text-center">
-					Uh-oh, your fridge is looking a little
-					empty! <br />
+					Uh-oh, your fridge is looking a little empty! <br />
 					Let’s fill it up!
 				</div>
 				<div
-					style:filter={'invert(16%) sepia(2%) saturate(24%) hue-rotate(336deg) brightness(97%) contrast(53%)'}
+					style:filter={`invert(16%) sepia(2%) saturate(24%) hue-rotate(336deg) brightness(97%) contrast(53%)`}
 					style:background-image={`url("${imgUrl}")`}
 					class="relative top-[30px] right-[70px] h-[160px] w-[160px] bg-contain bg-no-repeat"
 				></div>
@@ -416,12 +341,12 @@
 	{#if O.isNone(viewModel.derived.maybeNonEmptySelected)}
 		<div
 			transition:fade={{ duration: 200 }}
-			style:bottom={'calc(env(safe-area-inset-bottom, 0) + 21px)'}
+			style:bottom={`calc(env(safe-area-inset-bottom, 0) + 21px)`}
 			class="bg-primary z-50 overflow-hidden text-background shadow-md shadow-on-background/30 fixed right-[16px] flex h-[96px] w-[96px] items-center justify-center rounded-4xl"
 		>
 			<Ripple
 				ontap={() => {
-					goto('/add-product')
+					goto(`/add-product`)
 				}}
 			></Ripple>
 			<Plus size="36" />

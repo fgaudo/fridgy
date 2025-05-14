@@ -1,11 +1,7 @@
 <script lang="ts">
 	import '@fontsource-variable/comfortaa/index.css'
 	import '@fontsource-variable/roboto-flex/index.css'
-	import {
-		onDestroy,
-		onMount,
-		setContext,
-	} from 'svelte'
+	import { onDestroy, onMount } from 'svelte'
 	import { fade } from 'svelte/transition'
 
 	import { Eff, MR } from '$lib/core/imports.ts'
@@ -26,10 +22,6 @@
 	let areFontsLoaded = $state(false)
 
 	const runEffect = Utils.createRunEffect(runtime)
-
-	onMount(() => {
-		setContext('runtime', runEffect)
-	})
 
 	const awaitFonts = () =>
 		runEffect(

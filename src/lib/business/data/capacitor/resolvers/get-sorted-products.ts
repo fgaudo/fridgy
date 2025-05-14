@@ -20,24 +20,16 @@ const ProductsListSchema = Sc.Struct({
 	total: Sc.Number,
 	products: Sc.Array(
 		Sc.Struct({
-			id: Sc.OptionFromUndefinedOr(
-				Sc.Unknown,
-			).annotations({
+			id: Sc.OptionFromUndefinedOr(Sc.Unknown).annotations({
 				decodingFallback: H.fallback(O.none()),
 			}),
-			name: Sc.OptionFromUndefinedOr(
-				Sc.String,
-			).annotations({
+			name: Sc.OptionFromUndefinedOr(Sc.String).annotations({
 				decodingFallback: H.fallback(O.none()),
 			}),
-			expirationDate: Sc.OptionFromUndefinedOr(
-				Sc.Number,
-			).annotations({
+			expirationDate: Sc.OptionFromUndefinedOr(Sc.Number).annotations({
 				decodingFallback: H.fallback(O.none()),
 			}),
-			creationDate: Sc.OptionFromUndefinedOr(
-				Sc.Number,
-			).annotations({
+			creationDate: Sc.OptionFromUndefinedOr(Sc.Number).annotations({
 				decodingFallback: H.fallback(O.none()),
 			}),
 		}).annotations({
@@ -54,36 +46,27 @@ const ProductsListSchema = Sc.Struct({
 export const query = L.effect(
 	GetSortedProducts.Resolver,
 	Eff.gen(function* () {
-		const { getAllProductsWithTotal } =
-			yield* DbPlugin
+		const { getAllProductsWithTotal } = yield* DbPlugin
 
 		return RR.fromEffect(() =>
 			Eff.gen(function* () {
-				const result = yield* pipe(
-					getAllProductsWithTotal,
-					Eff.either,
-				)
+				const result = yield* pipe(getAllProductsWithTotal, Eff.either)
 
 				if (E.isLeft(result)) {
 					yield* Eff.logError(result.left.error)
 					return yield* new GetSortedProducts.FetchingFailed()
 				}
 
-				const decodeResult =
-					yield* Sc.decodeUnknown(
-						ProductsListSchema,
-					)(result.right).pipe(Eff.either)
+				const decodeResult = yield* Sc.decodeUnknown(ProductsListSchema)(
+					result.right,
+				).pipe(Eff.either)
 
 				if (E.isLeft(decodeResult)) {
-					yield* Eff.logError(
-						decodeResult.left.message,
-					)
+					yield* Eff.logError(decodeResult.left.message)
 					return yield* new GetSortedProducts.InvalidDataReceived()
 				}
 
-				const totalResult = NNInt.fromNumber(
-					decodeResult.right.total,
-				)
+				const totalResult = NNInt.fromNumber(decodeResult.right.total)
 
 				if (O.isNone(totalResult)) {
 					return yield* new GetSortedProducts.InvalidDataReceived()
@@ -92,42 +75,27 @@ export const query = L.effect(
 				const total = totalResult.value
 
 				const products = yield* Eff.all(
-					decodeResult.right.products.map(
-						product =>
-							Eff.gen(function* () {
-								return {
-									maybeId: yield* O.match(
-										product.id,
-										{
-											onNone: () =>
-												Eff.succeed(
-													O.none<string>(),
-												),
-											onSome: id =>
-												Eff.option(
-													Eff.try(() =>
-														JSON.stringify(id),
-													),
-												),
-										},
-									),
+					decodeResult.right.products.map(product =>
+						Eff.gen(function* () {
+							return {
+								maybeId: yield* O.match(product.id, {
+									onNone: () => Eff.succeed(O.none<string>()),
+									onSome: id => Eff.option(Eff.try(() => JSON.stringify(id))),
+								}),
 
-									maybeName: pipe(
-										product.name,
-										O.flatMap(NETS.fromString),
-									),
+								maybeName: pipe(product.name, O.flatMap(NETS.fromString)),
 
-									maybeExpirationDate: pipe(
-										product.expirationDate,
-										O.flatMap(Int.fromNumber),
-									),
+								maybeExpirationDate: pipe(
+									product.expirationDate,
+									O.flatMap(Int.fromNumber),
+								),
 
-									maybeCreationDate: pipe(
-										product.creationDate,
-										O.flatMap(Int.fromNumber),
-									),
-								} satisfies GetSortedProducts.ProductDTO
-							}),
+								maybeCreationDate: pipe(
+									product.creationDate,
+									O.flatMap(Int.fromNumber),
+								),
+							} satisfies GetSortedProducts.ProductDTO
+						}),
 					),
 				)
 

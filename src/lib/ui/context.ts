@@ -10,9 +10,7 @@ export type GlobalContext = {
 	runtime: MR.ManagedRuntime<UseCases, never>
 }
 
-export function setGlobalContext(
-	p: GlobalContext,
-): void {
+export function setGlobalContext(p: GlobalContext): void {
 	setContext(unique, p)
 }
 

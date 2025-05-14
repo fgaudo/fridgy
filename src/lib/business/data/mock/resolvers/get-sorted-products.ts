@@ -18,28 +18,19 @@ import { Config } from '../config.ts'
 import { Db } from '../db.ts'
 
 const ord = Ord.make(
-	(
-		p1: GetSortedProducts.ProductDTO,
-		p2: GetSortedProducts.ProductDTO,
-	) => {
+	(p1: GetSortedProducts.ProductDTO, p2: GetSortedProducts.ProductDTO) => {
 		return Ord.combineAll([
 			pipe(
 				Ord.number,
 				Ord.reverse,
 				O.getOrder,
 				Ord.reverse,
-				Ord.mapInput(
-					(product: typeof p1) =>
-						product.maybeExpirationDate,
-				),
+				Ord.mapInput((product: typeof p1) => product.maybeExpirationDate),
 			),
 			pipe(
 				Ord.string,
 				O.getOrder,
-				Ord.mapInput(
-					(product: typeof p1) =>
-						product.maybeName,
-				),
+				Ord.mapInput((product: typeof p1) => product.maybeName),
 			),
 		])(p1, p2)
 	},
@@ -57,14 +48,11 @@ export const query = L.effect(
 				if (withErrors && Math.random() < 0.5)
 					return yield* new GetSortedProducts.InvalidDataReceived()
 
-				const map = yield* Ref.get(db).pipe(
-					Eff.map(({ map }) => map),
-				)
+				const map = yield* Ref.get(db).pipe(Eff.map(({ map }) => map))
 
 				const total = map.pipe(HM.size)
 
-				const products: GetSortedProducts.ProductDTO[] =
-					map.pipe(HM.toValues)
+				const products: GetSortedProducts.ProductDTO[] = map.pipe(HM.toValues)
 
 				return {
 					total: NNInt.unsafeFromNumber(total),

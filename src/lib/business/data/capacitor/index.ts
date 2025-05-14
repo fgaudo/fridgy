@@ -5,17 +5,9 @@ import { command as addProduct } from './resolvers/add-product.ts'
 import { command as deleteProductById } from './resolvers/delete-products-by-ids.ts'
 import { query as getSortedProducts } from './resolvers/get-sorted-products.ts'
 
-export {
-	addProduct,
-	deleteProductById,
-	getSortedProducts,
-}
+export { addProduct, deleteProductById, getSortedProducts }
 
 export const allImplementations = L.provide(
-	L.mergeAll(
-		addProduct,
-		deleteProductById,
-		getSortedProducts,
-	),
+	L.mergeAll(addProduct, deleteProductById, getSortedProducts),
 	DbPlugin.Default,
 )

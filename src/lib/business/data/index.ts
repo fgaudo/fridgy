@@ -6,10 +6,7 @@ import { Deps } from './deps.ts'
 import { logger } from './logging/index.ts'
 import { allImplementations as mockImplementations } from './mock/index.ts'
 
-const base = pipe(
-	useCasesNoDeps,
-	L.provide(logger),
-)
+const base = pipe(useCasesNoDeps, L.provide(logger))
 
 export const capacitor = pipe(
 	base,

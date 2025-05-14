@@ -1,12 +1,6 @@
 import * as RR from 'effect/RequestResolver'
 
-import {
-	E,
-	Eff,
-	L,
-	LL,
-	O,
-} from '$lib/core/imports.ts'
+import { E, Eff, L, LL, O } from '$lib/core/imports.ts'
 
 import { AddProduct } from '$lib/business/app/operations.ts'
 
@@ -21,17 +15,14 @@ export const command = L.effect(
 
 		return RR.fromEffect(product =>
 			Eff.gen(function* () {
-				const maybeExpirationDate =
-					product.maybeExpirationDate
+				const maybeExpirationDate = product.maybeExpirationDate
 
 				const result = yield* Eff.either(
 					addProduct({
 						product: {
 							name: product.name,
 							creationDate: product.creationDate,
-							expirationDate: O.getOrUndefined(
-								maybeExpirationDate,
-							),
+							expirationDate: O.getOrUndefined(maybeExpirationDate),
 						},
 					}),
 				)
@@ -41,10 +32,7 @@ export const command = L.effect(
 					return yield* new AddProduct.OperationFailed()
 				}
 
-				yield* log(
-					LL.Debug,
-					'No errors adding the product',
-				)
+				yield* log(LL.Debug, `No errors adding the product`)
 			}),
 		)
 	}),

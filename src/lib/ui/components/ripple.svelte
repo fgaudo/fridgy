@@ -24,11 +24,7 @@
 		isDown: false,
 	})
 
-	let {
-		ontap,
-		onhold,
-		color = 'var(--color-secondary)',
-	}: Props = $props()
+	let { ontap, onhold, color = `var(--color-secondary)` }: Props = $props()
 </script>
 
 <button

@@ -6,17 +6,13 @@ import { Eff } from '$lib/core/imports.ts'
 
 export const fallback: <A>(
 	def: A,
-) => (
-	issue: ParseIssue,
-) => Eff.Effect<A, ParseIssue> = def => () =>
+) => (issue: ParseIssue) => Eff.Effect<A, ParseIssue> = def => () =>
 	Eff.gen(function* () {
 		return yield* Eff.succeed(def)
 	})
 
 export const tryPromise = <A>(
-	evaluate: (
-		signal?: AbortSignal,
-	) => PromiseLike<A>,
+	evaluate: (signal?: AbortSignal) => PromiseLike<A>,
 ): Eff.Effect<A, UnknownException> =>
 	Eff.async((resolve, signal) => {
 		evaluate(signal).then(

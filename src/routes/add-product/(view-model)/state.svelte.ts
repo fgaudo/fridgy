@@ -1,9 +1,4 @@
-import {
-	Int,
-	NETS,
-	O,
-	pipe,
-} from '$lib/core/imports.ts'
+import { Int, NETS, O, pipe } from '$lib/core/imports.ts'
 
 export type State = {
 	name: string
@@ -11,50 +6,37 @@ export type State = {
 	currentDate: number
 	isAdding: boolean
 	isLoading: boolean
-	toastMessage:
-		| { message: string; id: symbol }
-		| undefined
+	toastMessage: { message: string; id: symbol } | undefined
 	hasInteractedWithName: boolean
 	spinnerId: symbol | undefined
 }
 
-export type StateContext = ReturnType<
-	typeof createStateContext
->
+export type StateContext = ReturnType<typeof createStateContext>
 
 export function createStateContext() {
 	const state = $state<State>({
 		currentDate: Date.now(),
 		isAdding: false,
 		isLoading: false,
-		name: '',
+		name: ``,
 		expirationDate: undefined,
 		toastMessage: undefined,
 		spinnerId: undefined,
 		hasInteractedWithName: false,
 	})
 
-	const maybeName = $derived(
-		NETS.fromString(state.name),
-	)
+	const maybeName = $derived(NETS.fromString(state.name))
 
-	const isNameValid = $derived(
-		O.isSome(maybeName),
-	)
+	const isNameValid = $derived(O.isSome(maybeName))
 
-	const isSubmittable = $derived(
-		isNameValid && !state.isAdding,
-	)
+	const isSubmittable = $derived(isNameValid && !state.isAdding)
 
 	const isNameValidOrUntouched = $derived(
 		isNameValid || !state.hasInteractedWithName,
 	)
 
 	const maybeExpirationDate = $derived(
-		pipe(
-			O.fromNullable(state.expirationDate),
-			O.flatMap(Int.fromNumber),
-		),
+		pipe(O.fromNullable(state.expirationDate), O.flatMap(Int.fromNumber)),
 	)
 
 	const maybeToastMessage = $derived(
@@ -66,17 +48,13 @@ export function createStateContext() {
 	)
 
 	const formattedCurrentDate = $derived(
-		new Date(state.currentDate)
-			.toISOString()
-			.substring(0, 10),
+		new Date(state.currentDate).toISOString().substring(0, 10),
 	)
 
 	const formattedExpirationDateOrEmpty = $derived(
 		state.expirationDate
-			? new Date(state.expirationDate)
-					.toISOString()
-					.substring(0, 10)
-			: '',
+			? new Date(state.expirationDate).toISOString().substring(0, 10)
+			: ``,
 	)
 
 	return {

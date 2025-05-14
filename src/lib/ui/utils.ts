@@ -1,11 +1,8 @@
 import { differenceInDays } from 'date-fns'
 
-export const formatRemainingTime = (
-	from: number,
-	to: number,
-): string => {
+export const formatRemainingTime = (from: number, to: number): string => {
 	if (to - from <= 0) {
-		return 'EXP'
+		return `EXP`
 	}
 
 	const days = differenceInDays(to, from)

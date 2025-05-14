@@ -1,9 +1,4 @@
-import {
-	Eff,
-	Ref,
-	flow,
-	pipe,
-} from '$lib/core/imports.ts'
+import { Eff, Ref, flow, pipe } from '$lib/core/imports.ts'
 
 import {
 	createDispatcherWithLogging,
@@ -12,10 +7,7 @@ import {
 import { getGlobalContext } from '$lib/ui/context.ts'
 
 import { createStateContext } from './state.svelte.ts'
-import {
-	Message,
-	update,
-} from './update.svelte.ts'
+import { Message, update } from './update.svelte.ts'
 
 export function createViewModel() {
 	const context = createStateContext()
@@ -37,19 +29,14 @@ export function createViewModel() {
 		tasks: {
 			addProduct: () =>
 				pipe(
-					Eff.log(
-						'Received addProduct event from the ui',
-					),
-					Eff.andThen(
-						Eff.succeed(Message.AddProduct()),
-					),
+					Eff.log(`Received addProduct event from the ui`),
+					Eff.andThen(Eff.succeed(Message.AddProduct())),
 					unsafeDispatch,
 				),
 			setExpirationDate: (value: string) =>
 				pipe(
 					Eff.log(
-						'Received setExpirationDate event from the ui with value ' +
-							value,
+						`Received setExpirationDate event from the ui with value ` + value,
 					),
 					Eff.andThen(
 						Eff.succeed(
@@ -63,26 +50,15 @@ export function createViewModel() {
 
 			setName: (name: string) =>
 				pipe(
-					Eff.log(
-						'Received setName event from the ui with name ' +
-							name,
-					),
-					Eff.andThen(
-						Eff.succeed(
-							Message.SetName({ name }),
-						),
-					),
+					Eff.log(`Received setName event from the ui with name ` + name),
+					Eff.andThen(Eff.succeed(Message.SetName({ name }))),
 					unsafeDispatch,
 				),
 
 			setNameInteracted: () =>
 				pipe(
-					Eff.log(
-						'Received setNameInteracted event from the ui',
-					),
-					Eff.andThen(
-						Message.SetNameInteracted(),
-					),
+					Eff.log(`Received setNameInteracted event from the ui`),
+					Eff.andThen(Message.SetNameInteracted()),
 					unsafeDispatch,
 				),
 		},

@@ -1,12 +1,6 @@
 import { format } from 'effect/Inspectable'
 
-import {
-	Cl,
-	Eff,
-	Int,
-	NETS,
-	O,
-} from '$lib/core/imports.ts'
+import { Cl, Eff, Int, NETS, O } from '$lib/core/imports.ts'
 import { withLayerLogging } from '$lib/core/logging.ts'
 
 import { AddProduct as AddProductOperation } from '$lib/business/app/operations'
@@ -18,41 +12,31 @@ export interface ProductDTO {
 }
 
 export class AddProduct extends Eff.Service<AddProduct>()(
-	'app/useCases/AddProduct',
+	`app/useCases/AddProduct`,
 	{
 		effect: Eff.gen(function* () {
-			const addProductResolver =
-				yield* AddProductOperation.Resolver
+			const addProductResolver = yield* AddProductOperation.Resolver
 
 			return (productData: ProductDTO) =>
 				Eff.gen(function* () {
-					yield* Eff.logInfo(
-						`Requested to add product "${productData.name}"`,
-					)
+					yield* Eff.logInfo(`Requested to add product "${productData.name}"`)
 
-					const timestamp = Int.unsafeFromNumber(
-						yield* Cl.currentTimeMillis,
-					)
+					const timestamp = Int.unsafeFromNumber(yield* Cl.currentTimeMillis)
 
 					const product = P.createProduct({
 						name: productData.name,
-						maybeExpirationDate:
-							productData.maybeExpirationDate,
+						maybeExpirationDate: productData.maybeExpirationDate,
 						creationDate: timestamp,
 					})
 
 					if (O.isNone(product)) {
-						yield* Eff.logError(
-							'Attempted to add an invalid product.',
-						).pipe(
+						yield* Eff.logError(`Attempted to add an invalid product.`).pipe(
 							Eff.annotateLogs({
 								product: format(productData),
 							}),
 						)
 
-						return yield* Eff.fail(
-							'Product is not valid',
-						)
+						return yield* Eff.fail(`Product is not valid`)
 					}
 
 					yield* Eff.logInfo(
@@ -62,21 +46,14 @@ export class AddProduct extends Eff.Service<AddProduct>()(
 					yield* Eff.request(
 						AddProductOperation.Request({
 							name: P.name(product.value),
-							maybeExpirationDate:
-								P.maybeExpirationDate(
-									product.value,
-								),
-							creationDate: P.creationDate(
-								product.value,
-							),
+							maybeExpirationDate: P.maybeExpirationDate(product.value),
+							creationDate: P.creationDate(product.value),
 						}),
 						addProductResolver,
 					)
 
-					yield* Eff.logInfo(
-						'Successfully added a product',
-					)
-				}).pipe(withLayerLogging('A'))
+					yield* Eff.logInfo(`Successfully added a product`)
+				}).pipe(withLayerLogging(`A`))
 		}),
 	},
 ) {}

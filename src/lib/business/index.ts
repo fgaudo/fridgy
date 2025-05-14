@@ -9,5 +9,6 @@ export {
 	GetSortedProducts,
 } from './app/use-cases.ts'
 
-export const useCases: L.Layer<UseCases> =
-	import.meta.env.PROD ? capacitor : mock
+export const useCases: L.Layer<UseCases> = import.meta.env.PROD
+	? capacitor
+	: mock

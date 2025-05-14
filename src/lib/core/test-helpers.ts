@@ -1,9 +1,4 @@
-import {
-	Cause,
-	Exit,
-	FastCheck,
-	flow,
-} from 'effect'
+import { Cause, Exit, FastCheck, flow } from 'effect'
 import { assert } from 'vitest'
 
 import { Int, M, NETS, O } from './imports.ts'
@@ -16,15 +11,14 @@ export function assertExitIsFailure<A, E>(
 	exit: Exit.Exit<A, E>,
 ): asserts exit is Exit.Failure<A, E> {
 	if (Exit.isSuccess(exit)) {
-		assert(false, 'Exit is a success')
+		assert(false, `Exit is a success`)
 	}
 
 	if (
 		Exit.isFailure(exit) &&
-		(Cause.isDie(exit.cause) ||
-			Cause.isDieType(exit.cause))
+		(Cause.isDie(exit.cause) || Cause.isDieType(exit.cause))
 	) {
-		assert(false, 'Exit is a Die')
+		assert(false, `Exit is a Die`)
 	}
 }
 
@@ -32,7 +26,7 @@ export function assertExitIsDie<A, E>(
 	exit: Exit.Exit<A, E>,
 ): asserts exit is Exit.Failure<A, E> {
 	if (Exit.isSuccess(exit)) {
-		assert(false, 'Exit is a success')
+		assert(false, `Exit is a success`)
 	}
 
 	if (
@@ -40,7 +34,7 @@ export function assertExitIsDie<A, E>(
 		!Cause.isDie(exit.cause) &&
 		!Cause.isDieType(exit.cause)
 	) {
-		assert(false, 'Exit is not a Die')
+		assert(false, `Exit is not a Die`)
 	}
 }
 
@@ -53,112 +47,90 @@ export function assertExitIsSuccess<A, E>(
 }
 
 export const maybeInteger = fc
-	.constantFrom('some' as const, 'none' as const)
+	.constantFrom(`some` as const, `none` as const)
 	.chain(
 		flow(
 			M.value,
-			M.when('none', () => fc.constant(O.none())),
-			M.when('some', () =>
-				fc
-					.integer()
-					.map(Int.unsafeFromNumber)
-					.map(O.some),
-			),
+			M.when(`none`, () => fc.constant(O.none())),
+			M.when(`some`, () => fc.integer().map(Int.unsafeFromNumber).map(O.some)),
 			M.exhaustive,
 		),
 	)
 
-export const integer = fc
-	.integer()
-	.map(Int.unsafe_fromNumber)
+export const integer = fc.integer().map(Int.unsafe_fromNumber)
 
-export const nonBlankString =
-	fc.stringMatching(/\S/)
+export const nonBlankString = fc.stringMatching(/\S/)
 
-export const blankString =
-	fc.stringMatching(/^\s*$/)
+export const blankString = fc.stringMatching(/^\s*$/)
 
 export const string = fc
-	.constantFrom(
-		'blank' as const,
-		'non-blank' as const,
-		'empty' as const,
-	)
+	.constantFrom(`blank` as const, `non-blank` as const, `empty` as const)
 	.chain(
 		flow(
 			M.value,
-			M.when('blank', () => blankString),
-			M.when('empty', () => fc.constant('')),
-			M.when('non-blank', () => nonBlankString),
+			M.when(`blank`, () => blankString),
+			M.when(`empty`, () => fc.constant(``)),
+			M.when(`non-blank`, () => nonBlankString),
 			M.exhaustive,
 		),
 	)
 
 export const maybeString = fc
-	.constantFrom('some' as const, 'none' as const)
+	.constantFrom(`some` as const, `none` as const)
 	.chain(
 		flow(
 			M.value,
-			M.when('some', () => string.map(O.some)),
-			M.when('none', () => fc.constant(O.none())),
+			M.when(`some`, () => string.map(O.some)),
+			M.when(`none`, () => fc.constant(O.none())),
 			M.exhaustive,
 		),
 	)
 
-export const nonEmptyTrimmedString =
-	nonBlankString.map(NETS.unsafeFromString)
+export const nonEmptyTrimmedString = nonBlankString.map(NETS.unsafeFromString)
 
 export const maybeNonEmptyTrimmedString = fc
-	.constantFrom('some' as const, 'none' as const)
+	.constantFrom(`some` as const, `none` as const)
 	.chain(
 		flow(
 			M.value,
-			M.when('some', () =>
-				nonEmptyTrimmedString.map(O.some),
-			),
-			M.when('none', () => fc.constant(O.none())),
+			M.when(`some`, () => nonEmptyTrimmedString.map(O.some)),
+			M.when(`none`, () => fc.constant(O.none())),
 			M.exhaustive,
 		),
 	)
 
 export const stringOrUndefined = fc
 	.constantFrom(
-		'blank' as const,
-		'non-blank' as const,
-		'empty' as const,
-		'undefined' as const,
+		`blank` as const,
+		`non-blank` as const,
+		`empty` as const,
+		`undefined` as const,
 	)
 	.chain(
 		flow(
 			M.value,
-			M.when('undefined', () =>
-				fc.constant(undefined),
-			),
-			M.when('blank', () => blankString),
-			M.when('empty', () => fc.constant('')),
-			M.when('non-blank', () => nonBlankString),
+			M.when(`undefined`, () => fc.constant(undefined)),
+			M.when(`blank`, () => blankString),
+			M.when(`empty`, () => fc.constant(``)),
+			M.when(`non-blank`, () => nonBlankString),
 			M.exhaustive,
 		),
 	)
 
 export const nonInteger = fc
 	.constantFrom(
-		'double' as const,
-		'NaN' as const,
-		'Infinity' as const,
-		'-Infinity' as const,
+		`double` as const,
+		`NaN` as const,
+		`Infinity` as const,
+		`-Infinity` as const,
 	)
 	.chain(
 		flow(
 			M.value,
-			M.when('-Infinity', () =>
-				fc.constant(-Infinity),
-			),
-			M.when('Infinity', () =>
-				fc.constant(Infinity),
-			),
-			M.when('NaN', () => fc.constant(NaN)),
-			M.when('double', () =>
+			M.when(`-Infinity`, () => fc.constant(-Infinity)),
+			M.when(`Infinity`, () => fc.constant(Infinity)),
+			M.when(`NaN`, () => fc.constant(NaN)),
+			M.when(`double`, () =>
 				fc.double({
 					noDefaultInfinity: true,
 					noNaN: true,
@@ -171,66 +143,54 @@ export const nonInteger = fc
 
 export const nonIntegerOrUndefined = fc
 	.constantFrom(
-		'double' as const,
-		'NaN' as const,
-		'Infinity' as const,
-		'-Infinity' as const,
-		'undefined' as const,
+		`double` as const,
+		`NaN` as const,
+		`Infinity` as const,
+		`-Infinity` as const,
+		`undefined` as const,
 	)
 	.chain(
 		flow(
 			M.value,
-			M.when('-Infinity', () =>
-				fc.constant(-Infinity),
-			),
-			M.when('Infinity', () =>
-				fc.constant(Infinity),
-			),
-			M.when('NaN', () => fc.constant(NaN)),
-			M.when('double', () =>
+			M.when(`-Infinity`, () => fc.constant(-Infinity)),
+			M.when(`Infinity`, () => fc.constant(Infinity)),
+			M.when(`NaN`, () => fc.constant(NaN)),
+			M.when(`double`, () =>
 				fc.double({
 					noDefaultInfinity: true,
 					noNaN: true,
 					noInteger: true,
 				}),
 			),
-			M.when('undefined', () =>
-				fc.constant(undefined),
-			),
+			M.when(`undefined`, () => fc.constant(undefined)),
 			M.exhaustive,
 		),
 	)
 
 export const numberOrUndefined = fc
 	.constantFrom(
-		'integer' as const,
-		'double' as const,
-		'NaN' as const,
-		'Infinity' as const,
-		'-Infinity' as const,
-		'undefined' as const,
+		`integer` as const,
+		`double` as const,
+		`NaN` as const,
+		`Infinity` as const,
+		`-Infinity` as const,
+		`undefined` as const,
 	)
 	.chain(
 		flow(
 			M.value,
-			M.when('-Infinity', () =>
-				fc.constant(-Infinity),
-			),
-			M.when('Infinity', () =>
-				fc.constant(-Infinity),
-			),
-			M.when('NaN', () => fc.constant(NaN)),
-			M.when('double', () =>
+			M.when(`-Infinity`, () => fc.constant(-Infinity)),
+			M.when(`Infinity`, () => fc.constant(-Infinity)),
+			M.when(`NaN`, () => fc.constant(NaN)),
+			M.when(`double`, () =>
 				fc.double({
 					noDefaultInfinity: true,
 					noNaN: true,
 					noInteger: true,
 				}),
 			),
-			M.when('integer', () => fc.integer()),
-			M.when('undefined', () =>
-				fc.constant(undefined),
-			),
+			M.when(`integer`, () => fc.integer()),
+			M.when(`undefined`, () => fc.constant(undefined)),
 			M.exhaustive,
 		),
 	)

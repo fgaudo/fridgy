@@ -1,8 +1,4 @@
-import {
-	describe,
-	effect,
-	layer,
-} from '@effect/vitest'
+import { describe, effect, layer } from '@effect/vitest'
 
 import { Cl, Eff, L } from '$lib/core/imports.ts'
 import * as H from '$lib/core/test-helpers.ts'
@@ -11,9 +7,9 @@ import { AddProduct as Query } from '$lib/business/app/operations.ts'
 
 import * as Usecase from './add-product.ts'
 
-describe('Add product', () => {
+describe(`Add product`, () => {
 	effect.prop(
-		'Should just work',
+		`Should just work`,
 		{
 			name: H.nonEmptyTrimmedString,
 			expirationDate: H.maybeInteger,
@@ -53,13 +49,11 @@ describe('Add product', () => {
 	layer(
 		L.provide(
 			Usecase.useCase,
-			L.succeed(Query.AddProduct, () =>
-				Eff.fail(undefined),
-			),
+			L.succeed(Query.AddProduct, () => Eff.fail(undefined)),
 		),
 	)(({ effect }) => {
 		effect.prop(
-			'Should return error',
+			`Should return error`,
 			{
 				name: H.nonEmptyTrimmedString,
 				expirationDate: H.maybeInteger,

@@ -1,8 +1,4 @@
-import {
-	Int,
-	NETS,
-	O,
-} from '$lib/core/imports.ts'
+import { Int, NETS, O } from '$lib/core/imports.ts'
 
 const productSymbol: unique symbol = Symbol()
 
@@ -18,11 +14,7 @@ export const createProduct: (f: {
 	name: NETS.NonEmptyTrimmedString
 	creationDate: Int.Integer
 	maybeExpirationDate: O.Option<Int.Integer>
-}) => O.Option<Product> = ({
-	name,
-	creationDate,
-	maybeExpirationDate,
-}) =>
+}) => O.Option<Product> = ({ name, creationDate, maybeExpirationDate }) =>
 	O.some({
 		[productSymbol]: {
 			name,
@@ -31,12 +23,10 @@ export const createProduct: (f: {
 		},
 	})
 
-export const name = (product: Product) =>
-	product[productSymbol].name
+export const name = (product: Product) => product[productSymbol].name
 
-export const maybeExpirationDate = (
-	product: Product,
-) => product[productSymbol].maybeExpirationDate
+export const maybeExpirationDate = (product: Product) =>
+	product[productSymbol].maybeExpirationDate
 
 export const creationDate = (product: Product) =>
 	product[productSymbol].creationDate

@@ -27,9 +27,8 @@ export type ProductViewModel =
 			maybeName: string | undefined
 	  }
 
-export type FetchId = B.Branded<symbol, 'FetchId'>
-export const FetchId = () =>
-	B.nominal<FetchId>()(Symbol())
+export type FetchId = B.Branded<symbol, `FetchId`>
+export const FetchId = () => B.nominal<FetchId>()(Symbol())
 
 export type State = {
 	isMenuOpen: boolean
@@ -48,13 +47,9 @@ export type State = {
 		| undefined
 }
 
-export type StateContext = ReturnType<
-	typeof createStateContext
->
+export type StateContext = ReturnType<typeof createStateContext>
 
-export function hasProducts(
-	state: State,
-): state is State & {
+export function hasProducts(state: State): state is State & {
 	products: {
 		selectedProducts: SvelteSet<string>
 		entries: ProductViewModel[]
@@ -81,24 +76,18 @@ export function createStateContext() {
 	)
 
 	const maybeNonEmptySelected = $derived(
-		O.fromNullable(state.products?.selected).pipe(
-			O.filter(s => s.size > 0),
-		),
+		O.fromNullable(state.products?.selected).pipe(O.filter(s => s.size > 0)),
 	)
 
 	const refreshTimeListenersEnabled = $derived(
 		state.products !== undefined &&
 			state.products.entries.findIndex(
-				e =>
-					!e.isCorrupt &&
-					e.maybeExpirationDate !== undefined,
+				e => !e.isCorrupt && e.maybeExpirationDate !== undefined,
 			) >= 0,
 	)
 
 	const maybeLoadedNonEmptyProducts = $derived(
-		O.fromNullable(state.products).pipe(
-			O.filter(p => p.entries.length > 0),
-		),
+		O.fromNullable(state.products).pipe(O.filter(p => p.entries.length > 0)),
 	)
 
 	return {

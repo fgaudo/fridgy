@@ -1,6 +1,6 @@
 import { B } from '../imports.ts'
 
-export type Integer = B.Branded<number, 'Integer'>
+export type Integer = B.Branded<number, `Integer`>
 
 /** @internal */
 export const Integer = B.refined<Integer>(

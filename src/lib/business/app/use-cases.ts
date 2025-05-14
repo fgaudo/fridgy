@@ -4,11 +4,7 @@ import * as AddProduct from './use-cases/add-product.ts'
 import * as DeleteProductsByIds from './use-cases/delete-products-by-ids.ts'
 import * as GetSortedProducts from './use-cases/get-sorted-products.ts'
 
-export {
-	AddProduct,
-	DeleteProductsByIds,
-	GetSortedProducts,
-}
+export { AddProduct, DeleteProductsByIds, GetSortedProducts }
 
 export type UseCases =
 	| AddProduct.AddProduct

@@ -1,18 +1,7 @@
-import {
-	describe,
-	effect,
-	layer,
-} from '@effect/vitest'
+import { describe, effect, layer } from '@effect/vitest'
 import { FastCheck } from 'effect'
 
-import {
-	Eff,
-	Int,
-	L,
-	NETS,
-	NNInt,
-	O,
-} from '$lib/core/imports.ts'
+import { Eff, Int, L, NETS, NNInt, O } from '$lib/core/imports.ts'
 import * as H from '$lib/core/test-helpers.ts'
 
 import { Capacitor } from '$lib/data/index.ts'
@@ -47,43 +36,34 @@ function toModel(product: {
 			isValid: true,
 			id: product.id.toString(10),
 			name: NETS.unsafeFromString(product.name),
-			creationDate: Int.unsafe_fromNumber(
-				product.creationDate,
+			creationDate: Int.unsafe_fromNumber(product.creationDate),
+			expirationDate: O.fromNullable(product.expirationDate).pipe(
+				O.map(Int.unsafe_fromNumber),
 			),
-			expirationDate: O.fromNullable(
-				product.expirationDate,
-			).pipe(O.map(Int.unsafe_fromNumber)),
 		}
 	}
 
 	return {
 		isValid: false,
-		name: O.fromNullable(product.name).pipe(
-			O.flatMap(NETS.fromString),
-		),
-		id: O.fromNullable(product.id).pipe(
-			O.map(id => id.toString(10)),
-		),
+		name: O.fromNullable(product.name).pipe(O.flatMap(NETS.fromString)),
+		id: O.fromNullable(product.id).pipe(O.map(id => id.toString(10))),
 	}
 }
 
-describe('Get products', () => {
+describe(`Get products`, () => {
 	effect.prop(
-		'Should return a list',
+		`Should return a list`,
 		[record, record, record],
 		(products, { expect }) =>
 			Eff.provide(
 				Eff.gen(function* () {
-					const service =
-						yield* GetSortedProducts.Tag
+					const service = yield* GetSortedProducts.Tag
 					const exit = yield* Eff.exit(service)
 
 					H.assertExitIsSuccess(exit)
 
 					expect(exit.value).toStrictEqual({
-						total: NNInt.unsafeFromNumber(
-							products.length,
-						),
+						total: NNInt.unsafeFromNumber(products.length),
 						products: products.map(toModel),
 					})
 				}),
@@ -107,16 +87,14 @@ describe('Get products', () => {
 			query,
 			L.succeed(Capacitor.Tag, {
 				db: {
-					getAllProductsWithTotal: () =>
-						Promise.resolve({}),
+					getAllProductsWithTotal: () => Promise.resolve({}),
 				} as unknown as Capacitor.FridgySqlitePlugin,
 			}),
 		),
 	)(({ effect }) => {
-		effect('Should return an error', () =>
+		effect(`Should return an error`, () =>
 			Eff.gen(function* () {
-				const service =
-					yield* GetSortedProducts.Tag
+				const service = yield* GetSortedProducts.Tag
 
 				const exit = yield* Eff.exit(service)
 
@@ -130,16 +108,14 @@ describe('Get products', () => {
 			query,
 			L.succeed(Capacitor.Tag, {
 				db: {
-					getAllProductsWithTotal: () =>
-						Promise.reject(new Error()),
+					getAllProductsWithTotal: () => Promise.reject(new Error()),
 				} as unknown as Capacitor.FridgySqlitePlugin,
 			}),
 		),
 	)(({ effect }) => {
-		effect('Should return an error', () =>
+		effect(`Should return an error`, () =>
 			Eff.gen(function* () {
-				const service =
-					yield* GetSortedProducts.Tag
+				const service = yield* GetSortedProducts.Tag
 
 				const exit = yield* Eff.exit(service)
 
@@ -162,10 +138,9 @@ describe('Get products', () => {
 			}),
 		),
 	)(({ effect }) => {
-		effect('Should return an error', () =>
+		effect(`Should return an error`, () =>
 			Eff.gen(function* () {
-				const service =
-					yield* GetSortedProducts.Tag
+				const service = yield* GetSortedProducts.Tag
 
 				const exit = yield* Eff.exit(service)
 
@@ -186,10 +161,9 @@ describe('Get products', () => {
 			}),
 		),
 	)(({ effect }) => {
-		effect('Should crash', () =>
+		effect(`Should crash`, () =>
 			Eff.gen(function* () {
-				const service =
-					yield* GetSortedProducts.Tag
+				const service = yield* GetSortedProducts.Tag
 
 				const exit = yield* Eff.exit(service)
 

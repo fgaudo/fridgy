@@ -1,32 +1,17 @@
-import {
-	type BackButtonListener,
-	App as CAP,
-} from '@capacitor/app'
+import { type BackButtonListener, App as CAP } from '@capacitor/app'
 import type { PluginListenerHandle } from '@capacitor/core'
 import { format } from 'effect/Inspectable'
 import { withMinimumLogLevel } from 'effect/Logger'
 import type { Cancel } from 'effect/Runtime'
 import { onDestroy } from 'svelte'
 
-import {
-	Eff,
-	LL,
-	MR,
-	Ref,
-	pipe,
-} from '$lib/core/imports.ts'
+import { Eff, LL, MR, Ref, pipe } from '$lib/core/imports.ts'
 import { withLayerLogging } from '$lib/core/logging.ts'
-import {
-	type Command,
-	type Update,
-	createDispatcher,
-} from '$lib/core/store.ts'
+import { type Command, type Update, createDispatcher } from '$lib/core/store.ts'
 
 import type { UseCases } from '$lib/business/app/use-cases.ts'
 
-export function createRunEffect(
-	runtime: MR.ManagedRuntime<UseCases, never>,
-) {
+export function createRunEffect(runtime: MR.ManagedRuntime<UseCases, never>) {
 	const set = new Set<Cancel<unknown, unknown>>()
 
 	let isDestroyed = false
@@ -39,19 +24,15 @@ export function createRunEffect(
 		})
 	})
 
-	return (
-		eff: Eff.Effect<unknown, unknown, UseCases>,
-	) => {
+	return (eff: Eff.Effect<unknown, unknown, UseCases>) => {
 		if (isDestroyed) {
 			return () => {}
 		}
 
 		const cancel = runtime.runCallback(
 			eff.pipe(
-				withLayerLogging('P'),
-				import.meta.env.PROD
-					? eff => eff
-					: withMinimumLogLevel(LL.Debug),
+				withLayerLogging(`P`),
+				import.meta.env.PROD ? eff => eff : withMinimumLogLevel(LL.Debug),
 				Eff.tapDefect(Eff.logFatal),
 			),
 		)
@@ -66,11 +47,11 @@ export function createCapacitorListener({
 	cb,
 }:
 	| {
-			event: 'resume'
+			event: `resume`
 			cb: () => void
 	  }
 	| {
-			event: 'backButton'
+			event: `backButton`
 			cb: BackButtonListener
 	  }) {
 	let listener: PluginListenerHandle | undefined
@@ -89,7 +70,7 @@ export function createCapacitorListener({
 		}
 
 		const promise =
-			event === 'resume'
+			event === `resume`
 				? CAP.addListener(event, () => {
 						if (isDestroyed) {
 							listener?.remove()
@@ -128,9 +109,7 @@ export const createDispatcherWithLogging =
 		pipe(
 			command,
 			Eff.tap(message =>
-				Eff.logDebug(
-					'Dispatched message ' + message._tag,
-				).pipe(
+				Eff.logDebug(`Dispatched message ` + message._tag).pipe(
 					Eff.annotateLogs({
 						message: format(message),
 					}),

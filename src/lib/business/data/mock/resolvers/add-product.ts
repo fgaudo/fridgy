@@ -1,13 +1,4 @@
-import {
-	Eff,
-	HM,
-	L,
-	LL,
-	O,
-	RR,
-	Ref,
-	pipe,
-} from '$lib/core/imports.ts'
+import { Eff, HM, L, LL, O, RR, Ref, pipe } from '$lib/core/imports.ts'
 import { withLayerLogging } from '$lib/core/logging.ts'
 
 import { AddProduct } from '$lib/business/app/operations.ts'
@@ -26,17 +17,11 @@ export const command = L.effect(
 			pipe(
 				Eff.gen(function* () {
 					if (withErrors && Math.random() < 0.5) {
-						yield* Eff.logInfo(
-							'Triggered fake error on mock AddProduct',
-						)
-						return yield* Eff.fail(
-							new AddProduct.OperationFailed(),
-						)
+						yield* Eff.logInfo(`Triggered fake error on mock AddProduct`)
+						return yield* Eff.fail(new AddProduct.OperationFailed())
 					}
 
-					yield* Eff.logInfo(
-						'Attempting to add product into mock database...',
-					)
+					yield* Eff.logInfo(`Attempting to add product into mock database...`)
 
 					yield* Ref.update(db, dbValues => {
 						const index = dbValues.index + 1
@@ -47,11 +32,8 @@ export const command = L.effect(
 							map: dbValues.map.pipe(
 								HM.set(indexString, {
 									maybeName: O.some(product.name),
-									maybeExpirationDate:
-										product.maybeExpirationDate,
-									maybeCreationDate: O.some(
-										product.creationDate,
-									),
+									maybeExpirationDate: product.maybeExpirationDate,
+									maybeCreationDate: O.some(product.creationDate),
 									maybeId: O.some(indexString),
 								}),
 							),
@@ -65,7 +47,7 @@ export const command = L.effect(
 
 					return yield* Eff.void
 				}),
-				withLayerLogging('I'),
+				withLayerLogging(`I`),
 			),
 		)
 	}),

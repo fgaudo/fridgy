@@ -5,10 +5,7 @@
 
 	import licenses from '$lib/ui/assets/licenses.json' with { type: 'json' }
 	import Ripple from '$lib/ui/components/ripple.svelte'
-	import {
-		PAGE_TRANSITION_Y,
-		version,
-	} from '$lib/ui/constants'
+	import { PAGE_TRANSITION_Y, version } from '$lib/ui/constants'
 </script>
 
 <div
@@ -31,9 +28,7 @@
 			></Ripple>
 			<ArrowLeft />
 		</div>
-		<div class="font-stylish pl-2 text-2xl">
-			About
-		</div>
+		<div class="font-stylish pl-2 text-2xl">About</div>
 	</div>
 
 	<div
@@ -48,19 +43,14 @@
 		</p>
 		<p class="mt-2">© 2024 Francesco Gaudenzi</p>
 		<p class="mt-2">
-			This app is open source and released under
-			the
+			This app is open source and released under the
 			<a
 				class="text-primary underline"
 				href="https://www.gnu.org/licenses/agpl-3.0.en.html"
 			>
 				AGPL-3.0 license
-			</a>. <br />The entire source code is
-			available at
-			<a
-				class="text-primary underline"
-				href="https://github.com/fgaudo/fridgy"
-			>
+			</a>. <br />The entire source code is available at
+			<a class="text-primary underline" href="https://github.com/fgaudo/fridgy">
 				https://github.com/fgaudo/fridgy
 			</a>
 		</p>
@@ -74,26 +64,22 @@
 				open a ticket
 			</a>
 			or send me an email at
-			<a
-				class="text-primary underline"
-				href="mailto:fgaudo@gmail.com"
-			>
+			<a class="text-primary underline" href="mailto:fgaudo@gmail.com">
 				fgaudo@gmail.com
 			</a>.
 		</p>
 
 		<p class="mt-5 mb-3">
-			Fridgy uses many other open source
-			libraries.
+			Fridgy uses many other open source libraries.
 			<br /> Here's the complete list of software.
 		</p>
 
-		{#each Object.entries(licenses) as [name, license]}
+		{#each Object.entries(licenses) as [name, license] (name)}
 			<div
 				class="mb-[20px] overflow-x-auto text-nowrap"
-				style:content-visibility="auto"
+				style:content-visibility={`auto`}
 			>
-				{#if 'name' in license && license.name.trim().length > 0}
+				{#if `name` in license && license.name.trim().length > 0}
 					<h1 class="font-bold">
 						{license.name}
 					</h1>
@@ -102,22 +88,22 @@
 						{name}
 					</h1>
 				{/if}
-				{#if 'description' in license && license.description}
+				{#if `description` in license && license.description}
 					<p>{license.description}</p>
 				{/if}
-				{#if 'publisher' in license && license.publisher}
+				{#if `publisher` in license && license.publisher}
 					<p>{license.publisher}</p>
 				{/if}
-				{#if 'email' in license && license.email}
+				{#if `email` in license && license.email}
 					<p>{license.email}</p>
 				{/if}
-				{#if 'copyright' in license && license.copyright}
+				{#if `copyright` in license && license.copyright}
 					<p>{license.copyright}</p>
 				{/if}
-				{#if 'licenses' in license && license.licenses}
+				{#if `licenses` in license && license.licenses}
 					<p>{license.licenses}</p>
 				{/if}
-				{#if 'repository' in license && license.repository}
+				{#if `repository` in license && license.repository}
 					<a
 						class="text-primary underline"
 						href={encodeURI(license.repository)}

@@ -1,22 +1,11 @@
 import { endOfDay } from 'date-fns'
 
-import {
-	Da,
-	Int,
-	M,
-	NETS,
-	O,
-	pipe,
-} from '$lib/core/imports.ts'
+import { Da, Int, M, NETS, O, pipe } from '$lib/core/imports.ts'
 import type { Update } from '$lib/core/store.ts'
 
 import type { UseCases } from '$lib/business/app/use-cases.ts'
 
-import {
-	addProduct,
-	queueLoading,
-	queueRemoveToast,
-} from './commands.ts'
+import { addProduct, queueLoading, queueRemoveToast } from './commands.ts'
 import type { State } from './state.svelte.ts'
 
 export type Message = Da.TaggedEnum<{
@@ -32,13 +21,9 @@ export type Message = Da.TaggedEnum<{
 
 export const Message = Da.taggedEnum<Message>()
 
-export const update: Update<
-	State,
-	Message,
-	UseCases
-> = (state, message) =>
+export const update: Update<State, Message, UseCases> = (state, message) =>
 	M.type<Message>().pipe(
-		M.tag('AddProduct', () => {
+		M.tag(`AddProduct`, () => {
 			if (state.isAdding) {
 				return { state, commands: [] }
 			}
@@ -74,21 +59,21 @@ export const update: Update<
 				],
 			}
 		}),
-		M.tag('AddProductFailed', () => {
+		M.tag(`AddProductFailed`, () => {
 			state.isAdding = false
 			state.spinnerId = undefined
 			state.isLoading = false
 
 			return { state, commands: [] }
 		}),
-		M.tag('AddProductSucceeded', () => {
+		M.tag(`AddProductSucceeded`, () => {
 			state.isAdding = false
 			state.hasInteractedWithName = false
 			state.expirationDate = undefined
-			state.name = ''
+			state.name = ``
 			const id = Symbol()
 			state.toastMessage = {
-				message: 'Product added',
+				message: `Product added`,
 				id,
 			}
 			state.spinnerId = undefined
@@ -99,7 +84,7 @@ export const update: Update<
 				commands: [queueRemoveToast(id)],
 			}
 		}),
-		M.tag('RemoveToast', ({ id }) => {
+		M.tag(`RemoveToast`, ({ id }) => {
 			if (id !== state.toastMessage?.id) {
 				return { state, commands: [] }
 			}
@@ -108,31 +93,26 @@ export const update: Update<
 
 			return { state, commands: [] }
 		}),
-		M.tag(
-			'SetExpirationDate',
-			({ expirationDate }) => {
-				if (expirationDate.length <= 0) {
-					state.expirationDate = undefined
-					return { state, commands: [] }
-				}
-				state.expirationDate = endOfDay(
-					Date.parse(expirationDate),
-				).valueOf()
-
+		M.tag(`SetExpirationDate`, ({ expirationDate }) => {
+			if (expirationDate.length <= 0) {
+				state.expirationDate = undefined
 				return { state, commands: [] }
-			},
-		),
-		M.tag('SetName', ({ name }) => {
+			}
+			state.expirationDate = endOfDay(Date.parse(expirationDate)).valueOf()
+
+			return { state, commands: [] }
+		}),
+		M.tag(`SetName`, ({ name }) => {
 			state.hasInteractedWithName = true
 			state.name = name
 
 			return { state, commands: [] }
 		}),
-		M.tag('SetNameInteracted', () => {
+		M.tag(`SetNameInteracted`, () => {
 			state.hasInteractedWithName = true
 			return { state, commands: [] }
 		}),
-		M.tag('ShowSpinner', ({ id }) => {
+		M.tag(`ShowSpinner`, ({ id }) => {
 			if (id !== state.spinnerId) {
 				return { state, commands: [] }
 			}
