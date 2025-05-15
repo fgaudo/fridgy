@@ -1,36 +1,37 @@
-import { A, E, Eff, Int, NNInt, O, pipe } from '$lib/core/imports.ts'
+import { A, E, Eff, Int, NETS, O, Sc, pipe } from '$lib/core/imports.ts'
 import { withLayerLogging } from '$lib/core/logging.ts'
-import type { NonEmptyTrimmedString } from '$lib/core/non-empty-trimmed-string.ts'
 
 import { GetSortedProducts as GetSortedProductsOperation } from '$lib/business/app/operations'
 import * as P from '$lib/business/domain/product'
 
-export type Product =
-	| {
-			isCorrupt: false
-			id: string
-			maybeName: O.Option<NonEmptyTrimmedString>
-			maybeExpirationDate: O.Option<Int.Integer>
-			maybeCreationDate: O.Option<Int.Integer>
-			isValid: false
-	  }
-	| {
-			isCorrupt: false
-			id: string
-			name: NonEmptyTrimmedString
-			maybeExpirationDate: O.Option<Int.Integer>
-			creationDate: Int.Integer
-			isValid: true
-	  }
-	| {
-			isCorrupt: true
-			maybeName: O.Option<NonEmptyTrimmedString>
-	  }
+export const Product = Sc.Union(
+	Sc.Struct({
+		isCorrupt: Sc.Literal(false),
+		id: Sc.String,
+		maybeName: Sc.Option(NETS.NonEmptyTrimmedStringSchema),
+		maybeExpirationDate: Sc.Option(Int.IntegerSchema),
+		maybeCreationDate: Sc.Option(Int.IntegerSchema),
+		isValid: Sc.Literal(false),
+	}),
+	Sc.Struct({
+		isCorrupt: Sc.Literal(false),
+		id: Sc.String,
+		name: NETS.NonEmptyTrimmedStringSchema,
+		maybeExpirationDate: Sc.Option(Int.IntegerSchema),
+		creationDate: Int.IntegerSchema,
+		isValid: Sc.Literal(true),
+	}),
+	Sc.Struct({
+		isCorrupt: Sc.Literal(true),
+		maybeName: Sc.Option(NETS.NonEmptyTrimmedStringSchema),
+	}),
+)
 
-export type ProductsPage = {
-	entries: Product[]
-	total: NNInt.NonNegativeInteger
-}
+export type Product = Sc.Schema.Type<typeof Product>
+
+export const GetSortedProductsDTO = Sc.Array(Product)
+
+export type GetSortedProductsDTO = Sc.Schema.Type<typeof GetSortedProductsDTO>
 
 export class GetSortedProducts extends Eff.Service<GetSortedProducts>()(
 	`app/useCases/GetSortedProducts`,
@@ -65,33 +66,14 @@ export class GetSortedProducts extends Eff.Service<GetSortedProducts>()(
 
 				const result = errorOrData.right
 
-				const total = yield* Eff.gen(function* () {
-					if (result.total < result.products.length) {
-						yield* Eff.logWarning(
-							`Received ${result.products.length.toString(10)} products, but they exceed the reported total (${result.total.toString(10)}).`,
-						)
-
-						return NNInt.unsafeFromNumber(result.products.length)
-					}
-
-					yield* Eff.logInfo(
-						`Received ${result.products.length.toString(10)} products out of ${result.total.toString(10)}`,
-					)
-
-					return result.total
-				})
-
 				const entries = yield* pipe(
-					result.products,
+					result,
 					A.map(toProductResultWithEffect),
 					Eff.all,
 				)
 
-				return {
-					entries,
-					total,
-				}
-			}).pipe(withLayerLogging(`A`)) satisfies Eff.Effect<ProductsPage, void>
+				return entries
+			}).pipe(withLayerLogging(`A`)) satisfies Eff.Effect<Product[], void>
 		}),
 	},
 ) {}
@@ -119,7 +101,7 @@ function toProductResultWithEffect({
 				creationDate: maybeCreationDate,
 			})
 
-			return yield* P.createProduct({
+			return yield* P.fromStruct({
 				name,
 				creationDate,
 				maybeExpirationDate,
@@ -143,9 +125,9 @@ function toProductResultWithEffect({
 			isCorrupt: false,
 			isValid: true,
 			id: maybeId.value,
-			name: P.name(maybeProduct.value),
-			creationDate: P.creationDate(maybeProduct.value),
-			maybeExpirationDate: P.maybeExpirationDate(maybeProduct.value),
+			name: maybeProduct.value.name,
+			creationDate: maybeProduct.value.creationDate,
+			maybeExpirationDate: maybeProduct.value.maybeExpirationDate,
 		}
 	})
 }

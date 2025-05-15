@@ -109,7 +109,7 @@ export const createDispatcherWithLogging =
 		pipe(
 			command,
 			Eff.tap(message =>
-				Eff.logDebug(`Dispatched message ` + message._tag).pipe(
+				Eff.logDebug(`Dispatched message ${message._tag}`).pipe(
 					Eff.annotateLogs({
 						message: format(message),
 					}),

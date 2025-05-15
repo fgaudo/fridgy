@@ -5,7 +5,7 @@ import { Da, Eff, HS, M, NEHS, O, pipe } from '$lib/core/imports.ts'
 import { type Update } from '$lib/core/store.ts'
 
 import type { UseCases } from '$lib/business/app/use-cases.ts'
-import type { ProductsPage } from '$lib/business/app/use-cases/get-sorted-products.ts'
+import type { GetSortedProductsDTO } from '$lib/business/app/use-cases/get-sorted-products.ts'
 
 import {
 	deleteSelectedAndRefresh,
@@ -19,7 +19,7 @@ export type Message = Da.TaggedEnum<{
 	FetchList: object
 	FetchListSucceeded: {
 		taskId: FetchId
-		result: ProductsPage
+		result: GetSortedProductsDTO
 	}
 	FetchListFailed: { taskId: FetchId }
 	ToggleMenu: object
@@ -33,7 +33,7 @@ export type Message = Da.TaggedEnum<{
 	DeleteSelectedFailed: object
 	DeleteSelectedSucceededButRefreshFailed: object
 	DeleteSelectedAndRefreshSucceeded: {
-		result: ProductsPage
+		result: GetSortedProductsDTO
 	}
 	RefreshTime: object
 	RefreshTimeResult: { timestamp: number }
@@ -72,7 +72,7 @@ export const update: Update<State, Message, UseCases> = (state, message) => {
 			}
 
 			state.products = {
-				entries: result.entries.map(entry => {
+				entries: result.map(entry => {
 					if (entry.isCorrupt) {
 						return {
 							...entry,
@@ -129,7 +129,7 @@ export const update: Update<State, Message, UseCases> = (state, message) => {
 		M.tag(`DeleteSelectedAndRefreshSucceeded`, ({ result }) => {
 			state.isDeleteRunning = false
 			state.products = {
-				entries: result.entries.map(entry => {
+				entries: result.map(entry => {
 					if (entry.isCorrupt) {
 						return {
 							...entry,

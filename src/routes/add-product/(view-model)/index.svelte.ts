@@ -36,7 +36,7 @@ export function createViewModel() {
 			setExpirationDate: (value: string) =>
 				pipe(
 					Eff.log(
-						`Received setExpirationDate event from the ui with value ` + value,
+						`Received setExpirationDate event from the ui with value ${value}`,
 					),
 					Eff.andThen(
 						Eff.succeed(
@@ -50,7 +50,7 @@ export function createViewModel() {
 
 			setName: (name: string) =>
 				pipe(
-					Eff.log(`Received setName event from the ui with name ` + name),
+					Eff.log(`Received setName event from the ui with name ${name}`),
 					Eff.andThen(Eff.succeed(Message.SetName({ name }))),
 					unsafeDispatch,
 				),

@@ -1,12 +1,14 @@
 import type { RequestResolver } from 'effect/RequestResolver'
 
-import { C, Da, Int, NETS, O, R } from '$lib/core/imports.ts'
+import { C, Da, Int, NETS, R, Sc } from '$lib/core/imports.ts'
 
-export interface ProductDTO {
-	readonly name: NETS.NonEmptyTrimmedString
-	readonly maybeExpirationDate: O.Option<Int.Integer>
-	readonly creationDate: Int.Integer
-}
+export const ProductDTO = Sc.Struct({
+	name: NETS.NonEmptyTrimmedStringSchema,
+	maybeExpirationDate: Sc.Option(Int.IntegerSchema),
+	creationDate: Int.IntegerSchema,
+})
+
+export type ProductDTO = Sc.Schema.Type<typeof ProductDTO>
 
 export class OperationFailed extends Da.TaggedError(`OperationFailed`) {}
 

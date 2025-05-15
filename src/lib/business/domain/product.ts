@@ -1,32 +1,18 @@
-import { Int, NETS, O } from '$lib/core/imports.ts'
+import { B, Int, NETS, O } from '$lib/core/imports.ts'
 
-const productSymbol: unique symbol = Symbol()
-
-export interface Product {
-	[productSymbol]: {
+export type Product = B.Branded<
+	{
 		name: NETS.NonEmptyTrimmedString
 		maybeExpirationDate: O.Option<Int.Integer>
 		creationDate: Int.Integer
-	}
-}
+	},
+	`Product`
+>
 
-export const createProduct: (f: {
-	name: NETS.NonEmptyTrimmedString
-	creationDate: Int.Integer
-	maybeExpirationDate: O.Option<Int.Integer>
-}) => O.Option<Product> = ({ name, creationDate, maybeExpirationDate }) =>
-	O.some({
-		[productSymbol]: {
-			name,
-			creationDate,
-			maybeExpirationDate,
-		},
-	})
+/** @internal */
+export const Product = B.refined<Product>(
+	() => true,
+	() => B.error(`Product is invalid`),
+)
 
-export const name = (product: Product) => product[productSymbol].name
-
-export const maybeExpirationDate = (product: Product) =>
-	product[productSymbol].maybeExpirationDate
-
-export const creationDate = (product: Product) =>
-	product[productSymbol].creationDate
+export const fromStruct = Product.option

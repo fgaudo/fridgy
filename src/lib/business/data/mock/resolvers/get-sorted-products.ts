@@ -1,15 +1,4 @@
-import {
-	A,
-	Eff,
-	HM,
-	L,
-	NNInt,
-	O,
-	Ord,
-	RR,
-	Ref,
-	pipe,
-} from '$lib/core/imports.ts'
+import { A, Eff, HM, L, O, Ord, RR, Ref, pipe } from '$lib/core/imports.ts'
 
 import { GetSortedProducts } from '$lib/business/app/operations.ts'
 
@@ -50,14 +39,9 @@ export const query = L.effect(
 
 				const map = yield* Ref.get(db).pipe(Eff.map(({ map }) => map))
 
-				const total = map.pipe(HM.size)
-
 				const products: GetSortedProducts.ProductDTO[] = map.pipe(HM.toValues)
 
-				return {
-					total: NNInt.unsafeFromNumber(total),
-					products: A.sort(ord)(products),
-				}
+				return A.sort(ord)(products)
 			}),
 		)
 	}),

@@ -1,13 +1,18 @@
 import type { RequestResolver } from 'effect/RequestResolver'
 
-import { C, Da, Int, NETS, NNInt, O, R } from '$lib/core/imports.ts'
+import { C, Da, Int, NETS, R, Sc } from '$lib/core/imports.ts'
 
-export type ProductDTO = {
-	readonly maybeId: O.Option<string>
-	readonly maybeName: O.Option<NETS.NonEmptyTrimmedString>
-	readonly maybeExpirationDate: O.Option<Int.Integer>
-	readonly maybeCreationDate: O.Option<Int.Integer>
-}
+export const ProductDTO = Sc.Struct({
+	maybeId: Sc.Option(Sc.String),
+	maybeName: Sc.Option(NETS.NonEmptyTrimmedStringSchema),
+	maybeExpirationDate: Sc.Option(Int.IntegerSchema),
+	maybeCreationDate: Sc.Option(Int.IntegerSchema),
+})
+export type ProductDTO = Sc.Schema.Type<typeof ProductDTO>
+
+export const GetSortedProductsDTO = Sc.Array(ProductDTO)
+
+export type GetSortedProductsDTO = Sc.Schema.Type<typeof GetSortedProductsDTO>
 
 export class FetchingFailed extends Da.TaggedError(`FetchingFailed`) {}
 
@@ -17,10 +22,7 @@ export class InvalidDataReceived extends Da.TaggedError(
 
 interface Request
 	extends R.Request<
-		{
-			total: NNInt.NonNegativeInteger
-			products: ProductDTO[]
-		},
+		GetSortedProductsDTO,
 		InvalidDataReceived | FetchingFailed
 	> {
 	readonly _tag: `GetSortedProducts`

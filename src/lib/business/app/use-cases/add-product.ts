@@ -1,15 +1,17 @@
 import { format } from 'effect/Inspectable'
 
-import { Cl, Eff, Int, NETS, O } from '$lib/core/imports.ts'
+import { Cl, Eff, Int, NETS, O, Sc } from '$lib/core/imports.ts'
 import { withLayerLogging } from '$lib/core/logging.ts'
 
 import { AddProduct as AddProductOperation } from '$lib/business/app/operations'
 import * as P from '$lib/business/domain/product'
 
-export interface ProductDTO {
-	name: NETS.NonEmptyTrimmedString
-	maybeExpirationDate: O.Option<Int.Integer>
-}
+export const ProductDTO = Sc.Struct({
+	name: NETS.NonEmptyTrimmedStringSchema,
+	maybeExpirationDate: Sc.Option(Int.IntegerSchema),
+})
+
+export type ProductDTO = Sc.Schema.Type<typeof ProductDTO>
 
 export class AddProduct extends Eff.Service<AddProduct>()(
 	`app/useCases/AddProduct`,
@@ -23,7 +25,7 @@ export class AddProduct extends Eff.Service<AddProduct>()(
 
 					const timestamp = Int.unsafeFromNumber(yield* Cl.currentTimeMillis)
 
-					const product = P.createProduct({
+					const product = P.fromStruct({
 						name: productData.name,
 						maybeExpirationDate: productData.maybeExpirationDate,
 						creationDate: timestamp,
@@ -45,9 +47,9 @@ export class AddProduct extends Eff.Service<AddProduct>()(
 
 					yield* Eff.request(
 						AddProductOperation.Request({
-							name: P.name(product.value),
-							maybeExpirationDate: P.maybeExpirationDate(product.value),
-							creationDate: P.creationDate(product.value),
+							name: product.value.name,
+							maybeExpirationDate: product.value.maybeExpirationDate,
+							creationDate: product.value.creationDate,
 						}),
 						addProductResolver,
 					)

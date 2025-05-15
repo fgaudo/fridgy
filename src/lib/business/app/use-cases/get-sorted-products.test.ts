@@ -1,43 +1,48 @@
 import { describe, effect, layer } from '@effect/vitest'
+import { Arbitrary } from 'effect'
 
-import { Eff, L, NNInt } from '$lib/core/imports.ts'
+import { Eff, L, RR } from '$lib/core/imports.ts'
 import * as H from '$lib/core/test-helpers.ts'
 
 import { GetSortedProducts as Query } from '$lib/business/app/operations.ts'
 
+import {
+	FetchingFailed,
+	InvalidDataReceived,
+} from '../operations/get-sorted-products.ts'
 import * as Usecase from './get-sorted-products.ts'
-
-const record = H.FC.oneof(
-	H.FC.record(
-		{
-			isValid: H.FC.constant(true) as H.FC.Arbitrary<true>,
-			id: H.string,
-			creationDate: H.integer,
-			expirationDate: H.maybeInteger,
-			name: H.nonEmptyTrimmedString,
-		},
-		{ noNullPrototype: true },
-	),
-	H.FC.record(
-		{
-			isValid: H.FC.constant(false) as H.FC.Arbitrary<false>,
-			id: H.maybeString,
-			name: H.maybeNonEmptyTrimmedString,
-		},
-		{ noNullPrototype: true },
-	),
-)
 
 describe(`Get sorted products`, () => {
 	layer(
 		L.provide(
-			Usecase.useCase,
-			L.succeed(Query.GetSortedProducts, Eff.fail(undefined)),
+			Usecase.GetSortedProducts.Default,
+			L.succeed(
+				Query.Resolver,
+				RR.fromEffect(() => Eff.fail(new FetchingFailed())),
+			),
 		),
 	)(({ effect }) => {
 		effect(`Should return an error`, () =>
 			Eff.gen(function* () {
-				const service = yield* Usecase.Tag
+				const service = yield* Usecase.GetSortedProducts
+				const exit = yield* Eff.exit(service)
+				H.assertExitIsFailure(exit)
+			}),
+		)
+	})
+
+	layer(
+		L.provide(
+			Usecase.GetSortedProducts.Default,
+			L.succeed(
+				Query.Resolver,
+				RR.fromEffect(() => Eff.fail(new InvalidDataReceived())),
+			),
+		),
+	)(({ effect }) => {
+		effect(`Should return an error`, () =>
+			Eff.gen(function* () {
+				const service = yield* Usecase.GetSortedProducts
 				const exit = yield* Eff.exit(service)
 				H.assertExitIsFailure(exit)
 			}),
@@ -46,29 +51,23 @@ describe(`Get sorted products`, () => {
 
 	effect.prop(
 		`Should return a list`,
-		[record, record, record],
-		(products, { expect }) =>
+		[Arbitrary.make(Query.GetSortedProductsDTO)],
+		([products], { expect }) =>
 			Eff.provide(
 				Eff.gen(function* () {
-					const service = yield* Usecase.Tag
+					const service = yield* Usecase.GetSortedProducts
 
 					const exit = yield* Eff.exit(service)
 
 					H.assertExitIsSuccess(exit)
 
-					expect(exit.value).toStrictEqual({
-						total: NNInt.unsafeFromNumber(products.length),
-						models: products,
-					})
+					expect(exit.value).toStrictEqual(products)
 				}),
 				L.provide(
-					Usecase.useCase,
+					Usecase.GetSortedProducts.Default,
 					L.succeed(
-						Query.GetSortedProducts,
-						Eff.succeed({
-							total: NNInt.unsafeFromNumber(products.length),
-							products,
-						}),
+						Query.Resolver,
+						RR.fromEffect(() => Eff.succeed(products)),
 					),
 				),
 			),
