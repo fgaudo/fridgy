@@ -1,6 +1,4 @@
-import * as RR from 'effect/RequestResolver'
-
-import { E, Eff, L, LL, O } from '$lib/core/imports.ts'
+import { E, Eff, L, LL, O, RR } from '$lib/core/imports.ts'
 
 import { AddProduct } from '$lib/business/app/operations.ts'
 

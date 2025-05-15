@@ -40,7 +40,7 @@ describe(`Delete products by ids`, () => {
 			),
 		),
 	)(({ effect }) => {
-		effect.prop(`Should just work`, [H.FC.string(), H.FC.string()], ids =>
+		effect.prop(`Should just work`, [FC.string(), FC.string()], ids =>
 			Eff.gen(function* () {
 				const service = yield* Usecase.DeleteProductsByIds
 

@@ -1,6 +1,4 @@
-import type { RequestResolver } from 'effect/RequestResolver'
-
-import { C, Da, NEHS, R } from '$lib/core/imports.ts'
+import { C, Da, NEHS, R, RR } from '$lib/core/imports.ts'
 
 export class OperationFailed extends Da.TaggedError(`OperationFailed`) {}
 
@@ -13,4 +11,4 @@ export const Request = R.tagged<Request>(`DeleteProductsByIds`)
 
 export class Resolver extends C.Tag(
 	`app/operations/DeleteProductsByIdsResolver`,
-)<Resolver, RequestResolver<Request>>() {}
+)<Resolver, RR.RequestResolver<Request>>() {}

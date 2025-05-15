@@ -1,4 +1,3 @@
-import { nonBlankString } from './arbitraries.ts'
 import { B, Sc, flow } from './imports.ts'
 
 export type NonEmptyTrimmedString = B.Branded<string, `NonEmptyTrimmedString`>
@@ -10,11 +9,11 @@ export const NonEmptyTrimmedString = B.refined<NonEmptyTrimmedString>(
 )
 export const NonEmptyTrimmedStringSchema = Sc.fromBrand(NonEmptyTrimmedString)(
 	Sc.String,
-).annotations({ arbitrary: () => () => nonEmptyTrimmedString })
+).annotations({
+	arbitrary: () => fc => fc.stringMatching(/\S/).map(unsafeFromString),
+})
 
 export const unsafeFromString = flow(trim, NonEmptyTrimmedString)
-
-const nonEmptyTrimmedString = nonBlankString.map(unsafeFromString)
 
 export const isNonEmptyTrimmedString = NonEmptyTrimmedString.is
 

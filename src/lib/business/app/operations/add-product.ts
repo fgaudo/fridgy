@@ -1,6 +1,4 @@
-import type { RequestResolver } from 'effect/RequestResolver'
-
-import { C, Da, Int, NETS, R, Sc } from '$lib/core/imports.ts'
+import { C, Da, Int, NETS, R, RR, Sc } from '$lib/core/imports.ts'
 
 export const ProductDTO = Sc.Struct({
 	name: NETS.NonEmptyTrimmedStringSchema,
@@ -20,5 +18,5 @@ export const Request = R.tagged<Request>(`AddProduct`)
 
 export class Resolver extends C.Tag(`app/operations/AddProductResolver`)<
 	Resolver,
-	RequestResolver<Request>
+	RR.RequestResolver<Request>
 >() {}

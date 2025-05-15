@@ -1,4 +1,4 @@
-import { B, FC, Sc } from '../imports.ts'
+import { B, Sc } from '../imports.ts'
 
 export type Integer = B.Branded<number, `Integer`>
 
@@ -9,7 +9,7 @@ export const Integer = B.refined<Integer>(
 )
 
 export const IntegerSchema = Sc.fromBrand(Integer)(Sc.Number).annotations({
-	arbitrary: () => () => FC.integer().map(unsafeFromNumber),
+	arbitrary: () => fc => fc.integer().map(unsafeFromNumber),
 })
 
 export const fromNumber = Integer.option

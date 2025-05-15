@@ -1,11 +1,10 @@
 import { type BackButtonListener, App as CAP } from '@capacitor/app'
 import type { PluginListenerHandle } from '@capacitor/core'
 import { format } from 'effect/Inspectable'
-import { withMinimumLogLevel } from 'effect/Logger'
 import type { Cancel } from 'effect/Runtime'
 import { onDestroy } from 'svelte'
 
-import { Eff, LL, MR, Ref, pipe } from '$lib/core/imports.ts'
+import { Eff, LL, Log, MR, Ref, pipe } from '$lib/core/imports.ts'
 import { withLayerLogging } from '$lib/core/logging.ts'
 import { type Command, type Update, createDispatcher } from '$lib/core/store.ts'
 
@@ -32,7 +31,7 @@ export function createRunEffect(runtime: MR.ManagedRuntime<UseCases, never>) {
 		const cancel = runtime.runCallback(
 			eff.pipe(
 				withLayerLogging(`P`),
-				import.meta.env.PROD ? eff => eff : withMinimumLogLevel(LL.Debug),
+				import.meta.env.PROD ? eff => eff : Log.withMinimumLogLevel(LL.Debug),
 				Eff.tapDefect(Eff.logFatal),
 			),
 		)

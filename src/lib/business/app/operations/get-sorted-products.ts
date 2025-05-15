@@ -1,6 +1,4 @@
-import type { RequestResolver } from 'effect/RequestResolver'
-
-import { C, Da, Int, NETS, R, Sc } from '$lib/core/imports.ts'
+import { C, Da, Int, NETS, R, RR, Sc } from '$lib/core/imports.ts'
 
 export const ProductDTO = Sc.Struct({
 	maybeId: Sc.Option(Sc.String),
@@ -32,5 +30,5 @@ export const Request = R.tagged<Request>(`GetSortedProducts`)
 
 export class Resolver extends C.Tag(`app/operations/GetSortedProductsResolver`)<
 	Resolver,
-	RequestResolver<Request>
+	RR.RequestResolver<Request>
 >() {}
