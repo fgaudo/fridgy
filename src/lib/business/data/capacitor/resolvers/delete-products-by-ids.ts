@@ -1,4 +1,4 @@
-import { E, Eff, L, LL, O, RR } from '$lib/core/imports.ts'
+import { E, Eff, L, LL, O, RR, pipe } from '$lib/core/imports.ts'
 
 import { DeleteProductsByIds } from '$lib/business/app/operations.ts'
 
@@ -16,7 +16,11 @@ export const command = L.effect(
 				const idsArray = yield* Eff.allSuccesses(
 					Array.from(ids).map(id =>
 						Eff.gen(function* () {
-							const parsed = yield* Eff.option(Eff.try(() => JSON.parse(id)))
+							const parsed = yield* pipe(
+								Eff.try(() => JSON.parse(id) as unknown),
+								Eff.option,
+								Eff.map(O.filter(id => typeof id === `number`)),
+							)
 
 							if (O.isSome(parsed)) {
 								return parsed.value

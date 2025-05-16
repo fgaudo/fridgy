@@ -1,8 +1,8 @@
 import { Cl, E, Eff, NEHS, pipe } from '$lib/core/imports.ts'
-import type { Command } from '$lib/core/store.ts'
 
 import type { UseCases } from '$lib/business/app/use-cases.ts'
 import { DeleteProductsByIds, GetSortedProducts } from '$lib/business/index.ts'
+import type { Command } from '$lib/ui/adapters.ts'
 
 import type { FetchId } from './state.svelte.ts'
 import { Message } from './update.svelte.ts'

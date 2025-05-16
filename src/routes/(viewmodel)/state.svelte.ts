@@ -1,31 +1,36 @@
 import { SvelteSet } from 'svelte/reactivity'
 
-import { B, Int, O } from '$lib/core/imports.ts'
+import { B, Int, O, Sc } from '$lib/core/imports.ts'
 
-export type ProductViewModel =
-	| {
-			isCorrupt: false
-			id: string
-			maybeName: string | undefined
-			maybeExpirationDate: number | undefined
-			maybeCreationDate: number | undefined
-			isValid: false
-			isSelected: boolean
-	  }
-	| {
-			isCorrupt: false
-			id: string
-			name: string
-			maybeExpirationDate: number | undefined
-			creationDate: number
-			isValid: true
-			isSelected: boolean
-	  }
-	| {
-			isCorrupt: true
-			id: symbol
-			maybeName: string | undefined
-	  }
+export const ProductViewModel = Sc.mutable(
+	Sc.Union(
+		Sc.Struct({
+			isCorrupt: Sc.Literal(false),
+			id: Sc.String,
+			maybeName: Sc.UndefinedOr(Sc.String),
+			maybeExpirationDate: Sc.UndefinedOr(Sc.Number),
+			maybeCreationDate: Sc.UndefinedOr(Sc.Number),
+			isValid: Sc.Literal(false),
+			isSelected: Sc.Boolean,
+		}),
+		Sc.Struct({
+			isCorrupt: Sc.Literal(false),
+			id: Sc.String,
+			name: Sc.String,
+			maybeExpirationDate: Sc.UndefinedOr(Sc.Number),
+			creationDate: Sc.Number,
+			isValid: Sc.Literal(true),
+			isSelected: Sc.Boolean,
+		}),
+		Sc.Struct({
+			id: Sc.Symbol,
+			isCorrupt: Sc.Literal(true),
+			maybeName: Sc.UndefinedOr(Sc.NonEmptyTrimmedString),
+		}),
+	),
+)
+
+export type ProductViewModel = Sc.Schema.Type<typeof ProductViewModel>
 
 export type FetchId = B.Branded<symbol, `FetchId`>
 export const FetchId = () => B.nominal<FetchId>()(Symbol())

@@ -1,9 +1,9 @@
 import { endOfDay } from 'date-fns'
 
 import { Da, Int, M, NETS, O, pipe } from '$lib/core/imports.ts'
-import type { Update } from '$lib/core/store.ts'
 
 import type { UseCases } from '$lib/business/app/use-cases.ts'
+import type { Update } from '$lib/ui/adapters.ts'
 
 import { addProduct, queueLoading, queueRemoveToast } from './commands.ts'
 import type { State } from './state.svelte.ts'
@@ -25,7 +25,7 @@ export const update: Update<State, Message, UseCases> = (state, message) =>
 	M.type<Message>().pipe(
 		M.tag(`AddProduct`, () => {
 			if (state.isAdding) {
-				return { state, commands: [] }
+				return []
 			}
 
 			const maybeName = pipe(
@@ -34,7 +34,7 @@ export const update: Update<State, Message, UseCases> = (state, message) =>
 			)
 
 			if (O.isNone(maybeName)) {
-				return { state, commands: [] }
+				return []
 			}
 
 			state.toastMessage = undefined
@@ -48,23 +48,20 @@ export const update: Update<State, Message, UseCases> = (state, message) =>
 			state.spinnerId = id
 			state.isAdding = true
 
-			return {
-				state,
-				commands: [
-					queueLoading(id),
-					addProduct({
-						name: maybeName.value,
-						maybeExpirationDate,
-					}),
-				],
-			}
+			return [
+				queueLoading(id),
+				addProduct({
+					name: maybeName.value,
+					maybeExpirationDate,
+				}),
+			]
 		}),
 		M.tag(`AddProductFailed`, () => {
 			state.isAdding = false
 			state.spinnerId = undefined
 			state.isLoading = false
 
-			return { state, commands: [] }
+			return []
 		}),
 		M.tag(`AddProductSucceeded`, () => {
 			state.isAdding = false
@@ -79,49 +76,43 @@ export const update: Update<State, Message, UseCases> = (state, message) =>
 			state.spinnerId = undefined
 			state.isLoading = false
 
-			return {
-				state,
-				commands: [queueRemoveToast(id)],
-			}
+			return [queueRemoveToast(id)]
 		}),
 		M.tag(`RemoveToast`, ({ id }) => {
 			if (id !== state.toastMessage?.id) {
-				return { state, commands: [] }
+				return []
 			}
 
 			state.toastMessage = undefined
 
-			return { state, commands: [] }
+			return []
 		}),
 		M.tag(`SetExpirationDate`, ({ expirationDate }) => {
 			if (expirationDate.length <= 0) {
 				state.expirationDate = undefined
-				return { state, commands: [] }
+				return []
 			}
 			state.expirationDate = endOfDay(Date.parse(expirationDate)).valueOf()
 
-			return { state, commands: [] }
+			return []
 		}),
 		M.tag(`SetName`, ({ name }) => {
 			state.hasInteractedWithName = true
 			state.name = name
 
-			return { state, commands: [] }
+			return []
 		}),
 		M.tag(`SetNameInteracted`, () => {
 			state.hasInteractedWithName = true
-			return { state, commands: [] }
+			return []
 		}),
 		M.tag(`ShowSpinner`, ({ id }) => {
 			if (id !== state.spinnerId) {
-				return { state, commands: [] }
+				return []
 			}
 			state.isLoading = true
 
-			return {
-				state,
-				commands: [],
-			}
+			return []
 		}),
 		M.exhaustive,
 	)(message)

@@ -1,43 +1,91 @@
 import { type BackButtonListener, App as CAP } from '@capacitor/app'
 import type { PluginListenerHandle } from '@capacitor/core'
-import { format } from 'effect/Inspectable'
 import type { Cancel } from 'effect/Runtime'
-import { onDestroy } from 'svelte'
+import { onDestroy, onMount } from 'svelte'
 
-import { Eff, LL, Log, MR, Ref, pipe } from '$lib/core/imports.ts'
+import { Eff, MR, Q, flow, pipe } from '$lib/core/imports.ts'
 import { withLayerLogging } from '$lib/core/logging.ts'
-import { type Command, type Update, createDispatcher } from '$lib/core/store.ts'
 
-import type { UseCases } from '$lib/business/app/use-cases.ts'
+export type Update<S, M, R> = (state: S, message: M) => Command<M, R>[]
 
-export function createRunEffect(runtime: MR.ManagedRuntime<UseCases, never>) {
+export type Command<M, R> = Eff.Effect<M, never, R>
+
+interface EffectRunner<R> {
+	runEffect: (eff: Eff.Effect<void, never, R>) => Cancel<void>
+}
+
+interface Dispatcher<M> {
+	dispatch: (m: M) => Eff.Effect<void>
+	unsafeDispatch: (m: M) => Cancel<void>
+}
+
+export function makeEffectRunner<R>(
+	runtime: MR.ManagedRuntime<R, never>,
+): EffectRunner<R> {
 	const set = new Set<Cancel<unknown, unknown>>()
 
-	let isDestroyed = false
-
 	onDestroy(() => {
-		isDestroyed = true
-
 		set.forEach(cancel => {
 			cancel()
 		})
 	})
 
-	return (eff: Eff.Effect<unknown, unknown, UseCases>) => {
-		if (isDestroyed) {
-			return () => {}
-		}
+	return {
+		runEffect: eff => {
+			const cancel = runtime.runCallback(
+				eff.pipe(withLayerLogging(`P`), Eff.tapDefect(Eff.logFatal)),
+			)
+			set.add(cancel)
+			return cancel
+		},
+	}
+}
 
-		const cancel = runtime.runCallback(
-			eff.pipe(
-				withLayerLogging(`P`),
-				import.meta.env.PROD ? eff => eff : Log.withMinimumLogLevel(LL.Debug),
-				Eff.tapDefect(Eff.logFatal),
-			),
+export function makeDispatcher<S, M, R>(
+	mutableState: S,
+	effectRunner: EffectRunner<R>,
+	update: Update<S, M, R>,
+): Dispatcher<M> {
+	const queue = Eff.runSync(Q.unbounded<M>())
+
+	let cancel: Cancel<unknown> | undefined
+
+	onMount(() => {
+		cancel = effectRunner.runEffect(
+			Eff.gen(function* () {
+				while (true) {
+					yield* pipe(
+						Eff.gen(function* () {
+							const m = yield* Q.take(queue)
+
+							const commands = update(mutableState, m)
+
+							for (const command of commands) {
+								yield* pipe(
+									command,
+									Eff.flatMap(m => queue.offer(m)),
+									Eff.catchAllDefect(err => Eff.logFatal(err)),
+									Eff.fork,
+								)
+							}
+						}),
+						Eff.catchAllDefect(Eff.logFatal),
+					)
+				}
+			}),
 		)
-		set.add(cancel)
+	})
 
-		return cancel
+	onDestroy(() => {
+		Eff.runSync(queue.shutdown)
+		cancel?.()
+	})
+
+	const dispatch = (m: M) => queue.offer(m)
+
+	return {
+		dispatch,
+		unsafeDispatch: flow(dispatch, effectRunner.runEffect),
 	}
 }
 
@@ -58,11 +106,11 @@ export function createCapacitorListener({
 
 	onDestroy(() => {
 		isDestroyed = true
-		listener?.remove()
+		void listener?.remove()
 	})
 
 	return () => {
-		listener?.remove()
+		void listener?.remove()
 
 		if (isDestroyed) {
 			return
@@ -72,47 +120,29 @@ export function createCapacitorListener({
 			event === `resume`
 				? CAP.addListener(event, () => {
 						if (isDestroyed) {
-							listener?.remove()
+							void listener?.remove()
 							return
 						}
 						cb()
 					})
 				: CAP.addListener(event, e => {
 						if (isDestroyed) {
-							listener?.remove()
+							void listener?.remove()
 							return
 						}
 						cb(e)
 					})
 
-		promise.then(l => {
+		void promise.then(l => {
 			if (isDestroyed) {
-				l.remove()
+				void l.remove()
 				return
 			}
 			listener = l
 		})
 
 		return () => {
-			listener?.remove()
+			void listener?.remove()
 		}
 	}
 }
-
-export const createDispatcherWithLogging =
-	<S, M extends { _tag: string }, R>(
-		ref: Ref.Ref<S>,
-		update: Update<S, M, R>,
-	) =>
-	(command: Command<M, R>) =>
-		pipe(
-			command,
-			Eff.tap(message =>
-				Eff.logDebug(`Dispatched message ${message._tag}`).pipe(
-					Eff.annotateLogs({
-						message: format(message),
-					}),
-				),
-			),
-			createDispatcher(ref, update),
-		)

@@ -2,10 +2,10 @@ import { Haptics, ImpactStyle } from '@capacitor/haptics'
 import { SvelteSet } from 'svelte/reactivity'
 
 import { Da, Eff, HS, M, NEHS, O, pipe } from '$lib/core/imports.ts'
-import { type Update } from '$lib/core/store.ts'
 
 import type { UseCases } from '$lib/business/app/use-cases.ts'
 import type { GetSortedProductsDTO } from '$lib/business/app/use-cases/get-sorted-products.ts'
+import type { Update } from '$lib/ui/adapters.ts'
 
 import {
 	deleteSelectedAndRefresh,
@@ -46,29 +46,26 @@ export const Message = Da.taggedEnum<Message>()
 export const update: Update<State, Message, UseCases> = (state, message) => {
 	return M.type<Message>().pipe(
 		M.tag(`RefreshTime`, () => {
-			return { state, commands: [refreshTime] }
+			return [refreshTime]
 		}),
 		M.tag(`FetchList`, () => {
 			const taskId = FetchId()
 
 			state.refreshingTaskId = taskId
 
-			return {
-				state,
-				commands: [refreshList(taskId)],
-			}
+			return [refreshList(taskId)]
 		}),
 		M.tag(`FetchListFailed`, ({ taskId }) => {
 			if (taskId !== state.refreshingTaskId) {
-				return { state, commands: [] }
+				return []
 			}
 			state.receivedError = true
 
-			return { state, commands: [] }
+			return []
 		}),
 		M.tag(`FetchListSucceeded`, ({ result, taskId }) => {
 			if (taskId !== state.refreshingTaskId) {
-				return { state, commands: [] }
+				return []
 			}
 
 			state.products = {
@@ -100,11 +97,11 @@ export const update: Update<State, Message, UseCases> = (state, message) => {
 				selected: new SvelteSet(),
 			}
 
-			return { state, commands: [] }
+			return []
 		}),
 		M.tag(`DeleteSelectedAndRefresh`, () => {
 			if (state.isDeleteRunning) {
-				return { state, commands: [] }
+				return []
 			}
 
 			const maybeIds = pipe(
@@ -114,17 +111,14 @@ export const update: Update<State, Message, UseCases> = (state, message) => {
 			)
 
 			if (O.isNone(maybeIds)) {
-				return { state, commands: [] }
+				return []
 			}
 
 			const id = Symbol()
 			state.spinnerTaskId = id
 			state.isDeleteRunning = true
 
-			return {
-				state,
-				commands: [deleteSelectedAndRefresh(maybeIds.value), queueLoading(id)],
-			}
+			return [deleteSelectedAndRefresh(maybeIds.value), queueLoading(id)]
 		}),
 		M.tag(`DeleteSelectedAndRefreshSucceeded`, ({ result }) => {
 			state.isDeleteRunning = false
@@ -160,14 +154,14 @@ export const update: Update<State, Message, UseCases> = (state, message) => {
 			state.isLoading = false
 			state.spinnerTaskId = undefined
 
-			return { state, commands: [] }
+			return []
 		}),
 		M.tag(`DeleteSelectedFailed`, () => {
 			state.isDeleteRunning = false
 			state.isLoading = false
 			state.spinnerTaskId = undefined
 
-			return { state, commands: [] }
+			return []
 		}),
 		M.tag(`DeleteSelectedSucceededButRefreshFailed`, () => {
 			state.isDeleteRunning = false
@@ -177,84 +171,78 @@ export const update: Update<State, Message, UseCases> = (state, message) => {
 
 			state.isLoading = false
 
-			return { state, commands: [] }
+			return []
 		}),
 		M.tag(`DisableRefreshTimeListener`, () => {
 			state.refreshTimeListenersRegistered = false
 
-			return { state, commands: [] }
+			return []
 		}),
 		M.tag(`EnableRefreshTimeListener`, () => {
 			state.refreshTimeListenersRegistered = true
 
-			return { state, commands: [] }
+			return []
 		}),
 		M.tag(`ClearSelected`, () => {
-			if (state.products === undefined) return { state, commands: [] }
+			if (state.products === undefined) return []
 
 			state.products.selected.clear()
 			state.products.entries.forEach(entry => {
 				if (entry.isCorrupt) return
 				entry.isSelected = false
 			})
-			return { state, commands: [] }
+			return []
 		}),
 		M.tag(`ToggleItem`, ({ product }) => {
-			if (state.isDeleteRunning) return { state, commands: [] }
+			if (state.isDeleteRunning) return []
 
 			if (product.isCorrupt) {
-				return { state, commands: [] }
+				return []
 			}
 
-			if (state.products === undefined) return { state, commands: [] }
+			if (state.products === undefined) return []
 
 			const hasSelectionStarted = state.products.selected.size <= 0
 
 			if (state.products.selected.has(product.id)) {
 				product.isSelected = false
 				state.products.selected.delete(product.id)
-				return { state, commands: [] }
+				return []
 			}
 
 			state.products.selected.add(product.id)
 			product.isSelected = true
 
-			return {
-				state,
-				commands: [
-					...(hasSelectionStarted
-						? [
-								Eff.promise(() =>
-									Haptics.impact({
-										style: ImpactStyle.Light,
-									}),
-								).pipe(Eff.as(Message.NoOp())),
-							]
-						: []),
-				],
-			}
+			return [
+				...(hasSelectionStarted
+					? [
+							Eff.promise(() =>
+								Haptics.impact({
+									style: ImpactStyle.Light,
+								}),
+							).pipe(Eff.as(Message.NoOp())),
+						]
+					: []),
+			]
 		}),
 		M.tag(`ToggleMenu`, () => {
 			state.isMenuOpen = !state.isMenuOpen
 
-			return { state, commands: [] }
+			return []
 		}),
 		M.tag(`RefreshTimeResult`, ({ timestamp }) => {
 			state.currentTimestamp = timestamp
 
-			return { state, commands: [] }
+			return []
 		}),
 		M.tag(`ShowSpinner`, ({ id }) => {
 			if (id !== state.spinnerTaskId) {
-				return { state, commands: [] }
+				return []
 			}
 			state.isLoading = true
-			return { state, commands: [] }
+			return []
 		}),
-		M.tag(`NoOp`, () => ({
-			state,
-			commands: [],
-		})),
+		M.tag(`NoOp`, () => []),
 		M.exhaustive,
 	)(message)
 }

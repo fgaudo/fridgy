@@ -27,7 +27,7 @@ export class DbPlugin extends Eff.Service<DbPlugin>()(`DbPlugin`, {
 			deleteProductsByIds: (...p: Parameters<typeof db.deleteProductsByIds>) =>
 				H.tryPromise(() => db.deleteProductsByIds(...p)),
 
-			getAllProductsWithTotal: H.tryPromise(db.getAllProductsWithTotal),
+			getAllProductsWithTotal: H.tryPromise(() => db.getAllProductsWithTotal()),
 		}
 	},
 }) {}

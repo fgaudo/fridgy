@@ -1,4 +1,4 @@
-import { B, Int, NETS, O } from '$lib/core/imports.ts'
+import { B, Int, NETS, O, Sc } from '$lib/core/imports.ts'
 
 export type Product = B.Branded<
 	{
@@ -15,4 +15,13 @@ export const Product = B.refined<Product>(
 	() => B.error(`Product is invalid`),
 )
 
-export const fromStruct = Product.option
+export const ProductSchema = Sc.fromBrand(Product)(
+	Sc.Struct({
+		name: NETS.NonEmptyTrimmedStringSchema,
+		maybeExpirationDate: Sc.Option(Int.IntegerSchema),
+		creationDate: Int.IntegerSchema,
+	}),
+)
+
+export const fromStruct = (...p: Parameters<typeof Product.option>) =>
+	Product.option(...p)

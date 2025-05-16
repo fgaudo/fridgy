@@ -1,10 +1,18 @@
-import { C, Da, NEHS, R, RR } from '$lib/core/imports.ts'
+import { C, Da, NEHS, R, RR, Sc } from '$lib/core/imports.ts'
 
 export class OperationFailed extends Da.TaggedError(`OperationFailed`) {}
 
+export const DeleteProductsByIdsDTO = Sc.fromBrand(
+	NEHS.NonEmptyHashSet<string>(),
+)(Sc.HashSet(Sc.String))
+
+export type DeleteProductsByIdsDTO = Sc.Schema.Type<
+	typeof DeleteProductsByIdsDTO
+>
+
 interface Request extends R.Request<void, OperationFailed> {
 	readonly _tag: `DeleteProductsByIds`
-	readonly ids: NEHS.NonEmptyHashSet<string>
+	readonly ids: DeleteProductsByIdsDTO
 }
 
 export const Request = R.tagged<Request>(`DeleteProductsByIds`)

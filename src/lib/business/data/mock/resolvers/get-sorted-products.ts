@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unnecessary-condition */
 import { A, Eff, HM, L, O, Ord, RR, Ref, pipe } from '$lib/core/imports.ts'
 
 import { GetSortedProducts } from '$lib/business/app/operations.ts'

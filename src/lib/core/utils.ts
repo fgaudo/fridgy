@@ -9,7 +9,7 @@ export const useOrCreateError = (message: string) => (error: unknown) =>
 	error instanceof Error ? error : new Error(message)
 
 export const objectFromEntries = <
-	const T extends ReadonlyArray<readonly [PropertyKey, unknown]>,
+	const T extends readonly (readonly [PropertyKey, unknown])[],
 >(
 	entries: T,
 ): { [K in T[number] as K[0]]: K[1] } => {

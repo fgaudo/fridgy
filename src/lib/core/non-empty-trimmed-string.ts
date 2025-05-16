@@ -15,9 +15,10 @@ export const NonEmptyTrimmedStringSchema = Sc.fromBrand(NonEmptyTrimmedString)(
 
 export const unsafeFromString = flow(trim, NonEmptyTrimmedString)
 
-export const isNonEmptyTrimmedString = NonEmptyTrimmedString.is
+export const isNonEmptyTrimmedString = (s: string) =>
+	NonEmptyTrimmedString.is(s)
 
-export const fromString = flow(trim, NonEmptyTrimmedString.option)
+export const fromString = flow(trim, s => NonEmptyTrimmedString.option(s))
 
 function trim(s: string): string {
 	return s.trim()

@@ -3,80 +3,72 @@ import { ParseResult } from 'effect'
 import { E, Eff, H, Int, L, NETS, O, RR, Sc, pipe } from '$lib/core/imports.ts'
 
 import { GetSortedProducts } from '$lib/business/app/operations.ts'
-import { GetSortedProductsDTO } from '$lib/business/app/operations/get-sorted-products.ts'
 
 import { DbPlugin } from '../db-plugin.ts'
 
-const Response = Sc.Struct({
-	total: Sc.Number,
-	products: Sc.Array(
-		Sc.Struct({
-			id: Sc.OptionFromUndefinedOr(Sc.Number).annotations({
-				decodingFallback: H.fallback(O.none()),
+const DtoFromBackend = Sc.transformOrFail(
+	Sc.Struct({
+		total: Sc.Number,
+		products: Sc.Array(
+			Sc.Struct({
+				id: Sc.OptionFromUndefinedOr(Sc.Number).annotations({
+					decodingFallback: H.fallback(O.none()),
+				}),
+				name: Sc.OptionFromUndefinedOr(Sc.String).annotations({
+					decodingFallback: H.fallback(O.none()),
+				}),
+				expirationDate: Sc.OptionFromUndefinedOr(Sc.Number).annotations({
+					decodingFallback: H.fallback(O.none()),
+				}),
+				creationDate: Sc.OptionFromUndefinedOr(Sc.Number).annotations({
+					decodingFallback: H.fallback(O.none()),
+				}),
+			}).annotations({
+				decodingFallback: H.fallback({
+					id: O.none(),
+					name: O.none(),
+					expirationDate: O.none(),
+					creationDate: O.none(),
+				}),
 			}),
-			name: Sc.OptionFromUndefinedOr(Sc.String).annotations({
-				decodingFallback: H.fallback(O.none()),
-			}),
-			expirationDate: Sc.OptionFromUndefinedOr(Sc.Number).annotations({
-				decodingFallback: H.fallback(O.none()),
-			}),
-			creationDate: Sc.OptionFromUndefinedOr(Sc.Number).annotations({
-				decodingFallback: H.fallback(O.none()),
-			}),
-		}).annotations({
-			decodingFallback: H.fallback({
-				id: O.none(),
-				name: O.none(),
-				expirationDate: O.none(),
-				creationDate: O.none(),
-			}),
-		}),
-	),
-})
-
-const GetSortedProductsDTOFromResponse = Sc.transformOrFail(
-	Response,
-	GetSortedProductsDTO,
+		),
+	}),
+	GetSortedProducts.GetSortedProductsDTO,
 	{
 		strict: true,
-		decode: data =>
-			Eff.gen(function* () {
-				const products = yield* Eff.all(
-					data.products.map(product =>
-						Eff.gen(function* () {
-							return {
-								maybeId: yield* O.match(product.id, {
-									onNone: () => Eff.succeed(O.none<string>()),
-									onSome: id => Eff.option(Eff.try(() => JSON.stringify(id))),
-								}),
+		decode: response =>
+			Eff.all(
+				response.products.map(product =>
+					Eff.gen(function* () {
+						return {
+							maybeId: yield* O.match(product.id, {
+								onNone: () => Eff.succeed(O.none<string>()),
+								onSome: id => Eff.option(Eff.try(() => JSON.stringify(id))),
+							}),
 
-								maybeName: pipe(product.name, O.flatMap(NETS.fromString)),
+							maybeName: pipe(product.name, O.flatMap(NETS.fromString)),
 
-								maybeExpirationDate: pipe(
-									product.expirationDate,
-									O.flatMap(Int.fromNumber),
-								),
+							maybeExpirationDate: pipe(
+								product.expirationDate,
+								O.flatMap(Int.fromNumber),
+							),
 
-								maybeCreationDate: pipe(
-									product.creationDate,
-									O.flatMap(Int.fromNumber),
-								),
-							}
-						}),
-					),
-				)
-				return yield* ParseResult.succeed(products)
-			}),
-
+							maybeCreationDate: pipe(
+								product.creationDate,
+								O.flatMap(Int.fromNumber),
+							),
+						}
+					}),
+				),
+			),
 		encode: (actual, _, ast) =>
 			ParseResult.fail(
 				new ParseResult.Forbidden(
 					ast,
 					actual,
-					`Transformation is only for decoding`,
+					`This transformer is only for decoding`,
 				),
 			),
-		// Successfully encode a Right value
 	},
 )
 
@@ -84,7 +76,6 @@ export const query = L.effect(
 	GetSortedProducts.Resolver,
 	Eff.gen(function* () {
 		const { getAllProductsWithTotal } = yield* DbPlugin
-
 		return RR.fromEffect(() =>
 			Eff.gen(function* () {
 				const result = yield* pipe(getAllProductsWithTotal, Eff.either)
@@ -93,17 +84,11 @@ export const query = L.effect(
 					yield* Eff.logError(result.left.error)
 					return yield* new GetSortedProducts.FetchingFailed()
 				}
+				const entries = yield* Sc.decodeUnknown(DtoFromBackend)(
+					result.right,
+				).pipe(Eff.catchTags({ ParseError: Eff.die }))
 
-				const decodeResult = yield* Sc.decodeUnknown(
-					GetSortedProductsDTOFromResponse,
-				)(result.right).pipe(Eff.either)
-
-				if (E.isLeft(decodeResult)) {
-					yield* Eff.logError(decodeResult.left.message)
-					return yield* new GetSortedProducts.InvalidDataReceived()
-				}
-
-				return decodeResult.right
+				return entries
 			}),
 		)
 	}),

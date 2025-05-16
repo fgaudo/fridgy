@@ -17,8 +17,8 @@ export function scale2(
 		easing,
 		css: (_t, u) => {
 			return `
-        transform: ${transform} scale(${1 - sd * u});
-        opacity: ${target_opacity - od * u}
+        transform: ${transform} scale(${(1 - sd * u).toString()});
+        opacity: ${(target_opacity - od * u).toString(10)}
     `
 		},
 	} satisfies TransitionConfig

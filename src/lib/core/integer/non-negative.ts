@@ -7,6 +7,6 @@ export type NonNegativeInteger = Integer & NNN.NonNegative
 /** @internal */
 export const NonNegativeInteger = B.all(Int.Integer, NNN.NonNegative)
 
-export const fromNumber = NonNegativeInteger.option
+export const fromNumber = (number: number) => NonNegativeInteger.option(number)
 export const unsafeFromNumber = NonNegativeInteger
-export const isNonNegative = NonNegativeInteger.is
+export const isNonNegative = (number: number) => NonNegativeInteger.is(number)

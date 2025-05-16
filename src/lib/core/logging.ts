@@ -12,8 +12,9 @@ export const withLayerLogger = Log.mapInputOptions(
 		message: pipe(
 			options.annotations,
 			HM.get(`_LAYER_`),
+			O.filter(l => typeof l === `string`),
 			O.match({
-				onSome: layer => `[${layer}] ${options.message}`,
+				onSome: layer => `[${layer}] ${options.message as string}`,
 				onNone: () => options.message,
 			}),
 		),

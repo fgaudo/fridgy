@@ -1,11 +1,11 @@
 import type { Cancel } from 'effect/Runtime'
 
-import { D, Eff, Ref, flow, pipe } from '$lib/core/imports.ts'
+import { D, Eff, pipe } from '$lib/core/imports.ts'
 
 import {
 	createCapacitorListener,
-	createDispatcherWithLogging,
-	createRunEffect,
+	makeDispatcher,
+	makeEffectRunner,
 } from '$lib/ui/adapters.ts'
 import { getGlobalContext } from '$lib/ui/context.ts'
 
@@ -19,15 +19,9 @@ export function createViewModel() {
 	const context = createStateContext()
 
 	const { runtime } = getGlobalContext()
+	const runner = makeEffectRunner(runtime)
 
-	const runEffect = createRunEffect(runtime)
-
-	const dispatch = createDispatcherWithLogging(
-		Ref.unsafeMake(context.state),
-		update,
-	)
-
-	const unsafeDispatch = flow(dispatch, runEffect)
+	const { dispatch } = makeDispatcher(context.state, runner, update)
 
 	/** Refresh time listeners */
 	{
@@ -37,13 +31,15 @@ export function createViewModel() {
 
 		const startRefreshTimeResumeListener = createCapacitorListener({
 			event: `resume`,
-			cb: () => unsafeDispatch(Eff.succeed(Message.RefreshTime())),
+			cb: () => {
+				runner.runEffect(dispatch(Message.RefreshTime()))
+			},
 		})
 
 		const refreshTimeInterval = Eff.gen(function* () {
 			while (true) {
-				yield* dispatch(Tasks.refreshTime)
-
+				const m = yield* Tasks.refreshTime
+				yield* dispatch(m)
 				yield* Eff.sleep(refreshTimeIntervalFrequency)
 			}
 		})
@@ -53,12 +49,12 @@ export function createViewModel() {
 			cancelRefreshTimeInterval?.()
 
 			if (context.derived.refreshTimeListenersEnabled) {
-				runEffect(Eff.log(`Refresh time listeners enabled`))
+				runner.runEffect(Eff.log(`Refresh time listeners enabled`))
 				cancelRefreshTimeResumeListener = startRefreshTimeResumeListener()
 
-				cancelRefreshTimeInterval = runEffect(refreshTimeInterval)
+				cancelRefreshTimeInterval = runner.runEffect(refreshTimeInterval)
 			} else {
-				runEffect(Eff.log(`Refresh time listeners disabled`))
+				runner.runEffect(Eff.log(`Refresh time listeners disabled`))
 			}
 		})
 	}
@@ -67,53 +63,48 @@ export function createViewModel() {
 		state: context.state,
 		derived: context.derived,
 		tasks: {
-			clearSelected: () =>
-				pipe(
-					Eff.log(`Received clearSelected event from the ui`),
-					Eff.andThen(Eff.succeed(Message.ClearSelected())),
-					unsafeDispatch,
-				),
+			clearSelected: () => dispatch(Message.ClearSelected()),
 
 			fetchList: () =>
 				pipe(
 					Eff.log(`Received fetchList event from the ui`),
-					Eff.andThen(Eff.succeed(Message.FetchList())),
-					unsafeDispatch,
+					Eff.andThen(dispatch(Message.FetchList())),
+					runner.runEffect,
 				),
 
 			toggleMenu: () =>
 				pipe(
 					Eff.log(`Received toggleMenu event from the ui`),
-					Eff.andThen(Eff.succeed(Message.ToggleMenu())),
-					unsafeDispatch,
+					Eff.andThen(dispatch(Message.ToggleMenu())),
+					runner.runEffect,
 				),
 
 			toggleItem: (product: ProductViewModel) =>
 				pipe(
 					Eff.log(`Received toggleItem event from the ui`),
-					Eff.andThen(Eff.succeed(Message.ToggleItem({ product }))),
-					unsafeDispatch,
+					Eff.andThen(dispatch(Message.ToggleItem({ product }))),
+					runner.runEffect,
 				),
 
 			registerRefreshTimeListeners: () =>
 				pipe(
 					Eff.log(`Received registerRefreshTimeListeners event from the ui`),
-					Eff.andThen(Eff.succeed(Message.EnableRefreshTimeListener())),
-					unsafeDispatch,
+					Eff.andThen(dispatch(Message.EnableRefreshTimeListener())),
+					runner.runEffect,
 				),
 
 			unregisterRefreshTimeListeners: () =>
 				pipe(
 					Eff.log(`Received unregisterRefreshTimeListeners event from the ui`),
-					Eff.andThen(Eff.succeed(Message.DisableRefreshTimeListener())),
-					unsafeDispatch,
+					Eff.andThen(dispatch(Message.DisableRefreshTimeListener())),
+					runner.runEffect,
 				),
 
 			deleteSelected: () =>
 				pipe(
 					Eff.log(`Received deleteSelected event from the ui`),
-					Eff.andThen(Eff.succeed(Message.DeleteSelectedAndRefresh())),
-					unsafeDispatch,
+					Eff.andThen(dispatch(Message.DeleteSelectedAndRefresh())),
+					runner.runEffect,
 				),
 		},
 	}

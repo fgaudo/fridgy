@@ -1,8 +1,8 @@
 import { E, Eff, Int, NETS, O } from '$lib/core/imports.ts'
-import type { Command } from '$lib/core/store.ts'
 
 import type { UseCases } from '$lib/business/app/use-cases.ts'
 import { AddProduct } from '$lib/business/index.ts'
+import type { Command } from '$lib/ui/adapters.ts'
 import { MINIMUM_LAG_MS } from '$lib/ui/constants.ts'
 
 import { Message } from './update.svelte.ts'

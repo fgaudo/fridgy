@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unnecessary-condition */
 import { Eff, HM, L, RR, Ref } from '$lib/core/imports.ts'
 
 import { DeleteProductsByIds } from '$lib/business/app/operations.ts'

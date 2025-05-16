@@ -36,7 +36,7 @@
 		if (onhold)
 			timeoudId = setTimeout(() => {
 				isDown = false
-				onhold?.()
+				onhold()
 			}, 400)
 	}}
 	onpointermove={e => {

@@ -4,32 +4,30 @@ import { withLayerLogging } from '$lib/core/logging.ts'
 import { GetSortedProducts as GetSortedProductsOperation } from '$lib/business/app/operations'
 import * as P from '$lib/business/domain/product'
 
-export const Product = Sc.Union(
-	Sc.Struct({
-		isCorrupt: Sc.Literal(false),
-		id: Sc.String,
-		maybeName: Sc.Option(NETS.NonEmptyTrimmedStringSchema),
-		maybeExpirationDate: Sc.Option(Int.IntegerSchema),
-		maybeCreationDate: Sc.Option(Int.IntegerSchema),
-		isValid: Sc.Literal(false),
-	}),
-	Sc.Struct({
-		isCorrupt: Sc.Literal(false),
-		id: Sc.String,
-		name: NETS.NonEmptyTrimmedStringSchema,
-		maybeExpirationDate: Sc.Option(Int.IntegerSchema),
-		creationDate: Int.IntegerSchema,
-		isValid: Sc.Literal(true),
-	}),
-	Sc.Struct({
-		isCorrupt: Sc.Literal(true),
-		maybeName: Sc.Option(NETS.NonEmptyTrimmedStringSchema),
-	}),
+export const GetSortedProductsDTO = Sc.Array(
+	Sc.Union(
+		Sc.Struct({
+			isCorrupt: Sc.Literal(false),
+			id: Sc.String,
+			maybeName: Sc.Option(NETS.NonEmptyTrimmedStringSchema),
+			maybeExpirationDate: Sc.Option(Int.IntegerSchema),
+			maybeCreationDate: Sc.Option(Int.IntegerSchema),
+			isValid: Sc.Literal(false),
+		}),
+		Sc.Struct({
+			isCorrupt: Sc.Literal(false),
+			id: Sc.String,
+			name: NETS.NonEmptyTrimmedStringSchema,
+			maybeExpirationDate: Sc.Option(Int.IntegerSchema),
+			creationDate: Int.IntegerSchema,
+			isValid: Sc.Literal(true),
+		}),
+		Sc.Struct({
+			isCorrupt: Sc.Literal(true),
+			maybeName: Sc.Option(NETS.NonEmptyTrimmedStringSchema),
+		}),
+	),
 )
-
-export type Product = Sc.Schema.Type<typeof Product>
-
-export const GetSortedProductsDTO = Sc.Array(Product)
 
 export type GetSortedProductsDTO = Sc.Schema.Type<typeof GetSortedProductsDTO>
 
@@ -48,7 +46,6 @@ export class GetSortedProducts extends Eff.Service<GetSortedProducts>()(
 				yield* Eff.log(`Attempting to fetch the list of products...`)
 
 				const errorOrData = yield* pipe(getSortedProducts, Eff.either)
-
 				if (
 					E.isLeft(errorOrData) &&
 					errorOrData.left._tag === `FetchingFailed`
@@ -68,66 +65,60 @@ export class GetSortedProducts extends Eff.Service<GetSortedProducts>()(
 
 				const entries = yield* pipe(
 					result,
-					A.map(toProductResultWithEffect),
+					A.map(
+						({ maybeId, maybeName, maybeCreationDate, maybeExpirationDate }) =>
+							Eff.gen(function* () {
+								if (O.isNone(maybeId)) {
+									yield* Eff.logWarning(`CORRUPTION - Product has no id.`)
+
+									return {
+										id: Symbol(),
+										isCorrupt: true,
+										maybeName,
+									} as const
+								}
+
+								const maybeProduct = O.gen(function* () {
+									const { name, creationDate } = yield* O.all({
+										name: maybeName,
+										creationDate: maybeCreationDate,
+									})
+
+									return yield* P.fromStruct({
+										name,
+										creationDate,
+										maybeExpirationDate,
+									})
+								})
+
+								if (O.isNone(maybeProduct)) {
+									yield* Eff.logWarning(`Product is invalid.`)
+
+									return {
+										id: maybeId.value,
+										maybeName,
+										maybeCreationDate,
+										maybeExpirationDate,
+										isCorrupt: false,
+										isValid: false,
+									} as const
+								}
+
+								return {
+									isCorrupt: false,
+									isValid: true,
+									id: maybeId.value,
+									name: maybeProduct.value.name,
+									creationDate: maybeProduct.value.creationDate,
+									maybeExpirationDate: maybeProduct.value.maybeExpirationDate,
+								} as const
+							}),
+					),
 					Eff.all,
 				)
 
-				return entries
-			}).pipe(withLayerLogging(`A`)) satisfies Eff.Effect<Product[], void>
+				return entries satisfies GetSortedProductsDTO
+			}).pipe(withLayerLogging(`A`))
 		}),
 	},
 ) {}
-
-function toProductResultWithEffect({
-	maybeId,
-	maybeName,
-	maybeCreationDate,
-	maybeExpirationDate,
-}: GetSortedProductsOperation.ProductDTO): Eff.Effect<Product> {
-	return Eff.gen(function* () {
-		if (O.isNone(maybeId)) {
-			yield* Eff.logWarning(`CORRUPTION - Product has no id.`)
-
-			return {
-				id: Symbol(),
-				isCorrupt: true,
-				maybeName,
-			}
-		}
-
-		const maybeProduct = O.gen(function* () {
-			const { name, creationDate } = yield* O.all({
-				name: maybeName,
-				creationDate: maybeCreationDate,
-			})
-
-			return yield* P.fromStruct({
-				name,
-				creationDate,
-				maybeExpirationDate,
-			})
-		})
-
-		if (O.isNone(maybeProduct)) {
-			yield* Eff.logWarning(`Product is invalid.`)
-
-			return {
-				id: maybeId.value,
-				maybeName,
-				maybeCreationDate,
-				maybeExpirationDate,
-				isCorrupt: false,
-				isValid: false,
-			}
-		}
-
-		return {
-			isCorrupt: false,
-			isValid: true,
-			id: maybeId.value,
-			name: maybeProduct.value.name,
-			creationDate: maybeProduct.value.creationDate,
-			maybeExpirationDate: maybeProduct.value.maybeExpirationDate,
-		}
-	})
-}

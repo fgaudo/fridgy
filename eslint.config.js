@@ -10,14 +10,13 @@ import { URL } from 'url'
 
 import svelteConfig from './svelte.config.js'
 
-const gitignorePath = fileURLToPath(
-	new URL('./.gitignore', import.meta.url),
-)
+const gitignorePath = fileURLToPath(new URL('./.gitignore', import.meta.url))
 
 export default ts.config(
 	includeIgnoreFile(gitignorePath),
 	js.configs.recommended,
-	...ts.configs.recommended,
+	...ts.configs.strictTypeChecked,
+	...ts.configs.stylisticTypeChecked,
 	...svelte.configs.recommended,
 	prettier,
 	...svelte.configs.prettier,
@@ -25,30 +24,39 @@ export default ts.config(
 		plugins: { '@stylistic/ts': stylistic },
 
 		languageOptions: {
+			parserOptions: {
+				projectService: true,
+				tsconfigRootDir: import.meta.dirname,
+			},
+
 			globals: {
 				...globals.browser,
 				...globals.node,
 			},
 		},
-		ignores: [
-			'eslint.config.js',
-			'svelte.config.js',
-		],
+		ignores: ['eslint.config.js', 'svelte.config.js'],
 		rules: {
 			'no-undef': 'off',
-			'@stylistic/ts/quotes': [
-				'error',
-				'backtick',
-			],
+			'@stylistic/ts/quotes': ['error', 'backtick'],
 			'svelte/no-useless-mustaches': 'off',
+			'@typescript-eslint/no-unnecessary-condition': [
+				'error',
+				{
+					allowConstantLoopConditions: 'only-allowed-literals',
+				},
+			],
+			'@typescript-eslint/consistent-type-definitions': ['off'],
 		},
 	},
 	{
-		files: [
-			'**/*.svelte',
-			'**/*.svelte.ts',
-			'**/*.svelte.js',
-		],
+		files: ['**/*.svelte'],
+
+		rules: {
+			'@typescript-eslint/no-unsafe-assignment': 'off',
+		},
+	},
+	{
+		files: ['**/*.svelte', '**/*.svelte.ts', '**/*.svelte.js'],
 
 		languageOptions: {
 			parserOptions: {

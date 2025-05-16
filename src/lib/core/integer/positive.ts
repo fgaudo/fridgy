@@ -7,6 +7,6 @@ export type PositiveInteger = Integer & Pos.Positive
 /** @internal */
 export const PositiveInteger = B.all(Int.Integer, Pos.Positive)
 
-export const fromNumber = PositiveInteger.option
+export const fromNumber = (number: number) => PositiveInteger.option(number)
 export const unsafeFromNumber = PositiveInteger
-export const isNonNegative = PositiveInteger.is
+export const isNonNegative = (number: number) => PositiveInteger.is(number)

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unnecessary-condition */
 import { Eff, HM, L, LL, O, RR, Ref, pipe } from '$lib/core/imports.ts'
 import { withLayerLogging } from '$lib/core/logging.ts'
 

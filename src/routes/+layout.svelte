@@ -1,7 +1,7 @@
 <script lang="ts">
 	import '@fontsource-variable/comfortaa/index.css'
 	import '@fontsource-variable/roboto-flex/index.css'
-	import { onDestroy, onMount } from 'svelte'
+	import { type Snippet, onDestroy, onMount } from 'svelte'
 	import { fade } from 'svelte/transition'
 
 	import { Eff, MR } from '$lib/core/imports.ts'
@@ -15,13 +15,13 @@
 	const runtime = MR.make(useCases)
 
 	onDestroy(() => {
-		runtime.dispose()
+		void runtime.dispose()
 	})
 
-	let { children } = $props()
+	let { children }: { children: Snippet } = $props()
 	let areFontsLoaded = $state(false)
 
-	const runEffect = Utils.createRunEffect(runtime)
+	const { runEffect } = Utils.makeEffectRunner(runtime)
 
 	const awaitFonts = () =>
 		runEffect(

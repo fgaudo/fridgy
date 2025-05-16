@@ -67,7 +67,7 @@
 			<div class="w-full p-4 flex relative">
 				<Ripple
 					ontap={() => {
-						goto(`/about`)
+						void goto(`/about`)
 					}}
 				></Ripple>
 				<Info />
@@ -275,7 +275,7 @@
 										{@const currentProgressOrZero =
 											totalDuration < 0 ? 0 : currentProgress}
 
-										{@const color = `color-mix(in srgb, var(--color-secondary) ${currentProgressOrZero * 100}%, var(--color-primary) ${(1 - currentProgressOrZero) * 100}%)`}
+										{@const color = `color-mix(in srgb, var(--color-secondary) ${(currentProgressOrZero * 100).toString(10)}%, var(--color-primary) ${((1 - currentProgressOrZero) * 100).toString(10)}%)`}
 
 										<div
 											style:outline-color={color}
@@ -346,7 +346,7 @@
 		>
 			<Ripple
 				ontap={() => {
-					goto(`/add-product`)
+					void goto(`/add-product`)
 				}}
 			></Ripple>
 			<Plus size="36" />
