@@ -2,10 +2,11 @@ import { endOfDay } from 'date-fns'
 
 import { Da, Eff, Int, M, NETS, O, pipe } from '$lib/core/imports.ts'
 
+import type { UseCases } from '$lib/business/app/use-cases.ts'
 import type { Update } from '$lib/ui/adapters.ts'
 
 import { addProduct, queueLoading, queueRemoveToast } from './commands.ts'
-import type { StateContext } from './state.svelte.ts'
+import type { State } from './state.svelte.ts'
 
 export type Message = Da.TaggedEnum<{
 	AddProduct: object
@@ -17,22 +18,21 @@ export type Message = Da.TaggedEnum<{
 	SetNameInteracted: object
 	ShowSpinner: { id: symbol }
 	NoOp: object
+	ShowCrash: object
+	Crash: { message: unknown }
 }>
 
 export const Message = Da.taggedEnum<Message>()
 
-export const update: Update<
-	{ state: StateContext[`state`]; derived: StateContext[`derived`] },
-	Message
-> = (context, message) =>
+export const update: Update<State, Message, UseCases> = (state, message) =>
 	M.type<Message>().pipe(
 		M.tag(`AddProduct`, () => {
-			if (context.state.isAdding) {
+			if (state.isAdding) {
 				return []
 			}
 
 			const maybeName = pipe(
-				O.fromNullable(context.state.name),
+				O.fromNullable(state.name),
 				O.flatMap(NETS.fromString),
 			)
 
@@ -40,16 +40,16 @@ export const update: Update<
 				return []
 			}
 
-			context.state.toastMessage = undefined
+			state.toastMessage = undefined
 
 			const maybeExpirationDate = pipe(
-				O.fromNullable(context.state.expirationDate),
+				O.fromNullable(state.expirationDate),
 				O.flatMap(Int.fromNumber),
 			)
 
 			const id = Symbol()
-			context.state.spinnerId = id
-			context.state.isAdding = true
+			state.spinnerId = id
+			state.isAdding = true
 
 			return [
 				queueLoading(id),
@@ -60,69 +60,83 @@ export const update: Update<
 			]
 		}),
 		M.tag(`AddProductFailed`, () => {
-			context.state.isAdding = false
-			context.state.spinnerId = undefined
-			context.state.isLoading = false
+			state.isAdding = false
+			state.spinnerId = undefined
+			state.isLoading = false
 
 			return []
 		}),
 		M.tag(`AddProductSucceeded`, () => {
-			context.state.isAdding = false
-			context.state.hasInteractedWithName = false
-			context.state.expirationDate = undefined
-			context.state.name = ``
+			state.isAdding = false
+			state.hasInteractedWithName = false
+			state.expirationDate = undefined
+			state.name = ``
 			const id = Symbol()
-			context.state.toastMessage = {
+			state.toastMessage = {
 				message: `Product added`,
 				id,
+				type: `success`,
 			}
-			context.state.spinnerId = undefined
-			context.state.isLoading = false
+			state.spinnerId = undefined
+			state.isLoading = false
 
 			return [queueRemoveToast(id)]
 		}),
 		M.tag(`RemoveToast`, ({ id }) => {
-			if (id !== context.state.toastMessage?.id) {
+			if (id !== state.toastMessage?.id) {
 				return [
 					Eff.logWarning(`RemoveToast is stale`).pipe(Eff.as(Message.NoOp())),
 				]
 			}
 
-			context.state.toastMessage = undefined
+			state.toastMessage = undefined
 
 			return []
 		}),
 		M.tag(`SetExpirationDate`, ({ expirationDate }) => {
 			if (expirationDate.length <= 0) {
-				context.state.expirationDate = undefined
+				state.expirationDate = undefined
 				return []
 			}
-			context.state.expirationDate = endOfDay(
-				Date.parse(expirationDate),
-			).valueOf()
+			state.expirationDate = endOfDay(Date.parse(expirationDate)).valueOf()
 
 			return []
 		}),
 		M.tag(`SetName`, ({ name }) => {
-			context.state.hasInteractedWithName = true
-			context.state.name = name
+			state.hasInteractedWithName = true
+			state.name = name
 
 			return []
 		}),
 		M.tag(`SetNameInteracted`, () => {
-			context.state.hasInteractedWithName = true
+			state.hasInteractedWithName = true
 			return []
 		}),
 		M.tag(`ShowSpinner`, ({ id }) => {
-			if (id !== context.state.spinnerId) {
+			if (id !== state.spinnerId) {
 				return [
 					Eff.logWarning(`ShowSpinner is stale`).pipe(Eff.as(Message.NoOp())),
 				]
 			}
-			context.state.isLoading = true
+			state.isLoading = true
 
 			return []
 		}),
 		M.tag(`NoOp`, () => []),
+		M.tag(`ShowCrash`, () => {
+			const id = Symbol()
+			state.toastMessage = {
+				message: `An unexpected error occurred and the app had to be reloaded`,
+				id,
+				type: `error`,
+			}
+
+			return [queueRemoveToast(id)]
+		}),
+		M.tag(`Crash`, () => {
+			state.hasCrashOccurred = true
+			return []
+		}),
+
 		M.exhaustive,
 	)(message)

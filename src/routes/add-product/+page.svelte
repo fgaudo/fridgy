@@ -1,6 +1,8 @@
 <script lang="ts">
+	import { page } from '$app/state'
 	import ArrowLeft from '@lucide/svelte/icons/arrow-left'
 	import Quote from '@lucide/svelte/icons/quote'
+	import { onMount } from 'svelte'
 	import { cubicIn, cubicOut } from 'svelte/easing'
 	import { fade, fly } from 'svelte/transition'
 
@@ -13,6 +15,19 @@
 	import { createViewModel } from './(view-model)/index.svelte.ts'
 
 	const viewModel = createViewModel()
+
+	$effect(() => {
+		if (viewModel.state.hasCrashOccurred) {
+			window.history.replaceState(null, ``, `/add-product?crash=true`)
+			window.location.reload()
+		}
+	})
+
+	onMount(() => {
+		if (page.url.searchParams.has(`crash`)) {
+			viewModel.tasks.showCrash()
+		}
+	})
 </script>
 
 <div
@@ -171,24 +186,43 @@
 						class="flex p-4 items-center w-full shadow-md mx-auto text-gray-500 bg-white rounded-lg"
 						role="alert"
 					>
-						<div
-							class="inline-flex items-center justify-center shrink-0 w-8 h-8 text-green-500 rounded-lg"
-						>
-							<svg
-								class="w-5 h-5"
-								aria-hidden="true"
-								xmlns="http://www.w3.org/2000/svg"
-								fill="currentColor"
-								viewBox="0 0 20 20"
+						{#if viewModel.derived.maybeToastMessage.value.type === `success`}
+							<div
+								class="inline-flex items-center justify-center shrink-0 w-8 h-8 text-green-500 rounded-lg"
 							>
-								<path
-									d="M10 .5a9.5 9.5 0 1 0 9.5 9.5A9.51 9.51 0 0 0 10 .5Zm3.707 8.207-4 4a1 1 0 0 1-1.414 0l-2-2a1 1 0 0 1 1.414-1.414L9 10.586l3.293-3.293a1 1 0 0 1 1.414 1.414Z"
-								/>
-							</svg>
-							<span class="sr-only">Check icon</span>
-						</div>
+								<svg
+									class="w-5 h-5"
+									aria-hidden="true"
+									xmlns="http://www.w3.org/2000/svg"
+									fill="currentColor"
+									viewBox="0 0 20 20"
+								>
+									<path
+										d="M10 .5a9.5 9.5 0 1 0 9.5 9.5A9.51 9.51 0 0 0 10 .5Zm3.707 8.207-4 4a1 1 0 0 1-1.414 0l-2-2a1 1 0 0 1 1.414-1.414L9 10.586l3.293-3.293a1 1 0 0 1 1.414 1.414Z"
+									/>
+								</svg>
+								<span class="sr-only">Check icon</span>
+							</div>
+						{:else}
+							<div
+								class="inline-flex items-center justify-center shrink-0 w-8 h-8 text-red-500 rounded-lg dark:text-red-200"
+							>
+								<svg
+									class="w-5 h-5"
+									aria-hidden="true"
+									xmlns="http://www.w3.org/2000/svg"
+									fill="currentColor"
+									viewBox="0 0 20 20"
+								>
+									<path
+										d="M10 .5a9.5 9.5 0 1 0 9.5 9.5A9.51 9.51 0 0 0 10 .5Zm3.707 11.793a1 1 0 1 1-1.414 1.414L10 11.414l-2.293 2.293a1 1 0 0 1-1.414-1.414L8.586 10 6.293 7.707a1 1 0 0 1 1.414-1.414L10 8.586l2.293-2.293a1 1 0 0 1 1.414 1.414L11.414 10l2.293 2.293Z"
+									/>
+								</svg>
+								<span class="sr-only">Error icon</span>
+							</div>
+						{/if}
 						<div class="ms-3 text-sm font-normal">
-							{viewModel.derived.maybeToastMessage.value}
+							{viewModel.derived.maybeToastMessage.value.message}
 						</div>
 					</div>
 				</div>

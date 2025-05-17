@@ -5,7 +5,7 @@ import { onDestroy, onMount } from 'svelte'
 import { Eff, LL, Log, MR, Q, Str, flow, pipe } from '$lib/core/imports.ts'
 import { withLayerLogging } from '$lib/core/logging.ts'
 
-export type Update<S, M> = (state: S, message: M) => void
+export type Update<S, M, R> = (state: S, message: M) => Command<M, R>[]
 
 export type Command<M, R> = Eff.Effect<M, never, R>
 
@@ -52,7 +52,8 @@ export function makeEffectRunner<R>(
 export function makeDispatcher<S, M extends { _tag: string }, R>(
 	mutableState: S,
 	effectRunner: EffectRunner<R>,
-	update: Update<S, M>,
+	update: Update<S, M, R>,
+	fatalMessage: (error: unknown) => M,
 ): Dispatcher<M> {
 	const queue = Eff.runSync(Q.unbounded<M>())
 
@@ -70,9 +71,27 @@ export function makeDispatcher<S, M extends { _tag: string }, R>(
 								yield* Eff.logDebug(`Dispatched message "${m._tag}"`).pipe(
 									Eff.annotateLogs({ message: m }),
 								)
-								update(mutableState, m)
+
+								const commands = update(mutableState, m)
+
+								for (const command of commands) {
+									yield* pipe(
+										command,
+										Eff.flatMap(m => queue.offer(m)),
+										Eff.catchAllDefect(err =>
+											Eff.logFatal(err).pipe(
+												Eff.andThen(Q.offer(queue, fatalMessage(err))),
+											),
+										),
+										Eff.fork,
+									)
+								}
 							}),
-							Eff.catchAllDefect(Eff.logFatal),
+							Eff.catchAllDefect(err =>
+								Eff.logFatal(err).pipe(
+									Eff.andThen(Q.offer(queue, fatalMessage(err))),
+								),
+							),
 						)
 					}
 				}),

@@ -12,7 +12,9 @@ export function createViewModel() {
 	const { runtime } = getGlobalContext()
 
 	const runner = makeEffectRunner(runtime)
-	const { dispatch } = makeDispatcher(context, runner, update)
+	const { dispatch } = makeDispatcher(context.state, runner, update, err =>
+		Message.Crash({ message: err }),
+	)
 
 	return {
 		state: context.state,
@@ -52,6 +54,14 @@ export function createViewModel() {
 					Eff.andThen(dispatch(Message.SetNameInteracted())),
 					runner.runEffect,
 				),
+
+			showCrash: () => {
+				pipe(
+					Eff.log(`Received showCrash event from the ui`),
+					Eff.andThen(dispatch(Message.ShowCrash())),
+					runner.runEffect,
+				)
+			},
 		},
 	}
 }

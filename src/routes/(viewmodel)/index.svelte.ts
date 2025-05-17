@@ -18,15 +18,12 @@ export function createViewModel() {
 	const { runtime } = getGlobalContext()
 	const runner = makeEffectRunner(runtime)
 
-	const { dispatch } = makeDispatcher(context, runner, update)
+	const { dispatch } = makeDispatcher(context.state, runner, update, err =>
+		Message.Crash({ message: err }),
+	)
 
 	onMount(() => {
 		runner.runEffect(dispatch(Message.FetchList()))
-	})
-
-	$effect(() => {
-		if (context.state.refreshTimeTask !== undefined) {
-		}
 	})
 
 	/** Refresh time listeners */
@@ -69,7 +66,7 @@ export function createViewModel() {
 			pageResumed: () =>
 				pipe(
 					Eff.log(`UI triggered pageResumed`),
-					Eff.andThen(dispatch(Message.RefreshTime())),
+					Eff.andThen(dispatch(Message.StartRefreshTime())),
 					runner.runEffect,
 				),
 			clearSelected: () =>
@@ -89,9 +86,16 @@ export function createViewModel() {
 			deleteSelected: () =>
 				pipe(
 					Eff.log(`UI triggered deleteSelected`),
-					Eff.andThen(dispatch(Message.DeleteSelectedAndRefresh())),
+					Eff.andThen(dispatch(Message.StartDeleteSelectedAndRefresh())),
 					runner.runEffect,
 				),
+			showCrash: () => {
+				pipe(
+					Eff.log(`Received showCrash event from the ui`),
+					Eff.andThen(dispatch(Message.ShowCrash())),
+					runner.runEffect,
+				)
+			},
 		},
 	}
 }

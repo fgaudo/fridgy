@@ -6,7 +6,10 @@ export type State = {
 	currentDate: number
 	isAdding: boolean
 	isLoading: boolean
-	toastMessage: { message: string; id: symbol } | undefined
+	hasCrashOccurred: boolean
+	toastMessage:
+		| { message: string; id: symbol; type: `error` | `success` }
+		| undefined
 	hasInteractedWithName: boolean
 	spinnerId: symbol | undefined
 }
@@ -22,6 +25,7 @@ export function createStateContext() {
 		expirationDate: undefined,
 		toastMessage: undefined,
 		spinnerId: undefined,
+		hasCrashOccurred: false,
 		hasInteractedWithName: false,
 	})
 
@@ -39,13 +43,7 @@ export function createStateContext() {
 		pipe(O.fromNullable(state.expirationDate), O.flatMap(Int.fromNumber)),
 	)
 
-	const maybeToastMessage = $derived(
-		pipe(
-			O.fromNullable(state.toastMessage),
-			O.map(toast => toast.message),
-			O.flatMap(NETS.fromString),
-		),
-	)
+	const maybeToastMessage = $derived(O.fromNullable(state.toastMessage))
 
 	const formattedCurrentDate = $derived(
 		new Date(state.currentDate).toISOString().substring(0, 10),

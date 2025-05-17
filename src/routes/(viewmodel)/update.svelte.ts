@@ -3,66 +3,62 @@ import { SvelteSet } from 'svelte/reactivity'
 
 import { Da, Eff, HS, M, NEHS, O, pipe } from '$lib/core/imports.ts'
 
+import type { UseCases } from '$lib/business/app/use-cases.ts'
 import type { GetSortedProductsDTO } from '$lib/business/app/use-cases/get-sorted-products.ts'
 import type { Update } from '$lib/ui/adapters.ts'
 
 import {
 	deleteSelectedAndRefresh,
 	queueLoading,
+	queueRemoveToast,
 	refreshList,
 	refreshTime,
-	refreshTimeIntervalTick,
 } from './commands.ts'
-import {
-	FetchId,
-	type ProductViewModel,
-	type StateContext,
-} from './state.svelte.ts'
+import { type ProductViewModel, type State } from './state.svelte.ts'
 
 export type Message = Da.TaggedEnum<{
 	FetchList: object
 	FetchListSucceeded: {
-		taskId: FetchId
+		taskId: symbol
 		result: GetSortedProductsDTO
 	}
-	FetchListFailed: { taskId: FetchId }
+	FetchListFailed: { taskId: symbol }
 	ClearSelected: object
 	ToggleItem: {
 		product: ProductViewModel
 	}
-	DeleteSelectedAndRefresh: object
+	StartDeleteSelectedAndRefresh: object
 	DeleteSelectedFailed: object
 	DeleteSelectedSucceededButRefreshFailed: object
 	DeleteSelectedAndRefreshSucceeded: {
 		result: GetSortedProductsDTO
 	}
 	StartRefreshTime: object
-	RefreshTimeIntervalTick: { timestamp: number }
 	RefreshTimeResult: { timestamp: number }
 	ShowSpinner: { id: symbol }
 	NoOp: object
+	ShowCrash: object
+	RemoveToast: { id: symbol }
+	Crash: { message: unknown }
 }>
 
 export const Message = Da.taggedEnum<Message>()
 
-export const update: Update<
-	{ state: StateContext[`state`]; derived: StateContext[`derived`] },
-	Message
-> = (context, message) => {
+export const update: Update<State, Message, UseCases> = (state, message) => {
 	return M.type<Message>().pipe(
 		M.tag(`StartRefreshTime`, () => {
 			return [refreshTime]
 		}),
 		M.tag(`FetchList`, () => {
-			const taskId = FetchId()
+			const taskId = Symbol()
 
-			context.state.refreshingTaskId = taskId
-			context.state.isLoading = true
+			state.refreshingTaskId = taskId
+			state.isLoading = true
 
 			return [refreshList(taskId)]
 		}),
 		M.tag(`FetchListFailed`, ({ taskId }) => {
-			if (taskId !== context.state.refreshingTaskId) {
+			if (taskId !== state.refreshingTaskId) {
 				return [
 					Eff.logWarning(`FetchListFailed is stale`).pipe(
 						Eff.as(Message.NoOp()),
@@ -70,22 +66,22 @@ export const update: Update<
 				]
 			}
 
-			context.state.isLoading = false
-			context.state.receivedError = true
+			state.isLoading = false
+			state.receivedError = true
 
 			return []
 		}),
 		M.tag(`FetchListSucceeded`, ({ result, taskId }) => {
-			if (taskId !== context.state.refreshingTaskId) {
+			if (taskId !== state.refreshingTaskId) {
 				return [
 					Eff.logWarning(`FetchListSucceeded is stale`).pipe(
 						Eff.as(Message.NoOp()),
 					),
 				]
 			}
-			context.state.isLoading = false
+			state.isLoading = false
 
-			context.state.products = {
+			state.products = {
 				entries: result.map(entry => {
 					if (entry.isCorrupt) {
 						return {
@@ -116,13 +112,13 @@ export const update: Update<
 
 			return []
 		}),
-		M.tag(`DeleteSelectedAndRefresh`, () => {
-			if (context.state.isDeleteRunning) {
+		M.tag(`StartDeleteSelectedAndRefresh`, () => {
+			if (state.isDeleteRunning) {
 				return []
 			}
 
 			const maybeIds = pipe(
-				O.fromNullable(context.state.products?.selected),
+				O.fromNullable(state.products?.selected),
 				O.map(HS.fromIterable),
 				O.flatMap(NEHS.fromHashSet),
 			)
@@ -132,14 +128,13 @@ export const update: Update<
 			}
 
 			const id = Symbol()
-			context.state.spinnerTaskId = id
-			context.state.isDeleteRunning = true
+			state.spinnerTaskId = id
 
 			return [deleteSelectedAndRefresh(maybeIds.value), queueLoading(id)]
 		}),
 		M.tag(`DeleteSelectedAndRefreshSucceeded`, ({ result }) => {
-			context.state.isDeleteRunning = false
-			context.state.products = {
+			state.isDeleteRunning = false
+			state.products = {
 				entries: result.map(entry => {
 					if (entry.isCorrupt) {
 						return {
@@ -167,57 +162,57 @@ export const update: Update<
 				}),
 				selected: new SvelteSet(),
 			}
-			context.state.products.selected.clear()
-			context.state.isLoading = false
-			context.state.spinnerTaskId = undefined
+			state.products.selected.clear()
+			state.isLoading = false
+			state.spinnerTaskId = undefined
 
 			return []
 		}),
 		M.tag(`DeleteSelectedFailed`, () => {
-			context.state.isDeleteRunning = false
-			context.state.isLoading = false
-			context.state.spinnerTaskId = undefined
+			state.isDeleteRunning = false
+			state.isLoading = false
+			state.spinnerTaskId = undefined
 
 			return []
 		}),
 		M.tag(`DeleteSelectedSucceededButRefreshFailed`, () => {
-			context.state.isDeleteRunning = false
-			context.state.products = undefined
-			context.state.receivedError = true
-			context.state.spinnerTaskId = undefined
+			state.isDeleteRunning = false
+			state.products = undefined
+			state.receivedError = true
+			state.spinnerTaskId = undefined
 
-			context.state.isLoading = false
+			state.isLoading = false
 
 			return []
 		}),
 		M.tag(`ClearSelected`, () => {
-			if (context.state.products === undefined) return []
+			if (state.products === undefined) return []
 
-			context.state.products.selected.clear()
-			context.state.products.entries.forEach(entry => {
+			state.products.selected.clear()
+			state.products.entries.forEach(entry => {
 				if (entry.isCorrupt) return
 				entry.isSelected = false
 			})
 			return []
 		}),
 		M.tag(`ToggleItem`, ({ product }) => {
-			if (context.state.isDeleteRunning) return []
+			if (state.isDeleteRunning) return []
 
 			if (product.isCorrupt) {
 				return []
 			}
 
-			if (context.state.products === undefined) return []
+			if (state.products === undefined) return []
 
-			const hasSelectionStarted = context.state.products.selected.size <= 0
+			const hasSelectionStarted = state.products.selected.size <= 0
 
-			if (context.state.products.selected.has(product.id)) {
+			if (state.products.selected.has(product.id)) {
 				product.isSelected = false
-				context.state.products.selected.delete(product.id)
+				state.products.selected.delete(product.id)
 				return []
 			}
 
-			context.state.products.selected.add(product.id)
+			state.products.selected.add(product.id)
 			product.isSelected = true
 
 			return [
@@ -233,26 +228,45 @@ export const update: Update<
 			]
 		}),
 		M.tag(`RefreshTimeResult`, ({ timestamp }) => {
-			context.state.currentTimestamp = timestamp
+			state.currentTimestamp = timestamp
 
 			return []
 		}),
 		M.tag(`ShowSpinner`, ({ id }) => {
-			if (id !== context.state.spinnerTaskId) {
+			if (id !== state.spinnerTaskId) {
 				return [
 					Eff.logWarning(`ShowSpinner is stale`).pipe(Eff.as(Message.NoOp())),
 				]
 			}
-			context.state.isLoading = true
+			state.isLoading = true
 			return []
 		}),
-		M.tag(`RefreshTimeIntervalTick`, () => {
-			if (context.derived.refreshTimeListenersEnabled)
-				return [refreshTimeIntervalTick]
+		M.tag(`RemoveToast`, ({ id }) => {
+			if (id !== state.toastMessage?.id) {
+				return [
+					Eff.logWarning(`RemoveToast is stale`).pipe(Eff.as(Message.NoOp())),
+				]
+			}
+
+			state.toastMessage = undefined
 
 			return []
 		}),
+		M.tag(`ShowCrash`, () => {
+			const id = Symbol()
+			state.toastMessage = {
+				message: `An unexpected error occurred and the app had to be reloaded`,
+				id,
+				type: `error`,
+			}
+
+			return [queueRemoveToast(id)]
+		}),
 		M.tag(`NoOp`, () => []),
+		M.tag(`Crash`, () => {
+			state.hasCrashOccurred = true
+			return []
+		}),
 		M.exhaustive,
 	)(message)
 }

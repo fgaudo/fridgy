@@ -1,6 +1,6 @@
 import { SvelteSet } from 'svelte/reactivity'
 
-import { B, Int, O, Sc } from '$lib/core/imports.ts'
+import { Int, O, Sc } from '$lib/core/imports.ts'
 
 export const ProductViewModel = Sc.mutable(
 	Sc.Union(
@@ -32,17 +32,16 @@ export const ProductViewModel = Sc.mutable(
 
 export type ProductViewModel = Sc.Schema.Type<typeof ProductViewModel>
 
-export type FetchId = B.Branded<symbol, `FetchId`>
-export const FetchId = () => B.nominal<FetchId>()(Symbol())
-
 export type State = {
-	isMenuOpen: boolean
 	receivedError: boolean
 	currentTimestamp: number
-	refreshingTaskId: FetchId | undefined
+	refreshingTaskId: symbol | undefined
 	isDeleteRunning: boolean
 	spinnerTaskId: symbol | undefined
-	refreshTimeTask: symbol | undefined
+	hasCrashOccurred: boolean
+	toastMessage:
+		| { id: symbol; message: string; type: `error` | `success` }
+		| undefined
 	isLoading: boolean
 	products:
 		| {
@@ -65,12 +64,12 @@ export function hasProducts(state: State): state is State & {
 
 export function createStateContext() {
 	const state = $state<State>({
-		isMenuOpen: false,
 		receivedError: false,
+		hasCrashOccurred: false,
 		isLoading: false,
 		isDeleteRunning: false,
+		toastMessage: undefined,
 		currentTimestamp: Date.now(),
-		refreshTimeTask: undefined,
 		products: undefined,
 		spinnerTaskId: undefined,
 		refreshingTaskId: undefined,

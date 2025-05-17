@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation'
+	import { page } from '$app/state'
 	import { App as CAP } from '@capacitor/app'
 	import Inf from '@lucide/svelte/icons/infinity'
 	import Info from '@lucide/svelte/icons/info'
@@ -37,6 +38,19 @@
 	function toggleMenu() {
 		isMenuOpen = !isMenuOpen
 	}
+
+	$effect(() => {
+		if (viewModel.state.hasCrashOccurred) {
+			window.history.replaceState(null, ``, `/?crash=true`)
+			window.location.reload()
+		}
+	})
+
+	onMount(() => {
+		if (page.url.searchParams.has(`crash`)) {
+			viewModel.tasks.showCrash()
+		}
+	})
 
 	onMount(() => {
 		pipe(

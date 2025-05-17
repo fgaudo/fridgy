@@ -4,12 +4,11 @@ import type { UseCases } from '$lib/business/app/use-cases.ts'
 import { DeleteProductsByIds, GetSortedProducts } from '$lib/business/index.ts'
 import type { Command } from '$lib/ui/adapters.ts'
 
-import type { FetchId } from './state.svelte.ts'
 import { Message } from './update.svelte.ts'
 
 type HomeCommand = Command<Message, UseCases>
 
-export const refreshList: (taskid: FetchId) => HomeCommand = taskId =>
+export const refreshList: (taskid: symbol) => HomeCommand = taskId =>
 	Eff.gen(function* () {
 		const getProducts = yield* GetSortedProducts.GetSortedProducts
 
@@ -28,21 +27,6 @@ export const refreshList: (taskid: FetchId) => HomeCommand = taskId =>
 export const refreshTime: HomeCommand = Eff.gen(function* () {
 	const time = yield* Cl.currentTimeMillis
 	return Message.RefreshTimeResult({
-		timestamp: time,
-	})
-})
-
-export const refreshTimeIntervalTick: HomeCommand = Eff.gen(function* () {
-	yield* Eff.sleep(`20 seconds`)
-	const time = yield* Cl.currentTimeMillis
-	return Message.RefreshTimeIntervalTick({
-		timestamp: time,
-	})
-})
-
-export const startRefreshTimeInterval: HomeCommand = Eff.gen(function* () {
-	const time = yield* Cl.currentTimeMillis
-	return Message.RefreshTimeIntervalTick({
 		timestamp: time,
 	})
 })
@@ -76,4 +60,11 @@ export const queueLoading: (id: symbol) => HomeCommand = id =>
 	Eff.gen(function* () {
 		yield* Eff.sleep(`150 millis`)
 		return Message.ShowSpinner({ id })
+	})
+
+export const queueRemoveToast: (id: symbol) => HomeCommand = id =>
+	Eff.gen(function* () {
+		yield* Eff.logDebug(`Executed command to queue toast removal`)
+		yield* Eff.sleep(3000)
+		return Message.RemoveToast({ id })
 	})
