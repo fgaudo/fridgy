@@ -12,7 +12,7 @@ export function createViewModel() {
 	const { runtime } = getGlobalContext()
 
 	const runner = makeEffectRunner(runtime)
-	const { dispatch } = makeDispatcher(context.state, runner, update)
+	const { dispatch } = makeDispatcher(context, runner, update)
 
 	return {
 		state: context.state,

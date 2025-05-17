@@ -1,12 +1,11 @@
 import { endOfDay } from 'date-fns'
 
-import { Da, Int, M, NETS, O, pipe } from '$lib/core/imports.ts'
+import { Da, Eff, Int, M, NETS, O, pipe } from '$lib/core/imports.ts'
 
-import type { UseCases } from '$lib/business/app/use-cases.ts'
 import type { Update } from '$lib/ui/adapters.ts'
 
 import { addProduct, queueLoading, queueRemoveToast } from './commands.ts'
-import type { State } from './state.svelte.ts'
+import type { StateContext } from './state.svelte.ts'
 
 export type Message = Da.TaggedEnum<{
 	AddProduct: object
@@ -17,19 +16,23 @@ export type Message = Da.TaggedEnum<{
 	SetName: { name: string }
 	SetNameInteracted: object
 	ShowSpinner: { id: symbol }
+	NoOp: object
 }>
 
 export const Message = Da.taggedEnum<Message>()
 
-export const update: Update<State, Message, UseCases> = (state, message) =>
+export const update: Update<
+	{ state: StateContext[`state`]; derived: StateContext[`derived`] },
+	Message
+> = (context, message) =>
 	M.type<Message>().pipe(
 		M.tag(`AddProduct`, () => {
-			if (state.isAdding) {
+			if (context.state.isAdding) {
 				return []
 			}
 
 			const maybeName = pipe(
-				O.fromNullable(state.name),
+				O.fromNullable(context.state.name),
 				O.flatMap(NETS.fromString),
 			)
 
@@ -37,16 +40,16 @@ export const update: Update<State, Message, UseCases> = (state, message) =>
 				return []
 			}
 
-			state.toastMessage = undefined
+			context.state.toastMessage = undefined
 
 			const maybeExpirationDate = pipe(
-				O.fromNullable(state.expirationDate),
+				O.fromNullable(context.state.expirationDate),
 				O.flatMap(Int.fromNumber),
 			)
 
 			const id = Symbol()
-			state.spinnerId = id
-			state.isAdding = true
+			context.state.spinnerId = id
+			context.state.isAdding = true
 
 			return [
 				queueLoading(id),
@@ -57,62 +60,69 @@ export const update: Update<State, Message, UseCases> = (state, message) =>
 			]
 		}),
 		M.tag(`AddProductFailed`, () => {
-			state.isAdding = false
-			state.spinnerId = undefined
-			state.isLoading = false
+			context.state.isAdding = false
+			context.state.spinnerId = undefined
+			context.state.isLoading = false
 
 			return []
 		}),
 		M.tag(`AddProductSucceeded`, () => {
-			state.isAdding = false
-			state.hasInteractedWithName = false
-			state.expirationDate = undefined
-			state.name = ``
+			context.state.isAdding = false
+			context.state.hasInteractedWithName = false
+			context.state.expirationDate = undefined
+			context.state.name = ``
 			const id = Symbol()
-			state.toastMessage = {
+			context.state.toastMessage = {
 				message: `Product added`,
 				id,
 			}
-			state.spinnerId = undefined
-			state.isLoading = false
+			context.state.spinnerId = undefined
+			context.state.isLoading = false
 
 			return [queueRemoveToast(id)]
 		}),
 		M.tag(`RemoveToast`, ({ id }) => {
-			if (id !== state.toastMessage?.id) {
-				return []
+			if (id !== context.state.toastMessage?.id) {
+				return [
+					Eff.logWarning(`RemoveToast is stale`).pipe(Eff.as(Message.NoOp())),
+				]
 			}
 
-			state.toastMessage = undefined
+			context.state.toastMessage = undefined
 
 			return []
 		}),
 		M.tag(`SetExpirationDate`, ({ expirationDate }) => {
 			if (expirationDate.length <= 0) {
-				state.expirationDate = undefined
+				context.state.expirationDate = undefined
 				return []
 			}
-			state.expirationDate = endOfDay(Date.parse(expirationDate)).valueOf()
+			context.state.expirationDate = endOfDay(
+				Date.parse(expirationDate),
+			).valueOf()
 
 			return []
 		}),
 		M.tag(`SetName`, ({ name }) => {
-			state.hasInteractedWithName = true
-			state.name = name
+			context.state.hasInteractedWithName = true
+			context.state.name = name
 
 			return []
 		}),
 		M.tag(`SetNameInteracted`, () => {
-			state.hasInteractedWithName = true
+			context.state.hasInteractedWithName = true
 			return []
 		}),
 		M.tag(`ShowSpinner`, ({ id }) => {
-			if (id !== state.spinnerId) {
-				return []
+			if (id !== context.state.spinnerId) {
+				return [
+					Eff.logWarning(`ShowSpinner is stale`).pipe(Eff.as(Message.NoOp())),
+				]
 			}
-			state.isLoading = true
+			context.state.isLoading = true
 
 			return []
 		}),
+		M.tag(`NoOp`, () => []),
 		M.exhaustive,
 	)(message)

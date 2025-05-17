@@ -13,38 +13,59 @@
 	import { expoIn, expoOut } from 'svelte/easing'
 	import { fade, fly } from 'svelte/transition'
 
-	import { O } from '$lib/core/imports.ts'
+	import { Eff, O, Str, pipe } from '$lib/core/imports.ts'
 
-	import { createCapacitorListener } from '$lib/ui/adapters.ts'
+	import {
+		createCapacitorListener,
+		makeEffectRunner,
+	} from '$lib/ui/adapters.ts'
 	import imgUrl from '$lib/ui/assets/arrow.svg'
 	import Ripple from '$lib/ui/components/ripple.svelte'
 	import Spinner from '$lib/ui/components/spinner.svelte'
+	import { getGlobalContext } from '$lib/ui/context.ts'
 	import * as Utils from '$lib/ui/utils.ts'
 
 	import { createViewModel } from './(viewmodel)/index.svelte.ts'
 
 	const viewModel = createViewModel()
 
-	const startBackListener = createCapacitorListener({
-		event: `backButton`,
-		cb: () => {
-			if (viewModel.state.isMenuOpen) {
-				viewModel.tasks.toggleMenu()
-			} else {
-				void CAP.exitApp()
-			}
-		},
-	})
+	const { runtime } = getGlobalContext()
+	const runner = makeEffectRunner(runtime)
+
+	let isMenuOpen = $state(false)
+
+	function toggleMenu() {
+		isMenuOpen = !isMenuOpen
+	}
 
 	onMount(() => {
-		startBackListener()
-		viewModel.tasks.fetchList()
-		viewModel.tasks.registerRefreshTimeListeners()
+		pipe(
+			createCapacitorListener(`backButton`),
+			Str.runForEach(() =>
+				Eff.sync(() => {
+					if (isMenuOpen) {
+						toggleMenu()
+					} else {
+						void CAP.exitApp()
+					}
+				}),
+			),
+			runner.runEffect,
+		)
+		pipe(
+			createCapacitorListener(`resume`),
+			Str.runForEach(() =>
+				Eff.sync(() => {
+					viewModel.tasks.pageResumed()
+				}),
+			),
+			runner.runEffect,
+		)
 	})
 </script>
 
 <div in:fade>
-	{#if viewModel.state.isMenuOpen}
+	{#if isMenuOpen}
 		<div
 			in:fly={{
 				x: -256,
@@ -91,7 +112,7 @@
 				duration: 400,
 				easing: expoIn,
 			}}
-			onpointerup={viewModel.tasks.toggleMenu}
+			onpointerup={toggleMenu}
 			class="touch-none pointer-events-auto h-full z-998 flex-col fixed w-full bg-black/50 backdrop-blur-xs"
 		></div>
 	{/if}
@@ -107,16 +128,15 @@
 			>
 				{#if O.isSome(viewModel.derived.maybeNonEmptySelected)}
 					<div class="absolute" transition:fade={{ duration: 200 }}>
-						<Ripple ontap={viewModel.tasks.clearSelected}></Ripple>
+						{#if !viewModel.state.isDeleteRunning}
+							<Ripple ontap={viewModel.tasks.clearSelected}></Ripple>
+						{/if}
 
 						<X />
 					</div>
 				{:else}
 					<div transition:fade={{ duration: 200 }} class="absolute">
-						<Ripple
-							color="var(--color-background)"
-							ontap={viewModel.tasks.toggleMenu}
-						></Ripple>
+						<Ripple color="var(--color-background)" ontap={toggleMenu}></Ripple>
 						<Menu />
 					</div>
 				{/if}
@@ -142,7 +162,8 @@
 					class="ml-2 mr-2 relative h-12 w-12 flex items-center justify-center rounded-full overflow-hidden"
 					transition:fade={{ duration: 200 }}
 				>
-					<Ripple ontap={viewModel.tasks.deleteSelected}></Ripple>
+					{#if !viewModel.state.isDeleteRunning}
+						<Ripple ontap={viewModel.tasks.deleteSelected}></Ripple>{/if}
 					<Trash2 />
 				</div>
 			{/if}
@@ -180,7 +201,7 @@
 					<div
 						class="text-primary underline relative overflow-hidden rounded-full py-1 px-2"
 					>
-						<Ripple ontap={viewModel.tasks.fetchList}></Ripple>
+						<Ripple ontap={viewModel.tasks.refreshList}></Ripple>
 						Try again
 					</div>
 				</div>
@@ -218,12 +239,14 @@
 									: `bg-secondary/5`,
 							]}
 						>
-							{#if products.selected.size > 0}
-								<Ripple ontap={() => viewModel.tasks.toggleItem(product)}
-								></Ripple>
-							{:else}
-								<Ripple onhold={() => viewModel.tasks.toggleItem(product)}
-								></Ripple>
+							{#if !viewModel.state.isDeleteRunning}
+								{#if products.selected.size > 0}
+									<Ripple ontap={() => viewModel.tasks.toggleItem(product)}
+									></Ripple>
+								{:else}
+									<Ripple onhold={() => viewModel.tasks.toggleItem(product)}
+									></Ripple>
+								{/if}
 							{/if}
 							<div
 								class={[

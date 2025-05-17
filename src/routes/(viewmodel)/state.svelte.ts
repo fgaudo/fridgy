@@ -39,10 +39,10 @@ export type State = {
 	isMenuOpen: boolean
 	receivedError: boolean
 	currentTimestamp: number
-	refreshTimeListenersRegistered: boolean
 	refreshingTaskId: FetchId | undefined
 	isDeleteRunning: boolean
 	spinnerTaskId: symbol | undefined
+	refreshTimeTask: symbol | undefined
 	isLoading: boolean
 	products:
 		| {
@@ -69,8 +69,8 @@ export function createStateContext() {
 		receivedError: false,
 		isLoading: false,
 		isDeleteRunning: false,
-		refreshTimeListenersRegistered: false,
 		currentTimestamp: Date.now(),
+		refreshTimeTask: undefined,
 		products: undefined,
 		spinnerTaskId: undefined,
 		refreshingTaskId: undefined,

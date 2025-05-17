@@ -32,6 +32,21 @@ export const refreshTime: HomeCommand = Eff.gen(function* () {
 	})
 })
 
+export const refreshTimeIntervalTick: HomeCommand = Eff.gen(function* () {
+	yield* Eff.sleep(`20 seconds`)
+	const time = yield* Cl.currentTimeMillis
+	return Message.RefreshTimeIntervalTick({
+		timestamp: time,
+	})
+})
+
+export const startRefreshTimeInterval: HomeCommand = Eff.gen(function* () {
+	const time = yield* Cl.currentTimeMillis
+	return Message.RefreshTimeIntervalTick({
+		timestamp: time,
+	})
+})
+
 export const deleteSelectedAndRefresh: (
 	ids: NEHS.NonEmptyHashSet<string>,
 ) => HomeCommand = ids =>

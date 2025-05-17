@@ -1,12 +1,9 @@
 import type { Cancel } from 'effect/Runtime'
+import { onMount } from 'svelte'
 
-import { D, Eff, pipe } from '$lib/core/imports.ts'
+import { D, Eff, Str, pipe } from '$lib/core/imports.ts'
 
-import {
-	createCapacitorListener,
-	makeDispatcher,
-	makeEffectRunner,
-} from '$lib/ui/adapters.ts'
+import { makeDispatcher, makeEffectRunner } from '$lib/ui/adapters.ts'
 import { getGlobalContext } from '$lib/ui/context.ts'
 
 import * as Tasks from './commands.ts'
@@ -21,38 +18,37 @@ export function createViewModel() {
 	const { runtime } = getGlobalContext()
 	const runner = makeEffectRunner(runtime)
 
-	const { dispatch } = makeDispatcher(context.state, runner, update)
+	const { dispatch } = makeDispatcher(context, runner, update)
+
+	onMount(() => {
+		runner.runEffect(dispatch(Message.FetchList()))
+	})
+
+	$effect(() => {
+		if (context.state.refreshTimeTask !== undefined) {
+		}
+	})
 
 	/** Refresh time listeners */
 	{
-		let cancelRefreshTimeResumeListener: Cancel<unknown, unknown> | undefined
-
 		let cancelRefreshTimeInterval: Cancel<unknown, unknown> | undefined
 
-		const startRefreshTimeResumeListener = createCapacitorListener({
-			event: `resume`,
-			cb: () => {
-				runner.runEffect(dispatch(Message.RefreshTime()))
-			},
-		})
-
-		const refreshTimeInterval = Eff.gen(function* () {
-			while (true) {
-				const m = yield* Tasks.refreshTime
-				yield* dispatch(m)
-				yield* Eff.sleep(refreshTimeIntervalFrequency)
-			}
-		})
+		const refreshTimeInterval = pipe(
+			Str.fromEffect(Tasks.refreshTime),
+			Str.mapEffect(dispatch),
+			Str.mapEffect(() => Eff.sleep(refreshTimeIntervalFrequency)),
+			Str.forever,
+		)
 
 		$effect(() => {
-			cancelRefreshTimeResumeListener?.()
 			cancelRefreshTimeInterval?.()
 
 			if (context.derived.refreshTimeListenersEnabled) {
 				runner.runEffect(Eff.log(`Refresh time listeners enabled`))
-				cancelRefreshTimeResumeListener = startRefreshTimeResumeListener()
 
-				cancelRefreshTimeInterval = runner.runEffect(refreshTimeInterval)
+				cancelRefreshTimeInterval = runner.runEffect(
+					pipe(refreshTimeInterval, Str.runDrain),
+				)
 			} else {
 				runner.runEffect(Eff.log(`Refresh time listeners disabled`))
 			}
@@ -63,46 +59,36 @@ export function createViewModel() {
 		state: context.state,
 		derived: context.derived,
 		tasks: {
-			clearSelected: () => dispatch(Message.ClearSelected()),
-
-			fetchList: () =>
+			refreshList: () => {
 				pipe(
-					Eff.log(`Received fetchList event from the ui`),
+					Eff.log(`UI triggered refreshList`),
 					Eff.andThen(dispatch(Message.FetchList())),
 					runner.runEffect,
-				),
-
-			toggleMenu: () =>
+				)
+			},
+			pageResumed: () =>
 				pipe(
-					Eff.log(`Received toggleMenu event from the ui`),
-					Eff.andThen(dispatch(Message.ToggleMenu())),
+					Eff.log(`UI triggered pageResumed`),
+					Eff.andThen(dispatch(Message.RefreshTime())),
+					runner.runEffect,
+				),
+			clearSelected: () =>
+				pipe(
+					Eff.log(`UI triggered clearSelected`),
+					Eff.andThen(dispatch(Message.ClearSelected())),
 					runner.runEffect,
 				),
 
 			toggleItem: (product: ProductViewModel) =>
 				pipe(
-					Eff.log(`Received toggleItem event from the ui`),
+					Eff.log(`UI triggered toggleItem`),
 					Eff.andThen(dispatch(Message.ToggleItem({ product }))),
-					runner.runEffect,
-				),
-
-			registerRefreshTimeListeners: () =>
-				pipe(
-					Eff.log(`Received registerRefreshTimeListeners event from the ui`),
-					Eff.andThen(dispatch(Message.EnableRefreshTimeListener())),
-					runner.runEffect,
-				),
-
-			unregisterRefreshTimeListeners: () =>
-				pipe(
-					Eff.log(`Received unregisterRefreshTimeListeners event from the ui`),
-					Eff.andThen(dispatch(Message.DisableRefreshTimeListener())),
 					runner.runEffect,
 				),
 
 			deleteSelected: () =>
 				pipe(
-					Eff.log(`Received deleteSelected event from the ui`),
+					Eff.log(`UI triggered deleteSelected`),
 					Eff.andThen(dispatch(Message.DeleteSelectedAndRefresh())),
 					runner.runEffect,
 				),

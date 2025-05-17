@@ -1,12 +1,11 @@
-import { type BackButtonListener, App as CAP } from '@capacitor/app'
-import type { PluginListenerHandle } from '@capacitor/core'
+import { type BackButtonListenerEvent, App as CAP } from '@capacitor/app'
 import type { Cancel } from 'effect/Runtime'
 import { onDestroy, onMount } from 'svelte'
 
-import { Eff, MR, Q, flow, pipe } from '$lib/core/imports.ts'
+import { Eff, LL, Log, MR, Q, Str, flow, pipe } from '$lib/core/imports.ts'
 import { withLayerLogging } from '$lib/core/logging.ts'
 
-export type Update<S, M, R> = (state: S, message: M) => Command<M, R>[]
+export type Update<S, M> = (state: S, message: M) => void
 
 export type Command<M, R> = Eff.Effect<M, never, R>
 
@@ -23,8 +22,9 @@ export function makeEffectRunner<R>(
 	runtime: MR.ManagedRuntime<R, never>,
 ): EffectRunner<R> {
 	const set = new Set<Cancel<unknown, unknown>>()
-
+	let isDestroyed = false
 	onDestroy(() => {
+		isDestroyed = true
 		set.forEach(cancel => {
 			cancel()
 		})
@@ -32,8 +32,16 @@ export function makeEffectRunner<R>(
 
 	return {
 		runEffect: eff => {
+			if (isDestroyed) {
+				return () => undefined
+			}
+
 			const cancel = runtime.runCallback(
-				eff.pipe(withLayerLogging(`P`), Eff.tapDefect(Eff.logFatal)),
+				eff.pipe(
+					withLayerLogging(`P`),
+					Eff.provide(Log.minimumLogLevel(LL.Debug)),
+					Eff.tapDefect(Eff.logFatal),
+				),
 			)
 			set.add(cancel)
 			return cancel
@@ -41,10 +49,10 @@ export function makeEffectRunner<R>(
 	}
 }
 
-export function makeDispatcher<S, M, R>(
+export function makeDispatcher<S, M extends { _tag: string }, R>(
 	mutableState: S,
 	effectRunner: EffectRunner<R>,
-	update: Update<S, M, R>,
+	update: Update<S, M>,
 ): Dispatcher<M> {
 	const queue = Eff.runSync(Q.unbounded<M>())
 
@@ -52,27 +60,23 @@ export function makeDispatcher<S, M, R>(
 
 	onMount(() => {
 		cancel = effectRunner.runEffect(
-			Eff.gen(function* () {
-				while (true) {
-					yield* pipe(
-						Eff.gen(function* () {
-							const m = yield* Q.take(queue)
+			Eff.scoped(
+				Eff.gen(function* () {
+					while (true) {
+						yield* pipe(
+							Eff.gen(function* () {
+								const m = yield* Q.take(queue)
 
-							const commands = update(mutableState, m)
-
-							for (const command of commands) {
-								yield* pipe(
-									command,
-									Eff.flatMap(m => queue.offer(m)),
-									Eff.catchAllDefect(err => Eff.logFatal(err)),
-									Eff.fork,
+								yield* Eff.logDebug(`Dispatched message "${m._tag}"`).pipe(
+									Eff.annotateLogs({ message: m }),
 								)
-							}
-						}),
-						Eff.catchAllDefect(Eff.logFatal),
-					)
-				}
-			}),
+								update(mutableState, m)
+							}),
+							Eff.catchAllDefect(Eff.logFatal),
+						)
+					}
+				}),
+			),
 		)
 	})
 
@@ -89,60 +93,21 @@ export function makeDispatcher<S, M, R>(
 	}
 }
 
-export function createCapacitorListener({
-	event,
-	cb,
-}:
-	| {
-			event: `resume`
-			cb: () => void
-	  }
-	| {
-			event: `backButton`
-			cb: BackButtonListener
-	  }) {
-	let listener: PluginListenerHandle | undefined
-	let isDestroyed = false
-
-	onDestroy(() => {
-		isDestroyed = true
-		void listener?.remove()
-	})
-
-	return () => {
-		void listener?.remove()
-
-		if (isDestroyed) {
-			return
-		}
-
-		const promise =
-			event === `resume`
-				? CAP.addListener(event, () => {
-						if (isDestroyed) {
-							void listener?.remove()
-							return
-						}
-						cb()
-					})
-				: CAP.addListener(event, e => {
-						if (isDestroyed) {
-							void listener?.remove()
-							return
-						}
-						cb(e)
-					})
-
-		void promise.then(l => {
-			if (isDestroyed) {
-				void l.remove()
-				return
-			}
-			listener = l
-		})
-
-		return () => {
-			void listener?.remove()
-		}
-	}
+export function createCapacitorListener(event: `resume`): Str.Stream<void>
+export function createCapacitorListener(
+	event: `backButton`,
+): Str.Stream<BackButtonListenerEvent>
+export function createCapacitorListener<E extends `resume` | `backButton`>(
+	event: E,
+) {
+	return Str.asyncPush<unknown>(emit =>
+		Eff.acquireRelease(
+			Eff.promise(() =>
+				event === `resume`
+					? CAP.addListener(event, () => emit.single(undefined))
+					: CAP.addListener(event, e => emit.single(e)),
+			),
+			handle => Eff.promise(() => handle.remove()),
+		),
+	)
 }
