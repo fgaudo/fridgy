@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { goto } from '$app/navigation'
-	import { page } from '$app/state'
 	import { App as CAP } from '@capacitor/app'
 	import Inf from '@lucide/svelte/icons/infinity'
 	import Info from '@lucide/svelte/icons/info'
@@ -11,7 +10,7 @@
 	import { format } from 'date-fns'
 	import { onMount } from 'svelte'
 	import { flip } from 'svelte/animate'
-	import { expoIn, expoOut } from 'svelte/easing'
+	import { cubicIn, expoIn, expoOut } from 'svelte/easing'
 	import { fade, fly } from 'svelte/transition'
 
 	import { Eff, O, Str, pipe } from '$lib/core/imports.ts'
@@ -41,38 +40,32 @@
 
 	$effect(() => {
 		if (viewModel.state.hasCrashOccurred) {
-			window.history.replaceState(null, ``, `/?crash=true`)
+			sessionStorage.setItem(`crash`, `true`)
 			window.location.reload()
 		}
 	})
 
 	onMount(() => {
-		if (page.url.searchParams.has(`crash`)) {
+		if (sessionStorage.getItem(`crash`) === `true`) {
+			sessionStorage.removeItem(`crash`)
 			viewModel.tasks.showCrash()
 		}
-	})
 
-	onMount(() => {
 		pipe(
 			createCapacitorListener(`backButton`),
 			Str.runForEach(() =>
-				Eff.sync(() => {
-					if (isMenuOpen) {
-						toggleMenu()
-					} else {
-						void CAP.exitApp()
-					}
-				}),
+				isMenuOpen
+					? Eff.sync(toggleMenu)
+					: viewModel.derived.hasSelectedProducts
+						? Eff.sync(viewModel.tasks.clearSelected)
+						: Eff.promise(() => CAP.exitApp()),
 			),
 			runner.runEffect,
 		)
+
 		pipe(
 			createCapacitorListener(`resume`),
-			Str.runForEach(() =>
-				Eff.sync(() => {
-					viewModel.tasks.pageResumed()
-				}),
-			),
+			Str.runForEach(() => Eff.sync(viewModel.tasks.pageResumed)),
 			runner.runEffect,
 		)
 	})
@@ -358,35 +351,86 @@
 					</div>
 				{/each}
 			</div>
-		{:else}
-			<div
-				in:fade={{ duration: 200 }}
-				class="font-stylish fixed right-0 bottom-[150px] left-0 flex flex-col items-end duration-[fade]"
-			>
-				<div class="w-full p-[20px] text-center">
-					Uh-oh, your fridge is looking a little empty! <br />
-					Let’s fill it up!
-				</div>
-				<div
-					style:filter={`invert(16%) sepia(2%) saturate(24%) hue-rotate(336deg) brightness(97%) contrast(53%)`}
-					style:background-image={`url("${imgUrl}")`}
-					class="relative top-[30px] right-[70px] h-[160px] w-[160px] bg-contain bg-no-repeat"
-				></div>
-			</div>
 		{/if}
 	</div>
 	{#if O.isNone(viewModel.derived.maybeNonEmptySelected)}
 		<div
-			transition:fade={{ duration: 200 }}
+			class="fixed right-[16px] left-[16px]"
 			style:bottom={`calc(env(safe-area-inset-bottom, 0) + 21px)`}
-			class="bg-primary z-50 overflow-hidden text-background shadow-md shadow-on-background/30 fixed right-[16px] flex h-[96px] w-[96px] items-center justify-center rounded-4xl"
 		>
-			<Ripple
-				ontap={() => {
-					void goto(`/add-product`)
-				}}
-			></Ripple>
-			<Plus size="36" />
+			{#if O.isNone(viewModel.derived.maybeLoadedProducts)}
+				<div
+					in:fade={{ duration: 200 }}
+					class="font-stylish absolute right-0 bottom-[100px] flex flex-col items-end duration-[fade]"
+				>
+					<div class="w-full p-[20px] text-center">
+						Uh-oh, your fridge is looking a little empty! <br />
+						Let’s fill it up!
+					</div>
+					<div
+						style:filter={`invert(16%) sepia(2%) saturate(24%) hue-rotate(336deg) brightness(97%) contrast(53%)`}
+						style:background-image={`url("${imgUrl}")`}
+						class="relative right-[50px] h-[160px] w-[160px] bg-contain bg-no-repeat"
+					></div>
+				</div>
+			{/if}
+			<div
+				transition:fade={{ duration: 200 }}
+				class="bg-primary z-50 absolute bottom-0 right-0 overflow-hidden text-background shadow-md shadow-on-background/30 flex h-[96px] w-[96px] items-center justify-center rounded-4xl"
+			>
+				<Ripple
+					ontap={() => {
+						void goto(`/add-product`)
+					}}
+				></Ripple>
+				<Plus size="36" />
+			</div>
 		</div>
 	{/if}
+
+	{#key O.isSome(viewModel.derived.maybeToastMessage)}
+		<div
+			in:fade={{
+				duration: 300,
+				easing: cubicIn,
+			}}
+			out:fade={{ duration: 100 }}
+			style:bottom={O.isNone(viewModel.derived.maybeNonEmptySelected)
+				? `calc(env(safe-area-inset-bottom, 0) + 140px)`
+				: `calc(env(safe-area-inset-bottom, 0) + 21px)`}
+			class="z-90 fixed flex left-0 right-0 items-center justify-center transition-all"
+		>
+			{#if O.isSome(viewModel.derived.maybeToastMessage)}
+				<div
+					class="flex justify-center items-center px-8 w-full max-w-lg transition-all"
+				>
+					<div
+						id="toast-success"
+						class="flex p-4 items-center w-full shadow-md mx-auto text-gray-500 bg-white rounded-lg"
+						role="alert"
+					>
+						<div
+							class="inline-flex items-center justify-center shrink-0 w-8 h-8 text-red-500 rounded-lg dark:text-red-200"
+						>
+							<svg
+								class="w-5 h-5"
+								aria-hidden="true"
+								xmlns="http://www.w3.org/2000/svg"
+								fill="currentColor"
+								viewBox="0 0 20 20"
+							>
+								<path
+									d="M10 .5a9.5 9.5 0 1 0 9.5 9.5A9.51 9.51 0 0 0 10 .5Zm3.707 11.793a1 1 0 1 1-1.414 1.414L10 11.414l-2.293 2.293a1 1 0 0 1-1.414-1.414L8.586 10 6.293 7.707a1 1 0 0 1 1.414-1.414L10 8.586l2.293-2.293a1 1 0 0 1 1.414 1.414L11.414 10l2.293 2.293Z"
+								/>
+							</svg>
+							<span class="sr-only">Error icon</span>
+						</div>
+						<div class="ms-3 text-sm font-normal">
+							{viewModel.derived.maybeToastMessage.value.message}
+						</div>
+					</div>
+				</div>
+			{/if}
+		</div>
+	{/key}
 </div>

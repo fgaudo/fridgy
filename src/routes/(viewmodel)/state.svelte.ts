@@ -94,6 +94,15 @@ export function createStateContext() {
 		O.fromNullable(state.products).pipe(O.filter(p => p.entries.length > 0)),
 	)
 
+	const hasSelectedProducts = $derived(
+		O.fromNullable(state.products).pipe(
+			O.map(products => products.selected.size > 0),
+			O.getOrElse(() => false),
+		),
+	)
+
+	const maybeToastMessage = $derived(O.fromNullable(state.toastMessage))
+
 	return {
 		state,
 		derived: {
@@ -108,6 +117,12 @@ export function createStateContext() {
 			},
 			get currentTimestamp() {
 				return currentTimestamp
+			},
+			get hasSelectedProducts() {
+				return hasSelectedProducts
+			},
+			get maybeToastMessage() {
+				return maybeToastMessage
 			},
 		},
 	}

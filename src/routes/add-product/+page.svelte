@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { page } from '$app/state'
 	import ArrowLeft from '@lucide/svelte/icons/arrow-left'
 	import Quote from '@lucide/svelte/icons/quote'
 	import { onMount } from 'svelte'
@@ -18,13 +17,14 @@
 
 	$effect(() => {
 		if (viewModel.state.hasCrashOccurred) {
-			window.history.replaceState(null, ``, `/add-product?crash=true`)
+			sessionStorage.setItem(`crash`, `true`)
 			window.location.reload()
 		}
 	})
 
 	onMount(() => {
-		if (page.url.searchParams.has(`crash`)) {
+		if (sessionStorage.getItem(`crash`) === `true`) {
+			sessionStorage.removeItem(`crash`)
 			viewModel.tasks.showCrash()
 		}
 	})
@@ -177,7 +177,8 @@
 				easing: cubicIn,
 			}}
 			out:fade={{ duration: 100 }}
-			class="z-90 fixed flex left-0 right-0 bottom-3 items-center justify-center"
+			style:bottom={`calc(env(safe-area-inset-bottom, 0) + 21px)`}
+			class="z-90 fixed flex left-0 right-0 bottom-3 items-center justify-center transition-all"
 		>
 			{#if O.isSome(viewModel.derived.maybeToastMessage)}
 				<div class="flex justify-center items-center px-8 w-full max-w-lg">

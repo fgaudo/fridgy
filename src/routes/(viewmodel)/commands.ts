@@ -17,7 +17,6 @@ export const refreshList: (taskid: symbol) => HomeCommand = taskId =>
 		if (E.isLeft(result)) {
 			return Message.FetchListFailed({ taskId })
 		}
-
 		return Message.FetchListSucceeded({
 			taskId,
 			result: result.right,
