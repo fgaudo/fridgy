@@ -1,6 +1,6 @@
 import { ParseResult } from 'effect'
 
-import { E, Eff, H, Int, L, NETS, O, RR, Sc, pipe } from '$lib/core/imports.ts'
+import { E, Eff, H, Int, L, NETS, O, Sc, pipe } from '$lib/core/imports.ts'
 
 import { GetSortedProducts } from '$lib/business/app/operations.ts'
 
@@ -73,23 +73,21 @@ const DtoFromBackend = Sc.transformOrFail(
 )
 
 export const query = L.effect(
-	GetSortedProducts.Resolver,
+	GetSortedProducts.Tag,
 	Eff.gen(function* () {
 		const { getAllProductsWithTotal } = yield* DbPlugin
-		return RR.fromEffect(() =>
-			Eff.gen(function* () {
-				const result = yield* pipe(getAllProductsWithTotal, Eff.either)
+		return Eff.gen(function* () {
+			const result = yield* pipe(getAllProductsWithTotal, Eff.either)
 
-				if (E.isLeft(result)) {
-					yield* Eff.logError(result.left.error)
-					return yield* new GetSortedProducts.FetchingFailed()
-				}
-				const entries = yield* Sc.decodeUnknown(DtoFromBackend)(
-					result.right,
-				).pipe(Eff.catchTags({ ParseError: Eff.die }))
+			if (E.isLeft(result)) {
+				yield* Eff.logError(result.left.error)
+				return yield* new GetSortedProducts.FetchingFailed()
+			}
+			const entries = yield* Sc.decodeUnknown(DtoFromBackend)(
+				result.right,
+			).pipe(Eff.catchTags({ ParseError: Eff.die }))
 
-				return entries
-			}),
-		)
+			return entries
+		})
 	}),
 )

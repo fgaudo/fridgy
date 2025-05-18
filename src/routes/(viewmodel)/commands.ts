@@ -17,6 +17,7 @@ export const refreshList: (taskid: symbol) => HomeCommand = taskId =>
 		if (E.isLeft(result)) {
 			return Message.FetchListFailed({ taskId })
 		}
+
 		return Message.FetchListSucceeded({
 			taskId,
 			result: result.right,
@@ -64,6 +65,6 @@ export const queueLoading: (id: symbol) => HomeCommand = id =>
 export const queueRemoveToast: (id: symbol) => HomeCommand = id =>
 	Eff.gen(function* () {
 		yield* Eff.logDebug(`Executed command to queue toast removal`)
-		yield* Eff.sleep(3000)
+		yield* Eff.sleep(`3 seconds`)
 		return Message.RemoveToast({ id })
 	})

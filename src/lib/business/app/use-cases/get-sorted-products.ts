@@ -35,10 +35,7 @@ export class GetSortedProducts extends Eff.Service<GetSortedProducts>()(
 	`app/useCases/GetSortedProducts`,
 	{
 		effect: Eff.gen(function* () {
-			const getSortedProducts = Eff.request(
-				GetSortedProductsOperation.Request({}),
-				yield* GetSortedProductsOperation.Resolver,
-			)
+			const getSortedProducts = yield* GetSortedProductsOperation.Tag
 
 			return Eff.gen(function* () {
 				yield* Eff.log(`Requested to fetch the list of products`)

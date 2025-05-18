@@ -12,7 +12,7 @@ import { Capacitor } from '$lib/data/index.ts';
 
 import { DeleteProductsById$lib/business/data/index.tsiness/app/queries.ts';
 
-import { command } from './delete-products-by-ids.ts';
+import { command } from './delete-product-by-id.ts';
 
 describe('Delete products by ids', () => {
 	layer(

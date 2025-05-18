@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unnecessary-condition */
-import { A, Eff, HM, L, O, Ord, RR, Ref, pipe } from '$lib/core/imports.ts'
+import { A, Eff, HM, L, O, Ord, Ref, pipe } from '$lib/core/imports.ts'
 
 import { GetSortedProducts } from '$lib/business/app/operations.ts'
 
@@ -27,23 +27,21 @@ const ord = Ord.make(
 )
 
 export const query = L.effect(
-	GetSortedProducts.Resolver,
+	GetSortedProducts.Tag,
 	Eff.gen(function* () {
 		// eslint-disable-next-line @typescript-eslint/no-unused-vars
 		const { log } = yield* Deps
 		const withErrors = yield* Config.withErrors
 		const db = yield* Db
-		return RR.fromEffect(() =>
-			Eff.gen(function* () {
-				if (withErrors && Math.random() < 0.5)
-					return yield* new GetSortedProducts.InvalidDataReceived()
+		return Eff.gen(function* () {
+			if (withErrors && Math.random() < 0.5)
+				return yield* new GetSortedProducts.InvalidDataReceived()
 
-				const map = yield* Ref.get(db).pipe(Eff.map(({ map }) => map))
+			const map = yield* Ref.get(db).pipe(Eff.map(({ map }) => map))
 
-				const products: GetSortedProducts.ProductDTO[] = map.pipe(HM.toValues)
+			const products: GetSortedProducts.ProductDTO[] = map.pipe(HM.toValues)
 
-				return A.sort(ord)(products)
-			}),
-		)
+			return A.sort(ord)(products)
+		})
 	}),
 )

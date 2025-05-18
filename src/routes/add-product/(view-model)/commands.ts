@@ -41,7 +41,7 @@ export const addProduct = ({
 export const queueRemoveToast: (id: symbol) => AddProductCommand = id =>
 	Eff.gen(function* () {
 		yield* Eff.logDebug(`Executed command to queue toast removal`)
-		yield* Eff.sleep(3000)
+		yield* Eff.sleep(`3 seconds`)
 		return Message.RemoveToast({ id })
 	})
 
