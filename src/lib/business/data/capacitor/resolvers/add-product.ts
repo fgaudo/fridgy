@@ -45,6 +45,7 @@ export const command = L.effect(
 		return RR.fromEffect(product =>
 			Eff.gen(function* () {
 				const dto = yield* Sc.encode(DtoToBackend)(product).pipe(Eff.either)
+
 				if (E.isLeft(dto)) {
 					return yield* Eff.die(dto.left)
 				}
