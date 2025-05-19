@@ -14,8 +14,6 @@ If you need a place to put logic that answers to questions like "_What fields do
 The domain layer solely provides functions and objects to the application layer and can only depend on external libraries or on the core layer.  
 In the domain layer it's **forbidden** to handle or return _effects_. Every function inside of it **must** be pure and deterministic.
 
-The domain objects returned by the domain layer must be _opaque values_, meaning they cannot be directly accessed by other layers. In order to get the data, special getters functions must be used on them.
-
 For example if we create a `Person` object with `name` and `age`, and we need to know if the person is old enough to watch some content, then the domain layer should have an `isAllowedToWatch` function which checks the given age and returns either `true` or `false`.  
 The application layer should be completely ignorant about these details and should always ask the domain layer for this information.
 

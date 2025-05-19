@@ -58,7 +58,7 @@ This rule is especially important for the `Domain` and `App` layers, where the c
 
 ### "Making impossible states impossible"
 
-Another important rule is to avoid passing objects that may contain invalid data to functions that should not be responsible for validating such data.  
+An important rule is to avoid passing objects that may contain invalid data to functions that should not be responsible for validating such data.  
 For example, if you need a type to represent a post description, you wouldn't want to use a simple `string`.  
 A `string` could be composed entirely of blank characters or start and end with unnecessary spaces — none of which make sense for a description.  
 To ensure consistency, each function receiving that string would then need to validate its correctness, increasing the number of test cases.
