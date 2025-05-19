@@ -1,16 +1,10 @@
-import type { Cancel } from 'effect/Runtime'
-import { onMount } from 'svelte'
-
-import { D, Eff, Str, pipe } from '$lib/core/imports.ts'
+import { Eff, NEHS, pipe } from '$lib/core/imports.ts'
 
 import { makeDispatcher, makeEffectRunner } from '$lib/ui/adapters.ts'
 import { getGlobalContext } from '$lib/ui/context.ts'
 
-import * as Tasks from './commands.ts'
-import { type ProductViewModel, createStateContext } from './state.svelte.ts'
+import { createStateContext } from './state.svelte.ts'
 import { Message, update } from './update.svelte.ts'
-
-const refreshTimeIntervalFrequency = D.seconds(20)
 
 export function createViewModel() {
 	const context = createStateContext()
@@ -21,36 +15,6 @@ export function createViewModel() {
 	const { dispatch } = makeDispatcher(context.state, runner, update, err =>
 		Message.Crash({ message: err }),
 	)
-
-	onMount(() => {
-		runner.runEffect(dispatch(Message.FetchList()))
-	})
-
-	/** Refresh time listeners */
-	{
-		let cancelRefreshTimeInterval: Cancel<unknown, unknown> | undefined
-
-		const refreshTimeInterval = pipe(
-			Str.fromEffect(Tasks.refreshTime),
-			Str.mapEffect(dispatch),
-			Str.mapEffect(() => Eff.sleep(refreshTimeIntervalFrequency)),
-			Str.forever,
-		)
-
-		$effect(() => {
-			cancelRefreshTimeInterval?.()
-
-			if (context.derived.refreshTimeListenersEnabled) {
-				runner.runEffect(Eff.log(`Refresh time listeners enabled`))
-
-				cancelRefreshTimeInterval = runner.runEffect(
-					pipe(refreshTimeInterval, Str.runDrain),
-				)
-			} else {
-				runner.runEffect(Eff.log(`Refresh time listeners disabled`))
-			}
-		})
-	}
 
 	return {
 		state: context.state,
@@ -63,39 +27,13 @@ export function createViewModel() {
 					runner.runEffect,
 				)
 			},
-			pageResumed: () =>
-				pipe(
-					Eff.log(`UI triggered pageResumed`),
-					Eff.andThen(dispatch(Message.StartRefreshTime())),
-					runner.runEffect,
-				),
-			clearSelected: () =>
-				pipe(
-					Eff.log(`UI triggered clearSelected`),
-					Eff.andThen(dispatch(Message.ClearSelected())),
-					runner.runEffect,
-				),
 
-			toggleItem: (product: ProductViewModel) =>
-				pipe(
-					Eff.log(`UI triggered toggleItem`),
-					Eff.andThen(dispatch(Message.ToggleItem({ product }))),
-					runner.runEffect,
-				),
-
-			deleteSelected: () =>
+			deleteProducts: (ids: NEHS.NonEmptyHashSet<string>) =>
 				pipe(
 					Eff.log(`UI triggered deleteSelected`),
-					Eff.andThen(dispatch(Message.StartDeleteSelectedAndRefresh())),
+					Eff.andThen(dispatch(Message.StartDeleteSelectedAndRefresh({ ids }))),
 					runner.runEffect,
 				),
-			showCrash: () => {
-				pipe(
-					Eff.log(`Received showCrash event from the ui`),
-					Eff.andThen(dispatch(Message.ShowCrash())),
-					runner.runEffect,
-				)
-			},
 		},
 	}
 }

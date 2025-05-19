@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation'
 	import { App as CAP } from '@capacitor/app'
+	import { Haptics, ImpactStyle } from '@capacitor/haptics'
 	import Inf from '@lucide/svelte/icons/infinity'
 	import Info from '@lucide/svelte/icons/info'
 	import Menu from '@lucide/svelte/icons/menu'
@@ -8,15 +9,19 @@
 	import Trash2 from '@lucide/svelte/icons/trash-2'
 	import X from '@lucide/svelte/icons/x'
 	import { format } from 'date-fns'
+	import type { Cancel } from 'effect/Runtime'
 	import { onMount } from 'svelte'
 	import { flip } from 'svelte/animate'
 	import { cubicIn, expoIn, expoOut } from 'svelte/easing'
 	import { fade, fly } from 'svelte/transition'
 
-	import { Eff, O, Str, pipe } from '$lib/core/imports.ts'
+	import { Cl, Da, Eff, M, O, Str, pipe } from '$lib/core/imports.ts'
 
 	import {
+		type Command,
+		type Update,
 		createCapacitorListener,
+		makeDispatcher,
 		makeEffectRunner,
 	} from '$lib/ui/adapters.ts'
 	import imgUrl from '$lib/ui/assets/arrow.svg'
@@ -25,21 +30,13 @@
 	import { getGlobalContext } from '$lib/ui/context.ts'
 	import * as Utils from '$lib/ui/utils.ts'
 
-	import { createViewModel } from './(viewmodel)/index.svelte.ts'
+	import { createUiState } from './(ui)/index.svelte.ts'
 
-	const viewModel = createViewModel()
-
-	const { runtime } = getGlobalContext()
-	const runner = makeEffectRunner(runtime)
-
-	let isMenuOpen = $state(false)
-
-	function toggleMenu() {
-		isMenuOpen = !isMenuOpen
-	}
+	const uiState = createUiState()
+	type HomeCommand = Command<Message, never>
 
 	$effect(() => {
-		if (viewModel.state.hasCrashOccurred) {
+		if (uiState.state.hasCrashOccurred) {
 			sessionStorage.setItem(`crash`, `true`)
 			window.location.reload()
 		}
@@ -48,16 +45,18 @@
 	onMount(() => {
 		if (sessionStorage.getItem(`crash`) === `true`) {
 			sessionStorage.removeItem(`crash`)
-			viewModel.tasks.showCrash()
+			uiState.tasks.showCrash()
 		}
+
+		uiState.tasks.refreshList()
 
 		pipe(
 			createCapacitorListener(`backButton`),
 			Str.runForEach(() =>
-				isMenuOpen
-					? Eff.sync(toggleMenu)
-					: viewModel.derived.hasSelectedProducts
-						? Eff.sync(viewModel.tasks.clearSelected)
+				state.isMenuOpen
+					? dispatch(Message.ToggleMenu())
+					: hasSelectedProducts
+						? dispatch(Message.ClearSelected())
 						: Eff.promise(() => CAP.exitApp()),
 			),
 			runner.runEffect,
@@ -65,14 +64,14 @@
 
 		pipe(
 			createCapacitorListener(`resume`),
-			Str.runForEach(() => Eff.sync(viewModel.tasks.pageResumed)),
+			Str.runForEach(() => dispatch(Message.StartRefreshTime())),
 			runner.runEffect,
 		)
 	})
 </script>
 
 <div in:fade>
-	{#if isMenuOpen}
+	{#if state.isMenuOpen}
 		<div
 			in:fly={{
 				x: -256,
@@ -119,7 +118,7 @@
 				duration: 400,
 				easing: expoIn,
 			}}
-			onpointerup={toggleMenu}
+			onpointerup={() => runner.runEffect(dispatch(Message.ToggleMenu()))}
 			class="touch-none pointer-events-auto h-full z-998 flex-col fixed w-full bg-black/50 backdrop-blur-xs"
 		></div>
 	{/if}
@@ -133,17 +132,20 @@
 			<div
 				class="ml-2 relative h-12 w-12 flex items-center justify-center rounded-full overflow-hidden"
 			>
-				{#if O.isSome(viewModel.derived.maybeNonEmptySelected)}
+				{#if O.isSome(maybeNonEmptySelected)}
 					<div class="absolute" transition:fade={{ duration: 200 }}>
-						{#if !viewModel.state.isDeleteRunning}
-							<Ripple ontap={viewModel.tasks.clearSelected}></Ripple>
+						{#if !uiState.state.isDeleteRunning}
+							<Ripple ontap={uiState.tasks.clearSelected}></Ripple>
 						{/if}
 
 						<X />
 					</div>
 				{:else}
 					<div transition:fade={{ duration: 200 }} class="absolute">
-						<Ripple color="var(--color-background)" ontap={toggleMenu}></Ripple>
+						<Ripple
+							color="var(--color-background)"
+							ontap={() => runner.runEffect(dispatch(Message.ToggleMenu()))}
+						></Ripple>
 						<Menu />
 					</div>
 				{/if}
@@ -153,14 +155,14 @@
 				Fridgy
 			</div>
 			<div class="grow"></div>
-			{#if O.isSome(viewModel.derived.maybeNonEmptySelected)}
+			{#if O.isSome(maybeNonEmptySelected)}
 				<div
 					transition:fade={{ duration: 200 }}
 					class="relative flex h-full items-center text-lg font-stylish translate-y-[2px]"
 				>
-					{#key viewModel.derived.maybeNonEmptySelected.value.size}
+					{#key maybeNonEmptySelected.value.size}
 						<div class="absolute" transition:fade={{ duration: 200 }}>
-							{viewModel.derived.maybeNonEmptySelected.value.size}
+							{maybeNonEmptySelected.value.size}
 						</div>
 					{/key}
 				</div>
@@ -169,14 +171,14 @@
 					class="ml-2 mr-2 relative h-12 w-12 flex items-center justify-center rounded-full overflow-hidden"
 					transition:fade={{ duration: 200 }}
 				>
-					{#if !viewModel.state.isDeleteRunning}
-						<Ripple ontap={viewModel.tasks.deleteSelected}></Ripple>{/if}
+					{#if !uiState.state.isDeleteRunning}
+						<Ripple ontap={uiState.tasks.deleteSelected}></Ripple>{/if}
 					<Trash2 />
 				</div>
 			{/if}
 		</div>
-		{#if O.isSome(viewModel.derived.maybeLoadedProducts)}
-			{@const products = viewModel.derived.maybeLoadedProducts.value}
+		{#if O.isSome(uiState.derived.maybeLoadedProducts)}
+			{@const products = uiState.derived.maybeLoadedProducts.value}
 
 			{#if products.entries.length > 0}
 				<p
@@ -188,7 +190,7 @@
 			{/if}
 		{/if}
 	</div>
-	{#if viewModel.state.isLoading}
+	{#if state.isLoading}
 		<div
 			transition:fade={{ duration: 200 }}
 			class="z-50 scale-[175%] fixed left-0 top-0 right-0 bottom-0 backdrop-blur-[1px] flex items-center justify-center"
@@ -198,7 +200,7 @@
 	{/if}
 
 	<div class="bg-background flex flex-col">
-		{#if viewModel.state.receivedError}
+		{#if state.receivedError}
 			<div
 				class="flex h-screen w-screen items-center justify-center text-center text-lg"
 			>
@@ -208,20 +210,20 @@
 					<div
 						class="text-primary underline relative overflow-hidden rounded-full py-1 px-2"
 					>
-						<Ripple ontap={viewModel.tasks.refreshList}></Ripple>
+						<Ripple ontap={uiState.tasks.refreshList}></Ripple>
 						Try again
 					</div>
 				</div>
 			</div>
-		{:else if O.isSome(viewModel.derived.maybeLoadedProducts)}
-			{@const products = viewModel.derived.maybeLoadedProducts.value}
+		{:else if O.isSome(uiState.derived.maybeLoadedProducts)}
+			{@const products = uiState.derived.maybeLoadedProducts.value}
 
 			<div
 				style:padding-top={`calc(env(safe-area-inset-top) + 64px + 42px)`}
 				out:fade={{ duration: 200 }}
 				class="flex flex-1 gap-2 flex-col w-full pt-[98px] pb-35"
 			>
-				{#each products.entries as product (product.id)}
+				{#each products as product (product.id)}
 					{@const maybeCreation = product.isCorrupt
 						? O.none()
 						: product.isValid
@@ -246,12 +248,16 @@
 									: `bg-secondary/5`,
 							]}
 						>
-							{#if !viewModel.state.isDeleteRunning}
-								{#if products.selected.size > 0}
-									<Ripple ontap={() => viewModel.tasks.toggleItem(product)}
+							{#if !uiState.state.isDeleteRunning}
+								{#if state.selected.size > 0}
+									<Ripple ontap={() => uiState.tasks.toggleItem(product)}
 									></Ripple>
 								{:else}
-									<Ripple onhold={() => viewModel.tasks.toggleItem(product)}
+									<Ripple
+										onhold={() =>
+											runner.runEffect(
+												dispatch(Message.ToggleItem({ product })),
+											)}
 									></Ripple>
 								{/if}
 							{/if}
@@ -293,13 +299,13 @@
 
 									{#if O.isNone(maybeCreation)}
 										No creation date
-									{:else if O.isSome(maybeExpirationDate) && maybeExpirationDate.value > viewModel.state.currentTimestamp}
+									{:else if O.isSome(maybeExpirationDate) && maybeExpirationDate.value > state.currentTimestamp}
 										{@const expiration = maybeExpirationDate.value}
 										{@const creation = maybeCreation.value}
 
 										{@const totalDuration = expiration - creation}
 										{@const remainingDuration =
-											expiration - viewModel.state.currentTimestamp}
+											expiration - state.currentTimestamp}
 										{@const currentProgress = remainingDuration / totalDuration}
 
 										{@const currentProgressOrZero =
@@ -334,13 +340,12 @@
 												`text-primary duration-fade absolute text-sm`,
 												{
 													'text-primary font-bold':
-														maybeExpirationDate.value <
-														viewModel.state.currentTimestamp,
+														maybeExpirationDate.value < state.currentTimestamp,
 												},
 											]}
 										>
 											{Utils.formatRemainingTime(
-												viewModel.state.currentTimestamp,
+												state.currentTimestamp,
 												maybeExpirationDate.value,
 											)}
 										</div>
@@ -353,12 +358,12 @@
 			</div>
 		{/if}
 	</div>
-	{#if O.isNone(viewModel.derived.maybeNonEmptySelected)}
+	{#if O.isNone(maybeNonEmptySelected)}
 		<div
 			class="fixed right-[16px] left-[16px]"
 			style:bottom={`calc(env(safe-area-inset-bottom, 0) + 21px)`}
 		>
-			{#if O.isNone(viewModel.derived.maybeLoadedProducts)}
+			{#if O.isNone(uiState.derived.maybeLoadedProducts)}
 				<div
 					in:fade={{ duration: 200 }}
 					class="font-stylish absolute right-0 bottom-[100px] flex flex-col items-end duration-[fade]"
@@ -388,19 +393,19 @@
 		</div>
 	{/if}
 
-	{#key O.isSome(viewModel.derived.maybeToastMessage)}
+	{#key O.isSome(maybeToastMessage)}
 		<div
 			in:fade={{
 				duration: 300,
 				easing: cubicIn,
 			}}
 			out:fade={{ duration: 100 }}
-			style:bottom={O.isNone(viewModel.derived.maybeNonEmptySelected)
+			style:bottom={O.isNone(maybeNonEmptySelected)
 				? `calc(env(safe-area-inset-bottom, 0) + 140px)`
 				: `calc(env(safe-area-inset-bottom, 0) + 21px)`}
 			class="z-90 fixed flex left-0 right-0 items-center justify-center transition-all"
 		>
-			{#if O.isSome(viewModel.derived.maybeToastMessage)}
+			{#if O.isSome(maybeToastMessage)}
 				<div
 					class="flex justify-center items-center px-8 w-full max-w-lg transition-all"
 				>
@@ -426,7 +431,7 @@
 							<span class="sr-only">Error icon</span>
 						</div>
 						<div class="ms-3 text-sm font-normal">
-							{viewModel.derived.maybeToastMessage.value.message}
+							{maybeToastMessage.value.message}
 						</div>
 					</div>
 				</div>
