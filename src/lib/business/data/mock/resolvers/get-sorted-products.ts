@@ -1,9 +1,9 @@
 /* eslint-disable @typescript-eslint/no-unnecessary-condition */
 import { A, Eff, HM, L, O, Ord, Ref, pipe } from '$lib/core/imports.ts'
+import { withLayerLogging } from '$lib/core/logging.ts'
 
 import { GetSortedProducts } from '$lib/business/app/operations.ts'
 
-import { Deps } from '../../deps.ts'
 import { Config } from '../config.ts'
 import { Db } from '../db.ts'
 
@@ -29,8 +29,6 @@ const ord = Ord.make(
 export const query = L.effect(
 	GetSortedProducts.Tag,
 	Eff.gen(function* () {
-		// eslint-disable-next-line @typescript-eslint/no-unused-vars
-		const { log } = yield* Deps
 		const withErrors = yield* Config.withErrors
 		const db = yield* Db
 		return Eff.gen(function* () {
@@ -42,6 +40,6 @@ export const query = L.effect(
 			const products: GetSortedProducts.ProductDTO[] = map.pipe(HM.toValues)
 
 			return A.sort(ord)(products)
-		})
+		}).pipe(withLayerLogging(`I`))
 	}),
 )

@@ -1,10 +1,10 @@
 import { ParseResult } from 'effect'
 
-import { E, Eff, L, LL, O, RR, Sc } from '$lib/core/imports.ts'
+import { E, Eff, L, O, RR, Sc } from '$lib/core/imports.ts'
+import { withLayerLogging } from '$lib/core/logging.ts'
 
 import { AddProduct } from '$lib/business/app/operations.ts'
 
-import { Deps } from '../../deps.ts'
 import { DbPlugin } from '../db-plugin.ts'
 
 const DtoToBackend = Sc.transformOrFail(
@@ -41,23 +41,23 @@ export const command = L.effect(
 	AddProduct.Resolver,
 	Eff.gen(function* () {
 		const { addProduct } = yield* DbPlugin
-		const { log } = yield* Deps
 
 		return RR.fromEffect(product =>
 			Eff.gen(function* () {
-				const dto = yield* Sc.encodeEither(DtoToBackend)(product).pipe(
-					Eff.catchTags({ ParseError: Eff.die }),
-				)
+				const dto = yield* Sc.encode(DtoToBackend)(product).pipe(Eff.either)
+				if (E.isLeft(dto)) {
+					return yield* Eff.die(dto.left)
+				}
 
-				const result = yield* Eff.either(addProduct(dto))
+				const result = yield* Eff.either(addProduct(dto.right))
 
 				if (E.isLeft(result)) {
 					yield* Eff.logError(result.left.error)
 					return yield* new AddProduct.OperationFailed()
 				}
 
-				yield* log(LL.Debug, `No errors adding the product`)
-			}),
+				yield* Eff.logDebug(`No errors adding the product`)
+			}).pipe(withLayerLogging(`I`)),
 		)
 	}),
 )

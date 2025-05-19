@@ -1,10 +1,9 @@
 /* eslint-disable @typescript-eslint/no-unnecessary-condition */
-import { Eff, HM, L, LL, O, RR, Ref, pipe } from '$lib/core/imports.ts'
+import { Eff, HM, L, O, RR, Ref, pipe } from '$lib/core/imports.ts'
 import { withLayerLogging } from '$lib/core/logging.ts'
 
 import { AddProduct } from '$lib/business/app/operations.ts'
 
-import { Deps } from '../../deps.ts'
 import { Config } from '../config.ts'
 import { Db } from '../db.ts'
 
@@ -12,7 +11,6 @@ export const command = L.effect(
 	AddProduct.Resolver,
 	Eff.gen(function* () {
 		const withErrors = yield* Config.withErrors
-		const { log } = yield* Deps
 		const db = yield* Db
 		return RR.fromEffect(product =>
 			pipe(
@@ -22,7 +20,7 @@ export const command = L.effect(
 						return yield* Eff.fail(new AddProduct.OperationFailed())
 					}
 
-					yield* Eff.logInfo(`Attempting to add product into mock database...`)
+					yield* Eff.log(`Attempting to add product into mock database...`)
 
 					yield* Ref.update(db, dbValues => {
 						const index = dbValues.index + 1
@@ -41,10 +39,7 @@ export const command = L.effect(
 						}
 					})
 
-					yield* log(
-						LL.Info,
-						`Added product ${product.name} into mock database`,
-					)
+					yield* Eff.log(`Added product ${product.name} into mock database`)
 
 					return yield* Eff.void
 				}),
