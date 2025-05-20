@@ -35,6 +35,7 @@ export type ProductViewModel = Sc.Schema.Type<typeof ProductViewModel>
 export type State = {
 	receivedError: boolean
 	currentTimestamp: number
+	isMenuOpen: boolean
 	refreshingTaskId: symbol | undefined
 	isDeleteRunning: boolean
 	spinnerTaskId: symbol | undefined
@@ -68,6 +69,7 @@ export function createStateContext() {
 		hasCrashOccurred: false,
 		isLoading: false,
 		isDeleteRunning: false,
+		isMenuOpen: false,
 		toastMessage: undefined,
 		currentTimestamp: Date.now(),
 		products: undefined,

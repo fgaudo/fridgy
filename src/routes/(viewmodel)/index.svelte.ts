@@ -1,10 +1,16 @@
+import { App as CAP } from '@capacitor/app'
 import type { Cancel } from 'effect/Runtime'
 import { onMount } from 'svelte'
 
 import { D, Eff, Str, pipe } from '$lib/core/imports.ts'
 
-import { makeDispatcher, makeEffectRunner } from '$lib/ui/adapters.ts'
+import {
+	createCapacitorListener,
+	makeDispatcher,
+	makeEffectRunner,
+} from '$lib/ui/adapters.ts'
 import { getGlobalContext } from '$lib/ui/context.ts'
+import { createCrashHandler } from '$lib/ui/helpers.svelte.ts'
 
 import * as Tasks from './commands.ts'
 import { type ProductViewModel, createStateContext } from './state.svelte.ts'
@@ -22,8 +28,38 @@ export function createViewModel() {
 		Message.Crash({ message: err }),
 	)
 
+	createCrashHandler(
+		() => context.state.hasCrashOccurred,
+		runner,
+		dispatch(Message.ShowCrash()),
+	)
+
 	onMount(() => {
 		runner.runEffect(dispatch(Message.FetchList()))
+
+		pipe(
+			createCapacitorListener(`backButton`),
+			Str.runForEach(() =>
+				Eff.gen(function* () {
+					if (context.state.isMenuOpen) {
+						return yield* dispatch(Message.ToggleMenu())
+					}
+
+					if (context.derived.hasSelectedProducts) {
+						return yield* dispatch(Message.ClearSelected())
+					}
+
+					return yield* Eff.promise(() => CAP.exitApp())
+				}),
+			),
+			runner.runEffect,
+		)
+
+		pipe(
+			createCapacitorListener(`resume`),
+			Str.runForEach(() => dispatch(Message.StartRefreshTime())),
+			runner.runEffect,
+		)
 	})
 
 	/** Refresh time listeners */
@@ -63,12 +99,6 @@ export function createViewModel() {
 					runner.runEffect,
 				)
 			},
-			pageResumed: () =>
-				pipe(
-					Eff.log(`UI triggered pageResumed`),
-					Eff.andThen(dispatch(Message.StartRefreshTime())),
-					runner.runEffect,
-				),
 			clearSelected: () =>
 				pipe(
 					Eff.log(`UI triggered clearSelected`),
@@ -83,19 +113,19 @@ export function createViewModel() {
 					runner.runEffect,
 				),
 
+			toggleMenu: () =>
+				pipe(
+					Eff.log(`UI triggered toggleMenu`),
+					Eff.andThen(dispatch(Message.ToggleMenu())),
+					runner.runEffect,
+				),
+
 			deleteSelected: () =>
 				pipe(
 					Eff.log(`UI triggered deleteSelected`),
 					Eff.andThen(dispatch(Message.StartDeleteSelectedAndRefresh())),
 					runner.runEffect,
 				),
-			showCrash: () => {
-				pipe(
-					Eff.log(`Received showCrash event from the ui`),
-					Eff.andThen(dispatch(Message.ShowCrash())),
-					runner.runEffect,
-				)
-			},
 		},
 	}
 }

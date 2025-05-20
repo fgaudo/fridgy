@@ -37,6 +37,7 @@ export type Message = Da.TaggedEnum<{
 	RefreshTimeResult: { timestamp: number }
 	ShowSpinner: { id: symbol }
 	NoOp: object
+	ToggleMenu: object
 	ShowCrash: object
 	RemoveToast: { id: symbol }
 	Crash: { message: unknown }
@@ -261,6 +262,11 @@ export const update: Update<State, Message, UseCases> = (state, message) => {
 			}
 
 			return [queueRemoveToast(id)]
+		}),
+		M.tag(`ToggleMenu`, () => {
+			state.isMenuOpen = !state.isMenuOpen
+
+			return []
 		}),
 		M.tag(`NoOp`, () => []),
 		M.tag(`Crash`, () => {

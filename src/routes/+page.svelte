@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { goto } from '$app/navigation'
-	import { App as CAP } from '@capacitor/app'
 	import Inf from '@lucide/svelte/icons/infinity'
 	import Info from '@lucide/svelte/icons/info'
 	import Menu from '@lucide/svelte/icons/menu'
@@ -8,71 +7,24 @@
 	import Trash2 from '@lucide/svelte/icons/trash-2'
 	import X from '@lucide/svelte/icons/x'
 	import { format } from 'date-fns'
-	import { onMount } from 'svelte'
 	import { flip } from 'svelte/animate'
 	import { cubicIn, expoIn, expoOut } from 'svelte/easing'
 	import { fade, fly } from 'svelte/transition'
 
-	import { Eff, O, Str, pipe } from '$lib/core/imports.ts'
+	import { O } from '$lib/core/imports.ts'
 
-	import {
-		createCapacitorListener,
-		makeEffectRunner,
-	} from '$lib/ui/adapters.ts'
 	import imgUrl from '$lib/ui/assets/arrow.svg'
 	import Ripple from '$lib/ui/components/ripple.svelte'
 	import Spinner from '$lib/ui/components/spinner.svelte'
-	import { getGlobalContext } from '$lib/ui/context.ts'
 	import * as Utils from '$lib/ui/utils.ts'
 
 	import { createViewModel } from './(viewmodel)/index.svelte.ts'
 
 	const viewModel = createViewModel()
-
-	const { runtime } = getGlobalContext()
-	const runner = makeEffectRunner(runtime)
-
-	let isMenuOpen = $state(false)
-
-	function toggleMenu() {
-		isMenuOpen = !isMenuOpen
-	}
-
-	$effect(() => {
-		if (viewModel.state.hasCrashOccurred) {
-			sessionStorage.setItem(`crash`, `true`)
-			window.location.reload()
-		}
-	})
-
-	onMount(() => {
-		if (sessionStorage.getItem(`crash`) === `true`) {
-			sessionStorage.removeItem(`crash`)
-			viewModel.tasks.showCrash()
-		}
-
-		pipe(
-			createCapacitorListener(`backButton`),
-			Str.runForEach(() =>
-				isMenuOpen
-					? Eff.sync(toggleMenu)
-					: viewModel.derived.hasSelectedProducts
-						? Eff.sync(viewModel.tasks.clearSelected)
-						: Eff.promise(() => CAP.exitApp()),
-			),
-			runner.runEffect,
-		)
-
-		pipe(
-			createCapacitorListener(`resume`),
-			Str.runForEach(() => Eff.sync(viewModel.tasks.pageResumed)),
-			runner.runEffect,
-		)
-	})
 </script>
 
 <div in:fade>
-	{#if isMenuOpen}
+	{#if viewModel.state.isMenuOpen}
 		<div
 			in:fly={{
 				x: -256,
@@ -119,7 +71,7 @@
 				duration: 400,
 				easing: expoIn,
 			}}
-			onpointerup={toggleMenu}
+			onpointerup={viewModel.tasks.toggleMenu}
 			class="touch-none pointer-events-auto h-full z-998 flex-col fixed w-full bg-black/50 backdrop-blur-xs"
 		></div>
 	{/if}
@@ -143,7 +95,10 @@
 					</div>
 				{:else}
 					<div transition:fade={{ duration: 200 }} class="absolute">
-						<Ripple color="var(--color-background)" ontap={toggleMenu}></Ripple>
+						<Ripple
+							color="var(--color-background)"
+							ontap={viewModel.tasks.toggleMenu}
+						></Ripple>
 						<Menu />
 					</div>
 				{/if}

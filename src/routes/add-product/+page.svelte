@@ -1,7 +1,6 @@
 <script lang="ts">
 	import ArrowLeft from '@lucide/svelte/icons/arrow-left'
 	import Quote from '@lucide/svelte/icons/quote'
-	import { onMount } from 'svelte'
 	import { cubicIn, cubicOut } from 'svelte/easing'
 	import { fade, fly } from 'svelte/transition'
 
@@ -14,20 +13,6 @@
 	import { createViewModel } from './(view-model)/index.svelte.ts'
 
 	const viewModel = createViewModel()
-
-	$effect(() => {
-		if (viewModel.state.hasCrashOccurred) {
-			sessionStorage.setItem(`crash`, `true`)
-			window.location.reload()
-		}
-	})
-
-	onMount(() => {
-		if (sessionStorage.getItem(`crash`) === `true`) {
-			sessionStorage.removeItem(`crash`)
-			viewModel.tasks.showCrash()
-		}
-	})
 </script>
 
 <div

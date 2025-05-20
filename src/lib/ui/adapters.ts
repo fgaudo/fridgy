@@ -9,7 +9,7 @@ export type Update<S, M, R> = (state: S, message: M) => Command<M, R>[]
 
 export type Command<M, R> = Eff.Effect<M, never, R>
 
-interface EffectRunner<R> {
+export interface EffectRunner<R> {
 	runEffect: (eff: Eff.Effect<void, never, R>) => Cancel<void>
 }
 
@@ -42,6 +42,11 @@ export function makeEffectRunner<R>(
 					Eff.provide(Log.minimumLogLevel(LL.Debug)),
 					Eff.tapDefect(Eff.logFatal),
 				),
+				{
+					onExit: () => {
+						set.delete(cancel)
+					},
+				},
 			)
 			set.add(cancel)
 			return cancel
