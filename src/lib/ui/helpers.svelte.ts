@@ -13,6 +13,7 @@ export function createCrashHandler(
 	handleError: Eff.Effect<void>,
 ) {
 	effectToStream({ state: stateCallback }).pipe(
+		Str.filter(({ state }) => state),
 		Str.tap(() =>
 			Eff.sync(() => {
 				sessionStorage.setItem(`crash`, `true`)

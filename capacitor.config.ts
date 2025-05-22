@@ -7,6 +7,7 @@ const config: CapacitorConfig = {
 	server: {
 		androidScheme: 'https',
 	},
+	loggingBehavior: 'production',
 }
 
 export default config

@@ -1,8 +1,8 @@
 import { Eff, pipe } from '$lib/core/imports.ts'
 
-import { makeDispatcher, makeEffectRunner } from '$lib/ui/adapters.svelte.ts'
+import { makeEffectRunner } from '$lib/ui/adapters.svelte.ts'
 import { getGlobalContext } from '$lib/ui/context.ts'
-import { createCrashHandler } from '$lib/ui/helpers.svelte.ts'
+import { createCrashHandler, makeDispatcher } from '$lib/ui/helpers.svelte.ts'
 
 import { createStateContext } from './state.svelte.ts'
 import { Message, update } from './update.svelte.ts'

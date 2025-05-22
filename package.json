@@ -7,6 +7,7 @@
 		"@capacitor/assets": "^3.0.5",
 		"@capacitor/cli": "^7.2.0",
 		"@capacitor/core": "^7.2.0",
+		"@capacitor/filesystem": "^7.0.1",
 		"@capacitor/haptics": "^7.0.1",
 		"@capacitor/toast": "^7.0.1",
 		"@effect/vitest": "^0.22.2",
