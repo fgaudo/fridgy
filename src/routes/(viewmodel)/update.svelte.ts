@@ -5,7 +5,7 @@ import { Da, Eff, HS, M, NEHS, O, pipe } from '$lib/core/imports.ts'
 
 import type { UseCases } from '$lib/business/app/use-cases.ts'
 import type { GetSortedProductsDTO } from '$lib/business/app/use-cases/get-sorted-products.ts'
-import type { Update } from '$lib/ui/adapters.ts'
+import type { Update } from '$lib/ui/helpers.svelte.ts'
 
 import {
 	deleteSelectedAndRefresh,

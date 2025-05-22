@@ -1,22 +1,19 @@
 import { App as CAP } from '@capacitor/app'
-import type { Cancel } from 'effect/Runtime'
 import { onMount } from 'svelte'
 
-import { D, Eff, Str, pipe } from '$lib/core/imports.ts'
+import { Eff, Str, pipe } from '$lib/core/imports.ts'
 
 import {
 	createCapacitorListener,
-	makeDispatcher,
+	effectToStream,
 	makeEffectRunner,
-} from '$lib/ui/adapters.ts'
+} from '$lib/ui/adapters.svelte.ts'
 import { getGlobalContext } from '$lib/ui/context.ts'
-import { createCrashHandler } from '$lib/ui/helpers.svelte.ts'
+import { createCrashHandler, makeDispatcher } from '$lib/ui/helpers.svelte.ts'
 
-import * as Tasks from './commands.ts'
 import { type ProductViewModel, createStateContext } from './state.svelte.ts'
+import { refreshTimeInterval } from './subs.ts'
 import { Message, update } from './update.svelte.ts'
-
-const refreshTimeIntervalFrequency = D.seconds(20)
 
 export function createViewModel() {
 	const context = createStateContext()
@@ -62,31 +59,18 @@ export function createViewModel() {
 		)
 	})
 
-	/** Refresh time listeners */
-	{
-		let cancelRefreshTimeInterval: Cancel<unknown, unknown> | undefined
-
-		const refreshTimeInterval = pipe(
-			Str.fromEffect(Tasks.refreshTime),
-			Str.mapEffect(dispatch),
-			Str.mapEffect(() => Eff.sleep(refreshTimeIntervalFrequency)),
-			Str.forever,
-		)
-
-		$effect(() => {
-			cancelRefreshTimeInterval?.()
-
-			if (context.derived.refreshTimeListenersEnabled) {
-				runner.runEffect(Eff.log(`Refresh time listeners enabled`))
-
-				cancelRefreshTimeInterval = runner.runEffect(
-					pipe(refreshTimeInterval, Str.runDrain),
-				)
-			} else {
-				runner.runEffect(Eff.log(`Refresh time listeners disabled`))
-			}
-		})
-	}
+	effectToStream({
+		refreshTimeListenersEnabled: () =>
+			context.derived.refreshTimeListenersEnabled,
+	}).pipe(
+		Str.flatMap(
+			({ refreshTimeListenersEnabled }) =>
+				refreshTimeListenersEnabled ? refreshTimeInterval : Str.empty,
+			{ switch: true },
+		),
+		Str.runForEach(dispatch),
+		runner.runEffect,
+	)
 
 	return {
 		state: context.state,

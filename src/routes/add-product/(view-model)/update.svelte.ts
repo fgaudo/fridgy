@@ -3,7 +3,7 @@ import { endOfDay } from 'date-fns'
 import { Da, Eff, Int, M, NETS, O, pipe } from '$lib/core/imports.ts'
 
 import type { UseCases } from '$lib/business/app/use-cases.ts'
-import type { Update } from '$lib/ui/adapters.ts'
+import type { Update } from '$lib/ui/adapters.svelte.ts'
 
 import { addProduct, queueLoading, queueRemoveToast } from './commands.ts'
 import type { State } from './state.svelte.ts'

@@ -2,9 +2,10 @@ import { sveltekit } from '@sveltejs/kit/vite'
 import tailwindcss from '@tailwindcss/vite'
 import { svelteTesting } from '@testing-library/svelte/vite'
 import { defineConfig } from 'vite'
+import tsconfigPaths from 'vite-tsconfig-paths'
 
 export default defineConfig(() => ({
-	plugins: [tailwindcss(), sveltekit()],
+	plugins: [tailwindcss(), sveltekit(), tsconfigPaths()],
 
 	test: {
 		workspace: [

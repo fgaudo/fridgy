@@ -7,7 +7,7 @@
 	import { Eff, MR } from '$lib/core/imports.ts'
 
 	import { useCases } from '$lib/business/index.ts'
-	import * as Utils from '$lib/ui/adapters.ts'
+	import * as Utils from '$lib/ui/adapters.svelte.ts'
 	import '$lib/ui/assets/index.css'
 	import Spinner from '$lib/ui/components/spinner.svelte'
 	import { setGlobalContext } from '$lib/ui/context.ts'
