@@ -1,11 +1,14 @@
 <script lang="ts">
 	import ArrowLeft from '@lucide/svelte/icons/arrow-left'
 	import Quote from '@lucide/svelte/icons/quote'
+	import { getDayOfYear } from 'date-fns'
+	import { Hash, Random } from 'effect'
 	import { cubicIn, cubicOut } from 'svelte/easing'
 	import { fade, fly } from 'svelte/transition'
 
 	import { O } from '$lib/core/imports.ts'
 
+	import sayings from '$lib/ui/assets/sayings.json' with { type: 'json' }
 	import Ripple from '$lib/ui/components/ripple.svelte'
 	import Spinner from '$lib/ui/components/spinner.svelte'
 	import { PAGE_TRANSITION_Y } from '$lib/ui/constants.ts'
@@ -13,6 +16,8 @@
 	import { createViewModel } from './(view-model)/index.svelte.ts'
 
 	const viewModel = createViewModel()
+
+	const day = getDayOfYear(Date.now()) % sayings.length
 </script>
 
 <div
@@ -56,8 +61,7 @@
 		<blockquote>
 			<div class="flex items-center justify-center">
 				<p class="text-md mb-2 italic select-text">
-					Chi c'ha er pepe, lo mette alle rape; <br />
-					chi nun ce l'ha, le magna sciape.
+					{@html sayings.at(day)}
 				</p>
 			</div>
 			<p class="text-right text-sm"></p>
