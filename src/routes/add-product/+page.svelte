@@ -22,7 +22,7 @@
 		duration: 600,
 		easing: cubicOut,
 	}}
-	class="bg-background flex flex-col justify-between opacity-100"
+	class="bg-background flex flex-col justify-between h-screen opacity-100"
 >
 	<div
 		style:padding-top={`env(safe-area-inset-top)`}

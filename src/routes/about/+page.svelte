@@ -16,7 +16,9 @@
 	}}
 >
 	<div
-		class="bg-secondary shadow-secondary/40 flex h-16 w-full items-center shadow-md"
+		style:padding-top={`env(safe-area-inset-top)`}
+		style:height={`calc(64px + env(safe-area-inset-top))`}
+		class="bg-secondary shadow-secondary/40 flex w-full items-center shadow-md"
 	>
 		<div
 			class="ml-2 text-center flex h-12 w-12 items-center justify-center relative overflow-hidden rounded-full"
