@@ -61,7 +61,7 @@
 		<blockquote>
 			<div class="flex items-center justify-center">
 				<p class="text-md mb-2 italic select-text">
-					{@html sayings.at(day)}
+					“{@html sayings.at(day)}”
 				</p>
 			</div>
 			<p class="text-right text-sm"></p>
