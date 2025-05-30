@@ -2,7 +2,6 @@
 	import ArrowLeft from '@lucide/svelte/icons/arrow-left'
 	import Quote from '@lucide/svelte/icons/quote'
 	import { getDayOfYear } from 'date-fns'
-	import { Hash, Random } from 'effect'
 	import { cubicIn, cubicOut } from 'svelte/easing'
 	import { fade, fly } from 'svelte/transition'
 
@@ -17,7 +16,7 @@
 
 	const viewModel = createViewModel()
 
-	const day = getDayOfYear(Date.now()) % sayings.length
+	const saying = sayings[getDayOfYear(Date.now()) % sayings.length]
 </script>
 
 <div
@@ -61,7 +60,7 @@
 		<blockquote>
 			<div class="flex items-center justify-center">
 				<p class="text-md mb-2 italic select-text">
-					“{@html sayings.at(day)}”
+					“{@html saying}”
 				</p>
 			</div>
 			<p class="text-right text-sm"></p>
@@ -69,7 +68,8 @@
 	</figure>
 
 	<form
-		class="flex w-full max-w-lg flex-col gap-5 px-8 pt-8 justify-center pb-32 mx-auto"
+		style:padding-bottom={`calc(env(safe-area-inset-bottom, 0) + 128px)`}
+		class="flex w-full max-w-lg flex-col gap-5 px-8 pt-8 justify-center mx-auto"
 	>
 		<div class="text-on-background flex flex-col rounded-xl align-middle">
 			<label

@@ -173,8 +173,9 @@
 
 			<div
 				style:padding-top={`calc(env(safe-area-inset-top) + 64px + 42px)`}
+				style:padding-bottom={`calc(env(safe-area-inset-bottom) + 140px)`}
 				out:fade={{ duration: 200 }}
-				class="flex flex-1 gap-2 flex-col w-full pt-[98px] pb-35"
+				class="flex flex-1 gap-2 flex-col w-full"
 			>
 				{#each products.entries as product (product.id)}
 					{@const maybeCreation = product.isCorrupt

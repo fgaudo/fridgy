@@ -18,7 +18,7 @@
 	<div
 		style:padding-top={`env(safe-area-inset-top)`}
 		style:height={`calc(64px + env(safe-area-inset-top))`}
-		class="bg-secondary shadow-secondary/40 flex w-full items-center shadow-md"
+		class="bg-secondary shadow-secondary/40 fixed flex w-full items-center shadow-md z-20"
 	>
 		<div
 			class="ml-2 text-center flex h-12 w-12 items-center justify-center relative overflow-hidden rounded-full"
@@ -34,7 +34,9 @@
 	</div>
 
 	<div
-		class="flex flex-col justify-center gap-2 px-[24px] pt-[24px] bg-background"
+		style:padding-top={`calc(env(safe-area-inset-top) + 92px)`}
+		style:padding-bottom={'env(safe-area-inset-bottom)'}
+		class="flex flex-col justify-center gap-2 px-[24px] bg-background"
 	>
 		<p class="font-stylish text-xl">Fridgy</p>
 		<p class="mt-2">

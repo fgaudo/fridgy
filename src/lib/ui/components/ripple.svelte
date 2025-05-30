@@ -62,7 +62,7 @@
 		isDown = false
 		clearTimeout(timeoudId)
 	}}
-	class="absolute overflow-hidden h-full w-full top-0 left-0 z-30"
+	class="absolute overflow-hidden h-full w-full top-0 left-0"
 >
 	{#if isDown}
 		<div

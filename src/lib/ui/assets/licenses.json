@@ -1,332 +1,349 @@
 {
-	"@capacitor/android@7.2.0": {
-		"licenses": "MIT",
-		"repository": "https://github.com/ionic-team/capacitor",
-		"publisher": "Ionic Team",
-		"email": "hi@ionic.io",
-		"copyright": "Copyright (c) 2017-present Drifty Co.",
-		"name": "@capacitor/android",
-		"description": "Capacitor: Cross-platform apps with JavaScript and the web"
-	},
-	"@capacitor/app@7.0.1": {
-		"licenses": "MIT",
-		"repository": "https://github.com/ionic-team/capacitor-plugins",
-		"publisher": "Ionic",
-		"email": "hi@ionicframework.com",
-		"copyright": "Copyright 2020-present Ionic. https://ionic.io",
-		"name": "@capacitor/app",
-		"description": "The App API handles high level App state and events.For example, this API emits events when the app enters and leaves the foreground, handles deeplinks, opens other apps, and manages persisted plugin state."
-	},
-	"@capacitor/assets@3.0.5": {
-		"licenses": "MIT",
-		"repository": "https://github.com/ionic-team/capacitor-assets",
-		"publisher": "Ionic Team",
-		"email": "hi@ionicframework.com",
-		"copyright": "Copyright (c) 2021 Drifty Co.",
-		"name": "@capacitor/assets",
-		"description": "Generate icon and splash screen images for Capacitor apps"
-	},
-	"@capacitor/cli@7.2.0": {
-		"licenses": "MIT",
-		"repository": "https://github.com/ionic-team/capacitor",
-		"publisher": "Ionic Team",
-		"email": "hi@ionic.io",
-		"copyright": "Copyright (c) 2017-present Drifty Co.",
-		"name": "@capacitor/cli",
-		"description": "Capacitor: Cross-platform apps with JavaScript and the web"
-	},
-	"@capacitor/core@7.2.0": {
-		"licenses": "MIT",
-		"repository": "https://github.com/ionic-team/capacitor",
-		"publisher": "Ionic Team",
-		"email": "hi@ionic.io",
-		"copyright": "Copyright (c) 2017-present Drifty Co.",
-		"name": "@capacitor/core",
-		"description": "Capacitor: Cross-platform apps with JavaScript and the web"
-	},
-	"@capacitor/haptics@7.0.1": {
-		"licenses": "MIT",
-		"repository": "https://github.com/ionic-team/capacitor-plugins",
-		"publisher": "Ionic",
-		"email": "hi@ionicframework.com",
-		"copyright": "Copyright 2020-present Ionic. https://ionic.io",
-		"name": "@capacitor/haptics",
-		"description": "The Haptics API provides physical feedback to the user through touch or vibration."
-	},
-	"@capacitor/toast@7.0.1": {
-		"licenses": "MIT",
-		"repository": "https://github.com/ionic-team/capacitor-plugins",
-		"publisher": "Ionic",
-		"email": "hi@ionicframework.com",
-		"copyright": "Copyright 2020-present Ionic. https://ionic.io",
-		"name": "@capacitor/toast",
-		"description": "The Toast API provides a notification pop up for displaying important information to a user. Just like real toast!"
-	},
-	"@effect/vitest@0.21.5": {
-		"licenses": "MIT",
-		"repository": "https://github.com/Effect-TS/effect",
-		"copyright": "Copyright (c) 2023 Effectful Technologies Inc",
-		"name": "@effect/vitest",
-		"description": "A set of helpers for testing Effects with vitest"
-	},
-	"@eslint/compat@1.2.9": {
-		"licenses": "Apache-2.0",
-		"repository": "https://github.com/eslint/rewrite",
-		"publisher": "Nicholas C. Zakas",
-		"name": "@eslint/compat",
-		"description": "Compatibility utilities for ESLint",
-		"copyright": ""
-	},
-	"@eslint/js@9.26.0": {
-		"licenses": "MIT",
-		"repository": "https://github.com/eslint/eslint",
-		"copyright": "Copyright OpenJS Foundation and other contributors, <www.openjsf.org>",
-		"name": "@eslint/js",
-		"description": "ESLint JavaScript language implementation"
-	},
-	"@fontsource-variable/comfortaa@5.2.5": {
-		"licenses": "OFL-1.1",
-		"repository": "https://github.com/fontsource/font-files",
-		"publisher": "Google Inc.",
-		"name": "@fontsource-variable/comfortaa",
-		"description": "Self-host the Comfortaa font in a neatly bundled NPM package.",
-		"copyright": ""
-	},
-	"@fontsource-variable/roboto-flex@5.2.5": {
-		"licenses": "OFL-1.1",
-		"repository": "https://github.com/fontsource/font-files",
-		"publisher": "Google Inc.",
-		"name": "@fontsource-variable/roboto-flex",
-		"description": "Self-host the Roboto Flex font in a neatly bundled NPM package.",
-		"copyright": ""
-	},
-	"@lucide/svelte@0.509.0": {
-		"licenses": "ISC",
-		"repository": "https://github.com/lucide-icons/lucide",
-		"publisher": "Eric Fennis",
-		"copyright": "Copyright (c) for portions of Lucide are held by Cole Bemis 2013-2022 as part of Feather (MIT). All other copyright (c) for Lucide are held by Lucide Contributors 2022.",
-		"name": "@lucide/svelte",
-		"description": "A Lucide icon library package for Svelte applications."
-	},
-	"@playwright/test@1.52.0": {
-		"licenses": "Apache-2.0",
-		"repository": "https://github.com/microsoft/playwright",
-		"publisher": "Microsoft Corporation",
-		"noticeFile": "C:\\Users\\fgaud\\Project\\fridgy\\node_modules\\@playwright\\test\\NOTICE",
-		"name": "@playwright/test",
-		"description": "A high-level API to automate web browsers",
-		"copyright": ""
-	},
-	"@sveltejs/adapter-static@3.0.8": {
-		"licenses": "MIT",
-		"repository": "https://github.com/sveltejs/kit",
-		"copyright": "Copyright (c) 2020 [these people](https://github.com/sveltejs/kit/graphs/contributors)",
-		"name": "@sveltejs/adapter-static",
-		"description": "Adapter for SvelteKit apps that prerenders your entire site as a collection of static files"
-	},
-	"@sveltejs/kit@2.20.8": {
-		"licenses": "MIT",
-		"repository": "https://github.com/sveltejs/kit",
-		"copyright": "Copyright (c) 2020 [these people](https://github.com/sveltejs/kit/graphs/contributors)",
-		"name": "@sveltejs/kit",
-		"description": "SvelteKit is the fastest way to build Svelte apps"
-	},
-	"@sveltejs/vite-plugin-svelte@5.0.3": {
-		"licenses": "MIT",
-		"repository": "https://github.com/sveltejs/vite-plugin-svelte",
-		"publisher": "dominikg",
-		"copyright": "Copyright (c) 2021 [these people](https://github.com/sveltejs/vite-plugin-svelte/graphs/contributors)",
-		"name": "@sveltejs/vite-plugin-svelte",
-		"description": "The official [Svelte](https://svelte.dev) plugin for [Vite](https://vitejs.dev)."
-	},
-	"@tailwindcss/forms@0.5.10": {
-		"licenses": "MIT",
-		"repository": "https://github.com/tailwindlabs/tailwindcss-forms",
-		"copyright": "Copyright (c) Tailwind Labs, Inc.",
-		"name": "@tailwindcss/forms",
-		"description": "A plugin that provides a basic reset for form styles that makes form elements easy to override with utilities."
-	},
-	"@tailwindcss/vite@4.1.6": {
-		"licenses": "MIT",
-		"repository": "https://github.com/tailwindlabs/tailwindcss",
-		"copyright": "Copyright (c) Tailwind Labs, Inc.",
-		"name": "@tailwindcss/vite",
-		"description": "A utility-first CSS framework for rapidly building custom user interfaces."
-	},
-	"@testing-library/jest-dom@6.6.3": {
-		"licenses": "MIT",
-		"repository": "https://github.com/testing-library/jest-dom",
-		"publisher": "Ernesto Garcia",
-		"email": "gnapse@gmail.com",
-		"name": "@testing-library/jest-dom",
-		"description": "Custom jest matchers to test the state of the DOM",
-		"copyright": ""
-	},
-	"@testing-library/svelte@5.2.7": {
-		"licenses": "MIT",
-		"repository": "https://github.com/testing-library/svelte-testing-library",
-		"copyright": "Copyright (c) 2019 Ben Monro <ben.monro@gmail.com> (https://github.com/benmonro)",
-		"name": "@testing-library/svelte",
-		"description": "Simple and complete Svelte testing utilities that encourage good testing practices."
-	},
-	"@trivago/prettier-plugin-sort-imports@5.2.2": {
-		"licenses": "Apache-2.0",
-		"repository": "https://github.com/trivago/prettier-plugin-sort-imports",
-		"publisher": "Ayush Sharma",
-		"email": "ayush.sharma@trivago.com",
-		"name": "@trivago/prettier-plugin-sort-imports",
-		"description": "A prettier plugins to sort imports in provided RegEx order",
-		"copyright": ""
-	},
-	"date-fns@4.1.0": {
-		"licenses": "MIT",
-		"repository": "https://github.com/date-fns/date-fns",
-		"copyright": "Copyright (c) 2021 Sasha Koss and Lesha Koss https://kossnocorp.mit-license.org",
-		"name": "date-fns",
-		"description": "Modern JavaScript date utility library"
-	},
-	"effect@3.14.22": {
-		"licenses": "MIT",
-		"repository": "https://github.com/Effect-TS/effect",
-		"copyright": "Copyright (c) 2023 Effectful Technologies Inc",
-		"name": "effect",
-		"description": "The missing standard library for TypeScript, for writing production-grade software."
-	},
-	"eslint-config-prettier@10.1.5": {
-		"licenses": "MIT",
-		"repository": "https://github.com/prettier/eslint-config-prettier",
-		"publisher": "Simon Lydell",
-		"copyright": "Copyright (c) 2017, 2018, 2019, 2020, 2021, 2022, 2023 Simon Lydell and contributors",
-		"name": "eslint-config-prettier",
-		"description": "Turns off all rules that are unnecessary or might conflict with Prettier."
-	},
-	"eslint-plugin-svelte@3.5.1": {
-		"licenses": "MIT",
-		"repository": "https://github.com/sveltejs/eslint-plugin-svelte",
-		"publisher": "Yosuke Ota",
-		"copyright": "Copyright (c) 2021 Yosuke Ota",
-		"name": "eslint-plugin-svelte",
-		"description": "ESLint plugin for Svelte using AST"
-	},
-	"eslint@9.26.0": {
-		"licenses": "MIT",
-		"repository": "https://github.com/eslint/eslint",
-		"publisher": "Nicholas C. Zakas",
-		"email": "nicholas+npm@nczconsulting.com",
-		"copyright": "Copyright OpenJS Foundation and other contributors, <www.openjsf.org>",
-		"name": "eslint",
-		"description": "An AST-based pattern checker for JavaScript."
-	},
-	"globals@16.1.0": {
-		"licenses": "MIT",
-		"repository": "https://github.com/sindresorhus/globals",
-		"publisher": "Sindre Sorhus",
-		"email": "sindresorhus@gmail.com",
-		"copyright": "Copyright (c) Sindre Sorhus <sindresorhus@gmail.com> (https://sindresorhus.com)",
-		"name": "globals",
-		"description": "Global identifiers from different JavaScript environments"
-	},
-	"jsdom@26.1.0": {
-		"licenses": "MIT",
-		"repository": "https://github.com/jsdom/jsdom",
-		"copyright": "Copyright (c) 2010 Elijah Insua",
-		"name": "jsdom",
-		"description": "A JavaScript implementation of many web standards"
-	},
-	"license-checker-rseidelsohn@4.4.2": {
-		"licenses": "BSD-3-Clause",
-		"repository": "https://github.com/RSeidelsohn/license-checker-rseidelsohn",
-		"publisher": "Roman Seidelsohn",
-		"email": "rseidelsohn@gmail.com",
-		"copyright": "Copyright 2012 Yahoo Inc.",
-		"name": "license-checker-rseidelsohn",
-		"description": "Extract NPM package licenses - Feature enhanced version of the original license-checker v25.0.1"
-	},
-	"prettier-plugin-svelte@3.3.3": {
-		"licenses": "MIT",
-		"repository": "https://github.com/sveltejs/prettier-plugin-svelte",
-		"publisher": "James Birtles",
-		"email": "jameshbirtles@gmail.com",
-		"copyright": "Copyright (c) 2019 [Contributors](https://github.com/sveltejs/prettier-plugin-svelte/graphs/contributors)",
-		"name": "prettier-plugin-svelte",
-		"description": "Svelte plugin for prettier"
-	},
-	"prettier-plugin-tailwindcss@0.6.11": {
-		"licenses": "MIT",
-		"repository": "https://github.com/tailwindlabs/prettier-plugin-tailwindcss",
-		"copyright": "Copyright (c) Tailwind Labs Inc.",
-		"name": "prettier-plugin-tailwindcss",
-		"description": "A Prettier plugin for sorting Tailwind CSS classes."
-	},
-	"prettier@3.5.3": {
-		"licenses": "MIT",
-		"repository": "https://github.com/prettier/prettier",
-		"publisher": "James Long",
-		"copyright": "Copyright © James Long and contributors",
-		"name": "prettier",
-		"description": "Prettier is an opinionated code formatter"
-	},
-	"svelte-check@4.1.7": {
-		"licenses": "MIT",
-		"repository": "https://github.com/sveltejs/language-tools",
-		"publisher": "The Svelte Community",
-		"copyright": "Copyright (c) 2020-Present [these people](https://github.com/sveltejs/language-tools/graphs/contributors)",
-		"name": "svelte-check",
-		"description": "Svelte Code Checker Terminal Interface"
-	},
-	"svelte@5.28.2": {
-		"licenses": "MIT",
-		"repository": "https://github.com/sveltejs/svelte",
-		"copyright": "Copyright (c) 2016-2025 [Svelte Contributors](https://github.com/sveltejs/svelte/graphs/contributors)",
-		"name": "svelte",
-		"description": "Cybernetically enhanced web apps"
-	},
-	"tailwindcss@4.1.6": {
-		"licenses": "MIT",
-		"repository": "https://github.com/tailwindlabs/tailwindcss",
-		"copyright": "Copyright (c) Tailwind Labs, Inc.",
-		"name": "tailwindcss",
-		"description": "A utility-first CSS framework for rapidly building custom user interfaces."
-	},
-	"type-fest@4.41.0": {
-		"licenses": "(MIT OR CC0-1.0)",
-		"repository": "https://github.com/sindresorhus/type-fest",
-		"publisher": "Sindre Sorhus",
-		"email": "sindresorhus@gmail.com",
-		"name": "type-fest",
-		"description": "A collection of essential TypeScript types",
-		"copyright": ""
-	},
-	"typescript-eslint@8.32.0": {
-		"licenses": "MIT",
-		"repository": "https://github.com/typescript-eslint/typescript-eslint",
-		"copyright": "Copyright (c) 2019 typescript-eslint and other contributors",
-		"name": "typescript-eslint",
-		"description": "Tooling which enables you to use TypeScript with ESLint"
-	},
-	"typescript@5.8.3": {
-		"licenses": "Apache-2.0",
-		"repository": "https://github.com/microsoft/TypeScript",
-		"publisher": "Microsoft Corp.",
-		"name": "typescript",
-		"description": "TypeScript is a language for application scale JavaScript development",
-		"copyright": ""
-	},
-	"vite@6.3.5": {
-		"licenses": "MIT",
-		"repository": "https://github.com/vitejs/vite",
-		"publisher": "Evan You",
-		"copyright": "Copyright (c) 2019-present, VoidZero Inc. and Vite contributors",
-		"name": "vite",
-		"description": "Native-ESM powered web dev build tool"
-	},
-	"vitest@3.1.3": {
-		"licenses": "MIT",
-		"repository": "https://github.com/vitest-dev/vitest",
-		"publisher": "Anthony Fu",
-		"email": "anthonyfu117@hotmail.com",
-		"copyright": "Copyright (c) 2021-Present Vitest Team",
-		"name": "vitest",
-		"description": "Next generation testing framework powered by Vite"
-	}
+    "@capacitor/android@7.2.0": {
+        "licenses": "MIT",
+        "repository": "https://github.com/ionic-team/capacitor",
+        "publisher": "Ionic Team",
+        "email": "hi@ionic.io",
+        "copyright": "Copyright (c) 2017-present Drifty Co.",
+        "name": "@capacitor/android",
+        "description": "Capacitor: Cross-platform apps with JavaScript and the web"
+    },
+    "@capacitor/app@7.0.1": {
+        "licenses": "MIT",
+        "repository": "https://github.com/ionic-team/capacitor-plugins",
+        "publisher": "Ionic",
+        "email": "hi@ionicframework.com",
+        "copyright": "Copyright 2020-present Ionic. https://ionic.io",
+        "name": "@capacitor/app",
+        "description": "The App API handles high level App state and events.For example, this API emits events when the app enters and leaves the foreground, handles deeplinks, opens other apps, and manages persisted plugin state."
+    },
+    "@capacitor/assets@3.0.5": {
+        "licenses": "MIT",
+        "repository": "https://github.com/ionic-team/capacitor-assets",
+        "publisher": "Ionic Team",
+        "email": "hi@ionicframework.com",
+        "copyright": "Copyright (c) 2021 Drifty Co.",
+        "name": "@capacitor/assets",
+        "description": "Generate icon and splash screen images for Capacitor apps"
+    },
+    "@capacitor/cli@7.2.0": {
+        "licenses": "MIT",
+        "repository": "https://github.com/ionic-team/capacitor",
+        "publisher": "Ionic Team",
+        "email": "hi@ionic.io",
+        "copyright": "Copyright (c) 2017-present Drifty Co.",
+        "name": "@capacitor/cli",
+        "description": "Capacitor: Cross-platform apps with JavaScript and the web"
+    },
+    "@capacitor/core@7.2.0": {
+        "licenses": "MIT",
+        "repository": "https://github.com/ionic-team/capacitor",
+        "publisher": "Ionic Team",
+        "email": "hi@ionic.io",
+        "copyright": "Copyright (c) 2017-present Drifty Co.",
+        "name": "@capacitor/core",
+        "description": "Capacitor: Cross-platform apps with JavaScript and the web"
+    },
+    "@capacitor/haptics@7.0.1": {
+        "licenses": "MIT",
+        "repository": "https://github.com/ionic-team/capacitor-plugins",
+        "publisher": "Ionic",
+        "email": "hi@ionicframework.com",
+        "copyright": "Copyright 2020-present Ionic. https://ionic.io",
+        "name": "@capacitor/haptics",
+        "description": "The Haptics API provides physical feedback to the user through touch or vibration."
+    },
+    "@capacitor/toast@7.0.1": {
+        "licenses": "MIT",
+        "repository": "https://github.com/ionic-team/capacitor-plugins",
+        "publisher": "Ionic",
+        "email": "hi@ionicframework.com",
+        "copyright": "Copyright 2020-present Ionic. https://ionic.io",
+        "name": "@capacitor/toast",
+        "description": "The Toast API provides a notification pop up for displaying important information to a user. Just like real toast!"
+    },
+    "@effect/vitest@0.23.1": {
+        "licenses": "MIT",
+        "repository": "https://github.com/Effect-TS/effect",
+        "copyright": "Copyright (c) 2023 Effectful Technologies Inc",
+        "name": "@effect/vitest",
+        "description": "A set of helpers for testing Effects with vitest"
+    },
+    "@eslint/compat@1.2.9": {
+        "licenses": "Apache-2.0",
+        "repository": "https://github.com/eslint/rewrite",
+        "publisher": "Nicholas C. Zakas",
+        "name": "@eslint/compat",
+        "description": "Compatibility utilities for ESLint",
+        "copyright": ""
+    },
+    "@eslint/js@9.27.0": {
+        "licenses": "MIT",
+        "repository": "https://github.com/eslint/eslint",
+        "copyright": "Copyright OpenJS Foundation and other contributors, <www.openjsf.org>",
+        "name": "@eslint/js",
+        "description": "ESLint JavaScript language implementation"
+    },
+    "@fontsource-variable/comfortaa@5.2.5": {
+        "licenses": "OFL-1.1",
+        "repository": "https://github.com/fontsource/font-files",
+        "publisher": "Google Inc.",
+        "name": "@fontsource-variable/comfortaa",
+        "description": "Self-host the Comfortaa font in a neatly bundled NPM package.",
+        "copyright": ""
+    },
+    "@fontsource-variable/roboto-flex@5.2.5": {
+        "licenses": "OFL-1.1",
+        "repository": "https://github.com/fontsource/font-files",
+        "publisher": "Google Inc.",
+        "name": "@fontsource-variable/roboto-flex",
+        "description": "Self-host the Roboto Flex font in a neatly bundled NPM package.",
+        "copyright": ""
+    },
+    "@lucide/svelte@0.511.0": {
+        "licenses": "ISC",
+        "repository": "https://github.com/lucide-icons/lucide",
+        "publisher": "Eric Fennis",
+        "copyright": "Copyright (c) for portions of Lucide are held by Cole Bemis 2013-2022 as part of Feather (MIT). All other copyright (c) for Lucide are held by Lucide Contributors 2022.",
+        "name": "@lucide/svelte",
+        "description": "A Lucide icon library package for Svelte applications."
+    },
+    "@playwright/test@1.52.0": {
+        "licenses": "Apache-2.0",
+        "repository": "https://github.com/microsoft/playwright",
+        "publisher": "Microsoft Corporation",
+        "noticeFile": "/Users/gaudo/Projects/fridgy/main/node_modules/@playwright/test/NOTICE",
+        "name": "@playwright/test",
+        "description": "A high-level API to automate web browsers",
+        "copyright": ""
+    },
+    "@stylistic/eslint-plugin-ts@4.4.0": {
+        "licenses": "MIT",
+        "repository": "https://github.com/eslint-stylistic/eslint-stylistic",
+        "publisher": "Anthony Fu",
+        "email": "anthonyfu117@hotmail.com",
+        "copyright": "Copyright (c) 2019 typescript-eslint and other contributors. Copyright (c) 2023-PRESENT eslint-stylistic and other contributors",
+        "name": "@stylistic/eslint-plugin-ts",
+        "description": "TypeScript stylistic rules for ESLint, migrated from [`typescript-eslint`](https://github.com/typescript-eslint/typescript-eslint)."
+    },
+    "@sveltejs/adapter-static@3.0.8": {
+        "licenses": "MIT",
+        "repository": "https://github.com/sveltejs/kit",
+        "copyright": "Copyright (c) 2020 [these people](https://github.com/sveltejs/kit/graphs/contributors)",
+        "name": "@sveltejs/adapter-static",
+        "description": "Adapter for SvelteKit apps that prerenders your entire site as a collection of static files"
+    },
+    "@sveltejs/kit@2.21.1": {
+        "licenses": "MIT",
+        "repository": "https://github.com/sveltejs/kit",
+        "copyright": "Copyright (c) 2020 [these people](https://github.com/sveltejs/kit/graphs/contributors)",
+        "name": "@sveltejs/kit",
+        "description": "SvelteKit is the fastest way to build Svelte apps"
+    },
+    "@sveltejs/vite-plugin-svelte@5.0.3": {
+        "licenses": "MIT",
+        "repository": "https://github.com/sveltejs/vite-plugin-svelte",
+        "publisher": "dominikg",
+        "copyright": "Copyright (c) 2021 [these people](https://github.com/sveltejs/vite-plugin-svelte/graphs/contributors)",
+        "name": "@sveltejs/vite-plugin-svelte",
+        "description": "The official [Svelte](https://svelte.dev) plugin for [Vite](https://vitejs.dev)."
+    },
+    "@tailwindcss/forms@0.5.10": {
+        "licenses": "MIT",
+        "repository": "https://github.com/tailwindlabs/tailwindcss-forms",
+        "copyright": "Copyright (c) Tailwind Labs, Inc.",
+        "name": "@tailwindcss/forms",
+        "description": "A plugin that provides a basic reset for form styles that makes form elements easy to override with utilities."
+    },
+    "@tailwindcss/vite@4.1.8": {
+        "licenses": "MIT",
+        "repository": "https://github.com/tailwindlabs/tailwindcss",
+        "copyright": "Copyright (c) Tailwind Labs, Inc.",
+        "name": "@tailwindcss/vite",
+        "description": "A utility-first CSS framework for rapidly building custom user interfaces."
+    },
+    "@testing-library/jest-dom@6.6.3": {
+        "licenses": "MIT",
+        "repository": "https://github.com/testing-library/jest-dom",
+        "publisher": "Ernesto Garcia",
+        "email": "gnapse@gmail.com",
+        "name": "@testing-library/jest-dom",
+        "description": "Custom jest matchers to test the state of the DOM",
+        "copyright": ""
+    },
+    "@testing-library/svelte@5.2.8": {
+        "licenses": "MIT",
+        "repository": "https://github.com/testing-library/svelte-testing-library",
+        "copyright": "Copyright (c) 2019 Ben Monro <ben.monro@gmail.com> (https://github.com/benmonro)",
+        "name": "@testing-library/svelte",
+        "description": "Simple and complete Svelte testing utilities that encourage good testing practices."
+    },
+    "@trivago/prettier-plugin-sort-imports@5.2.2": {
+        "licenses": "Apache-2.0",
+        "repository": "https://github.com/trivago/prettier-plugin-sort-imports",
+        "publisher": "Ayush Sharma",
+        "email": "ayush.sharma@trivago.com",
+        "name": "@trivago/prettier-plugin-sort-imports",
+        "description": "A prettier plugins to sort imports in provided RegEx order",
+        "copyright": ""
+    },
+    "date-fns@4.1.0": {
+        "licenses": "MIT",
+        "repository": "https://github.com/date-fns/date-fns",
+        "copyright": "Copyright (c) 2021 Sasha Koss and Lesha Koss https://kossnocorp.mit-license.org",
+        "name": "date-fns",
+        "description": "Modern JavaScript date utility library"
+    },
+    "effect@3.16.1": {
+        "licenses": "MIT",
+        "repository": "https://github.com/Effect-TS/effect",
+        "copyright": "Copyright (c) 2023 Effectful Technologies Inc",
+        "name": "effect",
+        "description": "The missing standard library for TypeScript, for writing production-grade software."
+    },
+    "eslint-config-prettier@10.1.5": {
+        "licenses": "MIT",
+        "repository": "https://github.com/prettier/eslint-config-prettier",
+        "publisher": "Simon Lydell",
+        "copyright": "Copyright (c) 2017, 2018, 2019, 2020, 2021, 2022, 2023 Simon Lydell and contributors",
+        "name": "eslint-config-prettier",
+        "description": "Turns off all rules that are unnecessary or might conflict with Prettier."
+    },
+    "eslint-plugin-svelte@3.9.0": {
+        "licenses": "MIT",
+        "repository": "https://github.com/sveltejs/eslint-plugin-svelte",
+        "publisher": "Yosuke Ota",
+        "copyright": "Copyright (c) 2021 Yosuke Ota",
+        "name": "eslint-plugin-svelte",
+        "description": "ESLint plugin for Svelte using AST"
+    },
+    "eslint@9.27.0": {
+        "licenses": "MIT",
+        "repository": "https://github.com/eslint/eslint",
+        "publisher": "Nicholas C. Zakas",
+        "email": "nicholas+npm@nczconsulting.com",
+        "copyright": "Copyright OpenJS Foundation and other contributors, <www.openjsf.org>",
+        "name": "eslint",
+        "description": "An AST-based pattern checker for JavaScript."
+    },
+    "globals@16.2.0": {
+        "licenses": "MIT",
+        "repository": "https://github.com/sindresorhus/globals",
+        "publisher": "Sindre Sorhus",
+        "email": "sindresorhus@gmail.com",
+        "copyright": "Copyright (c) Sindre Sorhus <sindresorhus@gmail.com> (https://sindresorhus.com)",
+        "name": "globals",
+        "description": "Global identifiers from different JavaScript environments"
+    },
+    "jsdom@26.1.0": {
+        "licenses": "MIT",
+        "repository": "https://github.com/jsdom/jsdom",
+        "copyright": "Copyright (c) 2010 Elijah Insua",
+        "name": "jsdom",
+        "description": "A JavaScript implementation of many web standards"
+    },
+    "license-checker-rseidelsohn@4.4.2": {
+        "licenses": "BSD-3-Clause",
+        "repository": "https://github.com/RSeidelsohn/license-checker-rseidelsohn",
+        "publisher": "Roman Seidelsohn",
+        "email": "rseidelsohn@gmail.com",
+        "copyright": "Copyright 2012 Yahoo Inc.",
+        "name": "license-checker-rseidelsohn",
+        "description": "Extract NPM package licenses - Feature enhanced version of the original license-checker v25.0.1"
+    },
+    "prettier-plugin-svelte@3.4.0": {
+        "licenses": "MIT",
+        "repository": "https://github.com/sveltejs/prettier-plugin-svelte",
+        "publisher": "James Birtles",
+        "email": "jameshbirtles@gmail.com",
+        "copyright": "Copyright (c) 2019 [Contributors](https://github.com/sveltejs/prettier-plugin-svelte/graphs/contributors)",
+        "name": "prettier-plugin-svelte",
+        "description": "Svelte plugin for prettier"
+    },
+    "prettier-plugin-tailwindcss@0.6.11": {
+        "licenses": "MIT",
+        "repository": "https://github.com/tailwindlabs/prettier-plugin-tailwindcss",
+        "copyright": "Copyright (c) Tailwind Labs Inc.",
+        "name": "prettier-plugin-tailwindcss",
+        "description": "A Prettier plugin for sorting Tailwind CSS classes."
+    },
+    "prettier@3.5.3": {
+        "licenses": "MIT",
+        "repository": "https://github.com/prettier/prettier",
+        "publisher": "James Long",
+        "copyright": "Copyright © James Long and contributors",
+        "name": "prettier",
+        "description": "Prettier is an opinionated code formatter"
+    },
+    "svelte-check@4.2.1": {
+        "licenses": "MIT",
+        "repository": "https://github.com/sveltejs/language-tools",
+        "publisher": "The Svelte Community",
+        "copyright": "Copyright (c) 2020-Present [these people](https://github.com/sveltejs/language-tools/graphs/contributors)",
+        "name": "svelte-check",
+        "description": "Svelte Code Checker Terminal Interface"
+    },
+    "svelte@5.33.6": {
+        "licenses": "MIT",
+        "repository": "https://github.com/sveltejs/svelte",
+        "copyright": "Copyright (c) 2016-2025 [Svelte Contributors](https://github.com/sveltejs/svelte/graphs/contributors)",
+        "name": "svelte",
+        "description": "Cybernetically enhanced web apps"
+    },
+    "tailwindcss@4.1.8": {
+        "licenses": "MIT",
+        "repository": "https://github.com/tailwindlabs/tailwindcss",
+        "copyright": "Copyright (c) Tailwind Labs, Inc.",
+        "name": "tailwindcss",
+        "description": "A utility-first CSS framework for rapidly building custom user interfaces."
+    },
+    "type-fest@4.41.0": {
+        "licenses": "(MIT OR CC0-1.0)",
+        "repository": "https://github.com/sindresorhus/type-fest",
+        "publisher": "Sindre Sorhus",
+        "email": "sindresorhus@gmail.com",
+        "name": "type-fest",
+        "description": "A collection of essential TypeScript types",
+        "copyright": ""
+    },
+    "typescript-eslint@8.33.0": {
+        "licenses": "MIT",
+        "repository": "https://github.com/typescript-eslint/typescript-eslint",
+        "copyright": "Copyright (c) 2019 typescript-eslint and other contributors",
+        "name": "typescript-eslint",
+        "description": "Tooling which enables you to use TypeScript with ESLint"
+    },
+    "typescript@5.8.3": {
+        "licenses": "Apache-2.0",
+        "repository": "https://github.com/microsoft/TypeScript",
+        "publisher": "Microsoft Corp.",
+        "name": "typescript",
+        "description": "TypeScript is a language for application scale JavaScript development",
+        "copyright": ""
+    },
+    "vite-tsconfig-paths@5.1.4": {
+        "licenses": "MIT",
+        "repository": "https://github.com/aleclarson/vite-tsconfig-paths",
+        "publisher": "aleclarson",
+        "copyright": "Copyright (c) Alec Larson",
+        "name": "vite-tsconfig-paths",
+        "description": "Vite resolver for TypeScript compilerOptions.paths"
+    },
+    "vite@6.3.5": {
+        "licenses": "MIT",
+        "repository": "https://github.com/vitejs/vite",
+        "publisher": "Evan You",
+        "copyright": "Copyright (c) 2019-present, VoidZero Inc. and Vite contributors",
+        "name": "vite",
+        "description": "Native-ESM powered web dev build tool"
+    },
+    "vitest@3.1.4": {
+        "licenses": "MIT",
+        "repository": "https://github.com/vitest-dev/vitest",
+        "publisher": "Anthony Fu",
+        "email": "anthonyfu117@hotmail.com",
+        "copyright": "Copyright (c) 2021-Present Vitest Team",
+        "name": "vitest",
+        "description": "Next generation testing framework powered by Vite"
+    }
 }
