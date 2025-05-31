@@ -17,7 +17,7 @@ export const command = L.effect(
 				Eff.gen(function* () {
 					if (withErrors && Math.random() < 0.5) {
 						yield* Eff.logInfo(`Triggered fake error on mock AddProduct`)
-						return yield* Eff.fail(new AddProduct.OperationFailed())
+						return yield* Eff.fail(undefined)
 					}
 
 					yield* Eff.log(`Attempting to add product into mock database...`)

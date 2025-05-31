@@ -17,7 +17,7 @@ export const command = L.effect(
 			pipe(
 				Eff.gen(function* () {
 					if (withErrors && Math.random() < 0.5) {
-						return yield* Eff.fail(new DeleteProductById.OperationFailed())
+						return yield* Eff.fail(undefined)
 					}
 					yield* Eff.sleep(MINIMUM_LAG_MS)
 					for (const request of requests) {
