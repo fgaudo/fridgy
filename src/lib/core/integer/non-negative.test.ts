@@ -10,7 +10,7 @@ const fcInvalidNumber = H.FC.oneof(
 	H.FC.double().filter(value => !Number.isInteger(value)),
 )
 
-describe(`non-negative integer`, () => {
+describe.concurrent(`non-negative integer`, () => {
 	effect.prop(`should be ok`, [H.FC.nat()], ([integer], { expect }) =>
 		Eff.gen(function* () {
 			const result = fromNumber(integer)

@@ -7,7 +7,7 @@ import { DeleteProductById as Query } from '$lib/business/app/operations.ts'
 
 import * as Usecase from './delete-products-by-ids.ts'
 
-describe(`Delete products by ids`, () => {
+describe.concurrent(`Delete products by ids`, () => {
 	layer(
 		L.provide(
 			Usecase.DeleteProductsByIds.Default,

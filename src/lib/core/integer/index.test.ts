@@ -5,7 +5,7 @@ import * as H from '$lib/core/test-helpers.ts'
 import { Eff } from '../imports.ts'
 import { fromNumber, unsafeFromNumber } from './index.ts'
 
-describe(`integer`, () => {
+describe.concurrent(`integer`, () => {
 	effect.prop(`should be ok`, [H.FC.integer()], ([integer], { expect }) =>
 		Eff.gen(function* () {
 			const result = fromNumber(integer)

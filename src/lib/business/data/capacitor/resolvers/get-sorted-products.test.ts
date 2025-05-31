@@ -15,7 +15,17 @@ function toModel(product: {
 	expirationDate: number | undefined
 }): GetSortedProducts.ProductDTO {
 	return {
-		maybeId: O.fromNullable(product.id).pipe(O.map(id => id.toString(10))),
+		maybeId: O.fromNullable(product.id).pipe(
+			O.flatMap(id => {
+				try {
+					const idString = JSON.stringify(id)
+					return O.some(idString)
+					// eslint-disable-next-line @typescript-eslint/no-unused-vars
+				} catch (_) {
+					return O.none()
+				}
+			}),
+		),
 		maybeName: O.fromNullable(product.name).pipe(O.flatMap(NETS.fromString)),
 		maybeCreationDate: O.fromNullable(product.creationDate).pipe(
 			O.flatMap(Int.fromNumber),
@@ -26,7 +36,7 @@ function toModel(product: {
 	}
 }
 
-describe(`Get products`, () => {
+describe.concurrent(`Get products`, () => {
 	effect.prop(`Should return a list`, [Backend], ([{ products }], { expect }) =>
 		Eff.provide(
 			Eff.gen(function* () {

@@ -9,7 +9,7 @@ import { AddProduct as Query } from '$lib/business/app/operations.ts'
 
 import * as Usecase from './add-product.ts'
 
-describe(`Add product`, () => {
+describe.concurrent(`Add product`, () => {
 	effect.prop(
 		`Should just work`,
 		{ product: Arbitrary.make(Usecase.ProductDTO) },

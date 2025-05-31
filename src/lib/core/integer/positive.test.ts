@@ -5,7 +5,7 @@ import * as H from '$lib/core/test-helpers.ts'
 import { Eff } from '../imports.ts'
 import { fromNumber, unsafeFromNumber } from './positive.ts'
 
-describe(`positive integer`, () => {
+describe.concurrent(`positive integer`, () => {
 	effect.prop(
 		`should be ok`,
 		[H.FC.integer({ min: 1 })],

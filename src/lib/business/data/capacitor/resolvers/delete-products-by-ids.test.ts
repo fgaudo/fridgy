@@ -8,7 +8,7 @@ import { DeleteProductById } from '$lib/business/app/operations.ts'
 import { DbPlugin } from '../db-plugin.ts'
 import { command } from './delete-product-by-id.ts'
 
-describe(`Delete products by ids`, () => {
+describe.concurrent(`Delete products by ids`, () => {
 	layer(
 		L.provide(
 			command,

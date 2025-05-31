@@ -9,16 +9,16 @@ export const Backend = Sc.Struct({
 	total: Sc.Number,
 	products: Sc.Array(
 		Sc.Struct({
-			id: Sc.UndefinedOr(Sc.Number).annotations({
+			id: Sc.UndefinedOr(Sc.Int).annotations({
 				decodingFallback: H.fallback(undefined),
 			}),
 			name: Sc.UndefinedOr(Sc.String).annotations({
 				decodingFallback: H.fallback(undefined),
 			}),
-			expirationDate: Sc.UndefinedOr(Sc.Number).annotations({
+			expirationDate: Sc.UndefinedOr(Sc.JsonNumber).annotations({
 				decodingFallback: H.fallback(undefined),
 			}),
-			creationDate: Sc.UndefinedOr(Sc.Number).annotations({
+			creationDate: Sc.UndefinedOr(Sc.JsonNumber).annotations({
 				decodingFallback: H.fallback(undefined),
 			}),
 		}).annotations({

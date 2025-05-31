@@ -11,7 +11,7 @@ import {
 } from '../operations/get-sorted-products.ts'
 import * as Usecase from './get-sorted-products.ts'
 
-describe(`Get sorted products`, () => {
+describe.concurrent(`Get sorted products`, () => {
 	layer(
 		L.provide(
 			Usecase.GetSortedProducts.Default,

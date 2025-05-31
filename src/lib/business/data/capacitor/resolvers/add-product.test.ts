@@ -8,7 +8,7 @@ import { AddProduct } from '$lib/business/app/operations.ts'
 import { DbPlugin } from '../db-plugin.ts'
 import { command } from './add-product.ts'
 
-describe(`Add product`, () => {
+describe.concurrent(`Add product`, () => {
 	layer(
 		L.provide(
 			command,

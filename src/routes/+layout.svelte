@@ -23,7 +23,9 @@
 
 	const { runEffect } = Utils.makeEffectRunner(runtime)
 
-	const awaitFonts = () =>
+	onMount(() => {
+		setGlobalContext({ runtime })
+
 		runEffect(
 			Eff.gen(function* () {
 				yield* Eff.all([
@@ -34,11 +36,6 @@
 				areFontsLoaded = true
 			}),
 		)
-
-	onMount(() => {
-		setGlobalContext({ runtime })
-
-		awaitFonts()
 	})
 </script>
 
