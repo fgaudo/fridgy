@@ -27,8 +27,8 @@ export const command = L.effect(
 						}))
 					}
 				}),
-				Eff.matchEffect({
-					onFailure: error => Eff.forEach(requests, R.fail(error)),
+				Eff.matchCauseEffect({
+					onFailure: error => Eff.forEach(requests, R.failCause(error)),
 					onSuccess: () => Eff.forEach(requests, R.succeed(undefined)),
 				}),
 				withLayerLogging(`I`),

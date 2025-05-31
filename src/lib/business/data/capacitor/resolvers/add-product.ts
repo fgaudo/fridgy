@@ -15,7 +15,7 @@ const DtoToBackend = Sc.transformOrFail(
 			expirationDate: Sc.UndefinedOr(Sc.Number),
 		}),
 	}),
-	Sc.Struct(AddProduct.ProductDTO),
+	Sc.Struct(AddProduct.Request.fields),
 	{
 		strict: true,
 		encode: (_, __, ___, product) =>
