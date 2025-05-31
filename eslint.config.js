@@ -1,6 +1,6 @@
 import { includeIgnoreFile } from '@eslint/compat'
 import js from '@eslint/js'
-import stylistic from '@stylistic/eslint-plugin-ts'
+import stylistic from '@stylistic/eslint-plugin'
 import prettier from 'eslint-config-prettier'
 import svelte from 'eslint-plugin-svelte'
 import globals from 'globals'
@@ -21,7 +21,7 @@ export default ts.config(
 	prettier,
 	...svelte.configs.prettier,
 	{
-		plugins: { '@stylistic/ts': stylistic },
+		plugins: { '@stylistic': stylistic },
 
 		languageOptions: {
 			parserOptions: {
@@ -37,7 +37,7 @@ export default ts.config(
 		ignores: ['eslint.config.js', 'svelte.config.js'],
 		rules: {
 			'no-undef': 'off',
-			'@stylistic/ts/quotes': ['error', 'backtick'],
+			'@stylistic/quotes': ['error', 'backtick'],
 			'svelte/no-useless-mustaches': 'off',
 			'@typescript-eslint/no-unnecessary-condition': [
 				'error',

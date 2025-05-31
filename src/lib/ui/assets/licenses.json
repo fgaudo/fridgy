@@ -53,15 +53,6 @@
         "name": "@capacitor/haptics",
         "description": "The Haptics API provides physical feedback to the user through touch or vibration."
     },
-    "@capacitor/toast@7.0.1": {
-        "licenses": "MIT",
-        "repository": "https://github.com/ionic-team/capacitor-plugins",
-        "publisher": "Ionic",
-        "email": "hi@ionicframework.com",
-        "copyright": "Copyright 2020-present Ionic. https://ionic.io",
-        "name": "@capacitor/toast",
-        "description": "The Toast API provides a notification pop up for displaying important information to a user. Just like real toast!"
-    },
     "@effect/vitest@0.23.1": {
         "licenses": "MIT",
         "repository": "https://github.com/Effect-TS/effect",
@@ -187,6 +178,13 @@
         "description": "A prettier plugins to sort imports in provided RegEx order",
         "copyright": ""
     },
+    "@types/node@22.15.29": {
+        "licenses": "MIT",
+        "repository": "https://github.com/DefinitelyTyped/DefinitelyTyped",
+        "name": "@types/node",
+        "description": "TypeScript definitions for node",
+        "copyright": ""
+    },
     "date-fns@4.1.0": {
         "licenses": "MIT",
         "repository": "https://github.com/date-fns/date-fns",
@@ -241,6 +239,15 @@
         "copyright": "Copyright (c) 2010 Elijah Insua",
         "name": "jsdom",
         "description": "A JavaScript implementation of many web standards"
+    },
+    "knip@5.59.1": {
+        "licenses": "ISC",
+        "repository": "https://github.com/webpro-nl/knip",
+        "publisher": "Lars Kappert",
+        "email": "lars@webpro.nl",
+        "name": "knip",
+        "description": "Find and fix unused dependencies, exports and files in your TypeScript and JavaScript projects",
+        "copyright": ""
     },
     "license-checker-rseidelsohn@4.4.2": {
         "licenses": "BSD-3-Clause",
