@@ -14,4 +14,4 @@ export const IntegerSchema = Sc.fromBrand(Integer)(Sc.Number).annotations({
 
 export const fromNumber = (n: number) => Integer.option(n)
 export const unsafeFromNumber = Integer
-export const isNonNegative = (n: number) => Integer.is(n)
+export const isInteger = (n: number) => Integer.is(n)

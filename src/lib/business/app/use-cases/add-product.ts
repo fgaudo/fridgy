@@ -38,7 +38,7 @@ export class AddProduct extends Eff.Service<AddProduct>()(
 							}),
 						)
 
-						return yield* Eff.fail(`Product is not valid`)
+						return yield* Eff.fail(undefined)
 					}
 
 					yield* Eff.logInfo(
@@ -46,7 +46,7 @@ export class AddProduct extends Eff.Service<AddProduct>()(
 					)
 
 					yield* Eff.request(
-						AddProductOperation.Request({
+						new AddProductOperation.Request({
 							name: product.value.name,
 							maybeExpirationDate: product.value.maybeExpirationDate,
 							creationDate: product.value.creationDate,

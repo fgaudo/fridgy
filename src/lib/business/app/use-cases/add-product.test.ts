@@ -7,7 +7,6 @@ import * as H from '$lib/core/test-helpers.ts'
 
 import { AddProduct as Query } from '$lib/business/app/operations.ts'
 
-import { OperationFailed } from '../operations/add-product.ts'
 import * as Usecase from './add-product.ts'
 
 describe(`Add product`, () => {
@@ -54,7 +53,7 @@ describe(`Add product`, () => {
 			Usecase.AddProduct.Default,
 			L.succeed(
 				Query.Resolver,
-				RR.fromEffect(() => Eff.fail(new OperationFailed())),
+				RR.fromEffect(() => Eff.fail(undefined)),
 			),
 		),
 	)(({ effect }) => {

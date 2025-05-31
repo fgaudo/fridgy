@@ -1,7 +1,6 @@
 import { describe, effect, layer } from '@effect/vitest'
-import { Arbitrary } from 'effect'
 
-import { Eff, L, RR } from '$lib/core/imports.ts'
+import { Eff, L } from '$lib/core/imports.ts'
 import * as H from '$lib/core/test-helpers.ts'
 
 import { GetSortedProducts as Query } from '$lib/business/app/operations.ts'
@@ -16,10 +15,7 @@ describe(`Get sorted products`, () => {
 	layer(
 		L.provide(
 			Usecase.GetSortedProducts.Default,
-			L.succeed(
-				Query.Resolver,
-				RR.fromEffect(() => Eff.fail(new FetchingFailed())),
-			),
+			L.succeed(Query.Tag, Eff.fail(new FetchingFailed())),
 		),
 	)(({ effect }) => {
 		effect(`Should return an error`, () =>
@@ -34,10 +30,7 @@ describe(`Get sorted products`, () => {
 	layer(
 		L.provide(
 			Usecase.GetSortedProducts.Default,
-			L.succeed(
-				Query.Resolver,
-				RR.fromEffect(() => Eff.fail(new InvalidDataReceived())),
-			),
+			L.succeed(Query.Tag, Eff.fail(new InvalidDataReceived())),
 		),
 	)(({ effect }) => {
 		effect(`Should return an error`, () =>
@@ -50,8 +43,8 @@ describe(`Get sorted products`, () => {
 	})
 
 	effect.prop(
-		`Should return a list`,
-		[Arbitrary.make(Query.GetSortedProductsDTO)],
+		`Should always return all elements`,
+		[H.Arb.make(Query.GetSortedProductsDTO)],
 		([products], { expect }) =>
 			Eff.provide(
 				Eff.gen(function* () {
@@ -61,14 +54,11 @@ describe(`Get sorted products`, () => {
 
 					H.assertExitIsSuccess(exit)
 
-					expect(exit.value).toStrictEqual(products)
+					expect(exit.value.length).toStrictEqual(products.length)
 				}),
 				L.provide(
 					Usecase.GetSortedProducts.Default,
-					L.succeed(
-						Query.Resolver,
-						RR.fromEffect(() => Eff.succeed(products)),
-					),
+					L.succeed(Query.Tag, Eff.succeed(products)),
 				),
 			),
 	)

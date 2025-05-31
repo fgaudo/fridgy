@@ -15,7 +15,7 @@ const DtoToBackend = Sc.transformOrFail(
 			expirationDate: Sc.UndefinedOr(Sc.Number),
 		}),
 	}),
-	AddProduct.ProductDTO,
+	Sc.Struct(AddProduct.ProductDTO),
 	{
 		strict: true,
 		encode: (_, __, ___, product) =>
@@ -49,12 +49,11 @@ export const command = L.effect(
 				if (E.isLeft(dto)) {
 					return yield* Eff.die(dto.left)
 				}
-
 				const result = yield* Eff.either(addProduct(dto.right))
 
 				if (E.isLeft(result)) {
-					yield* Eff.logError(result.left.error)
-					return yield* new AddProduct.OperationFailed()
+					yield* Eff.logError(result.left)
+					return yield* Eff.fail(undefined)
 				}
 
 				yield* Eff.logDebug(`No errors adding the product`)

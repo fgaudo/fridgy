@@ -5,28 +5,28 @@ import { GetSortedProducts } from '$lib/business/app/operations.ts'
 
 import { DbPlugin } from '../db-plugin.ts'
 
-const Backend = Sc.Struct({
+export const Backend = Sc.Struct({
 	total: Sc.Number,
 	products: Sc.Array(
 		Sc.Struct({
-			id: Sc.OptionFromUndefinedOr(Sc.Number).annotations({
-				decodingFallback: H.fallback(O.none()),
+			id: Sc.UndefinedOr(Sc.Number).annotations({
+				decodingFallback: H.fallback(undefined),
 			}),
-			name: Sc.OptionFromUndefinedOr(Sc.String).annotations({
-				decodingFallback: H.fallback(O.none()),
+			name: Sc.UndefinedOr(Sc.String).annotations({
+				decodingFallback: H.fallback(undefined),
 			}),
-			expirationDate: Sc.OptionFromUndefinedOr(Sc.Number).annotations({
-				decodingFallback: H.fallback(O.none()),
+			expirationDate: Sc.UndefinedOr(Sc.Number).annotations({
+				decodingFallback: H.fallback(undefined),
 			}),
-			creationDate: Sc.OptionFromUndefinedOr(Sc.Number).annotations({
-				decodingFallback: H.fallback(O.none()),
+			creationDate: Sc.UndefinedOr(Sc.Number).annotations({
+				decodingFallback: H.fallback(undefined),
 			}),
 		}).annotations({
 			decodingFallback: H.fallback({
-				id: O.none(),
-				name: O.none(),
-				expirationDate: O.none(),
-				creationDate: O.none(),
+				id: undefined,
+				name: undefined,
+				expirationDate: undefined,
+				creationDate: undefined,
 			}),
 		}),
 	),
@@ -40,7 +40,7 @@ export const query = L.effect(
 			const result = yield* pipe(getAllProductsWithTotal, Eff.either)
 
 			if (E.isLeft(result)) {
-				yield* Eff.logError(result.left.error)
+				yield* Eff.logError(result.left)
 				return yield* new GetSortedProducts.FetchingFailed()
 			}
 
@@ -56,20 +56,23 @@ export const query = L.effect(
 				decodeResult.right.products.map(product =>
 					Eff.gen(function* () {
 						return {
-							maybeId: yield* O.match(product.id, {
+							maybeId: yield* O.match(O.fromNullable(product.id), {
 								onNone: () => Eff.succeed(O.none<string>()),
 								onSome: id => Eff.option(Eff.try(() => JSON.stringify(id))),
 							}),
 
-							maybeName: pipe(product.name, O.flatMap(NETS.fromString)),
+							maybeName: pipe(
+								O.fromNullable(product.name),
+								O.flatMap(NETS.fromString),
+							),
 
 							maybeExpirationDate: pipe(
-								product.expirationDate,
+								O.fromNullable(product.expirationDate),
 								O.flatMap(Int.fromNumber),
 							),
 
 							maybeCreationDate: pipe(
-								product.creationDate,
+								O.fromNullable(product.creationDate),
 								O.flatMap(Int.fromNumber),
 							),
 						} as const

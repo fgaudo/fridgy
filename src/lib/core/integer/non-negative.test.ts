@@ -3,7 +3,7 @@ import { assert, describe, effect } from '@effect/vitest'
 import * as H from '$lib/core/test-helpers.ts'
 
 import { Eff } from '../imports.ts'
-import { fromNumber, unsafe_fromNumber } from './non-negative.ts'
+import { fromNumber, unsafeFromNumber } from './non-negative.ts'
 
 const fcInvalidNumber = H.FC.oneof(
 	H.FC.integer({ max: -1 }),
@@ -36,7 +36,7 @@ describe(`non-negative integer`, () => {
 
 	effect.prop(`should be ok`, [H.FC.nat()], ([integer], { expect }) =>
 		Eff.gen(function* () {
-			const number = unsafe_fromNumber(integer)
+			const number = unsafeFromNumber(integer)
 			expect(number).toStrictEqual(integer)
 
 			yield* Eff.void
@@ -45,7 +45,7 @@ describe(`non-negative integer`, () => {
 
 	effect.prop(`should crash`, [fcInvalidNumber], ([integer], { expect }) =>
 		Eff.gen(function* () {
-			expect(() => unsafe_fromNumber(integer)).toThrowError()
+			expect(() => unsafeFromNumber(integer)).toThrowError()
 
 			yield* Eff.void
 		}),

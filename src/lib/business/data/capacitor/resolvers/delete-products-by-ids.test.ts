@@ -1,131 +1,104 @@
-import { describe, layer } from '@effect/vitest';
+import { describe, layer } from '@effect/vitest'
 
-import {
-	Eff,
-	HS,
-	L,
-	NEHS,
-} from '$lib/core/imports.ts';
-import * as H from '$lib/core/test-helpers.ts';
+import { Eff, L, Sc } from '$lib/core/imports.ts'
+import * as H from '$lib/core/test-helpers.ts'
 
-import { Capacitor } from '$lib/data/index.ts';
+import { DeleteProductById } from '$lib/business/app/operations.ts'
 
-import { DeleteProductsById$lib/business/data/index.tsiness/app/queries.ts';
+import { DbPlugin } from '../db-plugin.ts'
+import { command } from './delete-product-by-id.ts'
 
-import { command } from './delete-product-by-id.ts';
-
-describe('Delete products by ids', () => {
+describe(`Delete products by ids`, () => {
 	layer(
 		L.provide(
 			command,
-			L.succeed(Capacitor.Tag, {
-				db: {
-					deleteProductsByIds: () =>
-						Promise.resolve(undefined),
-				} as unknown as Capacitor.FridgySqlitePlugin,
-			}),
+			L.succeed(DbPlugin, {
+				deleteProductsByIds: () => Eff.succeed(undefined),
+			} as unknown as DbPlugin),
 		),
 	)(({ effect }) => {
-		effect('Should just work', () =>
-			Eff.gen(function* () {
-				const service =
-					yield* DeleteProductsByIds.Tag;
+		effect.prop(
+			`Should just work`,
+			[Sc.NonEmptyArray(DeleteProductById.Request)],
+			([requests]) =>
+				Eff.gen(function* () {
+					const resolver = yield* DeleteProductById.Resolver
 
-				const exit = yield* Eff.exit(
-					service(
-						NEHS.unsafeFromHashSet(
-							HS.fromIterable(['1', '2']),
-						),
-					),
-				);
+					const exit = yield* Eff.exit(
+						Eff.forEach(requests, request => Eff.request(request, resolver)),
+					)
 
-				H.assertExitIsSuccess(exit);
-			}),
-		);
-	});
+					H.assertExitIsSuccess(exit)
+				}),
+		)
+	})
 
-	layer(
-		L.provide(
-			command,
-			L.succeed(Capacitor.Tag, {
-				db: {} as unknown as Capacitor.FridgySqlitePlugin,
-			}),
-		),
-	)(({ effect }) => {
-		effect('Should return an error', () =>
-			Eff.gen(function* () {
-				const service =
-					yield* DeleteProductsByIds.Tag;
+	layer(L.provide(command, L.succeed(DbPlugin, {} as unknown as DbPlugin)))(
+		({ effect }) => {
+			effect.prop(
+				`Should return an error`,
+				[Sc.NonEmptyArray(DeleteProductById.Request)],
+				([requests]) =>
+					Eff.gen(function* () {
+						const resolver = yield* DeleteProductById.Resolver
 
-				const exit = yield* Eff.exit(
-					service(
-						NEHS.unsafeFromHashSet(
-							HS.fromIterable(['id']),
-						),
-					),
-				);
+						const exit = yield* Eff.exit(
+							Eff.forEach(requests, request => Eff.request(request, resolver)),
+						)
 
-				H.assertExitIsFailure(exit);
-			}),
-		);
-	});
+						H.assertExitIsDie(exit)
+					}),
+			)
+		},
+	)
 
 	layer(
 		L.provide(
 			command,
-			L.succeed(Capacitor.Tag, {
-				db: {
-					deleteProductsByIds: () =>
-						Promise.reject(new Error()),
-				} as unknown as Capacitor.FridgySqlitePlugin,
-			}),
+			L.succeed(DbPlugin, {
+				deleteProductsByIds: () => Eff.fail(undefined),
+			} as unknown as DbPlugin),
 		),
 	)(({ effect }) => {
-		effect('Should return an error', () =>
-			Eff.gen(function* () {
-				const service =
-					yield* DeleteProductsByIds.Tag;
+		effect.prop(
+			`Should return an error`,
+			[Sc.NonEmptyArray(DeleteProductById.Request)],
+			([requests]) =>
+				Eff.gen(function* () {
+					const resolver = yield* DeleteProductById.Resolver
 
-				const exit = yield* Eff.exit(
-					service(
-						NEHS.unsafeFromHashSet(
-							HS.fromIterable(['1']),
-						),
-					),
-				);
+					const exit = yield* Eff.exit(
+						Eff.forEach(requests, request => Eff.request(request, resolver)),
+					)
 
-				H.assertExitIsFailure(exit);
-			}),
-		);
-	});
+					H.assertExitIsFailure(exit)
+				}),
+		)
+	})
 
 	layer(
 		L.provide(
 			command,
-			L.succeed(Capacitor.Tag, {
-				db: {
-					deleteProductsByIds: () => {
-						throw new Error();
-					},
-				} as unknown as Capacitor.FridgySqlitePlugin,
-			}),
+			L.succeed(DbPlugin, {
+				deleteProductsByIds: () => {
+					throw new Error()
+				},
+			} as unknown as DbPlugin),
 		),
 	)(({ effect }) => {
-		effect('Should crash', () =>
-			Eff.gen(function* () {
-				const service =
-					yield* DeleteProductsByIds.Tag;
+		effect.prop(
+			`Should crash`,
+			[Sc.NonEmptyArray(DeleteProductById.Request)],
+			([requests]) =>
+				Eff.gen(function* () {
+					const resolver = yield* DeleteProductById.Resolver
 
-				const exit = yield* Eff.exit(
-					service(
-						NEHS.unsafeFromHashSet(
-							HS.fromIterable(['1']),
-						),
-					),
-				);
+					const exit = yield* Eff.exit(
+						Eff.forEach(requests, request => Eff.request(request, resolver)),
+					)
 
-				H.assertExitIsDie(exit);
-			}),
-		);
-	});
-});
+					H.assertExitIsDie(exit)
+				}),
+		)
+	})
+})

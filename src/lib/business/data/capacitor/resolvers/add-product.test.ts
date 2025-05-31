@@ -1,117 +1,85 @@
-import { describe, layer } from '@effect/vitest';
+import { describe, layer } from '@effect/vitest'
 
-import { Eff, L } from '$lib/core/imports.ts';
-import * as H from '$lib/core/test-helpers.ts';
+import { Eff, L, Sc } from '$lib/core/imports.ts'
+import * as H from '$lib/core/test-helpers.ts'
 
-import { Capacitor } from '$lib/data/index.ts';
+import { AddProduct } from '$lib/business/app/operations.ts'
 
-import { AddProduct } from $lib/business/data/index.ts/queries.ts';
+import { DbPlugin } from '../db-plugin.ts'
+import { command } from './add-product.ts'
 
-import { command } from './add-product.ts';
-
-describe('Add product', () => {
+describe(`Add product`, () => {
 	layer(
 		L.provide(
 			command,
-			L.succeed(Capacitor.Tag, {
-				db: {
-					addProduct: () => Promise.resolve(),
-				} as unknown as Capacitor.FridgySqlitePlugin,
-			}),
+			L.succeed(DbPlugin, {
+				addProduct: () => Eff.succeed(undefined),
+			} as unknown as DbPlugin),
 		),
 	)(({ effect }) => {
 		effect.prop(
-			'Should just work',
-			{
-				name: H.nonEmptyTrimmedString,
-				expirationDate: H.maybeInteger,
-				creationDate: H.integer,
-			},
-			({ name, expirationDate, creationDate }) =>
+			`Should just work`,
+			[Sc.NonEmptyArray(AddProduct.Request)],
+			([requests]) =>
 				Eff.gen(function* () {
-					const service = yield* AddProduct.Tag;
+					const resolver = yield* AddProduct.Resolver
 
 					const exit = yield* Eff.exit(
-						service({
-							maybeName: name,
-							maybeExpirationDate: expirationDate,
-							maybeCreationDate: creationDate,
-						}),
-					);
+						Eff.forEach(requests, request => Eff.request(request, resolver)),
+					)
 
-					H.assertExitIsSuccess(exit);
+					H.assertExitIsSuccess(exit)
 				}),
-		);
-	});
+		)
+	})
 
 	layer(
 		L.provide(
 			command,
-			L.succeed(Capacitor.Tag, {
-				db: {
-					addProduct: () =>
-						Promise.reject(new Error()),
-				} as unknown as Capacitor.FridgySqlitePlugin,
-			}),
+			L.succeed(DbPlugin, {
+				addProduct: () => Eff.fail(undefined),
+			} as unknown as DbPlugin),
 		),
 	)(({ effect }) => {
 		effect.prop(
-			'Should return an error',
-			{
-				name: H.nonEmptyTrimmedString,
-				expirationDate: H.maybeInteger,
-				creationDate: H.integer,
-			},
-			({ name, expirationDate, creationDate }) =>
+			`Should return an error`,
+			[Sc.NonEmptyArray(AddProduct.Request)],
+			([requests]) =>
 				Eff.gen(function* () {
-					const service = yield* AddProduct.Tag;
+					const resolver = yield* AddProduct.Resolver
 
 					const exit = yield* Eff.exit(
-						service({
-							maybeName: name,
-							maybeExpirationDate: expirationDate,
-							maybeCreationDate: creationDate,
-						}),
-					);
+						Eff.forEach(requests, request => Eff.request(request, resolver)),
+					)
 
-					H.assertExitIsFailure(exit);
+					H.assertExitIsFailure(exit)
 				}),
-		);
-	});
+		)
+	})
 
 	layer(
 		L.provide(
 			command,
-			L.succeed(Capacitor.Tag, {
-				db: {
-					addProduct: () => {
-						throw new Error();
-					},
-				} as unknown as Capacitor.FridgySqlitePlugin,
-			}),
+			L.succeed(DbPlugin, {
+				addProduct: () => {
+					throw new Error()
+				},
+			} as unknown as DbPlugin),
 		),
 	)(({ effect }) => {
 		effect.prop(
-			'Should crash',
-			{
-				name: H.nonEmptyTrimmedString,
-				expirationDate: H.maybeInteger,
-				creationDate: H.integer,
-			},
-			({ name, expirationDate, creationDate }) =>
+			`Should crash`,
+			[Sc.NonEmptyArray(AddProduct.Request)],
+			([requests]) =>
 				Eff.gen(function* () {
-					const service = yield* AddProduct.Tag;
+					const resolver = yield* AddProduct.Resolver
 
 					const exit = yield* Eff.exit(
-						service({
-							maybeName: name,
-							maybeExpirationDate: expirationDate,
-							maybeCreationDate: creationDate,
-						}),
-					);
+						Eff.forEach(requests, request => Eff.request(request, resolver)),
+					)
 
-					H.assertExitIsDie(exit);
+					H.assertExitIsDie(exit)
 				}),
-		);
-	});
-});
+		)
+	})
+})

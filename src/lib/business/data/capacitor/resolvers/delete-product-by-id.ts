@@ -36,7 +36,6 @@ export const command = L.effect(
 								}),
 							),
 					)
-
 					yield* Eff.logDebug(
 						`About to delete ${ids.length.toString(10)} products`,
 					)
@@ -48,14 +47,14 @@ export const command = L.effect(
 					)
 
 					if (E.isLeft(result)) {
-						yield* Eff.logError(result.left.error)
-						return yield* new DeleteProductById.OperationFailed()
+						yield* Eff.logError(result.left)
+						return yield* Eff.fail(undefined)
 					}
 
 					return result.right
 				}),
-				Eff.matchEffect({
-					onFailure: error => Eff.forEach(requests, R.fail(error)),
+				Eff.matchCauseEffect({
+					onFailure: err => Eff.forEach(requests, R.failCause(err)),
 					onSuccess: () => Eff.forEach(requests, R.succeed(undefined)),
 				}),
 				withLayerLogging(`I`),

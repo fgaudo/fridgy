@@ -1,17 +1,16 @@
-import { C, Da, R, RR, Sc } from '$lib/core/imports.ts'
+import { TaggedRequest } from 'effect/Schema'
 
-export class OperationFailed extends Da.TaggedError(`OperationFailed`) {}
+import { C, RR, Sc } from '$lib/core/imports.ts'
 
-export const DeleteProductByIdDTO = Sc.String
+export const DeleteProductByIdDTO = { id: Sc.String }
 
 export type DeleteProductByIdDTO = Sc.Schema.Type<typeof DeleteProductByIdDTO>
 
-export interface Request extends R.Request<void, OperationFailed> {
-	readonly _tag: `DeleteProductById`
-	readonly id: DeleteProductByIdDTO
-}
-
-export const Request = R.tagged<Request>(`DeleteProductById`)
+export class Request extends TaggedRequest<Request>()(`DeleteProductById`, {
+	success: Sc.Void,
+	failure: Sc.Void,
+	payload: DeleteProductByIdDTO,
+}) {}
 
 export class Resolver extends C.Tag(`app/operations/DeleteProductByIdResolver`)<
 	Resolver,

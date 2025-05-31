@@ -2,6 +2,9 @@ import * as Cause from 'effect/Cause'
 import * as Exit from 'effect/Exit'
 import { assert } from 'vitest'
 
+export * as FC from 'effect/FastCheck'
+export * as Arb from 'effect/Arbitrary'
+
 export function assertExitIsFailure<A, E>(
 	exit: Exit.Exit<A, E>,
 ): asserts exit is Exit.Failure<A, E> {

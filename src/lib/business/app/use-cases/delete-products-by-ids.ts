@@ -28,7 +28,7 @@ export class DeleteProductsByIds extends Eff.Service<DeleteProductsByIds>()(
 							ids,
 							id =>
 								Eff.request(
-									DeleteProductByIdOperation.Request({
+									new DeleteProductByIdOperation.Request({
 										id,
 									}),
 									deleteProductResolver,
@@ -39,8 +39,7 @@ export class DeleteProductsByIds extends Eff.Service<DeleteProductsByIds>()(
 
 					if (E.isLeft(result)) {
 						yield* Eff.logError(`Could not delete the products`)
-
-						return yield* result.left
+						return yield* Eff.fail(undefined)
 					}
 
 					yield* Eff.logInfo(`Products deleted`)
