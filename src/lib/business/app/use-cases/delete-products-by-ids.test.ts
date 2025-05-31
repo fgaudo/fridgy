@@ -1,6 +1,6 @@
 import { describe, layer } from '@effect/vitest'
 
-import { Eff, HS, L, NEHS, RR } from '$lib/core/imports.ts'
+import { Eff, L, RR } from '$lib/core/imports.ts'
 import * as H from '$lib/core/test-helpers.ts'
 
 import { DeleteProductById as Query } from '$lib/business/app/operations.ts'
@@ -23,7 +23,6 @@ describe.concurrent(`Delete products by ids`, () => {
 			([ids]) =>
 				Eff.gen(function* () {
 					const service = yield* Usecase.DeleteProductsByIds
-
 					const exit = yield* Eff.exit(service(ids))
 
 					H.assertExitIsFailure(exit)
@@ -40,13 +39,11 @@ describe.concurrent(`Delete products by ids`, () => {
 			),
 		),
 	)(({ effect }) => {
-		effect.prop(`Should just work`, [H.FC.string(), H.FC.string()], ids =>
+		effect.prop(`Should just work`, [Usecase.DeleteProductsByIdsDTO], ([ids]) =>
 			Eff.gen(function* () {
 				const service = yield* Usecase.DeleteProductsByIds
 
-				const exit = yield* Eff.exit(
-					service(NEHS.unsafeFromHashSet(HS.fromIterable(ids))),
-				)
+				const exit = yield* Eff.exit(service(ids))
 
 				H.assertExitIsSuccess(exit)
 			}),

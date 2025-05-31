@@ -44,7 +44,7 @@ describe.concurrent(`Get sorted products`, () => {
 
 	effect.prop(
 		`Should always return all elements`,
-		[H.Arb.make(Query.GetSortedProductsDTO)],
+		[Query.GetSortedProductsDTO],
 		([products], { expect }) =>
 			Eff.provide(
 				Eff.gen(function* () {

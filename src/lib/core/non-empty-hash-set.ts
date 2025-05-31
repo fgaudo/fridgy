@@ -1,4 +1,6 @@
-import { B, HS, PInt } from './imports.ts'
+import { Arbitrary } from 'effect'
+
+import { B, HS, NEHS, PInt, Sc } from './imports.ts'
 
 export type NonEmptyHashSet<A> = B.Branded<HS.HashSet<A>, `NonEmptyHashSet`>
 
@@ -7,6 +9,18 @@ export const NonEmptyHashSet = <A>() =>
 	B.refined<NonEmptyHashSet<A>>(
 		set => HS.size(set) > 0,
 		() => B.error(`Provided set is empty`),
+	)
+
+export const NonEmptyHashSetSchema = <Value extends Sc.Schema.Any>(
+	value: Value,
+) =>
+	Sc.fromBrand(NonEmptyHashSet<Value[`Type`]>())(Sc.HashSet(value)).annotations(
+		{
+			arbitrary: () => () =>
+				Arbitrary.make(Sc.HashSet(value))
+					.filter(set => HS.size(set) > 0)
+					.map(NEHS.unsafeFromHashSet),
+		},
 	)
 
 export const size = <A>(hashSet: NonEmptyHashSet<A>): PInt.PositiveInteger =>

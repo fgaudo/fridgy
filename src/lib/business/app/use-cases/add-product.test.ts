@@ -1,5 +1,5 @@
 import { describe, effect, layer } from '@effect/vitest'
-import { Arbitrary, TestClock } from 'effect'
+import { TestClock } from 'effect'
 import { TestContext } from 'effect/TestContext'
 
 import { Eff, L, RR } from '$lib/core/imports.ts'
@@ -12,7 +12,7 @@ import * as Usecase from './add-product.ts'
 describe.concurrent(`Add product`, () => {
 	effect.prop(
 		`Should just work`,
-		{ product: Arbitrary.make(Usecase.ProductDTO) },
+		{ product: Usecase.ProductDTO },
 		({ product: { name, maybeExpirationDate } }, { expect }) =>
 			Eff.gen(function* () {
 				const service = yield* Usecase.AddProduct
@@ -59,7 +59,7 @@ describe.concurrent(`Add product`, () => {
 	)(({ effect }) => {
 		effect.prop(
 			`Should return error`,
-			{ product: Arbitrary.make(Usecase.ProductDTO) },
+			{ product: Usecase.ProductDTO },
 			({ product: { name, maybeExpirationDate } }) =>
 				Eff.gen(function* () {
 					const service = yield* Usecase.AddProduct

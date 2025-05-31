@@ -3,9 +3,7 @@ import { withLayerLogging } from '$lib/core/logging.ts'
 
 import { DeleteProductById as DeleteProductByIdOperation } from '$lib/business/app/operations'
 
-export const DeleteProductsByIdsDTO = Sc.fromBrand(
-	NEHS.NonEmptyHashSet<string>(),
-)(Sc.HashSet(Sc.String))
+export const DeleteProductsByIdsDTO = NEHS.NonEmptyHashSetSchema(Sc.String)
 
 export type DeleteProductsByIdsDTO = Sc.Schema.Type<
 	typeof DeleteProductsByIdsDTO
