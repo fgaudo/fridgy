@@ -63,8 +63,13 @@ export const update: Update<State, Message, UseCases> = (state, message) =>
 			state.isAdding = false
 			state.spinnerId = undefined
 			state.isLoading = false
-
-			return []
+			const id = Symbol()
+			state.toastMessage = {
+				message: `Failed to add product`,
+				id,
+				type: `error`,
+			}
+			return [queueRemoveToast(id)]
 		}),
 		M.tag(`AddProductSucceeded`, () => {
 			state.isAdding = false

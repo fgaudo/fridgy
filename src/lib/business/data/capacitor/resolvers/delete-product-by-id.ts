@@ -1,4 +1,4 @@
-import { E, Eff, L, O, R, RR, pipe } from '$lib/core/imports.ts'
+import { A, E, Eff, L, O, R, RR, pipe } from '$lib/core/imports.ts'
 import { withLayerLogging } from '$lib/core/logging.ts'
 
 import { DeleteProductById } from '$lib/business/app/operations.ts'
@@ -13,29 +13,31 @@ export const command = L.effect(
 		return RR.makeBatched(requests =>
 			pipe(
 				Eff.gen(function* () {
-					const ids = yield* Eff.allSuccesses(
-						requests
-							.map(r => r.id)
-							.map(id =>
-								Eff.gen(function* () {
-									const parsed = yield* pipe(
-										Eff.try(() => JSON.parse(id) as unknown),
-										Eff.option,
-										Eff.map(O.filter(id => typeof id === `number`)),
-									)
+					const ids = yield* pipe(
+						requests,
+						A.map(request => request.id),
+						A.map(id =>
+							Eff.gen(function* () {
+								const parsed = yield* pipe(
+									Eff.try(() => JSON.parse(id) as unknown),
+									Eff.option,
+									Eff.map(O.filter(id => typeof id === `number`)),
+								)
 
-									if (O.isSome(parsed)) {
-										return parsed.value
-									}
+								if (O.isSome(parsed)) {
+									return parsed.value
+								}
 
-									yield* Eff.logWarning(
-										`Id has incorrect format. Skipping.`,
-									).pipe(Eff.annotateLogs({ id }))
+								yield* Eff.logWarning(
+									`Id has incorrect format. Skipping.`,
+								).pipe(Eff.annotateLogs({ id }))
 
-									return yield* Eff.fail(undefined)
-								}),
-							),
+								return yield* Eff.fail(undefined)
+							}),
+						),
+						Eff.allSuccesses,
 					)
+
 					yield* Eff.logDebug(
 						`About to delete ${ids.length.toString(10)} products`,
 					)

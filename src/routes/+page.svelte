@@ -314,7 +314,7 @@
 			class="fixed right-[16px] left-[16px]"
 			style:bottom={`calc(env(safe-area-inset-bottom, 0) + 21px)`}
 		>
-			{#if O.isNone(viewModel.derived.maybeLoadedProducts)}
+			{#if !viewModel.state.receivedError && O.isNone(viewModel.derived.maybeLoadedProducts)}
 				<div
 					in:fade={{ duration: 200 }}
 					class="font-stylish absolute right-0 bottom-[100px] flex flex-col items-end duration-[fade]"

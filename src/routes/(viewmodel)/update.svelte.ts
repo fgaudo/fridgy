@@ -81,6 +81,7 @@ export const update: Update<State, Message, UseCases> = (state, message) => {
 				]
 			}
 			state.isLoading = false
+			state.receivedError = false
 
 			state.products = {
 				entries: result.map(entry => {
