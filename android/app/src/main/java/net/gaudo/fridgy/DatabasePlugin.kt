@@ -12,10 +12,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import net.gaudo.fridgy.data.FridgySqliteOpenHelper
-import net.gaudo.fridgy.data.Product
-import net.gaudo.fridgy.data.getAllProductsWithTotal as getAllProductsWithTotalQuery
-import net.gaudo.fridgy.data.addProduct as addProductCommand
-import net.gaudo.fridgy.data.deleteProductsByIds as deleteProductsByIdsCommand
+import net.gaudo.fridgy.data.schemas.Schema
+import net.gaudo.fridgy.data.statements.AddProductDto
+import net.gaudo.fridgy.data.statements.getAllProductsWithTotal as getAllProductsWithTotalQuery
+import net.gaudo.fridgy.data.statements.addProduct as addProductCommand
+import net.gaudo.fridgy.data.statements.deleteProductsByIds as deleteProductsByIdsCommand
 
 @CapacitorPlugin(name = "FridgySqlitePlugin")
 class DatabasePlugin : Plugin() {
@@ -41,13 +42,15 @@ class DatabasePlugin : Plugin() {
                 val product = call.getObject("product")
                 val name = product.getString("name")!!
                 val creationDate = product.getLong("creationDate")
+                val storage = Schema.Storage.Type.valueOf(product.getString("storage")!!)
+
                 val expirationDate =
                     if (!product.has("expirationDate"))
                         null
                     else
                         product.getLong("expirationDate")
 
-                addProductCommand(Product(name, expirationDate, creationDate))(
+                addProductCommand(AddProductDto(name, expirationDate, creationDate, storage))(
                     helper
                 )
                 call.resolve()
@@ -72,6 +75,7 @@ class DatabasePlugin : Plugin() {
                             .put("name", it.name)
                             .put("creationDate", it.creationDate)
                             .put("expirationDate", it.expirationDate)
+                            .put("storage", it.storage)
                     }))
                     .put("total", result.total)
 

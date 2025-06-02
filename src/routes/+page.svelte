@@ -4,6 +4,8 @@
 	import Info from '@lucide/svelte/icons/info'
 	import Menu from '@lucide/svelte/icons/menu'
 	import Plus from '@lucide/svelte/icons/plus'
+	import Refrigerator from '@lucide/svelte/icons/refrigerator'
+	import Snowflake from '@lucide/svelte/icons/snowflake'
 	import Trash2 from '@lucide/svelte/icons/trash-2'
 	import X from '@lucide/svelte/icons/x'
 	import { format } from 'date-fns'
@@ -130,18 +132,6 @@
 				</div>
 			{/if}
 		</div>
-		{#if O.isSome(viewModel.derived.maybeLoadedProducts)}
-			{@const products = viewModel.derived.maybeLoadedProducts.value}
-
-			{#if products.entries.length > 0}
-				<p
-					out:fade={{ duration: 200 }}
-					class="bg-background z-50 w-full px-[14px] pt-[10px] pb-[8px] text-xs"
-				>
-					{products.entries.length} items
-				</p>
-			{/if}
-		{/if}
 	</div>
 	{#if viewModel.state.isLoading}
 		<div
@@ -152,162 +142,211 @@
 		</div>
 	{/if}
 
-	<div class="bg-background flex flex-col">
-		{#if viewModel.state.receivedError}
-			<div
-				class="flex h-screen w-screen items-center justify-center text-center text-lg"
-			>
-				<div>
-					Could not load the list! :(
-					<br />
-					<div
-						class="text-primary underline relative overflow-hidden rounded-full py-1 px-2"
+	<div
+		style:padding-bottom={`calc(env(safe-area-inset-bottom) + 140px)`}
+		style:padding-top={`calc(env(safe-area-inset-top) + 64px)`}
+	>
+		<ul
+			class="mb-3 flex flex-wrap text-sm font-medium text-center text-gray-500 dark:text-gray-400"
+		>
+			<li class="flex-1 rounded-br-2xl bg-background">
+				<div class="bg-secondary/20 rounded-br-2xl">
+					<button
+						class="inline-flex items-center justify-center p-4 rounded-t-lg"
 					>
-						<Ripple ontap={viewModel.tasks.refreshList}></Ripple>
-						Try again
-					</div>
+						<Refrigerator />Fridge
+					</button>
 				</div>
-			</div>
-		{:else if O.isSome(viewModel.derived.maybeLoadedProducts)}
+			</li>
+			<li class="flex-1 bg-secondary/20">
+				<div class="bg-background rounded-tl-2xl rounded-tr-2xl">
+					<button
+						class="inline-flex items-center justify-center p-4 text-secondary rounded-t-lg active"
+						aria-current="page"
+					>
+						<Snowflake />Freezer
+					</button>
+				</div>
+			</li>
+			<li class="flex-1 rounded-bl-2xl bg-background">
+				<div class="bg-secondary/20 rounded-bl-2xl">
+					<button
+						class="inline-flex items-center justify-center p-4 rounded-t-lg"
+					>
+						<Refrigerator />Other
+					</button>
+				</div>
+			</li>
+		</ul>
+
+		{#if O.isSome(viewModel.derived.maybeLoadedProducts)}
 			{@const products = viewModel.derived.maybeLoadedProducts.value}
 
-			<div
-				style:padding-top={`calc(env(safe-area-inset-top) + 64px + 42px)`}
-				style:padding-bottom={`calc(env(safe-area-inset-bottom) + 140px)`}
-				out:fade={{ duration: 200 }}
-				class="flex flex-1 gap-2 flex-col w-full"
-			>
-				{#each products.entries as product (product.id)}
-					{@const maybeCreation = product.isCorrupt
-						? O.none()
-						: product.isValid
-							? O.some(product.creationDate)
-							: O.fromNullable(product.maybeCreationDate)}
-
-					{@const maybeName = product.isCorrupt
-						? O.fromNullable(product.maybeName)
-						: product.isValid
-							? O.some(product.name)
-							: O.fromNullable(product.maybeName)}
-
-					{@const maybeExpirationDate = product.isCorrupt
-						? O.none()
-						: O.fromNullable(product.maybeExpirationDate)}
-					<div out:fade={{ duration: 200 }} animate:flip={{ duration: 250 }}>
+			{#if products.entries.length > 0}
+				<p
+					out:fade={{ duration: 200 }}
+					class="mb-3 bg-background z-50 w-full px-[14px] pt-[10px] text-xs"
+				>
+					{products.entries.length} items
+				</p>
+			{/if}
+		{/if}
+		<div class="bg-background flex flex-col">
+			{#if viewModel.state.receivedError}
+				<div
+					class="flex h-screen w-screen items-center justify-center text-center text-lg"
+				>
+					<div>
+						Could not load the list! :(
+						<br />
 						<div
-							class={[
-								`flex mx-2 relative transition-transform shadow-sm rounded-lg py-1 overflow-hidden`,
-								!product.isCorrupt && product.isSelected
-									? `bg-accent/10 scale-[102%]`
-									: `bg-secondary/5`,
-							]}
+							class="text-primary underline relative overflow-hidden rounded-full py-1 px-2"
 						>
-							{#if !viewModel.state.isDeleteRunning}
-								{#if products.selected.size > 0}
-									<Ripple ontap={() => viewModel.tasks.toggleItem(product)}
-									></Ripple>
-								{:else}
-									<Ripple onhold={() => viewModel.tasks.toggleItem(product)}
-									></Ripple>
-								{/if}
-							{/if}
+							<Ripple ontap={viewModel.tasks.refreshList}></Ripple>
+							Try again
+						</div>
+					</div>
+				</div>
+			{:else if O.isSome(viewModel.derived.maybeLoadedProducts)}
+				{@const products = viewModel.derived.maybeLoadedProducts.value}
+
+				<div
+					out:fade={{ duration: 200 }}
+					class="flex flex-1 gap-2 flex-col w-full"
+				>
+					{#each products.entries as product (product.id)}
+						{@const maybeCreation = product.isCorrupt
+							? O.none()
+							: product.isValid
+								? O.some(product.creationDate)
+								: O.fromNullable(product.maybeCreationDate)}
+
+						{@const maybeName = product.isCorrupt
+							? O.fromNullable(product.maybeName)
+							: product.isValid
+								? O.some(product.name)
+								: O.fromNullable(product.maybeName)}
+
+						{@const maybeExpirationDate = product.isCorrupt
+							? O.none()
+							: O.fromNullable(product.maybeExpirationDate)}
+						<div out:fade={{ duration: 200 }} animate:flip={{ duration: 250 }}>
 							<div
 								class={[
-									`justify-between flex min-h-[60px] w-full gap-1 select-none items-center`,
+									`flex mx-2 relative transition-transform shadow-sm rounded-lg py-1 overflow-hidden`,
+									!product.isCorrupt && product.isSelected
+										? `bg-accent/10 scale-[102%]`
+										: `bg-secondary/5`,
 								]}
-								style="content-visibility: 'auto'"
 							>
-								<div class="p-2 h-full aspect-square">
+								{#if !viewModel.state.isDeleteRunning}
+									{#if products.selected.size > 0}
+										<Ripple ontap={() => viewModel.tasks.toggleItem(product)}
+										></Ripple>
+									{:else}
+										<Ripple onhold={() => viewModel.tasks.toggleItem(product)}
+										></Ripple>
+									{/if}
+								{/if}
+								<div
+									class={[
+										`justify-between flex min-h-[60px] w-full gap-1 select-none items-center`,
+									]}
+									style="content-visibility: 'auto'"
+								>
+									<div class="p-2 h-full aspect-square">
+										<div
+											class="flex-col flex bg-secondary text-background shadow-xs rounded-full items-center justify-center text-center h-full aspect-square"
+										>
+											{#if O.isSome(maybeExpirationDate)}
+												<div class="text-lg font-bold leading-4">
+													{format(maybeExpirationDate.value, `d`)}
+												</div>
+												<div class="text-sm leading-4">
+													{format(maybeExpirationDate.value, `LLL`)}
+												</div>
+											{:else}
+												<Inf class="p-2 w-full h-full font-bold " />
+											{/if}
+										</div>
+									</div>
+
 									<div
-										class="flex-col flex bg-secondary text-background shadow-xs rounded-full items-center justify-center text-center h-full aspect-square"
+										class="flex-1 h-full flex justify-center flex-col leading-[16px] gap-2"
 									>
-										{#if O.isSome(maybeExpirationDate)}
-											<div class="text-lg font-bold leading-4">
-												{format(maybeExpirationDate.value, `d`)}
-											</div>
-											<div class="text-sm leading-4">
-												{format(maybeExpirationDate.value, `LLL`)}
+										{#if O.isSome(maybeName)}
+											<div
+												class="overflow-ellipsis whitespace-nowrap overflow-hidden capitalize"
+											>
+												{maybeName.value}
 											</div>
 										{:else}
-											<Inf class="p-2 w-full h-full font-bold " />
+											<div>[NO NAME]</div>
+										{/if}
+
+										{#if O.isNone(maybeCreation)}
+											No creation date
+										{:else if O.isSome(maybeExpirationDate) && maybeExpirationDate.value > viewModel.state.currentTimestamp}
+											{@const expiration = maybeExpirationDate.value}
+											{@const creation = maybeCreation.value}
+
+											{@const totalDuration = expiration - creation}
+											{@const remainingDuration =
+												expiration - viewModel.state.currentTimestamp}
+											{@const currentProgress =
+												remainingDuration / totalDuration}
+
+											{@const currentProgressOrZero =
+												totalDuration < 0 ? 0 : currentProgress}
+
+											{@const color = `color-mix(in srgb, var(--color-secondary) ${(currentProgressOrZero * 100).toString(10)}%, var(--color-primary) ${((1 - currentProgressOrZero) * 100).toString(10)}%)`}
+
+											<div
+												style:outline-color={color}
+												class="z-0 h-[4px] my-[2px] w-full outline-[1px]"
+											>
+												<div
+													class="bg-primary h-full"
+													style:background-color={color}
+													style:width={`${(currentProgressOrZero * 100).toString()}%`}
+												></div>
+											</div>
+										{:else if O.isSome(maybeExpirationDate)}
+											<div
+												class="text-[12px] leading-[8px] text-primary font-bold"
+											>
+												Expired
+											</div>
+										{/if}
+									</div>
+									<div
+										class="h-9/12 aspect-square flex items-center justify-center"
+									>
+										{#if O.isSome(maybeExpirationDate)}
+											<div
+												class={[
+													`text-primary duration-fade absolute text-sm`,
+													{
+														'text-primary font-bold':
+															maybeExpirationDate.value <
+															viewModel.state.currentTimestamp,
+													},
+												]}
+											>
+												{Utils.formatRemainingTime(
+													viewModel.state.currentTimestamp,
+													maybeExpirationDate.value,
+												)}
+											</div>
 										{/if}
 									</div>
 								</div>
-
-								<div
-									class="flex-1 h-full flex justify-center flex-col leading-[16px] gap-2"
-								>
-									{#if O.isSome(maybeName)}
-										<div
-											class="overflow-ellipsis whitespace-nowrap overflow-hidden capitalize"
-										>
-											{maybeName.value}
-										</div>
-									{:else}
-										<div>[NO NAME]</div>
-									{/if}
-
-									{#if O.isNone(maybeCreation)}
-										No creation date
-									{:else if O.isSome(maybeExpirationDate) && maybeExpirationDate.value > viewModel.state.currentTimestamp}
-										{@const expiration = maybeExpirationDate.value}
-										{@const creation = maybeCreation.value}
-
-										{@const totalDuration = expiration - creation}
-										{@const remainingDuration =
-											expiration - viewModel.state.currentTimestamp}
-										{@const currentProgress = remainingDuration / totalDuration}
-
-										{@const currentProgressOrZero =
-											totalDuration < 0 ? 0 : currentProgress}
-
-										{@const color = `color-mix(in srgb, var(--color-secondary) ${(currentProgressOrZero * 100).toString(10)}%, var(--color-primary) ${((1 - currentProgressOrZero) * 100).toString(10)}%)`}
-
-										<div
-											style:outline-color={color}
-											class="z-0 h-[4px] my-[2px] w-full outline-[1px]"
-										>
-											<div
-												class="bg-primary h-full"
-												style:background-color={color}
-												style:width={`${(currentProgressOrZero * 100).toString()}%`}
-											></div>
-										</div>
-									{:else if O.isSome(maybeExpirationDate)}
-										<div
-											class="text-[12px] leading-[8px] text-primary font-bold"
-										>
-											Expired
-										</div>
-									{/if}
-								</div>
-								<div
-									class="h-9/12 aspect-square flex items-center justify-center"
-								>
-									{#if O.isSome(maybeExpirationDate)}
-										<div
-											class={[
-												`text-primary duration-fade absolute text-sm`,
-												{
-													'text-primary font-bold':
-														maybeExpirationDate.value <
-														viewModel.state.currentTimestamp,
-												},
-											]}
-										>
-											{Utils.formatRemainingTime(
-												viewModel.state.currentTimestamp,
-												maybeExpirationDate.value,
-											)}
-										</div>
-									{/if}
-								</div>
 							</div>
 						</div>
-					</div>
-				{/each}
-			</div>
-		{/if}
+					{/each}
+				</div>
+			{/if}
+		</div>
 	</div>
 	{#if O.isNone(viewModel.derived.maybeNonEmptySelected)}
 		<div
