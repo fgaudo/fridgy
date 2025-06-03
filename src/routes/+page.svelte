@@ -147,32 +147,107 @@
 		style:padding-top={`calc(env(safe-area-inset-top) + 64px)`}
 	>
 		<ul
-			class="mb-3 flex flex-wrap text-sm font-medium text-center text-gray-500 dark:text-gray-400"
+			class=" mb-3 flex flex-wrap text-sm font-medium text-center text-gray-500 dark:text-gray-400"
 		>
-			<li class="flex-1 rounded-br-2xl bg-background">
-				<div class="bg-secondary/20 rounded-br-2xl">
+			<li
+				class={[
+					'flex-1 transition-all',
+					{
+						'rounded-br-2xl bg-background':
+							viewModel.state.viewOpen !== 'fridge',
+						'bg-secondary/20': viewModel.state.viewOpen === 'fridge',
+					},
+				]}
+			>
+				<div
+					class={[
+						'transition-all relative',
+						{
+							'rounded-br-2xl': viewModel.state.viewOpen === 'freezer',
+							'bg-secondary/20': viewModel.state.viewOpen !== 'fridge',
+							'bg-background  rounded-tr-2xl':
+								viewModel.state.viewOpen === 'fridge',
+						},
+					]}
+				>
 					<button
-						class="inline-flex items-center justify-center p-4 rounded-t-lg"
+						class={[
+							'transition-all',
+							{ 'text-secondary': viewModel.state.viewOpen === 'fridge' },
+							'inline-flex items-center justify-center p-4 rounded-t-lg active',
+						]}
 					>
+						<Ripple ontap={() => viewModel.tasks.changeCompartment('fridge')}
+						></Ripple>
 						<Refrigerator />Fridge
 					</button>
 				</div>
 			</li>
-			<li class="flex-1 bg-secondary/20">
-				<div class="bg-background rounded-tl-2xl rounded-tr-2xl">
+			<li
+				class={[
+					'flex-1 transition-all',
+					{
+						'bg-secondary/20': viewModel.state.viewOpen === 'freezer',
+						'rounded-br-2xl bg-background':
+							viewModel.state.viewOpen !== 'freezer',
+					},
+				]}
+			>
+				<div
+					class={[
+						'relative transition-all',
+						{
+							'rounded-bl-2xl': viewModel.state.viewOpen === 'fridge',
+							'rounded-br-2xl': viewModel.state.viewOpen === 'other',
+							'bg-background rounded-tl-2xl rounded-tr-2xl':
+								viewModel.state.viewOpen === 'freezer',
+							'bg-secondary/20  ': viewModel.state.viewOpen !== 'freezer',
+						},
+					]}
+				>
 					<button
-						class="inline-flex items-center justify-center p-4 text-secondary rounded-t-lg active"
+						class={[
+							'transition-all',
+							{ 'text-secondary': viewModel.state.viewOpen === 'freezer' },
+							'inline-flex items-center justify-center p-4 rounded-t-lg active',
+						]}
 						aria-current="page"
 					>
+						<Ripple ontap={() => viewModel.tasks.changeCompartment('freezer')}
+						></Ripple>
 						<Snowflake />Freezer
 					</button>
 				</div>
 			</li>
-			<li class="flex-1 rounded-bl-2xl bg-background">
-				<div class="bg-secondary/20 rounded-bl-2xl">
+			<li
+				class={[
+					'flex-1 transition-all',
+					{
+						'bg-background': viewModel.state.viewOpen !== 'other',
+						'bg-secondary/20': viewModel.state.viewOpen === 'other',
+					},
+				]}
+			>
+				<div
+					class={[
+						'transition-all relative',
+						{
+							'rounded-bl-2xl': viewModel.state.viewOpen === 'freezer',
+							'bg-secondary/20 ': viewModel.state.viewOpen !== 'other',
+							'bg-background  rounded-tl-2xl':
+								viewModel.state.viewOpen === 'other',
+						},
+					]}
+				>
 					<button
-						class="inline-flex items-center justify-center p-4 rounded-t-lg"
+						class={[
+							'transition-all',
+							{ 'text-secondary': viewModel.state.viewOpen === 'other' },
+							'inline-flex items-center justify-center p-4 rounded-t-lg active',
+						]}
 					>
+						<Ripple ontap={() => viewModel.tasks.changeCompartment('other')}
+						></Ripple>
 						<Refrigerator />Other
 					</button>
 				</div>

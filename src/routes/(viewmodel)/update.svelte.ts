@@ -38,6 +38,7 @@ export type Message = Da.TaggedEnum<{
 	ShowSpinner: { id: symbol }
 	NoOp: object
 	ToggleMenu: object
+	ChangeCompartment: { type: `fridge` | `freezer` | `other` }
 	ShowCrash: object
 	RemoveToast: { id: symbol }
 	Crash: { message: unknown }
@@ -195,6 +196,10 @@ export const update: Update<State, Message, UseCases> = (state, message) => {
 				if (entry.isCorrupt) return
 				entry.isSelected = false
 			})
+			return []
+		}),
+		M.tag(`ChangeCompartment`, ({ type }) => {
+			state.viewOpen = type
 			return []
 		}),
 		M.tag(`ToggleItem`, ({ product }) => {

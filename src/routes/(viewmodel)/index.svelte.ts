@@ -110,6 +110,14 @@ export function createViewModel() {
 					Eff.andThen(dispatch(Message.StartDeleteSelectedAndRefresh())),
 					runner.runEffect,
 				),
+			changeCompartment: (compartment: `fridge` | `freezer` | `other`) =>
+				pipe(
+					Eff.log(`UI triggered changeCompartment`),
+					Eff.andThen(
+						dispatch(Message.ChangeCompartment({ type: compartment })),
+					),
+					runner.runEffect,
+				),
 		},
 	}
 }

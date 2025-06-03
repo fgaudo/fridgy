@@ -40,6 +40,7 @@ export type State = {
 	isDeleteRunning: boolean
 	spinnerTaskId: symbol | undefined
 	hasCrashOccurred: boolean
+	viewOpen: `fridge` | `freezer` | `other`
 	toastMessage:
 		| { id: symbol; message: string; type: `error` | `success` }
 		| undefined
@@ -69,6 +70,7 @@ export function createStateContext() {
 		hasCrashOccurred: false,
 		isLoading: false,
 		isDeleteRunning: false,
+		viewOpen: `fridge`,
 		isMenuOpen: false,
 		toastMessage: undefined,
 		currentTimestamp: Date.now(),
