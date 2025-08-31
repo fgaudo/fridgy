@@ -38,8 +38,8 @@
 				opacity: 1,
 				easing: expoIn,
 			}}
-			style:padding-top={`env(safe-area-inset-top)`}
-			style:padding-bottom={`env(safe-area-inset-bottom)`}
+			style:padding-top={`var(--safe-area-inset-top)`}
+			style:padding-bottom={`var(--safe-area-inset-bottom)`}
 			class="touch-none pointer-events-auto h-screen flex-col flex fixed bg-background z-999 rounded-r-2xl overflow-hidden w-64 will-change-transform"
 		>
 			<p class="font-stylish pt-8 pb-4 pl-4">Fridgy</p>
@@ -78,8 +78,8 @@
 
 	<div class="fixed w-full z-50 top-0">
 		<div
-			style:padding-top={`env(safe-area-inset-top)`}
-			style:height={`calc(64px + env(safe-area-inset-top))`}
+			style:padding-top={`var(--safe-area-inset-top)`}
+			style:height={`calc(64px + var(--safe-area-inset-top))`}
 			class="bg-secondary shadow-secondary/40 flex w-full items-center shadow-md"
 		>
 			<div
@@ -172,8 +172,8 @@
 			{@const products = viewModel.derived.maybeLoadedProducts.value}
 
 			<div
-				style:padding-top={`calc(env(safe-area-inset-top) + 64px + 42px)`}
-				style:padding-bottom={`calc(env(safe-area-inset-bottom) + 140px)`}
+				style:padding-top={`calc(var(--safe-area-inset-top) + 64px + 42px)`}
+				style:padding-bottom={`calc(var(--safe-area-inset-bottom) + 140px)`}
 				out:fade={{ duration: 200 }}
 				class="flex flex-1 gap-2 flex-col w-full"
 			>
@@ -312,7 +312,7 @@
 	{#if O.isNone(viewModel.derived.maybeNonEmptySelected)}
 		<div
 			class="fixed right-[16px] left-[16px]"
-			style:bottom={`calc(env(safe-area-inset-bottom, 0) + 21px)`}
+			style:bottom={`calc(var(--safe-area-inset-bottom, 0) + 21px)`}
 		>
 			{#if !viewModel.state.receivedError && O.isNone(viewModel.derived.maybeLoadedProducts)}
 				<div
@@ -352,8 +352,8 @@
 			}}
 			out:fade={{ duration: 100 }}
 			style:bottom={O.isNone(viewModel.derived.maybeNonEmptySelected)
-				? `calc(env(safe-area-inset-bottom, 0) + 140px)`
-				: `calc(env(safe-area-inset-bottom, 0) + 21px)`}
+				? `calc(var(--safe-area-inset-bottom, 0) + 140px)`
+				: `calc(var(--safe-area-inset-bottom, 0) + 21px)`}
 			class="z-90 fixed flex left-0 right-0 items-center justify-center transition-all"
 		>
 			{#if O.isSome(viewModel.derived.maybeToastMessage)}

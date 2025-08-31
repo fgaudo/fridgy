@@ -16,8 +16,8 @@
 	}}
 >
 	<div
-		style:padding-top={`env(safe-area-inset-top)`}
-		style:height={`calc(64px + env(safe-area-inset-top))`}
+		style:padding-top={`var(--safe-area-inset-top)`}
+		style:height={`calc(64px + var(--safe-area-inset-top))`}
 		class="bg-secondary shadow-secondary/40 fixed flex w-full items-center shadow-md z-20"
 	>
 		<div
@@ -34,8 +34,8 @@
 	</div>
 
 	<div
-		style:padding-top={`calc(env(safe-area-inset-top) + 92px)`}
-		style:padding-bottom={'env(safe-area-inset-bottom)'}
+		style:padding-top={`calc(var(--safe-area-inset-top) + 92px)`}
+		style:padding-bottom={`var(--safe-area-inset-bottom)`}
 		class="flex flex-col justify-center gap-2 px-[24px] bg-background"
 	>
 		<p class="font-stylish text-xl">Fridgy</p>

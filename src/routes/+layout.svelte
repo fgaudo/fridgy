@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { SafeArea } from '@capacitor-community/safe-area'
 	import '@fontsource-variable/comfortaa/index.css'
 	import '@fontsource-variable/roboto-flex/index.css'
 	import { type Snippet, onDestroy, onMount } from 'svelte'
@@ -29,7 +30,20 @@
 		runEffect(
 			Eff.gen(function* () {
 				yield* Eff.all([
-					Eff.promise(() => document.fonts.ready),
+					Eff.promise(() =>
+						Promise.all([
+							document.fonts.ready,
+							SafeArea.enable({
+								config: {
+									customColorsForSystemBars: true,
+									statusBarColor: `#00000000`, // transparent
+									statusBarContent: `dark`,
+									navigationBarColor: `#00000000`, // transparent
+									navigationBarContent: `light`,
+								},
+							}),
+						]),
+					),
 					Eff.sleep(150),
 				])
 

@@ -29,8 +29,8 @@
 	class="bg-background flex flex-col justify-between h-screen opacity-100"
 >
 	<div
-		style:padding-top={`env(safe-area-inset-top)`}
-		style:height={`calc(64px + env(safe-area-inset-top))`}
+		style:padding-top={`var(--safe-area-inset-top)`}
+		style:height={`calc(64px + var(--safe-area-inset-top))`}
 		class="bg-secondary z-50 shadow-secondary/40 flex w-full items-center shadow-md"
 	>
 		<div
@@ -68,7 +68,7 @@
 	</figure>
 
 	<form
-		style:padding-bottom={`calc(env(safe-area-inset-bottom, 0) + 128px)`}
+		style:padding-bottom={`calc(var(--safe-area-inset-bottom, 0) + 128px)`}
 		class="flex w-full max-w-lg flex-col gap-5 px-8 pt-8 justify-center mx-auto"
 	>
 		<div class="text-on-background flex flex-col rounded-xl align-middle">
@@ -166,7 +166,7 @@
 				easing: cubicIn,
 			}}
 			out:fade={{ duration: 100 }}
-			style:bottom={`calc(env(safe-area-inset-bottom, 0) + 21px)`}
+			style:bottom={`calc(var(--safe-area-inset-bottom, 0) + 21px)`}
 			class="z-90 fixed flex left-0 right-0 bottom-3 items-center justify-center transition-all"
 		>
 			{#if O.isSome(viewModel.derived.maybeToastMessage)}
