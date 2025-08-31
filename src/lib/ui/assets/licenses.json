@@ -1,4 +1,11 @@
 {
+    "@capacitor-community/safe-area@7.0.0-alpha.1": {
+        "licenses": "MIT",
+        "repository": "https://github.com/capacitor-community/safe-area",
+        "copyright": "Copyright (c) 2022 Daniel Suchý",
+        "name": "@capacitor-community/safe-area",
+        "description": "Capacitor Plugin that exposes the safe area insets from the native iOS/Android device to your web project."
+    },
     "@capacitor/android@7.2.0": {
         "licenses": "MIT",
         "repository": "https://github.com/ionic-team/capacitor",
@@ -103,19 +110,18 @@
         "licenses": "Apache-2.0",
         "repository": "https://github.com/microsoft/playwright",
         "publisher": "Microsoft Corporation",
-        "noticeFile": "/Users/gaudo/Projects/fridgy/main/node_modules/@playwright/test/NOTICE",
         "name": "@playwright/test",
         "description": "A high-level API to automate web browsers",
         "copyright": ""
     },
-    "@stylistic/eslint-plugin-ts@4.4.0": {
+    "@stylistic/eslint-plugin@4.4.0": {
         "licenses": "MIT",
         "repository": "https://github.com/eslint-stylistic/eslint-stylistic",
         "publisher": "Anthony Fu",
         "email": "anthonyfu117@hotmail.com",
-        "copyright": "Copyright (c) 2019 typescript-eslint and other contributors. Copyright (c) 2023-PRESENT eslint-stylistic and other contributors",
-        "name": "@stylistic/eslint-plugin-ts",
-        "description": "TypeScript stylistic rules for ESLint, migrated from [`typescript-eslint`](https://github.com/typescript-eslint/typescript-eslint)."
+        "copyright": "Copyright OpenJS Foundation and other contributors, <www.openjsf.org>. Copyright (c) 2023-PRESENT ESLint Stylistic contributors",
+        "name": "@stylistic/eslint-plugin",
+        "description": "Stylistic rules for ESLint, works for both JavaScript and TypeScript."
     },
     "@sveltejs/adapter-static@3.0.8": {
         "licenses": "MIT",
