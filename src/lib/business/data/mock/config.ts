@@ -1,8 +1,8 @@
-import { Eff } from '$lib/core/imports.ts'
+import * as Effect from 'effect/Effect'
 
-export class Config extends Eff.Service<Config>()(`data/mock/Config`, {
+export class Config extends Effect.Service<Config>()(`data/mock/Config`, {
 	accessors: true,
 	succeed: {
-		withErrors: false,
+		withErrors: false as boolean,
 	},
 }) {}

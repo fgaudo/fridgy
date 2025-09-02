@@ -1,16 +1,19 @@
-import { B, Sc } from '../imports.ts'
+import * as Brand from 'effect/Brand'
+import * as _Schema from 'effect/Schema'
 
-export type Integer = B.Branded<number, `Integer`>
+export type Integer = Brand.Branded<number, `Integer`>
 
 /** @internal */
-export const Integer = B.refined<Integer>(
+export const Integer = Brand.refined<Integer>(
 	n => Number.isInteger(n),
-	n => B.error(`Expected ${n.toString(10)} to be an integer`),
+	n => Brand.error(`Expected ${n.toString(10)} to be an integer`),
 )
 
-export const IntegerSchema = Sc.fromBrand(Integer)(Sc.Number).annotations({
-	arbitrary: () => fc => fc.integer().map(unsafeFromNumber),
-})
+export const Schema = _Schema
+	.fromBrand(Integer)(_Schema.Number)
+	.annotations({
+		arbitrary: () => fc => fc.integer().map(unsafeFromNumber),
+	})
 
 export const fromNumber = (n: number) => Integer.option(n)
 export const unsafeFromNumber = Integer

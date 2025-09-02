@@ -1,10 +1,12 @@
-import { Eff, HM, Ref } from '$lib/core/imports.ts'
+import * as Effect from 'effect/Effect'
+import * as HashMap from 'effect/HashMap'
+import * as Ref from 'effect/Ref'
 
 import { GetSortedProducts } from '$lib/business/app/operations'
 
-export class Db extends Eff.Service<Db>()(`data/mock/Db`, {
+export class Db extends Effect.Service<Db>()(`data/mock/Db`, {
 	effect: Ref.make({
 		index: 0,
-		map: HM.empty<string, GetSortedProducts.ProductDTO>(),
+		map: HashMap.empty<string, GetSortedProducts.ProductDTO>(),
 	}),
 }) {}

@@ -2,10 +2,10 @@
 	import { SafeArea } from '@capacitor-community/safe-area'
 	import '@fontsource-variable/comfortaa/index.css'
 	import '@fontsource-variable/roboto-flex/index.css'
+	import * as Effect from 'effect/Effect'
+	import * as ManagedRuntime from 'effect/ManagedRuntime'
 	import { type Snippet, onDestroy, onMount } from 'svelte'
 	import { fade } from 'svelte/transition'
-
-	import { Eff, MR } from '$lib/core/imports.ts'
 
 	import { useCases } from '$lib/business/index.ts'
 	import * as Utils from '$lib/ui/adapters.svelte.ts'
@@ -13,7 +13,7 @@
 	import Spinner from '$lib/ui/components/spinner.svelte'
 	import { setGlobalContext } from '$lib/ui/context.ts'
 
-	const runtime = MR.make(useCases)
+	const runtime = ManagedRuntime.make(useCases)
 
 	onDestroy(() => {
 		void runtime.dispose()
@@ -28,9 +28,9 @@
 		setGlobalContext({ runtime })
 
 		runEffect(
-			Eff.gen(function* () {
-				yield* Eff.all([
-					Eff.promise(() =>
+			Effect.gen(function* () {
+				yield* Effect.all([
+					Effect.promise(() =>
 						Promise.all([
 							document.fonts.ready,
 							SafeArea.enable({
@@ -44,7 +44,7 @@
 							}),
 						]),
 					),
-					Eff.sleep(150),
+					Effect.sleep(150),
 				])
 
 				areFontsLoaded = true

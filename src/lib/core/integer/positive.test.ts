@@ -1,30 +1,30 @@
 import { assert, describe, effect } from '@effect/vitest'
+import * as Effect from 'effect/Effect'
 
 import * as H from '$lib/core/test-helpers.ts'
 
-import { Eff } from '../imports.ts'
-import { fromNumber, unsafeFromNumber } from './positive.ts'
+import * as Positive from './positive.ts'
 
 describe.concurrent(`positive integer`, () => {
 	effect.prop(
 		`should be ok`,
 		[H.FC.integer({ min: 1 })],
 		([integer], { expect }) =>
-			Eff.gen(function* () {
-				const result = fromNumber(integer)
+			Effect.gen(function* () {
+				const result = Positive.fromNumber(integer)
 				assert(result._tag === `Some`, `Could not parse number`)
 				expect(result.value).toStrictEqual(integer)
 
-				yield* Eff.void
+				yield* Effect.void
 			}),
 	)
 
 	effect.prop(`should return none`, [H.FC.integer({ max: 0 })], ([integer]) =>
-		Eff.gen(function* () {
-			const result = fromNumber(integer)
+		Effect.gen(function* () {
+			const result = Positive.fromNumber(integer)
 			assert(result._tag === `None`, `Number should not be valid`)
 
-			yield* Eff.void
+			yield* Effect.void
 		}),
 	)
 
@@ -32,11 +32,11 @@ describe.concurrent(`positive integer`, () => {
 		`should be ok`,
 		[H.FC.integer({ min: 1 })],
 		([integer], { expect }) =>
-			Eff.gen(function* () {
-				const number = unsafeFromNumber(integer)
+			Effect.gen(function* () {
+				const number = Positive.unsafeFromNumber(integer)
 				expect(number).toStrictEqual(integer)
 
-				yield* Eff.void
+				yield* Effect.void
 			}),
 	)
 
@@ -44,10 +44,10 @@ describe.concurrent(`positive integer`, () => {
 		`should crash`,
 		[H.FC.integer({ max: 0 })],
 		([integer], { expect }) =>
-			Eff.gen(function* () {
-				expect(() => unsafeFromNumber(integer)).toThrowError()
+			Effect.gen(function* () {
+				expect(() => Positive.unsafeFromNumber(integer)).toThrowError()
 
-				yield* Eff.void
+				yield* Effect.void
 			}),
 	)
 })

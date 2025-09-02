@@ -1,33 +1,39 @@
-import { Arbitrary } from 'effect'
+import * as Arbitrary from 'effect/Arbitrary'
+import * as Brand from 'effect/Brand'
+import * as HashSet from 'effect/HashSet'
+import * as _Schema from 'effect/Schema'
 
-import { B, HS, NEHS, PInt, Sc } from './imports.ts'
+import * as PositiveInteger from './integer/positive.ts'
 
-export type NonEmptyHashSet<A> = B.Branded<HS.HashSet<A>, `NonEmptyHashSet`>
+export type NonEmptyHashSet<A> = Brand.Branded<
+	HashSet.HashSet<A>,
+	`NonEmptyHashSet`
+>
 
 /** @internal */
 export const NonEmptyHashSet = <A>() =>
-	B.refined<NonEmptyHashSet<A>>(
-		set => HS.size(set) > 0,
-		() => B.error(`Provided set is empty`),
+	Brand.refined<NonEmptyHashSet<A>>(
+		set => HashSet.size(set) > 0,
+		() => Brand.error(`Provided set is empty`),
 	)
 
-export const NonEmptyHashSetSchema = <Value extends Sc.Schema.Any>(
-	value: Value,
-) =>
-	Sc.fromBrand(NonEmptyHashSet<Value[`Type`]>())(Sc.HashSet(value)).annotations(
-		{
+export const Schema = <Value extends _Schema.Schema.Any>(value: Value) =>
+	_Schema
+		.fromBrand(NonEmptyHashSet<Value[`Type`]>())(_Schema.HashSet(value))
+		.annotations({
 			arbitrary: () => () =>
-				Arbitrary.make(Sc.HashSet(value))
-					.filter(set => HS.size(set) > 0)
-					.map(NEHS.unsafeFromHashSet),
-		},
-	)
+				Arbitrary.make(_Schema.HashSet(value))
+					.filter(set => HashSet.size(set) > 0)
+					.map(unsafeFromHashSet),
+		})
 
-export const size = <A>(hashSet: NonEmptyHashSet<A>): PInt.PositiveInteger =>
-	PInt.unsafeFromNumber(HS.size(hashSet))
+export const size = <A>(
+	hashSet: NonEmptyHashSet<A>,
+): PositiveInteger.PositiveInteger =>
+	PositiveInteger.unsafeFromNumber(HashSet.size(hashSet))
 
-export const unsafeFromHashSet = <A>(hashSet: HS.HashSet<A>) =>
+export const unsafeFromHashSet = <A>(hashSet: HashSet.HashSet<A>) =>
 	NonEmptyHashSet<A>()(hashSet)
 
-export const fromHashSet = <A>(hashSet: HS.HashSet<A>) =>
+export const fromHashSet = <A>(hashSet: HashSet.HashSet<A>) =>
 	NonEmptyHashSet<A>().option(hashSet)

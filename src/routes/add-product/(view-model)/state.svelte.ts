@@ -1,4 +1,8 @@
-import { Int, NETS, O, pipe } from '$lib/core/imports.ts'
+import { pipe } from 'effect/Function'
+import * as Option from 'effect/Option'
+
+import * as Integer from '$lib/core/integer/index.ts'
+import * as NonEmptyTrimmedString from '$lib/core/non-empty-trimmed-string.ts'
 
 export type State = {
 	name: string
@@ -29,9 +33,9 @@ export function createStateContext() {
 		hasInteractedWithName: false,
 	})
 
-	const maybeName = $derived(NETS.fromString(state.name))
+	const maybeName = $derived(NonEmptyTrimmedString.fromString(state.name))
 
-	const isNameValid = $derived(O.isSome(maybeName))
+	const isNameValid = $derived(Option.isSome(maybeName))
 
 	const isSubmittable = $derived(isNameValid && !state.isAdding)
 
@@ -40,10 +44,13 @@ export function createStateContext() {
 	)
 
 	const maybeExpirationDate = $derived(
-		pipe(O.fromNullable(state.expirationDate), O.flatMap(Int.fromNumber)),
+		pipe(
+			Option.fromNullable(state.expirationDate),
+			Option.flatMap(Integer.fromNumber),
+		),
 	)
 
-	const maybeToastMessage = $derived(O.fromNullable(state.toastMessage))
+	const maybeToastMessage = $derived(Option.fromNullable(state.toastMessage))
 
 	const formattedCurrentDate = $derived(
 		new Date(state.currentDate).toISOString().substring(0, 10),

@@ -1,11 +1,15 @@
-import { B, Int } from '../imports.ts'
-import * as NNN from '../number/non-negative.ts'
-import type { Integer } from './index.ts'
+import * as Brand from 'effect/Brand'
 
-export type NonNegativeInteger = Integer & NNN.NonNegative
+import * as NonNegative from '../number/non-negative.ts'
+import * as Integer from './index.ts'
+
+export type NonNegativeInteger = Integer.Integer & NonNegative.NonNegative
 
 /** @internal */
-export const NonNegativeInteger = B.all(Int.Integer, NNN.NonNegative)
+export const NonNegativeInteger = Brand.all(
+	Integer.Integer,
+	NonNegative.NonNegative,
+)
 
 export const fromNumber = (number: number) => NonNegativeInteger.option(number)
 export const unsafeFromNumber = NonNegativeInteger

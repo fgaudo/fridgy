@@ -1,6 +1,7 @@
 import { registerPlugin } from '@capacitor/core'
+import * as Effect from 'effect/Effect'
 
-import { Eff, H } from '$lib/core/imports.ts'
+import * as H from '$lib/core/helper'
 
 interface FridgySqlitePlugin {
 	getAllProductsWithTotal(): Promise<unknown>
@@ -16,7 +17,7 @@ interface FridgySqlitePlugin {
 	deleteProductsByIds(data: { ids: readonly number[] }): Promise<unknown>
 }
 
-export class DbPlugin extends Eff.Service<DbPlugin>()(`DbPlugin`, {
+export class DbPlugin extends Effect.Service<DbPlugin>()(`DbPlugin`, {
 	sync: () => {
 		const db = registerPlugin<FridgySqlitePlugin>(`FridgySqlitePlugin`)
 

@@ -1,7 +1,9 @@
+import * as Effect from 'effect/Effect'
+import { flow, pipe } from 'effect/Function'
+import * as Queue from 'effect/Queue'
 import type { Cancel } from 'effect/Runtime'
+import * as Stream from 'effect/Stream'
 import { onDestroy, onMount } from 'svelte'
-
-import { Eff, Q, Str, flow, pipe } from '$lib/core/imports.ts'
 
 import type { UseCases } from '$lib/business/app/use-cases.ts'
 
@@ -10,26 +12,28 @@ import { type EffectRunner, effectToStream } from './adapters.svelte.ts'
 export function createCrashHandler(
 	stateCallback: () => boolean,
 	runner: EffectRunner<UseCases>,
-	handleError: Eff.Effect<void>,
+	handleError: Effect.Effect<void>,
 ) {
 	effectToStream({ state: stateCallback }).pipe(
-		Str.filter(({ state }) => state),
-		Str.tap(() =>
-			Eff.sync(() => {
+		Stream.filter(({ state }) => state),
+		Stream.tap(() =>
+			Effect.sync(() => {
 				sessionStorage.setItem(`crash`, `true`)
 				window.location.reload()
 			}),
 		),
-		Str.runDrain,
+		Stream.runDrain,
 		runner.runEffect,
 	)
 
 	onMount(() =>
 		runner.runEffect(
-			Eff.gen(function* () {
-				const hasCrash = yield* Eff.sync(() => sessionStorage.getItem(`crash`))
+			Effect.gen(function* () {
+				const hasCrash = yield* Effect.sync(() =>
+					sessionStorage.getItem(`crash`),
+				)
 				if (hasCrash !== `true`) return
-				yield* Eff.sync(() => {
+				yield* Effect.sync(() => {
 					sessionStorage.removeItem(`crash`)
 				})
 				yield* handleError
@@ -40,10 +44,10 @@ export function createCrashHandler(
 
 export type Update<S, M, R> = (state: S, message: M) => Command<M, R>[]
 
-export type Command<M, R> = Eff.Effect<M, never, R>
+export type Command<M, R> = Effect.Effect<M, never, R>
 
 interface Dispatcher<M> {
-	dispatch: (m: M) => Eff.Effect<void>
+	dispatch: (m: M) => Effect.Effect<void>
 	unsafeDispatch: (m: M) => Cancel<void>
 }
 
@@ -53,21 +57,21 @@ export function makeDispatcher<S, M extends { _tag: string }, R>(
 	update: Update<S, M, R>,
 	fatalMessage: (error: unknown) => M,
 ): Dispatcher<M> {
-	const queue = Eff.runSync(Q.unbounded<M>())
+	const queue = Effect.runSync(Queue.unbounded<M>())
 
 	let cancel: Cancel<unknown> | undefined
 
 	onMount(() => {
 		cancel = effectRunner.runEffect(
-			Eff.scoped(
-				Eff.gen(function* () {
+			Effect.scoped(
+				Effect.gen(function* () {
 					while (true) {
 						yield* pipe(
-							Eff.gen(function* () {
-								const m = yield* Q.take(queue)
+							Effect.gen(function* () {
+								const m = yield* Queue.take(queue)
 
-								yield* Eff.logDebug(`Dispatched message "${m._tag}"`).pipe(
-									Eff.annotateLogs({ message: m }),
+								yield* Effect.logDebug(`Dispatched message "${m._tag}"`).pipe(
+									Effect.annotateLogs({ message: m }),
 								)
 
 								const commands = update(mutableState, m)
@@ -75,19 +79,19 @@ export function makeDispatcher<S, M extends { _tag: string }, R>(
 								for (const command of commands) {
 									yield* pipe(
 										command,
-										Eff.flatMap(m => queue.offer(m)),
-										Eff.catchAllDefect(err =>
-											Eff.logFatal(err).pipe(
-												Eff.andThen(Q.offer(queue, fatalMessage(err))),
+										Effect.flatMap(m => queue.offer(m)),
+										Effect.catchAllDefect(err =>
+											Effect.logFatal(err).pipe(
+												Effect.andThen(Queue.offer(queue, fatalMessage(err))),
 											),
 										),
-										Eff.forkScoped,
+										Effect.forkScoped,
 									)
 								}
 							}),
-							Eff.catchAllDefect(err =>
-								Eff.logFatal(err).pipe(
-									Eff.andThen(Q.offer(queue, fatalMessage(err))),
+							Effect.catchAllDefect(err =>
+								Effect.logFatal(err).pipe(
+									Effect.andThen(Queue.offer(queue, fatalMessage(err))),
 								),
 							),
 						)
@@ -98,7 +102,7 @@ export function makeDispatcher<S, M extends { _tag: string }, R>(
 	})
 
 	onDestroy(() => {
-		Eff.runSync(queue.shutdown)
+		Effect.runSync(queue.shutdown)
 		cancel?.()
 	})
 

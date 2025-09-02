@@ -1,24 +1,32 @@
-import { C, Da, Eff, Int, NETS, Sc } from '$lib/core/imports.ts'
+import * as Context from 'effect/Context'
+import * as Data from 'effect/Data'
+import type { Effect } from 'effect/Effect'
+import * as Schema from 'effect/Schema'
 
-export const ProductDTO = Sc.Struct({
-	maybeId: Sc.Option(Sc.String),
-	maybeName: Sc.Option(NETS.NonEmptyTrimmedStringSchema),
-	maybeExpirationDate: Sc.Option(Int.IntegerSchema),
-	maybeCreationDate: Sc.Option(Int.IntegerSchema),
+import * as Integer from '$lib/core/integer/index.ts'
+import * as NonEmptyTrimmedString from '$lib/core/non-empty-trimmed-string.ts'
+
+export const ProductDTO = Schema.Struct({
+	maybeId: Schema.Option(Schema.String),
+	maybeName: Schema.Option(NonEmptyTrimmedString.Schema),
+	maybeExpirationDate: Schema.Option(Integer.Schema),
+	maybeCreationDate: Schema.Option(Integer.Schema),
 })
-export type ProductDTO = Sc.Schema.Type<typeof ProductDTO>
+export type ProductDTO = Schema.Schema.Type<typeof ProductDTO>
 
-export const GetSortedProductsDTO = Sc.Array(ProductDTO)
+export const GetSortedProductsDTO = Schema.Array(ProductDTO)
 
-export type GetSortedProductsDTO = Sc.Schema.Type<typeof GetSortedProductsDTO>
+export type GetSortedProductsDTO = Schema.Schema.Type<
+	typeof GetSortedProductsDTO
+>
 
-export class FetchingFailed extends Da.TaggedError(`FetchingFailed`) {}
+export class FetchingFailed extends Data.TaggedError(`FetchingFailed`) {}
 
-export class InvalidDataReceived extends Da.TaggedError(
+export class InvalidDataReceived extends Data.TaggedError(
 	`InvalidDataReceived`,
 ) {}
 
-export class Tag extends C.Tag(`app/operations/GetSortedProducts`)<
+export class Tag extends Context.Tag(`app/operations/GetSortedProducts`)<
 	Tag,
-	Eff.Effect<GetSortedProductsDTO, FetchingFailed | InvalidDataReceived>
+	Effect<GetSortedProductsDTO, FetchingFailed | InvalidDataReceived>
 >() {}

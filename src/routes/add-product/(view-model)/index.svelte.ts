@@ -1,4 +1,5 @@
-import { Eff, pipe } from '$lib/core/imports.ts'
+import * as Effect from 'effect/Effect'
+import { pipe } from 'effect/Function'
 
 import { makeEffectRunner } from '$lib/ui/adapters.svelte.ts'
 import { getGlobalContext } from '$lib/ui/context.ts'
@@ -29,16 +30,16 @@ export function createViewModel() {
 		tasks: {
 			addProduct: () =>
 				pipe(
-					Eff.log(`Received addProduct event from the ui`),
-					Eff.andThen(dispatch(Message.AddProduct())),
+					Effect.log(`Received addProduct event from the ui`),
+					Effect.andThen(dispatch(Message.AddProduct())),
 					runner.runEffect,
 				),
 			setExpirationDate: (value: string) =>
 				pipe(
-					Eff.log(
+					Effect.log(
 						`Received setExpirationDate event from the ui with value ${value}`,
 					),
-					Eff.andThen(
+					Effect.andThen(
 						dispatch(
 							Message.SetExpirationDate({
 								expirationDate: value,
@@ -50,22 +51,22 @@ export function createViewModel() {
 
 			setName: (name: string) =>
 				pipe(
-					Eff.log(`Received setName event from the ui with name ${name}`),
-					Eff.andThen(dispatch(Message.SetName({ name }))),
+					Effect.log(`Received setName event from the ui with name ${name}`),
+					Effect.andThen(dispatch(Message.SetName({ name }))),
 					runner.runEffect,
 				),
 
 			setNameInteracted: () =>
 				pipe(
-					Eff.log(`Received setNameInteracted event from the ui`),
-					Eff.andThen(dispatch(Message.SetNameInteracted())),
+					Effect.log(`Received setNameInteracted event from the ui`),
+					Effect.andThen(dispatch(Message.SetNameInteracted())),
 					runner.runEffect,
 				),
 
 			showCrash: () => {
 				pipe(
-					Eff.log(`Received showCrash event from the ui`),
-					Eff.andThen(dispatch(Message.ShowCrash())),
+					Effect.log(`Received showCrash event from the ui`),
+					Effect.andThen(dispatch(Message.ShowCrash())),
 					runner.runEffect,
 				)
 			},

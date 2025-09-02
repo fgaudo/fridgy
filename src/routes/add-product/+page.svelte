@@ -2,10 +2,9 @@
 	import ArrowLeft from '@lucide/svelte/icons/arrow-left'
 	import Quote from '@lucide/svelte/icons/quote'
 	import { getDayOfYear } from 'date-fns'
+	import * as Option from 'effect/Option'
 	import { cubicIn, cubicOut } from 'svelte/easing'
 	import { fade, fly } from 'svelte/transition'
-
-	import { O } from '$lib/core/imports.ts'
 
 	import sayings from '$lib/ui/assets/sayings.json' with { type: 'json' }
 	import Ripple from '$lib/ui/components/ripple.svelte'
@@ -106,7 +105,7 @@
 				Expiration date
 			</label>
 			<div class="relative h-16">
-				{#if O.isNone(viewModel.derived.maybeExpirationDate)}
+				{#if Option.isNone(viewModel.derived.maybeExpirationDate)}
 					<div
 						class="h-full flex items-center text-gray-400 absolute focus:ring-0 bg-secondary/5 shadow-none p-4 w-full rounded-[4px] border-0 z-40 pointer-events-none"
 					>
@@ -125,7 +124,7 @@
 					class={[
 						`absolute h-full focus:ring-0 bg-secondary/5 shadow-none p-4 w-full rounded-[4px] border-0`,
 						{
-							'opacity-0': O.isNone(viewModel.derived.maybeExpirationDate),
+							'opacity-0': Option.isNone(viewModel.derived.maybeExpirationDate),
 						},
 					]}
 					min={viewModel.derived.formattedCurrentDate}
@@ -159,7 +158,7 @@
 		</div>
 	{/if}
 
-	{#key O.isSome(viewModel.derived.maybeToastMessage)}
+	{#key Option.isSome(viewModel.derived.maybeToastMessage)}
 		<div
 			in:fade={{
 				duration: 300,
@@ -169,7 +168,7 @@
 			style:bottom={`calc(var(--safe-area-inset-bottom, 0) + 21px)`}
 			class="z-90 fixed flex left-0 right-0 bottom-3 items-center justify-center transition-all"
 		>
-			{#if O.isSome(viewModel.derived.maybeToastMessage)}
+			{#if Option.isSome(viewModel.derived.maybeToastMessage)}
 				<div class="flex justify-center items-center px-8 w-full max-w-lg">
 					<div
 						id="toast-success"

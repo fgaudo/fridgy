@@ -1,4 +1,9 @@
-import { E, Eff, Int, NETS, O } from '$lib/core/imports.ts'
+import * as Effect from 'effect/Effect'
+import * as Either from 'effect/Either'
+import * as Option from 'effect/Option'
+
+import * as Integer from '$lib/core/integer/index.ts'
+import * as NonEmptyTrimmedString from '$lib/core/non-empty-trimmed-string.ts'
 
 import type { UseCases } from '$lib/business/app/use-cases.ts'
 import { AddProduct } from '$lib/business/index.ts'
@@ -13,25 +18,25 @@ export const addProduct = ({
 	name,
 	maybeExpirationDate,
 }: {
-	name: NETS.NonEmptyTrimmedString
-	maybeExpirationDate: O.Option<Int.Integer>
+	name: NonEmptyTrimmedString.NonEmptyTrimmedString
+	maybeExpirationDate: Option.Option<Integer.Integer>
 }): AddProductCommand =>
-	Eff.gen(function* () {
-		yield* Eff.log(`Executed command for adding a product`)
+	Effect.gen(function* () {
+		yield* Effect.log(`Executed command for adding a product`)
 
 		const addProduct = yield* AddProduct.AddProduct
 
-		const [result] = yield* Eff.all([
-			Eff.either(
+		const [result] = yield* Effect.all([
+			Effect.either(
 				addProduct({
 					name,
 					maybeExpirationDate: maybeExpirationDate,
 				}),
 			),
-			Eff.sleep(MINIMUM_LAG_MS),
+			Effect.sleep(MINIMUM_LAG_MS),
 		])
 
-		if (E.isLeft(result)) {
+		if (Either.isLeft(result)) {
 			return Message.AddProductFailed()
 		}
 
@@ -39,15 +44,15 @@ export const addProduct = ({
 	})
 
 export const queueRemoveToast: (id: symbol) => AddProductCommand = id =>
-	Eff.gen(function* () {
-		yield* Eff.logDebug(`Executed command to queue toast removal`)
-		yield* Eff.sleep(`3 seconds`)
+	Effect.gen(function* () {
+		yield* Effect.logDebug(`Executed command to queue toast removal`)
+		yield* Effect.sleep(`3 seconds`)
 		return Message.RemoveToast({ id })
 	})
 
 export const queueLoading: (id: symbol) => AddProductCommand = id =>
-	Eff.gen(function* () {
-		yield* Eff.logDebug(`Executed command to queue spinner display`)
-		yield* Eff.sleep(`150 millis`)
+	Effect.gen(function* () {
+		yield* Effect.logDebug(`Executed command to queue spinner display`)
+		yield* Effect.sleep(`150 millis`)
 		return Message.ShowSpinner({ id })
 	})

@@ -1,6 +1,8 @@
 import { describe, layer } from '@effect/vitest'
+import * as Effect from 'effect/Effect'
+import * as Layer from 'effect/Layer'
+import * as Schema from 'effect/Schema'
 
-import { Eff, L, Sc } from '$lib/core/imports.ts'
 import * as H from '$lib/core/test-helpers.ts'
 
 import { AddProduct } from '$lib/business/app/operations.ts'
@@ -10,22 +12,24 @@ import { command } from './add-product.ts'
 
 describe.concurrent(`Add product`, () => {
 	layer(
-		L.provide(
+		Layer.provide(
 			command,
-			L.succeed(DbPlugin, {
-				addProduct: () => Eff.succeed(undefined),
+			Layer.succeed(DbPlugin, {
+				addProduct: () => Effect.succeed(undefined),
 			} as unknown as DbPlugin),
 		),
 	)(({ effect }) => {
 		effect.prop(
 			`Should just work`,
-			[Sc.NonEmptyArray(AddProduct.Request)],
+			[Schema.NonEmptyArray(AddProduct.Request)],
 			([requests]) =>
-				Eff.gen(function* () {
+				Effect.gen(function* () {
 					const resolver = yield* AddProduct.Resolver
 
-					const exit = yield* Eff.exit(
-						Eff.forEach(requests, request => Eff.request(request, resolver)),
+					const exit = yield* Effect.exit(
+						Effect.forEach(requests, request =>
+							Effect.request(request, resolver),
+						),
 					)
 
 					H.assertExitIsSuccess(exit)
@@ -34,22 +38,24 @@ describe.concurrent(`Add product`, () => {
 	})
 
 	layer(
-		L.provide(
+		Layer.provide(
 			command,
-			L.succeed(DbPlugin, {
-				addProduct: () => Eff.fail(undefined),
+			Layer.succeed(DbPlugin, {
+				addProduct: () => Effect.fail(undefined),
 			} as unknown as DbPlugin),
 		),
 	)(({ effect }) => {
 		effect.prop(
 			`Should return an error`,
-			[Sc.NonEmptyArray(AddProduct.Request)],
+			[Schema.NonEmptyArray(AddProduct.Request)],
 			([requests]) =>
-				Eff.gen(function* () {
+				Effect.gen(function* () {
 					const resolver = yield* AddProduct.Resolver
 
-					const exit = yield* Eff.exit(
-						Eff.forEach(requests, request => Eff.request(request, resolver)),
+					const exit = yield* Effect.exit(
+						Effect.forEach(requests, request =>
+							Effect.request(request, resolver),
+						),
 					)
 
 					H.assertExitIsFailure(exit)
@@ -58,9 +64,9 @@ describe.concurrent(`Add product`, () => {
 	})
 
 	layer(
-		L.provide(
+		Layer.provide(
 			command,
-			L.succeed(DbPlugin, {
+			Layer.succeed(DbPlugin, {
 				addProduct: () => {
 					throw new Error()
 				},
@@ -69,13 +75,15 @@ describe.concurrent(`Add product`, () => {
 	)(({ effect }) => {
 		effect.prop(
 			`Should crash`,
-			[Sc.NonEmptyArray(AddProduct.Request)],
+			[Schema.NonEmptyArray(AddProduct.Request)],
 			([requests]) =>
-				Eff.gen(function* () {
+				Effect.gen(function* () {
 					const resolver = yield* AddProduct.Resolver
 
-					const exit = yield* Eff.exit(
-						Eff.forEach(requests, request => Eff.request(request, resolver)),
+					const exit = yield* Effect.exit(
+						Effect.forEach(requests, request =>
+							Effect.request(request, resolver),
+						),
 					)
 
 					H.assertExitIsDie(exit)

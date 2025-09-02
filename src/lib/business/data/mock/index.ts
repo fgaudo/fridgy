@@ -1,4 +1,5 @@
-import { L, pipe } from '$lib/core/imports.ts'
+import { pipe } from 'effect/Function'
+import * as Layer from 'effect/Layer'
 
 import { Config } from './config.ts'
 import { Db } from './db.ts'
@@ -9,7 +10,7 @@ import { query as getSortedProducts } from './resolvers/get-sorted-products.ts'
 export { addProduct, deleteProductById, getSortedProducts }
 
 export const allImplementations = pipe(
-	L.mergeAll(addProduct, getSortedProducts, deleteProductById),
-	L.provide(Db.Default),
-	L.provide(Config.Default),
+	Layer.mergeAll(addProduct, getSortedProducts, deleteProductById),
+	Layer.provide(Db.Default),
+	Layer.provide(Config.Default),
 )

@@ -1,5 +1,11 @@
-/* eslint-disable @typescript-eslint/no-unnecessary-condition */
-import { Eff, HM, L, R, RR, Ref, pipe } from '$lib/core/imports.ts'
+import * as Effect from 'effect/Effect'
+import { pipe } from 'effect/Function'
+import * as HashMap from 'effect/HashMap'
+import * as Layer from 'effect/Layer'
+import * as Ref from 'effect/Ref'
+import * as Request from 'effect/Request'
+import * as RequestResolver from 'effect/RequestResolver'
+
 import { withLayerLogging } from '$lib/core/logging.ts'
 
 import { DeleteProductById } from '$lib/business/app/operations.ts'
@@ -8,28 +14,29 @@ import { MINIMUM_LAG_MS } from '$lib/ui/constants.ts'
 import { Config } from '../config.ts'
 import { Db } from '../db.ts'
 
-export const command = L.effect(
+export const command = Layer.effect(
 	DeleteProductById.Resolver,
-	Eff.gen(function* () {
+	Effect.gen(function* () {
 		const withErrors = yield* Config.withErrors
 		const db = yield* Db
-		return RR.makeBatched(requests =>
+		return RequestResolver.makeBatched(requests =>
 			pipe(
-				Eff.gen(function* () {
+				Effect.gen(function* () {
 					if (withErrors && Math.random() < 0.5) {
-						return yield* Eff.fail(undefined)
+						return yield* Effect.fail(undefined)
 					}
-					yield* Eff.sleep(MINIMUM_LAG_MS)
+					yield* Effect.sleep(MINIMUM_LAG_MS)
 					for (const request of requests) {
 						yield* Ref.update(db, dbValues => ({
 							...dbValues,
-							map: HM.remove(dbValues.map, request.id),
+							map: HashMap.remove(dbValues.map, request.id),
 						}))
 					}
 				}),
-				Eff.matchCauseEffect({
-					onFailure: error => Eff.forEach(requests, R.failCause(error)),
-					onSuccess: () => Eff.forEach(requests, R.succeed(undefined)),
+				Effect.matchCauseEffect({
+					onFailure: error =>
+						Effect.forEach(requests, Request.failCause(error)),
+					onSuccess: () => Effect.forEach(requests, Request.succeed(undefined)),
 				}),
 				withLayerLogging(`I`),
 			),

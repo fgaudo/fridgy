@@ -1,25 +1,30 @@
-import { B, Int, NETS, O, Sc } from '$lib/core/imports.ts'
+import * as Brand from 'effect/Brand'
+import * as Option from 'effect/Option'
+import * as _Schema from 'effect/Schema'
 
-export type Product = B.Branded<
+import * as Integer from '$lib/core/integer/index.ts'
+import * as NonEmptyTrimmedString from '$lib/core/non-empty-trimmed-string.ts'
+
+export type Product = Brand.Branded<
 	{
-		name: NETS.NonEmptyTrimmedString
-		maybeExpirationDate: O.Option<Int.Integer>
-		creationDate: Int.Integer
+		name: NonEmptyTrimmedString.NonEmptyTrimmedString
+		maybeExpirationDate: Option.Option<Integer.Integer>
+		creationDate: Integer.Integer
 	},
 	`Product`
 >
 
 /** @internal */
-export const Product = B.refined<Product>(
+export const Product = Brand.refined<Product>(
 	() => true,
-	() => B.error(`Product is invalid`),
+	() => Brand.error(`Product is invalid`),
 )
 
-export const ProductSchema = Sc.fromBrand(Product)(
-	Sc.Struct({
-		name: NETS.NonEmptyTrimmedStringSchema,
-		maybeExpirationDate: Sc.Option(Int.IntegerSchema),
-		creationDate: Int.IntegerSchema,
+export const Schema = _Schema.fromBrand(Product)(
+	_Schema.Struct({
+		name: NonEmptyTrimmedString.Schema,
+		maybeExpirationDate: _Schema.Option(Integer.Schema),
+		creationDate: Integer.Schema,
 	}),
 )
 

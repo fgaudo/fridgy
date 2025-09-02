@@ -1,7 +1,8 @@
 import { App as CAP } from '@capacitor/app'
+import * as Effect from 'effect/Effect'
+import { pipe } from 'effect/Function'
+import * as Stream from 'effect/Stream'
 import { onMount } from 'svelte'
-
-import { Eff, Str, pipe } from '$lib/core/imports.ts'
 
 import {
 	createCapacitorListener,
@@ -36,8 +37,8 @@ export function createViewModel() {
 
 		pipe(
 			createCapacitorListener(`backButton`),
-			Str.runForEach(() =>
-				Eff.gen(function* () {
+			Stream.runForEach(() =>
+				Effect.gen(function* () {
 					if (context.state.isMenuOpen) {
 						return yield* dispatch(Message.ToggleMenu())
 					}
@@ -46,7 +47,7 @@ export function createViewModel() {
 						return yield* dispatch(Message.ClearSelected())
 					}
 
-					return yield* Eff.promise(() => CAP.exitApp())
+					return yield* Effect.promise(() => CAP.exitApp())
 				}),
 			),
 			runner.runEffect,
@@ -54,7 +55,7 @@ export function createViewModel() {
 
 		pipe(
 			createCapacitorListener(`resume`),
-			Str.runForEach(() => dispatch(Message.StartRefreshTime())),
+			Stream.runForEach(() => dispatch(Message.StartRefreshTime())),
 			runner.runEffect,
 		)
 	})
@@ -63,12 +64,12 @@ export function createViewModel() {
 		refreshTimeListenersEnabled: () =>
 			context.derived.refreshTimeListenersEnabled,
 	}).pipe(
-		Str.flatMap(
+		Stream.flatMap(
 			({ refreshTimeListenersEnabled }) =>
-				refreshTimeListenersEnabled ? refreshTimeInterval : Str.empty,
+				refreshTimeListenersEnabled ? refreshTimeInterval : Stream.empty,
 			{ switch: true },
 		),
-		Str.runForEach(dispatch),
+		Stream.runForEach(dispatch),
 		runner.runEffect,
 	)
 
@@ -78,36 +79,36 @@ export function createViewModel() {
 		tasks: {
 			refreshList: () => {
 				pipe(
-					Eff.log(`UI triggered refreshList`),
-					Eff.andThen(dispatch(Message.FetchList())),
+					Effect.log(`UI triggered refreshList`),
+					Effect.andThen(dispatch(Message.FetchList())),
 					runner.runEffect,
 				)
 			},
 			clearSelected: () =>
 				pipe(
-					Eff.log(`UI triggered clearSelected`),
-					Eff.andThen(dispatch(Message.ClearSelected())),
+					Effect.log(`UI triggered clearSelected`),
+					Effect.andThen(dispatch(Message.ClearSelected())),
 					runner.runEffect,
 				),
 
 			toggleItem: (product: ProductViewModel) =>
 				pipe(
-					Eff.log(`UI triggered toggleItem`),
-					Eff.andThen(dispatch(Message.ToggleItem({ product }))),
+					Effect.log(`UI triggered toggleItem`),
+					Effect.andThen(dispatch(Message.ToggleItem({ product }))),
 					runner.runEffect,
 				),
 
 			toggleMenu: () =>
 				pipe(
-					Eff.log(`UI triggered toggleMenu`),
-					Eff.andThen(dispatch(Message.ToggleMenu())),
+					Effect.log(`UI triggered toggleMenu`),
+					Effect.andThen(dispatch(Message.ToggleMenu())),
 					runner.runEffect,
 				),
 
 			deleteSelected: () =>
 				pipe(
-					Eff.log(`UI triggered deleteSelected`),
-					Eff.andThen(dispatch(Message.StartDeleteSelectedAndRefresh())),
+					Effect.log(`UI triggered deleteSelected`),
+					Effect.andThen(dispatch(Message.StartDeleteSelectedAndRefresh())),
 					runner.runEffect,
 				),
 		},

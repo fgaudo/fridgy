@@ -1,11 +1,11 @@
-import { B } from '../imports.ts'
+import * as Brand from 'effect/Brand'
 
-export type Positive = B.Branded<number, `Positive`>
+export type Positive = Brand.Branded<number, `Positive`>
 
 /** @internal **/
-export const Positive = B.refined<Positive>(
+export const Positive = Brand.refined<Positive>(
 	n => n > 0,
-	n => B.error(`Expected ${n.toString(10)} to be a positive number`),
+	n => Brand.error(`Expected ${n.toString(10)} to be a positive number`),
 )
 
 export const fromNumber = (number: number) => Positive.option(number)

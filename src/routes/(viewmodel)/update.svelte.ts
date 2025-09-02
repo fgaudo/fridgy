@@ -1,7 +1,13 @@
 import { Haptics, ImpactStyle } from '@capacitor/haptics'
+import * as Data from 'effect/Data'
+import * as Effect from 'effect/Effect'
+import { pipe } from 'effect/Function'
+import * as HashSet from 'effect/HashSet'
+import * as Match from 'effect/Match'
+import * as Option from 'effect/Option'
 import { SvelteSet } from 'svelte/reactivity'
 
-import { Da, Eff, HS, M, NEHS, O, pipe } from '$lib/core/imports.ts'
+import * as NonEmptyHashSet from '$lib/core/non-empty-hash-set.ts'
 
 import type { UseCases } from '$lib/business/app/use-cases.ts'
 import type { GetSortedProductsDTO } from '$lib/business/app/use-cases/get-sorted-products.ts'
@@ -16,7 +22,7 @@ import {
 } from './commands.ts'
 import { type ProductViewModel, type State } from './state.svelte.ts'
 
-export type Message = Da.TaggedEnum<{
+export type Message = Data.TaggedEnum<{
 	FetchList: object
 	FetchListSucceeded: {
 		taskId: symbol
@@ -43,14 +49,14 @@ export type Message = Da.TaggedEnum<{
 	Crash: { message: unknown }
 }>
 
-export const Message = Da.taggedEnum<Message>()
+export const Message = Data.taggedEnum<Message>()
 
 export const update: Update<State, Message, UseCases> = (state, message) => {
-	return M.type<Message>().pipe(
-		M.tag(`StartRefreshTime`, () => {
+	return Match.type<Message>().pipe(
+		Match.tag(`StartRefreshTime`, () => {
 			return [refreshTime]
 		}),
-		M.tag(`FetchList`, () => {
+		Match.tag(`FetchList`, () => {
 			const taskId = Symbol()
 
 			state.refreshingTaskId = taskId
@@ -58,11 +64,11 @@ export const update: Update<State, Message, UseCases> = (state, message) => {
 
 			return [refreshList(taskId)]
 		}),
-		M.tag(`FetchListFailed`, ({ taskId }) => {
+		Match.tag(`FetchListFailed`, ({ taskId }) => {
 			if (taskId !== state.refreshingTaskId) {
 				return [
-					Eff.logWarning(`FetchListFailed is stale`).pipe(
-						Eff.as(Message.NoOp()),
+					Effect.logWarning(`FetchListFailed is stale`).pipe(
+						Effect.as(Message.NoOp()),
 					),
 				]
 			}
@@ -72,11 +78,11 @@ export const update: Update<State, Message, UseCases> = (state, message) => {
 
 			return []
 		}),
-		M.tag(`FetchListSucceeded`, ({ result, taskId }) => {
+		Match.tag(`FetchListSucceeded`, ({ result, taskId }) => {
 			if (taskId !== state.refreshingTaskId) {
 				return [
-					Eff.logWarning(`FetchListSucceeded is stale`).pipe(
-						Eff.as(Message.NoOp()),
+					Effect.logWarning(`FetchListSucceeded is stale`).pipe(
+						Effect.as(Message.NoOp()),
 					),
 				]
 			}
@@ -88,7 +94,7 @@ export const update: Update<State, Message, UseCases> = (state, message) => {
 					if (entry.isCorrupt) {
 						return {
 							...entry,
-							maybeName: O.getOrUndefined(entry.maybeName),
+							maybeName: Option.getOrUndefined(entry.maybeName),
 							id: Symbol(),
 						}
 					}
@@ -96,16 +102,20 @@ export const update: Update<State, Message, UseCases> = (state, message) => {
 					if (entry.isValid) {
 						return {
 							...entry,
-							maybeExpirationDate: O.getOrUndefined(entry.maybeExpirationDate),
+							maybeExpirationDate: Option.getOrUndefined(
+								entry.maybeExpirationDate,
+							),
 							isSelected: false,
 						}
 					}
 
 					return {
 						...entry,
-						maybeName: O.getOrUndefined(entry.maybeName),
-						maybeCreationDate: O.getOrUndefined(entry.maybeCreationDate),
-						maybeExpirationDate: O.getOrUndefined(entry.maybeExpirationDate),
+						maybeName: Option.getOrUndefined(entry.maybeName),
+						maybeCreationDate: Option.getOrUndefined(entry.maybeCreationDate),
+						maybeExpirationDate: Option.getOrUndefined(
+							entry.maybeExpirationDate,
+						),
 						isSelected: false,
 					}
 				}),
@@ -114,18 +124,18 @@ export const update: Update<State, Message, UseCases> = (state, message) => {
 
 			return []
 		}),
-		M.tag(`StartDeleteSelectedAndRefresh`, () => {
+		Match.tag(`StartDeleteSelectedAndRefresh`, () => {
 			if (state.isDeleteRunning) {
 				return []
 			}
 
 			const maybeIds = pipe(
-				O.fromNullable(state.products?.selected),
-				O.map(HS.fromIterable),
-				O.flatMap(NEHS.fromHashSet),
+				Option.fromNullable(state.products?.selected),
+				Option.map(HashSet.fromIterable),
+				Option.flatMap(NonEmptyHashSet.fromHashSet),
 			)
 
-			if (O.isNone(maybeIds)) {
+			if (Option.isNone(maybeIds)) {
 				return []
 			}
 
@@ -134,14 +144,14 @@ export const update: Update<State, Message, UseCases> = (state, message) => {
 
 			return [deleteSelectedAndRefresh(maybeIds.value), queueLoading(id)]
 		}),
-		M.tag(`DeleteSelectedAndRefreshSucceeded`, ({ result }) => {
+		Match.tag(`DeleteSelectedAndRefreshSucceeded`, ({ result }) => {
 			state.isDeleteRunning = false
 			state.products = {
 				entries: result.map(entry => {
 					if (entry.isCorrupt) {
 						return {
 							...entry,
-							maybeName: O.getOrUndefined(entry.maybeName),
+							maybeName: Option.getOrUndefined(entry.maybeName),
 							id: Symbol(),
 						}
 					}
@@ -149,16 +159,20 @@ export const update: Update<State, Message, UseCases> = (state, message) => {
 					if (entry.isValid) {
 						return {
 							...entry,
-							maybeExpirationDate: O.getOrUndefined(entry.maybeExpirationDate),
+							maybeExpirationDate: Option.getOrUndefined(
+								entry.maybeExpirationDate,
+							),
 							isSelected: false,
 						}
 					}
 
 					return {
 						...entry,
-						maybeName: O.getOrUndefined(entry.maybeName),
-						maybeCreationDate: O.getOrUndefined(entry.maybeCreationDate),
-						maybeExpirationDate: O.getOrUndefined(entry.maybeExpirationDate),
+						maybeName: Option.getOrUndefined(entry.maybeName),
+						maybeCreationDate: Option.getOrUndefined(entry.maybeCreationDate),
+						maybeExpirationDate: Option.getOrUndefined(
+							entry.maybeExpirationDate,
+						),
 						isSelected: false,
 					}
 				}),
@@ -170,14 +184,14 @@ export const update: Update<State, Message, UseCases> = (state, message) => {
 
 			return []
 		}),
-		M.tag(`DeleteSelectedFailed`, () => {
+		Match.tag(`DeleteSelectedFailed`, () => {
 			state.isDeleteRunning = false
 			state.isLoading = false
 			state.spinnerTaskId = undefined
 
 			return []
 		}),
-		M.tag(`DeleteSelectedSucceededButRefreshFailed`, () => {
+		Match.tag(`DeleteSelectedSucceededButRefreshFailed`, () => {
 			state.isDeleteRunning = false
 			state.products = undefined
 			state.receivedError = true
@@ -187,7 +201,7 @@ export const update: Update<State, Message, UseCases> = (state, message) => {
 
 			return []
 		}),
-		M.tag(`ClearSelected`, () => {
+		Match.tag(`ClearSelected`, () => {
 			if (state.products === undefined) return []
 
 			state.products.selected.clear()
@@ -197,7 +211,7 @@ export const update: Update<State, Message, UseCases> = (state, message) => {
 			})
 			return []
 		}),
-		M.tag(`ToggleItem`, ({ product }) => {
+		Match.tag(`ToggleItem`, ({ product }) => {
 			if (state.isDeleteRunning) return []
 
 			if (product.isCorrupt) {
@@ -220,33 +234,37 @@ export const update: Update<State, Message, UseCases> = (state, message) => {
 			return [
 				...(hasSelectionStarted
 					? [
-							Eff.promise(() =>
+							Effect.promise(() =>
 								Haptics.impact({
 									style: ImpactStyle.Light,
 								}),
-							).pipe(Eff.as(Message.NoOp())),
+							).pipe(Effect.as(Message.NoOp())),
 						]
 					: []),
 			]
 		}),
-		M.tag(`RefreshTimeResult`, ({ timestamp }) => {
+		Match.tag(`RefreshTimeResult`, ({ timestamp }) => {
 			state.currentTimestamp = timestamp
 
 			return []
 		}),
-		M.tag(`ShowSpinner`, ({ id }) => {
+		Match.tag(`ShowSpinner`, ({ id }) => {
 			if (id !== state.spinnerTaskId) {
 				return [
-					Eff.logWarning(`ShowSpinner is stale`).pipe(Eff.as(Message.NoOp())),
+					Effect.logWarning(`ShowSpinner is stale`).pipe(
+						Effect.as(Message.NoOp()),
+					),
 				]
 			}
 			state.isLoading = true
 			return []
 		}),
-		M.tag(`RemoveToast`, ({ id }) => {
+		Match.tag(`RemoveToast`, ({ id }) => {
 			if (id !== state.toastMessage?.id) {
 				return [
-					Eff.logWarning(`RemoveToast is stale`).pipe(Eff.as(Message.NoOp())),
+					Effect.logWarning(`RemoveToast is stale`).pipe(
+						Effect.as(Message.NoOp()),
+					),
 				]
 			}
 
@@ -254,7 +272,7 @@ export const update: Update<State, Message, UseCases> = (state, message) => {
 
 			return []
 		}),
-		M.tag(`ShowCrash`, () => {
+		Match.tag(`ShowCrash`, () => {
 			const id = Symbol()
 			state.toastMessage = {
 				message: `An unexpected error occurred and the app had to be reloaded`,
@@ -264,16 +282,16 @@ export const update: Update<State, Message, UseCases> = (state, message) => {
 
 			return [queueRemoveToast(id)]
 		}),
-		M.tag(`ToggleMenu`, () => {
+		Match.tag(`ToggleMenu`, () => {
 			state.isMenuOpen = !state.isMenuOpen
 
 			return []
 		}),
-		M.tag(`NoOp`, () => []),
-		M.tag(`Crash`, () => {
+		Match.tag(`NoOp`, () => []),
+		Match.tag(`Crash`, () => {
 			state.hasCrashOccurred = true
 			return []
 		}),
-		M.exhaustive,
+		Match.exhaustive,
 	)(message)
 }

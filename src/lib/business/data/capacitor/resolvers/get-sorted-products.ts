@@ -1,24 +1,33 @@
-import { E, Eff, H, Int, L, NETS, O, Sc, pipe } from '$lib/core/imports.ts'
+import * as Effect from 'effect/Effect'
+import * as Either from 'effect/Either'
+import { pipe } from 'effect/Function'
+import * as Layer from 'effect/Layer'
+import * as Option from 'effect/Option'
+import * as Schema from 'effect/Schema'
+
+import * as H from '$lib/core/helper.ts'
+import * as Integer from '$lib/core/integer/index.ts'
 import { withLayerLogging } from '$lib/core/logging.ts'
+import * as NonEmptyTrimmedString from '$lib/core/non-empty-trimmed-string.ts'
 
 import { GetSortedProducts } from '$lib/business/app/operations.ts'
 
 import { DbPlugin } from '../db-plugin.ts'
 
-export const Backend = Sc.Struct({
-	total: Sc.Number,
-	products: Sc.Array(
-		Sc.Struct({
-			id: Sc.UndefinedOr(Sc.Int).annotations({
+export const Backend = Schema.Struct({
+	total: Schema.Number,
+	products: Schema.Array(
+		Schema.Struct({
+			id: Schema.UndefinedOr(Schema.Int).annotations({
 				decodingFallback: H.fallback(undefined),
 			}),
-			name: Sc.UndefinedOr(Sc.String).annotations({
+			name: Schema.UndefinedOr(Schema.String).annotations({
 				decodingFallback: H.fallback(undefined),
 			}),
-			expirationDate: Sc.UndefinedOr(Sc.JsonNumber).annotations({
+			expirationDate: Schema.UndefinedOr(Schema.JsonNumber).annotations({
 				decodingFallback: H.fallback(undefined),
 			}),
-			creationDate: Sc.UndefinedOr(Sc.JsonNumber).annotations({
+			creationDate: Schema.UndefinedOr(Schema.JsonNumber).annotations({
 				decodingFallback: H.fallback(undefined),
 			}),
 		}).annotations({
@@ -32,48 +41,50 @@ export const Backend = Sc.Struct({
 	),
 })
 
-export const query = L.effect(
+export const query = Layer.effect(
 	GetSortedProducts.Tag,
-	Eff.gen(function* () {
+	Effect.gen(function* () {
 		const { getAllProductsWithTotal } = yield* DbPlugin
-		return Eff.gen(function* () {
-			const result = yield* pipe(getAllProductsWithTotal, Eff.either)
+		return Effect.gen(function* () {
+			const result = yield* pipe(getAllProductsWithTotal, Effect.either)
 
-			if (E.isLeft(result)) {
-				yield* Eff.logError(result.left)
+			if (Either.isLeft(result)) {
+				yield* Effect.logError(result.left)
 				return yield* new GetSortedProducts.FetchingFailed()
 			}
 
-			const decodeResult = yield* Sc.decodeUnknown(Backend)(result.right).pipe(
-				Eff.either,
+			const decodeResult = yield* pipe(
+				Schema.decodeUnknown(Backend)(result.right),
+				Effect.either,
 			)
 
-			if (E.isLeft(decodeResult)) {
+			if (Either.isLeft(decodeResult)) {
 				return yield* new GetSortedProducts.InvalidDataReceived()
 			}
 
-			const entries = yield* Eff.all(
+			const entries = yield* Effect.all(
 				decodeResult.right.products.map(product =>
-					Eff.gen(function* () {
+					Effect.gen(function* () {
 						return {
-							maybeId: yield* O.match(O.fromNullable(product.id), {
-								onNone: () => Eff.succeed(O.none<string>()),
-								onSome: id => Eff.option(Eff.try(() => JSON.stringify(id))),
+							maybeId: yield* Option.match(Option.fromNullable(product.id), {
+								onNone: () => Effect.succeed(Option.none<string>()),
+								onSome: id =>
+									Effect.option(Effect.try(() => JSON.stringify(id))),
 							}),
 
 							maybeName: pipe(
-								O.fromNullable(product.name),
-								O.flatMap(NETS.fromString),
+								Option.fromNullable(product.name),
+								Option.flatMap(NonEmptyTrimmedString.fromString),
 							),
 
 							maybeExpirationDate: pipe(
-								O.fromNullable(product.expirationDate),
-								O.flatMap(Int.fromNumber),
+								Option.fromNullable(product.expirationDate),
+								Option.flatMap(Integer.fromNumber),
 							),
 
 							maybeCreationDate: pipe(
-								O.fromNullable(product.creationDate),
-								O.flatMap(Int.fromNumber),
+								Option.fromNullable(product.creationDate),
+								Option.flatMap(Integer.fromNumber),
 							),
 						} as const
 					}),

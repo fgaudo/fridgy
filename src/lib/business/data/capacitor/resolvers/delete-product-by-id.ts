@@ -1,63 +1,71 @@
-import { A, E, Eff, L, O, R, RR, pipe } from '$lib/core/imports.ts'
+import * as Array from 'effect/Array'
+import * as Effect from 'effect/Effect'
+import * as Either from 'effect/Either'
+import { pipe } from 'effect/Function'
+import * as Layer from 'effect/Layer'
+import * as Option from 'effect/Option'
+import * as Request from 'effect/Request'
+import * as RequestResolver from 'effect/RequestResolver'
+
 import { withLayerLogging } from '$lib/core/logging.ts'
 
 import { DeleteProductById } from '$lib/business/app/operations.ts'
 
 import { DbPlugin } from '../db-plugin.ts'
 
-export const command = L.effect(
+export const command = Layer.effect(
 	DeleteProductById.Resolver,
-	Eff.gen(function* () {
+	Effect.gen(function* () {
 		const { deleteProductsByIds } = yield* DbPlugin
 
-		return RR.makeBatched(requests =>
+		return RequestResolver.makeBatched(requests =>
 			pipe(
-				Eff.gen(function* () {
+				Effect.gen(function* () {
 					const ids = yield* pipe(
 						requests,
-						A.map(request => request.id),
-						A.map(id =>
-							Eff.gen(function* () {
+						Array.map(request => request.id),
+						Array.map(id =>
+							Effect.gen(function* () {
 								const parsed = yield* pipe(
-									Eff.try(() => JSON.parse(id) as unknown),
-									Eff.option,
-									Eff.map(O.filter(id => typeof id === `number`)),
+									Effect.try(() => JSON.parse(id) as unknown),
+									Effect.option,
+									Effect.map(Option.filter(id => typeof id === `number`)),
 								)
 
-								if (O.isSome(parsed)) {
+								if (Option.isSome(parsed)) {
 									return parsed.value
 								}
 
-								yield* Eff.logWarning(
+								yield* Effect.logWarning(
 									`Id has incorrect format. Skipping.`,
-								).pipe(Eff.annotateLogs({ id }))
+								).pipe(Effect.annotateLogs({ id }))
 
-								return yield* Eff.fail(undefined)
+								return yield* Effect.fail(undefined)
 							}),
 						),
-						Eff.allSuccesses,
+						Effect.allSuccesses,
 					)
 
-					yield* Eff.logDebug(
+					yield* Effect.logDebug(
 						`About to delete ${ids.length.toString(10)} products`,
 					)
 
-					const result = yield* Eff.either(
+					const result = yield* Effect.either(
 						deleteProductsByIds({
 							ids,
 						}),
 					)
 
-					if (E.isLeft(result)) {
-						yield* Eff.logError(result.left)
-						return yield* Eff.fail(undefined)
+					if (Either.isLeft(result)) {
+						yield* Effect.logError(result.left)
+						return yield* Effect.fail(undefined)
 					}
 
 					return result.right
 				}),
-				Eff.matchCauseEffect({
-					onFailure: err => Eff.forEach(requests, R.failCause(err)),
-					onSuccess: () => Eff.forEach(requests, R.succeed(undefined)),
+				Effect.matchCauseEffect({
+					onFailure: err => Effect.forEach(requests, Request.failCause(err)),
+					onSuccess: () => Effect.forEach(requests, Request.succeed(undefined)),
 				}),
 				withLayerLogging(`I`),
 			),

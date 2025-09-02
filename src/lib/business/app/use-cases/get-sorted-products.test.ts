@@ -1,6 +1,7 @@
 import { describe, effect, layer } from '@effect/vitest'
+import * as Effect from 'effect/Effect'
+import * as Layer from 'effect/Layer'
 
-import { Eff, L } from '$lib/core/imports.ts'
 import * as H from '$lib/core/test-helpers.ts'
 
 import { GetSortedProducts as Query } from '$lib/business/app/operations.ts'
@@ -13,30 +14,30 @@ import * as Usecase from './get-sorted-products.ts'
 
 describe.concurrent(`Get sorted products`, () => {
 	layer(
-		L.provide(
+		Layer.provide(
 			Usecase.GetSortedProducts.Default,
-			L.succeed(Query.Tag, Eff.fail(new FetchingFailed())),
+			Layer.succeed(Query.Tag, Effect.fail(new FetchingFailed())),
 		),
 	)(({ effect }) => {
 		effect(`Should return an error`, () =>
-			Eff.gen(function* () {
+			Effect.gen(function* () {
 				const service = yield* Usecase.GetSortedProducts
-				const exit = yield* Eff.exit(service)
+				const exit = yield* Effect.exit(service)
 				H.assertExitIsFailure(exit)
 			}),
 		)
 	})
 
 	layer(
-		L.provide(
+		Layer.provide(
 			Usecase.GetSortedProducts.Default,
-			L.succeed(Query.Tag, Eff.fail(new InvalidDataReceived())),
+			Layer.succeed(Query.Tag, Effect.fail(new InvalidDataReceived())),
 		),
 	)(({ effect }) => {
 		effect(`Should return an error`, () =>
-			Eff.gen(function* () {
+			Effect.gen(function* () {
 				const service = yield* Usecase.GetSortedProducts
-				const exit = yield* Eff.exit(service)
+				const exit = yield* Effect.exit(service)
 				H.assertExitIsFailure(exit)
 			}),
 		)
@@ -46,19 +47,19 @@ describe.concurrent(`Get sorted products`, () => {
 		`Should always return all elements`,
 		[Query.GetSortedProductsDTO],
 		([products], { expect }) =>
-			Eff.provide(
-				Eff.gen(function* () {
+			Effect.provide(
+				Effect.gen(function* () {
 					const service = yield* Usecase.GetSortedProducts
 
-					const exit = yield* Eff.exit(service)
+					const exit = yield* Effect.exit(service)
 
 					H.assertExitIsSuccess(exit)
 
 					expect(exit.value.length).toStrictEqual(products.length)
 				}),
-				L.provide(
+				Layer.provide(
 					Usecase.GetSortedProducts.Default,
-					L.succeed(Query.Tag, Eff.succeed(products)),
+					Layer.succeed(Query.Tag, Effect.succeed(products)),
 				),
 			),
 	)

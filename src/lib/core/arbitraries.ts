@@ -1,20 +1,25 @@
 import * as FC from 'effect/FastCheck'
+import { flow } from 'effect/Function'
+import * as Match from 'effect/Match'
+import * as Option from 'effect/Option'
 
-import { Int, M, O, flow } from './imports.ts'
+import * as Integer from './integer/index.ts'
 
 export const maybeInteger = FC.constantFrom(
 	`some` as const,
 	`none` as const,
 ).chain(
 	flow(
-		M.value,
-		M.when(`none`, () => FC.constant(O.none())),
-		M.when(`some`, () => FC.integer().map(Int.unsafeFromNumber).map(O.some)),
-		M.exhaustive,
+		Match.value,
+		Match.when(`none`, () => FC.constant(Option.none())),
+		Match.when(`some`, () =>
+			FC.integer().map(Integer.unsafeFromNumber).map(Option.some),
+		),
+		Match.exhaustive,
 	),
 )
 
-export const integer = FC.integer().map(Int.unsafeFromNumber)
+export const integer = FC.integer().map(Integer.unsafeFromNumber)
 
 export const nonBlankString = FC.stringMatching(/\S/)
 
@@ -26,11 +31,11 @@ export const string = FC.constantFrom(
 	`empty` as const,
 ).chain(
 	flow(
-		M.value,
-		M.when(`blank`, () => blankString),
-		M.when(`empty`, () => FC.constant(``)),
-		M.when(`non-blank`, () => nonBlankString),
-		M.exhaustive,
+		Match.value,
+		Match.when(`blank`, () => blankString),
+		Match.when(`empty`, () => FC.constant(``)),
+		Match.when(`non-blank`, () => nonBlankString),
+		Match.exhaustive,
 	),
 )
 
@@ -39,10 +44,10 @@ export const maybeString = FC.constantFrom(
 	`none` as const,
 ).chain(
 	flow(
-		M.value,
-		M.when(`some`, () => string.map(O.some)),
-		M.when(`none`, () => FC.constant(O.none())),
-		M.exhaustive,
+		Match.value,
+		Match.when(`some`, () => string.map(Option.some)),
+		Match.when(`none`, () => FC.constant(Option.none())),
+		Match.exhaustive,
 	),
 )
 
@@ -53,12 +58,12 @@ export const stringOrUndefined = FC.constantFrom(
 	`undefined` as const,
 ).chain(
 	flow(
-		M.value,
-		M.when(`undefined`, () => FC.constant(undefined)),
-		M.when(`blank`, () => blankString),
-		M.when(`empty`, () => FC.constant(``)),
-		M.when(`non-blank`, () => nonBlankString),
-		M.exhaustive,
+		Match.value,
+		Match.when(`undefined`, () => FC.constant(undefined)),
+		Match.when(`blank`, () => blankString),
+		Match.when(`empty`, () => FC.constant(``)),
+		Match.when(`non-blank`, () => nonBlankString),
+		Match.exhaustive,
 	),
 )
 
@@ -69,18 +74,18 @@ export const nonInteger = FC.constantFrom(
 	`-Infinity` as const,
 ).chain(
 	flow(
-		M.value,
-		M.when(`-Infinity`, () => FC.constant(-Infinity)),
-		M.when(`Infinity`, () => FC.constant(Infinity)),
-		M.when(`NaN`, () => FC.constant(NaN)),
-		M.when(`double`, () =>
+		Match.value,
+		Match.when(`-Infinity`, () => FC.constant(-Infinity)),
+		Match.when(`Infinity`, () => FC.constant(Infinity)),
+		Match.when(`NaN`, () => FC.constant(NaN)),
+		Match.when(`double`, () =>
 			FC.double({
 				noDefaultInfinity: true,
 				noNaN: true,
 				noInteger: true,
 			}),
 		),
-		M.exhaustive,
+		Match.exhaustive,
 	),
 )
 
@@ -92,19 +97,19 @@ export const nonIntegerOrUndefined = FC.constantFrom(
 	`undefined` as const,
 ).chain(
 	flow(
-		M.value,
-		M.when(`-Infinity`, () => FC.constant(-Infinity)),
-		M.when(`Infinity`, () => FC.constant(Infinity)),
-		M.when(`NaN`, () => FC.constant(NaN)),
-		M.when(`double`, () =>
+		Match.value,
+		Match.when(`-Infinity`, () => FC.constant(-Infinity)),
+		Match.when(`Infinity`, () => FC.constant(Infinity)),
+		Match.when(`NaN`, () => FC.constant(NaN)),
+		Match.when(`double`, () =>
 			FC.double({
 				noDefaultInfinity: true,
 				noNaN: true,
 				noInteger: true,
 			}),
 		),
-		M.when(`undefined`, () => FC.constant(undefined)),
-		M.exhaustive,
+		Match.when(`undefined`, () => FC.constant(undefined)),
+		Match.exhaustive,
 	),
 )
 
@@ -117,19 +122,19 @@ export const numberOrUndefined = FC.constantFrom(
 	`undefined` as const,
 ).chain(
 	flow(
-		M.value,
-		M.when(`-Infinity`, () => FC.constant(-Infinity)),
-		M.when(`Infinity`, () => FC.constant(-Infinity)),
-		M.when(`NaN`, () => FC.constant(NaN)),
-		M.when(`double`, () =>
+		Match.value,
+		Match.when(`-Infinity`, () => FC.constant(-Infinity)),
+		Match.when(`Infinity`, () => FC.constant(-Infinity)),
+		Match.when(`NaN`, () => FC.constant(NaN)),
+		Match.when(`double`, () =>
 			FC.double({
 				noDefaultInfinity: true,
 				noNaN: true,
 				noInteger: true,
 			}),
 		),
-		M.when(`integer`, () => FC.integer()),
-		M.when(`undefined`, () => FC.constant(undefined)),
-		M.exhaustive,
+		Match.when(`integer`, () => FC.integer()),
+		Match.when(`undefined`, () => FC.constant(undefined)),
+		Match.exhaustive,
 	),
 )

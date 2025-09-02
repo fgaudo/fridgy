@@ -1,6 +1,8 @@
 import { describe, layer } from '@effect/vitest'
+import * as Effect from 'effect/Effect'
+import * as Layer from 'effect/Layer'
+import * as Schema from 'effect/Schema'
 
-import { Eff, L, Sc } from '$lib/core/imports.ts'
 import * as H from '$lib/core/test-helpers.ts'
 
 import { DeleteProductById } from '$lib/business/app/operations.ts'
@@ -10,22 +12,24 @@ import { command } from './delete-product-by-id.ts'
 
 describe.concurrent(`Delete products by ids`, () => {
 	layer(
-		L.provide(
+		Layer.provide(
 			command,
-			L.succeed(DbPlugin, {
-				deleteProductsByIds: () => Eff.succeed(undefined),
+			Layer.succeed(DbPlugin, {
+				deleteProductsByIds: () => Effect.succeed(undefined),
 			} as unknown as DbPlugin),
 		),
 	)(({ effect }) => {
 		effect.prop(
 			`Should just work`,
-			[Sc.NonEmptyArray(DeleteProductById.Request)],
+			[Schema.NonEmptyArray(DeleteProductById.Request)],
 			([requests]) =>
-				Eff.gen(function* () {
+				Effect.gen(function* () {
 					const resolver = yield* DeleteProductById.Resolver
 
-					const exit = yield* Eff.exit(
-						Eff.forEach(requests, request => Eff.request(request, resolver)),
+					const exit = yield* Effect.exit(
+						Effect.forEach(requests, request =>
+							Effect.request(request, resolver),
+						),
 					)
 
 					H.assertExitIsSuccess(exit)
@@ -33,42 +37,46 @@ describe.concurrent(`Delete products by ids`, () => {
 		)
 	})
 
-	layer(L.provide(command, L.succeed(DbPlugin, {} as unknown as DbPlugin)))(
-		({ effect }) => {
-			effect.prop(
-				`Should return an error`,
-				[Sc.NonEmptyArray(DeleteProductById.Request)],
-				([requests]) =>
-					Eff.gen(function* () {
-						const resolver = yield* DeleteProductById.Resolver
+	layer(
+		Layer.provide(command, Layer.succeed(DbPlugin, {} as unknown as DbPlugin)),
+	)(({ effect }) => {
+		effect.prop(
+			`Should return an error`,
+			[Schema.NonEmptyArray(DeleteProductById.Request)],
+			([requests]) =>
+				Effect.gen(function* () {
+					const resolver = yield* DeleteProductById.Resolver
 
-						const exit = yield* Eff.exit(
-							Eff.forEach(requests, request => Eff.request(request, resolver)),
-						)
+					const exit = yield* Effect.exit(
+						Effect.forEach(requests, request =>
+							Effect.request(request, resolver),
+						),
+					)
 
-						H.assertExitIsDie(exit)
-					}),
-			)
-		},
-	)
+					H.assertExitIsDie(exit)
+				}),
+		)
+	})
 
 	layer(
-		L.provide(
+		Layer.provide(
 			command,
-			L.succeed(DbPlugin, {
-				deleteProductsByIds: () => Eff.fail(undefined),
+			Layer.succeed(DbPlugin, {
+				deleteProductsByIds: () => Effect.fail(undefined),
 			} as unknown as DbPlugin),
 		),
 	)(({ effect }) => {
 		effect.prop(
 			`Should return an error`,
-			[Sc.NonEmptyArray(DeleteProductById.Request)],
+			[Schema.NonEmptyArray(DeleteProductById.Request)],
 			([requests]) =>
-				Eff.gen(function* () {
+				Effect.gen(function* () {
 					const resolver = yield* DeleteProductById.Resolver
 
-					const exit = yield* Eff.exit(
-						Eff.forEach(requests, request => Eff.request(request, resolver)),
+					const exit = yield* Effect.exit(
+						Effect.forEach(requests, request =>
+							Effect.request(request, resolver),
+						),
 					)
 
 					H.assertExitIsFailure(exit)
@@ -77,9 +85,9 @@ describe.concurrent(`Delete products by ids`, () => {
 	})
 
 	layer(
-		L.provide(
+		Layer.provide(
 			command,
-			L.succeed(DbPlugin, {
+			Layer.succeed(DbPlugin, {
 				deleteProductsByIds: () => {
 					throw new Error()
 				},
@@ -88,13 +96,15 @@ describe.concurrent(`Delete products by ids`, () => {
 	)(({ effect }) => {
 		effect.prop(
 			`Should crash`,
-			[Sc.NonEmptyArray(DeleteProductById.Request)],
+			[Schema.NonEmptyArray(DeleteProductById.Request)],
 			([requests]) =>
-				Eff.gen(function* () {
+				Effect.gen(function* () {
 					const resolver = yield* DeleteProductById.Resolver
 
-					const exit = yield* Eff.exit(
-						Eff.forEach(requests, request => Eff.request(request, resolver)),
+					const exit = yield* Effect.exit(
+						Effect.forEach(requests, request =>
+							Effect.request(request, resolver),
+						),
 					)
 
 					H.assertExitIsDie(exit)

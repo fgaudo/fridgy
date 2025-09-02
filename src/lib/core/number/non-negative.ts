@@ -1,11 +1,11 @@
-import { B } from '../imports.ts'
+import * as Brand from 'effect/Brand'
 
-export type NonNegative = B.Branded<number, `NonNegative`>
+export type NonNegative = Brand.Branded<number, `NonNegative`>
 
 /** @internal **/
-export const NonNegative = B.refined<NonNegative>(
+export const NonNegative = Brand.refined<NonNegative>(
 	n => n >= 0,
-	n => B.error(`Expected ${n.toString(10)} to be a non-negative number`),
+	n => Brand.error(`Expected ${n.toString(10)} to be a non-negative number`),
 )
 
 export const fromNumber = (number: number) => NonNegative.option(number)

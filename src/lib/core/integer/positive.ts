@@ -1,11 +1,12 @@
-import { B, Int } from '../imports.ts'
-import * as Pos from '../number/positive.ts'
-import type { Integer } from './index.ts'
+import * as Brand from 'effect/Brand'
 
-export type PositiveInteger = Integer & Pos.Positive
+import * as Positive from '../number/positive.ts'
+import * as Integer from './index.ts'
+
+export type PositiveInteger = Integer.Integer & Positive.Positive
 
 /** @internal */
-export const PositiveInteger = B.all(Int.Integer, Pos.Positive)
+export const PositiveInteger = Brand.all(Integer.Integer, Positive.Positive)
 
 export const fromNumber = (number: number) => PositiveInteger.option(number)
 export const unsafeFromNumber = PositiveInteger

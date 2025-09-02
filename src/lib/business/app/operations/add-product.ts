@@ -1,16 +1,21 @@
-import { C, Int, NETS, RR, Sc } from '$lib/core/imports.ts'
+import * as Context from 'effect/Context'
+import { type RequestResolver } from 'effect/RequestResolver'
+import * as Schema from 'effect/Schema'
 
-export class Request extends Sc.TaggedRequest<Request>()(`AddProduct`, {
-	failure: Sc.Void,
-	success: Sc.Void,
+import * as Integer from '$lib/core/integer/index.ts'
+import * as NonEmptyTrimmedString from '$lib/core/non-empty-trimmed-string.ts'
+
+export class Request extends Schema.TaggedRequest<Request>()(`AddProduct`, {
+	failure: Schema.Void,
+	success: Schema.Void,
 	payload: {
-		name: NETS.NonEmptyTrimmedStringSchema,
-		maybeExpirationDate: Sc.Option(Int.IntegerSchema),
-		creationDate: Int.IntegerSchema,
+		name: NonEmptyTrimmedString.Schema,
+		maybeExpirationDate: Schema.Option(Integer.Schema),
+		creationDate: Integer.Schema,
 	},
 }) {}
 
-export class Resolver extends C.Tag(`app/operations/AddProductResolver`)<
+export class Resolver extends Context.Tag(`app/operations/AddProductResolver`)<
 	Resolver,
-	RR.RequestResolver<Request>
+	RequestResolver<Request>
 >() {}

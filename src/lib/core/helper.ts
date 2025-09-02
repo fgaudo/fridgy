@@ -1,26 +1,27 @@
-import { UnknownException } from 'effect/Cause'
-import { fail, succeed } from 'effect/Exit'
-import type { ParseIssue } from 'effect/ParseResult'
-
-import { Eff } from '$lib/core/imports.ts'
+import * as Cause from 'effect/Cause'
+import * as Effect from 'effect/Effect'
+import * as Exit from 'effect/Exit'
+import * as ParseResult from 'effect/ParseResult'
 
 export const fallback: <A>(
 	def: A,
-) => (issue: ParseIssue) => Eff.Effect<A, ParseIssue> = def => () =>
-	Eff.gen(function* () {
-		return yield* Eff.succeed(def)
+) => (
+	issue: ParseResult.ParseIssue,
+) => Effect.Effect<A, ParseResult.ParseIssue> = def => () =>
+	Effect.gen(function* () {
+		return yield* Effect.succeed(def)
 	})
 
 export const tryPromise = <A>(
 	evaluate: (signal?: AbortSignal) => PromiseLike<A>,
-): Eff.Effect<A, UnknownException> =>
-	Eff.async((resolve, signal) => {
+): Effect.Effect<A, Cause.UnknownException> =>
+	Effect.async((resolve, signal) => {
 		evaluate(signal).then(
 			a => {
-				resolve(succeed(a))
+				resolve(Exit.succeed(a))
 			},
 			(e: unknown) => {
-				resolve(fail(new UnknownException(e)))
+				resolve(Exit.fail(new Cause.UnknownException(e)))
 			},
 		)
 	})

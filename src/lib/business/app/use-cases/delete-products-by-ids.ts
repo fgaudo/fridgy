@@ -1,31 +1,35 @@
-import { E, Eff, NEHS, Sc } from '$lib/core/imports.ts'
+import * as Effect from 'effect/Effect'
+import * as Either from 'effect/Either'
+import * as Schema from 'effect/Schema'
+
 import { withLayerLogging } from '$lib/core/logging.ts'
+import * as NonEmptyHashSet from '$lib/core/non-empty-hash-set.ts'
 
 import { DeleteProductById as DeleteProductByIdOperation } from '$lib/business/app/operations'
 
-export const DeleteProductsByIdsDTO = NEHS.NonEmptyHashSetSchema(Sc.String)
+export const DeleteProductsByIdsDTO = NonEmptyHashSet.Schema(Schema.String)
 
-export type DeleteProductsByIdsDTO = Sc.Schema.Type<
+export type DeleteProductsByIdsDTO = Schema.Schema.Type<
 	typeof DeleteProductsByIdsDTO
 >
 
-export class DeleteProductsByIds extends Eff.Service<DeleteProductsByIds>()(
+export class DeleteProductsByIds extends Effect.Service<DeleteProductsByIds>()(
 	`app/useCases/DeleteProductsByIds`,
 	{
-		effect: Eff.gen(function* () {
+		effect: Effect.gen(function* () {
 			const deleteProductResolver = yield* DeleteProductByIdOperation.Resolver
 
 			return (ids: DeleteProductsByIdsDTO) =>
-				Eff.gen(function* () {
-					yield* Eff.logInfo(`Requested to delete products`)
+				Effect.gen(function* () {
+					yield* Effect.logInfo(`Requested to delete products`)
 
-					yield* Eff.logInfo(`Attempting to delete products...`)
+					yield* Effect.logInfo(`Attempting to delete products...`)
 
-					const result = yield* Eff.either(
-						Eff.forEach(
+					const result = yield* Effect.either(
+						Effect.forEach(
 							ids,
 							id =>
-								Eff.request(
+								Effect.request(
 									new DeleteProductByIdOperation.Request({
 										id,
 									}),
@@ -35,12 +39,12 @@ export class DeleteProductsByIds extends Eff.Service<DeleteProductsByIds>()(
 						),
 					)
 
-					if (E.isLeft(result)) {
-						yield* Eff.logError(`Could not delete the products`)
-						return yield* Eff.fail(undefined)
+					if (Either.isLeft(result)) {
+						yield* Effect.logError(`Could not delete the products`)
+						return yield* Effect.fail(undefined)
 					}
 
-					yield* Eff.logInfo(`Products deleted`)
+					yield* Effect.logInfo(`Products deleted`)
 				}).pipe(withLayerLogging(`A`))
 		}),
 	},

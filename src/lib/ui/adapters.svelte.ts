@@ -1,16 +1,21 @@
 import { type BackButtonListenerEvent, App as CAP } from '@capacitor/app'
+import * as Effect from 'effect/Effect'
+import * as LogLevel from 'effect/LogLevel'
+import * as Logger from 'effect/Logger'
+import * as ManagedRuntime from 'effect/ManagedRuntime'
+import * as Queue from 'effect/Queue'
 import type { Cancel } from 'effect/Runtime'
+import * as Stream from 'effect/Stream'
 import { onDestroy } from 'svelte'
 
-import { Eff, LL, Log, MR, Q, Str } from '$lib/core/imports.ts'
 import { withLayerLogging } from '$lib/core/logging.ts'
 
 export interface EffectRunner<R> {
-	runEffect: (eff: Eff.Effect<void, never, R>) => Cancel<void>
+	runEffect: (eff: Effect.Effect<void, never, R>) => Cancel<void>
 }
 
 export function makeEffectRunner<R>(
-	runtime: MR.ManagedRuntime<R, never>,
+	runtime: ManagedRuntime.ManagedRuntime<R, never>,
 ): EffectRunner<R> {
 	const set = new Set<Cancel<unknown, unknown>>()
 	let isDestroyed = false
@@ -30,8 +35,8 @@ export function makeEffectRunner<R>(
 			const cancel = runtime.runCallback(
 				eff.pipe(
 					withLayerLogging(`P`),
-					Eff.provide(Log.minimumLogLevel(LL.Debug)),
-					Eff.tapDefect(Eff.logFatal),
+					Effect.provide(Logger.minimumLogLevel(LogLevel.Debug)),
+					Effect.tapDefect(Effect.logFatal),
 				),
 				{
 					onExit: () => {
@@ -52,10 +57,10 @@ type ReturnTypes<T extends Record<string, (...args: unknown[]) => unknown>> = {
 export function effectToStream<
 	T extends Record<string, (...args: unknown[]) => unknown>,
 >(f: T) {
-	const queue = Eff.runSync(Q.unbounded<ReturnTypes<T>>())
+	const queue = Effect.runSync(Queue.unbounded<ReturnTypes<T>>())
 
 	onDestroy(() => {
-		Eff.runSync(queue.shutdown)
+		Effect.runSync(queue.shutdown)
 	})
 
 	$effect(() => {
@@ -66,24 +71,24 @@ export function effectToStream<
 		queue.unsafeOffer(result)
 	})
 
-	return Str.fromQueue(queue)
+	return Stream.fromQueue(queue)
 }
 
-export function createCapacitorListener(event: `resume`): Str.Stream<void>
+export function createCapacitorListener(event: `resume`): Stream.Stream<void>
 export function createCapacitorListener(
 	event: `backButton`,
-): Str.Stream<BackButtonListenerEvent>
+): Stream.Stream<BackButtonListenerEvent>
 export function createCapacitorListener<E extends `resume` | `backButton`>(
 	event: E,
 ) {
-	return Str.asyncPush<unknown>(emit =>
-		Eff.acquireRelease(
-			Eff.promise(() =>
+	return Stream.asyncPush<unknown>(emit =>
+		Effect.acquireRelease(
+			Effect.promise(() =>
 				event === `resume`
 					? CAP.addListener(event, () => emit.single(undefined))
 					: CAP.addListener(event, e => emit.single(e)),
 			),
-			handle => Eff.promise(() => handle.remove()),
+			handle => Effect.promise(() => handle.remove()),
 		),
 	)
 }

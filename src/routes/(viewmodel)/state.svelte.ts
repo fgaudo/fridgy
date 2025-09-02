@@ -1,36 +1,38 @@
+import * as Option from 'effect/Option'
+import * as Schema from 'effect/Schema'
 import { SvelteSet } from 'svelte/reactivity'
 
-import { Int, O, Sc } from '$lib/core/imports.ts'
+import * as Integer from '$lib/core/integer/index.ts'
 
-export const ProductViewModel = Sc.mutable(
-	Sc.Union(
-		Sc.Struct({
-			isCorrupt: Sc.Literal(false),
-			id: Sc.String,
-			maybeName: Sc.UndefinedOr(Sc.String),
-			maybeExpirationDate: Sc.UndefinedOr(Sc.Number),
-			maybeCreationDate: Sc.UndefinedOr(Sc.Number),
-			isValid: Sc.Literal(false),
-			isSelected: Sc.Boolean,
+export const ProductViewModel = Schema.mutable(
+	Schema.Union(
+		Schema.Struct({
+			isCorrupt: Schema.Literal(false),
+			id: Schema.String,
+			maybeName: Schema.UndefinedOr(Schema.String),
+			maybeExpirationDate: Schema.UndefinedOr(Schema.Number),
+			maybeCreationDate: Schema.UndefinedOr(Schema.Number),
+			isValid: Schema.Literal(false),
+			isSelected: Schema.Boolean,
 		}),
-		Sc.Struct({
-			isCorrupt: Sc.Literal(false),
-			id: Sc.String,
-			name: Sc.String,
-			maybeExpirationDate: Sc.UndefinedOr(Sc.Number),
-			creationDate: Sc.Number,
-			isValid: Sc.Literal(true),
-			isSelected: Sc.Boolean,
+		Schema.Struct({
+			isCorrupt: Schema.Literal(false),
+			id: Schema.String,
+			name: Schema.String,
+			maybeExpirationDate: Schema.UndefinedOr(Schema.Number),
+			creationDate: Schema.Number,
+			isValid: Schema.Literal(true),
+			isSelected: Schema.Boolean,
 		}),
-		Sc.Struct({
-			id: Sc.Symbol,
-			isCorrupt: Sc.Literal(true),
-			maybeName: Sc.UndefinedOr(Sc.NonEmptyTrimmedString),
+		Schema.Struct({
+			id: Schema.Symbol,
+			isCorrupt: Schema.Literal(true),
+			maybeName: Schema.UndefinedOr(Schema.NonEmptyTrimmedString),
 		}),
 	),
 )
 
-export type ProductViewModel = Sc.Schema.Type<typeof ProductViewModel>
+export type ProductViewModel = Schema.Schema.Type<typeof ProductViewModel>
 
 export type State = {
 	receivedError: boolean
@@ -78,11 +80,13 @@ export function createStateContext() {
 	})
 
 	const currentTimestamp = $derived(
-		Int.unsafeFromNumber(state.currentTimestamp),
+		Integer.unsafeFromNumber(state.currentTimestamp),
 	)
 
 	const maybeNonEmptySelected = $derived(
-		O.fromNullable(state.products?.selected).pipe(O.filter(s => s.size > 0)),
+		Option.fromNullable(state.products?.selected).pipe(
+			Option.filter(s => s.size > 0),
+		),
 	)
 
 	const refreshTimeListenersEnabled = $derived(
@@ -93,17 +97,19 @@ export function createStateContext() {
 	)
 
 	const maybeLoadedNonEmptyProducts = $derived(
-		O.fromNullable(state.products).pipe(O.filter(p => p.entries.length > 0)),
-	)
-
-	const hasSelectedProducts = $derived(
-		O.fromNullable(state.products).pipe(
-			O.map(products => products.selected.size > 0),
-			O.getOrElse(() => false),
+		Option.fromNullable(state.products).pipe(
+			Option.filter(p => p.entries.length > 0),
 		),
 	)
 
-	const maybeToastMessage = $derived(O.fromNullable(state.toastMessage))
+	const hasSelectedProducts = $derived(
+		Option.fromNullable(state.products).pipe(
+			Option.map(products => products.selected.size > 0),
+			Option.getOrElse(() => false),
+		),
+	)
+
+	const maybeToastMessage = $derived(Option.fromNullable(state.toastMessage))
 
 	return {
 		state,

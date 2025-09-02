@@ -1,21 +1,26 @@
-import { ParseResult } from 'effect'
+import * as Effect from 'effect/Effect'
+import * as Either from 'effect/Either'
+import * as Layer from 'effect/Layer'
+import * as Option from 'effect/Option'
+import * as ParseResult from 'effect/ParseResult'
+import * as RequestResolver from 'effect/RequestResolver'
+import * as Schema from 'effect/Schema'
 
-import { E, Eff, L, O, RR, Sc } from '$lib/core/imports.ts'
 import { withLayerLogging } from '$lib/core/logging.ts'
 
 import { AddProduct } from '$lib/business/app/operations.ts'
 
 import { DbPlugin } from '../db-plugin.ts'
 
-const DtoToBackend = Sc.transformOrFail(
-	Sc.Struct({
-		product: Sc.Struct({
-			name: Sc.String,
-			creationDate: Sc.Number,
-			expirationDate: Sc.UndefinedOr(Sc.Number),
+const DtoToBackend = Schema.transformOrFail(
+	Schema.Struct({
+		product: Schema.Struct({
+			name: Schema.String,
+			creationDate: Schema.Number,
+			expirationDate: Schema.UndefinedOr(Schema.Number),
 		}),
 	}),
-	Sc.Struct(AddProduct.Request.fields),
+	Schema.Struct(AddProduct.Request.fields),
 	{
 		strict: true,
 		encode: (_, __, ___, product) =>
@@ -23,7 +28,7 @@ const DtoToBackend = Sc.transformOrFail(
 				product: {
 					name: product.name,
 					creationDate: product.creationDate,
-					expirationDate: O.getOrUndefined(product.maybeExpirationDate),
+					expirationDate: Option.getOrUndefined(product.maybeExpirationDate),
 				},
 			}),
 		decode: (actual, _, ast) =>
@@ -37,26 +42,28 @@ const DtoToBackend = Sc.transformOrFail(
 	},
 )
 
-export const command = L.effect(
+export const command = Layer.effect(
 	AddProduct.Resolver,
-	Eff.gen(function* () {
+	Effect.gen(function* () {
 		const { addProduct } = yield* DbPlugin
 
-		return RR.fromEffect(product =>
-			Eff.gen(function* () {
-				const dto = yield* Sc.encode(DtoToBackend)(product).pipe(Eff.either)
+		return RequestResolver.fromEffect(product =>
+			Effect.gen(function* () {
+				const dto = yield* Schema.encode(DtoToBackend)(product).pipe(
+					Effect.either,
+				)
 
-				if (E.isLeft(dto)) {
-					return yield* Eff.die(dto.left)
+				if (Either.isLeft(dto)) {
+					return yield* Effect.die(dto.left)
 				}
-				const result = yield* Eff.either(addProduct(dto.right))
+				const result = yield* Effect.either(addProduct(dto.right))
 
-				if (E.isLeft(result)) {
-					yield* Eff.logError(result.left)
-					return yield* Eff.fail(undefined)
+				if (Either.isLeft(result)) {
+					yield* Effect.logError(result.left)
+					return yield* Effect.fail(undefined)
 				}
 
-				yield* Eff.logDebug(`No errors adding the product`)
+				yield* Effect.logDebug(`No errors adding the product`)
 			}).pipe(withLayerLogging(`I`)),
 		)
 	}),

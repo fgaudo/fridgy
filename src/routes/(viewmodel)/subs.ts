@@ -1,12 +1,13 @@
-import { Schedule } from 'effect'
-
-import { D, Str, pipe } from '$lib/core/imports.ts'
+import * as Duration from 'effect/Duration'
+import { pipe } from 'effect/Function'
+import * as Schedule from 'effect/Schedule'
+import * as Stream from 'effect/Stream'
 
 import { Message } from './update.svelte.ts'
 
-const refreshTimeIntervalFrequency = D.seconds(20)
+const refreshTimeIntervalFrequency = Duration.seconds(20)
 
 export const refreshTimeInterval = pipe(
-	Str.make(Message.StartRefreshTime()),
-	Str.repeat(Schedule.spaced(refreshTimeIntervalFrequency)),
+	Stream.make(Message.StartRefreshTime()),
+	Stream.repeat(Schedule.spaced(refreshTimeIntervalFrequency)),
 )

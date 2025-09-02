@@ -1,7 +1,8 @@
-import { Log } from '$lib/core/imports.ts'
+import * as Logger from 'effect/Logger'
+
 import { withLayerLogger } from '$lib/core/logging.ts'
 
-export const logger = Log.replace(
-	Log.defaultLogger,
-	Log.prettyLoggerDefault.pipe(withLayerLogger),
+export const logger = Logger.replace(
+	Logger.defaultLogger,
+	Logger.prettyLoggerDefault.pipe(withLayerLogger),
 )

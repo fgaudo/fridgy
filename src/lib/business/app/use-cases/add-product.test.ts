@@ -1,8 +1,10 @@
 import { describe, effect, layer } from '@effect/vitest'
-import { TestClock } from 'effect'
+import * as Effect from 'effect/Effect'
+import * as Layer from 'effect/Layer'
+import * as RequestResolver from 'effect/RequestResolver'
+import * as TestClock from 'effect/TestClock'
 import { TestContext } from 'effect/TestContext'
 
-import { Eff, L, RR } from '$lib/core/imports.ts'
 import * as H from '$lib/core/test-helpers.ts'
 
 import { AddProduct as Query } from '$lib/business/app/operations.ts'
@@ -14,10 +16,10 @@ describe.concurrent(`Add product`, () => {
 		`Should just work`,
 		{ product: Usecase.ProductDTO },
 		({ product: { name, maybeExpirationDate } }, { expect }) =>
-			Eff.gen(function* () {
+			Effect.gen(function* () {
 				const service = yield* Usecase.AddProduct
 				yield* TestClock.setTime(0)
-				const exit = yield* Eff.exit(
+				const exit = yield* Effect.exit(
 					service({
 						name,
 						maybeExpirationDate,
@@ -26,34 +28,34 @@ describe.concurrent(`Add product`, () => {
 
 				H.assertExitIsSuccess(exit)
 			}).pipe(
-				Eff.provide(TestContext),
-				Eff.provide(
-					L.provide(Usecase.AddProduct.Default, [
-						L.succeed(
+				Effect.provide([
+					TestContext,
+					Layer.provide(Usecase.AddProduct.Default, [
+						Layer.succeed(
 							Query.Resolver,
-							RR.fromEffect(request =>
-								Eff.gen(function* () {
+							RequestResolver.fromEffect(request =>
+								Effect.gen(function* () {
 									expect(request).toMatchObject({
 										name,
 										maybeExpirationDate,
 										creationDate: 0,
 									})
-									return yield* Eff.succeed(undefined)
+									return yield* Effect.succeed(undefined)
 								}),
 							),
 						),
 					]),
-				),
+				]),
 			),
 		{ fastCheck: { verbose: 2 } },
 	)
 
 	layer(
-		L.provide(
+		Layer.provide(
 			Usecase.AddProduct.Default,
-			L.succeed(
+			Layer.succeed(
 				Query.Resolver,
-				RR.fromEffect(() => Eff.fail(undefined)),
+				RequestResolver.fromEffect(() => Effect.fail(undefined)),
 			),
 		),
 	)(({ effect }) => {
@@ -61,9 +63,9 @@ describe.concurrent(`Add product`, () => {
 			`Should return error`,
 			{ product: Usecase.ProductDTO },
 			({ product: { name, maybeExpirationDate } }) =>
-				Eff.gen(function* () {
+				Effect.gen(function* () {
 					const service = yield* Usecase.AddProduct
-					const exit = yield* Eff.exit(
+					const exit = yield* Effect.exit(
 						service({
 							name,
 							maybeExpirationDate,

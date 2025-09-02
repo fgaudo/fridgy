@@ -7,11 +7,10 @@
 	import Trash2 from '@lucide/svelte/icons/trash-2'
 	import X from '@lucide/svelte/icons/x'
 	import { format } from 'date-fns'
+	import * as Option from 'effect/Option'
 	import { flip } from 'svelte/animate'
 	import { cubicIn, expoIn, expoOut } from 'svelte/easing'
 	import { fade, fly } from 'svelte/transition'
-
-	import { O } from '$lib/core/imports.ts'
 
 	import imgUrl from '$lib/ui/assets/arrow.svg'
 	import Ripple from '$lib/ui/components/ripple.svelte'
@@ -85,7 +84,7 @@
 			<div
 				class="ml-2 relative h-12 w-12 flex items-center justify-center rounded-full overflow-hidden"
 			>
-				{#if O.isSome(viewModel.derived.maybeNonEmptySelected)}
+				{#if Option.isSome(viewModel.derived.maybeNonEmptySelected)}
 					<div class="absolute" transition:fade={{ duration: 200 }}>
 						{#if !viewModel.state.isDeleteRunning}
 							<Ripple ontap={viewModel.tasks.clearSelected}></Ripple>
@@ -108,7 +107,7 @@
 				Fridgy
 			</div>
 			<div class="grow"></div>
-			{#if O.isSome(viewModel.derived.maybeNonEmptySelected)}
+			{#if Option.isSome(viewModel.derived.maybeNonEmptySelected)}
 				<div
 					transition:fade={{ duration: 200 }}
 					class="relative flex h-full items-center text-lg font-stylish translate-y-[2px]"
@@ -130,7 +129,7 @@
 				</div>
 			{/if}
 		</div>
-		{#if O.isSome(viewModel.derived.maybeLoadedProducts)}
+		{#if Option.isSome(viewModel.derived.maybeLoadedProducts)}
 			{@const products = viewModel.derived.maybeLoadedProducts.value}
 
 			{#if products.entries.length > 0}
@@ -168,7 +167,7 @@
 					</div>
 				</div>
 			</div>
-		{:else if O.isSome(viewModel.derived.maybeLoadedProducts)}
+		{:else if Option.isSome(viewModel.derived.maybeLoadedProducts)}
 			{@const products = viewModel.derived.maybeLoadedProducts.value}
 
 			<div
@@ -179,20 +178,20 @@
 			>
 				{#each products.entries as product (product.id)}
 					{@const maybeCreation = product.isCorrupt
-						? O.none()
+						? Option.none()
 						: product.isValid
-							? O.some(product.creationDate)
-							: O.fromNullable(product.maybeCreationDate)}
+							? Option.some(product.creationDate)
+							: Option.fromNullable(product.maybeCreationDate)}
 
 					{@const maybeName = product.isCorrupt
-						? O.fromNullable(product.maybeName)
+						? Option.fromNullable(product.maybeName)
 						: product.isValid
-							? O.some(product.name)
-							: O.fromNullable(product.maybeName)}
+							? Option.some(product.name)
+							: Option.fromNullable(product.maybeName)}
 
 					{@const maybeExpirationDate = product.isCorrupt
-						? O.none()
-						: O.fromNullable(product.maybeExpirationDate)}
+						? Option.none()
+						: Option.fromNullable(product.maybeExpirationDate)}
 					<div out:fade={{ duration: 200 }} animate:flip={{ duration: 250 }}>
 						<div
 							class={[
@@ -221,7 +220,7 @@
 									<div
 										class="flex-col flex bg-secondary text-background shadow-xs rounded-full items-center justify-center text-center h-full aspect-square"
 									>
-										{#if O.isSome(maybeExpirationDate)}
+										{#if Option.isSome(maybeExpirationDate)}
 											<div class="text-lg font-bold leading-4">
 												{format(maybeExpirationDate.value, `d`)}
 											</div>
@@ -237,7 +236,7 @@
 								<div
 									class="flex-1 h-full flex justify-center flex-col leading-[16px] gap-2"
 								>
-									{#if O.isSome(maybeName)}
+									{#if Option.isSome(maybeName)}
 										<div
 											class="overflow-ellipsis whitespace-nowrap overflow-hidden capitalize"
 										>
@@ -247,9 +246,9 @@
 										<div>[NO NAME]</div>
 									{/if}
 
-									{#if O.isNone(maybeCreation)}
+									{#if Option.isNone(maybeCreation)}
 										No creation date
-									{:else if O.isSome(maybeExpirationDate) && maybeExpirationDate.value > viewModel.state.currentTimestamp}
+									{:else if Option.isSome(maybeExpirationDate) && maybeExpirationDate.value > viewModel.state.currentTimestamp}
 										{@const expiration = maybeExpirationDate.value}
 										{@const creation = maybeCreation.value}
 
@@ -273,7 +272,7 @@
 												style:width={`${(currentProgressOrZero * 100).toString()}%`}
 											></div>
 										</div>
-									{:else if O.isSome(maybeExpirationDate)}
+									{:else if Option.isSome(maybeExpirationDate)}
 										<div
 											class="text-[12px] leading-[8px] text-primary font-bold"
 										>
@@ -284,7 +283,7 @@
 								<div
 									class="h-9/12 aspect-square flex items-center justify-center"
 								>
-									{#if O.isSome(maybeExpirationDate)}
+									{#if Option.isSome(maybeExpirationDate)}
 										<div
 											class={[
 												`text-primary duration-fade absolute text-sm`,
@@ -309,12 +308,12 @@
 			</div>
 		{/if}
 	</div>
-	{#if O.isNone(viewModel.derived.maybeNonEmptySelected)}
+	{#if Option.isNone(viewModel.derived.maybeNonEmptySelected)}
 		<div
 			class="fixed right-[16px] left-[16px]"
 			style:bottom={`calc(var(--safe-area-inset-bottom, 0) + 21px)`}
 		>
-			{#if !viewModel.state.receivedError && O.isNone(viewModel.derived.maybeLoadedProducts)}
+			{#if !viewModel.state.receivedError && Option.isNone(viewModel.derived.maybeLoadedProducts)}
 				<div
 					in:fade={{ duration: 200 }}
 					class="font-stylish absolute right-0 bottom-[100px] flex flex-col items-end duration-[fade]"
@@ -344,19 +343,19 @@
 		</div>
 	{/if}
 
-	{#key O.isSome(viewModel.derived.maybeToastMessage)}
+	{#key Option.isSome(viewModel.derived.maybeToastMessage)}
 		<div
 			in:fade={{
 				duration: 300,
 				easing: cubicIn,
 			}}
 			out:fade={{ duration: 100 }}
-			style:bottom={O.isNone(viewModel.derived.maybeNonEmptySelected)
+			style:bottom={Option.isNone(viewModel.derived.maybeNonEmptySelected)
 				? `calc(var(--safe-area-inset-bottom, 0) + 140px)`
 				: `calc(var(--safe-area-inset-bottom, 0) + 21px)`}
 			class="z-90 fixed flex left-0 right-0 items-center justify-center transition-all"
 		>
-			{#if O.isSome(viewModel.derived.maybeToastMessage)}
+			{#if Option.isSome(viewModel.derived.maybeToastMessage)}
 				<div
 					class="flex justify-center items-center px-8 w-full max-w-lg transition-all"
 				>

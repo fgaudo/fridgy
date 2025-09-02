@@ -1,18 +1,18 @@
 import { assert, describe, effect } from '@effect/vitest'
+import * as Effect from 'effect/Effect'
 
 import * as H from '$lib/core/test-helpers.ts'
 
-import { Eff } from '../imports.ts'
 import { fromNumber, unsafeFromNumber } from './index.ts'
 
 describe.concurrent(`integer`, () => {
 	effect.prop(`should be ok`, [H.FC.integer()], ([integer], { expect }) =>
-		Eff.gen(function* () {
+		Effect.gen(function* () {
 			const result = fromNumber(integer)
 			assert(result._tag === `Some`, `Could not parse number`)
 			expect(result.value).toStrictEqual(integer)
 
-			yield* Eff.void
+			yield* Effect.void
 		}),
 	)
 
@@ -21,11 +21,11 @@ describe.concurrent(`integer`, () => {
 		[H.FC.integer()],
 
 		([integer], { expect }) =>
-			Eff.gen(function* () {
+			Effect.gen(function* () {
 				const number = unsafeFromNumber(integer)
 				expect(number).toStrictEqual(integer)
 
-				yield* Eff.void
+				yield* Effect.void
 			}),
 	)
 
@@ -38,10 +38,10 @@ describe.concurrent(`integer`, () => {
 		],
 
 		([integer], { expect }) =>
-			Eff.gen(function* () {
+			Effect.gen(function* () {
 				expect(() => unsafeFromNumber(integer)).toThrowError()
 
-				yield* Eff.void
+				yield* Effect.void
 			}),
 	)
 })

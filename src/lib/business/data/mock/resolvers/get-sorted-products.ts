@@ -1,5 +1,12 @@
-/* eslint-disable @typescript-eslint/no-unnecessary-condition */
-import { A, Eff, HM, L, O, Ord, Ref, pipe } from '$lib/core/imports.ts'
+import * as Array from 'effect/Array'
+import * as Effect from 'effect/Effect'
+import { pipe } from 'effect/Function'
+import * as HashMap from 'effect/HashMap'
+import * as Layer from 'effect/Layer'
+import * as Option from 'effect/Option'
+import * as Order from 'effect/Order'
+import * as Ref from 'effect/Ref'
+
 import { withLayerLogging } from '$lib/core/logging.ts'
 
 import { GetSortedProducts } from '$lib/business/app/operations.ts'
@@ -7,39 +14,41 @@ import { GetSortedProducts } from '$lib/business/app/operations.ts'
 import { Config } from '../config.ts'
 import { Db } from '../db.ts'
 
-const ord = Ord.make(
+const ord = Order.make(
 	(p1: GetSortedProducts.ProductDTO, p2: GetSortedProducts.ProductDTO) => {
-		return Ord.combineAll([
+		return Order.combineAll([
 			pipe(
-				Ord.number,
-				Ord.reverse,
-				O.getOrder,
-				Ord.reverse,
-				Ord.mapInput((product: typeof p1) => product.maybeExpirationDate),
+				Order.number,
+				Order.reverse,
+				Option.getOrder,
+				Order.reverse,
+				Order.mapInput((product: typeof p1) => product.maybeExpirationDate),
 			),
 			pipe(
-				Ord.string,
-				O.getOrder,
-				Ord.mapInput((product: typeof p1) => product.maybeName),
+				Order.string,
+				Option.getOrder,
+				Order.mapInput((product: typeof p1) => product.maybeName),
 			),
 		])(p1, p2)
 	},
 )
 
-export const query = L.effect(
+export const query = Layer.effect(
 	GetSortedProducts.Tag,
-	Eff.gen(function* () {
+	Effect.gen(function* () {
 		const withErrors = yield* Config.withErrors
 		const db = yield* Db
-		return Eff.gen(function* () {
+		return Effect.gen(function* () {
 			if (withErrors && Math.random() < 0.5)
 				return yield* new GetSortedProducts.InvalidDataReceived()
 
-			const map = yield* Ref.get(db).pipe(Eff.map(({ map }) => map))
+			const map = yield* Ref.get(db).pipe(Effect.map(({ map }) => map))
 
-			const products: GetSortedProducts.ProductDTO[] = map.pipe(HM.toValues)
+			const products: GetSortedProducts.ProductDTO[] = map.pipe(
+				HashMap.toValues,
+			)
 
-			return A.sort(ord)(products)
+			return Array.sort(ord)(products)
 		}).pipe(withLayerLogging(`I`))
 	}),
 )

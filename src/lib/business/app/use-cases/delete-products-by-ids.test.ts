@@ -1,6 +1,8 @@
 import { describe, layer } from '@effect/vitest'
+import * as Effect from 'effect/Effect'
+import * as Layer from 'effect/Layer'
+import * as RequestResolver from 'effect/RequestResolver'
 
-import { Eff, L, RR } from '$lib/core/imports.ts'
 import * as H from '$lib/core/test-helpers.ts'
 
 import { DeleteProductById as Query } from '$lib/business/app/operations.ts'
@@ -9,11 +11,11 @@ import * as Usecase from './delete-products-by-ids.ts'
 
 describe.concurrent(`Delete products by ids`, () => {
 	layer(
-		L.provide(
+		Layer.provide(
 			Usecase.DeleteProductsByIds.Default,
-			L.succeed(
+			Layer.succeed(
 				Query.Resolver,
-				RR.fromEffect(() => Eff.fail(undefined)),
+				RequestResolver.fromEffect(() => Effect.fail(undefined)),
 			),
 		),
 	)(({ effect }) => {
@@ -21,9 +23,9 @@ describe.concurrent(`Delete products by ids`, () => {
 			`Should return an error`,
 			[Usecase.DeleteProductsByIdsDTO],
 			([ids]) =>
-				Eff.gen(function* () {
+				Effect.gen(function* () {
 					const service = yield* Usecase.DeleteProductsByIds
-					const exit = yield* Eff.exit(service(ids))
+					const exit = yield* Effect.exit(service(ids))
 
 					H.assertExitIsFailure(exit)
 				}),
@@ -31,19 +33,19 @@ describe.concurrent(`Delete products by ids`, () => {
 	})
 
 	layer(
-		L.provide(
+		Layer.provide(
 			Usecase.DeleteProductsByIds.Default,
-			L.succeed(
+			Layer.succeed(
 				Query.Resolver,
-				RR.fromEffect(() => Eff.succeed(undefined)),
+				RequestResolver.fromEffect(() => Effect.succeed(undefined)),
 			),
 		),
 	)(({ effect }) => {
 		effect.prop(`Should just work`, [Usecase.DeleteProductsByIdsDTO], ([ids]) =>
-			Eff.gen(function* () {
+			Effect.gen(function* () {
 				const service = yield* Usecase.DeleteProductsByIds
 
-				const exit = yield* Eff.exit(service(ids))
+				const exit = yield* Effect.exit(service(ids))
 
 				H.assertExitIsSuccess(exit)
 			}),

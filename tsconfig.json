@@ -1,6 +1,14 @@
 {
 	"extends": "./.svelte-kit/tsconfig.json",
 	"compilerOptions": {
+		"plugins": [
+			{ "name": "typescript-svelte-plugin" },
+			{
+				"name": "@effect/language-service",
+				"topLevelNamedReexports": "follow", 
+				"namespaceImportPackages": ["effect", "effect/*"],
+			}
+		],
 		"allowJs": true,
 		"checkJs": true,
 		"esModuleInterop": true,

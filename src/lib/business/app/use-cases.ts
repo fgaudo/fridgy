@@ -1,4 +1,4 @@
-import { L } from '$lib/core/imports.ts'
+import * as Layer from 'effect/Layer'
 
 import * as AddProduct from './use-cases/add-product.ts'
 import * as DeleteProductsByIds from './use-cases/delete-products-by-ids.ts'
@@ -11,7 +11,7 @@ export type UseCases =
 	| DeleteProductsByIds.DeleteProductsByIds
 	| GetSortedProducts.GetSortedProducts
 
-export const useCasesNoDeps = L.mergeAll(
+export const useCasesNoDeps = Layer.mergeAll(
 	AddProduct.AddProduct.Default,
 	DeleteProductsByIds.DeleteProductsByIds.Default,
 	GetSortedProducts.GetSortedProducts.Default,

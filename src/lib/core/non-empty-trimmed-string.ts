@@ -1,17 +1,22 @@
-import { B, Sc, flow } from './imports.ts'
+import * as Brand from 'effect/Brand'
+import { flow } from 'effect/Function'
+import * as _Schema from 'effect/Schema'
 
-export type NonEmptyTrimmedString = B.Branded<string, `NonEmptyTrimmedString`>
+export type NonEmptyTrimmedString = Brand.Branded<
+	string,
+	`NonEmptyTrimmedString`
+>
 
 /** @internal */
-export const NonEmptyTrimmedString = B.refined<NonEmptyTrimmedString>(
+export const NonEmptyTrimmedString = Brand.refined<NonEmptyTrimmedString>(
 	string => /^\S.*\S$|^\S$/.test(string),
-	() => B.error(`Provided string is either empty or non-trimmed`),
+	() => Brand.error(`Provided string is either empty or non-trimmed`),
 )
-export const NonEmptyTrimmedStringSchema = Sc.fromBrand(NonEmptyTrimmedString)(
-	Sc.String,
-).annotations({
-	arbitrary: () => fc => fc.stringMatching(/\S/).map(unsafeFromString),
-})
+export const Schema = _Schema
+	.fromBrand(NonEmptyTrimmedString)(_Schema.String)
+	.annotations({
+		arbitrary: () => fc => fc.stringMatching(/\S/).map(unsafeFromString),
+	})
 
 export const unsafeFromString = flow(trim, NonEmptyTrimmedString)
 

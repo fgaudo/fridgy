@@ -1,72 +1,82 @@
-import { A, E, Eff, Int, NETS, O, Sc, pipe } from '$lib/core/imports.ts'
+import * as Array from 'effect/Array'
+import * as Effect from 'effect/Effect'
+import * as Either from 'effect/Either'
+import { pipe } from 'effect/Function'
+import * as Option from 'effect/Option'
+import * as Schema from 'effect/Schema'
+
+import * as Integer from '$lib/core/integer/index.ts'
 import { withLayerLogging } from '$lib/core/logging.ts'
+import * as NonEmptyTrimmedString from '$lib/core/non-empty-trimmed-string.ts'
 
 import { GetSortedProducts as GetSortedProductsOperation } from '$lib/business/app/operations'
-import * as P from '$lib/business/domain/product'
+import * as Product from '$lib/business/domain/product'
 
-export const GetSortedProductsDTO = Sc.Array(
-	Sc.Union(
-		Sc.Struct({
-			isCorrupt: Sc.Literal(false),
-			id: Sc.String,
-			maybeName: Sc.Option(NETS.NonEmptyTrimmedStringSchema),
-			maybeExpirationDate: Sc.Option(Int.IntegerSchema),
-			maybeCreationDate: Sc.Option(Int.IntegerSchema),
-			isValid: Sc.Literal(false),
+export const GetSortedProductsDTO = Schema.Array(
+	Schema.Union(
+		Schema.Struct({
+			isCorrupt: Schema.Literal(false),
+			id: Schema.String,
+			maybeName: Schema.Option(NonEmptyTrimmedString.Schema),
+			maybeExpirationDate: Schema.Option(Integer.Schema),
+			maybeCreationDate: Schema.Option(Integer.Schema),
+			isValid: Schema.Literal(false),
 		}),
-		Sc.Struct({
-			isCorrupt: Sc.Literal(false),
-			id: Sc.String,
-			name: NETS.NonEmptyTrimmedStringSchema,
-			maybeExpirationDate: Sc.Option(Int.IntegerSchema),
-			creationDate: Int.IntegerSchema,
-			isValid: Sc.Literal(true),
+		Schema.Struct({
+			isCorrupt: Schema.Literal(false),
+			id: Schema.String,
+			name: NonEmptyTrimmedString.Schema,
+			maybeExpirationDate: Schema.Option(Integer.Schema),
+			creationDate: Integer.Schema,
+			isValid: Schema.Literal(true),
 		}),
-		Sc.Struct({
-			isCorrupt: Sc.Literal(true),
-			maybeName: Sc.Option(NETS.NonEmptyTrimmedStringSchema),
+		Schema.Struct({
+			isCorrupt: Schema.Literal(true),
+			maybeName: Schema.Option(NonEmptyTrimmedString.Schema),
 		}),
 	),
 )
 
-export type GetSortedProductsDTO = Sc.Schema.Type<typeof GetSortedProductsDTO>
+export type GetSortedProductsDTO = Schema.Schema.Type<
+	typeof GetSortedProductsDTO
+>
 
-export class GetSortedProducts extends Eff.Service<GetSortedProducts>()(
+export class GetSortedProducts extends Effect.Service<GetSortedProducts>()(
 	`app/useCases/GetSortedProducts`,
 	{
-		effect: Eff.gen(function* () {
+		effect: Effect.gen(function* () {
 			const getSortedProducts = yield* GetSortedProductsOperation.Tag
 
-			return Eff.gen(function* () {
-				yield* Eff.log(`Requested to fetch the list of products`)
+			return Effect.gen(function* () {
+				yield* Effect.log(`Requested to fetch the list of products`)
 
-				yield* Eff.log(`Attempting to fetch the list of products...`)
+				yield* Effect.log(`Attempting to fetch the list of products...`)
 
-				const errorOrData = yield* pipe(getSortedProducts, Eff.either)
+				const errorOrData = yield* pipe(getSortedProducts, Effect.either)
 				if (
-					E.isLeft(errorOrData) &&
+					Either.isLeft(errorOrData) &&
 					errorOrData.left._tag === `FetchingFailed`
 				) {
-					yield* Eff.logError(`Could not receive items.`)
+					yield* Effect.logError(`Could not receive items.`)
 
-					return yield* Eff.fail(undefined)
+					return yield* Effect.fail(undefined)
 				}
 
-				if (E.isLeft(errorOrData)) {
-					yield* Eff.logError(`Received invalid data.`)
+				if (Either.isLeft(errorOrData)) {
+					yield* Effect.logError(`Received invalid data.`)
 
-					return yield* Eff.fail(undefined)
+					return yield* Effect.fail(undefined)
 				}
 
 				const result = errorOrData.right
 
 				const entries = yield* pipe(
 					result,
-					A.map(
+					Array.map(
 						({ maybeId, maybeName, maybeCreationDate, maybeExpirationDate }) =>
-							Eff.gen(function* () {
-								if (O.isNone(maybeId)) {
-									yield* Eff.logWarning(`CORRUPTION - Product has no id.`)
+							Effect.gen(function* () {
+								if (Option.isNone(maybeId)) {
+									yield* Effect.logWarning(`CORRUPTION - Product has no id.`)
 
 									return {
 										id: Symbol(),
@@ -75,21 +85,21 @@ export class GetSortedProducts extends Eff.Service<GetSortedProducts>()(
 									} as const
 								}
 
-								const maybeProduct = O.gen(function* () {
-									const { name, creationDate } = yield* O.all({
+								const maybeProduct = Option.gen(function* () {
+									const { name, creationDate } = yield* Option.all({
 										name: maybeName,
 										creationDate: maybeCreationDate,
 									})
 
-									return yield* P.fromStruct({
+									return yield* Product.fromStruct({
 										name,
 										creationDate,
 										maybeExpirationDate,
 									})
 								})
 
-								if (O.isNone(maybeProduct)) {
-									yield* Eff.logWarning(`Product is invalid.`)
+								if (Option.isNone(maybeProduct)) {
+									yield* Effect.logWarning(`Product is invalid.`)
 
 									return {
 										id: maybeId.value,
@@ -111,7 +121,7 @@ export class GetSortedProducts extends Eff.Service<GetSortedProducts>()(
 								} as const
 							}),
 					),
-					Eff.all,
+					Effect.all,
 				)
 
 				return entries satisfies GetSortedProductsDTO

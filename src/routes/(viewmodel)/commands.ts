@@ -1,4 +1,9 @@
-import { Cl, E, Eff, NEHS, pipe } from '$lib/core/imports.ts'
+import * as Clock from 'effect/Clock'
+import * as Effect from 'effect/Effect'
+import * as Either from 'effect/Either'
+import { pipe } from 'effect/Function'
+
+import * as NonEmptyHashSet from '$lib/core/non-empty-hash-set.ts'
 
 import type { UseCases } from '$lib/business/app/use-cases.ts'
 import { DeleteProductsByIds, GetSortedProducts } from '$lib/business/index.ts'
@@ -9,12 +14,12 @@ import { Message } from './update.svelte.ts'
 type HomeCommand = Command<Message, UseCases>
 
 export const refreshList: (taskid: symbol) => HomeCommand = taskId =>
-	Eff.gen(function* () {
+	Effect.gen(function* () {
 		const getProducts = yield* GetSortedProducts.GetSortedProducts
 
-		const result = yield* Eff.either(getProducts)
+		const result = yield* Effect.either(getProducts)
 
-		if (E.isLeft(result)) {
+		if (Either.isLeft(result)) {
 			return Message.FetchListFailed({ taskId })
 		}
 
@@ -24,30 +29,30 @@ export const refreshList: (taskid: symbol) => HomeCommand = taskId =>
 		})
 	})
 
-export const refreshTime: HomeCommand = Eff.gen(function* () {
-	const time = yield* Cl.currentTimeMillis
+export const refreshTime: HomeCommand = Effect.gen(function* () {
+	const time = yield* Clock.currentTimeMillis
 	return Message.RefreshTimeResult({
 		timestamp: time,
 	})
 })
 
 export const deleteSelectedAndRefresh: (
-	ids: NEHS.NonEmptyHashSet<string>,
+	ids: NonEmptyHashSet.NonEmptyHashSet<string>,
 ) => HomeCommand = ids =>
-	Eff.gen(function* () {
+	Effect.gen(function* () {
 		const deleteProducts = yield* DeleteProductsByIds.DeleteProductsByIds
 
-		const deleteResult = yield* pipe(deleteProducts(ids), Eff.either)
+		const deleteResult = yield* pipe(deleteProducts(ids), Effect.either)
 
-		if (E.isLeft(deleteResult)) {
+		if (Either.isLeft(deleteResult)) {
 			return Message.DeleteSelectedFailed()
 		}
 
 		const refreshList = yield* GetSortedProducts.GetSortedProducts
 
-		const refreshResult = yield* pipe(refreshList, Eff.either)
+		const refreshResult = yield* pipe(refreshList, Effect.either)
 
-		if (E.isLeft(refreshResult)) {
+		if (Either.isLeft(refreshResult)) {
 			return Message.DeleteSelectedSucceededButRefreshFailed()
 		}
 
@@ -57,14 +62,14 @@ export const deleteSelectedAndRefresh: (
 	})
 
 export const queueLoading: (id: symbol) => HomeCommand = id =>
-	Eff.gen(function* () {
-		yield* Eff.sleep(`150 millis`)
+	Effect.gen(function* () {
+		yield* Effect.sleep(`150 millis`)
 		return Message.ShowSpinner({ id })
 	})
 
 export const queueRemoveToast: (id: symbol) => HomeCommand = id =>
-	Eff.gen(function* () {
-		yield* Eff.logDebug(`Executed command to queue toast removal`)
-		yield* Eff.sleep(`3 seconds`)
+	Effect.gen(function* () {
+		yield* Effect.logDebug(`Executed command to queue toast removal`)
+		yield* Effect.sleep(`3 seconds`)
 		return Message.RemoveToast({ id })
 	})

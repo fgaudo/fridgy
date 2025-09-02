@@ -1,4 +1,4 @@
-import type { L } from '$lib/core/imports.ts'
+import * as Layer from 'effect/Layer'
 
 import { type UseCases } from './app/use-cases.ts'
 import { capacitor, mock } from './data/index.ts'
@@ -9,6 +9,6 @@ export {
 	GetSortedProducts,
 } from './app/use-cases.ts'
 
-export const useCases: L.Layer<UseCases> = import.meta.env.PROD
+export const useCases: Layer.Layer<UseCases> = import.meta.env.PROD
 	? capacitor
 	: mock

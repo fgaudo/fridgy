@@ -70,7 +70,7 @@
     "@eslint/compat@1.2.9": {
         "licenses": "Apache-2.0",
         "repository": "https://github.com/eslint/rewrite",
-        "publisher": "Nicholas C. Zakas",
+        "publisher": "Nicholas Context Zakas",
         "name": "@eslint/compat",
         "description": "Compatibility utilities for ESLint",
         "copyright": ""
@@ -224,7 +224,7 @@
     "eslint@9.27.0": {
         "licenses": "MIT",
         "repository": "https://github.com/eslint/eslint",
-        "publisher": "Nicholas C. Zakas",
+        "publisher": "Nicholas Context Zakas",
         "email": "nicholas+npm@nczconsulting.com",
         "copyright": "Copyright OpenJS Foundation and other contributors, <www.openjsf.org>",
         "name": "eslint",
