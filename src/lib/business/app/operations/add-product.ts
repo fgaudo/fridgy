@@ -7,6 +7,9 @@ export class Request extends Sc.TaggedRequest<Request>()(`AddProduct`, {
 		name: NETS.NonEmptyTrimmedStringSchema,
 		maybeExpirationDate: Sc.Option(Int.IntegerSchema),
 		creationDate: Int.IntegerSchema,
+		maybeStorage: Sc.Option(
+			Sc.Union(Sc.Literal('freezer'), Sc.Literal('fridge')),
+		),
 	},
 }) {}
 

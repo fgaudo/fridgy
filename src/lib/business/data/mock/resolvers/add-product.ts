@@ -34,6 +34,7 @@ export const command = L.effect(
 									maybeExpirationDate: product.maybeExpirationDate,
 									maybeCreationDate: O.some(product.creationDate),
 									maybeId: O.some(indexString),
+									maybeStorage: product.maybeStorage,
 								}),
 							),
 						}

@@ -1,18 +1,18 @@
-package net.gaudo.fridgy.data.statements
+package net.gaudo.fridgy.data.queries
 
 import android.database.sqlite.SQLiteOpenHelper
 import android.provider.BaseColumns
 import androidx.core.database.getLongOrNull
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import net.gaudo.fridgy.data.schemas.Schema
+import net.gaudo.fridgy.data.db.Schema
 
 data class ProductEntity(
     val id: Long,
     val name: String,
     val expirationDate: Long?,
     val creationDate: Long,
-    val storage: String
+    val storage: String?
 )
 
 data class GetAllProductsDto(
@@ -23,15 +23,19 @@ data class GetAllProductsDto(
 private val getAllProductsSql = run {
     val product = Schema.Product.TABLE_NAME
     val productExpiration = Schema.ProductExpiration.TABLE_NAME
+    val productStorage = Schema.ProductStorage.TABLE_NAME
     val storage = Schema.Storage.TABLE_NAME
 
     val product_id = "${product}.${BaseColumns._ID}"
     val product_name = "${product}.${Schema.Product.COLUMN_NAME}"
     val product_creationDate = "${product}.${Schema.Product.COLUMN_CREATION_DATE}"
-    val product_storageId = "${product}.${Schema.Product.COLUMN_STORAGE_ID}"
     val productExpiration_date = "${productExpiration}.${Schema.ProductExpiration.COLUMN_DATE}"
     val productExpiration_productId =
         "${productExpiration}.${Schema.ProductExpiration.COLUMN_PRODUCT_ID}"
+
+    val product_storage_product_id = "${productStorage}.${Schema.ProductStorage.COLUMN_PRODUCT_ID}"
+    val product_storage_storage_id = "${productStorage}.${Schema.ProductStorage.COLUMN_STORAGE_ID}"
+
     val storage_id = "${storage}.${BaseColumns._ID}"
     val storage_name = "${storage}.${Schema.Storage.COLUMN_NAME}"
 
@@ -40,8 +44,10 @@ private val getAllProductsSql = run {
             FROM ${product} 
             LEFT JOIN ${productExpiration}
                 ON ${product_id} = ${productExpiration_productId}
-            INNER JOIN ${storage}
-                ON ${product_storageId} = ${storage_id}
+            LEFT JOIN ${productStorage}
+                ON ${product_id} = ${product_storage_product_id}
+            LEFT JOIN ${storage}
+                ON ${storage_id} = ${product_storage_storage_id}
             ORDER BY
                ${productExpiration_date} IS NULL, ${productExpiration_date}
     """.trimIndent()

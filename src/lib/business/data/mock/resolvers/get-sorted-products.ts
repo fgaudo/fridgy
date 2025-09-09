@@ -37,7 +37,7 @@ export const query = L.effect(
 
 			const map = yield* Ref.get(db).pipe(Eff.map(({ map }) => map))
 
-			const products: GetSortedProducts.ProductDTO[] = map.pipe(HM.toValues)
+			const products: GetSortedProducts.ProductDTO[] = HM.toValues(map)
 
 			return A.sort(ord)(products)
 		}).pipe(withLayerLogging(`I`))

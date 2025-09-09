@@ -5,6 +5,7 @@ export type Product = B.Branded<
 		name: NETS.NonEmptyTrimmedString
 		maybeExpirationDate: O.Option<Int.Integer>
 		creationDate: Int.Integer
+		maybeStorage: O.Option<'freezer' | 'fridge'>
 	},
 	`Product`
 >
@@ -20,6 +21,9 @@ export const ProductSchema = Sc.fromBrand(Product)(
 		name: NETS.NonEmptyTrimmedStringSchema,
 		maybeExpirationDate: Sc.Option(Int.IntegerSchema),
 		creationDate: Int.IntegerSchema,
+		maybeStorage: Sc.Option(
+			Sc.Union(Sc.Literal('freezer'), Sc.Literal('fridge')),
+		),
 	}),
 )
 

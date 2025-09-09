@@ -13,6 +13,9 @@ const DtoToBackend = Sc.transformOrFail(
 			name: Sc.String,
 			creationDate: Sc.Number,
 			expirationDate: Sc.UndefinedOr(Sc.Number),
+			storage: Sc.UndefinedOr(
+				Sc.Union(Sc.Literal('freezer'), Sc.Literal('fridge')),
+			),
 		}),
 	}),
 	Sc.Struct(AddProduct.Request.fields),
@@ -24,6 +27,7 @@ const DtoToBackend = Sc.transformOrFail(
 					name: product.name,
 					creationDate: product.creationDate,
 					expirationDate: O.getOrUndefined(product.maybeExpirationDate),
+					storage: O.getOrUndefined(product.maybeStorage),
 				},
 			}),
 		decode: (actual, _, ast) =>

@@ -37,6 +37,7 @@
 			class="ml-2 text-center flex h-12 w-12 items-center justify-center relative overflow-hidden rounded-full"
 		>
 			<Ripple
+				color="var(--color-background)"
 				ontap={() => {
 					if (!viewModel.state.isAdding) {
 						window.history.back()

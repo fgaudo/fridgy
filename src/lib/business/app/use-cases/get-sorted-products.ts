@@ -12,6 +12,9 @@ export const GetSortedProductsDTO = Sc.Array(
 			maybeName: Sc.Option(NETS.NonEmptyTrimmedStringSchema),
 			maybeExpirationDate: Sc.Option(Int.IntegerSchema),
 			maybeCreationDate: Sc.Option(Int.IntegerSchema),
+			maybeStorage: Sc.Option(
+				Sc.Union(Sc.Literal('freezer'), Sc.Literal('fridge')),
+			),
 			isValid: Sc.Literal(false),
 		}),
 		Sc.Struct({
@@ -19,6 +22,9 @@ export const GetSortedProductsDTO = Sc.Array(
 			id: Sc.String,
 			name: NETS.NonEmptyTrimmedStringSchema,
 			maybeExpirationDate: Sc.Option(Int.IntegerSchema),
+			maybeStorage: Sc.Option(
+				Sc.Union(Sc.Literal('freezer'), Sc.Literal('fridge')),
+			),
 			creationDate: Int.IntegerSchema,
 			isValid: Sc.Literal(true),
 		}),
@@ -63,7 +69,13 @@ export class GetSortedProducts extends Eff.Service<GetSortedProducts>()(
 				const entries = yield* pipe(
 					result,
 					A.map(
-						({ maybeId, maybeName, maybeCreationDate, maybeExpirationDate }) =>
+						({
+							maybeId,
+							maybeName,
+							maybeCreationDate,
+							maybeExpirationDate,
+							maybeStorage,
+						}) =>
 							Eff.gen(function* () {
 								if (O.isNone(maybeId)) {
 									yield* Eff.logWarning(`CORRUPTION - Product has no id.`)
@@ -85,6 +97,7 @@ export class GetSortedProducts extends Eff.Service<GetSortedProducts>()(
 										name,
 										creationDate,
 										maybeExpirationDate,
+										maybeStorage,
 									})
 								})
 
@@ -96,6 +109,7 @@ export class GetSortedProducts extends Eff.Service<GetSortedProducts>()(
 										maybeName,
 										maybeCreationDate,
 										maybeExpirationDate,
+										maybeStorage,
 										isCorrupt: false,
 										isValid: false,
 									} as const
@@ -106,6 +120,7 @@ export class GetSortedProducts extends Eff.Service<GetSortedProducts>()(
 									isValid: true,
 									id: maybeId.value,
 									name: maybeProduct.value.name,
+									maybeStorage: maybeProduct.value.maybeStorage,
 									creationDate: maybeProduct.value.creationDate,
 									maybeExpirationDate: maybeProduct.value.maybeExpirationDate,
 								} as const

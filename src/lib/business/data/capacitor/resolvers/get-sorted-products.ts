@@ -21,12 +21,18 @@ export const Backend = Sc.Struct({
 			creationDate: Sc.UndefinedOr(Sc.JsonNumber).annotations({
 				decodingFallback: H.fallback(undefined),
 			}),
+			storage: Sc.UndefinedOr(
+				Sc.Union(Sc.Literal('freezer'), Sc.Literal('fridge')),
+			).annotations({
+				decodingFallback: H.fallback(undefined),
+			}),
 		}).annotations({
 			decodingFallback: H.fallback({
 				id: undefined,
 				name: undefined,
 				expirationDate: undefined,
 				creationDate: undefined,
+				storage: undefined,
 			}),
 		}),
 	),
@@ -37,15 +43,15 @@ export const query = L.effect(
 	Eff.gen(function* () {
 		const { getAllProductsWithTotal } = yield* DbPlugin
 		return Eff.gen(function* () {
-			const result = yield* pipe(getAllProductsWithTotal, Eff.either)
+			const result = yield* Eff.either(getAllProductsWithTotal)
 
 			if (E.isLeft(result)) {
 				yield* Eff.logError(result.left)
 				return yield* new GetSortedProducts.FetchingFailed()
 			}
 
-			const decodeResult = yield* Sc.decodeUnknown(Backend)(result.right).pipe(
-				Eff.either,
+			const decodeResult = yield* Eff.either(
+				Sc.decodeUnknown(Backend)(result.right),
 			)
 
 			if (E.isLeft(decodeResult)) {
@@ -61,8 +67,7 @@ export const query = L.effect(
 								onSome: id => Eff.option(Eff.try(() => JSON.stringify(id))),
 							}),
 
-							maybeName: pipe(
-								O.fromNullable(product.name),
+							maybeName: O.fromNullable(product.name).pipe(
 								O.flatMap(NETS.fromString),
 							),
 
@@ -75,6 +80,8 @@ export const query = L.effect(
 								O.fromNullable(product.creationDate),
 								O.flatMap(Int.fromNumber),
 							),
+
+							maybeStorage: O.fromNullable(product.storage),
 						} as const
 					}),
 				),

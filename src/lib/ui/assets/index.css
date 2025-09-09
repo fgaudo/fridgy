@@ -1,6 +1,7 @@
 @import 'tailwindcss';
 
 @plugin '@tailwindcss/forms';
+@plugin 'tailwindcss-elevation';
 
 @theme {
 	--transition-duration-fade: 300ms;

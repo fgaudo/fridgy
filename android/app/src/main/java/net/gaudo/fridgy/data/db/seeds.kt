@@ -1,16 +1,16 @@
-package net.gaudo.fridgy.data.seeds
+package net.gaudo.fridgy.data.db
 
 import android.content.ContentValues
 import android.database.sqlite.SQLiteDatabase
-import net.gaudo.fridgy.data.schemas.Schema
+import android.database.sqlite.SQLiteDatabase.CONFLICT_IGNORE
 import java.lang.Exception
 
-fun seed_1_2(db: SQLiteDatabase) {
+fun seed(db: SQLiteDatabase) {
     if (!db.inTransaction()) {
         throw Exception("not in transaction")
     }
 
-    db.insert(
+    db.insertWithOnConflict(
         Schema.Storage.TABLE_NAME,
         null,
         ContentValues().apply {
@@ -18,8 +18,10 @@ fun seed_1_2(db: SQLiteDatabase) {
                 Schema.Storage.COLUMN_NAME,
                 Schema.Storage.Type.Fridge.type
             )
-        })
-    db.insert(
+        },
+        CONFLICT_IGNORE
+    )
+    db.insertWithOnConflict(
         Schema.Storage.TABLE_NAME,
         null,
         ContentValues().apply {
@@ -27,14 +29,6 @@ fun seed_1_2(db: SQLiteDatabase) {
                 Schema.Storage.COLUMN_NAME,
                 Schema.Storage.Type.Freezer.type
             )
-        })
-    db.insert(
-        Schema.Storage.TABLE_NAME,
-        null,
-        ContentValues().apply {
-            put(
-                Schema.Storage.COLUMN_NAME,
-                Schema.Storage.Type.Other.type
-            )
-        })
+        }, CONFLICT_IGNORE
+    )
 }

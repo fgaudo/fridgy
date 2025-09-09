@@ -24,10 +24,12 @@
 			class="ml-2 text-center flex h-12 w-12 items-center justify-center relative overflow-hidden rounded-full"
 		>
 			<Ripple
+				color="var(--color-background)"
 				ontap={() => {
 					window.history.back()
 				}}
 			></Ripple>
+
 			<ArrowLeft />
 		</div>
 		<div class="font-stylish pl-2 text-2xl">About</div>
@@ -35,7 +37,7 @@
 
 	<div
 		style:padding-top={`calc(env(safe-area-inset-top) + 92px)`}
-		style:padding-bottom={'env(safe-area-inset-bottom)'}
+		style:padding-bottom={`env(safe-area-inset-bottom)`}
 		class="flex flex-col justify-center gap-2 px-[24px] bg-background"
 	>
 		<p class="font-stylish text-xl">Fridgy</p>

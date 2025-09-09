@@ -11,11 +11,10 @@ export const command = L.effect(
 		const { deleteProductsByIds } = yield* DbPlugin
 
 		return RR.makeBatched(requests =>
-			pipe(
+			Eff.matchCauseEffect(
 				Eff.gen(function* () {
 					const ids = yield* pipe(
-						requests,
-						A.map(request => request.id),
+						A.map(requests, request => request.id),
 						A.map(id =>
 							Eff.gen(function* () {
 								const parsed = yield* pipe(
@@ -55,12 +54,11 @@ export const command = L.effect(
 
 					return result.right
 				}),
-				Eff.matchCauseEffect({
+				{
 					onFailure: err => Eff.forEach(requests, R.failCause(err)),
 					onSuccess: () => Eff.forEach(requests, R.succeed(undefined)),
-				}),
-				withLayerLogging(`I`),
-			),
+				},
+			).pipe(withLayerLogging(`I`)),
 		)
 	}),
 )

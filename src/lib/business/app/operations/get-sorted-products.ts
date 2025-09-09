@@ -5,6 +5,9 @@ export const ProductDTO = Sc.Struct({
 	maybeName: Sc.Option(NETS.NonEmptyTrimmedStringSchema),
 	maybeExpirationDate: Sc.Option(Int.IntegerSchema),
 	maybeCreationDate: Sc.Option(Int.IntegerSchema),
+	maybeStorage: Sc.Option(
+		Sc.Union(Sc.Literal('freezer'), Sc.Literal('fridge')),
+	),
 })
 export type ProductDTO = Sc.Schema.Type<typeof ProductDTO>
 

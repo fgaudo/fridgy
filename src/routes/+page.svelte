@@ -21,6 +21,7 @@
 	import * as Utils from '$lib/ui/utils.ts'
 
 	import { createViewModel } from './(viewmodel)/index.svelte.ts'
+	import { ProductViewModel } from './(viewmodel)/state.svelte.ts'
 
 	const viewModel = createViewModel()
 </script>
@@ -87,20 +88,28 @@
 			<div
 				class="ml-2 relative h-12 w-12 flex items-center justify-center rounded-full overflow-hidden"
 			>
-				{#if O.isSome(viewModel.derived.maybeNonEmptySelected)}
-					<div class="absolute" transition:fade={{ duration: 200 }}>
-						{#if !viewModel.state.isDeleteRunning}
-							<Ripple ontap={viewModel.tasks.clearSelected}></Ripple>
-						{/if}
-
+				{#if !viewModel.derived.selected.isEmpty}
+					{#if !viewModel.state.deletingTaskId}
+						<Ripple
+							color="var(--color-background)"
+							ontap={viewModel.tasks.clearSelected}
+						></Ripple>
+					{/if}
+					<div
+						class="absolute pointer-events-none"
+						transition:fade={{ duration: 200 }}
+					>
 						<X />
 					</div>
 				{:else}
-					<div transition:fade={{ duration: 200 }} class="absolute">
-						<Ripple
-							color="var(--color-background)"
-							ontap={viewModel.tasks.toggleMenu}
-						></Ripple>
+					<Ripple
+						color="var(--color-background)"
+						ontap={viewModel.tasks.toggleMenu}
+					></Ripple>
+					<div
+						transition:fade={{ duration: 200 }}
+						class="absolute pointer-events-none"
+					>
 						<Menu />
 					</div>
 				{/if}
@@ -110,14 +119,14 @@
 				Fridgy
 			</div>
 			<div class="grow"></div>
-			{#if O.isSome(viewModel.derived.maybeNonEmptySelected)}
+			{#if !viewModel.derived.selected.isEmpty}
 				<div
 					transition:fade={{ duration: 200 }}
 					class="relative flex h-full items-center text-lg font-stylish translate-y-[2px]"
 				>
-					{#key viewModel.derived.maybeNonEmptySelected.value.size}
+					{#key viewModel.derived.selected.size}
 						<div class="absolute" transition:fade={{ duration: 200 }}>
-							{viewModel.derived.maybeNonEmptySelected.value.size}
+							{viewModel.derived.selected.size}
 						</div>
 					{/key}
 				</div>
@@ -127,7 +136,10 @@
 					transition:fade={{ duration: 200 }}
 				>
 					{#if !viewModel.state.isDeleteRunning}
-						<Ripple ontap={viewModel.tasks.deleteSelected}></Ripple>{/if}
+						<Ripple
+							color="var(--color-background)"
+							ontap={viewModel.tasks.deleteSelected}
+						></Ripple>{/if}
 					<Trash2 />
 				</div>
 			{/if}
@@ -146,111 +158,57 @@
 		style:padding-bottom={`calc(env(safe-area-inset-bottom) + 140px)`}
 		style:padding-top={`calc(env(safe-area-inset-top) + 64px)`}
 	>
+		<div
+			class={[
+				`transition-all absolute bg-background h-11 mt-3 w-1/3`,
+				{
+					'rounded-tr-lg': viewModel.state.storage === `fridge`,
+					'translate-x-[100%] rounded-t-lg':
+						viewModel.state.storage === `freezer`,
+					'translate-x-[200%] rounded-tl-lg':
+						viewModel.state.storage === `other`,
+				},
+			]}
+		></div>
 		<ul
-			class=" mb-3 flex flex-wrap text-sm font-medium text-center text-gray-500 dark:text-gray-400"
+			class="items-end bg-secondary/20 h-14 flex mb-3 flex-wrap text-sm font-medium text-center text-gray-500 dark:text-gray-400"
 		>
 			<li
 				class={[
-					'flex-1 transition-all',
-					{
-						'rounded-br-2xl bg-background':
-							viewModel.state.viewOpen !== 'fridge',
-						'bg-secondary/20': viewModel.state.viewOpen === 'fridge',
-					},
+					`flex-1 h-11 transition-all relative flex justify-center items-center`,
 				]}
 			>
-				<div
-					class={[
-						'transition-all relative',
-						{
-							'rounded-br-2xl': viewModel.state.viewOpen === 'freezer',
-							'bg-secondary/20': viewModel.state.viewOpen !== 'fridge',
-							'bg-background  rounded-tr-2xl':
-								viewModel.state.viewOpen === 'fridge',
-						},
-					]}
-				>
-					<button
-						class={[
-							'transition-all',
-							{ 'text-secondary': viewModel.state.viewOpen === 'fridge' },
-							'inline-flex items-center justify-center p-4 rounded-t-lg active',
-						]}
-					>
-						<Ripple ontap={() => viewModel.tasks.changeCompartment('fridge')}
-						></Ripple>
-						<Refrigerator />Fridge
-					</button>
+				{#if viewModel.state.storage !== `fridge`}
+					<Ripple ontap={() => viewModel.tasks.changeCompartment(`fridge`)}
+					></Ripple>
+				{/if}
+				<div class="pointer-events-none flex items-center gap-1 justify-center">
+					<Refrigerator />Fridge
 				</div>
 			</li>
 			<li
 				class={[
-					'flex-1 transition-all',
-					{
-						'bg-secondary/20': viewModel.state.viewOpen === 'freezer',
-						'rounded-br-2xl bg-background':
-							viewModel.state.viewOpen !== 'freezer',
-					},
+					`flex-1 h-11 transition-all relative flex justify-center items-center`,
 				]}
 			>
-				<div
-					class={[
-						'relative transition-all',
-						{
-							'rounded-bl-2xl': viewModel.state.viewOpen === 'fridge',
-							'rounded-br-2xl': viewModel.state.viewOpen === 'other',
-							'bg-background rounded-tl-2xl rounded-tr-2xl':
-								viewModel.state.viewOpen === 'freezer',
-							'bg-secondary/20  ': viewModel.state.viewOpen !== 'freezer',
-						},
-					]}
-				>
-					<button
-						class={[
-							'transition-all',
-							{ 'text-secondary': viewModel.state.viewOpen === 'freezer' },
-							'inline-flex items-center justify-center p-4 rounded-t-lg active',
-						]}
-						aria-current="page"
-					>
-						<Ripple ontap={() => viewModel.tasks.changeCompartment('freezer')}
-						></Ripple>
-						<Snowflake />Freezer
-					</button>
+				{#if viewModel.state.storage !== `freezer`}
+					<Ripple ontap={() => viewModel.tasks.changeCompartment(`freezer`)}
+					></Ripple>
+				{/if}
+				<div class="pointer-events-none flex items-center gap-1 justify-center">
+					<Snowflake />Freezer
 				</div>
 			</li>
 			<li
 				class={[
-					'flex-1 transition-all',
-					{
-						'bg-background': viewModel.state.viewOpen !== 'other',
-						'bg-secondary/20': viewModel.state.viewOpen === 'other',
-					},
+					`flex-1 h-11 transition-all flex justify-center items-center relative`,
 				]}
 			>
-				<div
-					class={[
-						'transition-all relative',
-						{
-							'rounded-bl-2xl': viewModel.state.viewOpen === 'freezer',
-							'bg-secondary/20 ': viewModel.state.viewOpen !== 'other',
-							'bg-background  rounded-tl-2xl':
-								viewModel.state.viewOpen === 'other',
-						},
-					]}
-				>
-					<button
-						class={[
-							'transition-all',
-							{ 'text-secondary': viewModel.state.viewOpen === 'other' },
-							'inline-flex items-center justify-center p-4 rounded-t-lg active',
-						]}
-					>
-						<Ripple ontap={() => viewModel.tasks.changeCompartment('other')}
-						></Ripple>
-						<Refrigerator />Other
-					</button>
-				</div>
+				{#if viewModel.state.storage !== `other`}
+					<Ripple ontap={() => viewModel.tasks.changeCompartment(undefined)}
+					></Ripple>
+				{/if}
+				<div class="pointer-events-none">Other</div>
 			</li>
 		</ul>
 
@@ -282,148 +240,175 @@
 						</div>
 					</div>
 				</div>
-			{:else if O.isSome(viewModel.derived.maybeLoadedProducts)}
-				{@const products = viewModel.derived.maybeLoadedProducts.value}
-
-				<div
-					out:fade={{ duration: 200 }}
-					class="flex flex-1 gap-2 flex-col w-full"
-				>
-					{#each products.entries as product (product.id)}
-						{@const maybeCreation = product.isCorrupt
-							? O.none()
-							: product.isValid
-								? O.some(product.creationDate)
-								: O.fromNullable(product.maybeCreationDate)}
-
-						{@const maybeName = product.isCorrupt
-							? O.fromNullable(product.maybeName)
-							: product.isValid
-								? O.some(product.name)
-								: O.fromNullable(product.maybeName)}
-
-						{@const maybeExpirationDate = product.isCorrupt
-							? O.none()
-							: O.fromNullable(product.maybeExpirationDate)}
-						<div out:fade={{ duration: 200 }} animate:flip={{ duration: 250 }}>
-							<div
-								class={[
-									`flex mx-2 relative transition-transform shadow-sm rounded-lg py-1 overflow-hidden`,
-									!product.isCorrupt && product.isSelected
-										? `bg-accent/10 scale-[102%]`
-										: `bg-secondary/5`,
-								]}
-							>
-								{#if !viewModel.state.isDeleteRunning}
-									{#if products.selected.size > 0}
-										<Ripple ontap={() => viewModel.tasks.toggleItem(product)}
-										></Ripple>
-									{:else}
-										<Ripple onhold={() => viewModel.tasks.toggleItem(product)}
-										></Ripple>
-									{/if}
-								{/if}
-								<div
-									class={[
-										`justify-between flex min-h-[60px] w-full gap-1 select-none items-center`,
-									]}
-									style="content-visibility: 'auto'"
-								>
-									<div class="p-2 h-full aspect-square">
-										<div
-											class="flex-col flex bg-secondary text-background shadow-xs rounded-full items-center justify-center text-center h-full aspect-square"
-										>
-											{#if O.isSome(maybeExpirationDate)}
-												<div class="text-lg font-bold leading-4">
-													{format(maybeExpirationDate.value, `d`)}
-												</div>
-												<div class="text-sm leading-4">
-													{format(maybeExpirationDate.value, `LLL`)}
-												</div>
-											{:else}
-												<Inf class="p-2 w-full h-full font-bold " />
-											{/if}
-										</div>
-									</div>
-
-									<div
-										class="flex-1 h-full flex justify-center flex-col leading-[16px] gap-2"
-									>
-										{#if O.isSome(maybeName)}
-											<div
-												class="overflow-ellipsis whitespace-nowrap overflow-hidden capitalize"
-											>
-												{maybeName.value}
-											</div>
-										{:else}
-											<div>[NO NAME]</div>
-										{/if}
-
-										{#if O.isNone(maybeCreation)}
-											No creation date
-										{:else if O.isSome(maybeExpirationDate) && maybeExpirationDate.value > viewModel.state.currentTimestamp}
-											{@const expiration = maybeExpirationDate.value}
-											{@const creation = maybeCreation.value}
-
-											{@const totalDuration = expiration - creation}
-											{@const remainingDuration =
-												expiration - viewModel.state.currentTimestamp}
-											{@const currentProgress =
-												remainingDuration / totalDuration}
-
-											{@const currentProgressOrZero =
-												totalDuration < 0 ? 0 : currentProgress}
-
-											{@const color = `color-mix(in srgb, var(--color-secondary) ${(currentProgressOrZero * 100).toString(10)}%, var(--color-primary) ${((1 - currentProgressOrZero) * 100).toString(10)}%)`}
-
-											<div
-												style:outline-color={color}
-												class="z-0 h-[4px] my-[2px] w-full outline-[1px]"
-											>
-												<div
-													class="bg-primary h-full"
-													style:background-color={color}
-													style:width={`${(currentProgressOrZero * 100).toString()}%`}
-												></div>
-											</div>
-										{:else if O.isSome(maybeExpirationDate)}
-											<div
-												class="text-[12px] leading-[8px] text-primary font-bold"
-											>
-												Expired
-											</div>
-										{/if}
-									</div>
-									<div
-										class="h-9/12 aspect-square flex items-center justify-center"
-									>
-										{#if O.isSome(maybeExpirationDate)}
-											<div
-												class={[
-													`text-primary duration-fade absolute text-sm`,
-													{
-														'text-primary font-bold':
-															maybeExpirationDate.value <
-															viewModel.state.currentTimestamp,
-													},
-												]}
-											>
-												{Utils.formatRemainingTime(
-													viewModel.state.currentTimestamp,
-													maybeExpirationDate.value,
-												)}
-											</div>
-										{/if}
-									</div>
-								</div>
-							</div>
-						</div>
-					{/each}
-				</div>
 			{/if}
+
+			<div class="relative">
+				<div class="absolute">
+					<div
+						out:fade={{ duration: 200 }}
+						class="flex flex-1 gap-2 flex-col w-screen"
+					>
+						{#each viewModel.derived.uncategorizedProducts as product (product.id)}
+							<div
+								out:fade={{ duration: 200 }}
+								animate:flip={{ duration: 250 }}
+							>
+								{@render item(product)}
+							</div>
+						{/each}
+					</div>
+					<div
+						out:fade={{ duration: 200 }}
+						class="flex flex-1 gap-2 flex-col w-screen"
+					>
+						{#each viewModel.derived.uncategorized as product (product.id)}
+							<div
+								out:fade={{ duration: 200 }}
+								animate:flip={{ duration: 250 }}
+							>
+								{@render item(product)}
+							</div>
+						{/each}
+					</div>
+					<div
+						out:fade={{ duration: 200 }}
+						class="flex flex-1 gap-2 flex-col w-screen"
+					>
+						{#each viewModel.derived.uncategorized as product (product.id)}
+							<div
+								out:fade={{ duration: 200 }}
+								animate:flip={{ duration: 250 }}
+							>
+								{@render item(product)}
+							</div>
+						{/each}
+					</div>
+				</div>
+			</div>
 		</div>
 	</div>
-	{#if O.isNone(viewModel.derived.maybeNonEmptySelected)}
+	{#snippet item(product: ProductViewModel)}
+		{@const maybeCreation = product.isCorrupt
+			? O.none()
+			: product.isValid
+				? O.some(product.creationDate)
+				: O.fromNullable(product.maybeCreationDate)}
+
+		{@const maybeName = product.isCorrupt
+			? O.fromNullable(product.maybeName)
+			: product.isValid
+				? O.some(product.name)
+				: O.fromNullable(product.maybeName)}
+
+		{@const maybeExpirationDate = product.isCorrupt
+			? O.none()
+			: O.fromNullable(product.maybeExpirationDate)}
+		<div
+			class={[
+				`flex mx-2 relative transition-transform shadow-sm rounded-lg py-1 overflow-hidden`,
+				!product.isCorrupt && product.isSelected
+					? `bg-accent/10 scale-[102%]`
+					: `bg-secondary/5`,
+			]}
+		>
+			{#if !viewModel.state.isDeleteRunning}
+				{#if products.selected.size > 0}
+					<Ripple ontap={() => viewModel.tasks.toggleItem(product)}></Ripple>
+				{:else}
+					<Ripple onhold={() => viewModel.tasks.toggleItem(product)}></Ripple>
+				{/if}
+			{/if}
+			<div
+				class={[
+					`justify-between flex min-h-[60px] w-full gap-1 select-none items-center`,
+				]}
+				style="content-visibility: 'auto'"
+			>
+				<div class="p-2 h-full aspect-square">
+					<div
+						class="flex-col flex bg-secondary text-background shadow-xs rounded-full items-center justify-center text-center h-full aspect-square"
+					>
+						{#if O.isSome(maybeExpirationDate)}
+							<div class="text-lg font-bold leading-4">
+								{format(maybeExpirationDate.value, `d`)}
+							</div>
+							<div class="text-sm leading-4">
+								{format(maybeExpirationDate.value, `LLL`)}
+							</div>
+						{:else}
+							<Inf class="p-2 w-full h-full font-bold " />
+						{/if}
+					</div>
+				</div>
+
+				<div
+					class="flex-1 h-full flex justify-center flex-col leading-[16px] gap-2"
+				>
+					{#if O.isSome(maybeName)}
+						<div
+							class="overflow-ellipsis whitespace-nowrap overflow-hidden capitalize"
+						>
+							{maybeName.value}
+						</div>
+					{:else}
+						<div>[NO NAME]</div>
+					{/if}
+
+					{#if O.isNone(maybeCreation)}
+						No creation date
+					{:else if O.isSome(maybeExpirationDate) && maybeExpirationDate.value > viewModel.state.currentTimestamp}
+						{@const expiration = maybeExpirationDate.value}
+						{@const creation = maybeCreation.value}
+
+						{@const totalDuration = expiration - creation}
+						{@const remainingDuration =
+							expiration - viewModel.state.currentTimestamp}
+						{@const currentProgress = remainingDuration / totalDuration}
+
+						{@const currentProgressOrZero =
+							totalDuration < 0 ? 0 : currentProgress}
+
+						{@const color = `color-mix(in srgb, var(--color-secondary) ${(currentProgressOrZero * 100).toString(10)}%, var(--color-primary) ${((1 - currentProgressOrZero) * 100).toString(10)}%)`}
+
+						<div
+							style:outline-color={color}
+							class="z-0 h-[4px] my-[2px] w-full outline-[1px]"
+						>
+							<div
+								class="bg-primary h-full"
+								style:background-color={color}
+								style:width={`${(currentProgressOrZero * 100).toString()}%`}
+							></div>
+						</div>
+					{:else if O.isSome(maybeExpirationDate)}
+						<div class="text-[12px] leading-[8px] text-primary font-bold">
+							Expired
+						</div>
+					{/if}
+				</div>
+				<div class="h-9/12 aspect-square flex items-center justify-center">
+					{#if O.isSome(maybeExpirationDate)}
+						<div
+							class={[
+								`text-primary duration-fade absolute text-sm`,
+								{
+									'text-primary font-bold':
+										maybeExpirationDate.value <
+										viewModel.state.currentTimestamp,
+								},
+							]}
+						>
+							{Utils.formatRemainingTime(
+								viewModel.state.currentTimestamp,
+								maybeExpirationDate.value,
+							)}
+						</div>
+					{/if}
+				</div>
+			</div>
+		</div>
+	{/snippet}
+	{#if O.isNone(viewModel.derived.maybeSelected)}
 		<div
 			class="fixed right-[16px] left-[16px]"
 			style:bottom={`calc(env(safe-area-inset-bottom, 0) + 21px)`}

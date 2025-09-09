@@ -38,7 +38,7 @@ export type Message = Da.TaggedEnum<{
 	ShowSpinner: { id: symbol }
 	NoOp: object
 	ToggleMenu: object
-	ChangeCompartment: { type: `fridge` | `freezer` | `other` }
+	ChangeCompartment: { type: `fridge` | `freezer` | undefined }
 	ShowCrash: object
 	RemoveToast: { id: symbol }
 	Crash: { message: unknown }
@@ -55,7 +55,6 @@ export const update: Update<State, Message, UseCases> = (state, message) => {
 			const taskId = Symbol()
 
 			state.refreshingTaskId = taskId
-			state.isLoading = true
 
 			return [refreshList(taskId)]
 		}),
@@ -84,7 +83,7 @@ export const update: Update<State, Message, UseCases> = (state, message) => {
 			state.isLoading = false
 			state.receivedError = false
 
-			state.products = {
+			state.productsState = {
 				entries: result.map(entry => {
 					if (entry.isCorrupt) {
 						return {
@@ -98,6 +97,7 @@ export const update: Update<State, Message, UseCases> = (state, message) => {
 						return {
 							...entry,
 							maybeExpirationDate: O.getOrUndefined(entry.maybeExpirationDate),
+							maybeStorage: O.getOrUndefined(entry.maybeStorage),
 							isSelected: false,
 						}
 					}
@@ -106,6 +106,7 @@ export const update: Update<State, Message, UseCases> = (state, message) => {
 						...entry,
 						maybeName: O.getOrUndefined(entry.maybeName),
 						maybeCreationDate: O.getOrUndefined(entry.maybeCreationDate),
+						maybeStorage: O.getOrUndefined(entry.maybeStorage),
 						maybeExpirationDate: O.getOrUndefined(entry.maybeExpirationDate),
 						isSelected: false,
 					}
@@ -116,12 +117,12 @@ export const update: Update<State, Message, UseCases> = (state, message) => {
 			return []
 		}),
 		M.tag(`StartDeleteSelectedAndRefresh`, () => {
-			if (state.isDeleteRunning) {
+			if (state.deletingTaskId) {
 				return []
 			}
 
 			const maybeIds = pipe(
-				O.fromNullable(state.products?.selected),
+				O.fromNullable(state.selectedProducts),
 				O.map(HS.fromIterable),
 				O.flatMap(NEHS.fromHashSet),
 			)
@@ -131,13 +132,14 @@ export const update: Update<State, Message, UseCases> = (state, message) => {
 			}
 
 			const id = Symbol()
+			state.deletingTaskId = id
 			state.spinnerTaskId = id
 
 			return [deleteSelectedAndRefresh(maybeIds.value), queueLoading(id)]
 		}),
 		M.tag(`DeleteSelectedAndRefreshSucceeded`, ({ result }) => {
-			state.isDeleteRunning = false
-			state.products = {
+			state.deletingTaskId = undefined
+			state.productsState = {
 				entries: result.map(entry => {
 					if (entry.isCorrupt) {
 						return {
@@ -151,6 +153,7 @@ export const update: Update<State, Message, UseCases> = (state, message) => {
 						return {
 							...entry,
 							maybeExpirationDate: O.getOrUndefined(entry.maybeExpirationDate),
+							maybeStorage: O.getOrUndefined(entry.maybeStorage),
 							isSelected: false,
 						}
 					}
@@ -160,19 +163,20 @@ export const update: Update<State, Message, UseCases> = (state, message) => {
 						maybeName: O.getOrUndefined(entry.maybeName),
 						maybeCreationDate: O.getOrUndefined(entry.maybeCreationDate),
 						maybeExpirationDate: O.getOrUndefined(entry.maybeExpirationDate),
+						maybeStorage: O.getOrUndefined(entry.maybeStorage),
 						isSelected: false,
 					}
 				}),
 				selected: new SvelteSet(),
 			}
-			state.products.selected.clear()
+			state.productsState.selected.clear()
 			state.isLoading = false
 			state.spinnerTaskId = undefined
 
 			return []
 		}),
 		M.tag(`DeleteSelectedFailed`, () => {
-			state.isDeleteRunning = false
+			state.deletingTaskId = undefined
 			state.isLoading = false
 			state.spinnerTaskId = undefined
 
@@ -180,7 +184,7 @@ export const update: Update<State, Message, UseCases> = (state, message) => {
 		}),
 		M.tag(`DeleteSelectedSucceededButRefreshFailed`, () => {
 			state.isDeleteRunning = false
-			state.products = undefined
+			state.productsState = undefined
 			state.receivedError = true
 			state.spinnerTaskId = undefined
 
@@ -189,17 +193,17 @@ export const update: Update<State, Message, UseCases> = (state, message) => {
 			return []
 		}),
 		M.tag(`ClearSelected`, () => {
-			if (state.products === undefined) return []
+			if (state.productsState === undefined) return []
 
-			state.products.selected.clear()
-			state.products.entries.forEach(entry => {
+			state.productsState.selected.clear()
+			state.productsState.entries.forEach(entry => {
 				if (entry.isCorrupt) return
 				entry.isSelected = false
 			})
 			return []
 		}),
 		M.tag(`ChangeCompartment`, ({ type }) => {
-			state.viewOpen = type
+			state.storage = type
 			return []
 		}),
 		M.tag(`ToggleItem`, ({ product }) => {
@@ -209,17 +213,17 @@ export const update: Update<State, Message, UseCases> = (state, message) => {
 				return []
 			}
 
-			if (state.products === undefined) return []
+			if (state.productsState === undefined) return []
 
-			const hasSelectionStarted = state.products.selected.size <= 0
+			const hasSelectionStarted = state.productsState.selected.size <= 0
 
-			if (state.products.selected.has(product.id)) {
+			if (state.productsState.selected.has(product.id)) {
 				product.isSelected = false
-				state.products.selected.delete(product.id)
+				state.productsState.selected.delete(product.id)
 				return []
 			}
 
-			state.products.selected.add(product.id)
+			state.productsState.selected.add(product.id)
 			product.isSelected = true
 
 			return [

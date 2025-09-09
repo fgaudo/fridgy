@@ -42,7 +42,7 @@ export function createViewModel() {
 						return yield* dispatch(Message.ToggleMenu())
 					}
 
-					if (context.derived.hasSelectedProducts) {
+					if (context.derived.hasSelected) {
 						return yield* dispatch(Message.ClearSelected())
 					}
 
@@ -110,7 +110,7 @@ export function createViewModel() {
 					Eff.andThen(dispatch(Message.StartDeleteSelectedAndRefresh())),
 					runner.runEffect,
 				),
-			changeCompartment: (compartment: `fridge` | `freezer` | `other`) =>
+			changeCompartment: (compartment: `fridge` | `freezer` | undefined) =>
 				pipe(
 					Eff.log(`UI triggered changeCompartment`),
 					Eff.andThen(

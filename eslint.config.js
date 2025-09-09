@@ -21,24 +21,30 @@ export default ts.config(
 	prettier,
 	...svelte.configs.prettier,
 	{
-		plugins: { '@stylistic': stylistic },
-
+		languageOptions: {
+			globals: { ...globals.browser, ...globals.node },
+		},
+		rules: { 'no-undef': 'off' },
+	},
+	{
+		files: ['**/*.svelte', '**/*.svelte.ts', '**/*.svelte.js'],
 		languageOptions: {
 			parserOptions: {
 				projectService: true,
-				tsconfigRootDir: import.meta.dirname,
-			},
-
-			globals: {
-				...globals.browser,
-				...globals.node,
+				extraFileExtensions: ['.svelte'],
+				parser: ts.parser,
+				svelteConfig,
 			},
 		},
-		ignores: ['eslint.config.js', 'svelte.config.js'],
+	},
+	{
+		plugins: { '@stylistic': stylistic },
+
 		rules: {
 			'no-undef': 'off',
 			'@stylistic/quotes': ['error', 'backtick'],
 			'svelte/no-useless-mustaches': 'off',
+			'svelte/no-at-html-tags': 'off',
 			'@typescript-eslint/no-unnecessary-condition': [
 				'error',
 				{
@@ -53,18 +59,6 @@ export default ts.config(
 
 		rules: {
 			'@typescript-eslint/no-unsafe-assignment': 'off',
-		},
-	},
-	{
-		files: ['**/*.svelte', '**/*.svelte.ts', '**/*.svelte.js'],
-
-		languageOptions: {
-			parserOptions: {
-				projectService: true,
-				extraFileExtensions: ['.svelte'],
-				parser: ts.parser,
-				svelteConfig,
-			},
 		},
 	},
 )

@@ -12,9 +12,11 @@ export type AddProductCommand = Command<Message, UseCases>
 export const addProduct = ({
 	name,
 	maybeExpirationDate,
+	maybeStorage,
 }: {
 	name: NETS.NonEmptyTrimmedString
 	maybeExpirationDate: O.Option<Int.Integer>
+	maybeStorage: O.Option<'freezer' | 'fridge'>
 }): AddProductCommand =>
 	Eff.gen(function* () {
 		yield* Eff.log(`Executed command for adding a product`)
@@ -25,7 +27,8 @@ export const addProduct = ({
 			Eff.either(
 				addProduct({
 					name,
-					maybeExpirationDate: maybeExpirationDate,
+					maybeExpirationDate,
+					maybeStorage,
 				}),
 			),
 			Eff.sleep(MINIMUM_LAG_MS),

@@ -1,6 +1,6 @@
 import { SvelteSet } from 'svelte/reactivity'
 
-import { Int, O, Sc } from '$lib/core/imports.ts'
+import { A, Int, O, Sc } from '$lib/core/imports.ts'
 
 export const ProductViewModel = Sc.mutable(
 	Sc.Union(
@@ -10,6 +10,9 @@ export const ProductViewModel = Sc.mutable(
 			maybeName: Sc.UndefinedOr(Sc.String),
 			maybeExpirationDate: Sc.UndefinedOr(Sc.Number),
 			maybeCreationDate: Sc.UndefinedOr(Sc.Number),
+			maybeStorage: Sc.UndefinedOr(
+				Sc.Union(Sc.Literal(`fridge`), Sc.Literal(`freezer`)),
+			),
 			isValid: Sc.Literal(false),
 			isSelected: Sc.Boolean,
 		}),
@@ -18,6 +21,9 @@ export const ProductViewModel = Sc.mutable(
 			id: Sc.String,
 			name: Sc.String,
 			maybeExpirationDate: Sc.UndefinedOr(Sc.Number),
+			maybeStorage: Sc.UndefinedOr(
+				Sc.Union(Sc.Literal(`fridge`), Sc.Literal(`freezer`)),
+			),
 			creationDate: Sc.Number,
 			isValid: Sc.Literal(true),
 			isSelected: Sc.Boolean,
@@ -33,97 +39,98 @@ export const ProductViewModel = Sc.mutable(
 export type ProductViewModel = Sc.Schema.Type<typeof ProductViewModel>
 
 export type State = {
-	receivedError: boolean
-	currentTimestamp: number
+	currentTimestamp: number | undefined
 	isMenuOpen: boolean
 	refreshingTaskId: symbol | undefined
-	isDeleteRunning: boolean
+	deletingTaskId: symbol | undefined
 	spinnerTaskId: symbol | undefined
 	hasCrashOccurred: boolean
-	viewOpen: `fridge` | `freezer` | `other`
+	storage: `fridge` | `freezer` | `other`
+	products: ProductViewModel[]
+	selected: SvelteSet<string>
 	toastMessage:
 		| { id: symbol; message: string; type: `error` | `success` }
-		| undefined
-	isLoading: boolean
-	products:
-		| {
-				selected: SvelteSet<string>
-				entries: ProductViewModel[]
-		  }
 		| undefined
 }
 
 export type StateContext = ReturnType<typeof createStateContext>
 
-export function hasProducts(state: State): state is State & {
-	products: {
-		selectedProducts: SvelteSet<string>
-		entries: ProductViewModel[]
-	}
-} {
-	return state.products !== undefined
-}
-
 export function createStateContext() {
 	const state = $state<State>({
-		receivedError: false,
 		hasCrashOccurred: false,
-		isLoading: false,
-		isDeleteRunning: false,
-		viewOpen: `fridge`,
+		deletingTaskId: undefined,
+		storage: `fridge`,
 		isMenuOpen: false,
 		toastMessage: undefined,
-		currentTimestamp: Date.now(),
-		products: undefined,
+		currentTimestamp: undefined,
 		spinnerTaskId: undefined,
 		refreshingTaskId: undefined,
+		products: [],
+		selected: new SvelteSet(),
 	})
 
-	const currentTimestamp = $derived(
-		Int.unsafeFromNumber(state.currentTimestamp),
+	const maybeCurrentTimestamp = $derived(
+		O.fromNullable(state.currentTimestamp).pipe(O.map(Int.unsafeFromNumber)),
 	)
 
-	const maybeNonEmptySelected = $derived(
-		O.fromNullable(state.products?.selected).pipe(O.filter(s => s.size > 0)),
+	const uncategorizedProducts = $derived(
+		A.filter(
+			state.products,
+			product => product.isCorrupt || product.maybeStorage === undefined,
+		),
+	)
+
+	const fridgeProducts = $derived(
+		A.filter(
+			state.products,
+			product => !product.isCorrupt && product.maybeStorage === `fridge`,
+		),
+	)
+
+	const freezerProducts = $derived(
+		A.filter(
+			state.products,
+			product => !product.isCorrupt && product.maybeStorage === `freezer`,
+		),
 	)
 
 	const refreshTimeListenersEnabled = $derived(
-		state.products !== undefined &&
-			state.products.entries.findIndex(
+		(state.storage === `other` &&
+			A.findFirstIndex(
+				uncategorizedProducts,
 				e => !e.isCorrupt && e.maybeExpirationDate !== undefined,
-			) >= 0,
+			).pipe(O.isSome)) ||
+			(state.storage === `fridge` &&
+				A.findFirstIndex(
+					fridgeProducts,
+					e => !e.isCorrupt && e.maybeExpirationDate !== undefined,
+				).pipe(O.isSome)) ||
+			(state.storage === `freezer` &&
+				A.findFirstIndex(
+					freezerProducts,
+					e => !e.isCorrupt && e.maybeExpirationDate !== undefined,
+				).pipe(O.isSome)),
 	)
 
-	const maybeLoadedNonEmptyProducts = $derived(
-		O.fromNullable(state.products).pipe(O.filter(p => p.entries.length > 0)),
-	)
-
-	const hasSelectedProducts = $derived(
-		O.fromNullable(state.products).pipe(
-			O.map(products => products.selected.size > 0),
-			O.getOrElse(() => false),
-		),
-	)
+	const selected = $derived({
+		isEmpty: state.selected.size <= 0,
+		size: state.selected.size,
+		products: state.selected,
+	})
 
 	const maybeToastMessage = $derived(O.fromNullable(state.toastMessage))
 
 	return {
 		state,
 		derived: {
-			get maybeLoadedProducts() {
-				return maybeLoadedNonEmptyProducts
-			},
-			get maybeNonEmptySelected() {
-				return maybeNonEmptySelected
+			get selected() {
+				return selected
 			},
 			get refreshTimeListenersEnabled() {
 				return refreshTimeListenersEnabled
 			},
 			get currentTimestamp() {
-				return currentTimestamp
-			},
-			get hasSelectedProducts() {
-				return hasSelectedProducts
+				return maybeCurrentTimestamp
 			},
 			get maybeToastMessage() {
 				return maybeToastMessage

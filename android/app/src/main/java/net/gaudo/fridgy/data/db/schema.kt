@@ -1,4 +1,4 @@
-package net.gaudo.fridgy.data.schemas
+package net.gaudo.fridgy.data.db
 
 import android.database.sqlite.SQLiteDatabase
 import android.provider.BaseColumns
@@ -18,11 +18,16 @@ object Schema {
         const val COLUMN_PRODUCT_ID = "product_id"
     }
 
+    object ProductStorage : BaseColumns {
+        const val TABLE_NAME = "product_storage"
+        const val COLUMN_PRODUCT_ID = "product_id"
+        const val COLUMN_STORAGE_ID = "storage_id"
+    }
+
     object Storage : BaseColumns {
         enum class Type(val type: String) {
             Fridge("fridge"),
             Freezer("freezer"),
-            Other("other")
         }
 
         const val TABLE_NAME = "storage"
@@ -42,14 +47,23 @@ fun createSchema(db: SQLiteDatabase) {
     """.trimIndent())
 
     db.execSQL("""
+        CREATE TABLE ${Schema.ProductStorage.TABLE_NAME}(
+        ${Schema.ProductStorage.COLUMN_PRODUCT_ID} INTEGER UNIQUE NOT NULL,
+        ${Schema.ProductStorage.COLUMN_STORAGE_ID} INTEGER NOT NULL,
+        FOREIGN KEY(${Schema.ProductStorage.COLUMN_PRODUCT_ID})
+            REFERENCES ${Schema.Product.TABLE_NAME}(${BaseColumns._ID})
+            ON DELETE CASCADE,
+        FOREIGN KEY(${Schema.ProductStorage.COLUMN_STORAGE_ID})
+            REFERENCES ${Schema.Storage.TABLE_NAME}(${BaseColumns._ID})
+            ON DELETE CASCADE
+        )
+    """.trimIndent())
+
+    db.execSQL("""
         CREATE TABLE ${Schema.Product.TABLE_NAME}(
             ${BaseColumns._ID} INTEGER PRIMARY KEY ASC AUTOINCREMENT,
             ${Schema.Product.COLUMN_NAME} TEXT NOT NULL,
-            ${Schema.Product.COLUMN_CREATION_DATE} INTEGER NOT NULL,
-            ${Schema.Product.COLUMN_STORAGE_ID} INTEGER NOT NULL,
-            FOREIGN KEY(${Schema.Product.COLUMN_STORAGE_ID})
-                REFERENCES ${Schema.Storage.TABLE_NAME}(${BaseColumns._ID})
-                ON DELETE CASCADE
+            ${Schema.Product.COLUMN_CREATION_DATE} INTEGER NOT NULL
         )
     """.trimIndent())
 

@@ -12,11 +12,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import net.gaudo.fridgy.data.FridgySqliteOpenHelper
-import net.gaudo.fridgy.data.schemas.Schema
-import net.gaudo.fridgy.data.statements.AddProductDto
-import net.gaudo.fridgy.data.statements.getAllProductsWithTotal as getAllProductsWithTotalQuery
-import net.gaudo.fridgy.data.statements.addProduct as addProductCommand
-import net.gaudo.fridgy.data.statements.deleteProductsByIds as deleteProductsByIdsCommand
+import net.gaudo.fridgy.data.db.Schema
+import net.gaudo.fridgy.data.queries.AddProductDto
+import net.gaudo.fridgy.data.queries.getAllProductsWithTotal as getAllProductsWithTotalQuery
+import net.gaudo.fridgy.data.queries.addProduct as addProductCommand
+import net.gaudo.fridgy.data.queries.deleteProductsByIds as deleteProductsByIdsCommand
 
 @CapacitorPlugin(name = "FridgySqlitePlugin")
 class DatabasePlugin : Plugin() {
@@ -37,12 +37,22 @@ class DatabasePlugin : Plugin() {
 
     @PluginMethod
     fun addProduct(call: PluginCall) {
+
         pluginScope.launch {
             try {
                 val product = call.getObject("product")
                 val name = product.getString("name")!!
                 val creationDate = product.getLong("creationDate")
-                val storage = Schema.Storage.Type.valueOf(product.getString("storage")!!)
+
+                val storage = runCatching {
+                    if (!product.has("storage"))
+                        return@runCatching null
+
+                    val t = product.getString("storage")!!
+
+                    Schema.Storage.Type.valueOf(t.lowercase())
+                }.getOrNull()
+
 
                 val expirationDate =
                     if (!product.has("expirationDate"))

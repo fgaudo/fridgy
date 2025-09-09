@@ -22,8 +22,8 @@ class MainActivity : BridgeActivity() {
                 .build()
         )
 */
+        super.onCreate(savedInstanceState)
         setTheme(R.style.AppTheme_NoActionBar)
         registerPlugin(DatabasePlugin::class.java)
-        super.onCreate(savedInstanceState)
     }
 }

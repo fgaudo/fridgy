@@ -9,6 +9,9 @@ import * as P from '$lib/business/domain/product'
 export const ProductDTO = Sc.Struct({
 	name: NETS.NonEmptyTrimmedStringSchema,
 	maybeExpirationDate: Sc.Option(Int.IntegerSchema),
+	maybeStorage: Sc.Option(
+		Sc.Union(Sc.Literal('fridge'), Sc.Literal('freezer')),
+	),
 })
 
 export type ProductDTO = Sc.Schema.Type<typeof ProductDTO>
@@ -29,6 +32,7 @@ export class AddProduct extends Eff.Service<AddProduct>()(
 						name: productData.name,
 						maybeExpirationDate: productData.maybeExpirationDate,
 						creationDate: timestamp,
+						maybeStorage: productData.maybeStorage,
 					})
 
 					if (O.isNone(product)) {
@@ -50,6 +54,7 @@ export class AddProduct extends Eff.Service<AddProduct>()(
 							name: product.value.name,
 							maybeExpirationDate: product.value.maybeExpirationDate,
 							creationDate: product.value.creationDate,
+							maybeStorage: productData.maybeStorage,
 						}),
 						addProductResolver,
 					)

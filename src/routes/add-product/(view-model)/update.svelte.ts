@@ -56,6 +56,8 @@ export const update: Update<State, Message, UseCases> = (state, message) =>
 				addProduct({
 					name: maybeName.value,
 					maybeExpirationDate,
+					maybeStorage:
+						Math.random() < 0.5 ? O.some(`freezer`) : O.some(`fridge`),
 				}),
 			]
 		}),
