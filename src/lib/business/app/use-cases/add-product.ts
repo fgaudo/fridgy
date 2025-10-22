@@ -1,6 +1,6 @@
 import * as Clock from 'effect/Clock'
 import * as Effect from 'effect/Effect'
-import { format } from 'effect/Inspectable'
+import * as Inspectable from 'effect/Inspectable'
 import * as Option from 'effect/Option'
 import * as Schema from 'effect/Schema'
 
@@ -24,8 +24,8 @@ export class AddProduct extends Effect.Service<AddProduct>()(
 		effect: Effect.gen(function* () {
 			const addProductResolver = yield* AddProductOperation.Resolver
 
-			return (productData: ProductDTO) =>
-				Effect.gen(function* () {
+			return Effect.fn(
+				function* (productData: ProductDTO) {
 					yield* Effect.logInfo(
 						`Requested to add product "${productData.name}"`,
 					)
@@ -43,7 +43,7 @@ export class AddProduct extends Effect.Service<AddProduct>()(
 					if (Option.isNone(product)) {
 						yield* Effect.logError(`Attempted to add an invalid product.`).pipe(
 							Effect.annotateLogs({
-								product: format(productData),
+								product: Inspectable.format(productData),
 							}),
 						)
 
@@ -64,7 +64,9 @@ export class AddProduct extends Effect.Service<AddProduct>()(
 					)
 
 					yield* Effect.logInfo(`Successfully added a product`)
-				}).pipe(withLayerLogging(`A`))
+				},
+				eff => withLayerLogging(eff, `A`),
+			)
 		}),
 	},
 ) {}

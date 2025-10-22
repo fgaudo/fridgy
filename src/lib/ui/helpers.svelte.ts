@@ -42,9 +42,9 @@ export function createCrashHandler(
 	)
 }
 
-export type Update<S, M, R> = (state: S, message: M) => Command<M, R>[]
-
 export type Command<M, R> = Effect.Effect<M, never, R>
+
+export type Update<S, M, R> = (state: S, message: M) => Command<M, R>[]
 
 interface Dispatcher<M> {
 	dispatch: (m: M) => Effect.Effect<void>

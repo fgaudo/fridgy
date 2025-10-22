@@ -13,8 +13,8 @@ import { Message } from './update.svelte.ts'
 
 type HomeCommand = Command<Message, UseCases>
 
-export const refreshList: (taskid: symbol) => HomeCommand = taskId =>
-	Effect.gen(function* () {
+export const refreshList: (taskid: symbol) => HomeCommand = Effect.fn(
+	function* (taskId) {
 		const getProducts = yield* GetSortedProducts.GetSortedProducts
 
 		const result = yield* Effect.either(getProducts)
@@ -27,7 +27,8 @@ export const refreshList: (taskid: symbol) => HomeCommand = taskId =>
 			taskId,
 			result: result.right,
 		})
-	})
+	},
+)
 
 export const refreshTime: HomeCommand = Effect.gen(function* () {
 	const time = yield* Clock.currentTimeMillis
@@ -38,38 +39,39 @@ export const refreshTime: HomeCommand = Effect.gen(function* () {
 
 export const deleteSelectedAndRefresh: (
 	ids: NonEmptyHashSet.NonEmptyHashSet<string>,
-) => HomeCommand = ids =>
-	Effect.gen(function* () {
-		const deleteProducts = yield* DeleteProductsByIds.DeleteProductsByIds
+) => HomeCommand = Effect.fn(function* (ids) {
+	const deleteProducts = yield* DeleteProductsByIds.DeleteProductsByIds
 
-		const deleteResult = yield* pipe(deleteProducts(ids), Effect.either)
+	const deleteResult = yield* pipe(deleteProducts(ids), Effect.either)
 
-		if (Either.isLeft(deleteResult)) {
-			return Message.DeleteSelectedFailed()
-		}
+	if (Either.isLeft(deleteResult)) {
+		return Message.DeleteSelectedFailed()
+	}
 
-		const refreshList = yield* GetSortedProducts.GetSortedProducts
+	const refreshList = yield* GetSortedProducts.GetSortedProducts
 
-		const refreshResult = yield* pipe(refreshList, Effect.either)
+	const refreshResult = yield* pipe(refreshList, Effect.either)
 
-		if (Either.isLeft(refreshResult)) {
-			return Message.DeleteSelectedSucceededButRefreshFailed()
-		}
+	if (Either.isLeft(refreshResult)) {
+		return Message.DeleteSelectedSucceededButRefreshFailed()
+	}
 
-		return Message.DeleteSelectedAndRefreshSucceeded({
-			result: refreshResult.right,
-		})
+	return Message.DeleteSelectedAndRefreshSucceeded({
+		result: refreshResult.right,
 	})
+})
 
-export const queueLoading: (id: symbol) => HomeCommand = id =>
-	Effect.gen(function* () {
+export const queueLoading: (id: symbol) => HomeCommand = Effect.fn(
+	function* (id) {
 		yield* Effect.sleep(`150 millis`)
 		return Message.ShowSpinner({ id })
-	})
+	},
+)
 
-export const queueRemoveToast: (id: symbol) => HomeCommand = id =>
-	Effect.gen(function* () {
+export const queueRemoveToast: (id: symbol) => HomeCommand = Effect.fn(
+	function* (id) {
 		yield* Effect.logDebug(`Executed command to queue toast removal`)
 		yield* Effect.sleep(`3 seconds`)
 		return Message.RemoveToast({ id })
-	})
+	},
+)

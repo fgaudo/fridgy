@@ -14,45 +14,43 @@ import { Message } from './update.svelte.ts'
 
 export type AddProductCommand = Command<Message, UseCases>
 
-export const addProduct = ({
-	name,
-	maybeExpirationDate,
-}: {
+export const addProduct: (dto: {
 	name: NonEmptyTrimmedString.NonEmptyTrimmedString
 	maybeExpirationDate: Option.Option<Integer.Integer>
-}): AddProductCommand =>
-	Effect.gen(function* () {
-		yield* Effect.log(`Executed command for adding a product`)
+}) => AddProductCommand = Effect.fn(function* ({ name, maybeExpirationDate }) {
+	yield* Effect.log(`Executed command for adding a product`)
 
-		const addProduct = yield* AddProduct.AddProduct
+	const addProduct = yield* AddProduct.AddProduct
 
-		const [result] = yield* Effect.all([
-			Effect.either(
-				addProduct({
-					name,
-					maybeExpirationDate: maybeExpirationDate,
-				}),
-			),
-			Effect.sleep(MINIMUM_LAG_MS),
-		])
+	const [result] = yield* Effect.all([
+		Effect.either(
+			addProduct({
+				name,
+				maybeExpirationDate: maybeExpirationDate,
+			}),
+		),
+		Effect.sleep(MINIMUM_LAG_MS),
+	])
 
-		if (Either.isLeft(result)) {
-			return Message.AddProductFailed()
-		}
+	if (Either.isLeft(result)) {
+		return Message.AddProductFailed()
+	}
 
-		return Message.AddProductSucceeded()
-	})
+	return Message.AddProductSucceeded()
+})
 
-export const queueRemoveToast: (id: symbol) => AddProductCommand = id =>
-	Effect.gen(function* () {
+export const queueRemoveToast: (id: symbol) => AddProductCommand = Effect.fn(
+	function* (id) {
 		yield* Effect.logDebug(`Executed command to queue toast removal`)
 		yield* Effect.sleep(`3 seconds`)
 		return Message.RemoveToast({ id })
-	})
+	},
+)
 
-export const queueLoading: (id: symbol) => AddProductCommand = id =>
-	Effect.gen(function* () {
+export const queueLoading: (id: symbol) => AddProductCommand = Effect.fn(
+	function* (id) {
 		yield* Effect.logDebug(`Executed command to queue spinner display`)
 		yield* Effect.sleep(`150 millis`)
 		return Message.ShowSpinner({ id })
-	})
+	},
+)

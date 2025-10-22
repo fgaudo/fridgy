@@ -1,3 +1,4 @@
+import * as Array from 'effect/Array'
 import * as Effect from 'effect/Effect'
 import * as Either from 'effect/Either'
 import { pipe } from 'effect/Function'
@@ -63,31 +64,34 @@ export const query = Layer.effect(
 			}
 
 			const entries = yield* Effect.all(
-				decodeResult.right.products.map(product =>
-					Effect.gen(function* () {
-						return {
-							maybeId: yield* Option.match(Option.fromNullable(product.id), {
-								onNone: () => Effect.succeed(Option.none<string>()),
-								onSome: id =>
-									Effect.option(Effect.try(() => JSON.stringify(id))),
-							}),
+				pipe(
+					decodeResult.right.products,
+					Array.map(product =>
+						Effect.gen(function* () {
+							return {
+								maybeId: yield* Option.match(Option.fromNullable(product.id), {
+									onNone: () => Effect.succeed(Option.none<string>()),
+									onSome: id =>
+										Effect.option(Effect.try(() => JSON.stringify(id))),
+								}),
 
-							maybeName: pipe(
-								Option.fromNullable(product.name),
-								Option.flatMap(NonEmptyTrimmedString.fromString),
-							),
+								maybeName: pipe(
+									Option.fromNullable(product.name),
+									Option.flatMap(NonEmptyTrimmedString.fromString),
+								),
 
-							maybeExpirationDate: pipe(
-								Option.fromNullable(product.expirationDate),
-								Option.flatMap(Integer.fromNumber),
-							),
+								maybeExpirationDate: pipe(
+									Option.fromNullable(product.expirationDate),
+									Option.flatMap(Integer.fromNumber),
+								),
 
-							maybeCreationDate: pipe(
-								Option.fromNullable(product.creationDate),
-								Option.flatMap(Integer.fromNumber),
-							),
-						} as const
-					}),
+								maybeCreationDate: pipe(
+									Option.fromNullable(product.creationDate),
+									Option.flatMap(Integer.fromNumber),
+								),
+							} as const
+						}),
+					),
 				),
 			)
 

@@ -19,10 +19,9 @@ export class DeleteProductsByIds extends Effect.Service<DeleteProductsByIds>()(
 		effect: Effect.gen(function* () {
 			const deleteProductResolver = yield* DeleteProductByIdOperation.Resolver
 
-			return (ids: DeleteProductsByIdsDTO) =>
-				Effect.gen(function* () {
+			return Effect.fn(
+				function* (ids: DeleteProductsByIdsDTO) {
 					yield* Effect.logInfo(`Requested to delete products`)
-
 					yield* Effect.logInfo(`Attempting to delete products...`)
 
 					const result = yield* Effect.either(
@@ -45,7 +44,9 @@ export class DeleteProductsByIds extends Effect.Service<DeleteProductsByIds>()(
 					}
 
 					yield* Effect.logInfo(`Products deleted`)
-				}).pipe(withLayerLogging(`A`))
+				},
+				eff => withLayerLogging(eff, `A`),
+			)
 		}),
 	},
 ) {}

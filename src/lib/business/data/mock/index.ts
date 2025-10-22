@@ -11,6 +11,5 @@ export { addProduct, deleteProductById, getSortedProducts }
 
 export const allImplementations = pipe(
 	Layer.mergeAll(addProduct, getSortedProducts, deleteProductById),
-	Layer.provide(Db.Default),
-	Layer.provide(Config.Default),
+	Layer.provide([Db.Default, Config.Default]),
 )
