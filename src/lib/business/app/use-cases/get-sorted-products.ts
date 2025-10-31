@@ -73,53 +73,57 @@ export class GetSortedProducts extends Effect.Service<GetSortedProducts>()(
 				const entries = yield* pipe(
 					result,
 					Array.map(
-						({ maybeId, maybeName, maybeCreationDate, maybeExpirationDate }) =>
-							Effect.gen(function* () {
-								if (Option.isNone(maybeId)) {
-									yield* Effect.logWarning(`CORRUPTION - Product has no id.`)
-
-									return {
-										id: Symbol(),
-										isCorrupt: true,
-										maybeName,
-									} as const
-								}
-
-								const maybeProduct = Option.gen(function* () {
-									const { name, creationDate } = yield* Option.all({
-										name: maybeName,
-										creationDate: maybeCreationDate,
-									})
-
-									return yield* Product.fromStruct({
-										name,
-										creationDate,
-										maybeExpirationDate,
-									})
-								})
-
-								if (Option.isNone(maybeProduct)) {
-									yield* Effect.logWarning(`Product is invalid.`)
-
-									return {
-										id: maybeId.value,
-										maybeName,
-										maybeCreationDate,
-										maybeExpirationDate,
-										isCorrupt: false,
-										isValid: false,
-									} as const
-								}
+						Effect.fn(function* ({
+							maybeId,
+							maybeName,
+							maybeCreationDate,
+							maybeExpirationDate,
+						}) {
+							if (Option.isNone(maybeId)) {
+								yield* Effect.logWarning(`CORRUPTION - Product has no id.`)
 
 								return {
-									isCorrupt: false,
-									isValid: true,
-									id: maybeId.value,
-									name: maybeProduct.value.name,
-									creationDate: maybeProduct.value.creationDate,
-									maybeExpirationDate: maybeProduct.value.maybeExpirationDate,
+									id: Symbol(),
+									isCorrupt: true,
+									maybeName,
 								} as const
-							}),
+							}
+
+							const maybeProduct = Option.gen(function* () {
+								const { name, creationDate } = yield* Option.all({
+									name: maybeName,
+									creationDate: maybeCreationDate,
+								})
+
+								return yield* Product.fromStruct({
+									name,
+									creationDate,
+									maybeExpirationDate,
+								})
+							})
+
+							if (Option.isNone(maybeProduct)) {
+								yield* Effect.logWarning(`Product is invalid.`)
+
+								return {
+									id: maybeId.value,
+									maybeName,
+									maybeCreationDate,
+									maybeExpirationDate,
+									isCorrupt: false,
+									isValid: false,
+								} as const
+							}
+
+							return {
+								isCorrupt: false,
+								isValid: true,
+								id: maybeId.value,
+								name: maybeProduct.value.name,
+								creationDate: maybeProduct.value.creationDate,
+								maybeExpirationDate: maybeProduct.value.maybeExpirationDate,
+							} as const
+						}),
 					),
 					Effect.all,
 				)

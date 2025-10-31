@@ -19,34 +19,32 @@ export class DeleteProductsByIds extends Effect.Service<DeleteProductsByIds>()(
 		effect: Effect.gen(function* () {
 			const deleteProductResolver = yield* DeleteProductByIdOperation.Resolver
 
-			return Effect.fn(
-				function* (ids: DeleteProductsByIdsDTO) {
-					yield* Effect.logInfo(`Requested to delete products`)
-					yield* Effect.logInfo(`Attempting to delete products...`)
+			return Effect.fn(function* (ids: DeleteProductsByIdsDTO) {
+				yield* Effect.logInfo(`Requested to delete products`)
+				yield* Effect.logInfo(`Attempting to delete products...`)
 
-					const result = yield* Effect.either(
-						Effect.forEach(
-							ids,
-							id =>
-								Effect.request(
-									new DeleteProductByIdOperation.Request({
-										id,
-									}),
-									deleteProductResolver,
-								),
-							{ batching: true },
+				const result = yield* Effect.either(
+					Effect.forEach(
+						ids,
+						Effect.fn(id =>
+							Effect.request(
+								new DeleteProductByIdOperation.Request({
+									id,
+								}),
+								deleteProductResolver,
+							),
 						),
-					)
+						{ batching: true },
+					),
+				)
 
-					if (Either.isLeft(result)) {
-						yield* Effect.logError(`Could not delete the products`)
-						return yield* Effect.fail(undefined)
-					}
+				if (Either.isLeft(result)) {
+					yield* Effect.logError(`Could not delete the products`)
+					return yield* Effect.fail(undefined)
+				}
 
-					yield* Effect.logInfo(`Products deleted`)
-				},
-				eff => withLayerLogging(eff, `A`),
-			)
+				yield* Effect.logInfo(`Products deleted`)
+			}, withLayerLogging(`A`))
 		}),
 	},
 ) {}

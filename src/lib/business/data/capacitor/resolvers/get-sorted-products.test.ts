@@ -43,25 +43,31 @@ function toModel(product: {
 }
 
 describe.concurrent(`Get products`, () => {
-	effect.prop(`Should return a list`, [Backend], ([{ products }], { expect }) =>
-		Effect.provide(
-			Effect.gen(function* () {
+	effect.prop(
+		`Should return a list`,
+		[Backend],
+		Effect.fn(
+			function* ([{ products }], { expect }) {
 				const service = yield* GetSortedProducts.Tag
 				const exit = yield* Effect.exit(service)
 
 				H.assertExitIsSuccess(exit)
 
 				expect(exit.value).toStrictEqual(products.map(toModel))
-			}),
-			Layer.provide(
-				query,
-				Layer.succeed(DbPlugin, {
-					getAllProductsWithTotal: Effect.succeed({
-						total: products.length,
-						products,
-					}),
-				} as unknown as DbPlugin),
-			),
+			},
+			(effect, [{ products }]) =>
+				Effect.provide(
+					effect,
+					Layer.provide(
+						query,
+						Layer.succeed(DbPlugin, {
+							getAllProductsWithTotal: Effect.succeed({
+								total: products.length,
+								products,
+							}),
+						} as unknown as DbPlugin),
+					),
+				),
 		),
 	)
 
@@ -73,8 +79,9 @@ describe.concurrent(`Get products`, () => {
 			} as unknown as DbPlugin),
 		),
 	)(({ effect }) => {
-		effect(`Should return an error`, () =>
-			Effect.gen(function* () {
+		effect(
+			`Should return an error`,
+			Effect.fn(function* () {
 				const service = yield* GetSortedProducts.Tag
 
 				const exit = yield* Effect.exit(service)
@@ -92,8 +99,9 @@ describe.concurrent(`Get products`, () => {
 			} as unknown as DbPlugin),
 		),
 	)(({ effect }) => {
-		effect(`Should return an error`, () =>
-			Effect.gen(function* () {
+		effect(
+			`Should return an error`,
+			Effect.fn(function* () {
 				const service = yield* GetSortedProducts.Tag
 
 				const exit = yield* Effect.exit(service)
@@ -111,8 +119,9 @@ describe.concurrent(`Get products`, () => {
 			} as unknown as DbPlugin),
 		),
 	)(({ effect }) => {
-		effect(`Should crash`, () =>
-			Effect.gen(function* () {
+		effect(
+			`Should crash`,
+			Effect.fn(function* () {
 				const service = yield* GetSortedProducts.Tag
 
 				const exit = yield* Effect.exit(service)

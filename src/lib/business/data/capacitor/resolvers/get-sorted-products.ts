@@ -66,8 +66,8 @@ export const query = Layer.effect(
 			const entries = yield* Effect.all(
 				pipe(
 					decodeResult.right.products,
-					Array.map(product =>
-						Effect.gen(function* () {
+					Array.map(
+						Effect.fn(function* (product) {
 							return {
 								maybeId: yield* Option.match(Option.fromNullable(product.id), {
 									onNone: () => Effect.succeed(Option.none<string>()),

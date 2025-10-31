@@ -6,8 +6,10 @@ import * as H from '$lib/core/test-helpers.ts'
 import { fromNumber, unsafeFromNumber } from './index.ts'
 
 describe.concurrent(`integer`, () => {
-	effect.prop(`should be ok`, [H.FC.integer()], ([integer], { expect }) =>
-		Effect.gen(function* () {
+	effect.prop(
+		`should be ok`,
+		[H.FC.integer()],
+		Effect.fn(function* ([integer], { expect }) {
 			const result = fromNumber(integer)
 			assert(result._tag === `Some`, `Could not parse number`)
 			expect(result.value).toStrictEqual(integer)
@@ -19,14 +21,12 @@ describe.concurrent(`integer`, () => {
 	effect.prop(
 		`should be ok`,
 		[H.FC.integer()],
+		Effect.fn(function* ([integer], { expect }) {
+			const number = unsafeFromNumber(integer)
+			expect(number).toStrictEqual(integer)
 
-		([integer], { expect }) =>
-			Effect.gen(function* () {
-				const number = unsafeFromNumber(integer)
-				expect(number).toStrictEqual(integer)
-
-				yield* Effect.void
-			}),
+			yield* Effect.void
+		}),
 	)
 
 	effect.prop(
@@ -36,12 +36,10 @@ describe.concurrent(`integer`, () => {
 				value => !Number.isInteger(value),
 			),
 		],
+		Effect.fn(function* ([integer], { expect }) {
+			expect(() => unsafeFromNumber(integer)).toThrowError()
 
-		([integer], { expect }) =>
-			Effect.gen(function* () {
-				expect(() => unsafeFromNumber(integer)).toThrowError()
-
-				yield* Effect.void
-			}),
+			yield* Effect.void
+		}),
 	)
 })

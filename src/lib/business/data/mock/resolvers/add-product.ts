@@ -1,5 +1,4 @@
 import * as Effect from 'effect/Effect'
-import { pipe } from 'effect/Function'
 import * as HashMap from 'effect/HashMap'
 import * as Layer from 'effect/Layer'
 import * as Option from 'effect/Option'
@@ -18,39 +17,36 @@ export const command = Layer.effect(
 	Effect.gen(function* () {
 		const withErrors = yield* Config.withErrors
 		const db = yield* Db
-		return RequestResolver.fromEffect(product =>
-			pipe(
-				Effect.gen(function* () {
-					if (withErrors && Math.random() < 0.5) {
-						yield* Effect.logInfo(`Triggered fake error on mock AddProduct`)
-						return yield* Effect.fail(undefined)
+		return RequestResolver.fromEffect(
+			Effect.fn(function* (product) {
+				if (withErrors && Math.random() < 0.5) {
+					yield* Effect.logInfo(`Triggered fake error on mock AddProduct`)
+					return yield* Effect.fail(undefined)
+				}
+
+				yield* Effect.log(`Attempting to add product into mock database...`)
+
+				yield* Ref.update(db, dbValues => {
+					const index = dbValues.index + 1
+					const indexString = index.toString(10)
+					return {
+						...dbValues,
+						index,
+						map: dbValues.map.pipe(
+							HashMap.set(indexString, {
+								maybeName: Option.some(product.name),
+								maybeExpirationDate: product.maybeExpirationDate,
+								maybeCreationDate: Option.some(product.creationDate),
+								maybeId: Option.some(indexString),
+							}),
+						),
 					}
+				})
 
-					yield* Effect.log(`Attempting to add product into mock database...`)
+				yield* Effect.log(`Added product ${product.name} into mock database`)
 
-					yield* Ref.update(db, dbValues => {
-						const index = dbValues.index + 1
-						const indexString = index.toString(10)
-						return {
-							...dbValues,
-							index,
-							map: dbValues.map.pipe(
-								HashMap.set(indexString, {
-									maybeName: Option.some(product.name),
-									maybeExpirationDate: product.maybeExpirationDate,
-									maybeCreationDate: Option.some(product.creationDate),
-									maybeId: Option.some(indexString),
-								}),
-							),
-						}
-					})
-
-					yield* Effect.log(`Added product ${product.name} into mock database`)
-
-					return yield* Effect.void
-				}),
-				withLayerLogging(`I`),
-			),
+				return yield* Effect.void
+			}, withLayerLogging(`I`)),
 		)
 	}),
 )

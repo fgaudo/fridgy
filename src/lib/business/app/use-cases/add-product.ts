@@ -24,49 +24,44 @@ export class AddProduct extends Effect.Service<AddProduct>()(
 		effect: Effect.gen(function* () {
 			const addProductResolver = yield* AddProductOperation.Resolver
 
-			return Effect.fn(
-				function* (productData: ProductDTO) {
-					yield* Effect.logInfo(
-						`Requested to add product "${productData.name}"`,
-					)
+			return Effect.fn(function* (productData: ProductDTO) {
+				yield* Effect.logInfo(`Requested to add product "${productData.name}"`)
 
-					const timestamp = Integer.unsafeFromNumber(
-						yield* Clock.currentTimeMillis,
-					)
+				const timestamp = Integer.unsafeFromNumber(
+					yield* Clock.currentTimeMillis,
+				)
 
-					const product = Product.fromStruct({
-						name: productData.name,
-						maybeExpirationDate: productData.maybeExpirationDate,
-						creationDate: timestamp,
-					})
+				const product = Product.fromStruct({
+					name: productData.name,
+					maybeExpirationDate: productData.maybeExpirationDate,
+					creationDate: timestamp,
+				})
 
-					if (Option.isNone(product)) {
-						yield* Effect.logError(`Attempted to add an invalid product.`).pipe(
-							Effect.annotateLogs({
-								product: Inspectable.format(productData),
-							}),
-						)
-
-						return yield* Effect.fail(undefined)
-					}
-
-					yield* Effect.logInfo(
-						`Attempting to add product "${productData.name}"...`,
-					)
-
-					yield* Effect.request(
-						new AddProductOperation.Request({
-							name: product.value.name,
-							maybeExpirationDate: product.value.maybeExpirationDate,
-							creationDate: product.value.creationDate,
+				if (Option.isNone(product)) {
+					yield* Effect.logError(`Attempted to add an invalid product.`).pipe(
+						Effect.annotateLogs({
+							product: Inspectable.format(productData),
 						}),
-						addProductResolver,
 					)
 
-					yield* Effect.logInfo(`Successfully added a product`)
-				},
-				eff => withLayerLogging(eff, `A`),
-			)
+					return yield* Effect.fail(undefined)
+				}
+
+				yield* Effect.logInfo(
+					`Attempting to add product "${productData.name}"...`,
+				)
+
+				yield* Effect.request(
+					new AddProductOperation.Request({
+						name: product.value.name,
+						maybeExpirationDate: product.value.maybeExpirationDate,
+						creationDate: product.value.creationDate,
+					}),
+					addProductResolver,
+				)
+
+				yield* Effect.logInfo(`Successfully added a product`)
+			}, withLayerLogging(`A`))
 		}),
 	},
 ) {}

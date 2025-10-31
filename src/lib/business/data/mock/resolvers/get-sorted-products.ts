@@ -15,22 +15,24 @@ import { Config } from '../config.ts'
 import { Db } from '../db.ts'
 
 const ord = Order.make(
-	(p1: GetSortedProducts.ProductDTO, p2: GetSortedProducts.ProductDTO) => {
-		return Order.combineAll([
-			pipe(
-				Order.number,
-				Order.reverse,
-				Option.getOrder,
-				Order.reverse,
-				Order.mapInput((product: typeof p1) => product.maybeExpirationDate),
+	Order.combineAll([
+		pipe(
+			Order.number,
+			Order.reverse,
+			Option.getOrder,
+			Order.reverse,
+			Order.mapInput(
+				(product: GetSortedProducts.ProductDTO) => product.maybeExpirationDate,
 			),
-			pipe(
-				Order.string,
-				Option.getOrder,
-				Order.mapInput((product: typeof p1) => product.maybeName),
+		),
+		pipe(
+			Order.string,
+			Option.getOrder,
+			Order.mapInput(
+				(product: GetSortedProducts.ProductDTO) => product.maybeName,
 			),
-		])(p1, p2)
-	},
+		),
+	]),
 )
 
 export const query = Layer.effect(
@@ -48,7 +50,7 @@ export const query = Layer.effect(
 				HashMap.toValues,
 			)
 
-			return Array.sort(ord)(products)
+			return Array.sort(products, ord)
 		}).pipe(withLayerLogging(`I`))
 	}),
 )

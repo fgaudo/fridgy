@@ -1,5 +1,4 @@
 import * as Effect from 'effect/Effect'
-import { pipe } from 'effect/Function'
 import * as HashMap from 'effect/HashMap'
 import * as Layer from 'effect/Layer'
 import * as Ref from 'effect/Ref'
@@ -19,9 +18,9 @@ export const command = Layer.effect(
 	Effect.gen(function* () {
 		const withErrors = yield* Config.withErrors
 		const db = yield* Db
-		return RequestResolver.makeBatched(requests =>
-			pipe(
-				Effect.gen(function* () {
+		return RequestResolver.makeBatched(
+			Effect.fn(
+				function* (requests) {
 					if (withErrors && Math.random() < 0.5) {
 						return yield* Effect.fail(undefined)
 					}
@@ -32,12 +31,16 @@ export const command = Layer.effect(
 							map: HashMap.remove(dbValues.map, request.id),
 						}))
 					}
-				}),
-				Effect.matchCauseEffect({
-					onFailure: error =>
-						Effect.forEach(requests, Request.failCause(error)),
-					onSuccess: () => Effect.forEach(requests, Request.succeed(undefined)),
-				}),
+				},
+				(effect, requests) =>
+					Effect.matchCauseEffect(effect, {
+						onFailure: Effect.fn(error =>
+							Effect.forEach(requests, Request.failCause(error)),
+						),
+						onSuccess: Effect.fn(() =>
+							Effect.forEach(requests, Request.succeed(undefined)),
+						),
+					}),
 				withLayerLogging(`I`),
 			),
 		)

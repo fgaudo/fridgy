@@ -18,14 +18,14 @@ export const command = Layer.effect(
 	Effect.gen(function* () {
 		const { deleteProductsByIds } = yield* DbPlugin
 
-		return RequestResolver.makeBatched(requests =>
-			pipe(
-				Effect.gen(function* () {
+		return RequestResolver.makeBatched(
+			Effect.fn(
+				function* (requests) {
 					const ids = yield* pipe(
 						requests,
 						Array.map(request => request.id),
-						Array.map(id =>
-							Effect.gen(function* () {
+						Array.map(
+							Effect.fn(function* (id) {
 								const parsed = yield* pipe(
 									Effect.try(() => JSON.parse(id) as unknown),
 									Effect.option,
@@ -62,11 +62,16 @@ export const command = Layer.effect(
 					}
 
 					return result.right
-				}),
-				Effect.matchCauseEffect({
-					onFailure: err => Effect.forEach(requests, Request.failCause(err)),
-					onSuccess: () => Effect.forEach(requests, Request.succeed(undefined)),
-				}),
+				},
+				(effect, requests) =>
+					Effect.matchCauseEffect(effect, {
+						onFailure: Effect.fn(err =>
+							Effect.forEach(requests, Request.failCause(err)),
+						),
+						onSuccess: Effect.fn(() =>
+							Effect.forEach(requests, Request.succeed(undefined)),
+						),
+					}),
 				withLayerLogging(`I`),
 			),
 		)

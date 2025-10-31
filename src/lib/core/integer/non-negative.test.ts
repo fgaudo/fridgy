@@ -11,8 +11,10 @@ const fcInvalidNumber = H.FC.oneof(
 )
 
 describe.concurrent(`non-negative integer`, () => {
-	effect.prop(`should be ok`, [H.FC.nat()], ([integer], { expect }) =>
-		Effect.gen(function* () {
+	effect.prop(
+		`should be ok`,
+		[H.FC.nat()],
+		Effect.fn(function* ([integer], { expect }) {
 			const result = NonNegative.fromNumber(integer)
 			assert(result._tag === `Some`, `Could not parse number`)
 			expect(result.value).toStrictEqual(integer)
@@ -24,18 +26,18 @@ describe.concurrent(`non-negative integer`, () => {
 	effect.prop(
 		`should return none`,
 		[fcInvalidNumber],
+		Effect.fn(function* ([integer]) {
+			const result = NonNegative.fromNumber(integer)
+			assert(result._tag === `None`, `Number should not be valid`)
 
-		([integer]) =>
-			Effect.gen(function* () {
-				const result = NonNegative.fromNumber(integer)
-				assert(result._tag === `None`, `Number should not be valid`)
-
-				yield* Effect.void
-			}),
+			yield* Effect.void
+		}),
 	)
 
-	effect.prop(`should be ok`, [H.FC.nat()], ([integer], { expect }) =>
-		Effect.gen(function* () {
+	effect.prop(
+		`should be ok`,
+		[H.FC.nat()],
+		Effect.fn(function* ([integer], { expect }) {
 			const number = NonNegative.unsafeFromNumber(integer)
 			expect(number).toStrictEqual(integer)
 
@@ -43,8 +45,10 @@ describe.concurrent(`non-negative integer`, () => {
 		}),
 	)
 
-	effect.prop(`should crash`, [fcInvalidNumber], ([integer], { expect }) =>
-		Effect.gen(function* () {
+	effect.prop(
+		`should crash`,
+		[fcInvalidNumber],
+		Effect.fn(function* ([integer], { expect }) {
 			expect(() => NonNegative.unsafeFromNumber(integer)).toThrowError()
 
 			yield* Effect.void

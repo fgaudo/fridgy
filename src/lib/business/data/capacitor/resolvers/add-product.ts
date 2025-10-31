@@ -47,8 +47,8 @@ export const command = Layer.effect(
 	Effect.gen(function* () {
 		const { addProduct } = yield* DbPlugin
 
-		return RequestResolver.fromEffect(product =>
-			Effect.gen(function* () {
+		return RequestResolver.fromEffect(
+			Effect.fn(function* (product) {
 				const dto = yield* Schema.encode(DtoToBackend)(product).pipe(
 					Effect.either,
 				)
@@ -64,7 +64,7 @@ export const command = Layer.effect(
 				}
 
 				yield* Effect.logDebug(`No errors adding the product`)
-			}).pipe(withLayerLogging(`I`)),
+			}, withLayerLogging(`I`)),
 		)
 	}),
 )

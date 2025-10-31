@@ -15,25 +15,24 @@ describe.concurrent(`Add product`, () => {
 		Layer.provide(
 			command,
 			Layer.succeed(DbPlugin, {
-				addProduct: () => Effect.succeed(undefined),
+				addProduct: Effect.fn(() => Effect.succeed(undefined)),
 			} as unknown as DbPlugin),
 		),
 	)(({ effect }) => {
 		effect.prop(
 			`Should just work`,
 			[Schema.NonEmptyArray(AddProduct.Request)],
-			([requests]) =>
-				Effect.gen(function* () {
-					const resolver = yield* AddProduct.Resolver
+			Effect.fn(function* ([requests]) {
+				const resolver = yield* AddProduct.Resolver
 
-					const exit = yield* Effect.exit(
-						Effect.forEach(requests, request =>
-							Effect.request(request, resolver),
-						),
-					)
+				const exit = yield* Effect.exit(
+					Effect.forEach(requests, request =>
+						Effect.request(request, resolver),
+					),
+				)
 
-					H.assertExitIsSuccess(exit)
-				}),
+				H.assertExitIsSuccess(exit)
+			}),
 		)
 	})
 
@@ -41,25 +40,24 @@ describe.concurrent(`Add product`, () => {
 		Layer.provide(
 			command,
 			Layer.succeed(DbPlugin, {
-				addProduct: () => Effect.fail(undefined),
+				addProduct: Effect.fn(() => Effect.fail(undefined)),
 			} as unknown as DbPlugin),
 		),
 	)(({ effect }) => {
 		effect.prop(
 			`Should return an error`,
 			[Schema.NonEmptyArray(AddProduct.Request)],
-			([requests]) =>
-				Effect.gen(function* () {
-					const resolver = yield* AddProduct.Resolver
+			Effect.fn(function* ([requests]) {
+				const resolver = yield* AddProduct.Resolver
 
-					const exit = yield* Effect.exit(
-						Effect.forEach(requests, request =>
-							Effect.request(request, resolver),
-						),
-					)
+				const exit = yield* Effect.exit(
+					Effect.forEach(requests, request =>
+						Effect.request(request, resolver),
+					),
+				)
 
-					H.assertExitIsFailure(exit)
-				}),
+				H.assertExitIsFailure(exit)
+			}),
 		)
 	})
 
@@ -76,18 +74,17 @@ describe.concurrent(`Add product`, () => {
 		effect.prop(
 			`Should crash`,
 			[Schema.NonEmptyArray(AddProduct.Request)],
-			([requests]) =>
-				Effect.gen(function* () {
-					const resolver = yield* AddProduct.Resolver
+			Effect.fn(function* ([requests]) {
+				const resolver = yield* AddProduct.Resolver
 
-					const exit = yield* Effect.exit(
-						Effect.forEach(requests, request =>
-							Effect.request(request, resolver),
-						),
-					)
+				const exit = yield* Effect.exit(
+					Effect.forEach(requests, request =>
+						Effect.request(request, resolver),
+					),
+				)
 
-					H.assertExitIsDie(exit)
-				}),
+				H.assertExitIsDie(exit)
+			}),
 		)
 	})
 })

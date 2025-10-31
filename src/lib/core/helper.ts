@@ -7,10 +7,8 @@ export const fallback: <A>(
 	def: A,
 ) => (
 	issue: ParseResult.ParseIssue,
-) => Effect.Effect<A, ParseResult.ParseIssue> = def => () =>
-	Effect.gen(function* () {
-		return yield* Effect.succeed(def)
-	})
+) => Effect.Effect<A, ParseResult.ParseIssue> = def =>
+	Effect.fn(() => Effect.succeed(def))
 
 export const tryPromise = <A>(
 	evaluate: (signal?: AbortSignal) => PromiseLike<A>,

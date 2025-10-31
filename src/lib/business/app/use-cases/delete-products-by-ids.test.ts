@@ -22,13 +22,12 @@ describe.concurrent(`Delete products by ids`, () => {
 		effect.prop(
 			`Should return an error`,
 			[Usecase.DeleteProductsByIdsDTO],
-			([ids]) =>
-				Effect.gen(function* () {
-					const service = yield* Usecase.DeleteProductsByIds
-					const exit = yield* Effect.exit(service(ids))
+			Effect.fn(function* ([ids]) {
+				const service = yield* Usecase.DeleteProductsByIds
+				const exit = yield* Effect.exit(service(ids))
 
-					H.assertExitIsFailure(exit)
-				}),
+				H.assertExitIsFailure(exit)
+			}),
 		)
 	})
 
@@ -41,8 +40,10 @@ describe.concurrent(`Delete products by ids`, () => {
 			),
 		),
 	)(({ effect }) => {
-		effect.prop(`Should just work`, [Usecase.DeleteProductsByIdsDTO], ([ids]) =>
-			Effect.gen(function* () {
+		effect.prop(
+			`Should just work`,
+			[Usecase.DeleteProductsByIdsDTO],
+			Effect.fn(function* ([ids]) {
 				const service = yield* Usecase.DeleteProductsByIds
 
 				const exit = yield* Effect.exit(service(ids))

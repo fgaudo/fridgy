@@ -15,8 +15,8 @@ describe.concurrent(`Add product`, () => {
 	effect.prop(
 		`Should just work`,
 		{ product: Usecase.ProductDTO },
-		({ product: { name, maybeExpirationDate } }, { expect }) =>
-			Effect.gen(function* () {
+		Effect.fn(
+			function* ({ product: { name, maybeExpirationDate } }, _) {
 				const service = yield* Usecase.AddProduct
 				yield* TestClock.setTime(0)
 				const exit = yield* Effect.exit(
@@ -25,16 +25,16 @@ describe.concurrent(`Add product`, () => {
 						maybeExpirationDate,
 					}),
 				)
-
 				H.assertExitIsSuccess(exit)
-			}).pipe(
-				Effect.provide([
+			},
+			(effect, { product: { name, maybeExpirationDate } }, { expect }) =>
+				Effect.provide(effect, [
 					TestContext,
 					Layer.provide(Usecase.AddProduct.Default, [
 						Layer.succeed(
 							Query.Resolver,
-							RequestResolver.fromEffect(request =>
-								Effect.gen(function* () {
+							RequestResolver.fromEffect(
+								Effect.fn(function* (request) {
 									expect(request).toMatchObject({
 										name,
 										maybeExpirationDate,
@@ -46,7 +46,7 @@ describe.concurrent(`Add product`, () => {
 						),
 					]),
 				]),
-			),
+		),
 		{ fastCheck: { verbose: 2 } },
 	)
 
@@ -55,25 +55,24 @@ describe.concurrent(`Add product`, () => {
 			Usecase.AddProduct.Default,
 			Layer.succeed(
 				Query.Resolver,
-				RequestResolver.fromEffect(() => Effect.fail(undefined)),
+				RequestResolver.fromEffect(Effect.fn(() => Effect.fail(undefined))),
 			),
 		),
 	)(({ effect }) => {
 		effect.prop(
 			`Should return error`,
 			{ product: Usecase.ProductDTO },
-			({ product: { name, maybeExpirationDate } }) =>
-				Effect.gen(function* () {
-					const service = yield* Usecase.AddProduct
-					const exit = yield* Effect.exit(
-						service({
-							name,
-							maybeExpirationDate,
-						}),
-					)
+			Effect.fn(function* ({ product: { name, maybeExpirationDate } }) {
+				const service = yield* Usecase.AddProduct
+				const exit = yield* Effect.exit(
+					service({
+						name,
+						maybeExpirationDate,
+					}),
+				)
 
-					H.assertExitIsFailure(exit)
-				}),
+				H.assertExitIsFailure(exit)
+			}),
 		)
 	})
 })
