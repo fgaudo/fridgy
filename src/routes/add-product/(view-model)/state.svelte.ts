@@ -1,8 +1,8 @@
 import { pipe } from 'effect/Function'
 import * as Option from 'effect/Option'
 
-import * as Integer from '$lib/core/integer/index.ts'
-import * as NonEmptyTrimmedString from '$lib/core/non-empty-trimmed-string.ts'
+import * as Integer from '../../../core/integer'
+import * as NonEmptyTrimmedString from '../../../core/non-empty-trimmed-string'
 
 export type State = {
 	name: string
@@ -11,9 +11,11 @@ export type State = {
 	isAdding: boolean
 	isLoading: boolean
 	hasCrashOccurred: boolean
-	toastMessage:
-		| { message: string; id: symbol; type: `error` | `success` }
-		| undefined
+
+	toastMessage: string
+	toastId: symbol | undefined
+	toastType: `error` | `success`
+
 	hasInteractedWithName: boolean
 	spinnerId: symbol | undefined
 }
@@ -27,7 +29,9 @@ export function createStateContext() {
 		isLoading: false,
 		name: ``,
 		expirationDate: undefined,
-		toastMessage: undefined,
+		toastMessage: ``,
+		toastId: undefined,
+		toastType: `success`,
 		spinnerId: undefined,
 		hasCrashOccurred: false,
 		hasInteractedWithName: false,

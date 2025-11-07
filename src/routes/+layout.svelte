@@ -4,56 +4,60 @@
 	import '@fontsource-variable/roboto-flex/index.css'
 	import * as Effect from 'effect/Effect'
 	import * as ManagedRuntime from 'effect/ManagedRuntime'
+	import * as Stream from 'effect/Stream'
 	import { type Snippet, onDestroy, onMount } from 'svelte'
 	import { fade } from 'svelte/transition'
 
-	import { useCases } from '$lib/business/index.ts'
-	import * as Utils from '$lib/ui/adapters.svelte.ts'
+	import Spinner from '$lib/components/spinner.svelte'
+	import { setGlobalContext } from '$lib/context.ts'
+	import { makeExecutor } from '$lib/executor'
 	import '$lib/ui/assets/index.css'
-	import Spinner from '$lib/ui/components/spinner.svelte'
-	import { setGlobalContext } from '$lib/ui/context.ts'
 
-	const runtime = ManagedRuntime.make(useCases)
-
-	onDestroy(() => {
-		void runtime.dispose()
-	})
+	import { useCases } from '../business'
 
 	let { children }: { children: Snippet } = $props()
-	let areFontsLoaded = $state(false)
+	let isPageReady = $state(false)
 
-	const { runEffect } = Utils.makeEffectRunner(runtime)
+	const pageLoader = Stream.fromEffect(
+		Effect.all([
+			Effect.promise(() =>
+				Promise.all([
+					document.fonts.ready,
+					SafeArea.enable({
+						config: {
+							customColorsForSystemBars: true,
+							statusBarColor: `#00000000`, // transparent
+							statusBarContent: `dark`,
+							navigationBarColor: `#00000000`, // transparent
+							navigationBarContent: `light`,
+						},
+					}),
+				]),
+			),
+			Effect.sleep(150),
+		]),
+	)
 
 	onMount(() => {
-		setGlobalContext({ runtime })
+		const runtime = ManagedRuntime.make(useCases)
+		const executor = makeExecutor(runtime)
+		setGlobalContext({ executor: makeExecutor(runtime) })
 
-		runEffect(
-			Effect.gen(function* () {
-				yield* Effect.all([
-					Effect.promise(() =>
-						Promise.all([
-							document.fonts.ready,
-							SafeArea.enable({
-								config: {
-									customColorsForSystemBars: true,
-									statusBarColor: `#00000000`, // transparent
-									statusBarContent: `dark`,
-									navigationBarColor: `#00000000`, // transparent
-									navigationBarContent: `light`,
-								},
-							}),
-						]),
-					),
-					Effect.sleep(150),
-				])
-
-				areFontsLoaded = true
-			}),
+		executor.runCallback(
+			Stream.runForEach(pageLoader, () =>
+				Effect.sync(() => {
+					isPageReady = true
+				}),
+			),
 		)
+
+		onDestroy(() => {
+			void runtime.dispose()
+		})
 	})
 </script>
 
-{#if areFontsLoaded}
+{#if isPageReady}
 	<div in:fade={{ delay: 400 }}>
 		{@render children()}
 	</div>

@@ -6,12 +6,12 @@
 	import { cubicIn, cubicOut } from 'svelte/easing'
 	import { fade, fly } from 'svelte/transition'
 
-	import sayings from '$lib/ui/assets/sayings.json' with { type: 'json' }
-	import Ripple from '$lib/ui/components/ripple.svelte'
-	import Spinner from '$lib/ui/components/spinner.svelte'
-	import { PAGE_TRANSITION_Y } from '$lib/ui/constants.ts'
+	import sayings from '$lib/assets/sayings.json' with { type: 'json' }
+	import Ripple from '$lib/components/ripple.svelte'
+	import Spinner from '$lib/components/spinner.svelte'
+	import { PAGE_TRANSITION_Y } from '$lib/constants.ts'
 
-	import { createViewModel } from './(view-model)/index.svelte.ts'
+	import { createViewModel } from './(view-model)/index.ts'
 
 	const viewModel = createViewModel()
 

@@ -3,9 +3,9 @@
 	import { cubicOut } from 'svelte/easing'
 	import { fly } from 'svelte/transition'
 
-	import licenses from '$lib/ui/assets/licenses.json' with { type: 'json' }
-	import Ripple from '$lib/ui/components/ripple.svelte'
-	import { PAGE_TRANSITION_Y, version } from '$lib/ui/constants'
+	import licenses from '$lib/assets/licenses.json' with { type: 'json' }
+	import Ripple from '$lib/components/ripple.svelte'
+	import { PAGE_TRANSITION_Y, version } from '$lib/constants'
 </script>
 
 <div

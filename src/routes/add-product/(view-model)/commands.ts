@@ -2,17 +2,16 @@ import * as Effect from 'effect/Effect'
 import * as Either from 'effect/Either'
 import * as Option from 'effect/Option'
 
-import * as Integer from '$lib/core/integer/index.ts'
-import * as NonEmptyTrimmedString from '$lib/core/non-empty-trimmed-string.ts'
+import { MINIMUM_LAG_MS } from '$lib/constants.ts'
+import type { Command } from '$lib/helpers.ts'
 
-import type { UseCases } from '$lib/business/app/use-cases.ts'
-import { AddProduct } from '$lib/business/index.ts'
-import { MINIMUM_LAG_MS } from '$lib/ui/constants.ts'
-import type { Command } from '$lib/ui/helpers.svelte.ts'
-
+import type { UseCases } from '../../../business/app/use-cases.ts'
+import { AddProduct } from '../../../business/index.ts'
+import * as Integer from '../../../core/integer/index.ts'
+import * as NonEmptyTrimmedString from '../../../core/non-empty-trimmed-string.ts'
 import { Message } from './update.svelte.ts'
 
-export type AddProductCommand = Command<Message, UseCases>
+export type AddProductCommand = Command<Message>
 
 export const addProduct: (dto: {
 	name: NonEmptyTrimmedString.NonEmptyTrimmedString
