@@ -13,19 +13,7 @@ export type Update<S, M, R> = (
 	message: M,
 ) => (state: S) => { state: S; commands: Command<M, R>[] }
 
-export type ViewModel<S, M, R> = {
-	changes: Stream.Stream<S>
-	listen: Effect.Effect<
-		{
-			dispose: Effect.Effect<void>
-			dispatch: (m: M) => Effect.Effect<void>
-		},
-		never,
-		R
-	>
-}
-
-export const runStateManager = Effect.fn(function* <
+export const makeStateManager = Effect.fn(function* <
 	S,
 	M extends { _tag: string },
 	R,
@@ -47,7 +35,7 @@ export const runStateManager = Effect.fn(function* <
 			ref.changes,
 			Effect.logDebug(`StateManager: Stream of changes ended`),
 		),
-		listen: Effect.scoped(
+		run: Effect.scoped(
 			Effect.gen(function* () {
 				const queue = yield* Queue.unbounded<M>()
 
@@ -167,5 +155,5 @@ export const runStateManager = Effect.fn(function* <
 				}
 			}),
 		),
-	} satisfies ViewModel<S, M, R>
+	}
 })

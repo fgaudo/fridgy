@@ -3,15 +3,15 @@ import * as Either from 'effect/Either'
 import * as Option from 'effect/Option'
 
 import { MINIMUM_LAG_MS } from '$lib/constants.ts'
-import type { Command } from '$lib/helpers.ts'
 
 import type { UseCases } from '../../../business/app/use-cases.ts'
 import { AddProduct } from '../../../business/index.ts'
 import * as Integer from '../../../core/integer/index.ts'
 import * as NonEmptyTrimmedString from '../../../core/non-empty-trimmed-string.ts'
-import { Message } from './update.svelte.ts'
+import type { Command } from '../../../core/state-manager.ts'
+import { InternalMessage } from './update.ts'
 
-export type AddProductCommand = Command<Message>
+export type AddProductCommand = Command<InternalMessage, UseCases>
 
 export const addProduct: (dto: {
 	name: NonEmptyTrimmedString.NonEmptyTrimmedString
@@ -32,17 +32,17 @@ export const addProduct: (dto: {
 	])
 
 	if (Either.isLeft(result)) {
-		return Message.AddProductFailed()
+		return InternalMessage.AddProductFailed()
 	}
 
-	return Message.AddProductSucceeded()
+	return InternalMessage.AddProductSucceeded()
 })
 
 export const queueRemoveToast: (id: symbol) => AddProductCommand = Effect.fn(
 	function* (id) {
 		yield* Effect.logDebug(`Executed command to queue toast removal`)
 		yield* Effect.sleep(`3 seconds`)
-		return Message.RemoveToast({ id })
+		return InternalMessage.RemoveToast({ id })
 	},
 )
 
@@ -50,6 +50,6 @@ export const queueLoading: (id: symbol) => AddProductCommand = Effect.fn(
 	function* (id) {
 		yield* Effect.logDebug(`Executed command to queue spinner display`)
 		yield* Effect.sleep(`150 millis`)
-		return Message.ShowSpinner({ id })
+		return InternalMessage.ShowSpinner({ id })
 	},
 )

@@ -16,6 +16,34 @@
 	const viewModel = createViewModel()
 
 	const saying = sayings[getDayOfYear(Date.now()) % sayings.length]
+	const maybeName = $derived(NonEmptyTrimmedString.fromString(state.name))
+
+	const isNameValid = $derived(Option.isSome(maybeName))
+
+	const isSubmittable = $derived(isNameValid && !state.isAdding)
+
+	const isNameValidOrUntouched = $derived(
+		isNameValid || !state.hasInteractedWithName,
+	)
+
+	const maybeExpirationDate = $derived(
+		pipe(
+			Option.fromNullable(state.expirationDate),
+			Option.flatMap(Integer.fromNumber),
+		),
+	)
+
+	const maybeToastMessage = $derived(Option.fromNullable(state.toastMessage))
+
+	const formattedCurrentDate = $derived(
+		new Date(state.currentDate).toISOString().substring(0, 10),
+	)
+
+	const formattedExpirationDateOrEmpty = $derived(
+		state.expirationDate
+			? new Date(state.expirationDate).toISOString().substring(0, 10)
+			: ``,
+	)
 </script>
 
 <div

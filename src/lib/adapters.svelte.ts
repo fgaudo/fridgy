@@ -3,7 +3,7 @@ import * as Effect from 'effect/Effect'
 import * as Stream from 'effect/Stream'
 import { onMount } from 'svelte'
 
-import type { ViewModel } from '../core/state-manager.ts'
+import type { ViewModel } from './core.ts'
 import type { Executor } from './executor.ts'
 
 export function createCapacitorListener(event: `resume`): Stream.Stream<void>
@@ -27,31 +27,32 @@ export function createCapacitorListener<E extends `resume` | `backButton`>(
 
 export const useViewmodel = <S, M, R>(
 	executor: Executor<R>,
-	makeViewModel: Effect.Effect<ViewModel<S, M, R>>,
-): { state: S | undefined; dispatch: ((m: M) => void) | undefined } => {
-	let reactiveState = $state<S>()
+	viewModel: ViewModel<S, M, R>,
+): { state: S; dispatch: ((m: M) => void) | undefined } => {
+	let state = $state.raw<S>(viewModel.initState)
 
-	let viewModel = $state.raw<Effect.Effect.Success<typeof makeViewModel>>()
+	let initializedViewModel =
+		$state.raw<Effect.Effect.Success<(typeof viewModel)[`setup`]>>()
 	let handle =
 		$state.raw<
 			Effect.Effect.Success<
-				Effect.Effect.Success<typeof makeViewModel>[`listen`]
+				Effect.Effect.Success<(typeof viewModel)[`setup`]>[`run`]
 			>
 		>()
 
 	$effect(() => {
-		if (!viewModel) return
+		if (!initializedViewModel) return
 
 		const cancelChanges = executor.runCallback(
-			Stream.runForEach(viewModel.changes, s =>
+			Stream.runForEach(initializedViewModel.changes, s =>
 				Effect.sync(() => {
-					reactiveState = s
+					state = s
 				}),
 			),
 		)
 
 		const cancelListen = executor.runCallback(
-			viewModel.listen,
+			initializedViewModel.run,
 			stateManager => {
 				handle = stateManager
 			},
@@ -67,8 +68,8 @@ export const useViewmodel = <S, M, R>(
 	})
 
 	onMount(() => {
-		const cancelInit = executor.runCallback(makeViewModel, vm => {
-			viewModel = vm
+		const cancelInit = executor.runCallback(viewModel.setup, vm => {
+			initializedViewModel = vm
 		})
 
 		return () => {
@@ -77,13 +78,13 @@ export const useViewmodel = <S, M, R>(
 	})
 
 	return $derived.by(() => {
-		if (!handle?.dispatch) return { state: reactiveState, dispatch: undefined }
+		if (!handle?.dispatch) return { state, dispatch: undefined }
 
 		const dispatch = handle.dispatch
 
 		return {
 			dispatch: (m: M) => executor.runCallback(dispatch(m)),
-			state: reactiveState,
+			state,
 		}
 	})
 }
