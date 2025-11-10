@@ -47,15 +47,25 @@ export const modify = Function.dual<
 	return { state: finishDraft(draft) as typeof state, commands }
 })
 
-export const noOp = Function.dual<
-	<C>(_: void) => <S>(state: S) => {
-		state: S
-		commands: C[]
+type NoOpType = {
+	<S, C>(state: S): { state: S; commands: C[] }
+	curried<C>(): <S>(state: S) => { state: S; commands: C[] }
+}
+
+export const noOp: NoOpType = Object.assign(
+	<S>(state: S) => ({
+		state,
+		commands: [],
+	}),
+	{
+		curried:
+			<C>() =>
+			<S>(state: S) => ({
+				state,
+				commands: [],
+			}),
 	},
-	<S, C>(state: S, _: void) => { state: S; commands: C[] }
->(2, state => {
-	return { state, commands: [] }
-})
+)
 
 export const commands = Function.dual<
 	<C>(commands: Arr.NonEmptyArray<C>) => <S>(state: S) => {

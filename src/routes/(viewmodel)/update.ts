@@ -166,7 +166,7 @@ const update_: Update<State, InternalMessage, UseCases> = matcher({
 			draft.receivedError = true
 			draft.isLoading = false
 		}),
-	NoOp: () => noOp,
+	NoOp: () => noOp.curried(),
 	Crash: () =>
 		modify(draft => {
 			draft.hasCrashOccurred = true

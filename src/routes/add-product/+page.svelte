@@ -2,28 +2,49 @@
 	import ArrowLeft from '@lucide/svelte/icons/arrow-left'
 	import Quote from '@lucide/svelte/icons/quote'
 	import { getDayOfYear } from 'date-fns'
+	import { pipe } from 'effect/Function'
 	import * as Option from 'effect/Option'
 	import { cubicIn, cubicOut } from 'svelte/easing'
 	import { fade, fly } from 'svelte/transition'
 
+	import { useViewmodel } from '$lib/adapters.svelte.ts'
 	import sayings from '$lib/assets/sayings.json' with { type: 'json' }
 	import Ripple from '$lib/components/ripple.svelte'
 	import Spinner from '$lib/components/spinner.svelte'
 	import { PAGE_TRANSITION_Y } from '$lib/constants.ts'
+	import { getGlobalContext } from '$lib/context.ts'
 
-	import { createViewModel } from './(view-model)/index.ts'
+	import * as Integer from '../../core/integer/index.ts'
+	import * as NonEmptyTrimmedString from '../../core/non-empty-trimmed-string.ts'
+	import { viewModel } from './(view-model)/index.ts'
 
-	const viewModel = createViewModel()
+	type State = {
+		name: undefined | string
+		hasInteractedWithName: boolean
+		expirationDate: undefined | number
+		currentDate: number
+	}
+
+	const { executor } = getGlobalContext()
+	const { state: viewmodelState, dispatch } = useViewmodel(executor, viewModel)
+
+	const state = $state<State>({
+		name: ``,
+		hasInteractedWithName: false,
+		expirationDate: undefined,
+		currentDate: Date.now(),
+	})
+
+	const validName = $derived(NonEmptyTrimmedString.fromString(state.name ?? ``))
 
 	const saying = sayings[getDayOfYear(Date.now()) % sayings.length]
-	const maybeName = $derived(NonEmptyTrimmedString.fromString(state.name))
 
-	const isNameValid = $derived(Option.isSome(maybeName))
-
-	const isSubmittable = $derived(isNameValid && !state.isAdding)
+	const isSubmittable = $derived(
+		Option.isSome(validName) && !viewmodelState.isAdding,
+	)
 
 	const isNameValidOrUntouched = $derived(
-		isNameValid || !state.hasInteractedWithName,
+		Option.isSome(validName) || !state.hasInteractedWithName,
 	)
 
 	const maybeExpirationDate = $derived(
@@ -65,7 +86,7 @@
 		>
 			<Ripple
 				ontap={() => {
-					if (!viewModel.state.isAdding) {
+					if (!viewmodelState.isAdding) {
 						window.history.back()
 					}
 				}}
@@ -103,24 +124,20 @@
 				for="name"
 				class={[
 					`bg-background inline-block p-[4px] text-sm duration-500`,
-					viewModel.derived.isNameValidOrUntouched
-						? `text-secondary`
-						: `text-primary`,
+					isNameValidOrUntouched ? `text-secondary` : `text-primary`,
 				]}
 			>
 				Product name <span class="font-bold text-primary">*</span>
 			</label>
 			<input
 				type="text"
-				bind:value={() => viewModel.state.name, viewModel.tasks.setName}
+				bind:value={() => state.name, viewModel.tasks.setName}
 				placeholder="For example: Milk"
 				enterkeyhint="done"
 				id="name"
 				class={[
 					`h-16 transition-all focus:ring-0 shadow-none placeholder:text-gray-400 p-4 w-full  duration-500 rounded-[4px] border-0`,
-					viewModel.derived.isNameValidOrUntouched
-						? `bg-secondary/5`
-						: `bg-primary/15 `,
+					isNameValidOrUntouched ? `bg-secondary/5` : `bg-primary/15 `,
 				]}
 			/>
 		</div>
@@ -133,7 +150,7 @@
 				Expiration date
 			</label>
 			<div class="relative h-16">
-				{#if Option.isNone(viewModel.derived.maybeExpirationDate)}
+				{#if Option.isNone(maybeExpirationDate)}
 					<div
 						class="h-full flex items-center text-gray-400 absolute focus:ring-0 bg-secondary/5 shadow-none p-4 w-full rounded-[4px] border-0 z-40 pointer-events-none"
 					>
@@ -144,7 +161,7 @@
 					type="date"
 					placeholder="Select a date"
 					bind:value={
-						() => viewModel.derived.formattedExpirationDateOrEmpty,
+						() => formattedExpirationDateOrEmpty,
 						viewModel.tasks.setExpirationDate
 					}
 					tabindex="-1"
@@ -152,10 +169,10 @@
 					class={[
 						`absolute h-full focus:ring-0 bg-secondary/5 shadow-none p-4 w-full rounded-[4px] border-0`,
 						{
-							'opacity-0': Option.isNone(viewModel.derived.maybeExpirationDate),
+							'opacity-0': Option.isNone(maybeExpirationDate),
 						},
 					]}
-					min={viewModel.derived.formattedCurrentDate}
+					min={formattedCurrentDate}
 				/>
 			</div>
 		</div>
@@ -165,11 +182,11 @@
 					class={[
 						`px-6 justify-center transition-all duration-500 overflow-hidden bg-primary h-full items-center flex  text-background shadow-primary/70 rounded-full shadow-md `,
 						{
-							'opacity-15 ': !viewModel.derived.isSubmittable,
+							'opacity-15 ': !isSubmittable,
 						},
 					]}
 				>
-					{#if viewModel.derived.isSubmittable}
+					{#if isSubmittable}
 						<Ripple ontap={viewModel.tasks.addProduct}></Ripple>
 					{/if}
 					Add product
