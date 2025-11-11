@@ -37,19 +37,3 @@ export const addProduct: (dto: {
 
 	return InternalMessage.AddProductSucceeded()
 })
-
-export const queueRemoveToast: (id: symbol) => AddProductCommand = Effect.fn(
-	function* (id) {
-		yield* Effect.logDebug(`Executed command to queue toast removal`)
-		yield* Effect.sleep(`3 seconds`)
-		return InternalMessage.RemoveToast({ id })
-	},
-)
-
-export const queueLoading: (id: symbol) => AddProductCommand = Effect.fn(
-	function* (id) {
-		yield* Effect.logDebug(`Executed command to queue spinner display`)
-		yield* Effect.sleep(`150 millis`)
-		return InternalMessage.ShowSpinner({ id })
-	},
-)

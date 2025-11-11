@@ -44,12 +44,18 @@ export const modify = Function.dual<
 	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 	const commands = p(draft) ?? []
 
-	return { state: finishDraft(draft) as typeof state, commands }
+	return {
+		state: finishDraft(draft) as typeof state,
+		commands,
+	}
 })
 
 type NoOpType = {
 	<S, C>(state: S): { state: S; commands: C[] }
-	curried<C>(): <S>(state: S) => { state: S; commands: C[] }
+	func<C>(): <S>(state: S) => {
+		state: S
+		commands: C[]
+	}
 }
 
 export const noOp: NoOpType = Object.assign(
@@ -58,8 +64,8 @@ export const noOp: NoOpType = Object.assign(
 		commands: [],
 	}),
 	{
-		curried:
-			<C>() =>
+		func:
+			() =>
 			<S>(state: S) => ({
 				state,
 				commands: [],
@@ -68,14 +74,20 @@ export const noOp: NoOpType = Object.assign(
 )
 
 export const commands = Function.dual<
-	<C>(commands: Arr.NonEmptyArray<C>) => <S>(state: S) => {
+	<C>(effects: Arr.NonEmptyArray<C>) => <S>(state: S) => {
 		state: S
 		commands: C[]
 	},
 	<S, C>(
 		state: S,
-		commands: Arr.NonEmptyArray<C>,
-	) => { state: S; commands: C[] }
+		effects: Arr.NonEmptyArray<C>,
+	) => {
+		state: S
+		commands: C[]
+	}
 >(2, (state, commands) => {
-	return { state, commands }
+	return {
+		state,
+		commands,
+	}
 })

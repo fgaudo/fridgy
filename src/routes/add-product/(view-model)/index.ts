@@ -9,7 +9,7 @@ const initState = {} as State
 
 export const viewModel: ViewModel<State, Message, UseCases> = {
 	initState,
-	setup: makeStateManager({
+	run: makeStateManager({
 		initState,
 		update,
 		fatalMessage: err => InternalMessage.Crash({ message: err }),

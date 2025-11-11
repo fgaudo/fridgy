@@ -8,7 +8,7 @@ import { modify, noOp } from '../../../core/helper.ts'
 import * as Integer from '../../../core/integer/index.ts'
 import * as NonEmptyTrimmedString from '../../../core/non-empty-trimmed-string.ts'
 import type { Command, Update } from '../../../core/state-manager.ts'
-import { addProduct, queueLoading, queueRemoveToast } from './commands.ts'
+import { addProduct } from './commands.ts'
 import type { State } from './state.ts'
 
 type _Message = {
@@ -50,12 +50,9 @@ const update_: Update<State, InternalMessage, UseCases> = matcher({
 			}
 
 			return modify(state, draft => {
-				const id = Symbol()
-
 				draft.isAdding = true
 
 				return [
-					queueLoading(id),
 					addProduct({
 						name,
 						maybeExpirationDate,
@@ -65,36 +62,17 @@ const update_: Update<State, InternalMessage, UseCases> = matcher({
 		},
 	AddProductFailed: () =>
 		modify(draft => {
-			const id = Symbol()
 			draft.isAdding = false
 			draft.isLoading = false
-			draft.toastMessage = `Failed to add product`
-			draft.toastType = `error`
-
-			return [queueRemoveToast(id)] as const
 		}),
 	AddProductSucceeded: () =>
 		modify(draft => {
-			const id = Symbol()
-
 			draft.isAdding = false
-			draft.toastMessage = `Product added`
-			draft.toastType = `success`
 			draft.isLoading = false
-
-			return [queueRemoveToast(id)] as const
 		}),
 
-	NoOp: () => noOp.curried(),
-	ShowCrash: () =>
-		modify(draft => {
-			const id = Symbol()
-
-			draft.toastMessage = `An unexpected error occurred and the app had to be reloaded`
-			draft.toastType = `error`
-
-			return [queueRemoveToast(id)] as const
-		}),
+	NoOp: () => noOp.func(),
+	ShowCrash: () => noOp.func(),
 	Crash: () =>
 		modify(draft => {
 			draft.hasCrashOccurred = true
@@ -109,5 +87,8 @@ export const update: Update<State, InternalMessage, UseCases> = Function.dual<
 	(
 		state: State,
 		message: InternalMessage,
-	) => { state: State; commands: Command<InternalMessage, UseCases>[] }
+	) => {
+		state: State
+		commands: Command<InternalMessage, UseCases>[]
+	}
 >(2, (state, message) => update_(message)(state))

@@ -1,7 +1,7 @@
 import { type BackButtonListenerEvent, App as CAP } from '@capacitor/app'
 import * as Effect from 'effect/Effect'
 import * as Stream from 'effect/Stream'
-import { onMount } from 'svelte'
+import { onDestroy, onMount } from 'svelte'
 
 import type { ViewModel } from './core.ts'
 import type { Executor } from './executor.ts'
@@ -31,45 +31,29 @@ export const useViewmodel = <S, M, R>(
 ): { state: S; dispatch: ((m: M) => void) | undefined } => {
 	let state = $state.raw<S>(viewModel.initState)
 
-	let initializedViewModel =
-		$state.raw<Effect.Effect.Success<(typeof viewModel)[`setup`]>>()
-	let handle =
-		$state.raw<
-			Effect.Effect.Success<
-				Effect.Effect.Success<(typeof viewModel)[`setup`]>[`run`]
-			>
-		>()
+	let handle = $state.raw<Effect.Effect.Success<(typeof viewModel)[`run`]>>()
+	let initialized = false
 
 	$effect(() => {
-		if (!initializedViewModel) return
+		if (!handle) return
 
 		const cancelChanges = executor.runCallback(
-			Stream.runForEach(initializedViewModel.changes, s =>
+			Stream.runForEach(handle.changes, s =>
 				Effect.sync(() => {
 					state = s
 				}),
 			),
 		)
-
-		const cancelListen = executor.runCallback(
-			initializedViewModel.run,
-			stateManager => {
-				handle = stateManager
-			},
-		)
+		initialized = true
 
 		return () => {
 			cancelChanges()
-			cancelListen()
-			if (handle) {
-				executor.runCallback(handle.dispose)
-			}
 		}
 	})
 
 	onMount(() => {
-		const cancelInit = executor.runCallback(viewModel.setup, vm => {
-			initializedViewModel = vm
+		const cancelInit = executor.runCallback(viewModel.run, h => {
+			handle = h
 		})
 
 		return () => {
@@ -77,8 +61,14 @@ export const useViewmodel = <S, M, R>(
 		}
 	})
 
+	onDestroy(() => {
+		if (handle?.dispose) {
+			executor.runCallback(handle.dispose)
+		}
+	})
+
 	return $derived.by(() => {
-		if (!handle?.dispatch) return { state, dispatch: undefined }
+		if (!initialized || !handle?.dispatch) return { state, dispatch: undefined }
 
 		const dispatch = handle.dispatch
 

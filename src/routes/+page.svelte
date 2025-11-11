@@ -37,13 +37,13 @@
 		selectedProducts: SvelteSet<string>
 	}
 
-	const { state: viewmodelState, dispatch } = useViewmodel(executor, viewModel)
-
 	const state = $state<State>({
 		isMenuOpen: false,
 		currentTimestamp: Integer.unsafeFromNumber(Date.now()),
 		selectedProducts: new SvelteSet(),
 	})
+
+	const { state: viewmodelState, dispatch } = useViewmodel(executor, viewModel)
 
 	function toggleMenu() {
 		if (state.isMenuOpen) {

@@ -111,9 +111,9 @@ const update_: Update<State, InternalMessage, UseCases> = matcher({
 
 						return ProductViewModel(entry)
 					}),
-					xs =>
-						Arr.isNonEmptyArray(xs)
-							? Option.some(xs)
+					models =>
+						Arr.isNonEmptyArray(models)
+							? Option.some(models)
 							: Option.none<Arr.NonEmptyArray<ProductViewModel>>(),
 				)
 			})
@@ -148,9 +148,9 @@ const update_: Update<State, InternalMessage, UseCases> = matcher({
 
 					return ProductViewModel(entry)
 				}),
-				xs =>
-					Arr.isNonEmptyArray(xs)
-						? Option.some(xs)
+				models =>
+					Arr.isNonEmptyArray(models)
+						? Option.some(models)
 						: Option.none<Arr.NonEmptyArray<ProductViewModel>>(),
 			)
 		}),
@@ -166,7 +166,7 @@ const update_: Update<State, InternalMessage, UseCases> = matcher({
 			draft.receivedError = true
 			draft.isLoading = false
 		}),
-	NoOp: () => noOp.curried(),
+	NoOp: () => noOp.func(),
 	Crash: () =>
 		modify(draft => {
 			draft.hasCrashOccurred = true
@@ -181,5 +181,8 @@ export const update: Update<State, InternalMessage, UseCases> = Function.dual<
 	(
 		state: State,
 		message: InternalMessage,
-	) => { state: State; commands: Command<InternalMessage, UseCases>[] }
+	) => {
+		state: State
+		commands: Command<InternalMessage, UseCases>[]
+	}
 >(2, (state, message) => update_(message)(state))
