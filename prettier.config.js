@@ -20,6 +20,9 @@ export default {
 		},
 	],
 	importOrder: [
+		'@/core',
+		'@/shared',
+		'@/',
 		`^\\./\\$types$`,
 		`^\\$lib/core`,
 		`^\\$lib/domain`,

@@ -8,6 +8,11 @@ export default {
 		runes: true,
 	},
 	kit: {
+		alias: {
+			'@/core': 'src/core',
+			'@/shared': 'src/business/shared',
+			'@/feature': 'src/business/feature',
+		},
 		adapter: adapter({
 			// default options are shown. On some platforms
 			// these options are set automatically — see below

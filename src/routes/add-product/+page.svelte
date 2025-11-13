@@ -7,6 +7,9 @@
 	import { cubicIn, cubicOut } from 'svelte/easing'
 	import { fade, fly } from 'svelte/transition'
 
+	import * as Integer from '@/core/integer/index.ts'
+	import * as NonEmptyTrimmedString from '@/core/non-empty-trimmed-string.ts'
+
 	import { useViewmodel } from '$lib/adapters.svelte.ts'
 	import sayings from '$lib/assets/sayings.json' with { type: 'json' }
 	import Ripple from '$lib/components/ripple.svelte'
@@ -14,8 +17,6 @@
 	import { PAGE_TRANSITION_Y } from '$lib/constants.ts'
 	import { getGlobalContext } from '$lib/context.ts'
 
-	import * as Integer from '../../core/integer/index.ts'
-	import * as NonEmptyTrimmedString from '../../core/non-empty-trimmed-string.ts'
 	import { viewModel } from './(view-model)/index.ts'
 	import { Message } from './(view-model)/update.ts'
 

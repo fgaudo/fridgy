@@ -40,7 +40,6 @@ export const makeStateManager = Effect.fn(function* <
 			}
 		}),
 	)
-
 	const maybeSubsFiber = yield* Effect.option(
 		Effect.gen(function* () {
 			const subs = yield* Option.fromNullable(subscriptions)
@@ -128,6 +127,7 @@ export const makeStateManager = Effect.fn(function* <
 	)
 
 	return {
+		initState,
 		changes: Stream.onEnd(
 			ref.changes,
 			Effect.logDebug(`StateManager: Stream of changes ended`),

@@ -17,6 +17,9 @@
 	import { SvelteSet } from 'svelte/reactivity'
 	import { fade, fly } from 'svelte/transition'
 
+	import * as Integer from '@/core/integer/index.ts'
+	import * as NonEmptyHashSet from '@/core/non-empty-hash-set.ts'
+
 	import { useViewmodel } from '$lib/adapters.svelte.ts'
 	import imgUrl from '$lib/assets/arrow.svg'
 	import Ripple from '$lib/components/ripple.svelte'
@@ -24,9 +27,7 @@
 	import { getGlobalContext } from '$lib/context.ts'
 	import * as Utils from '$lib/utils.ts'
 
-	import * as Integer from '../core/integer/index.ts'
-	import * as NonEmptyHashSet from '../core/non-empty-hash-set.ts'
-	import { viewModel } from './(viewmodel)/index.ts'
+	import { capacitor } from '../business/feature/home/index.ts'
 	import { Message } from './(viewmodel)/update.ts'
 
 	const { executor } = getGlobalContext()
@@ -43,7 +44,7 @@
 		selectedProducts: new SvelteSet(),
 	})
 
-	const { state: viewmodelState, dispatch } = useViewmodel(executor, viewModel)
+	const viewmodel = useViewmodel(executor, capacitor)
 
 	function toggleMenu() {
 		if (state.isMenuOpen) {
@@ -82,6 +83,7 @@
 	const refreshTimeListenersEnabled = $derived(
 		Option.isSome(
 			Option.gen(function* () {
+				const { state: viewmodelState } = yield* Option.fromNullable(viewmodel)
 				const products = yield* viewmodelState.maybeProducts
 				return Arr.findFirstIndex(
 					products,

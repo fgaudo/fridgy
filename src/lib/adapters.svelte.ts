@@ -28,10 +28,10 @@ export function createCapacitorListener<E extends `resume` | `backButton`>(
 export const useViewmodel = <S, M, R>(
 	executor: Executor<R>,
 	viewModel: ViewModel<S, M, R>,
-): { state: S; dispatch: ((m: M) => void) | undefined } => {
-	let state = $state.raw<S>(viewModel.initState)
+): { state: S; dispatch: (m: M) => void } | undefined => {
+	let state = $state.raw<S>()
 
-	let handle = $state.raw<Effect.Effect.Success<(typeof viewModel)[`run`]>>()
+	let handle = $state.raw<Effect.Effect.Success<typeof viewModel>>()
 	let initialized = false
 
 	$effect(() => {
@@ -44,6 +44,7 @@ export const useViewmodel = <S, M, R>(
 				}),
 			),
 		)
+
 		initialized = true
 
 		return () => {
@@ -52,7 +53,8 @@ export const useViewmodel = <S, M, R>(
 	})
 
 	onMount(() => {
-		const cancelInit = executor.runCallback(viewModel.run, h => {
+		const cancelInit = executor.runCallback(viewModel, h => {
+			state = h.initState
 			handle = h
 		})
 
@@ -68,7 +70,7 @@ export const useViewmodel = <S, M, R>(
 	})
 
 	return $derived.by(() => {
-		if (!initialized || !handle?.dispatch) return { state, dispatch: undefined }
+		if (!initialized || !handle?.dispatch || !state) return undefined
 
 		const dispatch = handle.dispatch
 
