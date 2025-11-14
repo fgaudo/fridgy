@@ -1,4 +1,5 @@
 import * as Arr from 'effect/Array'
+import * as Clock from 'effect/Clock'
 import * as Data from 'effect/Data'
 import * as Effect from 'effect/Effect'
 import { pipe } from 'effect/Function'
@@ -7,11 +8,14 @@ import * as Option from 'effect/Option'
 import * as Schema from 'effect/Schema'
 
 import { modify, noOp } from '@/core/helper.ts'
+import * as Integer from '@/core/integer/index.ts'
 import * as NonEmptyHashSet from '@/core/non-empty-hash-set.ts'
 import * as NonEmptyTrimmedString from '@/core/non-empty-trimmed-string.ts'
 import { type Command, makeStateManager } from '@/core/state-manager.ts'
+import * as UnitInterval from '@/core/unit-interval.ts'
 
-import { UseCases as ProductManagementUseCases } from '@/feature/product-management/index.ts'
+import { Rules, UseCases } from '@/feature/product-management/index.ts'
+import type { DTO } from '@/feature/product-management/usecases/get-sorted-products.ts'
 
 type Message = Data.TaggedEnum<{
 	FetchList: object
@@ -25,18 +29,32 @@ const ProductViewModelSchema = Schema.Union(
 		isCorrupt: Schema.Literal(false),
 		id: Schema.String,
 		maybeName: Schema.Option(Schema.String),
-		maybeExpirationDate: Schema.Option(Schema.Number),
-		maybeCreationDate: Schema.Option(Schema.Number),
 		isValid: Schema.Literal(false),
 	}),
-	Schema.Struct({
-		isCorrupt: Schema.Literal(false),
-		id: Schema.String,
-		name: Schema.String,
-		maybeExpirationDate: Schema.Option(Schema.Number),
-		creationDate: Schema.Number,
-		isValid: Schema.Literal(true),
-	}),
+	Schema.extend(
+		Schema.Struct({
+			isCorrupt: Schema.Literal(false),
+			id: Schema.String,
+			name: Schema.String,
+			isValid: Schema.Literal(true),
+		}),
+		Schema.Union(
+			Schema.Struct({
+				timeLeft: Integer.Schema,
+				freshness: UnitInterval.Schema,
+				expirationDate: Integer.Schema,
+				isStale: Schema.Literal(false),
+			}),
+			Schema.Struct({
+				expirationDate: Integer.Schema,
+				isStale: Schema.Literal(true),
+			}),
+
+			Schema.Struct({
+				expirationDate: Schema.Literal(`none`),
+			}),
+		),
+	),
 	Schema.Struct({
 		id: Schema.Symbol,
 		isCorrupt: Schema.Literal(true),
@@ -48,132 +66,160 @@ type ProductViewModel = Schema.Schema.Type<typeof ProductViewModelSchema>
 
 const ProductViewModel = Data.struct<ProductViewModel>
 
-const State = Schema.Struct({
-	receivedError: Schema.Boolean,
-	maybeRefreshingTaskId: Schema.Option(Schema.Symbol),
-	isDeleteRunning: Schema.Boolean,
-	hasCrashOccurred: Schema.Boolean,
-
-	maybeMessage: Schema.Option(NonEmptyTrimmedString.Schema),
-	messageType: Schema.Union(Schema.Literal(`error`), Schema.Literal(`success`)),
-
-	isLoading: Schema.Boolean,
-
-	maybeProducts: Schema.Option(Schema.NonEmptyArray(ProductViewModelSchema)),
-})
+const State = Schema.extend(
+	Schema.Struct({
+		currentDate: Integer.Schema,
+		isBusy: Schema.Boolean,
+		maybeProducts: Schema.Option(Schema.NonEmptyArray(ProductViewModelSchema)),
+	}),
+	Schema.Union(
+		Schema.Struct({
+			maybeMessage: NonEmptyTrimmedString.Schema,
+			messageType: Schema.Union(
+				Schema.Literal(`error`),
+				Schema.Literal(`success`),
+			),
+		}),
+		Schema.Struct({
+			messageType: Schema.Literal(`none`),
+		}),
+	),
+)
 
 type State = Schema.Schema.Type<typeof State>
 
 type InternalMessage =
 	| Message
-	| ProductManagementUseCases.GetSortedProducts.Message
-	| ProductManagementUseCases.DeleteProductsByIdsAndRetrieve.Message
+	| UseCases.GetSortedProducts.Message
+	| UseCases.DeleteProductsByIdsAndRetrieve.Message
 
 const matcher = Match.typeTags<
 	InternalMessage,
 	(s: Readonly<State>) => Readonly<{
 		state: State
-		commands: Command<InternalMessage, ProductManagementUseCases.All>[]
+		commands: Command<InternalMessage, UseCases.All>[]
 	}>
 >()
+
+const mapToViewModels = (entries: DTO, state: State) => {
+	return pipe(
+		entries,
+		Arr.map(entry => {
+			if (entry.isCorrupt) {
+				return ProductViewModel({
+					...entry,
+					id: Symbol(),
+				})
+			}
+
+			if (!entry.isValid) {
+				return entry
+			}
+
+			if (Option.isNone(entry.maybeExpirationDate)) {
+				return ProductViewModel({
+					expirationDate: `none` as const,
+					id: entry.id,
+					name: entry.name,
+					isValid: true,
+					isCorrupt: false,
+				})
+			}
+
+			return ProductViewModel({
+				expirationDate: entry.maybeExpirationDate.value,
+				id: entry.id,
+				isValid: true,
+				isCorrupt: false,
+				name: entry.name,
+				...(Rules.isProductStale({
+					expirationDate: entry.maybeExpirationDate.value,
+					currentDate: state.currentDate,
+				})
+					? { isStale: true }
+					: {
+							isStale: false,
+							freshness: Rules.computeFreshness({
+								creationDate: entry.creationDate,
+								expirationDate: entry.maybeExpirationDate.value,
+								currentDate: state.currentDate,
+							}),
+							timeLeft: Rules.computeTimeLeft({
+								expirationDate: entry.maybeExpirationDate.value,
+								currentDate: state.currentDate,
+							}),
+						}),
+			})
+		}),
+		models =>
+			Arr.isNonEmptyArray(models)
+				? Option.some(models)
+				: Option.none<Arr.NonEmptyArray<ProductViewModel>>(),
+	)
+}
 
 const update = matcher({
 	FetchList: () =>
 		modify(draft => {
-			const taskId = Symbol()
-			draft.maybeRefreshingTaskId = Option.some(taskId)
-			draft.isLoading = true
+			draft.isBusy = true
 
-			return [ProductManagementUseCases.GetSortedProducts.Service.run]
+			return [UseCases.GetSortedProducts.Service.run]
 		}),
 	FetchListFailed: () =>
 		modify(draft => {
-			draft.isLoading = false
-			draft.receivedError = true
+			draft.isBusy = false
 		}),
 	FetchListSucceeded:
 		({ result }) =>
 		state => {
 			return modify(state, draft => {
-				draft.isLoading = false
-				draft.receivedError = false
-				draft.maybeProducts = pipe(
-					result,
-					Arr.map(entry => {
-						if (entry.isCorrupt) {
-							return ProductViewModel({
-								...entry,
-								id: Symbol(),
-							})
-						}
-
-						return ProductViewModel(entry)
-					}),
-					models =>
-						Arr.isNonEmptyArray(models)
-							? Option.some(models)
-							: Option.none<Arr.NonEmptyArray<ProductViewModel>>(),
-				)
+				draft.isBusy = false
+				draft.maybeProducts = mapToViewModels(result, state)
 			})
 		},
 	DeleteAndRefresh:
 		({ ids }) =>
 		state => {
-			if (state.isDeleteRunning) {
+			if (state.isBusy) {
 				return noOp(state)
 			}
 
 			return modify(state, draft => {
-				draft.isDeleteRunning = true
+				draft.isBusy = true
 
-				return [
-					ProductManagementUseCases.DeleteProductsByIdsAndRetrieve.Service.run(
-						ids,
-					),
-				]
+				return [UseCases.DeleteProductsByIdsAndRetrieve.Service.run(ids)]
 			})
 		},
-	DeleteAndRefreshSucceeded: ({ result }) =>
-		modify(draft => {
-			draft.isDeleteRunning = false
-			draft.isLoading = false
+	DeleteAndRefreshSucceeded:
+		({ result }) =>
+		state =>
+			modify(state, draft => {
+				draft.isBusy = false
 
-			draft.maybeProducts = pipe(
-				result,
-				Arr.map(entry => {
-					if (entry.isCorrupt) {
-						return ProductViewModel({
-							...entry,
-							id: Symbol(),
-						})
-					}
-
-					return ProductViewModel(entry)
-				}),
-				models =>
-					Arr.isNonEmptyArray(models)
-						? Option.some(models)
-						: Option.none<Arr.NonEmptyArray<ProductViewModel>>(),
-			)
-		}),
+				draft.maybeProducts = mapToViewModels(result, state)
+			}),
 	DeleteFailed: () =>
 		modify(draft => {
-			draft.isDeleteRunning = false
-			draft.isLoading = false
+			draft.isBusy = false
 		}),
 	DeleteSucceededButRefreshFailed: () =>
 		modify(draft => {
-			draft.isDeleteRunning = false
+			draft.isBusy = false
 			draft.maybeProducts = Option.none<Arr.NonEmptyArray<ProductViewModel>>()
-			draft.receivedError = true
-			draft.isLoading = false
 		}),
 })
 
 const makeViewModel = Effect.provide(
 	Effect.gen(function* () {
+		const initState: State = {
+			currentDate: Integer.unsafeFromNumber(yield* Clock.currentTimeMillis),
+			isBusy: false,
+			maybeProducts: Option.none(),
+			messageType: `none`,
+		}
+
 		const viewModel = yield* makeStateManager({
-			initState: {} as State,
+			initState,
 			update,
 		})
 
@@ -184,7 +230,7 @@ const makeViewModel = Effect.provide(
 			changes: viewModel.changes,
 		}
 	}),
-	ProductManagementUseCases.all,
+	UseCases.all,
 )
 
 export { makeViewModel, Message }

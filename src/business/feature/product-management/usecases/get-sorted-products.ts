@@ -1,4 +1,5 @@
 import * as Array from 'effect/Array'
+import * as Clock from 'effect/Clock'
 import * as Data from 'effect/Data'
 import * as Effect from 'effect/Effect'
 import * as Either from 'effect/Either'
@@ -9,26 +10,24 @@ import * as Schema from 'effect/Schema'
 import * as Integer from '@/core/integer/index.ts'
 import * as NonEmptyTrimmedString from '@/core/non-empty-trimmed-string.ts'
 
-import * as Product from '../domain/product'
+import * as Product from '../domain/entities/product'
 import * as GetSortedProductsQuery from '../queries/get-sorted-products'
 
 export const DTO = Schema.Array(
 	Schema.Union(
 		Schema.Struct({
 			isCorrupt: Schema.Literal(false),
-			id: Schema.String,
 			maybeName: Schema.Option(NonEmptyTrimmedString.Schema),
-			maybeExpirationDate: Schema.Option(Integer.Schema),
-			maybeCreationDate: Schema.Option(Integer.Schema),
+			id: Schema.String,
 			isValid: Schema.Literal(false),
 		}),
 		Schema.Struct({
 			isCorrupt: Schema.Literal(false),
 			id: Schema.String,
 			name: NonEmptyTrimmedString.Schema,
+			isValid: Schema.Literal(true),
 			maybeExpirationDate: Schema.Option(Integer.Schema),
 			creationDate: Integer.Schema,
-			isValid: Schema.Literal(true),
 		}),
 		Schema.Struct({
 			isCorrupt: Schema.Literal(true),
@@ -79,6 +78,10 @@ export class Service extends Effect.Service<Service>()(
 
 					const result = errorOrData.right
 
+					const currentDate = Integer.unsafeFromNumber(
+						yield* Clock.currentTimeMillis,
+					)
+
 					const entries = yield* pipe(
 						result,
 						Array.map(
@@ -108,6 +111,7 @@ export class Service extends Effect.Service<Service>()(
 										name,
 										creationDate,
 										maybeExpirationDate,
+										currentDate,
 									})
 								})
 
@@ -117,8 +121,6 @@ export class Service extends Effect.Service<Service>()(
 									return {
 										id: maybeId.value,
 										maybeName,
-										maybeCreationDate,
-										maybeExpirationDate,
 										isCorrupt: false,
 										isValid: false,
 									} as const
@@ -129,8 +131,8 @@ export class Service extends Effect.Service<Service>()(
 									isValid: true,
 									id: maybeId.value,
 									name: maybeProduct.value.name,
-									creationDate: maybeProduct.value.creationDate,
 									maybeExpirationDate: maybeProduct.value.maybeExpirationDate,
+									creationDate: maybeProduct.value.creationDate,
 								} as const
 							}),
 						),

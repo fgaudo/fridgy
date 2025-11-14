@@ -6,6 +6,8 @@ import * as UC from './usecases/index.ts'
 
 export * as UseCases from './usecases/index.ts'
 
+export * as Rules from './domain/rules.ts'
+
 export const UseCasesWithDeps = {
 	capacitor: Layer.provide(UC.all, capacitorQueries),
 	mock: {

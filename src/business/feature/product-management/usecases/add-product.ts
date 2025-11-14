@@ -9,7 +9,7 @@ import * as Schema from 'effect/Schema'
 import * as Integer from '@/core/integer'
 import * as NonEmptyTrimmedString from '@/core/non-empty-trimmed-string'
 
-import * as Product from '../domain/product.ts'
+import * as Product from '../domain/entities/product.ts'
 import * as AddProductOperation from '../queries/add-product'
 
 export const ProductDTO = Schema.Struct({

@@ -20,13 +20,23 @@ type Message = Data.TaggedEnum<{
 
 type InternalMessage = Message | ProductManagementUseCases.AddProduct.Message
 
-const State = Schema.Struct({
-	isAdding: Schema.Boolean,
-	isLoading: Schema.Boolean,
-	hasCrashOccurred: Schema.Boolean,
-	toastMessage: Schema.String,
-	toastType: Schema.Union(Schema.Literal(`error`), Schema.Literal(`success`)),
-})
+const State = Schema.extend(
+	Schema.Struct({
+		isAdding: Schema.Boolean,
+	}),
+	Schema.Union(
+		Schema.Struct({
+			maybeMessage: NonEmptyTrimmedString.Schema,
+			messageType: Schema.Union(
+				Schema.Literal(`error`),
+				Schema.Literal(`success`),
+			),
+		}),
+		Schema.Struct({
+			messageType: Schema.Literal(`none`),
+		}),
+	),
+)
 
 type State = Schema.Schema.Type<typeof State>
 
@@ -60,19 +70,17 @@ const update = matcher({
 	AddProductFailed: () =>
 		modify(draft => {
 			draft.isAdding = false
-			draft.isLoading = false
 		}),
 	AddProductSucceeeded: () =>
 		modify(draft => {
 			draft.isAdding = false
-			draft.isLoading = false
 		}),
 })
 
 const makeViewModel = Effect.provide(
 	Effect.gen(function* () {
 		const viewModel = yield* makeStateManager({
-			initState: {} as State,
+			initState: { isAdding: false, messageType: `none` },
 			update,
 		})
 
