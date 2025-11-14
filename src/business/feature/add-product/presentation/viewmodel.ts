@@ -58,7 +58,7 @@ const update = matcher({
 			draft.isAdding = false
 			draft.isLoading = false
 		}),
-	AddProductSucceeded: () =>
+	AddProductSucceeeded: () =>
 		modify(draft => {
 			draft.isAdding = false
 			draft.isLoading = false

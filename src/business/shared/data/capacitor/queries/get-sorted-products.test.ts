@@ -10,7 +10,7 @@ import * as H from '@/core/test-helpers.ts'
 import * as GetSortedProducts from '@/shared/app/queries/get-sorted-products.ts'
 import * as Db from '@/shared/data/capacitor/db.ts'
 
-import { query } from './get-sorted-products.ts'
+import * as Query from './get-sorted-products.ts'
 
 function toModel(product: {
 	id: number | undefined
@@ -45,7 +45,7 @@ function toModel(product: {
 describe.concurrent(`Get products`, () => {
 	effect.prop(
 		`Should return a list`,
-		[Db.Backend],
+		[Query.Backend],
 		Effect.fn(
 			function* ([{ products }], { expect }) {
 				const { run } = yield* GetSortedProducts.GetSortedProducts
@@ -59,7 +59,7 @@ describe.concurrent(`Get products`, () => {
 				Effect.provide(
 					effect,
 					Layer.provide(
-						query,
+						Query.query,
 						Layer.succeed(Db.Db, {
 							getAllProductsWithTotal: Effect.succeed({
 								total: products.length,
@@ -73,7 +73,7 @@ describe.concurrent(`Get products`, () => {
 
 	layer(
 		Layer.provide(
-			query,
+			Query.query,
 			Layer.succeed(Db.Db, {
 				getAllProductsWithTotal: Effect.succeed({}),
 			} as unknown as Db.Db),
@@ -93,7 +93,7 @@ describe.concurrent(`Get products`, () => {
 
 	layer(
 		Layer.provide(
-			query,
+			Query.query,
 			Layer.succeed(Db.Db, {
 				getAllProductsWithTotal: Effect.fail(undefined),
 			} as unknown as Db.Db),
@@ -113,7 +113,7 @@ describe.concurrent(`Get products`, () => {
 
 	layer(
 		Layer.provide(
-			query,
+			Query.query,
 			Layer.succeed(Db.Db, {
 				getAllProductsWithTotal: Effect.die(new Error()),
 			} as unknown as Db.Db),

@@ -1,4 +1,4 @@
-import { describe, effect, layer } from '@effect/vitest'
+import { describe, effect, expect, layer } from '@effect/vitest'
 import * as Effect from 'effect/Effect'
 import * as Layer from 'effect/Layer'
 
@@ -22,7 +22,11 @@ describe.concurrent(`Get sorted products`, () => {
 			Effect.fn(function* () {
 				const { run } = yield* Usecase.GetSortedProducts
 				const exit = yield* Effect.exit(run)
-				H.assertExitIsFailure(exit)
+				H.assertExitIsSuccess(exit)
+
+				expect(
+					Usecase.Message.$is(`FetchListFailed`)(exit.value),
+				).toStrictEqual(true)
 			}),
 		)
 	})
@@ -40,7 +44,11 @@ describe.concurrent(`Get sorted products`, () => {
 			Effect.fn(function* () {
 				const { run } = yield* Usecase.GetSortedProducts
 				const exit = yield* Effect.exit(run)
-				H.assertExitIsFailure(exit)
+				H.assertExitIsSuccess(exit)
+
+				expect(
+					Usecase.Message.$is(`FetchListFailed`)(exit.value),
+				).toStrictEqual(true)
 			}),
 		)
 	})

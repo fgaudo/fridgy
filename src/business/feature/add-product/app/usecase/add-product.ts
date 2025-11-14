@@ -20,7 +20,7 @@ export const ProductDTO = Schema.Struct({
 export type ProductDTO = Schema.Schema.Type<typeof ProductDTO>
 
 export type Message = Data.TaggedEnum<{
-	AddProductSucceeded: object
+	AddProductSucceeeded: object
 	AddProductFailed: object
 }>
 
@@ -79,7 +79,7 @@ export class AddProduct extends Effect.Service<AddProduct>()(
 					}
 
 					yield* Effect.logInfo(`Successfully added a product`)
-					return Message.AddProductSucceeded()
+					return Message.AddProductSucceeeded()
 				}),
 			}
 		}),

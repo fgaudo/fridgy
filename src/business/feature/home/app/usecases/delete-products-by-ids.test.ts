@@ -1,4 +1,4 @@
-import { describe, layer } from '@effect/vitest'
+import { describe, expect, layer } from '@effect/vitest'
 import * as Effect from 'effect/Effect'
 import * as Layer from 'effect/Layer'
 import * as RequestResolver from 'effect/RequestResolver'
@@ -30,7 +30,11 @@ describe.concurrent(`Delete products by ids`, () => {
 				const { run } = yield* Usecase.DeleteProductsByIdsAndRetrieve
 				const exit = yield* Effect.exit(run(ids))
 
-				H.assertExitIsFailure(exit)
+				H.assertExitIsSuccess(exit)
+
+				expect(Usecase.Message.$is(`DeleteFailed`)(exit.value)).toStrictEqual(
+					true,
+				)
 			}),
 		)
 	})
@@ -41,9 +45,7 @@ describe.concurrent(`Delete products by ids`, () => {
 				resolver: RequestResolver.fromEffect(() => Effect.succeed(undefined)),
 			}),
 			Layer.succeed(GetSortedProducts.GetSortedProducts, {
-				run: Effect.succeed(
-					{} as unknown as GetSortedProducts.GetSortedProductsDTO,
-				),
+				run: Effect.succeed([]),
 			}),
 		]),
 	)(({ effect }) => {
@@ -56,6 +58,10 @@ describe.concurrent(`Delete products by ids`, () => {
 				const exit = yield* Effect.exit(run(ids))
 
 				H.assertExitIsSuccess(exit)
+
+				expect(
+					Usecase.Message.$is(`DeleteAndRefreshSucceeded`)(exit.value),
+				).toStrictEqual(true)
 			}),
 		)
 	})
@@ -78,7 +84,11 @@ describe.concurrent(`Delete products by ids`, () => {
 
 				const exit = yield* Effect.exit(run(ids))
 
-				H.assertExitIsFailure(exit)
+				H.assertExitIsSuccess(exit)
+
+				expect(
+					Usecase.Message.$is(`DeleteSucceededButRefreshFailed`)(exit.value),
+				).toStrictEqual(true)
 			}),
 		)
 	})

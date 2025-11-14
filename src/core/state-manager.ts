@@ -15,7 +15,7 @@ export type Update<S, M, R> = (
 
 export const makeStateManager = Effect.fn(function* <
 	S,
-	M extends { _tag: string },
+	M extends { _tag: string | symbol },
 	R,
 >({
 	initState,
@@ -76,7 +76,9 @@ export const makeStateManager = Effect.fn(function* <
 			const message = yield* queue.take
 
 			yield* Effect.annotateLogs(
-				Effect.logDebug(`StateManager: Dispatched message "${message._tag}"`),
+				Effect.logDebug(
+					`StateManager: Dispatched message "${String(message._tag)}"`,
+				),
 				{ message },
 			)
 
