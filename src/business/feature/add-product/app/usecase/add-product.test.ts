@@ -1,4 +1,4 @@
-import { describe, effect, layer } from '@effect/vitest'
+import { describe, effect, expect, layer } from '@effect/vitest'
 import * as Effect from 'effect/Effect'
 import * as Layer from 'effect/Layer'
 import * as RequestResolver from 'effect/RequestResolver'
@@ -6,6 +6,8 @@ import * as TestClock from 'effect/TestClock'
 import { TestContext } from 'effect/TestContext'
 
 import * as H from '@/core/test-helpers.ts'
+
+import * as AddProduct from '@/shared/app/queries/add-product.ts'
 
 import * as Usecase from './add-product.ts'
 
@@ -15,22 +17,26 @@ describe.concurrent(`Add product`, () => {
 		{ product: Usecase.ProductDTO },
 		Effect.fn(
 			function* ({ product: { name, maybeExpirationDate } }, _) {
-				const service = yield* Usecase.AddProduct
+				const { run } = yield* Usecase.AddProduct
 				yield* TestClock.setTime(0)
 				const exit = yield* Effect.exit(
-					service({
+					run({
 						name,
 						maybeExpirationDate,
 					}),
 				)
 				H.assertExitIsSuccess(exit)
+
+				expect(
+					Usecase.Message.$is(`AddProductSucceeeded`)(exit.value),
+				).toStrictEqual(true)
 			},
 			(effect, { product: { name, maybeExpirationDate } }, { expect }) =>
 				Effect.provide(effect, [
 					TestContext,
 					Layer.provide(Usecase.AddProduct.Default, [
 						Layer.succeed(
-							Query.Resolver,
+							AddProduct.AddProduct,
 							RequestResolver.fromEffect(
 								Effect.fn(function* (request) {
 									expect(request).toMatchObject({
@@ -52,7 +58,7 @@ describe.concurrent(`Add product`, () => {
 		Layer.provide(
 			Usecase.AddProduct.Default,
 			Layer.succeed(
-				Query.Resolver,
+				AddProduct.AddProduct,
 				RequestResolver.fromEffect(Effect.fn(() => Effect.fail(undefined))),
 			),
 		),
@@ -61,15 +67,19 @@ describe.concurrent(`Add product`, () => {
 			`Should return error`,
 			{ product: Usecase.ProductDTO },
 			Effect.fn(function* ({ product: { name, maybeExpirationDate } }) {
-				const service = yield* Usecase.AddProduct
+				const { run } = yield* Usecase.AddProduct
 				const exit = yield* Effect.exit(
-					service({
+					run({
 						name,
 						maybeExpirationDate,
 					}),
 				)
 
-				H.assertExitIsFailure(exit)
+				H.assertExitIsSuccess(exit)
+
+				expect(
+					Usecase.Message.$is(`AddProductFailed`)(exit.value),
+				).toStrictEqual(true)
 			}),
 		)
 	})
