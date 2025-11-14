@@ -11,7 +11,7 @@
 	import { makeExecutor } from '$lib/executor'
 	import '$lib/ui/assets/index.css'
 
-	import { runtime } from '../business'
+	import { capacitorRuntime } from '../business'
 
 	let { children }: { children: Snippet } = $props()
 
@@ -30,7 +30,7 @@
 	])
 
 	onMount(() => {
-		setGlobalContext({ executor: makeExecutor(runtime) })
+		setGlobalContext({ executor: makeExecutor(capacitorRuntime) })
 	})
 </script>
 

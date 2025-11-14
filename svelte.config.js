@@ -10,7 +10,6 @@ export default {
 	kit: {
 		alias: {
 			'@/core': 'src/core',
-			'@/shared': 'src/business/shared',
 			'@/feature': 'src/business/feature',
 		},
 		adapter: adapter({
