@@ -56,7 +56,7 @@ export const Message = Data.taggedEnum<Message>()
 /////
 
 export class GetSortedProducts extends Effect.Service<GetSortedProducts>()(
-	`feature/product-management/usecases/GetSortedProducts`,
+	`feature/product-management/usecases/get-sorted-products`,
 	{
 		accessors: true,
 		effect: Effect.gen(function* () {

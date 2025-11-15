@@ -32,7 +32,7 @@ export const Message = Data.taggedEnum<Message>()
 /////
 
 export class DeleteProductsByIdsAndRetrieve extends Effect.Service<DeleteProductsByIdsAndRetrieve>()(
-	`feature/product-management/usecases/DeleteProductsByIdsAndRetrieve`,
+	`feature/product-management/usecases/delete-products-by-ids-and-retrieve`,
 	{
 		accessors: true,
 		effect: Effect.gen(function* () {

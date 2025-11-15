@@ -36,7 +36,7 @@ export const Message = Data.taggedEnum<Message>()
 /////
 
 export class AddProduct extends Effect.Service<AddProduct>()(
-	`feature/product-management/usecases/AddProduct`,
+	`feature/product-management/usecases/add-product`,
 	{
 		accessors: true,
 		effect: Effect.gen(function* () {

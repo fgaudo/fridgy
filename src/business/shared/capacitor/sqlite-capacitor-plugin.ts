@@ -57,7 +57,7 @@ class FetchingFailed extends Data.TaggedError(`FetchingFailed`) {}
 class InvalidDataReceived extends Data.TaggedError(`InvalidDataReceived`) {}
 
 export class SqliteCapacitorPlugin extends Effect.Service<SqliteCapacitorPlugin>()(
-	`data/capacitor/Db`,
+	`shared/capacitor/sqlite-capacitor-plugin`,
 	{
 		sync: () => {
 			const db = registerPlugin<_SqliteCapacitorPlugin>(`FridgySqlitePlugin`)

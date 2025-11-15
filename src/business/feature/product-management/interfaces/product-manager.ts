@@ -69,7 +69,7 @@ export type GetSortedProducts = {
 /////
 
 class ProductManager extends Context.Tag(
-	`feature/product-management/product-manager`,
+	`feature/product-management/interfaces/product-manager`,
 )<
 	ProductManager,
 	{
