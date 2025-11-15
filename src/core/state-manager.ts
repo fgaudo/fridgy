@@ -3,6 +3,7 @@ import * as Exit from 'effect/Exit'
 import * as Fiber from 'effect/Fiber'
 import { pipe } from 'effect/Function'
 import * as Queue from 'effect/Queue'
+import * as Scope from 'effect/Scope'
 import * as Stream from 'effect/Stream'
 import * as SubscriptionRef from 'effect/SubscriptionRef'
 
@@ -11,6 +12,13 @@ export type Command<M, R> = Stream.Stream<M, never, R>
 export type Update<S, M, R> = (
 	message: M,
 ) => (state: S) => { state: S; commands: Command<M, R>[] }
+
+export type StateManager<S, M> = {
+	initState: S
+	changes: Stream.Stream<S>
+	dispatch: (m: M) => Effect.Effect<void>
+	dispose: Effect.Effect<void>
+}
 
 export const makeStateManager = Effect.fn(function* <
 	S,
@@ -24,7 +32,7 @@ export const makeStateManager = Effect.fn(function* <
 	initState: S
 	update: Update<S, M, R>
 	fatalMessage?: (err: unknown) => NoInfer<M>
-}) {
+}): Effect.fn.Return<StateManager<S, M>, never, R | Scope.Scope> {
 	const ref = yield* SubscriptionRef.make(initState)
 	const queue = yield* Queue.unbounded<M>()
 

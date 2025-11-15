@@ -2,7 +2,7 @@ import { assert, describe, effect } from '@effect/vitest'
 import * as Effect from 'effect/Effect'
 
 import * as H from '../test-helpers.ts'
-import { fromNumber, unsafeFromNumber } from './index.ts'
+import { fromNumber, unsafeFromNumber } from './integer.ts'
 
 describe.concurrent(`integer`, () => {
 	effect.prop(

@@ -1,10 +1,11 @@
 import { type BackButtonListenerEvent, App as CAP } from '@capacitor/app'
 import * as Effect from 'effect/Effect'
+import * as Exit from 'effect/Exit'
+import * as ManagedRuntime from 'effect/ManagedRuntime'
 import * as Stream from 'effect/Stream'
 import { onDestroy, onMount } from 'svelte'
 
-import type { ViewModel } from './core.ts'
-import type { Executor } from './executor.ts'
+import type { StateManager } from '@/core/state-manager.ts'
 
 export function createCapacitorListener(event: `resume`): Stream.Stream<void>
 export function createCapacitorListener(
@@ -26,18 +27,18 @@ export function createCapacitorListener<E extends `resume` | `backButton`>(
 }
 
 export const useViewmodel = <S, M, R>(
-	executor: Executor<R>,
-	viewModel: ViewModel<S, M, R>,
+	runtime: ManagedRuntime.ManagedRuntime<R, never>,
+	makeViewModel: Effect.Effect<StateManager<S, M>, never, R>,
 ): { state: S; dispatch: (m: M) => void } | undefined => {
 	let state = $state.raw<S>()
 
-	let handle = $state.raw<Effect.Effect.Success<typeof viewModel>>()
+	let handle = $state.raw<Effect.Effect.Success<typeof makeViewModel>>()
 	let initialized = false
 
 	$effect(() => {
 		if (!handle) return
 
-		const cancelChanges = executor.runCallback(
+		const cancelChanges = runtime.runCallback(
 			Stream.runForEach(handle.changes, s =>
 				Effect.sync(() => {
 					state = s
@@ -53,9 +54,13 @@ export const useViewmodel = <S, M, R>(
 	})
 
 	onMount(() => {
-		const cancelInit = executor.runCallback(viewModel, h => {
-			state = h.initState
-			handle = h
+		const cancelInit = runtime.runCallback(makeViewModel, {
+			onExit: h => {
+				if (Exit.isSuccess(h)) {
+					state = h.value.initState
+					handle = h.value
+				}
+			},
 		})
 
 		return () => {
@@ -65,7 +70,7 @@ export const useViewmodel = <S, M, R>(
 
 	onDestroy(() => {
 		if (handle?.dispose) {
-			executor.runCallback(handle.dispose)
+			runtime.runCallback(handle.dispose)
 		}
 	})
 
@@ -75,7 +80,7 @@ export const useViewmodel = <S, M, R>(
 		const dispatch = handle.dispatch
 
 		return {
-			dispatch: (m: M) => executor.runCallback(dispatch(m)),
+			dispatch: (m: M) => runtime.runCallback(dispatch(m)),
 			state,
 		}
 	})

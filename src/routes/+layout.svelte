@@ -8,10 +8,9 @@
 
 	import Spinner from '$lib/components/spinner.svelte'
 	import { setGlobalContext } from '$lib/context.ts'
-	import { makeExecutor } from '$lib/executor'
 	import '$lib/ui/assets/index.css'
 
-	import { capacitorRuntime } from '../business'
+	import { runtime } from '../business/index.ts'
 
 	let { children }: { children: Snippet } = $props()
 
@@ -30,7 +29,7 @@
 	])
 
 	onMount(() => {
-		setGlobalContext({ executor: makeExecutor(capacitorRuntime) })
+		setGlobalContext({ runtime })
 	})
 </script>
 

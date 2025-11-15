@@ -1,5 +1,4 @@
 import * as Array from 'effect/Array'
-import * as Clock from 'effect/Clock'
 import * as Data from 'effect/Data'
 import * as Effect from 'effect/Effect'
 import * as Either from 'effect/Either'
@@ -7,7 +6,7 @@ import { pipe } from 'effect/Function'
 import * as Option from 'effect/Option'
 import * as Schema from 'effect/Schema'
 
-import * as Integer from '@/core/integer/index.ts'
+import * as Integer from '@/core/integer/integer.ts'
 import * as NonEmptyTrimmedString from '@/core/non-empty-trimmed-string.ts'
 
 import * as Product from '../domain/entities/product'
@@ -78,10 +77,6 @@ export class Service extends Effect.Service<Service>()(
 
 					const result = errorOrData.right
 
-					const currentDate = Integer.unsafeFromNumber(
-						yield* Clock.currentTimeMillis,
-					)
-
 					const entries = yield* pipe(
 						result,
 						Array.map(
@@ -111,7 +106,6 @@ export class Service extends Effect.Service<Service>()(
 										name,
 										creationDate,
 										maybeExpirationDate,
-										currentDate,
 									})
 								})
 

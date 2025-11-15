@@ -17,7 +17,7 @@
 	import { SvelteSet } from 'svelte/reactivity'
 	import { fade, fly } from 'svelte/transition'
 
-	import * as Integer from '@/core/integer/index.ts'
+	import * as Integer from '@/core/integer/integer.ts'
 	import * as NonEmptyHashSet from '@/core/non-empty-hash-set.ts'
 
 	import { useViewmodel } from '$lib/adapters.svelte.ts'
@@ -27,10 +27,9 @@
 	import { getGlobalContext } from '$lib/context.ts'
 	import * as Utils from '$lib/utils.ts'
 
-	import { capacitor } from '../business/feature/home/index.ts'
-	import { Message } from './(viewmodel)/update.ts'
+	import { Pages } from '../business/index.ts'
 
-	const { executor } = getGlobalContext()
+	const { runtime } = getGlobalContext()
 
 	type State = {
 		currentTimestamp: Integer.Integer
@@ -44,7 +43,7 @@
 		selectedProducts: new SvelteSet(),
 	})
 
-	const viewmodel = useViewmodel(executor, capacitor)
+	const viewmodel = useViewmodel(runtime, Pages.Home.makeViewModel)
 
 	function toggleMenu() {
 		if (state.isMenuOpen) {
@@ -217,7 +216,7 @@
 						<Ripple
 							ontap={() => {
 								dispatch(
-									Message.DeleteAndRefresh({
+									Pages.Home.Message.DeleteAndRefresh({
 										ids: maybeSelectedProducts.value,
 									}),
 								)
@@ -271,7 +270,7 @@
 					</div>
 				</div>
 			</div>
-		{:else if Option.isSome(viewmodelState.maybeProducts)}
+		{:else if Option.isSome(viewmodel.state.maybeProducts)}
 			{@const products = viewmodelState.maybeProducts.value}
 
 			<div

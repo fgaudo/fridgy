@@ -2,7 +2,7 @@ import * as Context from 'effect/Context'
 import { type RequestResolver } from 'effect/RequestResolver'
 import * as Schema from 'effect/Schema'
 
-import * as Integer from '@/core/integer'
+import * as Integer from '@/core/integer/integer.ts'
 import * as NonEmptyTrimmedString from '@/core/non-empty-trimmed-string'
 
 export class Request extends Schema.TaggedRequest<Request>()(`AddProduct`, {

@@ -3,7 +3,7 @@ import * as Data from 'effect/Data'
 import type { Effect } from 'effect/Effect'
 import * as Schema from 'effect/Schema'
 
-import * as Integer from '@/core/integer'
+import * as Integer from '@/core/integer/integer.ts'
 import * as NonEmptyTrimmedString from '@/core/non-empty-trimmed-string'
 
 export const ProductDTO = Schema.Struct({

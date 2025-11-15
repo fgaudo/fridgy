@@ -8,7 +8,7 @@ import * as Option from 'effect/Option'
 import * as Schema from 'effect/Schema'
 
 import { modify, noOp } from '@/core/helper.ts'
-import * as Integer from '@/core/integer/index.ts'
+import * as Integer from '@/core/integer/integer.ts'
 import * as NonEmptyHashSet from '@/core/non-empty-hash-set.ts'
 import * as NonEmptyTrimmedString from '@/core/non-empty-trimmed-string.ts'
 import { type Command, makeStateManager } from '@/core/state-manager.ts'
@@ -209,28 +209,23 @@ const update = matcher({
 		}),
 })
 
-const makeViewModel = Effect.provide(
-	Effect.gen(function* () {
-		const initState: State = {
-			currentDate: Integer.unsafeFromNumber(yield* Clock.currentTimeMillis),
-			isBusy: false,
-			maybeProducts: Option.none(),
-			messageType: `none`,
-		}
+const makeViewModel = Effect.gen(function* () {
+	const initState: State = {
+		currentDate: Integer.unsafeFromNumber(yield* Clock.currentTimeMillis),
+		isBusy: false,
+		maybeProducts: Option.none(),
+		messageType: `none`,
+	}
 
-		const viewModel = yield* makeStateManager({
-			initState,
-			update,
-		})
+	const viewModel = yield* makeStateManager({
+		initState,
+		update,
+	})
 
-		return {
-			dispose: viewModel.dispose,
-			dispatch: (m: Message) => viewModel.dispatch(m),
-			initState: viewModel.initState,
-			changes: viewModel.changes,
-		}
-	}),
-	UseCases.all,
-)
+	return {
+		...viewModel,
+		dispatch: (m: Message) => viewModel.dispatch(m),
+	}
+})
 
 export { makeViewModel, Message }

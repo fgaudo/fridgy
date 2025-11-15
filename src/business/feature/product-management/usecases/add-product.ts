@@ -6,7 +6,7 @@ import * as Inspectable from 'effect/Inspectable'
 import * as Option from 'effect/Option'
 import * as Schema from 'effect/Schema'
 
-import * as Integer from '@/core/integer'
+import * as Integer from '@/core/integer/integer.ts'
 import * as NonEmptyTrimmedString from '@/core/non-empty-trimmed-string'
 
 import * as Product from '../domain/entities/product.ts'

@@ -3,7 +3,7 @@ import * as HashMap from 'effect/HashMap'
 import * as Ref from 'effect/Ref'
 import * as Schema from 'effect/Schema'
 
-import * as Integer from '@/core/integer/index.ts'
+import * as Integer from '@/core/integer/integer.ts'
 import * as NonEmptyTrimmedString from '@/core/non-empty-trimmed-string.ts'
 
 const ProductDTO = Schema.Struct({

@@ -7,7 +7,7 @@
 	import { cubicIn, cubicOut } from 'svelte/easing'
 	import { fade, fly } from 'svelte/transition'
 
-	import * as Integer from '@/core/integer/index.ts'
+	import * as Integer from '@/core/integer/integer.ts'
 	import * as NonEmptyTrimmedString from '@/core/non-empty-trimmed-string.ts'
 
 	import { useViewmodel } from '$lib/adapters.svelte.ts'
@@ -17,8 +17,7 @@
 	import { PAGE_TRANSITION_Y } from '$lib/constants.ts'
 	import { getGlobalContext } from '$lib/context.ts'
 
-	import { viewModel } from './(view-model)/index.ts'
-	import { Message } from './(view-model)/update.ts'
+	import { Pages } from '../../business/index.ts'
 
 	type State = {
 		name: undefined | string
@@ -27,8 +26,8 @@
 		currentDate: number
 	}
 
-	const { executor } = getGlobalContext()
-	const { state: viewmodelState, dispatch } = useViewmodel(executor, viewModel)
+	const { runtime: executor } = getGlobalContext()
+	const viewModel = useViewmodel(executor, Pages.AddProduct.makeViewModel)
 
 	const state = $state<State>({
 		name: ``,
@@ -42,7 +41,7 @@
 	const saying = sayings[getDayOfYear(Date.now()) % sayings.length]
 
 	const submission = $derived.by(() => {
-		if (Option.isSome(validName) && !viewmodelState.isAdding) {
+		if (Option.isSome(validName) && viewModel && !viewModel.state.isAdding) {
 			return { isSubmittable: true, name: validName.value } as const
 		}
 
@@ -84,7 +83,7 @@
 	)
 </script>
 
-{#if !dispatch}
+{#if !viewModel}
 	<div>Loading</div>
 {:else}
 	<div
@@ -106,7 +105,7 @@
 			>
 				<Ripple
 					ontap={() => {
-						if (!viewmodelState.isAdding) {
+						if (!viewModel.state.isAdding) {
 							window.history.back()
 						}
 					}}
@@ -208,8 +207,8 @@
 						{#if submission.isSubmittable}
 							<Ripple
 								ontap={() => {
-									dispatch(
-										Message.AddProduct({
+									viewModel.dispatch(
+										Pages.AddProduct.Message.AddProduct({
 											name: submission.name,
 											maybeExpirationDate: Option.fromNullable(
 												state.expirationDate,

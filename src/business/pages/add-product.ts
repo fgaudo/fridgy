@@ -5,7 +5,7 @@ import * as Option from 'effect/Option'
 import * as Schema from 'effect/Schema'
 
 import { modify, noOp } from '@/core/helper.ts'
-import * as Integer from '@/core/integer'
+import * as Integer from '@/core/integer/integer.ts'
 import * as NonEmptyTrimmedString from '@/core/non-empty-trimmed-string.ts'
 import { type Command, makeStateManager } from '@/core/state-manager.ts'
 
@@ -17,6 +17,8 @@ type Message = Data.TaggedEnum<{
 		maybeExpirationDate: Option.Option<Integer.Integer>
 	}
 }>
+
+const Message = Data.taggedEnum<Message>()
 
 type InternalMessage = Message | ProductManagementUseCases.AddProduct.Message
 
@@ -77,23 +79,18 @@ const update = matcher({
 		}),
 })
 
-const makeViewModel = Effect.provide(
-	Effect.gen(function* () {
-		const viewModel = yield* makeStateManager({
-			initState: { isAdding: false, messageType: `none` },
-			update,
-		})
+const makeViewModel = Effect.gen(function* () {
+	const viewModel = yield* makeStateManager({
+		initState: { isAdding: false, messageType: `none` },
+		update,
+	})
 
-		return {
-			dispose: viewModel.dispose,
-			dispatch: (m: Message) => viewModel.dispatch(m),
-			initState: viewModel.initState,
-			changes: viewModel.changes,
-		}
-	}),
-	ProductManagementUseCases.all,
-)
+	return {
+		...viewModel,
+		dispatch: (m: Message) => viewModel.dispatch(m),
+	}
+})
 
 export { makeViewModel }
 
-export type { Message }
+export { Message }

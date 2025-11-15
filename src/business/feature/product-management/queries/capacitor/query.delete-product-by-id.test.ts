@@ -5,9 +5,9 @@ import * as Schema from 'effect/Schema'
 
 import * as H from '@/core/test-helpers.ts'
 
-import * as DeleteProductById from '../../../app/queries/delete-product-by-id.ts'
+import * as DeleteProductById from '../delete-product-by-id.ts'
 import { Db } from './db.ts'
-import { command } from './queries/delete-product-by-id.ts'
+import { command } from './query.delete-product-by-id.ts'
 
 describe.concurrent(`Delete products by ids`, () => {
 	layer(

@@ -8,22 +8,22 @@ export type NonEmptyTrimmedString = Brand.Branded<
 >
 
 /** @internal */
-export const NonEmptyTrimmedString = Brand.refined<NonEmptyTrimmedString>(
+export const _NonEmptyTrimmedString = Brand.refined<NonEmptyTrimmedString>(
 	string => /^\S.*\S$|^\S$/.test(string),
 	() => Brand.error(`Provided string is either empty or non-trimmed`),
 )
 export const Schema = _Schema
-	.fromBrand(NonEmptyTrimmedString)(_Schema.String)
+	.fromBrand(_NonEmptyTrimmedString)(_Schema.String)
 	.annotations({
 		arbitrary: () => fc => fc.stringMatching(/\S/).map(unsafeFromString),
 	})
 
-export const unsafeFromString = flow(trim, NonEmptyTrimmedString)
+export const unsafeFromString = flow(trim, _NonEmptyTrimmedString)
 
 export const isNonEmptyTrimmedString = (s: string) =>
-	NonEmptyTrimmedString.is(s)
+	_NonEmptyTrimmedString.is(s)
 
-export const fromString = flow(trim, s => NonEmptyTrimmedString.option(s))
+export const fromString = flow(trim, s => _NonEmptyTrimmedString.option(s))
 
 function trim(s: string): string {
 	return s.trim()

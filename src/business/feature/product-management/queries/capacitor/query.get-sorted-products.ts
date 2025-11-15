@@ -8,7 +8,7 @@ import * as Option from 'effect/Option'
 import * as Schema from 'effect/Schema'
 
 import * as H from '@/core/helper.ts'
-import * as Integer from '@/core/integer/index.ts'
+import * as Integer from '@/core/integer/integer.ts'
 import * as NonEmptyTrimmedString from '@/core/non-empty-trimmed-string.ts'
 
 import * as GetSortedProducts from '../get-sorted-products'

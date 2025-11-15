@@ -11,7 +11,7 @@ export type NonEmptyHashSet<A> = Brand.Branded<
 >
 
 /** @internal */
-export const NonEmptyHashSet = <A>() =>
+export const _NonEmptyHashSet = <A>() =>
 	Brand.refined<NonEmptyHashSet<A>>(
 		set => HashSet.size(set) > 0,
 		() => Brand.error(`Provided set is empty`),
@@ -19,7 +19,7 @@ export const NonEmptyHashSet = <A>() =>
 
 export const Schema = <Value extends _Schema.Schema.Any>(value: Value) =>
 	_Schema
-		.fromBrand(NonEmptyHashSet<Value[`Type`]>())(_Schema.HashSet(value))
+		.fromBrand(_NonEmptyHashSet<Value[`Type`]>())(_Schema.HashSet(value))
 		.annotations({
 			arbitrary: () => () =>
 				Arbitrary.make(_Schema.HashSet(value))
@@ -33,7 +33,7 @@ export const size = <A>(
 	PositiveInteger.unsafeFromNumber(HashSet.size(hashSet))
 
 export const unsafeFromHashSet = <A>(hashSet: HashSet.HashSet<A>) =>
-	NonEmptyHashSet<A>()(hashSet)
+	_NonEmptyHashSet<A>()(hashSet)
 
 export const fromHashSet = <A>(hashSet: HashSet.HashSet<A>) =>
-	NonEmptyHashSet<A>().option(hashSet)
+	_NonEmptyHashSet<A>().option(hashSet)
