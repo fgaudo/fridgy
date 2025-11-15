@@ -11,17 +11,20 @@ import * as GetSortedProducts from './get-sorted-products.ts'
 
 describe.concurrent(`Delete products by ids`, () => {
 	layer(
-		Layer.provide(Usecase.DeleteProductsByIdsAndRetrieve.Default, [
-			Layer.succeed(ProductManager.ProductManager, {
-				deleteProductById: {
-					resolver: RequestResolver.fromEffect(() => Effect.fail(undefined)),
-				},
-			} as unknown as ProductManager.ProductManager[`Type`]),
-			Layer.succeed(
-				GetSortedProducts.GetSortedProducts,
-				{} as unknown as GetSortedProducts.GetSortedProducts,
-			),
-		]),
+		Layer.provide(
+			Usecase.DeleteProductsByIdsAndRetrieve.DefaultWithoutDependencies,
+			[
+				Layer.succeed(ProductManager.ProductManager, {
+					deleteProductById: {
+						resolver: RequestResolver.fromEffect(() => Effect.fail(undefined)),
+					},
+				} as unknown as ProductManager.ProductManager[`Type`]),
+				Layer.succeed(
+					GetSortedProducts.GetSortedProducts,
+					{} as unknown as GetSortedProducts.GetSortedProducts,
+				),
+			],
+		),
 	)(({ effect }) => {
 		effect.prop(
 			`Should return delete failed`,

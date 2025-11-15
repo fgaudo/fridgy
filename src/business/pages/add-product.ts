@@ -9,7 +9,7 @@ import * as Integer from '@/core/integer/integer.ts'
 import * as NonEmptyTrimmedString from '@/core/non-empty-trimmed-string.ts'
 import { type Command, makeStateManager } from '@/core/state-manager.ts'
 
-import { UseCases as ProductManagementUseCases } from '@/feature/product-management/index.ts'
+import { UseCasesWithoutDependencies as ProductManagementUseCases } from '@/feature/product-management/index.ts'
 
 type Message = Data.TaggedEnum<{
 	AddProduct: {

@@ -13,8 +13,8 @@ import { Config } from '@/feature/product-management/implementations/mock/config
 
 import * as ProductManager from '../../interfaces/product-manager.ts'
 
-type ProductDTO = ProductManager.GetSortedProducts[`Success`][`DTO`][0]
-type GetSortedProductsDTO = ProductManager.GetSortedProducts[`Success`][`DTO`]
+type ProductDTO = ProductManager.GetSortedProducts[`DTO`][0]
+type GetSortedProductsDTO = ProductManager.GetSortedProducts[`DTO`]
 
 const ord = Order.make(
 	Order.combineAll([
@@ -33,7 +33,7 @@ const ord = Order.make(
 	]),
 )
 
-export const manager = Layer.effect(
+export const layerWithoutDependencies = Layer.effect(
 	ProductManager.ProductManager,
 	Effect.gen(function* () {
 		const { withErrors } = yield* Config

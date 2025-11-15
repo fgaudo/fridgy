@@ -19,6 +19,17 @@ class AddProductRequest extends Schema.TaggedRequest<AddProductRequest>()(
 	},
 ) {}
 
+export type AddProduct = {
+	Request: AddProductRequest
+}
+
+export const AddProduct = {
+	Request: AddProductRequest,
+}
+
+/////
+/////
+
 class DeleteProductByIdRequest extends Schema.TaggedRequest<DeleteProductByIdRequest>()(
 	`DeleteProductById`,
 	{
@@ -28,54 +39,50 @@ class DeleteProductByIdRequest extends Schema.TaggedRequest<DeleteProductByIdReq
 	},
 ) {}
 
-const GetSortedProductsDTO = Schema.Array(
-	Schema.Struct({
-		maybeId: Schema.Option(Schema.String),
-		maybeName: Schema.Option(NonEmptyTrimmedString.Schema),
-		maybeExpirationDate: Schema.Option(Integer.Schema),
-		maybeCreationDate: Schema.Option(Integer.Schema),
-	}),
-)
-type GetSortedProductsDTO = Schema.Schema.Type<typeof GetSortedProductsDTO>
+export type DeleteProductById = {
+	Request: DeleteProductByIdRequest
+}
+
+export const DeleteProductById = {
+	Request: DeleteProductByIdRequest,
+}
+
+/////
+/////
+
+export const GetSortedProducts = {
+	DTO: Schema.Array(
+		Schema.Struct({
+			maybeId: Schema.Option(Schema.String),
+			maybeName: Schema.Option(NonEmptyTrimmedString.Schema),
+			maybeExpirationDate: Schema.Option(Integer.Schema),
+			maybeCreationDate: Schema.Option(Integer.Schema),
+		}),
+	),
+}
+
+export type GetSortedProducts = {
+	DTO: Schema.Schema.Type<typeof GetSortedProducts.DTO>
+}
+
+/////
+/////
 
 class ProductManager extends Context.Tag(
 	`feature/product-management/product-manager`,
 )<
 	ProductManager,
 	{
-		addProduct: { resolver: RequestResolver<AddProductRequest> }
+		addProduct: {
+			resolver: RequestResolver<AddProductRequest>
+		}
+
 		deleteProductById: {
 			resolver: RequestResolver<DeleteProductByIdRequest>
 		}
-		getSortedProducts: Effect.Effect<GetSortedProductsDTO, void>
+
+		getSortedProducts: Effect.Effect<GetSortedProducts[`DTO`], void>
 	}
 >() {}
 
-export type AddProduct = {
-	Request: AddProductRequest
-}
-export const AddProduct = { Request: AddProductRequest }
-
-export type DeleteProductById = {
-	Request: DeleteProductByIdRequest
-}
-export const DeleteProductById = { Request: DeleteProductByIdRequest }
-
-export type GetSortedProducts = {
-	Success: {
-		DTO: GetSortedProductsDTO
-	}
-}
-export const GetSortedProducts = {
-	Success: {
-		DTO: Schema.Array(
-			Schema.Struct({
-				maybeId: Schema.Option(Schema.String),
-				maybeName: Schema.Option(NonEmptyTrimmedString.Schema),
-				maybeExpirationDate: Schema.Option(Integer.Schema),
-				maybeCreationDate: Schema.Option(Integer.Schema),
-			}),
-		),
-	},
-}
 export { ProductManager }

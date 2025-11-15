@@ -8,9 +8,15 @@ import * as NonEmptyHashSet from '@/core/non-empty-hash-set'
 import * as ProductManager from '../interfaces/product-manager.ts'
 import * as GetSortedProducts from './get-sorted-products.ts'
 
+/////
+/////
+
 export const DTO = NonEmptyHashSet.Schema(Schema.String)
 
 export type DTO = Schema.Schema.Type<typeof DTO>
+
+/////
+/////
 
 export type Message = Data.TaggedEnum<{
 	DeleteFailed: object
@@ -21,6 +27,9 @@ export type Message = Data.TaggedEnum<{
 }>
 
 export const Message = Data.taggedEnum<Message>()
+
+/////
+/////
 
 export class DeleteProductsByIdsAndRetrieve extends Effect.Service<DeleteProductsByIdsAndRetrieve>()(
 	`feature/product-management/usecases/DeleteProductsByIdsAndRetrieve`,

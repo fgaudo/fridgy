@@ -1,4 +1,4 @@
-import * as Array from 'effect/Array'
+import * as Arr from 'effect/Array'
 import * as Data from 'effect/Data'
 import * as Effect from 'effect/Effect'
 import * as Either from 'effect/Either'
@@ -11,6 +11,9 @@ import * as NonEmptyTrimmedString from '@/core/non-empty-trimmed-string.ts'
 
 import * as Product from '../domain/entities/product.ts'
 import * as ProductManager from '../interfaces/product-manager.ts'
+
+/////
+/////
 
 export const DTO = Schema.Array(
 	Schema.Union(
@@ -37,6 +40,9 @@ export const DTO = Schema.Array(
 
 export type DTO = Schema.Schema.Type<typeof DTO>
 
+/////
+/////
+
 export type Message = Data.TaggedEnum<{
 	FetchListSucceeded: {
 		result: DTO
@@ -45,6 +51,9 @@ export type Message = Data.TaggedEnum<{
 }>
 
 export const Message = Data.taggedEnum<Message>()
+
+/////
+/////
 
 export class GetSortedProducts extends Effect.Service<GetSortedProducts>()(
 	`feature/product-management/usecases/GetSortedProducts`,
@@ -70,7 +79,7 @@ export class GetSortedProducts extends Effect.Service<GetSortedProducts>()(
 
 					const entries = yield* pipe(
 						result,
-						Array.map(
+						Arr.map(
 							Effect.fn(function* ({
 								maybeId,
 								maybeName,

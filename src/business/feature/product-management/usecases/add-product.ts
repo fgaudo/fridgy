@@ -12,6 +12,9 @@ import * as NonEmptyTrimmedString from '@/core/non-empty-trimmed-string'
 import * as Product from '../domain/entities/product.ts'
 import * as ProductManager from '../interfaces/product-manager.ts'
 
+/////
+/////
+
 export const ProductDTO = Schema.Struct({
 	name: NonEmptyTrimmedString.Schema,
 	maybeExpirationDate: Schema.Option(Integer.Schema),
@@ -19,12 +22,18 @@ export const ProductDTO = Schema.Struct({
 
 export type ProductDTO = Schema.Schema.Type<typeof ProductDTO>
 
+/////
+/////
+
 export type Message = Data.TaggedEnum<{
 	AddProductSucceeeded: object
 	AddProductFailed: object
 }>
 
 export const Message = Data.taggedEnum<Message>()
+
+/////
+/////
 
 export class AddProduct extends Effect.Service<AddProduct>()(
 	`feature/product-management/usecases/AddProduct`,

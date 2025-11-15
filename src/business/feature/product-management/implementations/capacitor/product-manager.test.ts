@@ -14,7 +14,7 @@ import * as CapacitorProductManager from './product-manager.ts'
 describe.concurrent(`Add product`, () => {
 	layer(
 		Layer.provide(
-			CapacitorProductManager.manager,
+			CapacitorProductManager.layerWithoutDependencies,
 			Layer.succeed(SqliteCapacitorPlugin, {
 				addProduct: Effect.fn(() => Effect.succeed(undefined)),
 			} as unknown as SqliteCapacitorPlugin),
@@ -41,7 +41,7 @@ describe.concurrent(`Add product`, () => {
 
 	layer(
 		Layer.provide(
-			CapacitorProductManager.manager,
+			CapacitorProductManager.layerWithoutDependencies,
 			Layer.succeed(SqliteCapacitorPlugin, {
 				addProduct: Effect.fn(() => Effect.fail(undefined)),
 			} as unknown as SqliteCapacitorPlugin),
@@ -68,7 +68,7 @@ describe.concurrent(`Add product`, () => {
 
 	layer(
 		Layer.provide(
-			CapacitorProductManager.manager,
+			CapacitorProductManager.layerWithoutDependencies,
 			Layer.succeed(SqliteCapacitorPlugin, {
 				addProduct: () => {
 					throw new Error()
@@ -99,7 +99,7 @@ describe.concurrent(`Add product`, () => {
 describe.concurrent(`Delete products by ids`, () => {
 	layer(
 		Layer.provide(
-			CapacitorProductManager.manager,
+			CapacitorProductManager.layerWithoutDependencies,
 			Layer.succeed(SqliteCapacitorPlugin, {
 				deleteProductsByIds: () => Effect.succeed(undefined),
 			} as unknown as SqliteCapacitorPlugin),
@@ -126,7 +126,7 @@ describe.concurrent(`Delete products by ids`, () => {
 
 	layer(
 		Layer.provide(
-			CapacitorProductManager.manager,
+			CapacitorProductManager.layerWithoutDependencies,
 			Layer.succeed(
 				SqliteCapacitorPlugin,
 				{} as unknown as SqliteCapacitorPlugin,
@@ -154,7 +154,7 @@ describe.concurrent(`Delete products by ids`, () => {
 
 	layer(
 		Layer.provide(
-			CapacitorProductManager.manager,
+			CapacitorProductManager.layerWithoutDependencies,
 			Layer.succeed(SqliteCapacitorPlugin, {
 				deleteProductsByIds: () => Effect.fail(undefined),
 			} as unknown as SqliteCapacitorPlugin),
@@ -181,7 +181,7 @@ describe.concurrent(`Delete products by ids`, () => {
 
 	layer(
 		Layer.provide(
-			CapacitorProductManager.manager,
+			CapacitorProductManager.layerWithoutDependencies,
 			Layer.succeed(SqliteCapacitorPlugin, {
 				deleteProductsByIds: () => {
 					throw new Error()
@@ -212,7 +212,7 @@ describe.concurrent(`Delete products by ids`, () => {
 describe.concurrent(`Get products`, () => {
 	effect.prop(
 		`Should return a list`,
-		[ProductManager.GetSortedProducts.Success.DTO],
+		[ProductManager.GetSortedProducts.DTO],
 		Effect.fn(
 			function* ([products], { expect }) {
 				const { getSortedProducts } = yield* ProductManager.ProductManager
@@ -231,7 +231,7 @@ describe.concurrent(`Get products`, () => {
 				Effect.provide(
 					effect,
 					Layer.provide(
-						CapacitorProductManager.manager,
+						CapacitorProductManager.layerWithoutDependencies,
 						Layer.succeed(SqliteCapacitorPlugin, {
 							getAllProductsWithTotal: Effect.succeed(products),
 						} as unknown as SqliteCapacitorPlugin),
@@ -242,7 +242,7 @@ describe.concurrent(`Get products`, () => {
 
 	layer(
 		Layer.provide(
-			CapacitorProductManager.manager,
+			CapacitorProductManager.layerWithoutDependencies,
 			Layer.succeed(SqliteCapacitorPlugin, {
 				getAllProductsWithTotal: Effect.fail(undefined),
 			} as unknown as SqliteCapacitorPlugin),

@@ -13,7 +13,7 @@ import { SqliteCapacitorPlugin } from '@/shared/capacitor/sqlite-capacitor-plugi
 
 import * as ProductManager from '../../interfaces/product-manager.ts'
 
-export const manager = Layer.effect(
+export const layerWithoutDependencies = Layer.effect(
 	ProductManager.ProductManager,
 	Effect.gen(function* () {
 		const { addProduct, getAllProductsWithTotal, deleteProductsByIds } =
@@ -127,4 +127,9 @@ export const manager = Layer.effect(
 			},
 		}
 	}),
+)
+
+export const layer = Layer.provide(
+	layerWithoutDependencies,
+	SqliteCapacitorPlugin.Default,
 )

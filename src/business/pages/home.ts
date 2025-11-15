@@ -14,7 +14,10 @@ import * as NonEmptyTrimmedString from '@/core/non-empty-trimmed-string.ts'
 import { type Command, makeStateManager } from '@/core/state-manager.ts'
 import * as UnitInterval from '@/core/unit-interval.ts'
 
-import { Rules, UseCases } from '@/feature/product-management/index.ts'
+import {
+	Rules,
+	UseCasesWithoutDependencies,
+} from '@/feature/product-management/index.ts'
 
 type Message = Data.TaggedEnum<{
 	FetchList: object
@@ -89,19 +92,19 @@ type State = Schema.Schema.Type<typeof State>
 
 type InternalMessage =
 	| Message
-	| UseCases.GetSortedProducts.Message
-	| UseCases.DeleteProductsByIdsAndRetrieve.Message
+	| UseCasesWithoutDependencies.GetSortedProducts.Message
+	| UseCasesWithoutDependencies.DeleteProductsByIdsAndRetrieve.Message
 
 const matcher = Match.typeTags<
 	InternalMessage,
 	(s: Readonly<State>) => Readonly<{
 		state: State
-		commands: Command<InternalMessage, UseCases.All>[]
+		commands: Command<InternalMessage, UseCasesWithoutDependencies.All>[]
 	}>
 >()
 
 const mapToViewModels = (
-	entries: UseCases.GetSortedProducts.DTO,
+	entries: UseCasesWithoutDependencies.GetSortedProducts.DTO,
 	state: State,
 ) => {
 	return pipe(
@@ -173,7 +176,9 @@ const update = matcher({
 		modify(draft => {
 			draft.isBusy = true
 
-			return [UseCases.GetSortedProducts.GetSortedProducts.run]
+			return [
+				UseCasesWithoutDependencies.GetSortedProducts.GetSortedProducts.run,
+			]
 		}),
 	FetchListFailed: () =>
 		modify(draft => {
@@ -198,7 +203,7 @@ const update = matcher({
 				draft.isBusy = true
 
 				return [
-					UseCases.DeleteProductsByIdsAndRetrieve.DeleteProductsByIdsAndRetrieve.run(
+					UseCasesWithoutDependencies.DeleteProductsByIdsAndRetrieve.DeleteProductsByIdsAndRetrieve.run(
 						ids,
 					),
 				]
