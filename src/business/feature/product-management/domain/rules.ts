@@ -9,17 +9,6 @@ export const isProductStale = ({
 	currentDate: Integer.Integer
 }) => expirationDate <= currentDate
 
-export const computeTimeLeft = ({
-	expirationDate,
-	currentDate,
-}: {
-	expirationDate: Integer.Integer
-	currentDate: Integer.Integer
-}) =>
-	Integer.unsafeFromNumber(
-		expirationDate > currentDate ? expirationDate - currentDate : 0,
-	)
-
 export const computeFreshness = ({
 	creationDate,
 	expirationDate,

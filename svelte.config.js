@@ -11,6 +11,7 @@ export default {
 		alias: {
 			'@/core': 'src/core',
 			'@/feature': 'src/business/feature',
+			'@/shared': 'src/business/shared',
 		},
 		adapter: adapter({
 			// default options are shown. On some platforms

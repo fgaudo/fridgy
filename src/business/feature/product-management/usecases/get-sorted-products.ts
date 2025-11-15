@@ -9,8 +9,8 @@ import * as Schema from 'effect/Schema'
 import * as Integer from '@/core/integer/integer.ts'
 import * as NonEmptyTrimmedString from '@/core/non-empty-trimmed-string.ts'
 
-import * as Product from '../domain/entities/product'
-import * as GetSortedProductsQuery from '../queries/get-sorted-products'
+import * as Product from '../domain/entities/product.ts'
+import * as ProductManager from '../interfaces/product-manager.ts'
 
 export const DTO = Schema.Array(
 	Schema.Union(
@@ -46,31 +46,22 @@ export type Message = Data.TaggedEnum<{
 
 export const Message = Data.taggedEnum<Message>()
 
-export class Service extends Effect.Service<Service>()(
+export class GetSortedProducts extends Effect.Service<GetSortedProducts>()(
 	`feature/product-management/usecases/GetSortedProducts`,
 	{
 		accessors: true,
 		effect: Effect.gen(function* () {
-			const { run: query } = yield* GetSortedProductsQuery.GetSortedProducts
-
+			const { getSortedProducts } = yield* ProductManager.ProductManager
 			return {
 				run: Effect.gen(function* () {
 					yield* Effect.log(`Requested to fetch the list of products`)
 
 					yield* Effect.log(`Attempting to fetch the list of products...`)
 
-					const errorOrData = yield* pipe(query, Effect.either)
-					if (
-						Either.isLeft(errorOrData) &&
-						errorOrData.left._tag === `FetchingFailed`
-					) {
-						yield* Effect.logError(`Could not receive items.`)
-
-						return Message.FetchListFailed()
-					}
+					const errorOrData = yield* pipe(getSortedProducts, Effect.either)
 
 					if (Either.isLeft(errorOrData)) {
-						yield* Effect.logError(`Received invalid data.`)
+						yield* Effect.logError(`Could not receive items.`)
 
 						return Message.FetchListFailed()
 					}

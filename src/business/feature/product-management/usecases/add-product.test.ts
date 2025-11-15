@@ -7,7 +7,7 @@ import { TestContext } from 'effect/TestContext'
 
 import * as H from '@/core/test-helpers.ts'
 
-import * as AddProduct from '../queries/add-product.ts'
+import * as ProductManager from '../interfaces/product-manager.ts'
 import * as Usecase from './add-product.ts'
 
 describe.concurrent(`Add product`, () => {
@@ -16,7 +16,7 @@ describe.concurrent(`Add product`, () => {
 		{ product: Usecase.ProductDTO },
 		Effect.fn(
 			function* ({ product: { name, maybeExpirationDate } }, _) {
-				const { run } = yield* Usecase.Service
+				const { run } = yield* Usecase.AddProduct
 				yield* TestClock.setTime(0)
 				const exit = yield* Effect.exit(
 					run({
@@ -33,20 +33,21 @@ describe.concurrent(`Add product`, () => {
 			(effect, { product: { name, maybeExpirationDate } }, { expect }) =>
 				Effect.provide(effect, [
 					TestContext,
-					Layer.provide(Usecase.Service.Default, [
-						Layer.succeed(
-							AddProduct.AddProduct,
-							RequestResolver.fromEffect(
-								Effect.fn(function* (request) {
-									expect(request).toMatchObject({
-										name,
-										maybeExpirationDate,
-										creationDate: 0,
-									})
-									return yield* Effect.succeed(undefined)
-								}),
-							),
-						),
+					Layer.provide(Usecase.AddProduct.Default, [
+						Layer.succeed(ProductManager.ProductManager, {
+							addProduct: {
+								resolver: RequestResolver.fromEffect(
+									Effect.fn(function* (request) {
+										expect(request).toMatchObject({
+											name,
+											maybeExpirationDate,
+											creationDate: 0,
+										})
+										return yield* Effect.succeed(undefined)
+									}),
+								),
+							},
+						} as ProductManager.ProductManager[`Type`]),
 					]),
 				]),
 		),
@@ -55,18 +56,21 @@ describe.concurrent(`Add product`, () => {
 
 	layer(
 		Layer.provide(
-			Usecase.Service.Default,
-			Layer.succeed(
-				AddProduct.AddProduct,
-				RequestResolver.fromEffect(Effect.fn(() => Effect.fail(undefined))),
-			),
+			Usecase.AddProduct.Default,
+			Layer.succeed(ProductManager.ProductManager, {
+				addProduct: {
+					resolver: RequestResolver.fromEffect(
+						Effect.fn(() => Effect.fail(undefined)),
+					),
+				},
+			} as ProductManager.ProductManager[`Type`]),
 		),
 	)(({ effect }) => {
 		effect.prop(
 			`Should return error`,
 			{ product: Usecase.ProductDTO },
 			Effect.fn(function* ({ product: { name, maybeExpirationDate } }) {
-				const { run } = yield* Usecase.Service
+				const { run } = yield* Usecase.AddProduct
 				const exit = yield* Effect.exit(
 					run({
 						name,

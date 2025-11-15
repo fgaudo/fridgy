@@ -62,7 +62,7 @@ const update = matcher({
 				draft.isAdding = true
 
 				return [
-					ProductManagementUseCases.AddProduct.Service.run({
+					ProductManagementUseCases.AddProduct.AddProduct.run({
 						name,
 						maybeExpirationDate,
 					}),

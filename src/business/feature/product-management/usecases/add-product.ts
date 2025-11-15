@@ -10,7 +10,7 @@ import * as Integer from '@/core/integer/integer.ts'
 import * as NonEmptyTrimmedString from '@/core/non-empty-trimmed-string'
 
 import * as Product from '../domain/entities/product.ts'
-import * as AddProductOperation from '../queries/add-product'
+import * as ProductManager from '../interfaces/product-manager.ts'
 
 export const ProductDTO = Schema.Struct({
 	name: NonEmptyTrimmedString.Schema,
@@ -26,12 +26,14 @@ export type Message = Data.TaggedEnum<{
 
 export const Message = Data.taggedEnum<Message>()
 
-export class Service extends Effect.Service<Service>()(
+export class AddProduct extends Effect.Service<AddProduct>()(
 	`feature/product-management/usecases/AddProduct`,
 	{
 		accessors: true,
 		effect: Effect.gen(function* () {
-			const addProductResolver = yield* AddProductOperation.AddProduct
+			const {
+				addProduct: { resolver },
+			} = yield* ProductManager.ProductManager
 
 			return {
 				run: Effect.fn(`AddProduct UC`)(function* (productData: ProductDTO) {
@@ -65,12 +67,12 @@ export class Service extends Effect.Service<Service>()(
 
 					const result = yield* Effect.either(
 						Effect.request(
-							new AddProductOperation.Request({
+							new ProductManager.AddProduct.Request({
 								name: product.value.name,
 								maybeExpirationDate: product.value.maybeExpirationDate,
 								creationDate: product.value.creationDate,
 							}),
-							addProductResolver,
+							resolver,
 						),
 					)
 

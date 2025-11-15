@@ -15,7 +15,6 @@ import { type Command, makeStateManager } from '@/core/state-manager.ts'
 import * as UnitInterval from '@/core/unit-interval.ts'
 
 import { Rules, UseCases } from '@/feature/product-management/index.ts'
-import type { DTO } from '@/feature/product-management/usecases/get-sorted-products.ts'
 
 type Message = Data.TaggedEnum<{
 	FetchList: object
@@ -101,7 +100,10 @@ const matcher = Match.typeTags<
 	}>
 >()
 
-const mapToViewModels = (entries: DTO, state: State) => {
+const mapToViewModels = (
+	entries: UseCases.GetSortedProducts.DTO,
+	state: State,
+) => {
 	return pipe(
 		entries,
 		Arr.map(entry => {
@@ -126,29 +128,37 @@ const mapToViewModels = (entries: DTO, state: State) => {
 				})
 			}
 
-			return ProductViewModel({
+			const partial = {
 				expirationDate: entry.maybeExpirationDate.value,
 				id: entry.id,
 				isValid: true,
 				isCorrupt: false,
 				name: entry.name,
-				...(Rules.isProductStale({
+			} as const
+
+			if (
+				Rules.isProductStale({
 					expirationDate: entry.maybeExpirationDate.value,
 					currentDate: state.currentDate,
 				})
-					? { isStale: true }
-					: {
-							isStale: false,
-							freshness: Rules.computeFreshness({
-								creationDate: entry.creationDate,
-								expirationDate: entry.maybeExpirationDate.value,
-								currentDate: state.currentDate,
-							}),
-							timeLeft: Rules.computeTimeLeft({
-								expirationDate: entry.maybeExpirationDate.value,
-								currentDate: state.currentDate,
-							}),
-						}),
+			) {
+				return ProductViewModel({
+					...partial,
+					isStale: true,
+				})
+			}
+
+			return ProductViewModel({
+				...partial,
+				isStale: false,
+				freshness: Rules.computeFreshness({
+					creationDate: entry.creationDate,
+					expirationDate: entry.maybeExpirationDate.value,
+					currentDate: state.currentDate,
+				}),
+				timeLeft: Integer.unsafeFromNumber(
+					entry.maybeExpirationDate.value - state.currentDate,
+				),
 			})
 		}),
 		models =>
@@ -163,7 +173,7 @@ const update = matcher({
 		modify(draft => {
 			draft.isBusy = true
 
-			return [UseCases.GetSortedProducts.Service.run]
+			return [UseCases.GetSortedProducts.GetSortedProducts.run]
 		}),
 	FetchListFailed: () =>
 		modify(draft => {
@@ -187,7 +197,11 @@ const update = matcher({
 			return modify(state, draft => {
 				draft.isBusy = true
 
-				return [UseCases.DeleteProductsByIdsAndRetrieve.Service.run(ids)]
+				return [
+					UseCases.DeleteProductsByIdsAndRetrieve.DeleteProductsByIdsAndRetrieve.run(
+						ids,
+					),
+				]
 			})
 		},
 	DeleteAndRefreshSucceeded:

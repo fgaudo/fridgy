@@ -1,7 +1,8 @@
 import * as Layer from 'effect/Layer'
 
-import { queries as capacitorQueries } from './queries/capacitor/index.ts'
-import * as Mock from './queries/mock/index.ts'
+import { manager as capacitorDb } from './implementations/capacitor/product-manager.ts'
+import { Config } from './implementations/mock/config.ts'
+import { manager as mockDb } from './implementations/mock/product-manager.ts'
 import * as UC from './usecases/index.ts'
 
 export * as UseCases from './usecases/index.ts'
@@ -9,9 +10,9 @@ export * as UseCases from './usecases/index.ts'
 export * as Rules from './domain/rules.ts'
 
 export const UseCasesWithDeps = {
-	capacitor: Layer.provide(UC.all, capacitorQueries),
+	capacitor: Layer.provide(UC.all, capacitorDb),
 	mock: {
-		useCases: Layer.provide(UC.all, Mock.queries),
-		Config: Mock.Config,
+		useCases: Layer.provide(UC.all, mockDb),
+		Config: Config,
 	},
 }
