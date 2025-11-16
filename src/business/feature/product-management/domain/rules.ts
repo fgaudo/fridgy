@@ -22,17 +22,16 @@ export const computeFreshness = ({
 		return UnitInterval.unsafeFromNumber(0)
 	}
 
-	const totalDuration = expirationDate - creationDate
-
-	if (totalDuration <= 0) {
+	if (expirationDate <= creationDate) {
 		return UnitInterval.unsafeFromNumber(0)
 	}
 
-	const remainingDuration = expirationDate - currentDate
-
-	if (remainingDuration > totalDuration) {
+	if (currentDate < creationDate) {
 		return UnitInterval.unsafeFromNumber(1)
 	}
+
+	const remainingDuration = expirationDate - currentDate
+	const totalDuration = expirationDate - creationDate
 
 	return UnitInterval.unsafeFromNumber(remainingDuration / totalDuration)
 }

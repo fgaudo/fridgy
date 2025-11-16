@@ -50,6 +50,8 @@ const matcher = Match.typeTags<
 	}>
 >()
 
+const addProduct = ProductManagementUseCases.AddProduct.AddProduct.run
+
 const update = matcher({
 	AddProduct:
 		({ maybeExpirationDate, name }) =>
@@ -62,7 +64,7 @@ const update = matcher({
 				draft.isAdding = true
 
 				return [
-					ProductManagementUseCases.AddProduct.AddProduct.run({
+					addProduct({
 						name,
 						maybeExpirationDate,
 					}),

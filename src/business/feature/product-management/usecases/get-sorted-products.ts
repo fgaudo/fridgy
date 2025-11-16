@@ -61,6 +61,7 @@ export class GetSortedProducts extends Effect.Service<GetSortedProducts>()(
 		accessors: true,
 		effect: Effect.gen(function* () {
 			const { getSortedProducts } = yield* ProductManager.ProductManager
+			const { makeProduct } = yield* Product.ProductService
 			return {
 				run: Effect.gen(function* () {
 					yield* Effect.log(`Requested to fetch the list of products`)
@@ -102,7 +103,7 @@ export class GetSortedProducts extends Effect.Service<GetSortedProducts>()(
 										creationDate: maybeCreationDate,
 									})
 
-									return yield* Product.fromStruct({
+									return yield* makeProduct({
 										name,
 										creationDate,
 										maybeExpirationDate,
@@ -137,5 +138,6 @@ export class GetSortedProducts extends Effect.Service<GetSortedProducts>()(
 				}).pipe(Effect.withLogSpan(`GetSortedProducts UC`)),
 			}
 		}),
+		dependencies: [Product.ProductService.Default],
 	},
 ) {}

@@ -1,4 +1,5 @@
 import * as Brand from 'effect/Brand'
+import * as Effect from 'effect/Effect'
 import * as Option from 'effect/Option'
 import * as _Schema from 'effect/Schema'
 
@@ -28,13 +29,20 @@ export const Schema = _Schema.fromBrand(Product)(
 	}),
 )
 
-export const fromStruct = (p: {
-	name: NonEmptyTrimmedString.NonEmptyTrimmedString
-	maybeExpirationDate: Option.Option<Integer.Integer>
-	creationDate: Integer.Integer
-}) =>
-	Product.option({
-		name: p.name,
-		maybeExpirationDate: p.maybeExpirationDate,
-		creationDate: p.creationDate,
-	})
+export class ProductService extends Effect.Service<ProductService>()(
+	`feature/product-management/domain/product`,
+	{
+		succeed: {
+			makeProduct: (p: {
+				name: NonEmptyTrimmedString.NonEmptyTrimmedString
+				maybeExpirationDate: Option.Option<Integer.Integer>
+				creationDate: Integer.Integer
+			}) =>
+				Product.option({
+					name: p.name,
+					maybeExpirationDate: p.maybeExpirationDate,
+					creationDate: p.creationDate,
+				}),
+		},
+	},
+) {}

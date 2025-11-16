@@ -8,7 +8,7 @@ export default defineConfig(() => ({
 	plugins: [tailwindcss(), sveltekit(), tsconfigPaths()],
 
 	test: {
-		workspace: [
+		projects: [
 			{
 				extends: `./vite.config.ts`,
 				plugins: [svelteTesting()],

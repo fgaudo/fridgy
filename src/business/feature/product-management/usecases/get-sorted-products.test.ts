@@ -54,7 +54,7 @@ describe.concurrent(`Get sorted products`, () => {
 
 	effect.prop(
 		`Should always return all elements`,
-		[ProductManager.GetSortedProducts.Success.DTO],
+		[ProductManager.GetSortedProducts.DTO],
 		Effect.fn(
 			function* ([products], { expect }) {
 				const { run } = yield* Usecase.GetSortedProducts

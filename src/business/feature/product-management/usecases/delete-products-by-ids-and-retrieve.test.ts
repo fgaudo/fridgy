@@ -1,6 +1,7 @@
 import { describe, expect, layer } from '@effect/vitest'
 import * as Effect from 'effect/Effect'
 import * as Layer from 'effect/Layer'
+import * as Request from 'effect/Request'
 import * as RequestResolver from 'effect/RequestResolver'
 
 import * as H from '@/core/test-helpers.ts'
@@ -16,7 +17,9 @@ describe.concurrent(`Delete products by ids`, () => {
 			[
 				Layer.succeed(ProductManager.ProductManager, {
 					deleteProductById: {
-						resolver: RequestResolver.fromEffect(() => Effect.fail(undefined)),
+						resolver: RequestResolver.fromEffect(() =>
+							Effect.fail(Request.fail(undefined)),
+						),
 					},
 				} as unknown as ProductManager.ProductManager[`Type`]),
 				Layer.succeed(
@@ -49,7 +52,7 @@ describe.concurrent(`Delete products by ids`, () => {
 				Layer.succeed(ProductManager.ProductManager, {
 					deleteProductById: {
 						resolver: RequestResolver.fromEffect(() =>
-							Effect.succeed(undefined),
+							Effect.succeed(Request.succeed(undefined)),
 						),
 					},
 				} as unknown as ProductManager.ProductManager[`Type`]),
@@ -85,7 +88,7 @@ describe.concurrent(`Delete products by ids`, () => {
 				Layer.succeed(ProductManager.ProductManager, {
 					deleteProductById: {
 						resolver: RequestResolver.fromEffect(() =>
-							Effect.succeed(undefined),
+							Effect.succeed(Request.succeed(undefined)),
 						),
 					},
 				} as unknown as ProductManager.ProductManager[`Type`]),

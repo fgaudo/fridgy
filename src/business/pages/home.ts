@@ -171,14 +171,19 @@ const mapToViewModels = (
 	)
 }
 
+const deleteProductsByIds =
+	UseCasesWithoutDependencies.DeleteProductsByIdsAndRetrieve
+		.DeleteProductsByIdsAndRetrieve.run
+
+const fetchList =
+	UseCasesWithoutDependencies.GetSortedProducts.GetSortedProducts.run
+
 const update = matcher({
 	FetchList: () =>
 		modify(draft => {
 			draft.isBusy = true
 
-			return [
-				UseCasesWithoutDependencies.GetSortedProducts.GetSortedProducts.run,
-			]
+			return [fetchList]
 		}),
 	FetchListFailed: () =>
 		modify(draft => {
@@ -202,11 +207,7 @@ const update = matcher({
 			return modify(state, draft => {
 				draft.isBusy = true
 
-				return [
-					UseCasesWithoutDependencies.DeleteProductsByIdsAndRetrieve.DeleteProductsByIdsAndRetrieve.run(
-						ids,
-					),
-				]
+				return [deleteProductsByIds(ids)]
 			})
 		},
 	DeleteAndRefreshSucceeded:

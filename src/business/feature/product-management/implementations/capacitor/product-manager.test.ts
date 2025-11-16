@@ -6,7 +6,7 @@ import * as Schema from 'effect/Schema'
 
 import * as H from '@/core/test-helpers.ts'
 
-import { SqliteCapacitorPlugin } from '@/shared/capacitor/sqlite-capacitor-plugin.ts'
+import { SqliteCapacitorService } from '@/shared/capacitor/sqlite-capacitor-service.ts'
 
 import * as ProductManager from '../../interfaces/product-manager.ts'
 import * as CapacitorProductManager from './product-manager.ts'
@@ -15,9 +15,9 @@ describe.concurrent(`Add product`, () => {
 	layer(
 		Layer.provide(
 			CapacitorProductManager.layerWithoutDependencies,
-			Layer.succeed(SqliteCapacitorPlugin, {
-				addProduct: Effect.fn(() => Effect.succeed(undefined)),
-			} as unknown as SqliteCapacitorPlugin),
+			Layer.succeed(SqliteCapacitorService, {
+				addProduct: () => Effect.succeed(undefined),
+			} as unknown as SqliteCapacitorService),
 		),
 	)(({ effect }) => {
 		effect.prop(
@@ -42,9 +42,9 @@ describe.concurrent(`Add product`, () => {
 	layer(
 		Layer.provide(
 			CapacitorProductManager.layerWithoutDependencies,
-			Layer.succeed(SqliteCapacitorPlugin, {
-				addProduct: Effect.fn(() => Effect.fail(undefined)),
-			} as unknown as SqliteCapacitorPlugin),
+			Layer.succeed(SqliteCapacitorService, {
+				addProduct: () => Effect.fail(undefined),
+			} as unknown as SqliteCapacitorService),
 		),
 	)(({ effect }) => {
 		effect.prop(
@@ -69,11 +69,11 @@ describe.concurrent(`Add product`, () => {
 	layer(
 		Layer.provide(
 			CapacitorProductManager.layerWithoutDependencies,
-			Layer.succeed(SqliteCapacitorPlugin, {
+			Layer.succeed(SqliteCapacitorService, {
 				addProduct: () => {
 					throw new Error()
 				},
-			} as unknown as SqliteCapacitorPlugin),
+			} as unknown as SqliteCapacitorService),
 		),
 	)(({ effect }) => {
 		effect.prop(
@@ -100,9 +100,9 @@ describe.concurrent(`Delete products by ids`, () => {
 	layer(
 		Layer.provide(
 			CapacitorProductManager.layerWithoutDependencies,
-			Layer.succeed(SqliteCapacitorPlugin, {
+			Layer.succeed(SqliteCapacitorService, {
 				deleteProductsByIds: () => Effect.succeed(undefined),
-			} as unknown as SqliteCapacitorPlugin),
+			} as unknown as SqliteCapacitorService),
 		),
 	)(({ effect }) => {
 		effect.prop(
@@ -128,8 +128,8 @@ describe.concurrent(`Delete products by ids`, () => {
 		Layer.provide(
 			CapacitorProductManager.layerWithoutDependencies,
 			Layer.succeed(
-				SqliteCapacitorPlugin,
-				{} as unknown as SqliteCapacitorPlugin,
+				SqliteCapacitorService,
+				{} as unknown as SqliteCapacitorService,
 			),
 		),
 	)(({ effect }) => {
@@ -155,9 +155,9 @@ describe.concurrent(`Delete products by ids`, () => {
 	layer(
 		Layer.provide(
 			CapacitorProductManager.layerWithoutDependencies,
-			Layer.succeed(SqliteCapacitorPlugin, {
+			Layer.succeed(SqliteCapacitorService, {
 				deleteProductsByIds: () => Effect.fail(undefined),
-			} as unknown as SqliteCapacitorPlugin),
+			} as unknown as SqliteCapacitorService),
 		),
 	)(({ effect }) => {
 		effect.prop(
@@ -182,11 +182,11 @@ describe.concurrent(`Delete products by ids`, () => {
 	layer(
 		Layer.provide(
 			CapacitorProductManager.layerWithoutDependencies,
-			Layer.succeed(SqliteCapacitorPlugin, {
+			Layer.succeed(SqliteCapacitorService, {
 				deleteProductsByIds: () => {
 					throw new Error()
 				},
-			} as unknown as SqliteCapacitorPlugin),
+			} as unknown as SqliteCapacitorService),
 		),
 	)(({ effect }) => {
 		effect.prop(
@@ -232,9 +232,9 @@ describe.concurrent(`Get products`, () => {
 					effect,
 					Layer.provide(
 						CapacitorProductManager.layerWithoutDependencies,
-						Layer.succeed(SqliteCapacitorPlugin, {
+						Layer.succeed(SqliteCapacitorService, {
 							getAllProductsWithTotal: Effect.succeed(products),
-						} as unknown as SqliteCapacitorPlugin),
+						} as unknown as SqliteCapacitorService),
 					),
 				),
 		),
@@ -243,9 +243,9 @@ describe.concurrent(`Get products`, () => {
 	layer(
 		Layer.provide(
 			CapacitorProductManager.layerWithoutDependencies,
-			Layer.succeed(SqliteCapacitorPlugin, {
+			Layer.succeed(SqliteCapacitorService, {
 				getAllProductsWithTotal: Effect.fail(undefined),
-			} as unknown as SqliteCapacitorPlugin),
+			} as unknown as SqliteCapacitorService),
 		),
 	)(({ effect }) => {
 		effect(

@@ -1,51 +1,26 @@
-import { assert, describe, effect } from '@effect/vitest'
-import * as Effect from 'effect/Effect'
+import { assert, describe, prop } from '@effect/vitest'
 
 import * as H from '../test-helpers.ts'
 import * as Positive from './positive.ts'
 
 describe.concurrent(`positive integer`, () => {
-	effect.prop(
-		`should be ok`,
-		[H.FC.integer({ min: 1 })],
-		Effect.fn(function* ([integer], { expect }) {
-			const result = Positive.fromNumber(integer)
-			assert(result._tag === `Some`, `Could not parse number`)
-			expect(result.value).toStrictEqual(integer)
+	prop(`should be ok`, [H.FC.integer({ min: 1 })], ([integer], { expect }) => {
+		const result = Positive.fromNumber(integer)
+		assert(result._tag === `Some`, `Could not parse number`)
+		expect(result.value).toStrictEqual(integer)
+	})
 
-			yield* Effect.void
-		}),
-	)
+	prop(`should return none`, [H.FC.integer({ max: 0 })], ([integer]) => {
+		const result = Positive.fromNumber(integer)
+		assert(result._tag === `None`, `Number should not be valid`)
+	})
 
-	effect.prop(
-		`should return none`,
-		[H.FC.integer({ max: 0 })],
-		Effect.fn(function* ([integer]) {
-			const result = Positive.fromNumber(integer)
-			assert(result._tag === `None`, `Number should not be valid`)
+	prop(`should be ok`, [H.FC.integer({ min: 1 })], ([integer], { expect }) => {
+		const number = Positive.unsafeFromNumber(integer)
+		expect(number).toStrictEqual(integer)
+	})
 
-			yield* Effect.void
-		}),
-	)
-
-	effect.prop(
-		`should be ok`,
-		[H.FC.integer({ min: 1 })],
-		Effect.fn(function* ([integer], { expect }) {
-			const number = Positive.unsafeFromNumber(integer)
-			expect(number).toStrictEqual(integer)
-
-			yield* Effect.void
-		}),
-	)
-
-	effect.prop(
-		`should crash`,
-		[H.FC.integer({ max: 0 })],
-		Effect.fn(function* ([integer], { expect }) {
-			expect(() => Positive.unsafeFromNumber(integer)).toThrowError()
-
-			yield* Effect.void
-		}),
-	)
+	prop(`should crash`, [H.FC.integer({ max: 0 })], ([integer], { expect }) => {
+		expect(() => Positive.unsafeFromNumber(integer)).toThrowError()
+	})
 })

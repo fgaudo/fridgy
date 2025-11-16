@@ -44,6 +44,8 @@ export class AddProduct extends Effect.Service<AddProduct>()(
 				addProduct: { resolver },
 			} = yield* ProductManager.ProductManager
 
+			const { makeProduct } = yield* Product.ProductService
+
 			return {
 				run: Effect.fn(`AddProduct UC`)(function* (productData: ProductDTO) {
 					yield* Effect.logInfo(
@@ -54,7 +56,7 @@ export class AddProduct extends Effect.Service<AddProduct>()(
 						yield* Clock.currentTimeMillis,
 					)
 
-					const product = Product.fromStruct({
+					const product = makeProduct({
 						name: productData.name,
 						maybeExpirationDate: productData.maybeExpirationDate,
 						creationDate: timestamp,
@@ -94,5 +96,6 @@ export class AddProduct extends Effect.Service<AddProduct>()(
 				}),
 			}
 		}),
+		dependencies: [Product.ProductService.Default],
 	},
 ) {}

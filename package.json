@@ -27,6 +27,7 @@
 		"@testing-library/svelte": "^5.2.8",
 		"@trivago/prettier-plugin-sort-imports": "^5.2.2",
 		"@types/node": "^22.15.29",
+		"@vitest/coverage-v8": "^4.0.9",
 		"date-fns": "4.1.0",
 		"effect": "^3.19.3",
 		"eslint": "^9.39.1",
@@ -49,7 +50,7 @@
 		"typescript-svelte-plugin": "^0.3.50",
 		"vite": "^6.3.5",
 		"vite-tsconfig-paths": "^5.1.4",
-		"vitest": "^3.1.4"
+		"vitest": "^4.0.9"
 	},
 	"license": "AGPL-3.0-or-later",
 	"pnpm": {
