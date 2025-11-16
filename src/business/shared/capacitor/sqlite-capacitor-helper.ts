@@ -1,4 +1,3 @@
-import * as Arr from 'effect/Array'
 import * as Data from 'effect/Data'
 import * as Effect from 'effect/Effect'
 import * as Either from 'effect/Either'
@@ -7,8 +6,6 @@ import * as Option from 'effect/Option'
 import * as Schema from 'effect/Schema'
 
 import * as H from '@/core/helper.ts'
-import * as Integer from '@/core/integer/integer.ts'
-import * as NonEmptyTrimmedString from '@/core/non-empty-trimmed-string.ts'
 
 import {
 	GetAllProductsWithTotalDTO,
@@ -19,8 +16,8 @@ class FetchingFailed extends Data.TaggedError(`FetchingFailed`) {}
 
 class InvalidDataReceived extends Data.TaggedError(`InvalidDataReceived`) {}
 
-export class SqliteCapacitorService extends Effect.Service<SqliteCapacitorService>()(
-	`shared/capacitor/sqlite-capacitor-service`,
+export class SqliteCapacitorHelper extends Effect.Service<SqliteCapacitorHelper>()(
+	`shared/capacitor/sqlite-capacitor-helper`,
 	{
 		effect: Effect.gen(function* () {
 			const db = yield* SqliteCapacitorPlugin
@@ -68,29 +65,7 @@ export class SqliteCapacitorService extends Effect.Service<SqliteCapacitorServic
 						return yield* new InvalidDataReceived()
 					}
 
-					const entries = Arr.map(
-						decodeResult.right.products,
-						product =>
-							({
-								maybeId: Option.fromNullable(product.id),
-								maybeName: pipe(
-									Option.fromNullable(product.name),
-									Option.flatMap(NonEmptyTrimmedString.fromString),
-								),
-
-								maybeExpirationDate: pipe(
-									Option.fromNullable(product.expirationDate),
-									Option.flatMap(Integer.fromNumber),
-								),
-
-								maybeCreationDate: pipe(
-									Option.fromNullable(product.creationDate),
-									Option.flatMap(Integer.fromNumber),
-								),
-							}) as const,
-					)
-
-					return entries
+					return decodeResult.right.products
 				}),
 			}
 		}),

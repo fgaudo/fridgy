@@ -1,5 +1,6 @@
 import { registerPlugin } from '@capacitor/core'
 import * as Effect from 'effect/Effect'
+import * as Option from 'effect/Option'
 import * as Schema from 'effect/Schema'
 
 import * as H from '@/core/helper.ts'
@@ -22,24 +23,28 @@ export const GetAllProductsWithTotalDTO = Schema.Struct({
 	total: Schema.Number,
 	products: Schema.Array(
 		Schema.Struct({
-			id: Schema.UndefinedOr(Schema.Int).annotations({
-				decodingFallback: H.fallback(undefined),
+			maybeId: Schema.OptionFromUndefinedOr(Schema.Int).annotations({
+				decodingFallback: H.fallback(Option.none()),
 			}),
-			name: Schema.UndefinedOr(Schema.String).annotations({
-				decodingFallback: H.fallback(undefined),
+			maybeName: Schema.OptionFromUndefinedOr(Schema.String).annotations({
+				decodingFallback: H.fallback(Option.none()),
 			}),
-			expirationDate: Schema.UndefinedOr(Schema.JsonNumber).annotations({
-				decodingFallback: H.fallback(undefined),
+			maybeExpirationDate: Schema.OptionFromUndefinedOr(
+				Schema.JsonNumber,
+			).annotations({
+				decodingFallback: H.fallback(Option.none()),
 			}),
-			creationDate: Schema.UndefinedOr(Schema.JsonNumber).annotations({
-				decodingFallback: H.fallback(undefined),
+			maybeCreationDate: Schema.OptionFromUndefinedOr(
+				Schema.JsonNumber,
+			).annotations({
+				decodingFallback: H.fallback(Option.none()),
 			}),
 		}).annotations({
 			decodingFallback: H.fallback({
-				id: undefined,
-				name: undefined,
-				expirationDate: undefined,
-				creationDate: undefined,
+				maybeId: Option.none(),
+				maybeName: Option.none(),
+				maybeExpirationDate: Option.none(),
+				maybeCreationDate: Option.none(),
 			}),
 		}),
 	),
