@@ -5,8 +5,6 @@ import { pipe } from 'effect/Function'
 import * as Option from 'effect/Option'
 import * as Schema from 'effect/Schema'
 
-import * as H from '@/core/helper.ts'
-
 import {
 	GetAllProductsWithTotalDTO,
 	SqliteCapacitorPlugin,
@@ -20,7 +18,7 @@ export class SqliteCapacitorHelper extends Effect.Service<SqliteCapacitorHelper>
 	`shared/capacitor/sqlite-capacitor-helper`,
 	{
 		effect: Effect.gen(function* () {
-			const db = yield* SqliteCapacitorPlugin
+			const plugin = yield* SqliteCapacitorPlugin
 
 			return {
 				addProduct: (p: {
@@ -28,26 +26,22 @@ export class SqliteCapacitorHelper extends Effect.Service<SqliteCapacitorHelper>
 					creationDate: number
 					maybeExpirationDate: Option.Option<number>
 				}) =>
-					H.tryPromise(() =>
-						db.addProduct({
-							product: {
-								name: p.name,
-								creationDate: p.creationDate,
-								expirationDate: Option.match(p.maybeExpirationDate, {
-									onNone: () => undefined,
-									onSome: num => num,
-								}),
-							},
-						}),
-					),
+					plugin.addProduct({
+						product: {
+							name: p.name,
+							creationDate: p.creationDate,
+							expirationDate: Option.match(p.maybeExpirationDate, {
+								onNone: () => undefined,
+								onSome: num => num,
+							}),
+						},
+					}),
 
 				deleteProductsByIds: (ids: number[]) =>
-					H.tryPromise(() => db.deleteProductsByIds({ ids })),
+					plugin.deleteProductsByIds({ ids }),
 
 				getAllProductsWithTotal: Effect.gen(function* () {
-					const result = yield* Effect.either(
-						H.tryPromise(() => db.getAllProductsWithTotal()),
-					)
+					const result = yield* Effect.either(plugin.getAllProductsWithTotal)
 
 					if (Either.isLeft(result)) {
 						yield* Effect.logError(result.left)

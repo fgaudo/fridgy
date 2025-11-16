@@ -57,6 +57,22 @@ export const GetAllProductsWithTotalDTO = Schema.Struct({
 export class SqliteCapacitorPlugin extends Effect.Service<SqliteCapacitorPlugin>()(
 	`shared/capacitor/sqlite-capacitor-plugin`,
 	{
-		sync: () => registerPlugin<_SqliteCapacitorPlugin>(`FridgySqlitePlugin`),
+		sync: () => {
+			const plugin =
+				registerPlugin<_SqliteCapacitorPlugin>(`FridgySqlitePlugin`)
+
+			return {
+				addProduct: (...p: Parameters<_SqliteCapacitorPlugin[`addProduct`]>) =>
+					H.tryPromise(() => plugin.addProduct(...p)),
+
+				deleteProductsByIds: (
+					...p: Parameters<_SqliteCapacitorPlugin[`deleteProductsByIds`]>
+				) => H.tryPromise(() => plugin.deleteProductsByIds(...p)),
+
+				getAllProductsWithTotal: H.tryPromise(() =>
+					plugin.getAllProductsWithTotal(),
+				),
+			}
+		},
 	},
 ) {}
