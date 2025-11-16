@@ -4,6 +4,8 @@ import * as Option from 'effect/Option'
 import * as Schema from 'effect/Schema'
 
 import * as H from '@/core/helper.ts'
+import * as Integer from '@/core/integer/integer.ts'
+import * as NonEmptyTrimmedString from '@/core/non-empty-trimmed-string.ts'
 
 interface _SqliteCapacitorPlugin {
 	getAllProductsWithTotal(): Promise<unknown>
@@ -26,16 +28,18 @@ export const GetAllProductsWithTotalDTO = Schema.Struct({
 			maybeId: Schema.OptionFromUndefinedOr(Schema.Int).annotations({
 				decodingFallback: H.fallback(Option.none()),
 			}),
-			maybeName: Schema.OptionFromUndefinedOr(Schema.String).annotations({
+			maybeName: Schema.OptionFromUndefinedOr(
+				NonEmptyTrimmedString.Schema,
+			).annotations({
 				decodingFallback: H.fallback(Option.none()),
 			}),
 			maybeExpirationDate: Schema.OptionFromUndefinedOr(
-				Schema.JsonNumber,
+				Integer.Schema,
 			).annotations({
 				decodingFallback: H.fallback(Option.none()),
 			}),
 			maybeCreationDate: Schema.OptionFromUndefinedOr(
-				Schema.JsonNumber,
+				Integer.Schema,
 			).annotations({
 				decodingFallback: H.fallback(Option.none()),
 			}),

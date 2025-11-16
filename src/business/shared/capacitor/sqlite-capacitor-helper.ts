@@ -23,12 +23,12 @@ export class SqliteCapacitorHelper extends Effect.Service<SqliteCapacitorHelper>
 			const db = yield* SqliteCapacitorPlugin
 
 			return {
-				addProduct: Effect.fn(function* (p: {
+				addProduct: (p: {
 					name: string
 					creationDate: number
 					maybeExpirationDate: Option.Option<number>
-				}) {
-					return yield* H.tryPromise(() =>
+				}) =>
+					H.tryPromise(() =>
 						db.addProduct({
 							product: {
 								name: p.name,
@@ -39,12 +39,10 @@ export class SqliteCapacitorHelper extends Effect.Service<SqliteCapacitorHelper>
 								}),
 							},
 						}),
-					)
-				}),
+					),
 
-				deleteProductsByIds: Effect.fn(function* (ids: number[]) {
-					return yield* H.tryPromise(() => db.deleteProductsByIds({ ids }))
-				}),
+				deleteProductsByIds: (ids: number[]) =>
+					H.tryPromise(() => db.deleteProductsByIds({ ids })),
 
 				getAllProductsWithTotal: Effect.gen(function* () {
 					const result = yield* Effect.either(
