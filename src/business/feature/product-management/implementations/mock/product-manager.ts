@@ -9,7 +9,7 @@ import * as Ref from 'effect/Ref'
 import * as Request from 'effect/Request'
 import * as RequestResolver from 'effect/RequestResolver'
 
-import { Service } from '@/feature/product-management/implementations/mock/config.ts'
+import * as Config from '@/feature/product-management/implementations/mock/config.ts'
 
 import * as ProductManager from '../../interfaces/product-manager.ts'
 
@@ -36,7 +36,7 @@ const ord = Order.make(
 export const layerWithoutDependencies = Layer.effect(
 	ProductManager.Service,
 	Effect.gen(function* () {
-		const { withErrors } = yield* Service
+		const { withErrors } = yield* Config.Service
 
 		const ref = yield* Ref.make({
 			index: 0,
