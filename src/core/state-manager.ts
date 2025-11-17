@@ -1,11 +1,14 @@
+import * as Arr from 'effect/Array'
 import * as Effect from 'effect/Effect'
 import * as Exit from 'effect/Exit'
 import * as Fiber from 'effect/Fiber'
 import { pipe } from 'effect/Function'
+import * as Function from 'effect/Function'
 import * as Queue from 'effect/Queue'
 import * as Scope from 'effect/Scope'
 import * as Stream from 'effect/Stream'
 import * as SubscriptionRef from 'effect/SubscriptionRef'
+import { type Draft, createDraft, finishDraft } from 'immer'
 
 export type Command<M, R> = Stream.Stream<M, never, R>
 
@@ -116,3 +119,68 @@ export const makeStateManager = Effect.fn(function* <
 		}),
 	}
 }, Effect.scoped)
+
+export const modify = Function.dual<
+	<S extends object, C>(
+		p: (draft: Draft<S>) => Arr.NonEmptyArray<C> | void,
+	) => (state: S) => {
+		state: S
+		commands: C[]
+	},
+	<S extends object, C>(
+		state: S,
+		p: (draft: Draft<S>) => Arr.NonEmptyArray<C> | void,
+	) => { state: S; commands: C[] }
+>(2, (state, p) => {
+	const draft = createDraft(state)
+
+	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+	const commands = p(draft) ?? []
+
+	return {
+		state: finishDraft(draft) as typeof state,
+		commands,
+	}
+})
+
+type NoOpType = {
+	<S, C>(state: S): { state: S; commands: C[] }
+	func<C>(): <S>(state: S) => {
+		state: S
+		commands: C[]
+	}
+}
+
+export const noOp: NoOpType = Object.assign(
+	<S>(state: S) => ({
+		state,
+		commands: [],
+	}),
+	{
+		func:
+			() =>
+			<S>(state: S) => ({
+				state,
+				commands: [],
+			}),
+	},
+)
+
+export const commands = Function.dual<
+	<C>(effects: Arr.NonEmptyArray<C>) => <S>(state: S) => {
+		state: S
+		commands: C[]
+	},
+	<S, C>(
+		state: S,
+		effects: Arr.NonEmptyArray<C>,
+	) => {
+		state: S
+		commands: C[]
+	}
+>(2, (state, commands) => {
+	return {
+		state,
+		commands,
+	}
+})

@@ -7,11 +7,15 @@ import * as Match from 'effect/Match'
 import * as Option from 'effect/Option'
 import * as Schema from 'effect/Schema'
 
-import { modify, noOp } from '@/core/helper.ts'
 import * as Integer from '@/core/integer/integer.ts'
 import * as NonEmptyHashSet from '@/core/non-empty-hash-set.ts'
 import * as NonEmptyTrimmedString from '@/core/non-empty-trimmed-string.ts'
-import { type Command, makeStateManager } from '@/core/state-manager.ts'
+import {
+	type Command,
+	makeStateManager,
+	modify,
+	noOp,
+} from '@/core/state-manager.ts'
 import * as UnitInterval from '@/core/unit-interval.ts'
 
 import {

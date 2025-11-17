@@ -6,7 +6,7 @@ import * as Schema from 'effect/Schema'
 
 import * as H from '@/core/test-helpers.ts'
 
-import { SqliteCapacitorHelper } from '@/shared/capacitor/sqlite-capacitor-helper.ts'
+import * as SqliteCapacitorHelper from '@/shared/capacitor/sqlite-capacitor-helper.ts'
 
 import * as ProductManager from '../../interfaces/product-manager.ts'
 import * as CapacitorProductManager from './product-manager.ts'
@@ -15,9 +15,9 @@ describe.concurrent(`Add product`, () => {
 	layer(
 		Layer.provide(
 			CapacitorProductManager.layerWithoutDependencies,
-			Layer.succeed(SqliteCapacitorHelper, {
+			Layer.succeed(SqliteCapacitorHelper.SqliteCapacitorHelper, {
 				addProduct: () => Effect.succeed(undefined),
-			} as unknown as SqliteCapacitorHelper),
+			} as unknown as SqliteCapacitorHelper.SqliteCapacitorHelper),
 		),
 	)(({ effect }) => {
 		effect.prop(
@@ -42,9 +42,9 @@ describe.concurrent(`Add product`, () => {
 	layer(
 		Layer.provide(
 			CapacitorProductManager.layerWithoutDependencies,
-			Layer.succeed(SqliteCapacitorHelper, {
+			Layer.succeed(SqliteCapacitorHelper.SqliteCapacitorHelper, {
 				addProduct: () => Effect.fail(undefined),
-			} as unknown as SqliteCapacitorHelper),
+			} as unknown as SqliteCapacitorHelper.SqliteCapacitorHelper),
 		),
 	)(({ effect }) => {
 		effect.prop(
@@ -69,11 +69,11 @@ describe.concurrent(`Add product`, () => {
 	layer(
 		Layer.provide(
 			CapacitorProductManager.layerWithoutDependencies,
-			Layer.succeed(SqliteCapacitorHelper, {
+			Layer.succeed(SqliteCapacitorHelper.SqliteCapacitorHelper, {
 				addProduct: () => {
 					throw new Error()
 				},
-			} as unknown as SqliteCapacitorHelper),
+			} as unknown as SqliteCapacitorHelper.SqliteCapacitorHelper),
 		),
 	)(({ effect }) => {
 		effect.prop(
@@ -100,9 +100,9 @@ describe.concurrent(`Delete products by ids`, () => {
 	layer(
 		Layer.provide(
 			CapacitorProductManager.layerWithoutDependencies,
-			Layer.succeed(SqliteCapacitorHelper, {
+			Layer.succeed(SqliteCapacitorHelper.SqliteCapacitorHelper, {
 				deleteProductsByIds: () => Effect.succeed(undefined),
-			} as unknown as SqliteCapacitorHelper),
+			} as unknown as SqliteCapacitorHelper.SqliteCapacitorHelper),
 		),
 	)(({ effect }) => {
 		effect.prop(
@@ -128,8 +128,8 @@ describe.concurrent(`Delete products by ids`, () => {
 		Layer.provide(
 			CapacitorProductManager.layerWithoutDependencies,
 			Layer.succeed(
-				SqliteCapacitorHelper,
-				{} as unknown as SqliteCapacitorHelper,
+				SqliteCapacitorHelper.SqliteCapacitorHelper,
+				{} as unknown as SqliteCapacitorHelper.SqliteCapacitorHelper,
 			),
 		),
 	)(({ effect }) => {
@@ -155,9 +155,9 @@ describe.concurrent(`Delete products by ids`, () => {
 	layer(
 		Layer.provide(
 			CapacitorProductManager.layerWithoutDependencies,
-			Layer.succeed(SqliteCapacitorHelper, {
+			Layer.succeed(SqliteCapacitorHelper.SqliteCapacitorHelper, {
 				deleteProductsByIds: () => Effect.fail(undefined),
-			} as unknown as SqliteCapacitorHelper),
+			} as unknown as SqliteCapacitorHelper.SqliteCapacitorHelper),
 		),
 	)(({ effect }) => {
 		effect.prop(
@@ -182,11 +182,11 @@ describe.concurrent(`Delete products by ids`, () => {
 	layer(
 		Layer.provide(
 			CapacitorProductManager.layerWithoutDependencies,
-			Layer.succeed(SqliteCapacitorHelper, {
+			Layer.succeed(SqliteCapacitorHelper.SqliteCapacitorHelper, {
 				deleteProductsByIds: () => {
 					throw new Error()
 				},
-			} as unknown as SqliteCapacitorHelper),
+			} as unknown as SqliteCapacitorHelper.SqliteCapacitorHelper),
 		),
 	)(({ effect }) => {
 		effect.prop(
@@ -232,9 +232,9 @@ describe.concurrent(`Get products`, () => {
 					effect,
 					Layer.provide(
 						CapacitorProductManager.layerWithoutDependencies,
-						Layer.succeed(SqliteCapacitorHelper, {
+						Layer.succeed(SqliteCapacitorHelper.SqliteCapacitorHelper, {
 							getAllProductsWithTotal: Effect.succeed(products),
-						} as unknown as SqliteCapacitorHelper),
+						} as unknown as SqliteCapacitorHelper.SqliteCapacitorHelper),
 					),
 				),
 		),
@@ -243,9 +243,9 @@ describe.concurrent(`Get products`, () => {
 	layer(
 		Layer.provide(
 			CapacitorProductManager.layerWithoutDependencies,
-			Layer.succeed(SqliteCapacitorHelper, {
+			Layer.succeed(SqliteCapacitorHelper.SqliteCapacitorHelper, {
 				getAllProductsWithTotal: Effect.fail(undefined),
-			} as unknown as SqliteCapacitorHelper),
+			} as unknown as SqliteCapacitorHelper.SqliteCapacitorHelper),
 		),
 	)(({ effect }) => {
 		effect(

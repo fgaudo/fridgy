@@ -5,10 +5,7 @@ import { pipe } from 'effect/Function'
 import * as Option from 'effect/Option'
 import * as Schema from 'effect/Schema'
 
-import {
-	GetAllProductsWithTotalDTO,
-	SqliteCapacitorPlugin,
-} from './sqlite-capacitor-plugin.ts'
+import * as SqliteCapacitorPlugin from './sqlite-capacitor-plugin.ts'
 
 class FetchingFailed extends Data.TaggedError(`FetchingFailed`) {}
 
@@ -18,7 +15,7 @@ export class SqliteCapacitorHelper extends Effect.Service<SqliteCapacitorHelper>
 	`shared/capacitor/sqlite-capacitor-helper`,
 	{
 		effect: Effect.gen(function* () {
-			const plugin = yield* SqliteCapacitorPlugin
+			const plugin = yield* SqliteCapacitorPlugin.SqliteCapacitorPlugin
 
 			return {
 				addProduct: (p: {
@@ -49,7 +46,9 @@ export class SqliteCapacitorHelper extends Effect.Service<SqliteCapacitorHelper>
 					}
 
 					const decodeResult = yield* pipe(
-						Schema.decodeUnknown(GetAllProductsWithTotalDTO)(result.right),
+						Schema.decodeUnknown(
+							SqliteCapacitorPlugin.GetAllProductsWithTotalDTO,
+						)(result.right),
 						Effect.either,
 					)
 
@@ -61,6 +60,6 @@ export class SqliteCapacitorHelper extends Effect.Service<SqliteCapacitorHelper>
 				}),
 			}
 		}),
-		dependencies: [SqliteCapacitorPlugin.Default],
+		dependencies: [SqliteCapacitorPlugin.SqliteCapacitorPlugin.Default],
 	},
 ) {}
