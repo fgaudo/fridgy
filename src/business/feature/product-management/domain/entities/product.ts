@@ -29,7 +29,7 @@ export const Schema = _Schema.fromBrand(Product)(
 	}),
 )
 
-export class ProductService extends Effect.Service<ProductService>()(
+export class Service extends Effect.Service<Service>()(
 	`feature/product-management/domain/product`,
 	{
 		succeed: {

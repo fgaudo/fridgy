@@ -9,12 +9,12 @@ export * as AddProduct from './add-product.ts'
 export * as GetSortedProducts from './get-sorted-products.ts'
 
 export type All =
-	| _GetSortedProducts.GetSortedProducts
-	| _DeleteProductsByIdsAndRetrieve.DeleteProductsByIdsAndRetrieve
-	| _AddProduct.AddProduct
+	| _GetSortedProducts.Service
+	| _DeleteProductsByIdsAndRetrieve.Service
+	| _AddProduct.Service
 
 export const all = Layer.mergeAll(
-	_GetSortedProducts.GetSortedProducts.Default,
-	_DeleteProductsByIdsAndRetrieve.DeleteProductsByIdsAndRetrieve.Default,
-	_AddProduct.AddProduct.Default,
+	_GetSortedProducts.Service.Default,
+	_DeleteProductsByIdsAndRetrieve.Service.Default,
+	_AddProduct.Service.Default,
 )

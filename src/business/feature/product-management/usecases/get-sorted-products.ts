@@ -44,10 +44,10 @@ export type DTO = Schema.Schema.Type<typeof DTO>
 /////
 
 export type Message = Data.TaggedEnum<{
-	FetchListSucceeded: {
+	Succeeded: {
 		result: DTO
 	}
-	FetchListFailed: object
+	Failed: object
 }>
 
 export const Message = Data.taggedEnum<Message>()
@@ -55,13 +55,13 @@ export const Message = Data.taggedEnum<Message>()
 /////
 /////
 
-export class GetSortedProducts extends Effect.Service<GetSortedProducts>()(
+export class Service extends Effect.Service<Service>()(
 	`feature/product-management/usecases/get-sorted-products`,
 	{
 		accessors: true,
 		effect: Effect.gen(function* () {
-			const { getSortedProducts } = yield* ProductManager.ProductManager
-			const { makeProduct } = yield* Product.ProductService
+			const { getSortedProducts } = yield* ProductManager.Service
+			const { makeProduct } = yield* Product.Service
 			return {
 				run: Effect.gen(function* () {
 					yield* Effect.log(`Requested to fetch the list of products`)
@@ -73,7 +73,7 @@ export class GetSortedProducts extends Effect.Service<GetSortedProducts>()(
 					if (Either.isLeft(errorOrData)) {
 						yield* Effect.logError(`Could not receive items.`)
 
-						return Message.FetchListFailed()
+						return Message.Failed()
 					}
 
 					const result = errorOrData.right
@@ -134,10 +134,10 @@ export class GetSortedProducts extends Effect.Service<GetSortedProducts>()(
 						Effect.all,
 					)
 
-					return Message.FetchListSucceeded({ result: entries })
+					return Message.Succeeded({ result: entries })
 				}).pipe(Effect.withLogSpan(`GetSortedProducts UC`)),
 			}
 		}),
-		dependencies: [Product.ProductService.Default],
+		dependencies: [Product.Service.Default],
 	},
 ) {}

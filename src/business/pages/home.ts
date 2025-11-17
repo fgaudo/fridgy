@@ -7,6 +7,7 @@ import * as Match from 'effect/Match'
 import * as Option from 'effect/Option'
 import * as Schema from 'effect/Schema'
 
+import { type MapTags, mapFunctionReturn } from '@/core/helper.ts'
 import * as Integer from '@/core/integer/integer.ts'
 import * as NonEmptyHashSet from '@/core/non-empty-hash-set.ts'
 import * as NonEmptyTrimmedString from '@/core/non-empty-trimmed-string.ts'
@@ -20,7 +21,7 @@ import * as UnitInterval from '@/core/unit-interval.ts'
 
 import {
 	Rules,
-	UseCasesWithoutDependencies,
+	UseCasesWithoutDependencies as UC,
 } from '@/feature/product-management/index.ts'
 
 type Message = Data.TaggedEnum<{
@@ -96,21 +97,33 @@ type State = Schema.Schema.Type<typeof State>
 
 type InternalMessage =
 	| Message
-	| UseCasesWithoutDependencies.GetSortedProducts.Message
-	| UseCasesWithoutDependencies.DeleteProductsByIdsAndRetrieve.Message
+	| MapTags<
+			UC.GetSortedProducts.Message,
+			{
+				Failed: `FetchListFailed`
+				Succeeded: `FetchListSucceeded`
+			}
+	  >
+	| MapTags<
+			UC.DeleteProductsByIdsAndRetrieve.Message,
+			{
+				Succeeded: `DeleteAndRefreshSucceeded`
+				Failed: `DeleteFailed`
+				DeleteSucceededButRefreshFailed: `DeleteSucceededButRefreshFailed`
+			}
+	  >
+
+const InternalMessage = Data.taggedEnum<InternalMessage>()
 
 const matcher = Match.typeTags<
 	InternalMessage,
 	(s: Readonly<State>) => Readonly<{
 		state: State
-		commands: Command<InternalMessage, UseCasesWithoutDependencies.All>[]
+		commands: Command<InternalMessage, UC.All>[]
 	}>
 >()
 
-const mapToViewModels = (
-	entries: UseCasesWithoutDependencies.GetSortedProducts.DTO,
-	state: State,
-) => {
+const mapToViewModels = (entries: UC.GetSortedProducts.DTO, state: State) => {
 	return pipe(
 		entries,
 		Arr.map(entry => {
@@ -175,12 +188,26 @@ const mapToViewModels = (
 	)
 }
 
-const deleteProductsByIds =
-	UseCasesWithoutDependencies.DeleteProductsByIdsAndRetrieve
-		.DeleteProductsByIdsAndRetrieve.run
+const deleteProductsByIds = mapFunctionReturn(
+	UC.DeleteProductsByIdsAndRetrieve.Service.run,
+	Effect.map(
+		UC.DeleteProductsByIdsAndRetrieve.Message.$match({
+			DeleteSucceededButRefreshFailed: () =>
+				InternalMessage.DeleteSucceededButRefreshFailed(),
+			Failed: () => InternalMessage.DeleteFailed(),
+			Succeeded: ({ result }) =>
+				InternalMessage.DeleteAndRefreshSucceeded({ result }),
+		}),
+	),
+)
 
-const fetchList =
-	UseCasesWithoutDependencies.GetSortedProducts.GetSortedProducts.run
+const fetchList = Effect.map(
+	UC.GetSortedProducts.Service.run,
+	UC.GetSortedProducts.Message.$match({
+		Failed: () => InternalMessage.FetchListFailed(),
+		Succeeded: ({ result }) => InternalMessage.FetchListSucceeded({ result }),
+	}),
+)
 
 const update = matcher({
 	FetchList: () =>

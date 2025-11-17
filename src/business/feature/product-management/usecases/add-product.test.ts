@@ -22,8 +22,8 @@ describe.concurrent(`Add product`, () => {
 			const observed = yield* Deferred.make<number>()
 
 			const mockLayer = Layer.provide(
-				AddProduct.AddProduct.Default,
-				Layer.succeed(ProductManager.ProductManager, {
+				AddProduct.Service.Default,
+				Layer.succeed(ProductManager.Service, {
 					addProduct: {
 						resolver: RequestResolver.fromEffect(
 							Effect.fn(function* (req) {
@@ -33,11 +33,11 @@ describe.concurrent(`Add product`, () => {
 							}),
 						),
 					},
-				} as ProductManager.ProductManager[`Type`]),
+				} as ProductManager.Service[`Type`]),
 			)
 
 			const run = Effect.provide(
-				Usecase.AddProduct.run({ maybeExpirationDate, name }),
+				Usecase.Service.run({ maybeExpirationDate, name }),
 				[mockLayer],
 			)
 
@@ -50,29 +50,27 @@ describe.concurrent(`Add product`, () => {
 			const creationDate = yield* Deferred.await(observed)
 
 			expect(creationDate).toStrictEqual(0)
-			expect(
-				Usecase.Message.$is(`AddProductSucceeeded`)(exit.value),
-			).toStrictEqual(true)
+			expect(Usecase.Message.$is(`Succeeded`)(exit.value)).toStrictEqual(true)
 		}),
 	)
 
 	layer(
 		Layer.provide(
-			Usecase.AddProduct.Default,
-			Layer.succeed(ProductManager.ProductManager, {
+			Usecase.Service.Default,
+			Layer.succeed(ProductManager.Service, {
 				addProduct: {
 					resolver: RequestResolver.fromEffect(
 						Effect.fn(() => Effect.fail(Request.fail(undefined))),
 					),
 				},
-			} as ProductManager.ProductManager[`Type`]),
+			} as ProductManager.Service[`Type`]),
 		),
 	)(({ effect }) => {
 		effect.prop(
 			`Should return error`,
 			{ product: Usecase.ProductDTO },
 			Effect.fn(function* ({ product: { name, maybeExpirationDate } }) {
-				const { run } = yield* Usecase.AddProduct
+				const { run } = yield* Usecase.Service
 				const exit = yield* Effect.exit(
 					run({
 						name,
@@ -82,33 +80,31 @@ describe.concurrent(`Add product`, () => {
 
 				H.assertExitIsSuccess(exit)
 
-				expect(
-					Usecase.Message.$is(`AddProductFailed`)(exit.value),
-				).toStrictEqual(true)
+				expect(Usecase.Message.$is(`Failed`)(exit.value)).toStrictEqual(true)
 			}),
 		)
 	})
 
 	layer(
-		Layer.provide(Usecase.AddProduct.DefaultWithoutDependencies, [
-			Layer.succeed(ProductManager.ProductManager, {
+		Layer.provide(Usecase.Service.DefaultWithoutDependencies, [
+			Layer.succeed(ProductManager.Service, {
 				addProduct: {
 					resolver: RequestResolver.fromEffect(
 						Effect.fn(() => Effect.fail(Request.fail(undefined))),
 					),
 				},
-			} as ProductManager.ProductManager[`Type`]),
+			} as ProductManager.Service[`Type`]),
 
-			Layer.succeed(ProductService.ProductService, {
+			Layer.succeed(ProductService.Service, {
 				makeProduct: () => Option.none(),
-			} as unknown as ProductService.ProductService),
+			} as unknown as ProductService.Service),
 		]),
 	)(({ effect }) => {
 		effect.prop(
 			`Should return error`,
 			{ product: Usecase.ProductDTO },
 			Effect.fn(function* ({ product: { name, maybeExpirationDate } }) {
-				const { run } = yield* Usecase.AddProduct
+				const { run } = yield* Usecase.Service
 				const exit = yield* Effect.exit(
 					run({
 						name,
@@ -118,9 +114,7 @@ describe.concurrent(`Add product`, () => {
 
 				H.assertExitIsSuccess(exit)
 
-				expect(
-					Usecase.Message.$is(`AddProductFailed`)(exit.value),
-				).toStrictEqual(true)
+				expect(Usecase.Message.$is(`Failed`)(exit.value)).toStrictEqual(true)
 			}),
 		)
 	})

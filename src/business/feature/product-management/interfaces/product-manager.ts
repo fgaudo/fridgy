@@ -68,10 +68,10 @@ export type GetSortedProducts = {
 /////
 /////
 
-class ProductManager extends Context.Tag(
+export class Service extends Context.Tag(
 	`feature/product-management/interfaces/product-manager`,
 )<
-	ProductManager,
+	Service,
 	{
 		addProduct: {
 			resolver: RequestResolver<AddProductRequest>
@@ -84,5 +84,3 @@ class ProductManager extends Context.Tag(
 		getSortedProducts: Effect.Effect<GetSortedProducts[`DTO`], void>
 	}
 >() {}
-
-export { ProductManager }

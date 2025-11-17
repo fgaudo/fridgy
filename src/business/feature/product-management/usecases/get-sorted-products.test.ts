@@ -10,44 +10,40 @@ import * as Usecase from './get-sorted-products.ts'
 describe.concurrent(`Get sorted products`, () => {
 	layer(
 		Layer.provide(
-			Usecase.GetSortedProducts.Default,
-			Layer.succeed(ProductManager.ProductManager, {
+			Usecase.Service.Default,
+			Layer.succeed(ProductManager.Service, {
 				getSortedProducts: Effect.fail(undefined),
-			} as unknown as ProductManager.ProductManager[`Type`]),
+			} as unknown as ProductManager.Service[`Type`]),
 		),
 	)(({ effect }) => {
 		effect(
 			`Should return an error`,
 			Effect.fn(function* () {
-				const { run } = yield* Usecase.GetSortedProducts
+				const { run } = yield* Usecase.Service
 				const exit = yield* Effect.exit(run)
 				H.assertExitIsSuccess(exit)
 
-				expect(
-					Usecase.Message.$is(`FetchListFailed`)(exit.value),
-				).toStrictEqual(true)
+				expect(Usecase.Message.$is(`Failed`)(exit.value)).toStrictEqual(true)
 			}),
 		)
 	})
 
 	layer(
 		Layer.provide(
-			Usecase.GetSortedProducts.Default,
-			Layer.succeed(ProductManager.ProductManager, {
+			Usecase.Service.Default,
+			Layer.succeed(ProductManager.Service, {
 				getSortedProducts: Effect.fail(undefined),
-			} as unknown as ProductManager.ProductManager[`Type`]),
+			} as unknown as ProductManager.Service[`Type`]),
 		),
 	)(({ effect }) => {
 		effect(
 			`Should return an error`,
 			Effect.fn(function* () {
-				const { run } = yield* Usecase.GetSortedProducts
+				const { run } = yield* Usecase.Service
 				const exit = yield* Effect.exit(run)
 				H.assertExitIsSuccess(exit)
 
-				expect(
-					Usecase.Message.$is(`FetchListFailed`)(exit.value),
-				).toStrictEqual(true)
+				expect(Usecase.Message.$is(`Failed`)(exit.value)).toStrictEqual(true)
 			}),
 		)
 	})
@@ -57,14 +53,14 @@ describe.concurrent(`Get sorted products`, () => {
 		[ProductManager.GetSortedProducts.DTO],
 		Effect.fn(
 			function* ([products], { expect }) {
-				const { run } = yield* Usecase.GetSortedProducts
+				const { run } = yield* Usecase.Service
 
 				const exit = yield* Effect.exit(run)
 
 				H.assertExitIsSuccess(exit)
 
 				expect(
-					Usecase.Message.$is(`FetchListSucceeded`)(exit.value) &&
+					Usecase.Message.$is(`Succeeded`)(exit.value) &&
 						exit.value.result.length,
 				).toStrictEqual(products.length)
 			},
@@ -72,10 +68,10 @@ describe.concurrent(`Get sorted products`, () => {
 				Effect.provide(
 					effect,
 					Layer.provide(
-						Usecase.GetSortedProducts.Default,
-						Layer.succeed(ProductManager.ProductManager, {
+						Usecase.Service.Default,
+						Layer.succeed(ProductManager.Service, {
 							getSortedProducts: Effect.succeed(products),
-						} as unknown as ProductManager.ProductManager[`Type`]),
+						} as unknown as ProductManager.Service[`Type`]),
 					),
 				),
 		),

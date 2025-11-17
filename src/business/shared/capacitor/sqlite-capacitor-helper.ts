@@ -11,11 +11,11 @@ class FetchingFailed extends Data.TaggedError(`FetchingFailed`) {}
 
 class InvalidDataReceived extends Data.TaggedError(`InvalidDataReceived`) {}
 
-export class SqliteCapacitorHelper extends Effect.Service<SqliteCapacitorHelper>()(
+export class Service extends Effect.Service<Service>()(
 	`shared/capacitor/sqlite-capacitor-helper`,
 	{
 		effect: Effect.gen(function* () {
-			const plugin = yield* SqliteCapacitorPlugin.SqliteCapacitorPlugin
+			const plugin = yield* SqliteCapacitorPlugin.Service
 
 			return {
 				addProduct: (p: {
@@ -60,6 +60,6 @@ export class SqliteCapacitorHelper extends Effect.Service<SqliteCapacitorHelper>
 				}),
 			}
 		}),
-		dependencies: [SqliteCapacitorPlugin.SqliteCapacitorPlugin.Default],
+		dependencies: [SqliteCapacitorPlugin.Service.Default],
 	},
 ) {}

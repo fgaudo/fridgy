@@ -9,15 +9,15 @@ import * as RequestResolver from 'effect/RequestResolver'
 
 import * as Integer from '@/core/integer/integer.ts'
 
-import { SqliteCapacitorHelper } from '@/shared/capacitor/sqlite-capacitor-helper.ts'
+import { Service } from '@/shared/capacitor/sqlite-capacitor-helper.ts'
 
 import * as ProductManager from '../../interfaces/product-manager.ts'
 
 export const layerWithoutDependencies = Layer.effect(
-	ProductManager.ProductManager,
+	ProductManager.Service,
 	Effect.gen(function* () {
 		const { addProduct, getAllProductsWithTotal, deleteProductsByIds } =
-			yield* SqliteCapacitorHelper
+			yield* Service
 
 		return {
 			getSortedProducts: Effect.gen(function* () {
@@ -129,7 +129,4 @@ export const layerWithoutDependencies = Layer.effect(
 	}),
 )
 
-export const layer = Layer.provide(
-	layerWithoutDependencies,
-	SqliteCapacitorHelper.Default,
-)
+export const layer = Layer.provide(layerWithoutDependencies, Service.Default)

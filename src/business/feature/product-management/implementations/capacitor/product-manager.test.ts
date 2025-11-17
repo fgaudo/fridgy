@@ -15,9 +15,9 @@ describe.concurrent(`Add product`, () => {
 	layer(
 		Layer.provide(
 			CapacitorProductManager.layerWithoutDependencies,
-			Layer.succeed(SqliteCapacitorHelper.SqliteCapacitorHelper, {
+			Layer.succeed(SqliteCapacitorHelper.Service, {
 				addProduct: () => Effect.succeed(undefined),
-			} as unknown as SqliteCapacitorHelper.SqliteCapacitorHelper),
+			} as unknown as SqliteCapacitorHelper.Service),
 		),
 	)(({ effect }) => {
 		effect.prop(
@@ -26,7 +26,7 @@ describe.concurrent(`Add product`, () => {
 			Effect.fn(function* ([requests]) {
 				const {
 					addProduct: { resolver },
-				} = yield* ProductManager.ProductManager
+				} = yield* ProductManager.Service
 
 				const exit = yield* Effect.exit(
 					Effect.forEach(requests, request =>
@@ -42,9 +42,9 @@ describe.concurrent(`Add product`, () => {
 	layer(
 		Layer.provide(
 			CapacitorProductManager.layerWithoutDependencies,
-			Layer.succeed(SqliteCapacitorHelper.SqliteCapacitorHelper, {
+			Layer.succeed(SqliteCapacitorHelper.Service, {
 				addProduct: () => Effect.fail(undefined),
-			} as unknown as SqliteCapacitorHelper.SqliteCapacitorHelper),
+			} as unknown as SqliteCapacitorHelper.Service),
 		),
 	)(({ effect }) => {
 		effect.prop(
@@ -53,7 +53,7 @@ describe.concurrent(`Add product`, () => {
 			Effect.fn(function* ([requests]) {
 				const {
 					addProduct: { resolver },
-				} = yield* ProductManager.ProductManager
+				} = yield* ProductManager.Service
 
 				const exit = yield* Effect.exit(
 					Effect.forEach(requests, request =>
@@ -69,11 +69,11 @@ describe.concurrent(`Add product`, () => {
 	layer(
 		Layer.provide(
 			CapacitorProductManager.layerWithoutDependencies,
-			Layer.succeed(SqliteCapacitorHelper.SqliteCapacitorHelper, {
+			Layer.succeed(SqliteCapacitorHelper.Service, {
 				addProduct: () => {
 					throw new Error()
 				},
-			} as unknown as SqliteCapacitorHelper.SqliteCapacitorHelper),
+			} as unknown as SqliteCapacitorHelper.Service),
 		),
 	)(({ effect }) => {
 		effect.prop(
@@ -82,7 +82,7 @@ describe.concurrent(`Add product`, () => {
 			Effect.fn(function* ([requests]) {
 				const {
 					addProduct: { resolver },
-				} = yield* ProductManager.ProductManager
+				} = yield* ProductManager.Service
 
 				const exit = yield* Effect.exit(
 					Effect.forEach(requests, request =>
@@ -100,9 +100,9 @@ describe.concurrent(`Delete products by ids`, () => {
 	layer(
 		Layer.provide(
 			CapacitorProductManager.layerWithoutDependencies,
-			Layer.succeed(SqliteCapacitorHelper.SqliteCapacitorHelper, {
+			Layer.succeed(SqliteCapacitorHelper.Service, {
 				deleteProductsByIds: () => Effect.succeed(undefined),
-			} as unknown as SqliteCapacitorHelper.SqliteCapacitorHelper),
+			} as unknown as SqliteCapacitorHelper.Service),
 		),
 	)(({ effect }) => {
 		effect.prop(
@@ -111,7 +111,7 @@ describe.concurrent(`Delete products by ids`, () => {
 			Effect.fn(function* ([requests]) {
 				const {
 					deleteProductById: { resolver },
-				} = yield* ProductManager.ProductManager
+				} = yield* ProductManager.Service
 
 				const exit = yield* Effect.exit(
 					Effect.forEach(requests, request =>
@@ -128,8 +128,8 @@ describe.concurrent(`Delete products by ids`, () => {
 		Layer.provide(
 			CapacitorProductManager.layerWithoutDependencies,
 			Layer.succeed(
-				SqliteCapacitorHelper.SqliteCapacitorHelper,
-				{} as unknown as SqliteCapacitorHelper.SqliteCapacitorHelper,
+				SqliteCapacitorHelper.Service,
+				{} as unknown as SqliteCapacitorHelper.Service,
 			),
 		),
 	)(({ effect }) => {
@@ -139,7 +139,7 @@ describe.concurrent(`Delete products by ids`, () => {
 			Effect.fn(function* ([requests]) {
 				const {
 					deleteProductById: { resolver },
-				} = yield* ProductManager.ProductManager
+				} = yield* ProductManager.Service
 
 				const exit = yield* Effect.exit(
 					Effect.forEach(requests, request =>
@@ -155,9 +155,9 @@ describe.concurrent(`Delete products by ids`, () => {
 	layer(
 		Layer.provide(
 			CapacitorProductManager.layerWithoutDependencies,
-			Layer.succeed(SqliteCapacitorHelper.SqliteCapacitorHelper, {
+			Layer.succeed(SqliteCapacitorHelper.Service, {
 				deleteProductsByIds: () => Effect.fail(undefined),
-			} as unknown as SqliteCapacitorHelper.SqliteCapacitorHelper),
+			} as unknown as SqliteCapacitorHelper.Service),
 		),
 	)(({ effect }) => {
 		effect.prop(
@@ -166,7 +166,7 @@ describe.concurrent(`Delete products by ids`, () => {
 			Effect.fn(function* ([requests]) {
 				const {
 					deleteProductById: { resolver },
-				} = yield* ProductManager.ProductManager
+				} = yield* ProductManager.Service
 
 				const exit = yield* Effect.exit(
 					Effect.forEach(requests, request =>
@@ -182,11 +182,11 @@ describe.concurrent(`Delete products by ids`, () => {
 	layer(
 		Layer.provide(
 			CapacitorProductManager.layerWithoutDependencies,
-			Layer.succeed(SqliteCapacitorHelper.SqliteCapacitorHelper, {
+			Layer.succeed(SqliteCapacitorHelper.Service, {
 				deleteProductsByIds: () => {
 					throw new Error()
 				},
-			} as unknown as SqliteCapacitorHelper.SqliteCapacitorHelper),
+			} as unknown as SqliteCapacitorHelper.Service),
 		),
 	)(({ effect }) => {
 		effect.prop(
@@ -195,7 +195,7 @@ describe.concurrent(`Delete products by ids`, () => {
 			Effect.fn(function* ([requests]) {
 				const {
 					deleteProductById: { resolver },
-				} = yield* ProductManager.ProductManager
+				} = yield* ProductManager.Service
 
 				const exit = yield* Effect.exit(
 					Effect.forEach(requests, request =>
@@ -215,7 +215,7 @@ describe.concurrent(`Get products`, () => {
 		[ProductManager.GetSortedProducts.DTO],
 		Effect.fn(
 			function* ([products], { expect }) {
-				const { getSortedProducts } = yield* ProductManager.ProductManager
+				const { getSortedProducts } = yield* ProductManager.Service
 				const exit = yield* Effect.exit(getSortedProducts)
 
 				H.assertExitIsSuccess(exit)
@@ -232,9 +232,9 @@ describe.concurrent(`Get products`, () => {
 					effect,
 					Layer.provide(
 						CapacitorProductManager.layerWithoutDependencies,
-						Layer.succeed(SqliteCapacitorHelper.SqliteCapacitorHelper, {
+						Layer.succeed(SqliteCapacitorHelper.Service, {
 							getAllProductsWithTotal: Effect.succeed(products),
-						} as unknown as SqliteCapacitorHelper.SqliteCapacitorHelper),
+						} as unknown as SqliteCapacitorHelper.Service),
 					),
 				),
 		),
@@ -243,15 +243,15 @@ describe.concurrent(`Get products`, () => {
 	layer(
 		Layer.provide(
 			CapacitorProductManager.layerWithoutDependencies,
-			Layer.succeed(SqliteCapacitorHelper.SqliteCapacitorHelper, {
+			Layer.succeed(SqliteCapacitorHelper.Service, {
 				getAllProductsWithTotal: Effect.fail(undefined),
-			} as unknown as SqliteCapacitorHelper.SqliteCapacitorHelper),
+			} as unknown as SqliteCapacitorHelper.Service),
 		),
 	)(({ effect }) => {
 		effect(
 			`Should return an error`,
 			Effect.fn(function* () {
-				const { getSortedProducts } = yield* ProductManager.ProductManager
+				const { getSortedProducts } = yield* ProductManager.Service
 
 				const exit = yield* Effect.exit(getSortedProducts)
 

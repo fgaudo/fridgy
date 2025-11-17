@@ -26,8 +26,8 @@ export type ProductDTO = Schema.Schema.Type<typeof ProductDTO>
 /////
 
 export type Message = Data.TaggedEnum<{
-	AddProductSucceeeded: object
-	AddProductFailed: object
+	Failed: object
+	Succeeded: object
 }>
 
 export const Message = Data.taggedEnum<Message>()
@@ -35,16 +35,16 @@ export const Message = Data.taggedEnum<Message>()
 /////
 /////
 
-export class AddProduct extends Effect.Service<AddProduct>()(
+export class Service extends Effect.Service<Service>()(
 	`feature/product-management/usecases/add-product`,
 	{
 		accessors: true,
 		effect: Effect.gen(function* () {
 			const {
 				addProduct: { resolver },
-			} = yield* ProductManager.ProductManager
+			} = yield* ProductManager.Service
 
-			const { makeProduct } = yield* Product.ProductService
+			const { makeProduct } = yield* Product.Service
 
 			return {
 				run: Effect.fn(`AddProduct UC`)(function* (productData: ProductDTO) {
@@ -69,7 +69,7 @@ export class AddProduct extends Effect.Service<AddProduct>()(
 							}),
 						)
 
-						return Message.AddProductFailed()
+						return Message.Failed()
 					}
 
 					yield* Effect.logInfo(
@@ -88,14 +88,14 @@ export class AddProduct extends Effect.Service<AddProduct>()(
 					)
 
 					if (Either.isLeft(result)) {
-						return Message.AddProductFailed()
+						return Message.Failed()
 					}
 
 					yield* Effect.logInfo(`Successfully added a product`)
-					return Message.AddProductSucceeeded()
+					return Message.Succeeded()
 				}),
 			}
 		}),
-		dependencies: [Product.ProductService.Default],
+		dependencies: [Product.Service.Default],
 	},
 ) {}

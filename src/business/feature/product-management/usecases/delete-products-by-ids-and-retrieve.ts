@@ -19,9 +19,9 @@ export type DTO = Schema.Schema.Type<typeof DTO>
 /////
 
 export type Message = Data.TaggedEnum<{
-	DeleteFailed: object
+	Failed: object
 	DeleteSucceededButRefreshFailed: object
-	DeleteAndRefreshSucceeded: {
+	Succeeded: {
 		result: GetSortedProducts.DTO
 	}
 }>
@@ -31,16 +31,16 @@ export const Message = Data.taggedEnum<Message>()
 /////
 /////
 
-export class DeleteProductsByIdsAndRetrieve extends Effect.Service<DeleteProductsByIdsAndRetrieve>()(
+export class Service extends Effect.Service<Service>()(
 	`feature/product-management/usecases/delete-products-by-ids-and-retrieve`,
 	{
 		accessors: true,
 		effect: Effect.gen(function* () {
 			const {
 				deleteProductById: { resolver },
-			} = yield* ProductManager.ProductManager
+			} = yield* ProductManager.Service
 
-			const getAllProductsWithTotal = yield* GetSortedProducts.GetSortedProducts
+			const getAllProductsWithTotal = yield* GetSortedProducts.Service
 
 			return {
 				run: Effect.fn(`DeleteProductsByIds UC`)(function* (ids: DTO) {
@@ -64,7 +64,7 @@ export class DeleteProductsByIdsAndRetrieve extends Effect.Service<DeleteProduct
 
 					if (Either.isLeft(result)) {
 						yield* Effect.logError(`Could not delete the products`)
-						return Message.DeleteFailed()
+						return Message.Failed()
 					}
 
 					yield* Effect.logInfo(`Products deleted`)
@@ -72,14 +72,13 @@ export class DeleteProductsByIdsAndRetrieve extends Effect.Service<DeleteProduct
 					const result2 = yield* getAllProductsWithTotal.run
 
 					return GetSortedProducts.Message.$match(result2, {
-						FetchListFailed: () => Message.DeleteSucceededButRefreshFailed(),
-						FetchListSucceeded: ({ result }) =>
-							Message.DeleteAndRefreshSucceeded({ result }),
+						Failed: () => Message.DeleteSucceededButRefreshFailed(),
+						Succeeded: ({ result }) => Message.Succeeded({ result }),
 					})
 				}),
 			}
 		}),
 
-		dependencies: [GetSortedProducts.GetSortedProducts.Default],
+		dependencies: [GetSortedProducts.Service.Default],
 	},
 ) {}
