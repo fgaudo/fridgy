@@ -9,8 +9,8 @@ import * as NonEmptyTrimmedString from '@/core/non-empty-trimmed-string'
 class AddProductRequest extends Schema.TaggedRequest<AddProductRequest>()(
 	`AddProduct`,
 	{
-		failure: Schema.Void,
-		success: Schema.Void,
+		success: Schema.Boolean,
+		failure: Schema.Never,
 		payload: {
 			name: NonEmptyTrimmedString.Schema,
 			maybeExpirationDate: Schema.Option(Integer.Schema),

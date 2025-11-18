@@ -99,16 +99,32 @@ export const layerWithoutDependencies = Layer.effect(
 				),
 			},
 			addProduct: {
-				resolver: RequestResolver.fromEffect<
-					never,
-					ProductManager.AddProduct[`Request`]
+				resolver: RequestResolver.makeBatched<
+					ProductManager.AddProduct[`Request`],
+					never
 				>(
-					Effect.fn(function* (product) {
-						return yield* Effect.request(
-							SqliteCapacitorHelper.AddProduct.Request(product),
-							addProductResolver,
-						)
-					}),
+					Effect.forEach(
+						Effect.fn(
+							function* (request) {
+								const result = yield* Effect.either(
+									Effect.request(
+										SqliteCapacitorHelper.AddProduct.Request(request),
+										addProductResolver,
+									),
+								)
+
+								if (Either.isLeft(result)) {
+									return yield* Request.succeed(request, false)
+								}
+
+								return yield* Request.succeed(request, true)
+							},
+							(effect, request) =>
+								Effect.catchAllCause(effect, cause =>
+									Request.failCause(request, cause),
+								),
+						),
+					),
 				),
 			},
 		}

@@ -43,6 +43,7 @@ describe.concurrent(`Add product`, () => {
 				)
 
 				H.assertExitIsSuccess(exit)
+				expect(exit.value.every(x => x)).toBe(true)
 			}),
 		)
 	})
@@ -76,7 +77,9 @@ describe.concurrent(`Add product`, () => {
 					),
 				)
 
-				H.assertExitIsFailure(exit)
+				H.assertExitIsSuccess(exit)
+
+				expect(exit.value.every(x => !x)).toBe(true)
 			}),
 		)
 	})
