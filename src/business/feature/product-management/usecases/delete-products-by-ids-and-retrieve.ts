@@ -1,7 +1,7 @@
+import assert from 'assert'
+import * as Arr from 'effect/Array'
 import * as Data from 'effect/Data'
 import * as Effect from 'effect/Effect'
-import * as Either from 'effect/Either'
-import { pipe } from 'effect/Function'
 import * as Schema from 'effect/Schema'
 
 import * as NonEmptyHashSet from '@/core/non-empty-hash-set'
@@ -55,18 +55,28 @@ export class Service extends Effect.Service<Service>()(
 					yield* Effect.logInfo(`Requested to delete products`)
 					yield* Effect.logInfo(`Attempting to delete products...`)
 
-					const result = yield* pipe(
-						ids,
-						Effect.forEach(deleteProductById, { batching: true }),
-						Effect.either,
+					const result = yield* Effect.forEach(ids, deleteProductById, {
+						batching: true,
+					})
+
+					const number = Arr.reduce(result, 0, (acc, value) =>
+						value ? acc + 1 : acc,
 					)
 
-					if (Either.isLeft(result)) {
-						yield* Effect.logError(`Could not delete the products`)
+					assert(number <= result.length)
+					assert(number >= 0)
+
+					if (number <= 0) {
 						return Message.Failed()
 					}
 
-					yield* Effect.logInfo(`Products deleted`)
+					if (number < result.length) {
+						yield* Effect.logWarning(
+							`${(result.length - number).toString()} Products could not be deleted`,
+						)
+					}
+
+					yield* Effect.logInfo(`${number.toString()} Products deleted`)
 
 					const result2 = yield* getAllProductsWithTotal.run
 

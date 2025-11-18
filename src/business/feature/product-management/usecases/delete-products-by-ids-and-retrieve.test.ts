@@ -1,7 +1,6 @@
 import { describe, expect, layer } from '@effect/vitest'
 import * as Effect from 'effect/Effect'
 import * as Layer from 'effect/Layer'
-import * as Request from 'effect/Request'
 import * as RequestResolver from 'effect/RequestResolver'
 
 import * as H from '@/core/test-helpers.ts'
@@ -15,9 +14,7 @@ describe.concurrent(`Delete products by ids`, () => {
 		Layer.provide(Usecase.Service.DefaultWithoutDependencies, [
 			Layer.succeed(ProductManager.Service, {
 				deleteProductById: {
-					resolver: RequestResolver.fromEffect(() =>
-						Effect.fail(Request.fail(undefined)),
-					),
+					resolver: RequestResolver.fromEffect(() => Effect.succeed(false)),
 				},
 			} as unknown as ProductManager.Service[`Type`]),
 			Layer.succeed(
@@ -44,9 +41,7 @@ describe.concurrent(`Delete products by ids`, () => {
 		Layer.provide(Usecase.Service.DefaultWithoutDependencies, [
 			Layer.succeed(ProductManager.Service, {
 				deleteProductById: {
-					resolver: RequestResolver.fromEffect(() =>
-						Effect.succeed(Request.succeed(undefined)),
-					),
+					resolver: RequestResolver.fromEffect(() => Effect.succeed(true)),
 				},
 			} as unknown as ProductManager.Service[`Type`]),
 			Layer.succeed(GetSortedProducts.Service, {
@@ -75,9 +70,7 @@ describe.concurrent(`Delete products by ids`, () => {
 		Layer.provide(Usecase.Service.DefaultWithoutDependencies, [
 			Layer.succeed(ProductManager.Service, {
 				deleteProductById: {
-					resolver: RequestResolver.fromEffect(() =>
-						Effect.succeed(Request.succeed(undefined)),
-					),
+					resolver: RequestResolver.fromEffect(() => Effect.succeed(true)),
 				},
 			} as unknown as ProductManager.Service[`Type`]),
 			Layer.succeed(GetSortedProducts.Service, {
