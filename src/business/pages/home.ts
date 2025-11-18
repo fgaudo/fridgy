@@ -5,6 +5,7 @@ import * as Effect from 'effect/Effect'
 import { pipe } from 'effect/Function'
 import * as Match from 'effect/Match'
 import * as Option from 'effect/Option'
+import * as Request from 'effect/Request'
 import * as Schema from 'effect/Schema'
 
 import { type MapTags, mapFunctionReturn } from '@/core/helper.ts'
@@ -28,6 +29,12 @@ type Message = Data.TaggedEnum<{
 	FetchList: object
 	DeleteAndRefresh: { ids: NonEmptyHashSet.NonEmptyHashSet<string> }
 }>
+
+interface DeleteRequest extends Request.Request<string[]> {
+	id: string
+}
+
+const DeleteRequest = Request.of<DeleteRequest>()
 
 const Message = Data.taggedEnum<Message>()
 
@@ -276,6 +283,8 @@ const makeViewModel = Effect.gen(function* () {
 	return {
 		...viewModel,
 		dispatch: (m: Message) => viewModel.dispatch(m),
+		dispatchEffect: (effect: Effect.Effect<Message>) =>
+			effect.pipe(Effect.flatMap(m => viewModel.dispatch(m))),
 	}
 })
 

@@ -42,3 +42,11 @@ export function assertExitIsSuccess<A, E>(
 		assert(false, exit.cause.toString())
 	}
 }
+
+export function assertExitIsNotSuccess<A, E>(
+	exit: Exit.Exit<A, E>,
+): asserts exit is Exit.Success<A, E> {
+	if (Exit.isSuccess(exit)) {
+		assert(false, `Exit is a Success`)
+	}
+}

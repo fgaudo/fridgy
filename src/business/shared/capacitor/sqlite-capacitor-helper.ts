@@ -1,15 +1,57 @@
+import * as Cause from 'effect/Cause'
 import * as Data from 'effect/Data'
 import * as Effect from 'effect/Effect'
 import * as Either from 'effect/Either'
 import { pipe } from 'effect/Function'
 import * as Option from 'effect/Option'
+import * as Request from 'effect/Request'
+import * as RequestResolver from 'effect/RequestResolver'
 import * as Schema from 'effect/Schema'
 
 import * as SqliteCapacitorPlugin from './sqlite-capacitor-plugin.ts'
 
+/////
+/////
+
 class FetchingFailed extends Data.TaggedError(`FetchingFailed`) {}
 
 class InvalidDataReceived extends Data.TaggedError(`InvalidDataReceived`) {}
+
+/////
+/////
+
+interface AddProductRequest
+	extends Request.Request<void, Cause.UnknownException> {
+	name: string
+	creationDate: number
+	maybeExpirationDate: Option.Option<number>
+}
+
+export type AddProduct = {
+	Request: AddProductRequest
+}
+export const AddProduct = {
+	Request: Request.of<AddProductRequest>(),
+}
+
+/////
+/////
+
+interface DeleteProductRequest
+	extends Request.Request<void, Cause.UnknownException> {
+	id: number
+}
+
+export type DeleteProductById = {
+	Request: DeleteProductRequest
+}
+
+export const DeleteProductById = {
+	Request: Request.of<DeleteProductRequest>(),
+}
+
+/////
+/////
 
 export class Service extends Effect.Service<Service>()(
 	`shared/capacitor/sqlite-capacitor-helper`,
@@ -18,24 +60,42 @@ export class Service extends Effect.Service<Service>()(
 			const plugin = yield* SqliteCapacitorPlugin.Service
 
 			return {
-				addProduct: (p: {
-					name: string
-					creationDate: number
-					maybeExpirationDate: Option.Option<number>
-				}) =>
-					plugin.addProduct({
-						product: {
-							name: p.name,
-							creationDate: p.creationDate,
-							expirationDate: Option.match(p.maybeExpirationDate, {
-								onNone: () => undefined,
-								onSome: num => num,
-							}),
-						},
-					}),
+				addProduct: {
+					resolver: RequestResolver.fromEffect<never, AddProduct[`Request`]>(
+						Effect.fn(function* (request) {
+							return yield* plugin.addProduct({
+								product: {
+									...request,
+									expirationDate: Option.isSome(request.maybeExpirationDate)
+										? request.maybeExpirationDate.value
+										: undefined,
+								},
+							})
+						}),
+					),
+				},
 
-				deleteProductsByIds: (ids: number[]) =>
-					plugin.deleteProductsByIds({ ids }),
+				deleteProductById: {
+					resolver: RequestResolver.makeBatched<
+						DeleteProductById[`Request`],
+						never
+					>(
+						Effect.fn(
+							function* (requests) {
+								return yield* plugin.deleteProductsByIds({
+									ids: requests.map(({ id }) => id),
+								})
+							},
+							(effect, requests) =>
+								Effect.matchCauseEffect(effect, {
+									onFailure: err =>
+										Effect.forEach(requests, Request.failCause(err)),
+									onSuccess: () =>
+										Effect.forEach(requests, Request.succeed(undefined)),
+								}),
+						),
+					),
+				},
 
 				getAllProductsWithTotal: Effect.gen(function* () {
 					const result = yield* Effect.either(plugin.getAllProductsWithTotal)

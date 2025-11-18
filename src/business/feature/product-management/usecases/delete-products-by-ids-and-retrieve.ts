@@ -1,6 +1,7 @@
 import * as Data from 'effect/Data'
 import * as Effect from 'effect/Effect'
 import * as Either from 'effect/Either'
+import { pipe } from 'effect/Function'
 import * as Schema from 'effect/Schema'
 
 import * as NonEmptyHashSet from '@/core/non-empty-hash-set'
@@ -36,9 +37,16 @@ export class Service extends Effect.Service<Service>()(
 	{
 		accessors: true,
 		effect: Effect.gen(function* () {
-			const {
-				deleteProductById: { resolver },
-			} = yield* ProductManager.Service
+			const resolver = (yield* ProductManager.Service).deleteProductById
+				.resolver
+
+			const deleteProductById = (id: string) =>
+				Effect.request(
+					new ProductManager.DeleteProductById.Request({
+						id,
+					}),
+					resolver,
+				)
 
 			const getAllProductsWithTotal = yield* GetSortedProducts.Service
 
@@ -47,19 +55,10 @@ export class Service extends Effect.Service<Service>()(
 					yield* Effect.logInfo(`Requested to delete products`)
 					yield* Effect.logInfo(`Attempting to delete products...`)
 
-					const result = yield* Effect.either(
-						Effect.forEach(
-							ids,
-							Effect.fn(id =>
-								Effect.request(
-									new ProductManager.DeleteProductById.Request({
-										id,
-									}),
-									resolver,
-								),
-							),
-							{ batching: true },
-						),
+					const result = yield* pipe(
+						ids,
+						Effect.forEach(deleteProductById, { batching: true }),
+						Effect.either,
 					)
 
 					if (Either.isLeft(result)) {

@@ -33,8 +33,8 @@ export const AddProduct = {
 class DeleteProductByIdRequest extends Schema.TaggedRequest<DeleteProductByIdRequest>()(
 	`DeleteProductById`,
 	{
-		success: Schema.Void,
-		failure: Schema.Void,
+		success: Schema.Boolean,
+		failure: Schema.Never,
 		payload: { id: Schema.String },
 	},
 ) {}

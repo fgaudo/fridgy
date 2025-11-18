@@ -20,6 +20,7 @@ export type StateManager<S, M> = {
 	initState: S
 	changes: Stream.Stream<S>
 	dispatch: (m: M) => Effect.Effect<void>
+	dispatchEffect: (m: Effect.Effect<M>) => Effect.Effect<void>
 	dispose: Effect.Effect<void>
 }
 
@@ -115,6 +116,10 @@ export const makeStateManager = Effect.fn(function* <
 			yield* Effect.logDebug(`StateManager: Resources freed`)
 		}),
 		dispatch: Effect.fn(function* (m: M) {
+			yield* queue.offer(m)
+		}),
+		dispatchEffect: Effect.fn(function* (effect: Effect.Effect<M>) {
+			const m = yield* effect
 			yield* queue.offer(m)
 		}),
 	}

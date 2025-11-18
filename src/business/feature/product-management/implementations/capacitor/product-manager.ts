@@ -16,8 +16,11 @@ import * as ProductManager from '../../interfaces/product-manager.ts'
 export const layerWithoutDependencies = Layer.effect(
 	ProductManager.Service,
 	Effect.gen(function* () {
-		const { addProduct, getAllProductsWithTotal, deleteProductsByIds } =
-			yield* SqliteCapacitorHelper.Service
+		const {
+			addProduct: { resolver: addProductResolver },
+			getAllProductsWithTotal,
+			deleteProductById: { resolver: deleteResolver },
+		} = yield* SqliteCapacitorHelper.Service
 
 		return {
 			getSortedProducts: Effect.gen(function* () {
@@ -52,59 +55,46 @@ export const layerWithoutDependencies = Layer.effect(
 					ProductManager.DeleteProductById[`Request`],
 					never
 				>(
-					Effect.fn(
-						function* (requests) {
-							const ids = yield* pipe(
-								requests,
-								Arr.map(request => request.id),
-								Arr.map(
-									Effect.fn(function* (id) {
-										const parsed = yield* pipe(
-											Effect.try(() => JSON.parse(id) as unknown),
-											Effect.option,
-											Effect.map(
-												Option.filter(
-													id => typeof id === `number` && Integer.isInteger(id),
-												),
-											),
-										)
+					Effect.forEach(
+						Effect.fn(
+							function* (request) {
+								const parsed = yield* pipe(
+									Effect.try(() => JSON.parse(request.id) as unknown),
+									Effect.option,
+									Effect.map(
+										Option.filter(
+											id => typeof id === `number` && Integer.isInteger(id),
+										),
+									),
+								)
 
-										if (Option.isSome(parsed)) {
-											return parsed.value
-										}
+								if (Option.isNone(parsed)) {
+									yield* Effect.logWarning(
+										`Id has incorrect format. Skipping.`,
+									).pipe(Effect.annotateLogs({ id: request.id }))
+									return yield* Request.succeed(request, false)
+								}
 
-										yield* Effect.logWarning(
-											`Id has incorrect format. Skipping.`,
-										).pipe(Effect.annotateLogs({ id }))
+								const result = yield* Effect.either(
+									Effect.request(
+										SqliteCapacitorHelper.DeleteProductById.Request({
+											id: parsed.value,
+										}),
+										deleteResolver,
+									),
+								)
 
-										return yield* Effect.fail(undefined)
-									}),
+								if (Either.isLeft(result)) {
+									return yield* Request.succeed(request, false)
+								}
+
+								return yield* Request.succeed(request, true)
+							},
+							(effect, request) =>
+								Effect.catchAllCause(effect, cause =>
+									Request.failCause(request, cause),
 								),
-								Effect.allSuccesses,
-							)
-
-							yield* Effect.logDebug(
-								`About to delete ${ids.length.toString(10)} products`,
-							)
-
-							const result = yield* Effect.either(deleteProductsByIds(ids))
-
-							if (Either.isLeft(result)) {
-								yield* Effect.logError(result.left)
-								return yield* Effect.fail(undefined)
-							}
-
-							return result.right
-						},
-						(effect, requests) =>
-							Effect.matchCauseEffect(effect, {
-								onFailure: Effect.fn(err =>
-									Effect.forEach(requests, Request.failCause(err)),
-								),
-								onSuccess: Effect.fn(() =>
-									Effect.forEach(requests, Request.succeed(undefined)),
-								),
-							}),
+						),
 					),
 				),
 			},
@@ -114,14 +104,10 @@ export const layerWithoutDependencies = Layer.effect(
 					ProductManager.AddProduct[`Request`]
 				>(
 					Effect.fn(function* (product) {
-						const result = yield* Effect.either(addProduct(product))
-
-						if (Either.isLeft(result)) {
-							yield* Effect.logError(result.left)
-							return yield* Effect.fail(undefined)
-						}
-
-						yield* Effect.logDebug(`No errors adding the product`)
+						return yield* Effect.request(
+							SqliteCapacitorHelper.AddProduct.Request(product),
+							addProductResolver,
+						)
 					}),
 				),
 			},
