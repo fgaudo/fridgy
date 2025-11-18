@@ -76,18 +76,16 @@ export class Service extends Effect.Service<Service>()(
 						`Attempting to add product "${productData.name}"...`,
 					)
 
-					const result = yield* Effect.either(
-						Effect.request(
-							new ProductManager.AddProduct.Request({
-								name: product.value.name,
-								maybeExpirationDate: product.value.maybeExpirationDate,
-								creationDate: product.value.creationDate,
-							}),
-							resolver,
-						),
+					const result = yield* Effect.request(
+						new ProductManager.AddProduct.Request({
+							name: product.value.name,
+							maybeExpirationDate: product.value.maybeExpirationDate,
+							creationDate: product.value.creationDate,
+						}),
+						resolver,
 					)
 
-					if (Either.isLeft(result)) {
+					if (!result) {
 						return Message.Failed()
 					}
 

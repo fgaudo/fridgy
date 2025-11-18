@@ -5,8 +5,8 @@ import * as HashMap from 'effect/HashMap'
 import * as Layer from 'effect/Layer'
 import * as Option from 'effect/Option'
 import * as Order from 'effect/Order'
+import * as Random from 'effect/Random'
 import * as Ref from 'effect/Ref'
-import * as Request from 'effect/Request'
 import * as RequestResolver from 'effect/RequestResolver'
 
 import * as Config from '@/feature/product-management/implementations/mock/config.ts'
@@ -45,8 +45,14 @@ export const layerWithoutDependencies = Layer.effect(
 
 		return {
 			getSortedProducts: Effect.gen(function* () {
-				if (withErrors && Math.random() < 0.5)
+				const isAnError = withErrors && (yield* Random.nextRange(0, 1)) < 0.5
+
+				if (isAnError) {
+					yield* Effect.logInfo(
+						`Triggered fake error on mock GetSortedProducts`,
+					)
 					return yield* Effect.fail(undefined)
+				}
 
 				const map = yield* Ref.get(ref).pipe(Effect.map(({ map }) => map))
 
@@ -55,33 +61,29 @@ export const layerWithoutDependencies = Layer.effect(
 				return Arr.sort(products, ord)
 			}),
 			deleteProductById: {
-				resolver: RequestResolver.makeBatched<
-					ProductManager.DeleteProductById[`Request`],
-					never
+				resolver: RequestResolver.fromEffect<
+					never,
+					ProductManager.DeleteProductById[`Request`]
 				>(
-					Effect.fn(
-						function* (requests) {
-							if (withErrors && Math.random() < 0.5) {
-								return yield* Effect.fail(undefined)
-							}
-							yield* Effect.sleep(`200 millis`)
-							for (const request of requests) {
-								yield* Ref.update(ref, dbValues => ({
-									...dbValues,
-									map: HashMap.remove(dbValues.map, request.id),
-								}))
-							}
-						},
-						(effect, requests) =>
-							Effect.matchCauseEffect(effect, {
-								onFailure: Effect.fn(error =>
-									Effect.forEach(requests, Request.failCause(error)),
-								),
-								onSuccess: Effect.fn(() =>
-									Effect.forEach(requests, Request.succeed(undefined)),
-								),
-							}),
-					),
+					Effect.fn(function* (request) {
+						const isAnError =
+							withErrors && (yield* Random.nextRange(0, 1)) < 0.5
+
+						if (isAnError) {
+							yield* Effect.logInfo(
+								`Triggered fake error on mock DeleteProductId`,
+							)
+							return yield* Effect.succeed(false)
+						}
+						yield* Effect.sleep(`200 millis`)
+
+						yield* Ref.update(ref, dbValues => ({
+							...dbValues,
+							map: HashMap.remove(dbValues.map, request.id),
+						}))
+
+						return yield* Effect.succeed(true)
+					}),
 				),
 			},
 			addProduct: {
@@ -90,9 +92,12 @@ export const layerWithoutDependencies = Layer.effect(
 					ProductManager.AddProduct[`Request`]
 				>(
 					Effect.fn(function* (product) {
-						if (withErrors && Math.random() < 0.5) {
+						const isAnError =
+							withErrors && (yield* Random.nextRange(0, 1)) < 0.5
+
+						if (isAnError) {
 							yield* Effect.logInfo(`Triggered fake error on mock AddProduct`)
-							return yield* Effect.fail(undefined)
+							return yield* Effect.succeed(false)
 						}
 
 						yield* Effect.log(`Attempting to add product into mock database...`)
@@ -118,7 +123,7 @@ export const layerWithoutDependencies = Layer.effect(
 							`Added product ${product.name} into mock database`,
 						)
 
-						return yield* Effect.void
+						return yield* Effect.succeed(true)
 					}),
 				),
 			},

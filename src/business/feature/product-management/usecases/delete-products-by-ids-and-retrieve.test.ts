@@ -4,6 +4,7 @@ import * as Layer from 'effect/Layer'
 import * as RequestResolver from 'effect/RequestResolver'
 
 import * as H from '@/core/test-helpers.ts'
+import { makeTestLayer } from '@/core/testing.ts'
 
 import * as ProductManager from '../interfaces/product-manager.ts'
 import * as Usecase from './delete-products-by-ids-and-retrieve.ts'
@@ -12,15 +13,12 @@ import * as GetSortedProducts from './get-sorted-products.ts'
 describe.concurrent(`Delete products by ids`, () => {
 	layer(
 		Layer.provide(Usecase.Service.DefaultWithoutDependencies, [
-			Layer.succeed(ProductManager.Service, {
+			makeTestLayer(ProductManager.Service)({
 				deleteProductById: {
 					resolver: RequestResolver.fromEffect(() => Effect.succeed(false)),
 				},
-			} as unknown as ProductManager.Service[`Type`]),
-			Layer.succeed(
-				GetSortedProducts.Service,
-				{} as unknown as GetSortedProducts.Service,
-			),
+			}),
+			makeTestLayer(GetSortedProducts.Service)({}),
 		]),
 	)(({ effect }) => {
 		effect.prop(
@@ -39,16 +37,16 @@ describe.concurrent(`Delete products by ids`, () => {
 
 	layer(
 		Layer.provide(Usecase.Service.DefaultWithoutDependencies, [
-			Layer.succeed(ProductManager.Service, {
+			makeTestLayer(ProductManager.Service)({
 				deleteProductById: {
 					resolver: RequestResolver.fromEffect(() => Effect.succeed(true)),
 				},
-			} as unknown as ProductManager.Service[`Type`]),
-			Layer.succeed(GetSortedProducts.Service, {
+			}),
+			makeTestLayer(GetSortedProducts.Service)({
 				run: Effect.succeed(
 					GetSortedProducts.Message.Succeeded({ result: [] }),
 				),
-			} as unknown as GetSortedProducts.Service),
+			}),
 		]),
 	)(({ effect }) => {
 		effect.prop(
@@ -68,14 +66,14 @@ describe.concurrent(`Delete products by ids`, () => {
 
 	layer(
 		Layer.provide(Usecase.Service.DefaultWithoutDependencies, [
-			Layer.succeed(ProductManager.Service, {
+			makeTestLayer(ProductManager.Service)({
 				deleteProductById: {
 					resolver: RequestResolver.fromEffect(() => Effect.succeed(true)),
 				},
-			} as unknown as ProductManager.Service[`Type`]),
-			Layer.succeed(GetSortedProducts.Service, {
+			}),
+			makeTestLayer(GetSortedProducts.Service)({
 				run: Effect.succeed(GetSortedProducts.Message.Failed()),
-			} as unknown as GetSortedProducts.Service),
+			}),
 		]),
 	)(({ effect }) => {
 		effect.prop(

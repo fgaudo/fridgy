@@ -8,6 +8,9 @@ import * as Request from 'effect/Request'
 import * as RequestResolver from 'effect/RequestResolver'
 import * as Schema from 'effect/Schema'
 
+import * as Integer from '@/core/integer/integer.ts'
+import * as NonEmptyTrimmedString from '@/core/non-empty-trimmed-string.ts'
+
 import * as SqliteCapacitorPlugin from './sqlite-capacitor-plugin.ts'
 
 /////
@@ -16,6 +19,26 @@ import * as SqliteCapacitorPlugin from './sqlite-capacitor-plugin.ts'
 class FetchingFailed extends Data.TaggedError(`FetchingFailed`) {}
 
 class InvalidDataReceived extends Data.TaggedError(`InvalidDataReceived`) {}
+
+const GetAllProductsWithTotalDTO = Schema.Array(
+	Schema.Struct({
+		maybeId: Schema.Option(Schema.Number),
+		maybeName: Schema.Option(NonEmptyTrimmedString.Schema),
+		maybeExpirationDate: Schema.Option(Integer.Schema),
+		maybeCreationDate: Schema.Option(Integer.Schema),
+	}),
+)
+
+export type GetAllProductsWithTotal = {
+	FetchingFailed: FetchingFailed
+	InvalidDataReceived: InvalidDataReceived
+	DTO: Schema.Schema.Type<typeof GetAllProductsWithTotalDTO>
+}
+export const GetAllProductsWithTotal = {
+	FetchingFailed: FetchingFailed,
+	InvalidDataReceived: InvalidDataReceived,
+	DTO: GetAllProductsWithTotalDTO,
+}
 
 /////
 /////

@@ -3,11 +3,11 @@ import * as Deferred from 'effect/Deferred'
 import * as Effect from 'effect/Effect'
 import * as Layer from 'effect/Layer'
 import * as Option from 'effect/Option'
-import * as Request from 'effect/Request'
 import * as RequestResolver from 'effect/RequestResolver'
 import * as TestClock from 'effect/TestClock'
 
 import * as H from '@/core/test-helpers.ts'
+import { makeTestLayer } from '@/core/testing.ts'
 
 import * as ProductService from '../domain/entities/product.ts'
 import * as ProductManager from '../interfaces/product-manager.ts'
@@ -23,17 +23,17 @@ describe.concurrent(`Add product`, () => {
 
 			const mockLayer = Layer.provide(
 				AddProduct.Service.Default,
-				Layer.succeed(ProductManager.Service, {
+				makeTestLayer(ProductManager.Service)({
 					addProduct: {
 						resolver: RequestResolver.fromEffect(
 							Effect.fn(function* (req) {
 								yield* Deferred.succeed(observed, req.creationDate)
 
-								return Request.succeed(undefined)
+								return yield* Effect.succeed(true)
 							}),
 						),
 					},
-				} as ProductManager.Service[`Type`]),
+				}),
 			)
 
 			const run = Effect.provide(
@@ -57,13 +57,13 @@ describe.concurrent(`Add product`, () => {
 	layer(
 		Layer.provide(
 			Usecase.Service.Default,
-			Layer.succeed(ProductManager.Service, {
+			makeTestLayer(ProductManager.Service)({
 				addProduct: {
 					resolver: RequestResolver.fromEffect(
-						Effect.fn(() => Effect.fail(Request.fail(undefined))),
+						Effect.fn(() => Effect.succeed(false)),
 					),
 				},
-			} as ProductManager.Service[`Type`]),
+			}),
 		),
 	)(({ effect }) => {
 		effect.prop(
@@ -87,17 +87,16 @@ describe.concurrent(`Add product`, () => {
 
 	layer(
 		Layer.provide(Usecase.Service.DefaultWithoutDependencies, [
-			Layer.succeed(ProductManager.Service, {
+			makeTestLayer(ProductManager.Service)({
 				addProduct: {
 					resolver: RequestResolver.fromEffect(
-						Effect.fn(() => Effect.fail(Request.fail(undefined))),
+						Effect.fn(() => Effect.succeed(false)),
 					),
 				},
-			} as ProductManager.Service[`Type`]),
-
-			Layer.succeed(ProductService.Service, {
+			}),
+			makeTestLayer(ProductService.Service)({
 				makeProduct: () => Option.none(),
-			} as unknown as ProductService.Service),
+			}),
 		]),
 	)(({ effect }) => {
 		effect.prop(

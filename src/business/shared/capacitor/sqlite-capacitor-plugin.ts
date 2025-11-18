@@ -54,6 +54,10 @@ export const GetAllProductsWithTotalDTO = Schema.Struct({
 	),
 })
 
+export type GetAllProductsWithTotalDTO = Schema.Schema.Type<
+	typeof GetAllProductsWithTotalDTO
+>
+
 export class Service extends Effect.Service<Service>()(
 	`shared/capacitor/sqlite-capacitor-plugin`,
 	{
