@@ -6,12 +6,11 @@ import * as FiberId from 'effect/FiberId'
 import { pipe } from 'effect/Function'
 import * as Match from 'effect/Match'
 import * as Option from 'effect/Option'
-import * as Request from 'effect/Request'
 import * as Schedule from 'effect/Schedule'
 import * as Schema from 'effect/Schema'
 import * as Stream from 'effect/Stream'
 
-import { type MapTags, mapFunctionReturn } from '@/core/helper.ts'
+import * as H from '@/core/helper.ts'
 import * as Integer from '@/core/integer/integer.ts'
 import * as NonEmptyHashSet from '@/core/non-empty-hash-set.ts'
 import * as NonEmptyTrimmedString from '@/core/non-empty-trimmed-string.ts'
@@ -24,16 +23,10 @@ import {
 } from '@/feature/product-management/index.ts'
 
 type Message = Data.TaggedEnum<{
-	FetchList: object
-	DeleteAndRefresh: { ids: NonEmptyHashSet.NonEmptyHashSet<string> }
-	UpdateCurrentDate: { currentDate: Integer.Integer }
+	StartFetchList: object
+	StartDeleteAndRefresh: { ids: NonEmptyHashSet.NonEmptyHashSet<string> }
+	StartUpdateCurrentTime: object
 }>
-
-interface DeleteRequest extends Request.Request<string[]> {
-	id: string
-}
-
-const DeleteRequest = Request.of<DeleteRequest>()
 
 const Message = Data.taggedEnum<Message>()
 
@@ -105,19 +98,20 @@ type State = Schema.Schema.Type<typeof State>
 type _InternalMessage = Data.TaggedEnum<{
 	StartScheduler: object
 	SchedulerStarted: { id: FiberId.FiberId }
+	UpdateCurrentTime: { currentDate: Integer.Integer }
 }>
 
 type InternalMessage =
 	| Message
 	| _InternalMessage
-	| MapTags<
+	| H.MapTags<
 			UC.GetSortedProducts.Message,
 			{
 				Failed: `FetchListFailed`
 				Succeeded: `FetchListSucceeded`
 			}
 	  >
-	| MapTags<
+	| H.MapTags<
 			UC.DeleteProductsByIdsAndRetrieve.Message,
 			{
 				Succeeded: `DeleteAndRefreshSucceeded`
@@ -193,7 +187,7 @@ const mapToViewModels = (entries: UC.GetSortedProducts.DTO, state: State) => {
 	)
 }
 
-const deleteProductsByIds = mapFunctionReturn(
+const deleteProductsByIds = H.mapFunctionReturn(
 	UC.DeleteProductsByIdsAndRetrieve.Service.run,
 	Effect.map(
 		UC.DeleteProductsByIdsAndRetrieve.Message.$match({
@@ -222,16 +216,18 @@ const matcher = Match.typeTags<
 >()
 
 const update = matcher({
-	FetchList: () =>
+	StartFetchList: () =>
 		SM.modify(draft => {
 			draft.isBusy = true
 
 			return [Operation.command({ effect: fetchList })]
 		}),
+
 	FetchListFailed: () =>
 		SM.modify(draft => {
 			draft.isBusy = false
 		}),
+
 	FetchListSucceeded:
 		({ result }) =>
 		state => {
@@ -240,7 +236,8 @@ const update = matcher({
 				draft.maybeProducts = mapToViewModels(result, state)
 			})
 		},
-	DeleteAndRefresh:
+
+	StartDeleteAndRefresh:
 		({ ids }) =>
 		state => {
 			if (state.isBusy) {
@@ -253,6 +250,7 @@ const update = matcher({
 				return [Operation.command({ effect: deleteProductsByIds(ids) })]
 			})
 		},
+
 	DeleteAndRefreshSucceeded:
 		({ result }) =>
 		state =>
@@ -261,40 +259,70 @@ const update = matcher({
 
 				draft.maybeProducts = mapToViewModels(result, state)
 			}),
+
 	DeleteFailed: () =>
 		SM.modify(draft => {
 			draft.isBusy = false
 		}),
+
 	DeleteSucceededButRefreshFailed: () =>
 		SM.modify(draft => {
 			draft.isBusy = false
 			draft.maybeProducts = Option.none<Arr.NonEmptyArray<ProductViewModel>>()
 		}),
+
 	StartScheduler: () =>
 		SM.operations([
 			Operation.subscription({
 				init: id => InternalMessage.SchedulerStarted({ id }),
 				stream: () =>
 					pipe(
-						Stream.fromSchedule(Schedule.fixed(`20 seconds`)),
-						Stream.mapEffect(
-							Effect.fn(function* () {
-								const currentDate = Integer.unsafeFromNumber(
-									yield* Clock.currentTimeMillis,
-								)
-								return InternalMessage.UpdateCurrentDate({ currentDate })
-							}),
+						Schedule.fixed(`20 seconds`),
+						Stream.fromSchedule,
+						Stream.mapEffect(() => Clock.currentTimeMillis),
+						Stream.filterMap(Integer.fromNumber),
+						Stream.map(currentDate =>
+							InternalMessage.UpdateCurrentTime({ currentDate }),
 						),
 					),
 			}),
 		]),
+
 	SchedulerStarted: ({ id }) =>
 		SM.modify(draft => {
 			draft.maybeScheduler = Option.some(id)
 		}),
-	UpdateCurrentDate: ({ currentDate }) =>
+
+	UpdateCurrentTime: ({ currentDate }) =>
 		SM.modify(draft => {
 			draft.currentDate = currentDate
+		}),
+
+	StartUpdateCurrentTime: () => state =>
+		SM.modify(state, draft => {
+			const updateTime = Operation.command({
+				effect: pipe(
+					Clock.currentTimeMillis,
+					Effect.map(Integer.unsafeFromNumber),
+					Effect.map(date =>
+						InternalMessage.UpdateCurrentTime({ currentDate: date }),
+					),
+				),
+			})
+
+			if (Option.isNone(state.maybeScheduler)) {
+				return [updateTime]
+			}
+
+			draft.maybeScheduler = Option.none()
+
+			return [
+				Operation.cancel({ id: state.maybeScheduler.value }),
+				Operation.command({
+					effect: Effect.succeed(InternalMessage.StartScheduler()),
+				}),
+				updateTime,
+			]
 		}),
 })
 

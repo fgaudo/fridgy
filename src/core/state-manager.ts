@@ -246,9 +246,9 @@ export const noOp: NoOpType = Object.assign(
 )
 
 export const operations = Function.dual<
-	<M, R>(
-		operations: Arr.NonEmptyArray<O>,
-	) => <S>(state: S) => {
+	<S, M, R>(
+		operations: Arr.NonEmptyArray<Operation<S, M, R>>,
+	) => (state: S) => {
 		state: S
 		operations: Operation<S, M, R>[]
 	},

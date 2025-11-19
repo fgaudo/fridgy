@@ -4,13 +4,12 @@ import * as Match from 'effect/Match'
 import * as Option from 'effect/Option'
 import * as Schema from 'effect/Schema'
 
-import { type MapTags, mapFunctionReturn } from '@/core/helper.ts'
+import * as H from '@/core/helper.ts'
 import * as Integer from '@/core/integer/integer.ts'
 import * as NonEmptyTrimmedString from '@/core/non-empty-trimmed-string.ts'
 import * as SM from '@/core/state-manager.ts'
 
 import { UseCasesWithoutDependencies as UC } from '@/feature/product-management/index.ts'
-import { Message as AddProductMessage } from '@/feature/product-management/usecases/add-product.ts'
 
 /////
 /////
@@ -26,8 +25,8 @@ const Message = Data.taggedEnum<Message>()
 
 type InternalMessage =
 	| Message
-	| MapTags<
-			AddProductMessage,
+	| H.MapTags<
+			UC.AddProduct.Message,
 			{ Failed: `AddProductFailed`; Succeeded: `AddProductSucceeded` }
 	  >
 
@@ -59,10 +58,10 @@ type State = Schema.Schema.Type<typeof State>
 /////
 /////
 
-const addProduct = mapFunctionReturn(
+const addProduct = H.mapFunctionReturn(
 	UC.AddProduct.Service.run,
 	Effect.map(
-		AddProductMessage.$match({
+		UC.AddProduct.Message.$match({
 			Failed: () => InternalMessage.AddProductFailed(),
 			Succeeded: () => InternalMessage.AddProductSucceeded(),
 		}),
