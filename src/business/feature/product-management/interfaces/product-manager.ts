@@ -1,6 +1,6 @@
 import * as Context from 'effect/Context'
-import * as Effect from 'effect/Effect'
-import { type RequestResolver } from 'effect/RequestResolver'
+import type * as Effect from 'effect/Effect'
+import type { RequestResolver } from 'effect/RequestResolver'
 import * as Schema from 'effect/Schema'
 
 import * as Integer from '@/core/integer/integer.ts'
@@ -9,13 +9,13 @@ import * as NonEmptyTrimmedString from '@/core/non-empty-trimmed-string'
 class AddProductRequest extends Schema.TaggedRequest<AddProductRequest>()(
 	`AddProduct`,
 	{
-		success: Schema.Boolean,
 		failure: Schema.Never,
 		payload: {
-			name: NonEmptyTrimmedString.Schema,
-			maybeExpirationDate: Schema.Option(Integer.Schema),
 			creationDate: Integer.Schema,
+			maybeExpirationDate: Schema.Option(Integer.Schema),
+			name: NonEmptyTrimmedString.Schema,
 		},
+		success: Schema.Boolean,
 	},
 ) {}
 
@@ -33,9 +33,9 @@ export const AddProduct = {
 class DeleteProductByIdRequest extends Schema.TaggedRequest<DeleteProductByIdRequest>()(
 	`DeleteProductById`,
 	{
-		success: Schema.Boolean,
 		failure: Schema.Never,
 		payload: { id: Schema.String },
+		success: Schema.Boolean,
 	},
 ) {}
 
@@ -53,10 +53,10 @@ export const DeleteProductById = {
 export const GetSortedProducts = {
 	DTO: Schema.Array(
 		Schema.Struct({
+			maybeCreationDate: Schema.Option(Integer.Schema),
+			maybeExpirationDate: Schema.Option(Integer.Schema),
 			maybeId: Schema.Option(Schema.String),
 			maybeName: Schema.Option(NonEmptyTrimmedString.Schema),
-			maybeExpirationDate: Schema.Option(Integer.Schema),
-			maybeCreationDate: Schema.Option(Integer.Schema),
 		}),
 	),
 }

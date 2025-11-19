@@ -1,6 +1,6 @@
 import * as Brand from 'effect/Brand'
 import * as Effect from 'effect/Effect'
-import * as Option from 'effect/Option'
+import type * as Option from 'effect/Option'
 import * as _Schema from 'effect/Schema'
 
 import * as Integer from '@/core/integer/integer.ts'
@@ -23,9 +23,9 @@ export const Product = Brand.refined<Product>(
 
 export const Schema = _Schema.fromBrand(Product)(
 	_Schema.Struct({
-		name: NonEmptyTrimmedString.Schema,
-		maybeExpirationDate: _Schema.Option(Integer.Schema),
 		creationDate: Integer.Schema,
+		maybeExpirationDate: _Schema.Option(Integer.Schema),
+		name: NonEmptyTrimmedString.Schema,
 	}),
 )
 
@@ -39,9 +39,9 @@ export class Service extends Effect.Service<Service>()(
 				creationDate: Integer.Integer
 			}) =>
 				Product.option({
-					name: p.name,
-					maybeExpirationDate: p.maybeExpirationDate,
 					creationDate: p.creationDate,
+					maybeExpirationDate: p.maybeExpirationDate,
+					name: p.name,
 				}),
 		},
 	},

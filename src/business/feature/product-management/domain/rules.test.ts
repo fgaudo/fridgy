@@ -25,7 +25,7 @@ describe.concurrent(`isProductStale`, () => {
 			}),
 		],
 		([{ expirationDate, currentDate }]) => {
-			const isStale = isProductStale({ expirationDate, currentDate })
+			const isStale = isProductStale({ currentDate, expirationDate })
 
 			expect(isStale).toStrictEqual(true)
 		},
@@ -51,7 +51,7 @@ describe.concurrent(`isProductStale`, () => {
 				),
 		],
 		([{ expirationDate, currentDate }]) => {
-			const isStale = isProductStale({ expirationDate, currentDate })
+			const isStale = isProductStale({ currentDate, expirationDate })
 
 			expect(isStale).toStrictEqual(false)
 		},
@@ -73,17 +73,17 @@ describe.concurrent(`computeFreshness`, () => {
 				)
 
 				return {
+					creationDate: Integer.unsafeFromNumber(creationDate),
 					currentDate: Integer.unsafeFromNumber(currentDate),
 					expirationDate: Integer.unsafeFromNumber(expirationDate),
-					creationDate: Integer.unsafeFromNumber(creationDate),
 				}
 			}),
 		],
 		([{ expirationDate, currentDate, creationDate }]) => {
 			const freshness = computeFreshness({
-				expirationDate,
-				currentDate,
 				creationDate,
+				currentDate,
+				expirationDate,
 			})
 
 			expect(freshness).toStrictEqual(0)
@@ -105,9 +105,9 @@ describe.concurrent(`computeFreshness`, () => {
 					)
 
 					return {
+						creationDate: Integer.unsafeFromNumber(creationDate),
 						currentDate: Integer.unsafeFromNumber(currentDate),
 						expirationDate: Integer.unsafeFromNumber(expirationDate),
-						creationDate: Integer.unsafeFromNumber(creationDate),
 					}
 				})
 				.filter(
@@ -116,9 +116,9 @@ describe.concurrent(`computeFreshness`, () => {
 		],
 		([{ expirationDate, currentDate, creationDate }]) => {
 			const freshness = computeFreshness({
-				expirationDate,
-				currentDate,
 				creationDate,
+				currentDate,
+				expirationDate,
 			})
 
 			expect(freshness).toStrictEqual(0)
@@ -140,9 +140,9 @@ describe.concurrent(`computeFreshness`, () => {
 					)
 
 					return {
+						creationDate,
 						currentDate,
 						expirationDate,
-						creationDate,
 					}
 				})
 				.filter(
@@ -152,16 +152,16 @@ describe.concurrent(`computeFreshness`, () => {
 						currentDate !== creationDate,
 				)
 				.map(({ expirationDate, currentDate, creationDate }) => ({
-					expirationDate: Integer.unsafeFromNumber(expirationDate),
-					currentDate: Integer.unsafeFromNumber(currentDate),
 					creationDate: Integer.unsafeFromNumber(creationDate),
+					currentDate: Integer.unsafeFromNumber(currentDate),
+					expirationDate: Integer.unsafeFromNumber(expirationDate),
 				})),
 		],
 		([{ expirationDate, currentDate, creationDate }]) => {
 			const freshness = computeFreshness({
-				expirationDate,
-				currentDate,
 				creationDate,
+				currentDate,
+				expirationDate,
 			})
 
 			expect(freshness).toStrictEqual(1)
@@ -183,9 +183,9 @@ describe.concurrent(`computeFreshness`, () => {
 					)
 
 					return {
+						creationDate,
 						currentDate,
 						expirationDate,
-						creationDate,
 					}
 				})
 				.filter(
@@ -193,16 +193,16 @@ describe.concurrent(`computeFreshness`, () => {
 						expirationDate !== currentDate && expirationDate !== creationDate,
 				)
 				.map(({ expirationDate, currentDate, creationDate }) => ({
-					expirationDate: Integer.unsafeFromNumber(expirationDate),
-					currentDate: Integer.unsafeFromNumber(currentDate),
 					creationDate: Integer.unsafeFromNumber(creationDate),
+					currentDate: Integer.unsafeFromNumber(currentDate),
+					expirationDate: Integer.unsafeFromNumber(expirationDate),
 				})),
 		],
 		([{ expirationDate, currentDate, creationDate }]) => {
 			const freshness = computeFreshness({
-				expirationDate,
-				currentDate,
 				creationDate,
+				currentDate,
+				expirationDate,
 			})
 
 			expect(freshness).toStrictEqual(

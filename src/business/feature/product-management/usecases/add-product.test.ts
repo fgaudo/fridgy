@@ -73,8 +73,8 @@ describe.concurrent(`Add product`, () => {
 				const { run } = yield* Usecase.Service
 				const exit = yield* Effect.exit(
 					run({
-						name,
 						maybeExpirationDate,
+						name,
 					}),
 				)
 
@@ -106,8 +106,8 @@ describe.concurrent(`Add product`, () => {
 				const { run } = yield* Usecase.Service
 				const exit = yield* Effect.exit(
 					run({
-						name,
 						maybeExpirationDate,
+						name,
 					}),
 				)
 

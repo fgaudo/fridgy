@@ -1,27 +1,27 @@
 {
-	"extends": "./.svelte-kit/tsconfig.json",
 	"compilerOptions": {
-		"plugins": [
-			{ "name": "typescript-svelte-plugin" },
-			{
-				"name": "@effect/language-service",
-				"topLevelNamedReexports": "follow", 
-				"namespaceImportPackages": ["effect", "effect/*"],
-			}
-		],
+		"allowImportingTsExtensions": true,
 		"allowJs": true,
 		"checkJs": true,
 		"esModuleInterop": true,
 		"forceConsistentCasingInFileNames": true,
+		"moduleResolution": "bundler",
+		"noErrorTruncation": true,
+		"plugins": [
+			{ "name": "typescript-svelte-plugin" },
+			{
+				"name": "@effect/language-service",
+				"namespaceImportPackages": ["effect", "effect/*"],
+				"topLevelNamedReexports": "follow"
+			}
+		],
 		"resolveJsonModule": true,
 		"skipLibCheck": true,
-		"verbatimModuleSyntax": true,
-		"allowImportingTsExtensions": true,
 		"sourceMap": true,
 		"strict": true,
-		"moduleResolution": "bundler",
-		"noErrorTruncation" : true
-	}
+		"verbatimModuleSyntax": true
+	},
+	"extends": "./.svelte-kit/tsconfig.json"
 	// Path aliases are handled by https://svelte.dev/docs/kit/configuration#alias
 	// except $lib which is handled by https://svelte.dev/docs/kit/configuration#files
 	//

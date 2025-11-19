@@ -1,21 +1,21 @@
-import * as Arr from 'effect/Array'
+import type * as Arr from 'effect/Array'
 import * as Data from 'effect/Data'
 import * as Deferred from 'effect/Deferred'
 import * as Effect from 'effect/Effect'
 import * as Exit from 'effect/Exit'
 import * as Fiber from 'effect/Fiber'
-import * as FiberId from 'effect/FiberId'
+import type * as FiberId from 'effect/FiberId'
+import * as Func from 'effect/Function'
 import { pipe } from 'effect/Function'
-import * as Function from 'effect/Function'
 import * as HashMap from 'effect/HashMap'
 import * as Option from 'effect/Option'
 import * as Queue from 'effect/Queue'
 import * as Ref from 'effect/Ref'
-import * as Scope from 'effect/Scope'
+import type * as Scope from 'effect/Scope'
 import * as Stream from 'effect/Stream'
 import * as SubscriptionRef from 'effect/SubscriptionRef'
 import * as SynchronizedRef from 'effect/SynchronizedRef'
-import { type Draft, createDraft, finishDraft } from 'immer'
+import { createDraft, type Draft, finishDraft } from 'immer'
 
 type Operation<S, M, R> = Data.TaggedEnum<{
 	cancel: { id: FiberId.FiberId }
@@ -196,7 +196,7 @@ export const makeStateManager = Effect.fn(function* <
 	}
 }, Effect.scoped)
 
-export const modify = Function.dual<
+export const modify = Func.dual<
 	<S extends object, M, R>(
 		p: (draft: Draft<S>) => Arr.NonEmptyArray<Operation<S, M, R>> | void,
 	) => (state: S) => {
@@ -213,7 +213,6 @@ export const modify = Function.dual<
 >(2, (state, p) => {
 	const draft = createDraft(state)
 
-	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 	const operations = p(draft) ?? []
 
 	return {
@@ -245,7 +244,7 @@ export const noOp: NoOpType = Object.assign(
 	},
 )
 
-export const operations = Function.dual<
+export const operations = Func.dual<
 	<S, M, R>(
 		operations: Arr.NonEmptyArray<Operation<S, M, R>>,
 	) => (state: S) => {

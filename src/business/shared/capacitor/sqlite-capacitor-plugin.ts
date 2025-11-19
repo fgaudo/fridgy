@@ -22,14 +22,10 @@ interface _SqliteCapacitorPlugin {
 }
 
 export const GetAllProductsWithTotalDTO = Schema.Struct({
-	total: Schema.Number,
 	products: Schema.Array(
 		Schema.Struct({
-			maybeId: Schema.OptionFromUndefinedOr(Schema.Int).annotations({
-				decodingFallback: H.fallback(Option.none()),
-			}),
-			maybeName: Schema.OptionFromUndefinedOr(
-				NonEmptyTrimmedString.Schema,
+			maybeCreationDate: Schema.OptionFromUndefinedOr(
+				Integer.Schema,
 			).annotations({
 				decodingFallback: H.fallback(Option.none()),
 			}),
@@ -38,20 +34,24 @@ export const GetAllProductsWithTotalDTO = Schema.Struct({
 			).annotations({
 				decodingFallback: H.fallback(Option.none()),
 			}),
-			maybeCreationDate: Schema.OptionFromUndefinedOr(
-				Integer.Schema,
+			maybeId: Schema.OptionFromUndefinedOr(Schema.Int).annotations({
+				decodingFallback: H.fallback(Option.none()),
+			}),
+			maybeName: Schema.OptionFromUndefinedOr(
+				NonEmptyTrimmedString.Schema,
 			).annotations({
 				decodingFallback: H.fallback(Option.none()),
 			}),
 		}).annotations({
 			decodingFallback: H.fallback({
+				maybeCreationDate: Option.none(),
+				maybeExpirationDate: Option.none(),
 				maybeId: Option.none(),
 				maybeName: Option.none(),
-				maybeExpirationDate: Option.none(),
-				maybeCreationDate: Option.none(),
 			}),
 		}),
 	),
+	total: Schema.Number,
 })
 
 export type GetAllProductsWithTotalDTO = Schema.Schema.Type<

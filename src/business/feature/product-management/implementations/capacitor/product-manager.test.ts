@@ -10,10 +10,9 @@ import * as Schema from 'effect/Schema'
 import * as H from '@/core/test-helpers.ts'
 import { makeTestLayer } from '@/core/testing.ts'
 
-import * as SqliteCapacitorHelper from '@/shared/capacitor/sqlite-capacitor-helper.ts'
-
 import * as ProductManager from '../../interfaces/product-manager.ts'
 import * as CapacitorProductManager from './product-manager.ts'
+import * as SqliteCapacitorHelper from '@/shared/capacitor/sqlite-capacitor-helper.ts'
 
 describe.concurrent(`Add product`, () => {
 	layer(
