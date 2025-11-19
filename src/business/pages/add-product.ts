@@ -74,7 +74,7 @@ const matcher = Match.typeTags<
 	ReturnType<SM.Update<State, InternalMessage, UC.All>>
 >()
 
-const Operation = SM.Operation<InternalMessage, UC.All>()
+const Operation = SM.Operation<State, InternalMessage, UC.All>()
 
 const update = matcher({
 	AddProduct:

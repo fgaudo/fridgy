@@ -4,27 +4,33 @@ import * as Deferred from 'effect/Deferred'
 import * as Effect from 'effect/Effect'
 import * as Exit from 'effect/Exit'
 import * as Fiber from 'effect/Fiber'
+import * as FiberId from 'effect/FiberId'
 import { pipe } from 'effect/Function'
 import * as Function from 'effect/Function'
+import * as HashMap from 'effect/HashMap'
+import * as Option from 'effect/Option'
 import * as Queue from 'effect/Queue'
+import * as Ref from 'effect/Ref'
 import * as Scope from 'effect/Scope'
 import * as Stream from 'effect/Stream'
 import * as SubscriptionRef from 'effect/SubscriptionRef'
+import * as SynchronizedRef from 'effect/SynchronizedRef'
 import { type Draft, createDraft, finishDraft } from 'immer'
 
-type Operation<M, R> = Data.TaggedEnum<{
+type Operation<S, M, R> = Data.TaggedEnum<{
+	cancel: { id: FiberId.FiberId }
 	command: { effect: Effect.Effect<M, never, R> }
 	subscription: {
-		init?: (fiber: Fiber.RuntimeFiber<void>) => M
-		stream: Stream.Stream<M, never, R>
+		init?: (id: FiberId.FiberId, state: S) => M
+		stream: (state: Effect.Effect<S>) => Stream.Stream<M, never, R>
 	}
 }>
 
-export const Operation = <M, R>() => Data.taggedEnum<Operation<M, R>>()
+export const Operation = <S, M, R>() => Data.taggedEnum<Operation<S, M, R>>()
 
 export type Update<S, M, R> = (message: M) => (state: S) => {
 	state: S
-	operations: Operation<M, R>[]
+	operations: Operation<S, M, R>[]
 }
 
 export type StateManager<S, M> = {
@@ -50,6 +56,10 @@ export const makeStateManager = Effect.fn(function* <
 	const ref = yield* SubscriptionRef.make(initState)
 	const queue = yield* Queue.unbounded<M>()
 
+	const subscriptions = yield* SynchronizedRef.make(
+		HashMap.empty<FiberId.FiberId, Fiber.RuntimeFiber<void>>(),
+	)
+
 	yield* Effect.addFinalizer(
 		Effect.fn(function* (exit) {
 			if (Exit.isFailure(exit)) {
@@ -59,7 +69,7 @@ export const makeStateManager = Effect.fn(function* <
 		}),
 	)
 
-	const Op = Operation<M, R>()
+	const Op = Operation<S, M, R>()
 
 	const updatesFiber = yield* pipe(
 		Effect.gen(function* () {
@@ -72,15 +82,31 @@ export const makeStateManager = Effect.fn(function* <
 				{ message },
 			)
 
-			const change = update(message)
+			const transition = update(message)
 
 			const operations = yield* SubscriptionRef.modify(ref, s => {
-				const { state, operations } = change(s)
+				const { state, operations } = transition(s)
 				return [operations, state]
 			})
 
 			for (const operation of operations) {
 				yield* Op.$match(operation, {
+					cancel: Effect.fn(function* ({ id }) {
+						yield* SynchronizedRef.updateEffect(
+							subscriptions,
+							Effect.fn(function* (hm) {
+								const maybeFiber = HashMap.get(hm, id)
+
+								if (Option.isNone(maybeFiber)) {
+									return hm
+								}
+
+								yield* Fiber.interrupt(maybeFiber.value)
+
+								return HashMap.remove(hm, id)
+							}),
+						)
+					}),
 					command: Effect.fn(
 						function* ({ effect }) {
 							const message = yield* effect
@@ -100,7 +126,7 @@ export const makeStateManager = Effect.fn(function* <
 						const deferred = yield* Deferred.make()
 
 						const fiber = yield* pipe(
-							stream,
+							stream(ref.get),
 							Stream.onStart(Deferred.await(deferred)),
 							Stream.catchAllCause(err =>
 								fatalMessage
@@ -116,12 +142,20 @@ export const makeStateManager = Effect.fn(function* <
 							Effect.fork,
 						)
 
+						const fiberId = Fiber.id(fiber)
+
 						if (init) {
-							yield* queue.offer(init(fiber))
+							yield* Ref.update(subscriptions, HashMap.set(fiberId, fiber))
+							const currentState = yield* ref.get
+							yield* queue.offer(init(fiberId, currentState))
 						}
 
 						yield* Deferred.succeed(deferred, undefined)
-					}),
+
+						yield* fiber.await
+
+						yield* Ref.update(subscriptions, HashMap.remove(fiberId))
+					}, Effect.fork),
 				})
 			}
 		}),
@@ -163,18 +197,18 @@ export const makeStateManager = Effect.fn(function* <
 }, Effect.scoped)
 
 export const modify = Function.dual<
-	<S extends object, O>(
-		p: (draft: Draft<S>) => Arr.NonEmptyArray<O> | void,
+	<S extends object, M, R>(
+		p: (draft: Draft<S>) => Arr.NonEmptyArray<Operation<S, M, R>> | void,
 	) => (state: S) => {
 		state: S
-		operations: O[]
+		operations: Operation<S, M, R>[]
 	},
-	<S extends object, O>(
+	<S extends object, M, R>(
 		state: S,
-		p: (draft: Draft<S>) => Arr.NonEmptyArray<O> | void,
+		p: (draft: Draft<S>) => Arr.NonEmptyArray<Operation<S, M, R>> | void,
 	) => {
 		state: S
-		operations: O[]
+		operations: Operation<S, M, R>[]
 	}
 >(2, (state, p) => {
 	const draft = createDraft(state)
@@ -189,10 +223,10 @@ export const modify = Function.dual<
 })
 
 type NoOpType = {
-	<S, O>(state: S): { state: S; operations: O[] }
-	func<O>(): <S>(state: S) => {
+	<S, M, R>(state: S): { state: S; operations: Operation<S, M, R>[] }
+	func<M, R>(): <S>(state: S) => {
 		state: S
-		operations: O[]
+		operations: Operation<S, M, R>[]
 	}
 }
 
@@ -212,16 +246,18 @@ export const noOp: NoOpType = Object.assign(
 )
 
 export const operations = Function.dual<
-	<O>(operations: Arr.NonEmptyArray<O>) => <S>(state: S) => {
-		state: S
-		operations: O[]
-	},
-	<S, O>(
-		state: S,
+	<M, R>(
 		operations: Arr.NonEmptyArray<O>,
+	) => <S>(state: S) => {
+		state: S
+		operations: Operation<S, M, R>[]
+	},
+	<S, M, R>(
+		state: S,
+		operations: Arr.NonEmptyArray<Operation<S, M, R>>,
 	) => {
 		state: S
-		operations: O[]
+		operations: Operation<S, M, R>[]
 	}
 >(2, (state, operations) => {
 	return {

@@ -2,6 +2,7 @@ import * as Arr from 'effect/Array'
 import * as Clock from 'effect/Clock'
 import * as Data from 'effect/Data'
 import * as Effect from 'effect/Effect'
+import * as FiberId from 'effect/FiberId'
 import { pipe } from 'effect/Function'
 import * as Match from 'effect/Match'
 import * as Option from 'effect/Option'
@@ -25,6 +26,7 @@ import {
 type Message = Data.TaggedEnum<{
 	FetchList: object
 	DeleteAndRefresh: { ids: NonEmptyHashSet.NonEmptyHashSet<string> }
+	UpdateCurrentDate: { currentDate: Integer.Integer }
 }>
 
 interface DeleteRequest extends Request.Request<string[]> {
@@ -79,6 +81,7 @@ const ProductViewModel = Data.struct<ProductViewModel>
 
 const State = Schema.extend(
 	Schema.Struct({
+		maybeScheduler: Schema.Option(Schema.FiberId),
 		currentDate: Integer.Schema,
 		isBusy: Schema.Boolean,
 		maybeProducts: Schema.Option(Schema.NonEmptyArray(ProductViewModelSchema)),
@@ -99,7 +102,10 @@ const State = Schema.extend(
 
 type State = Schema.Schema.Type<typeof State>
 
-type _InternalMessage = Data.TaggedEnum<{ StartScheduler: object }>
+type _InternalMessage = Data.TaggedEnum<{
+	StartScheduler: object
+	SchedulerStarted: { id: FiberId.FiberId }
+}>
 
 type InternalMessage =
 	| Message
@@ -208,7 +214,7 @@ const fetchList = Effect.map(
 	}),
 )
 
-const Operation = SM.Operation<InternalMessage, UC.All>()
+const Operation = SM.Operation<State, InternalMessage, UC.All>()
 
 const matcher = Match.typeTags<
 	InternalMessage,
@@ -267,16 +273,34 @@ const update = matcher({
 	StartScheduler: () =>
 		SM.operations([
 			Operation.subscription({
-				init: () => InternalMessage.FetchList(),
-				stream: Stream.fromSchedule(Schedule.fixed(`20 seconds`)).pipe(
-					Stream.map(InternalMessage.FetchList),
-				),
+				init: id => InternalMessage.SchedulerStarted({ id }),
+				stream: () =>
+					pipe(
+						Stream.fromSchedule(Schedule.fixed(`20 seconds`)),
+						Stream.mapEffect(
+							Effect.fn(function* () {
+								const currentDate = Integer.unsafeFromNumber(
+									yield* Clock.currentTimeMillis,
+								)
+								return InternalMessage.UpdateCurrentDate({ currentDate })
+							}),
+						),
+					),
 			}),
 		]),
+	SchedulerStarted: ({ id }) =>
+		SM.modify(draft => {
+			draft.maybeScheduler = Option.some(id)
+		}),
+	UpdateCurrentDate: ({ currentDate }) =>
+		SM.modify(draft => {
+			draft.currentDate = currentDate
+		}),
 })
 
 const makeViewModel = Effect.gen(function* () {
 	const initState: State = {
+		maybeScheduler: Option.none(),
 		currentDate: Integer.unsafeFromNumber(yield* Clock.currentTimeMillis),
 		isBusy: false,
 		maybeProducts: Option.none(),
@@ -287,6 +311,8 @@ const makeViewModel = Effect.gen(function* () {
 		initState,
 		update,
 	})
+
+	yield* viewModel.dispatch(InternalMessage.StartScheduler())
 
 	return {
 		...viewModel,

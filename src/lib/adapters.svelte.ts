@@ -36,7 +36,7 @@ export const useViewmodel = <S, M, R>(
 	let initialized = false
 
 	$effect(() => {
-		if (!handle) return
+		if (!handle || initialized) return
 
 		const cancelChanges = runtime.runCallback(
 			Stream.runForEach(handle.changes, s =>
