@@ -6,18 +6,15 @@ import { pipe } from 'effect/Function'
 import * as Match from 'effect/Match'
 import * as Option from 'effect/Option'
 import * as Request from 'effect/Request'
+import * as Schedule from 'effect/Schedule'
 import * as Schema from 'effect/Schema'
+import * as Stream from 'effect/Stream'
 
 import { type MapTags, mapFunctionReturn } from '@/core/helper.ts'
 import * as Integer from '@/core/integer/integer.ts'
 import * as NonEmptyHashSet from '@/core/non-empty-hash-set.ts'
 import * as NonEmptyTrimmedString from '@/core/non-empty-trimmed-string.ts'
-import {
-	type Command,
-	makeStateManager,
-	modify,
-	noOp,
-} from '@/core/state-manager.ts'
+import * as SM from '@/core/state-manager.ts'
 import * as UnitInterval from '@/core/unit-interval.ts'
 
 import {
@@ -102,8 +99,11 @@ const State = Schema.extend(
 
 type State = Schema.Schema.Type<typeof State>
 
+type _InternalMessage = Data.TaggedEnum<{ StartScheduler: object }>
+
 type InternalMessage =
 	| Message
+	| _InternalMessage
 	| MapTags<
 			UC.GetSortedProducts.Message,
 			{
@@ -121,14 +121,6 @@ type InternalMessage =
 	  >
 
 const InternalMessage = Data.taggedEnum<InternalMessage>()
-
-const matcher = Match.typeTags<
-	InternalMessage,
-	(s: Readonly<State>) => Readonly<{
-		state: State
-		commands: Command<InternalMessage, UC.All>[]
-	}>
->()
 
 const mapToViewModels = (entries: UC.GetSortedProducts.DTO, state: State) => {
 	return pipe(
@@ -216,21 +208,28 @@ const fetchList = Effect.map(
 	}),
 )
 
+const Operation = SM.Operation<InternalMessage, UC.All>()
+
+const matcher = Match.typeTags<
+	InternalMessage,
+	ReturnType<SM.Update<State, InternalMessage, UC.All>>
+>()
+
 const update = matcher({
 	FetchList: () =>
-		modify(draft => {
+		SM.modify(draft => {
 			draft.isBusy = true
 
-			return [fetchList]
+			return [Operation.command({ effect: fetchList })]
 		}),
 	FetchListFailed: () =>
-		modify(draft => {
+		SM.modify(draft => {
 			draft.isBusy = false
 		}),
 	FetchListSucceeded:
 		({ result }) =>
 		state => {
-			return modify(state, draft => {
+			return SM.modify(state, draft => {
 				draft.isBusy = false
 				draft.maybeProducts = mapToViewModels(result, state)
 			})
@@ -239,32 +238,41 @@ const update = matcher({
 		({ ids }) =>
 		state => {
 			if (state.isBusy) {
-				return noOp(state)
+				return SM.noOp(state)
 			}
 
-			return modify(state, draft => {
+			return SM.modify(state, draft => {
 				draft.isBusy = true
 
-				return [deleteProductsByIds(ids)]
+				return [Operation.command({ effect: deleteProductsByIds(ids) })]
 			})
 		},
 	DeleteAndRefreshSucceeded:
 		({ result }) =>
 		state =>
-			modify(state, draft => {
+			SM.modify(state, draft => {
 				draft.isBusy = false
 
 				draft.maybeProducts = mapToViewModels(result, state)
 			}),
 	DeleteFailed: () =>
-		modify(draft => {
+		SM.modify(draft => {
 			draft.isBusy = false
 		}),
 	DeleteSucceededButRefreshFailed: () =>
-		modify(draft => {
+		SM.modify(draft => {
 			draft.isBusy = false
 			draft.maybeProducts = Option.none<Arr.NonEmptyArray<ProductViewModel>>()
 		}),
+	StartScheduler: () =>
+		SM.operations([
+			Operation.subscription({
+				init: () => InternalMessage.FetchList(),
+				stream: Stream.fromSchedule(Schedule.fixed(`20 seconds`)).pipe(
+					Stream.map(InternalMessage.FetchList),
+				),
+			}),
+		]),
 })
 
 const makeViewModel = Effect.gen(function* () {
@@ -275,7 +283,7 @@ const makeViewModel = Effect.gen(function* () {
 		messageType: `none`,
 	}
 
-	const viewModel = yield* makeStateManager({
+	const viewModel = yield* SM.makeStateManager({
 		initState,
 		update,
 	})
@@ -283,8 +291,6 @@ const makeViewModel = Effect.gen(function* () {
 	return {
 		...viewModel,
 		dispatch: (m: Message) => viewModel.dispatch(m),
-		dispatchEffect: (effect: Effect.Effect<Message>) =>
-			effect.pipe(Effect.flatMap(m => viewModel.dispatch(m))),
 	}
 })
 

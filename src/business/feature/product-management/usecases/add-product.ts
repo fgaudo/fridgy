@@ -1,7 +1,6 @@
 import * as Clock from 'effect/Clock'
 import * as Data from 'effect/Data'
 import * as Effect from 'effect/Effect'
-import * as Either from 'effect/Either'
 import * as Inspectable from 'effect/Inspectable'
 import * as Option from 'effect/Option'
 import * as Schema from 'effect/Schema'

@@ -7,12 +7,7 @@ import * as Schema from 'effect/Schema'
 import { type MapTags, mapFunctionReturn } from '@/core/helper.ts'
 import * as Integer from '@/core/integer/integer.ts'
 import * as NonEmptyTrimmedString from '@/core/non-empty-trimmed-string.ts'
-import {
-	type Command,
-	makeStateManager,
-	modify,
-	noOp,
-} from '@/core/state-manager.ts'
+import * as SM from '@/core/state-manager.ts'
 
 import { UseCasesWithoutDependencies as UC } from '@/feature/product-management/index.ts'
 import { Message as AddProductMessage } from '@/feature/product-management/usecases/add-product.ts'
@@ -76,43 +71,44 @@ const addProduct = mapFunctionReturn(
 
 const matcher = Match.typeTags<
 	InternalMessage,
-	(s: Readonly<State>) => Readonly<{
-		state: State
-		commands: Command<InternalMessage, UC.All>[]
-	}>
+	ReturnType<SM.Update<State, InternalMessage, UC.All>>
 >()
+
+const Operation = SM.Operation<InternalMessage, UC.All>()
 
 const update = matcher({
 	AddProduct:
 		({ maybeExpirationDate, name }) =>
 		state => {
 			if (state.isAdding) {
-				return noOp(state)
+				return SM.noOp(state)
 			}
 
-			return modify(state, draft => {
+			return SM.modify(state, draft => {
 				draft.isAdding = true
 
 				return [
-					addProduct({
-						name,
-						maybeExpirationDate,
+					Operation.command({
+						effect: addProduct({
+							name,
+							maybeExpirationDate,
+						}),
 					}),
 				]
 			})
 		},
 	AddProductSucceeded: () =>
-		modify(draft => {
+		SM.modify(draft => {
 			draft.isAdding = false
 		}),
 	AddProductFailed: () =>
-		modify(draft => {
+		SM.modify(draft => {
 			draft.isAdding = false
 		}),
 })
 
 const makeViewModel = Effect.gen(function* () {
-	const viewModel = yield* makeStateManager({
+	const viewModel = yield* SM.makeStateManager({
 		initState: { isAdding: false, messageType: `none` },
 		update,
 	})

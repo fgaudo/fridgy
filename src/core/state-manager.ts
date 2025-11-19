@@ -1,4 +1,6 @@
 import * as Arr from 'effect/Array'
+import * as Data from 'effect/Data'
+import * as Deferred from 'effect/Deferred'
 import * as Effect from 'effect/Effect'
 import * as Exit from 'effect/Exit'
 import * as Fiber from 'effect/Fiber'
@@ -10,17 +12,25 @@ import * as Stream from 'effect/Stream'
 import * as SubscriptionRef from 'effect/SubscriptionRef'
 import { type Draft, createDraft, finishDraft } from 'immer'
 
-export type Command<M, R> = Stream.Stream<M, never, R>
+type Operation<M, R> = Data.TaggedEnum<{
+	command: { effect: Effect.Effect<M, never, R> }
+	subscription: {
+		init?: (fiber: Fiber.RuntimeFiber<void>) => M
+		stream: Stream.Stream<M, never, R>
+	}
+}>
 
-export type Update<S, M, R> = (
-	message: M,
-) => (state: S) => { state: S; commands: Command<M, R>[] }
+export const Operation = <M, R>() => Data.taggedEnum<Operation<M, R>>()
+
+export type Update<S, M, R> = (message: M) => (state: S) => {
+	state: S
+	operations: Operation<M, R>[]
+}
 
 export type StateManager<S, M> = {
 	initState: S
 	changes: Stream.Stream<S>
 	dispatch: (m: M) => Effect.Effect<void>
-	dispatchEffect: (m: Effect.Effect<M>) => Effect.Effect<void>
 	dispose: Effect.Effect<void>
 }
 
@@ -49,6 +59,8 @@ export const makeStateManager = Effect.fn(function* <
 		}),
 	)
 
+	const Op = Operation<M, R>()
+
 	const updatesFiber = yield* pipe(
 		Effect.gen(function* () {
 			const message = yield* queue.take
@@ -62,26 +74,55 @@ export const makeStateManager = Effect.fn(function* <
 
 			const change = update(message)
 
-			const commands = yield* SubscriptionRef.modify(ref, s => {
-				const { state, commands } = change(s)
-				return [commands, state]
+			const operations = yield* SubscriptionRef.modify(ref, s => {
+				const { state, operations } = change(s)
+				return [operations, state]
 			})
 
-			for (const command of commands) {
-				yield* pipe(
-					command,
-					Stream.mapEffect(m => queue.offer(m)),
-					Stream.runDrain,
-					Effect.catchAllDefect(
-						Effect.fn(function* (err) {
-							yield* Effect.logFatal(err)
-							if (fatalMessage) {
-								yield* queue.offer(fatalMessage(err))
-							}
-						}),
+			for (const operation of operations) {
+				yield* Op.$match(operation, {
+					command: Effect.fn(
+						function* ({ effect }) {
+							const message = yield* effect
+							yield* queue.offer(message)
+						},
+						Effect.catchAllDefect(
+							Effect.fn(function* (err) {
+								yield* Effect.logFatal(err)
+								if (fatalMessage) {
+									yield* queue.offer(fatalMessage(err))
+								}
+							}),
+						),
+						Effect.fork,
 					),
-					Effect.fork,
-				)
+					subscription: Effect.fn(function* ({ stream, init }) {
+						const deferred = yield* Deferred.make()
+
+						const fiber = yield* pipe(
+							stream,
+							Stream.onStart(Deferred.await(deferred)),
+							Stream.catchAllCause(err =>
+								fatalMessage
+									? Stream.fromEffect(
+											Effect.gen(function* () {
+												yield* Effect.logFatal(err)
+												return fatalMessage(err)
+											}),
+										)
+									: Stream.empty,
+							),
+							Stream.runForEach(m => queue.offer(m)),
+							Effect.fork,
+						)
+
+						if (init) {
+							yield* queue.offer(init(fiber))
+						}
+
+						yield* Deferred.succeed(deferred, undefined)
+					}),
+				})
 			}
 		}),
 		Effect.catchAllDefect(
@@ -118,74 +159,73 @@ export const makeStateManager = Effect.fn(function* <
 		dispatch: Effect.fn(function* (m: M) {
 			yield* queue.offer(m)
 		}),
-		dispatchEffect: Effect.fn(function* (effect: Effect.Effect<M>) {
-			const m = yield* effect
-			yield* queue.offer(m)
-		}),
 	}
 }, Effect.scoped)
 
 export const modify = Function.dual<
-	<S extends object, C>(
-		p: (draft: Draft<S>) => Arr.NonEmptyArray<C> | void,
+	<S extends object, O>(
+		p: (draft: Draft<S>) => Arr.NonEmptyArray<O> | void,
 	) => (state: S) => {
 		state: S
-		commands: C[]
+		operations: O[]
 	},
-	<S extends object, C>(
+	<S extends object, O>(
 		state: S,
-		p: (draft: Draft<S>) => Arr.NonEmptyArray<C> | void,
-	) => { state: S; commands: C[] }
+		p: (draft: Draft<S>) => Arr.NonEmptyArray<O> | void,
+	) => {
+		state: S
+		operations: O[]
+	}
 >(2, (state, p) => {
 	const draft = createDraft(state)
 
 	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-	const commands = p(draft) ?? []
+	const operations = p(draft) ?? []
 
 	return {
 		state: finishDraft(draft) as typeof state,
-		commands,
+		operations,
 	}
 })
 
 type NoOpType = {
-	<S, C>(state: S): { state: S; commands: C[] }
-	func<C>(): <S>(state: S) => {
+	<S, O>(state: S): { state: S; operations: O[] }
+	func<O>(): <S>(state: S) => {
 		state: S
-		commands: C[]
+		operations: O[]
 	}
 }
 
 export const noOp: NoOpType = Object.assign(
 	<S>(state: S) => ({
 		state,
-		commands: [],
+		operations: [],
 	}),
 	{
 		func:
 			() =>
 			<S>(state: S) => ({
 				state,
-				commands: [],
+				operations: [],
 			}),
 	},
 )
 
-export const commands = Function.dual<
-	<C>(effects: Arr.NonEmptyArray<C>) => <S>(state: S) => {
+export const operations = Function.dual<
+	<O>(operations: Arr.NonEmptyArray<O>) => <S>(state: S) => {
 		state: S
-		commands: C[]
+		operations: O[]
 	},
-	<S, C>(
+	<S, O>(
 		state: S,
-		effects: Arr.NonEmptyArray<C>,
+		operations: Arr.NonEmptyArray<O>,
 	) => {
 		state: S
-		commands: C[]
+		operations: O[]
 	}
->(2, (state, commands) => {
+>(2, (state, operations) => {
 	return {
 		state,
-		commands,
+		operations,
 	}
 })
