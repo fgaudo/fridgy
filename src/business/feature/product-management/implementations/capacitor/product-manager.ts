@@ -9,8 +9,9 @@ import * as RequestResolver from 'effect/RequestResolver'
 
 import * as Integer from '@/core/integer/integer.ts'
 
-import * as ProductManager from '../../interfaces/product-manager.ts'
 import * as SqliteCapacitorHelper from '@/shared/capacitor/sqlite-capacitor-helper.ts'
+
+import * as ProductManager from '../../interfaces/product-manager.ts'
 
 export const layerWithoutDependencies = Layer.effect(
 	ProductManager.Service,
@@ -22,36 +23,33 @@ export const layerWithoutDependencies = Layer.effect(
 		} = yield* SqliteCapacitorHelper.Service
 
 		return {
-			addProduct: {
-				resolver: RequestResolver.makeBatched<
-					ProductManager.AddProduct[`Request`],
-					never
-				>(
-					Effect.forEach(
-						Effect.fn(
-							function* (request) {
-								const result = yield* Effect.either(
-									Effect.request(
-										SqliteCapacitorHelper.AddProduct.Request(request),
-										addProductResolver,
-									),
-								)
+			getSortedProducts: Effect.gen(function* () {
+				const result = yield* Effect.either(getAllProductsWithTotal)
 
-								if (Either.isLeft(result)) {
-									return yield* Request.succeed(request, false)
-								}
+				if (Either.isLeft(result)) {
+					yield* Effect.logError(result.left)
+					return yield* Effect.fail(undefined)
+				}
 
-								return yield* Request.succeed(request, true)
-							},
-							(effect, request) =>
-								Effect.catchAllCause(effect, cause =>
-									Request.failCause(request, cause),
-								),
-						),
-						{ batching: true },
+				const entries = yield* pipe(
+					result.right,
+					Arr.map(
+						Effect.fn(function* (product) {
+							return {
+								...product,
+								maybeId: yield* Option.match(product.maybeId, {
+									onNone: () => Effect.succeed(Option.none<string>()),
+									onSome: id =>
+										Effect.option(Effect.try(() => JSON.stringify(id))),
+								}),
+							} as const
+						}),
 					),
-				),
-			},
+					Effect.all,
+				)
+
+				return entries
+			}),
 			deleteProductById: {
 				resolver: RequestResolver.makeBatched<
 					ProductManager.DeleteProductById[`Request`],
@@ -101,33 +99,36 @@ export const layerWithoutDependencies = Layer.effect(
 					),
 				),
 			},
-			getSortedProducts: Effect.gen(function* () {
-				const result = yield* Effect.either(getAllProductsWithTotal)
+			addProduct: {
+				resolver: RequestResolver.makeBatched<
+					ProductManager.AddProduct[`Request`],
+					never
+				>(
+					Effect.forEach(
+						Effect.fn(
+							function* (request) {
+								const result = yield* Effect.either(
+									Effect.request(
+										SqliteCapacitorHelper.AddProduct.Request(request),
+										addProductResolver,
+									),
+								)
 
-				if (Either.isLeft(result)) {
-					yield* Effect.logError(result.left)
-					return yield* Effect.fail(undefined)
-				}
+								if (Either.isLeft(result)) {
+									return yield* Request.succeed(request, false)
+								}
 
-				const entries = yield* pipe(
-					result.right,
-					Arr.map(
-						Effect.fn(function* (product) {
-							return {
-								...product,
-								maybeId: yield* Option.match(product.maybeId, {
-									onNone: () => Effect.succeed(Option.none<string>()),
-									onSome: id =>
-										Effect.option(Effect.try(() => JSON.stringify(id))),
-								}),
-							} as const
-						}),
+								return yield* Request.succeed(request, true)
+							},
+							(effect, request) =>
+								Effect.catchAllCause(effect, cause =>
+									Request.failCause(request, cause),
+								),
+						),
+						{ batching: true },
 					),
-					Effect.all,
-				)
-
-				return entries
-			}),
+				),
+			},
 		}
 	}),
 )

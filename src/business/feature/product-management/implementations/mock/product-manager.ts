@@ -44,47 +44,22 @@ export const layerWithoutDependencies = Layer.effect(
 		})
 
 		return {
-			addProduct: {
-				resolver: RequestResolver.fromEffect<
-					never,
-					ProductManager.AddProduct[`Request`]
-				>(
-					Effect.fn(function* (product) {
-						const isAnError =
-							withErrors && (yield* Random.nextRange(0, 1)) < 0.5
+			getSortedProducts: Effect.gen(function* () {
+				const isAnError = withErrors && (yield* Random.nextRange(0, 1)) < 0.5
 
-						if (isAnError) {
-							yield* Effect.logInfo(`Triggered fake error on mock AddProduct`)
-							return yield* Effect.succeed(false)
-						}
+				if (isAnError) {
+					yield* Effect.logInfo(
+						`Triggered fake error on mock GetSortedProducts`,
+					)
+					return yield* Effect.fail(undefined)
+				}
 
-						yield* Effect.log(`Attempting to add product into mock database...`)
+				const map = yield* Ref.get(ref).pipe(Effect.map(({ map }) => map))
 
-						yield* Ref.update(ref, dbValues => {
-							const index = dbValues.index + 1
-							const indexString = index.toString(10)
-							return {
-								...dbValues,
-								index,
-								map: dbValues.map.pipe(
-									HashMap.set(indexString, {
-										maybeCreationDate: Option.some(product.creationDate),
-										maybeExpirationDate: product.maybeExpirationDate,
-										maybeId: Option.some(indexString),
-										maybeName: Option.some(product.name),
-									}),
-								),
-							}
-						})
+				const products: GetSortedProductsDTO = map.pipe(HashMap.toValues)
 
-						yield* Effect.log(
-							`Added product ${product.name} into mock database`,
-						)
-
-						return yield* Effect.succeed(true)
-					}),
-				),
-			},
+				return Arr.sort(products, ord)
+			}),
 			deleteProductById: {
 				resolver: RequestResolver.fromEffect<
 					never,
@@ -111,22 +86,47 @@ export const layerWithoutDependencies = Layer.effect(
 					}),
 				),
 			},
-			getSortedProducts: Effect.gen(function* () {
-				const isAnError = withErrors && (yield* Random.nextRange(0, 1)) < 0.5
+			addProduct: {
+				resolver: RequestResolver.fromEffect<
+					never,
+					ProductManager.AddProduct[`Request`]
+				>(
+					Effect.fn(function* (product) {
+						const isAnError =
+							withErrors && (yield* Random.nextRange(0, 1)) < 0.5
 
-				if (isAnError) {
-					yield* Effect.logInfo(
-						`Triggered fake error on mock GetSortedProducts`,
-					)
-					return yield* Effect.fail(undefined)
-				}
+						if (isAnError) {
+							yield* Effect.logInfo(`Triggered fake error on mock AddProduct`)
+							return yield* Effect.succeed(false)
+						}
 
-				const map = yield* Ref.get(ref).pipe(Effect.map(({ map }) => map))
+						yield* Effect.log(`Attempting to add product into mock database...`)
 
-				const products: GetSortedProductsDTO = map.pipe(HashMap.toValues)
+						yield* Ref.update(ref, dbValues => {
+							const index = dbValues.index + 1
+							const indexString = index.toString(10)
+							return {
+								...dbValues,
+								index,
+								map: dbValues.map.pipe(
+									HashMap.set(indexString, {
+										maybeName: Option.some(product.name),
+										maybeExpirationDate: product.maybeExpirationDate,
+										maybeCreationDate: Option.some(product.creationDate),
+										maybeId: Option.some(indexString),
+									}),
+								),
+							}
+						})
 
-				return Arr.sort(products, ord)
-			}),
+						yield* Effect.log(
+							`Added product ${product.name} into mock database`,
+						)
+
+						return yield* Effect.succeed(true)
+					}),
+				),
+			},
 		}
 	}),
 )

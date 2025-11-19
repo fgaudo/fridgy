@@ -18,18 +18,18 @@ import * as ProductManager from '../interfaces/product-manager.ts'
 export const DTO = Schema.Array(
 	Schema.Union(
 		Schema.Struct({
-			id: Schema.String,
 			isCorrupt: Schema.Literal(false),
-			isValid: Schema.Literal(false),
 			maybeName: Schema.Option(NonEmptyTrimmedString.Schema),
+			id: Schema.String,
+			isValid: Schema.Literal(false),
 		}),
 		Schema.Struct({
-			creationDate: Integer.Schema,
-			id: Schema.String,
 			isCorrupt: Schema.Literal(false),
+			id: Schema.String,
+			name: NonEmptyTrimmedString.Schema,
 			isValid: Schema.Literal(true),
 			maybeExpirationDate: Schema.Option(Integer.Schema),
-			name: NonEmptyTrimmedString.Schema,
+			creationDate: Integer.Schema,
 		}),
 		Schema.Struct({
 			isCorrupt: Schema.Literal(true),
@@ -59,7 +59,6 @@ export class Service extends Effect.Service<Service>()(
 	`feature/product-management/usecases/get-sorted-products`,
 	{
 		accessors: true,
-		dependencies: [Product.Service.Default],
 		effect: Effect.gen(function* () {
 			const { getSortedProducts } = yield* ProductManager.Service
 			const { makeProduct } = yield* Product.Service
@@ -100,14 +99,14 @@ export class Service extends Effect.Service<Service>()(
 
 								const maybeProduct = Option.gen(function* () {
 									const { name, creationDate } = yield* Option.all({
-										creationDate: maybeCreationDate,
 										name: maybeName,
+										creationDate: maybeCreationDate,
 									})
 
 									return yield* makeProduct({
+										name,
 										creationDate,
 										maybeExpirationDate,
-										name,
 									})
 								})
 
@@ -116,19 +115,19 @@ export class Service extends Effect.Service<Service>()(
 
 									return {
 										id: maybeId.value,
+										maybeName,
 										isCorrupt: false,
 										isValid: false,
-										maybeName,
 									} as const
 								}
 
 								return {
-									creationDate: maybeProduct.value.creationDate,
-									id: maybeId.value,
 									isCorrupt: false,
 									isValid: true,
-									maybeExpirationDate: maybeProduct.value.maybeExpirationDate,
+									id: maybeId.value,
 									name: maybeProduct.value.name,
+									maybeExpirationDate: maybeProduct.value.maybeExpirationDate,
+									creationDate: maybeProduct.value.creationDate,
 								} as const
 							}),
 						),
@@ -139,5 +138,6 @@ export class Service extends Effect.Service<Service>()(
 				}).pipe(Effect.withLogSpan(`GetSortedProducts UC`)),
 			}
 		}),
+		dependencies: [Product.Service.Default],
 	},
 ) {}

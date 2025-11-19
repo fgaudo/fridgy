@@ -15,8 +15,8 @@ import * as ProductManager from '../interfaces/product-manager.ts'
 /////
 
 export const ProductDTO = Schema.Struct({
-	maybeExpirationDate: Schema.Option(Integer.Schema),
 	name: NonEmptyTrimmedString.Schema,
+	maybeExpirationDate: Schema.Option(Integer.Schema),
 })
 
 export type ProductDTO = Schema.Schema.Type<typeof ProductDTO>
@@ -29,8 +29,6 @@ export type Message = Data.TaggedEnum<{
 	Succeeded: object
 }>
 
-export const fooPackageVariable = 1
-
 export const Message = Data.taggedEnum<Message>()
 
 /////
@@ -40,7 +38,6 @@ export class Service extends Effect.Service<Service>()(
 	`feature/product-management/usecases/add-product`,
 	{
 		accessors: true,
-		dependencies: [Product.Service.Default],
 		effect: Effect.gen(function* () {
 			const {
 				addProduct: { resolver },
@@ -59,9 +56,9 @@ export class Service extends Effect.Service<Service>()(
 					)
 
 					const product = makeProduct({
-						creationDate: timestamp,
-						maybeExpirationDate: productData.maybeExpirationDate,
 						name: productData.name,
+						maybeExpirationDate: productData.maybeExpirationDate,
+						creationDate: timestamp,
 					})
 
 					if (Option.isNone(product)) {
@@ -80,9 +77,9 @@ export class Service extends Effect.Service<Service>()(
 
 					const result = yield* Effect.request(
 						new ProductManager.AddProduct.Request({
-							creationDate: product.value.creationDate,
-							maybeExpirationDate: product.value.maybeExpirationDate,
 							name: product.value.name,
+							maybeExpirationDate: product.value.maybeExpirationDate,
+							creationDate: product.value.creationDate,
 						}),
 						resolver,
 					)
@@ -96,5 +93,6 @@ export class Service extends Effect.Service<Service>()(
 				}),
 			}
 		}),
+		dependencies: [Product.Service.Default],
 	},
 ) {}

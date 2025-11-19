@@ -1,4 +1,4 @@
-import type * as Cause from 'effect/Cause'
+import * as Cause from 'effect/Cause'
 import * as Data from 'effect/Data'
 import * as Effect from 'effect/Effect'
 import * as Either from 'effect/Either'
@@ -22,10 +22,10 @@ class InvalidDataReceived extends Data.TaggedError(`InvalidDataReceived`) {}
 
 const GetAllProductsWithTotalDTO = Schema.Array(
 	Schema.Struct({
-		maybeCreationDate: Schema.Option(Integer.Schema),
-		maybeExpirationDate: Schema.Option(Integer.Schema),
 		maybeId: Schema.Option(Schema.Number),
 		maybeName: Schema.Option(NonEmptyTrimmedString.Schema),
+		maybeExpirationDate: Schema.Option(Integer.Schema),
+		maybeCreationDate: Schema.Option(Integer.Schema),
 	}),
 )
 
@@ -35,9 +35,9 @@ export type GetAllProductsWithTotal = {
 	DTO: Schema.Schema.Type<typeof GetAllProductsWithTotalDTO>
 }
 export const GetAllProductsWithTotal = {
-	DTO: GetAllProductsWithTotalDTO,
 	FetchingFailed: FetchingFailed,
 	InvalidDataReceived: InvalidDataReceived,
+	DTO: GetAllProductsWithTotalDTO,
 }
 
 /////
@@ -79,7 +79,6 @@ export const DeleteProductById = {
 export class Service extends Effect.Service<Service>()(
 	`shared/capacitor/sqlite-capacitor-helper`,
 	{
-		dependencies: [SqliteCapacitorPlugin.Service.Default],
 		effect: Effect.gen(function* () {
 			const plugin = yield* SqliteCapacitorPlugin.Service
 
@@ -144,5 +143,6 @@ export class Service extends Effect.Service<Service>()(
 				}),
 			}
 		}),
+		dependencies: [SqliteCapacitorPlugin.Service.Default],
 	},
 ) {}

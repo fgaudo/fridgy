@@ -2,7 +2,7 @@ import * as Arr from 'effect/Array'
 import * as Clock from 'effect/Clock'
 import * as Data from 'effect/Data'
 import * as Effect from 'effect/Effect'
-import type * as FiberId from 'effect/FiberId'
+import * as FiberId from 'effect/FiberId'
 import { pipe } from 'effect/Function'
 import * as Match from 'effect/Match'
 import * as Option from 'effect/Option'
@@ -12,7 +12,7 @@ import * as Stream from 'effect/Stream'
 
 import * as H from '@/core/helper.ts'
 import * as Integer from '@/core/integer/integer.ts'
-import type * as NonEmptyHashSet from '@/core/non-empty-hash-set.ts'
+import * as NonEmptyHashSet from '@/core/non-empty-hash-set.ts'
 import * as NonEmptyTrimmedString from '@/core/non-empty-trimmed-string.ts'
 import * as SM from '@/core/state-manager.ts'
 import * as UnitInterval from '@/core/unit-interval.ts'
@@ -28,30 +28,28 @@ type Message = Data.TaggedEnum<{
 	StartUpdateCurrentTime: object
 }>
 
-new Promise(() => {})
-
 const Message = Data.taggedEnum<Message>()
 
 const ProductViewModelSchema = Schema.Union(
 	Schema.Struct({
-		id: Schema.String,
 		isCorrupt: Schema.Literal(false),
-		isValid: Schema.Literal(false),
+		id: Schema.String,
 		maybeName: Schema.Option(Schema.String),
+		isValid: Schema.Literal(false),
 	}),
 	Schema.extend(
 		Schema.Struct({
-			id: Schema.String,
 			isCorrupt: Schema.Literal(false),
-			isValid: Schema.Literal(true),
+			id: Schema.String,
 			name: Schema.String,
+			isValid: Schema.Literal(true),
 		}),
 		Schema.Union(
 			Schema.Struct({
-				expirationDate: Integer.Schema,
-				freshness: UnitInterval.Schema,
-				isStale: Schema.Literal(false),
 				timeLeft: Integer.Schema,
+				freshness: UnitInterval.Schema,
+				expirationDate: Integer.Schema,
+				isStale: Schema.Literal(false),
 			}),
 			Schema.Struct({
 				expirationDate: Integer.Schema,
@@ -76,10 +74,10 @@ const ProductViewModel = Data.struct<ProductViewModel>
 
 const State = Schema.extend(
 	Schema.Struct({
+		maybeScheduler: Schema.Option(Schema.FiberId),
 		currentDate: Integer.Schema,
 		isBusy: Schema.Boolean,
 		maybeProducts: Schema.Option(Schema.NonEmptyArray(ProductViewModelSchema)),
-		maybeScheduler: Schema.Option(Schema.FiberId),
 	}),
 	Schema.Union(
 		Schema.Struct({
@@ -143,24 +141,24 @@ const mapToViewModels = (entries: UC.GetSortedProducts.DTO, state: State) => {
 				return ProductViewModel({
 					expirationDate: `none` as const,
 					id: entry.id,
-					isCorrupt: false,
-					isValid: true,
 					name: entry.name,
+					isValid: true,
+					isCorrupt: false,
 				})
 			}
 
 			const partial = {
 				expirationDate: entry.maybeExpirationDate.value,
 				id: entry.id,
-				isCorrupt: false,
 				isValid: true,
+				isCorrupt: false,
 				name: entry.name,
 			} as const
 
 			if (
 				Rules.isProductStale({
-					currentDate: state.currentDate,
 					expirationDate: entry.maybeExpirationDate.value,
+					currentDate: state.currentDate,
 				})
 			) {
 				return ProductViewModel({
@@ -171,12 +169,12 @@ const mapToViewModels = (entries: UC.GetSortedProducts.DTO, state: State) => {
 
 			return ProductViewModel({
 				...partial,
+				isStale: false,
 				freshness: Rules.computeFreshness({
 					creationDate: entry.creationDate,
-					currentDate: state.currentDate,
 					expirationDate: entry.maybeExpirationDate.value,
+					currentDate: state.currentDate,
 				}),
-				isStale: false,
 				timeLeft: Integer.unsafeFromNumber(
 					entry.maybeExpirationDate.value - state.currentDate,
 				),
@@ -218,6 +216,41 @@ const matcher = Match.typeTags<
 >()
 
 const update = matcher({
+	StartFetchList: () =>
+		SM.modify(draft => {
+			draft.isBusy = true
+
+			return [Operation.command({ effect: fetchList })]
+		}),
+
+	FetchListFailed: () =>
+		SM.modify(draft => {
+			draft.isBusy = false
+		}),
+
+	FetchListSucceeded:
+		({ result }) =>
+		state => {
+			return SM.modify(state, draft => {
+				draft.isBusy = false
+				draft.maybeProducts = mapToViewModels(result, state)
+			})
+		},
+
+	StartDeleteAndRefresh:
+		({ ids }) =>
+		state => {
+			if (state.isBusy) {
+				return SM.noOp(state)
+			}
+
+			return SM.modify(state, draft => {
+				draft.isBusy = true
+
+				return [Operation.command({ effect: deleteProductsByIds(ids) })]
+			})
+		},
+
 	DeleteAndRefreshSucceeded:
 		({ result }) =>
 		state =>
@@ -238,45 +271,6 @@ const update = matcher({
 			draft.maybeProducts = Option.none<Arr.NonEmptyArray<ProductViewModel>>()
 		}),
 
-	FetchListFailed: () =>
-		SM.modify(draft => {
-			draft.isBusy = false
-		}),
-
-	FetchListSucceeded:
-		({ result }) =>
-		state => {
-			return SM.modify(state, draft => {
-				draft.isBusy = false
-				draft.maybeProducts = mapToViewModels(result, state)
-			})
-		},
-
-	SchedulerStarted: ({ id }) =>
-		SM.modify(draft => {
-			draft.maybeScheduler = Option.some(id)
-		}),
-
-	StartDeleteAndRefresh:
-		({ ids }) =>
-		state => {
-			if (state.isBusy) {
-				return SM.noOp(state)
-			}
-
-			return SM.modify(state, draft => {
-				draft.isBusy = true
-
-				return [Operation.command({ effect: deleteProductsByIds(ids) })]
-			})
-		},
-	StartFetchList: () =>
-		SM.modify(draft => {
-			draft.isBusy = true
-
-			return [Operation.command({ effect: fetchList })]
-		}),
-
 	StartScheduler: () =>
 		SM.operations([
 			Operation.subscription({
@@ -293,6 +287,16 @@ const update = matcher({
 					),
 			}),
 		]),
+
+	SchedulerStarted: ({ id }) =>
+		SM.modify(draft => {
+			draft.maybeScheduler = Option.some(id)
+		}),
+
+	UpdateCurrentTime: ({ currentDate }) =>
+		SM.modify(draft => {
+			draft.currentDate = currentDate
+		}),
 
 	StartUpdateCurrentTime: () => state =>
 		SM.modify(state, draft => {
@@ -320,19 +324,14 @@ const update = matcher({
 				updateTime,
 			]
 		}),
-
-	UpdateCurrentTime: ({ currentDate }) =>
-		SM.modify(draft => {
-			draft.currentDate = currentDate
-		}),
 })
 
 const makeViewModel = Effect.gen(function* () {
 	const initState: State = {
+		maybeScheduler: Option.none(),
 		currentDate: Integer.unsafeFromNumber(yield* Clock.currentTimeMillis),
 		isBusy: false,
 		maybeProducts: Option.none(),
-		maybeScheduler: Option.none(),
 		messageType: `none`,
 	}
 

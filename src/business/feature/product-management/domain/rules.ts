@@ -1,4 +1,4 @@
-import type * as Integer from '@/core/integer/integer.ts'
+import * as Integer from '@/core/integer/integer.ts'
 import * as UnitInterval from '@/core/unit-interval.ts'
 
 export const isProductStale = ({

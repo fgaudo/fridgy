@@ -36,8 +36,6 @@ export class Service extends Effect.Service<Service>()(
 	`feature/product-management/usecases/delete-products-by-ids-and-retrieve`,
 	{
 		accessors: true,
-
-		dependencies: [GetSortedProducts.Service.Default],
 		effect: Effect.gen(function* () {
 			const resolver = (yield* ProductManager.Service).deleteProductById
 				.resolver
@@ -89,5 +87,7 @@ export class Service extends Effect.Service<Service>()(
 				}),
 			}
 		}),
+
+		dependencies: [GetSortedProducts.Service.Default],
 	},
 ) {}

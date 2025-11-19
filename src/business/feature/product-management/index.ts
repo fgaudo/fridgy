@@ -5,13 +5,14 @@ import { Service } from './implementations/mock/config.ts'
 import { layerWithoutDependencies as mockDb } from './implementations/mock/product-manager.ts'
 import * as UC from './usecases/index.ts'
 
-export * as Rules from './domain/rules.ts'
 export * as UseCasesWithoutDependencies from './usecases/index.ts'
+
+export * as Rules from './domain/rules.ts'
 
 export const UseCases = {
 	capacitor: Layer.provide(UC.all, capacitorProductManager),
 	mock: {
-		Config: Service,
 		useCases: Layer.provide(UC.all, mockDb),
+		Config: Service,
 	},
 }

@@ -1,7 +1,7 @@
 import { pipe } from 'effect/Function'
 import * as Layer from 'effect/Layer'
-import * as Logger from 'effect/Logger'
 import * as LogLevel from 'effect/LogLevel'
+import * as Logger from 'effect/Logger'
 import * as ManagedRuntime from 'effect/ManagedRuntime'
 
 import { UseCases } from '@/feature/product-management/index.ts'

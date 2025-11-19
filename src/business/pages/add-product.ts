@@ -1,11 +1,11 @@
 import * as Data from 'effect/Data'
 import * as Effect from 'effect/Effect'
 import * as Match from 'effect/Match'
-import type * as Option from 'effect/Option'
+import * as Option from 'effect/Option'
 import * as Schema from 'effect/Schema'
 
 import * as H from '@/core/helper.ts'
-import type * as Integer from '@/core/integer/integer.ts'
+import * as Integer from '@/core/integer/integer.ts'
 import * as NonEmptyTrimmedString from '@/core/non-empty-trimmed-string.ts'
 import * as SM from '@/core/state-manager.ts'
 
@@ -89,18 +89,18 @@ const update = matcher({
 				return [
 					Operation.command({
 						effect: addProduct({
-							maybeExpirationDate,
 							name,
+							maybeExpirationDate,
 						}),
 					}),
 				]
 			})
 		},
-	AddProductFailed: () =>
+	AddProductSucceeded: () =>
 		SM.modify(draft => {
 			draft.isAdding = false
 		}),
-	AddProductSucceeded: () =>
+	AddProductFailed: () =>
 		SM.modify(draft => {
 			draft.isAdding = false
 		}),
