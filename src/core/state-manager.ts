@@ -213,10 +213,10 @@ export const modify = Function.dual<
 >(2, (state, p) => {
 	const draft = createDraft(state)
 
-	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 	const operations = p(draft) ?? []
 
 	return {
+		// oxlint-disable-next-line no-unsafe-type-assertion
 		state: finishDraft(draft) as typeof state,
 		operations,
 	}

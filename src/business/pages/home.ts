@@ -277,7 +277,7 @@ const update = matcher({
 				init: id => InternalMessage.SchedulerStarted({ id }),
 				stream: () =>
 					pipe(
-						Schedule.fixed(`20 seconds`),
+						Schedule.spaced('20 seconds'),
 						Stream.fromSchedule,
 						Stream.mapEffect(() => Clock.currentTimeMillis),
 						Stream.filterMap(Integer.fromNumber),
