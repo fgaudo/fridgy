@@ -19,34 +19,38 @@ import * as ProductManager from '../interfaces/product-manager.ts'
 export const DTO = Schema.Option(
 	Schema.NonEmptyArray(
 		Schema.Union(
-			Schema.Union(
-				Schema.TaggedStruct('Corrupt', {
-					maybeName: Schema.Option(NonEmptyTrimmedString.Schema),
-				}),
-				Schema.TaggedStruct('Invalid', {
-					maybeName: Schema.Option(NonEmptyTrimmedString.Schema),
-					id: Schema.String,
-				}),
-				Schema.TaggedStruct('Valid', {
-					id: Schema.String,
-					name: NonEmptyTrimmedString.Schema,
-					maybeExpiration: Schema.Option(
-						Schema.Union(
-							Schema.TaggedStruct('Stale', {
-								date: Integer.Schema,
-							}),
-							Schema.TaggedStruct('Fresh', {
-								freshness: UnitInterval.Schema,
-								timeLeft: Integer.Schema,
-								date: Integer.Schema,
-							}),
-						),
-					),
-				}),
-			),
+			Schema.TaggedStruct('Corrupt', {
+				maybeName: Schema.Option(NonEmptyTrimmedString.Schema),
+			}),
+			Schema.TaggedStruct('Invalid', {
+				maybeName: Schema.Option(NonEmptyTrimmedString.Schema),
+				id: Schema.String,
+			}),
+			Schema.TaggedStruct('Valid', {
+				id: Schema.String,
+				name: NonEmptyTrimmedString.Schema,
+				status: Schema.Union(
+					Schema.TaggedStruct('Everlasting', {}),
+					Schema.TaggedStruct('Stale', {
+						expirationDate: Integer.Schema,
+					}),
+					Schema.TaggedStruct('Fresh', {
+						freshnessRatio: UnitInterval.Schema,
+						timeLeft: Integer.Schema,
+						expirationDate: Integer.Schema,
+					}),
+				),
+			}),
 		),
 	),
 )
+
+const StatusDTO =
+	Data.taggedEnum<
+		Data.TaggedEnum.Value<Option.Option.Value<DTO>[0], 'Valid'>['status']
+	>()
+
+const ProductDTO = Data.taggedEnum<Option.Option.Value<DTO>[0]>()
 
 export type DTO = Schema.Schema.Type<typeof DTO>
 
@@ -100,11 +104,9 @@ export class Service extends Effect.Service<Service>()(
 								if (Option.isNone(maybeId)) {
 									yield* Effect.logWarning(`CORRUPTION - Product has no id.`)
 
-									return {
-										id: Symbol(),
-										isCorrupt: true,
+									return ProductDTO.Corrupt({
 										maybeName,
-									} as const
+									})
 								}
 
 								const maybeProduct = Option.gen(function* () {
@@ -123,24 +125,17 @@ export class Service extends Effect.Service<Service>()(
 								if (Option.isNone(maybeProduct)) {
 									yield* Effect.logWarning(`Product is invalid.`)
 
-									return {
-										id: maybeId.value,
-										maybeName,
-										isCorrupt: false,
-										isValid: false,
-									} as const
+									return ProductDTO.Invalid({ id: maybeId.value, maybeName })
 								}
 
 								const product = maybeProduct.value
 
 								if (!Product.hasExpirationDate(product)) {
-									return {
-										isCorrupt: false,
-										isValid: true,
+									return ProductDTO.Valid({
 										id: maybeId.value,
 										name: product.name,
-										expirationDate: 'none',
-									} as const
+										status: StatusDTO.Everlasting(),
+									})
 								}
 
 								const currentDate = Integer.unsafeFromNumber(
@@ -148,26 +143,27 @@ export class Service extends Effect.Service<Service>()(
 								)
 
 								if (Product.isStale(product, currentDate)) {
-									return {
-										isCorrupt: false,
-										isValid: true,
-										isStale: true,
+									return ProductDTO.Valid({
 										id: maybeId.value,
 										name: product.name,
-										expirationDate: product.maybeExpirationDate.value,
-									} as const
+										status: StatusDTO.Stale({
+											expirationDate: product.maybeExpirationDate.value,
+										}),
+									})
 								}
 
-								return {
-									isCorrupt: false,
-									isValid: true,
-									isStale: false,
+								return ProductDTO.Valid({
 									id: maybeId.value,
 									name: product.name,
-									expirationDate: product.maybeExpirationDate.value,
-									timeLeft: Product.timeLeft(product, currentDate),
-									freshness: Product.computeFreshness(product, currentDate),
-								} as const
+									status: StatusDTO.Fresh({
+										expirationDate: product.maybeExpirationDate.value,
+										timeLeft: Product.timeLeft(product, currentDate),
+										freshnessRatio: Product.computeFreshness(
+											product,
+											currentDate,
+										),
+									}),
+								})
 							}),
 						),
 						Effect.all,

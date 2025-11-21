@@ -102,17 +102,16 @@ const State = Schema.Struct({
 						Schema.TaggedStruct('Valid', {
 							id: Schema.String,
 							name: NonEmptyTrimmedString.Schema,
-							maybeExpiration: Schema.Option(
-								Schema.Union(
-									Schema.TaggedStruct('Stale', {
-										date: Integer.Schema,
-									}),
-									Schema.TaggedStruct('Fresh', {
-										freshness: UnitInterval.Schema,
-										timeLeft: Integer.Schema,
-										date: Integer.Schema,
-									}),
-								),
+							status: Schema.Union(
+								Schema.TaggedStruct('Everlasting', {}),
+								Schema.TaggedStruct('Stale', {
+									expirationDate: Integer.Schema,
+								}),
+								Schema.TaggedStruct('Fresh', {
+									freshnessRatio: UnitInterval.Schema,
+									timeLeft: Integer.Schema,
+									expirationDate: Integer.Schema,
+								}),
 							),
 						}),
 					),
@@ -127,6 +126,8 @@ type State = Schema.Schema.Type<typeof State>
 export type ProductDTO = Option.Option.Value<
 	Data.TaggedEnum.Value<State['refreshStatus'], 'Success'>['maybeProducts']
 >[0]
+
+const ProductDTO = Data.taggedEnum<ProductDTO>()
 
 ////
 ////
@@ -163,9 +164,9 @@ const update = matcher({
 						Option.map(
 							Arr.map(v => {
 								if (v._tag === 'Corrupt') {
-									return { ...v, id: Symbol() }
+									return ProductDTO.Corrupt({ ...v, id: Symbol() })
 								}
-								return v
+								return v satisfies ProductDTO
 							}),
 						),
 					),
@@ -200,7 +201,7 @@ const update = matcher({
 						Option.map(
 							Arr.map(v => {
 								if (v._tag === 'Corrupt') {
-									return { ...v, id: Symbol() }
+									return ProductDTO.Corrupt({ ...v, id: Symbol() })
 								}
 								return v
 							}),

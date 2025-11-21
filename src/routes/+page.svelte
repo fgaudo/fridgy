@@ -101,7 +101,7 @@
 					product =>
 						product._tag !== 'Corrupt' &&
 						product._tag !== 'Invalid' &&
-						Option.isSome(product.maybeExpiration),
+						product.status._tag !== 'Everlasting',
 				)
 			}),
 		),
@@ -435,15 +435,15 @@
 											<div
 												class="flex-col flex bg-secondary text-background shadow-xs rounded-full items-center justify-center text-center h-full aspect-square"
 											>
-												{#if Option.isSome(product.maybeExpiration)}
+												{#if product.status._tag === 'Everlasting'}
+													<Inf class="p-2 w-full h-full font-bold " />
+												{:else}
 													<div class="text-lg font-bold leading-4">
-														{format(product.maybeExpiration.value.date, `d`)}
+														{format(product.status.expirationDate, `d`)}
 													</div>
 													<div class="text-sm leading-4">
-														{format(product.maybeExpiration.value.date, `LLL`)}
+														{format(product.status.expirationDate, `LLL`)}
 													</div>
-												{:else}
-													<Inf class="p-2 w-full h-full font-bold " />
 												{/if}
 											</div>
 										</div>
@@ -457,9 +457,9 @@
 												{product.name}
 											</div>
 
-											{#if Option.isSome(product.maybeExpiration) && product.maybeExpiration.value._tag === 'Fresh'}
+											{#if product.status._tag === 'Fresh'}
 												{@const freshnessPercentage =
-													product.maybeExpiration.value.freshness * 100}
+													product.status.freshnessRatio * 100}
 												{@const color = `color-mix(in srgb, var(--color-secondary) ${freshnessPercentage.toString(10)}%, var(--color-primary) ${((1 - freshnessPercentage) * 100).toString(10)}%)`}
 
 												<div
@@ -483,15 +483,13 @@
 										<div
 											class="h-9/12 aspect-square flex items-center justify-center"
 										>
-											{#if Option.isSome(product.maybeExpiration) && product.maybeExpiration.value._tag === 'Fresh'}
+											{#if product.status._tag === 'Fresh'}
 												<div
 													class={[
 														`text-primary duration-fade absolute text-sm`,
 													]}
 												>
-													{Utils.formatRemainingTime(
-														product.maybeExpiration.value.timeLeft,
-													)}
+													{Utils.formatRemainingTime(product.status.timeLeft)}
 												</div>
 											{:else}
 												<div
