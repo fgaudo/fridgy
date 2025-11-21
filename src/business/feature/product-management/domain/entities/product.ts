@@ -5,6 +5,7 @@ import * as _Schema from 'effect/Schema'
 
 import * as Integer from '@/core/integer/integer.ts'
 import * as NonEmptyTrimmedString from '@/core/non-empty-trimmed-string.ts'
+import * as UnitInterval from '@/core/unit-interval.ts'
 
 export type Product = Brand.Branded<
 	{
@@ -46,3 +47,56 @@ export class Service extends Effect.Service<Service>()(
 		},
 	},
 ) {}
+
+export const hasExpirationDate = (
+	product: Product,
+): product is Product & {
+	maybeExpirationDate: Option.Some<Integer.Integer>
+} => {
+	return Option.isSome(product.maybeExpirationDate)
+}
+
+export const isStale = (
+	{
+		maybeExpirationDate,
+	}: Product & { maybeExpirationDate: Option.Some<Integer.Integer> },
+	currentDate: Integer.Integer,
+) => maybeExpirationDate.value <= currentDate
+
+export const computeFreshness = (
+	{
+		maybeExpirationDate,
+		creationDate,
+	}: Product & { maybeExpirationDate: Option.Some<Integer.Integer> },
+	currentDate: Integer.Integer,
+): UnitInterval.UnitInterval => {
+	const expirationDate = maybeExpirationDate.value
+
+	if (expirationDate <= currentDate) {
+		return UnitInterval.unsafeFromNumber(0)
+	}
+
+	if (expirationDate <= creationDate) {
+		return UnitInterval.unsafeFromNumber(0)
+	}
+
+	if (currentDate < creationDate) {
+		return UnitInterval.unsafeFromNumber(1)
+	}
+
+	const remainingDuration = expirationDate - currentDate
+	const totalDuration = expirationDate - creationDate
+
+	return UnitInterval.unsafeFromNumber(remainingDuration / totalDuration)
+}
+
+export const timeLeft = (
+	product: Product & { maybeExpirationDate: Option.Some<Integer.Integer> },
+	currentDate: Integer.Integer,
+): Integer.Integer => {
+	const timeLeft = product.maybeExpirationDate.value - currentDate
+
+	return timeLeft <= 0
+		? Integer.unsafeFromNumber(0)
+		: Integer.unsafeFromNumber(timeLeft)
+}

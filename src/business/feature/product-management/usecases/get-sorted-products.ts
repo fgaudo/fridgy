@@ -1,13 +1,14 @@
 import * as Arr from 'effect/Array'
+import * as Clock from 'effect/Clock'
 import * as Data from 'effect/Data'
 import * as Effect from 'effect/Effect'
-import * as Either from 'effect/Either'
 import { pipe } from 'effect/Function'
 import * as Option from 'effect/Option'
 import * as Schema from 'effect/Schema'
 
 import * as Integer from '@/core/integer/integer.ts'
 import * as NonEmptyTrimmedString from '@/core/non-empty-trimmed-string.ts'
+import * as UnitInterval from '@/core/unit-interval.ts'
 
 import * as Product from '../domain/entities/product.ts'
 import * as ProductManager from '../interfaces/product-manager.ts'
@@ -15,26 +16,35 @@ import * as ProductManager from '../interfaces/product-manager.ts'
 /////
 /////
 
-export const DTO = Schema.Array(
-	Schema.Union(
-		Schema.Struct({
-			isCorrupt: Schema.Literal(false),
-			maybeName: Schema.Option(NonEmptyTrimmedString.Schema),
-			id: Schema.String,
-			isValid: Schema.Literal(false),
-		}),
-		Schema.Struct({
-			isCorrupt: Schema.Literal(false),
-			id: Schema.String,
-			name: NonEmptyTrimmedString.Schema,
-			isValid: Schema.Literal(true),
-			maybeExpirationDate: Schema.Option(Integer.Schema),
-			creationDate: Integer.Schema,
-		}),
-		Schema.Struct({
-			isCorrupt: Schema.Literal(true),
-			maybeName: Schema.Option(NonEmptyTrimmedString.Schema),
-		}),
+export const DTO = Schema.Option(
+	Schema.NonEmptyArray(
+		Schema.Union(
+			Schema.Union(
+				Schema.TaggedStruct('Corrupt', {
+					maybeName: Schema.Option(NonEmptyTrimmedString.Schema),
+				}),
+				Schema.TaggedStruct('Invalid', {
+					maybeName: Schema.Option(NonEmptyTrimmedString.Schema),
+					id: Schema.String,
+				}),
+				Schema.TaggedStruct('Valid', {
+					id: Schema.String,
+					name: NonEmptyTrimmedString.Schema,
+					maybeExpiration: Schema.Option(
+						Schema.Union(
+							Schema.TaggedStruct('Stale', {
+								date: Integer.Schema,
+							}),
+							Schema.TaggedStruct('Fresh', {
+								freshness: UnitInterval.Schema,
+								timeLeft: Integer.Schema,
+								date: Integer.Schema,
+							}),
+						),
+					),
+				}),
+			),
+		),
 	),
 )
 
@@ -63,20 +73,20 @@ export class Service extends Effect.Service<Service>()(
 			const { getSortedProducts } = yield* ProductManager.Service
 			const { makeProduct } = yield* Product.Service
 			return {
-				run: Effect.gen(function* () {
+				run: Effect.gen(function* (): Effect.fn.Return<Message> {
 					yield* Effect.log(`Requested to fetch the list of products`)
 
 					yield* Effect.log(`Attempting to fetch the list of products...`)
 
-					const errorOrData = yield* pipe(getSortedProducts, Effect.either)
+					const maybeProducts = yield* Effect.option(getSortedProducts)
 
-					if (Either.isLeft(errorOrData)) {
+					if (Option.isNone(maybeProducts)) {
 						yield* Effect.logError(`Could not receive items.`)
 
 						return Message.Failed()
 					}
 
-					const result = errorOrData.right
+					const result = maybeProducts.value
 
 					const entries = yield* pipe(
 						result,
@@ -121,20 +131,53 @@ export class Service extends Effect.Service<Service>()(
 									} as const
 								}
 
+								const product = maybeProduct.value
+
+								if (!Product.hasExpirationDate(product)) {
+									return {
+										isCorrupt: false,
+										isValid: true,
+										id: maybeId.value,
+										name: product.name,
+										expirationDate: 'none',
+									} as const
+								}
+
+								const currentDate = Integer.unsafeFromNumber(
+									yield* Clock.currentTimeMillis,
+								)
+
+								if (Product.isStale(product, currentDate)) {
+									return {
+										isCorrupt: false,
+										isValid: true,
+										isStale: true,
+										id: maybeId.value,
+										name: product.name,
+										expirationDate: product.maybeExpirationDate.value,
+									} as const
+								}
+
 								return {
 									isCorrupt: false,
 									isValid: true,
+									isStale: false,
 									id: maybeId.value,
-									name: maybeProduct.value.name,
-									maybeExpirationDate: maybeProduct.value.maybeExpirationDate,
-									creationDate: maybeProduct.value.creationDate,
+									name: product.name,
+									expirationDate: product.maybeExpirationDate.value,
+									timeLeft: Product.timeLeft(product, currentDate),
+									freshness: Product.computeFreshness(product, currentDate),
 								} as const
 							}),
 						),
 						Effect.all,
 					)
 
-					return Message.Succeeded({ result: entries })
+					return Message.Succeeded({
+						result: Arr.isNonEmptyArray(entries)
+							? Option.some(entries)
+							: Option.none(),
+					})
 				}).pipe(Effect.withLogSpan(`GetSortedProducts UC`)),
 			}
 		}),

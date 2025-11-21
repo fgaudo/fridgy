@@ -1,9 +1,9 @@
 import * as Arr from 'effect/Array'
-import * as Clock from 'effect/Clock'
 import * as Data from 'effect/Data'
 import * as Effect from 'effect/Effect'
 import * as FiberId from 'effect/FiberId'
 import { pipe } from 'effect/Function'
+import * as Function from 'effect/Function'
 import * as Match from 'effect/Match'
 import * as Option from 'effect/Option'
 import * as Schedule from 'effect/Schedule'
@@ -17,88 +17,21 @@ import * as NonEmptyTrimmedString from '@/core/non-empty-trimmed-string.ts'
 import * as SM from '@/core/state-manager.ts'
 import * as UnitInterval from '@/core/unit-interval.ts'
 
-import {
-	Rules,
-	UseCasesWithoutDependencies as UC,
-} from '@/feature/product-management/index.ts'
+import { UseCasesWithoutDependencies as UC } from '@/feature/product-management/index.ts'
+
+////
+////
 
 type Message = Data.TaggedEnum<{
 	StartFetchList: object
 	StartDeleteAndRefresh: { ids: NonEmptyHashSet.NonEmptyHashSet<string> }
-	StartUpdateCurrentTime: object
 }>
 
 const Message = Data.taggedEnum<Message>()
 
-const ProductViewModelSchema = Schema.Union(
-	Schema.Struct({
-		isCorrupt: Schema.Literal(false),
-		id: Schema.String,
-		maybeName: Schema.Option(Schema.String),
-		isValid: Schema.Literal(false),
-	}),
-	Schema.extend(
-		Schema.Struct({
-			isCorrupt: Schema.Literal(false),
-			id: Schema.String,
-			name: Schema.String,
-			isValid: Schema.Literal(true),
-		}),
-		Schema.Union(
-			Schema.Struct({
-				timeLeft: Integer.Schema,
-				freshness: UnitInterval.Schema,
-				expirationDate: Integer.Schema,
-				isStale: Schema.Literal(false),
-			}),
-			Schema.Struct({
-				expirationDate: Integer.Schema,
-				isStale: Schema.Literal(true),
-			}),
-
-			Schema.Struct({
-				expirationDate: Schema.Literal(`none`),
-			}),
-		),
-	),
-	Schema.Struct({
-		id: Schema.Symbol,
-		isCorrupt: Schema.Literal(true),
-		maybeName: Schema.Option(Schema.NonEmptyTrimmedString),
-	}),
-)
-
-type ProductViewModel = Schema.Schema.Type<typeof ProductViewModelSchema>
-
-const ProductViewModel = Data.struct<ProductViewModel>
-
-const State = Schema.extend(
-	Schema.Struct({
-		maybeScheduler: Schema.Option(Schema.FiberId),
-		currentDate: Integer.Schema,
-		isBusy: Schema.Boolean,
-		maybeProducts: Schema.Option(Schema.NonEmptyArray(ProductViewModelSchema)),
-	}),
-	Schema.Union(
-		Schema.Struct({
-			maybeMessage: NonEmptyTrimmedString.Schema,
-			messageType: Schema.Union(
-				Schema.Literal(`error`),
-				Schema.Literal(`success`),
-			),
-		}),
-		Schema.Struct({
-			messageType: Schema.Literal(`none`),
-		}),
-	),
-)
-
-type State = Schema.Schema.Type<typeof State>
-
 type _InternalMessage = Data.TaggedEnum<{
 	StartScheduler: object
 	SchedulerStarted: { id: FiberId.FiberId }
-	UpdateCurrentTime: { currentDate: Integer.Integer }
 }>
 
 type InternalMessage =
@@ -122,71 +55,6 @@ type InternalMessage =
 
 const InternalMessage = Data.taggedEnum<InternalMessage>()
 
-const mapToViewModels = (entries: UC.GetSortedProducts.DTO, state: State) => {
-	return pipe(
-		entries,
-		Arr.map(entry => {
-			if (entry.isCorrupt) {
-				return ProductViewModel({
-					...entry,
-					id: Symbol(),
-				})
-			}
-
-			if (!entry.isValid) {
-				return entry
-			}
-
-			if (Option.isNone(entry.maybeExpirationDate)) {
-				return ProductViewModel({
-					expirationDate: `none` as const,
-					id: entry.id,
-					name: entry.name,
-					isValid: true,
-					isCorrupt: false,
-				})
-			}
-
-			const partial = {
-				expirationDate: entry.maybeExpirationDate.value,
-				id: entry.id,
-				isValid: true,
-				isCorrupt: false,
-				name: entry.name,
-			} as const
-
-			if (
-				Rules.isProductStale({
-					expirationDate: entry.maybeExpirationDate.value,
-					currentDate: state.currentDate,
-				})
-			) {
-				return ProductViewModel({
-					...partial,
-					isStale: true,
-				})
-			}
-
-			return ProductViewModel({
-				...partial,
-				isStale: false,
-				freshness: Rules.computeFreshness({
-					creationDate: entry.creationDate,
-					expirationDate: entry.maybeExpirationDate.value,
-					currentDate: state.currentDate,
-				}),
-				timeLeft: Integer.unsafeFromNumber(
-					entry.maybeExpirationDate.value - state.currentDate,
-				),
-			})
-		}),
-		models =>
-			Arr.isNonEmptyArray(models)
-				? Option.some(models)
-				: Option.none<Arr.NonEmptyArray<ProductViewModel>>(),
-	)
-}
-
 const deleteProductsByIds = H.mapFunctionReturn(
 	UC.DeleteProductsByIdsAndRetrieve.Service.run,
 	Effect.map(
@@ -207,6 +75,61 @@ const fetchList = Effect.map(
 		Succeeded: ({ result }) => InternalMessage.FetchListSucceeded({ result }),
 	}),
 )
+
+////
+////
+
+const State = Schema.Struct({
+	maybeScheduler: Schema.Option(Schema.FiberId),
+	isBusy: Schema.Boolean,
+	refreshStatus: Schema.Union(
+		Schema.TaggedStruct('Error', {
+			message: NonEmptyTrimmedString.Schema,
+		}),
+		Schema.TaggedStruct('Uninitialized', {}),
+		Schema.TaggedStruct('Success', {
+			maybeProducts: Schema.Option(
+				Schema.NonEmptyArray(
+					Schema.Union(
+						Schema.TaggedStruct('Corrupt', {
+							maybeName: Schema.Option(NonEmptyTrimmedString.Schema),
+							id: Schema.Symbol,
+						}),
+						Schema.TaggedStruct('Invalid', {
+							maybeName: Schema.Option(NonEmptyTrimmedString.Schema),
+							id: Schema.String,
+						}),
+						Schema.TaggedStruct('Valid', {
+							id: Schema.String,
+							name: NonEmptyTrimmedString.Schema,
+							maybeExpiration: Schema.Option(
+								Schema.Union(
+									Schema.TaggedStruct('Stale', {
+										date: Integer.Schema,
+									}),
+									Schema.TaggedStruct('Fresh', {
+										freshness: UnitInterval.Schema,
+										timeLeft: Integer.Schema,
+										date: Integer.Schema,
+									}),
+								),
+							),
+						}),
+					),
+				),
+			),
+		}),
+	),
+})
+
+type State = Schema.Schema.Type<typeof State>
+
+export type ProductDTO = Option.Option.Value<
+	Data.TaggedEnum.Value<State['refreshStatus'], 'Success'>['maybeProducts']
+>[0]
+
+////
+////
 
 const Operation = SM.Operation<State, InternalMessage, UC.All>()
 
@@ -233,7 +156,20 @@ const update = matcher({
 		state => {
 			return SM.modify(state, draft => {
 				draft.isBusy = false
-				draft.maybeProducts = mapToViewModels(result, state)
+				draft.refreshStatus = {
+					_tag: 'Success',
+					maybeProducts: pipe(
+						result,
+						Option.map(
+							Arr.map(v => {
+								if (v._tag === 'Corrupt') {
+									return { ...v, id: Symbol() }
+								}
+								return v
+							}),
+						),
+					),
+				}
 			})
 		},
 
@@ -257,7 +193,20 @@ const update = matcher({
 			SM.modify(state, draft => {
 				draft.isBusy = false
 
-				draft.maybeProducts = mapToViewModels(result, state)
+				draft.refreshStatus = {
+					_tag: 'Success',
+					maybeProducts: pipe(
+						result,
+						Option.map(
+							Arr.map(v => {
+								if (v._tag === 'Corrupt') {
+									return { ...v, id: Symbol() }
+								}
+								return v
+							}),
+						),
+					),
+				}
 			}),
 
 	DeleteFailed: () =>
@@ -268,7 +217,10 @@ const update = matcher({
 	DeleteSucceededButRefreshFailed: () =>
 		SM.modify(draft => {
 			draft.isBusy = false
-			draft.maybeProducts = Option.none<Arr.NonEmptyArray<ProductViewModel>>()
+			draft.refreshStatus = {
+				_tag: 'Error',
+				message: NonEmptyTrimmedString.unsafeFromString('ciao'),
+			}
 		}),
 
 	StartScheduler: () =>
@@ -277,13 +229,8 @@ const update = matcher({
 				init: id => InternalMessage.SchedulerStarted({ id }),
 				stream: () =>
 					pipe(
-						Schedule.spaced('20 seconds'),
-						Stream.fromSchedule,
-						Stream.mapEffect(() => Clock.currentTimeMillis),
-						Stream.filterMap(Integer.fromNumber),
-						Stream.map(currentDate =>
-							InternalMessage.UpdateCurrentTime({ currentDate }),
-						),
+						Stream.succeed(InternalMessage.StartFetchList()),
+						Stream.schedule(Schedule.spaced('20 seconds')),
 					),
 			}),
 		]),
@@ -292,47 +239,13 @@ const update = matcher({
 		SM.modify(draft => {
 			draft.maybeScheduler = Option.some(id)
 		}),
-
-	UpdateCurrentTime: ({ currentDate }) =>
-		SM.modify(draft => {
-			draft.currentDate = currentDate
-		}),
-
-	StartUpdateCurrentTime: () => state =>
-		SM.modify(state, draft => {
-			const updateTime = Operation.command({
-				effect: pipe(
-					Clock.currentTimeMillis,
-					Effect.map(Integer.unsafeFromNumber),
-					Effect.map(date =>
-						InternalMessage.UpdateCurrentTime({ currentDate: date }),
-					),
-				),
-			})
-
-			if (Option.isNone(state.maybeScheduler)) {
-				return [updateTime]
-			}
-
-			draft.maybeScheduler = Option.none()
-
-			return [
-				Operation.cancel({ id: state.maybeScheduler.value }),
-				Operation.command({
-					effect: Effect.succeed(InternalMessage.StartScheduler()),
-				}),
-				updateTime,
-			]
-		}),
 })
 
 const makeViewModel = Effect.gen(function* () {
 	const initState: State = {
 		maybeScheduler: Option.none(),
-		currentDate: Integer.unsafeFromNumber(yield* Clock.currentTimeMillis),
 		isBusy: false,
-		maybeProducts: Option.none(),
-		messageType: `none`,
+		refreshStatus: { _tag: 'Uninitialized' },
 	}
 
 	const viewModel = yield* SM.makeStateManager({
@@ -344,8 +257,22 @@ const makeViewModel = Effect.gen(function* () {
 
 	return {
 		...viewModel,
+		messages: Stream.filterMap(
+			viewModel.messages,
+			Function.flow(
+				Match.value,
+				Match.tags({
+					DeleteAndRefreshSucceeded: ({ _tag }) => Option.some(_tag),
+					DeleteFailed: ({ _tag }) => Option.some(_tag),
+					DeleteSucceededButRefreshFailed: ({ _tag }) => Option.some(_tag),
+					FetchListFailed: ({ _tag }) => Option.some(_tag),
+					FetchListSucceeded: ({ _tag }) => Option.some(_tag),
+				}),
+				Match.orElse(() => Option.none()),
+			),
+		),
 		dispatch: (m: Message) => viewModel.dispatch(m),
-	}
+	} as const
 })
 
 export { makeViewModel, Message }

@@ -9,6 +9,7 @@ import { pipe } from 'effect/Function'
 import * as Function from 'effect/Function'
 import * as HashMap from 'effect/HashMap'
 import * as Option from 'effect/Option'
+import * as PubSub from 'effect/PubSub'
 import * as Queue from 'effect/Queue'
 import * as Ref from 'effect/Ref'
 import * as Scope from 'effect/Scope'
@@ -35,6 +36,7 @@ export type Update<S, M, R> = (message: M) => (state: S) => {
 
 export type StateManager<S, M> = {
 	initState: S
+	messages: Stream.Stream<M>
 	changes: Stream.Stream<S>
 	dispatch: (m: M) => Effect.Effect<void>
 	dispose: Effect.Effect<void>
@@ -55,6 +57,7 @@ export const makeStateManager = Effect.fn(function* <
 }): Effect.fn.Return<StateManager<S, M>, never, R | Scope.Scope> {
 	const ref = yield* SubscriptionRef.make(initState)
 	const queue = yield* Queue.unbounded<M>()
+	const messagePubSub = yield* PubSub.unbounded<M>()
 
 	const subscriptions = yield* SynchronizedRef.make(
 		HashMap.empty<FiberId.FiberId, Fiber.RuntimeFiber<void>>(),
@@ -88,6 +91,8 @@ export const makeStateManager = Effect.fn(function* <
 				const { state, operations } = transition(s)
 				return [operations, state]
 			})
+
+			yield* PubSub.publish(messagePubSub, message)
 
 			for (const operation of operations) {
 				yield* Op.$match(operation, {
@@ -182,12 +187,20 @@ export const makeStateManager = Effect.fn(function* <
 
 	return {
 		initState,
+		messages: Stream.onEnd(
+			Stream.fromPubSub(messagePubSub),
+			Effect.logDebug(`StateManager: Stream of messages ended`),
+		),
 		changes: Stream.onEnd(
 			ref.changes,
 			Effect.logDebug(`StateManager: Stream of changes ended`),
 		),
 		dispose: Effect.gen(function* () {
-			yield* Effect.all([queue.shutdown, Fiber.interrupt(updatesFiber)])
+			yield* Effect.all([
+				queue.shutdown,
+				Fiber.interrupt(updatesFiber),
+				messagePubSub.shutdown,
+			])
 			yield* Effect.logDebug(`StateManager: Resources freed`)
 		}),
 		dispatch: Effect.fn(function* (m: M) {

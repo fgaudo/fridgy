@@ -5,7 +5,7 @@ import * as ManagedRuntime from 'effect/ManagedRuntime'
 import * as Stream from 'effect/Stream'
 import { onDestroy, onMount } from 'svelte'
 
-import type { StateManager } from '@/core/state-manager.ts'
+import type { ViewModel } from '@/core/viewmodel.ts'
 
 export function createCapacitorListener(event: `resume`): Stream.Stream<void>
 export function createCapacitorListener(
@@ -26,10 +26,15 @@ export function createCapacitorListener<E extends `resume` | `backButton`>(
 	)
 }
 
-export const useViewmodel = <S, M, R>(
-	runtime: ManagedRuntime.ManagedRuntime<R, never>,
-	makeViewModel: Effect.Effect<StateManager<S, M>, never, R>,
-): { state: S; dispatch: (m: M) => void } | undefined => {
+export const useViewmodel = <S, M1, M2, R>({
+	runtime,
+	makeViewModel,
+	messages,
+}: {
+	runtime: ManagedRuntime.ManagedRuntime<R, never>
+	makeViewModel: Effect.Effect<ViewModel<S, M1, M2>, never, R>
+	messages?: (m: M2) => void
+}): { state: S; dispatch: (m: M1) => void } | undefined => {
 	let state = $state.raw<S>()
 
 	let handle = $state.raw<Effect.Effect.Success<typeof makeViewModel>>()
@@ -46,10 +51,19 @@ export const useViewmodel = <S, M, R>(
 			),
 		)
 
+		const cancelMessages = messages
+			? runtime.runCallback(
+					Stream.runForEach(handle.messages, m =>
+						Effect.sync(() => messages(m)),
+					),
+				)
+			: undefined
+
 		initialized = true
 
 		return () => {
 			cancelChanges()
+			cancelMessages?.()
 		}
 	})
 
@@ -80,7 +94,7 @@ export const useViewmodel = <S, M, R>(
 		const dispatch = handle.dispatch
 
 		return {
-			dispatch: (m: M) => runtime.runCallback(dispatch(m)),
+			dispatch: (m: M1) => runtime.runCallback(dispatch(m)),
 			state,
 		}
 	})
