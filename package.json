@@ -1,5 +1,6 @@
 {
 	"name": "fridgy",
+	"version": "1.0.8",
 	"author": "Francesco Gaudenzi <fgaudo@gmail.com>",
 	"devDependencies": {
 		"@capacitor-community/safe-area": "7.0.0-alpha.1",

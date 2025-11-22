@@ -5,7 +5,7 @@
 
 	import licenses from '$lib/assets/licenses.json' with { type: 'json' }
 	import Ripple from '$lib/components/ripple.svelte'
-	import { PAGE_TRANSITION_Y, version } from '$lib/constants'
+	import { PAGE_TRANSITION_Y } from '$lib/constants'
 </script>
 
 <div
@@ -42,7 +42,7 @@
 		<p class="mt-2">
 			version:
 			<span class="text-primary">
-				{version}
+				{__VERSION__}
 			</span>
 		</p>
 		<p class="mt-2">© 2024 Francesco Gaudenzi</p>
