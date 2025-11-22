@@ -1,7 +1,7 @@
 import assert from 'assert'
 import * as Arr from 'effect/Array'
-import * as Data from 'effect/Data'
 import * as Effect from 'effect/Effect'
+import * as Match from 'effect/Match'
 import * as Schema from 'effect/Schema'
 
 import * as NonEmptyHashSet from '@/core/non-empty-hash-set'
@@ -12,23 +12,33 @@ import * as GetSortedProducts from './get-sorted-products.ts'
 /////
 /////
 
-/** @internal */
-export const DTOSchema = NonEmptyHashSet.Schema(Schema.String)
-
-export type DTO = Schema.Schema.Type<typeof DTOSchema>
+export class DeleteParameters extends Schema.Class<DeleteParameters>(
+	'DeleteParameters',
+)({
+	ids: NonEmptyHashSet.Schema(Schema.String),
+}) {}
 
 /////
 /////
 
-export type Message = Data.TaggedEnum<{
-	Failed: object
-	DeleteSucceededButRefreshFailed: object
-	Succeeded: {
-		result: GetSortedProducts.DTO
-	}
-}>
+class Failed extends Schema.TaggedClass<Failed>()('Failed', {}) {}
 
-export const Message = Data.taggedEnum<Message>()
+class DeleteSucceededButRefreshFailed extends Schema.TaggedClass<DeleteSucceededButRefreshFailed>()(
+	'DeleteSucceededButRefreshFailed',
+	{},
+) {}
+
+class Succeeded extends Schema.TaggedClass<Succeeded>()('Succeeded', {
+	result: GetSortedProducts.Response.Succeeded.fields.result,
+}) {}
+
+export const Response = {
+	Failed,
+	DeleteSucceededButRefreshFailed,
+	Succeeded,
+}
+
+export type Response = Failed | DeleteSucceededButRefreshFailed | Succeeded
 
 /////
 /////
@@ -52,7 +62,9 @@ export class Service extends Effect.Service<Service>()(
 			const getAllProductsWithTotal = yield* GetSortedProducts.Service
 
 			return {
-				run: Effect.fn(`DeleteProductsByIds UC`)(function* (ids: DTO) {
+				run: Effect.fn(`DeleteProductsByIds UC`)(function* ({
+					ids,
+				}: DeleteParameters) {
 					yield* Effect.logInfo(`Requested to delete products`)
 					yield* Effect.logInfo(`Attempting to delete products...`)
 
@@ -68,7 +80,7 @@ export class Service extends Effect.Service<Service>()(
 					assert(number >= 0)
 
 					if (number <= 0) {
-						return Message.Failed()
+						return new Response.Failed()
 					}
 
 					if (number < result.length) {
@@ -81,9 +93,9 @@ export class Service extends Effect.Service<Service>()(
 
 					const result2 = yield* getAllProductsWithTotal.run
 
-					return GetSortedProducts.Message.$match(result2, {
-						Failed: () => Message.DeleteSucceededButRefreshFailed(),
-						Succeeded: ({ result }) => Message.Succeeded({ result }),
+					return Match.valueTags(result2, {
+						Failed: () => new Response.DeleteSucceededButRefreshFailed(),
+						Succeeded: ({ result }) => new Response.Succeeded({ result }),
 					})
 				}),
 			}

@@ -17,7 +17,7 @@ import { AddProduct } from './index.ts'
 describe.concurrent(`Add product`, () => {
 	effect.prop(
 		`Should just work`,
-		{ product: Usecase.ProductDTOSchema },
+		{ product: Usecase.AddProductParams },
 		Effect.fn(function* ({ product: { name, maybeExpirationDate } }, _) {
 			const observed = yield* Deferred.make<number>()
 
@@ -50,7 +50,7 @@ describe.concurrent(`Add product`, () => {
 			const creationDate = yield* Deferred.await(observed)
 
 			expect(creationDate).toStrictEqual(0)
-			expect(Usecase.Message.$is(`Succeeded`)(exit.value)).toStrictEqual(true)
+			expect(exit.value._tag).toStrictEqual(Usecase.Response.Succeeded._tag)
 		}),
 	)
 
@@ -68,7 +68,7 @@ describe.concurrent(`Add product`, () => {
 	)(({ effect }) => {
 		effect.prop(
 			`Should return error`,
-			{ product: Usecase.ProductDTOSchema },
+			{ product: Usecase.AddProductParams },
 			Effect.fn(function* ({ product: { name, maybeExpirationDate } }) {
 				const { run } = yield* Usecase.Service
 				const exit = yield* Effect.exit(
@@ -80,7 +80,7 @@ describe.concurrent(`Add product`, () => {
 
 				H.assertExitIsSuccess(exit)
 
-				expect(Usecase.Message.$is(`Failed`)(exit.value)).toStrictEqual(true)
+				expect(exit.value._tag).toStrictEqual(Usecase.Response.Failed._tag)
 			}),
 		)
 	})
@@ -101,7 +101,7 @@ describe.concurrent(`Add product`, () => {
 	)(({ effect }) => {
 		effect.prop(
 			`Should return error`,
-			{ product: Usecase.ProductDTOSchema },
+			{ product: Usecase.AddProductParams },
 			Effect.fn(function* ({ product: { name, maybeExpirationDate } }) {
 				const { run } = yield* Usecase.Service
 				const exit = yield* Effect.exit(
@@ -113,7 +113,7 @@ describe.concurrent(`Add product`, () => {
 
 				H.assertExitIsSuccess(exit)
 
-				expect(Usecase.Message.$is(`Failed`)(exit.value)).toStrictEqual(true)
+				expect(exit.value._tag).toStrictEqual(Usecase.Response.Failed._tag)
 			}),
 		)
 	})

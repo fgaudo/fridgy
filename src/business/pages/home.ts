@@ -38,14 +38,14 @@ type InternalMessage =
 	| Message
 	| _InternalMessage
 	| H.MapTags<
-			UC.GetSortedProducts.Message,
+			UC.GetSortedProducts.Response,
 			{
 				Failed: `FetchListFailed`
 				Succeeded: `FetchListSucceeded`
 			}
 	  >
 	| H.MapTags<
-			UC.DeleteProductsByIdsAndRetrieve.Message,
+			UC.DeleteProductsByIdsAndRetrieve.Response,
 			{
 				Succeeded: `DeleteAndRefreshSucceeded`
 				Failed: `DeleteFailed`
@@ -58,7 +58,7 @@ const InternalMessage = Data.taggedEnum<InternalMessage>()
 const deleteProductsByIds = H.mapFunctionReturn(
 	UC.DeleteProductsByIdsAndRetrieve.Service.run,
 	Effect.map(
-		UC.DeleteProductsByIdsAndRetrieve.Message.$match({
+		Match.valueTags({
 			DeleteSucceededButRefreshFailed: () =>
 				InternalMessage.DeleteSucceededButRefreshFailed(),
 			Failed: () => InternalMessage.DeleteFailed(),
@@ -70,7 +70,7 @@ const deleteProductsByIds = H.mapFunctionReturn(
 
 const fetchList = Effect.map(
 	UC.GetSortedProducts.Service.run,
-	UC.GetSortedProducts.Message.$match({
+	Match.valueTags({
 		Failed: () => InternalMessage.FetchListFailed(),
 		Succeeded: ({ result }) => InternalMessage.FetchListSucceeded({ result }),
 	}),
@@ -184,7 +184,7 @@ const update = matcher({
 			return SM.modify(state, draft => {
 				draft.isBusy = true
 
-				return [Operation.command({ effect: deleteProductsByIds(ids) })]
+				return [Operation.command({ effect: deleteProductsByIds({ ids }) })]
 			})
 		},
 
@@ -226,6 +226,7 @@ const update = matcher({
 
 	StartScheduler: () =>
 		SM.operations([
+			Operation.command({ effect: Effect.succeed(Message.StartFetchList()) }),
 			Operation.subscription({
 				init: id => InternalMessage.SchedulerStarted({ id }),
 				stream: () =>

@@ -1,5 +1,4 @@
 import * as Clock from 'effect/Clock'
-import * as Data from 'effect/Data'
 import * as Effect from 'effect/Effect'
 import * as Inspectable from 'effect/Inspectable'
 import * as Option from 'effect/Option'
@@ -14,23 +13,25 @@ import * as ProductManager from '../interfaces/product-manager.ts'
 /////
 /////
 
-/** @internal */
-export const ProductDTOSchema = Schema.Struct({
+export class AddProductParams extends Schema.Class<AddProductParams>(
+	'ProductDTO',
+)({
 	name: NonEmptyTrimmedString.Schema,
 	maybeExpirationDate: Schema.Option(Integer.Schema),
-})
-
-export type ProductDTO = Schema.Schema.Type<typeof ProductDTOSchema>
+}) {}
 
 /////
 /////
 
-export type Message = Data.TaggedEnum<{
-	Failed: object
-	Succeeded: object
-}>
+class Failed extends Schema.TaggedClass<Failed>()('Failed', {}) {}
+class Succeeded extends Schema.TaggedClass<Succeeded>()('Succeeded', {}) {}
 
-export const Message = Data.taggedEnum<Message>()
+export const Response = {
+	Failed,
+	Succeeded,
+}
+
+export type Response = Failed | Succeeded
 
 /////
 /////
@@ -47,7 +48,9 @@ export class Service extends Effect.Service<Service>()(
 			const { makeProduct } = yield* Product.Service
 
 			return {
-				run: Effect.fn(`AddProduct UC`)(function* (productData: ProductDTO) {
+				run: Effect.fn(`AddProduct UC`)(function* (
+					productData: AddProductParams,
+				): Effect.fn.Return<Response> {
 					yield* Effect.logInfo(
 						`Requested to add product "${productData.name}"`,
 					)
@@ -69,7 +72,7 @@ export class Service extends Effect.Service<Service>()(
 							}),
 						)
 
-						return Message.Failed()
+						return new Response.Failed()
 					}
 
 					yield* Effect.logInfo(
@@ -86,11 +89,11 @@ export class Service extends Effect.Service<Service>()(
 					)
 
 					if (!result) {
-						return Message.Failed()
+						return new Response.Failed()
 					}
 
 					yield* Effect.logInfo(`Successfully added a product`)
-					return Message.Succeeded()
+					return new Response.Succeeded()
 				}),
 			}
 		}),

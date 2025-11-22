@@ -26,8 +26,11 @@
 		currentDate: number
 	}
 
-	const { runtime: executor } = getGlobalContext()
-	const viewModel = useViewmodel(executor, Pages.AddProduct.makeViewModel)
+	const { runtime } = getGlobalContext()
+
+	const { viewModel } = $derived(
+		useViewmodel({ runtime, makeViewModel: Pages.AddProduct.makeViewModel }),
+	)
 
 	const state = $state<State>({
 		name: ``,

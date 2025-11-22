@@ -43,13 +43,15 @@
 		selectedProducts: new SvelteSet(),
 	})
 
-	const viewmodel = useViewmodel({
-		runtime,
-		makeViewModel: Pages.Home.makeViewModel,
-		messages: m => {
-			void Toast.show({ text: m })
-		},
-	})
+	const { viewModel } = $derived(
+		useViewmodel({
+			runtime,
+			makeViewModel: Pages.Home.makeViewModel,
+			messages: m => {
+				void Toast.show({ text: m })
+			},
+		}),
+	)
 
 	function toggleMenu() {
 		if (state.isMenuOpen) {
@@ -88,7 +90,7 @@
 	const refreshTimeListenersEnabled = $derived(
 		Option.isSome(
 			Option.gen(function* () {
-				const { state: viewmodelState } = yield* Option.fromNullable(viewmodel)
+				const { state: viewmodelState } = yield* Option.fromNullable(viewModel)
 
 				if (viewmodelState.refreshStatus._tag !== 'Success') {
 					return false
@@ -143,11 +145,12 @@
 	</div>
 {/snippet}
 
-{#if !viewmodel}
+{#if !viewModel}
 	<div
 		transition:fade={{ duration: 200 }}
 		class="z-50 scale-[175%] fixed left-0 top-0 right-0 bottom-0 backdrop-blur-[1px] flex items-center justify-center"
 	>
+		ciao
 		<Spinner />
 	</div>
 {:else}
@@ -163,7 +166,7 @@
 					: `bg-secondary/5`,
 			]}
 		>
-			{#if !viewmodel.state.isBusy}
+			{#if !viewModel.state.isBusy}
 				{#if Option.some(maybeSelectedProducts)}
 					<Ripple
 						ontap={() => {
@@ -275,7 +278,7 @@
 				>
 					{#if Option.isSome(maybeSelectedProducts)}
 						<div class="absolute" transition:fade={{ duration: 200 }}>
-							{#if !viewmodel.state.isBusy}
+							{#if !viewModel.state.isBusy}
 								<Ripple
 									ontap={() => {
 										clearSelected()
@@ -314,10 +317,10 @@
 						class="ml-2 mr-2 relative h-12 w-12 flex items-center justify-center rounded-full overflow-hidden"
 						transition:fade={{ duration: 200 }}
 					>
-						{#if !viewmodel.state.isBusy}
+						{#if !viewModel.state.isBusy}
 							<Ripple
 								ontap={() => {
-									viewmodel.dispatch(
+									viewModel.dispatch(
 										Pages.Home.Message.StartDeleteAndRefresh({
 											ids: maybeSelectedProducts.value,
 										}),
@@ -329,11 +332,11 @@
 					</div>
 				{/if}
 			</div>
-			{#if viewmodel.state.refreshStatus._tag === 'Success'}
+			{#if viewModel.state.refreshStatus._tag === 'Success'}
 				{@const count = Option.isSome(
-					viewmodel.state.refreshStatus.maybeProducts,
+					viewModel.state.refreshStatus.maybeProducts,
 				)
-					? Arr.length(viewmodel.state.refreshStatus.maybeProducts.value)
+					? Arr.length(viewModel.state.refreshStatus.maybeProducts.value)
 					: 0}
 
 				<p
@@ -345,7 +348,7 @@
 			{/if}
 		</div>
 
-		{#if viewmodel.state.isBusy}
+		{#if viewModel.state.isBusy}
 			<div
 				transition:fade={{ duration: 200 }}
 				class="z-50 scale-[175%] fixed left-0 top-0 right-0 bottom-0 backdrop-blur-[1px] flex items-center justify-center"
@@ -355,7 +358,7 @@
 		{/if}
 
 		<div class="bg-background flex flex-col">
-			{#if viewmodel.state.refreshStatus._tag === 'Error'}
+			{#if viewModel.state.refreshStatus._tag === 'Error'}
 				<div
 					class="flex h-screen w-screen items-center justify-center text-center text-lg"
 				>
@@ -365,10 +368,10 @@
 						<div
 							class="text-primary underline relative overflow-hidden rounded-full py-1 px-2"
 						>
-							{#if viewmodel.state.isBusy}
+							{#if viewModel.state.isBusy}
 								<Ripple
 									ontap={() => {
-										viewmodel.dispatch(Pages.Home.Message.StartFetchList())
+										viewModel.dispatch(Pages.Home.Message.StartFetchList())
 									}}
 								></Ripple>
 							{/if}
@@ -377,14 +380,14 @@
 						</div>
 					</div>
 				</div>
-			{:else if viewmodel.state.refreshStatus._tag === 'Uninitialized'}
+			{:else if viewModel.state.refreshStatus._tag === 'Uninitialized'}
 				<div
 					class="flex h-screen w-screen items-center justify-center text-center text-lg"
 				>
 					<Spinner />
 				</div>
-			{:else if Option.isSome(viewmodel.state.refreshStatus.maybeProducts)}
-				{@const products = viewmodel.state.refreshStatus.maybeProducts.value}
+			{:else if Option.isSome(viewModel.state.refreshStatus.maybeProducts)}
+				{@const products = viewModel.state.refreshStatus.maybeProducts.value}
 
 				<div
 					style:padding-top={`calc(var(--safe-area-inset-top) + 64px + 42px)`}
@@ -408,7 +411,7 @@
 											: `bg-secondary/5`,
 									]}
 								>
-									{#if !viewmodel.state.isBusy}
+									{#if !viewModel.state.isBusy}
 										{#if Option.some(maybeSelectedProducts)}
 											<Ripple
 												ontap={() => {
@@ -510,7 +513,7 @@
 					class="fixed right-4 left-4"
 					style:bottom={`calc(var(--safe-area-inset-bottom, 0) + 21px)`}
 				>
-					{#if Option.isNone(viewmodel.state.refreshStatus.maybeProducts)}
+					{#if Option.isNone(viewModel.state.refreshStatus.maybeProducts)}
 						<div
 							in:fade={{ duration: 200 }}
 							class="font-stylish absolute right-0 bottom-[100px] flex flex-col items-end duration-[fade]"

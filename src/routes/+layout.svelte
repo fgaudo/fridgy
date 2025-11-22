@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { SafeArea } from '@capacitor-community/safe-area'
 	import '@fontsource-variable/comfortaa/index.css'
 	import '@fontsource-variable/roboto-flex/index.css'
 	import { defineCustomElements } from '@ionic/pwa-elements/loader'
@@ -6,9 +7,9 @@
 	import { type Snippet, onMount } from 'svelte'
 	import { fade } from 'svelte/transition'
 
+	import '$lib/assets/index.css'
 	import Spinner from '$lib/components/spinner.svelte'
 	import { setGlobalContext } from '$lib/context.ts'
-	import '$lib/ui/assets/index.css'
 
 	import { runtime } from '../business/index.ts'
 
@@ -17,7 +18,15 @@
 	const pageLoader = Promise.all([
 		document.fonts.ready,
 		defineCustomElements(window),
-
+		SafeArea.enable({
+			config: {
+				customColorsForSystemBars: true,
+				statusBarColor: `#00000000`, // transparent
+				statusBarContent: `dark`,
+				navigationBarColor: `#00000000`, // transparent
+				navigationBarContent: `light`,
+			},
+		}),
 		Effect.runPromise(Effect.sleep(150)),
 	])
 

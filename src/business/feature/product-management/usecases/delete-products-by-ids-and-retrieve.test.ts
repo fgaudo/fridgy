@@ -27,14 +27,14 @@ describe.concurrent(`Delete products by ids`, () => {
 	)(({ effect }) => {
 		effect.prop(
 			`Should return delete failed`,
-			[Usecase.DTOSchema],
-			Effect.fn(function* ([ids]) {
+			[Usecase.DeleteParameters],
+			Effect.fn(function* ([params]) {
 				const { run } = yield* Usecase.Service
-				const exit = yield* Effect.exit(run(ids))
+				const exit = yield* Effect.exit(run(params))
 
 				H.assertExitIsSuccess(exit)
 
-				expect(Usecase.Message.$is(`Failed`)(exit.value)).toStrictEqual(true)
+				expect(exit.value._tag).toStrictEqual(Usecase.Response.Failed._tag)
 			}),
 		)
 	})
@@ -47,33 +47,36 @@ describe.concurrent(`Delete products by ids`, () => {
 				},
 			}),
 			makeTestLayer(GetSortedProducts.Service)({
-				run: pipe(
-					NonEmptyTrimmedString.unsafeFromString(''),
-					Option.some,
-					maybeName =>
-						GetSortedProducts.ProductDTO.Corrupt({
-							maybeName,
-						}),
-					Arr.make,
-					Option.some,
-					maybeProducts =>
-						GetSortedProducts.Message.Succeeded({ result: maybeProducts }),
-					Effect.succeed,
+				run: Effect.sync(() =>
+					pipe(
+						NonEmptyTrimmedString.unsafeFromString('asd'),
+						Option.some,
+						maybeName =>
+							GetSortedProducts.Response.Succeeded.ProductDTO.Corrupt({
+								maybeName,
+							}),
+						Arr.make,
+						Option.some,
+						maybeProducts =>
+							new GetSortedProducts.Response.Succeeded({
+								result: maybeProducts,
+							}),
+					),
 				),
 			}),
 		]),
 	)(({ effect }) => {
 		effect.prop(
 			`Should just work`,
-			[Usecase.DTOSchema],
-			Effect.fn(function* ([ids]) {
+			[Usecase.DeleteParameters],
+			Effect.fn(function* ([params]) {
 				const { run } = yield* Usecase.Service
 
-				const exit = yield* Effect.exit(run(ids))
+				const exit = yield* Effect.exit(run(params))
 
 				H.assertExitIsSuccess(exit)
 
-				expect(Usecase.Message.$is(`Succeeded`)(exit.value)).toStrictEqual(true)
+				expect(exit.value._tag).toStrictEqual(Usecase.Response.Succeeded._tag)
 			}),
 		)
 	})
@@ -86,23 +89,23 @@ describe.concurrent(`Delete products by ids`, () => {
 				},
 			}),
 			makeTestLayer(GetSortedProducts.Service)({
-				run: Effect.succeed(GetSortedProducts.Message.Failed()),
+				run: Effect.sync(() => new GetSortedProducts.Response.Failed()),
 			}),
 		]),
 	)(({ effect }) => {
 		effect.prop(
 			`Should return error`,
-			[Usecase.DTOSchema],
-			Effect.fn(function* ([ids]) {
+			[Usecase.DeleteParameters],
+			Effect.fn(function* ([params]) {
 				const { run } = yield* Usecase.Service
 
-				const exit = yield* Effect.exit(run(ids))
+				const exit = yield* Effect.exit(run(params))
 
 				H.assertExitIsSuccess(exit)
 
-				expect(
-					Usecase.Message.$is(`DeleteSucceededButRefreshFailed`)(exit.value),
-				).toStrictEqual(true)
+				expect(exit.value._tag).toStrictEqual(
+					Usecase.Response.DeleteSucceededButRefreshFailed._tag,
+				)
 			}),
 		)
 	})

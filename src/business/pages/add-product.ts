@@ -26,7 +26,7 @@ const Message = Data.taggedEnum<Message>()
 type InternalMessage =
 	| Message
 	| H.MapTags<
-			UC.AddProduct.Message,
+			UC.AddProduct.Response,
 			{ Failed: `AddProductFailed`; Succeeded: `AddProductSucceeded` }
 	  >
 
@@ -61,7 +61,7 @@ type State = Schema.Schema.Type<typeof State>
 const addProduct = H.mapFunctionReturn(
 	UC.AddProduct.Service.run,
 	Effect.map(
-		UC.AddProduct.Message.$match({
+		Match.valueTags({
 			Failed: () => InternalMessage.AddProductFailed(),
 			Succeeded: () => InternalMessage.AddProductSucceeded(),
 		}),

@@ -34,19 +34,22 @@ export const useViewmodel = <S, M1, M2, R>({
 	runtime: ManagedRuntime.ManagedRuntime<R, never>
 	makeViewModel: Effect.Effect<ViewModel<S, M1, M2>, never, R>
 	messages?: (m: M2) => void
-}): { state: S; dispatch: (m: M1) => void } | undefined => {
-	let state = $state.raw<S>()
+}) => {
+	let viewmodelState = $state.raw<S>()
 
 	let handle = $state.raw<Effect.Effect.Success<typeof makeViewModel>>()
-	let initialized = false
+
+	let initialized = $derived<boolean>(
+		handle !== undefined && viewmodelState !== undefined,
+	)
 
 	$effect(() => {
-		if (!handle || initialized) return
+		if (!handle) return
 
 		const cancelChanges = runtime.runCallback(
 			Stream.runForEach(handle.changes, s =>
 				Effect.sync(() => {
-					state = s
+					viewmodelState = s
 				}),
 			),
 		)
@@ -59,8 +62,6 @@ export const useViewmodel = <S, M1, M2, R>({
 				)
 			: undefined
 
-		initialized = true
-
 		return () => {
 			cancelChanges()
 			cancelMessages?.()
@@ -71,7 +72,7 @@ export const useViewmodel = <S, M1, M2, R>({
 		const cancelInit = runtime.runCallback(makeViewModel, {
 			onExit: h => {
 				if (Exit.isSuccess(h)) {
-					state = h.value.initState
+					viewmodelState = h.value.initState
 					handle = h.value
 				}
 			},
@@ -88,14 +89,25 @@ export const useViewmodel = <S, M1, M2, R>({
 		}
 	})
 
-	return $derived.by(() => {
-		if (!initialized || !handle?.dispatch || !state) return undefined
+	const viewModel = $derived.by(() => {
+		if (
+			!initialized ||
+			handle?.dispatch === undefined ||
+			viewmodelState === undefined
+		)
+			return undefined
 
 		const dispatch = handle.dispatch
 
 		return {
 			dispatch: (m: M1) => runtime.runCallback(dispatch(m)),
-			state,
+			state: viewmodelState,
 		}
 	})
+
+	return {
+		get viewModel() {
+			return viewModel
+		},
+	}
 }

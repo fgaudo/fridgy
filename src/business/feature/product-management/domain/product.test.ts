@@ -14,7 +14,10 @@ describe.concurrent(`isStale`, () => {
 	prop(
 		`Should return true`,
 		[
-			FastCheck.tuple(FastCheck.integer(), FastCheck.integer())
+			FastCheck.tuple(
+				Arbitrary.make(Integer.Schema),
+				Arbitrary.make(Integer.Schema),
+			)
 				.map(numbers => {
 					const [expirationDate, currentDate] = pipe(
 						numbers,
@@ -22,10 +25,52 @@ describe.concurrent(`isStale`, () => {
 					)
 
 					return {
-						currentDate: Integer.unsafeFromNumber(currentDate),
-						expirationDate: Integer.unsafeFromNumber(expirationDate),
+						currentDate,
+						expirationDate,
 					}
 				})
+				.chain(({ currentDate, expirationDate }) =>
+					FastCheck.record({
+						product: Arbitrary.make(Product.Schema).map(product => ({
+							...product,
+							maybeExpirationDate: Option.some(expirationDate),
+						})),
+						currentDate: FastCheck.constant(currentDate),
+					}),
+				),
+		],
+		([{ currentDate, product }]) => {
+			assert(Option.isSome(product.maybeExpirationDate))
+			const isStale = Product.isStale(
+				{ ...product, maybeExpirationDate: product.maybeExpirationDate },
+				currentDate,
+			)
+
+			expect(isStale).toStrictEqual(true)
+		},
+	)
+
+	prop(
+		`Should return false`,
+		[
+			FastCheck.tuple(
+				Arbitrary.make(Integer.Schema),
+				Arbitrary.make(Integer.Schema),
+			)
+				.map(numbers => {
+					const [currentDate, expirationDate] = pipe(
+						numbers,
+						Arr.sortBy(Order.number),
+					)
+
+					return {
+						currentDate,
+						expirationDate,
+					}
+				})
+				.filter(
+					({ currentDate, expirationDate }) => expirationDate !== currentDate,
+				)
 				.chain(({ currentDate, expirationDate }) =>
 					FastCheck.record({
 						product: Arbitrary.make(Product.Schema).map(b => ({
@@ -36,18 +81,70 @@ describe.concurrent(`isStale`, () => {
 					}),
 				),
 		],
-		([{ currentDate, product }]) => {
-			assert(Product.hasExpirationDate(product))
-			const isStale = Product.isStale(product, currentDate)
+		([{ product, currentDate }]) => {
+			assert(Option.isSome(product.maybeExpirationDate))
+			const isStale = Product.isStale(
+				{ ...product, maybeExpirationDate: product.maybeExpirationDate },
+				currentDate,
+			)
 
-			expect(isStale).toStrictEqual(true)
+			expect(isStale).toStrictEqual(false)
+		},
+	)
+})
+
+describe.concurrent(`hasExpiration`, () => {
+	prop(
+		'should return true',
+		[
+			Arbitrary.make(Integer.Schema).chain(expirationDate =>
+				Arbitrary.make(Product.Schema).map(product => ({
+					...product,
+					maybeExpirationDate: Option.some(expirationDate),
+				})),
+			),
+		],
+		([product]) => {
+			assert(Option.isSome(product.maybeExpirationDate))
+
+			expect(
+				Product.hasExpirationDate({
+					...product,
+					maybeExpirationDate: product.maybeExpirationDate,
+				}),
+			).toStrictEqual(true)
 		},
 	)
 
 	prop(
-		`Should return false`,
+		'should return false',
 		[
-			FastCheck.tuple(FastCheck.integer(), FastCheck.integer())
+			Arbitrary.make(Product.Schema).map(product => ({
+				...product,
+				maybeExpirationDate: Option.none(),
+			})),
+		],
+		([product]) => {
+			assert(Option.isNone(product.maybeExpirationDate))
+
+			expect(
+				Product.hasExpirationDate({
+					...product,
+					maybeExpirationDate: product.maybeExpirationDate,
+				}),
+			).toStrictEqual(false)
+		},
+	)
+})
+
+describe.concurrent(`timeLeft`, () => {
+	prop(
+		'should return value',
+		[
+			FastCheck.tuple(
+				Arbitrary.make(Integer.Schema),
+				Arbitrary.make(Integer.Schema),
+			)
 				.map(numbers => {
 					const [currentDate, expirationDate] = pipe(
 						numbers,
@@ -55,18 +152,78 @@ describe.concurrent(`isStale`, () => {
 					)
 
 					return {
-						currentDate: Integer.unsafeFromNumber(currentDate),
-						expirationDate: Integer.unsafeFromNumber(expirationDate),
+						currentDate,
+						expirationDate,
+					}
+				})
+				.chain(({ currentDate, expirationDate }) =>
+					FastCheck.record({
+						product: Arbitrary.make(Product.Schema).map(product => ({
+							...product,
+							maybeExpirationDate: Option.some(expirationDate),
+						})),
+						currentDate: FastCheck.constant(currentDate),
+					}),
+				),
+		],
+		([{ product, currentDate }]) => {
+			assert(Option.isSome(product.maybeExpirationDate))
+
+			expect(
+				Product.timeLeft(
+					{
+						...product,
+						maybeExpirationDate: product.maybeExpirationDate,
+					},
+					currentDate,
+				),
+			).toStrictEqual(product.maybeExpirationDate.value - currentDate)
+		},
+	)
+
+	prop(
+		'should return 0',
+		[
+			FastCheck.tuple(
+				Arbitrary.make(Integer.Schema),
+				Arbitrary.make(Integer.Schema),
+			)
+				.map(numbers => {
+					const [expirationDate, currentDate] = pipe(
+						numbers,
+						Arr.sortBy(Order.number),
+					)
+
+					return {
+						currentDate,
+						expirationDate,
 					}
 				})
 				.filter(
-					({ currentDate, expirationDate }) => expirationDate !== currentDate,
+					({ currentDate, expirationDate }) => currentDate !== expirationDate,
+				)
+				.chain(({ currentDate, expirationDate }) =>
+					FastCheck.record({
+						product: Arbitrary.make(Product.Schema).map(product => ({
+							...product,
+							maybeExpirationDate: Option.some(expirationDate),
+						})),
+						currentDate: FastCheck.constant(currentDate),
+					}),
 				),
 		],
-		([{ expirationDate, currentDate }]) => {
-			const isStale = Product.isStale({ expirationDate, currentDate })
+		([{ product, currentDate }]) => {
+			assert(Option.isSome(product.maybeExpirationDate))
 
-			expect(isStale).toStrictEqual(false)
+			expect(
+				Product.timeLeft(
+					{
+						...product,
+						maybeExpirationDate: product.maybeExpirationDate,
+					},
+					currentDate,
+				),
+			).toStrictEqual(0)
 		},
 	)
 })
@@ -76,28 +233,39 @@ describe.concurrent(`computeFreshness`, () => {
 		`Should return 0`,
 		[
 			FastCheck.tuple(
-				FastCheck.integer(),
-				FastCheck.integer(),
-				FastCheck.integer(),
-			).map(numbers => {
-				const [expirationDate, currentDate, creationDate] = pipe(
-					numbers,
-					Arr.sortBy(Order.number),
-				)
+				Arbitrary.make(Integer.Schema),
+				Arbitrary.make(Integer.Schema),
+				Arbitrary.make(Integer.Schema),
+			)
+				.map(numbers => {
+					const [expirationDate, currentDate, creationDate] = pipe(
+						numbers,
+						Arr.sortBy(Order.number),
+					)
 
-				return {
-					currentDate: Integer.unsafeFromNumber(currentDate),
-					expirationDate: Integer.unsafeFromNumber(expirationDate),
-					creationDate: Integer.unsafeFromNumber(creationDate),
-				}
-			}),
+					return {
+						currentDate,
+						expirationDate,
+						creationDate,
+					}
+				})
+				.chain(({ creationDate, currentDate, expirationDate }) =>
+					FastCheck.record({
+						product: Arbitrary.make(Product.Schema).map(product => ({
+							...product,
+							maybeExpirationDate: Option.some(expirationDate),
+							creationDate,
+						})),
+						currentDate: FastCheck.constant(currentDate),
+					}),
+				),
 		],
-		([{ expirationDate, currentDate, creationDate }]) => {
-			const freshness = Product.computeFreshness({
-				expirationDate,
+		([{ product, currentDate }]) => {
+			assert(Option.isSome(product.maybeExpirationDate))
+			const freshness = Product.computeFreshness(
+				{ ...product, maybeExpirationDate: product.maybeExpirationDate },
 				currentDate,
-				creationDate,
-			})
+			)
 
 			expect(freshness).toStrictEqual(0)
 		},
@@ -107,9 +275,9 @@ describe.concurrent(`computeFreshness`, () => {
 		`Should return 0`,
 		[
 			FastCheck.tuple(
-				FastCheck.integer(),
-				FastCheck.integer(),
-				FastCheck.integer(),
+				Arbitrary.make(Integer.Schema),
+				Arbitrary.make(Integer.Schema),
+				Arbitrary.make(Integer.Schema),
 			)
 				.map(array => {
 					const [currentDate, expirationDate, creationDate] = pipe(
@@ -118,21 +286,31 @@ describe.concurrent(`computeFreshness`, () => {
 					)
 
 					return {
-						currentDate: Integer.unsafeFromNumber(currentDate),
-						expirationDate: Integer.unsafeFromNumber(expirationDate),
-						creationDate: Integer.unsafeFromNumber(creationDate),
+						currentDate,
+						expirationDate,
+						creationDate,
 					}
 				})
 				.filter(
 					({ expirationDate, currentDate }) => expirationDate !== currentDate,
+				)
+				.chain(({ creationDate, currentDate, expirationDate }) =>
+					FastCheck.record({
+						product: Arbitrary.make(Product.Schema).map(product => ({
+							...product,
+							maybeExpirationDate: Option.some(expirationDate),
+							creationDate,
+						})),
+						currentDate: FastCheck.constant(currentDate),
+					}),
 				),
 		],
-		([{ expirationDate, currentDate, creationDate }]) => {
-			const freshness = Product.computeFreshness({
-				expirationDate,
+		([{ product, currentDate }]) => {
+			assert(Option.isSome(product.maybeExpirationDate))
+			const freshness = Product.computeFreshness(
+				{ ...product, maybeExpirationDate: product.maybeExpirationDate },
 				currentDate,
-				creationDate,
-			})
+			)
 
 			expect(freshness).toStrictEqual(0)
 		},
@@ -142,9 +320,9 @@ describe.concurrent(`computeFreshness`, () => {
 		`Should return 1`,
 		[
 			FastCheck.tuple(
-				FastCheck.integer(),
-				FastCheck.integer(),
-				FastCheck.integer(),
+				Arbitrary.make(Integer.Schema),
+				Arbitrary.make(Integer.Schema),
+				Arbitrary.make(Integer.Schema),
 			)
 				.map(array => {
 					const [currentDate, creationDate, expirationDate] = pipe(
@@ -164,18 +342,23 @@ describe.concurrent(`computeFreshness`, () => {
 						expirationDate !== creationDate &&
 						currentDate !== creationDate,
 				)
-				.map(({ expirationDate, currentDate, creationDate }) => ({
-					expirationDate: Integer.unsafeFromNumber(expirationDate),
-					currentDate: Integer.unsafeFromNumber(currentDate),
-					creationDate: Integer.unsafeFromNumber(creationDate),
-				})),
+				.chain(({ creationDate, currentDate, expirationDate }) =>
+					FastCheck.record({
+						product: Arbitrary.make(Product.Schema).map(product => ({
+							...product,
+							maybeExpirationDate: Option.some(expirationDate),
+							creationDate,
+						})),
+						currentDate: FastCheck.constant(currentDate),
+					}),
+				),
 		],
-		([{ expirationDate, currentDate, creationDate }]) => {
-			const freshness = Product.computeFreshness({
-				expirationDate,
+		([{ product, currentDate }]) => {
+			assert(Option.isSome(product.maybeExpirationDate))
+			const freshness = Product.computeFreshness(
+				{ ...product, maybeExpirationDate: product.maybeExpirationDate },
 				currentDate,
-				creationDate,
-			})
+			)
 
 			expect(freshness).toStrictEqual(1)
 		},
@@ -185,9 +368,9 @@ describe.concurrent(`computeFreshness`, () => {
 		`Should return remainingDuration / totalDuration`,
 		[
 			FastCheck.tuple(
-				FastCheck.integer(),
-				FastCheck.integer(),
-				FastCheck.integer(),
+				Arbitrary.make(Integer.Schema),
+				Arbitrary.make(Integer.Schema),
+				Arbitrary.make(Integer.Schema),
 			)
 				.map(array => {
 					const [creationDate, currentDate, expirationDate] = pipe(
@@ -205,21 +388,27 @@ describe.concurrent(`computeFreshness`, () => {
 					({ currentDate, creationDate, expirationDate }) =>
 						expirationDate !== currentDate && expirationDate !== creationDate,
 				)
-				.map(({ expirationDate, currentDate, creationDate }) => ({
-					expirationDate: Integer.unsafeFromNumber(expirationDate),
-					currentDate: Integer.unsafeFromNumber(currentDate),
-					creationDate: Integer.unsafeFromNumber(creationDate),
-				})),
+				.chain(({ creationDate, currentDate, expirationDate }) =>
+					FastCheck.record({
+						product: Arbitrary.make(Product.Schema).map(product => ({
+							...product,
+							maybeExpirationDate: Option.some(expirationDate),
+							creationDate,
+						})),
+						currentDate: FastCheck.constant(currentDate),
+					}),
+				),
 		],
-		([{ expirationDate, currentDate, creationDate }]) => {
-			const freshness = Product.computeFreshness({
-				expirationDate,
+		([{ product, currentDate }]) => {
+			assert(Option.isSome(product.maybeExpirationDate))
+			const freshness = Product.computeFreshness(
+				{ ...product, maybeExpirationDate: product.maybeExpirationDate },
 				currentDate,
-				creationDate,
-			})
+			)
 
 			expect(freshness).toStrictEqual(
-				(expirationDate - currentDate) / (expirationDate - creationDate),
+				(product.maybeExpirationDate.value - currentDate) /
+					(product.maybeExpirationDate.value - product.creationDate),
 			)
 		},
 	)

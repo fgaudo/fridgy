@@ -2,7 +2,7 @@
 	"name": "fridgy",
 	"author": "Francesco Gaudenzi <fgaudo@gmail.com>",
 	"devDependencies": {
-		"@capacitor-community/safe-area": "7.0.0-beta.4",
+		"@capacitor-community/safe-area": "7.0.0-alpha.1",
 		"@capacitor/android": "^7.4.4",
 		"@capacitor/app": "^7.1.0",
 		"@capacitor/assets": "^3.0.5",
@@ -25,7 +25,7 @@
 		"@testing-library/jest-dom": "^6.9.1",
 		"@testing-library/svelte": "^5.2.9",
 		"@trivago/prettier-plugin-sort-imports": "^6.0.0",
-		"@vitest/coverage-v8": "^4.0.12",
+		"@vitest/coverage-v8": "^4.0.13",
 		"date-fns": "4.1.0",
 		"effect": "^3.19.6",
 		"immer": "^10.2.0",
@@ -43,7 +43,7 @@
 		"typescript-svelte-plugin": "^0.3.50",
 		"vite": "^7.2.4",
 		"vite-tsconfig-paths": "^5.1.4",
-		"vitest": "^4.0.12"
+		"vitest": "^4.0.13"
 	},
 	"license": "AGPL-3.0-or-later",
 	"private": true,

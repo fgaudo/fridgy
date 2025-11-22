@@ -16,56 +16,56 @@ import * as ProductManager from '../interfaces/product-manager.ts'
 /////
 /////
 
-/** @internal */
-export const DTOSchema = Schema.Option(
-	Schema.NonEmptyArray(
-		Schema.Union(
-			Schema.TaggedStruct('Corrupt', {
-				maybeName: Schema.Option(NonEmptyTrimmedString.Schema),
-			}),
-			Schema.TaggedStruct('Invalid', {
-				maybeName: Schema.Option(NonEmptyTrimmedString.Schema),
-				id: Schema.String,
-			}),
-			Schema.TaggedStruct('Valid', {
-				id: Schema.String,
-				name: NonEmptyTrimmedString.Schema,
-				status: Schema.Union(
-					Schema.TaggedStruct('Everlasting', {}),
-					Schema.TaggedStruct('Stale', {
-						expirationDate: Integer.Schema,
-					}),
-					Schema.TaggedStruct('Fresh', {
-						freshnessRatio: UnitInterval.Schema,
-						timeLeft: Integer.Schema,
-						expirationDate: Integer.Schema,
-					}),
-				),
-			}),
+class Succeeded extends Schema.TaggedClass<Succeeded>()('Succeeded', {
+	result: Schema.Option(
+		Schema.NonEmptyArray(
+			Schema.Union(
+				Schema.TaggedStruct('Corrupt', {
+					maybeName: Schema.Option(NonEmptyTrimmedString.Schema),
+				}),
+				Schema.TaggedStruct('Invalid', {
+					maybeName: Schema.Option(NonEmptyTrimmedString.Schema),
+					id: Schema.String,
+				}),
+				Schema.TaggedStruct('Valid', {
+					id: Schema.String,
+					name: NonEmptyTrimmedString.Schema,
+					status: Schema.Union(
+						Schema.TaggedStruct('Everlasting', {}),
+						Schema.TaggedStruct('Stale', {
+							expirationDate: Integer.Schema,
+						}),
+						Schema.TaggedStruct('Fresh', {
+							freshnessRatio: UnitInterval.Schema,
+							timeLeft: Integer.Schema,
+							expirationDate: Integer.Schema,
+						}),
+					),
+				}),
+			),
 		),
 	),
-)
+}) {
+	static readonly ProductDTO =
+		Data.taggedEnum<Option.Option.Value<Succeeded['result']>[0]>()
 
-export const StatusDTO =
-	Data.taggedEnum<
-		Data.TaggedEnum.Value<Option.Option.Value<DTO>[0], 'Valid'>['status']
-	>()
+	static readonly StatusDTO =
+		Data.taggedEnum<
+			Data.TaggedEnum.Value<
+				Option.Option.Value<Succeeded['result']>[0],
+				'Valid'
+			>['status']
+		>()
+}
 
-export const ProductDTO = Data.taggedEnum<Option.Option.Value<DTO>[0]>()
+class Failed extends Schema.TaggedClass<Failed>()('Failed', {}) {}
 
-export type DTO = Schema.Schema.Type<typeof DTOSchema>
+export type Response = Failed | Succeeded
 
-/////
-/////
-
-export type Message = Data.TaggedEnum<{
-	Succeeded: {
-		result: DTO
-	}
-	Failed: object
-}>
-
-export const Message = Data.taggedEnum<Message>()
+export const Response = {
+	Succeeded,
+	Failed,
+}
 
 /////
 /////
@@ -78,7 +78,7 @@ export class Service extends Effect.Service<Service>()(
 			const { getSortedProducts } = yield* ProductManager.Service
 			const { makeProduct } = yield* Product.Service
 			return {
-				run: Effect.gen(function* (): Effect.fn.Return<Message> {
+				run: Effect.gen(function* (): Effect.fn.Return<Response> {
 					yield* Effect.log(`Requested to fetch the list of products`)
 
 					yield* Effect.log(`Attempting to fetch the list of products...`)
@@ -88,7 +88,7 @@ export class Service extends Effect.Service<Service>()(
 					if (Option.isNone(maybeProducts)) {
 						yield* Effect.logError(`Could not receive items.`)
 
-						return Message.Failed()
+						return new Failed()
 					}
 
 					const result = maybeProducts.value
@@ -105,7 +105,7 @@ export class Service extends Effect.Service<Service>()(
 								if (Option.isNone(maybeId)) {
 									yield* Effect.logWarning(`CORRUPTION - Product has no id.`)
 
-									return ProductDTO.Corrupt({
+									return Succeeded.ProductDTO.Corrupt({
 										maybeName,
 									})
 								}
@@ -126,16 +126,19 @@ export class Service extends Effect.Service<Service>()(
 								if (Option.isNone(maybeProduct)) {
 									yield* Effect.logWarning(`Product is invalid.`)
 
-									return ProductDTO.Invalid({ id: maybeId.value, maybeName })
+									return Succeeded.ProductDTO.Invalid({
+										id: maybeId.value,
+										maybeName,
+									})
 								}
 
 								const product = maybeProduct.value
 
 								if (!Product.hasExpirationDate(product)) {
-									return ProductDTO.Valid({
+									return Succeeded.ProductDTO.Valid({
 										id: maybeId.value,
 										name: product.name,
-										status: StatusDTO.Everlasting(),
+										status: Succeeded.StatusDTO.Everlasting(),
 									})
 								}
 
@@ -144,19 +147,19 @@ export class Service extends Effect.Service<Service>()(
 								)
 
 								if (Product.isStale(product, currentDate)) {
-									return ProductDTO.Valid({
+									return Succeeded.ProductDTO.Valid({
 										id: maybeId.value,
 										name: product.name,
-										status: StatusDTO.Stale({
+										status: Succeeded.StatusDTO.Stale({
 											expirationDate: product.maybeExpirationDate.value,
 										}),
 									})
 								}
 
-								return ProductDTO.Valid({
+								return Succeeded.ProductDTO.Valid({
 									id: maybeId.value,
 									name: product.name,
-									status: StatusDTO.Fresh({
+									status: Succeeded.StatusDTO.Fresh({
 										expirationDate: product.maybeExpirationDate.value,
 										timeLeft: Product.timeLeft(product, currentDate),
 										freshnessRatio: Product.computeFreshness(
@@ -170,7 +173,7 @@ export class Service extends Effect.Service<Service>()(
 						Effect.all,
 					)
 
-					return Message.Succeeded({
+					return new Succeeded({
 						result: Arr.isNonEmptyArray(entries)
 							? Option.some(entries)
 							: Option.none(),

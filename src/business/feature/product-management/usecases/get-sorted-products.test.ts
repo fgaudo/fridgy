@@ -26,7 +26,7 @@ describe.concurrent(`Get sorted products`, () => {
 				const exit = yield* Effect.exit(run)
 				H.assertExitIsSuccess(exit)
 
-				expect(Usecase.Message.$is(`Failed`)(exit.value)).toStrictEqual(true)
+				expect(exit.value._tag).toStrictEqual('Failed')
 			}),
 		)
 	})
