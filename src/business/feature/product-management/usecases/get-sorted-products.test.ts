@@ -1,6 +1,8 @@
-import { describe, effect, expect, layer } from '@effect/vitest'
+import { assert, describe, effect, expect, layer } from '@effect/vitest'
+import * as Arbitrary from 'effect/Arbitrary'
 import * as Effect from 'effect/Effect'
 import * as Layer from 'effect/Layer'
+import * as Option from 'effect/Option'
 
 import * as H from '@/core/test-helpers.ts'
 import { makeTestLayer } from '@/core/testing.ts'
@@ -31,19 +33,21 @@ describe.concurrent(`Get sorted products`, () => {
 
 	effect.prop(
 		`Should always return all elements`,
-		[ProductManager.GetSortedProducts.DTO],
+		[
+			Arbitrary.make(ProductManager.GetSortedProducts.DTOSchema).filter(
+				a => a.length > 0,
+			),
+		],
 		Effect.fn(
 			function* ([products], { expect }) {
 				const { run } = yield* Usecase.Service
-
 				const exit = yield* Effect.exit(run)
 
 				H.assertExitIsSuccess(exit)
 
-				expect(
-					Usecase.Message.$is(`Succeeded`)(exit.value) &&
-						exit.value.result.length,
-				).toStrictEqual(products.length)
+				assert(exit.value._tag === 'Succeeded')
+				assert(Option.isSome(exit.value.result))
+				expect(exit.value.result.value.length).toStrictEqual(products.length)
 			},
 			(effect, [products]) =>
 				Effect.provide(

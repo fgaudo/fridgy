@@ -1,8 +1,12 @@
 import { describe, expect, layer } from '@effect/vitest'
+import * as Arr from 'effect/Array'
 import * as Effect from 'effect/Effect'
+import { pipe } from 'effect/Function'
 import * as Layer from 'effect/Layer'
+import * as Option from 'effect/Option'
 import * as RequestResolver from 'effect/RequestResolver'
 
+import * as NonEmptyTrimmedString from '@/core/non-empty-trimmed-string.ts'
 import * as H from '@/core/test-helpers.ts'
 import { makeTestLayer } from '@/core/testing.ts'
 
@@ -23,7 +27,7 @@ describe.concurrent(`Delete products by ids`, () => {
 	)(({ effect }) => {
 		effect.prop(
 			`Should return delete failed`,
-			[Usecase.DTO],
+			[Usecase.DTOSchema],
 			Effect.fn(function* ([ids]) {
 				const { run } = yield* Usecase.Service
 				const exit = yield* Effect.exit(run(ids))
@@ -43,15 +47,25 @@ describe.concurrent(`Delete products by ids`, () => {
 				},
 			}),
 			makeTestLayer(GetSortedProducts.Service)({
-				run: Effect.succeed(
-					GetSortedProducts.Message.Succeeded({ result: [] }),
+				run: pipe(
+					NonEmptyTrimmedString.unsafeFromString(''),
+					Option.some,
+					maybeName =>
+						GetSortedProducts.ProductDTO.Corrupt({
+							maybeName,
+						}),
+					Arr.make,
+					Option.some,
+					maybeProducts =>
+						GetSortedProducts.Message.Succeeded({ result: maybeProducts }),
+					Effect.succeed,
 				),
 			}),
 		]),
 	)(({ effect }) => {
 		effect.prop(
 			`Should just work`,
-			[Usecase.DTO],
+			[Usecase.DTOSchema],
 			Effect.fn(function* ([ids]) {
 				const { run } = yield* Usecase.Service
 
@@ -78,7 +92,7 @@ describe.concurrent(`Delete products by ids`, () => {
 	)(({ effect }) => {
 		effect.prop(
 			`Should return error`,
-			[Usecase.DTO],
+			[Usecase.DTOSchema],
 			Effect.fn(function* ([ids]) {
 				const { run } = yield* Usecase.Service
 

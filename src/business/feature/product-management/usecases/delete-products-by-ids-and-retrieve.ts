@@ -12,9 +12,10 @@ import * as GetSortedProducts from './get-sorted-products.ts'
 /////
 /////
 
-export const DTO = NonEmptyHashSet.Schema(Schema.String)
+/** @internal */
+export const DTOSchema = NonEmptyHashSet.Schema(Schema.String)
 
-export type DTO = Schema.Schema.Type<typeof DTO>
+export type DTO = Schema.Schema.Type<typeof DTOSchema>
 
 /////
 /////

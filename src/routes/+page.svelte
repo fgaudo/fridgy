@@ -99,9 +99,7 @@
 				return Arr.findFirstIndex(
 					products,
 					product =>
-						product._tag !== 'Corrupt' &&
-						product._tag !== 'Invalid' &&
-						product.status._tag !== 'Everlasting',
+						product._tag === 'Valid' && product.status._tag === 'Fresh',
 				)
 			}),
 		),

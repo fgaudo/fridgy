@@ -51,7 +51,7 @@ export const DeleteProductById = {
 /////
 
 export const GetSortedProducts = {
-	DTO: Schema.Array(
+	DTOSchema: Schema.Array(
 		Schema.Struct({
 			maybeId: Schema.Option(Schema.String),
 			maybeName: Schema.Option(NonEmptyTrimmedString.Schema),
@@ -62,7 +62,7 @@ export const GetSortedProducts = {
 }
 
 export type GetSortedProducts = {
-	DTO: Schema.Schema.Type<typeof GetSortedProducts.DTO>
+	DTO: Schema.Schema.Type<typeof GetSortedProducts.DTOSchema>
 }
 
 /////

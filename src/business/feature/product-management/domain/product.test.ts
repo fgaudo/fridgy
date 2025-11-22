@@ -1,31 +1,44 @@
-import { describe, expect, prop } from '@effect/vitest'
+import { assert, describe, expect, prop } from '@effect/vitest'
+import * as Arbitrary from 'effect/Arbitrary'
 import * as Arr from 'effect/Array'
 import * as FastCheck from 'effect/FastCheck'
 import { pipe } from 'effect/Function'
+import * as Option from 'effect/Option'
 import * as Order from 'effect/Order'
 
 import * as Integer from '@/core/integer/integer.ts'
 
-import { computeFreshness, isProductStale } from './rules.ts'
+import * as Product from './product.ts'
 
-describe.concurrent(`isProductStale`, () => {
+describe.concurrent(`isStale`, () => {
 	prop(
 		`Should return true`,
 		[
-			FastCheck.tuple(FastCheck.integer(), FastCheck.integer()).map(numbers => {
-				const [expirationDate, currentDate] = pipe(
-					numbers,
-					Arr.sortBy(Order.number),
-				)
+			FastCheck.tuple(FastCheck.integer(), FastCheck.integer())
+				.map(numbers => {
+					const [expirationDate, currentDate] = pipe(
+						numbers,
+						Arr.sortBy(Order.number),
+					)
 
-				return {
-					currentDate: Integer.unsafeFromNumber(currentDate),
-					expirationDate: Integer.unsafeFromNumber(expirationDate),
-				}
-			}),
+					return {
+						currentDate: Integer.unsafeFromNumber(currentDate),
+						expirationDate: Integer.unsafeFromNumber(expirationDate),
+					}
+				})
+				.chain(({ currentDate, expirationDate }) =>
+					FastCheck.record({
+						product: Arbitrary.make(Product.Schema).map(b => ({
+							...b,
+							maybeExpirationDate: Option.some(expirationDate),
+						})),
+						currentDate: FastCheck.constant(currentDate),
+					}),
+				),
 		],
-		([{ expirationDate, currentDate }]) => {
-			const isStale = isProductStale({ expirationDate, currentDate })
+		([{ currentDate, product }]) => {
+			assert(Product.hasExpirationDate(product))
+			const isStale = Product.isStale(product, currentDate)
 
 			expect(isStale).toStrictEqual(true)
 		},
@@ -51,7 +64,7 @@ describe.concurrent(`isProductStale`, () => {
 				),
 		],
 		([{ expirationDate, currentDate }]) => {
-			const isStale = isProductStale({ expirationDate, currentDate })
+			const isStale = Product.isStale({ expirationDate, currentDate })
 
 			expect(isStale).toStrictEqual(false)
 		},
@@ -80,7 +93,7 @@ describe.concurrent(`computeFreshness`, () => {
 			}),
 		],
 		([{ expirationDate, currentDate, creationDate }]) => {
-			const freshness = computeFreshness({
+			const freshness = Product.computeFreshness({
 				expirationDate,
 				currentDate,
 				creationDate,
@@ -115,7 +128,7 @@ describe.concurrent(`computeFreshness`, () => {
 				),
 		],
 		([{ expirationDate, currentDate, creationDate }]) => {
-			const freshness = computeFreshness({
+			const freshness = Product.computeFreshness({
 				expirationDate,
 				currentDate,
 				creationDate,
@@ -158,7 +171,7 @@ describe.concurrent(`computeFreshness`, () => {
 				})),
 		],
 		([{ expirationDate, currentDate, creationDate }]) => {
-			const freshness = computeFreshness({
+			const freshness = Product.computeFreshness({
 				expirationDate,
 				currentDate,
 				creationDate,
@@ -199,7 +212,7 @@ describe.concurrent(`computeFreshness`, () => {
 				})),
 		],
 		([{ expirationDate, currentDate, creationDate }]) => {
-			const freshness = computeFreshness({
+			const freshness = Product.computeFreshness({
 				expirationDate,
 				currentDate,
 				creationDate,

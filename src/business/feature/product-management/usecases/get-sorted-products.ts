@@ -10,13 +10,14 @@ import * as Integer from '@/core/integer/integer.ts'
 import * as NonEmptyTrimmedString from '@/core/non-empty-trimmed-string.ts'
 import * as UnitInterval from '@/core/unit-interval.ts'
 
-import * as Product from '../domain/entities/product.ts'
+import * as Product from '../domain/product.ts'
 import * as ProductManager from '../interfaces/product-manager.ts'
 
 /////
 /////
 
-export const DTO = Schema.Option(
+/** @internal */
+export const DTOSchema = Schema.Option(
 	Schema.NonEmptyArray(
 		Schema.Union(
 			Schema.TaggedStruct('Corrupt', {
@@ -45,14 +46,14 @@ export const DTO = Schema.Option(
 	),
 )
 
-const StatusDTO =
+export const StatusDTO =
 	Data.taggedEnum<
 		Data.TaggedEnum.Value<Option.Option.Value<DTO>[0], 'Valid'>['status']
 	>()
 
-const ProductDTO = Data.taggedEnum<Option.Option.Value<DTO>[0]>()
+export const ProductDTO = Data.taggedEnum<Option.Option.Value<DTO>[0]>()
 
-export type DTO = Schema.Schema.Type<typeof DTO>
+export type DTO = Schema.Schema.Type<typeof DTOSchema>
 
 /////
 /////

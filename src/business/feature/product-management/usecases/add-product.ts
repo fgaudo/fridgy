@@ -8,18 +8,19 @@ import * as Schema from 'effect/Schema'
 import * as Integer from '@/core/integer/integer.ts'
 import * as NonEmptyTrimmedString from '@/core/non-empty-trimmed-string'
 
-import * as Product from '../domain/entities/product.ts'
+import * as Product from '../domain/product.ts'
 import * as ProductManager from '../interfaces/product-manager.ts'
 
 /////
 /////
 
-export const ProductDTO = Schema.Struct({
+/** @internal */
+export const ProductDTOSchema = Schema.Struct({
 	name: NonEmptyTrimmedString.Schema,
 	maybeExpirationDate: Schema.Option(Integer.Schema),
 })
 
-export type ProductDTO = Schema.Schema.Type<typeof ProductDTO>
+export type ProductDTO = Schema.Schema.Type<typeof ProductDTOSchema>
 
 /////
 /////
