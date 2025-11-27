@@ -28,6 +28,8 @@ import { UseCasesWithoutDependencies as UC } from '@/feature/product-management/
 type Message = Data.TaggedEnum<{
 	StartFetchList: object
 	StartDeleteAndRefresh: object
+	ToggleItem: { id: string }
+	ClearSelected: object
 }>
 
 const Message = Data.taggedEnum<Message>()
@@ -145,6 +147,11 @@ const matcher = Match.typeTags<
 
 type Command = SM.Command<InternalMessage, UC.All>
 
+const notifyWrongState = Effect.fn(function* (message: { _tag: string }) {
+	yield* Effect.logWarning(`Triggered ${message._tag} in wrong state`)
+	return InternalMessage.NoOp()
+})
+
 const update = matcher({
 	NoOp: () => state => ({ state, commands: List.empty() }),
 
@@ -235,33 +242,13 @@ const update = matcher({
 			}
 		},
 	StartDeleteAndRefresh: message => state => {
-		if (state.productListStatus._tag !== 'Available') {
+		if (
+			state.productListStatus._tag !== 'Available' ||
+			Option.isNone(state.productListStatus.maybeSelectedProducts)
+		) {
 			return {
 				state,
-				commands: List.make(
-					Effect.gen(function* () {
-						yield* Effect.logWarning(
-							`Triggered ${message._tag} in wrong state.`,
-							state.productListStatus._tag,
-						)
-						return InternalMessage.NoOp()
-					}),
-				),
-			}
-		}
-
-		if (Option.isNone(state.productListStatus.maybeSelectedProducts)) {
-			return {
-				state,
-				commands: List.make(
-					Effect.gen(function* () {
-						yield* Effect.logWarning(
-							`Triggered ${message._tag} without any items selected.`,
-							state.productListStatus._tag,
-						)
-						return InternalMessage.NoOp()
-					}),
-				),
+				commands: List.make(notifyWrongState(message)),
 			}
 		}
 
@@ -298,15 +285,7 @@ const update = matcher({
 		let commands = List.empty<Command>()
 
 		if (state.productListStatus._tag !== 'Available') {
-			commands = List.prepend(
-				commands,
-				Effect.gen(function* () {
-					yield* Effect.logWarning(
-						`Triggered ${message._tag} in state ${state.productListStatus._tag}`,
-					)
-					return InternalMessage.NoOp()
-				}),
-			)
+			commands = List.prepend(commands, notifyWrongState(message))
 		}
 
 		if (Option.isNone(message.maybeProducts)) {
@@ -349,15 +328,7 @@ const update = matcher({
 		let commands = List.empty<Command>()
 
 		if (state.productListStatus._tag !== 'Available') {
-			commands = List.prepend(
-				commands,
-				Effect.gen(function* () {
-					yield* Effect.logWarning(
-						`Triggered ${message._tag} in state ${state.productListStatus._tag}`,
-					)
-					return InternalMessage.NoOp()
-				}),
-			)
+			commands = List.prepend(commands, notifyWrongState(message))
 		}
 
 		return {
@@ -370,15 +341,7 @@ const update = matcher({
 		let commands = List.empty<Command>()
 
 		if (state.productListStatus._tag !== 'Available') {
-			commands = List.prepend(
-				commands,
-				Effect.gen(function* () {
-					yield* Effect.logWarning(
-						`Triggered ${message._tag} in state ${state.productListStatus._tag}`,
-					)
-					return InternalMessage.NoOp()
-				}),
-			)
+			commands = List.prepend(commands, notifyWrongState(message))
 		}
 
 		return {
@@ -407,6 +370,53 @@ const update = matcher({
 		return {
 			state: { ...state, refreshSchedulerEnabled: false },
 			commands: List.make(fetchList),
+		}
+	},
+
+	ToggleItem: message => state => {
+		if (state.productListStatus._tag !== 'Available') {
+			return {
+				state,
+				commands: List.make(notifyWrongState(message)),
+			}
+		}
+
+		return {
+			state: {
+				...state,
+				productListStatus: {
+					...state.productListStatus,
+					maybeSelectedProducts: pipe(
+						state.productListStatus.maybeSelectedProducts,
+						Option.map(HashSet.toggle(message.id)),
+						Option.flatMap(NonEmptyHashSet.fromHashSet),
+					),
+				},
+			},
+			commands: List.empty(),
+		}
+	},
+
+	ClearSelected: message => state => {
+		if (
+			state.productListStatus._tag !== 'Available' ||
+			Option.isNone(state.productListStatus.maybeSelectedProducts)
+		) {
+			return {
+				state,
+				commands: List.make(notifyWrongState(message)),
+			}
+		}
+
+		return {
+			state: {
+				...state,
+				productListStatus: {
+					...state.productListStatus,
+					maybeSelectedProducts: Option.none(),
+				},
+			},
+			commands: List.empty(),
 		}
 	},
 })
