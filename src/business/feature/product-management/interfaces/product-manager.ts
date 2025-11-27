@@ -1,69 +1,50 @@
 import * as Context from 'effect/Context'
 import * as Effect from 'effect/Effect'
+import * as Option from 'effect/Option'
+import * as Req from 'effect/Request'
 import { type RequestResolver } from 'effect/RequestResolver'
-import * as Schema from 'effect/Schema'
 
 import * as Integer from '@/core/integer/integer.ts'
 import * as NonEmptyTrimmedString from '@/core/non-empty-trimmed-string'
 
-class AddProductRequest extends Schema.TaggedRequest<AddProductRequest>()(
-	`AddProduct`,
-	{
-		success: Schema.Boolean,
-		failure: Schema.Never,
-		payload: {
-			name: NonEmptyTrimmedString.Schema,
-			maybeExpirationDate: Schema.Option(Integer.Schema),
-			creationDate: Integer.Schema,
-		},
-	},
-) {}
+interface AddProductRequest extends Req.Request<boolean> {
+	name: NonEmptyTrimmedString.NonEmptyTrimmedString
+	maybeExpirationDate: Option.Option<Integer.Integer>
+	creationDate: Integer.Integer
+}
 
 export type AddProduct = {
 	Request: AddProductRequest
 }
 
 export const AddProduct = {
-	Request: AddProductRequest,
+	Request: Req.of<AddProductRequest>(),
 }
 
 /////
 /////
 
-class DeleteProductByIdRequest extends Schema.TaggedRequest<DeleteProductByIdRequest>()(
-	`DeleteProductById`,
-	{
-		success: Schema.Boolean,
-		failure: Schema.Never,
-		payload: { id: Schema.String },
-	},
-) {}
+interface DeleteProductByIdRequest extends Req.Request<boolean> {
+	id: string
+}
 
 export type DeleteProductById = {
 	Request: DeleteProductByIdRequest
 }
 
 export const DeleteProductById = {
-	Request: DeleteProductByIdRequest,
+	Request: Req.of<DeleteProductByIdRequest>(),
 }
 
 /////
 /////
 
-export const GetSortedProducts = {
-	DTOSchema: Schema.Array(
-		Schema.Struct({
-			maybeId: Schema.Option(Schema.String),
-			maybeName: Schema.Option(NonEmptyTrimmedString.Schema),
-			maybeExpirationDate: Schema.Option(Integer.Schema),
-			maybeCreationDate: Schema.Option(Integer.Schema),
-		}),
-	),
-}
-
-export type GetSortedProducts = {
-	DTO: Schema.Schema.Type<typeof GetSortedProducts.DTOSchema>
-}
+type GetSortedProducts = Iterable<{
+	maybeId: Option.Option<string>
+	maybeName: Option.Option<NonEmptyTrimmedString.NonEmptyTrimmedString>
+	maybeExpirationDate: Option.Option<Integer.Integer>
+	maybeCreationDate: Option.Option<Integer.Integer>
+}>
 
 /////
 /////
@@ -81,6 +62,6 @@ export class Service extends Context.Tag(
 			resolver: RequestResolver<DeleteProductByIdRequest>
 		}
 
-		getSortedProducts: Effect.Effect<GetSortedProducts[`DTO`], void>
+		getSortedProducts: Effect.Effect<GetSortedProducts, void>
 	}
 >() {}

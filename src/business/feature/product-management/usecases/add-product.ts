@@ -1,8 +1,8 @@
 import * as Clock from 'effect/Clock'
+import * as Data from 'effect/Data'
 import * as Effect from 'effect/Effect'
 import * as Inspectable from 'effect/Inspectable'
 import * as Option from 'effect/Option'
-import * as Schema from 'effect/Schema'
 
 import * as Integer from '@/core/integer/integer.ts'
 import * as NonEmptyTrimmedString from '@/core/non-empty-trimmed-string'
@@ -13,25 +13,20 @@ import * as ProductManager from '../interfaces/product-manager.ts'
 /////
 /////
 
-export class AddProductParams extends Schema.Class<AddProductParams>(
-	'ProductDTO',
-)({
-	name: NonEmptyTrimmedString.Schema,
-	maybeExpirationDate: Schema.Option(Integer.Schema),
-}) {}
-
-/////
-/////
-
-class Failed extends Schema.TaggedClass<Failed>()('Failed', {}) {}
-class Succeeded extends Schema.TaggedClass<Succeeded>()('Succeeded', {}) {}
-
-export const Response = {
-	Failed,
-	Succeeded,
+type AddProductParams = {
+	name: NonEmptyTrimmedString.NonEmptyTrimmedString
+	maybeExpirationDate: Option.Option<Integer.Integer>
 }
 
-export type Response = Failed | Succeeded
+/////
+/////
+
+type Response = Data.TaggedEnum<{
+	Succeeded: object
+	Failed: object
+}>
+
+const Response = Data.taggedEnum<Response>()
 
 /////
 /////
@@ -72,7 +67,7 @@ export class Service extends Effect.Service<Service>()(
 							}),
 						)
 
-						return new Response.Failed()
+						return Response.Failed()
 					}
 
 					yield* Effect.logInfo(
@@ -89,11 +84,11 @@ export class Service extends Effect.Service<Service>()(
 					)
 
 					if (!result) {
-						return new Response.Failed()
+						return Response.Failed()
 					}
 
 					yield* Effect.logInfo(`Successfully added a product`)
-					return new Response.Succeeded()
+					return Response.Succeeded()
 				}),
 			}
 		}),

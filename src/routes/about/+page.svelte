@@ -36,7 +36,7 @@
 	<div
 		style:padding-top={`calc(var(--safe-area-inset-top) + 92px)`}
 		style:padding-bottom={`var(--safe-area-inset-bottom)`}
-		class="flex flex-col justify-center gap-2 px-[24px] bg-background"
+		class="flex flex-col justify-center gap-2 px-6 bg-background"
 	>
 		<p class="font-stylish text-xl">Fridgy</p>
 		<p class="mt-2">
@@ -80,7 +80,7 @@
 
 		{#each Object.entries(licenses) as [name, license] (name)}
 			<div
-				class="mb-[20px] overflow-x-auto text-nowrap"
+				class="mb-5 overflow-x-auto text-nowrap"
 				style:content-visibility={`auto`}
 			>
 				{#if `name` in license && license.name.trim().length > 0}

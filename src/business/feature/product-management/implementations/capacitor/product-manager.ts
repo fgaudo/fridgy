@@ -1,4 +1,3 @@
-import * as Arr from 'effect/Array'
 import * as Effect from 'effect/Effect'
 import * as Either from 'effect/Either'
 import { pipe } from 'effect/Function'
@@ -31,28 +30,25 @@ export const layerWithoutDependencies = Layer.effect(
 					return yield* Effect.fail(undefined)
 				}
 
-				const entries = yield* pipe(
+				const entries = yield* Effect.forEach(
 					result.right,
-					Arr.map(
-						Effect.fn(function* (product) {
-							return {
-								...product,
-								maybeId: yield* Option.match(product.maybeId, {
-									onNone: () => Effect.succeed(Option.none<string>()),
-									onSome: id =>
-										Effect.option(Effect.try(() => JSON.stringify(id))),
-								}),
-							} as const
-						}),
-					),
-					Effect.all,
+					Effect.fn(function* (product) {
+						return {
+							...product,
+							maybeId: yield* Option.match(product.maybeId, {
+								onNone: () => Effect.succeed(Option.none<string>()),
+								onSome: id =>
+									Effect.option(Effect.try(() => JSON.stringify(id))),
+							}),
+						} as const
+					}),
 				)
 
 				return entries
 			}),
 			deleteProductById: {
 				resolver: RequestResolver.makeBatched<
-					ProductManager.DeleteProductById[`Request`],
+					ProductManager.DeleteProductById['Request'],
 					never
 				>(
 					Effect.forEach(
@@ -72,10 +68,11 @@ export const layerWithoutDependencies = Layer.effect(
 									yield* Effect.logWarning(
 										`Id has incorrect format. Skipping.`,
 									).pipe(Effect.annotateLogs({ id: request.id }))
-									return yield* Request.succeed(request, false)
+									yield* Request.succeed(request, false)
+									return false
 								}
 
-								const result = yield* Effect.either(
+								const result = yield* Effect.option(
 									Effect.request(
 										SqliteCapacitorHelper.DeleteProductById.Request({
 											id: parsed.value,
@@ -84,15 +81,21 @@ export const layerWithoutDependencies = Layer.effect(
 									),
 								)
 
-								if (Either.isLeft(result)) {
-									return yield* Request.succeed(request, false)
+								if (Option.isNone(result)) {
+									yield* Request.succeed(request, false)
+									return false
 								}
 
-								return yield* Request.succeed(request, true)
+								yield* Request.succeed(request, true)
+								return true
 							},
 							(effect, request) =>
-								Effect.catchAllCause(effect, cause =>
-									Request.failCause(request, cause),
+								Effect.catchAllCause(
+									effect,
+									Effect.fn(function* (cause) {
+										yield* Request.failCause(request, cause)
+										return yield* Effect.failCause(cause)
+									}),
 								),
 						),
 						{ batching: true },
@@ -107,22 +110,28 @@ export const layerWithoutDependencies = Layer.effect(
 					Effect.forEach(
 						Effect.fn(
 							function* (request) {
-								const result = yield* Effect.either(
+								const result = yield* Effect.option(
 									Effect.request(
 										SqliteCapacitorHelper.AddProduct.Request(request),
 										addProductResolver,
 									),
 								)
 
-								if (Either.isLeft(result)) {
-									return yield* Request.succeed(request, false)
+								if (Option.isNone(result)) {
+									yield* Request.succeed(request, false)
+									return false
 								}
 
-								return yield* Request.succeed(request, true)
+								yield* Request.succeed(request, true)
+								return true
 							},
 							(effect, request) =>
-								Effect.catchAllCause(effect, cause =>
-									Request.failCause(request, cause),
+								Effect.catchAllCause(
+									effect,
+									Effect.fn(function* (cause) {
+										yield* Request.failCause(request, cause)
+										return yield* Effect.failCause(cause)
+									}),
 								),
 						),
 						{ batching: true },

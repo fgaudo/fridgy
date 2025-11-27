@@ -1,45 +1,33 @@
 import * as Arr from 'effect/Array'
-import * as Data from 'effect/Data'
-import * as Deferred from 'effect/Deferred'
 import * as Effect from 'effect/Effect'
+import * as Equal from 'effect/Equal'
 import * as Exit from 'effect/Exit'
 import * as Fiber from 'effect/Fiber'
-import * as FiberId from 'effect/FiberId'
-import { pipe } from 'effect/Function'
-import * as Function from 'effect/Function'
-import * as HashMap from 'effect/HashMap'
+import { flow, pipe } from 'effect/Function'
 import * as Option from 'effect/Option'
 import * as PubSub from 'effect/PubSub'
 import * as Queue from 'effect/Queue'
-import * as Ref from 'effect/Ref'
 import * as Scope from 'effect/Scope'
 import * as Stream from 'effect/Stream'
 import * as SubscriptionRef from 'effect/SubscriptionRef'
-import * as SynchronizedRef from 'effect/SynchronizedRef'
-import { type Draft, createDraft, finishDraft } from 'immer'
 
-type Operation<S, M, R> = Data.TaggedEnum<{
-	cancel: { id: FiberId.FiberId }
-	command: { effect: Effect.Effect<M, never, R> }
-	subscription: {
-		init?: (id: FiberId.FiberId, state: S) => M
-		stream: (state: Effect.Effect<S>) => Stream.Stream<M, never, R>
-	}
-}>
-
-export const Operation = <S, M, R>() => Data.taggedEnum<Operation<S, M, R>>()
+export type Command<M, R> = Effect.Effect<M, never, R>
 
 export type Update<S, M, R> = (message: M) => (state: S) => {
 	state: S
-	operations: Operation<S, M, R>[]
+	commands: readonly Command<M, R>[]
 }
 
 export type StateManager<S, M> = {
 	initState: S
 	messages: Stream.Stream<M>
-	changes: Stream.Stream<S>
 	dispatch: (m: M) => Effect.Effect<void>
 	dispose: Effect.Effect<void>
+}
+
+export type Subscription<S, M, R> = {
+	selector: (s: S) => unknown
+	create: (s: S) => Stream.Stream<M, never, R>
 }
 
 export const makeStateManager = Effect.fn(function* <
@@ -49,74 +37,125 @@ export const makeStateManager = Effect.fn(function* <
 >({
 	initState,
 	update,
+	subscriptions: _subscriptions,
 	fatalMessage,
 }: {
 	initState: S
+	subscriptions: Subscription<S, M, R>[]
 	update: Update<S, M, R>
 	fatalMessage?: (err: unknown) => NoInfer<M>
 }): Effect.fn.Return<StateManager<S, M>, never, R | Scope.Scope> {
-	const ref = yield* SubscriptionRef.make(initState)
-	const queue = yield* Queue.unbounded<M>()
-	const messagePubSub = yield* PubSub.unbounded<M>()
+	const stateRef = yield* SubscriptionRef.make(initState)
 
-	const subscriptions = yield* SynchronizedRef.make(
-		HashMap.empty<FiberId.FiberId, Fiber.RuntimeFiber<void>>(),
-	)
+	const queue = yield* Effect.gen(function* () {
+		const q = yield* Queue.unbounded<M>()
+		yield* Effect.addFinalizer(
+			Effect.fn(function* (exit) {
+				if (Exit.isFailure(exit)) {
+					yield* q.shutdown
+					yield* Effect.logDebug(`StateManager: Queue shut down`)
+				}
+			}),
+		)
+		return q
+	})
 
-	yield* Effect.addFinalizer(
-		Effect.fn(function* (exit) {
-			if (Exit.isFailure(exit)) {
-				yield* queue.shutdown
-				yield* Effect.logDebug(`StateManager: Queue shut down`)
-			}
-		}),
-	)
+	const messagePubSub = yield* Effect.gen(function* () {
+		const pubSub = yield* PubSub.unbounded<M>()
+		yield* Effect.addFinalizer(
+			Effect.fn(function* (exit) {
+				if (Exit.isFailure(exit)) {
+					yield* pubSub.shutdown
+					yield* Effect.logDebug(`StateManager: Message PubSub shut down`)
+				}
+			}),
+		)
+		return pubSub
+	})
 
-	const Op = Operation<S, M, R>()
+	const maybeSubscriptions = Option.fromNullable(_subscriptions)
+	const maybeSubscriptionsFiber = yield* Effect.gen(function* () {
+		if (Option.isNone(maybeSubscriptions)) {
+			return Option.none<Fiber.RuntimeFiber<void>>()
+		}
+		const subscriptions = [...maybeSubscriptions.value]
 
-	const updatesFiber = yield* pipe(
-		Effect.gen(function* () {
-			const message = yield* queue.take
-
-			yield* Effect.annotateLogs(
-				Effect.logDebug(
-					`StateManager: Dispatched message "${String(message._tag)}"`,
-				),
-				{ message },
-			)
-
-			const transition = update(message)
-
-			const operations = yield* SubscriptionRef.modify(ref, s => {
-				const { state, operations } = transition(s)
-				return [operations, state]
-			})
-
-			yield* PubSub.publish(messagePubSub, message)
-
-			for (const operation of operations) {
-				yield* Op.$match(operation, {
-					cancel: Effect.fn(function* ({ id }) {
-						yield* SynchronizedRef.updateEffect(
-							subscriptions,
-							Effect.fn(function* (hm) {
-								const maybeFiber = HashMap.get(hm, id)
-
-								if (Option.isNone(maybeFiber)) {
-									return hm
-								}
-
-								yield* Fiber.interrupt(maybeFiber.value)
-
-								return HashMap.remove(hm, id)
+		const fiber = yield* pipe(
+			stateRef.changes,
+			Stream.broadcast(Arr.length(subscriptions), {
+				capacity: 'unbounded',
+			}),
+			Stream.map(
+				Arr.zipWith(subscriptions, (changes, { create, selector }) => ({
+					create,
+					changes,
+					selector,
+				})),
+			),
+			Stream.flatMap(
+				flow(
+					Arr.map(({ changes, selector, create }) =>
+						pipe(
+							changes,
+							Stream.bindTo('state'),
+							Stream.bindEffect('result', ({ state }) =>
+								Effect.sync(() => selector(state)),
+							),
+							Stream.changesWith(({ result: result1 }, { result: result2 }) =>
+								Equal.equals(result1, result2),
+							),
+							Stream.map(({ state }) => state),
+							Stream.flatMap(create, {
+								switch: true,
 							}),
-						)
-					}),
-					command: Effect.fn(
-						function* ({ effect }) {
-							const message = yield* effect
+						),
+					),
+					Stream.mergeAll({ concurrency: 'unbounded' }),
+				),
+			),
+			Stream.runForEach(m => queue.offer(m)),
+			Effect.forkDaemon,
+		)
+
+		yield* Effect.addFinalizer(
+			Effect.fn(function* (exit) {
+				if (Exit.isFailure(exit)) {
+					yield* Fiber.interrupt(fiber)
+					yield* Effect.logDebug(`StateManager: Subscriptions shut down`)
+				}
+			}),
+		)
+
+		return Option.some(fiber)
+	})
+
+	const updatesFiber = yield* Effect.gen(function* () {
+		const f = yield* pipe(
+			Effect.gen(function* () {
+				const message = yield* queue.take
+
+				yield* Effect.annotateLogs(
+					Effect.logDebug(
+						`StateManager: Dispatched message "${String(message._tag)}"`,
+					),
+					{ message },
+				)
+
+				const transition = update(message)
+
+				const commands = yield* SubscriptionRef.modify(stateRef, s => {
+					const { state, commands } = transition(s)
+					return [commands, state]
+				})
+
+				yield* PubSub.publish(messagePubSub, message)
+
+				for (const command of commands) {
+					yield* pipe(
+						Effect.gen(function* () {
+							const message = yield* command
 							yield* queue.offer(message)
-						},
+						}),
 						Effect.catchAllDefect(
 							Effect.fn(function* (err) {
 								yield* Effect.logFatal(err)
@@ -126,64 +165,32 @@ export const makeStateManager = Effect.fn(function* <
 							}),
 						),
 						Effect.fork,
-					),
-					subscription: Effect.fn(function* ({ stream, init }) {
-						const deferred = yield* Deferred.make()
-
-						const fiber = yield* pipe(
-							stream(ref.get),
-							Stream.onStart(Deferred.await(deferred)),
-							Stream.catchAllCause(err =>
-								fatalMessage
-									? Stream.fromEffect(
-											Effect.gen(function* () {
-												yield* Effect.logFatal(err)
-												return fatalMessage(err)
-											}),
-										)
-									: Stream.empty,
-							),
-							Stream.runForEach(m => queue.offer(m)),
-							Effect.fork,
-						)
-
-						const fiberId = Fiber.id(fiber)
-
-						if (init) {
-							yield* Ref.update(subscriptions, HashMap.set(fiberId, fiber))
-							const currentState = yield* ref.get
-							yield* queue.offer(init(fiberId, currentState))
-						}
-
-						yield* Deferred.succeed(deferred, undefined)
-
-						yield* fiber.await
-
-						yield* Ref.update(subscriptions, HashMap.remove(fiberId))
-					}, Effect.fork),
-				})
-			}
-		}),
-		Effect.catchAllDefect(
-			Effect.fn(function* (err) {
-				yield* Effect.logFatal(err)
-				if (fatalMessage) {
-					yield* queue.offer(fatalMessage(err))
+					)
 				}
 			}),
-		),
-		Effect.forever,
-		Effect.forkDaemon,
-	)
+			Effect.catchAllDefect(
+				Effect.fn(function* (err) {
+					yield* Effect.logFatal(err)
+					if (fatalMessage) {
+						yield* queue.offer(fatalMessage(err))
+					}
+				}),
+			),
+			Effect.forever,
+			Effect.forkDaemon,
+		)
 
-	yield* Effect.addFinalizer(
-		Effect.fn(function* (exit) {
-			if (Exit.isFailure(exit)) {
-				yield* Fiber.interrupt(updatesFiber)
-				yield* Effect.logDebug(`StateManager: Reducer interrupted`)
-			}
-		}),
-	)
+		yield* Effect.addFinalizer(
+			Effect.fn(function* (exit) {
+				if (Exit.isFailure(exit)) {
+					yield* Fiber.interrupt(f)
+					yield* Effect.logDebug(`StateManager: Reducer interrupted`)
+				}
+			}),
+		)
+
+		return f
+	})
 
 	return {
 		initState,
@@ -191,15 +198,15 @@ export const makeStateManager = Effect.fn(function* <
 			Stream.fromPubSub(messagePubSub),
 			Effect.logDebug(`StateManager: Stream of messages ended`),
 		),
-		changes: Stream.onEnd(
-			ref.changes,
-			Effect.logDebug(`StateManager: Stream of changes ended`),
-		),
 		dispose: Effect.gen(function* () {
 			yield* Effect.all([
 				queue.shutdown,
 				Fiber.interrupt(updatesFiber),
 				messagePubSub.shutdown,
+				Option.match(maybeSubscriptionsFiber, {
+					onSome: fiber => Fiber.interrupt(fiber),
+					onNone: () => Effect.void,
+				}),
 			])
 			yield* Effect.logDebug(`StateManager: Resources freed`)
 		}),
@@ -208,73 +215,3 @@ export const makeStateManager = Effect.fn(function* <
 		}),
 	}
 }, Effect.scoped)
-
-export const modify = Function.dual<
-	<S extends object, M, R>(
-		p: (draft: Draft<S>) => Arr.NonEmptyArray<Operation<S, M, R>> | void,
-	) => (state: S) => {
-		state: S
-		operations: Operation<S, M, R>[]
-	},
-	<S extends object, M, R>(
-		state: S,
-		p: (draft: Draft<S>) => Arr.NonEmptyArray<Operation<S, M, R>> | void,
-	) => {
-		state: S
-		operations: Operation<S, M, R>[]
-	}
->(2, (state, p) => {
-	const draft = createDraft(state)
-
-	const operations = p(draft) ?? []
-
-	return {
-		// oxlint-disable-next-line no-unsafe-type-assertion
-		state: finishDraft(draft) as typeof state,
-		operations,
-	}
-})
-
-type NoOpType = {
-	<S, M, R>(state: S): { state: S; operations: Operation<S, M, R>[] }
-	func<M, R>(): <S>(state: S) => {
-		state: S
-		operations: Operation<S, M, R>[]
-	}
-}
-
-export const noOp: NoOpType = Object.assign(
-	<S>(state: S) => ({
-		state,
-		operations: [],
-	}),
-	{
-		func:
-			() =>
-			<S>(state: S) => ({
-				state,
-				operations: [],
-			}),
-	},
-)
-
-export const operations = Function.dual<
-	<S, M, R>(
-		operations: Arr.NonEmptyArray<Operation<S, M, R>>,
-	) => (state: S) => {
-		state: S
-		operations: Operation<S, M, R>[]
-	},
-	<S, M, R>(
-		state: S,
-		operations: Arr.NonEmptyArray<Operation<S, M, R>>,
-	) => {
-		state: S
-		operations: Operation<S, M, R>[]
-	}
->(2, (state, operations) => {
-	return {
-		state,
-		operations,
-	}
-})

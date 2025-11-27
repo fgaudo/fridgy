@@ -1,5 +1,5 @@
 export const formatRemainingTime = (ms: number): string => {
-	const days = ms / (1000 * 60 * 60 * 24)
+	const days = Math.floor(ms / (1000 * 60 * 60 * 24))
 
 	if (days < 1) {
 		return `< 1d`

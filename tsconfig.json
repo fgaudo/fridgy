@@ -5,8 +5,9 @@
 			{ "name": "typescript-svelte-plugin" },
 			{
 				"name": "@effect/language-service",
-				"topLevelNamedReexports": "follow", 
-				"namespaceImportPackages": ["effect", "effect/*"],
+				"topLevelNamedReexports": "follow",
+				"namespaceImportPackages": ["effect"],
+				"importAliases": { "Array": "Arr", "Request": "Req" } // allows to chose some different names for import name aliases (only when not chosing to import the whole module) (default: {})
 			}
 		],
 		"allowJs": true,
@@ -20,7 +21,7 @@
 		"sourceMap": true,
 		"strict": true,
 		"moduleResolution": "bundler",
-		"noErrorTruncation" : true
+		"noErrorTruncation": true
 	}
 	// Path aliases are handled by https://svelte.dev/docs/kit/configuration#alias
 	// except $lib which is handled by https://svelte.dev/docs/kit/configuration#files

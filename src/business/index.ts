@@ -6,8 +6,6 @@ import * as ManagedRuntime from 'effect/ManagedRuntime'
 
 import { UseCases } from '@/feature/product-management/index.ts'
 
-export * as Pages from './pages/index.ts'
-
 export const runtime = import.meta.env.PROD
 	? pipe(UseCases.capacitor, Layer.provide(Logger.logFmt), ManagedRuntime.make)
 	: pipe(

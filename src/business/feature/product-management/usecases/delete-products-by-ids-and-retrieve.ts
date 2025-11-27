@@ -1,8 +1,8 @@
 import assert from 'assert'
 import * as Arr from 'effect/Array'
+import * as Data from 'effect/Data'
 import * as Effect from 'effect/Effect'
 import * as Match from 'effect/Match'
-import * as Schema from 'effect/Schema'
 
 import * as NonEmptyHashSet from '@/core/non-empty-hash-set'
 
@@ -12,33 +12,25 @@ import * as GetSortedProducts from './get-sorted-products.ts'
 /////
 /////
 
-export class DeleteParameters extends Schema.Class<DeleteParameters>(
-	'DeleteParameters',
-)({
-	ids: NonEmptyHashSet.Schema(Schema.String),
-}) {}
-
-/////
-/////
-
-class Failed extends Schema.TaggedClass<Failed>()('Failed', {}) {}
-
-class DeleteSucceededButRefreshFailed extends Schema.TaggedClass<DeleteSucceededButRefreshFailed>()(
-	'DeleteSucceededButRefreshFailed',
-	{},
-) {}
-
-class Succeeded extends Schema.TaggedClass<Succeeded>()('Succeeded', {
-	result: GetSortedProducts.Response.Succeeded.fields.result,
-}) {}
-
-export const Response = {
-	Failed,
-	DeleteSucceededButRefreshFailed,
-	Succeeded,
+type DeleteParameters = {
+	ids: NonEmptyHashSet.NonEmptyHashSet<string>
 }
 
-export type Response = Failed | DeleteSucceededButRefreshFailed | Succeeded
+/////
+/////
+
+export type Response = Data.TaggedEnum<{
+	DeleteSucceededButRefreshFailed: object
+	Failed: object
+	Succeeded: {
+		maybeProducts: Data.TaggedEnum.Value<
+			GetSortedProducts.Response,
+			'Succeeded'
+		>['maybeProducts']
+	}
+}>
+
+export const Response = Data.taggedEnum<Response>()
 
 /////
 /////
@@ -53,7 +45,7 @@ export class Service extends Effect.Service<Service>()(
 
 			const deleteProductById = (id: string) =>
 				Effect.request(
-					new ProductManager.DeleteProductById.Request({
+					ProductManager.DeleteProductById.Request({
 						id,
 					}),
 					resolver,
@@ -68,34 +60,35 @@ export class Service extends Effect.Service<Service>()(
 					yield* Effect.logInfo(`Requested to delete products`)
 					yield* Effect.logInfo(`Attempting to delete products...`)
 
-					const result = yield* Effect.forEach(ids, deleteProductById, {
+					const deleteResults = yield* Effect.forEach(ids, deleteProductById, {
 						batching: true,
 					})
 
-					const number = Arr.reduce(result, 0, (acc, value) =>
+					const successes = Arr.reduce(deleteResults, 0, (acc, value) =>
 						value ? acc + 1 : acc,
 					)
 
-					assert(number <= result.length)
-					assert(number >= 0)
+					assert(successes <= deleteResults.length)
+					assert(successes >= 0)
 
-					if (number <= 0) {
-						return new Response.Failed()
+					if (successes <= 0) {
+						return Response.Failed()
 					}
 
-					if (number < result.length) {
+					if (successes < deleteResults.length) {
 						yield* Effect.logWarning(
-							`${(result.length - number).toString()} Products could not be deleted`,
+							`${(deleteResults.length - successes).toString()} Products could not be deleted`,
 						)
 					}
 
-					yield* Effect.logInfo(`${number.toString()} Products deleted`)
+					yield* Effect.logInfo(`${successes.toString()} Products deleted`)
 
-					const result2 = yield* getAllProductsWithTotal.run
+					const fetchResult = yield* getAllProductsWithTotal.run
 
-					return Match.valueTags(result2, {
-						Failed: () => new Response.DeleteSucceededButRefreshFailed(),
-						Succeeded: ({ result }) => new Response.Succeeded({ result }),
+					return Match.valueTags(fetchResult, {
+						Failed: () => Response.DeleteSucceededButRefreshFailed(),
+						Succeeded: ({ maybeProducts }) =>
+							Response.Succeeded({ maybeProducts }),
 					})
 				}),
 			}

@@ -3,69 +3,62 @@ import * as Clock from 'effect/Clock'
 import * as Data from 'effect/Data'
 import * as Effect from 'effect/Effect'
 import { pipe } from 'effect/Function'
+import * as NonEmptyIterable from 'effect/NonEmptyIterable'
 import * as Option from 'effect/Option'
-import * as Schema from 'effect/Schema'
 
 import * as Integer from '@/core/integer/integer.ts'
+import * as PositiveInteger from '@/core/integer/positive.ts'
+import * as NonEmptyIterableHelper from '@/core/non-empty-iterable.ts'
 import * as NonEmptyTrimmedString from '@/core/non-empty-trimmed-string.ts'
 import * as UnitInterval from '@/core/unit-interval.ts'
 
-import * as Product from '../domain/product.ts'
+import * as _Product from '../domain/product.ts'
 import * as ProductManager from '../interfaces/product-manager.ts'
 
 /////
 /////
 
-class Succeeded extends Schema.TaggedClass<Succeeded>()('Succeeded', {
-	result: Schema.Option(
-		Schema.NonEmptyArray(
-			Schema.Union(
-				Schema.TaggedStruct('Corrupt', {
-					maybeName: Schema.Option(NonEmptyTrimmedString.Schema),
-				}),
-				Schema.TaggedStruct('Invalid', {
-					maybeName: Schema.Option(NonEmptyTrimmedString.Schema),
-					id: Schema.String,
-				}),
-				Schema.TaggedStruct('Valid', {
-					id: Schema.String,
-					name: NonEmptyTrimmedString.Schema,
-					status: Schema.Union(
-						Schema.TaggedStruct('Everlasting', {}),
-						Schema.TaggedStruct('Stale', {
-							expirationDate: Integer.Schema,
-						}),
-						Schema.TaggedStruct('Fresh', {
-							freshnessRatio: UnitInterval.Schema,
-							timeLeft: Integer.Schema,
-							expirationDate: Integer.Schema,
-						}),
-					),
-				}),
-			),
-		),
-	),
-}) {
-	static readonly ProductDTO =
-		Data.taggedEnum<Option.Option.Value<Succeeded['result']>[0]>()
+type Product = Data.TaggedEnum<{
+	Corrupt: {
+		maybeName: Option.Option<NonEmptyTrimmedString.NonEmptyTrimmedString>
+	}
+	Invalid: {
+		maybeName: Option.Option<NonEmptyTrimmedString.NonEmptyTrimmedString>
+		id: string
+	}
+	Valid: {
+		id: string
+		name: NonEmptyTrimmedString.NonEmptyTrimmedString
+		status: Data.TaggedEnum<{
+			Everlasting: object
+			Stale: {
+				expirationDate: Integer.Integer
+			}
+			Fresh: {
+				freshnessRatio: UnitInterval.UnitInterval
+				timeLeft: Integer.Integer
+				expirationDate: Integer.Integer
+			}
+		}>
+	}
+}>
 
-	static readonly StatusDTO =
-		Data.taggedEnum<
-			Data.TaggedEnum.Value<
-				Option.Option.Value<Succeeded['result']>[0],
-				'Valid'
-			>['status']
-		>()
-}
+export const Status =
+	Data.taggedEnum<Data.TaggedEnum.Value<Product, 'Valid'>['status']>()
 
-class Failed extends Schema.TaggedClass<Failed>()('Failed', {}) {}
+export const Product = Data.taggedEnum<Product>()
 
-export type Response = Failed | Succeeded
+export type Response = Data.TaggedEnum<{
+	Succeeded: {
+		maybeProducts: Option.Option<{
+			total: PositiveInteger.PositiveInteger
+			list: NonEmptyIterable.NonEmptyIterable<Product>
+		}>
+	}
+	Failed: object
+}>
 
-export const Response = {
-	Succeeded,
-	Failed,
-}
+export const Response = Data.taggedEnum<Response>()
 
 /////
 /////
@@ -76,7 +69,7 @@ export class Service extends Effect.Service<Service>()(
 		accessors: true,
 		effect: Effect.gen(function* () {
 			const { getSortedProducts } = yield* ProductManager.Service
-			const { makeProduct } = yield* Product.Service
+			const { makeProduct } = yield* _Product.Service
 			return {
 				run: Effect.gen(function* (): Effect.fn.Return<Response> {
 					yield* Effect.log(`Requested to fetch the list of products`)
@@ -88,99 +81,99 @@ export class Service extends Effect.Service<Service>()(
 					if (Option.isNone(maybeProducts)) {
 						yield* Effect.logError(`Could not receive items.`)
 
-						return new Failed()
+						return Response.Failed()
 					}
 
 					const result = maybeProducts.value
 
-					const entries = yield* pipe(
+					const entries = yield* Effect.forEach(
 						result,
-						Arr.map(
-							Effect.fn(function* ({
-								maybeId,
-								maybeName,
-								maybeCreationDate,
-								maybeExpirationDate,
-							}) {
-								if (Option.isNone(maybeId)) {
-									yield* Effect.logWarning(`CORRUPTION - Product has no id.`)
+						Effect.fn(function* ({
+							maybeId,
+							maybeName,
+							maybeCreationDate,
+							maybeExpirationDate,
+						}) {
+							if (Option.isNone(maybeId)) {
+								yield* Effect.logWarning(`CORRUPTION - Product has no id.`)
+								return Product.Corrupt({
+									maybeName,
+								})
+							}
 
-									return Succeeded.ProductDTO.Corrupt({
-										maybeName,
-									})
-								}
-
-								const maybeProduct = Option.gen(function* () {
-									const { name, creationDate } = yield* Option.all({
-										name: maybeName,
-										creationDate: maybeCreationDate,
-									})
-
-									return yield* makeProduct({
-										name,
-										creationDate,
-										maybeExpirationDate,
-									})
+							const maybeProduct = Option.gen(function* () {
+								const { name, creationDate } = yield* Option.all({
+									name: maybeName,
+									creationDate: maybeCreationDate,
 								})
 
-								if (Option.isNone(maybeProduct)) {
-									yield* Effect.logWarning(`Product is invalid.`)
+								return yield* makeProduct({
+									name,
+									creationDate,
+									maybeExpirationDate,
+								})
+							})
 
-									return Succeeded.ProductDTO.Invalid({
-										id: maybeId.value,
-										maybeName,
-									})
-								}
+							if (Option.isNone(maybeProduct)) {
+								yield* Effect.logWarning(`Product is invalid.`)
 
-								const product = maybeProduct.value
+								return Product.Invalid({
+									id: maybeId.value,
+									maybeName,
+								})
+							}
 
-								if (!Product.hasExpirationDate(product)) {
-									return Succeeded.ProductDTO.Valid({
-										id: maybeId.value,
-										name: product.name,
-										status: Succeeded.StatusDTO.Everlasting(),
-									})
-								}
+							const product = maybeProduct.value
 
-								const currentDate = Integer.unsafeFromNumber(
-									yield* Clock.currentTimeMillis,
-								)
-
-								if (Product.isStale(product, currentDate)) {
-									return Succeeded.ProductDTO.Valid({
-										id: maybeId.value,
-										name: product.name,
-										status: Succeeded.StatusDTO.Stale({
-											expirationDate: product.maybeExpirationDate.value,
-										}),
-									})
-								}
-
-								return Succeeded.ProductDTO.Valid({
+							if (!_Product.hasExpirationDate(product)) {
+								return Product.Valid({
 									id: maybeId.value,
 									name: product.name,
-									status: Succeeded.StatusDTO.Fresh({
+									status: Status.Everlasting(),
+								})
+							}
+
+							const currentDate = Integer.unsafeFromNumber(
+								yield* Clock.currentTimeMillis,
+							)
+
+							if (_Product.isStale(product, currentDate)) {
+								return Product.Valid({
+									id: maybeId.value,
+									name: product.name,
+									status: Status.Stale({
 										expirationDate: product.maybeExpirationDate.value,
-										timeLeft: Product.timeLeft(product, currentDate),
-										freshnessRatio: Product.computeFreshness(
-											product,
-											currentDate,
-										),
 									}),
 								})
-							}),
-						),
-						Effect.all,
+							}
+
+							return Product.Valid({
+								id: maybeId.value,
+								name: product.name,
+								status: Status.Fresh({
+									expirationDate: product.maybeExpirationDate.value,
+									timeLeft: _Product.timeLeft(product, currentDate),
+									freshnessRatio: _Product.computeFreshness(
+										product,
+										currentDate,
+									),
+								}),
+							})
+						}),
 					)
 
-					return new Succeeded({
-						result: Arr.isNonEmptyArray(entries)
-							? Option.some(entries)
-							: Option.none(),
+					return Response.Succeeded({
+						maybeProducts: pipe(
+							NonEmptyIterableHelper.fromIterable(entries),
+							Option.map(iterable => ({
+								total: PositiveInteger.unsafeFromNumber(Arr.length(entries)),
+								list: iterable,
+							})),
+						),
 					})
 				}).pipe(Effect.withLogSpan(`GetSortedProducts UC`)),
 			}
 		}),
-		dependencies: [Product.Service.Default],
+		dependencies: [_Product.Service.Default],
 	},
 ) {}

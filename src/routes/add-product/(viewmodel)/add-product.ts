@@ -35,23 +35,9 @@ const InternalMessage = Data.taggedEnum<InternalMessage>()
 /////
 /////
 
-const State = Schema.extend(
-	Schema.Struct({
-		isAdding: Schema.Boolean,
-	}),
-	Schema.Union(
-		Schema.Struct({
-			maybeMessage: NonEmptyTrimmedString.Schema,
-			messageType: Schema.Union(
-				Schema.Literal(`error`),
-				Schema.Literal(`success`),
-			),
-		}),
-		Schema.Struct({
-			messageType: Schema.Literal(`none`),
-		}),
-	),
-)
+const State = Schema.Struct({
+	isAdding: Schema.Boolean,
+})
 
 type State = Schema.Schema.Type<typeof State>
 
@@ -108,7 +94,7 @@ const update = matcher({
 
 const makeViewModel = Effect.gen(function* () {
 	const viewModel = yield* SM.makeStateManager({
-		initState: { isAdding: false, messageType: `none` },
+		initState: { isAdding: false },
 		update,
 	})
 

@@ -28,8 +28,7 @@
 	import { getGlobalContext } from '$lib/context.ts'
 	import * as Utils from '$lib/utils.ts'
 
-	import { Pages } from '../business/index.ts'
-	import { Home } from '../business/pages/index.ts'
+	import * as Home from './(viewmodel)/home.ts'
 
 	const { runtime } = getGlobalContext()
 
@@ -46,7 +45,7 @@
 	const { viewModel } = $derived(
 		useViewmodel({
 			runtime,
-			makeViewModel: Pages.Home.makeViewModel,
+			makeViewModel: Home.makeViewModel,
 			messages: m => {
 				void Toast.show({ text: m })
 			},
@@ -92,14 +91,14 @@
 			Option.gen(function* () {
 				const { state: viewmodelState } = yield* Option.fromNullable(viewModel)
 
-				if (viewmodelState.refreshStatus._tag !== 'Success') {
+				if (viewmodelState.productListStatus._tag !== 'Loaded') {
 					return false
 				}
 
-				const products = yield* viewmodelState.refreshStatus.maybeProducts
+				const products = yield* viewmodelState.productListStatus.products
 
 				return Arr.findFirstIndex(
-					products,
+					products.items,
 					product =>
 						product._tag === 'Valid' && product.status._tag === 'Fresh',
 				)
@@ -150,13 +149,10 @@
 		transition:fade={{ duration: 200 }}
 		class="z-50 scale-[175%] fixed left-0 top-0 right-0 bottom-0 backdrop-blur-[1px] flex items-center justify-center"
 	>
-		ciao
 		<Spinner />
 	</div>
 {:else}
-	{#snippet invalidProduct(
-		product: Pages.Home.ProductDTO & { _tag: 'Invalid' },
-	)}
+	{#snippet invalidProduct(product: Home.ProductDTO & { _tag: 'Invalid' })}
 		<div
 			class={[
 				`flex mx-2 relative transition-transform shadow-sm rounded-lg py-1 overflow-hidden`,
@@ -321,7 +317,7 @@
 							<Ripple
 								ontap={() => {
 									viewModel.dispatch(
-										Pages.Home.Message.StartDeleteAndRefresh({
+										Home.Message.StartDeleteAndRefresh({
 											ids: maybeSelectedProducts.value,
 										}),
 									)
@@ -332,18 +328,12 @@
 					</div>
 				{/if}
 			</div>
-			{#if viewModel.state.refreshStatus._tag === 'Success'}
-				{@const count = Option.isSome(
-					viewModel.state.refreshStatus.maybeProducts,
-				)
-					? Arr.length(viewModel.state.refreshStatus.maybeProducts.value)
-					: 0}
-
+			{#if viewModel.state.productListStatus._tag === 'Loaded' && Option.isSome(viewModel.state.productListStatus.products)}
 				<p
 					out:fade={{ duration: 200 }}
 					class="bg-background z-50 w-full px-3.5 pt-2.5 pb-2 text-xs"
 				>
-					{count} items
+					{viewModel.state.productListStatus.products.value.total} items
 				</p>
 			{/if}
 		</div>
@@ -358,7 +348,7 @@
 		{/if}
 
 		<div class="bg-background flex flex-col">
-			{#if viewModel.state.refreshStatus._tag === 'Error'}
+			{#if viewModel.state.productListStatus._tag === 'StartupError'}
 				<div
 					class="flex h-screen w-screen items-center justify-center text-center text-lg"
 				>
@@ -371,7 +361,7 @@
 							{#if viewModel.state.isBusy}
 								<Ripple
 									ontap={() => {
-										viewModel.dispatch(Pages.Home.Message.StartFetchList())
+										viewModel.dispatch(Home.Message.StartFetchList())
 									}}
 								></Ripple>
 							{/if}
@@ -380,14 +370,15 @@
 						</div>
 					</div>
 				</div>
-			{:else if viewModel.state.refreshStatus._tag === 'Uninitialized'}
+			{:else if viewModel.state.productListStatus._tag === 'Initial'}
 				<div
 					class="flex h-screen w-screen items-center justify-center text-center text-lg"
 				>
 					<Spinner />
 				</div>
-			{:else if Option.isSome(viewModel.state.refreshStatus.maybeProducts)}
-				{@const products = viewModel.state.refreshStatus.maybeProducts.value}
+			{:else if Option.isSome(viewModel.state.productListStatus.maybeProducts)}
+				{@const products =
+					viewModel.state.productListStatus.maybeProducts.value.items}
 
 				<div
 					style:padding-top={`calc(var(--safe-area-inset-top) + 64px + 42px)`}
@@ -459,9 +450,8 @@
 											</div>
 
 											{#if product.status._tag === 'Fresh'}
-												{@const freshnessPercentage =
-													product.status.freshnessRatio * 100}
-												{@const color = `color-mix(in srgb, var(--color-secondary) ${freshnessPercentage.toString(10)}%, var(--color-primary) ${((1 - freshnessPercentage) * 100).toString(10)}%)`}
+												{@const freshnessRatio = product.status.freshnessRatio}
+												{@const color = `color-mix(in srgb, var(--color-secondary) ${(freshnessRatio * 100).toString(10)}%, var(--color-primary) ${((1 - freshnessRatio) * 100).toString(10)}%)`}
 
 												<div
 													style:outline-color={color}
@@ -470,7 +460,7 @@
 													<div
 														class="bg-primary h-full"
 														style:background-color={color}
-														style:width={`${freshnessPercentage.toString(10)}%`}
+														style:width={`${(freshnessRatio * 100).toString(10)}%`}
 													></div>
 												</div>
 											{:else}
@@ -513,7 +503,7 @@
 					class="fixed right-4 left-4"
 					style:bottom={`calc(var(--safe-area-inset-bottom, 0) + 21px)`}
 				>
-					{#if Option.isNone(viewModel.state.refreshStatus.maybeProducts)}
+					{#if Option.isNone(viewModel.state.productListStatus.maybeProducts)}
 						<div
 							in:fade={{ duration: 200 }}
 							class="font-stylish absolute right-0 bottom-[100px] flex flex-col items-end duration-[fade]"
