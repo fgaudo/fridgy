@@ -32,39 +32,49 @@ export const useViewmodel = <S, M1, M2, R>({
 	messages,
 }: {
 	runtime: ManagedRuntime.ManagedRuntime<R, never>
-	makeViewModel: Effect.Effect<ViewModel<S, M1, M2>, never, R>
+	makeViewModel: Effect.Effect<ViewModel<S, M1, M2, R>>
 	messages?: (m: M2) => void
 }) => {
-	let viewmodelState = $state.raw<S>()
+	let state = $state.raw<S>()
 
-	let handle = $state.raw<Effect.Effect.Success<typeof makeViewModel>>()
+	let viewModel = $state.raw<Effect.Effect.Success<typeof makeViewModel>>()
 
-	let initialized = $derived<boolean>(
-		handle !== undefined && viewmodelState !== undefined,
-	)
+	let handle =
+		$state.raw<
+			Effect.Effect.Success<Effect.Effect.Success<typeof makeViewModel>['run']>
+		>()
 
 	$effect(() => {
-		if (!handle) return
+		if (!viewModel) return
 
 		const cancelChanges = runtime.runCallback(
-			Stream.runForEach(handle.changes, s =>
+			Stream.runForEach(viewModel.stateChanges, s =>
 				Effect.sync(() => {
-					viewmodelState = s
+					state = s
 				}),
 			),
 		)
 
 		const cancelMessages = messages
 			? runtime.runCallback(
-					Stream.runForEach(handle.messages, m =>
+					Stream.runForEach(viewModel.messages, m =>
 						Effect.sync(() => messages(m)),
 					),
 				)
 			: undefined
 
+		const cancelRun = runtime.runCallback(viewModel.run, {
+			onExit: h => {
+				if (Exit.isSuccess(h)) {
+					handle = h.value
+				}
+			},
+		})
+
 		return () => {
 			cancelChanges()
 			cancelMessages?.()
+			cancelRun()
 		}
 	})
 
@@ -72,8 +82,8 @@ export const useViewmodel = <S, M1, M2, R>({
 		const cancelInit = runtime.runCallback(makeViewModel, {
 			onExit: h => {
 				if (Exit.isSuccess(h)) {
-					viewmodelState = h.value.initState
-					handle = h.value
+					state = h.value.initState
+					viewModel = h.value
 				}
 			},
 		})
@@ -89,25 +99,22 @@ export const useViewmodel = <S, M1, M2, R>({
 		}
 	})
 
-	const viewModel = $derived.by(() => {
-		if (
-			!initialized ||
-			handle?.dispatch === undefined ||
-			viewmodelState === undefined
-		)
+	const publicViewModel = $derived.by(() => {
+		if (handle === undefined || state === undefined) {
 			return undefined
+		}
 
 		const dispatch = handle.dispatch
 
 		return {
 			dispatch: (m: M1) => runtime.runCallback(dispatch(m)),
-			state: viewmodelState,
+			state: state,
 		}
 	})
 
 	return {
 		get viewModel() {
-			return viewModel
+			return publicViewModel
 		},
 	}
 }
