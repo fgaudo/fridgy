@@ -4,26 +4,34 @@ import * as Effect from 'effect/Effect'
 import * as Layer from 'effect/Layer'
 import * as Option from 'effect/Option'
 import * as RequestResolver from 'effect/RequestResolver'
+import * as Schema from 'effect/Schema'
 import * as TestClock from 'effect/TestClock'
 
+import * as Integer from '@/core/integer/integer.ts'
+import * as NonEmptyTrimmedString from '@/core/non-empty-trimmed-string.ts'
 import * as H from '@/core/test-helpers.ts'
 import { makeTestLayer } from '@/core/testing.ts'
 
 import * as ProductService from '../domain/product.ts'
-import * as ProductManager from '../interfaces/product-manager.ts'
+import * as ProductRepository from '../repository/product-repository.ts'
 import * as Usecase from './add-product.ts'
 import { AddProduct } from './index.ts'
+
+const AddProductParams = Schema.Struct({
+	name: NonEmptyTrimmedString.Schema,
+	maybeExpirationDate: Schema.Option(Integer.Schema),
+})
 
 describe.concurrent(`Add product`, () => {
 	effect.prop(
 		`Should just work`,
-		{ product: Usecase.AddProductParams },
+		{ product: AddProductParams },
 		Effect.fn(function* ({ product: { name, maybeExpirationDate } }, _) {
 			const observed = yield* Deferred.make<number>()
 
 			const mockLayer = Layer.provide(
-				AddProduct.Service.Default,
-				makeTestLayer(ProductManager.Service)({
+				AddProduct.AddProduct.Default,
+				makeTestLayer(ProductRepository.ProductRepository)({
 					addProduct: {
 						resolver: RequestResolver.fromEffect(
 							Effect.fn(function* (req) {
@@ -37,7 +45,7 @@ describe.concurrent(`Add product`, () => {
 			)
 
 			const run = Effect.provide(
-				Usecase.Service.run({ maybeExpirationDate, name }),
+				Usecase.AddProduct.run({ maybeExpirationDate, name }),
 				[mockLayer],
 			)
 
@@ -50,14 +58,14 @@ describe.concurrent(`Add product`, () => {
 			const creationDate = yield* Deferred.await(observed)
 
 			expect(creationDate).toStrictEqual(0)
-			expect(exit.value._tag).toStrictEqual(Usecase.Response.Succeeded._tag)
+			expect(exit.value._tag === 'Succeeded').toBe(true)
 		}),
 	)
 
 	layer(
 		Layer.provide(
-			Usecase.Service.Default,
-			makeTestLayer(ProductManager.Service)({
+			Usecase.AddProduct.Default,
+			makeTestLayer(ProductRepository.ProductRepository)({
 				addProduct: {
 					resolver: RequestResolver.fromEffect(
 						Effect.fn(() => Effect.succeed(false)),
@@ -68,9 +76,9 @@ describe.concurrent(`Add product`, () => {
 	)(({ effect }) => {
 		effect.prop(
 			`Should return error`,
-			{ product: Usecase.AddProductParams },
+			{ product: AddProductParams },
 			Effect.fn(function* ({ product: { name, maybeExpirationDate } }) {
-				const { run } = yield* Usecase.Service
+				const { run } = yield* Usecase.AddProduct
 				const exit = yield* Effect.exit(
 					run({
 						name,
@@ -80,30 +88,30 @@ describe.concurrent(`Add product`, () => {
 
 				H.assertExitIsSuccess(exit)
 
-				expect(exit.value._tag).toStrictEqual(Usecase.Response.Failed._tag)
+				expect(exit.value._tag === 'Failed').toBe(true)
 			}),
 		)
 	})
 
 	layer(
-		Layer.provide(Usecase.Service.DefaultWithoutDependencies, [
-			makeTestLayer(ProductManager.Service)({
+		Layer.provide(Usecase.AddProduct.DefaultWithoutDependencies, [
+			makeTestLayer(ProductRepository.ProductRepository)({
 				addProduct: {
 					resolver: RequestResolver.fromEffect(
 						Effect.fn(() => Effect.succeed(false)),
 					),
 				},
 			}),
-			makeTestLayer(ProductService.Service)({
+			makeTestLayer(ProductService.ProductService)({
 				makeProduct: () => Option.none(),
 			}),
 		]),
 	)(({ effect }) => {
 		effect.prop(
 			`Should return error`,
-			{ product: Usecase.AddProductParams },
+			{ product: AddProductParams },
 			Effect.fn(function* ({ product: { name, maybeExpirationDate } }) {
-				const { run } = yield* Usecase.Service
+				const { run } = yield* Usecase.AddProduct
 				const exit = yield* Effect.exit(
 					run({
 						name,
@@ -113,7 +121,7 @@ describe.concurrent(`Add product`, () => {
 
 				H.assertExitIsSuccess(exit)
 
-				expect(exit.value._tag).toStrictEqual(Usecase.Response.Failed._tag)
+				expect(exit.value._tag === 'Failed').toBe(true)
 			}),
 		)
 	})

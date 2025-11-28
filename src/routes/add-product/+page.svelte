@@ -17,7 +17,7 @@
 	import { PAGE_TRANSITION_Y } from '$lib/constants.ts'
 	import { getGlobalContext } from '$lib/context.ts'
 
-	import { Pages } from '../../business/index.ts'
+	import * as VM from './(add-product)/viewmodel.ts'
 
 	type State = {
 		name: undefined | string
@@ -29,7 +29,7 @@
 	const { runtime } = getGlobalContext()
 
 	const { viewModel } = $derived(
-		useViewmodel({ runtime, makeViewModel: Pages.AddProduct.makeViewModel }),
+		useViewmodel({ runtime, makeViewModel: VM.makeViewModel }),
 	)
 
 	const state = $state<State>({

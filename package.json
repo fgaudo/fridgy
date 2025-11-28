@@ -44,6 +44,7 @@
 		"typescript": "^5.9.3",
 		"typescript-svelte-plugin": "^0.3.50",
 		"vite": "^7.2.4",
+		"vite-plugin-devtools-json": "^1.0.0",
 		"vite-tsconfig-paths": "^5.1.4",
 		"vitest": "^4.0.13"
 	},

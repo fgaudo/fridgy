@@ -58,7 +58,7 @@ export type GetAllProductsWithTotalDTO = Schema.Schema.Type<
 	typeof GetAllProductsWithTotalDTO
 >
 
-export class Service extends Effect.Service<Service>()(
+export class SqliteCapacitorPlugin extends Effect.Service<SqliteCapacitorPlugin>()(
 	`shared/capacitor/sqlite-capacitor-plugin`,
 	{
 		sync: () => {

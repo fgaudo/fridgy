@@ -1,4 +1,5 @@
 import { type BackButtonListenerEvent, App as CAP } from '@capacitor/app'
+import { pipe } from 'effect'
 import * as Effect from 'effect/Effect'
 import * as Exit from 'effect/Exit'
 import * as ManagedRuntime from 'effect/ManagedRuntime'
@@ -44,24 +45,16 @@ export const useViewmodel = <S, M1, M2, R>({
 			Effect.Effect.Success<Effect.Effect.Success<typeof makeViewModel>['run']>
 		>()
 
+	let initialized = $state({ changes: false, messages: false })
+
 	$effect(() => {
-		if (!viewModel) return
+		if (!viewModel) {
+			return
+		}
 
-		const cancelChanges = runtime.runCallback(
-			Stream.runForEach(viewModel.stateChanges, s =>
-				Effect.sync(() => {
-					state = s
-				}),
-			),
-		)
-
-		const cancelMessages = messages
-			? runtime.runCallback(
-					Stream.runForEach(viewModel.messages, m =>
-						Effect.sync(() => messages(m)),
-					),
-				)
-			: undefined
+		if (!initialized.changes || !initialized.messages) {
+			return
+		}
 
 		const cancelRun = runtime.runCallback(viewModel.run, {
 			onExit: h => {
@@ -72,9 +65,46 @@ export const useViewmodel = <S, M1, M2, R>({
 		})
 
 		return () => {
+			cancelRun()
+		}
+	})
+
+	$effect(() => {
+		if (!viewModel) return
+
+		const cancelChanges = runtime.runCallback(
+			pipe(
+				viewModel.stateChanges,
+				Stream.onStart(
+					Effect.sync(() => {
+						initialized.changes = true
+					}),
+				),
+				Stream.runForEach(s =>
+					Effect.sync(() => {
+						state = s
+					}),
+				),
+			),
+		)
+
+		const cancelMessages = messages
+			? runtime.runCallback(
+					pipe(
+						viewModel.messages,
+						Stream.onStart(
+							Effect.sync(() => {
+								initialized.messages = true
+							}),
+						),
+						Stream.runForEach(m => Effect.sync(() => messages(m))),
+					),
+				)
+			: undefined
+
+		return () => {
 			cancelChanges()
 			cancelMessages?.()
-			cancelRun()
 		}
 	})
 

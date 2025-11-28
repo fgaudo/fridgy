@@ -8,7 +8,7 @@ import * as Integer from '@/core/integer/integer.ts'
 import * as NonEmptyTrimmedString from '@/core/non-empty-trimmed-string'
 
 import * as Product from '../domain/product.ts'
-import * as ProductManager from '../interfaces/product-manager.ts'
+import * as ProductRepository from '../repository/product-repository.ts'
 
 /////
 /////
@@ -21,7 +21,7 @@ type AddProductParams = {
 /////
 /////
 
-type Response = Data.TaggedEnum<{
+export type Response = Data.TaggedEnum<{
 	Succeeded: object
 	Failed: object
 }>
@@ -31,16 +31,16 @@ const Response = Data.taggedEnum<Response>()
 /////
 /////
 
-export class Service extends Effect.Service<Service>()(
-	`feature/product-management/usecases/add-product`,
+export class AddProduct extends Effect.Service<AddProduct>()(
+	`feature/product-management/usecase/add-product`,
 	{
 		accessors: true,
 		effect: Effect.gen(function* () {
 			const {
 				addProduct: { resolver },
-			} = yield* ProductManager.Service
+			} = yield* ProductRepository.ProductRepository
 
-			const { makeProduct } = yield* Product.Service
+			const { makeProduct } = yield* Product.ProductService
 
 			return {
 				run: Effect.fn(`AddProduct UC`)(function* (
@@ -75,7 +75,7 @@ export class Service extends Effect.Service<Service>()(
 					)
 
 					const result = yield* Effect.request(
-						new ProductManager.AddProduct.Request({
+						ProductRepository.AddProduct.Request({
 							name: product.value.name,
 							maybeExpirationDate: product.value.maybeExpirationDate,
 							creationDate: product.value.creationDate,
@@ -92,6 +92,6 @@ export class Service extends Effect.Service<Service>()(
 				}),
 			}
 		}),
-		dependencies: [Product.Service.Default],
+		dependencies: [Product.ProductService.Default],
 	},
 ) {}

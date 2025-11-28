@@ -13,9 +13,9 @@ import * as NonEmptyTrimmedString from '@/core/non-empty-trimmed-string.ts'
 import * as H from '@/core/test-helpers.ts'
 import { makeTestLayer } from '@/core/testing.ts'
 
-import * as ProductManager from '../interfaces/product-manager.ts'
-import * as Usecase from './delete-products-by-ids-and-retrieve.ts'
-import * as GetSortedProducts from './get-sorted-products.ts'
+import * as ProductRepository from '../repository/product-repository.ts'
+import * as Usecase from './delete-and-get-products.ts'
+import * as GetSortedProducts from './get-products.ts'
 
 const DeleteParameters = Schema.Struct({
 	ids: NonEmptyHashSet.Schema(Schema.String),
@@ -23,37 +23,37 @@ const DeleteParameters = Schema.Struct({
 
 describe.concurrent(`Delete products by ids`, () => {
 	layer(
-		Layer.provide(Usecase.Service.DefaultWithoutDependencies, [
-			makeTestLayer(ProductManager.Service)({
+		Layer.provide(Usecase.DeleteAndGetProducts.DefaultWithoutDependencies, [
+			makeTestLayer(ProductRepository.ProductRepository)({
 				deleteProductById: {
 					resolver: RequestResolver.fromEffect(() => Effect.succeed(false)),
 				},
 			}),
-			makeTestLayer(GetSortedProducts.Service)({}),
+			makeTestLayer(GetSortedProducts.GetProducts)({}),
 		]),
 	)(({ effect }) => {
 		effect.prop(
 			`Should return delete failed`,
 			[DeleteParameters],
 			Effect.fn(function* ([params]) {
-				const { run } = yield* Usecase.Service
+				const { run } = yield* Usecase.DeleteAndGetProducts
 				const exit = yield* Effect.exit(run(params))
 
 				H.assertExitIsSuccess(exit)
 
-				expect(exit.value._tag).toStrictEqual('Failed')
+				expect(exit.value._tag === 'Failed').toBe(true)
 			}),
 		)
 	})
 
 	layer(
-		Layer.provide(Usecase.Service.DefaultWithoutDependencies, [
-			makeTestLayer(ProductManager.Service)({
+		Layer.provide(Usecase.DeleteAndGetProducts.DefaultWithoutDependencies, [
+			makeTestLayer(ProductRepository.ProductRepository)({
 				deleteProductById: {
 					resolver: RequestResolver.fromEffect(() => Effect.succeed(true)),
 				},
 			}),
-			makeTestLayer(GetSortedProducts.Service)({
+			makeTestLayer(GetSortedProducts.GetProducts)({
 				run: Effect.sync(() =>
 					pipe(
 						NonEmptyTrimmedString.unsafeFromString('asd'),
@@ -62,7 +62,7 @@ describe.concurrent(`Delete products by ids`, () => {
 							Option.some({
 								total: PositiveInteger.unsafeFromNumber(1),
 								list: NonEmptyIterableHelper.make(
-									GetSortedProducts.Product.Corrupt({ maybeName }),
+									GetSortedProducts.ProductDTO.Corrupt({ maybeName }),
 								),
 							}),
 						maybeProducts =>
@@ -78,25 +78,25 @@ describe.concurrent(`Delete products by ids`, () => {
 			`Should just work`,
 			[DeleteParameters],
 			Effect.fn(function* ([params]) {
-				const { run } = yield* Usecase.Service
+				const { run } = yield* Usecase.DeleteAndGetProducts
 
 				const exit = yield* Effect.exit(run(params))
 
 				H.assertExitIsSuccess(exit)
 
-				expect(exit.value._tag).toStrictEqual('Succeeded')
+				expect(exit.value._tag === 'Succeeded').toBe(true)
 			}),
 		)
 	})
 
 	layer(
-		Layer.provide(Usecase.Service.DefaultWithoutDependencies, [
-			makeTestLayer(ProductManager.Service)({
+		Layer.provide(Usecase.DeleteAndGetProducts.DefaultWithoutDependencies, [
+			makeTestLayer(ProductRepository.ProductRepository)({
 				deleteProductById: {
 					resolver: RequestResolver.fromEffect(() => Effect.succeed(true)),
 				},
 			}),
-			makeTestLayer(GetSortedProducts.Service)({
+			makeTestLayer(GetSortedProducts.GetProducts)({
 				run: Effect.sync(() => GetSortedProducts.Response.Failed()),
 			}),
 		]),
@@ -105,13 +105,13 @@ describe.concurrent(`Delete products by ids`, () => {
 			`Should return error`,
 			[DeleteParameters],
 			Effect.fn(function* ([params]) {
-				const { run } = yield* Usecase.Service
+				const { run } = yield* Usecase.DeleteAndGetProducts
 
 				const exit = yield* Effect.exit(run(params))
 
 				H.assertExitIsSuccess(exit)
 
-				expect(exit.value._tag).toStrictEqual('DeleteSucceededButRefreshFailed')
+				expect(exit.value._tag === 'DeleteSucceededButRefreshFailed').toBe(true)
 			}),
 		)
 	})

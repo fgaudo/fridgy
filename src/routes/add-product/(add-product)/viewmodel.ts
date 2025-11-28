@@ -1,7 +1,9 @@
 import * as Data from 'effect/Data'
 import * as Effect from 'effect/Effect'
+import * as List from 'effect/List'
 import * as Match from 'effect/Match'
 import * as Option from 'effect/Option'
+import * as Record from 'effect/Record'
 import * as Schema from 'effect/Schema'
 
 import * as H from '@/core/helper.ts'
@@ -59,37 +61,25 @@ const matcher = Match.typeTags<
 	ReturnType<SM.Update<State, InternalMessage, UC.All>>
 >()
 
-const Operation = SM.Operation<State, InternalMessage, UC.All>()
-
 const update = matcher({
 	AddProduct:
 		({ maybeExpirationDate, name }) =>
 		state => {
 			if (state.isAdding) {
-				return SM.noOp(state)
+				return { state, commands: List.empty() }
 			}
 
-			return SM.modify(state, draft => {
-				draft.isAdding = true
-
-				return [
-					Operation.command({
-						effect: addProduct({
-							name,
-							maybeExpirationDate,
-						}),
-					}),
-				]
-			})
+			return {
+				state: { ...state, isAdding: true },
+				commands: List.make(addProduct({ maybeExpirationDate, name })),
+			}
 		},
-	AddProductSucceeded: () =>
-		SM.modify(draft => {
-			draft.isAdding = false
-		}),
-	AddProductFailed: () =>
-		SM.modify(draft => {
-			draft.isAdding = false
-		}),
+	AddProductSucceeded: () => state => {
+		return { state: { ...state, isAdding: false }, commands: List.empty() }
+	},
+	AddProductFailed: () => state => {
+		return { state: { ...state, isAdding: false }, commands: List.empty() }
+	},
 })
 
 const makeViewModel = Effect.gen(function* () {

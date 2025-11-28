@@ -6,8 +6,8 @@ import * as Match from 'effect/Match'
 
 import * as NonEmptyHashSet from '@/core/non-empty-hash-set'
 
-import * as ProductManager from '../interfaces/product-manager.ts'
-import * as GetSortedProducts from './get-sorted-products.ts'
+import * as ProductRepository from '../repository/product-repository.ts'
+import * as GetSortedProducts from './get-products.ts'
 
 /////
 /////
@@ -35,23 +35,23 @@ export const Response = Data.taggedEnum<Response>()
 /////
 /////
 
-export class Service extends Effect.Service<Service>()(
-	`feature/product-management/usecases/delete-products-by-ids-and-retrieve`,
+export class DeleteAndGetProducts extends Effect.Service<DeleteAndGetProducts>()(
+	`feature/product-management/usecase/delete-and-get-products`,
 	{
 		accessors: true,
 		effect: Effect.gen(function* () {
-			const resolver = (yield* ProductManager.Service).deleteProductById
-				.resolver
+			const resolver = (yield* ProductRepository.ProductRepository)
+				.deleteProductById.resolver
 
 			const deleteProductById = (id: string) =>
 				Effect.request(
-					ProductManager.DeleteProductById.Request({
+					ProductRepository.DeleteProductById.Request({
 						id,
 					}),
 					resolver,
 				)
 
-			const getAllProductsWithTotal = yield* GetSortedProducts.Service
+			const getAllProductsWithTotal = yield* GetSortedProducts.GetProducts
 
 			return {
 				run: Effect.fn(`DeleteProductsByIds UC`)(function* ({
@@ -94,6 +94,6 @@ export class Service extends Effect.Service<Service>()(
 			}
 		}),
 
-		dependencies: [GetSortedProducts.Service.Default],
+		dependencies: [GetSortedProducts.GetProducts.Default],
 	},
 ) {}

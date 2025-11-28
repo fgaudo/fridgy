@@ -1,9 +1,9 @@
+import * as Arr from 'effect/Array'
+import * as Chunk from 'effect/Chunk'
 import * as Data from 'effect/Data'
 import * as Effect from 'effect/Effect'
 import { flow, pipe } from 'effect/Function'
 import * as HashSet from 'effect/HashSet'
-import * as Iterable from 'effect/Iterable'
-import * as List from 'effect/List'
 import * as Match from 'effect/Match'
 import * as NonEmptyIterable from 'effect/NonEmptyIterable'
 import * as Option from 'effect/Option'
@@ -42,14 +42,14 @@ type InternalMessage =
 	| Message
 	| _InternalMessage
 	| H.MapTags<
-			UC.GetSortedProducts.Response,
+			UC.GetProducts.Response,
 			{
 				Failed: `FetchListFailed`
 				Succeeded: `FetchListSucceeded`
 			}
 	  >
 	| H.MapTags<
-			UC.DeleteProductsByIdsAndRetrieve.Response,
+			UC.DeleteAndGetProducts.Response,
 			{
 				Succeeded: `DeleteAndRefreshSucceeded`
 				Failed: `DeleteFailed`
@@ -59,8 +59,8 @@ type InternalMessage =
 
 const InternalMessage = Data.taggedEnum<InternalMessage>()
 
-const deleteProductsByIds = H.mapFunctionReturn(
-	UC.DeleteProductsByIdsAndRetrieve.Service.run,
+const deleteAndGetProducts = H.mapFunctionReturn(
+	UC.DeleteAndGetProducts.DeleteAndGetProducts.run,
 	Effect.map(
 		Match.valueTags({
 			DeleteSucceededButRefreshFailed: () =>
@@ -73,7 +73,7 @@ const deleteProductsByIds = H.mapFunctionReturn(
 )
 
 const fetchList = Effect.map(
-	UC.GetSortedProducts.Service.run,
+	UC.GetProducts.GetProducts.run,
 	Match.valueTags({
 		Failed: () => InternalMessage.FetchListFailed(),
 		Succeeded: ({ maybeProducts }) =>
@@ -153,7 +153,7 @@ const notifyWrongState = Effect.fn(function* (message: { _tag: string }) {
 })
 
 const update = matcher({
-	NoOp: () => state => ({ state, commands: List.empty() }),
+	NoOp: () => state => ({ state, commands: Chunk.empty() }),
 
 	FetchListFailed: () => state => {
 		if (state.productListStatus._tag === 'Initial') {
@@ -163,13 +163,13 @@ const update = matcher({
 					refreshSchedulerEnabled: false,
 					productListStatus: { _tag: 'Error' },
 				} satisfies State,
-				commands: List.empty(),
+				commands: Chunk.empty(),
 			}
 		}
 
 		return {
 			state: { ...state, refreshSchedulerEnabled: true } satisfies State,
-			commands: List.empty(),
+			commands: Chunk.empty(),
 		}
 	},
 
@@ -183,7 +183,7 @@ const update = matcher({
 						refreshSchedulerEnabled: false,
 						productListStatus: { _tag: 'Empty' },
 					} satisfies State,
-					commands: List.empty(),
+					commands: Chunk.empty(),
 				}
 			}
 
@@ -203,7 +203,7 @@ const update = matcher({
 
 			if (state.productListStatus._tag !== 'Available') {
 				return {
-					commands: List.empty(),
+					commands: Chunk.empty(),
 					state: {
 						...state,
 						refreshSchedulerEnabled: true,
@@ -217,7 +217,7 @@ const update = matcher({
 			}
 
 			return {
-				commands: List.empty(),
+				commands: Chunk.empty(),
 				state: {
 					...state,
 					refreshSchedulerEnabled: true,
@@ -230,8 +230,8 @@ const update = matcher({
 								HashSet.intersection(
 									pipe(
 										maybeProducts.value.list,
-										Iterable.filter(product => product._tag !== 'Corrupt'),
-										Iterable.map(product => product.id),
+										Arr.filter(product => product._tag !== 'Corrupt'),
+										Arr.map(product => product.id),
 									),
 								),
 							),
@@ -248,14 +248,14 @@ const update = matcher({
 		) {
 			return {
 				state,
-				commands: List.make(notifyWrongState(message)),
+				commands: Chunk.make(notifyWrongState(message)),
 			}
 		}
 
 		if (state.isBusy) {
 			return {
 				state,
-				commands: List.make(
+				commands: Chunk.make(
 					Effect.gen(function* () {
 						yield* Effect.logWarning(
 							`Delete triggered while it's already deleting`,
@@ -273,8 +273,8 @@ const update = matcher({
 				isBusy: true,
 				refreshSchedulerEnabled: false,
 			} satisfies State,
-			commands: List.make(
-				deleteProductsByIds({
+			commands: Chunk.make(
+				deleteAndGetProducts({
 					ids: state.productListStatus.maybeSelectedProducts.value,
 				}),
 			),
@@ -282,10 +282,10 @@ const update = matcher({
 	},
 
 	DeleteAndRefreshSucceeded: message => state => {
-		let commands = List.empty<Command>()
+		let commands = Chunk.empty<Command>()
 
 		if (state.productListStatus._tag !== 'Available') {
-			commands = List.prepend(commands, notifyWrongState(message))
+			commands = Chunk.append(commands, notifyWrongState(message))
 		}
 
 		if (Option.isNone(message.maybeProducts)) {
@@ -325,10 +325,10 @@ const update = matcher({
 	},
 
 	DeleteFailed: message => state => {
-		let commands = List.empty<Command>()
+		let commands = Chunk.empty<Command>()
 
 		if (state.productListStatus._tag !== 'Available') {
-			commands = List.prepend(commands, notifyWrongState(message))
+			commands = Chunk.append(commands, notifyWrongState(message))
 		}
 
 		return {
@@ -338,10 +338,10 @@ const update = matcher({
 	},
 
 	DeleteSucceededButRefreshFailed: message => state => {
-		let commands = List.empty<Command>()
+		let commands = Chunk.empty<Command>()
 
 		if (state.productListStatus._tag !== 'Available') {
-			commands = List.prepend(commands, notifyWrongState(message))
+			commands = Chunk.append(commands, notifyWrongState(message))
 		}
 
 		return {
@@ -358,7 +358,7 @@ const update = matcher({
 		if (state.isBusy) {
 			return {
 				state,
-				commands: List.make(
+				commands: Chunk.make(
 					Effect.gen(function* () {
 						yield* Effect.logWarning(`Triggered ${message._tag} while deleting`)
 						return InternalMessage.NoOp()
@@ -369,7 +369,7 @@ const update = matcher({
 
 		return {
 			state: { ...state, refreshSchedulerEnabled: false },
-			commands: List.make(fetchList),
+			commands: Chunk.make(fetchList),
 		}
 	},
 
@@ -377,7 +377,7 @@ const update = matcher({
 		if (state.productListStatus._tag !== 'Available') {
 			return {
 				state,
-				commands: List.make(notifyWrongState(message)),
+				commands: Chunk.make(notifyWrongState(message)),
 			}
 		}
 
@@ -393,7 +393,7 @@ const update = matcher({
 					),
 				},
 			},
-			commands: List.empty(),
+			commands: Chunk.empty(),
 		}
 	},
 
@@ -404,7 +404,7 @@ const update = matcher({
 		) {
 			return {
 				state,
-				commands: List.make(notifyWrongState(message)),
+				commands: Chunk.make(notifyWrongState(message)),
 			}
 		}
 
@@ -416,7 +416,7 @@ const update = matcher({
 					maybeSelectedProducts: Option.none(),
 				},
 			},
-			commands: List.empty(),
+			commands: Chunk.empty(),
 		}
 	},
 })

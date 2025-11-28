@@ -1,10 +1,10 @@
 import * as Arr from 'effect/Array'
+import * as Chunk from 'effect/Chunk'
 import * as Effect from 'effect/Effect'
 import * as Equal from 'effect/Equal'
 import * as Exit from 'effect/Exit'
 import * as Fiber from 'effect/Fiber'
 import { flow, pipe } from 'effect/Function'
-import * as List from 'effect/List'
 import * as Option from 'effect/Option'
 import * as PubSub from 'effect/PubSub'
 import * as Queue from 'effect/Queue'
@@ -16,7 +16,7 @@ export type Command<M, R> = Effect.Effect<M, never, R>
 
 export type Update<S, M, R> = (message: M) => (state: S) => {
 	state: S
-	commands: List.List<Command<M, R>>
+	commands: Chunk.Chunk<Command<M, R>>
 }
 
 export type StateManager<S, M, R> = {

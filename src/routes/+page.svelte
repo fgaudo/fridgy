@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { goto } from '$app/navigation'
-	import { App as CAP } from '@capacitor/app'
 	import { Toast } from '@capacitor/toast'
 	import QM from '@lucide/svelte/icons/circle-question-mark'
 	import Inf from '@lucide/svelte/icons/infinity'
@@ -10,16 +9,11 @@
 	import Trash2 from '@lucide/svelte/icons/trash-2'
 	import X from '@lucide/svelte/icons/x'
 	import { format } from 'date-fns'
-	import * as Arr from 'effect/Array'
-	import { pipe } from 'effect/Function'
 	import * as HashSet from 'effect/HashSet'
 	import * as Option from 'effect/Option'
 	import { flip } from 'svelte/animate'
 	import { expoIn, expoOut } from 'svelte/easing'
-	import { SvelteSet } from 'svelte/reactivity'
 	import { fade, fly } from 'svelte/transition'
-
-	import * as NonEmptyHashSet from '@/core/non-empty-hash-set.ts'
 
 	import { useViewmodel } from '$lib/adapters.svelte.ts'
 	import imgUrl from '$lib/assets/arrow.svg'
@@ -28,7 +22,7 @@
 	import { getGlobalContext } from '$lib/context.ts'
 	import * as Utils from '$lib/utils.ts'
 
-	import * as Home from './(viewmodel)/home.ts'
+	import * as Home from './(home)/viewmodel.ts'
 
 	const { runtime } = getGlobalContext()
 

@@ -10,19 +10,19 @@ import * as Integer from '@/core/integer/integer.ts'
 
 import * as SqliteCapacitorHelper from '@/shared/capacitor/sqlite-capacitor-helper.ts'
 
-import * as ProductManager from '../../interfaces/product-manager.ts'
+import * as ProductRepository from '../product-repository.ts'
 
 export const layerWithoutDependencies = Layer.effect(
-	ProductManager.Service,
+	ProductRepository.ProductRepository,
 	Effect.gen(function* () {
 		const {
 			addProduct: { resolver: addProductResolver },
 			getAllProductsWithTotal,
 			deleteProductById: { resolver: deleteResolver },
-		} = yield* SqliteCapacitorHelper.Service
+		} = yield* SqliteCapacitorHelper.SqliteCapacitorHelper
 
 		return {
-			getSortedProducts: Effect.gen(function* () {
+			getProducts: Effect.gen(function* () {
 				const result = yield* Effect.either(getAllProductsWithTotal)
 
 				if (Either.isLeft(result)) {
@@ -48,7 +48,7 @@ export const layerWithoutDependencies = Layer.effect(
 			}),
 			deleteProductById: {
 				resolver: RequestResolver.makeBatched<
-					ProductManager.DeleteProductById['Request'],
+					ProductRepository.DeleteProductById['Request'],
 					never
 				>(
 					Effect.forEach(
@@ -104,7 +104,7 @@ export const layerWithoutDependencies = Layer.effect(
 			},
 			addProduct: {
 				resolver: RequestResolver.makeBatched<
-					ProductManager.AddProduct[`Request`],
+					ProductRepository.AddProduct[`Request`],
 					never
 				>(
 					Effect.forEach(
@@ -144,5 +144,5 @@ export const layerWithoutDependencies = Layer.effect(
 
 export const layer = Layer.provide(
 	layerWithoutDependencies,
-	SqliteCapacitorHelper.Service.Default,
+	SqliteCapacitorHelper.SqliteCapacitorHelper.Default,
 )

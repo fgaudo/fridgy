@@ -1,7 +1,6 @@
 import { assert, describe, effect, expect, layer } from '@effect/vitest'
 import * as Arbitrary from 'effect/Arbitrary'
 import * as Effect from 'effect/Effect'
-import * as Iterable from 'effect/Iterable'
 import * as Layer from 'effect/Layer'
 import * as Option from 'effect/Option'
 import * as Schema from 'effect/Schema'
@@ -11,8 +10,8 @@ import * as NonEmptyTrimmedString from '@/core/non-empty-trimmed-string.ts'
 import * as H from '@/core/test-helpers.ts'
 import { makeTestLayer } from '@/core/testing.ts'
 
-import * as ProductManager from '../interfaces/product-manager.ts'
-import * as Usecase from './get-sorted-products.ts'
+import * as ProductRepository from '../repository/product-repository.ts'
+import * as Usecase from './get-products.ts'
 
 const GetSortedProductsSchema = Schema.Array(
 	Schema.Struct({
@@ -26,20 +25,20 @@ const GetSortedProductsSchema = Schema.Array(
 describe.concurrent(`Get sorted products`, () => {
 	layer(
 		Layer.provide(
-			Usecase.Service.Default,
-			makeTestLayer(ProductManager.Service)({
-				getSortedProducts: Effect.fail(undefined),
+			Usecase.GetProducts.Default,
+			makeTestLayer(ProductRepository.ProductRepository)({
+				getProducts: Effect.fail(undefined),
 			}),
 		),
 	)(({ effect }) => {
 		effect(
 			`Should return an error`,
 			Effect.fn(function* () {
-				const { run } = yield* Usecase.Service
+				const { run } = yield* Usecase.GetProducts
 				const exit = yield* Effect.exit(run)
 				H.assertExitIsSuccess(exit)
 
-				expect(exit.value._tag).toStrictEqual('Failed')
+				expect(exit.value._tag === 'Failed').toBe(true)
 			}),
 		)
 	})
@@ -49,7 +48,7 @@ describe.concurrent(`Get sorted products`, () => {
 		[Arbitrary.make(GetSortedProductsSchema).filter(a => a.length > 0)],
 		Effect.fn(
 			function* ([products], { expect }) {
-				const { run } = yield* Usecase.Service
+				const { run } = yield* Usecase.GetProducts
 				const exit = yield* Effect.exit(run)
 
 				H.assertExitIsSuccess(exit)
@@ -64,9 +63,9 @@ describe.concurrent(`Get sorted products`, () => {
 				Effect.provide(
 					effect,
 					Layer.provide(
-						Usecase.Service.Default,
-						makeTestLayer(ProductManager.Service)({
-							getSortedProducts: Effect.succeed(products),
+						Usecase.GetProducts.Default,
+						makeTestLayer(ProductRepository.ProductRepository)({
+							getProducts: Effect.succeed(products),
 						}),
 					),
 				),

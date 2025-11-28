@@ -7,19 +7,33 @@ import * as Option from 'effect/Option'
 import * as RequestResolver from 'effect/RequestResolver'
 import * as Schema from 'effect/Schema'
 
+import * as Integer from '@/core/integer/integer.ts'
+import * as NonEmptyTrimmedString from '@/core/non-empty-trimmed-string.ts'
 import * as H from '@/core/test-helpers.ts'
 import { makeTestLayer } from '@/core/testing.ts'
 
 import * as SqliteCapacitorHelper from '@/shared/capacitor/sqlite-capacitor-helper.ts'
 
-import * as ProductManager from '../../interfaces/product-manager.ts'
-import * as CapacitorProductManager from './product-manager.ts'
+import * as ProductRepository from '../product-repository.ts'
+import * as CapacitorProductManager from './product-repository.ts'
+
+class AddProductRequest extends Schema.TaggedRequest<AddProductRequest>(
+	'AddProductRequest',
+)('AddProductRequest', {
+	failure: Schema.Never,
+	success: Schema.Boolean,
+	payload: {
+		name: NonEmptyTrimmedString.Schema,
+		maybeExpirationDate: Schema.Option(Integer.Schema),
+		creationDate: Integer.Schema,
+	},
+}) {}
 
 describe.concurrent(`Add product`, () => {
 	layer(
 		Layer.provide(
 			CapacitorProductManager.layerWithoutDependencies,
-			makeTestLayer(SqliteCapacitorHelper.Service)({
+			makeTestLayer(SqliteCapacitorHelper.SqliteCapacitorHelper)({
 				addProduct: {
 					resolver: RequestResolver.fromEffect(() => Effect.succeed(undefined)),
 				},
@@ -28,11 +42,11 @@ describe.concurrent(`Add product`, () => {
 	)(({ effect }) => {
 		effect.prop(
 			`Should just work`,
-			[Schema.NonEmptyArray(ProductManager.AddProduct.Request)],
+			[Schema.NonEmptyArray(AddProductRequest)],
 			Effect.fn(function* ([requests]) {
 				const {
 					addProduct: { resolver },
-				} = yield* ProductManager.Service
+				} = yield* ProductRepository.ProductRepository
 
 				const exit = yield* Effect.exit(
 					Effect.forEach(requests, request =>
@@ -49,7 +63,7 @@ describe.concurrent(`Add product`, () => {
 	layer(
 		Layer.provide(
 			CapacitorProductManager.layerWithoutDependencies,
-			makeTestLayer(SqliteCapacitorHelper.Service)({
+			makeTestLayer(SqliteCapacitorHelper.SqliteCapacitorHelper)({
 				addProduct: {
 					resolver: RequestResolver.fromEffect(() =>
 						Effect.fail(new Cause.UnknownException(``)),
@@ -60,11 +74,11 @@ describe.concurrent(`Add product`, () => {
 	)(({ effect }) => {
 		effect.prop(
 			`Should return false`,
-			[Schema.NonEmptyArray(ProductManager.AddProduct.Request)],
+			[Schema.NonEmptyArray(AddProductRequest)],
 			Effect.fn(function* ([requests]) {
 				const {
 					addProduct: { resolver },
-				} = yield* ProductManager.Service
+				} = yield* ProductRepository.ProductRepository
 
 				const exit = yield* Effect.exit(
 					Effect.forEach(requests, request =>
@@ -82,7 +96,7 @@ describe.concurrent(`Add product`, () => {
 	layer(
 		Layer.provide(
 			CapacitorProductManager.layerWithoutDependencies,
-			makeTestLayer(SqliteCapacitorHelper.Service)({
+			makeTestLayer(SqliteCapacitorHelper.SqliteCapacitorHelper)({
 				addProduct: {
 					resolver: RequestResolver.fromEffect(() => Effect.die(undefined)),
 				},
@@ -91,11 +105,11 @@ describe.concurrent(`Add product`, () => {
 	)(({ effect }) => {
 		effect.prop(
 			`Should crash`,
-			[Schema.NonEmptyArray(ProductManager.AddProduct.Request)],
+			[Schema.NonEmptyArray(AddProductRequest)],
 			Effect.fn(function* ([requests]) {
 				const {
 					addProduct: { resolver },
-				} = yield* ProductManager.Service
+				} = yield* ProductRepository.ProductRepository
 
 				const exit = yield* Effect.exit(
 					Effect.forEach(requests, request =>
@@ -109,11 +123,21 @@ describe.concurrent(`Add product`, () => {
 	})
 })
 
+class DeleteProductByIdRequest extends Schema.TaggedRequest<DeleteProductByIdRequest>(
+	'DeleteProductByIdRequest',
+)('DeleteProductByIdRequest', {
+	failure: Schema.Never,
+	success: Schema.Boolean,
+	payload: {
+		id: Schema.String,
+	},
+}) {}
+
 describe.concurrent(`Delete products by ids`, () => {
 	layer(
 		Layer.provide(
 			CapacitorProductManager.layerWithoutDependencies,
-			makeTestLayer(SqliteCapacitorHelper.Service)({
+			makeTestLayer(SqliteCapacitorHelper.SqliteCapacitorHelper)({
 				deleteProductById: {
 					resolver: RequestResolver.fromEffect(() => Effect.succeed(true)),
 				},
@@ -122,11 +146,11 @@ describe.concurrent(`Delete products by ids`, () => {
 	)(({ effect }) => {
 		effect.prop(
 			`Should just work`,
-			[Schema.NonEmptyArray(ProductManager.DeleteProductById.Request)],
+			[Schema.NonEmptyArray(DeleteProductByIdRequest)],
 			Effect.fn(function* ([requests]) {
 				const {
 					deleteProductById: { resolver },
-				} = yield* ProductManager.Service
+				} = yield* ProductRepository.ProductRepository
 
 				const exit = yield* Effect.exit(
 					Effect.forEach(requests, request =>
@@ -142,7 +166,7 @@ describe.concurrent(`Delete products by ids`, () => {
 	layer(
 		Layer.provide(
 			CapacitorProductManager.layerWithoutDependencies,
-			makeTestLayer(SqliteCapacitorHelper.Service)({
+			makeTestLayer(SqliteCapacitorHelper.SqliteCapacitorHelper)({
 				deleteProductById: {
 					resolver: RequestResolver.fromEffect(() =>
 						Effect.fail(new Cause.UnknownException(`fail`)),
@@ -153,11 +177,11 @@ describe.concurrent(`Delete products by ids`, () => {
 	)(({ effect }) => {
 		effect.prop(
 			`Should return an error`,
-			[Schema.NonEmptyArray(ProductManager.DeleteProductById.Request)],
+			[Schema.NonEmptyArray(DeleteProductByIdRequest)],
 			Effect.fn(function* ([requests]) {
 				const {
 					deleteProductById: { resolver },
-				} = yield* ProductManager.Service
+				} = yield* ProductRepository.ProductRepository
 
 				const exit = yield* Effect.exit(
 					Effect.forEach(requests, request =>
@@ -175,7 +199,7 @@ describe.concurrent(`Delete products by ids`, () => {
 	layer(
 		Layer.provide(
 			CapacitorProductManager.layerWithoutDependencies,
-			makeTestLayer(SqliteCapacitorHelper.Service)({
+			makeTestLayer(SqliteCapacitorHelper.SqliteCapacitorHelper)({
 				deleteProductById: {
 					resolver: RequestResolver.fromEffect(() => Effect.die(undefined)),
 				},
@@ -184,11 +208,11 @@ describe.concurrent(`Delete products by ids`, () => {
 	)(({ effect }) => {
 		effect.prop(
 			`Should either be false or crash for every call`,
-			[Schema.NonEmptyArray(ProductManager.DeleteProductById.Request)],
+			[Schema.NonEmptyArray(DeleteProductByIdRequest)],
 			Effect.fn(function* ([requests]) {
 				const {
 					deleteProductById: { resolver },
-				} = yield* ProductManager.Service
+				} = yield* ProductRepository.ProductRepository
 
 				const exit = yield* Effect.exit(
 					Effect.forEach(requests, request =>
@@ -206,13 +230,21 @@ describe.concurrent(`Delete products by ids`, () => {
 	})
 })
 
+export const GetSortedProducts = Iterable<{
+	maybeId: Option.Option<string>
+	maybeName: Option.Option<NonEmptyTrimmedString.NonEmptyTrimmedString>
+	maybeExpirationDate: Option.Option<Integer.Integer>
+	maybeCreationDate: Option.Option<Integer.Integer>
+}>
+
 describe.concurrent(`Get products`, () => {
 	effect.prop(
 		`Should return a list`,
-		[SqliteCapacitorHelper.GetAllProductsWithTotal.DTO],
+		[SqliteCapacitorHelper.GetAllProducts.DTO],
 		Effect.fn(
 			function* ([products], { expect }) {
-				const { getSortedProducts } = yield* ProductManager.Service
+				const { getProducts: getSortedProducts } =
+					yield* ProductRepository.ProductRepository
 				const exit = yield* Effect.exit(getSortedProducts)
 
 				H.assertExitIsSuccess(exit)
@@ -229,7 +261,7 @@ describe.concurrent(`Get products`, () => {
 					effect,
 					Layer.provide(
 						CapacitorProductManager.layerWithoutDependencies,
-						makeTestLayer(SqliteCapacitorHelper.Service)({
+						makeTestLayer(SqliteCapacitorHelper.SqliteCapacitorHelper)({
 							getAllProductsWithTotal: Effect.succeed(products),
 						}),
 					),
@@ -240,9 +272,9 @@ describe.concurrent(`Get products`, () => {
 	layer(
 		Layer.provide(
 			CapacitorProductManager.layerWithoutDependencies,
-			makeTestLayer(SqliteCapacitorHelper.Service)({
+			makeTestLayer(SqliteCapacitorHelper.SqliteCapacitorHelper)({
 				getAllProductsWithTotal: Effect.fail(
-					new SqliteCapacitorHelper.GetAllProductsWithTotal.FetchingFailed(),
+					SqliteCapacitorHelper.GetAllProducts.FetchingFailed(),
 				),
 			}),
 		),
@@ -250,7 +282,8 @@ describe.concurrent(`Get products`, () => {
 		effect(
 			`Should return an error`,
 			Effect.fn(function* () {
-				const { getSortedProducts } = yield* ProductManager.Service
+				const { getProducts: getSortedProducts } =
+					yield* ProductRepository.ProductRepository
 
 				const exit = yield* Effect.exit(getSortedProducts)
 

@@ -12,13 +12,13 @@ import * as NonEmptyIterableHelper from '@/core/non-empty-iterable.ts'
 import * as NonEmptyTrimmedString from '@/core/non-empty-trimmed-string.ts'
 import * as UnitInterval from '@/core/unit-interval.ts'
 
-import * as _Product from '../domain/product.ts'
-import * as ProductManager from '../interfaces/product-manager.ts'
+import * as Product from '../domain/product.ts'
+import * as ProductRepository from '../repository/product-repository.ts'
 
 /////
 /////
 
-type Product = Data.TaggedEnum<{
+type ProductDTO = Data.TaggedEnum<{
 	Corrupt: {
 		maybeName: Option.Option<NonEmptyTrimmedString.NonEmptyTrimmedString>
 	}
@@ -44,15 +44,15 @@ type Product = Data.TaggedEnum<{
 }>
 
 export const Status =
-	Data.taggedEnum<Data.TaggedEnum.Value<Product, 'Valid'>['status']>()
+	Data.taggedEnum<Data.TaggedEnum.Value<ProductDTO, 'Valid'>['status']>()
 
-export const Product = Data.taggedEnum<Product>()
+export const ProductDTO = Data.taggedEnum<ProductDTO>()
 
 export type Response = Data.TaggedEnum<{
 	Succeeded: {
 		maybeProducts: Option.Option<{
 			total: PositiveInteger.PositiveInteger
-			list: NonEmptyIterable.NonEmptyIterable<Product>
+			list: NonEmptyIterable.NonEmptyIterable<ProductDTO>
 		}>
 	}
 	Failed: object
@@ -63,13 +63,14 @@ export const Response = Data.taggedEnum<Response>()
 /////
 /////
 
-export class Service extends Effect.Service<Service>()(
-	`feature/product-management/usecases/get-sorted-products`,
+export class GetProducts extends Effect.Service<GetProducts>()(
+	`feature/product-management/usecase/get-products`,
 	{
 		accessors: true,
 		effect: Effect.gen(function* () {
-			const { getSortedProducts } = yield* ProductManager.Service
-			const { makeProduct } = yield* _Product.Service
+			const { getProducts: getSortedProducts } =
+				yield* ProductRepository.ProductRepository
+			const ProductService = yield* Product.ProductService
 			return {
 				run: Effect.gen(function* (): Effect.fn.Return<Response> {
 					yield* Effect.log(`Requested to fetch the list of products`)
@@ -96,7 +97,7 @@ export class Service extends Effect.Service<Service>()(
 						}) {
 							if (Option.isNone(maybeId)) {
 								yield* Effect.logWarning(`CORRUPTION - Product has no id.`)
-								return Product.Corrupt({
+								return ProductDTO.Corrupt({
 									maybeName,
 								})
 							}
@@ -107,7 +108,7 @@ export class Service extends Effect.Service<Service>()(
 									creationDate: maybeCreationDate,
 								})
 
-								return yield* makeProduct({
+								return yield* ProductService.makeProduct({
 									name,
 									creationDate,
 									maybeExpirationDate,
@@ -117,7 +118,7 @@ export class Service extends Effect.Service<Service>()(
 							if (Option.isNone(maybeProduct)) {
 								yield* Effect.logWarning(`Product is invalid.`)
 
-								return Product.Invalid({
+								return ProductDTO.Invalid({
 									id: maybeId.value,
 									maybeName,
 								})
@@ -125,8 +126,8 @@ export class Service extends Effect.Service<Service>()(
 
 							const product = maybeProduct.value
 
-							if (!_Product.hasExpirationDate(product)) {
-								return Product.Valid({
+							if (!ProductService.hasExpirationDate(product)) {
+								return ProductDTO.Valid({
 									id: maybeId.value,
 									name: product.name,
 									status: Status.Everlasting(),
@@ -137,8 +138,8 @@ export class Service extends Effect.Service<Service>()(
 								yield* Clock.currentTimeMillis,
 							)
 
-							if (_Product.isStale(product, currentDate)) {
-								return Product.Valid({
+							if (ProductService.isStale(product, currentDate)) {
+								return ProductDTO.Valid({
 									id: maybeId.value,
 									name: product.name,
 									status: Status.Stale({
@@ -147,13 +148,13 @@ export class Service extends Effect.Service<Service>()(
 								})
 							}
 
-							return Product.Valid({
+							return ProductDTO.Valid({
 								id: maybeId.value,
 								name: product.name,
 								status: Status.Fresh({
 									expirationDate: product.maybeExpirationDate.value,
-									timeLeft: _Product.timeLeft(product, currentDate),
-									freshnessRatio: _Product.computeFreshness(
+									timeLeft: ProductService.timeLeft(product, currentDate),
+									freshnessRatio: ProductService.computeFreshness(
 										product,
 										currentDate,
 									),
@@ -174,6 +175,6 @@ export class Service extends Effect.Service<Service>()(
 				}).pipe(Effect.withLogSpan(`GetSortedProducts UC`)),
 			}
 		}),
-		dependencies: [_Product.Service.Default],
+		dependencies: [Product.ProductService.Default],
 	},
 ) {}

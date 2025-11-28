@@ -39,20 +39,20 @@ export const DeleteProductById = {
 /////
 /////
 
-type GetSortedProducts = Iterable<{
+export type GetProducts = {
 	maybeId: Option.Option<string>
 	maybeName: Option.Option<NonEmptyTrimmedString.NonEmptyTrimmedString>
 	maybeExpirationDate: Option.Option<Integer.Integer>
 	maybeCreationDate: Option.Option<Integer.Integer>
-}>
+}[]
 
 /////
 /////
 
-export class Service extends Context.Tag(
-	`feature/product-management/interfaces/product-manager`,
+export class ProductRepository extends Context.Tag(
+	`feature/product-management/repository/product-repository`,
 )<
-	Service,
+	ProductRepository,
 	{
 		addProduct: {
 			resolver: RequestResolver<AddProductRequest>
@@ -62,6 +62,6 @@ export class Service extends Context.Tag(
 			resolver: RequestResolver<DeleteProductByIdRequest>
 		}
 
-		getSortedProducts: Effect.Effect<GetSortedProducts, void>
+		getProducts: Effect.Effect<GetProducts, void>
 	}
 >() {}

@@ -19,22 +19,22 @@ const DEFAULT_TIMEOUT: Duration.DurationInput = '5 seconds'
 /////
 /////
 
-type GetAllProductsWithTotal = {
+type GetAllProducts = {
 	Failed: Data.TaggedEnum<{
 		FetchingFailed: object
 		InvalidDataReceived: object
 	}>
 
-	Succeeded: Iterable<{
+	Succeeded: {
 		maybeId: Option.Option<number>
 		maybeName: Option.Option<NonEmptyTrimmedString.NonEmptyTrimmedString>
 		maybeExpirationDate: Option.Option<Integer.Integer>
 		maybeCreationDate: Option.Option<Integer.Integer>
-	}>
+	}[]
 }
 
 export const GetAllProductsWithTotal = {
-	Failed: Data.taggedEnum<GetAllProductsWithTotal['Failed']>(),
+	Failed: Data.taggedEnum<GetAllProducts['Failed']>(),
 }
 
 /////
@@ -73,19 +73,19 @@ export const DeleteProductById = {
 /////
 /////
 
-export class Service extends Effect.Service<Service>()(
+export class SqliteCapacitorHelper extends Effect.Service<SqliteCapacitorHelper>()(
 	`shared/capacitor/sqlite-capacitor-helper`,
 	{
 		effect: Effect.gen(function* () {
-			const plugin = yield* SqliteCapacitorPlugin.Service
+			const plugin = yield* SqliteCapacitorPlugin.SqliteCapacitorPlugin
 
 			const mutex = yield* Effect.makeSemaphore(1)
 
 			const [getAllProductsWithTotal, invalidate] =
 				yield* Effect.cachedInvalidateWithTTL(
 					Effect.gen(function* (): Effect.fn.Return<
-						GetAllProductsWithTotal['Succeeded'],
-						GetAllProductsWithTotal['Failed']
+						GetAllProducts['Succeeded'],
+						GetAllProducts['Failed']
 					> {
 						const result = yield* Effect.either(
 							Effect.timeout(
@@ -184,6 +184,6 @@ export class Service extends Effect.Service<Service>()(
 				getAllProductsWithTotal,
 			}
 		}),
-		dependencies: [SqliteCapacitorPlugin.Service.Default],
+		dependencies: [SqliteCapacitorPlugin.SqliteCapacitorPlugin.Default],
 	},
 ) {}

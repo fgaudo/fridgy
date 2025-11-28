@@ -1,4 +1,5 @@
 import * as Arr from 'effect/Array'
+import * as Context from 'effect/Context'
 import * as Effect from 'effect/Effect'
 import { pipe } from 'effect/Function'
 import * as HashMap from 'effect/HashMap'
@@ -9,12 +10,7 @@ import * as Random from 'effect/Random'
 import * as Ref from 'effect/Ref'
 import * as RequestResolver from 'effect/RequestResolver'
 
-import * as Config from '@/feature/product-management/implementations/mock/config.ts'
-
-import * as ProductManager from '../../interfaces/product-manager.ts'
-
-type ProductDTO = ProductManager.GetSortedProducts[`DTO`][0]
-type GetSortedProductsDTO = ProductManager.GetSortedProducts[`DTO`]
+import * as ProductRepository from '../../repository/product-repository.ts'
 
 const ord = Order.make(
 	Order.combineAll([
@@ -23,28 +19,37 @@ const ord = Order.make(
 			Order.reverse,
 			Option.getOrder,
 			Order.reverse,
-			Order.mapInput((product: ProductDTO) => product.maybeExpirationDate),
+			Order.mapInput(
+				(product: ProductRepository.GetProducts[0]) =>
+					product.maybeExpirationDate,
+			),
 		),
 		pipe(
 			Order.string,
 			Option.getOrder,
-			Order.mapInput((product: ProductDTO) => product.maybeName),
+			Order.mapInput(
+				(product: ProductRepository.GetProducts[0]) => product.maybeName,
+			),
 		),
 	]),
 )
 
+export class Config extends Context.Tag(
+	`feature/product-management/repository/mock/config`,
+)<Config, { withErrors: boolean }>() {}
+
 export const layerWithoutDependencies = Layer.effect(
-	ProductManager.Service,
+	ProductRepository.ProductRepository,
 	Effect.gen(function* () {
-		const { withErrors } = yield* Config.Service
+		const { withErrors } = yield* Config
 
 		const ref = yield* Ref.make({
 			index: 0,
-			map: HashMap.empty<string, ProductDTO>(),
+			map: HashMap.empty<string, ProductRepository.GetProducts[0]>(),
 		})
 
 		return {
-			getSortedProducts: Effect.gen(function* () {
+			getProducts: Effect.gen(function* () {
 				const isAnError = withErrors && (yield* Random.nextRange(0, 1)) < 0.5
 
 				if (isAnError) {
@@ -56,14 +61,16 @@ export const layerWithoutDependencies = Layer.effect(
 
 				const map = yield* Ref.get(ref).pipe(Effect.map(({ map }) => map))
 
-				const products: GetSortedProductsDTO = map.pipe(HashMap.toValues)
+				const products: ProductRepository.GetProducts = map.pipe(
+					HashMap.toValues,
+				)
 
 				return Arr.sort(products, ord)
 			}),
 			deleteProductById: {
 				resolver: RequestResolver.fromEffect<
 					never,
-					ProductManager.DeleteProductById[`Request`]
+					ProductRepository.DeleteProductById[`Request`]
 				>(
 					Effect.fn(function* (request) {
 						const isAnError =
@@ -89,7 +96,7 @@ export const layerWithoutDependencies = Layer.effect(
 			addProduct: {
 				resolver: RequestResolver.fromEffect<
 					never,
-					ProductManager.AddProduct[`Request`]
+					ProductRepository.AddProduct[`Request`]
 				>(
 					Effect.fn(function* (product) {
 						const isAnError =
