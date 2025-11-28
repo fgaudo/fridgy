@@ -8,6 +8,7 @@ import * as List from 'effect/List'
 import * as Option from 'effect/Option'
 import * as PubSub from 'effect/PubSub'
 import * as Queue from 'effect/Queue'
+import * as Ref from 'effect/Ref'
 import * as Stream from 'effect/Stream'
 import * as SubscriptionRef from 'effect/SubscriptionRef'
 
@@ -61,6 +62,7 @@ export const makeStateManager = Effect.fn(function* <
 }): Effect.fn.Return<StateManager<S, M, R>> {
 	const stateRef = yield* SubscriptionRef.make(initState)
 	const messagePubSub = yield* PubSub.unbounded<M>()
+	const initializedRef = yield* Ref.make(false)
 
 	return {
 		initState,
@@ -74,6 +76,10 @@ export const makeStateManager = Effect.fn(function* <
 		),
 		run: Effect.scoped(
 			Effect.gen(function* () {
+				if (yield* Ref.getAndSet(initializedRef, true)) {
+					return yield* Effect.dieMessage('State manager was already started')
+				}
+
 				const queue = yield* Queue.unbounded<M>()
 
 				if (initMessages) {

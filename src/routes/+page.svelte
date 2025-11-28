@@ -34,12 +34,10 @@
 
 	type State = {
 		isMenuOpen: boolean
-		selectedProducts: SvelteSet<string>
 	}
 
 	const state = $state<State>({
 		isMenuOpen: false,
-		selectedProducts: new SvelteSet(),
 	})
 
 	const { viewModel } = $derived(
@@ -60,61 +58,6 @@
 
 		state.isMenuOpen = true
 	}
-
-	function toggleItem(id: string | symbol) {
-		if (typeof id === `symbol`) {
-			return
-		}
-
-		if (state.selectedProducts.has(id)) {
-			state.selectedProducts.delete(id)
-			return
-		}
-
-		state.selectedProducts.add(id)
-	}
-
-	function clearSelected() {
-		state.selectedProducts.clear()
-	}
-
-	const maybeSelectedProducts = $derived(
-		pipe(
-			state.selectedProducts,
-			HashSet.fromIterable,
-			NonEmptyHashSet.fromHashSet,
-		),
-	)
-
-	const refreshTimeListenersEnabled = $derived(
-		Option.isSome(
-			Option.gen(function* () {
-				const { state: viewmodelState } = yield* Option.fromNullable(viewModel)
-
-				if (viewmodelState.productListStatus._tag !== 'Loaded') {
-					return false
-				}
-
-				const products = yield* viewmodelState.productListStatus.products
-
-				return Arr.findFirstIndex(
-					products.items,
-					product =>
-						product._tag === 'Valid' && product.status._tag === 'Fresh',
-				)
-			}),
-		),
-	)
-
-	$effect(() => {
-		if (!refreshTimeListenersEnabled) return
-
-		const handle = CAP.addListener(`resume`, () => {})
-
-		return () => {
-			void handle.then(h => h.remove())
-		}
-	})
 </script>
 
 {#snippet corruptProduct()}
@@ -152,59 +95,10 @@
 		<Spinner />
 	</div>
 {:else}
-	{#snippet invalidProduct(product: Home.ProductDTO & { _tag: 'Invalid' })}
-		<div
-			class={[
-				`flex mx-2 relative transition-transform shadow-sm rounded-lg py-1 overflow-hidden`,
-				Option.isSome(maybeSelectedProducts) &&
-				HashSet.has(maybeSelectedProducts.value, product.id)
-					? `bg-accent/10 scale-[102%]`
-					: `bg-secondary/5`,
-			]}
-		>
-			{#if !viewModel.state.isBusy}
-				{#if Option.some(maybeSelectedProducts)}
-					<Ripple
-						ontap={() => {
-							toggleItem(product.id)
-						}}
-					></Ripple>
-				{:else}
-					<Ripple
-						onhold={() => {
-							toggleItem(product.id)
-						}}
-					></Ripple>
-				{/if}
-			{/if}
-			<div
-				class={[
-					`justify-between flex min-h-[60px] w-full gap-1 select-none items-center`,
-				]}
-				style="content-visibility: 'auto'"
-			>
-				<div class="p-2 h-full aspect-square">
-					<div
-						class="flex-col flex bg-secondary text-background shadow-xs rounded-full items-center justify-center text-center h-full aspect-square"
-					>
-						<QM class="p-2 w-full h-full font-bold " />
-					</div>
-				</div>
-
-				<div class="flex-1 h-full flex justify-center flex-col leading-4 gap-2">
-					{#if Option.isSome(product.maybeName)}
-						<div
-							class="overflow-ellipsis whitespace-nowrap overflow-hidden capitalize"
-						>
-							{product.maybeName.value}
-						</div>
-					{:else}
-						<div>[NO NAME]</div>
-					{/if}
-				</div>
-			</div>
-		</div>
-	{/snippet}
+	{@const maybeSelectedProducts =
+		viewModel.state.productListStatus._tag === 'Available'
+			? viewModel.state.productListStatus.maybeSelectedProducts
+			: Option.none()}
 
 	{#snippet menu()}
 		<div
@@ -277,7 +171,7 @@
 							{#if !viewModel.state.isBusy}
 								<Ripple
 									ontap={() => {
-										clearSelected()
+										viewModel.dispatch(Home.Message.ClearSelected())
 									}}
 								></Ripple>
 							{/if}
@@ -316,11 +210,7 @@
 						{#if !viewModel.state.isBusy}
 							<Ripple
 								ontap={() => {
-									viewModel.dispatch(
-										Home.Message.StartDeleteAndRefresh({
-											ids: maybeSelectedProducts.value,
-										}),
-									)
+									viewModel.dispatch(Home.Message.StartDeleteAndRefresh())
 								}}
 							></Ripple>
 						{/if}
@@ -328,12 +218,12 @@
 					</div>
 				{/if}
 			</div>
-			{#if viewModel.state.productListStatus._tag === 'Loaded' && Option.isSome(viewModel.state.productListStatus.products)}
+			{#if viewModel.state.productListStatus._tag === 'Available'}
 				<p
 					out:fade={{ duration: 200 }}
 					class="bg-background z-50 w-full px-3.5 pt-2.5 pb-2 text-xs"
 				>
-					{viewModel.state.productListStatus.products.value.total} items
+					{viewModel.state.productListStatus.total} items
 				</p>
 			{/if}
 		</div>
@@ -348,7 +238,7 @@
 		{/if}
 
 		<div class="bg-background flex flex-col">
-			{#if viewModel.state.productListStatus._tag === 'StartupError'}
+			{#if viewModel.state.productListStatus._tag === 'Error'}
 				<div
 					class="flex h-screen w-screen items-center justify-center text-center text-lg"
 				>
@@ -376,10 +266,8 @@
 				>
 					<Spinner />
 				</div>
-			{:else if Option.isSome(viewModel.state.productListStatus.maybeProducts)}
-				{@const products =
-					viewModel.state.productListStatus.maybeProducts.value.items}
-
+			{:else if viewModel.state.productListStatus._tag === 'Available'}
+				{@const products = viewModel.state.productListStatus.products}
 				<div
 					style:padding-top={`calc(var(--safe-area-inset-top) + 64px + 42px)`}
 					style:padding-bottom={`calc(var(--safe-area-inset-bottom) + 140px)`}
@@ -391,7 +279,63 @@
 							{#if product._tag === 'Corrupt'}
 								{@render corruptProduct()}
 							{:else if product._tag === 'Invalid'}
-								{@render invalidProduct(product)}
+								<div
+									class={[
+										`flex mx-2 relative transition-transform shadow-sm rounded-lg py-1 overflow-hidden`,
+										Option.isSome(maybeSelectedProducts) &&
+										HashSet.has(maybeSelectedProducts.value, product.id)
+											? `bg-accent/10 scale-[102%]`
+											: `bg-secondary/5`,
+									]}
+								>
+									{#if !viewModel.state.isBusy}
+										{#if Option.some(maybeSelectedProducts)}
+											<Ripple
+												ontap={() => {
+													viewModel.dispatch(
+														Home.Message.ToggleItem({ id: product.id }),
+													)
+												}}
+											></Ripple>
+										{:else}
+											<Ripple
+												onhold={() => {
+													viewModel.dispatch(
+														Home.Message.ToggleItem({ id: product.id }),
+													)
+												}}
+											></Ripple>
+										{/if}
+									{/if}
+									<div
+										class={[
+											`justify-between flex min-h-[60px] w-full gap-1 select-none items-center`,
+										]}
+										style="content-visibility: 'auto'"
+									>
+										<div class="p-2 h-full aspect-square">
+											<div
+												class="flex-col flex bg-secondary text-background shadow-xs rounded-full items-center justify-center text-center h-full aspect-square"
+											>
+												<QM class="p-2 w-full h-full font-bold " />
+											</div>
+										</div>
+
+										<div
+											class="flex-1 h-full flex justify-center flex-col leading-4 gap-2"
+										>
+											{#if Option.isSome(product.maybeName)}
+												<div
+													class="overflow-ellipsis whitespace-nowrap overflow-hidden capitalize"
+												>
+													{product.maybeName.value}
+												</div>
+											{:else}
+												<div>[NO NAME]</div>
+											{/if}
+										</div>
+									</div>
+								</div>
 							{:else}
 								<div
 									class={[
@@ -406,13 +350,17 @@
 										{#if Option.some(maybeSelectedProducts)}
 											<Ripple
 												ontap={() => {
-													toggleItem(product.id)
+													viewModel.dispatch(
+														Home.Message.ToggleItem({ id: product.id }),
+													)
 												}}
 											></Ripple>
 										{:else}
 											<Ripple
 												onhold={() => {
-													toggleItem(product.id)
+													viewModel.dispatch(
+														Home.Message.ToggleItem({ id: product.id }),
+													)
 												}}
 											></Ripple>
 										{/if}
@@ -503,22 +451,20 @@
 					class="fixed right-4 left-4"
 					style:bottom={`calc(var(--safe-area-inset-bottom, 0) + 21px)`}
 				>
-					{#if Option.isNone(viewModel.state.productListStatus.maybeProducts)}
-						<div
-							in:fade={{ duration: 200 }}
-							class="font-stylish absolute right-0 bottom-[100px] flex flex-col items-end duration-[fade]"
-						>
-							<div class="w-full p-5 text-center">
-								Uh-oh, your fridge is looking a little empty! <br />
-								Let’s fill it up!
-							</div>
-							<div
-								style:filter={`invert(16%) sepia(2%) saturate(24%) hue-rotate(336deg) brightness(97%) contrast(53%)`}
-								style:background-image={`url("${imgUrl}")`}
-								class="relative right-[50px] h-40 w-40 bg-contain bg-no-repeat"
-							></div>
+					<div
+						in:fade={{ duration: 200 }}
+						class="font-stylish absolute right-0 bottom-[100px] flex flex-col items-end duration-[fade]"
+					>
+						<div class="w-full p-5 text-center">
+							Uh-oh, your fridge is looking a little empty! <br />
+							Let’s fill it up!
 						</div>
-					{/if}
+						<div
+							style:filter={`invert(16%) sepia(2%) saturate(24%) hue-rotate(336deg) brightness(97%) contrast(53%)`}
+							style:background-image={`url("${imgUrl}")`}
+							class="relative right-[50px] h-40 w-40 bg-contain bg-no-repeat"
+						></div>
+					</div>
 				</div>
 			{/if}
 

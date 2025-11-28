@@ -1,3 +1,4 @@
+import { DevTools } from '@effect/experimental'
 import { pipe } from 'effect/Function'
 import * as Layer from 'effect/Layer'
 import * as LogLevel from 'effect/LogLevel'
@@ -11,6 +12,7 @@ export const runtime = import.meta.env.PROD
 	: pipe(
 			UseCases.mock.useCases,
 			Layer.provide([
+				DevTools.layer(),
 				Layer.succeed(UseCases.mock.Config, { withErrors: false }),
 				Logger.minimumLogLevel(LogLevel.Debug),
 				Logger.pretty,
