@@ -25,9 +25,9 @@ describe.concurrent(`Delete products by ids`, () => {
 	layer(
 		Layer.provide(Usecase.DeleteAndGetProducts.DefaultWithoutDependencies, [
 			makeTestLayer(ProductRepository.ProductRepository)({
-				deleteProductById: {
-					resolver: RequestResolver.fromEffect(() => Effect.succeed(false)),
-				},
+				deleteProductByIdResolver: RequestResolver.fromEffect(() =>
+					Effect.succeed(false),
+				),
 			}),
 			makeTestLayer(GetSortedProducts.GetProducts)({}),
 		]),
@@ -49,9 +49,9 @@ describe.concurrent(`Delete products by ids`, () => {
 	layer(
 		Layer.provide(Usecase.DeleteAndGetProducts.DefaultWithoutDependencies, [
 			makeTestLayer(ProductRepository.ProductRepository)({
-				deleteProductById: {
-					resolver: RequestResolver.fromEffect(() => Effect.succeed(true)),
-				},
+				deleteProductByIdResolver: RequestResolver.fromEffect(() =>
+					Effect.succeed(true),
+				),
 			}),
 			makeTestLayer(GetSortedProducts.GetProducts)({
 				run: Effect.sync(() =>
@@ -92,9 +92,9 @@ describe.concurrent(`Delete products by ids`, () => {
 	layer(
 		Layer.provide(Usecase.DeleteAndGetProducts.DefaultWithoutDependencies, [
 			makeTestLayer(ProductRepository.ProductRepository)({
-				deleteProductById: {
-					resolver: RequestResolver.fromEffect(() => Effect.succeed(true)),
-				},
+				deleteProductByIdResolver: RequestResolver.fromEffect(() =>
+					Effect.succeed(true),
+				),
 			}),
 			makeTestLayer(GetSortedProducts.GetProducts)({
 				run: Effect.sync(() => GetSortedProducts.Response.Failed()),

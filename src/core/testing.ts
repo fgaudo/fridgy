@@ -1,5 +1,6 @@
-import type { Context } from 'effect'
-import { Effect, Layer } from 'effect'
+import * as Context from 'effect/Context'
+import * as Effect from 'effect/Effect'
+import * as Layer from 'effect/Layer'
 
 const makeUnimplemented = (id: string, prop: PropertyKey) => {
 	const dead = Effect.die(`${id}: Unimplemented method "${prop.toString()}"`)

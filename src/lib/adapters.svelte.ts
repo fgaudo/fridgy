@@ -1,7 +1,7 @@
 import { type BackButtonListenerEvent, App as CAP } from '@capacitor/app'
-import { pipe } from 'effect'
 import * as Effect from 'effect/Effect'
 import * as Exit from 'effect/Exit'
+import { pipe } from 'effect/Function'
 import * as ManagedRuntime from 'effect/ManagedRuntime'
 import * as Stream from 'effect/Stream'
 import { onDestroy, onMount } from 'svelte'

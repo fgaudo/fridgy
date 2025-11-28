@@ -32,15 +32,13 @@ describe.concurrent(`Add product`, () => {
 			const mockLayer = Layer.provide(
 				AddProduct.AddProduct.Default,
 				makeTestLayer(ProductRepository.ProductRepository)({
-					addProduct: {
-						resolver: RequestResolver.fromEffect(
-							Effect.fn(function* (req) {
-								yield* Deferred.succeed(observed, req.creationDate)
+					addProductResolver: RequestResolver.fromEffect(
+						Effect.fn(function* (req) {
+							yield* Deferred.succeed(observed, req.creationDate)
 
-								return yield* Effect.succeed(true)
-							}),
-						),
-					},
+							return yield* Effect.succeed(true)
+						}),
+					),
 				}),
 			)
 
@@ -66,11 +64,9 @@ describe.concurrent(`Add product`, () => {
 		Layer.provide(
 			Usecase.AddProduct.Default,
 			makeTestLayer(ProductRepository.ProductRepository)({
-				addProduct: {
-					resolver: RequestResolver.fromEffect(
-						Effect.fn(() => Effect.succeed(false)),
-					),
-				},
+				addProductResolver: RequestResolver.fromEffect(
+					Effect.fn(() => Effect.succeed(false)),
+				),
 			}),
 		),
 	)(({ effect }) => {
@@ -96,11 +92,9 @@ describe.concurrent(`Add product`, () => {
 	layer(
 		Layer.provide(Usecase.AddProduct.DefaultWithoutDependencies, [
 			makeTestLayer(ProductRepository.ProductRepository)({
-				addProduct: {
-					resolver: RequestResolver.fromEffect(
-						Effect.fn(() => Effect.succeed(false)),
-					),
-				},
+				addProductResolver: RequestResolver.fromEffect(
+					Effect.fn(() => Effect.succeed(false)),
+				),
 			}),
 			makeTestLayer(ProductService.ProductService)({
 				makeProduct: () => Option.none(),

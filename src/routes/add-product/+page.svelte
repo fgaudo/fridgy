@@ -20,10 +20,7 @@
 	import * as VM from './(add-product)/viewmodel.ts'
 
 	type State = {
-		name: undefined | string
 		hasInteractedWithName: boolean
-		expirationDate: undefined | number
-		currentDate: number
 	}
 
 	const { runtime } = getGlobalContext()
@@ -33,56 +30,20 @@
 	)
 
 	const state = $state<State>({
-		name: ``,
 		hasInteractedWithName: false,
-		expirationDate: undefined,
-		currentDate: Date.now(),
 	})
-
-	const validName = $derived(NonEmptyTrimmedString.fromString(state.name ?? ``))
 
 	const saying = sayings[getDayOfYear(Date.now()) % sayings.length]
 
-	const submission = $derived.by(() => {
-		if (Option.isSome(validName) && viewModel && !viewModel.state.isAdding) {
-			return { isSubmittable: true, name: validName.value } as const
-		}
-
-		return { isSubmittable: false } as const
-	})
-
 	const isNameValidOrUntouched = $derived(
-		Option.isSome(validName) || !state.hasInteractedWithName,
+		Option.fromNullable(viewModel?.state).pipe(
+			Option.map(VM.isNameValid),
+			Option.getOrElse(() => false),
+		) || !state.hasInteractedWithName,
 	)
-
-	const maybeExpirationDate = $derived(
-		pipe(
-			Option.fromNullable(state.expirationDate),
-			Option.flatMap(Integer.fromNumber),
-		),
-	)
-
-	function setName(name: string) {
-		state.hasInteractedWithName = true
-		state.name = name
-	}
-
-	function setExpirationDate(date: string) {
-		if (date.length <= 0) {
-			state.expirationDate = undefined
-			return []
-		}
-		state.expirationDate = endOfDay(Date.parse(date)).valueOf()
-	}
 
 	const formattedCurrentDate = $derived(
-		new Date(state.currentDate).toISOString().substring(0, 10),
-	)
-
-	const formattedExpirationDateOrEmpty = $derived(
-		state.expirationDate
-			? new Date(state.expirationDate).toISOString().substring(0, 10)
-			: ``,
+		new Date(Date.now()).toISOString().substring(0, 10),
 	)
 </script>
 
@@ -108,7 +69,7 @@
 			>
 				<Ripple
 					ontap={() => {
-						if (!viewModel.state.isAdding) {
+						if (!viewModel.state.isBusy) {
 							window.history.back()
 						}
 					}}
@@ -153,7 +114,18 @@
 				</label>
 				<input
 					type="text"
-					bind:value={() => state.name ?? ``, setName}
+					bind:value={
+						() => {
+							state.hasInteractedWithName = true
+							if (Option.isSome(viewModel.state.maybeName)) {
+								return viewModel.state.maybeName.value
+							}
+							return ''
+						},
+						name => {
+							viewModel.dispatch(VM.Message.SetName({ name }))
+						}
+					}
 					placeholder="For example: Milk"
 					enterkeyhint="done"
 					id="name"
@@ -174,7 +146,7 @@
 					Expiration date
 				</label>
 				<div class="relative h-16">
-					{#if Option.isNone(maybeExpirationDate)}
+					{#if Option.isNone(viewModel.state.maybeExpirationDate)}
 						<div
 							class="h-full flex items-center text-gray-400 absolute focus:ring-0 bg-secondary/5 shadow-none p-4 w-full rounded-sm border-0 z-40 pointer-events-none"
 						>
@@ -184,13 +156,39 @@
 					<input
 						type="date"
 						placeholder="Select a date"
-						bind:value={() => formattedExpirationDateOrEmpty, setExpirationDate}
+						bind:value={
+							() => {
+								return Option.isSome(viewModel.state.maybeExpirationDate)
+									? new Date(viewModel.state.maybeExpirationDate.value)
+											.toISOString()
+											.substring(0, 10)
+									: ``
+							},
+							expirationDate => {
+								if (expirationDate.length <= 0) {
+									viewModel.dispatch(
+										VM.Message.SetExpiration({
+											maybeExpirationDate: Option.none(),
+										}),
+									)
+									return []
+								}
+
+								viewModel.dispatch(
+									VM.Message.SetExpiration({
+										maybeExpirationDate: Integer.fromNumber(
+											endOfDay(Date.parse(expirationDate)).valueOf(),
+										),
+									}),
+								)
+							}
+						}
 						tabindex="-1"
 						id="expdate"
 						class={[
 							`absolute h-full focus:ring-0 bg-secondary/5 shadow-none p-4 w-full rounded-sm border-0`,
 							{
-								'opacity-0': Option.isNone(maybeExpirationDate),
+								'opacity-0': Option.isNone(viewModel.state.maybeExpirationDate),
 							},
 						]}
 						min={formattedCurrentDate}
@@ -203,21 +201,14 @@
 						class={[
 							`px-6 justify-center transition-all duration-500 overflow-hidden bg-primary h-full items-center flex  text-background shadow-primary/70 rounded-full shadow-md `,
 							{
-								'opacity-15 ': !submission.isSubmittable,
+								'opacity-15 ': !VM.isSubmittable(viewModel.state),
 							},
 						]}
 					>
-						{#if submission.isSubmittable}
+						{#if VM.isSubmittable(viewModel.state)}
 							<Ripple
 								ontap={() => {
-									viewModel.dispatch(
-										Pages.AddProduct.Message.AddProduct({
-											name: submission.name,
-											maybeExpirationDate: Option.fromNullable(
-												state.expirationDate,
-											).pipe(Option.flatMap(Integer.fromNumber)),
-										}),
-									)
+									viewModel.dispatch(VM.Message.StartAddProduct())
 								}}
 							></Ripple>
 						{/if}
@@ -227,7 +218,7 @@
 			</div>
 		</form>
 
-		{#if viewModel.state.isAdding}
+		{#if viewModel.state.isBusy}
 			<div
 				class="z-50 scale-[175%] fixed left-0 top-0 right-0 bottom-0 backdrop-blur-[1px] flex items-center justify-center"
 			>

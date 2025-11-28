@@ -24,7 +24,7 @@ export const AddProduct = {
 /////
 /////
 
-interface DeleteProductByIdRequest extends Req.Request<boolean> {
+export interface DeleteProductByIdRequest extends Req.Request<boolean> {
 	id: string
 }
 
@@ -54,13 +54,9 @@ export class ProductRepository extends Context.Tag(
 )<
 	ProductRepository,
 	{
-		addProduct: {
-			resolver: RequestResolver<AddProductRequest>
-		}
+		addProductResolver: RequestResolver<AddProductRequest>
 
-		deleteProductById: {
-			resolver: RequestResolver<DeleteProductByIdRequest>
-		}
+		deleteProductByIdResolver: RequestResolver<DeleteProductByIdRequest>
 
 		getProducts: Effect.Effect<GetProducts, void>
 	}

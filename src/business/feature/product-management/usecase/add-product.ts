@@ -36,9 +36,7 @@ export class AddProduct extends Effect.Service<AddProduct>()(
 	{
 		accessors: true,
 		effect: Effect.gen(function* () {
-			const {
-				addProduct: { resolver },
-			} = yield* ProductRepository.ProductRepository
+			const { addProductResolver } = yield* ProductRepository.ProductRepository
 
 			const { makeProduct } = yield* Product.ProductService
 
@@ -80,7 +78,7 @@ export class AddProduct extends Effect.Service<AddProduct>()(
 							maybeExpirationDate: product.value.maybeExpirationDate,
 							creationDate: product.value.creationDate,
 						}),
-						resolver,
+						addProductResolver,
 					)
 
 					if (!result) {

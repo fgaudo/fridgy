@@ -41,7 +41,7 @@ export class DeleteAndGetProducts extends Effect.Service<DeleteAndGetProducts>()
 		accessors: true,
 		effect: Effect.gen(function* () {
 			const resolver = (yield* ProductRepository.ProductRepository)
-				.deleteProductById.resolver
+				.deleteProductByIdResolver
 
 			const deleteProductById = (id: string) =>
 				Effect.request(

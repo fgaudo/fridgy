@@ -44,13 +44,12 @@ describe.concurrent(`Add product`, () => {
 			`Should just work`,
 			[Schema.NonEmptyArray(AddProductRequest)],
 			Effect.fn(function* ([requests]) {
-				const {
-					addProduct: { resolver },
-				} = yield* ProductRepository.ProductRepository
+				const { addProductResolver } =
+					yield* ProductRepository.ProductRepository
 
 				const exit = yield* Effect.exit(
 					Effect.forEach(requests, request =>
-						Effect.request(request, resolver),
+						Effect.request(request, addProductResolver),
 					),
 				)
 
@@ -76,13 +75,12 @@ describe.concurrent(`Add product`, () => {
 			`Should return false`,
 			[Schema.NonEmptyArray(AddProductRequest)],
 			Effect.fn(function* ([requests]) {
-				const {
-					addProduct: { resolver },
-				} = yield* ProductRepository.ProductRepository
+				const { addProductResolver } =
+					yield* ProductRepository.ProductRepository
 
 				const exit = yield* Effect.exit(
 					Effect.forEach(requests, request =>
-						Effect.request(request, resolver),
+						Effect.request(request, addProductResolver),
 					),
 				)
 
@@ -107,13 +105,12 @@ describe.concurrent(`Add product`, () => {
 			`Should crash`,
 			[Schema.NonEmptyArray(AddProductRequest)],
 			Effect.fn(function* ([requests]) {
-				const {
-					addProduct: { resolver },
-				} = yield* ProductRepository.ProductRepository
+				const { addProductResolver } =
+					yield* ProductRepository.ProductRepository
 
 				const exit = yield* Effect.exit(
 					Effect.forEach(requests, request =>
-						Effect.request(request, resolver),
+						Effect.request(request, addProductResolver),
 					),
 				)
 
@@ -148,13 +145,12 @@ describe.concurrent(`Delete products by ids`, () => {
 			`Should just work`,
 			[Schema.NonEmptyArray(DeleteProductByIdRequest)],
 			Effect.fn(function* ([requests]) {
-				const {
-					deleteProductById: { resolver },
-				} = yield* ProductRepository.ProductRepository
+				const { deleteProductByIdResolver } =
+					yield* ProductRepository.ProductRepository
 
 				const exit = yield* Effect.exit(
 					Effect.forEach(requests, request =>
-						Effect.request(request, resolver),
+						Effect.request(request, deleteProductByIdResolver),
 					),
 				)
 
@@ -179,13 +175,12 @@ describe.concurrent(`Delete products by ids`, () => {
 			`Should return an error`,
 			[Schema.NonEmptyArray(DeleteProductByIdRequest)],
 			Effect.fn(function* ([requests]) {
-				const {
-					deleteProductById: { resolver },
-				} = yield* ProductRepository.ProductRepository
+				const { deleteProductByIdResolver } =
+					yield* ProductRepository.ProductRepository
 
 				const exit = yield* Effect.exit(
 					Effect.forEach(requests, request =>
-						Effect.request(request, resolver),
+						Effect.request(request, deleteProductByIdResolver),
 					),
 				)
 
@@ -210,13 +205,12 @@ describe.concurrent(`Delete products by ids`, () => {
 			`Should either be false or crash for every call`,
 			[Schema.NonEmptyArray(DeleteProductByIdRequest)],
 			Effect.fn(function* ([requests]) {
-				const {
-					deleteProductById: { resolver },
-				} = yield* ProductRepository.ProductRepository
+				const { deleteProductByIdResolver } =
+					yield* ProductRepository.ProductRepository
 
 				const exit = yield* Effect.exit(
 					Effect.forEach(requests, request =>
-						Effect.request(request, resolver),
+						Effect.request(request, deleteProductByIdResolver),
 					),
 				)
 

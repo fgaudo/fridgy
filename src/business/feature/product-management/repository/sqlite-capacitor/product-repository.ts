@@ -46,98 +46,95 @@ export const layerWithoutDependencies = Layer.effect(
 
 				return entries
 			}),
-			deleteProductById: {
-				resolver: RequestResolver.makeBatched<
-					ProductRepository.DeleteProductById['Request'],
-					never
-				>(
-					Effect.forEach(
-						Effect.fn(
-							function* (request) {
-								const parsed = yield* pipe(
-									Effect.try(() => JSON.parse(request.id) as unknown),
-									Effect.option,
-									Effect.map(
-										Option.filter(
-											id => typeof id === `number` && Integer.isInteger(id),
-										),
+			deleteProductByIdResolver: RequestResolver.makeBatched<
+				ProductRepository.DeleteProductById['Request'],
+				never
+			>(
+				Effect.forEach(
+					Effect.fn(
+						function* (request) {
+							const parsed = yield* pipe(
+								Effect.try(() => JSON.parse(request.id) as unknown),
+								Effect.option,
+								Effect.map(
+									Option.filter(
+										id => typeof id === `number` && Integer.isInteger(id),
 									),
-								)
-
-								if (Option.isNone(parsed)) {
-									yield* Effect.logWarning(
-										`Id has incorrect format. Skipping.`,
-									).pipe(Effect.annotateLogs({ id: request.id }))
-									yield* Request.succeed(request, false)
-									return false
-								}
-
-								const result = yield* Effect.option(
-									Effect.request(
-										SqliteCapacitorHelper.DeleteProductById.Request({
-											id: parsed.value,
-										}),
-										deleteResolver,
-									),
-								)
-
-								if (Option.isNone(result)) {
-									yield* Request.succeed(request, false)
-									return false
-								}
-
-								yield* Request.succeed(request, true)
-								return true
-							},
-							(effect, request) =>
-								Effect.catchAllCause(
-									effect,
-									Effect.fn(function* (cause) {
-										yield* Request.failCause(request, cause)
-										return yield* Effect.failCause(cause)
-									}),
 								),
-						),
-						{ batching: true },
-					),
-				),
-			},
-			addProduct: {
-				resolver: RequestResolver.makeBatched<
-					ProductRepository.AddProduct[`Request`],
-					never
-				>(
-					Effect.forEach(
-						Effect.fn(
-							function* (request) {
-								const result = yield* Effect.option(
-									Effect.request(
-										SqliteCapacitorHelper.AddProduct.Request(request),
-										addProductResolver,
-									),
-								)
+							)
 
-								if (Option.isNone(result)) {
-									yield* Request.succeed(request, false)
-									return false
-								}
+							if (Option.isNone(parsed)) {
+								yield* Effect.logWarning(
+									`Id has incorrect format. Skipping.`,
+								).pipe(Effect.annotateLogs({ id: request.id }))
+								yield* Request.succeed(request, false)
+								return false
+							}
 
-								yield* Request.succeed(request, true)
-								return true
-							},
-							(effect, request) =>
-								Effect.catchAllCause(
-									effect,
-									Effect.fn(function* (cause) {
-										yield* Request.failCause(request, cause)
-										return yield* Effect.failCause(cause)
+							const result = yield* Effect.option(
+								Effect.request(
+									SqliteCapacitorHelper.DeleteProductById.Request({
+										id: parsed.value,
 									}),
+									deleteResolver,
 								),
-						),
-						{ batching: true },
+							)
+
+							if (Option.isNone(result)) {
+								yield* Request.succeed(request, false)
+								return false
+							}
+
+							yield* Request.succeed(request, true)
+							return true
+						},
+						(effect, request) =>
+							Effect.catchAllCause(
+								effect,
+								Effect.fn(function* (cause) {
+									yield* Request.failCause(request, cause)
+									return yield* Effect.failCause(cause)
+								}),
+							),
 					),
+					{ batching: true },
 				),
-			},
+			),
+
+			addProductResolver: RequestResolver.makeBatched<
+				ProductRepository.AddProduct[`Request`],
+				never
+			>(
+				Effect.forEach(
+					Effect.fn(
+						function* (request) {
+							const result = yield* Effect.option(
+								Effect.request(
+									SqliteCapacitorHelper.AddProduct.Request(request),
+									addProductResolver,
+								),
+							)
+
+							if (Option.isNone(result)) {
+								yield* Request.succeed(request, false)
+								return false
+							}
+
+							yield* Request.succeed(request, true)
+							return true
+						},
+						(effect, request) =>
+							Effect.catchAllCause(
+								effect,
+								Effect.fn(function* (cause) {
+									yield* Request.failCause(request, cause)
+									return yield* Effect.failCause(cause)
+								}),
+							),
+					),
+					{ batching: true },
+				),
+			),
 		}
 	}),
 )
