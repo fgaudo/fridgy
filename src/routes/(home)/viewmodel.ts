@@ -375,8 +375,11 @@ const update = matcher({
 					...state.productListStatus,
 					maybeSelectedProducts: pipe(
 						state.productListStatus.maybeSelectedProducts,
-						Option.map(HashSet.toggle(message.id)),
-						Option.flatMap(NonEmptyHashSet.fromHashSet),
+						Option.match({
+							onSome: HashSet.toggle(message.id),
+							onNone: () => HashSet.make(message.id),
+						}),
+						NonEmptyHashSet.fromHashSet,
 					),
 				},
 			},
@@ -421,16 +424,17 @@ const makeViewModel: Effect.Effect<
 			selector: state => state.refreshSchedulerEnabled,
 			create: state =>
 				state.refreshSchedulerEnabled
-					? Stream.schedule(
+					? pipe(
 							Stream.fromEffect(fetchList),
-							Schedule.spaced('20 seconds'),
+							Stream.schedule(Schedule.spaced('20 seconds')),
+							Stream.forever,
 						)
 					: Stream.empty,
 		},
 	]
 
 	const initState: State = {
-		refreshSchedulerEnabled: false,
+		refreshSchedulerEnabled: true,
 		isBusy: false,
 		productListStatus: { _tag: 'Initial' },
 	}

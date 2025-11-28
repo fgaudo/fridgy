@@ -283,7 +283,7 @@
 									]}
 								>
 									{#if !viewModel.state.isBusy}
-										{#if Option.some(maybeSelectedProducts)}
+										{#if Option.isSome(maybeSelectedProducts)}
 											<Ripple
 												ontap={() => {
 													viewModel.dispatch(
@@ -341,7 +341,7 @@
 									]}
 								>
 									{#if !viewModel.state.isBusy}
-										{#if Option.some(maybeSelectedProducts)}
+										{#if Option.isSome(maybeSelectedProducts)}
 											<Ripple
 												ontap={() => {
 													viewModel.dispatch(
@@ -405,7 +405,7 @@
 														style:width={`${(freshnessRatio * 100).toString(10)}%`}
 													></div>
 												</div>
-											{:else}
+											{:else if product.status._tag === 'Stale'}
 												<div
 													class="text-[12px] leading-2 text-primary font-bold"
 												>
@@ -424,7 +424,7 @@
 												>
 													{Utils.formatRemainingTime(product.status.timeLeft)}
 												</div>
-											{:else}
+											{:else if product.status._tag === 'Stale'}
 												<div
 													class={[
 														`text-primary duration-fade absolute text-sm font-bold`,

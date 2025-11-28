@@ -1,10 +1,9 @@
-import * as Arr from 'effect/Array'
 import * as Chunk from 'effect/Chunk'
 import * as Effect from 'effect/Effect'
 import * as Equal from 'effect/Equal'
 import * as Exit from 'effect/Exit'
 import * as Fiber from 'effect/Fiber'
-import { flow, pipe } from 'effect/Function'
+import { pipe } from 'effect/Function'
 import * as Option from 'effect/Option'
 import * as PubSub from 'effect/PubSub'
 import * as Queue from 'effect/Queue'
@@ -92,42 +91,28 @@ export const makeStateManager = Effect.fn(function* <
 					if (Option.isNone(maybeSubscriptions)) {
 						return Option.none<Fiber.RuntimeFiber<void>>()
 					}
-					const subscriptions = [...maybeSubscriptions.value]
 
+					const subscriptions = [...maybeSubscriptions.value]
 					const fiber = yield* pipe(
-						stateRef.changes,
-						Stream.broadcast(Arr.length(subscriptions), {
-							capacity: 'unbounded',
-						}),
-						Stream.map(
-							Arr.zipWith(subscriptions, (changes, { create, selector }) => ({
-								create,
-								changes,
-								selector,
-							})),
-						),
-						Stream.flatMap(
-							flow(
-								Arr.map(({ changes, selector, create }) =>
-									pipe(
-										changes,
-										Stream.bindTo('state'),
-										Stream.bindEffect('result', ({ state }) =>
-											Effect.sync(() => selector(state)),
-										),
-										Stream.changesWith(
-											({ result: result1 }, { result: result2 }) =>
-												Equal.equals(result1, result2),
-										),
-										Stream.map(({ state }) => state),
-										Stream.flatMap(create, {
-											switch: true,
-										}),
-									),
+						Stream.fromIterable(subscriptions),
+						Stream.map(({ create, selector }) =>
+							pipe(
+								stateRef.changes,
+								Stream.bindTo('state'),
+								Stream.bindEffect('result', ({ state }) =>
+									Effect.sync(() => selector(state)),
 								),
-								Stream.mergeAll({ concurrency: 'unbounded' }),
+								Stream.changesWith(({ result: result1 }, { result: result2 }) =>
+									Equal.equals(result1, result2),
+								),
+								Stream.map(({ state }) => state),
+								Stream.flatMap(create, {
+									switch: true,
+								}),
 							),
 						),
+						Stream.runCollect,
+						Stream.flatMap(Stream.mergeAll({ concurrency: 'unbounded' })),
 						Stream.runForEach(m => queue.offer(m)),
 						Effect.forkDaemon,
 					)
@@ -145,7 +130,7 @@ export const makeStateManager = Effect.fn(function* <
 				})
 
 				const updatesFiber = yield* Effect.gen(function* () {
-					const f = yield* pipe(
+					const fiber = yield* pipe(
 						Effect.gen(function* () {
 							const message = yield* queue.take
 
@@ -198,13 +183,13 @@ export const makeStateManager = Effect.fn(function* <
 					yield* Effect.addFinalizer(
 						Effect.fn(function* (exit) {
 							if (Exit.isFailure(exit)) {
-								yield* Fiber.interrupt(f)
+								yield* Fiber.interrupt(fiber)
 								yield* Effect.logDebug(`StateManager: Reducer interrupted`)
 							}
 						}),
 					)
 
-					return f
+					return fiber
 				})
 
 				return {
