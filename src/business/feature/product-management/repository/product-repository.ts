@@ -39,7 +39,7 @@ export const DeleteProductById = {
 /////
 /////
 
-export type GetProducts = {
+export type GetProducts = readonly {
 	maybeId: Option.Option<string>
 	maybeName: Option.Option<NonEmptyTrimmedString.NonEmptyTrimmedString>
 	maybeExpirationDate: Option.Option<Integer.Integer>

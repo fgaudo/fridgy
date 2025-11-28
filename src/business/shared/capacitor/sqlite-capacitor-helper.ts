@@ -25,7 +25,7 @@ type GetAllProducts = {
 		InvalidDataReceived: object
 	}>
 
-	Succeeded: {
+	Succeeded: readonly {
 		maybeId: Option.Option<number>
 		maybeName: Option.Option<NonEmptyTrimmedString.NonEmptyTrimmedString>
 		maybeExpirationDate: Option.Option<Integer.Integer>
@@ -33,7 +33,7 @@ type GetAllProducts = {
 	}[]
 }
 
-export const GetAllProductsWithTotal = {
+export const GetAllProducts = {
 	Failed: Data.taggedEnum<GetAllProducts['Failed']>(),
 }
 
@@ -96,9 +96,7 @@ export class SqliteCapacitorHelper extends Effect.Service<SqliteCapacitorHelper>
 
 						if (Either.isLeft(result)) {
 							yield* Effect.logDebug(result.left)
-							return yield* Effect.fail(
-								GetAllProductsWithTotal.Failed.FetchingFailed(),
-							)
+							return yield* Effect.fail(GetAllProducts.Failed.FetchingFailed())
 						}
 
 						const decodeResult = yield* pipe(
@@ -110,7 +108,7 @@ export class SqliteCapacitorHelper extends Effect.Service<SqliteCapacitorHelper>
 
 						if (Either.isLeft(decodeResult)) {
 							return yield* Effect.fail(
-								GetAllProductsWithTotal.Failed.InvalidDataReceived(),
+								GetAllProducts.Failed.InvalidDataReceived(),
 							)
 						}
 

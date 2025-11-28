@@ -15,7 +15,7 @@ import { makeTestLayer } from '@/core/testing.ts'
 import * as SqliteCapacitorHelper from '@/shared/capacitor/sqlite-capacitor-helper.ts'
 
 import * as ProductRepository from '../product-repository.ts'
-import * as CapacitorProductManager from './product-repository.ts'
+import * as SqliteCapacitorProductRepository from './product-repository.ts'
 
 class AddProductRequest extends Schema.TaggedRequest<AddProductRequest>(
 	'AddProductRequest',
@@ -32,7 +32,7 @@ class AddProductRequest extends Schema.TaggedRequest<AddProductRequest>(
 describe.concurrent(`Add product`, () => {
 	layer(
 		Layer.provide(
-			CapacitorProductManager.layerWithoutDependencies,
+			SqliteCapacitorProductRepository.layerWithoutDependencies,
 			makeTestLayer(SqliteCapacitorHelper.SqliteCapacitorHelper)({
 				addProduct: {
 					resolver: RequestResolver.fromEffect(() => Effect.succeed(undefined)),
@@ -62,7 +62,7 @@ describe.concurrent(`Add product`, () => {
 
 	layer(
 		Layer.provide(
-			CapacitorProductManager.layerWithoutDependencies,
+			SqliteCapacitorProductRepository.layerWithoutDependencies,
 			makeTestLayer(SqliteCapacitorHelper.SqliteCapacitorHelper)({
 				addProduct: {
 					resolver: RequestResolver.fromEffect(() =>
@@ -95,7 +95,7 @@ describe.concurrent(`Add product`, () => {
 
 	layer(
 		Layer.provide(
-			CapacitorProductManager.layerWithoutDependencies,
+			SqliteCapacitorProductRepository.layerWithoutDependencies,
 			makeTestLayer(SqliteCapacitorHelper.SqliteCapacitorHelper)({
 				addProduct: {
 					resolver: RequestResolver.fromEffect(() => Effect.die(undefined)),
@@ -136,7 +136,7 @@ class DeleteProductByIdRequest extends Schema.TaggedRequest<DeleteProductByIdReq
 describe.concurrent(`Delete products by ids`, () => {
 	layer(
 		Layer.provide(
-			CapacitorProductManager.layerWithoutDependencies,
+			SqliteCapacitorProductRepository.layerWithoutDependencies,
 			makeTestLayer(SqliteCapacitorHelper.SqliteCapacitorHelper)({
 				deleteProductById: {
 					resolver: RequestResolver.fromEffect(() => Effect.succeed(true)),
@@ -165,7 +165,7 @@ describe.concurrent(`Delete products by ids`, () => {
 
 	layer(
 		Layer.provide(
-			CapacitorProductManager.layerWithoutDependencies,
+			SqliteCapacitorProductRepository.layerWithoutDependencies,
 			makeTestLayer(SqliteCapacitorHelper.SqliteCapacitorHelper)({
 				deleteProductById: {
 					resolver: RequestResolver.fromEffect(() =>
@@ -198,7 +198,7 @@ describe.concurrent(`Delete products by ids`, () => {
 
 	layer(
 		Layer.provide(
-			CapacitorProductManager.layerWithoutDependencies,
+			SqliteCapacitorProductRepository.layerWithoutDependencies,
 			makeTestLayer(SqliteCapacitorHelper.SqliteCapacitorHelper)({
 				deleteProductById: {
 					resolver: RequestResolver.fromEffect(() => Effect.die(undefined)),
@@ -230,17 +230,19 @@ describe.concurrent(`Delete products by ids`, () => {
 	})
 })
 
-export const GetSortedProducts = Iterable<{
-	maybeId: Option.Option<string>
-	maybeName: Option.Option<NonEmptyTrimmedString.NonEmptyTrimmedString>
-	maybeExpirationDate: Option.Option<Integer.Integer>
-	maybeCreationDate: Option.Option<Integer.Integer>
-}>
+export const GetSortedProducts = Schema.Array(
+	Schema.Struct({
+		maybeId: Schema.Option(Schema.Number),
+		maybeName: Schema.Option(NonEmptyTrimmedString.Schema),
+		maybeExpirationDate: Schema.Option(Integer.Schema),
+		maybeCreationDate: Schema.Option(Integer.Schema),
+	}),
+)
 
 describe.concurrent(`Get products`, () => {
 	effect.prop(
 		`Should return a list`,
-		[SqliteCapacitorHelper.GetAllProducts.DTO],
+		[GetSortedProducts],
 		Effect.fn(
 			function* ([products], { expect }) {
 				const { getProducts: getSortedProducts } =
@@ -260,7 +262,7 @@ describe.concurrent(`Get products`, () => {
 				Effect.provide(
 					effect,
 					Layer.provide(
-						CapacitorProductManager.layerWithoutDependencies,
+						SqliteCapacitorProductRepository.layerWithoutDependencies,
 						makeTestLayer(SqliteCapacitorHelper.SqliteCapacitorHelper)({
 							getAllProductsWithTotal: Effect.succeed(products),
 						}),
@@ -271,10 +273,10 @@ describe.concurrent(`Get products`, () => {
 
 	layer(
 		Layer.provide(
-			CapacitorProductManager.layerWithoutDependencies,
+			SqliteCapacitorProductRepository.layerWithoutDependencies,
 			makeTestLayer(SqliteCapacitorHelper.SqliteCapacitorHelper)({
 				getAllProductsWithTotal: Effect.fail(
-					SqliteCapacitorHelper.GetAllProducts.FetchingFailed(),
+					SqliteCapacitorHelper.GetAllProducts.Failed.FetchingFailed(),
 				),
 			}),
 		),

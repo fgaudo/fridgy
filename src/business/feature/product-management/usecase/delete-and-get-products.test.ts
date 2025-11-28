@@ -1,4 +1,5 @@
 import { describe, expect, layer } from '@effect/vitest'
+import * as Arr from 'effect/Array'
 import * as Effect from 'effect/Effect'
 import { pipe } from 'effect/Function'
 import * as Layer from 'effect/Layer'
@@ -8,7 +9,6 @@ import * as Schema from 'effect/Schema'
 
 import * as PositiveInteger from '@/core/integer/positive.ts'
 import * as NonEmptyHashSet from '@/core/non-empty-hash-set.ts'
-import * as NonEmptyIterableHelper from '@/core/non-empty-iterable.ts'
 import * as NonEmptyTrimmedString from '@/core/non-empty-trimmed-string.ts'
 import * as H from '@/core/test-helpers.ts'
 import { makeTestLayer } from '@/core/testing.ts'
@@ -61,7 +61,7 @@ describe.concurrent(`Delete products by ids`, () => {
 						maybeName =>
 							Option.some({
 								total: PositiveInteger.unsafeFromNumber(1),
-								list: NonEmptyIterableHelper.make(
+								list: Arr.make(
 									GetSortedProducts.ProductDTO.Corrupt({ maybeName }),
 								),
 							}),

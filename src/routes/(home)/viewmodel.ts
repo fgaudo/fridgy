@@ -5,7 +5,6 @@ import * as Effect from 'effect/Effect'
 import { flow, pipe } from 'effect/Function'
 import * as HashSet from 'effect/HashSet'
 import * as Match from 'effect/Match'
-import * as NonEmptyIterable from 'effect/NonEmptyIterable'
 import * as Option from 'effect/Option'
 import * as Schedule from 'effect/Schedule'
 import * as Stream from 'effect/Stream'
@@ -14,7 +13,6 @@ import * as H from '@/core/helper.ts'
 import * as Integer from '@/core/integer/integer.ts'
 import * as PositiveInteger from '@/core/integer/positive.ts'
 import * as NonEmptyHashSet from '@/core/non-empty-hash-set.ts'
-import * as NonEmptyIterableHelper from '@/core/non-empty-iterable.ts'
 import * as NonEmptyTrimmedString from '@/core/non-empty-trimmed-string.ts'
 import * as SM from '@/core/state-manager.ts'
 import * as UnitInterval from '@/core/unit-interval.ts'
@@ -96,7 +94,7 @@ type State = Readonly<{
 				NonEmptyHashSet.NonEmptyHashSet<string>
 			>
 			total: PositiveInteger.PositiveInteger
-			products: NonEmptyIterable.NonEmptyIterable<
+			products: Arr.NonEmptyReadonlyArray<
 				Data.TaggedEnum<{
 					Corrupt: Readonly<{
 						maybeName: Option.Option<NonEmptyTrimmedString.NonEmptyTrimmedString>
@@ -125,15 +123,10 @@ type State = Readonly<{
 	}>
 }>
 
-type NonEmptyIterableValue<T extends NonEmptyIterable.NonEmptyIterable<any>> = [
-	T,
-] extends [NonEmptyIterable.NonEmptyIterable<infer F>]
-	? F
-	: never
-
-export type ProductDTO = NonEmptyIterableValue<
-	Data.TaggedEnum.Value<State['productListStatus'], 'Available'>['products']
->
+export type ProductDTO = Data.TaggedEnum.Value<
+	State['productListStatus'],
+	'Available'
+>['products'][0]
 
 const ProductDTO = Data.taggedEnum<ProductDTO>()
 
@@ -189,16 +182,13 @@ const update = matcher({
 
 			const loadProducts = {
 				total: maybeProducts.value.total,
-				products: NonEmptyIterableHelper.map(
-					maybeProducts.value.list,
-					product => {
-						if (product._tag === 'Corrupt') {
-							return ProductDTO.Corrupt({ ...product, id: Symbol() })
-						}
+				products: Arr.map(maybeProducts.value.list, product => {
+					if (product._tag === 'Corrupt') {
+						return ProductDTO.Corrupt({ ...product, id: Symbol() })
+					}
 
-						return product
-					},
-				),
+					return product
+				}),
 			} satisfies Partial<State['productListStatus']>
 
 			if (state.productListStatus._tag !== 'Available') {
@@ -308,16 +298,13 @@ const update = matcher({
 				productListStatus: {
 					_tag: 'Available',
 					total: message.maybeProducts.value.total,
-					products: NonEmptyIterableHelper.map(
-						message.maybeProducts.value.list,
-						product => {
-							if (product._tag === 'Corrupt') {
-								return ProductDTO.Corrupt({ ...product, id: Symbol() })
-							}
+					products: Arr.map(message.maybeProducts.value.list, product => {
+						if (product._tag === 'Corrupt') {
+							return ProductDTO.Corrupt({ ...product, id: Symbol() })
+						}
 
-							return product
-						},
-					),
+						return product
+					}),
 					maybeSelectedProducts: Option.none(),
 				},
 			} satisfies State,

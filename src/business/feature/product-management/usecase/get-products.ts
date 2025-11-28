@@ -3,12 +3,10 @@ import * as Clock from 'effect/Clock'
 import * as Data from 'effect/Data'
 import * as Effect from 'effect/Effect'
 import { pipe } from 'effect/Function'
-import * as NonEmptyIterable from 'effect/NonEmptyIterable'
 import * as Option from 'effect/Option'
 
 import * as Integer from '@/core/integer/integer.ts'
 import * as PositiveInteger from '@/core/integer/positive.ts'
-import * as NonEmptyIterableHelper from '@/core/non-empty-iterable.ts'
 import * as NonEmptyTrimmedString from '@/core/non-empty-trimmed-string.ts'
 import * as UnitInterval from '@/core/unit-interval.ts'
 
@@ -52,7 +50,7 @@ export type Response = Data.TaggedEnum<{
 	Succeeded: {
 		maybeProducts: Option.Option<{
 			total: PositiveInteger.PositiveInteger
-			list: NonEmptyIterable.NonEmptyIterable<ProductDTO>
+			list: Arr.NonEmptyReadonlyArray<ProductDTO>
 		}>
 	}
 	Failed: object
@@ -165,10 +163,12 @@ export class GetProducts extends Effect.Service<GetProducts>()(
 
 					return Response.Succeeded({
 						maybeProducts: pipe(
-							NonEmptyIterableHelper.fromIterable(entries),
-							Option.map(iterable => ({
+							Arr.isNonEmptyReadonlyArray(entries)
+								? Option.some(entries)
+								: Option.none(),
+							Option.map(array => ({
 								total: PositiveInteger.unsafeFromNumber(Arr.length(entries)),
-								list: iterable,
+								list: array,
 							})),
 						),
 					})

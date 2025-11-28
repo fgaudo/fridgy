@@ -1,5 +1,6 @@
 import { assert, describe, effect, expect, layer } from '@effect/vitest'
 import * as Arbitrary from 'effect/Arbitrary'
+import * as Arr from 'effect/Array'
 import * as Effect from 'effect/Effect'
 import * as Layer from 'effect/Layer'
 import * as Option from 'effect/Option'
@@ -55,9 +56,9 @@ describe.concurrent(`Get sorted products`, () => {
 
 				assert(exit.value._tag === 'Succeeded')
 				assert(Option.isSome(exit.value.maybeProducts))
-				expect(
-					Iterable.size(exit.value.maybeProducts.value.list),
-				).toStrictEqual(products.length)
+				expect(Arr.length(exit.value.maybeProducts.value.list)).toStrictEqual(
+					products.length,
+				)
 			},
 			(effect, [products]) =>
 				Effect.provide(

@@ -10,7 +10,7 @@ import * as Random from 'effect/Random'
 import * as Ref from 'effect/Ref'
 import * as RequestResolver from 'effect/RequestResolver'
 
-import * as ProductRepository from '../../repository/product-repository.ts'
+import * as ProductRepository from '../product-repository.ts'
 
 const ord = Order.make(
 	Order.combineAll([
