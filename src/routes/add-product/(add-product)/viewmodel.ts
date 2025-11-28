@@ -14,6 +14,8 @@ import type { ViewModel } from '@/core/viewmodel.ts'
 
 import { UseCasesWithoutDependencies as UC } from '@/feature/product-management/index.ts'
 
+import { MINIMUM_LAG_MS } from '$lib/constants.ts'
+
 /////
 /////
 
@@ -53,14 +55,17 @@ type State = {
 /////
 /////
 
-const addProduct = H.mapFunctionReturn(
-	UC.AddProduct.AddProduct.run,
-	Effect.map(
-		Match.valueTags({
-			Failed: () => InternalMessage.AddProductFailed(),
-			Succeeded: () => InternalMessage.AddProductSucceeded(),
-		}),
-	),
+const addProduct = H.mapFunctionReturn(UC.AddProduct.AddProduct.run, effect =>
+	Effect.all([
+		Effect.map(
+			effect,
+			Match.valueTags({
+				Failed: () => InternalMessage.AddProductFailed(),
+				Succeeded: () => InternalMessage.AddProductSucceeded(),
+			}),
+		),
+		Effect.sleep(MINIMUM_LAG_MS),
+	]).pipe(Effect.map(([eff]) => eff)),
 )
 
 const matcher = Match.typeTags<
@@ -93,6 +98,7 @@ const isNameValid = (
 
 const update = matcher({
 	NoOp: () => state => ({ state, commands: Chunk.empty() }),
+
 	SetName: message => state => {
 		return {
 			state: {
@@ -132,7 +138,12 @@ const update = matcher({
 	},
 	AddProductSucceeded: () => state => {
 		return {
-			state: { ...state, isBusy: false } satisfies State,
+			state: {
+				...state,
+				isBusy: false,
+				maybeExpirationDate: Option.none(),
+				maybeName: Option.none(),
+			} satisfies State,
 			commands: Chunk.empty(),
 		}
 	},

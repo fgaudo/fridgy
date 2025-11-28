@@ -67,73 +67,66 @@ export const layerWithoutDependencies = Layer.effect(
 
 				return Arr.sort(products, ord)
 			}),
-			deleteProductById: {
-				resolver: RequestResolver.fromEffect<
-					never,
-					ProductRepository.DeleteProductById[`Request`]
-				>(
-					Effect.fn(function* (request) {
-						const isAnError =
-							withErrors && (yield* Random.nextRange(0, 1)) < 0.5
+			deleteProductByIdResolver: RequestResolver.fromEffect<
+				never,
+				ProductRepository.DeleteProductById[`Request`]
+			>(
+				Effect.fn(function* (request) {
+					const isAnError = withErrors && (yield* Random.nextRange(0, 1)) < 0.5
 
-						if (isAnError) {
-							yield* Effect.logInfo(
-								`Triggered fake error on mock DeleteProductId`,
-							)
-							return yield* Effect.succeed(false)
-						}
-						yield* Effect.sleep(`200 millis`)
-
-						yield* Ref.update(ref, dbValues => ({
-							...dbValues,
-							map: HashMap.remove(dbValues.map, request.id),
-						}))
-
-						return yield* Effect.succeed(true)
-					}),
-				),
-			},
-			addProduct: {
-				resolver: RequestResolver.fromEffect<
-					never,
-					ProductRepository.AddProduct[`Request`]
-				>(
-					Effect.fn(function* (product) {
-						const isAnError =
-							withErrors && (yield* Random.nextRange(0, 1)) < 0.5
-
-						if (isAnError) {
-							yield* Effect.logInfo(`Triggered fake error on mock AddProduct`)
-							return yield* Effect.succeed(false)
-						}
-
-						yield* Effect.log(`Attempting to add product into mock database...`)
-
-						yield* Ref.update(ref, dbValues => {
-							const index = dbValues.index + 1
-							const indexString = index.toString(10)
-							return {
-								...dbValues,
-								index,
-								map: dbValues.map.pipe(
-									HashMap.set(indexString, {
-										maybeName: Option.some(product.name),
-										maybeExpirationDate: product.maybeExpirationDate,
-										maybeCreationDate: Option.some(product.creationDate),
-										maybeId: Option.some(indexString),
-									}),
-								),
-							}
-						})
-
-						yield* Effect.log(
-							`Added product ${product.name} into mock database`,
+					if (isAnError) {
+						yield* Effect.logInfo(
+							`Triggered fake error on mock DeleteProductId`,
 						)
+						return yield* Effect.succeed(false)
+					}
+					yield* Effect.sleep(`200 millis`)
 
-						return yield* Effect.succeed(true)
-					}),
-				),
-			},
+					yield* Ref.update(ref, dbValues => ({
+						...dbValues,
+						map: HashMap.remove(dbValues.map, request.id),
+					}))
+
+					return yield* Effect.succeed(true)
+				}),
+			),
+
+			addProductResolver: RequestResolver.fromEffect<
+				never,
+				ProductRepository.AddProduct[`Request`]
+			>(
+				Effect.fn(function* (product) {
+					const isAnError = withErrors && (yield* Random.nextRange(0, 1)) < 0.5
+
+					if (isAnError) {
+						yield* Effect.logInfo(`Triggered fake error on mock AddProduct`)
+						return yield* Effect.succeed(false)
+					}
+
+					yield* Effect.log(`Attempting to add product into mock database...`)
+
+					yield* Ref.update(ref, dbValues => {
+						const index = dbValues.index + 1
+						const indexString = index.toString(10)
+						return {
+							...dbValues,
+							index,
+							map: dbValues.map.pipe(
+								HashMap.set(indexString, {
+									maybeName: Option.some(product.name),
+									maybeExpirationDate: product.maybeExpirationDate,
+									maybeCreationDate: Option.some(product.creationDate),
+									maybeId: Option.some(indexString),
+								}),
+							),
+						}
+					})
+
+					yield* Effect.log(`Added product ${product.name} into mock database`)
+
+					return yield* Effect.succeed(true)
+				}),
+			),
 		}
 	}),
 )

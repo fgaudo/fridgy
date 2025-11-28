@@ -3,6 +3,7 @@ import * as Effect from 'effect/Effect'
 import * as Exit from 'effect/Exit'
 import { pipe } from 'effect/Function'
 import * as ManagedRuntime from 'effect/ManagedRuntime'
+import * as Runtime from 'effect/Runtime'
 import * as Stream from 'effect/Stream'
 import { onDestroy, onMount } from 'svelte'
 
@@ -88,19 +89,24 @@ export const useViewmodel = <S, M1, M2, R>({
 			),
 		)
 
-		const cancelMessages = messages
-			? runtime.runCallback(
-					pipe(
-						viewModel.messages,
-						Stream.onStart(
-							Effect.sync(() => {
-								initialized.messages = true
-							}),
-						),
-						Stream.runForEach(m => Effect.sync(() => messages(m))),
+		let cancelMessages: Runtime.Cancel<void>
+
+		if (messages) {
+			cancelMessages = runtime.runCallback(
+				pipe(
+					viewModel.messages,
+					Stream.onStart(
+						Effect.sync(() => {
+							initialized.messages = true
+						}),
 					),
-				)
-			: undefined
+					Stream.runForEach(m => Effect.sync(() => messages(m))),
+				),
+			)
+		} else {
+			initialized.messages = true
+			cancelMessages = () => {}
+		}
 
 		return () => {
 			cancelChanges()
@@ -135,7 +141,6 @@ export const useViewmodel = <S, M1, M2, R>({
 		}
 
 		const dispatch = handle.dispatch
-
 		return {
 			dispatch: (m: M1) => runtime.runCallback(dispatch(m)),
 			state: state,

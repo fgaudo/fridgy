@@ -2,13 +2,11 @@
 	import ArrowLeft from '@lucide/svelte/icons/arrow-left'
 	import Quote from '@lucide/svelte/icons/quote'
 	import { endOfDay, getDayOfYear } from 'date-fns'
-	import { pipe } from 'effect/Function'
 	import * as Option from 'effect/Option'
-	import { cubicIn, cubicOut } from 'svelte/easing'
-	import { fade, fly } from 'svelte/transition'
+	import { cubicOut } from 'svelte/easing'
+	import { fly } from 'svelte/transition'
 
 	import * as Integer from '@/core/integer/integer.ts'
-	import * as NonEmptyTrimmedString from '@/core/non-empty-trimmed-string.ts'
 
 	import { useViewmodel } from '$lib/adapters.svelte.ts'
 	import sayings from '$lib/assets/sayings.json' with { type: 'json' }
@@ -25,22 +23,23 @@
 
 	const { runtime } = getGlobalContext()
 
-	const { viewModel } = $derived(
-		useViewmodel({ runtime, makeViewModel: VM.makeViewModel }),
-	)
-
 	const state = $state<State>({
 		hasInteractedWithName: false,
 	})
 
-	const saying = sayings[getDayOfYear(Date.now()) % sayings.length]
-
-	const isNameValidOrUntouched = $derived(
-		Option.fromNullable(viewModel?.state).pipe(
-			Option.map(VM.isNameValid),
-			Option.getOrElse(() => false),
-		) || !state.hasInteractedWithName,
+	const { viewModel } = $derived(
+		useViewmodel({
+			runtime,
+			makeViewModel: VM.makeViewModel,
+			messages: m => {
+				if (m === 'AddProductSucceeded') {
+					state.hasInteractedWithName = false
+				}
+			},
+		}),
 	)
+
+	const saying = sayings[getDayOfYear(Date.now()) % sayings.length]
 
 	const formattedCurrentDate = $derived(
 		new Date(Date.now()).toISOString().substring(0, 10),
@@ -48,7 +47,11 @@
 </script>
 
 {#if !viewModel}
-	<div>Loading</div>
+	<div
+		class="z-50 scale-[175%] fixed left-0 top-0 right-0 bottom-0 backdrop-blur-[1px] flex items-center justify-center"
+	>
+		<Spinner />
+	</div>
 {:else}
 	<div
 		in:fly={{
@@ -107,7 +110,9 @@
 					for="name"
 					class={[
 						`bg-background inline-block p-1 text-sm duration-500`,
-						isNameValidOrUntouched ? `text-secondary` : `text-primary`,
+						VM.isNameValid(viewModel.state) || !state.hasInteractedWithName
+							? `text-secondary`
+							: `text-primary`,
 					]}
 				>
 					Product name <span class="font-bold text-primary">*</span>
@@ -116,13 +121,13 @@
 					type="text"
 					bind:value={
 						() => {
-							state.hasInteractedWithName = true
 							if (Option.isSome(viewModel.state.maybeName)) {
 								return viewModel.state.maybeName.value
 							}
 							return ''
 						},
 						name => {
+							state.hasInteractedWithName = true
 							viewModel.dispatch(VM.Message.SetName({ name }))
 						}
 					}
@@ -131,7 +136,9 @@
 					id="name"
 					class={[
 						`h-16 transition-all focus:ring-0 shadow-none placeholder:text-gray-400 p-4 w-full  duration-500 rounded-sm border-0`,
-						isNameValidOrUntouched ? `bg-secondary/5` : `bg-primary/15 `,
+						VM.isNameValid(viewModel.state) || !state.hasInteractedWithName
+							? `bg-secondary/5`
+							: `bg-primary/15 `,
 					]}
 				/>
 			</div>
