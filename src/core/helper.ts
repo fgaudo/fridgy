@@ -41,3 +41,10 @@ export function mapFunctionReturn<F extends (...args: any[]) => any, R>(
 ): (...args: Parameters<F>) => R {
 	return (...args: Parameters<F>) => mapper(fn(...args))
 }
+
+export function assert(
+	condition: unknown,
+	message = 'assertion failed',
+): asserts condition {
+	if (!condition) throw new Error(message)
+}

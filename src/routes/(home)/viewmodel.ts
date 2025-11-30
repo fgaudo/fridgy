@@ -28,32 +28,39 @@ type Message = Data.TaggedEnum<{
 	StartDeleteAndRefresh: object
 	ToggleItem: { id: string }
 	ClearSelected: object
+	ProductListHidden: object
 }>
 
 const Message = Data.taggedEnum<Message>()
 
 type _InternalMessage = Data.TaggedEnum<{
 	NoOp: object
+	FetchListFailed: {
+		version: number
+		response: Data.TaggedEnum.Value<UC.GetProducts.Response, 'Failed'>
+	}
+	FetchListSucceeded: {
+		version: number
+		response: Data.TaggedEnum.Value<UC.GetProducts.Response, 'Succeeded'>
+	}
+	DeleteAndRefreshSucceeded: {
+		response: Data.TaggedEnum.Value<
+			UC.DeleteAndGetProducts.Response,
+			'Succeeded'
+		>
+	}
+	DeleteAndRefreshFailed: {
+		response: Data.TaggedEnum.Value<UC.DeleteAndGetProducts.Response, 'Failed'>
+	}
+	DeleteSucceededButRefreshFailed: {
+		response: Data.TaggedEnum.Value<
+			UC.DeleteAndGetProducts.Response,
+			'DeleteSucceededButRefreshFailed'
+		>
+	}
 }>
 
-type InternalMessage =
-	| Message
-	| _InternalMessage
-	| H.MapTags<
-			UC.GetProducts.Response,
-			{
-				Failed: `FetchListFailed`
-				Succeeded: `FetchListSucceeded`
-			}
-	  >
-	| H.MapTags<
-			UC.DeleteAndGetProducts.Response,
-			{
-				Succeeded: `DeleteAndRefreshSucceeded`
-				Failed: `DeleteFailed`
-				DeleteSucceededButRefreshFailed: `DeleteSucceededButRefreshFailed`
-			}
-	  >
+type InternalMessage = Message | _InternalMessage
 
 const InternalMessage = Data.taggedEnum<InternalMessage>()
 
@@ -61,30 +68,33 @@ const deleteAndGetProducts = H.mapFunctionReturn(
 	UC.DeleteAndGetProducts.DeleteAndGetProducts.run,
 	Effect.map(
 		Match.valueTags({
-			DeleteSucceededButRefreshFailed: () =>
-				InternalMessage.DeleteSucceededButRefreshFailed(),
-			Failed: () => InternalMessage.DeleteFailed(),
-			Succeeded: ({ maybeProducts }) =>
-				InternalMessage.DeleteAndRefreshSucceeded({ maybeProducts }),
+			DeleteSucceededButRefreshFailed: response =>
+				InternalMessage.DeleteSucceededButRefreshFailed({ response }),
+			Failed: response => InternalMessage.DeleteAndRefreshFailed({ response }),
+			Succeeded: response =>
+				InternalMessage.DeleteAndRefreshSucceeded({ response }),
 		}),
 	),
 )
 
-const fetchList = Effect.map(
-	UC.GetProducts.GetProducts.run,
-	Match.valueTags({
-		Failed: () => InternalMessage.FetchListFailed(),
-		Succeeded: ({ maybeProducts }) =>
-			InternalMessage.FetchListSucceeded({ maybeProducts }),
-	}),
-)
+const fetchList = (version: number) =>
+	Effect.map(
+		UC.GetProducts.GetProducts.run,
+		Match.valueTags({
+			Failed: response =>
+				InternalMessage.FetchListFailed({ version, response }),
+			Succeeded: response =>
+				InternalMessage.FetchListSucceeded({ version, response }),
+		}),
+	)
 
 ////
 ////
 
 type State = Readonly<{
-	refreshSchedulerEnabled: boolean
-	isBusy: boolean
+	fetchListVersion: number
+	isProductListVisible: boolean
+	isDeleting: boolean
 	productListStatus: Data.TaggedEnum<{
 		Initial: object
 		Error: object
@@ -141,100 +151,108 @@ const matcher = Match.typeTags<
 type Command = SM.Command<InternalMessage, UC.All>
 
 const notifyWrongState = Effect.fn(function* (message: { _tag: string }) {
-	yield* Effect.logWarning(`Triggered ${message._tag} in wrong state`)
+	yield* Effect.logError(`Triggered ${message._tag} in wrong state`)
+	return InternalMessage.NoOp()
+})
+
+const notifyStale = Effect.fn(function* (message: { _tag: string }) {
+	yield* Effect.logWarning(`Triggered stale ${message._tag}`)
 	return InternalMessage.NoOp()
 })
 
 const update = matcher({
 	NoOp: () => state => ({ state, commands: Chunk.empty() }),
 
-	FetchListFailed: () => state => {
-		if (state.productListStatus._tag === 'Initial') {
+	FetchListFailed: message => state => {
+		if (message.version !== state.fetchListVersion) {
+			return { state, commands: Chunk.make(notifyStale(message)) }
+		}
+
+		if (state.productListStatus._tag === 'Available') {
 			return {
-				state: {
-					...state,
-					refreshSchedulerEnabled: false,
-					productListStatus: { _tag: 'Error' },
-				} satisfies State,
+				state: state satisfies State,
 				commands: Chunk.empty(),
 			}
 		}
 
 		return {
-			state: { ...state, refreshSchedulerEnabled: true } satisfies State,
+			state: {
+				...state,
+				productListStatus: { _tag: 'Error' },
+			} satisfies State,
 			commands: Chunk.empty(),
 		}
 	},
 
-	FetchListSucceeded:
-		({ maybeProducts }) =>
-		state => {
-			if (Option.isNone(maybeProducts)) {
-				return {
-					state: {
-						...state,
-						refreshSchedulerEnabled: false,
-						productListStatus: { _tag: 'Empty' },
-					} satisfies State,
-					commands: Chunk.empty(),
-				}
+	FetchListSucceeded: message => state => {
+		if (message.version !== state.fetchListVersion) {
+			return { state, commands: Chunk.make(notifyStale(message)) }
+		}
+
+		if (Option.isNone(message.response.maybeProducts)) {
+			return {
+				state: {
+					...state,
+					productListStatus: { _tag: 'Empty' },
+				} satisfies State,
+				commands: Chunk.empty(),
 			}
+		}
 
-			const loadProducts = {
-				total: maybeProducts.value.total,
-				products: Arr.map(maybeProducts.value.list, product => {
-					if (product._tag === 'Corrupt') {
-						return ProductDTO.Corrupt({ ...product, id: Symbol() })
-					}
-
-					return product
-				}),
-			} satisfies Partial<State['productListStatus']>
-
-			if (state.productListStatus._tag !== 'Available') {
-				return {
-					commands: Chunk.empty(),
-					state: {
-						...state,
-						refreshSchedulerEnabled: true,
-						productListStatus: {
-							_tag: 'Available',
-							...loadProducts,
-							maybeSelectedProducts: Option.none(),
-						},
-					} satisfies State,
+		const loadProducts = {
+			total: message.response.maybeProducts.value.total,
+			products: Arr.map(message.response.maybeProducts.value.list, product => {
+				if (product._tag === 'Corrupt') {
+					return ProductDTO.Corrupt({ ...product, id: Symbol() })
 				}
-			}
 
+				return product
+			}),
+		} satisfies Partial<State['productListStatus']>
+
+		if (state.productListStatus._tag !== 'Available') {
 			return {
 				commands: Chunk.empty(),
 				state: {
 					...state,
-					refreshSchedulerEnabled: true,
 					productListStatus: {
 						_tag: 'Available',
 						...loadProducts,
-						maybeSelectedProducts: pipe(
-							state.productListStatus.maybeSelectedProducts,
-							Option.map(
-								HashSet.intersection(
-									pipe(
-										maybeProducts.value.list,
-										Arr.filter(product => product._tag !== 'Corrupt'),
-										Arr.map(product => product.id),
-									),
-								),
-							),
-							Option.flatMap(NonEmptyHashSet.fromHashSet),
-						),
+						maybeSelectedProducts: Option.none(),
 					},
 				} satisfies State,
 			}
-		},
+		}
+
+		return {
+			commands: Chunk.empty(),
+			state: {
+				...state,
+				productListStatus: {
+					_tag: 'Available',
+					...loadProducts,
+					maybeSelectedProducts: pipe(
+						state.productListStatus.maybeSelectedProducts,
+						Option.map(
+							HashSet.intersection(
+								pipe(
+									message.response.maybeProducts.value.list,
+									Arr.filter(product => product._tag !== 'Corrupt'),
+									Arr.map(product => product.id),
+								),
+							),
+						),
+						Option.flatMap(NonEmptyHashSet.fromHashSet),
+					),
+				},
+			} satisfies State,
+		}
+	},
 	StartDeleteAndRefresh: message => state => {
 		if (
 			state.productListStatus._tag !== 'Available' ||
-			Option.isNone(state.productListStatus.maybeSelectedProducts)
+			Option.isNone(state.productListStatus.maybeSelectedProducts) ||
+			state.isDeleting
 		) {
 			return {
 				state,
@@ -242,26 +260,11 @@ const update = matcher({
 			}
 		}
 
-		if (state.isBusy) {
-			return {
-				state,
-				commands: Chunk.make(
-					Effect.gen(function* () {
-						yield* Effect.logWarning(
-							`Delete triggered while it's already deleting`,
-							state.productListStatus._tag,
-						)
-						return InternalMessage.NoOp()
-					}),
-				),
-			}
-		}
-
 		return {
 			state: {
 				...state,
-				isBusy: true,
-				refreshSchedulerEnabled: false,
+				isDeleting: true,
+				fetchListVersion: state.fetchListVersion + 1,
 			} satisfies State,
 			commands: Chunk.make(
 				deleteAndGetProducts({
@@ -278,11 +281,11 @@ const update = matcher({
 			commands = Chunk.append(commands, notifyWrongState(message))
 		}
 
-		if (Option.isNone(message.maybeProducts)) {
+		if (Option.isNone(message.response.maybeProducts)) {
 			return {
 				state: {
 					...state,
-					isBusy: false,
+					isDeleting: false,
 					productListStatus: { _tag: 'Empty' },
 				} satisfies State,
 				commands,
@@ -293,25 +296,27 @@ const update = matcher({
 			commands,
 			state: {
 				...state,
-				isBusy: false,
-				refreshSchedulerEnabled: true,
+				isDeleting: false,
 				productListStatus: {
 					_tag: 'Available',
-					total: message.maybeProducts.value.total,
-					products: Arr.map(message.maybeProducts.value.list, product => {
-						if (product._tag === 'Corrupt') {
-							return ProductDTO.Corrupt({ ...product, id: Symbol() })
-						}
+					total: message.response.maybeProducts.value.total,
+					products: Arr.map(
+						message.response.maybeProducts.value.list,
+						product => {
+							if (product._tag === 'Corrupt') {
+								return ProductDTO.Corrupt({ ...product, id: Symbol() })
+							}
 
-						return product
-					}),
+							return product
+						},
+					),
 					maybeSelectedProducts: Option.none(),
 				},
 			} satisfies State,
 		}
 	},
 
-	DeleteFailed: message => state => {
+	DeleteAndRefreshFailed: message => state => {
 		let commands = Chunk.empty<Command>()
 
 		if (state.productListStatus._tag !== 'Available') {
@@ -319,7 +324,7 @@ const update = matcher({
 		}
 
 		return {
-			state: { ...state, isBusy: false, refreshSchedulerEnabled: true },
+			state: { ...state, isDeleting: false } satisfies State,
 			commands,
 		}
 	},
@@ -335,28 +340,28 @@ const update = matcher({
 			commands,
 			state: {
 				...state,
+				isDeleting: false,
 				productListStatus: { _tag: 'Error' },
-				refreshSchedulerEnabled: false,
 			} satisfies State,
 		}
 	},
 
 	StartFetchList: message => state => {
-		if (state.isBusy) {
+		if (state.isDeleting) {
 			return {
 				state,
-				commands: Chunk.make(
-					Effect.gen(function* () {
-						yield* Effect.logWarning(`Triggered ${message._tag} while deleting`)
-						return InternalMessage.NoOp()
-					}),
-				),
+				commands: Chunk.make(notifyWrongState(message)),
 			}
 		}
 
+		const nextFetchVersion = state.fetchListVersion + 1
 		return {
-			state: { ...state, refreshSchedulerEnabled: false },
-			commands: Chunk.make(fetchList),
+			state: {
+				...state,
+				fetchListVersion: nextFetchVersion,
+				isProductListVisible: true,
+			} satisfies State,
+			commands: Chunk.make(fetchList(nextFetchVersion)),
 		}
 	},
 
@@ -409,38 +414,93 @@ const update = matcher({
 			commands: Chunk.empty(),
 		}
 	},
+
+	ProductListHidden: () => state => ({
+		state: { ...state, isProductListVisible: false },
+		commands: Chunk.empty(),
+	}),
 })
+
+const hasFreshProducts = (
+	products: (State['productListStatus'] & { _tag: 'Available' })['products'],
+): boolean =>
+	products.some(
+		product => product._tag === 'Valid' && product.status._tag === 'Fresh',
+	)
+
+const fetchListStream = (version: number) =>
+	pipe(
+		fetchList(version),
+		Stream.schedule(Schedule.spaced('20 seconds')),
+		Stream.forever,
+	)
+
+const fetchListScheduler: SM.Subscription<State, InternalMessage, UC.All> = {
+	init: state => {
+		if (!state.isProductListVisible) {
+			return SM.keyedEmptyStream
+		}
+
+		if (state.productListStatus._tag !== 'Available') {
+			return SM.keyedEmptyStream
+		}
+
+		if (!hasFreshProducts(state.productListStatus.products)) {
+			return SM.keyedEmptyStream
+		}
+
+		return { key: true, stream: fetchListStream(state.fetchListVersion) }
+	},
+
+	update: ({ current, previous, active }) => {
+		if (current.fetchListVersion !== previous.fetchListVersion) {
+			return SM.keyedEmptyStream
+		}
+
+		if (!current.isProductListVisible) {
+			return SM.keyedEmptyStream
+		}
+
+		if (current.productListStatus._tag !== 'Available') {
+			return SM.keyedEmptyStream
+		}
+
+		if (current.productListStatus === previous.productListStatus) {
+			return active
+		}
+
+		if (
+			current.productListStatus._tag === previous.productListStatus._tag &&
+			current.productListStatus.products === previous.productListStatus.products
+		) {
+			return active
+		}
+
+		if (!hasFreshProducts(current.productListStatus.products)) {
+			return SM.keyedEmptyStream
+		}
+
+		return { key: true, stream: fetchListStream(current.fetchListVersion) }
+	},
+}
+
+const initState: State = {
+	fetchListVersion: 0,
+	isProductListVisible: true,
+	isDeleting: false,
+	productListStatus: { _tag: 'Initial' },
+}
 
 const makeViewModel: Effect.Effect<
 	ViewModel<
 		State,
 		Message,
-		'DeleteSucceededButRefreshFailed' | 'DeleteFailed',
+		'DeleteSucceededButRefreshFailed' | 'DeleteAndRefreshFailed',
 		UC.All
 	>
 > = Effect.gen(function* () {
-	const subscriptions: SM.Subscriptions<State, InternalMessage, UC.All> = [
-		{
-			selector: state => state.refreshSchedulerEnabled,
-			create: state =>
-				state.refreshSchedulerEnabled
-					? pipe(
-							Stream.fromEffect(fetchList),
-							Stream.schedule(Schedule.spaced('20 seconds')),
-							Stream.forever,
-						)
-					: Stream.empty,
-		},
-	]
-
-	const initState: State = {
-		refreshSchedulerEnabled: true,
-		isBusy: false,
-		productListStatus: { _tag: 'Initial' },
-	}
-
 	const stateManager = yield* SM.makeStateManager({
-		subscriptions,
+		subscriptions: [fetchListScheduler],
 		initState,
 		initMessages: [InternalMessage.StartFetchList()],
 		update,
@@ -453,7 +513,7 @@ const makeViewModel: Effect.Effect<
 			flow(
 				Match.value,
 				Match.tags({
-					DeleteFailed: ({ _tag }) => Option.some(_tag),
+					DeleteAndRefreshFailed: ({ _tag }) => Option.some(_tag),
 					DeleteSucceededButRefreshFailed: ({ _tag }) => Option.some(_tag),
 				}),
 				Match.orElse(() => Option.none()),

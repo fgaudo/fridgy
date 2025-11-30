@@ -1,9 +1,9 @@
-import assert from 'assert'
 import * as Arr from 'effect/Array'
 import * as Data from 'effect/Data'
 import * as Effect from 'effect/Effect'
 import * as Match from 'effect/Match'
 
+import { assert } from '@/core/helper.ts'
 import * as NonEmptyHashSet from '@/core/non-empty-hash-set'
 
 import * as ProductRepository from '../repository/product-repository.ts'

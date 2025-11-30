@@ -1,3 +1,4 @@
+import * as Brand from 'effect/Brand'
 import * as Chunk from 'effect/Chunk'
 import * as Effect from 'effect/Effect'
 import * as Equal from 'effect/Equal'
@@ -32,9 +33,26 @@ export type StateManager<S, M, R> = {
 	>
 }
 
+export const keyedEmptyStream = { key: Symbol(), stream: Stream.empty }
+
+const previous: unique symbol = Symbol('Previous')
+const current: unique symbol = Symbol('Current')
+
+type Previous<T> = Brand.Branded<T, typeof previous>
+type Current<T> = Brand.Branded<T, typeof current>
+
+type KeyedStream<M, R> = {
+	key: unknown
+	stream: Stream.Stream<M, never, R>
+}
+
 export type Subscription<S, M, R> = {
-	selector: (s: S) => unknown
-	create: (s: S) => Stream.Stream<M, never, R>
+	init: (s: S) => KeyedStream<M, R>
+	update: (p: {
+		current: Current<S>
+		previous: Previous<S>
+		active: KeyedStream<M, R>
+	}) => KeyedStream<M, R>
 }
 
 export type Subscriptions<S, M, R> = [
@@ -95,18 +113,42 @@ export const makeStateManager = Effect.fn(function* <
 					const subscriptions = [...maybeSubscriptions.value]
 					const fiber = yield* pipe(
 						Stream.fromIterable(subscriptions),
-						Stream.map(({ create, selector }) =>
+						Stream.map(subscription =>
 							pipe(
 								stateRef.changes,
-								Stream.bindTo('state'),
-								Stream.bindEffect('result', ({ state }) =>
-									Effect.sync(() => selector(state)),
+								Stream.changesWith((s1, s2) => s1 === s2),
+								Stream.mapAccum(
+									Option.none<{
+										state: S
+										stream: {
+											key: unknown
+											stream: Stream.Stream<M, never, R>
+										}
+									}>(),
+									(maybePrev, currentState) => {
+										const newStream = Option.match(maybePrev, {
+											onNone: () => subscription.init(currentState),
+											onSome: previous =>
+												subscription.update({
+													// oxlint-disable-next-line no-unsafe-type-assertion
+													current: currentState as Current<S>,
+													// oxlint-disable-next-line no-unsafe-type-assertion
+													previous: previous.state as Previous<S>,
+													active: previous.stream,
+												}),
+										})
+
+										const nextPrev = Option.some({
+											state: currentState,
+											stream: newStream,
+										})
+										return [nextPrev, newStream]
+									},
 								),
-								Stream.changesWith(({ result: result1 }, { result: result2 }) =>
-									Equal.equals(result1, result2),
+								Stream.changesWith(({ key: k1 }, { key: k2 }) =>
+									Equal.equals(k1, k2),
 								),
-								Stream.map(({ state }) => state),
-								Stream.flatMap(create, {
+								Stream.flatMap(s => s.stream, {
 									switch: true,
 								}),
 							),

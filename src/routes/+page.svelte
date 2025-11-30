@@ -47,8 +47,11 @@
 	function toggleMenu() {
 		if (state.isMenuOpen) {
 			state.isMenuOpen = false
+			viewModel?.dispatch(Home.Message.StartFetchList())
 			return
 		}
+
+		viewModel?.dispatch(Home.Message.ProductListHidden())
 
 		state.isMenuOpen = true
 	}
@@ -162,7 +165,7 @@
 				>
 					{#if Option.isSome(maybeSelectedProducts)}
 						<div class="absolute" transition:fade={{ duration: 200 }}>
-							{#if !viewModel.state.isBusy}
+							{#if !viewModel.state.isDeleting}
 								<Ripple
 									ontap={() => {
 										viewModel.dispatch(Home.Message.ClearSelected())
@@ -201,7 +204,7 @@
 						class="ml-2 mr-2 relative h-12 w-12 flex items-center justify-center rounded-full overflow-hidden"
 						transition:fade={{ duration: 200 }}
 					>
-						{#if !viewModel.state.isBusy}
+						{#if !viewModel.state.isDeleting}
 							<Ripple
 								ontap={() => {
 									viewModel.dispatch(Home.Message.StartDeleteAndRefresh())
@@ -222,7 +225,7 @@
 			{/if}
 		</div>
 
-		{#if viewModel.state.isBusy}
+		{#if viewModel.state.isDeleting}
 			<div
 				transition:fade={{ duration: 200 }}
 				class="z-50 scale-[175%] fixed left-0 top-0 right-0 bottom-0 backdrop-blur-[1px] flex items-center justify-center"
@@ -242,7 +245,7 @@
 						<div
 							class="text-primary underline relative overflow-hidden rounded-full py-1 px-2"
 						>
-							{#if viewModel.state.isBusy}
+							{#if viewModel.state.isDeleting}
 								<Ripple
 									ontap={() => {
 										viewModel.dispatch(Home.Message.StartFetchList())
@@ -282,7 +285,7 @@
 											: `bg-secondary/5`,
 									]}
 								>
-									{#if !viewModel.state.isBusy}
+									{#if !viewModel.state.isDeleting}
 										{#if Option.isSome(maybeSelectedProducts)}
 											<Ripple
 												ontap={() => {
@@ -340,7 +343,7 @@
 											: `bg-secondary/5`,
 									]}
 								>
-									{#if !viewModel.state.isBusy}
+									{#if !viewModel.state.isDeleting}
 										{#if Option.isSome(maybeSelectedProducts)}
 											<Ripple
 												ontap={() => {
