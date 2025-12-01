@@ -65,6 +65,7 @@ export const layerWithoutDependencies = Layer.effect(
 					HashMap.toValues,
 				)
 
+				yield* Effect.sleep(300)
 				return Arr.sort(products, ord)
 			}),
 			deleteProductByIdResolver: RequestResolver.fromEffect<
@@ -86,6 +87,8 @@ export const layerWithoutDependencies = Layer.effect(
 						...dbValues,
 						map: HashMap.remove(dbValues.map, request.id),
 					}))
+
+					yield* Effect.sleep('500 millis')
 
 					return yield* Effect.succeed(true)
 				}),
@@ -121,6 +124,7 @@ export const layerWithoutDependencies = Layer.effect(
 							),
 						}
 					})
+					yield* Effect.sleep('500 millis')
 
 					yield* Effect.log(`Added product ${product.name} into mock database`)
 

@@ -7,6 +7,7 @@ import * as SM from '@/core/state-manager.ts'
 import { UseCasesWithoutDependencies as UC } from '@/feature/product-management/index.ts'
 
 import { InternalMessage } from './message.ts'
+import type { FetchListSchedulerVersion, FetchListVersion } from './state.ts'
 
 export type Command = SM.Command<InternalMessage, UC.All>
 
@@ -35,15 +36,18 @@ export const deleteAndGetProducts = H.mapFunctionReturn(
 	),
 )
 
-export const fetchList = Effect.map(
-	UC.GetProducts.GetProducts.run,
-	Match.valueTags({
-		Failed: response => InternalMessage.FetchListFailed({ response }),
-		Succeeded: response => InternalMessage.FetchListSucceeded({ response }),
-	}),
-)
+export const fetchList = (version: FetchListVersion) =>
+	Effect.map(
+		UC.GetProducts.GetProducts.run,
+		Match.valueTags({
+			Failed: response =>
+				InternalMessage.FetchListFailed({ version, response }),
+			Succeeded: response =>
+				InternalMessage.FetchListSucceeded({ version, response }),
+		}),
+	)
 
-export const fetchListTick = (version: number) =>
+export const fetchListTick = (version: FetchListSchedulerVersion) =>
 	Effect.map(
 		UC.GetProducts.GetProducts.run,
 		Match.valueTags({

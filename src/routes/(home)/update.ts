@@ -13,7 +13,11 @@ import { UseCasesWithoutDependencies as UC } from '@/feature/product-management/
 
 import * as Command from './command.ts'
 import { InternalMessage } from './message.ts'
-import type { State } from './state.ts'
+import {
+	FetchListSchedulerVersion,
+	FetchListVersion,
+	type State,
+} from './state.ts'
 
 export type ProductDTO = Data.TaggedEnum.Value<
 	State['productListStatus'],
@@ -121,31 +125,50 @@ export const update: SM.Update<State, InternalMessage, UC.All> = matcher({
 			}
 		}
 
+		const nextFetchVersion = FetchListVersion.increment(state.fetchListVersion)
 		return {
 			state: {
 				...state,
-				fetchListSchedulerVersion: state.fetchListSchedulerVersion + 1,
-				isSchedulerEnabled: false,
+				fetchListSchedulerVersion: FetchListSchedulerVersion.increment(
+					state.fetchListSchedulerVersion,
+				),
+				fetchListVersion: nextFetchVersion,
+				isManualFetching: true,
+				isFetching: true,
 			} satisfies State,
-			commands: Chunk.make(Command.fetchList),
+			commands: Chunk.make(Command.fetchList(nextFetchVersion)),
 		}
 	},
 
-	FetchListSucceeded: message => state =>
-		pipe(updateFetchListSucceeded(message, state), result => ({
+	FetchListSucceeded: message => state => {
+		if (state.fetchListVersion !== message.version) {
+			return { state, commands: Chunk.make(Command.notifyStale(message)) }
+		}
+
+		return pipe(updateFetchListSucceeded(message, state), result => ({
 			state: {
 				...result.state,
-				isStaleData: false,
-				isSchedulerEnabled: true,
-			},
+				isManualFetching: false,
+				isFetching: false,
+			} satisfies State,
 			commands: result.commands,
-		})),
+		}))
+	},
 
-	FetchListFailed: message => state =>
-		pipe(updateFetchListFailed(message, state), result => ({
-			state: { ...result.state, isSchedulerEnabled: true },
+	FetchListFailed: message => state => {
+		if (state.fetchListVersion !== message.version) {
+			return { state, commands: Chunk.make(Command.notifyStale(message)) }
+		}
+
+		return pipe(updateFetchListFailed(message, state), result => ({
+			state: {
+				...result.state,
+				isManualFetching: false,
+				isFetching: false,
+			} satisfies State,
 			commands: result.commands,
-		})),
+		}))
+	},
 
 	FetchListTick: message => state => {
 		if (message.version !== state.fetchListSchedulerVersion) {
@@ -156,7 +179,7 @@ export const update: SM.Update<State, InternalMessage, UC.All> = matcher({
 		}
 
 		return {
-			state,
+			state: { ...state, isFetching: true },
 			commands: Chunk.make(Command.fetchListTick(message.version)),
 		}
 	},
@@ -168,11 +191,14 @@ export const update: SM.Update<State, InternalMessage, UC.All> = matcher({
 
 		return pipe(
 			updateFetchListSucceeded(
-				InternalMessage.FetchListSucceeded(message),
+				InternalMessage.FetchListSucceeded({
+					response: message.response,
+					version: state.fetchListVersion,
+				}),
 				state,
 			),
 			result => ({
-				state: { ...result.state, isStaleData: false },
+				state: { ...result.state, isFetching: false },
 				commands: result.commands,
 			}),
 		)
@@ -183,10 +209,50 @@ export const update: SM.Update<State, InternalMessage, UC.All> = matcher({
 			return { state, commands: Chunk.make(Command.notifyStale(message)) }
 		}
 
-		return updateFetchListFailed(
-			InternalMessage.FetchListFailed(message),
-			state,
+		return pipe(
+			updateFetchListFailed(
+				InternalMessage.FetchListFailed({
+					response: message.response,
+					version: state.fetchListVersion,
+				}),
+				state,
+			),
+			result => ({
+				state: { ...state, isFetching: false },
+				commands: result.commands,
+			}),
 		)
+	},
+
+	StartDeleteAndRefresh: message => state => {
+		if (
+			state.productListStatus._tag !== 'Available' ||
+			Option.isNone(state.productListStatus.maybeSelectedProducts) ||
+			state.isDeleting
+		) {
+			return {
+				state,
+				commands: Chunk.make(Command.notifyWrongState(message)),
+			}
+		}
+
+		return {
+			state: {
+				...state,
+				isDeleting: true,
+				isFetching: true,
+				isManualFetching: true,
+				fetchListSchedulerVersion: FetchListSchedulerVersion.increment(
+					state.fetchListSchedulerVersion,
+				),
+				fetchListVersion: FetchListVersion.increment(state.fetchListVersion),
+			} satisfies State,
+			commands: Chunk.make(
+				Command.deleteAndGetProducts({
+					ids: state.productListStatus.maybeSelectedProducts.value,
+				}),
+			),
+		}
 	},
 
 	DeleteAndRefreshSucceeded: message => state =>
@@ -231,7 +297,12 @@ export const update: SM.Update<State, InternalMessage, UC.All> = matcher({
 				}
 			})(),
 			result => ({
-				state: { ...result.state, isDeleting: false, isStaleData: false },
+				state: {
+					...result.state,
+					isDeleting: false,
+					isFetching: false,
+					isManualFetching: false,
+				} satisfies State,
 				commands: result.commands,
 			}),
 		),
@@ -244,34 +315,18 @@ export const update: SM.Update<State, InternalMessage, UC.All> = matcher({
 		}
 
 		return {
-			state: { ...state, isDeleting: false } satisfies State,
+			state: {
+				...state,
+				isDeleting: false,
+				isFetching: false,
+				isManualFetching: false,
+			} satisfies State,
 			commands,
 		}
 	},
 
 	DeleteSucceededButRefreshFailed: message => state => {
-		let commands = Chunk.empty<Command.Command>()
-
 		if (state.productListStatus._tag !== 'Available') {
-			commands = Chunk.append(commands, Command.notifyWrongState(message))
-		}
-
-		return {
-			commands,
-			state: {
-				...state,
-				isStaleData: true,
-				isDeleting: false,
-			} satisfies State,
-		}
-	},
-
-	StartDeleteAndRefresh: message => state => {
-		if (
-			state.productListStatus._tag !== 'Available' ||
-			Option.isNone(state.productListStatus.maybeSelectedProducts) ||
-			state.isDeleting
-		) {
 			return {
 				state,
 				commands: Chunk.make(Command.notifyWrongState(message)),
@@ -279,17 +334,16 @@ export const update: SM.Update<State, InternalMessage, UC.All> = matcher({
 		}
 
 		return {
+			commands: Chunk.empty(),
 			state: {
 				...state,
-				isDeleting: true,
-				fetchListSchedulerVersion: state.fetchListSchedulerVersion + 1,
-				isSchedulerEnabled: false,
+				productListStatus: {
+					_tag: 'Error',
+				},
+				isDeleting: false,
+				isManualFetching: false,
+				isFetching: false,
 			} satisfies State,
-			commands: Chunk.make(
-				Command.deleteAndGetProducts({
-					ids: state.productListStatus.maybeSelectedProducts.value,
-				}),
-			),
 		}
 	},
 
@@ -342,13 +396,4 @@ export const update: SM.Update<State, InternalMessage, UC.All> = matcher({
 			commands: Chunk.empty(),
 		}
 	},
-
-	ProductListHidden: () => state => ({
-		state: {
-			...state,
-			isSchedulerEnabled: false,
-			fetchListSchedulerVersion: state.fetchListSchedulerVersion + 1,
-		} satisfies State,
-		commands: Chunk.empty(),
-	}),
 })

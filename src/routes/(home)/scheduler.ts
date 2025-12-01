@@ -9,16 +9,14 @@ import { UseCasesWithoutDependencies as UC } from '@/feature/product-management/
 import { HOME_SCHEDULER_FREQUENCY } from '$lib/constants.ts'
 
 import { InternalMessage } from './message.ts'
-import type { State } from './state.ts'
+import {
+	FetchListSchedulerVersion,
+	type State,
+	hasFreshProducts,
+	isSchedulerEnabled,
+} from './state.ts'
 
-const hasFreshProducts = (
-	products: (State['productListStatus'] & { _tag: 'Available' })['products'],
-): boolean =>
-	products.some(
-		product => product._tag === 'Valid' && product.status._tag === 'Fresh',
-	)
-
-const fetchListStream = (version: number) =>
+const fetchListStream = (version: FetchListSchedulerVersion) =>
 	pipe(
 		Stream.make(InternalMessage.FetchListTick({ version })),
 		Stream.schedule(Schedule.spaced(HOME_SCHEDULER_FREQUENCY)),
@@ -31,7 +29,7 @@ export const fetchListScheduler: SM.Subscription<
 	UC.All
 > = {
 	init: state => {
-		if (!state.isSchedulerEnabled) {
+		if (!isSchedulerEnabled(state)) {
 			return SM.keyedEmptyStream
 		}
 
@@ -50,7 +48,7 @@ export const fetchListScheduler: SM.Subscription<
 	},
 
 	update: ({ current, previous, active }) => {
-		if (!current.isSchedulerEnabled) {
+		if (!isSchedulerEnabled(current)) {
 			return SM.keyedEmptyStream
 		}
 

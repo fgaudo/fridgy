@@ -11,13 +11,19 @@ import { UseCasesWithoutDependencies as UC } from '@/feature/product-management/
 
 import { InternalMessage, Message } from './message.ts'
 import * as Scheduler from './scheduler.ts'
-import type { State } from './state.ts'
+import {
+	FetchListSchedulerVersion,
+	FetchListVersion,
+	type State,
+	isLoadingData,
+} from './state.ts'
 import { update } from './update.ts'
 
 const initState: State = {
-	fetchListSchedulerVersion: 0,
-	isStaleData: false,
-	isSchedulerEnabled: false,
+	fetchListVersion: FetchListVersion.make(0),
+	fetchListSchedulerVersion: FetchListSchedulerVersion.make(0),
+	isFetching: false,
+	isManualFetching: false,
 	isDeleting: false,
 	productListStatus: { _tag: 'Initial' },
 }
@@ -53,4 +59,4 @@ const makeViewModel: Effect.Effect<
 	}
 })
 
-export { makeViewModel, Message }
+export { makeViewModel, Message, isLoadingData }

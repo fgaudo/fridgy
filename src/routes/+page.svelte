@@ -9,13 +9,19 @@
 	import Trash2 from '@lucide/svelte/icons/trash-2'
 	import X from '@lucide/svelte/icons/x'
 	import { format } from 'date-fns'
+	import * as Effect from 'effect/Effect'
 	import * as HashSet from 'effect/HashSet'
 	import * as Option from 'effect/Option'
+	import * as Stream from 'effect/Stream'
+	import { onMount } from 'svelte'
 	import { flip } from 'svelte/animate'
 	import { expoIn, expoOut } from 'svelte/easing'
 	import { fade, fly } from 'svelte/transition'
 
-	import { useViewmodel } from '$lib/adapters.svelte.ts'
+	import {
+		createCapacitorListener,
+		useViewmodel,
+	} from '$lib/adapters.svelte.ts'
 	import imgUrl from '$lib/assets/arrow.svg'
 	import Ripple from '$lib/components/ripple.svelte'
 	import Spinner from '$lib/components/spinner.svelte'
@@ -28,10 +34,12 @@
 
 	type State = {
 		isMenuOpen: boolean
+		isLoadingData: boolean
 	}
 
 	const state = $state<State>({
 		isMenuOpen: false,
+		isLoadingData: false,
 	})
 
 	const { viewModel } = $derived(
@@ -44,14 +52,39 @@
 		}),
 	)
 
+	$effect(() => {
+		if (!viewModel) return
+
+		let id: NodeJS.Timeout | undefined
+		if (Home.isLoadingData(viewModel.state)) {
+			state.isLoadingData = true
+		} else {
+			id = setTimeout(() => {
+				state.isLoadingData = false
+			}, 600)
+		}
+
+		return () => {
+			clearTimeout(id)
+		}
+	})
+
+	onMount(() => {
+		const cancel = runtime.runCallback(
+			Stream.runForEach(createCapacitorListener('resume'), () =>
+				Effect.sync(() => {
+					viewModel?.dispatch(Home.Message.StartFetchList())
+				}),
+			),
+		)
+		return cancel
+	})
+
 	function toggleMenu() {
 		if (state.isMenuOpen) {
 			state.isMenuOpen = false
-			viewModel?.dispatch(Home.Message.StartFetchList())
 			return
 		}
-
-		viewModel?.dispatch(Home.Message.ProductListHidden())
 
 		state.isMenuOpen = true
 	}
@@ -216,12 +249,19 @@
 				{/if}
 			</div>
 			{#if viewModel.state.productListStatus._tag === 'Available'}
-				<p
+				<div
 					out:fade={{ duration: 200 }}
-					class="bg-background z-50 w-full px-3.5 pt-2.5 pb-2 text-xs"
+					class="bg-background z-50 w-full px-3.5 pt-1.5 h-10 pb-1 text-xs justify-between flex items-center"
 				>
-					{viewModel.state.productListStatus.total} items
-				</p>
+					<div>{viewModel.state.productListStatus.total} items</div>
+					<div>
+						{#if state.isLoadingData}
+							<div in:fade={{ duration: 300 }} out:fade={{ duration: 300 }}>
+								<Spinner height="20" width="20" />
+							</div>
+						{/if}
+					</div>
+				</div>
 			{/if}
 		</div>
 
@@ -236,27 +276,34 @@
 
 		<div class="bg-background flex flex-col">
 			{#if viewModel.state.productListStatus._tag === 'Error'}
-				<div
-					class="flex h-screen w-screen items-center justify-center text-center text-lg"
-				>
-					<div>
-						Could not load the list! :(
-						<br />
-						<div
-							class="text-primary underline relative overflow-hidden rounded-full py-1 px-2"
-						>
-							{#if viewModel.state.isDeleting}
+				{#if Home.isLoadingData(viewModel.state)}
+					<div
+						transition:fade={{ duration: 200 }}
+						class="z-50 scale-[175%] fixed left-0 top-0 right-0 bottom-0 backdrop-blur-[1px] flex items-center justify-center"
+					>
+						<Spinner />
+					</div>
+				{:else}
+					<div
+						class="flex h-screen w-screen items-center justify-center text-center text-lg"
+					>
+						<div>
+							Could not load the list! :(
+							<br />
+							<div
+								class="text-primary underline relative overflow-hidden rounded-full py-1 px-2"
+							>
 								<Ripple
 									ontap={() => {
 										viewModel.dispatch(Home.Message.StartFetchList())
 									}}
 								></Ripple>
-							{/if}
 
-							Try again
+								Try again
+							</div>
 						</div>
 					</div>
-				</div>
+				{/if}
 			{:else if viewModel.state.productListStatus._tag === 'Initial'}
 				<div
 					class="flex h-screen w-screen items-center justify-center text-center text-lg"
