@@ -1,5 +1,6 @@
 import * as Brand from 'effect/Brand'
 import * as Chunk from 'effect/Chunk'
+import * as Deferred from 'effect/Deferred'
 import * as Effect from 'effect/Effect'
 import * as Equal from 'effect/Equal'
 import * as Exit from 'effect/Exit'
@@ -80,12 +81,14 @@ export const makeStateManager = Effect.fn(function* <
 	const stateRef = yield* SubscriptionRef.make(initState)
 	const messagePubSub = yield* PubSub.unbounded<M>()
 	const initializedRef = yield* Ref.make(false)
+	const isShutdown = yield* Deferred.make<undefined>()
 
 	return {
 		initState,
-		stateChanges: Stream.onEnd(
+		stateChanges: pipe(
 			stateRef.changes,
-			Effect.logDebug(`StateManager: Stream of changes ended`),
+			Stream.onEnd(Effect.logDebug(`StateManager: Stream of changes ended`)),
+			Stream.interruptWhenDeferred(isShutdown),
 		),
 		messages: Stream.onEnd(
 			Stream.fromPubSub(messagePubSub),
@@ -238,6 +241,8 @@ export const makeStateManager = Effect.fn(function* <
 					dispose: Effect.gen(function* () {
 						yield* Effect.all([
 							queue.shutdown,
+							messagePubSub.shutdown,
+							Deferred.succeed(isShutdown, undefined),
 							Fiber.interrupt(updatesFiber),
 							Option.match(maybeSubscriptionsFiber, {
 								onSome: fiber => Fiber.interrupt(fiber),
