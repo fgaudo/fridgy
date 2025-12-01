@@ -6,6 +6,8 @@ import * as SM from '@/core/state-manager.ts'
 
 import { UseCasesWithoutDependencies as UC } from '@/feature/product-management/index.ts'
 
+import { HOME_SCHEDULER_FREQUENCY } from '$lib/constants.ts'
+
 import { InternalMessage } from './message.ts'
 import type { State } from './state.ts'
 
@@ -19,7 +21,7 @@ const hasFreshProducts = (
 const fetchListStream = (version: number) =>
 	pipe(
 		Stream.make(InternalMessage.FetchListTick({ version })),
-		Stream.schedule(Schedule.spaced('1 second')),
+		Stream.schedule(Schedule.spaced(HOME_SCHEDULER_FREQUENCY)),
 		Stream.forever,
 	)
 
