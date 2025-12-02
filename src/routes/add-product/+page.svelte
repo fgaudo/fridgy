@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { Toast } from '@capacitor/toast'
 	import ArrowLeft from '@lucide/svelte/icons/arrow-left'
 	import Quote from '@lucide/svelte/icons/quote'
 	import { endOfDay, getDayOfYear } from 'date-fns'
@@ -33,7 +34,11 @@
 			makeViewModel: VM.makeViewModel,
 			messages: m => {
 				if (m === 'AddProductSucceeded') {
+					void Toast.show({ text: 'Product added' })
+
 					state.hasInteractedWithName = false
+				} else if (m === 'AddProductFailed') {
+					void Toast.show({ text: 'Could not add product' })
 				}
 			},
 		}),

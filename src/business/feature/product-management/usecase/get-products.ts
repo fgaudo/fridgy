@@ -71,19 +71,19 @@ export class GetProducts extends Effect.Service<GetProducts>()(
 			const ProductService = yield* Product.ProductService
 			return {
 				run: Effect.gen(function* (): Effect.fn.Return<Response> {
-					yield* Effect.log(`Requested to fetch the list of products`)
-
-					yield* Effect.log(`Attempting to fetch the list of products...`)
+					yield* Effect.log(`Started`)
 
 					const maybeProducts = yield* Effect.option(getSortedProducts)
 
 					if (Option.isNone(maybeProducts)) {
-						yield* Effect.logError(`Could not receive items.`)
+						yield* Effect.logError(`Could not receive products`)
 
 						return Response.Failed()
 					}
 
 					const result = maybeProducts.value
+
+					yield* Effect.logInfo(`Received ${result.length} products`)
 
 					const entries = yield* Effect.forEach(
 						result,
@@ -94,7 +94,7 @@ export class GetProducts extends Effect.Service<GetProducts>()(
 							maybeExpirationDate,
 						}) {
 							if (Option.isNone(maybeId)) {
-								yield* Effect.logWarning(`CORRUPTION - Product has no id.`)
+								yield* Effect.logWarning(`Product is corrupt`)
 								return ProductDTO.Corrupt({
 									maybeName,
 								})
@@ -114,7 +114,7 @@ export class GetProducts extends Effect.Service<GetProducts>()(
 							})
 
 							if (Option.isNone(maybeProduct)) {
-								yield* Effect.logWarning(`Product is invalid.`)
+								yield* Effect.logWarning(`Product is invalid`)
 
 								return ProductDTO.Invalid({
 									id: maybeId.value,
@@ -172,7 +172,7 @@ export class GetProducts extends Effect.Service<GetProducts>()(
 							})),
 						),
 					})
-				}).pipe(Effect.withLogSpan(`GetSortedProducts UC`)),
+				}).pipe(Effect.withLogSpan(`GetProducts`)),
 			}
 		}),
 		dependencies: [Product.ProductService.Default],

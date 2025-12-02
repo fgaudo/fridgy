@@ -1,6 +1,7 @@
 import * as Arr from 'effect/Array'
 import * as Chunk from 'effect/Chunk'
 import * as Data from 'effect/Data'
+import * as Effect from 'effect/Effect'
 import { pipe } from 'effect/Function'
 import * as HashSet from 'effect/HashSet'
 import * as Match from 'effect/Match'
@@ -115,6 +116,12 @@ const updateFetchListFailed = (
 }
 
 export const update: SM.Update<State, InternalMessage, UC.All> = matcher({
+	Crash: error => state => ({
+		state,
+		commands: Chunk.make(
+			Effect.logFatal(error).pipe(Effect.as(InternalMessage.NoOp())),
+		),
+	}),
 	NoOp: () => state => ({ state, commands: Chunk.empty() }),
 
 	StartFetchList: message => state => {

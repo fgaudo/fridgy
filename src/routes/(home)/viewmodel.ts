@@ -40,11 +40,14 @@ const makeViewModel: Effect.Effect<
 		subscriptions: [Scheduler.fetchListScheduler],
 		initState,
 		initMessages: [InternalMessage.StartFetchList()],
+		fatalMessage: error => InternalMessage.Crash({ error }),
+		fatalMessageSubscription: error => InternalMessage.Crash({ error }),
 		update,
 	})
 
 	return {
 		...stateManager,
+		initState,
 		messages: Stream.filterMap(
 			stateManager.messages,
 			flow(

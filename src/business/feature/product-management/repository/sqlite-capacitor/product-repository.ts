@@ -80,6 +80,8 @@ export const layerWithoutDependencies = Layer.effect(
 								),
 							)
 
+							yield* Effect.logDebug('Product deleted from sqlite database')
+
 							if (Option.isNone(result)) {
 								yield* Request.succeed(request, false)
 								return false

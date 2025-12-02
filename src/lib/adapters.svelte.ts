@@ -41,37 +41,26 @@ export const useViewmodel = <S, M1, M2, R>({
 
 	let viewModel = $state.raw<Effect.Effect.Success<typeof makeViewModel>>()
 
-	let handle =
-		$state.raw<
-			Effect.Effect.Success<Effect.Effect.Success<typeof makeViewModel>['run']>
-		>()
-
 	let initialized = $state({ changes: false, messages: false })
 
-	$effect(() => {
-		if (!viewModel) {
-			return
-		}
-
-		if (!initialized.changes || !initialized.messages) {
-			return
-		}
-
-		const cancelRun = runtime.runCallback(viewModel.run, {
-			onExit: h => {
-				if (Exit.isSuccess(h)) {
-					handle = h.value
+	onMount(() => {
+		const cancelMakeStateManager = runtime.runCallback(makeViewModel, {
+			onExit: v => {
+				if (Exit.isSuccess(v)) {
+					viewModel = v.value
 				}
 			},
 		})
 
 		return () => {
-			cancelRun()
+			cancelMakeStateManager()
 		}
 	})
 
 	$effect(() => {
-		if (!viewModel) return
+		if (!viewModel) {
+			return
+		}
 
 		const cancelChanges = runtime.runCallback(
 			pipe(
@@ -114,33 +103,30 @@ export const useViewmodel = <S, M1, M2, R>({
 		}
 	})
 
-	onMount(() => {
-		const cancelInit = runtime.runCallback(makeViewModel, {
-			onExit: h => {
-				if (Exit.isSuccess(h)) {
-					state = h.value.initState
-					viewModel = h.value
-				}
-			},
-		})
+	$effect(() => {
+		if (!initialized.changes || !initialized.messages || !viewModel) {
+			return
+		}
+
+		const cancelRun = runtime.runCallback(viewModel.start)
 
 		return () => {
-			cancelInit()
+			cancelRun()
 		}
 	})
 
 	onDestroy(() => {
-		if (handle?.dispose) {
-			runtime.runCallback(handle.dispose)
+		if (viewModel) {
+			runtime.runCallback(viewModel.dispose)
 		}
 	})
 
 	const publicViewModel = $derived.by(() => {
-		if (handle === undefined || state === undefined) {
+		if (viewModel === undefined || state === undefined) {
 			return undefined
 		}
 
-		const dispatch = handle.dispatch
+		const dispatch = viewModel.dispatch
 		return {
 			dispatch: (m: M1) => runtime.runCallback(dispatch(m)),
 			state: state,

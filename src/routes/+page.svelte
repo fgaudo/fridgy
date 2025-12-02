@@ -47,13 +47,19 @@
 			runtime,
 			makeViewModel: Home.makeViewModel,
 			messages: m => {
-				void Toast.show({ text: m })
+				if (m === 'DeleteAndRefreshFailed') {
+					void Toast.show({ text: 'Could not delete products' })
+				} else if (m === 'DeleteSucceededButRefreshFailed') {
+					void Toast.show({ text: 'Product deleted, but could not refresh' })
+				}
 			},
 		}),
 	)
 
 	$effect(() => {
-		if (!viewModel) return
+		if (!viewModel?.state) {
+			return
+		}
 
 		let id: NodeJS.Timeout | undefined
 		if (Home.isLoadingData(viewModel.state)) {
@@ -90,45 +96,43 @@
 	}
 </script>
 
-{#snippet corruptProduct()}
-	<div
-		class="flex mx-2 relative transition-transform shadow-sm rounded-lg py-1 overflow-hidden bg-secondary/5"
-	>
-		<div
-			class={[
-				`justify-between flex min-h-[60px] w-full gap-1 select-none items-center`,
-			]}
-			style="content-visibility: 'auto'"
-		>
-			<div class="p-2 h-full aspect-square">
-				<div
-					class="flex-col flex bg-secondary text-background shadow-xs rounded-full items-center justify-center text-center h-full aspect-square"
-				>
-					<QM class="p-2 w-full h-full font-bold " />
-				</div>
-			</div>
-
-			<div class="flex-1 h-full flex justify-center flex-col leading-4 gap-2">
-				<div>[ CORRUPT ]</div>
-
-				<div>No creation date</div>
-			</div>
-		</div>
-	</div>
-{/snippet}
-
 {#if !viewModel}
 	<div
 		transition:fade={{ duration: 200 }}
 		class="z-50 scale-[175%] fixed left-0 top-0 right-0 bottom-0 backdrop-blur-[1px] flex items-center justify-center"
-	>
-		<Spinner />
-	</div>
+	></div>
 {:else}
 	{@const maybeSelectedProducts =
 		viewModel.state.productListStatus._tag === 'Available'
 			? viewModel.state.productListStatus.maybeSelectedProducts
 			: Option.none()}
+
+	{#snippet corruptProduct()}
+		<div
+			class="flex mx-2 relative transition-transform shadow-sm rounded-lg py-1 overflow-hidden bg-secondary/5"
+		>
+			<div
+				class={[
+					`justify-between flex min-h-[60px] w-full gap-1 select-none items-center`,
+				]}
+				style="content-visibility: 'auto'"
+			>
+				<div class="p-2 h-full aspect-square">
+					<div
+						class="flex-col flex bg-secondary text-background shadow-xs rounded-full items-center justify-center text-center h-full aspect-square"
+					>
+						<QM class="p-2 w-full h-full font-bold " />
+					</div>
+				</div>
+
+				<div class="flex-1 h-full flex justify-center flex-col leading-4 gap-2">
+					<div>[ CORRUPT ]</div>
+
+					<div>No creation date</div>
+				</div>
+			</div>
+		</div>
+	{/snippet}
 
 	{#snippet menu()}
 		<div
@@ -433,7 +437,7 @@
 										</div>
 
 										<div
-											class="flex-1 h-full flex justify-center flex-col leading-4 gap-2"
+											class="flex-1 h-full flex justify-center flex-col leading-4 gap-2 pointer-events-none"
 										>
 											<div
 												class="overflow-ellipsis whitespace-nowrap overflow-hidden capitalize"
@@ -464,7 +468,7 @@
 											{/if}
 										</div>
 										<div
-											class="h-9/12 aspect-square flex items-center justify-center"
+											class="h-9/12 aspect-square flex items-center justify-center pointer-events-none"
 										>
 											{#if product.status._tag === 'Fresh'}
 												<div

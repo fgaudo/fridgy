@@ -54,7 +54,7 @@ export class DeleteAndGetProducts extends Effect.Service<DeleteAndGetProducts>()
 			const getAllProductsWithTotal = yield* GetSortedProducts.GetProducts
 
 			return {
-				run: Effect.fn(`DeleteProductsByIds UC`)(function* ({
+				run: Effect.fn(`DeleteProductsByIds`)(function* ({
 					ids,
 				}: DeleteParameters) {
 					yield* Effect.logInfo(`Requested to delete products`)

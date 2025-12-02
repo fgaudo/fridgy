@@ -13,20 +13,23 @@ import { Message } from './message.ts'
 import { type State, isNameValid, isSubmittable } from './state.ts'
 import { update } from './update.ts'
 
-const makeViewModel = Effect.gen(function* (): Effect.fn.Return<
+const initState = {
+	isBusy: false,
+	maybeExpirationDate: Option.none(),
+	maybeName: Option.none(),
+}
+
+const makeViewModel: Effect.Effect<
 	ViewModel<State, Message, 'AddProductFailed' | 'AddProductSucceeded', UC.All>
-> {
+> = Effect.gen(function* () {
 	const stateManager = yield* SM.makeStateManager({
-		initState: {
-			isBusy: false,
-			maybeExpirationDate: Option.none(),
-			maybeName: Option.none(),
-		},
+		initState,
 		update,
 	})
 
 	return {
 		...stateManager,
+		initState,
 		messages: Stream.filterMap(
 			stateManager.messages,
 			flow(

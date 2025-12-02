@@ -14,6 +14,7 @@ export type Message = Data.TaggedEnum<{
 export const Message = Data.taggedEnum<Message>()
 
 type _InternalMessage = Data.TaggedEnum<{
+	Crash: { error: unknown }
 	NoOp: object
 	FetchListFailed: {
 		version: FetchListVersion
