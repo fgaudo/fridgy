@@ -30,7 +30,6 @@
 		"@vitest/coverage-v8": "^4.0.13",
 		"date-fns": "4.1.0",
 		"effect": "^3.19.6",
-		"immer": "^10.2.0",
 		"knip": "^5.70.1",
 		"license-checker-rseidelsohn": "^4.4.2",
 		"oxlint": "^1.29.0",
@@ -62,7 +61,7 @@
 		"test": "pnpm run test:unit -- --run && pnpm run test:e2e",
 		"test:e2e": "playwright test",
 		"test:unit": "vitest",
-		"licenses": "license-checker-rseidelsohn --json --customPath src/lib/ui/assets/custom-path.json --out src/lib/ui/assets/licenses.json --depth 0",
+		"licenses": "license-checker-rseidelsohn --excludePackages fridgy --json --customPath src/lib/assets/custom-path.json --out src/lib/assets/licenses.json --depth 0",
 		"knip": "knip"
 	},
 	"type": "module",
