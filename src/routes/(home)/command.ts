@@ -6,21 +6,21 @@ import * as SM from '@/core/state-manager.ts'
 
 import { UseCasesWithoutDependencies as UC } from '@/feature/product-management/index.ts'
 
-import { InternalMessage } from './message.ts'
+import { Message } from './message.ts'
 import type { FetchListSchedulerVersion, FetchListVersion } from './state.ts'
 
-export type Command = SM.Command<InternalMessage, UC.All>
+export type Command = SM.Command<Message, UC.All>
 
 export const notifyWrongState = Effect.fn(function* (message: {
 	_tag: string
 }) {
 	yield* Effect.logError(`Triggered ${message._tag} in wrong state`)
-	return InternalMessage.NoOp()
+	return Message.NoOp()
 })
 
 export const notifyStale = Effect.fn(function* (message: { _tag: string }) {
 	yield* Effect.logInfo(`Triggered stale ${message._tag}`)
-	return InternalMessage.NoOp()
+	return Message.NoOp()
 })
 
 export const deleteAndGetProducts = H.mapFunctionReturn(
@@ -28,10 +28,9 @@ export const deleteAndGetProducts = H.mapFunctionReturn(
 	Effect.map(
 		Match.valueTags({
 			DeleteSucceededButRefreshFailed: response =>
-				InternalMessage.DeleteSucceededButRefreshFailed({ response }),
-			Failed: response => InternalMessage.DeleteAndRefreshFailed({ response }),
-			Succeeded: response =>
-				InternalMessage.DeleteAndRefreshSucceeded({ response }),
+				Message.DeleteSucceededButRefreshFailed({ response }),
+			Failed: response => Message.DeleteAndRefreshFailed({ response }),
+			Succeeded: response => Message.DeleteAndRefreshSucceeded({ response }),
 		}),
 	),
 )
@@ -40,10 +39,8 @@ export const fetchList = (version: FetchListVersion) =>
 	Effect.map(
 		UC.GetProducts.GetProducts.run,
 		Match.valueTags({
-			Failed: response =>
-				InternalMessage.FetchListFailed({ version, response }),
-			Succeeded: response =>
-				InternalMessage.FetchListSucceeded({ version, response }),
+			Failed: response => Message.FetchListFailed({ version, response }),
+			Succeeded: response => Message.FetchListSucceeded({ version, response }),
 		}),
 	)
 
@@ -51,9 +48,8 @@ export const fetchListTick = (version: FetchListSchedulerVersion) =>
 	Effect.map(
 		UC.GetProducts.GetProducts.run,
 		Match.valueTags({
-			Failed: response =>
-				InternalMessage.FetchListTickFailed({ version, response }),
+			Failed: response => Message.FetchListTickFailed({ version, response }),
 			Succeeded: response =>
-				InternalMessage.FetchListTickSucceeded({ version, response }),
+				Message.FetchListTickSucceeded({ version, response }),
 		}),
 	)

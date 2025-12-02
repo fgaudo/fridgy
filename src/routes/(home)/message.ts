@@ -9,11 +9,6 @@ export type Message = Data.TaggedEnum<{
 	StartDeleteAndRefresh: object
 	ToggleItem: { id: string }
 	ClearSelected: object
-}>
-
-export const Message = Data.taggedEnum<Message>()
-
-type _InternalMessage = Data.TaggedEnum<{
 	Crash: { error: unknown }
 	NoOp: object
 	FetchListFailed: {
@@ -50,6 +45,4 @@ type _InternalMessage = Data.TaggedEnum<{
 	}
 }>
 
-export type InternalMessage = Message | _InternalMessage
-
-export const InternalMessage = Data.taggedEnum<InternalMessage>()
+export const Message = Data.taggedEnum<Message>()

@@ -8,32 +8,27 @@ import { UseCasesWithoutDependencies as UC } from '@/feature/product-management/
 
 import { HOME_SCHEDULER_FREQUENCY } from '$lib/constants.ts'
 
-import { InternalMessage } from './message.ts'
+import { Message } from './message.ts'
 import {
 	FetchListSchedulerVersion,
 	type State,
 	hasFreshProducts,
-	isSchedulerEnabled,
 } from './state.ts'
 
 const fetchListStream = (version: FetchListSchedulerVersion) =>
 	pipe(
-		Stream.make(InternalMessage.FetchListTick({ version })),
+		Stream.make(Message.FetchListTick({ version })),
 		Stream.schedule(Schedule.spaced(HOME_SCHEDULER_FREQUENCY)),
 		Stream.forever,
 	)
 
-export const fetchListScheduler: SM.Subscription<
-	State,
-	InternalMessage,
-	UC.All
-> = {
+export const fetchListScheduler: SM.Subscription<State, Message, UC.All> = {
 	init: state => {
-		if (!isSchedulerEnabled(state)) {
+		if (state.productListStatus._tag !== 'Available') {
 			return SM.keyedEmptyStream
 		}
 
-		if (state.productListStatus._tag !== 'Available') {
+		if (state.productListStatus.isDeleting || state.isManualFetching) {
 			return SM.keyedEmptyStream
 		}
 
@@ -48,11 +43,11 @@ export const fetchListScheduler: SM.Subscription<
 	},
 
 	update: ({ current, previous, active }) => {
-		if (!isSchedulerEnabled(current)) {
+		if (current.productListStatus._tag !== 'Available') {
 			return SM.keyedEmptyStream
 		}
 
-		if (current.productListStatus._tag !== 'Available') {
+		if (current.productListStatus.isDeleting || current.isManualFetching) {
 			return SM.keyedEmptyStream
 		}
 

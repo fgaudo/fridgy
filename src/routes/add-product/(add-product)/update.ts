@@ -7,15 +7,15 @@ import * as SM from '@/core/state-manager.ts'
 import { UseCasesWithoutDependencies as UC } from '@/feature/product-management/index.ts'
 
 import * as Command from './command.ts'
-import type { InternalMessage } from './message.ts'
+import type { Message } from './message.ts'
 import { type State, isSubmittable } from './state.ts'
 
 const matcher = Match.typeTags<
-	InternalMessage,
-	ReturnType<SM.Update<State, InternalMessage, UC.All>>
+	Message,
+	ReturnType<SM.Update<State, Message, UC.All>>
 >()
 
-export const update: SM.Update<State, InternalMessage, UC.All> = matcher({
+export const update: SM.Update<State, Message, UC.All> = matcher({
 	NoOp: () => state => ({ state, commands: Chunk.empty() }),
 
 	SetName: message => state => {
@@ -37,13 +37,13 @@ export const update: SM.Update<State, InternalMessage, UC.All> = matcher({
 		}
 	},
 	StartAddProduct: message => state => {
-		if (state.isBusy) {
+		if (state.isAdding) {
 			return { state, commands: Chunk.empty() }
 		}
 
 		if (isSubmittable(state)) {
 			return {
-				state: { ...state, isBusy: true } satisfies State,
+				state: { ...state, isAdding: true } satisfies State,
 				commands: Chunk.make(
 					Command.addProduct({
 						maybeExpirationDate: state.maybeExpirationDate,
@@ -59,7 +59,7 @@ export const update: SM.Update<State, InternalMessage, UC.All> = matcher({
 		return {
 			state: {
 				...state,
-				isBusy: false,
+				isAdding: false,
 				maybeExpirationDate: Option.none(),
 				maybeName: Option.none(),
 			} satisfies State,
@@ -68,7 +68,7 @@ export const update: SM.Update<State, InternalMessage, UC.All> = matcher({
 	},
 	AddProductFailed: () => state => {
 		return {
-			state: { ...state, isBusy: false } satisfies State,
+			state: { ...state, isAdding: false } satisfies State,
 			commands: Chunk.empty(),
 		}
 	},

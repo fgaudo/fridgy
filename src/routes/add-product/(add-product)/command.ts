@@ -7,7 +7,7 @@ import { UseCasesWithoutDependencies as UC } from '@/feature/product-management/
 
 import { MINIMUM_LAG_MS } from '$lib/constants.ts'
 
-import { InternalMessage } from './message.ts'
+import { Message } from './message.ts'
 
 export const addProduct = H.mapFunctionReturn(
 	UC.AddProduct.AddProduct.run,
@@ -16,8 +16,8 @@ export const addProduct = H.mapFunctionReturn(
 			Effect.map(
 				effect,
 				Match.valueTags({
-					Failed: () => InternalMessage.AddProductFailed(),
-					Succeeded: () => InternalMessage.AddProductSucceeded(),
+					Failed: () => Message.AddProductFailed(),
+					Succeeded: () => Message.AddProductSucceeded(),
 				}),
 			),
 			Effect.sleep(MINIMUM_LAG_MS),
@@ -28,5 +28,5 @@ export const notifyWrongState = Effect.fn(function* (message: {
 	_tag: string
 }) {
 	yield* Effect.logWarning(`Triggered ${message._tag} in wrong state`)
-	return InternalMessage.NoOp()
+	return Message.NoOp()
 })

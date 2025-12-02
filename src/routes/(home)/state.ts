@@ -33,13 +33,13 @@ export type State = Readonly<{
 	fetchListSchedulerVersion: FetchListSchedulerVersion
 	fetchListVersion: FetchListVersion
 	isManualFetching: boolean
-	isDeleting: boolean
 	isFetching: boolean
 	productListStatus: Data.TaggedEnum<{
 		Initial: object
 		Error: object
 		Empty: object
 		Available: Readonly<{
+			isDeleting: boolean
 			maybeSelectedProducts: Option.Option<
 				NonEmptyHashSet.NonEmptyHashSet<string>
 			>
@@ -73,15 +73,17 @@ export type State = Readonly<{
 	}>
 }>
 
+export const init: State = {
+	fetchListVersion: FetchListVersion.make(0),
+	fetchListSchedulerVersion: FetchListSchedulerVersion.make(0),
+	isFetching: false,
+	isManualFetching: false,
+	productListStatus: { _tag: 'Initial' },
+}
+
 export const hasFreshProducts = (
 	products: (State['productListStatus'] & { _tag: 'Available' })['products'],
 ): boolean =>
 	products.some(
 		product => product._tag === 'Valid' && product.status._tag === 'Fresh',
 	)
-
-export const isSchedulerEnabled = (state: State) =>
-	!state.isDeleting && !state.isManualFetching
-
-export const isLoadingData = (state: State) =>
-	state.isFetching || state.isManualFetching

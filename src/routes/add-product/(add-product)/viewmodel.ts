@@ -1,7 +1,4 @@
 import * as Effect from 'effect/Effect'
-import { flow } from 'effect/Function'
-import * as Match from 'effect/Match'
-import * as Option from 'effect/Option'
 import * as Stream from 'effect/Stream'
 
 import * as SM from '@/core/state-manager.ts'
@@ -9,39 +6,28 @@ import type { ViewModel } from '@/core/viewmodel.ts'
 
 import { UseCasesWithoutDependencies as UC } from '@/feature/product-management/index.ts'
 
+import * as Derived from './derived.ts'
 import { Message } from './message.ts'
-import { type State, isNameValid, isSubmittable } from './state.ts'
+import * as State from './state.ts'
 import { update } from './update.ts'
 
-const initState = {
-	isBusy: false,
-	maybeExpirationDate: Option.none(),
-	maybeName: Option.none(),
-}
+export const derivedInit = Derived.deriveInit(State.init)
 
 const makeViewModel: Effect.Effect<
-	ViewModel<State, Message, 'AddProductFailed' | 'AddProductSucceeded', UC.All>
+	ViewModel<Derived.Derived, Message, UC.All>
 > = Effect.gen(function* () {
 	const stateManager = yield* SM.makeStateManager({
-		initState,
+		initState: State.init,
 		update,
 	})
 
 	return {
 		...stateManager,
-		initState,
-		messages: Stream.filterMap(
-			stateManager.messages,
-			flow(
-				Match.value,
-				Match.tags({
-					AddProductFailed: ({ _tag }) => Option.some(_tag),
-					AddProductSucceeded: ({ _tag }) => Option.some(_tag),
-				}),
-				Match.orElse(() => Option.none()),
-			),
+		stateChanges: Stream.map(
+			stateManager.stateChanges,
+			Derived.derive(stateManager.dispatch),
 		),
 	}
 })
 
-export { makeViewModel, Message, isSubmittable, isNameValid }
+export { makeViewModel, Message }

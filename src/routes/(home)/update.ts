@@ -13,7 +13,7 @@ import * as SM from '@/core/state-manager.ts'
 import { UseCasesWithoutDependencies as UC } from '@/feature/product-management/index.ts'
 
 import * as Command from './command.ts'
-import { InternalMessage } from './message.ts'
+import { Message } from './message.ts'
 import {
 	FetchListSchedulerVersion,
 	FetchListVersion,
@@ -28,12 +28,12 @@ export type ProductDTO = Data.TaggedEnum.Value<
 const ProductDTO = Data.taggedEnum<ProductDTO>()
 
 const matcher = Match.typeTags<
-	InternalMessage,
-	ReturnType<SM.Update<State, InternalMessage, UC.All>>
+	Message,
+	ReturnType<SM.Update<State, Message, UC.All>>
 >()
 
 const updateFetchListSucceeded = (
-	message: Data.TaggedEnum.Value<InternalMessage, 'FetchListSucceeded'>,
+	message: Data.TaggedEnum.Value<Message, 'FetchListSucceeded'>,
 	state: State,
 ) => {
 	if (Option.isNone(message.response.maybeProducts)) {
@@ -64,6 +64,7 @@ const updateFetchListSucceeded = (
 			state: {
 				...state,
 				productListStatus: {
+					isDeleting: false,
 					...withProducts,
 					maybeSelectedProducts: Option.none(),
 				},
@@ -76,6 +77,7 @@ const updateFetchListSucceeded = (
 		state: {
 			...state,
 			productListStatus: {
+				...state.productListStatus,
 				...withProducts,
 				maybeSelectedProducts: pipe(
 					state.productListStatus.maybeSelectedProducts,
@@ -96,7 +98,7 @@ const updateFetchListSucceeded = (
 }
 
 const updateFetchListFailed = (
-	message: Data.TaggedEnum.Value<InternalMessage, 'FetchListFailed'>,
+	message: Data.TaggedEnum.Value<Message, 'FetchListFailed'>,
 	state: State,
 ) => {
 	if (state.productListStatus._tag !== 'Initial') {
@@ -115,17 +117,20 @@ const updateFetchListFailed = (
 	}
 }
 
-export const update: SM.Update<State, InternalMessage, UC.All> = matcher({
+export const update: SM.Update<State, Message, UC.All> = matcher({
 	Crash: error => state => ({
 		state,
 		commands: Chunk.make(
-			Effect.logFatal(error).pipe(Effect.as(InternalMessage.NoOp())),
+			Effect.logFatal(error).pipe(Effect.as(Message.NoOp())),
 		),
 	}),
 	NoOp: () => state => ({ state, commands: Chunk.empty() }),
 
 	StartFetchList: message => state => {
-		if (state.isDeleting) {
+		if (
+			state.productListStatus._tag === 'Available' &&
+			state.productListStatus.isDeleting
+		) {
 			return {
 				state,
 				commands: Chunk.make(Command.notifyWrongState(message)),
@@ -198,7 +203,7 @@ export const update: SM.Update<State, InternalMessage, UC.All> = matcher({
 
 		return pipe(
 			updateFetchListSucceeded(
-				InternalMessage.FetchListSucceeded({
+				Message.FetchListSucceeded({
 					response: message.response,
 					version: state.fetchListVersion,
 				}),
@@ -218,7 +223,7 @@ export const update: SM.Update<State, InternalMessage, UC.All> = matcher({
 
 		return pipe(
 			updateFetchListFailed(
-				InternalMessage.FetchListFailed({
+				Message.FetchListFailed({
 					response: message.response,
 					version: state.fetchListVersion,
 				}),
@@ -232,11 +237,14 @@ export const update: SM.Update<State, InternalMessage, UC.All> = matcher({
 	},
 
 	StartDeleteAndRefresh: message => state => {
-		if (
-			state.productListStatus._tag !== 'Available' ||
-			Option.isNone(state.productListStatus.maybeSelectedProducts) ||
-			state.isDeleting
-		) {
+		if (state.productListStatus._tag !== 'Available') {
+			return {
+				state,
+				commands: Chunk.make(Command.notifyWrongState(message)),
+			}
+		}
+
+		if (Option.isNone(state.productListStatus.maybeSelectedProducts)) {
 			return {
 				state,
 				commands: Chunk.make(Command.notifyWrongState(message)),
@@ -246,8 +254,11 @@ export const update: SM.Update<State, InternalMessage, UC.All> = matcher({
 		return {
 			state: {
 				...state,
-				isDeleting: true,
 				isFetching: true,
+				productListStatus: {
+					...state.productListStatus,
+					isDeleting: true,
+				},
 				isManualFetching: true,
 				fetchListSchedulerVersion: FetchListSchedulerVersion.increment(
 					state.fetchListSchedulerVersion,
@@ -262,78 +273,93 @@ export const update: SM.Update<State, InternalMessage, UC.All> = matcher({
 		}
 	},
 
-	DeleteAndRefreshSucceeded: message => state =>
-		pipe(
-			(() => {
-				let commands = Chunk.empty<Command.Command>()
+	DeleteAndRefreshSucceeded: message => state => {
+		if (state.productListStatus._tag !== 'Available') {
+			return {
+				state,
+				commands: Chunk.make(Command.notifyWrongState(message)),
+			}
+		}
 
-				if (state.productListStatus._tag !== 'Available') {
-					commands = Chunk.append(commands, Command.notifyWrongState(message))
-				}
+		if (!state.productListStatus.isDeleting) {
+			return {
+				state,
+				commands: Chunk.make(Command.notifyWrongState(message)),
+			}
+		}
 
-				if (Option.isNone(message.response.maybeProducts)) {
-					return {
-						state: {
-							...state,
-							productListStatus: { _tag: 'Empty' },
-						} satisfies State,
-						commands,
-					}
-				}
-
-				return {
-					commands,
-					state: {
-						...state,
-						productListStatus: {
-							_tag: 'Available',
-							total: message.response.maybeProducts.value.total,
-							products: Arr.map(
-								message.response.maybeProducts.value.list,
-								product => {
-									if (product._tag === 'Corrupt') {
-										return ProductDTO.Corrupt({ ...product, id: Symbol() })
-									}
-
-									return product
-								},
-							),
-							maybeSelectedProducts: Option.none(),
-						},
-					} satisfies State,
-				}
-			})(),
-			result => ({
+		if (Option.isNone(message.response.maybeProducts)) {
+			return {
 				state: {
-					...result.state,
-					isDeleting: false,
+					...state,
 					isFetching: false,
 					isManualFetching: false,
+					productListStatus: { _tag: 'Empty' },
 				} satisfies State,
-				commands: result.commands,
-			}),
-		),
+				commands: Chunk.empty(),
+			}
+		}
 
+		return {
+			commands: Chunk.empty(),
+			state: {
+				...state,
+				isFetching: false,
+				isManualFetching: false,
+				productListStatus: {
+					_tag: 'Available',
+					isDeleting: false,
+					total: message.response.maybeProducts.value.total,
+					products: Arr.map(
+						message.response.maybeProducts.value.list,
+						product => {
+							if (product._tag === 'Corrupt') {
+								return ProductDTO.Corrupt({ ...product, id: Symbol() })
+							}
+
+							return product
+						},
+					),
+					maybeSelectedProducts: Option.none(),
+				},
+			} satisfies State,
+		}
+	},
 	DeleteAndRefreshFailed: message => state => {
-		let commands = Chunk.empty<Command.Command>()
-
 		if (state.productListStatus._tag !== 'Available') {
-			commands = Chunk.append(commands, Command.notifyWrongState(message))
+			return {
+				state,
+				commands: Chunk.make(Command.notifyWrongState(message)),
+			}
+		}
+
+		if (!state.productListStatus.isDeleting) {
+			return {
+				state,
+				commands: Chunk.make(Command.notifyWrongState(message)),
+			}
 		}
 
 		return {
 			state: {
 				...state,
-				isDeleting: false,
+				productListStatus: { ...state.productListStatus, isDeleting: false },
 				isFetching: false,
 				isManualFetching: false,
 			} satisfies State,
-			commands,
+			commands: Chunk.empty(),
 		}
 	},
 
 	DeleteSucceededButRefreshFailed: message => state => {
 		if (state.productListStatus._tag !== 'Available') {
+			return {
+				state,
+				commands: Chunk.make(Command.notifyWrongState(message)),
+			}
+		}
+
+		if (!state.productListStatus.isDeleting) {
 			return {
 				state,
 				commands: Chunk.make(Command.notifyWrongState(message)),
@@ -347,7 +373,6 @@ export const update: SM.Update<State, InternalMessage, UC.All> = matcher({
 				productListStatus: {
 					_tag: 'Error',
 				},
-				isDeleting: false,
 				isManualFetching: false,
 				isFetching: false,
 			} satisfies State,
@@ -356,6 +381,13 @@ export const update: SM.Update<State, InternalMessage, UC.All> = matcher({
 
 	ToggleItem: message => state => {
 		if (state.productListStatus._tag !== 'Available') {
+			return {
+				state,
+				commands: Chunk.make(Command.notifyWrongState(message)),
+			}
+		}
+
+		if (state.productListStatus.isDeleting) {
 			return {
 				state,
 				commands: Chunk.make(Command.notifyWrongState(message)),
@@ -382,10 +414,21 @@ export const update: SM.Update<State, InternalMessage, UC.All> = matcher({
 	},
 
 	ClearSelected: message => state => {
-		if (
-			state.productListStatus._tag !== 'Available' ||
-			Option.isNone(state.productListStatus.maybeSelectedProducts)
-		) {
+		if (state.productListStatus._tag !== 'Available') {
+			return {
+				state,
+				commands: Chunk.make(Command.notifyWrongState(message)),
+			}
+		}
+
+		if (Option.isNone(state.productListStatus.maybeSelectedProducts)) {
+			return {
+				state,
+				commands: Chunk.make(Command.notifyWrongState(message)),
+			}
+		}
+
+		if (state.productListStatus.isDeleting) {
 			return {
 				state,
 				commands: Chunk.make(Command.notifyWrongState(message)),

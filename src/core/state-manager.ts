@@ -199,6 +199,7 @@ export const makeStateManager = Effect.fn(function* <
 	return {
 		stateChanges: pipe(
 			stateRef.changes,
+			Stream.changesWith((s1, s2) => s1 === s2),
 			Stream.interruptWhenDeferred(isShutdown),
 		),
 		messages: Stream.fromPubSub(messagePubSub),
@@ -241,7 +242,6 @@ export const makeStateManager = Effect.fn(function* <
 				}),
 			),
 			Effect.uninterruptible,
-			Effect.scoped,
 		),
 
 		dispose: pipe(

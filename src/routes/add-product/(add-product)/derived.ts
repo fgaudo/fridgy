@@ -1,0 +1,79 @@
+import * as Data from 'effect/Data'
+import * as Effect from 'effect/Effect'
+import { pipe } from 'effect/Function'
+import * as Option from 'effect/Option'
+
+import * as Integer from '@/core/integer/integer.ts'
+import * as NonEmptyTrimmedString from '@/core/non-empty-trimmed-string.ts'
+import * as SM from '@/core/state-manager.ts'
+
+import { UseCasesWithoutDependencies as UC } from '@/feature/product-management/index.ts'
+
+import { Message } from './message.ts'
+import * as State from './state.ts'
+
+export type Derived = {
+	canSubmit: Data.TaggedEnum<{
+		True: { submit: Effect.Effect<void> }
+		False: object
+	}>
+	canSetName: Data.TaggedEnum<{
+		True: { setName: (name: string) => Effect.Effect<void> }
+		False: object
+	}>
+	canSetExpirationDate: Data.TaggedEnum<{
+		True: {
+			setExpirationDate: (
+				date: Option.Option<Integer.Integer>,
+			) => Effect.Effect<void>
+		}
+		False: object
+	}>
+	isNameValid: boolean
+	isAdding: boolean
+	maybeName: Option.Option<string>
+	maybeExpirationDate: Option.Option<Integer.Integer>
+}
+
+const isNameValid = (state: State.State) =>
+	pipe(
+		state.maybeName,
+		Option.flatMap(NonEmptyTrimmedString.fromString),
+		Option.isSome,
+	)
+
+export const derive =
+	(dispatch: SM.StateManager<State.State, Message, UC.All>['dispatch']) =>
+	(state: State.State): Derived => {
+		return {
+			...state,
+
+			canSetName: {
+				_tag: 'True',
+				setName: (name: string) => dispatch(Message.SetName({ name })),
+			} as const,
+
+			canSetExpirationDate: {
+				_tag: 'True',
+				setExpirationDate: (
+					maybeExpirationDate: Option.Option<Integer.Integer>,
+				) => dispatch(Message.SetExpiration({ maybeExpirationDate })),
+			} as const,
+
+			canSubmit:
+				!state.isAdding && isNameValid(state)
+					? { _tag: 'True', submit: dispatch(Message.StartAddProduct()) }
+					: { _tag: 'False' },
+
+			isNameValid: isNameValid(state),
+		}
+	}
+
+export const deriveInit = (state: State.State): Derived => ({
+	...state,
+
+	canSetName: { _tag: 'False' },
+	canSetExpirationDate: { _tag: 'False' },
+	canSubmit: { _tag: 'False' },
+	isNameValid: isNameValid(state),
+})

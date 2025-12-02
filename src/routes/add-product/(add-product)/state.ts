@@ -5,7 +5,7 @@ import * as Integer from '@/core/integer/integer.ts'
 import * as NonEmptyTrimmedString from '@/core/non-empty-trimmed-string.ts'
 
 export type State = {
-	isBusy: boolean
+	isAdding: boolean
 	maybeName: Option.Option<string>
 	maybeExpirationDate: Option.Option<Integer.Integer>
 }
@@ -15,7 +15,7 @@ export const isSubmittable = (
 ): state is State & {
 	maybeName: Option.Some<NonEmptyTrimmedString.NonEmptyTrimmedString>
 	isBusy: false
-} => isNameValid(state) && !state.isBusy
+} => isNameValid(state) && !state.isAdding
 
 export const isNameValid = (
 	state: State,
@@ -27,3 +27,9 @@ export const isNameValid = (
 		Option.flatMap(NonEmptyTrimmedString.fromString),
 		Option.isSome,
 	)
+
+export const init: State = {
+	isAdding: false,
+	maybeExpirationDate: Option.none(),
+	maybeName: Option.none(),
+}

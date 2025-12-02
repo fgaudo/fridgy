@@ -28,16 +28,18 @@ export function createCapacitorListener<E extends `resume` | `backButton`>(
 	)
 }
 
-export const useViewmodel = <S, M1, M2, R>({
+export const useViewmodel = <S, M, R>({
 	runtime,
+	initState,
 	makeViewModel,
 	messages,
 }: {
 	runtime: ManagedRuntime.ManagedRuntime<R, never>
-	makeViewModel: Effect.Effect<ViewModel<S, M1, M2, R>>
-	messages?: (m: M2) => void
+	initState: S
+	makeViewModel: Effect.Effect<ViewModel<S, M, R>>
+	messages?: (m: M) => void
 }) => {
-	let state = $state.raw<S>()
+	let state = $state.raw<S>(initState)
 
 	let viewModel = $state.raw<Effect.Effect.Success<typeof makeViewModel>>()
 
@@ -121,21 +123,9 @@ export const useViewmodel = <S, M1, M2, R>({
 		}
 	})
 
-	const publicViewModel = $derived.by(() => {
-		if (viewModel === undefined || state === undefined) {
-			return undefined
-		}
-
-		const dispatch = viewModel.dispatch
-		return {
-			dispatch: (m: M1) => runtime.runCallback(dispatch(m)),
-			state: state,
-		}
-	})
-
 	return {
-		get viewModel() {
-			return publicViewModel
+		get state() {
+			return state
 		},
 	}
 }

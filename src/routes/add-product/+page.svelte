@@ -28,16 +28,17 @@
 		hasInteractedWithName: false,
 	})
 
-	const { viewModel } = $derived(
+	const { state: viewModelState } = $derived(
 		useViewmodel({
 			runtime,
+			initState: VM.derivedInit,
 			makeViewModel: VM.makeViewModel,
 			messages: m => {
-				if (m === 'AddProductSucceeded') {
+				if (m._tag === 'AddProductSucceeded') {
 					void Toast.show({ text: 'Product added' })
 
 					state.hasInteractedWithName = false
-				} else if (m === 'AddProductFailed') {
+				} else if (m._tag === 'AddProductFailed') {
 					void Toast.show({ text: 'Could not add product' })
 				}
 			},
@@ -51,89 +52,84 @@
 	)
 </script>
 
-{#if !viewModel}
+<div
+	in:fly={{
+		y: PAGE_TRANSITION_Y,
+		opacity: 0,
+		duration: 600,
+		easing: cubicOut,
+	}}
+	class="bg-background flex flex-col justify-between h-screen opacity-100"
+>
 	<div
-		class="z-50 scale-[175%] fixed left-0 top-0 right-0 bottom-0 backdrop-blur-[1px] flex items-center justify-center"
-	>
-		<Spinner />
-	</div>
-{:else}
-	<div
-		in:fly={{
-			y: PAGE_TRANSITION_Y,
-			opacity: 0,
-			duration: 600,
-			easing: cubicOut,
-		}}
-		class="bg-background flex flex-col justify-between h-screen opacity-100"
+		style:padding-top={`var(--safe-area-inset-top)`}
+		style:height={`calc(64px + var(--safe-area-inset-top))`}
+		class="bg-secondary z-50 shadow-secondary/40 flex w-full items-center shadow-md"
 	>
 		<div
-			style:padding-top={`var(--safe-area-inset-top)`}
-			style:height={`calc(64px + var(--safe-area-inset-top))`}
-			class="bg-secondary z-50 shadow-secondary/40 flex w-full items-center shadow-md"
+			class="ml-2 text-center flex h-12 w-12 items-center justify-center relative overflow-hidden rounded-full"
 		>
-			<div
-				class="ml-2 text-center flex h-12 w-12 items-center justify-center relative overflow-hidden rounded-full"
-			>
-				<Ripple
-					ontap={() => {
-						if (!viewModel.state.isBusy) {
-							window.history.back()
-						}
-					}}
-				></Ripple>
-				<ArrowLeft />
-			</div>
-			<div class="font-stylish pl-2 text-2xl">Add a product</div>
+			<Ripple
+				ontap={() => {
+					if (!viewModelState.isAdding) {
+						window.history.back()
+					}
+				}}
+			></Ripple>
+			<ArrowLeft />
 		</div>
+		<div class="font-stylish pl-2 text-2xl">Add a product</div>
+	</div>
 
-		<figure class="font-stylish mx-auto max-w-3xl p-8 opacity-50">
-			<div class="mb-3 flex items-center justify-center">
-				<Quote fill="black" />
+	<figure class="font-stylish mx-auto max-w-3xl p-8 opacity-50">
+		<div class="mb-3 flex items-center justify-center">
+			<Quote fill="black" />
 
-				<p class="ml-5">
-					Italian Saying of the Day <br />
-					(Roman dialect)
+			<p class="ml-5">
+				Italian Saying of the Day <br />
+				(Roman dialect)
+			</p>
+		</div>
+		<blockquote>
+			<div class="flex items-center justify-center">
+				<p class="text-md mb-2 italic select-text">
+					“{@html saying}”
 				</p>
 			</div>
-			<blockquote>
-				<div class="flex items-center justify-center">
-					<p class="text-md mb-2 italic select-text">
-						“{@html saying}”
-					</p>
-				</div>
-				<p class="text-right text-sm"></p>
-			</blockquote>
-		</figure>
+			<p class="text-right text-sm"></p>
+		</blockquote>
+	</figure>
 
-		<form
-			style:padding-bottom={`calc(var(--safe-area-inset-bottom, 0) + 128px)`}
-			class="flex w-full max-w-lg flex-col gap-5 px-8 pt-8 justify-center mx-auto"
-		>
-			<div class="text-on-background flex flex-col rounded-xl align-middle">
-				<label
-					for="name"
-					class={[
-						`bg-background inline-block p-1 text-sm duration-500`,
-						VM.isNameValid(viewModel.state) || !state.hasInteractedWithName
-							? `text-secondary`
-							: `text-primary`,
-					]}
-				>
-					Product name <span class="font-bold text-primary">*</span>
-				</label>
+	<form
+		style:padding-bottom={`calc(var(--safe-area-inset-bottom, 0) + 128px)`}
+		class="flex w-full max-w-lg flex-col gap-5 px-8 pt-8 justify-center mx-auto"
+	>
+		<div class="text-on-background flex flex-col rounded-xl align-middle">
+			<label
+				for="name"
+				class={[
+					`bg-background inline-block p-1 text-sm duration-500`,
+					viewModelState.isNameValid || !state.hasInteractedWithName
+						? `text-secondary`
+						: `text-primary`,
+				]}
+			>
+				Product name <span class="font-bold text-primary">*</span>
+			</label>
+			{#if viewModelState.canSetName._tag === 'True'}
+				{@const setName = viewModelState.canSetName.setName}
 				<input
 					type="text"
 					bind:value={
 						() => {
-							if (Option.isSome(viewModel.state.maybeName)) {
-								return viewModel.state.maybeName.value
+							if (Option.isSome(viewModelState.maybeName)) {
+								return viewModelState.maybeName.value
 							}
 							return ''
 						},
 						name => {
 							state.hasInteractedWithName = true
-							viewModel.dispatch(VM.Message.SetName({ name }))
+							runtime.runCallback(setName(name))
 						}
 					}
 					placeholder="For example: Milk"
@@ -141,57 +137,66 @@
 					id="name"
 					class={[
 						`h-16 transition-all focus:ring-0 shadow-none placeholder:text-gray-400 p-4 w-full  duration-500 rounded-sm border-0`,
-						VM.isNameValid(viewModel.state) || !state.hasInteractedWithName
+						viewModelState.isNameValid || !state.hasInteractedWithName
 							? `bg-secondary/5`
 							: `bg-primary/15 `,
 					]}
 				/>
-			</div>
+			{:else}
+				<input
+					type="text"
+					disabled
+					placeholder="For example: Milk"
+					enterkeyhint="done"
+					id="name"
+					class={[
+						`h-16 transition-all focus:ring-0 shadow-none placeholder:text-gray-400 p-4 w-full  duration-500 rounded-sm border-0`,
+					]}
+				/>
+			{/if}
+		</div>
 
-			<div
-				class={[`text-on-background flex flex-col rounded-xl align-middle `]}
+		<div class={[`text-on-background flex flex-col rounded-xl align-middle `]}>
+			<label
+				for="expdate"
+				class="bg-background text-secondary inline-block p-1 text-sm"
 			>
-				<label
-					for="expdate"
-					class="bg-background text-secondary inline-block p-1 text-sm"
-				>
-					Expiration date
-				</label>
-				<div class="relative h-16">
-					{#if Option.isNone(viewModel.state.maybeExpirationDate)}
-						<div
-							class="h-full flex items-center text-gray-400 absolute focus:ring-0 bg-secondary/5 shadow-none p-4 w-full rounded-sm border-0 z-40 pointer-events-none"
-						>
-							No expiration
-						</div>
-					{/if}
+				Expiration date
+			</label>
+			<div class="relative h-16">
+				{#if Option.isNone(viewModelState.maybeExpirationDate)}
+					<div
+						class="h-full flex items-center text-gray-400 absolute focus:ring-0 bg-secondary/5 shadow-none p-4 w-full rounded-sm border-0 z-40 pointer-events-none"
+					>
+						No expiration
+					</div>
+				{/if}
+				{#if viewModelState.canSetExpirationDate._tag === 'True'}
+					{@const setExpiratonDate =
+						viewModelState.canSetExpirationDate.setExpirationDate}
 					<input
 						type="date"
 						placeholder="Select a date"
 						bind:value={
 							() => {
-								return Option.isSome(viewModel.state.maybeExpirationDate)
-									? new Date(viewModel.state.maybeExpirationDate.value)
+								return Option.isSome(viewModelState.maybeExpirationDate)
+									? new Date(viewModelState.maybeExpirationDate.value)
 											.toISOString()
 											.substring(0, 10)
 									: ``
 							},
 							expirationDate => {
 								if (expirationDate.length <= 0) {
-									viewModel.dispatch(
-										VM.Message.SetExpiration({
-											maybeExpirationDate: Option.none(),
-										}),
-									)
+									runtime.runCallback(setExpiratonDate(Option.none()))
 									return []
 								}
 
-								viewModel.dispatch(
-									VM.Message.SetExpiration({
-										maybeExpirationDate: Integer.fromNumber(
+								runtime.runCallback(
+									setExpiratonDate(
+										Integer.fromNumber(
 											endOfDay(Date.parse(expirationDate)).valueOf(),
 										),
-									}),
+									),
 								)
 							}
 						}
@@ -200,42 +205,58 @@
 						class={[
 							`absolute h-full focus:ring-0 bg-secondary/5 shadow-none p-4 w-full rounded-sm border-0`,
 							{
-								'opacity-0': Option.isNone(viewModel.state.maybeExpirationDate),
+								'opacity-0': Option.isNone(viewModelState.maybeExpirationDate),
 							},
 						]}
 						min={formattedCurrentDate}
 					/>
-				</div>
-			</div>
-			<div class="flex w-full justify-end pt-8">
-				<div class="w-48 relative h-12 items-center">
-					<div
+				{:else}
+					<input
+						type="date"
+						placeholder="Select a date"
+						disabled
+						tabindex="-1"
+						id="expdate"
 						class={[
-							`px-6 justify-center transition-all duration-500 overflow-hidden bg-primary h-full items-center flex  text-background shadow-primary/70 rounded-full shadow-md `,
+							`absolute h-full focus:ring-0 bg-secondary/5 shadow-none p-4 w-full rounded-sm border-0`,
 							{
-								'opacity-15 ': !VM.isSubmittable(viewModel.state),
+								'opacity-0': Option.isNone(viewModelState.maybeExpirationDate),
 							},
 						]}
-					>
-						{#if VM.isSubmittable(viewModel.state)}
-							<Ripple
-								ontap={() => {
-									viewModel.dispatch(VM.Message.StartAddProduct())
-								}}
-							></Ripple>
-						{/if}
-						Add product
-					</div>
+						min={formattedCurrentDate}
+					/>
+				{/if}
+			</div>
+		</div>
+		<div class="flex w-full justify-end pt-8">
+			<div class="w-48 relative h-12 items-center">
+				<div
+					class={[
+						`px-6 justify-center transition-all duration-500 overflow-hidden bg-primary h-full items-center flex  text-background shadow-primary/70 rounded-full shadow-md `,
+						{
+							'opacity-15 ': viewModelState.canSubmit._tag === 'False',
+						},
+					]}
+				>
+					{#if viewModelState.canSubmit._tag === 'True'}
+						{@const submit = viewModelState.canSubmit.submit}
+						<Ripple
+							ontap={() => {
+								runtime.runCallback(submit)
+							}}
+						></Ripple>
+					{/if}
+					Add product
 				</div>
 			</div>
-		</form>
+		</div>
+	</form>
 
-		{#if viewModel.state.isBusy}
-			<div
-				class="z-50 scale-[175%] fixed left-0 top-0 right-0 bottom-0 backdrop-blur-[1px] flex items-center justify-center"
-			>
-				<Spinner />
-			</div>
-		{/if}
-	</div>
-{/if}
+	{#if viewModelState.isAdding}
+		<div
+			class="z-50 scale-[175%] fixed left-0 top-0 right-0 bottom-0 backdrop-blur-[1px] flex items-center justify-center"
+		>
+			<Spinner />
+		</div>
+	{/if}
+</div>
