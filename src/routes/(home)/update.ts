@@ -14,14 +14,10 @@ import { UseCasesWithoutDependencies as UC } from '@/feature/product-management/
 
 import * as Command from './command.ts'
 import { Message } from './message.ts'
-import {
-	FetchListSchedulerVersion,
-	FetchListVersion,
-	type State,
-} from './state.ts'
+import * as State from './state.ts'
 
 export type ProductDTO = Data.TaggedEnum.Value<
-	State['productListStatus'],
+	State.State['productListStatus'],
 	'Available'
 >['products'][0]
 
@@ -29,19 +25,19 @@ const ProductDTO = Data.taggedEnum<ProductDTO>()
 
 const matcher = Match.typeTags<
 	Message,
-	ReturnType<SM.Update<State, Message, UC.All>>
+	ReturnType<SM.Update<State.State, Message, UC.All>>
 >()
 
 const updateFetchListSucceeded = (
 	message: Data.TaggedEnum.Value<Message, 'FetchListSucceeded'>,
-	state: State,
+	state: State.State,
 ) => {
 	if (Option.isNone(message.response.maybeProducts)) {
 		return {
 			state: {
 				...state,
 				productListStatus: { _tag: 'Empty' },
-			} satisfies State,
+			} satisfies State.State,
 			commands: Chunk.empty(),
 		}
 	}
@@ -56,9 +52,9 @@ const updateFetchListSucceeded = (
 
 			return product
 		}),
-	} satisfies Partial<State['productListStatus']>
+	} satisfies Partial<State.State['productListStatus']>
 
-	if (state.productListStatus._tag !== 'Available') {
+	if (!State.isInAvailable(state)) {
 		return {
 			commands: Chunk.empty(),
 			state: {
@@ -68,7 +64,7 @@ const updateFetchListSucceeded = (
 					...withProducts,
 					maybeSelectedProducts: Option.none(),
 				},
-			} satisfies State,
+			} satisfies State.State,
 		}
 	}
 
@@ -93,17 +89,17 @@ const updateFetchListSucceeded = (
 					Option.flatMap(NonEmptyHashSet.fromHashSet),
 				),
 			},
-		} satisfies State,
+		} satisfies State.State,
 	}
 }
 
 const updateFetchListFailed = (
 	message: Data.TaggedEnum.Value<Message, 'FetchListFailed'>,
-	state: State,
+	state: State.State,
 ) => {
-	if (state.productListStatus._tag !== 'Initial') {
+	if (State.isInitial(state)) {
 		return {
-			state: state satisfies State,
+			state,
 			commands: Chunk.empty(),
 		}
 	}
@@ -112,42 +108,42 @@ const updateFetchListFailed = (
 		state: {
 			...state,
 			productListStatus: { _tag: 'Error' },
-		} satisfies State,
+		} satisfies State.State,
 		commands: Chunk.empty(),
 	}
 }
 
-export const update: SM.Update<State, Message, UC.All> = matcher({
+export const update: SM.Update<State.State, Message, UC.All> = matcher({
 	Crash: error => state => ({
 		state,
 		commands: Chunk.make(
 			Effect.logFatal(error).pipe(Effect.as(Message.NoOp())),
 		),
 	}),
+
 	NoOp: () => state => ({ state, commands: Chunk.empty() }),
 
 	StartFetchList: message => state => {
-		if (
-			state.productListStatus._tag === 'Available' &&
-			state.productListStatus.isDeleting
-		) {
+		if (!State.isFetchingAllowed(state)) {
 			return {
 				state,
 				commands: Chunk.make(Command.notifyWrongState(message)),
 			}
 		}
 
-		const nextFetchVersion = FetchListVersion.increment(state.fetchListVersion)
+		const nextFetchVersion = State.FetchListVersion.increment(
+			state.fetchListVersion,
+		)
 		return {
 			state: {
 				...state,
-				fetchListSchedulerVersion: FetchListSchedulerVersion.increment(
+				fetchListSchedulerVersion: State.FetchListSchedulerVersion.increment(
 					state.fetchListSchedulerVersion,
 				),
 				fetchListVersion: nextFetchVersion,
 				isManualFetching: true,
 				isFetching: true,
-			} satisfies State,
+			} satisfies State.State,
 			commands: Chunk.make(Command.fetchList(nextFetchVersion)),
 		}
 	},
@@ -157,12 +153,16 @@ export const update: SM.Update<State, Message, UC.All> = matcher({
 			return { state, commands: Chunk.make(Command.notifyStale(message)) }
 		}
 
+		if (!State.isManualFetching(state)) {
+			return { state, commands: Chunk.make(Command.notifyWrongState(message)) }
+		}
+
 		return pipe(updateFetchListSucceeded(message, state), result => ({
 			state: {
 				...result.state,
 				isManualFetching: false,
 				isFetching: false,
-			} satisfies State,
+			} satisfies State.State,
 			commands: result.commands,
 		}))
 	},
@@ -172,12 +172,16 @@ export const update: SM.Update<State, Message, UC.All> = matcher({
 			return { state, commands: Chunk.make(Command.notifyStale(message)) }
 		}
 
+		if (!State.isManualFetching(state)) {
+			return { state, commands: Chunk.make(Command.notifyWrongState(message)) }
+		}
+
 		return pipe(updateFetchListFailed(message, state), result => ({
 			state: {
 				...result.state,
 				isManualFetching: false,
 				isFetching: false,
-			} satisfies State,
+			} satisfies State.State,
 			commands: result.commands,
 		}))
 	},
@@ -201,6 +205,10 @@ export const update: SM.Update<State, Message, UC.All> = matcher({
 			return { state, commands: Chunk.make(Command.notifyStale(message)) }
 		}
 
+		if (!State.isFetching(state)) {
+			return { state, commands: Chunk.make(Command.notifyWrongState(message)) }
+		}
+
 		return pipe(
 			updateFetchListSucceeded(
 				Message.FetchListSucceeded({
@@ -221,6 +229,10 @@ export const update: SM.Update<State, Message, UC.All> = matcher({
 			return { state, commands: Chunk.make(Command.notifyStale(message)) }
 		}
 
+		if (!State.isFetching(state)) {
+			return { state, commands: Chunk.make(Command.notifyWrongState(message)) }
+		}
+
 		return pipe(
 			updateFetchListFailed(
 				Message.FetchListFailed({
@@ -237,14 +249,7 @@ export const update: SM.Update<State, Message, UC.All> = matcher({
 	},
 
 	StartDeleteAndRefresh: message => state => {
-		if (state.productListStatus._tag !== 'Available') {
-			return {
-				state,
-				commands: Chunk.make(Command.notifyWrongState(message)),
-			}
-		}
-
-		if (Option.isNone(state.productListStatus.maybeSelectedProducts)) {
+		if (!State.isDeletingAllowed(state)) {
 			return {
 				state,
 				commands: Chunk.make(Command.notifyWrongState(message)),
@@ -260,11 +265,13 @@ export const update: SM.Update<State, Message, UC.All> = matcher({
 					isDeleting: true,
 				},
 				isManualFetching: true,
-				fetchListSchedulerVersion: FetchListSchedulerVersion.increment(
+				fetchListSchedulerVersion: State.FetchListSchedulerVersion.increment(
 					state.fetchListSchedulerVersion,
 				),
-				fetchListVersion: FetchListVersion.increment(state.fetchListVersion),
-			} satisfies State,
+				fetchListVersion: State.FetchListVersion.increment(
+					state.fetchListVersion,
+				),
+			} satisfies State.State,
 			commands: Chunk.make(
 				Command.deleteAndGetProducts({
 					ids: state.productListStatus.maybeSelectedProducts.value,
@@ -274,14 +281,7 @@ export const update: SM.Update<State, Message, UC.All> = matcher({
 	},
 
 	DeleteAndRefreshSucceeded: message => state => {
-		if (state.productListStatus._tag !== 'Available') {
-			return {
-				state,
-				commands: Chunk.make(Command.notifyWrongState(message)),
-			}
-		}
-
-		if (!state.productListStatus.isDeleting) {
+		if (!State.isDeleting(state)) {
 			return {
 				state,
 				commands: Chunk.make(Command.notifyWrongState(message)),
@@ -295,7 +295,7 @@ export const update: SM.Update<State, Message, UC.All> = matcher({
 					isFetching: false,
 					isManualFetching: false,
 					productListStatus: { _tag: 'Empty' },
-				} satisfies State,
+				} satisfies State.State,
 				commands: Chunk.empty(),
 			}
 		}
@@ -322,18 +322,11 @@ export const update: SM.Update<State, Message, UC.All> = matcher({
 					),
 					maybeSelectedProducts: Option.none(),
 				},
-			} satisfies State,
+			} satisfies State.State,
 		}
 	},
 	DeleteAndRefreshFailed: message => state => {
-		if (state.productListStatus._tag !== 'Available') {
-			return {
-				state,
-				commands: Chunk.make(Command.notifyWrongState(message)),
-			}
-		}
-
-		if (!state.productListStatus.isDeleting) {
+		if (!State.isDeleting(state)) {
 			return {
 				state,
 				commands: Chunk.make(Command.notifyWrongState(message)),
@@ -346,20 +339,13 @@ export const update: SM.Update<State, Message, UC.All> = matcher({
 				productListStatus: { ...state.productListStatus, isDeleting: false },
 				isFetching: false,
 				isManualFetching: false,
-			} satisfies State,
+			} satisfies State.State,
 			commands: Chunk.empty(),
 		}
 	},
 
 	DeleteSucceededButRefreshFailed: message => state => {
-		if (state.productListStatus._tag !== 'Available') {
-			return {
-				state,
-				commands: Chunk.make(Command.notifyWrongState(message)),
-			}
-		}
-
-		if (!state.productListStatus.isDeleting) {
+		if (!State.isDeleting(state)) {
 			return {
 				state,
 				commands: Chunk.make(Command.notifyWrongState(message)),
@@ -375,19 +361,12 @@ export const update: SM.Update<State, Message, UC.All> = matcher({
 				},
 				isManualFetching: false,
 				isFetching: false,
-			} satisfies State,
+			} satisfies State.State,
 		}
 	},
 
 	ToggleItem: message => state => {
-		if (state.productListStatus._tag !== 'Available') {
-			return {
-				state,
-				commands: Chunk.make(Command.notifyWrongState(message)),
-			}
-		}
-
-		if (state.productListStatus.isDeleting) {
+		if (!State.productsAreToggleable(state)) {
 			return {
 				state,
 				commands: Chunk.make(Command.notifyWrongState(message)),
@@ -408,27 +387,13 @@ export const update: SM.Update<State, Message, UC.All> = matcher({
 						NonEmptyHashSet.fromHashSet,
 					),
 				},
-			} satisfies State,
+			} satisfies State.State,
 			commands: Chunk.empty(),
 		}
 	},
 
 	ClearSelected: message => state => {
-		if (state.productListStatus._tag !== 'Available') {
-			return {
-				state,
-				commands: Chunk.make(Command.notifyWrongState(message)),
-			}
-		}
-
-		if (Option.isNone(state.productListStatus.maybeSelectedProducts)) {
-			return {
-				state,
-				commands: Chunk.make(Command.notifyWrongState(message)),
-			}
-		}
-
-		if (state.productListStatus.isDeleting) {
+		if (!State.isSelectionClearable(state)) {
 			return {
 				state,
 				commands: Chunk.make(Command.notifyWrongState(message)),
@@ -442,7 +407,7 @@ export const update: SM.Update<State, Message, UC.All> = matcher({
 					...state.productListStatus,
 					maybeSelectedProducts: Option.none(),
 				},
-			} satisfies State,
+			} satisfies State.State,
 			commands: Chunk.empty(),
 		}
 	},

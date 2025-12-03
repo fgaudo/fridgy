@@ -81,9 +81,119 @@ export const init: State = {
 	productListStatus: { _tag: 'Initial' },
 }
 
-export const hasFreshProducts = (
-	products: (State['productListStatus'] & { _tag: 'Available' })['products'],
-): boolean =>
-	products.some(
+type IsInAvailable = State & { productListStatus: { _tag: 'Available' } }
+type isNotInAvailable = State & {
+	productListStatus: Exclude<State['productListStatus'], { _tag: 'Available' }>
+}
+
+export const isInAvailable = (state: State): state is State & IsInAvailable =>
+	state.productListStatus._tag === 'Available'
+
+export const isEmpty = (
+	state: State,
+): state is State & { productListStatus: { _tag: 'Empty' } } =>
+	state.productListStatus._tag === 'Empty'
+
+export const isError = (
+	state: State,
+): state is State & { productListStatus: { _tag: 'Error' } } =>
+	state.productListStatus._tag === 'Error'
+
+export const isInitial = (
+	state: State,
+): state is State & { productListStatus: { _tag: 'Initial' } } =>
+	state.productListStatus._tag === 'Initial'
+
+export const hasFreshProducts = (state: State): state is IsInAvailable =>
+	isInAvailable(state) &&
+	state.productListStatus.products.some(
 		product => product._tag === 'Valid' && product.status._tag === 'Fresh',
 	)
+
+type HasSelectedProducts = State &
+	IsInAvailable & {
+		productListStatus: {
+			maybeSelectedProducts: Option.Some<
+				Option.Option.Value<
+					Data.TaggedEnum.Value<
+						State['productListStatus'],
+						'Available'
+					>['maybeSelectedProducts']
+				>
+			>
+		}
+	}
+
+export const hasSelectedProducts = (
+	state: State,
+): state is IsInAvailable & HasSelectedProducts =>
+	isInAvailable(state) &&
+	Option.isSome(state.productListStatus.maybeSelectedProducts)
+
+type IsDeleting = State &
+	IsInAvailable & {
+		productListStatus: { isDeleting: true }
+	}
+
+type IsNotDeleting = State &
+	IsInAvailable & {
+		productListStatus: { isDeleting: false }
+	}
+
+export const isDeleting = (state: State): state is IsInAvailable & IsDeleting =>
+	isInAvailable(state) && state.productListStatus.isDeleting
+
+type IsFetching = State & {
+	isFetching: true
+}
+
+export const isFetching = (state: State): state is IsFetching =>
+	state.isFetching
+
+type IsManualFetching = State & {
+	isFetching: true
+	isManualFetching: true
+}
+
+type IsNotManualFetching = State &
+	(
+		| {
+				isFetching: false
+				isManualFetching: false
+		  }
+		| {
+				isFetching: true
+				isManualFetching: false
+		  }
+	)
+
+export const isManualFetching = (
+	state: State,
+): state is IsFetching & IsManualFetching =>
+	isFetching(state) && state.isManualFetching
+
+export const productsAreToggleable = (
+	state: State,
+): state is IsInAvailable & IsNotManualFetching & IsNotDeleting =>
+	isInAvailable(state) && !isManualFetching(state) && !isDeleting(state)
+
+export const isDeletingAllowed = (
+	state: State,
+): state is IsInAvailable &
+	IsNotManualFetching &
+	IsNotDeleting &
+	HasSelectedProducts =>
+	isInAvailable(state) &&
+	!isManualFetching(state) &&
+	!isDeleting(state) &&
+	hasSelectedProducts(state)
+
+export const isFetchingAllowed = (
+	state: State,
+): state is IsNotDeleting | isNotInAvailable =>
+	!isDeleting(state) || !isInAvailable(state)
+
+export const isSelectionClearable = (
+	state: State,
+): state is IsInAvailable & IsNotDeleting & HasSelectedProducts =>
+	isInAvailable(state) && !isDeleting(state) && hasSelectedProducts(state)

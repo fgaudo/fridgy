@@ -7,7 +7,7 @@ import { assert } from '@/core/helper.ts'
 import * as NonEmptyHashSet from '@/core/non-empty-hash-set'
 
 import * as ProductRepository from '../repository/product-repository.ts'
-import * as GetSortedProducts from './get-products.ts'
+import * as GetProducts from './get-products.ts'
 
 /////
 /////
@@ -24,7 +24,7 @@ export type Response = Data.TaggedEnum<{
 	Failed: object
 	Succeeded: {
 		maybeProducts: Data.TaggedEnum.Value<
-			GetSortedProducts.Response,
+			GetProducts.Response,
 			'Succeeded'
 		>['maybeProducts']
 	}
@@ -51,7 +51,7 @@ export class DeleteAndGetProducts extends Effect.Service<DeleteAndGetProducts>()
 					resolver,
 				)
 
-			const getAllProductsWithTotal = yield* GetSortedProducts.GetProducts
+			const getProducts = yield* GetProducts.GetProducts
 
 			return {
 				run: Effect.fn(`DeleteProductsByIds`)(function* ({
@@ -83,7 +83,7 @@ export class DeleteAndGetProducts extends Effect.Service<DeleteAndGetProducts>()
 
 					yield* Effect.logInfo(`${successes.toString()} Products deleted`)
 
-					const fetchResult = yield* getAllProductsWithTotal.run
+					const fetchResult = yield* getProducts.run
 
 					return Match.valueTags(fetchResult, {
 						Failed: () => Response.DeleteSucceededButRefreshFailed(),
@@ -94,6 +94,6 @@ export class DeleteAndGetProducts extends Effect.Service<DeleteAndGetProducts>()
 			}
 		}),
 
-		dependencies: [GetSortedProducts.GetProducts.Default],
+		dependencies: [GetProducts.GetProducts.Default],
 	},
 ) {}

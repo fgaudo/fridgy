@@ -11,7 +11,7 @@ import { Message } from './message.ts'
 import * as State from './state.ts'
 import { update } from './update.ts'
 
-export const derivedInit = Derived.deriveInit(State.init)
+const init = Derived.deriveInit(State.init)
 
 const makeViewModel: Effect.Effect<
 	ViewModel<Derived.Derived, Message, UC.All>
@@ -30,4 +30,4 @@ const makeViewModel: Effect.Effect<
 	}
 })
 
-export { makeViewModel, Message }
+export { makeViewModel, init }

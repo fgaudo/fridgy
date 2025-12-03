@@ -9,12 +9,8 @@
 	import Trash2 from '@lucide/svelte/icons/trash-2'
 	import X from '@lucide/svelte/icons/x'
 	import { format } from 'date-fns'
-	import { duration } from 'effect/Config'
-	import * as Effect from 'effect/Effect'
-	import * as HashSet from 'effect/HashSet'
 	import * as Option from 'effect/Option'
 	import * as Stream from 'effect/Stream'
-	import { onMount } from 'svelte'
 	import { flip } from 'svelte/animate'
 	import { expoIn, expoOut } from 'svelte/easing'
 	import { fade, fly } from 'svelte/transition'
@@ -29,7 +25,7 @@
 	import { getGlobalContext } from '$lib/context.ts'
 	import * as Utils from '$lib/utils.ts'
 
-	import * as Home from './(home)/viewmodel.ts'
+	import * as Home from './(home)/index.ts'
 
 	const { runtime } = getGlobalContext()
 
@@ -46,7 +42,7 @@
 	const { state: viewModelState } = $derived(
 		useViewmodel({
 			runtime,
-			initState: Home.derivedInit,
+			initState: Home.init,
 			makeViewModel: Home.makeViewModel,
 			messages: m => {
 				if (m._tag === 'DeleteAndRefreshFailed') {

@@ -1,10 +1,8 @@
 import * as Data from 'effect/Data'
 import * as Effect from 'effect/Effect'
-import { pipe } from 'effect/Function'
 import * as Option from 'effect/Option'
 
 import * as Integer from '@/core/integer/integer.ts'
-import * as NonEmptyTrimmedString from '@/core/non-empty-trimmed-string.ts'
 import * as SM from '@/core/state-manager.ts'
 
 import { UseCasesWithoutDependencies as UC } from '@/feature/product-management/index.ts'
@@ -35,13 +33,6 @@ export type Derived = {
 	maybeExpirationDate: Option.Option<Integer.Integer>
 }
 
-const isNameValid = (state: State.State) =>
-	pipe(
-		state.maybeName,
-		Option.flatMap(NonEmptyTrimmedString.fromString),
-		Option.isSome,
-	)
-
 export const derive =
 	(dispatch: SM.StateManager<State.State, Message, UC.All>['dispatch']) =>
 	(state: State.State): Derived => {
@@ -60,12 +51,11 @@ export const derive =
 				) => dispatch(Message.SetExpiration({ maybeExpirationDate })),
 			} as const,
 
-			canSubmit:
-				!state.isAdding && isNameValid(state)
-					? { _tag: 'True', submit: dispatch(Message.StartAddProduct()) }
-					: { _tag: 'False' },
+			canSubmit: State.isSubmittable(state)
+				? { _tag: 'True', submit: dispatch(Message.StartAddProduct()) }
+				: { _tag: 'False' },
 
-			isNameValid: isNameValid(state),
+			isNameValid: State.isNameValid(state),
 		}
 	}
 
@@ -75,5 +65,5 @@ export const deriveInit = (state: State.State): Derived => ({
 	canSetName: { _tag: 'False' },
 	canSetExpirationDate: { _tag: 'False' },
 	canSubmit: { _tag: 'False' },
-	isNameValid: isNameValid(state),
+	isNameValid: State.isNameValid(state),
 })

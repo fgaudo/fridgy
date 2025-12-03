@@ -171,16 +171,21 @@ export const makeStateManager = Effect.fn(function* <
 					Stream.changesWith(({ key: k1 }, { key: k2 }) =>
 						Equal.equals(k1, k2),
 					),
+
 					Stream.flatMap(
 						keyed =>
 							pipe(
 								keyed.stream,
 								Stream.catchAllCause(err =>
 									fatalMessageSubscription
-										? Stream.make(fatalMessageSubscription(err))
-										: Stream.empty,
+										? Stream.concat(
+												Stream.make(fatalMessageSubscription(err)),
+												Stream.fail(err),
+											)
+										: Stream.fail(err),
 								),
-								Stream.repeat(Schedule.spaced('2 seconds')),
+								Stream.retry(Schedule.spaced('2 seconds')),
+								Stream.catchAll(() => Stream.empty),
 							),
 						{
 							switch: true,

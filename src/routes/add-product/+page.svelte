@@ -31,7 +31,7 @@
 	const { state: viewModelState } = $derived(
 		useViewmodel({
 			runtime,
-			initState: VM.derivedInit,
+			initState: VM.init,
 			makeViewModel: VM.makeViewModel,
 			messages: m => {
 				if (m._tag === 'AddProductSucceeded') {

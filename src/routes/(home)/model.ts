@@ -17,7 +17,7 @@ import { UseCasesWithoutDependencies as UC } from '@/feature/product-management/
 import { Message } from './message.ts'
 import * as State from './state.ts'
 
-export type Derived = Readonly<{
+export type Model = Readonly<{
 	isFetching: boolean
 	canFetch: Data.TaggedEnum<{
 		True: { fetch: Effect.Effect<void> }
@@ -80,9 +80,9 @@ export type Derived = Readonly<{
 	}>
 }>
 
-export const derive =
+export const make =
 	(dispatch: SM.StateManager<State.State, Message, UC.All>['dispatch']) =>
-	(state: State.State): Derived => {
+	(state: State.State): Model => {
 		const isFetching = state.isFetching || state.isManualFetching
 
 		const canFetch =
@@ -107,23 +107,25 @@ export const derive =
 		const status = state.productListStatus
 		const maybeSelected = status.maybeSelectedProducts
 
-		const canClearSelection =
-			!status.isDeleting && Option.isSome(maybeSelected)
-				? ({
-						_tag: 'True',
-						clear: dispatch(Message.ClearSelected()),
-					} as const)
-				: ({ _tag: 'False' } as const)
+		const canClearSelection = State.isSelectionClearable({
+			...state,
+			productListStatus: status,
+		})
+			? ({
+					_tag: 'True',
+					clear: dispatch(Message.ClearSelected()),
+				} as const)
+			: ({ _tag: 'False' } as const)
 
-		const canDelete =
-			!state.isManualFetching &&
-			!status.isDeleting &&
-			Option.isSome(maybeSelected)
-				? ({
-						_tag: 'True',
-						deleteSelected: dispatch(Message.StartDeleteAndRefresh()),
-					} as const)
-				: ({ _tag: 'False' } as const)
+		const canDelete = State.isDeletingAllowed({
+			...state,
+			productListStatus: status,
+		})
+			? ({
+					_tag: 'True',
+					deleteSelected: dispatch(Message.StartDeleteAndRefresh()),
+				} as const)
+			: ({ _tag: 'False' } as const)
 
 		const hasSelectedProducts = Option.isSome(maybeSelected)
 			? ({
@@ -168,7 +170,7 @@ export const derive =
 		}
 	}
 
-export const deriveInit = (state: State.State): Derived => {
+export const makeInit = (state: State.State): Model => {
 	const isFetching = state.isFetching || state.isManualFetching
 
 	const canFetch = { _tag: 'False' } as const
