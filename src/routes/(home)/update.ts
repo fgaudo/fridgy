@@ -124,7 +124,7 @@ export const update: SM.Update<State.State, Message, UC.All> = matcher({
 	NoOp: () => state => ({ state, commands: Chunk.empty() }),
 
 	StartFetchList: message => state => {
-		if (!State.isFetchingAllowed(state)) {
+		if (!State.isManualFetchingAllowed(state)) {
 			return {
 				state,
 				commands: Chunk.make(Command.notifyWrongState(message)),
@@ -192,6 +192,10 @@ export const update: SM.Update<State.State, Message, UC.All> = matcher({
 				state,
 				commands: Chunk.make(Command.notifyStale(message)),
 			}
+		}
+
+		if (!State.isSchedulerFetchingAllowed(state)) {
+			return { state, commands: Chunk.make(Command.notifyWrongState(message)) }
 		}
 
 		return {

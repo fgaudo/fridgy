@@ -208,9 +208,9 @@ export const makeStateManager = Effect.fn(function* <
 			Stream.interruptWhenDeferred(isShutdown),
 		),
 		messages: Stream.fromPubSub(messagePubSub),
-		start: pipe(
-			managerStateRef,
+		start: Effect.uninterruptibleMask(restore =>
 			SynchronizedRef.updateEffect(
+				managerStateRef,
 				Effect.fn(function* (managerState) {
 					if (managerState.isDisposed) {
 						yield* Effect.logWarning('State manager is disposed.')
@@ -231,12 +231,14 @@ export const makeStateManager = Effect.fn(function* <
 							return Option.none()
 						}
 
-						const fiber = yield* Effect.forkDaemon(maybeSubscriptionsLoop.value)
+						const fiber = yield* restore(
+							Effect.forkDaemon(maybeSubscriptionsLoop.value),
+						)
 
 						return Option.some(fiber)
 					})
 
-					const updatesFiber = yield* Effect.forkDaemon(updateLoop)
+					const updatesFiber = yield* restore(Effect.forkDaemon(updateLoop))
 
 					return {
 						...managerState,
@@ -246,7 +248,6 @@ export const makeStateManager = Effect.fn(function* <
 					}
 				}),
 			),
-			Effect.uninterruptible,
 		),
 
 		dispose: pipe(

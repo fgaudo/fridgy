@@ -188,10 +188,18 @@ export const isDeletingAllowed = (
 	!isDeleting(state) &&
 	hasSelectedProducts(state)
 
-export const isFetchingAllowed = (
+export const isManualFetchingAllowed = (
 	state: State,
 ): state is IsNotDeleting | isNotInAvailable =>
 	!isDeleting(state) || !isInAvailable(state)
+
+export const isSchedulerFetchingAllowed = (
+	state: State,
+): state is IsInAvailable & IsNotDeleting & IsNotManualFetching =>
+	isInAvailable(state) &&
+	!isDeleting(state) &&
+	!isManualFetching(state) &&
+	hasFreshProducts(state)
 
 export const isSelectionClearable = (
 	state: State,
