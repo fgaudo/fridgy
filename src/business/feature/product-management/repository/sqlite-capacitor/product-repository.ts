@@ -16,9 +16,9 @@ export const layerWithoutDependencies = Layer.effect(
 	ProductRepository.ProductRepository,
 	Effect.gen(function* () {
 		const {
-			addProduct: { resolver: addProductResolver },
+			addProductResolver,
 			getAllProductsWithTotal,
-			deleteProductById: { resolver: deleteResolver },
+			deleteProductByIdResolver,
 		} = yield* SqliteCapacitorHelper.SqliteCapacitorHelper
 
 		return {
@@ -76,16 +76,16 @@ export const layerWithoutDependencies = Layer.effect(
 									SqliteCapacitorHelper.DeleteProductById.Request({
 										id: parsed.value,
 									}),
-									deleteResolver,
+									deleteProductByIdResolver,
 								),
 							)
-
-							yield* Effect.logDebug('Product deleted from sqlite database')
 
 							if (Option.isNone(result)) {
 								yield* Request.succeed(request, false)
 								return false
 							}
+
+							yield* Effect.logDebug('Product deleted from sqlite database')
 
 							yield* Request.succeed(request, true)
 							return true

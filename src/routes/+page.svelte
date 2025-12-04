@@ -25,7 +25,7 @@
 	import { getGlobalContext } from '$lib/context.ts'
 	import * as Utils from '$lib/utils.ts'
 
-	import * as Home from './(home)/index.ts'
+	import * as HomeVM from './(home)/index.ts'
 
 	const { runtime } = getGlobalContext()
 
@@ -42,8 +42,8 @@
 	const { state: viewModelState } = $derived(
 		useViewmodel({
 			runtime,
-			initState: Home.init,
-			makeViewModel: Home.makeViewModel,
+			initState: HomeVM.init,
+			makeViewModel: HomeVM.make,
 			messages: m => {
 				if (m._tag === 'DeleteAndRefreshFailed') {
 					void Toast.show({ text: 'Could not delete products' })

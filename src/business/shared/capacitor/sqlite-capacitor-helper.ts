@@ -14,8 +14,6 @@ import * as NonEmptyTrimmedString from '@/core/non-empty-trimmed-string.ts'
 
 import * as SqliteCapacitorPlugin from './sqlite-capacitor-plugin.ts'
 
-const DEFAULT_TIMEOUT: Duration.DurationInput = '5 seconds'
-
 /////
 /////
 
@@ -88,10 +86,7 @@ export class SqliteCapacitorHelper extends Effect.Service<SqliteCapacitorHelper>
 						GetAllProducts['Failed']
 					> {
 						const result = yield* Effect.either(
-							Effect.timeout(
-								mutex.withPermits(1)(plugin.getAllProductsWithTotal),
-								DEFAULT_TIMEOUT,
-							),
+							mutex.withPermits(1)(plugin.getAllProductsWithTotal),
 						)
 
 						if (Either.isLeft(result)) {
@@ -117,67 +112,57 @@ export class SqliteCapacitorHelper extends Effect.Service<SqliteCapacitorHelper>
 					Duration.infinity,
 				)
 
-			const deleteByIds = Effect.fn(
-				function* (
-					ids: Parameters<typeof plugin.deleteProductsByIds>[0]['ids'],
-				) {
-					const result = yield* plugin.deleteProductsByIds({
-						ids,
-					})
-					yield* invalidate
-					return result
-				},
-				mutex.withPermits(1),
-				Effect.timeout(DEFAULT_TIMEOUT),
-			)
+			const deleteByIds = Effect.fn(function* (
+				ids: Parameters<typeof plugin.deleteProductsByIds>[0]['ids'],
+			) {
+				const result = yield* plugin.deleteProductsByIds({
+					ids,
+				})
+				yield* invalidate
+				return result
+			}, mutex.withPermits(1))
 
-			const addProduct = Effect.fn(
-				function* (
-					product: Parameters<typeof plugin.addProduct>[0]['product'],
-				) {
-					const result = yield* plugin.addProduct({
-						product,
-					})
-					yield* invalidate
-					return result
-				},
-				mutex.withPermits(1),
-				Effect.timeout(DEFAULT_TIMEOUT),
-			)
+			const addProduct = Effect.fn(function* (
+				product: Parameters<typeof plugin.addProduct>[0]['product'],
+			) {
+				const result = yield* plugin.addProduct({
+					product,
+				})
+				yield* invalidate
+				return result
+			}, mutex.withPermits(1))
 
 			return {
-				addProduct: {
-					resolver: RequestResolver.fromEffect<never, AddProduct[`Request`]>(
-						Effect.fn(function* (request) {
-							return yield* addProduct({
-								...request,
-								expirationDate: Option.isSome(request.maybeExpirationDate)
-									? request.maybeExpirationDate.value
-									: undefined,
-							})
-						}),
-					),
-				},
+				addProductResolver: RequestResolver.fromEffect<
+					never,
+					AddProduct[`Request`]
+				>(
+					Effect.fn(function* (request) {
+						return yield* addProduct({
+							...request,
+							expirationDate: Option.isSome(request.maybeExpirationDate)
+								? request.maybeExpirationDate.value
+								: undefined,
+						})
+					}),
+				),
 
-				deleteProductById: {
-					resolver: RequestResolver.makeBatched<
-						DeleteProductById[`Request`],
-						never
-					>(
-						Effect.fn(
-							function* (requests) {
-								return yield* deleteByIds(requests.map(({ id }) => id))
-							},
-							(effect, requests) =>
-								Effect.matchCauseEffect(effect, {
-									onFailure: err =>
-										Effect.forEach(requests, Req.failCause(err)),
-									onSuccess: () =>
-										Effect.forEach(requests, Req.succeed(undefined)),
-								}),
-						),
+				deleteProductByIdResolver: RequestResolver.makeBatched<
+					DeleteProductById[`Request`],
+					never
+				>(
+					Effect.fn(
+						function* (requests) {
+							return yield* deleteByIds(requests.map(({ id }) => id))
+						},
+						(effect, requests) =>
+							Effect.matchCauseEffect(effect, {
+								onFailure: err => Effect.forEach(requests, Req.failCause(err)),
+								onSuccess: () =>
+									Effect.forEach(requests, Req.succeed(undefined)),
+							}),
 					),
-				},
+				),
 
 				getAllProductsWithTotal,
 			}

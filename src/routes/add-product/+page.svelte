@@ -32,7 +32,7 @@
 		useViewmodel({
 			runtime,
 			initState: VM.init,
-			makeViewModel: VM.makeViewModel,
+			makeViewModel: VM.make,
 			messages: m => {
 				if (m._tag === 'AddProductSucceeded') {
 					void Toast.show({ text: 'Product added' })

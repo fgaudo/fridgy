@@ -34,9 +34,9 @@ describe.concurrent(`Add product`, () => {
 		Layer.provide(
 			SqliteCapacitorProductRepository.layerWithoutDependencies,
 			makeTestLayer(SqliteCapacitorHelper.SqliteCapacitorHelper)({
-				addProduct: {
-					resolver: RequestResolver.fromEffect(() => Effect.succeed(undefined)),
-				},
+				addProductResolver: RequestResolver.fromEffect(() =>
+					Effect.succeed(undefined),
+				),
 			}),
 		),
 	)(({ effect }) => {
@@ -63,11 +63,9 @@ describe.concurrent(`Add product`, () => {
 		Layer.provide(
 			SqliteCapacitorProductRepository.layerWithoutDependencies,
 			makeTestLayer(SqliteCapacitorHelper.SqliteCapacitorHelper)({
-				addProduct: {
-					resolver: RequestResolver.fromEffect(() =>
-						Effect.fail(new Cause.UnknownException(``)),
-					),
-				},
+				addProductResolver: RequestResolver.fromEffect(() =>
+					Effect.fail(new Cause.UnknownException(``)),
+				),
 			}),
 		),
 	)(({ effect }) => {
@@ -95,9 +93,9 @@ describe.concurrent(`Add product`, () => {
 		Layer.provide(
 			SqliteCapacitorProductRepository.layerWithoutDependencies,
 			makeTestLayer(SqliteCapacitorHelper.SqliteCapacitorHelper)({
-				addProduct: {
-					resolver: RequestResolver.fromEffect(() => Effect.die(undefined)),
-				},
+				addProductResolver: RequestResolver.fromEffect(() =>
+					Effect.die(undefined),
+				),
 			}),
 		),
 	)(({ effect }) => {
@@ -135,9 +133,9 @@ describe.concurrent(`Delete products by ids`, () => {
 		Layer.provide(
 			SqliteCapacitorProductRepository.layerWithoutDependencies,
 			makeTestLayer(SqliteCapacitorHelper.SqliteCapacitorHelper)({
-				deleteProductById: {
-					resolver: RequestResolver.fromEffect(() => Effect.succeed(true)),
-				},
+				deleteProductByIdResolver: RequestResolver.fromEffect(() =>
+					Effect.succeed(true),
+				),
 			}),
 		),
 	)(({ effect }) => {
@@ -163,11 +161,9 @@ describe.concurrent(`Delete products by ids`, () => {
 		Layer.provide(
 			SqliteCapacitorProductRepository.layerWithoutDependencies,
 			makeTestLayer(SqliteCapacitorHelper.SqliteCapacitorHelper)({
-				deleteProductById: {
-					resolver: RequestResolver.fromEffect(() =>
-						Effect.fail(new Cause.UnknownException(`fail`)),
-					),
-				},
+				deleteProductByIdResolver: RequestResolver.fromEffect(() =>
+					Effect.fail(new Cause.UnknownException(`fail`)),
+				),
 			}),
 		),
 	)(({ effect }) => {
@@ -195,9 +191,9 @@ describe.concurrent(`Delete products by ids`, () => {
 		Layer.provide(
 			SqliteCapacitorProductRepository.layerWithoutDependencies,
 			makeTestLayer(SqliteCapacitorHelper.SqliteCapacitorHelper)({
-				deleteProductById: {
-					resolver: RequestResolver.fromEffect(() => Effect.die(undefined)),
-				},
+				deleteProductByIdResolver: RequestResolver.fromEffect(() =>
+					Effect.die(undefined),
+				),
 			}),
 		),
 	)(({ effect }) => {

@@ -13,8 +13,8 @@ import { update } from './update.ts'
 
 const init = Model.init(State.init)
 
-const makeViewModel: Effect.Effect<ViewModel<Model.Model, Message, UC.All>> =
-	Effect.gen(function* () {
+const make: Effect.Effect<ViewModel<Model.Model, Message, UC.All>> = Effect.gen(
+	function* () {
 		const stateManager = yield* SM.makeStateManager({
 			initState: State.init,
 			update,
@@ -27,6 +27,7 @@ const makeViewModel: Effect.Effect<ViewModel<Model.Model, Message, UC.All>> =
 				Model.make(stateManager.dispatch),
 			),
 		}
-	})
+	},
+)
 
-export { makeViewModel, init }
+export { make, init }
