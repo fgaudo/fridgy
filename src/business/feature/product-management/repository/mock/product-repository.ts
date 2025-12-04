@@ -53,7 +53,7 @@ export const layerWithoutDependencies = Layer.effect(
 				const isAnError = withErrors && (yield* Random.nextRange(0, 1)) < 0.5
 
 				if (isAnError) {
-					yield* Effect.logInfo(
+					yield* Effect.logDebug(
 						`Triggered fake error on mock GetSortedProducts`,
 					)
 					return yield* Effect.fail(undefined)
@@ -76,7 +76,7 @@ export const layerWithoutDependencies = Layer.effect(
 					const isAnError = withErrors && (yield* Random.nextRange(0, 1)) < 0.5
 
 					if (isAnError) {
-						yield* Effect.logInfo(
+						yield* Effect.logDebug(
 							`Triggered fake error on mock DeleteProductId`,
 						)
 						return yield* Effect.succeed(false)
@@ -102,11 +102,13 @@ export const layerWithoutDependencies = Layer.effect(
 					const isAnError = withErrors && (yield* Random.nextRange(0, 1)) < 0.5
 
 					if (isAnError) {
-						yield* Effect.logInfo(`Triggered fake error on mock AddProduct`)
+						yield* Effect.logDebug(`Triggered fake error on mock AddProduct`)
 						return yield* Effect.succeed(false)
 					}
 
-					yield* Effect.log(`Attempting to add product into mock database...`)
+					yield* Effect.logDebug(
+						`Attempting to add product into mock database...`,
+					)
 
 					yield* Ref.update(ref, dbValues => {
 						const index = dbValues.index + 1
@@ -126,7 +128,9 @@ export const layerWithoutDependencies = Layer.effect(
 					})
 					yield* Effect.sleep('500 millis')
 
-					yield* Effect.log(`Added product ${product.name} into mock database`)
+					yield* Effect.logDebug(
+						`Added product ${product.name} into mock database`,
+					)
 
 					return yield* Effect.succeed(true)
 				}),

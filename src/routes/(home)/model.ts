@@ -170,7 +170,7 @@ export const make =
 		}
 	}
 
-export const makeInit = (state: State.State): Model => {
+export const init = (state: State.State): Model => {
 	const isFetching = state.isFetching || state.isManualFetching
 
 	const canFetch = { _tag: 'False' } as const

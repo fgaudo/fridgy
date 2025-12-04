@@ -41,7 +41,7 @@ export class AddProduct extends Effect.Service<AddProduct>()(
 			const { makeProduct } = yield* Product.ProductService
 
 			return {
-				run: Effect.fn(`AddProduct`)(function* (
+				run: Effect.fn(function* (
 					productData: AddProductParams,
 				): Effect.fn.Return<Response> {
 					yield* Effect.logInfo(
@@ -87,7 +87,7 @@ export class AddProduct extends Effect.Service<AddProduct>()(
 
 					yield* Effect.logInfo(`Successfully added a product`)
 					return Response.Succeeded()
-				}),
+				}, Effect.withLogSpan('AddProduct')),
 			}
 		}),
 		dependencies: [Product.ProductService.Default],

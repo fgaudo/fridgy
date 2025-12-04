@@ -12,16 +12,15 @@ export type State = {
 
 export const isSubmittable = (
 	state: State,
-): state is State & {
-	maybeName: Option.Some<NonEmptyTrimmedString.NonEmptyTrimmedString>
-	isBusy: false
+): state is IsNameValid & {
+	isAdding: false
 } => isNameValid(state) && !state.isAdding
 
-export const isNameValid = (
-	state: State,
-): state is State & {
+type IsNameValid = State & {
 	maybeName: Option.Some<NonEmptyTrimmedString.NonEmptyTrimmedString>
-} =>
+}
+
+export const isNameValid = (state: State): state is IsNameValid =>
 	pipe(
 		state.maybeName,
 		Option.flatMap(NonEmptyTrimmedString.fromString),

@@ -16,7 +16,7 @@
 	import { PAGE_TRANSITION_Y } from '$lib/constants.ts'
 	import { getGlobalContext } from '$lib/context.ts'
 
-	import * as VM from './(add-product)/viewmodel.ts'
+	import * as VM from './(add-product)/index.ts'
 
 	type State = {
 		hasInteractedWithName: boolean

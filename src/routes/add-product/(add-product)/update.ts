@@ -8,67 +8,78 @@ import { UseCasesWithoutDependencies as UC } from '@/feature/product-management/
 
 import * as Command from './command.ts'
 import type { Message } from './message.ts'
-import { type State, isSubmittable } from './state.ts'
+import * as State from './state.ts'
 
 const matcher = Match.typeTags<
 	Message,
-	ReturnType<SM.Update<State, Message, UC.All>>
+	ReturnType<SM.Update<State.State, Message, UC.All>>
 >()
 
-export const update: SM.Update<State, Message, UC.All> = matcher({
+export const update: SM.Update<State.State, Message, UC.All> = matcher({
 	NoOp: () => state => ({ state, commands: Chunk.empty() }),
 
 	SetName: message => state => {
+		if (state.isAdding) {
+			return { state, commands: Chunk.make(Command.notifyWrongState(message)) }
+		}
+
 		return {
 			state: {
 				...state,
 				maybeName: Option.some(message.name),
-			} satisfies State,
+			} satisfies State.State,
 			commands: Chunk.empty(),
 		}
 	},
 	SetExpiration: message => state => {
+		if (state.isAdding) {
+			return { state, commands: Chunk.make(Command.notifyWrongState(message)) }
+		}
+
 		return {
 			state: {
 				...state,
 				maybeExpirationDate: message.maybeExpirationDate,
-			} satisfies State,
+			} satisfies State.State,
 			commands: Chunk.empty(),
 		}
 	},
 	StartAddProduct: message => state => {
-		if (state.isAdding) {
-			return { state, commands: Chunk.empty() }
+		if (!State.isSubmittable(state)) {
+			return { state, commands: Chunk.make(Command.notifyWrongState(message)) }
 		}
 
-		if (isSubmittable(state)) {
-			return {
-				state: { ...state, isAdding: true } satisfies State,
-				commands: Chunk.make(
-					Command.addProduct({
-						maybeExpirationDate: state.maybeExpirationDate,
-						name: state.maybeName.value,
-					}),
-				),
-			}
+		return {
+			state: { ...state, isAdding: true } satisfies State.State,
+			commands: Chunk.make(
+				Command.addProduct({
+					maybeExpirationDate: state.maybeExpirationDate,
+					name: state.maybeName.value,
+				}),
+			),
 		}
-
-		return { state, commands: Chunk.make(Command.notifyWrongState(message)) }
 	},
-	AddProductSucceeded: () => state => {
+	AddProductSucceeded: message => state => {
+		if (!state.isAdding) {
+			return { state, commands: Chunk.make(Command.notifyWrongState(message)) }
+		}
+
 		return {
 			state: {
 				...state,
 				isAdding: false,
 				maybeExpirationDate: Option.none(),
 				maybeName: Option.none(),
-			} satisfies State,
+			} satisfies State.State,
 			commands: Chunk.empty(),
 		}
 	},
-	AddProductFailed: () => state => {
+	AddProductFailed: message => state => {
+		if (!state.isAdding) {
+			return { state, commands: Chunk.make(Command.notifyWrongState(message)) }
+		}
 		return {
-			state: { ...state, isAdding: false } satisfies State,
+			state: { ...state, isAdding: false } satisfies State.State,
 			commands: Chunk.empty(),
 		}
 	},

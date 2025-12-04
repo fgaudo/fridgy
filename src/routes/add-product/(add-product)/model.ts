@@ -10,7 +10,7 @@ import { UseCasesWithoutDependencies as UC } from '@/feature/product-management/
 import { Message } from './message.ts'
 import * as State from './state.ts'
 
-export type Derived = {
+export type Model = {
 	canSubmit: Data.TaggedEnum<{
 		True: { submit: Effect.Effect<void> }
 		False: object
@@ -33,9 +33,9 @@ export type Derived = {
 	maybeExpirationDate: Option.Option<Integer.Integer>
 }
 
-export const derive =
+export const make =
 	(dispatch: SM.StateManager<State.State, Message, UC.All>['dispatch']) =>
-	(state: State.State): Derived => {
+	(state: State.State): Model => {
 		return {
 			...state,
 
@@ -59,7 +59,7 @@ export const derive =
 		}
 	}
 
-export const deriveInit = (state: State.State): Derived => ({
+export const init = (state: State.State): Model => ({
 	...state,
 
 	canSetName: { _tag: 'False' },

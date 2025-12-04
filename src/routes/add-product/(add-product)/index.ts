@@ -8,7 +8,6 @@ import { UseCasesWithoutDependencies as UC } from '@/feature/product-management/
 
 import { Message } from './message.ts'
 import * as Model from './model.ts'
-import * as Scheduler from './scheduler.ts'
 import * as State from './state.ts'
 import { update } from './update.ts'
 
@@ -17,11 +16,7 @@ const init = Model.init(State.init)
 const makeViewModel: Effect.Effect<ViewModel<Model.Model, Message, UC.All>> =
 	Effect.gen(function* () {
 		const stateManager = yield* SM.makeStateManager({
-			subscriptions: [Scheduler.fetchListScheduler],
 			initState: State.init,
-			initMessages: [Message.StartFetchList()],
-			fatalMessage: error => Message.Crash({ error }),
-			fatalMessageSubscription: error => Message.Crash({ error }),
 			update,
 		})
 

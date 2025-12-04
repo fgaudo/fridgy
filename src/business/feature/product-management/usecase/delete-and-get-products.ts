@@ -54,9 +54,7 @@ export class DeleteAndGetProducts extends Effect.Service<DeleteAndGetProducts>()
 			const getProducts = yield* GetProducts.GetProducts
 
 			return {
-				run: Effect.fn(`DeleteProductsByIds`)(function* ({
-					ids,
-				}: DeleteParameters) {
+				run: Effect.fn(function* ({ ids }: DeleteParameters) {
 					yield* Effect.logInfo(`Requested to delete products`)
 					yield* Effect.logInfo(`Attempting to delete products...`)
 
@@ -90,7 +88,7 @@ export class DeleteAndGetProducts extends Effect.Service<DeleteAndGetProducts>()
 						Succeeded: ({ maybeProducts }) =>
 							Response.Succeeded({ maybeProducts }),
 					})
-				}),
+				}, Effect.withLogSpan('DeleteAndGetProducts')),
 			}
 		}),
 
