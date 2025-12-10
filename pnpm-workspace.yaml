@@ -1,4 +1,1 @@
-onlyBuiltDependencies:
-  - '@tailwindcss/oxide'
-  - esbuild
-  - sharp
+nodeLinker: hoisted

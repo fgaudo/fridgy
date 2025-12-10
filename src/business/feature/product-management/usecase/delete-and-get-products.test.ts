@@ -21,7 +21,7 @@ const DeleteParameters = Schema.Struct({
 	ids: NonEmptyHashSet.Schema(Schema.String),
 })
 
-describe.concurrent(`Delete products by ids`, () => {
+describe.concurrent('Delete products by ids', () => {
 	layer(
 		Layer.provide(Usecase.DeleteAndGetProducts.DefaultWithoutDependencies, [
 			makeTestLayer(ProductRepository.ProductRepository)({
@@ -33,7 +33,7 @@ describe.concurrent(`Delete products by ids`, () => {
 		]),
 	)(({ effect }) => {
 		effect.prop(
-			`Should return delete failed`,
+			'Should return delete failed',
 			[DeleteParameters],
 			Effect.fn(function* ([params]) {
 				const { run } = yield* Usecase.DeleteAndGetProducts
@@ -75,7 +75,7 @@ describe.concurrent(`Delete products by ids`, () => {
 		]),
 	)(({ effect }) => {
 		effect.prop(
-			`Should just work`,
+			'Should just work',
 			[DeleteParameters],
 			Effect.fn(function* ([params]) {
 				const { run } = yield* Usecase.DeleteAndGetProducts
@@ -102,7 +102,7 @@ describe.concurrent(`Delete products by ids`, () => {
 		]),
 	)(({ effect }) => {
 		effect.prop(
-			`Should return error`,
+			'Should return error',
 			[DeleteParameters],
 			Effect.fn(function* ([params]) {
 				const { run } = yield* Usecase.DeleteAndGetProducts

@@ -1,10 +1,9 @@
-import * as Arr from 'effect/Array'
 import * as Data from 'effect/Data'
 import * as Effect from 'effect/Effect'
 import * as Match from 'effect/Match'
+import * as Option from 'effect/Option'
 
-import { assert } from '@/core/helper.ts'
-import * as NonEmptyHashSet from '@/core/non-empty-hash-set'
+import * as NonEmptyHashSet from '@/core/non-empty-hash-set.ts'
 
 import * as ProductRepository from '../repository/product-repository.ts'
 import * as GetProducts from './get-products.ts'
@@ -35,8 +34,9 @@ export const Response = Data.taggedEnum<Response>()
 /////
 /////
 
+// @effect-codegens accessors:b1c5b121b8178709
 export class DeleteAndGetProducts extends Effect.Service<DeleteAndGetProducts>()(
-	`feature/product-management/usecase/delete-and-get-products`,
+	'da9e5f05edc3a0ba',
 	{
 		accessors: true,
 		effect: Effect.gen(function* () {
@@ -55,31 +55,20 @@ export class DeleteAndGetProducts extends Effect.Service<DeleteAndGetProducts>()
 
 			return {
 				run: Effect.fn(function* ({ ids }: DeleteParameters) {
-					yield* Effect.logInfo(`Requested to delete products`)
-					yield* Effect.logInfo(`Attempting to delete products...`)
+					yield* Effect.logInfo('Requested to delete products')
+					yield* Effect.logInfo('Attempting to delete products...')
 
-					const deleteResults = yield* Effect.forEach(ids, deleteProductById, {
-						batching: true,
-					})
-
-					const successes = Arr.reduce(deleteResults, 0, (acc, value) =>
-						value ? acc + 1 : acc,
+					const maybeDeleteResults = yield* Effect.option(
+						Effect.forEach(ids, deleteProductById, {
+							batching: true,
+						}),
 					)
 
-					assert(successes <= deleteResults.length)
-					assert(successes >= 0)
-
-					if (successes <= 0) {
+					if (Option.isNone(maybeDeleteResults)) {
 						return Response.Failed()
 					}
 
-					if (successes < deleteResults.length) {
-						yield* Effect.logWarning(
-							`${(deleteResults.length - successes).toString()} Products could not be deleted`,
-						)
-					}
-
-					yield* Effect.logInfo(`${successes.toString()} Products deleted`)
+					yield* Effect.logInfo('Products deleted')
 
 					const fetchResult = yield* getProducts.run
 

@@ -1,7 +1,7 @@
 import * as Brand from 'effect/Brand'
 import * as _Schema from 'effect/Schema'
 
-export type Integer = Brand.Branded<number, `Integer`>
+export type Integer = Brand.Branded<number, 'Integer'>
 
 /** @internal **/
 export const _Integer = Brand.refined<Integer>(
@@ -14,6 +14,10 @@ export const Schema = _Schema
 	.annotations({
 		arbitrary: () => fc => fc.integer().map(unsafeFromNumber),
 	})
+
+export const IntegerFromSelf = _Schema.declare(
+	(input): input is Integer => typeof input === 'number' && _Integer.is(input),
+)
 
 export const fromNumber = (n: number) => _Integer.option(n)
 export const unsafeFromNumber = _Integer

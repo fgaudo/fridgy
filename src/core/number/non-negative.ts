@@ -1,7 +1,7 @@
 import * as Brand from 'effect/Brand'
 import * as _Schema from 'effect/Schema'
 
-export type NonNegative = Brand.Branded<number, `NonNegative`>
+export type NonNegative = Brand.Branded<number, 'NonNegative'>
 
 /** @internal **/
 export const _NonNegative = Brand.refined<NonNegative>(

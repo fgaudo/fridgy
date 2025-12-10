@@ -1,21 +1,28 @@
-import { DevTools } from '@effect/experimental'
+import { SqliteClient } from '@effect/sql-sqlite-react-native'
 import { pipe } from 'effect/Function'
 import * as Layer from 'effect/Layer'
 import * as LogLevel from 'effect/LogLevel'
 import * as Logger from 'effect/Logger'
-import * as ManagedRuntime from 'effect/ManagedRuntime'
 
-import { UseCases } from '@/feature/product-management/index.ts'
+import {
+	UseCases,
+	UseCasesWithoutDependencies,
+} from '@/feature/product-management/index.ts'
 
-export const runtime = import.meta.env.PROD
-	? pipe(UseCases.capacitor, Layer.provide(Logger.logFmt), ManagedRuntime.make)
+export { UseCasesWithoutDependencies }
+
+export const layers: Layer.Layer<UseCasesWithoutDependencies.All> = __DEV__
+	? pipe(
+			UseCases.inMemory({ withErrors: false }),
+			Layer.provide([Logger.minimumLogLevel(LogLevel.Debug), Logger.pretty]),
+		)
 	: pipe(
-			UseCases.mock.useCases,
+			UseCases.sql,
 			Layer.provide([
-				DevTools.layer(),
-				Layer.succeed(UseCases.mock.Config, { withErrors: false }),
-				Logger.minimumLogLevel(LogLevel.Debug),
-				Logger.pretty,
+				Logger.logFmt,
+				SqliteClient.layer({
+					filename: 'fridgy.db',
+				}),
 			]),
-			ManagedRuntime.make,
+			Layer.orDie,
 		)

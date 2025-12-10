@@ -61,8 +61,9 @@ export const Response = Data.taggedEnum<Response>()
 /////
 /////
 
+// @effect-codegens accessors:8b5beb644ad8d551
 export class GetProducts extends Effect.Service<GetProducts>()(
-	`feature/product-management/usecase/get-products`,
+	'f06987d602104c44',
 	{
 		accessors: true,
 		effect: Effect.gen(function* () {
@@ -71,22 +72,27 @@ export class GetProducts extends Effect.Service<GetProducts>()(
 			const ProductService = yield* Product.ProductService
 			return {
 				run: Effect.gen(function* (): Effect.fn.Return<Response> {
-					yield* Effect.log(`Started`)
+					yield* Effect.log('Started')
 
 					const maybeProducts = yield* Effect.option(getSortedProducts)
 
 					if (Option.isNone(maybeProducts)) {
-						yield* Effect.logError(`Could not receive products`)
+						yield* Effect.logError('Could not receive products')
 
 						return Response.Failed()
 					}
 
 					const result = maybeProducts.value
 
-					yield* Effect.logInfo(`Received ${result.length} products`)
+					if (Option.isNone(result)) {
+						yield* Effect.logInfo('Received no products')
+						return Response.Succeeded({ maybeProducts: Option.none() })
+					}
+
+					yield* Effect.logInfo(`Received ${result.value.length} products`)
 
 					const entries = yield* Effect.forEach(
-						result,
+						result.value,
 						Effect.fn(function* ({
 							maybeId,
 							maybeName,
@@ -94,7 +100,7 @@ export class GetProducts extends Effect.Service<GetProducts>()(
 							maybeExpirationDate,
 						}) {
 							if (Option.isNone(maybeId)) {
-								yield* Effect.logWarning(`Product is corrupt`)
+								yield* Effect.logWarning('Product is corrupt')
 								return ProductDTO.Corrupt({
 									maybeName,
 								})
@@ -114,7 +120,7 @@ export class GetProducts extends Effect.Service<GetProducts>()(
 							})
 
 							if (Option.isNone(maybeProduct)) {
-								yield* Effect.logWarning(`Product is invalid`)
+								yield* Effect.logWarning('Product is invalid')
 
 								return ProductDTO.Invalid({
 									id: maybeId.value,
@@ -172,7 +178,7 @@ export class GetProducts extends Effect.Service<GetProducts>()(
 							})),
 						),
 					})
-				}).pipe(Effect.withLogSpan(`GetProducts`)),
+				}).pipe(Effect.withLogSpan('GetProducts')),
 			}
 		}),
 		dependencies: [Product.ProductService.Default],

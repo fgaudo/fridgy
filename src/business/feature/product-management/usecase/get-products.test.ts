@@ -23,7 +23,7 @@ const GetSortedProductsSchema = Schema.Array(
 	}),
 )
 
-describe.concurrent(`Get sorted products`, () => {
+describe.concurrent('Get sorted products', () => {
 	layer(
 		Layer.provide(
 			Usecase.GetProducts.Default,
@@ -33,7 +33,7 @@ describe.concurrent(`Get sorted products`, () => {
 		),
 	)(({ effect }) => {
 		effect(
-			`Should return an error`,
+			'Should return an error',
 			Effect.fn(function* () {
 				const { run } = yield* Usecase.GetProducts
 				const exit = yield* Effect.exit(run)
@@ -45,7 +45,7 @@ describe.concurrent(`Get sorted products`, () => {
 	})
 
 	effect.prop(
-		`Should always return all elements`,
+		'Should always return all elements',
 		[Arbitrary.make(GetSortedProductsSchema).filter(a => a.length > 0)],
 		Effect.fn(
 			function* ([products], { expect }) {

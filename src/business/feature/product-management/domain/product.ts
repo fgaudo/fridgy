@@ -3,9 +3,9 @@ import * as Effect from 'effect/Effect'
 import * as Option from 'effect/Option'
 import * as _Schema from 'effect/Schema'
 
-import * as Integer from '@/core/integer/integer.ts'
-import * as NonEmptyTrimmedString from '@/core/non-empty-trimmed-string.ts'
-import * as UnitInterval from '@/core/unit-interval.ts'
+import * as Integer from '@/core/integer/integer'
+import * as NonEmptyTrimmedString from '@/core/non-empty-trimmed-string'
+import * as UnitInterval from '@/core/unit-interval'
 
 export type Product = Brand.Branded<
 	{
@@ -13,13 +13,13 @@ export type Product = Brand.Branded<
 		maybeExpirationDate: Option.Option<Integer.Integer>
 		creationDate: Integer.Integer
 	},
-	`Product`
+	'Product'
 >
 
 /** @internal */
 export const Product = Brand.refined<Product>(
 	() => true,
-	() => Brand.error(`Product is invalid`),
+	() => Brand.error('Product is invalid'),
 )
 
 export const Schema = _Schema.fromBrand(Product)(
@@ -31,7 +31,7 @@ export const Schema = _Schema.fromBrand(Product)(
 )
 
 export class ProductService extends Effect.Service<ProductService>()(
-	`feature/product-management/domain/product`,
+	'3e5ddcee35f78a04',
 	{
 		succeed: {
 			makeProduct: (p: {

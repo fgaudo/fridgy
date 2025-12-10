@@ -1,13 +1,13 @@
-import * as Context from 'effect/Context'
+import * as Arr from 'effect/Array'
 import * as Effect from 'effect/Effect'
 import * as Option from 'effect/Option'
 import * as Req from 'effect/Request'
 import { type RequestResolver } from 'effect/RequestResolver'
 
-import * as Integer from '@/core/integer/integer.ts'
+import * as Integer from '@/core/integer/integer'
 import * as NonEmptyTrimmedString from '@/core/non-empty-trimmed-string'
 
-interface AddProductRequest extends Req.Request<boolean> {
+interface AddProductRequest extends Req.Request<string, void> {
 	name: NonEmptyTrimmedString.NonEmptyTrimmedString
 	maybeExpirationDate: Option.Option<Integer.Integer>
 	creationDate: Integer.Integer
@@ -24,7 +24,7 @@ export const AddProduct = {
 /////
 /////
 
-export interface DeleteProductByIdRequest extends Req.Request<boolean> {
+export interface DeleteProductByIdRequest extends Req.Request<void, void> {
 	id: string
 }
 
@@ -39,25 +39,28 @@ export const DeleteProductById = {
 /////
 /////
 
-export type GetProducts = readonly {
-	maybeId: Option.Option<string>
-	maybeName: Option.Option<NonEmptyTrimmedString.NonEmptyTrimmedString>
-	maybeExpirationDate: Option.Option<Integer.Integer>
-	maybeCreationDate: Option.Option<Integer.Integer>
-}[]
+export type GetProducts = Option.Option<
+	Arr.NonEmptyReadonlyArray<
+		Readonly<{
+			maybeId: Option.Option<string>
+			maybeName: Option.Option<NonEmptyTrimmedString.NonEmptyTrimmedString>
+			maybeExpirationDate: Option.Option<Integer.Integer>
+			maybeCreationDate: Option.Option<Integer.Integer>
+		}>
+	>
+>
 
 /////
 /////
 
-export class ProductRepository extends Context.Tag(
-	`feature/product-management/repository/product-repository`,
-)<
+// @effect-codegens accessors:c93d80bf8e827ab7
+export class ProductRepository extends Effect.Tag('9ea1edcf8c731e69')<
 	ProductRepository,
 	{
-		addProductResolver: RequestResolver<AddProductRequest>
+		readonly addProductResolver: RequestResolver<AddProductRequest>
 
-		deleteProductByIdResolver: RequestResolver<DeleteProductByIdRequest>
+		readonly deleteProductByIdResolver: RequestResolver<DeleteProductByIdRequest>
 
-		getProducts: Effect.Effect<GetProducts, void>
+		readonly getProducts: Effect.Effect<GetProducts, void>
 	}
 >() {}

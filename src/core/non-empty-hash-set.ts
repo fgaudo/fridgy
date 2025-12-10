@@ -7,19 +7,19 @@ import * as PositiveInteger from './integer/positive.ts'
 
 export type NonEmptyHashSet<A> = Brand.Branded<
 	HashSet.HashSet<A>,
-	`NonEmptyHashSet`
+	'NonEmptyHashSet'
 >
 
 /** @internal */
 export const _NonEmptyHashSet = <A>() =>
 	Brand.refined<NonEmptyHashSet<A>>(
 		set => HashSet.size(set) > 0,
-		() => Brand.error(`Provided set is empty`),
+		() => Brand.error('Provided set is empty'),
 	)
 
 export const Schema = <Value extends _Schema.Schema.Any>(value: Value) =>
 	_Schema
-		.fromBrand(_NonEmptyHashSet<Value[`Type`]>())(_Schema.HashSet(value))
+		.fromBrand(_NonEmptyHashSet<Value['Type']>())(_Schema.HashSet(value))
 		.annotations({
 			arbitrary: () => () =>
 				Arbitrary.make(_Schema.HashSet(value))

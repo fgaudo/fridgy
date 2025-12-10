@@ -11,10 +11,10 @@ import * as Integer from '@/core/integer/integer.ts'
 
 import * as Product from './product.ts'
 
-describe.concurrent(`isStale`, () => {
+describe.concurrent('isStale', () => {
 	layer(Product.ProductService.Default)(({ effect }) =>
 		effect.prop(
-			`Should return true`,
+			'Should return true',
 			[
 				FastCheck.tuple(
 					Arbitrary.make(Integer.Schema),
@@ -58,7 +58,7 @@ describe.concurrent(`isStale`, () => {
 
 	layer(Product.ProductService.Default)(({ effect }) =>
 		effect.prop(
-			`Should return false`,
+			'Should return false',
 			[
 				FastCheck.tuple(
 					Arbitrary.make(Integer.Schema),
@@ -104,7 +104,7 @@ describe.concurrent(`isStale`, () => {
 	)
 })
 
-describe.concurrent(`hasExpiration`, () => {
+describe.concurrent('hasExpiration', () => {
 	layer(Product.ProductService.Default)(({ effect }) =>
 		effect.prop(
 			'should return true',
@@ -154,7 +154,7 @@ describe.concurrent(`hasExpiration`, () => {
 	)
 })
 
-describe.concurrent(`timeLeft`, () => {
+describe.concurrent('timeLeft', () => {
 	layer(Product.ProductService.Default)(({ effect }) =>
 		effect.prop(
 			'should return value',
@@ -253,10 +253,10 @@ describe.concurrent(`timeLeft`, () => {
 	)
 })
 
-describe.concurrent(`computeFreshness`, () => {
+describe.concurrent('computeFreshness', () => {
 	layer(Product.ProductService.Default)(({ effect }) =>
 		effect.prop(
-			`Should return 0`,
+			'Should return 0',
 			[
 				FastCheck.tuple(
 					Arbitrary.make(Integer.Schema),
@@ -303,7 +303,7 @@ describe.concurrent(`computeFreshness`, () => {
 
 	layer(Product.ProductService.Default)(({ effect }) =>
 		effect.prop(
-			`Should return 0`,
+			'Should return 0',
 			[
 				FastCheck.tuple(
 					Arbitrary.make(Integer.Schema),
@@ -353,7 +353,7 @@ describe.concurrent(`computeFreshness`, () => {
 
 	layer(Product.ProductService.Default)(({ effect }) =>
 		effect.prop(
-			`Should return 1`,
+			'Should return 1',
 			[
 				FastCheck.tuple(
 					Arbitrary.make(Integer.Schema),
@@ -406,7 +406,7 @@ describe.concurrent(`computeFreshness`, () => {
 
 	layer(Product.ProductService.Default)(({ effect }) =>
 		effect.prop(
-			`Should return remainingDuration / totalDuration`,
+			'Should return remainingDuration / totalDuration',
 			[
 				FastCheck.tuple(
 					Arbitrary.make(Integer.Schema),

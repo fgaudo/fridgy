@@ -1,22 +1,30 @@
 import * as Brand from 'effect/Brand'
+import * as Effect from 'effect/Effect'
+import { string } from 'effect/Equivalence'
 import { flow } from 'effect/Function'
+import * as ParseResult from 'effect/ParseResult'
 import * as _Schema from 'effect/Schema'
 
 export type NonEmptyTrimmedString = Brand.Branded<
 	string,
-	`NonEmptyTrimmedString`
+	'NonEmptyTrimmedString'
 >
 
 /** @internal */
 export const _NonEmptyTrimmedString = Brand.refined<NonEmptyTrimmedString>(
 	string => /^\S.*\S$|^\S$/.test(string),
-	() => Brand.error(`Provided string is either empty or non-trimmed`),
+	() => Brand.error('Provided string is either empty or non-trimmed'),
 )
 export const Schema = _Schema
 	.fromBrand(_NonEmptyTrimmedString)(_Schema.String)
 	.annotations({
 		arbitrary: () => fc => fc.stringMatching(/\S/).map(unsafeFromString),
 	})
+
+export const NonEmptyTrimmedStringFromSelf = _Schema.declare(
+	(input): input is NonEmptyTrimmedString =>
+		typeof input === 'string' && _NonEmptyTrimmedString.is(input),
+)
 
 export const unsafeFromString = flow(trim, _NonEmptyTrimmedString)
 

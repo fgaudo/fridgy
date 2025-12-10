@@ -1,17 +1,20 @@
-import { getContext, setContext } from 'svelte'
+import { type ManagedRuntime } from 'effect/ManagedRuntime'
+import { createContext, useContext } from 'react'
 
-import type { runtime } from '../business/index.ts'
+import { UseCasesWithoutDependencies } from '../business'
 
-const unique: unique symbol = Symbol()
+export const FridgyContext = createContext(
+	undefined as
+		| ManagedRuntime<UseCasesWithoutDependencies.All, never>
+		| undefined,
+)
 
-export type GlobalContext = {
-	runtime: typeof runtime
-}
+export const useFridgyContext = () => {
+	const context = useContext(FridgyContext)
 
-export function setGlobalContext(p: GlobalContext): void {
-	setContext(unique, p)
-}
+	if (!context) {
+		throw new Error('FridgyContext not found')
+	}
 
-export function getGlobalContext(): GlobalContext {
-	return getContext(unique)
+	return context
 }

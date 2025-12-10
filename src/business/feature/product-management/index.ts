@@ -1,18 +1,13 @@
 import * as Layer from 'effect/Layer'
 
-import {
-	Config,
-	layerWithoutDependencies as mockProductRepositoryLayer,
-} from './repository/mock/product-repository.ts'
-import { layer as sqliteCapacitorProductRepositoryLayer } from './repository/sqlite-capacitor/product-repository.ts'
+import { layer as inMemoryProductRepositoryLayer } from './repository/in-memory/product-repository.ts'
+import { layer as sqlProductRepositoryLayer } from './repository/sql/product-repository.ts'
 import * as UC from './usecase/index.ts'
 
 export * as UseCasesWithoutDependencies from './usecase/index.ts'
 
 export const UseCases = {
-	capacitor: Layer.provide(UC.all, sqliteCapacitorProductRepositoryLayer),
-	mock: {
-		useCases: Layer.provide(UC.all, mockProductRepositoryLayer),
-		Config,
-	},
+	sql: Layer.provide(UC.all, sqlProductRepositoryLayer),
+	inMemory: (config: Parameters<typeof inMemoryProductRepositoryLayer>[0]) =>
+		Layer.provide(UC.all, inMemoryProductRepositoryLayer(config)),
 }

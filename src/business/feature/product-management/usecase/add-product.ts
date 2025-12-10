@@ -5,7 +5,7 @@ import * as Inspectable from 'effect/Inspectable'
 import * as Option from 'effect/Option'
 
 import * as Integer from '@/core/integer/integer.ts'
-import * as NonEmptyTrimmedString from '@/core/non-empty-trimmed-string'
+import * as NonEmptyTrimmedString from '@/core/non-empty-trimmed-string.ts'
 
 import * as Product from '../domain/product.ts'
 import * as ProductRepository from '../repository/product-repository.ts'
@@ -31,8 +31,9 @@ const Response = Data.taggedEnum<Response>()
 /////
 /////
 
+// @effect-codegens accessors:8ec1a1b397228aad
 export class AddProduct extends Effect.Service<AddProduct>()(
-	`feature/product-management/usecase/add-product`,
+	'53e92243bb8435c7',
 	{
 		accessors: true,
 		effect: Effect.gen(function* () {
@@ -59,7 +60,7 @@ export class AddProduct extends Effect.Service<AddProduct>()(
 					})
 
 					if (Option.isNone(product)) {
-						yield* Effect.logError(`Attempted to add an invalid product.`).pipe(
+						yield* Effect.logError('Attempted to add an invalid product.').pipe(
 							Effect.annotateLogs({
 								product: Inspectable.format(productData),
 							}),
@@ -72,20 +73,24 @@ export class AddProduct extends Effect.Service<AddProduct>()(
 						`Attempting to add product "${productData.name}"...`,
 					)
 
-					const result = yield* Effect.request(
-						ProductRepository.AddProduct.Request({
-							name: product.value.name,
-							maybeExpirationDate: product.value.maybeExpirationDate,
-							creationDate: product.value.creationDate,
-						}),
-						addProductResolver,
+					const maybeResult = yield* Effect.option(
+						Effect.request(
+							ProductRepository.AddProduct.Request({
+								name: product.value.name,
+								maybeExpirationDate: product.value.maybeExpirationDate,
+								creationDate: product.value.creationDate,
+							}),
+							addProductResolver,
+						),
 					)
 
-					if (!result) {
+					if (Option.isNone(maybeResult)) {
 						return Response.Failed()
 					}
 
-					yield* Effect.logInfo(`Successfully added a product`)
+					yield* Effect.logInfo(
+						`Successfully added product with id ${maybeResult.value}`,
+					)
 					return Response.Succeeded()
 				}, Effect.withLogSpan('AddProduct')),
 			}

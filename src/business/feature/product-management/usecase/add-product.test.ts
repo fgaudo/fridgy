@@ -22,9 +22,9 @@ const AddProductParams = Schema.Struct({
 	maybeExpirationDate: Schema.Option(Integer.Schema),
 })
 
-describe.concurrent(`Add product`, () => {
+describe.concurrent('Add product', () => {
 	effect.prop(
-		`Should just work`,
+		'Should just work',
 		{ product: AddProductParams },
 		Effect.fn(function* ({ product: { name, maybeExpirationDate } }, _) {
 			const observed = yield* Deferred.make<number>()
@@ -71,7 +71,7 @@ describe.concurrent(`Add product`, () => {
 		),
 	)(({ effect }) => {
 		effect.prop(
-			`Should return error`,
+			'Should return error',
 			{ product: AddProductParams },
 			Effect.fn(function* ({ product: { name, maybeExpirationDate } }) {
 				const { run } = yield* Usecase.AddProduct
@@ -102,7 +102,7 @@ describe.concurrent(`Add product`, () => {
 		]),
 	)(({ effect }) => {
 		effect.prop(
-			`Should return error`,
+			'Should return error',
 			{ product: AddProductParams },
 			Effect.fn(function* ({ product: { name, maybeExpirationDate } }) {
 				const { run } = yield* Usecase.AddProduct

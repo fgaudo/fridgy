@@ -1,7 +1,7 @@
 import * as Brand from 'effect/Brand'
 import * as _Schema from 'effect/Schema'
 
-export type UnitInterval = Brand.Branded<number, `UnitInterval`>
+export type UnitInterval = Brand.Branded<number, 'UnitInterval'>
 
 /** @internal */
 export const UnitInterval = Brand.refined<UnitInterval>(

@@ -1,31 +1,51 @@
 {
-	"extends": "./.svelte-kit/tsconfig.json",
+	"extends": "expo/tsconfig.base",
 	"compilerOptions": {
 		"plugins": [
-			{ "name": "typescript-svelte-plugin" },
 			{
 				"name": "@effect/language-service",
+				"transform": "@effect/language-service/transform",
 				"topLevelNamedReexports": "follow",
 				"namespaceImportPackages": ["effect"],
-				"importAliases": { "Array": "Arr", "Request": "Req" } // allows to chose some different names for import name aliases (only when not chosing to import the whole module) (default: {})
+				"diagnosticSeverity": {
+					"deterministicKeys": "error"
+				},
+				"keyPatterns": [
+					{
+						"target": "service",
+						"pattern": "default-hashed"
+					}
+				],
+				"importAliases": {
+					"Array": "Arr",
+					"Request": "Req"
+				}
 			}
 		],
-		"allowJs": true,
-		"checkJs": true,
-		"esModuleInterop": true,
-		"forceConsistentCasingInFileNames": true,
-		"resolveJsonModule": true,
-		"skipLibCheck": true,
-		"verbatimModuleSyntax": true,
-		"allowImportingTsExtensions": true,
-		"sourceMap": true,
 		"strict": true,
-		"moduleResolution": "bundler",
-		"noErrorTruncation": true
-	}
-	// Path aliases are handled by https://svelte.dev/docs/kit/configuration#alias
-	// except $lib which is handled by https://svelte.dev/docs/kit/configuration#files
-	//
-	// If you want to overwrite includes/excludes, make sure to copy over the relevant includes/excludes
-	// from the referenced tsconfig.json - TypeScript does not merge them in
+		"noImplicitOverride": true,
+		"skipLibCheck": false,
+		"noUncheckedIndexedAccess": true,
+		"exactOptionalPropertyTypes": true,
+		"allowImportingTsExtensions": true,
+		"noFallthroughCasesInSwitch": true,
+		"useUnknownInCatchVariables": true,
+		"useDefineForClassFields": true,
+		"noPropertyAccessFromIndexSignature": true,
+		"forceConsistentCasingInFileNames": true,
+		"verbatimModuleSyntax": true,
+		"paths": {
+			"@/core/*": ["./src/core/*"],
+			"@/feature/*": ["./src/business/feature/*"],
+			"@/shared/*": ["./src/business/shared/*"],
+			"@/screen/*": ["./src/screen/*"]
+		}
+	},
+	"include": [
+		"**/*.ts",
+		"**/*.tsx",
+		".expo/types/**/*.ts",
+		"expo-env.d.ts",
+		"nativewind-env.d.ts"
+	]
 }
