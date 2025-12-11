@@ -18,11 +18,9 @@ const fetchListStream = (version: State.FetchListSchedulerVersion) =>
 		Stream.forever,
 	)
 
-export const subscriptions: SM.Subscriptions<
-	State.State,
-	Message,
-	UC.All
-> = state => {
+export const subscriptions: (
+	state: State.State,
+) => SM.Subscriptions<Message, UC.All> = state => {
 	let map = HashMap.empty<unknown, Stream.Stream<Message, never, UC.All>>()
 
 	if (State.isSchedulerFetchingAllowed(state)) {

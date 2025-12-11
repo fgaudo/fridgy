@@ -1,8 +1,5 @@
 import * as Brand from 'effect/Brand'
-import * as Effect from 'effect/Effect'
-import { string } from 'effect/Equivalence'
 import { flow } from 'effect/Function'
-import * as ParseResult from 'effect/ParseResult'
 import * as _Schema from 'effect/Schema'
 
 export type NonEmptyTrimmedString = Brand.Branded<

@@ -18,15 +18,15 @@ const init = Model.init(State.init)
 const make: Effect.Effect<
 	ViewModel<Model.Model, Message, UC.All>,
 	never,
-	Scope.Scope
+	Scope.Scope | UC.All
 > = Effect.gen(function* () {
-	const stateManager = yield* SM.makeStateManager({
-		subscriptions: Scheduler.subscriptions,
-		initState: State.init,
-		initMessages: [Message.StartFetchList()],
-		fatalMessage: error => Message.Crash({ error }),
-		fatalMessageSubscription: error => Message.Crash({ error }),
-		update,
+	const stateManager = yield* SM.withSubscriptions({
+		makeStateManager: SM.makeStateManager({
+			initState: State.init,
+			fatalMessage: error => Message.Crash({ error }),
+			update,
+		}),
+		evaluateSubscriptions: Scheduler.subscriptions,
 	})
 
 	return {

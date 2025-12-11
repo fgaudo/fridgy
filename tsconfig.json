@@ -4,7 +4,6 @@
 		"plugins": [
 			{
 				"name": "@effect/language-service",
-				"transform": "@effect/language-service/transform",
 				"topLevelNamedReexports": "follow",
 				"namespaceImportPackages": ["effect"],
 				"diagnosticSeverity": {
@@ -18,11 +17,13 @@
 				],
 				"importAliases": {
 					"Array": "Arr",
-					"Request": "Req"
+					"Request": "Req",
+					"Option": "Opt"
 				}
 			}
 		],
 		"strict": true,
+		"noImplicitAny": true,
 		"noImplicitOverride": true,
 		"skipLibCheck": false,
 		"noUncheckedIndexedAccess": true,

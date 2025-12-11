@@ -1,1 +1,3 @@
-nodeLinker: hoisted
+onlyBuiltDependencies:
+  - msgpackr-extract
+  - unrs-resolver

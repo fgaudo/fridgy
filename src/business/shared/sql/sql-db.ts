@@ -1,5 +1,4 @@
 import * as Sql from '@effect/sql'
-import * as Sqlite from '@effect/sql-sqlite-react-native'
 import * as Effect from 'effect/Effect'
 import { flow } from 'effect/Function'
 import * as Schema from 'effect/Schema'
