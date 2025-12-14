@@ -5,6 +5,7 @@ import { pipe } from 'effect/Function'
 import * as HashMap from 'effect/HashMap'
 import * as Option from 'effect/Option'
 import * as PubSub from 'effect/PubSub'
+import * as Ref from 'effect/Ref'
 import * as Scope from 'effect/Scope'
 import * as Stream from 'effect/Stream'
 import * as SubscriptionRef from 'effect/SubscriptionRef'
@@ -45,10 +46,20 @@ export const makeStateManager = Effect.fn(function* <S, M, R>({
 		pubSub => pubSub.shutdown,
 	)
 	const scope = yield* Scope.Scope
-	const isStartedRef = yield* SynchronizedRef.make(false)
+	const isStartedRef = yield* Ref.make(false)
+	const messages = Stream.fromPubSub(messagePubSub)
 
-	const startUpdateLoop = pipe(
-		Stream.fromPubSub(messagePubSub),
+	const start = pipe(
+		Ref.getAndSet(isStartedRef, true),
+		Effect.tap(isStarted =>
+			isStarted
+				? Effect.logWarning('State manager already started')
+				: Effect.logDebug('Starting state manager'),
+		),
+		Stream.whenCaseEffect(isStarted =>
+			isStarted ? Option.none() : Option.some(messages),
+		),
+		Stream.onStart(Effect.logDebug('State manager started')),
 		Stream.map(update),
 		Stream.mapEffect(transition =>
 			SubscriptionRef.modify(stateRef, s => {
@@ -66,22 +77,7 @@ export const makeStateManager = Effect.fn(function* <S, M, R>({
 		),
 		Stream.runForEach(messagePubSub.publish),
 		Effect.forkScoped,
-	)
-
-	const start = pipe(
-		isStartedRef,
-		SynchronizedRef.updateEffect<boolean, Scope.Scope | R, never>(
-			Effect.fn(function* (isStarted) {
-				if (isStarted) {
-					yield* Effect.logWarning('Update already started')
-					return isStarted
-				}
-
-				yield* startUpdateLoop
-
-				return true
-			}),
-		),
+		Effect.asVoid,
 		Scope.extend(scope),
 	)
 
@@ -107,10 +103,49 @@ export const makeStateManager = Effect.fn(function* <S, M, R>({
 	return {
 		stateChanges,
 		start,
-		messages: yield* Stream.fromPubSub(messagePubSub, { scoped: true }),
+		messages,
 		dispatch: messagePubSub.publish,
 	}
 })
+
+const updateActiveSubscriptions = <K, M, R>(
+	subscriptions: HashMap.HashMap<K, Stream.Stream<M, never, R>>,
+) =>
+	SynchronizedRef.modifyEffect(
+		Effect.fn(function* (
+			activeSubscriptions: HashMap.HashMap<K, Deferred.Deferred<void>>,
+		) {
+			for (const [key, interruption] of activeSubscriptions) {
+				if (HashMap.has(subscriptions, key)) {
+					continue
+				}
+
+				activeSubscriptions = HashMap.remove(activeSubscriptions, key)
+				yield* Deferred.succeed(interruption, undefined)
+			}
+
+			let streams = Chunk.empty<Stream.Stream<M, never, R>>()
+
+			for (const [key, stream] of subscriptions) {
+				if (HashMap.has(activeSubscriptions, key)) {
+					continue
+				}
+
+				const interruption = yield* Deferred.make<void>()
+				activeSubscriptions = HashMap.set(
+					activeSubscriptions,
+					key,
+					interruption,
+				)
+				streams = Chunk.append(
+					streams,
+					Stream.interruptWhenDeferred(stream, interruption),
+				)
+			}
+
+			return [streams, activeSubscriptions] as const
+		}),
+	)
 
 export const withSubscriptions = Effect.fn(function* <
 	S,
@@ -125,80 +160,53 @@ export const withSubscriptions = Effect.fn(function* <
 	makeStateManager: Effect.Effect<StateManager<S, M, R>, never, Scope.Scope>
 	evaluateSubscriptions: (state: S) => Subscriptions<M, R, K>
 	fatalMessage?: (err: unknown) => NoInfer<M>
-}): Effect.fn.Return<StateManager<S, M, R>, never, Scope.Scope | R> {
+}): Effect.fn.Return<StateManager<S, M, R>, never, Scope.Scope> {
 	const stateManager = yield* makeStateManager
 	const maybeFatalMessage = Option.fromNullable(_fatalMessage)
 
+	const isStartedRef = yield* Ref.make(false)
+
+	const scope = yield* Scope.Scope
 	const activeSubscriptionsRef = yield* SynchronizedRef.make(
 		HashMap.empty<K, Deferred.Deferred<void>>(),
 	)
 
-	const updateActiveSubscriptions = (
-		subscriptions: HashMap.HashMap<K, Stream.Stream<M, never, R>>,
-	) =>
-		SynchronizedRef.modifyEffect(
-			activeSubscriptionsRef,
-			Effect.fn(function* (
-				activeSubscriptions: HashMap.HashMap<K, Deferred.Deferred<void>>,
-			) {
-				for (const [key, interruption] of activeSubscriptions) {
-					if (HashMap.has(subscriptions, key)) {
-						continue
-					}
-
-					activeSubscriptions = HashMap.remove(activeSubscriptions, key)
-					yield* Deferred.succeed(interruption, undefined)
+	const start = pipe(
+		Ref.getAndSet(isStartedRef, true),
+		Effect.andThen(
+			Effect.fn(function* (isStarted) {
+				if (isStarted) {
+					yield* Effect.logWarning('State manager already started')
+					return Stream.empty
 				}
 
-				let streams = Chunk.empty<Stream.Stream<M, never, R>>()
-
-				for (const [key, stream] of subscriptions) {
-					if (HashMap.has(activeSubscriptions, key)) {
-						continue
-					}
-
-					const interruption = yield* Deferred.make<void>()
-					activeSubscriptions = HashMap.set(
-						activeSubscriptions,
-						key,
-						interruption,
-					)
-					streams = Chunk.append(
-						streams,
-						Stream.interruptWhenDeferred(stream, interruption),
-					)
-				}
-
-				return [streams, activeSubscriptions] as const
+				yield* stateManager.start
+				yield* Effect.logDebug('Starting subscriptions')
+				return stateManager.stateChanges
 			}),
-		)
-
-	const scope = yield* Scope.Scope
+		),
+		Stream.unwrap,
+		Stream.onStart(Effect.logDebug('Subscriptions started')),
+		Stream.changesWith((s1, s2) => s1 === s2),
+		Stream.map(computeSubscriptions),
+		Stream.mapEffect(subscriptions =>
+			updateActiveSubscriptions(subscriptions)(activeSubscriptionsRef),
+		),
+		Stream.flattenChunks,
+		Stream.flatten({ concurrency: 'unbounded' }),
+		Stream.catchAllCause(err =>
+			Option.match(maybeFatalMessage, {
+				onNone: () => Stream.empty,
+				onSome: fatalMessage => Stream.make(fatalMessage(err)),
+			}),
+		),
+		Stream.runForEach(stateManager.dispatch),
+		Effect.forkScoped,
+		Scope.extend(scope),
+	)
 
 	return {
 		...stateManager,
-		start: Scope.extend(
-			Effect.gen(function* () {
-				yield* stateManager.start
-
-				yield* pipe(
-					stateManager.stateChanges,
-					Stream.changesWith((s1, s2) => s1 === s2),
-					Stream.map(computeSubscriptions),
-					Stream.mapEffect(updateActiveSubscriptions),
-					Stream.flattenChunks,
-					Stream.flatten({ concurrency: 'unbounded' }),
-					Stream.catchAllCause(err =>
-						Option.match(maybeFatalMessage, {
-							onNone: () => Stream.empty,
-							onSome: fatalMessage => Stream.make(fatalMessage(err)),
-						}),
-					),
-					Stream.runForEach(stateManager.dispatch),
-					Effect.forkScoped,
-				)
-			}),
-			scope,
-		),
+		start,
 	}
 })

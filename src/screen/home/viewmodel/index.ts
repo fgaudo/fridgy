@@ -18,7 +18,7 @@ const init = Model.init(State.init)
 const make: Effect.Effect<
 	ViewModel<Model.Model, Message, UC.All>,
 	never,
-	Scope.Scope | UC.All
+	Scope.Scope
 > = Effect.gen(function* () {
 	const stateManager = yield* SM.withSubscriptions({
 		makeStateManager: SM.makeStateManager({
