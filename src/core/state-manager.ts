@@ -182,13 +182,17 @@ export const withSubscriptions = Effect.fn(function* <
 					return Stream.empty
 				}
 
-				yield* stateManager.start
 				yield* Effect.logDebug('Starting subscriptions')
 				return stateManager.stateChanges
 			}),
 		),
 		Stream.unwrap,
-		Stream.onStart(Effect.logDebug('Subscriptions started')),
+		Stream.onStart(
+			Effect.gen(function* () {
+				yield* Effect.logDebug('Subscriptions started')
+				yield* stateManager.start
+			}),
+		),
 		Stream.changesWith((s1, s2) => s1 === s2),
 		Stream.map(computeSubscriptions),
 		Stream.mapEffect(subscriptions =>
