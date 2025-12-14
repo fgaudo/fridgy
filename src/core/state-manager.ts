@@ -68,12 +68,14 @@ export const makeStateManager = Effect.fn(function* <S, M, R>({
 			}),
 		),
 		Stream.flattenChunks,
-		Stream.flattenEffect({ concurrency: 'unbounded', unordered: true }),
-		Stream.catchAllCause(err =>
-			Option.match(maybeFatalMessage, {
-				onNone: () => Stream.empty,
-				onSome: fatalMessage => Stream.make(fatalMessage(err)),
-			}),
+		Stream.flatMap(
+			Stream.catchAllCause(err =>
+				Option.match(maybeFatalMessage, {
+					onNone: () => Stream.empty,
+					onSome: fatalMessage => Stream.make(fatalMessage(err)),
+				}),
+			),
+			{ concurrency: 'unbounded' },
 		),
 		Stream.runForEach(messagePubSub.publish),
 		Effect.forkScoped,
@@ -193,12 +195,14 @@ export const withSubscriptions = Effect.fn(function* <
 			updateActiveSubscriptions(subscriptions)(activeSubscriptionsRef),
 		),
 		Stream.flattenChunks,
-		Stream.flatten({ concurrency: 'unbounded' }),
-		Stream.catchAllCause(err =>
-			Option.match(maybeFatalMessage, {
-				onNone: () => Stream.empty,
-				onSome: fatalMessage => Stream.make(fatalMessage(err)),
-			}),
+		Stream.flatMap(
+			Stream.catchAllCause(err =>
+				Option.match(maybeFatalMessage, {
+					onNone: () => Stream.empty,
+					onSome: fatalMessage => Stream.make(fatalMessage(err)),
+				}),
+			),
+			{ concurrency: 'unbounded' },
 		),
 		Stream.runForEach(stateManager.dispatch),
 		Effect.forkScoped,
