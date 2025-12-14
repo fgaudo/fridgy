@@ -21,15 +21,12 @@ const fetchListStream = (version: State.FetchListSchedulerVersion) =>
 export const subscriptions: (
 	state: State.State,
 ) => SM.Subscriptions<Message, UC.All> = state => {
-	let map = HashMap.empty<unknown, Stream.Stream<Message, never, UC.All>>()
-
-	if (State.isSchedulerFetchingAllowed(state)) {
-		map = HashMap.set(
-			map,
-			'fetchList',
-			fetchListStream(state.fetchListSchedulerVersion),
-		)
+	if (!State.isSchedulerFetchingAllowed(state)) {
+		return SM.emptySubscription
 	}
 
-	return map
+	return HashMap.make([
+		state.fetchListSchedulerVersion,
+		fetchListStream(state.fetchListSchedulerVersion),
+	])
 }

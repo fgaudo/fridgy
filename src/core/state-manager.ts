@@ -1,6 +1,7 @@
 import * as Chunk from 'effect/Chunk'
 import * as Deferred from 'effect/Deferred'
 import * as Effect from 'effect/Effect'
+import * as Function from 'effect/Function'
 import { pipe } from 'effect/Function'
 import * as HashMap from 'effect/HashMap'
 import * as Option from 'effect/Option'
@@ -17,11 +18,6 @@ export type Update<S, M, R> = (message: M) => (state: S) => {
 	state: S
 	commands: Chunk.Chunk<Command<M, R>>
 }
-
-export type Subscriptions<M, R, K = unknown> = HashMap.HashMap<
-	K,
-	Stream.Stream<M, never, R>
->
 
 export type StateManager<S, M, R> = {
 	stateChanges: Stream.Stream<S>
@@ -149,12 +145,14 @@ const updateActiveSubscriptions = <K, M, R>(
 		}),
 	)
 
-export const withSubscriptions = Effect.fn(function* <
-	S,
-	M extends { _tag: string | symbol },
-	R,
-	K = unknown,
->({
+export const emptySubscription = HashMap.empty()
+
+export type Subscriptions<M, R, K = unknown> = HashMap.HashMap<
+	K,
+	Stream.Stream<M, never, R>
+>
+
+const _withSubscriptions = Effect.fn(function* <S, M, R, K = unknown>({
 	makeStateManager,
 	evaluateSubscriptions: computeSubscriptions,
 	fatalMessage: _fatalMessage,
@@ -195,6 +193,7 @@ export const withSubscriptions = Effect.fn(function* <
 		),
 		Stream.changesWith((s1, s2) => s1 === s2),
 		Stream.map(computeSubscriptions),
+		Stream.changesWith((x, y) => x === y),
 		Stream.mapEffect(subscriptions =>
 			updateActiveSubscriptions(subscriptions)(activeSubscriptionsRef),
 		),
@@ -218,3 +217,25 @@ export const withSubscriptions = Effect.fn(function* <
 		start,
 	}
 })
+
+export const withSubscriptions = Function.dual<
+	<S, M, R, K>(
+		p: (state: S) => Subscriptions<M, R, K>,
+		options?: { fatalMessage: (err: unknown) => NoInfer<M> },
+	) => (
+		s: Effect.Effect<StateManager<S, M, R>, never, Scope.Scope>,
+	) => Effect.Effect<StateManager<S, M, R>, never, Scope.Scope>,
+	<S, M, R, K>(
+		s: Effect.Effect<StateManager<S, M, R>, never, Scope.Scope>,
+		p: (state: S) => Subscriptions<M, R, K>,
+		options?: { fatalMessage: (err: unknown) => NoInfer<M> },
+	) => Effect.Effect<StateManager<S, M, R>, never, Scope.Scope>
+>(
+	args => Effect.isEffect(args[0]),
+	(makeStateManager, evaluateSubscriptions, options) =>
+		_withSubscriptions({
+			makeStateManager,
+			evaluateSubscriptions,
+			...(options?.fatalMessage ? { fatalMessage: options.fatalMessage } : {}),
+		}),
+)

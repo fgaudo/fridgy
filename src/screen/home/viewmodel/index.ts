@@ -20,14 +20,14 @@ const make: Effect.Effect<
 	never,
 	Scope.Scope
 > = Effect.gen(function* () {
-	const stateManager = yield* SM.withSubscriptions({
-		makeStateManager: SM.makeStateManager({
+	const stateManager = yield* SM.withSubscriptions(
+		SM.makeStateManager({
 			initState: State.init,
 			fatalMessage: error => Message.Crash({ error }),
 			update,
 		}),
-		evaluateSubscriptions: Scheduler.subscriptions,
-	})
+		Scheduler.subscriptions,
+	)
 
 	return {
 		...stateManager,

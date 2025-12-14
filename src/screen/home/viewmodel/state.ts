@@ -104,6 +104,10 @@ export const isInitial = (
 ): state is State & { productListStatus: { _tag: 'Initial' } } =>
 	state.productListStatus._tag === 'Initial'
 
+/** @remarks
+ *  Time complexity: O(n) in the worst case.
+ *  Could be improved with a cached hasFreshProducts stored in the state
+ */
 export const hasFreshProducts = (state: State): state is IsInAvailable =>
 	isInAvailable(state) &&
 	state.productListStatus.products.some(
