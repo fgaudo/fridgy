@@ -2,8 +2,10 @@
 const { defineConfig } = require('eslint/config')
 const expoConfig = require('eslint-config-expo/flat')
 const stylistic = require('@stylistic/eslint-plugin')
+const reactHooks = require('eslint-plugin-react-hooks')
 
 module.exports = defineConfig([
+	...reactHooks.configs.flat.recommended,
 	expoConfig,
 	{ plugins: { '@stylistic': stylistic } },
 	{

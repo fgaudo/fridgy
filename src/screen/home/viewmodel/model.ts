@@ -23,6 +23,7 @@ export type Model = Readonly<{
 		True: { fetch: Effect.Effect<void> }
 		False: object
 	}>
+	canNavigateToAddProduct: boolean
 	productListStatus: Data.TaggedEnum<{
 		Initial: object
 		Error: object
@@ -37,7 +38,7 @@ export type Model = Readonly<{
 				True: { clear: Effect.Effect<void> }
 				False: object
 			}>
-			hasSelectedProducts: Data.TaggedEnum<{
+			isSelectingProducts: Data.TaggedEnum<{
 				True: { number: PositiveInteger.PositiveInteger }
 				False: object
 			}>
@@ -101,6 +102,7 @@ export const make =
 		if (state.productListStatus._tag !== 'Available') {
 			return {
 				...state,
+				canNavigateToAddProduct: true,
 				isFetching,
 				canFetch,
 				productListStatus: state.productListStatus,
@@ -130,44 +132,48 @@ export const make =
 				} as const)
 			: ({ _tag: 'False' } as const)
 
-		const hasSelectedProducts = Option.isSome(maybeSelected)
+		const isSelectingProducts = Option.isSome(maybeSelected)
 			? ({
 					_tag: 'True',
 					number: NonEmptyHashSet.size(maybeSelected.value),
 				} as const)
 			: ({ _tag: 'False' } as const)
 
-		const products = Arr.map(status.products, p =>
-			p._tag === 'Corrupt'
+		const products = Arr.map(status.products, product =>
+			product._tag === 'Corrupt'
 				? {
-						...p,
+						...product,
 						canToggle: { _tag: 'False' } as const,
 					}
 				: {
-						...p,
+						...product,
 						canToggle: status.isDeleting
 							? ({ _tag: 'False' } as const)
 							: ({
 									_tag: 'True',
-									toggle: dispatch(Message.ToggleItem({ id: p.id })),
+									toggle: dispatch(Message.ToggleItem({ id: product.id })),
 								} as const),
 						selected: pipe(
 							maybeSelected,
-							Option.map(HashSet.has(p.id)),
+							Option.map(HashSet.has(product.id)),
 							Option.getOrElse(() => false),
 						),
 					},
 		)
 
+		const canNavigateToAddProduct =
+			isSelectingProducts._tag === 'False' && !status.isDeleting
+
 		return {
 			...state,
+			canNavigateToAddProduct,
 			isFetching,
 			canFetch,
 			productListStatus: {
 				...status,
 				canClearSelection,
 				canDelete,
-				hasSelectedProducts,
+				isSelectingProducts,
 				products,
 			},
 		}
@@ -181,6 +187,7 @@ export const init = (state: State.State): Model => {
 	if (state.productListStatus._tag !== 'Available') {
 		return {
 			...state,
+			canNavigateToAddProduct: true,
 			isFetching,
 			canFetch,
 			productListStatus: state.productListStatus,
@@ -191,36 +198,40 @@ export const init = (state: State.State): Model => {
 	const maybeSelected = status.maybeSelectedProducts
 	const canClearSelection = { _tag: 'False' } as const
 	const canDelete = { _tag: 'False' } as const
-	const hasSelectedProducts = Option.isSome(maybeSelected)
+	const isSelectingProducts = Option.isSome(maybeSelected)
 		? ({
 				_tag: 'True',
 				number: NonEmptyHashSet.size(maybeSelected.value),
 			} as const)
 		: ({ _tag: 'False' } as const)
 
-	const products = Arr.map(status.products, p =>
-		p._tag === 'Corrupt'
-			? ({ ...p, canToggle: { _tag: 'False' } } as const)
+	const products = Arr.map(status.products, product =>
+		product._tag === 'Corrupt'
+			? ({ ...product, canToggle: { _tag: 'False' } } as const)
 			: {
-					...p,
+					...product,
 					canToggle: { _tag: 'False' } as const,
 					selected: pipe(
 						maybeSelected,
-						Option.map(HashSet.has(p.id)),
+						Option.map(HashSet.has(product.id)),
 						Option.getOrElse(() => false),
 					),
 				},
 	)
 
+	const canNavigateToAddProduct =
+		isSelectingProducts._tag === 'False' && !status.isDeleting
+
 	return {
 		...state,
+		canNavigateToAddProduct,
 		isFetching,
 		canFetch,
 		productListStatus: {
 			...status,
 			canClearSelection,
 			canDelete,
-			hasSelectedProducts,
+			isSelectingProducts,
 			products,
 		},
 	}
@@ -231,8 +242,6 @@ type isNotInAvailable = Model & {
 }
 
 type IsInAvailable = Model & { productListStatus: { _tag: 'Available' } }
-export const isInAvailable = (model: Model): model is IsInAvailable =>
-	model.productListStatus._tag === 'Available'
 
 export const isNotInAvailable = (model: Model): model is isNotInAvailable =>
 	model.productListStatus._tag !== 'Available'

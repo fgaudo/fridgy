@@ -154,7 +154,7 @@ export type Subscriptions<M, R, K = unknown> = HashMap.HashMap<
 
 const _withSubscriptions = Effect.fn(function* <S, M, R, K = unknown>({
 	makeStateManager,
-	evaluateSubscriptions: computeSubscriptions,
+	evaluateSubscriptions,
 	fatalMessage: _fatalMessage,
 }: {
 	makeStateManager: Effect.Effect<StateManager<S, M, R>, never, Scope.Scope>
@@ -192,7 +192,7 @@ const _withSubscriptions = Effect.fn(function* <S, M, R, K = unknown>({
 			}),
 		),
 		Stream.changesWith((s1, s2) => s1 === s2),
-		Stream.map(computeSubscriptions),
+		Stream.map(evaluateSubscriptions),
 		Stream.changesWith((x, y) => x === y),
 		Stream.mapEffect(subscriptions =>
 			updateActiveSubscriptions(subscriptions)(activeSubscriptionsRef),

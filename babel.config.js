@@ -1,6 +1,9 @@
 module.exports = function (api) {
 	api.cache(true)
 	return {
+		plugins: [
+			'babel-plugin-react-compiler', // must run first!
+		],
 		presets: [
 			['babel-preset-expo', { jsxImportSource: 'nativewind' }],
 			'nativewind/babel',
