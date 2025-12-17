@@ -134,6 +134,7 @@ export const update: SM.Update<State.State, Message, UC.All> = matcher({
 		const nextFetchVersion = State.FetchListVersion.increment(
 			state.fetchListVersion,
 		)
+
 		return {
 			state: {
 				...state,

@@ -1,11 +1,11 @@
 import * as ManagedRuntime from 'effect/ManagedRuntime'
 import { Stack } from 'expo-router'
-import { StatusBar } from 'expo-status-bar'
 import { useEffect, useMemo } from 'react'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
+import Toast from 'react-native-toast-message'
 
 import '../../global.css'
-import { layers } from '../business'
+import { layers } from '../business/index.ts'
 import { FridgyContext } from '../lib/context'
 
 export default function RootLayout() {
@@ -20,9 +20,9 @@ export default function RootLayout() {
 	return (
 		<SafeAreaProvider>
 			<FridgyContext.Provider value={runtime}>
-				<StatusBar style="auto" />
-				<Stack />
+				<Stack screenOptions={{ headerTitleAlign: 'center' }}></Stack>
 			</FridgyContext.Provider>
+			<Toast />
 		</SafeAreaProvider>
 	)
 }

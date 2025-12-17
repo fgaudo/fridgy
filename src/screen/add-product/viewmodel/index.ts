@@ -19,10 +19,7 @@ const make: Effect.Effect<
 	never,
 	Scope.Scope
 > = Effect.gen(function* () {
-	const stateManager = yield* SM.makeStateManager({
-		initState: State.init,
-		update,
-	})
+	const stateManager = yield* SM.makeStateManager(State.init, update)
 
 	return {
 		...stateManager,

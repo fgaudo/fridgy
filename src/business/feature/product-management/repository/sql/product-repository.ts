@@ -17,7 +17,8 @@ import * as ProductRepository from '../product-repository.ts'
 
 const makeGetProducts = Effect.gen(function* () {
 	const sql = yield* Sql.SqlClient.SqlClient
-	const makeSelectProducts = Sql.SqlSchema.findAll({
+
+	const selectProducts = Sql.SqlSchema.findAll({
 		Request: Schema.Void,
 		Result: Schema.Struct({
 			maybeId: OptionFromValue(Integer.Schema).annotations({
@@ -66,7 +67,7 @@ const makeGetProducts = Effect.gen(function* () {
 	})()
 
 	return Effect.gen(function* () {
-		const maybeProducts = yield* Effect.option(makeSelectProducts)
+		const maybeProducts = yield* Effect.option(selectProducts)
 
 		if (Option.isNone(maybeProducts)) {
 			return yield* Effect.fail(undefined)

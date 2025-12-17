@@ -23,23 +23,24 @@ export type Model = Readonly<{
 		True: { fetch: Effect.Effect<void> }
 		False: object
 	}>
-	canNavigateToAddProduct: boolean
 	productListStatus: Data.TaggedEnum<{
 		Initial: object
 		Error: object
 		Empty: object
 		Available: Readonly<{
 			isDeleting: boolean
-			canDelete: Data.TaggedEnum<{
-				True: { deleteSelected: Effect.Effect<void> }
-				False: object
-			}>
-			canClearSelection: Data.TaggedEnum<{
-				True: { clear: Effect.Effect<void> }
-				False: object
-			}>
-			isSelectingProducts: Data.TaggedEnum<{
-				True: { number: PositiveInteger.PositiveInteger }
+			hasSelectedProducts: Data.TaggedEnum<{
+				True: {
+					number: PositiveInteger.PositiveInteger
+					canDelete: Data.TaggedEnum<{
+						True: { deleteSelected: Effect.Effect<void> }
+						False: object
+					}>
+					canClearSelection: Data.TaggedEnum<{
+						True: { clear: Effect.Effect<void> }
+						False: object
+					}>
+				}
 				False: object
 			}>
 			total: PositiveInteger.PositiveInteger
@@ -102,7 +103,6 @@ export const make =
 		if (state.productListStatus._tag !== 'Available') {
 			return {
 				...state,
-				canNavigateToAddProduct: true,
 				isFetching,
 				canFetch,
 				productListStatus: state.productListStatus,
@@ -132,10 +132,12 @@ export const make =
 				} as const)
 			: ({ _tag: 'False' } as const)
 
-		const isSelectingProducts = Option.isSome(maybeSelected)
+		const hasSelectedProducts = Option.isSome(maybeSelected)
 			? ({
 					_tag: 'True',
 					number: NonEmptyHashSet.size(maybeSelected.value),
+					canDelete,
+					canClearSelection,
 				} as const)
 			: ({ _tag: 'False' } as const)
 
@@ -161,19 +163,13 @@ export const make =
 					},
 		)
 
-		const canNavigateToAddProduct =
-			isSelectingProducts._tag === 'False' && !status.isDeleting
-
 		return {
 			...state,
-			canNavigateToAddProduct,
 			isFetching,
 			canFetch,
 			productListStatus: {
 				...status,
-				canClearSelection,
-				canDelete,
-				isSelectingProducts,
+				hasSelectedProducts,
 				products,
 			},
 		}
@@ -187,7 +183,6 @@ export const init = (state: State.State): Model => {
 	if (state.productListStatus._tag !== 'Available') {
 		return {
 			...state,
-			canNavigateToAddProduct: true,
 			isFetching,
 			canFetch,
 			productListStatus: state.productListStatus,
@@ -198,10 +193,12 @@ export const init = (state: State.State): Model => {
 	const maybeSelected = status.maybeSelectedProducts
 	const canClearSelection = { _tag: 'False' } as const
 	const canDelete = { _tag: 'False' } as const
-	const isSelectingProducts = Option.isSome(maybeSelected)
+	const hasSelectedProducts = Option.isSome(maybeSelected)
 		? ({
 				_tag: 'True',
 				number: NonEmptyHashSet.size(maybeSelected.value),
+				canDelete,
+				canClearSelection,
 			} as const)
 		: ({ _tag: 'False' } as const)
 
@@ -219,41 +216,57 @@ export const init = (state: State.State): Model => {
 				},
 	)
 
-	const canNavigateToAddProduct =
-		isSelectingProducts._tag === 'False' && !status.isDeleting
-
 	return {
 		...state,
-		canNavigateToAddProduct,
 		isFetching,
 		canFetch,
 		productListStatus: {
 			...status,
-			canClearSelection,
-			canDelete,
-			isSelectingProducts,
+			hasSelectedProducts,
 			products,
 		},
 	}
 }
 
-type isNotInAvailable = Model & {
-	productListStatus: Exclude<Model['productListStatus'], { _tag: 'Available' }>
-}
-
 type IsInAvailable = Model & { productListStatus: { _tag: 'Available' } }
+export const isInAvailable = (model: Model): model is IsInAvailable =>
+	model.productListStatus._tag === 'Available'
 
-export const isNotInAvailable = (model: Model): model is isNotInAvailable =>
-	model.productListStatus._tag !== 'Available'
+type IsSelectingProducts = Model &
+	IsInAvailable & {
+		productListStatus: { hasSelectedProducts: { _tag: 'True' } }
+	}
 
-type IsInEmpty = Model & { productListStatus: { _tag: 'Empty' } }
-export const isInEmpty = (model: Model): model is IsInEmpty =>
-	model.productListStatus._tag === 'Empty'
+export const hasSelectedProducts = (
+	model: Model,
+): model is IsInAvailable & IsSelectingProducts =>
+	isInAvailable(model) &&
+	model.productListStatus.hasSelectedProducts._tag === 'True'
 
-type IsInError = Model & { productListStatus: { _tag: 'Error' } }
-export const isInError = (model: Model): model is IsInError =>
-	model.productListStatus._tag === 'Error'
+export const canClearSelection = (
+	model: Model,
+): model is IsInAvailable &
+	IsSelectingProducts & {
+		productListStatus: {
+			hasSelectedProducts: { canClearSelection: { _tag: 'True' } }
+		}
+	} =>
+	isInAvailable(model) &&
+	hasSelectedProducts(model) &&
+	model.productListStatus.hasSelectedProducts.canClearSelection._tag === 'True'
 
-type IsInInitial = Model & { productListStatus: { _tag: 'Initial' } }
-export const isInInitial = (model: Model): model is IsInInitial =>
-	model.productListStatus._tag === 'Initial'
+export const canDeleteSelected = (
+	model: Model,
+): model is IsInAvailable &
+	IsSelectingProducts & {
+		productListStatus: { hasSelectedProducts: { canDelete: { _tag: 'True' } } }
+	} =>
+	isInAvailable(model) &&
+	hasSelectedProducts(model) &&
+	model.productListStatus.hasSelectedProducts.canDelete._tag === 'True'
+
+export const canNavigateToAddProduct = (model: Model) =>
+	model.productListStatus._tag !== 'Available' ||
+	(model.productListStatus._tag === 'Available' &&
+		!model.productListStatus.isDeleting &&
+		model.productListStatus.hasSelectedProducts._tag === 'False')

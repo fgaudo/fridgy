@@ -1,24 +1,102 @@
 import Ionicons from '@expo/vector-icons/Ionicons'
 import * as Arr from 'effect/Array'
 import { absurd } from 'effect/Function'
-import { Link } from 'expo-router'
+import { Link, useNavigation } from 'expo-router'
+import { useEffect } from 'react'
 import { ActivityIndicator, FlatList, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import * as Svg from 'react-native-svg'
+import Toast from 'react-native-toast-message'
 
 import * as Home from '@/screen/home/viewmodel/index.ts'
+import * as Model from '@/screen/home/viewmodel/model.ts'
 
 import { useViewmodel } from '../lib/adapter.ts'
 import { useFridgyContext } from '../lib/context.ts'
 
 export default function Index() {
 	const runtime = useFridgyContext()
-
+	const navigation = useNavigation()
 	const model = useViewmodel({
 		runtime,
 		makeViewModel: Home.make,
 		initState: Home.init,
+		messages: message => {
+			Toast.show({ type: 'info', text1: message._tag })
+		},
 	})
+
+	const canClearSelection = Model.canClearSelection(model)
+	const hasSelectedProducts = Model.hasSelectedProducts(model)
+	const canDeleteSelected = Model.canDeleteSelected(model)
+
+	useEffect(() => {
+		if (!hasSelectedProducts) {
+			navigation.setOptions({
+				headerRight: undefined,
+			})
+
+			return
+		}
+
+		if (!canDeleteSelected) {
+			navigation.setOptions({
+				headerRight: () => (
+					<View className="pr-5">
+						<Text>{model.productListStatus.hasSelectedProducts.number}</Text>
+						<Ionicons name="trash" disabled></Ionicons>
+					</View>
+				),
+			})
+
+			return
+		}
+
+		navigation.setOptions({
+			headerRight: () => (
+				<View className="pr-5">
+					<Text>{model.productListStatus.hasSelectedProducts.number}</Text>
+
+					<Ionicons
+						name="trash"
+						onPress={() => {
+							runtime.runCallback(
+								model.productListStatus.hasSelectedProducts.canDelete
+									.deleteSelected,
+							)
+						}}
+					></Ionicons>
+				</View>
+			),
+		})
+	}, [hasSelectedProducts, canDeleteSelected])
+
+	useEffect(() => {
+		if (!canClearSelection) {
+			navigation.setOptions({
+				headerLeft: () => (
+					<Ionicons name="menu" size={32} className="pl-5"></Ionicons>
+				),
+			})
+			return
+		}
+
+		navigation.setOptions({
+			headerLeft: () => (
+				<Ionicons
+					name="close"
+					size={32}
+					className="pl-5"
+					onPress={() => {
+						runtime.runCallback(
+							model.productListStatus.hasSelectedProducts.canClearSelection
+								.clear,
+						)
+					}}
+				></Ionicons>
+			),
+		})
+	}, [canClearSelection])
 
 	return (
 		<SafeAreaView className="flex-1">
@@ -61,15 +139,14 @@ export default function Index() {
 				absurd(model.productListStatus)
 			)}
 
-			{model.canNavigateToAddProduct ? (
-				<View className="absolute bottom-5 right-5 items-end">
-					{model.productListStatus._tag === 'Empty' && <StylishArrow />}
+			{Model.canNavigateToAddProduct(model) ? (
+				<View className="absolute bottom-15 right-5 items-end">
 					<Link href={'/add-product'}>
 						<Ionicons
 							name="add"
-							size={50}
+							size={36}
 							color={'white'}
-							className="bg-red-600 z-50 text-background shadow-md shadow-on-background/30 flex h-24 w-24 items-center justify-center rounded-full"
+							className="elevation-md bg-red-600 z-50 text-background shadow-md shadow-on-background/30 flex h-24 w-24 items-center justify-center rounded-4xl"
 						/>
 					</Link>
 				</View>
@@ -79,17 +156,3 @@ export default function Index() {
 		</SafeAreaView>
 	)
 }
-
-const StylishArrow = () => (
-	<View className="flex flex-col items-center pb-5 right-16">
-		<Svg.Svg
-			width={160}
-			height={160}
-			viewBox="0 0 130 185"
-			className="rotate-[12deg] relative left-[25px]"
-		>
-			<Svg.Path d="M22.6 5.9c-.3.5..." />
-			<Svg.Path d="M93.5 125c-.3.5..." />
-		</Svg.Svg>
-	</View>
-)

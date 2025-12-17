@@ -45,7 +45,7 @@ export const useViewmodel = <S, M, R>({
 				if (Exit.isSuccess(exit)) {
 					setViewmodel(exit.value)
 				} else {
-					setError(new Error('Could not initialize viewModel'))
+					setError(new Error(exit.cause.toString()))
 				}
 			},
 		})

@@ -59,7 +59,7 @@ export class SqlDb extends Effect.Service<SqlDb>()('e37d576c27abb171', {
 			spanPrefix: 'ProductDataLoader',
 		} as const)
 
-		const productRepository = Sql.Model.makeRepository(Product, {
+		const productRepository = yield* Sql.Model.makeRepository(Product, {
 			tableName: DbSchema.product.table,
 			idColumn: 'id',
 			spanPrefix: 'ProductRepository',

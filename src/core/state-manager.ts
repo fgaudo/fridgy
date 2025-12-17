@@ -6,6 +6,7 @@ import { pipe } from 'effect/Function'
 import * as HashMap from 'effect/HashMap'
 import * as Option from 'effect/Option'
 import * as PubSub from 'effect/PubSub'
+import * as Queue from 'effect/Queue'
 import * as Ref from 'effect/Ref'
 import * as Scope from 'effect/Scope'
 import * as Stream from 'effect/Stream'
@@ -26,24 +27,29 @@ export type StateManager<S, M, R> = {
 	dispatch: (m: M) => Effect.Effect<void>
 }
 
-export const makeStateManager = Effect.fn(function* <S, M, R>({
-	update,
-	initState,
-	fatalMessage: _fatalMessage,
-}: {
-	update: Update<S, M, R>
-	initState: S
-	fatalMessage?: (err: unknown) => NoInfer<M>
-}): Effect.fn.Return<StateManager<S, M, R>, never, Scope.Scope> {
-	const maybeFatalMessage = Option.fromNullable(_fatalMessage)
+export const makeStateManager = Effect.fn(function* <S, M, R>(
+	initState: S,
+	update: Update<S, M, R>,
+	options?: { fatalMessage?: (err: unknown) => NoInfer<M> },
+): Effect.fn.Return<StateManager<S, M, R>, never, Scope.Scope> {
+	const maybeFatalMessage = pipe(
+		Option.fromNullable(options),
+		Option.flatMap(opt => Option.fromNullable(opt.fatalMessage)),
+	)
+
 	const stateRef = yield* SubscriptionRef.make(initState)
+	const messageQueue = yield* Effect.acquireRelease(
+		Queue.unbounded<M>(),
+		queue => queue.shutdown,
+	)
+
 	const messagePubSub = yield* Effect.acquireRelease(
 		PubSub.unbounded<M>(),
 		pubSub => pubSub.shutdown,
 	)
-	const scope = yield* Scope.Scope
+
+	const scope = yield* Effect.scope
 	const isStartedRef = yield* Ref.make(false)
-	const messages = Stream.fromPubSub(messagePubSub)
 
 	const start = pipe(
 		Ref.getAndSet(isStartedRef, true),
@@ -53,13 +59,19 @@ export const makeStateManager = Effect.fn(function* <S, M, R>({
 				: Effect.logDebug('Starting state manager'),
 		),
 		Stream.whenCaseEffect(isStarted =>
-			isStarted ? Option.none() : Option.some(messages),
+			isStarted
+				? Option.none()
+				: Option.some(
+						Stream.fromQueue(messageQueue).pipe(
+							Stream.onStart(Effect.logDebug('State manager started')),
+						),
+					),
 		),
-		Stream.onStart(Effect.logDebug('State manager started')),
 		Stream.map(update),
 		Stream.mapEffect(transition =>
 			SubscriptionRef.modify(stateRef, s => {
 				const { state, commands } = transition(s)
+
 				return [commands, state]
 			}),
 		),
@@ -73,12 +85,13 @@ export const makeStateManager = Effect.fn(function* <S, M, R>({
 			),
 			{ concurrency: 'unbounded' },
 		),
-		Stream.runForEach(messagePubSub.publish),
+		Stream.runForEach(m =>
+			Effect.all([messageQueue.offer(m), messagePubSub.publish(m)]),
+		),
 		Effect.forkScoped,
 		Effect.asVoid,
 		Scope.extend(scope),
 	)
-
 	const stateChanges = yield* pipe(
 		Effect.acquireRelease(
 			Effect.gen(function* () {
@@ -101,8 +114,8 @@ export const makeStateManager = Effect.fn(function* <S, M, R>({
 	return {
 		stateChanges,
 		start,
-		messages,
-		dispatch: messagePubSub.publish,
+		messages: Stream.fromPubSub(messagePubSub),
+		dispatch: (m: M) => messageQueue.offer(m),
 	}
 })
 
@@ -166,7 +179,7 @@ const _withSubscriptions = Effect.fn(function* <S, M, R, K = unknown>({
 
 	const isStartedRef = yield* Ref.make(false)
 
-	const scope = yield* Scope.Scope
+	const scope = yield* Effect.scope
 	const activeSubscriptionsRef = yield* SynchronizedRef.make(
 		HashMap.empty<K, Deferred.Deferred<void>>(),
 	)
@@ -181,16 +194,17 @@ const _withSubscriptions = Effect.fn(function* <S, M, R, K = unknown>({
 				}
 
 				yield* Effect.logDebug('Starting subscriptions')
-				return stateManager.stateChanges
+				return stateManager.stateChanges.pipe(
+					Stream.onStart(
+						Effect.gen(function* () {
+							yield* Effect.logDebug('Subscriptions started')
+							yield* stateManager.start
+						}),
+					),
+				)
 			}),
 		),
 		Stream.unwrap,
-		Stream.onStart(
-			Effect.gen(function* () {
-				yield* Effect.logDebug('Subscriptions started')
-				yield* stateManager.start
-			}),
-		),
 		Stream.changesWith((s1, s2) => s1 === s2),
 		Stream.map(evaluateSubscriptions),
 		Stream.changesWith((x, y) => x === y),

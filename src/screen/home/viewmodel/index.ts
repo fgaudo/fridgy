@@ -21,13 +21,14 @@ const make: Effect.Effect<
 	Scope.Scope
 > = Effect.gen(function* () {
 	const stateManager = yield* SM.withSubscriptions(
-		SM.makeStateManager({
-			initState: State.init,
+		SM.makeStateManager(State.init, update, {
 			fatalMessage: error => Message.Crash({ error }),
-			update,
 		}),
-		Scheduler.subscriptions,
+		Scheduler.evaluateSubscriptions,
+		{ fatalMessage: error => Message.Crash({ error }) },
 	)
+
+	yield* stateManager.dispatch(Message.StartFetchList())
 
 	return {
 		...stateManager,
