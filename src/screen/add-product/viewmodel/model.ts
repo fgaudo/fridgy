@@ -5,7 +5,7 @@ import * as Option from 'effect/Option'
 import * as Integer from '@/core/integer/integer.ts'
 import * as SM from '@/core/state-manager.ts'
 
-import { UseCasesWithoutDependencies as UC } from '@/feature/product-management/index.ts'
+import { layers } from '@/business/index.ts'
 
 import { Message } from './message.ts'
 import * as State from './state.ts'

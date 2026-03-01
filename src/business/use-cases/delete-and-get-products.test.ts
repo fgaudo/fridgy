@@ -13,7 +13,7 @@ import * as NonEmptyTrimmedString from '@/core/non-empty-trimmed-string.ts'
 import * as H from '@/core/test-helpers.ts'
 import { makeTestLayer } from '@/core/testing.ts'
 
-import * as ProductRepository from '../repository/product-repository.ts'
+import * as ProductRepository from '../../../infrastructure/product-repository.ts'
 import * as Usecase from './delete-and-get-products.ts'
 import * as GetSortedProducts from './get-products.ts'
 
@@ -56,7 +56,7 @@ describe.concurrent('Delete products by ids', () => {
 			makeTestLayer(GetSortedProducts.GetProducts)({
 				run: Effect.sync(() =>
 					pipe(
-						NonEmptyTrimmedString.unsafeFromString('asd'),
+						NonEmptyTrimmedString.makeUnsafe('asd'),
 						Option.some,
 						maybeName =>
 							Option.some({
@@ -67,7 +67,7 @@ describe.concurrent('Delete products by ids', () => {
 							}),
 						maybeProducts =>
 							GetSortedProducts.Response.Succeeded({
-								maybeProducts,
+								products: maybeProducts,
 							}),
 					),
 				),

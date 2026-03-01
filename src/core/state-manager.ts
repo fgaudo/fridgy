@@ -33,24 +33,23 @@ export const makeStateManager = Effect.fn(function* <S, M, R>(
 	options?: { fatalMessage?: (err: unknown) => NoInfer<M> },
 ): Effect.fn.Return<StateManager<S, M, R>, never, Scope.Scope> {
 	const maybeFatalMessage = pipe(
-		Option.fromNullable(options),
-		Option.flatMap(opt => Option.fromNullable(opt.fatalMessage)),
+		Option.fromUndefinedOr(options),
+		Option.flatMap(opt => Option.fromUndefinedOr(opt.fatalMessage)),
 	)
 
 	const stateRef = yield* SubscriptionRef.make(initState)
 	const messageQueue = yield* Effect.acquireRelease(
 		Queue.unbounded<M>(),
-		queue => queue.shutdown,
+		Queue.shutdown,
 	)
 
 	const messagePubSub = yield* Effect.acquireRelease(
 		PubSub.unbounded<M>(),
-		pubSub => pubSub.shutdown,
+		pubSub => PubSub.shutdown(pubSub),
 	)
 
 	const scope = yield* Effect.scope
 	const isStartedRef = yield* Ref.make(false)
-
 	const start = pipe(
 		Ref.getAndSet(isStartedRef, true),
 		Effect.tap(isStarted =>
@@ -58,14 +57,12 @@ export const makeStateManager = Effect.fn(function* <S, M, R>(
 				? Effect.logWarning('State manager already started')
 				: Effect.logDebug('Starting state manager'),
 		),
-		Stream.whenCaseEffect(isStarted =>
-			isStarted
-				? Option.none()
-				: Option.some(
-						Stream.fromQueue(messageQueue).pipe(
-							Stream.onStart(Effect.logDebug('State manager started')),
-						),
-					),
+		Stream.fromEffect,
+		Stream.filter(isStarted => !isStarted),
+		Stream.flatMap(() =>
+			Stream.fromQueue(messageQueue).pipe(
+				Stream.onStart(Effect.logDebug('State manager started')),
+			),
 		),
 		Stream.map(update),
 		Stream.mapEffect(transition =>
@@ -75,22 +72,23 @@ export const makeStateManager = Effect.fn(function* <S, M, R>(
 				return [commands, state]
 			}),
 		),
-		Stream.flattenChunks,
-		Stream.flatMap(
-			Stream.catchAllCause(err =>
-				Option.match(maybeFatalMessage, {
-					onNone: () => Stream.empty,
-					onSome: fatalMessage => Stream.make(fatalMessage(err)),
-				}),
-			),
-			{ concurrency: 'unbounded' },
+		Stream.flattenIterable,
+		Stream.flattenEffect({ concurrency: 'unbounded', unordered: true }),
+		Stream.catchCause(err =>
+			Option.match(maybeFatalMessage, {
+				onNone: () => Stream.empty,
+				onSome: fatalMessage => Stream.make(fatalMessage(err)),
+			}),
 		),
 		Stream.runForEach(m =>
-			Effect.all([messageQueue.offer(m), messagePubSub.publish(m)]),
+			Effect.all([
+				Queue.offer(messageQueue, m),
+				PubSub.publish(messagePubSub, m),
+			]),
 		),
 		Effect.forkScoped,
 		Effect.asVoid,
-		Scope.extend(scope),
+		Scope.provide(scope),
 	)
 	const stateChanges = yield* pipe(
 		Effect.acquireRelease(
@@ -99,9 +97,9 @@ export const makeStateManager = Effect.fn(function* <S, M, R>(
 
 				return {
 					stream: pipe(
-						stateRef.changes,
+						SubscriptionRef.changes(stateRef),
 						Stream.changesWith((s1, s2) => s1 === s2),
-						Stream.interruptWhenDeferred(interruption),
+						Stream.interruptWhen(Deferred.await(interruption)),
 					),
 					interruption,
 				}
@@ -115,7 +113,7 @@ export const makeStateManager = Effect.fn(function* <S, M, R>(
 		stateChanges,
 		start,
 		messages: Stream.fromPubSub(messagePubSub),
-		dispatch: (m: M) => messageQueue.offer(m),
+		dispatch: (m: M) => Queue.offer(messageQueue, m),
 	}
 })
 
@@ -148,9 +146,10 @@ const updateActiveSubscriptions = <K, M, R>(
 					key,
 					interruption,
 				)
+
 				streams = Chunk.append(
 					streams,
-					Stream.interruptWhenDeferred(stream, interruption),
+					Stream.interruptWhen(stream, Deferred.await(interruption)),
 				)
 			}
 
@@ -175,7 +174,7 @@ const _withSubscriptions = Effect.fn(function* <S, M, R, K = unknown>({
 	fatalMessage?: (err: unknown) => NoInfer<M>
 }): Effect.fn.Return<StateManager<S, M, R>, never, Scope.Scope> {
 	const stateManager = yield* makeStateManager
-	const maybeFatalMessage = Option.fromNullable(_fatalMessage)
+	const maybeFatalMessage = Option.fromUndefinedOr(_fatalMessage)
 
 	const isStartedRef = yield* Ref.make(false)
 
@@ -211,9 +210,9 @@ const _withSubscriptions = Effect.fn(function* <S, M, R, K = unknown>({
 		Stream.mapEffect(subscriptions =>
 			updateActiveSubscriptions(subscriptions)(activeSubscriptionsRef),
 		),
-		Stream.flattenChunks,
+		Stream.flattenIterable,
 		Stream.flatMap(
-			Stream.catchAllCause(err =>
+			Stream.catchCause(err =>
 				Option.match(maybeFatalMessage, {
 					onNone: () => Stream.empty,
 					onSome: fatalMessage => Stream.make(fatalMessage(err)),
@@ -223,7 +222,7 @@ const _withSubscriptions = Effect.fn(function* <S, M, R, K = unknown>({
 		),
 		Stream.runForEach(stateManager.dispatch),
 		Effect.forkScoped,
-		Scope.extend(scope),
+		Scope.provide(scope),
 	)
 
 	return {
@@ -250,6 +249,8 @@ export const withSubscriptions = Function.dual<
 		_withSubscriptions({
 			makeStateManager,
 			evaluateSubscriptions,
-			...(options?.fatalMessage ? { fatalMessage: options.fatalMessage } : {}),
+			...(options?.fatalMessage !== undefined
+				? { fatalMessage: options.fatalMessage }
+				: {}),
 		}),
 )

@@ -12,10 +12,10 @@ import * as NonEmptyTrimmedString from '@/core/non-empty-trimmed-string.ts'
 import * as H from '@/core/test-helpers.ts'
 import { makeTestLayer } from '@/core/testing.ts'
 
+import * as ProductRepository from '../../../infrastructure/product-repository.ts'
 import * as ProductService from '../domain/product.ts'
-import * as ProductRepository from '../repository/product-repository.ts'
 import * as Usecase from './add-product.ts'
-import { AddProduct } from './index.ts'
+import { AddProduct } from './usecase/index.ts'
 
 const AddProductParams = Schema.Struct({
 	name: NonEmptyTrimmedString.Schema,

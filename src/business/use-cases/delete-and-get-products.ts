@@ -1,22 +1,21 @@
 import * as Data from 'effect/Data'
 import * as Effect from 'effect/Effect'
+import { pipe } from 'effect/Function'
+import * as HashSet from 'effect/HashSet'
+import * as Layer from 'effect/Layer'
 import * as Match from 'effect/Match'
 import * as Option from 'effect/Option'
+import * as ServiceMap from 'effect/ServiceMap'
 
 import * as NonEmptyHashSet from '@/core/non-empty-hash-set.ts'
 
-import * as ProductRepository from '../repository/product-repository.ts'
-import * as GetProducts from './get-products.ts'
+import * as DeleteProductById from '@/ports/delete-product-by-id.ts'
 
-/////
-/////
+import * as GetProducts from './get-products.ts'
 
 type DeleteParameters = {
 	ids: NonEmptyHashSet.NonEmptyHashSet<string>
 }
-
-/////
-/////
 
 export type Response = Data.TaggedEnum<{
 	DeleteSucceededButRefreshFailed: object
@@ -25,31 +24,19 @@ export type Response = Data.TaggedEnum<{
 		maybeProducts: Data.TaggedEnum.Value<
 			GetProducts.Response,
 			'Succeeded'
-		>['maybeProducts']
+		>['products']
 	}
 }>
 
 export const Response = Data.taggedEnum<Response>()
 
-/////
-/////
-
-// @effect-codegens accessors:b1c5b121b8178709
-export class DeleteAndGetProducts extends Effect.Service<DeleteAndGetProducts>()(
+export class DeleteAndGetProducts extends ServiceMap.Service<DeleteAndGetProducts>()(
 	'da9e5f05edc3a0ba',
 	{
-		accessors: true,
-		effect: Effect.gen(function* () {
-			const resolver = (yield* ProductRepository.ProductRepository)
-				.deleteProductByIdResolver
-
-			const deleteProductById = (id: string) =>
-				Effect.request(
-					ProductRepository.DeleteProductById.Request({
-						id,
-					}),
-					resolver,
-				)
+		make: Effect.gen(function* () {
+			const deleteById = Effect.request(
+				(yield* DeleteProductById.DeleteProductById).resolver,
+			)
 
 			const getProducts = yield* GetProducts.GetProducts
 
@@ -58,10 +45,17 @@ export class DeleteAndGetProducts extends Effect.Service<DeleteAndGetProducts>()
 					yield* Effect.logInfo('Requested to delete products')
 					yield* Effect.logInfo('Attempting to delete products...')
 
-					const maybeDeleteResults = yield* Effect.option(
-						Effect.forEach(ids, deleteProductById, {
-							batching: true,
+					const maybeDeleteResults = yield* pipe(
+						ids,
+						HashSet.map(id =>
+							DeleteProductById.Request({
+								id,
+							}),
+						),
+						Effect.forEach(deleteById, {
+							concurrency: 'unbounded',
 						}),
+						Effect.option,
 					)
 
 					if (Option.isNone(maybeDeleteResults)) {
@@ -74,13 +68,16 @@ export class DeleteAndGetProducts extends Effect.Service<DeleteAndGetProducts>()
 
 					return Match.valueTags(fetchResult, {
 						Failed: () => Response.DeleteSucceededButRefreshFailed(),
-						Succeeded: ({ maybeProducts }) =>
+						Succeeded: ({ products: maybeProducts }) =>
 							Response.Succeeded({ maybeProducts }),
 					})
 				}, Effect.withLogSpan('DeleteAndGetProducts')),
 			}
 		}),
-
-		dependencies: [GetProducts.GetProducts.Default],
 	},
-) {}
+) {
+	static layer = Layer.provide(
+		Layer.effect(this, this.make),
+		GetProducts.GetProducts.layer,
+	)
+}

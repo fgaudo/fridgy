@@ -22,6 +22,7 @@
 				}
 			}
 		],
+		"libReplacement": false,
 		"strict": true,
 		"noImplicitAny": true,
 		"noImplicitOverride": true,
@@ -33,12 +34,16 @@
 		"useUnknownInCatchVariables": true,
 		"useDefineForClassFields": true,
 		"noPropertyAccessFromIndexSignature": true,
+		"noUncheckedSideEffectImports": true,
 		"forceConsistentCasingInFileNames": true,
 		"verbatimModuleSyntax": true,
 		"paths": {
 			"@/core/*": ["./src/core/*"],
-			"@/feature/*": ["./src/business/feature/*"],
-			"@/shared/*": ["./src/business/shared/*"],
+			"@/business/*": ["./src/business/*"],
+			"@/ports/*": ["./src/business/ports/*"],
+			"@/adapters/*": ["./src/business/adapters/*"],
+			"@/use-cases/*": ["./src/business/use-cases/*"],
+			"@/domain/*": ["./src/business/domain/*"],
 			"@/screen/*": ["./src/screen/*"]
 		}
 	},
@@ -48,5 +53,6 @@
 		".expo/types/**/*.ts",
 		"expo-env.d.ts",
 		"nativewind-env.d.ts"
-	]
+	],
+	"exclude": ["**/*.test.ts"]
 }

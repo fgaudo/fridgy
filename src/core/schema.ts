@@ -1,18 +1,18 @@
 import * as Effect from 'effect/Effect'
-import * as Either from 'effect/Either'
 import * as Option from 'effect/Option'
 import * as ParseResult from 'effect/ParseResult'
+import * as Result from 'effect/Result'
 import * as Schema from 'effect/Schema'
 
-export const OptionFromValue = <T extends Schema.Schema.Any>(schema: T) => {
+export const OptionFromValue = <T extends Schema.Any>(schema: T) => {
 	const type = Schema.typeSchema(Schema.asSchema(schema))
 	return Schema.transformOrFail(schema, Schema.OptionFromSelf(type), {
 		strict: true,
 		decode: Effect.fn(function* (input) {
 			const decodedValue = yield* Effect.either(Schema.decode(type)(input))
 
-			if (Either.isLeft(decodedValue)) {
-				return yield* ParseResult.fail(decodedValue.left.issue)
+			if (Result.isSuccess(decodedValue)) {
+				return yield* ParseResult.fail(decodedValue.success.issue)
 			}
 
 			return Option.some(decodedValue.right)

@@ -23,7 +23,7 @@ type IsNameValid = State & {
 export const isNameValid = (state: State): state is IsNameValid =>
 	pipe(
 		state.maybeName,
-		Option.flatMap(NonEmptyTrimmedString.fromString),
+		Option.flatMap(NonEmptyTrimmedString.make),
 		Option.isSome,
 	)
 

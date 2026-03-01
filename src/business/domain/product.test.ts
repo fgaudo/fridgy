@@ -44,7 +44,7 @@ describe.concurrent('isStale', () => {
 			Effect.fn(function* ([{ currentDate, product }]) {
 				assert(Option.isSome(product.maybeExpirationDate))
 
-				const { isStale } = yield* Product.ProductService
+				const { isFresh: isStale } = yield* Product.ProductService
 
 				const isStaleResult = isStale(
 					{ ...product, maybeExpirationDate: product.maybeExpirationDate },
@@ -91,7 +91,7 @@ describe.concurrent('isStale', () => {
 			Effect.fn(function* ([{ currentDate, product }]) {
 				assert(Option.isSome(product.maybeExpirationDate))
 
-				const { isStale } = yield* Product.ProductService
+				const { isFresh: isStale } = yield* Product.ProductService
 
 				const isStaleResult = isStale(
 					{ ...product, maybeExpirationDate: product.maybeExpirationDate },

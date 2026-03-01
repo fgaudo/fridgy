@@ -11,7 +11,7 @@ import * as NonEmptyTrimmedString from '@/core/non-empty-trimmed-string.ts'
 import * as H from '@/core/test-helpers.ts'
 import { makeTestLayer } from '@/core/testing.ts'
 
-import * as ProductRepository from '../repository/product-repository.ts'
+import * as ProductRepository from '../../../infrastructure/product-repository.ts'
 import * as Usecase from './get-products.ts'
 
 const GetSortedProductsSchema = Schema.Array(
