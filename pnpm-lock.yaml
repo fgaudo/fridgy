@@ -10,7 +10,7 @@ importers:
     dependencies:
       '@effect/sql-sqlite-react-native':
         specifier: 4.0.0-beta.21
-        version: 4.0.0-beta.21(@op-engineering/op-sqlite@7.1.0(react-native@0.83.2(@babel/core@7.28.5)(@types/react@19.2.14)(react@19.2.0))(react@19.2.0))(effect@4.0.0-beta.21)
+        version: 4.0.0-beta.21(@op-engineering/op-sqlite@7.1.0(react-native@0.83.2(@babel/core@7.28.5)(@types/react@19.2.14)(react@19.2.0))(react@19.2.0))(effect@4.0.0-beta.28)
       '@expo/vector-icons':
         specifier: ^15.0.3
         version: 15.0.3(expo-font@55.0.4)(react-native@0.83.2(@babel/core@7.28.5)(@types/react@19.2.14)(react@19.2.0))(react@19.2.0)
@@ -24,8 +24,8 @@ importers:
         specifier: ^7.1.8
         version: 7.1.24(react-native@0.83.2(@babel/core@7.28.5)(@types/react@19.2.14)(react@19.2.0))(react@19.2.0)
       effect:
-        specifier: 4.0.0-beta.21
-        version: 4.0.0-beta.21
+        specifier: 4.0.0-beta.28
+        version: 4.0.0-beta.28
       expo:
         specifier: ~55.0.4
         version: 55.0.4(@babel/core@7.28.5)(@expo/dom-webview@55.0.3)(@expo/metro-runtime@55.0.6)(expo-router@55.0.3)(react-dom@19.2.0(react@19.2.0))(react-native@0.83.2(@babel/core@7.28.5)(@types/react@19.2.14)(react@19.2.0))(react@19.2.0)(typescript@5.9.3)
@@ -2243,8 +2243,8 @@ packages:
   ee-first@1.1.1:
     resolution: {integrity: sha512-WMwm9LhRUo+WUaRN+vRuETqG89IgZphVSNkdFgeb6sS/E4OrDIN7t48CAewSHXc6C8lefD8KKfr5vY61brQlow==}
 
-  effect@4.0.0-beta.21:
-    resolution: {integrity: sha512-M2pujOGwVpu3q+10S7C99Ql19BreKgxKXNLZy8NpJ7ymT1vs7NzG9NWI6dFtcF5do0Dzas1Kpa8NwSH+sqy/Cw==}
+  effect@4.0.0-beta.28:
+    resolution: {integrity: sha512-9T/LPIF/t54DN/z1gTnJ3Jwv4s6iWlN3w8Jvg7koDLI4whLXDEsnXWhMf05yQZUSNRJ0naVV1Ltwr2+cEj0HZA==}
 
   electron-to-chromium@1.5.264:
     resolution: {integrity: sha512-1tEf0nLgltC3iy9wtlYDlQDc5Rg9lEKVjEmIHJ21rI9OcqkvD45K1oyNIRA4rR1z3LgJ7KeGzEBojVcV6m4qjA==}
@@ -5187,10 +5187,10 @@ snapshots:
 
   '@effect/language-service@0.77.0': {}
 
-  '@effect/sql-sqlite-react-native@4.0.0-beta.21(@op-engineering/op-sqlite@7.1.0(react-native@0.83.2(@babel/core@7.28.5)(@types/react@19.2.14)(react@19.2.0))(react@19.2.0))(effect@4.0.0-beta.21)':
+  '@effect/sql-sqlite-react-native@4.0.0-beta.21(@op-engineering/op-sqlite@7.1.0(react-native@0.83.2(@babel/core@7.28.5)(@types/react@19.2.14)(react@19.2.0))(react@19.2.0))(effect@4.0.0-beta.28)':
     dependencies:
       '@op-engineering/op-sqlite': 7.1.0(react-native@0.83.2(@babel/core@7.28.5)(@types/react@19.2.14)(react@19.2.0))(react@19.2.0)
-      effect: 4.0.0-beta.21
+      effect: 4.0.0-beta.28
 
   '@egjs/hammerjs@2.0.17':
     dependencies:
@@ -7106,7 +7106,7 @@ snapshots:
 
   ee-first@1.1.1: {}
 
-  effect@4.0.0-beta.21:
+  effect@4.0.0-beta.28:
     dependencies:
       '@standard-schema/spec': 1.1.0
       fast-check: 4.5.3

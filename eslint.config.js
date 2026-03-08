@@ -2,12 +2,11 @@
 const { defineConfig } = require('eslint/config')
 const expoConfig = require('eslint-config-expo/flat')
 const stylistic = require('@stylistic/eslint-plugin')
-const reactHooks = require('eslint-plugin-react-hooks')
 const eslintConfigPrettier = require('eslint-config-prettier/flat')
+const typescriptEslint = require('typescript-eslint')
 
 module.exports = defineConfig([
 	expoConfig,
-	reactHooks.configs.flat.recommended,
 	{
 		languageOptions: {
 			parserOptions: {
@@ -15,9 +14,11 @@ module.exports = defineConfig([
 			},
 		},
 	},
+	typescriptEslint.configs.strictTypeChecked,
 	{ plugins: { '@stylistic': stylistic } },
 	{
 		rules: {
+			'@typescript-eslint/no-invalid-void-type': ['off'],
 			'@typescript-eslint/no-redeclare': ['off'],
 			'import/namespace': ['off'],
 			'@typescript-eslint/no-unused-vars': ['off'],

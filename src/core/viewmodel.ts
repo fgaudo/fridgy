@@ -1,8 +1,9 @@
 import * as Effect from 'effect/Effect'
-import * as Stream from 'effect/Stream'
+import * as Scope from 'effect/Scope'
+
+import type { StateManager } from './state-manager.ts'
 
 export type ViewModel<S, M, R> = {
-	messages: Stream.Stream<M>
-	stateChanges: Stream.Stream<S>
-	start: Effect.Effect<void, never, R>
+	init: S
+	make: Effect.Effect<StateManager<S, M, R>, never, Scope.Scope>
 }

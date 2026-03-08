@@ -1,5 +1,5 @@
 import * as Effect from 'effect/Effect'
-import { flow, pipe } from 'effect/Function'
+import { flow } from 'effect/Function'
 import * as Layer from 'effect/Layer'
 import * as Schema from 'effect/Schema'
 import * as ServiceMap from 'effect/ServiceMap'
@@ -44,7 +44,7 @@ export class ProductExpiration extends SchemaX.Model.Class<ProductExpiration>(
 ///////////
 ///////////
 
-export class SqlDb extends ServiceMap.Service<SqlDb>()('e37d576c27abb171', {
+export class SqlDb extends ServiceMap.Service<SqlDb>()('996f8b8ef80563f4', {
 	make: Effect.gen(function* () {
 		const sql = yield* Sql.SqlClient.SqlClient
 

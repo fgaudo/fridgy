@@ -13,13 +13,17 @@ import * as SqlDb from './sql-db.ts'
 
 const makeGetProducts = Effect.gen(function* () {
 	const sql = yield* Sql.SqlClient.SqlClient
-	const makeSelectProducts = Sql.SqlSchema.findMany({
+	const getProducts = Sql.SqlSchema.findAll({
 		Request: Schema.Void,
 		Result: Schema.Struct({
-			maybeId: Schema.Option(Integer.Schema),
-			maybeName: Schema.Option(SqlDb.Product.fields.name),
-			maybeCreationDate: Schema.Option(SqlDb.Product.fields.creationDate),
-			maybeExpirationDate: Schema.Option(SqlDb.ProductExpiration.fields.date),
+			maybeId: Schema.OptionFromNullishOr(Integer.Schema),
+			maybeName: Schema.OptionFromNullishOr(SqlDb.Product.fields.name),
+			maybeCreationDate: Schema.OptionFromNullishOr(
+				SqlDb.Product.fields.creationDate,
+			),
+			maybeExpirationDate: Schema.OptionFromNullishOr(
+				SqlDb.ProductExpiration.fields.date,
+			),
 		}),
 		execute: () => {
 			const { table: product_table, columns: product } = SqlDb.DbSchema.product
@@ -43,7 +47,7 @@ const makeGetProducts = Effect.gen(function* () {
 
 	return {
 		run: Effect.gen(function* () {
-			const maybeProducts = yield* Effect.option(makeSelectProducts)
+			const maybeProducts = yield* Effect.option(getProducts)
 
 			if (Option.isNone(maybeProducts)) {
 				return yield* Effect.fail(undefined)

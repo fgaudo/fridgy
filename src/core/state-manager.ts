@@ -27,7 +27,7 @@ export type StateManager<S, M, R> = {
 	dispatch: (m: M) => Effect.Effect<void>
 }
 
-export const makeStateManager = Effect.fn(function* <S, M, R>(
+export const make = Effect.fn(function* <S, M, R>(
 	initState: S,
 	update: Update<S, M, R>,
 	options?: { fatalMessage?: (err: unknown) => NoInfer<M> },
@@ -45,7 +45,7 @@ export const makeStateManager = Effect.fn(function* <S, M, R>(
 
 	const messagePubSub = yield* Effect.acquireRelease(
 		PubSub.unbounded<M>(),
-		pubSub => PubSub.shutdown(pubSub),
+		PubSub.shutdown,
 	)
 
 	const scope = yield* Effect.scope
@@ -59,10 +59,12 @@ export const makeStateManager = Effect.fn(function* <S, M, R>(
 		),
 		Stream.fromEffect,
 		Stream.filter(isStarted => !isStarted),
-		Stream.flatMap(() =>
-			Stream.fromQueue(messageQueue).pipe(
-				Stream.onStart(Effect.logDebug('State manager started')),
-			),
+		Stream.flatMap(
+			() =>
+				Stream.fromQueue(messageQueue).pipe(
+					Stream.onStart(Effect.logDebug('State manager started')),
+				),
+			{ concurrency: 'unbounded' },
 		),
 		Stream.map(update),
 		Stream.mapEffect(transition =>
@@ -81,10 +83,10 @@ export const makeStateManager = Effect.fn(function* <S, M, R>(
 			}),
 		),
 		Stream.runForEach(m =>
-			Effect.all([
-				Queue.offer(messageQueue, m),
-				PubSub.publish(messagePubSub, m),
-			]),
+			Effect.all(
+				[Queue.offer(messageQueue, m), PubSub.publish(messagePubSub, m)],
+				{ concurrency: 'unbounded' },
+			),
 		),
 		Effect.forkScoped,
 		Effect.asVoid,
@@ -231,7 +233,7 @@ const _withSubscriptions = Effect.fn(function* <S, M, R, K = unknown>({
 	}
 })
 
-export const withSubscriptions = Function.dual<
+export const addSubscriptions = Function.dual<
 	<S, M, R, K>(
 		p: (state: S) => Subscriptions<M, R, K>,
 		options?: { fatalMessage: (err: unknown) => NoInfer<M> },

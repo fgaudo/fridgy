@@ -16,4 +16,4 @@ export class GetProducts extends ServiceMap.Service<
 	{
 		run: Effect.Effect<Result, void>
 	}
->()('69720f2ab45eb724') {}
+>()('48b38a588f884c0a') {}

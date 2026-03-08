@@ -13,7 +13,7 @@ import * as DeleteProductById from '@/ports/delete-product-by-id.ts'
 
 import * as GetProducts from './get-products.ts'
 
-type DeleteParameters = {
+export type DeleteParameters = {
 	ids: NonEmptyHashSet.NonEmptyHashSet<string>
 }
 
@@ -31,7 +31,7 @@ export type Response = Data.TaggedEnum<{
 export const Response = Data.taggedEnum<Response>()
 
 export class DeleteAndGetProducts extends ServiceMap.Service<DeleteAndGetProducts>()(
-	'da9e5f05edc3a0ba',
+	'f60b77ba5778f872',
 	{
 		make: Effect.gen(function* () {
 			const deleteById = Effect.request(

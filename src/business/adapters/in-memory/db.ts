@@ -16,7 +16,7 @@ export type Product = Readonly<{
 }>
 
 export class InMemoryDb extends ServiceMap.Service<InMemoryDb>()(
-	'b62d3458716ef37f',
+	'4dcf5b609752794f',
 	{
 		make: Effect.gen(function* () {
 			const ref = yield* Ref.make({
@@ -25,15 +25,12 @@ export class InMemoryDb extends ServiceMap.Service<InMemoryDb>()(
 			})
 
 			return {
-				ref,
 				products: Effect.gen(function* () {
 					const { map } = yield* Ref.get(ref)
 
 					const arr = HashMap.toValues(map)
 
-					const immArr: readonly (typeof arr)[0][] = arr
-
-					return immArr
+					return arr
 				}),
 				deleteProductById: Effect.fn(function* (id: Integer.Integer) {
 					return yield* Ref.update(ref, dbValues => ({

@@ -17,21 +17,23 @@ import { useFridgyContext } from '../lib/context.ts'
 export default function Index() {
 	const runtime = useFridgyContext()
 	const navigation = useNavigation()
-	const model = useViewmodel({
+	const { state: model } = useViewmodel({
 		runtime,
-		makeViewModel: Home.make,
-		initState: Home.init,
-		messages: message => {
+		viewModel: Home.viewModel,
+		messageHandler: message => {
 			Toast.show({ type: 'info', text1: message._tag })
 		},
 	})
 
-	const canClearSelection = Model.canClearSelection(model)
-	const hasSelectedProducts = Model.hasSelectedProducts(model)
-	const canDeleteSelected = Model.canDeleteSelected(model)
-
 	useEffect(() => {
-		if (!hasSelectedProducts) {
+		if (model.productListStatus._tag !== 'Available') {
+			navigation.setOptions({
+				headerRight: undefined,
+			})
+			return
+		}
+
+		if (!model.productListStatus) {
 			navigation.setOptions({
 				headerRight: undefined,
 			})

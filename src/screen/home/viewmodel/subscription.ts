@@ -5,7 +5,7 @@ import * as Stream from 'effect/Stream'
 
 import * as SM from '@/core/state-manager.ts'
 
-import { UseCasesWithoutDependencies as UC } from '@/feature/product-management/index.ts'
+import { UseCases as UC } from '@/business/index.ts'
 
 import { HOME_SCHEDULER_FREQUENCY } from './constants.ts'
 import { Message } from './message.ts'

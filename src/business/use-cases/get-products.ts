@@ -1,14 +1,11 @@
-import * as Arr from 'effect/Array'
 import * as Clock from 'effect/Clock'
 import * as Data from 'effect/Data'
 import * as Effect from 'effect/Effect'
-import { pipe } from 'effect/Function'
 import * as Layer from 'effect/Layer'
 import * as Option from 'effect/Option'
 import * as ServiceMap from 'effect/ServiceMap'
 
 import * as Integer from '@/core/integer/integer.ts'
-import * as PositiveInteger from '@/core/integer/positive.ts'
 import * as UnitInterval from '@/core/unit-interval.ts'
 
 import * as Product from '@/domain/product.ts'
@@ -50,11 +47,8 @@ export type Response = Data.TaggedEnum<{
 
 export const Response = Data.taggedEnum<Response>()
 
-/////
-/////
-
 export class GetProducts extends ServiceMap.Service<GetProducts>()(
-	'f06987d602104c44',
+	'06a610be80140f91',
 	{
 		make: Effect.gen(function* () {
 			const getSortedProducts = yield* Ports.GetProducts.GetProducts

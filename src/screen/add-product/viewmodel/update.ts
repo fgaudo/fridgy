@@ -4,7 +4,7 @@ import * as Option from 'effect/Option'
 
 import * as SM from '@/core/state-manager.ts'
 
-import { UseCasesWithoutDependencies as UC } from '@/feature/product-management/index.ts'
+import { UseCases as UC } from '@/business/index.ts'
 
 import * as Command from './command.ts'
 import type { Message } from './message.ts'
@@ -54,7 +54,7 @@ export const update: SM.Update<State.State, Message, UC.All> = matcher({
 			commands: Chunk.make(
 				Command.addProduct({
 					maybeExpirationDate: state.maybeExpirationDate,
-					name: state.maybeName.value,
+					maybeName: state.maybeName,
 				}),
 			),
 		}

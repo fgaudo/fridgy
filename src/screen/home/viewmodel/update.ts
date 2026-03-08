@@ -10,7 +10,7 @@ import * as Option from 'effect/Option'
 import * as NonEmptyHashSet from '@/core/non-empty-hash-set.ts'
 import * as SM from '@/core/state-manager.ts'
 
-import { UseCasesWithoutDependencies as UC } from '@/feature/product-management/index.ts'
+import { UseCases as UC } from '@/business/index.ts'
 
 import * as Command from './command.ts'
 import { Message } from './message.ts'
@@ -32,7 +32,7 @@ const updateFetchListSucceeded = (
 	message: Data.TaggedEnum.Value<Message, 'FetchListSucceeded'>,
 	state: State.State,
 ) => {
-	if (Option.isNone(message.response.maybeProducts)) {
+	if (message.response.products.length <= 0) {
 		return {
 			state: {
 				...state,
@@ -80,7 +80,7 @@ const updateFetchListSucceeded = (
 					Option.map(
 						HashSet.intersection(
 							pipe(
-								message.response.maybeProducts.value.list,
+								message.response.products,
 								Arr.filter(product => product._tag !== 'Corrupt'),
 								Arr.map(product => product.id),
 							),

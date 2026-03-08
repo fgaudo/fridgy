@@ -16,4 +16,4 @@ export class AddProduct extends ServiceMap.Service<
 	{
 		resolver: RequestResolver.RequestResolver<Request>
 	}
->()('69720f2ab45eb724') {}
+>()('cf9ce73b753f639e') {}

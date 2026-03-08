@@ -1,19 +1,21 @@
+import * as Layer from 'effect/Layer'
 import * as ManagedRuntime from 'effect/ManagedRuntime'
 import { Stack } from 'expo-router'
 import { useEffect, useMemo } from 'react'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
 import Toast from 'react-native-toast-message'
 
-import '../../global.css'
-import { layers } from '../business/index.ts'
-import { FridgyContext } from '../lib/context'
+import { UseCases } from '@/business/index.ts'
 
-export default function RootLayout() {
-	const runtime = useMemo(() => ManagedRuntime.make(layers), [])
+import '../../global.css'
+import { FridgyContext } from './context.ts'
+
+export function RootLayout(layer: Layer.Layer<UseCases.All>) {
+	const runtime = useMemo(() => ManagedRuntime.make(layer), [layer])
 
 	useEffect(() => {
 		return () => {
-			runtime.dispose()
+			void runtime.dispose()
 		}
 	}, [runtime])
 

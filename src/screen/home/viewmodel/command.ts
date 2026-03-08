@@ -1,10 +1,9 @@
 import * as Effect from 'effect/Effect'
 import * as Match from 'effect/Match'
 
-import * as H from '@/core/helper.ts'
 import * as SM from '@/core/state-manager.ts'
 
-import { UseCasesWithoutDependencies as UC } from '@/feature/product-management/index.ts'
+import { UseCases as UC } from '@/business/index.ts'
 
 import { Message } from './message.ts'
 import type { FetchListSchedulerVersion, FetchListVersion } from './state.ts'
@@ -23,21 +22,25 @@ export const notifyStale = Effect.fn(function* (message: { _tag: string }) {
 	return Message.NoOp()
 })
 
-export const deleteAndGetProducts = H.mapFunctionReturn(
-	UC.DeleteAndGetProducts.DeleteAndGetProducts.run,
-	Effect.map(
-		Match.valueTags({
-			DeleteSucceededButRefreshFailed: response =>
-				Message.DeleteSucceededButRefreshFailed({ response }),
-			Failed: response => Message.DeleteAndRefreshFailed({ response }),
-			Succeeded: response => Message.DeleteAndRefreshSucceeded({ response }),
-		}),
-	),
-)
+export const deleteAndGetProducts = Effect.fn(function* (
+	params: UC.DeleteAndGetProducts.DeleteParameters,
+) {
+	const deleteProducts = (yield* UC.DeleteAndGetProducts.DeleteAndGetProducts)
+		.run
+
+	const result = yield* deleteProducts(params)
+
+	return Match.valueTags(result, {
+		DeleteSucceededButRefreshFailed: response =>
+			Message.DeleteSucceededButRefreshFailed({ response }),
+		Failed: response => Message.DeleteAndRefreshFailed({ response }),
+		Succeeded: response => Message.DeleteAndRefreshSucceeded({ response }),
+	})
+})
 
 export const fetchList = (version: FetchListVersion) =>
 	Effect.map(
-		UC.GetProducts.GetProducts.run,
+		UC.GetProducts.GetProducts.use(({ run }) => run),
 		Match.valueTags({
 			Failed: response => Message.FetchListFailed({ version, response }),
 			Succeeded: response => Message.FetchListSucceeded({ version, response }),
@@ -46,7 +49,7 @@ export const fetchList = (version: FetchListVersion) =>
 
 export const fetchListTick = (version: FetchListSchedulerVersion) =>
 	Effect.map(
-		UC.GetProducts.GetProducts.run,
+		UC.GetProducts.GetProducts.use(({ run }) => run),
 		Match.valueTags({
 			Failed: response => Message.FetchListTickFailed({ version, response }),
 			Succeeded: response =>

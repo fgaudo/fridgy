@@ -13,6 +13,5 @@
 	"typescript.preferences.importModuleSpecifierEnding": "js",
 	"terminal.integrated.minimumContrastRatio": 1,
 	"typescript.tsdk": "./node_modules/typescript/lib",
-	"typescript.enablePromptUseWorkspaceTsdk": true,
-	"typescript.tsserver.experimental.enableProjectDiagnostics": true
+	"typescript.enablePromptUseWorkspaceTsdk": true
 }

@@ -12,16 +12,10 @@ import * as Integer from '@/core/integer/integer.ts'
 import * as Product from '@/domain/product.ts'
 import { AddProduct as AddProductPort } from '@/ports/index.ts'
 
-/////
-/////
-
-type AddProductParams = {
+export type Params = {
 	maybeName: Option.Option<string>
 	maybeExpirationDate: Option.Option<Integer.Integer>
 }
-
-/////
-/////
 
 export type Response = Data.TaggedEnum<{
 	Succeeded: object
@@ -30,11 +24,8 @@ export type Response = Data.TaggedEnum<{
 
 const Response = Data.taggedEnum<Response>()
 
-/////
-/////
-
 export class AddProduct extends ServiceMap.Service<AddProduct>()(
-	'53e92243bb8435c7',
+	'09bc504007747d85',
 	{
 		make: Effect.gen(function* () {
 			const addProduct = Effect.request(
@@ -43,7 +34,7 @@ export class AddProduct extends ServiceMap.Service<AddProduct>()(
 
 			return {
 				run: Effect.fn(function* (
-					productData: AddProductParams,
+					productData: Params,
 				): Effect.fn.Return<Response> {
 					const timestamp = Integer.unsafeFromNumber(
 						yield* Clock.currentTimeMillis,

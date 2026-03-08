@@ -1,6 +1,6 @@
 import * as Data from 'effect/Data'
 
-import { UseCasesWithoutDependencies as UC } from '@/feature/product-management/index.ts'
+import { UseCases as UC } from '@/business/index.ts'
 
 import type { FetchListSchedulerVersion, FetchListVersion } from './state.ts'
 
