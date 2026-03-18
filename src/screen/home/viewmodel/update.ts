@@ -7,10 +7,9 @@ import * as HashSet from 'effect/HashSet'
 import * as Match from 'effect/Match'
 import * as Option from 'effect/Option'
 
+import { UseCases as UC } from '@/business/index.ts'
 import * as NonEmptyHashSet from '@/core/non-empty-hash-set.ts'
 import * as SM from '@/core/state-manager.ts'
-
-import { UseCases as UC } from '@/business/index.ts'
 
 import * as Command from './command.ts'
 import { Message } from './message.ts'

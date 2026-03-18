@@ -1,8 +1,0 @@
-{
-	"recommendations": [
-		"expo.vscode-expo-tools",
-		"effectful-tech.effect-vscode",
-		"dbaeumer.vscode-eslint",
-		"esbenp.prettier-vscode"
-	]
-}

@@ -12,4 +12,4 @@ export class DeleteProductById extends ServiceMap.Service<
 	{
 		resolver: RequestResolver.RequestResolver<Request>
 	}
->()('72b91c5d90a6c55d') {}
+>()('dd346eaa1f807826') {}

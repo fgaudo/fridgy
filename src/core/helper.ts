@@ -1,6 +1,7 @@
 import * as Cause from 'effect/Cause'
 import * as Effect from 'effect/Effect'
 import * as Exit from 'effect/Exit'
+import { flow } from 'effect/Function'
 import * as ParseResult from 'effect/ParseResult'
 
 export const fallback: <A>(

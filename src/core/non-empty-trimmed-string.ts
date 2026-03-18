@@ -7,7 +7,7 @@ export type NonEmptyTrimmedString = Brand.Branded<
 	'core.NonEmptyTrimmedString'
 >
 
-const NonEmptyTrimmedString = Brand.make<NonEmptyTrimmedString>(string =>
+export const NonEmptyTrimmedString = Brand.make<NonEmptyTrimmedString>(string =>
 	/^\S.*\S$|^\S$/.test(string),
 )
 

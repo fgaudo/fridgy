@@ -11,6 +11,7 @@
 			"supportsTablet": true,
 			"bundleIdentifier": "com.anonymous.fridgy"
 		},
+
 		"android": {
 			"adaptiveIcon": {
 				"backgroundColor": "#E6F4FE",

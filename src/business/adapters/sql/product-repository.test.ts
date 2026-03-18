@@ -11,7 +11,6 @@ import * as Integer from '@/core/integer/integer.ts'
 import * as NonEmptyTrimmedString from '@/core/non-empty-trimmed-string.ts'
 import * as H from '@/core/test-helpers.ts'
 import { makeTestLayer } from '@/core/testing.ts'
-
 import * as SqliteCapacitorHelper from '@/shared/sql/sql-db-helper.ts'
 
 import * as ProductRepository from '../product-repository.ts'

@@ -3,9 +3,8 @@ import * as HashMap from 'effect/HashMap'
 import * as Schedule from 'effect/Schedule'
 import * as Stream from 'effect/Stream'
 
-import * as SM from '@/core/state-manager.ts'
-
 import { UseCases as UC } from '@/business/index.ts'
+import * as SM from '@/core/state-manager.ts'
 
 import { HOME_SCHEDULER_FREQUENCY } from './constants.ts'
 import { Message } from './message.ts'

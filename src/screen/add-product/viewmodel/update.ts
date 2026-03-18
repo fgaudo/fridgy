@@ -2,12 +2,12 @@ import * as Chunk from 'effect/Chunk'
 import * as Match from 'effect/Match'
 import * as Option from 'effect/Option'
 
+import { UseCases as UC } from '@/business/index.ts'
 import * as SM from '@/core/state-manager.ts'
 
-import { UseCases as UC } from '@/business/index.ts'
+import type { Message } from './message.ts'
 
 import * as Command from './command.ts'
-import type { Message } from './message.ts'
 import * as State from './state.ts'
 
 const matcher = Match.typeTags<

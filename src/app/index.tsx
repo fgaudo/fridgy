@@ -19,7 +19,7 @@ export default function Index() {
 	const navigation = useNavigation()
 	const { state: model } = useViewmodel({
 		runtime,
-		viewModel: Home.viewModel,
+		viewModel: Home.makeViewModel,
 		messageHandler: message => {
 			Toast.show({ type: 'info', text1: message._tag })
 		},
@@ -116,7 +116,7 @@ export default function Index() {
 				/>
 			) : model.productListStatus._tag === 'Empty' ? (
 				<View className="flex-1 items-center justify-center">
-					<Text className="text-center text-md">
+					<Text className="text-md text-center">
 						Uh-oh, your fridge is looking a little empty!{'\n'}
 						Let’s fill it up!
 					</Text>
@@ -142,13 +142,13 @@ export default function Index() {
 			)}
 
 			{Model.canNavigateToAddProduct(model) ? (
-				<View className="absolute bottom-15 right-5 items-end">
+				<View className="absolute right-5 bottom-15 items-end">
 					<Link href={'/add-product'}>
 						<Ionicons
 							name="add"
 							size={36}
 							color={'white'}
-							className="elevation-md bg-red-600 z-50 text-background shadow-md shadow-on-background/30 flex h-24 w-24 items-center justify-center rounded-4xl"
+							className="elevation-md text-background shadow-on-background/30 z-50 flex h-24 w-24 items-center justify-center rounded-4xl bg-red-600 shadow-md"
 						/>
 					</Link>
 				</View>

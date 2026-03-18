@@ -8,14 +8,14 @@ import * as RequestResolver from 'effect/RequestResolver'
 
 import * as Integer from '@/core/integer/integer.ts'
 
-import * as DeleteProductById from '../../ports/delete-product-by-id.ts'
+import * as DeleteProductById from '../../ports/get-products.ts'
 import * as SqlDb from './sql-db.ts'
 
 const makeDeleteResolver = Effect.gen(function* () {
 	const { productDataLoader } = yield* SqlDb.SqlDb
 
 	return {
-		resolver: RequestResolver.make<DeleteProductById.Request>(
+		resolver: RequestResolver.make<DeleteProductById.DeleteRequest>(
 			Effect.fn(function* (entries) {
 				const validEntries = pipe(
 					entries,
@@ -52,6 +52,6 @@ const makeDeleteResolver = Effect.gen(function* () {
 })
 
 export const layer = Layer.provide(
-	Layer.effect(DeleteProductById.DeleteProductById, makeDeleteResolver),
+	Layer.effect(DeleteProductById.GetProducts, makeDeleteResolver),
 	SqlDb.SqlDb.layer,
 )

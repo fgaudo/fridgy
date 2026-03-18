@@ -9,6 +9,7 @@ import * as Stream from 'effect/Stream'
 import { useEffect, useState } from 'react'
 
 import type { StateManager } from '@/core/state-manager.ts'
+
 import { type ViewModel } from '@/core/viewmodel.ts'
 
 export const useViewmodel = <S, M, R>({

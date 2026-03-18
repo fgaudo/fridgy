@@ -8,13 +8,12 @@ import * as ServiceMap from 'effect/ServiceMap'
 import { v4 as uuidv4 } from 'uuid'
 
 import * as Integer from '@/core/integer/integer.ts'
-import type * as NonEmptyTrimmedString from '@/core/non-empty-trimmed-string'
 import { AddProduct as AddProductPort } from '@/ports/index.ts'
 
-import * as Product from '../domain/product'
+import * as Product from '../../business/domain/product'
 
 export type Params = {
-	maybeName: Option.Option<NonEmptyTrimmedString.NonEmptyTrimmedString>
+	maybeName: Option.Option<string>
 	maybeExpirationDate: Option.Option<Integer.Integer>
 }
 
@@ -26,7 +25,7 @@ export type Response = Data.TaggedEnum<{
 const Response = Data.taggedEnum<Response>()
 
 export class AddProduct extends ServiceMap.Service<AddProduct>()(
-	'09bc504007747d85',
+	'46eea6438089b697',
 	{
 		make: Effect.gen(function* () {
 			const addProduct = Effect.request(

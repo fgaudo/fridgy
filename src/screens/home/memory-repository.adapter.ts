@@ -1,3 +1,4 @@
+import * as Arr from 'effect/Array'
 import * as Effect from 'effect/Effect'
 import { pipe } from 'effect/Function'
 import * as Layer from 'effect/Layer'
@@ -6,14 +7,29 @@ import * as RequestResolver from 'effect/RequestResolver'
 
 import * as Integer from '@/core/integer/integer.ts'
 
-import * as DeleteProductById from '../../ports/delete-product-by-id.ts'
-import * as InMemoryDb from './db.ts'
+import * as InMemoryDb from '../../business/adapters/in-memory/db.ts'
+import * as Repository from '../../business/ports/get-products.ts'
 
 const makeDeleteResolver = Effect.gen(function* () {
 	const db = yield* InMemoryDb.InMemoryDb
 
 	return {
-		resolver: RequestResolver.fromEffect<DeleteProductById.Request>(
+		getProduct: Effect.gen(function* () {
+			const map = yield* db.products
+
+			const result = pipe(
+				map,
+				Arr.map(({ id, ...product }) => ({
+					maybeName: Opt.some(product.name),
+					maybeId: Opt.some(id.toString(10)),
+					maybeCreationDate: Opt.some(product.creationDate),
+					maybeExpirationDate: product.maybeExpirationDate,
+				})),
+			)
+
+			return result
+		}),
+		deleteProductResolver: RequestResolver.fromEffect<Repository.DeleteRequest>(
 			Effect.fn(function* (request) {
 				const maybeId = pipe(
 					Number.parseInt(request.request.id, 10),
@@ -31,6 +47,6 @@ const makeDeleteResolver = Effect.gen(function* () {
 })
 
 export const layer = Layer.provide(
-	Layer.effect(DeleteProductById.DeleteProductById, makeDeleteResolver),
+	Layer.effect(Repository.GetProducts, makeDeleteResolver),
 	InMemoryDb.InMemoryDb.layer,
 )

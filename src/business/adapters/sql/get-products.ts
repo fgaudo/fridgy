@@ -8,7 +8,7 @@ import * as Sql from 'effect/unstable/sql'
 
 import * as Integer from '@/core/integer/integer.ts'
 
-import * as GetProducts from '../../ports/get-products.ts'
+import * as GetProducts from '../../../screens/home/use-cases.ts'
 import * as SqlDb from './sql-db.ts'
 
 const makeGetProducts = Effect.gen(function* () {
@@ -82,4 +82,4 @@ const makeGetProducts = Effect.gen(function* () {
 	}
 })
 
-export const layer = Layer.effect(GetProducts.GetProducts, makeGetProducts)
+export const layer = Layer.effect(GetProducts.UseCases, makeGetProducts)

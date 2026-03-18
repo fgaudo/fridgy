@@ -1,3 +1,4 @@
+import * as Arr from 'effect/Array'
 import * as Clock from 'effect/Clock'
 import * as Data from 'effect/Data'
 import * as Effect from 'effect/Effect'
@@ -6,19 +7,20 @@ import * as Option from 'effect/Option'
 import * as ServiceMap from 'effect/ServiceMap'
 
 import * as Integer from '@/core/integer/integer.ts'
+import * as NonEmptyTrimmedString from '@/core/non-empty-trimmed-string.ts'
 import * as UnitInterval from '@/core/unit-interval.ts'
 
-import * as Product from '@/domain/product.ts'
-import * as Ports from '@/ports/index.ts'
+import * as Product from '../domain/product.ts'
+import * as GetProductsPort from '../ports/get-products.ts'
 
-type ProductDTO = Data.TaggedEnum<{
+export type ProductDTO = Data.TaggedEnum<{
 	Invalid: {
-		maybeName: Option.Option<string>
+		maybeName: Option.Option<NonEmptyTrimmedString.NonEmptyTrimmedString>
 		id: Option.Option<string>
 	}
 	Valid: {
 		id: string
-		name: string
+		name: NonEmptyTrimmedString.NonEmptyTrimmedString
 		status: Data.TaggedEnum<{
 			Everlasting: object
 			Stale: {
@@ -40,7 +42,7 @@ export const ProductDTO = Data.taggedEnum<ProductDTO>()
 
 export type Response = Data.TaggedEnum<{
 	Succeeded: {
-		products: ProductDTO[]
+		maybeProducts: Option.Option<Arr.NonEmptyArray<ProductDTO>>
 	}
 	Failed: object
 }>
@@ -51,13 +53,13 @@ export class GetProducts extends ServiceMap.Service<GetProducts>()(
 	'06a610be80140f91',
 	{
 		make: Effect.gen(function* () {
-			const getSortedProducts = yield* Ports.GetProducts.GetProducts
+			const { run } = yield* GetProductsPort.GetProducts
 
 			return {
 				run: Effect.gen(function* (): Effect.fn.Return<Response> {
 					yield* Effect.log('Started')
 
-					const maybeProducts = yield* Effect.option(getSortedProducts.run)
+					const maybeProducts = yield* Effect.option(run)
 
 					if (Option.isNone(maybeProducts)) {
 						yield* Effect.logError('Could not receive products')
@@ -122,7 +124,7 @@ export class GetProducts extends ServiceMap.Service<GetProducts>()(
 						}),
 					)
 					return Response.Succeeded({
-						products: entries,
+						maybeProducts: entries,
 					})
 				}).pipe(Effect.withLogSpan('GetProducts')),
 			}

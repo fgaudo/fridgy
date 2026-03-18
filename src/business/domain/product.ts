@@ -9,12 +9,12 @@ import * as UnitInterval from '@/core/unit-interval.ts'
 export type Product = Brand.Branded<object, 'Product'>
 export type Expirable = Brand.Branded<Product, 'Expirable'>
 export type ProductState = {
-	name: string
+	name: NonEmptyTrimmedString.NonEmptyTrimmedString
 	creationDate: Integer.Integer
 	maybeExpirationDate: Opt.Option<Integer.Integer>
 }
 export type ProductInput = {
-	maybeName: Opt.Option<string>
+	maybeName: Opt.Option<NonEmptyTrimmedString.NonEmptyTrimmedString>
 	maybeCreationDate: Opt.Option<Integer.Integer>
 	maybeExpirationDate: Opt.Option<Integer.Integer>
 }
@@ -22,7 +22,7 @@ export type ProductInput = {
 export const makeProduct = (p: ProductInput): Opt.Option<Product> =>
 	Opt.gen(function* () {
 		const [name, creationDate] = yield* Opt.all([
-			Opt.andThen(p.maybeName, NonEmptyTrimmedString.make),
+			p.maybeName,
 			Opt.andThen(p.maybeCreationDate, Integer.fromNumber),
 		])
 

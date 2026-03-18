@@ -1,258 +1,250 @@
+import * as Cause from 'effect/Cause'
 import * as Chunk from 'effect/Chunk'
 import * as Deferred from 'effect/Deferred'
 import * as Effect from 'effect/Effect'
+import * as Equal from 'effect/Equal'
 import * as Function from 'effect/Function'
-import { pipe } from 'effect/Function'
+import { pipe, flow } from 'effect/Function'
 import * as HashMap from 'effect/HashMap'
+import * as HashSet from 'effect/HashSet'
+import * as Newtype from 'effect/Newtype'
 import * as Option from 'effect/Option'
 import * as PubSub from 'effect/PubSub'
 import * as Queue from 'effect/Queue'
 import * as Ref from 'effect/Ref'
+import * as Schema from 'effect/Schema'
 import * as Scope from 'effect/Scope'
 import * as Stream from 'effect/Stream'
 import * as SubscriptionRef from 'effect/SubscriptionRef'
-import * as SynchronizedRef from 'effect/SynchronizedRef'
+import * as Tuple from 'effect/Tuple'
 
-export type Command<M, R> = Effect.Effect<M, never, R>
+export type Command<Message, R> = Effect.Effect<Message, never, R>
 
-export type Update<S, M, R> = (message: M) => (state: S) => {
-	state: S
-	commands: Chunk.Chunk<Command<M, R>>
+export type Update<State, Message, R> = (
+	message: Message,
+) => (state: State) => readonly [State, readonly Command<Message, R>[]]
+
+export type Subscriptions<Message, R> = HashMap.HashMap<
+	unknown,
+	Stream.Stream<Message, never, R>
+>
+
+export type StateManager<State, Message, R> = Newtype.Newtype<
+	'StateManager',
+	StateManagerImpl<State, Message, R>
+>
+
+type StateManagerImpl<State, Message, R> = {
+	isStartedRef: Ref.Ref<boolean>
+	stateRef: SubscriptionRef.SubscriptionRef<State>
+	messagePubSub: PubSub.PubSub<Message>
+	messageQueue: Queue.Queue<Message>
+	initState: State
+	update: Update<State, Message, R>
+	defectMessage: (errors: Error[]) => Message
+	maybeSubsEvaluation: Option.Option<
+		(state: State) => Subscriptions<Message, R>
+	>
+	scope: Scope.Scope
 }
 
-export type StateManager<S, M, R> = {
-	stateChanges: Stream.Stream<S>
-	messages: Stream.Stream<M>
-	start: Effect.Effect<void, never, R>
-	dispatch: (m: M) => Effect.Effect<void>
-}
+export const makeScoped = Effect.fnUntraced(function* <State, Message, R>(
+	initState: State,
+	update: Update<State, Message, R>,
+	defectMessage: (errors: Error[]) => NoInfer<Message>,
+	options: {
+		subsEvaluation?: (state: State) => Subscriptions<Message, R>
+	},
+): Effect.fn.Return<StateManager<State, Message, R>, never, Scope.Scope> {
+	const iso = Newtype.makeIso<StateManager<State, Message, R>>()
 
-export const make = Effect.fn(function* <S, M, R>(
-	initState: S,
-	update: Update<S, M, R>,
-	options?: { fatalMessage?: (err: unknown) => NoInfer<M> },
-): Effect.fn.Return<StateManager<S, M, R>, never, Scope.Scope> {
-	const maybeFatalMessage = pipe(
+	const maybeSubsEvaluation = pipe(
 		Option.fromUndefinedOr(options),
-		Option.flatMap(opt => Option.fromUndefinedOr(opt.fatalMessage)),
+		Option.flatMap(opt => Option.fromUndefinedOr(opt.subsEvaluation)),
 	)
 
-	const stateRef = yield* SubscriptionRef.make(initState)
+	const stateRef = yield* Effect.acquireRelease(
+		SubscriptionRef.make(initState),
+		ref => PubSub.shutdown(ref.pubsub),
+	)
+
 	const messageQueue = yield* Effect.acquireRelease(
-		Queue.unbounded<M>(),
+		Queue.unbounded<Message>(),
 		Queue.shutdown,
 	)
-
 	const messagePubSub = yield* Effect.acquireRelease(
-		PubSub.unbounded<M>(),
+		PubSub.unbounded<Message>(),
 		PubSub.shutdown,
 	)
 
-	const scope = yield* Effect.scope
 	const isStartedRef = yield* Ref.make(false)
-	const start = pipe(
-		Ref.getAndSet(isStartedRef, true),
-		Effect.tap(isStarted =>
-			isStarted
-				? Effect.logWarning('State manager already started')
-				: Effect.logDebug('Starting state manager'),
-		),
-		Stream.fromEffect,
-		Stream.filter(isStarted => !isStarted),
-		Stream.flatMap(
-			() =>
-				Stream.fromQueue(messageQueue).pipe(
-					Stream.onStart(Effect.logDebug('State manager started')),
-				),
-			{ concurrency: 'unbounded' },
-		),
-		Stream.map(update),
-		Stream.mapEffect(transition =>
-			SubscriptionRef.modify(stateRef, s => {
-				const { state, commands } = transition(s)
+	const scope = yield* Scope.Scope
 
-				return [commands, state]
+	return iso.set({
+		defectMessage,
+		maybeSubsEvaluation,
+		stateRef,
+		initState,
+		update,
+		isStartedRef,
+		messagePubSub,
+		messageQueue,
+		scope,
+	})
+})
+
+export const dispatch = Function.dual<
+	<Message>(
+		that: Message,
+	) => <State, R>(self: StateManager<State, Message, R>) => Effect.Effect<void>,
+	<State, Message, R>(
+		self: StateManager<State, Message, R>,
+		that: Message,
+	) => Effect.Effect<void>
+>(
+	2,
+	Effect.fnUntraced(function* (stateManager, message) {
+		const iso = Newtype.makeIso<typeof stateManager>()
+
+		const { messageQueue } = iso.get(stateManager)
+
+		return yield* Queue.offer(messageQueue, message)
+	}),
+)
+
+export const messages = <State, Message, R>(
+	stateManager: StateManager<State, Message, R>,
+) => {
+	const iso = Newtype.makeIso<typeof stateManager>()
+	const { messagePubSub } = iso.get(stateManager)
+
+	return Stream.fromPubSub(messagePubSub)
+}
+
+export const stateChanges = <State, Message, R>(
+	stateManager: StateManager<State, Message, R>,
+) => {
+	const iso = Newtype.makeIso<typeof stateManager>()
+	const { stateRef } = iso.get(stateManager)
+	return SubscriptionRef.changes(stateRef)
+}
+
+export const start = Effect.fnUntraced(function* <State, Message, R>(
+	stateManager: StateManager<State, Message, R>,
+) {
+	const iso = Newtype.makeIso<typeof stateManager>()
+
+	const isStartedRef = iso.key('isStartedRef').get(stateManager)
+
+	if (yield* Ref.getAndSet(isStartedRef, true)) {
+		yield* Effect.logWarning('State manager already started')
+		return
+	}
+
+	const {
+		defectMessage,
+		maybeSubsEvaluation,
+		messagePubSub,
+		messageQueue,
+		scope,
+		stateRef,
+		update,
+	} = iso.get(stateManager)
+
+	const updateMessage$ = pipe(
+		Stream.fromQueue(messageQueue),
+		Stream.onStart(Effect.logDebug('Update loop started')),
+		Stream.mapEffect(message =>
+			SubscriptionRef.modifySome(stateRef, state => {
+				const [newState, commands] = update(message)(state)
+
+				if (Equal.equals(newState, state)) {
+					return [[message, commands] as const, Option.none()]
+				}
+
+				return [[message, commands] as const, Option.some(newState)]
 			}),
 		),
+		Stream.tap(([message]) => PubSub.publish(messagePubSub, message)),
+		Stream.map(([, commands]) => commands),
 		Stream.flattenIterable,
 		Stream.flattenEffect({ concurrency: 'unbounded', unordered: true }),
-		Stream.catchCause(err =>
-			Option.match(maybeFatalMessage, {
-				onNone: () => Stream.empty,
-				onSome: fatalMessage => Stream.make(fatalMessage(err)),
-			}),
-		),
-		Stream.runForEach(m =>
-			Effect.all(
-				[Queue.offer(messageQueue, m), PubSub.publish(messagePubSub, m)],
-				{ concurrency: 'unbounded' },
-			),
-		),
-		Effect.forkScoped,
-		Effect.asVoid,
-		Scope.provide(scope),
-	)
-	const stateChanges = yield* pipe(
-		Effect.acquireRelease(
-			Effect.gen(function* () {
-				const interruption = yield* Deferred.make<undefined>()
-
-				return {
-					stream: pipe(
-						SubscriptionRef.changes(stateRef),
-						Stream.changesWith((s1, s2) => s1 === s2),
-						Stream.interruptWhen(Deferred.await(interruption)),
-					),
-					interruption,
-				}
-			}),
-			({ interruption }) => Deferred.succeed(interruption, undefined),
-		),
-		Effect.map(({ stream }) => stream),
 	)
 
-	return {
-		stateChanges,
-		start,
-		messages: Stream.fromPubSub(messagePubSub),
-		dispatch: (m: M) => Queue.offer(messageQueue, m),
-	}
-})
+	const message$ = yield* Option.match(maybeSubsEvaluation, {
+		onNone: () => Effect.succeed(updateMessage$),
+		onSome: Effect.fnUntraced(function* (subsEvaluation) {
+			const isReady = yield* Deferred.make<void>()
 
-const updateActiveSubscriptions = <K, M, R>(
-	subscriptions: HashMap.HashMap<K, Stream.Stream<M, never, R>>,
-) =>
-	SynchronizedRef.modifyEffect(
-		Effect.fn(function* (
-			activeSubscriptions: HashMap.HashMap<K, Deferred.Deferred<void>>,
-		) {
-			for (const [key, interruption] of activeSubscriptions) {
-				if (HashMap.has(subscriptions, key)) {
-					continue
-				}
+			return pipe(
+				stateChanges(stateManager),
+				Stream.onStart(
+					Effect.gen(function* () {
+						yield* Effect.logDebug('Subs started')
+						yield* Deferred.succeed(isReady, undefined)
+					}),
+				),
+				Stream.map(subsEvaluation),
+				Stream.map(
+					map => [HashSet.fromIterable(HashMap.keys(map)), map] as const,
+				),
+				Stream.changesWith(([keys1], [keys2]) => Equal.equals(keys1, keys2)),
+				Stream.map(([, subs]) => subs),
+				Stream.mapAccumEffect(
+					() => HashMap.empty<unknown, Deferred.Deferred<void>>(),
+					Effect.fnUntraced(function* (activeSubscriptions, subscriptions) {
+						const mutable = HashMap.beginMutation(activeSubscriptions)
 
-				activeSubscriptions = HashMap.remove(activeSubscriptions, key)
-				yield* Deferred.succeed(interruption, undefined)
-			}
+						for (const [key, interruption] of activeSubscriptions) {
+							if (HashMap.has(subscriptions, key)) {
+								continue
+							}
+							HashMap.remove(mutable, key)
+							yield* Deferred.succeed(interruption, undefined)
+						}
 
-			let streams = Chunk.empty<Stream.Stream<M, never, R>>()
+						let streams = Chunk.empty<Stream.Stream<Message, never, R>>()
 
-			for (const [key, stream] of subscriptions) {
-				if (HashMap.has(activeSubscriptions, key)) {
-					continue
-				}
+						for (const [key, stream] of subscriptions) {
+							if (HashMap.has(mutable, key)) {
+								continue
+							}
 
-				const interruption = yield* Deferred.make<void>()
-				activeSubscriptions = HashMap.set(
-					activeSubscriptions,
-					key,
-					interruption,
-				)
+							const interruption = yield* Deferred.make<void>()
+							HashMap.set(mutable, key, interruption)
 
-				streams = Chunk.append(
-					streams,
-					Stream.interruptWhen(stream, Deferred.await(interruption)),
-				)
-			}
+							streams = Chunk.append(
+								streams,
+								Stream.interruptWhen(stream, Deferred.await(interruption)),
+							)
+						}
 
-			return [streams, activeSubscriptions] as const
-		}),
-	)
-
-export const emptySubscription = HashMap.empty()
-
-export type Subscriptions<M, R, K = unknown> = HashMap.HashMap<
-	K,
-	Stream.Stream<M, never, R>
->
-
-const _withSubscriptions = Effect.fn(function* <S, M, R, K = unknown>({
-	makeStateManager,
-	evaluateSubscriptions,
-	fatalMessage: _fatalMessage,
-}: {
-	makeStateManager: Effect.Effect<StateManager<S, M, R>, never, Scope.Scope>
-	evaluateSubscriptions: (state: S) => Subscriptions<M, R, K>
-	fatalMessage?: (err: unknown) => NoInfer<M>
-}): Effect.fn.Return<StateManager<S, M, R>, never, Scope.Scope> {
-	const stateManager = yield* makeStateManager
-	const maybeFatalMessage = Option.fromUndefinedOr(_fatalMessage)
-
-	const isStartedRef = yield* Ref.make(false)
-
-	const scope = yield* Effect.scope
-	const activeSubscriptionsRef = yield* SynchronizedRef.make(
-		HashMap.empty<K, Deferred.Deferred<void>>(),
-	)
-
-	const start = pipe(
-		Ref.getAndSet(isStartedRef, true),
-		Effect.andThen(
-			Effect.fn(function* (isStarted) {
-				if (isStarted) {
-					yield* Effect.logWarning('State manager already started')
-					return Stream.empty
-				}
-
-				yield* Effect.logDebug('Starting subscriptions')
-				return stateManager.stateChanges.pipe(
-					Stream.onStart(
+						return [
+							HashMap.endMutation(mutable),
+							Chunk.toReadonlyArray(streams),
+						] as const
+					}),
+				),
+				Stream.flatten({ concurrency: 'unbounded' }),
+				Stream.merge(
+					Stream.unwrap(
 						Effect.gen(function* () {
-							yield* Effect.logDebug('Subscriptions started')
-							yield* stateManager.start
+							yield* Deferred.await(isReady)
+							return updateMessage$
 						}),
 					),
-				)
-			}),
-		),
-		Stream.unwrap,
-		Stream.changesWith((s1, s2) => s1 === s2),
-		Stream.map(evaluateSubscriptions),
-		Stream.changesWith((x, y) => x === y),
-		Stream.mapEffect(subscriptions =>
-			updateActiveSubscriptions(subscriptions)(activeSubscriptionsRef),
-		),
-		Stream.flattenIterable,
-		Stream.flatMap(
-			Stream.catchCause(err =>
-				Option.match(maybeFatalMessage, {
-					onNone: () => Stream.empty,
-					onSome: fatalMessage => Stream.make(fatalMessage(err)),
-				}),
-			),
-			{ concurrency: 'unbounded' },
-		),
-		Stream.runForEach(stateManager.dispatch),
-		Effect.forkScoped,
-		Scope.provide(scope),
-	)
-
-	return {
-		...stateManager,
-		start,
-	}
-})
-
-export const addSubscriptions = Function.dual<
-	<S, M, R, K>(
-		p: (state: S) => Subscriptions<M, R, K>,
-		options?: { fatalMessage: (err: unknown) => NoInfer<M> },
-	) => (
-		s: Effect.Effect<StateManager<S, M, R>, never, Scope.Scope>,
-	) => Effect.Effect<StateManager<S, M, R>, never, Scope.Scope>,
-	<S, M, R, K>(
-		s: Effect.Effect<StateManager<S, M, R>, never, Scope.Scope>,
-		p: (state: S) => Subscriptions<M, R, K>,
-		options?: { fatalMessage: (err: unknown) => NoInfer<M> },
-	) => Effect.Effect<StateManager<S, M, R>, never, Scope.Scope>
->(
-	args => Effect.isEffect(args[0]),
-	(makeStateManager, evaluateSubscriptions, options) =>
-		_withSubscriptions({
-			makeStateManager,
-			evaluateSubscriptions,
-			...(options?.fatalMessage !== undefined
-				? { fatalMessage: options.fatalMessage }
-				: {}),
+				),
+			)
 		}),
-)
+	})
+
+	yield* Effect.logDebug('Starting state manager')
+
+	yield* pipe(
+		message$,
+		Stream.onStart(Effect.logDebug('State manager started')),
+		Stream.catchCause(flow(Cause.prettyErrors, defectMessage, Stream.make)),
+		Stream.runForEach(message => dispatch(stateManager, message)),
+		Effect.forkIn(scope),
+	)
+})

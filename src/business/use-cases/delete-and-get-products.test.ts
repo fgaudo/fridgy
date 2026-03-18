@@ -14,7 +14,7 @@ import * as H from '@/core/test-helpers.ts'
 import { makeTestLayer } from '@/core/testing.ts'
 
 import * as ProductRepository from '../../../infrastructure/product-repository.ts'
-import * as Usecase from './delete-and-get-products.ts'
+import * as Usecase from './delete-products-by-ids.ts'
 import * as GetSortedProducts from './get-products.ts'
 
 const DeleteParameters = Schema.Struct({
@@ -23,7 +23,7 @@ const DeleteParameters = Schema.Struct({
 
 describe.concurrent('Delete products by ids', () => {
 	layer(
-		Layer.provide(Usecase.DeleteAndGetProducts.DefaultWithoutDependencies, [
+		Layer.provide(Usecase.DeleteProductsByIds.DefaultWithoutDependencies, [
 			makeTestLayer(ProductRepository.ProductRepository)({
 				deleteProductByIdResolver: RequestResolver.fromEffect(() =>
 					Effect.succeed(false),
@@ -36,7 +36,7 @@ describe.concurrent('Delete products by ids', () => {
 			'Should return delete failed',
 			[DeleteParameters],
 			Effect.fn(function* ([params]) {
-				const { run } = yield* Usecase.DeleteAndGetProducts
+				const { run } = yield* Usecase.DeleteProductsByIds
 				const exit = yield* Effect.exit(run(params))
 
 				H.assertExitIsSuccess(exit)
@@ -47,7 +47,7 @@ describe.concurrent('Delete products by ids', () => {
 	})
 
 	layer(
-		Layer.provide(Usecase.DeleteAndGetProducts.DefaultWithoutDependencies, [
+		Layer.provide(Usecase.DeleteProductsByIds.DefaultWithoutDependencies, [
 			makeTestLayer(ProductRepository.ProductRepository)({
 				deleteProductByIdResolver: RequestResolver.fromEffect(() =>
 					Effect.succeed(true),
@@ -78,7 +78,7 @@ describe.concurrent('Delete products by ids', () => {
 			'Should just work',
 			[DeleteParameters],
 			Effect.fn(function* ([params]) {
-				const { run } = yield* Usecase.DeleteAndGetProducts
+				const { run } = yield* Usecase.DeleteProductsByIds
 
 				const exit = yield* Effect.exit(run(params))
 
@@ -90,7 +90,7 @@ describe.concurrent('Delete products by ids', () => {
 	})
 
 	layer(
-		Layer.provide(Usecase.DeleteAndGetProducts.DefaultWithoutDependencies, [
+		Layer.provide(Usecase.DeleteProductsByIds.DefaultWithoutDependencies, [
 			makeTestLayer(ProductRepository.ProductRepository)({
 				deleteProductByIdResolver: RequestResolver.fromEffect(() =>
 					Effect.succeed(true),
@@ -105,7 +105,7 @@ describe.concurrent('Delete products by ids', () => {
 			'Should return error',
 			[DeleteParameters],
 			Effect.fn(function* ([params]) {
-				const { run } = yield* Usecase.DeleteAndGetProducts
+				const { run } = yield* Usecase.DeleteProductsByIds
 
 				const exit = yield* Effect.exit(run(params))
 
