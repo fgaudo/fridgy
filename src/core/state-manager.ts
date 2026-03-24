@@ -12,22 +12,19 @@ import * as Option from 'effect/Option'
 import * as PubSub from 'effect/PubSub'
 import * as Queue from 'effect/Queue'
 import * as Ref from 'effect/Ref'
-import * as Schema from 'effect/Schema'
 import * as Scope from 'effect/Scope'
 import * as Stream from 'effect/Stream'
 import * as SubscriptionRef from 'effect/SubscriptionRef'
-import * as Tuple from 'effect/Tuple'
 
 export type Command<Message, R> = Effect.Effect<Message, never, R>
 
 export type Update<State, Message, R> = (
 	message: Message,
-) => (state: State) => readonly [State, readonly Command<Message, R>[]]
+) => (state: State) => readonly [State, Command<Message, R>[]]
 
-export type Subscriptions<Message, R> = HashMap.HashMap<
-	unknown,
-	Stream.Stream<Message, never, R>
->
+export type Subscriptions<State, Message, R> = (
+	s: State,
+) => HashMap.HashMap<unknown, Stream.Stream<Message, never, R>>
 
 export type StateManager<State, Message, R> = Newtype.Newtype<
 	'StateManager',
@@ -39,28 +36,25 @@ type StateManagerImpl<State, Message, R> = {
 	stateRef: SubscriptionRef.SubscriptionRef<State>
 	messagePubSub: PubSub.PubSub<Message>
 	messageQueue: Queue.Queue<Message>
-	initState: State
 	update: Update<State, Message, R>
 	defectMessage: (errors: Error[]) => Message
-	maybeSubsEvaluation: Option.Option<
-		(state: State) => Subscriptions<Message, R>
-	>
+	maybeSubsEvaluation: Option.Option<Subscriptions<State, Message, R>>
 	scope: Scope.Scope
 }
 
 export const makeScoped = Effect.fnUntraced(function* <State, Message, R>(
-	initState: State,
+	[initState, initMessages]: readonly [State, Message[]],
 	update: Update<State, Message, R>,
 	defectMessage: (errors: Error[]) => NoInfer<Message>,
 	options: {
-		subsEvaluation?: (state: State) => Subscriptions<Message, R>
+		subscriptions?: Subscriptions<State, Message, R>
 	},
 ): Effect.fn.Return<StateManager<State, Message, R>, never, Scope.Scope> {
 	const iso = Newtype.makeIso<StateManager<State, Message, R>>()
 
 	const maybeSubsEvaluation = pipe(
 		Option.fromUndefinedOr(options),
-		Option.flatMap(opt => Option.fromUndefinedOr(opt.subsEvaluation)),
+		Option.flatMap(opt => Option.fromUndefinedOr(opt.subscriptions)),
 	)
 
 	const stateRef = yield* Effect.acquireRelease(
@@ -72,6 +66,9 @@ export const makeScoped = Effect.fnUntraced(function* <State, Message, R>(
 		Queue.unbounded<Message>(),
 		Queue.shutdown,
 	)
+
+	yield* Queue.offerAll(messageQueue, initMessages)
+
 	const messagePubSub = yield* Effect.acquireRelease(
 		PubSub.unbounded<Message>(),
 		PubSub.shutdown,
@@ -84,7 +81,6 @@ export const makeScoped = Effect.fnUntraced(function* <State, Message, R>(
 		defectMessage,
 		maybeSubsEvaluation,
 		stateRef,
-		initState,
 		update,
 		isStartedRef,
 		messagePubSub,

@@ -9,11 +9,11 @@ import type { Update } from '@/core/state-manager.ts'
 import * as Home from './home/index.viewmodel.ts'
 
 type Message = Data.TaggedEnum<{
-	Home: { message: Home.MessageImpl }
+	Home: { message: Home._Message }
 }>
 
 type State = {
-	home: Home.State
+	home: Home._State
 }
 
 export const update: Update<State, Message, UseCases.All> = Match.typeTags<
@@ -24,4 +24,3 @@ export const update: Update<State, Message, UseCases.All> = Match.typeTags<
 		const ad = Home.update(m.message)(state.home)
 	},
 })
-Tuple.make()
