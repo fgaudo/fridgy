@@ -4,7 +4,6 @@ import * as Deferred from 'effect/Deferred'
 import * as Effect from 'effect/Effect'
 import * as Equal from 'effect/Equal'
 import * as Function from 'effect/Function'
-import { pipe, flow } from 'effect/Function'
 import * as HashMap from 'effect/HashMap'
 import * as HashSet from 'effect/HashSet'
 import * as Newtype from 'effect/Newtype'
@@ -52,14 +51,13 @@ export const makeScoped = Effect.fnUntraced(function* <State, Message, R>(
 	[initState, initCommands]: Transition<State, Message, R>,
 	update: Update<State, Message, R>,
 	defectMessage: (errors: Error[]) => NoInfer<Message>,
-	options: {
+	options?: {
 		subscriptions?: Subscriptions<State, Message, R>
 	},
 ): Effect.fn.Return<StateManager<State, Message, R>, never, Scope.Scope> {
 	const iso = Newtype.makeIso<StateManager<State, Message, R>>()
 
-	const maybeSubsEvaluation = pipe(
-		Option.fromUndefinedOr(options),
+	const maybeSubsEvaluation = Option.fromUndefinedOr(options).pipe(
 		Option.flatMap(opt => Option.fromUndefinedOr(opt.subscriptions)),
 	)
 
@@ -153,8 +151,7 @@ export const start = Effect.fnUntraced(function* <State, Message, R>(
 		update,
 	} = iso.get(stateManager)
 
-	const updateMessage$ = pipe(
-		Stream.fromQueue(messageQueue),
+	const updateMessage$ = Stream.fromQueue(messageQueue).pipe(
 		Stream.onStart(Effect.logDebug('Update loop started')),
 		Stream.mapEffect(message =>
 			SubscriptionRef.modifySome(stateRef, state => {
@@ -179,8 +176,7 @@ export const start = Effect.fnUntraced(function* <State, Message, R>(
 		onSome: Effect.fnUntraced(function* (subsEvaluation) {
 			const isReady = yield* Deferred.make<void>()
 
-			return pipe(
-				stateChanges(stateManager),
+			return stateChanges(stateManager).pipe(
 				Stream.onStart(
 					Effect.gen(function* () {
 						yield* Effect.logDebug('Subs started')
@@ -243,10 +239,11 @@ export const start = Effect.fnUntraced(function* <State, Message, R>(
 
 	yield* Effect.logDebug('Starting state manager')
 
-	yield* pipe(
-		message$,
+	yield* message$.pipe(
 		Stream.onStart(Effect.logDebug('State manager started')),
-		Stream.catchCause(flow(Cause.prettyErrors, defectMessage, Stream.make)),
+		Stream.catchCause(cause =>
+			cause.pipe(Cause.prettyErrors, defectMessage, Stream.make),
+		),
 		Stream.runForEach(message => dispatch(stateManager, message)),
 		Effect.forkIn(scope),
 	)

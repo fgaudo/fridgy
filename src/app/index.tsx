@@ -19,7 +19,7 @@ export default function Index() {
 	const navigation = useNavigation()
 	const { state: model } = useViewmodel({
 		runtime,
-		viewModel: Home.makeViewModel,
+		update: Home.makeViewModel,
 		messageHandler: message => {
 			Toast.show({ type: 'info', text1: message._tag })
 		},

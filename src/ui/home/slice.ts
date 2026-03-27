@@ -590,6 +590,9 @@ const _update = Match.typeTags<
 	},
 })
 
+export const fatalMessage = (errors: unknown) =>
+	messageIso.set(MessageRaw.Crash({ error: errors }))
+
 export const update: StateManager.Update<State, Message, UseCases> =
 	message => state => {
 		const _message = messageIso.get(message)

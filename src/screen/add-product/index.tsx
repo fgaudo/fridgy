@@ -14,7 +14,7 @@ export function AddProduct(props: {
 }) {
 	const model = useViewmodel({
 		runtime: props.runtime,
-		viewModel,
+		update: viewModel,
 	})
 
 	return <SafeAreaView className="flex-1"></SafeAreaView>

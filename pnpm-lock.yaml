@@ -11,6 +11,9 @@ importers:
 
   .:
     dependencies:
+      '@effect/atom-react':
+        specifier: 4.0.0-beta.41
+        version: 4.0.0-beta.41(effect@4.0.0-beta.40)(react@19.2.0)(scheduler@0.27.0)
       '@effect/sql-sqlite-react-native':
         specifier: 4.0.0-beta.21
         version: 4.0.0-beta.21(@op-engineering/op-sqlite@7.1.0(react-native@0.83.2(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.0))(react@19.2.0))(effect@4.0.0-beta.40)
@@ -700,6 +703,13 @@ packages:
   '@babel/types@7.29.0':
     resolution: {integrity: sha512-LwdZHpScM4Qz8Xw2iKSzS+cfglZzJGvofQICy7W7v4caru4EaAmyUuO6BGrbyQ2mYV11W0U8j5mBhd14dd3B0A==}
     engines: {node: '>=6.9.0'}
+
+  '@effect/atom-react@4.0.0-beta.41':
+    resolution: {integrity: sha512-OTswgfkXBslZVL3GM6/PYY4GLvOsNzXGAj9BHmjYl+ZnGDYVQqpO1fwFFfqn6APnfR76d9zuzzM9c24K/FUXeg==}
+    peerDependencies:
+      effect: ^4.0.0-beta.41
+      react: ^19.2.4
+      scheduler: '*'
 
   '@effect/language-service@0.77.0':
     resolution: {integrity: sha512-QP2bri8DdcK7Eo+SqFS2yNeD0Ch9kKHYxq2jeE9CaPpBknevCNFb3+hT6qSsPt2P6yOkhNP83KMy5Uk7DGBXlg==}
@@ -5643,6 +5653,12 @@ snapshots:
     dependencies:
       '@babel/helper-string-parser': 7.27.1
       '@babel/helper-validator-identifier': 7.28.5
+
+  '@effect/atom-react@4.0.0-beta.41(effect@4.0.0-beta.40)(react@19.2.0)(scheduler@0.27.0)':
+    dependencies:
+      effect: 4.0.0-beta.40
+      react: 19.2.0
+      scheduler: 0.27.0
 
   '@effect/language-service@0.77.0': {}
 

@@ -1,107 +1,75 @@
-import * as Cause from 'effect/Cause'
+import * as A from '@effect/atom-react'
 import * as Deferred from 'effect/Deferred'
 import * as Effect from 'effect/Effect'
-import * as Exit from 'effect/Exit'
-import { pipe } from 'effect/Function'
-import * as ManagedRuntime from 'effect/ManagedRuntime'
 import * as Scope from 'effect/Scope'
 import * as Stream from 'effect/Stream'
-import { useEffect, useState } from 'react'
+import * as AsyncResult from 'effect/unstable/reactivity/AsyncResult'
+import * as Atom from 'effect/unstable/reactivity/Atom'
 
-import type { StateManager } from '@/core/state-manager.ts'
+import * as StateManager from '@/core/state-manager.ts'
 
-import { type ViewModel } from '@/core/viewmodel.ts'
+export const useStateManager = <S, M, R>(
+	runtime: Atom.AtomRuntime<R>,
+	makeStateManager: Effect.Effect<
+		StateManager.StateManager<S, M, R>,
+		never,
+		Scope.Scope
+	>,
+	messages: (m: M) => void,
+) => {
+	const [stateResult, setState] = A.useAtom(
+		Atom.make<AsyncResult.AsyncResult<S>>(AsyncResult.initial()),
+	)
 
-export const useViewmodel = <S, M, R>({
-	runtime,
-	viewModel,
-	messageHandler,
-}: {
-	runtime: ManagedRuntime.ManagedRuntime<R, never>
-	viewModel: ViewModel<S, M, R>
-	messageHandler?: (m: M) => void
-}) => {
-	const [state, setState] = useState(viewModel.init)
-	const [stateManager, setStateManager] = useState<
-		StateManager<S, M, R> | undefined
-	>(undefined)
+	const dispatch = A.useAtomSet(
+		runtime.fn(
+			({
+				m,
+				stateManager,
+			}: {
+				m: M
+				stateManager: StateManager.StateManager<S, M, R>
+			}) => StateManager.dispatch(stateManager, m),
+		),
+	)
 
-	const [error, setError] = useState<Error | undefined>(undefined)
+	const dispatchResult = A.useAtomValue(
+		runtime.atom(
+			Effect.gen(function* () {
+				const stateManager = yield* makeStateManager
+				const ready1 = yield* Deferred.make()
+				const ready2 = yield* Deferred.make()
+				const scope = yield* Scope.Scope
 
-	if (error !== undefined) {
-		throw error
-	}
+				yield* StateManager.stateChanges(stateManager).pipe(
+					Stream.onStart(Deferred.succeed(ready1, undefined)),
+					Stream.runForEach(
+						Effect.fn(function* (state) {
+							yield* Effect.sync(() => setState(AsyncResult.success(state)))
+						}),
+					),
+					Effect.forkIn(scope),
+				)
 
-	useEffect(() => {
-		const scope = Scope.makeUnsafe('parallel')
+				yield* StateManager.messages(stateManager).pipe(
+					Stream.onStart(Deferred.succeed(ready2, undefined)),
 
-		const cancel = runtime.runCallback(
-			Scope.provide(
-				Effect.gen(function* () {
-					const stateManager = yield* viewModel.make
+					Stream.runForEach(
+						Effect.fn(function* (message) {
+							yield* Effect.sync(() => messages(message))
+						}),
+					),
+					Effect.forkIn(scope),
+				)
 
-					yield* Effect.sync(() => {
-						setStateManager(stateManager)
-					})
+				yield* Deferred.await(ready1)
+				yield* Deferred.await(ready2)
+				yield* StateManager.start(stateManager)
 
-					const messagesReady = yield* Deferred.make<undefined>()
-					const statesReady = yield* Deferred.make<undefined>()
+				return (m: M) => dispatch({ stateManager, m })
+			}),
+		),
+	)
 
-					yield* pipe(
-						stateManager.stateChanges,
-						Stream.onStart(Deferred.succeed(statesReady, undefined)),
-						Stream.runForEach(state =>
-							Effect.sync(() => {
-								setState(state)
-							}),
-						),
-						Effect.forkScoped,
-					)
-
-					if (messageHandler === undefined) {
-						yield* Deferred.succeed(messagesReady, undefined)
-					} else {
-						yield* pipe(
-							stateManager.messages,
-							Stream.onStart(Deferred.succeed(messagesReady, undefined)),
-							Stream.runForEach(message =>
-								pipe(
-									Effect.sync(() => {
-										messageHandler(message)
-									}),
-									Effect.catchDefect(e =>
-										Effect.logFatal('Messages callback threw an error', e),
-									),
-								),
-							),
-							Effect.forkScoped,
-						)
-					}
-
-					yield* Effect.all([
-						Deferred.await(statesReady),
-						Deferred.await(messagesReady),
-					])
-
-					yield* stateManager.start
-				}),
-				scope,
-			),
-			{
-				onExit: exit => {
-					if (Exit.isFailure(exit) && Cause.hasDies(exit.cause)) {
-						runtime.runFork(Scope.close(scope, Exit.void))
-						setError(new Error(exit.cause.toString()))
-					}
-				},
-			},
-		)
-
-		return () => {
-			cancel()
-			runtime.runFork(Scope.close(scope, Exit.void))
-		}
-	}, [runtime, viewModel, messageHandler])
-
-	return { state, dispatch: stateManager?.dispatch }
+	return AsyncResult.all([stateResult, dispatchResult])
 }
