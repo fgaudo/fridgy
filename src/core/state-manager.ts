@@ -18,9 +18,14 @@ import * as SubscriptionRef from 'effect/SubscriptionRef'
 
 export type Command<Message, R> = Effect.Effect<Message, never, R>
 
+export type Transition<State, Message, R> = readonly [
+	State,
+	Command<Message, R>[],
+]
+
 export type Update<State, Message, R> = (
 	message: Message,
-) => (state: State) => readonly [State, Command<Message, R>[]]
+) => (state: State) => Transition<State, Message, R>
 
 export type Subscriptions<State, Message, R> = (
 	s: State,
@@ -37,13 +42,14 @@ type StateManagerImpl<State, Message, R> = {
 	messagePubSub: PubSub.PubSub<Message>
 	messageQueue: Queue.Queue<Message>
 	update: Update<State, Message, R>
+	initCommands: Command<Message, R>[]
 	defectMessage: (errors: Error[]) => Message
 	maybeSubsEvaluation: Option.Option<Subscriptions<State, Message, R>>
 	scope: Scope.Scope
 }
 
 export const makeScoped = Effect.fnUntraced(function* <State, Message, R>(
-	[initState, initMessages]: readonly [State, Message[]],
+	[initState, initCommands]: Transition<State, Message, R>,
 	update: Update<State, Message, R>,
 	defectMessage: (errors: Error[]) => NoInfer<Message>,
 	options: {
@@ -67,8 +73,6 @@ export const makeScoped = Effect.fnUntraced(function* <State, Message, R>(
 		Queue.shutdown,
 	)
 
-	yield* Queue.offerAll(messageQueue, initMessages)
-
 	const messagePubSub = yield* Effect.acquireRelease(
 		PubSub.unbounded<Message>(),
 		PubSub.shutdown,
@@ -82,6 +86,7 @@ export const makeScoped = Effect.fnUntraced(function* <State, Message, R>(
 		maybeSubsEvaluation,
 		stateRef,
 		update,
+		initCommands,
 		isStartedRef,
 		messagePubSub,
 		messageQueue,
@@ -142,6 +147,7 @@ export const start = Effect.fnUntraced(function* <State, Message, R>(
 		maybeSubsEvaluation,
 		messagePubSub,
 		messageQueue,
+		initCommands,
 		scope,
 		stateRef,
 		update,
@@ -164,6 +170,7 @@ export const start = Effect.fnUntraced(function* <State, Message, R>(
 		Stream.tap(([message]) => PubSub.publish(messagePubSub, message)),
 		Stream.map(([, commands]) => commands),
 		Stream.flattenIterable,
+		Stream.merge(Stream.make(...initCommands)),
 		Stream.flattenEffect({ concurrency: 'unbounded', unordered: true }),
 	)
 

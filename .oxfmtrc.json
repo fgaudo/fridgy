@@ -4,6 +4,7 @@
 	"singleQuote": true,
 	"trailingComma": "all",
 	"semi": false,
+
 	"printWidth": 80,
 	"sortTailwindcss": {},
 	"arrowParens": "avoid",

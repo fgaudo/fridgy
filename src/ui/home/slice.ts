@@ -9,7 +9,6 @@ import * as Newtype from 'effect/Newtype'
 import * as Opt from 'effect/Option'
 import * as Schedule from 'effect/Schedule'
 import * as Stream from 'effect/Stream'
-import * as Struct from 'effect/Struct'
 import * as T from 'effect/Tuple'
 
 import { UseCase as UC } from '@/business/index.ts'
@@ -21,6 +20,10 @@ import * as NonEmptyTrimmedString from '@/core/non-empty-trimmed-string.ts'
 import * as StateManager from '@/core/state-manager.ts'
 import * as UnitInterval from '@/core/unit-interval.ts'
 import { HOME_SCHEDULER_FREQUENCY } from '@/screen/home/viewmodel/constants'
+
+type UseCases =
+	| UC.DeleteProductsByIds.DeleteProductsByIds
+	| UC.GetProducts.GetProducts
 
 export type Model = Readonly<{
 	canNavigateOut: boolean
@@ -86,110 +89,124 @@ export type Model = Readonly<{
 	}>
 }>
 
-type _Message = Data.TaggedEnum<{
-	StartFetchList: object
-	StartDeleteAndRefresh: object
-	ToggleItem: { id: string }
-	ClearSelected: object
-	Crash: { error: unknown }
-	NoOp: object
-	FetchListFailed: {
-		version: FetchListVersion
-		response: Data.TaggedEnum.Value<UC.GetProducts.Response, 'Failed'>
-	}
-	FetchListSucceeded: {
-		version: FetchListVersion
-		response: Data.TaggedEnum.Value<UC.GetProducts.Response, 'Succeeded'>
-	}
-	FetchListTick: { version: FetchListSchedulerVersion }
-	FetchListTickSucceeded: {
-		version: FetchListSchedulerVersion
-		response: Data.TaggedEnum.Value<UC.GetProducts.Response, 'Succeeded'>
-	}
-	FetchListTickFailed: {
-		version: FetchListSchedulerVersion
-		response: Data.TaggedEnum.Value<UC.GetProducts.Response, 'Failed'>
-	}
-	DeleteAndRefreshSucceeded: {
-		response: Data.TaggedEnum.Value<UC.GetProducts.Response, 'Succeeded'>
-	}
-	DeleteAndRefreshFailed: {
-		response: Data.TaggedEnum.Value<UC.DeleteProductsByIds.Response, 'Failed'>
-	}
-	DeleteSucceededButRefreshFailed: {
-		response: Data.TaggedEnum.Value<UC.GetProducts.Response, 'Failed'>
-	}
-}>
-const _Message = Data.taggedEnum<_Message>()
-type Message = Newtype.Newtype<'Message', _Message>
+export type Message = Newtype.Newtype<
+	'HomeMessage',
+	Data.TaggedEnum<{
+		StartFetchList: object
+		StartDeleteAndRefresh: object
+		ToggleItem: { id: string }
+		ClearSelected: object
+		Crash: { error: unknown }
+		NoOp: object
+		FetchListFailed: {
+			version: FetchListVersion
+			response: Data.TaggedEnum.Value<UC.GetProducts.Response, 'Failed'>
+		}
+		FetchListSucceeded: {
+			version: FetchListVersion
+			response: Data.TaggedEnum.Value<UC.GetProducts.Response, 'Succeeded'>
+		}
+
+		FetchListTick: { version: FetchListSchedulerVersion }
+		FetchListTickSucceeded: {
+			version: FetchListSchedulerVersion
+			response: Data.TaggedEnum.Value<UC.GetProducts.Response, 'Succeeded'>
+		}
+
+		FetchListTickFailed: {
+			version: FetchListSchedulerVersion
+			response: Data.TaggedEnum.Value<UC.GetProducts.Response, 'Failed'>
+		}
+		DeleteAndRefreshSucceeded: {
+			response: Data.TaggedEnum.Value<UC.GetProducts.Response, 'Succeeded'>
+		}
+		DeleteAndRefreshFailed: {
+			response: Data.TaggedEnum.Value<UC.DeleteProductsByIds.Response, 'Failed'>
+		}
+		DeleteSucceededButRefreshFailed: {
+			response: Data.TaggedEnum.Value<UC.GetProducts.Response, 'Failed'>
+		}
+	}>
+>
 const messageIso = Newtype.makeIso<Message>()
 
-type State = Newtype.Newtype<'State', _State>
-type _State = Readonly<{
-	versions: {
-		scheduledFetcher: FetchListSchedulerVersion
-		manualFetcher: FetchListVersion
-	}
-	productListData: Data.TaggedEnum<{
-		Initial: { activity: 'fetching' | 'idle' }
-		Error: { activity: 'fetching' | 'idle' }
-		Empty: { activity: 'fetching' | 'idle' }
-		Available: Readonly<{
-			activity: 'scheduledFetching' | 'idle' | 'deleting' | 'fetching'
-			maybeSelectedProducts: Opt.Option<NonEmptyHashSet.NonEmptyHashSet<string>>
-			total: PositiveInteger.PositiveInteger
-			products: Arr.NonEmptyReadonlyArray<
-				Data.TaggedEnum<{
-					Corrupt: Readonly<{
-						maybeName: Opt.Option<NonEmptyTrimmedString.NonEmptyTrimmedString>
-						id: symbol
-					}>
-					Invalid: Readonly<{
-						id: string
-						maybeName: Opt.Option<NonEmptyTrimmedString.NonEmptyTrimmedString>
-					}>
-					Valid: Readonly<{
-						id: string
-						name: NonEmptyTrimmedString.NonEmptyTrimmedString
-						status: Data.TaggedEnum<{
-							Everlasting: object
-							Stale: Readonly<{ expirationDate: Integer.Integer }>
-							Fresh: Readonly<{
-								expirationDate: Integer.Integer
-								timeLeft: Integer.Integer
-								freshnessRatio: UnitInterval.UnitInterval
+type MessageRaw = Newtype.Newtype.Carrier<Message>
+const MessageRaw = Data.taggedEnum<MessageRaw>()
+
+export type State = Newtype.Newtype<
+	'HomeState',
+	Readonly<{
+		versions: {
+			scheduledFetcher: FetchListSchedulerVersion
+			manualFetcher: FetchListVersion
+		}
+		productListData: Data.TaggedEnum<{
+			Initial: { activity: 'fetching' | 'idle' }
+			Error: { activity: 'fetching' | 'idle' }
+			Empty: { activity: 'fetching' | 'idle' }
+			Available: Readonly<{
+				activity: 'scheduledFetching' | 'idle' | 'deleting' | 'fetching'
+				maybeSelectedProducts: Opt.Option<
+					NonEmptyHashSet.NonEmptyHashSet<string>
+				>
+				total: PositiveInteger.PositiveInteger
+				hasFreshProducts: boolean
+				products: Arr.NonEmptyReadonlyArray<
+					Data.TaggedEnum<{
+						Corrupt: Readonly<{
+							maybeName: Opt.Option<NonEmptyTrimmedString.NonEmptyTrimmedString>
+							id: symbol
+						}>
+						Invalid: Readonly<{
+							id: string
+							maybeName: Opt.Option<NonEmptyTrimmedString.NonEmptyTrimmedString>
+						}>
+						Valid: Readonly<{
+							id: string
+							name: NonEmptyTrimmedString.NonEmptyTrimmedString
+							status: Data.TaggedEnum<{
+								Everlasting: object
+								Stale: Readonly<{ expirationDate: Integer.Integer }>
+								Fresh: Readonly<{
+									expirationDate: Integer.Integer
+									timeLeft: Integer.Integer
+									freshnessRatio: UnitInterval.UnitInterval
+								}>
 							}>
 						}>
 					}>
-				}>
-			>
+				>
+			}>
 		}>
 	}>
-}>
+>
 const stateIso = Newtype.makeIso<State>()
+type StateRaw = Newtype.Newtype.Carrier<State>
 
 type ProductDTO = Data.TaggedEnum.Value<
-	_State['productListData'],
+	StateRaw['productListData'],
 	'Available'
 >['products'][0]
 
 const ProductDTO = Data.taggedEnum<ProductDTO>()
 
 function updateFetchListSucceeded(
-	state: _State,
+	state: StateRaw,
 	maybeProducts: Data.TaggedEnum.Value<
-		_Message,
+		MessageRaw,
 		'FetchListSucceeded'
 	>['response']['maybeProducts'],
 ) {
 	if (Opt.isNone(maybeProducts)) {
 		return T.make(
-			Struct.evolve(state, {
-				productListData: () => ({
+			{
+				...state,
+				productListData: {
+					...state.productListData,
 					_tag: 'Empty' as const,
 					activity: 'idle' as const,
-				}),
-			}),
+				},
+			},
 			[],
 		)
 	}
@@ -202,82 +219,82 @@ function updateFetchListSucceeded(
 		return product
 	})
 
+	const hasFreshProducts = Arr.some(
+		mappedProducts,
+		p => p._tag === 'Valid' && p.status._tag === 'Fresh',
+	)
+
 	if (state.productListData._tag !== 'Available') {
 		return T.make(
-			Struct.evolve(state, {
-				productListData: () => ({
+			{
+				...state,
+				productListData: {
+					...state.productListData,
+					hasFreshProducts,
 					_tag: 'Available' as const,
 					activity: 'idle' as const,
 					total: ArrX.length(maybeProducts.value),
 					products: mappedProducts,
 					maybeSelectedProducts: Opt.none(),
-				}),
-			}),
+				},
+			} satisfies StateRaw,
 			[],
 		)
 	}
 	return T.make(
-		Struct.evolve(state, {
-			productListData: Struct.evolve({
-				activity: () => 'idle' as const,
-				total: () => ArrX.length(maybeProducts.value),
-				products: () => mappedProducts,
-				maybeSelectedProducts: maybeSelectedProducts =>
-					Opt.Do.pipe(
-						Opt.bind('selectedProducts', () => maybeSelectedProducts),
-						Opt.bind('newProducts', () =>
-							maybeProducts.pipe(
-								Opt.map(Arr.filter(product => product._tag !== 'Invalid')),
-								Opt.map(Arr.map(product => product.id)),
-								Opt.map(HashSet.make),
-							),
+		{
+			...state,
+			productListData: {
+				...state.productListData,
+				activity: 'idle' as const,
+				total: ArrX.length(maybeProducts.value),
+				products: mappedProducts,
+				hasFreshProducts,
+				maybeSelectedProducts: state.productListData.maybeSelectedProducts.pipe(
+					Opt.bindTo('selectedProducts'),
+					Opt.bind('newProducts', () =>
+						maybeProducts.pipe(
+							Opt.map(Arr.filter(product => product._tag !== 'Invalid')),
+							Opt.map(Arr.map(product => product.id)),
+							Opt.map(HashSet.make),
 						),
-						Opt.map(({ selectedProducts, newProducts }) =>
-							HashSet.intersection(newProducts, selectedProducts),
-						),
-						Opt.andThen(NonEmptyHashSet.make),
 					),
-			}),
-		}),
+					Opt.map(({ selectedProducts, newProducts }) =>
+						HashSet.intersection(newProducts, selectedProducts),
+					),
+					Opt.andThen(NonEmptyHashSet.make),
+				),
+			},
+		},
 		[],
 	)
 }
 
-function updateFetchListFailed(state: _State) {
+function updateFetchListFailed(state: StateRaw) {
 	if (state.productListData._tag === 'Initial') {
 		return T.make(state, [])
 	}
 
 	return T.make(
-		Struct.evolve(state, {
-			productListData: () => ({
+		{
+			...state,
+			productListData: {
+				...state.productListData,
 				_tag: 'Error' as const,
 				activity: 'idle' as const,
-			}),
-		}),
+			},
+		},
 		[],
 	)
 }
 
-/** @remarks
- *  Time complexity: O(n) in the worst case.
- *  Could be improved with a cached hasFreshProducts stored in the state
- */
-function hasFreshProducts(
-	state: _State & { productListData: { _tag: 'Available' } },
-) {
-	return state.productListData.products.some(
-		product => product._tag === 'Valid' && product.status._tag === 'Fresh',
-	)
-}
-
 function hasSelectedProducts(
-	state: _State & { productListData: { _tag: 'Available' } },
+	state: StateRaw & { productListData: { _tag: 'Available' } },
 ) {
 	return Opt.isSome(state.productListData.maybeSelectedProducts)
 }
 
-function productsAreToggleable(state: _State) {
+function productsAreToggleable(state: StateRaw) {
 	return (
 		state.productListData.activity === 'idle' ||
 		state.productListData.activity === 'scheduledFetching'
@@ -285,33 +302,50 @@ function productsAreToggleable(state: _State) {
 }
 
 function isSchedulerRunning(
-	state: _State,
-): state is _State & { productListData: { _tag: 'Available' } } {
+	state: StateRaw,
+): state is StateRaw & { productListData: { _tag: 'Available' } } {
 	const productListData = state.productListData
 	return (
 		productListData._tag === 'Available' &&
 		(productListData.activity === 'scheduledFetching' ||
 			productListData.activity === 'idle') &&
-		hasFreshProducts(
-			Struct.evolve(state, { productListData: () => productListData }),
-		)
+		productListData.hasFreshProducts
 	)
 }
 
-function isSelectionClearable(
-	state: _State,
-): state is IsInAvailable & IsNotDeleting & HasSelectedProducts {
+function isDeletingAllowed(state: StateRaw): state is typeof state & {
+	productListData: Data.TaggedEnum.Value<
+		(typeof state)['productListData'],
+		'Available'
+	> & {
+		activity: Exclude<
+			(typeof state)['productListData']['activity'],
+			'fetching' | 'deleting'
+		>
+		maybeSelectedProducts: Opt.Some<
+			Opt.Option.Value<
+				Data.TaggedEnum.Value<
+					(typeof state)['productListData'],
+					'Available'
+				>['maybeSelectedProducts']
+			>
+		>
+	}
+} {
 	return (
-		isInAvailable(state) && !isDeleting(state) && hasSelectedProducts(state)
+		state.productListData._tag === 'Available' &&
+		state.productListData.activity !== 'fetching' &&
+		state.productListData.activity !== 'deleting' &&
+		Opt.isSome(state.productListData.maybeSelectedProducts)
 	)
 }
 
 const _update = Match.typeTags<
-	_Message,
-	ReturnType<StateManager.Update<_State, _Message, UC.All>>
+	MessageRaw,
+	ReturnType<StateManager.Update<StateRaw, MessageRaw, UseCases>>
 >()({
 	Crash: error => state =>
-		T.make(state, [Effect.logFatal(error).pipe(Effect.as(_Message.NoOp()))]),
+		T.make(state, [Effect.logFatal(error).pipe(Effect.as(MessageRaw.NoOp()))]),
 
 	NoOp: () => state => T.make(state, []),
 
@@ -397,7 +431,10 @@ const _update = Match.typeTags<
 			return T.make(state, [notifyStale(message)])
 		}
 
-		if (state.productListData.activity !== 'scheduledFetching') {
+		if (
+			state.productListData.activity !== 'scheduledFetching' ||
+			!isSchedulerRunning(state)
+		) {
 			return T.make(state, [notifyWrongState(message)])
 		}
 
@@ -409,7 +446,10 @@ const _update = Match.typeTags<
 			return T.make(state, [notifyStale(message)])
 		}
 
-		if (state.productListData.activity !== 'scheduledFetching') {
+		if (
+			state.productListData.activity !== 'scheduledFetching' ||
+			!isSchedulerRunning(state)
+		) {
 			return T.make(state, [notifyWrongState(message)])
 		}
 
@@ -459,49 +499,9 @@ const _update = Match.typeTags<
 			return T.make(state, [notifyWrongState(message)])
 		}
 
-		const maybeProducts = message.response.maybeProducts
-
-		if (Opt.isNone(maybeProducts)) {
-			return T.make(
-				{
-					...state,
-					productListData: {
-						_tag: 'Empty',
-						activity: 'idle',
-					},
-				} as const,
-				[],
-			)
-		}
-
-		return T.make(
-			{
-				...state,
-				productListData: {
-					...state.productListData,
-					_tag: 'Available' as const,
-					activity: 'idle' as const,
-					total: ArrX.length(maybeProducts.value),
-					products: Arr.map(maybeProducts.value, product => {
-						if (product._tag === 'Invalid') {
-							if (Opt.isNone(product.id)) {
-								return ProductDTO.Corrupt({ ...product, id: Symbol() })
-							}
-
-							return ProductDTO.Invalid({
-								...product,
-								id: product.id.value,
-							})
-						}
-
-						return ProductDTO.Valid({ ...product })
-					}),
-					maybeSelectedProducts: Opt.none(),
-				},
-			},
-			[],
-		)
+		return updateFetchListSucceeded(state, message.response.maybeProducts)
 	},
+
 	DeleteAndRefreshFailed: message => state => {
 		if (state.productListData.activity !== 'deleting') {
 			return T.make(state, [notifyWrongState(message)])
@@ -590,8 +590,8 @@ const _update = Match.typeTags<
 	},
 })
 
-const update: StateManager.Update<State, Message, UC.All> =
-	(message: Message) => (state: State) => {
+export const update: StateManager.Update<State, Message, UseCases> =
+	message => state => {
 		const _message = messageIso.get(message)
 		const _state = stateIso.get(state)
 
@@ -604,9 +604,9 @@ const update: StateManager.Update<State, Message, UC.All> =
 	}
 
 const _subscriptions: StateManager.Subscriptions<
-	_State,
-	_Message,
-	UC.All
+	StateRaw,
+	MessageRaw,
+	UseCases
 > = state => {
 	if (!isSchedulerRunning(state)) {
 		return HashMap.empty()
@@ -615,7 +615,7 @@ const _subscriptions: StateManager.Subscriptions<
 	return HashMap.make([
 		state.versions.scheduledFetcher,
 		Stream.make(
-			_Message.FetchListTick({ version: state.versions.scheduledFetcher }),
+			MessageRaw.FetchListTick({ version: state.versions.scheduledFetcher }),
 		).pipe(
 			Stream.schedule(Schedule.spaced(HOME_SCHEDULER_FREQUENCY)),
 			Stream.forever,
@@ -623,10 +623,10 @@ const _subscriptions: StateManager.Subscriptions<
 	])
 }
 
-const subscriptions: StateManager.Subscriptions<
+export const subscriptions: StateManager.Subscriptions<
 	State,
 	Message,
-	UC.All
+	UseCases
 > = _state => {
 	const state = stateIso.get(_state)
 
@@ -653,20 +653,15 @@ const FetchListVersion = {
 	increment: (version: FetchListVersion) => _FetchListVersion(version + 1n),
 }
 
-const _init: [_State, _Message[]] = T.make(
-	{
+export const init: StateManager.Transition<State, Message, UseCases> = T.make(
+	stateIso.set({
 		versions: {
 			manualFetcher: FetchListVersion.make(0n),
 			scheduledFetcher: FetchListSchedulerVersion.make(0n),
 		},
 		productListData: { _tag: 'Initial', activity: 'idle' },
-	},
+	}),
 	[],
-)
-
-const init: [State, Message[]] = T.make(
-	stateIso.set(_init[0]),
-	Arr.map(_init[1], messageIso.set),
 )
 
 function makeModel(s: State): Model {
@@ -679,7 +674,7 @@ function makeModel(s: State): Model {
 		!state.productListData.isDeleting
 			? ({
 					_tag: 'True',
-					fetch: _Message.StartFetchList(),
+					fetch: MessageRaw.StartFetchList(),
 				} as const)
 			: ({ _tag: 'False' } as const)
 
@@ -702,7 +697,7 @@ function makeModel(s: State): Model {
 	})
 		? ({
 				_tag: 'True',
-				deleteSelected: _Message.StartDeleteAndRefresh(),
+				deleteSelected: MessageRaw.StartDeleteAndRefresh(),
 			} as const)
 		: ({ _tag: 'False' } as const)
 
@@ -712,7 +707,7 @@ function makeModel(s: State): Model {
 	})
 		? ({
 				_tag: 'True',
-				clear: _Message.ClearSelected(),
+				clear: MessageRaw.ClearSelected(),
 			} as const)
 		: ({ _tag: 'False' } as const)
 
@@ -728,7 +723,7 @@ function makeModel(s: State): Model {
 						? ({ _tag: 'False' } as const)
 						: ({
 								_tag: 'True',
-								toggle: _Message.ToggleItem({ id: product.id }),
+								toggle: MessageRaw.ToggleItem({ id: product.id }),
 							} as const),
 					selected: maybeSelected.pipe(
 						Opt.map(HashSet.has(product.id)),
@@ -755,12 +750,12 @@ function makeModel(s: State): Model {
 
 const notifyWrongState = Effect.fn(function* (message: { _tag: string }) {
 	yield* Effect.logError(`Triggered ${message._tag} in wrong state`)
-	return _Message.NoOp()
+	return MessageRaw.NoOp()
 })
 
 const notifyStale = Effect.fn(function* (message: { _tag: string }) {
 	yield* Effect.logInfo(`Triggered stale ${message._tag}`)
-	return _Message.NoOp()
+	return MessageRaw.NoOp()
 })
 
 const deleteAndGetProducts = Effect.fn(function* (
@@ -772,7 +767,7 @@ const deleteAndGetProducts = Effect.fn(function* (
 		const result = yield* deleteProducts(params)
 
 		if (result._tag === 'Failed') {
-			return _Message.DeleteAndRefreshFailed({ response: result })
+			return MessageRaw.DeleteAndRefreshFailed({ response: result })
 		}
 	}
 
@@ -783,8 +778,8 @@ const deleteAndGetProducts = Effect.fn(function* (
 
 		return Match.valueTags(result, {
 			Failed: response =>
-				_Message.DeleteSucceededButRefreshFailed({ response }),
-			Succeeded: response => _Message.DeleteAndRefreshSucceeded({ response }),
+				MessageRaw.DeleteSucceededButRefreshFailed({ response }),
+			Succeeded: response => MessageRaw.DeleteAndRefreshSucceeded({ response }),
 		})
 	}
 })
@@ -795,8 +790,8 @@ const fetchList = Effect.fn(function* (version: FetchListVersion) {
 	const result = yield* run
 
 	return Match.valueTags(result, {
-		Failed: response => _Message.FetchListFailed({ version, response }),
-		Succeeded: response => _Message.FetchListSucceeded({ version, response }),
+		Failed: response => MessageRaw.FetchListFailed({ version, response }),
+		Succeeded: response => MessageRaw.FetchListSucceeded({ version, response }),
 	})
 })
 
@@ -806,26 +801,14 @@ const fetchListTick = Effect.fn(function* (version: FetchListSchedulerVersion) {
 	const result = yield* run
 
 	return Match.valueTags(result, {
-		Failed: response => _Message.FetchListTickFailed({ version, response }),
+		Failed: response => MessageRaw.FetchListTickFailed({ version, response }),
 		Succeeded: response =>
-			_Message.FetchListTickSucceeded({ version, response }),
+			MessageRaw.FetchListTickSucceeded({ version, response }),
 	})
 })
 
-export const makeRuntime = StateManager.makeScoped(
-	init,
-	update,
-	err => messageIso.set(_Message.Crash({ error: err })),
-	{
-		subscriptions,
-	},
-)
-
 /** @internal */
 export const _testing = {
-	_Message,
-
-	update: _update,
-	subscriptions: _subscriptions,
-	init: _init,
+	messageIso,
+	stateIso,
 }
