@@ -13,13 +13,11 @@ import * as T from 'effect/Tuple'
 
 import { UseCase as UC } from '@/business/index.ts'
 import * as Integer from '@/core/integer/integer.ts'
-import * as PositiveInteger from '@/core/integer/positive.ts'
+import * as PositiveInteger from '@/core/integer/positive-integer.ts'
 import * as ArrX from '@/core/non-empty-array.ts'
 import * as NonEmptyHashSet from '@/core/non-empty-hash-set.ts'
-import * as NonEmptyTrimmedString from '@/core/non-empty-trimmed-string.ts'
 import * as StateManager from '@/core/state-manager.ts'
 import * as UnitInterval from '@/core/unit-interval.ts'
-import { HOME_SCHEDULER_FREQUENCY } from '@/screen/home/viewmodel/constants'
 
 type UseCases =
 	| UC.DeleteProductsByIds.DeleteProductsByIds
@@ -54,7 +52,7 @@ export type Model = Readonly<{
 				Data.TaggedEnum<{
 					Corrupt: Readonly<{
 						canToggle: Data.TaggedEnum<{ False: object }>
-						maybeName: Opt.Option<NonEmptyTrimmedString.NonEmptyTrimmedString>
+						maybeName: Opt.Option<string>
 					}>
 					Invalid: Readonly<{
 						canToggle: Data.TaggedEnum<{
@@ -63,7 +61,7 @@ export type Model = Readonly<{
 						}>
 						selected: boolean
 						id: string
-						maybeName: Opt.Option<NonEmptyTrimmedString.NonEmptyTrimmedString>
+						maybeName: Opt.Option<string>
 					}>
 					Valid: Readonly<{
 						canToggle: Data.TaggedEnum<{
@@ -72,7 +70,7 @@ export type Model = Readonly<{
 						}>
 						id: string
 						isSelected: boolean
-						name: NonEmptyTrimmedString.NonEmptyTrimmedString
+						name: string
 						status: Data.TaggedEnum<{
 							Everlasting: object
 							Stale: Readonly<{ expirationDate: Integer.Integer }>
@@ -154,16 +152,16 @@ export type State = Newtype.Newtype<
 				products: Arr.NonEmptyReadonlyArray<
 					Data.TaggedEnum<{
 						Corrupt: Readonly<{
-							maybeName: Opt.Option<NonEmptyTrimmedString.NonEmptyTrimmedString>
+							maybeName: Opt.Option<string>
 							id: symbol
 						}>
 						Invalid: Readonly<{
 							id: string
-							maybeName: Opt.Option<NonEmptyTrimmedString.NonEmptyTrimmedString>
+							maybeName: Opt.Option<string>
 						}>
 						Valid: Readonly<{
 							id: string
-							name: NonEmptyTrimmedString.NonEmptyTrimmedString
+							name: string
 							status: Data.TaggedEnum<{
 								Everlasting: object
 								Stale: Readonly<{ expirationDate: Integer.Integer }>
@@ -213,7 +211,7 @@ function updateFetchListSucceeded(
 
 	const mappedProducts = Arr.map(maybeProducts.value, product => {
 		if (product._tag === 'Invalid') {
-			return ProductDTO.Corrupt({ ...product, id: Symbol() })
+			return ProductDTO.Corrupt({ ...product, id: Symbol('id') })
 		}
 
 		return product
@@ -554,9 +552,10 @@ const _update = Match.typeTags<
 					maybeSelectedProducts:
 						state.productListData.maybeSelectedProducts.pipe(
 							Opt.match({
-								onSome: HashSet.has(message.id)
-									? HashSet.remove(message.id)
-									: HashSet.add(message.id),
+								onSome: map =>
+									HashSet.has(map, message.id)
+										? HashSet.remove(map, message.id)
+										: HashSet.add(map, message.id),
 								onNone: () => HashSet.make(message.id),
 							}),
 							NonEmptyHashSet.make,
@@ -774,10 +773,10 @@ const deleteAndGetProducts = Effect.fn(function* (
 		}
 	}
 
-	const { run } = yield* UC.GetProducts.GetProducts
+	const getProducts = yield* UC.GetProducts.GetProducts
 
 	{
-		const result = yield* run
+		const result = yield* getProducts
 
 		return Match.valueTags(result, {
 			Failed: response =>
@@ -788,9 +787,9 @@ const deleteAndGetProducts = Effect.fn(function* (
 })
 
 const fetchList = Effect.fn(function* (version: FetchListVersion) {
-	const { run } = yield* UC.GetProducts.GetProducts
+	const getProducts = yield* UC.GetProducts.GetProducts
 
-	const result = yield* run
+	const result = yield* getProducts
 
 	return Match.valueTags(result, {
 		Failed: response => MessageRaw.FetchListFailed({ version, response }),
@@ -799,9 +798,9 @@ const fetchList = Effect.fn(function* (version: FetchListVersion) {
 })
 
 const fetchListTick = Effect.fn(function* (version: FetchListSchedulerVersion) {
-	const { run } = yield* UC.GetProducts.GetProducts
+	const getProducts = yield* UC.GetProducts.GetProducts
 
-	const result = yield* run
+	const result = yield* getProducts
 
 	return Match.valueTags(result, {
 		Failed: response => MessageRaw.FetchListTickFailed({ version, response }),
@@ -811,7 +810,7 @@ const fetchListTick = Effect.fn(function* (version: FetchListSchedulerVersion) {
 })
 
 /** @internal */
-export const _testing = {
+export const _internal = {
 	messageIso,
 	stateIso,
 }

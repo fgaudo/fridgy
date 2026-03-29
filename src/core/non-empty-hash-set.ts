@@ -2,15 +2,14 @@ import * as Brand from 'effect/Brand'
 import * as HashSet from 'effect/HashSet'
 import * as _Schema from 'effect/Schema'
 
-import * as PositiveInteger from './integer/positive.ts'
+import * as PositiveInteger from '@/core/integer/positive-integer.ts'
 
 export type NonEmptyHashSet<A> = Brand.Branded<
 	HashSet.HashSet<A>,
 	'core.NonEmptyHashSet'
 >
 
-/** @internal */
-export const _NonEmptyHashSet = <A>() =>
+const NonEmptyHashSet = <A>() =>
 	Brand.make<NonEmptyHashSet<A>>(set => HashSet.size(set) > 0)
 
 export const size = <A>(
@@ -19,7 +18,12 @@ export const size = <A>(
 	PositiveInteger.unsafeFromNumber(HashSet.size(hashSet))
 
 export const makeUnsafe = <A>(hashSet: HashSet.HashSet<A>) =>
-	_NonEmptyHashSet<A>()(hashSet)
+	NonEmptyHashSet<A>()(hashSet)
 
 export const make = <A>(hashSet: HashSet.HashSet<A>) =>
-	_NonEmptyHashSet<A>().option(hashSet)
+	NonEmptyHashSet<A>().option(hashSet)
+
+/** @internal */
+export const _internal = {
+	NonEmptyHashSet,
+}

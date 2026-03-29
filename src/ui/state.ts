@@ -24,7 +24,7 @@ export type State = Newtype.Newtype<
 	'RootState',
 	Data.TaggedEnum<{
 		Home: Home.State
-		AddProduct: {}
+		AddProduct: object
 	}>
 >
 const stateIso = Newtype.makeIso<State>()

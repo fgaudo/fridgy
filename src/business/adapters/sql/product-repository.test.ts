@@ -8,7 +8,7 @@ import * as RequestResolver from 'effect/RequestResolver'
 import * as Schema from 'effect/Schema'
 
 import * as Integer from '@/core/integer/integer.ts'
-import * as NonEmptyTrimmedString from '@/core/non-empty-trimmed-string.ts'
+import * as NormalizedString from '@/core/normalized-string.ts'
 import * as H from '@/core/test-helpers.ts'
 import { makeTestLayer } from '@/core/testing.ts'
 import * as SqliteCapacitorHelper from '@/shared/sql/sql-db-helper.ts'
@@ -22,7 +22,7 @@ class AddProductRequest extends Schema.TaggedRequest<AddProductRequest>(
 	failure: Schema.Never,
 	success: Schema.Boolean,
 	payload: {
-		name: NonEmptyTrimmedString.Schema,
+		name: NormalizedString.Schema,
 		maybeExpirationDate: Schema.Option(Integer.Schema),
 		creationDate: Integer.Schema,
 	},
@@ -222,7 +222,7 @@ describe.concurrent('Delete products by ids', () => {
 export const GetSortedProducts = Schema.Array(
 	Schema.Struct({
 		maybeId: Schema.Option(Schema.Number),
-		maybeName: Schema.Option(NonEmptyTrimmedString.Schema),
+		maybeName: Schema.Option(NormalizedString.Schema),
 		maybeExpirationDate: Schema.Option(Integer.Schema),
 		maybeCreationDate: Schema.Option(Integer.Schema),
 	}),

@@ -60,7 +60,7 @@ export class AddProduct extends ServiceMap.Service<AddProduct>()(
 					const id = yield* Effect.sync(() => uuidv4())
 
 					const maybeResult = yield* pipe(
-						AddProductPort.Request({ id, product: Product.toState(product) }),
+						AddProductPort.Request({ id, product: Product.toOutput(product) }),
 						addProduct,
 						Effect.option,
 					)

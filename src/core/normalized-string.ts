@@ -1,31 +1,35 @@
 import * as Brand from 'effect/Brand'
-import * as Filter from 'effect/Filter'
 import { pipe } from 'effect/Function'
-import * as Predicate from 'effect/Predicate'
-import * as Result from 'effect/Result'
-import * as Schema from 'effect/Schema'
+import * as Opt from 'effect/Option'
+import * as _Schema from 'effect/Schema'
+import * as Str from 'effect/String'
 
-import * as NonEmptyTrimmedString from './non-empty-trimmed-string.ts'
+export type NormalizedString = Brand.Branded<string, 'core.NormalizedString'>
 
-type NormalizedString = Brand.Branded<string, 'NormalizedString'>
-const NormalizedString = pipe(
-	Filter.make((s: string) =>
-		s.length > 0 ? Result.succeed(s) : Result.fail(s),
-	),
-	Filter.compose(
-		Filter.make(s => (s.trim() === s ? Result.succeed(s) : Result.fail(s))),
-	),
-	Filter.compose(
-		Filter.make(s => (/ {2,}/.test(s) ? Result.fail(s) : Result.succeed(s))),
-	),
-	Filter.toPredicate,
-	Brand.make<NormalizedString>,
-)
+const NormalizedString = Brand.nominal<NormalizedString>()
 
-class NotFound1 extends Schema.Class<NotFound1>('NotFound1')({
-	id: Schema.Number,
-}) {}
+export const makeNormalized = (
+	string: string,
+): Opt.Option<NormalizedString> => {
+	if (string.length <= 0) {
+		return Opt.none<NormalizedString>()
+	}
 
-const asd = new NotFound1({ id: 3 })
+	return pipe(
+		string,
+		Str.normalize('NFKC'),
+		Str.trim,
+		Str.replaceAll(/\s{2,}/g, ' '),
+		s => NormalizedString.option(s),
+	)
+}
 
-NotFound1.rebuild
+export const Schema = _Schema.fromBrand(
+	'core.NormalizedString',
+	NormalizedString,
+)(_Schema.String)
+
+/** @internal */
+export const _internal = {
+	NormalizedString,
+}

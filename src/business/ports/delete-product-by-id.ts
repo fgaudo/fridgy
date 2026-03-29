@@ -9,7 +9,5 @@ export const Request = Req.of<Request>()
 
 export class DeleteProductById extends ServiceMap.Service<
 	DeleteProductById,
-	{
-		resolver: RequestResolver.RequestResolver<Request>
-	}
->()('dd346eaa1f807826') {}
+	RequestResolver.RequestResolver<Request>
+>()('72b91c5d90a6c55d') {}

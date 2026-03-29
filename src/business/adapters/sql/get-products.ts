@@ -6,9 +6,9 @@ import * as Option from 'effect/Option'
 import * as Schema from 'effect/Schema'
 import * as Sql from 'effect/unstable/sql'
 
+import * as GetProducts from '@/business/ports/get-products.ts'
 import * as Integer from '@/core/integer/integer.ts'
 
-import * as GetProducts from '../../../screens/home/use-cases.ts'
 import * as SqlDb from './sql-db.ts'
 
 const makeGetProducts = Effect.gen(function* () {
@@ -31,9 +31,9 @@ const makeGetProducts = Effect.gen(function* () {
 				SqlDb.DbSchema.productExpiration
 
 			return sql`
-            SELECT 
+            SELECT
                ${sql(product.id)} as maybeId,
-               ${sql(product.name)} as maybeName, 
+               ${sql(product.name)} as maybeName,
                ${sql(product.creationDate)} as maybeCreationDate,
                ${sql(expiration.date)} as maybeExpirationDate
             FROM ${sql(product_table)}
@@ -45,41 +45,34 @@ const makeGetProducts = Effect.gen(function* () {
 		},
 	})()
 
-	return {
-		run: Effect.gen(function* () {
-			const maybeProducts = yield* Effect.option(getProducts)
+	// @effect-diagnostics-next-line returnEffectInGen:off
+	return Effect.gen(function* () {
+		const maybeProducts = yield* Effect.option(getProducts)
 
-			if (Option.isNone(maybeProducts)) {
-				return yield* Effect.fail(undefined)
-			}
+		if (Option.isNone(maybeProducts)) {
+			return yield* Effect.fail(undefined)
+		}
 
-			type Product = (typeof maybeProducts.value)[0]
+		type Product = (typeof maybeProducts.value)[0]
 
-			const mapToDTO = Effect.fn(function* (product: Product) {
-				return {
-					...product,
-					maybeId: yield* Option.match(product.maybeId, {
-						onNone: () => Effect.succeed(Option.none<string>()),
-						onSome: id =>
-							Effect.option(
-								Effect.try({
-									try: () => id.toString(10),
-									catch: () => undefined,
-								}),
-							),
-					}),
-				} as const
-			})
+		const mapToDTO = Effect.fn(function* (product: Product) {
+			return {
+				...product,
+				maybeId: yield* Option.match(product.maybeId, {
+					onNone: () => Effect.succeed(Option.none<string>()),
+					onSome: id =>
+						Effect.option(
+							Effect.try({
+								try: () => id.toString(10),
+								catch: () => undefined,
+							}),
+						),
+				}),
+			} as const
+		})
 
-			const arr = yield* pipe(
-				maybeProducts.value,
-				Arr.map(mapToDTO),
-				Effect.all,
-			)
-
-			return arr
-		}),
-	}
+		return yield* pipe(maybeProducts.value, Arr.map(mapToDTO), Effect.all)
+	})
 })
 
-export const layer = Layer.effect(GetProducts.UseCases, makeGetProducts)
+export const layer = Layer.effect(GetProducts.GetProducts, makeGetProducts)

@@ -6,21 +6,20 @@ import * as Layer from 'effect/Layer'
 import * as Option from 'effect/Option'
 import * as ServiceMap from 'effect/ServiceMap'
 
+import * as Product from '@/business/domain/product.ts'
+import * as GetProductsPort from '@/business/ports/get-products.ts'
 import * as Integer from '@/core/integer/integer.ts'
-import * as NonEmptyTrimmedString from '@/core/non-empty-trimmed-string.ts'
+import * as NormalizedString from '@/core/normalized-string.ts'
 import * as UnitInterval from '@/core/unit-interval.ts'
-
-import * as Product from '../domain/product.ts'
-import * as GetProductsPort from '../ports/get-products.ts'
 
 export type ProductDTO = Data.TaggedEnum<{
 	Invalid: {
-		maybeName: Option.Option<NonEmptyTrimmedString.NonEmptyTrimmedString>
-		id: Option.Option<string>
+		maybeName: Option.Option<string>
+		maybeId: Option.Option<string>
 	}
 	Valid: {
 		id: string
-		name: NonEmptyTrimmedString.NonEmptyTrimmedString
+		name: string
 		status: Data.TaggedEnum<{
 			Everlasting: object
 			Stale: {
@@ -53,81 +52,93 @@ export class GetProducts extends ServiceMap.Service<GetProducts>()(
 	'06a610be80140f91',
 	{
 		make: Effect.gen(function* () {
-			const { run } = yield* GetProductsPort.GetProducts
+			const getProducts = yield* GetProductsPort.GetProducts
 
-			return {
-				run: Effect.gen(function* (): Effect.fn.Return<Response> {
-					yield* Effect.log('Started')
+			// @effect-diagnostics-next-line returnEffectInGen:off
+			return Effect.gen(function* (): Effect.fn.Return<Response> {
+				yield* Effect.log('Started')
 
-					const maybeProducts = yield* Effect.option(run)
+				const maybeProducts = yield* Effect.option(getProducts)
 
-					if (Option.isNone(maybeProducts)) {
-						yield* Effect.logError('Could not receive products')
+				if (Option.isNone(maybeProducts)) {
+					yield* Effect.logError('Could not receive products')
 
-						return Response.Failed()
-					}
+					return Response.Failed()
+				}
 
-					const entries = yield* Effect.forEach(
-						maybeProducts.value,
-						Effect.fn(function* (productData) {
-							if (Option.isNone(productData.maybeId)) {
-								return ProductDTO.Invalid({
-									id: productData.maybeId,
-									maybeName: productData.maybeName,
-								})
-							}
+				const entries = yield* Effect.forEach(
+					maybeProducts.value,
+					Effect.fn(function* (productData) {
+						if (Option.isNone(productData.maybeId)) {
+							return ProductDTO.Invalid({
+								maybeId: productData.maybeId,
+								maybeName: Option.map(productData.maybeName, string =>
+									NormalizedString.makeNormalized(string).pipe(
+										Option.getOrElse(() => '[Invalid name]'),
+									),
+								),
+							})
+						}
 
-							const maybeProduct = Product.makeProduct(productData)
+						const maybeProduct = Product.makeProduct(productData)
 
-							if (Option.isNone(maybeProduct)) {
-								return ProductDTO.Invalid({
-									id: productData.maybeId,
-									maybeName: productData.maybeName,
-								})
-							}
+						if (Option.isNone(maybeProduct)) {
+							return ProductDTO.Invalid({
+								maybeId: productData.maybeId,
+								maybeName: Option.map(productData.maybeName, string =>
+									NormalizedString.makeNormalized(string).pipe(
+										Option.getOrElse(() => '[Invalid name]'),
+									),
+								),
+							})
+						}
 
-							const product = maybeProduct.value
+						const product = maybeProduct.value
 
-							if (!Product.isExpirable(product)) {
-								return ProductDTO.Valid({
-									id: productData.maybeId.value,
-									name: Product.name(product),
-									status: Status.Everlasting(),
-								})
-							}
-
-							const currentDate = Integer.unsafeFromNumber(
-								yield* Clock.currentTimeMillis,
-							)
-
-							const isFresh = Product.isFresh(currentDate)(product)
-
-							if (isFresh._tag === 'False') {
-								return ProductDTO.Valid({
-									id: productData.maybeId.value,
-									name: Product.name(product),
-									status: Status.Stale({
-										expirationDate: Product.expirationDate(product),
-									}),
-								})
-							}
-
+						const maybeExpiration = Product.maybeExpiration(product)
+						if (Option.isNone(maybeExpiration)) {
 							return ProductDTO.Valid({
 								id: productData.maybeId.value,
 								name: Product.name(product),
-								status: Status.Fresh({
-									expirationDate: Product.expirationDate(product),
-									timeLeft: isFresh.timeLeft,
-									freshnessRatio: isFresh.freshness,
+								status: Status.Everlasting(),
+							})
+						}
+
+						const currentDate = Integer.unsafeFromNumber(
+							yield* Clock.currentTimeMillis,
+						)
+
+						const status = Product.expirationStatus(currentDate)(
+							maybeExpiration.value,
+						)
+
+						if (status.hasExpired) {
+							return ProductDTO.Valid({
+								id: productData.maybeId.value,
+								name: Product.name(product),
+								status: Status.Stale({
+									expirationDate: Product.expirationDate(maybeExpiration.value),
 								}),
 							})
-						}),
-					)
-					return Response.Succeeded({
-						maybeProducts: entries,
-					})
-				}).pipe(Effect.withLogSpan('GetProducts')),
-			}
+						}
+
+						return ProductDTO.Valid({
+							id: productData.maybeId.value,
+							name: Product.name(product),
+							status: Status.Fresh({
+								expirationDate: Product.expirationDate(maybeExpiration.value),
+								timeLeft: status.timeLeft,
+								freshnessRatio: status.freshness,
+							}),
+						})
+					}),
+				)
+				return Response.Succeeded({
+					maybeProducts: Arr.isArrayNonEmpty(entries)
+						? Option.some(entries)
+						: Option.none(),
+				})
+			}).pipe(Effect.withLogSpan('GetProducts'))
 		}),
 	},
 ) {

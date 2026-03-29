@@ -1,4 +1,3 @@
-import * as Arr from 'effect/Array'
 import * as Effect from 'effect/Effect'
 import * as HashMap from 'effect/HashMap'
 import * as Layer from 'effect/Layer'
@@ -6,7 +5,7 @@ import * as Option from 'effect/Option'
 import * as Ref from 'effect/Ref'
 import * as ServiceMap from 'effect/ServiceMap'
 
-import * as Integer from '@/core/integer/integer'
+import * as Integer from '@/core/integer/integer.ts'
 
 export type Product = Readonly<{
 	id: Integer.Integer

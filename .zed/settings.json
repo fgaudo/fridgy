@@ -3,6 +3,16 @@
 // For a full list of overridable settings, and general information on folder-specific settings,
 // see the documentation: https://zed.dev/docs/configuring-zed#settings-files
 {
+  "inlay_hints": {
+    "edit_debounce_ms": 700,
+    "show_background": true,
+    "show_other_hints": true,
+    "show_parameter_hints": true,
+    "show_type_hints": true,
+    "show_value_hints": true,
+    "enabled": false,
+  },
+  "language_servers": ["!eslint", "!vtsls", "..."],
   "lsp": {
     "oxfmt": {
       "initialization_options": {
@@ -24,6 +34,7 @@
   },
   "languages": {
     "TSX": {
+      "language_servers": ["typescript-language-server", "oxlint", "oxfmt"],
       "format_on_save": "on",
       "prettier": {
         "allowed": false,
@@ -41,6 +52,7 @@
       "prettier": {
         "allowed": false,
       },
+      "language_servers": ["typescript-language-server", "oxlint", "oxfmt"],
       "formatter": [
         {
           "language_server": {

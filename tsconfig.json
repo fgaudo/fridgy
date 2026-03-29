@@ -1,58 +1,71 @@
 {
-	"extends": "expo/tsconfig.base",
-	"compilerOptions": {
-		"plugins": [
-			{
-				"name": "@effect/language-service",
-				"topLevelNamedReexports": "follow",
-				"namespaceImportPackages": ["effect"],
-				"diagnosticSeverity": {
-					"deterministicKeys": "error"
-				},
-				"keyPatterns": [
-					{
-						"target": "service",
-						"pattern": "default-hashed"
-					}
-				],
-				"importAliases": {
-					"Array": "Arr",
-					"Request": "Req",
-					"Option": "Opt"
-				}
-			}
-		],
-		"libReplacement": false,
-		"strict": true,
-		"noImplicitAny": true,
-		"noImplicitOverride": true,
-		"skipLibCheck": false,
-		"noUncheckedIndexedAccess": true,
-		"exactOptionalPropertyTypes": true,
-		"allowImportingTsExtensions": true,
-		"noFallthroughCasesInSwitch": true,
-		"useUnknownInCatchVariables": true,
-		"useDefineForClassFields": true,
-		"noPropertyAccessFromIndexSignature": true,
-		"noUncheckedSideEffectImports": true,
-		"forceConsistentCasingInFileNames": true,
-		"verbatimModuleSyntax": true,
-		"paths": {
-			"@/core/*": ["./src/core/*"],
-			"@/business/*": ["./src/business/*"],
-			"@/ports/*": ["./src/business/ports/*"],
-			"@/adapters/*": ["./src/business/adapters/*"],
-			"@/use-cases/*": ["./src/business/use-cases/*"],
-			"@/domain/*": ["./src/business/domain/*"],
-			"@/screen/*": ["./src/screen/*"]
-		}
-	},
-	"include": [
-		"**/*.ts",
-		"**/*.tsx",
-		".expo/types/**/*.ts",
-		"expo-env.d.ts",
-		"nativewind-env.d.ts"
-	],
-	"exclude": ["**/*.test.ts"]
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "plugins": [
+      {
+        "name": "@effect/language-service",
+        "topLevelNamedReexports": "follow",
+        "namespaceImportPackages": ["effect"],
+        "diagnosticSeverity": {
+          "deterministicKeys": "error",
+          "importFromBarrel": "error",
+          "missedPipeableOpportunity": "warn",
+          "schemaUnionOfLiterals": "warn",
+          "strictBooleanExpressions": "error",
+          "nodeBuiltinImport": "error",
+          "globalTimersInEffect": "error",
+          "instanceOfSchema": "error",
+          "globalRandomInEffect": "error",
+          "globalFetchInEffect": "error",
+          "globalDateInEffect": "error",
+          "globalConsoleInEffect": "error",
+          "extendsNativeError": "warn",
+          "anyUnknownInErrorContext": "error",
+        },
+        "keyPatterns": [
+          {
+            "target": "service",
+            "pattern": "default-hashed",
+          },
+        ],
+        "importAliases": {
+          "Array": "Arr",
+          "Request": "Req",
+          "Option": "Opt",
+        },
+      },
+    ],
+    "libReplacement": false,
+    "strict": true,
+    "noImplicitAny": true,
+    "noImplicitOverride": true,
+    "skipLibCheck": false,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "allowImportingTsExtensions": true,
+    "noFallthroughCasesInSwitch": true,
+    "useUnknownInCatchVariables": true,
+    "useDefineForClassFields": true,
+    "noPropertyAccessFromIndexSignature": true,
+    "noUncheckedSideEffectImports": true,
+    "forceConsistentCasingInFileNames": true,
+    "verbatimModuleSyntax": true,
+    "paths": {
+      "@/core/*": ["./src/core/*"],
+      "@/business/*": ["./src/business/*"],
+      "@/ports/*": ["./src/business/ports/*"],
+      "@/adapters/*": ["./src/business/adapters/*"],
+      "@/use-cases/*": ["./src/business/use-cases/*"],
+      "@/domain/*": ["./src/business/domain/*"],
+      "@/screen/*": ["./src/screen/*"],
+    },
+  },
+  "include": [
+    "**/*.ts",
+    "**/*.tsx",
+    ".expo/types/**/*.ts",
+    "expo-env.d.ts",
+    "nativewind-env.d.ts",
+  ],
+  "exclude": ["**/*.test.ts"],
 }

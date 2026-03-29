@@ -6,10 +6,8 @@ import * as Layer from 'effect/Layer'
 import * as Option from 'effect/Option'
 import * as ServiceMap from 'effect/ServiceMap'
 
+import * as DeleteProductById from '@/business/ports/delete-product-by-id.ts'
 import * as NonEmptyHashSet from '@/core/non-empty-hash-set.ts'
-
-import * as DeleteProductById from '../ports/delete-product-by-id.ts'
-import * as GetProductsUC from './get-products.ts'
 
 export type Params<Msg> = {
 	ids: NonEmptyHashSet.NonEmptyHashSet<string>
@@ -26,9 +24,7 @@ export class DeleteProductsByIds extends ServiceMap.Service<DeleteProductsByIds>
 	'402cca6a248e6361',
 	{
 		make: Effect.gen(function* () {
-			const deleteById = Effect.request(
-				(yield* DeleteProductById.DeleteProductById).resolver,
-			)
+			const resolver = yield* DeleteProductById.DeleteProductById
 
 			return Effect.fn(function* ({
 				ids,
@@ -45,7 +41,7 @@ export class DeleteProductsByIds extends ServiceMap.Service<DeleteProductsByIds>
 							id,
 						}),
 					),
-					Effect.forEach(deleteById, {
+					Effect.forEach(Effect.request(resolver), {
 						concurrency: 'unbounded',
 					}),
 					Effect.option,
@@ -62,8 +58,5 @@ export class DeleteProductsByIds extends ServiceMap.Service<DeleteProductsByIds>
 		}),
 	},
 ) {
-	static layer = Layer.provide(
-		Layer.effect(this, this.make),
-		GetProductsUC.GetProducts.layer,
-	)
+	static layer = Layer.effect(this, this.make)
 }

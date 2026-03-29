@@ -4,9 +4,32 @@
 		"typeAware": true,
 		"typeCheck": true
 	},
-	"plugins": ["typescript", "eslint", "react", "react-perf", "unicorn", "oxc"],
-	"categories": {},
-	"rules": {},
+	"plugins": [
+		"typescript",
+		"eslint",
+		"react",
+		"react-perf",
+		"unicorn",
+		"oxc",
+		"import"
+	],
+	"categories": {
+		"correctness": "error",
+		"suspicious": "warn",
+		"pedantic": "error"
+	},
+	"rules": {
+		"eslint/max-lines": "off",
+		"eslint/max-lines-per-function": "off",
+		"eslint/max-depth": "off",
+		"unicorn/no-array-callback-reference": "off",
+		"eslint/no-shadow": "off",
+		"unicorn/no-useless-undefined": "off",
+		"eslint/max-classes-per-file": "off",
+		"import/extensions": ["error", "ignorePackages"],
+		"import/max-dependencies": "off",
+		"import/namespace": "off"
+	},
 	"settings": {
 		"jsx-a11y": {
 			"polymorphicPropName": null,

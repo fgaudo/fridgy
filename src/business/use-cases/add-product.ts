@@ -7,14 +7,12 @@ import * as Option from 'effect/Option'
 import * as ServiceMap from 'effect/ServiceMap'
 import { v4 as uuidv4 } from 'uuid'
 
+import * as Product from '@/business/domain/product.ts'
 import * as Integer from '@/core/integer/integer.ts'
-import type * as NonEmptyTrimmedString from '@/core/non-empty-trimmed-string'
-import { AddProduct as AddProductPort } from '@/ports/index.ts'
-
-import * as Product from '../domain/product'
+import * as AddProductPort from '@/ports/add-product.ts'
 
 export type Params = {
-	maybeName: Option.Option<NonEmptyTrimmedString.NonEmptyTrimmedString>
+	maybeName: Option.Option<string>
 	maybeExpirationDate: Option.Option<Integer.Integer>
 }
 
@@ -29,53 +27,49 @@ export class AddProduct extends ServiceMap.Service<AddProduct>()(
 	'09bc504007747d85',
 	{
 		make: Effect.gen(function* () {
-			const addProduct = Effect.request(
-				(yield* AddProductPort.AddProduct).resolver,
-			)
+			const resolver = yield* AddProductPort.AddProduct
 
-			return {
-				run: Effect.fn(function* (
-					productData: Params,
-				): Effect.fn.Return<Response> {
-					const timestamp = Integer.unsafeFromNumber(
-						yield* Clock.currentTimeMillis,
-					)
+			return Effect.fn(function* (
+				productData: Params,
+			): Effect.fn.Return<Response> {
+				const timestamp = Integer.unsafeFromNumber(
+					yield* Clock.currentTimeMillis,
+				)
 
-					const maybeProduct = Product.makeProduct({
-						maybeName: productData.maybeName,
-						maybeCreationDate: Option.some(timestamp),
-						maybeExpirationDate: productData.maybeExpirationDate,
-					})
+				const maybeProduct = Product.makeProduct({
+					maybeName: productData.maybeName,
+					maybeCreationDate: Option.some(timestamp),
+					maybeExpirationDate: productData.maybeExpirationDate,
+				})
 
-					if (Option.isNone(maybeProduct)) {
-						yield* Effect.logError('Product is invalid')
-						return Response.Failed()
-					}
+				if (Option.isNone(maybeProduct)) {
+					yield* Effect.logError('Product is invalid')
+					return Response.Failed()
+				}
 
-					const product = maybeProduct.value
+				const product = maybeProduct.value
 
-					yield* Effect.logInfo(
-						`Attempting to add product "${Product.name(product)}"...`,
-					)
+				yield* Effect.logInfo(
+					`Attempting to add product "${Product.name(product)}"...`,
+				)
 
-					const id = yield* Effect.sync(() => uuidv4())
+				const id = yield* Effect.sync(() => uuidv4())
 
-					const maybeResult = yield* pipe(
-						AddProductPort.Request({ id, product: Product.toState(product) }),
-						addProduct,
-						Effect.option,
-					)
+				const maybeResult = yield* pipe(
+					AddProductPort.Request({ id, product: Product.toOutput(product) }),
+					Effect.request(resolver),
+					Effect.option,
+				)
 
-					if (Option.isNone(maybeResult)) {
-						return Response.Failed()
-					}
+				if (Option.isNone(maybeResult)) {
+					return Response.Failed()
+				}
 
-					yield* Effect.logInfo(
-						`Successfully added product with id ${maybeResult.value}`,
-					)
-					return Response.Succeeded()
-				}, Effect.withLogSpan('AddProduct')),
-			}
+				yield* Effect.logInfo(
+					`Successfully added product with id ${maybeResult.value}`,
+				)
+				return Response.Succeeded()
+			}, Effect.withLogSpan('AddProduct'))
 		}),
 	},
 ) {

@@ -1,165 +1,128 @@
-import * as Brand from 'effect/Brand'
-import { pipe } from 'effect/Function'
+import * as Newtype from 'effect/Newtype'
 import * as Opt from 'effect/Option'
 
-import * as Integer from '@/core/integer/integer'
-import * as NonEmptyTrimmedString from '@/core/non-empty-trimmed-string'
+import * as Integer from '@/core/integer/integer.ts'
+import * as NormalizedString from '@/core/normalized-string.ts'
 import * as UnitInterval from '@/core/unit-interval.ts'
 
-export type Product = Brand.Branded<object, 'Product'>
-export type Expirable = Brand.Branded<Product, 'Expirable'>
-export type ProductState = {
-	name: NonEmptyTrimmedString.NonEmptyTrimmedString
-	creationDate: Integer.Integer
+type Product = Newtype.Newtype<
+	'Product',
+	{
+		name: NormalizedString.NormalizedString
+		creationDate: Integer.Integer
+		maybeExpirationDate: Opt.Option<Integer.Integer>
+	}
+>
+const productIso = Newtype.makeIso<Product>()
+
+type Expiration = Newtype.Newtype<
+	'Expiration',
+	{ creationDate: Integer.Integer; expirationDate: Integer.Integer }
+>
+const expirationIso = Newtype.makeIso<Expiration>()
+
+export type ProductInput = {
+	maybeName: Opt.Option<string>
+	maybeCreationDate: Opt.Option<Integer.Integer>
 	maybeExpirationDate: Opt.Option<Integer.Integer>
 }
-export type ProductInput = {
-	maybeName: Opt.Option<NonEmptyTrimmedString.NonEmptyTrimmedString>
-	maybeCreationDate: Opt.Option<Integer.Integer>
+
+export type ProductOutput = {
+	name: string
+	creationDate: Integer.Integer
 	maybeExpirationDate: Opt.Option<Integer.Integer>
 }
 
 export const makeProduct = (p: ProductInput): Opt.Option<Product> =>
 	Opt.gen(function* () {
 		const [name, creationDate] = yield* Opt.all([
-			p.maybeName,
-			Opt.andThen(p.maybeCreationDate, Integer.fromNumber),
+			Opt.flatMap(p.maybeName, NormalizedString.makeNormalized),
+			p.maybeCreationDate,
 		])
 
-		const maybeExpirationDate = Opt.andThen(
-			p.maybeExpirationDate,
-			Integer.fromNumber,
-		)
-
-		if (Opt.isNone(maybeExpirationDate)) {
-			return asProduct(
-				_Product({
-					name,
-					creationDate,
-					maybeExpirationDate: Opt.none(),
-				}),
-			)
+		if (Opt.isNone(p.maybeExpirationDate)) {
+			return productIso.set({
+				name,
+				creationDate,
+				maybeExpirationDate: Opt.none(),
+			})
 		}
 
-		if (creationDate > maybeExpirationDate.value) {
+		if (creationDate > p.maybeExpirationDate.value) {
 			return yield* Opt.none()
 		}
 
-		return asProduct(
-			_Product({
-				name,
-				creationDate,
-				maybeExpirationDate,
-			}),
-		)
+		return productIso.set({
+			name,
+			creationDate,
+			maybeExpirationDate: p.maybeExpirationDate,
+		})
 	})
 
-export const toState = (p: Product): ProductState => {
-	const product = asInternalProduct(p)
+export const toOutput = (p: Product): ProductOutput => productIso.get(p)
 
-	return product
-}
+export const maybeExpiration = (product: Product) =>
+	Opt.gen(function* () {
+		const p = productIso.get(product)
 
-export function isFresh(currentDate: Integer.Integer) {
-	return (expirable: Expirable) => {
-		const product = asInternalExpirable(expirable)
+		const expirationDate = yield* p.maybeExpirationDate
 
-		if (product.maybeExpirationDate.value <= currentDate) {
-			return { _tag: 'False' } as const
+		return expirationIso.set({ creationDate: p.creationDate, expirationDate })
+	})
+
+export const isValid = (p: ProductInput) => makeProduct(p).pipe(Opt.isSome)
+
+export const name = (product: Product): string => productIso.get(product).name
+
+export const creationDate = (product: Product) =>
+	productIso.get(product).creationDate
+
+export const expirationDate = (expiration: Expiration) =>
+	expirationIso.get(expiration).expirationDate
+
+const _freshness =
+	(currentDate: Integer.Integer) => (expiration: Expiration) => {
+		const exp = expirationIso.get(expiration)
+		if (exp.expirationDate <= currentDate) {
+			return UnitInterval.unsafeFromNumber(0)
+		}
+
+		if (exp.expirationDate <= exp.creationDate) {
+			return UnitInterval.unsafeFromNumber(0)
+		}
+
+		if (currentDate < exp.creationDate) {
+			return UnitInterval.unsafeFromNumber(1)
+		}
+
+		const remainingDuration = exp.expirationDate - currentDate
+		const totalDuration = exp.expirationDate - exp.creationDate
+
+		return UnitInterval.unsafeFromNumber(remainingDuration / totalDuration)
+	}
+
+const _timeLeft =
+	(currentDate: Integer.Integer) => (expiration: Expiration) => {
+		const exp = expirationIso.get(expiration)
+
+		const timeLeft = exp.expirationDate - currentDate
+
+		return timeLeft <= 0
+			? Integer.unsafeFromNumber(0)
+			: Integer.unsafeFromNumber(timeLeft)
+	}
+
+export const expirationStatus =
+	(currentDate: Integer.Integer) => (expiration: Expiration) => {
+		const exp = expirationIso.get(expiration)
+
+		if (currentDate >= exp.expirationDate) {
+			return { hasExpired: true } as const
 		}
 
 		return {
-			_tag: 'True',
-			freshness: evaluateFreshness(
-				product.maybeExpirationDate.value,
-				product.creationDate,
-				currentDate,
-			),
-			timeLeft: evaluateTimeLeft(
-				product.maybeExpirationDate.value,
-				product.creationDate,
-			),
+			timeLeft: _timeLeft(currentDate)(expiration),
+			freshness: _freshness(currentDate)(expiration),
+			hasExpired: false,
 		} as const
 	}
-}
-
-export function isExpirable(_product: Product): _product is Expirable {
-	const product = asInternalProduct(_product)
-
-	if (Opt.isNone(product.maybeExpirationDate)) {
-		return false
-	}
-
-	return true
-}
-
-export const isValid = (p: ProductInput) => Opt.isSome(makeProduct(p))
-
-export const name = (product: Product) => asInternalProduct(product).name
-
-export const creationDate = (product: Product) =>
-	asInternalProduct(product).creationDate
-
-export const expirationDate = (product: Expirable) =>
-	asInternalExpirable(product).maybeExpirationDate.value
-
-function evaluateFreshness(
-	expirationDate: Integer.Integer,
-	creationDate: Integer.Integer,
-	currentDate: Integer.Integer,
-) {
-	if (expirationDate <= currentDate) {
-		return UnitInterval.unsafeFromNumber(0)
-	}
-
-	if (expirationDate <= creationDate) {
-		return UnitInterval.unsafeFromNumber(0)
-	}
-
-	if (currentDate < creationDate) {
-		return UnitInterval.unsafeFromNumber(1)
-	}
-
-	const remainingDuration = expirationDate - currentDate
-	const totalDuration = expirationDate - creationDate
-
-	return UnitInterval.unsafeFromNumber(remainingDuration / totalDuration)
-}
-
-function evaluateTimeLeft(
-	expirationDate: Integer.Integer,
-	currentDate: Integer.Integer,
-) {
-	const timeLeft = expirationDate - currentDate
-
-	return timeLeft <= 0
-		? Integer.unsafeFromNumber(0)
-		: Integer.unsafeFromNumber(timeLeft)
-}
-
-type _Product = Brand.Branded<
-	{
-		name: NonEmptyTrimmedString.NonEmptyTrimmedString
-		creationDate: Integer.Integer
-		maybeExpirationDate: Opt.Option<Integer.Integer>
-	},
-	'Product'
->
-const _Product = Brand.nominal<_Product>()
-
-type _Expirable = Brand.Branded<
-	_Product & { maybeExpirationDate: Opt.Some<Integer.Integer> },
-	'_Expirable'
->
-
-/* eslint-disable @typescript-eslint/consistent-type-assertions */
-function asInternalExpirable(product: Expirable) {
-	return product as unknown as _Expirable
-}
-function asInternalProduct(product: Product) {
-	return product as unknown as _Product
-}
-function asProduct(product: _Product) {
-	return product as unknown as Product
-}
-/* eslint-enable @typescript-eslint/consistent-type-assertions */
