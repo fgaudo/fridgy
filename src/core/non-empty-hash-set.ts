@@ -15,7 +15,7 @@ const NonEmptyHashSet = <A>() =>
 export const size = <A>(
 	hashSet: NonEmptyHashSet<A>,
 ): PositiveInteger.PositiveInteger =>
-	PositiveInteger.unsafeFromNumber(HashSet.size(hashSet))
+	PositiveInteger.fromNumberUnsafe(HashSet.size(hashSet))
 
 export const makeUnsafe = <A>(hashSet: HashSet.HashSet<A>) =>
 	NonEmptyHashSet<A>()(hashSet)

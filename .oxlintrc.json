@@ -28,7 +28,8 @@
 		"eslint/max-classes-per-file": "off",
 		"import/extensions": ["error", "ignorePackages"],
 		"import/max-dependencies": "off",
-		"import/namespace": "off"
+		"import/namespace": "off",
+		"eslint/no-unused-vars": "off"
 	},
 	"settings": {
 		"jsx-a11y": {

@@ -32,7 +32,7 @@ export class AddProduct extends ServiceMap.Service<AddProduct>()(
 			return Effect.fn(function* (
 				productData: Params,
 			): Effect.fn.Return<Response> {
-				const timestamp = Integer.unsafeFromNumber(
+				const timestamp = Integer.fromNumberUnsafe(
 					yield* Clock.currentTimeMillis,
 				)
 

@@ -10,5 +10,5 @@ export function fromIterable<A>(
 }
 
 export function length<A>(array: Arr.NonEmptyArray<A>) {
-	return PositiveInteger.unsafeFromNumber(array.length)
+	return PositiveInteger.fromNumberUnsafe(array.length)
 }

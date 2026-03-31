@@ -13,13 +13,8 @@ const PositiveInteger = Brand.all(
 	Brand.make<PositiveInteger>(n => n > 0),
 )
 
-export const Schema = _Schema.fromBrand(
-	'core.PositiveInteger',
-	PositiveInteger,
-)(_Schema.Number)
-
 export const fromNumber = (number: number) => PositiveInteger.option(number)
-export const unsafeFromNumber = PositiveInteger
+export const fromNumberUnsafe = PositiveInteger
 export const isNonNegative = (number: number) => PositiveInteger.is(number)
 
 /** @internal */

@@ -8,9 +8,7 @@ export type NormalizedString = Brand.Branded<string, 'core.NormalizedString'>
 
 const NormalizedString = Brand.nominal<NormalizedString>()
 
-export const makeNormalized = (
-	string: string,
-): Opt.Option<NormalizedString> => {
+export const fromString = (string: string): Opt.Option<NormalizedString> => {
 	if (string.length <= 0) {
 		return Opt.none<NormalizedString>()
 	}
@@ -22,14 +20,4 @@ export const makeNormalized = (
 		Str.replaceAll(/\s{2,}/g, ' '),
 		s => NormalizedString.option(s),
 	)
-}
-
-export const Schema = _Schema.fromBrand(
-	'core.NormalizedString',
-	NormalizedString,
-)(_Schema.String)
-
-/** @internal */
-export const _internal = {
-	NormalizedString,
 }

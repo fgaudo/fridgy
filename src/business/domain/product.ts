@@ -36,7 +36,15 @@ export type ProductOutput = {
 export const makeProduct = (p: ProductInput): Opt.Option<Product> =>
 	Opt.gen(function* () {
 		const [name, creationDate] = yield* Opt.all([
-			Opt.flatMap(p.maybeName, NormalizedString.makeNormalized),
+			Opt.gen(function* () {
+				const maybeName = NormalizedString.fromString(yield* p.maybeName)
+
+				if (Opt.isNone(maybeName)) {
+					return yield* NormalizedString.fromString('Undefined name')
+				}
+
+				return maybeName.value
+			}),
 			p.maybeCreationDate,
 		])
 
@@ -108,8 +116,8 @@ const _timeLeft =
 		const timeLeft = exp.expirationDate - currentDate
 
 		return timeLeft <= 0
-			? Integer.unsafeFromNumber(0)
-			: Integer.unsafeFromNumber(timeLeft)
+			? Integer.fromNumberUnsafe(0)
+			: Integer.fromNumberUnsafe(timeLeft)
 	}
 
 export const expirationStatus =

@@ -1,24 +1,26 @@
 import * as A from '@effect/atom-react'
 import * as Deferred from 'effect/Deferred'
 import * as Effect from 'effect/Effect'
+import * as Opt from 'effect/Option'
 import * as Scope from 'effect/Scope'
 import * as Stream from 'effect/Stream'
-import * as AsyncResult from 'effect/unstable/reactivity/AsyncResult'
 import * as Atom from 'effect/unstable/reactivity/Atom'
 
 import * as StateManager from '@/core/state-manager.ts'
 
-export const useAtomStateManager = <S, M, R>(
+export const useAtomStateManager = <State, Message, R>(
 	runtime: Atom.AtomRuntime<R>,
-	makeStateManager: Effect.Effect<
-		StateManager.StateManager<S, M, R>,
+	init: StateManager.Transition<State, Message, R>,
+	makeStateManager: (
+		init: StateManager.Transition<State, Message, R>,
+	) => Effect.Effect<
+		StateManager.StateManager<State, Message, R>,
 		never,
 		Scope.Scope
 	>,
-	options?: { messages?: (m: M) => void },
 ) => {
-	const [stateResult, setState] = A.useAtom(
-		Atom.make<AsyncResult.AsyncResult<S>>(AsyncResult.initial()),
+	const [event, setEvent] = A.useAtom(
+		Atom.make([init[0], Opt.none<Message>()] as const),
 	)
 
 	const dispatch = A.useAtomSet(
@@ -27,8 +29,8 @@ export const useAtomStateManager = <S, M, R>(
 				m,
 				stateManager,
 			}: {
-				m: M
-				stateManager: StateManager.StateManager<S, M, R>
+				m: Message
+				stateManager: StateManager.StateManager<State, Message, R>
 			}) => StateManager.dispatch(stateManager, m),
 		),
 	)
@@ -36,50 +38,31 @@ export const useAtomStateManager = <S, M, R>(
 	const dispatchResult = A.useAtomValue(
 		runtime.atom(
 			Effect.gen(function* () {
-				const stateManager = yield* makeStateManager
+				const stateManager = yield* makeStateManager(init)
 				const ready1 = yield* Deferred.make()
 
 				yield* StateManager.stateChanges(stateManager).pipe(
 					Stream.onStart(Deferred.succeed(ready1, undefined)),
+					Stream.drop(1),
 					Stream.runForEach(
-						Effect.fn(function* (state) {
+						Effect.fnUntraced(function* (event) {
 							yield* Effect.sync(() => {
-								setState(AsyncResult.success(state))
+								setEvent(event)
 							})
 						}),
 					),
 					Effect.forkScoped,
 				)
 
-				const messages = options?.messages
-				if (messages !== undefined) {
-					const ready2 = yield* Deferred.make()
-
-					yield* StateManager.messages(stateManager).pipe(
-						Stream.onStart(Deferred.succeed(ready2, undefined)),
-
-						Stream.runForEach(
-							Effect.fn(function* (message) {
-								yield* Effect.sync(() => {
-									messages(message)
-								})
-							}),
-						),
-						Effect.forkScoped,
-					)
-
-					yield* Deferred.await(ready2)
-				}
-
 				yield* Deferred.await(ready1)
 				yield* StateManager.start(stateManager)
 
-				return (m: M) => {
+				return (m: Message) => {
 					dispatch({ stateManager, m })
 				}
 			}),
 		),
 	)
 
-	return AsyncResult.all([stateResult, dispatchResult])
+	return [[event[0], event[1]] as const, dispatchResult] as const
 }

@@ -19,7 +19,7 @@ export class InMemoryDb extends ServiceMap.Service<InMemoryDb>()(
 	{
 		make: Effect.gen(function* () {
 			const ref = yield* Ref.make({
-				lastIndex: Integer.unsafeFromNumber(0),
+				lastIndex: Integer.fromNumberUnsafe(0),
 				map: HashMap.empty<Integer.Integer, Product>(),
 			})
 
@@ -39,7 +39,7 @@ export class InMemoryDb extends ServiceMap.Service<InMemoryDb>()(
 				}),
 				addProduct: Effect.fn(function* (product: Product) {
 					const { lastIndex } = yield* Ref.updateAndGet(ref, dbValues => {
-						const nextIndex = Integer.unsafeFromNumber(dbValues.lastIndex + 1)
+						const nextIndex = Integer.fromNumberUnsafe(dbValues.lastIndex + 1)
 						return {
 							...dbValues,
 							lastIndex: nextIndex,

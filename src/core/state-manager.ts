@@ -22,6 +22,8 @@ export type Transition<State, Message, R> = readonly [
 	Command<Message, R>[],
 ]
 
+export type Event<State, Message> = readonly [State, Option.Option<Message>]
+
 export type Update<State, Message, R> = (
 	message: Message,
 ) => (state: State) => Transition<State, Message, R>
@@ -32,65 +34,61 @@ export type Subscriptions<State, Message, R> = (
 
 export type StateManager<State, Message, R> = Newtype.Newtype<
 	'StateManager',
-	StateManagerImpl<State, Message, R>
+	{
+		isStartedRef: Ref.Ref<boolean>
+		stateRef: SubscriptionRef.SubscriptionRef<Event<State, Message>>
+		messageQueue: Queue.Queue<Message>
+		update: Update<State, Message, R>
+		initCommands: Command<Message, R>[]
+		defectMessage: (errors: Error[]) => Message
+		maybeSubsEvaluation: Option.Option<Subscriptions<State, Message, R>>
+		scope: Scope.Scope
+	}
 >
 
-type StateManagerImpl<State, Message, R> = {
-	isStartedRef: Ref.Ref<boolean>
-	stateRef: SubscriptionRef.SubscriptionRef<State>
-	messagePubSub: PubSub.PubSub<Message>
-	messageQueue: Queue.Queue<Message>
+export const prepare = <State, Message, R>({
+	update,
+	defectMessage,
+	subscriptions,
+}: {
 	update: Update<State, Message, R>
-	initCommands: Command<Message, R>[]
-	defectMessage: (errors: Error[]) => Message
-	maybeSubsEvaluation: Option.Option<Subscriptions<State, Message, R>>
-	scope: Scope.Scope
-}
-
-export const makeScoped = Effect.fnUntraced(function* <State, Message, R>(
-	[initState, initCommands]: Transition<State, Message, R>,
-	update: Update<State, Message, R>,
-	defectMessage: (errors: Error[]) => NoInfer<Message>,
-	options?: {
-		subscriptions?: Subscriptions<State, Message, R>
-	},
-): Effect.fn.Return<StateManager<State, Message, R>, never, Scope.Scope> {
+	defectMessage: (errors: Error[]) => NoInfer<Message>
+	subscriptions?: Subscriptions<State, Message, R>
+}) => {
 	const iso = Newtype.makeIso<StateManager<State, Message, R>>()
 
-	const maybeSubsEvaluation = Option.fromUndefinedOr(options).pipe(
-		Option.flatMap(opt => Option.fromUndefinedOr(opt.subscriptions)),
-	)
+	const maybeSubsEvaluation = Option.fromUndefinedOr(subscriptions)
 
-	const stateRef = yield* Effect.acquireRelease(
-		SubscriptionRef.make(initState),
-		ref => PubSub.shutdown(ref.pubsub),
-	)
+	return Effect.fnUntraced(function* ([initState, initCommands]: Transition<
+		State,
+		Message,
+		R
+	>) {
+		const stateRef = yield* Effect.acquireRelease(
+			SubscriptionRef.make([initState, Option.none<Message>()] as const),
+			ref => PubSub.shutdown(ref.pubsub),
+		)
 
-	const messageQueue = yield* Effect.acquireRelease(
-		Queue.unbounded<Message>(),
-		Queue.shutdown,
-	)
+		const messageQueue = yield* Effect.acquireRelease(
+			Queue.unbounded<Message>(),
+			Queue.shutdown,
+		)
 
-	const messagePubSub = yield* Effect.acquireRelease(
-		PubSub.unbounded<Message>(),
-		PubSub.shutdown,
-	)
+		const isStartedRef = yield* Ref.make(false)
+		const scope = yield* Scope.Scope
 
-	const isStartedRef = yield* Ref.make(false)
-	const scope = yield* Scope.Scope
-
-	return iso.set({
-		defectMessage,
-		maybeSubsEvaluation,
-		stateRef,
-		update,
-		initCommands,
-		isStartedRef,
-		messagePubSub,
-		messageQueue,
-		scope,
+		return iso.set({
+			defectMessage,
+			maybeSubsEvaluation,
+			stateRef,
+			update,
+			initCommands,
+			isStartedRef,
+			messageQueue,
+			scope,
+		})
 	})
-})
+}
 
 export const dispatch = Function.dual<
 	<Message>(
@@ -103,69 +101,47 @@ export const dispatch = Function.dual<
 >(
 	2,
 	Effect.fnUntraced(function* (stateManager, message) {
-		const iso = Newtype.makeIso<typeof stateManager>()
-
-		const { messageQueue } = iso.get(stateManager)
+		const { messageQueue } = Newtype.value(stateManager)
 
 		return yield* Queue.offer(messageQueue, message)
 	}),
 )
 
-export const messages = <State, Message, R>(
-	stateManager: StateManager<State, Message, R>,
-) => {
-	const iso = Newtype.makeIso<typeof stateManager>()
-	const { messagePubSub } = iso.get(stateManager)
-
-	return Stream.fromPubSub(messagePubSub)
-}
-
 export const stateChanges = <State, Message, R>(
 	stateManager: StateManager<State, Message, R>,
 ) => {
-	const iso = Newtype.makeIso<typeof stateManager>()
-	const { stateRef } = iso.get(stateManager)
+	const { stateRef } = Newtype.value(stateManager)
 	return SubscriptionRef.changes(stateRef)
 }
 
 export const start = Effect.fnUntraced(function* <State, Message, R>(
 	stateManager: StateManager<State, Message, R>,
 ) {
-	const iso = Newtype.makeIso<typeof stateManager>()
-
-	const isStartedRef = iso.key('isStartedRef').get(stateManager)
+	const {
+		defectMessage,
+		maybeSubsEvaluation,
+		messageQueue,
+		initCommands,
+		scope,
+		stateRef,
+		update,
+		isStartedRef,
+	} = Newtype.value(stateManager)
 
 	if (yield* Ref.getAndSet(isStartedRef, true)) {
 		yield* Effect.logWarning('State manager already started')
 		return
 	}
 
-	const {
-		defectMessage,
-		maybeSubsEvaluation,
-		messagePubSub,
-		messageQueue,
-		initCommands,
-		scope,
-		stateRef,
-		update,
-	} = iso.get(stateManager)
-
 	const updateMessage$ = Stream.fromQueue(messageQueue).pipe(
 		Stream.onStart(Effect.logDebug('Update loop started')),
 		Stream.mapEffect(message =>
-			SubscriptionRef.modifySome(stateRef, state => {
+			SubscriptionRef.modify(stateRef, ([state]) => {
 				const [newState, commands] = update(message)(state)
 
-				if (Equal.equals(newState, state)) {
-					return [[message, commands] as const, Option.none()]
-				}
-
-				return [[message, commands] as const, Option.some(newState)]
+				return [commands, [newState, Option.some(message)] as const]
 			}),
 		),
-		Stream.tap(([message]) => PubSub.publish(messagePubSub, message)),
-		Stream.map(([, commands]) => commands),
 		Stream.flattenIterable,
 		Stream.merge(Stream.make(...initCommands)),
 		Stream.flattenEffect({ concurrency: 'unbounded', unordered: true }),
@@ -183,7 +159,7 @@ export const start = Effect.fnUntraced(function* <State, Message, R>(
 						yield* Deferred.succeed(isReady, undefined)
 					}),
 				),
-				Stream.map(subsEvaluation),
+				Stream.map(([state]) => subsEvaluation(state)),
 				Stream.map(
 					map => [HashSet.fromIterable(HashMap.keys(map)), map] as const,
 				),

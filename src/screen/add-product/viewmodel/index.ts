@@ -13,7 +13,7 @@ import { update } from './update.ts'
 const viewModel: ViewModel<Model.Model, Message, UC.All> = {
 	init: Model.make(State.init),
 	make: Effect.gen(function* () {
-		const stateManager = yield* SM.makeScoped(State.init, update)
+		const stateManager = yield* SM.prepare(State.init, update)
 
 		return {
 			...stateManager,

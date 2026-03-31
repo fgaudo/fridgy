@@ -69,42 +69,34 @@ export class GetProducts extends ServiceMap.Service<GetProducts>()(
 				const entries = yield* Effect.forEach(
 					maybeProducts.value,
 					Effect.fn(function* (productData) {
-						if (Option.isNone(productData.maybeId)) {
+						const result = Option.all([
+							productData.maybeId,
+							Product.makeProduct(productData),
+						])
+
+						if (Option.isNone(result)) {
 							return ProductDTO.Invalid({
 								maybeId: productData.maybeId,
 								maybeName: Option.map(productData.maybeName, string =>
-									NormalizedString.makeNormalized(string).pipe(
+									NormalizedString.fromString(string).pipe(
 										Option.getOrElse(() => '[Invalid name]'),
 									),
 								),
 							})
 						}
 
-						const maybeProduct = Product.makeProduct(productData)
-
-						if (Option.isNone(maybeProduct)) {
-							return ProductDTO.Invalid({
-								maybeId: productData.maybeId,
-								maybeName: Option.map(productData.maybeName, string =>
-									NormalizedString.makeNormalized(string).pipe(
-										Option.getOrElse(() => '[Invalid name]'),
-									),
-								),
-							})
-						}
-
-						const product = maybeProduct.value
+						const [id, product] = result.value
 
 						const maybeExpiration = Product.maybeExpiration(product)
 						if (Option.isNone(maybeExpiration)) {
 							return ProductDTO.Valid({
-								id: productData.maybeId.value,
+								id,
 								name: Product.name(product),
 								status: Status.Everlasting(),
 							})
 						}
 
-						const currentDate = Integer.unsafeFromNumber(
+						const currentDate = Integer.fromNumberUnsafe(
 							yield* Clock.currentTimeMillis,
 						)
 
@@ -114,7 +106,7 @@ export class GetProducts extends ServiceMap.Service<GetProducts>()(
 
 						if (status.hasExpired) {
 							return ProductDTO.Valid({
-								id: productData.maybeId.value,
+								id,
 								name: Product.name(product),
 								status: Status.Stale({
 									expirationDate: Product.expirationDate(maybeExpiration.value),
@@ -123,7 +115,7 @@ export class GetProducts extends ServiceMap.Service<GetProducts>()(
 						}
 
 						return ProductDTO.Valid({
-							id: productData.maybeId.value,
+							id,
 							name: Product.name(product),
 							status: Status.Fresh({
 								expirationDate: Product.expirationDate(maybeExpiration.value),

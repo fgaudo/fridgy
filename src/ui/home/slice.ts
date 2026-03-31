@@ -90,6 +90,7 @@ export type Model = Readonly<{
 export type Message = Newtype.Newtype<
 	'HomeMessage',
 	Data.TaggedEnum<{
+		Init: object
 		StartFetchList: object
 		StartDeleteAndRefresh: object
 		ToggleItem: { id: string }
@@ -666,7 +667,7 @@ export const init: StateManager.Transition<State, Message, UseCases> = T.make(
 	[],
 )
 
-function makeModel(s: State): Model {
+function toModel(s: State): Model {
 	const state = stateIso.get(s)
 	const isFetching = state.isFetchingAutomatically || state.isFetchingManually
 
@@ -808,6 +809,12 @@ const fetchListTick = Effect.fn(function* (version: FetchListSchedulerVersion) {
 			MessageRaw.FetchListTickSucceeded({ version, response }),
 	})
 })
+
+export const toReadable = ([state, maybeMessage]: StateManager.Event<
+	State,
+	Message
+>): StateManager.Event<Model, MessageRaw> =>
+	[toModel(state), Opt.map(maybeMessage, messageIso.get)] as const
 
 /** @internal */
 export const _internal = {
