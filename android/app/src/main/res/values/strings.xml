@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">fridgy</string>
+    <string name="title_activity_main">fridgy</string>
+    <string name="package_name">net.gaudo.fridgy</string>
+    <string name="custom_url_scheme">net.gaudo.fridgy</string>
+</resources>

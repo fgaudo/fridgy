@@ -6,7 +6,7 @@
 	"semi": false,
 
 	"printWidth": 80,
-	"sortTailwindcss": {},
+	"sortTailwindcss": true,
 	"arrowParens": "avoid",
 	"sortImports": {
 		"internalPattern": ["@/"],

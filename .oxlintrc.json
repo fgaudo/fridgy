@@ -4,15 +4,7 @@
 		"typeAware": true,
 		"typeCheck": true
 	},
-	"plugins": [
-		"typescript",
-		"eslint",
-		"react",
-		"react-perf",
-		"unicorn",
-		"oxc",
-		"import"
-	],
+	"plugins": ["typescript", "eslint", "unicorn", "oxc", "import"],
 	"categories": {
 		"correctness": "error",
 		"suspicious": "warn",
@@ -29,7 +21,9 @@
 		"import/extensions": ["error", "ignorePackages"],
 		"import/max-dependencies": "off",
 		"import/namespace": "off",
-		"eslint/no-unused-vars": "off"
+		"eslint/no-unused-vars": "off",
+		"eslint/array-callback-return": "off",
+		"import/no-unassigned-import": "off"
 	},
 	"settings": {
 		"jsx-a11y": {

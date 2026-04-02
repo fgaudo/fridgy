@@ -90,7 +90,6 @@ export type Model = Readonly<{
 export type Message = Newtype.Newtype<
 	'HomeMessage',
 	Data.TaggedEnum<{
-		Init: object
 		StartFetchList: object
 		StartDeleteAndRefresh: object
 		ToggleItem: { id: string }
