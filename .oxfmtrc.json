@@ -1,28 +1,20 @@
 {
-	"$schema": "./node_modules/oxfmt/configuration_schema.json",
-	"useTabs": true,
-	"singleQuote": true,
-	"trailingComma": "all",
-	"semi": false,
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  "useTabs": true,
+  "singleQuote": true,
+  "trailingComma": "all",
+  "semi": false,
 
-	"printWidth": 80,
-	"sortTailwindcss": true,
-	"arrowParens": "avoid",
-	"sortImports": {
-		"internalPattern": ["@/"],
-		"groups": [
-			["type-builtin", "value-builtin", "value-external"],
-			["type-internal", "value-internal"],
-			[
-				"type-parent",
-				"type-sibling",
-				"type-index",
-				"value-parent",
-				"value-sibling",
-				"value-index"
-			],
-			"unknown"
-		]
-	},
-	"ignorePatterns": []
+  "printWidth": 80,
+  "arrowParens": "avoid",
+  "sortImports": {
+    "internalPattern": ["@/"],
+    "groups": [
+      ["type-builtin", "value-builtin", "value-external"],
+      ["type-internal", "value-internal"],
+      ["type-parent", "type-sibling", "type-index", "value-parent", "value-sibling", "value-index"],
+      "unknown"
+    ]
+  },
+  "ignorePatterns": []
 }

@@ -8,7 +8,7 @@ import { sql } from './business/sql.ts'
 const worker = Effect.acquireRelease(
 	Effect.sync(
 		() =>
-			new Worker(new URL('./sqlite-worker.ts', import.meta.url), {
+			new Worker('http://localhost:3000/sqlite-worker.js', {
 				type: 'module',
 			}),
 	),
