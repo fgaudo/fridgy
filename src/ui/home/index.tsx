@@ -1,1 +1,1 @@
-import * as VM from "./slice.ts";
+import * as VM from './state.ts'

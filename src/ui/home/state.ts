@@ -5,7 +5,6 @@ import * as Effect from 'effect/Effect'
 import * as HashMap from 'effect/HashMap'
 import * as HashSet from 'effect/HashSet'
 import * as Match from 'effect/Match'
-import * as Newtype from 'effect/Newtype'
 import * as Opt from 'effect/Option'
 import * as Schedule from 'effect/Schedule'
 import * as Stream from 'effect/Stream'
@@ -87,111 +86,99 @@ export type Model = Readonly<{
 	}>
 }>
 
-export type Message = Newtype.Newtype<
-	'HomeMessage',
-	Data.TaggedEnum<{
-		StartFetchList: object
-		StartDeleteAndRefresh: object
-		ToggleItem: { id: string }
-		ClearSelected: object
-		Crash: { error: unknown }
-		NoOp: object
-		FetchListFailed: {
-			version: FetchListVersion
-			response: Data.TaggedEnum.Value<UC.GetProducts.Response, 'Failed'>
-		}
-		FetchListSucceeded: {
-			version: FetchListVersion
-			response: Data.TaggedEnum.Value<UC.GetProducts.Response, 'Succeeded'>
-		}
+export type Message = Data.TaggedEnum<{
+	StartFetchList: object
+	StartDeleteAndRefresh: object
+	ToggleItem: { id: string }
+	ClearSelected: object
+	Crash: { error: unknown }
+	NoOp: object
+	FetchListFailed: {
+		version: FetchListVersion
+		response: Data.TaggedEnum.Value<UC.GetProducts.Response, 'Failed'>
+	}
+	FetchListSucceeded: {
+		version: FetchListVersion
+		response: Data.TaggedEnum.Value<UC.GetProducts.Response, 'Succeeded'>
+	}
 
-		FetchListTick: { version: FetchListSchedulerVersion }
-		FetchListTickSucceeded: {
-			version: FetchListSchedulerVersion
-			response: Data.TaggedEnum.Value<UC.GetProducts.Response, 'Succeeded'>
-		}
+	FetchListTick: { version: FetchListSchedulerVersion }
+	FetchListTickSucceeded: {
+		version: FetchListSchedulerVersion
+		response: Data.TaggedEnum.Value<UC.GetProducts.Response, 'Succeeded'>
+	}
 
-		FetchListTickFailed: {
-			version: FetchListSchedulerVersion
-			response: Data.TaggedEnum.Value<UC.GetProducts.Response, 'Failed'>
-		}
-		DeleteAndRefreshSucceeded: {
-			response: Data.TaggedEnum.Value<UC.GetProducts.Response, 'Succeeded'>
-		}
-		DeleteAndRefreshFailed: {
-			response: Data.TaggedEnum.Value<UC.DeleteProductsByIds.Response, 'Failed'>
-		}
-		DeleteSucceededButRefreshFailed: {
-			response: Data.TaggedEnum.Value<UC.GetProducts.Response, 'Failed'>
-		}
-	}>
->
-const messageIso = Newtype.makeIso<Message>()
+	FetchListTickFailed: {
+		version: FetchListSchedulerVersion
+		response: Data.TaggedEnum.Value<UC.GetProducts.Response, 'Failed'>
+	}
+	DeleteAndRefreshSucceeded: {
+		response: Data.TaggedEnum.Value<UC.GetProducts.Response, 'Succeeded'>
+	}
+	DeleteAndRefreshFailed: {
+		response: Data.TaggedEnum.Value<UC.DeleteProductsByIds.Response, 'Failed'>
+	}
+	DeleteSucceededButRefreshFailed: {
+		response: Data.TaggedEnum.Value<UC.GetProducts.Response, 'Failed'>
+	}
+}>
 
-type MessageRaw = Newtype.Newtype.Carrier<Message>
-const MessageRaw = Data.taggedEnum<MessageRaw>()
+export const Message = Data.taggedEnum<Message>()
 
-export type State = Newtype.Newtype<
-	'HomeState',
-	Readonly<{
-		versions: {
-			scheduledFetcher: FetchListSchedulerVersion
-			manualFetcher: FetchListVersion
-		}
-		productListData: Data.TaggedEnum<{
-			Initial: { activity: 'fetching' | 'idle' }
-			Error: { activity: 'fetching' | 'idle' }
-			Empty: { activity: 'fetching' | 'idle' }
-			Available: Readonly<{
-				activity: 'scheduledFetching' | 'idle' | 'deleting' | 'fetching'
-				maybeSelectedProducts: Opt.Option<
-					NonEmptyHashSet.NonEmptyHashSet<string>
-				>
-				total: PositiveInteger.PositiveInteger
-				hasFreshProducts: boolean
-				products: Arr.NonEmptyReadonlyArray<
-					Data.TaggedEnum<{
-						Corrupt: Readonly<{
-							maybeName: Opt.Option<string>
-							id: symbol
-						}>
-						Invalid: Readonly<{
-							id: string
-							maybeName: Opt.Option<string>
-						}>
-						Valid: Readonly<{
-							id: string
-							name: string
-							status: Data.TaggedEnum<{
-								Everlasting: object
-								Stale: Readonly<{ expirationDate: Integer.Integer }>
-								Fresh: Readonly<{
-									expirationDate: Integer.Integer
-									timeLeft: Integer.Integer
-									freshnessRatio: UnitInterval.UnitInterval
-								}>
+export type State = Readonly<{
+	versions: {
+		scheduledFetcher: FetchListSchedulerVersion
+		manualFetcher: FetchListVersion
+	}
+	productListData: Data.TaggedEnum<{
+		Initial: { activity: 'fetching' | 'idle' }
+		Error: { activity: 'fetching' | 'idle' }
+		Empty: { activity: 'fetching' | 'idle' }
+		Available: Readonly<{
+			activity: 'scheduledFetching' | 'idle' | 'deleting' | 'fetching'
+			maybeSelectedProducts: Opt.Option<NonEmptyHashSet.NonEmptyHashSet<string>>
+			total: PositiveInteger.PositiveInteger
+			hasFreshProducts: boolean
+			products: Arr.NonEmptyReadonlyArray<
+				Data.TaggedEnum<{
+					Corrupt: Readonly<{
+						maybeName: Opt.Option<string>
+						id: symbol
+					}>
+					Invalid: Readonly<{
+						id: string
+						maybeName: Opt.Option<string>
+					}>
+					Valid: Readonly<{
+						id: string
+						name: string
+						status: Data.TaggedEnum<{
+							Everlasting: object
+							Stale: Readonly<{ expirationDate: Integer.Integer }>
+							Fresh: Readonly<{
+								expirationDate: Integer.Integer
+								timeLeft: Integer.Integer
+								freshnessRatio: UnitInterval.UnitInterval
 							}>
 						}>
 					}>
-				>
-			}>
+				}>
+			>
 		}>
 	}>
->
-const stateIso = Newtype.makeIso<State>()
-type StateRaw = Newtype.Newtype.Carrier<State>
+}>
 
 type ProductDTO = Data.TaggedEnum.Value<
-	StateRaw['productListData'],
+	State['productListData'],
 	'Available'
 >['products'][0]
 
 const ProductDTO = Data.taggedEnum<ProductDTO>()
 
 function updateFetchListSucceeded(
-	state: StateRaw,
+	state: State,
 	maybeProducts: Data.TaggedEnum.Value<
-		MessageRaw,
+		Message,
 		'FetchListSucceeded'
 	>['response']['maybeProducts'],
 ) {
@@ -235,7 +222,7 @@ function updateFetchListSucceeded(
 					products: mappedProducts,
 					maybeSelectedProducts: Opt.none(),
 				},
-			} satisfies StateRaw,
+			} satisfies State,
 			[],
 		)
 	}
@@ -268,7 +255,7 @@ function updateFetchListSucceeded(
 	)
 }
 
-function updateFetchListFailed(state: StateRaw) {
+function updateFetchListFailed(state: State) {
 	if (state.productListData._tag === 'Initial') {
 		return T.make(state, [])
 	}
@@ -287,12 +274,12 @@ function updateFetchListFailed(state: StateRaw) {
 }
 
 function hasSelectedProducts(
-	state: StateRaw & { productListData: { _tag: 'Available' } },
+	state: State & { productListData: { _tag: 'Available' } },
 ) {
 	return Opt.isSome(state.productListData.maybeSelectedProducts)
 }
 
-function productsAreToggleable(state: StateRaw) {
+function productsAreToggleable(state: State) {
 	return (
 		state.productListData.activity === 'idle' ||
 		state.productListData.activity === 'scheduledFetching'
@@ -300,8 +287,8 @@ function productsAreToggleable(state: StateRaw) {
 }
 
 function isSchedulerRunning(
-	state: StateRaw,
-): state is StateRaw & { productListData: { _tag: 'Available' } } {
+	state: State,
+): state is State & { productListData: { _tag: 'Available' } } {
 	const productListData = state.productListData
 	return (
 		productListData._tag === 'Available' &&
@@ -311,7 +298,7 @@ function isSchedulerRunning(
 	)
 }
 
-function isDeletingAllowed(state: StateRaw): state is typeof state & {
+function isDeletingAllowed(state: State): state is typeof state & {
 	productListData: Data.TaggedEnum.Value<
 		(typeof state)['productListData'],
 		'Available'
@@ -338,12 +325,12 @@ function isDeletingAllowed(state: StateRaw): state is typeof state & {
 	)
 }
 
-const _update = Match.typeTags<
-	MessageRaw,
-	ReturnType<StateManager.Update<StateRaw, MessageRaw, UseCases>>
+export const update = Match.typeTags<
+	Message,
+	ReturnType<StateManager.Update<State, Message, UseCases>>
 >()({
 	Crash: error => state =>
-		T.make(state, [Effect.logFatal(error).pipe(Effect.as(MessageRaw.NoOp()))]),
+		T.make(state, [Effect.logFatal(error).pipe(Effect.as(Message.NoOp()))]),
 
 	NoOp: () => state => T.make(state, []),
 
@@ -590,24 +577,11 @@ const _update = Match.typeTags<
 })
 
 export const fatalMessage = (errors: unknown) =>
-	messageIso.set(MessageRaw.Crash({ error: errors }))
+	Message.Crash({ error: errors })
 
-export const update: StateManager.Update<State, Message, UseCases> =
-	message => state => {
-		const _message = messageIso.get(message)
-		const _state = stateIso.get(state)
-
-		const [newState, commands] = _update(_message)(_state)
-
-		return [
-			stateIso.set(newState),
-			Arr.map(commands, Effect.map(messageIso.set)),
-		] as const
-	}
-
-const _subscriptions: StateManager.Subscriptions<
-	StateRaw,
-	MessageRaw,
+export const subscriptions: StateManager.Subscriptions<
+	State,
+	Message,
 	UseCases
 > = state => {
 	if (!isSchedulerRunning(state)) {
@@ -617,24 +591,12 @@ const _subscriptions: StateManager.Subscriptions<
 	return HashMap.make([
 		state.versions.scheduledFetcher,
 		Stream.make(
-			MessageRaw.FetchListTick({ version: state.versions.scheduledFetcher }),
+			Message.FetchListTick({ version: state.versions.scheduledFetcher }),
 		).pipe(
 			Stream.schedule(Schedule.spaced(HOME_SCHEDULER_FREQUENCY)),
 			Stream.forever,
 		),
 	])
-}
-
-export const subscriptions: StateManager.Subscriptions<
-	State,
-	Message,
-	UseCases
-> = _state => {
-	const state = stateIso.get(_state)
-
-	const subs = _subscriptions(state)
-
-	return HashMap.map(subs, Stream.map(messageIso.set))
 }
 
 type FetchListSchedulerVersion = Brand.Branded<
@@ -656,18 +618,17 @@ const FetchListVersion = {
 }
 
 export const init: StateManager.Transition<State, Message, UseCases> = T.make(
-	stateIso.set({
+	{
 		versions: {
 			manualFetcher: FetchListVersion.make(0n),
 			scheduledFetcher: FetchListSchedulerVersion.make(0n),
 		},
 		productListData: { _tag: 'Initial', activity: 'idle' },
-	}),
+	},
 	[],
 )
 
-function toModel(s: State): Model {
-	const state = stateIso.get(s)
+export function makeModel(state: State): Model {
 	const isFetching = state.isFetchingAutomatically || state.isFetchingManually
 
 	const canFetch =
@@ -752,12 +713,12 @@ function toModel(s: State): Model {
 
 const notifyWrongState = Effect.fn(function* (message: { _tag: string }) {
 	yield* Effect.logError(`Triggered ${message._tag} in wrong state`)
-	return MessageRaw.NoOp()
+	return Message.NoOp()
 })
 
 const notifyStale = Effect.fn(function* (message: { _tag: string }) {
 	yield* Effect.logInfo(`Triggered stale ${message._tag}`)
-	return MessageRaw.NoOp()
+	return Message.NoOp()
 })
 
 const deleteAndGetProducts = Effect.fn(function* (
@@ -769,7 +730,7 @@ const deleteAndGetProducts = Effect.fn(function* (
 		const result = yield* deleteProducts(params)
 
 		if (result._tag === 'Failed') {
-			return MessageRaw.DeleteAndRefreshFailed({ response: result })
+			return Message.DeleteAndRefreshFailed({ response: result })
 		}
 	}
 
@@ -779,9 +740,8 @@ const deleteAndGetProducts = Effect.fn(function* (
 		const result = yield* getProducts
 
 		return Match.valueTags(result, {
-			Failed: response =>
-				MessageRaw.DeleteSucceededButRefreshFailed({ response }),
-			Succeeded: response => MessageRaw.DeleteAndRefreshSucceeded({ response }),
+			Failed: response => Message.DeleteSucceededButRefreshFailed({ response }),
+			Succeeded: response => Message.DeleteAndRefreshSucceeded({ response }),
 		})
 	}
 })
@@ -792,8 +752,8 @@ const fetchList = Effect.fn(function* (version: FetchListVersion) {
 	const result = yield* getProducts
 
 	return Match.valueTags(result, {
-		Failed: response => MessageRaw.FetchListFailed({ version, response }),
-		Succeeded: response => MessageRaw.FetchListSucceeded({ version, response }),
+		Failed: response => Message.FetchListFailed({ version, response }),
+		Succeeded: response => Message.FetchListSucceeded({ version, response }),
 	})
 })
 
@@ -803,20 +763,8 @@ const fetchListTick = Effect.fn(function* (version: FetchListSchedulerVersion) {
 	const result = yield* getProducts
 
 	return Match.valueTags(result, {
-		Failed: response => MessageRaw.FetchListTickFailed({ version, response }),
+		Failed: response => Message.FetchListTickFailed({ version, response }),
 		Succeeded: response =>
-			MessageRaw.FetchListTickSucceeded({ version, response }),
+			Message.FetchListTickSucceeded({ version, response }),
 	})
 })
-
-export const toReadable = ([state, maybeMessage]: StateManager.Event<
-	State,
-	Message
->): StateManager.Event<Model, MessageRaw> =>
-	[toModel(state), Opt.map(maybeMessage, messageIso.get)] as const
-
-/** @internal */
-export const _internal = {
-	messageIso,
-	stateIso,
-}

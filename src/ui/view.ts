@@ -1,12 +1,15 @@
 import { h } from 'snabbdom'
 
-import * as StateManager from '@/core/state-manager.ts'
-
-import * as Home from './home/slice.ts'
+import * as Home from './home/state.ts'
+import * as Root from './state.ts'
 
 export const view = (
-	event: StateManager.Event<Home.State, Home.Message>,
-	{ dispatch }: { dispatch: (m: Home.Message) => void },
+	event: Root.Model,
+	{ dispatch }: { dispatch: (m: Root.Message) => void },
 ) => {
+	const dispatchHomeMessage = (message: Home.Message) => {
+		dispatch(Root.Message.GotHomeMsg({ message }))
+	}
+
 	return h('div', { props: { class: 'text-white text-2xl' } })
 }

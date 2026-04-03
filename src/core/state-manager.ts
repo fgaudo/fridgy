@@ -28,11 +28,11 @@ export type Update<State, Message, R> = (
 	message: Message,
 ) => (state: State) => Transition<State, Message, R>
 
-export type Subscriptions<State, Message, R> = (
+export type Subscriptions<State, Message, R, K = unknown> = (
 	s: State,
-) => HashMap.HashMap<unknown, Stream.Stream<Message, never, R>>
+) => HashMap.HashMap<K, Stream.Stream<Message, never, R>>
 
-export type StateManager<State, Message, R> = Newtype.Newtype<
+export type StateManager<State, Message, R, K> = Newtype.Newtype<
 	'StateManager',
 	{
 		isStartedRef: Ref.Ref<boolean>
@@ -41,21 +41,20 @@ export type StateManager<State, Message, R> = Newtype.Newtype<
 		update: Update<State, Message, R>
 		initCommands: Command<Message, R>[]
 		defectMessage: (errors: Error[]) => Message
-		maybeSubsEvaluation: Option.Option<Subscriptions<State, Message, R>>
-		scope: Scope.Scope
+		maybeSubsEvaluation: Option.Option<Subscriptions<State, Message, R, K>>
 	}
 >
 
-export const prepare = <State, Message, R>({
+export const prepare = <State, Message, R, K>({
 	update,
 	defectMessage,
 	subscriptions,
 }: {
 	update: Update<State, Message, R>
 	defectMessage: (errors: Error[]) => NoInfer<Message>
-	subscriptions?: Subscriptions<State, Message, R>
+	subscriptions?: Subscriptions<State, Message, R, K>
 }) => {
-	const iso = Newtype.makeIso<StateManager<State, Message, R>>()
+	const iso = Newtype.makeIso<StateManager<State, Message, R, K>>()
 
 	const maybeSubsEvaluation = Option.fromUndefinedOr(subscriptions)
 
@@ -75,7 +74,6 @@ export const prepare = <State, Message, R>({
 		)
 
 		const isStartedRef = yield* Ref.make(false)
-		const scope = yield* Scope.Scope
 
 		return iso.set({
 			defectMessage,
@@ -85,7 +83,6 @@ export const prepare = <State, Message, R>({
 			initCommands,
 			isStartedRef,
 			messageQueue,
-			scope,
 		})
 	})
 }
@@ -93,9 +90,11 @@ export const prepare = <State, Message, R>({
 export const dispatch = Function.dual<
 	<Message>(
 		that: Message,
-	) => <State, R>(self: StateManager<State, Message, R>) => Effect.Effect<void>,
-	<State, Message, R>(
-		self: StateManager<State, Message, R>,
+	) => <State, R, K>(
+		self: StateManager<State, Message, R, K>,
+	) => Effect.Effect<void>,
+	<State, Message, R, K>(
+		self: StateManager<State, Message, R, K>,
 		that: Message,
 	) => Effect.Effect<void>
 >(
@@ -107,31 +106,24 @@ export const dispatch = Function.dual<
 	}),
 )
 
-export const stateChanges = <State, Message, R>(
-	stateManager: StateManager<State, Message, R>,
+export const stateChanges = <State, Message, R, K>(
+	stateManager: StateManager<State, Message, R, K>,
 ) => {
 	const { stateRef } = Newtype.value(stateManager)
 	return SubscriptionRef.changes(stateRef)
 }
 
-export const start = Effect.fnUntraced(function* <State, Message, R>(
-	stateManager: StateManager<State, Message, R>,
+export const runLoop = Effect.fnUntraced(function* <State, Message, R, K>(
+	stateManager: StateManager<State, Message, R, K>,
 ) {
 	const {
 		defectMessage,
 		maybeSubsEvaluation,
 		messageQueue,
 		initCommands,
-		scope,
 		stateRef,
 		update,
-		isStartedRef,
 	} = Newtype.value(stateManager)
-
-	if (yield* Ref.getAndSet(isStartedRef, true)) {
-		yield* Effect.logWarning('State manager already started')
-		return
-	}
 
 	const updateMessage$ = Stream.fromQueue(messageQueue).pipe(
 		Stream.onStart(Effect.logDebug('Update loop started')),
@@ -166,7 +158,7 @@ export const start = Effect.fnUntraced(function* <State, Message, R>(
 				Stream.changesWith(([keys1], [keys2]) => Equal.equals(keys1, keys2)),
 				Stream.map(([, subs]) => subs),
 				Stream.mapAccumEffect(
-					() => HashMap.empty<unknown, Deferred.Deferred<void>>(),
+					() => HashMap.empty<K, Deferred.Deferred<void>>(),
 					Effect.fnUntraced(function* (activeSubscriptions, subscriptions) {
 						const mutable = HashMap.beginMutation(activeSubscriptions)
 
@@ -213,14 +205,14 @@ export const start = Effect.fnUntraced(function* <State, Message, R>(
 		}),
 	})
 
-	yield* Effect.logDebug('Starting state manager')
+	yield* Effect.logDebug('Starting main loop')
 
-	yield* message$.pipe(
-		Stream.onStart(Effect.logDebug('State manager started')),
+	return yield* message$.pipe(
+		Stream.onStart(Effect.logDebug('Main loop started')),
 		Stream.catchCause(cause =>
 			cause.pipe(Cause.prettyErrors, defectMessage, Stream.make),
 		),
 		Stream.runForEach(message => dispatch(stateManager, message)),
-		Effect.forkIn(scope),
+		Effect.flatMap(() => Effect.never),
 	)
 })

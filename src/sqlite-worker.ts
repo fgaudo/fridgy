@@ -1,9 +1,9 @@
 /// <reference lib="webworker" />
 
+import * as Browser from '@effect/platform-browser'
 import * as SqliteWasm from '@effect/sql-sqlite-wasm'
-import * as Effect from 'effect/Effect'
 
-Effect.runFork(
+Browser.BrowserRuntime.runMain(
 	SqliteWasm.OpfsWorker.run({
 		dbName: 'fridgy',
 		port: self,
