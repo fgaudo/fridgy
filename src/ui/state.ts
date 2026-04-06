@@ -1,13 +1,11 @@
-import * as Arr from 'effect/Array'
 import * as Data from 'effect/Data'
-import * as Effect from 'effect/Effect'
 import * as HashMap from 'effect/HashMap'
 import * as Match from 'effect/Match'
-import * as Stream from 'effect/Stream'
+import type * as Stream from 'effect/Stream'
 import * as T from 'effect/Tuple'
 
 import type { UseCase as UC } from '@/business/index.ts'
-import * as StateManager from '@/core/state-manager.ts'
+import type * as StateManager from '@/core/state-manager.ts'
 
 import { mapSubscriptions, mapTransition } from './helpers.ts'
 import * as Home from './home/state.ts'
@@ -24,20 +22,22 @@ export type State = Data.TaggedEnum<{
 }>
 const State = Data.taggedEnum<State>()
 
-export const update: StateManager.Update<State, Message, UC.All> =
-	message => state =>
-		Match.value({ message, state }).pipe(
-			Match.when(
-				{ message: Message.$is('GotHomeMsg'), state: State.$is('Home') },
-				({ message: { message }, state: { state } }) =>
-					mapTransition({
-						update: Home.update(message)(state),
-						mapState: newState => State.Home({ state: newState }),
-						mapMessage: message => Message.GotHomeMsg({ message }),
-					}),
-			),
-			Match.orElse(({ state }) => T.make(state, [])),
-		)
+export const update: StateManager.Update<
+	State,
+	Message,
+	UC.All | Home.UseCases
+> = message => state =>
+	Match.value({ message, state }).pipe(
+		Match.when(
+			{ message: Message.$is('GotHomeMsg'), state: State.$is('Home') },
+			({ message: { message }, state: { state } }) =>
+				mapTransition(Home.update(message)(state), {
+					mapState: State.Home,
+					mapMessage: Message.GotHomeMsg,
+				}),
+		),
+		Match.orElse(({ state }) => T.make(state, [])),
+	)
 
 export type Model = Data.TaggedEnum<{
 	Home: { model: Home.Model }
@@ -53,33 +53,33 @@ export const makeModel = (state: State): Model => {
 	return Model.AddProduct()
 }
 
-export const fatalMessage = (err: unknown) => Message.Crash()
+export const fatalMessage = (_err: unknown) => Message.Crash()
 
-export const init: StateManager.Transition<State, Message, UC.All> = T.make(
-	State.Home({ state: Home.init[0] }),
-	Arr.map(
-		Home.init[1],
-		Effect.map(message => Message.GotHomeMsg({ message })),
-	),
-)
+export const init: StateManager.Transition<
+	State,
+	Message,
+	UC.All | Home.UseCases
+> = mapTransition(Home.init, {
+	mapMessage: Message.GotHomeMsg,
+	mapState: State.Home,
+})
 
 export const subscriptions: StateManager.Subscriptions<
 	State,
 	Message,
-	UC.All
+	UC.All | Home.UseCases
 > = state => {
 	let subs = HashMap.empty<
 		readonly ['Home', unknown],
-		Stream.Stream<Message, never, UC.All>
+		Stream.Stream<Message, never, UC.All | Home.UseCases>
 	>()
 
 	if (state._tag === 'Home') {
 		subs = HashMap.setMany(
 			subs,
-			mapSubscriptions({
-				subscriptions: Home.subscriptions(state.state),
-				mapKey: k => [state._tag, k] as const,
-				mapMessage: message => Message.GotHomeMsg({ message }),
+			mapSubscriptions(Home.subscriptions(state.state), {
+				mapKey: k => T.make(state._tag, k),
+				mapMessage: Message.GotHomeMsg,
 			}),
 		)
 	}

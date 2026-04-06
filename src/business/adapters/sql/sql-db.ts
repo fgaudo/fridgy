@@ -41,26 +41,20 @@ export class ProductExpiration extends SchemaX.Model.Class<ProductExpiration>(
 	productId: Integer.Schema,
 }) {}
 
-///////////
-///////////
-
-export class SqlDb extends ServiceMap.Service<SqlDb>()('996f8b8ef80563f4', {
+export class SqlDb extends ServiceMap.Service<SqlDb>()('dd33f8c5cbb72f0f', {
 	make: Effect.gen(function* () {
 		const sql = yield* Sql.SqlClient.SqlClient
-
 		const productDataLoader = yield* Sql.SqlModel.makeDataLoaders(Product, {
 			tableName: DbSchema.product.table,
 			idColumn: 'id',
 			window: '1 second',
 			spanPrefix: 'ProductDataLoader',
 		} as const)
-
 		const productRepository = yield* Sql.SqlModel.makeRepository(Product, {
 			tableName: DbSchema.product.table,
 			idColumn: 'id',
 			spanPrefix: 'ProductRepository',
 		} as const)
-
 		const productExpirationDataLoader = yield* Sql.SqlModel.makeDataLoaders(
 			ProductExpiration,
 			{
@@ -70,7 +64,6 @@ export class SqlDb extends ServiceMap.Service<SqlDb>()('996f8b8ef80563f4', {
 				spanPrefix: 'ProductExpirationDataLoader',
 			} as const,
 		)
-
 		const productExpirationRepository = yield* Sql.SqlModel.makeRepository(
 			ProductExpiration,
 			{
@@ -79,7 +72,6 @@ export class SqlDb extends ServiceMap.Service<SqlDb>()('996f8b8ef80563f4', {
 				spanPrefix: 'ProductExpirationRepository',
 			} as const,
 		)
-
 		const insertProductWithExpirationResolver = Sql.SqlResolver.ordered({
 			Request: Schema.Struct({
 				creationDate: Integer.IntegerFromSelf,
@@ -94,12 +86,10 @@ export class SqlDb extends ServiceMap.Service<SqlDb>()('996f8b8ef80563f4', {
 							creationDate: request.creationDate,
 							name: request.name,
 						})
-
 						yield* productExpirationDataLoader.insert({
 							date: request.expirationDate,
 							productId: product.id,
 						})
-
 						return product
 					}),
 					{ concurrency: 'unbounded' },
@@ -107,7 +97,6 @@ export class SqlDb extends ServiceMap.Service<SqlDb>()('996f8b8ef80563f4', {
 				sql.withTransaction,
 			),
 		})
-
 		return {
 			productDataLoader,
 			productRepository,

@@ -10,7 +10,7 @@ import * as Product from '@/business/domain/product.ts'
 import * as GetProductsPort from '@/business/ports/get-products.ts'
 import * as Integer from '@/core/integer/integer.ts'
 import * as NormalizedString from '@/core/normalized-string.ts'
-import * as UnitInterval from '@/core/unit-interval.ts'
+import type * as UnitInterval from '@/core/unit-interval.ts'
 
 export type ProductDTO = Data.TaggedEnum<{
 	Invalid: {
@@ -45,27 +45,21 @@ export type Response = Data.TaggedEnum<{
 	}
 	Failed: object
 }>
-
 export const Response = Data.taggedEnum<Response>()
 
 export class GetProducts extends ServiceMap.Service<GetProducts>()(
-	'06a610be80140f91',
+	'05522a70e796a394',
 	{
 		make: Effect.gen(function* () {
 			const getProducts = yield* GetProductsPort.GetProducts
-
 			// @effect-diagnostics-next-line returnEffectInGen:off
 			return Effect.gen(function* (): Effect.fn.Return<Response> {
 				yield* Effect.log('Started')
-
 				const maybeProducts = yield* Effect.option(getProducts)
-
 				if (Option.isNone(maybeProducts)) {
 					yield* Effect.logError('Could not receive products')
-
 					return Response.Failed()
 				}
-
 				const entries = yield* Effect.forEach(
 					maybeProducts.value,
 					Effect.fn(function* (productData) {
@@ -73,7 +67,6 @@ export class GetProducts extends ServiceMap.Service<GetProducts>()(
 							productData.maybeId,
 							Product.makeProduct(productData),
 						])
-
 						if (Option.isNone(result)) {
 							return ProductDTO.Invalid({
 								maybeId: productData.maybeId,
@@ -84,9 +77,7 @@ export class GetProducts extends ServiceMap.Service<GetProducts>()(
 								),
 							})
 						}
-
 						const [id, product] = result.value
-
 						const maybeExpiration = Product.maybeExpiration(product)
 						if (Option.isNone(maybeExpiration)) {
 							return ProductDTO.Valid({
@@ -95,15 +86,12 @@ export class GetProducts extends ServiceMap.Service<GetProducts>()(
 								status: Status.Everlasting(),
 							})
 						}
-
 						const currentDate = Integer.fromNumberUnsafe(
 							yield* Clock.currentTimeMillis,
 						)
-
 						const status = Product.expirationStatus(currentDate)(
 							maybeExpiration.value,
 						)
-
 						if (status.hasExpired) {
 							return ProductDTO.Valid({
 								id,
@@ -113,7 +101,6 @@ export class GetProducts extends ServiceMap.Service<GetProducts>()(
 								}),
 							})
 						}
-
 						return ProductDTO.Valid({
 							id,
 							name: Product.name(product),

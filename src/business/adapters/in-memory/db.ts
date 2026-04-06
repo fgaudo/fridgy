@@ -1,7 +1,7 @@
 import * as Effect from 'effect/Effect'
 import * as HashMap from 'effect/HashMap'
 import * as Layer from 'effect/Layer'
-import * as Option from 'effect/Option'
+import type * as Option from 'effect/Option'
 import * as Ref from 'effect/Ref'
 import * as ServiceMap from 'effect/ServiceMap'
 
@@ -15,20 +15,17 @@ export type Product = Readonly<{
 }>
 
 export class InMemoryDb extends ServiceMap.Service<InMemoryDb>()(
-	'4dcf5b609752794f',
+	'ed34f7c1f1f46a75',
 	{
 		make: Effect.gen(function* () {
 			const ref = yield* Ref.make({
 				lastIndex: Integer.fromNumberUnsafe(0),
 				map: HashMap.empty<Integer.Integer, Product>(),
 			})
-
 			return {
 				products: Effect.gen(function* () {
 					const { map } = yield* Ref.get(ref)
-
 					const arr = HashMap.toValues(map)
-
 					return arr
 				}),
 				deleteProductById: Effect.fn(function* (id: Integer.Integer) {

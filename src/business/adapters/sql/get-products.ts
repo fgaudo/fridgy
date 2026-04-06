@@ -29,7 +29,6 @@ const makeGetProducts = Effect.gen(function* () {
 			const { table: product_table, columns: product } = SqlDb.DbSchema.product
 			const { table: expiration_table, columns: expiration } =
 				SqlDb.DbSchema.productExpiration
-
 			return sql`
             SELECT
                ${sql(product.id)} as maybeId,
@@ -44,17 +43,13 @@ const makeGetProducts = Effect.gen(function* () {
          `
 		},
 	})()
-
 	// @effect-diagnostics-next-line returnEffectInGen:off
 	return Effect.gen(function* () {
 		const maybeProducts = yield* Effect.option(getProducts)
-
 		if (Option.isNone(maybeProducts)) {
 			return yield* Effect.fail(undefined)
 		}
-
 		type Product = (typeof maybeProducts.value)[0]
-
 		const mapToDTO = Effect.fn(function* (product: Product) {
 			return {
 				...product,
@@ -70,7 +65,6 @@ const makeGetProducts = Effect.gen(function* () {
 				}),
 			} as const
 		})
-
 		return yield* pipe(maybeProducts.value, Arr.map(mapToDTO), Effect.all)
 	})
 })

@@ -1,6 +1,7 @@
 import * as Arr from 'effect/Array'
 import * as Brand from 'effect/Brand'
 import * as Data from 'effect/Data'
+import * as Duration from 'effect/Duration'
 import * as Effect from 'effect/Effect'
 import * as HashMap from 'effect/HashMap'
 import * as HashSet from 'effect/HashSet'
@@ -11,14 +12,14 @@ import * as Stream from 'effect/Stream'
 import * as T from 'effect/Tuple'
 
 import { UseCase as UC } from '@/business/index.ts'
-import * as Integer from '@/core/integer/integer.ts'
-import * as PositiveInteger from '@/core/integer/positive-integer.ts'
+import type * as Integer from '@/core/integer/integer.ts'
+import type * as PositiveInteger from '@/core/integer/positive-integer.ts'
 import * as ArrX from '@/core/non-empty-array.ts'
 import * as NonEmptyHashSet from '@/core/non-empty-hash-set.ts'
-import * as StateManager from '@/core/state-manager.ts'
-import * as UnitInterval from '@/core/unit-interval.ts'
+import type * as StateManager from '@/core/state-manager.ts'
+import type * as UnitInterval from '@/core/unit-interval.ts'
 
-type UseCases =
+export type UseCases =
 	| UC.DeleteProductsByIds.DeleteProductsByIds
 	| UC.GetProducts.GetProducts
 
@@ -101,13 +102,11 @@ export type Message = Data.TaggedEnum<{
 		version: FetchListVersion
 		response: Data.TaggedEnum.Value<UC.GetProducts.Response, 'Succeeded'>
 	}
-
 	FetchListTick: { version: FetchListSchedulerVersion }
 	FetchListTickSucceeded: {
 		version: FetchListSchedulerVersion
 		response: Data.TaggedEnum.Value<UC.GetProducts.Response, 'Succeeded'>
 	}
-
 	FetchListTickFailed: {
 		version: FetchListSchedulerVersion
 		response: Data.TaggedEnum.Value<UC.GetProducts.Response, 'Failed'>
@@ -122,7 +121,6 @@ export type Message = Data.TaggedEnum<{
 		response: Data.TaggedEnum.Value<UC.GetProducts.Response, 'Failed'>
 	}
 }>
-
 export const Message = Data.taggedEnum<Message>()
 
 export type State = Readonly<{
@@ -172,7 +170,6 @@ type ProductDTO = Data.TaggedEnum.Value<
 	State['productListData'],
 	'Available'
 >['products'][0]
-
 const ProductDTO = Data.taggedEnum<ProductDTO>()
 
 function updateFetchListSucceeded(
@@ -195,20 +192,16 @@ function updateFetchListSucceeded(
 			[],
 		)
 	}
-
 	const mappedProducts = Arr.map(maybeProducts.value, product => {
 		if (product._tag === 'Invalid') {
 			return ProductDTO.Corrupt({ ...product, id: Symbol('id') })
 		}
-
 		return product
 	})
-
 	const hasFreshProducts = Arr.some(
 		mappedProducts,
 		p => p._tag === 'Valid' && p.status._tag === 'Fresh',
 	)
-
 	if (state.productListData._tag !== 'Available') {
 		return T.make(
 			{
@@ -259,7 +252,6 @@ function updateFetchListFailed(state: State) {
 	if (state.productListData._tag === 'Initial') {
 		return T.make(state, [])
 	}
-
 	return T.make(
 		{
 			...state,
@@ -341,11 +333,9 @@ export const update = Match.typeTags<
 		) {
 			return T.make(state, [notifyWrongState(message)])
 		}
-
 		const nextFetchVersion = FetchListVersion.increment(
 			state.versions.manualFetcher,
 		)
-
 		return T.make(
 			{
 				...state,
@@ -361,7 +351,6 @@ export const update = Match.typeTags<
 					activity: 'fetching' as const,
 				},
 			},
-
 			[fetchList(nextFetchVersion)],
 		)
 	},
@@ -370,11 +359,9 @@ export const update = Match.typeTags<
 		if (state.versions.manualFetcher !== message.version) {
 			return T.make(state, [notifyStale(message)])
 		}
-
 		if (state.productListData.activity !== 'fetching') {
 			return T.make(state, [notifyWrongState(message)])
 		}
-
 		return updateFetchListSucceeded(state, message.response.maybeProducts)
 	},
 
@@ -382,11 +369,9 @@ export const update = Match.typeTags<
 		if (state.versions.manualFetcher !== message.version) {
 			return T.make(state, [notifyStale(message)])
 		}
-
 		if (state.productListData.activity !== 'fetching') {
 			return T.make(state, [notifyWrongState(message)])
 		}
-
 		return updateFetchListFailed(state)
 	},
 
@@ -394,11 +379,9 @@ export const update = Match.typeTags<
 		if (message.version !== state.versions.scheduledFetcher) {
 			return T.make(state, [notifyStale(message)])
 		}
-
 		if (!isSchedulerRunning(state)) {
 			return T.make(state, [notifyWrongState(message)])
 		}
-
 		return T.make(
 			{
 				...state,
@@ -415,14 +398,12 @@ export const update = Match.typeTags<
 		if (message.version !== state.versions.scheduledFetcher) {
 			return T.make(state, [notifyStale(message)])
 		}
-
 		if (
 			state.productListData.activity !== 'scheduledFetching' ||
 			!isSchedulerRunning(state)
 		) {
 			return T.make(state, [notifyWrongState(message)])
 		}
-
 		return updateFetchListSucceeded(state, message.response.maybeProducts)
 	},
 
@@ -430,14 +411,12 @@ export const update = Match.typeTags<
 		if (message.version !== state.versions.scheduledFetcher) {
 			return T.make(state, [notifyStale(message)])
 		}
-
 		if (
 			state.productListData.activity !== 'scheduledFetching' ||
 			!isSchedulerRunning(state)
 		) {
 			return T.make(state, [notifyWrongState(message)])
 		}
-
 		return updateFetchListFailed(state)
 	},
 
@@ -449,11 +428,9 @@ export const update = Match.typeTags<
 		) {
 			return T.make(state, [notifyWrongState(message)])
 		}
-
 		if (Opt.isNone(state.productListData.maybeSelectedProducts)) {
 			return T.make(state, [notifyWrongState(message)])
 		}
-
 		return T.make(
 			{
 				...state,
@@ -483,7 +460,6 @@ export const update = Match.typeTags<
 		if (state.productListData.activity !== 'deleting') {
 			return T.make(state, [notifyWrongState(message)])
 		}
-
 		return updateFetchListSucceeded(state, message.response.maybeProducts)
 	},
 
@@ -491,7 +467,6 @@ export const update = Match.typeTags<
 		if (state.productListData.activity !== 'deleting') {
 			return T.make(state, [notifyWrongState(message)])
 		}
-
 		return T.make(
 			{
 				...state,
@@ -508,7 +483,6 @@ export const update = Match.typeTags<
 		if (state.productListData.activity !== 'deleting') {
 			return T.make(state, [notifyWrongState(message)])
 		}
-
 		return T.make(
 			{
 				...state,
@@ -530,7 +504,6 @@ export const update = Match.typeTags<
 		) {
 			return T.make(state, [notifyWrongState(message)])
 		}
-
 		return T.make(
 			{
 				...state,
@@ -562,7 +535,6 @@ export const update = Match.typeTags<
 		) {
 			return T.make(state, [notifyWrongState(message)])
 		}
-
 		return T.make(
 			{
 				...state,
@@ -587,7 +559,6 @@ export const subscriptions: StateManager.Subscriptions<
 	if (!isSchedulerRunning(state)) {
 		return HashMap.empty()
 	}
-
 	return HashMap.make([
 		state.versions.scheduledFetcher,
 		Stream.make(
@@ -603,7 +574,9 @@ type FetchListSchedulerVersion = Brand.Branded<
 	bigint,
 	'FetchListSchedulerVersion'
 >
+
 const _FetchListSchedulerVersion = Brand.nominal<FetchListSchedulerVersion>()
+
 const FetchListSchedulerVersion = {
 	make: _FetchListSchedulerVersion,
 	increment: (version: FetchListSchedulerVersion) =>
@@ -611,7 +584,9 @@ const FetchListSchedulerVersion = {
 }
 
 type FetchListVersion = Brand.Branded<bigint, 'FetchListVersion'>
+
 const _FetchListVersion = Brand.nominal<FetchListVersion>()
+
 const FetchListVersion = {
 	make: _FetchListVersion,
 	increment: (version: FetchListVersion) => _FetchListVersion(version + 1n),
@@ -630,7 +605,6 @@ export const init: StateManager.Transition<State, Message, UseCases> = T.make(
 
 export function makeModel(state: State): Model {
 	const isFetching = state.isFetchingAutomatically || state.isFetchingManually
-
 	const canFetch =
 		!state.isFetchingManually &&
 		state.productListData._tag === 'Available' &&
@@ -640,7 +614,6 @@ export function makeModel(state: State): Model {
 					fetch: MessageRaw.StartFetchList(),
 				} as const)
 			: ({ _tag: 'False' } as const)
-
 	if (state.productListData._tag !== 'Available') {
 		return {
 			...state,
@@ -650,10 +623,8 @@ export function makeModel(state: State): Model {
 			productListStatus: state.productListData,
 		}
 	}
-
 	const status = state.productListData
 	const maybeSelected = status.maybeSelectedProducts
-
 	const canDelete = isDeletingAllowed({
 		...state,
 		productListData: status,
@@ -663,7 +634,6 @@ export function makeModel(state: State): Model {
 				deleteSelected: MessageRaw.StartDeleteAndRefresh(),
 			} as const)
 		: ({ _tag: 'False' } as const)
-
 	const canClearSelection = isSelectionClearable({
 		...state,
 		productListData: status,
@@ -673,7 +643,6 @@ export function makeModel(state: State): Model {
 				clear: MessageRaw.ClearSelected(),
 			} as const)
 		: ({ _tag: 'False' } as const)
-
 	const products = Arr.map(status.products, product =>
 		product._tag === 'Corrupt'
 			? {
@@ -694,7 +663,6 @@ export function makeModel(state: State): Model {
 					),
 				},
 	)
-
 	return {
 		...state,
 		isFetching,
@@ -725,20 +693,15 @@ const deleteAndGetProducts = Effect.fn(function* (
 	params: Parameters<UC.DeleteProductsByIds.DeleteProductsByIds['Service']>[0],
 ) {
 	const deleteProducts = yield* UC.DeleteProductsByIds.DeleteProductsByIds
-
 	{
 		const result = yield* deleteProducts(params)
-
 		if (result._tag === 'Failed') {
 			return Message.DeleteAndRefreshFailed({ response: result })
 		}
 	}
-
 	const getProducts = yield* UC.GetProducts.GetProducts
-
 	{
 		const result = yield* getProducts
-
 		return Match.valueTags(result, {
 			Failed: response => Message.DeleteSucceededButRefreshFailed({ response }),
 			Succeeded: response => Message.DeleteAndRefreshSucceeded({ response }),
@@ -748,9 +711,7 @@ const deleteAndGetProducts = Effect.fn(function* (
 
 const fetchList = Effect.fn(function* (version: FetchListVersion) {
 	const getProducts = yield* UC.GetProducts.GetProducts
-
 	const result = yield* getProducts
-
 	return Match.valueTags(result, {
 		Failed: response => Message.FetchListFailed({ version, response }),
 		Succeeded: response => Message.FetchListSucceeded({ version, response }),
@@ -759,9 +720,7 @@ const fetchList = Effect.fn(function* (version: FetchListVersion) {
 
 const fetchListTick = Effect.fn(function* (version: FetchListSchedulerVersion) {
 	const getProducts = yield* UC.GetProducts.GetProducts
-
 	const result = yield* getProducts
-
 	return Match.valueTags(result, {
 		Failed: response => Message.FetchListTickFailed({ version, response }),
 		Succeeded: response =>

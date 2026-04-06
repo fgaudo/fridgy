@@ -11,7 +11,6 @@ import * as Option from 'effect/Option'
 import * as PubSub from 'effect/PubSub'
 import * as Queue from 'effect/Queue'
 import * as Ref from 'effect/Ref'
-import * as Scope from 'effect/Scope'
 import * as Stream from 'effect/Stream'
 import * as SubscriptionRef from 'effect/SubscriptionRef'
 
@@ -19,7 +18,7 @@ export type Command<Message, R> = Effect.Effect<Message, never, R>
 
 export type Transition<State, Message, R> = readonly [
 	State,
-	Command<Message, R>[],
+	Array<Command<Message, R>>,
 ]
 
 export type Event<State, Message> = readonly [State, Option.Option<Message>]
@@ -35,12 +34,13 @@ export type Subscriptions<State, Message, R, K = unknown> = (
 export type StateManager<State, Message, R, K> = Newtype.Newtype<
 	'StateManager',
 	{
-		isStartedRef: Ref.Ref<boolean>
+		isRunningRef: Ref.Ref<boolean>
 		stateRef: SubscriptionRef.SubscriptionRef<Event<State, Message>>
 		messageQueue: Queue.Queue<Message>
 		update: Update<State, Message, R>
-		initCommands: Command<Message, R>[]
-		defectMessage: (errors: Error[]) => Message
+		initCommands: Array<Command<Message, R>>
+		defectMessage: (errors: Array<Error>) => Message
+		shutdownSignal: Deferred.Deferred<void>
 		maybeSubsEvaluation: Option.Option<Subscriptions<State, Message, R, K>>
 	}
 >
@@ -51,14 +51,12 @@ export const prepare = <State, Message, R, K>({
 	subscriptions,
 }: {
 	update: Update<State, Message, R>
-	defectMessage: (errors: Error[]) => NoInfer<Message>
+	defectMessage: (errors: Array<Error>) => NoInfer<Message>
 	subscriptions?: Subscriptions<State, Message, R, K>
 }) => {
 	const iso = Newtype.makeIso<StateManager<State, Message, R, K>>()
-
 	const maybeSubsEvaluation = Option.fromUndefinedOr(subscriptions)
-
-	return Effect.fnUntraced(function* ([initState, initCommands]: Transition<
+	return Effect.fn(function* ([initState, initCommands]: Transition<
 		State,
 		Message,
 		R
@@ -67,21 +65,23 @@ export const prepare = <State, Message, R, K>({
 			SubscriptionRef.make([initState, Option.none<Message>()] as const),
 			ref => PubSub.shutdown(ref.pubsub),
 		)
-
 		const messageQueue = yield* Effect.acquireRelease(
 			Queue.unbounded<Message>(),
 			Queue.shutdown,
 		)
-
-		const isStartedRef = yield* Ref.make(false)
-
+		const shutdownSignal = yield* Effect.acquireRelease(
+			Deferred.make<void>(),
+			Deferred.succeed<void>(undefined),
+		)
+		const isRunningRef = yield* Ref.make(false)
 		return iso.set({
 			defectMessage,
 			maybeSubsEvaluation,
 			stateRef,
 			update,
+			shutdownSignal,
 			initCommands,
-			isStartedRef,
+			isRunningRef,
 			messageQueue,
 		})
 	})
@@ -99,51 +99,66 @@ export const dispatch = Function.dual<
 	) => Effect.Effect<void>
 >(
 	2,
-	Effect.fnUntraced(function* (stateManager, message) {
-		const { messageQueue } = Newtype.value(stateManager)
-
-		return yield* Queue.offer(messageQueue, message)
+	Effect.fn(function* (stateManager, message) {
+		const { messageQueue, shutdownSignal } = Newtype.value(stateManager)
+		if (Deferred.isDoneUnsafe(shutdownSignal)) {
+			return yield* Effect.logWarning('State manager is no longer available')
+		}
+		yield* Queue.offer(messageQueue, message)
 	}),
 )
 
 export const stateChanges = <State, Message, R, K>(
 	stateManager: StateManager<State, Message, R, K>,
 ) => {
-	const { stateRef } = Newtype.value(stateManager)
-	return SubscriptionRef.changes(stateRef)
+	const { stateRef, shutdownSignal } = Newtype.value(stateManager)
+	return SubscriptionRef.changes(stateRef).pipe(
+		Stream.interruptWhen(Deferred.await(shutdownSignal)),
+	)
 }
 
-export const runLoop = Effect.fnUntraced(function* <State, Message, R, K>(
-	stateManager: StateManager<State, Message, R, K>,
-) {
+export const runLoop = Effect.fn('StateManager runloop')(function* <
+	State,
+	Message,
+	R,
+	K,
+>(stateManager: StateManager<State, Message, R, K>) {
 	const {
 		defectMessage,
 		maybeSubsEvaluation,
 		messageQueue,
 		initCommands,
+		isRunningRef,
+		shutdownSignal,
 		stateRef,
 		update,
 	} = Newtype.value(stateManager)
-
+	if (yield* Deferred.isDone(shutdownSignal)) {
+		return yield* Effect.logWarning('State manager is no longer available')
+	}
+	const isRunning = yield* Effect.acquireRelease(
+		Ref.getAndSet(isRunningRef, true),
+		isRunning => (isRunning ? Effect.void : Ref.set(isRunningRef, false)),
+	)
+	if (isRunning) {
+		return yield* Effect.logWarning('Already running')
+	}
 	const updateMessage$ = Stream.fromQueue(messageQueue).pipe(
 		Stream.onStart(Effect.logDebug('Update loop started')),
 		Stream.mapEffect(message =>
 			SubscriptionRef.modify(stateRef, ([state]) => {
 				const [newState, commands] = update(message)(state)
-
-				return [commands, [newState, Option.some(message)] as const]
+				return [commands, [newState, Option.some(message)] as const] as const
 			}),
 		),
 		Stream.flattenIterable,
 		Stream.merge(Stream.make(...initCommands)),
 		Stream.flattenEffect({ concurrency: 'unbounded', unordered: true }),
 	)
-
 	const message$ = yield* Option.match(maybeSubsEvaluation, {
 		onNone: () => Effect.succeed(updateMessage$),
-		onSome: Effect.fnUntraced(function* (subsEvaluation) {
+		onSome: Effect.fn(function* (subsEvaluation) {
 			const isReady = yield* Deferred.make<void>()
-
 			return stateChanges(stateManager).pipe(
 				Stream.onStart(
 					Effect.gen(function* () {
@@ -158,10 +173,9 @@ export const runLoop = Effect.fnUntraced(function* <State, Message, R, K>(
 				Stream.changesWith(([keys1], [keys2]) => Equal.equals(keys1, keys2)),
 				Stream.map(([, subs]) => subs),
 				Stream.mapAccumEffect(
-					() => HashMap.empty<K, Deferred.Deferred<void>>(),
-					Effect.fnUntraced(function* (activeSubscriptions, subscriptions) {
+					HashMap.empty<K, Deferred.Deferred<void>>,
+					Effect.fn(function* (activeSubscriptions, subscriptions) {
 						const mutable = HashMap.beginMutation(activeSubscriptions)
-
 						for (const [key, interruption] of activeSubscriptions) {
 							if (HashMap.has(subscriptions, key)) {
 								continue
@@ -169,23 +183,18 @@ export const runLoop = Effect.fnUntraced(function* <State, Message, R, K>(
 							HashMap.remove(mutable, key)
 							yield* Deferred.succeed(interruption, undefined)
 						}
-
 						let streams = Chunk.empty<Stream.Stream<Message, never, R>>()
-
 						for (const [key, stream] of subscriptions) {
 							if (HashMap.has(mutable, key)) {
 								continue
 							}
-
 							const interruption = yield* Deferred.make<void>()
 							HashMap.set(mutable, key, interruption)
-
 							streams = Chunk.append(
 								streams,
 								Stream.interruptWhen(stream, Deferred.await(interruption)),
 							)
 						}
-
 						return [
 							HashMap.endMutation(mutable),
 							Chunk.toReadonlyArray(streams),
@@ -204,15 +213,14 @@ export const runLoop = Effect.fnUntraced(function* <State, Message, R, K>(
 			)
 		}),
 	})
-
 	yield* Effect.logDebug('Starting main loop')
-
 	return yield* message$.pipe(
 		Stream.onStart(Effect.logDebug('Main loop started')),
 		Stream.catchCause(cause =>
 			cause.pipe(Cause.prettyErrors, defectMessage, Stream.make),
 		),
+		Stream.interruptWhen(Deferred.await(shutdownSignal)),
 		Stream.runForEach(message => dispatch(stateManager, message)),
 		Effect.flatMap(() => Effect.never),
 	)
-})
+}, Effect.scoped)

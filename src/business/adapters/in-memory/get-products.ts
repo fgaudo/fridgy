@@ -10,11 +10,9 @@ import * as InMemoryDb from './db.ts'
 
 const makeGetProducts = Effect.gen(function* () {
 	const db = yield* InMemoryDb.InMemoryDb
-
 	// @effect-diagnostics-next-line returnEffectInGen:off
 	return Effect.gen(function* () {
 		const map = yield* db.products
-
 		const result = pipe(
 			map,
 			Arr.map(({ id, ...product }) => ({
@@ -24,7 +22,6 @@ const makeGetProducts = Effect.gen(function* () {
 				maybeExpirationDate: product.maybeExpirationDate,
 			})),
 		)
-
 		return result
 	})
 })

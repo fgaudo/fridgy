@@ -7,14 +7,13 @@ import * as RequestResolver from 'effect/RequestResolver'
 import * as SqlResolver from 'effect/unstable/sql/SqlResolver'
 
 import * as AddProduct from '@/business/ports/add-product.ts'
-import * as Integer from '@/core/integer/integer.ts'
+import type * as Integer from '@/core/integer/integer.ts'
 
 import * as SqlDb from './sql-db.ts'
 
 const makeAddProductResolver = Effect.gen(function* () {
 	const { productDataLoader, insertProductWithExpirationResolver } =
 		yield* SqlDb.SqlDb
-
 	return RequestResolver.makeGrouped<
 		AddProduct.Request,
 		Option.Option<Integer.Integer>
@@ -42,11 +41,9 @@ const makeAddProductResolver = Effect.gen(function* () {
 						),
 				Effect.option,
 			)
-
 			if (Option.isNone(maybeProducts)) {
 				return yield* Effect.forEach(entries, Request.fail(undefined))
 			}
-
 			return yield* Effect.forEach(entries, (entry, index) =>
 				Request.succeed(entry, maybeProducts.value[index]!.id.toString(10)),
 			)

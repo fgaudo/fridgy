@@ -13,7 +13,6 @@ import * as SqlDb from './sql-db.ts'
 
 const makeDeleteResolver = Effect.gen(function* () {
 	const { productDataLoader } = yield* SqlDb.SqlDb
-
 	return RequestResolver.make<DeleteProductById.Request>(
 		Effect.fn(function* (entries) {
 			const validEntries = pipe(
@@ -27,7 +26,6 @@ const makeDeleteResolver = Effect.gen(function* () {
 				),
 				Arr.filter(maybeEntry => Option.isSome(maybeEntry)),
 			)
-
 			const maybeIds = yield* pipe(
 				validEntries,
 				Effect.forEach(maybeEntry =>
@@ -35,20 +33,17 @@ const makeDeleteResolver = Effect.gen(function* () {
 				),
 				Effect.option,
 			)
-
 			if (Option.isNone(maybeIds)) {
 				return yield* Effect.forEach(validEntries, entry =>
 					Request.fail(entry.value[0], undefined),
 				)
 			}
-
 			return yield* Effect.forEach(validEntries, entry =>
 				Request.succeed(entry.value[0], undefined),
 			)
 		}),
 	)
 })
-
 export const layer = Layer.provide(
 	Layer.effect(DeleteProductById.DeleteProductById, makeDeleteResolver),
 	SqlDb.SqlDb.layer,

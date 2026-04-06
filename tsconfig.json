@@ -1,8 +1,9 @@
 {
+	"$schema": "https://raw.githubusercontent.com/Effect-TS/tsgo/refs/heads/main/schema.json",
 	"compilerOptions": {
 		"jsx": "react",
-		"jsxFactory": "jsx",
-		"jsxFragmentFactory": "Fragment",
+		"jsxFactory": "_jsx",
+		"jsxFragmentFactory": "_Fragment",
 
 		"plugins": [
 			{
@@ -10,20 +11,24 @@
 				"topLevelNamedReexports": "follow",
 				"namespaceImportPackages": ["effect"],
 				"diagnosticSeverity": {
+					"anyUnknownInErrorContext": "error",
 					"deterministicKeys": "error",
-					"importFromBarrel": "error",
-					"missedPipeableOpportunity": "warn",
-					"schemaUnionOfLiterals": "warn",
-					"strictBooleanExpressions": "error",
-					"nodeBuiltinImport": "error",
-					"globalTimersInEffect": "error",
-					"instanceOfSchema": "error",
-					"globalRandomInEffect": "error",
-					"globalFetchInEffect": "error",
-					"globalDateInEffect": "error",
+					"extendsNativeError": "warning",
+					"globalConsole": "warning",
 					"globalConsoleInEffect": "error",
-					"extendsNativeError": "warn",
-					"anyUnknownInErrorContext": "error"
+					"globalDate": "warning",
+					"globalDateInEffect": "error",
+					"globalFetch": "warning",
+					"globalFetchInEffect": "error",
+					"globalRandom": "warning",
+					"globalRandomInEffect": "error",
+					"globalTimers": "warning",
+					"globalTimersInEffect": "error",
+					"importFromBarrel": "error",
+					"instanceOfSchema": "error",
+					"nodeBuiltinImport": "error",
+					"preferSchemaOverJson": "warning",
+					"strictBooleanExpressions": "error"
 				},
 				"keyPatterns": [
 					{
@@ -51,9 +56,9 @@
 		// Environment setup & latest features
 		"lib": ["ESNext", "DOM"],
 		"target": "ESNext",
-		"module": "Preserve",
+		"module": "preserve",
 		"moduleDetection": "force",
-		"allowJs": true,
+		"allowJs": false,
 
 		// Bundler mode
 		"moduleResolution": "bundler",
@@ -64,14 +69,19 @@
 		// Best practices
 		"strict": true,
 		"skipLibCheck": true,
+		"erasableSyntaxOnly": true,
 		"noFallthroughCasesInSwitch": true,
 		"noUncheckedIndexedAccess": true,
 		"noImplicitOverride": true,
+		"exactOptionalPropertyTypes": true,
+		"noErrorTruncation": true,
 
 		// Some stricter flags (disabled by default)
 		"noUnusedLocals": false,
 		"noUnusedParameters": false,
-		"noPropertyAccessFromIndexSignature": true
+		"noPropertyAccessFromIndexSignature": true,
+		"types": ["snabbdom"]
 	},
-	"include": ["src", "scripts"]
+
+	"include": ["src/**/*", "scripts/**/*"]
 }
