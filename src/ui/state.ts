@@ -1,55 +1,81 @@
+import * as Array from 'effect/Array'
 import * as Data from 'effect/Data'
+import * as Effect from 'effect/Effect'
 import * as HashMap from 'effect/HashMap'
 import * as Match from 'effect/Match'
+import * as Option from 'effect/Option'
 import type * as Stream from 'effect/Stream'
 import * as T from 'effect/Tuple'
 
 import type { UseCase as UC } from '@/business/index.ts'
 import type * as StateManager from '@/core/state-manager.ts'
 
-import { mapSubscriptions, mapTransition } from './helpers.ts'
+import { mapSubscriptions } from './helpers.ts'
 import * as Home from './home/state.ts'
+import { Message } from './messages.ts'
 
-export type Message = Data.TaggedEnum<{
-	GotHomeMsg: { message: Home.Message }
-	Crash: object
+export type State = Readonly<{
+	toast: Readonly<{
+		version: bigint
+		maybeText: Option.Option<string>
+	}>
+	currentPage: Data.TaggedEnum<{
+		Home: Readonly<{ state: Home.State }>
+		AddProduct: Readonly<{ state: object }>
+	}>
 }>
-export const Message = Data.taggedEnum<Message>()
+const Page = Data.taggedEnum<State['currentPage']>()
 
-export type State = Data.TaggedEnum<{
-	Home: { state: Home.State }
-	AddProduct: object
-}>
-const State = Data.taggedEnum<State>()
+const route = <S extends Parameters<typeof Page.$is>[0]>(
+	pageName: S,
+	updateFn: (
+		m: Extract<Message, Record<'_tag', `${S}_${string}`>>,
+	) => (
+		s: Data.TaggedEnum.Value<State['currentPage'], S>['state'],
+	) => StateManager.Transition<
+		Data.TaggedEnum.Value<State['currentPage'], S>['state'],
+		Message,
+		UC.All
+	>,
+) =>
+	Match.tagStartsWith(
+		(pageName + '_') as `${S}_`,
+		message => (state: State) => {
+			const currentPage = state.currentPage
+			if (currentPage._tag === pageName) {
+				// oxlint-disable-next-line typescript/no-unsafe-argument
+				const [nextSubState, cmds] = updateFn(message)(currentPage.state as any)
+				return T.make(
+					{
+						...state,
+						currentPage: { _tag: pageName, state: nextSubState },
+					},
+					cmds,
+				)
+			}
+			return T.make(state, [])
+		},
+	)
 
 export const update: StateManager.Update<
 	State,
 	Message,
 	UC.All | Home.UseCases
-> = message => state =>
-	Match.value({ message, state }).pipe(
-		Match.when(
-			{ message: Message.$is('GotHomeMsg'), state: State.$is('Home') },
-			({ message: { message }, state: { state } }) =>
-				mapTransition(Home.update(message)(state), {
-					mapState: State.Home,
-					mapMessage: Message.GotHomeMsg,
-				}),
-		),
-		Match.orElse(({ state }) => T.make(state, [])),
-	)
+> = Match.type<Message>().pipe(
+	route('Home', Home.update),
+	Match.orElse(() => (state: State) => T.make(state, [])),
+)
 
 export type Model = Data.TaggedEnum<{
 	Home: { model: Home.Model }
 	AddProduct: object
 }>
-const Model = Data.taggedEnum<Model>()
+export const Model = Data.taggedEnum<Model>()
 
 export const makeModel = (state: State): Model => {
-	if (state._tag === 'Home') {
-		return Model.Home({ model: Home.makeModel(state.state) })
+	if (state.currentPage._tag === 'Home') {
+		return Model.Home({ model: Home.makeModel(state.currentPage.state) })
 	}
-
 	return Model.AddProduct()
 }
 
@@ -59,10 +85,16 @@ export const init: StateManager.Transition<
 	State,
 	Message,
 	UC.All | Home.UseCases
-> = mapTransition(Home.init, {
-	mapMessage: Message.GotHomeMsg,
-	mapState: State.Home,
-})
+> = (() => {
+	const [state, commands] = Home.init
+	return T.make(
+		{
+			toast: { version: 0n, maybeText: Option.none() },
+			currentPage: Page.Home({ state: state }),
+		},
+		commands,
+	)
+})()
 
 export const subscriptions: StateManager.Subscriptions<
 	State,
@@ -71,18 +103,15 @@ export const subscriptions: StateManager.Subscriptions<
 > = state => {
 	let subs = HashMap.empty<
 		readonly ['Home', unknown],
-		Stream.Stream<Message, never, UC.All | Home.UseCases>
+		Stream.Stream<ReadonlyArray<Message>, never, UC.All | Home.UseCases>
 	>()
-
-	if (state._tag === 'Home') {
+	if (state.currentPage._tag === 'Home') {
 		subs = HashMap.setMany(
 			subs,
-			mapSubscriptions(Home.subscriptions(state.state), {
-				mapKey: k => T.make(state._tag, k),
-				mapMessage: Message.GotHomeMsg,
-			}),
+			mapSubscriptions(Home.subscriptions(state.currentPage.state), k =>
+				T.make('Home', k),
+			),
 		)
 	}
-
 	return subs
 }

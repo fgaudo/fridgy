@@ -1,16 +1,13 @@
 import './styles.css'
-import { SplashScreen } from '@capacitor/splash-screen'
-import { Toast } from '@capacitor/toast'
 import * as Browser from '@effect/platform-browser'
 import * as SqliteWasm from '@effect/sql-sqlite-wasm'
 import * as Deferred from 'effect/Deferred'
 import * as Effect from 'effect/Effect'
 import * as FiberSet from 'effect/FiberSet'
 import * as Layer from 'effect/Layer'
-import * as Match from 'effect/Match'
-import * as Option from 'effect/Option'
 import * as Stream from 'effect/Stream'
 import * as SynchronizedRef from 'effect/SynchronizedRef'
+import * as T from 'effect/Tuple'
 import * as Snabbdom from 'snabbdom'
 
 import { sql as sqlDeps } from '@/business/sql.ts'
@@ -18,7 +15,7 @@ import * as StateManager from '@/core/state-manager.ts'
 
 import * as UC from './business/use-cases/index.ts'
 import * as Root from './ui/state.ts'
-import { view } from './ui/view.ts'
+import * as RootView from './ui/view.ts'
 
 const root = document.querySelector('#root')!
 
@@ -63,25 +60,6 @@ export const layer = (() => {
 	)
 })()
 
-const applyInitialImpurity = Effect.promise(() => SplashScreen.hide())
-
-const applyImpurities = Match.type<Root.Message>().pipe(
-	Match.tag('GotHomeMsg', ({ message }) =>
-		Match.value(message).pipe(
-			Match.tag('DeleteAndRefreshFailed', () =>
-				Effect.promise(() => Toast.show({ text: 'Delete failed' })),
-			),
-			Match.tag('DeleteSucceededButRefreshFailed', () =>
-				Effect.promise(() =>
-					Toast.show({ text: 'Delete succeeded but refresh failed' }),
-				),
-			),
-			Match.orElse(() => Effect.void),
-		),
-	),
-	Match.orElse(() => Effect.void),
-)
-
 declare global {
 	interface Window {
 		db: object
@@ -91,7 +69,9 @@ declare global {
 Browser.BrowserRuntime.runMain(
 	Effect.scoped(
 		Effect.gen(function* () {
-			const ref = yield* SynchronizedRef.make<Element | Snabbdom.VNode>(root)
+			const containerRef = yield* SynchronizedRef.make<
+				Element | Snabbdom.VNode
+			>(root)
 			const manager = yield* makeStateManager(Root.init)
 			const run = yield* FiberSet.makeRuntimePromise()
 			const dispatch = (message: Root.Message) => {
@@ -114,18 +94,16 @@ Browser.BrowserRuntime.runMain(
 			const ready = yield* Deferred.make()
 			yield* StateManager.stateChanges(manager).pipe(
 				Stream.onStart(Deferred.succeed(ready, undefined)),
-				Stream.tap(([state, maybeMessage]) =>
+				Stream.map(([state, maybeMessage]) =>
+					T.make(Root.makeModel(state), maybeMessage),
+				),
+				Stream.tap(([model, maybeMessage]) =>
 					Effect.all([
 						SynchronizedRef.updateEffect(
-							ref,
-							patch(view(Root.makeModel(state), dispatch)),
+							containerRef,
+							patch(RootView.view(model, { dispatch })),
 						),
-						maybeMessage.pipe(
-							Option.match({
-								onNone: () => applyInitialImpurity,
-								onSome: applyImpurities,
-							}),
-						),
+						RootView.onRender({ maybeMessage, model }),
 					]),
 				),
 				Stream.runDrain,

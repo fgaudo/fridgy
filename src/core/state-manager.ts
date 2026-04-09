@@ -14,11 +14,15 @@ import * as Ref from 'effect/Ref'
 import * as Stream from 'effect/Stream'
 import * as SubscriptionRef from 'effect/SubscriptionRef'
 
-export type Command<Message, R> = Effect.Effect<Message, never, R>
+export type Command<Message, R> = Effect.Effect<
+	ReadonlyArray<Message>,
+	never,
+	R
+>
 
 export type Transition<State, Message, R> = readonly [
 	State,
-	Array<Command<Message, R>>,
+	ReadonlyArray<Command<Message, R>>,
 ]
 
 export type Event<State, Message> = readonly [State, Option.Option<Message>]
@@ -29,7 +33,7 @@ export type Update<State, Message, R> = (
 
 export type Subscriptions<State, Message, R, K = unknown> = (
 	s: State,
-) => HashMap.HashMap<K, Stream.Stream<Message, never, R>>
+) => HashMap.HashMap<K, Stream.Stream<ReadonlyArray<Message>, never, R>>
 
 export type StateManager<State, Message, R, K> = Newtype.Newtype<
 	'StateManager',
@@ -38,8 +42,8 @@ export type StateManager<State, Message, R, K> = Newtype.Newtype<
 		stateRef: SubscriptionRef.SubscriptionRef<Event<State, Message>>
 		messageQueue: Queue.Queue<Message>
 		update: Update<State, Message, R>
-		initCommands: Array<Command<Message, R>>
-		defectMessage: (errors: Array<Error>) => Message
+		initCommands: ReadonlyArray<Command<Message, R>>
+		defectMessage: (errors: ReadonlyArray<Error>) => ReadonlyArray<Message>
 		shutdownSignal: Deferred.Deferred<void>
 		maybeSubsEvaluation: Option.Option<Subscriptions<State, Message, R, K>>
 	}
@@ -51,7 +55,9 @@ export const prepare = <State, Message, R, K>({
 	subscriptions,
 }: {
 	update: Update<State, Message, R>
-	defectMessage: (errors: Array<Error>) => NoInfer<Message>
+	defectMessage: (
+		errors: ReadonlyArray<Error>,
+	) => NoInfer<ReadonlyArray<Message>>
 	subscriptions?: Subscriptions<State, Message, R, K>
 }) => {
 	const iso = Newtype.makeIso<StateManager<State, Message, R, K>>()
@@ -183,7 +189,8 @@ export const runLoop = Effect.fn('StateManager runloop')(function* <
 							HashMap.remove(mutable, key)
 							yield* Deferred.succeed(interruption, undefined)
 						}
-						let streams = Chunk.empty<Stream.Stream<Message, never, R>>()
+						let streams =
+							Chunk.empty<Stream.Stream<ReadonlyArray<Message>, never, R>>()
 						for (const [key, stream] of subscriptions) {
 							if (HashMap.has(mutable, key)) {
 								continue
@@ -220,6 +227,7 @@ export const runLoop = Effect.fn('StateManager runloop')(function* <
 			cause.pipe(Cause.prettyErrors, defectMessage, Stream.make),
 		),
 		Stream.interruptWhen(Deferred.await(shutdownSignal)),
+		Stream.flattenIterable,
 		Stream.runForEach(message => dispatch(stateManager, message)),
 		Effect.flatMap(() => Effect.never),
 	)
