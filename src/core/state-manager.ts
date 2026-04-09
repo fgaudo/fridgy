@@ -1,3 +1,4 @@
+import type * as Array from 'effect/Array'
 import * as Cause from 'effect/Cause'
 import * as Chunk from 'effect/Chunk'
 import * as Deferred from 'effect/Deferred'
@@ -15,7 +16,7 @@ import * as Stream from 'effect/Stream'
 import * as SubscriptionRef from 'effect/SubscriptionRef'
 
 export type Command<Message, R> = Effect.Effect<
-	ReadonlyArray<Message>,
+	Array.NonEmptyReadonlyArray<Message>,
 	never,
 	R
 >
@@ -33,7 +34,10 @@ export type Update<State, Message, R> = (
 
 export type Subscriptions<State, Message, R, K = unknown> = (
 	s: State,
-) => HashMap.HashMap<K, Stream.Stream<ReadonlyArray<Message>, never, R>>
+) => HashMap.HashMap<
+	K,
+	Stream.Stream<Array.NonEmptyReadonlyArray<Message>, never, R>
+>
 
 export type StateManager<State, Message, R, K> = Newtype.Newtype<
 	'StateManager',
@@ -43,7 +47,9 @@ export type StateManager<State, Message, R, K> = Newtype.Newtype<
 		messageQueue: Queue.Queue<Message>
 		update: Update<State, Message, R>
 		initCommands: ReadonlyArray<Command<Message, R>>
-		defectMessage: (errors: ReadonlyArray<Error>) => ReadonlyArray<Message>
+		defectMessage: (
+			errors: ReadonlyArray<Error>,
+		) => Array.NonEmptyReadonlyArray<Message>
 		shutdownSignal: Deferred.Deferred<void>
 		maybeSubsEvaluation: Option.Option<Subscriptions<State, Message, R, K>>
 	}
@@ -57,7 +63,7 @@ export const prepare = <State, Message, R, K>({
 	update: Update<State, Message, R>
 	defectMessage: (
 		errors: ReadonlyArray<Error>,
-	) => NoInfer<ReadonlyArray<Message>>
+	) => NoInfer<Array.NonEmptyReadonlyArray<Message>>
 	subscriptions?: Subscriptions<State, Message, R, K>
 }) => {
 	const iso = Newtype.makeIso<StateManager<State, Message, R, K>>()
@@ -190,7 +196,9 @@ export const runLoop = Effect.fn('StateManager runloop')(function* <
 							yield* Deferred.succeed(interruption, undefined)
 						}
 						let streams =
-							Chunk.empty<Stream.Stream<ReadonlyArray<Message>, never, R>>()
+							Chunk.empty<
+								Stream.Stream<Array.NonEmptyReadonlyArray<Message>, never, R>
+							>()
 						for (const [key, stream] of subscriptions) {
 							if (HashMap.has(mutable, key)) {
 								continue

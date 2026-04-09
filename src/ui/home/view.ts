@@ -3,13 +3,14 @@ import * as Effect from 'effect/Effect'
 import * as Match from 'effect/Match'
 import { h } from 'snabbdom'
 
-import * as VM from './state.ts'
+import { Message } from '../messages.ts'
+import type * as VM from './state.ts'
 
-export const onRender = Match.type<VM.Message>().pipe(
-	Match.when(VM.Message.$is('DeleteAndRefreshFailed'), () =>
+export const onRender = Match.type<Message>().pipe(
+	Match.when(Message.$is('Home_DeleteAndRefreshFailed'), () =>
 		Effect.promise(() => Toast.show({ text: 'Could not delete' })),
 	),
-	Match.when(VM.Message.$is('DeleteSucceededButRefreshFailed'), () =>
+	Match.when(Message.$is('Home_DeleteSucceededButRefreshFailed'), () =>
 		Effect.promise(() => Toast.show({ text: 'Could not refresh' })),
 	),
 	Match.orElse(event => Effect.logWarning('Ignored impurity', event)),
@@ -17,7 +18,7 @@ export const onRender = Match.type<VM.Message>().pipe(
 
 export const view = (
 	model: VM.Model,
-	{ dispatch }: { dispatch: (m: VM.Message) => void },
+	{ dispatch }: { dispatch: (m: Message) => void },
 ) => {
 	return Match.valueTags(model.productListStatus, {
 		Available: () => h('div'),

@@ -8,9 +8,10 @@ import type * as Home from './home/messages.ts'
 export type Message = Data.TaggedEnum<
 	PrefixKeys<Home.Message, 'Home'> &
 		PrefixKeys<AddProduct.Message, 'AddProduct'> & {
-			HideToast: object
+			HideToast: { version: bigint }
 			NoOp: object
 			Crash: object
+			ShowToast: { text: string }
 		}
 >
 

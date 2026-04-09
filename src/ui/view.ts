@@ -1,16 +1,32 @@
+import { Toast } from '@capacitor/toast'
 import * as Match from 'effect/Match'
+import * as Option from 'effect/Option'
 import { h } from 'snabbdom'
 
-import { mapMessage } from './helpers.ts'
 import * as Home from './home/view.ts'
-import * as Root from './state.ts'
+import type { Message } from './messages.ts'
+import type * as VM from './state.ts'
 
 export const view = (
-	model: Root.Model,
-	{ dispatch }: { dispatch: (m: Root.Message) => void },
+	model: VM.Model,
+	{ dispatch }: { dispatch: (m: Message) => void },
 ) => {
-	return Match.valueTags(model, {
-		Home: ({ model }) => Home.view(model, { dispatch: _dispatchHome }),
-		AddProduct: () => h('div', { class: { 'text-2xl text-white': true } }, []),
-	})
+	return h('div', [
+		Match.valueTags(model.currentPage, {
+			Home: ({ model }) => Home.view(model, { dispatch }),
+			AddProduct: () =>
+				h('div', { class: { 'text-2xl text-white': true } }, []),
+		}),
+		h('div', {
+			key: model.toast.key,
+			hook: {
+				insert: () => {
+					const maybeText = model.toast.maybeText
+					if (Option.isSome(maybeText)) {
+						void Toast.show({ text: maybeText.value })
+					}
+				},
+			},
+		}),
+	])
 }

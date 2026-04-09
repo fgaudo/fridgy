@@ -14,6 +14,7 @@ import { sql as sqlDeps } from '@/business/sql.ts'
 import * as StateManager from '@/core/state-manager.ts'
 
 import * as UC from './business/use-cases/index.ts'
+import type { Message } from './ui/messages.ts'
 import * as Root from './ui/state.ts'
 import * as RootView from './ui/view.ts'
 
@@ -74,7 +75,7 @@ Browser.BrowserRuntime.runMain(
 			>(root)
 			const manager = yield* makeStateManager(Root.init)
 			const run = yield* FiberSet.makeRuntimePromise()
-			const dispatch = (message: Root.Message) => {
+			const dispatch = (message: Message) => {
 				void run(StateManager.dispatch(manager, message))
 			}
 			window.db = yield* Effect.gen(function* () {
@@ -97,14 +98,11 @@ Browser.BrowserRuntime.runMain(
 				Stream.map(([state, maybeMessage]) =>
 					T.make(Root.makeModel(state), maybeMessage),
 				),
-				Stream.tap(([model, maybeMessage]) =>
-					Effect.all([
-						SynchronizedRef.updateEffect(
-							containerRef,
-							patch(RootView.view(model, { dispatch })),
-						),
-						RootView.onRender({ maybeMessage, model }),
-					]),
+				Stream.tap(([model]) =>
+					SynchronizedRef.updateEffect(
+						containerRef,
+						patch(RootView.view(model, { dispatch })),
+					),
 				),
 				Stream.runDrain,
 				Effect.forkScoped,

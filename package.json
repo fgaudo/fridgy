@@ -13,7 +13,7 @@
 		"@capacitor/toast": "^8.0.1",
 		"@effect/platform-browser": "^4.0.0-beta.43",
 		"@effect/sql-sqlite-wasm": "^4.0.0-beta.43",
-		"@typescript/native-preview": "^7.0.0-dev.20260408.1",
+		"@typescript/native-preview": "^7.0.0-dev.20260409.1",
 		"clsx": "^2.1.1",
 		"effect": "^4.0.0-beta.43",
 		"snabbdom": "^3.6.3",

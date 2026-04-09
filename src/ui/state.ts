@@ -1,4 +1,4 @@
-import * as Array from 'effect/Array'
+import type * as Array from 'effect/Array'
 import * as Data from 'effect/Data'
 import * as Effect from 'effect/Effect'
 import * as HashMap from 'effect/HashMap'
@@ -57,29 +57,82 @@ const route = <S extends Parameters<typeof Page.$is>[0]>(
 		},
 	)
 
-export const update: StateManager.Update<
-	State,
-	Message,
-	UC.All | Home.UseCases
-> = Match.type<Message>().pipe(
-	route('Home', Home.update),
-	Match.orElse(() => (state: State) => T.make(state, [])),
-)
+export const update: StateManager.Update<State, Message, UC.All> =
+	Match.type<Message>().pipe(
+		route('Home', Home.update),
+		Match.withReturnType<
+			ReturnType<StateManager.Update<State, Message, UC.All>>
+		>(),
+		Match.tag('ShowToast', ({ text }) => state => {
+			const nextVersion = state.toast.version + 1n
+			return T.make(
+				{
+					...state,
+					toast: {
+						...state.toast,
+						version: nextVersion,
+						maybeText: Option.some(text),
+					},
+				},
+				[
+					Effect.succeed(
+						T.make(Message.HideToast({ version: nextVersion })),
+					).pipe(Effect.delay('2 seconds')),
+				],
+			)
+		}),
+		Match.tag('HideToast', ({ version }) => state => {
+			if (state.toast.version !== version) {
+				return T.make(state, [])
+			}
+			return T.make(
+				{
+					...state,
+					toast: {
+						...state.toast,
+						maybeText: Option.none(),
+					},
+				},
+				[],
+			)
+		}),
+		Match.orElse(() => (state: State) => T.make(state, [])),
+	)
 
-export type Model = Data.TaggedEnum<{
-	Home: { model: Home.Model }
-	AddProduct: object
-}>
-export const Model = Data.taggedEnum<Model>()
+export type Model = {
+	toast: {
+		key: string
+		maybeText: Option.Option<string>
+	}
+	currentPage: Data.TaggedEnum<{
+		Home: { model: Home.Model }
+		AddProduct: { model: object }
+	}>
+}
+export const PageModel = Data.taggedEnum<Model['currentPage']>()
 
 export const makeModel = (state: State): Model => {
 	if (state.currentPage._tag === 'Home') {
-		return Model.Home({ model: Home.makeModel(state.currentPage.state) })
+		return {
+			toast: {
+				key: state.toast.version.toString(16),
+				maybeText: state.toast.maybeText,
+			},
+			currentPage: PageModel.Home({
+				model: Home.makeModel(state.currentPage.state),
+			}),
+		}
 	}
-	return Model.AddProduct()
+	return {
+		toast: {
+			key: state.toast.version.toString(16),
+			maybeText: state.toast.maybeText,
+		},
+		currentPage: PageModel.AddProduct({ model: {} }),
+	}
 }
 
-export const fatalMessage = (_err: unknown) => Message.Crash()
+export const fatalMessage = (_err: unknown) => T.make(Message.Crash())
 
 export const init: StateManager.Transition<
 	State,
@@ -103,7 +156,11 @@ export const subscriptions: StateManager.Subscriptions<
 > = state => {
 	let subs = HashMap.empty<
 		readonly ['Home', unknown],
-		Stream.Stream<ReadonlyArray<Message>, never, UC.All | Home.UseCases>
+		Stream.Stream<
+			Array.NonEmptyReadonlyArray<Message>,
+			never,
+			UC.All | Home.UseCases
+		>
 	>()
 	if (state.currentPage._tag === 'Home') {
 		subs = HashMap.setMany(

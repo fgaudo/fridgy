@@ -19,6 +19,7 @@ import type * as StateManager from '@/core/state-manager.ts'
 import type * as UnitInterval from '@/core/unit-interval.ts'
 
 import { Message } from '../messages.ts'
+
 export type UseCases =
 	| UC.DeleteProductsByIds.DeleteProductsByIds
 	| UC.GetProducts.GetProducts
@@ -30,7 +31,7 @@ export type Model = Readonly<{
 		False: object
 	}>
 	productListStatus: Data.TaggedEnum<{
-		Initial: { activity: 'fetching' | 'idle' }
+		Initial: { activity: 'fetching' }
 		Error: { activity: 'fetching' | 'idle' }
 		Empty: { activity: 'fetching' | 'idle' }
 		Available: Readonly<{
@@ -93,7 +94,7 @@ export type State = Readonly<{
 		manualFetcher: FetchListVersion
 	}
 	productListData: Data.TaggedEnum<{
-		Initial: { activity: 'fetching' | 'idle' }
+		Initial: { activity: 'fetching' }
 		Error: { activity: 'fetching' | 'idle' }
 		Empty: { activity: 'fetching' | 'idle' }
 		Available: Readonly<{
@@ -140,7 +141,7 @@ function updateFetchListSucceeded(
 	state: State,
 	maybeProducts: Data.TaggedEnum.Value<
 		Message,
-		'FetchListSucceeded'
+		'Home_FetchListSucceeded'
 	>['response']['maybeProducts'],
 ) {
 	if (Opt.isNone(maybeProducts)) {
@@ -229,19 +230,6 @@ function updateFetchListFailed(state: State) {
 	)
 }
 
-function hasSelectedProducts(
-	state: State & { productListData: { _tag: 'Available' } },
-) {
-	return Opt.isSome(state.productListData.maybeSelectedProducts)
-}
-
-function productsAreToggleable(state: State) {
-	return (
-		state.productListData.activity === 'idle' ||
-		state.productListData.activity === 'scheduledFetching'
-	)
-}
-
 function isSchedulerRunning(
 	state: State,
 ): state is State & { productListData: { _tag: 'Available' } } {
@@ -251,33 +239,6 @@ function isSchedulerRunning(
 		(productListData.activity === 'scheduledFetching' ||
 			productListData.activity === 'idle') &&
 		productListData.hasFreshProducts
-	)
-}
-
-function isDeletingAllowed(state: State): state is typeof state & {
-	productListData: Data.TaggedEnum.Value<
-		(typeof state)['productListData'],
-		'Available'
-	> & {
-		activity: Exclude<
-			(typeof state)['productListData']['activity'],
-			'fetching' | 'deleting'
-		>
-		maybeSelectedProducts: Opt.Some<
-			Opt.Option.Value<
-				Data.TaggedEnum.Value<
-					(typeof state)['productListData'],
-					'Available'
-				>['maybeSelectedProducts']
-			>
-		>
-	}
-} {
-	return (
-		state.productListData._tag === 'Available' &&
-		state.productListData.activity !== 'fetching' &&
-		state.productListData.activity !== 'deleting' &&
-		Opt.isSome(state.productListData.maybeSelectedProducts)
 	)
 }
 
@@ -310,7 +271,7 @@ export const update = Match.typeTags<
 					activity: 'fetching' as const,
 				},
 			},
-			[fetchList(nextFetchVersion)],
+			T.make(fetchList(nextFetchVersion)),
 		)
 	},
 
@@ -555,95 +516,129 @@ export const init: StateManager.Transition<State, Message, UseCases> = T.make(
 			manualFetcher: FetchListVersion.make(0n),
 			scheduledFetcher: FetchListSchedulerVersion.make(0n),
 		},
-		productListData: { _tag: 'Initial', activity: 'idle' },
+		productListData: { _tag: 'Initial', activity: 'fetching' },
 	},
 	[],
 )
 
 export function makeModel(state: State): Model {
-	const isFetching = state.isFetchingAutomatically || state.isFetchingManually
-	const canFetch =
-		!state.isFetchingManually &&
-		state.productListData._tag === 'Available' &&
-		!state.productListData.isDeleting
-			? ({
-					_tag: 'True',
-					fetch: Message.StartFetchList(),
-				} as const)
-			: ({ _tag: 'False' } as const)
+	if (state.productListData._tag === 'Initial') {
+		return {
+			canNavigateOut: true,
+			productListStatus: { _tag: 'Initial', activity: 'fetching' },
+			canFetch: { _tag: 'False' },
+		} satisfies Model
+	}
+
 	if (state.productListData._tag !== 'Available') {
 		return {
-			...state,
 			canNavigateOut: true,
-			isFetching,
-			canFetch,
 			productListStatus: state.productListData,
-		}
+			canFetch:
+				state.productListData.activity === 'fetching'
+					? { _tag: 'False' }
+					: { _tag: 'True', fetch: Message.Home_StartFetchList() },
+		} satisfies Model
 	}
-	const status = state.productListData
-	const maybeSelected = status.maybeSelectedProducts
-	const canDelete = isDeletingAllowed({
-		...state,
-		productListData: status,
-	})
-		? ({
-				_tag: 'True',
-				deleteSelected: Message.StartDeleteAndRefresh(),
-			} as const)
-		: ({ _tag: 'False' } as const)
-	const canClearSelection = isSelectionClearable({
-		...state,
-		productListData: status,
-	})
-		? ({
-				_tag: 'True',
-				clear: Message.ClearSelected(),
-			} as const)
-		: ({ _tag: 'False' } as const)
-	const products = Arr.map(status.products, product =>
-		product._tag === 'Corrupt'
-			? {
-					...product,
-					canToggle: { _tag: 'False' } as const,
-				}
-			: {
-					...product,
-					canToggle: status.isDeleting
-						? ({ _tag: 'False' } as const)
-						: ({
-								_tag: 'True',
-								toggle: Message.ToggleItem({ id: product.id }),
-							} as const),
-					selected: maybeSelected.pipe(
-						Opt.map(HashSet.has(product.id)),
-						Opt.getOrElse(() => false),
-					),
-				},
-	)
+
+	const productListData = state.productListData
 	return {
-		...state,
-		isFetching,
-		canFetch,
-		canNavigateOut:
-			!state.productListData.isDeleting &&
-			Opt.isNone(state.productListData.maybeSelectedProducts),
+		canFetch:
+			productListData.activity !== 'deleting' &&
+			productListData.activity !== 'fetching'
+				? { _tag: 'True', fetch: Message.Home_StartFetchList() }
+				: { _tag: 'False' },
+		canNavigateOut: state.productListData.activity !== 'deleting',
 		productListStatus: {
-			...status,
-			canClearSelection,
-			canDeleteSelected: canDelete,
-			products,
+			_tag: state.productListData._tag,
+			activity:
+				state.productListData.activity === 'scheduledFetching'
+					? 'fetching'
+					: state.productListData.activity,
+			canClearSelection:
+				state.productListData.activity !== 'deleting' &&
+				state.productListData.activity !== 'fetching'
+					? { _tag: 'True', clearMessage: Message.Home_ClearSelected() }
+					: { _tag: 'False' },
+			canDeleteSelected:
+				state.productListData.activity !== 'deleting' &&
+				state.productListData.activity !== 'fetching'
+					? {
+							_tag: 'True',
+							deleteMessage: Message.Home_StartDeleteAndRefresh(),
+						}
+					: { _tag: 'False' },
+			products: Arr.map(
+				state.productListData.products,
+				(
+					product,
+				): Data.TaggedEnum.Value<
+					Model['productListStatus'],
+					'Available'
+				>['products'][0] => {
+					if (product._tag === 'Corrupt') {
+						return {
+							_tag: 'Corrupt',
+							canToggle: { _tag: 'False' },
+							maybeName: product.maybeName,
+						}
+					}
+					if (product._tag === 'Invalid') {
+						return {
+							_tag: 'Invalid',
+							canToggle:
+								productListData.activity !== 'deleting' &&
+								productListData.activity === 'fetching'
+									? {
+											_tag: 'True',
+											message: Message.Home_ToggleItem({ id: product.id }),
+										}
+									: { _tag: 'False' },
+							maybeName: product.maybeName,
+							id: product.id,
+							selected:
+								Opt.isSome(productListData.maybeSelectedProducts) &&
+								HashSet.has(
+									productListData.maybeSelectedProducts.value,
+									product.id,
+								),
+						}
+					}
+					return {
+						_tag: 'Valid',
+						canToggle:
+							productListData.activity !== 'deleting' &&
+							productListData.activity === 'fetching'
+								? {
+										_tag: 'True',
+										message: Message.Home_ToggleItem({ id: product.id }),
+									}
+								: { _tag: 'False' },
+						id: product.id,
+						name: product.name,
+						isSelected:
+							Opt.isSome(productListData.maybeSelectedProducts) &&
+							HashSet.has(
+								productListData.maybeSelectedProducts.value,
+								product.id,
+							),
+						status: product.status,
+					}
+				},
+			),
+			total: productListData.total,
 		},
-	}
+	} satisfies Model
 }
 
 const notifyWrongState = Effect.fn(function* (message: { _tag: string }) {
 	yield* Effect.logError(`Triggered ${message._tag} in wrong state`)
-	return [Message.NoOp()]
+	return T.make(Message.NoOp())
 })
 
 const notifyStale = Effect.fn(function* (message: { _tag: string }) {
 	yield* Effect.logInfo(`Triggered stale ${message._tag}`)
-	return [Message.NoOp()]
+	return T.make(Message.NoOp())
 })
 
 const deleteAndGetProducts = Effect.fn(function* (
@@ -653,19 +648,23 @@ const deleteAndGetProducts = Effect.fn(function* (
 	{
 		const result = yield* deleteProducts(params)
 		if (result._tag === 'Failed') {
-			return [Message.Home_DeleteAndRefreshFailed({ response: result })]
+			return T.make(
+				Message.Home_DeleteAndRefreshFailed({ response: result }),
+				Message.ShowToast({ text: 'Delete failed' }),
+			)
 		}
 	}
 	const getProducts = yield* UC.GetProducts.GetProducts
 	{
 		const result = yield* getProducts
 		return Match.valueTags(result, {
-			Failed: response => [
-				Message.Home_DeleteSucceededButRefreshFailed({ response }),
-			],
-			Succeeded: response => [
-				Message.Home_DeleteAndRefreshSucceeded({ response }),
-			],
+			Failed: response =>
+				T.make(
+					Message.Home_DeleteSucceededButRefreshFailed({ response }),
+					Message.ShowToast({ text: 'Refresh failed' }),
+				),
+			Succeeded: response =>
+				T.make(Message.Home_DeleteAndRefreshSucceeded({ response })),
 		})
 	}
 })
@@ -674,10 +673,10 @@ const fetchList = Effect.fn(function* (version: bigint) {
 	const getProducts = yield* UC.GetProducts.GetProducts
 	const result = yield* getProducts
 	return Match.valueTags(result, {
-		Failed: response => [Message.Home_FetchListFailed({ version, response })],
-		Succeeded: response => [
-			Message.Home_FetchListSucceeded({ version, response }),
-		],
+		Failed: response =>
+			T.make(Message.Home_FetchListFailed({ version, response })),
+		Succeeded: response =>
+			T.make(Message.Home_FetchListSucceeded({ version, response })),
 	})
 })
 
@@ -685,11 +684,9 @@ const fetchListTick = Effect.fn(function* (version: bigint) {
 	const getProducts = yield* UC.GetProducts.GetProducts
 	const result = yield* getProducts
 	return Match.valueTags(result, {
-		Failed: response => [
-			Message.Home_FetchListTickFailed({ version, response }),
-		],
-		Succeeded: response => [
-			Message.Home_FetchListTickSucceeded({ version, response }),
-		],
+		Failed: response =>
+			T.make(Message.Home_FetchListTickFailed({ version, response })),
+		Succeeded: response =>
+			T.make(Message.Home_FetchListTickSucceeded({ version, response })),
 	})
 })
