@@ -6,13 +6,13 @@ import * as Request from 'effect/Request'
 import * as RequestResolver from 'effect/RequestResolver'
 import * as SqlResolver from 'effect/unstable/sql/SqlResolver'
 
-import * as AddProduct from '@/business/ports/add-product.ts'
 import type * as Integer from '@/core/integer/integer.ts'
+import * as AddProduct from '@/ports/add-product.ts'
 
 import * as SqlDb from './sql-db.ts'
 
 const makeAddProductResolver = Effect.gen(function* () {
-	const { productDataLoader, insertProductWithExpirationResolver } =
+	const { productRepository, insertProductWithExpirationResolver } =
 		yield* SqlDb.SqlDb
 	return RequestResolver.makeGrouped<
 		AddProduct.Request,
@@ -24,7 +24,7 @@ const makeAddProductResolver = Effect.gen(function* () {
 				entries,
 				Option.isNone(maybeExpirationDate)
 					? Effect.forEach(entry =>
-							productDataLoader.insert({
+							productRepository.insert({
 								name: entry.request.product.name,
 								creationDate: entry.request.product.creationDate,
 							}),

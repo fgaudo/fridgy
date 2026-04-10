@@ -1,10 +1,10 @@
 import * as Arr from 'effect/Array'
 import * as Clock from 'effect/Clock'
+import * as Context from 'effect/Context'
 import * as Data from 'effect/Data'
 import * as Effect from 'effect/Effect'
 import * as Layer from 'effect/Layer'
 import * as Option from 'effect/Option'
-import * as ServiceMap from 'effect/ServiceMap'
 
 import * as Product from '@/business/domain/product.ts'
 import * as GetProductsPort from '@/business/ports/get-products.ts'
@@ -47,7 +47,7 @@ export type Response = Data.TaggedEnum<{
 }>
 export const Response = Data.taggedEnum<Response>()
 
-export class GetProducts extends ServiceMap.Service<GetProducts>()(
+export class GetProducts extends Context.Service<GetProducts>()(
 	'05522a70e796a394',
 	{
 		make: Effect.gen(function* () {

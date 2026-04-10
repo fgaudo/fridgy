@@ -1,24 +1,18 @@
 import * as Effect from 'effect/Effect'
-import { pipe } from 'effect/Function'
 import * as Layer from 'effect/Layer'
-import * as Opt from 'effect/Option'
 import * as RequestResolver from 'effect/RequestResolver'
 
+import * as AddProduct from '@/business/ports/add-product.ts'
 import * as Integer from '@/core/integer/integer.ts'
 
-import * as AddProduct from '../../ports/add-product.ts'
 import * as InMemoryDb from './db.ts'
 
 const makeAddProductResolver = Effect.gen(function* () {
 	const db = yield* InMemoryDb.InMemoryDb
 	return RequestResolver.fromEffect<AddProduct.Request>(
 		Effect.fn(function* ({ request }) {
-			const maybeId = pipe(Number.parseInt(request.id, 10), Integer.fromNumber)
-			if (Opt.isNone(maybeId)) {
-				return yield* Effect.fail(undefined)
-			}
 			return (yield* db.addProduct({
-				id: maybeId.value,
+				id: Integer.fromNumberUnsafe(3),
 				...request.product,
 			})).toString(10)
 		}),

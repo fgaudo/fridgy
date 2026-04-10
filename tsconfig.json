@@ -1,10 +1,6 @@
 {
 	"$schema": "https://raw.githubusercontent.com/Effect-TS/tsgo/refs/heads/main/schema.json",
 	"compilerOptions": {
-		"jsx": "react",
-		"jsxFactory": "_jsx",
-		"jsxFragmentFactory": "_Fragment",
-
 		"plugins": [
 			{
 				"name": "@effect/language-service",
@@ -80,7 +76,7 @@
 		"noUnusedLocals": false,
 		"noUnusedParameters": false,
 		"noPropertyAccessFromIndexSignature": true,
-		"types": ["snabbdom"]
+		"types": ["snabbdom", "bun"]
 	},
 
 	"include": ["src/**/*", "scripts/**/*"]

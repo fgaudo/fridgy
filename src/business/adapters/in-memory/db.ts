@@ -1,9 +1,9 @@
+import * as Context from 'effect/Context'
 import * as Effect from 'effect/Effect'
 import * as HashMap from 'effect/HashMap'
 import * as Layer from 'effect/Layer'
 import type * as Option from 'effect/Option'
 import * as Ref from 'effect/Ref'
-import * as ServiceMap from 'effect/ServiceMap'
 
 import * as Integer from '@/core/integer/integer.ts'
 
@@ -14,7 +14,7 @@ export type Product = Readonly<{
 	creationDate: Integer.Integer
 }>
 
-export class InMemoryDb extends ServiceMap.Service<InMemoryDb>()(
+export class InMemoryDb extends Context.Service<InMemoryDb>()(
 	'ed34f7c1f1f46a75',
 	{
 		make: Effect.gen(function* () {

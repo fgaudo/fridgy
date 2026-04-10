@@ -1,3 +1,4 @@
+import { SplashScreen } from '@capacitor/splash-screen'
 import { Toast } from '@capacitor/toast'
 import * as Match from 'effect/Match'
 import * as Option from 'effect/Option'
@@ -25,6 +26,14 @@ export const view = (
 					if (Option.isSome(maybeText)) {
 						void Toast.show({ text: maybeText.value })
 					}
+				},
+			},
+		}),
+		h('div', {
+			key: 'static',
+			hook: {
+				insert: () => {
+					void SplashScreen.hide()
 				},
 			},
 		}),

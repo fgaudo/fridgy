@@ -12,7 +12,7 @@ import * as Integer from '@/core/integer/integer.ts'
 import * as SqlDb from './sql-db.ts'
 
 const makeDeleteResolver = Effect.gen(function* () {
-	const { productDataLoader } = yield* SqlDb.SqlDb
+	const { productRepository } = yield* SqlDb.SqlDb
 	return RequestResolver.make<DeleteProductById.Request>(
 		Effect.fn(function* (entries) {
 			const validEntries = pipe(
@@ -29,7 +29,7 @@ const makeDeleteResolver = Effect.gen(function* () {
 			const maybeIds = yield* pipe(
 				validEntries,
 				Effect.forEach(maybeEntry =>
-					productDataLoader.delete(maybeEntry.value[1]),
+					productRepository.delete(maybeEntry.value[1]),
 				),
 				Effect.option,
 			)

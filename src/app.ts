@@ -13,7 +13,7 @@ import * as Snabbdom from 'snabbdom'
 import { sql as sqlDeps } from '@/business/sql.ts'
 import * as StateManager from '@/core/state-manager.ts'
 
-import * as UC from './business/use-cases/index.ts'
+import { migrations } from './business/adapters/sql/migrations.ts'
 import type { Message } from './ui/messages.ts'
 import * as Root from './ui/state.ts'
 import * as RootView from './ui/view.ts'
@@ -51,21 +51,14 @@ export const layer = (() => {
 				worker.terminate()
 			}),
 	)
-	return sqlDeps.pipe(
-		Layer.provide(
-			SqliteWasm.SqliteClient.layer({
-				worker: makeWorker,
-			}),
-		),
-		Layer.orDie,
-	)
+	const clientLayer = SqliteWasm.SqliteClient.layer({
+		worker: makeWorker,
+	})
+	const migratorLayer = SqliteWasm.SqliteMigrator.layer({
+		loader: SqliteWasm.SqliteMigrator.fromRecord(migrations),
+	}).pipe(Layer.provideMerge(clientLayer))
+	return sqlDeps.pipe(Layer.provide(migratorLayer), Layer.orDie)
 })()
-
-declare global {
-	interface Window {
-		db: object
-	}
-}
 
 Browser.BrowserRuntime.runMain(
 	Effect.scoped(
@@ -78,20 +71,6 @@ Browser.BrowserRuntime.runMain(
 			const dispatch = (message: Message) => {
 				void run(StateManager.dispatch(manager, message))
 			}
-			window.db = yield* Effect.gen(function* () {
-				const db = {
-					deleteProducts: yield* UC.DeleteProductsByIds.DeleteProductsByIds,
-					getProducts: yield* UC.GetProducts.GetProducts,
-					addProduct: yield* UC.AddProduct.AddProduct,
-				}
-				return {
-					deleteProducts: (id: Parameters<typeof db.deleteProducts>[0]) =>
-						run(db.deleteProducts(id)),
-					getProducts: () => run(db.getProducts),
-					addProduct: (product: Parameters<typeof db.addProduct>[0]) =>
-						run(db.addProduct(product)),
-				}
-			})
 			const ready = yield* Deferred.make()
 			yield* StateManager.stateChanges(manager).pipe(
 				Stream.onStart(Deferred.succeed(ready, undefined)),

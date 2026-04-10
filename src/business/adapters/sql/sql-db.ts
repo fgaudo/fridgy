@@ -1,8 +1,8 @@
+import * as Context from 'effect/Context'
 import * as Effect from 'effect/Effect'
 import { flow } from 'effect/Function'
 import * as Layer from 'effect/Layer'
 import * as Schema from 'effect/Schema'
-import * as ServiceMap from 'effect/ServiceMap'
 import * as SchemaX from 'effect/unstable/schema'
 import * as Sql from 'effect/unstable/sql'
 
@@ -41,13 +41,12 @@ export class ProductExpiration extends SchemaX.Model.Class<ProductExpiration>(
 	productId: Integer.Schema,
 }) {}
 
-export class SqlDb extends ServiceMap.Service<SqlDb>()('dd33f8c5cbb72f0f', {
+export class SqlDb extends Context.Service<SqlDb>()('dd33f8c5cbb72f0f', {
 	make: Effect.gen(function* () {
 		const sql = yield* Sql.SqlClient.SqlClient
-		const productDataLoader = yield* Sql.SqlModel.makeDataLoaders(Product, {
+		const productDataLoader = yield* Sql.SqlModel.makeResolvers(Product, {
 			tableName: DbSchema.product.table,
 			idColumn: 'id',
-			window: '1 second',
 			spanPrefix: 'ProductDataLoader',
 		} as const)
 		const productRepository = yield* Sql.SqlModel.makeRepository(Product, {
@@ -55,12 +54,11 @@ export class SqlDb extends ServiceMap.Service<SqlDb>()('dd33f8c5cbb72f0f', {
 			idColumn: 'id',
 			spanPrefix: 'ProductRepository',
 		} as const)
-		const productExpirationDataLoader = yield* Sql.SqlModel.makeDataLoaders(
+		const productExpirationDataLoader = yield* Sql.SqlModel.makeResolvers(
 			ProductExpiration,
 			{
 				tableName: DbSchema.productExpiration.table,
 				idColumn: 'id',
-				window: '1 second',
 				spanPrefix: 'ProductExpirationDataLoader',
 			} as const,
 		)
@@ -82,11 +80,11 @@ export class SqlDb extends ServiceMap.Service<SqlDb>()('dd33f8c5cbb72f0f', {
 			execute: flow(
 				Effect.forEach(
 					Effect.fn(function* (request) {
-						const product = yield* productDataLoader.insert({
+						const product = yield* productRepository.insert({
 							creationDate: request.creationDate,
 							name: request.name,
 						})
-						yield* productExpirationDataLoader.insert({
+						yield* productExpirationRepository.insert({
 							date: request.expirationDate,
 							productId: product.id,
 						})

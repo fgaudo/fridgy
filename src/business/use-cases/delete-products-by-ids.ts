@@ -1,10 +1,10 @@
+import * as Context from 'effect/Context'
 import * as Data from 'effect/Data'
 import * as Effect from 'effect/Effect'
 import { pipe } from 'effect/Function'
 import * as HashSet from 'effect/HashSet'
 import * as Layer from 'effect/Layer'
 import * as Option from 'effect/Option'
-import * as ServiceMap from 'effect/ServiceMap'
 
 import * as DeleteProductById from '@/business/ports/delete-product-by-id.ts'
 import type * as NonEmptyHashSet from '@/core/non-empty-hash-set.ts'
@@ -20,7 +20,7 @@ export type Response = Data.TaggedEnum<{
 }>
 export const Response = Data.taggedEnum<Response>()
 
-export class DeleteProductsByIds extends ServiceMap.Service<DeleteProductsByIds>()(
+export class DeleteProductsByIds extends Context.Service<DeleteProductsByIds>()(
 	'eedea280c3a76270',
 	{
 		make: Effect.gen(function* () {

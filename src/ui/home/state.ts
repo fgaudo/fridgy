@@ -31,7 +31,7 @@ export type Model = Readonly<{
 		False: object
 	}>
 	productListStatus: Data.TaggedEnum<{
-		Initial: { activity: 'fetching' }
+		Initial: { activity: 'fetching' | 'idle' }
 		Error: { activity: 'fetching' | 'idle' }
 		Empty: { activity: 'fetching' | 'idle' }
 		Available: Readonly<{
@@ -94,7 +94,7 @@ export type State = Readonly<{
 		manualFetcher: FetchListVersion
 	}
 	productListData: Data.TaggedEnum<{
-		Initial: { activity: 'fetching' }
+		Initial: { activity: 'fetching' | 'idle' }
 		Error: { activity: 'fetching' | 'idle' }
 		Empty: { activity: 'fetching' | 'idle' }
 		Available: Readonly<{
@@ -516,16 +516,19 @@ export const init: StateManager.Transition<State, Message, UseCases> = T.make(
 			manualFetcher: FetchListVersion.make(0n),
 			scheduledFetcher: FetchListSchedulerVersion.make(0n),
 		},
-		productListData: { _tag: 'Initial', activity: 'fetching' },
+		productListData: { _tag: 'Initial', activity: 'idle' },
 	},
-	[],
+	[Effect.succeed(T.make(Message.Home_StartFetchList()))],
 )
 
 export function makeModel(state: State): Model {
 	if (state.productListData._tag === 'Initial') {
 		return {
 			canNavigateOut: true,
-			productListStatus: { _tag: 'Initial', activity: 'fetching' },
+			productListStatus: {
+				_tag: 'Initial',
+				activity: state.productListData.activity,
+			},
 			canFetch: { _tag: 'False' },
 		} satisfies Model
 	}
