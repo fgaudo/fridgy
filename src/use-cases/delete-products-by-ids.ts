@@ -7,8 +7,7 @@ import * as Layer from 'effect/Layer'
 import * as Option from 'effect/Option'
 
 import type * as NonEmptyHashSet from '@/core/non-empty-hash-set.ts'
-
-import * as DeleteProductById from '../ports/outbound/delete-product-by-id'
+import * as DeleteProductById from '@/ports/outbound/delete-product-by-id.ts'
 
 export type Params<Msg> = {
 	ids: NonEmptyHashSet.NonEmptyHashSet<string>
@@ -22,7 +21,7 @@ export type Response = Data.TaggedEnum<{
 export const Response = Data.taggedEnum<Response>()
 
 export class DeleteProductsByIds extends Context.Service<DeleteProductsByIds>()(
-	'402cca6a248e6361',
+	'aa0f064aa381c677',
 	{
 		make: Effect.gen(function* () {
 			const resolver = yield* DeleteProductById.DeleteProductById

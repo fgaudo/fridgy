@@ -48,7 +48,7 @@ class ProductExpiration extends SchemaX.Model.Class<ProductExpiration>(
 	[ProductExpirationSchema.columns.productId]: Integer.Schema,
 }) {}
 
-class SqlDb extends Context.Service<SqlDb>()('d570b91ceeaaab1d', {
+class SqlDb extends Context.Service<SqlDb>()('2c19025a677f99b3', {
 	make: Effect.gen(function* () {
 		const sql = yield* Sql.SqlClient.SqlClient
 		const productDataLoader = yield* Sql.SqlModel.makeResolvers(Product, {

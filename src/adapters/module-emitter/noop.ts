@@ -2,15 +2,13 @@ import * as Effect from 'effect/Effect'
 import * as Layer from 'effect/Layer'
 import * as Stream from 'effect/Stream'
 
-import { ModuleEmitter } from '@/ports/outbound/module-emitter.ts'
+import { UiModuleEmitter } from '@/ports/inbound/ui-module-emitter.ts'
 
 export const noopModuleEmitter = Layer.effect(
-	ModuleEmitter,
+	UiModuleEmitter,
 	Effect.gen(function* () {
-		const { view: staticView } = yield* Effect.promise(
-			() => import('@/ui/pages/view.ts'),
-		)
+		const { view } = yield* Effect.promise(() => import('@/ui/pages/view.ts'))
 
-		return Stream.make(staticView)
+		return Stream.make({ view })
 	}),
 )

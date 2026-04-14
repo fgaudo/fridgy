@@ -9,9 +9,8 @@ import * as Option from 'effect/Option'
 import * as Integer from '@/core/integer/integer.ts'
 import * as NormalizedString from '@/core/normalized-string.ts'
 import type * as UnitInterval from '@/core/unit-interval.ts'
-
-import * as Product from '../domain/product'
-import * as GetProductsPort from '../ports/outbound/get-products'
+import * as Product from '@/domain/product.ts'
+import * as GetProductsPort from '@/ports/outbound/get-products.ts'
 
 export type ProductDTO = Data.TaggedEnum<{
 	Invalid: {
@@ -49,7 +48,7 @@ export type Response = Data.TaggedEnum<{
 export const Response = Data.taggedEnum<Response>()
 
 export class GetProducts extends Context.Service<GetProducts>()(
-	'06a610be80140f91',
+	'964810d869a6d065',
 	{
 		make: Effect.gen(function* () {
 			const getProducts = yield* GetProductsPort.GetProducts

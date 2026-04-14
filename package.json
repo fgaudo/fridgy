@@ -8,6 +8,7 @@
 		"@capacitor/core": "latest",
 		"@capacitor/splash-screen": "latest",
 		"@capacitor/toast": "latest",
+		"@effect/experimental": "^0.60.0",
 		"@effect/platform-browser": "beta",
 		"@effect/sql-sqlite-wasm": "beta",
 		"@fontsource-variable/comfortaa": "^5.2.8",

@@ -4,7 +4,7 @@ import * as Layer from 'effect/Layer'
 import * as SubscriptionRef from 'effect/SubscriptionRef'
 import * as Socket from 'effect/unstable/socket'
 
-import { ModuleEmitter } from '@/ports/outbound/module-emitter.ts'
+import { UiModuleEmitter } from '@/ports/inbound/ui-module-emitter.ts'
 
 export const hotLayer = ({
 	modulePath,
@@ -14,7 +14,7 @@ export const hotLayer = ({
 	cssLinkElement: Element
 }) =>
 	Layer.effect(
-		ModuleEmitter,
+		UiModuleEmitter,
 		Effect.gen(function* () {
 			const loadView = Effect.gen(function* () {
 				const millis = yield* Clock.currentTimeMillis

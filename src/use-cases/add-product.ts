@@ -8,9 +8,8 @@ import * as Option from 'effect/Option'
 import { v4 as uuidv4 } from 'uuid'
 
 import * as Integer from '@/core/integer/integer.ts'
-
-import * as Product from '../domain/product'
-import * as AddProductPort from '../ports/outbound/add-product'
+import * as Product from '@/domain/product.ts'
+import * as AddProductPort from '@/ports/outbound/add-product.ts'
 
 export type Params = {
 	maybeName: Option.Option<string>
@@ -24,7 +23,7 @@ export type Response = Data.TaggedEnum<{
 const Response = Data.taggedEnum<Response>()
 
 export class AddProduct extends Context.Service<AddProduct>()(
-	'09bc504007747d85',
+	'01767be861b12f76',
 	{
 		make: Effect.gen(function* () {
 			const resolver = yield* AddProductPort.AddProduct
