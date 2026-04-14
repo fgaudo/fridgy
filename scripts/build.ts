@@ -16,7 +16,7 @@ const build = Effect.gen(function* () {
 			target: 'browser',
 			entrypoints: [
 				path.join(currentDir, '../src/sqlite-worker.ts'),
-				path.join(currentDir, '../src/ui/view.ts'),
+				path.join(currentDir, '../src/ui/pages/view.ts'),
 				path.join(currentDir, '../src/app.ts'),
 			],
 			outdir: path.join(currentDir, '../dist'),
@@ -28,6 +28,7 @@ const build = Effect.gen(function* () {
 				chunk: '[name].[ext]',
 				asset: '[name].[ext]',
 			},
+			external: ['*.woff2'],
 		}),
 	)
 })
@@ -68,6 +69,14 @@ await Effect.runPromise(
 		yield* fs.copyFile(
 			path.join(currentDir, '../src/index.html'),
 			path.join(currentDir, '../dist/index.html'),
+		)
+		yield* fs.copyFile(
+			path.join(currentDir, '../src/ui/fonts/comfortaa-latin-ext.woff2'),
+			path.join(currentDir, '../dist/comfortaa-latin-ext.woff2'),
+		)
+		yield* fs.copyFile(
+			path.join(currentDir, '../src/ui/fonts/comfortaa-latin.woff2'),
+			path.join(currentDir, '../dist/comfortaa-latin.woff2'),
 		)
 		yield* fs.watch(path.join(currentDir, '../src')).pipe(
 			Stream.runForEach(

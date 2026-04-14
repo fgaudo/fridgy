@@ -43,11 +43,11 @@
 		"paths": {
 			"@/core/*": ["./src/core/*"],
 			"@/business/*": ["./src/business/*"],
-			"@/ports/*": ["./src/business/ports/*"],
-			"@/adapters/*": ["./src/business/adapters/*"],
-			"@/use-cases/*": ["./src/business/use-cases/*"],
-			"@/domain/*": ["./src/business/domain/*"],
-			"@/screen/*": ["./src/screen/*"]
+			"@/ports/*": ["./src/ports/*"],
+			"@/adapters/*": ["./src/adapters/*"],
+			"@/use-cases/*": ["./src/use-cases/*"],
+			"@/domain/*": ["./src/domain/*"],
+			"@/ui/*": ["./src/ui/*"]
 		},
 		// Environment setup & latest features
 		"lib": ["ESNext", "DOM"],

@@ -6,9 +6,9 @@ import * as Option from 'effect/Option'
 import * as Schema from 'effect/Schema'
 import * as Sql from 'effect/unstable/sql'
 
-import * as GetProducts from '@/business/ports/get-products.ts'
 import * as Integer from '@/core/integer/integer.ts'
 
+import * as GetProducts from '../../../ports/outbound/get-products.ts'
 import * as SqlDb from './sql-db.ts'
 
 const makeGetProducts = Effect.gen(function* () {

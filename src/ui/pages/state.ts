@@ -10,7 +10,7 @@ import * as T from 'effect/Tuple'
 import type { UseCase as UC } from '@/business/index.ts'
 import type * as StateManager from '@/core/fsm.ts'
 
-import { mapSubscriptions } from './helpers.ts'
+import { mapSubscriptions } from '../helpers.ts'
 import * as Home from './home/state.ts'
 import { Message } from './messages.ts'
 

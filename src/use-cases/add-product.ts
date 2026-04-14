@@ -7,9 +7,10 @@ import * as Layer from 'effect/Layer'
 import * as Option from 'effect/Option'
 import { v4 as uuidv4 } from 'uuid'
 
-import * as Product from '@/business/domain/product.ts'
 import * as Integer from '@/core/integer/integer.ts'
-import * as AddProductPort from '@/ports/add-product.ts'
+
+import * as Product from '../domain/product'
+import * as AddProductPort from '../ports/outbound/add-product'
 
 export type Params = {
 	maybeName: Option.Option<string>

@@ -1,4 +1,4 @@
-import '../styles.css'
+import '../css/styles.css'
 import { SplashScreen } from '@capacitor/splash-screen'
 import { Toast } from '@capacitor/toast'
 import { defineCustomElements } from '@ionic/pwa-elements/loader'
@@ -6,6 +6,7 @@ import * as Match from 'effect/Match'
 import * as Option from 'effect/Option'
 import { h } from 'snabbdom'
 
+import { loadFonts } from '../fonts/index.ts'
 import * as Home from './home/view.ts'
 import type { Message } from './messages.ts'
 import type * as VM from './state.ts'
@@ -35,9 +36,13 @@ export const view = (
 			key: 'static',
 			hook: {
 				insert: () => {
-					void defineCustomElements(window).then(() => SplashScreen.hide())
+					Promise.all([loadFonts(), defineCustomElements(window)]).then(() =>
+						SplashScreen.hide(),
+					)
 				},
 			},
 		}),
 	])
 }
+
+export type View = typeof view

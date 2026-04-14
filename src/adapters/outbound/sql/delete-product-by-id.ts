@@ -6,9 +6,9 @@ import * as Option from 'effect/Option'
 import * as Request from 'effect/Request'
 import * as RequestResolver from 'effect/RequestResolver'
 
-import * as DeleteProductById from '@/business/ports/delete-product-by-id.ts'
 import * as Integer from '@/core/integer/integer.ts'
 
+import * as DeleteProductById from '../../../ports/outbound/delete-product-by-id.ts'
 import * as SqlDb from './sql-db.ts'
 
 const makeDeleteResolver = Effect.gen(function* () {

@@ -11,6 +11,8 @@
         "@capacitor/toast": "latest",
         "@effect/platform-browser": "beta",
         "@effect/sql-sqlite-wasm": "beta",
+        "@fontsource-variable/comfortaa": "^5.2.8",
+        "@fontsource-variable/roboto-flex": "^5.2.8",
         "@ionic/pwa-elements": "latest",
         "clsx": "^2.1.1",
         "effect": "beta",
@@ -53,6 +55,10 @@
     "@effect/sql-sqlite-wasm": ["@effect/sql-sqlite-wasm@4.0.0-beta.48", "", { "peerDependencies": { "@effect/wa-sqlite": "^0.1.2", "effect": "^4.0.0-beta.48" } }, "sha512-Rtm/1Oqg+2rFMHyO0v9hFqpDOmio6WNNtiH74v3TCxYU+TY1ZmAssvV9pp0A8oSecfLbm2Va30qq8vAEhTWYtg=="],
 
     "@effect/wa-sqlite": ["@effect/wa-sqlite@0.1.2", "", {}, "sha512-2JvJ9BDkBOwfeY/gXsC0XwEKC0AwisP2W5ABJ6mx14QyXTK12MGDIybDlHieuZt1TEFSMiKfpg7yyqyRWRooJQ=="],
+
+    "@fontsource-variable/comfortaa": ["@fontsource-variable/comfortaa@5.2.8", "", {}, "sha512-8YqOYbeHxywYtMD/AtNc7SHTIk3UufmYdgwVHBwFUe5wxjT7QM1NJ64M5M+qtNTenPEkQl8JU5Be3+EZl8dhMA=="],
+
+    "@fontsource-variable/roboto-flex": ["@fontsource-variable/roboto-flex@5.2.8", "", {}, "sha512-Q9zbz+P2VrDeIxBu9YAIG+eYpLmQF5FIJEEwAWn8En9Lao1TOISnoYcywGV+jSv7LGsHEndCR8hveXPnvCBEQQ=="],
 
     "@ionic/cli-framework-output": ["@ionic/cli-framework-output@2.2.8", "", { "dependencies": { "@ionic/utils-terminal": "2.3.5", "debug": "^4.0.0", "tslib": "^2.0.1" } }, "sha512-TshtaFQsovB4NWRBydbNFawql6yul7d5bMiW1WYYf17hd99V6xdDdk3vtF51bw6sLkxON3bDQpWsnUc9/hVo3g=="],
 

@@ -13,12 +13,14 @@ import * as SynchronizedRef from 'effect/SynchronizedRef'
 import { Socket } from 'effect/unstable/socket'
 import * as Snabbdom from 'snabbdom'
 
-import { migrations } from '@/business/adapters/sql/migrations.ts'
 import { sql as sqlDeps } from '@/business/sql.ts'
 import * as Engine from '@/core/fsm.ts'
 
-import type { Message } from './ui/messages.ts'
-import * as Root from './ui/state.ts'
+import { migrations } from './adapters/outbound/sql/migrations.ts'
+import { Reloader } from './ports/inbound/reloader.ts'
+import type { Message } from './ui/pages/messages.ts'
+import * as Root from './ui/pages/state.ts'
+import type { View } from './ui/pages/view.ts'
 
 const root = document.querySelector('#root')!
 const css = document.querySelector('#css')!
@@ -63,60 +65,6 @@ export const layer = (() => {
 	return sqlDeps.pipe(Layer.provide(migratorLayer), Layer.orDie)
 })()
 
-export class Reloader extends Context.Service<
-	Reloader,
-	{
-		readonly changes: Stream.Stream<any>
-	}
->()('1a31ca6f709175d4') {}
-
-export const loadView = Effect.gen(function* () {
-	const millis = yield* Clock.currentTimeMillis
-	const { view } = yield* Effect.promise(() => import(`./view.js?t=${millis}`))
-	return view
-})
-
-export const HotModuleReloader = Layer.effect(
-	Reloader,
-	Effect.gen(function* () {
-		const initialView = yield* loadView
-		const view = yield* SubscriptionRef.make(initialView)
-		const socket = yield* Socket.Socket
-
-		const triggerReload = Effect.gen(function* () {
-			const newView = yield* loadView
-			yield* refreshCss
-			yield* SubscriptionRef.set(view, newView)
-		})
-
-		yield* socket.run(() => triggerReload).pipe(Effect.forkScoped)
-
-		return { changes: SubscriptionRef.changes(view) }
-	}),
-)
-
-export const NoOpReloader = Layer.effect(
-	Reloader,
-	Effect.gen(function* () {
-		const { view: staticView } = yield* Effect.promise(
-			() => import('./ui/view.ts'),
-		)
-		const view = yield* SubscriptionRef.make(staticView)
-
-		return {
-			changes: SubscriptionRef.changes(view),
-		}
-	}),
-)
-
-export const refreshCss = Effect.gen(function* () {
-	const millis = yield* Clock.currentTimeMillis
-	const href = yield* Effect.sync(() => css.getAttribute('href')!)
-	const url = new URL(href, window.location.origin)
-	url.searchParams.set('t', millis.toString())
-	yield* Effect.sync(() => css.setAttribute('href', url.toString()))
-})
-
 Browser.BrowserRuntime.runMain(
 	Effect.gen(function* () {
 		const reloader = yield* Reloader
@@ -137,7 +85,6 @@ Browser.BrowserRuntime.runMain(
 				(state, view) => [state, view] as const,
 			),
 			Stream.map(([state, view]) => view(Root.makeModel(state), { dispatch })),
-			Stream.tap(Effect.log),
 			Stream.tap(view =>
 				SynchronizedRef.updateEffect(containerRef, patch(view)),
 			),

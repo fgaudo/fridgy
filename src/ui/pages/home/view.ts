@@ -1,4 +1,3 @@
-import { defineCustomElements } from '@ionic/pwa-elements/loader'
 import * as Match from 'effect/Match'
 import { h } from 'snabbdom'
 
@@ -14,10 +13,11 @@ export const view = (
 			'div',
 			{
 				props: {
-					className: 'bg-secondary h-14 text-on-background flex items-center',
+					className:
+						'h-14 bottom-0 text-on-background flex items-center fixed w-full',
 				},
 			},
-			'asddsa123213',
+			h('div', { props: { className: 'font-extrabold' } }, 'fridgy'),
 		),
 		h(
 			'div',

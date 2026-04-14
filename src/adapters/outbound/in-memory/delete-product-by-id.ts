@@ -4,9 +4,9 @@ import * as Layer from 'effect/Layer'
 import * as Opt from 'effect/Option'
 import * as RequestResolver from 'effect/RequestResolver'
 
-import * as DeleteProductById from '@/business/ports/delete-product-by-id.ts'
 import * as Integer from '@/core/integer/integer.ts'
 
+import * as DeleteProductById from '../../../ports/outbound/delete-product-by-id.ts'
 import * as InMemoryDb from './db.ts'
 
 const makeDeleteResolver = Effect.gen(function* () {

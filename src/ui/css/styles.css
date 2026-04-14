@@ -1,12 +1,11 @@
 @import 'tailwindcss';
 
 @theme {
-	--font-stylish: 'Comfortaa Variable';
-	--color-on-background: #000003;
-	--color-primary: #c43921;
-	--color-background: #fef8e9;
-	--color-secondary: #fba551;
-	--color-accent: #4fa34a;
+	--font-stylish: Comfortaa;
+	--color-primary: #ce2727;
+	--color-background: #ffffff;
+	--color-accent: #ff7f3b;
+	--color-text: #050315;
 }
 
 * {

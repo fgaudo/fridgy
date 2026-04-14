@@ -4,8 +4,7 @@ import { pipe } from 'effect/Function'
 import * as Layer from 'effect/Layer'
 import * as Opt from 'effect/Option'
 
-import * as GetProducts from '@/business/ports/get-products.ts'
-
+import * as GetProducts from '../../../ports/outbound/get-products.ts'
 import * as InMemoryDb from './db.ts'
 
 const makeGetProducts = Effect.gen(function* () {

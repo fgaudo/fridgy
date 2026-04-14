@@ -2,9 +2,9 @@ import * as Effect from 'effect/Effect'
 import * as Layer from 'effect/Layer'
 import * as RequestResolver from 'effect/RequestResolver'
 
-import * as AddProduct from '@/business/ports/add-product.ts'
 import * as Integer from '@/core/integer/integer.ts'
 
+import * as AddProduct from '../../../ports/outbound/add-product.ts'
 import * as InMemoryDb from './db.ts'
 
 const makeAddProductResolver = Effect.gen(function* () {

@@ -7,8 +7,8 @@ import * as RequestResolver from 'effect/RequestResolver'
 import * as SqlResolver from 'effect/unstable/sql/SqlResolver'
 
 import type * as Integer from '@/core/integer/integer.ts'
-import * as AddProduct from '@/ports/add-product.ts'
 
+import * as AddProduct from '../../../ports/outbound/add-product.ts'
 import * as SqlDb from './sql-db.ts'
 
 const makeAddProductResolver = Effect.gen(function* () {
