@@ -6,7 +6,7 @@ import type * as Stream from 'effect/Stream'
 import * as T from 'effect/Tuple'
 import { twMerge } from 'tailwind-merge'
 
-import type * as StateManager from '@/core/state-manager.ts'
+import type * as StateManager from '@/core/fsm'
 
 export const cn = (...p: Parameters<typeof clsx>) => ({
 	[twMerge(clsx(p))]: true,
@@ -17,9 +17,9 @@ export const whenLazy = <A>(condition: boolean, a: Function.LazyArg<A>) =>
 	condition ? a() : undefined
 
 export const mapSubscriptions = <State, Message, Key, NewKey, R>(
-	subscriptions: ReturnType<StateManager.Subscriptions<State, Message, R, Key>>,
+	subscriptions: ReturnType<StateManager.Emitter<State, Message, R, Key>>,
 	mapKey: (key: Key) => NewKey,
-): ReturnType<StateManager.Subscriptions<State, Message, R, NewKey>> =>
+): ReturnType<StateManager.Emitter<State, Message, R, NewKey>> =>
 	subscriptions.pipe(
 		HashMap.reduce(
 			HashMap.empty<
@@ -31,11 +31,11 @@ export const mapSubscriptions = <State, Message, Key, NewKey, R>(
 	)
 
 export const mapTransition = <State, NewState, Message, R>(
-	transition: StateManager.Transition<State, Message, R>,
+	transition: StateManager.Step<State, Message, R>,
 	{
 		mapState,
 	}: {
 		mapState: (key: { state: State }) => NewState
 	},
-): StateManager.Transition<NewState, Message, R> =>
+): StateManager.Step<NewState, Message, R> =>
 	T.make(mapState({ state: transition[0] }), transition[1])

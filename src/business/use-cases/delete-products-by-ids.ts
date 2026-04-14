@@ -21,7 +21,7 @@ export type Response = Data.TaggedEnum<{
 export const Response = Data.taggedEnum<Response>()
 
 export class DeleteProductsByIds extends Context.Service<DeleteProductsByIds>()(
-	'eedea280c3a76270',
+	'402cca6a248e6361',
 	{
 		make: Effect.gen(function* () {
 			const resolver = yield* DeleteProductById.DeleteProductById

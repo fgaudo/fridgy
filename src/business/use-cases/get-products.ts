@@ -48,7 +48,7 @@ export type Response = Data.TaggedEnum<{
 export const Response = Data.taggedEnum<Response>()
 
 export class GetProducts extends Context.Service<GetProducts>()(
-	'05522a70e796a394',
+	'06a610be80140f91',
 	{
 		make: Effect.gen(function* () {
 			const getProducts = yield* GetProductsPort.GetProducts

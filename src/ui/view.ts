@@ -1,5 +1,7 @@
+import '../styles.css'
 import { SplashScreen } from '@capacitor/splash-screen'
 import { Toast } from '@capacitor/toast'
+import { defineCustomElements } from '@ionic/pwa-elements/loader'
 import * as Match from 'effect/Match'
 import * as Option from 'effect/Option'
 import { h } from 'snabbdom'
@@ -33,7 +35,7 @@ export const view = (
 			key: 'static',
 			hook: {
 				insert: () => {
-					void SplashScreen.hide()
+					void defineCustomElements(window).then(() => SplashScreen.hide())
 				},
 			},
 		}),

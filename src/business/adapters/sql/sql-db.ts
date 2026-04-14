@@ -8,65 +8,64 @@ import * as Sql from 'effect/unstable/sql'
 
 import * as Integer from '@/core/integer/integer.ts'
 
-export const DbSchema = {
-	product: {
-		table: 'product',
-		columns: {
-			id: 'product.id',
-			name: 'product.name',
-			creationDate: 'product.creation_date',
-		},
+export const ProductSchema = {
+	table: 'product',
+	columns: {
+		id: 'id',
+		name: 'name',
+		creationDate: 'creation_date',
 	},
-	productExpiration: {
-		table: 'product_expiration',
-		columns: {
-			id: 'product_expiration.id',
-			date: 'product_expiration.date',
-			productId: 'product_expiration.product_id',
-		},
+} as const
+
+export const ProductExpirationSchema = {
+	table: 'product_expiration',
+	columns: {
+		id: 'id',
+		date: 'date',
+		productId: 'product_id',
 	},
 } as const
 
 export class Product extends SchemaX.Model.Class<Product>('Product')({
-	id: SchemaX.Model.Generated(Integer.Schema),
-	name: Schema.String,
-	creationDate: Integer.Schema,
+	[ProductSchema.columns.id]: SchemaX.Model.Generated(Integer.Schema),
+	[ProductSchema.columns.name]: Schema.String,
+	[ProductSchema.columns.creationDate]: Integer.Schema,
 }) {}
 
 export class ProductExpiration extends SchemaX.Model.Class<ProductExpiration>(
 	'ProductExpiration',
 )({
-	id: SchemaX.Model.Generated(Integer.Schema),
-	date: Integer.Schema,
-	productId: Integer.Schema,
+	[ProductExpirationSchema.columns.id]: SchemaX.Model.Generated(Integer.Schema),
+	[ProductExpirationSchema.columns.date]: Integer.Schema,
+	[ProductExpirationSchema.columns.productId]: Integer.Schema,
 }) {}
 
 export class SqlDb extends Context.Service<SqlDb>()('dd33f8c5cbb72f0f', {
 	make: Effect.gen(function* () {
 		const sql = yield* Sql.SqlClient.SqlClient
 		const productDataLoader = yield* Sql.SqlModel.makeResolvers(Product, {
-			tableName: DbSchema.product.table,
-			idColumn: 'id',
+			tableName: ProductSchema.table,
+			idColumn: ProductSchema.columns.id,
 			spanPrefix: 'ProductDataLoader',
 		} as const)
 		const productRepository = yield* Sql.SqlModel.makeRepository(Product, {
-			tableName: DbSchema.product.table,
-			idColumn: 'id',
+			tableName: ProductSchema.table,
+			idColumn: ProductSchema.columns.id,
 			spanPrefix: 'ProductRepository',
 		} as const)
 		const productExpirationDataLoader = yield* Sql.SqlModel.makeResolvers(
 			ProductExpiration,
 			{
-				tableName: DbSchema.productExpiration.table,
-				idColumn: 'id',
+				tableName: ProductExpirationSchema.table,
+				idColumn: ProductExpirationSchema.columns.id,
 				spanPrefix: 'ProductExpirationDataLoader',
 			} as const,
 		)
 		const productExpirationRepository = yield* Sql.SqlModel.makeRepository(
 			ProductExpiration,
 			{
-				tableName: DbSchema.productExpiration.table,
-				idColumn: 'id',
+				tableName: ProductExpirationSchema.table,
+				idColumn: ProductExpirationSchema.columns.id,
 				spanPrefix: 'ProductExpirationRepository',
 			} as const,
 		)
@@ -81,12 +80,12 @@ export class SqlDb extends Context.Service<SqlDb>()('dd33f8c5cbb72f0f', {
 				Effect.forEach(
 					Effect.fn(function* (request) {
 						const product = yield* productRepository.insert({
-							creationDate: request.creationDate,
+							creation_date: request.creationDate,
 							name: request.name,
 						})
 						yield* productExpirationRepository.insert({
 							date: request.expirationDate,
-							productId: product.id,
+							product_id: product.id,
 						})
 						return product
 					}),

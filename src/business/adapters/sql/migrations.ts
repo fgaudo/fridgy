@@ -8,21 +8,22 @@ export const migrations = {
 		const sql = yield* SqlClient.SqlClient
 		yield* sql.withTransaction(
 			Effect.gen(function* () {
-				const product = DB.DbSchema.product
-				const productExpiration = DB.DbSchema.productExpiration
+				const product = DB.ProductSchema
+				const expiration = DB.ProductExpirationSchema
 				yield* sql`
-					CREATE TABLE ${product.table}(
-						${product.columns.id} INT PRIMARY KEY,
-						${product.columns.name} VARCHAR(255) NOT NULL,
-						${product.columns.creationDate} INT NOT NULL
-					)
-					CREATE TABLE ${DB.DbSchema.productExpiration.table}(
-						${productExpiration.columns.id} INT PRIMARY KEY,
-						${productExpiration.columns.date} INT NOT NULL,
-						FOREIGN KEY(${productExpiration.columns.productId})
-                REFERENCES ${product.columns.id})
+					CREATE TABLE ${sql(product.table)}(
+						${sql(product.columns.id)} INT PRIMARY KEY,
+						${sql(product.columns.name)} VARCHAR(255) NOT NULL,
+						${sql(product.columns.creationDate)} INT NOT NULL
+					);
+					CREATE TABLE ${sql(expiration.table)}(
+						${sql(expiration.columns.id)} INT PRIMARY KEY,
+						${sql(expiration.columns.date)} INT NOT NULL,
+						${sql(expiration.columns.productId)} INT NOT NULL,
+						FOREIGN KEY(${sql(expiration.columns.productId)})
+                REFERENCES ${sql(product.table)}(${sql(product.columns.id)})
                 ON DELETE CASCADE
-					)
+					);
 				`
 			}),
 		)

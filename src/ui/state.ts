@@ -8,7 +8,7 @@ import type * as Stream from 'effect/Stream'
 import * as T from 'effect/Tuple'
 
 import type { UseCase as UC } from '@/business/index.ts'
-import type * as StateManager from '@/core/state-manager.ts'
+import type * as StateManager from '@/core/fsm.ts'
 
 import { mapSubscriptions } from './helpers.ts'
 import * as Home from './home/state.ts'
@@ -32,7 +32,7 @@ const route = <S extends Parameters<typeof Page.$is>[0]>(
 		m: Extract<Message, Record<'_tag', `${S}_${string}`>>,
 	) => (
 		s: Data.TaggedEnum.Value<State['currentPage'], S>['state'],
-	) => StateManager.Transition<
+	) => StateManager.Step<
 		Data.TaggedEnum.Value<State['currentPage'], S>['state'],
 		Message,
 		UC.All
@@ -132,36 +132,34 @@ export const makeModel = (state: State): Model => {
 	}
 }
 
-export const fatalMessage = (_err: unknown) => T.make(Message.Crash())
+export const handleDefect = (_err: unknown) => T.make(Message.Crash())
 
-export const init: StateManager.Transition<
-	State,
-	Message,
-	UC.All | Home.UseCases
-> = (() => {
-	const [state, commands] = Home.init
-	return T.make(
-		{
-			toast: { version: 0n, maybeText: Option.none() },
-			currentPage: Page.Home({ state: state }),
-		},
-		commands,
-	)
-})()
+export const init: StateManager.Step<State, Message, UC.All | Home.UseCases> =
+	(() => {
+		const [state, commands] = Home.init
+		return T.make(
+			{
+				toast: { version: 0n, maybeText: Option.none() },
+				currentPage: Page.Home({ state: state }),
+			},
+			commands,
+		)
+	})()
 
-export const subscriptions: StateManager.Subscriptions<
+export const subscriptions: StateManager.Emitter<
 	State,
 	Message,
 	UC.All | Home.UseCases
 > = state => {
 	let subs = HashMap.empty<
-		readonly ['Home', unknown],
+		unknown,
 		Stream.Stream<
 			Array.NonEmptyReadonlyArray<Message>,
 			never,
 			UC.All | Home.UseCases
 		>
 	>()
+
 	if (state.currentPage._tag === 'Home') {
 		subs = HashMap.setMany(
 			subs,

@@ -17,30 +17,31 @@ const makeGetProducts = Effect.gen(function* () {
 		Request: Schema.Void,
 		Result: Schema.Struct({
 			maybeId: Schema.OptionFromNullishOr(Integer.Schema),
-			maybeName: Schema.OptionFromNullishOr(SqlDb.Product.fields.name),
+			maybeName: Schema.OptionFromNullishOr(SqlDb.Product.fields['name']),
 			maybeCreationDate: Schema.OptionFromNullishOr(
-				SqlDb.Product.fields.creationDate,
+				SqlDb.Product.fields['creation_date'],
 			),
 			maybeExpirationDate: Schema.OptionFromNullishOr(
-				SqlDb.ProductExpiration.fields.date,
+				SqlDb.ProductExpiration.fields['date'],
 			),
 		}),
 		execute: () => {
-			const { table: product_table, columns: product } = SqlDb.DbSchema.product
+			const { table: product_table, columns: product } = SqlDb.ProductSchema
 			const { table: expiration_table, columns: expiration } =
-				SqlDb.DbSchema.productExpiration
+				SqlDb.ProductExpirationSchema
 			return sql`
-            SELECT
-               ${sql(product.id)} as maybeId,
-               ${sql(product.name)} as maybeName,
-               ${sql(product.creationDate)} as maybeCreationDate,
-               ${sql(expiration.date)} as maybeExpirationDate
-            FROM ${sql(product_table)}
-            LEFT JOIN ${sql(expiration_table)}
-               ON ${sql(product.id)} = ${sql(expiration.id)}
-            ORDER BY
-               ${sql(expiration.date)} IS NULL, ${sql(expiration.date)}
-         `
+				SELECT
+						${sql(`${product_table}.${product.id}`)} as maybeId,
+						${sql(`${product_table}.${product.name}`)} as maybeName,
+						${sql(`${product_table}.${product.creationDate}`)} as maybeCreationDate,
+						${sql(`${expiration_table}.${expiration.date}`)} as maybeExpirationDate
+				FROM ${sql(product_table)}
+				LEFT JOIN ${sql(expiration_table)}
+						ON ${sql(`${product_table}.${product.id}`)} = ${sql(`${expiration_table}.${expiration.productId}`)}
+				${sql.csv('ORDER BY', [
+					sql`${sql(`${expiration_table}.${expiration.date}`)} IS NULL`,
+					sql`${sql(`${expiration_table}.${expiration.date}`)}`,
+				])}`
 		},
 	})()
 	// @effect-diagnostics-next-line returnEffectInGen:off

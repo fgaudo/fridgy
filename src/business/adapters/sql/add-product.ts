@@ -26,7 +26,7 @@ const makeAddProductResolver = Effect.gen(function* () {
 					? Effect.forEach(entry =>
 							productRepository.insert({
 								name: entry.request.product.name,
-								creationDate: entry.request.product.creationDate,
+								creation_date: entry.request.product.creationDate,
 							}),
 						)
 					: Effect.forEach(entry =>

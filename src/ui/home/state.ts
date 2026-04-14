@@ -11,11 +11,11 @@ import * as Stream from 'effect/Stream'
 import * as T from 'effect/Tuple'
 
 import { UseCase as UC } from '@/business/index.ts'
+import type * as StateManager from '@/core/fsm.ts'
 import type * as Integer from '@/core/integer/integer.ts'
 import type * as PositiveInteger from '@/core/integer/positive-integer.ts'
 import * as ArrX from '@/core/non-empty-array.ts'
 import * as NonEmptyHashSet from '@/core/non-empty-hash-set.ts'
-import type * as StateManager from '@/core/state-manager.ts'
 import type * as UnitInterval from '@/core/unit-interval.ts'
 
 import { Message } from '../messages.ts'
@@ -60,7 +60,7 @@ export type Model = Readonly<{
 							True: Readonly<{ message: Message }>
 							False: object
 						}>
-						selected: boolean
+						isSelected: boolean
 						id: string
 						maybeName: Opt.Option<string>
 					}>
@@ -468,7 +468,7 @@ export const update = Match.typeTags<
 	},
 })
 
-export const subscriptions: StateManager.Subscriptions<
+export const subscriptions: StateManager.Emitter<
 	State,
 	Message,
 	UseCases
@@ -510,7 +510,7 @@ const FetchListVersion = {
 	increment: (version: FetchListVersion) => _FetchListVersion(version + 1n),
 }
 
-export const init: StateManager.Transition<State, Message, UseCases> = T.make(
+export const init: StateManager.Step<State, Message, UseCases> = T.make(
 	{
 		versions: {
 			manualFetcher: FetchListVersion.make(0n),
@@ -532,7 +532,6 @@ export function makeModel(state: State): Model {
 			canFetch: { _tag: 'False' },
 		} satisfies Model
 	}
-
 	if (state.productListData._tag !== 'Available') {
 		return {
 			canNavigateOut: true,
@@ -543,7 +542,6 @@ export function makeModel(state: State): Model {
 					: { _tag: 'True', fetch: Message.Home_StartFetchList() },
 		} satisfies Model
 	}
-
 	const productListData = state.productListData
 	return {
 		canFetch:
@@ -599,7 +597,7 @@ export function makeModel(state: State): Model {
 									: { _tag: 'False' },
 							maybeName: product.maybeName,
 							id: product.id,
-							selected:
+							isSelected:
 								Opt.isSome(productListData.maybeSelectedProducts) &&
 								HashSet.has(
 									productListData.maybeSelectedProducts.value,

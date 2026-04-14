@@ -3,7 +3,7 @@
 
 	"tailwindCSS.classFunctions": ["tw"],
 	"tailwindCSS.experimental.classRegex": [
-		"h\\([^,]+,\\s*\\{\\s*props:\\s*\\{\\s*class:\\s*'([^']*)'\\s*\\}\\s*\\}\\)",
+		"h\\([^,]+,\\s*\\{[^}]*className:\\s*['\"`]([^'\"`]*)['\"`]",
 		"h\\([^,]+,\\s*\\{\\s*class:\\s*\\{\\s*'([^']*)'\\s*:\\s*[^,}\\s]+"
 	],
 	"dprint.experimentalLsp": true,
