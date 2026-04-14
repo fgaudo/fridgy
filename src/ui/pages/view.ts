@@ -6,15 +6,12 @@ import * as Match from 'effect/Match'
 import * as Option from 'effect/Option'
 import { h } from 'snabbdom'
 
+import type { View } from '@/ports/outbound/module-emitter.ts'
+
 import { loadFonts } from '../fonts/index.ts'
 import * as Home from './home/view.ts'
-import type { Message } from './messages.ts'
-import type * as VM from './state.ts'
 
-export const view = (
-	model: VM.Model,
-	{ dispatch }: { dispatch: (m: Message) => void },
-) => {
+export const view: View = (model, { dispatch }) => {
 	return h('div', [
 		Match.valueTags(model.currentPage, {
 			Home: ({ model }) => Home.view(model, { dispatch }),
@@ -44,5 +41,3 @@ export const view = (
 		}),
 	])
 }
-
-export type View = typeof view

@@ -7,12 +7,13 @@ import * as Option from 'effect/Option'
 import type * as Stream from 'effect/Stream'
 import * as T from 'effect/Tuple'
 
-import type { UseCase as UC } from '@/business/index.ts'
+import * as Home from '@/adapters/state-manager/default/home/state.ts'
 import type * as StateManager from '@/core/fsm.ts'
+import { Message } from '@/ports/inbound/message-dispatcher.ts'
+import type { Model } from '@/ports/outbound/model-emitter/model.ts'
+import type * as UC from '@/use-cases/index.ts'
 
-import { mapSubscriptions } from '../helpers.ts'
-import * as Home from './home/state.ts'
-import { Message } from './messages.ts'
+import { mapSubscriptions } from './helpers.ts'
 
 export type State = Readonly<{
 	toast: Readonly<{
@@ -99,16 +100,6 @@ export const update: StateManager.Update<State, Message, UC.All> =
 		Match.orElse(() => (state: State) => T.make(state, [])),
 	)
 
-export type Model = {
-	toast: {
-		key: string
-		maybeText: Option.Option<string>
-	}
-	currentPage: Data.TaggedEnum<{
-		Home: { model: Home.Model }
-		AddProduct: { model: object }
-	}>
-}
 export const PageModel = Data.taggedEnum<Model['currentPage']>()
 
 export const makeModel = (state: State): Model => {

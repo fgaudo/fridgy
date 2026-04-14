@@ -10,83 +10,19 @@ import * as Schedule from 'effect/Schedule'
 import * as Stream from 'effect/Stream'
 import * as T from 'effect/Tuple'
 
-import { UseCase as UC } from '@/business/index.ts'
 import type * as StateManager from '@/core/fsm.ts'
 import type * as Integer from '@/core/integer/integer.ts'
 import type * as PositiveInteger from '@/core/integer/positive-integer.ts'
 import * as ArrX from '@/core/non-empty-array.ts'
 import * as NonEmptyHashSet from '@/core/non-empty-hash-set.ts'
 import type * as UnitInterval from '@/core/unit-interval.ts'
-
-import { Message } from '../messages.ts'
+import { Message } from '@/ports/inbound/message-dispatcher.ts'
+import type { Model } from '@/ports/outbound/model-emitter/home/model'
+import * as UC from '@/use-cases/index.ts'
 
 export type UseCases =
 	| UC.DeleteProductsByIds.DeleteProductsByIds
 	| UC.GetProducts.GetProducts
-
-export type Model = Readonly<{
-	canNavigateOut: boolean
-	canFetch: Data.TaggedEnum<{
-		True: Readonly<{ fetch: Message }>
-		False: object
-	}>
-	productListStatus: Data.TaggedEnum<{
-		Initial: { activity: 'fetching' | 'idle' }
-		Error: { activity: 'fetching' | 'idle' }
-		Empty: { activity: 'fetching' | 'idle' }
-		Available: Readonly<{
-			activity: 'fetching' | 'idle' | 'deleting'
-			canDeleteSelected: Data.TaggedEnum<{
-				True: Readonly<{
-					deleteMessage: Message
-				}>
-				False: object
-			}>
-			canClearSelection: Data.TaggedEnum<{
-				True: Readonly<{
-					clearMessage: Message
-				}>
-				False: object
-			}>
-			total: PositiveInteger.PositiveInteger
-			products: Arr.NonEmptyReadonlyArray<
-				Data.TaggedEnum<{
-					Corrupt: Readonly<{
-						canToggle: Data.TaggedEnum<{ False: object }>
-						maybeName: Opt.Option<string>
-					}>
-					Invalid: Readonly<{
-						canToggle: Data.TaggedEnum<{
-							True: Readonly<{ message: Message }>
-							False: object
-						}>
-						isSelected: boolean
-						id: string
-						maybeName: Opt.Option<string>
-					}>
-					Valid: Readonly<{
-						canToggle: Data.TaggedEnum<{
-							True: Readonly<{ message: Message }>
-							False: object
-						}>
-						id: string
-						isSelected: boolean
-						name: string
-						status: Data.TaggedEnum<{
-							Everlasting: object
-							Stale: Readonly<{ expirationDate: Integer.Integer }>
-							Fresh: Readonly<{
-								expirationDate: Integer.Integer
-								timeLeft: Integer.Integer
-								freshnessRatio: UnitInterval.UnitInterval
-							}>
-						}>
-					}>
-				}>
-			>
-		}>
-	}>
-}>
 
 export type State = Readonly<{
 	versions: {

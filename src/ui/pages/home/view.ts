@@ -1,11 +1,11 @@
 import * as Match from 'effect/Match'
 import { h } from 'snabbdom'
 
-import type { Message } from '../messages.ts'
-import type * as VM from './state.ts'
+import type { Message } from '@/ports/inbound/message-dispatcher'
+import type { Model } from '@/ports/outbound/model-emitter/home/model'
 
 export const view = (
-	model: VM.Model,
+	model: Model,
 	{ dispatch }: { dispatch: (m: Message) => void },
 ) => {
 	return h('div', [
@@ -17,7 +17,7 @@ export const view = (
 						'h-14 bottom-0 text-on-background flex items-center fixed w-full',
 				},
 			},
-			h('div', { props: { className: 'font-extrabold' } }, 'fridgy'),
+			h('div', { props: { className: 'font-extrabold' } }, 'fridgy!!!'),
 		),
 		h(
 			'div',
