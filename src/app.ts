@@ -1,4 +1,3 @@
-// oxlint-disable unicorn/prefer-top-level-await
 import * as Browser from '@effect/platform-browser'
 import * as Effect from 'effect/Effect'
 import * as Layer from 'effect/Layer'
@@ -35,23 +34,24 @@ const uiModuleEmitterLayer = (() => {
 })()
 
 Browser.BrowserRuntime.runMain(
-	Effect.gen(function* () {
-		const render = yield* Renderer
-		const uiModule$ = yield* UiModuleEmitter
-		const model$ = yield* ModelEmitter
-		return yield* model$.pipe(
-			Stream.zipLatestWith(
-				uiModule$.pipe(
-					Stream.map(({ makeUi }) => makeUi),
-					Stream.flattenEffect,
+	Effect.scoped(
+		Effect.gen(function* () {
+			const render = yield* Renderer
+			const uiModule$ = yield* UiModuleEmitter
+			const model$ = yield* ModelEmitter
+			return yield* model$.pipe(
+				Stream.zipLatestWith(
+					uiModule$.pipe(
+						Stream.map(({ makeUi }) => makeUi),
+						Stream.flattenEffect,
+					),
+					(model, view) => [model, view] as const,
 				),
-				(model, view) => [model, view] as const,
-			),
-			Stream.map(([model, view]) => view(model)),
-			Stream.runForEach(render),
-		)
-	}).pipe(
-		Effect.scoped,
+				Stream.map(([model, view]) => view(model)),
+				Stream.runForEach(render),
+			)
+		}),
+	).pipe(
 		Effect.provide([
 			Layer.succeed(References.MinimumLogLevel, 'Debug'),
 			StateManager.layer.pipe(Layer.provideMerge(useCasesLayer)),

@@ -28,7 +28,6 @@ const commonBuildConfig = Effect.gen(function* () {
 		plugins: [BunTailwind],
 		loader: { '.css': 'css' },
 		naming: {
-			// default values
 			entry: '[name].[ext]',
 			chunk: '[name].[ext]',
 			asset: '[name].[ext]',
@@ -58,7 +57,6 @@ const buildProd = Effect.gen(function* () {
 				syntax: true,
 			},
 			define: {
-				// This forces 'process.env.NODE_ENV' to literally become the string "production"
 				'process.env.NODE_ENV': '"production"',
 			},
 			sourcemap: 'none',
@@ -141,12 +139,11 @@ const buildCommand = Cli.Command.make(
 )
 
 EffBun.BunRuntime.runMain(
-	Cli.Command.run(
-		Cli.Command.make('cli.ts').pipe(
-			Cli.Command.withSubcommands([buildCommand, serveCommand]),
-		),
-		{
+	Cli.Command.make('cli.ts').pipe(
+		Cli.Command.withSubcommands([buildCommand, serveCommand]),
+		Cli.Command.run({
 			version: '1.0',
-		},
-	).pipe(Effect.provide([EffBun.BunServices.layer])),
+		}),
+		Effect.provide([EffBun.BunServices.layer]),
+	),
 )
