@@ -3,6 +3,12 @@
 	"private": true,
 	"type": "module",
 	"module": "index.ts",
+	"scripts": {
+		"update-licenses": "license-checker-rseidelsohn --excludePackages fridgy --json --customPath src/ui/assets/custom-path.json --out src/ui/assets/licenses.json --depth 0",
+		"build": "bun ./scripts/cli.ts build",
+		"serve": "bun ./scripts/cli.ts serve",
+		"prepare": "effect-language-service patch"
+	},
 	"dependencies": {
 		"@capacitor/android": "latest",
 		"@capacitor/core": "latest",
@@ -22,6 +28,7 @@
 		"@effect/platform-bun": "beta",
 		"@types/bun": "^1.3.12",
 		"bun-plugin-tailwind": "^0.1.2",
+		"license-checker-rseidelsohn": "^4.4.2",
 		"oxfmt": "^0.42.0",
 		"oxlint": "1.58.0",
 		"tailwindcss": "^4.2.2",

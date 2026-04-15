@@ -3,7 +3,7 @@ import * as Layer from 'effect/Layer'
 import * as SynchronizedRef from 'effect/SynchronizedRef'
 import * as Snabbdom from 'snabbdom'
 
-import { Renderer } from '@/ports/outbound/renderer.ts'
+import { HtmlView, Renderer } from '@/ports/outbound/renderer.ts'
 
 export const layer = (root: Element) =>
 	Layer.effect(
@@ -22,7 +22,7 @@ export const layer = (root: Element) =>
 
 			return view =>
 				SynchronizedRef.updateEffect(containerRef, node =>
-					Effect.sync(() => patch(node, view)),
+					Effect.sync(() => patch(node, HtmlView.get(view) as Snabbdom.VNode)),
 				)
 		}),
 	)

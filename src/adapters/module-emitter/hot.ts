@@ -4,7 +4,11 @@ import * as Layer from 'effect/Layer'
 import * as SubscriptionRef from 'effect/SubscriptionRef'
 import * as Socket from 'effect/unstable/socket'
 
-import { UiModuleEmitter } from '@/ports/inbound/ui-module-emitter.ts'
+import { safeImport } from '@/core/safe.ts'
+import {
+	UiModuleEmitter,
+	type UiModule,
+} from '@/ports/inbound/ui-module-emitter.ts'
 
 export const layer = ({
 	modulePath,
@@ -18,13 +22,13 @@ export const layer = ({
 		Effect.gen(function* () {
 			const loadView = Effect.gen(function* () {
 				const millis = yield* Clock.currentTimeMillis
-				const { view } = yield* Effect.promise(
-					() => import(`${modulePath}?t=${millis}`),
-				)
-				return view
+				const module = (yield* safeImport(
+					`${modulePath}?t=${millis}`,
+				)) as UiModule
+				return module
 			})
 
-			const initialView = yield* loadView
+			const initialView: UiModule = yield* loadView
 			const view = yield* SubscriptionRef.make(initialView)
 			const socket = yield* Socket.Socket.Socket
 

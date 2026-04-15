@@ -8,7 +8,7 @@ export const view = (
 	model: Model,
 	{ dispatch }: { dispatch: (m: Message) => void },
 ) => {
-	return h('div', [
+	return h('div', { props: { className: 'bg-red-300' } }, [
 		h(
 			'div',
 			{
@@ -17,7 +17,11 @@ export const view = (
 						'h-14 bottom-0 text-on-background flex items-center fixed w-full',
 				},
 			},
-			h('div', { props: { className: 'font-extrabold' } }, 'fridgy!!!'),
+			h(
+				'div',
+				{ props: { className: 'font-extrabold font-stylish' } },
+				'fridgy!!!!!',
+			),
 		),
 		h(
 			'div',

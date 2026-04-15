@@ -1,5 +1,5 @@
 import * as Array from 'effect/Array'
-import * as Cause from 'effect/Cause'
+import type * as Cause from 'effect/Cause'
 import type * as Data from 'effect/Data'
 import * as Deferred from 'effect/Deferred'
 import * as Effect from 'effect/Effect'
@@ -11,6 +11,7 @@ import * as Newtype from 'effect/Newtype'
 import * as Option from 'effect/Option'
 import * as PubSub from 'effect/PubSub'
 import * as Queue from 'effect/Queue'
+import * as Schedule from 'effect/Schedule'
 import * as Stream from 'effect/Stream'
 import * as SubscriptionRef from 'effect/SubscriptionRef'
 
@@ -56,7 +57,7 @@ export const prepare = <State, Message, R, K>({
 }: {
 	update: Update<State, Message, R>
 	handleDefect: (
-		errors: ReadonlyArray<Error>,
+		cause: Cause.Cause<unknown>,
 	) => NoInfer<Array.NonEmptyReadonlyArray<Message>>
 	emitter?: Emitter<State, Message, R, K>
 }) => {
@@ -80,7 +81,7 @@ export const prepare = <State, Message, R, K>({
 		)
 		const update$ = Stream.fromQueue(messageQueue).pipe(
 			Stream.onStart(Effect.logDebug('Update loop started')),
-			Stream.mapEffect(messages =>
+			Stream.flatMap(messages =>
 				SubscriptionRef.modify(transitionRef, ({ state }) => {
 					const [newState, commands] = Array.reduce(
 						messages,
@@ -94,7 +95,16 @@ export const prepare = <State, Message, R, K>({
 						commands,
 						{ _tag: 'Subsequent', state: newState, messages },
 					] as const
-				}),
+				}).pipe(
+					Stream.fromEffect,
+					Stream.catchCause(
+						Function.flow(
+							cause => Queue.offer(messageQueue, handleDefect(cause)),
+							Stream.fromEffect,
+							Stream.flatMap(() => Stream.empty),
+						),
+					),
+				),
 			),
 			Stream.flattenIterable,
 			Stream.flattenIterable,
@@ -113,7 +123,18 @@ export const prepare = <State, Message, R, K>({
 									yield* Deferred.succeed(isReady, undefined)
 								}),
 							),
-							Stream.map(({ state }) => maybeEmitter.value(state)),
+							Stream.flatMap(({ state }) =>
+								Stream.sync(() => maybeEmitter.value(state)).pipe(
+									Stream.catchCause(
+										Function.flow(
+											handleDefect,
+											messages =>
+												Stream.fromEffect(Queue.offer(messageQueue, messages)),
+											Stream.flatMap(() => Stream.empty),
+										),
+									),
+								),
+							),
 							Stream.map(
 								map => [HashSet.fromIterable(HashMap.keys(map)), map] as const,
 							),
@@ -148,9 +169,12 @@ export const prepare = <State, Message, R, K>({
 										HashMap.set(mutable, key, interruption)
 										streams = Array.append(
 											streams,
-											Stream.interruptWhen(
-												stream,
-												Deferred.await(interruption),
+											stream.pipe(
+												Stream.onError(cause =>
+													Queue.offer(messageQueue, handleDefect(cause)),
+												),
+												Stream.retry(Schedule.forever),
+												Stream.interruptWhen(Deferred.await(interruption)),
 											),
 										)
 									}
@@ -172,9 +196,6 @@ export const prepare = <State, Message, R, K>({
 					}),
 				)
 		const transition$ = yield* message$.pipe(
-			Stream.catchCause(cause =>
-				cause.pipe(Cause.prettyErrors, handleDefect, Stream.make),
-			),
 			Stream.tap(messages => Queue.offer(messageQueue, messages)),
 			Stream.drain,
 			Stream.merge(SubscriptionRef.changes(transitionRef)),

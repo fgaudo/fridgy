@@ -2,13 +2,17 @@ import * as Effect from 'effect/Effect'
 import * as Layer from 'effect/Layer'
 import * as Stream from 'effect/Stream'
 
-import { UiModuleEmitter } from '@/ports/inbound/ui-module-emitter.ts'
-
-export const layer = Layer.effect(
+import { safeImport } from '@/core/safe.ts'
+import {
 	UiModuleEmitter,
-	Effect.gen(function* () {
-		const { view } = yield* Effect.promise(() => import('@/ui/pages/view.ts'))
+	type UiModule,
+} from '@/ports/inbound/ui-module-emitter.ts'
 
-		return Stream.make({ view })
-	}),
-)
+export const layer = (path: string) =>
+	Layer.effect(
+		UiModuleEmitter,
+		Effect.gen(function* () {
+			const module = (yield* safeImport(path)) as UiModule
+			return Stream.make(module)
+		}),
+	)

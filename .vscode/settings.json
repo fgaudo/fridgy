@@ -10,5 +10,8 @@
 	"js/ts.tsdk.promptToUseWorkspaceVersion": true,
 	"js/ts.tsdk.path": "node_modules\\typescript\\lib",
 	"js/ts.preferences.importModuleSpecifierEnding": "js",
-	"js/ts.preferences.importModuleSpecifier": "non-relative"
+	"js/ts.preferences.importModuleSpecifier": "non-relative",
+	"files.associations": {
+		"*.css": "tailwindcss"
+	}
 }

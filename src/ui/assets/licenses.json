@@ -1,0 +1,171 @@
+{
+    "@capacitor/android@8.3.0": {
+        "licenses": "MIT",
+        "repository": "https://github.com/ionic-team/capacitor",
+        "publisher": "Ionic Team",
+        "email": "hi@ionic.io",
+        "copyright": "Copyright (c) 2017-present Drifty Co.",
+        "name": "@capacitor/android",
+        "description": "Capacitor: Cross-platform apps with JavaScript and the web"
+    },
+    "@capacitor/cli@8.3.0": {
+        "licenses": "MIT",
+        "repository": "https://github.com/ionic-team/capacitor",
+        "publisher": "Ionic Team",
+        "email": "hi@ionic.io",
+        "copyright": "Copyright (c) 2017-present Drifty Co.",
+        "name": "@capacitor/cli",
+        "description": "Capacitor: Cross-platform apps with JavaScript and the web"
+    },
+    "@capacitor/core@8.3.0": {
+        "licenses": "MIT",
+        "repository": "https://github.com/ionic-team/capacitor",
+        "publisher": "Ionic Team",
+        "email": "hi@ionic.io",
+        "copyright": "Copyright (c) 2017-present Drifty Co.",
+        "name": "@capacitor/core",
+        "description": "Capacitor: Cross-platform apps with JavaScript and the web"
+    },
+    "@capacitor/splash-screen@8.0.1": {
+        "licenses": "MIT",
+        "repository": "https://github.com/ionic-team/capacitor-plugins",
+        "publisher": "Ionic",
+        "email": "hi@ionicframework.com",
+        "copyright": "Copyright 2020-present Ionic. https://ionic.io",
+        "name": "@capacitor/splash-screen",
+        "description": "The Splash Screen API provides methods for showing or hiding a Splash image."
+    },
+    "@capacitor/toast@8.0.1": {
+        "licenses": "MIT",
+        "repository": "https://github.com/ionic-team/capacitor-plugins",
+        "publisher": "Ionic",
+        "email": "hi@ionicframework.com",
+        "copyright": "Copyright 2020-present Ionic. https://ionic.io",
+        "name": "@capacitor/toast",
+        "description": "The Toast API provides a notification pop up for displaying important information to a user. Just like real toast!"
+    },
+    "@effect/language-service@0.85.1": {
+        "licenses": "MIT",
+        "repository": "https://github.com/Effect-TS/language-service",
+        "publisher": "Michael Arnaldi",
+        "email": "ma@matechs.com",
+        "copyright": "Copyright (c) 2023 Effectful Technologies Inc",
+        "name": "@effect/language-service",
+        "description": "A Language-Service Plugin to Refactor and Diagnostic effect-ts projects"
+    },
+    "@effect/platform-browser@4.0.0-beta.49": {
+        "licenses": "MIT",
+        "repository": "https://github.com/Effect-TS/effect-smol",
+        "copyright": "Copyright (c) 2023 Effectful Technologies Inc",
+        "name": "@effect/platform-browser",
+        "description": "Platform specific implementations for the browser"
+    },
+    "@effect/platform-bun@4.0.0-beta.49": {
+        "licenses": "MIT",
+        "repository": "https://github.com/Effect-TS/effect-smol",
+        "copyright": "Copyright (c) 2023 Effectful Technologies Inc",
+        "name": "@effect/platform-bun",
+        "description": "Platform specific implementations for the Bun runtime"
+    },
+    "@effect/sql-sqlite-wasm@4.0.0-beta.49": {
+        "licenses": "MIT",
+        "repository": "https://github.com/Effect-TS/effect-smol",
+        "copyright": "Copyright (c) 2023-present The Contributors",
+        "name": "@effect/sql-sqlite-wasm",
+        "description": "A SQLite toolkit for Effect"
+    },
+    "@ionic/pwa-elements@3.4.0": {
+        "licenses": "MIT",
+        "repository": "https://github.com/ionic-team/ionic-pwa-elements",
+        "publisher": "Ionic Team",
+        "copyright": "Copyright (c) 2017 Ionic",
+        "name": "@ionic/pwa-elements",
+        "description": "Stencil Component Starter"
+    },
+    "@types/bun@1.3.12": {
+        "licenses": "MIT",
+        "repository": "https://github.com/DefinitelyTyped/DefinitelyTyped",
+        "name": "@types/bun",
+        "description": "TypeScript definitions for bun",
+        "copyright": ""
+    },
+    "bun-plugin-tailwind@0.1.2": {
+        "licenses": "MIT",
+        "repository": "https://github.com/tailwindlabs/tailwindcss",
+        "name": "bun-plugin-tailwind",
+        "description": "Bun plugin for Tailwind CSS v4",
+        "copyright": ""
+    },
+    "clsx@2.1.1": {
+        "licenses": "MIT",
+        "repository": "https://github.com/lukeed/clsx",
+        "publisher": "Luke Edwards",
+        "email": "luke.edwards05@gmail.com",
+        "copyright": "Copyright (c) Luke Edwards <luke.edwards05@gmail.com> (lukeed.com)",
+        "name": "clsx",
+        "description": "A tiny (239B) utility for constructing className strings conditionally."
+    },
+    "effect@4.0.0-beta.49": {
+        "licenses": "MIT",
+        "repository": "https://github.com/Effect-TS/effect-smol",
+        "copyright": "Copyright (c) 2023 Effectful Technologies Inc",
+        "name": "effect",
+        "description": "The missing standard library for TypeScript, for writing production-grade software."
+    },
+    "license-checker-rseidelsohn@4.4.2": {
+        "licenses": "BSD-3-Clause",
+        "repository": "https://github.com/RSeidelsohn/license-checker-rseidelsohn",
+        "publisher": "Roman Seidelsohn",
+        "email": "rseidelsohn@gmail.com",
+        "copyright": "Copyright 2012 Yahoo Inc.",
+        "name": "license-checker-rseidelsohn",
+        "description": "Extract NPM package licenses - Feature enhanced version of the original license-checker v25.0.1"
+    },
+    "oxfmt@0.42.0": {
+        "licenses": "MIT",
+        "repository": "https://github.com/oxc-project/oxc",
+        "publisher": "Boshen and oxc contributors",
+        "copyright": "Copyright (c) 2024-present VoidZero Inc. & Contributors. Copyright (c) 2023 Boshen",
+        "name": "oxfmt",
+        "description": "Formatter for the JavaScript Oxidation Compiler"
+    },
+    "oxlint@1.58.0": {
+        "licenses": "MIT",
+        "repository": "https://github.com/oxc-project/oxc",
+        "publisher": "Boshen and oxc contributors",
+        "copyright": "Copyright (c) 2024-present VoidZero Inc. & Contributors. Copyright (c) 2023 Boshen",
+        "name": "oxlint",
+        "description": "Linter for the JavaScript Oxidation Compiler"
+    },
+    "snabbdom@3.6.3": {
+        "licenses": "MIT",
+        "repository": "https://github.com/snabbdom/snabbdom",
+        "publisher": "Simon Friis Vindum",
+        "copyright": "Copyright (c) 2015 Simon Friis Vindum",
+        "name": "snabbdom",
+        "description": "A virtual DOM library with focus on simplicity, modularity, powerful features and performance."
+    },
+    "tailwind-merge@3.5.0": {
+        "licenses": "MIT",
+        "repository": "https://github.com/dcastil/tailwind-merge",
+        "publisher": "Dany Castillo",
+        "copyright": "Copyright (c) 2021 Dany Castillo",
+        "name": "tailwind-merge",
+        "description": "Merge Tailwind CSS classes without style conflicts"
+    },
+    "tailwindcss@4.2.2": {
+        "licenses": "MIT",
+        "repository": "https://github.com/tailwindlabs/tailwindcss",
+        "copyright": "Copyright (c) Tailwind Labs, Inc.",
+        "name": "tailwindcss",
+        "description": "A utility-first CSS framework for rapidly building custom user interfaces."
+    },
+    "typescript@6.0.2": {
+        "licenses": "Apache-2.0",
+        "repository": "https://github.com/microsoft/TypeScript",
+        "publisher": "Microsoft Corp.",
+        "name": "typescript",
+        "description": "TypeScript is a language for application scale JavaScript development",
+        "copyright": ""
+    }
+}
