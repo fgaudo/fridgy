@@ -8,19 +8,23 @@ import * as Path from 'effect/Path'
 import * as Stream from 'effect/Stream'
 import * as Cli from 'effect/unstable/cli'
 
-const metaDir = Effect.sync(() => import.meta.dir)
+const makeRootResolver = Effect.gen(function* () {
+	const path = yield* Path.Path
+	const currentDir = yield* Effect.sync(() => import.meta.dir)
+	return (...parts: ReadonlyArray<string>) =>
+		path.join(currentDir, '..', ...parts)
+})
 
 const commonBuildConfig = Effect.gen(function* () {
-	const path = yield* Path.Path
-	const currentDir = yield* metaDir
+	const resolve = yield* makeRootResolver
 	return {
 		target: 'browser',
 		entrypoints: [
-			path.join(currentDir, '../src/sqlite-worker.ts'),
-			path.join(currentDir, '../src/ui/ui.ts'),
-			path.join(currentDir, '../src/app.ts'),
+			resolve('./src/sqlite-worker.ts'),
+			resolve('./src/ui/ui.ts'),
+			resolve('./src/app.ts'),
 		],
-		outdir: path.join(currentDir, '../dist'),
+		outdir: resolve('./dist'),
 		plugins: [BunTailwind],
 		loader: { '.css': 'css' },
 		naming: {
@@ -63,32 +67,28 @@ const buildProd = Effect.gen(function* () {
 })
 
 const prepareDist = Effect.gen(function* () {
-	const path = yield* Path.Path
+	const resolve = yield* makeRootResolver
 	const fs = yield* FS.FileSystem
-	const currentDir = yield* metaDir
-	yield* fs.remove(path.join(currentDir, '../dist'), {
+	yield* fs.remove(resolve('./dist'), {
 		force: true,
 		recursive: true,
 	})
-	yield* fs.makeDirectory(path.join(currentDir, '../dist'))
+	yield* fs.makeDirectory(resolve('./dist'))
 	yield* fs.copyFile(
-		path.join(
-			currentDir,
-			'../node_modules/@effect/wa-sqlite/dist/wa-sqlite.wasm',
-		),
-		path.join(currentDir, '../dist/wa-sqlite.wasm'),
+		resolve('./node_modules/@effect/wa-sqlite/dist/wa-sqlite.wasm'),
+		resolve('./dist/wa-sqlite.wasm'),
 	)
 	yield* fs.copyFile(
-		path.join(currentDir, '../src/index.html'),
-		path.join(currentDir, '../dist/index.html'),
+		resolve('./src/ui/index.html'),
+		resolve('./dist/index.html'),
 	)
 	yield* fs.copyFile(
-		path.join(currentDir, '../src/ui/fonts/comfortaa-latin-ext.woff2'),
-		path.join(currentDir, '../dist/comfortaa-latin-ext.woff2'),
+		resolve('./src/ui/fonts/comfortaa-latin-ext.woff2'),
+		resolve('./dist/comfortaa-latin-ext.woff2'),
 	)
 	yield* fs.copyFile(
-		path.join(currentDir, '../src/ui/fonts/comfortaa-latin.woff2'),
-		path.join(currentDir, '../dist/comfortaa-latin.woff2'),
+		resolve('./src/ui/fonts/comfortaa-latin.woff2'),
+		resolve('./dist/comfortaa-latin.woff2'),
 	)
 })
 
@@ -97,8 +97,7 @@ const serveCommand = Cli.Command.make(
 	{},
 	Effect.fn(function* () {
 		const fs = yield* FS.FileSystem
-		const path = yield* Path.Path
-		const currentDir = yield* metaDir
+		const resolve = yield* makeRootResolver
 		const server = yield* Effect.sync(() =>
 			Bun.serve({
 				port: 3000,
@@ -117,7 +116,7 @@ const serveCommand = Cli.Command.make(
 		yield* prepareDist
 		yield* buildDev
 		const publish = Effect.sync(() => server.publish('refresh', 'reload-page'))
-		return yield* fs.watch(path.join(currentDir, '../src/ui')).pipe(
+		return yield* fs.watch(resolve('./src/ui')).pipe(
 			Stream.tap(
 				Effect.fnUntraced(
 					function* () {

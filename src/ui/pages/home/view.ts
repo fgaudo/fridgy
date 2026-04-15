@@ -20,7 +20,7 @@ export const view = (
 			h(
 				'div',
 				{ props: { className: 'font-extrabold font-stylish' } },
-				'fridgy!!!!!',
+				'111fridgy!!!!!',
 			),
 		),
 		h(
