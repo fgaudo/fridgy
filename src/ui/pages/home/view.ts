@@ -2,7 +2,7 @@ import * as Match from 'effect/Match'
 import { h } from 'snabbdom'
 
 import type { Message } from '@/ports/inbound/message-dispatcher'
-import type { Model } from '@/ports/outbound/model-emitter/home/model'
+import type { Model } from '@/ports/inbound/model-emitter/home/model'
 
 export const view = (
 	model: Model,

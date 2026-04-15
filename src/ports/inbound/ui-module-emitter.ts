@@ -3,7 +3,7 @@ import type * as Stream from 'effect/Stream'
 import type { VNode } from 'snabbdom'
 
 import type { Message } from '@/ports/inbound/message-dispatcher.ts'
-import type { Model } from '@/ports/outbound/model-emitter/model.ts'
+import type { Model } from '@/ports/inbound/model-emitter/model'
 
 export type Module = {
 	view: (

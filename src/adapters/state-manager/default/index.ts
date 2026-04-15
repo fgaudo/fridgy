@@ -4,7 +4,7 @@ import * as Stream from 'effect/Stream'
 
 import * as Fsm from '@/core/fsm.ts'
 import * as MessageDispatcher from '@/ports/inbound/message-dispatcher.ts'
-import * as ModelEmitter from '@/ports/outbound/model-emitter/index.ts'
+import * as ModelEmitter from '@/ports/inbound/model-emitter/index.ts'
 
 import * as Root from './state.ts'
 
