@@ -8,7 +8,7 @@ import * as ModelEmitter from '@/ports/outbound/model-emitter/index.ts'
 
 import * as Root from './state.ts'
 
-export const stateManagerLayer = Effect.gen(function* () {
+export const layer = Effect.gen(function* () {
 	const manager = yield* Fsm.prepare({
 		update: Root.update,
 		handleDefect: Root.handleDefect,

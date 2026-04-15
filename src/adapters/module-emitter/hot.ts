@@ -6,7 +6,7 @@ import * as Socket from 'effect/unstable/socket'
 
 import { UiModuleEmitter } from '@/ports/inbound/ui-module-emitter.ts'
 
-export const hotLayer = ({
+export const layer = ({
 	modulePath,
 	cssLinkElement,
 }: {

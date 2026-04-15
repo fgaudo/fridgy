@@ -5,7 +5,7 @@ import * as Snabbdom from 'snabbdom'
 
 import { Renderer } from '@/ports/outbound/renderer.ts'
 
-export const snabbdomRendererLayer = (root: Element) =>
+export const layer = (root: Element) =>
 	Layer.effect(
 		Renderer,
 		Effect.gen(function* () {
@@ -13,18 +13,16 @@ export const snabbdomRendererLayer = (root: Element) =>
 				Element | Snabbdom.VNode
 			>(root)
 
-			const patch = (() => {
-				const _patch = Snabbdom.init([
-					Snabbdom.classModule,
-					Snabbdom.propsModule,
-					Snabbdom.styleModule,
-					Snabbdom.eventListenersModule,
-				])
-				return (that: Parameters<typeof _patch>[1]) =>
-					(self: Parameters<typeof _patch>[0]) =>
-						Effect.sync(() => _patch(self, that))
-			})()
+			const patch = Snabbdom.init([
+				Snabbdom.classModule,
+				Snabbdom.propsModule,
+				Snabbdom.styleModule,
+				Snabbdom.eventListenersModule,
+			])
 
-			return view => SynchronizedRef.updateEffect(containerRef, patch(view))
+			return view =>
+				SynchronizedRef.updateEffect(containerRef, node =>
+					Effect.sync(() => patch(node, view)),
+				)
 		}),
 	)
