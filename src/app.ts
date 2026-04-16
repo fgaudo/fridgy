@@ -22,7 +22,7 @@ const useCasesLayer = all.pipe(
 )
 
 const uiModuleEmitterLayer = (() => {
-	if (process.env.NODE_ENV === 'production') {
+	if (____FRIDGY_PROD____ === 'true') {
 		return NoopModuleEmitter.layer('./ui.js')
 	}
 	return HotModuleEmitter.layer({
@@ -45,9 +45,9 @@ Browser.BrowserRuntime.runMain(
 						Stream.map(({ makeUi }) => makeUi),
 						Stream.flattenEffect,
 					),
-					(model, view) => [model, view] as const,
+					(model, makeView) => [model, makeView] as const,
 				),
-				Stream.map(([model, view]) => view(model)),
+				Stream.map(([model, makeView]) => makeView(model)),
 				Stream.runForEach(render),
 			)
 		}),

@@ -2,7 +2,7 @@ import * as Context from 'effect/Context'
 import * as Data from 'effect/Data'
 import type * as Effect from 'effect/Effect'
 
-import type { PrefixKeys } from '@/core/types'
+import type { PrefixKeys } from '@/core/types.ts'
 import type * as UC from '@/use-cases/index.ts'
 
 export type Message = Data.TaggedEnum<

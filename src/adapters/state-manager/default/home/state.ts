@@ -17,7 +17,7 @@ import * as ArrX from '@/core/non-empty-array.ts'
 import * as NonEmptyHashSet from '@/core/non-empty-hash-set.ts'
 import type * as UnitInterval from '@/core/unit-interval.ts'
 import { Message } from '@/ports/inbound/message-dispatcher.ts'
-import type { Model } from '@/ports/inbound/model-emitter/home/model'
+import type { Model } from '@/ports/inbound/model-emitter/home/model.ts'
 import * as UC from '@/use-cases/index.ts'
 
 export type UseCases =

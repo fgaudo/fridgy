@@ -5,7 +5,7 @@ import type * as Opt from 'effect/Option'
 import type * as Integer from '@/core/integer/integer.ts'
 import type * as PositiveInteger from '@/core/integer/positive-integer.ts'
 import type * as UnitInterval from '@/core/unit-interval.ts'
-import type { Message } from '@/ports/inbound/message-dispatcher'
+import type { Message } from '@/ports/inbound/message-dispatcher.ts'
 
 export type Model = Readonly<{
 	canNavigateOut: boolean

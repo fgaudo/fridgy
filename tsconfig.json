@@ -1,6 +1,8 @@
 {
-	"$schema": "https://raw.githubusercontent.com/Effect-TS/tsgo/refs/heads/main/schema.json",
+	"$schema": "./node_modules/@effect/language-service/schema.json",
 	"compilerOptions": {
+		"jsx": "react-jsx",
+		"jsxImportSource": "@herp-inc/snabbdom-jsx",
 		"plugins": [
 			{
 				"name": "@effect/language-service",
@@ -39,7 +41,6 @@
 				}
 			}
 		],
-
 		"paths": {
 			"@/core/*": ["./src/core/*"],
 			"@/business/*": ["./src/business/*"],

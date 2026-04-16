@@ -2,7 +2,7 @@ import * as Context from 'effect/Context'
 import * as Req from 'effect/Request'
 import type * as RequestResolver from 'effect/RequestResolver'
 
-import type { ProductOutput } from '../../domain/product'
+import type { ProductOutput } from '@/domain/product.ts'
 
 export interface Request extends Req.Request<string, void> {
 	id: string

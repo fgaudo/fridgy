@@ -17,6 +17,7 @@ export const layer = (root: Element) =>
 				Snabbdom.classModule,
 				Snabbdom.propsModule,
 				Snabbdom.styleModule,
+				Snabbdom.attributesModule,
 				Snabbdom.eventListenersModule,
 			])
 

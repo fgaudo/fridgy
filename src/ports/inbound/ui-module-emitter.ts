@@ -3,7 +3,7 @@ import type * as Effect from 'effect/Effect'
 import type * as Stream from 'effect/Stream'
 
 import type { MessageDispatcher } from '@/ports/inbound/message-dispatcher.ts'
-import type { Model } from '@/ports/inbound/model-emitter/model'
+import type { Model } from '@/ports/inbound/model-emitter/model.ts'
 import type { HtmlView } from '@/ports/outbound/renderer.ts'
 
 export type UiModule = {

@@ -39,9 +39,9 @@ export const layer = ({
 				)
 				const url = new URL(href, window.location.origin)
 				url.searchParams.set('t', millis.toString())
-				yield* Effect.sync(() =>
-					cssLinkElement.setAttribute('href', url.toString()),
-				)
+				yield* Effect.sync(() => {
+					cssLinkElement.setAttribute('href', url.toString())
+				})
 			})
 
 			yield* socket

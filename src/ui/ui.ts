@@ -17,7 +17,7 @@ import type { UiModule } from '@/ports/inbound/ui-module-emitter.ts'
 import { HtmlView } from '@/ports/outbound/renderer.ts'
 
 import { loadFonts } from './fonts/index.ts'
-import * as Home from './pages/home/view.ts'
+import * as Home from './pages/home/view.tsx'
 
 export const makeUi: UiModule['makeUi'] = Effect.gen(function* () {
 	const messageDispatcher = yield* MessageDispatcher
@@ -29,22 +29,10 @@ export const makeUi: UiModule['makeUi'] = Effect.gen(function* () {
 		HtmlView.set(
 			h('div', [
 				Match.valueTags(model.currentPage, {
-					Home: ({ model }) => Home.view(model, { dispatch }),
+					Home: ({ model }) => Home.makeView(model, { dispatch }),
 					AddProduct: () =>
 						h('div', { class: { 'text-2xl text-white': true } }, []),
 				}),
-				h('div', {
-					key: model.toast.key,
-					hook: {
-						insert: () => {
-							const maybeText = model.toast.maybeText
-							if (Option.isSome(maybeText)) {
-								void Toast.show({ text: maybeText.value })
-							}
-						},
-					},
-				}),
-				h('div', '1asd33ads33dsa3sa3dd3d35a55'),
 				h('div', {
 					key: 'static',
 					hook: {
