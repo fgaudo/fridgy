@@ -8,22 +8,20 @@ import { Renderer } from '@/app/ports/outbound/renderer.ts'
 import { AppLayer } from '@/infra/configuration/app.ts'
 
 Browser.BrowserRuntime.runMain(
-	Effect.scoped(
-		Effect.gen(function* () {
-			const render = yield* Renderer
-			const uiModule$ = yield* UiModuleEmitter
-			const model$ = yield* ModelEmitter
-			return yield* model$.pipe(
-				Stream.zipLatestWith(
-					uiModule$.pipe(
-						Stream.map(({ makeUi }) => makeUi),
-						Stream.flattenEffect,
-					),
-					(model, makeView) => [model, makeView] as const,
+	Effect.gen(function* () {
+		const render = yield* Renderer
+		const uiModule$ = yield* UiModuleEmitter
+		const model$ = yield* ModelEmitter
+		return yield* model$.pipe(
+			Stream.zipLatestWith(
+				uiModule$.pipe(
+					Stream.map(({ makeUi }) => makeUi),
+					Stream.flattenEffect,
 				),
-				Stream.map(([model, makeView]) => makeView(model)),
-				Stream.runForEach(render),
-			)
-		}),
-	).pipe(Effect.provide(AppLayer)),
+				(model, makeView) => [model, makeView] as const,
+			),
+			Stream.map(([model, makeView]) => makeView(model)),
+			Stream.runForEach(render),
+		)
+	}).pipe(Effect.provide(AppLayer)),
 )
