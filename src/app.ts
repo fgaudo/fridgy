@@ -22,7 +22,7 @@ const useCasesLayer = all.pipe(
 )
 
 const uiModuleEmitterLayer = (() => {
-	if (____FRIDGY_PROD____ === 'true') {
+	if (process.env.NODE_ENV === 'production') {
 		return NoopModuleEmitter.layer('./ui.js')
 	}
 	return HotModuleEmitter.layer({

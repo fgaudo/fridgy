@@ -42,11 +42,6 @@ const buildDev = Effect.gen(function* () {
 		Bun.build({
 			...config,
 			sourcemap: 'inline',
-			define: {
-				____FRIDGY_PROD____: '"false"',
-				/* Forcing "production" mode to bypass Bun's search for jsx-dev-runtime, which is missing in @herp-inc/snabbdom-jsx. */
-				'process.env.NODE_ENV': '"production"',
-			},
 		}),
 	)
 })
@@ -62,7 +57,6 @@ const buildProd = Effect.gen(function* () {
 				syntax: true,
 			},
 			define: {
-				____FRIDGY_PROD____: '"true"',
 				'process.env.NODE_ENV': '"production"',
 			},
 			sourcemap: 'none',

@@ -36,5 +36,8 @@
 		"oxlint-tsgolint": "^0.21.0",
 		"tailwindcss": "^4.2.2",
 		"typescript": "^6.0.2"
+	},
+	"patchedDependencies": {
+		"@herp-inc/snabbdom-jsx@0.22.0": "patches/@herp-inc%2Fsnabbdom-jsx@0.22.0.patch"
 	}
 }

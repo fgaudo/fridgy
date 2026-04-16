@@ -34,6 +34,9 @@
       },
     },
   },
+  "patchedDependencies": {
+    "@herp-inc/snabbdom-jsx@0.22.0": "patches/@herp-inc%2Fsnabbdom-jsx@0.22.0.patch",
+  },
   "packages": {
     "@capacitor/android": ["@capacitor/android@8.3.0", "", { "peerDependencies": { "@capacitor/core": "^8.3.0" } }, "sha512-EQy6ByUuKayQBJmMm/e0byJiHavqsQHrvW23BuT2GNVQvenAvipqwaePiJHzrv2PZr7A0T0+se4kgDCeROj0mQ=="],
 
