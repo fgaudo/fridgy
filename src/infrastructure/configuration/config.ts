@@ -10,5 +10,7 @@ export const ConfigLayer = ConfigProvider.layer(
 		CSS_LINK_SELECTOR: process.env.CSS_LINK_SELECTOR,
 		// @ts-expect-error
 		UI_EMITTER_WEBSOCKET_URL: process.env.UI_EMITTER_WEBSOCKET_URL,
+		// @ts-expect-error
+		SQLITE_WORKER_PATH: process.env.SQLITE_WORKER_PATH,
 	}),
 )
