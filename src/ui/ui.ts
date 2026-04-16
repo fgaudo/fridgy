@@ -1,12 +1,7 @@
 import './css/styles.css'
-import { SplashScreen } from '@capacitor/splash-screen'
-import { Toast } from '@capacitor/toast'
 import { defineCustomElements } from '@ionic/pwa-elements/loader'
 import * as Effect from 'effect/Effect'
 import * as FiberSet from 'effect/FiberSet'
-import * as Match from 'effect/Match'
-import * as Option from 'effect/Option'
-import { h } from 'snabbdom'
 
 import {
 	MessageDispatcher,
@@ -17,7 +12,7 @@ import type { UiModule } from '@/app/ports/inbound/ui-module-emitter.ts'
 import { HtmlView } from '@/app/ports/outbound/renderer.ts'
 
 import { loadFonts } from './fonts/index.ts'
-import * as Home from './pages/home/view.tsx'
+import * as Root from './pages/view.tsx'
 
 export const makeUi: UiModule['makeUi'] = Effect.gen(function* () {
 	const messageDispatcher = yield* MessageDispatcher
@@ -25,25 +20,9 @@ export const makeUi: UiModule['makeUi'] = Effect.gen(function* () {
 	const dispatch = (message: Message) => {
 		void run(messageDispatcher(message))
 	}
-	return (model: Model) =>
-		HtmlView.set(
-			h('div', [
-				Match.valueTags(model.currentPage, {
-					Home: ({ model }) => Home.makeView(model, { dispatch }),
-					AddProduct: () =>
-						h('div', { class: { 'text-2xl text-white': true } }, []),
-				}),
-				h('div', {
-					key: 'static',
-					hook: {
-						insert: () => {
-							void Promise.all([
-								loadFonts(),
-								defineCustomElements(window),
-							]).then(() => SplashScreen.hide())
-						},
-					},
-				}),
-			]),
-		)
+	yield* Effect.all(
+		[loadFonts, Effect.promise(() => defineCustomElements(window))],
+		{ concurrency: 'unbounded' },
+	)
+	return (model: Model) => HtmlView.set(Root.makeView(model, { dispatch }))
 }).pipe(Effect.scoped)

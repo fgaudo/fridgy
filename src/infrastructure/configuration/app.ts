@@ -1,4 +1,5 @@
 import * as Layer from 'effect/Layer'
+import * as References from 'effect/References'
 
 import * as UC from '@/app/use-cases/index.ts'
 import * as SnabbdomRenderer from '@/infra/adapters/snabbdom-renderer.ts'
@@ -11,4 +12,9 @@ export const AppLayer = Layer.mergeAll(
 	SnabbdomRenderer.layer,
 	StateManager.layer.pipe(Layer.provideMerge(UC.all), Layer.provide(DbLayer)),
 	UiEmitterLayer,
-).pipe(Layer.provide(ConfigLayer))
+).pipe(
+	Layer.provideMerge([
+		ConfigLayer,
+		Layer.succeed(References.MinimumLogLevel, 'Debug'),
+	]),
+)

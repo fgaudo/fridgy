@@ -33,6 +33,7 @@ const commonBuildConfig = Effect.gen(function* () {
 			asset: '[name].[ext]',
 		},
 		external: ['*.woff2'],
+		env: 'inline',
 	} satisfies Bun.BuildConfig
 })
 
@@ -42,7 +43,6 @@ const buildDev = Effect.gen(function* () {
 		Bun.build({
 			...config,
 			sourcemap: 'inline',
-			env: 'inline',
 		}),
 	)
 })
@@ -112,13 +112,10 @@ const serveCommand = Cli.Command.make(
 				},
 			}),
 		)
-
 		yield* prepareDist
-
 		yield* buildDev
-
 		const publish = Effect.sync(() => server.publish('refresh', 'reload-page'))
-		return yield* fs.watch(resolve('./src/ui')).pipe(
+		return yield* fs.watch(resolve('./src/ui/pages')).pipe(
 			Stream.runForEach(
 				Effect.fn(
 					function* () {
@@ -137,7 +134,6 @@ const buildCommand = Cli.Command.make(
 	{},
 	Effect.fn(function* () {
 		yield* prepareDist
-
 		return yield* buildProd
 	}),
 )

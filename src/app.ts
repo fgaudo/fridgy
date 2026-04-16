@@ -13,12 +13,8 @@ Browser.BrowserRuntime.runMain(
 		const uiModule$ = yield* UiModuleEmitter
 		const model$ = yield* ModelEmitter
 		return yield* model$.pipe(
-			Stream.zipLatestWith(
-				uiModule$.pipe(
-					Stream.map(({ makeUi }) => makeUi),
-					Stream.flattenEffect,
-				),
-				(model, makeView) => [model, makeView] as const,
+			Stream.zipLatest(
+				uiModule$.pipe(Stream.mapEffect(({ makeUi }) => makeUi)),
 			),
 			Stream.map(([model, makeView]) => makeView(model)),
 			Stream.runForEach(render),

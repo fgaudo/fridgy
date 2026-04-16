@@ -45,8 +45,7 @@
 			"@/shared/*": ["./src/shared/*"],
 			"@/infra/*": ["./src/infrastructure/*"],
 			"@/app/*": ["./src/application/*"],
-			"@/domain/*": ["./src/domain/*"],
-			"@/ui/*": ["./src/ui/*"]
+			"@/domain/*": ["./src/domain/*"]
 		},
 		// Environment setup & latest features
 		"lib": ["ESNext", "DOM"],

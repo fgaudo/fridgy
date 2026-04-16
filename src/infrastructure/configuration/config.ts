@@ -12,5 +12,9 @@ export const ConfigLayer = ConfigProvider.layer(
 		UI_EMITTER_WEBSOCKET_URL: process.env.UI_EMITTER_WEBSOCKET_URL,
 		// @ts-expect-error
 		SQLITE_WORKER_PATH: process.env.SQLITE_WORKER_PATH,
+		// @ts-expect-error
+		FONT_COMFORTAA_LATIN_EXT_PATH: process.env.FONT_COMFORTAA_LATIN_EXT_PATH,
+		// @ts-expect-error
+		FONT_COMFORTAA_LATIN_PATH: process.env.FONT_COMFORTAA_LATIN_PATH,
 	}),
 )
