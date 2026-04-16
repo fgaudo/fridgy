@@ -1,7 +1,5 @@
-import * as ASD from '@herp-inc/snabbdom-jsx/jsx-runtime'
-
-import type { Message } from '@/ports/inbound/message-dispatcher.ts'
-import type { Model } from '@/ports/inbound/model-emitter/home/model.ts'
+import type { Message } from '@/app/ports/inbound/message-dispatcher.ts'
+import type { Model } from '@/app/ports/inbound/model-emitter/home/model.ts'
 export const makeView = (
 	model: Model,
 	{ dispatch }: { dispatch: (m: Message) => void },

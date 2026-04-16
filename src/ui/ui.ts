@@ -11,10 +11,10 @@ import { h } from 'snabbdom'
 import {
 	MessageDispatcher,
 	type Message,
-} from '@/ports/inbound/message-dispatcher.ts'
-import type { Model } from '@/ports/inbound/model-emitter/model.ts'
-import type { UiModule } from '@/ports/inbound/ui-module-emitter.ts'
-import { HtmlView } from '@/ports/outbound/renderer.ts'
+} from '@/app/ports/inbound/message-dispatcher.ts'
+import type { Model } from '@/app/ports/inbound/model-emitter/model.ts'
+import type { UiModule } from '@/app/ports/inbound/ui-module-emitter.ts'
+import { HtmlView } from '@/app/ports/outbound/renderer.ts'
 
 import { loadFonts } from './fonts/index.ts'
 import * as Home from './pages/home/view.tsx'
@@ -37,9 +37,10 @@ export const makeUi: UiModule['makeUi'] = Effect.gen(function* () {
 					key: 'static',
 					hook: {
 						insert: () => {
-							Promise.all([loadFonts(), defineCustomElements(window)]).then(
-								() => SplashScreen.hide(),
-							)
+							void Promise.all([
+								loadFonts(),
+								defineCustomElements(window),
+							]).then(() => SplashScreen.hide())
 						},
 					},
 				}),

@@ -1,12 +1,6 @@
 {
 	"editor.defaultFormatter": "oxc.oxc-vscode",
-
-	"tailwindCSS.classFunctions": ["tw"],
-	"tailwindCSS.experimental.classRegex": [
-		"h\\([^,]+,\\s*\\{[^}]*className:\\s*['\"`]([^'\"`]*)['\"`]",
-		"h\\([^,]+,\\s*\\{\\s*class:\\s*\\{\\s*'([^']*)'\\s*:\\s*[^,}\\s]+"
-	],
-	"dprint.experimentalLsp": true,
+	"tailwindCSS.classFunctions": ["cn"],
 	"js/ts.tsdk.promptToUseWorkspaceVersion": true,
 	"js/ts.tsdk.path": "node_modules\\typescript\\lib",
 	"js/ts.preferences.importModuleSpecifierEnding": "js",

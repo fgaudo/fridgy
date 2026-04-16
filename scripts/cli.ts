@@ -42,7 +42,8 @@ const buildDev = Effect.gen(function* () {
 		Bun.build({
 			...config,
 			sourcemap: 'inline',
-		}),
+			env: 'inline',
+		}).catch(console.log),
 	)
 })
 
