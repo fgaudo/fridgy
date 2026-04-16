@@ -7,10 +7,10 @@ import * as Layer from 'effect/Layer'
 import * as Option from 'effect/Option'
 
 import * as GetProductsPort from '@/app/ports/outbound/get-products.ts'
-import * as Integer from '@/core/integer/integer.ts'
-import * as NormalizedString from '@/core/normalized-string.ts'
-import type * as UnitInterval from '@/core/unit-interval.ts'
 import * as Product from '@/domain/product.ts'
+import * as Integer from '@/shared/integer/integer.ts'
+import * as NormalizedString from '@/shared/normalized-string.ts'
+import type * as UnitInterval from '@/shared/unit-interval.ts'
 
 export type ProductDTO = Data.TaggedEnum<{
 	Invalid: {

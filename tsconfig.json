@@ -42,7 +42,7 @@
 			}
 		],
 		"paths": {
-			"@/core/*": ["./src/core/*"],
+			"@/shared/*": ["./src/shared/*"],
 			"@/infra/*": ["./src/infrastructure/*"],
 			"@/app/*": ["./src/application/*"],
 			"@/domain/*": ["./src/domain/*"],

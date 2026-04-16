@@ -10,7 +10,7 @@ import * as T from 'effect/Tuple'
 import { Message } from '@/app/ports/inbound/message-dispatcher.ts'
 import type { Model } from '@/app/ports/inbound/model-emitter/model.ts'
 import type * as UC from '@/app/use-cases/index.ts'
-import type * as StateManager from '@/core/fsm.ts'
+import type * as StateManager from '@/shared/fsm.ts'
 
 import { mapSubscriptions } from './helpers.ts'
 import * as Home from './home/state.ts'

@@ -6,7 +6,7 @@ import {
 	UiModuleEmitter,
 	type UiModule,
 } from '@/app/ports/inbound/ui-module-emitter.ts'
-import { safeImport } from '@/core/safe.ts'
+import { safeImport } from '@/shared/safe.ts'
 
 export const layer = (path: string) =>
 	Layer.effect(

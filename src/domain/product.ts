@@ -1,9 +1,9 @@
 import * as Newtype from 'effect/Newtype'
 import * as Opt from 'effect/Option'
 
-import * as Integer from '@/core/integer/integer.ts'
-import * as NormalizedString from '@/core/normalized-string.ts'
-import * as UnitInterval from '@/core/unit-interval.ts'
+import * as Integer from '@/shared/integer/integer.ts'
+import * as NormalizedString from '@/shared/normalized-string.ts'
+import * as UnitInterval from '@/shared/unit-interval.ts'
 
 type Product = Newtype.Newtype<
 	'Product',

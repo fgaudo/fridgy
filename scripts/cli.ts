@@ -43,7 +43,7 @@ const buildDev = Effect.gen(function* () {
 			...config,
 			sourcemap: 'inline',
 			env: 'inline',
-		}).catch(console.log),
+		}),
 	)
 })
 

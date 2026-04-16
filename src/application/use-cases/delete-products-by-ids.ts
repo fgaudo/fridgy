@@ -7,7 +7,7 @@ import * as Layer from 'effect/Layer'
 import * as Option from 'effect/Option'
 
 import * as DeleteProductById from '@/app/ports/outbound/delete-product-by-id.ts'
-import type * as NonEmptyHashSet from '@/core/non-empty-hash-set.ts'
+import type * as NonEmptyHashSet from '@/shared/non-empty-hash-set.ts'
 
 export type Params<Msg> = {
 	ids: NonEmptyHashSet.NonEmptyHashSet<string>

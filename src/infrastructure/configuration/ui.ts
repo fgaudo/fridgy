@@ -8,12 +8,12 @@ export const UiEmitterLayer = Layer.unwrap(
 		const uiModulePath = yield* Config.string('UI_MODULE_PATH')
 		if (process.env.NODE_ENV === 'production') {
 			const Noop = yield* Effect.promise(
-				() => import('@/infra/adapters/module-emitter/noop.ts'),
+				() => import('@/infra/adapters/ui-module-emitter/noop'),
 			)
 			return Noop.layer(uiModulePath)
 		}
 		const Hot = yield* Effect.promise(
-			() => import('@/infra/adapters/module-emitter/hot.ts'),
+			() => import('@/infra/adapters/ui-module-emitter/hot'),
 		)
 		const cssLinkSelector = yield* Config.string('CSS_LINK_SELECTOR')
 		const url = yield* Config.string('UI_EMITTER_WEBSOCKET_URL')

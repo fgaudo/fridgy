@@ -2,7 +2,7 @@ import * as Brand from 'effect/Brand'
 import * as HashSet from 'effect/HashSet'
 import * as _Schema from 'effect/Schema'
 
-import * as PositiveInteger from '@/core/integer/positive-integer.ts'
+import * as PositiveInteger from '@/shared/integer/positive-integer.ts'
 
 export type NonEmptyHashSet<A> = Brand.Branded<
 	HashSet.HashSet<A>,

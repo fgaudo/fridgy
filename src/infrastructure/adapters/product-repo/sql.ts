@@ -14,7 +14,7 @@ import * as SqlResolver from 'effect/unstable/sql/SqlResolver'
 import * as AddProduct from '@/app/ports/outbound/add-product.ts'
 import * as DeleteProductById from '@/app/ports/outbound/delete-product-by-id.ts'
 import * as GetProducts from '@/app/ports/outbound/get-products.ts'
-import * as Integer from '@/core/integer/integer.ts'
+import * as Integer from '@/shared/integer/integer.ts'
 
 const ProductSchema = {
 	table: 'product',

@@ -8,8 +8,8 @@ import * as Option from 'effect/Option'
 import { v4 as uuidv4 } from 'uuid'
 
 import * as AddProductPort from '@/app/ports/outbound/add-product.ts'
-import * as Integer from '@/core/integer/integer.ts'
 import * as Product from '@/domain/product.ts'
+import * as Integer from '@/shared/integer/integer.ts'
 
 export type Params = {
 	maybeName: Option.Option<string>

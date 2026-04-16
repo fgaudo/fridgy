@@ -13,12 +13,12 @@ import * as T from 'effect/Tuple'
 import { Message } from '@/app/ports/inbound/message-dispatcher.ts'
 import type { Model } from '@/app/ports/inbound/model-emitter/home/model.ts'
 import * as UC from '@/app/use-cases/index.ts'
-import type * as StateManager from '@/core/fsm.ts'
-import type * as Integer from '@/core/integer/integer.ts'
-import type * as PositiveInteger from '@/core/integer/positive-integer.ts'
-import * as ArrX from '@/core/non-empty-array.ts'
-import * as NonEmptyHashSet from '@/core/non-empty-hash-set.ts'
-import type * as UnitInterval from '@/core/unit-interval.ts'
+import type * as StateManager from '@/shared/fsm.ts'
+import type * as Integer from '@/shared/integer/integer.ts'
+import type * as PositiveInteger from '@/shared/integer/positive-integer.ts'
+import * as ArrX from '@/shared/non-empty-array.ts'
+import * as NonEmptyHashSet from '@/shared/non-empty-hash-set.ts'
+import type * as UnitInterval from '@/shared/unit-interval.ts'
 
 export type UseCases =
 	| UC.DeleteProductsByIds.DeleteProductsByIds
