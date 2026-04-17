@@ -100,8 +100,10 @@ const serveCommand = Cli.Command.make(
 		const resolve = yield* makeRootResolver
 		const server = yield* Effect.sync(() =>
 			Bun.serve({
-				port: process.env.UI_EMITTER_WEBSOCKET_PORT,
-				hostname: process.env.UI_EMITTER_WEBSOCKET_HOST,
+				// @ts-expect-error
+				port: process.env.UI_EMITTER_WEBSOCKET_PORT!,
+				// @ts-expect-error
+				hostname: process.env.UI_EMITTER_WEBSOCKET_HOST!,
 				fetch(req, server) {
 					if (server.upgrade(req)) return
 					return new Response('HMR Server Active')

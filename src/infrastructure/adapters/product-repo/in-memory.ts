@@ -8,9 +8,9 @@ import * as Opt from 'effect/Option'
 import * as Ref from 'effect/Ref'
 import * as RequestResolver from 'effect/RequestResolver'
 
-import * as AddProduct from '@/app/ports/outbound/add-product.ts'
-import * as DeleteProductById from '@/app/ports/outbound/delete-product-by-id.ts'
-import * as GetProducts from '@/app/ports/outbound/get-products.ts'
+import * as AddProduct from '@/app/ports/product-repo/add-product.ts'
+import * as DeleteProductById from '@/app/ports/product-repo/delete-product-by-id.ts'
+import * as GetProducts from '@/app/ports/product-repo/get-products.ts'
 import * as Integer from '@/shared/integer/integer.ts'
 
 type Product = Readonly<{

@@ -56,4 +56,4 @@ export const Message = Data.taggedEnum<Message>()
 export class MessageDispatcher extends Context.Service<
 	MessageDispatcher,
 	(m: Message) => Effect.Effect<void>
->()('0b011bae6e3a6a1f') {}
+>()('f92236d4ace1403b') {}

@@ -7,8 +7,8 @@ import * as Option from 'effect/Option'
 import type * as Stream from 'effect/Stream'
 import * as T from 'effect/Tuple'
 
-import { Message } from '@/app/ports/inbound/message-dispatcher.ts'
-import type { Model } from '@/app/ports/inbound/model-emitter/model.ts'
+import { Message } from '@/app/ports/state-manager/message-dispatcher.ts'
+import type { Model } from '@/app/ports/state-manager/model-emitter/pages/model.ts'
 import type * as UC from '@/app/use-cases/index.ts'
 import type * as StateManager from '@/shared/fsm.ts'
 

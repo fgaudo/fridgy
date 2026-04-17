@@ -13,4 +13,4 @@ export type Result = Array<
 export class GetProducts extends Context.Service<
 	GetProducts,
 	Effect.Effect<Result, void>
->()('0f56db7951745e01') {}
+>()('8fa5fc7071077602') {}

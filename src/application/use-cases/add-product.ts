@@ -7,7 +7,7 @@ import * as Layer from 'effect/Layer'
 import * as Option from 'effect/Option'
 import { v4 as uuidv4 } from 'uuid'
 
-import * as AddProductPort from '@/app/ports/outbound/add-product.ts'
+import * as AddProductPort from '@/app/ports/product-repo/add-product.ts'
 import * as Product from '@/domain/product.ts'
 import * as Integer from '@/shared/integer/integer.ts'
 

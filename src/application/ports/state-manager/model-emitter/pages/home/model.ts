@@ -2,7 +2,7 @@ import type * as Arr from 'effect/Array'
 import type * as Data from 'effect/Data'
 import type * as Opt from 'effect/Option'
 
-import type { Message } from '@/app/ports/inbound/message-dispatcher.ts'
+import type { Message } from '@/app/ports/state-manager/message-dispatcher.ts'
 import type * as Integer from '@/shared/integer/integer.ts'
 import type * as PositiveInteger from '@/shared/integer/positive-integer.ts'
 import type * as UnitInterval from '@/shared/unit-interval.ts'

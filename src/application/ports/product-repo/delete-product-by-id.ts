@@ -10,4 +10,4 @@ export const Request = Req.of<Request>()
 export class DeleteProductById extends Context.Service<
 	DeleteProductById,
 	RequestResolver.RequestResolver<Request>
->()('3cca35434d0e353b') {}
+>()('19b1ecbd767959ed') {}

@@ -2,9 +2,9 @@ import * as Browser from '@effect/platform-browser'
 import * as Effect from 'effect/Effect'
 import * as Stream from 'effect/Stream'
 
-import { ModelEmitter } from '@/app/ports/inbound/model-emitter/index.ts'
-import { UiModuleEmitter } from '@/app/ports/inbound/ui-module-emitter.ts'
-import { Renderer } from '@/app/ports/outbound/renderer.ts'
+import { Renderer } from '@/app/ports/renderer.ts'
+import { ModelEmitter } from '@/app/ports/state-manager/model-emitter/index.ts'
+import { UiModuleEmitter } from '@/app/ports/ui-module-emitter.ts'
 import { AppLayer } from '@/infra/configuration/app.ts'
 
 Browser.BrowserRuntime.runMain(

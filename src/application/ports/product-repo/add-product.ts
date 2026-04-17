@@ -14,4 +14,4 @@ export const Request = Req.of<Request>()
 export class AddProduct extends Context.Service<
 	AddProduct,
 	RequestResolver.RequestResolver<Request>
->()('1c1d8ca867c75900') {}
+>()('c82c014ffc140d6c') {}

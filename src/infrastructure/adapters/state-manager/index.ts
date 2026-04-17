@@ -2,8 +2,8 @@ import * as Effect from 'effect/Effect'
 import * as Layer from 'effect/Layer'
 import * as Stream from 'effect/Stream'
 
-import * as MessageDispatcher from '@/app/ports/inbound/message-dispatcher.ts'
-import * as ModelEmitter from '@/app/ports/inbound/model-emitter/index.ts'
+import * as MessageDispatcher from '@/app/ports/state-manager/message-dispatcher.ts'
+import * as ModelEmitter from '@/app/ports/state-manager/model-emitter/index.ts'
 import * as Fsm from '@/shared/fsm.ts'
 
 import * as Root from './pages/state.ts'

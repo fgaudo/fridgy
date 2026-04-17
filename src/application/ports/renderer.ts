@@ -8,4 +8,4 @@ export const View = Newtype.makeIso<View>()
 export class Renderer extends Context.Service<
 	Renderer,
 	(view: View) => Effect.Effect<void>
->()('868728ce6feafe32') {}
+>()('299c282976c8ceb6') {}
