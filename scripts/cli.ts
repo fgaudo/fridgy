@@ -145,12 +145,23 @@ const buildCommand = Cli.Command.make(
 	}),
 )
 
+const setupEnv = Effect.gen(function* () {
+	const fs = yield* FS.FileSystem
+	const resolve = yield* makeRootResolver
+	yield* fs.copy(resolve('./.env.default'), resolve('./.env'), {
+		overwrite: false,
+	})
+})
+
 EffBun.BunRuntime.runMain(
-	Cli.Command.make('cli.ts').pipe(
-		Cli.Command.withSubcommands([buildCommand, serveCommand]),
-		Cli.Command.run({
-			version: '1.0',
-		}),
-		Effect.provide([EffBun.BunServices.layer]),
-	),
+	Effect.zipWith(
+		setupEnv,
+		Cli.Command.make('cli.ts').pipe(
+			Cli.Command.withSubcommands([buildCommand, serveCommand]),
+			Cli.Command.run({
+				version: '1.0',
+			}),
+		),
+		(a, b) => b,
+	).pipe(Effect.provide([EffBun.BunServices.layer])),
 )
