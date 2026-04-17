@@ -6,7 +6,7 @@ import * as MessageDispatcher from '@/app/ports/inbound/message-dispatcher.ts'
 import * as ModelEmitter from '@/app/ports/inbound/model-emitter/index.ts'
 import * as Fsm from '@/shared/fsm.ts'
 
-import * as Root from './state.ts'
+import * as Root from './pages/state.ts'
 
 export const layer = Effect.gen(function* () {
 	const manager = yield* Fsm.prepare({

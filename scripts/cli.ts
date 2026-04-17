@@ -23,6 +23,7 @@ const commonBuildConfig = Effect.gen(function* () {
 			resolve('./src/sqlite-worker.ts'),
 			resolve('./src/ui/ui.ts'),
 			resolve('./src/app.ts'),
+			resolve('./src/ui/css/styles.css'),
 		],
 		outdir: resolve('./dist'),
 		plugins: [BunTailwind],
@@ -99,7 +100,8 @@ const serveCommand = Cli.Command.make(
 		const resolve = yield* makeRootResolver
 		const server = yield* Effect.sync(() =>
 			Bun.serve({
-				port: 3000,
+				port: process.env.UI_EMITTER_WEBSOCKET_PORT,
+				hostname: process.env.UI_EMITTER_WEBSOCKET_HOST,
 				fetch(req, server) {
 					if (server.upgrade(req)) return
 					return new Response('HMR Server Active')
@@ -116,9 +118,10 @@ const serveCommand = Cli.Command.make(
 		yield* buildDev
 		const publish = Effect.sync(() => server.publish('refresh', 'reload-page'))
 		return yield* fs.watch(resolve('./src/ui/pages')).pipe(
+			Stream.debounce('100 millis'),
 			Stream.runForEach(
 				Effect.fn(
-					function* () {
+					function* (a) {
 						yield* buildDev
 						yield* publish
 					},

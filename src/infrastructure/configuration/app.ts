@@ -1,20 +1,15 @@
 import * as Layer from 'effect/Layer'
-import * as References from 'effect/References'
 
-import * as UC from '@/app/use-cases/index.ts'
-import * as SnabbdomRenderer from '@/infra/adapters/snabbdom-renderer.ts'
-import * as StateManager from '@/infra/adapters/state-manager/default/index.ts'
+import * as Usecase from '@/app/use-cases/index.ts'
+import * as StateManager from '@/infra/adapters/state-manager/index.ts'
 import { ConfigLayer } from '@/infra/configuration/config.ts'
 import { DbLayer } from '@/infra/configuration/db.ts'
-import { UiEmitterLayer } from '@/infra/configuration/ui.ts'
+import { UiLayer } from '@/infra/configuration/ui.ts'
 
 export const AppLayer = Layer.mergeAll(
-	SnabbdomRenderer.layer,
-	StateManager.layer.pipe(Layer.provideMerge(UC.all), Layer.provide(DbLayer)),
-	UiEmitterLayer,
-).pipe(
-	Layer.provideMerge([
-		ConfigLayer,
-		Layer.succeed(References.MinimumLogLevel, 'Debug'),
-	]),
-)
+	StateManager.layer.pipe(
+		Layer.provideMerge(Usecase.all),
+		Layer.provide(DbLayer),
+	),
+	UiLayer,
+).pipe(Layer.provideMerge(ConfigLayer))

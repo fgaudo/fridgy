@@ -4,10 +4,10 @@ import type * as Stream from 'effect/Stream'
 
 import type { MessageDispatcher } from '@/app/ports/inbound/message-dispatcher.ts'
 import type { Model } from '@/app/ports/inbound/model-emitter/model.ts'
-import type { HtmlView } from '@/app/ports/outbound/renderer.ts'
+import type { View } from '@/app/ports/outbound/renderer.ts'
 
 export type UiModule = {
-	makeUi: Effect.Effect<(model: Model) => HtmlView, never, MessageDispatcher>
+	makeUi: Effect.Effect<(model: Model) => View, never, MessageDispatcher>
 }
 
 export class UiModuleEmitter extends Context.Service<

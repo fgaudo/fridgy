@@ -12,7 +12,7 @@ import type { Model } from '@/app/ports/inbound/model-emitter/model.ts'
 import type * as UC from '@/app/use-cases/index.ts'
 import type * as StateManager from '@/shared/fsm.ts'
 
-import { mapSubscriptions } from './helpers.ts'
+import { mapSubscriptions } from '../helpers.ts'
 import * as Home from './home/state.ts'
 
 export type State = Readonly<{
