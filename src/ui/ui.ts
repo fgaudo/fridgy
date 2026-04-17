@@ -1,8 +1,8 @@
 import * as Effect from 'effect/Effect'
 
-import { View } from '@/app/ports/renderer.ts'
-import type { Model } from '@/app/ports/state-manager/model-emitter/pages/model.ts'
+import type { Model } from '@/app/ports/state-manager/model-emitter/model.ts'
 import type { UiModule } from '@/app/ports/ui-module-emitter.ts'
+import { View } from '@/infra/adapters/renderer/index.ts'
 
 import * as Root from './pages/view.tsx'
 

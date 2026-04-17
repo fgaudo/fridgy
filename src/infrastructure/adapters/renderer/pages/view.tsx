@@ -3,15 +3,15 @@ import * as FiberSet from 'effect/FiberSet'
 import * as Match from 'effect/Match'
 import { h } from 'snabbdom'
 
-import type { Model } from '@/app/ports/state-manager/model-emitter/model.ts'
-import { SplashScreenService } from '@/app/ports/ui/splashscreen-service.ts'
+import type { Model } from '@/app/model/root.ts'
+import { UiService } from '@/infra/adapters/renderer/ui-service.ts'
 
 import * as Home from './home/view.tsx'
 
 export const makeView = Effect.gen(function* () {
 	const run = yield* FiberSet.makeRuntime()
-	const splashScreen = yield* SplashScreenService
 	const homeView = yield* Home.makeView
+	const { hideSplashScreen } = yield* UiService
 	return (model: Model) => {
 		return h('div', [
 			Match.valueTags(model.currentPage, {
@@ -23,7 +23,7 @@ export const makeView = Effect.gen(function* () {
 				key: 'static',
 				hook: {
 					insert: () => {
-						run(splashScreen.hide)
+						run(hideSplashScreen)
 					},
 				},
 			}),

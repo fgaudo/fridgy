@@ -1,11 +1,9 @@
 import * as Context from 'effect/Context'
-import type * as Effect from 'effect/Effect'
-import * as Newtype from 'effect/Newtype'
+import type * as Stream from 'effect/Stream'
 
-export type View = Newtype.Newtype<'View', unknown>
-export const View = Newtype.makeIso<View>()
+import type { Model } from '@/app/model/root.ts'
 
 export class Renderer extends Context.Service<
 	Renderer,
-	(view: View) => Effect.Effect<void>
+	(view: Model) => Stream.Stream<void>
 >()('299c282976c8ceb6') {}

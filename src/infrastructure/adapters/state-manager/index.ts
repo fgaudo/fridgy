@@ -3,26 +3,28 @@ import * as Layer from 'effect/Layer'
 import * as Stream from 'effect/Stream'
 
 import * as MessageDispatcher from '@/app/ports/state-manager/message-dispatcher.ts'
-import * as ModelEmitter from '@/app/ports/state-manager/model-emitter/index.ts'
+import * as ModelEmitter from '@/app/ports/state-manager/model-emitter.ts'
 import * as Fsm from '@/shared/fsm.ts'
 
-import * as Root from './pages/state.ts'
+import * as Root from './state.ts'
 
-export const layer = Effect.gen(function* () {
-	const manager = yield* Fsm.prepare({
-		update: Root.update,
-		handleDefect: Root.handleDefect,
-		emitter: Root.subscriptions,
-	})(Root.init)
-	return Layer.mergeAll(
-		Layer.succeed(MessageDispatcher.MessageDispatcher, message =>
-			Fsm.dispatch(manager, [message]),
-		),
-		Layer.succeed(
-			ModelEmitter.ModelEmitter,
-			Fsm.transitions(manager).pipe(
-				Stream.map(({ state }) => Root.makeModel(state)),
+export const layer = Layer.unwrap(
+	Effect.gen(function* () {
+		const manager = yield* Fsm.prepare({
+			update: Root.update,
+			handleDefect: Root.handleDefect,
+			emitter: Root.subscriptions,
+		})(Root.init)
+		return Layer.mergeAll(
+			Layer.succeed(MessageDispatcher.MessageDispatcher, message =>
+				Fsm.dispatch(manager, [message]),
 			),
-		),
-	)
-}).pipe(Layer.unwrap)
+			Layer.succeed(
+				ModelEmitter.ModelEmitter,
+				Fsm.transitions(manager).pipe(
+					Stream.map(({ state }) => Root.makeModel(state)),
+				),
+			),
+		)
+	}),
+)
