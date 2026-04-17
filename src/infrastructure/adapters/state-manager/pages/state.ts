@@ -12,8 +12,8 @@ import type { Model } from '@/app/model/root.ts'
 import type * as UC from '@/app/use-cases/index.ts'
 import type * as StateManager from '@/shared/fsm.ts'
 
-import { mapSubscriptions } from './helpers.ts'
-import * as Home from './pages/home.ts'
+import { mapSubscriptions } from '../helpers.ts'
+import * as Home from './home/state.ts'
 
 export type State = Readonly<{
 	toast: Readonly<{

@@ -6,7 +6,7 @@ import * as MessageDispatcher from '@/app/ports/state-manager/message-dispatcher
 import * as ModelEmitter from '@/app/ports/state-manager/model-emitter.ts'
 import * as Fsm from '@/shared/fsm.ts'
 
-import * as Root from './state.ts'
+import * as Root from './pages/state.ts'
 
 export const layer = Layer.unwrap(
 	Effect.gen(function* () {

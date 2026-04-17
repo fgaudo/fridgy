@@ -21,7 +21,7 @@ const commonBuildConfig = Effect.gen(function* () {
 		target: 'browser',
 		entrypoints: [
 			resolve('./src/sqlite-worker.ts'),
-			resolve('./src/ui/ui.ts'),
+			resolve('./src/infrastructure/adapters/renderer/pages/view.tsx'),
 			resolve('./src/app.ts'),
 			resolve('./src/ui/css/styles.css'),
 		],
@@ -119,18 +119,20 @@ const serveCommand = Cli.Command.make(
 		yield* prepareDist
 		yield* buildDev
 		const publish = Effect.sync(() => server.publish('refresh', 'reload-page'))
-		return yield* fs.watch(resolve('./src/ui/pages')).pipe(
-			Stream.debounce('100 millis'),
-			Stream.runForEach(
-				Effect.fn(
-					function* (a) {
-						yield* buildDev
-						yield* publish
-					},
-					Effect.catchCause(flow(Cause.squash, Effect.logError)),
+		return yield* fs
+			.watch(resolve('./src/infrastructure/adapters/renderer/pages'))
+			.pipe(
+				Stream.debounce('100 millis'),
+				Stream.runForEach(
+					Effect.fn(
+						function* () {
+							yield* buildDev
+							yield* publish
+						},
+						Effect.catchCause(flow(Cause.squash, Effect.logError)),
+					),
 				),
-			),
-		)
+			)
 	}),
 )
 
