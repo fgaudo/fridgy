@@ -1,0 +1,255 @@
+import * as Arr from 'effect/Array'
+import * as Brand from 'effect/Brand'
+import type * as Data from 'effect/Data'
+import * as HashSet from 'effect/HashSet'
+import * as Opt from 'effect/Option'
+
+import { InternalMessage, type Message } from '@/app/core/messages.ts'
+import type * as Integer from '@/shared/integer/integer.ts'
+import type * as PositiveInteger from '@/shared/integer/positive-integer.ts'
+import type * as NonEmptyHashSet from '@/shared/non-empty-hash-set.ts'
+import type * as UnitInterval from '@/shared/unit-interval.ts'
+
+export type Model = Readonly<{
+	canNavigateOut: boolean
+	canFetch: Data.TaggedEnum<{
+		True: Readonly<{ fetch: Message }>
+		False: object
+	}>
+	productListStatus: Data.TaggedEnum<{
+		Initial: { activity: 'fetching' | 'idle' }
+		Error: { activity: 'fetching' | 'idle' }
+		Empty: { activity: 'fetching' | 'idle' }
+		Available: Readonly<{
+			activity: 'fetching' | 'idle' | 'deleting'
+			canDeleteSelected: Data.TaggedEnum<{
+				True: Readonly<{
+					deleteMessage: Message
+				}>
+				False: object
+			}>
+			canClearSelection: Data.TaggedEnum<{
+				True: Readonly<{
+					clearMessage: Message
+				}>
+				False: object
+			}>
+			total: PositiveInteger.PositiveInteger
+			products: Arr.NonEmptyReadonlyArray<
+				Data.TaggedEnum<{
+					Corrupt: Readonly<{
+						canToggle: Data.TaggedEnum<{ False: object }>
+						maybeName: Opt.Option<string>
+					}>
+					Invalid: Readonly<{
+						canToggle: Data.TaggedEnum<{
+							True: Readonly<{ message: Message }>
+							False: object
+						}>
+						isSelected: boolean
+						id: string
+						maybeName: Opt.Option<string>
+					}>
+					Valid: Readonly<{
+						canToggle: Data.TaggedEnum<{
+							True: Readonly<{ message: Message }>
+							False: object
+						}>
+						id: string
+						isSelected: boolean
+						name: string
+						status: Data.TaggedEnum<{
+							Everlasting: object
+							Stale: Readonly<{ expirationDate: Integer.Integer }>
+							Fresh: Readonly<{
+								expirationDate: Integer.Integer
+								timeLeft: Integer.Integer
+								freshnessRatio: UnitInterval.UnitInterval
+							}>
+						}>
+					}>
+				}>
+			>
+		}>
+	}>
+}>
+
+export type State = Readonly<{
+	versions: {
+		scheduledFetcher: FetchListSchedulerVersion
+		manualFetcher: FetchListVersion
+	}
+	productListData: Data.TaggedEnum<{
+		Initial: { activity: 'fetching' | 'idle' }
+		Error: { activity: 'fetching' | 'idle' }
+		Empty: { activity: 'fetching' | 'idle' }
+		Available: Readonly<{
+			activity: 'scheduledFetching' | 'idle' | 'deleting' | 'fetching'
+			maybeSelectedProducts: Opt.Option<NonEmptyHashSet.NonEmptyHashSet<string>>
+			total: PositiveInteger.PositiveInteger
+			hasFreshProducts: boolean
+			products: Arr.NonEmptyReadonlyArray<
+				Data.TaggedEnum<{
+					Corrupt: Readonly<{
+						maybeName: Opt.Option<string>
+						id: symbol
+					}>
+					Invalid: Readonly<{
+						id: string
+						maybeName: Opt.Option<string>
+					}>
+					Valid: Readonly<{
+						id: string
+						name: string
+						status: Data.TaggedEnum<{
+							Everlasting: object
+							Stale: Readonly<{ expirationDate: Integer.Integer }>
+							Fresh: Readonly<{
+								expirationDate: Integer.Integer
+								timeLeft: Integer.Integer
+								freshnessRatio: UnitInterval.UnitInterval
+							}>
+						}>
+					}>
+				}>
+			>
+		}>
+	}>
+}>
+
+type FetchListSchedulerVersion = Brand.Branded<
+	bigint,
+	'FetchListSchedulerVersion'
+>
+
+const _FetchListSchedulerVersion = Brand.nominal<FetchListSchedulerVersion>()
+
+export const FetchListSchedulerVersion = {
+	make: _FetchListSchedulerVersion,
+	increment: (version: FetchListSchedulerVersion) =>
+		_FetchListSchedulerVersion(version + 1n),
+}
+
+type FetchListVersion = Brand.Branded<bigint, 'FetchListVersion'>
+
+const _FetchListVersion = Brand.nominal<FetchListVersion>()
+
+export const FetchListVersion = {
+	make: _FetchListVersion,
+	increment: (version: FetchListVersion) => _FetchListVersion(version + 1n),
+}
+
+export function makeModel(state: State): Model {
+	if (state.productListData._tag === 'Initial') {
+		return {
+			canNavigateOut: true,
+			productListStatus: {
+				_tag: 'Initial',
+				activity: state.productListData.activity,
+			},
+			canFetch: { _tag: 'False' },
+		} satisfies Model
+	}
+	if (state.productListData._tag !== 'Available') {
+		return {
+			canNavigateOut: true,
+			productListStatus: state.productListData,
+			canFetch:
+				state.productListData.activity === 'fetching'
+					? { _tag: 'False' }
+					: { _tag: 'True', fetch: InternalMessage.Home_StartFetchList() },
+		} satisfies Model
+	}
+	const productListData = state.productListData
+	return {
+		canFetch:
+			productListData.activity !== 'deleting' &&
+			productListData.activity !== 'fetching'
+				? { _tag: 'True', fetch: InternalMessage.Home_StartFetchList() }
+				: { _tag: 'False' },
+		canNavigateOut: state.productListData.activity !== 'deleting',
+		productListStatus: {
+			_tag: state.productListData._tag,
+			activity:
+				state.productListData.activity === 'scheduledFetching'
+					? 'fetching'
+					: state.productListData.activity,
+			canClearSelection:
+				state.productListData.activity !== 'deleting' &&
+				state.productListData.activity !== 'fetching'
+					? { _tag: 'True', clearMessage: InternalMessage.Home_ClearSelected() }
+					: { _tag: 'False' },
+			canDeleteSelected:
+				state.productListData.activity !== 'deleting' &&
+				state.productListData.activity !== 'fetching'
+					? {
+							_tag: 'True',
+							deleteMessage: InternalMessage.Home_StartDeleteAndRefresh(),
+						}
+					: { _tag: 'False' },
+			products: Arr.map(
+				state.productListData.products,
+				(
+					product,
+				): Data.TaggedEnum.Value<
+					Model['productListStatus'],
+					'Available'
+				>['products'][0] => {
+					if (product._tag === 'Corrupt') {
+						return {
+							_tag: 'Corrupt',
+							canToggle: { _tag: 'False' },
+							maybeName: product.maybeName,
+						}
+					}
+					if (product._tag === 'Invalid') {
+						return {
+							_tag: 'Invalid',
+							canToggle:
+								productListData.activity !== 'deleting' &&
+								productListData.activity === 'fetching'
+									? {
+											_tag: 'True',
+											message: InternalMessage.Home_ToggleItem({
+												id: product.id,
+											}),
+										}
+									: { _tag: 'False' },
+							maybeName: product.maybeName,
+							id: product.id,
+							isSelected:
+								Opt.isSome(productListData.maybeSelectedProducts) &&
+								HashSet.has(
+									productListData.maybeSelectedProducts.value,
+									product.id,
+								),
+						}
+					}
+					return {
+						_tag: 'Valid',
+						canToggle:
+							productListData.activity !== 'deleting' &&
+							productListData.activity === 'fetching'
+								? {
+										_tag: 'True',
+										message: InternalMessage.Home_ToggleItem({
+											id: product.id,
+										}),
+									}
+								: { _tag: 'False' },
+						id: product.id,
+						name: product.name,
+						isSelected:
+							Opt.isSome(productListData.maybeSelectedProducts) &&
+							HashSet.has(
+								productListData.maybeSelectedProducts.value,
+								product.id,
+							),
+						status: product.status,
+					}
+				},
+			),
+			total: productListData.total,
+		},
+	} satisfies Model
+}

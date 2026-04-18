@@ -79,6 +79,5 @@
 		"noPropertyAccessFromIndexSignature": true,
 		"types": ["snabbdom", "bun"]
 	},
-
 	"include": ["src/**/*", "scripts/**/*"]
 }

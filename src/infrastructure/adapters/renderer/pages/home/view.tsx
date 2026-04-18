@@ -1,6 +1,6 @@
 import * as Effect from 'effect/Effect'
 
-import type { Model } from '@/app/model/home/model.ts'
+import type { Model } from '@/app/core/home/model.ts'
 
 export const makeView = Effect.gen(function* () {
 	return (model: Model) => {

@@ -3,9 +3,10 @@ import BunTailwind from 'bun-plugin-tailwind'
 import * as Cause from 'effect/Cause'
 import * as Effect from 'effect/Effect'
 import * as FS from 'effect/FileSystem'
-import { flow } from 'effect/Function'
+import { flow, pipe } from 'effect/Function'
 import * as Path from 'effect/Path'
 import * as Stream from 'effect/Stream'
+import * as Terminal from 'effect/Terminal'
 import * as Cli from 'effect/unstable/cli'
 
 const makeRootResolver = Effect.gen(function* () {
@@ -92,36 +93,49 @@ const prepareDist = Effect.gen(function* () {
 	)
 })
 
-const serveCommand = Cli.Command.make(
-	'serve',
+const watchCommand = Cli.Command.make(
+	'watch',
 	{},
 	Effect.fn(function* () {
 		const fs = yield* FS.FileSystem
 		const resolve = yield* makeRootResolver
-		const server = yield* Effect.sync(() =>
-			Bun.serve({
-				// @ts-expect-error
-				port: process.env.UI_EMITTER_WEBSOCKET_PORT!,
-				// @ts-expect-error
-				hostname: process.env.UI_EMITTER_WEBSOCKET_HOST!,
-				fetch(req, server) {
-					if (server.upgrade(req)) return
-					return new Response('HMR Server Active')
-				},
-				websocket: {
-					open(ws) {
-						ws.subscribe('refresh')
+		const server = yield* Effect.acquireRelease(
+			Effect.sync(() =>
+				Bun.serve({
+					// @ts-expect-error
+					port: process.env.UI_EMITTER_WEBSOCKET_PORT!,
+					// @ts-expect-error
+					hostname: process.env.UI_EMITTER_WEBSOCKET_HOST!,
+					fetch(req, server) {
+						if (server.upgrade(req)) return
+						return new Response('HMR Server Active')
 					},
-					message() {},
-				},
-			}),
+					websocket: {
+						open(ws) {
+							ws.subscribe('refresh')
+						},
+						message() {},
+					},
+				}),
+			),
+			s => Effect.promise(() => s.stop(true)),
 		)
-		yield* prepareDist
-		yield* buildDev
 		const publish = Effect.sync(() => server.publish('refresh', 'reload-page'))
-		return yield* fs
-			.watch(resolve('./src/infrastructure/adapters/renderer/pages'))
-			.pipe(
+		const terminal = yield* Terminal.Terminal
+		const input = yield* terminal.readInput
+		yield* buildDev
+		const display = terminal.display(
+			//@ts-expect-error
+			`\nHMR running at ws://${process.env.UI_EMITTER_WEBSOCKET_HOST}:${process.env.UI_EMITTER_WEBSOCKET_PORT}\nPress Ctrl+c to stop\n`,
+		)
+		return yield* Effect.race(
+			Stream.fromQueue(input).pipe(
+				Stream.onStart(display),
+				Stream.filter(() => input.state._tag === 'Open'),
+				Stream.tap(() => display),
+				Stream.runDrain,
+			),
+			fs.watch(resolve('./src/infrastructure/adapters/renderer/pages')).pipe(
 				Stream.debounce('100 millis'),
 				Stream.runForEach(
 					Effect.fn(
@@ -132,8 +146,9 @@ const serveCommand = Cli.Command.make(
 						Effect.catchCause(flow(Cause.squash, Effect.logError)),
 					),
 				),
-			)
-	}),
+			),
+		)
+	}, Effect.scoped),
 )
 
 const buildCommand = Cli.Command.make(
@@ -152,12 +167,11 @@ const setupEnv = Effect.gen(function* () {
 		overwrite: false,
 	})
 })
-
 EffBun.BunRuntime.runMain(
 	Effect.zipWith(
 		setupEnv,
 		Cli.Command.make('cli.ts').pipe(
-			Cli.Command.withSubcommands([buildCommand, serveCommand]),
+			Cli.Command.withSubcommands([buildCommand, watchCommand]),
 			Cli.Command.run({
 				version: '1.0',
 			}),

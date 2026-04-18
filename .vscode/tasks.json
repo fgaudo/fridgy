@@ -1,0 +1,40 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"type": "bun",
+			"script": "bun ./scripts/cli.ts watch",
+			"problemMatcher": [],
+			"label": "watch",
+			"detail": "bun scripts/cli.ts watch"
+		},
+		{
+			"type": "bun",
+			"script": "bun ./scripts/cli.ts build",
+			"problemMatcher": [],
+			"label": "build",
+			"detail": "bun scripts/cli.ts build"
+		},
+		{
+			"type": "bun",
+			"script": "bun run http-server dist/",
+			"problemMatcher": [],
+			"label": "http-server",
+			"detail": "bun run http-server dist/"
+		},
+		{
+			"label": "tsc: watch",
+			"type": "shell",
+			"command": "bunx tsc --watch --noEmit",
+			"problemMatcher": "$tsc-watch",
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			},
+			"presentation": {
+				"reveal": "silent",
+				"panel": "shared"
+			}
+		}
+	]
+}
