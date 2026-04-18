@@ -3,7 +3,7 @@ import BunTailwind from 'bun-plugin-tailwind'
 import * as Cause from 'effect/Cause'
 import * as Effect from 'effect/Effect'
 import * as FS from 'effect/FileSystem'
-import { flow, pipe } from 'effect/Function'
+import { flow } from 'effect/Function'
 import * as Path from 'effect/Path'
 import * as Stream from 'effect/Stream'
 import * as Terminal from 'effect/Terminal'
@@ -24,7 +24,7 @@ const commonBuildConfig = Effect.gen(function* () {
 			resolve('./src/sqlite-worker.ts'),
 			resolve('./src/infrastructure/adapters/renderer/pages/view.tsx'),
 			resolve('./src/app.ts'),
-			resolve('./src/ui/css/styles.css'),
+			resolve('./src/infrastructure/adapters/renderer/css/styles.css'),
 		],
 		outdir: resolve('./dist'),
 		plugins: [BunTailwind],
@@ -80,15 +80,19 @@ const prepareDist = Effect.gen(function* () {
 		resolve('./dist/wa-sqlite.wasm'),
 	)
 	yield* fs.copyFile(
-		resolve('./src/ui/index.html'),
+		resolve('./src/infrastructure/adapters/renderer/index.html'),
 		resolve('./dist/index.html'),
 	)
 	yield* fs.copyFile(
-		resolve('./src/ui/fonts/comfortaa-latin-ext.woff2'),
+		resolve(
+			'./src/infrastructure/adapters/renderer/fonts/comfortaa-latin-ext.woff2',
+		),
 		resolve('./dist/comfortaa-latin-ext.woff2'),
 	)
 	yield* fs.copyFile(
-		resolve('./src/ui/fonts/comfortaa-latin.woff2'),
+		resolve(
+			'./src/infrastructure/adapters/renderer/fonts/comfortaa-latin.woff2',
+		),
 		resolve('./dist/comfortaa-latin.woff2'),
 	)
 })

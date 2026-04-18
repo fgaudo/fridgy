@@ -1,6 +1,7 @@
 import * as Effect from 'effect/Effect'
 
 import type { Model } from '@/app/core/home/model.ts'
+import { MessageDispatcher } from '@/app/ports/state-manager/message-dispatcher.ts'
 
 export const makeView = Effect.gen(function* () {
 	return (model: Model) => {

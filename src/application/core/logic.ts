@@ -1,5 +1,4 @@
 import type * as Array from 'effect/Array'
-import type * as Data from 'effect/Data'
 import * as Effect from 'effect/Effect'
 import * as HashMap from 'effect/HashMap'
 import * as Match from 'effect/Match'
@@ -15,78 +14,63 @@ import { mapSubscriptions } from '../../shared/helpers.ts'
 import * as Home from './home/logic.ts'
 import { Page, type State } from './model.ts'
 
-const route = <S extends Parameters<typeof Page.$is>[0]>(
-	pageName: S,
-	updateFn: (
-		m: Extract<InternalMessage, Record<'_tag', `${S}_${string}`>>,
-	) => (
-		s: Data.TaggedEnum.Value<State['currentPage'], S>['state'],
-	) => StateManager.Step<
-		Data.TaggedEnum.Value<State['currentPage'], S>['state'],
-		InternalMessage,
-		UC.All
-	>,
-) =>
-	Match.tagStartsWith(
-		(pageName + '_') as `${S}_`,
-		message => (state: State) => {
-			const currentPage = state.currentPage
-			if (currentPage._tag === pageName) {
-				// oxlint-disable-next-line typescript/no-unsafe-argument
-				const [nextSubState, cmds] = updateFn(message)(currentPage.state as any)
+const isHomeMessage = (
+	message: InternalMessage,
+): message is Extract<InternalMessage, Record<'_tag', `Home_${string}`>> =>
+	message._tag.startsWith('Home_')
+
+export const update: StateManager.Update<State, InternalMessage, UC.All> =
+	message => state => {
+		if (state.currentPage._tag === 'Home' && isHomeMessage(message)) {
+			const [nextSubState, cmds] = Home.update(message)(state.currentPage.state)
+			return T.make(
+				{
+					...state,
+					currentPage: Page.Home({ state: nextSubState }),
+				},
+				cmds,
+			)
+		}
+		return Match.value(message).pipe(
+			Match.withReturnType<
+				ReturnType<StateManager.Update<State, InternalMessage, UC.All>>
+			>(),
+			Match.tag('ShowToast', ({ text }) => state => {
+				const nextVersion = state.toast.version + 1n
 				return T.make(
 					{
 						...state,
-						currentPage: { _tag: pageName, state: nextSubState },
+						toast: {
+							...state.toast,
+							version: nextVersion,
+							maybeText: Option.some(text),
+						},
 					},
-					cmds,
+					[
+						Effect.succeed(
+							T.make(InternalMessage.HideToast({ version: nextVersion })),
+						).pipe(Effect.delay('2 seconds')),
+					],
 				)
-			}
-			return T.make(state, [])
-		},
-	)
-
-export const update: StateManager.Update<State, InternalMessage, UC.All> =
-	Match.type<InternalMessage>().pipe(
-		route('Home', Home.update),
-		Match.withReturnType<
-			ReturnType<StateManager.Update<State, InternalMessage, UC.All>>
-		>(),
-		Match.tag('ShowToast', ({ text }) => state => {
-			const nextVersion = state.toast.version + 1n
-			return T.make(
-				{
-					...state,
-					toast: {
-						...state.toast,
-						version: nextVersion,
-						maybeText: Option.some(text),
+			}),
+			Match.tag('HideToast', ({ version }) => state => {
+				if (state.toast.version !== version) {
+					return T.make(state, [])
+				}
+				return T.make(
+					{
+						...state,
+						toast: {
+							...state.toast,
+							maybeText: Option.none(),
+						},
 					},
-				},
-				[
-					Effect.succeed(
-						T.make(InternalMessage.HideToast({ version: nextVersion })),
-					).pipe(Effect.delay('2 seconds')),
-				],
-			)
-		}),
-		Match.tag('HideToast', ({ version }) => state => {
-			if (state.toast.version !== version) {
-				return T.make(state, [])
-			}
-			return T.make(
-				{
-					...state,
-					toast: {
-						...state.toast,
-						maybeText: Option.none(),
-					},
-				},
-				[],
-			)
-		}),
-		Match.orElse(() => (state: State) => T.make(state, [])),
-	)
+					[],
+				)
+			}),
+			Match.orElse(() => (state: State) => T.make(state, [])),
+		)(state)
+	}
 
 export const handleDefect = (_err: unknown) => T.make(InternalMessage.Crash())
 
