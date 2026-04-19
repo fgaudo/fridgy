@@ -1,5 +1,5 @@
 {
-    "@capacitor/android@8.3.0": {
+    "@capacitor/android@8.3.1": {
         "licenses": "MIT",
         "repository": "https://github.com/ionic-team/capacitor",
         "publisher": "Ionic Team",
@@ -8,7 +8,7 @@
         "name": "@capacitor/android",
         "description": "Capacitor: Cross-platform apps with JavaScript and the web"
     },
-    "@capacitor/cli@8.3.0": {
+    "@capacitor/cli@8.3.1": {
         "licenses": "MIT",
         "repository": "https://github.com/ionic-team/capacitor",
         "publisher": "Ionic Team",
@@ -17,7 +17,7 @@
         "name": "@capacitor/cli",
         "description": "Capacitor: Cross-platform apps with JavaScript and the web"
     },
-    "@capacitor/core@8.3.0": {
+    "@capacitor/core@8.3.1": {
         "licenses": "MIT",
         "repository": "https://github.com/ionic-team/capacitor",
         "publisher": "Ionic Team",
@@ -53,26 +53,35 @@
         "name": "@effect/language-service",
         "description": "A Language-Service Plugin to Refactor and Diagnostic effect-ts projects"
     },
-    "@effect/platform-browser@4.0.0-beta.49": {
+    "@effect/platform-browser@4.0.0-beta.50": {
         "licenses": "MIT",
         "repository": "https://github.com/Effect-TS/effect-smol",
         "copyright": "Copyright (c) 2023 Effectful Technologies Inc",
         "name": "@effect/platform-browser",
         "description": "Platform specific implementations for the browser"
     },
-    "@effect/platform-bun@4.0.0-beta.49": {
+    "@effect/platform-bun@4.0.0-beta.50": {
         "licenses": "MIT",
         "repository": "https://github.com/Effect-TS/effect-smol",
         "copyright": "Copyright (c) 2023 Effectful Technologies Inc",
         "name": "@effect/platform-bun",
         "description": "Platform specific implementations for the Bun runtime"
     },
-    "@effect/sql-sqlite-wasm@4.0.0-beta.49": {
+    "@effect/sql-sqlite-wasm@4.0.0-beta.50": {
         "licenses": "MIT",
         "repository": "https://github.com/Effect-TS/effect-smol",
         "copyright": "Copyright (c) 2023-present The Contributors",
         "name": "@effect/sql-sqlite-wasm",
         "description": "A SQLite toolkit for Effect"
+    },
+    "@herp-inc/snabbdom-jsx@0.22.0": {
+        "licenses": "MIT",
+        "repository": "https://github.com/herp-inc/snabbdom-jsx",
+        "publisher": "HERP, Inc. dev team",
+        "email": "dev@herp.co.jp",
+        "name": "@herp-inc/snabbdom-jsx",
+        "description": "Yet another JSX pragma for Snabbdom",
+        "copyright": ""
     },
     "@ionic/pwa-elements@3.4.0": {
         "licenses": "MIT",
@@ -105,12 +114,28 @@
         "name": "clsx",
         "description": "A tiny (239B) utility for constructing className strings conditionally."
     },
-    "effect@4.0.0-beta.49": {
+    "csstype@3.2.3": {
+        "licenses": "MIT",
+        "repository": "https://github.com/frenic/csstype",
+        "publisher": "Fredrik Nicol",
+        "email": "fredrik.nicol@gmail.com",
+        "copyright": "Copyright (c) 2017-2018 Fredrik Nicol",
+        "name": "csstype",
+        "description": "Strict TypeScript and Flow types for style based on MDN data"
+    },
+    "effect@4.0.0-beta.50": {
         "licenses": "MIT",
         "repository": "https://github.com/Effect-TS/effect-smol",
         "copyright": "Copyright (c) 2023 Effectful Technologies Inc",
         "name": "effect",
         "description": "The missing standard library for TypeScript, for writing production-grade software."
+    },
+    "http-server@14.1.1": {
+        "licenses": "MIT",
+        "repository": "https://github.com/http-party/http-server",
+        "copyright": "Copyright (c) 2011-2022 Charlie Robbins, Marak Squires, Jade Michael Thornton and the Contributors.",
+        "name": "http-server",
+        "description": "A simple zero-configuration command-line http server"
     },
     "license-checker-rseidelsohn@4.4.2": {
         "licenses": "BSD-3-Clause",
@@ -128,6 +153,15 @@
         "copyright": "Copyright (c) 2024-present VoidZero Inc. & Contributors. Copyright (c) 2023 Boshen",
         "name": "oxfmt",
         "description": "Formatter for the JavaScript Oxidation Compiler"
+    },
+    "oxlint-tsgolint@0.21.1": {
+        "licenses": "MIT",
+        "repository": "https://github.com/oxc-project/tsgolint",
+        "publisher": "auvred",
+        "email": "aauvred@gmail.com",
+        "copyright": "Copyright (c) 2025 July-present VoidZero Inc. & Contributors. Copyright (c) 2025 July typescript-eslint and other contributors",
+        "name": "oxlint-tsgolint",
+        "description": "High-performance type-aware TypeScript linter powered by typescript-go, for use with oxlint."
     },
     "oxlint@1.58.0": {
         "licenses": "MIT",
@@ -160,7 +194,7 @@
         "name": "tailwindcss",
         "description": "A utility-first CSS framework for rapidly building custom user interfaces."
     },
-    "typescript@6.0.2": {
+    "typescript@6.0.3": {
         "licenses": "Apache-2.0",
         "repository": "https://github.com/microsoft/TypeScript",
         "publisher": "Microsoft Corp.",

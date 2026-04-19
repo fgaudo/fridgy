@@ -17,10 +17,10 @@
 		},
 		{
 			"type": "bun",
-			"script": "bun run http-server dist/",
+			"script": "bun run http-server",
 			"problemMatcher": [],
 			"label": "http-server",
-			"detail": "bun run http-server dist/"
+			"detail": "bun run http-server"
 		},
 		{
 			"label": "tsc: watch",
