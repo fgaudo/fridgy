@@ -3,6 +3,7 @@ import { Toast } from '@capacitor/toast'
 import * as Browser from '@effect/platform-browser'
 import { defineCustomElements } from '@ionic/pwa-elements/loader'
 import * as Clock from 'effect/Clock'
+import * as Config from 'effect/Config'
 import * as Effect from 'effect/Effect'
 import * as Layer from 'effect/Layer'
 import * as Stream from 'effect/Stream'
@@ -18,16 +19,14 @@ import { safeImport } from '@/shared/safe.ts'
 import type * as Root from './pages/view.tsx'
 import { UiService } from './ui-service.ts'
 
-const loadFonts = Effect.fn(function* ({
-	comfortaaLatinExtFontPath,
-	comfortaaLatinFontPath,
-}: {
-	comfortaaLatinExtFontPath: string
-	comfortaaLatinFontPath: string
-}) {
+const loadFonts = Effect.gen(function* () {
+	const [comfortaaLatinPath, comfortaaLatinExtPath] = yield* Config.all([
+		Config.string('comfortaaLatinPath'),
+		Config.string('comfortaaLatinExtPath'),
+	]).pipe(Config.nested('font'), Config.nested('ui'))
 	const comfortaaLatinExt = new FontFace(
 		'Comfortaa',
-		`url(${comfortaaLatinExtFontPath})`,
+		`url(${comfortaaLatinExtPath})`,
 		{
 			style: 'normal',
 			weight: '300 700',
@@ -38,7 +37,7 @@ const loadFonts = Effect.fn(function* ({
 	)
 	const comfortaaLatin = new FontFace(
 		'Comfortaa',
-		`url(${comfortaaLatinFontPath})`,
+		`url(${comfortaaLatinPath})`,
 		{
 			style: 'normal',
 			weight: '300 700',
@@ -58,38 +57,19 @@ const loadFonts = Effect.fn(function* ({
 		],
 		{ concurrency: 'unbounded' },
 	)
-})
+}).pipe(Effect.catchTag('ConfigError', Effect.die))
 
-const loadAssets = Effect.fn(function* ({
-	comfortaaLatinExtFontPath,
-	comfortaaLatinFontPath,
-}: {
-	comfortaaLatinExtFontPath: string
-	comfortaaLatinFontPath: string
-}) {
-	return yield* Effect.all(
-		[
-			loadFonts({
-				comfortaaLatinExtFontPath,
-				comfortaaLatinFontPath,
-			}),
-			Effect.promise(() => defineCustomElements(window)),
-		],
-		{ concurrency: 'unbounded' },
+const loadAssets = Effect.all(
+	[loadFonts, Effect.promise(() => defineCustomElements(window))],
+	{ concurrency: 'unbounded' },
+)
+
+const initRenderer = Effect.gen(function* () {
+	const rootSelector = yield* Config.string('rootSelector').pipe(
+		Config.nested('ui'),
 	)
-})
-
-const initRenderer = Effect.fn(function* ({
-	comfortaaLatinExtFontPath,
-	comfortaaLatinFontPath,
-	rootSelector,
-}: {
-	comfortaaLatinExtFontPath: string
-	comfortaaLatinFontPath: string
-	rootSelector: string
-}) {
 	const root = yield* Effect.sync(() => document.querySelector(rootSelector)!)
-	yield* loadAssets({ comfortaaLatinExtFontPath, comfortaaLatinFontPath })
+	yield* loadAssets
 	const containerRef = yield* SynchronizedRef.make<Element | Snabbdom.VNode>(
 		root,
 	)
@@ -111,101 +91,93 @@ const initRenderer = Effect.fn(function* ({
 		}),
 	)
 	return { patch, containerRef, uiLayer }
-})
+}).pipe(Effect.catchTag('ConfigError', Effect.die))
 
-export const hotRendererLayer = ({
-	rootSelector,
-	comfortaaLatinExtFontPath,
-	comfortaaLatinFontPath,
-	modulePath,
-	cssLinkSelector,
-	webSocketUrl,
-}: {
-	rootSelector: string
-	comfortaaLatinExtFontPath: string
-	comfortaaLatinFontPath: string
-	modulePath: string
-	cssLinkSelector: string
-	webSocketUrl: string
-}) =>
-	Layer.effect(
-		Renderer,
-		Effect.gen(function* () {
-			const { uiLayer, patch, containerRef } = yield* initRenderer({
-				rootSelector,
-				comfortaaLatinExtFontPath,
-				comfortaaLatinFontPath,
-			})
-			const loadModule = Effect.gen(function* () {
-				const millis = yield* Clock.currentTimeMillis
-				const module = (yield* safeImport(
-					`${modulePath}?t=${millis}`,
-				)) as typeof Root
-				return yield* module.makeView.pipe(Effect.provide(uiLayer))
-			})
-			const socket = yield* Socket.Socket
-			const uiModuleRef = yield* SubscriptionRef.make(
-				yield* loadModule.pipe(Effect.provide(uiLayer)),
+export const hotLayer = Layer.effect(
+	Renderer,
+	Effect.gen(function* () {
+		const { uiLayer, patch, containerRef } = yield* initRenderer
+		const loadModule = Effect.gen(function* () {
+			const modulePath = yield* Config.string('viewModulePath').pipe(
+				Config.nested('ui'),
 			)
-			const cssLinkElement = yield* Effect.sync(
-				() => document.querySelector(cssLinkSelector)!,
+			const millis = yield* Clock.currentTimeMillis
+			const module = (yield* safeImport(
+				`${modulePath}?t=${millis}`,
+			)) as typeof Root
+			return yield* module.makeView.pipe(Effect.provide(uiLayer))
+		}).pipe(Effect.catchTag('ConfigError', Effect.die))
+		const socket = yield* Socket.Socket
+		const uiModuleRef = yield* SubscriptionRef.make(
+			yield* loadModule.pipe(Effect.provide(uiLayer)),
+		)
+		const cssLinkElement = yield* Effect.gen(function* () {
+			const cssLinkSelector = yield* Config.string('cssLinkSelector').pipe(
+				Config.nested('ui'),
 			)
-			const refreshCss = Effect.gen(function* () {
-				const millis = yield* Clock.currentTimeMillis
-				const href = yield* Effect.sync(
-					() => cssLinkElement.getAttribute('href')!,
-				)
-				const url = new URL(href, window.location.origin)
-				url.searchParams.set('t', millis.toString())
-				yield* Effect.sync(() => {
-					cssLinkElement.setAttribute('href', url.toString())
-				})
+			return yield* Effect.sync(() => document.querySelector(cssLinkSelector)!)
+		}).pipe(Effect.catchTag('ConfigError', Effect.die))
+		const refreshCss = Effect.gen(function* () {
+			const millis = yield* Clock.currentTimeMillis
+			const href = yield* Effect.sync(
+				() => cssLinkElement.getAttribute('href')!,
+			)
+			const url = new URL(href, window.location.origin)
+			url.searchParams.set('t', millis.toString())
+			yield* Effect.sync(() => {
+				cssLinkElement.setAttribute('href', url.toString())
 			})
-			yield* socket
-				.run(
-					Effect.fn(function* () {
-						const newView = yield* loadModule
-						yield* refreshCss
-						yield* SubscriptionRef.set(uiModuleRef, newView)
-					}),
-				)
-				.pipe(Effect.forkScoped)
-			return model =>
-				SubscriptionRef.changes(uiModuleRef).pipe(
-					Stream.mapEffect(view =>
-						SynchronizedRef.updateEffect(containerRef, node =>
-							Effect.sync(() => patch(node, view(model))),
-						),
-					),
-				)
-		}),
-	).pipe(Layer.provide(Browser.BrowserSocket.layerWebSocket(webSocketUrl)))
-
-export const coldRendererLayer = ({
-	rootSelector,
-	comfortaaLatinExtFontPath,
-	comfortaaLatinFontPath,
-}: {
-	rootSelector: string
-	comfortaaLatinExtFontPath: string
-	comfortaaLatinFontPath: string
-}) =>
-	Layer.effect(
-		Renderer,
-		Effect.gen(function* () {
-			const { uiLayer, patch, containerRef } = yield* initRenderer({
-				rootSelector,
-				comfortaaLatinExtFontPath,
-				comfortaaLatinFontPath,
-			})
-			const view = yield* (yield* Effect.promise(
-				() => import('./pages/view.tsx'),
-			)).makeView.pipe(Effect.provide(uiLayer))
-			return model =>
-				Stream.fromEffect(
+		})
+		yield* socket
+			.run(
+				Effect.fn(function* () {
+					const newView = yield* loadModule
+					yield* refreshCss
+					yield* SubscriptionRef.set(uiModuleRef, newView)
+				}),
+			)
+			.pipe(Effect.forkScoped)
+		return model =>
+			SubscriptionRef.changes(uiModuleRef).pipe(
+				Stream.mapEffect(view =>
 					SynchronizedRef.updateEffect(containerRef, node =>
 						Effect.sync(() => patch(node, view(model))),
 					),
+				),
+			)
+	}),
+).pipe(
+	Layer.provide(
+		Layer.unwrap(
+			Effect.gen(function* () {
+				const webSocketUrl = yield* Config.all([
+					Config.string('host'),
+					Config.number('port'),
+				]).pipe(
+					Config.nested('emitterWebsocket'),
+					Config.nested('ui'),
+					Config.mapOrFail(([host, port]) =>
+						Effect.sync(() => `ws://${host}:${port.toString(10)}`),
+					),
 				)
-		}),
-	).pipe(Layer.orDie)
+				return Browser.BrowserSocket.layerWebSocket(webSocketUrl)
+			}).pipe(Effect.catchTag('ConfigError', Effect.die)),
+		),
+	),
+)
+
+export const staticLayer = Layer.effect(
+	Renderer,
+	Effect.gen(function* () {
+		const { uiLayer, patch, containerRef } = yield* initRenderer
+		const view = yield* (yield* Effect.promise(
+			() => import('./pages/view.tsx'),
+		)).makeView.pipe(Effect.provide(uiLayer))
+		return model =>
+			Stream.fromEffect(
+				SynchronizedRef.updateEffect(containerRef, node =>
+					Effect.sync(() => patch(node, view(model))),
+				),
+			)
+	}),
+).pipe(Layer.orDie)

@@ -1,23 +1,21 @@
+import * as Context from 'effect/Context'
 import * as Layer from 'effect/Layer'
+import * as References from 'effect/References'
 
+import { MessageDispatcher } from '@/app/ports/state-manager/message-dispatcher.ts'
 import * as Usecase from '@/app/use-cases/index.ts'
-import * as GetLicenses from '@/infra/adapters/get-licenses/index.ts'
-import * as GetSayings from '@/infra/adapters/get-sayings/index.ts'
 import * as StateManager from '@/infra/adapters/state-manager.ts'
 import { ConfigLayer } from '@/infra/configuration/config.ts'
 import { DbLayer } from '@/infra/configuration/db.ts'
 import { UiLayer } from '@/infra/configuration/ui.ts'
 
-export const AppLayer = Layer.mergeAll(
-	UiLayer,
-	GetSayings.layer,
-	GetLicenses.layer,
-).pipe(
+export const AppLayer = UiLayer.pipe(
 	Layer.provideMerge(
-		StateManager.layer.pipe(
-			Layer.provideMerge(Usecase.all),
-			Layer.provide(DbLayer),
-		),
+		StateManager.layer.pipe(Layer.provide(Usecase.all), Layer.provide(DbLayer)),
 	),
-	Layer.provideMerge(ConfigLayer),
+	Layer.flatMap(context =>
+		Layer.succeedContext(Context.omit(MessageDispatcher)(context)),
+	),
+	Layer.provide(ConfigLayer),
+	Layer.provideMerge(Layer.succeed(References.MinimumLogLevel, 'Debug')),
 )

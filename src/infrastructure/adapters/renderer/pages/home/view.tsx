@@ -10,7 +10,7 @@ export const makeView = Effect.gen(function* () {
 				<div className="mx-auto max-w-7xl px-6 lg:px-8">
 					<div className="mx-auto max-w-2xl lg:text-center">
 						<h2 className="text-base/7 font-semibold text-red-300">
-							2 13 1232 aaa d11 3 111 31 11Deploy faster
+							1 2 13 1232 aaa d11 3 111 31 11Deploy faster
 						</h2>
 						<p className="mt-2 text-4xl font-semibold tracking-tight text-pretty text-gray-900 sm:text-5xl lg:text-balance">
 							s Everything you need to deploy your app

@@ -6,6 +6,6 @@ export const DbLayer = Layer.unwrap(
 		const Sqlite = yield* Effect.promise(
 			() => import('@/infra/adapters/product-repo/sqlite.ts'),
 		)
-		return Sqlite.layer('./sqlite-worker.js')
+		return Sqlite.layer
 	}),
 ).pipe(Layer.orDie)

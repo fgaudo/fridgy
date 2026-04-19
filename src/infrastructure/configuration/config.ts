@@ -1,12 +1,24 @@
 import * as ConfigProvider from 'effect/ConfigProvider'
-import * as Layer from 'effect/Layer'
-import * as References from 'effect/References'
 
 export const ConfigLayer = ConfigProvider.layer(
 	ConfigProvider.fromUnknown({
-		// @ts-expect-error
-		UI_EMITTER_WEBSOCKET_HOST: process.env.UI_EMITTER_WEBSOCKET_HOST,
-		// @ts-expect-error
-		UI_EMITTER_WEBSOCKET_PORT: process.env.UI_EMITTER_WEBSOCKET_PORT,
+		ui: {
+			emitterWebsocket: {
+				// @ts-expect-error
+				host: process.env.UI_EMITTER_WEBSOCKET_HOST,
+				// @ts-expect-error
+				port: process.env.UI_EMITTER_WEBSOCKET_PORT,
+			},
+			rootSelector: '#root',
+			cssLinkSelector: '#css',
+			font: {
+				comfortaaLatinPath: './comfortaa-latin.woff2',
+				comfortaaLatinExtPath: './comfortaa-latin-ext.woff2',
+			},
+			viewModulePath: './view.js',
+		},
+		sqlite: {
+			workerPath: './sqlite-worker.js',
+		},
 	}),
-).pipe(Layer.provideMerge(Layer.succeed(References.MinimumLogLevel, 'Debug')))
+)
