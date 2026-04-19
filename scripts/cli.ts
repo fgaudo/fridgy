@@ -21,8 +21,7 @@ const commonBuildConfig = Effect.gen(function* () {
 	return {
 		target: 'browser',
 		entrypoints: [
-			resolve('./src/sqlite-worker.ts'),
-			resolve('./src/infrastructure/adapters/renderer/pages/view.tsx'),
+			resolve('./src/infrastructure/adapters/db/sqlite/sqlite-worker.ts'),
 			resolve('./src/app.ts'),
 			resolve('./src/infrastructure/adapters/renderer/css/styles.css'),
 		],
@@ -40,10 +39,15 @@ const commonBuildConfig = Effect.gen(function* () {
 })
 
 const buildDev = Effect.gen(function* () {
+	const resolve = yield* makeRootResolver
 	const config = yield* commonBuildConfig
 	yield* Effect.promise(() =>
 		Bun.build({
 			...config,
+			entrypoints: [
+				...config.entrypoints,
+				resolve('./src/infrastructure/adapters/renderer/pages/view.tsx'),
+			],
 			sourcemap: 'inline',
 		}),
 	)
@@ -139,7 +143,13 @@ const watchCommand = Cli.Command.make(
 				Stream.tap(() => display),
 				Stream.runDrain,
 			),
-			fs.watch(resolve('./src/infrastructure/adapters/renderer/pages')).pipe(
+			Stream.mergeAll(
+				[
+					fs.watch(resolve('./src/infrastructure/adapters/renderer/pages')),
+					fs.watch(resolve('./src/infrastructure/adapters/renderer/css')),
+				],
+				{ concurrency: 'unbounded' },
+			).pipe(
 				Stream.debounce('100 millis'),
 				Stream.runForEach(
 					Effect.fn(
@@ -171,6 +181,7 @@ const setupEnv = Effect.gen(function* () {
 		overwrite: false,
 	})
 })
+
 EffBun.BunRuntime.runMain(
 	Effect.zipWith(
 		setupEnv,

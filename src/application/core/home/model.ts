@@ -121,9 +121,7 @@ type FetchListSchedulerVersion = Brand.Branded<
 	bigint,
 	'FetchListSchedulerVersion'
 >
-
 const _FetchListSchedulerVersion = Brand.nominal<FetchListSchedulerVersion>()
-
 export const FetchListSchedulerVersion = {
 	make: _FetchListSchedulerVersion,
 	increment: (version: FetchListSchedulerVersion) =>
@@ -131,9 +129,7 @@ export const FetchListSchedulerVersion = {
 }
 
 type FetchListVersion = Brand.Branded<bigint, 'FetchListVersion'>
-
 const _FetchListVersion = Brand.nominal<FetchListVersion>()
-
 export const FetchListVersion = {
 	make: _FetchListVersion,
 	increment: (version: FetchListVersion) => _FetchListVersion(version + 1n),

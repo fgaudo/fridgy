@@ -1,11 +1,2 @@
-import * as Effect from 'effect/Effect'
-import * as Layer from 'effect/Layer'
-
-export const DbLayer = Layer.unwrap(
-	Effect.gen(function* () {
-		const Sqlite = yield* Effect.promise(
-			() => import('@/infra/adapters/product-repo/sqlite.ts'),
-		)
-		return Sqlite.layer
-	}),
-).pipe(Layer.orDie)
+import * as Sqlite from '@/infra/adapters/db/sqlite/index.ts'
+export const DbLayer = Sqlite.layer

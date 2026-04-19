@@ -3,7 +3,7 @@ import * as Config from 'effect/Config'
 import * as Effect from 'effect/Effect'
 import * as Layer from 'effect/Layer'
 
-import * as Sql from './sql.ts'
+import * as Sql from '../sql.ts'
 
 export const layer = Layer.unwrap(
 	Effect.gen(function* () {

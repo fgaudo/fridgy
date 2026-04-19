@@ -65,10 +65,7 @@ const loadAssets = Effect.all(
 )
 
 const initRenderer = Effect.gen(function* () {
-	const rootSelector = yield* Config.string('rootSelector').pipe(
-		Config.nested('ui'),
-	)
-	const root = yield* Effect.sync(() => document.querySelector(rootSelector)!)
+	const root = yield* Effect.sync(() => document.querySelector('#root')!)
 	yield* loadAssets
 	const containerRef = yield* SynchronizedRef.make<Element | Snabbdom.VNode>(
 		root,
@@ -91,14 +88,15 @@ const initRenderer = Effect.gen(function* () {
 		}),
 	)
 	return { patch, containerRef, uiLayer }
-}).pipe(Effect.catchTag('ConfigError', Effect.die))
+})
 
 export const hotLayer = Layer.effect(
 	Renderer,
 	Effect.gen(function* () {
 		const { uiLayer, patch, containerRef } = yield* initRenderer
 		const loadModule = Effect.gen(function* () {
-			const modulePath = yield* Config.string('viewModulePath').pipe(
+			const modulePath = yield* Config.string('viewPath').pipe(
+				Config.nested('hotModule'),
 				Config.nested('ui'),
 			)
 			const millis = yield* Clock.currentTimeMillis
@@ -112,11 +110,8 @@ export const hotLayer = Layer.effect(
 			yield* loadModule.pipe(Effect.provide(uiLayer)),
 		)
 		const cssLinkElement = yield* Effect.gen(function* () {
-			const cssLinkSelector = yield* Config.string('cssLinkSelector').pipe(
-				Config.nested('ui'),
-			)
-			return yield* Effect.sync(() => document.querySelector(cssLinkSelector)!)
-		}).pipe(Effect.catchTag('ConfigError', Effect.die))
+			return yield* Effect.sync(() => document.querySelector('#css')!)
+		})
 		const refreshCss = Effect.gen(function* () {
 			const millis = yield* Clock.currentTimeMillis
 			const href = yield* Effect.sync(
@@ -154,7 +149,8 @@ export const hotLayer = Layer.effect(
 					Config.string('host'),
 					Config.number('port'),
 				]).pipe(
-					Config.nested('emitterWebsocket'),
+					Config.nested('websocket'),
+					Config.nested('hotModule'),
 					Config.nested('ui'),
 					Config.mapOrFail(([host, port]) =>
 						Effect.sync(() => `ws://${host}:${port.toString(10)}`),
