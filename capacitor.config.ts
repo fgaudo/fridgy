@@ -5,6 +5,12 @@ const config: CapacitorConfig = {
 	appName: 'fridgy',
 	webDir: 'dist',
 	plugins: {
+		SystemBars: {
+			insetsHandling: 'css',
+			style: 'DEFAULT',
+			hidden: false,
+			animation: 'NONE',
+		},
 		SplashScreen: {
 			launchAutoHide: false,
 			launchFadeOutDuration: 3000,

@@ -11,11 +11,21 @@
         "@capacitor/toast": "latest",
         "@effect/platform-browser": "beta",
         "@effect/sql-sqlite-wasm": "beta",
+        "@fontsource-variable/noto-sans": "^5.2.10",
+        "@fontsource-variable/noto-sans-arabic": "^5.2.10",
+        "@fontsource-variable/noto-sans-bengali": "^5.2.11",
+        "@fontsource-variable/noto-sans-jp": "^5.2.10",
+        "@fontsource-variable/noto-sans-kr": "^5.2.10",
+        "@fontsource-variable/noto-sans-sc": "^5.2.10",
+        "@fontsource/noto-sans": "^5.2.10",
         "@herp-inc/snabbdom-jsx": "^0.22.0",
         "@ionic/pwa-elements": "latest",
         "clsx": "^2.1.1",
         "csstype": "^3.2.3",
         "effect": "beta",
+        "lucide-static": "^1.8.0",
+        "material-icons": "^1.13.14",
+        "material-symbols": "^0.44.2",
         "snabbdom": "^3.6.3",
         "tailwind-merge": "^3.5.0",
       },
@@ -29,14 +39,20 @@
         "license-checker-rseidelsohn": "^4.4.2",
         "oxfmt": "^0.42.0",
         "oxlint": "1.58.0",
-        "oxlint-tsgolint": "^0.21.0",
+        "oxlint-tsgolint": "^0.21.1",
         "tailwindcss": "^4.2.2",
-        "typescript": "^6.0.2",
+        "typescript": "^6.0.3",
       },
     },
   },
   "patchedDependencies": {
+    "@fontsource-variable/noto-sans-bengali@5.2.11": "patches/@fontsource-variable%2Fnoto-sans-bengali@5.2.11.patch",
     "@herp-inc/snabbdom-jsx@0.22.0": "patches/@herp-inc%2Fsnabbdom-jsx@0.22.0.patch",
+    "@fontsource-variable/noto-sans-kr@5.2.10": "patches/@fontsource-variable%2Fnoto-sans-kr@5.2.10.patch",
+    "@fontsource-variable/noto-sans-jp@5.2.10": "patches/@fontsource-variable%2Fnoto-sans-jp@5.2.10.patch",
+    "@fontsource-variable/noto-sans@5.2.10": "patches/@fontsource-variable%2Fnoto-sans@5.2.10.patch",
+    "@fontsource-variable/noto-sans-arabic@5.2.10": "patches/@fontsource-variable%2Fnoto-sans-arabic@5.2.10.patch",
+    "@fontsource-variable/noto-sans-sc@5.2.10": "patches/@fontsource-variable%2Fnoto-sans-sc@5.2.10.patch",
   },
   "packages": {
     "@capacitor/android": ["@capacitor/android@8.3.1", "", { "peerDependencies": { "@capacitor/core": "^8.3.0" } }, "sha512-hjskIG8YcBEh3X4yaTXvE9gcqpdcxunTgFruSKnuPxtMxAUzEK4Oq25x0Z1g3cz+MQPc+lRG09R7Ovc+ydKsNw=="],
@@ -60,6 +76,20 @@
     "@effect/sql-sqlite-wasm": ["@effect/sql-sqlite-wasm@4.0.0-beta.50", "", { "peerDependencies": { "@effect/wa-sqlite": "^0.1.2", "effect": "^4.0.0-beta.50" } }, "sha512-H9DvNg5RwvJ9fV9SMCXI5PKaKrgqFqSs2p/Sue+La1Ig8Cbf/5OSYJg0x9M+U6oIiOkrlXRFFkGJDRCuAwrm2g=="],
 
     "@effect/wa-sqlite": ["@effect/wa-sqlite@0.1.2", "", {}, "sha512-2JvJ9BDkBOwfeY/gXsC0XwEKC0AwisP2W5ABJ6mx14QyXTK12MGDIybDlHieuZt1TEFSMiKfpg7yyqyRWRooJQ=="],
+
+    "@fontsource-variable/noto-sans": ["@fontsource-variable/noto-sans@5.2.10", "", {}, "sha512-wyFgKkFu7jki5kEL8qv7avjQ8rxHX0J/nhLWvbR9T0hOH1HRKZEvb9EW9lMjZfWHHfEzKkYf5J+NadwgCS7TXA=="],
+
+    "@fontsource-variable/noto-sans-arabic": ["@fontsource-variable/noto-sans-arabic@5.2.10", "", {}, "sha512-6vP9gU5yQQE/4ClrVoS92rjwc3qUnSkoxaw/Hkrha1Nqn9UEwuh3WVxT2+DMlMdV49uxvxUKVauSd2nwLu/WBA=="],
+
+    "@fontsource-variable/noto-sans-bengali": ["@fontsource-variable/noto-sans-bengali@5.2.11", "", {}, "sha512-/n/T+YpnXXZHOYuoucK/Q+hOd8I93Pp49esgbb9DNKY4Ve+xIRTtvcoRZPLkjmMhEM+Fg5Z3LtaBPrHErM97GA=="],
+
+    "@fontsource-variable/noto-sans-jp": ["@fontsource-variable/noto-sans-jp@5.2.10", "", {}, "sha512-m0XfZ38rZtCaGAuAQL0cBPQ6fc/RguYEOqw66zvuLOV9vNRUBf9MFqyoazTu2JVCRIcnkrxbwF29UUaHHgTKdg=="],
+
+    "@fontsource-variable/noto-sans-kr": ["@fontsource-variable/noto-sans-kr@5.2.10", "", {}, "sha512-UZOO7HF44Rt5+7SCeFMHYVgbKu36Jet6IxrAd7jjEkQMVDmeefwd0H8V5pSZydvBOOxClk3V5cQsujJqGHhQMw=="],
+
+    "@fontsource-variable/noto-sans-sc": ["@fontsource-variable/noto-sans-sc@5.2.10", "", {}, "sha512-zdk10i5HrDQTXI7ldD61zToX1fsgig8vDTsu7zB48SXOitWfuX0e5viZAwnkHuhwh096PU6X6i1AyAsbBCISpA=="],
+
+    "@fontsource/noto-sans": ["@fontsource/noto-sans@5.2.10", "", {}, "sha512-J58RVfS/C0Z2VBF+PoU260Tx8cdRGYuS+e3yQe4hYaIYDl0sEVn5CzlLo5zVRvQD0HaIUTV8AZMfqR7rtdEpqQ=="],
 
     "@herp-inc/snabbdom-jsx": ["@herp-inc/snabbdom-jsx@0.22.0", "", { "peerDependencies": { "csstype": "3", "snabbdom": "3" } }, "sha512-slUSuRRsufYaiu52r2gkCGiivimukZ7A2IwWjvh/FCWz4PG/RmgTYRRk30nvD+1NiegpuguzdQ0sUi+fjZ9IcQ=="],
 
@@ -380,6 +410,12 @@
     "lodash.clonedeep": ["lodash.clonedeep@4.5.0", "", {}, "sha512-H5ZhCF25riFd9uB5UCkVKo61m3S/xZk1x4wA6yp/L3RFP6Z/eHH1ymQcGLo7J3GMPfm0V/7m1tryHuGVxpqEBQ=="],
 
     "lru-cache": ["lru-cache@11.3.5", "", {}, "sha512-NxVFwLAnrd9i7KUBxC4DrUhmgjzOs+1Qm50D3oF1/oL+r1NpZ4gA7xvG0/zJ8evR7zIKn4vLf7qTNduWFtCrRw=="],
+
+    "lucide-static": ["lucide-static@1.8.0", "", {}, "sha512-eQJCJuDg3tyQrjP0PwD5eIA4ePd5CMdxkrfyqk3iUQA4VOtsJ0v5T6IBJ5UyR3SYHzUn8HOAEL+I+SLVnOJNIA=="],
+
+    "material-icons": ["material-icons@1.13.14", "", {}, "sha512-kZOfc7xCC0rAT8Q3DQixYAeT+tBqZnxkseQtp2bxBxz7q5pMAC+wmit7vJn1g/l7wRU+HEPq23gER4iPjGs5Cg=="],
+
+    "material-symbols": ["material-symbols@0.44.2", "", {}, "sha512-FAOO8/VB+zMUA84jDJnRc/BPNLr3PPaZAXUUnsd/zkBcPZQyyMl8ECb68xWiYSn7w9OZbhUmyEwLIcfNgkakAg=="],
 
     "math-intrinsics": ["math-intrinsics@1.1.0", "", {}, "sha512-/IXtbwEk5HTPyEwyKX6hGkYXxM9nbj64B+ilVJnC/R6B0pH5G4V3b0pVbL7DBj4tkhBAppbQUlf6F6Xl9LHu1g=="],
 

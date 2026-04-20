@@ -17,11 +17,21 @@
 		"@capacitor/toast": "latest",
 		"@effect/platform-browser": "beta",
 		"@effect/sql-sqlite-wasm": "beta",
+		"@fontsource-variable/noto-sans": "^5.2.10",
+		"@fontsource-variable/noto-sans-arabic": "^5.2.10",
+		"@fontsource-variable/noto-sans-bengali": "^5.2.11",
+		"@fontsource-variable/noto-sans-jp": "^5.2.10",
+		"@fontsource-variable/noto-sans-kr": "^5.2.10",
+		"@fontsource-variable/noto-sans-sc": "^5.2.10",
+		"@fontsource/noto-sans": "^5.2.10",
 		"@herp-inc/snabbdom-jsx": "^0.22.0",
 		"@ionic/pwa-elements": "latest",
 		"clsx": "^2.1.1",
 		"csstype": "^3.2.3",
 		"effect": "beta",
+		"lucide-static": "^1.8.0",
+		"material-icons": "^1.13.14",
+		"material-symbols": "^0.44.2",
 		"snabbdom": "^3.6.3",
 		"tailwind-merge": "^3.5.0"
 	},
@@ -40,6 +50,12 @@
 		"typescript": "^6.0.3"
 	},
 	"patchedDependencies": {
-		"@herp-inc/snabbdom-jsx@0.22.0": "patches/@herp-inc%2Fsnabbdom-jsx@0.22.0.patch"
+		"@herp-inc/snabbdom-jsx@0.22.0": "patches/@herp-inc%2Fsnabbdom-jsx@0.22.0.patch",
+		"@fontsource-variable/noto-sans@5.2.10": "patches/@fontsource-variable%2Fnoto-sans@5.2.10.patch",
+		"@fontsource-variable/noto-sans-arabic@5.2.10": "patches/@fontsource-variable%2Fnoto-sans-arabic@5.2.10.patch",
+		"@fontsource-variable/noto-sans-bengali@5.2.11": "patches/@fontsource-variable%2Fnoto-sans-bengali@5.2.11.patch",
+		"@fontsource-variable/noto-sans-jp@5.2.10": "patches/@fontsource-variable%2Fnoto-sans-jp@5.2.10.patch",
+		"@fontsource-variable/noto-sans-kr@5.2.10": "patches/@fontsource-variable%2Fnoto-sans-kr@5.2.10.patch",
+		"@fontsource-variable/noto-sans-sc@5.2.10": "patches/@fontsource-variable%2Fnoto-sans-sc@5.2.10.patch"
 	}
 }

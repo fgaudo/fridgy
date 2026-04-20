@@ -19,45 +19,19 @@ import { safeImport } from '@/shared/safe.ts'
 import type * as Root from './pages/view.tsx'
 import { UiService } from './ui-service.ts'
 
-const loadFonts = Effect.gen(function* () {
-	const [comfortaaLatinPath, comfortaaLatinExtPath] = yield* Config.all([
-		Config.string('comfortaaLatinPath'),
-		Config.string('comfortaaLatinExtPath'),
-	]).pipe(Config.nested('font'), Config.nested('ui'))
-	const comfortaaLatinExt = new FontFace(
-		'Comfortaa',
-		`url(${comfortaaLatinExtPath})`,
-		{
-			style: 'normal',
-			weight: '300 700',
-			display: 'swap',
-			unicodeRange:
-				'U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF',
-		},
-	)
-	const comfortaaLatin = new FontFace(
-		'Comfortaa',
-		`url(${comfortaaLatinPath})`,
-		{
-			style: 'normal',
-			weight: '300 700',
-			display: 'swap',
-			unicodeRange:
-				'U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD',
-		},
-	)
-	yield* Effect.sync(() => {
-		document.fonts.add(comfortaaLatinExt)
-		document.fonts.add(comfortaaLatin)
-	})
-	yield* Effect.all(
+const loadFonts = Effect.asVoid(
+	Effect.all(
 		[
-			Effect.promise(() => comfortaaLatinExt.load()),
-			Effect.promise(() => comfortaaLatin.load()),
+			Effect.promise(() =>
+				document.fonts.load('1em "Material Symbols Rounded"'),
+			),
+			Effect.promise(() =>
+				document.fonts.load("1em 'Noto Sans Variable'", ' \u0000'),
+			),
 		],
 		{ concurrency: 'unbounded' },
-	)
-}).pipe(Effect.catchTag('ConfigError', Effect.die))
+	),
+)
 
 const loadAssets = Effect.all(
 	[loadFonts, Effect.promise(() => defineCustomElements(window))],
@@ -109,9 +83,9 @@ export const hotLayer = Layer.effect(
 		const uiModuleRef = yield* SubscriptionRef.make(
 			yield* loadModule.pipe(Effect.provide(uiLayer)),
 		)
-		const cssLinkElement = yield* Effect.gen(function* () {
-			return yield* Effect.sync(() => document.querySelector('#css')!)
-		})
+		const cssLinkElement = yield* Effect.sync(
+			() => document.querySelector('#css')!,
+		)
 		const refreshCss = Effect.gen(function* () {
 			const millis = yield* Clock.currentTimeMillis
 			const href = yield* Effect.sync(

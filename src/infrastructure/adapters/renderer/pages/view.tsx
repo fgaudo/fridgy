@@ -13,20 +13,19 @@ export const makeView = Effect.gen(function* () {
 	const homeView = yield* Home.makeView
 	const { hideSplashScreen } = yield* UiService
 	return (model: Model) => {
-		return h('div', [
-			Match.valueTags(model.currentPage, {
-				Home: ({ model }) => homeView(model),
-				AddProduct: () =>
-					h('div', { class: { 'text-2xl text-white': true } }, []),
-			}),
-			h('div', {
-				key: 'static',
-				hook: {
-					insert: () => {
-						run(hideSplashScreen)
-					},
-				},
-			}),
-		])
+		return (
+			<div>
+				{Match.valueTags(model.currentPage, {
+					Home: ({ model }) => homeView(model),
+					AddProduct: () => <div className="text-2xl text-white"></div>,
+				})}
+				<div
+					$key="static"
+					$hook={{
+						insert: () => run(hideSplashScreen),
+					}}
+				></div>
+			</div>
+		)
 	}
 }).pipe(Effect.scoped)

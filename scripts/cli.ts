@@ -27,13 +27,12 @@ const commonBuildConfig = Effect.gen(function* () {
 		],
 		outdir: resolve('./dist'),
 		plugins: [BunTailwind],
-		loader: { '.css': 'css' },
+		loader: { '.css': 'css', '.woff2': 'file' },
 		naming: {
 			entry: '[name].[ext]',
 			chunk: '[name].[ext]',
 			asset: '[name].[ext]',
 		},
-		external: ['*.woff2'],
 		env: 'inline',
 	} satisfies Bun.BuildConfig
 })
@@ -87,18 +86,6 @@ const prepareDist = Effect.gen(function* () {
 		resolve('./src/infrastructure/adapters/renderer/index.html'),
 		resolve('./dist/index.html'),
 	)
-	yield* fs.copyFile(
-		resolve(
-			'./src/infrastructure/adapters/renderer/fonts/comfortaa-latin-ext.woff2',
-		),
-		resolve('./dist/comfortaa-latin-ext.woff2'),
-	)
-	yield* fs.copyFile(
-		resolve(
-			'./src/infrastructure/adapters/renderer/fonts/comfortaa-latin.woff2',
-		),
-		resolve('./dist/comfortaa-latin.woff2'),
-	)
 })
 
 const watchCommand = Cli.Command.make(
@@ -107,6 +94,8 @@ const watchCommand = Cli.Command.make(
 	Effect.fn(function* () {
 		const fs = yield* FS.FileSystem
 		const resolve = yield* makeRootResolver
+		yield* prepareDist
+		yield* buildDev
 		const server = yield* Effect.acquireRelease(
 			Effect.sync(() =>
 				Bun.serve({
@@ -131,7 +120,6 @@ const watchCommand = Cli.Command.make(
 		const publish = Effect.sync(() => server.publish('refresh', 'reload-page'))
 		const terminal = yield* Terminal.Terminal
 		const input = yield* terminal.readInput
-		yield* buildDev
 		const display = terminal.display(
 			//@ts-expect-error
 			`\nHMR running at ws://${process.env.UI_EMITTER_WEBSOCKET_HOST}:${process.env.UI_EMITTER_WEBSOCKET_PORT}\nPress Ctrl+c to stop\n`,
