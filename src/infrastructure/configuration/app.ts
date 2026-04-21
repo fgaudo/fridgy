@@ -29,13 +29,9 @@ const UiLayer = Layer.unwrap(
 const ConfigLayer = ConfigProvider.layer(
 	ConfigProvider.fromUnknown({
 		sqlite: {
-			workerPath: './sqlite-worker.js',
+			workerPath: './sqlite.worker.js',
 		},
 		ui: {
-			font: {
-				comfortaaLatinExtPath: './comfortaa-latin-ext.woff2',
-				comfortaaLatinPath: './comfortaa-latin.woff2',
-			},
 			hotModule: {
 				viewPath: './view.js',
 				websocket: {

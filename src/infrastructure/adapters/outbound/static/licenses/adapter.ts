@@ -18,12 +18,12 @@ export const layer = Layer.succeed(
 					Opt.fromNullishOr(v),
 				)
 				return {
-					packageName,
 					copyright: Opt.none(),
 					description: Opt.none(),
 					email: Opt.none(),
 					licenses: Opt.none(),
 					name: Opt.none(),
+					packageName,
 					publisher: Opt.none(),
 					repository: Opt.none(),
 					...options,
