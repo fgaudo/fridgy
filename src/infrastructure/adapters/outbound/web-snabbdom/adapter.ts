@@ -15,7 +15,7 @@ import * as Snabbdom from 'snabbdom'
 
 import { MessageDispatcher } from '@/app/ports/inbound/message-dispatcher.ts'
 import { Renderer } from '@/app/ports/outbound/model-renderer.ts'
-import { safeImport } from '@/shared/safe.ts'
+import { saferImport } from '@/shared/safe.ts'
 
 import type * as Root from './pages/view.tsx'
 import { UiService } from './ui-service.ts'
@@ -75,7 +75,7 @@ export const hotLayer = Layer.effect(
 				Config.nested('ui'),
 			)
 			const millis = yield* Clock.currentTimeMillis
-			const module = (yield* safeImport(
+			const module = (yield* saferImport(
 				`${modulePath}?t=${millis}`,
 			)) as typeof Root
 			return yield* module.makeView.pipe(Effect.provide(uiLayer))

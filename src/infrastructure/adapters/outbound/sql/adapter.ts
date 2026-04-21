@@ -16,18 +16,14 @@ import {
 	ProductExpirationSchema,
 	ProductSchema,
 } from '@/infra/shared/sql/schema.ts'
-import {
-	Product,
-	ProductExpiration,
-	SqlHelper,
-} from '@/infra/shared/sql/sql-helper.ts'
+import * as SqlHelper from '@/infra/shared/sql/sql-helper.ts'
 import * as Integer from '@/shared/integer/integer.ts'
 
 const addProductLayer = Layer.effect(
 	AddProduct.AddProduct,
 	Effect.gen(function* () {
 		const { productRepository, insertProductWithExpirationResolver } =
-			yield* SqlHelper
+			yield* SqlHelper.SqlHelper
 		return RequestResolver.makeGrouped<
 			AddProduct.Request,
 			Opt.Option<Integer.Integer>
@@ -69,7 +65,7 @@ const addProductLayer = Layer.effect(
 const deleteProductsLayer = Layer.effect(
 	DeleteProductById.DeleteProductById,
 	Effect.gen(function* () {
-		const { productRepository } = yield* SqlHelper
+		const { productRepository } = yield* SqlHelper.SqlHelper
 		return RequestResolver.make<DeleteProductById.Request>(
 			Effect.fn(function* (entries) {
 				const validEntries = pipe(
@@ -111,12 +107,16 @@ const getProductsLayer = Layer.effect(
 			Request: Schema.Void,
 			Result: Schema.Struct({
 				maybeId: Schema.OptionFromNullishOr(Integer.Schema),
-				maybeName: Schema.OptionFromNullishOr(Product.fields['name']),
+				maybeName: Schema.OptionFromNullishOr(
+					SqlHelper.Product.fields[ProductSchema.columns.name],
+				),
 				maybeCreationDate: Schema.OptionFromNullishOr(
-					Product.fields['creation_date'],
+					SqlHelper.Product.fields[ProductSchema.columns.creationDate],
 				),
 				maybeExpirationDate: Schema.OptionFromNullishOr(
-					ProductExpiration.fields['date'],
+					SqlHelper.ProductExpiration.fields[
+						ProductExpirationSchema.columns.date
+					],
 				),
 			}),
 			execute: () => {
