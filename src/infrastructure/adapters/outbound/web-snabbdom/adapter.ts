@@ -1,12 +1,11 @@
 import { SplashScreen } from '@capacitor/splash-screen'
 import { Toast } from '@capacitor/toast'
-import * as Browser from '@effect/platform-browser'
 import { defineCustomElements } from '@ionic/pwa-elements/loader'
 import * as Clock from 'effect/Clock'
 import * as Config from 'effect/Config'
 import * as Effect from 'effect/Effect'
-import { flow } from 'effect/Function'
 import * as Layer from 'effect/Layer'
+import * as PubSub from 'effect/PubSub'
 import * as Stream from 'effect/Stream'
 import * as SubscriptionRef from 'effect/SubscriptionRef'
 import * as SynchronizedRef from 'effect/SynchronizedRef'
@@ -55,35 +54,44 @@ const initRenderer = Effect.gen(function* () {
 		]),
 	)
 	const messageDispatcher = yield* MessageDispatcher
+	const invalidatePubSub = yield* Effect.acquireRelease(
+		PubSub.unbounded<void>({ replay: 1 }),
+		q => PubSub.shutdown(q),
+	)
+	yield* PubSub.publish(invalidatePubSub, undefined)
 	const uiLayer = Layer.mergeAll(
 		Layer.succeed(MessageDispatcher, messageDispatcher),
 		Layer.succeed(UiService, {
 			hideSplashScreen: Effect.promise(() => SplashScreen.hide()),
+			invalidateUi: PubSub.publish(invalidatePubSub, undefined),
 			showToast: text => Effect.promise(() => Toast.show({ text })),
 		}),
 	)
-	return { containerRef, patch, uiLayer }
+	return {
+		containerRef,
+		invalidate$: Stream.fromPubSub(invalidatePubSub),
+		patch,
+		uiLayer,
+	}
 })
 
 export const hotLayer = Layer.effect(
 	Renderer,
 	Effect.gen(function* () {
-		const { uiLayer, patch, containerRef } = yield* initRenderer
+		const { uiLayer, patch, containerRef, invalidate$ } = yield* initRenderer
+		const modulePath = yield* Config.string('viewPath').pipe(
+			Config.nested('hotModule'),
+			Config.nested('ui'),
+		)
 		const loadModule = Effect.gen(function* () {
-			const modulePath = yield* Config.string('viewPath').pipe(
-				Config.nested('hotModule'),
-				Config.nested('ui'),
-			)
 			const millis = yield* Clock.currentTimeMillis
 			const module = (yield* saferImport(
 				`${modulePath}?t=${millis}`,
 			)) as typeof Root
 			return yield* module.makeView.pipe(Effect.provide(uiLayer))
-		}).pipe(Effect.catchTag('ConfigError', Effect.die))
+		})
 		const socket = yield* Socket.Socket
-		const uiModuleRef = yield* SubscriptionRef.make(
-			yield* loadModule.pipe(Effect.provide(uiLayer)),
-		)
+		const uiModuleRef = yield* SubscriptionRef.make(loadModule)
 		const cssLinkElement = yield* Effect.sync(
 			() => document.querySelector('#css')!,
 		)
@@ -99,63 +107,56 @@ export const hotLayer = Layer.effect(
 			})
 		})
 		yield* socket
-			.run(
-				Effect.fn(function* () {
-					const newView = yield* loadModule
-					yield* refreshCss
-					yield* SubscriptionRef.set(uiModuleRef, newView)
-				}),
-			)
+			.run(() => SubscriptionRef.set(uiModuleRef, loadModule))
 			.pipe(Effect.forkScoped)
-		return flow(
-			Stream.zipLatest(SubscriptionRef.changes(uiModuleRef)),
-			Stream.switchMap(([model, view]) =>
-				Stream.fromEffect(
-					SynchronizedRef.updateEffect(containerRef, node =>
-						Effect.sync(() => patch(node, view(model))),
+		return model$ =>
+			SubscriptionRef.changes(uiModuleRef).pipe(
+				Stream.switchMap(makeView =>
+					Stream.zipLatestAll(
+						model$,
+						Stream.fromEffect(
+							Effect.gen(function* () {
+								yield* refreshCss
+								return yield* makeView
+							}),
+						),
+						invalidate$,
+					).pipe(
+						Stream.mapEffect(([model, view]) =>
+							SynchronizedRef.updateEffect(containerRef, node =>
+								Effect.sync(() => patch(node, view(model))),
+							),
+						),
+						Stream.switchMap(() => Stream.never),
+						Stream.scoped,
 					),
 				),
-			),
-			Stream.runDrain,
-		)
+				Stream.runDrain,
+			)
 	}),
-).pipe(
-	Layer.provide(
-		Layer.unwrap(
-			Effect.gen(function* () {
-				const webSocketUrl = yield* Config.all([
-					Config.string('host'),
-					Config.number('port'),
-				]).pipe(
-					Config.nested('websocket'),
-					Config.nested('hotModule'),
-					Config.nested('ui'),
-					Config.mapOrFail(([host, port]) =>
-						Effect.sync(() => `ws://${host}:${port.toString(10)}`),
-					),
-				)
-				return Browser.BrowserSocket.layerWebSocket(webSocketUrl)
-			}).pipe(Effect.catchTag('ConfigError', Effect.die)),
-		),
-	),
-)
+).pipe(Layer.orDie)
 
 export const staticLayer = Layer.effect(
 	Renderer,
 	Effect.gen(function* () {
-		const { uiLayer, patch, containerRef } = yield* initRenderer
-		const view = yield* (yield* Effect.promise(
+		const { uiLayer, patch, containerRef, invalidate$ } = yield* initRenderer
+		const makeView = (yield* Effect.promise(
 			() => import('./pages/view.tsx'),
 		)).makeView.pipe(Effect.provide(uiLayer))
-		return flow(
-			Stream.switchMap(model =>
-				Stream.fromEffect(
+		return model$ =>
+			Stream.zipLatestAll(
+				Stream.fromEffect(makeView),
+				model$,
+				invalidate$,
+			).pipe(
+				Stream.mapEffect(([view, model]) =>
 					SynchronizedRef.updateEffect(containerRef, node =>
 						Effect.sync(() => patch(node, view(model))),
 					),
 				),
-			),
-			Stream.runDrain,
-		)
+				Stream.switchMap(() => Stream.never),
+				Stream.scoped,
+				Stream.runDrain,
+			)
 	}),
 ).pipe(Layer.orDie)
