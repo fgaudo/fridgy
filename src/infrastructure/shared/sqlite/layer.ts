@@ -3,9 +3,7 @@ import * as Config from 'effect/Config'
 import * as Effect from 'effect/Effect'
 import * as Layer from 'effect/Layer'
 
-import * as Sql from '@/infra/adapters/outbound/sql/adapter.ts'
-import { migrations } from '@/infra/adapters/outbound/sql/migrations.ts'
-import * as SqlDb from '@/infra/adapters/outbound/sql/sql-db.ts'
+import { migrations } from '@/infra/shared/sql/migrations.ts'
 
 export const layer = Layer.unwrap(
 	Effect.gen(function* () {
@@ -29,13 +27,8 @@ export const layer = Layer.unwrap(
 		const clientLayer = SqliteWasm.SqliteClient.layer({
 			worker: makeWorker,
 		})
-		const migratorWithClientLayer = SqliteWasm.SqliteMigrator.layer({
+		return SqliteWasm.SqliteMigrator.layer({
 			loader: SqliteWasm.SqliteMigrator.fromRecord(migrations),
-		}).pipe(Layer.provideMerge(clientLayer))
-		return Sql.layer.pipe(
-			Layer.provide(SqlDb.SqlDb.layer),
-			Layer.provide(migratorWithClientLayer),
-			Layer.orDie,
-		)
+		}).pipe(Layer.provideMerge(clientLayer), Layer.orDie)
 	}),
 )

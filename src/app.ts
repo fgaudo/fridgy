@@ -2,7 +2,7 @@ import * as Browser from '@effect/platform-browser'
 import * as Effect from 'effect/Effect'
 
 import { ModelEmitter } from '@/app/ports/outbound/model-emitter.ts'
-import { Renderer } from '@/app/ports/outbound/model-renderer'
+import { Renderer } from '@/app/ports/outbound/model-renderer.ts'
 import { AppLayer } from '@/infra/configuration/app.ts'
 
 Browser.BrowserRuntime.runMain(

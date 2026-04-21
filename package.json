@@ -4,7 +4,7 @@
 	"type": "module",
 	"module": "index.ts",
 	"scripts": {
-		"update-licenses": "license-checker-rseidelsohn --excludePackages fridgy --json --customPath src/infrastructure/adapters/get-licenses/custom-path.json --out src/infrastructure/adapters/get-licenses/generated/licenses.json --depth 0",
+		"update-licenses": "license-checker-rseidelsohn --excludePackages fridgy --json --customPath src/infrastructure/adapters/outbound/static/licenses/custom-path.json --out src/infrastructure/adapters/outbound/static/licenses/generated/licenses.json --depth 0",
 		"build": "bun ./scripts/cli.ts build",
 		"watch": "bun ./scripts/cli.ts watch",
 		"http-server": "bunx http-server dist",

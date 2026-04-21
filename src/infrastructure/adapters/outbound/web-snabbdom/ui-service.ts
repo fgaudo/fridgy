@@ -7,4 +7,4 @@ export class UiService extends Context.Service<
 		showToast: (text: string) => Effect.Effect<void>
 		hideSplashScreen: Effect.Effect<void>
 	}
->()('a0fdb1d70ea24aea') {}
+>()('40684680775332b1') {}

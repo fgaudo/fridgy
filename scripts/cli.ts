@@ -16,7 +16,7 @@ const makeRootResolver = Effect.gen(function* () {
 		path.join(currentDir, '..', ...parts)
 })
 
-const rendererPath = './src/infrastructure/adapters/outbound/renderer/'
+const rendererPath = './src/infrastructure/adapters/outbound/web-snabbdom/'
 
 const commonBuildConfig = Effect.gen(function* () {
 	const resolve = yield* makeRootResolver
@@ -24,9 +24,7 @@ const commonBuildConfig = Effect.gen(function* () {
 	return {
 		target: 'browser',
 		entrypoints: [
-			resolve(
-				'./src/infrastructure/configuration/database/sqlite/sqlite-worker.ts',
-			),
+			resolve('./src/infrastructure/shared/sqlite/sqlite.worker.ts'),
 			resolve('./src/app.ts'),
 			resolve(rendererPath, './css/styles.css'),
 		],

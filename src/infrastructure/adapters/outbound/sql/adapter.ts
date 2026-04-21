@@ -15,16 +15,19 @@ import * as GetProducts from '@/app/ports/outbound/product/get-products.ts'
 import {
 	ProductExpirationSchema,
 	ProductSchema,
-} from '@/infra/adapters/outbound/sql/schema.ts'
+} from '@/infra/shared/sql/schema.ts'
+import {
+	Product,
+	ProductExpiration,
+	SqlHelper,
+} from '@/infra/shared/sql/sql-helper.ts'
 import * as Integer from '@/shared/integer/integer.ts'
-
-import { Product, ProductExpiration, SqlDb } from './sql-db.ts'
 
 const addProductLayer = Layer.effect(
 	AddProduct.AddProduct,
 	Effect.gen(function* () {
 		const { productRepository, insertProductWithExpirationResolver } =
-			yield* SqlDb
+			yield* SqlHelper
 		return RequestResolver.makeGrouped<
 			AddProduct.Request,
 			Opt.Option<Integer.Integer>
@@ -66,7 +69,7 @@ const addProductLayer = Layer.effect(
 const deleteProductsLayer = Layer.effect(
 	DeleteProductById.DeleteProductById,
 	Effect.gen(function* () {
-		const { productRepository } = yield* SqlDb
+		const { productRepository } = yield* SqlHelper
 		return RequestResolver.make<DeleteProductById.Request>(
 			Effect.fn(function* (entries) {
 				const validEntries = pipe(

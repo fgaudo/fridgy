@@ -1,25 +1,64 @@
+import * as ConfigProvider from 'effect/ConfigProvider'
+import * as Effect from 'effect/Effect'
 import * as Layer from 'effect/Layer'
 import * as References from 'effect/References'
 
-import * as Logic from '@/app/core/logic.ts'
 import * as Usecase from '@/app/use-cases/index.ts'
 import { layer as MessageDispatcherLayer } from '@/infra/adapters/inbound/fsm.adapter.ts'
 import { layer as ModelEmitterLayer } from '@/infra/adapters/outbound/fsm.adapter.ts'
-import { ConfigLayer } from '@/infra/configuration/config.ts'
-import { layer as DbLayer } from '@/infra/configuration/db/adapter.ts'
-import { UiLayer } from '@/infra/configuration/ui.ts'
-import * as Fsm from '@/shared/fsm.ts'
+import * as Sql from '@/infra/adapters/outbound/sql/adapter.ts'
+import * as GetLicenses from '@/infra/adapters/outbound/static/licenses/adapter.ts'
+import * as GetSayings from '@/infra/adapters/outbound/static/sayings/adapter.ts'
+import {
+	hotLayer,
+	staticLayer,
+} from '@/infra/adapters/outbound/web-snabbdom/adapter.ts'
+import * as Fsm from '@/infra/shared/fsm.ts'
+import * as SqlHelper from '@/infra/shared/sql/sql-helper.ts'
+import * as Sqlite from '@/infra/shared/sqlite/layer.ts'
+
+const UiLayer = Layer.unwrap(
+	Effect.gen(function* () {
+		if (process.env.NODE_ENV === 'production') {
+			return staticLayer
+		}
+		return hotLayer
+	}),
+).pipe(Layer.provide([GetSayings.layer, GetLicenses.layer]))
+
+const ConfigLayer = ConfigProvider.layer(
+	ConfigProvider.fromUnknown({
+		ui: {
+			hotModule: {
+				websocket: {
+					// @ts-expect-error
+					host: process.env.UI_EMITTER_WEBSOCKET_HOST,
+					// @ts-expect-error
+					port: process.env.UI_EMITTER_WEBSOCKET_PORT,
+				},
+				viewPath: './view.js',
+			},
+			font: {
+				comfortaaLatinPath: './comfortaa-latin.woff2',
+				comfortaaLatinExtPath: './comfortaa-latin-ext.woff2',
+			},
+		},
+		sqlite: {
+			workerPath: './sqlite-worker.js',
+		},
+	}),
+)
+
+const DbLayer = Sql.layer.pipe(
+	Layer.provide(SqlHelper.SqlHelper.layer),
+	Layer.provide(Sqlite.layer),
+)
 
 export const AppLayer = UiLayer.pipe(
 	Layer.provide(MessageDispatcherLayer),
 	Layer.merge(ModelEmitterLayer),
 	Layer.provide(
-		Fsm.layer({
-			emitter: Logic.subscriptions,
-			handleDefect: Logic.handleDefect,
-			init: Logic.init,
-			update: Logic.update,
-		}).pipe(Layer.provide(Usecase.all), Layer.provide(DbLayer)),
+		Fsm.layer.pipe(Layer.provide(Usecase.all), Layer.provide(DbLayer)),
 	),
 	Layer.provide(ConfigLayer),
 	Layer.provideMerge(Layer.succeed(References.MinimumLogLevel, 'Debug')),

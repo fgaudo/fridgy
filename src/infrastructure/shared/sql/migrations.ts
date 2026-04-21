@@ -4,7 +4,7 @@ import * as Sql from 'effect/unstable/sql'
 import {
 	ProductExpirationSchema,
 	ProductSchema,
-} from '@/infra/adapters/outbound/sql/schema.ts'
+} from '@/infra/shared/sql/schema.ts'
 
 export const migrations = {
 	'0000001_create_db': Effect.gen(function* () {
