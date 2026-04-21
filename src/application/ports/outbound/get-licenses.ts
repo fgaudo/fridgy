@@ -16,4 +16,4 @@ export type License = {
 export class GetLicenses extends Context.Service<
 	GetLicenses,
 	Effect.Effect<ReadonlyArray<License>>
->()('f26dda181ceae6f7') {}
+>()('386f12cda3d5716d') {}

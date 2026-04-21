@@ -4,7 +4,7 @@ import * as Layer from 'effect/Layer'
 import * as Opt from 'effect/Option'
 import * as Record from 'effect/Record'
 
-import * as GetLicenses from '@/app/ports/get-licenses.ts'
+import * as GetLicenses from '@/app/ports/outbound/get-licenses.ts'
 
 import * as Licenses from './generated/licenses.json' with { type: 'json' }
 

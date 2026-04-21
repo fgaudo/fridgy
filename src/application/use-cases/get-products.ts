@@ -6,7 +6,7 @@ import * as Effect from 'effect/Effect'
 import * as Layer from 'effect/Layer'
 import * as Option from 'effect/Option'
 
-import * as GetProductsPort from '@/app/ports/product-repo/get-products.ts'
+import * as GetProductsPort from '@/app/ports/outbound/product/get-products'
 import * as Product from '@/domain/product.ts'
 import * as Integer from '@/shared/integer/integer.ts'
 import * as NormalizedString from '@/shared/normalized-string.ts'

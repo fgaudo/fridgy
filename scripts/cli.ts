@@ -16,14 +16,19 @@ const makeRootResolver = Effect.gen(function* () {
 		path.join(currentDir, '..', ...parts)
 })
 
+const rendererPath = './src/infrastructure/adapters/outbound/renderer/'
+
 const commonBuildConfig = Effect.gen(function* () {
 	const resolve = yield* makeRootResolver
+
 	return {
 		target: 'browser',
 		entrypoints: [
-			resolve('./src/infrastructure/adapters/db/sqlite/sqlite-worker.ts'),
+			resolve(
+				'./src/infrastructure/configuration/database/sqlite/sqlite-worker.ts',
+			),
 			resolve('./src/app.ts'),
-			resolve('./src/infrastructure/adapters/renderer/css/styles.css'),
+			resolve(rendererPath, './css/styles.css'),
 		],
 		outdir: resolve('./dist'),
 		plugins: [BunTailwind],
@@ -45,7 +50,7 @@ const buildDev = Effect.gen(function* () {
 			...config,
 			entrypoints: [
 				...config.entrypoints,
-				resolve('./src/infrastructure/adapters/renderer/pages/view.tsx'),
+				resolve(rendererPath, './pages/view.tsx'),
 			],
 			sourcemap: 'inline',
 		}),
@@ -83,7 +88,7 @@ const prepareDist = Effect.gen(function* () {
 		resolve('./dist/wa-sqlite.wasm'),
 	)
 	yield* fs.copyFile(
-		resolve('./src/infrastructure/adapters/renderer/index.html'),
+		resolve(rendererPath, './index.html'),
 		resolve('./dist/index.html'),
 	)
 })
@@ -133,8 +138,8 @@ const watchCommand = Cli.Command.make(
 			),
 			Stream.mergeAll(
 				[
-					fs.watch(resolve('./src/infrastructure/adapters/renderer/pages')),
-					fs.watch(resolve('./src/infrastructure/adapters/renderer/css')),
+					fs.watch(resolve(rendererPath, './pages')),
+					fs.watch(resolve(rendererPath, './css')),
 				],
 				{ concurrency: 'unbounded' },
 			).pipe(

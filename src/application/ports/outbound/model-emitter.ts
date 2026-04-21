@@ -6,4 +6,4 @@ import type { Model } from '@/app/core/model.ts'
 export class ModelEmitter extends Context.Service<
 	ModelEmitter,
 	Stream.Stream<Model>
->()('23d12c75c163961a') {}
+>()('1ca0d18bad82f0e6') {}

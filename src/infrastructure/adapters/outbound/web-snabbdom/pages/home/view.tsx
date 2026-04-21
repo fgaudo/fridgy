@@ -2,7 +2,7 @@ import * as Effect from 'effect/Effect'
 import { h } from 'snabbdom'
 
 import type { Model } from '@/app/core/home/model.ts'
-import { MessageDispatcher } from '@/app/ports/state-manager/message-dispatcher.ts'
+import { MessageDispatcher } from '@/app/ports/inbound/message-dispatcher'
 export const makeView = Effect.gen(function* () {
 	return (model: Model) => {
 		return (

@@ -5,6 +5,7 @@ import { defineCustomElements } from '@ionic/pwa-elements/loader'
 import * as Clock from 'effect/Clock'
 import * as Config from 'effect/Config'
 import * as Effect from 'effect/Effect'
+import { flow } from 'effect/Function'
 import * as Layer from 'effect/Layer'
 import * as Stream from 'effect/Stream'
 import * as SubscriptionRef from 'effect/SubscriptionRef'
@@ -12,8 +13,8 @@ import * as SynchronizedRef from 'effect/SynchronizedRef'
 import * as Socket from 'effect/unstable/socket/Socket'
 import * as Snabbdom from 'snabbdom'
 
-import { Renderer } from '@/app/ports/renderer.ts'
-import { MessageDispatcher } from '@/app/ports/state-manager/message-dispatcher.ts'
+import { MessageDispatcher } from '@/app/ports/inbound/message-dispatcher.ts'
+import { Renderer } from '@/app/ports/outbound/model-renderer.ts'
 import { safeImport } from '@/shared/safe.ts'
 
 import type * as Root from './pages/view.tsx'
@@ -106,14 +107,17 @@ export const hotLayer = Layer.effect(
 				}),
 			)
 			.pipe(Effect.forkScoped)
-		return model =>
-			SubscriptionRef.changes(uiModuleRef).pipe(
-				Stream.mapEffect(view =>
+		return flow(
+			Stream.zipLatest(SubscriptionRef.changes(uiModuleRef)),
+			Stream.switchMap(([model, view]) =>
+				Stream.fromEffect(
 					SynchronizedRef.updateEffect(containerRef, node =>
 						Effect.sync(() => patch(node, view(model))),
 					),
 				),
-			)
+			),
+			Stream.runDrain,
+		)
 	}),
 ).pipe(
 	Layer.provide(
@@ -143,11 +147,15 @@ export const staticLayer = Layer.effect(
 		const view = yield* (yield* Effect.promise(
 			() => import('./pages/view.tsx'),
 		)).makeView.pipe(Effect.provide(uiLayer))
-		return model =>
-			Stream.fromEffect(
-				SynchronizedRef.updateEffect(containerRef, node =>
-					Effect.sync(() => patch(node, view(model))),
+		return flow(
+			Stream.switchMap(model =>
+				Stream.fromEffect(
+					SynchronizedRef.updateEffect(containerRef, node =>
+						Effect.sync(() => patch(node, view(model))),
+					),
 				),
-			)
+			),
+			Stream.runDrain,
+		)
 	}),
 ).pipe(Layer.orDie)

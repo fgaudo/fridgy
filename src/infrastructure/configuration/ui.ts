@@ -1,9 +1,12 @@
 import * as Effect from 'effect/Effect'
 import * as Layer from 'effect/Layer'
 
-import * as GetLicenses from '@/infra/adapters/get-licenses/index.ts'
-import * as GetSayings from '@/infra/adapters/get-sayings/index.ts'
-import { hotLayer, staticLayer } from '@/infra/adapters/renderer/index.ts'
+import * as GetLicenses from '@/infra/adapters/outbound/static/licenses/adapter.ts'
+import * as GetSayings from '@/infra/adapters/outbound/static/sayings/adapter.ts'
+import {
+	hotLayer,
+	staticLayer,
+} from '@/infra/adapters/outbound/web-snabbdom/adapter.ts'
 
 export const UiLayer = Layer.unwrap(
 	Effect.gen(function* () {

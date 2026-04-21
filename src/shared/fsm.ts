@@ -1,5 +1,6 @@
 import * as Array from 'effect/Array'
 import type * as Cause from 'effect/Cause'
+import * as Context from 'effect/Context'
 import type * as Data from 'effect/Data'
 import * as Deferred from 'effect/Deferred'
 import * as Effect from 'effect/Effect'
@@ -7,6 +8,7 @@ import * as Equal from 'effect/Equal'
 import * as Function from 'effect/Function'
 import * as HashMap from 'effect/HashMap'
 import * as HashSet from 'effect/HashSet'
+import * as Layer from 'effect/Layer'
 import * as Newtype from 'effect/Newtype'
 import * as Option from 'effect/Option'
 import * as PubSub from 'effect/PubSub'
@@ -231,3 +233,21 @@ export const transitions = <State, Message>(
 	const { transitionStream } = Newtype.value(stateManager)
 	return transitionStream
 }
+
+export const Engine = <S, M>() =>
+	Context.Service<Engine<S, M>>('#fgaudo/fsm/Engine')
+
+export const layer = <S, M, R, K>({
+	update,
+	emitter,
+	handleDefect,
+	init,
+}: {
+	handleDefect: (
+		cause: Cause.Cause<unknown>,
+	) => NoInfer<Array.NonEmptyReadonlyArray<M>>
+	update: Update<S, M, R>
+	emitter: Emitter<S, M, R, K>
+	init: Step<S, M, R>
+}) =>
+	Layer.effect(Engine<S, M>(), prepare({ handleDefect, update, emitter })(init))

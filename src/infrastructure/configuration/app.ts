@@ -1,20 +1,25 @@
-import * as Context from 'effect/Context'
 import * as Layer from 'effect/Layer'
 import * as References from 'effect/References'
 
-import { MessageDispatcher } from '@/app/ports/state-manager/message-dispatcher.ts'
+import * as Logic from '@/app/core/logic.ts'
 import * as Usecase from '@/app/use-cases/index.ts'
-import * as StateManager from '@/infra/adapters/state-manager.ts'
+import { layer as MessageDispatcherLayer } from '@/infra/adapters/inbound/fsm.adapter.ts'
+import { layer as ModelEmitterLayer } from '@/infra/adapters/outbound/fsm.adapter.ts'
 import { ConfigLayer } from '@/infra/configuration/config.ts'
-import { DbLayer } from '@/infra/configuration/db.ts'
+import { layer as DbLayer } from '@/infra/configuration/db/adapter.ts'
 import { UiLayer } from '@/infra/configuration/ui.ts'
+import * as Fsm from '@/shared/fsm.ts'
 
 export const AppLayer = UiLayer.pipe(
-	Layer.provideMerge(
-		StateManager.layer.pipe(Layer.provide(Usecase.all), Layer.provide(DbLayer)),
-	),
-	Layer.flatMap(context =>
-		Layer.succeedContext(Context.omit(MessageDispatcher)(context)),
+	Layer.provide(MessageDispatcherLayer),
+	Layer.merge(ModelEmitterLayer),
+	Layer.provide(
+		Fsm.layer({
+			emitter: Logic.subscriptions,
+			handleDefect: Logic.handleDefect,
+			init: Logic.init,
+			update: Logic.update,
+		}).pipe(Layer.provide(Usecase.all), Layer.provide(DbLayer)),
 	),
 	Layer.provide(ConfigLayer),
 	Layer.provideMerge(Layer.succeed(References.MinimumLogLevel, 'Debug')),

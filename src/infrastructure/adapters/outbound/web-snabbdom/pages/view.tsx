@@ -4,7 +4,7 @@ import * as Match from 'effect/Match'
 import { h } from 'snabbdom'
 
 import type { Model } from '@/app/core/model.ts'
-import { UiService } from '@/infra/adapters/renderer/ui-service.ts'
+import { UiService } from '@/infra/adapters/outbound/web-snabbdom/ui-service.ts'
 
 import * as Home from './home/view.tsx'
 

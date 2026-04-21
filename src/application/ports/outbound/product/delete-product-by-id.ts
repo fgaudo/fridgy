@@ -2,16 +2,12 @@ import * as Context from 'effect/Context'
 import * as Req from 'effect/Request'
 import type * as RequestResolver from 'effect/RequestResolver'
 
-import type { ProductOutput } from '@/domain/product.ts'
-
-export interface Request extends Req.Request<string, void> {
+export interface Request extends Req.Request<void, void> {
 	id: string
-	product: ProductOutput
 }
-
 export const Request = Req.of<Request>()
 
-export class AddProduct extends Context.Service<
-	AddProduct,
+export class DeleteProductById extends Context.Service<
+	DeleteProductById,
 	RequestResolver.RequestResolver<Request>
->()('c82c014ffc140d6c') {}
+>()('8daf8f7787f3fb9b') {}
