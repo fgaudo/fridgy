@@ -1,17 +1,17 @@
 export const ProductSchema = {
-	table: 'product',
 	columns: {
+		creationDate: 'creation_date',
 		id: 'id',
 		name: 'name',
-		creationDate: 'creation_date',
 	},
+	table: 'product',
 } as const
 
 export const ProductExpirationSchema = {
-	table: 'product_expiration',
 	columns: {
-		id: 'id',
 		date: 'date',
+		id: 'id',
 		productId: 'product_id',
 	},
+	table: 'product_expiration',
 } as const

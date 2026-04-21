@@ -42,8 +42,8 @@ export const update: StateManager.Update<State, InternalMessage, UC.All> =
 						...state,
 						toast: {
 							...state.toast,
-							version: nextVersion,
 							maybeText: Option.some(text),
+							version: nextVersion,
 						},
 					},
 					[
@@ -82,8 +82,8 @@ export const init: StateManager.Step<
 	const [state, commands] = Home.init
 	return T.make(
 		{
-			toast: { version: 0n, maybeText: Option.none() },
 			currentPage: Page.Home({ state: state }),
+			toast: { maybeText: Option.none(), version: 0n },
 		},
 		commands,
 	)

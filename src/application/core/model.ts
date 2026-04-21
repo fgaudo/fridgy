@@ -32,20 +32,20 @@ const PageModel = Data.taggedEnum<Model['currentPage']>()
 export const makeModel = (state: State): Model => {
 	if (state.currentPage._tag === 'Home') {
 		return {
+			currentPage: PageModel.Home({
+				model: Home.makeModel(state.currentPage.state),
+			}),
 			toast: {
 				key: state.toast.version.toString(16),
 				maybeText: state.toast.maybeText,
 			},
-			currentPage: PageModel.Home({
-				model: Home.makeModel(state.currentPage.state),
-			}),
 		}
 	}
 	return {
+		currentPage: PageModel.AddProduct({ model: {} }),
 		toast: {
 			key: state.toast.version.toString(16),
 			maybeText: state.toast.maybeText,
 		},
-		currentPage: PageModel.AddProduct({ model: {} }),
 	}
 }

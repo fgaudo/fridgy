@@ -35,16 +35,16 @@ const addProductLayer = Layer.effect(
 					Opt.isNone(maybeExpirationDate)
 						? Effect.forEach(entry =>
 								productRepository.insert({
-									name: entry.request.product.name,
 									creation_date: entry.request.product.creationDate,
+									name: entry.request.product.name,
 								}),
 							)
 						: Effect.forEach(entry =>
 								SqlResolver.request(
 									{
-										name: entry.request.product.name,
 										creationDate: entry.request.product.creationDate,
 										expirationDate: maybeExpirationDate.value,
+										name: entry.request.product.name,
 									},
 									insertProductWithExpirationResolver,
 								),
@@ -106,10 +106,6 @@ const getProductsLayer = Layer.effect(
 		const getProducts = Sql.SqlSchema.findAll({
 			Request: Schema.Void,
 			Result: Schema.Struct({
-				maybeId: Schema.OptionFromNullishOr(Integer.Schema),
-				maybeName: Schema.OptionFromNullishOr(
-					SqlHelper.Product.fields[ProductSchema.columns.name],
-				),
 				maybeCreationDate: Schema.OptionFromNullishOr(
 					SqlHelper.Product.fields[ProductSchema.columns.creationDate],
 				),
@@ -117,6 +113,10 @@ const getProductsLayer = Layer.effect(
 					SqlHelper.ProductExpiration.fields[
 						ProductExpirationSchema.columns.date
 					],
+				),
+				maybeId: Schema.OptionFromNullishOr(Integer.Schema),
+				maybeName: Schema.OptionFromNullishOr(
+					SqlHelper.Product.fields[ProductSchema.columns.name],
 				),
 			}),
 			execute: () => {
@@ -153,8 +153,8 @@ const getProductsLayer = Layer.effect(
 						onSome: id =>
 							Effect.option(
 								Effect.try({
-									try: () => id.toString(10),
 									catch: () => undefined,
+									try: () => id.toString(10),
 								}),
 							),
 					}),

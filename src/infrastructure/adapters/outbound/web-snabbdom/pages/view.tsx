@@ -1,7 +1,6 @@
 import * as Effect from 'effect/Effect'
 import * as FiberSet from 'effect/FiberSet'
 import * as Match from 'effect/Match'
-import { h } from 'snabbdom'
 
 import type { Model } from '@/app/core/model.ts'
 import { UiService } from '@/infra/adapters/outbound/web-snabbdom/ui-service.ts'
@@ -16,8 +15,8 @@ export const makeView = Effect.gen(function* () {
 		return (
 			<div>
 				{Match.valueTags(model.currentPage, {
-					Home: ({ model }) => homeView(model),
 					AddProduct: () => <div className="text-2xl text-white"></div>,
+					Home: ({ model }) => homeView(model),
 				})}
 				<div
 					$key="static"

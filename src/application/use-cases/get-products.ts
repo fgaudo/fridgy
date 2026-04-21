@@ -106,8 +106,8 @@ export class GetProducts extends Context.Service<GetProducts>()(
 							name: Product.name(product),
 							status: Status.Fresh({
 								expirationDate: Product.expirationDate(maybeExpiration.value),
-								timeLeft: status.timeLeft,
 								freshnessRatio: status.freshness,
+								timeLeft: status.timeLeft,
 							}),
 						})
 					}),

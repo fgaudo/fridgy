@@ -34,9 +34,9 @@ export class AddProduct extends Context.Service<AddProduct>()(
 					yield* Clock.currentTimeMillis,
 				)
 				const maybeProduct = Product.makeProduct({
-					maybeName: productData.maybeName,
 					maybeCreationDate: Option.some(timestamp),
 					maybeExpirationDate: productData.maybeExpirationDate,
+					maybeName: productData.maybeName,
 				})
 				if (Option.isNone(maybeProduct)) {
 					yield* Effect.logError('Product is invalid')

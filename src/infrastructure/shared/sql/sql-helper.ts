@@ -32,36 +32,36 @@ export class SqlHelper extends Context.Service<SqlHelper>()(
 		make: Effect.gen(function* () {
 			const sql = yield* Sql.SqlClient.SqlClient
 			const productDataLoader = yield* Sql.SqlModel.makeResolvers(Product, {
-				tableName: ProductSchema.table,
 				idColumn: ProductSchema.columns.id,
 				spanPrefix: 'ProductDataLoader',
+				tableName: ProductSchema.table,
 			} as const)
 			const productRepository = yield* Sql.SqlModel.makeRepository(Product, {
-				tableName: ProductSchema.table,
 				idColumn: ProductSchema.columns.id,
 				spanPrefix: 'ProductRepository',
+				tableName: ProductSchema.table,
 			} as const)
 			const productExpirationDataLoader = yield* Sql.SqlModel.makeResolvers(
 				ProductExpiration,
 				{
-					tableName: ProductExpirationSchema.table,
 					idColumn: ProductExpirationSchema.columns.id,
 					spanPrefix: 'ProductExpirationDataLoader',
+					tableName: ProductExpirationSchema.table,
 				} as const,
 			)
 			const productExpirationRepository = yield* Sql.SqlModel.makeRepository(
 				ProductExpiration,
 				{
-					tableName: ProductExpirationSchema.table,
 					idColumn: ProductExpirationSchema.columns.id,
 					spanPrefix: 'ProductExpirationRepository',
+					tableName: ProductExpirationSchema.table,
 				} as const,
 			)
 			const insertProductWithExpirationResolver = Sql.SqlResolver.ordered({
 				Request: Schema.Struct({
 					creationDate: Integer.IntegerFromSelf,
-					name: Schema.String,
 					expirationDate: Integer.IntegerFromSelf,
+					name: Schema.String,
 				}),
 				Result: Product,
 				execute: flow(
@@ -83,11 +83,11 @@ export class SqlHelper extends Context.Service<SqlHelper>()(
 				),
 			})
 			return {
+				insertProductWithExpirationResolver,
 				productDataLoader,
-				productRepository,
 				productExpirationDataLoader,
 				productExpirationRepository,
-				insertProductWithExpirationResolver,
+				productRepository,
 			}
 		}),
 	},

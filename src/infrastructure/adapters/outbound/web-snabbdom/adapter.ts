@@ -58,11 +58,11 @@ const initRenderer = Effect.gen(function* () {
 	const uiLayer = Layer.mergeAll(
 		Layer.succeed(MessageDispatcher, messageDispatcher),
 		Layer.succeed(UiService, {
-			showToast: text => Effect.promise(() => Toast.show({ text })),
 			hideSplashScreen: Effect.promise(() => SplashScreen.hide()),
+			showToast: text => Effect.promise(() => Toast.show({ text })),
 		}),
 	)
-	return { patch, containerRef, uiLayer }
+	return { containerRef, patch, uiLayer }
 })
 
 export const hotLayer = Layer.effect(

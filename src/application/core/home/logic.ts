@@ -67,12 +67,12 @@ function updateFetchListSucceeded(
 				...state,
 				productListData: {
 					...state.productListData,
-					hasFreshProducts,
 					_tag: 'Available' as const,
 					activity: 'idle' as const,
-					total: ArrX.length(maybeProducts.value),
-					products: mappedProducts,
+					hasFreshProducts,
 					maybeSelectedProducts: Opt.none(),
+					products: mappedProducts,
+					total: ArrX.length(maybeProducts.value),
 				},
 			} satisfies State,
 			[],
@@ -84,8 +84,6 @@ function updateFetchListSucceeded(
 			productListData: {
 				...state.productListData,
 				activity: 'idle' as const,
-				total: ArrX.length(maybeProducts.value),
-				products: mappedProducts,
 				hasFreshProducts,
 				maybeSelectedProducts: state.productListData.maybeSelectedProducts.pipe(
 					Opt.bindTo('selectedProducts'),
@@ -101,6 +99,8 @@ function updateFetchListSucceeded(
 					),
 					Opt.andThen(NonEmptyHashSet.make),
 				),
+				products: mappedProducts,
+				total: ArrX.length(maybeProducts.value),
 			},
 		},
 		[],
@@ -140,43 +140,65 @@ export const update = Match.typeTags<
 	Extract<InternalMessage, Record<'_tag', `Home_${string}`>>,
 	ReturnType<StateManager.Update<State, InternalMessage, UseCases>>
 >()({
-	Home_StartFetchList: message => state => {
+	Home_ClearSelected: message => state => {
 		if (
-			state.productListData.activity !== 'idle' &&
-			state.productListData.activity !== 'scheduledFetching'
+			(state.productListData.activity !== 'idle' &&
+				state.productListData.activity !== 'scheduledFetching') ||
+			state.productListData._tag !== 'Available' ||
+			Opt.isNone(state.productListData.maybeSelectedProducts)
 		) {
 			return T.make(state, [notifyWrongState(message)])
 		}
-		const nextFetchVersion = FetchListVersion.increment(
-			state.versions.manualFetcher,
-		)
 		return T.make(
 			{
 				...state,
-				versions: {
-					...state.versions,
-					scheduledFetcher: FetchListSchedulerVersion.increment(
-						state.versions.scheduledFetcher,
-					),
-					manualFetcher: nextFetchVersion,
-				},
 				productListData: {
 					...state.productListData,
-					activity: 'fetching' as const,
+					maybeSelectedProducts: Opt.none(),
 				},
 			},
-			T.make(fetchList(nextFetchVersion)),
+			[],
 		)
 	},
 
-	Home_FetchListSucceeded: message => state => {
-		if (state.versions.manualFetcher !== message.version) {
-			return T.make(state, [notifyStale(message)])
+	Home_DeleteAndRefreshFailed: message => state => {
+		if (state.productListData.activity !== 'deleting') {
+			return T.make(state, [notifyWrongState(message)])
 		}
-		if (state.productListData.activity !== 'fetching') {
+		return T.make(
+			{
+				...state,
+				productListData: {
+					...state.productListData,
+					activity: 'idle' as const,
+				},
+			},
+			[],
+		)
+	},
+
+	Home_DeleteAndRefreshSucceeded: message => state => {
+		if (state.productListData.activity !== 'deleting') {
 			return T.make(state, [notifyWrongState(message)])
 		}
 		return updateFetchListSucceeded(state, message.response.maybeProducts)
+	},
+
+	Home_DeleteSucceededButRefreshFailed: message => state => {
+		if (state.productListData.activity !== 'deleting') {
+			return T.make(state, [notifyWrongState(message)])
+		}
+		return T.make(
+			{
+				...state,
+				productListData: {
+					...state.productListData,
+					_tag: 'Error' as const,
+					activity: 'idle' as const,
+				},
+			},
+			[],
+		)
 	},
 
 	Home_FetchListFailed: message => state => {
@@ -187,6 +209,16 @@ export const update = Match.typeTags<
 			return T.make(state, [notifyWrongState(message)])
 		}
 		return updateFetchListFailed(state)
+	},
+
+	Home_FetchListSucceeded: message => state => {
+		if (state.versions.manualFetcher !== message.version) {
+			return T.make(state, [notifyStale(message)])
+		}
+		if (state.productListData.activity !== 'fetching') {
+			return T.make(state, [notifyWrongState(message)])
+		}
+		return updateFetchListSucceeded(state, message.response.maybeProducts)
 	},
 
 	Home_FetchListTick: message => state => {
@@ -208,19 +240,6 @@ export const update = Match.typeTags<
 		)
 	},
 
-	Home_FetchListTickSucceeded: message => state => {
-		if (message.version !== state.versions.scheduledFetcher) {
-			return T.make(state, [notifyStale(message)])
-		}
-		if (
-			state.productListData.activity !== 'scheduledFetching' ||
-			!isSchedulerRunning(state)
-		) {
-			return T.make(state, [notifyWrongState(message)])
-		}
-		return updateFetchListSucceeded(state, message.response.maybeProducts)
-	},
-
 	Home_FetchListTickFailed: message => state => {
 		if (message.version !== state.versions.scheduledFetcher) {
 			return T.make(state, [notifyStale(message)])
@@ -232,6 +251,19 @@ export const update = Match.typeTags<
 			return T.make(state, [notifyWrongState(message)])
 		}
 		return updateFetchListFailed(state)
+	},
+
+	Home_FetchListTickSucceeded: message => state => {
+		if (message.version !== state.versions.scheduledFetcher) {
+			return T.make(state, [notifyStale(message)])
+		}
+		if (
+			state.productListData.activity !== 'scheduledFetching' ||
+			!isSchedulerRunning(state)
+		) {
+			return T.make(state, [notifyWrongState(message)])
+		}
+		return updateFetchListSucceeded(state, message.response.maybeProducts)
 	},
 
 	Home_StartDeleteAndRefresh: message => state => {
@@ -248,6 +280,10 @@ export const update = Match.typeTags<
 		return T.make(
 			{
 				...state,
+				productListData: {
+					...state.productListData,
+					activity: 'deleting' as const,
+				},
 				versions: {
 					...state.versions,
 					manualFetcher: FetchListVersion.increment(
@@ -256,10 +292,6 @@ export const update = Match.typeTags<
 					scheduledFetcher: FetchListSchedulerVersion.increment(
 						state.versions.scheduledFetcher,
 					),
-				},
-				productListData: {
-					...state.productListData,
-					activity: 'deleting' as const,
 				},
 			},
 			[
@@ -270,43 +302,32 @@ export const update = Match.typeTags<
 		)
 	},
 
-	Home_DeleteAndRefreshSucceeded: message => state => {
-		if (state.productListData.activity !== 'deleting') {
+	Home_StartFetchList: message => state => {
+		if (
+			state.productListData.activity !== 'idle' &&
+			state.productListData.activity !== 'scheduledFetching'
+		) {
 			return T.make(state, [notifyWrongState(message)])
 		}
-		return updateFetchListSucceeded(state, message.response.maybeProducts)
-	},
-
-	Home_DeleteAndRefreshFailed: message => state => {
-		if (state.productListData.activity !== 'deleting') {
-			return T.make(state, [notifyWrongState(message)])
-		}
-		return T.make(
-			{
-				...state,
-				productListData: {
-					...state.productListData,
-					activity: 'idle' as const,
-				},
-			},
-			[],
+		const nextFetchVersion = FetchListVersion.increment(
+			state.versions.manualFetcher,
 		)
-	},
-
-	Home_DeleteSucceededButRefreshFailed: message => state => {
-		if (state.productListData.activity !== 'deleting') {
-			return T.make(state, [notifyWrongState(message)])
-		}
 		return T.make(
 			{
 				...state,
 				productListData: {
 					...state.productListData,
-					_tag: 'Error' as const,
-					activity: 'idle' as const,
+					activity: 'fetching' as const,
+				},
+				versions: {
+					...state.versions,
+					manualFetcher: nextFetchVersion,
+					scheduledFetcher: FetchListSchedulerVersion.increment(
+						state.versions.scheduledFetcher,
+					),
 				},
 			},
-			[],
+			T.make(fetchList(nextFetchVersion)),
 		)
 	},
 
@@ -326,35 +347,14 @@ export const update = Match.typeTags<
 					maybeSelectedProducts:
 						state.productListData.maybeSelectedProducts.pipe(
 							Opt.match({
+								onNone: () => HashSet.make(message.id),
 								onSome: map =>
 									HashSet.has(map, message.id)
 										? HashSet.remove(map, message.id)
 										: HashSet.add(map, message.id),
-								onNone: () => HashSet.make(message.id),
 							}),
 							NonEmptyHashSet.make,
 						),
-				},
-			},
-			[],
-		)
-	},
-
-	Home_ClearSelected: message => state => {
-		if (
-			(state.productListData.activity !== 'idle' &&
-				state.productListData.activity !== 'scheduledFetching') ||
-			state.productListData._tag !== 'Available' ||
-			Opt.isNone(state.productListData.maybeSelectedProducts)
-		) {
-			return T.make(state, [notifyWrongState(message)])
-		}
-		return T.make(
-			{
-				...state,
-				productListData: {
-					...state.productListData,
-					maybeSelectedProducts: Opt.none(),
 				},
 			},
 			[],
@@ -384,11 +384,11 @@ export const subscriptions: StateManager.Emitter<
 
 export const init: StateManager.Step<State, InternalMessage, UseCases> = T.make(
 	{
+		productListData: { _tag: 'Initial', activity: 'idle' },
 		versions: {
 			manualFetcher: FetchListVersion.make(0n),
 			scheduledFetcher: FetchListSchedulerVersion.make(0n),
 		},
-		productListData: { _tag: 'Initial', activity: 'idle' },
 	},
 	[Effect.succeed(T.make(InternalMessage.Home_StartFetchList()))],
 )
@@ -436,9 +436,9 @@ const fetchList = Effect.fn(function* (version: bigint) {
 	const result = yield* getProducts
 	return Match.valueTags(result, {
 		Failed: response =>
-			T.make(InternalMessage.Home_FetchListFailed({ version, response })),
+			T.make(InternalMessage.Home_FetchListFailed({ response, version })),
 		Succeeded: response =>
-			T.make(InternalMessage.Home_FetchListSucceeded({ version, response })),
+			T.make(InternalMessage.Home_FetchListSucceeded({ response, version })),
 	})
 })
 
@@ -447,10 +447,10 @@ const fetchListTick = Effect.fn(function* (version: bigint) {
 	const result = yield* getProducts
 	return Match.valueTags(result, {
 		Failed: response =>
-			T.make(InternalMessage.Home_FetchListTickFailed({ version, response })),
+			T.make(InternalMessage.Home_FetchListTickFailed({ response, version })),
 		Succeeded: response =>
 			T.make(
-				InternalMessage.Home_FetchListTickSucceeded({ version, response }),
+				InternalMessage.Home_FetchListTickSucceeded({ response, version }),
 			),
 	})
 })

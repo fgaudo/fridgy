@@ -11,6 +11,7 @@
 		"pedantic": "error"
 	},
 	"rules": {
+		"sort-keys": ["error", "asc"],
 		"import/no-cycle": "error",
 		"eslint/max-lines": "off",
 		"eslint/max-lines-per-function": "off",
