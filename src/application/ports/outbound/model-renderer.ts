@@ -7,4 +7,4 @@ import type { Model } from '@/app/core/model.ts'
 export class Renderer extends Context.Service<
 	Renderer,
 	(model$: Stream.Stream<Model>) => Effect.Effect<void>
->()('868728ce6feafe32') {}
+>()('03825343f68ff5fd') {}
