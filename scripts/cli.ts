@@ -22,21 +22,21 @@ const commonBuildConfig = Effect.gen(function* () {
 	const resolve = yield* makeRootResolver
 
 	return {
-		target: 'browser',
 		entrypoints: [
 			resolve('./src/infrastructure/shared/sqlite/sqlite.worker.ts'),
 			resolve('./src/app.ts'),
 			resolve(rendererPath, './css/styles.css'),
 		],
-		outdir: resolve('./dist'),
-		plugins: [BunTailwind],
+		env: 'inline',
 		loader: { '.css': 'css', '.woff2': 'file' },
 		naming: {
-			entry: '[name].[ext]',
-			chunk: '[name].[ext]',
 			asset: '[name].[ext]',
+			chunk: '[name].[ext]',
+			entry: '[name].[ext]',
 		},
-		env: 'inline',
+		outdir: resolve('./dist'),
+		plugins: [BunTailwind],
+		target: 'browser',
 	} satisfies Bun.BuildConfig
 })
 
@@ -60,13 +60,13 @@ const buildProd = Effect.gen(function* () {
 	yield* Effect.promise(() =>
 		Bun.build({
 			...config,
-			minify: {
-				whitespace: true,
-				identifiers: true,
-				syntax: true,
-			},
 			define: {
 				'process.env.NODE_ENV': '"production"',
+			},
+			minify: {
+				identifiers: true,
+				syntax: true,
+				whitespace: true,
 			},
 			sourcemap: 'none',
 		}),
@@ -102,19 +102,19 @@ const watchCommand = Cli.Command.make(
 		const server = yield* Effect.acquireRelease(
 			Effect.sync(() =>
 				Bun.serve({
-					// @ts-expect-error
-					port: process.env.UI_EMITTER_WEBSOCKET_PORT!,
-					// @ts-expect-error
-					hostname: process.env.UI_EMITTER_WEBSOCKET_HOST!,
 					fetch(req, server) {
 						if (server.upgrade(req)) return
 						return new Response('HMR Server Active')
 					},
+					// @ts-expect-error
+					hostname: process.env.UI_EMITTER_WEBSOCKET_HOST!,
+					// @ts-expect-error
+					port: process.env.UI_EMITTER_WEBSOCKET_PORT!,
 					websocket: {
+						message() {},
 						open(ws) {
 							ws.subscribe('refresh')
 						},
-						message() {},
 					},
 				}),
 			),
