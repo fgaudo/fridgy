@@ -1,5 +1,5 @@
 import * as Array from 'effect/Array'
-import type * as Cause from 'effect/Cause'
+import * as Cause from 'effect/Cause'
 import * as Context from 'effect/Context'
 import type * as Data from 'effect/Data'
 import * as Deferred from 'effect/Deferred'
@@ -13,7 +13,6 @@ import * as Newtype from 'effect/Newtype'
 import * as Option from 'effect/Option'
 import * as PubSub from 'effect/PubSub'
 import * as Queue from 'effect/Queue'
-import * as Schedule from 'effect/Schedule'
 import * as Stream from 'effect/Stream'
 import * as SubscriptionRef from 'effect/SubscriptionRef'
 
@@ -48,7 +47,7 @@ export type Engine<State, Message> = Newtype.Newtype<
 	'#fgaudo/fsm/Engine',
 	{
 		messageQueue: Queue.Queue<Array.NonEmptyReadonlyArray<Message>>
-		transitionStream: Stream.Stream<Transition<State, Message>, never, never>
+		transitionStream: Stream.Stream<Transition<State, Message>>
 	}
 >
 
@@ -59,7 +58,7 @@ export const prepare = <State, Message, R, K>({
 }: {
 	update: Update<State, Message, R>
 	handleDefect: (
-		cause: Cause.Cause<unknown>,
+		cause: unknown,
 	) => NoInfer<Array.NonEmptyReadonlyArray<Message>>
 	emitter?: Emitter<State, Message, R, K>
 }) => {
@@ -98,20 +97,24 @@ export const prepare = <State, Message, R, K>({
 						{ _tag: 'Subsequent', messages, state: newState },
 					] as const
 				}).pipe(
-					Stream.fromEffect,
-					Stream.catchCause(
-						Function.flow(
-							cause => Queue.offer(messageQueue, handleDefect(cause)),
-							Stream.fromEffect,
-							Stream.flatMap(() => Stream.empty),
-						),
+					Effect.catchDefect(
+						Effect.fn(function* (err) {
+							yield* Effect.logFatal(err)
+							return []
+						}),
 					),
+					Stream.fromEffect,
 				),
 			),
 			Stream.flattenIterable,
-			Stream.flattenIterable,
 			Stream.merge(Stream.make(...initCommands)),
-			Stream.flattenEffect({ concurrency: 'unbounded', unordered: true }),
+			Stream.mapEffect(
+				Effect.catchDefect(Function.flow(handleDefect, Effect.succeed)),
+				{
+					concurrency: 'unbounded',
+					unordered: true,
+				},
+			),
 		)
 		const message$ = Option.isNone(maybeEmitter)
 			? update$
@@ -125,15 +128,13 @@ export const prepare = <State, Message, R, K>({
 									yield* Deferred.succeed(isReady, undefined)
 								}),
 							),
-							Stream.flatMap(({ state }) =>
-								Stream.sync(() => maybeEmitter.value(state)).pipe(
-									Stream.catchCause(
-										Function.flow(
-											handleDefect,
-											messages =>
-												Stream.fromEffect(Queue.offer(messageQueue, messages)),
-											Stream.flatMap(() => Stream.empty),
-										),
+							Stream.mapEffect(({ state }) =>
+								Effect.sync(() => maybeEmitter.value(state)).pipe(
+									Effect.catchDefect(
+										Effect.fn(function* (err) {
+											yield* Effect.logError('Subs evaluation threw', err)
+											return HashMap.empty()
+										}),
 									),
 								),
 							),
@@ -169,16 +170,27 @@ export const prepare = <State, Message, R, K>({
 										}
 										const interruption = yield* Deferred.make<void>()
 										HashMap.set(mutable, key, interruption)
-										streams = Array.append(
-											streams,
+										const recursiveStream: Stream.Stream<
+											readonly [Message, ...ReadonlyArray<Message>],
+											never,
+											R
+										> = Stream.suspend(() =>
 											stream.pipe(
-												Stream.onError(cause =>
-													Queue.offer(messageQueue, handleDefect(cause)),
+												Stream.catchCause(cause =>
+													Stream.concat(
+														Stream.make(handleDefect(cause)),
+														Stream.unwrap(
+															Effect.gen(function* () {
+																yield* Effect.sleep('1 second')
+																return recursiveStream
+															}),
+														),
+													),
 												),
-												Stream.retry(Schedule.forever),
 												Stream.interruptWhen(Deferred.await(interruption)),
 											),
 										)
+										streams = Array.append(streams, recursiveStream)
 									}
 									return [HashMap.endMutation(mutable), streams] as const
 								}, Effect.uninterruptible),
@@ -243,9 +255,7 @@ export const layer = <S, M, R, K>({
 	handleDefect,
 	init,
 }: {
-	handleDefect: (
-		cause: Cause.Cause<unknown>,
-	) => NoInfer<Array.NonEmptyReadonlyArray<M>>
+	handleDefect: (cause: unknown) => NoInfer<Array.NonEmptyReadonlyArray<M>>
 	update: Update<S, M, R>
 	emitter: Emitter<S, M, R, K>
 	init: Step<S, M, R>
