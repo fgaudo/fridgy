@@ -10,8 +10,8 @@ import * as Sql from '@/infra/adapters/outbound/sql/adapter.ts'
 import * as GetLicenses from '@/infra/adapters/outbound/static/licenses/adapter.ts'
 import * as GetSayings from '@/infra/adapters/outbound/static/sayings/adapter.ts'
 import {
-	hotLayer,
-	staticLayer,
+	HotLive,
+	StaticLive,
 } from '@/infra/adapters/outbound/web-snabbdom/adapter.ts'
 import * as Fsm from '@/infra/shared/fsm.ts'
 import * as SqlHelper from '@/infra/shared/sql/sql-helper.ts'
@@ -19,7 +19,7 @@ import * as Sqlite from '@/infra/shared/sqlite/layer.ts'
 
 const UiLayer =
 	process.env.NODE_ENV === 'production'
-		? staticLayer
+		? StaticLive
 		: (() => {
 				//@ts-expect-error
 				const host = process.env.UI_EMITTER_WEBSOCKET_HOST
@@ -29,7 +29,7 @@ const UiLayer =
 					10,
 				)
 				return Layer.provide(
-					hotLayer,
+					HotLive,
 					Browser.BrowserSocket.layerWebSocket(`ws://${host}:${port}`),
 				)
 			})()
