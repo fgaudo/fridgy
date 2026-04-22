@@ -217,7 +217,6 @@ const layer = Layer.effect(
 						invalidate$,
 					).pipe(
 						Stream.mapEffect(([model, view]) => patcher(view(model))),
-						Stream.switchMap(() => Stream.never),
 						Stream.scoped,
 					),
 				),

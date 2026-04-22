@@ -95,7 +95,7 @@ export const prepare = <State, Message, R, K>({
 					)
 					return [
 						commands,
-						{ _tag: 'Subsequent', state: newState, messages },
+						{ _tag: 'Subsequent', messages, state: newState },
 					] as const
 				}).pipe(
 					Stream.fromEffect,
@@ -201,7 +201,7 @@ export const prepare = <State, Message, R, K>({
 			Stream.tap(messages => Queue.offer(messageQueue, messages)),
 			Stream.drain,
 			Stream.merge(SubscriptionRef.changes(transitionRef)),
-			Stream.share({ capacity: 'unbounded' }),
+			Stream.broadcast({ capacity: 'unbounded', replay: 1 }),
 		)
 		return iso.set({
 			messageQueue,
@@ -250,4 +250,4 @@ export const layer = <S, M, R, K>({
 	emitter: Emitter<S, M, R, K>
 	init: Step<S, M, R>
 }) =>
-	Layer.effect(Engine<S, M>(), prepare({ handleDefect, update, emitter })(init))
+	Layer.effect(Engine<S, M>(), prepare({ emitter, handleDefect, update })(init))
