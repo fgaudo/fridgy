@@ -6,7 +6,9 @@ export const makeView = Effect.gen(function* () {
 		return (
 			<div className="pl-sail pb-saib pr-sair pt-sait">
 				<div className="items-center flex h-14 bg-red-50">
-					<div className="text-2xl font-bold px-2">Fridgy</div>
+					<div className="text-2xl font-bold px-2 text-amber-200">
+						asadsddsaadssssdsssssssss sssss s s s s sssdsd
+					</div>
 				</div>
 			</div>
 		)
