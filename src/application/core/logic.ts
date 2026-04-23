@@ -72,7 +72,8 @@ export const update: StateManager.Update<State, InternalMessage, UC.All> =
 		)(state)
 	}
 
-export const handleDefect = (_err: unknown) => T.make(InternalMessage.Crash())
+export const makeDefectMessages = (_err: unknown) =>
+	T.make(InternalMessage.Crash())
 
 export const init: StateManager.Step<
 	State,

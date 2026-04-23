@@ -225,7 +225,7 @@ const layer = Layer.effect(
 	}),
 )
 
-export const HotLive = layer.pipe(
+export const Hot = layer.pipe(
 	Layer.provide([
 		AssetLoader,
 		UiServiceLive.pipe(Layer.provide(NativeActionsLive)),
@@ -234,7 +234,7 @@ export const HotLive = layer.pipe(
 	]),
 )
 
-export const StaticLive = layer.pipe(
+export const Static = layer.pipe(
 	Layer.provide([
 		AssetLoader,
 		UiServiceLive.pipe(Layer.provide(NativeActionsLive)),
