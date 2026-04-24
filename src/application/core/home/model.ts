@@ -123,37 +123,37 @@ type FetchListSchedulerVersion = Brand.Branded<
 >
 const _FetchListSchedulerVersion = Brand.nominal<FetchListSchedulerVersion>()
 export const FetchListSchedulerVersion = {
-	make: _FetchListSchedulerVersion,
 	increment: (version: FetchListSchedulerVersion) =>
 		_FetchListSchedulerVersion(version + 1n),
+	make: _FetchListSchedulerVersion,
 }
 
 type FetchListVersion = Brand.Branded<bigint, 'FetchListVersion'>
 const _FetchListVersion = Brand.nominal<FetchListVersion>()
 export const FetchListVersion = {
-	make: _FetchListVersion,
 	increment: (version: FetchListVersion) => _FetchListVersion(version + 1n),
+	make: _FetchListVersion,
 }
 
 export function makeModel(state: State): Model {
 	if (state.productListData._tag === 'Initial') {
 		return {
+			canFetch: { _tag: 'False' },
 			canNavigateOut: true,
 			productListStatus: {
 				_tag: 'Initial',
 				activity: state.productListData.activity,
 			},
-			canFetch: { _tag: 'False' },
 		} satisfies Model
 	}
 	if (state.productListData._tag !== 'Available') {
 		return {
-			canNavigateOut: true,
-			productListStatus: state.productListData,
 			canFetch:
 				state.productListData.activity === 'fetching'
 					? { _tag: 'False' }
 					: { _tag: 'True', fetch: InternalMessage.Home_StartFetchList() },
+			canNavigateOut: true,
+			productListStatus: state.productListData,
 		} satisfies Model
 	}
 	const productListData = state.productListData
@@ -211,7 +211,6 @@ export function makeModel(state: State): Model {
 											}),
 										}
 									: { _tag: 'False' },
-							maybeName: product.maybeName,
 							id: product.id,
 							isSelected:
 								Opt.isSome(productListData.maybeSelectedProducts) &&
@@ -219,6 +218,7 @@ export function makeModel(state: State): Model {
 									productListData.maybeSelectedProducts.value,
 									product.id,
 								),
+							maybeName: product.maybeName,
 						}
 					}
 					return {
@@ -234,13 +234,13 @@ export function makeModel(state: State): Model {
 									}
 								: { _tag: 'False' },
 						id: product.id,
-						name: product.name,
 						isSelected:
 							Opt.isSome(productListData.maybeSelectedProducts) &&
 							HashSet.has(
 								productListData.maybeSelectedProducts.value,
 								product.id,
 							),
+						name: product.name,
 						status: product.status,
 					}
 				},

@@ -1,11 +1,14 @@
 {
-	"editor.defaultFormatter": "oxc.oxc-vscode",
-	"tailwindCSS.classFunctions": ["cn"],
-	"js/ts.tsdk.promptToUseWorkspaceVersion": true,
-	"js/ts.tsdk.path": "node_modules\\typescript\\lib",
-	"js/ts.preferences.importModuleSpecifierEnding": "js",
-	"js/ts.preferences.importModuleSpecifier": "non-relative",
-	"files.associations": {
-		"*.css": "tailwindcss"
-	}
+  "editor.defaultFormatter": "dprint.dprint",
+  "tailwindCSS.classFunctions": ["cn"],
+  "tailwindCSS.experimental.classRegex": [
+    ["h\\([^,]+,\\s*\\{[^}]*props:\\s*\\{[^}]*className:\\s*['\"`]([^'\"`]*?)['\"`][^}]*\\}", "([^\\s'\"`]+)"]
+  ],
+  "js/ts.tsdk.promptToUseWorkspaceVersion": true,
+  "js/ts.tsdk.path": "node_modules\\typescript\\lib",
+  "js/ts.preferences.importModuleSpecifierEnding": "js",
+  "js/ts.preferences.importModuleSpecifier": "non-relative",
+  "files.associations": {
+    "*.css": "tailwindcss"
+  }
 }

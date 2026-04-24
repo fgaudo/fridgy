@@ -8,6 +8,7 @@ import { layer as FsmDispatcherLayer } from '@/infra/adapters/inbound/fsm.adapte
 import { layer as FsmEmitterLayer } from '@/infra/adapters/outbound/fsm.adapter.ts'
 import * as Sql from '@/infra/adapters/outbound/sql/adapter.ts'
 import * as GetLicenses from '@/infra/adapters/outbound/static/licenses/adapter.ts'
+import { staticLayer } from '@/infra/adapters/outbound/static/product.ts'
 import * as GetSayings from '@/infra/adapters/outbound/static/sayings/adapter.ts'
 import { Hot, Static } from '@/infra/adapters/outbound/web-snabbdom/adapter.ts'
 import * as Fsm from '@/infra/shared/fsm.ts'
@@ -58,7 +59,7 @@ export const AppLayer = UiLayer.pipe(
 				Layer.mergeAll(
 					GetSayings.layer,
 					GetLicenses.layer,
-					Usecase.all.pipe(Layer.provide(DbLayer)),
+					Usecase.all.pipe(Layer.provide(staticLayer), Layer.provide(DbLayer)),
 				),
 			),
 		),

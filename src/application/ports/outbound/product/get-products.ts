@@ -4,7 +4,7 @@ import type * as Opt from 'effect/Option'
 
 import type { ProductInput } from '@/domain/product.ts'
 
-export type Result = Array<
+export type Result = ReadonlyArray<
 	ProductInput & {
 		maybeId: Opt.Option<string>
 	}
