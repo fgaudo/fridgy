@@ -10,12 +10,11 @@ import * as Stream from 'effect/Stream'
 import * as T from 'effect/Tuple'
 
 import { InternalMessage } from '@/app/core/messages.ts'
+import { ViewportActivity } from '@/app/ports/inbound/viewport-activity.ts'
 import * as UC from '@/app/use-cases/index.ts'
 import type * as StateManager from '@/shared/fsm.ts'
 import * as ArrX from '@/shared/non-empty-array.ts'
 import * as NonEmptyHashSet from '@/shared/non-empty-hash-set.ts'
-
-import { ViewportActivity } from '@/app/ports/inbound/viewport-activity.ts'
 import { FetchListSchedulerVersion, FetchListVersion, type State } from './model.ts'
 
 export type UseCases =

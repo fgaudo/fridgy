@@ -7,10 +7,11 @@ import * as MessageDispatcher from '@/app/ports/inbound/message-dispatcher.ts'
 import * as Fsm from '@/shared/fsm.ts'
 
 export const layer = Layer.unwrap(
-	Effect.gen(function* () {
-		const manager = yield* Fsm.Engine<State, InternalMessage>()
-		return Layer.succeed(MessageDispatcher.MessageDispatcher, message =>
-			Fsm.dispatch(manager, [message]),
-		)
-	}),
+  Effect.gen(function*() {
+    const manager = yield* Fsm.Engine<State, InternalMessage>()
+    return Layer.succeed(
+      MessageDispatcher.MessageDispatcher,
+      (message) => Fsm.dispatch(manager, [message]),
+    )
+  }),
 )

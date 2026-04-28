@@ -6,6 +6,7 @@ import * as Clock from 'effect/Clock'
 import * as Config from 'effect/Config'
 import * as Context from 'effect/Context'
 import * as Effect from 'effect/Effect'
+import * as FiberSet from 'effect/FiberSet'
 import * as Layer from 'effect/Layer'
 import * as Stream from 'effect/Stream'
 import * as SubscriptionRef from 'effect/SubscriptionRef'
@@ -13,13 +14,12 @@ import * as SynchronizedRef from 'effect/SynchronizedRef'
 import * as Socket from 'effect/unstable/socket/Socket'
 import * as Snabbdom from 'snabbdom'
 
-import { Renderer } from '@/app/ports/outbound/model-renderer.ts'
-import { saferImport } from '@/shared/safe.ts'
-
 import type { Message } from '@/app/core/messages.ts'
 import { MessageDispatcher } from '@/app/ports/inbound/message-dispatcher.ts'
+import { Renderer } from '@/app/ports/outbound/model-renderer.ts'
 import { Actions } from '@/infra/adapters/outbound/model-renderer/actions.ts'
-import * as FiberSet from 'effect/FiberSet'
+import { saferImport } from '@/shared/safe.ts'
+
 import type * as Root from './pages/view.ts'
 
 const AssetLoader = Layer.effectDiscard(
@@ -30,7 +30,9 @@ const AssetLoader = Layer.effectDiscard(
   ], { concurrency: 'unbounded' }),
 )
 
-class CssRefresher extends Context.Service<CssRefresher, Effect.Effect<void>>()('35a057c4f8666d22') {}
+class CssRefresher extends Context.Service<CssRefresher, Effect.Effect<void>>()(
+  '35a057c4f8666d22',
+) {}
 
 const CssRefresherLive = Layer.effect(
   CssRefresher,
@@ -52,12 +54,17 @@ const CssRefresherLive = Layer.effect(
   }),
 )
 
-class ViewLoader extends Context.Service<ViewLoader, Effect.Effect<(typeof Root)>>()('470138c1439ad528') {}
+class ViewLoader extends Context.Service<ViewLoader, Effect.Effect<(typeof Root)>>()(
+  '470138c1439ad528',
+) {}
 
 const ViewLoaderLive = Layer.effect(
   ViewLoader,
   Effect.gen(function*() {
-    const modulePath = yield* Config.string('viewPath').pipe(Config.nested('hotModule'), Config.nested('ui'))
+    const modulePath = yield* Config.string('viewPath').pipe(
+      Config.nested('hotModule'),
+      Config.nested('ui'),
+    )
     return Effect.gen(function*() {
       const millis = yield* Clock.currentTimeMillis
       const module = (yield* saferImport(`${modulePath}?t=${millis}`)) as typeof Root
@@ -66,9 +73,10 @@ const ViewLoaderLive = Layer.effect(
   }),
 ).pipe(Layer.orDie)
 
-class ModuleLoader
-  extends Context.Service<ModuleLoader, Stream.Stream<(typeof Root)['makeView']>>()('6766c67ad2dbadb9')
-{}
+class ModuleLoader extends Context.Service<
+  ModuleLoader,
+  Stream.Stream<(typeof Root)['makeView']>
+>()('6766c67ad2dbadb9') {}
 
 const HotModuleLoaderLive = Layer.effect(
   ModuleLoader,
@@ -98,15 +106,21 @@ const StaticModuleLoaderLive = Layer.effect(
   }),
 )
 
-class Patcher extends Context.Service<Patcher, (vnode: Snabbdom.VNode) => Effect.Effect<void>>()('d55767daed5c7682') {}
+class Patcher extends Context.Service<
+  Patcher,
+  (vnode: Snabbdom.VNode) => Effect.Effect<void>
+>()('d55767daed5c7682') {}
 
 const PatcherLive = Layer.effect(
   Patcher,
   Effect.gen(function*() {
-    const root = yield* Effect.sync(() => document.querySelector('#root')!).pipe(
-      Effect.tapDefect((error) => Effect.logFatal('Error while reading root query selector', error)),
+    const root = yield* Effect.sync(() => document.querySelector('#root')!)
+      .pipe(
+        Effect.tapDefect((error) => Effect.logFatal('Error while reading root query selector', error)),
+      )
+    const containerRef = yield* SynchronizedRef.make<Element | Snabbdom.VNode>(
+      root,
     )
-    const containerRef = yield* SynchronizedRef.make<Element | Snabbdom.VNode>(root)
     const patch = yield* Effect.sync(() =>
       Snabbdom.init([
         Snabbdom.classModule,
@@ -116,7 +130,11 @@ const PatcherLive = Layer.effect(
         Snabbdom.eventListenersModule,
       ])
     )
-    return (vnode) => SynchronizedRef.updateEffect(containerRef, (node) => Effect.sync(() => patch(node, vnode)))
+    return (vnode) =>
+      SynchronizedRef.updateEffect(
+        containerRef,
+        (node) => Effect.sync(() => patch(node, vnode)),
+      )
   }),
 )
 
@@ -128,7 +146,11 @@ const ActionsLive = Layer.effect(
       const run = yield* FiberSet.makeRuntime()
       return (m: Message) => run(dispatch(m))
     })
-    return { dispatch, hideSplashScreen: () => SplashScreen.hide(), showToast: (text) => Toast.show({ text }) }
+    return {
+      dispatch,
+      hideSplashScreen: () => SplashScreen.hide(),
+      showToast: (text) => Toast.show({ text }),
+    }
   }),
 )
 

@@ -1,3 +1,4 @@
+import type * as DateTime from 'effect/DateTime'
 import * as Effect from 'effect/Effect'
 import { pipe } from 'effect/Function'
 import * as Layer from 'effect/Layer'
@@ -5,16 +6,17 @@ import * as Opt from 'effect/Option'
 import * as Request from 'effect/Request'
 import * as RequestResolver from 'effect/RequestResolver'
 import * as SqlResolver from 'effect/unstable/sql/SqlResolver'
-
 import * as AddProduct from '@/app/ports/outbound/product/add-product.ts'
 import * as SqlHelper from '@/infra/shared/sql/sql-helper.ts'
-import type * as DateTime from 'effect/DateTime'
 
 export const addProductLayer = Layer.effect(
   AddProduct.AddProduct,
   Effect.gen(function*() {
     const { productRepository, insertProductWithExpirationResolver } = yield* SqlHelper.SqlHelper
-    return RequestResolver.makeGrouped<AddProduct.Request, Opt.Option<DateTime.Zoned>>({
+    return RequestResolver.makeGrouped<
+      AddProduct.Request,
+      Opt.Option<DateTime.Zoned>
+    >({
       key: (entry) => entry.request.product.maybeExpirationDate,
       resolver: Effect.fn(function*(entries, maybeExpirationDate) {
         const maybeProducts = yield* pipe(
@@ -40,7 +42,11 @@ export const addProductLayer = Layer.effect(
         }
         return yield* Effect.forEach(
           entries,
-          (entry, index) => Request.succeed(entry, maybeProducts.value[index]!.id.toString(10)),
+          (entry, index) =>
+            Request.succeed(
+              entry,
+              maybeProducts.value[index]!.id.toString(10),
+            ),
         )
       }),
     })

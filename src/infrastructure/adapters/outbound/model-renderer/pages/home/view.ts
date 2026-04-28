@@ -1,57 +1,47 @@
+import * as Effect from 'effect/Effect'
 import { h } from 'snabbdom'
 
 import type { Model } from '@/app/core/home/model.ts'
-import { Actions } from '@/infra/adapters/outbound/model-renderer/actions'
+import { Actions } from '@/infra/adapters/outbound/model-renderer/actions.ts'
 import { cn } from '@/shared/helpers1.ts'
-import * as Effect from 'effect/Effect'
 
 export const makeView = Effect.gen(function*() {
   const { dispatch } = yield* Actions
   return (model: Model) =>
     h('div', [
-      h(
-        'div',
-        {
-          on: {
-            click: () => dispatch({ _tag: 'Home_ToggleMenu' }),
-          },
-          props: {
-            className: cn('transition-colors fixed top-0 bottom-0 left-0 right-0 z-50 ', {
-              'bg-black/0 pointer-events-none backdrop-blur-none': !model.isMenuOpen,
-              'bg-black/50 backdrop-blur-xs': model.isMenuOpen,
-            }),
-          },
+      h('div', {
+        on: { click: () => dispatch({ _tag: 'Home_ToggleMenu' }) },
+        props: {
+          className: cn('transition-colors fixed top-0 bottom-0 left-0 right-0 z-50 ', {
+            'bg-black/0 pointer-events-none backdrop-blur-none': !model.isMenuOpen,
+            'bg-black/50 backdrop-blur-xs': model.isMenuOpen,
+          }),
         },
-      ),
+      }),
       h('div', {
         props: {
           className: cn(
             'duration-500 h-full bg-background z-60  top-0 rounded-r-2xl w-3/4 fixed left-0 transition-transform',
-            {
-              '-translate-x-full': !model.isMenuOpen,
-              'translate-x-0': model.isMenuOpen,
-            },
+            { '-translate-x-full': !model.isMenuOpen, 'translate-x-0': model.isMenuOpen },
           ),
         },
       }),
       h('div', {
         props: {
           className: cn(
-            { 'opacity-100': !model.isScrolling, 'opacity-30': model.isScrolling },
+            { 'opacity-100': !model.isInteracting, 'opacity-30': model.isInteracting },
             'fixed bottom-5 right-5 flex items-end justify-center z-30 flex-col gap-6 transition-opacity',
           ),
         },
       }, [
         h('button', {
           props: {
-            className:
-              'relative shadow-md bg-red-200 flex items-center justify-evenly rounded-2xl h-16 w-16 text-red-400',
+            className: 'relative shadow-md bg-red-200 flex items-center justify-evenly rounded-2xl h-16 w-16 text-red-400',
           },
         }, h('div', { props: { className: 'material-symbols-rounded text-4xl!' } }, 'add')),
         h('button', {
           props: {
-            className:
-              'relative shadow-md bg-red-200 flex items-center justify-evenly rounded-2xl h-16 w-36 text-red-400',
+            className: 'relative shadow-md bg-red-200 flex items-center justify-evenly rounded-2xl h-16 w-36 text-red-400',
           },
         }, [
           h('div', { props: { className: 'font-bold text-sm relative justify-center items-center flex' } }, [
@@ -63,18 +53,13 @@ export const makeView = Effect.gen(function*() {
       ]),
       h('div', {
         props: {
-          className: cn(
-            {
-              'bg-background scale-[98%]': model.isAtTop,
-              'bg-secondary/60 backdrop-blur-md shadow-md scale-100': !model.isAtTop,
-            },
-            ' fixed w-full z-40 top-0 pl-sail pr-sair pt-sait transition-all ',
-          ),
+          className: cn({
+            'bg-background scale-[98%]': model.isAtTop,
+            'bg-secondary/60 backdrop-blur-md shadow-md scale-100': !model.isAtTop,
+          }, 'fixed w-full z-40 top-0 pl-sail pr-sair pt-sait transition-all '),
         },
       }, [
-        h('div', {
-          props: { className: 'flex w-full items-center h-16' },
-        }, [
+        h('div', { props: { className: 'flex w-full items-center h-16' } }, [
           h('span', {
             on: { click: () => run({ _tag: 'Home_ToggleMenu' }) },
             props: { className: 'px-4 material-symbols-rounded' },
@@ -84,11 +69,7 @@ export const makeView = Effect.gen(function*() {
         model.productListStatus._tag === 'Available' ?
           h(
             'div',
-            {
-              props: {
-                className: 'z-50 w-full px-3.5  h-10 text-xs justify-between flex items-center',
-              },
-            },
+            { props: { className: 'z-50 w-full px-3.5  h-10 text-xs justify-between flex items-center' } },
             `${model.productListStatus.total} items`,
           ) :
           undefined,
@@ -101,14 +82,11 @@ export const makeView = Effect.gen(function*() {
             ? model.productListStatus.products.filter((product) => product._tag === 'Valid').map((product) =>
               h('div', {
                 key: product.id,
-                props: {
-                  className: 'bg-secondary/5 h-16 flex items-center gap-3 rounded-lg shadow-sm relative',
-                },
+                props: { className: 'bg-secondary/5 h-16 flex items-center gap-3 rounded-lg shadow-sm relative' },
               }, [
                 h('div', {
                   props: {
-                    className:
-                      'z-20 ml-2 w-12 h-12 rounded-full leading-0 shadow-gray-300 relative shadow-sm bg-secondary flex items-center gap-1 justify-evenly flex-col',
+                    className: 'z-20 ml-2 w-12 h-12 rounded-full leading-0 shadow-gray-300 relative shadow-sm bg-secondary flex items-center gap-1 justify-evenly flex-col',
                   },
                 }, [
                   h('div', { props: { className: 'text-white leading-0 font-bold text-lg' } }, '22'),

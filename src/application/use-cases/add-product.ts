@@ -1,16 +1,15 @@
 import * as Clock from 'effect/Clock'
 import * as Context from 'effect/Context'
 import * as Data from 'effect/Data'
+import * as DateTime from 'effect/DateTime'
 import * as Effect from 'effect/Effect'
 import { pipe } from 'effect/Function'
 import * as Layer from 'effect/Layer'
 import * as Option from 'effect/Option'
 import { v4 as uuidv4 } from 'uuid'
-
 import * as AddProductPort from '@/app/ports/outbound/product/add-product.ts'
 import * as Product from '@/domain/product.ts'
 import * as Integer from '@/shared/integer/integer.ts'
-import * as DateTime from 'effect/DateTime'
 
 export type Params = {
   maybeName: Option.Option<string>

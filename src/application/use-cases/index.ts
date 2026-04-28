@@ -11,7 +11,7 @@ export * as GetProducts from './get-products.ts'
 export type All = AddProduct | DeleteProductsByIds | GetProducts
 
 export const all = Layer.mergeAll(
-	AddProduct.layer,
-	DeleteProductsByIds.layer,
-	GetProducts.layer,
+  AddProduct.layer,
+  DeleteProductsByIds.layer,
+  GetProducts.layer,
 )

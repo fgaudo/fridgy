@@ -1,17 +1,17 @@
 import * as Arr from 'effect/Array'
 import * as Brand from 'effect/Brand'
 import type * as Data from 'effect/Data'
+import type * as DateTime from 'effect/DateTime'
+import type * as Duration from 'effect/Duration'
 import * as HashSet from 'effect/HashSet'
 import * as Opt from 'effect/Option'
-
 import { InternalMessage, type Message } from '@/app/core/messages.ts'
 import type * as PositiveInteger from '@/shared/integer/positive-integer.ts'
 import type * as NonEmptyHashSet from '@/shared/non-empty-hash-set.ts'
 import type * as UnitInterval from '@/shared/unit-interval.ts'
-import type * as DateTime from 'effect/DateTime'
-import type * as Duration from 'effect/Duration'
 
 export type Model = Readonly<{
+  isInteracting: boolean
   canNavigateOut: boolean
   canFetch: Data.TaggedEnum<{
     True: Readonly<{ fetch: Message }>
@@ -139,6 +139,7 @@ export const FetchListVersion = {
 export function makeModel(state: State): Model {
   if (state.productListData._tag === 'Initial') {
     return {
+      isInteracting: state.isInteracting,
       canFetch: { _tag: 'False' },
       canNavigateOut: true,
       productListStatus: {
@@ -149,6 +150,7 @@ export function makeModel(state: State): Model {
   }
   if (state.productListData._tag !== 'Available') {
     return {
+      isInteracting: state.isInteracting,
       canFetch: state.productListData.activity === 'fetching'
         ? { _tag: 'False' }
         : { _tag: 'True', fetch: InternalMessage.Home_StartFetchList() },
@@ -158,8 +160,9 @@ export function makeModel(state: State): Model {
   }
   const productListData = state.productListData
   return {
-    canFetch: productListData.activity !== 'deleting' &&
-        productListData.activity !== 'fetching'
+    isInteracting: state.isInteracting,
+    canFetch: productListData.activity !== 'deleting'
+        && productListData.activity !== 'fetching'
       ? { _tag: 'True', fetch: InternalMessage.Home_StartFetchList() }
       : { _tag: 'False' },
     canNavigateOut: state.productListData.activity !== 'deleting',
@@ -168,12 +171,12 @@ export function makeModel(state: State): Model {
       activity: state.productListData.activity === 'scheduledFetching'
         ? 'fetching'
         : state.productListData.activity,
-      canClearSelection: state.productListData.activity !== 'deleting' &&
-          state.productListData.activity !== 'fetching'
+      canClearSelection: state.productListData.activity !== 'deleting'
+          && state.productListData.activity !== 'fetching'
         ? { _tag: 'True', clearMessage: InternalMessage.Home_ClearSelected() }
         : { _tag: 'False' },
-      canDeleteSelected: state.productListData.activity !== 'deleting' &&
-          state.productListData.activity !== 'fetching'
+      canDeleteSelected: state.productListData.activity !== 'deleting'
+          && state.productListData.activity !== 'fetching'
         ? {
           _tag: 'True',
           deleteMessage: InternalMessage.Home_StartDeleteAndRefresh(),
@@ -197,8 +200,8 @@ export function makeModel(state: State): Model {
           if (product._tag === 'Invalid') {
             return {
               _tag: 'Invalid',
-              canToggle: productListData.activity !== 'deleting' &&
-                  productListData.activity === 'fetching'
+              canToggle: productListData.activity !== 'deleting'
+                  && productListData.activity === 'fetching'
                 ? {
                   _tag: 'True',
                   message: InternalMessage.Home_ToggleItem({
@@ -207,8 +210,8 @@ export function makeModel(state: State): Model {
                 }
                 : { _tag: 'False' },
               id: product.id,
-              isSelected: Opt.isSome(productListData.maybeSelectedProducts) &&
-                HashSet.has(
+              isSelected: Opt.isSome(productListData.maybeSelectedProducts)
+                && HashSet.has(
                   productListData.maybeSelectedProducts.value,
                   product.id,
                 ),
@@ -217,8 +220,8 @@ export function makeModel(state: State): Model {
           }
           return {
             _tag: 'Valid',
-            canToggle: productListData.activity !== 'deleting' &&
-                productListData.activity === 'fetching'
+            canToggle: productListData.activity !== 'deleting'
+                && productListData.activity === 'fetching'
               ? {
                 _tag: 'True',
                 message: InternalMessage.Home_ToggleItem({
@@ -227,8 +230,8 @@ export function makeModel(state: State): Model {
               }
               : { _tag: 'False' },
             id: product.id,
-            isSelected: Opt.isSome(productListData.maybeSelectedProducts) &&
-              HashSet.has(
+            isSelected: Opt.isSome(productListData.maybeSelectedProducts)
+              && HashSet.has(
                 productListData.maybeSelectedProducts.value,
                 product.id,
               ),

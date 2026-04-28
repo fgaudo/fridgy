@@ -2,17 +2,16 @@ import * as Arr from 'effect/Array'
 import * as Clock from 'effect/Clock'
 import * as Context from 'effect/Context'
 import * as Data from 'effect/Data'
+import * as DateTime from 'effect/DateTime'
+import * as Duration from 'effect/Duration'
 import * as Effect from 'effect/Effect'
 import * as Layer from 'effect/Layer'
 import * as Option from 'effect/Option'
-
 import * as GetProductsPort from '@/app/ports/outbound/product/get-products.ts'
 import * as Product from '@/domain/product.ts'
 import * as Integer from '@/shared/integer/integer.ts'
 import * as NormalizedString from '@/shared/normalized-string.ts'
 import type * as UnitInterval from '@/shared/unit-interval.ts'
-import * as DateTime from 'effect/DateTime'
-import * as Duration from 'effect/Duration'
 
 export type ProductDTO = Data.TaggedEnum<{
   Invalid: {

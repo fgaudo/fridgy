@@ -3,8 +3,9 @@
     "quoteStyle": "alwaysSingle",
     "semiColons": "asi",
     "indentWidth": 2,
-    "lineWidth": 120,
+    "lineWidth": 400,
     "arrowFunction.useParentheses": "force",
+    "operatorPosition": "maintain",
     "module.sortImportDeclarations": "maintain",
     "module.sortExportDeclarations": "maintain"
   },
@@ -14,7 +15,7 @@
   "malva": {},
   "markup": {},
   "yaml": {},
-  "excludes": ["**/node_modules", "**/*-lock.json", "./src/infrastructure/adapters/outbound/model-renderer/pages"],
+  "excludes": ["**/node_modules", "**/*-lock.json"],
   "plugins": [
     "https://plugins.dprint.dev/typescript-0.95.15.wasm",
     "https://plugins.dprint.dev/json-0.21.3.wasm",

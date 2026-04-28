@@ -5,10 +5,9 @@ import * as Option from 'effect/Option'
 import * as T from 'effect/Tuple'
 
 import { InternalMessage } from '@/app/core/messages.ts'
+import type { ViewportActivity } from '@/app/ports/inbound/viewport-activity.ts'
 import type * as UC from '@/app/use-cases/index.ts'
 import type * as StateManager from '@/shared/fsm.ts'
-
-import type { ViewportActivity } from '@/app/ports/inbound/viewport-activity.ts'
 import { mapSubscriptions } from '../../shared/helpers.ts'
 import * as Home from './home/logic.ts'
 import type { State } from './model.ts'

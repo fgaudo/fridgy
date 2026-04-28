@@ -10,5 +10,8 @@
   "js/ts.preferences.importModuleSpecifier": "non-relative",
   "files.associations": {
     "*.css": "tailwindcss"
+  },
+  "editor.codeActionsOnSave": {
+    "source.organizeImports.biome": "explicit"
   }
 }

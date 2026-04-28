@@ -15,23 +15,35 @@ export const deleteProductsLayer = Layer.effect(
   DeleteProductById.DeleteProductById,
   Effect.gen(function*() {
     const { productRepository } = yield* SqlHelper.SqlHelper
-    return RequestResolver.make<DeleteProductById.Request>(Effect.fn(function*(entries) {
-      const validEntries = pipe(
-        entries,
-        Arr.map((entry) =>
-          pipe(Number.parseInt(entry.request.id, 10), Integer.fromNumber, Opt.map((id) => [entry, id] as const))
-        ),
-        Arr.filter((maybeEntry) => Opt.isSome(maybeEntry)),
-      )
-      const maybeIds = yield* pipe(
-        validEntries,
-        Effect.forEach((maybeEntry) => productRepository.delete(maybeEntry.value[1])),
-        Effect.option,
-      )
-      if (Opt.isNone(maybeIds)) {
-        return yield* Effect.forEach(validEntries, (entry) => Request.fail(entry.value[0], undefined))
-      }
-      return yield* Effect.forEach(validEntries, (entry) => Request.succeed(entry.value[0], undefined))
-    }))
+    return RequestResolver.make<DeleteProductById.Request>(
+      Effect.fn(function*(entries) {
+        const validEntries = pipe(
+          entries,
+          Arr.map((entry) =>
+            pipe(
+              Number.parseInt(entry.request.id, 10),
+              Integer.fromNumber,
+              Opt.map((id) => [entry, id] as const),
+            )
+          ),
+          Arr.filter((maybeEntry) => Opt.isSome(maybeEntry)),
+        )
+        const maybeIds = yield* pipe(
+          validEntries,
+          Effect.forEach((maybeEntry) => productRepository.delete(maybeEntry.value[1])),
+          Effect.option,
+        )
+        if (Opt.isNone(maybeIds)) {
+          return yield* Effect.forEach(
+            validEntries,
+            (entry) => Request.fail(entry.value[0], undefined),
+          )
+        }
+        return yield* Effect.forEach(
+          validEntries,
+          (entry) => Request.succeed(entry.value[0], undefined),
+        )
+      }),
+    )
   }),
 )

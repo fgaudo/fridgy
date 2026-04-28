@@ -35,7 +35,7 @@ export const makeModel = (state: State): Model => {
     return {
       appIsReady: state.appIsReady,
       currentPage: PageModel.Home({
-        model: Home.makeModel(state.page['Home']),
+        model: Home.makeModel(state.page.Home),
       }),
       toast: {
         key: state.toast.version.toString(16),

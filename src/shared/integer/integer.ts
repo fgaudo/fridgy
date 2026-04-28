@@ -3,10 +3,10 @@ import * as _Schema from 'effect/Schema'
 
 export type Integer = Brand.Branded<number, 'core.Integer'>
 
-const Integer = Brand.make<Integer>(n => Number.isInteger(n))
+const Integer = Brand.make<Integer>((n) => Number.isInteger(n))
 
 export const IntegerFromSelf = _Schema.declare(
-	(input): input is Integer => typeof input === 'number' && Integer.is(input),
+  (input): input is Integer => typeof input === 'number' && Integer.is(input),
 )
 
 export const fromNumber = (n: number) => Integer.option(n)
@@ -17,5 +17,5 @@ export const Schema = _Schema.fromBrand('core.Integer', Integer)(_Schema.Number)
 
 /** @internal */
 export const _internal = {
-	Integer,
+  Integer,
 }

@@ -5,13 +5,8 @@ import * as Layer from 'effect/Layer'
 import * as Schema from 'effect/Schema'
 import * as SchemaX from 'effect/unstable/schema'
 import * as Sql from 'effect/unstable/sql'
-
-import {
-  ProductExpirationSchema,
-  ProductSchema,
-} from '@/infra/shared/sql/schema.ts'
+import { ProductExpirationSchema, ProductSchema } from '@/infra/shared/sql/schema.ts'
 import * as Integer from '@/shared/integer/integer.ts'
-import * as DateTime from 'effect/DateTime'
 
 export class Product extends SchemaX.Model.Class<Product>('Product')({
   [ProductSchema.columns.id]: SchemaX.Model.Generated(Integer.Schema),

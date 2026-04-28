@@ -1,6 +1,6 @@
-import type { Model } from '@/app/core/model.ts'
 import * as Effect from 'effect/Effect'
 import { h } from 'snabbdom'
+import type { Model } from '@/app/core/model.ts'
 import * as Home from './home/view.ts'
 
 export const makeView = Effect.gen(function*() {

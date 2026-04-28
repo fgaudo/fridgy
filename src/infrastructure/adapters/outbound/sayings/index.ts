@@ -6,6 +6,6 @@ import * as GetSayings from '@/app/ports/outbound/get-sayings.ts'
 import * as Sayings from './sayings.json' with { type: 'json' }
 
 export const layer = Layer.succeed(
-	GetSayings.GetSayings,
-	Effect.succeed(Sayings),
+  GetSayings.GetSayings,
+  Effect.succeed(Sayings),
 )
