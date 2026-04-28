@@ -1,0 +1,42 @@
+@import "tailwindcss";
+@import "material-symbols/rounded.css";
+@import "@fontsource-variable/noto-sans/standard.css";
+@import "@fontsource-variable/noto-sans/standard-italic.css";
+@import "@fontsource-variable/noto-sans-arabic/standard.css";
+@import "@fontsource-variable/noto-sans-bengali/standard.css";
+@import "@fontsource-variable/noto-sans-jp/index.css";
+@import "@fontsource-variable/noto-sans-sc/index.css";
+@import "@fontsource-variable/noto-sans-kr/index.css";
+
+@theme {
+  --font-stylish: Comfortaa;
+  --color-on-background: #000003;
+  --color-primary: #c43921;
+  --color-background: #fef8e9;
+  --color-secondary: #fba551;
+  --color-accent: #4fa34a;
+  --spacing-sait: var(--safe-area-inset-top, env(safe-area-inset-top, 0px));
+  --spacing-saib: var(
+    --safe-area-inset-bottom,
+    env(safe-area-inset-bottom, 0px)
+  );
+  --spacing-sail: var(--safe-area-inset-left, env(safe-area-inset-left, 0px));
+  --spacing-sair: var(--safe-area-inset-right, env(safe-area-inset-right, 0px));
+}
+
+body {
+  font-family:
+    "Noto Sans Variable", "Noto Sans Arabic Variable",
+    "Noto Sans Bengali Variable", "Noto Sans SC Variable",
+    "Noto Sans JP Variable", "Noto Sans KR Variable", "Roboto Flex Variable",
+    "Courier New", Courier, monospace;
+}
+
+html {
+  background-color: var(--color-background);
+  color: var(--color-on-background);
+}
+
+a {
+  white-space: nowrap;
+}

@@ -5,7 +5,8 @@
     "indentWidth": 2,
     "lineWidth": 120,
     "arrowFunction.useParentheses": "force",
-    "operatorPosition": "maintain"
+    "operatorPosition": "maintain",
+    "preferSingleLine": false
   },
   "json": {},
   "markdown": {},
@@ -13,7 +14,19 @@
   "malva": {},
   "markup": {},
   "oxc": {
-    "experimentalSortImports": {},
+    "experimentalSortImports": {
+      "groups": [
+        ["builtin"],
+        ["external"],
+        ["internal", "subpath"],
+        ["parent", "sibling", "index"],
+        ["style"],
+        ["unknown"]
+      ],
+      "internalPattern": [
+        "@/"
+      ]
+    },
     "experimentalTailwindcss": {
       "functions": ["cn"]
     }

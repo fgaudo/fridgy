@@ -15,7 +15,7 @@ const makeRootResolver = Effect.gen(function*() {
   return (...parts: ReadonlyArray<string>) => path.join(currentDir, '..', ...parts)
 })
 
-const rendererPath = './src/infrastructure/adapters/outbound/web-snabbdom/'
+const rendererPath = './src/infrastructure/adapters/outbound/model-renderer/'
 
 const commonBuildConfig = Effect.gen(function*() {
   const resolve = yield* makeRootResolver
@@ -50,7 +50,7 @@ const buildDev = Effect.gen(function*() {
         resolve(rendererPath, './pages/view.ts'),
       ],
       sourcemap: 'inline',
-    }).catch(console.log)
+    })
   )
 })
 
