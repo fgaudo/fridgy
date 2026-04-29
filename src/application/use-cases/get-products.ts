@@ -1,15 +1,13 @@
 import * as Arr from 'effect/Array'
-import * as Clock from 'effect/Clock'
 import * as Context from 'effect/Context'
 import * as Data from 'effect/Data'
 import * as DateTime from 'effect/DateTime'
-import * as Duration from 'effect/Duration'
+import type * as Duration from 'effect/Duration'
 import * as Effect from 'effect/Effect'
 import * as Layer from 'effect/Layer'
 import * as Option from 'effect/Option'
 import * as GetProductsPort from '@/app/ports/outbound/product/get-products.ts'
 import * as Product from '@/domain/product.ts'
-import * as Integer from '@/shared/integer/integer.ts'
 import * as NormalizedString from '@/shared/normalized-string.ts'
 import type * as UnitInterval from '@/shared/unit-interval.ts'
 
@@ -52,14 +50,16 @@ export class GetProducts extends Context.Service<GetProducts>()(
   {
     make: Effect.gen(function*() {
       const getProducts = yield* GetProductsPort.GetProducts
+
       // @effect-diagnostics-next-line returnEffectInGen:off
-      return Effect.gen(function*(): Effect.fn.Return<Response> {
+      return Effect.gen(function*(): Effect.fn.Return<Response, never, DateTime.CurrentTimeZone> {
         yield* Effect.log('Started')
         const maybeProducts = yield* Effect.option(getProducts)
         if (Option.isNone(maybeProducts)) {
           yield* Effect.logError('Could not receive products')
           return Response.Failed()
         }
+        const currentDate = yield* DateTime.nowInCurrentZone
         const entries = yield* Effect.forEach(
           maybeProducts.value,
           Effect.fn(function*(productData) {
@@ -85,9 +85,6 @@ export class GetProducts extends Context.Service<GetProducts>()(
                 status: Status.Everlasting(),
               })
             }
-            const currentDate = Integer.fromNumberUnsafe(
-              yield* Clock.currentTimeMillis,
-            )
             const status = Product.expirationStatus(currentDate)(
               maybeExpiration.value,
             )

@@ -80,6 +80,7 @@ export type Model = Readonly<{
 export type State = Readonly<{
   isMenuOpen: boolean
   isWindowAtTop: boolean
+  isWindowCloseToTop: boolean
   isInteracting: boolean
   versions: {
     scheduledFetcher: FetchListSchedulerVersion

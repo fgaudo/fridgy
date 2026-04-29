@@ -1,8 +1,8 @@
 import * as Browser from '@effect/platform-browser'
 import * as ConfigProvider from 'effect/ConfigProvider'
+import * as DateTime from 'effect/DateTime'
 import * as Layer from 'effect/Layer'
 import * as References from 'effect/References'
-
 import * as Usecase from '@/app/use-cases/index.ts'
 import { layer as FsmDispatcherLayer } from '@/infra/adapters/inbound/message-dispatcher.ts'
 import { layer as ViewportEvents } from '@/infra/adapters/inbound/viewport-events.ts'
@@ -13,7 +13,6 @@ import { staticLayer } from '@/infra/adapters/outbound/product/mock/get-products
 import * as Sql from '@/infra/adapters/outbound/product/sql/index.ts'
 import * as GetSayings from '@/infra/adapters/outbound/sayings/index.ts'
 import { layer as ViewportCommands } from '@/infra/adapters/outbound/viewport-commands.ts'
-
 import * as Fsm from '@/infra/shared/fsm.ts'
 import * as SqlHelper from '@/infra/shared/sql/sql-helper.ts'
 import * as Sqlite from '@/infra/shared/sqlite/layer.ts'
@@ -58,6 +57,7 @@ export const AppLayer = UiLayer.pipe(
   Layer.provide(
     Fsm.layer.pipe(
       Layer.provide([
+        DateTime.layerCurrentZoneNamed(Intl.DateTimeFormat().resolvedOptions().timeZone),
         ViewportCommands,
         ViewportEvents,
         GetSayings.layer,
@@ -65,10 +65,13 @@ export const AppLayer = UiLayer.pipe(
         Usecase.all.pipe(
           Layer.provide(staticLayer),
           Layer.provide(DbLayer),
+          Layer.provide(DateTime.layerCurrentZoneNamed(Intl.DateTimeFormat().resolvedOptions().timeZone)),
+          Layer.orDie,
         ),
       ]),
     ),
   ),
   Layer.provide(ConfigLayer),
   Layer.provideMerge(Layer.succeed(References.MinimumLogLevel, 'Debug')),
+  Layer.orDie,
 )

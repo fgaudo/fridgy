@@ -1,5 +1,6 @@
 import * as Arr from 'effect/Array'
 import * as Data from 'effect/Data'
+import type * as DateTime from 'effect/DateTime'
 import * as Effect from 'effect/Effect'
 import * as HashMap from 'effect/HashMap'
 import * as HashSet from 'effect/HashSet'
@@ -8,7 +9,6 @@ import * as Opt from 'effect/Option'
 import * as Schedule from 'effect/Schedule'
 import * as Stream from 'effect/Stream'
 import * as T from 'effect/Tuple'
-
 import { InternalMessage } from '@/app/core/messages.ts'
 import { ViewportEvents } from '@/app/ports/inbound/viewport-events.ts'
 import { ViewportCommands } from '@/app/ports/outbound/viewport-commands.ts'
@@ -132,28 +132,36 @@ function isSchedulerRunning(
 
 export const update = Match.typeTags<
   Extract<InternalMessage, Record<'_tag', `Home_${string}`>>,
-  ReturnType<StateManager.Update<State, InternalMessage, UseCases | ViewportCommands>>
+  ReturnType<StateManager.Update<State, InternalMessage, UseCases | ViewportCommands | DateTime.CurrentTimeZone>>
 >()({
+  Home_Interacting: ({ state: isInteracting }) => (state) =>
+    T.make(
+      { ...state, isInteracting },
+      [
+        ...(!isInteracting && state.isWindowCloseToTop
+          ? [
+            Effect.gen(function*() {
+              const { scrollToTop } = yield* ViewportCommands
+              yield* scrollToTop
+              return InternalMessage.NoOp()
+            }),
+          ]
+          : []),
+      ],
+    ),
+
   Home_ToggleMenu: () => (state) => {
     return T.make({ ...state, isMenuOpen: !state.isMenuOpen }, [])
   },
+
   Home_WindowCloseToTop: ({ state: isWindowCloseToTop }) => (state) => {
-    if (!isWindowCloseToTop) {
-      return T.make(state, [])
-    }
-    return T.make({ ...state }, [
-      ...(state.isInteracting
-        ? [Effect.gen(function*() {
-          const { scrollTo } = yield* ViewportCommands
-          yield* scrollTo({ top: 0 })
-          return InternalMessage.NoOp()
-        })]
-        : []),
-    ])
+    return T.make({ ...state, isWindowCloseToTop }, [])
   },
+
   Home_WindowAtTop: ({ state: isWindowAtTop }) => (state) => {
     return T.make({ ...state, isWindowAtTop }, [])
   },
+
   Home_ClearSelected: (message) => (state) => {
     if (
       (state.productListData.activity !== 'idle'
@@ -280,8 +288,6 @@ export const update = Match.typeTags<
     return updateFetchListSucceeded(state, message.response.maybeProducts)
   },
 
-  Home_Interacting: (interaction) => (state) => T.make({ ...state, isInteracting: interaction.state }, []),
-
   Home_StartDeleteAndRefresh: (message) => (state) => {
     if (
       state.productListData._tag !== 'Available'
@@ -400,11 +406,11 @@ export const subscriptions: StateManager.Emitter<
       ),
     ],
     [
-      'isCloseToTop',
+      'isWindowCloseToTop',
       Effect.service(ViewportEvents).pipe(
         Effect.map((a) => a.isCloseToTop$),
         Stream.unwrap,
-        Stream.map((isAtTop) => InternalMessage.Home_WindowAtTop({ state: isAtTop })),
+        Stream.map((isCloseToTop) => InternalMessage.Home_WindowCloseToTop({ state: isCloseToTop })),
       ),
     ],
   )
@@ -429,6 +435,7 @@ export const subscriptions: StateManager.Emitter<
 
 export const init: StateManager.Step<State, InternalMessage, UseCases | ViewportCommands> = T.make(
   {
+    isWindowCloseToTop: false,
     isMenuOpen: false,
     isWindowAtTop: true,
     isInteracting: false,
@@ -438,7 +445,7 @@ export const init: StateManager.Step<State, InternalMessage, UseCases | Viewport
       scheduledFetcher: FetchListSchedulerVersion.make(0n),
     },
   },
-  [],
+  [Effect.succeed(InternalMessage.Home_StartFetchList())],
 )
 
 const notifyWrongState = Effect.fn(function*(message: { _tag: string }) {

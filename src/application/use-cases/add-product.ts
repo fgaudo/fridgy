@@ -1,4 +1,3 @@
-import * as Clock from 'effect/Clock'
 import * as Context from 'effect/Context'
 import * as Data from 'effect/Data'
 import * as DateTime from 'effect/DateTime'
@@ -9,7 +8,6 @@ import * as Option from 'effect/Option'
 import { v4 as uuidv4 } from 'uuid'
 import * as AddProductPort from '@/app/ports/outbound/product/add-product.ts'
 import * as Product from '@/domain/product.ts'
-import * as Integer from '@/shared/integer/integer.ts'
 
 export type Params = {
   maybeName: Option.Option<string>
@@ -29,7 +27,7 @@ export class AddProduct extends Context.Service<AddProduct>()(
       const resolver = yield* AddProductPort.AddProduct
       return Effect.fn(function*(
         productData: Params,
-      ): Effect.fn.Return<Response> {
+      ): Effect.fn.Return<Response, never, DateTime.CurrentTimeZone> {
         const timestamp = yield* DateTime.nowInCurrentZone
         const maybeProduct = Product.makeProduct({
           maybeCreationDate: Option.some(timestamp),

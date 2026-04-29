@@ -36,7 +36,7 @@ export const makeLayer = (
       isCloseToTop$: Stream.concat(Stream.make(3), scroll$).pipe(
         Stream.mapEffect(() =>
           Effect.sync(
-            () => window.scrollY <= 30,
+            () => window.scrollY <= 60,
           )
         ),
         Stream.changes,
