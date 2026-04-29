@@ -10,7 +10,8 @@ import * as Stream from 'effect/Stream'
 import * as T from 'effect/Tuple'
 
 import { InternalMessage } from '@/app/core/messages.ts'
-import { ViewportActivity } from '@/app/ports/inbound/viewport-activity.ts'
+import { ViewportEvents } from '@/app/ports/inbound/viewport-events.ts'
+import { ViewportCommands } from '@/app/ports/outbound/viewport-commands.ts'
 import * as UC from '@/app/use-cases/index.ts'
 import type * as StateManager from '@/shared/fsm.ts'
 import * as ArrX from '@/shared/non-empty-array.ts'
@@ -131,8 +132,28 @@ function isSchedulerRunning(
 
 export const update = Match.typeTags<
   Extract<InternalMessage, Record<'_tag', `Home_${string}`>>,
-  ReturnType<StateManager.Update<State, InternalMessage, UseCases>>
+  ReturnType<StateManager.Update<State, InternalMessage, UseCases | ViewportCommands>>
 >()({
+  Home_ToggleMenu: () => (state) => {
+    return T.make({ ...state, isMenuOpen: !state.isMenuOpen }, [])
+  },
+  Home_WindowCloseToTop: ({ state: isWindowCloseToTop }) => (state) => {
+    if (!isWindowCloseToTop) {
+      return T.make(state, [])
+    }
+    return T.make({ ...state }, [
+      ...(state.isInteracting
+        ? [Effect.gen(function*() {
+          const { scrollTo } = yield* ViewportCommands
+          yield* scrollTo({ top: 0 })
+          return InternalMessage.NoOp()
+        })]
+        : []),
+    ])
+  },
+  Home_WindowAtTop: ({ state: isWindowAtTop }) => (state) => {
+    return T.make({ ...state, isWindowAtTop }, [])
+  },
   Home_ClearSelected: (message) => (state) => {
     if (
       (state.productListData.activity !== 'idle'
@@ -359,14 +380,31 @@ export const update = Match.typeTags<
 export const subscriptions: StateManager.Emitter<
   State,
   InternalMessage,
-  UseCases | ViewportActivity
+  ViewportEvents
 > = (state: State) => {
   const map: ReturnType<typeof subscriptions> = HashMap.make(
     [
       'activity',
-      Effect.service(ViewportActivity).pipe(
+      Effect.service(ViewportEvents).pipe(
+        Effect.map((a) => a.activity$),
         Stream.unwrap,
-        Stream.map((isInteracting) => [InternalMessage.Home_Interacting({ state: isInteracting })] as const),
+        Stream.map((isInteracting) => InternalMessage.Home_Interacting({ state: isInteracting })),
+      ),
+    ],
+    [
+      'isWindowTop',
+      Effect.service(ViewportEvents).pipe(
+        Effect.map((a) => a.isAtTop$),
+        Stream.unwrap,
+        Stream.map((isAtTop) => InternalMessage.Home_WindowAtTop({ state: isAtTop })),
+      ),
+    ],
+    [
+      'isCloseToTop',
+      Effect.service(ViewportEvents).pipe(
+        Effect.map((a) => a.isCloseToTop$),
+        Stream.unwrap,
+        Stream.map((isAtTop) => InternalMessage.Home_WindowAtTop({ state: isAtTop })),
       ),
     ],
   )
@@ -376,16 +414,23 @@ export const subscriptions: StateManager.Emitter<
   return HashMap.set(
     map,
     T.make('fetcher', state.versions.scheduledFetcher),
-    Stream.make([
+    Stream.make(
       InternalMessage.Home_FetchListTick({
         version: state.versions.scheduledFetcher,
       }),
-    ]).pipe(Stream.schedule(Schedule.spaced('3 seconds')), Stream.forever),
+    ).pipe(
+      Stream.schedule(
+        Schedule.spaced('3 seconds'),
+      ),
+      Stream.forever,
+    ),
   )
 }
 
-export const init: StateManager.Step<State, InternalMessage, UseCases> = T.make(
+export const init: StateManager.Step<State, InternalMessage, UseCases | ViewportCommands> = T.make(
   {
+    isMenuOpen: false,
+    isWindowAtTop: true,
     isInteracting: false,
     productListData: { _tag: 'Initial', activity: 'idle' },
     versions: {
@@ -393,17 +438,17 @@ export const init: StateManager.Step<State, InternalMessage, UseCases> = T.make(
       scheduledFetcher: FetchListSchedulerVersion.make(0n),
     },
   },
-  [Effect.succeed(T.make(InternalMessage.Home_StartFetchList()))],
+  [],
 )
 
 const notifyWrongState = Effect.fn(function*(message: { _tag: string }) {
   yield* Effect.logError(`Triggered ${message._tag} in wrong state`)
-  return T.make(InternalMessage.NoOp())
+  return InternalMessage.NoOp()
 })
 
 const notifyStale = Effect.fn(function*(message: { _tag: string }) {
   yield* Effect.logInfo(`Triggered stale ${message._tag}`)
-  return T.make(InternalMessage.NoOp())
+  return InternalMessage.NoOp()
 })
 
 const deleteAndGetProducts = Effect.fn(function*(
@@ -413,22 +458,15 @@ const deleteAndGetProducts = Effect.fn(function*(
   {
     const result = yield* deleteProducts(params)
     if (result._tag === 'Failed') {
-      return T.make(
-        InternalMessage.Home_DeleteAndRefreshFailed({ response: result }),
-        InternalMessage.ShowToast({ text: 'Delete failed' }),
-      )
+      return InternalMessage.Home_DeleteAndRefreshFailed({ response: result })
     }
   }
   const getProducts = yield* UC.GetProducts.GetProducts
   {
     const result = yield* getProducts
     return Match.valueTags(result, {
-      Failed: (response) =>
-        T.make(
-          InternalMessage.Home_DeleteSucceededButRefreshFailed({ response }),
-          InternalMessage.ShowToast({ text: 'Refresh failed' }),
-        ),
-      Succeeded: (response) => T.make(InternalMessage.Home_DeleteAndRefreshSucceeded({ response })),
+      Failed: (response) => InternalMessage.Home_DeleteSucceededButRefreshFailed({ response }),
+      Succeeded: (response) => InternalMessage.Home_DeleteAndRefreshSucceeded({ response }),
     })
   }
 })
@@ -437,8 +475,8 @@ const fetchList = Effect.fn(function*(version: bigint) {
   const getProducts = yield* UC.GetProducts.GetProducts
   const result = yield* getProducts
   return Match.valueTags(result, {
-    Failed: (response) => T.make(InternalMessage.Home_FetchListFailed({ response, version })),
-    Succeeded: (response) => T.make(InternalMessage.Home_FetchListSucceeded({ response, version })),
+    Failed: (response) => InternalMessage.Home_FetchListFailed({ response, version }),
+    Succeeded: (response) => InternalMessage.Home_FetchListSucceeded({ response, version }),
   })
 })
 
@@ -446,10 +484,7 @@ const fetchListTick = Effect.fn(function*(version: bigint) {
   const getProducts = yield* UC.GetProducts.GetProducts
   const result = yield* getProducts
   return Match.valueTags(result, {
-    Failed: (response) => T.make(InternalMessage.Home_FetchListTickFailed({ response, version })),
-    Succeeded: (response) =>
-      T.make(
-        InternalMessage.Home_FetchListTickSucceeded({ response, version }),
-      ),
+    Failed: (response) => InternalMessage.Home_FetchListTickFailed({ response, version }),
+    Succeeded: (response) => InternalMessage.Home_FetchListTickSucceeded({ response, version }),
   })
 })

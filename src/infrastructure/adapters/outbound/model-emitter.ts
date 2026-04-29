@@ -11,7 +11,6 @@ export const layer = Layer.effect(
   ModelEmitter,
   Effect.gen(function*() {
     const manager = yield* Fsm.Engine<RootModel.State, InternalMessage>()
-
     return Fsm.states(manager).pipe(
       Stream.map((state) => RootModel.makeModel(state)),
     )

@@ -5,7 +5,8 @@ import * as Option from 'effect/Option'
 import * as T from 'effect/Tuple'
 
 import { InternalMessage } from '@/app/core/messages.ts'
-import type { ViewportActivity } from '@/app/ports/inbound/viewport-activity.ts'
+import type { ViewportEvents } from '@/app/ports/inbound/viewport-events.ts'
+import type { ViewportCommands } from '@/app/ports/outbound/viewport-commands.ts'
 import type * as UC from '@/app/use-cases/index.ts'
 import type * as StateManager from '@/shared/fsm.ts'
 import { mapSubscriptions } from '../../shared/helpers.ts'
@@ -16,7 +17,7 @@ const isHomeMessage = (
   message: InternalMessage,
 ): message is Extract<InternalMessage, Record<'_tag', `Home_${string}`>> => message._tag.startsWith('Home_')
 
-export const update: StateManager.Update<State, InternalMessage, UC.All> = (message) => (state) => {
+export const update: StateManager.Update<State, InternalMessage, UC.All | ViewportCommands> = (message) => (state) => {
   if (state.currentPage === 'Home' && isHomeMessage(message)) {
     const [nextSubState, cmds] = Home.update(message)(state.page[state.currentPage])
     return T.make(
@@ -44,7 +45,7 @@ export const update: StateManager.Update<State, InternalMessage, UC.All> = (mess
         },
         [
           Effect.succeed(
-            T.make(InternalMessage.HideToast({ version: nextVersion })),
+            InternalMessage.HideToast({ version: nextVersion }),
           ).pipe(Effect.delay('2 seconds')),
         ],
       )
@@ -68,12 +69,12 @@ export const update: StateManager.Update<State, InternalMessage, UC.All> = (mess
   )(state)
 }
 
-export const makeDefectMessages = (_err: unknown) => T.make(InternalMessage.Crash())
+export const makeDefectMessage = (_err: unknown) => InternalMessage.Crash()
 
 export const init: StateManager.Step<
   State,
   InternalMessage,
-  UC.All | Home.UseCases
+  UC.All | Home.UseCases | ViewportCommands
 > = (() => {
   const [state, commands] = Home.init
   return T.make(
@@ -90,14 +91,17 @@ export const init: StateManager.Step<
 export const subscriptions: StateManager.Emitter<
   State,
   InternalMessage,
-  UC.All | ViewportActivity
+  ViewportEvents
 > = (state: State) => {
   let subs: ReturnType<typeof subscriptions> = HashMap.empty()
 
   if (state.currentPage === 'Home') {
     subs = HashMap.setMany(
       subs,
-      mapSubscriptions(Home.subscriptions(state.page[state.currentPage]), (k) => T.make('Home', k)),
+      mapSubscriptions(
+        Home.subscriptions(state.page[state.currentPage]),
+        (k) => T.make('Home', k),
+      ),
     )
   }
   return subs

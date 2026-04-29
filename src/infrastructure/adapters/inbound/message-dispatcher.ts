@@ -11,7 +11,7 @@ export const layer = Layer.unwrap(
     const manager = yield* Fsm.Engine<State, InternalMessage>()
     return Layer.succeed(
       MessageDispatcher.MessageDispatcher,
-      (message) => Fsm.dispatch(manager, [message]),
+      (message) => Fsm.dispatch(manager, message),
     )
   }),
 )

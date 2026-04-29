@@ -7,9 +7,12 @@ export type Message = {
   StartDeleteAndRefresh: object
   ToggleItem: { id: string }
   ClearSelected: object
+  ToggleMenu: object
 }
 
 export type InternalMessage = {
+  WindowAtTop: { state: boolean }
+  WindowCloseToTop: { state: boolean }
   Interacting: { state: boolean }
   FetchListFailed: {
     version: bigint

@@ -1,9 +1,10 @@
 import * as Context from 'effect/Context'
 import type * as Effect from 'effect/Effect'
 
-export class Viewport extends Context.Service<
-  Viewport,
+export class ViewportCommands extends Context.Service<
+  ViewportCommands,
   {
     scrollTo: (opt: ScrollToOptions) => Effect.Effect<void>
+    isWindowAtTop: Effect.Effect<boolean>
   }
->()('e1880b5e7e8a0ddc') {}
+>()('de09ac17be446a13') {}

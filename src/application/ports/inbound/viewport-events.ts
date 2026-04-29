@@ -1,11 +1,12 @@
 import * as Context from 'effect/Context'
-import type * as Effect from 'effect/Effect'
 import type * as Stream from 'effect/Stream'
 
-export class Viewport extends Context.Service<
-  Viewport,
+export class ViewportEvents extends Context.Service<
+  ViewportEvents,
   {
     scrollEnd$: Stream.Stream<{ y: number }>
+    isAtTop$: Stream.Stream<boolean>
+    isCloseToTop$: Stream.Stream<boolean>
     activity$: Stream.Stream<boolean>
   }
->()('def56e20eecf8ec0') {}
+>()('65ba5a6e21ac2521') {}

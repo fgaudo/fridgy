@@ -5,12 +5,15 @@ import * as References from 'effect/References'
 
 import * as Usecase from '@/app/use-cases/index.ts'
 import { layer as FsmDispatcherLayer } from '@/infra/adapters/inbound/message-dispatcher.ts'
+import { layer as ViewportEvents } from '@/infra/adapters/inbound/viewport-events.ts'
 import * as GetLicenses from '@/infra/adapters/outbound/licenses/adapter.ts'
 import { layer as FsmEmitterLayer } from '@/infra/adapters/outbound/model-emitter.ts'
 import { Hot, Static } from '@/infra/adapters/outbound/model-renderer/index.ts'
 import { staticLayer } from '@/infra/adapters/outbound/product/mock/get-products.ts'
 import * as Sql from '@/infra/adapters/outbound/product/sql/index.ts'
 import * as GetSayings from '@/infra/adapters/outbound/sayings/index.ts'
+import { layer as ViewportCommands } from '@/infra/adapters/outbound/viewport-commands.ts'
+
 import * as Fsm from '@/infra/shared/fsm.ts'
 import * as SqlHelper from '@/infra/shared/sql/sql-helper.ts'
 import * as Sqlite from '@/infra/shared/sqlite/layer.ts'
@@ -54,13 +57,16 @@ export const AppLayer = UiLayer.pipe(
   Layer.merge(FsmEmitterLayer),
   Layer.provide(
     Fsm.layer.pipe(
-      Layer.provide(
-        Layer.mergeAll(
-          GetSayings.layer,
-          GetLicenses.layer,
-          Usecase.all.pipe(Layer.provide(staticLayer), Layer.provide(DbLayer)),
+      Layer.provide([
+        ViewportCommands,
+        ViewportEvents,
+        GetSayings.layer,
+        GetLicenses.layer,
+        Usecase.all.pipe(
+          Layer.provide(staticLayer),
+          Layer.provide(DbLayer),
         ),
-      ),
+      ]),
     ),
   ),
   Layer.provide(ConfigLayer),

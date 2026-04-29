@@ -17,7 +17,7 @@ import * as Ref from 'effect/Ref'
 import * as Stream from 'effect/Stream'
 
 export type Command<Message, R> = Effect.Effect<
-  Array.NonEmptyReadonlyArray<Message>,
+  Message,
   never,
   R
 >
@@ -29,7 +29,7 @@ export type Step<State, Message, R> = readonly [
 
 export type Transition<State, Message> = Data.TaggedEnum<{
   Initial: { state: State }
-  Subsequent: { state: State; messages: Array.NonEmptyReadonlyArray<Message> }
+  Subsequent: { state: State; message: Message }
 }>
 
 export type Update<State, Message, R> = (
@@ -40,29 +40,29 @@ export type Emitter<State, Message, R, K = unknown> = (
   s: State,
 ) => HashMap.HashMap<
   K,
-  Stream.Stream<Array.NonEmptyReadonlyArray<Message>, never, R>
+  Stream.Stream<Message, never, R>
 >
 
 export type Engine<State, Message> = Newtype.Newtype<
   '#fgaudo/fsm/Engine',
   {
-    messageQueue: Queue.Queue<Array.NonEmptyReadonlyArray<Message>>
-    messages$: Stream.Stream<Array.NonEmptyReadonlyArray<Message>>
+    messageQueue: Queue.Queue<Message>
+    message$: Stream.Stream<Message>
     state$: Stream.Stream<State>
     hasStartedRef: Ref.Ref<boolean>
   }
 >
 
 const modifySubs = <Message>(
-  makeDefectMessages: (
+  makeDefectMessage: (
     cause: unknown,
-  ) => NoInfer<Array.NonEmptyReadonlyArray<Message>>,
+  ) => NoInfer<Message>,
 ) =>
   Effect.fn(function*<R, K>(
     activeSubscriptions: HashMap.HashMap<K, Deferred.Deferred<void>>,
     subscriptions: HashMap.HashMap<
       K,
-      Stream.Stream<readonly [Message, ...ReadonlyArray<Message>], never, R>
+      Stream.Stream<Message, never, R>
     >,
   ) {
     const mutable = HashMap.beginMutation(activeSubscriptions)
@@ -74,7 +74,7 @@ const modifySubs = <Message>(
       yield* Deferred.succeed(interruption, undefined)
     }
     let streams = Array.empty<
-      Stream.Stream<Array.NonEmptyReadonlyArray<Message>, never, R>
+      Stream.Stream<Message, never, R>
     >()
     for (const [key, stream] of subscriptions) {
       if (HashMap.has(mutable, key)) {
@@ -83,7 +83,7 @@ const modifySubs = <Message>(
       const interruption = yield* Deferred.make<void>()
       HashMap.set(mutable, key, interruption)
       const recursiveStream: Stream.Stream<
-        readonly [Message, ...ReadonlyArray<Message>],
+        Message,
         never,
         R
       > = Stream.suspend(() =>
@@ -92,7 +92,7 @@ const modifySubs = <Message>(
             (cause) => !Cause.hasInterrupts(cause),
             (cause) =>
               Stream.concat(
-                Stream.make(makeDefectMessages(cause)),
+                Stream.make(makeDefectMessage(cause)),
                 Stream.unwrap(
                   Effect.gen(function*() {
                     yield* Effect.sleep('1 second')
@@ -115,15 +115,8 @@ const modifySubs = <Message>(
 
 const modifyState = <State, Message, R>(update: Update<State, Message, R>) =>
   Effect.fn(
-    function*(state: State, messages: ReadonlyArray<Message>) {
-      const [newState, commands] = Array.reduce(
-        messages,
-        [state, Array.empty<Command<Message, R>>()] as const,
-        ([s, commands], message) => {
-          const [newState, newCommands] = update(message)(s)
-          return [newState, Array.appendAll(commands, newCommands)] as const
-        },
-      )
+    function*(state: State, message: Message) {
+      const [newState, commands] = yield* Effect.sync(() => update(message)(state))
       return [newState, [{ commands, state: newState }]] as const
     },
     (effect, state) =>
@@ -136,16 +129,16 @@ const modifyState = <State, Message, R>(update: Update<State, Message, R>) =>
       ),
   )
 
-export const prepare = <State, Message, R, K>({
+export const prepare = <State, Message, R, S, K>({
   update,
-  makeDefectMessages,
+  makeDefectMessage,
   emitter,
 }: {
   update: Update<State, Message, R>
-  makeDefectMessages: (
+  makeDefectMessage: (
     cause: unknown,
-  ) => NoInfer<Array.NonEmptyReadonlyArray<Message>>
-  emitter?: Emitter<State, Message, R, K>
+  ) => NoInfer<Message>
+  emitter?: Emitter<State, Message, S, K>
 }) => {
   const iso = Newtype.makeIso<Engine<State, Message>>()
   const maybeEmitter = Option.fromUndefinedOr(emitter)
@@ -155,7 +148,7 @@ export const prepare = <State, Message, R, K>({
     R
   >) {
     const messageQueue = yield* Effect.acquireRelease(
-      Queue.unbounded<Array.NonEmptyReadonlyArray<Message>>(),
+      Queue.unbounded<Message>(),
       Queue.shutdown,
     )
     const transition$ = yield* Stream.fromQueue(messageQueue).pipe(
@@ -168,7 +161,7 @@ export const prepare = <State, Message, R, K>({
       Stream.map(({ commands }) => commands),
       Stream.flattenIterable,
       Stream.map(
-        Effect.catchDefect(Function.flow(makeDefectMessages, Effect.succeed)),
+        Effect.catchDefect(Function.flow(makeDefectMessage, Effect.succeed)),
       ),
       Stream.flattenEffect({ concurrency: 'unbounded', unordered: true }),
     )
@@ -194,21 +187,22 @@ export const prepare = <State, Message, R, K>({
         Stream.map(([, subs]) => subs),
         Stream.mapAccumEffect(
           HashMap.empty<K, Deferred.Deferred<void>>,
-          modifySubs(makeDefectMessages),
+          modifySubs(makeDefectMessage),
         ),
         Stream.flatten({ concurrency: 'unbounded' }),
       )
       : Stream.empty
-    const requirements = yield* Effect.context<R>()
-    const messages$ = Stream.provideContext(
+    const requirementsS = yield* Effect.context<S>()
+    const requirementsR = yield* Effect.context<R>()
+    const message$ = Stream.provideContext(
       Stream.merge(fromSubs$, fromCommand$),
-      requirements,
+      Context.merge(requirementsR, requirementsS),
     )
     const hasStartedRef = yield* Ref.make(false)
     return iso.set({
       hasStartedRef,
       messageQueue,
-      messages$,
+      message$,
       state$,
     })
   })
@@ -216,27 +210,27 @@ export const prepare = <State, Message, R, K>({
 
 export const dispatch = Function.dual<
   <Message>(
-    that: Array.NonEmptyReadonlyArray<Message>,
+    that: Message,
   ) => <State>(self: Engine<State, Message>) => Effect.Effect<void>,
   <State, Message>(
     self: Engine<State, Message>,
-    that: Array.NonEmptyReadonlyArray<Message>,
+    that: Message,
   ) => Effect.Effect<void>
 >(
   2,
-  Effect.fn(function*(stateManager, messages) {
+  Effect.fn(function*(stateManager, message) {
     const { messageQueue } = Newtype.value(stateManager)
 
-    yield* Queue.offer(messageQueue, messages)
+    yield* Queue.offer(messageQueue, message)
   }),
 )
 
 export const states = <State, Message>(
   stateManager: Engine<State, Message>,
 ) => {
-  const { state$, messageQueue, messages$ } = Newtype.value(stateManager)
+  const { state$, messageQueue, message$ } = Newtype.value(stateManager)
 
-  return messages$.pipe(
+  return message$.pipe(
     Stream.tap((message) => Queue.offer(messageQueue, message)),
     Stream.drain,
     Stream.merge(state$),
@@ -251,20 +245,20 @@ export const states = <State, Message>(
 
 export const Engine = <S, M>() => Context.Service<Engine<S, M>>('#fgaudo/fsm/Engine')
 
-export const layer = <S, M, R, K>({
+export const layer = <State, Message, R, S, K>({
   update,
   emitter,
-  makeDefectMessages,
+  makeDefectMessage,
   init,
 }: {
-  makeDefectMessages: (
+  makeDefectMessage: (
     cause: unknown,
-  ) => NoInfer<Array.NonEmptyReadonlyArray<M>>
-  update: Update<S, M, R>
-  emitter: Emitter<S, M, R, K>
-  init: Step<S, M, R>
+  ) => NoInfer<Message>
+  update: Update<State, Message, R>
+  emitter: Emitter<State, Message, S, K>
+  init: Step<State, Message, R>
 }) =>
   Layer.effect(
-    Engine<S, M>(),
-    prepare({ emitter, makeDefectMessages, update })(init),
+    Engine<State, Message>(),
+    prepare({ emitter, makeDefectMessage, update })(init),
   )

@@ -54,14 +54,14 @@ export const makeView = Effect.gen(function*() {
       h('div', {
         props: {
           className: cn({
-            'bg-background scale-[98%]': model.isAtTop,
-            'bg-secondary/60 backdrop-blur-md shadow-md scale-100': !model.isAtTop,
+            'bg-background scale-[98%]': model.isWindowAtTop,
+            'bg-secondary/60 backdrop-blur-md shadow-md scale-100': !model.isWindowAtTop,
           }, 'fixed w-full z-40 top-0 pl-sail pr-sair pt-sait transition-all '),
         },
       }, [
         h('div', { props: { className: 'flex w-full items-center h-16' } }, [
           h('span', {
-            on: { click: () => run({ _tag: 'Home_ToggleMenu' }) },
+            on: { click: () => dispatch({ _tag: 'Home_ToggleMenu' }) },
             props: { className: 'px-4 material-symbols-rounded' },
           }, 'menu'),
           h('div', { props: { className: 'text-2xl font-bold px-2' } }, 'Fridgy'),
