@@ -11,7 +11,7 @@ import * as Product from '@/domain/product.ts'
 
 export type Params = {
   maybeName: Option.Option<string>
-  maybeExpirationDate: Option.Option<DateTime.Zoned>
+  maybeExpirationDate: Option.Option<DateTime.Utc>
 }
 
 export type Response = Data.TaggedEnum<{
@@ -27,10 +27,10 @@ export class AddProduct extends Context.Service<AddProduct>()(
       const resolver = yield* AddProductPort.AddProduct
       return Effect.fn(function*(
         productData: Params,
-      ): Effect.fn.Return<Response, never, DateTime.CurrentTimeZone> {
-        const timestamp = yield* DateTime.nowInCurrentZone
+      ): Effect.fn.Return<Response> {
+        const current = yield* DateTime.now
         const maybeProduct = Product.makeProduct({
-          maybeCreationDate: Option.some(timestamp),
+          maybeCreationDate: Option.some(current),
           maybeExpirationDate: productData.maybeExpirationDate,
           maybeName: productData.maybeName,
         })

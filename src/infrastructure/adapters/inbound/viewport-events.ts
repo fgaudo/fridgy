@@ -5,10 +5,9 @@ import * as Stream from 'effect/Stream'
 import { ViewportEvents } from '@/app/ports/inbound/viewport-events.ts'
 
 export const makeLayer = (
-  { scroll$, scrollEnd$, getScrollY }: {
+  { scroll$, scrollEnd$ }: {
     scrollEnd$: Stream.Stream<Event, never, never>
     scroll$: Stream.Stream<Event, never, never>
-    getScrollY: Effect.Effect<number, never, never>
   },
 ) =>
   Layer.succeed(
@@ -20,12 +19,7 @@ export const makeLayer = (
       ).pipe(
         Stream.changes,
       ),
-      scrollEnd$: scrollEnd$.pipe(
-        Stream.mapEffect(Effect.fn(function*() {
-          return { y: yield* getScrollY }
-        })),
-      ),
-      isAtTop$: Stream.concat(Stream.make(3), scroll$).pipe(
+      isAtTop$: Stream.concat(Stream.make(undefined), scroll$).pipe(
         Stream.mapEffect(() =>
           Effect.sync(
             () => window.scrollY === 0,
@@ -33,10 +27,10 @@ export const makeLayer = (
         ),
         Stream.changes,
       ),
-      isCloseToTop$: Stream.concat(Stream.make(3), scroll$).pipe(
+      isCloseToTop$: Stream.concat(Stream.make(undefined), scroll$).pipe(
         Stream.mapEffect(() =>
           Effect.sync(
-            () => window.scrollY <= 60,
+            () => window.scrollY <= 30,
           )
         ),
         Stream.changes,
@@ -47,5 +41,4 @@ export const makeLayer = (
 export const layer = makeLayer({
   scroll$: BrowserStream.fromEventListenerWindow('scroll'),
   scrollEnd$: BrowserStream.fromEventListenerWindow('scrollend'),
-  getScrollY: Effect.sync(() => window.scrollY),
 })

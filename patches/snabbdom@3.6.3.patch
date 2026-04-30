@@ -1,0 +1,25 @@
+diff --git a/build/modules/style.d.ts b/build/modules/style.d.ts
+index c28c2cb0d36588e6d6f213852b09f8d79b6ec483..b967a7c6f32499e9ba2a4c33e4236a0499058d9b 100644
+--- a/build/modules/style.d.ts
++++ b/build/modules/style.d.ts
+@@ -1,7 +1,13 @@
+ import { Module } from "./module.js";
+-export type ElementStyle = Partial<CSSStyleDeclaration>;
+-export type VNodeStyle = ElementStyle & Record<string, string> & {
+-    delayed?: ElementStyle & Record<string, string>;
+-    remove?: ElementStyle & Record<string, string>;
+-};
+-export declare const styleModule: Module;
++
++type ElementStyle = { [K in keyof CSSStyleDeclaration]?: string };
++
++interface InnerStyle extends ElementStyle {
++  [K: string]: string | undefined;
++}
++
++export interface VNodeStyle extends ElementStyle {
++  delayed?: InnerStyle;
++  remove?: InnerStyle;
++  [K: string]: InnerStyle | string | undefined;
++}
+\ No newline at end of file

@@ -63,9 +63,9 @@ export type Model = Readonly<{
             name: string
             status: Data.TaggedEnum<{
               Everlasting: object
-              Stale: Readonly<{ expirationDate: DateTime.Zoned }>
+              Stale: Readonly<{ expirationDate: DateTime.Utc }>
               Fresh: Readonly<{
-                expirationDate: DateTime.Zoned
+                expirationDate: DateTime.Utc
                 timeLeft: Duration.Duration
                 freshnessRatio: UnitInterval.UnitInterval
               }>
@@ -110,9 +110,9 @@ export type State = Readonly<{
             name: string
             status: Data.TaggedEnum<{
               Everlasting: object
-              Stale: Readonly<{ expirationDate: DateTime.Zoned }>
+              Stale: Readonly<{ expirationDate: DateTime.Utc }>
               Fresh: Readonly<{
-                expirationDate: DateTime.Zoned
+                expirationDate: DateTime.Utc
                 timeLeft: Duration.Duration
                 freshnessRatio: UnitInterval.UnitInterval
               }>

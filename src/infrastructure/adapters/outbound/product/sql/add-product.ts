@@ -15,7 +15,7 @@ export const addProductLayer = Layer.effect(
     const { productRepository, insertProductWithExpirationResolver } = yield* SqlHelper.SqlHelper
     return RequestResolver.makeGrouped<
       AddProduct.Request,
-      Opt.Option<DateTime.Zoned>
+      Opt.Option<DateTime.Utc>
     >({
       key: (entry) => entry.request.product.maybeExpirationDate,
       resolver: Effect.fn(function*(entries, maybeExpirationDate) {

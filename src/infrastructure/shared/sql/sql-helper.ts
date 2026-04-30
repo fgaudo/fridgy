@@ -11,14 +11,14 @@ import * as Integer from '@/shared/integer/integer.ts'
 export class Product extends SchemaX.Model.Class<Product>('Product')({
   [ProductSchema.columns.id]: SchemaX.Model.Generated(Integer.Schema),
   [ProductSchema.columns.name]: Schema.String,
-  [ProductSchema.columns.creationDate]: Schema.DateTimeZonedFromString,
+  [ProductSchema.columns.creationDate]: Schema.DateTimeUtcFromString,
 }) {}
 
 export class ProductExpiration extends SchemaX.Model.Class<ProductExpiration>(
   'ProductExpiration',
 )({
   [ProductExpirationSchema.columns.id]: SchemaX.Model.Generated(Integer.Schema),
-  [ProductExpirationSchema.columns.date]: Schema.DateTimeZonedFromString,
+  [ProductExpirationSchema.columns.date]: Schema.DateTimeUtcFromString,
   [ProductExpirationSchema.columns.productId]: Integer.Schema,
 }) {}
 
@@ -61,8 +61,8 @@ export class SqlHelper extends Context.Service<SqlHelper>()(
       )
       const insertProductWithExpirationResolver = Sql.SqlResolver.ordered({
         Request: Schema.Struct({
-          creationDate: Schema.DateTimeZoned,
-          expirationDate: Schema.DateTimeZoned,
+          creationDate: Schema.DateTimeUtc,
+          expirationDate: Schema.DateTimeUtc,
           name: Schema.String,
         }),
         Result: Product,

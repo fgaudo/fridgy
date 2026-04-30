@@ -22,12 +22,12 @@ export type ProductDTO = Data.TaggedEnum<{
     status: Data.TaggedEnum<{
       Everlasting: object
       Stale: {
-        expirationDate: DateTime.Zoned
+        expirationDate: DateTime.Utc
       }
       Fresh: {
         freshnessRatio: UnitInterval.UnitInterval
         timeLeft: Duration.Duration
-        expirationDate: DateTime.Zoned
+        expirationDate: DateTime.Utc
       }
     }>
   }
@@ -59,7 +59,7 @@ export class GetProducts extends Context.Service<GetProducts>()(
           yield* Effect.logError('Could not receive products')
           return Response.Failed()
         }
-        const currentDate = yield* DateTime.nowInCurrentZone
+        const currentDate = yield* DateTime.now
         const entries = yield* Effect.forEach(
           maybeProducts.value,
           Effect.fn(function*(productData) {

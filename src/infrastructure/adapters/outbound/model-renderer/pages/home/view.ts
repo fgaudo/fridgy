@@ -9,6 +9,59 @@ export const makeView = Effect.gen(function*() {
   const { dispatch } = yield* Actions
   return (model: Model) =>
     h('div', [
+      model.isMenuOpen ?
+        h(
+          'div',
+          {
+            props: {
+              className: cn('fixed flex items-end justify-center left-0 right-0 bottom-0 z-1000 top-0', 'bg-black/50 backdrop-blur-xs'),
+            },
+          },
+          h('div', {
+            style: {
+              opacity: '0',
+              transform: 'scale(0.8)',
+              transition: 'opacity 250ms, transform 150ms',
+              delayed: { opacity: '1', transform: 'scale(1)' },
+            },
+            key: 'add-product-box',
+            props: {
+              className: 'w-3/4 flex flex-col p-4 gap-2 rounded-lg shadow-md bg-background mb-12',
+            },
+          }, [
+            h('div', { props: { className: 'font-bold' } }, 'Add a product'),
+            h('div', [
+              h('div', 'Name'),
+              h('input', {
+                hook: {
+                  insert: (node) => {
+                    ;(node.elm as HTMLInputElement).focus()
+                  },
+                },
+                props: {
+                  className: 'w-full bg-white focus:inset-ring-1 shadow-md rounded-md p-3',
+                },
+                attrs: { type: 'text', value: 'asd' },
+              }),
+            ]),
+            h('div', [
+              h('div', 'Expiration date'),
+              h('input', {
+                props: {
+                  className: 'w-full bg-white focus:inset-ring-1 shadow-md rounded-md p-3',
+                },
+                attrs: { type: 'date' },
+              }),
+            ]),
+            h('button', {
+              props: {
+                className: 'w-full mt-4 shadow-md bg-secondary h-12 rounded-md p-3',
+              },
+            }, 'Add'),
+          ]),
+        ) :
+        undefined,
+      ,
       h('div', {
         on: { click: () => dispatch({ _tag: 'Home_ToggleMenu' }) },
         props: {

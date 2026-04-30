@@ -164,7 +164,7 @@ const setupEnv = Effect.gen(function*() {
 })
 
 EffBun.BunRuntime.runMain(
-  Effect.zipWith(
+  Effect.zip(
     setupEnv,
     Cli.Command.make('cli.ts').pipe(
       Cli.Command.withSubcommands([buildCommand, watchCommand]),
@@ -172,6 +172,5 @@ EffBun.BunRuntime.runMain(
         version: '1.0',
       }),
     ),
-    (a, b) => b,
   ).pipe(Effect.provide([EffBun.BunServices.layer])),
 )

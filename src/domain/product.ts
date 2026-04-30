@@ -1,17 +1,16 @@
-import * as Newtype from 'effect/Newtype'
-import * as Opt from 'effect/Option'
-
-import * as NormalizedString from '@/shared/normalized-string.ts'
-import * as UnitInterval from '@/shared/unit-interval.ts'
 import * as DateTime from 'effect/DateTime'
 import * as Duration from 'effect/Duration'
+import * as Newtype from 'effect/Newtype'
+import * as Opt from 'effect/Option'
+import * as NormalizedString from '@/shared/normalized-string.ts'
+import * as UnitInterval from '@/shared/unit-interval.ts'
 
 type Product = Newtype.Newtype<
   'Product',
   {
     name: NormalizedString.NormalizedString
-    creationDate: DateTime.Zoned
-    maybeExpirationDate: Opt.Option<DateTime.Zoned>
+    creationDate: DateTime.Utc
+    maybeExpirationDate: Opt.Option<DateTime.Utc>
   }
 >
 
@@ -19,21 +18,21 @@ const productIso = Newtype.makeIso<Product>()
 
 type Expiration = Newtype.Newtype<
   'Expiration',
-  { creationDate: DateTime.Zoned; expirationDate: DateTime.Zoned }
+  { creationDate: DateTime.Utc; expirationDate: DateTime.Utc }
 >
 
 const expirationIso = Newtype.makeIso<Expiration>()
 
 export type ProductInput = {
   maybeName: Opt.Option<string>
-  maybeCreationDate: Opt.Option<DateTime.Zoned>
-  maybeExpirationDate: Opt.Option<DateTime.Zoned>
+  maybeCreationDate: Opt.Option<DateTime.Utc>
+  maybeExpirationDate: Opt.Option<DateTime.Utc>
 }
 
 export type ProductOutput = {
   name: string
-  creationDate: DateTime.Zoned
-  maybeExpirationDate: Opt.Option<DateTime.Zoned>
+  creationDate: DateTime.Utc
+  maybeExpirationDate: Opt.Option<DateTime.Utc>
 }
 
 export const makeProduct = (p: ProductInput): Opt.Option<Product> =>
@@ -82,7 +81,7 @@ export const creationDate = (product: Product) => productIso.get(product).creati
 
 export const expirationDate = (expiration: Expiration) => expirationIso.get(expiration).expirationDate
 
-const _freshness = (currentDate: DateTime.Zoned) => (expiration: Expiration) => {
+const _freshness = (currentDate: DateTime.Utc) => (expiration: Expiration) => {
   const exp = expirationIso.get(expiration)
   if (DateTime.isLessThanOrEqualTo(exp.expirationDate, currentDate)) {
     return UnitInterval.unsafeFromNumber(0)
@@ -98,12 +97,12 @@ const _freshness = (currentDate: DateTime.Zoned) => (expiration: Expiration) => 
   return UnitInterval.unsafeFromNumber(Duration.toMillis(remainingDuration) / Duration.toMillis(totalDuration))
 }
 
-const _timeLeft = (currentDate: DateTime.Zoned) => (expiration: Expiration) => {
+const _timeLeft = (currentDate: DateTime.Utc) => (expiration: Expiration) => {
   const exp = expirationIso.get(expiration)
   return DateTime.distance(exp.expirationDate, currentDate)
 }
 
-export const expirationStatus = (currentDate: DateTime.Zoned) => (expiration: Expiration) => {
+export const expirationStatus = (currentDate: DateTime.Utc) => (expiration: Expiration) => {
   const exp = expirationIso.get(expiration)
   if (currentDate >= exp.expirationDate) {
     return { hasExpired: true } as const

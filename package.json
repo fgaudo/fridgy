@@ -24,7 +24,6 @@
 		"@fontsource-variable/noto-sans-kr": "^5.2.10",
 		"@fontsource-variable/noto-sans-sc": "^5.2.10",
 		"@fontsource/noto-sans": "^5.2.10",
-		"@herp-inc/snabbdom-jsx": "^0.22.0",
 		"@ionic/pwa-elements": "latest",
 		"clsx": "^2.1.1",
 		"csstype": "^3.2.3",
@@ -43,9 +42,6 @@
 		"dprint": "^0.54.0",
 		"http-server": "^14.1.1",
 		"license-checker-rseidelsohn": "^4.4.2",
-		"oxfmt": "^0.42.0",
-		"oxlint": "1.58.0",
-		"oxlint-tsgolint": "^0.21.1",
 		"tailwindcss": "^4.2.4",
 		"typescript": "^6.0.3"
 	},
@@ -55,6 +51,7 @@
 		"@fontsource-variable/noto-sans-bengali@5.2.11": "patches/@fontsource-variable%2Fnoto-sans-bengali@5.2.11.patch",
 		"@fontsource-variable/noto-sans-jp@5.2.10": "patches/@fontsource-variable%2Fnoto-sans-jp@5.2.10.patch",
 		"@fontsource-variable/noto-sans-kr@5.2.10": "patches/@fontsource-variable%2Fnoto-sans-kr@5.2.10.patch",
-		"@fontsource-variable/noto-sans-sc@5.2.10": "patches/@fontsource-variable%2Fnoto-sans-sc@5.2.10.patch"
+		"@fontsource-variable/noto-sans-sc@5.2.10": "patches/@fontsource-variable%2Fnoto-sans-sc@5.2.10.patch",
+		"snabbdom@3.6.3": "patches/snabbdom@3.6.3.patch"
 	}
 }

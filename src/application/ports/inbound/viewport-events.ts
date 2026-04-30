@@ -4,7 +4,6 @@ import type * as Stream from 'effect/Stream'
 export class ViewportEvents extends Context.Service<
   ViewportEvents,
   {
-    scrollEnd$: Stream.Stream<{ y: number }>
     isAtTop$: Stream.Stream<boolean>
     isCloseToTop$: Stream.Stream<boolean>
     activity$: Stream.Stream<boolean>
