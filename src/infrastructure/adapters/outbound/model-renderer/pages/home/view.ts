@@ -107,8 +107,8 @@ export const makeView = Effect.gen(function*() {
       h('div', {
         props: {
           className: cn({
-            'bg-background scale-[98%]': model.isWindowAtTop,
-            'bg-secondary/60 backdrop-blur-md shadow-md scale-100': !model.isWindowAtTop,
+            'bg-background scale-[98%]': model.isViewportAtTop,
+            'bg-secondary/60 backdrop-blur-md shadow-md scale-100': !model.isViewportAtTop,
           }, 'fixed w-full z-40 top-0 pl-sail pr-sair pt-sait transition-all '),
         },
       }, [

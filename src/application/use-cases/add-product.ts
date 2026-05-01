@@ -1,10 +1,10 @@
 import * as Context from 'effect/Context'
-import * as Data from 'effect/Data'
 import * as DateTime from 'effect/DateTime'
 import * as Effect from 'effect/Effect'
 import { pipe } from 'effect/Function'
 import * as Layer from 'effect/Layer'
 import * as Option from 'effect/Option'
+import * as Result from 'effect/Result'
 import { v4 as uuidv4 } from 'uuid'
 import * as AddProductPort from '@/app/ports/outbound/product/add-product.ts'
 import * as Product from '@/domain/product.ts'
@@ -14,12 +14,6 @@ export type Params = {
   maybeExpirationDate: Option.Option<DateTime.Utc>
 }
 
-export type Response = Data.TaggedEnum<{
-  Succeeded: object
-  Failed: object
-}>
-const Response = Data.taggedEnum<Response>()
-
 export class AddProduct extends Context.Service<AddProduct>()(
   '1c97d4e969af3275',
   {
@@ -27,7 +21,7 @@ export class AddProduct extends Context.Service<AddProduct>()(
       const resolver = yield* AddProductPort.AddProduct
       return Effect.fn(function*(
         productData: Params,
-      ): Effect.fn.Return<Response> {
+      ) {
         const current = yield* DateTime.now
         const maybeProduct = Product.makeProduct({
           maybeCreationDate: Option.some(current),
@@ -36,7 +30,7 @@ export class AddProduct extends Context.Service<AddProduct>()(
         })
         if (Option.isNone(maybeProduct)) {
           yield* Effect.logError('Product is invalid')
-          return Response.Failed()
+          return Result.fail(undefined)
         }
         const product = maybeProduct.value
         yield* Effect.logInfo(
@@ -49,12 +43,12 @@ export class AddProduct extends Context.Service<AddProduct>()(
           Effect.option,
         )
         if (Option.isNone(maybeResult)) {
-          return Response.Failed()
+          return Result.fail(undefined)
         }
         yield* Effect.logInfo(
           `Successfully added product with id ${maybeResult.value}`,
         )
-        return Response.Succeeded()
+        return Result.succeed(undefined)
       }, Effect.withLogSpan('AddProduct'))
     }),
   },

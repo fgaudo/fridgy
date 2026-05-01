@@ -44,8 +44,6 @@ export type Response = Result.Result<{
   maybeProducts: Option.Option<Arr.NonEmptyReadonlyArray<ProductDTO>>
 }, void>
 
-export const Response = Data.taggedEnum<Response>()
-
 const mapRawToDto = Effect.fn(
   function*(dtos: ReadonlyArray<RawProductDTO>): Effect.fn.Return<ReadonlyArray<ProductDTO>> {
     const currentDate = yield* DateTime.now

@@ -148,13 +148,12 @@ export const update = Match.typeTags<
     T.make(
       { ...state, isInteracting },
       [
-        ...(!isInteracting && state.isWindowCloseToTop
+        ...(!isInteracting && state.isViewportCloseToTop
           ? [
-            Effect.gen(function*() {
-              const { scrollToTop } = yield* ViewportCommands
-              yield* scrollToTop
-              return InternalMessage.NoOp()
-            }),
+            Effect.service(ViewportCommands).pipe(
+              Effect.andThen(({ scrollToTop }) => scrollToTop),
+              Effect.map(() => InternalMessage.NoOp()),
+            ),
           ]
           : []),
       ],
@@ -353,9 +352,9 @@ export const subscriptions: StateManager.Emitter<
 
 export const init: StateManager.Step<State, InternalMessage, UseCases | ViewportCommands> = T.make(
   {
-    isWindowCloseToTop: false,
+    isViewportCloseToTop: false,
     isMenuOpen: false,
-    isWindowAtTop: true,
+    isViewportAtTop: true,
     isInteracting: false,
     productListData: { _tag: 'Initial', activity: 'idle' },
     versions: {

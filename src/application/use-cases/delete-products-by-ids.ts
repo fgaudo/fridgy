@@ -1,11 +1,10 @@
 import * as Context from 'effect/Context'
-import * as Data from 'effect/Data'
 import * as Effect from 'effect/Effect'
 import { pipe } from 'effect/Function'
 import * as HashSet from 'effect/HashSet'
 import * as Layer from 'effect/Layer'
 import * as Option from 'effect/Option'
-
+import * as Result from 'effect/Result'
 import * as DeleteProductById from '@/app/ports/outbound/product/delete-product-by-id.ts'
 import type * as NonEmptyHashSet from '@/shared/non-empty-hash-set.ts'
 
@@ -14,11 +13,7 @@ export type Params<Msg> = {
   mapper: (r: Response) => Msg
 }
 
-export type Response = Data.TaggedEnum<{
-  Failed: object
-  Succeeded: object
-}>
-export const Response = Data.taggedEnum<Response>()
+export type Response = Result.Result<void, void>
 
 export class DeleteProductsByIds extends Context.Service<DeleteProductsByIds>()(
   'a192cfdd6138960a',
@@ -45,10 +40,10 @@ export class DeleteProductsByIds extends Context.Service<DeleteProductsByIds>()(
           Effect.option,
         )
         if (Option.isNone(maybeDeleteResults)) {
-          return Response.Failed()
+          return Result.fail(undefined)
         }
         yield* Effect.logInfo('Products deleted')
-        return Response.Succeeded()
+        return Result.succeed(undefined)
       }, Effect.withLogSpan('DeleteAndGetProducts'))
     }),
   },

@@ -70,13 +70,21 @@ export const update: StateManager.Update<State, InternalMessage, UC.All | Viewpo
       Match.tag('Crash', ({ error }) => (state) => {
         return T.make(
           state,
-          [Effect.logError(error).pipe(Effect.map(() => InternalMessage.NoOp()))],
+          [
+            Effect.logError(error).pipe(
+              Effect.map(() => InternalMessage.NoOp()),
+            ),
+          ],
         )
       }),
       Match.orElse((message) => (state) => {
         return T.make(
           state,
-          [Effect.logWarning('Ignored message', message).pipe(Effect.map(() => InternalMessage.NoOp()))],
+          [
+            Effect.logWarning('Ignored message', message).pipe(
+              Effect.map(() => InternalMessage.NoOp()),
+            ),
+          ],
         )
       }),
     )(state)

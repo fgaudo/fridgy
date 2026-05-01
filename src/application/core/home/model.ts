@@ -13,7 +13,7 @@ import type * as UnitInterval from '@/shared/unit-interval.ts'
 export type Model = Readonly<{
   isMenuOpen: boolean
   isInteracting: boolean
-  isWindowAtTop: boolean
+  isViewportAtTop: boolean
   canNavigateOut: boolean
   canFetch: Data.TaggedEnum<{
     True: Readonly<{ fetch: Message }>
@@ -79,8 +79,8 @@ export type Model = Readonly<{
 
 export type State = Readonly<{
   isMenuOpen: boolean
-  isWindowAtTop: boolean
-  isWindowCloseToTop: boolean
+  isViewportAtTop: boolean
+  isViewportCloseToTop: boolean
   isInteracting: boolean
   versions: {
     manualFetcher: FetchListVersion
@@ -134,7 +134,7 @@ export function makeModel(state: State): Model {
   if (state.productListData._tag === 'Initial') {
     return {
       isMenuOpen: state.isMenuOpen,
-      isWindowAtTop: state.isWindowAtTop,
+      isViewportAtTop: state.isViewportAtTop,
       isInteracting: state.isInteracting,
       canFetch: { _tag: 'False' },
       canNavigateOut: true,
@@ -147,7 +147,7 @@ export function makeModel(state: State): Model {
   if (state.productListData._tag !== 'Available') {
     return {
       isMenuOpen: state.isMenuOpen,
-      isWindowAtTop: state.isWindowAtTop,
+      isViewportAtTop: state.isViewportAtTop,
       isInteracting: state.isInteracting,
       canFetch: state.productListData.activity === 'fetching'
         ? { _tag: 'False' }
@@ -159,7 +159,7 @@ export function makeModel(state: State): Model {
   const productListData = state.productListData
   return {
     isMenuOpen: state.isMenuOpen,
-    isWindowAtTop: state.isWindowAtTop,
+    isViewportAtTop: state.isViewportAtTop,
     isInteracting: state.isInteracting,
     canFetch: productListData.activity !== 'deleting'
         && productListData.activity !== 'fetching'
