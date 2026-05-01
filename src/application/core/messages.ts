@@ -12,7 +12,7 @@ export type InternalMessage =
     PrefixKeys<Home.InternalMessage, 'Home'> & {
       HideToast: { version: bigint }
       NoOp: object
-      Crash: object
+      Crash: { error: unknown }
       ShowToast: { text: string }
     }
   >

@@ -67,11 +67,22 @@ export const update: StateManager.Update<State, InternalMessage, UC.All | Viewpo
           [],
         )
       }),
-      Match.orElse(() => (state: State) => T.make(state, [])),
+      Match.tag('Crash', ({ error }) => (state) => {
+        return T.make(
+          state,
+          [Effect.logError(error).pipe(Effect.map(() => InternalMessage.NoOp()))],
+        )
+      }),
+      Match.orElse((message) => (state) => {
+        return T.make(
+          state,
+          [Effect.logWarning('Ignored message', message).pipe(Effect.map(() => InternalMessage.NoOp()))],
+        )
+      }),
     )(state)
   }
 
-export const makeDefectMessage = (_err: unknown) => InternalMessage.Crash()
+export const makeDefectMessage = (_err: unknown) => InternalMessage.Crash({ error: _err })
 
 export const init: StateManager.Step<
   State,

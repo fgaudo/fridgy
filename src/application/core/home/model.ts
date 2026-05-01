@@ -151,7 +151,7 @@ export function makeModel(state: State): Model {
       isInteracting: state.isInteracting,
       canFetch: state.productListData.activity === 'fetching'
         ? { _tag: 'False' }
-        : { _tag: 'True', fetch: InternalMessage.Home_StartFetchList() },
+        : { _tag: 'True', fetch: InternalMessage.Home_FetchProducts() },
       canNavigateOut: true,
       productListStatus: state.productListData,
     } satisfies Model
@@ -163,7 +163,7 @@ export function makeModel(state: State): Model {
     isInteracting: state.isInteracting,
     canFetch: productListData.activity !== 'deleting'
         && productListData.activity !== 'fetching'
-      ? { _tag: 'True', fetch: InternalMessage.Home_StartFetchList() }
+      ? { _tag: 'True', fetch: InternalMessage.Home_FetchProducts() }
       : { _tag: 'False' },
     canNavigateOut: state.productListData.activity !== 'deleting',
     productListStatus: {
@@ -177,7 +177,7 @@ export function makeModel(state: State): Model {
           && state.productListData.activity !== 'fetching'
         ? {
           _tag: 'True',
-          deleteMessage: InternalMessage.Home_StartDeleteAndRefresh(),
+          deleteMessage: InternalMessage.Home_DeleteProducts(),
         }
         : { _tag: 'False' },
       products: Arr.map(

@@ -6,6 +6,7 @@ import * as HashMap from 'effect/HashMap'
 import * as HashSet from 'effect/HashSet'
 import * as Match from 'effect/Match'
 import * as Opt from 'effect/Option'
+import * as Result from 'effect/Result'
 import * as Stream from 'effect/Stream'
 import * as T from 'effect/Tuple'
 import { InternalMessage } from '@/app/core/messages.ts'
@@ -30,10 +31,7 @@ const ProductDTO = Data.taggedEnum<ProductDTO>()
 
 function updateFetchListSucceeded(
   state: State,
-  maybeProducts: Data.TaggedEnum.Value<
-    InternalMessage,
-    'Home_FetchListSucceeded'
-  >['response']['maybeProducts'],
+  maybeProducts: Result.Result.Success<UC.Products.Response>['maybeProducts'],
 ) {
   if (Opt.isNone(maybeProducts)) {
     return T.make(
@@ -122,19 +120,19 @@ export const update = Match.typeTags<
   Extract<InternalMessage, Record<'_tag', `Home_${string}`>>,
   ReturnType<StateManager.Update<State, InternalMessage, UseCases | ViewportCommands | DateTime.CurrentTimeZone>>
 >()({
-  Home_GoodListReceived: ({ response }) => (state) => {
-    return updateFetchListSucceeded(
-      {
-        ...state,
-        versions: {
-          ...state.versions,
-          manualFetcher: FetchListVersion.increment(state.versions.manualFetcher),
+  Home_ProductsChanged: ({ response }) => (state) => {
+    if (Result.isSuccess(response)) {
+      return updateFetchListSucceeded(
+        {
+          ...state,
+          versions: {
+            ...state.versions,
+            manualFetcher: FetchListVersion.increment(state.versions.manualFetcher),
+          },
         },
-      },
-      response.maybeProducts,
-    )
-  },
-  Home_BadListReceived: () => (state) => {
+        response.success.maybeProducts,
+      )
+    }
     return updateFetchListFailed(
       {
         ...state,
@@ -145,7 +143,8 @@ export const update = Match.typeTags<
       },
     )
   },
-  Home_Interacting: ({ state: isInteracting }) => (state) =>
+
+  Home_InteractionChanged: ({ isInteracting }) => (state) =>
     T.make(
       { ...state, isInteracting },
       [
@@ -165,12 +164,12 @@ export const update = Match.typeTags<
     return T.make({ ...state, isMenuOpen: !state.isMenuOpen }, [])
   },
 
-  Home_WindowCloseToTop: ({ state: isWindowCloseToTop }) => (state) => {
-    return T.make({ ...state, isWindowCloseToTop }, [])
+  Home_ViewportCloseToTopChanged: ({ isCloseToTop }) => (state) => {
+    return T.make({ ...state, isCloseToTop }, [])
   },
 
-  Home_WindowAtTop: ({ state: isWindowAtTop }) => (state) => {
-    return T.make({ ...state, isWindowAtTop }, [])
+  Home_ViewportAtTopChanged: ({ isAtTop }) => (state) => {
+    return T.make({ ...state, isAtTop }, [])
   },
 
   Home_ClearSelected: (message) => (state) => {
@@ -193,7 +192,7 @@ export const update = Match.typeTags<
     )
   },
 
-  Home_DeleteFailed: (message) => (state) => {
+  Home_DeleteProductsCompleted: (message) => (state) => {
     if (state.productListData.activity !== 'deleting') {
       return T.make(state, [notifyWrongState(message)])
     }
@@ -209,43 +208,20 @@ export const update = Match.typeTags<
     )
   },
 
-  Home_DeleteSucceeded: (message) => (state) => {
-    if (state.productListData.activity !== 'deleting') {
-      return T.make(state, [notifyWrongState(message)])
-    }
-    return T.make(
-      {
-        ...state,
-        productListData: {
-          ...state.productListData,
-          activity: 'idle' as const,
-        },
-      },
-      [],
-    )
-  },
-
-  Home_FetchListFailed: (message) => (state) => {
+  Home_FetchProductsCompleted: (message) => (state) => {
     if (state.versions.manualFetcher !== message.version) {
       return T.make(state, [notifyStale(message)])
     }
     if (state.productListData.activity !== 'fetching') {
       return T.make(state, [notifyWrongState(message)])
+    }
+    if (Result.isSuccess(message.response)) {
+      return updateFetchListSucceeded(state, message.response.success.maybeProducts)
     }
     return updateFetchListFailed(state)
   },
 
-  Home_FetchListSucceeded: (message) => (state) => {
-    if (state.versions.manualFetcher !== message.version) {
-      return T.make(state, [notifyStale(message)])
-    }
-    if (state.productListData.activity !== 'fetching') {
-      return T.make(state, [notifyWrongState(message)])
-    }
-    return updateFetchListSucceeded(state, message.response.maybeProducts)
-  },
-
-  Home_StartDeleteAndRefresh: (message) => (state) => {
+  Home_DeleteProducts: (message) => (state) => {
     if (
       state.productListData._tag !== 'Available'
       || state.productListData.activity === 'fetching'
@@ -278,7 +254,7 @@ export const update = Match.typeTags<
     )
   },
 
-  Home_StartFetchList: (message) => (state) => {
+  Home_FetchProducts: (message) => (state) => {
     if (
       state.productListData.activity !== 'idle'
     ) {
@@ -343,11 +319,7 @@ export const subscriptions: StateManager.Emitter<
       Effect.service(ProductChanges).pipe(
         Effect.map((changes) => changes(Stream.tick('30 seconds'))),
         Stream.unwrap,
-        Stream.map((response) =>
-          response._tag === 'Succeeded'
-            ? InternalMessage.Home_GoodListReceived({ response })
-            : InternalMessage.Home_BadListReceived()
-        ),
+        Stream.map((response) => InternalMessage.Home_ProductsChanged({ response })),
       ),
     ],
     [
@@ -355,7 +327,7 @@ export const subscriptions: StateManager.Emitter<
       Effect.service(ViewportEvents).pipe(
         Effect.map((a) => a.activity$),
         Stream.unwrap,
-        Stream.map((isInteracting) => InternalMessage.Home_Interacting({ state: isInteracting })),
+        Stream.map((isInteracting) => InternalMessage.Home_InteractionChanged({ isInteracting })),
       ),
     ],
     [
@@ -363,7 +335,7 @@ export const subscriptions: StateManager.Emitter<
       Effect.service(ViewportEvents).pipe(
         Effect.map((a) => a.isAtTop$),
         Stream.unwrap,
-        Stream.map((isAtTop) => InternalMessage.Home_WindowAtTop({ state: isAtTop })),
+        Stream.map((isAtTop) => InternalMessage.Home_ViewportAtTopChanged({ isAtTop })),
       ),
     ],
     [
@@ -371,7 +343,7 @@ export const subscriptions: StateManager.Emitter<
       Effect.service(ViewportEvents).pipe(
         Effect.map((a) => a.isCloseToTop$),
         Stream.unwrap,
-        Stream.map((isCloseToTop) => InternalMessage.Home_WindowCloseToTop({ state: isCloseToTop })),
+        Stream.map((isCloseToTop) => InternalMessage.Home_ViewportCloseToTopChanged({ isCloseToTop })),
       ),
     ],
   )
@@ -390,7 +362,7 @@ export const init: StateManager.Step<State, InternalMessage, UseCases | Viewport
       manualFetcher: FetchListVersion.make(0n),
     },
   },
-  [Effect.succeed(InternalMessage.Home_StartFetchList())],
+  [Effect.succeed(InternalMessage.Home_FetchProducts())],
 )
 
 const notifyWrongState = Effect.fn(function*(message: { _tag: string }) {
@@ -406,10 +378,7 @@ const notifyStale = Effect.fn(function*(message: { _tag: string }) {
 const fetchList = Effect.fn(function*(version: bigint) {
   const getProducts = yield* UC.Products.GetProducts
   const result = yield* getProducts
-  return Match.valueTags(result, {
-    Failed: (response) => InternalMessage.Home_FetchListFailed({ response, version }),
-    Succeeded: (response) => InternalMessage.Home_FetchListSucceeded({ response, version }),
-  })
+  return InternalMessage.Home_FetchProductsCompleted({ response: result, version })
 })
 
 const deleteProducts = Effect.fn(function*(
@@ -418,9 +387,6 @@ const deleteProducts = Effect.fn(function*(
   const deleteProducts = yield* UC.DeleteProductsByIds.DeleteProductsByIds
   {
     const result = yield* deleteProducts(params)
-    if (result._tag === 'Failed') {
-      return InternalMessage.Home_DeleteFailed()
-    }
-    return InternalMessage.Home_DeleteSucceeded()
+    return InternalMessage.Home_DeleteProductsCompleted({ response: result })
   }
 })

@@ -40,12 +40,10 @@ export const Status = Data.taggedEnum<Data.TaggedEnum.Value<ProductDTO, 'Valid'>
 
 export const ProductDTO = Data.taggedEnum<ProductDTO>()
 
-export type Response = Data.TaggedEnum<{
-  Succeeded: {
-    maybeProducts: Option.Option<Arr.NonEmptyReadonlyArray<ProductDTO>>
-  }
-  Failed: object
-}>
+export type Response = Result.Result<{
+  maybeProducts: Option.Option<Arr.NonEmptyReadonlyArray<ProductDTO>>
+}, void>
+
 export const Response = Data.taggedEnum<Response>()
 
 const mapRawToDto = Effect.fn(
@@ -114,10 +112,10 @@ export class GetProducts extends Context.Service<GetProducts>()(
         const maybeProducts = yield* Effect.option(get)
         if (Option.isNone(maybeProducts)) {
           yield* Effect.logError('Could not receive products')
-          return Response.Failed()
+          return Result.fail(undefined)
         }
         const entries = yield* mapRawToDto(maybeProducts.value)
-        return Response.Succeeded({
+        return Result.succeed({
           maybeProducts: Arr.isReadonlyArrayNonEmpty(entries)
             ? Option.some(entries)
             : Option.none(),
@@ -138,10 +136,10 @@ export class ProductChanges extends Context.Service<ProductChanges>()(
         Stream.zipLatestAll(change$, refresh$).pipe(
           Stream.mapEffect(Effect.fn(function*([result]) {
             if (Result.isFailure(result)) {
-              return Response.Failed()
+              return Result.fail(undefined)
             }
             const entries = yield* mapRawToDto(result.success)
-            return Response.Succeeded({
+            return Result.succeed({
               maybeProducts: Arr.isReadonlyArrayNonEmpty(entries)
                 ? Option.some(entries)
                 : Option.none(),
