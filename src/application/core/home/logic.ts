@@ -164,11 +164,11 @@ export const update = Match.typeTags<
   },
 
   Home_ViewportCloseToTopChanged: ({ isCloseToTop }) => (state) => {
-    return T.make({ ...state, isCloseToTop }, [])
+    return T.make({ ...state, isViewportCloseToTop: isCloseToTop }, [])
   },
 
   Home_ViewportAtTopChanged: ({ isAtTop }) => (state) => {
-    return T.make({ ...state, isAtTop }, [])
+    return T.make({ ...state, isViewportAtTop: isAtTop }, [])
   },
 
   Home_ClearSelected: (message) => (state) => {

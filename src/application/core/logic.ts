@@ -77,6 +77,9 @@ export const update: StateManager.Update<State, InternalMessage, UC.All | Viewpo
           ],
         )
       }),
+      Match.tag('NoOp', () => (state) => {
+        return T.make(state, [])
+      }),
       Match.orElse((message) => (state) => {
         return T.make(
           state,
