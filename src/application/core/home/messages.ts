@@ -16,28 +16,16 @@ export type InternalMessage = {
   Interacting: { state: boolean }
   FetchListFailed: {
     version: bigint
-    response: Data.TaggedEnum.Value<UC.GetProducts.Response, 'Failed'>
+    response: Data.TaggedEnum.Value<UC.Products.Response, 'Failed'>
   }
   FetchListSucceeded: {
     version: bigint
-    response: Data.TaggedEnum.Value<UC.GetProducts.Response, 'Succeeded'>
+    response: Data.TaggedEnum.Value<UC.Products.Response, 'Succeeded'>
   }
-  FetchListTick: { version: bigint }
-  FetchListTickSucceeded: {
-    version: bigint
-    response: Data.TaggedEnum.Value<UC.GetProducts.Response, 'Succeeded'>
+  GoodListReceived: {
+    response: Data.TaggedEnum.Value<UC.Products.Response, 'Succeeded'>
   }
-  FetchListTickFailed: {
-    version: bigint
-    response: Data.TaggedEnum.Value<UC.GetProducts.Response, 'Failed'>
-  }
-  DeleteAndRefreshSucceeded: {
-    response: Data.TaggedEnum.Value<UC.GetProducts.Response, 'Succeeded'>
-  }
-  DeleteAndRefreshFailed: {
-    response: Data.TaggedEnum.Value<UC.DeleteProductsByIds.Response, 'Failed'>
-  }
-  DeleteSucceededButRefreshFailed: {
-    response: Data.TaggedEnum.Value<UC.GetProducts.Response, 'Failed'>
-  }
+  BadListReceived: object
+  DeleteSucceeded: object
+  DeleteFailed: object
 }

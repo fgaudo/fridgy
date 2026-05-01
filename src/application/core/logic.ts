@@ -5,9 +5,10 @@ import * as Match from 'effect/Match'
 import * as Option from 'effect/Option'
 import * as T from 'effect/Tuple'
 import { InternalMessage } from '@/app/core/messages.ts'
-import type { ViewportEvents } from '@/app/ports/inbound/viewport-events.ts'
 import type { ViewportCommands } from '@/app/ports/outbound/viewport-commands.ts'
+import type { ViewportEvents } from '@/app/ports/outbound/viewport-events.ts'
 import type * as UC from '@/app/use-cases/index.ts'
+import type { ProductChanges } from '@/app/use-cases/products.ts'
 import type * as StateManager from '@/shared/fsm.ts'
 import { mapSubscriptions } from '../../shared/helpers.ts'
 import * as Home from './home/logic.ts'
@@ -92,7 +93,7 @@ export const init: StateManager.Step<
 export const subscriptions: StateManager.Emitter<
   State,
   InternalMessage,
-  ViewportEvents
+  ViewportEvents | ProductChanges
 > = (state: State) => {
   let subs: ReturnType<typeof subscriptions> = HashMap.empty()
 

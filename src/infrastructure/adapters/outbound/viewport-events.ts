@@ -2,7 +2,7 @@ import { BrowserStream } from '@effect/platform-browser'
 import * as Effect from 'effect/Effect'
 import * as Layer from 'effect/Layer'
 import * as Stream from 'effect/Stream'
-import { ViewportEvents } from '@/app/ports/inbound/viewport-events.ts'
+import { ViewportEvents } from '@/app/ports/outbound/viewport-events.ts'
 
 export const makeLayer = (
   { scroll$, scrollEnd$ }: {

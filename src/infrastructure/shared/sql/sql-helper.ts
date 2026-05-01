@@ -84,12 +84,57 @@ export class SqlHelper extends Context.Service<SqlHelper>()(
           sql.withTransaction,
         ),
       })
+
+      const getProducts = Sql.SqlSchema.findAll({
+        Request: Schema.Void,
+        Result: Schema.Struct({
+          maybeCreationDate: Schema.OptionFromNullishOr(
+            Product.fields[ProductSchema.columns.creationDate],
+          ),
+          maybeExpirationDate: Schema.OptionFromNullishOr(
+            ProductExpiration
+              .fields[ProductExpirationSchema.columns.date],
+          ),
+          maybeId: Schema.OptionFromNullishOr(Integer.Schema),
+          maybeName: Schema.OptionFromNullishOr(
+            Product.fields[ProductSchema.columns.name],
+          ),
+        }),
+        execute: () => {
+          const { table: product_table, columns: product } = ProductSchema
+          const { table: expiration_table, columns: expiration } = ProductExpirationSchema
+          const id = sql(`${product_table}.${product.id}`)
+          const name = sql(`${product_table}.${product.name}`)
+          const creationDate = sql(`${product_table}.${product.creationDate}`)
+          const expirationDate = sql(`${expiration_table}.${expiration.date}`)
+          const productTable = sql(product_table)
+          const expirationTable = sql(expiration_table)
+          const productId = sql(`${expiration_table}.${expiration.productId}`)
+          return sql`
+                SELECT
+                    ${id} as maybeId,
+                    ${name} as maybeName,
+                    ${creationDate} as maybeCreationDate,
+                    ${expirationDate} as maybeExpirationDate
+                FROM ${productTable}
+                LEFT JOIN ${expirationTable}
+                    ON ${id} = ${productId}
+                ${
+            sql.csv('ORDER BY', [
+              sql`${expirationDate} IS NULL`,
+              sql`${expirationDate}`,
+            ])
+          }
+                `
+        },
+      })()
       return {
         insertProductWithExpirationResolver,
         productDataLoader,
         productExpirationDataLoader,
         productExpirationRepository,
         productRepository,
+        getProducts,
       }
     }),
   },

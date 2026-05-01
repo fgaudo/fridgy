@@ -28,6 +28,7 @@ export const layer = SqliteWasm.SqliteMigrator.layer({
 }).pipe(
   Layer.provideMerge(
     SqliteWasm.SqliteClient.layer({
+      installReactivityHooks: true,
       worker: makeWorker,
     }),
   ),

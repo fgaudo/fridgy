@@ -6,21 +6,21 @@ import * as HashMap from 'effect/HashMap'
 import * as HashSet from 'effect/HashSet'
 import * as Match from 'effect/Match'
 import * as Opt from 'effect/Option'
-import * as Schedule from 'effect/Schedule'
 import * as Stream from 'effect/Stream'
 import * as T from 'effect/Tuple'
 import { InternalMessage } from '@/app/core/messages.ts'
-import { ViewportEvents } from '@/app/ports/inbound/viewport-events.ts'
 import { ViewportCommands } from '@/app/ports/outbound/viewport-commands.ts'
+import { ViewportEvents } from '@/app/ports/outbound/viewport-events.ts'
 import * as UC from '@/app/use-cases/index.ts'
+import { ProductChanges } from '@/app/use-cases/products.ts'
 import type * as StateManager from '@/shared/fsm.ts'
 import * as ArrX from '@/shared/non-empty-array.ts'
 import * as NonEmptyHashSet from '@/shared/non-empty-hash-set.ts'
-import { FetchListSchedulerVersion, FetchListVersion, type State } from './model.ts'
+import { FetchListVersion, type State } from './model.ts'
 
 export type UseCases =
   | UC.DeleteProductsByIds.DeleteProductsByIds
-  | UC.GetProducts.GetProducts
+  | UC.Products.GetProducts
 
 type ProductDTO = Data.TaggedEnum.Value<
   State['productListData'],
@@ -118,22 +118,33 @@ function updateFetchListFailed(state: State) {
   )
 }
 
-function isSchedulerRunning(
-  state: State,
-): state is State & { productListData: { _tag: 'Available' } } {
-  const productListData = state.productListData
-  return (
-    productListData._tag === 'Available'
-    && (productListData.activity === 'scheduledFetching'
-      || productListData.activity === 'idle')
-    && productListData.hasFreshProducts
-  )
-}
-
 export const update = Match.typeTags<
   Extract<InternalMessage, Record<'_tag', `Home_${string}`>>,
   ReturnType<StateManager.Update<State, InternalMessage, UseCases | ViewportCommands | DateTime.CurrentTimeZone>>
 >()({
+  Home_GoodListReceived: ({ response }) => (state) => {
+    return updateFetchListSucceeded(
+      {
+        ...state,
+        versions: {
+          ...state.versions,
+          manualFetcher: FetchListVersion.increment(state.versions.manualFetcher),
+        },
+      },
+      response.maybeProducts,
+    )
+  },
+  Home_BadListReceived: () => (state) => {
+    return updateFetchListFailed(
+      {
+        ...state,
+        versions: {
+          ...state.versions,
+          manualFetcher: FetchListVersion.increment(state.versions.manualFetcher),
+        },
+      },
+    )
+  },
   Home_Interacting: ({ state: isInteracting }) => (state) =>
     T.make(
       { ...state, isInteracting },
@@ -164,8 +175,7 @@ export const update = Match.typeTags<
 
   Home_ClearSelected: (message) => (state) => {
     if (
-      (state.productListData.activity !== 'idle'
-        && state.productListData.activity !== 'scheduledFetching')
+      state.productListData.activity !== 'idle'
       || state.productListData._tag !== 'Available'
       || Opt.isNone(state.productListData.maybeSelectedProducts)
     ) {
@@ -183,7 +193,7 @@ export const update = Match.typeTags<
     )
   },
 
-  Home_DeleteAndRefreshFailed: (message) => (state) => {
+  Home_DeleteFailed: (message) => (state) => {
     if (state.productListData.activity !== 'deleting') {
       return T.make(state, [notifyWrongState(message)])
     }
@@ -199,14 +209,7 @@ export const update = Match.typeTags<
     )
   },
 
-  Home_DeleteAndRefreshSucceeded: (message) => (state) => {
-    if (state.productListData.activity !== 'deleting') {
-      return T.make(state, [notifyWrongState(message)])
-    }
-    return updateFetchListSucceeded(state, message.response.maybeProducts)
-  },
-
-  Home_DeleteSucceededButRefreshFailed: (message) => (state) => {
+  Home_DeleteSucceeded: (message) => (state) => {
     if (state.productListData.activity !== 'deleting') {
       return T.make(state, [notifyWrongState(message)])
     }
@@ -215,7 +218,6 @@ export const update = Match.typeTags<
         ...state,
         productListData: {
           ...state.productListData,
-          _tag: 'Error' as const,
           activity: 'idle' as const,
         },
       },
@@ -238,51 +240,6 @@ export const update = Match.typeTags<
       return T.make(state, [notifyStale(message)])
     }
     if (state.productListData.activity !== 'fetching') {
-      return T.make(state, [notifyWrongState(message)])
-    }
-    return updateFetchListSucceeded(state, message.response.maybeProducts)
-  },
-
-  Home_FetchListTick: (message) => (state) => {
-    if (message.version !== state.versions.scheduledFetcher) {
-      return T.make(state, [notifyStale(message)])
-    }
-    if (!isSchedulerRunning(state)) {
-      return T.make(state, [notifyWrongState(message)])
-    }
-    return T.make(
-      {
-        ...state,
-        productListData: {
-          ...state.productListData,
-          activity: 'scheduledFetching' as const,
-        },
-      },
-      [fetchListTick(message.version)],
-    )
-  },
-
-  Home_FetchListTickFailed: (message) => (state) => {
-    if (message.version !== state.versions.scheduledFetcher) {
-      return T.make(state, [notifyStale(message)])
-    }
-    if (
-      state.productListData.activity !== 'scheduledFetching'
-      || !isSchedulerRunning(state)
-    ) {
-      return T.make(state, [notifyWrongState(message)])
-    }
-    return updateFetchListFailed(state)
-  },
-
-  Home_FetchListTickSucceeded: (message) => (state) => {
-    if (message.version !== state.versions.scheduledFetcher) {
-      return T.make(state, [notifyStale(message)])
-    }
-    if (
-      state.productListData.activity !== 'scheduledFetching'
-      || !isSchedulerRunning(state)
-    ) {
       return T.make(state, [notifyWrongState(message)])
     }
     return updateFetchListSucceeded(state, message.response.maybeProducts)
@@ -311,13 +268,10 @@ export const update = Match.typeTags<
           manualFetcher: FetchListVersion.increment(
             state.versions.manualFetcher,
           ),
-          scheduledFetcher: FetchListSchedulerVersion.increment(
-            state.versions.scheduledFetcher,
-          ),
         },
       },
       [
-        deleteAndGetProducts({
+        deleteProducts({
           ids: state.productListData.maybeSelectedProducts.value,
         }),
       ],
@@ -327,7 +281,6 @@ export const update = Match.typeTags<
   Home_StartFetchList: (message) => (state) => {
     if (
       state.productListData.activity !== 'idle'
-      && state.productListData.activity !== 'scheduledFetching'
     ) {
       return T.make(state, [notifyWrongState(message)])
     }
@@ -344,9 +297,6 @@ export const update = Match.typeTags<
         versions: {
           ...state.versions,
           manualFetcher: nextFetchVersion,
-          scheduledFetcher: FetchListSchedulerVersion.increment(
-            state.versions.scheduledFetcher,
-          ),
         },
       },
       T.make(fetchList(nextFetchVersion)),
@@ -356,8 +306,7 @@ export const update = Match.typeTags<
   Home_ToggleItem: (message) => (state) => {
     if (
       state.productListData._tag !== 'Available'
-      || (state.productListData.activity !== 'idle'
-        && state.productListData.activity !== 'scheduledFetching')
+      || (state.productListData.activity !== 'idle')
     ) {
       return T.make(state, [notifyWrongState(message)])
     }
@@ -386,9 +335,21 @@ export const update = Match.typeTags<
 export const subscriptions: StateManager.Emitter<
   State,
   InternalMessage,
-  ViewportEvents
+  ViewportEvents | ProductChanges
 > = (state: State) => {
   const map: ReturnType<typeof subscriptions> = HashMap.make(
+    [
+      'products',
+      Effect.service(ProductChanges).pipe(
+        Effect.map((changes) => changes(Stream.tick('30 seconds'))),
+        Stream.unwrap,
+        Stream.map((response) =>
+          response._tag === 'Succeeded'
+            ? InternalMessage.Home_GoodListReceived({ response })
+            : InternalMessage.Home_BadListReceived()
+        ),
+      ),
+    ],
     [
       'activity',
       Effect.service(ViewportEvents).pipe(
@@ -414,23 +375,8 @@ export const subscriptions: StateManager.Emitter<
       ),
     ],
   )
-  if (!isSchedulerRunning(state)) {
-    return map
-  }
-  return HashMap.set(
-    map,
-    T.make('fetcher', state.versions.scheduledFetcher),
-    Stream.make(
-      InternalMessage.Home_FetchListTick({
-        version: state.versions.scheduledFetcher,
-      }),
-    ).pipe(
-      Stream.schedule(
-        Schedule.spaced('3 seconds'),
-      ),
-      Stream.forever,
-    ),
-  )
+
+  return map
 }
 
 export const init: StateManager.Step<State, InternalMessage, UseCases | ViewportCommands> = T.make(
@@ -442,7 +388,6 @@ export const init: StateManager.Step<State, InternalMessage, UseCases | Viewport
     productListData: { _tag: 'Initial', activity: 'idle' },
     versions: {
       manualFetcher: FetchListVersion.make(0n),
-      scheduledFetcher: FetchListSchedulerVersion.make(0n),
     },
   },
   [Effect.succeed(InternalMessage.Home_StartFetchList())],
@@ -458,28 +403,8 @@ const notifyStale = Effect.fn(function*(message: { _tag: string }) {
   return InternalMessage.NoOp()
 })
 
-const deleteAndGetProducts = Effect.fn(function*(
-  params: Parameters<UC.DeleteProductsByIds.DeleteProductsByIds['Service']>[0],
-) {
-  const deleteProducts = yield* UC.DeleteProductsByIds.DeleteProductsByIds
-  {
-    const result = yield* deleteProducts(params)
-    if (result._tag === 'Failed') {
-      return InternalMessage.Home_DeleteAndRefreshFailed({ response: result })
-    }
-  }
-  const getProducts = yield* UC.GetProducts.GetProducts
-  {
-    const result = yield* getProducts
-    return Match.valueTags(result, {
-      Failed: (response) => InternalMessage.Home_DeleteSucceededButRefreshFailed({ response }),
-      Succeeded: (response) => InternalMessage.Home_DeleteAndRefreshSucceeded({ response }),
-    })
-  }
-})
-
 const fetchList = Effect.fn(function*(version: bigint) {
-  const getProducts = yield* UC.GetProducts.GetProducts
+  const getProducts = yield* UC.Products.GetProducts
   const result = yield* getProducts
   return Match.valueTags(result, {
     Failed: (response) => InternalMessage.Home_FetchListFailed({ response, version }),
@@ -487,11 +412,15 @@ const fetchList = Effect.fn(function*(version: bigint) {
   })
 })
 
-const fetchListTick = Effect.fn(function*(version: bigint) {
-  const getProducts = yield* UC.GetProducts.GetProducts
-  const result = yield* getProducts
-  return Match.valueTags(result, {
-    Failed: (response) => InternalMessage.Home_FetchListTickFailed({ response, version }),
-    Succeeded: (response) => InternalMessage.Home_FetchListTickSucceeded({ response, version }),
-  })
+const deleteProducts = Effect.fn(function*(
+  params: Parameters<UC.DeleteProductsByIds.DeleteProductsByIds['Service']>[0],
+) {
+  const deleteProducts = yield* UC.DeleteProductsByIds.DeleteProductsByIds
+  {
+    const result = yield* deleteProducts(params)
+    if (result._tag === 'Failed') {
+      return InternalMessage.Home_DeleteFailed()
+    }
+    return InternalMessage.Home_DeleteSucceeded()
+  }
 })

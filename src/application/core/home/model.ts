@@ -83,7 +83,6 @@ export type State = Readonly<{
   isWindowCloseToTop: boolean
   isInteracting: boolean
   versions: {
-    scheduledFetcher: FetchListSchedulerVersion
     manualFetcher: FetchListVersion
   }
   productListData: Data.TaggedEnum<{
@@ -91,7 +90,7 @@ export type State = Readonly<{
     Error: { activity: 'fetching' | 'idle' }
     Empty: { activity: 'fetching' | 'idle' }
     Available: Readonly<{
-      activity: 'scheduledFetching' | 'idle' | 'deleting' | 'fetching'
+      activity: 'idle' | 'deleting' | 'fetching'
       maybeSelectedProducts: Opt.Option<NonEmptyHashSet.NonEmptyHashSet<string>>
       total: PositiveInteger.PositiveInteger
       hasFreshProducts: boolean
@@ -123,16 +122,6 @@ export type State = Readonly<{
     }>
   }>
 }>
-
-type FetchListSchedulerVersion = Brand.Branded<
-  bigint,
-  'FetchListSchedulerVersion'
->
-const _FetchListSchedulerVersion = Brand.nominal<FetchListSchedulerVersion>()
-export const FetchListSchedulerVersion = {
-  increment: (version: FetchListSchedulerVersion) => _FetchListSchedulerVersion(version + 1n),
-  make: _FetchListSchedulerVersion,
-}
 
 type FetchListVersion = Brand.Branded<bigint, 'FetchListVersion'>
 const _FetchListVersion = Brand.nominal<FetchListVersion>()
@@ -179,9 +168,7 @@ export function makeModel(state: State): Model {
     canNavigateOut: state.productListData.activity !== 'deleting',
     productListStatus: {
       _tag: state.productListData._tag,
-      activity: state.productListData.activity === 'scheduledFetching'
-        ? 'fetching'
-        : state.productListData.activity,
+      activity: state.productListData.activity,
       canClearSelection: state.productListData.activity !== 'deleting'
           && state.productListData.activity !== 'fetching'
         ? { _tag: 'True', clearMessage: InternalMessage.Home_ClearSelected() }
