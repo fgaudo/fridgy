@@ -1,6 +1,7 @@
+import * as Chunk from 'effect/Chunk'
 import * as Data from 'effect/Data'
 import type * as Opt from 'effect/Option'
-
+import type { Route } from '@/app/core/transition.ts'
 import * as Home from './home/model.ts'
 
 export type Model = {
@@ -21,7 +22,7 @@ export type State = Readonly<{
     version: bigint
     maybeText: Opt.Option<string>
   }>
-  currentPage: 'Home' | 'AddProduct'
+  navigationStack: Chunk.NonEmptyChunk<Route>
   page: {
     Home: Home.State
     AddProduct: object
@@ -31,7 +32,7 @@ export type State = Readonly<{
 const PageModel = Data.taggedEnum<Model['currentPage']>()
 
 export const makeModel = (state: State): Model => {
-  if (state.currentPage === 'Home') {
+  if (Chunk.headNonEmpty(state.navigationStack) === 'Home') {
     return {
       appIsReady: state.appIsReady,
       currentPage: PageModel.Home({

@@ -5,7 +5,7 @@ import type * as DateTime from 'effect/DateTime'
 import type * as Duration from 'effect/Duration'
 import * as HashSet from 'effect/HashSet'
 import * as Opt from 'effect/Option'
-import { InternalMessage, type Message } from '@/app/core/messages.ts'
+import { InternalMessage, type Message } from '@/app/core/home/messages.ts'
 import type * as PositiveInteger from '@/shared/integer/positive-integer.ts'
 import type * as NonEmptyHashSet from '@/shared/non-empty-hash-set.ts'
 import type * as UnitInterval from '@/shared/unit-interval.ts'
@@ -151,7 +151,7 @@ export function makeModel(state: State): Model {
       isInteracting: state.isInteracting,
       canFetch: state.productListData.activity === 'fetching'
         ? { _tag: 'False' }
-        : { _tag: 'True', fetch: InternalMessage.Home_FetchProducts() },
+        : { _tag: 'True', fetch: InternalMessage.FetchProducts() },
       canNavigateOut: true,
       productListStatus: state.productListData,
     } satisfies Model
@@ -163,7 +163,7 @@ export function makeModel(state: State): Model {
     isInteracting: state.isInteracting,
     canFetch: productListData.activity !== 'deleting'
         && productListData.activity !== 'fetching'
-      ? { _tag: 'True', fetch: InternalMessage.Home_FetchProducts() }
+      ? { _tag: 'True', fetch: InternalMessage.FetchProducts() }
       : { _tag: 'False' },
     canNavigateOut: state.productListData.activity !== 'deleting',
     productListStatus: {
@@ -171,13 +171,13 @@ export function makeModel(state: State): Model {
       activity: state.productListData.activity,
       canClearSelection: state.productListData.activity !== 'deleting'
           && state.productListData.activity !== 'fetching'
-        ? { _tag: 'True', clearMessage: InternalMessage.Home_ClearSelected() }
+        ? { _tag: 'True', clearMessage: InternalMessage.ClearSelected() }
         : { _tag: 'False' },
       canDeleteSelected: state.productListData.activity !== 'deleting'
           && state.productListData.activity !== 'fetching'
         ? {
           _tag: 'True',
-          deleteMessage: InternalMessage.Home_DeleteProducts(),
+          deleteMessage: InternalMessage.DeleteProducts(),
         }
         : { _tag: 'False' },
       products: Arr.map(
@@ -202,7 +202,7 @@ export function makeModel(state: State): Model {
                   && productListData.activity === 'fetching'
                 ? {
                   _tag: 'True',
-                  message: InternalMessage.Home_ToggleItem({
+                  message: InternalMessage.ToggleItem({
                     id: product.id,
                   }),
                 }
@@ -222,7 +222,7 @@ export function makeModel(state: State): Model {
                 && productListData.activity === 'fetching'
               ? {
                 _tag: 'True',
-                message: InternalMessage.Home_ToggleItem({
+                message: InternalMessage.ToggleItem({
                   id: product.id,
                 }),
               }

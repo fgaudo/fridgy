@@ -12,6 +12,7 @@
 	},
 	"dependencies": {
 		"@capacitor/android": "latest",
+		"@capacitor/app": "^8.1.0",
 		"@capacitor/core": "latest",
 		"@capacitor/splash-screen": "latest",
 		"@capacitor/toast": "latest",

@@ -1,6 +1,5 @@
 import * as Arr from 'effect/Array'
 import * as Data from 'effect/Data'
-import type * as DateTime from 'effect/DateTime'
 import * as Effect from 'effect/Effect'
 import * as HashMap from 'effect/HashMap'
 import * as HashSet from 'effect/HashSet'
@@ -9,7 +8,8 @@ import * as Opt from 'effect/Option'
 import * as Result from 'effect/Result'
 import * as Stream from 'effect/Stream'
 import * as T from 'effect/Tuple'
-import { InternalMessage } from '@/app/core/messages.ts'
+import { InternalMessage } from '@/app/core/home/messages.ts'
+import type { Transition } from '@/app/core/transition.ts'
 import { ViewportCommands } from '@/app/ports/outbound/viewport-commands.ts'
 import { ViewportEvents } from '@/app/ports/outbound/viewport-events.ts'
 import * as UC from '@/app/use-cases/index.ts'
@@ -22,6 +22,7 @@ import { FetchListVersion, type State } from './model.ts'
 export type UseCases =
   | UC.DeleteProductsByIds.DeleteProductsByIds
   | UC.Products.GetProducts
+  | ViewportCommands
 
 type ProductDTO = Data.TaggedEnum.Value<
   State['productListData'],
@@ -34,8 +35,8 @@ function updateFetchListSucceeded(
   maybeProducts: Result.Result.Success<UC.Products.Response>['maybeProducts'],
 ) {
   if (Opt.isNone(maybeProducts)) {
-    return T.make(
-      {
+    return {
+      state: {
         ...state,
         productListData: {
           ...state.productListData,
@@ -43,8 +44,7 @@ function updateFetchListSucceeded(
           activity: 'idle' as const,
         },
       },
-      [],
-    )
+    }
   }
   const mappedProducts = Arr.map(maybeProducts.value, (product) => {
     if (product._tag === 'Invalid') {
@@ -57,8 +57,8 @@ function updateFetchListSucceeded(
     (p) => p._tag === 'Valid' && p.status._tag === 'Fresh',
   )
   if (state.productListData._tag !== 'Available') {
-    return T.make(
-      {
+    return {
+      state: {
         ...state,
         productListData: {
           ...state.productListData,
@@ -70,11 +70,10 @@ function updateFetchListSucceeded(
           total: ArrX.length(maybeProducts.value),
         },
       } satisfies State,
-      [],
-    )
+    }
   }
-  return T.make(
-    {
+  return {
+    state: {
       ...state,
       productListData: {
         ...state.productListData,
@@ -95,16 +94,17 @@ function updateFetchListSucceeded(
         total: ArrX.length(maybeProducts.value),
       },
     },
-    [],
-  )
+  }
 }
 
 function updateFetchListFailed(state: State) {
   if (state.productListData._tag === 'Initial') {
-    return T.make(state, [])
+    return {
+      state,
+    }
   }
-  return T.make(
-    {
+  return {
+    state: {
       ...state,
       productListData: {
         ...state.productListData,
@@ -112,15 +112,20 @@ function updateFetchListFailed(state: State) {
         activity: 'idle' as const,
       },
     },
-    [],
-  )
+  }
 }
 
 export const update = Match.typeTags<
-  Extract<InternalMessage, Record<'_tag', `Home_${string}`>>,
-  ReturnType<StateManager.Update<State, InternalMessage, UseCases | ViewportCommands | DateTime.CurrentTimeZone>>
+  InternalMessage,
+  ReturnType<
+    (
+      message: InternalMessage,
+    ) => (
+      state: State,
+    ) => Transition<State, InternalMessage, UC.All | ViewportCommands>
+  >
 >()({
-  Home_ProductsChanged: ({ response }) => (state) => {
+  ProductsChanged: ({ response }) => (state) => {
     if (Result.isSuccess(response)) {
       return updateFetchListSucceeded(
         {
@@ -144,75 +149,96 @@ export const update = Match.typeTags<
     )
   },
 
-  Home_InteractionChanged: ({ isInteracting }) => (state) =>
-    T.make(
-      { ...state, isInteracting },
-      [
-        ...(!isInteracting && state.isViewportCloseToTop
-          ? [
-            Effect.service(ViewportCommands).pipe(
-              Effect.andThen(({ scrollToTop }) => scrollToTop),
-              Effect.map(() => InternalMessage.NoOp()),
-            ),
-          ]
-          : []),
-      ],
-    ),
+  InteractionChanged: ({ isInteracting }) => (state) => ({
+    state: { ...state, isInteracting },
+    commands: [
+      ...(!isInteracting && state.isViewportCloseToTop
+        ? [
+          Effect.service(ViewportCommands).pipe(
+            Effect.andThen(({ scrollToTop }) => scrollToTop),
+            Effect.map(() => InternalMessage.NoOp()),
+          ),
+        ]
+        : []),
+    ],
+  }),
 
-  Home_ToggleMenu: () => (state) => {
-    return T.make({ ...state, isMenuOpen: !state.isMenuOpen }, [])
+  ToggleMenu: () => (state) => {
+    return {
+      state: {
+        ...state,
+        isMenuOpen: !state.isMenuOpen,
+      },
+    }
   },
 
-  Home_ViewportCloseToTopChanged: ({ isCloseToTop }) => (state) => {
-    return T.make({ ...state, isViewportCloseToTop: isCloseToTop }, [])
+  ViewportCloseToTopChanged: ({ isCloseToTop }) => (state) => {
+    return {
+      state: {
+        ...state,
+        isViewportCloseToTop: isCloseToTop,
+      },
+    }
   },
 
-  Home_ViewportAtTopChanged: ({ isAtTop }) => (state) => {
-    return T.make({ ...state, isViewportAtTop: isAtTop }, [])
+  ViewportAtTopChanged: ({ isAtTop }) => (state) => {
+    return {
+      state: { ...state, isViewportAtTop: isAtTop },
+    }
   },
 
-  Home_ClearSelected: (message) => (state) => {
+  ClearSelected: (message) => (state) => {
     if (
       state.productListData.activity !== 'idle'
       || state.productListData._tag !== 'Available'
       || Opt.isNone(state.productListData.maybeSelectedProducts)
     ) {
-      return T.make(state, [notifyWrongState(message)])
+      return {
+        state,
+        commands: [notifyWrongState(message)],
+      }
     }
-    return T.make(
-      {
+    return {
+      state: {
         ...state,
         productListData: {
           ...state.productListData,
           maybeSelectedProducts: Opt.none(),
         },
       },
-      [],
-    )
+    }
   },
 
-  Home_DeleteProductsCompleted: (message) => (state) => {
+  DeleteProductsCompleted: (message) => (state) => {
     if (state.productListData.activity !== 'deleting') {
-      return T.make(state, [notifyWrongState(message)])
+      return {
+        state,
+        commands: [notifyWrongState(message)],
+      }
     }
-    return T.make(
-      {
+    return {
+      state: {
         ...state,
         productListData: {
           ...state.productListData,
           activity: 'idle' as const,
         },
       },
-      [],
-    )
+    }
   },
 
-  Home_FetchProductsCompleted: (message) => (state) => {
+  FetchProductsCompleted: (message) => (state) => {
     if (state.versions.manualFetcher !== message.version) {
-      return T.make(state, [notifyStale(message)])
+      return {
+        state,
+        commands: [notifyStale(message)],
+      }
     }
     if (state.productListData.activity !== 'fetching') {
-      return T.make(state, [notifyWrongState(message)])
+      return {
+        state,
+        commands: [notifyWrongState(message)],
+      }
     }
     if (Result.isSuccess(message.response)) {
       return updateFetchListSucceeded(state, message.response.success.maybeProducts)
@@ -220,19 +246,25 @@ export const update = Match.typeTags<
     return updateFetchListFailed(state)
   },
 
-  Home_DeleteProducts: (message) => (state) => {
+  DeleteProducts: (message) => (state) => {
     if (
       state.productListData._tag !== 'Available'
       || state.productListData.activity === 'fetching'
       || state.productListData.activity === 'deleting'
     ) {
-      return T.make(state, [notifyWrongState(message)])
+      return {
+        state,
+        commands: [notifyWrongState(message)],
+      }
     }
     if (Opt.isNone(state.productListData.maybeSelectedProducts)) {
-      return T.make(state, [notifyWrongState(message)])
+      return {
+        state,
+        commands: [notifyWrongState(message)],
+      }
     }
-    return T.make(
-      {
+    return {
+      state: {
         ...state,
         productListData: {
           ...state.productListData,
@@ -245,25 +277,28 @@ export const update = Match.typeTags<
           ),
         },
       },
-      [
+      commands: [
         deleteProducts({
           ids: state.productListData.maybeSelectedProducts.value,
         }),
       ],
-    )
+    }
   },
 
-  Home_FetchProducts: (message) => (state) => {
+  FetchProducts: (message) => (state) => {
     if (
       state.productListData.activity !== 'idle'
     ) {
-      return T.make(state, [notifyWrongState(message)])
+      return {
+        state,
+        commands: [notifyWrongState(message)],
+      }
     }
     const nextFetchVersion = FetchListVersion.increment(
       state.versions.manualFetcher,
     )
-    return T.make(
-      {
+    return {
+      state: {
         ...state,
         productListData: {
           ...state.productListData,
@@ -274,19 +309,22 @@ export const update = Match.typeTags<
           manualFetcher: nextFetchVersion,
         },
       },
-      T.make(fetchList(nextFetchVersion)),
-    )
+      commands: [fetchList(nextFetchVersion)],
+    }
   },
-
-  Home_ToggleItem: (message) => (state) => {
+  NoOp: () => (state) => ({ state }),
+  ToggleItem: (message) => (state) => {
     if (
       state.productListData._tag !== 'Available'
       || (state.productListData.activity !== 'idle')
     ) {
-      return T.make(state, [notifyWrongState(message)])
+      return {
+        state,
+        commands: [notifyWrongState(message)],
+      }
     }
-    return T.make(
-      {
+    return {
+      state: {
         ...state,
         productListData: {
           ...state.productListData,
@@ -302,8 +340,7 @@ export const update = Match.typeTags<
           ),
         },
       },
-      [],
-    )
+    }
   },
 })
 
@@ -318,7 +355,7 @@ export const subscriptions: StateManager.Emitter<
       Effect.service(ProductChanges).pipe(
         Effect.map((changes) => changes(Stream.tick('30 seconds'))),
         Stream.unwrap,
-        Stream.map((response) => InternalMessage.Home_ProductsChanged({ response })),
+        Stream.map((response) => InternalMessage.ProductsChanged({ response })),
       ),
     ],
     [
@@ -326,7 +363,7 @@ export const subscriptions: StateManager.Emitter<
       Effect.service(ViewportEvents).pipe(
         Effect.map((a) => a.activity$),
         Stream.unwrap,
-        Stream.map((isInteracting) => InternalMessage.Home_InteractionChanged({ isInteracting })),
+        Stream.map((isInteracting) => InternalMessage.InteractionChanged({ isInteracting })),
       ),
     ],
     [
@@ -334,7 +371,7 @@ export const subscriptions: StateManager.Emitter<
       Effect.service(ViewportEvents).pipe(
         Effect.map((a) => a.isAtTop$),
         Stream.unwrap,
-        Stream.map((isAtTop) => InternalMessage.Home_ViewportAtTopChanged({ isAtTop })),
+        Stream.map((isAtTop) => InternalMessage.ViewportAtTopChanged({ isAtTop })),
       ),
     ],
     [
@@ -342,7 +379,7 @@ export const subscriptions: StateManager.Emitter<
       Effect.service(ViewportEvents).pipe(
         Effect.map((a) => a.isCloseToTop$),
         Stream.unwrap,
-        Stream.map((isCloseToTop) => InternalMessage.Home_ViewportCloseToTopChanged({ isCloseToTop })),
+        Stream.map((isCloseToTop) => InternalMessage.ViewportCloseToTopChanged({ isCloseToTop })),
       ),
     ],
   )
@@ -361,7 +398,7 @@ export const init: StateManager.Step<State, InternalMessage, UseCases | Viewport
       manualFetcher: FetchListVersion.make(0n),
     },
   },
-  [Effect.succeed(InternalMessage.Home_FetchProducts())],
+  [Effect.succeed(InternalMessage.FetchProducts())],
 )
 
 const notifyWrongState = Effect.fn(function*(message: { _tag: string }) {
@@ -377,7 +414,7 @@ const notifyStale = Effect.fn(function*(message: { _tag: string }) {
 const fetchList = Effect.fn(function*(version: bigint) {
   const getProducts = yield* UC.Products.GetProducts
   const result = yield* getProducts
-  return InternalMessage.Home_FetchProductsCompleted({ response: result, version })
+  return InternalMessage.FetchProductsCompleted({ response: result, version })
 })
 
 const deleteProducts = Effect.fn(function*(
@@ -386,6 +423,6 @@ const deleteProducts = Effect.fn(function*(
   const deleteProducts = yield* UC.DeleteProductsByIds.DeleteProductsByIds
   {
     const result = yield* deleteProducts(params)
-    return InternalMessage.Home_DeleteProductsCompleted({ response: result })
+    return InternalMessage.DeleteProductsCompleted({ response: result })
   }
 })

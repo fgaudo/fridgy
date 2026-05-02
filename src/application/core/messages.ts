@@ -1,19 +1,16 @@
 import * as Data from 'effect/Data'
 
-import type { PrefixKeys } from '@/shared/types.ts'
-
 import type * as Home from './home/messages.ts'
 
-export type Message = Data.TaggedEnum<PrefixKeys<Home.Message, 'Home'>>
-
 export type InternalMessage =
-  | Message
+  | Home.Message
   | Data.TaggedEnum<
-    PrefixKeys<Home.InternalMessage, 'Home'> & {
+    {
+      BackButtonPressed: object
+      GotHomeMsg: { message: Home.InternalMessage }
       HideToast: { version: bigint }
       NoOp: object
       Crash: { error: unknown }
-      ShowToast: { text: string }
     }
   >
 
