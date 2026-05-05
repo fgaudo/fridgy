@@ -2,8 +2,14 @@ import * as Data from 'effect/Data'
 
 import type * as Home from './home/messages.ts'
 
+export type Message = Data.TaggedEnum<{
+  GotHomeMsg: { message: Home.Message }
+}>
+
+export const Message = Data.taggedEnum<Message>()
+
 export type InternalMessage =
-  | Home.Message
+  | Message
   | Data.TaggedEnum<
     {
       BackButtonPressed: object

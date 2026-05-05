@@ -1,17 +1,21 @@
 import * as Arr from 'effect/Array'
 import * as Data from 'effect/Data'
+import * as DateTime from 'effect/DateTime'
 import * as Effect from 'effect/Effect'
+import { flow } from 'effect/Function'
 import * as HashMap from 'effect/HashMap'
 import * as HashSet from 'effect/HashSet'
 import * as Match from 'effect/Match'
 import * as Opt from 'effect/Option'
 import * as Result from 'effect/Result'
 import * as Stream from 'effect/Stream'
+import * as String from 'effect/String'
 import * as T from 'effect/Tuple'
 import { InternalMessage } from '@/app/core/home/messages.ts'
-import type { Transition } from '@/app/core/transition.ts'
+import { GlobalEvent, RouteEvent, type Transition } from '@/app/core/transition.ts'
 import { ViewportCommands } from '@/app/ports/outbound/viewport-commands.ts'
 import { ViewportEvents } from '@/app/ports/outbound/viewport-events.ts'
+import { AddProduct } from '@/app/use-cases/add-product.ts'
 import * as UC from '@/app/use-cases/index.ts'
 import { ProductChanges } from '@/app/use-cases/products.ts'
 import type * as StateManager from '@/shared/fsm.ts'
@@ -52,10 +56,7 @@ function updateFetchListSucceeded(
     }
     return product
   })
-  const hasFreshProducts = Arr.some(
-    mappedProducts,
-    (p) => p._tag === 'Valid' && p.status._tag === 'Fresh',
-  )
+
   if (state.productListData._tag !== 'Available') {
     return {
       state: {
@@ -64,7 +65,6 @@ function updateFetchListSucceeded(
           ...state.productListData,
           _tag: 'Available' as const,
           activity: 'idle' as const,
-          hasFreshProducts,
           maybeSelectedProducts: Opt.none(),
           products: mappedProducts,
           total: ArrX.length(maybeProducts.value),
@@ -78,7 +78,6 @@ function updateFetchListSucceeded(
       productListData: {
         ...state.productListData,
         activity: 'idle' as const,
-        hasFreshProducts,
         maybeSelectedProducts: state.productListData.maybeSelectedProducts.pipe(
           Opt.bindTo('selectedProducts'),
           Opt.bind('newProducts', () =>
@@ -125,6 +124,81 @@ export const update = Match.typeTags<
     ) => Transition<State, InternalMessage, UC.All | ViewportCommands>
   >
 >()({
+  ExpirationDateChanged: (message) => (state) => {
+    const result = DateTime.make(message.expiration)
+    return { state: { ...state, maybeExpirationDate: result } }
+  },
+
+  NameChanged: (message) => (state) => {
+    return { state: { ...state, maybeName: Opt.some(message.name) } }
+  },
+
+  AddProductCompleted: (message) => (state) => {
+    return {
+      state: {
+        ...state,
+        productListData: {
+          ...state.productListData,
+          activity: 'idle',
+        },
+      } satisfies State,
+    }
+  },
+
+  AddProductStarted: (message) => (state) => {
+    if (
+      state.productListData.activity !== 'idle'
+      || Opt.isNone(state.addProduct.maybeName)
+    ) {
+      return { state, commands: [notifyWrongState(message)] }
+    }
+    return {
+      state: {
+        ...state,
+        versions: {
+          ...state.versions,
+        },
+        productListData: {
+          ...state.productListData,
+          activity: 'adding',
+        },
+      } satisfies State,
+      commands: [
+        Effect.service(AddProduct).pipe(
+          Effect.andThen((addProduct) =>
+            addProduct({
+              maybeExpirationDate: state.maybeExpirationDate,
+              maybeName: state.maybeName,
+            })
+          ),
+          Effect.map(() => InternalMessage.AddProductCompleted()),
+        ),
+      ],
+    }
+  },
+
+  AddProductClosed: () => (state) => {
+    return {
+      state,
+      events: [
+        GlobalEvent.Route({ action: RouteEvent.GoBack() }),
+      ],
+    }
+  },
+
+  AddProductOpened: () => (state) => {
+    return {
+      state,
+      events: [
+        GlobalEvent.Route({
+          action: RouteEvent.NavigateTo({
+            route: { _tag: 'Home', route: 'add' },
+          }),
+        }),
+      ],
+    }
+  },
+
   ProductsChanged: ({ response }) => (state) => {
     if (Result.isSuccess(response)) {
       return updateFetchListSucceeded(
@@ -163,7 +237,7 @@ export const update = Match.typeTags<
     ],
   }),
 
-  ToggleMenu: () => (state) => {
+  MenuToggled: () => (state) => {
     return {
       state: {
         ...state,
@@ -227,7 +301,7 @@ export const update = Match.typeTags<
     }
   },
 
-  FetchProductsCompleted: (message) => (state) => {
+  FetchCompleted: (message) => (state) => {
     if (state.versions.manualFetcher !== message.version) {
       return {
         state,
@@ -246,7 +320,7 @@ export const update = Match.typeTags<
     return updateFetchListFailed(state)
   },
 
-  DeleteProducts: (message) => (state) => {
+  DeleteStarted: (message) => (state) => {
     if (
       state.productListData._tag !== 'Available'
       || state.productListData.activity === 'fetching'
@@ -285,7 +359,7 @@ export const update = Match.typeTags<
     }
   },
 
-  FetchProducts: (message) => (state) => {
+  FetchStarted: (message) => (state) => {
     if (
       state.productListData.activity !== 'idle'
     ) {
@@ -313,7 +387,7 @@ export const update = Match.typeTags<
     }
   },
   NoOp: () => (state) => ({ state }),
-  ToggleItem: (message) => (state) => {
+  ItemToggled: (message) => (state) => {
     if (
       state.productListData._tag !== 'Available'
       || (state.productListData.activity !== 'idle')
@@ -389,6 +463,8 @@ export const subscriptions: StateManager.Emitter<
 
 export const init: StateManager.Step<State, InternalMessage, UseCases | ViewportCommands> = T.make(
   {
+    maybeExpirationDate: Opt.none(),
+    maybeName: Opt.none(),
     isViewportCloseToTop: false,
     isMenuOpen: false,
     isViewportAtTop: true,
@@ -397,8 +473,8 @@ export const init: StateManager.Step<State, InternalMessage, UseCases | Viewport
     versions: {
       manualFetcher: FetchListVersion.make(0n),
     },
-  },
-  [Effect.succeed(InternalMessage.FetchProducts())],
+  } satisfies State,
+  [Effect.succeed(InternalMessage.FetchStarted())],
 )
 
 const notifyWrongState = Effect.fn(function*(message: { _tag: string }) {
@@ -414,7 +490,7 @@ const notifyStale = Effect.fn(function*(message: { _tag: string }) {
 const fetchList = Effect.fn(function*(version: bigint) {
   const getProducts = yield* UC.Products.GetProducts
   const result = yield* getProducts
-  return InternalMessage.FetchProductsCompleted({ response: result, version })
+  return InternalMessage.FetchCompleted({ response: result, version })
 })
 
 const deleteProducts = Effect.fn(function*(

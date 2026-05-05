@@ -53,6 +53,35 @@ export type Engine<State, Message> = Newtype.Newtype<
   }
 >
 
+const makeResilient = <Message, R>(
+  stream$: Stream.Stream<Message, never, R>,
+  makeDefectMessage: (err: unknown) => Message,
+) => {
+  const s: Stream.Stream<
+    Message,
+    never,
+    R
+  > = Stream.suspend(() =>
+    stream$.pipe(
+      Stream.catchCauseIf(
+        (cause) => !Cause.hasInterrupts(cause),
+        (cause) =>
+          Stream.concat(
+            Stream.make(makeDefectMessage(cause)),
+            Stream.unwrap(
+              Effect.gen(function*() {
+                yield* Effect.sleep('1 second')
+                return s
+              }),
+            ),
+          ),
+      ),
+    )
+  )
+
+  return s
+}
+
 const modifySubs = <Message>(
   makeDefectMessage: (
     cause: unknown,
@@ -82,30 +111,10 @@ const modifySubs = <Message>(
       }
       const interruption = yield* Deferred.make<void>()
       HashMap.set(mutable, key, interruption)
-      const recursiveStream: Stream.Stream<
-        Message,
-        never,
-        R
-      > = Stream.suspend(() =>
-        stream.pipe(
-          Stream.catchCauseIf(
-            (cause) => !Cause.hasInterrupts(cause),
-            (cause) =>
-              Stream.concat(
-                Stream.make(makeDefectMessage(cause)),
-                Stream.unwrap(
-                  Effect.gen(function*() {
-                    yield* Effect.sleep('1 second')
-                    return recursiveStream
-                  }),
-                ),
-              ),
-          ),
-        )
-      )
+      const resilientStream = makeResilient(stream, makeDefectMessage)
       streams = Array.append(
         streams,
-        recursiveStream.pipe(
+        resilientStream.pipe(
           Stream.interruptWhen(Deferred.await(interruption)),
         ),
       )

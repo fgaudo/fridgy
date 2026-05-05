@@ -19,12 +19,20 @@ export type Model = Readonly<{
     True: Readonly<{ fetch: Message }>
     False: object
   }>
+  addProduct: {
+    name: string
+    expirationDate: string | number
+    isSubmittable: Data.TaggedEnum<{
+      True: { submit: Message }
+      False: object
+    }>
+  }
   productListStatus: Data.TaggedEnum<{
-    Initial: { activity: 'fetching' | 'idle' }
-    Error: { activity: 'fetching' | 'idle' }
-    Empty: { activity: 'fetching' | 'idle' }
+    Initial: { activity: 'fetching' | 'idle' | 'adding' }
+    Error: { activity: 'fetching' | 'idle' | 'adding' }
+    Empty: { activity: 'fetching' | 'idle' | 'adding' }
     Available: Readonly<{
-      activity: 'fetching' | 'idle' | 'deleting'
+      activity: 'fetching' | 'idle' | 'deleting' | 'adding'
       canDeleteSelected: Data.TaggedEnum<{
         True: Readonly<{
           deleteMessage: Message
@@ -85,15 +93,19 @@ export type State = Readonly<{
   versions: {
     manualFetcher: FetchListVersion
   }
+  addProduct: {
+    isSubmittable: boolean
+    maybeName: Opt.Option<string>
+    maybeExpirationDate: Opt.Option<DateTime.Utc>
+  }
   productListData: Data.TaggedEnum<{
-    Initial: { activity: 'fetching' | 'idle' }
-    Error: { activity: 'fetching' | 'idle' }
-    Empty: { activity: 'fetching' | 'idle' }
+    Initial: { activity: 'fetching' | 'idle' | 'adding' }
+    Error: { activity: 'fetching' | 'idle' | 'adding' }
+    Empty: { activity: 'fetching' | 'idle' | 'adding' }
     Available: Readonly<{
-      activity: 'idle' | 'deleting' | 'fetching'
+      activity: 'idle' | 'deleting' | 'fetching' | 'adding'
       maybeSelectedProducts: Opt.Option<NonEmptyHashSet.NonEmptyHashSet<string>>
       total: PositiveInteger.PositiveInteger
-      hasFreshProducts: boolean
       products: Arr.NonEmptyReadonlyArray<
         Data.TaggedEnum<{
           Corrupt: Readonly<{
@@ -151,7 +163,7 @@ export function makeModel(state: State): Model {
       isInteracting: state.isInteracting,
       canFetch: state.productListData.activity === 'fetching'
         ? { _tag: 'False' }
-        : { _tag: 'True', fetch: InternalMessage.FetchProducts() },
+        : { _tag: 'True', fetch: InternalMessage.FetchStarted() },
       canNavigateOut: true,
       productListStatus: state.productListData,
     } satisfies Model
@@ -163,7 +175,7 @@ export function makeModel(state: State): Model {
     isInteracting: state.isInteracting,
     canFetch: productListData.activity !== 'deleting'
         && productListData.activity !== 'fetching'
-      ? { _tag: 'True', fetch: InternalMessage.FetchProducts() }
+      ? { _tag: 'True', fetch: InternalMessage.FetchStarted() }
       : { _tag: 'False' },
     canNavigateOut: state.productListData.activity !== 'deleting',
     productListStatus: {
@@ -177,7 +189,7 @@ export function makeModel(state: State): Model {
           && state.productListData.activity !== 'fetching'
         ? {
           _tag: 'True',
-          deleteMessage: InternalMessage.DeleteProducts(),
+          deleteMessage: InternalMessage.DeleteStarted(),
         }
         : { _tag: 'False' },
       products: Arr.map(
@@ -202,7 +214,7 @@ export function makeModel(state: State): Model {
                   && productListData.activity === 'fetching'
                 ? {
                   _tag: 'True',
-                  message: InternalMessage.ToggleItem({
+                  message: InternalMessage.ItemToggled({
                     id: product.id,
                   }),
                 }
@@ -222,7 +234,7 @@ export function makeModel(state: State): Model {
                 && productListData.activity === 'fetching'
               ? {
                 _tag: 'True',
-                message: InternalMessage.ToggleItem({
+                message: InternalMessage.ItemToggled({
                   id: product.id,
                 }),
               }

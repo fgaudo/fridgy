@@ -163,16 +163,7 @@ const layer = Layer.effect(
     return (model$) => {
       return Stream.zipLatestAll(
         model$,
-        view$.pipe(
-          Stream.switchMap(
-            (makeView) =>
-              Stream.fromEffect(
-                makeView.pipe(
-                  Effect.provideService(Actions, actions),
-                ),
-              ),
-          ),
-        ),
+        view$.pipe(Stream.map((view) => view(actions))),
       ).pipe(
         Stream.map(([model, view]) => view(model)),
         Stream.mapEffect(patcher),

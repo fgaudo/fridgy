@@ -11,7 +11,7 @@ export type Model = {
     maybeText: Opt.Option<string>
   }
   currentPage: Data.TaggedEnum<{
-    Home: { model: Home.Model }
+    Home: { model: Home.Model; route: 'default' | 'add' }
     AddProduct: { model: object }
   }>
 }
@@ -32,11 +32,13 @@ export type State = Readonly<{
 const PageModel = Data.taggedEnum<Model['currentPage']>()
 
 export const makeModel = (state: State): Model => {
-  if (Chunk.headNonEmpty(state.navigationStack) === 'Home') {
+  const currentPage = Chunk.headNonEmpty(state.navigationStack)
+  if (currentPage._tag === 'Home') {
     return {
       appIsReady: state.appIsReady,
       currentPage: PageModel.Home({
         model: Home.makeModel(state.page.Home),
+        route: currentPage.route,
       }),
       toast: {
         key: state.toast.version.toString(16),
