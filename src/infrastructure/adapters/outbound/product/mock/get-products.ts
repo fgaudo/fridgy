@@ -4,7 +4,7 @@ import * as Layer from 'effect/Layer'
 import * as Opt from 'effect/Option'
 import * as Result from 'effect/Result'
 import * as Stream from 'effect/Stream'
-import * as ProductRead from '@/app/ports/outbound/product/product-read.ts'
+import * as ProductRead from '@/app/ports/outbound/product/products-read'
 
 const results = (currentDate: DateTime.Utc) =>
   [
@@ -95,7 +95,7 @@ const results = (currentDate: DateTime.Utc) =>
   ] satisfies ProductRead.ProductsDTO
 
 export const staticLayer = Layer.effect(
-  ProductRead.ProductRead,
+  ProductRead.ProductsRead,
   Effect.gen(function*() {
     const currentDate = yield* DateTime.now
     return {

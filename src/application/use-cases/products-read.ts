@@ -1,51 +1,20 @@
 import * as Arr from 'effect/Array'
-import * as Context from 'effect/Context'
 import * as Data from 'effect/Data'
 import * as DateTime from 'effect/DateTime'
-import type * as Duration from 'effect/Duration'
 import * as Effect from 'effect/Effect'
 import * as Layer from 'effect/Layer'
 import * as Option from 'effect/Option'
 import * as Result from 'effect/Result'
 import * as Stream from 'effect/Stream'
-import * as ProductRead from '@/app/ports/outbound/product/product-read.ts'
-import type { RawProductDTO } from '@/app/shared/product.ts'
+import { ProductDTO, ProductsRead } from '@/app/ports/inbound/products-read.ts'
+import * as ProductsReadOut from '@/app/ports/outbound/product/products-read.ts'
 import * as Product from '@/domain/product.ts'
 import * as NormalizedString from '@/shared/normalized-string.ts'
-import type * as UnitInterval from '@/shared/unit-interval.ts'
-
-export type ProductDTO = Data.TaggedEnum<{
-  Invalid: {
-    maybeName: Option.Option<string>
-    maybeId: Option.Option<string>
-  }
-  Valid: {
-    id: string
-    name: string
-    status: Data.TaggedEnum<{
-      Everlasting: object
-      Stale: {
-        expirationDate: DateTime.Utc
-      }
-      Fresh: {
-        freshnessRatio: UnitInterval.UnitInterval
-        timeLeft: Duration.Duration
-        expirationDate: DateTime.Utc
-      }
-    }>
-  }
-}>
 
 export const Status = Data.taggedEnum<Data.TaggedEnum.Value<ProductDTO, 'Valid'>['status']>()
 
-export const ProductDTO = Data.taggedEnum<ProductDTO>()
-
-export type Response = Result.Result<{
-  maybeProducts: Option.Option<Arr.NonEmptyReadonlyArray<ProductDTO>>
-}, void>
-
 const mapRawToDto = Effect.fn(
-  function*(dtos: ReadonlyArray<RawProductDTO>): Effect.fn.Return<ReadonlyArray<ProductDTO>> {
+  function*(dtos: ReadonlyArray<ProductsReadOut.RawProductDTO>): Effect.fn.Return<ReadonlyArray<ProductDTO>> {
     const currentDate = yield* DateTime.now
     const entries = yield* Effect.forEach(
       dtos,
@@ -99,38 +68,27 @@ const mapRawToDto = Effect.fn(
   },
 )
 
-export class GetProducts extends Context.Service<GetProducts>()(
-  '9bcfd8f6b11a7039',
-  {
-    make: Effect.gen(function*() {
-      const { get } = yield* ProductRead.ProductRead
-      // @effect-diagnostics-next-line returnEffectInGen:off
-      return Effect.gen(function*(): Effect.fn.Return<Response> {
+export const productsRead = Layer.effect(
+  ProductsRead,
+  Effect.gen(function*() {
+    const { get, change$ } = yield* ProductsReadOut.ProductsRead
+    // @effect-diagnostics-next-line returnEffectInGen:off
+    return {
+      get: Effect.gen(function*() {
         yield* Effect.log('Started')
         const maybeProducts = yield* Effect.option(get)
         if (Option.isNone(maybeProducts)) {
           yield* Effect.logError('Could not receive products')
-          return Result.fail(undefined)
+          return yield* Effect.fail(undefined)
         }
         const entries = yield* mapRawToDto(maybeProducts.value)
-        return Result.succeed({
+        return {
           maybeProducts: Arr.isReadonlyArrayNonEmpty(entries)
             ? Option.some(entries)
             : Option.none(),
-        })
-      }).pipe(Effect.withLogSpan('GetProducts'))
-    }),
-  },
-) {
-  static layer = Layer.effect(this, this.make)
-}
-
-export class ProductChanges extends Context.Service<ProductChanges>()(
-  'f6ee461502dc6ee6',
-  {
-    make: Effect.gen(function*() {
-      const { change$ } = yield* ProductRead.ProductRead
-      return (refresh$: Stream.Stream<void>) =>
+        }
+      }),
+      changes: (refresh$: Stream.Stream<void>) =>
         Stream.zipLatestAll(change$, refresh$).pipe(
           Stream.mapEffect(Effect.fn(function*([result]) {
             if (Result.isFailure(result)) {
@@ -143,9 +101,7 @@ export class ProductChanges extends Context.Service<ProductChanges>()(
                 : Option.none(),
             })
           })),
-        )
-    }),
-  },
-) {
-  static layer = Layer.effect(this, this.make)
-}
+        ),
+    }
+  }),
+)

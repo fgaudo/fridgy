@@ -27,14 +27,12 @@ export type Step<State, Message, R> = readonly [
   ReadonlyArray<Command<Message, R>>,
 ]
 
-export type Transition<State, Message> = Data.TaggedEnum<{
-  Initial: { state: State }
-  Subsequent: { state: State; message: Message }
-}>
-
 export type Update<State, Message, R> = (
   message: Message,
-) => (state: State) => Step<State, Message, R>
+) => (state: State) => readonly [
+  State,
+  ReadonlyArray<Command<Message, R>>,
+]
 
 export type Emitter<State, Message, R, K = unknown> = (
   s: State,

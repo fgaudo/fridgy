@@ -6,7 +6,7 @@ import * as Opt from 'effect/Option'
 import * as Result from 'effect/Result'
 import * as Stream from 'effect/Stream'
 import * as SqlClient from 'effect/unstable/sql/SqlClient'
-import * as ProductRead from '@/app/ports/outbound/product/product-read.ts'
+import * as ProductRead from '@/app/ports/outbound/product/products-read'
 import { ProductExpirationSchema, ProductSchema } from '@/infra/shared/sql/schema.ts'
 import * as SqlHelper from '@/infra/shared/sql/sql-helper.ts'
 
@@ -20,7 +20,7 @@ const mapToDto = Effect.fn(
 )
 
 export const layer = Layer.effect(
-  ProductRead.ProductRead,
+  ProductRead.ProductsRead,
   Effect.gen(function*() {
     const { getProducts } = yield* SqlHelper.SqlHelper
     const sql = yield* SqlClient.SqlClient

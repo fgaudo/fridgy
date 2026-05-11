@@ -11,7 +11,7 @@ import { Route, type RouteEvent, type Transition } from '@/app/core/transition.t
 import { ViewportCommands } from '@/app/ports/outbound/viewport-commands.ts'
 import type { ViewportEvents } from '@/app/ports/outbound/viewport-events.ts'
 import type * as UC from '@/app/use-cases/index.ts'
-import type { ProductChanges } from '@/app/use-cases/products.ts'
+import type { ProductChanges } from '@/app/use-cases/products-read.ts'
 import type * as StateManager from '@/shared/fsm.ts'
 import { mapSubscriptions } from '../../shared/helpers.ts'
 import * as Home from './home/logic.ts'

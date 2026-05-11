@@ -11,21 +11,17 @@ import * as Result from 'effect/Result'
 import * as Stream from 'effect/Stream'
 import * as String from 'effect/String'
 import * as T from 'effect/Tuple'
-import { InternalMessage } from '@/app/core/home/messages.ts'
-import { GlobalEvent, RouteEvent, type Transition } from '@/app/core/transition.ts'
-import { ViewportCommands } from '@/app/ports/outbound/viewport-commands.ts'
-import { ViewportEvents } from '@/app/ports/outbound/viewport-events.ts'
-import { AddProduct } from '@/app/use-cases/add-product.ts'
-import * as UC from '@/app/use-cases/index.ts'
-import { ProductChanges } from '@/app/use-cases/products.ts'
+
+import { DeleteProductsByIds } from '@/app/ports/inbound/delete-products-by-ids.ts'
+import { ProductsRead } from '@/app/ports/inbound/products-read.ts'
+
 import type * as StateManager from '@/shared/fsm.ts'
 import * as ArrX from '@/shared/non-empty-array.ts'
 import * as NonEmptyHashSet from '@/shared/non-empty-hash-set.ts'
 import { FetchListVersion, type State } from './model.ts'
 
 export type UseCases =
-  | UC.DeleteProductsByIds.DeleteProductsByIds
-  | UC.Products.GetProducts
+  | ProductsRead
   | ViewportCommands
 
 type ProductDTO = Data.TaggedEnum.Value<
@@ -426,8 +422,8 @@ export const subscriptions: StateManager.Emitter<
   const map: ReturnType<typeof subscriptions> = HashMap.make(
     [
       'products',
-      Effect.service(ProductChanges).pipe(
-        Effect.map((changes) => changes(Stream.tick('30 seconds'))),
+      Effect.service(ProductsRead).pipe(
+        Effect.map(({ changes }) => changes(Stream.tick('30 seconds'))),
         Stream.unwrap,
         Stream.map((response) => InternalMessage.ProductsChanged({ response })),
       ),
@@ -488,17 +484,17 @@ const notifyStale = Effect.fn(function*(message: { _tag: string }) {
 })
 
 const fetchList = Effect.fn(function*(version: bigint) {
-  const getProducts = yield* UC.Products.GetProducts
-  const result = yield* getProducts
+  const { get } = yield* ProductsRead
+  const result = yield* get
   return InternalMessage.FetchCompleted({ response: result, version })
 })
 
 const deleteProducts = Effect.fn(function*(
-  params: Parameters<UC.DeleteProductsByIds.DeleteProductsByIds['Service']>[0],
+  params: Parameters<DeleteProductsByIds['Service']>[0],
 ) {
-  const deleteProducts = yield* UC.DeleteProductsByIds.DeleteProductsByIds
+  const deleteProducts = yield* DeleteProductsByIds
   {
-    const result = yield* deleteProducts(params)
+    const result = yield* deleteProducts(params).pipe(Effect.option)
     return InternalMessage.DeleteProductsCompleted({ response: result })
   }
 })
