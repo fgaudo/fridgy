@@ -41,9 +41,8 @@
     ],
     "paths": {
       "@/shared/*": ["./src/shared/*"],
-      "@/infra/*": ["./src/infrastructure/*"],
-      "@/app/*": ["./src/application/*"],
-      "@/domain/*": ["./src/domain/*"]
+      "@/feature/*": ["./src/feature/*"],
+      "@/core/*": ["./src/core/*"]
     },
     // Environment setup & latest features
     "lib": ["ESNext", "DOM"],
