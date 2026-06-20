@@ -5,12 +5,16 @@ import type * as DateTime from 'effect/DateTime'
 import type * as Duration from 'effect/Duration'
 import * as HashSet from 'effect/HashSet'
 import * as Opt from 'effect/Option'
-import { InternalMessage, type Message } from '@/app/core/home/messages.ts'
 import type * as PositiveInteger from '@/shared/integer/positive-integer.ts'
 import type * as NonEmptyHashSet from '@/shared/non-empty-hash-set.ts'
 import type * as UnitInterval from '@/shared/unit-interval.ts'
+import { Message } from './messages.ts'
 
 export type Model = Readonly<{
+  shouldMoveToTop: Data.TaggedEnum<{
+    True: { version: bigint }
+    False: object
+  }>
   isMenuOpen: boolean
   isInteracting: boolean
   isViewportAtTop: boolean
@@ -145,6 +149,7 @@ export const FetchListVersion = {
 export function makeModel(state: State): Model {
   if (state.productListData._tag === 'Initial') {
     return {
+      shouldMoveToTop: !state.isInteracting && state.isViewportCloseToTop,
       isMenuOpen: state.isMenuOpen,
       isViewportAtTop: state.isViewportAtTop,
       isInteracting: state.isInteracting,
@@ -158,24 +163,26 @@ export function makeModel(state: State): Model {
   }
   if (state.productListData._tag !== 'Available') {
     return {
+      shouldMoveToTop: !state.isInteracting && state.isViewportCloseToTop,
       isMenuOpen: state.isMenuOpen,
       isViewportAtTop: state.isViewportAtTop,
       isInteracting: state.isInteracting,
       canFetch: state.productListData.activity === 'fetching'
         ? { _tag: 'False' }
-        : { _tag: 'True', fetch: InternalMessage.FetchStarted() },
+        : { _tag: 'True', fetch: Message.FetchStarted() },
       canNavigateOut: true,
       productListStatus: state.productListData,
     } satisfies Model
   }
   const productListData = state.productListData
   return {
+    shouldMoveToTop: !state.isInteracting && state.isViewportCloseToTop,
     isMenuOpen: state.isMenuOpen,
     isViewportAtTop: state.isViewportAtTop,
     isInteracting: state.isInteracting,
     canFetch: productListData.activity !== 'deleting'
         && productListData.activity !== 'fetching'
-      ? { _tag: 'True', fetch: InternalMessage.FetchStarted() }
+      ? { _tag: 'True', fetch: Message.FetchStarted() }
       : { _tag: 'False' },
     canNavigateOut: state.productListData.activity !== 'deleting',
     productListStatus: {
@@ -183,13 +190,13 @@ export function makeModel(state: State): Model {
       activity: state.productListData.activity,
       canClearSelection: state.productListData.activity !== 'deleting'
           && state.productListData.activity !== 'fetching'
-        ? { _tag: 'True', clearMessage: InternalMessage.ClearSelected() }
+        ? { _tag: 'True', clearMessage: Message.ClearSelected() }
         : { _tag: 'False' },
       canDeleteSelected: state.productListData.activity !== 'deleting'
           && state.productListData.activity !== 'fetching'
         ? {
           _tag: 'True',
-          deleteMessage: InternalMessage.DeleteStarted(),
+          deleteMessage: Message.DeleteStarted(),
         }
         : { _tag: 'False' },
       products: Arr.map(
@@ -214,7 +221,7 @@ export function makeModel(state: State): Model {
                   && productListData.activity === 'fetching'
                 ? {
                   _tag: 'True',
-                  message: InternalMessage.ItemToggled({
+                  message: Message.ItemToggled({
                     id: product.id,
                   }),
                 }
@@ -234,7 +241,7 @@ export function makeModel(state: State): Model {
                 && productListData.activity === 'fetching'
               ? {
                 _tag: 'True',
-                message: InternalMessage.ItemToggled({
+                message: Message.ItemToggled({
                   id: product.id,
                 }),
               }

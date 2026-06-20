@@ -29,7 +29,7 @@
 		"clsx": "^2.1.1",
 		"csstype": "^3.2.3",
 		"effect": "beta",
-		"material-symbols": "^0.44.7",
+		"material-symbols": "^0.44.12",
 		"snabbdom": "^3.6.3",
 		"tailwind-merge": "^3.6.0"
 	},

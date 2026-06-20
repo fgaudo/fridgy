@@ -4,7 +4,7 @@ import * as Layer from 'effect/Layer'
 import * as Opt from 'effect/Option'
 import * as Result from 'effect/Result'
 import * as Stream from 'effect/Stream'
-import * as ProductRead from '../../../../../application/ports/outbound/product/products-read'
+import * as ProductRead from '../../../../../application/outbound/product/products-read'
 
 const results = (currentDate: DateTime.Utc) =>
   [

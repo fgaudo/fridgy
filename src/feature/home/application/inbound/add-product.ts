@@ -1,7 +1,7 @@
 import * as Context from 'effect/Context'
 import type * as DateTime from 'effect/DateTime'
-import type * as Effect from 'effect/Effect'
 import type * as Opt from 'effect/Option'
+import type * as Stream from 'effect/Stream'
 
 export type Params = {
   maybeName: Opt.Option<string>
@@ -10,5 +10,5 @@ export type Params = {
 
 export class AddProduct extends Context.Service<
   AddProduct,
-  (params: Params) => Effect.Effect<void, void>
->()('c5062cc6fbc0a397') {}
+  Stream.Stream<Params>
+>()('4d8ae10c7b65d242') {}

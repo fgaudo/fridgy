@@ -13,7 +13,7 @@ export type InternalMessage =
   | Data.TaggedEnum<
     {
       BackButtonPressed: object
-      GotHomeMsg: { message: Home.InternalMessage }
+      GotHomeMsg: { message: Home.Message }
       HideToast: { version: bigint }
       NoOp: object
       Crash: { error: unknown }

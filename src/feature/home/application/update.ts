@@ -1,28 +1,23 @@
 import * as Arr from 'effect/Array'
 import * as Data from 'effect/Data'
 import * as DateTime from 'effect/DateTime'
-import * as Effect from 'effect/Effect'
-import { flow } from 'effect/Function'
-import * as HashMap from 'effect/HashMap'
 import * as HashSet from 'effect/HashSet'
 import * as Match from 'effect/Match'
 import * as Opt from 'effect/Option'
 import * as Result from 'effect/Result'
-import * as Stream from 'effect/Stream'
-import * as String from 'effect/String'
 import * as T from 'effect/Tuple'
-
-import { DeleteProductsByIds } from './ports/inbound/delete-products-by-ids.ts'
-import { ProductsRead } from './ports/inbound/products-read.ts'
-
+import type { Transition } from '@/core/application/transition.ts'
+import type { AddProduct } from '@/feature/home/application/outbound/add-product.ts'
+import type { DeleteProductById } from '@/feature/home/application/outbound/delete-product-by-id.ts'
 import type * as StateManager from '@/shared/fsm.ts'
 import * as ArrX from '@/shared/non-empty-array.ts'
 import * as NonEmptyHashSet from '@/shared/non-empty-hash-set.ts'
+import * as Cmd from './commands.ts'
+import type { Message } from './messages.ts'
 import { FetchListVersion, type State } from './model.ts'
+import type * as ProductsRead from './outbound/products-read.ts'
 
-export type UseCases =
-  | ProductsRead
-  | ViewportCommands
+export type UseCases = ProductsRead.ProductsRead | AddProduct | DeleteProductById
 
 type ProductDTO = Data.TaggedEnum.Value<
   State['productListData'],
@@ -32,7 +27,7 @@ const ProductDTO = Data.taggedEnum<ProductDTO>()
 
 function updateFetchListSucceeded(
   state: State,
-  maybeProducts: Result.Result.Success<UC.Products.Response>['maybeProducts'],
+  maybeProducts: Result.Result.Success<Data.TaggedEnum.Value<Message, 'ProductsChanged'>['result']>,
 ) {
   if (Opt.isNone(maybeProducts)) {
     return {
@@ -82,7 +77,9 @@ function updateFetchListSucceeded(
               Opt.map(Arr.map((product) => product.id)),
               Opt.map(HashSet.make),
             )),
-          Opt.map(({ selectedProducts, newProducts }) => HashSet.intersection(newProducts, selectedProducts)),
+          Opt.map(
+            ({ selectedProducts, newProducts }) => HashSet.intersection(newProducts, selectedProducts),
+          ),
           Opt.andThen(NonEmptyHashSet.make),
         ),
         products: mappedProducts,
@@ -111,13 +108,13 @@ function updateFetchListFailed(state: State) {
 }
 
 export const update = Match.typeTags<
-  InternalMessage,
+  Message,
   ReturnType<
     (
-      message: InternalMessage,
+      message: Message,
     ) => (
       state: State,
-    ) => Transition<State, InternalMessage, UC.All | ViewportCommands>
+    ) => Transition<State, Message, UseCases>
   >
 >()({
   ExpirationDateChanged: (message) => (state) => {
@@ -146,7 +143,7 @@ export const update = Match.typeTags<
       state.productListData.activity !== 'idle'
       || Opt.isNone(state.addProduct.maybeName)
     ) {
-      return { state, commands: [notifyWrongState(message)] }
+      return { state, commands: [Cmd.notifyWrongState(message)] }
     }
     return {
       state: {
@@ -160,43 +157,22 @@ export const update = Match.typeTags<
         },
       } satisfies State,
       commands: [
-        Effect.service(AddProduct).pipe(
-          Effect.andThen((addProduct) =>
-            addProduct({
-              maybeExpirationDate: state.maybeExpirationDate,
-              maybeName: state.maybeName,
-            })
-          ),
-          Effect.map(() => InternalMessage.AddProductCompleted()),
-        ),
-      ],
-    }
-  },
-
-  AddProductClosed: () => (state) => {
-    return {
-      state,
-      events: [
-        GlobalEvent.Route({ action: RouteEvent.GoBack() }),
-      ],
-    }
-  },
-
-  AddProductOpened: () => (state) => {
-    return {
-      state,
-      events: [
-        GlobalEvent.Route({
-          action: RouteEvent.NavigateTo({
-            route: { _tag: 'Home', route: 'add' },
-          }),
+        Cmd.addProduct({
+          maybeExpirationDate: state.addProduct.maybeExpirationDate,
+          maybeName: state.addProduct.maybeName,
         }),
       ],
     }
   },
 
-  ProductsChanged: ({ response }) => (state) => {
-    if (Result.isSuccess(response)) {
+  AddProductToggled: () => (state) => {
+    return {
+      state,
+    }
+  },
+
+  ProductsChanged: ({ result }) => (state) => {
+    if (Result.isSuccess(result)) {
       return updateFetchListSucceeded(
         {
           ...state,
@@ -205,7 +181,7 @@ export const update = Match.typeTags<
             manualFetcher: FetchListVersion.increment(state.versions.manualFetcher),
           },
         },
-        response.success.maybeProducts,
+        result.success,
       )
     }
     return updateFetchListFailed(
@@ -221,16 +197,6 @@ export const update = Match.typeTags<
 
   InteractionChanged: ({ isInteracting }) => (state) => ({
     state: { ...state, isInteracting },
-    commands: [
-      ...(!isInteracting && state.isViewportCloseToTop
-        ? [
-          Effect.service(ViewportCommands).pipe(
-            Effect.andThen(({ scrollToTop }) => scrollToTop),
-            Effect.map(() => InternalMessage.NoOp()),
-          ),
-        ]
-        : []),
-    ],
   }),
 
   MenuToggled: () => (state) => {
@@ -265,7 +231,7 @@ export const update = Match.typeTags<
     ) {
       return {
         state,
-        commands: [notifyWrongState(message)],
+        commands: [Cmd.notifyWrongState(message)],
       }
     }
     return {
@@ -283,7 +249,7 @@ export const update = Match.typeTags<
     if (state.productListData.activity !== 'deleting') {
       return {
         state,
-        commands: [notifyWrongState(message)],
+        commands: [Cmd.notifyWrongState(message)],
       }
     }
     return {
@@ -297,25 +263,6 @@ export const update = Match.typeTags<
     }
   },
 
-  FetchCompleted: (message) => (state) => {
-    if (state.versions.manualFetcher !== message.version) {
-      return {
-        state,
-        commands: [notifyStale(message)],
-      }
-    }
-    if (state.productListData.activity !== 'fetching') {
-      return {
-        state,
-        commands: [notifyWrongState(message)],
-      }
-    }
-    if (Result.isSuccess(message.response)) {
-      return updateFetchListSucceeded(state, message.response.success.maybeProducts)
-    }
-    return updateFetchListFailed(state)
-  },
-
   DeleteStarted: (message) => (state) => {
     if (
       state.productListData._tag !== 'Available'
@@ -324,13 +271,13 @@ export const update = Match.typeTags<
     ) {
       return {
         state,
-        commands: [notifyWrongState(message)],
+        commands: [Cmd.notifyWrongState(message)],
       }
     }
     if (Opt.isNone(state.productListData.maybeSelectedProducts)) {
       return {
         state,
-        commands: [notifyWrongState(message)],
+        commands: [Cmd.notifyWrongState(message)],
       }
     }
     return {
@@ -348,40 +295,13 @@ export const update = Match.typeTags<
         },
       },
       commands: [
-        deleteProducts({
+        Cmd.deleteProducts({
           ids: state.productListData.maybeSelectedProducts.value,
         }),
       ],
     }
   },
 
-  FetchStarted: (message) => (state) => {
-    if (
-      state.productListData.activity !== 'idle'
-    ) {
-      return {
-        state,
-        commands: [notifyWrongState(message)],
-      }
-    }
-    const nextFetchVersion = FetchListVersion.increment(
-      state.versions.manualFetcher,
-    )
-    return {
-      state: {
-        ...state,
-        productListData: {
-          ...state.productListData,
-          activity: 'fetching' as const,
-        },
-        versions: {
-          ...state.versions,
-          manualFetcher: nextFetchVersion,
-        },
-      },
-      commands: [fetchList(nextFetchVersion)],
-    }
-  },
   NoOp: () => (state) => ({ state }),
   ItemToggled: (message) => (state) => {
     if (
@@ -390,7 +310,7 @@ export const update = Match.typeTags<
     ) {
       return {
         state,
-        commands: [notifyWrongState(message)],
+        commands: [Cmd.notifyWrongState(message)],
       }
     }
     return {
@@ -414,53 +334,9 @@ export const update = Match.typeTags<
   },
 })
 
-export const subscriptions: StateManager.Emitter<
-  State,
-  InternalMessage,
-  ViewportEvents | ProductChanges
-> = (state: State) => {
-  const map: ReturnType<typeof subscriptions> = HashMap.make(
-    [
-      'products',
-      Effect.service(ProductsRead).pipe(
-        Effect.map(({ changes }) => changes(Stream.tick('30 seconds'))),
-        Stream.unwrap,
-        Stream.map((response) => InternalMessage.ProductsChanged({ response })),
-      ),
-    ],
-    [
-      'activity',
-      Effect.service(ViewportEvents).pipe(
-        Effect.map((a) => a.activity$),
-        Stream.unwrap,
-        Stream.map((isInteracting) => InternalMessage.InteractionChanged({ isInteracting })),
-      ),
-    ],
-    [
-      'isWindowTop',
-      Effect.service(ViewportEvents).pipe(
-        Effect.map((a) => a.isAtTop$),
-        Stream.unwrap,
-        Stream.map((isAtTop) => InternalMessage.ViewportAtTopChanged({ isAtTop })),
-      ),
-    ],
-    [
-      'isWindowCloseToTop',
-      Effect.service(ViewportEvents).pipe(
-        Effect.map((a) => a.isCloseToTop$),
-        Stream.unwrap,
-        Stream.map((isCloseToTop) => InternalMessage.ViewportCloseToTopChanged({ isCloseToTop })),
-      ),
-    ],
-  )
-
-  return map
-}
-
-export const init: StateManager.Step<State, InternalMessage, UseCases | ViewportCommands> = T.make(
+export const init: StateManager.Step<State, Message, UseCases> = T.make(
   {
-    maybeExpirationDate: Opt.none(),
-    maybeName: Opt.none(),
+    addProduct: { maybeExpirationDate: Opt.none(), maybeName: Opt.none(), isSubmittable: false },
     isViewportCloseToTop: false,
     isMenuOpen: false,
     isViewportAtTop: true,
@@ -470,31 +346,5 @@ export const init: StateManager.Step<State, InternalMessage, UseCases | Viewport
       manualFetcher: FetchListVersion.make(0n),
     },
   } satisfies State,
-  [Effect.succeed(InternalMessage.FetchStarted())],
+  [],
 )
-
-const notifyWrongState = Effect.fn(function*(message: { _tag: string }) {
-  yield* Effect.logError(`Triggered ${message._tag} in wrong state`)
-  return InternalMessage.NoOp()
-})
-
-const notifyStale = Effect.fn(function*(message: { _tag: string }) {
-  yield* Effect.logInfo(`Triggered stale ${message._tag}`)
-  return InternalMessage.NoOp()
-})
-
-const fetchList = Effect.fn(function*(version: bigint) {
-  const { get } = yield* ProductsRead
-  const result = yield* get
-  return InternalMessage.FetchCompleted({ response: result, version })
-})
-
-const deleteProducts = Effect.fn(function*(
-  params: Parameters<DeleteProductsByIds['Service']>[0],
-) {
-  const deleteProducts = yield* DeleteProductsByIds
-  {
-    const result = yield* deleteProducts(params).pipe(Effect.option)
-    return InternalMessage.DeleteProductsCompleted({ response: result })
-  }
-})

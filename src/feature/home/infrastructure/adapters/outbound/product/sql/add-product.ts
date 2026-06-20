@@ -6,8 +6,8 @@ import * as Opt from 'effect/Option'
 import * as Request from 'effect/Request'
 import * as RequestResolver from 'effect/RequestResolver'
 import * as SqlResolver from 'effect/unstable/sql/SqlResolver'
-import * as AddProduct from '../../../../../application/ports/outbound/product/add-product'
 import * as SqlHelper from '@/infra/shared/sql/sql-helper.ts'
+import * as AddProduct from '../../../../../application/outbound/add-product'
 
 export const addProductLayer = Layer.effect(
   AddProduct.AddProduct,
