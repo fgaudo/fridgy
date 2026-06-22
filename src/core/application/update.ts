@@ -2,42 +2,26 @@ import * as Arr from 'effect/Array'
 import * as Chunk from 'effect/Chunk'
 import * as Effect from 'effect/Effect'
 import { absurd } from 'effect/Function'
-import * as HashMap from 'effect/HashMap'
 import * as Match from 'effect/Match'
-import * as Option from 'effect/Option'
 import * as T from 'effect/Tuple'
-import { ViewportCommands } from '@/app/ports/outbound/viewport-commands.ts'
-import type { ViewportEvents } from '@/app/ports/outbound/viewport-events.ts'
-import type * as UC from '@/app/use-cases/index.ts'
-import type { ProductChanges } from '@/app/use-cases/products-read.ts'
+import { closeApp, hideSplashScreen, showToast } from '@/core/application/commands.ts'
 import { InternalMessage } from '@/core/application/messages.ts'
+import type { Viewport } from '@/core/application/outbound/viewport.ts'
 import { Route, type RouteEvent, type Transition } from '@/core/application/transition.ts'
-import * as Home from '@/feature/home/application/logic.ts'
-import type { State } from '@/feature/home/application/model.ts'
+import * as Home from '@/feature/home/application/update.ts'
 import type * as StateManager from '@/shared/fsm.ts'
-import { mapSubscriptions } from '@/shared/helpers.ts'
+import type { State } from './model.ts'
 
-type Deps = UC.All | ViewportCommands
+type Deps = Viewport | Home.Deps
 
 const makeShowToastStep = (text: string) =>
 (
   [state, commands]: StateManager.Step<State, InternalMessage, Deps>,
 ): StateManager.Step<State, InternalMessage, Deps> => {
-  const nextVersion = state.toast.version + 1n
-  const s = {
-    ...state,
-    toast: {
-      version: nextVersion,
-      maybeText: Option.some(text),
-    },
-  }
-  const c = [
+  return [state, [
     ...commands,
-    Effect.succeed(
-      InternalMessage.HideToast({ version: nextVersion }),
-    ).pipe(Effect.delay('2 seconds')),
-  ]
-  return [s, c] as const
+    showToast(text),
+  ]] as const
 }
 
 const makeGoBackStep = ([state, commands]: StateManager.Step<State, InternalMessage, Deps>) => {
@@ -50,10 +34,7 @@ const makeGoBackStep = ([state, commands]: StateManager.Step<State, InternalMess
   }
   return T.make(state, [
     ...commands,
-    Effect.service(ViewportCommands).pipe(
-      Effect.andThen(({ closeApp }) => closeApp),
-      Effect.map(() => InternalMessage.NoOp()),
-    ),
+    closeApp,
   ])
 }
 
@@ -114,9 +95,6 @@ export const update: StateManager.Update<State, InternalMessage, Deps> = (messag
     Match.withReturnType<
       ReturnType<StateManager.Update<State, InternalMessage, Deps>>
     >(),
-    Match.tag('BackButtonPressed', () => (state) => {
-      return makeGoBackStep([state, []])
-    }),
     Match.tag('Crash', ({ error }) => (state) => {
       return T.make(
         state,
@@ -126,6 +104,9 @@ export const update: StateManager.Update<State, InternalMessage, Deps> = (messag
           ),
         ],
       )
+    }),
+    Match.tag('HideSplashScreenRequested', () => (state) => {
+      return T.make(state, [hideSplashScreen])
     }),
     Match.tag('NoOp', () => (state) => {
       return T.make(state, [])
@@ -156,28 +137,7 @@ export const init: StateManager.Step<
       appIsReady: true,
       navigationStack: Chunk.make(Route.Home({ route: 'default' })),
       page: { AddProduct: {}, Home: state },
-      toast: { maybeText: Option.none(), version: 0n },
     },
     commands.map(Effect.map((message) => InternalMessage.GotHomeMsg({ message }))),
   )
 })()
-
-export const subscriptions: StateManager.Emitter<
-  State,
-  InternalMessage,
-  ViewportEvents | ProductChanges
-> = (state: State) => {
-  let subs: ReturnType<typeof subscriptions> = HashMap.empty()
-  const currentPage = Chunk.headNonEmpty(state.navigationStack)
-  if (currentPage._tag === 'Home') {
-    subs = HashMap.setMany(
-      subs,
-      mapSubscriptions(
-        Home.subscriptions(state.page[currentPage._tag]),
-        (k) => T.make('Home', k),
-        (message) => InternalMessage.GotHomeMsg({ message }),
-      ),
-    )
-  }
-  return subs
-}

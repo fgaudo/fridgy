@@ -5,9 +5,9 @@ import * as Layer from 'effect/Layer'
 import * as Opt from 'effect/Option'
 import * as Request from 'effect/Request'
 import * as RequestResolver from 'effect/RequestResolver'
+import * as DeleteProductById from '@/feature/home/application/outbound/delete-product-by-id.ts'
 import * as SqlHelper from '@/infra/shared/sql/sql-helper.ts'
 import * as Integer from '@/shared/integer/integer.ts'
-import * as DeleteProductById from '../../../../../application/outbound/delete-product-by-id'
 
 export const deleteProductsLayer = Layer.effect(
   DeleteProductById.DeleteProductById,

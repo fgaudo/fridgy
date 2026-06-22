@@ -8,26 +8,22 @@ import * as Opt from 'effect/Option'
 import type * as PositiveInteger from '@/shared/integer/positive-integer.ts'
 import type * as NonEmptyHashSet from '@/shared/non-empty-hash-set.ts'
 import type * as UnitInterval from '@/shared/unit-interval.ts'
-import { Message } from './messages.ts'
+import { InternalMessage } from './messages.ts'
 
 export type Model = Readonly<{
-  shouldMoveToTop: Data.TaggedEnum<{
-    True: { version: bigint }
-    False: object
-  }>
   isMenuOpen: boolean
   isInteracting: boolean
   isViewportAtTop: boolean
   canNavigateOut: boolean
   canFetch: Data.TaggedEnum<{
-    True: Readonly<{ fetch: Message }>
+    True: Readonly<{ fetch: InternalMessage }>
     False: object
   }>
   addProduct: {
     name: string
     expirationDate: string | number
     isSubmittable: Data.TaggedEnum<{
-      True: { submit: Message }
+      True: { submit: InternalMessage }
       False: object
     }>
   }
@@ -39,13 +35,13 @@ export type Model = Readonly<{
       activity: 'fetching' | 'idle' | 'deleting' | 'adding'
       canDeleteSelected: Data.TaggedEnum<{
         True: Readonly<{
-          deleteMessage: Message
+          deleteMessage: InternalMessage
         }>
         False: object
       }>
       canClearSelection: Data.TaggedEnum<{
         True: Readonly<{
-          clearMessage: Message
+          clearMessage: InternalMessage
         }>
         False: object
       }>
@@ -58,7 +54,7 @@ export type Model = Readonly<{
           }>
           Invalid: Readonly<{
             canToggle: Data.TaggedEnum<{
-              True: Readonly<{ message: Message }>
+              True: Readonly<{ message: InternalMessage }>
               False: object
             }>
             isSelected: boolean
@@ -67,7 +63,7 @@ export type Model = Readonly<{
           }>
           Valid: Readonly<{
             canToggle: Data.TaggedEnum<{
-              True: Readonly<{ message: Message }>
+              True: Readonly<{ message: InternalMessage }>
               False: object
             }>
             id: string
@@ -92,7 +88,6 @@ export type Model = Readonly<{
 export type State = Readonly<{
   isMenuOpen: boolean
   isViewportAtTop: boolean
-  isViewportCloseToTop: boolean
   isInteracting: boolean
   versions: {
     manualFetcher: FetchListVersion
@@ -149,9 +144,8 @@ export const FetchListVersion = {
 export function makeModel(state: State): Model {
   if (state.productListData._tag === 'Initial') {
     return {
-      shouldMoveToTop: !state.isInteracting && state.isViewportCloseToTop,
-      isMenuOpen: state.isMenuOpen,
       isViewportAtTop: state.isViewportAtTop,
+      isMenuOpen: state.isMenuOpen,
       isInteracting: state.isInteracting,
       canFetch: { _tag: 'False' },
       canNavigateOut: true,
@@ -163,40 +157,31 @@ export function makeModel(state: State): Model {
   }
   if (state.productListData._tag !== 'Available') {
     return {
-      shouldMoveToTop: !state.isInteracting && state.isViewportCloseToTop,
-      isMenuOpen: state.isMenuOpen,
       isViewportAtTop: state.isViewportAtTop,
+      isMenuOpen: state.isMenuOpen,
       isInteracting: state.isInteracting,
-      canFetch: state.productListData.activity === 'fetching'
-        ? { _tag: 'False' }
-        : { _tag: 'True', fetch: Message.FetchStarted() },
       canNavigateOut: true,
       productListStatus: state.productListData,
     } satisfies Model
   }
   const productListData = state.productListData
   return {
-    shouldMoveToTop: !state.isInteracting && state.isViewportCloseToTop,
-    isMenuOpen: state.isMenuOpen,
     isViewportAtTop: state.isViewportAtTop,
+    isMenuOpen: state.isMenuOpen,
     isInteracting: state.isInteracting,
-    canFetch: productListData.activity !== 'deleting'
-        && productListData.activity !== 'fetching'
-      ? { _tag: 'True', fetch: Message.FetchStarted() }
-      : { _tag: 'False' },
     canNavigateOut: state.productListData.activity !== 'deleting',
     productListStatus: {
       _tag: state.productListData._tag,
       activity: state.productListData.activity,
       canClearSelection: state.productListData.activity !== 'deleting'
           && state.productListData.activity !== 'fetching'
-        ? { _tag: 'True', clearMessage: Message.ClearSelected() }
+        ? { _tag: 'True', clearMessage: InternalMessage.ClearSelected() }
         : { _tag: 'False' },
       canDeleteSelected: state.productListData.activity !== 'deleting'
           && state.productListData.activity !== 'fetching'
         ? {
           _tag: 'True',
-          deleteMessage: Message.DeleteStarted(),
+          deleteMessage: InternalMessage.DeleteStarted(),
         }
         : { _tag: 'False' },
       products: Arr.map(
@@ -221,7 +206,7 @@ export function makeModel(state: State): Model {
                   && productListData.activity === 'fetching'
                 ? {
                   _tag: 'True',
-                  message: Message.ItemToggled({
+                  message: InternalMessage.ItemToggled({
                     id: product.id,
                   }),
                 }
@@ -241,7 +226,7 @@ export function makeModel(state: State): Model {
                 && productListData.activity === 'fetching'
               ? {
                 _tag: 'True',
-                message: Message.ItemToggled({
+                message: InternalMessage.ItemToggled({
                   id: product.id,
                 }),
               }

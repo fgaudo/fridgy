@@ -3,7 +3,7 @@ import * as Data from 'effect/Data'
 import type * as Home from '@/feature/home/application/messages.ts'
 
 export type Message = Data.TaggedEnum<{
-  GotHomeMsg: { message: Home.Message }
+  HideSplashScreenRequested: object
 }>
 
 export const Message = Data.taggedEnum<Message>()
@@ -12,9 +12,7 @@ export type InternalMessage =
   | Message
   | Data.TaggedEnum<
     {
-      BackButtonPressed: object
-      GotHomeMsg: { message: Home.Message }
-      HideToast: { version: bigint }
+      GotHomeMsg: { message: Home.InternalMessage }
       NoOp: object
       Crash: { error: unknown }
     }

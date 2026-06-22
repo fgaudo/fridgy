@@ -1,4 +1,4 @@
-import * as Arr from 'effect/Array'
+import type * as Arr from 'effect/Array'
 import * as Data from 'effect/Data'
 import type * as StateManager from '@/shared/fsm.ts'
 

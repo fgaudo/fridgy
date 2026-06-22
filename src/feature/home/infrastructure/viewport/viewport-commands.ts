@@ -1,12 +1,10 @@
-import { App } from '@capacitor/app'
 import * as Effect from 'effect/Effect'
 import * as Layer from 'effect/Layer'
-import { ViewportCommands } from '@/app/ports/outbound/viewport-commands.ts'
+import { Viewport } from '@/feature/home/application/outbound/viewport.ts'
 
 export const layer = Layer.succeed(
-  ViewportCommands,
+  Viewport,
   {
     scrollToTop: Effect.sync(() => window.scrollTo({ top: 0, behavior: 'smooth' })),
-    closeApp: Effect.promise(() => App.exitApp()),
   },
 )

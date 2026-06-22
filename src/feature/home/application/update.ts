@@ -9,15 +9,16 @@ import * as T from 'effect/Tuple'
 import type { Transition } from '@/core/application/transition.ts'
 import type { AddProduct } from '@/feature/home/application/outbound/add-product.ts'
 import type { DeleteProductById } from '@/feature/home/application/outbound/delete-product-by-id.ts'
+import type { Viewport } from '@/feature/home/application/outbound/viewport.ts'
 import type * as StateManager from '@/shared/fsm.ts'
 import * as ArrX from '@/shared/non-empty-array.ts'
 import * as NonEmptyHashSet from '@/shared/non-empty-hash-set.ts'
 import * as Cmd from './commands.ts'
-import type { Message } from './messages.ts'
+import type { InternalMessage } from './messages.ts'
 import { FetchListVersion, type State } from './model.ts'
 import type * as ProductsRead from './outbound/products-read.ts'
 
-export type UseCases = ProductsRead.ProductsRead | AddProduct | DeleteProductById
+export type Deps = ProductsRead.ProductsRead | AddProduct | DeleteProductById | Viewport
 
 type ProductDTO = Data.TaggedEnum.Value<
   State['productListData'],
@@ -27,7 +28,7 @@ const ProductDTO = Data.taggedEnum<ProductDTO>()
 
 function updateFetchListSucceeded(
   state: State,
-  maybeProducts: Result.Result.Success<Data.TaggedEnum.Value<Message, 'ProductsChanged'>['result']>,
+  maybeProducts: Result.Result.Success<Data.TaggedEnum.Value<InternalMessage, 'ProductsChanged'>['result']>,
 ) {
   if (Opt.isNone(maybeProducts)) {
     return {
@@ -108,13 +109,13 @@ function updateFetchListFailed(state: State) {
 }
 
 export const update = Match.typeTags<
-  Message,
+  InternalMessage,
   ReturnType<
     (
-      message: Message,
+      message: InternalMessage,
     ) => (
       state: State,
-    ) => Transition<State, Message, UseCases>
+    ) => Transition<State, InternalMessage, Deps>
   >
 >()({
   ExpirationDateChanged: (message) => (state) => {
@@ -172,6 +173,13 @@ export const update = Match.typeTags<
   },
 
   ProductsChanged: ({ result }) => (state) => {
+    return {
+      state,
+      commands: [Cmd.validateProducts(result)],
+    }
+  },
+
+  ProductsValidated: ({ result }) => (state) => {
     if (Result.isSuccess(result)) {
       return updateFetchListSucceeded(
         {
@@ -210,10 +218,12 @@ export const update = Match.typeTags<
 
   ViewportCloseToTopChanged: ({ isCloseToTop }) => (state) => {
     return {
-      state: {
-        ...state,
-        isViewportCloseToTop: isCloseToTop,
-      },
+      state,
+      commands: !state.isInteracting && isCloseToTop
+        ? [
+          Cmd.scrollToTop,
+        ]
+        : [],
     }
   },
 
@@ -334,10 +344,13 @@ export const update = Match.typeTags<
   },
 })
 
-export const init: StateManager.Step<State, Message, UseCases> = T.make(
+export const init: StateManager.Step<State, InternalMessage, Deps> = T.make(
   {
-    addProduct: { maybeExpirationDate: Opt.none(), maybeName: Opt.none(), isSubmittable: false },
-    isViewportCloseToTop: false,
+    addProduct: {
+      maybeExpirationDate: Opt.none(),
+      maybeName: Opt.none(),
+      isSubmittable: false,
+    },
     isMenuOpen: false,
     isViewportAtTop: true,
     isInteracting: false,

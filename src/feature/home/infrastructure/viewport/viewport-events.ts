@@ -2,7 +2,7 @@ import { BrowserStream } from '@effect/platform-browser'
 import * as Effect from 'effect/Effect'
 import * as Layer from 'effect/Layer'
 import * as Stream from 'effect/Stream'
-import { ViewportEvents } from '@/app/ports/outbound/viewport-events.ts'
+import { ViewportEvents } from '@/feature/home/application/inbound/viewport-events.ts'
 
 export const makeLayer = (
   { scroll$, scrollEnd$ }: {
@@ -13,7 +13,7 @@ export const makeLayer = (
   Layer.succeed(
     ViewportEvents,
     {
-      activity$: Stream.merge(
+      isInteracting$: Stream.merge(
         scroll$.pipe(Stream.map(() => true)),
         scrollEnd$.pipe(Stream.map(() => false)),
       ).pipe(
