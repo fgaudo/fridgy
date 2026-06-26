@@ -1,18 +1,17 @@
 import { fromEventListenerWindow } from '@effect/platform-browser/BrowserStream'
 import * as Arr from 'effect/Array'
 import * as Effect from 'effect/Effect'
-import { flow, pipe } from 'effect/Function'
+import { pipe } from 'effect/Function'
 import * as Layer from 'effect/Layer'
 import * as Opt from 'effect/Option'
 import * as PubSub from 'effect/PubSub'
 import * as Result from 'effect/Result'
 import * as Stream from 'effect/Stream'
 import * as SqlClient from 'effect/unstable/sql/SqlClient'
-import { ProductExpirationSchema, ProductSchema } from '@/core/infrastructure/sql/schema.ts'
-import * as SqlHelper from '@/core/infrastructure/sql/sql-helper.ts'
-import { Events } from '@/feature/home/application/inbound.ts'
-import { Message } from '@/feature/home/application/messages.ts'
-import { EventPublisher } from '@/feature/home/view/event-publisher.ts'
+import { Events } from '@/feature/home/application/inbound'
+import { Dispatcher, Message } from '@/feature/home/application/messages.ts'
+import { ProductExpirationSchema, ProductSchema } from '@/infra/sql/schema.ts'
+import * as SqlHelper from '@/infra/sql/sql-helper.ts'
 
 const mapToDto = Effect.fn(
   function*(product: Effect.Success<SqlHelper.SqlHelper['Service']['getProducts']>[0]) {
@@ -85,6 +84,6 @@ export const inbound = Layer.unwrap(Effect.gen(function*() {
         Stream.fromPubSub(pubsub),
       ], { concurrency: 'unbounded' }),
     ),
-    Layer.succeed(EventPublisher, PubSub.publishUnsafe),
+    Layer.succeed(Dispatcher, PubSub.publishUnsafe),
   )
 }))

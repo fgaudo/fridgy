@@ -10,15 +10,14 @@ import type { Transition } from '@/core/application/transition.ts'
 import type { AddProduct } from '@/feature/home/application/outbound/add-product.ts'
 import type { DeleteProductById } from '@/feature/home/application/outbound/delete-product-by-id.ts'
 import type { Viewport } from '@/feature/home/application/outbound/viewport.ts'
-import type * as StateManager from '@/shared/fsm.ts'
-import * as ArrX from '@/shared/non-empty-array.ts'
-import * as NonEmptyHashSet from '@/shared/non-empty-hash-set.ts'
+import type * as StateManager from '@/libs/fsm.ts'
+import * as ArrX from '@/libs/non-empty-array.ts'
+import * as NonEmptyHashSet from '@/libs/non-empty-hash-set.ts'
 import * as Cmd from './commands.ts'
 import type { InternalMessage } from './messages.ts'
 import { FetchListVersion, type State } from './model.ts'
-import type * as ProductsRead from './outbound/products-read.ts'
 
-export type Deps = ProductsRead.ProductsRead | AddProduct | DeleteProductById | Viewport
+export type Deps = AddProduct | DeleteProductById | Viewport
 
 type ProductDTO = Data.TaggedEnum.Value<
   State['productListData'],

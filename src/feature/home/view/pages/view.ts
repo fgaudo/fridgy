@@ -1,15 +1,15 @@
 import * as Effect from 'effect/Effect'
-import { fragment, h } from 'snabbdom'
+import { h } from 'snabbdom'
+import { Dispatcher } from '@/feature/home/application/messages.ts'
 import type { Model } from '@/feature/home/application/model.ts'
-import { EventPublisher } from '@/feature/home/view/event-publisher.ts'
-import { cn } from '@/shared/helpers1.ts'
+import { cn } from '@/libs/helpers1.ts'
 
 function lockScroll(isLocked: boolean) {
   document.body.style.overflow = isLocked ? 'hidden' : ''
 }
 
 export const makeView = Effect.gen(function*() {
-  const publish = yield* EventPublisher
+  const dispatch = yield* Dispatcher
 
   return ((model: Model, route: 'add' | 'default') => {
     const addProductModal = route === 'add'
@@ -24,7 +24,7 @@ export const makeView = Effect.gen(function*() {
               remove: { opacity: '0' },
             },
             key: 'add-product-box-background',
-            on: { click: () => publish({ _tag: 'AddProductClosed' }) },
+            on: { click: () => dispatch({ _tag: 'AddProductToggled' }) },
             props: {
               className: 'fixed left-0 right-0 bottom-0 z-1000 top-0 bg-black/50 backdrop-blur-xs',
             },
@@ -120,7 +120,7 @@ export const makeView = Effect.gen(function*() {
       },
     }, [
       h('button', {
-        on: { click: () => dispatch({ _tag: 'AddProductOpened' }) },
+        on: { click: () => dispatch({ _tag: 'AddProductToggled' }) },
         props: {
           className: 'relative shadow-md bg-red-200 flex items-center justify-evenly rounded-2xl h-16 w-16 text-red-400',
         },

@@ -8,12 +8,6 @@ export const hideSplashScreen = Effect.gen(function*() {
   return InternalMessage.NoOp()
 })
 
-export const showToast = Effect.fn(function*(message: string) {
-  const { showToast } = yield* Viewport
-  yield* showToast(message)
-  return InternalMessage.NoOp()
-})
-
 export const closeApp = Effect.gen(function*() {
   const { closeApp } = yield* Viewport
   yield* closeApp

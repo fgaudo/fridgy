@@ -5,11 +5,11 @@ import * as Layer from 'effect/Layer'
 import * as Schema from 'effect/Schema'
 import * as SchemaX from 'effect/unstable/schema'
 import * as Sql from 'effect/unstable/sql'
-import * as Integer from '@/shared/integer/integer.ts'
+import * as Integer from '@/libs/integer/integer.ts'
 import { ProductExpirationSchema, ProductSchema } from './schema.ts'
 
 export class Product extends SchemaX.Model.Class<Product>('Product')({
-  [ProductSchema.columns.id]: SchemaX.Model.GeneratedByDb(Integer.Schema),
+  [ProductSchema.columns.id]: SchemaX.Model.GeneratedByApp(Integer.Schema),
   [ProductSchema.columns.name]: Schema.String,
   [ProductSchema.columns.creationDate]: Schema.DateTimeUtcFromString,
 }) {}
@@ -17,13 +17,13 @@ export class Product extends SchemaX.Model.Class<Product>('Product')({
 export class ProductExpiration extends SchemaX.Model.Class<ProductExpiration>(
   'ProductExpiration',
 )({
-  [ProductExpirationSchema.columns.id]: SchemaX.Model.GeneratedByDb(Integer.Schema),
+  [ProductExpirationSchema.columns.id]: SchemaX.Model.GeneratedByApp(Integer.Schema),
   [ProductExpirationSchema.columns.date]: Schema.DateTimeUtcFromString,
   [ProductExpirationSchema.columns.productId]: Integer.Schema,
 }) {}
 
 export class SqlHelper extends Context.Service<SqlHelper>()(
-  '3a4a911fa9f4b511',
+  '35441efdc077be69',
   {
     make: Effect.gen(function*() {
       const sql = yield* Sql.SqlClient.SqlClient

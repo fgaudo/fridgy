@@ -3,7 +3,7 @@ import * as Config from 'effect/Config'
 import * as Effect from 'effect/Effect'
 import * as Layer from 'effect/Layer'
 
-import { migrations } from '@/core/infrastructure/sql/migrations.ts'
+import { migrations } from '../sql/migrations.ts'
 
 const makeWorker = Effect.acquireRelease(
   Effect.gen(function*() {

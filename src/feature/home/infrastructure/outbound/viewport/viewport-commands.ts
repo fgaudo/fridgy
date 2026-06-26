@@ -5,6 +5,7 @@ import { Viewport } from '@/feature/home/application/outbound/viewport.ts'
 export const layer = Layer.succeed(
   Viewport,
   {
+    showToast: (m) => Effect.void,
     scrollToTop: Effect.sync(() => window.scrollTo({ top: 0, behavior: 'smooth' })),
   },
 )

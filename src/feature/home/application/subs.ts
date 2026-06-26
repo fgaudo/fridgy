@@ -3,7 +3,7 @@ import * as Filter from 'effect/Filter'
 import * as HashMap from 'effect/HashMap'
 import * as Stream from 'effect/Stream'
 import { Events } from '@/feature/home/application/inbound.ts'
-import type * as StateManager from '@/shared/fsm.ts'
+import type * as StateManager from '@/libs/fsm.ts'
 import type { Message } from './messages.ts'
 import type { State } from './model.ts'
 

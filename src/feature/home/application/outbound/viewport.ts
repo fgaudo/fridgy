@@ -5,5 +5,6 @@ export class Viewport extends Context.Service<
   Viewport,
   {
     scrollToTop: Effect.Effect<void>
+    showToast: (message: string) => Effect.Effect<void>
   }
 >()('472964882c4aa1e5') {}

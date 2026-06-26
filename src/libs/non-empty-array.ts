@@ -1,7 +1,7 @@
 import * as Arr from 'effect/Array'
 import * as Option from 'effect/Option'
 
-import * as PositiveInteger from '@/shared/integer/positive-integer.ts'
+import * as PositiveInteger from '@/libs/integer/positive-integer.ts'
 
 export function fromIterable<A>(
   array: ReadonlyArray<A>,

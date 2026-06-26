@@ -1,7 +1,6 @@
 import * as Array from 'effect/Array'
 import * as Cause from 'effect/Cause'
 import * as Context from 'effect/Context'
-import type * as Data from 'effect/Data'
 import * as Deferred from 'effect/Deferred'
 import * as Duration from 'effect/Duration'
 import * as Effect from 'effect/Effect'
@@ -214,23 +213,6 @@ export const prepare = <State, Message, R, S, K>({
     })
   })
 }
-
-export const dispatch = Function.dual<
-  <Message>(
-    that: Message,
-  ) => <State>(self: Engine<State, Message>) => Effect.Effect<void>,
-  <State, Message>(
-    self: Engine<State, Message>,
-    that: Message,
-  ) => Effect.Effect<void>
->(
-  2,
-  Effect.fn(function*(stateManager, message) {
-    const { messageQueue } = Newtype.value(stateManager)
-
-    yield* Queue.offer(messageQueue, message)
-  }),
-)
 
 export const states = <State, Message>(
   stateManager: Engine<State, Message>,

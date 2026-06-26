@@ -5,9 +5,9 @@ import type * as DateTime from 'effect/DateTime'
 import type * as Duration from 'effect/Duration'
 import * as HashSet from 'effect/HashSet'
 import * as Opt from 'effect/Option'
-import type * as PositiveInteger from '@/shared/integer/positive-integer.ts'
-import type * as NonEmptyHashSet from '@/shared/non-empty-hash-set.ts'
-import type * as UnitInterval from '@/shared/unit-interval.ts'
+import type * as PositiveInteger from '@/libs/integer/positive-integer.ts'
+import type * as NonEmptyHashSet from '@/libs/non-empty-hash-set.ts'
+import type * as UnitInterval from '@/libs/unit-interval.ts'
 import { InternalMessage } from './messages.ts'
 
 export type Model = Readonly<{

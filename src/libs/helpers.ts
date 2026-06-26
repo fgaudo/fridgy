@@ -1,7 +1,7 @@
 import * as HashMap from 'effect/HashMap'
 import * as Stream from 'effect/Stream'
 
-import type * as StateManager from '@/shared/fsm.ts'
+import type * as StateManager from '@/libs/fsm.ts'
 
 export const mapSubscriptions = <State, Message, NewMessage, Key, NewKey, R>(
   subscriptions: ReturnType<StateManager.Emitter<State, Message, R, Key>>,

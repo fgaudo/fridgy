@@ -7,8 +7,8 @@ import { Events } from '@/core/application/inbound.ts'
 import { InternalMessage } from '@/core/application/messages.ts'
 import type { State } from '@/core/application/model.ts'
 import * as Home from '@/feature/home/application/subs.ts'
-import type * as StateManager from '@/shared/fsm.ts'
-import { mapSubscriptions } from '@/shared/helpers.ts'
+import type * as StateManager from '@/libs/fsm.ts'
+import { mapSubscriptions } from '@/libs/helpers.ts'
 
 export const subscriptions: StateManager.Emitter<
   State,

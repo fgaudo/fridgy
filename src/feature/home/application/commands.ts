@@ -6,10 +6,9 @@ import * as HashSet from 'effect/HashSet'
 import * as Opt from 'effect/Option'
 import * as Result from 'effect/Result'
 import { v4 as uuidv4 } from 'uuid'
-import type * as ProductsRead from '@/feature/home/application/outbound/products-read.ts'
 import { Viewport } from '@/feature/home/application/outbound/viewport.ts'
-import type * as NonEmptyHashSet from '@/shared/non-empty-hash-set.ts'
-import * as NormalizedString from '@/shared/normalized-string.ts'
+import type * as NonEmptyHashSet from '@/libs/non-empty-hash-set.ts'
+import * as NormalizedString from '@/libs/normalized-string.ts'
 import * as Product from '../domain/product.ts'
 import { InternalMessage } from './messages.ts'
 import * as AddProductOut from './outbound/add-product.ts'
@@ -177,5 +176,11 @@ export const notifyStale = Effect.fn(function*(message: { _tag: string }) {
 export const scrollToTop = Effect.gen(function*() {
   const { scrollToTop } = yield* Viewport
   yield* scrollToTop
+  return InternalMessage.NoOp()
+})
+
+export const showToast = Effect.fn(function*(message: string) {
+  const { showToast } = yield* Viewport
+  yield* showToast(message)
   return InternalMessage.NoOp()
 })

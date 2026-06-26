@@ -1,37 +1,28 @@
-import { SplashScreen } from '@capacitor/splash-screen'
-import { Toast } from '@capacitor/toast'
-
 import { defineCustomElements } from '@ionic/pwa-elements/loader'
 import * as Clock from 'effect/Clock'
 import * as Config from 'effect/Config'
 import * as Context from 'effect/Context'
 import * as Effect from 'effect/Effect'
-import * as FiberSet from 'effect/FiberSet'
 import * as Layer from 'effect/Layer'
 import * as Stream from 'effect/Stream'
 import * as SubscriptionRef from 'effect/SubscriptionRef'
 import * as SynchronizedRef from 'effect/SynchronizedRef'
 import * as Socket from 'effect/unstable/socket/Socket'
 import * as Snabbdom from 'snabbdom'
+import { subscriptions } from '@/core/application/subs.ts'
+import { init, makeDefectMessage, update } from '@/core/application/update.ts'
+import type * as Root from '@/core/view/view.ts'
+import { dispatch, prepare, states } from '@/libs/fsm.ts'
+import { saferImport } from '@/libs/safe.ts'
 
-import type { Message } from '@/app/core/messages.ts'
-import { MessageDispatcher } from '@/app/ports/inbound/message-dispatcher.ts'
-import { Renderer } from '@/app/ports/outbound/model-renderer.ts'
-import { Actions } from '@/infra/adapters/outbound/model-renderer/actions.ts'
-import { saferImport } from '@/shared/safe.ts'
-
-import type * as Root from './pages/view.ts'
-
-const AssetLoader = Layer.effectDiscard(
-  Effect.all([
-    Effect.promise(() => document.fonts.load('1em "Material Symbols Rounded"')),
-    Effect.promise(() => document.fonts.load('1em \'Noto Sans Variable\'', ' \u0000')),
-    Effect.promise(() => defineCustomElements(window)),
-  ], { concurrency: 'unbounded' }),
-)
+export const loadAssets = Effect.all([
+  Effect.promise(() => document.fonts.load('1em "Material Symbols Rounded"')),
+  Effect.promise(() => document.fonts.load('1em \'Noto Sans Variable\'', ' \u0000')),
+  Effect.promise(() => defineCustomElements(window)),
+], { concurrency: 'unbounded' })
 
 class CssRefresher extends Context.Service<CssRefresher, Effect.Effect<void>>()(
-  '35a057c4f8666d22',
+  '27c2478aad3c86ef',
 ) {}
 
 const CssRefresherLive = Layer.effect(
@@ -55,7 +46,7 @@ const CssRefresherLive = Layer.effect(
 )
 
 class ViewLoader extends Context.Service<ViewLoader, Effect.Effect<(typeof Root)>>()(
-  '470138c1439ad528',
+  '2c7896ab2864eaa7',
 ) {}
 
 const ViewLoaderLive = Layer.effect(
@@ -73,10 +64,10 @@ const ViewLoaderLive = Layer.effect(
   }),
 ).pipe(Layer.orDie)
 
-class ModuleLoader extends Context.Service<
+export class ModuleLoader extends Context.Service<
   ModuleLoader,
   Stream.Stream<(typeof Root)['makeView']>
->()('6766c67ad2dbadb9') {}
+>()('764a721de8db5d5b') {}
 
 const HotModuleLoaderLive = Layer.effect(
   ModuleLoader,
@@ -101,18 +92,18 @@ const HotModuleLoaderLive = Layer.effect(
 const StaticModuleLoaderLive = Layer.effect(
   ModuleLoader,
   Effect.gen(function*() {
-    const module = yield* Effect.promise(() => import('./pages/view.ts'))
+    const module = yield* Effect.promise(() => import('@/core/view/view.ts'))
     return Stream.make(module.makeView)
   }),
 )
 
-class Patcher extends Context.Service<
-  Patcher,
+export class SnabbdomPatcher extends Context.Service<
+  SnabbdomPatcher,
   (vnode: Snabbdom.VNode) => Effect.Effect<void>
->()('d55767daed5c7682') {}
+>()('f3d714ea294367cb') {}
 
 const PatcherLive = Layer.effect(
-  Patcher,
+  SnabbdomPatcher,
   Effect.gen(function*() {
     const root = yield* Effect.sync(() => document.querySelector('#root')!)
       .pipe(
@@ -138,55 +129,35 @@ const PatcherLive = Layer.effect(
   }),
 )
 
-const ActionsLive = Layer.effect(
-  Actions,
-  Effect.gen(function*() {
-    const dispatch = yield* Effect.gen(function*() {
-      const dispatch = yield* MessageDispatcher
-      const run = yield* FiberSet.makeRuntime()
-      return (m: Message) => run(dispatch(m))
-    })
-    return {
-      dispatch,
-      hideSplashScreen: () => SplashScreen.hide(),
-      showToast: (text) => Toast.show({ text }),
-    }
-  }),
+const base = Effect.gen(function*() {
+  const fsm = yield* prepare({
+    update: update,
+    emitter: subscriptions,
+    makeDefectMessage: makeDefectMessage,
+  })(init)
+  const view$ = yield* ModuleLoader
+  const patcher = yield* SnabbdomPatcher
+  yield* Stream.zipLatestAll(
+    states(fsm),
+    view$.pipe(Stream.map((view) => view)),
+  ).pipe(
+    Stream.map(([model, view]) => view((m) => dispatch(fsm, m))(model)),
+    Stream.mapEffect(patcher),
+    Stream.runDrain,
+  )
+})
+
+export const Hot = Layer.merge(
+  PatcherLive,
+  HotModuleLoaderLive.pipe(
+    Layer.provide([
+      CssRefresherLive,
+      ViewLoaderLive,
+    ]),
+  ),
 )
 
-const layer = Layer.effect(
-  Renderer,
-  Effect.gen(function*() {
-    const view$ = yield* ModuleLoader
-    const patcher = yield* Patcher
-    const actions = yield* Actions
-    return (model$) => {
-      return Stream.zipLatestAll(
-        model$,
-        view$.pipe(Stream.map((view) => view(actions))),
-      ).pipe(
-        Stream.map(([model, view]) => view(model)),
-        Stream.mapEffect(patcher),
-        Stream.runDrain,
-      )
-    }
-  }),
-)
-
-export const Hot = layer.pipe(
-  Layer.provide([
-    ActionsLive,
-    AssetLoader,
-    PatcherLive,
-    HotModuleLoaderLive.pipe(Layer.provide([CssRefresherLive, ViewLoaderLive])),
-  ]),
-)
-
-export const Static = layer.pipe(
-  Layer.provide([
-    ActionsLive,
-    AssetLoader,
-    PatcherLive,
-    StaticModuleLoaderLive,
-  ]),
+export const Static = Layer.merge(
+  PatcherLive,
+  StaticModuleLoaderLive,
 )

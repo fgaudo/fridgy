@@ -2,8 +2,8 @@ import * as DateTime from 'effect/DateTime'
 import * as Duration from 'effect/Duration'
 import * as Newtype from 'effect/Newtype'
 import * as Opt from 'effect/Option'
-import * as NormalizedString from '@/shared/normalized-string.ts'
-import * as UnitInterval from '@/shared/unit-interval.ts'
+import * as NormalizedString from '@/libs/normalized-string.ts'
+import * as UnitInterval from '@/libs/unit-interval.ts'
 
 type Product = Newtype.Newtype<
   'Product',
