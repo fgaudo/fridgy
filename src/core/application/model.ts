@@ -1,7 +1,7 @@
 import * as Chunk from 'effect/Chunk'
 import * as Data from 'effect/Data'
 import type { Route } from '@/core/application/transition.ts'
-import * as Home from '../../feature/home/application/model.ts'
+import * as Home from '@/feature/home/app.ts'
 
 export type Model = {
   appIsReady: boolean

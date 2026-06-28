@@ -2,7 +2,7 @@ import * as Effect from 'effect/Effect'
 import { h } from 'snabbdom'
 import { Dispatcher, Message } from '@/core/application/messages.ts'
 import type { Model } from '@/core/application/model.ts'
-import * as Home from '@/feature/home/view/pages/view.ts'
+import * as Home from '@/feature/home/view/view.ts'
 
 export const makeView = Effect.gen(function*() {
   const dispatch = yield* Dispatcher

@@ -9,8 +9,8 @@ import * as CoreLive from '@/core/live.ts'
 import * as HomeLive from '@/feature/home/live.ts'
 import * as SqlHelper from '@/infra/sql/sql-helper.ts'
 import * as Sqlite from '@/infra/sqlite/layer.ts'
+import { Hot, loadAssets, ModuleLoader, SnabbdomPatcher, Static } from '@/infra/ui/ui.ts'
 import { prepare, states } from '@/libs/fsm.ts'
-import { Hot, ModuleLoader, SnabbdomPatcher, Static } from './runtime/index.ts'
 
 const ConfigLayer = ConfigProvider.layer(
   ConfigProvider.fromUnknown({
@@ -26,11 +26,11 @@ const ConfigLayer = ConfigProvider.layer(
 )
 
 const Infra = Layer.mergeAll(
-  HomeLive.live,
+  HomeLive.live.pipe(
+    Layer.provide(SqlHelper.SqlHelper.layer),
+    Layer.provide(Sqlite.layer),
+  ),
   CoreLive.live,
-).pipe(
-  Layer.provide(SqlHelper.SqlHelper.layer),
-  Layer.provide(Sqlite.layer),
 )
 
 const UiLayer = process.env.NODE_ENV === 'production'
@@ -61,25 +61,25 @@ const Base = Layer.provideMerge(
 )
 
 Browser.BrowserRuntime.runMain(
-  Effect.scoped(
-    Effect.gen(function*() {
-      const fsm = yield* prepare({
-        update: CoreApp.update,
-        emitter: CoreApp.subscriptions,
-        makeDefectMessage: CoreApp.makeDefectMessage,
-      })(CoreApp.init)
-      const view$ = yield* ModuleLoader
-      const patcher = yield* SnabbdomPatcher
-      yield* Stream.zipLatestAll(
-        states(fsm).pipe(Stream.map(CoreApp.makeModel)),
-        view$.pipe(Stream.mapEffect((view) => view)),
-      ).pipe(
-        Stream.map(([model, view]) => view(model)),
-        Stream.mapEffect(patcher),
-        Stream.runDrain,
-      )
-    }),
-  ).pipe(
+  Effect.gen(function*() {
+    yield* loadAssets
+    const fsm = yield* prepare({
+      update: CoreApp.update,
+      emitter: CoreApp.subscriptions,
+      makeDefectMessage: CoreApp.makeDefectMessage,
+    })(CoreApp.init)
+    const view$ = yield* ModuleLoader
+    const patcher = yield* SnabbdomPatcher
+    yield* Stream.zipLatestAll(
+      states(fsm).pipe(Stream.map(CoreApp.makeModel)),
+      view$.pipe(Stream.mapEffect((view) => view)),
+    ).pipe(
+      Stream.map(([model, view]) => view(model)),
+      Stream.mapEffect(patcher),
+      Stream.runDrain,
+    )
+  }).pipe(
+    Effect.scoped,
     Effect.provide(Base),
   ),
 )

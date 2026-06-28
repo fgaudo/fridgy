@@ -15,16 +15,14 @@ const makeRootResolver = Effect.gen(function*() {
   return (...parts: ReadonlyArray<string>) => path.join(currentDir, '..', ...parts)
 })
 
-const rendererPath = './src/infrastructure/adapters/outbound/model-renderer/'
-
 const commonBuildConfig = Effect.gen(function*() {
   const resolve = yield* makeRootResolver
 
   return {
     entrypoints: [
-      resolve('./src/infrastructure/shared/sqlite/sqlite.worker.ts'),
+      resolve('./src/infrastructure/sqlite/sqlite.worker.ts'),
       resolve('./src/app.ts'),
-      resolve(rendererPath, './css/styles.css'),
+      resolve('./src/assets/css/styles.css'),
     ],
     env: 'inline',
     loader: { '.css': 'css', '.woff2': 'file' },
@@ -47,7 +45,7 @@ const buildDev = Effect.gen(function*() {
       ...config,
       entrypoints: [
         ...config.entrypoints,
-        resolve(rendererPath, './pages/view.ts'),
+        resolve('./src/core/view/view.ts'),
       ],
       sourcemap: 'inline',
     })
@@ -85,7 +83,7 @@ const prepareDist = Effect.gen(function*() {
     resolve('./dist/wa-sqlite.wasm'),
   )
   yield* fs.copyFile(
-    resolve(rendererPath, './index.html'),
+    resolve('./src/assets/index.html'),
     resolve('./dist/index.html'),
   )
 })
@@ -127,8 +125,11 @@ const watchCommand = Cli.Command.make(
     const publish = Effect.sync(() => server.publish('refresh', 'reload-page'))
     return yield* Stream.mergeAll(
       [
-        fs.watch(resolve(rendererPath, './pages')),
-        fs.watch(resolve(rendererPath, './css')),
+        fs.watch(resolve('./src/core/view')),
+        fs.watch(resolve('./src/feature/home/view')),
+        fs.watch(resolve(
+          './src/assets/css',
+        )),
       ],
       { concurrency: 'unbounded' },
     ).pipe(

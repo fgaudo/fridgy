@@ -9,7 +9,6 @@ export class Dispatcher extends Context.Service<
 
 export type Message = Data.TaggedEnum<{
   HideSplashScreenRequested: object
-  GotHomeMsg: { message: Home.Message }
 }>
 
 export const Message = Data.taggedEnum<Message>()

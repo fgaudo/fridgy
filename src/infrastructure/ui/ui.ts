@@ -9,10 +9,7 @@ import * as SubscriptionRef from 'effect/SubscriptionRef'
 import * as SynchronizedRef from 'effect/SynchronizedRef'
 import * as Socket from 'effect/unstable/socket/Socket'
 import * as Snabbdom from 'snabbdom'
-import { subscriptions } from '@/core/application/subs.ts'
-import { init, makeDefectMessage, update } from '@/core/application/update.ts'
 import type * as Root from '@/core/view/view.ts'
-import { dispatch, prepare, states } from '@/libs/fsm.ts'
 import { saferImport } from '@/libs/safe.ts'
 
 export const loadAssets = Effect.all([
@@ -22,7 +19,7 @@ export const loadAssets = Effect.all([
 ], { concurrency: 'unbounded' })
 
 class CssRefresher extends Context.Service<CssRefresher, Effect.Effect<void>>()(
-  '27c2478aad3c86ef',
+  '407a07649fd34230',
 ) {}
 
 const CssRefresherLive = Layer.effect(
@@ -46,7 +43,7 @@ const CssRefresherLive = Layer.effect(
 )
 
 class ViewLoader extends Context.Service<ViewLoader, Effect.Effect<(typeof Root)>>()(
-  '2c7896ab2864eaa7',
+  '0f22e6abb8e51645',
 ) {}
 
 const ViewLoaderLive = Layer.effect(
@@ -67,7 +64,7 @@ const ViewLoaderLive = Layer.effect(
 export class ModuleLoader extends Context.Service<
   ModuleLoader,
   Stream.Stream<(typeof Root)['makeView']>
->()('764a721de8db5d5b') {}
+>()('5b4bb781a49af217') {}
 
 const HotModuleLoaderLive = Layer.effect(
   ModuleLoader,
@@ -100,7 +97,7 @@ const StaticModuleLoaderLive = Layer.effect(
 export class SnabbdomPatcher extends Context.Service<
   SnabbdomPatcher,
   (vnode: Snabbdom.VNode) => Effect.Effect<void>
->()('f3d714ea294367cb') {}
+>()('08c1970859f5ebdf') {}
 
 const PatcherLive = Layer.effect(
   SnabbdomPatcher,
@@ -128,24 +125,6 @@ const PatcherLive = Layer.effect(
       )
   }),
 )
-
-const base = Effect.gen(function*() {
-  const fsm = yield* prepare({
-    update: update,
-    emitter: subscriptions,
-    makeDefectMessage: makeDefectMessage,
-  })(init)
-  const view$ = yield* ModuleLoader
-  const patcher = yield* SnabbdomPatcher
-  yield* Stream.zipLatestAll(
-    states(fsm),
-    view$.pipe(Stream.map((view) => view)),
-  ).pipe(
-    Stream.map(([model, view]) => view((m) => dispatch(fsm, m))(model)),
-    Stream.mapEffect(patcher),
-    Stream.runDrain,
-  )
-})
 
 export const Hot = Layer.merge(
   PatcherLive,

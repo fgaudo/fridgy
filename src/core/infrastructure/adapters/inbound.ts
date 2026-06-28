@@ -12,9 +12,7 @@ export const inbound = Layer.unwrap(Effect.gen(function*() {
   return Layer.mergeAll(
     Layer.succeed(
       Events,
-      Stream.mergeAll([
-        Stream.fromPubSub(pubsub),
-      ], { concurrency: 'unbounded' }),
+      Stream.fromPubSub(pubsub),
     ),
     Layer.succeed(Dispatcher, PubSub.publishUnsafe),
   )

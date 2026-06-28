@@ -30,7 +30,7 @@
 		"csstype": "^3.2.3",
 		"effect": "beta",
 		"material-symbols": "^0.44.12",
-		"snabbdom": "^3.6.3",
+		"snabbdom": "^3.6.4",
 		"tailwind-merge": "^3.6.0"
 	},
 	"devDependencies": {
@@ -43,7 +43,7 @@
 		"dprint": "^0.54.0",
 		"http-server": "^14.1.1",
 		"license-checker-rseidelsohn": "^4.4.2",
-		"tailwindcss": "^4.3.0",
+		"tailwindcss": "^4.3.1",
 		"typescript": "^6.0.3"
 	},
 	"patchedDependencies": {
