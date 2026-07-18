@@ -1,7 +1,7 @@
 import * as Effect from 'effect/Effect'
 import { h } from 'snabbdom'
-import { Dispatcher } from '@/feature/home/application/messages.ts'
 import type { Model } from '@/feature/home/application/model.ts'
+import { Dispatcher } from '@/feature/home/view/dispatcher.ts'
 import { cn } from '@/libs/helpers1.ts'
 
 function lockScroll(isLocked: boolean) {

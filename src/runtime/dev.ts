@@ -3,14 +3,16 @@ import * as ConfigProvider from 'effect/ConfigProvider'
 import * as Effect from 'effect/Effect'
 import * as Layer from 'effect/Layer'
 import * as References from 'effect/References'
+import * as Stream from 'effect/Stream'
 import * as CoreApp from '@/core/app.ts'
 import * as CoreLive from '@/core/live.ts'
 import * as HomeLive from '@/feature/home/live.ts'
-
+import { CssRefresher } from '@/infra/css-refresher.ts'
 import * as SqlHelper from '@/infra/sql/sql-helper.ts'
 import * as Sqlite from '@/infra/sqlite/layer.ts'
-import { Hot, Renderer, Static } from '@/infra/ui/ui.ts'
-import { prepare } from '@/libs/fsm.ts'
+import { prepare, states } from '@/libs/fsm.ts'
+import { ViewModuleLoader } from './module-loader/index.ts'
+import { SnabbdomRenderer } from './renderer/index.ts'
 
 const ConfigLayer = ConfigProvider.layer(
   ConfigProvider.fromUnknown({
@@ -34,7 +36,7 @@ const Infra = Layer.mergeAll(
 )
 
 const UiLayer = process.env.NODE_ENV === 'production'
-  ? Static
+  ? ViewModuleLoader.Static
   : (() => {
     // @ts-expect-error
     const host = process.env.UI_EMITTER_WEBSOCKET_HOST
@@ -44,20 +46,26 @@ const UiLayer = process.env.NODE_ENV === 'production'
       10,
     )
     return Layer.provide(
-      Hot,
-      Browser.BrowserSocket.layerWebSocket(`ws://${host}:${port}`),
+      ViewModuleLoader.Hot,
+      [
+        Browser.BrowserSocket.layerWebSocket(`ws://${host}:${port}`),
+        CssRefresher.layer('#css'),
+      ],
     )
   })()
 
-const Base = Layer.provideMerge(
-  Layer.provide(
-    Layer.mergeAll(
-      Infra,
-      UiLayer,
+const Base = Layer.mergeAll(
+  Layer.provideMerge(
+    Layer.provide(
+      Layer.mergeAll(
+        Infra,
+        UiLayer,
+      ),
+      ConfigLayer,
     ),
-    ConfigLayer,
-  ),
-  Layer.succeed(References.MinimumLogLevel, 'Debug'),
+    Layer.succeed(References.MinimumLogLevel, 'Debug'),
+  ).pipe(Layer.orDie),
+  SnabbdomRenderer.layer('#root'),
 )
 
 Browser.BrowserRuntime.runMain(
@@ -67,10 +75,20 @@ Browser.BrowserRuntime.runMain(
       emitter: CoreApp.subscriptions,
       makeDefectMessage: CoreApp.makeDefectMessage,
     })(CoreApp.init)
-    const { render } = yield* Renderer
+    const { render } = yield* SnabbdomRenderer
+    const viewLoader = yield* ViewModuleLoader
     yield* render(
-      engine,
-      CoreApp.makeModel,
+      Stream.zipLatestAll(
+        states(engine).pipe(
+          Stream.map(CoreApp.makeModel),
+        ),
+        viewLoader.pipe(
+          Stream.mapEffect((view) => view.makeView),
+          Stream.map(([view]) => view),
+        ),
+      ).pipe(
+        Stream.map(([model, view]) => view(model)),
+      ),
     )
   }).pipe(
     Effect.scoped,

@@ -1,10 +1,10 @@
 import * as Context from 'effect/Context'
 import type * as Effect from 'effect/Effect'
 
-export class Viewport extends Context.Service<
-  Viewport,
+export class UiCommands extends Context.Service<
+  UiCommands,
   {
     hideSplashScreen: Effect.Effect<void>
     closeApp: Effect.Effect<void>
   }
->()('5febefa297b80e1f') {}
+>()('1e80ec5d9c885e0f') {}

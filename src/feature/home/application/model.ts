@@ -15,18 +15,17 @@ export type Model = Readonly<{
   isInteracting: boolean
   isViewportAtTop: boolean
   canNavigateOut: boolean
-  canFetch: Data.TaggedEnum<{
-    True: Readonly<{ fetch: InternalMessage }>
-    False: object
+  addProduct: Data.TaggedEnum<{
+    Open: {
+      name: string
+      expirationDate: string | number
+      isSubmittable: Data.TaggedEnum<{
+        True: { submit: InternalMessage }
+        False: object
+      }>
+    }
+    Closed: object
   }>
-  addProduct: {
-    name: string
-    expirationDate: string | number
-    isSubmittable: Data.TaggedEnum<{
-      True: { submit: InternalMessage }
-      False: object
-    }>
-  }
   productListStatus: Data.TaggedEnum<{
     Initial: { activity: 'fetching' | 'idle' | 'adding' }
     Error: { activity: 'fetching' | 'idle' | 'adding' }
@@ -92,11 +91,14 @@ export type State = Readonly<{
   versions: {
     manualFetcher: FetchListVersion
   }
-  addProduct: {
-    isSubmittable: boolean
-    maybeName: Opt.Option<string>
-    maybeExpirationDate: Opt.Option<DateTime.Utc>
-  }
+  addProduct: Data.TaggedEnum<{
+    Open: {
+      isSubmittable: boolean
+      maybeName: Opt.Option<string>
+      maybeExpirationDate: Opt.Option<DateTime.Utc>
+    }
+    Closed: object
+  }>
   productListData: Data.TaggedEnum<{
     Initial: { activity: 'fetching' | 'idle' | 'adding' }
     Error: { activity: 'fetching' | 'idle' | 'adding' }
@@ -144,10 +146,10 @@ export const FetchListVersion = {
 export function makeModel(state: State): Model {
   if (state.productListData._tag === 'Initial') {
     return {
+      addProduct: { _tag: 'Closed' },
       isViewportAtTop: state.isViewportAtTop,
       isMenuOpen: state.isMenuOpen,
       isInteracting: state.isInteracting,
-      canFetch: { _tag: 'False' },
       canNavigateOut: true,
       productListStatus: {
         _tag: 'Initial',
@@ -155,8 +157,23 @@ export function makeModel(state: State): Model {
       },
     } satisfies Model
   }
+  const addProduct: Model['addProduct'] = state.addProduct._tag === 'Closed' ? { ...state.addProduct } : {
+    ...state.addProduct,
+    isSubmittable: state.addProduct.isSubmittable
+      ? { _tag: 'True', submit: InternalMessage.AddProductStarted() } as const
+      : { _tag: 'False' } as const,
+    name: Opt.getOrElse(state.addProduct.maybeName, () => ''),
+    expirationDate: Opt.map(
+      state.addProduct.maybeExpirationDate,
+      () => '',
+    ).pipe(Opt.getOrElse(
+      () => '',
+    )),
+  }
+
   if (state.productListData._tag !== 'Available') {
     return {
+      addProduct,
       isViewportAtTop: state.isViewportAtTop,
       isMenuOpen: state.isMenuOpen,
       isInteracting: state.isInteracting,
@@ -166,6 +183,7 @@ export function makeModel(state: State): Model {
   }
   const productListData = state.productListData
   return {
+    addProduct,
     isViewportAtTop: state.isViewportAtTop,
     isMenuOpen: state.isMenuOpen,
     isInteracting: state.isInteracting,

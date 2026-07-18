@@ -5,13 +5,13 @@ import * as Match from 'effect/Match'
 import * as T from 'effect/Tuple'
 import { hideSplashScreen } from '@/core/application/commands.ts'
 import { InternalMessage } from '@/core/application/messages.ts'
-import type { Viewport } from '@/core/application/outbound/viewport.ts'
+import type { UiCommands } from '@/core/application/outbound/ui-commands.ts'
 import { Route } from '@/core/application/transition.ts'
 import * as Home from '@/feature/home/application/update.ts'
 import type * as StateManager from '@/libs/fsm.ts'
 import type { State } from './model.ts'
 
-type Deps = Home.Deps | Viewport
+type Deps = Home.Deps | UiCommands
 
 export const update: StateManager.Update<State, InternalMessage, Deps> = (message) => (state) => {
   const currentPage = Chunk.headNonEmpty(state.navigationStack)

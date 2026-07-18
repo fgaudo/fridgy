@@ -1,18 +1,11 @@
 import type * as Arr from 'effect/Array'
-import * as Context from 'effect/Context'
 import * as Data from 'effect/Data'
 import type * as DateTime from 'effect/DateTime'
 import type * as Duration from 'effect/Duration'
 import type * as Opt from 'effect/Option'
 import type * as Result from 'effect/Result'
 import type { ProductInput } from '@/feature/home/domain/product.ts'
-import type * as NonEmptyHashSet from '@/libs/non-empty-hash-set.ts'
 import type * as UnitInterval from '@/libs/unit-interval.ts'
-
-export class Dispatcher extends Context.Service<
-  Dispatcher,
-  (m: Message) => void
->()('ae85bebf0c1014b0') {}
 
 export type Message = Data.TaggedEnum<{
   DeleteStarted: object

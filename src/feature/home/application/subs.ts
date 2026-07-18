@@ -19,6 +19,7 @@ export const subscriptions: StateManager.Emitter<
       'events',
       Effect.service(Events).pipe(
         Stream.unwrap,
+        Stream.tap((m) => Effect.log(m)),
         Stream.filterMap(Filter.make(Filter.tagged('ProductsChanged'))),
         Stream.zipLatestWith(Stream.tick('30 seconds'), (a) => a),
       ),

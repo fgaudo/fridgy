@@ -1,4 +1,5 @@
 import * as Arr from 'effect/Array'
+import type * as Data from 'effect/Data'
 import * as DateTime from 'effect/DateTime'
 import * as Effect from 'effect/Effect'
 import { pipe } from 'effect/Function'
@@ -6,16 +7,21 @@ import * as HashSet from 'effect/HashSet'
 import * as Opt from 'effect/Option'
 import * as Result from 'effect/Result'
 import { v4 as uuidv4 } from 'uuid'
-import { Viewport } from '@/feature/home/application/outbound/viewport.ts'
+import { UiCommands } from '@/feature/home/application/outbound/ui-commands.ts'
 import type * as NonEmptyHashSet from '@/libs/non-empty-hash-set.ts'
 import * as NormalizedString from '@/libs/normalized-string.ts'
 import * as Product from '../domain/product.ts'
 import { InternalMessage } from './messages.ts'
 import * as AddProductOut from './outbound/add-product.ts'
 import * as DeleteProductByIdOut from './outbound/delete-product-by-id.ts'
+import * as Notification from './outbound/notification.ts'
 
 const mapRawToDto = Effect.fn(
-  function*(dtos: ReadonlyArray<ProductsRead.RawProductDTO>) {
+  function*(
+    dtos: Result.Result.Success<
+      Data.TaggedEnum.Value<InternalMessage, 'ProductsChanged'>['result']
+    >,
+  ) {
     const currentDate = yield* DateTime.now
     const entries = yield* Effect.forEach(
       dtos,
@@ -76,20 +82,12 @@ const mapRawToDto = Effect.fn(
 )
 
 export const validateProducts = Effect.fn(function*(
-  inputs: Result.Result<
-    ReadonlyArray<
-      Product.ProductInput & {
-        maybeId: Opt.Option<string>
-      }
-    >
-  >,
+  inputs: Data.TaggedEnum.Value<InternalMessage, 'ProductsChanged'>['result'],
 ) {
   if (Result.isFailure(inputs)) {
     return InternalMessage.ProductsValidated({ result: Result.fail(undefined) })
   }
-
   const results = yield* mapRawToDto(inputs.success)
-
   return InternalMessage.ProductsValidated({
     result: Result.succeed(
       Arr.isReadonlyArrayNonEmpty(results)
@@ -174,13 +172,13 @@ export const notifyStale = Effect.fn(function*(message: { _tag: string }) {
 })
 
 export const scrollToTop = Effect.gen(function*() {
-  const { scrollToTop } = yield* Viewport
+  const { scrollToTop } = yield* UiCommands
   yield* scrollToTop
   return InternalMessage.NoOp()
 })
 
 export const showToast = Effect.fn(function*(message: string) {
-  const { showToast } = yield* Viewport
+  const { showToast } = yield* Notification.Notification
   yield* showToast(message)
   return InternalMessage.NoOp()
 })

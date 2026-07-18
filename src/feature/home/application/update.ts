@@ -9,7 +9,8 @@ import * as T from 'effect/Tuple'
 import type { Transition } from '@/core/application/transition.ts'
 import type { AddProduct } from '@/feature/home/application/outbound/add-product.ts'
 import type { DeleteProductById } from '@/feature/home/application/outbound/delete-product-by-id.ts'
-import type { Viewport } from '@/feature/home/application/outbound/viewport.ts'
+import type { Notification } from '@/feature/home/application/outbound/notification.ts'
+import type { UiCommands } from '@/feature/home/application/outbound/ui-commands.ts'
 import type * as StateManager from '@/libs/fsm.ts'
 import * as ArrX from '@/libs/non-empty-array.ts'
 import * as NonEmptyHashSet from '@/libs/non-empty-hash-set.ts'
@@ -17,95 +18,13 @@ import * as Cmd from './commands.ts'
 import type { InternalMessage } from './messages.ts'
 import { FetchListVersion, type State } from './model.ts'
 
-export type Deps = AddProduct | DeleteProductById | Viewport
+export type Deps = AddProduct | DeleteProductById | Notification | UiCommands
 
 type ProductDTO = Data.TaggedEnum.Value<
   State['productListData'],
   'Available'
 >['products'][0]
 const ProductDTO = Data.taggedEnum<ProductDTO>()
-
-function updateFetchListSucceeded(
-  state: State,
-  maybeProducts: Result.Result.Success<Data.TaggedEnum.Value<InternalMessage, 'ProductsChanged'>['result']>,
-) {
-  if (Opt.isNone(maybeProducts)) {
-    return {
-      state: {
-        ...state,
-        productListData: {
-          ...state.productListData,
-          _tag: 'Empty' as const,
-          activity: 'idle' as const,
-        },
-      },
-    }
-  }
-  const mappedProducts = Arr.map(maybeProducts.value, (product) => {
-    if (product._tag === 'Invalid') {
-      return ProductDTO.Corrupt({ ...product, id: Symbol('id') })
-    }
-    return product
-  })
-
-  if (state.productListData._tag !== 'Available') {
-    return {
-      state: {
-        ...state,
-        productListData: {
-          ...state.productListData,
-          _tag: 'Available' as const,
-          activity: 'idle' as const,
-          maybeSelectedProducts: Opt.none(),
-          products: mappedProducts,
-          total: ArrX.length(maybeProducts.value),
-        },
-      } satisfies State,
-    }
-  }
-  return {
-    state: {
-      ...state,
-      productListData: {
-        ...state.productListData,
-        activity: 'idle' as const,
-        maybeSelectedProducts: state.productListData.maybeSelectedProducts.pipe(
-          Opt.bindTo('selectedProducts'),
-          Opt.bind('newProducts', () =>
-            maybeProducts.pipe(
-              Opt.map(Arr.filter((product) => product._tag !== 'Invalid')),
-              Opt.map(Arr.map((product) => product.id)),
-              Opt.map(HashSet.make),
-            )),
-          Opt.map(
-            ({ selectedProducts, newProducts }) => HashSet.intersection(newProducts, selectedProducts),
-          ),
-          Opt.andThen(NonEmptyHashSet.make),
-        ),
-        products: mappedProducts,
-        total: ArrX.length(maybeProducts.value),
-      },
-    },
-  }
-}
-
-function updateFetchListFailed(state: State) {
-  if (state.productListData._tag === 'Initial') {
-    return {
-      state,
-    }
-  }
-  return {
-    state: {
-      ...state,
-      productListData: {
-        ...state.productListData,
-        _tag: 'Error' as const,
-        activity: 'idle' as const,
-      },
-    },
-  }
-}
 
 export const update = Match.typeTags<
   InternalMessage,
@@ -139,6 +58,12 @@ export const update = Match.typeTags<
   },
 
   AddProductStarted: (message) => (state) => {
+    if (
+      state.addProduct._tag === 'Closed'
+    ) {
+      return { state, commands: [Cmd.notifyWrongState(message)] }
+    }
+
     if (
       state.productListData.activity !== 'idle'
       || Opt.isNone(state.addProduct.maybeName)
@@ -179,27 +104,81 @@ export const update = Match.typeTags<
   },
 
   ProductsValidated: ({ result }) => (state) => {
-    if (Result.isSuccess(result)) {
-      return updateFetchListSucceeded(
-        {
+    if (Result.isFailure(result)) {
+      if (state.productListData._tag === 'Initial') {
+        return {
+          state,
+        }
+      }
+      return {
+        state: {
           ...state,
-          versions: {
-            ...state.versions,
-            manualFetcher: FetchListVersion.increment(state.versions.manualFetcher),
+          productListData: {
+            ...state.productListData,
+            _tag: 'Error' as const,
+            activity: 'idle' as const,
           },
         },
-        result.success,
-      )
+      }
     }
-    return updateFetchListFailed(
-      {
+    const maybeProducts = result.success
+    if (Opt.isNone(maybeProducts)) {
+      return {
+        state: {
+          ...state,
+          productListData: {
+            ...state.productListData,
+            _tag: 'Empty' as const,
+            activity: 'idle' as const,
+          },
+        },
+      }
+    }
+    const mappedProducts = Arr.map(maybeProducts.value, (product) => {
+      if (product._tag === 'Invalid') {
+        return ProductDTO.Corrupt({ ...product, id: Symbol('id') })
+      }
+      return product
+    })
+    if (state.productListData._tag !== 'Available') {
+      return {
+        state: {
+          ...state,
+          productListData: {
+            ...state.productListData,
+            _tag: 'Available' as const,
+            activity: 'idle' as const,
+            maybeSelectedProducts: Opt.none(),
+            products: mappedProducts,
+            total: ArrX.length(maybeProducts.value),
+          },
+        } satisfies State,
+      }
+    }
+    return {
+      state: {
         ...state,
-        versions: {
-          ...state.versions,
-          manualFetcher: FetchListVersion.increment(state.versions.manualFetcher),
+        productListData: {
+          ...state.productListData,
+          activity: 'idle' as const,
+          maybeSelectedProducts: state.productListData.maybeSelectedProducts.pipe(
+            Opt.bindTo('selectedProducts'),
+            Opt.bind('newProducts', () =>
+              maybeProducts.pipe(
+                Opt.map(Arr.filter((product) => product._tag !== 'Invalid')),
+                Opt.map(Arr.map((product) => product.id)),
+                Opt.map(HashSet.make),
+              )),
+            Opt.map(
+              ({ selectedProducts, newProducts }) => HashSet.intersection(newProducts, selectedProducts),
+            ),
+            Opt.andThen(NonEmptyHashSet.make),
+          ),
+          products: mappedProducts,
+          total: ArrX.length(maybeProducts.value),
         },
       },
-    )
+    }
   },
 
   InteractionChanged: ({ isInteracting }) => (state) => ({
@@ -346,10 +325,8 @@ export const update = Match.typeTags<
 export const init: StateManager.Step<State, InternalMessage, Deps> = T.make(
   {
     addProduct: {
-      maybeExpirationDate: Opt.none(),
-      maybeName: Opt.none(),
-      isSubmittable: false,
-    },
+      _tag: 'Closed',
+    } as const,
     isMenuOpen: false,
     isViewportAtTop: true,
     isInteracting: false,

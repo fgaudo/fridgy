@@ -6,9 +6,7 @@ import * as Home from '@/feature/home/view/view.ts'
 
 export const makeView = Effect.gen(function*() {
   const dispatch = yield* Dispatcher
-
   const homeView = yield* Home.makeView
-
   return (model: Model) => {
     return h(
       'div',
