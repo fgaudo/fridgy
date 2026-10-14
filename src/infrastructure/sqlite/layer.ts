@@ -7,7 +7,7 @@ import { migrations } from '../sql/migrations.ts'
 
 const makeWorker = Effect.acquireRelease(
   Effect.gen(function*() {
-    const workerPath = yield* Config.string('workerPath').pipe(
+    const workerPath = yield* Config.String('workerPath').pipe(
       Config.nested('sqlite'),
     )
     return yield* Effect.sync(

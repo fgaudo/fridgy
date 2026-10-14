@@ -9,7 +9,7 @@ import * as HomeLive from '@/feature/home/live.ts'
 
 import * as SqlHelper from '@/infra/sql/sql-helper.ts'
 import * as Sqlite from '@/infra/sqlite/layer.ts'
-import { Hot, Renderer, Static } from '@/infra/ui/ui.ts'
+import { Hot, Renderer, Static } from './core'
 import { prepare } from '@/libs/fsm.ts'
 
 const ConfigLayer = ConfigProvider.layer(

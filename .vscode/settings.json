@@ -5,13 +5,19 @@
     ["h\\([^,]+,\\s*\\{[^}]*props:\\s*\\{[^}]*className:\\s*['\"`]([^'\"`]*?)['\"`][^}]*\\}", "([^\\s'\"`]+)"]
   ],
   "js/ts.tsdk.promptToUseWorkspaceVersion": true,
-  "js/ts.tsdk.path": "node_modules/typescript/lib",
+  "js/ts.experimental.useTsgo": true,
+  "js/ts.tsdk.path": "node_modules/typescript",
   "js/ts.preferences.importModuleSpecifierEnding": "js",
+  "workbench.tree.indent": 16,
+  "workbench.iconTheme": "vscode-modern-icons",
+  "editor.guides.indentation": false,
+  "workbench.tree.renderIndentGuides": "none",
   "js/ts.preferences.importModuleSpecifier": "non-relative",
   "files.associations": {
     "*.css": "tailwindcss"
   },
   "editor.codeActionsOnSave": {
     "source.organizeImports.biome": "explicit"
-  }
+  },
+  "js/ts.tsdk.additionalLocations": ["./node_modules/typescript/bin"]
 }

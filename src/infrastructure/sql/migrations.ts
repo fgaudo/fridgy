@@ -1,5 +1,5 @@
 import * as Effect from 'effect/Effect'
-import * as Sql from 'effect/unstable/sql'
+import * as Sql from 'effect/sql'
 
 import { ProductExpirationSchema, ProductSchema } from './schema.ts'
 

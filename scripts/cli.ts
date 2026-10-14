@@ -7,7 +7,7 @@ import { flow } from 'effect/Function'
 import * as Path from 'effect/Path'
 import * as Stream from 'effect/Stream'
 import * as Terminal from 'effect/Terminal'
-import * as Cli from 'effect/unstable/cli'
+import * as Cli from 'effect/cli'
 
 const makeRootResolver = Effect.gen(function*() {
   const path = yield* Path.Path

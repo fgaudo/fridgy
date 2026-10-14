@@ -1,11 +1,12 @@
 {
-  "$schema": "./node_modules/@effect/language-service/schema.json",
+  "$schema": "./node_modules/@effect/tsgo/schema.json",
   "compilerOptions": {
     "plugins": [
       {
         "name": "@effect/language-service",
         "topLevelNamedReexports": "follow",
         "namespaceImportPackages": ["effect"],
+
         "diagnosticSeverity": {
           "anyUnknownInErrorContext": "error",
           "deterministicKeys": "error",
@@ -20,7 +21,6 @@
           "globalRandomInEffect": "error",
           "globalTimers": "warning",
           "globalTimersInEffect": "error",
-          "importFromBarrel": "error",
           "instanceOfSchema": "error",
           "nodeBuiltinImport": "error",
           "preferSchemaOverJson": "warning",
@@ -41,8 +41,7 @@
     ],
     "paths": {
       "@/libs/*": ["./src/libs/*"],
-      "@/feature/*": ["./src/feature/*"],
-      "@/core/*": ["./src/core/*"],
+      "@/app/*": ["./src/app/*"],
       "@/infra/*": ["./src/infrastructure/*"]
     },
     // Environment setup & latest features

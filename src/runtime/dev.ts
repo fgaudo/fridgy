@@ -4,15 +4,15 @@ import * as Effect from 'effect/Effect'
 import * as Layer from 'effect/Layer'
 import * as References from 'effect/References'
 import * as Stream from 'effect/Stream'
-import * as CoreApp from '@/core/app.ts'
-import * as CoreLive from '@/core/live.ts'
-import * as HomeLive from '@/feature/home/live.ts'
+
+import * as CoreApp from '@/app/core.ts'
+import * as HomeLive from '@/app/pages/home/core.ts'
+
 import { CssRefresher } from '@/infra/css-refresher.ts'
 import * as SqlHelper from '@/infra/sql/sql-helper.ts'
 import * as Sqlite from '@/infra/sqlite/layer.ts'
 import { prepare, states } from '@/libs/fsm.ts'
-import { ViewModuleLoader } from './module-loader/index.ts'
-import { SnabbdomRenderer } from './renderer/index.ts'
+import { SnabbdomRenderer } from '@/infra/snabbdom-renderer.ts'
 
 const ConfigLayer = ConfigProvider.layer(
   ConfigProvider.fromUnknown({
