@@ -1,23 +1,38 @@
+import type * as Data from 'effect/Data'
+import * as DateTime from 'effect/DateTime'
+import * as Duration from 'effect/Duration'
+import * as Opt from 'effect/Option'
 import { h, type VNode } from 'snabbdom'
 import { cn } from '@/libs/ui/class-names.ts'
 import type { Dispatch, View } from '@/libs/elm/view.ts'
 import type { Message } from './program/messages.ts'
+import type { Model, ProductModel } from './program/model.ts'
 
 type HomeDispatch = Dispatch<Message>
-import type { Model } from './program/model.ts'
-
-function lockScroll(isLocked: boolean) {
-  document.body.style.overflow = isLocked ? 'hidden' : ''
-}
+type ValidProduct = Data.TaggedEnum.Value<ProductModel, 'Valid'>
 
 const inputValue = (event: Event) => (event.target as HTMLInputElement).value
 
-type Offer = Readonly<{ _tag: 'True'; message: Message }> | Readonly<{ _tag: 'False' }>
-
-/** Dispatches the offered message, if any: the model decides what can be done. */
-const dispatchOffer = (offer: Offer, dispatch: HomeDispatch) => () => {
-  if (offer._tag === 'True') dispatch(offer.message)
+/** Fades in once inserted, and out before being removed. */
+const fade = {
+  opacity: '0',
+  transition: 'opacity 200ms',
+  delayed: { opacity: '1' },
+  remove: { opacity: '0' },
 }
+
+/** The dimmed layer behind a modal or a menu; a click on it closes what is open. */
+const backdrop = (key: string, className: string, onClick: () => void) =>
+  h('div', {
+    key,
+    style: fade,
+    on: { click: onClick },
+    props: { className: cn('fixed top-0 bottom-0 left-0 right-0 bg-black/50 backdrop-blur-xs', className) },
+  })
+
+const field = (label: string, input: VNode) => h('div', [h('div', label), input])
+
+const inputClassName = 'w-full bg-white focus:inset-ring-1 shadow-md rounded-md p-3'
 
 const addProductModal = (
   addProduct: Model['addProduct'],
@@ -26,28 +41,16 @@ const addProductModal = (
   if (addProduct._tag === 'Closed') {
     return []
   }
-  const { isSubmittable, canEdit } = addProduct
   return [
-    h('div', {
-      style: {
-        opacity: '0',
-        transition: 'opacity 200ms',
-        delayed: { opacity: '1' },
-        remove: { opacity: '0' },
-      },
-      key: 'add-product-box-background',
-      on: { click: dispatchOffer(addProduct.canClose, dispatch) },
-      props: {
-        className: 'fixed left-0 right-0 bottom-0 z-1000 top-0 bg-black/50 backdrop-blur-xs',
-      },
+    backdrop('add-product-box-background', 'z-1000', () => {
+      if (Opt.isSome(addProduct.close)) dispatch(addProduct.close.value)
     }),
     h('div', {
       style: {
-        opacity: '0',
+        ...fade,
         transform: 'scale(0.8)',
         transition: 'opacity 200ms, transform 200ms',
         delayed: { opacity: '1', transform: 'scale(1)' },
-        remove: { opacity: '0' },
       },
       key: 'add-product-box',
       props: {
@@ -56,8 +59,8 @@ const addProductModal = (
       },
     }, [
       h('div', { props: { className: 'font-bold' } }, 'Add a product'),
-      h('div', [
-        h('div', 'Name'),
+      field(
+        'Name',
         h('input', {
           hook: {
             insert: (node) => {
@@ -65,42 +68,46 @@ const addProductModal = (
             },
           },
           props: {
-            className: 'w-full bg-white focus:inset-ring-1 shadow-md rounded-md p-3',
+            className: inputClassName,
             type: 'text',
             value: addProduct.name,
-            disabled: canEdit._tag === 'False',
+            disabled: Opt.isNone(addProduct.changeName),
           },
-          on: canEdit._tag === 'True'
-            ? { input: (event) => dispatch(canEdit.nameChanged(inputValue(event))) }
-            : {},
+          on: {
+            input: (event) => {
+              if (Opt.isSome(addProduct.changeName)) dispatch(addProduct.changeName.value(inputValue(event)))
+            },
+          },
         }),
-      ]),
-      h('div', [
-        h('div', 'Expiration date'),
+      ),
+      field(
+        'Expiration date',
         h('input', {
           props: {
-            className: 'w-full bg-white focus:inset-ring-1 shadow-md rounded-md p-3',
+            className: inputClassName,
             type: 'date',
             value: addProduct.expirationDate,
-            disabled: canEdit._tag === 'False',
+            disabled: Opt.isNone(addProduct.changeExpiration),
           },
-          on: canEdit._tag === 'True'
-            ? { input: (event) => dispatch(canEdit.expirationChanged(inputValue(event))) }
-            : {},
+          on: {
+            input: (event) => {
+              if (Opt.isSome(addProduct.changeExpiration)) {
+                dispatch(addProduct.changeExpiration.value(inputValue(event)))
+              }
+            },
+          },
         }),
-      ]),
+      ),
       h('button', {
         props: {
           className: cn('w-full mt-4 shadow-md bg-secondary h-12 rounded-md p-3', {
-            'opacity-50': isSubmittable._tag === 'False',
+            'opacity-50': Opt.isNone(addProduct.submit),
           }),
-          disabled: isSubmittable._tag === 'False',
+          disabled: Opt.isNone(addProduct.submit),
         },
         on: {
           click: () => {
-            if (isSubmittable._tag === 'True') {
-              dispatch(isSubmittable.submit)
-            }
+            if (Opt.isSome(addProduct.submit)) dispatch(addProduct.submit.value)
           },
         },
       }, addProduct.isSubmitting ? 'Adding…' : 'Add'),
@@ -108,24 +115,11 @@ const addProductModal = (
   ]
 }
 
-const sideMenu = (
-  model: Model,
-  dispatch: HomeDispatch,
-): ReadonlyArray<VNode> =>
+const sideMenu = (model: Model, dispatch: HomeDispatch): ReadonlyArray<VNode> =>
   model.isMenuOpen
     ? [
-      h('div', {
-        style: {
-          opacity: '0',
-          transition: 'opacity 200ms',
-          delayed: { opacity: '1' },
-          remove: { opacity: '0' },
-        },
-        key: 'side-menu-background',
-        on: { click: dispatchOffer(model.canCloseMenu, dispatch) },
-        props: {
-          className: 'transition-colors fixed top-0 bottom-0 left-0 right-0 z-50 bg-black/50 backdrop-blur-xs',
-        },
+      backdrop('side-menu-background', 'z-50 transition-colors', () => {
+        if (Opt.isSome(model.closeMenu)) dispatch(model.closeMenu.value)
       }),
       h('div', {
         key: 'side-menu',
@@ -140,7 +134,11 @@ const sideMenu = (
         },
       }, [
         h('button', {
-          on: { click: dispatchOffer(model.canRequestInfo, dispatch) },
+          on: {
+            click: () => {
+              if (Opt.isSome(model.requestInfo)) dispatch(model.requestInfo.value)
+            },
+          },
           props: { className: 'flex items-center gap-4 h-14 px-6 text-left' },
         }, [
           h('span', { props: { className: 'material-symbols-rounded' } }, 'info'),
@@ -150,9 +148,70 @@ const sideMenu = (
     ]
     : []
 
-export const view: View<Model, Message> = (model, dispatch) => {
-  const isScrollLocked = model.addProduct._tag === 'Open' || model.isMenuOpen
+/** The badge: the expiration day and month, or an infinity sign when the product does not expire. */
+const expirationBadge = (status: ValidProduct['status']) =>
+  h(
+    'div',
+    {
+      props: {
+        className:
+          'z-20 ml-2 w-12 h-12 rounded-full leading-0 shadow-gray-300 relative shadow-sm bg-secondary flex items-center gap-1 justify-evenly flex-col',
+      },
+    },
+    status._tag === 'Everlasting'
+      ? [h('div', { props: { className: 'text-white leading-0 font-bold text-lg' } }, '∞')]
+      : [
+        h(
+          'div',
+          { props: { className: 'text-white leading-0 font-bold text-lg' } },
+          DateTime.getPartUtc(status.expirationDate, 'day').toString(),
+        ),
+        h(
+          'div',
+          { props: { className: 'text-white leading-0 text-sm' } },
+          DateTime.formatUtc(status.expirationDate, { month: 'short' }),
+        ),
+      ],
+  )
 
+const statusText = (status: ValidProduct['status']) => {
+  switch (status._tag) {
+    case 'Everlasting':
+      return h('div', { props: { className: 'text-xs px-2' } }, 'No expiration')
+    case 'Stale':
+      return h('div', { props: { className: 'text-xs text-red-400 font-bold px-2' } }, 'Expired')
+    case 'Fresh': {
+      const days = Math.ceil(Duration.toDays(status.timeLeft))
+      return h('div', { props: { className: 'text-xs px-2' } }, days === 1 ? '1 day left' : `${days} days left`)
+    }
+  }
+}
+
+const productRow = (product: ValidProduct, dispatch: HomeDispatch) =>
+  h('div', {
+    key: product.id,
+    props: {
+      className: cn(
+        'h-16 flex items-center gap-3 rounded-lg shadow-sm relative select-none [-webkit-touch-callout:none]',
+        product.isSelected ? 'bg-secondary/30 ring-2 ring-secondary' : 'bg-secondary/5',
+      ),
+    },
+    on: {
+      // A long press on Android (a right click on desktop).
+      contextmenu: (event: MouseEvent) => {
+        event.preventDefault()
+        if (Opt.isSome(product.changeSelection)) dispatch(product.changeSelection.value)
+      },
+    },
+  }, [
+    expirationBadge(product.status),
+    h('div', { props: { className: 'flex flex-col relative z-20' } }, [
+      h('div', { props: { className: 'px-2' } }, product.name),
+      statusText(product.status),
+    ]),
+  ])
+
+export const view: View<Model, Message, VNode> = (model, dispatch) => {
   const fab = h('div', {
     props: {
       className: cn(
@@ -162,7 +221,11 @@ export const view: View<Model, Message> = (model, dispatch) => {
     },
   }, [
     h('button', {
-      on: { click: dispatchOffer(model.canOpenAddProduct, dispatch) },
+      on: {
+        click: () => {
+          if (Opt.isSome(model.openAddProduct)) dispatch(model.openAddProduct.value)
+        },
+      },
       props: {
         className: 'relative shadow-md bg-red-200 flex items-center justify-evenly rounded-2xl h-16 w-16 text-red-400',
       },
@@ -179,7 +242,11 @@ export const view: View<Model, Message> = (model, dispatch) => {
   }, [
     h('div', { props: { className: 'flex w-full items-center h-16' } }, [
       h('span', {
-        on: { click: dispatchOffer(model.canOpenMenu, dispatch) },
+        on: {
+          click: () => {
+            if (Opt.isSome(model.openMenu)) dispatch(model.openMenu.value)
+          },
+        },
         props: { className: 'px-4 material-symbols-rounded' },
       }, 'menu'),
       h('div', { props: { className: 'text-2xl font-bold px-2' } }, 'Fridgy'),
@@ -193,51 +260,17 @@ export const view: View<Model, Message> = (model, dispatch) => {
       : undefined,
   ])
 
+  // Invalid and corrupt products are not shown yet (see AGENTS.md, "Refactoring status").
   const productList = model.productListStatus._tag === 'Available'
     ? model.productListStatus.products.flatMap((product) =>
-      product._tag === 'Valid'
-        ? [h('div', {
-          key: product.id,
-          props: {
-            className: cn(
-              'h-16 flex items-center gap-3 rounded-lg shadow-sm relative select-none [-webkit-touch-callout:none]',
-              product.isSelected ? 'bg-secondary/30 ring-2 ring-secondary' : 'bg-secondary/5',
-            ),
-          },
-          on: {
-            // A long press on Android (a right click on desktop).
-            contextmenu: (event: MouseEvent) => {
-              event.preventDefault()
-              if (product.canToggle._tag === 'True') dispatch(product.canToggle.message)
-            },
-          },
-        }, [
-          h('div', {
-            props: {
-              className:
-                'z-20 ml-2 w-12 h-12 rounded-full leading-0 shadow-gray-300 relative shadow-sm bg-secondary flex items-center gap-1 justify-evenly flex-col',
-            },
-          }, [
-            h('div', { props: { className: 'text-white leading-0 font-bold text-lg' } }, '22'),
-            h('div', { props: { className: 'text-white leading-0 text-sm' } }, 'Oct'),
-          ]),
-          h('div', { props: { className: 'flex flex-col' } }, [
-            h('div', { props: { className: 'px-2 rounded relative z-20' } }, [h('div', product.name)]),
-            h('div', { props: { className: 'text-xs text-red-400 font-bold px-2 rounded relative z-20' } }, [
-              h('div', 'Expired'),
-            ]),
-          ]),
-        ])]
-        : []
+      product._tag === 'Valid' ? [productRow(product, dispatch)] : []
     )
     : []
 
-  return h('div', {
-    hook: {
-      insert: () => lockScroll(isScrollLocked),
-      update: () => lockScroll(isScrollLocked),
-    },
-  }, [
+  // While a modal or the menu is open, the page behind it does not scroll (see `styles.css`).
+  const isScrollLocked = model.addProduct._tag === 'Open' || model.isMenuOpen
+
+  return h('div', { props: { className: cn({ 'scroll-locked': isScrollLocked }) } }, [
     ...addProductModal(model.addProduct, dispatch),
     ...sideMenu(model, dispatch),
     fab,

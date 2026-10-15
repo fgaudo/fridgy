@@ -8,13 +8,13 @@ import * as Result from 'effect/Result'
 
 import * as NonEmptyHashSet from '@/libs/collections/non-empty-hash-set.ts'
 import * as Engine from '@/libs/elm/engine.ts'
+import * as NormalizedString from '@/libs/strings/normalized-string.ts'
 import * as Domain from '../../../domain/product.ts'
 import type { Notifications } from '../ports/notifications.ts'
 import type { StoredProduct } from '../ports/product-list.ts'
 import type { ProductCommands } from '../../../ports/product-commands.ts'
 import type { Viewport } from '../ports/viewport.ts'
 import * as Cmd from './commands.ts'
-import * as Guards from './guards.ts'
 import { Event, type Message } from './messages.ts'
 import { OperationId, type Product, type State } from './state.ts'
 
@@ -39,9 +39,30 @@ const validate = (stored: StoredProduct): Product =>
 const idsOf = (items: ReadonlyArray<Product>) =>
   HashSet.fromIterable(Arr.flatMap(items, (product) => (product._tag === 'Corrupt' ? [] : [product.id])))
 
+// Conditions shared by several messages. The model learns what is possible by
+// asking `update` itself (see `model.ts`), so these stay private.
+type Editing = Data.TaggedEnum.Value<State['addProduct'], 'Editing'>
+type Selecting = Data.TaggedEnum.Value<State['selection'], 'Selecting'>
+type Loaded = Data.TaggedEnum.Value<State['products'], 'Loaded'>
+type WithSelection = Selecting & { readonly maybeIds: Opt.Some<NonEmptyHashSet.NonEmptyHashSet<string>> }
+
+/** The form is closed, or edited, only while it is not being submitted. */
+const isEditing = (state: State): state is State & { readonly addProduct: Editing } =>
+  state.addProduct._tag === 'Editing'
+
+const canChangeSelection = (
+  state: State,
+): state is State & { readonly products: Loaded; readonly selection: Selecting } =>
+  state.products._tag === 'Loaded' && state.selection._tag === 'Selecting'
+
+const hasSelection = (state: State): state is State & { readonly selection: WithSelection } =>
+  state.selection._tag === 'Selecting' && Opt.isSome(state.selection.maybeIds)
+
+const isSelected = (selection: Selecting, id: string) => Opt.exists(selection.maybeIds, HashSet.has(id))
+
 export const update = Match.typeTags<Message, (state: State) => Transition>()({
   AddProductOpened: () => (state) =>
-    Guards.canOpenAddProduct(state)
+    state.addProduct._tag === 'Closed'
       ? {
         state: {
           ...state,
@@ -52,18 +73,18 @@ export const update = Match.typeTags<Message, (state: State) => Transition>()({
 
   // The form stays open until the submission completes.
   AddProductClosed: () => (state) =>
-    Guards.canEditAddProduct(state) ? { state: { ...state, addProduct: { _tag: 'Closed' } } } : Engine.reject,
+    isEditing(state) ? { state: { ...state, addProduct: { _tag: 'Closed' } } } : Engine.reject,
 
   // While submitting, the content is frozen: the inputs dispatch nothing.
   NameChanged: ({ name }) => (state) =>
-    Guards.canEditAddProduct(state)
+    isEditing(state)
       // The raw text is kept as typed (the input is controlled by the model);
       // whether it is a valid name is decided when adding.
       ? { state: { ...state, addProduct: { ...state.addProduct, maybeName: Opt.some(name) } } }
       : Engine.reject,
 
   ExpirationDateChanged: ({ expiration }) => (state) =>
-    Guards.canEditAddProduct(state)
+    isEditing(state)
       ? {
         state: {
           ...state,
@@ -73,7 +94,7 @@ export const update = Match.typeTags<Message, (state: State) => Transition>()({
       : Engine.reject,
 
   AddProductStarted: () => (state) => {
-    if (!Guards.canStartAdding(state)) {
+    if (!isEditing(state) || !Opt.exists(state.addProduct.maybeName, (name) => Opt.isSome(NormalizedString.fromString(name)))) {
       return Engine.reject
     }
     const operation = state.nextOperation
@@ -128,7 +149,7 @@ export const update = Match.typeTags<Message, (state: State) => Transition>()({
   TimeChanged: ({ now }) => (state) => ({ state: { ...state, maybeNow: Opt.some(now) } }),
 
   ItemSelected: ({ id }) => (state) => {
-    if (!Guards.canSelectItem(id)(state)) {
+    if (!canChangeSelection(state) || isSelected(state.selection, id)) {
       return Engine.reject
     }
     const ids = Opt.match(state.selection.maybeIds, {
@@ -139,7 +160,7 @@ export const update = Match.typeTags<Message, (state: State) => Transition>()({
   },
 
   ItemDeselected: ({ id }) => (state) => {
-    if (!Guards.canDeselectItem(id)(state)) {
+    if (!canChangeSelection(state) || !hasSelection(state) || !isSelected(state.selection, id)) {
       return Engine.reject
     }
     const maybeIds = NonEmptyHashSet.make(HashSet.remove(state.selection.maybeIds.value, id))
@@ -147,14 +168,14 @@ export const update = Match.typeTags<Message, (state: State) => Transition>()({
   },
 
   ClearSelected: () => (state) => {
-    if (!Guards.canClearSelection(state)) {
+    if (!hasSelection(state)) {
       return Engine.reject
     }
     return { state: { ...state, selection: { _tag: 'Selecting', maybeIds: Opt.none() } } }
   },
 
   DeleteStarted: () => (state) => {
-    if (!Guards.canDeleteSelected(state)) {
+    if (!(state.products._tag === 'Loaded' && hasSelection(state))) {
       return Engine.reject
     }
     const operation = state.nextOperation
@@ -183,7 +204,7 @@ export const update = Match.typeTags<Message, (state: State) => Transition>()({
 
   // Asked from the side menu, which closes on the way.
   InfoRequested: () => (state) =>
-    Guards.canRequestInfo(state)
+    state.isMenuOpen
       ? { state: { ...state, isMenuOpen: false }, events: [Event.InfoRequested()] }
       : Engine.reject,
 
@@ -203,9 +224,9 @@ export const update = Match.typeTags<Message, (state: State) => Transition>()({
     }
   },
 
-  MenuOpened: () => (state) => Guards.canOpenMenu(state) ? { state: { ...state, isMenuOpen: true } } : Engine.reject,
+  MenuOpened: () => (state) => !state.isMenuOpen ? { state: { ...state, isMenuOpen: true } } : Engine.reject,
 
-  MenuClosed: () => (state) => Guards.canCloseMenu(state) ? { state: { ...state, isMenuOpen: false } } : Engine.reject,
+  MenuClosed: () => (state) => state.isMenuOpen ? { state: { ...state, isMenuOpen: false } } : Engine.reject,
 
   InteractionChanged: ({ isInteracting }) => (state) => ({ state: { ...state, isInteracting } }),
 

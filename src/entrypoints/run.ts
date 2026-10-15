@@ -10,11 +10,12 @@ import * as Fonts from '@/infra/fonts.ts'
 import { SnabbdomRenderer } from '@/infra/snabbdom-renderer.ts'
 import * as SplashScreen from '@/infra/splash-screen.ts'
 import * as Engine from '@/libs/elm/engine.ts'
+import type { VNode } from 'snabbdom'
 import type { View } from '@/libs/elm/view.ts'
 
 export class RootViews extends Context.Service<
   RootViews,
-  Stream.Stream<View<App.Model, App.Message>>
+  Stream.Stream<View<App.Model, App.Message, VNode>>
 >()('7e2b556446628b98') {}
 
 const program = Effect.gen(function*() {

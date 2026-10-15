@@ -32,6 +32,11 @@ body {
     "Courier New", Courier, monospace;
 }
 
+/* A view marks itself `scroll-locked` while a modal or a menu covers it. */
+body:has(.scroll-locked) {
+  overflow: hidden;
+}
+
 html {
   background-color: var(--color-background);
   color: var(--color-on-background);

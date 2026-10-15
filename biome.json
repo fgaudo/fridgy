@@ -44,6 +44,30 @@
   },
   "overrides": [
     {
+      "includes": ["src/libs/elm/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["fast-check", "**/*.arbitrary.ts", "@/libs/testing/**"],
+                    "message": "Test-only code: fast-check, *.arbitrary.ts and libs/testing may only be imported by *.test.ts and *.arbitrary.ts files."
+                  },
+                  {
+                    "group": ["snabbdom", "snabbdom/**"],
+                    "message": "libs/elm is independent of the renderer: views are generic over their node type, and only the code that renders knows snabbdom."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
       "includes": ["src/app/pages/**"],
       "linter": {
         "rules": {

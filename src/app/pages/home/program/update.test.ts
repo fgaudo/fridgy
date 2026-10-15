@@ -149,6 +149,20 @@ describe('Home update', () => {
       }
     })
 
+    // The model offers what `update` accepts, and accepting is not enough: an
+    // offered action that changes nothing would be a button that does nothing.
+    // Typing is the exception: the input stores what is typed, even when it is
+    // the same text.
+    test('every message the view can dispatch does something', () => {
+      const typed = new Set<Message['_tag']>(['NameChanged', 'ExpirationDateChanged'])
+      assertProperty([state, fc.string()], (before, inputValue) =>
+        dispatchedBy(view, makeModel(before), inputValue).every((msg) => {
+          if (typed.has(msg._tag)) return true
+          const { after, commands, events } = step(msg, before)
+          return !Equal.equals(after, before) || commands.length > 0 || events.length > 0
+        }))
+    })
+
     // A double tap sends the same message twice from the same frame. The second
     // one must be rejected (and then ignored as stale), or change nothing: a
     // message must not carry a decision taken on the state it was rendered from.

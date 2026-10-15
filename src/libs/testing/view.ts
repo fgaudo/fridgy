@@ -8,7 +8,7 @@ import type { View } from '@/libs/elm/view.ts'
  * handlers dispatch. Hooks are not run: they only touch the DOM.
  */
 export const dispatchedBy = <Model, Message>(
-  view: View<Model, Message>,
+  view: View<Model, Message, VNode>,
   model: Model,
   inputValue = '',
 ): ReadonlyArray<Message> => {

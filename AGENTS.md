@@ -24,16 +24,28 @@ refactoring (see "Refactoring status"). A map of the source tree is in `src/READ
    (Effects that return an optional message: `None` for effects that only act on the outside world) and
    *subscriptions* (Streams of messages). The primitives are in
    `src/libs/elm/`: `engine.ts` (`Update`, `Step`, `Command`, `Emitter`, `make`, imported as `Engine`),
-   `program.ts` (pages and the root expose a `Program`; children are lifted into parents with `embed`) and
-   `view.ts` (views are pure `(model, dispatch) => VNode` functions). A page never acts on its parent: it
+   `program.ts` (pages and the root expose a `Program`; children are lifted into parents with `embed`),
+   `offer.ts` (`Offered`, `Offer`, `offered`: see rule 4) and `view.ts` (views are pure
+   `(model, dispatch) => Node` functions, generic over the node the renderer draws, and `dispatch` only takes `Offered` messages). `libs/elm` knows nothing of snabbdom (enforced by biome): pages, the root view and the renderer instantiate `View<Model, Message, VNode>`. A page never acts on its parent: it
    returns *events* (the Elm "OutMsg" pattern, e.g. `InfoRequested`, `LeaveRequested`), declared as a public
    `Event` type, and the parent handles them in `embed`'s `onEvent`, which the types require whenever the
    child has events.
 4. **Rejection.** When a message makes no sense in the current state, `update` returns `Engine.reject`
-   (never a log or a "wrong state" command). Actions that are only sometimes possible are exposed by the
-   model (`canX: { _tag: 'True', message } | { _tag: 'False' }`), and the view dispatches them only from
-   there. The conditions live in `program/guards.ts`, used by **both** `update` (to accept or reject) and
-   `makeModel` (to offer or not), so the two cannot disagree. The engine numbers states (revisions) and
+   (never a log or a "wrong state" command). The view never builds messages: the model *offers* them, as
+   `Offer<Message>` fields (`Option<Offered<Message>>`, from `libs/elm/offer.ts`) named after the action
+   (`openMenu`, `deleteSelected`, …). `Dispatch` only takes `Offered` messages, a brand that only `offered`
+   makes, so a view that dispatches anything else does not compile (it imports `Message` as a type only).
+   `makeModel` decides an offer by asking `update` itself: `offered(update, state)(message)` is
+   `Some(message)` exactly when `update(message)(state)` is not rejected (`update` is pure, and its commands
+   only describe effects), so the model and `update` cannot disagree by construction. The conditions
+   therefore live only in `update` (private helpers when several messages share one). The model may offer
+   *less* than `update` accepts (a UI condition on top, e.g. `Opt.filter`), never more. Messages carrying
+   what the user types or picks are offered as `InputOffer<Value, Message>` by `offeredInput`, which asks
+   with the current value: what is typed is never a reason to reject (`update` stores it as is, and validity
+   becomes model data, e.g. `submit` not offered). A parent view lifts a child's dispatch with
+   `mapDispatch(dispatch, wrap)`, passing the same `wrap` the child is embedded with: that is what keeps the
+   wrapped message offered, and the types cannot check it.
+   The engine numbers states (revisions) and
    remembers which revision every view message comes from: a message rejected for the *current* revision means
    the view sent something `update` does not accept — a bug, so the engine dies with `RejectedMessage`; a
    message rejected for an *older* revision (a click on an outdated frame, a double tap), or coming from a
@@ -42,14 +54,15 @@ refactoring (see "Refactoring status"). A map of the source tree is in `src/READ
    what keeps the engine from dying by mistake. Snabbdom hooks must not dispatch messages `update` may reject.
 
    A view message never carries a decision taken on the state it was rendered from: no toggles. Name the
-   intent (`MenuOpened` / `MenuClosed`, `ItemSelected` / `ItemDeselected`), give each a guard, and let the
-   model offer whichever applies. Only then is a double tap (the same message twice from one frame)
-   harmless: the second one is rejected, so it is ignored as stale, whereas a toggle accepted twice undoes
-   itself. A view message without a guard must make sense, and do the same thing, in every state; one that
-   would be accepted while changing nothing (e.g. typing into a form being submitted) gets a guard
-   instead, and the view does not attach its handler. Each page's `update.test.ts` checks that every
-   message the view can dispatch acts once when sent twice (no second change, command or event). Home's
-   view imports `Message` as a type only: every message it dispatches comes from the model.
+   intent (`MenuOpened` / `MenuClosed`, `ItemSelected` / `ItemDeselected`), have `update` reject it when
+   it does not apply, and let the model offer whichever is accepted (e.g.
+   `Opt.orElse(offer(ItemSelected), () => offer(ItemDeselected))`). Only then is a double tap (the same
+   message twice from one frame) harmless: the second one is rejected, so it is ignored as stale, whereas a
+   toggle accepted twice undoes itself. Since "accepted" is all the model can see, `update` rejects a view
+   message that would change nothing (e.g. typing into a form being submitted) instead of accepting it as a
+   no-op. Each page's `update.test.ts` checks that every message the view can dispatch does something
+   (changes the state, or returns commands or events; typed input excepted) and acts once when sent twice
+   (no second change, command or event).
 
    Asynchronous operations get an id from the state (`nextOperation`), the state remembers the operation in
    progress (e.g. `Deleting { operation }`, `Submitting { operation }`), and the
@@ -75,7 +88,7 @@ refactoring (see "Refactoring status"). A map of the source tree is in `src/READ
    They are separate files on purpose: the view is bundled on its own for hot reload, and each setup must
    only pull in its own dependencies. Privately, a page contains:
    - `program/` — the Elm program: `messages.ts` (`ExternalMessage`, `Message`, `Event`), `state.ts`,
-     `model.ts` (`Model` + `makeModel`), `update.ts` (`update` + `init`), `guards.ts`, `subs.ts`, `commands.ts`
+     `model.ts` (`Model` + `makeModel`), `update.ts` (`update` + `init`), `subs.ts`, `commands.ts`
    - `domain/` — domain types and logic only this page uses (the app's entities live in `src/app/domain/`,
      see rule 7)
    - `ports/<capability>.ts` — one `Context.Service` per external capability (e.g. `Viewport`,
@@ -134,9 +147,8 @@ refactoring (see "Refactoring status"). A map of the source tree is in `src/READ
 9. **State ≠ Model**, both in pages and in the root.
    - `State`: everything the program needs (versions, internal flags, raw data, …).
    - `Model`: the public projection of `State` for the view, containing only the data it needs.
-     Available actions are exposed in the Model as tagged enums carrying the message to dispatch
-     (e.g. `canDeleteSelected: { _tag: 'True', deleteMessage } | { _tag: 'False' }`), decided with the
-     page's guards, so the view makes no logic decisions (see rule 4).
+     Available actions are offers carrying the message to dispatch (e.g. `deleteSelected: Offer<Message>`, `None`
+     when `update` would reject it), so the view makes no logic decisions (see rule 4).
 10. **`src/infrastructure/`** (alias `@/infra/*`): everything adapters and entrypoints need to reach data
    and the platform (sqlite/wasm worker, sql helper and migrations, the in-memory store, snabbdom renderer,
    hot module loader, css refresher, …). Pages depend on their own ports; page adapters use the
@@ -146,7 +158,7 @@ refactoring (see "Refactoring status"). A map of the source tree is in `src/READ
 11. **`src/libs/`** (alias `@/libs/*`): generic code only, with no knowledge of the app domain. Organized
     in one folder per module; files of the same module import each other relatively, other modules via the
     alias:
-    - `elm/` — engine, program composition, view types
+    - `elm/` — engine, program composition, offers (`Offered` brand), view types
     - `numbers/` — branded `Integer`, `PositiveInteger`, `UnitInterval` (each module may have a
       `*.arbitrary.ts` companion for tests)
     - `collections/` — `NonEmptyHashSet`, and an arbitrary for non-empty arrays
@@ -236,5 +248,8 @@ kept) and `reload-page` otherwise.
 Some parts are still inconsistent:
 - the `about` page is a skeleton (licenses and a random saying); some sayings contain `<br />`, shown as
   text;
+- Home's view only shows `Valid` products: `Invalid` ones (stored with an id, but not a valid product)
+  and `Corrupt` ones (no id) are in the model, and counted in `total`, but not rendered, so the item count
+  can exceed the rows shown and an invalid product cannot be selected or deleted from the UI.
 
 When an item in this section is resolved, update this file.

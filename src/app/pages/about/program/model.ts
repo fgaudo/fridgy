@@ -1,9 +1,13 @@
 import type * as Data from 'effect/Data'
 import * as Opt from 'effect/Option'
+import { type Offer, offered } from '@/libs/elm/offer.ts'
 import type { License } from '../ports/licenses.ts'
+import { Message } from './messages.ts'
 import type { State } from './state.ts'
+import { update } from './update.ts'
 
 export type Model = Readonly<{
+  back: Offer<Message>
   licenses: Data.TaggedEnum<{
     Loading: object
     Loaded: Readonly<{ items: ReadonlyArray<License> }>
@@ -13,6 +17,7 @@ export type Model = Readonly<{
 }>
 
 export const makeModel = (state: State): Model => ({
+  back: offered(update, state)(Message.BackPressed()),
   licenses: state.licenses,
   saying: state.saying._tag === 'Picked' ? Opt.getOrElse(state.saying.maybeSaying, () => '') : '',
 })
