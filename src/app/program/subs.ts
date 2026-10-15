@@ -5,7 +5,7 @@ import type * as Engine from '@/libs/elm/engine.ts'
 import { Shell } from '../ports/shell.ts'
 import { Message } from './messages.ts'
 import type { State } from './state.ts'
-import { about, type Deps, home } from './update.ts'
+import { about, type Deps, home } from './navigation.ts'
 
 const backButton = Stream.unwrap(Effect.map(Effect.service(Shell), ({ backButton }) => backButton)).pipe(
   Stream.map(() => Message.BackRequested()),

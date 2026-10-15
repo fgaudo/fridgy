@@ -5,8 +5,8 @@ import * as HashSet from 'effect/HashSet'
 import * as Opt from 'effect/Option'
 import * as Result from 'effect/Result'
 import * as fc from 'fast-check'
-import type { VNode } from 'snabbdom'
 import * as Engine from '@/libs/elm/engine.ts'
+import { dispatchedBy } from '@/libs/testing/view.ts'
 import * as Domain from '../domain/product.ts'
 import type { StoredProduct } from '../ports/products.ts'
 import { view } from '../view.ts'
@@ -73,29 +73,6 @@ const step = (msg: Message, before: State) => {
   return result
 }
 
-/**
- * Renders the real view for `state` and fires every event handler in the tree,
- * with a fake event whose target holds `inputValue`. Returns the messages the
- * handlers dispatch. Hooks are not run: they only touch the DOM.
- */
-const dispatchedByView = (before: State, inputValue: string): ReadonlyArray<Message> => {
-  const dispatched: Array<Message> = []
-  const visit = (node: VNode | string | undefined): void => {
-    if (node === undefined || typeof node === 'string') return
-    for (const [type, handler] of Object.entries(node.data?.on ?? {})) {
-      // oxlint-disable-next-line typescript/no-unsafe-type-assertion
-      const event = { type, target: { value: inputValue } } as unknown as Event
-      if (typeof handler === 'function') {
-        // oxlint-disable-next-line typescript/no-unsafe-type-assertion
-        ;(handler as (this: VNode, event: Event, vnode: VNode) => void).call(node, event, node)
-      }
-    }
-    for (const child of node.children ?? []) visit(child)
-  }
-  visit(view(makeModel(before), (message) => dispatched.push(message)))
-  return dispatched
-}
-
 /** `after` equals `before` except, at most, for the given top-level keys. */
 const onlyChanged = (before: State, after: State, ...keys: ReadonlyArray<keyof State>) =>
   Equal.equals(after, { ...before, ...Object.fromEntries(keys.map((key) => [key, after[key]])) })
@@ -146,14 +123,14 @@ describe('Home update', () => {
   describe('view and update agree', () => {
     test('every message the view can dispatch is accepted', () => {
       assertProperty([state, fc.string()], (before, inputValue) =>
-        dispatchedByView(before, inputValue).every((msg) => !rejects(msg, before)))
+        dispatchedBy(view, makeModel(before), inputValue).every((msg) => !rejects(msg, before)))
     })
 
     // Guards against the property passing only because the view dispatches
     // nothing interesting: at least one message that `update` can reject must
     // be reachable from the view.
     test('the view reaches messages that update can reject', () => {
-      const tags = new Set(fc.sample(state, 1_000).flatMap((s) => dispatchedByView(s, '').map((msg) => msg._tag)))
+      const tags = new Set(fc.sample(state, 1_000).flatMap((s) => dispatchedBy(view, makeModel(s)).map((msg) => msg._tag)))
       expect(tags.has('AddProductStarted')).toBe(true)
       expect(tags.has('NameChanged')).toBe(true)
     })

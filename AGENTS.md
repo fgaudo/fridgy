@@ -82,12 +82,14 @@ refactoring (see "Refactoring status"). A map of the source tree is in `src/READ
    `src/app` may import; `program/`, `pages/` and, when the root needs outside services, `ports/` and
    `adapters/` are private (enforced by biome).
    Inside `src/app` files use relative imports, and the root reaches each page only through the page's
-   public files. Pages are **lifted into the root** with `embed` (e.g. `GotHomeMsg`, subscription keys prefixed by
-   the page name). The root owns navigation: a stack of page states (the last one is shown), changed only
-   when a page emits an event; Android's back button (`Shell` port) is forwarded to the shown page as
-   `BackPressed`, which closes what it has open or asks to be left, and leaving the last page exits the app.
-   A page is found wherever it is in the stack, so hidden pages still receive their completions; the root `*.layer.ts` files merge the root adapters with
-   the matching page setups.
+   public files. Pages are **lifted into the root** with `embed` (e.g. `GotHomeMsg`, subscription keys
+   prefixed by the page name). The root owns navigation: a stack of page states (the last one is shown),
+   changed only when a page emits an event; Android's back button (`Shell` port) is forwarded to the shown
+   page as `BackPressed`, which closes what it has open or asks to be left, and leaving the last page exits
+   the app. A page is found wherever it is in the stack, so hidden pages still receive their completions.
+   The stack helpers, the page embeds and the reactions to page events live in `program/navigation.ts`;
+   `program/state.ts` only holds the types. The root `*.layer.ts` files merge the root adapters with the
+   matching page setups.
 8. **Entrypoints in `src/entrypoints/`**: the only place that knows about environments. They also own
    the boot of the host shell: `run.ts` hides the splash screen (`src/infrastructure/splash-screen.ts`) once
    the renderer reports the first view displayed (`onFirstPaint`) and its fonts are loaded
@@ -116,7 +118,9 @@ refactoring (see "Refactoring status"). A map of the source tree is in `src/READ
     - `strings/` — `NormalizedString`
     - `ui/` — `cn` (clsx + tailwind-merge)
     - `dynamic-import/` — `saferImport`
-    - `testing/` — Exit assertions for tests
+    - `option/` — the `Option` arbitrary (`maybe` in tests)
+    - `testing/` — test-only helpers: `view.ts` (`dispatchedBy`, which fires every handler of a rendered
+      view), the `bun test` preload, Exit assertions
     - `types/` — type-level utilities
 12. **Runs locally**: the app must be runnable in a local browser (not only on Android).
 13. **View hot reload**: in dev, `scripts/cli.ts watch` rebuilds and notifies over WebSocket; the
@@ -124,6 +128,19 @@ refactoring (see "Refactoring status"). A map of the source tree is in `src/READ
     re-imports the root view module (`src/app/view.ts`) and `CssRefresher` reloads the CSS. Global state
     survives the reload because it lives in the engine, not in the view. When moving files,
     **update the paths in `scripts/cli.ts`** (entrypoints, view entrypoint and watched folders).
+
+## When the app grows
+
+- **Large views**: split a page view into private components under `view/` (e.g. `view/product-list.ts`),
+  keeping `view.ts` as the public facade, like `program.ts` and `program/`. Hot reload still works: it
+  reloads the root view with everything it imports.
+- **Shared ports and domain**: ports (e.g. `Viewport`, `Notifications`) and domain types (e.g. `Product`)
+  live in the page that uses them. When a second page needs one, move it to a shared layer (e.g.
+  `src/app/shared/` with `domain/`, `ports/`, `adapters/`) instead of copying it, and document here what
+  that layer may contain and who may import it.
+- **Navigation**: with three or four pages, consider an app-level page descriptor (not in `libs/elm`)
+  gathering what navigation needs from each page (back message, title, …), instead of growing the
+  exhaustive `Match`es in the root.
 
 ## Code conventions
 
@@ -145,7 +162,8 @@ refactoring (see "Refactoring status"). A map of the source tree is in `src/READ
   does not satisfy one yet, keep it as `test.failing` with the bug in its name, so the suite stays green and
   flags the fix.
 - Every page's `update.test.ts` checks that the view and `update` agree (rule 4): it renders the real view
-  for arbitrary states, fires every event handler and asserts `update` accepts what they dispatch. Rejections
+  for arbitrary states, fires every event handler (`dispatchedBy` from `src/libs/testing/view.ts`) and
+  asserts `update` accepts what they dispatch. Rejections
   are asserted explicitly (`Engine.isRejected`), never as "state unchanged". `bun test` preloads
   `src/libs/testing/preload.ts` (see `bunfig.toml`), which declares the `window` global snabbdom reads.
 - Tests may import a page's private files (biome allows it for `*.test.ts` only): a test drives a page

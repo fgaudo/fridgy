@@ -2,12 +2,13 @@ import { describe, expect, test } from 'bun:test'
 import * as Equal from 'effect/Equal'
 import * as Opt from 'effect/Option'
 import * as fc from 'fast-check'
-import type { VNode } from 'snabbdom'
 import * as Engine from '@/libs/elm/engine.ts'
+import { dispatchedBy } from '@/libs/testing/view.ts'
 import { view } from '../view.ts'
 import { Event, Message } from './messages.ts'
 import { makeModel } from './model.ts'
-import { licenses, maybe, state } from './state.arbitrary.ts'
+import { licenses, state } from './state.arbitrary.ts'
+import { arbitrary as maybe } from '@/libs/option/option.arbitrary.ts'
 import type { State } from './state.ts'
 import { update } from './update.ts'
 
@@ -23,25 +24,6 @@ const step = (msg: Message, before: State) => {
   return { after: result.state, commands: result.commands ?? [] }
 }
 
-/** Renders the real view and fires every event handler, returning what they dispatch. */
-const dispatchedByView = (before: State): ReadonlyArray<Message> => {
-  const dispatched: Array<Message> = []
-  const visit = (node: VNode | string | undefined): void => {
-    if (node === undefined || typeof node === 'string') return
-    for (const [type, handler] of Object.entries(node.data?.on ?? {})) {
-      // oxlint-disable-next-line typescript/no-unsafe-type-assertion
-      const event = { type, target: { value: '' } } as unknown as Event
-      if (typeof handler === 'function') {
-        // oxlint-disable-next-line typescript/no-unsafe-type-assertion
-        ;(handler as (this: VNode, event: Event, vnode: VNode) => void).call(node, event, node)
-      }
-    }
-    for (const child of node.children ?? []) visit(child)
-  }
-  visit(view(makeModel(before), (msg) => dispatched.push(msg)))
-  return dispatched
-}
-
 describe('About update', () => {
   test('is total and deterministic', () => {
     fc.assert(fc.property(state, message, (before, msg) => {
@@ -55,7 +37,7 @@ describe('About update', () => {
 
   test('every message the view can dispatch is accepted', () => {
     fc.assert(fc.property(state, (before) =>
-      dispatchedByView(before).every((msg) => !Engine.isRejected(update(msg)(before)))))
+      dispatchedBy(view, makeModel(before)).every((msg) => !Engine.isRejected(update(msg)(before)))))
   })
 
   test('LicensesLoaded stores the licenses and touches nothing else', () => {

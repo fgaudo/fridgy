@@ -2,6 +2,7 @@
 // (pages included) are private.
 import type * as Program from '@/libs/elm/program.ts'
 import type { Message } from './program/messages.ts'
+import type { Deps } from './program/navigation.ts'
 import { type Model, makeModel } from './program/model.ts'
 import type { State } from './program/state.ts'
 import * as Subs from './program/subs.ts'
@@ -11,7 +12,7 @@ export type { Message } from './program/messages.ts'
 export type { Model } from './program/model.ts'
 export type { State } from './program/state.ts'
 
-export type Deps = Update.Deps
+export type { Deps }
 
 export const program: Program.Program<State, Model, Message, Deps> = {
   init: Update.init,

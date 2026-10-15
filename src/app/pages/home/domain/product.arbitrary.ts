@@ -1,11 +1,9 @@
 import * as DateTime from 'effect/DateTime'
 import * as Opt from 'effect/Option'
 import * as fc from 'fast-check'
+import { arbitrary as maybe } from '@/libs/option/option.arbitrary.ts'
 import * as NormalizedString from '@/libs/strings/normalized-string.arbitrary.ts'
 import * as Product from './product.ts'
-
-const maybe = <A>(arbitrary: fc.Arbitrary<A>): fc.Arbitrary<Opt.Option<A>> =>
-  fc.option(arbitrary, { nil: undefined }).map((value) => (value === undefined ? Opt.none() : Opt.some(value)))
 
 const millis = fc.integer({ min: 0, max: 4_102_444_800_000 })
 const date = millis.map((ms) => DateTime.makeUnsafe(ms))

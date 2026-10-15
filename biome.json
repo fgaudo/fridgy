@@ -31,8 +31,8 @@
                 "message": "Page subfolders are private: import only the modules at the root of the page (program.ts, view.ts, *.layer.ts)."
               },
               {
-                "group": ["fast-check", "**/*.arbitrary.ts"],
-                "message": "Test-only code: fast-check and *.arbitrary.ts may only be imported by *.test.ts and *.arbitrary.ts files."
+                "group": ["fast-check", "**/*.arbitrary.ts", "@/libs/testing/**"],
+                "message": "Test-only code: fast-check, *.arbitrary.ts and libs/testing may only be imported by *.test.ts and *.arbitrary.ts files."
               }
             ]
           }

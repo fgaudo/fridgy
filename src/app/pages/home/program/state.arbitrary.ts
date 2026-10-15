@@ -1,13 +1,10 @@
 import * as DateTime from 'effect/DateTime'
-import * as Opt from 'effect/Option'
 import * as fc from 'fast-check'
+import { arbitrary as maybe } from '@/libs/option/option.arbitrary.ts'
 import * as NonEmptyHashSet from '@/libs/collections/non-empty-hash-set.arbitrary.ts'
 import * as ProductArbitrary from '../domain/product.arbitrary.ts'
 import type { StoredProduct } from '../ports/products.ts'
 import { OperationId, type Product, type State } from './state.ts'
-
-export const maybe = <A>(arbitrary: fc.Arbitrary<A>): fc.Arbitrary<Opt.Option<A>> =>
-  fc.option(arbitrary, { nil: undefined }).map((value) => (value === undefined ? Opt.none() : Opt.some(value)))
 
 // A small id space, so that selections and product lists overlap often.
 export const id: fc.Arbitrary<string> = fc.constantFrom('1', '2', '3', '4', '5', '6')

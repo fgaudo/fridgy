@@ -1,10 +1,7 @@
-import * as Opt from 'effect/Option'
 import * as fc from 'fast-check'
+import { arbitrary as maybe } from '@/libs/option/option.arbitrary.ts'
 import type { License } from '../ports/licenses.ts'
 import type { State } from './state.ts'
-
-export const maybe = <A>(arbitrary: fc.Arbitrary<A>): fc.Arbitrary<Opt.Option<A>> =>
-  fc.option(arbitrary, { nil: undefined }).map((value) => (value === undefined ? Opt.none() : Opt.some(value)))
 
 export const license: fc.Arbitrary<License> = fc.record({
   packageName: fc.string({ minLength: 1 }),
