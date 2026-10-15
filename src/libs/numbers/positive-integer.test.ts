@@ -1,26 +1,27 @@
-import { assert, describe, prop } from '@effect/vitest'
+import { describe, expect, test } from 'bun:test'
+import * as Opt from 'effect/Option'
+import * as fc from 'fast-check'
+import * as PositiveInteger from './positive-integer.ts'
 
-import * as H from '@/libs/testing/exit-assertions.ts'
-import * as Positive from './positive-integer.ts'
+describe('PositiveInteger', () => {
+  test('accepts every positive integer, unchanged', () => {
+    fc.assert(fc.property(fc.integer({ min: 1 }), (n) => Opt.getOrUndefined(PositiveInteger.fromNumber(n)) === n))
+  })
 
-describe.concurrent('positive integer', () => {
-	prop('should be ok', [H.FC.integer({ min: 1 })], ([integer], { expect }) => {
-		const result = Positive.fromNumber(integer)
-		assert(result._tag === 'Some', 'Could not parse number')
-		expect(result.value).toStrictEqual(integer)
-	})
+  test('rejects zero and negative integers', () => {
+    fc.assert(fc.property(fc.integer({ max: 0 }), (n) => Opt.isNone(PositiveInteger.fromNumber(n))))
+  })
 
-	prop('should return none', [H.FC.integer({ max: 0 })], ([integer]) => {
-		const result = Positive.fromNumber(integer)
-		assert(result._tag === 'None', 'Number should not be valid')
-	})
+  test('rejects positive non-integers', () => {
+    fc.assert(fc.property(
+      fc.double({ min: 0, noNaN: true, noDefaultInfinity: true }).filter((n) => !Number.isInteger(n)),
+      (n) => Opt.isNone(PositiveInteger.fromNumber(n)),
+    ))
+  })
 
-	prop('should be ok', [H.FC.integer({ min: 1 })], ([integer], { expect }) => {
-		const number = Positive.unsafeFromNumber(integer)
-		expect(number).toStrictEqual(integer)
-	})
-
-	prop('should crash', [H.FC.integer({ max: 0 })], ([integer], { expect }) => {
-		expect(() => Positive.unsafeFromNumber(integer)).toThrowError()
-	})
+  test('the unsafe constructor throws on zero and negative integers', () => {
+    fc.assert(fc.property(fc.integer({ max: 0 }), (n) => {
+      expect(() => PositiveInteger.fromNumberUnsafe(n)).toThrow()
+    }))
+  })
 })

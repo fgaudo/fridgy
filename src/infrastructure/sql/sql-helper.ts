@@ -2,14 +2,13 @@ import * as Context from 'effect/Context'
 import * as Effect from 'effect/Effect'
 import { flow } from 'effect/Function'
 import * as Layer from 'effect/Layer'
-import * as RequestResolver from 'effect/RequestResolver'
 import * as Schema from 'effect/Schema'
 import * as SchemaX from 'effect/schema'
 import * as Sql from 'effect/sql'
 import * as Integer from '@/libs/numbers/integer.ts'
 import { ProductExpirationSchema, ProductSchema } from './schema.ts'
 
-export class Product extends SchemaX.Model.Class<Product>('Product')({
+class Product extends SchemaX.Model.Class<Product>('Product')({
   [ProductSchema.columns.id]: SchemaX.Model.Field({
     select: Integer.Schema,
     update: Integer.Schema,
@@ -19,7 +18,7 @@ export class Product extends SchemaX.Model.Class<Product>('Product')({
   [ProductSchema.columns.creationDate]: Schema.DateTimeUtcFromString,
 }) {}
 
-export class ProductExpiration extends SchemaX.Model.Class<ProductExpiration>(
+class ProductExpiration extends SchemaX.Model.Class<ProductExpiration>(
   'ProductExpiration',
 )({
   [ProductExpirationSchema.columns.id]: SchemaX.Model.Field({

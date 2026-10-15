@@ -1,29 +1,22 @@
-import { assert, describe, prop } from '@effect/vitest'
+import { describe, expect, test } from 'bun:test'
+import * as Opt from 'effect/Option'
+import * as fc from 'fast-check'
+import * as Integer from './integer.ts'
 
-import * as H from '@/libs/testing/exit-assertions.ts'
-import { fromNumber, unsafeFromNumber } from './integer.ts'
+const nonInteger = fc.double({ noNaN: true, noDefaultInfinity: true }).filter((n) => !Number.isInteger(n))
 
-describe.concurrent('integer', () => {
-	prop('should be ok', [H.FC.integer()], ([integer], { expect }) => {
-		const result = fromNumber(integer)
-		assert(result._tag === 'Some', 'Could not parse number')
-		expect(result.value).toStrictEqual(integer)
-	})
+describe('Integer', () => {
+  test('accepts every integer, unchanged', () => {
+    fc.assert(fc.property(fc.integer(), (n) => Opt.getOrUndefined(Integer.fromNumber(n)) === n))
+  })
 
-	prop('should be ok', [H.FC.integer()], ([integer], { expect }) => {
-		const number = unsafeFromNumber(integer)
-		expect(number).toStrictEqual(integer)
-	})
+  test('rejects every non-integer', () => {
+    fc.assert(fc.property(nonInteger, (n) => Opt.isNone(Integer.fromNumber(n))))
+  })
 
-	prop(
-		'should crash',
-		[
-			H.FC.oneof(H.FC.float(), H.FC.double()).filter(
-				value => !Number.isInteger(value),
-			),
-		],
-		([integer], { expect }) => {
-			expect(() => unsafeFromNumber(integer)).toThrowError()
-		},
-	)
+  test('the unsafe constructor throws on a non-integer', () => {
+    fc.assert(fc.property(nonInteger, (n) => {
+      expect(() => Integer.fromNumberUnsafe(n)).toThrow()
+    }))
+  })
 })

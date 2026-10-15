@@ -10,7 +10,6 @@ import * as Update from './program/update.ts'
 
 export type { Message } from './program/messages.ts'
 export type { Model } from './program/model.ts'
-export type { State } from './program/state.ts'
 
 export type { Deps }
 

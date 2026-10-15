@@ -114,14 +114,17 @@ refactoring (see "Refactoring status"). A map of the source tree is in `src/READ
     - `elm/` — engine, program composition, view types
     - `numbers/` — branded `Integer`, `PositiveInteger`, `UnitInterval` (each module may have a
       `*.arbitrary.ts` companion for tests)
-    - `collections/` — `NonEmptyArray`, `NonEmptyHashSet` helpers
+    - `collections/` — `NonEmptyHashSet`, and an arbitrary for non-empty arrays
     - `strings/` — `NormalizedString`
     - `ui/` — `cn` (clsx + tailwind-merge)
     - `dynamic-import/` — `saferImport`
     - `option/` — the `Option` arbitrary (`maybe` in tests)
     - `testing/` — test-only helpers: `view.ts` (`dispatchedBy`, which fires every handler of a rendered
-      view), the `bun test` preload, Exit assertions
-    - `types/` — type-level utilities
+      view) and the `bun test` preload
+
+    Branded types expose `fromNumber` (or `make`), returning an `Option`, and `fromNumberUnsafe` (or
+    `makeUnsafe`), which throws: the latter only for values that are valid by construction. Export only what
+    another module uses, plus the public API a library module is meant to offer.
 12. **Runs locally**: the app must be runnable in a local browser (not only on Android).
 13. **View hot reload**: in dev, `scripts/cli.ts watch` rebuilds and notifies over WebSocket; the
     development entrypoint (`src/entrypoints/development.ts`, via `src/infrastructure/hot-module.ts`)
@@ -198,7 +201,5 @@ kept) and `reload-page` otherwise.
 Some parts are still inconsistent:
 - the `about` page is a skeleton (licenses and a random saying); some sayings contain `<br />`, shown as
   text;
-- older tests (`src/libs/numbers/*.test.ts`) use `vitest`/`@effect/vitest` and
-  Effect v3 APIs and do not compile; port them to `bun:test` + `fast-check`.
 
 When an item in this section is resolved, update this file.

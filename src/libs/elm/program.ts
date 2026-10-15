@@ -13,18 +13,18 @@ export interface Program<State, Model, Message, R, Event = never, K = unknown> {
   readonly makeModel: (state: State) => Model
 }
 
-export const mapCommands = <A, B, R>(
+const mapCommands = <A, B, R>(
   commands: ReadonlyArray<Engine.Command<A, R>>,
   f: (message: A) => B,
 ): ReadonlyArray<Engine.Command<B, R>> => Arr.map(commands, Effect.map(Opt.map(f)))
 
 /** Maps the commands of a step; its events are left to the caller. */
-export const mapStep = <State, A, B, R, Event>(
+const mapStep = <State, A, B, R, Event>(
   { state, commands = [] }: Engine.Step<State, A, R, Event>,
   f: (message: A) => B,
 ): Engine.Step<State, B, R> => ({ state, commands: mapCommands(commands, f) })
 
-export const mapSubscriptions = <A, B, R, K, NewK>(
+const mapSubscriptions = <A, B, R, K, NewK>(
   subscriptions: Engine.Subscriptions<K, A, R>,
   mapKey: (key: K) => NewK,
   mapMessage: (message: A) => B,

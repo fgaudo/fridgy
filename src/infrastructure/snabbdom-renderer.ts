@@ -6,7 +6,7 @@ import * as Snabbdom from 'snabbdom'
 import type * as View from '@/libs/elm/view.ts'
 import * as AnimationFrame from './animation-frame.ts'
 
-export type Frame<Model, Message> = Readonly<{
+type Frame<Model, Message> = Readonly<{
   model: Model
   dispatch: View.Dispatch<Message>
 }>

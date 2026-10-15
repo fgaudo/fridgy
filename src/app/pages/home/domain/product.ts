@@ -87,24 +87,22 @@ export const maybeExpiration = (product: Product) =>
 
 export const name = (product: Product): string => productIso.get(product).name
 
-export const creationDate = (product: Product) => productIso.get(product).creationDate
-
 export const expirationDate = (expiration: Expiration) => expirationIso.get(expiration).expirationDate
 
 const _freshness = (currentDate: DateTime.Utc) => (expiration: Expiration) => {
   const exp = expirationIso.get(expiration)
   if (DateTime.isLessThanOrEqualTo(exp.expirationDate, currentDate)) {
-    return UnitInterval.unsafeFromNumber(0)
+    return UnitInterval.fromNumberUnsafe(0)
   }
   if (DateTime.isLessThanOrEqualTo(exp.expirationDate, exp.creationDate)) {
-    return UnitInterval.unsafeFromNumber(0)
+    return UnitInterval.fromNumberUnsafe(0)
   }
   if (DateTime.isLessThan(currentDate, exp.creationDate)) {
-    return UnitInterval.unsafeFromNumber(1)
+    return UnitInterval.fromNumberUnsafe(1)
   }
   const remainingDuration = DateTime.distance(currentDate, exp.expirationDate)
   const totalDuration = DateTime.distance(exp.creationDate, exp.expirationDate)
-  return UnitInterval.unsafeFromNumber(Duration.toMillis(remainingDuration) / Duration.toMillis(totalDuration))
+  return UnitInterval.fromNumberUnsafe(Duration.toMillis(remainingDuration) / Duration.toMillis(totalDuration))
 }
 
 const _timeLeft = (currentDate: DateTime.Utc) => (expiration: Expiration) => {
