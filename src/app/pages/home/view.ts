@@ -1,7 +1,9 @@
 import { h, type VNode } from 'snabbdom'
 import { cn } from '@/libs/ui/class-names.ts'
-import type { View } from '@/libs/elm/view.ts'
+import type { Dispatch, View } from '@/libs/elm/view.ts'
 import { InternalMessage } from './program/messages.ts'
+
+type HomeDispatch = Dispatch<InternalMessage>
 import type { Model } from './program/model.ts'
 
 function lockScroll(isLocked: boolean) {
@@ -12,7 +14,7 @@ const inputValue = (event: Event) => (event.target as HTMLInputElement).value
 
 const addProductModal = (
   addProduct: Model['addProduct'],
-  dispatch: (message: InternalMessage) => void,
+  dispatch: HomeDispatch,
 ): ReadonlyArray<VNode> => {
   if (addProduct._tag === 'Closed') {
     return []
@@ -59,6 +61,7 @@ const addProductModal = (
             className: 'w-full bg-white focus:inset-ring-1 shadow-md rounded-md p-3',
             type: 'text',
             value: addProduct.name,
+            disabled: addProduct.isSubmitting,
           },
           on: {
             input: (event) => dispatch(InternalMessage.NameChanged({ name: inputValue(event) })),
@@ -72,6 +75,7 @@ const addProductModal = (
             className: 'w-full bg-white focus:inset-ring-1 shadow-md rounded-md p-3',
             type: 'date',
             value: addProduct.expirationDate,
+            disabled: addProduct.isSubmitting,
           },
           on: {
             input: (event) => dispatch(InternalMessage.ExpirationDateChanged({ expiration: inputValue(event) })),
@@ -92,14 +96,14 @@ const addProductModal = (
             }
           },
         },
-      }, 'Add'),
+      }, addProduct.isSubmitting ? 'Adding…' : 'Add'),
     ]),
   ]
 }
 
 const sideMenu = (
   isMenuOpen: boolean,
-  dispatch: (message: InternalMessage) => void,
+  dispatch: HomeDispatch,
 ): ReadonlyArray<VNode> =>
   isMenuOpen
     ? [

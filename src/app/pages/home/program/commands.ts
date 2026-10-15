@@ -10,6 +10,7 @@ import type * as NonEmptyHashSet from '@/libs/collections/non-empty-hash-set.ts'
 import * as NormalizedString from '@/libs/strings/normalized-string.ts'
 import * as Product from '../domain/product.ts'
 import { InternalMessage } from './messages.ts'
+import type { OperationId } from './state.ts'
 import { Notifications } from '../ports/notifications.ts'
 import * as Products from '../ports/products.ts'
 import { Viewport } from '../ports/viewport.ts'
@@ -80,13 +81,15 @@ const mapRawToDto = Effect.fn(
 )
 
 export const validateProducts = Effect.fn(function*(
+  validation: OperationId,
   inputs: Data.TaggedEnum.Value<InternalMessage, 'ProductsChanged'>['result'],
 ) {
   if (Result.isFailure(inputs)) {
-    return InternalMessage.ProductsValidated({ result: Result.fail(undefined) })
+    return InternalMessage.ProductsValidated({ validation, result: Result.fail(undefined) })
   }
   const results = yield* mapRawToDto(inputs.success)
   return InternalMessage.ProductsValidated({
+    validation,
     result: Result.succeed(
       Arr.isReadonlyArrayNonEmpty(results)
         ? Opt.some(results)
@@ -96,8 +99,10 @@ export const validateProducts = Effect.fn(function*(
 })
 
 export const deleteProducts = Effect.fn(function*({
+  operation,
   ids,
 }: {
+  operation: OperationId
   ids: NonEmptyHashSet.NonEmptyHashSet<string>
 }) {
   const { deleteById } = yield* Products.Products
@@ -110,13 +115,14 @@ export const deleteProducts = Effect.fn(function*({
   )
   if (Opt.isNone(maybeDeleted)) {
     yield* Effect.logWarning('Could not delete products')
-    return InternalMessage.DeleteProductsCompleted({ succeeded: false })
+    return InternalMessage.DeleteProductsCompleted({ operation, succeeded: false })
   }
   yield* Effect.logInfo('Products deleted')
-  return InternalMessage.DeleteProductsCompleted({ succeeded: true })
+  return InternalMessage.DeleteProductsCompleted({ operation, succeeded: true })
 }, Effect.withLogSpan('DeleteProducts'))
 
 export const addProduct = Effect.fn(function*(
+  operation: OperationId,
   productData: {
     maybeExpirationDate: Opt.Option<DateTime.Utc>
     maybeName: Opt.Option<string>
@@ -131,7 +137,7 @@ export const addProduct = Effect.fn(function*(
   })
   if (Opt.isNone(maybeProduct)) {
     yield* Effect.logWarning('Product is invalid')
-    return InternalMessage.AddProductCompleted({ succeeded: false })
+    return InternalMessage.AddProductCompleted({ operation, succeeded: false })
   }
   const product = maybeProduct.value
   yield* Effect.logInfo(`Attempting to add product "${Product.name(product)}"...`)
@@ -142,20 +148,10 @@ export const addProduct = Effect.fn(function*(
   )
   if (Opt.isNone(maybeId)) {
     yield* Effect.logWarning('Could not add the product')
-    return InternalMessage.AddProductCompleted({ succeeded: false })
+    return InternalMessage.AddProductCompleted({ operation, succeeded: false })
   }
   yield* Effect.logInfo(`Successfully added product with id ${maybeId.value}`)
-  return InternalMessage.AddProductCompleted({ succeeded: true })
-})
-
-export const notifyWrongState = Effect.fn(function*(message: { _tag: string }) {
-  yield* Effect.logError(`Triggered ${message._tag} in wrong state`)
-  return InternalMessage.NoOp()
-})
-
-export const notifyStale = Effect.fn(function*(message: { _tag: string }) {
-  yield* Effect.logInfo(`Triggered stale ${message._tag}`)
-  return InternalMessage.NoOp()
+  return InternalMessage.AddProductCompleted({ operation, succeeded: true })
 })
 
 export const scrollToTop = Effect.gen(function*() {

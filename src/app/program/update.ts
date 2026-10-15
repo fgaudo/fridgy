@@ -23,7 +23,7 @@ export const home = Program.embed(Home.program, {
 
 export const update: Engine.Update<State, InternalMessage, Deps> = Match.typeTags<
   InternalMessage,
-  (state: State) => Engine.Step<State, InternalMessage, Deps>
+  (state: State) => Engine.Transition<State, InternalMessage, Deps>
 >()({
   GotHomeMsg: ({ message }) => home.update(message),
 

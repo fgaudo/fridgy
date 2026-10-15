@@ -3,7 +3,7 @@ import * as Effect from 'effect/Effect'
 import * as HashMap from 'effect/HashMap'
 import * as Opt from 'effect/Option'
 import * as Stream from 'effect/Stream'
-import type * as Engine from './engine.ts'
+import * as Engine from './engine.ts'
 
 /**
  * Everything a page (or the root) exposes to the runtime, except the view.
@@ -60,12 +60,16 @@ export const embed = <ParentState, ParentMessage, ChildState, ChildMessage, R, K
   /** Maps the child's init commands; the caller places the child state. */
   init: (step: Engine.Step<ChildState, ChildMessage, R>) => mapStep(step, wrap),
 
-  update: (message: ChildMessage) => (state: ParentState): Engine.Step<ParentState, ParentMessage, R> =>
+  update: (message: ChildMessage) => (state: ParentState): Engine.Transition<ParentState, ParentMessage, R> =>
     Opt.match(get(state), {
-      // The child is gone: its in-flight messages are stale.
-      onNone: () => ({ state }),
+      // The child is not active: its messages make no sense here.
+      onNone: (): Engine.Rejected => Engine.reject,
       onSome: (childState) => {
-        const step = mapStep(child.update(message)(childState), wrap)
+        const result = child.update(message)(childState)
+        if (Engine.isRejected(result)) {
+          return result
+        }
+        const step = mapStep(result, wrap)
         return { ...step, state: set(state, step.state) }
       },
     }),

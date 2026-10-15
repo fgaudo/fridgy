@@ -1,4 +1,5 @@
 import * as Cause from 'effect/Cause'
+import * as Data from 'effect/Data'
 import * as Effect from 'effect/Effect'
 import * as FiberMap from 'effect/FiberMap'
 import * as FiberSet from 'effect/FiberSet'
@@ -16,9 +17,45 @@ export type Step<State, Message, R> = Readonly<{
   commands?: ReadonlyArray<Command<Message, R>>
 }>
 
+/**
+ * What `update` returns for a message that makes no sense in the current state.
+ *
+ * The engine decides what a rejection means from where the message came from:
+ * - from the view rendered for the *current* state: the view offered an action
+ *   that `update` does not accept, i.e. the model and `update` disagree. It is a
+ *   bug, and the engine dies with `RejectedMessage`.
+ * - from the view rendered for an *older* state (a click on a frame that was
+ *   already outdated, a double tap, …), or from a command or subscription: the
+ *   message is stale and is ignored.
+ */
+export const reject: unique symbol = Symbol.for('@fgaudo/elm/Rejected')
+export type Rejected = typeof reject
+
+export const isRejected = (result: unknown): result is Rejected => result === reject
+
+/** What `update` returns: the next step, or a rejection. */
+export type Transition<State, Message, R> = Step<State, Message, R> | Rejected
+
 export type Update<State, Message, R> = (
   message: Message,
-) => (state: State) => Step<State, Message, R>
+) => (state: State) => Transition<State, Message, R>
+
+/** Counts the states produced by the engine: every accepted message creates a new revision. */
+export type Revision = number
+
+export type Revisioned<State> = Readonly<{ state: State; revision: Revision }>
+
+/** The defect raised when the current view dispatches a message that `update` rejects. */
+export class RejectedMessage extends Data.TaggedError('RejectedMessage')<{
+  readonly message: unknown
+  readonly revision: Revision
+}> {}
+
+type Origin = Readonly<{ _tag: 'View'; revision: Revision }> | Readonly<{ _tag: 'Program' }>
+
+type Envelope<Message> = Readonly<{ message: Message; origin: Origin }>
+
+const fromProgram: Origin = { _tag: 'Program' }
 
 export type Subscriptions<K, Message, R> = HashMap.HashMap<
   K,
@@ -37,13 +74,18 @@ export type Emitter<State, Message, R, K = unknown> = (
  * messages.
  */
 export interface Engine<State, Message> {
-  /** Emits the current state, then every following state. */
-  readonly state$: Stream.Stream<State>
-  /** Enqueues a message. Meant to be called from DOM event handlers. */
-  readonly dispatch: (message: Message) => void
+  /** Emits the current state with its revision, then every following one. */
+  readonly state$: Stream.Stream<Revisioned<State>>
+  /**
+   * Returns the dispatch for a view rendered from the state with the given
+   * revision: the revision travels with every message it enqueues, so that a
+   * rejected message can be told apart as a bug or as stale.
+   */
+  readonly dispatchFrom: (revision: Revision) => (message: Message) => void
   /**
    * Never succeeds. Fails with the first defect raised by `update`, a command
-   * or a subscription, so whoever runs the program can let it crash.
+   * or a subscription, or with `RejectedMessage`, so whoever runs the program
+   * can let it crash.
    */
   readonly await: Effect.Effect<never>
 }
@@ -89,15 +131,15 @@ export const make = Effect.fn('Engine.make')(function*<State, Message, R, S, K>(
   const maybeMakeDefectMessage = Opt.fromUndefinedOr(makeDefectMessage)
   const context = yield* Effect.context<R | S>()
   const queue = yield* Effect.acquireRelease(
-    Queue.unbounded<Message>(),
+    Queue.unbounded<Envelope<Message>>(),
     Queue.shutdown,
   )
   // The loop and the commands. A defect in any of them fails `join`.
   const fibers = yield* FiberSet.make<unknown, never>()
   const subscriptionFibers = yield* FiberMap.make<K, void, never>()
-  const stateRef = yield* SubscriptionRef.make(initState)
+  const stateRef = yield* SubscriptionRef.make<Revisioned<State>>({ state: initState, revision: 0 })
 
-  const offer = (message: Message) => Queue.offer(queue, message)
+  const offer = (message: Message) => Queue.offer(queue, { message, origin: fromProgram })
 
   const runCommand = (command: Command<Message, R>) =>
     Opt.match(maybeMakeDefectMessage, {
@@ -140,11 +182,19 @@ export const make = Effect.fn('Engine.make')(function*<State, Message, R, S, K>(
 
   const step = Effect.fn(function*(
     active: HashSet.HashSet<K>,
-    message: Message,
+    { message, origin }: Envelope<Message>,
   ) {
-    const state = yield* SubscriptionRef.get(stateRef)
-    const { state: newState, commands = [] } = update(message)(state)
-    yield* SubscriptionRef.set(stateRef, newState)
+    const { state, revision } = yield* SubscriptionRef.get(stateRef)
+    const result = update(message)(state)
+    if (isRejected(result)) {
+      if (origin._tag === 'View' && origin.revision === revision) {
+        return yield* Effect.die(new RejectedMessage({ message, revision }))
+      }
+      yield* Effect.logDebug('Ignored a stale message', message)
+      return active
+    }
+    const { state: newState, commands = [] } = result
+    yield* SubscriptionRef.set(stateRef, { state: newState, revision: revision + 1 })
     const nextActive = yield* reconcile(active, newState)
     yield* Effect.forEach(commands, runCommand, { discard: true })
     return nextActive
@@ -156,8 +206,7 @@ export const make = Effect.fn('Engine.make')(function*<State, Message, R, S, K>(
   yield* Effect.gen(function*() {
     let active = initialActive
     while (true) {
-      const message = yield* Queue.take(queue)
-      active = yield* step(active, message)
+      active = yield* step(active, yield* Queue.take(queue))
     }
   }).pipe(FiberSet.run(fibers))
 
@@ -166,8 +215,8 @@ export const make = Effect.fn('Engine.make')(function*<State, Message, R, S, K>(
       FiberSet.join(fibers),
       FiberMap.join(subscriptionFibers),
     ).pipe(Effect.andThen(Effect.never)),
-    dispatch: (message) => {
-      Queue.offerUnsafe(queue, message)
+    dispatchFrom: (revision) => (message) => {
+      Queue.offerUnsafe(queue, { message, origin: { _tag: 'View', revision } })
     },
     state$: SubscriptionRef.changes(stateRef),
   } satisfies Engine<State, Message>

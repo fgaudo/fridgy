@@ -24,9 +24,12 @@ const program = Effect.gen(function*() {
   yield* Effect.raceFirst(
     engine.await,
     renderer.render({
-      model$: Stream.map(engine.state$, App.program.makeModel),
+      // Each model is drawn with a dispatch that remembers its revision.
+      frame$: Stream.map(engine.state$, ({ state, revision }) => ({
+        model: App.program.makeModel(state),
+        dispatch: engine.dispatchFrom(revision),
+      })),
       view$: views,
-      dispatch: engine.dispatch,
     }),
   )
 })

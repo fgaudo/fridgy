@@ -1,13 +1,45 @@
 import * as Arr from 'effect/Array'
 import type * as Data from 'effect/Data'
-import type * as DateTime from 'effect/DateTime'
+import * as DateTime from 'effect/DateTime'
 import type * as Duration from 'effect/Duration'
 import * as HashSet from 'effect/HashSet'
 import * as Opt from 'effect/Option'
-import type * as PositiveInteger from '@/libs/numbers/positive-integer.ts'
+import * as PositiveInteger from '@/libs/numbers/positive-integer.ts'
 import type * as UnitInterval from '@/libs/numbers/unit-interval.ts'
+import * as Guards from './guards.ts'
 import { InternalMessage } from './messages.ts'
-import * as State from './state.ts'
+import type * as State from './state.ts'
+
+/** An action the view may trigger, with the message to dispatch, or not. */
+type Availability<Fields> = Readonly<{ _tag: 'True' } & Fields> | Readonly<{ _tag: 'False' }>
+
+type ProductModel = Data.TaggedEnum<{
+  Corrupt: Readonly<{
+    canToggle: Data.TaggedEnum<{ False: object }>
+    maybeName: Opt.Option<string>
+  }>
+  Invalid: Readonly<{
+    canToggle: Availability<{ message: InternalMessage }>
+    isSelected: boolean
+    id: string
+    maybeName: Opt.Option<string>
+  }>
+  Valid: Readonly<{
+    canToggle: Availability<{ message: InternalMessage }>
+    id: string
+    isSelected: boolean
+    name: string
+    status: Data.TaggedEnum<{
+      Everlasting: object
+      Stale: Readonly<{ expirationDate: DateTime.Utc }>
+      Fresh: Readonly<{
+        expirationDate: DateTime.Utc
+        timeLeft: Duration.Duration
+        freshnessRatio: UnitInterval.UnitInterval
+      }>
+    }>
+  }>
+}>
 
 export type Model = Readonly<{
   isMenuOpen: boolean
@@ -18,189 +50,105 @@ export type Model = Readonly<{
     Open: {
       name: string
       expirationDate: string | number
-      isSubmittable: Data.TaggedEnum<{
-        True: { submit: InternalMessage }
-        False: object
-      }>
+      isSubmitting: boolean
+      isSubmittable: Availability<{ submit: InternalMessage }>
     }
     Closed: object
   }>
   productListStatus: Data.TaggedEnum<{
-    Initial: { activity: 'fetching' | 'idle' | 'adding' }
-    Error: { activity: 'fetching' | 'idle' | 'adding' }
-    Empty: { activity: 'fetching' | 'idle' | 'adding' }
+    Initial: object
+    Error: object
+    Empty: object
     Available: Readonly<{
-      activity: 'fetching' | 'idle' | 'deleting' | 'adding'
-      canDeleteSelected: Data.TaggedEnum<{
-        True: Readonly<{
-          deleteMessage: InternalMessage
-        }>
-        False: object
-      }>
-      canClearSelection: Data.TaggedEnum<{
-        True: Readonly<{
-          clearMessage: InternalMessage
-        }>
-        False: object
-      }>
+      isDeleting: boolean
+      canDeleteSelected: Availability<{ deleteMessage: InternalMessage }>
+      canClearSelection: Availability<{ clearMessage: InternalMessage }>
       total: PositiveInteger.PositiveInteger
-      products: Arr.NonEmptyReadonlyArray<
-        Data.TaggedEnum<{
-          Corrupt: Readonly<{
-            canToggle: Data.TaggedEnum<{ False: object }>
-            maybeName: Opt.Option<string>
-          }>
-          Invalid: Readonly<{
-            canToggle: Data.TaggedEnum<{
-              True: Readonly<{ message: InternalMessage }>
-              False: object
-            }>
-            isSelected: boolean
-            id: string
-            maybeName: Opt.Option<string>
-          }>
-          Valid: Readonly<{
-            canToggle: Data.TaggedEnum<{
-              True: Readonly<{ message: InternalMessage }>
-              False: object
-            }>
-            id: string
-            isSelected: boolean
-            name: string
-            status: Data.TaggedEnum<{
-              Everlasting: object
-              Stale: Readonly<{ expirationDate: DateTime.Utc }>
-              Fresh: Readonly<{
-                expirationDate: DateTime.Utc
-                timeLeft: Duration.Duration
-                freshnessRatio: UnitInterval.UnitInterval
-              }>
-            }>
-          }>
-        }>
-      >
+      products: Arr.NonEmptyReadonlyArray<ProductModel>
     }>
   }>
 }>
 
-export function makeModel(state: State.State): Model {
-  if (state.productListData._tag === 'Initial') {
-    return {
-      addProduct: { _tag: 'Closed' },
-      isViewportAtTop: state.isViewportAtTop,
-      isMenuOpen: state.isMenuOpen,
-      isInteracting: state.isInteracting,
-      canNavigateOut: true,
-      productListStatus: {
-        _tag: 'Initial',
-        activity: state.productListData.activity,
-      },
-    } satisfies Model
+const makeAddProduct = (state: State.State): Model['addProduct'] => {
+  if (state.addProduct._tag === 'Closed') {
+    return { _tag: 'Closed' }
   }
-  const addProduct: Model['addProduct'] = state.addProduct._tag === 'Closed' ? { ...state.addProduct } : {
-    ...state.addProduct,
-    isSubmittable: state.addProduct.isSubmittable
-      ? { _tag: 'True', submit: InternalMessage.AddProductStarted() } as const
-      : { _tag: 'False' } as const,
-    name: Opt.getOrElse(state.addProduct.maybeName, () => ''),
-    expirationDate: Opt.map(
-      state.addProduct.maybeExpirationDate,
-      () => '',
-    ).pipe(Opt.getOrElse(
-      () => '',
-    )),
-  }
-
-  if (state.productListData._tag !== 'Available') {
-    return {
-      addProduct,
-      isViewportAtTop: state.isViewportAtTop,
-      isMenuOpen: state.isMenuOpen,
-      isInteracting: state.isInteracting,
-      canNavigateOut: true,
-      productListStatus: state.productListData,
-    } satisfies Model
-  }
-  const productListData = state.productListData
   return {
-    addProduct,
-    isViewportAtTop: state.isViewportAtTop,
-    isMenuOpen: state.isMenuOpen,
-    isInteracting: state.isInteracting,
-    canNavigateOut: state.productListData.activity !== 'deleting',
-    productListStatus: {
-      _tag: state.productListData._tag,
-      activity: state.productListData.activity,
-      canClearSelection: state.productListData.activity !== 'deleting'
-          && state.productListData.activity !== 'fetching'
-        ? { _tag: 'True', clearMessage: InternalMessage.ClearSelected() }
-        : { _tag: 'False' },
-      canDeleteSelected: state.productListData.activity !== 'deleting'
-          && state.productListData.activity !== 'fetching'
-        ? {
-          _tag: 'True',
-          deleteMessage: InternalMessage.DeleteStarted(),
-        }
-        : { _tag: 'False' },
-      products: Arr.map(
-        state.productListData.products,
-        (
-          product,
-        ): Data.TaggedEnum.Value<
-          Model['productListStatus'],
-          'Available'
-        >['products'][0] => {
-          if (product._tag === 'Corrupt') {
-            return {
-              _tag: 'Corrupt',
-              canToggle: { _tag: 'False' },
-              maybeName: product.maybeName,
-            }
+    _tag: 'Open',
+    name: Opt.getOrElse(state.addProduct.maybeName, () => ''),
+    // The format of `<input type="date">`.
+    expirationDate: Opt.match(state.addProduct.maybeExpirationDate, {
+      onNone: () => '',
+      onSome: DateTime.formatIsoDateUtc,
+    }),
+    isSubmitting: state.addProduct._tag === 'Submitting',
+    isSubmittable: Guards.canStartAdding(state)
+      ? { _tag: 'True', submit: InternalMessage.AddProductStarted() }
+      : { _tag: 'False' },
+  }
+}
+
+const makeProductList = (state: State.State): Model['productListStatus'] => {
+  if (state.products._tag === 'Loading') {
+    return { _tag: 'Initial' }
+  }
+  if (state.products._tag === 'Failed') {
+    return { _tag: 'Error' }
+  }
+  const items = state.products.items
+  if (!Arr.isReadonlyArrayNonEmpty(items)) {
+    return { _tag: 'Empty' }
+  }
+  const selection = state.selection
+  const isSelected = (id: string) =>
+    selection._tag === 'Deleting'
+      ? HashSet.has(selection.ids, id)
+      : Opt.exists(selection.maybeIds, HashSet.has(id))
+  const canToggle = (id: string) =>
+    Guards.canToggleItems(state)
+      ? { _tag: 'True', message: InternalMessage.ItemToggled({ id }) } as const
+      : { _tag: 'False' } as const
+  return {
+    _tag: 'Available',
+    isDeleting: selection._tag === 'Deleting',
+    canDeleteSelected: Guards.canDeleteSelected(state)
+      ? { _tag: 'True', deleteMessage: InternalMessage.DeleteStarted() }
+      : { _tag: 'False' },
+    canClearSelection: Guards.canClearSelection(state)
+      ? { _tag: 'True', clearMessage: InternalMessage.ClearSelected() }
+      : { _tag: 'False' },
+    total: PositiveInteger.fromNumberUnsafe(items.length),
+    products: Arr.map(items, (product): ProductModel => {
+      switch (product._tag) {
+        case 'Corrupt':
+          return { _tag: 'Corrupt', canToggle: { _tag: 'False' }, maybeName: product.maybeName }
+        case 'Invalid':
+          return {
+            _tag: 'Invalid',
+            canToggle: canToggle(product.id),
+            id: product.id,
+            isSelected: isSelected(product.id),
+            maybeName: product.maybeName,
           }
-          if (product._tag === 'Invalid') {
-            return {
-              _tag: 'Invalid',
-              canToggle: productListData.activity !== 'deleting'
-                  && productListData.activity === 'fetching'
-                ? {
-                  _tag: 'True',
-                  message: InternalMessage.ItemToggled({
-                    id: product.id,
-                  }),
-                }
-                : { _tag: 'False' },
-              id: product.id,
-              isSelected: Opt.isSome(productListData.maybeSelectedProducts)
-                && HashSet.has(
-                  productListData.maybeSelectedProducts.value,
-                  product.id,
-                ),
-              maybeName: product.maybeName,
-            }
-          }
+        case 'Valid':
           return {
             _tag: 'Valid',
-            canToggle: productListData.activity !== 'deleting'
-                && productListData.activity === 'fetching'
-              ? {
-                _tag: 'True',
-                message: InternalMessage.ItemToggled({
-                  id: product.id,
-                }),
-              }
-              : { _tag: 'False' },
+            canToggle: canToggle(product.id),
             id: product.id,
-            isSelected: Opt.isSome(productListData.maybeSelectedProducts)
-              && HashSet.has(
-                productListData.maybeSelectedProducts.value,
-                product.id,
-              ),
+            isSelected: isSelected(product.id),
             name: product.name,
             status: product.status,
           }
-        },
-      ),
-      total: productListData.total,
-    },
-  } satisfies Model
+      }
+    }),
+  }
 }
+
+export const makeModel = (state: State.State): Model => ({
+  isMenuOpen: state.isMenuOpen,
+  isInteracting: state.isInteracting,
+  isViewportAtTop: state.isViewportAtTop,
+  canNavigateOut: state.selection._tag !== 'Deleting',
+  addProduct: makeAddProduct(state),
+  productListStatus: makeProductList(state),
+})
