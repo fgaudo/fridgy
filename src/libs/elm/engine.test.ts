@@ -18,7 +18,6 @@ const make = (initCommands: ReadonlyArray<Engine.Command<Message, never>> = []) 
     subscriptions: () => HashMap.empty(),
   })
 
-/** Waits until the engine reaches the given revision. */
 const revision = (engine: Engine.Engine<number, Message>, target: Engine.Revision) =>
   engine.state$.pipe(
     Stream.filter(({ revision }) => revision >= target),

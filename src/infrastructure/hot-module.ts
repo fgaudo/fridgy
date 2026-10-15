@@ -7,12 +7,6 @@ import * as Socket from 'effect/socket/Socket'
 import { CssRefresher } from '@/infra/css-refresher.ts'
 import { saferImport } from '@/libs/dynamic-import/safer-import.ts'
 
-/**
- * Imports the module at `path`, then re-imports it (and refreshes the CSS)
- * every time the dev server sends a message on the socket.
- *
- * The module is returned as `unknown`: the caller knows its shape.
- */
 export const watch = Effect.fn('HotModule.watch')(function*(path: string) {
   const refreshCss = yield* CssRefresher
   const socket = yield* Socket.Socket

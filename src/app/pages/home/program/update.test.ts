@@ -19,20 +19,12 @@ import { makeModel } from './model.ts'
 import { OperationId, type Product, type State } from './state.ts'
 import { update } from './update.ts'
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
 type ValidProduct = Data.TaggedEnum.Value<Product, 'Valid'>
 type ValidatedResult = Data.TaggedEnum.Value<InternalMessage, 'ProductsValidated'>['result']
 type ValidatedProduct = Data.TaggedEnum.Value<InternalMessage, 'ProductsValidated'> extends {
   result: Result.Result<Opt.Option<ReadonlyArray<infer P>>, void>
 } ? P
   : never
-
-// ---------------------------------------------------------------------------
-// Arbitraries
-// ---------------------------------------------------------------------------
 
 const maybe = <A>(arbitrary: fc.Arbitrary<A>): fc.Arbitrary<Opt.Option<A>> =>
   fc.option(arbitrary, { nil: undefined }).map((value) => (value === undefined ? Opt.none() : Opt.some(value)))
@@ -141,10 +133,6 @@ const message: fc.Arbitrary<InternalMessage> = fc.oneof(
   fc.constant(InternalMessage.NoOp()),
 )
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
 type Outcome =
   | Readonly<{ rejected: true }>
   | Readonly<{ rejected: false; after: State; commands: ReadonlyArray<unknown> }>
@@ -158,7 +146,6 @@ const outcome = (msg: InternalMessage, before: State): Outcome => {
 
 const rejects = (msg: InternalMessage, before: State) => outcome(msg, before).rejected
 
-/** The outcome of a message that must be accepted: a rejection fails the property. */
 const step = (msg: InternalMessage, before: State) => {
   const result = outcome(msg, before)
   if (result.rejected) {
@@ -203,10 +190,6 @@ const assertProperty = <Ts extends [unknown, ...Array<unknown>]>(
   arbitraries: { [K in keyof Ts]: fc.Arbitrary<Ts[K]> },
   predicate: (...args: Ts) => boolean,
 ) => fc.assert(fc.property<Ts>(...[...arbitraries, predicate] as const))
-
-// ---------------------------------------------------------------------------
-// Properties
-// ---------------------------------------------------------------------------
 
 describe('Home update', () => {
   describe('in general', () => {

@@ -10,7 +10,6 @@ import * as Guards from './guards.ts'
 import { InternalMessage } from './messages.ts'
 import type * as State from './state.ts'
 
-/** An action the view may trigger, with the message to dispatch, or not. */
 type Availability<Fields> = Readonly<{ _tag: 'True' } & Fields> | Readonly<{ _tag: 'False' }>
 
 type ProductModel = Data.TaggedEnum<{

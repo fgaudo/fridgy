@@ -10,7 +10,6 @@ import { SnabbdomRenderer } from '@/infra/snabbdom-renderer.ts'
 import * as Engine from '@/libs/elm/engine.ts'
 import type { View } from '@/libs/elm/view.ts'
 
-/** Where the root view comes from: built in, or hot reloaded. */
 export class RootViews extends Context.Service<
   RootViews,
   Stream.Stream<View<App.Model, App.InternalMessage>>
@@ -24,7 +23,6 @@ const program = Effect.gen(function*() {
   yield* Effect.raceFirst(
     engine.await,
     renderer.render({
-      // Each model is drawn with a dispatch that remembers its revision.
       frame$: Stream.map(engine.state$, ({ state, revision }) => ({
         model: App.program.makeModel(state),
         dispatch: engine.dispatchFrom(revision),

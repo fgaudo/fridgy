@@ -1,5 +1,4 @@
-// Development entrypoint: data in memory, the root view hot reloaded from `view.js`
-// (built separately by `scripts/cli.ts watch`), debug logs.
+// `view.js` is built separately by `scripts/cli.ts watch`.
 import * as Browser from '@effect/platform-browser'
 import * as Effect from 'effect/Effect'
 import * as Layer from 'effect/Layer'

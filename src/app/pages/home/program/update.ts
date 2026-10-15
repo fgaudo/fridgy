@@ -22,15 +22,10 @@ const ProductEnum = Data.taggedEnum<Product>()
 
 type Transition = Engine.Transition<State, InternalMessage, Deps>
 
-/** Ids that can be referenced: every product except the corrupt ones. */
 const idsOf = (items: ReadonlyArray<Product>) =>
   HashSet.fromIterable(Arr.flatMap(items, (product) => (product._tag === 'Corrupt' ? [] : [product.id])))
 
 export const update = Match.typeTags<InternalMessage, (state: State) => Transition>()({
-  // ---------------------------------------------------------------------------
-  // The "add a product" form
-  // ---------------------------------------------------------------------------
-
   AddProductToggled: () => (state) => {
     switch (state.addProduct._tag) {
       case 'Closed':
@@ -95,7 +90,6 @@ export const update = Match.typeTags<InternalMessage, (state: State) => Transiti
     }
   },
 
-  // Success closes the form; failure gives it back, as it was, to retry.
   AddProductCompleted: ({ operation, succeeded }) => (state) => {
     if (state.addProduct._tag !== 'Submitting' || state.addProduct.operation !== operation) {
       return Engine.reject
@@ -108,10 +102,6 @@ export const update = Match.typeTags<InternalMessage, (state: State) => Transiti
         commands: [Cmd.showToast('Could not add the product')],
       }
   },
-
-  // ---------------------------------------------------------------------------
-  // The product list
-  // ---------------------------------------------------------------------------
 
   // Every change is validated by a command; only the latest validation counts,
   // so that results arriving out of order cannot overwrite newer data.
@@ -130,8 +120,6 @@ export const update = Match.typeTags<InternalMessage, (state: State) => Transiti
     if (Result.isFailure(result)) {
       return { state: { ...state, products: { _tag: 'Failed' } } }
     }
-    // Invalid products that still have an id can be selected and deleted; the
-    // ones without an id cannot be referenced at all.
     const items = Opt.match(result.success, {
       onNone: (): ReadonlyArray<Product> => [],
       onSome: Arr.map((product): Product =>
@@ -147,8 +135,6 @@ export const update = Match.typeTags<InternalMessage, (state: State) => Transiti
       state: {
         ...state,
         products: { _tag: 'Loaded', items },
-        // The selection keeps the products that still exist; a deletion in
-        // progress is left alone.
         selection: state.selection._tag === 'Selecting'
           ? {
             _tag: 'Selecting',
@@ -161,10 +147,6 @@ export const update = Match.typeTags<InternalMessage, (state: State) => Transiti
       },
     }
   },
-
-  // ---------------------------------------------------------------------------
-  // Selection and deletion
-  // ---------------------------------------------------------------------------
 
   ItemToggled: ({ id }) => (state) => {
     if (!Guards.canToggleItems(state)) {
@@ -203,7 +185,6 @@ export const update = Match.typeTags<InternalMessage, (state: State) => Transiti
     }
   },
 
-  // Success clears the selection; failure gives it back, to retry.
   DeleteProductsCompleted: ({ operation, succeeded }) => (state) => {
     if (state.selection._tag !== 'Deleting' || state.selection.operation !== operation) {
       return Engine.reject
@@ -215,10 +196,6 @@ export const update = Match.typeTags<InternalMessage, (state: State) => Transiti
         commands: [Cmd.showToast('Could not delete the products')],
       }
   },
-
-  // ---------------------------------------------------------------------------
-  // Menu and viewport
-  // ---------------------------------------------------------------------------
 
   MenuToggled: () => (state) => ({ state: { ...state, isMenuOpen: !state.isMenuOpen } }),
 

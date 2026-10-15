@@ -5,12 +5,7 @@ import * as Opt from 'effect/Option'
 import * as Stream from 'effect/Stream'
 import * as Engine from './engine.ts'
 
-/**
- * Everything a page (or the root) exposes to the runtime, except the view.
- *
- * The view lives in its own module so it can be hot reloaded without
- * touching the program.
- */
+/** The view is not part of it: it lives in its own module, so it can be hot reloaded. */
 export interface Program<State, Model, Message, R, K = unknown> {
   readonly init: Engine.Step<State, Message, R>
   readonly update: Engine.Update<State, Message, R>
@@ -57,12 +52,10 @@ export const embed = <ParentState, ParentMessage, ChildState, ChildMessage, R, K
     set: (state: ParentState, child: ChildState) => ParentState
   },
 ) => ({
-  /** Maps the child's init commands; the caller places the child state. */
   init: (step: Engine.Step<ChildState, ChildMessage, R>) => mapStep(step, wrap),
 
   update: (message: ChildMessage) => (state: ParentState): Engine.Transition<ParentState, ParentMessage, R> =>
     Opt.match(get(state), {
-      // The child is not active: its messages make no sense here.
       onNone: (): Engine.Rejected => Engine.reject,
       onSome: (childState) => {
         const result = child.update(message)(childState)

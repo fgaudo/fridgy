@@ -14,22 +14,18 @@ type WithSelection = Selecting & {
   readonly maybeIds: Opt.Some<NonEmptyHashSet.NonEmptyHashSet<string>>
 }
 
-/** `AddProductStarted`: the form is being edited and its name is valid (not blank). */
 export const canStartAdding = (state: State): state is State & { readonly addProduct: Editing } =>
   state.addProduct._tag === 'Editing'
   && Opt.exists(state.addProduct.maybeName, (name) => Opt.isSome(NormalizedString.fromString(name)))
 
-/** `ItemToggled`: the products are shown and no deletion is in progress. */
 export const canToggleItems = (
   state: State,
 ): state is State & { readonly products: Loaded; readonly selection: Selecting } =>
   state.products._tag === 'Loaded' && state.selection._tag === 'Selecting'
 
-/** `ClearSelected`: there is a selection and it is not being deleted. */
 export const canClearSelection = (state: State): state is State & { readonly selection: WithSelection } =>
   state.selection._tag === 'Selecting' && Opt.isSome(state.selection.maybeIds)
 
-/** `DeleteStarted`: the products are shown, there is a selection and it is not being deleted. */
 export const canDeleteSelected = (
   state: State,
 ): state is State & { readonly products: Loaded; readonly selection: WithSelection } =>

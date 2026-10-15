@@ -12,7 +12,6 @@ import * as Products from '../../ports/products.ts'
 
 const seedNames = ['Milk', 'Meat', 'Cheese', 'Eggs', 'Butter', 'Yogurt', 'Bread']
 
-/** Products kept in memory, seeded with a few items. For tests and local runs without sqlite. */
 export const layer = Layer.effect(
   Products.Products,
   Effect.gen(function*() {

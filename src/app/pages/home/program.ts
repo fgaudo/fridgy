@@ -1,5 +1,5 @@
-// Public API of the Home page, together with `view.ts`, `sqlite.layer.ts`
-// and `in-memory.layer.ts`. Everything in the subfolders is private to the page.
+// Public API of the page, with `view.ts` and the `*.layer.ts` files: the subfolders
+// are private.
 import type * as Program from '@/libs/elm/program.ts'
 import type { InternalMessage } from './program/messages.ts'
 import { type Model, makeModel } from './program/model.ts'

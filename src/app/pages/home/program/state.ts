@@ -48,22 +48,18 @@ export type State = Readonly<{
   isMenuOpen: boolean
   isViewportAtTop: boolean
   isInteracting: boolean
-  /** The id the next asynchronous operation will get. */
   nextOperation: OperationId
   /** The latest validation requested: only its result is applied. */
   latestValidation: Opt.Option<OperationId>
-  /** The product list, as last received. */
   products: Data.TaggedEnum<{
     Loading: object
     Failed: object
     Loaded: Readonly<{ items: ReadonlyArray<Product> }>
   }>
-  /** What the user selected, and the deletion of a selection. */
   selection: Data.TaggedEnum<{
     Selecting: Readonly<{ maybeIds: Opt.Option<NonEmptyHashSet.NonEmptyHashSet<string>> }>
     Deleting: Readonly<{ operation: OperationId; ids: NonEmptyHashSet.NonEmptyHashSet<string> }>
   }>
-  /** The "add a product" form, and the submission of its content. */
   addProduct: Data.TaggedEnum<{
     Closed: object
     Editing: Form

@@ -1,7 +1,6 @@
 import * as fc from 'fast-check'
 import * as Integer from './integer.ts'
 
-/** Generates `Integer`s between `min` and `max` (inclusive), by default the whole safe integer range. */
 export const arbitrary = (
   { min = Number.MIN_SAFE_INTEGER, max = Number.MAX_SAFE_INTEGER }: {
     readonly min?: number

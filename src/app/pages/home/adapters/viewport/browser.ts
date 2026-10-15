@@ -4,7 +4,6 @@ import * as Layer from 'effect/Layer'
 import * as Stream from 'effect/Stream'
 import { Viewport } from '../../ports/viewport.ts'
 
-/** The browser window as the page viewport. */
 export const layer = Layer.succeed(Viewport, {
   isScrolling: Stream.merge(
     fromEventListenerWindow('scroll').pipe(Stream.map(() => true)),

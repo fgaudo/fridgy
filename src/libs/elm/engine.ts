@@ -33,7 +33,6 @@ export type Rejected = typeof reject
 
 export const isRejected = (result: unknown): result is Rejected => result === reject
 
-/** What `update` returns: the next step, or a rejection. */
 export type Transition<State, Message, R> = Step<State, Message, R> | Rejected
 
 export type Update<State, Message, R> = (
@@ -66,15 +65,8 @@ export type Emitter<State, Message, R, K = unknown> = (
   state: State,
 ) => Subscriptions<K, Message, R>
 
-/**
- * A running Elm-style program.
- *
- * The engine owns its message loop: it is started by `make` and lives as long
- * as the scope it was created in. Consumers only observe states and dispatch
- * messages.
- */
+/** The engine owns its message loop: it runs as long as the scope `make` was called in. */
 export interface Engine<State, Message> {
-  /** Emits the current state with its revision, then every following one. */
   readonly state$: Stream.Stream<Revisioned<State>>
   /**
    * Returns the dispatch for a view rendered from the state with the given
@@ -90,7 +82,6 @@ export interface Engine<State, Message> {
   readonly await: Effect.Effect<never>
 }
 
-/** Restarts a subscription that died, after emitting a message for the defect. */
 const makeResilient = <Message, R>(
   stream$: Stream.Stream<Message, never, R>,
   makeDefectMessage: (cause: unknown) => Message,

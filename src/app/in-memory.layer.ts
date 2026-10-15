@@ -3,5 +3,4 @@ import * as Layer from 'effect/Layer'
 import * as ShellCapacitor from './adapters/shell/capacitor.ts'
 import * as Home from './pages/home/in-memory.layer.ts'
 
-/** Like `./sqlite.layer.ts`, but data is kept in memory. */
 export const layer = Layer.mergeAll(ShellCapacitor.layer, Home.layer)

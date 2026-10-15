@@ -6,5 +6,4 @@ import { home } from './update.ts'
 
 export type Deps = Home.Deps
 
-// Merge more pages with HashMap.union as they are added.
 export const subscriptions: Engine.Emitter<State, InternalMessage, Deps> = (state) => home.subscriptions(state)

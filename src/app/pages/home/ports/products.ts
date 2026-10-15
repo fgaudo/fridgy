@@ -11,24 +11,20 @@ export type StoredProduct = ProductInput & {
   maybeId: Opt.Option<string>
 }
 
-/** The whole product list, or a failure to read it. */
 export type Snapshot = Result.Result<ReadonlyArray<StoredProduct>, void>
 
-/** Command: stores a product and succeeds with its id. */
 export interface AddProduct extends Req.Request<string, void> {
   readonly product: ProductOutput
 }
 
 export const AddProduct = Req.of<AddProduct>()
 
-/** Command: deletes the product with the given id. */
 export interface DeleteProductById extends Req.Request<void, void> {
   readonly id: string
 }
 
 export const DeleteProductById = Req.of<DeleteProductById>()
 
-/** Product storage: its commands and its events. */
 export class Products extends Context.Service<
   Products,
   {

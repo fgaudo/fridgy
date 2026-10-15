@@ -18,13 +18,7 @@ const nextAnimationFrame = Effect.callback<void>((resume) => {
 export class SnabbdomRenderer extends Context.Service<
   SnabbdomRenderer,
   {
-    /**
-     * Renders the latest frame with the latest view, at most once per
-     * animation frame. Intermediate frames are dropped, like Elm does.
-     * Each frame pairs a model with the dispatch bound to the state it was
-     * made from. `view$` has a single element in production and a new one on
-     * every hot reload in development.
-     */
+    /** Renders at most once per animation frame: intermediate frames are dropped, like Elm does. */
     render: <Model, Message>(options: {
       frame$: Stream.Stream<Frame<Model, Message>>
       view$: Stream.Stream<View.View<Model, Message>>

@@ -1,4 +1,3 @@
-// Production entrypoint: sqlite, the root view bundled in, informational logs.
 import * as Layer from 'effect/Layer'
 import * as References from 'effect/References'
 import * as Stream from 'effect/Stream'
@@ -11,7 +10,6 @@ import * as AppSqlite from '@/app/sqlite.layer.ts'
 import * as SqlHelper from '@/infra/sql/sql-helper.ts'
 import * as Sqlite from '@/infra/sqlite/layer.ts'
 
-/** The app's sqlite setup, with the infrastructure it needs. */
 const layer = AppSqlite.layer.pipe(
   Layer.provide(SqlHelper.SqlHelper.layer),
   Layer.provide(Sqlite.layer),
