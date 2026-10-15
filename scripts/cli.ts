@@ -19,10 +19,7 @@ const commonBuildConfig = Effect.gen(function*() {
   const resolve = yield* makeRootResolver
 
   return {
-    entrypoints: [
-      resolve('./src/infrastructure/sqlite/sqlite.worker.ts'),
-      resolve('./src/assets/css/styles.css'),
-    ],
+    entrypoints: [resolve('./src/assets/css/styles.css')],
     env: 'inline',
     loader: { '.css': 'css', '.woff2': 'file' },
     naming: {
@@ -44,7 +41,7 @@ const buildDev = Effect.gen(function*() {
       ...config,
       entrypoints: [
         ...config.entrypoints,
-        resolve('./src/main/development.ts'),
+        resolve('./src/entrypoints/development.ts'),
         // Built separately so it can be hot reloaded.
         resolve('./src/app/view.ts'),
       ],
@@ -59,7 +56,11 @@ const buildProd = Effect.gen(function*() {
   yield* Effect.promise(() =>
     Bun.build({
       ...config,
-      entrypoints: [...config.entrypoints, resolve('./src/main/production.ts')],
+      entrypoints: [
+        ...config.entrypoints,
+        resolve('./src/entrypoints/production.ts'),
+        resolve('./src/infrastructure/sqlite/sqlite.worker.ts'),
+      ],
       define: {
         'process.env.NODE_ENV': '"production"',
       },
@@ -82,10 +83,13 @@ const prepareDist = Effect.fn(function*(entry: 'development' | 'production') {
     recursive: true,
   })
   yield* fs.makeDirectory(resolve('./dist'))
-  yield* fs.copyFile(
-    resolve('./node_modules/@effect/wa-sqlite/dist/wa-sqlite.wasm'),
-    resolve('./dist/wa-sqlite.wasm'),
-  )
+  // Only production uses sqlite: development keeps data in memory.
+  if (entry === 'production') {
+    yield* fs.copyFile(
+      resolve('./node_modules/@effect/wa-sqlite/dist/wa-sqlite.wasm'),
+      resolve('./dist/wa-sqlite.wasm'),
+    )
+  }
   const html = yield* fs.readFileString(resolve('./src/assets/index.html'))
   yield* fs.writeFileString(
     resolve('./dist/index.html'),

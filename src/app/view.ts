@@ -3,8 +3,8 @@
 // import views, message constructors and generic helpers.
 import * as Match from 'effect/Match'
 import { h } from 'snabbdom'
-import { InternalMessage } from './core/messages.ts'
-import type { Model } from './core/model.ts'
+import { InternalMessage } from './program/messages.ts'
+import type { Model } from './program/model.ts'
 import * as Home from './pages/home/view.ts'
 import { mapDispatch, type View } from '@/libs/elm/view.ts'
 

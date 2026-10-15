@@ -1,16 +1,16 @@
-// Development entrypoint: sqlite, the root view hot reloaded from `view.js`
+// Development entrypoint: data in memory, the root view hot reloaded from `view.js`
 // (built separately by `scripts/cli.ts watch`), debug logs.
 import * as Browser from '@effect/platform-browser'
 import * as Effect from 'effect/Effect'
 import * as Layer from 'effect/Layer'
 import * as References from 'effect/References'
 import * as Stream from 'effect/Stream'
+import * as AppInMemory from '@/app/in-memory.layer.ts'
 import type * as RootView from '@/app/view.ts'
 import { CssRefresher } from '@/infra/css-refresher.ts'
 import * as HotModule from '@/infra/hot-module.ts'
 import { SnabbdomRenderer } from '@/infra/snabbdom-renderer.ts'
 import { RootViews, run } from './run.ts'
-import * as Sqlite from './sqlite.ts'
 
 const HotRootViews = Layer.effect(
   RootViews,
@@ -29,7 +29,7 @@ const HotRootViews = Layer.effect(
 
 run(
   Layer.mergeAll(
-    Sqlite.layer,
+    AppInMemory.layer,
     HotRootViews,
     SnabbdomRenderer.layer('#root'),
     Layer.succeed(References.MinimumLogLevel, 'Debug'),

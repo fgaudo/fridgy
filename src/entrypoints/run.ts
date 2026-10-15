@@ -14,7 +14,7 @@ import type { View } from '@/libs/elm/view.ts'
 export class RootViews extends Context.Service<
   RootViews,
   Stream.Stream<View<App.Model, App.InternalMessage>>
->()('325f313889b90330') {}
+>()('7e2b556446628b98') {}
 
 const program = Effect.gen(function*() {
   const engine = yield* Engine.make(App.program)

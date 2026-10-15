@@ -1,15 +1,16 @@
-// Public API of the app, together with `view.ts`, `sqlite.ts` and `in-memory.ts`.
+// Public API of the app, together with `view.ts`, `sqlite.layer.ts` and
+// `in-memory.layer.ts`.
 // Everything in the subfolders (pages included) is private to the app.
 import type * as Program from '@/libs/elm/program.ts'
-import type { InternalMessage } from './core/messages.ts'
-import { type Model, makeModel } from './core/model.ts'
-import type { State } from './core/state.ts'
-import * as Subs from './core/subs.ts'
-import * as Update from './core/update.ts'
+import type { InternalMessage } from './program/messages.ts'
+import { type Model, makeModel } from './program/model.ts'
+import type { State } from './program/state.ts'
+import * as Subs from './program/subs.ts'
+import * as Update from './program/update.ts'
 
-export type { InternalMessage, Message } from './core/messages.ts'
-export type { Model } from './core/model.ts'
-export type { State } from './core/state.ts'
+export type { InternalMessage, Message } from './program/messages.ts'
+export type { Model } from './program/model.ts'
+export type { State } from './program/state.ts'
 
 export type Deps = Update.Deps | Subs.Deps
 

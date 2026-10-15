@@ -1,0 +1,34 @@
+// Production entrypoint: sqlite, the root view bundled in, informational logs.
+import * as Layer from 'effect/Layer'
+import * as References from 'effect/References'
+import * as Stream from 'effect/Stream'
+import * as RootView from '@/app/view.ts'
+import { SnabbdomRenderer } from '@/infra/snabbdom-renderer.ts'
+import { RootViews, run } from './run.ts'
+
+import * as ConfigProvider from 'effect/ConfigProvider'
+import * as AppSqlite from '@/app/sqlite.layer.ts'
+import * as SqlHelper from '@/infra/sql/sql-helper.ts'
+import * as Sqlite from '@/infra/sqlite/layer.ts'
+
+/** The app's sqlite setup, with the infrastructure it needs. */
+const layer = AppSqlite.layer.pipe(
+  Layer.provide(SqlHelper.SqlHelper.layer),
+  Layer.provide(Sqlite.layer),
+  Layer.provide(
+    ConfigProvider.layer(
+      ConfigProvider.fromUnknown({
+        sqlite: { workerPath: './sqlite.worker.js' },
+      }),
+    ),
+  ),
+)
+
+run(
+  Layer.mergeAll(
+    layer,
+    Layer.succeed(RootViews, Stream.make(RootView.view)),
+    SnabbdomRenderer.layer('#root'),
+    Layer.succeed(References.MinimumLogLevel, 'Info'),
+  ).pipe(Layer.orDie),
+)

@@ -1,8 +1,8 @@
 import { h, type VNode } from 'snabbdom'
 import { cn } from '@/libs/ui/class-names.ts'
 import type { View } from '@/libs/elm/view.ts'
-import { InternalMessage } from './core/messages.ts'
-import type { Model } from './core/model.ts'
+import { InternalMessage } from './program/messages.ts'
+import type { Model } from './program/model.ts'
 
 function lockScroll(isLocked: boolean) {
   document.body.style.overflow = isLocked ? 'hidden' : ''
