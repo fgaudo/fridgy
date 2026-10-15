@@ -13,6 +13,7 @@ import * as NonEmptyArray from '@/libs/collections/non-empty-array.arbitrary.ts'
 import * as NonEmptyHashSet from '@/libs/collections/non-empty-hash-set.arbitrary.ts'
 import * as Engine from '@/libs/elm/engine.ts'
 import * as UnitInterval from '@/libs/numbers/unit-interval.arbitrary.ts'
+import * as ProductArbitrary from '../domain/product.arbitrary.ts'
 import { view } from '../view.ts'
 import { InternalMessage } from './messages.ts'
 import { makeModel } from './model.ts'
@@ -89,12 +90,7 @@ const stateWith = <K extends keyof State>(key: K, arbitrary: fc.Arbitrary<State[
   fc.tuple(state, arbitrary).map(([base, value]): State => ({ ...base, [key]: value }))
 
 const storedProducts = fc.array(
-  fc.record({
-    maybeId: maybe(id),
-    maybeName: maybe(fc.string()),
-    maybeCreationDate: maybe(date),
-    maybeExpirationDate: maybe(date),
-  }),
+  fc.tuple(maybe(id), ProductArbitrary.unvalidatedSnapshot).map(([maybeId, snapshot]) => ({ ...snapshot, maybeId })),
   { maxLength: 8 },
 )
 

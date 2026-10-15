@@ -1,460 +1,94 @@
-import { assert, describe, expect, layer } from '@effect/vitest'
-import * as Arbitrary from 'effect/Arbitrary'
-import * as Arr from 'effect/Array'
-import * as Effect from 'effect/Effect'
-import * as FastCheck from 'effect/FastCheck'
-import { pipe } from 'effect/Function'
-import * as Option from 'effect/Option'
-import * as Order from 'effect/Order'
-
-import * as Integer from '@/libs/numbers/integer.ts'
-
+import { describe, expect, test } from 'bun:test'
+import * as DateTime from 'effect/DateTime'
+import * as Duration from 'effect/Duration'
+import * as Equal from 'effect/Equal'
+import * as Opt from 'effect/Option'
+import * as fc from 'fast-check'
+import * as ProductArbitrary from './product.arbitrary.ts'
 import * as Product from './product.ts'
 
-describe.concurrent('isStale', () => {
-  layer(Product.ProductService.Default)(({ effect }) =>
-    effect.prop(
-      'Should return true',
-      [
-        FastCheck.tuple(
-          Arbitrary.make(Integer.Schema),
-          Arbitrary.make(Integer.Schema),
-        )
-          .map((numbers) => {
-            const [expirationDate, currentDate] = pipe(
-              numbers,
-              Arr.sortBy(Order.number),
-            )
+const date = fc.integer({ min: 0, max: 4_102_444_800_000 }).map((ms) => DateTime.makeUnsafe(ms))
+const validInput = ProductArbitrary.validSnapshot
+const product = ProductArbitrary.arbitrary
 
-            return {
-              currentDate,
-              expirationDate,
-            }
-          })
-          .chain(({ currentDate, expirationDate }) =>
-            FastCheck.record({
-              product: Arbitrary.make(Product.Schema).map((product) => ({
-                ...product,
-                maybeExpirationDate: Option.some(expirationDate),
-              })),
-              currentDate: FastCheck.constant(currentDate),
-            })
-          ),
-      ],
-      Effect.fn(function*([{ currentDate, product }]) {
-        assert(Option.isSome(product.maybeExpirationDate))
-
-        const { isFresh: isStale } = yield* Product.ProductService
-
-        const isStaleResult = isStale(
-          { ...product, maybeExpirationDate: product.maybeExpirationDate },
-          currentDate,
-        )
-
-        expect(isStaleResult).toStrictEqual(true)
-      }),
-    )
-  )
-
-  layer(Product.ProductService.Default)(({ effect }) =>
-    effect.prop(
-      'Should return false',
-      [
-        FastCheck.tuple(
-          Arbitrary.make(Integer.Schema),
-          Arbitrary.make(Integer.Schema),
-        )
-          .map((numbers) => {
-            const [currentDate, expirationDate] = pipe(
-              numbers,
-              Arr.sortBy(Order.number),
-            )
-
-            return {
-              currentDate,
-              expirationDate,
-            }
-          })
-          .filter(
-            ({ currentDate, expirationDate }) => expirationDate !== currentDate,
-          )
-          .chain(({ currentDate, expirationDate }) =>
-            FastCheck.record({
-              product: Arbitrary.make(Product.Schema).map((b) => ({
-                ...b,
-                maybeExpirationDate: Option.some(expirationDate),
-              })),
-              currentDate: FastCheck.constant(currentDate),
-            })
-          ),
-      ],
-      Effect.fn(function*([{ currentDate, product }]) {
-        assert(Option.isSome(product.maybeExpirationDate))
-
-        const { isFresh: isStale } = yield* Product.ProductService
-
-        const isStaleResult = isStale(
-          { ...product, maybeExpirationDate: product.maybeExpirationDate },
-          currentDate,
-        )
-
-        expect(isStaleResult).toStrictEqual(false)
-      }),
-    )
-  )
+/** What a storage gives back after storing `snapshot`. */
+const readBack = (snapshot: Product.Snapshot): Product.UnvalidatedSnapshot => ({
+  maybeName: Opt.some(snapshot.name),
+  maybeCreationDate: Opt.some(snapshot.creationDate),
+  maybeExpirationDate: snapshot.maybeExpirationDate,
 })
 
-describe.concurrent('hasExpiration', () => {
-  layer(Product.ProductService.Default)(({ effect }) =>
-    effect.prop(
-      'should return true',
-      [
-        Arbitrary.make(Integer.Schema).chain((expirationDate) =>
-          Arbitrary.make(Product.Schema).map((product) => ({
-            ...product,
-            maybeExpirationDate: Option.some(expirationDate),
-          }))
-        ),
-      ],
-      Effect.fn(function*([product]) {
-        assert(Option.isSome(product.maybeExpirationDate))
+describe('Product snapshots', () => {
+  test('a stored product reads back as the same product', () => {
+    fc.assert(fc.property(product, (p) =>
+      Equal.equals(Product.fromSnapshot(readBack(Product.toSnapshot(p))), Opt.some(p))))
+  })
 
-        const { hasExpirationDate } = yield* Product.ProductService
+  test('a snapshot holds exactly the persistent fields', () => {
+    fc.assert(fc.property(product, (p) =>
+      Object.keys(Product.toSnapshot(p)).sort().join() === 'creationDate,maybeExpirationDate,name'))
+  })
 
-        expect(
-          hasExpirationDate({
-            ...product,
-            maybeExpirationDate: product.maybeExpirationDate,
-          }),
-        ).toStrictEqual(true)
-      }),
-    )
-  )
+  test('a product needs a creation date', () => {
+    fc.assert(fc.property(validInput, (input) =>
+      Opt.isNone(Product.fromSnapshot({ ...input, maybeCreationDate: Opt.none() }))))
+  })
 
-  layer(Product.ProductService.Default)(({ effect }) =>
-    effect.prop(
-      'should return false',
-      [
-        Arbitrary.make(Product.Schema).map((product) => ({
-          ...product,
-          maybeExpirationDate: Option.none(),
-        })),
-      ],
-      Effect.fn(function*([product]) {
-        const { hasExpirationDate } = yield* Product.ProductService
-
-        expect(
-          hasExpirationDate({
-            ...product,
-            maybeExpirationDate: product.maybeExpirationDate,
-          }),
-        ).toStrictEqual(false)
-      }),
-    )
-  )
+  test('a product cannot expire before it is created', () => {
+    fc.assert(fc.property(validInput, fc.integer({ min: 1, max: 1_000_000 }), (input, early) => {
+      const creation = Opt.getOrThrow(input.maybeCreationDate)
+      const expiration = DateTime.makeUnsafe(DateTime.toEpochMillis(creation) - early)
+      return Opt.isNone(Product.fromSnapshot({ ...input, maybeExpirationDate: Opt.some(expiration) }))
+    }))
+  })
 })
 
-describe.concurrent('timeLeft', () => {
-  layer(Product.ProductService.Default)(({ effect }) =>
-    effect.prop(
-      'should return value',
-      [
-        FastCheck.tuple(
-          Arbitrary.make(Integer.Schema),
-          Arbitrary.make(Integer.Schema),
-        )
-          .map((numbers) => {
-            const [currentDate, expirationDate] = pipe(
-              numbers,
-              Arr.sortBy(Order.number),
-            )
+describe('Product expiration', () => {
+  test('a product has an expiration exactly when it has an expiration date', () => {
+    fc.assert(fc.property(product, (p) =>
+      Opt.isSome(Product.maybeExpiration(p)) === Opt.isSome(Product.toSnapshot(p).maybeExpirationDate)))
+  })
 
-            return {
-              currentDate,
-              expirationDate,
-            }
-          })
-          .chain(({ currentDate, expirationDate }) =>
-            FastCheck.record({
-              product: Arbitrary.make(Product.Schema).map((product) => ({
-                ...product,
-                maybeExpirationDate: Option.some(expirationDate),
-              })),
-              currentDate: FastCheck.constant(currentDate),
-            })
-          ),
-      ],
-      Effect.fn(function*([{ currentDate, product }]) {
-        assert(Option.isSome(product.maybeExpirationDate))
+  test('a product has expired exactly when its expiration date is not in the future', () => {
+    fc.assert(fc.property(product, date, (p, now) =>
+      Opt.match(Product.maybeExpiration(p), {
+        onNone: () => true,
+        onSome: (expiration) =>
+          Product.expirationStatus(now)(expiration).hasExpired
+            === DateTime.isGreaterThanOrEqualTo(now, Product.expirationDate(expiration)),
+      })))
+  })
 
-        const { timeLeft } = yield* Product.ProductService
+  test('before expiring, the time left reaches the expiration and freshness is a ratio in [0, 1]', () => {
+    fc.assert(fc.property(product, date, (p, now) =>
+      Opt.match(Product.maybeExpiration(p), {
+        onNone: () => true,
+        onSome: (expiration) => {
+          const status = Product.expirationStatus(now)(expiration)
+          if (status.hasExpired) return true
+          const expirationDate = Product.expirationDate(expiration)
+          return Duration.toMillis(status.timeLeft) === DateTime.toEpochMillis(expirationDate) - DateTime.toEpochMillis(now)
+            && status.freshness >= 0
+            && status.freshness <= 1
+        },
+      })))
+  })
 
-        expect(
-          timeLeft(
-            {
-              ...product,
-              maybeExpirationDate: product.maybeExpirationDate,
-            },
-            currentDate,
-          ),
-        ).toStrictEqual(product.maybeExpirationDate.value - currentDate)
-      }),
-    )
-  )
-
-  layer(Product.ProductService.Default)(({ effect }) =>
-    effect.prop(
-      'should return 0',
-      [
-        FastCheck.tuple(
-          Arbitrary.make(Integer.Schema),
-          Arbitrary.make(Integer.Schema),
-        )
-          .map((numbers) => {
-            const [expirationDate, currentDate] = pipe(
-              numbers,
-              Arr.sortBy(Order.number),
-            )
-
-            return {
-              currentDate,
-              expirationDate,
-            }
-          })
-          .filter(
-            ({ currentDate, expirationDate }) => currentDate !== expirationDate,
-          )
-          .chain(({ currentDate, expirationDate }) =>
-            FastCheck.record({
-              product: Arbitrary.make(Product.Schema).map((product) => ({
-                ...product,
-                maybeExpirationDate: Option.some(expirationDate),
-              })),
-              currentDate: FastCheck.constant(currentDate),
-            })
-          ),
-      ],
-      Effect.fn(function*([{ currentDate, product }]) {
-        assert(Option.isSome(product.maybeExpirationDate))
-
-        const { timeLeft } = yield* Product.ProductService
-
-        expect(
-          timeLeft(
-            {
-              ...product,
-              maybeExpirationDate: product.maybeExpirationDate,
-            },
-            currentDate,
-          ),
-        ).toStrictEqual(0)
-      }),
-    )
-  )
-})
-
-describe.concurrent('computeFreshness', () => {
-  layer(Product.ProductService.Default)(({ effect }) =>
-    effect.prop(
-      'Should return 0',
-      [
-        FastCheck.tuple(
-          Arbitrary.make(Integer.Schema),
-          Arbitrary.make(Integer.Schema),
-          Arbitrary.make(Integer.Schema),
-        )
-          .map((numbers) => {
-            const [expirationDate, currentDate, creationDate] = pipe(
-              numbers,
-              Arr.sortBy(Order.number),
-            )
-
-            return {
-              currentDate,
-              expirationDate,
-              creationDate,
-            }
-          })
-          .chain(({ creationDate, currentDate, expirationDate }) =>
-            FastCheck.record({
-              product: Arbitrary.make(Product.Schema).map((product) => ({
-                ...product,
-                maybeExpirationDate: Option.some(expirationDate),
-                creationDate,
-              })),
-              currentDate: FastCheck.constant(currentDate),
-            })
-          ),
-      ],
-      Effect.fn(function*([{ currentDate, product }]) {
-        assert(Option.isSome(product.maybeExpirationDate))
-
-        const { computeFreshness } = yield* Product.ProductService
-
-        const freshness = computeFreshness(
-          { ...product, maybeExpirationDate: product.maybeExpirationDate },
-          currentDate,
-        )
-
-        expect(freshness).toStrictEqual(0)
-      }),
-    )
-  )
-
-  layer(Product.ProductService.Default)(({ effect }) =>
-    effect.prop(
-      'Should return 0',
-      [
-        FastCheck.tuple(
-          Arbitrary.make(Integer.Schema),
-          Arbitrary.make(Integer.Schema),
-          Arbitrary.make(Integer.Schema),
-        )
-          .map((array) => {
-            const [currentDate, expirationDate, creationDate] = pipe(
-              array,
-              Arr.sortBy(Order.number),
-            )
-
-            return {
-              currentDate,
-              expirationDate,
-              creationDate,
-            }
-          })
-          .filter(
-            ({ expirationDate, currentDate }) => expirationDate !== currentDate,
-          )
-          .chain(({ creationDate, currentDate, expirationDate }) =>
-            FastCheck.record({
-              product: Arbitrary.make(Product.Schema).map((product) => ({
-                ...product,
-                maybeExpirationDate: Option.some(expirationDate),
-                creationDate,
-              })),
-              currentDate: FastCheck.constant(currentDate),
-            })
-          ),
-      ],
-      Effect.fn(function*([{ currentDate, product }]) {
-        assert(Option.isSome(product.maybeExpirationDate))
-
-        const { computeFreshness } = yield* Product.ProductService
-
-        const freshness = computeFreshness(
-          { ...product, maybeExpirationDate: product.maybeExpirationDate },
-          currentDate,
-        )
-
-        expect(freshness).toStrictEqual(0)
-      }),
-    )
-  )
-
-  layer(Product.ProductService.Default)(({ effect }) =>
-    effect.prop(
-      'Should return 1',
-      [
-        FastCheck.tuple(
-          Arbitrary.make(Integer.Schema),
-          Arbitrary.make(Integer.Schema),
-          Arbitrary.make(Integer.Schema),
-        )
-          .map((array) => {
-            const [currentDate, creationDate, expirationDate] = pipe(
-              array,
-              Arr.sortBy(Order.number),
-            )
-
-            return {
-              currentDate,
-              expirationDate,
-              creationDate,
-            }
-          })
-          .filter(
-            ({ currentDate, creationDate, expirationDate }) =>
-              expirationDate !== currentDate
-              && expirationDate !== creationDate
-              && currentDate !== creationDate,
-          )
-          .chain(({ creationDate, currentDate, expirationDate }) =>
-            FastCheck.record({
-              product: Arbitrary.make(Product.Schema).map((product) => ({
-                ...product,
-                maybeExpirationDate: Option.some(expirationDate),
-                creationDate,
-              })),
-              currentDate: FastCheck.constant(currentDate),
-            })
-          ),
-      ],
-      Effect.fn(function*([{ currentDate, product }]) {
-        assert(Option.isSome(product.maybeExpirationDate))
-
-        const { computeFreshness } = yield* Product.ProductService
-
-        const freshness = computeFreshness(
-          { ...product, maybeExpirationDate: product.maybeExpirationDate },
-          currentDate,
-        )
-
-        expect(freshness).toStrictEqual(1)
-      }),
-    )
-  )
-
-  layer(Product.ProductService.Default)(({ effect }) =>
-    effect.prop(
-      'Should return remainingDuration / totalDuration',
-      [
-        FastCheck.tuple(
-          Arbitrary.make(Integer.Schema),
-          Arbitrary.make(Integer.Schema),
-          Arbitrary.make(Integer.Schema),
-        )
-          .map((array) => {
-            const [creationDate, currentDate, expirationDate] = pipe(
-              array,
-              Arr.sortBy(Order.number),
-            )
-
-            return {
-              currentDate,
-              expirationDate,
-              creationDate,
-            }
-          })
-          .filter(
-            ({ currentDate, creationDate, expirationDate }) =>
-              expirationDate !== currentDate && expirationDate !== creationDate,
-          )
-          .chain(({ creationDate, currentDate, expirationDate }) =>
-            FastCheck.record({
-              product: Arbitrary.make(Product.Schema).map((product) => ({
-                ...product,
-                maybeExpirationDate: Option.some(expirationDate),
-                creationDate,
-              })),
-              currentDate: FastCheck.constant(currentDate),
-            })
-          ),
-      ],
-      Effect.fn(function*([{ currentDate, product }]) {
-        assert(Option.isSome(product.maybeExpirationDate))
-
-        const { computeFreshness } = yield* Product.ProductService
-
-        const freshness = computeFreshness(
-          { ...product, maybeExpirationDate: product.maybeExpirationDate },
-          currentDate,
-        )
-
-        expect(freshness).toStrictEqual(
-          (product.maybeExpirationDate.value - currentDate)
-            / (product.maybeExpirationDate.value - product.creationDate),
-        )
-      }),
-    )
-  )
+  test('a product is fully fresh until it is created, and loses freshness linearly afterwards', () => {
+    const creation = DateTime.makeUnsafe(1_000)
+    const expiration = Opt.getOrThrow(Product.maybeExpiration(Opt.getOrThrow(Product.fromSnapshot({
+      maybeName: Opt.some('Milk'),
+      maybeCreationDate: Opt.some(creation),
+      maybeExpirationDate: Opt.some(DateTime.makeUnsafe(5_000)),
+    }))))
+    const freshnessAt = (ms: number) => {
+      const status = Product.expirationStatus(DateTime.makeUnsafe(ms))(expiration)
+      return status.hasExpired ? 0 : status.freshness
+    }
+    expect(freshnessAt(0)).toBe(1)
+    expect(freshnessAt(1_000)).toBe(1)
+    expect(freshnessAt(2_000)).toBe(0.75)
+    expect(freshnessAt(3_000)).toBe(0.5)
+    expect(freshnessAt(5_000)).toBe(0)
+  })
 })

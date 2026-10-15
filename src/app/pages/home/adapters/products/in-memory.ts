@@ -33,14 +33,14 @@ export const layer = Layer.effect(
       Effect.forEach(entries, (entry) =>
         SubscriptionRef.modify(productsRef, ({ nextId, products }) => {
           const id = nextId.toString(10)
-          const { product } = entry.request
+          const { snapshot } = entry.request
           return [id, {
             nextId: nextId + 1,
             products: Arr.append(products, {
               maybeId: Opt.some(id),
-              maybeName: Opt.some(product.name),
-              maybeCreationDate: Opt.some(product.creationDate),
-              maybeExpirationDate: product.maybeExpirationDate,
+              maybeName: Opt.some(snapshot.name),
+              maybeCreationDate: Opt.some(snapshot.creationDate),
+              maybeExpirationDate: snapshot.maybeExpirationDate,
             }),
           }]
         }).pipe(Effect.flatMap((id) => Request.succeed(entry, id))), { discard: true })
@@ -58,7 +58,7 @@ export const layer = Layer.effect(
     )
 
     const changes = SubscriptionRef.changes(productsRef).pipe(
-      Stream.map(({ products }): Products.Snapshot => Result.succeed(products)),
+      Stream.map(({ products }): Products.StoredProducts => Result.succeed(products)),
     )
 
     return { add, deleteById, changes }

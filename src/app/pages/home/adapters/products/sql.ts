@@ -29,22 +29,22 @@ export const layer = Layer.effect(
       Products.AddProduct,
       Opt.Option<DateTime.Utc>
     >({
-      key: (entry) => entry.request.product.maybeExpirationDate,
+      key: (entry) => entry.request.snapshot.maybeExpirationDate,
       resolver: Effect.fn(function*(entries, maybeExpirationDate) {
         const maybeProducts = yield* pipe(
           entries,
           Opt.isNone(maybeExpirationDate)
             ? Effect.forEach((entry) =>
               productRepository.insert({
-                creation_date: entry.request.product.creationDate,
-                name: entry.request.product.name,
+                creation_date: entry.request.snapshot.creationDate,
+                name: entry.request.snapshot.name,
               })
             )
             : Effect.forEach((entry) =>
               SqlResolver.request({
-                creationDate: entry.request.product.creationDate,
+                creationDate: entry.request.snapshot.creationDate,
                 expirationDate: maybeExpirationDate.value,
-                name: entry.request.product.name,
+                name: entry.request.snapshot.name,
               }, insertProductWithExpirationResolver)
             ),
           Effect.option,
@@ -96,7 +96,7 @@ export const layer = Layer.effect(
       getProducts.pipe(Effect.option),
     ).pipe(
       Stream.buffer({ capacity: 1, strategy: 'sliding' }),
-      Stream.map((maybeProducts): Products.Snapshot =>
+      Stream.map((maybeProducts): Products.StoredProducts =>
         Opt.match(maybeProducts, {
           onNone: () => Result.fail(undefined),
           onSome: (products) =>

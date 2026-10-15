@@ -27,7 +27,7 @@ const mapRawToDto = Effect.fn(
       Effect.fn(function*(productData) {
         const result = Opt.all([
           productData.maybeId,
-          Product.makeProduct(productData),
+          Product.fromSnapshot(productData),
         ])
         if (Opt.isNone(result)) {
           return {
@@ -130,7 +130,7 @@ export const addProduct = Effect.fn(function*(
 ) {
   const { add } = yield* Products.Products
   const current = yield* DateTime.now
-  const maybeProduct = Product.makeProduct({
+  const maybeProduct = Product.fromSnapshot({
     maybeCreationDate: Opt.some(current),
     maybeExpirationDate: productData.maybeExpirationDate,
     maybeName: productData.maybeName,
@@ -142,7 +142,7 @@ export const addProduct = Effect.fn(function*(
   const product = maybeProduct.value
   yield* Effect.logInfo(`Attempting to add product "${Product.name(product)}"...`)
   const maybeId = yield* pipe(
-    Products.AddProduct({ product: Product.toOutput(product) }),
+    Products.AddProduct({ snapshot: Product.toSnapshot(product) }),
     Effect.request(add),
     Effect.option,
   )

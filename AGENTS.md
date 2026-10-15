@@ -61,7 +61,10 @@ refactoring (see "Refactoring status"). A map of the source tree is in `src/READ
    - `ports/<capability>.ts` — one `Context.Service` per external capability (e.g. `Products`,
      `Viewport`, `Notifications`), grouping that capability's *commands* (Effects / `RequestResolver`s) and
      *events* (Streams). Ports speak in domain data, never in page messages: `subs.ts` turns events into
-     messages and `commands.ts` turns command results into messages.
+     messages and `commands.ts` turns command results into messages. Persistence ports take the domain's
+     `Snapshot` (branded: only `toSnapshot` makes one, so it always comes from a valid object) and return
+     `UnvalidatedSnapshot`s, which the page validates with `fromSnapshot`. Adapters never read the fields of
+     domain objects: only the domain knows which fields are persistent and which are derived.
    - `adapters/<capability>/<implementation>.ts` (e.g. `products/sql.ts`, `products/in-memory.ts`), each
      exporting a `layer`, composed by the public `*.layer.ts` files (never several setups in the same
      file, so a bundle only includes the implementations it uses)
@@ -133,7 +136,9 @@ refactoring (see "Refactoring status"). A map of the source tree is in `src/READ
   `numbers/positive-integer.arbitrary.ts`) exporting a fast-check `arbitrary` that only produces valid values.
   Tests build their generators from these instead of calling `*Unsafe` constructors. `fast-check` and
   `*.arbitrary.ts` may only be imported by `*.test.ts` and `*.arbitrary.ts` files (biome), so production
-  bundles never include them. When adding a branded type, add its arbitrary too.
+  bundles never include them. When adding a branded type, add its arbitrary too. The same goes for domain
+  types in pages (e.g. `domain/product.arbitrary.ts`: valid products, the snapshots `fromSnapshot` accepts,
+  and anything a storage may return).
 
 ## Commands
 
@@ -155,7 +160,7 @@ bunx cap sync android  # copy dist/ into the Android project
 Some parts are still inconsistent:
 - the `about` page does not follow the page structure yet (`outbound/`, `infrastructure/outbound/`), and
   `src/infrastructure/sayings` imports from it;
-- older tests (`src/libs/**/*.test.ts`, `pages/home/domain/product.test.ts`) use `vitest`/`@effect/vitest` and
+- older tests (`src/libs/numbers/*.test.ts`) use `vitest`/`@effect/vitest` and
   Effect v3 APIs and do not compile; port them to `bun:test` + `fast-check`.
 
 When an item in this section is resolved, update this file.

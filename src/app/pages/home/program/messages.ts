@@ -4,7 +4,7 @@ import type * as DateTime from 'effect/DateTime'
 import type * as Duration from 'effect/Duration'
 import type * as Opt from 'effect/Option'
 import type * as Result from 'effect/Result'
-import type { ProductInput } from '../domain/product.ts'
+import type { UnvalidatedSnapshot } from '../domain/product.ts'
 import type { OperationId } from './state.ts'
 import type * as UnitInterval from '@/libs/numbers/unit-interval.ts'
 
@@ -24,7 +24,7 @@ export type Message = Data.TaggedEnum<{
   ProductsChanged: {
     result: Result.Result<
       ReadonlyArray<
-        ProductInput & {
+        UnvalidatedSnapshot & {
           maybeId: Opt.Option<string>
         }
       >,
