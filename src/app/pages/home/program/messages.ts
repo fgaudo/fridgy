@@ -18,6 +18,8 @@ export type Message = Data.TaggedEnum<{
   ExpirationDateChanged: { expiration: string | number }
   TimeChanged: { now: DateTime.Utc }
   ProductsChanged: { result: Result.Result<ReadonlyArray<StoredProduct>, void> }
+  InfoRequested: object
+  BackPressed: object
 }>
 
 export const Message = Data.taggedEnum<Message>()
@@ -30,3 +32,12 @@ export type InternalMessage =
   }>
 
 export const InternalMessage = Data.taggedEnum<InternalMessage>()
+
+/** What the page asks of its parent (the "OutMsg" pattern). */
+export type Event = Data.TaggedEnum<{
+  InfoRequested: object
+  /** Nothing left to close: the page should be left. */
+  LeaveRequested: object
+}>
+
+export const Event = Data.taggedEnum<Event>()

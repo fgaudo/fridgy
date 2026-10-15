@@ -14,14 +14,14 @@ import type { Products, StoredProduct } from '../ports/products.ts'
 import type { Viewport } from '../ports/viewport.ts'
 import * as Cmd from './commands.ts'
 import * as Guards from './guards.ts'
-import type { InternalMessage } from './messages.ts'
+import { Event, type InternalMessage } from './messages.ts'
 import { OperationId, type Product, type State } from './state.ts'
 
 export type Deps = Products | Viewport | Notifications
 
 const ProductEnum = Data.taggedEnum<Product>()
 
-type Transition = Engine.Transition<State, InternalMessage, Deps>
+type Transition = Engine.Transition<State, InternalMessage, Deps, Event>
 
 // Products that still have an id can be selected and deleted, even when invalid;
 // the ones without an id cannot be referenced at all.
@@ -189,6 +189,28 @@ export const update = Match.typeTags<InternalMessage, (state: State) => Transiti
         state: { ...state, selection: { _tag: 'Selecting', maybeIds: Opt.some(state.selection.ids) } },
         commands: [Cmd.showToast('Could not delete the products')],
       }
+  },
+
+  // Asked from the side menu, which closes on the way.
+  InfoRequested: () => (state) => ({
+    state: { ...state, isMenuOpen: false },
+    events: [Event.InfoRequested()],
+  }),
+
+  // Closes what is open, innermost first; with nothing to close, asks to leave.
+  BackPressed: () => (state) => {
+    if (state.isMenuOpen) {
+      return { state: { ...state, isMenuOpen: false } }
+    }
+    switch (state.addProduct._tag) {
+      case 'Editing':
+        return { state: { ...state, addProduct: { _tag: 'Closed' } } }
+      // The form cannot be closed while it is being submitted.
+      case 'Submitting':
+        return { state }
+      case 'Closed':
+        return { state, events: [Event.LeaveRequested()] }
+    }
   },
 
   MenuToggled: () => (state) => ({ state: { ...state, isMenuOpen: !state.isMenuOpen } }),

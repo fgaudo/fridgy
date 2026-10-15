@@ -129,9 +129,17 @@ const sideMenu = (
           remove: { transform: 'translateX(0)' },
         },
         props: {
-          className: 'h-full bg-background z-60 top-0 rounded-r-2xl w-3/4 fixed -left-3/4',
+          className: 'h-full bg-background z-60 top-0 rounded-r-2xl w-3/4 fixed -left-3/4 flex flex-col pt-sait',
         },
-      }),
+      }, [
+        h('button', {
+          on: { click: () => dispatch(InternalMessage.InfoRequested()) },
+          props: { className: 'flex items-center gap-4 h-14 px-6 text-left' },
+        }, [
+          h('span', { props: { className: 'material-symbols-rounded' } }, 'info'),
+          h('span', 'About'),
+        ]),
+      ]),
     ]
     : []
 

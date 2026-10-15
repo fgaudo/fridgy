@@ -1,9 +1,18 @@
+import * as Effect from 'effect/Effect'
+import * as HashMap from 'effect/HashMap'
+import * as Stream from 'effect/Stream'
 import type * as Engine from '@/libs/elm/engine.ts'
-import type * as Home from '../pages/home/program.ts'
-import type { InternalMessage } from './messages.ts'
+import { Shell } from '../ports/shell.ts'
+import { InternalMessage } from './messages.ts'
 import type { State } from './state.ts'
-import { home } from './update.ts'
+import { about, type Deps, home } from './update.ts'
 
-export type Deps = Home.Deps
+const backButton = Stream.unwrap(Effect.map(Effect.service(Shell), ({ backButton }) => backButton)).pipe(
+  Stream.map(() => InternalMessage.BackRequested()),
+)
 
-export const subscriptions: Engine.Emitter<State, InternalMessage, Deps> = (state) => home.subscriptions(state)
+export const subscriptions: Engine.Emitter<State, InternalMessage, Deps> = (state) =>
+  HashMap.make(['back-button', backButton]).pipe(
+    HashMap.union(home.subscriptions(state)),
+    HashMap.union(about.subscriptions(state)),
+  )

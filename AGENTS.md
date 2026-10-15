@@ -19,13 +19,16 @@ refactoring (see "Refactoring status"). A map of the source tree is in `src/READ
    it must not be silenced, retried, or turned into a "recoverable" message. Do not add fallbacks that hide
    bugs. The only exception is generic code reusable in other projects (`src/libs/`), which may offer
    *opt-in* recovery (e.g. `makeDefectMessage` in `Engine.make`); the app never opts in.
-3. **As close to Elm as possible.** `init`, a pure `update` `(msg) => (state) => Engine.Transition` (`{ state, commands? }` or `Engine.reject`),
+3. **As close to Elm as possible.** `init`, a pure `update` `(msg) => (state) => Engine.Transition` (`{ state, commands?, events? }` or `Engine.reject`),
    `subscriptions` derived from state, a pure `view` over the `Model`. Effects live only in *commands*
    (Effects that return an optional message: `None` for effects that only act on the outside world) and
    *subscriptions* (Streams of messages). The primitives are in
    `src/libs/elm/`: `engine.ts` (`Update`, `Step`, `Command`, `Emitter`, `make`, imported as `Engine`),
    `program.ts` (pages and the root expose a `Program`; children are lifted into parents with `embed`) and
-   `view.ts` (views are pure `(model, dispatch) => VNode` functions).
+   `view.ts` (views are pure `(model, dispatch) => VNode` functions). A page never acts on its parent: it
+   returns *events* (the Elm "OutMsg" pattern, e.g. `InfoRequested`, `LeaveRequested`), declared as a public
+   `Event` type, and the parent handles them in `embed`'s `onEvent`, which the types require whenever the
+   child has events.
 4. **Rejection.** When a message makes no sense in the current state, `update` returns `Engine.reject`
    (never a log or a "wrong state" command). Actions that are only sometimes possible are exposed by the
    model (`canX: { _tag: 'True', message } | { _tag: 'False' }`), and the view dispatches them only from
@@ -50,8 +53,8 @@ refactoring (see "Refactoring status"). A map of the source tree is in `src/READ
 6. **Self-contained pages.** Each page in `src/app/pages/<page>/` is a module with a small public API made
    of the files at its root; **every subfolder is private** to the page (enforced by biome
    `noRestrictedImports`). Inside a page, files import each other with relative paths. Public files:
-   - `program.ts` — the `Program` and the types the root needs (`State`, `Model`, `Message`,
-     `InternalMessage`, `Deps`); it is the facade of the private `program/` folder
+   - `program.ts` — the `Program` and what the root needs (`State`, `Model`, `Message`, `InternalMessage`,
+     `Event`, `Deps`); it is the facade of the private `program/` folder
    - `view.ts` — the page view
    - `sqlite.layer.ts`, `in-memory.layer.ts`, … — one adapter composition (`layer`) per setup, named after
      *what* backs the ports, never after an environment (environments only exist in `src/entrypoints/`)
@@ -76,8 +79,11 @@ refactoring (see "Refactoring status"). A map of the source tree is in `src/READ
    `src/app` may import; `program/`, `pages/` and, when the root needs outside services, `ports/` and
    `adapters/` are private (enforced by biome).
    Inside `src/app` files use relative imports, and the root reaches each page only through the page's
-   public files. Pages are **lifted into the root** with `embed` (e.g. `GotHomeMsg`, `state.page.Home`,
-   subscription keys prefixed by the page name); the root `*.layer.ts` files merge the root adapters with
+   public files. Pages are **lifted into the root** with `embed` (e.g. `GotHomeMsg`, subscription keys prefixed by
+   the page name). The root owns navigation: a stack of page states (the last one is shown), changed only
+   when a page emits an event; Android's back button (`Shell` port) is forwarded to the shown page as
+   `BackPressed`, which closes what it has open or asks to be left, and leaving the last page exits the app.
+   A page is found wherever it is in the stack, so hidden pages still receive their completions; the root `*.layer.ts` files merge the root adapters with
    the matching page setups.
 8. **Entrypoints in `src/entrypoints/`**: the only place that knows about environments. They also own
    the boot of the host shell: `run.ts` hides the splash screen (`src/infrastructure/splash-screen.ts`) once
@@ -167,8 +173,8 @@ kept) and `reload-page` otherwise.
 ## Refactoring status (verify before working)
 
 Some parts are still inconsistent:
-- the `about` page does not follow the page structure yet (`outbound/`, `infrastructure/outbound/`), and
-  `src/infrastructure/sayings` imports from it;
+- the `about` page is a skeleton (licenses and a random saying); some sayings contain `<br />`, shown as
+  text;
 - older tests (`src/libs/numbers/*.test.ts`) use `vitest`/`@effect/vitest` and
   Effect v3 APIs and do not compile; port them to `bun:test` + `fast-check`.
 

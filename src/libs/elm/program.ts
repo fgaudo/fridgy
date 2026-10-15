@@ -6,9 +6,9 @@ import * as Stream from 'effect/Stream'
 import * as Engine from './engine.ts'
 
 /** The view is not part of it: it lives in its own module, so it can be hot reloaded. */
-export interface Program<State, Model, Message, R, K = unknown> {
+export interface Program<State, Model, Message, R, Event = never, K = unknown> {
   readonly init: Engine.Step<State, Message, R>
-  readonly update: Engine.Update<State, Message, R>
+  readonly update: Engine.Update<State, Message, R, Event>
   readonly subscriptions: Engine.Emitter<State, Message, R, K>
   readonly makeModel: (state: State) => Model
 }
@@ -18,8 +18,9 @@ export const mapCommands = <A, B, R>(
   f: (message: A) => B,
 ): ReadonlyArray<Engine.Command<B, R>> => Arr.map(commands, Effect.map(Opt.map(f)))
 
-export const mapStep = <State, A, B, R>(
-  { state, commands = [] }: Engine.Step<State, A, R>,
+/** Maps the commands of a step; its events are left to the caller. */
+export const mapStep = <State, A, B, R, Event>(
+  { state, commands = [] }: Engine.Step<State, A, R, Event>,
   f: (message: A) => B,
 ): Engine.Step<State, B, R> => ({ state, commands: mapCommands(commands, f) })
 
@@ -34,6 +35,18 @@ export const mapSubscriptions = <A, B, R, K, NewK>(
     (acc, stream$, key) => HashMap.set(acc, mapKey(key), Stream.map(stream$, mapMessage)),
   )
 
+type EmbedOptions<ParentState, ParentMessage, ChildState, ChildMessage, ChildEvent, R> =
+  & {
+    key: string
+    wrap: (message: ChildMessage) => ParentMessage
+    get: (state: ParentState) => Opt.Option<ChildState>
+    set: (state: ParentState, child: ChildState) => ParentState
+  }
+  // Required exactly when the child emits events, so none can go unhandled.
+  & ([ChildEvent] extends [never] ? object : {
+    onEvent: (event: ChildEvent) => (state: ParentState) => Engine.Step<ParentState, ParentMessage, R>
+  })
+
 /**
  * Lifts a child program into its parent.
  *
@@ -42,39 +55,52 @@ export const mapSubscriptions = <A, B, R, K, NewK>(
  *   is not active (e.g. the page is not on the navigation stack).
  * - `set` writes the child state back.
  * - `key` namespaces the child's subscription keys.
+ * - `onEvent` handles the events the child emits, in the same transition, after
+ *   the child state has been written back.
  */
-export const embed = <ParentState, ParentMessage, ChildState, ChildMessage, R, K>(
-  child: Pick<Program<ChildState, unknown, ChildMessage, R, K>, 'update' | 'subscriptions'>,
-  { key, wrap, get, set }: {
-    key: string
-    wrap: (message: ChildMessage) => ParentMessage
-    get: (state: ParentState) => Opt.Option<ChildState>
-    set: (state: ParentState, child: ChildState) => ParentState
-  },
-) => ({
-  init: (step: Engine.Step<ChildState, ChildMessage, R>) => mapStep(step, wrap),
+export const embed = <ParentState, ParentMessage, ChildState, ChildMessage, R, ChildEvent = never, K = unknown>(
+  child: Pick<Program<ChildState, unknown, ChildMessage, R, ChildEvent, K>, 'update' | 'subscriptions'>,
+  options: EmbedOptions<ParentState, ParentMessage, ChildState, ChildMessage, ChildEvent, R>,
+) => {
+  const { key, wrap, get, set } = options
+  const onEvent = 'onEvent' in options
+    ? options.onEvent
+    // Unreachable through the types: `onEvent` is required whenever the child has events.
+    : (): never => {
+      throw new Error(`embed("${key}"): the child emitted an event, but no onEvent was given`)
+    }
+  return {
+    init: (step: Engine.Step<ChildState, ChildMessage, R>) => mapStep(step, wrap),
 
-  update: (message: ChildMessage) => (state: ParentState): Engine.Transition<ParentState, ParentMessage, R> =>
-    Opt.match(get(state), {
-      onNone: (): Engine.Rejected => Engine.reject,
-      onSome: (childState) => {
-        const result = child.update(message)(childState)
-        if (Engine.isRejected(result)) {
-          return result
-        }
-        const step = mapStep(result, wrap)
-        return { ...step, state: set(state, step.state) }
-      },
-    }),
+    update: (message: ChildMessage) => (state: ParentState): Engine.Transition<ParentState, ParentMessage, R> =>
+      Opt.match(get(state), {
+        onNone: (): Engine.Rejected => Engine.reject,
+        onSome: (childState) => {
+          const result = child.update(message)(childState)
+          if (Engine.isRejected(result)) {
+            return result
+          }
+          const step = mapStep(result, wrap)
+          return Arr.reduce(
+            result.events ?? [],
+            { state: set(state, step.state), commands: step.commands ?? [] },
+            (acc, event) => {
+              const next = onEvent(event)(acc.state)
+              return { state: next.state, commands: [...acc.commands, ...(next.commands ?? [])] }
+            },
+          )
+        },
+      }),
 
-  subscriptions: (state: ParentState): Engine.Subscriptions<readonly [string, K], ParentMessage, R> =>
-    Opt.match(get(state), {
-      onNone: () => HashMap.empty(),
-      onSome: (childState) =>
-        mapSubscriptions(
-          child.subscriptions(childState),
-          (childKey) => [key, childKey] as const,
-          wrap,
-        ),
-    }),
-})
+    subscriptions: (state: ParentState): Engine.Subscriptions<readonly [string, K], ParentMessage, R> =>
+      Opt.match(get(state), {
+        onNone: () => HashMap.empty(),
+        onSome: (childState) =>
+          mapSubscriptions(
+            child.subscriptions(childState),
+            (childKey) => [key, childKey] as const,
+            wrap,
+          ),
+      }),
+  }
+}

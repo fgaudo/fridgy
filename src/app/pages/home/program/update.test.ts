@@ -10,7 +10,7 @@ import * as Engine from '@/libs/elm/engine.ts'
 import * as Domain from '../domain/product.ts'
 import type { StoredProduct } from '../ports/products.ts'
 import { view } from '../view.ts'
-import { InternalMessage } from './messages.ts'
+import { Event, InternalMessage } from './messages.ts'
 import { makeModel } from './model.ts'
 import {
   closedForm,
@@ -48,17 +48,19 @@ const message: fc.Arbitrary<InternalMessage> = fc.oneof(
     storedProducts.map((products) => Result.succeed(products)),
   ).map((result) => InternalMessage.ProductsChanged({ result })),
   fc.record({ operation, succeeded: fc.boolean() }).map(InternalMessage.DeleteProductsCompleted),
+  fc.constant(InternalMessage.InfoRequested()),
+  fc.constant(InternalMessage.BackPressed()),
 )
 
 type Outcome =
   | Readonly<{ rejected: true }>
-  | Readonly<{ rejected: false; after: State; commands: ReadonlyArray<unknown> }>
+  | Readonly<{ rejected: false; after: State; commands: ReadonlyArray<unknown>; events: ReadonlyArray<Event> }>
 
 const outcome = (msg: InternalMessage, before: State): Outcome => {
   const result = update(msg)(before)
   return Engine.isRejected(result)
     ? { rejected: true }
-    : { rejected: false, after: result.state, commands: result.commands ?? [] }
+    : { rejected: false, after: result.state, commands: result.commands ?? [], events: result.events ?? [] }
 }
 
 const rejects = (msg: InternalMessage, before: State) => outcome(msg, before).rejected
@@ -154,6 +156,35 @@ describe('Home update', () => {
       const tags = new Set(fc.sample(state, 1_000).flatMap((s) => dispatchedByView(s, '').map((msg) => msg._tag)))
       expect(tags.has('AddProductStarted')).toBe(true)
       expect(tags.has('NameChanged')).toBe(true)
+    })
+  })
+
+  describe('InfoRequested', () => {
+    test('closes the menu and asks the parent for the info page', () => {
+      assertProperty([state], (before) => {
+        const { after, commands, events } = step(InternalMessage.InfoRequested(), before)
+        return !after.isMenuOpen
+          && onlyChanged(before, after, 'isMenuOpen')
+          && commands.length === 0
+          && Equal.equals(events, [Event.InfoRequested()])
+      })
+    })
+  })
+
+  describe('BackPressed', () => {
+    test('closes the menu first, then an edited form, and otherwise asks to leave', () => {
+      assertProperty([state], (before) => {
+        const { after, commands, events } = step(InternalMessage.BackPressed(), before)
+        if (before.isMenuOpen) {
+          return !after.isMenuOpen && onlyChanged(before, after, 'isMenuOpen') && events.length === 0
+        }
+        const expected = {
+          Editing: () => after.addProduct._tag === 'Closed' && onlyChanged(before, after, 'addProduct') && events.length === 0,
+          Submitting: () => Equal.equals(after, before) && events.length === 0,
+          Closed: () => Equal.equals(after, before) && Equal.equals(events, [Event.LeaveRequested()]),
+        }[before.addProduct._tag]()
+        return expected && commands.length === 0
+      })
     })
   })
 

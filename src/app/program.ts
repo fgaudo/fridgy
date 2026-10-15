@@ -11,7 +11,7 @@ export type { InternalMessage, Message } from './program/messages.ts'
 export type { Model } from './program/model.ts'
 export type { State } from './program/state.ts'
 
-export type Deps = Update.Deps | Subs.Deps
+export type Deps = Update.Deps
 
 export const program: Program.Program<State, Model, InternalMessage, Deps> = {
   init: Update.init,

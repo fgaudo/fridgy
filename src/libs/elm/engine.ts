@@ -13,9 +13,15 @@ import * as SubscriptionRef from 'effect/SubscriptionRef'
 /** An effect that may produce a message: `None` for effects that only act on the outside world. */
 export type Command<Message, R> = Effect.Effect<Opt.Option<Message>, never, R>
 
-export type Step<State, Message, R> = Readonly<{
+/**
+ * The result of a transition. `events` are for the parent (the "OutMsg" pattern):
+ * what happened that the program itself does not handle, e.g. a page asking to
+ * be left. A program that emits none leaves `Event` as `never`.
+ */
+export type Step<State, Message, R, Event = never> = Readonly<{
   state: State
   commands?: ReadonlyArray<Command<Message, R>>
+  events?: ReadonlyArray<Event>
 }>
 
 /**
@@ -34,11 +40,11 @@ export type Rejected = typeof reject
 
 export const isRejected = (result: unknown): result is Rejected => result === reject
 
-export type Transition<State, Message, R> = Step<State, Message, R> | Rejected
+export type Transition<State, Message, R, Event = never> = Step<State, Message, R, Event> | Rejected
 
-export type Update<State, Message, R> = (
+export type Update<State, Message, R, Event = never> = (
   message: Message,
-) => (state: State) => Transition<State, Message, R>
+) => (state: State) => Transition<State, Message, R, Event>
 
 /** Counts the states produced by the engine: every accepted message creates a new revision. */
 export type Revision = number
