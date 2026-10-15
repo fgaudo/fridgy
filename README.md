@@ -33,17 +33,11 @@ bun install
 bun run watch
 ```
 
-builds the development version into `dist/` (products are kept in memory) and starts a WebSocket server
-for hot reload. In another terminal:
+builds the development version into `dist/` (products are kept in memory), serves it, and rebuilds on every
+change under `src/`; open the address it prints. Editing a view or the CSS swaps the view in place, keeping
+the application state; any other change reloads the page.
 
-```bash
-bun run http-server
-```
-
-serves `dist/`; open the address it prints. Editing a view or the CSS reloads the view in place, keeping
-the application state.
-
-The first run creates `.env` from `.env.default`, where you can change the hot reload host and port.
+The first run creates `.env` from `.env.default`, where you can change the server host and port.
 
 ### Build the Android app
 
@@ -66,9 +60,9 @@ bunx cap open android
 
 | Command | |
 | --- | --- |
-| `bunx tsc --noEmit` | Type-check the project |
-| `bun test` | Run the tests |
-| `bunx biome lint src` | Lint, including the import rules described below |
+| `bun run typecheck` | Type-check the project |
+| `bun run test` | Run the tests |
+| `bun run lint` | Lint, including the import rules described below |
 
 ## Architecture
 

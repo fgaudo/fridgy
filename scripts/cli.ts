@@ -1,188 +1,176 @@
 import * as EffBun from '@effect/platform-bun'
 import BunTailwind from 'bun-plugin-tailwind'
-import * as Cause from 'effect/Cause'
+import * as Config from 'effect/Config'
+import * as ConfigProvider from 'effect/ConfigProvider'
+import * as Data from 'effect/Data'
 import * as Effect from 'effect/Effect'
 import * as FS from 'effect/FileSystem'
-import { flow } from 'effect/Function'
+import * as HashSet from 'effect/HashSet'
+import * as Layer from 'effect/Layer'
 import * as Path from 'effect/Path'
+import * as Ref from 'effect/Ref'
 import * as Stream from 'effect/Stream'
-import * as Terminal from 'effect/Terminal'
 import * as Cli from 'effect/cli'
 
-const makeRootResolver = Effect.gen(function*() {
-  const path = yield* Path.Path
-  const currentDir = yield* Effect.sync(() => import.meta.dir)
-  return (...parts: ReadonlyArray<string>) => path.join(currentDir, '..', ...parts)
-})
+type Mode = 'development' | 'production'
 
-const commonBuildConfig = Effect.gen(function*() {
-  const resolve = yield* makeRootResolver
-
-  return {
-    entrypoints: [resolve('./src/assets/css/styles.css')],
-    env: 'inline',
-    loader: { '.css': 'css', '.woff2': 'file' },
-    naming: {
-      asset: '[name].[ext]',
-      chunk: '[name].[ext]',
-      entry: '[name].[ext]',
-    },
-    outdir: resolve('./dist'),
-    plugins: [BunTailwind],
-    target: 'browser',
-  } satisfies Bun.BuildConfig
-})
-
-const buildDev = Effect.gen(function*() {
-  const resolve = yield* makeRootResolver
-  const config = yield* commonBuildConfig
-  yield* Effect.promise(() =>
-    Bun.build({
-      ...config,
-      entrypoints: [
-        ...config.entrypoints,
-        resolve('./src/entrypoints/development.ts'),
-        // Built separately so it can be hot reloaded.
-        resolve('./src/app/view.ts'),
-      ],
-      sourcemap: 'inline',
-    })
-  )
-})
-
-const buildProd = Effect.gen(function*() {
-  const resolve = yield* makeRootResolver
-  const config = yield* commonBuildConfig
-  yield* Effect.promise(() =>
-    Bun.build({
-      ...config,
-      entrypoints: [
-        ...config.entrypoints,
-        resolve('./src/entrypoints/production.ts'),
-        resolve('./src/infrastructure/sqlite/sqlite.worker.ts'),
-      ],
-      define: {
-        'process.env.NODE_ENV': '"production"',
-      },
-      minify: {
-        identifiers: true,
-        syntax: true,
-        whitespace: true,
-      },
-      sourcemap: 'none',
-    })
-  )
-})
-
-// `entry` is the name of the entrypoint bundle that index.html loads.
-const prepareDist = Effect.fn(function*(entry: 'development' | 'production') {
-  const resolve = yield* makeRootResolver
-  const fs = yield* FS.FileSystem
-  yield* fs.remove(resolve('./dist'), {
-    force: true,
-    recursive: true,
-  })
-  yield* fs.makeDirectory(resolve('./dist'))
-  // Only production uses sqlite: development keeps data in memory.
-  if (entry === 'production') {
-    yield* fs.copyFile(
-      resolve('./node_modules/@effect/wa-sqlite/dist/wa-sqlite.wasm'),
-      resolve('./dist/wa-sqlite.wasm'),
-    )
+const modes = {
+  development: {
+    entrypoints: [
+      'src/entrypoints/development.ts',
+      // Built separately so it can be hot reloaded.
+      'src/app/view.ts',
+    ],
+    assets: [],
+    options: { sourcemap: 'inline' },
+  },
+  production: {
+    entrypoints: ['src/entrypoints/production.ts', 'src/infrastructure/sqlite/sqlite.worker.ts'],
+    assets: ['node_modules/@effect/wa-sqlite/dist/wa-sqlite.wasm'],
+    options: { sourcemap: 'none', minify: true },
+  },
+} satisfies Record<
+  Mode,
+  {
+    entrypoints: ReadonlyArray<string>
+    assets: ReadonlyArray<string>
+    options: Partial<Bun.BuildConfig>
   }
-  const html = yield* fs.readFileString(resolve('./src/assets/index.html'))
-  yield* fs.writeFileString(
-    resolve('./dist/index.html'),
-    html.replaceAll('%ENTRY%', entry),
-  )
+>
+
+class BuildFailed extends Data.TaggedError('BuildFailed')<{ readonly logs: string }> {}
+
+const root = Effect.gen(function*() {
+  const path = yield* Path.Path
+  return (...parts: ReadonlyArray<string>) => path.join(import.meta.dir, '..', ...parts)
 })
+
+const build = Effect.fn('build')(function*(mode: Mode) {
+  const resolve = yield* root
+  const { entrypoints, options } = modes[mode]
+  const output = yield* Effect.tryPromise({
+    try: () =>
+      Bun.build({
+        entrypoints: [resolve('src/assets/css/styles.css'), ...entrypoints.map((entry) => resolve(entry))],
+        outdir: resolve('dist'),
+        target: 'browser',
+        loader: { '.css': 'css', '.woff2': 'file' },
+        naming: { asset: '[name].[ext]', chunk: '[name].[ext]', entry: '[name].[ext]' },
+        plugins: [BunTailwind],
+        define: { 'process.env.NODE_ENV': `"${mode}"` },
+        throw: false,
+        ...options,
+      }),
+    catch: (error) => new BuildFailed({ logs: String(error) }),
+  })
+  if (!output.success) {
+    return yield* new BuildFailed({ logs: output.logs.map(String).join('\n') })
+  }
+})
+
+/** Empties `dist/` and adds what the bundler does not produce. */
+const prepareDist = Effect.fn('prepareDist')(function*(mode: Mode) {
+  const resolve = yield* root
+  const path = yield* Path.Path
+  const fs = yield* FS.FileSystem
+  yield* fs.remove(resolve('dist'), { force: true, recursive: true })
+  yield* fs.makeDirectory(resolve('dist'))
+  for (const asset of modes[mode].assets) {
+    yield* fs.copyFile(resolve(asset), resolve('dist', path.basename(asset)))
+  }
+  // index.html loads the bundle of the entrypoint of `mode`.
+  const html = yield* fs.readFileString(resolve('src/assets/index.html'))
+  yield* fs.writeFileString(resolve('dist', 'index.html'), html.replaceAll('%ENTRY%', mode))
+})
+
+const devServerConfig = Config.all({
+  host: Config.String('DEV_SERVER_HOST').pipe(Config.withDefault('localhost')),
+  port: Config.Port('DEV_SERVER_PORT').pipe(Config.withDefault(3000)),
+})
+
+/** Views and styles can be swapped in place; any other change needs a full page reload. */
+const reloadFor = (path: Path.Path, changed: HashSet.HashSet<string>) =>
+  HashSet.every(changed, (file) => path.basename(file) === 'view.ts' || path.extname(file) === '.css')
+    ? 'reload-view'
+    : 'reload-page'
 
 const watchCommand = Cli.Command.make(
   'watch',
   {},
   Effect.fn(function*() {
+    const resolve = yield* root
+    const path = yield* Path.Path
     const fs = yield* FS.FileSystem
-    const resolve = yield* makeRootResolver
+    const { host, port } = yield* devServerConfig
+    const dist = resolve('dist')
+
     yield* prepareDist('development')
-    yield* buildDev
+    yield* build('development')
+
+    // Serves `dist/` and, on `/hot-reload`, the socket that tells the page to reload.
     const server = yield* Effect.acquireRelease(
       Effect.sync(() =>
         Bun.serve({
-          fetch(req, server) {
-            if (server.upgrade(req)) return
-            return new Response('HMR Server Active')
+          hostname: host,
+          port,
+          async fetch(request, server) {
+            const { pathname } = new URL(request.url)
+            if (pathname === '/hot-reload') {
+              return server.upgrade(request) ? undefined : new Response('Upgrade failed', { status: 400 })
+            }
+            const file = path.join(dist, pathname === '/' ? 'index.html' : pathname)
+            const isInDist = file.startsWith(dist)
+            return isInDist && (await Bun.file(file).exists())
+              ? new Response(Bun.file(file))
+              : new Response('Not found', { status: 404 })
           },
-          // @ts-expect-error
-          hostname: process.env.UI_EMITTER_WEBSOCKET_HOST!,
-          // @ts-expect-error
-          port: process.env.UI_EMITTER_WEBSOCKET_PORT!,
           websocket: {
             message() {},
-            open(ws) {
-              ws.subscribe('refresh')
+            open(socket) {
+              socket.subscribe('reload')
             },
           },
         })
       ),
-      (s) => Effect.promise(() => s.stop(true)),
+      (server) => Effect.promise(() => server.stop(true)),
     )
-    const terminal = yield* Terminal.Terminal
-    yield* terminal.display(
-      // @ts-expect-error
-      `HMR running at ws://${process.env.UI_EMITTER_WEBSOCKET_HOST}:${process.env.UI_EMITTER_WEBSOCKET_PORT}\n`,
-    )
-    const publish = Effect.sync(() => server.publish('refresh', 'reload-page'))
-    return yield* Stream.mergeAll(
-      [
-        fs.watch(resolve('./src/app'), { recursive: true }),
-        fs.watch(resolve(
-          './src/assets/css',
-        )),
-      ],
-      { concurrency: 'unbounded' },
-    ).pipe(
+    yield* Effect.logInfo(`Serving dist/ at http://${host}:${port}`)
+
+    const changed = yield* Ref.make(HashSet.empty<string>())
+    return yield* fs.watch(resolve('src'), { recursive: true }).pipe(
+      Stream.tap((event) => Ref.update(changed, HashSet.add(event.path))),
       Stream.debounce('100 millis'),
-      Stream.runForEach(
-        Effect.fn(
-          function*() {
-            yield* buildDev
-            yield* publish
-          },
-          Effect.catchCause(flow(Cause.squash, Effect.logError)),
-        ),
+      Stream.runForEach(() =>
+        Effect.gen(function*() {
+          const files = yield* Ref.getAndSet(changed, HashSet.empty())
+          yield* build('development')
+          server.publish('reload', reloadFor(path, files))
+        }).pipe(Effect.catchTag('BuildFailed', ({ logs }) => Effect.logError(`Build failed:\n${logs}`)))
       ),
     )
   }, Effect.scoped),
 )
 
-const buildCommand = Cli.Command.make(
-  'build',
-  {},
-  Effect.fn(function*() {
+const buildCommand = Cli.Command.make('build', {}, () =>
+  Effect.gen(function*() {
     yield* prepareDist('production')
-    return yield* buildProd
-  }),
-)
+    yield* build('production')
+  }))
 
-const setupEnv = Effect.gen(function*() {
+// `.env` is created from `.env.default` on the first run, then read from disk:
+// Bun only loads it when the process starts, before it exists.
+const DotEnv = Layer.unwrap(Effect.gen(function*() {
+  const resolve = yield* root
   const fs = yield* FS.FileSystem
-  const resolve = yield* makeRootResolver
-  yield* fs.copy(resolve('./.env.default'), resolve('./.env'), {
-    overwrite: false,
-  })
-})
+  yield* fs.copy(resolve('.env.default'), resolve('.env'), { overwrite: false })
+  const dotEnv = yield* ConfigProvider.fromDotEnv({ path: resolve('.env') })
+  return ConfigProvider.layer(ConfigProvider.orElse(dotEnv, ConfigProvider.fromEnv()))
+}))
 
 EffBun.BunRuntime.runMain(
-  setupEnv.pipe(
-    Effect.andThen(
-      () =>
-        Cli.Command.make('cli.ts').pipe(
-          Cli.Command.withSubcommands([buildCommand, watchCommand]),
-          Cli.Command.run({
-            version: '1.0',
-          }),
-        ),
-    ),
-    Effect.provide([EffBun.BunServices.layer]),
+  Cli.Command.make('cli.ts').pipe(
+    Cli.Command.withSubcommands([buildCommand, watchCommand]),
+    Cli.Command.run({ version: '1.0' }),
+    Effect.provide(Layer.provideMerge(DotEnv, EffBun.BunServices.layer)),
   ),
 )

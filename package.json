@@ -7,7 +7,9 @@
     "update-licenses": "license-checker-rseidelsohn --excludePackages fridgy --json --customPath src/infrastructure/adapters/outbound/static/licenses/custom-path.json --out src/infrastructure/adapters/outbound/static/licenses/generated/licenses.json --depth 0",
     "build": "bun ./scripts/cli.ts build",
     "watch": "bun ./scripts/cli.ts watch",
-    "http-server": "bunx http-server dist",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome lint src scripts",
+    "test": "bun test",
     "prepare": "effect-tsgo patch --typescript --no-oxlint"
   },
   "dependencies": {
@@ -42,7 +44,6 @@
     "bun-plugin-tailwind": "latest",
     "dprint": "latest",
     "fast-check": "^4.10.2",
-    "http-server": "latest",
     "license-checker-rseidelsohn": "latest",
     "tailwindcss": "latest",
     "typescript": "^7"

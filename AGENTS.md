@@ -151,16 +151,18 @@ refactoring (see "Refactoring status"). A map of the source tree is in `src/READ
 
 ```bash
 bun install            # prepare script patches typescript with @effect/tsgo
-bun run watch          # dev build into dist/ (data in memory) + WS server for hot reload (host/port from .env)
-bun run http-server    # serve dist/ to try the app in the browser
+bun run watch          # dev build into dist/ (data in memory), served with hot reload (host/port from .env)
 bun run build          # production build into dist/ (sqlite)
-bunx tsc --noEmit      # typecheck
-bunx biome lint src    # lint (includes the import-privacy rules)
-bun test               # tests (*.test.ts)
+bun run typecheck      # typecheck
+bun run lint           # lint (includes the import-privacy rules)
+bun run test           # tests (*.test.ts)
 bunx cap sync android  # copy dist/ into the Android project
 ```
 
-`.env` is created from `.env.default` the first time the CLI runs (`UI_EMITTER_WEBSOCKET_HOST/PORT`).
+`.env` is created from `.env.default` the first time the CLI runs, and read from disk (`DEV_SERVER_HOST`,
+`DEV_SERVER_PORT`, with defaults). `watch` serves `dist/` and the hot reload socket (`/hot-reload`) on the
+same port: it sends `reload-view` when only `view.ts` files or CSS changed (the view is swapped, the state
+kept) and `reload-page` otherwise.
 
 ## Refactoring status (verify before working)
 

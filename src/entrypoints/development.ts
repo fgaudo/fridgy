@@ -1,4 +1,4 @@
-// `view.js` is built separately by `scripts/cli.ts watch`.
+// `view.js` and the hot reload socket are served by `scripts/cli.ts watch`.
 import * as Browser from '@effect/platform-browser'
 import * as Effect from 'effect/Effect'
 import * as Layer from 'effect/Layer'
@@ -18,10 +18,7 @@ const HotRootViews = Layer.effect(
   ),
 ).pipe(
   Layer.provide([
-    Browser.BrowserSocket.layerWebSocket(
-      // @ts-expect-error
-      `ws://${process.env.UI_EMITTER_WEBSOCKET_HOST}:${process.env.UI_EMITTER_WEBSOCKET_PORT}`,
-    ),
+    Browser.BrowserSocket.layerWebSocket(`ws://${location.host}/hot-reload`),
     CssRefresher.layer('#css'),
   ]),
 )
