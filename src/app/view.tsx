@@ -4,8 +4,8 @@
 import * as Match from 'effect/Match'
 import type { VNode } from 'snabbdom'
 import { mapDispatch, type View } from '@/libs/elm/view.ts'
-import * as About from './pages/about/view.ts'
-import * as Home from './pages/home/view.ts'
+import * as About from './pages/about/view.tsx'
+import * as Home from './pages/home/view.tsx'
 import { Message } from './program/messages.ts'
 import type { Model } from './program/model.ts'
 

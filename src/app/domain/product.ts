@@ -40,7 +40,6 @@ export type Snapshot = Brand.Branded<
 
 const _Snapshot = Brand.nominal<Snapshot>()
 
-/** A snapshot as read back from storage, which may be incomplete or corrupt. */
 export type UnvalidatedSnapshot = Readonly<{
   maybeName: Opt.Option<string>
   maybeCreationDate: Opt.Option<DateTime.Utc>

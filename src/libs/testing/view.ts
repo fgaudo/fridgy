@@ -16,7 +16,6 @@ export const dispatchedBy = <Model, Message>(
   const visit = (node: VNode | string | undefined): void => {
     if (node === undefined || typeof node === 'string') return
     for (const [type, handler] of Object.entries(node.data?.on ?? {})) {
-      // oxlint-disable-next-line typescript/no-unsafe-type-assertion
       const event = {
         type,
         target: { value: inputValue },
@@ -24,7 +23,6 @@ export const dispatchedBy = <Model, Message>(
         stopPropagation: () => {},
       } as unknown as Event
       if (typeof handler === 'function') {
-        // oxlint-disable-next-line typescript/no-unsafe-type-assertion
         ;(handler as (this: VNode, event: Event, vnode: VNode) => void).call(node, event, node)
       }
     }

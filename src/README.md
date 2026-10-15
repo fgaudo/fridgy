@@ -12,7 +12,7 @@ src/
 │
 ├─ app/                  the application (environment-agnostic)
 │  ├─ program.ts         public: the root Program and its types
-│  ├─ view.ts            public: the root view (hot-reload entry in development)
+│  ├─ view.tsx           public: the root view (hot-reload entry in development)
 │  ├─ sqlite.layer.ts    public: every adapter, data in sqlite
 │  ├─ in-memory.layer.ts public: every adapter, data in memory
 │  ├─ program/           private: messages, state, model, update, subs, commands, navigation
@@ -20,7 +20,7 @@ src/
 │  ├─ ports/, adapters/  private: the root's ports (Shell) and the write ports, with their adapters
 │  └─ pages/<page>/      private: each page has the same shape as app/; it may import the
 │     │                  domain/ and ports/ above it, never the adapters/
-│     ├─ program.ts · view.ts · *.layer.ts    the page's public API
+│     ├─ program.ts · view.tsx · *.layer.ts   the page's public API
 │     └─ program/ · domain/ · ports/ · adapters/
 │
 ├─ infrastructure/       technical building blocks: sqlite, sql, in-memory store, renderer, hot reload
@@ -30,7 +30,7 @@ src/
 
 ## Reading order
 
-1. `app/program.ts` and `app/view.ts` — what the app is.
+1. `app/program.ts` and `app/view.tsx` — what the app is.
 2. `app/pages/home/program.ts` and `program/` — a page: messages → `update` → state → `makeModel` → view.
 3. `app/pages/home/ports/` — what the page needs from the outside world.
 4. `entrypoints/` — how everything is wired for each environment.

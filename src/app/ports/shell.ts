@@ -7,7 +7,6 @@ export class ShellError extends Data.TaggedError('ShellError')<{
   readonly cause: unknown
 }> {}
 
-/** The native shell hosting the app. */
 export class Shell extends Context.Service<
   Shell,
   {

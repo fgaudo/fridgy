@@ -18,6 +18,4 @@ export const mapDispatch = <A, B>(
   dispatch: Dispatch<B>,
   wrap: (message: A) => B,
 ): Dispatch<A> =>
-(message) =>
-  // oxlint-disable-next-line typescript/no-unsafe-type-assertion
-  dispatch(wrap(message) as Offered<B>)
+(message) => dispatch(wrap(message) as Offered<B>)

@@ -13,7 +13,7 @@ architecture.
 | --- | --- |
 | Language | TypeScript, with the Effect language service (`@effect/tsgo`) |
 | Effects, services, streams | [Effect](https://effect.website) v4 |
-| View | [snabbdom](https://github.com/snabbdom/snabbdom) (virtual DOM) and [Tailwind CSS](https://tailwindcss.com) |
+| View | [snabbdom](https://github.com/snabbdom/snabbdom) (virtual DOM, written in TSX) and [Tailwind CSS](https://tailwindcss.com) |
 | Storage | SQLite (WebAssembly, in a worker) |
 | Android packaging | [Capacitor](https://capacitorjs.com) |
 | Runtime, bundler, tests | [Bun](https://bun.com), with [fast-check](https://fast-check.dev) for property tests |

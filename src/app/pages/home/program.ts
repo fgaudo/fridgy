@@ -1,5 +1,3 @@
-// Public API of the page, with `view.ts` and the `*.layer.ts` files: the subfolders
-// are private.
 import type * as Program from '@/libs/elm/program.ts'
 import type { Event, Message } from './program/messages.ts'
 import { type Model, makeModel } from './program/model.ts'

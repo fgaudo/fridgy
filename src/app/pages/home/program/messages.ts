@@ -4,7 +4,6 @@ import type * as Result from 'effect/Result'
 import type { StoredProduct } from '../ports/product-list.ts'
 import type { OperationId } from './state.ts'
 
-/** What the parent may send to the page: its public, inbound API. */
 export type ExternalMessage = Data.TaggedEnum<{
   /** Android's back button, while the page is shown. */
   BackPressed: object
@@ -12,7 +11,6 @@ export type ExternalMessage = Data.TaggedEnum<{
 
 export const ExternalMessage = Data.taggedEnum<ExternalMessage>()
 
-/** Everything the page handles: the public messages, and the ones it generates itself. */
 export type Message =
   | ExternalMessage
   | Data.TaggedEnum<{
@@ -42,7 +40,6 @@ export type Message =
 
 export const Message = Data.taggedEnum<Message>()
 
-/** What the page asks of its parent (the "OutMsg" pattern). */
 export type Event = Data.TaggedEnum<{
   InfoRequested: object
   /** Nothing left to close: the page should be left. */

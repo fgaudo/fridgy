@@ -6,7 +6,6 @@ import { top } from './navigation.ts'
 import type { State } from './state.ts'
 
 export type Model = Readonly<{
-  /** The shown page. */
   page: Data.TaggedEnum<{
     Home: { model: Home.Model }
     About: { model: About.Model }

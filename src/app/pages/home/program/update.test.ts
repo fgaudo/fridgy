@@ -9,7 +9,7 @@ import * as Engine from '@/libs/elm/engine.ts'
 import { dispatchedBy } from '@/libs/testing/view.ts'
 import * as Domain from '../../../domain/product.ts'
 import type { StoredProduct } from '../ports/product-list.ts'
-import { view } from '../view.ts'
+import { view } from '../view.tsx'
 import { Event, Message } from './messages.ts'
 import { makeModel } from './model.ts'
 import {

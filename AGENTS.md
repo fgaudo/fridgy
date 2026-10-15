@@ -81,7 +81,7 @@ refactoring (see "Refactoring status"). A map of the source tree is in `src/READ
      of its parent) and `Model`; `Message` (everything the page handles: `ExternalMessage` plus what its
      view, subscriptions and commands generate) is exported as a type only, so code outside the page cannot
      forge a click or a completion. Also `State` and `Deps`; it is the facade of the private `program/` folder
-   - `view.ts` — the page view
+   - `view.tsx` — the page view, in TSX (see "Views" below)
    - `sqlite.layer.ts`, `in-memory.layer.ts`, … — one adapter composition (`layer`) per setup, named after
      *what* backs the ports, never after an environment (environments only exist in `src/entrypoints/`)
 
@@ -105,7 +105,7 @@ refactoring (see "Refactoring status"). A map of the source tree is in `src/READ
      exporting a `layer`, composed by the public `*.layer.ts` files (never several setups in the same
      file, so a bundle only includes the implementations it uses)
 7. **Root in `src/app/`**: structured exactly like a page, one level up. Public files at its root
-   (`program.ts`, `view.ts`, `sqlite.layer.ts`, `in-memory.layer.ts`) are the only things code outside
+   (`program.ts`, `view.tsx`, `sqlite.layer.ts`, `in-memory.layer.ts`) are the only things code outside
    `src/app` may import; `program/`, `domain/`, `ports/`, `adapters/` and `pages/` are private (enforced
    by biome).
    Inside `src/app` files use relative imports, and the root reaches each page only through the page's
@@ -166,6 +166,7 @@ refactoring (see "Refactoring status"). A map of the source tree is in `src/READ
     - `ui/` — `cn` (clsx + tailwind-merge)
     - `dynamic-import/` — `saferImport`
     - `option/` — the `Option` arbitrary (`maybe` in tests)
+    - `jsx/` — the JSX runtime for views (`jsx-runtime.ts`, see "Views")
     - `testing/` — test-only helpers: `view.ts` (`dispatchedBy`, which fires every handler of a rendered
       view) and the `bun test` preload
 
@@ -175,14 +176,14 @@ refactoring (see "Refactoring status"). A map of the source tree is in `src/READ
 12. **Runs locally**: the app must be runnable in a local browser (not only on Android).
 13. **View hot reload**: in dev, `scripts/cli.ts watch` rebuilds and notifies over WebSocket; the
     development entrypoint (`src/entrypoints/development.ts`, via `src/infrastructure/hot-module.ts`)
-    re-imports the root view module (`src/app/view.ts`) and `CssRefresher` reloads the CSS. Global state
+    re-imports the root view module (`src/app/view.tsx`) and `CssRefresher` reloads the CSS. Global state
     survives the reload because it lives in the engine, not in the view. When moving files,
     **update the paths in `scripts/cli.ts`** (entrypoints, view entrypoint and watched folders).
 
 ## When the app grows
 
 - **Large views**: split a page view into private components under `view/` (e.g. `view/product-list.ts`),
-  keeping `view.ts` as the public facade, like `program.ts` and `program/`. Hot reload still works: it
+  keeping `view.tsx` as the public facade, like `program.ts` and `program/`. Hot reload still works: it
   reloads the root view with everything it imports.
 - **A new page reading stored data**: it adds its own query port and adapters over the same database
   and in-memory store (rule 10), never a private copy, and uses the app's domain and write ports
@@ -193,6 +194,16 @@ refactoring (see "Refactoring status"). A map of the source tree is in `src/READ
   exhaustive `Match`es in the root.
 
 ## Code conventions
+
+- Views are TSX (`view.tsx`, and only views: `scripts/cli.ts` reloads the view in place when only `.tsx` or
+  CSS files change). TSX compiles with the automatic runtime from `src/libs/jsx/jsx-runtime.ts`
+  (`jsxImportSource` in `tsconfig.json`), so views import nothing for it. It builds snabbdom vnodes with
+  snabbdom's own `jsx`, but with strict types: an element only accepts the snabbdom modules (`key`,
+  `props`, `attrs`, `class`, `style`, `dataset`, `on`, `hook`), and `props` only the element's own
+  properties, so `<div props={{ className: '…' }} on={{ click: … }}>` compiles and a misplaced
+  `<div className='…'>` does not (snabbdom's types would accept and silently ignore it). Biome's
+  `a11y/useButtonType` is off for `.tsx` files: it looks for a React-style `type` attribute, which
+  snabbdom keeps in `props`.
 
 - `.ts` extension required in imports (biome `useImportExtensions`, `allowImportingTsExtensions`).
 - Namespace imports for effect modules: `import * as Effect from 'effect/Effect'`. Aliases:
@@ -206,7 +217,19 @@ refactoring (see "Refactoring status"). A map of the source tree is in `src/READ
   `Clock`/`DateTime`, `Random`, platform services (language service rules in `tsconfig.json`).
 - `strictBooleanExpressions`, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes` are enabled.
 - State and model are `Readonly`; prefer branded types (`Brand`) for values with invariants.
-- Linting: biome (formatter disabled); formatting with dprint.
+- Linting: biome (formatter disabled); formatting with dprint. Run dprint on the files you changed
+  (`bunx dprint fmt <files>`), not on the whole project: a bare `dprint fmt` also rewrites generated files,
+  Android resources and code nobody touched.
+- Comments only for what the code cannot say: why something is done this way, an invariant or a contract
+  that is not visible in the types, a behaviour of a library or platform the code relies on, a choice that
+  would look like a mistake. No comments that repeat a name or a type, describe what the next line
+  plainly does, or restate what this file documents (e.g. that a page's subfolders are private). When code
+  changes, update or remove the comments about it.
+- No blank lines between the statements of a block (a function body, a generator, a test body): a block
+  reads top to bottom, and a part that needs separating usually deserves a name of its own. Blank lines
+  stay where they separate declarations or units: top-level declarations, imports from code, class
+  members, type members, the entries of a large object (e.g. the handlers of an `update`), and `describe`
+  or `test` calls.
 - Tests: `bun:test` with `fast-check` property tests, in a `*.test.ts` file next to the module under test
   (e.g. `pages/home/program/update.test.ts`). Properties state the *intended* behaviour; when the code
   does not satisfy one yet, keep it as `test.failing` with the bug in its name, so the suite stays green and
@@ -240,12 +263,13 @@ bunx cap sync android  # copy dist/ into the Android project
 
 `.env` is created from `.env.default` the first time the CLI runs, and read from disk (`DEV_SERVER_HOST`,
 `DEV_SERVER_PORT`, with defaults). `watch` serves `dist/` and the hot reload socket (`/hot-reload`) on the
-same port: it sends `reload-view` when only `view.ts` files or CSS changed (the view is swapped, the state
+same port: it sends `reload-view` when only `.tsx` files (the views) or CSS changed (the view is swapped, the state
 kept) and `reload-page` otherwise.
 
 ## Refactoring status (verify before working)
 
 Some parts are still inconsistent:
+
 - the `about` page is a skeleton (licenses and a random saying); some sayings contain `<br />`, shown as
   text;
 - Home's view only shows `Valid` products: `Invalid` ones (stored with an id, but not a valid product)

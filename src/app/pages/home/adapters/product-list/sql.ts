@@ -14,7 +14,6 @@ export const layer = Layer.effect(
   Effect.gen(function*() {
     const { getProducts } = yield* SqlHelper.SqlHelper
     const sql = yield* SqlClient.SqlClient
-
     const changes = sql.reactive(
       [ProductSchema.table, ProductExpirationSchema.table],
       getProducts.pipe(Effect.option),
@@ -33,7 +32,6 @@ export const layer = Layer.effect(
         })
       ),
     )
-
     return { changes }
   }),
 )

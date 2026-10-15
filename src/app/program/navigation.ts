@@ -1,6 +1,3 @@
-// How the root moves between pages: the navigation stack, how each page is
-// plugged in (its embed), and what the root does with the events pages emit.
-// Used by both `update.ts` and `subs.ts`.
 import * as Arr from 'effect/Array'
 import * as Match from 'effect/Match'
 import * as Opt from 'effect/Option'

@@ -13,7 +13,6 @@ import { init, update } from './update.ts'
 
 const fromHome = (message: Home.Message) => Message.GotHomeMsg({ message })
 
-/** Applies the messages in order, collecting the commands. */
 const run = (messages: ReadonlyArray<Message>, from: State = init.state) =>
   messages.reduce(
     ({ state, commands }, message) => {

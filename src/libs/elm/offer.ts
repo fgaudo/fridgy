@@ -23,7 +23,6 @@ export const offered =
   <State, Message>(update: AnyUpdate<State, Message>, state: State) => (message: Message): Offer<Message> =>
     Engine.isRejected(update(message)(state))
       ? Opt.none()
-      // oxlint-disable-next-line typescript/no-unsafe-type-assertion
       : Opt.some(message as Offered<Message>)
 
 /**
@@ -36,6 +35,5 @@ export const offeredInput =
   <Value>(toMessage: (value: Value) => Message, current: Value): InputOffer<Value, Message> =>
     Opt.map(
       offered(update, state)(toMessage(current)),
-      // oxlint-disable-next-line typescript/no-unsafe-type-assertion
       () => (value: Value) => toMessage(value) as Offered<Message>,
     )

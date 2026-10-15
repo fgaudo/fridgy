@@ -35,7 +35,6 @@ export class SqlHelper extends Context.Service<SqlHelper>()(
   {
     make: Effect.gen(function*() {
       const sql = yield* Sql.SqlClient.SqlClient
-
       const productDataLoader = yield* Sql.SqlModel.makeResolvers(
         Product,
         {
@@ -93,7 +92,6 @@ export class SqlHelper extends Context.Service<SqlHelper>()(
           sql.withTransaction,
         ),
       })
-
       const getProducts = Sql.SqlSchema.findAll({
         Request: Schema.Void,
         Result: Schema.Struct({

@@ -5,7 +5,6 @@ import type * as Home from '../pages/home/program.ts'
 export type Message = Data.TaggedEnum<{
   GotHomeMsg: { message: Home.Message }
   GotAboutMsg: { message: About.Message }
-  /** Android's back button. */
   BackRequested: object
 }>
 

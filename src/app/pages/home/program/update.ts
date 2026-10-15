@@ -94,7 +94,10 @@ export const update = Match.typeTags<Message, (state: State) => Transition>()({
       : Engine.reject,
 
   AddProductStarted: () => (state) => {
-    if (!isEditing(state) || !Opt.exists(state.addProduct.maybeName, (name) => Opt.isSome(NormalizedString.fromString(name)))) {
+    if (
+      !isEditing(state)
+      || !Opt.exists(state.addProduct.maybeName, (name) => Opt.isSome(NormalizedString.fromString(name)))
+    ) {
       return Engine.reject
     }
     const operation = state.nextOperation
@@ -156,7 +159,9 @@ export const update = Match.typeTags<Message, (state: State) => Transition>()({
       onNone: () => HashSet.make(id),
       onSome: HashSet.add(id),
     })
-    return { state: { ...state, selection: { _tag: 'Selecting', maybeIds: Opt.some(NonEmptyHashSet.makeUnsafe(ids)) } } }
+    return {
+      state: { ...state, selection: { _tag: 'Selecting', maybeIds: Opt.some(NonEmptyHashSet.makeUnsafe(ids)) } },
+    }
   },
 
   ItemDeselected: ({ id }) => (state) => {
@@ -236,7 +241,6 @@ export const update = Match.typeTags<Message, (state: State) => Transition>()({
     state,
     commands: !state.isInteracting && isCloseToTop ? [Cmd.scrollToTop] : [],
   }),
-
 })
 
 export const init: Engine.Step<State, Message, Deps> = {

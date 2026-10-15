@@ -55,7 +55,6 @@ export const state: fc.Arbitrary<State> = fc.record({
   addProduct,
 })
 
-/** Like `state`, with `key` drawn from `arbitrary`. */
 export const stateWith = <K extends keyof State>(key: K, arbitrary: fc.Arbitrary<State[K]>) =>
   fc.tuple(state, arbitrary).map(([base, value]): State => ({ ...base, [key]: value }))
 

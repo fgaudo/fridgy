@@ -136,9 +136,7 @@ export const make = Effect.fn('Engine.make')(function*<State, Message, R, S, K>(
   const fibers = yield* FiberSet.make<unknown, never>()
   const subscriptionFibers = yield* FiberMap.make<K, void, never>()
   const stateRef = yield* SubscriptionRef.make<Revisioned<State>>({ state: initState, revision: 0 })
-
   const offer = (message: Message) => Queue.offer(queue, { message, origin: fromProgram })
-
   const runCommand = (command: Command<Message, R>) =>
     Opt.match(maybeMakeDefectMessage, {
       onNone: () => command,
@@ -148,7 +146,6 @@ export const make = Effect.fn('Engine.make')(function*<State, Message, R, S, K>(
       Effect.provideContext(context),
       FiberSet.run(fibers),
     )
-
   /**
    * Starts the subscriptions whose key appeared and interrupts the ones whose
    * key disappeared. Subscriptions whose key is unchanged keep running.
@@ -177,7 +174,6 @@ export const make = Effect.fn('Engine.make')(function*<State, Message, R, S, K>(
     }
     return nextKeys
   })
-
   const step = Effect.fn(function*(
     active: HashSet.HashSet<K>,
     { message, origin }: Envelope<Message>,
@@ -197,17 +193,14 @@ export const make = Effect.fn('Engine.make')(function*<State, Message, R, S, K>(
     yield* Effect.forEach(commands, runCommand, { discard: true })
     return nextActive
   })
-
   const initialActive = yield* reconcile(HashSet.empty(), initState)
   yield* Effect.forEach(initCommands, runCommand, { discard: true })
-
   yield* Effect.gen(function*() {
     let active = initialActive
     while (true) {
       active = yield* step(active, yield* Queue.take(queue))
     }
   }).pipe(FiberSet.run(fibers))
-
   return {
     await: Effect.raceFirst(
       FiberSet.join(fibers),

@@ -16,7 +16,6 @@ export const layer = Layer.effect(
   ProductCommands.ProductCommands,
   Effect.gen(function*() {
     const { productRepository, insertProductWithExpirationResolver } = yield* SqlHelper.SqlHelper
-
     const add = RequestResolver.makeGrouped<
       ProductCommands.AddProduct,
       Opt.Option<DateTime.Utc>
@@ -54,7 +53,6 @@ export const layer = Layer.effect(
         )
       }),
     })
-
     const deleteById = RequestResolver.make<ProductCommands.DeleteProductById>(
       Effect.fn(function*(entries) {
         const [validEntries, invalidEntries] = Arr.partition(entries, (entry) =>
@@ -82,7 +80,6 @@ export const layer = Layer.effect(
         )
       }),
     )
-
     return { add, deleteById }
   }),
 )

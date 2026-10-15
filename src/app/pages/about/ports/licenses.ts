@@ -16,7 +16,6 @@ export type License = Readonly<{
 export class Licenses extends Context.Service<
   Licenses,
   {
-    /** The licenses of the third-party packages the app is built with. */
     readonly all: Effect.Effect<ReadonlyArray<License>>
   }
 >()('848999471bed18f6') {}

@@ -19,7 +19,7 @@ const modes = {
     entrypoints: [
       'src/entrypoints/development.ts',
       // Built separately so it can be hot reloaded.
-      'src/app/view.ts',
+      'src/app/view.tsx',
     ],
     assets: [],
     options: { sourcemap: 'inline' },
@@ -68,7 +68,6 @@ const build = Effect.fn('build')(function*(mode: Mode) {
   }
 })
 
-/** Empties `dist/` and adds what the bundler does not produce. */
 const prepareDist = Effect.fn('prepareDist')(function*(mode: Mode) {
   const resolve = yield* root
   const path = yield* Path.Path
@@ -78,7 +77,6 @@ const prepareDist = Effect.fn('prepareDist')(function*(mode: Mode) {
   for (const asset of modes[mode].assets) {
     yield* fs.copyFile(resolve(asset), resolve('dist', path.basename(asset)))
   }
-  // index.html loads the bundle of the entrypoint of `mode`.
   const html = yield* fs.readFileString(resolve('src/assets/index.html'))
   yield* fs.writeFileString(resolve('dist', 'index.html'), html.replaceAll('%ENTRY%', mode))
 })
@@ -88,9 +86,12 @@ const devServerConfig = Config.all({
   port: Config.Port('DEV_SERVER_PORT').pipe(Config.withDefault(3000)),
 })
 
-/** Views and styles can be swapped in place; any other change needs a full page reload. */
+/**
+ * Views (the only `.tsx` files) and styles can be swapped in place; any other
+ * change needs a full page reload.
+ */
 const reloadFor = (path: Path.Path, changed: HashSet.HashSet<string>) =>
-  HashSet.every(changed, (file) => path.basename(file) === 'view.ts' || path.extname(file) === '.css')
+  HashSet.every(changed, (file) => ['.tsx', '.css'].includes(path.extname(file)))
     ? 'reload-view'
     : 'reload-page'
 
@@ -103,11 +104,8 @@ const watchCommand = Cli.Command.make(
     const fs = yield* FS.FileSystem
     const { host, port } = yield* devServerConfig
     const dist = resolve('dist')
-
     yield* prepareDist('development')
     yield* build('development')
-
-    // Serves `dist/` and, on `/hot-reload`, the socket that tells the page to reload.
     const server = yield* Effect.acquireRelease(
       Effect.sync(() =>
         Bun.serve({
@@ -135,7 +133,6 @@ const watchCommand = Cli.Command.make(
       (server) => Effect.promise(() => server.stop(true)),
     )
     yield* Effect.logInfo(`Serving dist/ at http://${host}:${port}`)
-
     const changed = yield* Ref.make(HashSet.empty<string>())
     return yield* fs.watch(resolve('src'), { recursive: true }).pipe(
       Stream.tap((event) => Ref.update(changed, HashSet.add(event.path))),

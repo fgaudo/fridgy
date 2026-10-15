@@ -51,6 +51,10 @@
     "moduleDetection": "force",
     "allowJs": false,
 
+    // Views are TSX, rendered by snabbdom through src/libs/jsx/jsx-runtime.ts.
+    "jsx": "react-jsx",
+    "jsxImportSource": "@/libs/jsx",
+
     // Bundler mode
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
