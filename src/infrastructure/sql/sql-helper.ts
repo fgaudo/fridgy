@@ -6,7 +6,7 @@ import * as RequestResolver from 'effect/RequestResolver'
 import * as Schema from 'effect/Schema'
 import * as SchemaX from 'effect/schema'
 import * as Sql from 'effect/sql'
-import * as Integer from '@/libs/integer/integer.ts'
+import * as Integer from '@/libs/numbers/integer.ts'
 import { ProductExpirationSchema, ProductSchema } from './schema.ts'
 
 export class Product extends SchemaX.Model.Class<Product>('Product')({

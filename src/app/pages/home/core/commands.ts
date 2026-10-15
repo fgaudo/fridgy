@@ -6,13 +6,13 @@ import { pipe } from 'effect/Function'
 import * as HashSet from 'effect/HashSet'
 import * as Opt from 'effect/Option'
 import * as Result from 'effect/Result'
-import * as Crypto from 'effect/Crypto'
-import type * as NonEmptyHashSet from '@/libs/non-empty-hash-set.ts'
-import * as NormalizedString from '@/libs/normalized-string.ts'
+import type * as NonEmptyHashSet from '@/libs/collections/non-empty-hash-set.ts'
+import * as NormalizedString from '@/libs/strings/normalized-string.ts'
 import * as Product from '../domain/product.ts'
 import { InternalMessage } from './messages.ts'
-import * as DeleteProductById from '@/app/pages/home/ports/delete-product-by-id.ts'
-import * as AddProduct from '@/app/pages/home/ports/add-product.ts'
+import { Notifications } from '../ports/notifications.ts'
+import * as Products from '../ports/products.ts'
+import { Viewport } from '../ports/viewport.ts'
 
 const mapRawToDto = Effect.fn(
   function*(
@@ -100,28 +100,21 @@ export const deleteProducts = Effect.fn(function*({
 }: {
   ids: NonEmptyHashSet.NonEmptyHashSet<string>
 }) {
-  const { resolver } = yield* DeleteProductById.DeleteProductById
-
-  yield* Effect.logInfo('Requested to delete products')
+  const { deleteById } = yield* Products.Products
   yield* Effect.logInfo('Attempting to delete products...')
-  const maybeDeleteResults = yield* pipe(
+  const maybeDeleted = yield* pipe(
     ids,
-    HashSet.map((id) =>
-      DeleteProductById.Request({
-        id,
-      })
-    ),
-    Effect.forEach(Effect.request(resolver), {
-      concurrency: 'unbounded',
-    }),
+    HashSet.map((id) => Products.DeleteProductById({ id })),
+    Effect.forEach(Effect.request(deleteById), { concurrency: 'unbounded' }),
     Effect.option,
   )
-  if (Opt.isNone(maybeDeleteResults)) {
-    return InternalMessage.DeleteProductsCompleted()
+  if (Opt.isNone(maybeDeleted)) {
+    yield* Effect.logWarning('Could not delete products')
+    return InternalMessage.DeleteProductsCompleted({ succeeded: false })
   }
   yield* Effect.logInfo('Products deleted')
-  return InternalMessage.DeleteProductsCompleted()
-}, Effect.withLogSpan('DeleteAndGetProducts'))
+  return InternalMessage.DeleteProductsCompleted({ succeeded: true })
+}, Effect.withLogSpan('DeleteProducts'))
 
 export const addProduct = Effect.fn(function*(
   productData: {
@@ -129,7 +122,7 @@ export const addProduct = Effect.fn(function*(
     maybeName: Opt.Option<string>
   },
 ) {
-  const { resolver } = yield* AddProduct.AddProduct
+  const { add } = yield* Products.Products
   const current = yield* DateTime.now
   const maybeProduct = Product.makeProduct({
     maybeCreationDate: Opt.some(current),
@@ -137,27 +130,22 @@ export const addProduct = Effect.fn(function*(
     maybeName: productData.maybeName,
   })
   if (Opt.isNone(maybeProduct)) {
-    yield* Effect.logError('Product is invalid')
-    return InternalMessage.AddProductCompleted()
+    yield* Effect.logWarning('Product is invalid')
+    return InternalMessage.AddProductCompleted({ succeeded: false })
   }
   const product = maybeProduct.value
-  yield* Effect.logInfo(
-    `Attempting to add product "${Product.name(product)}"...`,
-  )
-  const crypto = yield* Crypto.Crypto
-  const id = yield* crypto.randomUUIDv4
-  const maybeResult = yield* pipe(
-    AddProduct.Request({ id, product: Product.toOutput(product) }),
-    Effect.request(resolver),
+  yield* Effect.logInfo(`Attempting to add product "${Product.name(product)}"...`)
+  const maybeId = yield* pipe(
+    Products.AddProduct({ product: Product.toOutput(product) }),
+    Effect.request(add),
     Effect.option,
   )
-  if (Opt.isNone(maybeResult)) {
-    return InternalMessage.AddProductCompleted()
+  if (Opt.isNone(maybeId)) {
+    yield* Effect.logWarning('Could not add the product')
+    return InternalMessage.AddProductCompleted({ succeeded: false })
   }
-  yield* Effect.logInfo(
-    `Successfully added product with id ${maybeResult.value}`,
-  )
-  return InternalMessage.AddProductCompleted()
+  yield* Effect.logInfo(`Successfully added product with id ${maybeId.value}`)
+  return InternalMessage.AddProductCompleted({ succeeded: true })
 })
 
 export const notifyWrongState = Effect.fn(function*(message: { _tag: string }) {
@@ -171,13 +159,15 @@ export const notifyStale = Effect.fn(function*(message: { _tag: string }) {
 })
 
 export const scrollToTop = Effect.gen(function*() {
-  const { scrollToTop } = yield* UiCommands
+  const { scrollToTop } = yield* Viewport
   yield* scrollToTop
   return InternalMessage.NoOp()
 })
 
-export const showToast = Effect.fn(function*(message: string) {
-  const { showToast } = yield* Notification.Notification
-  yield* showToast(message)
+export const showToast = Effect.fn(function*(text: string) {
+  const { showToast } = yield* Notifications
+  yield* showToast(text).pipe(
+    Effect.catchTag('NotificationError', (error) => Effect.logWarning('Could not show toast', error.cause)),
+  )
   return InternalMessage.NoOp()
 })

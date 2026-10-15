@@ -7,7 +7,7 @@ import { pipe } from 'effect/Function'
 import * as Option from 'effect/Option'
 import * as Order from 'effect/Order'
 
-import * as Integer from '@/libs/integer/integer.ts'
+import * as Integer from '@/libs/numbers/integer.ts'
 
 import * as Product from './product.ts'
 

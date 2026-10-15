@@ -4,8 +4,8 @@ import type * as DateTime from 'effect/DateTime'
 import type * as Duration from 'effect/Duration'
 import type * as Opt from 'effect/Option'
 import type * as Result from 'effect/Result'
-import type { ProductInput } from '@/app/pages/home/domain/product.ts'
-import type * as UnitInterval from '@/libs/unit-interval.ts'
+import type { ProductInput } from '../domain/product.ts'
+import type * as UnitInterval from '@/libs/numbers/unit-interval.ts'
 
 export type Message = Data.TaggedEnum<{
   DeleteStarted: object
@@ -19,7 +19,7 @@ export type Message = Data.TaggedEnum<{
   InteractionChanged: { isInteracting: boolean }
   NameChanged: { name: string }
   ExpirationDateChanged: { expiration: string | number }
-  AddProductCompleted: object
+  AddProductCompleted: { succeeded: boolean }
   ProductsChanged: {
     result: Result.Result<
       ReadonlyArray<
@@ -67,7 +67,7 @@ export type InternalMessage =
         void
       >
     }
-    DeleteProductsCompleted: object
+    DeleteProductsCompleted: { succeeded: boolean }
     NoOp: object
   }>
 

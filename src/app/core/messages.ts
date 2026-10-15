@@ -1,5 +1,5 @@
 import * as Data from 'effect/Data'
-import type * as Home from '@/app/pages/home/messages.ts'
+import type * as Home from '../pages/home/program.ts'
 
 export type Message = Data.TaggedEnum<{
   HideSplashScreenRequested: object
@@ -13,7 +13,6 @@ export type InternalMessage =
     {
       GotHomeMsg: { message: Home.InternalMessage }
       NoOp: object
-      Crash: { error: unknown }
     }
   >
 

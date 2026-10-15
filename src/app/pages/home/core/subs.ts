@@ -1,36 +1,49 @@
 import * as Effect from 'effect/Effect'
-import * as Filter from 'effect/Filter'
 import * as HashMap from 'effect/HashMap'
 import * as Stream from 'effect/Stream'
-import type * as StateManager from '@/libs/fsm.ts'
-import type { Message } from './messages.ts'
+import { Products } from '../ports/products.ts'
+import { Viewport } from '../ports/viewport.ts'
+import type * as Engine from '@/libs/elm/engine.ts'
+import { Message } from './messages.ts'
 import type { State } from './state.ts'
 
-export type Deps = Events
+export type Deps = Products | Viewport
 
-export const subscriptions: StateManager.Emitter<
-  State,
-  Message,
-  Deps
-> = (state) => {
-  const map: ReturnType<typeof subscriptions> = HashMap.make(
+const CLOSE_TO_TOP_THRESHOLD = 30
+
+const fromViewport = <A>(f: (viewport: Viewport['Service']) => Stream.Stream<A>) =>
+  Stream.unwrap(Effect.map(Effect.service(Viewport), f))
+
+export const subscriptions: Engine.Emitter<State, Message, Deps> = (_state) =>
+  HashMap.make(
     [
-      'events',
-      Effect.service(Events).pipe(
-        Stream.unwrap,
-        Stream.tap((m) => Effect.log(m)),
-        Stream.filterMap(Filter.make(Filter.tagged('ProductsChanged'))),
-        Stream.zipLatestWith(Stream.tick('30 seconds'), (a) => a),
+      'products',
+      Stream.unwrap(Effect.map(Effect.service(Products), ({ changes }) => changes)).pipe(
+        // Re-emit periodically so that expiration statuses are recomputed.
+        Stream.zipLatestWith(Stream.tick('30 seconds'), (snapshot) => snapshot),
+        Stream.map((result) => Message.ProductsChanged({ result })),
       ),
     ],
     [
-      'changed',
-      Effect.service(Events).pipe(
-        Stream.unwrap,
-        Stream.filter((a) => a._tag !== 'ProductsChanged'),
+      'scrolling',
+      fromViewport(({ isScrolling }) => isScrolling).pipe(
+        Stream.map((isInteracting) => Message.InteractionChanged({ isInteracting })),
+      ),
+    ],
+    [
+      'at-top',
+      fromViewport(({ scrollY }) => scrollY).pipe(
+        Stream.map((y) => y === 0),
+        Stream.changes,
+        Stream.map((isAtTop) => Message.ViewportAtTopChanged({ isAtTop })),
+      ),
+    ],
+    [
+      'close-to-top',
+      fromViewport(({ scrollY }) => scrollY).pipe(
+        Stream.map((y) => y <= CLOSE_TO_TOP_THRESHOLD),
+        Stream.changes,
+        Stream.map((isCloseToTop) => Message.ViewportCloseToTopChanged({ isCloseToTop })),
       ),
     ],
   )
-
-  return map
-}

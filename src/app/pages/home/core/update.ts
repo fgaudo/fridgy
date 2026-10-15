@@ -5,16 +5,18 @@ import * as HashSet from 'effect/HashSet'
 import * as Match from 'effect/Match'
 import * as Opt from 'effect/Option'
 import * as Result from 'effect/Result'
-import * as T from 'effect/Tuple'
 
-import type * as StateManager from '@/libs/fsm.ts'
-import * as ArrX from '@/libs/non-empty-array.ts'
-import * as NonEmptyHashSet from '@/libs/non-empty-hash-set.ts'
+import type * as Engine from '@/libs/elm/engine.ts'
+import * as ArrX from '@/libs/collections/non-empty-array.ts'
+import * as NonEmptyHashSet from '@/libs/collections/non-empty-hash-set.ts'
 import * as Cmd from './commands.ts'
 import type { InternalMessage } from './messages.ts'
 import { FetchListVersion, type State } from './state.ts'
+import type { Notifications } from '../ports/notifications.ts'
+import type { Products } from '../ports/products.ts'
+import type { Viewport } from '../ports/viewport.ts'
 
-export type Deps = AddProduct | DeleteProductById | Notification | UiCommands
+export type Deps = Products | Viewport | Notifications
 
 type ProductDTO = Data.TaggedEnum.Value<
   State['productListData'],
@@ -29,7 +31,7 @@ export const update = Match.typeTags<
       message: InternalMessage,
     ) => (
       state: State,
-    ) => Transition<State, InternalMessage, Deps>
+    ) => Engine.Step<State, InternalMessage, Deps>
   >
 >()({
   ExpirationDateChanged: (message) => (state) => {
@@ -41,7 +43,7 @@ export const update = Match.typeTags<
     return { state: { ...state, maybeName: Opt.some(message.name) } }
   },
 
-  AddProductCompleted: (message) => (state) => {
+  AddProductCompleted: ({ succeeded }) => (state) => {
     return {
       state: {
         ...state,
@@ -50,6 +52,7 @@ export const update = Match.typeTags<
           activity: 'idle',
         },
       } satisfies State,
+      commands: succeeded ? [] : [Cmd.showToast('Could not add the product')],
     }
   },
 
@@ -244,6 +247,7 @@ export const update = Match.typeTags<
           activity: 'idle' as const,
         },
       },
+      commands: message.succeeded ? [] : [Cmd.showToast('Could not delete the products')],
     }
   },
 
@@ -318,11 +322,9 @@ export const update = Match.typeTags<
   },
 })
 
-export const init: StateManager.Step<State, InternalMessage, Deps> = T.make(
-  {
-    addProduct: {
-      _tag: 'Closed',
-    } as const,
+export const init: Engine.Step<State, InternalMessage, Deps> = {
+  state: {
+    addProduct: { _tag: 'Closed' },
     isMenuOpen: false,
     isViewportAtTop: true,
     isInteracting: false,
@@ -330,6 +332,5 @@ export const init: StateManager.Step<State, InternalMessage, Deps> = T.make(
     versions: {
       manualFetcher: FetchListVersion.make(0n),
     },
-  } satisfies State,
-  [],
-)
+  },
+}

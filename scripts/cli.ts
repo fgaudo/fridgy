@@ -45,7 +45,7 @@ const buildDev = Effect.gen(function*() {
       ...config,
       entrypoints: [
         ...config.entrypoints,
-        resolve('./src/core/view/view.ts'),
+        resolve('./src/app/view.ts'),
       ],
       sourcemap: 'inline',
     })
@@ -125,8 +125,7 @@ const watchCommand = Cli.Command.make(
     const publish = Effect.sync(() => server.publish('refresh', 'reload-page'))
     return yield* Stream.mergeAll(
       [
-        fs.watch(resolve('./src/core/view')),
-        fs.watch(resolve('./src/feature/home/view')),
+        fs.watch(resolve('./src/app'), { recursive: true }),
         fs.watch(resolve(
           './src/assets/css',
         )),

@@ -4,9 +4,9 @@ import type * as Data from 'effect/Data'
 import type * as DateTime from 'effect/DateTime'
 import type * as Duration from 'effect/Duration'
 import * as Opt from 'effect/Option'
-import type * as PositiveInteger from '@/libs/integer/positive-integer.ts'
-import type * as NonEmptyHashSet from '@/libs/non-empty-hash-set.ts'
-import type * as UnitInterval from '@/libs/unit-interval.ts'
+import type * as PositiveInteger from '@/libs/numbers/positive-integer.ts'
+import type * as NonEmptyHashSet from '@/libs/collections/non-empty-hash-set.ts'
+import type * as UnitInterval from '@/libs/numbers/unit-interval.ts'
 
 type FetchListVersion = Brand.Branded<bigint, 'FetchListVersion'>
 const _FetchListVersion = Brand.nominal<FetchListVersion>()

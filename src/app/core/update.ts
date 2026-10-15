@@ -1,78 +1,48 @@
-import * as Arr from 'effect/Array'
 import * as Chunk from 'effect/Chunk'
-import * as Effect from 'effect/Effect'
 import * as Match from 'effect/Match'
-import * as T from 'effect/Tuple'
-import { hideSplashScreen } from '@/app/core/commands.ts'
-import { InternalMessage } from '@/app/core/messages.ts'
-import { Route } from '@/app/transition.ts'
-import * as Home from '@/app/pages/home/update.ts'
-import type * as StateManager from '@/libs/fsm.ts'
-import type { State } from '../core/model.ts'
+import * as Opt from 'effect/Option'
+import type * as Engine from '@/libs/elm/engine.ts'
+import * as Program from '@/libs/elm/program.ts'
+import * as Home from '../pages/home/program.ts'
+import type { Shell } from '../ports/shell.ts'
+import { hideSplashScreen } from './commands.ts'
+import { InternalMessage } from './messages.ts'
+import { Route, type State } from './state.ts'
 
-type Deps = Home.Deps | UiCommands
+export type Deps = Home.Deps | Shell
 
-export const update: StateManager.Update<State, InternalMessage, Deps> = (message) => (state) => {
-  const currentPage = Chunk.headNonEmpty(state.navigationStack)
-  if (currentPage._tag === 'Home' && message._tag === 'GotHomeMsg') {
-    const { state: newState, commands } = Home.update(message.message)(state.page[currentPage._tag])
-    return T.make(
-      { ...state, page: { ...state.page, Home: newState } },
-      Arr.map(
-        commands ?? [],
-        Effect.map(
-          (message) => InternalMessage.GotHomeMsg({ message }),
-        ),
-      ),
-    )
-  }
-  return Match.value(message).pipe(
-    Match.withReturnType<
-      ReturnType<StateManager.Update<State, InternalMessage, Deps>>
-    >(),
-    Match.tag('Crash', ({ error }) => (state) => {
-      return T.make(
-        state,
-        [
-          Effect.logError(error).pipe(
-            Effect.map(() => InternalMessage.NoOp()),
-          ),
-        ],
-      )
-    }),
-    Match.tag('HideSplashScreenRequested', () => (state) => {
-      return T.make(state, [hideSplashScreen])
-    }),
-    Match.tag('NoOp', () => (state) => {
-      return T.make(state, [])
-    }),
-    Match.orElse((message) => (state) => {
-      return T.make(
-        state,
-        [
-          Effect.logWarning('Ignored message', message).pipe(
-            Effect.map(() => InternalMessage.NoOp()),
-          ),
-        ],
-      )
-    }),
-  )(state)
-}
+export const home = Program.embed(Home.program, {
+  key: 'Home',
+  wrap: (message) => InternalMessage.GotHomeMsg({ message }),
+  get: (state: State) =>
+    Chunk.headNonEmpty(state.navigationStack)._tag === 'Home'
+      ? Opt.some(state.page.Home)
+      : Opt.none(),
+  set: (state, Home) => ({ ...state, page: { ...state.page, Home } }),
+})
 
-export const makeDefectMessage = (error: unknown) => InternalMessage.Crash({ error })
-
-export const init: StateManager.Step<
-  State,
+export const update: Engine.Update<State, InternalMessage, Deps> = Match.typeTags<
   InternalMessage,
-  Deps
-> = (() => {
-  const [state, commands] = Home.init
-  return T.make(
-    {
+  (state: State) => Engine.Step<State, InternalMessage, Deps>
+>()({
+  GotHomeMsg: ({ message }) => home.update(message),
+
+  HideSplashScreenRequested: () => (state) => ({
+    state,
+    commands: [hideSplashScreen],
+  }),
+
+  NoOp: () => (state) => ({ state }),
+})
+
+export const init: Engine.Step<State, InternalMessage, Deps> = (() => {
+  const homeStep = home.init(Home.program.init)
+  return {
+    state: {
       appIsReady: true,
-      navigationStack: Chunk.make(Route.Home({ route: 'default' })),
-      page: { AddProduct: {}, Home: state },
+      navigationStack: Chunk.make(Route.Home()),
+      page: { AddProduct: {}, Home: homeStep.state },
     },
-    commands.map(Effect.map((message) => InternalMessage.GotHomeMsg({ message }))),
-  )
+    commands: homeStep.commands ?? [],
+  }
 })()
