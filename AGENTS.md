@@ -26,7 +26,7 @@ refactoring (see "Refactoring status"). A map of the source tree is in `src/READ
    `src/libs/elm/`: `engine.ts` (`Update`, `Step`, `Command`, `Emitter`, `make`, imported as `Engine`),
    `program.ts` (pages and the root expose a `Program`; children are lifted into parents with `embed`),
    `offer.ts` (`Offered`, `Offer`, `offered`: see rule 4) and `view.ts` (views are pure
-   `(model, dispatch) => Node` functions, generic over the node the renderer draws, and `dispatch` only takes `Offered` messages). `libs/elm` knows nothing of snabbdom (enforced by biome): pages, the root view and the renderer instantiate `View<Model, Message, VNode>`. A page never acts on its parent: it
+   `(model, dispatch) => Node` functions, generic over the node the renderer draws, and `dispatch` only takes `Offered` messages). `libs/elm` knows nothing of snabbdom (enforced by biome): views use `View<Model, Message>` from `libs/elm-snabbdom` (the renderer and tests instantiate `View<Model, Message, VNode>`). A page never acts on its parent: it
    returns *events* (the Elm "OutMsg" pattern, e.g. `InfoRequested`, `LeaveRequested`), declared as a public
    `Event` type, and the parent handles them in `embed`'s `onEvent`, which the types require whenever the
    child has events.
@@ -167,6 +167,7 @@ refactoring (see "Refactoring status"). A map of the source tree is in `src/READ
     - `dynamic-import/` — `saferImport`
     - `option/` — the `Option` arbitrary (`maybe` in tests)
     - `jsx/` — the JSX runtime for views (`jsx-runtime.ts`, see "Views")
+    - `elm-snabbdom/` — the bridge between `elm` and snabbdom: the `View` alias over `VNode`, and `handlers`
     - `testing/` — test-only helpers: `view.ts` (`dispatchedBy`, which fires every handler of a rendered
       view) and the `bun test` preload
 
@@ -204,6 +205,12 @@ refactoring (see "Refactoring status"). A map of the source tree is in `src/READ
   `<div className='…'>` does not (snabbdom's types would accept and silently ignore it). Biome's
   `a11y/useButtonType` is off for `.tsx` files: it looks for a React-style `type` attribute, which
   snabbdom keeps in `props`.
+- Views attach the model's offers with `handlers(dispatch)` from `libs/elm-snabbdom`:
+  `on={on('click', model.openMenu)}`, `on={onValue('input', form.changeName, inputValue)}`. The handler
+  exists only while the action is offered, so a view never wraps `dispatch` in `Opt.isSome` checks.
+  `onPreventingDefault` is the exception that always attaches: it cancels the browser's default (e.g. the
+  native menu of a long press) and dispatches only if the action is offered. Several events on one element
+  merge their objects: `on={{ ...on('pointerdown', a), ...on('pointerup', b) }}`.
 
 - `.ts` extension required in imports (biome `useImportExtensions`, `allowImportingTsExtensions`).
 - Namespace imports for effect modules: `import * as Effect from 'effect/Effect'`. Aliases:

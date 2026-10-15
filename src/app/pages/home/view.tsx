@@ -2,13 +2,13 @@ import type * as Data from 'effect/Data'
 import * as DateTime from 'effect/DateTime'
 import * as Duration from 'effect/Duration'
 import * as Opt from 'effect/Option'
-import type { VNode, VNodeStyle } from 'snabbdom'
-import type { Dispatch, View } from '@/libs/elm/view.ts'
+import type { On, VNode, VNodeStyle } from 'snabbdom'
+import { type Handlers, handlers, type View } from '@/libs/elm-snabbdom/elm-snabbdom.ts'
 import { cn } from '@/libs/ui/class-names.ts'
 import type { Message } from './program/messages.ts'
 import type { Model, ProductModel } from './program/model.ts'
 
-type HomeDispatch = Dispatch<Message>
+type Events = Handlers<Message>
 type ValidProduct = Data.TaggedEnum.Value<ProductModel, 'Valid'>
 
 const inputValue = (event: Event) => (event.target as HTMLInputElement).value
@@ -22,11 +22,11 @@ const fade: VNodeStyle = {
 }
 
 /** The dimmed layer behind a modal or a menu; a click on it closes what is open. */
-const backdrop = (key: string, className: string, onClick: () => void) => (
+const backdrop = (key: string, className: string, on: On) => (
   <div
     key={key}
     style={fade}
-    on={{ click: onClick }}
+    on={on}
     props={{ className: cn('fixed top-0 bottom-0 left-0 right-0 bg-black/50 backdrop-blur-xs', className) }}
   />
 )
@@ -40,14 +40,12 @@ const field = (label: string, input: VNode) => (
 
 const inputClassName = 'w-full bg-white focus:inset-ring-1 shadow-md rounded-md p-3'
 
-const addProductModal = (addProduct: Model['addProduct'], dispatch: HomeDispatch): ReadonlyArray<VNode> => {
+const addProductModal = (addProduct: Model['addProduct'], { on, onValue }: Events): ReadonlyArray<VNode> => {
   if (addProduct._tag === 'Closed') {
     return []
   }
   return [
-    backdrop('add-product-box-background', 'z-1000', () => {
-      if (Opt.isSome(addProduct.close)) dispatch(addProduct.close.value)
-    }),
+    backdrop('add-product-box-background', 'z-1000', on('click', addProduct.close)),
     <div
       key='add-product-box'
       style={{
@@ -76,11 +74,7 @@ const addProductModal = (addProduct: Model['addProduct'], dispatch: HomeDispatch
             value: addProduct.name,
             disabled: Opt.isNone(addProduct.changeName),
           }}
-          on={{
-            input: (event) => {
-              if (Opt.isSome(addProduct.changeName)) dispatch(addProduct.changeName.value(inputValue(event)))
-            },
-          }}
+          on={onValue('input', addProduct.changeName, inputValue)}
         />,
       )}
       {field(
@@ -92,13 +86,7 @@ const addProductModal = (addProduct: Model['addProduct'], dispatch: HomeDispatch
             value: addProduct.expirationDate.toString(),
             disabled: Opt.isNone(addProduct.changeExpiration),
           }}
-          on={{
-            input: (event) => {
-              if (Opt.isSome(addProduct.changeExpiration)) {
-                dispatch(addProduct.changeExpiration.value(inputValue(event)))
-              }
-            },
-          }}
+          on={onValue('input', addProduct.changeExpiration, inputValue)}
         />,
       )}
       <button
@@ -108,11 +96,7 @@ const addProductModal = (addProduct: Model['addProduct'], dispatch: HomeDispatch
           }),
           disabled: Opt.isNone(addProduct.submit),
         }}
-        on={{
-          click: () => {
-            if (Opt.isSome(addProduct.submit)) dispatch(addProduct.submit.value)
-          },
-        }}
+        on={on('click', addProduct.submit)}
       >
         {addProduct.isSubmitting ? 'Adding…' : 'Add'}
       </button>
@@ -120,12 +104,10 @@ const addProductModal = (addProduct: Model['addProduct'], dispatch: HomeDispatch
   ]
 }
 
-const sideMenu = (model: Model, dispatch: HomeDispatch): ReadonlyArray<VNode> =>
+const sideMenu = (model: Model, { on }: Events): ReadonlyArray<VNode> =>
   model.isMenuOpen
     ? [
-      backdrop('side-menu-background', 'z-50 transition-colors', () => {
-        if (Opt.isSome(model.closeMenu)) dispatch(model.closeMenu.value)
-      }),
+      backdrop('side-menu-background', 'z-50 transition-colors', on('click', model.closeMenu)),
       <div
         key='side-menu'
         style={{
@@ -140,11 +122,7 @@ const sideMenu = (model: Model, dispatch: HomeDispatch): ReadonlyArray<VNode> =>
       >
         <button
           props={{ className: 'flex items-center gap-4 h-14 px-6 text-left' }}
-          on={{
-            click: () => {
-              if (Opt.isSome(model.requestInfo)) dispatch(model.requestInfo.value)
-            },
-          }}
+          on={on('click', model.requestInfo)}
         >
           <span props={{ className: 'material-symbols-rounded' }}>info</span>
           <span>About</span>
@@ -187,7 +165,7 @@ const statusText = (status: ValidProduct['status']) => {
   }
 }
 
-const productRow = (product: ValidProduct, dispatch: HomeDispatch) => (
+const productRow = (product: ValidProduct, { onPreventingDefault }: Events) => (
   <div
     key={product.id}
     props={{
@@ -196,13 +174,8 @@ const productRow = (product: ValidProduct, dispatch: HomeDispatch) => (
         product.isSelected ? 'bg-secondary/30 ring-2 ring-secondary' : 'bg-secondary/5',
       ),
     }}
-    on={{
-      // A long press on Android (a right click on desktop).
-      contextmenu: (event: MouseEvent) => {
-        event.preventDefault()
-        if (Opt.isSome(product.changeSelection)) dispatch(product.changeSelection.value)
-      },
-    }}
+    // A long press on Android (a right click on desktop).
+    on={onPreventingDefault('contextmenu', product.changeSelection)}
   >
     {expirationBadge(product.status)}
     <div props={{ className: 'flex flex-col relative z-20' }}>
@@ -212,7 +185,9 @@ const productRow = (product: ValidProduct, dispatch: HomeDispatch) => (
   </div>
 )
 
-export const view: View<Model, Message, VNode> = (model, dispatch) => {
+export const view: View<Model, Message> = (model, dispatch) => {
+  const events = handlers(dispatch)
+  const { on } = events
   const fab = (
     <div
       props={{
@@ -227,11 +202,7 @@ export const view: View<Model, Message, VNode> = (model, dispatch) => {
           className:
             'relative shadow-md bg-red-200 flex items-center justify-evenly rounded-2xl h-16 w-16 text-red-400',
         }}
-        on={{
-          click: () => {
-            if (Opt.isSome(model.openAddProduct)) dispatch(model.openAddProduct.value)
-          },
-        }}
+        on={on('click', model.openAddProduct)}
       >
         <div props={{ className: 'material-symbols-rounded text-4xl!' }}>add</div>
       </button>
@@ -249,11 +220,7 @@ export const view: View<Model, Message, VNode> = (model, dispatch) => {
       <div props={{ className: 'flex w-full items-center h-16' }}>
         <span
           props={{ className: 'px-4 material-symbols-rounded' }}
-          on={{
-            click: () => {
-              if (Opt.isSome(model.openMenu)) dispatch(model.openMenu.value)
-            },
-          }}
+          on={on('click', model.openMenu)}
         >
           menu
         </span>
@@ -269,15 +236,15 @@ export const view: View<Model, Message, VNode> = (model, dispatch) => {
   // Invalid and corrupt products are not shown yet (see AGENTS.md, "Refactoring status").
   const productList = model.productListStatus._tag === 'Available'
     ? model.productListStatus.products.flatMap((product) =>
-      product._tag === 'Valid' ? [productRow(product, dispatch)] : []
+      product._tag === 'Valid' ? [productRow(product, events)] : []
     )
     : []
   // While a modal or the menu is open, the page behind it does not scroll (see `styles.css`).
   const isScrollLocked = model.addProduct._tag === 'Open' || model.isMenuOpen
   return (
     <div props={{ className: cn({ 'scroll-locked': isScrollLocked }) }}>
-      {addProductModal(model.addProduct, dispatch)}
-      {sideMenu(model, dispatch)}
+      {addProductModal(model.addProduct, events)}
+      {sideMenu(model, events)}
       {fab}
       {topBar}
       <div props={{ className: 'ml-sail mt-sait mr-sair' }}>
