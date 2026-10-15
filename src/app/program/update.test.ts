@@ -2,15 +2,17 @@ import { describe, expect, test } from 'bun:test'
 import * as DateTime from 'effect/DateTime'
 import * as Opt from 'effect/Option'
 import * as Engine from '@/libs/elm/engine.ts'
-import * as Home from '../pages/home/program.ts'
-import { InternalMessage } from './messages.ts'
+import type * as Home from '../pages/home/program.ts'
+// Tests may reach into a page: they drive it like its own view and subscriptions would.
+import { Message as HomeMessage } from '../pages/home/program/messages.ts'
+import { Message } from './messages.ts'
 import { homeState, type State, top } from './state.ts'
 import { init, update } from './update.ts'
 
-const fromHome = (message: Home.InternalMessage) => InternalMessage.GotHomeMsg({ message })
+const fromHome = (message: Home.Message) => Message.GotHomeMsg({ message })
 
 /** Applies the messages in order, collecting the commands. */
-const run = (messages: ReadonlyArray<InternalMessage>, from: State = init.state) =>
+const run = (messages: ReadonlyArray<Message>, from: State = init.state) =>
   messages.reduce(
     ({ state, commands }, message) => {
       const result = update(message)(state)
@@ -22,8 +24,8 @@ const run = (messages: ReadonlyArray<InternalMessage>, from: State = init.state)
 
 const tags = (state: State) => state.stack.map((page) => page._tag)
 
-const openAbout = fromHome(Home.Message.InfoRequested())
-const back = InternalMessage.BackRequested()
+const openAbout = fromHome(HomeMessage.InfoRequested())
+const back = Message.BackRequested()
 
 describe('Navigation', () => {
   test('starts on Home', () => {
@@ -45,7 +47,7 @@ describe('Navigation', () => {
   })
 
   test('back from About returns to Home, as it was', () => {
-    const onAbout = run([fromHome(Home.Message.MenuToggled()), openAbout]).state
+    const onAbout = run([fromHome(HomeMessage.MenuToggled()), openAbout]).state
     const { state, commands } = run([back], onAbout)
     expect(tags(state)).toEqual(['Home'])
     expect(commands.length).toBe(0)
@@ -54,7 +56,7 @@ describe('Navigation', () => {
   })
 
   test('back on Home first closes what is open', () => {
-    const { state, commands } = run([fromHome(Home.Message.MenuToggled()), back])
+    const { state, commands } = run([fromHome(HomeMessage.MenuToggled()), back])
     expect(tags(state)).toEqual(['Home'])
     expect(Opt.map(homeState(state), (home) => home.isMenuOpen)).toEqual(Opt.some(false))
     expect(commands.length).toBe(0)
@@ -68,7 +70,7 @@ describe('Navigation', () => {
 
   test('Home keeps receiving its messages while About is shown', () => {
     const now = DateTime.makeUnsafe(0)
-    const { state } = run([openAbout, fromHome(Home.Message.TimeChanged({ now }))])
+    const { state } = run([openAbout, fromHome(HomeMessage.TimeChanged({ now }))])
     expect(top(state)._tag).toBe('About')
     expect(Opt.flatMap(homeState(state), (home) => home.maybeNow)).toEqual(Opt.some(now))
   })

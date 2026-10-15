@@ -8,7 +8,7 @@ import * as Product from '../domain/product.ts'
 import { Notifications } from '../ports/notifications.ts'
 import * as Products from '../ports/products.ts'
 import { Viewport } from '../ports/viewport.ts'
-import { InternalMessage } from './messages.ts'
+import { Message } from './messages.ts'
 import type { OperationId } from './state.ts'
 
 export const deleteProducts = Effect.fn(function*({
@@ -29,7 +29,7 @@ export const deleteProducts = Effect.fn(function*({
   if (Opt.isNone(maybeDeleted)) {
     yield* Effect.logWarning('Could not delete products')
   }
-  return Opt.some(InternalMessage.DeleteProductsCompleted({ operation, succeeded: Opt.isSome(maybeDeleted) }))
+  return Opt.some(Message.DeleteProductsCompleted({ operation, succeeded: Opt.isSome(maybeDeleted) }))
 }, Effect.withLogSpan('DeleteProducts'))
 
 export const addProduct = Effect.fn(function*(
@@ -48,7 +48,7 @@ export const addProduct = Effect.fn(function*(
   })
   if (Opt.isNone(maybeProduct)) {
     yield* Effect.logWarning('Product is invalid')
-    return Opt.some(InternalMessage.AddProductCompleted({ operation, succeeded: false }))
+    return Opt.some(Message.AddProductCompleted({ operation, succeeded: false }))
   }
   const product = maybeProduct.value
   yield* Effect.logInfo(`Attempting to add product "${Product.name(product)}"...`)
@@ -59,10 +59,10 @@ export const addProduct = Effect.fn(function*(
   )
   if (Opt.isNone(maybeId)) {
     yield* Effect.logWarning('Could not add the product')
-    return Opt.some(InternalMessage.AddProductCompleted({ operation, succeeded: false }))
+    return Opt.some(Message.AddProductCompleted({ operation, succeeded: false }))
   }
   yield* Effect.logInfo(`Successfully added product with id ${maybeId.value}`)
-  return Opt.some(InternalMessage.AddProductCompleted({ operation, succeeded: true }))
+  return Opt.some(Message.AddProductCompleted({ operation, succeeded: true }))
 })
 
 export const scrollToTop = Effect.gen(function*() {

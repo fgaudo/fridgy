@@ -5,27 +5,27 @@ import * as fc from 'fast-check'
 import type { VNode } from 'snabbdom'
 import * as Engine from '@/libs/elm/engine.ts'
 import { view } from '../view.ts'
-import { Event, InternalMessage } from './messages.ts'
+import { Event, Message } from './messages.ts'
 import { makeModel } from './model.ts'
 import { licenses, maybe, state } from './state.arbitrary.ts'
 import type { State } from './state.ts'
 import { update } from './update.ts'
 
-const message: fc.Arbitrary<InternalMessage> = fc.oneof(
-  licenses.map((licenses) => InternalMessage.LicensesLoaded({ licenses })),
-  maybe(fc.string()).map((maybeSaying) => InternalMessage.SayingPicked({ maybeSaying })),
-  fc.constant(InternalMessage.BackPressed()),
+const message: fc.Arbitrary<Message> = fc.oneof(
+  licenses.map((licenses) => Message.LicensesLoaded({ licenses })),
+  maybe(fc.string()).map((maybeSaying) => Message.SayingPicked({ maybeSaying })),
+  fc.constant(Message.BackPressed()),
 )
 
-const step = (msg: InternalMessage, before: State) => {
+const step = (msg: Message, before: State) => {
   const result = update(msg)(before)
   if (Engine.isRejected(result)) throw new Error(`update rejected ${msg._tag}`)
   return { after: result.state, commands: result.commands ?? [] }
 }
 
 /** Renders the real view and fires every event handler, returning what they dispatch. */
-const dispatchedByView = (before: State): ReadonlyArray<InternalMessage> => {
-  const dispatched: Array<InternalMessage> = []
+const dispatchedByView = (before: State): ReadonlyArray<Message> => {
+  const dispatched: Array<Message> = []
   const visit = (node: VNode | string | undefined): void => {
     if (node === undefined || typeof node === 'string') return
     for (const [type, handler] of Object.entries(node.data?.on ?? {})) {
@@ -60,21 +60,21 @@ describe('About update', () => {
 
   test('LicensesLoaded stores the licenses and touches nothing else', () => {
     fc.assert(fc.property(state, licenses, (before, items) => {
-      const { after, commands } = step(InternalMessage.LicensesLoaded({ licenses: items }), before)
+      const { after, commands } = step(Message.LicensesLoaded({ licenses: items }), before)
       return Equal.equals(after, { ...before, licenses: { _tag: 'Loaded', items } }) && commands.length === 0
     }))
   })
 
   test('SayingPicked stores the saying and touches nothing else', () => {
     fc.assert(fc.property(state, maybe(fc.string()), (before, maybeSaying) => {
-      const { after, commands } = step(InternalMessage.SayingPicked({ maybeSaying }), before)
+      const { after, commands } = step(Message.SayingPicked({ maybeSaying }), before)
       return Equal.equals(after, { ...before, saying: { _tag: 'Picked', maybeSaying } }) && commands.length === 0
     }))
   })
 
   test('BackPressed asks the parent to leave the page, and changes nothing', () => {
     fc.assert(fc.property(state, (before) => {
-      const result = update(InternalMessage.BackPressed())(before)
+      const result = update(Message.BackPressed())(before)
       return !Engine.isRejected(result)
         && Equal.equals(result.state, before)
         && Equal.equals(result.events, [Event.LeaveRequested()])

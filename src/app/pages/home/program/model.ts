@@ -8,7 +8,7 @@ import * as PositiveInteger from '@/libs/numbers/positive-integer.ts'
 import type * as UnitInterval from '@/libs/numbers/unit-interval.ts'
 import * as Domain from '../domain/product.ts'
 import * as Guards from './guards.ts'
-import { InternalMessage } from './messages.ts'
+import { Message } from './messages.ts'
 import type * as State from './state.ts'
 
 type Availability<Fields> = Readonly<{ _tag: 'True' } & Fields> | Readonly<{ _tag: 'False' }>
@@ -19,13 +19,13 @@ type ProductModel = Data.TaggedEnum<{
     maybeName: Opt.Option<string>
   }>
   Invalid: Readonly<{
-    canToggle: Availability<{ message: InternalMessage }>
+    canToggle: Availability<{ message: Message }>
     isSelected: boolean
     id: string
     maybeName: Opt.Option<string>
   }>
   Valid: Readonly<{
-    canToggle: Availability<{ message: InternalMessage }>
+    canToggle: Availability<{ message: Message }>
     id: string
     isSelected: boolean
     name: string
@@ -50,7 +50,7 @@ export type Model = Readonly<{
       name: string
       expirationDate: string | number
       isSubmitting: boolean
-      isSubmittable: Availability<{ submit: InternalMessage }>
+      isSubmittable: Availability<{ submit: Message }>
     }
     Closed: object
   }>
@@ -60,8 +60,8 @@ export type Model = Readonly<{
     Empty: object
     Available: Readonly<{
       isDeleting: boolean
-      canDeleteSelected: Availability<{ deleteMessage: InternalMessage }>
-      canClearSelection: Availability<{ clearMessage: InternalMessage }>
+      canDeleteSelected: Availability<{ deleteMessage: Message }>
+      canClearSelection: Availability<{ clearMessage: Message }>
       total: PositiveInteger.PositiveInteger
       products: Arr.NonEmptyReadonlyArray<ProductModel>
     }>
@@ -96,7 +96,7 @@ const makeAddProduct = (state: State.State): Model['addProduct'] => {
     }),
     isSubmitting: state.addProduct._tag === 'Submitting',
     isSubmittable: Guards.canStartAdding(state)
-      ? { _tag: 'True', submit: InternalMessage.AddProductStarted() }
+      ? { _tag: 'True', submit: Message.AddProductStarted() }
       : { _tag: 'False' },
   }
 }
@@ -120,16 +120,16 @@ const makeProductList = (state: State.State): Model['productListStatus'] => {
       : Opt.exists(selection.maybeIds, HashSet.has(id))
   const canToggle = (id: string) =>
     Guards.canToggleItems(state)
-      ? { _tag: 'True', message: InternalMessage.ItemToggled({ id }) } as const
+      ? { _tag: 'True', message: Message.ItemToggled({ id }) } as const
       : { _tag: 'False' } as const
   return {
     _tag: 'Available',
     isDeleting: selection._tag === 'Deleting',
     canDeleteSelected: Guards.canDeleteSelected(state)
-      ? { _tag: 'True', deleteMessage: InternalMessage.DeleteStarted() }
+      ? { _tag: 'True', deleteMessage: Message.DeleteStarted() }
       : { _tag: 'False' },
     canClearSelection: Guards.canClearSelection(state)
-      ? { _tag: 'True', clearMessage: InternalMessage.ClearSelected() }
+      ? { _tag: 'True', clearMessage: Message.ClearSelected() }
       : { _tag: 'False' },
     total: PositiveInteger.fromNumberUnsafe(items.length),
     products: Arr.map(items, (product): ProductModel => {

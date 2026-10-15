@@ -1,14 +1,14 @@
 import * as Opt from 'effect/Option'
 import { h } from 'snabbdom'
 import type { View } from '@/libs/elm/view.ts'
-import { InternalMessage } from './program/messages.ts'
+import { Message } from './program/messages.ts'
 import type { Model } from './program/model.ts'
 
-export const view: View<Model, InternalMessage> = (model, dispatch) =>
+export const view: View<Model, Message> = (model, dispatch) =>
   h('div', { props: { className: 'flex flex-col gap-4 p-4 pt-sait' } }, [
     h('div', { props: { className: 'flex items-center gap-2' } }, [
       h('button', {
-        on: { click: () => dispatch(InternalMessage.BackPressed()) },
+        on: { click: () => dispatch(Message.BackPressed()) },
         props: { className: 'material-symbols-rounded p-2' },
       }, 'arrow_back'),
       h('h1', { props: { className: 'text-2xl font-bold' } }, 'Fridgy'),

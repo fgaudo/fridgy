@@ -14,14 +14,14 @@ import type { Products, StoredProduct } from '../ports/products.ts'
 import type { Viewport } from '../ports/viewport.ts'
 import * as Cmd from './commands.ts'
 import * as Guards from './guards.ts'
-import { Event, type InternalMessage } from './messages.ts'
+import { Event, type Message } from './messages.ts'
 import { OperationId, type Product, type State } from './state.ts'
 
 export type Deps = Products | Viewport | Notifications
 
 const ProductEnum = Data.taggedEnum<Product>()
 
-type Transition = Engine.Transition<State, InternalMessage, Deps, Event>
+type Transition = Engine.Transition<State, Message, Deps, Event>
 
 // Products that still have an id can be selected and deleted, even when invalid;
 // the ones without an id cannot be referenced at all.
@@ -38,7 +38,7 @@ const validate = (stored: StoredProduct): Product =>
 const idsOf = (items: ReadonlyArray<Product>) =>
   HashSet.fromIterable(Arr.flatMap(items, (product) => (product._tag === 'Corrupt' ? [] : [product.id])))
 
-export const update = Match.typeTags<InternalMessage, (state: State) => Transition>()({
+export const update = Match.typeTags<Message, (state: State) => Transition>()({
   AddProductToggled: () => (state) => {
     switch (state.addProduct._tag) {
       case 'Closed':
@@ -226,7 +226,7 @@ export const update = Match.typeTags<InternalMessage, (state: State) => Transiti
 
 })
 
-export const init: Engine.Step<State, InternalMessage, Deps> = {
+export const init: Engine.Step<State, Message, Deps> = {
   state: {
     isMenuOpen: false,
     isViewportAtTop: true,

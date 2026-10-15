@@ -53,15 +53,18 @@ refactoring (see "Refactoring status"). A map of the source tree is in `src/READ
 6. **Self-contained pages.** Each page in `src/app/pages/<page>/` is a module with a small public API made
    of the files at its root; **every subfolder is private** to the page (enforced by biome
    `noRestrictedImports`). Inside a page, files import each other with relative paths. Public files:
-   - `program.ts` — the `Program` and what the root needs (`State`, `Model`, `Message`, `InternalMessage`,
-     `Event`, `Deps`); it is the facade of the private `program/` folder
+   - `program.ts` — the `Program` and what the root needs: the page's contract is `ExternalMessage` (what
+     the parent may send, e.g. `BackPressed`; exported with its constructors), `Event` (what the page asks
+     of its parent) and `Model`; `Message` (everything the page handles: `ExternalMessage` plus what its
+     view, subscriptions and commands generate) is exported as a type only, so code outside the page cannot
+     forge a click or a completion. Also `State` and `Deps`; it is the facade of the private `program/` folder
    - `view.ts` — the page view
    - `sqlite.layer.ts`, `in-memory.layer.ts`, … — one adapter composition (`layer`) per setup, named after
      *what* backs the ports, never after an environment (environments only exist in `src/entrypoints/`)
 
    They are separate files on purpose: the view is bundled on its own for hot reload, and each setup must
    only pull in its own dependencies. Privately, a page contains:
-   - `program/` — the Elm program: `messages.ts` (public `Message` + `InternalMessage`), `state.ts`,
+   - `program/` — the Elm program: `messages.ts` (`ExternalMessage`, `Message`, `Event`), `state.ts`,
      `model.ts` (`Model` + `makeModel`), `update.ts` (`update` + `init`), `guards.ts`, `subs.ts`, `commands.ts`
    - `domain/` — domain types and logic
    - `ports/<capability>.ts` — one `Context.Service` per external capability (e.g. `Products`,
@@ -145,6 +148,8 @@ refactoring (see "Refactoring status"). A map of the source tree is in `src/READ
   for arbitrary states, fires every event handler and asserts `update` accepts what they dispatch. Rejections
   are asserted explicitly (`Engine.isRejected`), never as "state unchanged". `bun test` preloads
   `src/libs/testing/preload.ts` (see `bunfig.toml`), which declares the `window` global snabbdom reads.
+- Tests may import a page's private files (biome allows it for `*.test.ts` only): a test drives a page
+  the way its own view and subscriptions would, e.g. the root tests build Home's `Message`s.
 - Arbitraries: every branded type in `src/libs/` has a companion `<module>.arbitrary.ts` (e.g.
   `numbers/positive-integer.arbitrary.ts`) exporting a fast-check `arbitrary` that only produces valid values.
   Tests build their generators from these instead of calling `*Unsafe` constructors. `fast-check` and

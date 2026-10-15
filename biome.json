@@ -55,10 +55,6 @@
                   {
                     "group": ["@/app/*/**", "**/app/*/**"],
                     "message": "App subfolders are private: from outside src/app import only the modules at its root (program.ts, view.ts, *.layer.ts)."
-                  },
-                  {
-                    "group": ["@/app/pages/*/*/**", "**/pages/*/*/**"],
-                    "message": "Page subfolders are private: import only the modules at the root of the page (program.ts, view.ts, *.layer.ts)."
                   }
                 ]
               }

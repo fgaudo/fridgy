@@ -2,19 +2,24 @@ import * as Data from 'effect/Data'
 import type * as Opt from 'effect/Option'
 import type { License } from '../ports/licenses.ts'
 
-export type Message = Data.TaggedEnum<{
-  LicensesLoaded: { licenses: ReadonlyArray<License> }
-  SayingPicked: { maybeSaying: Opt.Option<string> }
-  /** From the back button, in the page or Android's. */
+/** What the parent may send to the page: its public, inbound API. */
+export type ExternalMessage = Data.TaggedEnum<{
+  /** Android's back button, while the page is shown; the page's own back button sends it too. */
   BackPressed: object
 }>
 
+export const ExternalMessage = Data.taggedEnum<ExternalMessage>()
+
+/** Everything the page handles: the public messages, and the ones it generates itself. */
+export type Message =
+  | ExternalMessage
+  | Data.TaggedEnum<{
+    // From commands.
+    LicensesLoaded: { licenses: ReadonlyArray<License> }
+    SayingPicked: { maybeSaying: Opt.Option<string> }
+  }>
+
 export const Message = Data.taggedEnum<Message>()
-
-/** The page has no messages of its own beyond the public ones yet. */
-export type InternalMessage = Message
-
-export const InternalMessage = Message
 
 /** What the page asks of its parent (the "OutMsg" pattern). */
 export type Event = Data.TaggedEnum<{

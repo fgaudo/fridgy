@@ -10,7 +10,7 @@ import * as Engine from '@/libs/elm/engine.ts'
 import * as Domain from '../domain/product.ts'
 import type { StoredProduct } from '../ports/products.ts'
 import { view } from '../view.ts'
-import { Event, InternalMessage } from './messages.ts'
+import { Event, Message } from './messages.ts'
 import { makeModel } from './model.ts'
 import {
   closedForm,
@@ -29,43 +29,43 @@ import {
 import type { State } from './state.ts'
 import { update } from './update.ts'
 
-const message: fc.Arbitrary<InternalMessage> = fc.oneof(
-  fc.constant(InternalMessage.DeleteStarted()),
-  id.map((id) => InternalMessage.ItemToggled({ id })),
-  fc.constant(InternalMessage.ClearSelected()),
-  fc.constant(InternalMessage.MenuToggled()),
-  fc.constant(InternalMessage.AddProductToggled()),
-  fc.constant(InternalMessage.AddProductStarted()),
-  fc.boolean().map((isAtTop) => InternalMessage.ViewportAtTopChanged({ isAtTop })),
-  fc.boolean().map((isCloseToTop) => InternalMessage.ViewportCloseToTopChanged({ isCloseToTop })),
-  fc.boolean().map((isInteracting) => InternalMessage.InteractionChanged({ isInteracting })),
-  fc.string().map((name) => InternalMessage.NameChanged({ name })),
-  fc.oneof(fc.string(), fc.integer()).map((expiration) => InternalMessage.ExpirationDateChanged({ expiration })),
-  date.map((now) => InternalMessage.TimeChanged({ now })),
-  fc.record({ operation, succeeded: fc.boolean() }).map(InternalMessage.AddProductCompleted),
+const message: fc.Arbitrary<Message> = fc.oneof(
+  fc.constant(Message.DeleteStarted()),
+  id.map((id) => Message.ItemToggled({ id })),
+  fc.constant(Message.ClearSelected()),
+  fc.constant(Message.MenuToggled()),
+  fc.constant(Message.AddProductToggled()),
+  fc.constant(Message.AddProductStarted()),
+  fc.boolean().map((isAtTop) => Message.ViewportAtTopChanged({ isAtTop })),
+  fc.boolean().map((isCloseToTop) => Message.ViewportCloseToTopChanged({ isCloseToTop })),
+  fc.boolean().map((isInteracting) => Message.InteractionChanged({ isInteracting })),
+  fc.string().map((name) => Message.NameChanged({ name })),
+  fc.oneof(fc.string(), fc.integer()).map((expiration) => Message.ExpirationDateChanged({ expiration })),
+  date.map((now) => Message.TimeChanged({ now })),
+  fc.record({ operation, succeeded: fc.boolean() }).map(Message.AddProductCompleted),
   fc.oneof(
     fc.constant(Result.fail(undefined)),
     storedProducts.map((products) => Result.succeed(products)),
-  ).map((result) => InternalMessage.ProductsChanged({ result })),
-  fc.record({ operation, succeeded: fc.boolean() }).map(InternalMessage.DeleteProductsCompleted),
-  fc.constant(InternalMessage.InfoRequested()),
-  fc.constant(InternalMessage.BackPressed()),
+  ).map((result) => Message.ProductsChanged({ result })),
+  fc.record({ operation, succeeded: fc.boolean() }).map(Message.DeleteProductsCompleted),
+  fc.constant(Message.InfoRequested()),
+  fc.constant(Message.BackPressed()),
 )
 
 type Outcome =
   | Readonly<{ rejected: true }>
   | Readonly<{ rejected: false; after: State; commands: ReadonlyArray<unknown>; events: ReadonlyArray<Event> }>
 
-const outcome = (msg: InternalMessage, before: State): Outcome => {
+const outcome = (msg: Message, before: State): Outcome => {
   const result = update(msg)(before)
   return Engine.isRejected(result)
     ? { rejected: true }
     : { rejected: false, after: result.state, commands: result.commands ?? [], events: result.events ?? [] }
 }
 
-const rejects = (msg: InternalMessage, before: State) => outcome(msg, before).rejected
+const rejects = (msg: Message, before: State) => outcome(msg, before).rejected
 
-const step = (msg: InternalMessage, before: State) => {
+const step = (msg: Message, before: State) => {
   const result = outcome(msg, before)
   if (result.rejected) {
     throw new Error(`update rejected ${msg._tag}`)
@@ -78,8 +78,8 @@ const step = (msg: InternalMessage, before: State) => {
  * with a fake event whose target holds `inputValue`. Returns the messages the
  * handlers dispatch. Hooks are not run: they only touch the DOM.
  */
-const dispatchedByView = (before: State, inputValue: string): ReadonlyArray<InternalMessage> => {
-  const dispatched: Array<InternalMessage> = []
+const dispatchedByView = (before: State, inputValue: string): ReadonlyArray<Message> => {
+  const dispatched: Array<Message> = []
   const visit = (node: VNode | string | undefined): void => {
     if (node === undefined || typeof node === 'string') return
     for (const [type, handler] of Object.entries(node.data?.on ?? {})) {
@@ -162,7 +162,7 @@ describe('Home update', () => {
   describe('InfoRequested', () => {
     test('closes the menu and asks the parent for the info page', () => {
       assertProperty([state], (before) => {
-        const { after, commands, events } = step(InternalMessage.InfoRequested(), before)
+        const { after, commands, events } = step(Message.InfoRequested(), before)
         return !after.isMenuOpen
           && onlyChanged(before, after, 'isMenuOpen')
           && commands.length === 0
@@ -174,7 +174,7 @@ describe('Home update', () => {
   describe('BackPressed', () => {
     test('closes the menu first, then an edited form, and otherwise asks to leave', () => {
       assertProperty([state], (before) => {
-        const { after, commands, events } = step(InternalMessage.BackPressed(), before)
+        const { after, commands, events } = step(Message.BackPressed(), before)
         if (before.isMenuOpen) {
           return !after.isMenuOpen && onlyChanged(before, after, 'isMenuOpen') && events.length === 0
         }
@@ -191,7 +191,7 @@ describe('Home update', () => {
   describe('MenuToggled', () => {
     test('flips the menu and touches nothing else', () => {
       assertProperty([state], (before) => {
-        const { after, commands } = step(InternalMessage.MenuToggled(), before)
+        const { after, commands } = step(Message.MenuToggled(), before)
         return after.isMenuOpen === !before.isMenuOpen
           && onlyChanged(before, after, 'isMenuOpen')
           && commands.length === 0
@@ -200,8 +200,8 @@ describe('Home update', () => {
 
     test('toggling twice restores the state', () => {
       assertProperty([state], (before) => {
-        const once = step(InternalMessage.MenuToggled(), before).after
-        return Equal.equals(step(InternalMessage.MenuToggled(), once).after, before)
+        const once = step(Message.MenuToggled(), before).after
+        return Equal.equals(step(Message.MenuToggled(), once).after, before)
       })
     })
   })
@@ -209,7 +209,7 @@ describe('Home update', () => {
   describe('InteractionChanged', () => {
     test('stores the flag, is idempotent and touches nothing else', () => {
       assertProperty([state, fc.boolean()], (before, isInteracting) => {
-        const msg = InternalMessage.InteractionChanged({ isInteracting })
+        const msg = Message.InteractionChanged({ isInteracting })
         const { after, commands } = step(msg, before)
         return after.isInteracting === isInteracting
           && onlyChanged(before, after, 'isInteracting')
@@ -222,7 +222,7 @@ describe('Home update', () => {
   describe('ViewportAtTopChanged', () => {
     test('stores the flag and touches nothing else', () => {
       assertProperty([state, fc.boolean()], (before, isAtTop) => {
-        const { after, commands } = step(InternalMessage.ViewportAtTopChanged({ isAtTop }), before)
+        const { after, commands } = step(Message.ViewportAtTopChanged({ isAtTop }), before)
         return after.isViewportAtTop === isAtTop
           && onlyChanged(before, after, 'isViewportAtTop')
           && commands.length === 0
@@ -233,7 +233,7 @@ describe('Home update', () => {
   describe('ViewportCloseToTopChanged', () => {
     test('scrolls to the top only when close to it and not interacting', () => {
       assertProperty([state, fc.boolean()], (before, isCloseToTop) => {
-        const { after, commands } = step(InternalMessage.ViewportCloseToTopChanged({ isCloseToTop }), before)
+        const { after, commands } = step(Message.ViewportCloseToTopChanged({ isCloseToTop }), before)
         const shouldScroll = isCloseToTop && !before.isInteracting
         return Equal.equals(after, before) && commands.length === (shouldScroll ? 1 : 0)
       })
@@ -243,7 +243,7 @@ describe('Home update', () => {
   describe('TimeChanged', () => {
     test('stores the time and touches nothing else', () => {
       assertProperty([state, date], (before, now) => {
-        const { after, commands } = step(InternalMessage.TimeChanged({ now }), before)
+        const { after, commands } = step(Message.TimeChanged({ now }), before)
         return Equal.equals(after.maybeNow, Opt.some(now))
           && onlyChanged(before, after, 'maybeNow')
           && commands.length === 0
@@ -253,11 +253,11 @@ describe('Home update', () => {
 
   describe('ProductsChanged', () => {
     const changed = (products: ReadonlyArray<StoredProduct>) =>
-      InternalMessage.ProductsChanged({ result: Result.succeed(products) })
+      Message.ProductsChanged({ result: Result.succeed(products) })
 
     test('a failure marks the products as failed and touches nothing else', () => {
       assertProperty([state], (before) => {
-        const { after, commands } = step(InternalMessage.ProductsChanged({ result: Result.fail(undefined) }), before)
+        const { after, commands } = step(Message.ProductsChanged({ result: Result.fail(undefined) }), before)
         return after.products._tag === 'Failed' && onlyChanged(before, after, 'products') && commands.length === 0
       })
     })
@@ -304,7 +304,7 @@ describe('Home update', () => {
 
     test('toggles membership of the id in the selection', () => {
       assertProperty([toggleable, id], (before, itemId) => {
-        const { after, commands } = step(InternalMessage.ItemToggled({ id: itemId }), before)
+        const { after, commands } = step(Message.ItemToggled({ id: itemId }), before)
         return HashSet.has(selectedIds(after.selection), itemId) === !HashSet.has(selectedIds(before.selection), itemId)
           && onlyChanged(before, after, 'selection')
           && commands.length === 0
@@ -313,7 +313,7 @@ describe('Home update', () => {
 
     test('toggling twice restores the state', () => {
       assertProperty([toggleable, id], (before, itemId) => {
-        const msg = InternalMessage.ItemToggled({ id: itemId })
+        const msg = Message.ItemToggled({ id: itemId })
         return Equal.equals(step(msg, step(msg, before).after).after, before)
       })
     })
@@ -321,7 +321,7 @@ describe('Home update', () => {
     test('is rejected unless the products are shown and nothing is being deleted', () => {
       assertProperty([state, id], (before, itemId) => {
         fc.pre(before.products._tag !== 'Loaded' || before.selection._tag !== 'Selecting')
-        return rejects(InternalMessage.ItemToggled({ id: itemId }), before)
+        return rejects(Message.ItemToggled({ id: itemId }), before)
       })
     })
   })
@@ -331,9 +331,9 @@ describe('Home update', () => {
       assertProperty([state], (before) => {
         const canClear = before.selection._tag === 'Selecting' && Opt.isSome(before.selection.maybeIds)
         if (!canClear) {
-          return rejects(InternalMessage.ClearSelected(), before)
+          return rejects(Message.ClearSelected(), before)
         }
-        const { after, commands } = step(InternalMessage.ClearSelected(), before)
+        const { after, commands } = step(Message.ClearSelected(), before)
         return Equal.equals(after.selection, { _tag: 'Selecting', maybeIds: Opt.none() })
           && onlyChanged(before, after, 'selection')
           && commands.length === 0
@@ -348,9 +348,9 @@ describe('Home update', () => {
           && before.selection._tag === 'Selecting'
           && Opt.isSome(before.selection.maybeIds)
         if (!canDelete) {
-          return rejects(InternalMessage.DeleteStarted(), before)
+          return rejects(Message.DeleteStarted(), before)
         }
-        const { after, commands } = step(InternalMessage.DeleteStarted(), before)
+        const { after, commands } = step(Message.DeleteStarted(), before)
         return after.selection._tag === 'Deleting'
           && after.selection.operation === before.nextOperation
           && Equal.equals(selectedIds(after.selection), selectedIds(before.selection))
@@ -368,7 +368,7 @@ describe('Home update', () => {
       assertProperty([deletingState], (before) => {
         fc.pre(before.selection._tag === 'Deleting')
         const operation = before.selection.operation
-        const { after, commands } = step(InternalMessage.DeleteProductsCompleted({ operation, succeeded: true }), before)
+        const { after, commands } = step(Message.DeleteProductsCompleted({ operation, succeeded: true }), before)
         return Equal.equals(after.selection, { _tag: 'Selecting', maybeIds: Opt.none() })
           && onlyChanged(before, after, 'selection')
           && commands.length === 0
@@ -379,7 +379,7 @@ describe('Home update', () => {
       assertProperty([deletingState], (before) => {
         fc.pre(before.selection._tag === 'Deleting')
         const operation = before.selection.operation
-        const { after, commands } = step(InternalMessage.DeleteProductsCompleted({ operation, succeeded: false }), before)
+        const { after, commands } = step(Message.DeleteProductsCompleted({ operation, succeeded: false }), before)
         return after.selection._tag === 'Selecting'
           && Equal.equals(selectedIds(after.selection), selectedIds(before.selection))
           && onlyChanged(before, after, 'selection')
@@ -390,7 +390,7 @@ describe('Home update', () => {
     test('is rejected unless it completes the deletion in progress', () => {
       assertProperty([state, operation, fc.boolean()], (before, operation, succeeded) => {
         fc.pre(before.selection._tag !== 'Deleting' || before.selection.operation !== operation)
-        return rejects(InternalMessage.DeleteProductsCompleted({ operation, succeeded }), before)
+        return rejects(Message.DeleteProductsCompleted({ operation, succeeded }), before)
       })
     })
   })
@@ -398,7 +398,7 @@ describe('Home update', () => {
   describe('AddProductToggled', () => {
     test('opens an empty form, closes an edited one, and leaves a submission alone', () => {
       assertProperty([state], (before) => {
-        const { after, commands } = step(InternalMessage.AddProductToggled(), before)
+        const { after, commands } = step(Message.AddProductToggled(), before)
         const expected = {
           Closed: () =>
             Equal.equals(after.addProduct, { _tag: 'Editing', maybeName: Opt.none(), maybeExpirationDate: Opt.none() }),
@@ -413,7 +413,7 @@ describe('Home update', () => {
   describe('NameChanged', () => {
     test('stores the name as typed while editing', () => {
       assertProperty([stateWith('addProduct', editingForm), fc.string()], (before, name) => {
-        const { after } = step(InternalMessage.NameChanged({ name }), before)
+        const { after } = step(Message.NameChanged({ name }), before)
         return after.addProduct._tag === 'Editing'
           && Equal.equals(after.addProduct.maybeName, Opt.some(name))
           && onlyChanged(before, after, 'addProduct')
@@ -422,12 +422,12 @@ describe('Home update', () => {
 
     test('changes nothing while submitting', () => {
       assertProperty([stateWith('addProduct', submittingForm), fc.string()], (before, name) =>
-        Equal.equals(step(InternalMessage.NameChanged({ name }), before).after, before))
+        Equal.equals(step(Message.NameChanged({ name }), before).after, before))
     })
 
     test('is rejected when the form is closed', () => {
       assertProperty([stateWith('addProduct', closedForm), fc.string()], (before, name) =>
-        rejects(InternalMessage.NameChanged({ name }), before))
+        rejects(Message.NameChanged({ name }), before))
     })
   })
 
@@ -437,7 +437,7 @@ describe('Home update', () => {
         before,
         expiration,
       ) => {
-        const { after } = step(InternalMessage.ExpirationDateChanged({ expiration }), before)
+        const { after } = step(Message.ExpirationDateChanged({ expiration }), before)
         return after.addProduct._tag === 'Editing'
           && Equal.equals(after.addProduct.maybeExpirationDate, DateTime.make(expiration))
           && onlyChanged(before, after, 'addProduct')
@@ -446,12 +446,12 @@ describe('Home update', () => {
 
     test('changes nothing while submitting', () => {
       assertProperty([stateWith('addProduct', submittingForm), fc.integer()], (before, expiration) =>
-        Equal.equals(step(InternalMessage.ExpirationDateChanged({ expiration }), before).after, before))
+        Equal.equals(step(Message.ExpirationDateChanged({ expiration }), before).after, before))
     })
 
     test('is rejected when the form is closed', () => {
       assertProperty([stateWith('addProduct', closedForm), fc.integer()], (before, expiration) =>
-        rejects(InternalMessage.ExpirationDateChanged({ expiration }), before))
+        rejects(Message.ExpirationDateChanged({ expiration }), before))
     })
   })
 
@@ -462,9 +462,9 @@ describe('Home update', () => {
         const canStart = form._tag === 'Editing'
           && Opt.exists(form.maybeName, (name) => name.normalize('NFKC').trim().length > 0)
         if (!canStart) {
-          return rejects(InternalMessage.AddProductStarted(), before)
+          return rejects(Message.AddProductStarted(), before)
         }
-        const { after, commands } = step(InternalMessage.AddProductStarted(), before)
+        const { after, commands } = step(Message.AddProductStarted(), before)
         return Equal.equals(after.addProduct, {
           _tag: 'Submitting',
           operation: before.nextOperation,
@@ -485,7 +485,7 @@ describe('Home update', () => {
       assertProperty([submittingState], (before) => {
         fc.pre(before.addProduct._tag === 'Submitting')
         const operation = before.addProduct.operation
-        const { after, commands } = step(InternalMessage.AddProductCompleted({ operation, succeeded: true }), before)
+        const { after, commands } = step(Message.AddProductCompleted({ operation, succeeded: true }), before)
         return after.addProduct._tag === 'Closed' && onlyChanged(before, after, 'addProduct') && commands.length === 0
       })
     })
@@ -494,7 +494,7 @@ describe('Home update', () => {
       assertProperty([submittingState], (before) => {
         fc.pre(before.addProduct._tag === 'Submitting')
         const { operation, maybeName, maybeExpirationDate } = before.addProduct
-        const { after, commands } = step(InternalMessage.AddProductCompleted({ operation, succeeded: false }), before)
+        const { after, commands } = step(Message.AddProductCompleted({ operation, succeeded: false }), before)
         return Equal.equals(after.addProduct, { _tag: 'Editing', maybeName, maybeExpirationDate })
           && onlyChanged(before, after, 'addProduct')
           && commands.length === 1
@@ -504,7 +504,7 @@ describe('Home update', () => {
     test('is rejected unless it completes the submission in progress', () => {
       assertProperty([state, operation, fc.boolean()], (before, operation, succeeded) => {
         fc.pre(before.addProduct._tag !== 'Submitting' || before.addProduct.operation !== operation)
-        return rejects(InternalMessage.AddProductCompleted({ operation, succeeded }), before)
+        return rejects(Message.AddProductCompleted({ operation, succeeded }), before)
       })
     })
   })

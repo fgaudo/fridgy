@@ -1,9 +1,9 @@
 import { h, type VNode } from 'snabbdom'
 import { cn } from '@/libs/ui/class-names.ts'
 import type { Dispatch, View } from '@/libs/elm/view.ts'
-import { InternalMessage } from './program/messages.ts'
+import { Message } from './program/messages.ts'
 
-type HomeDispatch = Dispatch<InternalMessage>
+type HomeDispatch = Dispatch<Message>
 import type { Model } from './program/model.ts'
 
 function lockScroll(isLocked: boolean) {
@@ -29,7 +29,7 @@ const addProductModal = (
         remove: { opacity: '0' },
       },
       key: 'add-product-box-background',
-      on: { click: () => dispatch(InternalMessage.AddProductToggled()) },
+      on: { click: () => dispatch(Message.AddProductToggled()) },
       props: {
         className: 'fixed left-0 right-0 bottom-0 z-1000 top-0 bg-black/50 backdrop-blur-xs',
       },
@@ -64,7 +64,7 @@ const addProductModal = (
             disabled: addProduct.isSubmitting,
           },
           on: {
-            input: (event) => dispatch(InternalMessage.NameChanged({ name: inputValue(event) })),
+            input: (event) => dispatch(Message.NameChanged({ name: inputValue(event) })),
           },
         }),
       ]),
@@ -78,7 +78,7 @@ const addProductModal = (
             disabled: addProduct.isSubmitting,
           },
           on: {
-            input: (event) => dispatch(InternalMessage.ExpirationDateChanged({ expiration: inputValue(event) })),
+            input: (event) => dispatch(Message.ExpirationDateChanged({ expiration: inputValue(event) })),
           },
         }),
       ]),
@@ -115,7 +115,7 @@ const sideMenu = (
           remove: { opacity: '0' },
         },
         key: 'side-menu-background',
-        on: { click: () => dispatch(InternalMessage.MenuToggled()) },
+        on: { click: () => dispatch(Message.MenuToggled()) },
         props: {
           className: 'transition-colors fixed top-0 bottom-0 left-0 right-0 z-50 bg-black/50 backdrop-blur-xs',
         },
@@ -133,7 +133,7 @@ const sideMenu = (
         },
       }, [
         h('button', {
-          on: { click: () => dispatch(InternalMessage.InfoRequested()) },
+          on: { click: () => dispatch(Message.InfoRequested()) },
           props: { className: 'flex items-center gap-4 h-14 px-6 text-left' },
         }, [
           h('span', { props: { className: 'material-symbols-rounded' } }, 'info'),
@@ -143,7 +143,7 @@ const sideMenu = (
     ]
     : []
 
-export const view: View<Model, InternalMessage> = (model, dispatch) => {
+export const view: View<Model, Message> = (model, dispatch) => {
   const isScrollLocked = model.addProduct._tag === 'Open' || model.isMenuOpen
 
   const fab = h('div', {
@@ -155,7 +155,7 @@ export const view: View<Model, InternalMessage> = (model, dispatch) => {
     },
   }, [
     h('button', {
-      on: { click: () => dispatch(InternalMessage.AddProductToggled()) },
+      on: { click: () => dispatch(Message.AddProductToggled()) },
       props: {
         className: 'relative shadow-md bg-red-200 flex items-center justify-evenly rounded-2xl h-16 w-16 text-red-400',
       },
@@ -172,7 +172,7 @@ export const view: View<Model, InternalMessage> = (model, dispatch) => {
   }, [
     h('div', { props: { className: 'flex w-full items-center h-16' } }, [
       h('span', {
-        on: { click: () => dispatch(InternalMessage.MenuToggled()) },
+        on: { click: () => dispatch(Message.MenuToggled()) },
         props: { className: 'px-4 material-symbols-rounded' },
       }, 'menu'),
       h('div', { props: { className: 'text-2xl font-bold px-2' } }, 'Fridgy'),
