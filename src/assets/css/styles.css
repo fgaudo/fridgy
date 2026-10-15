@@ -38,6 +38,10 @@ body:has(.scroll-locked) {
 }
 
 html {
+  /* No bounce past the top or the bottom: the browser fires `scrollend` only
+     once that animation is over, and the view treats the page as scrolling
+     until then (the add button stays faded). */
+  overscroll-behavior-y: none;
   background-color: var(--color-background);
   color: var(--color-on-background);
 }
