@@ -43,14 +43,23 @@ type ProductModel = Data.TaggedEnum<{
 
 export type Model = Readonly<{
   isMenuOpen: boolean
+  canOpenMenu: Availability<{ message: Message }>
+  canCloseMenu: Availability<{ message: Message }>
+  canRequestInfo: Availability<{ message: Message }>
   isInteracting: boolean
   isViewportAtTop: boolean
+  canOpenAddProduct: Availability<{ message: Message }>
   addProduct: Data.TaggedEnum<{
     Open: {
       name: string
       expirationDate: string | number
       isSubmitting: boolean
       isSubmittable: Availability<{ submit: Message }>
+      canClose: Availability<{ message: Message }>
+      canEdit: Availability<{
+        nameChanged: (name: string) => Message
+        expirationChanged: (expiration: string) => Message
+      }>
     }
     Closed: object
   }>
@@ -67,6 +76,9 @@ export type Model = Readonly<{
     }>
   }>
 }>
+
+const offer = (isAvailable: boolean, message: Message): Availability<{ message: Message }> =>
+  isAvailable ? { _tag: 'True', message } : { _tag: 'False' }
 
 type ProductStatus = Data.TaggedEnum.Value<ProductModel, 'Valid'>['status']
 
@@ -98,6 +110,14 @@ const makeAddProduct = (state: State.State): Model['addProduct'] => {
     isSubmittable: Guards.canStartAdding(state)
       ? { _tag: 'True', submit: Message.AddProductStarted() }
       : { _tag: 'False' },
+    canClose: offer(Guards.canEditAddProduct(state), Message.AddProductClosed()),
+    canEdit: Guards.canEditAddProduct(state)
+      ? {
+        _tag: 'True',
+        nameChanged: (name) => Message.NameChanged({ name }),
+        expirationChanged: (expiration) => Message.ExpirationDateChanged({ expiration }),
+      }
+      : { _tag: 'False' },
   }
 }
 
@@ -118,10 +138,11 @@ const makeProductList = (state: State.State): Model['productListStatus'] => {
     selection._tag === 'Deleting'
       ? HashSet.has(selection.ids, id)
       : Opt.exists(selection.maybeIds, HashSet.has(id))
+  // Offers whichever of selecting or deselecting the product is possible now.
   const canToggle = (id: string) =>
-    Guards.canToggleItems(state)
-      ? { _tag: 'True', message: Message.ItemToggled({ id }) } as const
-      : { _tag: 'False' } as const
+    Guards.canSelectItem(id)(state)
+      ? offer(true, Message.ItemSelected({ id }))
+      : offer(Guards.canDeselectItem(id)(state), Message.ItemDeselected({ id }))
   return {
     _tag: 'Available',
     isDeleting: selection._tag === 'Deleting',
@@ -160,8 +181,12 @@ const makeProductList = (state: State.State): Model['productListStatus'] => {
 
 export const makeModel = (state: State.State): Model => ({
   isMenuOpen: state.isMenuOpen,
+  canOpenMenu: offer(Guards.canOpenMenu(state), Message.MenuOpened()),
+  canCloseMenu: offer(Guards.canCloseMenu(state), Message.MenuClosed()),
+  canRequestInfo: offer(Guards.canRequestInfo(state), Message.InfoRequested()),
   isInteracting: state.isInteracting,
   isViewportAtTop: state.isViewportAtTop,
+  canOpenAddProduct: offer(Guards.canOpenAddProduct(state), Message.AddProductOpened()),
   addProduct: makeAddProduct(state),
   productListStatus: makeProductList(state),
 })

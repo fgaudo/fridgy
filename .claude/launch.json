@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "watch",
+      "runtimeExecutable": "bun",
+      "runtimeArgs": ["run", "watch"],
+      "port": 3000
+    }
+  ]
+}

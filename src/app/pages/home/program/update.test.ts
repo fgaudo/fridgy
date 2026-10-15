@@ -31,10 +31,13 @@ import { update } from './update.ts'
 
 const message: fc.Arbitrary<Message> = fc.oneof(
   fc.constant(Message.DeleteStarted()),
-  id.map((id) => Message.ItemToggled({ id })),
+  id.map((id) => Message.ItemSelected({ id })),
+  id.map((id) => Message.ItemDeselected({ id })),
   fc.constant(Message.ClearSelected()),
-  fc.constant(Message.MenuToggled()),
-  fc.constant(Message.AddProductToggled()),
+  fc.constant(Message.MenuOpened()),
+  fc.constant(Message.MenuClosed()),
+  fc.constant(Message.AddProductOpened()),
+  fc.constant(Message.AddProductClosed()),
   fc.constant(Message.AddProductStarted()),
   fc.boolean().map((isAtTop) => Message.ViewportAtTopChanged({ isAtTop })),
   fc.boolean().map((isCloseToTop) => Message.ViewportCloseToTopChanged({ isCloseToTop })),
@@ -131,14 +134,41 @@ describe('Home update', () => {
     // be reachable from the view.
     test('the view reaches messages that update can reject', () => {
       const tags = new Set(fc.sample(state, 1_000).flatMap((s) => dispatchedBy(view, makeModel(s)).map((msg) => msg._tag)))
-      expect(tags.has('AddProductStarted')).toBe(true)
-      expect(tags.has('NameChanged')).toBe(true)
+      const expected: ReadonlyArray<Message['_tag']> = [
+        'AddProductStarted',
+        'NameChanged',
+        'MenuOpened',
+        'MenuClosed',
+        'AddProductOpened',
+        'AddProductClosed',
+        'ItemSelected',
+        'ItemDeselected',
+      ]
+      for (const tag of expected) {
+        expect(tags.has(tag)).toBe(true)
+      }
+    })
+
+    // A double tap sends the same message twice from the same frame. The second
+    // one must be rejected (and then ignored as stale), or change nothing: a
+    // message must not carry a decision taken on the state it was rendered from.
+    test('a message sent twice from the same frame acts once', () => {
+      assertProperty([state, fc.string()], (before, inputValue) =>
+        dispatchedBy(view, makeModel(before), inputValue).every((msg) => {
+          const first = step(msg, before)
+          const second = outcome(msg, first.after)
+          return second.rejected
+            || (Equal.equals(second.after, first.after) && second.commands.length === 0 && second.events.length === 0)
+        }))
     })
   })
 
   describe('InfoRequested', () => {
-    test('closes the menu and asks the parent for the info page', () => {
+    test('closes the menu and asks the parent for the info page, or is rejected when the menu is closed', () => {
       assertProperty([state], (before) => {
+        if (!before.isMenuOpen) {
+          return rejects(Message.InfoRequested(), before)
+        }
         const { after, commands, events } = step(Message.InfoRequested(), before)
         return !after.isMenuOpen
           && onlyChanged(before, after, 'isMenuOpen')
@@ -165,21 +195,24 @@ describe('Home update', () => {
     })
   })
 
-  describe('MenuToggled', () => {
-    test('flips the menu and touches nothing else', () => {
-      assertProperty([state], (before) => {
-        const { after, commands } = step(Message.MenuToggled(), before)
-        return after.isMenuOpen === !before.isMenuOpen
-          && onlyChanged(before, after, 'isMenuOpen')
-          && commands.length === 0
-      })
+  describe('MenuOpened and MenuClosed', () => {
+    const cases = [
+      { msg: Message.MenuOpened(), isOpenBefore: false },
+      { msg: Message.MenuClosed(), isOpenBefore: true },
+    ] as const
+
+    test('open a closed menu, close an open one, and touch nothing else', () => {
+      assertProperty([state], (before) =>
+        cases.every(({ msg, isOpenBefore }) => {
+          const from = { ...before, isMenuOpen: isOpenBefore }
+          const { after, commands } = step(msg, from)
+          return after.isMenuOpen === !isOpenBefore && onlyChanged(from, after, 'isMenuOpen') && commands.length === 0
+        }))
     })
 
-    test('toggling twice restores the state', () => {
-      assertProperty([state], (before) => {
-        const once = step(Message.MenuToggled(), before).after
-        return Equal.equals(step(Message.MenuToggled(), once).after, before)
-      })
+    test('are rejected when the menu is already in the state they ask for', () => {
+      assertProperty([state], (before) =>
+        cases.every(({ msg, isOpenBefore }) => rejects(msg, { ...before, isMenuOpen: !isOpenBefore })))
     })
   })
 
@@ -274,31 +307,42 @@ describe('Home update', () => {
     })
   })
 
-  describe('ItemToggled', () => {
-    const toggleable = fc.tuple(state, fc.array(product, { maxLength: 8 }), selecting).map(
+  describe('ItemSelected and ItemDeselected', () => {
+    const changeable = fc.tuple(state, fc.array(product, { maxLength: 8 }), selecting).map(
       ([base, items, selection]): State => ({ ...base, products: { _tag: 'Loaded', items }, selection }),
     )
 
-    test('toggles membership of the id in the selection', () => {
-      assertProperty([toggleable, id], (before, itemId) => {
-        const { after, commands } = step(Message.ItemToggled({ id: itemId }), before)
-        return HashSet.has(selectedIds(after.selection), itemId) === !HashSet.has(selectedIds(before.selection), itemId)
+    test('select an unselected id, deselect a selected one, and touch nothing else', () => {
+      assertProperty([changeable, id], (before, itemId) => {
+        const wasSelected = HashSet.has(selectedIds(before.selection), itemId)
+        const msg = wasSelected ? Message.ItemDeselected({ id: itemId }) : Message.ItemSelected({ id: itemId })
+        const { after, commands } = step(msg, before)
+        return HashSet.has(selectedIds(after.selection), itemId) === !wasSelected
           && onlyChanged(before, after, 'selection')
           && commands.length === 0
       })
     })
 
-    test('toggling twice restores the state', () => {
-      assertProperty([toggleable, id], (before, itemId) => {
-        const msg = Message.ItemToggled({ id: itemId })
-        return Equal.equals(step(msg, step(msg, before).after).after, before)
+    test('selecting then deselecting restores the state', () => {
+      assertProperty([changeable, id], (before, itemId) => {
+        fc.pre(!HashSet.has(selectedIds(before.selection), itemId))
+        const selected = step(Message.ItemSelected({ id: itemId }), before).after
+        return Equal.equals(step(Message.ItemDeselected({ id: itemId }), selected).after, before)
       })
     })
 
-    test('is rejected unless the products are shown and nothing is being deleted', () => {
+    test('are rejected when the id is already in the state they ask for', () => {
+      assertProperty([changeable, id], (before, itemId) =>
+        HashSet.has(selectedIds(before.selection), itemId)
+          ? rejects(Message.ItemSelected({ id: itemId }), before)
+          : rejects(Message.ItemDeselected({ id: itemId }), before))
+    })
+
+    test('are rejected unless the products are shown and nothing is being deleted', () => {
       assertProperty([state, id], (before, itemId) => {
         fc.pre(before.products._tag !== 'Loaded' || before.selection._tag !== 'Selecting')
-        return rejects(Message.ItemToggled({ id: itemId }), before)
+        return rejects(Message.ItemSelected({ id: itemId }), before)
+          && rejects(Message.ItemDeselected({ id: itemId }), before)
       })
     })
   })
@@ -372,17 +416,28 @@ describe('Home update', () => {
     })
   })
 
-  describe('AddProductToggled', () => {
-    test('opens an empty form, closes an edited one, and leaves a submission alone', () => {
+  describe('AddProductOpened', () => {
+    test('opens an empty form, or is rejected when it is already open', () => {
       assertProperty([state], (before) => {
-        const { after, commands } = step(Message.AddProductToggled(), before)
-        const expected = {
-          Closed: () =>
-            Equal.equals(after.addProduct, { _tag: 'Editing', maybeName: Opt.none(), maybeExpirationDate: Opt.none() }),
-          Editing: () => after.addProduct._tag === 'Closed',
-          Submitting: () => Equal.equals(after.addProduct, before.addProduct),
-        }[before.addProduct._tag]()
-        return expected && onlyChanged(before, after, 'addProduct') && commands.length === 0
+        if (before.addProduct._tag !== 'Closed') {
+          return rejects(Message.AddProductOpened(), before)
+        }
+        const { after, commands } = step(Message.AddProductOpened(), before)
+        return Equal.equals(after.addProduct, { _tag: 'Editing', maybeName: Opt.none(), maybeExpirationDate: Opt.none() })
+          && onlyChanged(before, after, 'addProduct')
+          && commands.length === 0
+      })
+    })
+  })
+
+  describe('AddProductClosed', () => {
+    test('closes an edited form, or is rejected when closed or submitting', () => {
+      assertProperty([state], (before) => {
+        if (before.addProduct._tag !== 'Editing') {
+          return rejects(Message.AddProductClosed(), before)
+        }
+        const { after, commands } = step(Message.AddProductClosed(), before)
+        return after.addProduct._tag === 'Closed' && onlyChanged(before, after, 'addProduct') && commands.length === 0
       })
     })
   })
@@ -397,9 +452,9 @@ describe('Home update', () => {
       })
     })
 
-    test('changes nothing while submitting', () => {
+    test('is rejected while submitting: the inputs are frozen', () => {
       assertProperty([stateWith('addProduct', submittingForm), fc.string()], (before, name) =>
-        Equal.equals(step(Message.NameChanged({ name }), before).after, before))
+        rejects(Message.NameChanged({ name }), before))
     })
 
     test('is rejected when the form is closed', () => {
@@ -421,9 +476,9 @@ describe('Home update', () => {
       })
     })
 
-    test('changes nothing while submitting', () => {
+    test('is rejected while submitting: the inputs are frozen', () => {
       assertProperty([stateWith('addProduct', submittingForm), fc.integer()], (before, expiration) =>
-        Equal.equals(step(Message.ExpirationDateChanged({ expiration }), before).after, before))
+        rejects(Message.ExpirationDateChanged({ expiration }), before))
     })
 
     test('is rejected when the form is closed', () => {

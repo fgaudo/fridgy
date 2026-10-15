@@ -1,7 +1,7 @@
 import { h, type VNode } from 'snabbdom'
 import { cn } from '@/libs/ui/class-names.ts'
 import type { Dispatch, View } from '@/libs/elm/view.ts'
-import { Message } from './program/messages.ts'
+import type { Message } from './program/messages.ts'
 
 type HomeDispatch = Dispatch<Message>
 import type { Model } from './program/model.ts'
@@ -12,6 +12,13 @@ function lockScroll(isLocked: boolean) {
 
 const inputValue = (event: Event) => (event.target as HTMLInputElement).value
 
+type Offer = Readonly<{ _tag: 'True'; message: Message }> | Readonly<{ _tag: 'False' }>
+
+/** Dispatches the offered message, if any: the model decides what can be done. */
+const dispatchOffer = (offer: Offer, dispatch: HomeDispatch) => () => {
+  if (offer._tag === 'True') dispatch(offer.message)
+}
+
 const addProductModal = (
   addProduct: Model['addProduct'],
   dispatch: HomeDispatch,
@@ -19,7 +26,7 @@ const addProductModal = (
   if (addProduct._tag === 'Closed') {
     return []
   }
-  const isSubmittable = addProduct.isSubmittable
+  const { isSubmittable, canEdit } = addProduct
   return [
     h('div', {
       style: {
@@ -29,7 +36,7 @@ const addProductModal = (
         remove: { opacity: '0' },
       },
       key: 'add-product-box-background',
-      on: { click: () => dispatch(Message.AddProductToggled()) },
+      on: { click: dispatchOffer(addProduct.canClose, dispatch) },
       props: {
         className: 'fixed left-0 right-0 bottom-0 z-1000 top-0 bg-black/50 backdrop-blur-xs',
       },
@@ -61,11 +68,11 @@ const addProductModal = (
             className: 'w-full bg-white focus:inset-ring-1 shadow-md rounded-md p-3',
             type: 'text',
             value: addProduct.name,
-            disabled: addProduct.isSubmitting,
+            disabled: canEdit._tag === 'False',
           },
-          on: {
-            input: (event) => dispatch(Message.NameChanged({ name: inputValue(event) })),
-          },
+          on: canEdit._tag === 'True'
+            ? { input: (event) => dispatch(canEdit.nameChanged(inputValue(event))) }
+            : {},
         }),
       ]),
       h('div', [
@@ -75,11 +82,11 @@ const addProductModal = (
             className: 'w-full bg-white focus:inset-ring-1 shadow-md rounded-md p-3',
             type: 'date',
             value: addProduct.expirationDate,
-            disabled: addProduct.isSubmitting,
+            disabled: canEdit._tag === 'False',
           },
-          on: {
-            input: (event) => dispatch(Message.ExpirationDateChanged({ expiration: inputValue(event) })),
-          },
+          on: canEdit._tag === 'True'
+            ? { input: (event) => dispatch(canEdit.expirationChanged(inputValue(event))) }
+            : {},
         }),
       ]),
       h('button', {
@@ -102,10 +109,10 @@ const addProductModal = (
 }
 
 const sideMenu = (
-  isMenuOpen: boolean,
+  model: Model,
   dispatch: HomeDispatch,
 ): ReadonlyArray<VNode> =>
-  isMenuOpen
+  model.isMenuOpen
     ? [
       h('div', {
         style: {
@@ -115,7 +122,7 @@ const sideMenu = (
           remove: { opacity: '0' },
         },
         key: 'side-menu-background',
-        on: { click: () => dispatch(Message.MenuToggled()) },
+        on: { click: dispatchOffer(model.canCloseMenu, dispatch) },
         props: {
           className: 'transition-colors fixed top-0 bottom-0 left-0 right-0 z-50 bg-black/50 backdrop-blur-xs',
         },
@@ -133,7 +140,7 @@ const sideMenu = (
         },
       }, [
         h('button', {
-          on: { click: () => dispatch(Message.InfoRequested()) },
+          on: { click: dispatchOffer(model.canRequestInfo, dispatch) },
           props: { className: 'flex items-center gap-4 h-14 px-6 text-left' },
         }, [
           h('span', { props: { className: 'material-symbols-rounded' } }, 'info'),
@@ -155,7 +162,7 @@ export const view: View<Model, Message> = (model, dispatch) => {
     },
   }, [
     h('button', {
-      on: { click: () => dispatch(Message.AddProductToggled()) },
+      on: { click: dispatchOffer(model.canOpenAddProduct, dispatch) },
       props: {
         className: 'relative shadow-md bg-red-200 flex items-center justify-evenly rounded-2xl h-16 w-16 text-red-400',
       },
@@ -172,7 +179,7 @@ export const view: View<Model, Message> = (model, dispatch) => {
   }, [
     h('div', { props: { className: 'flex w-full items-center h-16' } }, [
       h('span', {
-        on: { click: () => dispatch(Message.MenuToggled()) },
+        on: { click: dispatchOffer(model.canOpenMenu, dispatch) },
         props: { className: 'px-4 material-symbols-rounded' },
       }, 'menu'),
       h('div', { props: { className: 'text-2xl font-bold px-2' } }, 'Fridgy'),
@@ -232,7 +239,7 @@ export const view: View<Model, Message> = (model, dispatch) => {
     },
   }, [
     ...addProductModal(model.addProduct, dispatch),
-    ...sideMenu(model.isMenuOpen, dispatch),
+    ...sideMenu(model, dispatch),
     fab,
     topBar,
     h('div', { props: { className: 'ml-sail mt-sait mr-sair' } }, [

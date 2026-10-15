@@ -11,7 +11,10 @@ export const watch = Effect.fn('HotModule.watch')(function*(path: string) {
   const refreshCss = yield* CssRefresher
   const socket = yield* Socket.Socket
   const load = Effect.gen(function*() {
-    yield* refreshCss
+    // The new styles are in place before the new view renders, so its new classes are never unstyled.
+    yield* refreshCss.pipe(
+      Effect.catchTag('CssLoadError', ({ href }) => Effect.logWarning(`Could not reload the stylesheet ${href}`)),
+    )
     const millis = yield* Clock.currentTimeMillis
     return yield* saferImport(`${path}?t=${millis}`)
   })

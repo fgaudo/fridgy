@@ -41,6 +41,16 @@ refactoring (see "Refactoring status"). A map of the source tree is in `src/READ
    arbitrary states, fires every handler and checks that `update` accepts every dispatched message: this is
    what keeps the engine from dying by mistake. Snabbdom hooks must not dispatch messages `update` may reject.
 
+   A view message never carries a decision taken on the state it was rendered from: no toggles. Name the
+   intent (`MenuOpened` / `MenuClosed`, `ItemSelected` / `ItemDeselected`), give each a guard, and let the
+   model offer whichever applies. Only then is a double tap (the same message twice from one frame)
+   harmless: the second one is rejected, so it is ignored as stale, whereas a toggle accepted twice undoes
+   itself. A view message without a guard must make sense, and do the same thing, in every state; one that
+   would be accepted while changing nothing (e.g. typing into a form being submitted) gets a guard
+   instead, and the view does not attach its handler. Each page's `update.test.ts` checks that every
+   message the view can dispatch acts once when sent twice (no second change, command or event). Home's
+   view imports `Message` as a type only: every message it dispatches comes from the model.
+
    Asynchronous operations get an id from the state (`nextOperation`), the state remembers the operation in
    progress (e.g. `Deleting { operation }`, `Submitting { operation }`), and the
    completion message carries the id back: `update` applies it only if it matches, and rejects it otherwise.

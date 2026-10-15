@@ -40,53 +40,37 @@ const idsOf = (items: ReadonlyArray<Product>) =>
   HashSet.fromIterable(Arr.flatMap(items, (product) => (product._tag === 'Corrupt' ? [] : [product.id])))
 
 export const update = Match.typeTags<Message, (state: State) => Transition>()({
-  AddProductToggled: () => (state) => {
-    switch (state.addProduct._tag) {
-      case 'Closed':
-        return {
-          state: {
-            ...state,
-            addProduct: { _tag: 'Editing', maybeName: Opt.none(), maybeExpirationDate: Opt.none() },
-          },
-        }
-      case 'Editing':
-        return { state: { ...state, addProduct: { _tag: 'Closed' } } }
-      // The form stays open until the submission completes.
-      case 'Submitting':
-        return { state }
-    }
-  },
+  AddProductOpened: () => (state) =>
+    Guards.canOpenAddProduct(state)
+      ? {
+        state: {
+          ...state,
+          addProduct: { _tag: 'Editing', maybeName: Opt.none(), maybeExpirationDate: Opt.none() },
+        },
+      }
+      : Engine.reject,
 
-  // The inputs only exist while the form is open: a change arriving after it
-  // was closed is stale. While submitting, the content is frozen.
-  NameChanged: ({ name }) => (state) => {
-    switch (state.addProduct._tag) {
-      case 'Closed':
-        return Engine.reject
-      case 'Submitting':
-        return { state }
-      case 'Editing':
-        // The raw text is kept as typed (the input is controlled by the
-        // model); whether it is a valid name is decided when adding.
-        return { state: { ...state, addProduct: { ...state.addProduct, maybeName: Opt.some(name) } } }
-    }
-  },
+  // The form stays open until the submission completes.
+  AddProductClosed: () => (state) =>
+    Guards.canEditAddProduct(state) ? { state: { ...state, addProduct: { _tag: 'Closed' } } } : Engine.reject,
 
-  ExpirationDateChanged: ({ expiration }) => (state) => {
-    switch (state.addProduct._tag) {
-      case 'Closed':
-        return Engine.reject
-      case 'Submitting':
-        return { state }
-      case 'Editing':
-        return {
-          state: {
-            ...state,
-            addProduct: { ...state.addProduct, maybeExpirationDate: DateTime.make(expiration) },
-          },
-        }
-    }
-  },
+  // While submitting, the content is frozen: the inputs dispatch nothing.
+  NameChanged: ({ name }) => (state) =>
+    Guards.canEditAddProduct(state)
+      // The raw text is kept as typed (the input is controlled by the model);
+      // whether it is a valid name is decided when adding.
+      ? { state: { ...state, addProduct: { ...state.addProduct, maybeName: Opt.some(name) } } }
+      : Engine.reject,
+
+  ExpirationDateChanged: ({ expiration }) => (state) =>
+    Guards.canEditAddProduct(state)
+      ? {
+        state: {
+          ...state,
+          addProduct: { ...state.addProduct, maybeExpirationDate: DateTime.make(expiration) },
+        },
+      }
+      : Engine.reject,
 
   AddProductStarted: () => (state) => {
     if (!Guards.canStartAdding(state)) {
@@ -143,17 +127,22 @@ export const update = Match.typeTags<Message, (state: State) => Transition>()({
 
   TimeChanged: ({ now }) => (state) => ({ state: { ...state, maybeNow: Opt.some(now) } }),
 
-  ItemToggled: ({ id }) => (state) => {
-    if (!Guards.canToggleItems(state)) {
+  ItemSelected: ({ id }) => (state) => {
+    if (!Guards.canSelectItem(id)(state)) {
       return Engine.reject
     }
-    const maybeIds = state.selection.maybeIds.pipe(
-      Opt.match({
-        onNone: () => HashSet.make(id),
-        onSome: (ids) => (HashSet.has(ids, id) ? HashSet.remove(ids, id) : HashSet.add(ids, id)),
-      }),
-      NonEmptyHashSet.make,
-    )
+    const ids = Opt.match(state.selection.maybeIds, {
+      onNone: () => HashSet.make(id),
+      onSome: HashSet.add(id),
+    })
+    return { state: { ...state, selection: { _tag: 'Selecting', maybeIds: Opt.some(NonEmptyHashSet.makeUnsafe(ids)) } } }
+  },
+
+  ItemDeselected: ({ id }) => (state) => {
+    if (!Guards.canDeselectItem(id)(state)) {
+      return Engine.reject
+    }
+    const maybeIds = NonEmptyHashSet.make(HashSet.remove(state.selection.maybeIds.value, id))
     return { state: { ...state, selection: { _tag: 'Selecting', maybeIds } } }
   },
 
@@ -193,10 +182,10 @@ export const update = Match.typeTags<Message, (state: State) => Transition>()({
   },
 
   // Asked from the side menu, which closes on the way.
-  InfoRequested: () => (state) => ({
-    state: { ...state, isMenuOpen: false },
-    events: [Event.InfoRequested()],
-  }),
+  InfoRequested: () => (state) =>
+    Guards.canRequestInfo(state)
+      ? { state: { ...state, isMenuOpen: false }, events: [Event.InfoRequested()] }
+      : Engine.reject,
 
   // Closes what is open, innermost first; with nothing to close, asks to leave.
   BackPressed: () => (state) => {
@@ -214,7 +203,9 @@ export const update = Match.typeTags<Message, (state: State) => Transition>()({
     }
   },
 
-  MenuToggled: () => (state) => ({ state: { ...state, isMenuOpen: !state.isMenuOpen } }),
+  MenuOpened: () => (state) => Guards.canOpenMenu(state) ? { state: { ...state, isMenuOpen: true } } : Engine.reject,
+
+  MenuClosed: () => (state) => Guards.canCloseMenu(state) ? { state: { ...state, isMenuOpen: false } } : Engine.reject,
 
   InteractionChanged: ({ isInteracting }) => (state) => ({ state: { ...state, isInteracting } }),
 

@@ -18,10 +18,13 @@ export type Message =
   | Data.TaggedEnum<{
     // From the view.
     DeleteStarted: object
-    ItemToggled: { id: string }
+    ItemSelected: { id: string }
+    ItemDeselected: { id: string }
     ClearSelected: object
-    MenuToggled: object
-    AddProductToggled: object
+    MenuOpened: object
+    MenuClosed: object
+    AddProductOpened: object
+    AddProductClosed: object
     AddProductStarted: object
     NameChanged: { name: string }
     ExpirationDateChanged: { expiration: string | number }
