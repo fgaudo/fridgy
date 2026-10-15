@@ -74,7 +74,8 @@ refactoring (see "Refactoring status"). A map of the source tree is in `src/READ
     in one folder per module; files of the same module import each other relatively, other modules via the
     alias:
     - `elm/` — engine, program composition, view types
-    - `numbers/` — branded `Integer`, `PositiveInteger`, `UnitInterval`
+    - `numbers/` — branded `Integer`, `PositiveInteger`, `UnitInterval` (each module may have a
+      `*.arbitrary.ts` companion for tests)
     - `collections/` — `NonEmptyArray`, `NonEmptyHashSet` helpers
     - `strings/` — `NormalizedString`
     - `ui/` — `cn` (clsx + tailwind-merge)
@@ -103,6 +104,15 @@ refactoring (see "Refactoring status"). A map of the source tree is in `src/READ
 - `strictBooleanExpressions`, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes` are enabled.
 - State and model are `Readonly`; prefer branded types (`Brand`) for values with invariants.
 - Linting: biome (formatter disabled); formatting with dprint.
+- Tests: `bun:test` with `fast-check` property tests, in a `*.test.ts` file next to the module under test
+  (e.g. `pages/home/program/update.test.ts`). Properties state the *intended* behaviour; when the code
+  does not satisfy one yet, keep it as `test.failing` with the bug in its name, so the suite stays green and
+  flags the fix.
+- Arbitraries: every branded type in `src/libs/` has a companion `<module>.arbitrary.ts` (e.g.
+  `numbers/positive-integer.arbitrary.ts`) exporting a fast-check `arbitrary` that only produces valid values.
+  Tests build their generators from these instead of calling `*Unsafe` constructors. `fast-check` and
+  `*.arbitrary.ts` may only be imported by `*.test.ts` and `*.arbitrary.ts` files (biome), so production
+  bundles never include them. When adding a branded type, add its arbitrary too.
 
 ## Commands
 
@@ -124,6 +134,8 @@ bunx cap sync android  # copy dist/ into the Android project
 Some parts are still inconsistent:
 - the `about` page does not follow the page structure yet (`outbound/`, `infrastructure/outbound/`), and
   `src/infrastructure/sayings` imports from it;
-- tests use `vitest`/`@effect/vitest` and Effect v3 APIs and do not compile.
+- older tests (`src/libs/**/*.test.ts`, `pages/home/domain/product.test.ts`) use `vitest`/`@effect/vitest` and
+  Effect v3 APIs and do not compile; port them to `bun:test` + `fast-check`;
+- `pages/home/program/update.test.ts` documents known bugs of the Home `update` as `test.failing`.
 
 When an item in this section is resolved, update this file.

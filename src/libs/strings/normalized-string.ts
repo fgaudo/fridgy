@@ -1,23 +1,24 @@
 import * as Brand from 'effect/Brand'
 import { pipe } from 'effect/Function'
-import * as Opt from 'effect/Option'
-import * as _Schema from 'effect/Schema'
+import type * as Opt from 'effect/Option'
 import * as Str from 'effect/String'
 
+/** A non-empty string in NFKC form, trimmed, without runs of whitespace. */
 export type NormalizedString = Brand.Branded<string, 'core.NormalizedString'>
 
-const NormalizedString = Brand.nominal<NormalizedString>()
-
-export const fromString = (string: string): Opt.Option<NormalizedString> => {
-	if (string.length <= 0) {
-		return Opt.none<NormalizedString>()
-	}
-
-	return pipe(
+const normalize = (string: string): string =>
+	pipe(
 		string,
 		Str.normalize('NFKC'),
 		Str.trim,
 		Str.replaceAll(/\s{2,}/g, ' '),
-		s => NormalizedString.option(s),
 	)
-}
+
+// The invariant is checked on the normalized value: checking the input instead
+// would accept strings that become empty once normalized (e.g. "\t").
+const NormalizedString = Brand.make<NormalizedString>(
+	(string) => string.length > 0 && normalize(string) === string,
+)
+
+export const fromString = (string: string): Opt.Option<NormalizedString> =>
+	NormalizedString.option(normalize(string))

@@ -37,13 +37,14 @@
   "devDependencies": {
     "@biomejs/biome": "latest",
     "@capacitor/cli": "latest",
+    "@effect/tsgo": "0.48.1",
     "@types/bun": "latest",
     "bun-plugin-tailwind": "latest",
     "dprint": "latest",
+    "fast-check": "^4.10.2",
     "http-server": "latest",
     "license-checker-rseidelsohn": "latest",
     "tailwindcss": "latest",
-    "typescript": "^7",
-    "@effect/tsgo": "0.48.1"
+    "typescript": "^7"
   }
 }
