@@ -3,7 +3,8 @@ import type { View } from '@/libs/elm/view.ts'
 
 /**
  * Renders `view` for `model` and fires every event handler in the tree, with a
- * fake event whose target holds `inputValue`. Returns the messages the
+ * fake event whose target holds `inputValue` (and whose `preventDefault` and
+ * `stopPropagation` do nothing). Returns the messages the
  * handlers dispatch. Hooks are not run: they only touch the DOM.
  */
 export const dispatchedBy = <Model, Message>(
@@ -16,7 +17,12 @@ export const dispatchedBy = <Model, Message>(
     if (node === undefined || typeof node === 'string') return
     for (const [type, handler] of Object.entries(node.data?.on ?? {})) {
       // oxlint-disable-next-line typescript/no-unsafe-type-assertion
-      const event = { type, target: { value: inputValue } } as unknown as Event
+      const event = {
+        type,
+        target: { value: inputValue },
+        preventDefault: () => {},
+        stopPropagation: () => {},
+      } as unknown as Event
       if (typeof handler === 'function') {
         // oxlint-disable-next-line typescript/no-unsafe-type-assertion
         ;(handler as (this: VNode, event: Event, vnode: VNode) => void).call(node, event, node)

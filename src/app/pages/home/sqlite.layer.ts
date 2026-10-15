@@ -1,10 +1,10 @@
 import * as Layer from 'effect/Layer'
 import * as NotificationsCapacitor from './adapters/notifications/capacitor.ts'
-import * as ProductsSql from './adapters/products/sql.ts'
+import * as ProductListSql from './adapters/product-list/sql.ts'
 import * as ViewportBrowser from './adapters/viewport/browser.ts'
 
 export const layer = Layer.mergeAll(
-  ProductsSql.layer,
+  ProductListSql.layer,
   ViewportBrowser.layer,
   NotificationsCapacitor.layer,
 )

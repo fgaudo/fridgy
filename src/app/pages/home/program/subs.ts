@@ -2,13 +2,13 @@ import * as DateTime from 'effect/DateTime'
 import * as Effect from 'effect/Effect'
 import * as HashMap from 'effect/HashMap'
 import * as Stream from 'effect/Stream'
-import { Products } from '../ports/products.ts'
+import { ProductList } from '../ports/product-list.ts'
 import { Viewport } from '../ports/viewport.ts'
 import type * as Engine from '@/libs/elm/engine.ts'
 import { Message } from './messages.ts'
 import type { State } from './state.ts'
 
-export type Deps = Products | Viewport
+export type Deps = ProductList | Viewport
 
 const CLOSE_TO_TOP_THRESHOLD = 30
 
@@ -28,7 +28,7 @@ export const subscriptions: Engine.Emitter<State, Message, Deps> = (_state) =>
     ],
     [
       'products',
-      Stream.unwrap(Effect.map(Effect.service(Products), ({ changes }) => changes)).pipe(
+      Stream.unwrap(Effect.map(Effect.service(ProductList), ({ changes }) => changes)).pipe(
         Stream.map((result) => Message.ProductsChanged({ result })),
       ),
     ],

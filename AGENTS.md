@@ -66,21 +66,25 @@ refactoring (see "Refactoring status"). A map of the source tree is in `src/READ
    only pull in its own dependencies. Privately, a page contains:
    - `program/` — the Elm program: `messages.ts` (`ExternalMessage`, `Message`, `Event`), `state.ts`,
      `model.ts` (`Model` + `makeModel`), `update.ts` (`update` + `init`), `guards.ts`, `subs.ts`, `commands.ts`
-   - `domain/` — domain types and logic
-   - `ports/<capability>.ts` — one `Context.Service` per external capability (e.g. `Products`,
-     `Viewport`, `Notifications`), grouping that capability's *commands* (Effects / `RequestResolver`s) and
-     *events* (Streams). Ports speak in domain data, never in page messages: `subs.ts` turns events into
+   - `domain/` — domain types and logic only this page uses (the app's entities live in `src/app/domain/`,
+     see rule 7)
+   - `ports/<capability>.ts` — one `Context.Service` per external capability (e.g. `Viewport`,
+     `Notifications`), grouping that capability's *commands* (Effects / `RequestResolver`s) and
+     *events* (Streams). Stored data has separate read and write ports: the page owns its query ports,
+     shaped for what it shows (e.g. Home's `ProductList`, whose `changes` stream re-emits after every
+     write), while write ports belong to the app (e.g. `ProductCommands` in `src/app/ports/`, with `add`
+     and `deleteById`). Ports speak in domain data, never in page messages: `subs.ts` turns events into
      messages and `commands.ts` turns command results into messages. Persistence ports take the domain's
      `Snapshot` (branded: only `toSnapshot` makes one, so it always comes from a valid object) and return
      `UnvalidatedSnapshot`s, which the page validates with `fromSnapshot`. Adapters never read the fields of
      domain objects: only the domain knows which fields are persistent and which are derived.
-   - `adapters/<capability>/<implementation>.ts` (e.g. `products/sql.ts`, `products/in-memory.ts`), each
+   - `adapters/<capability>/<implementation>.ts` (e.g. `product-list/sql.ts`, `product-list/in-memory.ts`), each
      exporting a `layer`, composed by the public `*.layer.ts` files (never several setups in the same
      file, so a bundle only includes the implementations it uses)
 7. **Root in `src/app/`**: structured exactly like a page, one level up. Public files at its root
    (`program.ts`, `view.ts`, `sqlite.layer.ts`, `in-memory.layer.ts`) are the only things code outside
-   `src/app` may import; `program/`, `pages/` and, when the root needs outside services, `ports/` and
-   `adapters/` are private (enforced by biome).
+   `src/app` may import; `program/`, `domain/`, `ports/`, `adapters/` and `pages/` are private (enforced
+   by biome).
    Inside `src/app` files use relative imports, and the root reaches each page only through the page's
    public files. Pages are **lifted into the root** with `embed` (e.g. `GotHomeMsg`, subscription keys
    prefixed by the page name). The root owns navigation: a stack of page states (the last one is shown),
@@ -90,6 +94,24 @@ refactoring (see "Refactoring status"). A map of the source tree is in `src/READ
    The stack helpers, the page embeds and the reactions to page events live in `program/navigation.ts`;
    `program/state.ts` only holds the types. The root `*.layer.ts` files merge the root adapters with the
    matching page setups.
+
+   The root's `domain/`, `ports/` and `adapters/` hold what must be the same for every page, so pages
+   never copy or reach into each other:
+   - `domain/` — the app's entities (e.g. `Product`), their `Snapshot`, validation rules and derived
+     functions (e.g. the expiration status computed from `now`), with their arbitraries and tests;
+   - `ports/` — the root's own ports (e.g. `Shell`) and the write ports (e.g. `ProductCommands`): every
+     page changes stored data through the same commands;
+   - `adapters/<capability>/<implementation>.ts` — their implementations, provided once by the root
+     `*.layer.ts` files.
+
+   The rule is the same at every level: a page imports the `domain/` and `ports/` of the levels above it
+   (relative paths), never their `adapters/`; the root's `domain/`, `ports/` and `adapters/` never
+   import a page (both enforced by biome). Reads stay in the pages: each page has its own query
+   ports and read models, built for what it shows (e.g. Home's products sorted by expiration), carrying
+   the fields the app's domain functions need. Two pages with two query ports ask two different
+   questions: that is not duplication. A page learns about writes from the storage, not from the writing
+   page: `sql.reactive` and the in-memory store's `SubscriptionRef` re-run its query after every write,
+   and the page turns that stream into a message in its `subscriptions`.
 8. **Entrypoints in `src/entrypoints/`**: the only place that knows about environments. They also own
    the boot of the host shell: `run.ts` hides the splash screen (`src/infrastructure/splash-screen.ts`) once
    the renderer reports the first view displayed (`onFirstPaint`) and its fonts are loaded
@@ -106,8 +128,11 @@ refactoring (see "Refactoring status"). A map of the source tree is in `src/READ
      (e.g. `canDeleteSelected: { _tag: 'True', deleteMessage } | { _tag: 'False' }`), decided with the
      page's guards, so the view makes no logic decisions (see rule 4).
 10. **`src/infrastructure/`** (alias `@/infra/*`): everything adapters and entrypoints need to reach data
-   and the platform (sqlite/wasm worker, sql helper and migrations, snabbdom renderer, hot module loader,
-   css refresher, …). Pages depend on their own ports; page adapters use the infrastructure.
+   and the platform (sqlite/wasm worker, sql helper and migrations, the in-memory store, snabbdom renderer,
+   hot module loader, css refresher, …). Pages depend on their own ports; page adapters use the
+   infrastructure. Storage is single: the sqlite database and the in-memory store
+   (`in-memory/store.ts`, the development counterpart of the database, with seed data) are each provided
+   once by the entrypoint, and every adapter queries them, so what one adapter writes the others read.
 11. **`src/libs/`** (alias `@/libs/*`): generic code only, with no knowledge of the app domain. Organized
     in one folder per module; files of the same module import each other relatively, other modules via the
     alias:
@@ -137,10 +162,10 @@ refactoring (see "Refactoring status"). A map of the source tree is in `src/READ
 - **Large views**: split a page view into private components under `view/` (e.g. `view/product-list.ts`),
   keeping `view.ts` as the public facade, like `program.ts` and `program/`. Hot reload still works: it
   reloads the root view with everything it imports.
-- **Shared ports and domain**: ports (e.g. `Viewport`, `Notifications`) and domain types (e.g. `Product`)
-  live in the page that uses them. When a second page needs one, move it to a shared layer (e.g.
-  `src/app/shared/` with `domain/`, `ports/`, `adapters/`) instead of copying it, and document here what
-  that layer may contain and who may import it.
+- **A new page reading stored data**: it adds its own query port and adapters over the same database
+  and in-memory store (rule 10), never a private copy, and uses the app's domain and write ports
+  (rule 7). Other ports (e.g. `Viewport`, `Notifications`) stay in the page that uses them until a second
+  page needs them; then they move, with their adapters, to `src/app/ports/` and `src/app/adapters/`.
 - **Navigation**: with three or four pages, consider an app-level page descriptor (not in `libs/elm`)
   gathering what navigation needs from each page (back message, title, …), instead of growing the
   exhaustive `Match`es in the root.
@@ -176,7 +201,7 @@ refactoring (see "Refactoring status"). A map of the source tree is in `src/READ
   Tests build their generators from these instead of calling `*Unsafe` constructors. `fast-check` and
   `*.arbitrary.ts` may only be imported by `*.test.ts` and `*.arbitrary.ts` files (biome), so production
   bundles never include them. When adding a branded type, add its arbitrary too. The same goes for domain
-  types in pages (e.g. `domain/product.arbitrary.ts`: valid products, the snapshots `fromSnapshot` accepts,
+  types in `src/app` (e.g. `domain/product.arbitrary.ts`: valid products, the snapshots `fromSnapshot` accepts,
   and anything a storage may return). State arbitraries live in `program/state.arbitrary.ts`.
 
 ## Commands

@@ -2,8 +2,8 @@ import * as DateTime from 'effect/DateTime'
 import * as fc from 'fast-check'
 import { arbitrary as maybe } from '@/libs/option/option.arbitrary.ts'
 import * as NonEmptyHashSet from '@/libs/collections/non-empty-hash-set.arbitrary.ts'
-import * as ProductArbitrary from '../domain/product.arbitrary.ts'
-import type { StoredProduct } from '../ports/products.ts'
+import * as ProductArbitrary from '../../../domain/product.arbitrary.ts'
+import type { StoredProduct } from '../ports/product-list.ts'
 import { OperationId, type Product, type State } from './state.ts'
 
 // A small id space, so that selections and product lists overlap often.

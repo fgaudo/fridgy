@@ -15,13 +15,15 @@ src/
 │  ├─ view.ts            public: the root view (hot-reload entry in development)
 │  ├─ sqlite.layer.ts    public: every adapter, data in sqlite
 │  ├─ in-memory.layer.ts public: every adapter, data in memory
-│  ├─ program/           private: messages, state, model, update, subs, commands
-│  ├─ ports/, adapters/  private, when the root itself needs outside services
-│  └─ pages/<page>/      private: each page has the same shape as app/
+│  ├─ program/           private: messages, state, model, update, subs, commands, navigation
+│  ├─ domain/            private: the app's entities, used by every page
+│  ├─ ports/, adapters/  private: the root's ports (Shell) and the write ports, with their adapters
+│  └─ pages/<page>/      private: each page has the same shape as app/; it may import the
+│     │                  domain/ and ports/ above it, never the adapters/
 │     ├─ program.ts · view.ts · *.layer.ts    the page's public API
 │     └─ program/ · domain/ · ports/ · adapters/
 │
-├─ infrastructure/       technical building blocks: sqlite, sql, renderer, hot reload
+├─ infrastructure/       technical building blocks: sqlite, sql, in-memory store, renderer, hot reload
 ├─ libs/                 generic, reusable code (elm runtime, branded numbers, …)
 └─ assets/               index.html and styles
 ```

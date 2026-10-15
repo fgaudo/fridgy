@@ -1,7 +1,7 @@
 import * as Data from 'effect/Data'
 import type * as DateTime from 'effect/DateTime'
 import type * as Result from 'effect/Result'
-import type { StoredProduct } from '../ports/products.ts'
+import type { StoredProduct } from '../ports/product-list.ts'
 import type { OperationId } from './state.ts'
 
 /** What the parent may send to the page: its public, inbound API. */

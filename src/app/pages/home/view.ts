@@ -191,7 +191,19 @@ export const view: View<Model, Message> = (model, dispatch) => {
       product._tag === 'Valid'
         ? [h('div', {
           key: product.id,
-          props: { className: 'bg-secondary/5 h-16 flex items-center gap-3 rounded-lg shadow-sm relative' },
+          props: {
+            className: cn(
+              'h-16 flex items-center gap-3 rounded-lg shadow-sm relative select-none [-webkit-touch-callout:none]',
+              product.isSelected ? 'bg-secondary/30 ring-2 ring-secondary' : 'bg-secondary/5',
+            ),
+          },
+          on: {
+            // A long press on Android (a right click on desktop).
+            contextmenu: (event: MouseEvent) => {
+              event.preventDefault()
+              if (product.canToggle._tag === 'True') dispatch(product.canToggle.message)
+            },
+          },
         }, [
           h('div', {
             props: {

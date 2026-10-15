@@ -8,16 +8,17 @@ import * as Result from 'effect/Result'
 
 import * as NonEmptyHashSet from '@/libs/collections/non-empty-hash-set.ts'
 import * as Engine from '@/libs/elm/engine.ts'
-import * as Domain from '../domain/product.ts'
+import * as Domain from '../../../domain/product.ts'
 import type { Notifications } from '../ports/notifications.ts'
-import type { Products, StoredProduct } from '../ports/products.ts'
+import type { StoredProduct } from '../ports/product-list.ts'
+import type { ProductCommands } from '../../../ports/product-commands.ts'
 import type { Viewport } from '../ports/viewport.ts'
 import * as Cmd from './commands.ts'
 import * as Guards from './guards.ts'
 import { Event, type Message } from './messages.ts'
 import { OperationId, type Product, type State } from './state.ts'
 
-export type Deps = Products | Viewport | Notifications
+export type Deps = ProductCommands | Viewport | Notifications
 
 const ProductEnum = Data.taggedEnum<Product>()
 

@@ -4,9 +4,9 @@ import { pipe } from 'effect/Function'
 import * as HashSet from 'effect/HashSet'
 import * as Opt from 'effect/Option'
 import type * as NonEmptyHashSet from '@/libs/collections/non-empty-hash-set.ts'
-import * as Product from '../domain/product.ts'
+import * as Product from '../../../domain/product.ts'
 import { Notifications } from '../ports/notifications.ts'
-import * as Products from '../ports/products.ts'
+import * as ProductCommands from '../../../ports/product-commands.ts'
 import { Viewport } from '../ports/viewport.ts'
 import { Message } from './messages.ts'
 import type { OperationId } from './state.ts'
@@ -18,11 +18,11 @@ export const deleteProducts = Effect.fn(function*({
   operation: OperationId
   ids: NonEmptyHashSet.NonEmptyHashSet<string>
 }) {
-  const { deleteById } = yield* Products.Products
+  const { deleteById } = yield* ProductCommands.ProductCommands
   yield* Effect.logInfo('Attempting to delete products...')
   const maybeDeleted = yield* pipe(
     ids,
-    HashSet.map((id) => Products.DeleteProductById({ id })),
+    HashSet.map((id) => ProductCommands.DeleteProductById({ id })),
     Effect.forEach(Effect.request(deleteById), { concurrency: 'unbounded' }),
     Effect.option,
   )
@@ -39,7 +39,7 @@ export const addProduct = Effect.fn(function*(
     maybeName: Opt.Option<string>
   },
 ) {
-  const { add } = yield* Products.Products
+  const { add } = yield* ProductCommands.ProductCommands
   const current = yield* DateTime.now
   const maybeProduct = Product.fromSnapshot({
     maybeCreationDate: Opt.some(current),
@@ -53,7 +53,7 @@ export const addProduct = Effect.fn(function*(
   const product = maybeProduct.value
   yield* Effect.logInfo(`Attempting to add product "${Product.name(product)}"...`)
   const maybeId = yield* pipe(
-    Products.AddProduct({ snapshot: Product.toSnapshot(product) }),
+    ProductCommands.AddProduct({ snapshot: Product.toSnapshot(product) }),
     Effect.request(add),
     Effect.option,
   )

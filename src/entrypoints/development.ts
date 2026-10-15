@@ -7,6 +7,7 @@ import * as Stream from 'effect/Stream'
 import * as AppInMemory from '@/app/in-memory.layer.ts'
 import type * as RootView from '@/app/view.ts'
 import { CssRefresher } from '@/infra/css-refresher.ts'
+import { InMemoryStore } from '@/infra/in-memory/store.ts'
 import * as HotModule from '@/infra/hot-module.ts'
 import { SnabbdomRenderer } from '@/infra/snabbdom-renderer.ts'
 import { RootViews, run } from './run.ts'
@@ -25,7 +26,7 @@ const HotRootViews = Layer.effect(
 
 run(
   Layer.mergeAll(
-    AppInMemory.layer,
+    AppInMemory.layer.pipe(Layer.provide(InMemoryStore.layer)),
     HotRootViews,
     SnabbdomRenderer.layer('#root'),
     Layer.succeed(References.MinimumLogLevel, 'Debug'),
