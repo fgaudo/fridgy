@@ -10,7 +10,8 @@ import * as Queue from 'effect/Queue'
 import * as Stream from 'effect/Stream'
 import * as SubscriptionRef from 'effect/SubscriptionRef'
 
-export type Command<Message, R> = Effect.Effect<Message, never, R>
+/** An effect that may produce a message: `None` for effects that only act on the outside world. */
+export type Command<Message, R> = Effect.Effect<Opt.Option<Message>, never, R>
 
 export type Step<State, Message, R> = Readonly<{
   state: State
@@ -135,9 +136,9 @@ export const make = Effect.fn('Engine.make')(function*<State, Message, R, S, K>(
   const runCommand = (command: Command<Message, R>) =>
     Opt.match(maybeMakeDefectMessage, {
       onNone: () => command,
-      onSome: (f) => Effect.catchDefect(command, (defect) => Effect.succeed(f(defect))),
+      onSome: (f) => Effect.catchDefect(command, (defect) => Effect.succeedSome(f(defect))),
     }).pipe(
-      Effect.flatMap(offer),
+      Effect.flatMap(Opt.match({ onNone: () => Effect.void, onSome: offer })),
       Effect.provideContext(context),
       FiberSet.run(fibers),
     )

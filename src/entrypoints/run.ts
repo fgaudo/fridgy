@@ -6,7 +6,9 @@ import * as Effect from 'effect/Effect'
 import type * as Layer from 'effect/Layer'
 import * as Stream from 'effect/Stream'
 import * as App from '@/app/program.ts'
+import * as Fonts from '@/infra/fonts.ts'
 import { SnabbdomRenderer } from '@/infra/snabbdom-renderer.ts'
+import * as SplashScreen from '@/infra/splash-screen.ts'
 import * as Engine from '@/libs/elm/engine.ts'
 import type { View } from '@/libs/elm/view.ts'
 
@@ -28,6 +30,7 @@ const program = Effect.gen(function*() {
         dispatch: engine.dispatchFrom(revision),
       })),
       view$: views,
+      onFirstPaint: Effect.andThen(Fonts.loaded, SplashScreen.hide),
     }),
   )
 })

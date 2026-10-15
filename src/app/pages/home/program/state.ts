@@ -1,13 +1,12 @@
 import * as Brand from 'effect/Brand'
 import type * as Data from 'effect/Data'
 import type * as DateTime from 'effect/DateTime'
-import type * as Duration from 'effect/Duration'
 import type * as Opt from 'effect/Option'
 import type * as NonEmptyHashSet from '@/libs/collections/non-empty-hash-set.ts'
-import type * as UnitInterval from '@/libs/numbers/unit-interval.ts'
+import type * as Domain from '../domain/product.ts'
 
 /**
- * Identifies an asynchronous operation (adding, deleting, validating). Its
+ * Identifies an asynchronous operation (adding, deleting). Its
  * completion carries the id back, and is only applied if that operation is
  * still the current one: a late completion is stale and rejected.
  */
@@ -24,19 +23,7 @@ export type Product = Data.TaggedEnum<{
   Corrupt: Readonly<{ maybeName: Opt.Option<string> }>
   /** Stored with an id, but not a valid product: it can still be selected and deleted. */
   Invalid: Readonly<{ id: string; maybeName: Opt.Option<string> }>
-  Valid: Readonly<{
-    id: string
-    name: string
-    status: Data.TaggedEnum<{
-      Everlasting: object
-      Stale: Readonly<{ expirationDate: DateTime.Utc }>
-      Fresh: Readonly<{
-        expirationDate: DateTime.Utc
-        timeLeft: Duration.Duration
-        freshnessRatio: UnitInterval.UnitInterval
-      }>
-    }>
-  }>
+  Valid: Readonly<{ id: string; product: Domain.Product }>
 }>
 
 type Form = Readonly<{
@@ -49,8 +36,8 @@ export type State = Readonly<{
   isViewportAtTop: boolean
   isInteracting: boolean
   nextOperation: OperationId
-  /** The latest validation requested: only its result is applied. */
-  latestValidation: Opt.Option<OperationId>
+  /** The current time, once the clock has ticked: expiration statuses derive from it. */
+  maybeNow: Opt.Option<DateTime.Utc>
   products: Data.TaggedEnum<{
     Loading: object
     Failed: object

@@ -64,7 +64,7 @@ describe('Engine reject', () => {
 
   test('a message rejected after coming from a command is ignored', async () => {
     const outcome = await run(Effect.gen(function*() {
-      const engine = yield* make([Effect.succeed('Forbidden')])
+      const engine = yield* make([Effect.succeedSome<Message>('Forbidden')])
       engine.dispatchFrom(0)('Increment')
       const reached = yield* revision(engine, 1)
       return { reached, failure: yield* failureWithin(engine) }

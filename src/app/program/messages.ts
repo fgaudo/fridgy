@@ -1,19 +1,11 @@
 import * as Data from 'effect/Data'
 import type * as Home from '../pages/home/program.ts'
 
-export type Message = Data.TaggedEnum<{
-  HideSplashScreenRequested: object
+export type InternalMessage = Data.TaggedEnum<{
+  GotHomeMsg: { message: Home.InternalMessage }
 }>
 
-export const Message = Data.taggedEnum<Message>()
-
-export type InternalMessage =
-  | Message
-  | Data.TaggedEnum<
-    {
-      GotHomeMsg: { message: Home.InternalMessage }
-      NoOp: object
-    }
-  >
-
 export const InternalMessage = Data.taggedEnum<InternalMessage>()
+
+/** The root has no messages of its own yet: it only carries the pages' ones. */
+export type Message = InternalMessage

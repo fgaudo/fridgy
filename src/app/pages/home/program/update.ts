@@ -8,8 +8,9 @@ import * as Result from 'effect/Result'
 
 import * as NonEmptyHashSet from '@/libs/collections/non-empty-hash-set.ts'
 import * as Engine from '@/libs/elm/engine.ts'
+import * as Domain from '../domain/product.ts'
 import type { Notifications } from '../ports/notifications.ts'
-import type { Products } from '../ports/products.ts'
+import type { Products, StoredProduct } from '../ports/products.ts'
 import type { Viewport } from '../ports/viewport.ts'
 import * as Cmd from './commands.ts'
 import * as Guards from './guards.ts'
@@ -21,6 +22,18 @@ export type Deps = Products | Viewport | Notifications
 const ProductEnum = Data.taggedEnum<Product>()
 
 type Transition = Engine.Transition<State, InternalMessage, Deps>
+
+// Products that still have an id can be selected and deleted, even when invalid;
+// the ones without an id cannot be referenced at all.
+const validate = (stored: StoredProduct): Product =>
+  Opt.match(stored.maybeId, {
+    onNone: () => ProductEnum.Corrupt({ maybeName: stored.maybeName }),
+    onSome: (id) =>
+      Opt.match(Domain.fromSnapshot(stored), {
+        onNone: () => ProductEnum.Invalid({ id, maybeName: stored.maybeName }),
+        onSome: (product) => ProductEnum.Valid({ id, product }),
+      }),
+  })
 
 const idsOf = (items: ReadonlyArray<Product>) =>
   HashSet.fromIterable(Arr.flatMap(items, (product) => (product._tag === 'Corrupt' ? [] : [product.id])))
@@ -103,38 +116,17 @@ export const update = Match.typeTags<InternalMessage, (state: State) => Transiti
       }
   },
 
-  // Every change is validated by a command; only the latest validation counts,
-  // so that results arriving out of order cannot overwrite newer data.
   ProductsChanged: ({ result }) => (state) => {
-    const validation = state.nextOperation
-    return {
-      state: { ...state, nextOperation: OperationId.next(validation), latestValidation: Opt.some(validation) },
-      commands: [Cmd.validateProducts(validation, result)],
-    }
-  },
-
-  ProductsValidated: ({ validation, result }) => (state) => {
-    if (!Opt.contains(state.latestValidation, validation)) {
-      return Engine.reject
-    }
     if (Result.isFailure(result)) {
       return { state: { ...state, products: { _tag: 'Failed' } } }
     }
-    const items = Opt.match(result.success, {
-      onNone: (): ReadonlyArray<Product> => [],
-      onSome: Arr.map((product): Product =>
-        product._tag === 'Valid'
-          ? product
-          : Opt.match(product.maybeId, {
-            onNone: () => ProductEnum.Corrupt({ maybeName: product.maybeName }),
-            onSome: (id) => ProductEnum.Invalid({ id, maybeName: product.maybeName }),
-          })
-      ),
-    })
+    const items = Arr.map(result.success, validate)
     return {
       state: {
         ...state,
         products: { _tag: 'Loaded', items },
+        // The selection keeps the products that still exist; a deletion in
+        // progress is left alone.
         selection: state.selection._tag === 'Selecting'
           ? {
             _tag: 'Selecting',
@@ -147,6 +139,8 @@ export const update = Match.typeTags<InternalMessage, (state: State) => Transiti
       },
     }
   },
+
+  TimeChanged: ({ now }) => (state) => ({ state: { ...state, maybeNow: Opt.some(now) } }),
 
   ItemToggled: ({ id }) => (state) => {
     if (!Guards.canToggleItems(state)) {
@@ -208,7 +202,6 @@ export const update = Match.typeTags<InternalMessage, (state: State) => Transiti
     commands: !state.isInteracting && isCloseToTop ? [Cmd.scrollToTop] : [],
   }),
 
-  NoOp: () => (state) => ({ state }),
 })
 
 export const init: Engine.Step<State, InternalMessage, Deps> = {
@@ -217,7 +210,7 @@ export const init: Engine.Step<State, InternalMessage, Deps> = {
     isViewportAtTop: true,
     isInteracting: false,
     nextOperation: OperationId.first,
-    latestValidation: Opt.none(),
+    maybeNow: Opt.none(),
     products: { _tag: 'Loading' },
     selection: { _tag: 'Selecting', maybeIds: Opt.none() },
     addProduct: { _tag: 'Closed' },

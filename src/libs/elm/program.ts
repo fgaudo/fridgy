@@ -16,7 +16,7 @@ export interface Program<State, Model, Message, R, K = unknown> {
 export const mapCommands = <A, B, R>(
   commands: ReadonlyArray<Engine.Command<A, R>>,
   f: (message: A) => B,
-): ReadonlyArray<Engine.Command<B, R>> => Arr.map(commands, Effect.map(f))
+): ReadonlyArray<Engine.Command<B, R>> => Arr.map(commands, Effect.map(Opt.map(f)))
 
 export const mapStep = <State, A, B, R>(
   { state, commands = [] }: Engine.Step<State, A, R>,

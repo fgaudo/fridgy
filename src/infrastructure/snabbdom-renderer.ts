@@ -4,16 +4,12 @@ import * as Layer from 'effect/Layer'
 import * as Stream from 'effect/Stream'
 import * as Snabbdom from 'snabbdom'
 import type * as View from '@/libs/elm/view.ts'
+import * as AnimationFrame from './animation-frame.ts'
 
 export type Frame<Model, Message> = Readonly<{
   model: Model
   dispatch: View.Dispatch<Message>
 }>
-
-const nextAnimationFrame = Effect.callback<void>((resume) => {
-  const id = requestAnimationFrame(() => resume(Effect.void))
-  return Effect.sync(() => cancelAnimationFrame(id))
-})
 
 export class SnabbdomRenderer extends Context.Service<
   SnabbdomRenderer,
@@ -22,6 +18,8 @@ export class SnabbdomRenderer extends Context.Service<
     render: <Model, Message>(options: {
       frame$: Stream.Stream<Frame<Model, Message>>
       view$: Stream.Stream<View.View<Model, Message>>
+      /** Runs once, after the first tree has been displayed. */
+      onFirstPaint: Effect.Effect<void>
     }) => Effect.Effect<void>
   }
 >()('01707e0c43c8de6e', {
@@ -38,7 +36,7 @@ export class SnabbdomRenderer extends Context.Service<
       Snabbdom.eventListenersModule,
     ])
     return {
-      render: ({ frame$, view$ }) =>
+      render: ({ frame$, view$, onFirstPaint }) =>
         Stream.zipLatest(frame$, view$).pipe(
           // Keep only the newest pair while waiting for the next frame.
           Stream.buffer({ capacity: 1, strategy: 'sliding' }),
@@ -46,10 +44,17 @@ export class SnabbdomRenderer extends Context.Service<
           Stream.runFoldEffect(
             (): Element | Snabbdom.VNode => root,
             (previous, [{ model, dispatch }, view]) =>
-              Effect.andThen(
-                nextAnimationFrame,
-                Effect.sync(() => patch(previous, view(model, dispatch))),
-              ),
+              Effect.gen(function*() {
+                yield* AnimationFrame.next
+                const next = yield* Effect.sync(() => patch(previous, view(model, dispatch)))
+                if (previous === root) {
+                  // The patch runs right before a paint: one more frame
+                  // guarantees the first tree has been displayed.
+                  yield* AnimationFrame.next
+                  yield* onFirstPaint
+                }
+                return next
+              }),
           ),
           Effect.asVoid,
         ),

@@ -21,7 +21,8 @@ refactoring (see "Refactoring status"). A map of the source tree is in `src/READ
    *opt-in* recovery (e.g. `makeDefectMessage` in `Engine.make`); the app never opts in.
 3. **As close to Elm as possible.** `init`, a pure `update` `(msg) => (state) => Engine.Transition` (`{ state, commands? }` or `Engine.reject`),
    `subscriptions` derived from state, a pure `view` over the `Model`. Effects live only in *commands*
-   (Effects that return a message) and *subscriptions* (Streams of messages). The primitives are in
+   (Effects that return an optional message: `None` for effects that only act on the outside world) and
+   *subscriptions* (Streams of messages). The primitives are in
    `src/libs/elm/`: `engine.ts` (`Update`, `Step`, `Command`, `Emitter`, `make`, imported as `Engine`),
    `program.ts` (pages and the root expose a `Program`; children are lifted into parents with `embed`) and
    `view.ts` (views are pure `(model, dispatch) => VNode` functions).
@@ -38,10 +39,12 @@ refactoring (see "Refactoring status"). A map of the source tree is in `src/READ
    what keeps the engine from dying by mistake. Snabbdom hooks must not dispatch messages `update` may reject.
 
    Asynchronous operations get an id from the state (`nextOperation`), the state remembers the operation in
-   progress (e.g. `Deleting { operation }`, `Submitting { operation }`, `latestValidation`), and the
+   progress (e.g. `Deleting { operation }`, `Submitting { operation }`), and the
    completion message carries the id back: `update` applies it only if it matches, and rejects it otherwise.
    Model the state as explicit, independent state machines (one per concern: data, selection, form, …)
-   rather than shared flags, so that impossible combinations cannot be represented.
+   rather than shared flags, so that impossible combinations cannot be represented. Never store derived data:
+   values that depend on time (expiration status, freshness, …) are computed in `makeModel` from a `now`
+   kept in the state by a clock subscription, so `update` stays pure and needs no command to validate.
 5. **A single global state** for everything: UI and logic. No local component/view state, no mutable
    refs/singletons outside the state.
 6. **Self-contained pages.** Each page in `src/app/pages/<page>/` is a module with a small public API made
@@ -70,12 +73,16 @@ refactoring (see "Refactoring status"). A map of the source tree is in `src/READ
      file, so a bundle only includes the implementations it uses)
 7. **Root in `src/app/`**: structured exactly like a page, one level up. Public files at its root
    (`program.ts`, `view.ts`, `sqlite.layer.ts`, `in-memory.layer.ts`) are the only things code outside
-   `src/app` may import; `program/`, `ports/`, `adapters/` and `pages/` are private (enforced by biome).
+   `src/app` may import; `program/`, `pages/` and, when the root needs outside services, `ports/` and
+   `adapters/` are private (enforced by biome).
    Inside `src/app` files use relative imports, and the root reaches each page only through the page's
    public files. Pages are **lifted into the root** with `embed` (e.g. `GotHomeMsg`, `state.page.Home`,
    subscription keys prefixed by the page name); the root `*.layer.ts` files merge the root adapters with
    the matching page setups.
-8. **Entrypoints in `src/entrypoints/`**: the only place that knows about environments. `production.ts` and
+8. **Entrypoints in `src/entrypoints/`**: the only place that knows about environments. They also own
+   the boot of the host shell: `run.ts` hides the splash screen (`src/infrastructure/splash-screen.ts`) once
+   the renderer reports the first view displayed (`onFirstPaint`) and its fonts are loaded
+   (`src/infrastructure/fonts.ts`), not when data is loaded. `production.ts` and
    `development.ts` each pick an app setup, the root view source (bundled, or hot reloaded), the log level
    and the infrastructure, then call `run` (`run.ts`, environment-agnostic). `scripts/cli.ts` builds only
    the entrypoint of the requested environment, so each bundle contains only what it uses; never branch on
@@ -138,7 +145,7 @@ refactoring (see "Refactoring status"). A map of the source tree is in `src/READ
   `*.arbitrary.ts` may only be imported by `*.test.ts` and `*.arbitrary.ts` files (biome), so production
   bundles never include them. When adding a branded type, add its arbitrary too. The same goes for domain
   types in pages (e.g. `domain/product.arbitrary.ts`: valid products, the snapshots `fromSnapshot` accepts,
-  and anything a storage may return).
+  and anything a storage may return). State arbitraries live in `program/state.arbitrary.ts`.
 
 ## Commands
 

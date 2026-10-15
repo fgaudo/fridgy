@@ -1,3 +1,4 @@
+import * as DateTime from 'effect/DateTime'
 import * as Effect from 'effect/Effect'
 import * as HashMap from 'effect/HashMap'
 import * as Stream from 'effect/Stream'
@@ -17,10 +18,17 @@ const fromViewport = <A>(f: (viewport: Viewport['Service']) => Stream.Stream<A>)
 export const subscriptions: Engine.Emitter<State, Message, Deps> = (_state) =>
   HashMap.make(
     [
+      // Expiration statuses derive from the current time: it is refreshed
+      // often enough for days-long expirations.
+      'clock',
+      Stream.tick('30 seconds').pipe(
+        Stream.mapEffect(() => DateTime.now),
+        Stream.map((now) => Message.TimeChanged({ now })),
+      ),
+    ],
+    [
       'products',
       Stream.unwrap(Effect.map(Effect.service(Products), ({ changes }) => changes)).pipe(
-        // Re-emit periodically so that expiration statuses are recomputed.
-        Stream.zipLatestWith(Stream.tick('30 seconds'), (snapshot) => snapshot),
         Stream.map((result) => Message.ProductsChanged({ result })),
       ),
     ],

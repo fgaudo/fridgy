@@ -1,0 +1,69 @@
+import * as DateTime from 'effect/DateTime'
+import * as Opt from 'effect/Option'
+import * as fc from 'fast-check'
+import * as NonEmptyHashSet from '@/libs/collections/non-empty-hash-set.arbitrary.ts'
+import * as ProductArbitrary from '../domain/product.arbitrary.ts'
+import type { StoredProduct } from '../ports/products.ts'
+import { OperationId, type Product, type State } from './state.ts'
+
+export const maybe = <A>(arbitrary: fc.Arbitrary<A>): fc.Arbitrary<Opt.Option<A>> =>
+  fc.option(arbitrary, { nil: undefined }).map((value) => (value === undefined ? Opt.none() : Opt.some(value)))
+
+// A small id space, so that selections and product lists overlap often.
+export const id: fc.Arbitrary<string> = fc.constantFrom('1', '2', '3', '4', '5', '6')
+
+// Operations already started have small ids; the next one is always larger.
+export const operation = fc.integer({ min: 0, max: 9 }).map(OperationId.make)
+export const nextOperation = fc.integer({ min: 10, max: 20 }).map(OperationId.make)
+
+export const date = fc.integer({ min: 0, max: 4_102_444_800_000 }).map((millis) => DateTime.makeUnsafe(millis))
+
+export const product: fc.Arbitrary<Product> = fc.oneof(
+  fc.record({ id, product: ProductArbitrary.arbitrary }).map((fields) => ({ _tag: 'Valid', ...fields } as const)),
+  fc.record({ id, maybeName: maybe(fc.string()) }).map((fields) => ({ _tag: 'Invalid', ...fields } as const)),
+  maybe(fc.string()).map((maybeName) => ({ _tag: 'Corrupt', maybeName } as const)),
+)
+
+export const products: fc.Arbitrary<State['products']> = fc.oneof(
+  fc.constant({ _tag: 'Loading' } as const),
+  fc.constant({ _tag: 'Failed' } as const),
+  fc.array(product, { maxLength: 8 }).map((items) => ({ _tag: 'Loaded', items } as const)),
+)
+
+export const selecting = maybe(NonEmptyHashSet.arbitrary(id)).map((maybeIds) => (
+  { _tag: 'Selecting', maybeIds } as const
+))
+export const deleting = fc.record({ operation, ids: NonEmptyHashSet.arbitrary(id) }).map((fields) => (
+  { _tag: 'Deleting', ...fields } as const
+))
+export const selection: fc.Arbitrary<State['selection']> = fc.oneof(selecting, deleting)
+
+const formFields = fc.record({ maybeName: maybe(fc.string()), maybeExpirationDate: maybe(date) })
+export const closedForm = fc.constant({ _tag: 'Closed' } as const)
+export const editingForm = formFields.map((fields) => ({ _tag: 'Editing', ...fields } as const))
+export const submittingForm = fc.tuple(formFields, operation).map(([fields, operation]) => (
+  { _tag: 'Submitting', operation, ...fields } as const
+))
+export const addProduct: fc.Arbitrary<State['addProduct']> = fc.oneof(closedForm, editingForm, submittingForm)
+
+/** Any state of the page, respecting its invariants (started operations have ids below `nextOperation`). */
+export const state: fc.Arbitrary<State> = fc.record({
+  isMenuOpen: fc.boolean(),
+  isViewportAtTop: fc.boolean(),
+  isInteracting: fc.boolean(),
+  nextOperation,
+  maybeNow: maybe(date),
+  products,
+  selection,
+  addProduct,
+})
+
+/** Like `state`, with `key` drawn from `arbitrary`. */
+export const stateWith = <K extends keyof State>(key: K, arbitrary: fc.Arbitrary<State[K]>) =>
+  fc.tuple(state, arbitrary).map(([base, value]): State => ({ ...base, [key]: value }))
+
+/** What the product storage may send: products with or without an id, valid or not. */
+export const storedProducts: fc.Arbitrary<ReadonlyArray<StoredProduct>> = fc.array(
+  fc.tuple(maybe(id), ProductArbitrary.unvalidatedSnapshot).map(([maybeId, snapshot]) => ({ ...snapshot, maybeId })),
+  { maxLength: 8 },
+)

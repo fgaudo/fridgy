@@ -16,8 +16,7 @@ src/
 │  ├─ sqlite.layer.ts    public: every adapter, data in sqlite
 │  ├─ in-memory.layer.ts public: every adapter, data in memory
 │  ├─ program/           private: messages, state, model, update, subs, commands
-│  ├─ ports/             private: services the root needs (e.g. Shell)
-│  ├─ adapters/          private: implementations of those ports
+│  ├─ ports/, adapters/  private, when the root itself needs outside services
 │  └─ pages/<page>/      private: each page has the same shape as app/
 │     ├─ program.ts · view.ts · *.layer.ts    the page's public API
 │     └─ program/ · domain/ · ports/ · adapters/

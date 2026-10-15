@@ -6,6 +6,7 @@ import * as HashSet from 'effect/HashSet'
 import * as Opt from 'effect/Option'
 import * as PositiveInteger from '@/libs/numbers/positive-integer.ts'
 import type * as UnitInterval from '@/libs/numbers/unit-interval.ts'
+import * as Domain from '../domain/product.ts'
 import * as Guards from './guards.ts'
 import { InternalMessage } from './messages.ts'
 import type * as State from './state.ts'
@@ -44,7 +45,6 @@ export type Model = Readonly<{
   isMenuOpen: boolean
   isInteracting: boolean
   isViewportAtTop: boolean
-  canNavigateOut: boolean
   addProduct: Data.TaggedEnum<{
     Open: {
       name: string
@@ -68,6 +68,20 @@ export type Model = Readonly<{
   }>
 }>
 
+type ProductStatus = Data.TaggedEnum.Value<ProductModel, 'Valid'>['status']
+
+const statusAt = (now: DateTime.Utc, product: Domain.Product): ProductStatus =>
+  Opt.match(Domain.maybeExpiration(product), {
+    onNone: () => ({ _tag: 'Everlasting' }),
+    onSome: (expiration) => {
+      const expirationDate = Domain.expirationDate(expiration)
+      const status = Domain.expirationStatus(now)(expiration)
+      return status.hasExpired
+        ? { _tag: 'Stale', expirationDate }
+        : { _tag: 'Fresh', expirationDate, timeLeft: status.timeLeft, freshnessRatio: status.freshness }
+    },
+  })
+
 const makeAddProduct = (state: State.State): Model['addProduct'] => {
   if (state.addProduct._tag === 'Closed') {
     return { _tag: 'Closed' }
@@ -88,9 +102,10 @@ const makeAddProduct = (state: State.State): Model['addProduct'] => {
 }
 
 const makeProductList = (state: State.State): Model['productListStatus'] => {
-  if (state.products._tag === 'Loading') {
+  if (state.products._tag === 'Loading' || Opt.isNone(state.maybeNow)) {
     return { _tag: 'Initial' }
   }
+  const now = state.maybeNow.value
   if (state.products._tag === 'Failed') {
     return { _tag: 'Error' }
   }
@@ -135,8 +150,8 @@ const makeProductList = (state: State.State): Model['productListStatus'] => {
             canToggle: canToggle(product.id),
             id: product.id,
             isSelected: isSelected(product.id),
-            name: product.name,
-            status: product.status,
+            name: Domain.name(product.product),
+            status: statusAt(now, product.product),
           }
       }
     }),
@@ -147,7 +162,6 @@ export const makeModel = (state: State.State): Model => ({
   isMenuOpen: state.isMenuOpen,
   isInteracting: state.isInteracting,
   isViewportAtTop: state.isViewportAtTop,
-  canNavigateOut: state.selection._tag !== 'Deleting',
   addProduct: makeAddProduct(state),
   productListStatus: makeProductList(state),
 })

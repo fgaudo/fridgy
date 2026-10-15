@@ -1,111 +1,33 @@
 import { describe, expect, test } from 'bun:test'
-import type * as Arr from 'effect/Array'
-import type * as Data from 'effect/Data'
 import * as DateTime from 'effect/DateTime'
-import * as Duration from 'effect/Duration'
 import * as Equal from 'effect/Equal'
 import * as HashSet from 'effect/HashSet'
 import * as Opt from 'effect/Option'
 import * as Result from 'effect/Result'
 import * as fc from 'fast-check'
 import type { VNode } from 'snabbdom'
-import * as NonEmptyArray from '@/libs/collections/non-empty-array.arbitrary.ts'
-import * as NonEmptyHashSet from '@/libs/collections/non-empty-hash-set.arbitrary.ts'
 import * as Engine from '@/libs/elm/engine.ts'
-import * as UnitInterval from '@/libs/numbers/unit-interval.arbitrary.ts'
-import * as ProductArbitrary from '../domain/product.arbitrary.ts'
+import * as Domain from '../domain/product.ts'
+import type { StoredProduct } from '../ports/products.ts'
 import { view } from '../view.ts'
 import { InternalMessage } from './messages.ts'
 import { makeModel } from './model.ts'
-import { OperationId, type Product, type State } from './state.ts'
+import {
+  closedForm,
+  date,
+  deleting,
+  editingForm,
+  id,
+  operation,
+  product,
+  selecting,
+  state,
+  stateWith,
+  storedProducts,
+  submittingForm,
+} from './state.arbitrary.ts'
+import type { State } from './state.ts'
 import { update } from './update.ts'
-
-type ValidProduct = Data.TaggedEnum.Value<Product, 'Valid'>
-type ValidatedResult = Data.TaggedEnum.Value<InternalMessage, 'ProductsValidated'>['result']
-type ValidatedProduct = Data.TaggedEnum.Value<InternalMessage, 'ProductsValidated'> extends {
-  result: Result.Result<Opt.Option<ReadonlyArray<infer P>>, void>
-} ? P
-  : never
-
-const maybe = <A>(arbitrary: fc.Arbitrary<A>): fc.Arbitrary<Opt.Option<A>> =>
-  fc.option(arbitrary, { nil: undefined }).map((value) => (value === undefined ? Opt.none() : Opt.some(value)))
-
-// A small id space, so that selections and product lists overlap often.
-const id: fc.Arbitrary<string> = fc.constantFrom('1', '2', '3', '4', '5', '6')
-
-// Operations already started have small ids; the next one is always larger.
-const operation = fc.integer({ min: 0, max: 9 }).map(OperationId.make)
-const nextOperation = fc.integer({ min: 10, max: 20 }).map(OperationId.make)
-
-const date = fc.integer({ min: 0, max: 4_102_444_800_000 }).map((millis) => DateTime.makeUnsafe(millis))
-
-const status: fc.Arbitrary<ValidProduct['status']> = fc.oneof(
-  fc.constant({ _tag: 'Everlasting' } as const),
-  date.map((expirationDate) => ({ _tag: 'Stale', expirationDate } as const)),
-  fc.record({
-    expirationDate: date,
-    timeLeft: fc.nat().map(Duration.millis),
-    freshnessRatio: UnitInterval.arbitrary,
-  }).map((fields) => ({ _tag: 'Fresh', ...fields } as const)),
-)
-
-const product: fc.Arbitrary<Product> = fc.oneof(
-  fc.record({ id, name: fc.string(), status }).map((fields) => ({ _tag: 'Valid', ...fields } as const)),
-  fc.record({ id, maybeName: maybe(fc.string()) }).map((fields) => ({ _tag: 'Invalid', ...fields } as const)),
-  maybe(fc.string()).map((maybeName) => ({ _tag: 'Corrupt', maybeName } as const)),
-)
-
-const products: fc.Arbitrary<State['products']> = fc.oneof(
-  fc.constant({ _tag: 'Loading' } as const),
-  fc.constant({ _tag: 'Failed' } as const),
-  fc.array(product, { maxLength: 8 }).map((items) => ({ _tag: 'Loaded', items } as const)),
-)
-
-const selecting = maybe(NonEmptyHashSet.arbitrary(id)).map((maybeIds) => ({ _tag: 'Selecting', maybeIds } as const))
-const deleting = fc.record({ operation, ids: NonEmptyHashSet.arbitrary(id) }).map((fields) => (
-  { _tag: 'Deleting', ...fields } as const
-))
-const selection: fc.Arbitrary<State['selection']> = fc.oneof(selecting, deleting)
-
-const formFields = fc.record({ maybeName: maybe(fc.string()), maybeExpirationDate: maybe(date) })
-const closedForm = fc.constant({ _tag: 'Closed' } as const)
-const editingForm = formFields.map((fields) => ({ _tag: 'Editing', ...fields } as const))
-const submittingForm = fc.tuple(formFields, operation).map(([fields, operation]) => (
-  { _tag: 'Submitting', operation, ...fields } as const
-))
-const addProduct: fc.Arbitrary<State['addProduct']> = fc.oneof(closedForm, editingForm, submittingForm)
-
-const state: fc.Arbitrary<State> = fc.record({
-  isMenuOpen: fc.boolean(),
-  isViewportAtTop: fc.boolean(),
-  isInteracting: fc.boolean(),
-  nextOperation,
-  latestValidation: maybe(operation),
-  products,
-  selection,
-  addProduct,
-})
-
-const stateWith = <K extends keyof State>(key: K, arbitrary: fc.Arbitrary<State[K]>) =>
-  fc.tuple(state, arbitrary).map(([base, value]): State => ({ ...base, [key]: value }))
-
-const storedProducts = fc.array(
-  fc.tuple(maybe(id), ProductArbitrary.unvalidatedSnapshot).map(([maybeId, snapshot]) => ({ ...snapshot, maybeId })),
-  { maxLength: 8 },
-)
-
-const validatedProduct: fc.Arbitrary<ValidatedProduct> = fc.oneof(
-  fc.record({ id, name: fc.string(), status }).map((fields) => ({ _tag: 'Valid', ...fields } as const)),
-  fc.record({ maybeId: maybe(id), maybeName: maybe(fc.string()) }).map((fields) => (
-    { _tag: 'Invalid', ...fields } as const
-  )),
-)
-
-const validatedResult: fc.Arbitrary<ValidatedResult> = fc.oneof(
-  fc.constant(Result.fail(undefined)),
-  fc.constant(Result.succeed(Opt.none())),
-  NonEmptyArray.arbitrary(validatedProduct).map((products) => Result.succeed(Opt.some(products))),
-)
 
 const message: fc.Arbitrary<InternalMessage> = fc.oneof(
   fc.constant(InternalMessage.DeleteStarted()),
@@ -119,14 +41,13 @@ const message: fc.Arbitrary<InternalMessage> = fc.oneof(
   fc.boolean().map((isInteracting) => InternalMessage.InteractionChanged({ isInteracting })),
   fc.string().map((name) => InternalMessage.NameChanged({ name })),
   fc.oneof(fc.string(), fc.integer()).map((expiration) => InternalMessage.ExpirationDateChanged({ expiration })),
+  date.map((now) => InternalMessage.TimeChanged({ now })),
   fc.record({ operation, succeeded: fc.boolean() }).map(InternalMessage.AddProductCompleted),
   fc.oneof(
     fc.constant(Result.fail(undefined)),
     storedProducts.map((products) => Result.succeed(products)),
   ).map((result) => InternalMessage.ProductsChanged({ result })),
-  fc.record({ validation: operation, result: validatedResult }).map(InternalMessage.ProductsValidated),
   fc.record({ operation, succeeded: fc.boolean() }).map(InternalMessage.DeleteProductsCompleted),
-  fc.constant(InternalMessage.NoOp()),
 )
 
 type Outcome =
@@ -207,7 +128,7 @@ describe('Home update', () => {
     })
 
     test('only messages that start an operation take a new operation id, one at a time', () => {
-      const starters = new Set(['AddProductStarted', 'DeleteStarted', 'ProductsChanged'])
+      const starters = new Set(['AddProductStarted', 'DeleteStarted'])
       assertProperty([state, message], (before, msg) => {
         const result = outcome(msg, before)
         if (result.rejected) return true
@@ -233,15 +154,6 @@ describe('Home update', () => {
       const tags = new Set(fc.sample(state, 1_000).flatMap((s) => dispatchedByView(s, '').map((msg) => msg._tag)))
       expect(tags.has('AddProductStarted')).toBe(true)
       expect(tags.has('NameChanged')).toBe(true)
-    })
-  })
-
-  describe('NoOp', () => {
-    test('changes nothing and runs nothing', () => {
-      assertProperty([state], (before) => {
-        const { after, commands } = step(InternalMessage.NoOp(), before)
-        return Equal.equals(after, before) && commands.length === 0
-      })
     })
   })
 
@@ -297,74 +209,57 @@ describe('Home update', () => {
     })
   })
 
-  describe('ProductsChanged', () => {
-    test('starts a validation with a new id, which becomes the latest', () => {
-      assertProperty([state, message.filter((msg) => msg._tag === 'ProductsChanged')], (before, msg) => {
-        const { after, commands } = step(msg, before)
-        return Equal.equals(after.latestValidation, Opt.some(before.nextOperation))
-          && onlyChanged(before, after, 'latestValidation', 'nextOperation')
-          && commands.length === 1
+  describe('TimeChanged', () => {
+    test('stores the time and touches nothing else', () => {
+      assertProperty([state, date], (before, now) => {
+        const { after, commands } = step(InternalMessage.TimeChanged({ now }), before)
+        return Equal.equals(after.maybeNow, Opt.some(now))
+          && onlyChanged(before, after, 'maybeNow')
+          && commands.length === 0
       })
     })
   })
 
-  describe('ProductsValidated', () => {
-    // A state whose latest validation is `validation`, so that its result applies.
-    const awaiting = fc.tuple(state, operation).map(([base, validation]) => ({
-      before: { ...base, latestValidation: Opt.some(validation) } satisfies State,
-      validation,
-    }))
-
-    const validated = (validation: OperationId, products: Arr.NonEmptyReadonlyArray<ValidatedProduct>) =>
-      InternalMessage.ProductsValidated({ validation, result: Result.succeed(Opt.some(products)) })
-
-    test('is rejected unless it is the latest validation', () => {
-      assertProperty([state, operation, validatedResult], (before, validation, result) => {
-        fc.pre(!Opt.contains(before.latestValidation, validation))
-        return rejects(InternalMessage.ProductsValidated({ validation, result }), before)
-      })
-    })
+  describe('ProductsChanged', () => {
+    const changed = (products: ReadonlyArray<StoredProduct>) =>
+      InternalMessage.ProductsChanged({ result: Result.succeed(products) })
 
     test('a failure marks the products as failed and touches nothing else', () => {
-      assertProperty([awaiting], ({ before, validation }) => {
-        const { after } = step(InternalMessage.ProductsValidated({ validation, result: Result.fail(undefined) }), before)
-        return after.products._tag === 'Failed' && onlyChanged(before, after, 'products')
+      assertProperty([state], (before) => {
+        const { after, commands } = step(InternalMessage.ProductsChanged({ result: Result.fail(undefined) }), before)
+        return after.products._tag === 'Failed' && onlyChanged(before, after, 'products') && commands.length === 0
       })
     })
 
-    test('no products means an empty list', () => {
-      assertProperty([awaiting], ({ before, validation }) => {
-        const { after } = step(InternalMessage.ProductsValidated({ validation, result: Result.succeed(Opt.none()) }), before)
-        return Equal.equals(after.products, { _tag: 'Loaded', items: [] })
-      })
-    })
-
-    test('products are stored in order; invalid ones keep their id when they have one', () => {
-      assertProperty([awaiting, NonEmptyArray.arbitrary(validatedProduct)], ({ before, validation }, products) => {
-        const after = step(validated(validation, products), before).after
+    test('products are validated in order, without commands', () => {
+      assertProperty([state, storedProducts], (before, stored) => {
+        const { after, commands } = step(changed(stored), before)
         return after.products._tag === 'Loaded'
-          && after.products.items.length === products.length
-          && products.every((product, index) => {
-            const stored = after.products._tag === 'Loaded' ? after.products.items[index] : undefined
-            if (product._tag === 'Valid') return stored?._tag === 'Valid' && stored.id === product.id
-            return Opt.match(product.maybeId, {
-              onNone: () => stored?._tag === 'Corrupt',
-              onSome: (id) => stored?._tag === 'Invalid' && stored.id === id,
+          && after.products.items.length === stored.length
+          && stored.every((input, index) => {
+            const item = after.products._tag === 'Loaded' ? after.products.items[index] : undefined
+            return Opt.match(input.maybeId, {
+              onNone: () => item?._tag === 'Corrupt',
+              onSome: (id) =>
+                Opt.match(Domain.fromSnapshot(input), {
+                  onNone: () => item?._tag === 'Invalid' && item.id === id,
+                  onSome: (validated) =>
+                    item?._tag === 'Valid' && item.id === id && Equal.equals(item.product, validated),
+                }),
             })
           })
           && onlyChanged(before, after, 'products', 'selection')
+          && commands.length === 0
       })
     })
 
     test('the selection keeps exactly the selected products that still exist; a deletion is left alone', () => {
-      assertProperty([awaiting, NonEmptyArray.arbitrary(validatedProduct)], ({ before, validation }, products) => {
-        const after = step(validated(validation, products), before).after
+      assertProperty([state, storedProducts], (before, stored) => {
+        const { after } = step(changed(stored), before)
         if (before.selection._tag === 'Deleting') {
           return Equal.equals(after.selection, before.selection)
         }
-        const existingIds = HashSet.fromIterable(
-          products.flatMap((product) => (product._tag === 'Valid' ? [product.id] : Opt.toArray(product.maybeId))),
-        )
+        const existingIds = HashSet.fromIterable(stored.flatMap((input) => Opt.toArray(input.maybeId)))
         return after.selection._tag === 'Selecting'
           && Equal.equals(selectedIds(after.selection), HashSet.intersection(selectedIds(before.selection), existingIds))
       })
