@@ -21,7 +21,6 @@ const commonBuildConfig = Effect.gen(function*() {
   return {
     entrypoints: [
       resolve('./src/infrastructure/sqlite/sqlite.worker.ts'),
-      resolve('./src/app.ts'),
       resolve('./src/assets/css/styles.css'),
     ],
     env: 'inline',
@@ -45,6 +44,8 @@ const buildDev = Effect.gen(function*() {
       ...config,
       entrypoints: [
         ...config.entrypoints,
+        resolve('./src/main/development.ts'),
+        // Built separately so it can be hot reloaded.
         resolve('./src/app/view.ts'),
       ],
       sourcemap: 'inline',
@@ -53,10 +54,12 @@ const buildDev = Effect.gen(function*() {
 })
 
 const buildProd = Effect.gen(function*() {
+  const resolve = yield* makeRootResolver
   const config = yield* commonBuildConfig
   yield* Effect.promise(() =>
     Bun.build({
       ...config,
+      entrypoints: [...config.entrypoints, resolve('./src/main/production.ts')],
       define: {
         'process.env.NODE_ENV': '"production"',
       },
@@ -70,7 +73,8 @@ const buildProd = Effect.gen(function*() {
   )
 })
 
-const prepareDist = Effect.gen(function*() {
+// `entry` is the name of the entrypoint bundle that index.html loads.
+const prepareDist = Effect.fn(function*(entry: 'development' | 'production') {
   const resolve = yield* makeRootResolver
   const fs = yield* FS.FileSystem
   yield* fs.remove(resolve('./dist'), {
@@ -82,9 +86,10 @@ const prepareDist = Effect.gen(function*() {
     resolve('./node_modules/@effect/wa-sqlite/dist/wa-sqlite.wasm'),
     resolve('./dist/wa-sqlite.wasm'),
   )
-  yield* fs.copyFile(
-    resolve('./src/assets/index.html'),
+  const html = yield* fs.readFileString(resolve('./src/assets/index.html'))
+  yield* fs.writeFileString(
     resolve('./dist/index.html'),
+    html.replaceAll('%ENTRY%', entry),
   )
 })
 
@@ -94,7 +99,7 @@ const watchCommand = Cli.Command.make(
   Effect.fn(function*() {
     const fs = yield* FS.FileSystem
     const resolve = yield* makeRootResolver
-    yield* prepareDist
+    yield* prepareDist('development')
     yield* buildDev
     const server = yield* Effect.acquireRelease(
       Effect.sync(() =>
@@ -150,7 +155,7 @@ const buildCommand = Cli.Command.make(
   'build',
   {},
   Effect.fn(function*() {
-    yield* prepareDist
+    yield* prepareDist('production')
     return yield* buildProd
   }),
 )

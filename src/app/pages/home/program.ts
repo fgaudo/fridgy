@@ -1,4 +1,4 @@
-// Public API of the Home page, together with `view.ts`, `live.ts` and
+// Public API of the Home page, together with `view.ts`, `sqlite.ts` and
 // `in-memory.ts`. Everything in the subfolders is private to the page.
 import type * as Program from '@/libs/elm/program.ts'
 import type { InternalMessage } from './core/messages.ts'

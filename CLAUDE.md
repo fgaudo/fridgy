@@ -33,7 +33,8 @@ refactoring (many imports point to old paths, see "Refactoring status").
    - `program.ts` — the `Program` and the types the root needs (`State`, `Model`, `Message`,
      `InternalMessage`, `Deps`)
    - `view.ts` — the page view
-   - `live.ts`, `in-memory.ts`, … — one adapter composition per setup
+   - `sqlite.ts`, `in-memory.ts`, … — one adapter composition per setup, named after *what* backs the
+     ports (never after an environment: environments only exist in `src/main/`)
    They are separate files on purpose: the view is bundled on its own for hot reload, and each setup must
    only pull in its own dependencies. Privately, a page contains:
    - domain types (`domain/`)
@@ -45,27 +46,31 @@ refactoring (many imports point to old paths, see "Refactoring status").
      *events* (Streams). Ports speak in domain data, never in page messages: `subs.ts` turns events into
      messages and `commands.ts` turns command results into messages.
    - **adapters** (`adapters/<capability>/<implementation>.ts`, e.g. `products/sql.ts`,
-     `products/in-memory.ts`), each exporting a `layer`, composed by the public `live.ts`, `in-memory.ts`, …
+     `products/in-memory.ts`), each exporting a `layer`, composed by the public `sqlite.ts`, `in-memory.ts`, …
      (never several setups in the same file, so a bundle only includes the implementations it
      uses)
 6. **Root in `src/app/`**: structured exactly like a page, one level up. Public files at its root
-   (`program.ts`, `view.ts`, `live.ts`, `in-memory.ts`) are the only things code outside `src/app` may import;
+   (`program.ts`, `view.ts`, `sqlite.ts`, `in-memory.ts`) are the only things code outside `src/app` may import;
    `core/` (messages, state, model, update, subs, commands), `ports/`, `adapters/` and `pages/` are private
    (enforced by biome). Inside `src/app` files use relative imports, and the root reaches each page only
    through the page's public files. Pages are **lifted into the root** with `embed` (e.g. `GotHomeMsg`,
-   `state.page.Home`, subscription keys prefixed by the page name); the root `live.ts`/`in-memory.ts`
-   merge the root adapters with the matching page setups. `src/app.ts` is the composition root (entry
-   point) that provides infrastructure and runs the program.
-7. **State ≠ Model**, both in pages and in the root.
+   `state.page.Home`, subscription keys prefixed by the page name); the root `sqlite.ts`/`in-memory.ts`
+   merge the root adapters with the matching page setups.
+7. **Entrypoints in `src/main/`**: the only place that knows about environments. `production.ts` and
+    `development.ts` each pick an app setup, the root view source (bundled, or hot reloaded), the log level
+   and the infrastructure, then call `run` (`run.ts`, environment-agnostic). `scripts/cli.ts` builds only
+   the entrypoint of the requested environment, so each bundle contains only what it uses; never branch on
+   `process.env.NODE_ENV` inside shared code.
+8. **State ≠ Model**, both in pages and in the root.
    - `State`: everything the program needs (versions, internal flags, raw data, …).
    - `Model`: the public projection of `State` for the view, containing only the data it needs.
      Available actions are exposed in the Model as tagged enums carrying the message to dispatch
      (e.g. `canDeleteSelected: { _tag: 'True', deleteMessage } | { _tag: 'False' }`), so the view makes no
      logic decisions.
-8. **`src/infrastructure/`** (alias `@/infra/*`): everything pages need to access data and the platform
+9. **`src/infrastructure/`** (alias `@/infra/*`): everything pages need to access data and the platform
    (sqlite/wasm worker, sql helper and migrations, snabbdom renderer, css refresher, …). Pages depend on
    their own ports; page adapters use the infrastructure.
-9. **`src/libs/`** (alias `@/libs/*`): generic code only, with no knowledge of the app domain. Organized
+10. **`src/libs/`** (alias `@/libs/*`): generic code only, with no knowledge of the app domain. Organized
    in one folder per module; files of the same module import each other relatively, other modules via the
    alias:
    - `elm/` — engine, program composition, view types
@@ -76,9 +81,9 @@ refactoring (many imports point to old paths, see "Refactoring status").
    - `dynamic-import/` — `saferImport`
    - `testing/` — Exit assertions for tests
    - `types/` — type-level utilities
-10. **Runs locally**: the app must be runnable in a local browser (not only on Android).
-11. **View hot reload**: in dev, `scripts/cli.ts watch` rebuilds and notifies over WebSocket; the
-    `RootViews.Hot` layer (`src/infrastructure/hot-module.ts`) re-imports the root view module (`src/app/view.ts`) and `CssRefresher` reloads the CSS. Global state
+11. **Runs locally**: the app must be runnable in a local browser (not only on Android).
+12. **View hot reload**: in dev, `scripts/cli.ts watch` rebuilds and notifies over WebSocket; the
+    development entrypoint (`src/main/development.ts`, via `src/infrastructure/hot-module.ts`) re-imports the root view module (`src/app/view.ts`) and `CssRefresher` reloads the CSS. Global state
     survives the reload because it lives in the engine, not in the view. When moving files,
     **update the paths in `scripts/cli.ts`** (view entrypoint and watched folders).
 
