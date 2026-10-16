@@ -6,4 +6,4 @@ export const arbitrary = (
     readonly min?: number
     readonly max?: number
   } = {},
-): fc.Arbitrary<Integer.Integer> => fc.integer({ min, max }).map(Integer.fromNumberUnsafe)
+): fc.Arbitrary<Integer.Integer> => fc.integer({ min, max }).map(Integer.makeUnsafe)

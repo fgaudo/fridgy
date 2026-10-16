@@ -60,7 +60,7 @@ export const layer = Layer.effect(
         const [validEntries, invalidEntries] = Arr.partition(entries, (entry) =>
           pipe(
             Number(entry.request.id),
-            Integer.fromNumber,
+            Integer.make,
             // Only the form ids are written in: `parseInt` would read "1 " or "1abc" as 1.
             Opt.filter((id) => id.toString(10) === entry.request.id),
             Opt.match({

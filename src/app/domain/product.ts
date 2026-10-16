@@ -91,17 +91,17 @@ export const expirationDate = (expiration: Expiration) => expirationIso.get(expi
 const _freshness = (currentDate: DateTime.Utc) => (expiration: Expiration) => {
   const exp = expirationIso.get(expiration)
   if (DateTime.isLessThanOrEqualTo(exp.expirationDate, currentDate)) {
-    return UnitInterval.fromNumberUnsafe(0)
+    return UnitInterval.makeUnsafe(0)
   }
   if (DateTime.isLessThanOrEqualTo(exp.expirationDate, exp.creationDate)) {
-    return UnitInterval.fromNumberUnsafe(0)
+    return UnitInterval.makeUnsafe(0)
   }
   if (DateTime.isLessThan(currentDate, exp.creationDate)) {
-    return UnitInterval.fromNumberUnsafe(1)
+    return UnitInterval.makeUnsafe(1)
   }
   const remainingDuration = DateTime.distance(currentDate, exp.expirationDate)
   const totalDuration = DateTime.distance(exp.creationDate, exp.expirationDate)
-  return UnitInterval.fromNumberUnsafe(Duration.toMillis(remainingDuration) / Duration.toMillis(totalDuration))
+  return UnitInterval.makeUnsafe(Duration.toMillis(remainingDuration) / Duration.toMillis(totalDuration))
 }
 
 const _timeLeft = (currentDate: DateTime.Utc) => (expiration: Expiration) => {

@@ -1,33 +1,72 @@
 {
-	"version": "2.0.0",
-	"tasks": [
-		{
-			"type": "bun",
-			"script": "bun ./scripts/cli.ts watch",
-			"problemMatcher": [],
-			"label": "watch",
-			"detail": "bun scripts/cli.ts watch"
-		},
-		{
-			"type": "bun",
-			"script": "bun ./scripts/cli.ts build",
-			"problemMatcher": [],
-			"label": "build",
-			"detail": "bun scripts/cli.ts build"
-		},
-		{
-			"label": "tsc: watch",
-			"type": "shell",
-			"command": "bunx tsc --watch --noEmit",
-			"problemMatcher": "$tsc-watch",
-			"group": {
-				"kind": "build",
-				"isDefault": true
-			},
-			"presentation": {
-				"reveal": "silent",
-				"panel": "shared"
-			}
-		}
-	]
+  // Run with "Tasks: Run Task"; Ctrl+Shift+B runs `check`. Problem matchers put the errors of the whole
+  // project in the Problems panel, not only those of the open files.
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "check",
+      "detail": "typecheck, lint and test, one after the other",
+      "dependsOn": ["typecheck", "lint", "test"],
+      "dependsOrder": "sequence",
+      "problemMatcher": [],
+      "group": { "kind": "build", "isDefault": true }
+    },
+    {
+      "label": "typecheck",
+      "type": "shell",
+      "command": "bun run typecheck --pretty false",
+      "problemMatcher": "$tsc"
+    },
+    {
+      "label": "typecheck: watch",
+      "detail": "keeps the type errors of the whole project in Problems",
+      "type": "shell",
+      "command": "bunx tsc --watch --noEmit",
+      "isBackground": true,
+      "problemMatcher": "$tsc-watch",
+      "presentation": { "reveal": "silent" }
+    },
+    {
+      "label": "lint",
+      "type": "shell",
+      "command": "bun run lint",
+      "problemMatcher": {
+        "owner": "biome",
+        "source": "biome",
+        "fileLocation": ["relative", "${workspaceFolder}"],
+        "severity": "warning",
+        // Biome's header line for each finding: `src\file.ts:53:15 lint/style/rule …`.
+        "pattern": {
+          "regexp": "^(\\S[^:]*):(\\d+):(\\d+)\\s+(\\S+)",
+          "file": 1,
+          "line": 2,
+          "column": 3,
+          "code": 4,
+          "message": 4
+        }
+      }
+    },
+    {
+      "label": "test",
+      "type": "shell",
+      "command": "bun test",
+      "problemMatcher": [],
+      "group": { "kind": "test", "isDefault": true }
+    },
+    {
+      "label": "dev server",
+      "detail": "builds on every change and serves dist/ with live reload",
+      "type": "shell",
+      "command": "bun run watch",
+      "isBackground": true,
+      "problemMatcher": []
+    },
+    {
+      "label": "build",
+      "detail": "production build into dist/",
+      "type": "shell",
+      "command": "bun run build",
+      "problemMatcher": []
+    }
+  ]
 }

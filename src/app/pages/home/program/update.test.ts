@@ -7,6 +7,7 @@ import * as Result from 'effect/Result'
 import * as fc from 'fast-check'
 import * as Tea from '@fgaudo/effect-tea'
 import { dispatchViolations } from '@fgaudo/effect-tea/testing'
+import * as NormalizedString from '@/libs/strings/normalized-string.ts'
 import { dispatchedBy } from '@/libs/testing/view.test_support.ts'
 import * as Domain from '../../../domain/product.ts'
 import type { StoredProduct } from '../ports/product-list.ts'
@@ -485,11 +486,11 @@ describe('Home update', () => {
   })
 
   describe('AddProductStarted', () => {
-    test('submits a form with a non-blank name, or is rejected', () => {
+    test('submits a form whose name normalizes to a valid one, or is rejected', () => {
       assertProperty([state], (before) => {
         const form = before.addProduct
         const canStart = form._tag === 'Editing'
-          && Opt.exists(form.maybeName, (name) => name.normalize('NFKC').trim().length > 0)
+          && Opt.exists(form.maybeName, (name) => Opt.isSome(NormalizedString.fromString(name)))
         if (!canStart) {
           return rejects(Message.AddProductStarted(), before)
         }

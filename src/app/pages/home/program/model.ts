@@ -136,7 +136,7 @@ const makeProductList = (state: State.State, { offer }: Offers<Message>): Model[
     isDeleting: selection._tag === 'Deleting',
     deleteSelected: offer(Message.DeleteStarted()),
     clearSelection: offer(Message.ClearSelected()),
-    total: PositiveInteger.fromNumberUnsafe(items.length),
+    total: PositiveInteger.makeUnsafe(items.length),
     products: Arr.map(items, (product): ProductModel => {
       switch (product._tag) {
         case 'Corrupt':

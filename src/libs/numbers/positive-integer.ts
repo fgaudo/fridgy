@@ -1,12 +1,11 @@
-import * as Brand from 'effect/Brand'
+import type * as Opt from 'effect/Option'
+import * as _Schema from 'effect/Schema'
 import * as Integer from './integer.ts'
 
-export type PositiveInteger = Brand.Branded<Integer.Integer, 'core.PositiveInteger'>
+/** An `Integer` greater than zero. */
+export const Schema = Integer.Schema.check(_Schema.isGreaterThan(0)).pipe(_Schema.brand('core.PositiveInteger'))
 
-const PositiveInteger = Brand.all(
-  Integer._internal.Integer,
-  Brand.make<PositiveInteger>((n) => n > 0),
-)
+export type PositiveInteger = typeof Schema.Type
 
-export const fromNumber = (number: number) => PositiveInteger.option(number)
-export const fromNumberUnsafe = PositiveInteger
+export const make: (n: number) => Opt.Option<PositiveInteger> = _Schema.decodeOption(Schema)
+export const makeUnsafe: (n: number) => PositiveInteger = _Schema.decodeSync(Schema)

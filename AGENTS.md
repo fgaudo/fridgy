@@ -76,9 +76,12 @@ The pages to copy are `src/app/pages/home` (full) and `src/app/pages/about` (min
   README. The app imports `import * as Tea from '@fgaudo/effect-tea'`, and its tests
   `@fgaudo/effect-tea/testing`. Never patch it from here: a change to the library is made, released and
   then upgraded to in this app.
-- **`src/libs/` is generic**: no knowledge of the app. Branded types offer `fromNumber`/`make` (an `Option`)
-  and `fromNumberUnsafe`/`makeUnsafe` only for values valid by construction. Export only what is used, plus
-  a library module's intended API.
+- **`src/libs/` is generic**: no knowledge of the app. A branded type with a rule is defined once, as a
+  `Schema` (`Schema.Int.pipe(Schema.brand(…))`, `.check(…)` for the rule), and its type, `make` (an
+  `Option`) and `makeUnsafe` (only for values valid by construction) are derived from it; `Brand.make` only
+  for a generic type, `Brand.nominal` for a brand without a rule. `make` checks a value of the base type as it
+  is; a constructor that converts it first is named after its input (`NormalizedString.fromString`
+  normalizes). Export only what is used, plus a library module's intended API.
 
 ## Views
 

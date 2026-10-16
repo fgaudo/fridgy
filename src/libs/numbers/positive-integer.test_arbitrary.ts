@@ -7,4 +7,4 @@ export const arbitrary = (
     readonly max?: number
   } = {},
 ): fc.Arbitrary<PositiveInteger.PositiveInteger> =>
-  fc.integer({ min: Math.max(min, 1), max }).map(PositiveInteger.fromNumberUnsafe)
+  fc.integer({ min: Math.max(min, 1), max }).map(PositiveInteger.makeUnsafe)

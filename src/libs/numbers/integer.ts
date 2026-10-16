@@ -1,16 +1,13 @@
-import * as Brand from 'effect/Brand'
+import type * as Opt from 'effect/Option'
 import * as _Schema from 'effect/Schema'
 
-export type Integer = Brand.Branded<number, 'core.Integer'>
+/**
+ * An integer that a `number` holds exactly: within ±`Number.MAX_SAFE_INTEGER`, as `Schema.Int` checks (its
+ * documentation does not say so; `integer.test.ts` holds it to it).
+ */
+export const Schema = _Schema.Int.pipe(_Schema.brand('core.Integer'))
 
-const Integer = Brand.make<Integer>((n) => Number.isInteger(n))
+export type Integer = typeof Schema.Type
 
-export const fromNumber = (n: number) => Integer.option(n)
-export const fromNumberUnsafe = Integer
-
-export const Schema = _Schema.fromBrand('core.Integer', Integer)(_Schema.Number)
-
-/** @internal Shared with `positive-integer.ts`, which refines it. */
-export const _internal = {
-  Integer,
-}
+export const make: (n: number) => Opt.Option<Integer> = _Schema.decodeOption(Schema)
+export const makeUnsafe: (n: number) => Integer = _Schema.decodeSync(Schema)
