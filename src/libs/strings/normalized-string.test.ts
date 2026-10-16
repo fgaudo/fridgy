@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test'
 import * as Opt from 'effect/Option'
 import * as fc from 'fast-check'
 import * as NormalizedString from './normalized-string.ts'
-import * as NormalizedStringArbitrary from './normalized-string.test-arbitrary.ts'
+import * as NormalizedStringArbitrary from './normalized-string.test_arbitrary.ts'
 
 // Mixes plain text with the characters normalization cares about: every kind
 // of whitespace, and compatibility characters that NFKC rewrites.

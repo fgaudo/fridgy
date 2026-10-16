@@ -1,8 +1,8 @@
 import * as DateTime from 'effect/DateTime'
 import * as Opt from 'effect/Option'
 import * as fc from 'fast-check'
-import { arbitrary as maybe } from '@/libs/option/option.test-arbitrary.ts'
-import * as NormalizedString from '@/libs/strings/normalized-string.test-arbitrary.ts'
+import { arbitrary as maybe } from '@/libs/option/option.test_arbitrary.ts'
+import * as NormalizedString from '@/libs/strings/normalized-string.test_arbitrary.ts'
 import * as Product from './product.ts'
 
 const millis = fc.integer({ min: 0, max: 4_102_444_800_000 })

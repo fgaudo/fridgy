@@ -7,7 +7,7 @@ import * as Result from 'effect/Result'
 import * as fc from 'fast-check'
 import * as Tea from '@fgaudo/effect-tea'
 import { dispatchViolations } from '@fgaudo/effect-tea/testing'
-import { dispatchedBy } from '@/libs/testing/view.test-support.ts'
+import { dispatchedBy } from '@/libs/testing/view.test_support.ts'
 import * as Domain from '../../../domain/product.ts'
 import type { StoredProduct } from '../ports/product-list.ts'
 import { view } from '../view.tsx'
@@ -25,7 +25,7 @@ import {
   stateWith,
   storedProducts,
   submittingForm,
-} from './state.test-arbitrary.ts'
+} from './state.test_arbitrary.ts'
 import type { State } from './state.ts'
 import { update } from './update.ts'
 

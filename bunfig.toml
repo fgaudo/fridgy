@@ -3,4 +3,4 @@
 linker = "hoisted"
 
 [test]
-preload = ["./src/libs/testing/preload.test-support.ts"]
+preload = ["./src/libs/testing/preload.test_support.ts"]

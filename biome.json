@@ -33,10 +33,10 @@
               {
                 "group": [
                   "fast-check",
-                  "**/*.test-*.ts",
+                  "**/*.test_*.ts",
                   "@fgaudo/effect-tea/testing"
                 ],
-                "message": "Test-only code: fast-check, *.test-*.ts files (arbitraries, contracts, test support) and @fgaudo/effect-tea/testing may only be imported by *.test.ts and *.test-*.ts files."
+                "message": "Test-only code: fast-check, *.test_*.ts files (arbitraries, contracts, test support) and @fgaudo/effect-tea/testing may only be imported by *.test.ts and *.test_*.ts files."
               }
             ]
           }
@@ -75,10 +75,10 @@
                   {
                     "group": [
                       "fast-check",
-                      "**/*.test-*.ts",
+                      "**/*.test_*.ts",
                       "@fgaudo/effect-tea/testing"
                     ],
-                    "message": "Test-only code: fast-check, *.test-*.ts files (arbitraries, contracts, test support) and @fgaudo/effect-tea/testing may only be imported by *.test.ts and *.test-*.ts files."
+                    "message": "Test-only code: fast-check, *.test_*.ts files (arbitraries, contracts, test support) and @fgaudo/effect-tea/testing may only be imported by *.test.ts and *.test_*.ts files."
                   },
                   {
                     "group": ["../../adapters/**", "../../../adapters/**", "../../../../adapters/**"],
@@ -107,10 +107,10 @@
                   {
                     "group": [
                       "fast-check",
-                      "**/*.test-*.ts",
+                      "**/*.test_*.ts",
                       "@fgaudo/effect-tea/testing"
                     ],
-                    "message": "Test-only code: fast-check, *.test-*.ts files (arbitraries, contracts, test support) and @fgaudo/effect-tea/testing may only be imported by *.test.ts and *.test-*.ts files."
+                    "message": "Test-only code: fast-check, *.test_*.ts files (arbitraries, contracts, test support) and @fgaudo/effect-tea/testing may only be imported by *.test.ts and *.test_*.ts files."
                   },
                   {
                     "group": ["**/pages/**"],
@@ -124,7 +124,7 @@
       }
     },
     {
-      "includes": ["**/*.test.ts", "**/*.test-*.ts"],
+      "includes": ["**/*.test.ts", "**/*.test_*.ts"],
       "linter": {
         "rules": {
           "style": {

@@ -91,16 +91,16 @@ large view into private components under `view/`.
 
 - `bun:test` and fast-check property tests, in a `*.test.ts` next to the module. A property the code does
   not satisfy yet stays as `test.failing` with the bug in its name.
-- Code used only by tests lives in `*.test-<kind>.ts` files (`test-arbitrary`, `test-contract`,
-  `test-support`): Biome lets only `*.test.ts` and other `*.test-*.ts` files import them, and `bun test`
+- Code used only by tests lives in `*.test_<kind>.ts` files (`test_arbitrary`, `test_contract`,
+  `test_support`): Biome lets only `*.test.ts` and other `*.test_*.ts` files import them, and `bun test`
   does not run them.
 - Every page's `update.test.ts` renders the real view for arbitrary states and checks, with
   `dispatchViolations` (`@fgaudo/effect-tea/testing`), that each message it can send is accepted, and acts
   once when sent twice unless it is listed as repeatable. Assert rejections with
   `Engine.isRejected`, never as "state unchanged".
-- Branded and domain types have a `*.test-arbitrary.ts` file producing only valid values; build generators from them,
+- Branded and domain types have a `*.test_arbitrary.ts` file producing only valid values; build generators from them,
   not from `*Unsafe` constructors.
-- Every adapter of a port passes one contract (`<port>.test-contract.ts`, next to the port), run by the
+- Every adapter of a port passes one contract (`<port>.test_contract.ts`, next to the port), run by the
   adapter's own `<adapter>.test.ts`: development only exercises the in-memory adapters, so nothing else
   catches a production one that behaves differently. A write port's contract takes `readBack` from each
   adapter's test: reads that only tests need never go into a port.

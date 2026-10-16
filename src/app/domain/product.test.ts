@@ -4,7 +4,7 @@ import * as Duration from 'effect/Duration'
 import * as Equal from 'effect/Equal'
 import * as Opt from 'effect/Option'
 import * as fc from 'fast-check'
-import * as ProductArbitrary from './product.test-arbitrary.ts'
+import * as ProductArbitrary from './product.test_arbitrary.ts'
 import * as Product from './product.ts'
 
 const date = fc.integer({ min: 0, max: 4_102_444_800_000 }).map((ms) => DateTime.makeUnsafe(ms))

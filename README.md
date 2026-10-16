@@ -105,7 +105,7 @@ See [`src/README.md`](src/README.md) for a map of the source tree and a suggeste
 
 Tests sit next to the code they test (`*.test.ts`) and are mostly property tests: fast-check generates
 thousands of states and messages and checks that the rules hold for all of them. Every branded type and
-domain type has a `*.test-arbitrary.ts` file with its generators. Among others, the tests check that:
+domain type has a `*.test_arbitrary.ts` file with its generators. Among others, the tests check that:
 
 - `update` is deterministic and never throws;
 - every message the real view can send, in any state, is accepted by `update`, and acts only once when

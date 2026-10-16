@@ -1,5 +1,5 @@
 // What every adapter of Home's `ProductList` must do, given the writes of `ProductCommands` (whose own
-// contract is `app/ports/product-commands.test-contract.ts`). It holds no implementation: each adapter's
+// contract is `app/ports/product-commands.test_contract.ts`). It holds no implementation: each adapter's
 // `<adapter>.test.ts` runs it with its own layers.
 import { describe, test } from 'bun:test'
 import * as Arr from 'effect/Array'
@@ -12,8 +12,8 @@ import * as Opt from 'effect/Option'
 import * as Queue from 'effect/Queue'
 import * as Result from 'effect/Result'
 import * as fc from 'fast-check'
-import { add, check, deleteById } from '../../../ports/product-commands.test-contract.ts'
-import * as ProductArbitrary from '../../../domain/product.test-arbitrary.ts'
+import { add, check, deleteById } from '../../../ports/product-commands.test_contract.ts'
+import * as ProductArbitrary from '../../../domain/product.test_arbitrary.ts'
 import * as Product from '../../../domain/product.ts'
 import type { ProductCommands } from '../../../ports/product-commands.ts'
 import { ProductList, type StoredProduct } from './product-list.ts'
