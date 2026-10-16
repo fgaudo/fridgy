@@ -7,16 +7,17 @@ import * as HashMap from 'effect/HashMap'
 import * as Opt from 'effect/Option'
 import * as References from 'effect/References'
 import * as Stream from 'effect/Stream'
-import * as Engine from './engine.ts'
-import { type Offer, type Offered, offered } from './offer.ts'
+import { type Bug, RejectedMessage } from './bug.ts'
+import { reject, type Update } from './update.ts'
+import { type Offer, type Offered, offers } from './offer.ts'
 import type { Program } from './program.ts'
 import { type Frame, run, type RunOptions } from './run.ts'
 
 // A counter that accepts `Increment` and always rejects `Forbidden`; its model offers `Increment`.
 type Message = 'Increment' | 'Forbidden'
 
-const update: Engine.Update<number, Message, never> = (message) => (count) =>
-  message === 'Increment' ? { state: count + 1 } : Engine.reject
+const update: Update<number, Message, never> = (message) => (count) =>
+  message === 'Increment' ? { state: count + 1 } : reject
 
 type Model = Readonly<{ count: number; increment: Offer<Message> }>
 
@@ -24,7 +25,7 @@ const counter: Program<number, Model, Message, never> = {
   init: { state: 0 },
   update,
   subscriptions: () => HashMap.empty(),
-  makeModel: (count) => ({ count, increment: offered(update, count)('Increment') }),
+  makeModel: (count) => ({ count, increment: offers(update, count).offer('Increment') }),
 }
 
 // The engine dies on purpose in some tests: what it logs then is expected.
@@ -62,7 +63,7 @@ describe('run', () => {
         ),
         Stream.runDrain,
       ))))
-    expect(Exit.isFailure(exit) && Cause.squash(exit.cause) instanceof Engine.RejectedMessage).toBe(true)
+    expect(Exit.isFailure(exit) && Cause.squash(exit.cause) instanceof RejectedMessage).toBe(true)
   })
 
   test('with onRejected: \'ignore\', such a message is dropped, reported, and the program goes on', async () => {
@@ -109,7 +110,7 @@ describe('run', () => {
 
 describe('onBug', () => {
   /** What `onBug` reports: where a defect happened (a subscription by its key), or `Rejected`. */
-  const label = (bug: Engine.Bug<Message>) =>
+  const label = (bug: Bug<Message>) =>
     bug._tag === 'Rejected' ? 'Rejected' : bug.where._tag === 'Subscription' ? bug.where.key : bug.where._tag
 
   /** Runs `program` until it dies, drawing every frame with `draw`, and returns what `onBug` reported. */
@@ -161,5 +162,39 @@ describe('onBug', () => {
       died: true,
       bugs: ['Rejected'],
     })
+  })
+})
+
+describe('frames', () => {
+  test('a model is made only for the frames whose model is read, once each', async () => {
+    let made = 0
+    const counting: Program<number, number, Message, never> = {
+      ...counter,
+      makeModel: (count) => {
+        made++
+        return count
+      },
+    }
+    const models: Array<number> = []
+    let seen = 0
+    await Effect.runPromise(quietly(run(
+      counting,
+      (frames) =>
+        frames.pipe(
+          // The first two frames send an increment without reading their model: three frames in all.
+          Stream.tap(({ dispatch }) =>
+            Effect.sync(() => {
+              if (seen++ < 2) dispatch('Increment' as Offered<Message>)
+            })
+          ),
+          Stream.take(3),
+          Stream.runLast,
+          // Like a renderer that only draws the newest frame, and reads its model twice.
+          Effect.map(Opt.map((last) => models.push(last.model, last.model))),
+        ),
+      { onRejected: 'die' },
+    )))
+    expect(models).toEqual([2, 2])
+    expect(made).toBe(1)
   })
 })

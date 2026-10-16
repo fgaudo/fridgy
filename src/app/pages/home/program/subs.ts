@@ -53,7 +53,7 @@ const closeToTop: Tea.Subscription<Message, Viewport> = Channel.unwrap(
   ),
 )
 
-export const subscriptions: Tea.Emitter<State, Message, Deps> = (_state) =>
+export const subscriptions: Tea.Subscribe<State, Message, Deps> = (_state) =>
   HashMap.make(
     ['clock', clock],
     ['products', products],

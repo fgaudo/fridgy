@@ -1,20 +1,22 @@
 import * as Arr from 'effect/Array'
 import * as Equal from 'effect/Equal'
-import * as Engine from './engine.ts'
+import { describeByTag } from './bug.ts'
+import type { Command } from './command.ts'
+import { isRejected, type Update } from './update.ts'
 
 /** Applies `messages` in order from `from`, collecting the commands; a rejection fails the test. */
 export const applyAll =
-  <State, Message, R, Event>(update: Engine.Update<State, Message, R, Event>) =>
+  <State, Message, R, Event>(update: Update<State, Message, R, Event>) =>
   (messages: ReadonlyArray<Message>, from: State) =>
     messages.reduce(
       ({ state, commands }, message, index) => {
         const result = update(message)(state)
-        if (Engine.isRejected(result)) {
-          throw new Error(`update rejected message ${index} (${String(Engine.describeByTag(message))})`)
+        if (isRejected(result)) {
+          throw new Error(`update rejected message ${index} (${String(describeByTag(message))})`)
         }
         return { state: result.state, commands: [...commands, ...(result.commands ?? [])] }
       },
-      { state: from, commands: [] as ReadonlyArray<Engine.Command<Message, R>> },
+      { state: from, commands: [] as ReadonlyArray<Command<Message, R>> },
     )
 
 /**
@@ -33,16 +35,16 @@ export type DispatchViolation<Message> = Readonly<{ _tag: 'Rejected' | 'ActsTwic
  * can assert there are none, e.g. for arbitrary states.
  */
 export const dispatchViolations = <State, Message, R, Event>(
-  update: Engine.Update<State, Message, R, Event>,
+  update: Update<State, Message, R, Event>,
   { repeatable = () => false }: Readonly<{ repeatable?: (message: Message) => boolean }> = {},
 ) =>
 (state: State, messages: Iterable<Message>): ReadonlyArray<DispatchViolation<Message>> =>
   Arr.flatMap(Arr.fromIterable(messages), (message): ReadonlyArray<DispatchViolation<Message>> => {
     const first = update(message)(state)
-    if (Engine.isRejected(first)) return [{ _tag: 'Rejected', message }]
+    if (isRejected(first)) return [{ _tag: 'Rejected', message }]
     if (repeatable(message)) return []
     const second = update(message)(first.state)
-    const actsAgain = !Engine.isRejected(second)
+    const actsAgain = !isRejected(second)
       && (!Equal.equals(second.state, first.state)
         || (second.commands?.length ?? 0) > 0
         || (second.events?.length ?? 0) > 0)

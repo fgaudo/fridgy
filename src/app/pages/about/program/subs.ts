@@ -5,4 +5,4 @@ import type { State } from './state.ts'
 
 export type Deps = never
 
-export const subscriptions: Tea.Emitter<State, Message, Deps> = () => HashMap.empty()
+export const subscriptions: Tea.Subscribe<State, Message, Deps> = () => HashMap.empty()

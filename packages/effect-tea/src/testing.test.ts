@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import * as Effect from 'effect/Effect'
 import * as Opt from 'effect/Option'
-import * as Engine from './engine.ts'
+import { reject, type Update } from './update.ts'
 import { applyAll, dispatchViolations } from './testing.ts'
 
 type State = Readonly<{ count: number; isOpen: boolean }>
@@ -10,18 +10,18 @@ type State = Readonly<{ count: number; isOpen: boolean }>
 // applies, and `Closed` changes nothing when sent again.
 type Message = 'Increment' | 'Opened' | 'Closed' | 'Pinged' | 'Forbidden'
 
-const update: Engine.Update<State, Message, never> = (message) => (state) => {
+const update: Update<State, Message, never> = (message) => (state) => {
   switch (message) {
     case 'Increment':
       return { state: { ...state, count: state.count + 1 } }
     case 'Opened':
-      return state.isOpen ? Engine.reject : { state: { ...state, isOpen: true } }
+      return state.isOpen ? reject : { state: { ...state, isOpen: true } }
     case 'Closed':
       return { state: { ...state, isOpen: false } }
     case 'Pinged':
       return { state, commands: [Effect.succeed(Opt.none())] }
     case 'Forbidden':
-      return Engine.reject
+      return reject
   }
 }
 

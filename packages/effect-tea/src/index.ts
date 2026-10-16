@@ -3,34 +3,19 @@
 // A program: its pieces, and how a child program is lifted into its parent.
 export { embed, embedEach, type Program } from './program.ts'
 
-// What `update` returns, and the effects it describes.
-export {
-  type Bug,
-  type BugReporter,
-  type Command,
-  type DefectSource,
-  type Emitter,
-  isRejected,
-  reject,
-  type Rejected,
-  RejectedMessage,
-  type RejectionOptions,
-  type RejectionPolicy,
-  type Step,
-  type Subscription,
-  type Subscriptions,
-  type Transition,
-  type Update,
-} from './engine.ts'
+// What `update` returns.
+export { isRejected, reject, type Rejected, type Step, type Transition, type Update } from './update.ts'
 
-// Commands from effects that may fail: their failures become messages.
-export { attempt } from './command.ts'
+// The effects it describes: commands, and subscriptions to the world.
+export { attempt, type Command } from './command.ts'
+export type { Subscribe, Subscription, Subscriptions } from './subscription.ts'
 
 // What the model offers to the view, decided by asking `update`.
-export { type InputOffer, type Offer, type Offered, offered, offeredInput, type Offers, offers } from './offer.ts'
+export { type InputOffer, type Offer, type Offered, type Offers, offers } from './offer.ts'
 
 // Views, independent of the renderer.
 export { type Dispatch, mapDispatch, type View } from './view.ts'
 
-// Running a program with a renderer.
+// Running a program with a renderer, and the bugs it reports.
+export { type Bug, type BugReporter, type DefectSource, RejectedMessage, type RejectionOptions } from './bug.ts'
 export { type Frame, run, type RunOptions } from './run.ts'

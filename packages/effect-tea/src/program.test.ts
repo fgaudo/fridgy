@@ -2,7 +2,8 @@ import { describe, expect, test } from 'bun:test'
 import * as Channel from 'effect/Channel'
 import * as HashMap from 'effect/HashMap'
 import * as Opt from 'effect/Option'
-import * as Engine from './engine.ts'
+import type { Subscription } from './subscription.ts'
+import { isRejected } from './update.ts'
 import { embed, embedEach, type Program } from './program.ts'
 
 // A child counter with one subscription, embedded in a parent that holds it and says whether it is shown.
@@ -10,7 +11,7 @@ type Parent = Readonly<{ child: Opt.Option<number>; isShown: boolean }>
 
 type Increment = 'Increment'
 
-const ticks: Engine.Subscription<Increment, never> = Channel.concatWith(
+const ticks: Subscription<Increment, never> = Channel.concatWith(
   Channel.succeed<Increment>('Increment'),
   () => Channel.never,
 )
@@ -36,11 +37,11 @@ describe('embed', () => {
 
   test('a child that does not listen still receives its messages', () => {
     const result = embedded.update('Increment')({ child: Opt.some(0), isShown: false })
-    expect(Engine.isRejected(result) ? Opt.none() : result.state.child).toEqual(Opt.some(1))
+    expect(isRejected(result) ? Opt.none() : result.state.child).toEqual(Opt.some(1))
   })
 
   test('a child that is not there rejects its messages', () => {
-    expect(Engine.isRejected(embedded.update('Increment')({ child: Opt.none(), isShown: true }))).toBe(
+    expect(isRejected(embedded.update('Increment')({ child: Opt.none(), isShown: true }))).toBe(
       true,
     )
   })
@@ -78,16 +79,16 @@ const twoCounters: Counters = { counts: new Map([['a', 0], ['b', 1]]), reachedTw
 describe('embedEach', () => {
   test('a message reaches the child with its id, and only that one', () => {
     const result = each.update('a', 'Increment')(twoCounters)
-    expect(Engine.isRejected(result) ? undefined : [...result.state.counts]).toEqual([['a', 1], ['b', 1]])
+    expect(isRejected(result) ? undefined : [...result.state.counts]).toEqual([['a', 1], ['b', 1]])
   })
 
   test('the events of a child are handled with its id', () => {
     const result = each.update('b', 'Increment')(twoCounters)
-    expect(Engine.isRejected(result) ? undefined : result.state.reachedTwo).toEqual(['b'])
+    expect(isRejected(result) ? undefined : result.state.reachedTwo).toEqual(['b'])
   })
 
   test('a message for an id that is not there is rejected', () => {
-    expect(Engine.isRejected(each.update('c', 'Increment')(twoCounters))).toBe(true)
+    expect(isRejected(each.update('c', 'Increment')(twoCounters))).toBe(true)
   })
 
   test('each subscribed child has its own subscriptions, keyed by its id', () => {

@@ -9,11 +9,14 @@ import * as References from 'effect/References'
 import type * as Scope from 'effect/Scope'
 import * as Stream from 'effect/Stream'
 import * as Engine from './engine.ts'
+import { RejectedMessage } from './bug.ts'
+import type { Command } from './command.ts'
+import { reject } from './update.ts'
 
 // A counter that accepts `Increment`, `Decrement` only above zero, and never `Forbidden`.
 type Message = 'Increment' | 'Decrement' | 'Forbidden'
 
-const make = (initCommands: ReadonlyArray<Engine.Command<Message, never>> = []) =>
+const make = (initCommands: ReadonlyArray<Command<Message, never>> = []) =>
   Engine.make<number, Message, never, never, never>({
     init: { state: 0, commands: initCommands },
     update: (message) => (count) =>
@@ -21,7 +24,7 @@ const make = (initCommands: ReadonlyArray<Engine.Command<Message, never>> = []) 
         ? { state: count + 1 }
         : message === 'Decrement' && count > 0
         ? { state: count - 1 }
-        : Engine.reject,
+        : reject,
     subscriptions: () => HashMap.empty(),
     onRejected: 'die',
   })
@@ -40,7 +43,7 @@ const failureWithin = (engine: Engine.Engine<number, Message>) =>
   engine.await.pipe(Effect.exit, Effect.timeoutOption('200 millis'))
 
 const diedWithRejectedMessage = (exit: Opt.Option<Exit.Exit<never>>) =>
-  Opt.isSome(exit) && Exit.isFailure(exit.value) && Cause.squash(exit.value.cause) instanceof Engine.RejectedMessage
+  Opt.isSome(exit) && Exit.isFailure(exit.value) && Cause.squash(exit.value.cause) instanceof RejectedMessage
 
 // Some tests make the engine die on purpose: what it logs then is expected.
 const run = <A>(effect: Effect.Effect<A, never, Scope.Scope>) =>
@@ -187,5 +190,45 @@ describe('Engine subscriptions', () => {
     expect(log.slice(0, 1)).toEqual(['start a'])
     expect(log.filter((line) => line === 'start a').length).toBe(1)
     expect(log.slice(1)).toEqual(['stop a']) // only when the engine itself stops, at the end of the test
+  })
+})
+
+describe('Engine same state', () => {
+  // `Same` keeps the very same state; `Ping` keeps it too, but runs a command that sends `Increment`.
+  type Signal = 'Same' | 'Ping' | 'Increment'
+
+  const make = () =>
+    Engine.make<number, Signal, never, never, never>({
+      init: { state: 0 },
+      update: (signal) => (count) =>
+        signal === 'Increment'
+          ? { state: count + 1 }
+          : signal === 'Same'
+          ? { state: count }
+          : { state: count, commands: [Effect.succeedSome<Signal>('Increment')] },
+      subscriptions: () => HashMap.empty(),
+      onRejected: 'die',
+    })
+
+  const firstAfter = (engine: Engine.Engine<number, Signal>) =>
+    engine.state$.pipe(Stream.filter(({ revision }) => revision > 0), Stream.runHead, Effect.map(Opt.getOrThrow))
+
+  test('a message that keeps the same state makes no new revision', async () => {
+    const reached = await run(Effect.gen(function*() {
+      const engine = yield* make()
+      engine.dispatchFrom({ state: 0, revision: 0 })('Same')
+      engine.dispatchFrom({ state: 0, revision: 0 })('Increment')
+      return yield* firstAfter(engine)
+    }))
+    expect(reached).toEqual({ state: 1, revision: 1 })
+  })
+
+  test('its commands still run', async () => {
+    const reached = await run(Effect.gen(function*() {
+      const engine = yield* make()
+      engine.dispatchFrom({ state: 0, revision: 0 })('Ping')
+      return yield* firstAfter(engine)
+    }))
+    expect(reached).toEqual({ state: 1, revision: 1 })
   })
 })

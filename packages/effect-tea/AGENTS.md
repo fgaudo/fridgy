@@ -25,9 +25,9 @@ All code, comments, identifiers, commit messages and `.md` files are in **Englis
 
 ## Invariants the engine keeps
 
-- **`update` is pure and called freely.** The library calls it to decide offers (`offered`, `offeredInput`)
+- **`update` is pure and called freely.** The library calls it to decide offers (`offers`)
   as well as to apply messages. Never assume it runs once per message.
-- **Only `offered` and `offeredInput` make an `Offered`.** `mapDispatch` is the only other cast, valid
+- **Only `offers` makes an `Offered`** (through the internal `offered` and `offeredInput`). `mapDispatch` is the only other cast, valid
   because the parent accepts `wrap(message)` exactly when the child accepts `message`. Add no other way to
   forge one.
 - **Rejections are judged by the frame's own state.** A view message carries the state its frame was drawn
@@ -38,7 +38,7 @@ All code, comments, identifiers, commit messages and `.md` files are in **Englis
 - **No default for rejections.** `onRejected` is required, and `'ignore'` requires `onBug`
   (`RejectionOptions`): a bug that is neither fatal nor reported must not be expressible.
 - **Defects always die.** `onBug` reports them, and nothing in the library may retry them, swallow them or
-  turn them into messages. `RejectionPolicy` is the only opt-in, and it only covers rejections, since a
+  turn them into messages. `onRejected` is the only opt-in, and it only covers rejections, since a
   rejection leaves the state unchanged.
 - **A subscription never ends on its own**: it is a `Channel` whose end value is `never`, so only an
   interruption, a defect or its key going away stops it. What the end of a stream means is the caller's
@@ -47,11 +47,15 @@ All code, comments, identifiers, commit messages and `.md` files are in **Englis
   gone key interrupts it.
 - **Commands cannot be cancelled.** This is a deliberate choice for now: do not add cancellation without
   asking.
+- **Frames cost only what is drawn**: a frame's model is made when first read, and a message that returns the
+  very same state makes no new frame. Keep it so: do not compute models eagerly in `run`.
 - **Logs never carry message data by default** (`describeByTag`). Levels: `error` for bugs, `debug` for the
   message loop and for subscriptions starting and stopping.
 
 ## Code
 
+- One module per concept: `update.ts`, `command.ts`, `subscription.ts`, `offer.ts`, `view.ts`, `program.ts` (`embed`),
+  `bug.ts`; `engine.ts` is the runtime only, and `run.ts` connects it to a renderer.
 - Effect modules are imported as namespaces (`import * as Effect from 'effect/Effect'`), with `Arr`, `Opt`
   for `Array`, `Option`.
 - Relative imports carry the `.ts` extension; `tsc` rewrites them to `.js` in the build, and `build.ts` does

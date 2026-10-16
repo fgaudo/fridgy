@@ -11,7 +11,7 @@ const backButton: Tea.Subscription<Message, Shell> = Channel.unwrap(
   Effect.map(Effect.service(Shell), ({ backButton }) => Channel.map(backButton, () => Message.BackRequested())),
 )
 
-export const subscriptions: Tea.Emitter<State, Message, Deps> = (state) =>
+export const subscriptions: Tea.Subscribe<State, Message, Deps> = (state) =>
   HashMap.make(['back-button', backButton]).pipe(
     HashMap.union(home.subscriptions(state)),
     HashMap.union(about.subscriptions(state)),

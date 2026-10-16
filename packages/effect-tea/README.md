@@ -662,7 +662,9 @@ Effect.runFork(main)
 ```
 
 A real renderer usually draws at most once per animation frame (e.g. with a sliding buffer of one frame),
-like Elm does.
+like Elm does. A frame's `model` is made the first time it is read, so the frames a renderer skips cost
+nothing; and a message that leaves the very same state (`===`) makes no new frame at all, only runs its
+commands.
 
 Options (`RunOptions`):
 
@@ -738,23 +740,23 @@ test('the view and update agree', () => {
 
 From `@fgaudo/effect-tea`:
 
-| Export                                          | What it is                                                                                 |
-| ----------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| `Program<State, Model, Message, R, Event?, K?>` | `init`, `update`, `subscriptions`, `makeModel`                                             |
-| `Update`, `Transition`, `Step`                  | `(message) => (state) => Step` or `Rejected`; a `Step` is `{ state, commands?, events? }`  |
-| `reject`, `Rejected`, `isRejected`              | the rejection `update` returns, and its check                                              |
-| `Command<Message, R>`                           | `Effect<Option<Message>, never, R>`                                                        |
-| `attempt`                                       | a command from an effect that may fail: its failure becomes a message                      |
-| `Subscription`                                  | a `Channel` of messages that never ends: listens to the world while its key is there       |
-| `Emitter`, `Subscriptions`                      | `(state) => HashMap<K, Subscription<Message>>`, reconciled by key                          |
-| `offers`, `offered`, `offeredInput`             | ask `update` what the model may offer                                                      |
-| `Offer`, `InputOffer`, `Offered`, `Offers`      | an optional offered message; an optional function to one; the brand; what `offers` returns |
-| `View`, `Dispatch`, `mapDispatch`               | `(model, dispatch) => Node`; a dispatch of offered messages; a child's dispatch            |
-| `embed`, `embedEach`                            | lift a child program, or a collection of them, into a parent                               |
-| `run`, `Frame`, `RunOptions`                    | run a program with a renderer; what the renderer draws; how the program runs               |
-| `RejectionOptions`, `RejectionPolicy`           | `onRejected` with the `onBug` it requires; `'die'` or `'ignore'`                           |
-| `Bug`, `BugReporter`, `DefectSource`            | what `onBug` receives; `onBug` itself; where a defect happened                             |
-| `RejectedMessage`                               | the defect the run fails with when a rejection is fatal                                    |
+| Export                                          | What it is                                                                                    |
+| ----------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| `Program<State, Model, Message, R, Event?, K?>` | `init`, `update`, `subscriptions`, `makeModel`                                                |
+| `Update`, `Transition`, `Step`                  | `(message) => (state) => Step` or `Rejected`; a `Step` is `{ state, commands?, events? }`     |
+| `reject`, `Rejected`, `isRejected`              | the rejection `update` returns, and its check                                                 |
+| `Command<Message, R>`                           | `Effect<Option<Message>, never, R>`                                                           |
+| `attempt`                                       | a command from an effect that may fail: its failure becomes a message                         |
+| `Subscription`                                  | a `Channel` of messages that never ends: listens to the world while its key is there          |
+| `Subscribe`, `Subscriptions`                    | `(state) => HashMap<K, Subscription<Message>>`, reconciled by key                             |
+| `offers`                                        | asks `update` what the model may offer: `offer(message)` and `offerInput(toMessage, current)` |
+| `Offer`, `InputOffer`, `Offered`, `Offers`      | an optional offered message; an optional function to one; the brand; what `offers` returns    |
+| `View`, `Dispatch`, `mapDispatch`               | `(model, dispatch) => Node`; a dispatch of offered messages; a child's dispatch               |
+| `embed`, `embedEach`                            | lift a child program, or a collection of them, into a parent                                  |
+| `run`, `Frame`, `RunOptions`                    | run a program with a renderer; what the renderer draws; how the program runs                  |
+| `RejectionOptions`                              | `onRejected` (`'die'` or `'ignore'`) with the `onBug` it requires                             |
+| `Bug`, `BugReporter`, `DefectSource`            | what `onBug` receives; `onBug` itself; where a defect happened                                |
+| `RejectedMessage`                               | the defect the run fails with when a rejection is fatal                                       |
 
 From `@fgaudo/effect-tea/testing`: `applyAll`, `dispatchViolations`, `DispatchViolation`.
 

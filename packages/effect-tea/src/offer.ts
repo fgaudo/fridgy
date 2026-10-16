@@ -1,6 +1,6 @@
 import type * as Brand from 'effect/Brand'
 import * as Opt from 'effect/Option'
-import * as Engine from './engine.ts'
+import { isRejected, type Update } from './update.ts'
 
 /**
  * A message `update` accepts in the state the view is rendered from. Only
@@ -16,12 +16,12 @@ export type Offer<Message> = Opt.Option<Offered<Message>>
 export type InputOffer<Value, Message> = Opt.Option<(value: Value) => Offered<Message>>
 
 // The update of any program: only whether it rejects matters here.
-type AnyUpdate<State, Message> = Engine.Update<State, Message, unknown, unknown>
+type AnyUpdate<State, Message> = Update<State, Message, unknown, unknown>
 
 /** Asks `update` whether it would accept `message` in `state`: `update` is pure, and its commands only describe effects. */
-export const offered =
+const offered =
   <State, Message>(update: AnyUpdate<State, Message>, state: State) => (message: Message): Offer<Message> =>
-    Engine.isRejected(update(message)(state))
+    isRejected(update(message)(state))
       ? Opt.none()
       : Opt.some(message as Offered<Message>)
 
@@ -30,7 +30,7 @@ export const offered =
  * It asks with `current`: what is typed or picked must never be a reason to
  * reject, so the answer holds for any value.
  */
-export const offeredInput =
+const offeredInput =
   <State, Message>(update: AnyUpdate<State, Message>, state: State) =>
   <Value>(toMessage: (value: Value) => Message, current: Value): InputOffer<Value, Message> =>
     Opt.map(

@@ -3,51 +3,53 @@ import * as Channel from 'effect/Channel'
 import * as Effect from 'effect/Effect'
 import * as HashMap from 'effect/HashMap'
 import * as Opt from 'effect/Option'
-import * as Engine from './engine.ts'
+import type { Command } from './command.ts'
+import type { Subscribe, Subscription, Subscriptions } from './subscription.ts'
+import { isRejected, reject, type Rejected, type Step, type Transition, type Update } from './update.ts'
 
 /** The view is not part of it: it lives in its own module, so it can be hot reloaded. */
 export interface Program<State, Model, Message, R, Event = never, K = unknown> {
-  readonly init: Engine.Step<State, Message, R>
-  readonly update: Engine.Update<State, Message, R, Event>
-  readonly subscriptions: Engine.Emitter<State, Message, R, K>
+  readonly init: Step<State, Message, R>
+  readonly update: Update<State, Message, R, Event>
+  readonly subscriptions: Subscribe<State, Message, R, K>
   readonly makeModel: (state: State) => Model
 }
 
 const mapCommands = <A, B, R>(
-  commands: ReadonlyArray<Engine.Command<A, R>>,
+  commands: ReadonlyArray<Command<A, R>>,
   f: (message: A) => B,
-): ReadonlyArray<Engine.Command<B, R>> => Arr.map(commands, Effect.map(Opt.map(f)))
+): ReadonlyArray<Command<B, R>> => Arr.map(commands, Effect.map(Opt.map(f)))
 
 /** Maps the commands of a step; its events are left to the caller. */
 const mapStep = <State, A, B, R, Event>(
-  { state, commands = [] }: Engine.Step<State, A, R, Event>,
+  { state, commands = [] }: Step<State, A, R, Event>,
   f: (message: A) => B,
-): Engine.Step<State, B, R> => ({ state, commands: mapCommands(commands, f) })
+): Step<State, B, R> => ({ state, commands: mapCommands(commands, f) })
 
 const mapSubscriptions = <A, B, R, K, NewK>(
-  subscriptions: Engine.Subscriptions<K, A, R>,
+  subscriptions: Subscriptions<K, A, R>,
   mapKey: (key: K) => NewK,
   mapMessage: (message: A) => B,
-): Engine.Subscriptions<NewK, B, R> =>
+): Subscriptions<NewK, B, R> =>
   HashMap.reduce(
     subscriptions,
-    HashMap.empty<NewK, Engine.Subscription<B, R>>(),
+    HashMap.empty<NewK, Subscription<B, R>>(),
     (acc, subscription, key) => HashMap.set(acc, mapKey(key), Channel.map(subscription, mapMessage)),
   )
 
-type ParentStep<ParentState, ParentMessage, R> = (state: ParentState) => Engine.Step<ParentState, ParentMessage, R>
+type ParentStep<ParentState, ParentMessage, R> = (state: ParentState) => Step<ParentState, ParentMessage, R>
 
 /** Required exactly when the child emits events, so none can go unhandled. */
 type OnEvent<ChildEvent, Handler> = [ChildEvent] extends [never] ? object : { onEvent: Handler }
 
 /** Writes a child's step back into its parent: its state, its commands (wrapped), then its events, in order. */
 const applyChild = <ParentState, ParentMessage, ChildState, ChildMessage, R, ChildEvent>(
-  result: Engine.Step<ChildState, ChildMessage, R, ChildEvent>,
+  result: Step<ChildState, ChildMessage, R, ChildEvent>,
   wrap: (message: ChildMessage) => ParentMessage,
   set: (state: ParentState, child: ChildState) => ParentState,
   onEvent: (event: ChildEvent) => ParentStep<ParentState, ParentMessage, R>,
 ) =>
-(state: ParentState): Engine.Step<ParentState, ParentMessage, R> => {
+(state: ParentState): Step<ParentState, ParentMessage, R> => {
   const step = mapStep(result, wrap)
   return Arr.reduce(
     result.events ?? [],
@@ -95,18 +97,18 @@ export const embed = <ParentState, ParentMessage, ChildState, ChildMessage, R, C
   const { key, wrap, get, set, getSubscribed = get } = options
   const onEvent = 'onEvent' in options ? options.onEvent : missingOnEvent('embed', key)
   return {
-    init: (step: Engine.Step<ChildState, ChildMessage, R>) => mapStep(step, wrap),
+    init: (step: Step<ChildState, ChildMessage, R>) => mapStep(step, wrap),
 
-    update: (message: ChildMessage) => (state: ParentState): Engine.Transition<ParentState, ParentMessage, R> =>
+    update: (message: ChildMessage) => (state: ParentState): Transition<ParentState, ParentMessage, R> =>
       Opt.match(get(state), {
-        onNone: (): Engine.Rejected => Engine.reject,
+        onNone: (): Rejected => reject,
         onSome: (childState) => {
           const result = child.update(message)(childState)
-          return Engine.isRejected(result) ? result : applyChild(result, wrap, set, onEvent)(state)
+          return isRejected(result) ? result : applyChild(result, wrap, set, onEvent)(state)
         },
       }),
 
-    subscriptions: (state: ParentState): Engine.Subscriptions<readonly [string, K], ParentMessage, R> =>
+    subscriptions: (state: ParentState): Subscriptions<readonly [string, K], ParentMessage, R> =>
       Opt.match(getSubscribed(state), {
         onNone: () => HashMap.empty(),
         onSome: (childState) =>
@@ -158,15 +160,15 @@ export const embedEach = <
   const { key, wrap, get, set, subscribed } = options
   const onEvent = 'onEvent' in options ? options.onEvent : missingOnEvent('embedEach', key)
   return {
-    init: (id: Id, step: Engine.Step<ChildState, ChildMessage, R>) =>
+    init: (id: Id, step: Step<ChildState, ChildMessage, R>) =>
       mapStep(step, (message: ChildMessage) => wrap(id, message)),
 
-    update: (id: Id, message: ChildMessage) => (state: ParentState): Engine.Transition<ParentState, ParentMessage, R> =>
+    update: (id: Id, message: ChildMessage) => (state: ParentState): Transition<ParentState, ParentMessage, R> =>
       Opt.match(get(state, id), {
-        onNone: (): Engine.Rejected => Engine.reject,
+        onNone: (): Rejected => reject,
         onSome: (childState) => {
           const result = child.update(message)(childState)
-          return Engine.isRejected(result)
+          return isRejected(result)
             ? result
             : applyChild(
               result,
@@ -177,10 +179,10 @@ export const embedEach = <
         },
       }),
 
-    subscriptions: (state: ParentState): Engine.Subscriptions<readonly [string, Id, K], ParentMessage, R> =>
+    subscriptions: (state: ParentState): Subscriptions<readonly [string, Id, K], ParentMessage, R> =>
       Arr.reduce(
         Arr.fromIterable(subscribed(state)),
-        HashMap.empty<readonly [string, Id, K], Engine.Subscription<ParentMessage, R>>(),
+        HashMap.empty<readonly [string, Id, K], Subscription<ParentMessage, R>>(),
         (acc, [id, childState]) =>
           HashMap.union(
             acc,
