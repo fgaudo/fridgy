@@ -9,7 +9,7 @@ import * as Stream from 'effect/Stream'
 import * as Engine from './engine.ts'
 import { type Offer, type Offered, offered } from './offer.ts'
 import type { Program } from './program.ts'
-import { run } from './run.ts'
+import { type Frame, run, type RunOptions } from './run.ts'
 
 // A counter that accepts `Increment` and always rejects `Forbidden`; its model offers `Increment`.
 type Message = 'Increment' | 'Forbidden'
@@ -17,7 +17,9 @@ type Message = 'Increment' | 'Forbidden'
 const update: Engine.Update<number, Message, never> = (message) => (count) =>
   message === 'Increment' ? { state: count + 1 } : Engine.reject
 
-const counter: Program<number, Readonly<{ count: number; increment: Offer<Message> }>, Message, never> = {
+type Model = Readonly<{ count: number; increment: Offer<Message> }>
+
+const counter: Program<number, Model, Message, never> = {
   init: { state: 0 },
   update,
   subscriptions: () => HashMap.empty(),
@@ -28,10 +30,15 @@ const counter: Program<number, Readonly<{ count: number; increment: Offer<Messag
 const quietly = <A, E>(effect: Effect.Effect<A, E>) =>
   effect.pipe(Effect.provideService(References.MinimumLogLevel, 'None'))
 
+const runDying = (
+  program: Program<number, Model, Message, never>,
+  render: (frames: Stream.Stream<Frame<Model, Message>>) => Effect.Effect<void>,
+) => run(program, render, { onRejected: 'die' })
+
 describe('run', () => {
   test('frames carry the model, and a dispatch that drives the program', async () => {
     const counts: Array<number> = []
-    await Effect.runPromise(quietly(run(counter, (frames) =>
+    await Effect.runPromise(quietly(runDying(counter, (frames) =>
       frames.pipe(
         Stream.tap(({ model, dispatch }) =>
           Effect.sync(() => {
@@ -46,7 +53,7 @@ describe('run', () => {
   })
 
   test('a message the current frame sends and update rejects makes the run fail', async () => {
-    const exit = await Effect.runPromiseExit(quietly(run(counter, (frames) =>
+    const exit = await Effect.runPromiseExit(quietly(runDying(counter, (frames) =>
       frames.pipe(
         Stream.tap(({ dispatch }) =>
           // A buggy view: it forges a message it was not offered.
@@ -86,8 +93,15 @@ describe('run', () => {
     expect(bugs).toEqual(['Forbidden'])
   })
 
+  test('there is no default for rejections, and onRejected: \'ignore\' requires onBug', () => {
+    const optionsAreRequired: undefined extends Parameters<typeof run>[2] ? false : true = true
+    // @ts-expect-error a bug that is neither fatal nor reported would go unnoticed
+    const unreported: RunOptions<Message> = { onRejected: 'ignore' }
+    expect([optionsAreRequired, unreported.onRejected]).toEqual([true, 'ignore'])
+  })
+
   test('the run ends when the renderer ends', async () => {
-    const exit = await Effect.runPromiseExit(quietly(run(counter, (frames) => Stream.runHead(frames))))
+    const exit = await Effect.runPromiseExit(quietly(runDying(counter, (frames) => Stream.runHead(frames))))
     expect(Exit.isSuccess(exit)).toBe(true)
   })
 })
@@ -106,7 +120,7 @@ describe('onBug', () => {
     const exit = await Effect.runPromiseExit(quietly(run(
       program,
       (frames) => frames.pipe(Stream.tap((frame) => Effect.sync(() => draw(frame))), Stream.runDrain),
-      { onBug: (bug) => Effect.sync(() => bugs.push(label(bug))) },
+      { onRejected: 'die', onBug: (bug) => Effect.sync(() => bugs.push(label(bug))) },
     )))
     return { died: Exit.isFailure(exit), bugs }
   }
@@ -141,7 +155,7 @@ describe('onBug', () => {
     })
   })
 
-  test('a rejected message from the current frame is reported, and is fatal by default', async () => {
+  test('a rejected message from the current frame is reported, and is fatal with onRejected: \'die\'', async () => {
     expect(await diesIn(counter, ({ dispatch }) => dispatch('Forbidden' as Offered<Message>))).toEqual({
       died: true,
       bugs: ['Rejected'],

@@ -27,12 +27,12 @@ export type Step<State, Message, R, Event = never> = Readonly<{
  * What `update` returns for a message that makes no sense in the current state.
  *
  * The engine decides what a rejection means from where the message came from:
- * - from the view rendered for the *current* state: the view offered an action
+ * - from a frame whose own state rejects it too: the frame offered an action
  *   that `update` does not accept, i.e. the model and `update` disagree. It is a
- *   bug, and the engine dies with `RejectedMessage`.
- * - from the view rendered for an *older* state (a click on a frame that was
- *   already outdated, a double tap, …), or from a command or subscription: the
- *   message is stale and is ignored.
+ *   bug, however many messages arrived in between.
+ * - from a frame whose state accepted it (a click on a frame that was already
+ *   outdated, a double tap, …), or from a command or subscription: the message
+ *   is stale and is ignored.
  */
 export const reject: unique symbol = Symbol.for('@fgaudo/effect-tea/Rejected')
 export type Rejected = typeof reject
@@ -50,17 +50,18 @@ export type Revision = number
 
 export type Revisioned<State> = Readonly<{ state: State; revision: Revision }>
 
-/** The defect raised when the current view dispatches a message that `update` rejects. */
+/** The defect raised when a frame dispatches a message that `update` rejects in the frame's own state. */
 export class RejectedMessage extends Data.TaggedError('RejectedMessage')<{
   readonly message: unknown
   readonly revision: Revision
 }> {}
 
-type Origin = Readonly<{ _tag: 'View'; revision: Revision }> | Readonly<{ _tag: 'Program' }>
+// A view message carries the state its frame was drawn from, to tell a bug from a stale message.
+type Origin<State> = Readonly<{ _tag: 'View'; frame: Revisioned<State> }> | Readonly<{ _tag: 'Program' }>
 
-type Envelope<Message> = Readonly<{ message: Message; origin: Origin }>
+type Envelope<State, Message> = Readonly<{ message: Message; origin: Origin<State> }>
 
-const fromProgram: Origin = { _tag: 'Program' }
+const fromProgram: Origin<never> = { _tag: 'Program' }
 
 export type Subscriptions<K, Message, R> = HashMap.HashMap<
   K,
@@ -81,18 +82,30 @@ export type DefectSource<K = unknown> =
  * A bug in the program:
  * - `Defect`: something blew up (an exception, an `Effect.die`). What it left behind is unknown, so the
  *   program always dies.
- * - `Rejected`: the current frame sent a message `update` rejects, so the model offered an action `update`
- *   does not accept. Nothing changed (`update` rejected it), so the program may go on (`RejectionPolicy`).
+ * - `Rejected`: a frame sent a message that `update` rejects in the frame's own state (`revision`), so the
+ *   model offered an action `update` does not accept. Nothing changed (`update` rejected it), so the
+ *   program may go on (`RejectionOptions`).
  */
 export type Bug<Message, K = unknown> =
   | Readonly<{ _tag: 'Defect'; cause: unknown; where: DefectSource<K> }>
   | Readonly<{ _tag: 'Rejected'; message: Message; revision: Revision }>
 
+/** Reports a bug, e.g. to a crash-reporting service. */
+export type BugReporter<Message, K = unknown> = (bug: Bug<Message, K>) => Effect.Effect<void>
+
 /**
- * What a `Rejected` bug does: `'die'` fails the program with `RejectedMessage`; `'ignore'` drops the
- * message and goes on, which is safe because the state did not change.
+ * What a `Rejected` bug does. There is no default: whether a bug the user may never notice should crash
+ * the app depends on where it runs.
+ * - `'die'`: the program fails with `RejectedMessage`.
+ * - `'ignore'`: the message is dropped and the program goes on, which is safe because the state did not
+ *   change. `onBug` is then required: a bug that is neither fatal nor reported would go unnoticed.
+ * `onBug` is called for every bug, defects included.
  */
-export type RejectionPolicy = 'die' | 'ignore'
+export type RejectionOptions<Message, K = unknown> =
+  | Readonly<{ onRejected: 'die'; onBug?: BugReporter<Message, K> }>
+  | Readonly<{ onRejected: 'ignore'; onBug: BugReporter<Message, K> }>
+
+export type RejectionPolicy = RejectionOptions<unknown>['onRejected']
 
 /** By default a message is described by its `_tag` (or itself, if it is a string): logs never carry its data. */
 export const describeByTag = (message: unknown): unknown =>
@@ -106,11 +119,11 @@ export const describeByTag = (message: unknown): unknown =>
 export interface Engine<State, Message> {
   readonly state$: Stream.Stream<Revisioned<State>>
   /**
-   * Returns the dispatch for a view rendered from the state with the given
-   * revision: the revision travels with every message it enqueues, so that a
-   * rejected message can be told apart as a bug or as stale.
+   * Returns the dispatch for a view rendered from `frame`: the frame travels
+   * with every message it enqueues, so that a rejected message can be told
+   * apart as a bug or as stale.
    */
-  readonly dispatchFrom: (revision: Revision) => (message: Message) => void
+  readonly dispatchFrom: (frame: Revisioned<State>) => (message: Message) => void
   /**
    * Never succeeds. Fails with the first defect raised by `update`, a command
    * or a subscription, or with `RejectedMessage`, so whoever runs the program
@@ -125,20 +138,20 @@ export const make = Effect.fn('Engine.make')(function*<State, Message, R, S, K>(
   subscriptions,
   onBug = () => Effect.void,
   describeMessage = describeByTag,
-  onRejected = 'die',
-}: {
-  init: Step<State, Message, R>
-  update: Update<State, Message, R>
-  subscriptions: Emitter<State, Message, S, K>
-  /** Reports every bug, fatal or not, e.g. to a crash-reporting service. */
-  onBug?: (bug: Bug<NoInfer<Message>, NoInfer<K>>) => Effect.Effect<void>
-  /** How a message appears in the logs, e.g. its tags only, without its data. */
-  describeMessage?: (message: NoInfer<Message>) => unknown
-  onRejected?: RejectionPolicy
-}) {
+  onRejected,
+}:
+  & {
+    init: Step<State, Message, R>
+    update: Update<State, Message, R>
+    subscriptions: Emitter<State, Message, S, K>
+    /** How a message appears in the logs, e.g. its tags only, without its data. */
+    describeMessage?: (message: NoInfer<Message>) => unknown
+  }
+  & RejectionOptions<NoInfer<Message>, NoInfer<K>>)
+{
   const context = yield* Effect.context<R | S>()
   const queue = yield* Effect.acquireRelease(
-    Queue.unbounded<Envelope<Message>>(),
+    Queue.unbounded<Envelope<State, Message>>(),
     Queue.shutdown,
   )
   // The loop and the commands. A defect in any of them fails `join`.
@@ -149,6 +162,10 @@ export const make = Effect.fn('Engine.make')(function*<State, Message, R, S, K>(
   const reportDefect = (defect: unknown, where: DefectSource<K>) =>
     Effect.logError(`A defect in ${where._tag === 'Subscription' ? 'a subscription' : where._tag}`, where, defect).pipe(
       Effect.andThen(onBug({ _tag: 'Defect', cause: defect, where })),
+    )
+  const apply = (message: Message, state: State) =>
+    Effect.sync(() => update(message)(state)).pipe(
+      Effect.tapDefect((defect) => reportDefect(defect, { _tag: 'Update' })),
     )
   const runCommand = (command: Command<Message, R>) =>
     command.pipe(
@@ -187,21 +204,25 @@ export const make = Effect.fn('Engine.make')(function*<State, Message, R, S, K>(
   })
   const step = Effect.fn(function*(
     active: HashSet.HashSet<K>,
-    { message, origin }: Envelope<Message>,
+    { message, origin }: Envelope<State, Message>,
   ) {
     const { state, revision } = yield* SubscriptionRef.get(stateRef)
-    const result = yield* Effect.sync(() => update(message)(state)).pipe(
-      Effect.tapDefect((defect) => reportDefect(defect, { _tag: 'Update' })),
-    )
+    const result = yield* apply(message, state)
     if (isRejected(result)) {
-      if (origin._tag === 'View' && origin.revision === revision) {
+      if (
+        origin._tag === 'View'
+        && (origin.frame.revision === revision || isRejected(yield* apply(message, origin.frame.state)))
+      ) {
+        const frameRevision = origin.frame.revision
         yield* Effect.logError(
-          'The view sent a message that update rejects: the model offered it, so the two disagree',
+          'A frame sent a message that update rejects in its own state: the model offered it, so the two disagree',
           describeMessage(message),
-          { revision },
+          { revision: frameRevision },
         )
-        yield* onBug({ _tag: 'Rejected', message, revision })
-        return onRejected === 'die' ? yield* Effect.die(new RejectedMessage({ message, revision })) : active
+        yield* onBug({ _tag: 'Rejected', message, revision: frameRevision })
+        return onRejected === 'die'
+          ? yield* Effect.die(new RejectedMessage({ message, revision: frameRevision }))
+          : active
       }
       yield* Effect.logDebug('Ignored a stale message', describeMessage(message))
       return active
@@ -229,8 +250,8 @@ export const make = Effect.fn('Engine.make')(function*<State, Message, R, S, K>(
       FiberSet.join(fibers),
       FiberMap.join(subscriptionFibers),
     ).pipe(Effect.andThen(Effect.never)),
-    dispatchFrom: (revision) => (message) => {
-      Queue.offerUnsafe(queue, { message, origin: { _tag: 'View', revision } })
+    dispatchFrom: (frame) => (message) => {
+      Queue.offerUnsafe(queue, { message, origin: { _tag: 'View', frame } })
     },
     state$: SubscriptionRef.changes(stateRef),
   } satisfies Engine<State, Message>

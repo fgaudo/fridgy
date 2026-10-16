@@ -76,12 +76,13 @@ The whole app is one Elm-style program:
 - a **pure view**: `makeModel` projects the state onto what the view needs, and the view turns that model
   into a virtual DOM.
 
-The runtime is a local package, [`@fgaudo/effect-tea`](packages/effect-tea/README.md) in `packages/effect-tea/` (a Bun workspace): `run(program, render)` runs a program and hands its frames (a model and its dispatch) to any
+The runtime is a local package, [`@fgaudo/effect-tea`](packages/effect-tea/README.md) in `packages/effect-tea/` (a Bun workspace): `run(program, render, options)` runs a program and hands its frames (a model and its dispatch) to any
 renderer. A few choices go beyond plain Elm:
 
 - **Rejection.** When a message makes no sense in the current state, `update` returns `Engine.reject`. The
   engine knows which displayed state every click comes from: a click on an outdated frame (or a double tap)
-  is simply ignored, while a message rejected for the current state is a bug, and crashes the app.
+  that made sense in that frame is simply ignored, while a message rejected even in the state of the frame
+  that sent it is a bug, and crashes the app.
 - **Offers.** The view never builds messages: the model _offers_ each action (`Option` of a message), and
   decides it by asking `update` whether it would accept the message, so the model and `update` cannot
   disagree. `dispatch` only takes offered messages, so a view that sends anything else does not compile.

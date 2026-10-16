@@ -30,9 +30,13 @@ All code, comments, identifiers, commit messages and `.md` files are in **Englis
 - **Only `offered` and `offeredInput` make an `Offered`.** `mapDispatch` is the only other cast, valid
   because the parent accepts `wrap(message)` exactly when the child accepts `message`. Add no other way to
   forge one.
-- **Rejections depend on their origin.** A message from the current frame (same revision) that `update`
-  rejects is a `Rejected` bug: it dies, unless `onRejected` is `'ignore'`. A message from an older frame, a
-  command or a subscription is stale and is ignored.
+- **Rejections are judged by the frame's own state.** A view message carries the state its frame was drawn
+  from. If `update` rejects it, and rejects it in that state too, it is a `Rejected` bug, however many
+  messages arrived in between; if that state accepted it, it is stale and ignored. Messages from commands
+  and subscriptions are stale when rejected. Never judge by revision alone: a frequent subscription would
+  hide bugs.
+- **No default for rejections.** `onRejected` is required, and `'ignore'` requires `onBug`
+  (`RejectionOptions`): a bug that is neither fatal nor reported must not be expressible.
 - **Defects always die.** `onBug` reports them, and nothing in the library may retry them, swallow them or
   turn them into messages. `RejectionPolicy` is the only opt-in, and it only covers rejections, since a
   rejection leaves the state unchanged.

@@ -31,7 +31,7 @@ const program = Effect.gen(function*() {
           Effect.andThen(SplashScreen.hide),
         ),
       }),
-    { describeMessage: App.describeMessage },
+    { onRejected: 'die', describeMessage: App.describeMessage },
   )
 })
 

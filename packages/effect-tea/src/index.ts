@@ -6,6 +6,7 @@ export { embed, embedEach, type Program } from './program.ts'
 // What `update` returns, and the effects it describes.
 export {
   type Bug,
+  type BugReporter,
   type Command,
   type DefectSource,
   type Emitter,
@@ -13,6 +14,7 @@ export {
   reject,
   type Rejected,
   RejectedMessage,
+  type RejectionOptions,
   type RejectionPolicy,
   type Step,
   type Subscriptions,
@@ -30,4 +32,4 @@ export { type InputOffer, type Offer, type Offered, offered, offeredInput, type 
 export { type Dispatch, mapDispatch, type View } from './view.ts'
 
 // Running a program with a renderer.
-export { type Frame, run } from './run.ts'
+export { type Frame, run, type RunOptions } from './run.ts'

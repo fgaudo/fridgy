@@ -98,7 +98,7 @@ const main = run(counter, (frames) =>
     ),
     Stream.take(4),
     Stream.runDrain,
-  ))
+  ), { onRejected: 'die' })
 
 Effect.runFork(main) // logs 0, 1, 2, 3
 ```
@@ -384,16 +384,18 @@ back.
 ### 6. Rejections: stale or bug
 
 Every frame's `dispatch` is bound to the state the frame was drawn from. When `update` rejects a message, the
-engine looks at where it came from:
+engine looks at where it came from, and asks `update` again with the frame's own state:
 
-| The message came from                       | Meaning                                                     | What happens                           |
-| ------------------------------------------- | ----------------------------------------------------------- | -------------------------------------- |
-| an older frame (a double tap, a late click) | the user acted on something already gone                    | ignored                                |
-| a command or a subscription                 | a completion that arrived too late                          | ignored                                |
-| the **current** frame                       | the model offered something `update` rejects: they disagree | a **bug**: by default the program dies |
+| The message came from                             | Meaning                                                     | What happens                            |
+| ------------------------------------------------- | ----------------------------------------------------------- | --------------------------------------- |
+| a frame whose state **accepts** it (a double tap) | the user acted on something already gone                    | ignored                                 |
+| a command or a subscription                       | a completion that arrived too late                          | ignored                                 |
+| a frame whose state **rejects** it too            | the model offered something `update` rejects: they disagree | a **bug**, handled as `onRejected` says |
 
-The last case cannot happen when every action goes through `offers`. It remains a check against mistakes in
-`makeModel`, such as an offer computed from a different state.
+A bug is a bug however many messages arrived between the frame and the click: a subscription that ticks
+often cannot hide it. It cannot happen when every action goes through `offers`; it remains a check against
+mistakes in `makeModel`, such as an offer computed from a different state. The second call to `update` only
+happens for a rejected message from an older frame.
 
 ### 7. Composing programs: `embed`
 
@@ -537,7 +539,7 @@ child. Ids are part of the subscription keys, so they must compare by value.
 
 ### 9. Running
 
-`run(program, render, options?)` starts the program and hands `render` the stream of frames. The run ends
+`run(program, render, options)` starts the program and hands `render` the stream of frames. The run ends
 when `render` ends. A snabbdom renderer patches the previous tree with each new frame:
 
 ```ts
@@ -560,6 +562,7 @@ const render = (frames: Stream.Stream<Frame<Model, Message>>) =>
   ).pipe(Effect.asVoid)
 
 const main = run(app, render, {
+  onRejected: 'ignore',
   onBug: (bug) => reportToCrashService(bug),
   describeMessage: (message) =>
     message._tag === 'GotForm' ? `Form/${message.message._tag}` : message._tag,
@@ -571,18 +574,22 @@ Effect.runFork(main)
 A real renderer usually draws at most once per animation frame (e.g. with a sliding buffer of one frame),
 like Elm does.
 
-Options:
+Options (`RunOptions`):
 
+- **`onRejected`** (required) decides what a `Rejected` bug does. It has no default, because the right
+  answer depends on where the app runs:
+  - `'die'` fails the run with `RejectedMessage`: the bug cannot go unnoticed, which is what you want while
+    developing and testing;
+  - `'ignore'` drops the message and goes on, which is safe since the state did not change: the user only
+    sees an action that does nothing, instead of a crashed app. `onBug` is then **required**, so the bug
+    still reaches you.
 - **`onBug(bug)`** is called for every bug, fatal or not, e.g. to send it to a crash-reporting service. A
   `Bug` is one of:
   - `Defect`: something blew up (an exception, an `Effect.die`). Its `cause` is the defect, and `where` is
-    `Update`, `Command`, or `Subscription` with its `key`. A defect always ends the run: what it left behind
-    is unknown, so nothing recovers from it.
-  - `Rejected`: the current frame sent a `message` that `update` rejected (see
-    [Rejections](#6-rejections-stale-or-bug)).
-- **`onRejected`** decides what a `Rejected` bug does: `'die'` (the default) fails the run with
-  `RejectedMessage`, and `'ignore'` drops the message and goes on. Ignoring is safe, since the state did not
-  change, and `onBug` still reports it.
+    `Update`, `Command`, or `Subscription` with its `key`. A defect always ends the run, whatever
+    `onRejected` says: what it left behind is unknown, so nothing recovers from it.
+  - `Rejected`: a frame sent a `message` that `update` rejects in the frame's own state, whose `revision`
+    it carries (see [Rejections](#6-rejections-stale-or-bug)).
 - **`describeMessage`** says how a message appears in the logs. By default only its `_tag` is logged (or the
   message itself, when it is a string), never its data.
 
@@ -630,8 +637,9 @@ From `@fgaudo/effect-tea`:
 | `Offer`, `InputOffer`, `Offered`, `Offers`      | an optional offered message; an optional function to one; the brand; what `offers` returns |
 | `View`, `Dispatch`, `mapDispatch`               | `(model, dispatch) => Node`; a dispatch of offered messages; a child's dispatch            |
 | `embed`, `embedEach`                            | lift a child program, or a collection of them, into a parent                               |
-| `run`, `Frame`                                  | run a program with a renderer; what the renderer draws                                     |
-| `Bug`, `DefectSource`, `RejectionPolicy`        | what `onBug` receives; where a defect happened; `'die'` or `'ignore'`                      |
+| `run`, `Frame`, `RunOptions`                    | run a program with a renderer; what the renderer draws; how the program runs               |
+| `RejectionOptions`, `RejectionPolicy`           | `onRejected` with the `onBug` it requires; `'die'` or `'ignore'`                           |
+| `Bug`, `BugReporter`, `DefectSource`            | what `onBug` receives; `onBug` itself; where a defect happened                             |
 | `RejectedMessage`                               | the defect the run fails with when a rejection is fatal                                    |
 
 From `@fgaudo/effect-tea/testing`: `applyAll`.

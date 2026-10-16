@@ -30,8 +30,9 @@ The pages to copy are `src/app/pages/home` (full) and `src/app/pages/about` (min
   no local view state or mutable singletons.
 - **The model offers, `update` decides.** Conditions live only in `update`, which returns `Engine.reject`
   when a message does not apply. `makeModel` builds each action with `offers(update, state)`, so what the
-  view can send is exactly what `update` accepts (it may offer less, never more). A message the current view
-  sent and `update` rejected is a bug, and the engine dies; one from an older frame is ignored.
+  view can send is exactly what `update` accepts (it may offer less, never more). A message that `update`
+  rejects even in the state of the frame that sent it is a bug, and the engine dies (`onRejected: 'die'`);
+  one the frame's state accepted is stale and ignored.
 - **No toggles, no no-ops.** A view message names an intent (`MenuOpened`/`MenuClosed`), and `update`
   rejects what would not change anything: then a double tap is harmless, since the second message is
   rejected as stale, while a toggle accepted twice undoes itself.
