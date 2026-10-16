@@ -40,6 +40,7 @@ type EmbedOptions<ParentState, ParentMessage, ChildState, ChildMessage, ChildEve
     key: string
     wrap: (message: ChildMessage) => ParentMessage
     get: (state: ParentState) => Opt.Option<ChildState>
+    getSubscribed?: (state: ParentState) => Opt.Option<ChildState>
     set: (state: ParentState, child: ChildState) => ParentState
   }
   // Required exactly when the child emits events, so none can go unhandled.
@@ -53,6 +54,9 @@ type EmbedOptions<ParentState, ParentMessage, ChildState, ChildMessage, ChildEve
  * - `wrap` turns a child message into a parent message (e.g. `GotHomeMsg`).
  * - `get` reads the child state from the parent state; `None` means the child
  *   is not active (e.g. the page is not on the navigation stack).
+ * - `getSubscribed`, when given, decides instead of `get` whether the child's
+ *   subscriptions run (e.g. only while the page is shown): a child can keep
+ *   receiving the completions of its commands without listening to the world.
  * - `set` writes the child state back.
  * - `key` namespaces the child's subscription keys.
  * - `onEvent` handles the events the child emits, in the same transition, after
@@ -62,7 +66,7 @@ export const embed = <ParentState, ParentMessage, ChildState, ChildMessage, R, C
   child: Pick<Program<ChildState, unknown, ChildMessage, R, ChildEvent, K>, 'update' | 'subscriptions'>,
   options: EmbedOptions<ParentState, ParentMessage, ChildState, ChildMessage, ChildEvent, R>,
 ) => {
-  const { key, wrap, get, set } = options
+  const { key, wrap, get, set, getSubscribed = get } = options
   const onEvent = 'onEvent' in options
     ? options.onEvent
     // Unreachable through the types: `onEvent` is required whenever the child has events.
@@ -93,7 +97,7 @@ export const embed = <ParentState, ParentMessage, ChildState, ChildMessage, R, C
       }),
 
     subscriptions: (state: ParentState): Engine.Subscriptions<readonly [string, K], ParentMessage, R> =>
-      Opt.match(get(state), {
+      Opt.match(getSubscribed(state), {
         onNone: () => HashMap.empty(),
         onSome: (childState) =>
           mapSubscriptions(

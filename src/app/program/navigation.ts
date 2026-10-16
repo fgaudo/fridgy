@@ -17,10 +17,16 @@ type Step = Engine.Step<State, Message, Deps>
 export const top = (state: State): Page => Arr.lastNonEmpty(state.stack)
 
 // A page is found wherever it is in the stack: a page that is not shown still
-// receives the completions of its operations.
+// receives the completions of its operations. Its subscriptions, though, only
+// run while it is shown: the window and its scrolling belong to the page on top.
 
 const homeState = (state: State): Opt.Option<Home.State> =>
   Opt.map(Arr.findFirst(state.stack, Page.$is('Home')), (page) => page.state)
+
+const shownHomeState = (state: State): Opt.Option<Home.State> => {
+  const page = top(state)
+  return page._tag === 'Home' ? Opt.some(page.state) : Opt.none()
+}
 
 const withHomeState = (state: State, home: Home.State): State => ({
   stack: Arr.map(state.stack, (page): Page => (Page.$is('Home')(page) ? Page.Home({ state: home }) : page)),
@@ -28,6 +34,11 @@ const withHomeState = (state: State, home: Home.State): State => ({
 
 const aboutState = (state: State): Opt.Option<About.State> =>
   Opt.map(Arr.findFirst(state.stack, Page.$is('About')), (page) => page.state)
+
+const shownAboutState = (state: State): Opt.Option<About.State> => {
+  const page = top(state)
+  return page._tag === 'About' ? Opt.some(page.state) : Opt.none()
+}
 
 const withAboutState = (state: State, about: About.State): State => ({
   stack: Arr.map(state.stack, (page): Page => (Page.$is('About')(page) ? Page.About({ state: about }) : page)),
@@ -52,6 +63,7 @@ export const about = Program.embed(About.program, {
   key: 'About',
   wrap: (message) => Message.GotAboutMsg({ message }),
   get: aboutState,
+  getSubscribed: shownAboutState,
   set: withAboutState,
   onEvent: Match.typeTags<About.Event, (state: State) => Step>()({
     LeaveRequested: () => leave,
@@ -67,6 +79,7 @@ export const home = Program.embed(Home.program, {
   key: 'Home',
   wrap: (message) => Message.GotHomeMsg({ message }),
   get: homeState,
+  getSubscribed: shownHomeState,
   set: withHomeState,
   onEvent: Match.typeTags<Home.Event, (state: State) => Step>()({
     InfoRequested: () => openAbout,

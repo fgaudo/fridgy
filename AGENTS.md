@@ -113,7 +113,10 @@ refactoring (see "Refactoring status"). A map of the source tree is in `src/READ
    prefixed by the page name). The root owns navigation: a stack of page states (the last one is shown),
    changed only when a page emits an event; Android's back button (`Shell` port) is forwarded to the shown
    page as `BackPressed`, which closes what it has open or asks to be left, and leaving the last page exits
-   the app. A page is found wherever it is in the stack, so hidden pages still receive their completions.
+   the app. A page is found wherever it is in the stack, so hidden pages still receive their completions;
+   its subscriptions, though, only run while it is on top (`embed`'s `getSubscribed`), since the window and
+   its scrolling belong to the shown page. A page shown again resubscribes, and its streams emit at once
+   (`changes`, `Stream.tick`), so it is up to date on its first frame.
    The stack helpers, the page embeds and the reactions to page events live in `program/navigation.ts`;
    `program/state.ts` only holds the types. The root `*.layer.ts` files merge the root adapters with the
    matching page setups.
