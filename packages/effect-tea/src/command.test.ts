@@ -1,8 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import * as Effect from 'effect/Effect'
 import * as Opt from 'effect/Option'
-import * as Stream from 'effect/Stream'
-import { attempt, attemptStream } from './command.ts'
+import { attempt } from './command.ts'
 
 const handlers = { onSuccess: (value: number) => `got ${value}`, onFailure: (error: string) => `failed: ${error}` }
 
@@ -13,15 +12,5 @@ describe('attempt', () => {
 
   test('an expected failure becomes the failure message', async () => {
     expect(await Effect.runPromise(attempt(Effect.fail('offline'), handlers))).toEqual(Opt.some('failed: offline'))
-  })
-})
-
-describe('attemptStream', () => {
-  test('values become messages, and a failure ends the stream with its message', async () => {
-    const stream = Stream.concat(Stream.make(1, 2), Stream.fail('offline'))
-    const messages = await Effect.runPromise(
-      Stream.runCollect(attemptStream(stream, { onValue: (value) => `got ${value}`, onFailure: handlers.onFailure })),
-    )
-    expect([...messages]).toEqual(['got 1', 'got 2', 'failed: offline'])
   })
 })

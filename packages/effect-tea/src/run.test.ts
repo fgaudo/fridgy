@@ -135,7 +135,7 @@ describe('onBug', () => {
   test('a defect in a subscription is reported with its key', async () => {
     const broken: Program<number, unknown, Message, never> = {
       ...counter,
-      subscriptions: () => HashMap.make(['broken', Stream.die('boom')]),
+      subscriptions: () => HashMap.make(['broken', () => Effect.die('boom')]),
     }
     expect(await diesIn(broken)).toEqual({ died: true, bugs: ['broken'] })
   })

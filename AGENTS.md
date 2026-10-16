@@ -24,8 +24,11 @@ The pages to copy are `src/app/pages/home` (full) and `src/app/pages/about` (min
 - **Expected errors are typed, bugs crash.** Expected failures go through Effect's error channel
   (`Effect.tryPromise`/`Effect.try`, no `try/catch`, no bare Promises). A violated invariant is a defect
   (`Effect.die`): never silenced, retried or turned into a message. Commands turn expected failures into
-  messages with `Tea.attempt` (`attemptStream` for subscriptions); `run`'s `onBug` may report a
+  messages with `Tea.attempt` (`Stream.catch` for subscriptions); `run`'s `onBug` may report a
   crash, never recover from it.
+- **Subscriptions never end.** A subscription built from a stream (`toSubscription` from
+  `libs/endless-stream`) dies if the stream ends, so the ports a page subscribes to promise streams that
+  never end, and their contracts check it.
 - **Effects only in commands and subscriptions.** `update`, `makeModel` and views are pure; one global state,
   no local view state or mutable singletons.
 - **The model offers, `update` decides.** Conditions live only in `update`, which returns `Engine.reject`
@@ -33,16 +36,21 @@ The pages to copy are `src/app/pages/home` (full) and `src/app/pages/about` (min
   view can send is exactly what `update` accepts (it may offer less, never more). A message that `update`
   rejects even in the state of the frame that sent it is a bug, and the engine dies (`onRejected: 'die'`);
   one the frame's state accepted is stale and ignored.
-- **No toggles, no no-ops.** A view message names an intent (`MenuOpened`/`MenuClosed`), and `update`
-  rejects what would not change anything: then a double tap is harmless, since the second message is
-  rejected as stale, while a toggle accepted twice undoes itself.
+- **No toggles; one-shot actions guard themselves.** A view message names an intent
+  (`MenuOpened`/`MenuClosed`), so sending it twice does what it did once, while a toggle accepted twice
+  undoes itself. An action that must happen once (submitting, deleting, navigating) moves to a state that
+  rejects it, so a double tap, or a tap on a view that has not caught up yet, is ignored as stale. Actions
+  meant to repeat stay accepted. Rejecting a message that would change nothing is a choice, not a rule: do
+  it when the view should hide or disable the control.
 - **What is typed is never a reason to reject.** Input is stored as typed (offered with `offerInput`), and
   validity becomes model data (e.g. `submit` not offered).
 - **State machines, no derived data.** One explicit state machine per concern (data, selection, form)
   instead of shared flags. Values that depend on time are computed in `makeModel` from a `now` that a clock
   subscription keeps in the state.
-- **Asynchronous operations carry an id** (`nextOperation`), remembered by the state while in progress; a
-  completion is applied only if its id matches.
+- **An asynchronous operation is a state that waits for its completion** (`Submitting`, `Deleting`): only
+  the completion leaves it, and `update` rejects the completion in any other state. Commands cannot be
+  cancelled, so a completion always belongs to the operation in progress. Give operations an id only when one
+  can be abandoned or overlap with another of its kind.
 - **Pages talk to their parent through events** (`Event`, handled by `embed`'s `onEvent`), never by acting
   on it. A page exports its `Message` as a type only, so nothing outside it can forge one. Hidden pages keep
   receiving their completions, but their subscriptions run only while they are on top.
@@ -78,12 +86,16 @@ large view into private components under `view/`.
 
 - `bun:test` and fast-check property tests, in a `*.test.ts` next to the module. A property the code does
   not satisfy yet stays as `test.failing` with the bug in its name.
-- Every page's `update.test.ts` renders the real view for arbitrary states and checks that each message it
-  can send is accepted, does something and acts once when sent twice. Assert rejections with
+- Code used only by tests lives in `*.test-<kind>.ts` files (`test-arbitrary`, `test-contract`,
+  `test-support`): Biome lets only `*.test.ts` and other `*.test-*.ts` files import them, and `bun test`
+  does not run them.
+- Every page's `update.test.ts` renders the real view for arbitrary states and checks, with
+  `dispatchViolations` (`@fgaudo/effect-tea/testing`), that each message it can send is accepted, and acts
+  once when sent twice unless it is listed as repeatable. Assert rejections with
   `Engine.isRejected`, never as "state unchanged".
-- Branded and domain types have a `*.arbitrary.ts` producing only valid values; build generators from them,
+- Branded and domain types have a `*.test-arbitrary.ts` file producing only valid values; build generators from them,
   not from `*Unsafe` constructors.
-- Every adapter of a port passes one contract (`<port>.contract.ts`, next to the port), run by the
+- Every adapter of a port passes one contract (`<port>.test-contract.ts`, next to the port), run by the
   adapter's own `<adapter>.test.ts`: development only exercises the in-memory adapters, so nothing else
   catches a production one that behaves differently. A write port's contract takes `readBack` from each
   adapter's test: reads that only tests need never go into a port.
@@ -101,7 +113,7 @@ large view into private components under `view/`.
   large tables (e.g. `update`'s handlers) and `describe`/`test` calls.
 - Logging only where effects run: `error` for a bug right before the app dies, `warn` for a handled failure
   with its cause (logged where the cause is known), `info` for rare events, `debug` for the program's loop.
-  Commands carry `Effect.withLogSpan` and `Effect.annotateLogs({ operation })`.
+  Commands carry `Effect.withLogSpan`.
 - Documentation is part of the change: update `README.md`, `src/README.md` and this file when what they
   describe changes, and remove what is no longer true.
 

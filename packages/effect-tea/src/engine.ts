@@ -6,7 +6,7 @@ import * as HashMap from 'effect/HashMap'
 import * as HashSet from 'effect/HashSet'
 import * as Opt from 'effect/Option'
 import * as Queue from 'effect/Queue'
-import * as Stream from 'effect/Stream'
+import type * as Stream from 'effect/Stream'
 import * as SubscriptionRef from 'effect/SubscriptionRef'
 
 /** An effect that may produce a message: `None` for effects that only act on the outside world. */
@@ -63,10 +63,15 @@ type Envelope<State, Message> = Readonly<{ message: Message; origin: Origin<Stat
 
 const fromProgram: Origin<never> = { _tag: 'Program' }
 
-export type Subscriptions<K, Message, R> = HashMap.HashMap<
-  K,
-  Stream.Stream<Message, never, R>
->
+/**
+ * Listens to the world while its key is in the subscriptions, sending what it hears with `emit`. It never
+ * ends on its own, as its success type says: it stops when its key goes away.
+ */
+export type Subscription<Message, R> = (
+  emit: (message: Message) => Effect.Effect<void>,
+) => Effect.Effect<never, never, R>
+
+export type Subscriptions<K, Message, R> = HashMap.HashMap<K, Subscription<Message, R>>
 
 export type Emitter<State, Message, R, K = unknown> = (
   state: State,
@@ -188,14 +193,13 @@ export const make = Effect.fn('Engine.make')(function*<State, Message, R, S, K>(
       yield* Effect.logDebug('Subscription stopped', key)
       yield* FiberMap.remove(subscriptionFibers, key)
     }
-    for (const [key, stream$] of next) {
+    for (const [key, subscription] of next) {
       if (HashSet.has(active, key)) {
         continue
       }
       yield* Effect.logDebug('Subscription started', key)
-      yield* stream$.pipe(
-        Stream.tapDefect((defect) => reportDefect(defect, { _tag: 'Subscription', key })),
-        Stream.runForEach(offer),
+      yield* subscription((message) => Effect.asVoid(offer(message))).pipe(
+        Effect.tapDefect((defect) => reportDefect(defect, { _tag: 'Subscription', key })),
         Effect.provideContext(context),
         FiberMap.run(subscriptionFibers, key),
       )
@@ -209,10 +213,7 @@ export const make = Effect.fn('Engine.make')(function*<State, Message, R, S, K>(
     const { state, revision } = yield* SubscriptionRef.get(stateRef)
     const result = yield* apply(message, state)
     if (isRejected(result)) {
-      if (
-        origin._tag === 'View'
-        && (origin.frame.revision === revision || isRejected(yield* apply(message, origin.frame.state)))
-      ) {
+      if (origin._tag === 'View' && isRejected(yield* apply(message, origin.frame.state))) {
         const frameRevision = origin.frame.revision
         yield* Effect.logError(
           'A frame sent a message that update rejects in its own state: the model offered it, so the two disagree',

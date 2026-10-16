@@ -9,7 +9,7 @@ import type * as Layer from 'effect/Layer'
 import * as Opt from 'effect/Option'
 import * as References from 'effect/References'
 import * as fc from 'fast-check'
-import * as ProductArbitrary from '../domain/product.arbitrary.ts'
+import * as ProductArbitrary from '../domain/product.test-arbitrary.ts'
 import * as Product from '../domain/product.ts'
 import * as ProductCommands from './product-commands.ts'
 

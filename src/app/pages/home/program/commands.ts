@@ -10,12 +10,8 @@ import { Notifications } from '../ports/notifications.ts'
 import * as ProductCommands from '../../../ports/product-commands.ts'
 import { Viewport } from '../ports/viewport.ts'
 import { Message } from './messages.ts'
-import type { OperationId } from './state.ts'
 
-export const deleteProducts = ({ operation, ids }: {
-  operation: OperationId
-  ids: NonEmptyHashSet.NonEmptyHashSet<string>
-}) =>
+export const deleteProducts = (ids: NonEmptyHashSet.NonEmptyHashSet<string>) =>
   Tea.attempt(
     Effect.gen(function*() {
       const { deleteById } = yield* ProductCommands.ProductCommands
@@ -30,13 +26,12 @@ export const deleteProducts = ({ operation, ids }: {
       yield* Effect.logInfo('Deleted products', { count: HashSet.size(ids) })
     }),
     {
-      onSuccess: () => Message.DeleteProductsCompleted({ operation, succeeded: true }),
-      onFailure: () => Message.DeleteProductsCompleted({ operation, succeeded: false }),
+      onSuccess: () => Message.DeleteProductsCompleted({ succeeded: true }),
+      onFailure: () => Message.DeleteProductsCompleted({ succeeded: false }),
     },
-  ).pipe(Effect.withLogSpan('DeleteProducts'), Effect.annotateLogs({ operation }))
+  ).pipe(Effect.withLogSpan('DeleteProducts'))
 
 export const addProduct = (
-  operation: OperationId,
   productData: {
     maybeExpirationDate: Opt.Option<DateTime.Utc>
     maybeName: Opt.Option<string>
@@ -64,10 +59,10 @@ export const addProduct = (
       yield* Effect.logInfo('Added a product', { id })
     }),
     {
-      onSuccess: () => Message.AddProductCompleted({ operation, succeeded: true }),
-      onFailure: () => Message.AddProductCompleted({ operation, succeeded: false }),
+      onSuccess: () => Message.AddProductCompleted({ succeeded: true }),
+      onFailure: () => Message.AddProductCompleted({ succeeded: false }),
     },
-  ).pipe(Effect.withLogSpan('AddProduct'), Effect.annotateLogs({ operation }))
+  ).pipe(Effect.withLogSpan('AddProduct'))
 
 export const scrollToTop = Effect.gen(function*() {
   const { scrollToTop } = yield* Viewport

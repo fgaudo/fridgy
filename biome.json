@@ -31,8 +31,12 @@
                 "message": "Page subfolders are private: import only the modules at the root of the page (program.ts, view.ts, *.layer.ts)."
               },
               {
-                "group": ["fast-check", "**/*.arbitrary.ts", "**/*.contract.ts", "@/libs/testing/**"],
-                "message": "Test-only code: fast-check, *.arbitrary.ts, *.contract.ts and libs/testing may only be imported by *.test.ts, *.arbitrary.ts and *.contract.ts files."
+                "group": [
+                  "fast-check",
+                  "**/*.test-*.ts",
+                  "@fgaudo/effect-tea/testing"
+                ],
+                "message": "Test-only code: fast-check, *.test-*.ts files (arbitraries, contracts, test support) and @fgaudo/effect-tea/testing may only be imported by *.test.ts and *.test-*.ts files."
               }
             ]
           }
@@ -69,8 +73,12 @@
                     "message": "Page subfolders are private: import only the modules at the root of the page (program.ts, view.ts, *.layer.ts)."
                   },
                   {
-                    "group": ["fast-check", "**/*.arbitrary.ts", "**/*.contract.ts", "@/libs/testing/**"],
-                    "message": "Test-only code: fast-check, *.arbitrary.ts, *.contract.ts and libs/testing may only be imported by *.test.ts, *.arbitrary.ts and *.contract.ts files."
+                    "group": [
+                      "fast-check",
+                      "**/*.test-*.ts",
+                      "@fgaudo/effect-tea/testing"
+                    ],
+                    "message": "Test-only code: fast-check, *.test-*.ts files (arbitraries, contracts, test support) and @fgaudo/effect-tea/testing may only be imported by *.test.ts and *.test-*.ts files."
                   },
                   {
                     "group": ["../../adapters/**", "../../../adapters/**", "../../../../adapters/**"],
@@ -97,8 +105,12 @@
                     "message": "App subfolders are private: from outside src/app import only the modules at its root (program.ts, view.ts, *.layer.ts)."
                   },
                   {
-                    "group": ["fast-check", "**/*.arbitrary.ts", "**/*.contract.ts", "@/libs/testing/**"],
-                    "message": "Test-only code: fast-check, *.arbitrary.ts, *.contract.ts and libs/testing may only be imported by *.test.ts, *.arbitrary.ts and *.contract.ts files."
+                    "group": [
+                      "fast-check",
+                      "**/*.test-*.ts",
+                      "@fgaudo/effect-tea/testing"
+                    ],
+                    "message": "Test-only code: fast-check, *.test-*.ts files (arbitraries, contracts, test support) and @fgaudo/effect-tea/testing may only be imported by *.test.ts and *.test-*.ts files."
                   },
                   {
                     "group": ["**/pages/**"],
@@ -112,7 +124,7 @@
       }
     },
     {
-      "includes": ["**/*.test.ts", "**/*.arbitrary.ts", "**/*.contract.ts"],
+      "includes": ["**/*.test.ts", "**/*.test-*.ts"],
       "linter": {
         "rules": {
           "style": {

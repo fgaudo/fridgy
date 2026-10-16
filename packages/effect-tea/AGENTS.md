@@ -40,8 +40,11 @@ All code, comments, identifiers, commit messages and `.md` files are in **Englis
 - **Defects always die.** `onBug` reports them, and nothing in the library may retry them, swallow them or
   turn them into messages. `RejectionPolicy` is the only opt-in, and it only covers rejections, since a
   rejection leaves the state unchanged.
-- **Subscriptions are reconciled by key**: a new key starts its stream, a kept key leaves it running, a gone
-  key interrupts it.
+- **A subscription never ends on its own**: its type is `(emit) => Effect<never, never, R>`, so only an
+  interruption, a defect or its key going away stops it. What the end of a stream means is the caller's
+  decision: the library offers no helper that takes it for them.
+- **Subscriptions are reconciled by key**: a new key starts its subscription, a kept key leaves it running, a
+  gone key interrupts it.
 - **Commands cannot be cancelled.** This is a deliberate choice for now: do not add cancellation without
   asking.
 - **Logs never carry message data by default** (`describeByTag`). Levels: `error` for bugs, `debug` for the

@@ -2,7 +2,6 @@ import * as Arr from 'effect/Array'
 import * as Effect from 'effect/Effect'
 import * as HashMap from 'effect/HashMap'
 import * as Opt from 'effect/Option'
-import * as Stream from 'effect/Stream'
 import * as Engine from './engine.ts'
 
 /** The view is not part of it: it lives in its own module, so it can be hot reloaded. */
@@ -31,8 +30,9 @@ const mapSubscriptions = <A, B, R, K, NewK>(
 ): Engine.Subscriptions<NewK, B, R> =>
   HashMap.reduce(
     subscriptions,
-    HashMap.empty<NewK, Stream.Stream<B, never, R>>(),
-    (acc, stream$, key) => HashMap.set(acc, mapKey(key), Stream.map(stream$, mapMessage)),
+    HashMap.empty<NewK, Engine.Subscription<B, R>>(),
+    (acc, subscription, key) =>
+      HashMap.set(acc, mapKey(key), (emit) => subscription((message) => emit(mapMessage(message)))),
   )
 
 type ParentStep<ParentState, ParentMessage, R> = (state: ParentState) => Engine.Step<ParentState, ParentMessage, R>
@@ -180,7 +180,7 @@ export const embedEach = <
     subscriptions: (state: ParentState): Engine.Subscriptions<readonly [string, Id, K], ParentMessage, R> =>
       Arr.reduce(
         Arr.fromIterable(subscribed(state)),
-        HashMap.empty<readonly [string, Id, K], Stream.Stream<ParentMessage, never, R>>(),
+        HashMap.empty<readonly [string, Id, K], Engine.Subscription<ParentMessage, R>>(),
         (acc, [id, childState]) =>
           HashMap.union(
             acc,

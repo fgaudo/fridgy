@@ -16,7 +16,7 @@ import type { ProductCommands } from '../../../ports/product-commands.ts'
 import type { Viewport } from '../ports/viewport.ts'
 import * as Cmd from './commands.ts'
 import { Event, type Message } from './messages.ts'
-import { OperationId, type Product, type State } from './state.ts'
+import type { Product, State } from './state.ts'
 
 export type Deps = ProductCommands | Viewport | Notifications
 
@@ -100,20 +100,15 @@ export const update = Match.typeTags<Message, (state: State) => Transition>()({
     ) {
       return Tea.reject
     }
-    const operation = state.nextOperation
     const { maybeName, maybeExpirationDate } = state.addProduct
     return {
-      state: {
-        ...state,
-        nextOperation: OperationId.next(operation),
-        addProduct: { _tag: 'Submitting', operation, maybeName, maybeExpirationDate },
-      },
-      commands: [Cmd.addProduct(operation, { maybeName, maybeExpirationDate })],
+      state: { ...state, addProduct: { _tag: 'Submitting', maybeName, maybeExpirationDate } },
+      commands: [Cmd.addProduct({ maybeName, maybeExpirationDate })],
     }
   },
 
-  AddProductCompleted: ({ operation, succeeded }) => (state) => {
-    if (state.addProduct._tag !== 'Submitting' || state.addProduct.operation !== operation) {
+  AddProductCompleted: ({ succeeded }) => (state) => {
+    if (state.addProduct._tag !== 'Submitting') {
       return Tea.reject
     }
     const { maybeName, maybeExpirationDate } = state.addProduct
@@ -183,20 +178,15 @@ export const update = Match.typeTags<Message, (state: State) => Transition>()({
     if (!(state.products._tag === 'Loaded' && hasSelection(state))) {
       return Tea.reject
     }
-    const operation = state.nextOperation
     const ids = state.selection.maybeIds.value
     return {
-      state: {
-        ...state,
-        nextOperation: OperationId.next(operation),
-        selection: { _tag: 'Deleting', operation, ids },
-      },
-      commands: [Cmd.deleteProducts({ operation, ids })],
+      state: { ...state, selection: { _tag: 'Deleting', ids } },
+      commands: [Cmd.deleteProducts(ids)],
     }
   },
 
-  DeleteProductsCompleted: ({ operation, succeeded }) => (state) => {
-    if (state.selection._tag !== 'Deleting' || state.selection.operation !== operation) {
+  DeleteProductsCompleted: ({ succeeded }) => (state) => {
+    if (state.selection._tag !== 'Deleting') {
       return Tea.reject
     }
     return succeeded
@@ -248,7 +238,6 @@ export const init: Tea.Step<State, Message, Deps> = {
     isMenuOpen: false,
     isViewportAtTop: true,
     isInteracting: false,
-    nextOperation: OperationId.first,
     maybeNow: Opt.none(),
     products: { _tag: 'Loading' },
     selection: { _tag: 'Selecting', maybeIds: Opt.none() },

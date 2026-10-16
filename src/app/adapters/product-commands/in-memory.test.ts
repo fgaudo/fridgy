@@ -3,7 +3,7 @@ import * as Effect from 'effect/Effect'
 import * as Layer from 'effect/Layer'
 import * as Opt from 'effect/Option'
 import * as SubscriptionRef from 'effect/SubscriptionRef'
-import { productCommandsContract } from '../../ports/product-commands.contract.ts'
+import { productCommandsContract } from '../../ports/product-commands.test-contract.ts'
 import * as ProductCommandsInMemory from './in-memory.ts'
 import { InMemoryStore } from '@/infra/in-memory/store.ts'
 

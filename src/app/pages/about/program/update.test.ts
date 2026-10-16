@@ -3,12 +3,13 @@ import * as Equal from 'effect/Equal'
 import * as Opt from 'effect/Option'
 import * as fc from 'fast-check'
 import * as Tea from '@fgaudo/effect-tea'
-import { dispatchedBy } from '@/libs/testing/view.ts'
+import { dispatchViolations } from '@fgaudo/effect-tea/testing'
+import { dispatchedBy } from '@/libs/testing/view.test-support.ts'
 import { view } from '../view.tsx'
 import { Event, Message } from './messages.ts'
 import { makeModel } from './model.ts'
-import { licenses, state } from './state.arbitrary.ts'
-import { arbitrary as maybe } from '@/libs/option/option.arbitrary.ts'
+import { licenses, state } from './state.test-arbitrary.ts'
+import { arbitrary as maybe } from '@/libs/option/option.test-arbitrary.ts'
 import type { State } from './state.ts'
 import { update } from './update.ts'
 
@@ -35,13 +36,13 @@ describe('About update', () => {
     }))
   })
 
-  test('every message the view can dispatch is accepted', () => {
-    fc.assert(
-      fc.property(
-        state,
-        (before) => dispatchedBy(view, makeModel(before)).every((msg) => !Tea.isRejected(update(msg)(before))),
-      ),
-    )
+  // Going back asks the parent to leave on every tap: the parent removes the page
+  // on the first one, so a second tap from the same frame is rejected there.
+  test('every message the view can dispatch is accepted, and acts once when sent twice', () => {
+    const check = dispatchViolations(update, { repeatable: (msg) => msg._tag === 'BackPressed' })
+    fc.assert(fc.property(state, (before) => {
+      expect(check(before, dispatchedBy(view, makeModel(before)))).toEqual([])
+    }))
   })
 
   test('LicensesLoaded stores the licenses and touches nothing else', () => {

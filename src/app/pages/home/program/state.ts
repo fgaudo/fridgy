@@ -1,22 +1,8 @@
-import * as Brand from 'effect/Brand'
 import type * as Data from 'effect/Data'
 import type * as DateTime from 'effect/DateTime'
 import type * as Opt from 'effect/Option'
 import type * as NonEmptyHashSet from '@/libs/collections/non-empty-hash-set.ts'
 import type * as Domain from '../../../domain/product.ts'
-
-/**
- * Identifies an asynchronous operation (adding, deleting). Its
- * completion carries the id back, and is only applied if that operation is
- * still the current one: a late completion is stale and rejected.
- */
-export type OperationId = Brand.Branded<number, 'OperationId'>
-const _OperationId = Brand.nominal<OperationId>()
-export const OperationId = {
-  first: _OperationId(0),
-  make: _OperationId,
-  next: (id: OperationId) => _OperationId(id + 1),
-}
 
 export type Product = Data.TaggedEnum<{
   /** Stored data so broken it cannot even be referenced. */
@@ -35,7 +21,6 @@ export type State = Readonly<{
   isMenuOpen: boolean
   isViewportAtTop: boolean
   isInteracting: boolean
-  nextOperation: OperationId
   /** The current time, once the clock has ticked: expiration statuses derive from it. */
   maybeNow: Opt.Option<DateTime.Utc>
   products: Data.TaggedEnum<{
@@ -45,11 +30,13 @@ export type State = Readonly<{
   }>
   selection: Data.TaggedEnum<{
     Selecting: Readonly<{ maybeIds: Opt.Option<NonEmptyHashSet.NonEmptyHashSet<string>> }>
-    Deleting: Readonly<{ operation: OperationId; ids: NonEmptyHashSet.NonEmptyHashSet<string> }>
+    // Left only by its completion, like `Submitting`: with commands that cannot be cancelled, a completion
+    // always belongs to the operation in progress, so it needs no id.
+    Deleting: Readonly<{ ids: NonEmptyHashSet.NonEmptyHashSet<string> }>
   }>
   addProduct: Data.TaggedEnum<{
     Closed: object
     Editing: Form
-    Submitting: Form & Readonly<{ operation: OperationId }>
+    Submitting: Form
   }>
 }>

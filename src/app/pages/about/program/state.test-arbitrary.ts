@@ -1,5 +1,5 @@
 import * as fc from 'fast-check'
-import { arbitrary as maybe } from '@/libs/option/option.arbitrary.ts'
+import { arbitrary as maybe } from '@/libs/option/option.test-arbitrary.ts'
 import type { License } from '../ports/licenses.ts'
 import type { State } from './state.ts'
 

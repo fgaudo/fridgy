@@ -17,13 +17,14 @@ export {
   type RejectionOptions,
   type RejectionPolicy,
   type Step,
+  type Subscription,
   type Subscriptions,
   type Transition,
   type Update,
 } from './engine.ts'
 
-// Commands and subscriptions from effects that may fail: their failures become messages.
-export { attempt, attemptStream } from './command.ts'
+// Commands from effects that may fail: their failures become messages.
+export { attempt } from './command.ts'
 
 // What the model offers to the view, decided by asking `update`.
 export { type InputOffer, type Offer, type Offered, offered, offeredInput, type Offers, offers } from './offer.ts'

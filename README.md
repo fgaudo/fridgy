@@ -88,7 +88,7 @@ renderer. A few choices go beyond plain Elm:
   disagree. `dispatch` only takes offered messages, so a view that sends anything else does not compile.
 - **Pages talk to their parent through events** (Elm's "OutMsg"): a page asks, e.g. to open the About page
   or to be left, and the root owns navigation, a stack of pages.
-- **Asynchronous operations carry an id**, so a late completion can never overwrite a newer one.
+- **An asynchronous operation is a state that waits for its completion**, which only that state accepts.
 - **Bugs crash the app**; expected errors are typed and handled with Effect.
 
 Each page is a self-contained module that owns its messages, state, update, view and **ports** (the services
@@ -105,11 +105,11 @@ See [`src/README.md`](src/README.md) for a map of the source tree and a suggeste
 
 Tests sit next to the code they test (`*.test.ts`) and are mostly property tests: fast-check generates
 thousands of states and messages and checks that the rules hold for all of them. Every branded type and
-domain type has an `*.arbitrary.ts` file with its generators. Among others, the tests check that:
+domain type has a `*.test-arbitrary.ts` file with its generators. Among others, the tests check that:
 
 - `update` is deterministic and never throws;
-- every message the real view can send, in any state, is accepted by `update`, does something, and acts
-  only once when sent twice (a double tap);
+- every message the real view can send, in any state, is accepted by `update`, and acts only once when
+  sent twice (a double tap), unless it is meant to repeat;
 - a stored product reads back as the same product;
 - every storage adapter, in memory or SQLite (on the real migrations), passes the same contract: what is
   written reads back as itself, deletions remove exactly what they should, Home's list is ordered and sees

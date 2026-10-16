@@ -6,7 +6,8 @@ import * as Opt from 'effect/Option'
 import * as Result from 'effect/Result'
 import * as fc from 'fast-check'
 import * as Tea from '@fgaudo/effect-tea'
-import { dispatchedBy } from '@/libs/testing/view.ts'
+import { dispatchViolations } from '@fgaudo/effect-tea/testing'
+import { dispatchedBy } from '@/libs/testing/view.test-support.ts'
 import * as Domain from '../../../domain/product.ts'
 import type { StoredProduct } from '../ports/product-list.ts'
 import { view } from '../view.tsx'
@@ -18,14 +19,13 @@ import {
   deleting,
   editingForm,
   id,
-  operation,
   product,
   selecting,
   state,
   stateWith,
   storedProducts,
   submittingForm,
-} from './state.arbitrary.ts'
+} from './state.test-arbitrary.ts'
 import type { State } from './state.ts'
 import { update } from './update.ts'
 
@@ -45,12 +45,12 @@ const message: fc.Arbitrary<Message> = fc.oneof(
   fc.string().map((name) => Message.NameChanged({ name })),
   fc.oneof(fc.string(), fc.integer()).map((expiration) => Message.ExpirationDateChanged({ expiration })),
   date.map((now) => Message.TimeChanged({ now })),
-  fc.record({ operation, succeeded: fc.boolean() }).map(Message.AddProductCompleted),
+  fc.boolean().map((succeeded) => Message.AddProductCompleted({ succeeded })),
   fc.oneof(
     fc.constant(Result.fail(undefined)),
     storedProducts.map((products) => Result.succeed(products)),
   ).map((result) => Message.ProductsChanged({ result })),
-  fc.record({ operation, succeeded: fc.boolean() }).map(Message.DeleteProductsCompleted),
+  fc.boolean().map((succeeded) => Message.DeleteProductsCompleted({ succeeded })),
   fc.constant(Message.InfoRequested()),
   fc.constant(Message.BackPressed()),
 )
@@ -108,27 +108,19 @@ describe('Home update', () => {
           : Equal.equals(first.after, second.after) && first.commands.length === second.commands.length
       })
     })
-
-    test('only messages that start an operation take a new operation id, one at a time', () => {
-      const starters = new Set(['AddProductStarted', 'DeleteStarted'])
-      assertProperty([state, message], (before, msg) => {
-        const result = outcome(msg, before)
-        if (result.rejected) return true
-        const expected = starters.has(msg._tag) ? before.nextOperation + 1 : before.nextOperation
-        return result.after.nextOperation === expected
-      })
-    })
   })
 
-  // Guarantees that the view never dispatches, from the state it was rendered
-  // from, a message that `update` rejects. That is what lets the engine treat
-  // such a rejection as a bug and crash.
   describe('view and update agree', () => {
-    test('every message the view can dispatch is accepted', () => {
-      assertProperty(
-        [state, fc.string()],
-        (before, inputValue) => dispatchedBy(view, makeModel(before), inputValue).every((msg) => !rejects(msg, before)),
-      )
+    // Every message the view can dispatch is accepted in the state it was
+    // rendered from, which is what lets the engine treat such a rejection as a
+    // bug; and sent twice from the same frame (a double tap, or a tap on a view
+    // that has not caught up yet), it acts once. No action of this page is meant
+    // to repeat.
+    test('every message the view can dispatch is accepted, and acts once when sent twice', () => {
+      const check = dispatchViolations(update)
+      fc.assert(fc.property(state, fc.string(), (before, inputValue) => {
+        expect(check(before, dispatchedBy(view, makeModel(before), inputValue))).toEqual([])
+      }))
     })
 
     // Guards against the property passing only because the view dispatches
@@ -151,39 +143,6 @@ describe('Home update', () => {
       for (const tag of expected) {
         expect(tags.has(tag)).toBe(true)
       }
-    })
-
-    // The model offers what `update` accepts, and accepting is not enough: an
-    // offered action that changes nothing would be a button that does nothing.
-    // Typing is the exception: the input stores what is typed, even when it is
-    // the same text.
-    test('every message the view can dispatch does something', () => {
-      const typed = new Set<Message['_tag']>(['NameChanged', 'ExpirationDateChanged'])
-      assertProperty(
-        [state, fc.string()],
-        (before, inputValue) =>
-          dispatchedBy(view, makeModel(before), inputValue).every((msg) => {
-            if (typed.has(msg._tag)) return true
-            const { after, commands, events } = step(msg, before)
-            return !Equal.equals(after, before) || commands.length > 0 || events.length > 0
-          }),
-      )
-    })
-
-    // A double tap sends the same message twice from the same frame. The second
-    // one must be rejected (and then ignored as stale), or change nothing: a
-    // message must not carry a decision taken on the state it was rendered from.
-    test('a message sent twice from the same frame acts once', () => {
-      assertProperty(
-        [state, fc.string()],
-        (before, inputValue) =>
-          dispatchedBy(view, makeModel(before), inputValue).every((msg) => {
-            const first = step(msg, before)
-            const second = outcome(msg, first.after)
-            return second.rejected
-              || (Equal.equals(second.after, first.after) && second.commands.length === 0 && second.events.length === 0)
-          }),
-      )
     })
   })
 
@@ -393,7 +352,7 @@ describe('Home update', () => {
   })
 
   describe('DeleteStarted', () => {
-    test('deletes the selection as a new operation, or is rejected', () => {
+    test('deletes the selection, or is rejected', () => {
       assertProperty([state], (before) => {
         const canDelete = before.products._tag === 'Loaded'
           && before.selection._tag === 'Selecting'
@@ -403,10 +362,8 @@ describe('Home update', () => {
         }
         const { after, commands } = step(Message.DeleteStarted(), before)
         return after.selection._tag === 'Deleting'
-          && after.selection.operation === before.nextOperation
           && Equal.equals(selectedIds(after.selection), selectedIds(before.selection))
-          && after.nextOperation === before.nextOperation + 1
-          && onlyChanged(before, after, 'selection', 'nextOperation')
+          && onlyChanged(before, after, 'selection')
           && commands.length === 1
       })
     })
@@ -418,8 +375,7 @@ describe('Home update', () => {
     test('success clears the selection', () => {
       assertProperty([deletingState], (before) => {
         fc.pre(before.selection._tag === 'Deleting')
-        const operation = before.selection.operation
-        const { after, commands } = step(Message.DeleteProductsCompleted({ operation, succeeded: true }), before)
+        const { after, commands } = step(Message.DeleteProductsCompleted({ succeeded: true }), before)
         return Equal.equals(after.selection, { _tag: 'Selecting', maybeIds: Opt.none() })
           && onlyChanged(before, after, 'selection')
           && commands.length === 0
@@ -429,8 +385,7 @@ describe('Home update', () => {
     test('failure gives the selection back and warns the user', () => {
       assertProperty([deletingState], (before) => {
         fc.pre(before.selection._tag === 'Deleting')
-        const operation = before.selection.operation
-        const { after, commands } = step(Message.DeleteProductsCompleted({ operation, succeeded: false }), before)
+        const { after, commands } = step(Message.DeleteProductsCompleted({ succeeded: false }), before)
         return after.selection._tag === 'Selecting'
           && Equal.equals(selectedIds(after.selection), selectedIds(before.selection))
           && onlyChanged(before, after, 'selection')
@@ -438,10 +393,10 @@ describe('Home update', () => {
       })
     })
 
-    test('is rejected unless it completes the deletion in progress', () => {
-      assertProperty([state, operation, fc.boolean()], (before, operation, succeeded) => {
-        fc.pre(before.selection._tag !== 'Deleting' || before.selection.operation !== operation)
-        return rejects(Message.DeleteProductsCompleted({ operation, succeeded }), before)
+    test('is rejected when no deletion is in progress', () => {
+      assertProperty([state, fc.boolean()], (before, succeeded) => {
+        fc.pre(before.selection._tag !== 'Deleting')
+        return rejects(Message.DeleteProductsCompleted({ succeeded }), before)
       })
     })
   })
@@ -530,7 +485,7 @@ describe('Home update', () => {
   })
 
   describe('AddProductStarted', () => {
-    test('submits a form with a non-blank name as a new operation, or is rejected', () => {
+    test('submits a form with a non-blank name, or is rejected', () => {
       assertProperty([state], (before) => {
         const form = before.addProduct
         const canStart = form._tag === 'Editing'
@@ -541,12 +496,10 @@ describe('Home update', () => {
         const { after, commands } = step(Message.AddProductStarted(), before)
         return Equal.equals(after.addProduct, {
           _tag: 'Submitting',
-          operation: before.nextOperation,
           maybeName: form.maybeName,
           maybeExpirationDate: form.maybeExpirationDate,
         })
-          && after.nextOperation === before.nextOperation + 1
-          && onlyChanged(before, after, 'addProduct', 'nextOperation')
+          && onlyChanged(before, after, 'addProduct')
           && commands.length === 1
       })
     })
@@ -558,8 +511,7 @@ describe('Home update', () => {
     test('success closes the form', () => {
       assertProperty([submittingState], (before) => {
         fc.pre(before.addProduct._tag === 'Submitting')
-        const operation = before.addProduct.operation
-        const { after, commands } = step(Message.AddProductCompleted({ operation, succeeded: true }), before)
+        const { after, commands } = step(Message.AddProductCompleted({ succeeded: true }), before)
         return after.addProduct._tag === 'Closed' && onlyChanged(before, after, 'addProduct') && commands.length === 0
       })
     })
@@ -567,18 +519,18 @@ describe('Home update', () => {
     test('failure gives the form back, as it was, and warns the user', () => {
       assertProperty([submittingState], (before) => {
         fc.pre(before.addProduct._tag === 'Submitting')
-        const { operation, maybeName, maybeExpirationDate } = before.addProduct
-        const { after, commands } = step(Message.AddProductCompleted({ operation, succeeded: false }), before)
+        const { maybeName, maybeExpirationDate } = before.addProduct
+        const { after, commands } = step(Message.AddProductCompleted({ succeeded: false }), before)
         return Equal.equals(after.addProduct, { _tag: 'Editing', maybeName, maybeExpirationDate })
           && onlyChanged(before, after, 'addProduct')
           && commands.length === 1
       })
     })
 
-    test('is rejected unless it completes the submission in progress', () => {
-      assertProperty([state, operation, fc.boolean()], (before, operation, succeeded) => {
-        fc.pre(before.addProduct._tag !== 'Submitting' || before.addProduct.operation !== operation)
-        return rejects(Message.AddProductCompleted({ operation, succeeded }), before)
+    test('is rejected when no submission is in progress', () => {
+      assertProperty([state, fc.boolean()], (before, succeeded) => {
+        fc.pre(before.addProduct._tag !== 'Submitting')
+        return rejects(Message.AddProductCompleted({ succeeded }), before)
       })
     })
   })

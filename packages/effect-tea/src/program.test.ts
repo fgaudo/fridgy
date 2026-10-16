@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test'
+import * as Effect from 'effect/Effect'
 import * as HashMap from 'effect/HashMap'
 import * as Opt from 'effect/Option'
-import * as Stream from 'effect/Stream'
 import * as Engine from './engine.ts'
 import { embed, embedEach, type Program } from './program.ts'
 
@@ -10,9 +10,11 @@ type Parent = Readonly<{ child: Opt.Option<number>; isShown: boolean }>
 
 type Increment = 'Increment'
 
+const ticks: Engine.Subscription<Increment, never> = (emit) => Effect.andThen(emit('Increment'), Effect.never)
+
 const child: Pick<Program<number, unknown, Increment, never>, 'update' | 'subscriptions'> = {
   update: () => (count) => ({ state: count + 1 }),
-  subscriptions: () => HashMap.make(['ticks', Stream.make<[Increment]>('Increment')]),
+  subscriptions: () => HashMap.make(['ticks', ticks]),
 }
 
 const embedded = embed(child, {
@@ -56,7 +58,7 @@ type Counters = Readonly<{ counts: ReadonlyMap<string, number>; reachedTwo: Read
 
 const counterWithEvent: Pick<Program<number, unknown, Increment, never, 'ReachedTwo'>, 'update' | 'subscriptions'> = {
   update: () => (count) => (count + 1 === 2 ? { state: 2, events: ['ReachedTwo'] } : { state: count + 1 }),
-  subscriptions: () => HashMap.make(['ticks', Stream.make<[Increment]>('Increment')]),
+  subscriptions: () => HashMap.make(['ticks', ticks]),
 }
 
 const each = embedEach(counterWithEvent, {

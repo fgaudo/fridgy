@@ -1,17 +1,13 @@
 import * as DateTime from 'effect/DateTime'
 import * as fc from 'fast-check'
-import { arbitrary as maybe } from '@/libs/option/option.arbitrary.ts'
-import * as NonEmptyHashSet from '@/libs/collections/non-empty-hash-set.arbitrary.ts'
-import * as ProductArbitrary from '../../../domain/product.arbitrary.ts'
+import { arbitrary as maybe } from '@/libs/option/option.test-arbitrary.ts'
+import * as NonEmptyHashSet from '@/libs/collections/non-empty-hash-set.test-arbitrary.ts'
+import * as ProductArbitrary from '../../../domain/product.test-arbitrary.ts'
 import type { StoredProduct } from '../ports/product-list.ts'
-import { OperationId, type Product, type State } from './state.ts'
+import type { Product, State } from './state.ts'
 
 // A small id space, so that selections and product lists overlap often.
 export const id: fc.Arbitrary<string> = fc.constantFrom('1', '2', '3', '4', '5', '6')
-
-// Operations already started have small ids; the next one is always larger.
-export const operation = fc.integer({ min: 0, max: 9 }).map(OperationId.make)
-export const nextOperation = fc.integer({ min: 10, max: 20 }).map(OperationId.make)
 
 export const date = fc.integer({ min: 0, max: 4_102_444_800_000 }).map((millis) => DateTime.makeUnsafe(millis))
 
@@ -30,25 +26,20 @@ export const products: fc.Arbitrary<State['products']> = fc.oneof(
 export const selecting = maybe(NonEmptyHashSet.arbitrary(id)).map((maybeIds) => (
   { _tag: 'Selecting', maybeIds } as const
 ))
-export const deleting = fc.record({ operation, ids: NonEmptyHashSet.arbitrary(id) }).map((fields) => (
-  { _tag: 'Deleting', ...fields } as const
-))
+export const deleting = NonEmptyHashSet.arbitrary(id).map((ids) => ({ _tag: 'Deleting', ids } as const))
 export const selection: fc.Arbitrary<State['selection']> = fc.oneof(selecting, deleting)
 
 const formFields = fc.record({ maybeName: maybe(fc.string()), maybeExpirationDate: maybe(date) })
 export const closedForm = fc.constant({ _tag: 'Closed' } as const)
 export const editingForm = formFields.map((fields) => ({ _tag: 'Editing', ...fields } as const))
-export const submittingForm = fc.tuple(formFields, operation).map(([fields, operation]) => (
-  { _tag: 'Submitting', operation, ...fields } as const
-))
+export const submittingForm = formFields.map((fields) => ({ _tag: 'Submitting', ...fields } as const))
 export const addProduct: fc.Arbitrary<State['addProduct']> = fc.oneof(closedForm, editingForm, submittingForm)
 
-/** Any state of the page, respecting its invariants (started operations have ids below `nextOperation`). */
+/** Any state of the page. */
 export const state: fc.Arbitrary<State> = fc.record({
   isMenuOpen: fc.boolean(),
   isViewportAtTop: fc.boolean(),
   isInteracting: fc.boolean(),
-  nextOperation,
   maybeNow: maybe(date),
   products,
   selection,

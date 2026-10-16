@@ -1,7 +1,7 @@
 // What every adapter of Home's `ProductList` must do, given the writes of `ProductCommands` (whose own
-// contract is `app/ports/product-commands.contract.ts`). It holds no implementation: each adapter's
+// contract is `app/ports/product-commands.test-contract.ts`). It holds no implementation: each adapter's
 // `<adapter>.test.ts` runs it with its own layers.
-import { describe, test } from 'bun:test'
+import { describe, expect, test } from 'bun:test'
 import * as Arr from 'effect/Array'
 import * as DateTime from 'effect/DateTime'
 import * as Effect from 'effect/Effect'
@@ -12,8 +12,8 @@ import * as Queue from 'effect/Queue'
 import * as Result from 'effect/Result'
 import * as Stream from 'effect/Stream'
 import * as fc from 'fast-check'
-import { add, check, deleteById } from '../../../ports/product-commands.contract.ts'
-import * as ProductArbitrary from '../../../domain/product.arbitrary.ts'
+import { add, check, deleteById } from '../../../ports/product-commands.test-contract.ts'
+import * as ProductArbitrary from '../../../domain/product.test-arbitrary.ts'
 import * as Product from '../../../domain/product.ts'
 import type { ProductCommands } from '../../../ports/product-commands.ts'
 import { ProductList, type StoredProduct } from './product-list.ts'
@@ -95,4 +95,15 @@ export const productListContract = (name: string, adapter: () => Layer.Layer<Sto
           yield* waitUntil((products) => Opt.isNone(withId(products, id)))
           return true
         }).pipe(Effect.scoped)))
+
+    // Home listens to it as a subscription, and a subscription that ends is a bug.
+    test('the changes never end', async () => {
+      const ended = await Effect.runPromise(
+        Effect.gen(function*() {
+          const { changes } = yield* ProductList
+          return yield* Stream.runDrain(changes).pipe(Effect.timeoutOption('200 millis'))
+        }).pipe(Effect.provide(adapter())),
+      )
+      expect(Opt.isNone(ended)).toBe(true)
+    })
   })

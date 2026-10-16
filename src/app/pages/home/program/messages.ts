@@ -2,7 +2,6 @@ import * as Data from 'effect/Data'
 import type * as DateTime from 'effect/DateTime'
 import type * as Result from 'effect/Result'
 import type { StoredProduct } from '../ports/product-list.ts'
-import type { OperationId } from './state.ts'
 
 export type ExternalMessage = Data.TaggedEnum<{
   /** Android's back button, while the page is shown. */
@@ -34,8 +33,8 @@ export type Message =
     TimeChanged: { now: DateTime.Utc }
     ProductsChanged: { result: Result.Result<ReadonlyArray<StoredProduct>, void> }
     // From commands.
-    AddProductCompleted: { operation: OperationId; succeeded: boolean }
-    DeleteProductsCompleted: { operation: OperationId; succeeded: boolean }
+    AddProductCompleted: { succeeded: boolean }
+    DeleteProductsCompleted: { succeeded: boolean }
   }>
 
 export const Message = Data.taggedEnum<Message>()

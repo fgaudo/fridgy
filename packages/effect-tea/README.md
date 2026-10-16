@@ -3,7 +3,7 @@
 The Elm architecture (TEA) on [Effect](https://effect.website) v4, for any renderer.
 
 - One **state**, changed only by a pure **`update`**.
-- Effects are described, not run: **commands** (one-shot) and **subscriptions** (streams).
+- Effects are described, not run: **commands** (one-shot) and **subscriptions** (listeners that never end).
 - The view draws a **model**, and can only send the messages the model **offers**.
 
 What it adds to plain Elm is a guarantee that the view and `update` agree. `update` may **reject** a message
@@ -163,9 +163,16 @@ Rules that make the rest work:
   decide offers (see below), so it must be cheap and free of side effects.
 - **Conditions live in `update`.** "Can the user load now?" is answered once, here, by rejecting. The view
   never repeats the check.
-- **Name intents, not toggles.** Prefer `MenuOpened`/`MenuClosed` to `MenuToggled`, and reject what would
-  change nothing. A double tap then sends its second message from an outdated frame, which is ignored (see
-  [Rejections](#6-rejections-stale-or-bug)), instead of undoing the first.
+- **Name intents, not toggles.** Prefer `MenuOpened`/`MenuClosed` to `MenuToggled`: an intent sent twice
+  (a double tap, or a second tap on a view that has not caught up yet) does what it did once, while a toggle
+  undoes itself.
+- **One-shot actions move to a state that rejects them.** After `Submitted`, the state is `Submitting`,
+  which rejects a second `Submitted`: sent from the same frame, it is ignored as stale (see
+  [Rejections](#6-rejections-stale-or-bug)), so the form is never sent twice. Actions meant to repeat (a
+  "+1") stay accepted.
+- **Rejecting a message that would change nothing is a choice, not a rule.** Rejecting makes the model stop
+  offering it, so the view can hide or disable the control; accepting it is harmless when there is nothing
+  to show.
 
 ### 2. The model offers, the view sends
 
@@ -355,31 +362,88 @@ to `update`.
 
 ### 5. Subscriptions
 
-`subscriptions(state)` returns a `HashMap` from keys to streams of messages. After every change, the engine
-compares the keys:
-
-- a key that **appears** starts its stream;
-- a key that **stays** keeps its stream running, untouched;
-- a key that **disappears** interrupts its stream.
+`subscriptions(state)` returns a `HashMap` from keys to **subscriptions**. A subscription listens to the world
+and sends what it hears with `emit`:
 
 ```ts
-import * as HashMap from 'effect/HashMap'
-import * as Stream from 'effect/Stream'
-
-// A clock that ticks only while loading.
-const subscriptions = (state: State) =>
-  state._tag === 'Loading'
-    ? HashMap.make([
-      'clock',
-      Stream.map(Stream.tick('1 second'), () => Message.Ticked()),
-    ])
-    : HashMap.empty<string, Stream.Stream<Message>>()
+type Subscription<Message, R> = (
+  emit: (message: Message) => Effect<void>,
+) => Effect<never, never, R>
 ```
 
-Keys are compared by value, so they can be strings, numbers, tuples of them, or Effect data. Streams cannot
-fail: `attemptStream(stream, { onValue, onFailure })` turns each value into a message, and ends the stream
-with one last message on failure. A failed subscription starts again only if its key goes away and comes
-back.
+Its success type is `never`: **a subscription never ends on its own.** It stops only when its key goes away.
+After every change, the engine compares the keys:
+
+- a key that **appears** starts its subscription;
+- a key that **stays** keeps its subscription running, untouched;
+- a key that **disappears** interrupts its subscription.
+
+```ts
+import { type Subscription } from '@fgaudo/effect-tea'
+import * as Effect from 'effect/Effect'
+import * as HashMap from 'effect/HashMap'
+
+// A clock that ticks only while loading.
+const clock: Subscription<Message, never> = (emit) =>
+  Effect.forever(
+    Effect.andThen(Effect.sleep('1 second'), emit(Message.Ticked())),
+  )
+
+const subscriptions = (state: State) =>
+  state._tag === 'Loading'
+    ? HashMap.make(['clock', clock])
+    : HashMap.empty<string, Subscription<Message, never>>()
+```
+
+Keys are compared by value, so they can be strings, numbers, tuples of them, or Effect data.
+
+**From a stream.** A stream, unlike a subscription, may end: its type cannot promise otherwise. So running
+one as a subscription means deciding what its end means, and that decision is yours:
+
+```ts
+// A stream that must never end: if it does, the promise is broken, and that is a bug.
+const fromEndlessStream = <Message, R>(
+  stream: Stream.Stream<Message, never, R>,
+): Subscription<Message, R> =>
+(emit) =>
+  Stream.runForEach(stream, emit).pipe(
+    Effect.andThen(Effect.die(new Error('A subscribed stream ended'))),
+  )
+
+// A stream that emits a few values, then stays quiet until its key goes away.
+const quietAfter = <Message, R>(
+  stream: Stream.Stream<Message, never, R>,
+): Subscription<Message, R> =>
+(emit) => Stream.runForEach(stream, emit).pipe(Effect.andThen(Effect.never))
+```
+
+**Failures.** A subscription cannot fail: an expected failure must become a message, so that `update` decides
+what it means.
+
+- Transient errors can be retried inside the stream, with `Stream.retry` and a `Schedule`, before they ever
+  reach `update`.
+- Otherwise, turn the failure into a message (`Stream.catch`), and let the state decide whether to listen
+  again. The subscription waits after its last message; `update` removes its key, and brings it back to retry:
+
+```ts
+const feed: Subscription<Message, never> = (emit) =>
+  changes.pipe(
+    Stream.map((change) => Message.FeedChanged({ change })),
+    Stream.catch(() => Stream.make(Message.FeedFailed())),
+    Stream.runForEach(emit),
+    Effect.andThen(Effect.never),
+  )
+
+subscriptions: (state) =>
+  state.feed._tag === 'Listening' ? HashMap.make(['feed', feed]) : HashMap.empty()
+
+// update
+FeedFailed:   Listening → Failed    // the key goes away: the waiting subscription stops
+RetryClicked: Failed → Listening    // the key comes back: a new subscription starts
+```
+
+A **defect** in a subscription (an exception, an `Effect.die`) ends the run, like any defect. To recover from
+one, handle it at the source with Effect's tools (`Effect.catchDefect`, `Stream.catchCause`).
 
 ### 6. Rejections: stale or bug
 
@@ -395,7 +459,7 @@ engine looks at where it came from, and asks `update` again with the frame's own
 A bug is a bug however many messages arrived between the frame and the click: a subscription that ticks
 often cannot hide it. It cannot happen when every action goes through `offers`; it remains a check against
 mistakes in `makeModel`, such as an offer computed from a different state. The second call to `update` only
-happens for a rejected message from an older frame.
+happens for a rejected message from the view.
 
 ### 7. Composing programs: `embed`
 
@@ -586,8 +650,8 @@ Options (`RunOptions`):
 - **`onBug(bug)`** is called for every bug, fatal or not, e.g. to send it to a crash-reporting service. A
   `Bug` is one of:
   - `Defect`: something blew up (an exception, an `Effect.die`). Its `cause` is the defect, and `where` is
-    `Update`, `Command`, or `Subscription` with its `key`. A defect always ends the run, whatever
-    `onRejected` says: what it left behind is unknown, so nothing recovers from it.
+    `Update`, `Command`, or `Subscription` with its `key`. A defect always ends the run, whatever `onRejected` says: to recover
+    from one, handle it where it happens, with Effect's tools.
   - `Rejected`: a frame sent a `message` that `update` rejects in the frame's own state, whose `revision`
     it carries (see [Rejections](#6-rejections-stale-or-bug)).
 - **`describeMessage`** says how a message appears in the logs. By default only its `_tag` is logged (or the
@@ -618,8 +682,31 @@ test('counting', () => {
 - `applyAll(update)(messages, from)` applies messages in order, and returns the final `state` and all the
   `commands`. A rejection throws, failing the test.
 - Assert rejections with `isRejected`, not by comparing states.
-- A useful property test: for arbitrary states, render the real view, collect every message it can send, and
-  check that `update` accepts each one and actually changes something.
+
+The agreement between the view and `update` is worth checking for every state the program can be in. Render
+the real view, collect every message it can send, and pass them to `dispatchViolations`:
+
+```ts
+import { dispatchViolations } from '@fgaudo/effect-tea/testing'
+import * as fc from 'fast-check'
+
+test('the view and update agree', () => {
+  const check = dispatchViolations(update, {
+    repeatable: (message) => message === 'Increment',
+  })
+  fc.assert(fc.property(arbitraryState, (state) => {
+    expect(check(state, messagesSentBy(view, makeModel(state)))).toEqual([])
+  }))
+})
+```
+
+- `dispatchViolations(update, { repeatable? })(state, messages)` returns a `DispatchViolation` for each
+  message that `update` rejects in `state` (`Rejected`: the model offered too much), and for each one that
+  acts again when sent twice from the same frame (`ActsTwice`: a double tap would repeat a one-shot action).
+  Acting again means a different state (by `Equal`), or commands, or events. Exclude the actions meant to
+  repeat, like a "+1", with `repeatable`.
+- Collecting the messages depends on the renderer, so it is yours to write: `messagesSentBy` renders the view
+  with a `dispatch` that records what it receives, and fires every event handler in the tree.
 
 ## API reference
 
@@ -631,8 +718,9 @@ From `@fgaudo/effect-tea`:
 | `Update`, `Transition`, `Step`                  | `(message) => (state) => Step` or `Rejected`; a `Step` is `{ state, commands?, events? }`  |
 | `reject`, `Rejected`, `isRejected`              | the rejection `update` returns, and its check                                              |
 | `Command<Message, R>`                           | `Effect<Option<Message>, never, R>`                                                        |
-| `attempt`, `attemptStream`                      | a command or a subscription from something that may fail: failures become messages         |
-| `Emitter`, `Subscriptions`                      | `(state) => HashMap<K, Stream<Message>>`, reconciled by key                                |
+| `attempt`                                       | a command from an effect that may fail: its failure becomes a message                      |
+| `Subscription`                                  | `(emit) => Effect<never>`: listens to the world, and never ends on its own                 |
+| `Emitter`, `Subscriptions`                      | `(state) => HashMap<K, Subscription<Message>>`, reconciled by key                          |
 | `offers`, `offered`, `offeredInput`             | ask `update` what the model may offer                                                      |
 | `Offer`, `InputOffer`, `Offered`, `Offers`      | an optional offered message; an optional function to one; the brand; what `offers` returns |
 | `View`, `Dispatch`, `mapDispatch`               | `(model, dispatch) => Node`; a dispatch of offered messages; a child's dispatch            |
@@ -642,7 +730,7 @@ From `@fgaudo/effect-tea`:
 | `Bug`, `BugReporter`, `DefectSource`            | what `onBug` receives; `onBug` itself; where a defect happened                             |
 | `RejectedMessage`                               | the defect the run fails with when a rejection is fatal                                    |
 
-From `@fgaudo/effect-tea/testing`: `applyAll`.
+From `@fgaudo/effect-tea/testing`: `applyAll`, `dispatchViolations`, `DispatchViolation`.
 
 ## Development
 

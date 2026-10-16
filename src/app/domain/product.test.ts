@@ -4,7 +4,7 @@ import * as Duration from 'effect/Duration'
 import * as Equal from 'effect/Equal'
 import * as Opt from 'effect/Option'
 import * as fc from 'fast-check'
-import * as ProductArbitrary from './product.arbitrary.ts'
+import * as ProductArbitrary from './product.test-arbitrary.ts'
 import * as Product from './product.ts'
 
 const date = fc.integer({ min: 0, max: 4_102_444_800_000 }).map((ms) => DateTime.makeUnsafe(ms))
@@ -20,18 +20,24 @@ const readBack = (snapshot: Product.Snapshot): Product.UnvalidatedSnapshot => ({
 
 describe('Product snapshots', () => {
   test('a stored product reads back as the same product', () => {
-    fc.assert(fc.property(product, (p) =>
-      Equal.equals(Product.fromSnapshot(readBack(Product.toSnapshot(p))), Opt.some(p))))
+    fc.assert(
+      fc.property(product, (p) => Equal.equals(Product.fromSnapshot(readBack(Product.toSnapshot(p))), Opt.some(p))),
+    )
   })
 
   test('a snapshot holds exactly the persistent fields', () => {
-    fc.assert(fc.property(product, (p) =>
-      Object.keys(Product.toSnapshot(p)).sort().join() === 'creationDate,maybeExpirationDate,name'))
+    fc.assert(
+      fc.property(
+        product,
+        (p) => Object.keys(Product.toSnapshot(p)).sort().join() === 'creationDate,maybeExpirationDate,name',
+      ),
+    )
   })
 
   test('a product needs a creation date', () => {
-    fc.assert(fc.property(validInput, (input) =>
-      Opt.isNone(Product.fromSnapshot({ ...input, maybeCreationDate: Opt.none() }))))
+    fc.assert(
+      fc.property(validInput, (input) => Opt.isNone(Product.fromSnapshot({ ...input, maybeCreationDate: Opt.none() }))),
+    )
   })
 
   test('a product cannot expire before it is created', () => {
@@ -45,8 +51,12 @@ describe('Product snapshots', () => {
 
 describe('Product expiration', () => {
   test('a product has an expiration exactly when it has an expiration date', () => {
-    fc.assert(fc.property(product, (p) =>
-      Opt.isSome(Product.maybeExpiration(p)) === Opt.isSome(Product.toSnapshot(p).maybeExpirationDate)))
+    fc.assert(
+      fc.property(
+        product,
+        (p) => Opt.isSome(Product.maybeExpiration(p)) === Opt.isSome(Product.toSnapshot(p).maybeExpirationDate),
+      ),
+    )
   })
 
   test('a product has expired exactly when its expiration date is not in the future', () => {
@@ -67,7 +77,8 @@ describe('Product expiration', () => {
           const status = Product.expirationStatus(now)(expiration)
           if (status.hasExpired) return true
           const expirationDate = Product.expirationDate(expiration)
-          return Duration.toMillis(status.timeLeft) === DateTime.toEpochMillis(expirationDate) - DateTime.toEpochMillis(now)
+          return Duration.toMillis(status.timeLeft)
+              === DateTime.toEpochMillis(expirationDate) - DateTime.toEpochMillis(now)
             && status.freshness >= 0
             && status.freshness <= 1
         },
