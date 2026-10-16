@@ -12,6 +12,9 @@ All code, comments, identifiers, commit messages and `.md` files are in **Englis
   renderer. Views are generic over their node type, and the renderer is a function given to `run`. `effect`
   (v4) is its only dependency, as a peer. Biome forbids renderer imports, and `lib` (`ES2022`, no `DOM`)
   rejects browser APIs.
+- **The peer range starts at the oldest Effect 4 the library works with** (`^4.0.0` today), so that any
+  application on Effect 4 can use it. Raise the minimum only when the code needs a newer API, after checking:
+  copy `src/` into a scratch project with that exact Effect version, then run `tsc` and `bun test` there.
 
 ## Public API
 
