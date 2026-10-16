@@ -1,7 +1,7 @@
 import * as Data from 'effect/Data'
 import * as Match from 'effect/Match'
-import * as About from '../pages/about/program.ts'
-import * as Home from '../pages/home/program.ts'
+import * as About from '#app/pages/about/program.ts'
+import * as Home from '#app/pages/home/program.ts'
 import { top } from './navigation.ts'
 import type { State } from './state.ts'
 

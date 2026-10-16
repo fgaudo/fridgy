@@ -1,6 +1,6 @@
 import * as Context from 'effect/Context'
 import type * as Effect from 'effect/Effect'
-import type { Source } from '@/libs/source/source.ts'
+import type { Source } from '#libs/source/source.ts'
 
 export class Viewport extends Context.Service<
   Viewport,

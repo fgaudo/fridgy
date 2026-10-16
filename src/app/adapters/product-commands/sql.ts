@@ -8,9 +8,9 @@ import * as Request from 'effect/Request'
 import * as RequestResolver from 'effect/RequestResolver'
 import * as Result from 'effect/Result'
 import * as SqlResolver from 'effect/sql/SqlResolver'
-import * as ProductCommands from '../../ports/product-commands.ts'
-import * as SqlHelper from '@/infra/sql/sql-helper.ts'
-import * as Integer from '@/libs/numbers/integer.ts'
+import * as ProductCommands from '#app/ports/product-commands.ts'
+import * as SqlHelper from '#infrastructure/sql/sql-helper.ts'
+import * as Integer from '#libs/numbers/integer.ts'
 
 export const layer = Layer.effect(
   ProductCommands.ProductCommands,

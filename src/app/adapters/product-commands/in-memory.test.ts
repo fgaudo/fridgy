@@ -3,9 +3,9 @@ import * as Effect from 'effect/Effect'
 import * as Layer from 'effect/Layer'
 import * as Opt from 'effect/Option'
 import * as SubscriptionRef from 'effect/SubscriptionRef'
-import { productCommandsContract } from '../../ports/product-commands.test_contract.ts'
+import { productCommandsContract } from '#app/ports/product-commands.test_contract.ts'
 import * as ProductCommandsInMemory from './in-memory.ts'
-import { InMemoryStore } from '@/infra/in-memory/store.ts'
+import { InMemoryStore } from '#infrastructure/in-memory/store.ts'
 
 productCommandsContract(
   'in memory',

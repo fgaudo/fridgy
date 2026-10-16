@@ -9,8 +9,8 @@ import type * as Layer from 'effect/Layer'
 import * as Opt from 'effect/Option'
 import * as References from 'effect/References'
 import * as fc from 'fast-check'
-import * as ProductArbitrary from '../domain/product.test_arbitrary.ts'
-import * as Product from '../domain/product.ts'
+import * as ProductArbitrary from '#app/domain/product.test_arbitrary.ts'
+import * as Product from '#app/domain/product.ts'
 import * as ProductCommands from './product-commands.ts'
 
 /** Runs `property` for generated values, each time on a fresh storage built by `adapter`. */

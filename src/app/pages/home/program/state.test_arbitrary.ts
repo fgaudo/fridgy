@@ -1,8 +1,8 @@
 import * as DateTime from 'effect/DateTime'
 import * as fc from 'fast-check'
-import { arbitrary as maybe } from '@/libs/option/option.test_arbitrary.ts'
-import * as NonEmptyHashSet from '@/libs/collections/non-empty-hash-set.test_arbitrary.ts'
-import * as ProductArbitrary from '../../../domain/product.test_arbitrary.ts'
+import { arbitrary as maybe } from '#libs/option/option.test_arbitrary.ts'
+import * as NonEmptyHashSet from '#libs/collections/non-empty-hash-set.test_arbitrary.ts'
+import * as ProductArbitrary from '#app/domain/product.test_arbitrary.ts'
 import type { StoredProduct } from '../ports/product-list.ts'
 import type { Product, State } from './state.ts'
 

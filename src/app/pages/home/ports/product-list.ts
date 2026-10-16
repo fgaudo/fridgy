@@ -1,8 +1,8 @@
 import * as Context from 'effect/Context'
 import type * as Opt from 'effect/Option'
 import type * as Result from 'effect/Result'
-import type { Source } from '@/libs/source/source.ts'
-import type * as Product from '../../../domain/product.ts'
+import type { Source } from '#libs/source/source.ts'
+import type * as Product from '#app/domain/product.ts'
 
 /** A stored product, still unvalidated: storage may contain anything. */
 export type StoredProduct = Product.UnvalidatedSnapshot & {

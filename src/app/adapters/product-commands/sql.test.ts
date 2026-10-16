@@ -2,10 +2,10 @@ import * as Arr from 'effect/Array'
 import * as Effect from 'effect/Effect'
 import * as Layer from 'effect/Layer'
 import * as Opt from 'effect/Option'
-import { productCommandsContract } from '../../ports/product-commands.test_contract.ts'
+import { productCommandsContract } from '#app/ports/product-commands.test_contract.ts'
 import * as ProductCommandsSql from './sql.ts'
-import * as SqlHelper from '@/infra/sql/sql-helper.ts'
-import * as SqliteMemory from '@/infra/sqlite/memory.layer.ts'
+import * as SqlHelper from '#infrastructure/sql/sql-helper.ts'
+import * as SqliteMemory from '#infrastructure/sqlite/memory.layer.ts'
 
 productCommandsContract(
   'sqlite',

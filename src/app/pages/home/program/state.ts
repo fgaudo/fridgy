@@ -1,8 +1,8 @@
 import type * as Data from 'effect/Data'
 import type * as DateTime from 'effect/DateTime'
 import type * as Opt from 'effect/Option'
-import type * as NonEmptyHashSet from '@/libs/collections/non-empty-hash-set.ts'
-import type * as Domain from '../../../domain/product.ts'
+import type * as NonEmptyHashSet from '#libs/collections/non-empty-hash-set.ts'
+import type * as Domain from '#app/domain/product.ts'
 
 export type Product = Data.TaggedEnum<{
   /** Stored data so broken it cannot even be referenced. */

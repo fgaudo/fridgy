@@ -1,14 +1,14 @@
 import * as Arr from 'effect/Array'
 import * as DateTime from 'effect/DateTime'
 import * as Layer from 'effect/Layer'
-import * as Source from '@/libs/source/source.ts'
+import * as Source from '#libs/source/source.ts'
 import * as Opt from 'effect/Option'
 import * as Order from 'effect/Order'
 import * as Result from 'effect/Result'
 import * as Stream from 'effect/Stream'
 import * as SubscriptionRef from 'effect/SubscriptionRef'
 import { ProductList, type StoredProducts } from '../../ports/product-list.ts'
-import { InMemoryStore, type ProductRow } from '@/infra/in-memory/store.ts'
+import { InMemoryStore, type ProductRow } from '#infrastructure/in-memory/store.ts'
 
 // Like the sql query: products without an expiration last.
 const byExpiration = Order.mapInput(

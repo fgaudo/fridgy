@@ -11,7 +11,8 @@ be in Italian.
 
 ## Tooling enforces a lot
 
-Biome and the typecheck enforce import boundaries (private folders of the app and of pages, test-only code (including
+Biome and the typecheck enforce import boundaries (private folders of the app and of pages, pages never importing
+each other or the app's adapters, relative imports kept short, test-only code (including
 `@fgaudo/effect-tea/testing`) kept out of bundles), the strict typing of views (`dispatch` only
 takes offered messages; JSX elements only accept snabbdom's modules) and the language service rules (no
 `console`, `Date`, `Math.random`, `fetch` or timers inside Effect; hashed service keys). When one of them
@@ -110,6 +111,9 @@ large view into private components under `view/`.
 
 ## Conventions
 
+- Imports: relative within a part of the project (a page, a folder of `src/app`, a module of `libs/`), at most
+  `../../`; another part through its alias, from the `imports` of `package.json` (`#app/…`, `#libs/…`,
+  `#infrastructure/…`), never through `tsconfig` paths.
 - Effect modules as namespaces (`import * as Effect from 'effect/Effect'`), with `Arr`, `Opt`, `Req`, `T`
   for `Array`, `Option`, `Request`, `Tuple`. Unions with `Data.TaggedEnum`, matched with `Match`.
 - Format only the files you changed (`bunx dprint fmt <files>`): a bare `dprint fmt` rewrites generated

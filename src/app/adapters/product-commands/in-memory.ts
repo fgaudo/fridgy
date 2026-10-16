@@ -4,8 +4,8 @@ import * as Layer from 'effect/Layer'
 import * as Request from 'effect/Request'
 import * as RequestResolver from 'effect/RequestResolver'
 import * as SubscriptionRef from 'effect/SubscriptionRef'
-import * as ProductCommands from '../../ports/product-commands.ts'
-import { InMemoryStore } from '@/infra/in-memory/store.ts'
+import * as ProductCommands from '#app/ports/product-commands.ts'
+import { InMemoryStore } from '#infrastructure/in-memory/store.ts'
 
 export const layer = Layer.effect(
   ProductCommands.ProductCommands,

@@ -3,6 +3,13 @@
   "private": true,
   "type": "module",
   "module": "index.ts",
+  "imports": {
+    "#app/*": "./src/app/*",
+    "#infrastructure/*": "./src/infrastructure/*",
+    "#libs/jsx/jsx-runtime": "./src/libs/jsx/jsx-runtime.ts",
+    "#libs/jsx/jsx-dev-runtime": "./src/libs/jsx/jsx-dev-runtime.ts",
+    "#libs/*": "./src/libs/*"
+  },
   "scripts": {
     "update-licenses": "license-checker-rseidelsohn --excludePackages fridgy --json --customPath src/app/pages/about/adapters/licenses/custom-path.json --out src/app/pages/about/adapters/licenses/generated/licenses.json --depth 0",
     "build": "bun ./scripts/cli.ts build",

@@ -39,11 +39,6 @@
         }
       }
     ],
-    "paths": {
-      "@/libs/*": ["./src/libs/*"],
-      "@/app/*": ["./src/app/*"],
-      "@/infra/*": ["./src/infrastructure/*"]
-    },
     // Environment setup & latest features
     "lib": ["ESNext", "DOM"],
     "target": "ESNext",
@@ -53,7 +48,7 @@
 
     // Views are TSX, rendered by snabbdom through src/libs/jsx/jsx-runtime.ts.
     "jsx": "react-jsx",
-    "jsxImportSource": "@/libs/jsx",
+    "jsxImportSource": "#libs/jsx",
 
     // Bundler mode
     "moduleResolution": "bundler",

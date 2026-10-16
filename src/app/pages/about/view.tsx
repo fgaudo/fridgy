@@ -1,5 +1,5 @@
 import * as Opt from 'effect/Option'
-import { handlers, type View } from '@/libs/tea-snabbdom/tea-snabbdom.ts'
+import { handlers, type View } from '#libs/tea-snabbdom/tea-snabbdom.ts'
 import type { Message } from './program/messages.ts'
 import type { Model } from './program/model.ts'
 

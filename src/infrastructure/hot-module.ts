@@ -4,8 +4,8 @@ import * as Schedule from 'effect/Schedule'
 import * as Stream from 'effect/Stream'
 import * as SubscriptionRef from 'effect/SubscriptionRef'
 import * as Socket from 'effect/socket/Socket'
-import { CssRefresher } from '@/infra/css-refresher.ts'
-import { saferImport } from '@/libs/dynamic-import/safer-import.ts'
+import { CssRefresher } from '#infrastructure/css-refresher.ts'
+import { saferImport } from '#libs/dynamic-import/safer-import.ts'
 
 export const watch = Effect.fn('HotModule.watch')(function*(path: string) {
   const refreshCss = yield* CssRefresher

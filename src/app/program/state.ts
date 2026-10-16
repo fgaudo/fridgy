@@ -1,7 +1,7 @@
 import type * as Arr from 'effect/Array'
 import * as Data from 'effect/Data'
-import type * as About from '../pages/about/program.ts'
-import type * as Home from '../pages/home/program.ts'
+import type * as About from '#app/pages/about/program.ts'
+import type * as Home from '#app/pages/home/program.ts'
 
 export type Page = Data.TaggedEnum<{
   Home: Readonly<{ state: Home.State }>

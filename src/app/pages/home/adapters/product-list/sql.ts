@@ -1,14 +1,14 @@
 import * as Arr from 'effect/Array'
 import * as Effect from 'effect/Effect'
 import * as Layer from 'effect/Layer'
-import * as Source from '@/libs/source/source.ts'
+import * as Source from '#libs/source/source.ts'
 import * as Opt from 'effect/Option'
 import * as Result from 'effect/Result'
 import * as Stream from 'effect/Stream'
 import * as SqlClient from 'effect/sql/SqlClient'
 import { ProductList, type StoredProducts } from '../../ports/product-list.ts'
-import { ProductExpirationSchema, ProductSchema } from '@/infra/sql/schema.ts'
-import * as SqlHelper from '@/infra/sql/sql-helper.ts'
+import { ProductExpirationSchema, ProductSchema } from '#infrastructure/sql/schema.ts'
+import * as SqlHelper from '#infrastructure/sql/sql-helper.ts'
 
 export const layer = Layer.effect(
   ProductList,

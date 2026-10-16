@@ -1,7 +1,7 @@
 import * as Context from 'effect/Context'
 import * as Req from 'effect/Request'
 import type * as RequestResolver from 'effect/RequestResolver'
-import type * as Product from '../domain/product.ts'
+import type * as Product from '#app/domain/product.ts'
 
 export interface AddProduct extends Req.Request<string, void> {
   readonly snapshot: Product.Snapshot

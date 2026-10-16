@@ -1,9 +1,9 @@
 import { describe, expect, test } from 'bun:test'
 import * as HashMap from 'effect/HashMap'
 import { applyAll } from '@fgaudo/effect-tea/testing'
-import type * as Home from '../pages/home/program.ts'
+import type * as Home from '#app/pages/home/program.ts'
 // Tests may reach into a page: they drive it like its own view and subscriptions would.
-import { Message as HomeMessage } from '../pages/home/program/messages.ts'
+import { Message as HomeMessage } from '#app/pages/home/program/messages.ts'
 import { Message } from './messages.ts'
 import type { State } from './state.ts'
 import { subscriptions } from './subs.ts'
