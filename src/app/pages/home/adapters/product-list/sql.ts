@@ -16,7 +16,10 @@ export const layer = Layer.effect(
     const sql = yield* SqlClient.SqlClient
     const changes = sql.reactive(
       [ProductSchema.table, ProductExpirationSchema.table],
-      getProducts.pipe(Effect.option),
+      getProducts.pipe(
+        Effect.tapError((error) => Effect.logWarning('Could not read the products', error)),
+        Effect.option,
+      ),
     ).pipe(
       Stream.buffer({ capacity: 1, strategy: 'sliding' }),
       Stream.map((maybeProducts): StoredProducts =>

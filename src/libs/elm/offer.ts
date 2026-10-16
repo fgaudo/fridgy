@@ -37,3 +37,14 @@ export const offeredInput =
       offered(update, state)(toMessage(current)),
       () => (value: Value) => toMessage(value) as Offered<Message>,
     )
+
+/** Both ways of offering for one state, as `offers` returns them to the parts of a `makeModel`. */
+export type Offers<Message> = Readonly<{
+  offer: (message: Message) => Offer<Message>
+  offerInput: <Value>(toMessage: (value: Value) => Message, current: Value) => InputOffer<Value, Message>
+}>
+
+export const offers = <State, Message>(update: AnyUpdate<State, Message>, state: State): Offers<Message> => ({
+  offer: offered(update, state),
+  offerInput: offeredInput(update, state),
+})

@@ -39,6 +39,7 @@ export class InMemoryStore extends Context.Service<
         maybeExpirationDate: Opt.some(DateTime.add(now, { days: index })),
       })),
     })
+    yield* Effect.logInfo('Storage ready: in memory, with sample products', { count: seedNames.length })
     return { tables }
   }),
 }) {

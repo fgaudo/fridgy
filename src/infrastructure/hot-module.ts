@@ -11,13 +11,15 @@ export const watch = Effect.fn('HotModule.watch')(function*(path: string) {
   const refreshCss = yield* CssRefresher
   const socket = yield* Socket.Socket
   const load = Effect.gen(function*() {
-    // The new styles are in place before the new view renders, so its new classes are never unstyled.
-    yield* refreshCss.pipe(
-      Effect.catchTag('CssLoadError', ({ href }) => Effect.logWarning(`Could not reload the stylesheet ${href}`)),
-    )
     const millis = yield* Clock.currentTimeMillis
     return yield* saferImport(`${path}?t=${millis}`)
   })
+  // The page already loaded the stylesheet: it is refreshed only when a view is swapped, before the new view
+  // renders, so that its new classes are never unstyled.
+  const reload = refreshCss.pipe(
+    Effect.catchTag('CssLoadError', ({ href }) => Effect.logWarning(`Could not reload the stylesheet ${href}`)),
+    Effect.andThen(load),
+  )
   const moduleRef = yield* SubscriptionRef.make(yield* load)
   yield* Socket.toStream(socket).pipe(
     Stream.map((frame) => new TextDecoder().decode(frame)),
@@ -25,8 +27,10 @@ export const watch = Effect.fn('HotModule.watch')(function*(path: string) {
     // cannot swap in place.
     Stream.runForEach((signal) =>
       signal === 'reload-page'
-        ? Effect.sync(() => location.reload())
-        : SubscriptionRef.updateEffect(moduleRef, () => load)
+        ? Effect.logInfo('Hot reload: reloading the page').pipe(Effect.andThen(Effect.sync(() => location.reload())))
+        : Effect.logInfo('Hot reload: swapping the view and the styles').pipe(
+          Effect.andThen(SubscriptionRef.updateEffect(moduleRef, () => reload)),
+        )
     ),
     // The dev server may restart: keep reconnecting.
     Effect.retry({ schedule: Schedule.spaced('1 second') }),

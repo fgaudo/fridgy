@@ -6,7 +6,7 @@ import * as HashSet from 'effect/HashSet'
 import * as Opt from 'effect/Option'
 import * as PositiveInteger from '@/libs/numbers/positive-integer.ts'
 import type * as UnitInterval from '@/libs/numbers/unit-interval.ts'
-import { type InputOffer, type Offer, offered, offeredInput } from '@/libs/elm/offer.ts'
+import { type InputOffer, type Offer, type Offers, offers } from '@/libs/elm/offer.ts'
 import * as Domain from '../../../domain/product.ts'
 import { Message } from './messages.ts'
 import type * as State from './state.ts'
@@ -76,11 +76,6 @@ export type Model = Readonly<{
   }>
 }>
 
-type Offers = Readonly<{
-  offer: (message: Message) => Offer<Message>
-  offerInput: <Value>(toMessage: (value: Value) => Message, current: Value) => InputOffer<Value, Message>
-}>
-
 type ProductStatus = Data.TaggedEnum.Value<ProductModel, 'Valid'>['status']
 
 const statusAt = (now: DateTime.Utc, product: Domain.Product): ProductStatus =>
@@ -95,7 +90,7 @@ const statusAt = (now: DateTime.Utc, product: Domain.Product): ProductStatus =>
     },
   })
 
-const makeAddProduct = (state: State.State, { offer, offerInput }: Offers): Model['addProduct'] => {
+const makeAddProduct = (state: State.State, { offer, offerInput }: Offers<Message>): Model['addProduct'] => {
   if (state.addProduct._tag === 'Closed') {
     return { _tag: 'Closed' }
   }
@@ -117,7 +112,7 @@ const makeAddProduct = (state: State.State, { offer, offerInput }: Offers): Mode
   }
 }
 
-const makeProductList = (state: State.State, { offer }: Offers): Model['productListStatus'] => {
+const makeProductList = (state: State.State, { offer }: Offers<Message>): Model['productListStatus'] => {
   if (state.products._tag === 'Loading' || Opt.isNone(state.maybeNow)) {
     return { _tag: 'Initial' }
   }
@@ -169,8 +164,8 @@ const makeProductList = (state: State.State, { offer }: Offers): Model['productL
 }
 
 export const makeModel = (state: State.State): Model => {
-  const offers: Offers = { offer: offered(update, state), offerInput: offeredInput(update, state) }
-  const { offer } = offers
+  const offering = offers(update, state)
+  const { offer } = offering
   return {
     isMenuOpen: state.isMenuOpen,
     openMenu: offer(Message.MenuOpened()),
@@ -179,7 +174,7 @@ export const makeModel = (state: State.State): Model => {
     isInteracting: state.isInteracting,
     isViewportAtTop: state.isViewportAtTop,
     openAddProduct: offer(Message.AddProductOpened()),
-    addProduct: makeAddProduct(state, offers),
-    productListStatus: makeProductList(state, offers),
+    addProduct: makeAddProduct(state, offering),
+    productListStatus: makeProductList(state, offering),
   }
 }

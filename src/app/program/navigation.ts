@@ -20,28 +20,21 @@ export const top = (state: State): Page => Arr.lastNonEmpty(state.stack)
 // receives the completions of its operations. Its subscriptions, though, only
 // run while it is shown: the window and its scrolling belong to the page on top.
 
-const homeState = (state: State): Opt.Option<Home.State> =>
-  Opt.map(Arr.findFirst(state.stack, Page.$is('Home')), (page) => page.state)
+type PageStates = { readonly [P in Page as P['_tag']]: P['state'] }
 
-const shownHomeState = (state: State): Opt.Option<Home.State> => {
-  const page = top(state)
-  return page._tag === 'Home' ? Opt.some(page.state) : Opt.none()
-}
+type PageOf<Tag extends Page['_tag']> = Page & Readonly<{ _tag: Tag; state: PageStates[Tag] }>
 
-const withHomeState = (state: State, home: Home.State): State => ({
-  stack: Arr.map(state.stack, (page): Page => (Page.$is('Home')(page) ? Page.Home({ state: home }) : page)),
-})
+const isPage = <Tag extends Page['_tag']>(tag: Tag) => (page: Page): page is PageOf<Tag> => page._tag === tag
 
-const aboutState = (state: State): Opt.Option<About.State> =>
-  Opt.map(Arr.findFirst(state.stack, Page.$is('About')), (page) => page.state)
+const pageState = <Tag extends Page['_tag']>(tag: Tag) => (state: State): Opt.Option<PageStates[Tag]> =>
+  Opt.map(Arr.findFirst(state.stack, isPage(tag)), (page) => page.state)
 
-const shownAboutState = (state: State): Opt.Option<About.State> => {
-  const page = top(state)
-  return page._tag === 'About' ? Opt.some(page.state) : Opt.none()
-}
+const shownPageState = <Tag extends Page['_tag']>(tag: Tag) => (state: State): Opt.Option<PageStates[Tag]> =>
+  Opt.map(Opt.liftPredicate(top(state), isPage(tag)), (page) => page.state)
 
-const withAboutState = (state: State, about: About.State): State => ({
-  stack: Arr.map(state.stack, (page): Page => (Page.$is('About')(page) ? Page.About({ state: about }) : page)),
+/** Puts `replacement` where the page with the same tag is. */
+const replacePage = (state: State, replacement: Page): State => ({
+  stack: Arr.map(state.stack, (page) => (page._tag === replacement._tag ? replacement : page)),
 })
 
 const push = (state: State, page: Page): State => ({ stack: Arr.append(state.stack, page) })
@@ -62,9 +55,9 @@ const leave = (state: State): Step =>
 export const about = Program.embed(About.program, {
   key: 'About',
   wrap: (message) => Message.GotAboutMsg({ message }),
-  get: aboutState,
-  getSubscribed: shownAboutState,
-  set: withAboutState,
+  get: pageState('About'),
+  getSubscribed: shownPageState('About'),
+  set: (state: State, about: About.State) => replacePage(state, Page.About({ state: about })),
   onEvent: Match.typeTags<About.Event, (state: State) => Step>()({
     LeaveRequested: () => leave,
   }),
@@ -78,9 +71,9 @@ const openAbout = (state: State): Step =>
 export const home = Program.embed(Home.program, {
   key: 'Home',
   wrap: (message) => Message.GotHomeMsg({ message }),
-  get: homeState,
-  getSubscribed: shownHomeState,
-  set: withHomeState,
+  get: pageState('Home'),
+  getSubscribed: shownPageState('Home'),
+  set: (state: State, home: Home.State) => replacePage(state, Page.Home({ state: home })),
   onEvent: Match.typeTags<Home.Event, (state: State) => Step>()({
     InfoRequested: () => openAbout,
     LeaveRequested: () => leave,

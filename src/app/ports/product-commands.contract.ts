@@ -7,6 +7,7 @@ import * as Effect from 'effect/Effect'
 import * as Equal from 'effect/Equal'
 import type * as Layer from 'effect/Layer'
 import * as Opt from 'effect/Option'
+import * as References from 'effect/References'
 import * as fc from 'fast-check'
 import * as ProductArbitrary from '../domain/product.arbitrary.ts'
 import * as Product from '../domain/product.ts'
@@ -22,7 +23,13 @@ export const check = <A, E, R>(
     fc.asyncProperty(arbitrary, (a) =>
       Effect.runPromise(
         // A request that is never completed hangs whoever waits on it: the timeout turns that into a failure.
-        property(a).pipe(Effect.timeout('5 seconds'), Effect.provide(adapter()), Effect.orDie),
+        property(a).pipe(
+          Effect.timeout('5 seconds'),
+          Effect.provide(adapter()),
+          Effect.orDie,
+          // Every run builds a storage, which logs that it is ready: only warnings are worth showing.
+          Effect.provideService(References.MinimumLogLevel, 'Warn'),
+        ),
       )),
     { numRuns: 25 },
   )

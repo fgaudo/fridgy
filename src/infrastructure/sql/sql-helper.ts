@@ -35,28 +35,12 @@ export class SqlHelper extends Context.Service<SqlHelper>()(
   {
     make: Effect.gen(function*() {
       const sql = yield* Sql.SqlClient.SqlClient
-      const productDataLoader = yield* Sql.SqlModel.makeResolvers(
-        Product,
-        {
-          idColumn: ProductSchema.columns.id,
-          spanPrefix: 'ProductDataLoader',
-          tableName: ProductSchema.table,
-        } as const,
-      )
       const productRepository = yield* Sql.SqlModel.makeRepository(
         Product,
         {
           idColumn: ProductSchema.columns.id,
           spanPrefix: 'ProductRepository',
           tableName: ProductSchema.table,
-        } as const,
-      )
-      const productExpirationDataLoader = yield* Sql.SqlModel.makeResolvers(
-        ProductExpiration,
-        {
-          idColumn: ProductExpirationSchema.columns.id,
-          spanPrefix: 'ProductExpirationDataLoader',
-          tableName: ProductExpirationSchema.table,
         } as const,
       )
       const productExpirationRepository = yield* Sql.SqlModel.makeRepository(
@@ -138,9 +122,6 @@ export class SqlHelper extends Context.Service<SqlHelper>()(
       })()
       return {
         insertProductWithExpirationResolver,
-        productDataLoader,
-        productExpirationDataLoader,
-        productExpirationRepository,
         productRepository,
         getProducts,
       }

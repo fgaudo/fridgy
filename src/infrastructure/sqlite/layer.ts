@@ -32,5 +32,6 @@ export const layer = SqliteWasm.SqliteMigrator.layer({
       worker: makeWorker,
     }),
   ),
+  Layer.tap(() => Effect.logInfo('Storage ready: sqlite, migrated', Object.keys(migrations))),
   Layer.orDie,
 )

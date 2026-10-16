@@ -115,6 +115,7 @@ export const make = Effect.fn('Engine.make')(function*<State, Message, R, S, K>(
   update,
   subscriptions,
   makeDefectMessage,
+  describeMessage = (message) => message,
 }: {
   init: Step<State, Message, R>
   update: Update<State, Message, R>
@@ -125,6 +126,8 @@ export const make = Effect.fn('Engine.make')(function*<State, Message, R, S, K>(
    * the engine. Defects in `update` always fail the engine.
    */
   makeDefectMessage?: (cause: unknown) => NoInfer<Message>
+  /** How a message appears in the logs, e.g. its tags only, without its data. */
+  describeMessage?: (message: NoInfer<Message>) => unknown
 }) {
   const maybeMakeDefectMessage = Opt.fromUndefinedOr(makeDefectMessage)
   const context = yield* Effect.context<R | S>()
@@ -139,7 +142,7 @@ export const make = Effect.fn('Engine.make')(function*<State, Message, R, S, K>(
   const offer = (message: Message) => Queue.offer(queue, { message, origin: fromProgram })
   const runCommand = (command: Command<Message, R>) =>
     Opt.match(maybeMakeDefectMessage, {
-      onNone: () => command,
+      onNone: () => command.pipe(Effect.tapDefect((defect) => Effect.logError('A command died', defect))),
       onSome: (f) => Effect.catchDefect(command, (defect) => Effect.succeedSome(f(defect))),
     }).pipe(
       Effect.flatMap(Opt.match({ onNone: () => Effect.void, onSome: offer })),
@@ -157,14 +160,16 @@ export const make = Effect.fn('Engine.make')(function*<State, Message, R, S, K>(
     const next = subscriptions(state)
     const nextKeys = HashSet.fromIterable(HashMap.keys(next))
     for (const key of HashSet.difference(active, nextKeys)) {
+      yield* Effect.logDebug('Subscription stopped', key)
       yield* FiberMap.remove(subscriptionFibers, key)
     }
     for (const [key, stream$] of next) {
       if (HashSet.has(active, key)) {
         continue
       }
+      yield* Effect.logDebug('Subscription started', key)
       yield* Opt.match(maybeMakeDefectMessage, {
-        onNone: () => stream$,
+        onNone: () => stream$.pipe(Stream.tapDefect((defect) => Effect.logError('A subscription died', key, defect))),
         onSome: (f) => makeResilient(stream$, f),
       }).pipe(
         Stream.runForEach(offer),
@@ -182,12 +187,21 @@ export const make = Effect.fn('Engine.make')(function*<State, Message, R, S, K>(
     const result = update(message)(state)
     if (isRejected(result)) {
       if (origin._tag === 'View' && origin.revision === revision) {
+        yield* Effect.logError(
+          'The view sent a message that update rejects: the model offered it, so the two disagree',
+          describeMessage(message),
+          { revision },
+        )
         return yield* Effect.die(new RejectedMessage({ message, revision }))
       }
-      yield* Effect.logDebug('Ignored a stale message', message)
+      yield* Effect.logDebug('Ignored a stale message', describeMessage(message))
       return active
     }
     const { state: newState, commands = [] } = result
+    // A message that changes nothing and does nothing (e.g. a scroll event that keeps the same state) is noise.
+    if (newState !== state || commands.length > 0) {
+      yield* Effect.logDebug('Message', describeMessage(message), { revision: revision + 1, commands: commands.length })
+    }
     yield* SubscriptionRef.set(stateRef, { state: newState, revision: revision + 1 })
     const nextActive = yield* reconcile(active, newState)
     yield* Effect.forEach(commands, runCommand, { discard: true })

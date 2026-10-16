@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 import * as HashMap from 'effect/HashMap'
-import * as Engine from '@/libs/elm/engine.ts'
+import { applyAll } from '@/libs/testing/update.ts'
 import type * as Home from '../pages/home/program.ts'
 // Tests may reach into a page: they drive it like its own view and subscriptions would.
 import { Message as HomeMessage } from '../pages/home/program/messages.ts'
@@ -11,12 +11,7 @@ import { init, update } from './update.ts'
 
 const fromHome = (message: Home.Message) => Message.GotHomeMsg({ message })
 
-const run = (messages: ReadonlyArray<Message>, from: State = init.state) =>
-  messages.reduce((state, message) => {
-    const result = update(message)(state)
-    if (Engine.isRejected(result)) throw new Error(`update rejected ${message._tag}`)
-    return result.state
-  }, from)
+const run = (messages: ReadonlyArray<Message>, from: State = init.state) => applyAll(update)(messages, from).state
 
 /** The pages whose subscriptions run, from the namespaced keys (`['Home', 'clock']`, …). */
 const subscribedPages = (state: State) =>

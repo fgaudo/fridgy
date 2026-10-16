@@ -19,7 +19,7 @@ export class RootViews extends Context.Service<
 >()('7e2b556446628b98') {}
 
 const program = Effect.gen(function*() {
-  const engine = yield* Engine.make(App.program)
+  const engine = yield* Engine.make({ ...App.program, describeMessage: App.describeMessage })
   const renderer = yield* SnabbdomRenderer
   const views = yield* RootViews
   // Whichever ends first ends the app: a dead engine or a failed render.
@@ -31,7 +31,10 @@ const program = Effect.gen(function*() {
         dispatch: engine.dispatchFrom(revision),
       })),
       view$: views,
-      onFirstPaint: Effect.andThen(Fonts.loaded, SplashScreen.hide),
+      onFirstPaint: Effect.logInfo('First view displayed').pipe(
+        Effect.andThen(Fonts.loaded),
+        Effect.andThen(SplashScreen.hide),
+      ),
     }),
   )
 })

@@ -38,6 +38,8 @@ export const layer = Layer.effect(
                 name: entry.request.snapshot.name,
               }, insertProductWithExpirationResolver)
             ),
+          // The requests only learn that they failed: the cause is logged here, where it is known.
+          Effect.tapError((error) => Effect.logWarning('Could not insert products', error)),
           Effect.option,
         )
         if (Opt.isNone(maybeProducts)) {
@@ -67,10 +69,14 @@ export const layer = Layer.effect(
             }),
           ))
         // Every request must be completed, including the ones we cannot run.
+        if (Arr.isArrayNonEmpty(invalidEntries)) {
+          yield* Effect.logDebug('Not deleting ids that were never written', invalidEntries.map((e) => e.request.id))
+        }
         yield* Effect.forEach(invalidEntries, Request.fail(undefined))
         const maybeIds = yield* pipe(
           validEntries,
           Effect.forEach(([, id]) => productRepository.delete(id)),
+          Effect.tapError((error) => Effect.logWarning('Could not delete products', error)),
           Effect.option,
         )
         return yield* Effect.forEach(

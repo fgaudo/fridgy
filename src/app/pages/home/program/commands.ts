@@ -19,18 +19,19 @@ export const deleteProducts = Effect.fn(function*({
   ids: NonEmptyHashSet.NonEmptyHashSet<string>
 }) {
   const { deleteById } = yield* ProductCommands.ProductCommands
-  yield* Effect.logInfo('Attempting to delete products...')
+  yield* Effect.logDebug('Deleting products', { count: HashSet.size(ids) })
   const maybeDeleted = yield* pipe(
     ids,
     HashSet.map((id) => ProductCommands.DeleteProductById({ id })),
     Effect.forEach(Effect.request(deleteById), { concurrency: 'unbounded' }),
     Effect.option,
   )
-  if (Opt.isNone(maybeDeleted)) {
-    yield* Effect.logWarning('Could not delete products')
-  }
+  // The storage logs the cause.
+  yield* Opt.isSome(maybeDeleted)
+    ? Effect.logInfo('Deleted products', { count: HashSet.size(ids) })
+    : Effect.logWarning('Could not delete the products')
   return Opt.some(Message.DeleteProductsCompleted({ operation, succeeded: Opt.isSome(maybeDeleted) }))
-}, Effect.withLogSpan('DeleteProducts'))
+}, (effect, { operation }) => effect.pipe(Effect.withLogSpan('DeleteProducts'), Effect.annotateLogs({ operation })))
 
 export const addProduct = Effect.fn(function*(
   operation: OperationId,
@@ -47,23 +48,24 @@ export const addProduct = Effect.fn(function*(
     maybeName: productData.maybeName,
   })
   if (Opt.isNone(maybeProduct)) {
-    yield* Effect.logWarning('Product is invalid')
+    yield* Effect.logWarning('The product is not valid: it was not added', productData)
     return Opt.some(Message.AddProductCompleted({ operation, succeeded: false }))
   }
   const product = maybeProduct.value
-  yield* Effect.logInfo(`Attempting to add product "${Product.name(product)}"...`)
+  yield* Effect.logDebug('Adding a product', Product.name(product))
   const maybeId = yield* pipe(
     ProductCommands.AddProduct({ snapshot: Product.toSnapshot(product) }),
     Effect.request(add),
     Effect.option,
   )
   if (Opt.isNone(maybeId)) {
+    // The storage logs the cause.
     yield* Effect.logWarning('Could not add the product')
     return Opt.some(Message.AddProductCompleted({ operation, succeeded: false }))
   }
-  yield* Effect.logInfo(`Successfully added product with id ${maybeId.value}`)
+  yield* Effect.logInfo('Added a product', { id: maybeId.value })
   return Opt.some(Message.AddProductCompleted({ operation, succeeded: true }))
-})
+}, (effect, operation) => effect.pipe(Effect.withLogSpan('AddProduct'), Effect.annotateLogs({ operation })))
 
 export const scrollToTop = Effect.gen(function*() {
   const { scrollToTop } = yield* Viewport

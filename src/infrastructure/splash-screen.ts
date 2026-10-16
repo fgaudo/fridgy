@@ -6,5 +6,6 @@ import * as Effect from 'effect/Effect'
 // with its fonts.
 // In the browser, Capacitor falls back to a web implementation.
 export const hide = Effect.tryPromise(() => SplashScreen.hide()).pipe(
+  Effect.andThen(Effect.logDebug('Splash screen hidden')),
   Effect.catch((error) => Effect.logWarning('Could not hide the splash screen', error)),
 )
