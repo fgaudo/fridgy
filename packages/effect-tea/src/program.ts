@@ -1,4 +1,5 @@
 import * as Arr from 'effect/Array'
+import * as Channel from 'effect/Channel'
 import * as Effect from 'effect/Effect'
 import * as HashMap from 'effect/HashMap'
 import * as Opt from 'effect/Option'
@@ -31,8 +32,7 @@ const mapSubscriptions = <A, B, R, K, NewK>(
   HashMap.reduce(
     subscriptions,
     HashMap.empty<NewK, Engine.Subscription<B, R>>(),
-    (acc, subscription, key) =>
-      HashMap.set(acc, mapKey(key), (emit) => subscription((message) => emit(mapMessage(message)))),
+    (acc, subscription, key) => HashMap.set(acc, mapKey(key), Channel.map(subscription, mapMessage)),
   )
 
 type ParentStep<ParentState, ParentMessage, R> = (state: ParentState) => Engine.Step<ParentState, ParentMessage, R>

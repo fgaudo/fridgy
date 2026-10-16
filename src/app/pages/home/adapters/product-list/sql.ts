@@ -1,7 +1,7 @@
 import * as Arr from 'effect/Array'
 import * as Effect from 'effect/Effect'
 import * as Layer from 'effect/Layer'
-import * as Listener from '@/libs/listener/listener.ts'
+import * as Source from '@/libs/source/source.ts'
 import * as Opt from 'effect/Option'
 import * as Result from 'effect/Result'
 import * as Stream from 'effect/Stream'
@@ -15,7 +15,7 @@ export const layer = Layer.effect(
   Effect.gen(function*() {
     const { getProducts } = yield* SqlHelper.SqlHelper
     const sql = yield* SqlClient.SqlClient
-    const changes = Listener.fromStream(
+    const changes = Source.fromStream(
       sql.reactive(
         [ProductSchema.table, ProductExpirationSchema.table],
         getProducts.pipe(

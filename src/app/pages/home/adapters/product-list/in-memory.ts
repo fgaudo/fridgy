@@ -1,7 +1,7 @@
 import * as Arr from 'effect/Array'
 import * as DateTime from 'effect/DateTime'
 import * as Layer from 'effect/Layer'
-import * as Listener from '@/libs/listener/listener.ts'
+import * as Source from '@/libs/source/source.ts'
 import * as Opt from 'effect/Option'
 import * as Order from 'effect/Order'
 import * as Result from 'effect/Result'
@@ -23,7 +23,7 @@ const expiringFirst = Order.combine(
 export const layer = Layer.effect(
   ProductList,
   InMemoryStore.useSync(({ tables }) => ({
-    changes: Listener.fromStream(
+    changes: Source.fromStream(
       SubscriptionRef.changes(tables).pipe(
         Stream.map(({ products }): StoredProducts =>
           Result.succeed(Arr.map(Arr.sort(products, expiringFirst), (row) => ({

@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import * as Effect from 'effect/Effect'
+import * as Channel from 'effect/Channel'
 import * as HashMap from 'effect/HashMap'
 import * as Opt from 'effect/Option'
 import * as Engine from './engine.ts'
@@ -10,7 +10,10 @@ type Parent = Readonly<{ child: Opt.Option<number>; isShown: boolean }>
 
 type Increment = 'Increment'
 
-const ticks: Engine.Subscription<Increment, never> = (emit) => Effect.andThen(emit('Increment'), Effect.never)
+const ticks: Engine.Subscription<Increment, never> = Channel.concatWith(
+  Channel.succeed<Increment>('Increment'),
+  () => Channel.never,
+)
 
 const child: Pick<Program<number, unknown, Increment, never>, 'update' | 'subscriptions'> = {
   update: () => (count) => ({ state: count + 1 }),

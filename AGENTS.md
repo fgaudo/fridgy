@@ -26,11 +26,14 @@ The pages to copy are `src/app/pages/home` (full) and `src/app/pages/about` (min
   (`Effect.die`): never silenced, retried or turned into a message. Commands turn expected failures into
   messages with `Tea.attempt` (in a subscription, `emit` a message for the failure); `run`'s `onBug` may report a
   crash, never recover from it.
-- **A source that never ends is a `Listener`, a process that ends is a `Stream`** (`libs/listener`). Ports
-  that pages subscribe to (database changes, scrolling, the back button) give a `Listener`, whose type
-  cannot end: an adapter built on a library's stream wraps it with `Listener.fromStream`, which keeps
-  listening once the stream has ended. A finite process with progress (a download) is a `Stream`, whose end
-  the page turns into a message before subscribing to it.
+- **A port says in its type how its data ends.** One value is an `Effect<A, E>`. Values over time are a
+  `Source<A, Done, E>` (`libs/source`, an Effect `Channel`): `Done` is what it ends with, e.g. the file of a
+  download, and `never` for a source that never ends (database changes, scrolling, the back button). A
+  `Tea.Subscription` is the same kind of channel, so a page subscribes by mapping a port's
+  `Source<A, never>` into messages (`Channel.unwrap` to read the service, `Channel.map`); a finished process
+  turns its `Done` into a message. An adapter built on a library's stream wraps it with `Source.fromStream`,
+  which keeps listening once the stream has ended. Only on-going observation is a `Source`: a one-off read is
+  an `Effect`.
 - **Effects only in commands and subscriptions.** `update`, `makeModel` and views are pure; one global state,
   no local view state or mutable singletons.
 - **The model offers, `update` decides.** Conditions live only in `update`, which returns `Engine.reject`
@@ -58,7 +61,7 @@ The pages to copy are `src/app/pages/home` (full) and `src/app/pages/about` (min
   receiving their completions, but their subscriptions run only while they are on top.
 - **Reads in the pages, writes in the app.** Write ports (`app/ports`, e.g. `ProductCommands`) have no read.
   Each page has its own query ports, shaped for what it shows; it learns about writes from the storage's
-  changes (a `Listener`), not from the page that wrote. Persistence ports take a domain `Snapshot` and return
+  changes (a `Source`), not from the page that wrote. Persistence ports take a domain `Snapshot` and return
   `UnvalidatedSnapshot`s; adapters never read domain fields.
 - **Shared things move up, never sideways.** What several pages need (entities, write ports, a port a second
   page wants) moves to `src/app/domain`, `ports`, `adapters`; pages never import each other.

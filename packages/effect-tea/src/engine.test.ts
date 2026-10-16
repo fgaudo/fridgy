@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 import * as Cause from 'effect/Cause'
+import * as Channel from 'effect/Channel'
 import * as Effect from 'effect/Effect'
 import * as Exit from 'effect/Exit'
 import * as HashMap from 'effect/HashMap'
@@ -125,11 +126,13 @@ describe('Engine subscriptions', () => {
         HashMap.fromIterable(names.map((name) =>
           [
             [name, 1] as const,
-            (): Effect.Effect<never> =>
+            // The scope of the effect lasts as long as the channel: stopping it releases what it holds.
+            Channel.unwrap(
               Effect.acquireRelease(
                 Effect.sync(() => log.push(`start ${name}`)),
                 () => Effect.sync(() => log.push(`stop ${name}`)),
-              ).pipe(Effect.andThen(Effect.never), Effect.scoped),
+              ).pipe(Effect.as(Channel.never)),
+            ),
           ] as const
         )),
       onRejected: 'die',

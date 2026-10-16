@@ -1,3 +1,4 @@
+import * as Channel from 'effect/Channel'
 import * as DateTime from 'effect/DateTime'
 import * as Effect from 'effect/Effect'
 import * as HashMap from 'effect/HashMap'
@@ -13,37 +14,44 @@ const CLOSE_TO_TOP_THRESHOLD = 30
 
 // Expiration statuses derive from the current time: it is refreshed often
 // enough for days-long expirations.
-const clock: Tea.Subscription<Message, never> = (emit) =>
-  DateTime.now.pipe(
-    Effect.flatMap((now) => emit(Message.TimeChanged({ now }))),
-    Effect.andThen(Effect.sleep('30 seconds')),
-    Effect.forever,
-  )
+const clock: Tea.Subscription<Message, never> = Channel.forever(
+  Channel.fromEffect(DateTime.now).pipe(
+    Channel.map((now) => Message.TimeChanged({ now })),
+    Channel.concatWith(() => Channel.fromEffectDrain(Effect.sleep('30 seconds'))),
+  ),
+)
 
-const products: Tea.Subscription<Message, ProductList> = (emit) =>
-  Effect.flatMap(
+const products: Tea.Subscription<Message, ProductList> = Channel.unwrap(
+  Effect.map(
     Effect.service(ProductList),
-    ({ changes }) => changes((result) => emit(Message.ProductsChanged({ result }))),
-  )
+    ({ changes }) => Channel.map(changes, (result) => Message.ProductsChanged({ result })),
+  ),
+)
 
-const scrolling: Tea.Subscription<Message, Viewport> = (emit) =>
-  Effect.flatMap(
+const scrolling: Tea.Subscription<Message, Viewport> = Channel.unwrap(
+  Effect.map(
     Effect.service(Viewport),
-    ({ isScrolling }) => isScrolling((isInteracting) => emit(Message.InteractionChanged({ isInteracting }))),
-  )
+    ({ isScrolling }) => Channel.map(isScrolling, (isInteracting) => Message.InteractionChanged({ isInteracting })),
+  ),
+)
 
-const atTop: Tea.Subscription<Message, Viewport> = (emit) =>
-  Effect.flatMap(
+const atTop: Tea.Subscription<Message, Viewport> = Channel.unwrap(
+  Effect.map(
     Effect.service(Viewport),
-    ({ isNearTop }) => isNearTop(0)((isAtTop) => emit(Message.ViewportAtTopChanged({ isAtTop }))),
-  )
+    ({ isNearTop }) => Channel.map(isNearTop(0), (isAtTop) => Message.ViewportAtTopChanged({ isAtTop })),
+  ),
+)
 
-const closeToTop: Tea.Subscription<Message, Viewport> = (emit) =>
-  Effect.flatMap(
+const closeToTop: Tea.Subscription<Message, Viewport> = Channel.unwrap(
+  Effect.map(
     Effect.service(Viewport),
     ({ isNearTop }) =>
-      isNearTop(CLOSE_TO_TOP_THRESHOLD)((isCloseToTop) => emit(Message.ViewportCloseToTopChanged({ isCloseToTop }))),
-  )
+      Channel.map(
+        isNearTop(CLOSE_TO_TOP_THRESHOLD),
+        (isCloseToTop) => Message.ViewportCloseToTopChanged({ isCloseToTop }),
+      ),
+  ),
+)
 
 export const subscriptions: Tea.Emitter<State, Message, Deps> = (_state) =>
   HashMap.make(

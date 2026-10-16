@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 import * as Cause from 'effect/Cause'
+import * as Channel from 'effect/Channel'
 import * as Effect from 'effect/Effect'
 import * as Exit from 'effect/Exit'
 import * as HashMap from 'effect/HashMap'
@@ -135,7 +136,7 @@ describe('onBug', () => {
   test('a defect in a subscription is reported with its key', async () => {
     const broken: Program<number, unknown, Message, never> = {
       ...counter,
-      subscriptions: () => HashMap.make(['broken', () => Effect.die('boom')]),
+      subscriptions: () => HashMap.make(['broken', Channel.die('boom')]),
     }
     expect(await diesIn(broken)).toEqual({ died: true, bugs: ['broken'] })
   })

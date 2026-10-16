@@ -362,32 +362,43 @@ to `update`.
 
 ### 5. Subscriptions
 
-`subscriptions(state)` returns a `HashMap` from keys to **subscriptions**. A subscription listens to the world
-and sends what it hears with `emit`:
+`subscriptions(state)` returns a `HashMap` from keys to **subscriptions**. A subscription is an Effect
+[`Channel`](https://effect.website) of messages: values over time, with what they end with in their type.
 
 ```ts
-type Subscription<Message, R> = (
-  emit: (message: Message) => Effect<void>,
-) => Effect<never, never, R>
+type Subscription<Message, R> = Channel<
+  Message,
+  never,
+  never,
+  unknown,
+  unknown,
+  unknown,
+  R
+>
+//                                      │        │      │      └──── input: none ────┘
+//                                  messages  no error  ends with never
 ```
 
-Its success type is `never`: **a subscription never ends on its own.** It stops only when its key goes away.
+Its end value is `never`: **a subscription never ends on its own.** It stops only when its key goes away.
 After every change, the engine compares the keys:
 
 - a key that **appears** starts its subscription;
 - a key that **stays** keeps its subscription running, untouched;
-- a key that **disappears** interrupts its subscription.
+- a key that **disappears** interrupts its subscription, which releases what it holds.
 
 ```ts
 import { type Subscription } from '@fgaudo/effect-tea'
+import * as Channel from 'effect/Channel'
 import * as Effect from 'effect/Effect'
 import * as HashMap from 'effect/HashMap'
 
-// A clock that ticks only while loading.
-const clock: Subscription<Message, never> = (emit) =>
-  Effect.forever(
-    Effect.andThen(Effect.sleep('1 second'), emit(Message.Ticked())),
-  )
+// A clock that ticks only while loading: every second, then again, forever.
+const clock: Subscription<Message, never> = Channel.forever(
+  Channel.map(
+    Channel.fromEffect(Effect.sleep('1 second')),
+    () => Message.Ticked(),
+  ),
+)
 
 const subscriptions = (state: State) =>
   state._tag === 'Loading'
@@ -395,44 +406,59 @@ const subscriptions = (state: State) =>
     : HashMap.empty<string, Subscription<Message, never>>()
 ```
 
-Keys are compared by value, so they can be strings, numbers, tuples of them, or Effect data.
-
-**From a stream.** A stream, unlike a subscription, may end: its type cannot promise otherwise. So running
-one as a subscription means deciding what its end means, and that decision is yours:
+Keys are compared by value, so they can be strings, numbers, tuples of them, or Effect data. Channels keep
+their end value through `Channel.map`, `Channel.filter`, `Channel.mapEffect`, `Channel.merge`…, and
+`Channel.unwrap` builds one from an effect, e.g. to read a service:
 
 ```ts
-// A stream that must never end: if it does, the promise is broken, and that is a bug.
-const fromEndlessStream = <Message, R>(
+const products: Subscription<Message, ProductList> = Channel.unwrap(
+  Effect.map(
+    Effect.service(ProductList),
+    ({ changes }) => Channel.map(changes, (list) => Message.Listed({ list })),
+  ),
+)
+```
+
+**From a stream.** A stream, unlike a subscription, may end: its type cannot say otherwise. So running one as
+a subscription means deciding what its end means, and that decision is yours:
+
+```ts
+// Once the stream has ended, keep listening to nothing until the key goes away.
+const listen = <Message, R>(
   stream: Stream.Stream<Message, never, R>,
 ): Subscription<Message, R> =>
-(emit) =>
-  Stream.runForEach(stream, emit).pipe(
-    Effect.andThen(Effect.die(new Error('A subscribed stream ended'))),
+  Stream.toChannel(stream).pipe(
+    Channel.flattenArray,
+    Channel.concatWith(() => Channel.never),
   )
 
-// A stream that emits a few values, then stays quiet until its key goes away.
-const quietAfter = <Message, R>(
+// Or treat the end as a bug.
+const listenForever = <Message, R>(
   stream: Stream.Stream<Message, never, R>,
 ): Subscription<Message, R> =>
-(emit) => Stream.runForEach(stream, emit).pipe(Effect.andThen(Effect.never))
+  Stream.toChannel(stream).pipe(
+    Channel.flattenArray,
+    Channel.concatWith(() =>
+      Channel.die(new Error('A subscribed stream ended'))
+    ),
+  )
 ```
 
 **Failures.** A subscription cannot fail: an expected failure must become a message, so that `update` decides
 what it means.
 
-- Transient errors can be retried inside the stream, with `Stream.retry` and a `Schedule`, before they ever
-  reach `update`.
-- Otherwise, turn the failure into a message (`Stream.catch`), and let the state decide whether to listen
-  again. The subscription waits after its last message; `update` removes its key, and brings it back to retry:
+- Transient errors can be retried at the source, with `Stream.retry` (or `Channel.retry`) and a `Schedule`,
+  before they ever reach `update`.
+- Otherwise, turn the failure into a message, and let the state decide whether to listen again. The
+  subscription waits after its last message; `update` removes its key, and brings it back to retry:
 
 ```ts
-const feed: Subscription<Message, never> = (emit) =>
+const feed: Subscription<Message, never> = listen(
   changes.pipe(
     Stream.map((change) => Message.FeedChanged({ change })),
     Stream.catch(() => Stream.make(Message.FeedFailed())),
-    Stream.runForEach(emit),
-    Effect.andThen(Effect.never),
-  )
+  ),
+)
 
 subscriptions: (state) =>
   state.feed._tag === 'Listening' ? HashMap.make(['feed', feed]) : HashMap.empty()
@@ -443,7 +469,7 @@ RetryClicked: Failed → Listening    // the key comes back: a new subscription 
 ```
 
 A **defect** in a subscription (an exception, an `Effect.die`) ends the run, like any defect. To recover from
-one, handle it at the source with Effect's tools (`Effect.catchDefect`, `Stream.catchCause`).
+one, handle it at the source with Effect's tools (`Channel.catchDefect`, `Stream.catchCause`).
 
 ### 6. Rejections: stale or bug
 
@@ -719,7 +745,7 @@ From `@fgaudo/effect-tea`:
 | `reject`, `Rejected`, `isRejected`              | the rejection `update` returns, and its check                                              |
 | `Command<Message, R>`                           | `Effect<Option<Message>, never, R>`                                                        |
 | `attempt`                                       | a command from an effect that may fail: its failure becomes a message                      |
-| `Subscription`                                  | `(emit) => Effect<never>`: listens to the world, and never ends on its own                 |
+| `Subscription`                                  | a `Channel` of messages that never ends: listens to the world while its key is there       |
 | `Emitter`, `Subscriptions`                      | `(state) => HashMap<K, Subscription<Message>>`, reconciled by key                          |
 | `offers`, `offered`, `offeredInput`             | ask `update` what the model may offer                                                      |
 | `Offer`, `InputOffer`, `Offered`, `Offers`      | an optional offered message; an optional function to one; the brand; what `offers` returns |

@@ -1,3 +1,4 @@
+import * as Channel from 'effect/Channel'
 import * as Data from 'effect/Data'
 import * as Effect from 'effect/Effect'
 import * as FiberMap from 'effect/FiberMap'
@@ -64,12 +65,10 @@ type Envelope<State, Message> = Readonly<{ message: Message; origin: Origin<Stat
 const fromProgram: Origin<never> = { _tag: 'Program' }
 
 /**
- * Listens to the world while its key is in the subscriptions, sending what it hears with `emit`. It never
- * ends on its own, as its success type says: it stops when its key goes away.
+ * Listens to the world while its key is in the subscriptions: an Effect `Channel` of messages that takes no
+ * input, cannot fail, and never ends, as its `never` end value says. It stops when its key goes away.
  */
-export type Subscription<Message, R> = (
-  emit: (message: Message) => Effect.Effect<void>,
-) => Effect.Effect<never, never, R>
+export type Subscription<Message, R> = Channel.Channel<Message, never, never, unknown, unknown, unknown, R>
 
 export type Subscriptions<K, Message, R> = HashMap.HashMap<K, Subscription<Message, R>>
 
@@ -198,7 +197,7 @@ export const make = Effect.fn('Engine.make')(function*<State, Message, R, S, K>(
         continue
       }
       yield* Effect.logDebug('Subscription started', key)
-      yield* subscription((message) => Effect.asVoid(offer(message))).pipe(
+      yield* Channel.runForEach(subscription, (message) => Effect.asVoid(offer(message))).pipe(
         Effect.tapDefect((defect) => reportDefect(defect, { _tag: 'Subscription', key })),
         Effect.provideContext(context),
         FiberMap.run(subscriptionFibers, key),

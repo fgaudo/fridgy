@@ -3,8 +3,8 @@
 // `<adapter>.test.ts` runs it with its own layers.
 import { describe, test } from 'bun:test'
 import * as Arr from 'effect/Array'
+import * as Channel from 'effect/Channel'
 import * as DateTime from 'effect/DateTime'
-import * as Deferred from 'effect/Deferred'
 import * as Effect from 'effect/Effect'
 import * as Equal from 'effect/Equal'
 import type * as Layer from 'effect/Layer'
@@ -16,19 +16,15 @@ import { add, check, deleteById } from '../../../ports/product-commands.test-con
 import * as ProductArbitrary from '../../../domain/product.test-arbitrary.ts'
 import * as Product from '../../../domain/product.ts'
 import type { ProductCommands } from '../../../ports/product-commands.ts'
-import { ProductList, type StoredProduct, type StoredProducts } from './product-list.ts'
+import { ProductList, type StoredProduct } from './product-list.ts'
 
 type Storage = ProductCommands | ProductList
 
 /** The list as it is now: `changes` emits it on subscription. */
 const list = Effect.gen(function*() {
   const { changes } = yield* ProductList
-  const first = yield* Deferred.make<StoredProducts>()
-  // `changes` never ends: it is interrupted once the first list has arrived.
-  const result = yield* Effect.raceFirst(
-    Deferred.await(first),
-    changes((products) => Effect.asVoid(Deferred.succeed(first, products))),
-  )
+  // `changes` never ends: it is stopped once the first list has arrived.
+  const result = yield* Effect.flatMap(Channel.runHead(changes), Effect.fromOption).pipe(Effect.orDie)
   return yield* Result.match(result, {
     onFailure: () => Effect.die(new Error('the storage could not be read')),
     onSuccess: Effect.succeed,
@@ -85,13 +81,14 @@ export const productListContract = (name: string, adapter: () => Layer.Layer<Sto
         Effect.gen(function*() {
           const { changes } = yield* ProductList
           const lists = yield* Queue.unbounded<ReadonlyArray<StoredProduct>>()
-          yield* changes((result) =>
-            Result.isSuccess(result) ? Effect.asVoid(Queue.offer(lists, result.success)) : Effect.void
-          )
+          yield* Channel.runForEach(changes, (result) =>
+            Result.isSuccess(result) ? Effect.asVoid(Queue.offer(lists, result.success)) : Effect.void)
             .pipe(Effect.forkScoped)
           const waitUntil = (predicate: (products: ReadonlyArray<StoredProduct>) => boolean): Effect.Effect<void> =>
             Queue.take(lists).pipe(
-              Effect.flatMap((products) => predicate(products) ? Effect.void : waitUntil(predicate)),
+              Effect.flatMap((products) =>
+                predicate(products) ? Effect.void : waitUntil(predicate)
+              ),
             )
           yield* waitUntil(() => true)
           const id = yield* add(product)

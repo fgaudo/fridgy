@@ -1,7 +1,7 @@
 import * as Context from 'effect/Context'
 import type * as Opt from 'effect/Option'
 import type * as Result from 'effect/Result'
-import type { Listener } from '@/libs/listener/listener.ts'
+import type { Source } from '@/libs/source/source.ts'
 import type * as Product from '../../../domain/product.ts'
 
 /** A stored product, still unvalidated: storage may contain anything. */
@@ -16,6 +16,6 @@ export class ProductList extends Context.Service<
   ProductList,
   {
     /** Event: emits the list on subscription and after every change to the stored products. */
-    readonly changes: Listener<StoredProducts>
+    readonly changes: Source<StoredProducts, never>
   }
 >()('81f05e4ce84c436a') {}

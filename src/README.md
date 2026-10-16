@@ -24,7 +24,7 @@ src/
 │     └─ program/ · domain/ · ports/ · adapters/
 │
 ├─ infrastructure/       technical building blocks: sqlite, sql, in-memory store, renderer, hot reload
-├─ libs/                 generic, reusable code (the snabbdom bridge and JSX runtime, listeners, branded numbers, …)
+├─ libs/                 generic, reusable code (the snabbdom bridge and JSX runtime, sources, branded numbers, …)
 └─ assets/               index.html and styles
 ```
 

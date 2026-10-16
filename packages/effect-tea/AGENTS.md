@@ -40,7 +40,7 @@ All code, comments, identifiers, commit messages and `.md` files are in **Englis
 - **Defects always die.** `onBug` reports them, and nothing in the library may retry them, swallow them or
   turn them into messages. `RejectionPolicy` is the only opt-in, and it only covers rejections, since a
   rejection leaves the state unchanged.
-- **A subscription never ends on its own**: its type is `(emit) => Effect<never, never, R>`, so only an
+- **A subscription never ends on its own**: it is a `Channel` whose end value is `never`, so only an
   interruption, a defect or its key going away stops it. What the end of a stream means is the caller's
   decision: the library offers no helper that takes it for them.
 - **Subscriptions are reconciled by key**: a new key starts its subscription, a kept key leaves it running, a
