@@ -232,3 +232,83 @@ describe('Engine same state', () => {
     expect(reached).toEqual({ state: 1, revision: 1 })
   })
 })
+
+describe('Engine subscriptions that end', () => {
+  // While `listening`, a subscription sends `a`, then ends with `end`; `Bumped` changes the state, not the keys.
+  type Heard = Readonly<{ listening: boolean; heard: ReadonlyArray<string>; bumps: number }>
+  type Signal =
+    | Readonly<{ _tag: 'Listened'; listening: boolean }>
+    | Readonly<{ _tag: 'Heard'; value: string }>
+    | Readonly<{ _tag: 'Bumped' }>
+
+  const heard = (value: string): Signal => ({ _tag: 'Heard', value })
+
+  const make = (starts: Array<number>) =>
+    Engine.make<Heard, Signal, never, never, string>({
+      init: { state: { listening: false, heard: [], bumps: 0 } },
+      update: (signal) => (state) =>
+        signal._tag === 'Listened'
+          ? { state: { ...state, listening: signal.listening } }
+          : signal._tag === 'Heard'
+          ? { state: { ...state, heard: [...state.heard, signal.value] } }
+          : { state: { ...state, bumps: state.bumps + 1 } },
+      subscriptions: ({ listening }) =>
+        listening
+          ? HashMap.make([
+            'feed',
+            Channel.suspend(() => {
+              starts.push(starts.length + 1)
+              return Channel.mapDone(Channel.succeed(heard('a')), () => heard('end'))
+            }),
+          ])
+          : HashMap.empty(),
+      onRejected: 'die',
+    })
+
+  const until = (engine: Engine.Engine<Heard, Signal>, done: (state: Heard) => boolean) =>
+    engine.state$.pipe(Stream.filter(({ state }) => done(state)), Stream.runHead, Effect.map(Opt.getOrThrow))
+
+  const send = (engine: Engine.Engine<Heard, Signal>, signal: Signal) =>
+    Effect.flatMap(
+      Stream.runHead(engine.state$),
+      (frame) => Effect.sync(() => engine.dispatchFrom(Opt.getOrThrow(frame))(signal)),
+    )
+
+  test('a subscription that ends sends its last message to update', async () => {
+    const reached = await run(Effect.gen(function*() {
+      const engine = yield* make([])
+      yield* send(engine, { _tag: 'Listened', listening: true })
+      return yield* until(engine, (state) => state.heard.length === 2)
+    }))
+    expect(reached.state.heard).toEqual(['a', 'end'])
+  })
+
+  test('it does not start again while its key stays', async () => {
+    const starts: Array<number> = []
+    await run(Effect.gen(function*() {
+      const engine = yield* make(starts)
+      yield* send(engine, { _tag: 'Listened', listening: true })
+      yield* until(engine, (state) => state.heard.length === 2)
+      yield* send(engine, { _tag: 'Bumped' })
+      yield* send(engine, { _tag: 'Bumped' })
+      yield* until(engine, (state) => state.bumps === 2)
+      yield* Effect.sleep('20 millis')
+    }))
+    expect(starts).toEqual([1])
+  })
+
+  test('it starts again when its key goes away and comes back', async () => {
+    const starts: Array<number> = []
+    const reached = await run(Effect.gen(function*() {
+      const engine = yield* make(starts)
+      yield* send(engine, { _tag: 'Listened', listening: true })
+      yield* until(engine, (state) => state.heard.length === 2)
+      yield* send(engine, { _tag: 'Listened', listening: false })
+      yield* until(engine, (state) => !state.listening)
+      yield* send(engine, { _tag: 'Listened', listening: true })
+      return yield* until(engine, (state) => state.heard.length === 4)
+    }))
+    expect(starts).toEqual([1, 2])
+    expect(reached.state.heard).toEqual(['a', 'end', 'a', 'end'])
+  })
+})

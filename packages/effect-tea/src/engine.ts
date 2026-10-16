@@ -86,7 +86,9 @@ export const make = Effect.fn('Engine.make')(function*<State, Message, R, S, K>(
     )
   /**
    * Starts the subscriptions whose key appeared and interrupts the ones whose
-   * key disappeared. Subscriptions whose key is unchanged keep running.
+   * key disappeared. Subscriptions whose key is unchanged keep running; one that
+   * has ended keeps its key among the active ones, so it does not start again
+   * until its key goes away and comes back.
    */
   const reconcile = Effect.fnUntraced(function*(
     active: HashSet.HashSet<K>,
@@ -104,6 +106,9 @@ export const make = Effect.fn('Engine.make')(function*<State, Message, R, S, K>(
       }
       yield* Effect.logDebug('Subscription started', key)
       yield* Channel.runForEach(subscription, (message) => Effect.asVoid(offer(message))).pipe(
+        Effect.flatMap((last) =>
+          Effect.logDebug('Subscription ended', key).pipe(Effect.andThen(offer(last)), Effect.asVoid)
+        ),
         Effect.tapDefect((defect) => reportDefect(defect, { _tag: 'Subscription', key })),
         Effect.provideContext(context),
         FiberMap.run(subscriptionFibers, key),

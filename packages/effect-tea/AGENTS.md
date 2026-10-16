@@ -40,8 +40,10 @@ All code, comments, identifiers, commit messages and `.md` files are in **Englis
 - **Defects always die.** `onBug` reports them, and nothing in the library may retry them, swallow them or
   turn them into messages. `onRejected` is the only opt-in, and it only covers rejections, since a
   rejection leaves the state unchanged.
-- **A subscription never ends on its own**: it is a `Channel` whose end value is `never`, so only an
-  interruption, a defect or its key going away stops it. What the end of a stream means is the caller's
+- **A subscription never ends in silence**: it is a `Channel` whose end value is a message (or `never`), and
+  the engine sends that last message to `update`. An ended subscription keeps its key among the active ones,
+  so it is not started again until its key goes away and comes back: never restart it automatically, which
+  would loop on a subscription that ends at once. What the end of a library's stream means is the caller's
   decision: the library offers no helper that takes it for them.
 - **Subscriptions are reconciled by key**: a new key starts its subscription, a kept key leaves it running, a
   gone key interrupts it.
@@ -50,7 +52,7 @@ All code, comments, identifiers, commit messages and `.md` files are in **Englis
 - **Frames cost only what is drawn**: a frame's model is made when first read, and a message that returns the
   very same state makes no new frame. Keep it so: do not compute models eagerly in `run`.
 - **Logs never carry message data by default** (`describeByTag`). Levels: `error` for bugs, `debug` for the
-  message loop and for subscriptions starting and stopping.
+  message loop and for subscriptions starting, stopping and ending.
 
 ## Code
 

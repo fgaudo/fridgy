@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 import * as Channel from 'effect/Channel'
+import * as Effect from 'effect/Effect'
 import * as HashMap from 'effect/HashMap'
 import * as Opt from 'effect/Option'
 import type { Subscription } from './subscription.ts'
@@ -96,5 +97,32 @@ describe('embedEach', () => {
     expect(keys).toContainEqual(['Counter', 'a', 'ticks'])
     expect(keys).toContainEqual(['Counter', 'b', 'ticks'])
     expect(keys.length).toBe(2)
+  })
+})
+
+describe('embedded subscriptions that end', () => {
+  type Signal = 'Tick' | 'Done'
+
+  const finite: Pick<Program<number, unknown, Signal, never>, 'update' | 'subscriptions'> = {
+    update: () => (count) => ({ state: count }),
+    subscriptions: () => HashMap.make(['feed', Channel.mapDone(Channel.succeed<Signal>('Tick'), (): Signal => 'Done')]),
+  }
+
+  test('their last message is wrapped like the others', async () => {
+    const parent = embed(finite, {
+      key: 'Child',
+      wrap: (signal: Signal) => `child:${signal}`,
+      get: (state: number) => Opt.some(state),
+      set: (_state: number, child: number) => child,
+    })
+    const sent: Array<string> = []
+    const [subscription] = HashMap.values(parent.subscriptions(0))
+    const last = await Effect.runPromise(
+      Channel.runForEach(
+        Opt.getOrThrow(Opt.fromNullishOr(subscription)),
+        (message) => Effect.sync(() => sent.push(message)),
+      ),
+    )
+    expect([...sent, last]).toEqual(['child:Tick', 'child:Done'])
   })
 })

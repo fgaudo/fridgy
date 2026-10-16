@@ -34,7 +34,8 @@ const mapSubscriptions = <A, B, R, K, NewK>(
   HashMap.reduce(
     subscriptions,
     HashMap.empty<NewK, Subscription<B, R>>(),
-    (acc, subscription, key) => HashMap.set(acc, mapKey(key), Channel.map(subscription, mapMessage)),
+    (acc, subscription, key) =>
+      HashMap.set(acc, mapKey(key), subscription.pipe(Channel.map(mapMessage), Channel.mapDone(mapMessage))),
   )
 
 type ParentStep<ParentState, ParentMessage, R> = (state: ParentState) => Step<ParentState, ParentMessage, R>

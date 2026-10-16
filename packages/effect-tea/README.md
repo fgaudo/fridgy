@@ -3,7 +3,7 @@
 The Elm architecture (TEA) on [Effect](https://effect.website) v4, for any renderer.
 
 - One **state**, changed only by a pure **`update`**.
-- Effects are described, not run: **commands** (one-shot) and **subscriptions** (listeners that never end).
+- Effects are described, not run: **commands** (one-shot) and **subscriptions** (listeners, kept by key).
 - The view draws a **model**, and can only send the messages the model **offers**.
 
 What it adds to plain Elm is a guarantee that the view and `update` agree. `update` may **reject** a message
@@ -369,22 +369,39 @@ to `update`.
 type Subscription<Message, R> = Channel<
   Message,
   never,
-  never,
+  Message,
   unknown,
   unknown,
   unknown,
   R
 >
-//                                      │        │      │      └──── input: none ────┘
-//                                  messages  no error  ends with never
+//                                  messages  no error  ends with a message   └── input: none ──┘
 ```
 
-Its end value is `never`: **a subscription never ends on its own.** It stops only when its key goes away.
-After every change, the engine compares the keys:
+**A subscription never ends in silence.** Either it never ends (its end value is `never`, as for a clock or
+database changes), or it ends with **one last message**, which the engine sends to `update` like the others:
+the type does not let it end without one. After every change, the engine compares the keys:
 
 - a key that **appears** starts its subscription;
-- a key that **stays** keeps its subscription running, untouched;
-- a key that **disappears** interrupts its subscription, which releases what it holds.
+- a key that **stays** keeps its subscription running, untouched. If it has ended, it is **not** started
+  again: `update` has its last message, and decides whether to drop the key;
+- a key that **disappears** interrupts its subscription, which releases what it holds. If it comes back,
+  the subscription starts anew.
+
+Unlike Elm, where subscriptions never end, this lets a finite process with progress be one subscription: a
+download sends its progress, ends with its file, and is canceled by dropping its key.
+
+```ts
+// The download's end value is the file: it becomes the last message.
+const downloadOf = (url: string): Subscription<Message, Downloads> =>
+  Channel.unwrap(
+    Effect.map(Effect.service(Downloads), ({ download }) =>
+      download(url).pipe(
+        Channel.map((progress) => Message.Progressed({ progress })),
+        Channel.mapDone((file) => Message.Downloaded({ file })),
+      )),
+  )
+```
 
 ```ts
 import { type Subscription } from '@fgaudo/effect-tea'
@@ -689,7 +706,7 @@ The run fails with the first defect. To show an error screen, handle the failure
 `Effect.tapCause`.
 
 The run logs with Effect's logger: `debug` for every message that changes the state or runs commands, and
-for subscriptions starting and stopping; `error` for bugs. Lower the minimum log level to see the `debug`
+for subscriptions starting, stopping and ending; `error` for bugs. Lower the minimum log level to see the `debug`
 lines.
 
 ### 10. Testing
@@ -747,7 +764,7 @@ From `@fgaudo/effect-tea`:
 | `reject`, `Rejected`, `isRejected`              | the rejection `update` returns, and its check                                                 |
 | `Command<Message, R>`                           | `Effect<Option<Message>, never, R>`                                                           |
 | `attempt`                                       | a command from an effect that may fail: its failure becomes a message                         |
-| `Subscription`                                  | a `Channel` of messages that never ends: listens to the world while its key is there          |
+| `Subscription`                                  | a `Channel` of messages that never ends, or ends with one last message; kept by key           |
 | `Subscribe`, `Subscriptions`                    | `(state) => HashMap<K, Subscription<Message>>`, reconciled by key                             |
 | `offers`                                        | asks `update` what the model may offer: `offer(message)` and `offerInput(toMessage, current)` |
 | `Offer`, `InputOffer`, `Offered`, `Offers`      | an optional offered message; an optional function to one; the brand; what `offers` returns    |
