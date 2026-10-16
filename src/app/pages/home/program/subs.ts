@@ -4,7 +4,7 @@ import * as HashMap from 'effect/HashMap'
 import * as Stream from 'effect/Stream'
 import { ProductList } from '../ports/product-list.ts'
 import { Viewport } from '../ports/viewport.ts'
-import type * as Engine from '@/libs/elm/engine.ts'
+import type * as Tea from '@fgaudo/effect-tea'
 import { Message } from './messages.ts'
 import type { State } from './state.ts'
 
@@ -15,7 +15,7 @@ const CLOSE_TO_TOP_THRESHOLD = 30
 const fromViewport = <A>(f: (viewport: Viewport['Service']) => Stream.Stream<A>) =>
   Stream.unwrap(Effect.map(Effect.service(Viewport), f))
 
-export const subscriptions: Engine.Emitter<State, Message, Deps> = (_state) =>
+export const subscriptions: Tea.Emitter<State, Message, Deps> = (_state) =>
   HashMap.make(
     [
       // Expiration statuses derive from the current time: it is refreshed

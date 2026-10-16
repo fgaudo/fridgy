@@ -11,8 +11,8 @@ be in Italian.
 
 ## Tooling enforces a lot
 
-Biome and the typecheck enforce import boundaries (private folders of the app and of pages, `libs/elm`
-independent of snabbdom, test-only code kept out of bundles), the strict typing of views (`dispatch` only
+Biome and the typecheck enforce import boundaries (private folders of the app and of pages, `@fgaudo/effect-tea`
+independent of snabbdom and reachable only through its public entrypoints, test-only code kept out of bundles), the strict typing of views (`dispatch` only
 takes offered messages; JSX elements only accept snabbdom's modules) and the language service rules (no
 `console`, `Date`, `Math.random`, `fetch` or timers inside Effect; hashed service keys). When one of them
 reports an error, the rule is intended: fix the code, do not work around the check.
@@ -23,8 +23,9 @@ The pages to copy are `src/app/pages/home` (full) and `src/app/pages/about` (min
 
 - **Expected errors are typed, bugs crash.** Expected failures go through Effect's error channel
   (`Effect.tryPromise`/`Effect.try`, no `try/catch`, no bare Promises). A violated invariant is a defect
-  (`Effect.die`): never silenced, retried or turned into a message. Only `src/libs/` may offer opt-in
-  recovery, and the app never opts in.
+  (`Effect.die`): never silenced, retried or turned into a message. Commands turn expected failures into
+  messages with `Tea.attempt` (`attemptStream` for subscriptions); `run`'s `onBug` may report a
+  crash, never recover from it.
 - **Effects only in commands and subscriptions.** `update`, `makeModel` and views are pure; one global state,
   no local view state or mutable singletons.
 - **The model offers, `update` decides.** Conditions live only in `update`, which returns `Engine.reject`
@@ -56,6 +57,11 @@ The pages to copy are `src/app/pages/home` (full) and `src/app/pages/about` (min
 - **Environments exist only in `src/entrypoints/`.** Shared code never branches on `process.env.NODE_ENV`;
   each setup has its own `*.layer.ts`, named after what backs it (`sqlite`, `in-memory`), so a bundle only
   contains what it uses. When moving files, update the paths in `scripts/cli.ts`.
+- **The runtime of the Elm architecture is a package**: `packages/effect-tea` (`@fgaudo/effect-tea`, a workspace dependency). Its API is `src/index.ts` (plus `@fgaudo/effect-tea/testing`), documented in its README; the app
+  imports `import * as Tea from '@fgaudo/effect-tea'`. The app uses its TypeScript sources (the `bun` export
+  condition, set in `tsconfig.json` and `scripts/cli.ts`), so it never needs `bun run build` in
+  `packages/effect-tea`, which only produces the `dist/` other consumers use. Changes to it follow
+  [`packages/effect-tea/AGENTS.md`](packages/effect-tea/AGENTS.md).
 - **`src/libs/` is generic**: no knowledge of the app. Branded types offer `fromNumber`/`make` (an `Option`)
   and `fromNumberUnsafe`/`makeUnsafe` only for values valid by construction. Export only what is used, plus
   a library module's intended API.
@@ -63,7 +69,7 @@ The pages to copy are `src/app/pages/home` (full) and `src/app/pages/about` (min
 ## Views
 
 TSX (`view.tsx`, and only views), rendered by snabbdom. Attach offers with `handlers(dispatch)` from
-`libs/elm-snabbdom` (`on={on('click', model.openMenu)}`): a handler exists only while its action is offered.
+`libs/tea-snabbdom` (`on={on('click', model.openMenu)}`): a handler exists only while its action is offered.
 `onPreventingDefault` is the exception that always attaches (e.g. the native menu of a long press). Split a
 large view into private components under `view/`.
 

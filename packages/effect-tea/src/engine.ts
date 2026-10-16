@@ -1,4 +1,3 @@
-import * as Cause from 'effect/Cause'
 import * as Data from 'effect/Data'
 import * as Effect from 'effect/Effect'
 import * as FiberMap from 'effect/FiberMap'
@@ -35,7 +34,7 @@ export type Step<State, Message, R, Event = never> = Readonly<{
  *   already outdated, a double tap, …), or from a command or subscription: the
  *   message is stale and is ignored.
  */
-export const reject: unique symbol = Symbol.for('@fgaudo/elm/Rejected')
+export const reject: unique symbol = Symbol.for('@fgaudo/effect-tea/Rejected')
 export type Rejected = typeof reject
 
 export const isRejected = (result: unknown): result is Rejected => result === reject
@@ -72,6 +71,37 @@ export type Emitter<State, Message, R, K = unknown> = (
   state: State,
 ) => Subscriptions<K, Message, R>
 
+/** Where a defect happened: in `update`, in a command, or in the subscription with that key. */
+export type DefectSource<K = unknown> =
+  | Readonly<{ _tag: 'Update' }>
+  | Readonly<{ _tag: 'Command' }>
+  | Readonly<{ _tag: 'Subscription'; key: K }>
+
+/**
+ * A bug in the program:
+ * - `Defect`: something blew up (an exception, an `Effect.die`). What it left behind is unknown, so the
+ *   program always dies.
+ * - `Rejected`: the current frame sent a message `update` rejects, so the model offered an action `update`
+ *   does not accept. Nothing changed (`update` rejected it), so the program may go on (`RejectionPolicy`).
+ */
+export type Bug<Message, K = unknown> =
+  | Readonly<{ _tag: 'Defect'; cause: unknown; where: DefectSource<K> }>
+  | Readonly<{ _tag: 'Rejected'; message: Message; revision: Revision }>
+
+/**
+ * What a `Rejected` bug does: `'die'` fails the program with `RejectedMessage`; `'ignore'` drops the
+ * message and goes on, which is safe because the state did not change.
+ */
+export type RejectionPolicy = 'die' | 'ignore'
+
+/** By default a message is described by its `_tag` (or itself, if it is a string): logs never carry its data. */
+export const describeByTag = (message: unknown): unknown =>
+  typeof message === 'string'
+    ? message
+    : typeof message === 'object' && message !== null && '_tag' in message
+    ? message._tag
+    : typeof message
+
 /** The engine owns its message loop: it runs as long as the scope `make` was called in. */
 export interface Engine<State, Message> {
   readonly state$: Stream.Stream<Revisioned<State>>
@@ -89,47 +119,23 @@ export interface Engine<State, Message> {
   readonly await: Effect.Effect<never>
 }
 
-const makeResilient = <Message, R>(
-  stream$: Stream.Stream<Message, never, R>,
-  makeDefectMessage: (cause: unknown) => Message,
-) => {
-  const resilient$: Stream.Stream<Message, never, R> = Stream.suspend(() =>
-    stream$.pipe(
-      Stream.catchCauseIf(
-        (cause) => !Cause.hasInterrupts(cause),
-        (cause) =>
-          Stream.concat(
-            Stream.make(makeDefectMessage(cause)),
-            Stream.unwrap(
-              Effect.as(Effect.sleep('1 second'), resilient$),
-            ),
-          ),
-      ),
-    )
-  )
-  return resilient$
-}
-
 export const make = Effect.fn('Engine.make')(function*<State, Message, R, S, K>({
   init: { state: initState, commands: initCommands = [] },
   update,
   subscriptions,
-  makeDefectMessage,
-  describeMessage = (message) => message,
+  onBug = () => Effect.void,
+  describeMessage = describeByTag,
+  onRejected = 'die',
 }: {
   init: Step<State, Message, R>
   update: Update<State, Message, R>
   subscriptions: Emitter<State, Message, S, K>
-  /**
-   * Opt-in recovery: when given, a defect in a command or a subscription
-   * becomes a message (and the subscription is restarted) instead of failing
-   * the engine. Defects in `update` always fail the engine.
-   */
-  makeDefectMessage?: (cause: unknown) => NoInfer<Message>
+  /** Reports every bug, fatal or not, e.g. to a crash-reporting service. */
+  onBug?: (bug: Bug<NoInfer<Message>, NoInfer<K>>) => Effect.Effect<void>
   /** How a message appears in the logs, e.g. its tags only, without its data. */
   describeMessage?: (message: NoInfer<Message>) => unknown
+  onRejected?: RejectionPolicy
 }) {
-  const maybeMakeDefectMessage = Opt.fromUndefinedOr(makeDefectMessage)
   const context = yield* Effect.context<R | S>()
   const queue = yield* Effect.acquireRelease(
     Queue.unbounded<Envelope<Message>>(),
@@ -140,11 +146,13 @@ export const make = Effect.fn('Engine.make')(function*<State, Message, R, S, K>(
   const subscriptionFibers = yield* FiberMap.make<K, void, never>()
   const stateRef = yield* SubscriptionRef.make<Revisioned<State>>({ state: initState, revision: 0 })
   const offer = (message: Message) => Queue.offer(queue, { message, origin: fromProgram })
+  const reportDefect = (defect: unknown, where: DefectSource<K>) =>
+    Effect.logError(`A defect in ${where._tag === 'Subscription' ? 'a subscription' : where._tag}`, where, defect).pipe(
+      Effect.andThen(onBug({ _tag: 'Defect', cause: defect, where })),
+    )
   const runCommand = (command: Command<Message, R>) =>
-    Opt.match(maybeMakeDefectMessage, {
-      onNone: () => command.pipe(Effect.tapDefect((defect) => Effect.logError('A command died', defect))),
-      onSome: (f) => Effect.catchDefect(command, (defect) => Effect.succeedSome(f(defect))),
-    }).pipe(
+    command.pipe(
+      Effect.tapDefect((defect) => reportDefect(defect, { _tag: 'Command' })),
       Effect.flatMap(Opt.match({ onNone: () => Effect.void, onSome: offer })),
       Effect.provideContext(context),
       FiberSet.run(fibers),
@@ -168,10 +176,8 @@ export const make = Effect.fn('Engine.make')(function*<State, Message, R, S, K>(
         continue
       }
       yield* Effect.logDebug('Subscription started', key)
-      yield* Opt.match(maybeMakeDefectMessage, {
-        onNone: () => stream$.pipe(Stream.tapDefect((defect) => Effect.logError('A subscription died', key, defect))),
-        onSome: (f) => makeResilient(stream$, f),
-      }).pipe(
+      yield* stream$.pipe(
+        Stream.tapDefect((defect) => reportDefect(defect, { _tag: 'Subscription', key })),
         Stream.runForEach(offer),
         Effect.provideContext(context),
         FiberMap.run(subscriptionFibers, key),
@@ -184,7 +190,9 @@ export const make = Effect.fn('Engine.make')(function*<State, Message, R, S, K>(
     { message, origin }: Envelope<Message>,
   ) {
     const { state, revision } = yield* SubscriptionRef.get(stateRef)
-    const result = update(message)(state)
+    const result = yield* Effect.sync(() => update(message)(state)).pipe(
+      Effect.tapDefect((defect) => reportDefect(defect, { _tag: 'Update' })),
+    )
     if (isRejected(result)) {
       if (origin._tag === 'View' && origin.revision === revision) {
         yield* Effect.logError(
@@ -192,7 +200,8 @@ export const make = Effect.fn('Engine.make')(function*<State, Message, R, S, K>(
           describeMessage(message),
           { revision },
         )
-        return yield* Effect.die(new RejectedMessage({ message, revision }))
+        yield* onBug({ _tag: 'Rejected', message, revision })
+        return onRejected === 'die' ? yield* Effect.die(new RejectedMessage({ message, revision })) : active
       }
       yield* Effect.logDebug('Ignored a stale message', describeMessage(message))
       return active

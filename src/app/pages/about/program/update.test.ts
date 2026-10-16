@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test'
 import * as Equal from 'effect/Equal'
 import * as Opt from 'effect/Option'
 import * as fc from 'fast-check'
-import * as Engine from '@/libs/elm/engine.ts'
+import * as Tea from '@fgaudo/effect-tea'
 import { dispatchedBy } from '@/libs/testing/view.ts'
 import { view } from '../view.tsx'
 import { Event, Message } from './messages.ts'
@@ -20,7 +20,7 @@ const message: fc.Arbitrary<Message> = fc.oneof(
 
 const step = (msg: Message, before: State) => {
   const result = update(msg)(before)
-  if (Engine.isRejected(result)) throw new Error(`update rejected ${msg._tag}`)
+  if (Tea.isRejected(result)) throw new Error(`update rejected ${msg._tag}`)
   return { after: result.state, commands: result.commands ?? [] }
 }
 
@@ -29,15 +29,19 @@ describe('About update', () => {
     fc.assert(fc.property(state, message, (before, msg) => {
       const first = update(msg)(before)
       const second = update(msg)(before)
-      return Engine.isRejected(first) || Engine.isRejected(second)
-        ? Engine.isRejected(first) === Engine.isRejected(second)
+      return Tea.isRejected(first) || Tea.isRejected(second)
+        ? Tea.isRejected(first) === Tea.isRejected(second)
         : Equal.equals(first.state, second.state)
     }))
   })
 
   test('every message the view can dispatch is accepted', () => {
-    fc.assert(fc.property(state, (before) =>
-      dispatchedBy(view, makeModel(before)).every((msg) => !Engine.isRejected(update(msg)(before)))))
+    fc.assert(
+      fc.property(
+        state,
+        (before) => dispatchedBy(view, makeModel(before)).every((msg) => !Tea.isRejected(update(msg)(before))),
+      ),
+    )
   })
 
   test('LicensesLoaded stores the licenses and touches nothing else', () => {
@@ -57,7 +61,7 @@ describe('About update', () => {
   test('BackPressed asks the parent to leave the page, and changes nothing', () => {
     fc.assert(fc.property(state, (before) => {
       const result = update(Message.BackPressed())(before)
-      return !Engine.isRejected(result)
+      return !Tea.isRejected(result)
         && Equal.equals(result.state, before)
         && Equal.equals(result.events, [Event.LeaveRequested()])
     }))

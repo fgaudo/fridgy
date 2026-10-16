@@ -2,8 +2,8 @@
 // (view.js) and re-imported on every change, so it must stay pure: it may only
 // import views, message constructors and generic helpers.
 import * as Match from 'effect/Match'
-import type { View } from '@/libs/elm-snabbdom/elm-snabbdom.ts'
-import { mapDispatch } from '@/libs/elm/view.ts'
+import type { View } from '@/libs/tea-snabbdom/tea-snabbdom.ts'
+import { mapDispatch } from '@fgaudo/effect-tea'
 import * as About from './pages/about/view.tsx'
 import * as Home from './pages/home/view.tsx'
 import { Message } from './program/messages.ts'

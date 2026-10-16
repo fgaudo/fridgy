@@ -54,6 +54,8 @@ const build = Effect.fn('build')(function*(mode: Mode) {
         entrypoints: [resolve('src/assets/css/styles.css'), ...entrypoints.map((entry) => resolve(entry))],
         outdir: resolve('dist'),
         target: 'browser',
+        // Local packages (e.g. @fgaudo/effect-tea) are bundled from their TypeScript sources, not their built `dist/`.
+        conditions: ['bun'],
         loader: { '.css': 'css', '.woff2': 'file' },
         naming: { asset: '[name].[ext]', chunk: '[name].[ext]', entry: '[name].[ext]' },
         plugins: [BunTailwind],
@@ -134,7 +136,11 @@ const watchCommand = Cli.Command.make(
     )
     yield* Effect.logInfo(`Serving dist/ at http://${host}:${port}`)
     const changed = yield* Ref.make(HashSet.empty<string>())
-    return yield* fs.watch(resolve('src'), { recursive: true }).pipe(
+    // The app's sources, and the local packages it is built with.
+    return yield* Stream.merge(
+      fs.watch(resolve('src'), { recursive: true }),
+      fs.watch(resolve('packages'), { recursive: true }),
+    ).pipe(
       Stream.tap((event) => Ref.update(changed, HashSet.add(event.path))),
       Stream.debounce('100 millis'),
       Stream.runForEach(() =>

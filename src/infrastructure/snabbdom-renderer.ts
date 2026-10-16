@@ -3,13 +3,9 @@ import * as Effect from 'effect/Effect'
 import * as Layer from 'effect/Layer'
 import * as Stream from 'effect/Stream'
 import * as Snabbdom from 'snabbdom'
-import type * as View from '@/libs/elm/view.ts'
+import type { Frame } from '@fgaudo/effect-tea'
+import type * as View from '@fgaudo/effect-tea'
 import * as AnimationFrame from './animation-frame.ts'
-
-type Frame<Model, Message> = Readonly<{
-  model: Model
-  dispatch: View.Dispatch<Message>
-}>
 
 export class SnabbdomRenderer extends Context.Service<
   SnabbdomRenderer,

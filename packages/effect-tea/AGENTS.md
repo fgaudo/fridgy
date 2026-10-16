@@ -1,0 +1,75 @@
+# @fgaudo/effect-tea — guide for coding agents
+
+How the library is used is in [`README.md`](README.md). This file holds the rules for changing it.
+
+## Language
+
+All code, comments, identifiers, commit messages and `.md` files are in **English**.
+
+## What belongs here
+
+- **Generic, and only Effect.** The library knows nothing of the applications that use it, nor of any
+  renderer. Views are generic over their node type, and the renderer is a function given to `run`. `effect`
+  (v4) is its only dependency, as a peer. Biome forbids renderer imports, and `lib` (`ES2022`, no `DOM`)
+  rejects browser APIs.
+
+## Public API
+
+- The API is exactly what `src/index.ts` and `src/testing.ts` export; every other module is internal.
+  Export only what a consumer needs.
+- A change to the API changes [`README.md`](README.md) in the same change: the guide section that uses it,
+  and the API reference table. Every example in the README must compile against the package.
+- `exports` has three conditions: `bun` (the TypeScript sources, for consumers that run under Bun), `types`
+  and `default` (`dist/`, for everyone else). A new entrypoint needs all three, and an entry in `files` if
+  it is not under `src` or `dist`.
+
+## Invariants the engine keeps
+
+- **`update` is pure and called freely.** The library calls it to decide offers (`offered`, `offeredInput`)
+  as well as to apply messages. Never assume it runs once per message.
+- **Only `offered` and `offeredInput` make an `Offered`.** `mapDispatch` is the only other cast, valid
+  because the parent accepts `wrap(message)` exactly when the child accepts `message`. Add no other way to
+  forge one.
+- **Rejections depend on their origin.** A message from the current frame (same revision) that `update`
+  rejects is a `Rejected` bug: it dies, unless `onRejected` is `'ignore'`. A message from an older frame, a
+  command or a subscription is stale and is ignored.
+- **Defects always die.** `onBug` reports them, and nothing in the library may retry them, swallow them or
+  turn them into messages. `RejectionPolicy` is the only opt-in, and it only covers rejections, since a
+  rejection leaves the state unchanged.
+- **Subscriptions are reconciled by key**: a new key starts its stream, a kept key leaves it running, a gone
+  key interrupts it.
+- **Commands cannot be cancelled.** This is a deliberate choice for now: do not add cancellation without
+  asking.
+- **Logs never carry message data by default** (`describeByTag`). Levels: `error` for bugs, `debug` for the
+  message loop and for subscriptions starting and stopping.
+
+## Code
+
+- Effect modules are imported as namespaces (`import * as Effect from 'effect/Effect'`), with `Arr`, `Opt`
+  for `Array`, `Option`.
+- Relative imports carry the `.ts` extension; `tsc` rewrites them to `.js` in the build, and `build.ts` does
+  the same in the declarations.
+- Comments only for what the code cannot say: a reason, an invariant the types do not show, a choice that
+  would look like a mistake. Never a repetition of names or of the next line.
+- No blank lines between the statements of a block; blank lines separate declarations and `describe`/`test`
+  calls.
+- Formatting: dprint, 120 columns, single quotes, no semicolons. Format only the files you changed.
+
+## Tests
+
+- `bun:test`, in a `*.test.ts` next to the module. Tests are excluded from `dist/` and from the packed
+  `src/`.
+- Test through behaviour (`run`, `Engine.make`, the public functions), not through internals.
+- Run tests that make the engine die on purpose with a minimum log level of `None`, so that the errors they
+  expect are not printed.
+
+## Checks
+
+From `packages/effect-tea`:
+
+- `bun run typecheck`, `bun run lint`, `bun run test`;
+- `bun run build` compiles `src/` into `dist/` (ignored by git); it also runs before `bun pm pack`.
+
+After an API change, check it as an external consumer would: `bun pm pack`, then extract the tarball into a
+scratch project (`moduleResolution: nodenext`, `skipLibCheck: false`, the `ESNext` and `DOM` libs, `effect`
+installed) and typecheck and run, with Node, code that uses the changed API.

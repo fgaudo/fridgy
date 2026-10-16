@@ -1,2 +1,6 @@
+[install]
+# Dependencies stay hoisted into node_modules/ (the build copies files from there), as before the workspace.
+linker = "hoisted"
+
 [test]
 preload = ["./src/libs/testing/preload.ts"]

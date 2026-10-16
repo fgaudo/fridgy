@@ -7,7 +7,7 @@ import * as Engine from './engine.ts'
  * `offered` and `offeredInput` make one, and `Dispatch` only takes these: a view
  * cannot send a message it was not offered.
  */
-export type Offered<Message> = Brand.Branded<Message, 'elm.Offered'>
+export type Offered<Message> = Brand.Branded<Message, 'effect-tea.Offered'>
 
 /** An action the model offers to the view: `Some` exactly when `update` accepts it. */
 export type Offer<Message> = Opt.Option<Offered<Message>>

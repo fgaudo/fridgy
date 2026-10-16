@@ -1,5 +1,5 @@
 import type { VNode } from 'snabbdom'
-import type { View } from '@/libs/elm/view.ts'
+import type { View } from '@fgaudo/effect-tea'
 
 /**
  * Renders `view` for `model` and fires every event handler in the tree, with a

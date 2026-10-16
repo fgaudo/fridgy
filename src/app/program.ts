@@ -1,4 +1,4 @@
-import type * as Program from '@/libs/elm/program.ts'
+import type * as Tea from '@fgaudo/effect-tea'
 import type { Message } from './program/messages.ts'
 import type { Deps } from './program/navigation.ts'
 import { makeModel, type Model } from './program/model.ts'
@@ -12,7 +12,7 @@ export type { Model } from './program/model.ts'
 
 export type { Deps }
 
-export const program: Program.Program<State, Model, Message, Deps> = {
+export const program: Tea.Program<State, Model, Message, Deps> = {
   init: Update.init,
   update: Update.update,
   subscriptions: Subs.subscriptions,

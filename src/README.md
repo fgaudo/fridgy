@@ -8,7 +8,7 @@ src/
 ├─ entrypoints/          how the app is started, one file per environment
 │  ├─ production.ts      sqlite, bundled view
 │  ├─ development.ts     in-memory data, hot-reloaded view
-│  └─ run.ts             shared: starts the engine and renders
+│  └─ run.ts             shared: runs the program (`@fgaudo/effect-tea` `run`) with the snabbdom renderer
 │
 ├─ app/                  the application (environment-agnostic)
 │  ├─ program.ts         public: the root Program and its types
@@ -24,10 +24,12 @@ src/
 │     └─ program/ · domain/ · ports/ · adapters/
 │
 ├─ infrastructure/       technical building blocks: sqlite, sql, in-memory store, renderer, hot reload
-├─ libs/                 generic, reusable code (elm runtime, its snabbdom bridge and JSX runtime,
-│                        branded numbers, …)
+├─ libs/                 generic, reusable code (the snabbdom bridge and JSX runtime, branded numbers, …)
 └─ assets/               index.html and styles
 ```
+
+The runtime of the Elm architecture is a local package, outside `src/`: [`packages/effect-tea`](../packages/effect-tea/README.md)
+(`@fgaudo/effect-tea`).
 
 ## Reading order
 

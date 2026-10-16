@@ -1,8 +1,7 @@
 import * as Arr from 'effect/Array'
 import * as Match from 'effect/Match'
 import * as Opt from 'effect/Option'
-import type * as Engine from '@/libs/elm/engine.ts'
-import * as Program from '@/libs/elm/program.ts'
+import * as Tea from '@fgaudo/effect-tea'
 import * as About from '../pages/about/program.ts'
 import * as Home from '../pages/home/program.ts'
 import type { Shell } from '../ports/shell.ts'
@@ -12,7 +11,7 @@ import { Page, type State } from './state.ts'
 
 export type Deps = Home.Deps | About.Deps | Shell
 
-type Step = Engine.Step<State, Message, Deps>
+type Step = Tea.Step<State, Message, Deps>
 
 export const top = (state: State): Page => Arr.lastNonEmpty(state.stack)
 
@@ -52,7 +51,7 @@ const leave = (state: State): Step =>
     onSome: (previous) => ({ state: previous }),
   })
 
-export const about = Program.embed(About.program, {
+export const about = Tea.embed(About.program, {
   key: 'About',
   wrap: (message) => Message.GotAboutMsg({ message }),
   get: pageState('About'),
@@ -68,7 +67,7 @@ const openAbout = (state: State): Step =>
     ? { state }
     : { ...about.init(About.program.init), state: push(state, Page.About({ state: About.program.init.state })) }
 
-export const home = Program.embed(Home.program, {
+export const home = Tea.embed(Home.program, {
   key: 'Home',
   wrap: (message) => Message.GotHomeMsg({ message }),
   get: pageState('Home'),

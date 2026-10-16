@@ -7,7 +7,7 @@ import * as Opt from 'effect/Option'
 import * as Result from 'effect/Result'
 
 import * as NonEmptyHashSet from '@/libs/collections/non-empty-hash-set.ts'
-import * as Engine from '@/libs/elm/engine.ts'
+import * as Tea from '@fgaudo/effect-tea'
 import * as NormalizedString from '@/libs/strings/normalized-string.ts'
 import * as Domain from '../../../domain/product.ts'
 import type { Notifications } from '../ports/notifications.ts'
@@ -22,7 +22,7 @@ export type Deps = ProductCommands | Viewport | Notifications
 
 const ProductEnum = Data.taggedEnum<Product>()
 
-type Transition = Engine.Transition<State, Message, Deps, Event>
+type Transition = Tea.Transition<State, Message, Deps, Event>
 
 // Products that still have an id can be selected and deleted, even when invalid;
 // the ones without an id cannot be referenced at all.
@@ -69,11 +69,11 @@ export const update = Match.typeTags<Message, (state: State) => Transition>()({
           addProduct: { _tag: 'Editing', maybeName: Opt.none(), maybeExpirationDate: Opt.none() },
         },
       }
-      : Engine.reject,
+      : Tea.reject,
 
   // The form stays open until the submission completes.
   AddProductClosed: () => (state) =>
-    isEditing(state) ? { state: { ...state, addProduct: { _tag: 'Closed' } } } : Engine.reject,
+    isEditing(state) ? { state: { ...state, addProduct: { _tag: 'Closed' } } } : Tea.reject,
 
   // While submitting, the content is frozen: the inputs dispatch nothing.
   NameChanged: ({ name }) => (state) =>
@@ -81,7 +81,7 @@ export const update = Match.typeTags<Message, (state: State) => Transition>()({
       // The raw text is kept as typed (the input is controlled by the model);
       // whether it is a valid name is decided when adding.
       ? { state: { ...state, addProduct: { ...state.addProduct, maybeName: Opt.some(name) } } }
-      : Engine.reject,
+      : Tea.reject,
 
   ExpirationDateChanged: ({ expiration }) => (state) =>
     isEditing(state)
@@ -91,14 +91,14 @@ export const update = Match.typeTags<Message, (state: State) => Transition>()({
           addProduct: { ...state.addProduct, maybeExpirationDate: DateTime.make(expiration) },
         },
       }
-      : Engine.reject,
+      : Tea.reject,
 
   AddProductStarted: () => (state) => {
     if (
       !isEditing(state)
       || !Opt.exists(state.addProduct.maybeName, (name) => Opt.isSome(NormalizedString.fromString(name)))
     ) {
-      return Engine.reject
+      return Tea.reject
     }
     const operation = state.nextOperation
     const { maybeName, maybeExpirationDate } = state.addProduct
@@ -114,7 +114,7 @@ export const update = Match.typeTags<Message, (state: State) => Transition>()({
 
   AddProductCompleted: ({ operation, succeeded }) => (state) => {
     if (state.addProduct._tag !== 'Submitting' || state.addProduct.operation !== operation) {
-      return Engine.reject
+      return Tea.reject
     }
     const { maybeName, maybeExpirationDate } = state.addProduct
     return succeeded
@@ -153,7 +153,7 @@ export const update = Match.typeTags<Message, (state: State) => Transition>()({
 
   ItemSelected: ({ id }) => (state) => {
     if (!canChangeSelection(state) || isSelected(state.selection, id)) {
-      return Engine.reject
+      return Tea.reject
     }
     const ids = Opt.match(state.selection.maybeIds, {
       onNone: () => HashSet.make(id),
@@ -166,7 +166,7 @@ export const update = Match.typeTags<Message, (state: State) => Transition>()({
 
   ItemDeselected: ({ id }) => (state) => {
     if (!canChangeSelection(state) || !hasSelection(state) || !isSelected(state.selection, id)) {
-      return Engine.reject
+      return Tea.reject
     }
     const maybeIds = NonEmptyHashSet.make(HashSet.remove(state.selection.maybeIds.value, id))
     return { state: { ...state, selection: { _tag: 'Selecting', maybeIds } } }
@@ -174,14 +174,14 @@ export const update = Match.typeTags<Message, (state: State) => Transition>()({
 
   ClearSelected: () => (state) => {
     if (!hasSelection(state)) {
-      return Engine.reject
+      return Tea.reject
     }
     return { state: { ...state, selection: { _tag: 'Selecting', maybeIds: Opt.none() } } }
   },
 
   DeleteStarted: () => (state) => {
     if (!(state.products._tag === 'Loaded' && hasSelection(state))) {
-      return Engine.reject
+      return Tea.reject
     }
     const operation = state.nextOperation
     const ids = state.selection.maybeIds.value
@@ -197,7 +197,7 @@ export const update = Match.typeTags<Message, (state: State) => Transition>()({
 
   DeleteProductsCompleted: ({ operation, succeeded }) => (state) => {
     if (state.selection._tag !== 'Deleting' || state.selection.operation !== operation) {
-      return Engine.reject
+      return Tea.reject
     }
     return succeeded
       ? { state: { ...state, selection: { _tag: 'Selecting', maybeIds: Opt.none() } } }
@@ -211,7 +211,7 @@ export const update = Match.typeTags<Message, (state: State) => Transition>()({
   InfoRequested: () => (state) =>
     state.isMenuOpen
       ? { state: { ...state, isMenuOpen: false }, events: [Event.InfoRequested()] }
-      : Engine.reject,
+      : Tea.reject,
 
   // Closes what is open, innermost first; with nothing to close, asks to leave.
   BackPressed: () => (state) => {
@@ -229,9 +229,9 @@ export const update = Match.typeTags<Message, (state: State) => Transition>()({
     }
   },
 
-  MenuOpened: () => (state) => !state.isMenuOpen ? { state: { ...state, isMenuOpen: true } } : Engine.reject,
+  MenuOpened: () => (state) => !state.isMenuOpen ? { state: { ...state, isMenuOpen: true } } : Tea.reject,
 
-  MenuClosed: () => (state) => state.isMenuOpen ? { state: { ...state, isMenuOpen: false } } : Engine.reject,
+  MenuClosed: () => (state) => state.isMenuOpen ? { state: { ...state, isMenuOpen: false } } : Tea.reject,
 
   InteractionChanged: ({ isInteracting }) => (state) => ({ state: { ...state, isInteracting } }),
 
@@ -243,7 +243,7 @@ export const update = Match.typeTags<Message, (state: State) => Transition>()({
   }),
 })
 
-export const init: Engine.Step<State, Message, Deps> = {
+export const init: Tea.Step<State, Message, Deps> = {
   state: {
     isMenuOpen: false,
     isViewportAtTop: true,

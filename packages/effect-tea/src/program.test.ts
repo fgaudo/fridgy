@@ -3,7 +3,7 @@ import * as HashMap from 'effect/HashMap'
 import * as Opt from 'effect/Option'
 import * as Stream from 'effect/Stream'
 import * as Engine from './engine.ts'
-import { embed, type Program } from './program.ts'
+import { embed, embedEach, type Program } from './program.ts'
 
 // A child counter with one subscription, embedded in a parent that holds it and says whether it is shown.
 type Parent = Readonly<{ child: Opt.Option<number>; isShown: boolean }>
@@ -48,5 +48,47 @@ describe('embed', () => {
       set: (parent: Parent, count: number) => ({ ...parent, child: Opt.some(count) }),
     })
     expect(HashMap.size(always.subscriptions({ child: Opt.some(0), isShown: false }))).toBe(1)
+  })
+})
+
+// Counters kept by id, each with one subscription, and an event when one reaches 2.
+type Counters = Readonly<{ counts: ReadonlyMap<string, number>; reachedTwo: ReadonlyArray<string> }>
+
+const counterWithEvent: Pick<Program<number, unknown, Increment, never, 'ReachedTwo'>, 'update' | 'subscriptions'> = {
+  update: () => (count) => (count + 1 === 2 ? { state: 2, events: ['ReachedTwo'] } : { state: count + 1 }),
+  subscriptions: () => HashMap.make(['ticks', Stream.make<[Increment]>('Increment')]),
+}
+
+const each = embedEach(counterWithEvent, {
+  key: 'Counter',
+  wrap: (id: string, message: Increment) => ({ id, message }),
+  get: (state: Counters, id) => Opt.fromUndefinedOr(state.counts.get(id)),
+  set: (state: Counters, id, count) => ({ ...state, counts: new Map([...state.counts, [id, count]]) }),
+  subscribed: (state: Counters) => state.counts.entries(),
+  onEvent: (id) => (state) => ({ state: { ...state, reachedTwo: [...state.reachedTwo, id] } }),
+})
+
+const twoCounters: Counters = { counts: new Map([['a', 0], ['b', 1]]), reachedTwo: [] }
+
+describe('embedEach', () => {
+  test('a message reaches the child with its id, and only that one', () => {
+    const result = each.update('a', 'Increment')(twoCounters)
+    expect(Engine.isRejected(result) ? undefined : [...result.state.counts]).toEqual([['a', 1], ['b', 1]])
+  })
+
+  test('the events of a child are handled with its id', () => {
+    const result = each.update('b', 'Increment')(twoCounters)
+    expect(Engine.isRejected(result) ? undefined : result.state.reachedTwo).toEqual(['b'])
+  })
+
+  test('a message for an id that is not there is rejected', () => {
+    expect(Engine.isRejected(each.update('c', 'Increment')(twoCounters))).toBe(true)
+  })
+
+  test('each subscribed child has its own subscriptions, keyed by its id', () => {
+    const keys = Array.from(HashMap.keys(each.subscriptions(twoCounters)))
+    expect(keys).toContainEqual(['Counter', 'a', 'ticks'])
+    expect(keys).toContainEqual(['Counter', 'b', 'ticks'])
+    expect(keys.length).toBe(2)
   })
 })

@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test'
 import * as Arr from 'effect/Array'
 import * as DateTime from 'effect/DateTime'
 import * as Opt from 'effect/Option'
-import { applyAll } from '@/libs/testing/update.ts'
+import { applyAll } from '@fgaudo/effect-tea/testing'
 import type * as Home from '../pages/home/program.ts'
 // Tests may reach into a page: they drive it like its own view and subscriptions would.
 import { Message as HomeMessage } from '../pages/home/program/messages.ts'

@@ -10,15 +10,15 @@ architecture.
 
 ## Stack
 
-| | |
-| --- | --- |
-| Language | TypeScript, with the Effect language service (`@effect/tsgo`) |
-| Effects, services, streams | [Effect](https://effect.website) v4 |
-| View | [snabbdom](https://github.com/snabbdom/snabbdom) (virtual DOM, written in TSX) and [Tailwind CSS](https://tailwindcss.com) |
-| Storage | SQLite (WebAssembly, in a worker) |
-| Android packaging | [Capacitor](https://capacitorjs.com) |
-| Runtime, bundler, tests | [Bun](https://bun.com), with [fast-check](https://fast-check.dev) for property tests |
-| Lint | [Biome](https://biomejs.dev) |
+|                            |                                                                                                                            |
+| -------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| Language                   | TypeScript, with the Effect language service (`@effect/tsgo`)                                                              |
+| Effects, services, streams | [Effect](https://effect.website) v4                                                                                        |
+| View                       | [snabbdom](https://github.com/snabbdom/snabbdom) (virtual DOM, written in TSX) and [Tailwind CSS](https://tailwindcss.com) |
+| Storage                    | SQLite (WebAssembly, in a worker)                                                                                          |
+| Android packaging          | [Capacitor](https://capacitorjs.com)                                                                                       |
+| Runtime, bundler, tests    | [Bun](https://bun.com), with [fast-check](https://fast-check.dev) for property tests                                       |
+| Lint                       | [Biome](https://biomejs.dev)                                                                                               |
 
 ## Getting started
 
@@ -59,29 +59,30 @@ bunx cap open android
 
 ## Development
 
-| Command | |
-| --- | --- |
-| `bun run typecheck` | Type-check the project |
-| `bun run test` | Run the tests |
-| `bun run lint` | Lint, including the import rules described below |
-| `bunx dprint fmt <files>` | Format the files you changed |
+| Command                   |                                                  |
+| ------------------------- | ------------------------------------------------ |
+| `bun run typecheck`       | Type-check the project                           |
+| `bun run test`            | Run the tests                                    |
+| `bun run lint`            | Lint, including the import rules described below |
+| `bunx dprint fmt <files>` | Format the files you changed                     |
 
 ## Architecture
 
 The whole app is one Elm-style program:
 
 - a **single global state**, changed only by a pure `update(message)(state)`;
-- **effects as data**: `update` returns *commands* (Effects that may produce a message), and *subscriptions*
+- **effects as data**: `update` returns _commands_ (Effects that may produce a message), and _subscriptions_
   turn the outside world (database changes, scrolling, a clock) into messages;
 - a **pure view**: `makeModel` projects the state onto what the view needs, and the view turns that model
   into a virtual DOM.
 
-The runtime that runs the program lives in `src/libs/elm/`. A few choices go beyond plain Elm:
+The runtime is a local package, [`@fgaudo/effect-tea`](packages/effect-tea/README.md) in `packages/effect-tea/` (a Bun workspace): `run(program, render)` runs a program and hands its frames (a model and its dispatch) to any
+renderer. A few choices go beyond plain Elm:
 
 - **Rejection.** When a message makes no sense in the current state, `update` returns `Engine.reject`. The
   engine knows which displayed state every click comes from: a click on an outdated frame (or a double tap)
   is simply ignored, while a message rejected for the current state is a bug, and crashes the app.
-- **Offers.** The view never builds messages: the model *offers* each action (`Option` of a message), and
+- **Offers.** The view never builds messages: the model _offers_ each action (`Option` of a message), and
   decides it by asking `update` whether it would accept the message, so the model and `update` cannot
   disagree. `dispatch` only takes offered messages, so a view that sends anything else does not compile.
 - **Pages talk to their parent through events** (Elm's "OutMsg"): a page asks, e.g. to open the About page
@@ -94,8 +95,8 @@ it needs from the outside, such as the query that lists products, or scrolling),
 implementing them for each setup (SQLite, in memory, …). What every page must share lives one level up, in
 `src/app/`: the entities (`Product`) and the ports that change stored data. Only the files at the root of
 a page are public; Biome rejects imports of anything deeper. Environments (production, development) exist
-only in `src/entrypoints/`. The runtime (`src/libs/elm/`) knows nothing of snabbdom: views are TSX,
-rendered by snabbdom through a small bridge (`src/libs/elm-snabbdom/`, `src/libs/jsx/`).
+only in `src/entrypoints/`. The runtime (`@fgaudo/effect-tea`) knows nothing of snabbdom: views are TSX,
+rendered by snabbdom through a small bridge (`src/libs/tea-snabbdom/`, `src/libs/jsx/`).
 
 See [`src/README.md`](src/README.md) for a map of the source tree and a suggested reading order.
 

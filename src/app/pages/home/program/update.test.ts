@@ -5,7 +5,7 @@ import * as HashSet from 'effect/HashSet'
 import * as Opt from 'effect/Option'
 import * as Result from 'effect/Result'
 import * as fc from 'fast-check'
-import * as Engine from '@/libs/elm/engine.ts'
+import * as Tea from '@fgaudo/effect-tea'
 import { dispatchedBy } from '@/libs/testing/view.ts'
 import * as Domain from '../../../domain/product.ts'
 import type { StoredProduct } from '../ports/product-list.ts'
@@ -61,7 +61,7 @@ type Outcome =
 
 const outcome = (msg: Message, before: State): Outcome => {
   const result = update(msg)(before)
-  return Engine.isRejected(result)
+  return Tea.isRejected(result)
     ? { rejected: true }
     : { rejected: false, after: result.state, commands: result.commands ?? [], events: result.events ?? [] }
 }
@@ -125,15 +125,19 @@ describe('Home update', () => {
   // such a rejection as a bug and crash.
   describe('view and update agree', () => {
     test('every message the view can dispatch is accepted', () => {
-      assertProperty([state, fc.string()], (before, inputValue) =>
-        dispatchedBy(view, makeModel(before), inputValue).every((msg) => !rejects(msg, before)))
+      assertProperty(
+        [state, fc.string()],
+        (before, inputValue) => dispatchedBy(view, makeModel(before), inputValue).every((msg) => !rejects(msg, before)),
+      )
     })
 
     // Guards against the property passing only because the view dispatches
     // nothing interesting: at least one message that `update` can reject must
     // be reachable from the view.
     test('the view reaches messages that update can reject', () => {
-      const tags = new Set(fc.sample(state, 1_000).flatMap((s) => dispatchedBy(view, makeModel(s)).map((msg) => msg._tag)))
+      const tags = new Set(
+        fc.sample(state, 1_000).flatMap((s) => dispatchedBy(view, makeModel(s)).map((msg) => msg._tag)),
+      )
       const expected: ReadonlyArray<Message['_tag']> = [
         'AddProductStarted',
         'NameChanged',
@@ -155,25 +159,31 @@ describe('Home update', () => {
     // the same text.
     test('every message the view can dispatch does something', () => {
       const typed = new Set<Message['_tag']>(['NameChanged', 'ExpirationDateChanged'])
-      assertProperty([state, fc.string()], (before, inputValue) =>
-        dispatchedBy(view, makeModel(before), inputValue).every((msg) => {
-          if (typed.has(msg._tag)) return true
-          const { after, commands, events } = step(msg, before)
-          return !Equal.equals(after, before) || commands.length > 0 || events.length > 0
-        }))
+      assertProperty(
+        [state, fc.string()],
+        (before, inputValue) =>
+          dispatchedBy(view, makeModel(before), inputValue).every((msg) => {
+            if (typed.has(msg._tag)) return true
+            const { after, commands, events } = step(msg, before)
+            return !Equal.equals(after, before) || commands.length > 0 || events.length > 0
+          }),
+      )
     })
 
     // A double tap sends the same message twice from the same frame. The second
     // one must be rejected (and then ignored as stale), or change nothing: a
     // message must not carry a decision taken on the state it was rendered from.
     test('a message sent twice from the same frame acts once', () => {
-      assertProperty([state, fc.string()], (before, inputValue) =>
-        dispatchedBy(view, makeModel(before), inputValue).every((msg) => {
-          const first = step(msg, before)
-          const second = outcome(msg, first.after)
-          return second.rejected
-            || (Equal.equals(second.after, first.after) && second.commands.length === 0 && second.events.length === 0)
-        }))
+      assertProperty(
+        [state, fc.string()],
+        (before, inputValue) =>
+          dispatchedBy(view, makeModel(before), inputValue).every((msg) => {
+            const first = step(msg, before)
+            const second = outcome(msg, first.after)
+            return second.rejected
+              || (Equal.equals(second.after, first.after) && second.commands.length === 0 && second.events.length === 0)
+          }),
+      )
     })
   })
 
@@ -200,7 +210,8 @@ describe('Home update', () => {
           return !after.isMenuOpen && onlyChanged(before, after, 'isMenuOpen') && events.length === 0
         }
         const expected = {
-          Editing: () => after.addProduct._tag === 'Closed' && onlyChanged(before, after, 'addProduct') && events.length === 0,
+          Editing: () =>
+            after.addProduct._tag === 'Closed' && onlyChanged(before, after, 'addProduct') && events.length === 0,
           Submitting: () => Equal.equals(after, before) && events.length === 0,
           Closed: () => Equal.equals(after, before) && Equal.equals(events, [Event.LeaveRequested()]),
         }[before.addProduct._tag]()
@@ -225,8 +236,10 @@ describe('Home update', () => {
     })
 
     test('are rejected when the menu is already in the state they ask for', () => {
-      assertProperty([state], (before) =>
-        cases.every(({ msg, isOpenBefore }) => rejects(msg, { ...before, isMenuOpen: !isOpenBefore })))
+      assertProperty(
+        [state],
+        (before) => cases.every(({ msg, isOpenBefore }) => rejects(msg, { ...before, isMenuOpen: !isOpenBefore })),
+      )
     })
   })
 
@@ -316,7 +329,10 @@ describe('Home update', () => {
         }
         const existingIds = HashSet.fromIterable(stored.flatMap((input) => Opt.toArray(input.maybeId)))
         return after.selection._tag === 'Selecting'
-          && Equal.equals(selectedIds(after.selection), HashSet.intersection(selectedIds(before.selection), existingIds))
+          && Equal.equals(
+            selectedIds(after.selection),
+            HashSet.intersection(selectedIds(before.selection), existingIds),
+          )
       })
     })
   })
@@ -437,7 +453,11 @@ describe('Home update', () => {
           return rejects(Message.AddProductOpened(), before)
         }
         const { after, commands } = step(Message.AddProductOpened(), before)
-        return Equal.equals(after.addProduct, { _tag: 'Editing', maybeName: Opt.none(), maybeExpirationDate: Opt.none() })
+        return Equal.equals(after.addProduct, {
+          _tag: 'Editing',
+          maybeName: Opt.none(),
+          maybeExpirationDate: Opt.none(),
+        })
           && onlyChanged(before, after, 'addProduct')
           && commands.length === 0
       })
@@ -467,13 +487,17 @@ describe('Home update', () => {
     })
 
     test('is rejected while submitting: the inputs are frozen', () => {
-      assertProperty([stateWith('addProduct', submittingForm), fc.string()], (before, name) =>
-        rejects(Message.NameChanged({ name }), before))
+      assertProperty(
+        [stateWith('addProduct', submittingForm), fc.string()],
+        (before, name) => rejects(Message.NameChanged({ name }), before),
+      )
     })
 
     test('is rejected when the form is closed', () => {
-      assertProperty([stateWith('addProduct', closedForm), fc.string()], (before, name) =>
-        rejects(Message.NameChanged({ name }), before))
+      assertProperty(
+        [stateWith('addProduct', closedForm), fc.string()],
+        (before, name) => rejects(Message.NameChanged({ name }), before),
+      )
     })
   })
 
@@ -491,13 +515,17 @@ describe('Home update', () => {
     })
 
     test('is rejected while submitting: the inputs are frozen', () => {
-      assertProperty([stateWith('addProduct', submittingForm), fc.integer()], (before, expiration) =>
-        rejects(Message.ExpirationDateChanged({ expiration }), before))
+      assertProperty(
+        [stateWith('addProduct', submittingForm), fc.integer()],
+        (before, expiration) => rejects(Message.ExpirationDateChanged({ expiration }), before),
+      )
     })
 
     test('is rejected when the form is closed', () => {
-      assertProperty([stateWith('addProduct', closedForm), fc.integer()], (before, expiration) =>
-        rejects(Message.ExpirationDateChanged({ expiration }), before))
+      assertProperty(
+        [stateWith('addProduct', closedForm), fc.integer()],
+        (before, expiration) => rejects(Message.ExpirationDateChanged({ expiration }), before),
+      )
     })
   })
 
@@ -561,5 +589,14 @@ test('arbitraries cover every variant of the state', () => {
   const tags = new Set(
     fc.sample(state, 500).flatMap((s) => [s.products._tag, s.selection._tag, s.addProduct._tag]),
   )
-  expect([...tags].sort()).toEqual(['Closed', 'Deleting', 'Editing', 'Failed', 'Loaded', 'Loading', 'Selecting', 'Submitting'])
+  expect([...tags].sort()).toEqual([
+    'Closed',
+    'Deleting',
+    'Editing',
+    'Failed',
+    'Loaded',
+    'Loading',
+    'Selecting',
+    'Submitting',
+  ])
 })
