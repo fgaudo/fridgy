@@ -227,6 +227,9 @@ refactoring (see "Refactoring status"). A map of the source tree is in `src/READ
 - Linting: biome (formatter disabled); formatting with dprint. Run dprint on the files you changed
   (`bunx dprint fmt <files>`), not on the whole project: a bare `dprint fmt` also rewrites generated files,
   Android resources and code nobody touched.
+- Documentation is part of the change: when a change affects what `README.md` (overview, status, commands,
+  architecture, tests), `src/README.md` (source map, reading order) or this file describe, update them in
+  the same change, and remove what is no longer true.
 - Comments only for what the code cannot say: why something is done this way, an invariant or a contract
   that is not visible in the types, a behaviour of a library or platform the code relies on, a choice that
   would look like a mistake. No comments that repeat a name or a type, describe what the next line
@@ -255,6 +258,19 @@ refactoring (see "Refactoring status"). A map of the source tree is in `src/READ
   bundles never include them. When adding a branded type, add its arbitrary too. The same goes for domain
   types in `src/app` (e.g. `domain/product.arbitrary.ts`: valid products, the snapshots `fromSnapshot` accepts,
   and anything a storage may return). State arbitraries live in `program/state.arbitrary.ts`.
+- All the adapters of a port pass the same contract: development only exercises the in-memory adapters, so
+  nothing else would notice a production (sqlite) adapter that behaves differently. The contract describes the
+  port and holds no implementation, so it sits next to the port as `<port>.contract.ts` (e.g.
+  `app/ports/product-commands.contract.ts`, `pages/home/ports/product-list.contract.ts`): a function taking
+  the adapter's layer. Each adapter has its own `<adapter>.test.ts` next to it that runs the contract with
+  that layer, so a failure names the broken adapter. `*.contract.ts` files are test-only code (biome).
+  Sqlite setups use `src/infrastructure/sqlite/memory.layer.ts`: the production engine (wa-sqlite) and
+  migrations, in memory. A write port has no read (pages read through their own query ports), so its
+  contract also takes `readBack`: each adapter's test supplies one that looks into that adapter's own storage
+  (e.g. the in-memory store's rows, or `SqlHelper.getProducts`). Reads that only tests need live in the tests,
+  never in a port.
+- Migrations (`src/infrastructure/sql/migrations.ts`) are append-only: a database on a phone has already run
+  the existing ones, so a fix is a new migration, never an edit of an old one.
 
 ## Commands
 

@@ -31,8 +31,8 @@
                 "message": "Page subfolders are private: import only the modules at the root of the page (program.ts, view.ts, *.layer.ts)."
               },
               {
-                "group": ["fast-check", "**/*.arbitrary.ts", "@/libs/testing/**"],
-                "message": "Test-only code: fast-check, *.arbitrary.ts and libs/testing may only be imported by *.test.ts and *.arbitrary.ts files."
+                "group": ["fast-check", "**/*.arbitrary.ts", "**/*.contract.ts", "@/libs/testing/**"],
+                "message": "Test-only code: fast-check, *.arbitrary.ts, *.contract.ts and libs/testing may only be imported by *.test.ts, *.arbitrary.ts and *.contract.ts files."
               }
             ]
           }
@@ -61,8 +61,8 @@
               "options": {
                 "patterns": [
                   {
-                    "group": ["fast-check", "**/*.arbitrary.ts", "@/libs/testing/**"],
-                    "message": "Test-only code: fast-check, *.arbitrary.ts and libs/testing may only be imported by *.test.ts and *.arbitrary.ts files."
+                    "group": ["fast-check", "**/*.arbitrary.ts", "**/*.contract.ts", "@/libs/testing/**"],
+                    "message": "Test-only code: fast-check, *.arbitrary.ts, *.contract.ts and libs/testing may only be imported by *.test.ts, *.arbitrary.ts and *.contract.ts files."
                   },
                   {
                     "group": ["snabbdom", "snabbdom/**"],
@@ -93,8 +93,8 @@
                     "message": "Page subfolders are private: import only the modules at the root of the page (program.ts, view.ts, *.layer.ts)."
                   },
                   {
-                    "group": ["fast-check", "**/*.arbitrary.ts", "@/libs/testing/**"],
-                    "message": "Test-only code: fast-check, *.arbitrary.ts and libs/testing may only be imported by *.test.ts and *.arbitrary.ts files."
+                    "group": ["fast-check", "**/*.arbitrary.ts", "**/*.contract.ts", "@/libs/testing/**"],
+                    "message": "Test-only code: fast-check, *.arbitrary.ts, *.contract.ts and libs/testing may only be imported by *.test.ts, *.arbitrary.ts and *.contract.ts files."
                   },
                   {
                     "group": ["../../adapters/**", "../../../adapters/**", "../../../../adapters/**"],
@@ -121,8 +121,8 @@
                     "message": "App subfolders are private: from outside src/app import only the modules at its root (program.ts, view.ts, *.layer.ts)."
                   },
                   {
-                    "group": ["fast-check", "**/*.arbitrary.ts", "@/libs/testing/**"],
-                    "message": "Test-only code: fast-check, *.arbitrary.ts and libs/testing may only be imported by *.test.ts and *.arbitrary.ts files."
+                    "group": ["fast-check", "**/*.arbitrary.ts", "**/*.contract.ts", "@/libs/testing/**"],
+                    "message": "Test-only code: fast-check, *.arbitrary.ts, *.contract.ts and libs/testing may only be imported by *.test.ts, *.arbitrary.ts and *.contract.ts files."
                   },
                   {
                     "group": ["**/pages/**"],
@@ -136,7 +136,7 @@
       }
     },
     {
-      "includes": ["**/*.test.ts", "**/*.arbitrary.ts"],
+      "includes": ["**/*.test.ts", "**/*.arbitrary.ts", "**/*.contract.ts"],
       "linter": {
         "rules": {
           "style": {

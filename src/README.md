@@ -24,7 +24,8 @@ src/
 │     └─ program/ · domain/ · ports/ · adapters/
 │
 ├─ infrastructure/       technical building blocks: sqlite, sql, in-memory store, renderer, hot reload
-├─ libs/                 generic, reusable code (elm runtime, branded numbers, …)
+├─ libs/                 generic, reusable code (elm runtime, its snabbdom bridge and JSX runtime,
+│                        branded numbers, …)
 └─ assets/               index.html and styles
 ```
 
@@ -32,7 +33,8 @@ src/
 
 1. `app/program.ts` and `app/view.tsx` — what the app is.
 2. `app/pages/home/program.ts` and `program/` — a page: messages → `update` → state → `makeModel` → view.
-3. `app/pages/home/ports/` — what the page needs from the outside world.
+3. `app/pages/home/ports/` — what the page needs from the outside world; `app/domain/` and `app/ports/` —
+   the entities and the write ports every page shares.
 4. `entrypoints/` — how everything is wired for each environment.
 
 ## Visibility

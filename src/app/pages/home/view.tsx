@@ -165,13 +165,20 @@ const statusText = (status: ValidProduct['status']) => {
   }
 }
 
+// A slight overshoot, so that a selected row pops out instead of just growing.
+const popEase = 'ease-[cubic-bezier(0.34,1.56,0.64,1)]'
+
 const productRow = (product: ValidProduct, { onPreventingDefault }: Events) => (
   <div
     key={product.id}
     props={{
       className: cn(
-        'h-16 flex items-center gap-3 rounded-lg shadow-sm relative select-none [-webkit-touch-callout:none]',
-        product.isSelected ? 'bg-secondary/30 ring-2 ring-secondary' : 'bg-secondary/5',
+        'h-16 flex items-center gap-3 rounded-lg relative select-none [-webkit-touch-callout:none]',
+        'transition-[translate,scale,box-shadow,background-color] duration-300',
+        popEase,
+        product.isSelected
+          ? 'z-10 bg-secondary/25 shadow-md -translate-y-0.5 scale-[1.02]'
+          : 'bg-secondary/5 shadow-sm',
       ),
     }}
     // A long press on Android (a right click on desktop).
@@ -182,6 +189,17 @@ const productRow = (product: ValidProduct, { onPreventingDefault }: Events) => (
       <div props={{ className: 'px-2' }}>{product.name}</div>
       {statusText(product.status)}
     </div>
+    <span
+      props={{
+        className: cn(
+          'material-symbols-rounded ml-auto mr-4 text-secondary [font-variation-settings:\'FILL\'_1] transition-[scale,opacity] duration-300',
+          popEase,
+          product.isSelected ? 'opacity-100 scale-100' : 'opacity-0 scale-50',
+        ),
+      }}
+    >
+      check_circle
+    </span>
   </div>
 )
 
@@ -247,7 +265,7 @@ export const view: View<Model, Message> = (model, dispatch) => {
       {sideMenu(model, events)}
       {fab}
       {topBar}
-      <div props={{ className: 'ml-sail mt-sait mr-sair' }}>
+      <div props={{ className: 'ml-sail mt-sait mr-sair overflow-x-clip' }}>
         <div props={{ className: 'p-2 flex gap-2 flex-col pb-48 pt-28' }}>{productList}</div>
       </div>
     </div>

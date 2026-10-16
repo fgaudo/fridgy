@@ -73,7 +73,8 @@ export class SqlHelper extends Context.Service<SqlHelper>()(
           expirationDate: Schema.DateTimeUtc,
           name: Schema.String,
         }),
-        Result: Product,
+        // Decoded from what `execute` returns, so it must describe encoded values: only the id is needed.
+        Result: Schema.Struct({ id: Integer.Schema }),
         execute: flow(
           Effect.forEach(
             Effect.fn(function*(request) {
@@ -85,7 +86,7 @@ export class SqlHelper extends Context.Service<SqlHelper>()(
                 date: request.expirationDate,
                 product_id: product.id,
               })
-              return product
+              return { id: product.id }
             }),
             { concurrency: 'unbounded' },
           ),

@@ -12,12 +12,12 @@ export const migrations = {
         const expiration = ProductExpirationSchema
         yield* sql`
           CREATE TABLE ${sql(product.table)}(
-            ${sql(product.columns.id)} INT PRIMARY KEY,
+            ${sql(product.columns.id)} INTEGER PRIMARY KEY,
             ${sql(product.columns.name)} VARCHAR(255) NOT NULL,
             ${sql(product.columns.creationDate)} INT NOT NULL
           );
           CREATE TABLE ${sql(expiration.table)}(
-            ${sql(expiration.columns.id)} INT PRIMARY KEY,
+            ${sql(expiration.columns.id)} INTEGER PRIMARY KEY,
             ${sql(expiration.columns.date)} INT NOT NULL,
             ${sql(expiration.columns.productId)} INT NOT NULL,
             FOREIGN KEY(${sql(expiration.columns.productId)})

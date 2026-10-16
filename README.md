@@ -4,8 +4,9 @@ Fridgy keeps track of the food in your fridge and of when it expires. It is an A
 during development) written in TypeScript, with a strictly functional, [Elm](https://elm-lang.org)-style
 architecture.
 
-> **Status:** work in progress. The main page (product list, adding and deleting products, expiration
-> tracking) is being rebuilt on the current architecture; other pages are not migrated yet.
+> **Status:** work in progress. The main page (product list, adding and selecting products, expiration
+> tracking) and a skeleton of the About page (licenses, a random saying) run on the current architecture,
+> with navigation between them and Android's back button.
 
 ## Stack
 
@@ -63,6 +64,7 @@ bunx cap open android
 | `bun run typecheck` | Type-check the project |
 | `bun run test` | Run the tests |
 | `bun run lint` | Lint, including the import rules described below |
+| `bunx dprint fmt <files>` | Format the files you changed |
 
 ## Architecture
 
@@ -77,15 +79,23 @@ The whole app is one Elm-style program:
 The runtime that runs the program lives in `src/libs/elm/`. A few choices go beyond plain Elm:
 
 - **Rejection.** When a message makes no sense in the current state, `update` returns `Engine.reject`. The
-  engine knows which displayed state every click comes from: a click on an outdated frame is simply ignored,
-  while a message rejected for the current state is a bug, and crashes the app.
+  engine knows which displayed state every click comes from: a click on an outdated frame (or a double tap)
+  is simply ignored, while a message rejected for the current state is a bug, and crashes the app.
+- **Offers.** The view never builds messages: the model *offers* each action (`Option` of a message), and
+  decides it by asking `update` whether it would accept the message, so the model and `update` cannot
+  disagree. `dispatch` only takes offered messages, so a view that sends anything else does not compile.
+- **Pages talk to their parent through events** (Elm's "OutMsg"): a page asks, e.g. to open the About page
+  or to be left, and the root owns navigation, a stack of pages.
 - **Asynchronous operations carry an id**, so a late completion can never overwrite a newer one.
 - **Bugs crash the app**; expected errors are typed and handled with Effect.
 
-Each page is a self-contained module that owns its domain, messages, state, update, view and **ports**
-(the services it needs from the outside, such as product storage), with **adapters** implementing them for
-each setup (SQLite, in memory, …). Only the files at the root of a page are public; Biome rejects imports
-of anything deeper. Environments (production, development) exist only in `src/entrypoints/`.
+Each page is a self-contained module that owns its messages, state, update, view and **ports** (the services
+it needs from the outside, such as the query that lists products, or scrolling), with **adapters**
+implementing them for each setup (SQLite, in memory, …). What every page must share lives one level up, in
+`src/app/`: the entities (`Product`) and the ports that change stored data. Only the files at the root of
+a page are public; Biome rejects imports of anything deeper. Environments (production, development) exist
+only in `src/entrypoints/`. The runtime (`src/libs/elm/`) knows nothing of snabbdom: views are TSX,
+rendered by snabbdom through a small bridge (`src/libs/elm-snabbdom/`, `src/libs/jsx/`).
 
 See [`src/README.md`](src/README.md) for a map of the source tree and a suggested reading order.
 
@@ -96,8 +106,12 @@ thousands of states and messages and checks that the rules hold for all of them.
 domain type has an `*.arbitrary.ts` file with its generators. Among others, the tests check that:
 
 - `update` is deterministic and never throws;
-- every message the real view can send, in any state, is accepted by `update`;
-- a stored product reads back as the same product.
+- every message the real view can send, in any state, is accepted by `update`, does something, and acts
+  only once when sent twice (a double tap);
+- a stored product reads back as the same product;
+- every storage adapter, in memory or SQLite (on the real migrations), passes the same contract: what is
+  written reads back as itself, deletions remove exactly what they should, Home's list is ordered and sees
+  every write.
 
 ## Contributing
 
