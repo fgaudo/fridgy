@@ -28,8 +28,8 @@ src/
 └─ assets/               index.html and styles
 ```
 
-The runtime of the Elm architecture is a local package, outside `src/`: [`packages/effect-tea`](../packages/effect-tea/README.md)
-(`@fgaudo/effect-tea`).
+The runtime of the Elm architecture is a library, an npm dependency:
+[`@fgaudo/effect-tea`](https://github.com/fgaudo/effect-tea).
 
 ## Reading order
 

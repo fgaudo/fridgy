@@ -76,7 +76,7 @@ The whole app is one Elm-style program:
 - a **pure view**: `makeModel` projects the state onto what the view needs, and the view turns that model
   into a virtual DOM.
 
-The runtime is a local package, [`@fgaudo/effect-tea`](packages/effect-tea/README.md) in `packages/effect-tea/` (a Bun workspace): `run(program, render, options)` runs a program and hands its frames (a model and its dispatch) to any
+The runtime is a library, [`@fgaudo/effect-tea`](https://github.com/fgaudo/effect-tea) (published on npm): `run(program, render, options)` runs a program and hands its frames (a model and its dispatch) to any
 renderer. A few choices go beyond plain Elm:
 
 - **Rejection.** When a message makes no sense in the current state, `update` returns `Engine.reject`. The

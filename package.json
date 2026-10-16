@@ -2,16 +2,13 @@
   "name": "fridgy",
   "private": true,
   "type": "module",
-  "workspaces": [
-    "packages/*"
-  ],
   "module": "index.ts",
   "scripts": {
     "update-licenses": "license-checker-rseidelsohn --excludePackages fridgy --json --customPath src/app/pages/about/adapters/licenses/custom-path.json --out src/app/pages/about/adapters/licenses/generated/licenses.json --depth 0",
     "build": "bun ./scripts/cli.ts build",
     "watch": "bun ./scripts/cli.ts watch",
     "typecheck": "tsc --noEmit",
-    "lint": "biome lint src scripts packages",
+    "lint": "biome lint src scripts",
     "test": "bun test",
     "prepare": "effect-tsgo patch --typescript --no-oxlint"
   },
@@ -24,7 +21,7 @@
     "@effect/platform-browser": "^4.0.5",
     "@effect/platform-bun": "^4.0.5",
     "@effect/sql-sqlite-wasm": "^4.0.5",
-    "@fgaudo/effect-tea": "workspace:*",
+    "@fgaudo/effect-tea": "^0.1.0",
     "@fontsource-variable/noto-sans": "^5.3.0",
     "@fontsource-variable/noto-sans-arabic": "^5.3.0",
     "@fontsource-variable/noto-sans-bengali": "^5.3.0",

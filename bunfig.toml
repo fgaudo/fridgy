@@ -1,5 +1,5 @@
 [install]
-# Dependencies stay hoisted into node_modules/ (the build copies files from there), as before the workspace.
+# Dependencies stay hoisted into node_modules/: the build copies files from there.
 linker = "hoisted"
 
 [test]

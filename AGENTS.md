@@ -11,8 +11,8 @@ be in Italian.
 
 ## Tooling enforces a lot
 
-Biome and the typecheck enforce import boundaries (private folders of the app and of pages, `@fgaudo/effect-tea`
-independent of snabbdom and reachable only through its public entrypoints, test-only code kept out of bundles), the strict typing of views (`dispatch` only
+Biome and the typecheck enforce import boundaries (private folders of the app and of pages, test-only code (including
+`@fgaudo/effect-tea/testing`) kept out of bundles), the strict typing of views (`dispatch` only
 takes offered messages; JSX elements only accept snabbdom's modules) and the language service rules (no
 `console`, `Date`, `Math.random`, `fetch` or timers inside Effect; hashed service keys). When one of them
 reports an error, the rule is intended: fix the code, do not work around the check.
@@ -71,11 +71,11 @@ The pages to copy are `src/app/pages/home` (full) and `src/app/pages/about` (min
 - **Environments exist only in `src/entrypoints/`.** Shared code never branches on `process.env.NODE_ENV`;
   each setup has its own `*.layer.ts`, named after what backs it (`sqlite`, `in-memory`), so a bundle only
   contains what it uses. When moving files, update the paths in `scripts/cli.ts`.
-- **The runtime of the Elm architecture is a package**: `packages/effect-tea` (`@fgaudo/effect-tea`, a workspace dependency). Its API is `src/index.ts` (plus `@fgaudo/effect-tea/testing`), documented in its README; the app
-  imports `import * as Tea from '@fgaudo/effect-tea'`. The app uses its TypeScript sources (the `bun` export
-  condition, set in `tsconfig.json` and `scripts/cli.ts`), so it never needs `bun run build` in
-  `packages/effect-tea`, which only produces the `dist/` other consumers use. Changes to it follow
-  [`packages/effect-tea/AGENTS.md`](packages/effect-tea/AGENTS.md).
+- **The runtime of the Elm architecture is a library**: [`@fgaudo/effect-tea`](https://www.npmjs.com/package/@fgaudo/effect-tea),
+  an npm dependency developed in its own repository (`github.com/fgaudo/effect-tea`), documented in its
+  README. The app imports `import * as Tea from '@fgaudo/effect-tea'`, and its tests
+  `@fgaudo/effect-tea/testing`. Never patch it from here: a change to the library is made, released and
+  then upgraded to in this app.
 - **`src/libs/` is generic**: no knowledge of the app. Branded types offer `fromNumber`/`make` (an `Option`)
   and `fromNumberUnsafe`/`makeUnsafe` only for values valid by construction. Export only what is used, plus
   a library module's intended API.
