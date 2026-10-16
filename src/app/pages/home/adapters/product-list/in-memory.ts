@@ -1,6 +1,7 @@
 import * as Arr from 'effect/Array'
 import * as DateTime from 'effect/DateTime'
 import * as Layer from 'effect/Layer'
+import * as Listener from '@/libs/listener/listener.ts'
 import * as Opt from 'effect/Option'
 import * as Order from 'effect/Order'
 import * as Result from 'effect/Result'
@@ -22,14 +23,16 @@ const expiringFirst = Order.combine(
 export const layer = Layer.effect(
   ProductList,
   InMemoryStore.useSync(({ tables }) => ({
-    changes: SubscriptionRef.changes(tables).pipe(
-      Stream.map(({ products }): StoredProducts =>
-        Result.succeed(Arr.map(Arr.sort(products, expiringFirst), (row) => ({
-          maybeId: Opt.some(row.id.toString(10)),
-          maybeName: Opt.some(row.name),
-          maybeCreationDate: Opt.some(row.creationDate),
-          maybeExpirationDate: row.maybeExpirationDate,
-        })))
+    changes: Listener.fromStream(
+      SubscriptionRef.changes(tables).pipe(
+        Stream.map(({ products }): StoredProducts =>
+          Result.succeed(Arr.map(Arr.sort(products, expiringFirst), (row) => ({
+            maybeId: Opt.some(row.id.toString(10)),
+            maybeName: Opt.some(row.name),
+            maybeCreationDate: Opt.some(row.creationDate),
+            maybeExpirationDate: row.maybeExpirationDate,
+          })))
+        ),
       ),
     ),
   })),

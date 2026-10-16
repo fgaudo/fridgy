@@ -1,29 +1,34 @@
 // What every adapter of Home's `ProductList` must do, given the writes of `ProductCommands` (whose own
 // contract is `app/ports/product-commands.test-contract.ts`). It holds no implementation: each adapter's
 // `<adapter>.test.ts` runs it with its own layers.
-import { describe, expect, test } from 'bun:test'
+import { describe, test } from 'bun:test'
 import * as Arr from 'effect/Array'
 import * as DateTime from 'effect/DateTime'
+import * as Deferred from 'effect/Deferred'
 import * as Effect from 'effect/Effect'
 import * as Equal from 'effect/Equal'
 import type * as Layer from 'effect/Layer'
 import * as Opt from 'effect/Option'
 import * as Queue from 'effect/Queue'
 import * as Result from 'effect/Result'
-import * as Stream from 'effect/Stream'
 import * as fc from 'fast-check'
 import { add, check, deleteById } from '../../../ports/product-commands.test-contract.ts'
 import * as ProductArbitrary from '../../../domain/product.test-arbitrary.ts'
 import * as Product from '../../../domain/product.ts'
 import type { ProductCommands } from '../../../ports/product-commands.ts'
-import { ProductList, type StoredProduct } from './product-list.ts'
+import { ProductList, type StoredProduct, type StoredProducts } from './product-list.ts'
 
 type Storage = ProductCommands | ProductList
 
 /** The list as it is now: `changes` emits it on subscription. */
 const list = Effect.gen(function*() {
   const { changes } = yield* ProductList
-  const result = yield* Stream.runHead(changes).pipe(Effect.flatMap(Effect.fromOption), Effect.orDie)
+  const first = yield* Deferred.make<StoredProducts>()
+  // `changes` never ends: it is interrupted once the first list has arrived.
+  const result = yield* Effect.raceFirst(
+    Deferred.await(first),
+    changes((products) => Effect.asVoid(Deferred.succeed(first, products))),
+  )
   return yield* Result.match(result, {
     onFailure: () => Effect.die(new Error('the storage could not be read')),
     onSuccess: Effect.succeed,
@@ -80,10 +85,10 @@ export const productListContract = (name: string, adapter: () => Layer.Layer<Sto
         Effect.gen(function*() {
           const { changes } = yield* ProductList
           const lists = yield* Queue.unbounded<ReadonlyArray<StoredProduct>>()
-          yield* changes.pipe(
-            Stream.runForEach((result) => Result.isSuccess(result) ? Queue.offer(lists, result.success) : Effect.void),
-            Effect.forkScoped,
+          yield* changes((result) =>
+            Result.isSuccess(result) ? Effect.asVoid(Queue.offer(lists, result.success)) : Effect.void
           )
+            .pipe(Effect.forkScoped)
           const waitUntil = (predicate: (products: ReadonlyArray<StoredProduct>) => boolean): Effect.Effect<void> =>
             Queue.take(lists).pipe(
               Effect.flatMap((products) => predicate(products) ? Effect.void : waitUntil(predicate)),
@@ -95,15 +100,4 @@ export const productListContract = (name: string, adapter: () => Layer.Layer<Sto
           yield* waitUntil((products) => Opt.isNone(withId(products, id)))
           return true
         }).pipe(Effect.scoped)))
-
-    // Home listens to it as a subscription, and a subscription that ends is a bug.
-    test('the changes never end', async () => {
-      const ended = await Effect.runPromise(
-        Effect.gen(function*() {
-          const { changes } = yield* ProductList
-          return yield* Stream.runDrain(changes).pipe(Effect.timeoutOption('200 millis'))
-        }).pipe(Effect.provide(adapter())),
-      )
-      expect(Opt.isNone(ended)).toBe(true)
-    })
   })

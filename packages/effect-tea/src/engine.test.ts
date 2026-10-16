@@ -106,3 +106,83 @@ describe('Engine reject', () => {
     expect(reached).toEqual({ state: 2, revision: 2 })
   })
 })
+
+describe('Engine subscriptions', () => {
+  // The state lists the names of the subscriptions to run; `Bumped` changes it without touching them.
+  type Listening = Readonly<{ names: ReadonlyArray<string>; bumps: number }>
+  type Change = Readonly<{ _tag: 'Listened'; names: ReadonlyArray<string> }> | Readonly<{ _tag: 'Bumped' }>
+
+  /** Runs an engine whose subscriptions write when they start and when they are stopped. */
+  const listening = (log: Array<string>) =>
+    Engine.make<Listening, Change, never, never, readonly [string, number]>({
+      init: { state: { names: [], bumps: 0 } },
+      update: (change) => (state) =>
+        change._tag === 'Listened'
+          ? { state: { ...state, names: change.names } }
+          : { state: { ...state, bumps: state.bumps + 1 } },
+      // The keys are new tuples every time: only their values say whether they changed.
+      subscriptions: ({ names }) =>
+        HashMap.fromIterable(names.map((name) =>
+          [
+            [name, 1] as const,
+            (): Effect.Effect<never> =>
+              Effect.acquireRelease(
+                Effect.sync(() => log.push(`start ${name}`)),
+                () => Effect.sync(() => log.push(`stop ${name}`)),
+              ).pipe(Effect.andThen(Effect.never), Effect.scoped),
+          ] as const
+        )),
+      onRejected: 'die',
+    })
+
+  /** Sends `changes` one at a time, from the frame of the state each one finds, letting the subscriptions settle. */
+  const send = (engine: Engine.Engine<Listening, Change>, changes: ReadonlyArray<Change>) =>
+    Effect.forEach(changes, (change, index) =>
+      Effect.gen(function*() {
+        const frame = yield* engine.state$.pipe(
+          Stream.filter(({ revision }) => revision >= index),
+          Stream.runHead,
+          Effect.map(Opt.getOrThrow),
+        )
+        engine.dispatchFrom(frame)(change)
+        yield* engine.state$.pipe(Stream.filter(({ revision }) => revision > index), Stream.runHead)
+        yield* Effect.sleep('20 millis')
+      }), { discard: true })
+
+  const logOf = async (changes: ReadonlyArray<Change>) => {
+    const log: Array<string> = []
+    await run(Effect.gen(function*() {
+      const engine = yield* listening(log)
+      yield* send(engine, changes)
+    }))
+    return log
+  }
+
+  test('a key that goes away interrupts its subscription, which releases what it holds', async () => {
+    expect(await logOf([{ _tag: 'Listened', names: ['a'] }, { _tag: 'Listened', names: [] }])).toEqual([
+      'start a',
+      'stop a',
+    ])
+  })
+
+  test('a key that comes back starts a new subscription', async () => {
+    const log = await logOf([
+      { _tag: 'Listened', names: ['a'] },
+      { _tag: 'Listened', names: [] },
+      { _tag: 'Listened', names: ['a'] },
+    ])
+    expect(log.slice(0, 3)).toEqual(['start a', 'stop a', 'start a'])
+  })
+
+  test('a key that changes stops the old subscription and starts the new one', async () => {
+    const log = await logOf([{ _tag: 'Listened', names: ['a'] }, { _tag: 'Listened', names: ['b'] }])
+    expect(log.slice(0, 3)).toEqual(['start a', 'stop a', 'start b'])
+  })
+
+  test('a key equal by value keeps its subscription running, untouched', async () => {
+    const log = await logOf([{ _tag: 'Listened', names: ['a'] }, { _tag: 'Bumped' }, { _tag: 'Bumped' }])
+    expect(log.slice(0, 1)).toEqual(['start a'])
+    expect(log.filter((line) => line === 'start a').length).toBe(1)
+    expect(log.slice(1)).toEqual(['stop a']) // only when the engine itself stops, at the end of the test
+  })
+})

@@ -1,6 +1,7 @@
 import * as Arr from 'effect/Array'
 import * as Effect from 'effect/Effect'
 import * as Layer from 'effect/Layer'
+import * as Listener from '@/libs/listener/listener.ts'
 import * as Opt from 'effect/Option'
 import * as Result from 'effect/Result'
 import * as Stream from 'effect/Stream'
@@ -14,25 +15,27 @@ export const layer = Layer.effect(
   Effect.gen(function*() {
     const { getProducts } = yield* SqlHelper.SqlHelper
     const sql = yield* SqlClient.SqlClient
-    const changes = sql.reactive(
-      [ProductSchema.table, ProductExpirationSchema.table],
-      getProducts.pipe(
-        Effect.tapError((error) => Effect.logWarning('Could not read the products', error)),
-        Effect.option,
-      ),
-    ).pipe(
-      Stream.buffer({ capacity: 1, strategy: 'sliding' }),
-      Stream.map((maybeProducts): StoredProducts =>
-        Opt.match(maybeProducts, {
-          onNone: () => Result.fail(undefined),
-          onSome: (products) =>
-            Result.succeed(
-              Arr.map(products, (product) => ({
-                ...product,
-                maybeId: Opt.map(product.maybeId, (id) => id.toString(10)),
-              })),
-            ),
-        })
+    const changes = Listener.fromStream(
+      sql.reactive(
+        [ProductSchema.table, ProductExpirationSchema.table],
+        getProducts.pipe(
+          Effect.tapError((error) => Effect.logWarning('Could not read the products', error)),
+          Effect.option,
+        ),
+      ).pipe(
+        Stream.buffer({ capacity: 1, strategy: 'sliding' }),
+        Stream.map((maybeProducts): StoredProducts =>
+          Opt.match(maybeProducts, {
+            onNone: () => Result.fail(undefined),
+            onSome: (products) =>
+              Result.succeed(
+                Arr.map(products, (product) => ({
+                  ...product,
+                  maybeId: Opt.map(product.maybeId, (id) => id.toString(10)),
+                })),
+              ),
+          })
+        ),
       ),
     )
     return { changes }
