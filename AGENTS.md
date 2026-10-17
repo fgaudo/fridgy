@@ -9,6 +9,12 @@ working yet and is in the middle of a refactoring (see "Refactoring status").
 All code, comments, identifiers, commit messages and `.md` files are in **English**. Chat with the user may
 be in Italian.
 
+## Commits
+
+A commit made with an AI agent ends with an `Assisted-by: <model>` trailer (e.g. `Assisted-by: Claude Opus 5.5`),
+never `Co-Authored-By`: the author is the person who commits. A clear subject is usually enough: a body only says
+why, or what the diff and the docs do not, never what they already describe.
+
 ## Tooling enforces a lot
 
 Biome and the typecheck enforce import boundaries (private folders of the app and of pages, pages never importing
