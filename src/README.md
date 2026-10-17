@@ -25,7 +25,8 @@ src/
 │
 ├─ infrastructure/       technical building blocks: sqlite, sql, in-memory store, renderer, hot reload
 ├─ libs/                 generic, reusable code (the snabbdom bridge and JSX runtime, sources, branded numbers, …)
-└─ assets/               index.html and styles
+├─ index.html            the page template: the build fills in the fonts and the entrypoint
+└─ styles.css            the stylesheet (Tailwind)
 ```
 
 The runtime of the Elm architecture is a library, an npm dependency:

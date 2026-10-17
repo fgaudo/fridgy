@@ -11,7 +11,7 @@
     "#libs/*": "./src/libs/*"
   },
   "scripts": {
-    "update-licenses": "license-checker-rseidelsohn --excludePackages fridgy --json --customPath src/app/pages/about/adapters/licenses/custom-path.json --out src/app/pages/about/adapters/licenses/generated/licenses.json --depth 0",
+    "update-licenses": "license-checker-rseidelsohn --excludePackages fridgy --json --customPath scripts/licenses.custom-path.json --out src/app/pages/about/adapters/licenses/generated/licenses.json --depth 0",
     "build": "bun ./scripts/cli.ts build",
     "watch": "bun ./scripts/cli.ts watch",
     "typecheck": "tsc --noEmit",

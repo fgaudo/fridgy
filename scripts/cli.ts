@@ -74,7 +74,7 @@ const build = Effect.fn('build')(function*(mode: Mode) {
   const output = yield* Effect.tryPromise({
     try: () =>
       Bun.build({
-        entrypoints: [resolve('src/assets/css/styles.css'), ...entrypoints.map((entry) => resolve(entry))],
+        entrypoints: [resolve('src/styles.css'), ...entrypoints.map((entry) => resolve(entry))],
         outdir: resolve('dist'),
         target: 'browser',
         loader: { '.css': 'css', '.woff2': 'file' },
@@ -116,7 +116,7 @@ const prepareDist = Effect.fn('prepareDist')(function*(mode: Mode) {
       }
       return `<link rel="stylesheet" href="./${target.replaceAll('\\', '/')}" />`
     }))
-  const html = yield* fs.readFileString(resolve('src/assets/index.html'))
+  const html = yield* fs.readFileString(resolve('src/index.html'))
   yield* fs.writeFileString(
     resolve('dist', 'index.html'),
     html.replaceAll('%ENTRY%', mode).replace('%FONTS%', fontLinks.join('\n\t\t')),
