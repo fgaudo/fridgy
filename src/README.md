@@ -31,6 +31,13 @@ src/
 The runtime of the Elm architecture is a library, an npm dependency:
 [`@fgaudo/effect-tea`](https://github.com/fgaudo/effect-tea).
 
+The Noto fonts, for every script the app shows, are copied by the build into `dist/fonts/` and linked from
+`index.html` (`fontStylesheets` in `scripts/cli.ts`), not imported in `styles.css`: the CSS bundler would inline
+them. Every font face is loaded before the splash screen hides (`infrastructure/fonts.ts`), so no text ever
+swaps fonts while the app is in use. Where several languages share a script, the device's language (set as
+`lang` by `index.html`) picks the family in `styles.css`: Nastaliq for Urdu, and the Japanese, Korean,
+traditional or simplified forms of Chinese characters.
+
 ## Reading order
 
 1. `app/program.ts` and `app/view.tsx` — what the app is.

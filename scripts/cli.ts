@@ -14,6 +14,29 @@ import * as Cli from 'effect/cli'
 
 type Mode = 'development' | 'production'
 
+// Copied into dist/fonts/ as they are, and linked from index.html: the CSS bundler would inline every font file
+// up to ~128 KB as a `data:` URL, putting megabytes of fonts in styles.css.
+const fontStylesheets = [
+  '@fontsource-variable/noto-sans/standard.css',
+  '@fontsource-variable/noto-sans/standard-italic.css',
+  '@fontsource-variable/noto-sans-arabic/standard.css',
+  '@fontsource-variable/noto-nastaliq-urdu/index.css',
+  '@fontsource-variable/noto-sans-hebrew/standard.css',
+  '@fontsource-variable/noto-sans-bengali/standard.css',
+  '@fontsource-variable/noto-sans-gujarati/standard.css',
+  '@fontsource-variable/noto-sans-gurmukhi/standard.css',
+  '@fontsource-variable/noto-sans-kannada/standard.css',
+  '@fontsource-variable/noto-sans-malayalam/standard.css',
+  '@fontsource-variable/noto-sans-oriya/standard.css',
+  '@fontsource-variable/noto-sans-tamil/standard.css',
+  '@fontsource-variable/noto-sans-telugu/standard.css',
+  '@fontsource-variable/noto-sans-thai/standard.css',
+  '@fontsource-variable/noto-sans-sc/index.css',
+  '@fontsource-variable/noto-sans-tc/index.css',
+  '@fontsource-variable/noto-sans-jp/index.css',
+  '@fontsource-variable/noto-sans-kr/index.css',
+]
+
 const modes = {
   development: {
     entrypoints: [
@@ -77,8 +100,27 @@ const prepareDist = Effect.fn('prepareDist')(function*(mode: Mode) {
   for (const asset of modes[mode].assets) {
     yield* fs.copyFile(resolve(asset), resolve('dist', path.basename(asset)))
   }
+  const fontLinks = yield* Effect.forEach(fontStylesheets, (stylesheet) =>
+    Effect.gen(function*() {
+      // `@fontsource-variable/noto-sans-jp/index.css` → `fonts/noto-sans-jp/index.css`, next to its files.
+      const target = path.join('fonts', path.basename(path.dirname(stylesheet)), path.basename(stylesheet))
+      const css = yield* fs.readFileString(resolve('node_modules', stylesheet))
+      yield* fs.makeDirectory(resolve('dist', path.dirname(target), 'files'), { recursive: true })
+      yield* fs.writeFileString(resolve('dist', target), css)
+      // Only the files this stylesheet refers to: a package also ships other subsets and styles.
+      for (const [, file] of css.matchAll(/url\(\.\/files\/([^)]+)\)/g)) {
+        yield* fs.copyFile(
+          resolve('node_modules', path.dirname(stylesheet), 'files', file ?? ''),
+          resolve('dist', path.dirname(target), 'files', file ?? ''),
+        )
+      }
+      return `<link rel="stylesheet" href="./${target.replaceAll('\\', '/')}" />`
+    }))
   const html = yield* fs.readFileString(resolve('src/assets/index.html'))
-  yield* fs.writeFileString(resolve('dist', 'index.html'), html.replaceAll('%ENTRY%', mode))
+  yield* fs.writeFileString(
+    resolve('dist', 'index.html'),
+    html.replaceAll('%ENTRY%', mode).replace('%FONTS%', fontLinks.join('\n\t\t')),
+  )
 })
 
 const devServerConfig = Config.all({

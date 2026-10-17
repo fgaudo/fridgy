@@ -1,12 +1,5 @@
 @import "tailwindcss";
 @import "material-symbols/rounded.css";
-@import "@fontsource-variable/noto-sans/standard.css";
-@import "@fontsource-variable/noto-sans/standard-italic.css";
-@import "@fontsource-variable/noto-sans-arabic/standard.css";
-@import "@fontsource-variable/noto-sans-bengali/standard.css";
-@import "@fontsource-variable/noto-sans-jp/index.css";
-@import "@fontsource-variable/noto-sans-sc/index.css";
-@import "@fontsource-variable/noto-sans-kr/index.css";
 
 @theme {
   --font-stylish: Comfortaa;
@@ -24,12 +17,57 @@
   --spacing-sair: var(--safe-area-inset-right, env(safe-area-inset-right, 0px));
 }
 
+/*
+ * One Noto family per script. Some scripts are shared by several languages with their own styles: the language
+ * of the document (`lang` on <html>, set from the device's) picks which family comes first. Arabic script is
+ * written in Nastaliq for Urdu; Chinese characters take the forms of Japanese, Korean, traditional or simplified
+ * Chinese.
+ */
 body {
+  --font-arabic: "Noto Sans Arabic Variable", "Noto Nastaliq Urdu Variable";
+  --font-han:
+    "Noto Sans SC Variable",
+    "Noto Sans TC Variable",
+    "Noto Sans JP Variable",
+    "Noto Sans KR Variable";
   font-family:
-    "Noto Sans Variable", "Noto Sans Arabic Variable",
-    "Noto Sans Bengali Variable", "Noto Sans SC Variable",
-    "Noto Sans JP Variable", "Noto Sans KR Variable", "Roboto Flex Variable",
-    "Courier New", Courier, monospace;
+    "Noto Sans Variable", var(--font-arabic), "Noto Sans Hebrew Variable",
+    "Noto Sans Bengali Variable", "Noto Sans Gujarati Variable",
+    "Noto Sans Gurmukhi Variable", "Noto Sans Kannada Variable",
+    "Noto Sans Malayalam Variable", "Noto Sans Oriya Variable",
+    "Noto Sans Tamil Variable", "Noto Sans Telugu Variable",
+    "Noto Sans Thai Variable", var(--font-han), sans-serif;
+}
+
+body:lang(ur) {
+  --font-arabic: "Noto Nastaliq Urdu Variable", "Noto Sans Arabic Variable";
+}
+
+body:lang(ja) {
+  --font-han:
+    "Noto Sans JP Variable",
+    "Noto Sans SC Variable",
+    "Noto Sans TC Variable",
+    "Noto Sans KR Variable";
+}
+
+body:lang(ko) {
+  --font-han:
+    "Noto Sans KR Variable",
+    "Noto Sans SC Variable",
+    "Noto Sans TC Variable",
+    "Noto Sans JP Variable";
+}
+
+body:lang(zh-TW),
+body:lang(zh-HK),
+body:lang(zh-MO),
+body:lang(zh-Hant) {
+  --font-han:
+    "Noto Sans TC Variable",
+    "Noto Sans SC Variable",
+    "Noto Sans JP Variable",
+    "Noto Sans KR Variable";
 }
 
 /* A view marks itself `scroll-locked` while a modal or a menu covers it. */
