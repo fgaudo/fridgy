@@ -79,7 +79,7 @@ The whole app is one Elm-style program:
 The runtime is a library, [`@fgaudo/effect-tea`](https://github.com/fgaudo/effect-tea) (published on npm): `run(program, render, options)` runs a program and hands its frames (a model and its dispatch) to any
 renderer. A few choices go beyond plain Elm:
 
-- **Rejection.** When a message makes no sense in the current state, `update` returns `Engine.reject`. The
+- **Rejection.** When a message makes no sense in the current state, `update` returns `reject`. The
   engine knows which displayed state every click comes from: a click on an outdated frame (or a double tap)
   that made sense in that frame is simply ignored, while a message rejected even in the state of the frame
   that sent it is a bug, and crashes the app.
