@@ -3,17 +3,16 @@ import * as Effect from 'effect/Effect'
 import * as Layer from 'effect/Layer'
 import * as Stream from 'effect/Stream'
 import * as Snabbdom from 'snabbdom'
-import type { Frame } from '@fgaudo/effect-tea'
-import type * as View from '@fgaudo/effect-tea'
+import type { Frame, View } from '@fgaudo/effect-tea'
 import * as AnimationFrame from '#libs/animation-frame/animation-frame.ts'
 
 export class SnabbdomRenderer extends Context.Service<
   SnabbdomRenderer,
   {
     /** Renders at most once per animation frame: intermediate frames are dropped, like Elm does. */
-    render: <Model, Message>(options: {
-      frame$: Stream.Stream<Frame<Model, Message>>
-      view$: Stream.Stream<View.View<Model, Message, Snabbdom.VNode>>
+    render: <Model>(options: {
+      frame$: Stream.Stream<Frame<Model>>
+      view$: Stream.Stream<View<Model, Snabbdom.VNode>>
       /** Runs once, after the first tree has been displayed. */
       onFirstPaint: Effect.Effect<void>
     }) => Effect.Effect<void>

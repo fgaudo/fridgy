@@ -24,22 +24,10 @@ export type State = Readonly<{
   stack: Arr.NonEmptyReadonlyArray<Page>
 }>
 
-export type Message = Data.TaggedEnum<{
-  Home: { message: Home.Message }
-  About: { message: About.Message }
-  /** Android's back button. */
-  BackRequested: object
-}>
+/** Android's back button: the root's own message, the pages' are made by `compose`. */
+type BackRequested = Readonly<{ _tag: 'BackRequested' }>
 
-const Message = Data.taggedEnum<Message>()
-
-export type Command = Data.TaggedEnum<{
-  Home: { command: Home.Command }
-  About: { command: About.Command }
-  ExitApp: object
-}>
-
-const Command = Data.taggedEnum<Command>()
+type ExitApp = Readonly<{ _tag: 'ExitApp' }>
 
 export type Deps = Shell | Home.Deps | About.Deps
 
@@ -52,14 +40,6 @@ export type Model = Readonly<{
 }>
 
 const PageModel = Data.taggedEnum<Model['page']>()
-
-// The same wraps for `embed` and the view's `mapDispatch`: a page's offered
-// messages stay offered only when both wrap them alike.
-export const fromHome = (message: Home.Message) => Message.Home({ message })
-
-export const fromAbout = (message: About.Message) => Message.About({ message })
-
-type Step = Tea.Step<State, Command>
 
 const top = (state: State) => Arr.lastNonEmpty(state.stack)
 
@@ -93,91 +73,71 @@ const pop = (state: State): Opt.Option<State> => {
 }
 
 /** Leaves the shown page; leaving the last one exits the app. */
-const leave = (state: State): Step =>
+const leave = (state: State) =>
   Opt.match(pop(state), {
-    onNone: () => ({ state, commands: [Command.ExitApp()] }),
+    onNone: () => ({ state, commands: [{ _tag: 'ExitApp' } as const] }),
     onSome: (previous) => ({ state: previous }),
   })
 
-const about = Tea.embed(About.program, {
-  key: 'About',
-  wrap: fromAbout,
-  wrapCommand: (command) => Command.About({ command }),
-  get: pageState('About'),
-  subscribed: shownPageState('About'),
-  set: (state: State, about) => replacePage(state, Page.About({ state: about })),
-  onEvent: () => leave,
-})
-
-// Opening About again while it is shown changes nothing, so that a double tap opens it once.
-const openAbout = (state: State): Step =>
-  top(state)._tag === 'About'
-    ? { state }
-    : {
-      state: push(state, Page.About({ state: About.program.init.state })),
-      commands: about.liftCommands(About.program.init.commands),
-    }
-
-const home = Tea.embed(Home.program, {
-  key: 'Home',
-  wrap: fromHome,
-  wrapCommand: (command) => Command.Home({ command }),
-  get: pageState('Home'),
-  subscribed: shownPageState('Home'),
-  set: (state: State, home) => replacePage(state, Page.Home({ state: home })),
-  onEvent: Match.typeTags<Home.Event>()({
-    InfoRequested: () => openAbout,
-    LeaveRequested: () => leave,
-  }),
-})
-
-const backButton: Tea.Subscription<Message, Shell> = Channel.unwrap(
+const backButton: Tea.Subscription<BackRequested, Shell> = Channel.unwrap(
   Effect.map(Effect.service(Shell), ({ backButton }) =>
     backButton.pipe(
-      Channel.map(() => Message.BackRequested()),
-      Channel.mapDone((done): Message => done),
+      Channel.map((): BackRequested => ({ _tag: 'BackRequested' })),
+      Channel.mapDone((done): BackRequested => done),
     )),
 )
 
-export const program: Tea.Program<State, Model, Message, Command, Deps> = {
-  init: {
-    state: { stack: [Page.Home({ state: Home.program.init.state })] },
-    commands: home.liftCommands(Home.program.init.commands),
+const { child, compose } = Tea.parent<{ state: State; command: ExitApp }>()
+
+export const program = compose({
+  init: { state: { stack: [Page.Home({ state: Home.program.init.state })] } },
+  children: {
+    Home: child(Home.program, {
+      get: pageState('Home'),
+      subscribed: shownPageState('Home'),
+      set: (state, home) => replacePage(state, Page.Home({ state: home })),
+    }),
+    About: child(About.program, {
+      get: pageState('About'),
+      subscribed: shownPageState('About'),
+      set: (state, about) => replacePage(state, Page.About({ state: about })),
+    }),
   },
-
-  update: Match.typeTags<Message, (state: State) => Tea.Transition<State, Command>>()({
-    Home: ({ message }) => home.update(message),
-    About: ({ message }) => about.update(message),
-    // The shown page closes what it has open, or asks to be left.
-    BackRequested: () => (state) =>
-      Match.valueTags(top(state), {
-        Home: () => home.update(Home.ExternalMessage.BackPressed())(state),
-        About: () => about.update(About.ExternalMessage.BackPressed())(state),
+  // The shown page closes what it has open, or asks to be left.
+  update: (_: BackRequested, children) => (state) =>
+    Match.valueTags(top(state), {
+      Home: () => children.Home.update(Home.ExternalMessage.BackPressed())(state),
+      About: () => children.About.update(About.ExternalMessage.BackPressed())(state),
+    }),
+  onEvent: {
+    Home: (event, children) => (state) =>
+      Match.valueTags(event, {
+        // Opening About again while it is shown changes nothing, so that a double tap opens it once.
+        InfoRequested: () => {
+          if (top(state)._tag === 'About') return { state }
+          const about = children.About.init
+          return { state: push(state, Page.About({ state: about.state })), commands: about.commands }
+        },
+        LeaveRequested: () => leave(state),
       }),
+    About: () => leave,
+  },
+  runCommand: Effect.fn(function*(_: ExitApp) {
+    const { exitApp } = yield* Shell
+    yield* exitApp.pipe(
+      Effect.catchTag('ShellError', (error) => Effect.logWarning('Could not exit the app', error.cause)),
+    )
+    return Opt.none()
   }),
-
-  runCommand: Match.typeTags<Command>()({
-    Home: ({ command }) => home.runCommand(command),
-    About: ({ command }) => about.runCommand(command),
-    ExitApp: Effect.fn(function*() {
-      const { exitApp } = yield* Shell
-      yield* exitApp.pipe(
-        Effect.catchTag('ShellError', (error) => Effect.logWarning('Could not exit the app', error.cause)),
-      )
-      return Opt.none()
-    }),
-  }),
-
-  subscriptions: (state) =>
-    HashMap.make(['back-button', backButton]).pipe(
-      HashMap.union(home.subscriptions(state)),
-      HashMap.union(about.subscriptions(state)),
-    ),
-
-  makeModel: (state) => ({
+  subscriptions: () => HashMap.make(['back-button', backButton]),
+  makeModel: (state, { children }): Model => ({
     page: Match.valueTags(top(state), {
-      Home: ({ state }) => PageModel.Home({ model: home.makeModel(state) }),
-      About: ({ state }) => PageModel.About({ model: about.makeModel(state) }),
+      Home: () => PageModel.Home({ model: children.Home(state) }),
+      About: () => PageModel.About({ model: children.About(state) }),
     }),
   }),
-}
+})
+
+export type Message = Tea.MessageOf<typeof program>
+
+export type Command = Tea.CommandOf<typeof program>

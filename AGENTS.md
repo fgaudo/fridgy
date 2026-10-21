@@ -57,23 +57,27 @@ upgraded to in this app.
   The model's shape says which actions exist: a union with a case per state the view distinguishes, each
   holding only its actions, made with the `offer`/`offerInput` that `makeModel` receives. Each offer is
   checked against `update` as the model is made, so a case that promises a rejected action crashes at once;
-  never probe offers to pick a case. The app runs with `onRejected: 'die'`.
+  never probe offers to pick a case. The app runs with `onRejectedInput: 'die'`.
 - **State machines, no derived data.** One explicit state machine per concern (data, selection, form)
   instead of shared flags. Values that depend on time are computed in `makeModel` from a `now` that a clock
   subscription keeps in the state.
 - **A program is split by concern, never by kind.** A program lives in one module until it is too large
   (300–400 lines); then it splits into **parts** (`pages/<page>/parts/`), each a `Tea.Program` with its own
-  state, messages, commands and model, embedded by the page as the root embeds the pages. What spans the
+  state, messages, commands and model, declared as a child of the page as the root declares the pages. What spans the
   parts (the menu, the back button, a toast for a part's failure) stays in the page's `program.ts`. Parts
   that read each other's state are one part. A part's view sits next to it (`<part>.view.tsx`), with its
   tests and arbitraries. Never split a program into `messages`/`state`/`update` files: they would import
   each other in cycles.
-- **The same wrap for `embed` and `mapDispatch`.** A child's messages are wrapped by one exported function
-  (`fromHome`, `fromAddProduct`, …), used by `embed` and by the parent's view, so that its offers stay
-  offered.
-- **Pages talk to their parent through events** (`Event`, handled by `embed`'s `onEvent`), never by acting
-  on it. A program exports its `Message`, `Event` and `Command` as types only, and its `ExternalMessage`
-  (what its parent may send it, e.g. `BackPressed`) as a value; tests build their own constructors with
+- **Children are declared, never wired.** A parent (`Tea.parent<{ state; command?; event?; external? }>()`)
+  declares each child with `child` (`get`, `set`, `subscribed`); the library routes their messages
+  (`{ _tag: <child>, message }`), commands, subscriptions and models. A parent decides whether a child is
+  there only with `get`, never by rejecting its messages. One `dispatch` serves every level: a parent's view
+  passes it to its children's views as it is, and a view whose model rarely changes is drawn with snabbdom's
+  `thunk` (e.g. Home's product list).
+- **Pages talk to their parent through events** (`Event`, handled by the parent's `onEvent`), never by
+  acting on it. A program exports its `Message`, `Event` and `Command` as types only (a parent's with
+  `Tea.MessageOf` and `Tea.CommandOf`), and its `ExternalMessage` (what its parent may give it with
+  `children.<Child>.update`, e.g. `BackPressed`) as a value; tests build their own constructors with
   `Data.taggedEnum<Message>()`. Hidden pages keep receiving their completions, but their subscriptions run
   only while they are on top.
 - **Reads in the pages, writes in the app.** Write ports (`app/ports`, e.g. `ProductCommands`) have no read.

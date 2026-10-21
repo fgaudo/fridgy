@@ -8,7 +8,7 @@ import * as HashMap from 'effect/HashMap'
 import * as Layer from 'effect/Layer'
 import * as Opt from 'effect/Option'
 import { InMemoryStore } from '#infrastructure/in-memory/store.ts'
-import { describeTags } from '#libs/logging/describe-tags.ts'
+import { tagPath } from '#libs/testing/tag-path.test_support.ts'
 import * as AppInMemory from './in-memory.layer.ts'
 import { type Command, type Page, program, type State } from './program.ts'
 import {
@@ -51,7 +51,7 @@ describe('Navigation', () => {
   test('Home opens About on top, which loads its data', () => {
     const { state, commands } = play(openAbout)
     expect(tags(state)).toEqual(['Home', 'About'])
-    expect(commands.map(describeTags)).toEqual(['About › LoadLicenses', 'About › PickSaying'])
+    expect(commands.map(tagPath)).toEqual(['About › LoadLicenses', 'About › PickSaying'])
   })
 
   // The menu's entry tapped twice from the same frame: the second tap is stale.
@@ -87,7 +87,7 @@ describe('Navigation', () => {
     const opened = play([openForm, typeName('Milk')]).state
     // The form adds a product only once it knows the time.
     const tick = await Effect.runPromise(
-      heard(opened, ['Home', ['add-product', 'clock']]).pipe(Effect.provide(layer)),
+      heard(opened, ['Home', ['AddProduct', 'clock']]).pipe(Effect.provide(layer)),
     )
     const submitted = play([() => tick, submit], opened)
     const [addProduct] = submitted.commands

@@ -2,7 +2,17 @@ import * as Data from 'effect/Data'
 import * as fc from 'fast-check'
 import * as AddProduct from './parts/add-product.test_arbitrary.ts'
 import * as Products from './parts/products.test_arbitrary.ts'
-import { fromAddProduct, fromProducts, type Message, type State } from './program.ts'
+import type * as AddProductProgram from './parts/add-product.ts'
+import type * as ProductsProgram from './parts/products.ts'
+import type { Message, State } from './program.ts'
+
+type AddProductMessage = AddProductProgram.Message
+type ProductsMessage = ProductsProgram.Message
+
+// A part's message as the page receives it: the library makes it, the test builds it.
+const fromAddProduct = (message: AddProductMessage): Message => ({ _tag: 'AddProduct', message })
+
+const fromProducts = (message: ProductsMessage): Message => ({ _tag: 'Products', message })
 
 const Msg = Data.taggedEnum<Message>()
 

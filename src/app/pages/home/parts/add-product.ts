@@ -123,7 +123,15 @@ const add = ({ product }: Readonly<{ product: Product.Product }>) =>
     },
   ).pipe(Effect.withLogSpan('AddProduct'))
 
-export const program: Tea.Program<State, Model, Message, Command, ProductCommands.ProductCommands, Event> = {
+export const program: Tea.Program<{
+  state: State
+  model: Model
+  message: Message
+  command: Command
+  services: ProductCommands.ProductCommands
+  event: Event
+  external: ExternalMessage
+}> = {
   init: { state: { _tag: 'Closed' } },
 
   update: Match.typeTags<Message, (state: State) => Tea.Transition<State, Command, Event>>()({

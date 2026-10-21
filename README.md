@@ -77,30 +77,27 @@ The whole app is one Elm-style program:
 - a **pure view**: `makeModel` projects the state onto what the view needs, and the view turns that model
   into a virtual DOM.
 
-The runtime is a library, [`@fgaudo/effect-tea`](https://github.com/fgaudo/effect-tea) (published on npm): `run(program, render, options)` runs a program and hands its frames (a model and its dispatch) to any
-renderer. A few choices go beyond plain Elm:
+The runtime is [`@fgaudo/effect-tea`](https://github.com/fgaudo/effect-tea), a library of its own. On top of
+plain Elm it makes the view and `update` agree: the model only offers the actions `update` accepts, a double
+tap is harmless, and pages are composed by declaring them. Its README explains how.
 
-- **Rejection.** When a message makes no sense in the current state, `update` returns `reject`. The
-  engine knows which displayed state every click comes from: a click on an outdated frame (or a double tap)
-  that made sense in that frame is simply ignored, while a message rejected even in the state of the frame
-  that sent it is a bug, and crashes the app.
-- **Offers.** The view never builds messages: the model's shape says which actions exist in each state (a
-  case per state, holding only its actions), and each action is an _offered_ message, checked against
-  `update` as the model is made, so a model that promises what `update` rejects crashes at once.
-  `dispatch` only takes offered messages, so a view that sends anything else does not compile.
-- **Pages talk to their parent through events** (Elm's "OutMsg"): a page asks, e.g. to open the About page
-  or to be left, and the root owns navigation, a stack of pages.
+What the app adds:
+
+- **The root owns navigation**, a stack of pages. Pages ask for it through events (Elm's "OutMsg"), e.g. to
+  open About or to be left.
 - **An asynchronous operation is a state that waits for its completion**, which only that state accepts.
 - **Bugs crash the app**; expected errors are typed and handled with Effect.
 
-Each page is a self-contained module that owns its messages, state, update, view and **ports** (the services
-it needs from the outside, such as the query that lists products, or scrolling), with **adapters**
-implementing them for each setup (SQLite, in memory, …). A large page is split by concern into **parts**, each
-a program of its own that the page embeds as the root embeds the pages. What every page must share lives one level up, in
-`src/app/`: the entities (`Product`) and the ports that change stored data. Only the files at the root of
-a page are public; Biome rejects imports of anything deeper. Environments (production, development) exist
-only in `src/entrypoints/`. The runtime (`@fgaudo/effect-tea`) knows nothing of snabbdom: views are TSX,
-rendered by snabbdom through a small bridge (`src/libs/tea-snabbdom/`, `src/libs/jsx/`).
+How the code is organized:
+
+- **Pages** (`src/app/pages/`) are self-contained: each owns its messages, state, `update` and view. Only the
+  files at a page's root are public; Biome rejects imports of anything deeper.
+- **Parts.** A large page is split by concern into parts, each a program the page declares as a child.
+- **Ports and adapters.** A page's ports are the services it needs from outside (the product list, scrolling);
+  adapters implement them for each setup (SQLite, in memory).
+- **Shared code moves up** to `src/app/`: the entities (`Product`) and the ports that change stored data.
+- **Environments** (production, development) exist only in `src/entrypoints/`.
+- **Views** are TSX, rendered by snabbdom through a small bridge (`src/libs/tea-snabbdom/`, `src/libs/jsx/`).
 
 See [`src/README.md`](src/README.md) for a map of the source tree and a suggested reading order.
 

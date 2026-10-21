@@ -20,12 +20,12 @@ src/
 │  └─ pages/<page>/      private: a page; it may import the domain/ and ports/ above it, never the
 │     │                  adapters/
 │     ├─ program.ts · view.tsx · *.layer.ts   the page's public API
-│     ├─ parts/          the parts of a large page, each a Program the page embeds, next to its view
+│     ├─ parts/          the parts of a large page, each a child Program of the page, next to its view
 │     └─ ports/ · adapters/
 │
 ├─ infrastructure/       technical building blocks: sqlite, sql, in-memory store, hot reload, fonts
 ├─ libs/                 generic, reusable code: the snabbdom bridge (tea-snabbdom: handlers, renderer,
-│                        test support) and JSX runtime, sources, branded numbers, log descriptions, …
+│                        test support) and JSX runtime, sources, branded numbers, test helpers, …
 ├─ index.html            the page template: the build fills in the fonts and the entrypoint
 └─ styles.css            the stylesheet (Tailwind)
 ```
@@ -44,7 +44,7 @@ traditional or simplified forms of Chinese characters.
 
 1. `app/program.ts` and `app/view.tsx` — what the app is.
 2. `app/pages/about/program.ts` — a page in one module: state, messages, `update`, commands, `makeModel`.
-3. `app/pages/home/program.ts` and `parts/` — a page made of parts, embedded like the pages in the root.
+3. `app/pages/home/program.ts` and `parts/` — a page made of parts, declared like the pages in the root.
 4. `app/pages/home/ports/` — what the page needs from the outside world; `app/domain/` and `app/ports/` —
    the entities and the write ports every page shares.
 5. `entrypoints/` — how everything is wired for each environment.

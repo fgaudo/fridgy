@@ -6,14 +6,14 @@ import * as Equal from 'effect/Equal'
 import * as HashMap from 'effect/HashMap'
 import * as Opt from 'effect/Option'
 import * as fc from 'fast-check'
-import { describeTags } from '#libs/logging/describe-tags.ts'
+import { tagPath } from '#libs/testing/tag-path.test_support.ts'
 import { dispatchedBy } from '#libs/tea-snabbdom/view.test_support.ts'
 import { assertProperty, onlyChanged, outcomesOf } from '#libs/testing/update.test_support.ts'
 import type * as AddProduct from './parts/add-product.ts'
 import { submitting } from './parts/add-product.test_arbitrary.ts'
 import type * as Products from './parts/products.ts'
 import { deleting } from './parts/products.test_arbitrary.ts'
-import { type Command, type Event, fromAddProduct, fromProducts, type Message, program, type State } from './program.ts'
+import { type Command, type Event, type Message, type Model, program, type State } from './program.ts'
 import { message, state } from './program.test_arbitrary.ts'
 import { view } from './view.tsx'
 
@@ -26,6 +26,14 @@ const ProductsMsg = Data.taggedEnum<Products.Message>()
 const { outcome, rejects, step } = outcomesOf(program.update)
 
 const makeModel = Tea.modelOf(program)
+
+type AddProductMessage = AddProduct.Message
+type ProductsMessage = Products.Message
+
+// A part's message as the page receives it: the library makes it, the test builds it.
+const fromAddProduct = (message: AddProductMessage): Message => ({ _tag: 'AddProduct', message })
+
+const fromProducts = (message: ProductsMessage): Message => ({ _tag: 'Products', message })
 
 describe('Home update', () => {
   test('is total and deterministic', () => {
@@ -41,7 +49,7 @@ describe('Home update', () => {
     test('every message the view can dispatch is accepted, and acts once when sent twice', () => {
       const check = dispatchViolations(program.update)
       fc.assert(fc.property(state, fc.string(), (before, inputValue) => {
-        expect(check(before, dispatchedBy(view, makeModel(before), inputValue))).toEqual([])
+        expect(check(before, dispatchedBy<Model, Message>(view, makeModel(before), inputValue))).toEqual([])
       }))
     })
 
@@ -93,7 +101,7 @@ describe('Home update', () => {
             ),
           ].map(fromProducts),
         ]
-        expect(missing(before, dispatchedBy(view, makeModel(before), inputValue), askable)).toEqual([])
+        expect(missing(before, dispatchedBy<Model, Message>(view, makeModel(before), inputValue), askable)).toEqual([])
       }))
     })
 
@@ -102,7 +110,7 @@ describe('Home update', () => {
     // reachable from the view.
     test('the view reaches messages that update can reject', () => {
       const sent = new Set(
-        fc.sample(state, 1_000).flatMap((s) => dispatchedBy(view, makeModel(s)).map(describeTags)),
+        fc.sample(state, 1_000).flatMap((s) => dispatchedBy<Model, Message>(view, makeModel(s)).map(tagPath)),
       )
       for (
         const expected of [
@@ -202,6 +210,6 @@ test('the form listens to the clock exactly while it is open', () => {
   const subscriptions = program.subscriptions ?? (() => HashMap.empty())
   assertProperty(
     [state],
-    (s) => HashMap.has(subscriptions(s), ['add-product', 'clock']) === (s.addProduct._tag !== 'Closed'),
+    (s) => HashMap.has(subscriptions(s), ['AddProduct', 'clock']) === (s.addProduct._tag !== 'Closed'),
   )
 })

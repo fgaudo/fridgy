@@ -3,13 +3,12 @@
 import * as Tea from '@fgaudo/effect-tea'
 import * as Data from 'effect/Data'
 import * as Effect from 'effect/Effect'
-import * as HashMap from 'effect/HashMap'
 import * as Match from 'effect/Match'
 import * as Opt from 'effect/Option'
+import type { ProductCommands } from '#app/ports/product-commands.ts'
 import * as AddProduct from './parts/add-product.ts'
 import * as Products from './parts/products.ts'
 import * as Scrolling from './parts/scrolling.ts'
-import type { ProductCommands } from '#app/ports/product-commands.ts'
 import { Notifications } from './ports/notifications.ts'
 import type { ProductList } from './ports/product-list.ts'
 import type { Viewport } from './ports/viewport.ts'
@@ -28,27 +27,18 @@ export type ExternalMessage = Data.TaggedEnum<{
 
 export const ExternalMessage = Data.taggedEnum<ExternalMessage>()
 
-export type Message =
+/** The page's own messages: its parts' are made by `compose`. */
+type Own =
   | ExternalMessage
   | Data.TaggedEnum<{
     MenuOpened: object
     MenuClosed: object
     InfoRequested: object
-    Scrolling: { message: Scrolling.Message }
-    AddProduct: { message: AddProduct.Message }
-    Products: { message: Products.Message }
   }>
 
-const Message = Data.taggedEnum<Message>()
+const Own = Data.taggedEnum<Own>()
 
-export type Command = Data.TaggedEnum<{
-  ShowToast: { text: string }
-  Scrolling: { command: Scrolling.Command }
-  AddProduct: { command: AddProduct.Command }
-  Products: { command: Products.Command }
-}>
-
-const Command = Data.taggedEnum<Command>()
+type ShowToast = Readonly<{ _tag: 'ShowToast'; text: string }>
 
 export type Event = Data.TaggedEnum<{
   InfoRequested: object
@@ -62,55 +52,20 @@ export type Deps = Notifications | Viewport | ProductCommands | ProductList
 
 export type Model = Readonly<{
   menu: Data.TaggedEnum<{
-    Closed: { open: Tea.Offered<Message> }
-    Open: { close: Tea.Offered<Message>; requestInfo: Tea.Offered<Message> }
+    Closed: { open: Tea.Offered<Own> }
+    Open: { close: Tea.Offered<Own>; requestInfo: Tea.Offered<Own> }
   }>
   scrolling: Scrolling.Model
   addProduct: AddProduct.Model
   products: Products.Model
 }>
 
-type Step = Tea.Step<State, Command, Event>
+const toast = (text: string): ShowToast => ({ _tag: 'ShowToast', text })
 
-// The same wraps for `embed` and the view's `mapDispatch`: a part's offered
-// messages stay offered only when both wrap them alike.
-export const fromAddProduct = (message: AddProduct.Message) => Message.AddProduct({ message })
-
-export const fromProducts = (message: Products.Message) => Message.Products({ message })
-
-const toast = (text: string) => (state: State): Step => ({ state, commands: [Command.ShowToast({ text })] })
+const { child, compose } = Tea.parent<{ state: State; command: ShowToast; event: Event; external: ExternalMessage }>()
 
 // Each part is always there: only its subscriptions could be turned off.
-const scrolling = Tea.embed(Scrolling.program, {
-  key: 'scrolling',
-  wrap: (message) => Message.Scrolling({ message }),
-  wrapCommand: (command) => Command.Scrolling({ command }),
-  get: (state: State) => Opt.some(state.scrolling),
-  set: (state, scrolling) => ({ ...state, scrolling }),
-})
-
-const addProduct = Tea.embed(AddProduct.program, {
-  key: 'add-product',
-  wrap: fromAddProduct,
-  wrapCommand: (command) => Command.AddProduct({ command }),
-  get: (state: State) => Opt.some(state.addProduct),
-  set: (state, addProduct) => ({ ...state, addProduct }),
-  onEvent: Match.typeTags<AddProduct.Event>()({
-    Failed: () => toast('Could not add the product'),
-    NothingToClose: () => (state: State): Step => ({ state, events: [Event.LeaveRequested()] }),
-  }),
-})
-
-const products = Tea.embed(Products.program, {
-  key: 'products',
-  wrap: fromProducts,
-  wrapCommand: (command) => Command.Products({ command }),
-  get: (state: State) => Opt.some(state.products),
-  set: (state, products) => ({ ...state, products }),
-  onEvent: () => toast('Could not delete the products'),
-})
-
-export const program: Tea.Program<State, Model, Message, Command, Deps, Event> = {
+export const program = compose({
   init: {
     state: {
       isMenuOpen: false,
@@ -119,57 +74,61 @@ export const program: Tea.Program<State, Model, Message, Command, Deps, Event> =
       products: Products.program.init.state,
     },
   },
-
-  update: Match.typeTags<Message, (state: State) => Tea.Transition<State, Command, Event>>()({
-    MenuOpened: () => (state) => !state.isMenuOpen ? { state: { ...state, isMenuOpen: true } } : Tea.reject,
-
-    MenuClosed: () => (state) => state.isMenuOpen ? { state: { ...state, isMenuOpen: false } } : Tea.reject,
-
-    // Asked from the side menu, which closes on the way.
-    InfoRequested: () => (state) =>
-      state.isMenuOpen
-        ? { state: { ...state, isMenuOpen: false }, events: [Event.InfoRequested()] }
-        : Tea.reject,
-
-    // Closes what is open, innermost first: the menu, then the form, which asks
-    // to leave the page when it has nothing to close.
-    BackPressed: () => (state) =>
-      state.isMenuOpen
-        ? { state: { ...state, isMenuOpen: false } }
-        : addProduct.update(AddProduct.ExternalMessage.BackPressed())(state),
-
-    Scrolling: ({ message }) => scrolling.update(message),
-
-    AddProduct: ({ message }) => addProduct.update(message),
-
-    Products: ({ message }) => products.update(message),
-  }),
-
-  runCommand: Match.typeTags<Command>()({
-    ShowToast: Effect.fn(function*({ text }) {
-      const { showToast } = yield* Notifications
-      yield* showToast(text).pipe(
-        Effect.catchTag('NotificationError', (error) => Effect.logWarning('Could not show toast', error.cause)),
-      )
-      return Opt.none()
+  children: {
+    Scrolling: child(Scrolling.program, {
+      get: (state) => Opt.some(state.scrolling),
+      set: (state, scrolling) => ({ ...state, scrolling }),
     }),
-    Scrolling: ({ command }) => scrolling.runCommand(command),
-    AddProduct: ({ command }) => addProduct.runCommand(command),
-    Products: ({ command }) => products.runCommand(command),
+    AddProduct: child(AddProduct.program, {
+      get: (state) => Opt.some(state.addProduct),
+      set: (state, addProduct) => ({ ...state, addProduct }),
+    }),
+    Products: child(Products.program, {
+      get: (state) => Opt.some(state.products),
+      set: (state, products) => ({ ...state, products }),
+    }),
+  },
+  update: (message: Own, children) => (state) =>
+    Match.valueTags(message, {
+      MenuOpened: () => !state.isMenuOpen ? { state: { ...state, isMenuOpen: true } } : Tea.reject,
+      MenuClosed: () => state.isMenuOpen ? { state: { ...state, isMenuOpen: false } } : Tea.reject,
+      // Asked from the side menu, which closes on the way.
+      InfoRequested: () =>
+        state.isMenuOpen
+          ? { state: { ...state, isMenuOpen: false }, events: [Event.InfoRequested()] }
+          : Tea.reject,
+      // Closes what is open, innermost first: the menu, then the form, which asks
+      // to leave the page when it has nothing to close.
+      BackPressed: () =>
+        state.isMenuOpen
+          ? { state: { ...state, isMenuOpen: false } }
+          : children.AddProduct.update(AddProduct.ExternalMessage.BackPressed())(state),
+    }),
+  onEvent: {
+    AddProduct: (event) => (state) =>
+      Match.valueTags(event, {
+        Failed: () => ({ state, commands: [toast('Could not add the product')] }),
+        NothingToClose: () => ({ state, events: [Event.LeaveRequested()] }),
+      }),
+    Products: () => (state) => ({ state, commands: [toast('Could not delete the products')] }),
+  },
+  runCommand: Effect.fn(function*({ text }: ShowToast) {
+    const { showToast } = yield* Notifications
+    yield* showToast(text).pipe(
+      Effect.catchTag('NotificationError', (error) => Effect.logWarning('Could not show toast', error.cause)),
+    )
+    return Opt.none()
   }),
-
-  subscriptions: (state) =>
-    scrolling.subscriptions(state).pipe(
-      HashMap.union(addProduct.subscriptions(state)),
-      HashMap.union(products.subscriptions(state)),
-    ),
-
-  makeModel: (state, { offer }) => ({
+  makeModel: (state, { offer, children }): Model => ({
     menu: state.isMenuOpen
-      ? { _tag: 'Open', close: offer(Message.MenuClosed()), requestInfo: offer(Message.InfoRequested()) }
-      : { _tag: 'Closed', open: offer(Message.MenuOpened()) },
-    scrolling: scrolling.makeModel(state.scrolling),
-    addProduct: addProduct.makeModel(state.addProduct),
-    products: products.makeModel(state.products),
+      ? { _tag: 'Open', close: offer(Own.MenuClosed()), requestInfo: offer(Own.InfoRequested()) }
+      : { _tag: 'Closed', open: offer(Own.MenuOpened()) },
+    scrolling: children.Scrolling(state),
+    addProduct: children.AddProduct(state),
+    products: children.Products(state),
   }),
-}
+})
+
+export type Message = Tea.MessageOf<typeof program>
+
+export type Command = Tea.CommandOf<typeof program>

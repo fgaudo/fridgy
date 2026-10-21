@@ -1,7 +1,8 @@
 // The root's tests act like a user: each action is a message the shown page's
-// model offers, wrapped as its view wraps it, never one built by hand.
+// model offers, read from the offer as the program would receive it, never one
+// built by hand.
 import * as Tea from '@fgaudo/effect-tea'
-import { applyAll } from '@fgaudo/effect-tea/testing'
+import { applyAll, messageOf } from '@fgaudo/effect-tea/testing'
 import * as Arr from 'effect/Array'
 import * as Channel from 'effect/Channel'
 import * as Data from 'effect/Data'
@@ -9,8 +10,8 @@ import * as Effect from 'effect/Effect'
 import * as Equal from 'effect/Equal'
 import * as HashMap from 'effect/HashMap'
 import * as Opt from 'effect/Option'
-import * as Home from './pages/home/program.ts'
-import { type Command, fromHome, type Message, program, type State } from './program.ts'
+import type * as Home from './pages/home/program.ts'
+import { type Command, type Message, program, type State } from './program.ts'
 
 const Msg = Data.taggedEnum<Message>()
 
@@ -19,13 +20,13 @@ const makeModel = Tea.modelOf(program)
 /** A message sent in a state, as its frame would send it. */
 export type Action = (state: State) => Message
 
-const onHome = (pick: (model: Home.Model) => Home.Message | undefined): Action => (state) => {
+const onHome = (pick: (model: Home.Model) => Tea.Offered<unknown> | undefined): Action => (state) => {
   const { page } = makeModel(state)
   const offered = page._tag === 'Home' ? pick(page.model) : undefined
   if (offered === undefined) {
     throw new Error('Home does not offer this action')
   }
-  return fromHome(offered)
+  return messageOf<Message>(offered)
 }
 
 export const openMenu = onHome(({ menu }) => menu._tag === 'Closed' ? menu.open : undefined)
@@ -35,20 +36,16 @@ export const requestInfo = onHome(({ menu }) => menu._tag === 'Open' ? menu.requ
 /** About is reached from Home's side menu. */
 export const openAbout = [openMenu, requestInfo]
 
-export const openForm = onHome(({ addProduct }) =>
-  addProduct._tag === 'Closed' ? Home.fromAddProduct(addProduct.open) : undefined
-)
+export const openForm = onHome(({ addProduct }) => addProduct._tag === 'Closed' ? addProduct.open : undefined)
 
 export const typeName = (name: string) =>
   onHome(({ addProduct }) =>
     addProduct._tag === 'Incomplete' || addProduct._tag === 'Complete'
-      ? Home.fromAddProduct(addProduct.changeName(name))
+      ? addProduct.changeName(name)
       : undefined
   )
 
-export const submit = onHome(({ addProduct }) =>
-  addProduct._tag === 'Complete' ? Home.fromAddProduct(addProduct.submit) : undefined
-)
+export const submit = onHome(({ addProduct }) => addProduct._tag === 'Complete' ? addProduct.submit : undefined)
 
 /** Android's back button: the shell sends it whatever is shown. */
 export const back: Action = () => Msg.BackRequested()

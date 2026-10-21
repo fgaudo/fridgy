@@ -51,7 +51,9 @@ const closeToTop = Channel.unwrap(
   ),
 )
 
-export const program: Tea.Program<State, Model, Message, Command, Viewport> = {
+export const program: Tea.Program<
+  { state: State; model: Model; message: Message; command: Command; services: Viewport }
+> = {
   init: { state: { isAtTop: true, isInteracting: false } },
 
   update: Match.typeTags<Message, (state: State) => Tea.Transition<State, Command>>()({

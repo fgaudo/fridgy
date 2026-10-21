@@ -1,13 +1,12 @@
-import { mapDispatch } from '@fgaudo/effect-tea'
-import type { VNode } from 'snabbdom'
+import { thunk, type VNode } from 'snabbdom'
 import { type Handlers, handlers, type View } from '#libs/tea-snabbdom/tea-snabbdom.ts'
 import { cn } from '#libs/ui/class-names.ts'
-import { fromAddProduct, fromProducts, type Message, type Model } from './program.ts'
+import type { Model } from './program.ts'
 import * as AddProduct from './parts/add-product.view.tsx'
 import { backdrop } from '#libs/ui/overlay.tsx'
 import * as Products from './parts/products.view.tsx'
 
-const sideMenu = (menu: Model['menu'], { on }: Handlers<Message>): ReadonlyArray<VNode> =>
+const sideMenu = (menu: Model['menu'], { on }: Handlers): ReadonlyArray<VNode> =>
   menu._tag === 'Open'
     ? [
       backdrop('side-menu-background', 'z-50 transition-colors', on('click', menu.close)),
@@ -34,11 +33,9 @@ const sideMenu = (menu: Model['menu'], { on }: Handlers<Message>): ReadonlyArray
     ]
     : []
 
-export const view: View<Model, Message> = (model, dispatch) => {
+export const view: View<Model> = (model, dispatch) => {
   const events = handlers(dispatch)
   const { on } = events
-  const addProductDispatch = mapDispatch(dispatch, fromAddProduct)
-  const productsDispatch = mapDispatch(dispatch, fromProducts)
   const topBar = (
     <div
       props={{
@@ -57,21 +54,23 @@ export const view: View<Model, Message> = (model, dispatch) => {
         </span>
         <div props={{ className: 'text-2xl font-bold px-2' }}>Fridgy</div>
       </div>
-      {Products.summary(model.products, productsDispatch)}
+      {Products.summary(model.products, dispatch)}
     </div>
   )
   // While a modal or the menu is open, the page behind it does not scroll (see `styles.css`).
   const isScrollLocked = model.addProduct._tag !== 'Closed' || model.menu._tag === 'Open'
   return (
     <div props={{ className: cn({ 'scroll-locked': isScrollLocked }) }}>
-      {AddProduct.modal(model.addProduct, addProductDispatch)}
+      {AddProduct.modal(model.addProduct, dispatch)}
       {sideMenu(model.menu, events)}
-      {AddProduct.addButton(model.addProduct, addProductDispatch, model.scrolling.isInteracting)}
+      {AddProduct.addButton(model.addProduct, dispatch, model.scrolling.isInteracting)}
       {topBar}
       <div props={{ className: 'ml-sail mt-sait mr-sair overflow-x-clip' }}>
-        <div props={{ className: 'p-2 flex gap-2 flex-col pb-48 pt-28' }}>
-          {Products.rows(model.products, productsDispatch)}
-        </div>
+        {
+          // The dispatch is the same in every frame, and the products' model while their state is: typing in
+          // the form, opening the menu or scrolling leave the list undrawn.
+          thunk('div', 'products', Products.list, [model.products, dispatch])
+        }
       </div>
     </div>
   )

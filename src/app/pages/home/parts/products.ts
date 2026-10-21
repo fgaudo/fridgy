@@ -194,14 +194,14 @@ const statusAt = (now: DateTime.Utc, product: Domain.Product): ProductStatus =>
     },
   })
 
-export const program: Tea.Program<
-  State,
-  Model,
-  Message,
-  Command,
-  ProductCommands.ProductCommands | ProductList,
-  Event
-> = {
+export const program: Tea.Program<{
+  state: State
+  model: Model
+  message: Message
+  command: Command
+  services: ProductCommands.ProductCommands | ProductList
+  event: Event
+}> = {
   init: {
     state: {
       maybeNow: Opt.none(),

@@ -9,13 +9,12 @@ import * as App from '#app/program.ts'
 import * as Fonts from '#infrastructure/fonts.ts'
 import { SnabbdomRenderer } from '#libs/tea-snabbdom/renderer.ts'
 import * as SplashScreen from '#infrastructure/splash-screen.ts'
-import { describeTags } from '#libs/logging/describe-tags.ts'
 import * as Tea from '@fgaudo/effect-tea'
 import type { VNode } from 'snabbdom'
 
 export class RootViews extends Context.Service<
   RootViews,
-  Stream.Stream<Tea.View<App.Model, App.Message, VNode>>
+  Stream.Stream<Tea.View<App.Model, VNode>>
 >()('7e2b556446628b98') {}
 
 const program = Effect.gen(function*() {
@@ -32,7 +31,7 @@ const program = Effect.gen(function*() {
           Effect.andThen(SplashScreen.hide),
         ),
       }),
-    { onRejected: 'die', describeMessage: describeTags, describeCommand: describeTags },
+    { onRejectedInput: 'die' },
   )
 })
 

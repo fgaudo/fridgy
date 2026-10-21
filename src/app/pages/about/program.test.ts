@@ -8,7 +8,7 @@ import * as fc from 'fast-check'
 import { arbitrary as maybe } from '#libs/option/option.test_arbitrary.ts'
 import { dispatchedBy } from '#libs/tea-snabbdom/view.test_support.ts'
 import { assertProperty, outcomesOf } from '#libs/testing/update.test_support.ts'
-import { type Event, type Message, program } from './program.ts'
+import { type Event, type Message, type Model, program } from './program.ts'
 import { licenses, state } from './program.test_arbitrary.ts'
 import { view } from './view.tsx'
 
@@ -35,7 +35,7 @@ describe('About update', () => {
   test('every message the view can dispatch is accepted, and acts once when sent twice', () => {
     const check = dispatchViolations(program.update, { repeatable: (msg) => msg._tag === 'BackPressed' })
     fc.assert(fc.property(state, (before) => {
-      expect(check(before, dispatchedBy(view, makeModel(before)))).toEqual([])
+      expect(check(before, dispatchedBy<Model, Message>(view, makeModel(before)))).toEqual([])
     }))
   })
 

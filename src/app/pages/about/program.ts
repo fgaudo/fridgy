@@ -54,7 +54,15 @@ export type Model = Readonly<{
   saying: string
 }>
 
-export const program: Tea.Program<State, Model, Message, Command, Deps, Event> = {
+export const program: Tea.Program<{
+  state: State
+  model: Model
+  message: Message
+  command: Command
+  services: Deps
+  event: Event
+  external: ExternalMessage
+}> = {
   init: {
     state: { licenses: { _tag: 'Loading' }, saying: { _tag: 'Loading' } },
     commands: [Command.LoadLicenses(), Command.PickSaying()],
