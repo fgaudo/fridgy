@@ -85,6 +85,8 @@ export const modal = (model: Model, dispatch: Dispatch<Message>): ReadonlyArray<
           on={isEditable ? onValue('input', model.changeExpiration, inputValue) : {}}
         />,
       )}
+      {model._tag === 'Incomplete' && model.isExpirationPast
+        && <div props={{ className: 'text-xs text-red-400' }}>This date has already passed.</div>}
       <button
         props={{
           className: cn('w-full mt-4 shadow-md bg-secondary h-12 rounded-md p-3', {

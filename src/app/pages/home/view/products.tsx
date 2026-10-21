@@ -35,9 +35,10 @@ const statusText = (status: ValidProduct['status']) => {
       return <div props={{ className: 'text-xs px-2' }}>No expiration</div>
     case 'Stale':
       return <div props={{ className: 'text-xs text-red-400 font-bold px-2' }}>Expired</div>
+    // A product is good through its expiration day: the days left count that day too.
     case 'Fresh': {
       const days = Math.ceil(Duration.toDays(status.timeLeft))
-      return <div props={{ className: 'text-xs px-2' }}>{days === 1 ? '1 day left' : `${days} days left`}</div>
+      return <div props={{ className: 'text-xs px-2' }}>{days === 1 ? 'Expires today' : `${days} days left`}</div>
     }
   }
 }

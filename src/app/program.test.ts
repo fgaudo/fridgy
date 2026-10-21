@@ -11,7 +11,18 @@ import { InMemoryStore } from '#infrastructure/in-memory/store.ts'
 import { describeTags } from '#libs/logging/describe-tags.ts'
 import * as AppInMemory from './in-memory.layer.ts'
 import { type Command, type Page, program, type State } from './program.ts'
-import { back, openAbout, openForm, openMenu, play, requestInfo, submit, typeName } from './user.test_support.ts'
+import {
+  back,
+  heard,
+  openAbout,
+  openForm,
+  openMenu,
+  play,
+  requestInfo,
+  submit,
+  subscriptionsOf,
+  typeName,
+} from './user.test_support.ts'
 
 const Cmd = Data.taggedEnum<Command>()
 
@@ -24,13 +35,13 @@ const homeState = (state: State) =>
     (page) => page.state,
   )
 
-const subscriptions = (state: State) => program.subscriptions?.(state) ?? HashMap.empty()
-
 /** The pages whose subscriptions run, from the namespaced keys (`['Home', 'clock']`, …). */
 const subscribedPages = (state: State) =>
-  new Set(Array.from(HashMap.keys(subscriptions(state))).flatMap((key) => Array.isArray(key) ? [key[0]] : []))
+  new Set(Array.from(HashMap.keys(subscriptionsOf(state))).flatMap((key) => Array.isArray(key) ? [key[0]] : []))
 
 const onAbout = play(openAbout).state
+
+const layer = AppInMemory.layer.pipe(Layer.provide(InMemoryStore.layer))
 
 describe('Navigation', () => {
   test('starts on Home', () => {
@@ -73,15 +84,18 @@ describe('Navigation', () => {
   })
 
   test('Home receives the completion of its operation while About is shown', async () => {
-    const submitted = play([openForm, typeName('Milk'), submit])
+    const opened = play([openForm, typeName('Milk')]).state
+    // The form adds a product only once it knows the time.
+    const tick = await Effect.runPromise(
+      heard(opened, ['Home', ['add-product', 'clock']]).pipe(Effect.provide(layer)),
+    )
+    const submitted = play([() => tick, submit], opened)
     const [addProduct] = submitted.commands
     if (addProduct === undefined) {
       throw new Error('submitting started no command')
     }
     const hidden = play(openAbout, submitted.state).state
-    const completion = await Effect.runPromise(
-      program.runCommand(addProduct).pipe(Effect.provide(AppInMemory.layer.pipe(Layer.provide(InMemoryStore.layer)))),
-    )
+    const completion = await Effect.runPromise(program.runCommand(addProduct).pipe(Effect.provide(layer)))
     const { state } = applyAll(program.update)(Opt.toArray(completion), hidden)
     expect(tags(state)).toEqual(['Home', 'About'])
     expect(Opt.map(homeState(state), (home) => home.addProduct._tag)).toEqual(Opt.some('Closed'))
@@ -104,7 +118,7 @@ describe('Subscriptions', () => {
 
   test('the back button is always listened to', () => {
     for (const state of [program.init.state, onAbout]) {
-      expect(HashMap.has(subscriptions(state), 'back-button')).toBe(true)
+      expect(HashMap.has(subscriptionsOf(state), 'back-button')).toBe(true)
     }
   })
 })

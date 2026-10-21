@@ -3,6 +3,7 @@ import * as Tea from '@fgaudo/effect-tea'
 import { dispatchViolations, missingOffers } from '@fgaudo/effect-tea/testing'
 import * as Data from 'effect/Data'
 import * as Equal from 'effect/Equal'
+import * as HashMap from 'effect/HashMap'
 import * as Opt from 'effect/Option'
 import * as fc from 'fast-check'
 import { describeTags } from '#libs/logging/describe-tags.ts'
@@ -194,4 +195,13 @@ describe('Home update', () => {
       })
     })
   })
+})
+
+// A part's subscriptions run only if the page passes them on.
+test('the form listens to the clock exactly while it is open', () => {
+  const subscriptions = program.subscriptions ?? (() => HashMap.empty())
+  assertProperty(
+    [state],
+    (s) => HashMap.has(subscriptions(s), ['add-product', 'clock']) === (s.addProduct._tag !== 'Closed'),
+  )
 })

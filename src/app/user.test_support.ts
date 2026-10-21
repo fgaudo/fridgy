@@ -2,7 +2,13 @@
 // model offers, wrapped as its view wraps it, never one built by hand.
 import * as Tea from '@fgaudo/effect-tea'
 import { applyAll } from '@fgaudo/effect-tea/testing'
+import * as Arr from 'effect/Array'
+import * as Channel from 'effect/Channel'
 import * as Data from 'effect/Data'
+import * as Effect from 'effect/Effect'
+import * as Equal from 'effect/Equal'
+import * as HashMap from 'effect/HashMap'
+import * as Opt from 'effect/Option'
 import * as Home from './pages/home/program.ts'
 import { type Command, fromHome, type Message, program, type State } from './program.ts'
 
@@ -46,6 +52,24 @@ export const submit = onHome(({ addProduct }) =>
 
 /** Android's back button: the shell sends it whatever is shown. */
 export const back: Action = () => Msg.BackRequested()
+
+/** What the program listens to in `state`. */
+export const subscriptionsOf = (state: State) => program.subscriptions?.(state) ?? HashMap.empty()
+
+/**
+ * The first message of the subscription that runs under `key` in `state`, as the program would hear it.
+ * Fails the test when nothing listens under that key.
+ */
+export const heard = (state: State, key: unknown) =>
+  Opt.match(Arr.findFirst(Array.from(subscriptionsOf(state)), ([k]) => Equal.equals(k, key)), {
+    onNone: () => Effect.die(new Error(`nothing listens under ${JSON.stringify(key)}`)),
+    onSome: ([, subscription]) =>
+      Effect.flatMap(Channel.runHead(subscription), (maybeMessage) =>
+        Opt.match(maybeMessage, {
+          onNone: () => Effect.die(new Error(`${JSON.stringify(key)} ended in silence`)),
+          onSome: Effect.succeed,
+        })),
+  })
 
 /** Plays the actions from `from`, each in the state the previous one left, with the commands they started. */
 export const play = (actions: ReadonlyArray<Action>, from = program.init.state) =>

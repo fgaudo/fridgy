@@ -80,6 +80,11 @@ upgraded to in this app.
   Each page has its own query ports, shaped for what it shows; it learns about writes from the storage's
   changes (a `Source`), not from the page that wrote. Persistence ports take a domain `Snapshot` and return
   `UnvalidatedSnapshot`s; adapters never read domain fields.
+- **The domain decides what an entity is.** A new one is made with its `make` (e.g. `Product.make`), and
+  a form offers to submit only what `make` accepts, asking the domain's own rules (`Product.make`,
+  `Product.canExpireOn`) rather than repeating them; the command then carries the entity, valid by
+  construction. `fromSnapshot` only reads stored data, and is more forgiving, so that what was stored can
+  still be shown and deleted.
 - **Shared things move up, never sideways.** What several pages need (entities, write ports, a port a second
   page wants, a query a second page reads in the same shape) moves to `src/app/domain`, `ports`, `adapters`;
   pages never import each other.

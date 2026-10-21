@@ -1,10 +1,12 @@
-import { describe, test } from 'bun:test'
+import { describe, expect, test } from 'bun:test'
+import * as Tea from '@fgaudo/effect-tea'
 import * as Data from 'effect/Data'
 import * as DateTime from 'effect/DateTime'
 import * as Equal from 'effect/Equal'
 import * as Opt from 'effect/Option'
 import * as fc from 'fast-check'
-import * as NormalizedString from '#libs/strings/normalized-string.ts'
+import * as Product from '#app/domain/product.ts'
+import { utc } from '#libs/testing/date-time.test_arbitrary.ts'
 import { assertProperty, outcomesOf } from '#libs/testing/update.test_support.ts'
 import { type Command, type Event, type Message, program } from './add-product.ts'
 import { closed, editing, message, state, submitting } from './add-product.test_arbitrary.ts'
@@ -28,6 +30,7 @@ describe('AddProduct update', () => {
           _tag: 'Editing',
           maybeName: Opt.none(),
           maybeExpirationDate: Opt.none(),
+          maybeNow: Opt.none(),
         }))
   })
 
@@ -59,17 +62,44 @@ describe('AddProduct update', () => {
     })
   })
 
-  test('Started submits a form whose name normalizes to a valid one, or is rejected', () => {
+  test('TimeChanged keeps the time while the form is open, and is rejected when it is closed', () => {
+    assertProperty([state, utc], (before, now) =>
+      before._tag === 'Closed'
+        ? rejects(Msg.TimeChanged({ now }), before)
+        : Equal.equals(step(Msg.TimeChanged({ now }), before).after, { ...before, maybeNow: Opt.some(now) }))
+  })
+
+  // The product is created at the time the form last heard: the rules of a product decide.
+  test('Started submits the product the form describes, or is rejected when it describes none', () => {
     assertProperty([state], (before) => {
-      const canStart = before._tag === 'Editing'
-        && Opt.exists(before.maybeName, (name) => Opt.isSome(NormalizedString.fromString(name)))
-      if (!canStart) {
+      const maybeProduct = before._tag === 'Editing'
+        ? Opt.flatMap(
+          Opt.all([before.maybeName, before.maybeNow]),
+          ([name, creationDate]) =>
+            Product.make({ name, creationDate, maybeExpirationDate: before.maybeExpirationDate }),
+        )
+        : Opt.none()
+      if (Opt.isNone(maybeProduct)) {
         return rejects(Msg.Started(), before)
       }
-      const { maybeName, maybeExpirationDate } = before
       const { after, commands } = step(Msg.Started(), before)
-      return Equal.equals(after, { _tag: 'Submitting', maybeName, maybeExpirationDate })
-        && Equal.equals(commands, [Cmd.Add({ maybeName, maybeExpirationDate })])
+      return Equal.equals(after, { ...before, _tag: 'Submitting' })
+        && Equal.equals(commands, [Cmd.Add({ product: maybeProduct.value })])
+    })
+  })
+
+  // Guards against the property above passing only on rejections.
+  test('the arbitrary forms describe products, and break each rule of a product', () => {
+    const offered = fc.sample(editing, 500).map((form) => Tea.modelOf(program)(form)._tag)
+    expect(offered).toContain('Complete')
+    expect(offered).toContain('Incomplete')
+  })
+
+  test('the model says when the product would expire before the day it is added', () => {
+    assertProperty([editing, utc], (form, now) => {
+      const model = Tea.modelOf(program)({ ...form, maybeNow: Opt.some(now) })
+      const isPast = Opt.exists(form.maybeExpirationDate, (expiration) => !Product.canExpireOn(now)(expiration))
+      return isPast ? model._tag === 'Incomplete' && model.isExpirationPast : model._tag !== 'Submitting'
     })
   })
 
@@ -83,10 +113,8 @@ describe('AddProduct update', () => {
 
     test('failure gives the form back, as it was, and says so', () => {
       assertProperty([submitting], (before) => {
-        const { maybeName, maybeExpirationDate } = before
         const { after, events } = step(Msg.Completed({ succeeded: false }), before)
-        return Equal.equals(after, { _tag: 'Editing', maybeName, maybeExpirationDate })
-          && Equal.equals(events, [Ev.Failed()])
+        return Equal.equals(after, { ...before, _tag: 'Editing' }) && Equal.equals(events, [Ev.Failed()])
       })
     })
 

@@ -1,19 +1,22 @@
 // The form that adds a product. Submitting is a state that only its completion
 // leaves; what is typed is stored in every state where the form is open.
 import * as Tea from '@fgaudo/effect-tea'
+import * as Channel from 'effect/Channel'
 import * as Data from 'effect/Data'
 import * as DateTime from 'effect/DateTime'
 import * as Effect from 'effect/Effect'
 import { pipe } from 'effect/Function'
+import * as HashMap from 'effect/HashMap'
 import * as Match from 'effect/Match'
 import * as Opt from 'effect/Option'
 import * as Product from '#app/domain/product.ts'
 import * as ProductCommands from '#app/ports/product-commands.ts'
-import * as NormalizedString from '#libs/strings/normalized-string.ts'
 
 type Form = Readonly<{
   maybeName: Opt.Option<string>
   maybeExpirationDate: Opt.Option<DateTime.Utc>
+  /** The current time, once the clock has ticked: the product is created then. */
+  maybeNow: Opt.Option<DateTime.Utc>
 }>
 
 export type State = Data.TaggedEnum<{
@@ -38,13 +41,16 @@ export type Message =
     NameChanged: { name: string }
     ExpirationDateChanged: { expiration: string | number }
     Started: object
+    // From subscriptions.
+    TimeChanged: { now: DateTime.Utc }
     // From commands.
     Completed: { succeeded: boolean }
   }>
 
 const Message = Data.taggedEnum<Message>()
 
-export type Command = Data.TaggedEnum<{ Add: Form }>
+/** Adds a product that `update` has already validated. */
+export type Command = Data.TaggedEnum<{ Add: { product: Product.Product } }>
 
 const Command = Data.taggedEnum<Command>()
 
@@ -72,8 +78,8 @@ type Editable =
 
 export type Model = Data.TaggedEnum<{
   Closed: { open: Tea.Offered<Message> }
-  /** The name is blank: there is nothing to add yet. */
-  Incomplete: Editable
+  /** Not a product yet: the name is blank, or the product would expire before the day it is added. */
+  Incomplete: Editable & Readonly<{ isExpirationPast: boolean }>
   Complete: Editable & Readonly<{ submit: Tea.Offered<Message> }>
   /** The inputs are disabled until the submission completes. */
   Submitting: Fields
@@ -83,18 +89,25 @@ type Open = Exclude<State, { readonly _tag: 'Closed' }>
 
 const isOpen = (state: State): state is Open => state._tag !== 'Closed'
 
-const hasValidName = (form: Form) => Opt.exists(form.maybeName, (name) => Opt.isSome(NormalizedString.fromString(name)))
+/** The product the form describes, created now, if it is one. */
+const productOf = (form: Form) =>
+  Opt.flatMap(
+    Opt.all([form.maybeName, form.maybeNow]),
+    ([name, creationDate]) => Product.make({ name, creationDate, maybeExpirationDate: form.maybeExpirationDate }),
+  )
 
-const add = ({ maybeName, maybeExpirationDate }: Form) =>
+// Refreshed often, so that the creation date is close to when the user adds the product.
+const clock = Channel.forever(
+  Channel.fromEffect(DateTime.now).pipe(
+    Channel.map((now) => Message.TimeChanged({ now })),
+    Channel.concatWith(() => Channel.fromEffectDrain(Effect.sleep('1 second'))),
+  ),
+)
+
+const add = ({ product }: Readonly<{ product: Product.Product }>) =>
   Tea.attempt(
     Effect.gen(function*() {
       const { add } = yield* ProductCommands.ProductCommands
-      const current = yield* DateTime.now
-      const form = { maybeCreationDate: Opt.some(current), maybeName, maybeExpirationDate }
-      const product = yield* Product.fromSnapshot(form).pipe(
-        Effect.fromOption,
-        Effect.tapError(() => Effect.logWarning('The product is not valid: it was not added', form)),
-      )
       yield* Effect.logDebug('Adding a product', Product.name(product))
       const id = yield* pipe(
         ProductCommands.AddProduct({ snapshot: Product.toSnapshot(product) }),
@@ -116,7 +129,9 @@ export const program: Tea.Program<State, Model, Message, Command, ProductCommand
   update: Match.typeTags<Message, (state: State) => Tea.Transition<State, Command, Event>>()({
     Opened: () => (state) =>
       state._tag === 'Closed'
-        ? { state: { _tag: 'Editing', maybeName: Opt.none(), maybeExpirationDate: Opt.none() } }
+        ? {
+          state: { _tag: 'Editing', maybeName: Opt.none(), maybeExpirationDate: Opt.none(), maybeNow: Opt.none() },
+        }
         : Tea.reject,
 
     // The form stays open until the submission completes.
@@ -131,25 +146,25 @@ export const program: Tea.Program<State, Model, Message, Command, ProductCommand
     ExpirationDateChanged: ({ expiration }) => (state) =>
       isOpen(state) ? { state: { ...state, maybeExpirationDate: DateTime.make(expiration) } } : Tea.reject,
 
+    TimeChanged: ({ now }) => (state) => isOpen(state) ? { state: { ...state, maybeNow: Opt.some(now) } } : Tea.reject,
+
     Started: () => (state) => {
-      if (state._tag !== 'Editing' || !hasValidName(state)) {
+      if (state._tag !== 'Editing') {
         return Tea.reject
       }
-      const { maybeName, maybeExpirationDate } = state
-      return {
-        state: { _tag: 'Submitting', maybeName, maybeExpirationDate },
-        commands: [Command.Add({ maybeName, maybeExpirationDate })],
-      }
+      return Opt.match(productOf(state), {
+        onNone: () => Tea.reject,
+        onSome: (product) => ({ state: { ...state, _tag: 'Submitting' }, commands: [Command.Add({ product })] }),
+      })
     },
 
     Completed: ({ succeeded }) => (state) => {
       if (state._tag !== 'Submitting') {
         return Tea.reject
       }
-      const { maybeName, maybeExpirationDate } = state
       return succeeded
         ? { state: { _tag: 'Closed' } }
-        : { state: { _tag: 'Editing', maybeName, maybeExpirationDate }, events: [Event.Failed()] }
+        : { state: { ...state, _tag: 'Editing' }, events: [Event.Failed()] }
     },
 
     BackPressed: () => (state) => {
@@ -168,6 +183,8 @@ export const program: Tea.Program<State, Model, Message, Command, ProductCommand
   runCommand: Match.typeTags<Command>()({
     Add: add,
   }),
+
+  subscriptions: (state) => isOpen(state) ? HashMap.make(['clock', clock]) : HashMap.empty(),
 
   makeModel: (state, { offer, offerInput }) => {
     if (state._tag === 'Closed') {
@@ -188,8 +205,12 @@ export const program: Tea.Program<State, Model, Message, Command, ProductCommand
       changeName: offerInput((name) => Message.NameChanged({ name }), name),
       changeExpiration: offerInput((expiration) => Message.ExpirationDateChanged({ expiration }), expirationDate),
     }
-    return hasValidName(state)
+    const isExpirationPast = Opt.exists(
+      Opt.all([state.maybeNow, state.maybeExpirationDate]),
+      ([now, expiration]) => !Product.canExpireOn(now)(expiration),
+    )
+    return Opt.isSome(productOf(state))
       ? { _tag: 'Complete', ...editable, submit: offer(Message.Started()) }
-      : { _tag: 'Incomplete', ...editable }
+      : { _tag: 'Incomplete', ...editable, isExpirationPast }
   },
 }

@@ -46,6 +46,40 @@ export type UnvalidatedSnapshot = Readonly<{
   maybeExpirationDate: Opt.Option<DateTime.Utc>
 }>
 
+/** A product's name, from what the user typed: normalized, and never blank. */
+const nameFrom = (text: string): Opt.Option<NormalizedString.NormalizedString> => NormalizedString.fromString(text)
+
+// An expiration date names a day: the product is good through that day, and has
+// expired from the start of the next one.
+const expiresAt = (expirationDate: DateTime.Utc) => DateTime.add(DateTime.startOf(expirationDate, 'day'), { days: 1 })
+
+/** Whether a product created at `creationDate` may expire on the day of `expirationDate`: not on a day before. */
+export const canExpireOn = (creationDate: DateTime.Utc) => (expirationDate: DateTime.Utc) =>
+  DateTime.isLessThan(creationDate, expiresAt(expirationDate))
+
+const mayExpireOn = (creationDate: DateTime.Utc, maybeExpirationDate: Opt.Option<DateTime.Utc>) =>
+  Opt.isNone(maybeExpirationDate) || canExpireOn(creationDate)(maybeExpirationDate.value)
+
+/** A new product, from what the user entered; `None` when it breaks a rule of a product. */
+export const make = (
+  input: Readonly<{
+    name: string
+    creationDate: DateTime.Utc
+    maybeExpirationDate: Opt.Option<DateTime.Utc>
+  }>,
+): Opt.Option<Product> =>
+  Opt.gen(function*() {
+    const name = yield* nameFrom(input.name)
+    if (!mayExpireOn(input.creationDate, input.maybeExpirationDate)) {
+      return yield* Opt.none()
+    }
+    return productIso.set({ name, creationDate: input.creationDate, maybeExpirationDate: input.maybeExpirationDate })
+  })
+
+/**
+ * A stored product, as a storage gives it back. More forgiving than `make`: a name that is no longer valid
+ * is replaced, so that the product can still be shown and deleted.
+ */
 export const fromSnapshot = (p: UnvalidatedSnapshot): Opt.Option<Product> =>
   Opt.gen(function*() {
     const [name, creationDate] = yield* Opt.all([
@@ -58,21 +92,10 @@ export const fromSnapshot = (p: UnvalidatedSnapshot): Opt.Option<Product> =>
       }),
       p.maybeCreationDate,
     ])
-    if (Opt.isNone(p.maybeExpirationDate)) {
-      return productIso.set({
-        creationDate,
-        maybeExpirationDate: Opt.none(),
-        name,
-      })
-    }
-    if (DateTime.isLessThan(p.maybeExpirationDate.value, creationDate)) {
+    if (!mayExpireOn(creationDate, p.maybeExpirationDate)) {
       return yield* Opt.none()
     }
-    return productIso.set({
-      creationDate,
-      maybeExpirationDate: p.maybeExpirationDate,
-      name,
-    })
+    return productIso.set({ creationDate, maybeExpirationDate: p.maybeExpirationDate, name })
   })
 
 export const toSnapshot = (product: Product): Snapshot => _Snapshot({ ...productIso.get(product) })
@@ -88,35 +111,25 @@ export const name = (product: Product): string => productIso.get(product).name
 
 export const expirationDate = (expiration: Expiration) => expirationIso.get(expiration).expirationDate
 
-const _freshness = (currentDate: DateTime.Utc) => (expiration: Expiration) => {
-  const exp = expirationIso.get(expiration)
-  if (DateTime.isLessThanOrEqualTo(exp.expirationDate, currentDate)) {
-    return UnitInterval.makeUnsafe(0)
-  }
-  if (DateTime.isLessThanOrEqualTo(exp.expirationDate, exp.creationDate)) {
-    return UnitInterval.makeUnsafe(0)
-  }
-  if (DateTime.isLessThan(currentDate, exp.creationDate)) {
+const freshness = (currentDate: DateTime.Utc, creationDate: DateTime.Utc, end: DateTime.Utc) => {
+  if (DateTime.isLessThan(currentDate, creationDate)) {
     return UnitInterval.makeUnsafe(1)
   }
-  const remainingDuration = DateTime.distance(currentDate, exp.expirationDate)
-  const totalDuration = DateTime.distance(exp.creationDate, exp.expirationDate)
+  const remainingDuration = DateTime.distance(currentDate, end)
+  const totalDuration = DateTime.distance(creationDate, end)
   return UnitInterval.makeUnsafe(Duration.toMillis(remainingDuration) / Duration.toMillis(totalDuration))
 }
 
-const _timeLeft = (currentDate: DateTime.Utc) => (expiration: Expiration) => {
-  const exp = expirationIso.get(expiration)
-  return DateTime.distance(currentDate, exp.expirationDate)
-}
-
 export const expirationStatus = (currentDate: DateTime.Utc) => (expiration: Expiration) => {
-  const exp = expirationIso.get(expiration)
-  if (currentDate >= exp.expirationDate) {
+  const { creationDate, expirationDate } = expirationIso.get(expiration)
+  const end = expiresAt(expirationDate)
+  if (DateTime.isGreaterThanOrEqualTo(currentDate, end)) {
     return { hasExpired: true } as const
   }
   return {
-    freshness: _freshness(currentDate)(expiration),
+    // A product ends after it is created (see `canExpireOn`), so the total duration is never zero.
+    freshness: freshness(currentDate, creationDate, end),
     hasExpired: false,
-    timeLeft: _timeLeft(currentDate)(expiration),
+    timeLeft: DateTime.distance(currentDate, end),
   } as const
 }

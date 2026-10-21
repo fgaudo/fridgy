@@ -158,7 +158,11 @@ export const program: Tea.Program<State, Model, Message, Command, Deps, Event> =
     Products: ({ command }) => products.runCommand(command),
   }),
 
-  subscriptions: (state) => HashMap.union(scrolling.subscriptions(state), products.subscriptions(state)),
+  subscriptions: (state) =>
+    scrolling.subscriptions(state).pipe(
+      HashMap.union(addProduct.subscriptions(state)),
+      HashMap.union(products.subscriptions(state)),
+    ),
 
   makeModel: (state, { offer }) => ({
     menu: state.isMenuOpen
