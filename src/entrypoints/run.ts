@@ -7,8 +7,9 @@ import type * as Layer from 'effect/Layer'
 import type * as Stream from 'effect/Stream'
 import * as App from '#app/program.ts'
 import * as Fonts from '#infrastructure/fonts.ts'
-import { SnabbdomRenderer } from '#infrastructure/snabbdom-renderer.ts'
+import { SnabbdomRenderer } from '#libs/tea-snabbdom/renderer.ts'
 import * as SplashScreen from '#infrastructure/splash-screen.ts'
+import { describeTags } from '#libs/logging/describe-tags.ts'
 import * as Tea from '@fgaudo/effect-tea'
 import type { VNode } from 'snabbdom'
 
@@ -31,7 +32,7 @@ const program = Effect.gen(function*() {
           Effect.andThen(SplashScreen.hide),
         ),
       }),
-    { onRejected: 'die', describeMessage: App.describeMessage },
+    { onRejected: 'die', describeMessage: describeTags, describeCommand: describeTags },
   )
 })
 

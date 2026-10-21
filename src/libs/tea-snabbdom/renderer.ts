@@ -5,7 +5,7 @@ import * as Stream from 'effect/Stream'
 import * as Snabbdom from 'snabbdom'
 import type { Frame } from '@fgaudo/effect-tea'
 import type * as View from '@fgaudo/effect-tea'
-import * as AnimationFrame from './animation-frame.ts'
+import * as AnimationFrame from '#libs/animation-frame/animation-frame.ts'
 
 export class SnabbdomRenderer extends Context.Service<
   SnabbdomRenderer,
@@ -18,7 +18,7 @@ export class SnabbdomRenderer extends Context.Service<
       onFirstPaint: Effect.Effect<void>
     }) => Effect.Effect<void>
   }
->()('01707e0c43c8de6e', {
+>()('be6dc6ffab00a36c', {
   make: Effect.fn(function*(selector: string) {
     const root = yield* Effect.sync(() => document.querySelector(selector)).pipe(
       Effect.flatMap(Effect.fromNullishOr),

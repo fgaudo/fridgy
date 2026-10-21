@@ -9,7 +9,7 @@ import type * as RootView from '#app/view.tsx'
 import { CssRefresher } from '#infrastructure/css-refresher.ts'
 import { InMemoryStore } from '#infrastructure/in-memory/store.ts'
 import * as HotModule from '#infrastructure/hot-module.ts'
-import { SnabbdomRenderer } from '#infrastructure/snabbdom-renderer.ts'
+import { SnabbdomRenderer } from '#libs/tea-snabbdom/renderer.ts'
 import { RootViews, run } from './run.ts'
 
 const HotRootViews = Layer.effect(

@@ -11,20 +11,22 @@ src/
 │  └─ run.ts             shared: runs the program (`@fgaudo/effect-tea` `run`) with the snabbdom renderer
 │
 ├─ app/                  the application (environment-agnostic)
-│  ├─ program.ts         public: the root Program and its types
+│  ├─ program.ts         public: the root Program: the stack of pages, the back button, leaving the app
 │  ├─ view.tsx           public: the root view (hot-reload entry in development)
 │  ├─ sqlite.layer.ts    public: every adapter, data in sqlite
 │  ├─ in-memory.layer.ts public: every adapter, data in memory
-│  ├─ program/           private: messages, state, model, update, subs, commands, navigation
 │  ├─ domain/            private: the app's entities, used by every page
 │  ├─ ports/, adapters/  private: the root's ports (Shell) and the write ports, with their adapters
-│  └─ pages/<page>/      private: each page has the same shape as app/; it may import the
-│     │                  domain/ and ports/ above it, never the adapters/
+│  └─ pages/<page>/      private: a page; it may import the domain/ and ports/ above it, never the
+│     │                  adapters/
 │     ├─ program.ts · view.tsx · *.layer.ts   the page's public API
-│     └─ program/ · domain/ · ports/ · adapters/
+│     ├─ parts/          the parts of a large page, each a Program the page embeds
+│     ├─ view/           the views of its parts
+│     └─ ports/ · adapters/
 │
-├─ infrastructure/       technical building blocks: sqlite, sql, in-memory store, renderer, hot reload
-├─ libs/                 generic, reusable code (the snabbdom bridge and JSX runtime, sources, branded numbers, …)
+├─ infrastructure/       technical building blocks: sqlite, sql, in-memory store, hot reload, fonts
+├─ libs/                 generic, reusable code: the snabbdom bridge (tea-snabbdom: handlers, renderer,
+│                        test support) and JSX runtime, sources, branded numbers, log descriptions, …
 ├─ index.html            the page template: the build fills in the fonts and the entrypoint
 └─ styles.css            the stylesheet (Tailwind)
 ```
@@ -42,10 +44,11 @@ traditional or simplified forms of Chinese characters.
 ## Reading order
 
 1. `app/program.ts` and `app/view.tsx` — what the app is.
-2. `app/pages/home/program.ts` and `program/` — a page: messages → `update` → state → `makeModel` → view.
-3. `app/pages/home/ports/` — what the page needs from the outside world; `app/domain/` and `app/ports/` —
+2. `app/pages/about/program.ts` — a page in one module: state, messages, `update`, commands, `makeModel`.
+3. `app/pages/home/program.ts` and `parts/` — a page made of parts, embedded like the pages in the root.
+4. `app/pages/home/ports/` — what the page needs from the outside world; `app/domain/` and `app/ports/` —
    the entities and the write ports every page shares.
-4. `entrypoints/` — how everything is wired for each environment.
+5. `entrypoints/` — how everything is wired for each environment.
 
 ## Visibility
 

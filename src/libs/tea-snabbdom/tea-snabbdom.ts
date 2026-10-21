@@ -1,34 +1,41 @@
-import * as Opt from 'effect/Option'
-import type { On, VNode } from 'snabbdom'
-import type * as Tea from '@fgaudo/effect-tea'
+import * as Tea from '@fgaudo/effect-tea'
+import type { Hooks, On, VNode } from 'snabbdom'
 
 export type View<Model, Message> = Tea.View<Model, Message, VNode>
 
 type EventName = keyof HTMLElementEventMap
 
-/** Builds snabbdom's `on` from the model's offers: a handler exists only while its action is offered. */
-export const handlers = <Message>(dispatch: Tea.Dispatch<Message>) => ({
-  on: (event: EventName, offer: Tea.Offer<Message>): On =>
-    Opt.match(offer, {
-      onNone: () => ({}),
-      onSome: (message) => ({ [event]: () => dispatch(message) }),
+/** Builds snabbdom's `on` from the model's offers: a handler exists only where the model has an action. */
+export const handlers = <Message>(dispatch: Tea.Dispatch<Message>) => {
+  const send = Tea.dispatchUnsafe(dispatch)
+  return {
+    on: (event: EventName, offer: Tea.Offered<Message>): On => ({ [event]: () => send(offer) }),
+    /** For a message built from what the event carries, e.g. an input's value. */
+    onValue: <Value>(
+      event: EventName,
+      toOffer: (value: Value) => Tea.Offered<Message>,
+      read: (event: Event) => Value,
+    ): On => ({ [event]: (domEvent: Event) => send(toOffer(read(domEvent))) }),
+    /**
+     * Always prevents the browser's default (e.g. the native menu of a long press), and sends the offered
+     * message when there is one.
+     */
+    onPreventingDefault: (event: EventName, offer?: Tea.Offered<Message>): On => ({
+      [event]: (domEvent: Event) => {
+        domEvent.preventDefault()
+        if (offer !== undefined) send(offer)
+      },
     }),
-  /** For a message built from what the event carries, e.g. an input's value. */
-  onValue: <Value>(event: EventName, offer: Tea.InputOffer<Value, Message>, read: (event: Event) => Value): On =>
-    Opt.match(offer, {
-      onNone: () => ({}),
-      onSome: (toMessage) => ({ [event]: (domEvent: Event) => dispatch(toMessage(read(domEvent))) }),
-    }),
-  /**
-   * Always prevents the browser's default (e.g. the native menu of a long press), and dispatches the
-   * offered message if there is one.
-   */
-  onPreventingDefault: (event: EventName, offer: Tea.Offer<Message>): On => ({
-    [event]: (domEvent: Event) => {
-      domEvent.preventDefault()
-      if (Opt.isSome(offer)) dispatch(offer.value)
-    },
-  }),
-})
+  }
+}
 
 export type Handlers<Message> = ReturnType<typeof handlers<Message>>
+
+/**
+ * Writes `text` into an input only when it is created. From then on the user owns its text, and the program
+ * learns it from the input's messages: writing the model's text on every frame could draw a frame older than
+ * the last keys, taking them back and moving the caret. To replace the text, give the input a new `key`.
+ */
+export const initialValue = (text: string): NonNullable<Hooks['create']> => (_, vnode) => {
+  ;(vnode.elm as HTMLInputElement).value = text
+}

@@ -2,7 +2,7 @@ import * as Layer from 'effect/Layer'
 import * as References from 'effect/References'
 import * as Stream from 'effect/Stream'
 import * as RootView from '#app/view.tsx'
-import { SnabbdomRenderer } from '#infrastructure/snabbdom-renderer.ts'
+import { SnabbdomRenderer } from '#libs/tea-snabbdom/renderer.ts'
 import { RootViews, run } from './run.ts'
 
 import * as ConfigProvider from 'effect/ConfigProvider'

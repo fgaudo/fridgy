@@ -1,5 +1,5 @@
 import * as Effect from 'effect/Effect'
-import * as AnimationFrame from './animation-frame.ts'
+import * as AnimationFrame from '#libs/animation-frame/animation-frame.ts'
 
 /**
  * Loads every font face the stylesheets declare, then waits one more frame. A face otherwise loads only when

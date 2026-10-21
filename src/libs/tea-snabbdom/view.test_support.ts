@@ -1,5 +1,6 @@
-import type { VNode } from 'snabbdom'
 import type { View } from '@fgaudo/effect-tea'
+import * as Effect from 'effect/Effect'
+import type { VNode } from 'snabbdom'
 
 /**
  * Renders `view` for `model` and fires every event handler in the tree, with a
@@ -28,6 +29,9 @@ export const dispatchedBy = <Model, Message>(
     }
     for (const child of node.children ?? []) visit(child)
   }
-  visit(view(model, (message) => dispatched.push(message)))
+  visit(view(model, (message) =>
+    Effect.sync(() => {
+      dispatched.push(message)
+    })))
   return dispatched
 }

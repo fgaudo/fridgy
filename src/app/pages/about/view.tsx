@@ -1,7 +1,6 @@
 import * as Opt from 'effect/Option'
 import { handlers, type View } from '#libs/tea-snabbdom/tea-snabbdom.ts'
-import type { Message } from './program/messages.ts'
-import type { Model } from './program/model.ts'
+import type { Message, Model } from './program.ts'
 
 export const view: View<Model, Message> = (model, dispatch) => {
   const { on } = handlers(dispatch)
