@@ -1,5 +1,5 @@
 import type { On, VNodeStyle } from 'snabbdom'
-import { cn } from '#libs/ui/class-names.ts'
+import { cn } from './class-names.ts'
 
 /** Fades in once inserted, and out before being removed. */
 export const fade: VNodeStyle = {

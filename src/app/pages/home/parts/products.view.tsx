@@ -4,7 +4,7 @@ import * as DateTime from 'effect/DateTime'
 import * as Duration from 'effect/Duration'
 import { type Handlers, handlers } from '#libs/tea-snabbdom/tea-snabbdom.ts'
 import { cn } from '#libs/ui/class-names.ts'
-import type { ItemSelection, Message, Model, ProductModel } from '../parts/products.ts'
+import type { ItemSelection, Message, Model, ProductModel } from './products.ts'
 
 type ValidProduct = Data.TaggedEnum.Value<ProductModel, 'Valid'>
 

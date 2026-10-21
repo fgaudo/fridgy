@@ -2,8 +2,8 @@ import type { Dispatch } from '@fgaudo/effect-tea'
 import type { VNode } from 'snabbdom'
 import { handlers, initialValue } from '#libs/tea-snabbdom/tea-snabbdom.ts'
 import { cn } from '#libs/ui/class-names.ts'
-import type { Message, Model } from '../parts/add-product.ts'
-import { backdrop, fade } from './common.tsx'
+import type { Message, Model } from './add-product.ts'
+import { backdrop, fade } from '#libs/ui/overlay.tsx'
 
 const inputValue = (event: Event) => (event.target as HTMLInputElement).value
 

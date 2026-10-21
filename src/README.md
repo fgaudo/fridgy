@@ -20,8 +20,7 @@ src/
 │  └─ pages/<page>/      private: a page; it may import the domain/ and ports/ above it, never the
 │     │                  adapters/
 │     ├─ program.ts · view.tsx · *.layer.ts   the page's public API
-│     ├─ parts/          the parts of a large page, each a Program the page embeds
-│     ├─ view/           the views of its parts
+│     ├─ parts/          the parts of a large page, each a Program the page embeds, next to its view
 │     └─ ports/ · adapters/
 │
 ├─ infrastructure/       technical building blocks: sqlite, sql, in-memory store, hot reload, fonts

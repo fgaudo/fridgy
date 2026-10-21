@@ -65,7 +65,7 @@ upgraded to in this app.
   (300–400 lines); then it splits into **parts** (`pages/<page>/parts/`), each a `Tea.Program` with its own
   state, messages, commands and model, embedded by the page as the root embeds the pages. What spans the
   parts (the menu, the back button, a toast for a part's failure) stays in the page's `program.ts`. Parts
-  that read each other's state are one part. Their views follow them (`view/<part>.tsx`), and so do their
+  that read each other's state are one part. A part's view sits next to it (`<part>.view.tsx`), with its
   tests and arbitraries. Never split a program into `messages`/`state`/`update` files: they would import
   each other in cycles.
 - **The same wrap for `embed` and `mapDispatch`.** A child's messages are wrapped by one exported function
@@ -103,12 +103,14 @@ upgraded to in this app.
 
 ## Views
 
-TSX (`view.tsx`, and only views), rendered by snabbdom. Attach offers with `handlers(dispatch)` from
+TSX (`view.tsx`, `<part>.view.tsx`, and only views), rendered by snabbdom. Attach offers with `handlers(dispatch)` from
 `libs/tea-snabbdom`, matching the model's case: `on={menu._tag === 'Closed' ? on('click', menu.open) : {}}`.
 `onPreventingDefault` is the exception that always attaches (e.g. the native menu of a long press), with an
 optional offer. An input the user types into gets its text with `initialValue` (written only when the input
-is created), never from `props.value`: a frame older than the last keys would take them back. Split a large
-view into private components under `view/`.
+is created), never from `props.value`: a frame older than the last keys would take them back. A large view
+splits along the parts; components that know nothing of the app (e.g. `libs/ui/overlay.tsx`) go to
+`libs/ui/`. The development server swaps the view in place when only `.tsx` and `.css` files change,
+wherever they are, and reloads the page otherwise.
 
 ## Tests
 
