@@ -186,7 +186,7 @@ const statusAt = (now: DateTime.Utc, product: Domain.Product): ProductStatus =>
   Opt.match(Domain.maybeExpiration(product), {
     onNone: () => ({ _tag: 'Everlasting' }),
     onSome: (expiration) => {
-      const expirationDate = Domain.expirationDate(expiration)
+      const { expirationDate } = expiration
       const status = Domain.expirationStatus(now)(expiration)
       return status.hasExpired
         ? { _tag: 'Stale', expirationDate }
@@ -339,7 +339,7 @@ export const program: Tea.Program<
               _tag: 'Valid',
               id: product.id,
               selection: selectionOf(product.id),
-              name: Domain.name(product.product),
+              name: product.product.name,
               status: statusAt(now, product.product),
             }
         }

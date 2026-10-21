@@ -84,7 +84,7 @@ describe('New products', () => {
       Opt.match(Product.make(i), {
         onNone: () => true,
         onSome: (p) =>
-          Opt.contains(NormalizedString.fromString(i.name), Product.name(p))
+          Opt.contains(NormalizedString.fromString(i.name), p.name)
           && Equal.equals(Product.fromSnapshot(readBack(Product.toSnapshot(p))), Opt.some(p)),
       })))
   })
@@ -116,7 +116,7 @@ describe('Product expiration', () => {
         onNone: () => true,
         onSome: (expiration) =>
           Product.expirationStatus(now)(expiration).hasExpired
-            === DateTime.isGreaterThanOrEqualTo(now, endOfDay(Product.expirationDate(expiration))),
+            === DateTime.isGreaterThanOrEqualTo(now, endOfDay(expiration.expirationDate)),
       })))
   })
 
@@ -127,7 +127,7 @@ describe('Product expiration', () => {
         onSome: (expiration) => {
           const status = Product.expirationStatus(now)(expiration)
           if (status.hasExpired) return true
-          const end = endOfDay(Product.expirationDate(expiration))
+          const end = endOfDay(expiration.expirationDate)
           return Duration.toMillis(status.timeLeft) === DateTime.toEpochMillis(end) - DateTime.toEpochMillis(now)
             && status.freshness >= 0
             && status.freshness <= 1

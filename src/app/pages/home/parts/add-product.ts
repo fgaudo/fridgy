@@ -108,7 +108,7 @@ const add = ({ product }: Readonly<{ product: Product.Product }>) =>
   Tea.attempt(
     Effect.gen(function*() {
       const { add } = yield* ProductCommands.ProductCommands
-      yield* Effect.logDebug('Adding a product', Product.name(product))
+      yield* Effect.logDebug('Adding a product', product.name)
       const id = yield* pipe(
         ProductCommands.AddProduct({ snapshot: Product.toSnapshot(product) }),
         Effect.request(add),

@@ -1,28 +1,29 @@
 import * as Brand from 'effect/Brand'
 import * as DateTime from 'effect/DateTime'
 import * as Duration from 'effect/Duration'
-import * as Newtype from 'effect/Newtype'
 import * as Opt from 'effect/Option'
 import * as UnitInterval from '#libs/numbers/unit-interval.ts'
 import * as NormalizedString from '#libs/strings/normalized-string.ts'
 
-export type Product = Newtype.Newtype<
-  'Product',
-  {
+/** A product that follows every rule of a product: only `make` and `fromSnapshot` can make one. */
+export type Product = Brand.Branded<
+  Readonly<{
     name: NormalizedString.NormalizedString
     creationDate: DateTime.Utc
     maybeExpirationDate: Opt.Option<DateTime.Utc>
-  }
+  }>,
+  'Product'
 >
 
-const productIso = Newtype.makeIso<Product>()
+const _Product = Brand.nominal<Product>()
 
-type Expiration = Newtype.Newtype<
-  'Expiration',
-  { creationDate: DateTime.Utc; expirationDate: DateTime.Utc }
+/** The expiration of a product, which never ends before the product is created. */
+export type Expiration = Brand.Branded<
+  Readonly<{ creationDate: DateTime.Utc; expirationDate: DateTime.Utc }>,
+  'ProductExpiration'
 >
 
-const expirationIso = Newtype.makeIso<Expiration>()
+const _Expiration = Brand.nominal<Expiration>()
 
 /**
  * What is stored of a product: its persistent fields, never the derived ones
@@ -73,7 +74,7 @@ export const make = (
     if (!mayExpireOn(input.creationDate, input.maybeExpirationDate)) {
       return yield* Opt.none()
     }
-    return productIso.set({ name, creationDate: input.creationDate, maybeExpirationDate: input.maybeExpirationDate })
+    return _Product({ name, creationDate: input.creationDate, maybeExpirationDate: input.maybeExpirationDate })
   })
 
 /**
@@ -95,21 +96,14 @@ export const fromSnapshot = (p: UnvalidatedSnapshot): Opt.Option<Product> =>
     if (!mayExpireOn(creationDate, p.maybeExpirationDate)) {
       return yield* Opt.none()
     }
-    return productIso.set({ creationDate, maybeExpirationDate: p.maybeExpirationDate, name })
+    return _Product({ creationDate, maybeExpirationDate: p.maybeExpirationDate, name })
   })
 
-export const toSnapshot = (product: Product): Snapshot => _Snapshot({ ...productIso.get(product) })
+export const toSnapshot = ({ name, creationDate, maybeExpirationDate }: Product): Snapshot =>
+  _Snapshot({ name, creationDate, maybeExpirationDate })
 
-export const maybeExpiration = (product: Product) =>
-  Opt.gen(function*() {
-    const p = productIso.get(product)
-    const expirationDate = yield* p.maybeExpirationDate
-    return expirationIso.set({ creationDate: p.creationDate, expirationDate })
-  })
-
-export const name = (product: Product): string => productIso.get(product).name
-
-export const expirationDate = (expiration: Expiration) => expirationIso.get(expiration).expirationDate
+export const maybeExpiration = ({ creationDate, maybeExpirationDate }: Product): Opt.Option<Expiration> =>
+  Opt.map(maybeExpirationDate, (expirationDate) => _Expiration({ creationDate, expirationDate }))
 
 const freshness = (currentDate: DateTime.Utc, creationDate: DateTime.Utc, end: DateTime.Utc) => {
   if (DateTime.isLessThan(currentDate, creationDate)) {
@@ -120,8 +114,7 @@ const freshness = (currentDate: DateTime.Utc, creationDate: DateTime.Utc, end: D
   return UnitInterval.makeUnsafe(Duration.toMillis(remainingDuration) / Duration.toMillis(totalDuration))
 }
 
-export const expirationStatus = (currentDate: DateTime.Utc) => (expiration: Expiration) => {
-  const { creationDate, expirationDate } = expirationIso.get(expiration)
+export const expirationStatus = (currentDate: DateTime.Utc) => ({ creationDate, expirationDate }: Expiration) => {
   const end = expiresAt(expirationDate)
   if (DateTime.isGreaterThanOrEqualTo(currentDate, end)) {
     return { hasExpired: true } as const
