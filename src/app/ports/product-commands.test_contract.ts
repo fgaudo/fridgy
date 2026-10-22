@@ -34,17 +34,15 @@ export const check = <A, E, R>(
     { numRuns: 25 },
   )
 
-export const add = (product: Product.Product) =>
-  Effect.gen(function*() {
-    const { add } = yield* ProductCommands.ProductCommands
-    return yield* Effect.request(ProductCommands.AddProduct({ snapshot: Product.toSnapshot(product) }), add)
-  })
+export const add = Effect.fnUntraced(function*(product: Product.Product) {
+  const { add } = yield* ProductCommands.ProductCommands
+  return yield* Effect.request(ProductCommands.AddProduct({ snapshot: Product.toSnapshot(product) }), add)
+})
 
-export const deleteById = (id: string) =>
-  Effect.gen(function*() {
-    const { deleteById } = yield* ProductCommands.ProductCommands
-    return yield* Effect.request(ProductCommands.DeleteProductById({ id }), deleteById)
-  })
+export const deleteById = Effect.fnUntraced(function*(id: string) {
+  const { deleteById } = yield* ProductCommands.ProductCommands
+  return yield* Effect.request(ProductCommands.DeleteProductById({ id }), deleteById)
+})
 
 /** Reads what the adapter's storage holds under `id`, without going through the port. */
 export type ReadBack<E, R> = (id: string) => Effect.Effect<Opt.Option<Product.UnvalidatedSnapshot>, E, R>
@@ -69,48 +67,48 @@ export const productCommandsContract = <E, R>(
     const isStored = (id: string) => readBack(id).pipe(Effect.map(Opt.isSome))
 
     test('a product reads back as itself, under the id it was given', () =>
-      check(adapter, ProductArbitrary.arbitrary, (product) =>
-        Effect.gen(function*() {
+      check(
+        adapter,
+        ProductArbitrary.arbitrary,
+        Effect.fnUntraced(function*(product) {
           const id = yield* add(product)
           return yield* readsBackAs(id, product)
-        })))
+        }),
+      ))
 
     test('products added together get distinct ids, and each reads back as itself', () =>
       check(
         adapter,
         fc.array(ProductArbitrary.arbitrary, { minLength: 1, maxLength: 6 }),
-        (products) =>
-          Effect.gen(function*() {
-            const ids = yield* Effect.forEach(products, add, { concurrency: 'unbounded' })
-            const readBack = yield* Effect.forEach(products, (product, index) => readsBackAs(ids[index] ?? '', product))
-            return new Set(ids).size === ids.length && readBack.every(Boolean)
-          }),
+        Effect.fnUntraced(function*(products) {
+          const ids = yield* Effect.forEach(products, add, { concurrency: 'unbounded' })
+          const readBack = yield* Effect.forEach(products, (product, index) => readsBackAs(ids[index] ?? '', product))
+          return new Set(ids).size === ids.length && readBack.every(Boolean)
+        }),
       ))
 
     test('deleting a product removes it, and only it', () =>
       check(
         adapter,
         fc.tuple(ProductArbitrary.arbitrary, ProductArbitrary.arbitrary),
-        ([kept, deleted]) =>
-          Effect.gen(function*() {
-            const keptId = yield* add(kept)
-            const deletedId = yield* add(deleted)
-            yield* deleteById(deletedId)
-            return !(yield* isStored(deletedId)) && (yield* readsBackAs(keptId, kept))
-          }),
+        Effect.fnUntraced(function*([kept, deleted]) {
+          const keptId = yield* add(kept)
+          const deletedId = yield* add(deleted)
+          yield* deleteById(deletedId)
+          return !(yield* isStored(deletedId)) && (yield* readsBackAs(keptId, kept))
+        }),
       ))
 
     test('deleting an id that is not stored completes and changes nothing', () =>
       check(
         adapter,
         fc.tuple(ProductArbitrary.arbitrary, unknownId),
-        ([product, unknownId]) =>
-          Effect.gen(function*() {
-            const id = yield* add(product)
-            // A storage may start with sample products: an id it holds is not a counterexample.
-            if (yield* isStored(unknownId)) return true
-            yield* deleteById(unknownId).pipe(Effect.ignore)
-            return yield* readsBackAs(id, product)
-          }),
+        Effect.fnUntraced(function*([product, unknownId]) {
+          const id = yield* add(product)
+          // A storage may start with sample products: an id it holds is not a counterexample.
+          if (yield* isStored(unknownId)) return true
+          yield* deleteById(unknownId).pipe(Effect.ignore)
+          return yield* readsBackAs(id, product)
+        }),
       ))
   })

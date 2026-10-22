@@ -52,43 +52,54 @@ const isExpiringFirst = (products: ReadonlyArray<StoredProduct>) =>
 export const productListContract = (name: string, adapter: () => Layer.Layer<Storage>) =>
   describe(`ProductList contract (${name})`, () => {
     test('the list shows a written product as itself, under its id', () =>
-      check(adapter, ProductArbitrary.arbitrary, (product) =>
-        Effect.gen(function*() {
+      check(
+        adapter,
+        ProductArbitrary.arbitrary,
+        Effect.fnUntraced(function*(product) {
           const id = yield* add(product)
           const stored = withId(yield* list, id)
           return Opt.exists(stored, (s) => Equal.equals(Product.fromSnapshot(s), Opt.some(product)))
-        })))
+        }),
+      ))
 
     test('the list is ordered by expiration, those that never expire last', () =>
-      check(adapter, fc.array(ProductArbitrary.arbitrary, { maxLength: 8 }), (products) =>
-        Effect.gen(function*() {
+      check(
+        adapter,
+        fc.array(ProductArbitrary.arbitrary, { maxLength: 8 }),
+        Effect.fnUntraced(function*(products) {
           yield* Effect.forEach(products, add)
           return isExpiringFirst(yield* list)
-        })))
+        }),
+      ))
 
     test('a deleted product leaves the list', () =>
-      check(adapter, ProductArbitrary.arbitrary, (product) =>
-        Effect.gen(function*() {
+      check(
+        adapter,
+        ProductArbitrary.arbitrary,
+        Effect.fnUntraced(function*(product) {
           const id = yield* add(product)
           yield* deleteById(id)
           return Opt.isNone(withId(yield* list, id))
-        })))
+        }),
+      ))
 
     // Intermediate lists may be skipped (the sql adapter keeps only the newest one while the reader is busy):
     // what is promised is that an open subscription eventually sees every write.
     test('an open subscription sees every write', () =>
-      check(adapter, ProductArbitrary.arbitrary, (product) =>
-        Effect.gen(function*() {
+      check(
+        adapter,
+        ProductArbitrary.arbitrary,
+        Effect.fnUntraced(function*(product) {
           const { changes } = yield* ProductList
           const lists = yield* Queue.unbounded<ReadonlyArray<StoredProduct>>()
-          yield* Channel.runForEach(changes, (result) =>
-            Result.isSuccess(result) ? Effect.asVoid(Queue.offer(lists, result.success)) : Effect.void)
+          yield* Channel.runForEach(
+            changes,
+            (result) => Result.isSuccess(result) ? Effect.asVoid(Queue.offer(lists, result.success)) : Effect.void,
+          )
             .pipe(Effect.forkScoped)
           const waitUntil = (predicate: (products: ReadonlyArray<StoredProduct>) => boolean): Effect.Effect<void> =>
             Queue.take(lists).pipe(
-              Effect.flatMap((products) =>
-                predicate(products) ? Effect.void : waitUntil(predicate)
-              ),
+              Effect.flatMap((products) => predicate(products) ? Effect.void : waitUntil(predicate)),
             )
           yield* waitUntil(() => true)
           const id = yield* add(product)
@@ -96,5 +107,6 @@ export const productListContract = (name: string, adapter: () => Layer.Layer<Sto
           yield* deleteById(id)
           yield* waitUntil((products) => Opt.isNone(withId(products, id)))
           return true
-        }).pipe(Effect.scoped)))
+        }, Effect.scoped),
+      ))
   })

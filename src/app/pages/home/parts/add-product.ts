@@ -104,24 +104,24 @@ const clock = Channel.forever(
   ),
 )
 
-const add = ({ product }: Readonly<{ product: Product.Product }>) =>
-  Tea.attempt(
-    Effect.gen(function*() {
-      const { add } = yield* ProductCommands.ProductCommands
-      yield* Effect.logDebug('Adding a product', product.name)
-      const id = yield* pipe(
-        ProductCommands.AddProduct({ snapshot: Product.toSnapshot(product) }),
-        Effect.request(add),
-        // The storage logs the cause.
-        Effect.tapError(() => Effect.logWarning('Could not add the product')),
-      )
-      yield* Effect.logInfo('Added a product', { id })
-    }),
-    {
-      onSuccess: () => Message.Completed({ succeeded: true }),
-      onFailure: () => Message.Completed({ succeeded: false }),
-    },
-  ).pipe(Effect.withLogSpan('AddProduct'))
+const add = Effect.fn('AddProduct')(
+  function*({ product }: Readonly<{ product: Product.Product }>) {
+    const { add } = yield* ProductCommands.ProductCommands
+    yield* Effect.logDebug('Adding a product', product.name)
+    const id = yield* pipe(
+      ProductCommands.AddProduct({ snapshot: Product.toSnapshot(product) }),
+      Effect.request(add),
+      // The storage logs the cause.
+      Effect.tapError(() => Effect.logWarning('Could not add the product')),
+    )
+    yield* Effect.logInfo('Added a product', { id })
+  },
+  Tea.attempt({
+    onSuccess: () => Message.Completed({ succeeded: true }),
+    onFailure: () => Message.Completed({ succeeded: false }),
+  }),
+  Effect.withLogSpan('AddProduct'),
+)
 
 export const program: Tea.Program<{
   state: State

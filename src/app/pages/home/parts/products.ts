@@ -160,25 +160,25 @@ const changes = Channel.unwrap(
   ),
 )
 
-const deleteProducts = ({ ids }: Readonly<{ ids: NonEmptyHashSet.NonEmptyHashSet<string> }>) =>
-  Tea.attempt(
-    Effect.gen(function*() {
-      const { deleteById } = yield* ProductCommands.ProductCommands
-      yield* Effect.logDebug('Deleting products', { count: HashSet.size(ids) })
-      yield* pipe(
-        ids,
-        HashSet.map((id) => ProductCommands.DeleteProductById({ id })),
-        Effect.forEach(Effect.request(deleteById), { concurrency: 'unbounded', discard: true }),
-        // The storage logs the cause.
-        Effect.tapError(() => Effect.logWarning('Could not delete the products')),
-      )
-      yield* Effect.logInfo('Deleted products', { count: HashSet.size(ids) })
-    }),
-    {
-      onSuccess: () => Message.DeleteCompleted({ succeeded: true }),
-      onFailure: () => Message.DeleteCompleted({ succeeded: false }),
-    },
-  ).pipe(Effect.withLogSpan('DeleteProducts'))
+const deleteProducts = Effect.fn('DeleteProducts')(
+  function*({ ids }: Readonly<{ ids: NonEmptyHashSet.NonEmptyHashSet<string> }>) {
+    const { deleteById } = yield* ProductCommands.ProductCommands
+    yield* Effect.logDebug('Deleting products', { count: HashSet.size(ids) })
+    yield* pipe(
+      ids,
+      HashSet.map((id) => ProductCommands.DeleteProductById({ id })),
+      Effect.forEach(Effect.request(deleteById), { concurrency: 'unbounded', discard: true }),
+      // The storage logs the cause.
+      Effect.tapError(() => Effect.logWarning('Could not delete the products')),
+    )
+    yield* Effect.logInfo('Deleted products', { count: HashSet.size(ids) })
+  },
+  Tea.attempt({
+    onSuccess: () => Message.DeleteCompleted({ succeeded: true }),
+    onFailure: () => Message.DeleteCompleted({ succeeded: false }),
+  }),
+  Effect.withLogSpan('DeleteProducts'),
+)
 
 type ProductStatus = Data.TaggedEnum.Value<ProductModel, 'Valid'>['status']
 
