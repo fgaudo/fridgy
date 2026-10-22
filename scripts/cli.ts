@@ -100,8 +100,9 @@ const prepareDist = Effect.fn('prepareDist')(function*(mode: Mode) {
   for (const asset of modes[mode].assets) {
     yield* fs.copyFile(resolve(asset), resolve('dist', path.basename(asset)))
   }
-  const fontLinks = yield* Effect.forEach(fontStylesheets, (stylesheet) =>
-    Effect.gen(function*() {
+  const fontLinks = yield* Effect.forEach(
+    fontStylesheets,
+    Effect.fn('copyFontStylesheet')(function*(stylesheet) {
       // `@fontsource-variable/noto-sans-jp/index.css` → `fonts/noto-sans-jp/index.css`, next to its files.
       const target = path.join('fonts', path.basename(path.dirname(stylesheet)), path.basename(stylesheet))
       const css = yield* fs.readFileString(resolve('node_modules', stylesheet))
@@ -115,7 +116,8 @@ const prepareDist = Effect.fn('prepareDist')(function*(mode: Mode) {
         )
       }
       return `<link rel="stylesheet" href="./${target.replaceAll('\\', '/')}" />`
-    }))
+    }),
+  )
   const html = yield* fs.readFileString(resolve('src/index.html'))
   yield* fs.writeFileString(
     resolve('dist', 'index.html'),
@@ -179,22 +181,28 @@ const watchCommand = Cli.Command.make(
     return yield* fs.watch(resolve('src'), { recursive: true }).pipe(
       Stream.tap((event) => Ref.update(changed, HashSet.add(event.path))),
       Stream.debounce('100 millis'),
-      Stream.runForEach(() =>
-        Effect.gen(function*() {
-          const files = yield* Ref.getAndSet(changed, HashSet.empty())
-          yield* build('development')
-          server.publish('reload', reloadFor(path, files))
-        }).pipe(Effect.catchTag('BuildFailed', ({ logs }) => Effect.logError(`Build failed:\n${logs}`)))
+      Stream.runForEach(
+        Effect.fn('rebuild')(
+          function*() {
+            const files = yield* Ref.getAndSet(changed, HashSet.empty())
+            yield* build('development')
+            server.publish('reload', reloadFor(path, files))
+          },
+          Effect.catchTag('BuildFailed', ({ logs }) => Effect.logError(`Build failed:\n${logs}`)),
+        ),
       ),
     )
   }, Effect.scoped),
 )
 
-const buildCommand = Cli.Command.make('build', {}, () =>
-  Effect.gen(function*() {
+const buildCommand = Cli.Command.make(
+  'build',
+  {},
+  Effect.fn('buildCommand')(function*() {
     yield* prepareDist('production')
     yield* build('production')
-  }))
+  }),
+)
 
 // `.env` is created from `.env.default` on the first run, then read from disk:
 // Bun only loads it when the process starts, before it exists.
