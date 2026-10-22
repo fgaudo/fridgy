@@ -66,13 +66,14 @@ const { child, compose } = Tea.parent<{ state: State; command: ShowToast; event:
 
 // Each part is always there: only its subscriptions could be turned off.
 export const program = compose({
-  init: {
-    state: {
-      isMenuOpen: false,
-      scrolling: Scrolling.program.init.state,
-      addProduct: AddProduct.program.init.state,
-      products: Products.program.init.state,
-    },
+  init: (children) => {
+    const scrolling = children.Scrolling.init
+    const addProduct = children.AddProduct.init
+    const products = children.Products.init
+    return {
+      state: { isMenuOpen: false, scrolling: scrolling.state, addProduct: addProduct.state, products: products.state },
+      commands: [...scrolling.commands, ...addProduct.commands, ...products.commands],
+    }
   },
   children: {
     Scrolling: child(Scrolling.program, {

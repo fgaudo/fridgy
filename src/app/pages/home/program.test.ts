@@ -9,10 +9,11 @@ import * as fc from 'fast-check'
 import { tagPath } from '#libs/testing/tag-path.test_support.ts'
 import { dispatchedBy } from '#libs/tea-snabbdom/view.test_support.ts'
 import { assertProperty, onlyChanged, outcomesOf } from '#libs/testing/update.test_support.ts'
-import type * as AddProduct from './parts/add-product.ts'
+import * as AddProduct from './parts/add-product.ts'
 import { submitting } from './parts/add-product.test_arbitrary.ts'
-import type * as Products from './parts/products.ts'
+import * as Products from './parts/products.ts'
 import { deleting } from './parts/products.test_arbitrary.ts'
+import * as Scrolling from './parts/scrolling.ts'
 import { type Command, type Event, type Message, type Model, program, type State } from './program.ts'
 import { message, state } from './program.test_arbitrary.ts'
 import { view } from './view.tsx'
@@ -207,9 +208,24 @@ describe('Home update', () => {
 
 // A part's subscriptions run only if the page passes them on.
 test('the form listens to the clock exactly while it is open', () => {
-  const subscriptions = program.subscriptions ?? (() => HashMap.empty())
   assertProperty(
     [state],
-    (s) => HashMap.has(subscriptions(s), ['AddProduct', 'clock']) === (s.addProduct._tag !== 'Closed'),
+    (s) => HashMap.has(Tea.subscriptionsOf(program)(s), ['AddProduct', 'clock']) === (s.addProduct._tag !== 'Closed'),
   )
+})
+
+test('starts each part as the part starts, with its commands', () => {
+  const lifted = <Tag extends string, C>(_tag: Tag, commands: ReadonlyArray<C> = []) =>
+    commands.map((command) => ({ _tag, command }))
+  expect(program.init.state).toEqual({
+    isMenuOpen: false,
+    scrolling: Scrolling.program.init.state,
+    addProduct: AddProduct.program.init.state,
+    products: Products.program.init.state,
+  })
+  expect(program.init.commands).toEqual([
+    ...lifted('Scrolling', Scrolling.program.init.commands),
+    ...lifted('AddProduct', AddProduct.program.init.commands),
+    ...lifted('Products', Products.program.init.commands),
+  ])
 })

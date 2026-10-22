@@ -71,7 +71,9 @@ upgraded to in this app.
 - **Children are declared, never wired.** A parent (`Tea.parent<{ state; command?; event?; external? }>()`)
   declares each child with `child` (`get`, `set`, `subscribed`); the library routes their messages
   (`{ _tag: <child>, message }`), commands, subscriptions and models. A parent decides whether a child is
-  there only with `get`, never by rejecting its messages. One `dispatch` serves every level: a parent's view
+  there only with `get`, never by rejecting its messages. A child is started with `children.<Child>.init`,
+  in `init` as in `onEvent`, and its `commands` go out with the parent's: reading its program's `init.state`
+  would leave them behind. One `dispatch` serves every level: a parent's view
   passes it to its children's views as it is, and a view whose model rarely changes is drawn with snabbdom's
   `thunk` (e.g. Home's product list).
 - **Pages talk to their parent through events** (`Event`, handled by the parent's `onEvent`), never by
@@ -128,8 +130,10 @@ wherever they are, and reloads the page otherwise.
   once when sent twice unless it is listed as repeatable, and, with `missingOffers`, that nothing the user
   could ask for and `update` accepts is missing from it, but what is `withheld` on purpose. Models in tests
   come from `Tea.modelOf(program)`. A part's `update` has its own tests (`parts/<part>.test.ts`). The root's
-  tests act like a user (`app/user.test_support.ts`): each message is taken from what the shown page's model
-  offers, and commands run on the app's in-memory layer. Generic helpers (`outcomesOf`, `onlyChanged`,
+  tests act like a user (`app/user.test_support.ts`), with `rehearse`: each action is taken from what the
+  shown page's model offers, a subscription's message is heard when the test says so, and commands run on the
+  app's in-memory layer when the test runs them, none left pending. What a program listens to comes from
+  `Tea.subscriptionsOf(program)`. Generic helpers (`outcomesOf`, `onlyChanged`,
   `assertProperty`) are in `libs/testing/`. Assert commands by value, rejections with `Tea.isRejected`, never
   as "state unchanged".
 - Branded and domain types have a `*.test_arbitrary.ts` file producing only valid values; build generators from them,

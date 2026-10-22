@@ -90,7 +90,10 @@ const backButton: Tea.Subscription<BackRequested, Shell> = Channel.unwrap(
 const { child, compose } = Tea.parent<{ state: State; command: ExitApp }>()
 
 export const program = compose({
-  init: { state: { stack: [Page.Home({ state: Home.program.init.state })] } },
+  init: (children) => {
+    const home = children.Home.init
+    return { state: { stack: [Page.Home({ state: home.state })] }, commands: home.commands }
+  },
   children: {
     Home: child(Home.program, {
       get: pageState('Home'),
