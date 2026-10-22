@@ -146,6 +146,9 @@ wherever they are, and reloads the page otherwise.
   `#infrastructure/…`), never through `tsconfig` paths.
 - Effect modules as namespaces (`import * as Effect from 'effect/Effect'`), with `Arr`, `Opt`, `Req`, `T`
   for `Array`, `Option`, `Request`, `Tuple`. Unions with `Data.TaggedEnum`, matched with `Match`.
+- A function that returns an effect made with `Effect.gen` is an `Effect.fn('Name')` instead, with what would
+  follow it in a `pipe` as its further arguments; `Effect.fnUntraced` where it runs often (on every frame, in a
+  loop). An effect that takes no arguments (a layer, a migration) stays an `Effect.gen`.
 - Format only the files you changed (`bunx dprint fmt <files>`): a bare `dprint fmt` rewrites generated
   files, Android resources and untouched code.
 - Comments only for what the code cannot say: a reason, an invariant the types do not show, a platform

@@ -38,18 +38,18 @@ export class SnabbdomRenderer extends Context.Service<
           // The accumulator is the previously rendered tree.
           Stream.runFoldEffect(
             (): Element | Snabbdom.VNode => root,
-            (previous, [{ model, dispatch }, view]) =>
-              Effect.gen(function*() {
+            // Untraced: it runs on every frame.
+            Effect.fnUntraced(function*(previous, [{ model, dispatch }, view]) {
+              yield* AnimationFrame.next
+              const next = yield* Effect.sync(() => patch(previous, view(model, dispatch)))
+              if (previous === root) {
+                // The patch runs right before a paint: one more frame
+                // guarantees the first tree has been displayed.
                 yield* AnimationFrame.next
-                const next = yield* Effect.sync(() => patch(previous, view(model, dispatch)))
-                if (previous === root) {
-                  // The patch runs right before a paint: one more frame
-                  // guarantees the first tree has been displayed.
-                  yield* AnimationFrame.next
-                  yield* onFirstPaint
-                }
-                return next
-              }),
+                yield* onFirstPaint
+              }
+              return next
+            }),
           ),
           Effect.asVoid,
         ),
