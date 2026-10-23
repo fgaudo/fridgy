@@ -1,6 +1,6 @@
 // What every adapter of `ProductList` must do. It holds no implementation: each adapter's
-// `<port>.<backing>.test.ts` runs it with its own layer, and with the storage's own `insert` and `remove`, which
-// write to that adapter's storage without a port.
+// `<service>.<backing>.test.ts` runs it with its own layer, and with the storage's own `insert` and `remove`, which
+// write to that adapter's storage without a service.
 import { describe, test } from 'bun:test'
 import * as Arr from 'effect/Array'
 import * as Channel from 'effect/Channel'
@@ -17,7 +17,7 @@ import * as Product from '#domain/product.ts'
 import { checkOnFreshLayer } from '#libs/testing/fresh-layer.test_support.ts'
 import { ProductList, type StoredProduct } from './product-list.ts'
 
-/** The adapter's storage, written without a port. */
+/** The adapter's storage, written without a service. */
 export type Storage<R> = Readonly<{
   /** Stores a product, answering with its id. */
   insert: (snapshot: Product.Snapshot) => Effect.Effect<string, never, R>

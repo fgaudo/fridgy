@@ -10,7 +10,7 @@ import * as HashMap from 'effect/HashMap'
 import * as Match from 'effect/Match'
 import * as Opt from 'effect/Option'
 import * as Product from '#domain/product.ts'
-import * as AddProducts from './add-products/add-products.ts'
+import * as AddProducts from './services/add-products/add-products.ts'
 
 type Form = Readonly<{
   maybeName: Opt.Option<string>

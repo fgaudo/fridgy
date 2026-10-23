@@ -88,7 +88,7 @@
                       "#app/**/*.test.ts",
                       "#app/**/*.test_*.ts"
                     ],
-                    "message": "An entrypoint imports from src/app its root modules (program.ts, view.tsx, layer.ts) and the adapters it picks (<port>.<backing>.ts); nothing else."
+                    "message": "An entrypoint imports from src/app its root modules (program.ts, view.tsx, layer.ts) and the adapters it picks (<service>.<backing>.ts); nothing else."
                   },
                   {
                     "group": [
@@ -126,7 +126,7 @@
                     "group": [
                       "../**"
                     ],
-                    "message": "A program knows only its own folder: an import never goes up to a parent or across to a sibling (another page, another part, another port)."
+                    "message": "A program knows only its own folder: an import never goes up to a parent or across to a sibling (another page, another part, another service)."
                   },
                   {
                     "group": [
@@ -144,7 +144,7 @@
                     "group": [
                       "**/*.*.ts"
                     ],
-                    "message": "Adapters (<port>.<backing>.ts) are imported only by a layer.ts, an entrypoint or their own test: a program uses its ports."
+                    "message": "Adapters (<service>.<backing>.ts) are imported only by a layer.ts, an entrypoint or their own test: a program uses its services."
                   },
                   {
                     "group": [
@@ -182,7 +182,7 @@
                     "group": [
                       "../**"
                     ],
-                    "message": "A program knows only its own folder: an import never goes up to a parent or across to a sibling (another page, another part, another port)."
+                    "message": "A program knows only its own folder: an import never goes up to a parent or across to a sibling (another page, another part, another service)."
                   },
                   {
                     "group": [

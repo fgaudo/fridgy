@@ -19,11 +19,11 @@ why, or what the diff and the docs do not, never what they already describe.
 
 Biome enforces import boundaries, by the role a file's name gives it:
 
-- inside `src/app`, imports go downwards only: a program knows its own folder (its ports, its children), never a
-  parent or a sibling (another page, part or port), and the root reaches a page only through the page's
+- inside `src/app`, imports go downwards only: a program knows its own folder (its services, its children),
+  never a parent or a sibling (another page, part or service), and the root reaches a page only through the page's
   `program.ts`, `view.tsx`, `layer.ts`;
-- adapters (`<port>.<backing>.ts`) are imported only by a `layer.ts`, an entrypoint or their own test: a program
-  uses its ports;
+- adapters (`<service>.<backing>.ts`) are imported only by a `layer.ts`, an entrypoint or their own test: a
+  program uses its services;
 - an entrypoint imports from `src/app` its root modules and the adapters it picks, nothing else;
 - the domain imports only `libs/`; the infrastructure never imports the app; `libs/` knows nothing of the app;
 - test-only code (including `@fgaudo/effect-tea/testing`) stays out of bundles, and relative imports stay short.
@@ -52,10 +52,10 @@ here: a change to the library is made, released and then upgraded to in this app
   (`Effect.die`): never silenced, retried or turned into a message. Commands turn expected failures into
   messages with `Tea.attempt`, subscriptions with a message of their own. A defect ends the run: crash reporting goes
   around `run` (`Effect.tapCause`), never recovers from it.
-- **A port says in its type how its data ends.** One value is an `Effect<A, E>`. Values over time are a
+- **A service says in its type how its data ends.** One value is an `Effect<A, E>`. Values over time are a
   `Source<A, Done, E>` (`libs/source`, an Effect `Channel`): `Done` is what it ends with, e.g. the file of a
   download, and `never` for a source that never ends (database changes, scrolling, the back button). A
-  `Tea.Subscription` is the same kind of channel, so a page subscribes by mapping a port's
+  `Tea.Subscription` is the same kind of channel, so a page subscribes by mapping a service's
   `Source<A, never>` into messages (`Channel.unwrap` to read the service, `Channel.map`); a finished process
   turns its `Done` into a message. An adapter built on a library's stream wraps it with `Source.fromStream`,
   which keeps listening once the stream has ended. Only on-going observation is a `Source`: a one-off read is
@@ -77,7 +77,7 @@ here: a change to the library is made, released and then upgraded to in this app
   state, messages, commands and model, declared as a child of the page as the root declares the pages. What
   spans the parts (the menu, the back button, a toast for a part's failure) stays in the page's `program.ts`.
   Parts that read each other's state are one part. A part is a folder (`parts/<part>/`) holding its program
-  (`<part>.ts`), its view (`<part>.view.tsx`), their tests and arbitraries, and a folder per port it uses.
+  (`<part>.ts`), its view (`<part>.view.tsx`), their tests and arbitraries, and its `services/`.
   Never split a program into `messages`/`state`/`update` files: they would import each other in cycles.
 - **Children are declared, never wired.** A parent (`Tea.parent<{ state; command?; event?; external? }>()`)
   declares each child with `child` (`get`, `set`, `subscribed`); the library routes their messages
@@ -95,16 +95,18 @@ here: a change to the library is made, released and then upgraded to in this app
   event when it is for the parent) as a value; tests build their own constructors with
   `Data.taggedEnum<Message>()`. Hidden pages keep receiving their completions, but their subscriptions run
   only while they are on top.
-- **A port belongs to what uses it, and is never shared.** A port is a requirement of its consumer, shaped
-  for it and free to change with it. It is a folder named after it, inside its consumer's folder, holding the
-  port, its adapters (named after what backs them), its contract and their tests: a part's
-  (`parts/products/product-list/`: `product-list.ts`, `product-list.sql.ts`, …), a page's (`notifications/`), the
-  root's (`app/shell/`). So a program's folder holds the program (`program.ts`, `view.tsx`, `layer.ts`, their
-  tests), a folder per port, and its children (`parts/`, `pages/`); there are no `ports/` or `adapters/`
-  folders. Two consumers that need the same thing today each have their own port (AddProduct's
+- **A service belongs to what uses it, and is never shared.** A service (a `Context.Service`: a port, in the
+  terms of ports and adapters) is a requirement of its consumer, listed in its program's `services`, shaped for
+  it and free to change with it. It is a folder named after it in its consumer's `services/`, holding the
+  service, its adapters (the layers that provide it, named after what backs them), its contract and their
+  tests: a part's (`parts/products/services/product-list/`: `product-list.ts`, `product-list.sql.ts`, …), a
+  page's (`services/notifications/`), the root's (`app/services/shell/`). So a program's folder holds the
+  program (`program.ts`, `view.tsx`, `layer.ts`, their tests), its `services/` and its children (`parts/`,
+  `pages/`). Two consumers that need the same thing today each have their own service (AddProduct's
   `AddProducts`, Products' `DeleteProducts`): what they truly share is the domain and the infrastructure, never
-  the port. Write ports have no read: a program learns about writes from the storage's changes (a `Source`),
-  not from the code that wrote. Persistence ports take a domain `Snapshot` and return `UnvalidatedSnapshot`s;
+  the service. Write services have no read: a program learns about writes from the storage's changes (a
+  `Source`), not from the code that wrote. Persistence services take a domain `Snapshot` and return
+  `UnvalidatedSnapshot`s;
   adapters never read domain fields. What every adapter of the storage shares (the
   schema, the migrations, how a product is written) is in `src/infrastructure/sql`.
 - **The domain decides what an entity is.** A new one is made with its `make` (e.g. `Product.make`), and
@@ -114,7 +116,7 @@ here: a change to the library is made, released and then upgraded to in this app
   still be shown and deleted.
 - **Shared things move up, never sideways.** What must be one truth moves up: the rules of an entity to
   `src/domain`, how things are done (the schema, how a product is written, a platform call that is more than
-  a line) to `src/infrastructure`. Ports never move up; pages never import each other.
+  a line) to `src/infrastructure`. Services never move up; pages never import each other.
 - **One storage per setup**: every adapter of the storage is written once, on `SqlClient` (providing itself
   the helpers it builds on, such as `SqlHelper`), and the entrypoint provides the engine (sqlite in a worker on
   the phone, in memory in development and tests, empty on every start).
@@ -122,10 +124,10 @@ here: a change to the library is made, released and then upgraded to in this app
 - **Environments exist only in `src/entrypoints/`.** Shared code never branches on `process.env.NODE_ENV`.
   A `layer.ts` (the app's, a page's) provides every adapter that has no alternative; what has alternatives (the
   `SqlClient`, the `Shell`) stays a requirement of the layer, and each entrypoint picks one by importing the
-  adapter's own module, wherever its port is (`#app/shell/shell.browser.ts`,
-  `#app/pages/home/parts/products/product-list/product-list.sql.ts`), never through a module that would load
+  adapter's own module, wherever its service is (`#app/services/shell/shell.browser.ts`,
+  `#app/pages/home/parts/products/services/product-list/product-list.sql.ts`), never through a module that would load
   the other alternatives too: a missing choice fails the typecheck, and a bundle only contains what it uses. A
-  port that gains a second adapter leaves its owner's `layer.ts` the same way. When moving files, update the
+  service that gains a second adapter leaves its owner's `layer.ts` the same way. When moving files, update the
   paths in `scripts/cli.ts` and `package.json`.
 - **`src/libs/` is generic**: no knowledge of the app. A branded type with a rule is defined once, as a
   `Schema` (`Schema.Int.pipe(Schema.brand(…))`, `.check(…)` for the rule), and its type, `make` (an
@@ -169,11 +171,11 @@ place when only `.tsx` and `.css` files change, wherever they are, and reloads t
   rejections with `Tea.isRejected`, never as "state unchanged".
 - Branded and domain types have a `*.test_arbitrary.ts` file producing only valid values; build generators
   from them, not from `*Unsafe` constructors.
-- A port's contract (`<port>.test_contract.ts`, next to the port) says what every adapter must do, and each
-  adapter's own `<port>.<backing>.test.ts` runs it: a second adapter passes the same contract. What a contract
-  needs beyond its port (reading back a write, storing products to list or delete) comes from the adapter's
-  test, through the storage itself (`infrastructure/sql/products.test_support.ts`): reads and writes that only
-  tests need never go into a port, nor into another part's.
+- A service's contract (`<service>.test_contract.ts`, next to the service) says what every adapter must do,
+  and each adapter's own `<service>.<backing>.test.ts` runs it: a second adapter passes the same contract. What
+  a contract needs beyond its service (reading back a write, storing products to list or delete) comes from
+  the adapter's test, through the storage itself (`infrastructure/sql/products.test_support.ts`): reads and
+  writes that only tests need never go into a service, nor into another part's.
 
 ## Conventions
 

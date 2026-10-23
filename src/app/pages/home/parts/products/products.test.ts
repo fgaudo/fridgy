@@ -8,7 +8,7 @@ import * as fc from 'fast-check'
 import * as Domain from '#domain/product.ts'
 import { utc } from '#libs/testing/date-time.test_arbitrary.ts'
 import { assertProperty, onlyChanged, outcomesOf } from '#libs/testing/update.test_support.ts'
-import type { StoredProduct } from './product-list/product-list.ts'
+import type { StoredProduct } from './services/product-list/product-list.ts'
 import { type Command, type Event, type Message, program, type State } from './products.ts'
 import {
   deleting,

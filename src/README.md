@@ -16,13 +16,14 @@ src/
 │  ├─ program.ts         public: the root Program: the stack of pages, the back button, leaving the app
 │  ├─ view.tsx           public: the root view (hot-reload entry in development)
 │  ├─ layer.ts           public: every adapter that has no alternative; needs a `SqlClient` and a `Shell`
-│  ├─ shell/             the root's port, with its adapters (`shell.capacitor.ts`, `shell.browser.ts`), which
-│  │                     the entrypoints import, to pick one
+│  ├─ services/shell/    the root's service, with its adapters (`shell.capacitor.ts`, `shell.browser.ts`),
+│  │                     which the entrypoints import, to pick one
 │  └─ pages/<page>/      a page; of app/, it imports only its own folder
 │     ├─ program.ts · view.tsx · layer.ts   the page's public API
-│     ├─ <port>/         a port of the page, with its adapters, contract and tests (`notifications/`)
-│     └─ parts/<part>/   a part of a large page, a child Program of the page, with its view, and a folder
-│                        for each port only it uses (`parts/products/product-list/`)
+│     ├─ services/<service>/   a service of the page, with its adapters, contract and tests
+│     │                        (`services/notifications/`)
+│     └─ parts/<part>/   a part of a large page, a child Program of the page, with its view and the services
+│                        only it uses (`parts/products/services/product-list/`)
 │
 ├─ infrastructure/       what the app's adapters share: the database's engine (sqlite, in a worker or in
 │                        memory), its schema, migrations and table helpers (sql), sample data, hot reload,
@@ -48,17 +49,17 @@ traditional or simplified forms of Chinese characters.
 1. `app/program.ts` and `app/view.tsx` — what the app is.
 2. `app/pages/about/program.ts` — a page in one module: state, messages, `update`, commands, `makeModel`.
 3. `app/pages/home/program.ts` and `parts/` — a page made of parts, declared like the pages in the root.
-4. `app/pages/home/parts/products/product-list/` and `delete-products/` — what a part needs from the
-   outside world, each port owned by what uses it; `domain/` — the entities and their rules.
+4. `app/pages/home/parts/products/services/` — what a part needs from the
+   outside world, each service owned by what uses it; `domain/` — the entities and their rules.
 5. `entrypoints/` — how everything is wired for each environment.
 
 ## Visibility
 
 Visibility follows the role a file's name gives it, and biome's `noRestrictedImports` rule enforces it:
 
-- inside `app/`, imports go downwards only: a program uses its own ports and children, never a parent or a
+- inside `app/`, imports go downwards only: a program uses its own services and children, never a parent or a
   sibling;
-- adapters (`<port>.<backing>.ts`) are imported only by a `layer.ts`, by the entrypoints, which pick among
+- adapters (`<service>.<backing>.ts`) are imported only by a `layer.ts`, by the entrypoints, which pick among
   alternatives, and by their own tests;
 - from outside `app/`, only its root modules (`program.ts`, `view.tsx`, `layer.ts`) and, for the entrypoints,
   the adapters.

@@ -5,7 +5,7 @@ import * as ProductArbitrary from '#domain/product.test_arbitrary.ts'
 import * as NonEmptyHashSet from '#libs/collections/non-empty-hash-set.test_arbitrary.ts'
 import { arbitrary as maybe } from '#libs/option/option.test_arbitrary.ts'
 import { utc } from '#libs/testing/date-time.test_arbitrary.ts'
-import type { StoredProduct } from './product-list/product-list.ts'
+import type { StoredProduct } from './services/product-list/product-list.ts'
 import type { Message, Product, State } from './products.ts'
 
 const Msg = Data.taggedEnum<Message>()

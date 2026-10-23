@@ -6,7 +6,7 @@ import * as Effect from 'effect/Effect'
 import * as HashMap from 'effect/HashMap'
 import * as Match from 'effect/Match'
 import * as Opt from 'effect/Option'
-import { Viewport } from './viewport/viewport.ts'
+import { Viewport } from './services/viewport/viewport.ts'
 
 export type State = Readonly<{
   isAtTop: boolean

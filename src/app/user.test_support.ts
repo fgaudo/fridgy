@@ -16,7 +16,7 @@ import * as App from './layer.ts'
 import type * as AddProduct from './pages/home/parts/add-product/add-product.ts'
 import type * as Home from './pages/home/program.ts'
 import { type Command, type Deps, type Message, type Model, program, type State } from './program.ts'
-import { Shell } from './shell/shell.ts'
+import { Shell } from './services/shell/shell.ts'
 
 const Msg = Data.taggedEnum<Message>()
 

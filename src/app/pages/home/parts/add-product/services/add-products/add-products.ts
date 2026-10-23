@@ -10,8 +10,8 @@ export interface AddProduct extends Req.Request<string, void> {
 
 export const AddProduct = Req.of<AddProduct>()
 
-/** Stores new products; the page sees them through the storage's changes, not through this port. */
+/** Stores new products; the page sees them through the storage's changes, not through this service. */
 export class AddProducts extends Context.Service<
   AddProducts,
   { readonly add: RequestResolver.RequestResolver<AddProduct> }
->()('68c26a9ad26f1936') {}
+>()('f61de35c16d1eb09') {}

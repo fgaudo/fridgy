@@ -3,8 +3,8 @@ import * as Data from 'effect/Data'
 import * as Effect from 'effect/Effect'
 import * as Match from 'effect/Match'
 import * as Opt from 'effect/Option'
-import { type License, Licenses } from './licenses/licenses.ts'
-import { Version } from './version/version.ts'
+import { type License, Licenses } from './services/licenses/licenses.ts'
+import { Version } from './services/version/version.ts'
 
 export type State = Readonly<{
   licenses: Data.TaggedEnum<{

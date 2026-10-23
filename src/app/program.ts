@@ -10,7 +10,7 @@ import * as Match from 'effect/Match'
 import * as Opt from 'effect/Option'
 import * as About from './pages/about/program.ts'
 import * as Home from './pages/home/program.ts'
-import { Shell } from './shell/shell.ts'
+import { Shell } from './services/shell/shell.ts'
 
 export type Page = Data.TaggedEnum<{
   Home: Readonly<{ state: Home.State }>

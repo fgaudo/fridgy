@@ -14,7 +14,7 @@
     "#package.json": "./package.json"
   },
   "scripts": {
-    "update-licenses": "license-checker-rseidelsohn --production --excludePackages fridgy --json --customPath scripts/licenses.custom-path.json --out src/app/pages/about/licenses/generated/licenses.json",
+    "update-licenses": "license-checker-rseidelsohn --production --excludePackages fridgy --json --customPath scripts/licenses.custom-path.json --out src/app/pages/about/services/licenses/generated/licenses.json",
     "build": "bun ./scripts/cli.ts build",
     "watch": "bun ./scripts/cli.ts watch",
     "typecheck": "tsc --noEmit",

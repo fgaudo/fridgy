@@ -6,4 +6,4 @@ export class Version extends Context.Service<
   {
     readonly current: Effect.Effect<string>
   }
->()('48501fccc61a5614') {}
+>()('448f209d7fdcf628') {}

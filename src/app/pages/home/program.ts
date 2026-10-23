@@ -8,11 +8,11 @@ import * as Opt from 'effect/Option'
 import * as AddProduct from './parts/add-product/add-product.ts'
 import * as Products from './parts/products/products.ts'
 import * as Scrolling from './parts/scrolling/scrolling.ts'
-import { Notifications } from './notifications/notifications.ts'
-import type { AddProducts } from './parts/add-product/add-products/add-products.ts'
-import type { DeleteProducts } from './parts/products/delete-products/delete-products.ts'
-import type { ProductList } from './parts/products/product-list/product-list.ts'
-import type { Viewport } from './parts/scrolling/viewport/viewport.ts'
+import { Notifications } from './services/notifications/notifications.ts'
+import type { AddProducts } from './parts/add-product/services/add-products/add-products.ts'
+import type { DeleteProducts } from './parts/products/services/delete-products/delete-products.ts'
+import type { ProductList } from './parts/products/services/product-list/product-list.ts'
+import type { Viewport } from './parts/scrolling/services/viewport/viewport.ts'
 
 export type State = Readonly<{
   isMenuOpen: boolean

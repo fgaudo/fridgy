@@ -29,7 +29,7 @@ bun install
 ```
 
 It also regenerates the licenses shown on the About page
-(`src/app/pages/about/licenses/generated/licenses.json`, from the production dependencies): commit
+(`src/app/pages/about/services/licenses/generated/licenses.json`, from the production dependencies): commit
 the file when it changes, with `bun.lock`.
 
 ### Run it in the browser
@@ -104,9 +104,10 @@ How the code is organized:
   and adapters are imported only by the layers and the entrypoints.
 - **Parts.** A large page is split by concern into parts, each a program the page declares as a child, in a
   folder of its own.
-- **Ports and adapters.** A port is a service a program needs from outside (the product list, scrolling, the
-  back button), owned by the part, page or root that uses it, with its adapters beside it. Ports are never
-  shared: two parts that both touch products each have their own.
+- **Services and adapters.** A service is what a program needs from outside (the product list, scrolling,
+  the back button): an Effect `Context.Service`, owned by the part, page or root that uses it, in its
+  `services/` folder with the adapters (layers) that provide it. Services are never shared: two parts that both
+  touch products each have their own.
 - **Shared code moves up**: the entities (`Product`) to `src/domain/`, how things are done (the database's
   schema, how a product is written) to `src/infrastructure/`.
 - **Environments** (production, development) exist only in `src/entrypoints/`, which pick what has
@@ -126,7 +127,7 @@ domain type has a `*.test_arbitrary.ts` file with its generators. Among others, 
 - every message the real view can send, in any state, is accepted by `update`, and acts only once when
   sent twice (a double tap), unless it is meant to repeat;
 - a stored product reads back as the same product;
-- every storage adapter passes its port's contract on SQLite with the real migrations: what is written reads
+- every storage adapter passes its service's contract on SQLite with the real migrations: what is written reads
   back as itself, deletions remove exactly what they should, Home's list is ordered and sees every write.
 
 ## Contributing

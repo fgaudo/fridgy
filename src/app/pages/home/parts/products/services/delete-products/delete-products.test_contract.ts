@@ -1,6 +1,6 @@
 // What every adapter of `DeleteProducts` must do. It holds no implementation: each adapter's
-// `<port>.<backing>.test.ts` runs it with its own layer, and with the storage's own `insert` and `readBack`,
-// which reach that adapter's storage without a port.
+// `<service>.<backing>.test.ts` runs it with its own layer, and with the storage's own `insert` and `readBack`,
+// which reach that adapter's storage without a service.
 import { describe, test } from 'bun:test'
 import * as Effect from 'effect/Effect'
 import * as Equal from 'effect/Equal'
@@ -17,7 +17,7 @@ const deleteById = Effect.fnUntraced(function*(id: string) {
   return yield* Effect.request(DeleteProducts.DeleteProductById({ id }), deleteById)
 })
 
-/** The adapter's storage, reached without a port. */
+/** The adapter's storage, reached without a service. */
 export type Storage<R> = Readonly<{
   /** Stores a product, answering with its id. */
   insert: (snapshot: Product.Snapshot) => Effect.Effect<string, never, R>

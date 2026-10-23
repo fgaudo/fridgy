@@ -18,4 +18,4 @@ export class ProductList extends Context.Service<
     /** Event: emits the list on subscription and after every change to the stored products. */
     readonly changes: Source<StoredProducts, never>
   }
->()('d96819bea186b772') {}
+>()('f48dc7f863addf4c') {}

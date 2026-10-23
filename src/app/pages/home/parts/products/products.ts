@@ -14,11 +14,11 @@ import * as Match from 'effect/Match'
 import * as Opt from 'effect/Option'
 import * as Result from 'effect/Result'
 import * as Domain from '#domain/product.ts'
-import * as DeleteProducts from './delete-products/delete-products.ts'
+import * as DeleteProducts from './services/delete-products/delete-products.ts'
 import * as NonEmptyHashSet from '#libs/collections/non-empty-hash-set.ts'
 import * as PositiveInteger from '#libs/numbers/positive-integer.ts'
 import type * as UnitInterval from '#libs/numbers/unit-interval.ts'
-import { ProductList, type StoredProduct } from './product-list/product-list.ts'
+import { ProductList, type StoredProduct } from './services/product-list/product-list.ts'
 
 export type Product = Data.TaggedEnum<{
   /** Stored data so broken it cannot even be referenced. */

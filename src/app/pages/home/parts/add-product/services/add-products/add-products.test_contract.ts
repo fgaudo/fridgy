@@ -1,6 +1,6 @@
 // What every adapter of `AddProducts` must do. It holds no implementation: each adapter's
-// `<port>.<backing>.test.ts` runs it with its own layer, and with `readBack`, which looks into that adapter's
-// storage (the port has no read: the page reads through its own query ports).
+// `<service>.<backing>.test.ts` runs it with its own layer, and with `readBack`, which looks into that adapter's
+// storage (the service has no read: the page reads through services of its own).
 import { describe, test } from 'bun:test'
 import * as Effect from 'effect/Effect'
 import * as Equal from 'effect/Equal'
@@ -17,7 +17,7 @@ const add = Effect.fnUntraced(function*(product: Product.Product) {
   return yield* Effect.request(AddProducts.AddProduct({ snapshot: Product.toSnapshot(product) }), add)
 })
 
-/** Reads what the adapter's storage holds under `id`, without going through the port. */
+/** Reads what the adapter's storage holds under `id`, without going through the service. */
 export type ReadBack<R> = (id: string) => Effect.Effect<Opt.Option<Product.UnvalidatedSnapshot>, never, R>
 
 export const addProductsContract = <R>(

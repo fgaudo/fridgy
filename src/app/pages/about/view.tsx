@@ -1,7 +1,7 @@
 import * as Opt from 'effect/Option'
 import type { VNode } from 'snabbdom'
 import { handlers, type View } from '#libs/tea-snabbdom/tea-snabbdom.ts'
-import type { License } from './licenses/licenses.ts'
+import type { License } from './services/licenses/licenses.ts'
 import type { Message, Model } from './program.ts'
 
 const link = (href: string, text: string): VNode => <a props={{ className: 'text-primary underline', href }}>{text}</a>

@@ -7,7 +7,7 @@ import { RootViews, run } from './run.ts'
 
 import * as ConfigProvider from 'effect/ConfigProvider'
 import * as App from '#app/layer.ts'
-import * as ShellCapacitor from '#app/shell/shell.capacitor.ts'
+import * as ShellCapacitor from '#app/services/shell/shell.capacitor.ts'
 import * as Sqlite from '#infrastructure/sqlite/layer.ts'
 
 const layer = App.layer.pipe(
