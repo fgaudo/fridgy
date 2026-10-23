@@ -61,6 +61,9 @@ bunx cap sync android
 bunx cap open android
 ```
 
+The app needs Android 7 (API 24) and Android System WebView 111: on an older WebView, Capacitor shows
+`src/error.html` instead (`minWebViewVersion` in `capacitor.config.ts`).
+
 A release raises the version in two places: `version` in `package.json`, which the About page shows, and
 `versionName` and `versionCode` in `android/app/build.gradle`. The Play Store only accepts a `versionCode`
 higher than the last one published (10, Fridgy 1.0.8).

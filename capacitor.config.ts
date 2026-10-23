@@ -4,6 +4,12 @@ const config: CapacitorConfig = {
   appId: 'net.gaudo.fridgy',
   appName: 'fridgy',
   webDir: 'dist',
+  server: { errorPath: 'error.html' },
+  android: {
+    // Tailwind's colors (oklch) and the database (OPFS sync access handles, 109) need it. Android 7
+    // gets WebView updates up to 119, Android 6 only up to 106: hence `minSdkVersion` 24.
+    minWebViewVersion: 111,
+  },
   plugins: {
     SystemBars: {
       insetsHandling: 'css',

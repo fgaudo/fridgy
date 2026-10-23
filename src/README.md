@@ -31,6 +31,7 @@ src/
 ├─ libs/                 generic, reusable code: the snabbdom bridge (tea-snabbdom: handlers, renderer,
 │                        test support) and JSX runtime, sources, branded numbers, test helpers, …
 ├─ index.html            the page template: the build fills in the fonts and the entrypoint
+├─ error.html            shown by Capacitor instead of the app on a WebView older than it needs
 └─ styles.css            the stylesheet (Tailwind)
 ```
 
