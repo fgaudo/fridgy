@@ -1,9 +1,9 @@
 import * as Data from 'effect/Data'
 import * as fc from 'fast-check'
-import * as AddProduct from './parts/add-product.test_arbitrary.ts'
-import * as Products from './parts/products.test_arbitrary.ts'
-import type * as AddProductProgram from './parts/add-product.ts'
-import type * as ProductsProgram from './parts/products.ts'
+import * as AddProduct from './parts/add-product/add-product.test_arbitrary.ts'
+import * as Products from './parts/products/products.test_arbitrary.ts'
+import type * as AddProductProgram from './parts/add-product/add-product.ts'
+import type * as ProductsProgram from './parts/products/products.ts'
 import type { Message, State } from './program.ts'
 
 type AddProductMessage = AddProductProgram.Message

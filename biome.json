@@ -30,14 +30,7 @@
                   "#app/*/**",
                   "**/app/*/**"
                 ],
-                "message": "App subfolders are private: from outside src/app import only the modules at its root (program.ts, view.ts, *.layer.ts)."
-              },
-              {
-                "group": [
-                  "#app/pages/*/*/**",
-                  "**/pages/*/*/**"
-                ],
-                "message": "Page subfolders are private: import only the modules at the root of the page (program.ts, view.ts, *.layer.ts)."
+                "message": "From outside src/app, import only the modules at its root (program.ts, view.tsx, layer.ts)."
               },
               {
                 "group": [
@@ -51,7 +44,7 @@
                 "group": [
                   "../../../**"
                 ],
-                "message": "Relative imports stay within their part of the project: reach another part through its alias (#app/…, #libs/…, #infrastructure/…)."
+                "message": "Relative imports stay within their part of the project: reach another part through its alias (#app/…, #domain/…, #libs/…, #infrastructure/…)."
               }
             ]
           }
@@ -79,6 +72,47 @@
     },
     {
       "includes": [
+        "src/entrypoints/**"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [
+                      "#app/*/**",
+                      "!#app/**/*.*.ts",
+                      "#app/**/*.test.ts",
+                      "#app/**/*.test_*.ts"
+                    ],
+                    "message": "An entrypoint imports from src/app its root modules (program.ts, view.tsx, layer.ts) and the adapters it picks (<port>.<backing>.ts); nothing else."
+                  },
+                  {
+                    "group": [
+                      "fast-check",
+                      "**/*.test_*.ts",
+                      "@fgaudo/effect-tea/testing"
+                    ],
+                    "message": "Test-only code: fast-check, *.test_*.ts files (arbitraries, contracts, test support) and @fgaudo/effect-tea/testing may only be imported by *.test.ts and *.test_*.ts files."
+                  },
+                  {
+                    "group": [
+                      "../../../**"
+                    ],
+                    "message": "Relative imports stay within their part of the project: reach another part through its alias (#app/…, #domain/…, #libs/…, #infrastructure/…)."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": [
         "src/app/**"
       ],
       "linter": {
@@ -90,10 +124,27 @@
                 "patterns": [
                   {
                     "group": [
-                      "#app/pages/*/*/**",
+                      "../**"
+                    ],
+                    "message": "A program knows only its own folder: an import never goes up to a parent or across to a sibling (another page, another part, another port)."
+                  },
+                  {
+                    "group": [
+                      "#app/**"
+                    ],
+                    "message": "Inside src/app, files reach each other through relative imports, downwards."
+                  },
+                  {
+                    "group": [
                       "**/pages/*/*/**"
                     ],
-                    "message": "Page subfolders are private: import only the modules at the root of the page (program.ts, view.ts, *.layer.ts)."
+                    "message": "The root reaches a page only through the modules at the page's root (program.ts, view.tsx, layer.ts)."
+                  },
+                  {
+                    "group": [
+                      "**/*.*.ts"
+                    ],
+                    "message": "Adapters (<port>.<backing>.ts) are imported only by a layer.ts, an entrypoint or their own test: a program uses its ports."
                   },
                   {
                     "group": [
@@ -107,7 +158,7 @@
                     "group": [
                       "../../../**"
                     ],
-                    "message": "Relative imports stay within their part of the project: reach another part through its alias (#app/…, #libs/…, #infrastructure/…)."
+                    "message": "Relative imports stay within their part of the project: reach another part through its alias (#app/…, #domain/…, #libs/…, #infrastructure/…)."
                   }
                 ]
               }
@@ -118,7 +169,7 @@
     },
     {
       "includes": [
-        "src/app/pages/**"
+        "src/app/**/layer.ts"
       ],
       "linter": {
         "rules": {
@@ -129,15 +180,21 @@
                 "patterns": [
                   {
                     "group": [
-                      "#app/pages/**"
+                      "../**"
                     ],
-                    "message": "Pages never import each other, and a page reaches its own files through relative imports."
+                    "message": "A program knows only its own folder: an import never goes up to a parent or across to a sibling (another page, another part, another port)."
                   },
                   {
                     "group": [
-                      "#app/adapters/**"
+                      "#app/**"
                     ],
-                    "message": "Pages use the domain and ports of src/app, never its adapters: the root *.layer.ts files provide them."
+                    "message": "Inside src/app, files reach each other through relative imports, downwards."
+                  },
+                  {
+                    "group": [
+                      "**/pages/*/*/**"
+                    ],
+                    "message": "The root reaches a page only through the modules at the page's root (program.ts, view.tsx, layer.ts)."
                   },
                   {
                     "group": [
@@ -151,7 +208,7 @@
                     "group": [
                       "../../../**"
                     ],
-                    "message": "Relative imports stay within their part of the project: reach another part through its alias (#app/…, #libs/…, #infrastructure/…)."
+                    "message": "Relative imports stay within their part of the project: reach another part through its alias (#app/…, #domain/…, #libs/…, #infrastructure/…)."
                   }
                 ]
               }
@@ -162,9 +219,7 @@
     },
     {
       "includes": [
-        "src/app/domain/**",
-        "src/app/ports/**",
-        "src/app/adapters/**"
+        "src/domain/**"
       ],
       "linter": {
         "rules": {
@@ -175,10 +230,12 @@
                 "patterns": [
                   {
                     "group": [
-                      "#app/pages/**",
-                      "**/pages/**"
+                      "#app/**",
+                      "**/app/**",
+                      "#infrastructure/**",
+                      "**/infrastructure/**"
                     ],
-                    "message": "The domain, ports and adapters of src/app never depend on a page: pages depend on them."
+                    "message": "The domain depends on nothing but libs: the app and the infrastructure depend on it."
                   },
                   {
                     "group": [
@@ -192,7 +249,86 @@
                     "group": [
                       "../../../**"
                     ],
-                    "message": "Relative imports stay within their part of the project: reach another part through its alias (#app/…, #libs/…, #infrastructure/…)."
+                    "message": "Relative imports stay within their part of the project: reach another part through its alias (#app/…, #domain/…, #libs/…, #infrastructure/…)."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": [
+        "src/infrastructure/**"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [
+                      "#app/**",
+                      "**/app/**"
+                    ],
+                    "message": "The infrastructure never depends on the app: the app's adapters depend on it."
+                  },
+                  {
+                    "group": [
+                      "fast-check",
+                      "**/*.test_*.ts",
+                      "@fgaudo/effect-tea/testing"
+                    ],
+                    "message": "Test-only code: fast-check, *.test_*.ts files (arbitraries, contracts, test support) and @fgaudo/effect-tea/testing may only be imported by *.test.ts and *.test_*.ts files."
+                  },
+                  {
+                    "group": [
+                      "../../../**"
+                    ],
+                    "message": "Relative imports stay within their part of the project: reach another part through its alias (#app/…, #domain/…, #libs/…, #infrastructure/…)."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": [
+        "src/libs/**"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [
+                      "#app/**",
+                      "#domain/**",
+                      "#infrastructure/**"
+                    ],
+                    "message": "src/libs is generic: it knows nothing of the app, its domain or its infrastructure."
+                  },
+                  {
+                    "group": [
+                      "fast-check",
+                      "**/*.test_*.ts",
+                      "@fgaudo/effect-tea/testing"
+                    ],
+                    "message": "Test-only code: fast-check, *.test_*.ts files (arbitraries, contracts, test support) and @fgaudo/effect-tea/testing may only be imported by *.test.ts and *.test_*.ts files."
+                  },
+                  {
+                    "group": [
+                      "../../../**"
+                    ],
+                    "message": "Relative imports stay within their part of the project: reach another part through its alias (#app/…, #domain/…, #libs/…, #infrastructure/…)."
                   }
                 ]
               }
@@ -217,7 +353,7 @@
                     "group": [
                       "../../../**"
                     ],
-                    "message": "Relative imports stay within their part of the project: reach another part through its alias (#app/…, #libs/…, #infrastructure/…)."
+                    "message": "Relative imports stay within their part of the project: reach another part through its alias (#app/…, #domain/…, #libs/…, #infrastructure/…)."
                   }
                 ]
               }

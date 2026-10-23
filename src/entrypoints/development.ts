@@ -4,11 +4,13 @@ import * as Effect from 'effect/Effect'
 import * as Layer from 'effect/Layer'
 import * as References from 'effect/References'
 import * as Stream from 'effect/Stream'
-import * as AppInMemory from '#app/in-memory.layer.ts'
+import * as App from '#app/layer.ts'
+import * as ShellBrowser from '#app/shell/shell.browser.ts'
 import type * as RootView from '#app/view.tsx'
 import { CssRefresher } from '#infrastructure/css-refresher.ts'
-import { InMemoryStore } from '#infrastructure/in-memory/store.ts'
 import * as HotModule from '#infrastructure/hot-module.ts'
+import * as SqliteMemory from '#infrastructure/sqlite/memory.layer.ts'
+import * as SqliteSamples from '#infrastructure/sqlite/samples.ts'
 import { SnabbdomRenderer } from '#libs/tea-snabbdom/renderer.ts'
 import { RootViews, run } from './run.ts'
 
@@ -26,7 +28,9 @@ const HotRootViews = Layer.effect(
 
 run(
   Layer.mergeAll(
-    AppInMemory.layer.pipe(Layer.provide(InMemoryStore.layer)),
+    // A database in memory, with sample products: every reload starts from the same data.
+    App.layer.pipe(Layer.provide(Layer.provideMerge(SqliteSamples.layer, SqliteMemory.layer))),
+    ShellBrowser.layer,
     HotRootViews,
     SnabbdomRenderer.layer('#root'),
     Layer.succeed(References.MinimumLogLevel, 'Debug'),

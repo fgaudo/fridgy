@@ -5,13 +5,14 @@ import * as Data from 'effect/Data'
 import * as Effect from 'effect/Effect'
 import * as Match from 'effect/Match'
 import * as Opt from 'effect/Option'
-import type { ProductCommands } from '#app/ports/product-commands.ts'
-import * as AddProduct from './parts/add-product.ts'
-import * as Products from './parts/products.ts'
-import * as Scrolling from './parts/scrolling.ts'
-import { Notifications } from './ports/notifications.ts'
-import type { ProductList } from './ports/product-list.ts'
-import type { Viewport } from './ports/viewport.ts'
+import * as AddProduct from './parts/add-product/add-product.ts'
+import * as Products from './parts/products/products.ts'
+import * as Scrolling from './parts/scrolling/scrolling.ts'
+import { Notifications } from './notifications/notifications.ts'
+import type { AddProducts } from './parts/add-product/add-products/add-products.ts'
+import type { DeleteProducts } from './parts/products/delete-products/delete-products.ts'
+import type { ProductList } from './parts/products/product-list/product-list.ts'
+import type { Viewport } from './parts/scrolling/viewport/viewport.ts'
 
 export type State = Readonly<{
   isMenuOpen: boolean
@@ -48,7 +49,7 @@ export type Event = Data.TaggedEnum<{
 
 const Event = Data.taggedEnum<Event>()
 
-export type Deps = Notifications | Viewport | ProductCommands | ProductList
+export type Deps = Notifications | Viewport | AddProducts | DeleteProducts | ProductList
 
 export type Model = Readonly<{
   menu: Data.TaggedEnum<{

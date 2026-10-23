@@ -44,7 +44,7 @@ const modes = {
       // Built separately so it can be hot reloaded.
       'src/app/view.tsx',
     ],
-    assets: [],
+    assets: ['node_modules/@effect/wa-sqlite/dist/wa-sqlite.wasm'],
     options: { sourcemap: 'inline' },
   },
   production: {

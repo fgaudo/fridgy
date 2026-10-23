@@ -6,12 +6,11 @@ import { SnabbdomRenderer } from '#libs/tea-snabbdom/renderer.ts'
 import { RootViews, run } from './run.ts'
 
 import * as ConfigProvider from 'effect/ConfigProvider'
-import * as AppSqlite from '#app/sqlite.layer.ts'
-import * as SqlHelper from '#infrastructure/sql/sql-helper.ts'
+import * as App from '#app/layer.ts'
+import * as ShellCapacitor from '#app/shell/shell.capacitor.ts'
 import * as Sqlite from '#infrastructure/sqlite/layer.ts'
 
-const layer = AppSqlite.layer.pipe(
-  Layer.provide(SqlHelper.SqlHelper.layer),
+const layer = App.layer.pipe(
   Layer.provide(Sqlite.layer),
   Layer.provide(
     ConfigProvider.layer(
@@ -25,6 +24,7 @@ const layer = AppSqlite.layer.pipe(
 run(
   Layer.mergeAll(
     layer,
+    ShellCapacitor.layer,
     Layer.succeed(RootViews, Stream.make(RootView.view)),
     SnabbdomRenderer.layer('#root'),
     Layer.succeed(References.MinimumLogLevel, 'Info'),

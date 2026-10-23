@@ -5,25 +5,28 @@ Rules and conventions are in [`AGENTS.md`](../AGENTS.md).
 
 ```
 src/
-├─ entrypoints/          how the app is started, one file per environment
-│  ├─ production.ts      sqlite, bundled view
-│  ├─ development.ts     in-memory data, hot-reloaded view
+├─ entrypoints/          how the app is started, one file per environment: each picks what has alternatives
+│  ├─ production.ts      sqlite in a worker (OPFS), Capacitor's shell, bundled view
+│  ├─ development.ts     sqlite in memory with sample products, the browser's shell, hot-reloaded view
 │  └─ run.ts             shared: runs the program (`@fgaudo/effect-tea` `run`) with the snabbdom renderer
+│
+├─ domain/               the entities and their rules (`Product`): imports nothing but libs/
 │
 ├─ app/                  the application (environment-agnostic)
 │  ├─ program.ts         public: the root Program: the stack of pages, the back button, leaving the app
 │  ├─ view.tsx           public: the root view (hot-reload entry in development)
-│  ├─ sqlite.layer.ts    public: every adapter, data in sqlite
-│  ├─ in-memory.layer.ts public: every adapter, data in memory
-│  ├─ domain/            private: the app's entities, used by every page
-│  ├─ ports/, adapters/  private: the root's ports (Shell) and the write ports, with their adapters
-│  └─ pages/<page>/      private: a page; it may import the domain/ and ports/ above it, never the
-│     │                  adapters/
-│     ├─ program.ts · view.tsx · *.layer.ts   the page's public API
-│     ├─ parts/          the parts of a large page, each a child Program of the page, next to its view
-│     └─ ports/ · adapters/
+│  ├─ layer.ts           public: every adapter that has no alternative; needs a `SqlClient` and a `Shell`
+│  ├─ shell/             the root's port, with its adapters (`shell.capacitor.ts`, `shell.browser.ts`), which
+│  │                     the entrypoints import, to pick one
+│  └─ pages/<page>/      a page; of app/, it imports only its own folder
+│     ├─ program.ts · view.tsx · layer.ts   the page's public API
+│     ├─ <port>/         a port of the page, with its adapters, contract and tests (`notifications/`)
+│     └─ parts/<part>/   a part of a large page, a child Program of the page, with its view, and a folder
+│                        for each port only it uses (`parts/products/product-list/`)
 │
-├─ infrastructure/       technical building blocks: sqlite, sql, in-memory store, hot reload, fonts
+├─ infrastructure/       what the app's adapters share: the database's engine (sqlite, in a worker or in
+│                        memory), its schema, migrations and table helpers (sql), sample data, hot reload,
+│                        fonts
 ├─ libs/                 generic, reusable code: the snabbdom bridge (tea-snabbdom: handlers, renderer,
 │                        test support) and JSX runtime, sources, branded numbers, test helpers, …
 ├─ index.html            the page template: the build fills in the fonts and the entrypoint
@@ -45,11 +48,17 @@ traditional or simplified forms of Chinese characters.
 1. `app/program.ts` and `app/view.tsx` — what the app is.
 2. `app/pages/about/program.ts` — a page in one module: state, messages, `update`, commands, `makeModel`.
 3. `app/pages/home/program.ts` and `parts/` — a page made of parts, declared like the pages in the root.
-4. `app/pages/home/ports/` — what the page needs from the outside world; `app/domain/` and `app/ports/` —
-   the entities and the write ports every page shares.
+4. `app/pages/home/parts/products/product-list/` and `delete-products/` — what a part needs from the
+   outside world, each port owned by what uses it; `domain/` — the entities and their rules.
 5. `entrypoints/` — how everything is wired for each environment.
 
 ## Visibility
 
-Only the files at the root of `app/` (and of each page) may be imported from outside. Subfolders are
-private; biome's `noRestrictedImports` rule enforces it.
+Visibility follows the role a file's name gives it, and biome's `noRestrictedImports` rule enforces it:
+
+- inside `app/`, imports go downwards only: a program uses its own ports and children, never a parent or a
+  sibling;
+- adapters (`<port>.<backing>.ts`) are imported only by a `layer.ts`, by the entrypoints, which pick among
+  alternatives, and by their own tests;
+- from outside `app/`, only its root modules (`program.ts`, `view.tsx`, `layer.ts`) and, for the entrypoints,
+  the adapters.

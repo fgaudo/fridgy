@@ -29,7 +29,7 @@ bun install
 ```
 
 It also regenerates the licenses shown on the About page
-(`src/app/pages/about/adapters/licenses/generated/licenses.json`, from the production dependencies): commit
+(`src/app/pages/about/licenses/generated/licenses.json`, from the production dependencies): commit
 the file when it changes, with `bun.lock`.
 
 ### Run it in the browser
@@ -38,9 +38,9 @@ the file when it changes, with `bun.lock`.
 bun run watch
 ```
 
-builds the development version into `dist/` (products are kept in memory), serves it, and rebuilds on every
-change under `src/`; open the address it prints. Editing a view or the CSS swaps the view in place, keeping
-the application state; any other change reloads the page.
+builds the development version into `dist/` (a database in memory, with sample products, new on every
+reload), serves it, and rebuilds on every change under `src/`; open the address it prints. Editing a view or
+the CSS swaps the view in place, keeping the application state; any other change reloads the page.
 
 The first run creates `.env` from `.env.default`, where you can change the server host and port.
 
@@ -99,13 +99,19 @@ What the app adds:
 
 How the code is organized:
 
-- **Pages** (`src/app/pages/`) are self-contained: each owns its messages, state, `update` and view. Only the
-  files at a page's root are public; Biome rejects imports of anything deeper.
-- **Parts.** A large page is split by concern into parts, each a program the page declares as a child.
-- **Ports and adapters.** A page's ports are the services it needs from outside (the product list, scrolling);
-  adapters implement them for each setup (SQLite, in memory).
-- **Shared code moves up** to `src/app/`: the entities (`Product`) and the ports that change stored data.
-- **Environments** (production, development) exist only in `src/entrypoints/`.
+- **Pages** (`src/app/pages/`) are self-contained: each owns its messages, state, `update` and view, and
+  imports nothing of another page. Biome enforces the boundaries by a file's role: imports go downwards only,
+  and adapters are imported only by the layers and the entrypoints.
+- **Parts.** A large page is split by concern into parts, each a program the page declares as a child, in a
+  folder of its own.
+- **Ports and adapters.** A port is a service a program needs from outside (the product list, scrolling, the
+  back button), owned by the part, page or root that uses it, with its adapters beside it. Ports are never
+  shared: two parts that both touch products each have their own.
+- **Shared code moves up**: the entities (`Product`) to `src/domain/`, how things are done (the database's
+  schema, how a product is written) to `src/infrastructure/`.
+- **Environments** (production, development) exist only in `src/entrypoints/`, which pick what has
+  alternatives: the database's engine and the shell (Capacitor on the phone, the browser's history in
+  development, where the browser's back button acts as Android's).
 - **Views** are TSX, rendered by snabbdom through a small bridge (`src/libs/tea-snabbdom/`, `src/libs/jsx/`).
 
 See [`src/README.md`](src/README.md) for a map of the source tree and a suggested reading order.
@@ -120,9 +126,8 @@ domain type has a `*.test_arbitrary.ts` file with its generators. Among others, 
 - every message the real view can send, in any state, is accepted by `update`, and acts only once when
   sent twice (a double tap), unless it is meant to repeat;
 - a stored product reads back as the same product;
-- every storage adapter, in memory or SQLite (on the real migrations), passes the same contract: what is
-  written reads back as itself, deletions remove exactly what they should, Home's list is ordered and sees
-  every write.
+- every storage adapter passes its port's contract on SQLite with the real migrations: what is written reads
+  back as itself, deletions remove exactly what they should, Home's list is ordered and sees every write.
 
 ## Contributing
 

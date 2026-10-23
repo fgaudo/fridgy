@@ -3,9 +3,9 @@ import { thunk, type VNode } from 'snabbdom'
 import { type Handlers, handlers, type View } from '#libs/tea-snabbdom/tea-snabbdom.ts'
 import { cn } from '#libs/ui/class-names.ts'
 import type { Message, Model } from './program.ts'
-import * as AddProduct from './parts/add-product.view.tsx'
+import * as AddProduct from './parts/add-product/add-product.view.tsx'
 import { backdrop } from '#libs/ui/overlay.tsx'
-import * as Products from './parts/products.view.tsx'
+import * as Products from './parts/products/products.view.tsx'
 
 const sideMenu = (menu: Model['menu'], { on }: Handlers<Message>): ReadonlyArray<VNode> =>
   menu._tag === 'Open'

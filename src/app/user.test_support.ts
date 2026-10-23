@@ -1,6 +1,6 @@
 // The root's tests act like a user: each message is one the shown page's model
 // holds, never one built by hand. Nothing runs by itself: a command runs,
-// on the app's in-memory layer, and a subscription sends, when the test says so.
+// on the app's layer over a database in memory, and a subscription sends, when the test says so.
 import * as Tea from '@fgaudo/effect-tea'
 import { type Rehearsal, rehearse } from '@fgaudo/effect-tea/testing'
 import * as Arr from 'effect/Array'
@@ -11,12 +11,12 @@ import * as Equal from 'effect/Equal'
 import * as Layer from 'effect/Layer'
 import * as Opt from 'effect/Option'
 import * as References from 'effect/References'
-import { InMemoryStore } from '#infrastructure/in-memory/store.ts'
-import * as AppInMemory from './in-memory.layer.ts'
-import type * as AddProduct from './pages/home/parts/add-product.ts'
+import * as SqliteMemory from '#infrastructure/sqlite/memory.layer.ts'
+import * as App from './layer.ts'
+import type * as AddProduct from './pages/home/parts/add-product/add-product.ts'
 import type * as Home from './pages/home/program.ts'
 import { type Command, type Deps, type Message, type Model, program, type State } from './program.ts'
-import { Shell } from './ports/shell.ts'
+import { Shell } from './shell/shell.ts'
 
 const Msg = Data.taggedEnum<Message>()
 
@@ -75,7 +75,7 @@ export const hearNext = Effect.fnUntraced(function*(user: User, key: unknown) {
 // The phone's shell is out of reach: its back button is heard through `back`, and leaving the app succeeds.
 const shell = Layer.succeed(Shell, { backButton: Channel.never, exitApp: Effect.void })
 
-const layer = Layer.merge(AppInMemory.layer.pipe(Layer.provide(InMemoryStore.layer)), shell)
+const layer = Layer.merge(App.layer.pipe(Layer.provide(SqliteMemory.layer)), shell)
 
 /** Rehearses the app from its start; fails when a command is still pending at the end. */
 export const rehearsed = <A>(scenario: (user: User) => Effect.Effect<A, never, Deps>) =>

@@ -17,11 +17,20 @@ why, or what the diff and the docs do not, never what they already describe.
 
 ## Tooling enforces a lot
 
-Biome and the typecheck enforce import boundaries (private folders of the app and of pages, pages never importing
-each other or the app's adapters, relative imports kept short, test-only code (including
-`@fgaudo/effect-tea/testing`) kept out of bundles), the strict typing of views (`dispatch` only
-takes the program's own messages; JSX elements only accept snabbdom's modules) and the language service rules (no
-`console`, `Date`, `Math.random`, `fetch` or timers inside Effect; hashed service keys). When one of them
+Biome enforces import boundaries, by the role a file's name gives it:
+
+- inside `src/app`, imports go downwards only: a program knows its own folder (its ports, its children), never a
+  parent or a sibling (another page, part or port), and the root reaches a page only through the page's
+  `program.ts`, `view.tsx`, `layer.ts`;
+- adapters (`<port>.<backing>.ts`) are imported only by a `layer.ts`, an entrypoint or their own test: a program
+  uses its ports;
+- an entrypoint imports from `src/app` its root modules and the adapters it picks, nothing else;
+- the domain imports only `libs/`; the infrastructure never imports the app; `libs/` knows nothing of the app;
+- test-only code (including `@fgaudo/effect-tea/testing`) stays out of bundles, and relative imports stay short.
+
+The typecheck enforces the strict typing of views (`dispatch` only takes the program's own messages; JSX
+elements only accept snabbdom's modules) and the language service rules (no `console`, `Date`, `Math.random`,
+`fetch` or timers inside Effect; hashed service keys). When one of them
 reports an error, the rule is intended: fix the code, do not work around the check.
 
 ## Architecture rules
@@ -65,11 +74,11 @@ here: a change to the library is made, released and then upgraded to in this app
   subscription keeps in the state.
 - **A program is split by concern, never by kind.** A program lives in one module until it is too large
   (300–400 lines); then it splits into **parts** (`pages/<page>/parts/`), each a `Tea.Program` with its own
-  state, messages, commands and model, declared as a child of the page as the root declares the pages. What spans the
-  parts (the menu, the back button, a toast for a part's failure) stays in the page's `program.ts`. Parts
-  that read each other's state are one part. A part's view sits next to it (`<part>.view.tsx`), with its
-  tests and arbitraries. Never split a program into `messages`/`state`/`update` files: they would import
-  each other in cycles.
+  state, messages, commands and model, declared as a child of the page as the root declares the pages. What
+  spans the parts (the menu, the back button, a toast for a part's failure) stays in the page's `program.ts`.
+  Parts that read each other's state are one part. A part is a folder (`parts/<part>/`) holding its program
+  (`<part>.ts`), its view (`<part>.view.tsx`), their tests and arbitraries, and a folder per port it uses.
+  Never split a program into `messages`/`state`/`update` files: they would import each other in cycles.
 - **Children are declared, never wired.** A parent (`Tea.parent<{ state; command?; event?; external? }>()`)
   declares each child with `child` (`get`, `set`, `subscribed`); the library routes their messages
   (`{ _tag: <child>, message }`), commands, subscriptions and models. A parent decides whether a child is
@@ -86,24 +95,38 @@ here: a change to the library is made, released and then upgraded to in this app
   event when it is for the parent) as a value; tests build their own constructors with
   `Data.taggedEnum<Message>()`. Hidden pages keep receiving their completions, but their subscriptions run
   only while they are on top.
-- **Reads in the pages, writes in the app.** Write ports (`app/ports`, e.g. `ProductCommands`) have no read.
-  Each page has its own query ports, shaped for what it shows; it learns about writes from the storage's
-  changes (a `Source`), not from the page that wrote. Persistence ports take a domain `Snapshot` and return
-  `UnvalidatedSnapshot`s; adapters never read domain fields.
+- **A port belongs to what uses it, and is never shared.** A port is a requirement of its consumer, shaped
+  for it and free to change with it. It is a folder named after it, inside its consumer's folder, holding the
+  port, its adapters (named after what backs them), its contract and their tests: a part's
+  (`parts/products/product-list/`: `product-list.ts`, `product-list.sql.ts`, …), a page's (`notifications/`), the
+  root's (`app/shell/`). So a program's folder holds the program (`program.ts`, `view.tsx`, `layer.ts`, their
+  tests), a folder per port, and its children (`parts/`, `pages/`); there are no `ports/` or `adapters/`
+  folders. Two consumers that need the same thing today each have their own port (AddProduct's
+  `AddProducts`, Products' `DeleteProducts`): what they truly share is the domain and the infrastructure, never
+  the port. Write ports have no read: a program learns about writes from the storage's changes (a `Source`),
+  not from the code that wrote. Persistence ports take a domain `Snapshot` and return `UnvalidatedSnapshot`s;
+  adapters never read domain fields. What every adapter of the storage shares (the
+  schema, the migrations, how a product is written) is in `src/infrastructure/sql`.
 - **The domain decides what an entity is.** A new one is made with its `make` (e.g. `Product.make`), and
   a form lets the user submit only what `make` accepts, asking the domain's own rules (`Product.make`,
   `Product.canExpireOn`) rather than repeating them; the command then carries the entity, valid by
   construction. `fromSnapshot` only reads stored data, and is more forgiving, so that what was stored can
   still be shown and deleted.
-- **Shared things move up, never sideways.** What several pages need (entities, write ports, a port a second
-  page wants, a query a second page reads in the same shape) moves to `src/app/domain`, `ports`, `adapters`;
-  pages never import each other.
-- **One storage per setup**, provided once by the entrypoint (sqlite in production, the in-memory store in
-  development), queried by every adapter.
+- **Shared things move up, never sideways.** What must be one truth moves up: the rules of an entity to
+  `src/domain`, how things are done (the schema, how a product is written, a platform call that is more than
+  a line) to `src/infrastructure`. Ports never move up; pages never import each other.
+- **One storage per setup**: every adapter of the storage is written once, on `SqlClient` (providing itself
+  the helpers it builds on, such as `SqlHelper`), and the entrypoint provides the engine (sqlite in a worker on
+  the phone, in memory in development and tests, empty on every start).
 - **Migrations are append-only**: a phone has already run the existing ones, so a fix is a new migration.
-- **Environments exist only in `src/entrypoints/`.** Shared code never branches on `process.env.NODE_ENV`;
-  each setup has its own `*.layer.ts`, named after what backs it (`sqlite`, `in-memory`), so a bundle only
-  contains what it uses. When moving files, update the paths in `scripts/cli.ts`.
+- **Environments exist only in `src/entrypoints/`.** Shared code never branches on `process.env.NODE_ENV`.
+  A `layer.ts` (the app's, a page's) provides every adapter that has no alternative; what has alternatives (the
+  `SqlClient`, the `Shell`) stays a requirement of the layer, and each entrypoint picks one by importing the
+  adapter's own module, wherever its port is (`#app/shell/shell.browser.ts`,
+  `#app/pages/home/parts/products/product-list/product-list.sql.ts`), never through a module that would load
+  the other alternatives too: a missing choice fails the typecheck, and a bundle only contains what it uses. A
+  port that gains a second adapter leaves its owner's `layer.ts` the same way. When moving files, update the
+  paths in `scripts/cli.ts` and `package.json`.
 - **`src/libs/` is generic**: no knowledge of the app. A branded type with a rule is defined once, as a
   `Schema` (`Schema.Int.pipe(Schema.brand(…))`, `.check(…)` for the rule), and its type, `make` (an
   `Option`) and `makeUnsafe` (only for values valid by construction) are derived from it; `Brand.make` only
@@ -137,25 +160,28 @@ place when only `.tsx` and `.css` files change, wherever they are, and reloads t
   `libs/tea-snabbdom`) is accepted, and acts once when sent twice unless it is listed as `repeatable`, and
   that, of the candidates the test lists, nothing the user could ask for and `update` accepts is missing from
   it, but what is `withheld` on purpose. Models in tests come from `program.makeModel`. A part's `update` has
-  its own tests (`parts/<part>.test.ts`). The root's tests act like a user (`app/user.test_support.ts`), with
-  `rehearse`: each message is taken from what the shown page's model holds, a subscription's message is heard
-  when the test says so, and commands run on the app's in-memory layer when the test runs them, none left
-  pending. A tap on a frame the state has moved past is tested with `update` itself. What a program listens to
-  comes from `Tea.subscriptionsOf(program)`. Generic helpers (`outcomesOf`, `onlyChanged`, `assertProperty`)
-  are in `libs/testing/`. Assert commands by value, rejections with `Tea.isRejected`, never
-  as "state unchanged".
-- Branded and domain types have a `*.test_arbitrary.ts` file producing only valid values; build generators from them,
-  not from `*Unsafe` constructors.
-- Every adapter of a port passes one contract (`<port>.test_contract.ts`, next to the port), run by the
-  adapter's own `<adapter>.test.ts`: development only exercises the in-memory adapters, so nothing else
-  catches a production one that behaves differently. A write port's contract takes `readBack` from each
-  adapter's test: reads that only tests need never go into a port.
+  its own tests (`parts/<part>/<part>.test.ts`). The root's tests act like a user (`app/user.test_support.ts`),
+  with `rehearse`: each message is taken from what the shown page's model holds, a subscription's message is
+  heard when the test says so, and commands run on the app's layer, over a database in memory, when the test
+  runs them, none left pending. A tap on a frame the state has moved past is tested with `update` itself. What
+  a program listens to comes from `Tea.subscriptionsOf(program)`. Generic helpers (`outcomesOf`, `onlyChanged`,
+  `assertProperty`, `checkOnFreshLayer` for contracts) are in `libs/testing/`. Assert commands by value,
+  rejections with `Tea.isRejected`, never as "state unchanged".
+- Branded and domain types have a `*.test_arbitrary.ts` file producing only valid values; build generators
+  from them, not from `*Unsafe` constructors.
+- A port's contract (`<port>.test_contract.ts`, next to the port) says what every adapter must do, and each
+  adapter's own `<port>.<backing>.test.ts` runs it: a second adapter passes the same contract. What a contract
+  needs beyond its port (reading back a write, storing products to list or delete) comes from the adapter's
+  test, through the storage itself (`infrastructure/sql/products.test_support.ts`): reads and writes that only
+  tests need never go into a port, nor into another part's.
 
 ## Conventions
 
-- Imports: relative within a part of the project (a page, a folder of `src/app`, a module of `libs/`), at most
-  `../../`; another part through its alias, from the `imports` of `package.json` (`#app/…`, `#libs/…`,
-  `#infrastructure/…`), never through `tsconfig` paths.
+- Imports: relative within a part of the project (downwards in `src/app`, within a module of `libs/`), at most
+  `../../`; another part through its alias, from the `imports` of `package.json` (`#app/…`, `#domain/…`,
+  `#libs/…`, `#infrastructure/…`), never through `tsconfig` paths. Dependencies point inwards: the domain
+  imports only `libs/`; the infrastructure the domain and `libs/`; the app all three; the entrypoints
+  everything.
 - Effect modules as namespaces (`import * as Effect from 'effect/Effect'`), with `Arr`, `Opt`, `Req`, `T`
   for `Array`, `Option`, `Request`, `Tuple`. Unions with `Data.TaggedEnum`, matched with `Match`.
 - A function that returns an effect made with `Effect.gen` is an `Effect.fn('Name')` instead, with what would
