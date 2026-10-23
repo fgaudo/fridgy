@@ -126,6 +126,9 @@ place when only `.tsx` and `.css` files change, wherever they are, and reloads t
 
 - `bun:test` and fast-check property tests, in a `*.test.ts` next to the module. A property the code does
   not satisfy yet stays as `test.failing` with the bug in its name.
+- A test's name says what it checks. When a change touches a test, or what it tests, check that its name, its
+  `describe` and its comments still say what the assertions check: a test adapted to a new design keeps an old
+  name that promises what it no longer proves.
 - Code used only by tests lives in `*.test_<kind>.ts` files (`test_arbitrary`, `test_contract`,
   `test_support`): Biome lets only `*.test.ts` and other `*.test_*.ts` files import them, and `bun test`
   does not run them.
