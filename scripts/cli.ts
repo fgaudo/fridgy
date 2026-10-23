@@ -45,12 +45,12 @@ const modes = {
       // Built separately so it can be hot reloaded.
       'src/app/view.tsx',
     ],
-    assets: ['node_modules/@effect/wa-sqlite/dist/wa-sqlite.wasm'],
+    assets: ['node_modules/@effect/wa-sqlite/dist/wa-sqlite.wasm', 'assets/logo.svg'],
     options: { sourcemap: 'inline' },
   },
   production: {
     entrypoints: ['src/entrypoints/production.ts', 'src/infrastructure/sqlite/sqlite.worker.ts'],
-    assets: ['node_modules/@effect/wa-sqlite/dist/wa-sqlite.wasm', 'src/error.html'],
+    assets: ['node_modules/@effect/wa-sqlite/dist/wa-sqlite.wasm', 'assets/logo.svg', 'src/error.html'],
     options: { sourcemap: 'none', minify: true },
   },
 } satisfies Record<

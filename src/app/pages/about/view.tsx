@@ -96,13 +96,9 @@ export const view: View<Model, Message> = (model, dispatch) => {
         <div props={{ className: 'mx-auto flex max-w-2xl flex-col gap-4 px-4 pt-24 pb-8' }}>
           <div props={{ className: 'flex flex-col items-center gap-2 py-4 text-center' }}>
             <div
-              props={{
-                className:
-                  'bg-secondary flex h-20 w-20 items-center justify-center rounded-full shadow-sm shadow-gray-300',
-              }}
-            >
-              {icon('kitchen', 'text-5xl! text-white')}
-            </div>
+              style={{ backgroundImage: 'url(./logo.svg)' }}
+              props={{ className: 'h-24 w-24 bg-contain bg-center bg-no-repeat' }}
+            />
             <p props={{ className: 'mt-2 text-3xl font-bold' }}>Fridgy</p>
             {Opt.match(model.version, {
               onNone: () => [],
