@@ -21,8 +21,8 @@ export const state: fc.Arbitrary<State> = fc.record({
     fc.constant({ _tag: 'Loading' } as const),
     licenses.map((items) => ({ _tag: 'Loaded', items } as const)),
   ),
-  saying: fc.oneof(
+  version: fc.oneof(
     fc.constant({ _tag: 'Loading' } as const),
-    maybe(fc.string()).map((maybeSaying) => ({ _tag: 'Picked', maybeSaying } as const)),
+    fc.string().map((version) => ({ _tag: 'Loaded', version } as const)),
   ),
 })

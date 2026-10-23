@@ -5,8 +5,8 @@ during development) written in TypeScript, with a strictly functional, [Elm](htt
 architecture.
 
 > **Status:** work in progress. The main page (product list, adding and selecting products, expiration
-> tracking) and a skeleton of the About page (licenses, a random saying) run on the current architecture,
-> with navigation between them and Android's back button.
+> tracking) and the About page (version, links, licenses) run on the current architecture, with navigation
+> between them and Android's back button.
 
 ## Stack
 
@@ -27,6 +27,10 @@ Requirements: [Bun](https://bun.com) and, to build the Android app, Android Stud
 ```bash
 bun install
 ```
+
+It also regenerates the licenses shown on the About page
+(`src/app/pages/about/adapters/licenses/generated/licenses.json`, from the production dependencies): commit
+the file when it changes, with `bun.lock`.
 
 ### Run it in the browser
 
@@ -56,6 +60,10 @@ bunx cap sync android
 ```bash
 bunx cap open android
 ```
+
+A release raises the version in two places: `version` in `package.json`, which the About page shows, and
+`versionName` and `versionCode` in `android/app/build.gradle`. The Play Store only accepts a `versionCode`
+higher than the last one published (10, Fridgy 1.0.8).
 
 ## Development
 

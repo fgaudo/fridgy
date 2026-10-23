@@ -54,7 +54,7 @@ describe('Navigation', () => {
     rehearsed(Effect.fnUntraced(function*(user) {
       yield* perform(user, openAbout)
       expect(tags(yield* user.state)).toEqual(['Home', 'About'])
-      expect((yield* user.pending).map(tagPath)).toEqual(['About › LoadLicenses', 'About › PickSaying'])
+      expect((yield* user.pending).map(tagPath)).toEqual(['About › LoadLicenses', 'About › LoadVersion'])
       yield* user.runAll
     })))
 

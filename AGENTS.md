@@ -176,8 +176,6 @@ place when only `.tsx` and `.css` files change, wherever they are, and reloads t
 
 ## Refactoring status (verify before working)
 
-- The `about` page is a skeleton (licenses and a random saying); some sayings contain `<br />`, shown as
-  text.
 - Home's view only shows `Valid` products: `Invalid` and `Corrupt` ones are in the model and counted in
   `total`, but not rendered, so the count can exceed the rows shown and an invalid product cannot be
   selected or deleted from the UI.

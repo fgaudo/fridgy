@@ -1,5 +1,4 @@
 import * as EffBun from '@effect/platform-bun'
-import BunTailwind from 'bun-plugin-tailwind'
 import * as Config from 'effect/Config'
 import * as ConfigProvider from 'effect/ConfigProvider'
 import * as Data from 'effect/Data'
@@ -11,6 +10,7 @@ import * as Path from 'effect/Path'
 import * as Ref from 'effect/Ref'
 import * as Stream from 'effect/Stream'
 import * as Cli from 'effect/cli'
+import { tailwind } from './tailwind.ts'
 
 type Mode = 'development' | 'production'
 
@@ -70,6 +70,7 @@ const root = Effect.gen(function*() {
 
 const build = Effect.fn('build')(function*(mode: Mode) {
   const resolve = yield* root
+  const path = yield* Path.Path
   const { entrypoints, options } = modes[mode]
   const output = yield* Effect.tryPromise({
     try: () =>
@@ -79,7 +80,7 @@ const build = Effect.fn('build')(function*(mode: Mode) {
         target: 'browser',
         loader: { '.css': 'css', '.woff2': 'file' },
         naming: { asset: '[name].[ext]', chunk: '[name].[ext]', entry: '[name].[ext]' },
-        plugins: [BunTailwind],
+        plugins: [tailwind(resolve(), path)],
         define: { 'process.env.NODE_ENV': `"${mode}"` },
         throw: false,
         ...options,

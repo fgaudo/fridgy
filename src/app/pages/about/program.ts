@@ -3,18 +3,17 @@ import * as Data from 'effect/Data'
 import * as Effect from 'effect/Effect'
 import * as Match from 'effect/Match'
 import * as Opt from 'effect/Option'
-import * as Random from 'effect/Random'
 import { type License, Licenses } from './ports/licenses.ts'
-import { Sayings } from './ports/sayings.ts'
+import { Version } from './ports/version.ts'
 
 export type State = Readonly<{
   licenses: Data.TaggedEnum<{
     Loading: object
     Loaded: Readonly<{ items: ReadonlyArray<License> }>
   }>
-  saying: Data.TaggedEnum<{
+  version: Data.TaggedEnum<{
     Loading: object
-    Picked: Readonly<{ maybeSaying: Opt.Option<string> }>
+    Loaded: Readonly<{ version: string }>
   }>
 }>
 
@@ -30,7 +29,7 @@ export type Message =
   | Data.TaggedEnum<{
     // From commands.
     LicensesLoaded: { licenses: ReadonlyArray<License> }
-    SayingPicked: { maybeSaying: Opt.Option<string> }
+    VersionLoaded: { version: string }
   }>
 
 const Message = Data.taggedEnum<Message>()
@@ -41,17 +40,17 @@ export type Event = Data.TaggedEnum<{
 
 const Event = Data.taggedEnum<Event>()
 
-export type Command = Data.TaggedEnum<{ PickSaying: object; LoadLicenses: object }>
+export type Command = Data.TaggedEnum<{ LoadLicenses: object; LoadVersion: object }>
 
 const Command = Data.taggedEnum<Command>()
 
-export type Deps = Licenses | Sayings
+export type Deps = Licenses | Version
 
 export type Model = Readonly<{
   back: Message
   licenses: State['licenses']
-  /** Empty until a saying has been picked, or when there is none. */
-  saying: string
+  /** Empty until it has been loaded. */
+  version: Opt.Option<string>
 }>
 
 export const program: Tea.Program<{
@@ -64,8 +63,8 @@ export const program: Tea.Program<{
   external: ExternalMessage
 }> = {
   init: {
-    state: { licenses: { _tag: 'Loading' }, saying: { _tag: 'Loading' } },
-    commands: [Command.LoadLicenses(), Command.PickSaying()],
+    state: { licenses: { _tag: 'Loading' }, version: { _tag: 'Loading' } },
+    commands: [Command.LoadLicenses(), Command.LoadVersion()],
   },
 
   update: Match.typeTags<Message, (state: State) => Tea.Transition<State, Command, Event>>()({
@@ -73,8 +72,8 @@ export const program: Tea.Program<{
       state: { ...state, licenses: { _tag: 'Loaded', items: licenses } },
     }),
 
-    SayingPicked: ({ maybeSaying }) => (state) => ({
-      state: { ...state, saying: { _tag: 'Picked', maybeSaying } },
+    VersionLoaded: ({ version }) => (state) => ({
+      state: { ...state, version: { _tag: 'Loaded', version } },
     }),
 
     BackPressed: () => (state) => ({ state, events: [Event.LeaveRequested()] }),
@@ -85,16 +84,15 @@ export const program: Tea.Program<{
       const { all } = yield* Licenses
       return Opt.some(Message.LicensesLoaded({ licenses: yield* all }))
     }),
-    PickSaying: Effect.fn(function*() {
-      const { all } = yield* Sayings
-      const maybeSaying = yield* Effect.option(Random.choice(yield* all))
-      return Opt.some(Message.SayingPicked({ maybeSaying }))
+    LoadVersion: Effect.fn(function*() {
+      const { current } = yield* Version
+      return Opt.some(Message.VersionLoaded({ version: yield* current }))
     }),
   }),
 
   makeModel: (state) => ({
     back: Message.BackPressed(),
     licenses: state.licenses,
-    saying: state.saying._tag === 'Picked' ? Opt.getOrElse(state.saying.maybeSaying, () => '') : '',
+    version: state.version._tag === 'Loaded' ? Opt.some(state.version.version) : Opt.none(),
   }),
 }

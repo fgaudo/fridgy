@@ -71,7 +71,8 @@
       "linter": {
         "rules": {
           "a11y": {
-            "useButtonType": "off"
+            "useButtonType": "off",
+            "useValidAnchor": "off"
           }
         }
       }

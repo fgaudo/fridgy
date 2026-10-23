@@ -1,5 +1,5 @@
 {
-    "@capacitor/android@8.3.1": {
+    "@capacitor/android@8.5.3": {
         "licenses": "MIT",
         "repository": "https://github.com/ionic-team/capacitor",
         "publisher": "Ionic Team",
@@ -8,16 +8,16 @@
         "name": "@capacitor/android",
         "description": "Capacitor: Cross-platform apps with JavaScript and the web"
     },
-    "@capacitor/cli@8.3.1": {
+    "@capacitor/app@8.1.2": {
         "licenses": "MIT",
-        "repository": "https://github.com/ionic-team/capacitor",
-        "publisher": "Ionic Team",
-        "email": "hi@ionic.io",
-        "copyright": "Copyright (c) 2017-present Drifty Co.",
-        "name": "@capacitor/cli",
-        "description": "Capacitor: Cross-platform apps with JavaScript and the web"
+        "repository": "https://github.com/ionic-team/capacitor-plugins",
+        "publisher": "Ionic",
+        "email": "hi@ionicframework.com",
+        "copyright": "Copyright 2020-present Ionic. https://ionic.io",
+        "name": "@capacitor/app",
+        "description": "The App API handles high level App state and events.For example, this API emits events when the app enters and leaves the foreground, handles deeplinks, opens other apps, and manages persisted plugin state."
     },
-    "@capacitor/core@8.3.1": {
+    "@capacitor/core@8.5.2": {
         "licenses": "MIT",
         "repository": "https://github.com/ionic-team/capacitor",
         "publisher": "Ionic Team",
@@ -26,7 +26,16 @@
         "name": "@capacitor/core",
         "description": "Capacitor: Cross-platform apps with JavaScript and the web"
     },
-    "@capacitor/splash-screen@8.0.1": {
+    "@capacitor/core@8.5.3": {
+        "licenses": "MIT",
+        "repository": "https://github.com/ionic-team/capacitor",
+        "publisher": "Ionic Team",
+        "email": "hi@ionic.io",
+        "copyright": "Copyright (c) 2017-present Drifty Co.",
+        "name": "@capacitor/core",
+        "description": "Capacitor: Cross-platform apps with JavaScript and the web"
+    },
+    "@capacitor/splash-screen@8.0.2": {
         "licenses": "MIT",
         "repository": "https://github.com/ionic-team/capacitor-plugins",
         "publisher": "Ionic",
@@ -44,44 +53,177 @@
         "name": "@capacitor/toast",
         "description": "The Toast API provides a notification pop up for displaying important information to a user. Just like real toast!"
     },
-    "@effect/language-service@0.85.1": {
+    "@effect/platform-browser@4.0.5": {
         "licenses": "MIT",
-        "repository": "https://github.com/Effect-TS/language-service",
-        "publisher": "Michael Arnaldi",
-        "email": "ma@matechs.com",
-        "copyright": "Copyright (c) 2023 Effectful Technologies Inc",
-        "name": "@effect/language-service",
-        "description": "A Language-Service Plugin to Refactor and Diagnostic effect-ts projects"
-    },
-    "@effect/platform-browser@4.0.0-beta.50": {
-        "licenses": "MIT",
-        "repository": "https://github.com/Effect-TS/effect-smol",
+        "repository": "https://github.com/Effect-TS/effect",
         "copyright": "Copyright (c) 2023 Effectful Technologies Inc",
         "name": "@effect/platform-browser",
         "description": "Platform specific implementations for the browser"
     },
-    "@effect/platform-bun@4.0.0-beta.50": {
+    "@effect/sql-sqlite-wasm@4.0.5": {
         "licenses": "MIT",
-        "repository": "https://github.com/Effect-TS/effect-smol",
-        "copyright": "Copyright (c) 2023 Effectful Technologies Inc",
-        "name": "@effect/platform-bun",
-        "description": "Platform specific implementations for the Bun runtime"
-    },
-    "@effect/sql-sqlite-wasm@4.0.0-beta.50": {
-        "licenses": "MIT",
-        "repository": "https://github.com/Effect-TS/effect-smol",
+        "repository": "https://github.com/Effect-TS/effect",
         "copyright": "Copyright (c) 2023-present The Contributors",
         "name": "@effect/sql-sqlite-wasm",
         "description": "A SQLite toolkit for Effect"
     },
-    "@herp-inc/snabbdom-jsx@0.22.0": {
+    "@effect/wa-sqlite@0.1.2": {
+        "licenses": "MIT*",
+        "copyright": "Copyright (c) 2023 Roy T. Hashimoto",
+        "name": "@effect/wa-sqlite",
+        "description": "[![wa-sqlite CI](https://github.com/rhashimoto/wa-sqlite/actions/workflows/ci.yml/badge.svg)](https://github.com/rhashimoto/wa-sqlite/actions/workflows/ci.yml)"
+    },
+    "@fgaudo/effect-tea@0.6.0": {
         "licenses": "MIT",
-        "repository": "https://github.com/herp-inc/snabbdom-jsx",
-        "publisher": "HERP, Inc. dev team",
-        "email": "dev@herp.co.jp",
-        "name": "@herp-inc/snabbdom-jsx",
-        "description": "Yet another JSX pragma for Snabbdom",
+        "repository": "https://github.com/fgaudo/effect-tea",
+        "publisher": "Francesco Gaudenzi",
+        "copyright": "Copyright (c) 2026 Francesco Gaudenzi",
+        "name": "@fgaudo/effect-tea",
+        "description": "The Elm architecture on Effect v4"
+    },
+    "@fontsource-variable/noto-nastaliq-urdu@5.3.0": {
+        "licenses": "OFL-1.1",
+        "repository": "https://github.com/fontsource/font-files",
+        "publisher": "Google Inc.",
+        "copyright": "Copyright 2022 The Noto Project Authors (https://github.com/notofonts/nastaliq)",
+        "name": "@fontsource-variable/noto-nastaliq-urdu",
+        "description": "Self-host the Noto Nastaliq Urdu font in a neatly bundled NPM package."
+    },
+    "@fontsource-variable/noto-sans-arabic@5.3.0": {
+        "licenses": "OFL-1.1",
+        "repository": "https://github.com/fontsource/font-files",
+        "publisher": "Google Inc.",
+        "copyright": "Copyright 2022 The Noto Project Authors (https://github.com/notofonts/arabic)",
+        "name": "@fontsource-variable/noto-sans-arabic",
+        "description": "Self-host the Noto Sans Arabic font in a neatly bundled NPM package."
+    },
+    "@fontsource-variable/noto-sans-bengali@5.3.0": {
+        "licenses": "OFL-1.1",
+        "repository": "https://github.com/fontsource/font-files",
+        "publisher": "Google Inc.",
+        "copyright": "Copyright 2025 The Noto Project Authors (https://github.com/notofonts/bengali)",
+        "name": "@fontsource-variable/noto-sans-bengali",
+        "description": "Self-host the Noto Sans Bengali font in a neatly bundled NPM package."
+    },
+    "@fontsource-variable/noto-sans-gujarati@5.3.0": {
+        "licenses": "OFL-1.1",
+        "repository": "https://github.com/fontsource/font-files",
+        "publisher": "Google Inc.",
+        "copyright": "Copyright 2022 The Noto Project Authors (https://github.com/notofonts/gujarati)",
+        "name": "@fontsource-variable/noto-sans-gujarati",
+        "description": "Self-host the Noto Sans Gujarati font in a neatly bundled NPM package."
+    },
+    "@fontsource-variable/noto-sans-gurmukhi@5.3.0": {
+        "licenses": "OFL-1.1",
+        "repository": "https://github.com/fontsource/font-files",
+        "publisher": "Google Inc.",
+        "copyright": "Copyright 2022 The Noto Project Authors (https://github.com/notofonts/gurmukhi)",
+        "name": "@fontsource-variable/noto-sans-gurmukhi",
+        "description": "Self-host the Noto Sans Gurmukhi font in a neatly bundled NPM package."
+    },
+    "@fontsource-variable/noto-sans-hebrew@5.3.0": {
+        "licenses": "OFL-1.1",
+        "repository": "https://github.com/fontsource/font-files",
+        "publisher": "Google Inc.",
+        "copyright": "Copyright 2024 The Noto Project Authors (https://github.com/notofonts/hebrew)",
+        "name": "@fontsource-variable/noto-sans-hebrew",
+        "description": "Self-host the Noto Sans Hebrew font in a neatly bundled NPM package."
+    },
+    "@fontsource-variable/noto-sans-jp@5.3.1": {
+        "licenses": "OFL-1.1",
+        "repository": "https://github.com/fontsource/font-files",
+        "publisher": "Google Inc.",
+        "name": "@fontsource-variable/noto-sans-jp",
+        "description": "Self-host the Noto Sans JP font in a neatly bundled NPM package.",
         "copyright": ""
+    },
+    "@fontsource-variable/noto-sans-kannada@5.3.0": {
+        "licenses": "OFL-1.1",
+        "repository": "https://github.com/fontsource/font-files",
+        "publisher": "Google Inc.",
+        "copyright": "Copyright 2022 The Noto Project Authors (https://github.com/notofonts/kannada)",
+        "name": "@fontsource-variable/noto-sans-kannada",
+        "description": "Self-host the Noto Sans Kannada font in a neatly bundled NPM package."
+    },
+    "@fontsource-variable/noto-sans-kr@5.3.1": {
+        "licenses": "OFL-1.1",
+        "repository": "https://github.com/fontsource/font-files",
+        "publisher": "Google Inc.",
+        "name": "@fontsource-variable/noto-sans-kr",
+        "description": "Self-host the Noto Sans KR font in a neatly bundled NPM package.",
+        "copyright": ""
+    },
+    "@fontsource-variable/noto-sans-malayalam@5.3.0": {
+        "licenses": "OFL-1.1",
+        "repository": "https://github.com/fontsource/font-files",
+        "publisher": "Google Inc.",
+        "copyright": "Copyright 2022 The Noto Project Authors (https://github.com/notofonts/malayalam)",
+        "name": "@fontsource-variable/noto-sans-malayalam",
+        "description": "Self-host the Noto Sans Malayalam font in a neatly bundled NPM package."
+    },
+    "@fontsource-variable/noto-sans-oriya@5.3.0": {
+        "licenses": "OFL-1.1",
+        "repository": "https://github.com/fontsource/font-files",
+        "publisher": "Google Inc.",
+        "copyright": "Copyright 2022 The Noto Project Authors (https://github.com/notofonts/oriya)",
+        "name": "@fontsource-variable/noto-sans-oriya",
+        "description": "Self-host the Noto Sans Oriya font in a neatly bundled NPM package."
+    },
+    "@fontsource-variable/noto-sans-sc@5.3.1": {
+        "licenses": "OFL-1.1",
+        "repository": "https://github.com/fontsource/font-files",
+        "publisher": "Google Inc.",
+        "name": "@fontsource-variable/noto-sans-sc",
+        "description": "Self-host the Noto Sans SC font in a neatly bundled NPM package.",
+        "copyright": ""
+    },
+    "@fontsource-variable/noto-sans-tamil@5.3.0": {
+        "licenses": "OFL-1.1",
+        "repository": "https://github.com/fontsource/font-files",
+        "publisher": "Google Inc.",
+        "copyright": "Copyright 2022 The Noto Project Authors (https://github.com/notofonts/tamil)",
+        "name": "@fontsource-variable/noto-sans-tamil",
+        "description": "Self-host the Noto Sans Tamil font in a neatly bundled NPM package."
+    },
+    "@fontsource-variable/noto-sans-tc@5.3.1": {
+        "licenses": "OFL-1.1",
+        "repository": "https://github.com/fontsource/font-files",
+        "publisher": "Google Inc.",
+        "name": "@fontsource-variable/noto-sans-tc",
+        "description": "Self-host the Noto Sans TC font in a neatly bundled NPM package.",
+        "copyright": ""
+    },
+    "@fontsource-variable/noto-sans-telugu@5.3.0": {
+        "licenses": "OFL-1.1",
+        "repository": "https://github.com/fontsource/font-files",
+        "publisher": "Google Inc.",
+        "copyright": "Copyright 2022 The Noto Project Authors (https://github.com/notofonts/telugu)",
+        "name": "@fontsource-variable/noto-sans-telugu",
+        "description": "Self-host the Noto Sans Telugu font in a neatly bundled NPM package."
+    },
+    "@fontsource-variable/noto-sans-thai@5.3.0": {
+        "licenses": "OFL-1.1",
+        "repository": "https://github.com/fontsource/font-files",
+        "publisher": "Google Inc.",
+        "copyright": "Copyright 2022 The Noto Project Authors (https://github.com/notofonts/thai)",
+        "name": "@fontsource-variable/noto-sans-thai",
+        "description": "Self-host the Noto Sans Thai font in a neatly bundled NPM package."
+    },
+    "@fontsource-variable/noto-sans@5.3.0": {
+        "licenses": "OFL-1.1",
+        "repository": "https://github.com/fontsource/font-files",
+        "publisher": "Google Inc.",
+        "copyright": "Copyright 2022 The Noto Project Authors (https://github.com/notofonts/latin-greek-cyrillic) NotoSans-Italic[wdth,wght].ttf: Copyright 2022 The Noto Project Authors (https://github.com/notofonts/latin-greek-cyrillic)",
+        "name": "@fontsource-variable/noto-sans",
+        "description": "Self-host the Noto Sans font in a neatly bundled NPM package."
+    },
+    "@fontsource/noto-sans@5.3.0": {
+        "licenses": "OFL-1.1",
+        "repository": "https://github.com/fontsource/font-files",
+        "publisher": "Google Inc.",
+        "copyright": "Copyright 2022 The Noto Project Authors (https://github.com/notofonts/latin-greek-cyrillic) NotoSans-Italic[wdth,wght].ttf: Copyright 2022 The Noto Project Authors (https://github.com/notofonts/latin-greek-cyrillic)",
+        "name": "@fontsource/noto-sans",
+        "description": "Self-host the Noto Sans font in a neatly bundled NPM package."
     },
     "@ionic/pwa-elements@3.4.0": {
         "licenses": "MIT",
@@ -90,20 +232,6 @@
         "copyright": "Copyright (c) 2017 Ionic",
         "name": "@ionic/pwa-elements",
         "description": "Stencil Component Starter"
-    },
-    "@types/bun@1.3.12": {
-        "licenses": "MIT",
-        "repository": "https://github.com/DefinitelyTyped/DefinitelyTyped",
-        "name": "@types/bun",
-        "description": "TypeScript definitions for bun",
-        "copyright": ""
-    },
-    "bun-plugin-tailwind@0.1.2": {
-        "licenses": "MIT",
-        "repository": "https://github.com/tailwindlabs/tailwindcss",
-        "name": "bun-plugin-tailwind",
-        "description": "Bun plugin for Tailwind CSS v4",
-        "copyright": ""
     },
     "clsx@2.1.1": {
         "licenses": "MIT",
@@ -114,64 +242,21 @@
         "name": "clsx",
         "description": "A tiny (239B) utility for constructing className strings conditionally."
     },
-    "csstype@3.2.3": {
+    "effect@4.0.5": {
         "licenses": "MIT",
-        "repository": "https://github.com/frenic/csstype",
-        "publisher": "Fredrik Nicol",
-        "email": "fredrik.nicol@gmail.com",
-        "copyright": "Copyright (c) 2017-2018 Fredrik Nicol",
-        "name": "csstype",
-        "description": "Strict TypeScript and Flow types for style based on MDN data"
-    },
-    "effect@4.0.0-beta.50": {
-        "licenses": "MIT",
-        "repository": "https://github.com/Effect-TS/effect-smol",
+        "repository": "https://github.com/Effect-TS/effect",
         "copyright": "Copyright (c) 2023 Effectful Technologies Inc",
         "name": "effect",
         "description": "The missing standard library for TypeScript, for writing production-grade software."
     },
-    "http-server@14.1.1": {
-        "licenses": "MIT",
-        "repository": "https://github.com/http-party/http-server",
-        "copyright": "Copyright (c) 2011-2022 Charlie Robbins, Marak Squires, Jade Michael Thornton and the Contributors.",
-        "name": "http-server",
-        "description": "A simple zero-configuration command-line http server"
+    "material-symbols@0.48.0": {
+        "licenses": "Apache-2.0",
+        "repository": "https://github.com/marella/material-symbols",
+        "name": "material-symbols",
+        "description": "Latest variable icon fonts and CSS for Material Symbols.",
+        "copyright": ""
     },
-    "license-checker-rseidelsohn@4.4.2": {
-        "licenses": "BSD-3-Clause",
-        "repository": "https://github.com/RSeidelsohn/license-checker-rseidelsohn",
-        "publisher": "Roman Seidelsohn",
-        "email": "rseidelsohn@gmail.com",
-        "copyright": "Copyright 2012 Yahoo Inc.",
-        "name": "license-checker-rseidelsohn",
-        "description": "Extract NPM package licenses - Feature enhanced version of the original license-checker v25.0.1"
-    },
-    "oxfmt@0.42.0": {
-        "licenses": "MIT",
-        "repository": "https://github.com/oxc-project/oxc",
-        "publisher": "Boshen and oxc contributors",
-        "copyright": "Copyright (c) 2024-present VoidZero Inc. & Contributors. Copyright (c) 2023 Boshen",
-        "name": "oxfmt",
-        "description": "Formatter for the JavaScript Oxidation Compiler"
-    },
-    "oxlint-tsgolint@0.21.1": {
-        "licenses": "MIT",
-        "repository": "https://github.com/oxc-project/tsgolint",
-        "publisher": "auvred",
-        "email": "aauvred@gmail.com",
-        "copyright": "Copyright (c) 2025 July-present VoidZero Inc. & Contributors. Copyright (c) 2025 July typescript-eslint and other contributors",
-        "name": "oxlint-tsgolint",
-        "description": "High-performance type-aware TypeScript linter powered by typescript-go, for use with oxlint."
-    },
-    "oxlint@1.58.0": {
-        "licenses": "MIT",
-        "repository": "https://github.com/oxc-project/oxc",
-        "publisher": "Boshen and oxc contributors",
-        "copyright": "Copyright (c) 2024-present VoidZero Inc. & Contributors. Copyright (c) 2023 Boshen",
-        "name": "oxlint",
-        "description": "Linter for the JavaScript Oxidation Compiler"
-    },
-    "snabbdom@3.6.3": {
+    "snabbdom@3.6.4": {
         "licenses": "MIT",
         "repository": "https://github.com/snabbdom/snabbdom",
         "publisher": "Simon Friis Vindum",
@@ -179,27 +264,19 @@
         "name": "snabbdom",
         "description": "A virtual DOM library with focus on simplicity, modularity, powerful features and performance."
     },
-    "tailwind-merge@3.5.0": {
-        "licenses": "MIT",
-        "repository": "https://github.com/dcastil/tailwind-merge",
-        "publisher": "Dany Castillo",
-        "copyright": "Copyright (c) 2021 Dany Castillo",
-        "name": "tailwind-merge",
-        "description": "Merge Tailwind CSS classes without style conflicts"
-    },
-    "tailwindcss@4.2.2": {
+    "tailwindcss@4.3.3": {
         "licenses": "MIT",
         "repository": "https://github.com/tailwindlabs/tailwindcss",
         "copyright": "Copyright (c) Tailwind Labs, Inc.",
         "name": "tailwindcss",
         "description": "A utility-first CSS framework for rapidly building custom user interfaces."
     },
-    "typescript@6.0.3": {
-        "licenses": "Apache-2.0",
-        "repository": "https://github.com/microsoft/TypeScript",
+    "tslib@2.8.1": {
+        "licenses": "0BSD",
+        "repository": "https://github.com/Microsoft/tslib",
         "publisher": "Microsoft Corp.",
-        "name": "typescript",
-        "description": "TypeScript is a language for application scale JavaScript development",
-        "copyright": ""
+        "copyright": "Copyright (c) Microsoft Corporation.",
+        "name": "tslib",
+        "description": "Runtime library for TypeScript helper functions"
     }
 }

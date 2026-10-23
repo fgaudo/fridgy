@@ -4,7 +4,6 @@ import * as Data from 'effect/Data'
 import * as Equal from 'effect/Equal'
 import * as Opt from 'effect/Option'
 import * as fc from 'fast-check'
-import { arbitrary as maybe } from '#libs/option/option.test_arbitrary.ts'
 import { messagesSentBy } from '#libs/tea-snabbdom/view.test_support.ts'
 import { assertProperty, outcomesOf } from '#libs/testing/update.test_support.ts'
 import { type Event, type Message, type Model, program } from './program.ts'
@@ -20,7 +19,7 @@ const { makeModel } = program
 
 const message: fc.Arbitrary<Message> = fc.oneof(
   licenses.map((licenses) => Msg.LicensesLoaded({ licenses })),
-  maybe(fc.string()).map((maybeSaying) => Msg.SayingPicked({ maybeSaying })),
+  fc.string().map((version) => Msg.VersionLoaded({ version })),
   fc.constant(Msg.BackPressed()),
 )
 
@@ -45,10 +44,10 @@ describe('About update', () => {
     })
   })
 
-  test('SayingPicked stores the saying and touches nothing else', () => {
-    assertProperty([state, maybe(fc.string())], (before, maybeSaying) => {
-      const { after, commands } = step(Msg.SayingPicked({ maybeSaying }), before)
-      return Equal.equals(after, { ...before, saying: { _tag: 'Picked', maybeSaying } }) && commands.length === 0
+  test('VersionLoaded stores the version and touches nothing else', () => {
+    assertProperty([state, fc.string()], (before, version) => {
+      const { after, commands } = step(Msg.VersionLoaded({ version }), before)
+      return Equal.equals(after, { ...before, version: { _tag: 'Loaded', version } }) && commands.length === 0
     })
   })
 
@@ -59,15 +58,17 @@ describe('About update', () => {
     })
   })
 
-  test('the model shows the picked saying, or nothing', () => {
+  test('the model shows the version once it is loaded, and nothing before', () => {
     assertProperty([state], (s) => {
-      const expected = s.saying._tag === 'Picked' ? Opt.getOrElse(s.saying.maybeSaying, () => '') : ''
-      return makeModel(s).saying === expected
+      const expected = s.version._tag === 'Loaded' ? Opt.some(s.version.version) : Opt.none()
+      return Equal.equals(makeModel(s).version, expected)
     })
   })
 })
 
 test('arbitraries cover every variant of the state', () => {
-  const tags = new Set(fc.sample(state, 300).flatMap((s) => [`licenses:${s.licenses._tag}`, `saying:${s.saying._tag}`]))
-  expect([...tags].sort()).toEqual(['licenses:Loaded', 'licenses:Loading', 'saying:Loading', 'saying:Picked'])
+  const tags = new Set(
+    fc.sample(state, 300).flatMap((s) => [`licenses:${s.licenses._tag}`, `version:${s.version._tag}`]),
+  )
+  expect([...tags].sort()).toEqual(['licenses:Loaded', 'licenses:Loading', 'version:Loaded', 'version:Loading'])
 })
