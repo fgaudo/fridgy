@@ -74,9 +74,11 @@ bunx @capacitor/assets@3.0.5 generate --android --iconBackgroundColor '#fef8e9' 
 The app has no dark theme, so the `drawable-*night*` splashes it also generates (from `assets/logo-dark.svg`)
 are deleted, and its reformatting of `AndroidManifest.xml` is reverted.
 
-A release raises the version in two places: `version` in `package.json`, which the About page shows, and
-`versionName` and `versionCode` in `android/app/build.gradle`. The Play Store only accepts a `versionCode`
-higher than the last one published (10, Fridgy 1.0.8).
+The version is `YEAR.MONTH.N`, N counting the releases of the month from 0 (`2026.10.0`, `2026.10.1`,
+`2026.11.0`), with no leading zeros, which `package.json` rejects. A release sets it only in `package.json`, which
+the About page shows; `android/app/build.gradle` reads it as `versionName` and derives the `versionCode`,
+`YEAR * 10000 + MONTH * 100 + N` (20261000), always higher than the last one, as the Play Store requires. Each
+release is tagged in git (`v2026.10.0`).
 
 ## Development
 
