@@ -66,25 +66,23 @@ export const view: View<Model, Message> = (model, dispatch) => {
       <div props={{ className: 'bg-background pt-sait pb-saib pl-sail pr-sair' }}>
         <div props={{ className: 'flex flex-col gap-2 px-6 pt-23' }}>
           <p props={{ className: 'text-xl font-bold' }}>Fridgy</p>
-          <p props={{ className: 'mt-2' }}>
-            version: <span props={{ className: 'text-primary' }}>{Opt.getOrElse(model.version, () => '')}</span>
-          </p>
-          <p props={{ className: 'mt-2' }}>© 2024 Francesco Gaudenzi</p>
-          <p props={{ className: 'mt-2' }}>
-            This app is open source and released under the{' '}
-            {link('https://www.gnu.org/licenses/agpl-3.0.en.html', 'AGPL-3.0 license')}.<br />
-            The entire source code is available at{' '}
-            {link('https://github.com/fgaudo/fridgy', 'https://github.com/fgaudo/fridgy')}
+          <p>
+            Version <span props={{ className: 'text-primary' }}>{Opt.getOrElse(model.version, () => '')}</span>
           </p>
           <p props={{ className: 'mt-2' }}>
-            For any issues, requests or feedback you can{' '}
-            {link('https://github.com/fgaudo/fridgy/issues', 'open a ticket')} or send me an email at{' '}
-            {link('mailto:fgaudo@gmail.com', 'fgaudo@gmail.com')}.
+            Keep track of what is in your fridge and when it expires.
           </p>
-          <p props={{ className: 'mt-5 mb-3' }}>
-            Fridgy uses many other open source libraries.<br />
-            Here's the complete list of software.
+          <p props={{ className: 'mt-2' }}>
+            Fridgy is free software, released under the{' '}
+            {link('https://spdx.org/licenses/AGPL-3.0-or-later.html', 'AGPL-3.0-or-later')}{' '}
+            license. Its source code is on {link('https://github.com/fgaudo/fridgy', 'GitHub')}.
           </p>
+          <p props={{ className: 'mt-2' }}>
+            Found a bug, or have an idea? {link('https://github.com/fgaudo/fridgy/issues', 'Open an issue')}.
+          </p>
+          <p props={{ className: 'mt-2' }}>© 2024–2026 Francesco Gaudenzi</p>
+          <h2 props={{ className: 'mt-5 text-lg font-bold' }}>Open source libraries</h2>
+          <p props={{ className: 'mb-3' }}>Fridgy is built with these libraries, under their own licenses.</p>
           {model.licenses._tag === 'Loading' ? [] : model.licenses.items.map(license)}
         </div>
       </div>
