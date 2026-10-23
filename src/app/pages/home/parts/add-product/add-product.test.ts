@@ -7,7 +7,7 @@ import * as fc from 'fast-check'
 import * as Product from '#domain/product.ts'
 import { utc } from '#libs/testing/date-time.test_arbitrary.ts'
 import { assertProperty, outcomesOf } from '#libs/testing/update.test_support.ts'
-import { type Command, type Event, type Message, program } from './add-product.ts'
+import { type Command, type Event, handlesBack, type Message, program } from './add-product.ts'
 import { closed, editing, message, state, submitting } from './add-product.test_arbitrary.ts'
 
 const Msg = Data.taggedEnum<Message>()
@@ -125,15 +125,16 @@ describe('AddProduct update', () => {
     })
   })
 
-  test('BackPressed closes an edited form, keeps one being submitted, and has nothing to close otherwise', () => {
+  test('BackPressed closes an edited form, and otherwise changes nothing', () => {
     assertProperty([state], (before) => {
       const { after, commands, events } = step(Msg.BackPressed(), before)
-      const expected = {
-        Editing: () => after._tag === 'Closed' && events.length === 0,
-        Submitting: () => Equal.equals(after, before) && events.length === 0,
-        Closed: () => Equal.equals(after, before) && Equal.equals(events, [Ev.NothingToClose()]),
-      }[before._tag]()
-      return expected && commands.length === 0
+      const expected = before._tag === 'Editing' ? after._tag === 'Closed' : Equal.equals(after, before)
+      return expected && commands.length === 0 && events.length === 0
     })
+  })
+
+  // A form being submitted keeps the button, though it does not close.
+  test('handlesBack holds while the form is open', () => {
+    assertProperty([state], (before) => handlesBack(before) === (before._tag !== 'Closed'))
   })
 })

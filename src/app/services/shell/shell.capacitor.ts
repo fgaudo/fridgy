@@ -6,22 +6,28 @@ import * as Queue from 'effect/Queue'
 import * as Stream from 'effect/Stream'
 import { Shell, ShellError } from './shell.ts'
 
+// Capacitor's handler takes the button from Android, even with no listener: it goes back in the WebView's
+// history, where the app has none, so the button would do nothing. It is enabled only while the button is
+// observed (`disableBackButtonHandler` in `capacitor.config.ts` turns it off at start): otherwise Android acts
+// on the button, and leaves the app.
 export const layer = Layer.succeed(Shell, {
   backButton: Source.fromStream(Stream.callback<void>((queue) =>
     Effect.acquireRelease(
       Effect.tryPromise({
-        try: () => App.addListener('backButton', () => Queue.offerUnsafe(queue, undefined)),
+        try: async () => {
+          const handle = await App.addListener('backButton', () => Queue.offerUnsafe(queue, undefined))
+          await App.toggleBackButtonHandler({ enabled: true })
+          return handle
+        },
         catch: (cause) => new ShellError({ cause }),
       }),
-      (handle) => Effect.promise(() => handle.remove()),
+      (handle) =>
+        Effect.promise(async () => {
+          await App.toggleBackButtonHandler({ enabled: false })
+          await handle.remove()
+        }),
     ).pipe(
-      // Without the listener, Capacitor goes back in the WebView's history, where the app has none: the
-      // button does nothing.
       Effect.catchTag('ShellError', (error) => Effect.logWarning('Could not listen to the back button', error.cause)),
     )
   )),
-  exitApp: Effect.tryPromise({
-    try: () => App.exitApp(),
-    catch: (cause) => new ShellError({ cause }),
-  }),
 })

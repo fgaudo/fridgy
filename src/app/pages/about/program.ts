@@ -18,7 +18,7 @@ export type State = Readonly<{
 }>
 
 export type ExternalMessage = Data.TaggedEnum<{
-  /** Android's back button, while the page is shown; the page's own back button sends it too. */
+  /** The back button, while the page is shown; the page's own back button sends it too. */
   BackPressed: object
 }>
 

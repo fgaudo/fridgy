@@ -11,6 +11,8 @@ const config: CapacitorConfig = {
     minWebViewVersion: 111,
   },
   plugins: {
+    // The app enables it while it listens to the back button: otherwise the button is Android's.
+    App: { disableBackButtonHandler: true },
     SystemBars: {
       insetsHandling: 'css',
       style: 'DEFAULT',

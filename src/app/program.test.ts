@@ -1,13 +1,13 @@
 import { describe, expect, test } from 'bun:test'
 import * as Tea from '@fgaudo/effect-tea'
 import * as Arr from 'effect/Array'
-import * as Data from 'effect/Data'
+import type * as Data from 'effect/Data'
 import * as Effect from 'effect/Effect'
 import * as HashMap from 'effect/HashMap'
 import * as Opt from 'effect/Option'
 import { tagPath } from '#libs/testing/tag-path.test_support.ts'
 import * as Home from './pages/home/program.ts'
-import { type Command, type Page, program, type State } from './program.ts'
+import { type Page, program, type State } from './program.ts'
 import { view } from './view.tsx'
 import {
   back,
@@ -21,8 +21,6 @@ import {
   submit,
   typeName,
 } from './user.test_support.ts'
-
-const Cmd = Data.taggedEnum<Command>()
 
 const tags = (state: State) => state.stack.map((page) => page._tag)
 
@@ -105,13 +103,10 @@ describe('Navigation', () => {
       expect(yield* user.pending).toEqual([])
     })))
 
-  test('back on Home with nothing open exits the app', () =>
-    rehearsed(Effect.fnUntraced(function*(user) {
-      yield* back(user)
-      expect(tags(yield* user.state)).toEqual(['Home'])
-      expect(yield* user.pending).toEqual([Cmd.ExitApp()])
-      yield* user.runAll
-    })))
+  // A back heard as the menu closes, before the subscription stops (a double press).
+  test('a back that reaches Home with nothing open changes nothing', () => {
+    expect(Tea.isRejected(program.update({ _tag: 'BackRequested' })(program.init.state))).toBe(true)
+  })
 
   test('Home receives the completion of its operation while About is shown', () =>
     rehearsed(Effect.fnUntraced(function*(user) {
@@ -149,11 +144,24 @@ describe('Subscriptions', () => {
       expect(subscribedPages(yield* user.state)).toEqual(new Set(['Home']))
     })))
 
-  test('the back button is always listened to', () =>
+  // Otherwise the button is the platform's, which leaves the app.
+  test('the back button is listened to only while the shown page has something to close', () =>
     rehearsed(Effect.fnUntraced(function*(user) {
-      expect(HashMap.has(Tea.subscriptionsOf(program)(yield* user.state), 'back-button')).toBe(true)
+      const listensToBack = Effect.map(
+        user.state,
+        (state) => HashMap.has(Tea.subscriptionsOf(program)(state), 'back-button'),
+      )
+      expect(yield* listensToBack).toBe(false)
+      yield* user.send(openMenu)
+      expect(yield* listensToBack).toBe(true)
+      yield* back(user)
+      expect(yield* listensToBack).toBe(false)
       yield* perform(user, openAbout)
-      expect(HashMap.has(Tea.subscriptionsOf(program)(yield* user.state), 'back-button')).toBe(true)
+      expect(yield* listensToBack).toBe(true)
       yield* user.runAll
+      yield* back(user)
+      expect(yield* listensToBack).toBe(false)
+      yield* user.send(openForm)
+      expect(yield* listensToBack).toBe(true)
     })))
 })

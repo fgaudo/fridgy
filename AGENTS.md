@@ -91,10 +91,13 @@ here: a change to the library is made, released and then upgraded to in this app
 - **Pages talk to their parent through events** (`Event`, handled by the parent's `onEvent`), never by
   acting on it. A program exports its `Message`, `Event` and `Command` as types only (a parent's with
   `Tea.MessageOf` and `Tea.CommandOf`), and its `ExternalMessage` (what its parent may give it with
-  `children.<Child>.update`, e.g. `BackPressed`, which the child accepts in every state, answering with an
-  event when it is for the parent) as a value; tests build their own constructors with
+  `children.<Child>.update`, e.g. `BackPressed`) as a value; tests build their own constructors with
   `Data.taggedEnum<Message>()`. Hidden pages keep receiving their completions, but their subscriptions run
   only while they are on top.
+- **The back button is the app's only while it has something to close.** A page that closes things on back
+  exports `handlesBack(state)`, and its parent listens to the button, or passes `BackPressed` on to it, only
+  then; elsewhere its `BackPressed` changes nothing (an external message is never rejected). When the root does
+  not listen, the platform leaves the app: Android itself, or the browser's history, past the app.
 - **A service belongs to what uses it, and is never shared.** A service (a `Context.Service`: a port, in the
   terms of ports and adapters) is a requirement of its consumer, listed in its program's `services`, shaped for
   it and free to change with it. It is a folder named after it in its consumer's `services/`, holding the

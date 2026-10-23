@@ -13,7 +13,7 @@ src/
 ├─ domain/               the entities and their rules (`Product`): imports nothing but libs/
 │
 ├─ app/                  the application (environment-agnostic)
-│  ├─ program.ts         public: the root Program: the stack of pages, the back button, leaving the app
+│  ├─ program.ts         public: the root Program: the stack of pages, the back button
 │  ├─ view.tsx           public: the root view (hot-reload entry in development)
 │  ├─ layer.ts           public: every adapter that has no alternative; needs a `SqlClient` and a `Shell`
 │  ├─ services/shell/    the root's service, with its adapters (`shell.capacitor.ts`, `shell.browser.ts`),

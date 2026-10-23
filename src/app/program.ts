@@ -1,5 +1,5 @@
-// The root: a stack of pages, the back button and leaving the app. The only
-// module that runs the pages' programs (the root view draws their views).
+// The root: a stack of pages and the back button. The only module that runs the
+// pages' programs (the root view draws their views).
 import * as Tea from '@fgaudo/effect-tea'
 import * as Arr from 'effect/Array'
 import * as Channel from 'effect/Channel'
@@ -24,10 +24,8 @@ export type State = Readonly<{
   stack: Arr.NonEmptyReadonlyArray<Page>
 }>
 
-/** Android's back button: the root's own message, the pages' are made by `compose`. */
+/** The back button: the root's own message, the pages' are made by `compose`. */
 type BackRequested = Readonly<{ _tag: 'BackRequested' }>
-
-type ExitApp = Readonly<{ _tag: 'ExitApp' }>
 
 export type Deps = Shell | Home.Deps | About.Deps
 
@@ -66,17 +64,18 @@ const replacePage = (state: State, replacement: Page): State => ({
 
 const push = (state: State, page: Page): State => ({ stack: Arr.append(state.stack, page) })
 
-/** Removes the shown page; `None` when it is the last one. */
-const pop = (state: State): Opt.Option<State> => {
+/** Leaves the shown page; Home, the first one, never asks to. */
+const leave = (state: State) => {
   const rest = Arr.initNonEmpty(state.stack)
-  return Arr.isReadonlyArrayNonEmpty(rest) ? Opt.some({ stack: rest }) : Opt.none()
+  return { state: Arr.isReadonlyArrayNonEmpty(rest) ? { stack: rest } : state }
 }
 
-/** Leaves the shown page; leaving the last one exits the app. */
-const leave = (state: State) =>
-  Opt.match(pop(state), {
-    onNone: () => ({ state, commands: [{ _tag: 'ExitApp' } as const] }),
-    onSome: (previous) => ({ state: previous }),
+// The shown page decides when the back button is its own; otherwise nothing listens, and the platform leaves
+// the app (Android), or goes back past it (a browser).
+const handlesBack = (state: State) =>
+  Match.valueTags(top(state), {
+    Home: ({ state }) => Home.handlesBack(state),
+    About: () => true,
   })
 
 const backButton: Tea.Subscription<BackRequested, Shell> = Channel.unwrap(
@@ -87,7 +86,7 @@ const backButton: Tea.Subscription<BackRequested, Shell> = Channel.unwrap(
     )),
 )
 
-const { child, compose } = Tea.parent<{ state: State; command: ExitApp }>()
+const { child, compose } = Tea.parent<{ state: State }>()
 
 export const program = compose({
   init: (children) => {
@@ -106,10 +105,12 @@ export const program = compose({
       set: (state, about) => replacePage(state, Page.About({ state: about })),
     }),
   },
-  // The shown page closes what it has open, or asks to be left.
+  // The shown page closes what it has open, or asks to be left. A back heard as Home closes its last thing
+  // (a double press, before the subscription stops) is the platform's.
   update: (_: BackRequested, children) => (state) =>
     Match.valueTags(top(state), {
-      Home: () => children.Home.update(Home.ExternalMessage.BackPressed())(state),
+      Home: ({ state: home }) =>
+        Home.handlesBack(home) ? children.Home.update(Home.ExternalMessage.BackPressed())(state) : Tea.reject,
       About: () => children.About.update(About.ExternalMessage.BackPressed())(state),
     }),
   onEvent: {
@@ -121,18 +122,10 @@ export const program = compose({
           const about = children.About.init
           return { state: push(state, Page.About({ state: about.state })), commands: about.commands }
         },
-        LeaveRequested: () => leave(state),
       }),
     About: () => leave,
   },
-  runCommand: Effect.fn(function*(_: ExitApp) {
-    const { exitApp } = yield* Shell
-    yield* exitApp.pipe(
-      Effect.catchTag('ShellError', (error) => Effect.logWarning('Could not exit the app', error.cause)),
-    )
-    return Opt.none()
-  }),
-  subscriptions: () => HashMap.make(['back-button', backButton]),
+  subscriptions: (state) => handlesBack(state) ? HashMap.make(['back-button', backButton]) : HashMap.empty(),
   makeModel: (state, children): Model => ({
     page: Match.valueTags(top(state), {
       Home: () => PageModel.Home({ model: children.Home(state) }),

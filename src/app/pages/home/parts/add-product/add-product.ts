@@ -26,7 +26,7 @@ export type State = Data.TaggedEnum<{
 }>
 
 export type ExternalMessage = Data.TaggedEnum<{
-  /** Android's back button: closes the form if it can. */
+  /** The back button, while the form `handlesBack`: closes it if it can. */
   BackPressed: object
 }>
 
@@ -56,8 +56,6 @@ const Command = Data.taggedEnum<Command>()
 
 export type Event = Data.TaggedEnum<{
   Failed: object
-  /** The form is closed: the back button is for someone else. */
-  NothingToClose: object
 }>
 
 const Event = Data.taggedEnum<Event>()
@@ -88,6 +86,9 @@ export type Model = Data.TaggedEnum<{
 type Open = Exclude<State, { readonly _tag: 'Closed' }>
 
 const isOpen = (state: State): state is Open => state._tag !== 'Closed'
+
+/** Whether the back button is the form's: otherwise `BackPressed` changes nothing. */
+export const handlesBack = (state: State): boolean => isOpen(state)
 
 /** The product the form describes, created now, if it is one. */
 const productOf = (form: Form) =>
@@ -181,9 +182,8 @@ export const program: Tea.Program<{
           return { state: { _tag: 'Closed' } }
         // The form cannot be closed while it is being submitted.
         case 'Submitting':
-          return { state }
         case 'Closed':
-          return { state, events: [Event.NothingToClose()] }
+          return { state }
       }
     },
   }),

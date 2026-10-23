@@ -22,7 +22,7 @@ export type State = Readonly<{
 }>
 
 export type ExternalMessage = Data.TaggedEnum<{
-  /** Android's back button, while the page is shown. */
+  /** The back button, while the page is shown and `handlesBack`. */
   BackPressed: object
 }>
 
@@ -43,11 +43,12 @@ type ShowToast = Readonly<{ _tag: 'ShowToast'; text: string }>
 
 export type Event = Data.TaggedEnum<{
   InfoRequested: object
-  /** Nothing left to close: the page should be left. */
-  LeaveRequested: object
 }>
 
 const Event = Data.taggedEnum<Event>()
+
+/** Whether the back button is the page's: otherwise `BackPressed` changes nothing. */
+export const handlesBack = (state: State): boolean => state.isMenuOpen || AddProduct.handlesBack(state.addProduct)
 
 export type Deps = Notifications | Viewport | AddProducts | DeleteProducts | ProductList
 
@@ -99,18 +100,18 @@ export const program = compose({
         state.isMenuOpen
           ? { state: { ...state, isMenuOpen: false }, events: [Event.InfoRequested()] }
           : Tea.reject,
-      // Closes what is open, innermost first: the menu, then the form, which asks
-      // to leave the page when it has nothing to close.
-      BackPressed: () =>
-        state.isMenuOpen
-          ? { state: { ...state, isMenuOpen: false } }
-          : children.AddProduct.update(AddProduct.ExternalMessage.BackPressed())(state),
+      // Closes what is open, innermost first: the menu, then the form.
+      BackPressed: () => {
+        if (state.isMenuOpen) return { state: { ...state, isMenuOpen: false } }
+        return AddProduct.handlesBack(state.addProduct)
+          ? children.AddProduct.update(AddProduct.ExternalMessage.BackPressed())(state)
+          : { state }
+      },
     }),
   onEvent: {
     AddProduct: (event) => (state) =>
       Match.valueTags(event, {
         Failed: () => ({ state, commands: [toast('Could not add the product')] }),
-        NothingToClose: () => ({ state, events: [Event.LeaveRequested()] }),
       }),
     Products: () => (state) => ({ state, commands: [toast('Could not delete the products')] }),
   },

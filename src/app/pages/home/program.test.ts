@@ -14,7 +14,7 @@ import { submitting } from './parts/add-product/add-product.test_arbitrary.ts'
 import * as Products from './parts/products/products.ts'
 import { deleting } from './parts/products/products.test_arbitrary.ts'
 import * as Scrolling from './parts/scrolling/scrolling.ts'
-import { type Command, type Event, type Message, type Model, program, type State } from './program.ts'
+import { type Command, type Event, handlesBack, type Message, type Model, program, type State } from './program.ts'
 import { message, state } from './program.test_arbitrary.ts'
 import { view } from './view.tsx'
 
@@ -161,20 +161,24 @@ describe('Home update', () => {
     })
   })
 
-  test('BackPressed closes the menu first, then an edited form, and otherwise asks to leave', () => {
+  test('BackPressed closes the menu first, then an edited form, and otherwise changes nothing', () => {
     assertProperty([state], (before) => {
       const { after, commands, events } = step(Msg.BackPressed(), before)
-      if (before.isMenuOpen) {
-        return !after.isMenuOpen && onlyChanged(before, after, 'isMenuOpen') && events.length === 0
-      }
-      const expected = {
-        Editing: () =>
-          after.addProduct._tag === 'Closed' && onlyChanged(before, after, 'addProduct') && events.length === 0,
-        Submitting: () => Equal.equals(after, before) && events.length === 0,
-        Closed: () => Equal.equals(after, before) && Equal.equals(events, [Ev.LeaveRequested()]),
-      }[before.addProduct._tag]()
-      return expected && commands.length === 0
+      const expected = before.isMenuOpen
+        ? !after.isMenuOpen && onlyChanged(before, after, 'isMenuOpen')
+        : before.addProduct._tag === 'Editing'
+        ? after.addProduct._tag === 'Closed' && onlyChanged(before, after, 'addProduct')
+        : Equal.equals(after, before)
+      return expected && commands.length === 0 && events.length === 0
     })
+  })
+
+  // A form being submitted keeps the button, though it does not close.
+  test('handlesBack holds while the menu or the form is open', () => {
+    assertProperty(
+      [state],
+      (before) => handlesBack(before) === (before.isMenuOpen || before.addProduct._tag !== 'Closed'),
+    )
   })
 
   describe('a failed operation is said with a toast', () => {

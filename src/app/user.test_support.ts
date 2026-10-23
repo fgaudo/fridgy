@@ -55,7 +55,7 @@ export const perform = Effect.fnUntraced(function*(user: User, choices: Readonly
   }
 })
 
-/** Android's back button, heard from the shell. */
+/** The back button, heard from the shell. */
 export const back = (user: User) => user.hear('back-button', Msg.BackRequested())
 
 /** The subscription under `key` sends its next message, the one it would send if it ran. */
@@ -72,8 +72,8 @@ export const hearNext = Effect.fnUntraced(function*(user: User, key: unknown) {
   yield* user.hear(key, maybeMessage.value)
 })
 
-// The phone's shell is out of reach: its back button is heard through `back`, and leaving the app succeeds.
-const shell = Layer.succeed(Shell, { backButton: Channel.never, exitApp: Effect.void })
+// The phone's shell is out of reach: its back button is heard through `back`.
+const shell = Layer.succeed(Shell, { backButton: Channel.never })
 
 const layer = Layer.merge(App.layer.pipe(Layer.provide(SqliteMemory.layer)), shell)
 
