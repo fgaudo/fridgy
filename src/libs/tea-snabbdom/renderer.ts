@@ -10,9 +10,9 @@ export class SnabbdomRenderer extends Context.Service<
   SnabbdomRenderer,
   {
     /** Renders at most once per animation frame: intermediate frames are dropped, like Elm does. */
-    render: <Model>(options: {
-      frame$: Stream.Stream<Frame<Model>>
-      view$: Stream.Stream<View<Model, Snabbdom.VNode>>
+    render: <Model, Message>(options: {
+      frame$: Stream.Stream<Frame<Model, Message>>
+      view$: Stream.Stream<View<Model, Message, Snabbdom.VNode>>
       /** Runs once, after the first tree has been displayed. */
       onFirstPaint: Effect.Effect<void>
     }) => Effect.Effect<void>

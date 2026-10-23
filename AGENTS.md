@@ -20,7 +20,7 @@ why, or what the diff and the docs do not, never what they already describe.
 Biome and the typecheck enforce import boundaries (private folders of the app and of pages, pages never importing
 each other or the app's adapters, relative imports kept short, test-only code (including
 `@fgaudo/effect-tea/testing`) kept out of bundles), the strict typing of views (`dispatch` only
-takes offered messages; JSX elements only accept snabbdom's modules) and the language service rules (no
+takes the program's own messages; JSX elements only accept snabbdom's modules) and the language service rules (no
 `console`, `Date`, `Math.random`, `fetch` or timers inside Effect; hashed service keys). When one of them
 reports an error, the rule is intended: fix the code, do not work around the check.
 
@@ -31,12 +31,12 @@ module).
 
 The runtime of the Elm architecture is [`@fgaudo/effect-tea`](https://www.npmjs.com/package/@fgaudo/effect-tea),
 an npm dependency developed in its own repository (`github.com/fgaudo/effect-tea`). Read its README
-(`node_modules/@fgaudo/effect-tea/README.md`) before changing a program: the rules in its "Concepts" (intents
+(`node_modules/@fgaudo/effect-tea/README.md`) before changing a program: the rules in its "Guide" (intents
 instead of toggles, one-shot actions moving to a state that rejects them, input never a reason to reject, an
-operation as a state that only its completion leaves, stale or bug rejections) are rules of this app too, and
-are not repeated here. The app imports `import * as Tea from '@fgaudo/effect-tea'`, and its tests
-`@fgaudo/effect-tea/testing`. Never patch it from here: a change to the library is made, released and then
-upgraded to in this app.
+operation as a state that only its completion leaves, a model that shows less than `update` accepts, never
+more) are rules of this app too, and are not repeated here. The app imports
+`import * as Tea from '@fgaudo/effect-tea'`, and its tests `@fgaudo/effect-tea/testing`. Never patch it from
+here: a change to the library is made, released and then upgraded to in this app.
 
 - **Expected errors are typed, bugs crash.** Expected failures go through Effect's error channel
   (`Effect.tryPromise`/`Effect.try`, no `try/catch`, no bare Promises). A violated invariant is a defect
@@ -53,11 +53,13 @@ upgraded to in this app.
   an `Effect`.
 - **Effects only in commands and subscriptions.** `update`, `makeModel` and views are pure; one global state,
   no local view state or mutable singletons.
-- **The model offers, `update` decides.** `update` returns `Tea.reject` when a message does not apply.
-  The model's shape says which actions exist: a union with a case per state the view distinguishes, each
-  holding only its actions, made with the `offer`/`offerInput` that `makeModel` receives. Each offer is
-  checked against `update` as the model is made, so a case that promises a rejected action crashes at once;
-  never probe offers to pick a case. The app runs with `onRejectedInput: 'die'`.
+- **The model holds the messages, `update` decides.** `update` returns `Tea.reject` when a message does not
+  apply. The model's shape says which actions exist: a union with a case per state the view distinguishes,
+  each holding only the messages of its controls (`open: Message`, `changeName: (name: string) => Message`),
+  picked from the state as `update` reads it, never by calling `update`. Views send only what the model
+  holds: they never build a message. The run ignores a message `update` rejects (a tap on a frame the state
+  has moved past); a control shown where `update` rejects its message is a bug that the tests find
+  (`dispatchViolations`).
 - **State machines, no derived data.** One explicit state machine per concern (data, selection, form)
   instead of shared flags. Values that depend on time are computed in `makeModel` from a `now` that a clock
   subscription keeps in the state.
@@ -73,13 +75,15 @@ upgraded to in this app.
   (`{ _tag: <child>, message }`), commands, subscriptions and models. A parent decides whether a child is
   there only with `get`, never by rejecting its messages. A child is started with `children.<Child>.init`,
   in `init` as in `onEvent`, and its `commands` go out with the parent's: reading its program's `init.state`
-  would leave them behind. One `dispatch` serves every level: a parent's view
-  passes it to its children's views as it is, and a view whose model rarely changes is drawn with snabbdom's
-  `thunk` (e.g. Home's product list).
+  would leave them behind. A parent's view gives each child's view its own dispatch,
+  `Tea.dispatchTo(dispatch, '<Child>')`, which wraps the child's messages as the parent receives them. It is
+  the same function in every frame, and a child's model the same object while its state is, so a view whose
+  model rarely changes is drawn with snabbdom's `thunk` (e.g. Home's product list).
 - **Pages talk to their parent through events** (`Event`, handled by the parent's `onEvent`), never by
   acting on it. A program exports its `Message`, `Event` and `Command` as types only (a parent's with
   `Tea.MessageOf` and `Tea.CommandOf`), and its `ExternalMessage` (what its parent may give it with
-  `children.<Child>.update`, e.g. `BackPressed`) as a value; tests build their own constructors with
+  `children.<Child>.update`, e.g. `BackPressed`, which the child accepts in every state, answering with an
+  event when it is for the parent) as a value; tests build their own constructors with
   `Data.taggedEnum<Message>()`. Hidden pages keep receiving their completions, but their subscriptions run
   only while they are on top.
 - **Reads in the pages, writes in the app.** Write ports (`app/ports`, e.g. `ProductCommands`) have no read.
@@ -87,7 +91,7 @@ upgraded to in this app.
   changes (a `Source`), not from the page that wrote. Persistence ports take a domain `Snapshot` and return
   `UnvalidatedSnapshot`s; adapters never read domain fields.
 - **The domain decides what an entity is.** A new one is made with its `make` (e.g. `Product.make`), and
-  a form offers to submit only what `make` accepts, asking the domain's own rules (`Product.make`,
+  a form lets the user submit only what `make` accepts, asking the domain's own rules (`Product.make`,
   `Product.canExpireOn`) rather than repeating them; the command then carries the entity, valid by
   construction. `fromSnapshot` only reads stored data, and is more forgiving, so that what was stored can
   still be shown and deleted.
@@ -109,14 +113,14 @@ upgraded to in this app.
 
 ## Views
 
-TSX (`view.tsx`, `<part>.view.tsx`, and only views), rendered by snabbdom. Attach offers with `handlers(dispatch)` from
-`libs/tea-snabbdom`, matching the model's case: `on={menu._tag === 'Closed' ? on('click', menu.open) : {}}`.
-`onPreventingDefault` is the exception that always attaches (e.g. the native menu of a long press), with an
-optional offer. An input the user types into gets its text with `initialValue` (written only when the input
-is created), never from `props.value`: a frame older than the last keys would take them back. A large view
-splits along the parts; components that know nothing of the app (e.g. `libs/ui/overlay.tsx`) go to
-`libs/ui/`. The development server swaps the view in place when only `.tsx` and `.css` files change,
-wherever they are, and reloads the page otherwise.
+TSX (`view.tsx`, `<part>.view.tsx`, and only views), rendered by snabbdom. Attach the model's messages with
+`handlers(dispatch)` from `libs/tea-snabbdom`, matching the model's case:
+`on={menu._tag === 'Closed' ? on('click', menu.open) : {}}`. `onPreventingDefault` is the exception that
+always attaches (e.g. the native menu of a long press), with an optional message. An input the user types into
+gets its text with `initialValue` (written only when the input is created), never from `props.value`: a frame
+older than the last keys would take them back. A large view splits along the parts; components that know
+nothing of the app (e.g. `libs/ui/overlay.tsx`) go to `libs/ui/`. The development server swaps the view in
+place when only `.tsx` and `.css` files change, wherever they are, and reloads the page otherwise.
 
 ## Tests
 
@@ -126,15 +130,16 @@ wherever they are, and reloads the page otherwise.
   `test_support`): Biome lets only `*.test.ts` and other `*.test_*.ts` files import them, and `bun test`
   does not run them.
 - Every page's `program.test.ts` renders the real view for arbitrary states and checks, with
-  `dispatchViolations` (`@fgaudo/effect-tea/testing`), that each message it can send is accepted, and acts
-  once when sent twice unless it is listed as repeatable, and, with `missingOffers`, that nothing the user
-  could ask for and `update` accepts is missing from it, but what is `withheld` on purpose. Models in tests
-  come from `Tea.modelOf(program)`. A part's `update` has its own tests (`parts/<part>.test.ts`). The root's
-  tests act like a user (`app/user.test_support.ts`), with `rehearse`: each action is taken from what the
-  shown page's model offers, a subscription's message is heard when the test says so, and commands run on the
-  app's in-memory layer when the test runs them, none left pending. What a program listens to comes from
-  `Tea.subscriptionsOf(program)`. Generic helpers (`outcomesOf`, `onlyChanged`,
-  `assertProperty`) are in `libs/testing/`. Assert commands by value, rejections with `Tea.isRejected`, never
+  `dispatchViolations` (`@fgaudo/effect-tea/testing`), that each message it sends (`messagesSentBy`, in
+  `libs/tea-snabbdom`) is accepted, and acts once when sent twice unless it is listed as `repeatable`, and
+  that, of the candidates the test lists, nothing the user could ask for and `update` accepts is missing from
+  it, but what is `withheld` on purpose. Models in tests come from `program.makeModel`. A part's `update` has
+  its own tests (`parts/<part>.test.ts`). The root's tests act like a user (`app/user.test_support.ts`), with
+  `rehearse`: each message is taken from what the shown page's model holds, a subscription's message is heard
+  when the test says so, and commands run on the app's in-memory layer when the test runs them, none left
+  pending. A tap on a frame the state has moved past is tested with `update` itself. What a program listens to
+  comes from `Tea.subscriptionsOf(program)`. Generic helpers (`outcomesOf`, `onlyChanged`, `assertProperty`)
+  are in `libs/testing/`. Assert commands by value, rejections with `Tea.isRejected`, never
   as "state unchanged".
 - Branded and domain types have a `*.test_arbitrary.ts` file producing only valid values; build generators from them,
   not from `*Unsafe` constructors.

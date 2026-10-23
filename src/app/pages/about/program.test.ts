@@ -1,12 +1,11 @@
 import { describe, expect, test } from 'bun:test'
-import * as Tea from '@fgaudo/effect-tea'
 import { dispatchViolations } from '@fgaudo/effect-tea/testing'
 import * as Data from 'effect/Data'
 import * as Equal from 'effect/Equal'
 import * as Opt from 'effect/Option'
 import * as fc from 'fast-check'
 import { arbitrary as maybe } from '#libs/option/option.test_arbitrary.ts'
-import { dispatchedBy } from '#libs/tea-snabbdom/view.test_support.ts'
+import { messagesSentBy } from '#libs/tea-snabbdom/view.test_support.ts'
 import { assertProperty, outcomesOf } from '#libs/testing/update.test_support.ts'
 import { type Event, type Message, type Model, program } from './program.ts'
 import { licenses, state } from './program.test_arbitrary.ts'
@@ -17,7 +16,7 @@ const Ev = Data.taggedEnum<Event>()
 
 const { outcome, step } = outcomesOf(program.update)
 
-const makeModel = Tea.modelOf(program)
+const { makeModel } = program
 
 const message: fc.Arbitrary<Message> = fc.oneof(
   licenses.map((licenses) => Msg.LicensesLoaded({ licenses })),
@@ -32,10 +31,10 @@ describe('About update', () => {
 
   // Going back asks the parent to leave on every tap: the parent removes the page
   // on the first one, so a second tap from the same frame is rejected there.
-  test('every message the view can dispatch is accepted, and acts once when sent twice', () => {
+  test('the view sends what update accepts, all of it, and acts once when sent twice', () => {
     const check = dispatchViolations(program.update, { repeatable: (msg) => msg._tag === 'BackPressed' })
     fc.assert(fc.property(state, (before) => {
-      expect(check(before, dispatchedBy<Model, Message>(view, makeModel(before)))).toEqual([])
+      expect(check(before, messagesSentBy<Model, Message>(view, makeModel(before)), [Msg.BackPressed()])).toEqual([])
     }))
   })
 

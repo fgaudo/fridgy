@@ -1,13 +1,13 @@
 import { describe, expect, test } from 'bun:test'
 import * as Tea from '@fgaudo/effect-tea'
-import { dispatchViolations, missingOffers } from '@fgaudo/effect-tea/testing'
+import { dispatchViolations } from '@fgaudo/effect-tea/testing'
 import * as Data from 'effect/Data'
 import * as Equal from 'effect/Equal'
 import * as HashMap from 'effect/HashMap'
 import * as Opt from 'effect/Option'
 import * as fc from 'fast-check'
 import { tagPath } from '#libs/testing/tag-path.test_support.ts'
-import { dispatchedBy } from '#libs/tea-snabbdom/view.test_support.ts'
+import { messagesSentBy } from '#libs/tea-snabbdom/view.test_support.ts'
 import { assertProperty, onlyChanged, outcomesOf } from '#libs/testing/update.test_support.ts'
 import * as AddProduct from './parts/add-product.ts'
 import { submitting } from './parts/add-product.test_arbitrary.ts'
@@ -26,7 +26,7 @@ const ProductsMsg = Data.taggedEnum<Products.Message>()
 
 const { outcome, rejects, step } = outcomesOf(program.update)
 
-const makeModel = Tea.modelOf(program)
+const { makeModel } = program
 
 type AddProductMessage = AddProduct.Message
 type ProductsMessage = Products.Message
@@ -42,28 +42,20 @@ describe('Home update', () => {
   })
 
   describe('view and update agree', () => {
-    // Every message the view can dispatch is accepted in the state it was
-    // rendered from, which is what lets the engine treat such a rejection as a
-    // bug; and sent twice from the same frame (a double tap, or a tap on a view
-    // that has not caught up yet), it acts once. No action of this page is meant
-    // to repeat.
-    test('every message the view can dispatch is accepted, and acts once when sent twice', () => {
-      const check = dispatchViolations(program.update)
-      fc.assert(fc.property(state, fc.string(), (before, inputValue) => {
-        expect(check(before, dispatchedBy<Model, Message>(view, makeModel(before), inputValue))).toEqual([])
-      }))
-    })
-
-    // The other direction: what the user could ask for and `update` accepts is in the view, but for what
-    // the model hides on purpose: typing while the form is submitted, and a list that is not shown, or not
-    // yet (see AGENTS.md, "Refactoring status"), its invalid products.
-    test('every message the user could send and update accepts is offered by the view', () => {
+    // Each message the view sends is accepted in the state it was rendered from,
+    // or its control would do nothing; sent twice from the same frame (a double
+    // tap, or a tap on a view that has not caught up yet), it acts once, as no
+    // action of this page is meant to repeat. And what the user could ask for and
+    // `update` accepts is in the view, but for what the model hides on purpose:
+    // typing while the form is submitted, and a list that is not shown, or not yet
+    // (see AGENTS.md, "Refactoring status"), its invalid products.
+    test('the view sends what update accepts, all of it, and acts once when sent twice', () => {
       const shownItems = ({ products }: State) =>
         Opt.isSome(products.maybeNow) && products.list._tag === 'Loaded' ? products.list.items : []
       const isListShown = (state: State) => shownItems(state).length > 0
       const isShown = (state: State, id: string) =>
         shownItems(state).some((item) => item._tag === 'Valid' && item.id === id)
-      const missing = missingOffers(program.update, {
+      const check = dispatchViolations(program.update, {
         withheld: (msg, state) => {
           if (msg._tag === 'AddProduct') {
             const { _tag } = msg.message
@@ -102,16 +94,16 @@ describe('Home update', () => {
             ),
           ].map(fromProducts),
         ]
-        expect(missing(before, dispatchedBy<Model, Message>(view, makeModel(before), inputValue), askable)).toEqual([])
+        expect(check(before, messagesSentBy<Model, Message>(view, makeModel(before), inputValue), askable)).toEqual([])
       }))
     })
 
-    // Guards against the properties passing only because the view dispatches
+    // Guards against the property above passing only because the view sends
     // nothing interesting: the messages that `update` can reject must be
     // reachable from the view.
     test('the view reaches messages that update can reject', () => {
       const sent = new Set(
-        fc.sample(state, 1_000).flatMap((s) => dispatchedBy<Model, Message>(view, makeModel(s)).map(tagPath)),
+        fc.sample(state, 1_000).flatMap((s) => messagesSentBy<Model, Message>(view, makeModel(s)).map(tagPath)),
       )
       for (
         const expected of [

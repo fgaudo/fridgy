@@ -52,8 +52,8 @@ export type Deps = Notifications | Viewport | ProductCommands | ProductList
 
 export type Model = Readonly<{
   menu: Data.TaggedEnum<{
-    Closed: { open: Tea.Offered<Own> }
-    Open: { close: Tea.Offered<Own>; requestInfo: Tea.Offered<Own> }
+    Closed: { open: Own }
+    Open: { close: Own; requestInfo: Own }
   }>
   scrolling: Scrolling.Model
   addProduct: AddProduct.Model
@@ -120,10 +120,10 @@ export const program = compose({
     )
     return Opt.none()
   }),
-  makeModel: (state, { offer, children }): Model => ({
+  makeModel: (state, children): Model => ({
     menu: state.isMenuOpen
-      ? { _tag: 'Open', close: offer(Own.MenuClosed()), requestInfo: offer(Own.InfoRequested()) }
-      : { _tag: 'Closed', open: offer(Own.MenuOpened()) },
+      ? { _tag: 'Open', close: Own.MenuClosed(), requestInfo: Own.InfoRequested() }
+      : { _tag: 'Closed', open: Own.MenuOpened() },
     scrolling: children.Scrolling(state),
     addProduct: children.AddProduct(state),
     products: children.Products(state),

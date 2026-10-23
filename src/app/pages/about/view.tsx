@@ -1,8 +1,8 @@
 import * as Opt from 'effect/Option'
 import { handlers, type View } from '#libs/tea-snabbdom/tea-snabbdom.ts'
-import type { Model } from './program.ts'
+import type { Message, Model } from './program.ts'
 
-export const view: View<Model> = (model, dispatch) => {
+export const view: View<Model, Message> = (model, dispatch) => {
   const { on } = handlers(dispatch)
   return (
     <div props={{ className: 'flex flex-col gap-4 p-4 pt-sait' }}>

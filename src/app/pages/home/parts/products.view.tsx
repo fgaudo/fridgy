@@ -4,7 +4,7 @@ import * as DateTime from 'effect/DateTime'
 import * as Duration from 'effect/Duration'
 import { type Handlers, handlers } from '#libs/tea-snabbdom/tea-snabbdom.ts'
 import { cn } from '#libs/ui/class-names.ts'
-import type { ItemSelection, Model, ProductModel } from './products.ts'
+import type { ItemSelection, Message, Model, ProductModel } from './products.ts'
 
 type ValidProduct = Data.TaggedEnum.Value<ProductModel, 'Valid'>
 
@@ -49,7 +49,7 @@ const popEase = 'ease-[cubic-bezier(0.34,1.56,0.64,1)]'
 const isSelected = (selection: ItemSelection) =>
   selection._tag === 'Selected' || (selection._tag === 'Deleting' && selection.isSelected)
 
-const productRow = (product: ValidProduct, { onPreventingDefault }: Handlers) => (
+const productRow = (product: ValidProduct, { onPreventingDefault }: Handlers<Message>) => (
   <div
     key={product.id}
     props={{
@@ -96,7 +96,7 @@ const iconButton = (icon: string, label: string) => (
 )
 
 /** Under the top bar: how many products there are, or what can be done with the selected ones. */
-export const summary = (model: Model, dispatch: Dispatch) => {
+export const summary = (model: Model, dispatch: Dispatch<Message>) => {
   if (model._tag !== 'Available') {
     return []
   }
@@ -122,7 +122,7 @@ export const summary = (model: Model, dispatch: Dispatch) => {
 }
 
 // Invalid and corrupt products are not shown yet (see AGENTS.md, "Refactoring status").
-export const list = (model: Model, dispatch: Dispatch) => {
+export const list = (model: Model, dispatch: Dispatch<Message>) => {
   const events = handlers(dispatch)
   return (
     <div props={{ className: 'p-2 flex gap-2 flex-col pb-48 pt-28' }}>

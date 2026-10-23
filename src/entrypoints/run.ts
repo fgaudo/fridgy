@@ -14,7 +14,7 @@ import type { VNode } from 'snabbdom'
 
 export class RootViews extends Context.Service<
   RootViews,
-  Stream.Stream<Tea.View<App.Model, VNode>>
+  Stream.Stream<Tea.View<App.Model, App.Message, VNode>>
 >()('7e2b556446628b98') {}
 
 const program = Effect.gen(function*() {
@@ -31,7 +31,6 @@ const program = Effect.gen(function*() {
           Effect.andThen(SplashScreen.hide),
         ),
       }),
-    { onRejectedInput: 'die' },
   )
 })
 

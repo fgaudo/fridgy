@@ -1,5 +1,4 @@
 import { describe, expect, test } from 'bun:test'
-import * as Tea from '@fgaudo/effect-tea'
 import * as Data from 'effect/Data'
 import * as DateTime from 'effect/DateTime'
 import * as Equal from 'effect/Equal'
@@ -90,14 +89,14 @@ describe('AddProduct update', () => {
 
   // Guards against the property above passing only on rejections.
   test('the arbitrary forms describe products, and break each rule of a product', () => {
-    const offered = fc.sample(editing, 500).map((form) => Tea.modelOf(program)(form)._tag)
-    expect(offered).toContain('Complete')
-    expect(offered).toContain('Incomplete')
+    const shown = fc.sample(editing, 500).map((form) => program.makeModel(form)._tag)
+    expect(shown).toContain('Complete')
+    expect(shown).toContain('Incomplete')
   })
 
   test('the model says when the product would expire before the day it is added', () => {
     assertProperty([editing, utc], (form, now) => {
-      const model = Tea.modelOf(program)({ ...form, maybeNow: Opt.some(now) })
+      const model = program.makeModel({ ...form, maybeNow: Opt.some(now) })
       const isPast = Opt.exists(form.maybeExpirationDate, (expiration) => !Product.canExpireOn(now)(expiration))
       return isPast ? model._tag === 'Incomplete' && model.isExpirationPast : model._tag !== 'Submitting'
     })

@@ -1,8 +1,8 @@
-// The root's tests act like a user: each action is one the shown page's model
-// offers, never a message built by hand. Nothing runs by itself: a command runs,
+// The root's tests act like a user: each message is one the shown page's model
+// holds, never one built by hand. Nothing runs by itself: a command runs,
 // on the app's in-memory layer, and a subscription sends, when the test says so.
 import * as Tea from '@fgaudo/effect-tea'
-import { type Action, input, type Rehearsal, rehearse, tap } from '@fgaudo/effect-tea/testing'
+import { type Rehearsal, rehearse } from '@fgaudo/effect-tea/testing'
 import * as Arr from 'effect/Array'
 import * as Channel from 'effect/Channel'
 import * as Data from 'effect/Data'
@@ -13,6 +13,7 @@ import * as Opt from 'effect/Option'
 import * as References from 'effect/References'
 import { InMemoryStore } from '#infrastructure/in-memory/store.ts'
 import * as AppInMemory from './in-memory.layer.ts'
+import type * as AddProduct from './pages/home/parts/add-product.ts'
 import type * as Home from './pages/home/program.ts'
 import { type Command, type Deps, type Message, type Model, program, type State } from './program.ts'
 import { Shell } from './ports/shell.ts'
@@ -21,35 +22,33 @@ const Msg = Data.taggedEnum<Message>()
 
 export type User = Rehearsal<State, Model, Message, Command, never, Deps>
 
-/** An action of the shown page, when its model offers it. */
-export type Choice = (model: Model) => Opt.Option<Action>
+/** A message of the shown page, when its model holds it, as the root receives it. */
+export type Choice = (model: Model) => Opt.Option<Message>
 
-const onHome = (pick: (model: Home.Model) => Opt.Option<Action>): Choice => ({ page }) =>
-  page._tag === 'Home' ? pick(page.model) : Opt.none()
+// The models hold each program's own messages: wrapped here as the view's `dispatchTo` wraps them.
+const onHome = (pick: (model: Home.Model) => Opt.Option<Home.Message>): Choice => ({ page }) =>
+  page._tag === 'Home' ? Opt.map(pick(page.model), (message) => Msg.Home({ message })) : Opt.none()
 
-export const openMenu = onHome(({ menu }) => menu._tag === 'Closed' ? Opt.some(tap(menu.open)) : Opt.none())
+const onAddProduct = (pick: (model: AddProduct.Model) => Opt.Option<AddProduct.Message>) =>
+  onHome(({ addProduct }) => Opt.map(pick(addProduct), (message) => ({ _tag: 'AddProduct', message })))
 
-export const requestInfo = onHome(({ menu }) => menu._tag === 'Open' ? Opt.some(tap(menu.requestInfo)) : Opt.none())
+export const openMenu = onHome(({ menu }) => menu._tag === 'Closed' ? Opt.some(menu.open) : Opt.none())
+
+export const requestInfo = onHome(({ menu }) => menu._tag === 'Open' ? Opt.some(menu.requestInfo) : Opt.none())
 
 /** About is reached from Home's side menu. */
 export const openAbout = [openMenu, requestInfo]
 
-export const openForm = onHome(({ addProduct }) =>
-  addProduct._tag === 'Closed' ? Opt.some(tap(addProduct.open)) : Opt.none()
-)
+export const openForm = onAddProduct((form) => form._tag === 'Closed' ? Opt.some(form.open) : Opt.none())
 
 export const typeName = (name: string) =>
-  onHome(({ addProduct }) =>
-    addProduct._tag === 'Incomplete' || addProduct._tag === 'Complete'
-      ? Opt.some(input(addProduct.changeName, name))
-      : Opt.none()
+  onAddProduct((form) =>
+    form._tag === 'Incomplete' || form._tag === 'Complete' ? Opt.some(form.changeName(name)) : Opt.none()
   )
 
-export const submit = onHome(({ addProduct }) =>
-  addProduct._tag === 'Complete' ? Opt.some(tap(addProduct.submit)) : Opt.none()
-)
+export const submit = onAddProduct((form) => form._tag === 'Complete' ? Opt.some(form.submit) : Opt.none())
 
-/** Does each action in turn, each on the model the previous one left. */
+/** Sends each message in turn, each from the model the previous one left. */
 export const perform = Effect.fnUntraced(function*(user: User, choices: ReadonlyArray<Choice>) {
   for (const choice of choices) {
     yield* user.send(choice)

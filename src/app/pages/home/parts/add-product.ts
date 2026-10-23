@@ -71,16 +71,16 @@ type Fields = Readonly<{
 type Editable =
   & Fields
   & Readonly<{
-    close: Tea.Offered<Message>
-    changeName: (name: string) => Tea.Offered<Message>
-    changeExpiration: (expiration: string) => Tea.Offered<Message>
+    close: Message
+    changeName: (name: string) => Message
+    changeExpiration: (expiration: string) => Message
   }>
 
 export type Model = Data.TaggedEnum<{
-  Closed: { open: Tea.Offered<Message> }
+  Closed: { open: Message }
   /** Not a product yet: the name is blank, or the product would expire before the day it is added. */
   Incomplete: Editable & Readonly<{ isExpirationPast: boolean }>
-  Complete: Editable & Readonly<{ submit: Tea.Offered<Message> }>
+  Complete: Editable & Readonly<{ submit: Message }>
   /** The inputs are disabled until the submission completes. */
   Submitting: Fields
 }>
@@ -194,9 +194,9 @@ export const program: Tea.Program<{
 
   subscriptions: (state) => isOpen(state) ? HashMap.make(['clock', clock]) : HashMap.empty(),
 
-  makeModel: (state, { offer, offerInput }) => {
+  makeModel: (state) => {
     if (state._tag === 'Closed') {
-      return { _tag: 'Closed', open: offer(Message.Opened()) }
+      return { _tag: 'Closed', open: Message.Opened() }
     }
     const name = Opt.getOrElse(state.maybeName, () => '')
     const expirationDate = Opt.match(state.maybeExpirationDate, {
@@ -209,16 +209,16 @@ export const program: Tea.Program<{
     const editable = {
       name,
       expirationDate,
-      close: offer(Message.Closed()),
-      changeName: offerInput((name) => Message.NameChanged({ name }), name),
-      changeExpiration: offerInput((expiration) => Message.ExpirationDateChanged({ expiration }), expirationDate),
+      close: Message.Closed(),
+      changeName: (name: string) => Message.NameChanged({ name }),
+      changeExpiration: (expiration: string) => Message.ExpirationDateChanged({ expiration }),
     }
     const isExpirationPast = Opt.exists(
       Opt.all([state.maybeNow, state.maybeExpirationDate]),
       ([now, expiration]) => !Product.canExpireOn(now)(expiration),
     )
     return Opt.isSome(productOf(state))
-      ? { _tag: 'Complete', ...editable, submit: offer(Message.Started()) }
+      ? { _tag: 'Complete', ...editable, submit: Message.Started() }
       : { _tag: 'Incomplete', ...editable, isExpirationPast }
   },
 }

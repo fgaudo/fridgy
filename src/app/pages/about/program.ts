@@ -48,7 +48,7 @@ const Command = Data.taggedEnum<Command>()
 export type Deps = Licenses | Sayings
 
 export type Model = Readonly<{
-  back: Tea.Offered<Message>
+  back: Message
   licenses: State['licenses']
   /** Empty until a saying has been picked, or when there is none. */
   saying: string
@@ -92,8 +92,8 @@ export const program: Tea.Program<{
     }),
   }),
 
-  makeModel: (state, { offer }) => ({
-    back: offer(Message.BackPressed()),
+  makeModel: (state) => ({
+    back: Message.BackPressed(),
     licenses: state.licenses,
     saying: state.saying._tag === 'Picked' ? Opt.getOrElse(state.saying.maybeSaying, () => '') : '',
   }),

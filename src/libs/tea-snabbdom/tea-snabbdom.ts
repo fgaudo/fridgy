@@ -1,35 +1,39 @@
-import * as Tea from '@fgaudo/effect-tea'
+import type * as Tea from '@fgaudo/effect-tea'
+import * as Effect from 'effect/Effect'
 import type { Hooks, On, VNode } from 'snabbdom'
 
-export type View<Model> = Tea.View<Model, VNode>
+export type View<Model, Message> = Tea.View<Model, Message, VNode>
 
 type EventName = keyof HTMLElementEventMap
 
-/** Builds snabbdom's `on` from the model's offers: a handler exists only where the model has an action. */
-export const handlers = (dispatch: Tea.Dispatch) => {
-  const send = Tea.dispatchUnsafe(dispatch)
+/**
+ * Builds snabbdom's `on` from the messages in the model. snabbdom's handlers are plain callbacks: a dispatch
+ * needs no services and completes synchronously, so it runs with `Effect.runSync`.
+ */
+export const handlers = <Message>(dispatch: Tea.Dispatch<Message>) => {
+  const send = (message: Message) => Effect.runSync(dispatch(message))
   return {
-    on: (event: EventName, offer: Tea.Offered<unknown>): On => ({ [event]: () => send(offer) }),
+    on: (event: EventName, message: Message): On => ({ [event]: () => send(message) }),
     /** For a message built from what the event carries, e.g. an input's value. */
     onValue: <Value>(
       event: EventName,
-      toOffer: (value: Value) => Tea.Offered<unknown>,
+      toMessage: (value: Value) => Message,
       read: (event: Event) => Value,
-    ): On => ({ [event]: (domEvent: Event) => send(toOffer(read(domEvent))) }),
+    ): On => ({ [event]: (domEvent: Event) => send(toMessage(read(domEvent))) }),
     /**
-     * Always prevents the browser's default (e.g. the native menu of a long press), and sends the offered
-     * message when there is one.
+     * Always prevents the browser's default (e.g. the native menu of a long press), and sends the message when
+     * there is one.
      */
-    onPreventingDefault: (event: EventName, offer?: Tea.Offered<unknown>): On => ({
+    onPreventingDefault: (event: EventName, message?: Message): On => ({
       [event]: (domEvent: Event) => {
         domEvent.preventDefault()
-        if (offer !== undefined) send(offer)
+        if (message !== undefined) send(message)
       },
     }),
   }
 }
 
-export type Handlers = ReturnType<typeof handlers>
+export type Handlers<Message> = ReturnType<typeof handlers<Message>>
 
 /**
  * Writes `text` into an input only when it is created. From then on the user owns its text, and the program

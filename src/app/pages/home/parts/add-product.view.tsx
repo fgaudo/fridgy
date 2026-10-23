@@ -2,7 +2,7 @@ import type { Dispatch } from '@fgaudo/effect-tea'
 import type { VNode } from 'snabbdom'
 import { handlers, initialValue } from '#libs/tea-snabbdom/tea-snabbdom.ts'
 import { cn } from '#libs/ui/class-names.ts'
-import type { Model } from './add-product.ts'
+import type { Message, Model } from './add-product.ts'
 import { backdrop, fade } from '#libs/ui/overlay.tsx'
 
 const inputValue = (event: Event) => (event.target as HTMLInputElement).value
@@ -17,7 +17,7 @@ const field = (label: string, input: VNode) => (
 const inputClassName = 'w-full bg-white focus:inset-ring-1 shadow-md rounded-md p-3'
 
 /** The floating button that opens the form, dimmed while the list is being scrolled. */
-export const addButton = (model: Model, dispatch: Dispatch, isDimmed: boolean) => {
+export const addButton = (model: Model, dispatch: Dispatch<Message>, isDimmed: boolean) => {
   const { on } = handlers(dispatch)
   return (
     <div
@@ -41,7 +41,7 @@ export const addButton = (model: Model, dispatch: Dispatch, isDimmed: boolean) =
   )
 }
 
-export const modal = (model: Model, dispatch: Dispatch): ReadonlyArray<VNode> => {
+export const modal = (model: Model, dispatch: Dispatch<Message>): ReadonlyArray<VNode> => {
   if (model._tag === 'Closed') {
     return []
   }

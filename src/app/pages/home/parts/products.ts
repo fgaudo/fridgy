@@ -71,8 +71,8 @@ const Event = Data.taggedEnum<Event>()
 
 /** What a tap on a product does. */
 export type ItemSelection = Data.TaggedEnum<{
-  Unselected: { select: Tea.Offered<Message> }
-  Selected: { deselect: Tea.Offered<Message> }
+  Unselected: { select: Message }
+  Selected: { deselect: Message }
   /** The selected products are being deleted: nothing can be selected meanwhile. */
   Deleting: { isSelected: boolean }
 }>
@@ -107,8 +107,8 @@ export type Model = Data.TaggedEnum<{
       NothingSelected: object
       Possible: {
         count: PositiveInteger.PositiveInteger
-        deleteSelected: Tea.Offered<Message>
-        clearSelection: Tea.Offered<Message>
+        deleteSelected: Message
+        clearSelection: Message
       }
       InProgress: object
     }>
@@ -293,7 +293,7 @@ export const program: Tea.Program<{
 
   subscriptions: () => HashMap.make(['clock', clock], ['changes', changes]),
 
-  makeModel: (state, { offer }) => {
+  makeModel: (state) => {
     if (state.list._tag === 'Loading' || Opt.isNone(state.maybeNow)) {
       return { _tag: 'Initial' }
     }
@@ -311,8 +311,8 @@ export const program: Tea.Program<{
         return { _tag: 'Deleting', isSelected: HashSet.has(selection.ids, id) }
       }
       return Opt.exists(selection.maybeIds, HashSet.has(id))
-        ? { _tag: 'Selected', deselect: offer(Message.ItemDeselected({ id })) }
-        : { _tag: 'Unselected', select: offer(Message.ItemSelected({ id })) }
+        ? { _tag: 'Selected', deselect: Message.ItemDeselected({ id }) }
+        : { _tag: 'Unselected', select: Message.ItemSelected({ id }) }
     }
     return {
       _tag: 'Available',
@@ -323,8 +323,8 @@ export const program: Tea.Program<{
           onSome: (ids) => ({
             _tag: 'Possible',
             count: PositiveInteger.makeUnsafe(HashSet.size(ids)),
-            deleteSelected: offer(Message.DeleteStarted()),
-            clearSelection: offer(Message.SelectionCleared()),
+            deleteSelected: Message.DeleteStarted(),
+            clearSelection: Message.SelectionCleared(),
           }),
         }),
       total: PositiveInteger.makeUnsafe(items.length),

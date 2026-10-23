@@ -78,8 +78,9 @@ The whole app is one Elm-style program:
   into a virtual DOM.
 
 The runtime is [`@fgaudo/effect-tea`](https://github.com/fgaudo/effect-tea), a library of its own. On top of
-plain Elm it makes the view and `update` agree: the model only offers the actions `update` accepts, a double
-tap is harmless, and pages are composed by declaring them. Its README explains how.
+plain Elm, `update` rejects what does not apply, so a double tap is harmless; its testing tools check that the
+view sends only what `update` accepts, and all of it; and pages are composed by declaring them. Its README
+explains how.
 
 What the app adds:
 

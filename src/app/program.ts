@@ -133,7 +133,7 @@ export const program = compose({
     return Opt.none()
   }),
   subscriptions: () => HashMap.make(['back-button', backButton]),
-  makeModel: (state, { children }): Model => ({
+  makeModel: (state, children): Model => ({
     page: Match.valueTags(top(state), {
       Home: () => PageModel.Home({ model: children.Home(state) }),
       About: () => PageModel.About({ model: children.About(state) }),

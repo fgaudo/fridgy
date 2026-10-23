@@ -58,15 +58,16 @@ describe('Navigation', () => {
       yield* user.runAll
     })))
 
-  // The menu's entry tapped twice from the same frame: the second tap is stale.
+  // The menu's entry tapped twice from the same frame: the second tap reaches a
+  // state that has moved on, which the program ignores.
   test('About opens once on a double tap', () =>
     rehearsed(Effect.fnUntraced(function*(user) {
       yield* user.send(openMenu)
       const entry = requestInfo(yield* user.model)
       yield* user.send(() => entry)
-      yield* user.send(() => entry)
-      expect(tags(yield* user.state)).toEqual(['Home', 'About'])
-      expect((yield* user.ignored).map(tagPath)).toEqual(['Home › InfoRequested'])
+      const state = yield* user.state
+      expect(tags(state)).toEqual(['Home', 'About'])
+      expect(Opt.map(entry, (message) => Tea.isRejected(program.update(message)(state)))).toEqual(Opt.some(true))
       yield* user.runAll
     })))
 
