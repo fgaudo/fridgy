@@ -8,8 +8,14 @@ import * as About from './pages/about/view.tsx'
 import * as Home from './pages/home/view.tsx'
 import type { Message, Model } from './program.ts'
 
-export const view: View<Model, Message> = (model, dispatch) =>
-  Match.valueTags(model.page, {
-    Home: ({ model }) => Home.view(model, Tea.dispatchTo(dispatch, 'Home')),
-    About: ({ model }) => About.view(model, Tea.dispatchTo(dispatch, 'About')),
-  })
+// Each page is drawn in an element keyed by its name, so that snabbdom never patches one page's elements into
+// another's: its props module never removes a property, and Home's root would leave its classes (e.g.
+// `scroll-locked`, from the menu that opened About) to the page drawn in its place.
+export const view: View<Model, Message> = (model, dispatch) => (
+  <div key={model.page._tag}>
+    {Match.valueTags(model.page, {
+      Home: ({ model }) => Home.view(model, Tea.dispatchTo(dispatch, 'Home')),
+      About: ({ model }) => About.view(model, Tea.dispatchTo(dispatch, 'About')),
+    })}
+  </div>
+)

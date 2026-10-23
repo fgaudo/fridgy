@@ -8,6 +8,7 @@ import * as Opt from 'effect/Option'
 import { tagPath } from '#libs/testing/tag-path.test_support.ts'
 import * as Home from './pages/home/program.ts'
 import { type Command, type Page, program, type State } from './program.ts'
+import { view } from './view.tsx'
 import {
   back,
   hearNext,
@@ -68,6 +69,17 @@ describe('Navigation', () => {
       const state = yield* user.state
       expect(tags(state)).toEqual(['Home', 'About'])
       expect(Opt.map(entry, (message) => Tea.isRejected(program.update(message)(state)))).toEqual(Opt.some(true))
+      yield* user.runAll
+    })))
+
+  // Snabbdom patches an element with the same tag and key in place, keeping the
+  // props the new page does not set: Home's `scroll-locked` stopped About from scrolling.
+  test('each page is drawn in an element of its own', () =>
+    rehearsed(Effect.fnUntraced(function*(user) {
+      const drawn = Effect.map(user.model, (model) => view(model, () => Effect.void).key)
+      expect(yield* drawn).toBe('Home')
+      yield* perform(user, openAbout)
+      expect(yield* drawn).toBe('About')
       yield* user.runAll
     })))
 
