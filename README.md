@@ -64,6 +64,16 @@ bunx cap open android
 The app needs Android 7 (API 24) and Android System WebView 111: on an older WebView, Capacitor shows
 `src/error.html` instead (`minWebViewVersion` in `capacitor.config.ts`).
 
+The launcher icons and the splash screens in `android/app/src/main/res` are generated from `assets/logo.svg`
+by [`@capacitor/assets`](https://github.com/ionic-team/capacitor-assets), on the app's background color:
+
+```bash
+bunx @capacitor/assets@3.0.5 generate --android --iconBackgroundColor '#fef8e9' --splashBackgroundColor '#fef8e9'
+```
+
+The app has no dark theme, so the `drawable-*night*` splashes it also generates (from `assets/logo-dark.svg`)
+are deleted, and its reformatting of `AndroidManifest.xml` is reverted.
+
 A release raises the version in two places: `version` in `package.json`, which the About page shows, and
 `versionName` and `versionCode` in `android/app/build.gradle`. The Play Store only accepts a `versionCode`
 higher than the last one published (10, Fridgy 1.0.8).
