@@ -70,8 +70,7 @@
     "@effect/wa-sqlite@0.1.2": {
         "licenses": "MIT*",
         "copyright": "Copyright (c) 2023 Roy T. Hashimoto",
-        "name": "@effect/wa-sqlite",
-        "description": "[![wa-sqlite CI](https://github.com/rhashimoto/wa-sqlite/actions/workflows/ci.yml/badge.svg)](https://github.com/rhashimoto/wa-sqlite/actions/workflows/ci.yml)"
+        "name": "@effect/wa-sqlite"
     },
     "@fgaudo/effect-tea@0.6.0": {
         "licenses": "MIT",
@@ -133,9 +132,9 @@
         "licenses": "OFL-1.1",
         "repository": "https://github.com/fontsource/font-files",
         "publisher": "Google Inc.",
+        "copyright": "",
         "name": "@fontsource-variable/noto-sans-jp",
-        "description": "Self-host the Noto Sans JP font in a neatly bundled NPM package.",
-        "copyright": ""
+        "description": "Self-host the Noto Sans JP font in a neatly bundled NPM package."
     },
     "@fontsource-variable/noto-sans-kannada@5.3.0": {
         "licenses": "OFL-1.1",
@@ -149,9 +148,9 @@
         "licenses": "OFL-1.1",
         "repository": "https://github.com/fontsource/font-files",
         "publisher": "Google Inc.",
+        "copyright": "",
         "name": "@fontsource-variable/noto-sans-kr",
-        "description": "Self-host the Noto Sans KR font in a neatly bundled NPM package.",
-        "copyright": ""
+        "description": "Self-host the Noto Sans KR font in a neatly bundled NPM package."
     },
     "@fontsource-variable/noto-sans-malayalam@5.3.0": {
         "licenses": "OFL-1.1",
@@ -173,9 +172,9 @@
         "licenses": "OFL-1.1",
         "repository": "https://github.com/fontsource/font-files",
         "publisher": "Google Inc.",
+        "copyright": "",
         "name": "@fontsource-variable/noto-sans-sc",
-        "description": "Self-host the Noto Sans SC font in a neatly bundled NPM package.",
-        "copyright": ""
+        "description": "Self-host the Noto Sans SC font in a neatly bundled NPM package."
     },
     "@fontsource-variable/noto-sans-tamil@5.3.0": {
         "licenses": "OFL-1.1",
@@ -189,9 +188,9 @@
         "licenses": "OFL-1.1",
         "repository": "https://github.com/fontsource/font-files",
         "publisher": "Google Inc.",
+        "copyright": "",
         "name": "@fontsource-variable/noto-sans-tc",
-        "description": "Self-host the Noto Sans TC font in a neatly bundled NPM package.",
-        "copyright": ""
+        "description": "Self-host the Noto Sans TC font in a neatly bundled NPM package."
     },
     "@fontsource-variable/noto-sans-telugu@5.3.0": {
         "licenses": "OFL-1.1",
@@ -252,9 +251,9 @@
     "material-symbols@0.48.0": {
         "licenses": "Apache-2.0",
         "repository": "https://github.com/marella/material-symbols",
+        "copyright": "",
         "name": "material-symbols",
-        "description": "Latest variable icon fonts and CSS for Material Symbols.",
-        "copyright": ""
+        "description": "Latest variable icon fonts and CSS for Material Symbols."
     },
     "snabbdom@3.6.4": {
         "licenses": "MIT",

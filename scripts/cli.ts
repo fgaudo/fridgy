@@ -10,6 +10,7 @@ import * as Path from 'effect/Path'
 import * as Ref from 'effect/Ref'
 import * as Stream from 'effect/Stream'
 import * as Cli from 'effect/cli'
+import * as LicenseChecker from 'license-checker-rseidelsohn'
 import { tailwind } from './tailwind.ts'
 
 type Mode = 'development' | 'production'
@@ -196,6 +197,60 @@ const watchCommand = Cli.Command.make(
   }, Effect.scoped),
 )
 
+class LicensesFailed extends Data.TaggedError('LicensesFailed')<{ readonly cause: unknown }> {}
+
+const licensesCommand = Cli.Command.make(
+  'licenses',
+  {},
+  Effect.fn('licensesCommand')(function*() {
+    const resolve = yield* root
+    const path = yield* Path.Path
+    const fs = yield* FS.FileSystem
+    const found = yield* Effect.tryPromise({
+      try: () =>
+        new Promise<LicenseChecker.ModuleInfos>((resolvePromise, reject) =>
+          LicenseChecker.init(
+            {
+              start: resolve(),
+              production: true,
+              excludePackages: 'fridgy',
+              customFormat: { name: '', description: '', copyright: '' },
+            },
+            // It reports success with `null`, not the `undefined` of its types.
+            (error, modules) => (error instanceof Error ? reject(error) : resolvePromise(modules)),
+          )
+        ),
+      catch: (cause) => new LicensesFailed({ cause }),
+    })
+    const entries = yield* Effect.forEach(
+      Object.entries(found),
+      Effect.fn('readLicense')(function*([id, info]) {
+        // A package without a description gets the first paragraph of its README instead (npm's normalization of
+        // package.json), which may be markdown, such as a badge.
+        const packageJson = yield* fs.readFileString(path.join(String(info.path), 'package.json'))
+        const isDeclared = yield* Effect.try({
+          try: () => typeof JSON.parse(packageJson).description === 'string',
+          catch: (cause) => new LicensesFailed({ cause }),
+        })
+        const { licenses, repository, publisher, email, copyright, name, description } = info
+        return [id, {
+          licenses,
+          repository,
+          publisher,
+          email,
+          copyright,
+          name,
+          description: isDeclared ? description : undefined,
+        }] as const
+      }),
+    )
+    yield* fs.writeFileString(
+      resolve('src/app/pages/about/services/licenses/generated/licenses.json'),
+      `${JSON.stringify(Object.fromEntries(entries), null, 4)}\n`,
+    )
+  }),
+)
+
 const buildCommand = Cli.Command.make(
   'build',
   {},
@@ -217,7 +272,7 @@ const DotEnv = Layer.unwrap(Effect.gen(function*() {
 
 EffBun.BunRuntime.runMain(
   Cli.Command.make('cli.ts').pipe(
-    Cli.Command.withSubcommands([buildCommand, watchCommand]),
+    Cli.Command.withSubcommands([buildCommand, watchCommand, licensesCommand]),
     Cli.Command.run({ version: '1.0' }),
     Effect.provide(Layer.provideMerge(DotEnv, EffBun.BunServices.layer)),
   ),
