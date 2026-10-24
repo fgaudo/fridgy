@@ -61,8 +61,17 @@ bunx cap sync android
 bunx cap open android
 ```
 
-The app needs Android 7 (API 24) and Android System WebView 111: on an older WebView, Capacitor shows
+The app needs Android 10 (API 29) and Android System WebView 111: on an older WebView, Capacitor shows
 `src/error.html` instead (`minWebViewVersion` in `capacitor.config.ts`).
+
+An Android version is supported only if the app can be tested on it, in the Android emulator:
+
+- on a Google Play image for x86_64: below API 28, Google's Play images are x86 only, at 32 bits;
+- with Android System WebView as the WebView: Android 7 to 9 use Chrome instead;
+- with that WebView updated through the Play Store to `minWebViewVersion` or later, signed in with a test
+  account: the images ship an older one (74 on API 29).
+
+API 29 is the lowest version that meets all three, hence `minSdkVersion` 29 in `android/variables.gradle`.
 
 The launcher icons and the splash screens in `android/app/src/main/res` are generated from `assets/logo.svg`
 by [`@capacitor/assets`](https://github.com/ionic-team/capacitor-assets), on the app's background color:

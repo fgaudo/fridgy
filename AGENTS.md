@@ -15,6 +15,12 @@ A commit made with an AI agent ends with an `Assisted-by: <model>` trailer (e.g.
 never `Co-Authored-By`: the author is the person who commits. A clear subject is usually enough: a body only says
 why, or what the diff and the docs do not, never what they already describe.
 
+## Supported Android versions
+
+Only what can be tested is supported. `minSdkVersion` is the lowest Android version that meets the rules in
+`README.md` ("Build the Android app"); a change of it, of those rules or of `minWebViewVersion` (which can move
+the lowest version that meets them) is checked in the emulator first, and the README changes with it.
+
 ## Tooling enforces a lot
 
 Biome enforces import boundaries, by the role a file's name gives it:
