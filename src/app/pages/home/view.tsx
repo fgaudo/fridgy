@@ -27,7 +27,7 @@ const addButton = (model: Model, { on }: Handlers<Message>) => (
       props={{
         className: cn(
           'overflow-hidden whitespace-nowrap text-label-large transition-[max-width,margin,opacity] duration-200',
-          model.scrolling.isInteracting ? 'ml-0 max-w-0 opacity-0' : 'ml-3 max-w-40 opacity-100',
+          model.isInteracting ? 'ml-0 max-w-0 opacity-0' : 'ml-3 max-w-40 opacity-100',
         ),
       }}
     >
@@ -75,7 +75,7 @@ export const view: View<Model, Message> = (model, dispatch) => {
   const toProducts = Tea.dispatchTo(dispatch, 'Products')
   const selectionBar = Products.selectionBar(model.products, toProducts)
   const subtitle = Products.subtitle(model.products)
-  const { isAtTop } = model.scrolling
+  const { isAtTop } = model
   // Material's small top app bar, with the emphasized title and a subtitle of Material 3 Expressive: the surface's
   // color at rest, filled with a container's once the list scrolls under it.
   const appBar = (

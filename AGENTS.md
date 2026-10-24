@@ -85,7 +85,11 @@ here: a change to the library is made, released and then upgraded to in this app
   state, messages, commands and model, declared as a child of the page as the root declares the pages. What
   spans the parts (the menu, the back button) stays in the page's `program.ts`; what concerns one part, even
   how the user learns of its failure (Products' toast), stays in the part.
-  Parts that read each other's state are one part. A part is a folder (`parts/<part>/`) holding its program
+  Parts that read each other's state are one part. A part has a view of its own: what only the parent's view
+  shows (Home's scrolling, which its top app bar and add button follow) is the parent's state, not a part. A
+  parent's view never reads the fields of a part's model: it hands the model to the part's view functions,
+  which draw the part's pieces where the parent leaves room for them (Products' list, and its subtitle and
+  selection bar in Home's top app bar). A part is a folder (`parts/<part>/`) holding its program
   (`<part>.ts`), its view (`<part>.view.tsx`), their tests and arbitraries, and its `services/`.
   Never split a program into `messages`/`state`/`update` files: they would import each other in cycles.
 - **Children are declared, never wired.** A parent (`Tea.parent<{ state; command?; event?; external? }>()`)

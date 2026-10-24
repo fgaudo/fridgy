@@ -10,7 +10,6 @@ import { tagPath } from '#libs/testing/tag-path.test_support.ts'
 import { messagesSentBy } from '#libs/tea-snabbdom/view.test_support.ts'
 import { assertProperty, onlyChanged, outcomesOf } from '#libs/testing/update.test_support.ts'
 import * as Products from './parts/products/products.ts'
-import * as Scrolling from './parts/scrolling/scrolling.ts'
 import { type Event, handlesBack, type Message, type Model, program, type State } from './program.ts'
 import { message, state } from './program.test_arbitrary.ts'
 import { view } from './view.tsx'
@@ -168,25 +167,44 @@ describe('Home update', () => {
   })
 })
 
-// A part's subscriptions run only if the page passes them on.
-test('the parts listen to the clock, the storage and the scrolling', () => {
-  assertProperty([state], (s) => {
-    const subscriptions = Tea.subscriptionsOf(program)(s)
-    return ['clock', 'changes'].every((key) => HashMap.has(subscriptions, ['Products', key]))
-      && HashMap.has(subscriptions, ['Scrolling', 'scrolling'])
+describe('scrolling', () => {
+  test('InteractionChanged and AtTopChanged store their flag, and nothing else', () => {
+    assertProperty([state, fc.boolean()], (before, flag) => {
+      const interacting = step(Msg.InteractionChanged({ isInteracting: flag }), before)
+      const atTop = step(Msg.AtTopChanged({ isAtTop: flag }), before)
+      return Equal.equals(interacting.after, { ...before, isInteracting: flag })
+        && Equal.equals(atTop.after, { ...before, isAtTop: flag })
+        && interacting.commands.length === 0
+        && atTop.commands.length === 0
+    })
+  })
+
+  test('CloseToTopChanged scrolls to the top only when close to it and not interacting', () => {
+    assertProperty([state, fc.boolean()], (before, isCloseToTop) => {
+      const { after, commands } = step(Msg.CloseToTopChanged({ isCloseToTop }), before)
+      const shouldScroll = isCloseToTop && !before.isInteracting
+      return Equal.equals(after, before) && Equal.equals(commands, shouldScroll ? [{ _tag: 'ScrollToTop' }] : [])
+    })
   })
 })
 
-test('starts each part as the part starts, with its commands', () => {
-  const lifted = <Tag extends string, C>(_tag: Tag, commands: ReadonlyArray<C> = []) =>
-    commands.map((command) => ({ _tag, command }))
+// A part's subscriptions run only if the page passes them on.
+test('the page listens to the scrolling, and its part to the clock and the storage', () => {
+  assertProperty([state], (s) => {
+    const subscriptions = Tea.subscriptionsOf(program)(s)
+    return ['clock', 'changes'].every((key) => HashMap.has(subscriptions, ['Products', key]))
+      && ['scrolling', 'at-top', 'close-to-top'].every((key) => HashMap.has(subscriptions, key))
+  })
+})
+
+test('starts its part as the part starts, with its commands', () => {
   expect(program.init.state).toEqual({
     isMenuOpen: false,
-    scrolling: Scrolling.program.init.state,
+    isAtTop: true,
+    isInteracting: false,
     products: Products.program.init.state,
   })
-  expect(program.init.commands).toEqual([
-    ...lifted('Scrolling', Scrolling.program.init.commands),
-    ...lifted('Products', Products.program.init.commands),
-  ])
+  expect(program.init.commands).toEqual(
+    (Products.program.init.commands ?? []).map((command) => ({ _tag: 'Products', command })),
+  )
 })

@@ -1,19 +1,22 @@
-// The page: its parts, and what spans them (the side menu, the back button, the
-// way to the page that adds products).
+// The page: its part (the products), and what is the page's own (the side menu, the back button, the way to the
+// page that adds products, and the scrolling, which the top app bar and the add button follow).
 import * as Tea from '@fgaudo/effect-tea'
+import * as Channel from 'effect/Channel'
 import * as Data from 'effect/Data'
+import * as Effect from 'effect/Effect'
+import * as HashMap from 'effect/HashMap'
 import * as Match from 'effect/Match'
 import * as Opt from 'effect/Option'
 import * as Products from './parts/products/products.ts'
-import * as Scrolling from './parts/scrolling/scrolling.ts'
 import type { DeleteProducts } from './parts/products/services/delete-products/delete-products.ts'
 import type { Notifications } from './parts/products/services/notifications/notifications.ts'
 import type { ProductList } from './parts/products/services/product-list/product-list.ts'
-import type { Viewport } from './parts/scrolling/services/viewport/viewport.ts'
+import { Viewport } from './services/viewport/viewport.ts'
 
 export type State = Readonly<{
   isMenuOpen: boolean
-  scrolling: Scrolling.State
+  isAtTop: boolean
+  isInteracting: boolean
   products: Products.State
 }>
 
@@ -24,17 +27,24 @@ export type ExternalMessage = Data.TaggedEnum<{
 
 export const ExternalMessage = Data.taggedEnum<ExternalMessage>()
 
-/** The page's own messages: its parts' are made by `compose`. */
+/** The page's own messages: its part's are made by `compose`. */
 type Own =
   | ExternalMessage
   | Data.TaggedEnum<{
+    // From the view.
     MenuOpened: object
     MenuClosed: object
     InfoRequested: object
     AddRequested: object
+    // From subscriptions.
+    AtTopChanged: { isAtTop: boolean }
+    CloseToTopChanged: { isCloseToTop: boolean }
+    InteractionChanged: { isInteracting: boolean }
   }>
 
 const Own = Data.taggedEnum<Own>()
+
+type ScrollToTop = Readonly<{ _tag: 'ScrollToTop' }>
 
 export type Event = Data.TaggedEnum<{
   InfoRequested: object
@@ -54,27 +64,55 @@ export type Model = Readonly<{
     Open: { close: Own; requestInfo: Own }
   }>
   add: Own
-  scrolling: Scrolling.Model
+  /** The top app bar takes a container's color once the list scrolls under it. */
+  isAtTop: boolean
+  /** The add button shrinks while the user scrolls. */
+  isInteracting: boolean
   products: Products.Model
 }>
 
-const { child, compose } = Tea.parent<{ state: State; event: Event; external: ExternalMessage }>()
+const CLOSE_TO_TOP_THRESHOLD = 30
 
-// Each part is always there: only its subscriptions could be turned off.
+const scrolling: Tea.Subscription<Own, Viewport> = Channel.unwrap(
+  Effect.map(
+    Effect.service(Viewport),
+    ({ isScrolling }) => Channel.map(isScrolling, (isInteracting) => Own.InteractionChanged({ isInteracting })),
+  ),
+)
+
+const atTop: Tea.Subscription<Own, Viewport> = Channel.unwrap(
+  Effect.map(
+    Effect.service(Viewport),
+    ({ isNearTop }) => Channel.map(isNearTop(0), (isAtTop) => Own.AtTopChanged({ isAtTop })),
+  ),
+)
+
+const closeToTop: Tea.Subscription<Own, Viewport> = Channel.unwrap(
+  Effect.map(
+    Effect.service(Viewport),
+    ({ isNearTop }) =>
+      Channel.map(isNearTop(CLOSE_TO_TOP_THRESHOLD), (isCloseToTop) => Own.CloseToTopChanged({ isCloseToTop })),
+  ),
+)
+
+const scrollToTop = Effect.fn('ScrollToTop')(function*() {
+  const { scrollToTop } = yield* Viewport
+  yield* scrollToTop
+  return Opt.none()
+})
+
+const { child, compose } = Tea.parent<{ state: State; command: ScrollToTop; event: Event; external: ExternalMessage }>()
+
+// The part is always there: only its subscriptions could be turned off.
 export const program = compose({
   init: (children) => {
-    const scrolling = children.Scrolling.init
     const products = children.Products.init
     return {
-      state: { isMenuOpen: false, scrolling: scrolling.state, products: products.state },
-      commands: [...scrolling.commands, ...products.commands],
+      state: { isMenuOpen: false, isAtTop: true, isInteracting: false, products: products.state },
+      commands: products.commands,
     }
   },
   children: {
-    Scrolling: child(Scrolling.program, {
-      get: (state) => Opt.some(state.scrolling),
-      set: (state, scrolling) => ({ ...state, scrolling }),
-    }),
     Products: child(Products.program, {
       get: (state) => Opt.some(state.products),
       set: (state, products) => ({ ...state, products }),
@@ -92,13 +130,23 @@ export const program = compose({
       // Each tap asks: the parent opens the page once.
       AddRequested: () => ({ state, events: [Event.AddRequested()] }),
       BackPressed: () => state.isMenuOpen ? { state: { ...state, isMenuOpen: false } } : { state },
+      AtTopChanged: ({ isAtTop }) => ({ state: { ...state, isAtTop } }),
+      InteractionChanged: ({ isInteracting }) => ({ state: { ...state, isInteracting } }),
+      // Close to the top, the list snaps to it, unless the user is scrolling it.
+      CloseToTopChanged: ({ isCloseToTop }) => ({
+        state,
+        commands: !state.isInteracting && isCloseToTop ? [{ _tag: 'ScrollToTop' } as const] : [],
+      }),
     }),
+  runCommand: scrollToTop,
+  subscriptions: () => HashMap.make(['scrolling', scrolling], ['at-top', atTop], ['close-to-top', closeToTop]),
   makeModel: (state, children): Model => ({
     menu: state.isMenuOpen
       ? { _tag: 'Open', close: Own.MenuClosed(), requestInfo: Own.InfoRequested() }
       : { _tag: 'Closed', open: Own.MenuOpened() },
     add: Own.AddRequested(),
-    scrolling: children.Scrolling(state),
+    isAtTop: state.isAtTop,
+    isInteracting: state.isInteracting,
     products: children.Products(state),
   }),
 })

@@ -14,16 +14,20 @@ const Msg = Data.taggedEnum<Message>()
 /** Any state of the page. */
 export const state: fc.Arbitrary<State> = fc.record({
   isMenuOpen: fc.boolean(),
-  scrolling: fc.record({ isAtTop: fc.boolean(), isInteracting: fc.boolean() }),
+  isAtTop: fc.boolean(),
+  isInteracting: fc.boolean(),
   products: Products.state,
 })
 
-/** Any message of the page, but the scrolling ones: that part has its own tests and rejects nothing. */
+/** Any message of the page. */
 export const message: fc.Arbitrary<Message> = fc.oneof(
   fc.constant(Msg.MenuOpened()),
   fc.constant(Msg.MenuClosed()),
   fc.constant(Msg.InfoRequested()),
   fc.constant(Msg.AddRequested()),
   fc.constant(Msg.BackPressed()),
+  fc.boolean().map((isAtTop) => Msg.AtTopChanged({ isAtTop })),
+  fc.boolean().map((isCloseToTop) => Msg.CloseToTopChanged({ isCloseToTop })),
+  fc.boolean().map((isInteracting) => Msg.InteractionChanged({ isInteracting })),
   Products.message.map(fromProducts),
 )
