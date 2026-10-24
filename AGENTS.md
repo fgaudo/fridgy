@@ -192,6 +192,9 @@ place when only `.tsx` and `.css` files change, wherever they are, and reloads t
 - A function that returns an effect made with `Effect.gen` is an `Effect.fn('Name')` instead, with what would
   follow it in a `pipe` as its further arguments; `Effect.fnUntraced` where it runs often (on every frame, in a
   loop). An effect that takes no arguments (a layer, a migration) stays an `Effect.gen`.
+- Nothing deprecated: no module, type, function, method or option marked `@deprecated`, of any dependency, in
+  code, tests or scripts. Use what the deprecation names instead, and replace a use found in passing.
+  `bun run lint` warns about one (Oxlint's type-aware `typescript/no-deprecated`).
 - Format only the files you changed (`bunx dprint fmt <files>`): a bare `dprint fmt` rewrites generated
   files, Android resources and untouched code.
 - Comments only for what the code cannot say: a reason, an invariant the types do not show, a platform

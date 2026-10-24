@@ -18,7 +18,7 @@ architecture.
 | Storage                    | SQLite (WebAssembly, in a worker)                                                                                          |
 | Android packaging          | [Capacitor](https://capacitorjs.com)                                                                                       |
 | Runtime, bundler, tests    | [Bun](https://bun.com), with [fast-check](https://fast-check.dev) for property tests                                       |
-| Lint                       | [Biome](https://biomejs.dev)                                                                                               |
+| Lint                       | [Biome](https://biomejs.dev), and [Oxlint](https://oxc.rs) for uses of deprecated APIs                                     |
 
 ## Getting started
 
@@ -82,12 +82,12 @@ release is tagged in git (`v2026.10.0`).
 
 ## Development
 
-| Command                   |                                                  |
-| ------------------------- | ------------------------------------------------ |
-| `bun run typecheck`       | Type-check the project                           |
-| `bun run test`            | Run the tests                                    |
-| `bun run lint`            | Lint, including the import rules described below |
-| `bunx dprint fmt <files>` | Format the files you changed                     |
+| Command                   |                                                                                  |
+| ------------------------- | -------------------------------------------------------------------------------- |
+| `bun run typecheck`       | Type-check the project                                                           |
+| `bun run test`            | Run the tests                                                                    |
+| `bun run lint`            | Lint, including the import rules described below, and warn about deprecated APIs |
+| `bunx dprint fmt <files>` | Format the files you changed                                                     |
 
 ## Architecture
 
