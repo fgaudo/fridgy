@@ -10,15 +10,15 @@ import * as Home from './pages/home/program.ts'
 import { type Page, program, type State } from './program.ts'
 import { view } from './view.tsx'
 import {
+  addUndated,
   back,
   hearNext,
   openAbout,
-  openForm,
+  openAddProducts,
   openMenu,
   perform,
   rehearsed,
   requestInfo,
-  submit,
   typeName,
 } from './user.test_support.ts'
 
@@ -108,18 +108,30 @@ describe('Navigation', () => {
     expect(Tea.isRejected(program.update({ _tag: 'BackRequested' })(program.init.state))).toBe(true)
   })
 
-  test('Home receives the completion of its operation while About is shown', () =>
+  // The add button tapped twice from the same frame: the second tap asks Home again, which changes nothing.
+  test('Home opens the page that adds products on top, once on a double tap', () =>
     rehearsed(Effect.fnUntraced(function*(user) {
-      yield* perform(user, [openForm, typeName('Milk')])
-      // The form adds a product only once it knows the time.
-      yield* hearNext(user, ['Home', ['AddProduct', 'clock']])
-      yield* user.send(submit)
-      yield* perform(user, openAbout)
-      yield* user.run((command) => tagPath(command) === 'Home › AddProduct › Add')
-      const state = yield* user.state
-      expect(tags(state)).toEqual(['Home', 'About'])
-      expect(Opt.map(homeState(state), (home) => home.addProduct._tag)).toEqual(Opt.some('Closed'))
-      yield* user.runAll
+      const add = openAddProducts(yield* user.model)
+      yield* user.send(() => add)
+      yield* user.send(() => add)
+      expect(tags(yield* user.state)).toEqual(['Home', 'AddProducts'])
+    })))
+
+  test('a product added on its page is in the list of Home once the page is left', () =>
+    rehearsed(Effect.fnUntraced(function*(user) {
+      yield* perform(user, [openAddProducts, typeName('Milk')])
+      // The page adds a product only once it knows the time.
+      yield* hearNext(user, ['AddProducts', 'clock'])
+      yield* user.send(addUndated)
+      yield* user.run((command) => tagPath(command) === 'AddProducts › Add')
+      yield* back(user)
+      expect(tags(yield* user.state)).toEqual(['Home'])
+      yield* hearNext(user, ['Home', ['Products', 'changes']])
+      const names = Opt.map(homeState(yield* user.state), ({ products: { list } }) =>
+        list._tag === 'Loaded'
+          ? list.items.flatMap((item): ReadonlyArray<string> => item._tag === 'Valid' ? [item.product.name] : [])
+          : [])
+      expect(names).toEqual(Opt.some(['Milk']))
     })))
 })
 
@@ -161,7 +173,7 @@ describe('Subscriptions', () => {
       yield* user.runAll
       yield* back(user)
       expect(yield* listensToBack).toBe(false)
-      yield* user.send(openForm)
+      yield* user.send(openAddProducts)
       expect(yield* listensToBack).toBe(true)
     })))
 })

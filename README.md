@@ -4,9 +4,10 @@ Fridgy keeps track of the food in your fridge and of when it expires. It is an A
 during development) written in TypeScript, with a strictly functional, [Elm](https://elm-lang.org)-style
 architecture.
 
-> **Status:** work in progress. The main page (product list, adding and selecting products, expiration
-> tracking) and the About page (version, links, licenses) run on the current architecture, with navigation
-> between them and Android's back button.
+> **Status:** work in progress. The main page (product list, selecting products, expiration tracking), the page
+> that adds products one after another (a scanned barcode names the product, and the date is typed as digits,
+> from which the user picks the day they meant) and the About page (version, links, licenses) run on the current
+> architecture, with navigation between them and Android's back button.
 
 ## Stack
 
@@ -124,7 +125,7 @@ explains how.
 What the app adds:
 
 - **The root owns navigation**, a stack of pages. Pages ask for it through events (Elm's "OutMsg"), e.g. to
-  open About or to be left.
+  open About or the page that adds products, or to be left.
 - **An asynchronous operation is a state that waits for its completion**, which only that state accepts.
 - **Bugs crash the app**; expected errors are typed and handled with Effect.
 

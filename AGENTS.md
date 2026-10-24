@@ -83,7 +83,8 @@ here: a change to the library is made, released and then upgraded to in this app
 - **A program is split by concern, never by kind.** A program lives in one module until it is too large
   (300–400 lines); then it splits into **parts** (`pages/<page>/parts/`), each a `Tea.Program` with its own
   state, messages, commands and model, declared as a child of the page as the root declares the pages. What
-  spans the parts (the menu, the back button, a toast for a part's failure) stays in the page's `program.ts`.
+  spans the parts (the menu, the back button) stays in the page's `program.ts`; what concerns one part, even
+  how the user learns of its failure (Products' toast), stays in the part.
   Parts that read each other's state are one part. A part is a folder (`parts/<part>/`) holding its program
   (`<part>.ts`), its view (`<part>.view.tsx`), their tests and arbitraries, and its `services/`.
   Never split a program into `messages`/`state`/`update` files: they would import each other in cycles.
@@ -111,10 +112,10 @@ here: a change to the library is made, released and then upgraded to in this app
   it and free to change with it. It is a folder named after it in its consumer's `services/`, holding the
   service, its adapters (the layers that provide it, named after what backs them), its contract and their
   tests: a part's (`parts/products/services/product-list/`: `product-list.ts`, `product-list.sql.ts`, …), a
-  page's (`services/notifications/`), the root's (`app/services/shell/`). So a program's folder holds the
+  page's (`pages/add-products/services/scanner/`), the root's (`app/services/shell/`). So a program's folder holds the
   program (`program.ts`, `view.tsx`, `layer.ts`, their tests), its `services/` and its children (`parts/`,
-  `pages/`). Two consumers that need the same thing today each have their own service (AddProduct's
-  `AddProducts`, Products' `DeleteProducts`): what they truly share is the domain and the infrastructure, never
+  `pages/`). Two consumers that need the same thing today each have their own service (the AddProducts
+  page's `AddProducts` and Products' `DeleteProducts`; each one's `Notifications`): what they truly share is the domain and the infrastructure, never
   the service. Write services have no read: a program learns about writes from the storage's changes (a
   `Source`), not from the code that wrote. Persistence services take a domain `Snapshot` and return
   `UnvalidatedSnapshot`s;
@@ -243,5 +244,9 @@ outlined text fields; selected things turn the top app bar into a contextual one
 - Home's view only shows `Valid` products: `Invalid` and `Corrupt` ones are in the model and counted in
   `total`, but not rendered, so the count can exceed the rows shown and an invalid product cannot be
   selected or deleted from the UI.
+
+- A scanned barcode is the product's name as it is: no lookup of the product (e.g. Open Food Facts) yet. The
+  scanner (`getUserMedia` and the Shape Detection API, `scanner.browser.ts`) has not been tried on Android yet;
+  on a desktop without the API (Chrome on Windows), the form says the camera is not available.
 
 When an item is resolved, update this section.

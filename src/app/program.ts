@@ -9,11 +9,13 @@ import * as HashMap from 'effect/HashMap'
 import * as Match from 'effect/Match'
 import * as Opt from 'effect/Option'
 import * as About from './pages/about/program.ts'
+import * as AddProducts from './pages/add-products/program.ts'
 import * as Home from './pages/home/program.ts'
 import { Shell } from './services/shell/shell.ts'
 
 export type Page = Data.TaggedEnum<{
   Home: Readonly<{ state: Home.State }>
+  AddProducts: Readonly<{ state: AddProducts.State }>
   About: Readonly<{ state: About.State }>
 }>
 
@@ -27,12 +29,13 @@ export type State = Readonly<{
 /** The back button: the root's own message, the pages' are made by `compose`. */
 type BackRequested = Readonly<{ _tag: 'BackRequested' }>
 
-export type Deps = Shell | Home.Deps | About.Deps
+export type Deps = Shell | Home.Deps | AddProducts.Deps | About.Deps
 
 /** Only the page on top is drawn. */
 export type Model = Readonly<{
   page: Data.TaggedEnum<{
     Home: { model: Home.Model }
+    AddProducts: { model: AddProducts.Model }
     About: { model: About.Model }
   }>
 }>
@@ -75,6 +78,8 @@ const leave = (state: State) => {
 const handlesBack = (state: State) =>
   Match.valueTags(top(state), {
     Home: ({ state }) => Home.handlesBack(state),
+    // While a product is being added, the button is held so that it does not leave the app.
+    AddProducts: () => true,
     About: () => true,
   })
 
@@ -99,6 +104,11 @@ export const program = compose({
       subscribed: shownPageState('Home'),
       set: (state, home) => replacePage(state, Page.Home({ state: home })),
     }),
+    AddProducts: child(AddProducts.program, {
+      get: pageState('AddProducts'),
+      subscribed: shownPageState('AddProducts'),
+      set: (state, page) => replacePage(state, Page.AddProducts({ state: page })),
+    }),
     About: child(About.program, {
       get: pageState('About'),
       subscribed: shownPageState('About'),
@@ -111,6 +121,7 @@ export const program = compose({
     Match.valueTags(top(state), {
       Home: ({ state: home }) =>
         Home.handlesBack(home) ? children.Home.update(Home.ExternalMessage.BackPressed())(state) : Tea.reject,
+      AddProducts: () => children.AddProducts.update(AddProducts.ExternalMessage.BackPressed())(state),
       About: () => children.About.update(About.ExternalMessage.BackPressed())(state),
     }),
   onEvent: {
@@ -122,13 +133,21 @@ export const program = compose({
           const about = children.About.init
           return { state: push(state, Page.About({ state: about.state })), commands: about.commands }
         },
+        // Likewise, the page that adds products opens once on a double tap.
+        AddRequested: () => {
+          if (top(state)._tag === 'AddProducts') return { state }
+          const page = children.AddProducts.init
+          return { state: push(state, Page.AddProducts({ state: page.state })), commands: page.commands }
+        },
       }),
+    AddProducts: () => leave,
     About: () => leave,
   },
   subscriptions: (state) => handlesBack(state) ? HashMap.make(['back-button', backButton]) : HashMap.empty(),
   makeModel: (state, children): Model => ({
     page: Match.valueTags(top(state), {
       Home: () => PageModel.Home({ model: children.Home(state) }),
+      AddProducts: () => PageModel.AddProducts({ model: children.AddProducts(state) }),
       About: () => PageModel.About({ model: children.About(state) }),
     }),
   }),

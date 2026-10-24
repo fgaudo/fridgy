@@ -18,6 +18,7 @@ import * as DeleteProducts from './services/delete-products/delete-products.ts'
 import * as NonEmptyHashSet from '#libs/collections/non-empty-hash-set.ts'
 import * as PositiveInteger from '#libs/numbers/positive-integer.ts'
 import type * as UnitInterval from '#libs/numbers/unit-interval.ts'
+import { Notifications } from './services/notifications/notifications.ts'
 import { ProductList, type StoredProduct } from './services/product-list/product-list.ts'
 
 export type Product = Data.TaggedEnum<{
@@ -61,13 +62,12 @@ export type Message = Data.TaggedEnum<{
 
 const Message = Data.taggedEnum<Message>()
 
-export type Command = Data.TaggedEnum<{ Delete: { ids: NonEmptyHashSet.NonEmptyHashSet<string> } }>
+export type Command = Data.TaggedEnum<{
+  Delete: { ids: NonEmptyHashSet.NonEmptyHashSet<string> }
+  ShowToast: { text: string }
+}>
 
 const Command = Data.taggedEnum<Command>()
-
-export type Event = Data.TaggedEnum<{ DeleteFailed: object }>
-
-const Event = Data.taggedEnum<Event>()
 
 /** What a tap on a product does. */
 export type ItemSelection = Data.TaggedEnum<{
@@ -180,6 +180,17 @@ const deleteProducts = Effect.fn('DeleteProducts')(
   Effect.withLogSpan('DeleteProducts'),
 )
 
+const showToast = Effect.fn('ShowToast')(
+  function*({ text }: Readonly<{ text: string }>) {
+    const { showToast } = yield* Notifications
+    yield* showToast(text).pipe(
+      Effect.catchTag('NotificationError', (error) => Effect.logWarning('Could not show toast', error.cause)),
+    )
+    return Opt.none()
+  },
+  Effect.withLogSpan('ShowToast'),
+)
+
 type ProductStatus = Data.TaggedEnum.Value<ProductModel, 'Valid'>['status']
 
 const statusAt = (now: DateTime.Utc, product: Domain.Product): ProductStatus =>
@@ -199,8 +210,7 @@ export const program: Tea.Program<{
   model: Model
   message: Message
   command: Command
-  services: DeleteProducts.DeleteProducts | ProductList
-  event: Event
+  services: DeleteProducts.DeleteProducts | ProductList | Notifications
 }> = {
   init: {
     state: {
@@ -210,7 +220,7 @@ export const program: Tea.Program<{
     },
   },
 
-  update: Match.typeTags<Message, (state: State) => Tea.Transition<State, Command, Event>>()({
+  update: Match.typeTags<Message, (state: State) => Tea.Transition<State, Command>>()({
     ListChanged: ({ result }) => (state) => {
       if (Result.isFailure(result)) {
         return { state: { ...state, list: { _tag: 'Failed' } } }
@@ -282,13 +292,14 @@ export const program: Tea.Program<{
         ? { state: { ...state, selection: { _tag: 'Selecting', maybeIds: Opt.none() } } }
         : {
           state: { ...state, selection: { _tag: 'Selecting', maybeIds: Opt.some(state.selection.ids) } },
-          events: [Event.DeleteFailed()],
+          commands: [Command.ShowToast({ text: 'Could not delete the products' })],
         }
     },
   }),
 
   runCommand: Match.typeTags<Command>()({
     Delete: deleteProducts,
+    ShowToast: showToast,
   }),
 
   subscriptions: () => HashMap.make(['clock', clock], ['changes', changes]),

@@ -14,4 +14,4 @@ export const AddProduct = Req.of<AddProduct>()
 export class AddProducts extends Context.Service<
   AddProducts,
   { readonly add: RequestResolver.RequestResolver<AddProduct> }
->()('f61de35c16d1eb09') {}
+>()('8550d5bf723bda4e') {}

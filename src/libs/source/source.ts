@@ -10,9 +10,10 @@ export type Source<A, Done, E = never, R = never> = Channel.Channel<A, E, Done, 
 
 /**
  * A stream, as a source that never ends: it sends each value, and once the stream has ended, it keeps
- * listening to nothing. For adapters built on a library's stream, whose type cannot say how it ends.
+ * listening to nothing; it fails as the stream fails. For adapters built on a library's stream, whose type
+ * cannot say how it ends.
  */
-export const fromStream = <A, R>(stream: Stream.Stream<A, never, R>): Source<A, never, never, R> =>
+export const fromStream = <A, E, R>(stream: Stream.Stream<A, E, R>): Source<A, never, E, R> =>
   Stream.toChannel(stream).pipe(
     Channel.flattenArray,
     Channel.concatWith(() => Channel.never),

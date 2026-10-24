@@ -13,7 +13,7 @@ import * as Opt from 'effect/Option'
 import * as References from 'effect/References'
 import * as SqliteMemory from '#infrastructure/sqlite/memory.layer.ts'
 import * as App from './layer.ts'
-import type * as AddProduct from './pages/home/parts/add-product/add-product.ts'
+import type * as AddProducts from './pages/add-products/program.ts'
 import type * as Home from './pages/home/program.ts'
 import { type Command, type Deps, type Message, type Model, program, type State } from './program.ts'
 import { Shell } from './services/shell/shell.ts'
@@ -29,8 +29,8 @@ export type Choice = (model: Model) => Opt.Option<Message>
 const onHome = (pick: (model: Home.Model) => Opt.Option<Home.Message>): Choice => ({ page }) =>
   page._tag === 'Home' ? Opt.map(pick(page.model), (message) => Msg.Home({ message })) : Opt.none()
 
-const onAddProduct = (pick: (model: AddProduct.Model) => Opt.Option<AddProduct.Message>) =>
-  onHome(({ addProduct }) => Opt.map(pick(addProduct), (message) => ({ _tag: 'AddProduct', message })))
+const onAddProducts = (pick: (model: AddProducts.Model) => Opt.Option<AddProducts.Message>): Choice => ({ page }) =>
+  page._tag === 'AddProducts' ? Opt.map(pick(page.model), (message) => Msg.AddProducts({ message })) : Opt.none()
 
 export const openMenu = onHome(({ menu }) => menu._tag === 'Closed' ? Opt.some(menu.open) : Opt.none())
 
@@ -39,14 +39,14 @@ export const requestInfo = onHome(({ menu }) => menu._tag === 'Open' ? Opt.some(
 /** About is reached from Home's side menu. */
 export const openAbout = [openMenu, requestInfo]
 
-export const openForm = onAddProduct((form) => form._tag === 'Closed' ? Opt.some(form.open) : Opt.none())
+/** The page that adds products is reached from Home's button. */
+export const openAddProducts = onHome(({ add }) => Opt.some(add))
 
 export const typeName = (name: string) =>
-  onAddProduct((form) =>
-    form._tag === 'Incomplete' || form._tag === 'Complete' ? Opt.some(form.changeName(name)) : Opt.none()
-  )
+  onAddProducts((form) => form._tag === 'Editing' ? Opt.some(form.changeName(name)) : Opt.none())
 
-export const submit = onAddProduct((form) => form._tag === 'Complete' ? Opt.some(form.submit) : Opt.none())
+/** Adds the product that never expires, before any digit is typed. */
+export const addUndated = onAddProducts((form) => form._tag === 'Editing' ? form.maybeAddUndated : Opt.none())
 
 /** Sends each message in turn, each from the model the previous one left. */
 export const perform = Effect.fnUntraced(function*(user: User, choices: ReadonlyArray<Choice>) {

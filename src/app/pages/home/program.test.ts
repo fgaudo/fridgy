@@ -9,31 +9,23 @@ import * as fc from 'fast-check'
 import { tagPath } from '#libs/testing/tag-path.test_support.ts'
 import { messagesSentBy } from '#libs/tea-snabbdom/view.test_support.ts'
 import { assertProperty, onlyChanged, outcomesOf } from '#libs/testing/update.test_support.ts'
-import * as AddProduct from './parts/add-product/add-product.ts'
-import { submitting } from './parts/add-product/add-product.test_arbitrary.ts'
 import * as Products from './parts/products/products.ts'
-import { deleting } from './parts/products/products.test_arbitrary.ts'
 import * as Scrolling from './parts/scrolling/scrolling.ts'
-import { type Command, type Event, handlesBack, type Message, type Model, program, type State } from './program.ts'
+import { type Event, handlesBack, type Message, type Model, program, type State } from './program.ts'
 import { message, state } from './program.test_arbitrary.ts'
 import { view } from './view.tsx'
 
 const Msg = Data.taggedEnum<Message>()
-const Cmd = Data.taggedEnum<Command>()
 const Ev = Data.taggedEnum<Event>()
-const AddProductMsg = Data.taggedEnum<AddProduct.Message>()
 const ProductsMsg = Data.taggedEnum<Products.Message>()
 
 const { outcome, rejects, step } = outcomesOf(program.update)
 
 const { makeModel } = program
 
-type AddProductMessage = AddProduct.Message
 type ProductsMessage = Products.Message
 
 // A part's message as the page receives it: the library makes it, the test builds it.
-const fromAddProduct = (message: AddProductMessage): Message => ({ _tag: 'AddProduct', message })
-
 const fromProducts = (message: ProductsMessage): Message => ({ _tag: 'Products', message })
 
 describe('Home update', () => {
@@ -44,10 +36,10 @@ describe('Home update', () => {
   describe('view and update agree', () => {
     // Each message the view sends is accepted in the state it was rendered from,
     // or its control would do nothing; sent twice from the same frame (a double
-    // tap, or a tap on a view that has not caught up yet), it acts once, as no
-    // action of this page is meant to repeat. And what the user could ask for and
-    // `update` accepts is in the view, but for what the model hides on purpose:
-    // typing while the form is submitted, a list that is not shown, or not yet
+    // tap, or a tap on a view that has not caught up yet), it acts once, but the
+    // add button, whose second tap the parent ignores once the page that adds is
+    // shown. And what the user could ask for and `update` accepts is in the view,
+    // but for what the model hides on purpose: a list that is not shown, or not yet
     // (see AGENTS.md, "Refactoring status"), its invalid products, and the menu
     // while products are selected: the selection's bar takes the place of its.
     test('the view sends what update accepts, all of it, and acts once when sent twice', () => {
@@ -59,14 +51,10 @@ describe('Home update', () => {
       const isSelecting = ({ products: { selection } }: State) =>
         selection._tag === 'Deleting' || Opt.isSome(selection.maybeIds)
       const check = dispatchViolations(program.update, {
+        repeatable: (msg) => msg._tag === 'AddRequested',
         withheld: (msg, state) => {
           if (msg._tag === 'MenuOpened') {
             return isListShown(state) && isSelecting(state)
-          }
-          if (msg._tag === 'AddProduct') {
-            const { _tag } = msg.message
-            return (_tag === 'NameChanged' || _tag === 'ExpirationDateChanged')
-              && state.addProduct._tag === 'Submitting'
           }
           if (msg._tag === 'Products') {
             const inner = msg.message
@@ -77,19 +65,13 @@ describe('Home update', () => {
           return false
         },
       })
-      fc.assert(fc.property(state, fc.string(), (before, inputValue) => {
+      fc.assert(fc.property(state, (before) => {
         const items = before.products.list._tag === 'Loaded' ? before.products.list.items : []
         const askable = [
           Msg.MenuOpened(),
           Msg.MenuClosed(),
           Msg.InfoRequested(),
-          ...[
-            AddProductMsg.Opened(),
-            AddProductMsg.Closed(),
-            AddProductMsg.Started(),
-            AddProductMsg.NameChanged({ name: inputValue }),
-            AddProductMsg.ExpirationDateChanged({ expiration: inputValue }),
-          ].map(fromAddProduct),
+          Msg.AddRequested(),
           ...[
             ProductsMsg.SelectionCleared(),
             ProductsMsg.DeleteStarted(),
@@ -100,7 +82,7 @@ describe('Home update', () => {
             ),
           ].map(fromProducts),
         ]
-        expect(check(before, messagesSentBy<Model, Message>(view, makeModel(before), inputValue), askable)).toEqual([])
+        expect(check(before, messagesSentBy<Model, Message>(view, makeModel(before)), askable)).toEqual([])
       }))
     })
 
@@ -116,10 +98,7 @@ describe('Home update', () => {
           'MenuOpened',
           'MenuClosed',
           'InfoRequested',
-          'AddProduct › Opened',
-          'AddProduct › Closed',
-          'AddProduct › Started',
-          'AddProduct › NameChanged',
+          'AddRequested',
           'Products › ItemSelected',
           'Products › ItemDeselected',
           'Products › SelectionCleared',
@@ -167,53 +146,35 @@ describe('Home update', () => {
     })
   })
 
-  test('BackPressed closes the menu first, then an edited form, and otherwise changes nothing', () => {
+  test('AddRequested asks for the page that adds products, and changes nothing', () => {
+    assertProperty([state], (before) => {
+      const { after, commands, events } = step(Msg.AddRequested(), before)
+      return Equal.equals(after, before) && commands.length === 0 && Equal.equals(events, [Ev.AddRequested()])
+    })
+  })
+
+  test('BackPressed closes the menu, and otherwise changes nothing', () => {
     assertProperty([state], (before) => {
       const { after, commands, events } = step(Msg.BackPressed(), before)
       const expected = before.isMenuOpen
         ? !after.isMenuOpen && onlyChanged(before, after, 'isMenuOpen')
-        : before.addProduct._tag === 'Editing'
-        ? after.addProduct._tag === 'Closed' && onlyChanged(before, after, 'addProduct')
         : Equal.equals(after, before)
       return expected && commands.length === 0 && events.length === 0
     })
   })
 
-  // A form being submitted keeps the button, though it does not close.
-  test('handlesBack holds while the menu or the form is open', () => {
-    assertProperty(
-      [state],
-      (before) => handlesBack(before) === (before.isMenuOpen || before.addProduct._tag !== 'Closed'),
-    )
-  })
-
-  describe('a failed operation is said with a toast', () => {
-    test('adding a product', () => {
-      assertProperty([state, submitting], (base, addProduct) => {
-        const { commands } = step(fromAddProduct(AddProductMsg.Completed({ succeeded: false })), {
-          ...base,
-          addProduct,
-        })
-        return Equal.equals(commands, [Cmd.ShowToast({ text: 'Could not add the product' })])
-      })
-    })
-
-    test('deleting products', () => {
-      assertProperty([state, deleting], (base, selection) => {
-        const before = { ...base, products: { ...base.products, selection } }
-        const { commands } = step(fromProducts(ProductsMsg.DeleteCompleted({ succeeded: false })), before)
-        return Equal.equals(commands, [Cmd.ShowToast({ text: 'Could not delete the products' })])
-      })
-    })
+  test('handlesBack holds while the menu is open', () => {
+    assertProperty([state], (before) => handlesBack(before) === before.isMenuOpen)
   })
 })
 
 // A part's subscriptions run only if the page passes them on.
-test('the form listens to the clock exactly while it is open', () => {
-  assertProperty(
-    [state],
-    (s) => HashMap.has(Tea.subscriptionsOf(program)(s), ['AddProduct', 'clock']) === (s.addProduct._tag !== 'Closed'),
-  )
+test('the parts listen to the clock, the storage and the scrolling', () => {
+  assertProperty([state], (s) => {
+    const subscriptions = Tea.subscriptionsOf(program)(s)
+    return ['clock', 'changes'].every((key) => HashMap.has(subscriptions, ['Products', key]))
+      && HashMap.has(subscriptions, ['Scrolling', 'scrolling'])
+  })
 })
 
 test('starts each part as the part starts, with its commands', () => {
@@ -222,12 +183,10 @@ test('starts each part as the part starts, with its commands', () => {
   expect(program.init.state).toEqual({
     isMenuOpen: false,
     scrolling: Scrolling.program.init.state,
-    addProduct: AddProduct.program.init.state,
     products: Products.program.init.state,
   })
   expect(program.init.commands).toEqual([
     ...lifted('Scrolling', Scrolling.program.init.commands),
-    ...lifted('AddProduct', AddProduct.program.init.commands),
     ...lifted('Products', Products.program.init.commands),
   ])
 })

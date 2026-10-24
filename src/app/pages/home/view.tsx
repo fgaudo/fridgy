@@ -3,9 +3,38 @@ import { thunk, type VNode } from 'snabbdom'
 import { type Handlers, handlers, type View } from '#libs/tea-snabbdom/tea-snabbdom.ts'
 import { cn } from '#libs/ui/class-names.ts'
 import type { Message, Model } from './program.ts'
-import * as AddProduct from './parts/add-product/add-product.view.tsx'
 import { backdrop } from '#libs/ui/overlay.tsx'
 import * as Products from './parts/products/products.view.tsx'
+
+/**
+ * Material's extended FAB: an icon and its action. While the list scrolls it shrinks to the icon alone, to leave
+ * the products in view.
+ */
+const addButton = (model: Model, { on }: Handlers<Message>) => (
+  <button
+    props={{
+      className: cn(
+        'state-layer fixed right-4 bottom-4 z-30 mr-sair mb-saib flex h-14 items-center rounded-large px-4',
+        'bg-primary-container text-on-primary-container shadow-elevation-3 hover:shadow-elevation-4',
+        'transition-shadow duration-200',
+      ),
+      title: 'Add products',
+    }}
+    on={on('click', model.add)}
+  >
+    <span props={{ className: 'material-symbols-rounded' }}>barcode_scanner</span>
+    <span
+      props={{
+        className: cn(
+          'overflow-hidden whitespace-nowrap text-label-large transition-[max-width,margin,opacity] duration-200',
+          model.scrolling.isInteracting ? 'ml-0 max-w-0 opacity-0' : 'ml-3 max-w-40 opacity-100',
+        ),
+      }}
+    >
+      Add products
+    </span>
+  </button>
+)
 
 /** Material's modal navigation drawer. */
 const sideMenu = (menu: Model['menu'], { on }: Handlers<Message>): ReadonlyArray<VNode> =>
@@ -43,7 +72,6 @@ const sideMenu = (menu: Model['menu'], { on }: Handlers<Message>): ReadonlyArray
 export const view: View<Model, Message> = (model, dispatch) => {
   const events = handlers(dispatch)
   const { on } = events
-  const toAddProduct = Tea.dispatchTo(dispatch, 'AddProduct')
   const toProducts = Tea.dispatchTo(dispatch, 'Products')
   const selectionBar = Products.selectionBar(model.products, toProducts)
   const subtitle = Products.subtitle(model.products)
@@ -85,18 +113,16 @@ export const view: View<Model, Message> = (model, dispatch) => {
       {selectionBar ?? appBar}
     </div>
   )
-  // While a modal or the menu is open, the page behind it does not scroll (see `styles.css`).
-  const isScrollLocked = model.addProduct._tag !== 'Closed' || model.menu._tag === 'Open'
+  // While the menu is open, the page behind it does not scroll (see `styles.css`).
   return (
-    <div props={{ className: cn({ 'scroll-locked': isScrollLocked }) }}>
-      {AddProduct.modal(model.addProduct, toAddProduct)}
+    <div props={{ className: cn({ 'scroll-locked': model.menu._tag === 'Open' }) }}>
       {sideMenu(model.menu, events)}
-      {AddProduct.addButton(model.addProduct, toAddProduct, model.scrolling.isInteracting)}
+      {addButton(model, events)}
       {topBar}
       <div props={{ className: 'ml-sail mt-sait mr-sair overflow-x-clip' }}>
         {
-          // The part's dispatch is the same in every frame, and its model while its state is: typing in the
-          // form, opening the menu or scrolling leave the list undrawn.
+          // The part's dispatch is the same in every frame, and its model while its state is: opening the menu
+          // or scrolling leave the list undrawn.
           thunk('div', 'products', Products.list, [model.products, toProducts])
         }
       </div>

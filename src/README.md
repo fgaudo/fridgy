@@ -21,7 +21,7 @@ src/
 │  └─ pages/<page>/      a page; of app/, it imports only its own folder
 │     ├─ program.ts · view.tsx · layer.ts   the page's public API
 │     ├─ services/<service>/   a service of the page, with its adapters, contract and tests
-│     │                        (`services/notifications/`)
+│     │                        (`add-products/services/scanner/`)
 │     └─ parts/<part>/   a part of a large page, a child Program of the page, with its view and the services
 │                        only it uses (`parts/products/services/product-list/`)
 │

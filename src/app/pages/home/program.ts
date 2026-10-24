@@ -1,23 +1,19 @@
 // The page: its parts, and what spans them (the side menu, the back button, the
-// toasts that say a part failed).
+// way to the page that adds products).
 import * as Tea from '@fgaudo/effect-tea'
 import * as Data from 'effect/Data'
-import * as Effect from 'effect/Effect'
 import * as Match from 'effect/Match'
 import * as Opt from 'effect/Option'
-import * as AddProduct from './parts/add-product/add-product.ts'
 import * as Products from './parts/products/products.ts'
 import * as Scrolling from './parts/scrolling/scrolling.ts'
-import { Notifications } from './services/notifications/notifications.ts'
-import type { AddProducts } from './parts/add-product/services/add-products/add-products.ts'
 import type { DeleteProducts } from './parts/products/services/delete-products/delete-products.ts'
+import type { Notifications } from './parts/products/services/notifications/notifications.ts'
 import type { ProductList } from './parts/products/services/product-list/product-list.ts'
 import type { Viewport } from './parts/scrolling/services/viewport/viewport.ts'
 
 export type State = Readonly<{
   isMenuOpen: boolean
   scrolling: Scrolling.State
-  addProduct: AddProduct.State
   products: Products.State
 }>
 
@@ -35,46 +31,43 @@ type Own =
     MenuOpened: object
     MenuClosed: object
     InfoRequested: object
+    AddRequested: object
   }>
 
 const Own = Data.taggedEnum<Own>()
 
-type ShowToast = Readonly<{ _tag: 'ShowToast'; text: string }>
-
 export type Event = Data.TaggedEnum<{
   InfoRequested: object
+  AddRequested: object
 }>
 
 const Event = Data.taggedEnum<Event>()
 
 /** Whether the back button is the page's: otherwise `BackPressed` changes nothing. */
-export const handlesBack = (state: State): boolean => state.isMenuOpen || AddProduct.handlesBack(state.addProduct)
+export const handlesBack = (state: State): boolean => state.isMenuOpen
 
-export type Deps = Notifications | Viewport | AddProducts | DeleteProducts | ProductList
+export type Deps = Viewport | DeleteProducts | ProductList | Notifications
 
 export type Model = Readonly<{
   menu: Data.TaggedEnum<{
     Closed: { open: Own }
     Open: { close: Own; requestInfo: Own }
   }>
+  add: Own
   scrolling: Scrolling.Model
-  addProduct: AddProduct.Model
   products: Products.Model
 }>
 
-const toast = (text: string): ShowToast => ({ _tag: 'ShowToast', text })
-
-const { child, compose } = Tea.parent<{ state: State; command: ShowToast; event: Event; external: ExternalMessage }>()
+const { child, compose } = Tea.parent<{ state: State; event: Event; external: ExternalMessage }>()
 
 // Each part is always there: only its subscriptions could be turned off.
 export const program = compose({
   init: (children) => {
     const scrolling = children.Scrolling.init
-    const addProduct = children.AddProduct.init
     const products = children.Products.init
     return {
-      state: { isMenuOpen: false, scrolling: scrolling.state, addProduct: addProduct.state, products: products.state },
-      commands: [...scrolling.commands, ...addProduct.commands, ...products.commands],
+      state: { isMenuOpen: false, scrolling: scrolling.state, products: products.state },
+      commands: [...scrolling.commands, ...products.commands],
     }
   },
   children: {
@@ -82,16 +75,12 @@ export const program = compose({
       get: (state) => Opt.some(state.scrolling),
       set: (state, scrolling) => ({ ...state, scrolling }),
     }),
-    AddProduct: child(AddProduct.program, {
-      get: (state) => Opt.some(state.addProduct),
-      set: (state, addProduct) => ({ ...state, addProduct }),
-    }),
     Products: child(Products.program, {
       get: (state) => Opt.some(state.products),
       set: (state, products) => ({ ...state, products }),
     }),
   },
-  update: (message: Own, children) => (state) =>
+  update: (message: Own) => (state) =>
     Match.valueTags(message, {
       MenuOpened: () => !state.isMenuOpen ? { state: { ...state, isMenuOpen: true } } : Tea.reject,
       MenuClosed: () => state.isMenuOpen ? { state: { ...state, isMenuOpen: false } } : Tea.reject,
@@ -100,34 +89,16 @@ export const program = compose({
         state.isMenuOpen
           ? { state: { ...state, isMenuOpen: false }, events: [Event.InfoRequested()] }
           : Tea.reject,
-      // Closes what is open, innermost first: the menu, then the form.
-      BackPressed: () => {
-        if (state.isMenuOpen) return { state: { ...state, isMenuOpen: false } }
-        return AddProduct.handlesBack(state.addProduct)
-          ? children.AddProduct.update(AddProduct.ExternalMessage.BackPressed())(state)
-          : { state }
-      },
+      // Each tap asks: the parent opens the page once.
+      AddRequested: () => ({ state, events: [Event.AddRequested()] }),
+      BackPressed: () => state.isMenuOpen ? { state: { ...state, isMenuOpen: false } } : { state },
     }),
-  onEvent: {
-    AddProduct: (event) => (state) =>
-      Match.valueTags(event, {
-        Failed: () => ({ state, commands: [toast('Could not add the product')] }),
-      }),
-    Products: () => (state) => ({ state, commands: [toast('Could not delete the products')] }),
-  },
-  runCommand: Effect.fn(function*({ text }: ShowToast) {
-    const { showToast } = yield* Notifications
-    yield* showToast(text).pipe(
-      Effect.catchTag('NotificationError', (error) => Effect.logWarning('Could not show toast', error.cause)),
-    )
-    return Opt.none()
-  }),
   makeModel: (state, children): Model => ({
     menu: state.isMenuOpen
       ? { _tag: 'Open', close: Own.MenuClosed(), requestInfo: Own.InfoRequested() }
       : { _tag: 'Closed', open: Own.MenuOpened() },
+    add: Own.AddRequested(),
     scrolling: children.Scrolling(state),
-    addProduct: children.AddProduct(state),
     products: children.Products(state),
   }),
 })

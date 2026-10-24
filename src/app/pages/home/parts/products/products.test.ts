@@ -9,7 +9,7 @@ import * as Domain from '#domain/product.ts'
 import { utc } from '#libs/testing/date-time.test_arbitrary.ts'
 import { assertProperty, onlyChanged, outcomesOf } from '#libs/testing/update.test_support.ts'
 import type { StoredProduct } from './services/product-list/product-list.ts'
-import { type Command, type Event, type Message, program, type State } from './products.ts'
+import { type Command, type Message, program, type State } from './products.ts'
 import {
   deleting,
   id,
@@ -23,7 +23,6 @@ import {
 
 const Msg = Data.taggedEnum<Message>()
 const Cmd = Data.taggedEnum<Command>()
-const Ev = Data.taggedEnum<Event>()
 
 const { outcome, rejects, step } = outcomesOf(program.update)
 
@@ -166,20 +165,20 @@ describe('Products update', () => {
 
     test('success clears the selection', () => {
       assertProperty([deletingState], (before) => {
-        const { after, events } = step(Msg.DeleteCompleted({ succeeded: true }), before)
+        const { after, commands } = step(Msg.DeleteCompleted({ succeeded: true }), before)
         return Equal.equals(after.selection, { _tag: 'Selecting', maybeIds: Opt.none() })
           && onlyChanged(before, after, 'selection')
-          && events.length === 0
+          && commands.length === 0
       })
     })
 
-    test('failure gives the selection back and says so', () => {
+    test('failure gives the selection back and says so with a toast', () => {
       assertProperty([deletingState], (before) => {
-        const { after, events } = step(Msg.DeleteCompleted({ succeeded: false }), before)
+        const { after, commands } = step(Msg.DeleteCompleted({ succeeded: false }), before)
         return after.selection._tag === 'Selecting'
           && Equal.equals(selectedIds(after.selection), selectedIds(before.selection))
           && onlyChanged(before, after, 'selection')
-          && Equal.equals(events, [Ev.DeleteFailed()])
+          && Equal.equals(commands, [Cmd.ShowToast({ text: 'Could not delete the products' })])
       })
     })
 
