@@ -72,6 +72,9 @@ An Android version is supported only if the app can be tested on it, in the Andr
   account: the images ship an older one (74 on API 29).
 
 API 29 is the lowest version that meets all three, hence `minSdkVersion` 29 in `android/variables.gradle`.
+At the other end, `compileSdkVersion` and `targetSdkVersion`, with the Android Gradle Plugin and Gradle, are
+those of the Android template of the Capacitor release in use (`assets/android-template.tar.gz` in
+`@capacitor/cli`): API 36 for Capacitor 8. A newer API comes with the Capacitor release that supports it.
 
 The launcher icons and the splash screens in `android/app/src/main/res` are generated from `assets/logo.svg`
 by [`@capacitor/assets`](https://github.com/ionic-team/capacitor-assets), on the app's background color:

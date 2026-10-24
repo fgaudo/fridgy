@@ -19,7 +19,9 @@ why, or what the diff and the docs do not, never what they already describe.
 
 Only what can be tested is supported. `minSdkVersion` is the lowest Android version that meets the rules in
 `README.md` ("Build the Android app"); a change of it, of those rules or of `minWebViewVersion` (which can move
-the lowest version that meets them) is checked in the emulator first, and the README changes with it.
+the lowest version that meets them) is checked in the emulator first, and the README changes with it. The target
+SDK, the compile SDK, the Android Gradle Plugin and Gradle follow Capacitor's Android template: they move only
+with an upgrade of Capacitor, checked in the emulator on the new target.
 
 ## Tooling enforces a lot
 
