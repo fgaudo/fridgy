@@ -158,6 +158,22 @@ older than the last keys would take them back. A large view splits along the par
 nothing of the app (e.g. `libs/ui/overlay.tsx`) go to `libs/ui/`. The development server swaps the view in
 place when only `.tsx` and `.css` files change, wherever they are, and reloads the page otherwise.
 
+Views follow Material 3 through the theme, which leaves out Tailwind's own colors, font sizes, radii and
+shadows. A control is the Material component that does its job, built to that component's spec (its colors,
+size, shape and elevation): a list of things is a list, not cards; an action of the page is a FAB or a top app
+bar's icon button; a form that opens over the page is a modal bottom sheet, within the thumb's reach, with
+outlined text fields; selected things turn the top app bar into a contextual one with their actions.
+
+- colors are Material's roles (`src/palette.generated.css`), generated from the key colors in `scripts/palette.ts` (change
+  those and run `bun run update-palette`, never the generated file): what is drawn on a role takes its `on-`
+  role (`bg-primary-container text-on-primary-container`), a dimmed text `on-surface-variant`; an opacity only
+  where Material sets one (a disabled control, 38%; the scrim, 32%);
+- text sizes are the type scale (`text-title-medium`, `text-body-small`), radii the shape scale
+  (`rounded-medium`, `rounded-full`), shadows the elevation levels (`shadow-elevation-3`, a FAB's), all in
+  `src/styles.css`; a surface's level is its component's, and a raised surface takes its tone from its
+  container role (`surface-container-low` for a drawer), not from a shadow alone;
+- what can be pressed carries `state-layer`, Material's feedback on hover, focus and press.
+
 ## Tests
 
 - `bun:test` and fast-check property tests, in a `*.test.ts` next to the module. A property the code does
@@ -203,8 +219,14 @@ place when only `.tsx` and `.css` files change, wherever they are, and reloads t
 - Nothing deprecated: no module, type, function, method or option marked `@deprecated`, of any dependency, in
   code, tests or scripts. Use what the deprecation names instead, and replace a use found in passing.
   `bun run lint` warns about one (Oxlint's type-aware `typescript/no-deprecated`).
-- Format only the files you changed (`bunx dprint fmt <files>`): a bare `dprint fmt` rewrites generated
-  files, Android resources and untouched code.
+- A file a tool writes is never edited by hand: change what it is made from and run the tool again. Such a file
+  is named `<name>.generated.<ext>` (`src/palette.generated.css`, by `bun run update-palette`;
+  `licenses.generated.json`, by `bun run update-licenses`), and a new one is too; dprint and Biome skip them.
+  The files whose name their tool fixes are the exception: `android/app/capacitor.build.gradle` and
+  `android/capacitor.settings.gradle` (written by `bunx cap sync`), the launcher icons and the splash screens
+  in `android/app/src/main/res` (by `@capacitor/assets`, see `README.md`).
+- Format only the files you changed (`bunx dprint fmt <files>`): a bare `dprint fmt` rewrites Android
+  resources and untouched code.
 - Comments only for what the code cannot say: a reason, an invariant the types do not show, a platform
   behaviour relied upon, a choice that would look like a mistake. Never a repetition of names, of the next
   line or of this file.

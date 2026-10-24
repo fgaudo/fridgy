@@ -15,6 +15,6 @@ export const backdrop = (key: string, className: string, on: On) => (
     key={key}
     style={fade}
     on={on}
-    props={{ className: cn('fixed top-0 bottom-0 left-0 right-0 bg-black/50 backdrop-blur-xs', className) }}
+    props={{ className: cn('fixed top-0 bottom-0 left-0 right-0 bg-scrim/32 backdrop-blur-xs', className) }}
   />
 )

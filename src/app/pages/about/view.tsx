@@ -10,14 +10,12 @@ const icon = (name: string, className: string): VNode => (
   <span props={{ className: `material-symbols-rounded ${className}` }}>{name}</span>
 )
 
-const card = 'rounded-lg bg-secondary/5 shadow-sm'
-
-/** A row of the project's card: an icon, then a sentence. */
+/** A list item of the project's card: a leading icon, then a sentence. */
 const row = (iconName: string, content: ReadonlyArray<VNode | string>): VNode => (
-  <div props={{ className: 'flex items-center gap-4 px-4 py-3' }}>
-    {icon(iconName, 'text-secondary')}
-    <p>{content}</p>
-  </div>
+  <li props={{ className: 'flex min-h-14 items-center gap-4 px-4 py-2' }}>
+    {icon(iconName, 'text-on-surface-variant')}
+    <p props={{ className: 'text-body-large text-on-surface' }}>{content}</p>
+  </li>
 )
 
 const nonEmpty = (value: Opt.Option<string>) => Opt.filter(value, (text) => text.trim().length > 0)
@@ -26,22 +24,28 @@ const license = (license: License): VNode => {
   const line = (value: Opt.Option<string>): ReadonlyArray<VNode> =>
     Opt.match(nonEmpty(value), {
       onNone: () => [],
-      onSome: (text) => [<p props={{ className: 'text-xs text-on-background/60 break-words' }}>{text}</p>],
+      onSome: (text) => [<p props={{ className: 'text-body-small text-on-surface-variant break-words' }}>{text}</p>],
     })
   return (
     <div
       key={license.packageName}
       style={{ contentVisibility: 'auto' }}
-      props={{ className: `${card} flex flex-col gap-1 p-4` }}
+      // Material's outlined card: a long list of them stays light.
+      props={{ className: 'flex flex-col gap-1 rounded-medium border border-outline-variant p-4' }}
     >
       <div props={{ className: 'flex items-start justify-between gap-3' }}>
-        <h3 props={{ className: 'font-bold break-all' }}>
+        <h3 props={{ className: 'text-title-medium text-on-surface break-all' }}>
           {Opt.getOrElse(nonEmpty(license.name), () => license.packageName)}
         </h3>
         {Opt.match(nonEmpty(license.licenses), {
           onNone: () => [],
           onSome: (licenses) => [
-            <span props={{ className: 'shrink-0 rounded-full bg-secondary/25 px-2 py-0.5 text-xs font-bold' }}>
+            <span
+              props={{
+                className:
+                  'flex h-6 shrink-0 items-center rounded-small border border-outline-variant px-2 text-label-medium text-on-surface-variant',
+              }}
+            >
               {licenses}
             </span>,
           ],
@@ -49,14 +53,18 @@ const license = (license: License): VNode => {
       </div>
       {Opt.match(nonEmpty(license.description), {
         onNone: () => [],
-        onSome: (description) => [<p props={{ className: 'text-sm break-words' }}>{description}</p>],
+        onSome: (
+          description,
+        ) => [<p props={{ className: 'text-body-medium text-on-surface break-words' }}>{description}</p>],
       })}
       {line(license.copyright)}
       {line(Opt.orElse(nonEmpty(license.publisher), () => license.email))}
       {Opt.match(nonEmpty(license.repository), {
         onNone: () => [],
         onSome: (url) => [
-          <a props={{ className: 'text-primary block truncate text-xs underline', href: encodeURI(url) }}>{url}</a>,
+          <a props={{ className: 'text-primary block truncate text-body-small underline', href: encodeURI(url) }}>
+            {url}
+          </a>,
         ],
       })}
     </div>
@@ -76,43 +84,49 @@ export const view: View<Model, Message> = (model, dispatch) => {
     >
       <div
         props={{
-          className: 'bg-secondary shadow-secondary/40 fixed top-0 z-20 w-full pt-sait pl-sail pr-sair shadow-md',
+          className: 'bg-surface-container text-on-surface fixed top-0 z-20 w-full pt-sait pl-sail pr-sair',
         }}
       >
-        <div props={{ className: 'flex h-16 items-center' }}>
+        <div props={{ className: 'flex h-16 items-center px-1' }}>
           <button
             props={{
-              className:
-                'material-symbols-rounded ml-2 flex h-12 w-12 items-center justify-center rounded-full transition-colors active:bg-black/10',
+              className: 'state-layer material-symbols-rounded flex h-12 w-12 items-center justify-center rounded-full',
+              title: 'Back',
             }}
             on={on('click', model.back)}
           >
             arrow_back
           </button>
-          <h1 props={{ className: 'pl-2 text-2xl font-bold' }}>About</h1>
+          <h1 props={{ className: 'px-1 text-title-large' }}>About</h1>
         </div>
       </div>
-      <div props={{ className: 'bg-background pt-sait pb-saib pl-sail pr-sair' }}>
+      <div props={{ className: 'bg-surface pt-sait pb-saib pl-sail pr-sair' }}>
         <div props={{ className: 'mx-auto flex max-w-2xl flex-col gap-4 px-4 pt-24 pb-8' }}>
           <div props={{ className: 'flex flex-col items-center gap-2 py-4 text-center' }}>
             <div
               style={{ backgroundImage: 'url(./logo.svg)' }}
               props={{ className: 'h-24 w-24 bg-contain bg-center bg-no-repeat' }}
             />
-            <p props={{ className: 'mt-2 text-3xl font-bold' }}>Fridgy</p>
+            <p props={{ className: 'mt-2 text-headline-medium text-on-surface' }}>Fridgy</p>
             {Opt.match(model.version, {
               onNone: () => [],
               onSome: (version) => [
-                <span props={{ className: 'rounded-full bg-secondary/25 px-3 py-0.5 text-sm font-bold' }}>
+                <span
+                  props={{
+                    className:
+                      'flex h-8 items-center rounded-small border border-outline-variant px-4 text-label-large text-on-surface-variant',
+                  }}
+                >
                   Version {version}
                 </span>,
               ],
             })}
-            <p props={{ className: 'mt-2 text-on-background/70' }}>
+            <p props={{ className: 'mt-2 text-body-large text-on-surface-variant' }}>
               Keep track of what is in your fridge and when it expires.
             </p>
           </div>
-          <div props={{ className: `${card} divide-y divide-secondary/20` }}>
+          {/* Material's filled card, holding a list. */}
+          <ul props={{ className: 'rounded-medium bg-surface-container-highest divide-y divide-outline-variant' }}>
             {row('balance', [
               'Free software, released under the ',
               link('https://spdx.org/licenses/AGPL-3.0-or-later.html', 'AGPL-3.0-or-later'),
@@ -124,11 +138,13 @@ export const view: View<Model, Message> = (model, dispatch) => {
               link('https://github.com/fgaudo/fridgy/issues', 'Open an issue'),
               '.',
             ])}
-          </div>
-          <p props={{ className: 'text-center text-sm text-on-background/60' }}>© 2024–2026 Francesco Gaudenzi</p>
+          </ul>
+          <p props={{ className: 'text-center text-body-small text-on-surface-variant' }}>
+            © 2024–2026 Francesco Gaudenzi
+          </p>
           <div props={{ className: 'mt-4' }}>
-            <h2 props={{ className: 'text-lg font-bold' }}>Open source libraries</h2>
-            <p props={{ className: 'text-sm text-on-background/70' }}>
+            <h2 props={{ className: 'text-title-large text-on-surface' }}>Open source libraries</h2>
+            <p props={{ className: 'text-body-medium text-on-surface-variant' }}>
               Fridgy is built with these libraries, under their own licenses.
             </p>
           </div>

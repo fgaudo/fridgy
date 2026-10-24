@@ -32,7 +32,8 @@ src/
 │                        test support) and JSX runtime, sources, branded numbers, test helpers, …
 ├─ index.html            the page template: the build fills in the fonts and the entrypoint
 ├─ error.html            shown by Capacitor instead of the app on a WebView older than it needs
-└─ styles.css            the stylesheet (Tailwind)
+├─ palette.generated.css the Material 3 color roles, written by `bun run update-palette`
+└─ styles.css            the stylesheet (Tailwind): Material's type scale, shapes and state layer
 ```
 
 The runtime of the Elm architecture is a library, an npm dependency:

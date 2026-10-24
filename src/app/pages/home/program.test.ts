@@ -47,16 +47,22 @@ describe('Home update', () => {
     // tap, or a tap on a view that has not caught up yet), it acts once, as no
     // action of this page is meant to repeat. And what the user could ask for and
     // `update` accepts is in the view, but for what the model hides on purpose:
-    // typing while the form is submitted, and a list that is not shown, or not yet
-    // (see AGENTS.md, "Refactoring status"), its invalid products.
+    // typing while the form is submitted, a list that is not shown, or not yet
+    // (see AGENTS.md, "Refactoring status"), its invalid products, and the menu
+    // while products are selected: the selection's bar takes the place of its.
     test('the view sends what update accepts, all of it, and acts once when sent twice', () => {
       const shownItems = ({ products }: State) =>
         Opt.isSome(products.maybeNow) && products.list._tag === 'Loaded' ? products.list.items : []
       const isListShown = (state: State) => shownItems(state).length > 0
       const isShown = (state: State, id: string) =>
         shownItems(state).some((item) => item._tag === 'Valid' && item.id === id)
+      const isSelecting = ({ products: { selection } }: State) =>
+        selection._tag === 'Deleting' || Opt.isSome(selection.maybeIds)
       const check = dispatchViolations(program.update, {
         withheld: (msg, state) => {
+          if (msg._tag === 'MenuOpened') {
+            return isListShown(state) && isSelecting(state)
+          }
           if (msg._tag === 'AddProduct') {
             const { _tag } = msg.message
             return (_tag === 'NameChanged' || _tag === 'ExpirationDateChanged')

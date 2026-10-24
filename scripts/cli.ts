@@ -11,6 +11,7 @@ import * as Ref from 'effect/Ref'
 import * as Stream from 'effect/Stream'
 import * as Cli from 'effect/cli'
 import * as LicenseChecker from 'license-checker-rseidelsohn'
+import { palette } from './palette.ts'
 import { tailwind } from './tailwind.ts'
 
 type Mode = 'development' | 'production'
@@ -245,9 +246,19 @@ const licensesCommand = Cli.Command.make(
       }),
     )
     yield* fs.writeFileString(
-      resolve('src/app/pages/about/services/licenses/generated/licenses.json'),
+      resolve('src/app/pages/about/services/licenses/licenses.generated.json'),
       `${JSON.stringify(Object.fromEntries(entries), null, 4)}\n`,
     )
+  }),
+)
+
+const paletteCommand = Cli.Command.make(
+  'palette',
+  {},
+  Effect.fn('paletteCommand')(function*() {
+    const resolve = yield* root
+    const fs = yield* FS.FileSystem
+    yield* fs.writeFileString(resolve('src/palette.generated.css'), palette())
   }),
 )
 
@@ -272,7 +283,7 @@ const DotEnv = Layer.unwrap(Effect.gen(function*() {
 
 EffBun.BunRuntime.runMain(
   Cli.Command.make('cli.ts').pipe(
-    Cli.Command.withSubcommands([buildCommand, watchCommand, licensesCommand]),
+    Cli.Command.withSubcommands([buildCommand, watchCommand, licensesCommand, paletteCommand]),
     Cli.Command.run({ version: '1.0' }),
     Effect.provide(Layer.provideMerge(DotEnv, EffBun.BunServices.layer)),
   ),

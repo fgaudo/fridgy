@@ -29,8 +29,11 @@ bun install
 ```
 
 It also regenerates the licenses shown on the About page
-(`src/app/pages/about/services/licenses/generated/licenses.json`, from the production dependencies): commit
+(`src/app/pages/about/services/licenses/licenses.generated.json`, from the production dependencies): commit
 the file when it changes, with `bun.lock`.
+
+A file named `*.generated.*` is written by a command (`bun run update-licenses`, `bun run update-palette`) and is
+never edited by hand: change what it is made from and run the command again.
 
 ### Run it in the browser
 
@@ -77,10 +80,10 @@ those of the Android template of the Capacitor release in use (`assets/android-t
 `@capacitor/cli`): API 36 for Capacitor 8. A newer API comes with the Capacitor release that supports it.
 
 The launcher icons and the splash screens in `android/app/src/main/res` are generated from `assets/logo.svg`
-by [`@capacitor/assets`](https://github.com/ionic-team/capacitor-assets), on the app's background color:
+by [`@capacitor/assets`](https://github.com/ionic-team/capacitor-assets), on the app's surface color:
 
 ```bash
-bunx @capacitor/assets@3.0.5 generate --android --iconBackgroundColor '#fef8e9' --splashBackgroundColor '#fef8e9'
+bunx @capacitor/assets@3.0.5 generate --android --iconBackgroundColor '#fff8f5' --splashBackgroundColor '#fff8f5'
 ```
 
 The app has no dark theme, so the `drawable-*night*` splashes it also generates (from `assets/logo-dark.svg`)
@@ -94,12 +97,13 @@ release is tagged in git (`v2026.10.0`).
 
 ## Development
 
-| Command                   |                                                                                  |
-| ------------------------- | -------------------------------------------------------------------------------- |
-| `bun run typecheck`       | Type-check the project                                                           |
-| `bun run test`            | Run the tests                                                                    |
-| `bun run lint`            | Lint, including the import rules described below, and warn about deprecated APIs |
-| `bunx dprint fmt <files>` | Format the files you changed                                                     |
+| Command                   |                                                                                                 |
+| ------------------------- | ----------------------------------------------------------------------------------------------- |
+| `bun run typecheck`       | Type-check the project                                                                          |
+| `bun run test`            | Run the tests                                                                                   |
+| `bun run lint`            | Lint, including the import rules described below, and warn about deprecated APIs                |
+| `bunx dprint fmt <files>` | Format the files you changed                                                                    |
+| `bun run update-palette`  | Regenerate `src/palette.generated.css`, the colors, from the key colors in `scripts/palette.ts` |
 
 ## Architecture
 
