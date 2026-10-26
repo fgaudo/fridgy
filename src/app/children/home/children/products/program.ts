@@ -174,10 +174,11 @@ const deleteProducts = Effect.fn('DeleteProducts')(
     )
     yield* Effect.logInfo('Deleted products', { count: HashSet.size(ids) })
   },
-  Tea.attempt({
+  Effect.match({
     onSuccess: () => Message.DeleteCompleted({ succeeded: true }),
     onFailure: () => Message.DeleteCompleted({ succeeded: false }),
   }),
+  Effect.asSome,
   Effect.withLogSpan('DeleteProducts'),
 )
 

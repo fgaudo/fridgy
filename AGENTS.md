@@ -49,9 +49,9 @@ not a kind of program. The programs to copy are `src/app/children/home` and `src
 
 - **Expected errors are typed, bugs crash.** Expected failures go through Effect's error channel
   (`Effect.tryPromise`, `Effect.try`; no `try/catch`, no bare Promises): commands turn them into messages with
-  `Tea.attempt`, subscriptions with a message of their own. A violated invariant is a defect (`Effect.die`,
-  `defect(reason)` from `libs/defect`), never silenced, retried or turned into a message; crash reporting goes
-  around `run` (`Effect.tapCause`) and never recovers from it.
+  `Effect.match` and `Effect.asSome`, subscriptions with a message of their own. A violated invariant is a
+  defect (`Effect.die`, `defect(reason)` from `libs/defect`), never silenced, retried or turned into a message;
+  crash reporting goes around `run` (`Effect.tapCause`) and never recovers from it.
 - **`Tea.reject` is for a message that does not apply but may arrive** (a tap on a frame the state has moved
   past). A message the invariants rule out (an operation's completion outside the state that only it leaves, a
   subscription's message outside the states that list its key) is a defect: the tests skip those pairs of

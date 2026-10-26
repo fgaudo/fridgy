@@ -45,7 +45,8 @@ learns of its failure, stays in the child. Children that read each other's state
 - `Model` is what the view distinguishes: a union with a case per state, each holding only the messages of
   its controls (`open: Message`, `changeName: (name: string) => Message`), picked from the state as `update`
   reads it, never by calling `update`. The view sends only what the model holds.
-- Commands turn expected failures into messages with `Tea.attempt` and carry `Effect.withLogSpan`.
+- Commands turn expected failures into messages with `Effect.match({ onSuccess, onFailure })` followed by
+  `Effect.asSome`, as the last steps of their `Effect.fn`, and carry `Effect.withLogSpan`.
   Subscriptions map a service's `Source<A, never>` into messages (`Channel.unwrap` to read the service,
   `Channel.map`); a process that ends turns its `Done` into a message. The back button is the subscription
   keyed `back-button`, observed only while the page has something to do with a press.
@@ -66,8 +67,8 @@ export const program = compose({
   },
   children: {
     Products: child(Products.program, {
-      get: (state) => Opt.some(state.products), // `Opt.none()` when the child is not there
-      set: (state, products) => ({ ...state, products }),
+      // Where it lives: `.compose(Optic.some())` for a child that may not be there.
+      at: Optic.id<State>().key('products'),
       subscribed: (state) => ..., // optional: when its subscriptions run (a page, only while on top)
     }),
   },
@@ -77,9 +78,10 @@ export const program = compose({
 })
 ```
 
-- A parent decides whether a child is there only with `get`, never by rejecting its messages. A child started
-  in `onEvent` is started the same way, with `children.<Child>.init`: reading its program's `init.state` would
-  leave its commands behind.
+- A parent decides whether a child is there only with its place: `at`, an optic into its state, or, where no
+  optic of Effect finds it (a page by its tag in the root's stack), the two functions `get` (an `Option`) and
+  `set`; never by rejecting its messages. A child started in `onEvent` is started the same way, with
+  `children.<Child>.init`: reading its program's `init.state` would leave its commands behind.
 - A child talks to its parent only through events; a parent never reads a child's state to decide. What a
   child needs, it gets from its own services and subscriptions. Only a fact several children must see as one
   truth (the viewport, the connection) is the parent's, handed down as an `ExternalMessage` with

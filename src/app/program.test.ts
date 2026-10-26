@@ -12,7 +12,6 @@ import { view } from './view.tsx'
 import {
   addUndated,
   back,
-  hearNext,
   openAbout,
   openAddProducts,
   openMenu,
@@ -116,12 +115,12 @@ describe('Navigation', () => {
     rehearsed(Effect.fnUntraced(function*(user) {
       yield* perform(user, [openAddProducts, typeName('Milk')])
       // The page adds a product only once it knows the time.
-      yield* hearNext(user, ['AddProducts', 'clock'])
+      yield* user.hearNext(['AddProducts', 'clock'])
       yield* user.send(addUndated)
       yield* user.run((command) => tagPath(command) === 'AddProducts › Add')
       yield* back(user)
       expect(tags(yield* user.state)).toEqual(['Home'])
-      yield* hearNext(user, ['Home', ['Products', 'changes']])
+      yield* user.hearNext(['Home', ['Products', 'changes']])
       const names = Opt.map(homeState(yield* user.state), ({ products: { list } }) =>
         list._tag === 'Loaded'
           ? list.items.flatMap((item): ReadonlyArray<string> => item._tag === 'Valid' ? [item.product.name] : [])

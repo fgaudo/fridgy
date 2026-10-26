@@ -1,13 +1,11 @@
 // The root's tests act like a user: each message is one the shown page's model
 // holds, never one built by hand. Nothing runs by itself: a command runs,
 // on the app's layer over a database in memory, and a subscription sends, when the test says so.
-import * as Tea from '@fgaudo/effect-tea'
 import { type Rehearsal, rehearse } from '@fgaudo/effect-tea/testing'
 import * as Arr from 'effect/Array'
 import * as Channel from 'effect/Channel'
 import * as Data from 'effect/Data'
 import * as Effect from 'effect/Effect'
-import * as Equal from 'effect/Equal'
 import * as Layer from 'effect/Layer'
 import * as Match from 'effect/Match'
 import * as Opt from 'effect/Option'
@@ -65,20 +63,6 @@ export const back = Effect.fnUntraced(function*(user: User) {
     About: () => Msg.About({ message: { _tag: 'BackPressed' } }),
   })
   yield* user.hear([shown._tag, 'back-button'], pressed)
-})
-
-/** The subscription under `key` sends its next message, the one it would send if it ran. */
-export const hearNext = Effect.fnUntraced(function*(user: User, key: unknown) {
-  const listening = Arr.fromIterable(Tea.subscriptionsOf(program)(yield* user.state))
-  const found = Arr.findFirst(listening, ([k]) => Equal.equals(k, key))
-  if (Opt.isNone(found)) {
-    return yield* Effect.die(new Error('nothing listens under this key', { cause: key }))
-  }
-  const maybeMessage = yield* Channel.runHead(found.value[1])
-  if (Opt.isNone(maybeMessage)) {
-    return yield* Effect.die(new Error('the subscription under this key ended in silence', { cause: key }))
-  }
-  yield* user.hear(key, maybeMessage.value)
 })
 
 // The platform's back button is out of reach: it is heard through `back`.

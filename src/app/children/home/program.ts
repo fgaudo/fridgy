@@ -7,6 +7,7 @@ import * as Effect from 'effect/Effect'
 import * as HashMap from 'effect/HashMap'
 import * as Match from 'effect/Match'
 import * as Opt from 'effect/Option'
+import * as Optic from 'effect/Optic'
 import { BackButton } from '#infrastructure/back-button/back-button.ts'
 import { defect } from '#libs/defect/defect.ts'
 import * as Products from './children/products/program.ts'
@@ -113,10 +114,7 @@ export const program = compose({
     }
   },
   children: {
-    Products: child(Products.program, {
-      get: (state) => Opt.some(state.products),
-      set: (state, products) => ({ ...state, products }),
-    }),
+    Products: child(Products.program, { at: Optic.id<State>().key('products') }),
   },
   update: (message: Own) => (state) =>
     Match.valueTags(message, {

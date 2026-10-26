@@ -184,10 +184,11 @@ const add = Effect.fn('AddProduct')(
     )
     yield* Effect.logInfo('Added a product', { id })
   },
-  Tea.attempt({
+  Effect.match({
     onSuccess: () => Message.Completed({ succeeded: true }),
     onFailure: () => Message.Completed({ succeeded: false }),
   }),
+  Effect.asSome,
   Effect.withLogSpan('AddProduct'),
 )
 

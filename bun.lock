@@ -12,7 +12,7 @@
         "@capacitor/toast": "next",
         "@effect/platform-browser": "^4.0.6",
         "@effect/sql-sqlite-wasm": "^4.0.6",
-        "@fgaudo/effect-tea": "^0.6.0",
+        "@fgaudo/effect-tea": "^0.7.0",
         "@fontsource-variable/noto-nastaliq-urdu": "^5.3.0",
         "@fontsource-variable/noto-sans": "^5.3.0",
         "@fontsource-variable/noto-sans-arabic": "^5.3.0",
@@ -155,7 +155,7 @@
 
     "@effect/wa-sqlite": ["@effect/wa-sqlite@0.1.2", "", {}, "sha512-2JvJ9BDkBOwfeY/gXsC0XwEKC0AwisP2W5ABJ6mx14QyXTK12MGDIybDlHieuZt1TEFSMiKfpg7yyqyRWRooJQ=="],
 
-    "@fgaudo/effect-tea": ["@fgaudo/effect-tea@0.6.0", "", { "peerDependencies": { "effect": "^4.0.0" } }, "sha512-n880H9XgzFUHj+VMF7mBlr5sgBN8czMcE+tgOH8AVDpMy0XE6qp/QaL7E2ZQKJKgTc+Uq/Wz1shfy2qAC8Acfw=="],
+    "@fgaudo/effect-tea": ["@fgaudo/effect-tea@0.7.0", "", { "peerDependencies": { "effect": "^4.0.0" } }, "sha512-weckZv+LGDFLc77v8xUqTNaeRR3QkOXuCy8JZKgxxr8mdDCCdjbngqTxcUCCUT0wgsQAjZWK5qUhQPvHCMs4MA=="],
 
     "@fontsource-variable/noto-nastaliq-urdu": ["@fontsource-variable/noto-nastaliq-urdu@5.3.0", "", {}, "sha512-VoUH7liMhQncJTBOLUKWtQ2maXp41466eaVheNhnh0Xeckm+VDaIyvtjreC89mH1cTqXWzSzeHnNj6cXyLgn2w=="],
 
