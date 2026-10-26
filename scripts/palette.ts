@@ -57,6 +57,9 @@ const oklch = (argb: number) => {
   return `oklch(${(lightness * 100).toFixed(2)}% ${chroma.toFixed(4)} ${hue})`
 }
 
+/** The surface role of the light scheme, as a hex: what the launcher icons and the splash screens are drawn on. */
+export const surface = () => hexFromArgb(scheme(false).getArgb(new MaterialDynamicColors().surface()))
+
 /** The Material 3 color roles of the light scheme, as Tailwind colors (`bg-primary-container`). */
 export const palette = () => {
   const light = scheme(false)

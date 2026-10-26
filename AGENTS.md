@@ -260,7 +260,7 @@ outlined text fields; selected things turn the top app bar into a contextual one
   `licenses.generated.json`, by `bun run update-licenses`), and a new one is too; dprint and Biome skip them.
   The files whose name their tool fixes are the exception: `android/app/capacitor.build.gradle` and
   `android/capacitor.settings.gradle` (written by `bunx cap sync`), the launcher icons and the splash screens
-  in `android/app/src/main/res` (by `@capacitor/assets`, see `README.md`).
+  in `android/app/src/main/res` (by `bun run update-assets`).
 - Format only the files you changed (`bunx dprint fmt <files>`): a bare `dprint fmt` rewrites Android
   resources and untouched code.
 - Comments only for what the code cannot say: a reason, an invariant the types do not show, a platform

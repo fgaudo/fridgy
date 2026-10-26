@@ -84,11 +84,11 @@ The launcher icons and the splash screens in `android/app/src/main/res` are gene
 by [`@capacitor/assets`](https://github.com/ionic-team/capacitor-assets), on the app's surface color:
 
 ```bash
-bunx @capacitor/assets@3.0.5 generate --android --iconBackgroundColor '#fff8f5' --splashBackgroundColor '#fff8f5'
+bun run update-assets
 ```
 
-The app has no dark theme, so the `drawable-*night*` splashes it also generates (from `assets/logo-dark.svg`)
-are deleted, and its reformatting of `AndroidManifest.xml` is reverted.
+The app has no dark theme, so the command deletes the `drawable-*night*` splashes the generator also makes
+(from `assets/logo-dark.svg`), and puts `AndroidManifest.xml` back as it was, since the generator reformats it.
 
 The version is `YEAR.MONTH.N`, N counting the releases of the month from 0 (`2026.10.0`, `2026.10.1`,
 `2026.11.0`), with no leading zeros, which `package.json` rejects. A release sets it only in `package.json`, which
@@ -105,6 +105,7 @@ release is tagged in git (`v2026.10.0`).
 | `bun run lint`            | Lint, including the import rules described below, and warn about deprecated APIs                |
 | `bunx dprint fmt <files>` | Format the files you changed                                                                    |
 | `bun run update-palette`  | Regenerate `src/palette.generated.css`, the colors, from the key colors in `scripts/palette.ts` |
+| `bun run update-assets`   | Regenerate the Android launcher icons and splash screens from `assets/logo.svg`                 |
 
 ## Architecture
 

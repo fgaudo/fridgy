@@ -16,6 +16,7 @@
   "scripts": {
     "update-licenses": "bun ./scripts/cli.ts licenses",
     "update-palette": "bun ./scripts/cli.ts palette",
+    "update-assets": "bun ./scripts/cli.ts assets",
     "build": "bun ./scripts/cli.ts build",
     "watch": "bun ./scripts/cli.ts watch",
     "typecheck": "tsc --noEmit",
