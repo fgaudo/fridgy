@@ -7,7 +7,8 @@ architecture.
 > **Status:** work in progress. The main page (product list, selecting products, expiration tracking), the page
 > that adds products one after another (a scanned barcode names the product, and the date is typed as digits,
 > from which the user picks the day they meant) and the About page (version, links, licenses) run on the current
-> architecture, with navigation between them and Android's back button.
+> architecture, with navigation between them and Android's back button. What is still missing is listed under
+> "Known gaps" in [`AGENTS.md`](AGENTS.md).
 
 ## Stack
 
@@ -33,9 +34,6 @@ It also regenerates the licenses shown on the About page
 (`src/app/children/about/services/licenses/licenses.generated.json`, from the production dependencies): commit
 the file when it changes, with `bun.lock`.
 
-A file named `*.generated.*` is written by a command (`bun run update-licenses`, `bun run update-palette`) and is
-never edited by hand: change what it is made from and run the command again.
-
 ### Run it in the browser
 
 ```bash
@@ -54,8 +52,8 @@ The first run creates `.env` from `.env.default`, where you can change the serve
 bun run build
 ```
 
-builds the production version (SQLite storage) into `dist/`. Then copy it into the Android project and
-open it in Android Studio:
+builds the production version (SQLite storage) into `dist/`. Then copy it into the Android project and open it
+in Android Studio:
 
 ```bash
 bunx cap sync android
@@ -65,36 +63,9 @@ bunx cap sync android
 bunx cap open android
 ```
 
-The app needs Android 10 (API 29) and Android System WebView 111: on an older WebView, Capacitor shows
-`src/error.html` instead (`minWebViewVersion` in `capacitor.config.ts`).
-
-An Android version is supported only if the app can be tested on it, in the Android emulator:
-
-- on a Google Play image for x86_64: below API 28, Google's Play images are x86 only, at 32 bits;
-- with Android System WebView as the WebView: Android 7 to 9 use Chrome instead;
-- with that WebView updated through the Play Store to `minWebViewVersion` or later, signed in with a test
-  account: the images ship an older one (74 on API 29).
-
-API 29 is the lowest version that meets all three, hence `minSdkVersion` 29 in `android/variables.gradle`.
-At the other end, `compileSdkVersion` and `targetSdkVersion`, with the Android Gradle Plugin and Gradle, are
-those of the Android template of the Capacitor release in use (`assets/android-template.tar.gz` in
-`@capacitor/cli`): API 36 for Capacitor 8. A newer API comes with the Capacitor release that supports it.
-
-The launcher icons and the splash screens in `android/app/src/main/res` are generated from `assets/logo.svg`
-by [`@capacitor/assets`](https://github.com/ionic-team/capacitor-assets), on the app's surface color:
-
-```bash
-bunx @capacitor/assets@3.0.5 generate --android --iconBackgroundColor '#fff8f5' --splashBackgroundColor '#fff8f5'
-```
-
-The app has no dark theme, so the `drawable-*night*` splashes it also generates (from `assets/logo-dark.svg`)
-are deleted, and its reformatting of `AndroidManifest.xml` is reverted.
-
-The version is `YEAR.MONTH.N`, N counting the releases of the month from 0 (`2026.10.0`, `2026.10.1`,
-`2026.11.0`), with no leading zeros, which `package.json` rejects. A release sets it only in `package.json`, which
-the About page shows; `android/app/build.gradle` reads it as `versionName` and derives the `versionCode`,
-`YEAR * 10000 + MONTH * 100 + N` (20261000), always higher than the last one, as the Play Store requires. Each
-release is tagged in git (`v2026.10.0`).
+The app needs Android 10 (API 29) and Android System WebView 114: on an older WebView, Capacitor shows
+`src/error.html` instead. Why these versions, how the icons and splash screens are generated and how a release
+is versioned and tagged is in [`.agents/skills/android-release/SKILL.md`](.agents/skills/android-release/SKILL.md).
 
 ## Development
 
@@ -102,9 +73,12 @@ release is tagged in git (`v2026.10.0`).
 | ------------------------- | ----------------------------------------------------------------------------------------------- |
 | `bun run typecheck`       | Type-check the project                                                                          |
 | `bun run test`            | Run the tests                                                                                   |
-| `bun run lint`            | Lint, including the import rules described below, and warn about deprecated APIs                |
+| `bun run lint`            | Lint, including the import boundaries, and warn about deprecated APIs                           |
 | `bunx dprint fmt <files>` | Format the files you changed                                                                    |
 | `bun run update-palette`  | Regenerate `src/palette.generated.css`, the colors, from the key colors in `scripts/palette.ts` |
+
+A file named `*.generated.*` is written by a command and never edited by hand: change what it is made from and
+run the command again.
 
 ## Architecture
 
@@ -112,8 +86,8 @@ The whole app is one Elm-style program:
 
 - a **single global state**, changed only by a pure `update(message)(state)`;
 - **effects as data**: `update` returns _commands_ (data that the program's `runCommand` turns into Effects
-  that may produce a message), and _subscriptions_
-  turn the outside world (database changes, scrolling, a clock) into messages;
+  that may produce a message), and _subscriptions_ turn the outside world (database changes, scrolling, a
+  clock) into messages;
 - a **pure view**: `makeModel` projects the state onto what the view needs, and the view turns that model
   into a virtual DOM.
 
@@ -132,21 +106,20 @@ What the app adds:
 How the code is organized:
 
 - **A tree of programs** (`src/app/children/`), all of the same shape: the root, its pages and a large page's
-  children are each a folder with a program, a view, a layer, its services and its own `children/`. Each owns
-  its messages, state, `update` and view, and imports nothing of a sibling. Biome enforces the boundaries by a
-  file's role: imports go downwards only, and adapters are imported only by the layers and the entrypoints.
-- **Services and adapters.** A service is what a program needs from outside (the product list, scrolling,
-  the back button): an Effect `Context.Service`, owned by the program that uses it, in its `services/` folder
-  with the adapters (layers) that provide it. Services are never shared: two programs that both touch products
-  each have their own.
+  children are each a folder with a program, a view, a layer, its services and its own `children/`. Each
+  imports nothing of a sibling; Biome enforces the boundaries.
+- **Services and adapters.** A service is what a program needs from outside (the product list, scrolling, the
+  back button), owned by the program that uses it, with the adapters that provide it. Two programs that both
+  touch products each have their own.
 - **Shared code moves up**: the entities (`Product`) to `src/domain/`, how things are done (the database's
   schema, how a product is written) to `src/infrastructure/`.
 - **Environments** (production, development) exist only in `src/entrypoints/`, which pick what has
-  alternatives: the database's engine and the platform's back button (Capacitor on the phone, the browser's
-  history in development, where the browser's back button acts as Android's).
-- **Views** are TSX, rendered by snabbdom through a small bridge (`src/libs/tea-snabbdom/`, `src/libs/jsx/`).
+  alternatives: the database's engine and the platform's back button.
+- **Views** are TSX, rendered by snabbdom through a small bridge (`src/libs/tea-snabbdom/`, `src/libs/jsx/`),
+  following Material 3.
 
-See [`src/README.md`](src/README.md) for a map of the source tree and a suggested reading order.
+See [`src/README.md`](src/README.md) for a map of the source tree, a suggested reading order and the import
+boundaries.
 
 ## Tests
 
@@ -164,6 +137,6 @@ domain type has a `*.test_arbitrary.ts` file with its generators. Among others, 
 
 ## Contributing
 
-The rules of the codebase (architecture, conventions, what is still being migrated) are in
-[`AGENTS.md`](AGENTS.md), written for both people and coding agents. Code, comments and documentation are
-in English.
+The rules of the codebase are in [`AGENTS.md`](AGENTS.md), written for both people and coding agents; the
+procedures (adding a program or a service, writing a view, releasing) are skills under `.agents/skills/`,
+plain Markdown that any agent reads. Code, comments and documentation are in English.

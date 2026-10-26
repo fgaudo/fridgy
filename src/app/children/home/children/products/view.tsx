@@ -170,7 +170,7 @@ const subtitleOf = (model: Data.TaggedEnum.Value<Model, 'Available'>) => `${mode
  */
 export const subtitle = (model: Model): string | undefined => model._tag === 'Available' ? subtitleOf(model) : undefined
 
-// Invalid and corrupt products are not shown yet (see AGENTS.md, "Refactoring status").
+// Invalid and corrupt products are not shown yet (see AGENTS.md, "Known gaps").
 export const list = (model: Model, dispatch: Dispatch<Message>) => {
   const events = handlers(dispatch)
   switch (model._tag) {

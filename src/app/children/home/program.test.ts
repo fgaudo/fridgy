@@ -48,7 +48,7 @@ describe('Home update', () => {
     // add button, whose second tap the parent ignores once the page that adds is
     // shown. And what the user could ask for and `update` accepts is in the view,
     // but for what the model hides on purpose: a list that is not shown, or not yet
-    // (see AGENTS.md, "Refactoring status"), its invalid products, and the menu
+    // (see AGENTS.md, "Known gaps"), its invalid products, and the menu
     // while products are selected: the selection's bar takes the place of its.
     test('the view sends what update accepts, all of it, and acts once when sent twice', () => {
       const shownItems = ({ products }: State) =>
