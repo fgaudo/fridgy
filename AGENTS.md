@@ -104,23 +104,40 @@ here: a change to the library is made, released and then upgraded to in this app
 - **Pages talk to their parent through events** (`Event`, handled by the parent's `onEvent`), never by
   acting on it. A program exports its `Message`, `Event` and `Command` as types only (a parent's with
   `Tea.MessageOf` and `Tea.CommandOf`), and its `ExternalMessage` (what its parent may give it with
-  `children.<Child>.update`, e.g. `BackPressed`) as a value; tests build their own constructors with
-  `Data.taggedEnum<Message>()`. Hidden pages keep receiving their completions, but their subscriptions run
-  only while they are on top.
-- **The back button is the app's only while it has something to close.** A page that closes things on back
-  exports `handlesBack(state)`, and its parent listens to the button, or passes `BackPressed` on to it, only
-  then; elsewhere its `BackPressed` changes nothing (an external message is never rejected). When the root does
-  not listen, the platform leaves the app: Android itself, or the browser's history, past the app.
+  `children.<Child>.update`), when it has one, as a value; tests build their own constructors with
+  `Data.taggedEnum<Message>()`. A parent never asks a child about its state to decide what to do: what a
+  child needs, it gets through its own services and subscriptions. Hidden pages keep receiving their
+  completions, but their subscriptions run only while they are on top.
+- **The back button is each page's, only while it has something to do with it.** A page observes the
+  platform's `BackButton` (`src/infrastructure/back-button`, a subscription keyed `back-button`) while it has
+  something to close (Home, while its menu is open), or always, when a press asks its parent to leave it (About)
+  or must be held (AddProducts, while a product is being added). The root knows nothing of the button. A
+  press goes to the last observer only, as Android's own back dispatcher does: what opened last is on top and
+  closes first, so two things that close on back never need a parent to order them. When no page observes it, the
+  platform leaves the app: Android itself, or the browser's history, past the app. The engine only delivers a
+  subscription's message to a state that lists its key, so a page that observes the button only in some
+  states treats a press in the others as a defect.
+- **A message that cannot arrive is a defect, not a rejection.** `Tea.reject` is for a message that does
+  not apply in this state and may still arrive (a tap on a frame the state has moved past). A message the
+  invariants rule out, such as an operation's completion outside the state that only it leaves (`Completed`
+  outside `Submitting`), or a subscription's message outside the states that list it, ends the run with
+  `defect(reason)` (`libs/defect`), a thrown error in expression form. The tests of `update` skip those pairs
+  of state and message, and check them as defects.
 - **A service belongs to what uses it, and is never shared.** A service (a `Context.Service`: a port, in the
   terms of ports and adapters) is a requirement of its consumer, listed in its program's `services`, shaped for
   it and free to change with it. It is a folder named after it in its consumer's `services/`, holding the
   service, its adapters (the layers that provide it, named after what backs them), its contract and their
   tests: a part's (`parts/products/services/product-list/`: `product-list.ts`, `product-list.sql.ts`, …), a
-  page's (`pages/add-products/services/scanner/`), the root's (`app/services/shell/`). So a program's folder holds the
+  page's (`pages/add-products/services/scanner/`). So a program's folder holds the
   program (`program.ts`, `view.tsx`, `layer.ts`, their tests), its `services/` and its children (`parts/`,
   `pages/`). Two consumers that need the same thing today each have their own service (the AddProducts
-  page's `AddProducts` and Products' `DeleteProducts`; each one's `Notifications`): what they truly share is the domain and the infrastructure, never
-  the service. Write services have no read: a program learns about writes from the storage's changes (a
+  page's `AddProducts` and Products' `DeleteProducts`): what they truly share is the domain and the
+  infrastructure, never the service. The exception is a fact of the platform that no consumer could shape
+  (`src/infrastructure/back-button`: a press is a `void`; `src/infrastructure/notifications`: a toast is a text,
+  for every program alike): it is a service of the infrastructure, with its adapters, which the programs that
+  need it list among their `services` directly, since a service of their own would only repeat it. The day a
+  consumer needs it shaped (a toast with an action), that consumer gets a service of its own, written on the
+  infrastructure's. Write services have no read: a program learns about writes from the storage's changes (a
   `Source`), not from the code that wrote. Persistence services take a domain `Snapshot` and return
   `UnvalidatedSnapshot`s;
   adapters never read domain fields. What every adapter of the storage shares (the
@@ -138,9 +155,10 @@ here: a change to the library is made, released and then upgraded to in this app
   the phone, in memory in development and tests, empty on every start).
 - **Migrations are append-only**: a phone has already run the existing ones, so a fix is a new migration.
 - **Environments exist only in `src/entrypoints/`.** Shared code never branches on `process.env.NODE_ENV`.
-  A `layer.ts` (the app's, a page's) provides every adapter that has no alternative; what has alternatives (the
-  `SqlClient`, the `Shell`) stays a requirement of the layer, and each entrypoint picks one by importing the
-  adapter's own module, wherever its service is (`#app/services/shell/shell.browser.ts`,
+  A `layer.ts` (the app's, a page's) provides every adapter that has no alternative, the infrastructure's
+  services' included (the app's provides the toasts); what has alternatives (the `SqlClient`, the platform's
+  `BackButton`) is left out of the layers, and each entrypoint picks one by importing the adapter's own module,
+  wherever its service is (`#infrastructure/back-button/browser.layer.ts`,
   `#app/pages/home/parts/products/services/product-list/product-list.sql.ts`), never through a module that would load
   the other alternatives too: a missing choice fails the typecheck, and a bundle only contains what it uses. A
   service that gains a second adapter leaves its owner's `layer.ts` the same way. When moving files, update the

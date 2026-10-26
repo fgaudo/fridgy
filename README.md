@@ -143,8 +143,8 @@ How the code is organized:
 - **Shared code moves up**: the entities (`Product`) to `src/domain/`, how things are done (the database's
   schema, how a product is written) to `src/infrastructure/`.
 - **Environments** (production, development) exist only in `src/entrypoints/`, which pick what has
-  alternatives: the database's engine and the shell (Capacitor on the phone, the browser's history in
-  development, where the browser's back button acts as Android's).
+  alternatives: the database's engine and the platform's back button (Capacitor on the phone, the browser's
+  history in development, where the browser's back button acts as Android's).
 - **Views** are TSX, rendered by snabbdom through a small bridge (`src/libs/tea-snabbdom/`, `src/libs/jsx/`).
 
 See [`src/README.md`](src/README.md) for a map of the source tree and a suggested reading order.
@@ -155,7 +155,8 @@ Tests sit next to the code they test (`*.test.ts`) and are mostly property tests
 thousands of states and messages and checks that the rules hold for all of them. Every branded type and
 domain type has a `*.test_arbitrary.ts` file with its generators. Among others, the tests check that:
 
-- `update` is deterministic and never throws;
+- `update` is deterministic, and throws only on a message that cannot arrive (an operation's completion
+  outside it), which is a bug that ends the run;
 - every message the real view can send, in any state, is accepted by `update`, and acts only once when
   sent twice (a double tap), unless it is meant to repeat;
 - a stored product reads back as the same product;

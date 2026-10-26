@@ -31,9 +31,16 @@ const selectedIds = (selection: State['selection']) =>
     ? HashSet.fromIterable(selection.ids)
     : Opt.match(selection.maybeIds, { onNone: () => HashSet.empty<string>(), onSome: HashSet.fromIterable })
 
+/** A message that cannot arrive in that state: a completion while no deletion is in progress. */
+const cannotArrive = (msg: Message, before: State) =>
+  msg._tag === 'DeleteCompleted' && before.selection._tag !== 'Deleting'
+
 describe('Products update', () => {
-  test('is total and deterministic', () => {
-    assertProperty([state, message], (before, msg) => Equal.equals(outcome(msg, before), outcome(msg, before)))
+  test('is total and deterministic, but for a message that cannot arrive', () => {
+    assertProperty([state, message], (before, msg) => {
+      fc.pre(!cannotArrive(msg, before))
+      return Equal.equals(outcome(msg, before), outcome(msg, before))
+    })
   })
 
   test('TimeChanged stores the time and touches nothing else', () => {
@@ -182,10 +189,12 @@ describe('Products update', () => {
       })
     })
 
-    test('is rejected when no deletion is in progress', () => {
+    // Only a completion leaves Deleting, so one that arrives elsewhere is a bug.
+    test('is a defect when no deletion is in progress', () => {
       assertProperty([state, fc.boolean()], (before, succeeded) => {
         fc.pre(before.selection._tag !== 'Deleting')
-        return rejects(Msg.DeleteCompleted({ succeeded }), before)
+        expect(() => program.update(Msg.DeleteCompleted({ succeeded }))(before)).toThrow()
+        return true
       })
     })
   })

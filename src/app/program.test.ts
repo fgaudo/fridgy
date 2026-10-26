@@ -103,11 +103,6 @@ describe('Navigation', () => {
       expect(yield* user.pending).toEqual([])
     })))
 
-  // A back heard as the menu closes, before the subscription stops (a double press).
-  test('a back that reaches Home with nothing open changes nothing', () => {
-    expect(Tea.isRejected(program.update({ _tag: 'BackRequested' })(program.init.state))).toBe(true)
-  })
-
   // The add button tapped twice from the same frame: the second tap asks Home again, which changes nothing.
   test('Home opens the page that adds products on top, once on a double tap', () =>
     rehearsed(Effect.fnUntraced(function*(user) {
@@ -156,12 +151,17 @@ describe('Subscriptions', () => {
       expect(subscribedPages(yield* user.state)).toEqual(new Set(['Home']))
     })))
 
-  // Otherwise the button is the platform's, which leaves the app.
-  test('the back button is listened to only while the shown page has something to close', () =>
+  // Otherwise the button is the platform's, which leaves the app. Each page observes the button under its own
+  // key (`['Home', 'back-button']`, …): what matters here is that exactly the shown page does, when it should.
+  test('the back button is observed only while the shown page has something to close', () =>
     rehearsed(Effect.fnUntraced(function*(user) {
       const listensToBack = Effect.map(
         user.state,
-        (state) => HashMap.has(Tea.subscriptionsOf(program)(state), 'back-button'),
+        (state) =>
+          Arr.some(
+            Arr.fromIterable(HashMap.keys(Tea.subscriptionsOf(program)(state))),
+            (key) => Array.isArray(key) && key[1] === 'back-button',
+          ),
       )
       expect(yield* listensToBack).toBe(false)
       yield* user.send(openMenu)

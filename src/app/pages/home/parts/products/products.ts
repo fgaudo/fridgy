@@ -14,11 +14,12 @@ import * as Match from 'effect/Match'
 import * as Opt from 'effect/Option'
 import * as Result from 'effect/Result'
 import * as Domain from '#domain/product.ts'
+import { Notifications } from '#infrastructure/notifications/notifications.ts'
 import * as DeleteProducts from './services/delete-products/delete-products.ts'
 import * as NonEmptyHashSet from '#libs/collections/non-empty-hash-set.ts'
+import { defect } from '#libs/defect/defect.ts'
 import * as PositiveInteger from '#libs/numbers/positive-integer.ts'
 import type * as UnitInterval from '#libs/numbers/unit-interval.ts'
-import { Notifications } from './services/notifications/notifications.ts'
 import { ProductList, type StoredProduct } from './services/product-list/product-list.ts'
 
 export type Product = Data.TaggedEnum<{
@@ -286,7 +287,7 @@ export const program: Tea.Program<{
 
     DeleteCompleted: ({ succeeded }) => (state) => {
       if (state.selection._tag !== 'Deleting') {
-        return Tea.reject
+        return defect('DeleteCompleted while no deletion is in progress: only a completion leaves Deleting')
       }
       return succeeded
         ? { state: { ...state, selection: { _tag: 'Selecting', maybeIds: Opt.none() } } }

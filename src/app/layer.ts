@@ -1,8 +1,11 @@
 import * as Layer from 'effect/Layer'
+import * as NotificationsCapacitor from '#infrastructure/notifications/capacitor.layer.ts'
 import * as About from './pages/about/layer.ts'
 import * as AddProducts from './pages/add-products/layer.ts'
 import * as Home from './pages/home/layer.ts'
 
-// The adapters that every setup shares. What has alternatives is left to the entrypoint: the `SqlClient` (the
-// database's engine) and the `Shell` (`services/shell/shell.capacitor.ts`, `services/shell/shell.browser.ts`).
-export const layer = Layer.mergeAll(Home.layer, AddProducts.layer, About.layer)
+// The adapters that every setup shares: the pages' services', and the infrastructure's that have no
+// alternative (the toasts). What has alternatives is left to the entrypoint: the `SqlClient` (the database's
+// engine) and the platform's `BackButton` (`#infrastructure/back-button/capacitor.layer.ts`,
+// `#infrastructure/back-button/browser.layer.ts`).
+export const layer = Layer.mergeAll(Home.layer, AddProducts.layer, About.layer, NotificationsCapacitor.layer)

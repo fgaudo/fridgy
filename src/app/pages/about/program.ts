@@ -1,8 +1,11 @@
 import type * as Tea from '@fgaudo/effect-tea'
+import * as Channel from 'effect/Channel'
 import * as Data from 'effect/Data'
 import * as Effect from 'effect/Effect'
+import * as HashMap from 'effect/HashMap'
 import * as Match from 'effect/Match'
 import * as Opt from 'effect/Option'
+import { BackButton } from '#infrastructure/back-button/back-button.ts'
 import { type License, Licenses } from './services/licenses/licenses.ts'
 import { Version } from './services/version/version.ts'
 
@@ -17,20 +20,13 @@ export type State = Readonly<{
   }>
 }>
 
-export type ExternalMessage = Data.TaggedEnum<{
-  /** The back button, while the page is shown; the page's own back button sends it too. */
+export type Message = Data.TaggedEnum<{
+  /** The page's own back button, and the platform's, while the page is shown. */
   BackPressed: object
+  // From commands.
+  LicensesLoaded: { licenses: ReadonlyArray<License> }
+  VersionLoaded: { version: string }
 }>
-
-export const ExternalMessage = Data.taggedEnum<ExternalMessage>()
-
-export type Message =
-  | ExternalMessage
-  | Data.TaggedEnum<{
-    // From commands.
-    LicensesLoaded: { licenses: ReadonlyArray<License> }
-    VersionLoaded: { version: string }
-  }>
 
 const Message = Data.taggedEnum<Message>()
 
@@ -44,7 +40,11 @@ export type Command = Data.TaggedEnum<{ LoadLicenses: object; LoadVersion: objec
 
 const Command = Data.taggedEnum<Command>()
 
-export type Deps = Licenses | Version
+export type Deps = Licenses | Version | BackButton
+
+const backButton: Tea.Subscription<Message, BackButton> = Channel.unwrap(
+  Effect.map(Effect.service(BackButton), ({ presses }) => Channel.map(presses, () => Message.BackPressed())),
+)
 
 export type Model = Readonly<{
   back: Message
@@ -60,7 +60,6 @@ export const program: Tea.Program<{
   command: Command
   services: Deps
   event: Event
-  external: ExternalMessage
 }> = {
   init: {
     state: { licenses: { _tag: 'Loading' }, version: { _tag: 'Loading' } },
@@ -89,6 +88,8 @@ export const program: Tea.Program<{
       return Opt.some(Message.VersionLoaded({ version: yield* current }))
     }),
   }),
+
+  subscriptions: () => HashMap.make(['back-button', backButton]),
 
   makeModel: (state) => ({
     back: Message.BackPressed(),

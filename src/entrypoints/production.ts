@@ -7,7 +7,7 @@ import { RootViews, run } from './run.ts'
 
 import * as ConfigProvider from 'effect/ConfigProvider'
 import * as App from '#app/layer.ts'
-import * as ShellCapacitor from '#app/services/shell/shell.capacitor.ts'
+import * as BackButtonCapacitor from '#infrastructure/back-button/capacitor.layer.ts'
 import * as Sqlite from '#infrastructure/sqlite/layer.ts'
 
 const layer = App.layer.pipe(
@@ -24,7 +24,7 @@ const layer = App.layer.pipe(
 run(
   Layer.mergeAll(
     layer,
-    ShellCapacitor.layer,
+    BackButtonCapacitor.layer,
     Layer.succeed(RootViews, Stream.make(RootView.view)),
     SnabbdomRenderer.layer('#root'),
     Layer.succeed(References.MinimumLogLevel, 'Info'),

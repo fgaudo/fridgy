@@ -1,17 +1,14 @@
-// The root: a stack of pages and the back button. The only module that runs the
-// pages' programs (the root view draws their views).
+// The root: a stack of pages. The only module that runs the pages' programs (the root view draws their views).
+// The back button is each page's: a page observes it while it has something to close, or asks to be left; when
+// no page observes it, the platform leaves the app (Android itself, or the browser's history, past the app).
 import * as Tea from '@fgaudo/effect-tea'
 import * as Arr from 'effect/Array'
-import * as Channel from 'effect/Channel'
 import * as Data from 'effect/Data'
-import * as Effect from 'effect/Effect'
-import * as HashMap from 'effect/HashMap'
 import * as Match from 'effect/Match'
 import * as Opt from 'effect/Option'
 import * as About from './pages/about/program.ts'
 import * as AddProducts from './pages/add-products/program.ts'
 import * as Home from './pages/home/program.ts'
-import { Shell } from './services/shell/shell.ts'
 
 export type Page = Data.TaggedEnum<{
   Home: Readonly<{ state: Home.State }>
@@ -26,10 +23,7 @@ export type State = Readonly<{
   stack: Arr.NonEmptyReadonlyArray<Page>
 }>
 
-/** The back button: the root's own message, the pages' are made by `compose`. */
-type BackRequested = Readonly<{ _tag: 'BackRequested' }>
-
-export type Deps = Shell | Home.Deps | AddProducts.Deps | About.Deps
+export type Deps = Home.Deps | AddProducts.Deps | About.Deps
 
 /** Only the page on top is drawn. */
 export type Model = Readonly<{
@@ -73,24 +67,6 @@ const leave = (state: State) => {
   return { state: Arr.isReadonlyArrayNonEmpty(rest) ? { stack: rest } : state }
 }
 
-// The shown page decides when the back button is its own; otherwise nothing listens, and the platform leaves
-// the app (Android), or goes back past it (a browser).
-const handlesBack = (state: State) =>
-  Match.valueTags(top(state), {
-    Home: ({ state }) => Home.handlesBack(state),
-    // While a product is being added, the button is held so that it does not leave the app.
-    AddProducts: () => true,
-    About: () => true,
-  })
-
-const backButton: Tea.Subscription<BackRequested, Shell> = Channel.unwrap(
-  Effect.map(Effect.service(Shell), ({ backButton }) =>
-    backButton.pipe(
-      Channel.map((): BackRequested => ({ _tag: 'BackRequested' })),
-      Channel.mapDone((done): BackRequested => done),
-    )),
-)
-
 const { child, compose } = Tea.parent<{ state: State }>()
 
 export const program = compose({
@@ -115,15 +91,6 @@ export const program = compose({
       set: (state, about) => replacePage(state, Page.About({ state: about })),
     }),
   },
-  // The shown page closes what it has open, or asks to be left. A back heard as Home closes its last thing
-  // (a double press, before the subscription stops) is the platform's.
-  update: (_: BackRequested, children) => (state) =>
-    Match.valueTags(top(state), {
-      Home: ({ state: home }) =>
-        Home.handlesBack(home) ? children.Home.update(Home.ExternalMessage.BackPressed())(state) : Tea.reject,
-      AddProducts: () => children.AddProducts.update(AddProducts.ExternalMessage.BackPressed())(state),
-      About: () => children.About.update(About.ExternalMessage.BackPressed())(state),
-    }),
   onEvent: {
     Home: (event, children) => (state) =>
       Match.valueTags(event, {
@@ -143,7 +110,6 @@ export const program = compose({
     AddProducts: () => leave,
     About: () => leave,
   },
-  subscriptions: (state) => handlesBack(state) ? HashMap.make(['back-button', backButton]) : HashMap.empty(),
   makeModel: (state, children): Model => ({
     page: Match.valueTags(top(state), {
       Home: () => PageModel.Home({ model: children.Home(state) }),

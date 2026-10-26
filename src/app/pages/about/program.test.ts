@@ -1,7 +1,9 @@
 import { describe, expect, test } from 'bun:test'
+import * as Tea from '@fgaudo/effect-tea'
 import { dispatchViolations } from '@fgaudo/effect-tea/testing'
 import * as Data from 'effect/Data'
 import * as Equal from 'effect/Equal'
+import * as HashMap from 'effect/HashMap'
 import * as Opt from 'effect/Option'
 import * as fc from 'fast-check'
 import { messagesSentBy } from '#libs/tea-snabbdom/view.test_support.ts'
@@ -64,6 +66,11 @@ describe('About update', () => {
       return Equal.equals(makeModel(s).version, expected)
     })
   })
+})
+
+// The page always has something to do on back: leave.
+test('the page observes the back button in every state', () => {
+  assertProperty([state], (s) => HashMap.has(Tea.subscriptionsOf(program)(s), 'back-button'))
 })
 
 test('arbitraries cover every variant of the state', () => {

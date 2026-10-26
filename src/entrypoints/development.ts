@@ -5,8 +5,8 @@ import * as Layer from 'effect/Layer'
 import * as References from 'effect/References'
 import * as Stream from 'effect/Stream'
 import * as App from '#app/layer.ts'
-import * as ShellBrowser from '#app/services/shell/shell.browser.ts'
 import type * as RootView from '#app/view.tsx'
+import * as BackButtonBrowser from '#infrastructure/back-button/browser.layer.ts'
 import { CssRefresher } from '#infrastructure/css-refresher.ts'
 import * as HotModule from '#infrastructure/hot-module.ts'
 import * as SqliteMemory from '#infrastructure/sqlite/memory.layer.ts'
@@ -30,7 +30,7 @@ run(
   Layer.mergeAll(
     // A database in memory, with sample products: every reload starts from the same data.
     App.layer.pipe(Layer.provide(Layer.provideMerge(SqliteSamples.layer, SqliteMemory.layer))),
-    ShellBrowser.layer,
+    BackButtonBrowser.layer,
     HotRootViews,
     SnabbdomRenderer.layer('#root'),
     Layer.succeed(References.MinimumLogLevel, 'Debug'),

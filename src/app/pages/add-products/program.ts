@@ -13,8 +13,10 @@ import * as Match from 'effect/Match'
 import * as Opt from 'effect/Option'
 import * as Product from '#domain/product.ts'
 import * as DigitDates from '#libs/dates/digit-dates.ts'
+import { BackButton } from '#infrastructure/back-button/back-button.ts'
+import { Notifications } from '#infrastructure/notifications/notifications.ts'
+import { defect } from '#libs/defect/defect.ts'
 import * as AddProducts from './services/add-products/add-products.ts'
-import { Notifications } from './services/notifications/notifications.ts'
 import { Scanner } from './services/scanner/scanner.ts'
 
 export type Digit = '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9'
@@ -37,29 +39,22 @@ export type State = Data.TaggedEnum<{
   Submitting: Form & Readonly<{ product: Product.Product }>
 }>
 
-export type ExternalMessage = Data.TaggedEnum<{
-  /** The back button, while the page is shown; the page's own close button sends it too. */
+export type Message = Data.TaggedEnum<{
+  // From the view.
+  NameChanged: { name: string }
+  DigitTyped: { digit: Digit }
+  DigitErased: object
+  /** Adds the product, expiring on one of the days the digits name, or never when no digit is typed. */
+  Started: { maybeExpirationDate: Opt.Option<DateTime.Utc> }
+  /** The page's close button, and the back button, while the page is shown. */
   BackPressed: object
+  // From subscriptions.
+  TimeChanged: { now: DateTime.Utc }
+  Scanned: { barcode: string }
+  CameraFailed: object
+  // From commands.
+  Completed: { succeeded: boolean }
 }>
-
-export const ExternalMessage = Data.taggedEnum<ExternalMessage>()
-
-export type Message =
-  | ExternalMessage
-  | Data.TaggedEnum<{
-    // From the view.
-    NameChanged: { name: string }
-    DigitTyped: { digit: Digit }
-    DigitErased: object
-    /** Adds the product, expiring on one of the days the digits name, or never when no digit is typed. */
-    Started: { maybeExpirationDate: Opt.Option<DateTime.Utc> }
-    // From subscriptions.
-    TimeChanged: { now: DateTime.Utc }
-    Scanned: { barcode: string }
-    CameraFailed: object
-    // From commands.
-    Completed: { succeeded: boolean }
-  }>
 
 const Message = Data.taggedEnum<Message>()
 
@@ -77,7 +72,7 @@ export type Event = Data.TaggedEnum<{
 
 const Event = Data.taggedEnum<Event>()
 
-export type Deps = AddProducts.AddProducts | Scanner | Notifications
+export type Deps = AddProducts.AddProducts | Scanner | Notifications | BackButton
 
 /** A day the digits name, which adds the product once the form names one. */
 type DateChoice = Readonly<{ date: DateTime.Utc; maybeAdd: Opt.Option<Message> }>
@@ -171,6 +166,12 @@ const scanner = Channel.unwrap(
     )),
 )
 
+// Observed as long as the page is shown: while a product is being added, the press is heard and held, so that
+// the platform does not leave the app.
+const backButton: Tea.Subscription<Message, BackButton> = Channel.unwrap(
+  Effect.map(Effect.service(BackButton), ({ presses }) => Channel.map(presses, () => Message.BackPressed())),
+)
+
 const add = Effect.fn('AddProduct')(
   function*({ product }: Readonly<{ product: Product.Product }>) {
     const { add } = yield* AddProducts.AddProducts
@@ -208,7 +209,6 @@ export const program: Tea.Program<{
   command: Command
   services: Deps
   event: Event
-  external: ExternalMessage
 }> = {
   init: {
     state: {
@@ -264,7 +264,7 @@ export const program: Tea.Program<{
     // The next product starts with no digits, and the name of this one: a second package of it may be next.
     Completed: ({ succeeded }) => (state) => {
       if (state._tag !== 'Submitting') {
-        return Tea.reject
+        return defect('Completed while no product is being added: only a completion leaves Submitting')
       }
       const form = formOf(state)
       return succeeded
@@ -284,7 +284,9 @@ export const program: Tea.Program<{
 
   // Once the camera has failed, it is not tried again until the page is opened anew.
   subscriptions: (state) =>
-    state.isCameraOn ? HashMap.make(['clock', clock], ['scanner', scanner]) : HashMap.make(['clock', clock]),
+    state.isCameraOn
+      ? HashMap.make(['clock', clock], ['scanner', scanner], ['back-button', backButton])
+      : HashMap.make(['clock', clock], ['back-button', backButton]),
 
   makeModel: (state) => {
     const shown: Shown = {

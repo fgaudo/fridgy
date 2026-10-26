@@ -10,7 +10,7 @@ import { tagPath } from '#libs/testing/tag-path.test_support.ts'
 import { messagesSentBy } from '#libs/tea-snabbdom/view.test_support.ts'
 import { assertProperty, onlyChanged, outcomesOf } from '#libs/testing/update.test_support.ts'
 import * as Products from './parts/products/products.ts'
-import { type Event, handlesBack, type Message, type Model, program, type State } from './program.ts'
+import { type Event, type Message, type Model, program, type State } from './program.ts'
 import { message, state } from './program.test_arbitrary.ts'
 import { view } from './view.tsx'
 
@@ -27,9 +27,18 @@ type ProductsMessage = Products.Message
 // A part's message as the page receives it: the library makes it, the test builds it.
 const fromProducts = (message: ProductsMessage): Message => ({ _tag: 'Products', message })
 
+/** A message that cannot arrive in that state: a back heard with the menu closed, a completion outside its deletion. */
+const cannotArrive = (msg: Message, before: State) =>
+  (msg._tag === 'BackPressed' && !before.isMenuOpen)
+  || (msg._tag === 'Products' && msg.message._tag === 'DeleteCompleted'
+    && before.products.selection._tag !== 'Deleting')
+
 describe('Home update', () => {
-  test('is total and deterministic', () => {
-    assertProperty([state, message], (before, msg) => Equal.equals(outcome(msg, before), outcome(msg, before)))
+  test('is total and deterministic, but for a message that cannot arrive', () => {
+    assertProperty([state, message], (before, msg) => {
+      fc.pre(!cannotArrive(msg, before))
+      return Equal.equals(outcome(msg, before), outcome(msg, before))
+    })
   })
 
   describe('view and update agree', () => {
@@ -152,18 +161,23 @@ describe('Home update', () => {
     })
   })
 
-  test('BackPressed closes the menu, and otherwise changes nothing', () => {
-    assertProperty([state], (before) => {
-      const { after, commands, events } = step(Msg.BackPressed(), before)
-      const expected = before.isMenuOpen
-        ? !after.isMenuOpen && onlyChanged(before, after, 'isMenuOpen')
-        : Equal.equals(after, before)
-      return expected && commands.length === 0 && events.length === 0
+  describe('BackPressed', () => {
+    test('closes the menu', () => {
+      assertProperty([state], (before) => {
+        const from = { ...before, isMenuOpen: true }
+        const { after, commands, events } = step(Msg.BackPressed(), from)
+        return !after.isMenuOpen && onlyChanged(from, after, 'isMenuOpen') && commands.length === 0
+          && events.length === 0
+      })
     })
-  })
 
-  test('handlesBack holds while the menu is open', () => {
-    assertProperty([state], (before) => handlesBack(before) === before.isMenuOpen)
+    // The button is observed only while the menu is open, so a press with it closed is a bug.
+    test('is a defect while the menu is closed', () => {
+      assertProperty([state], (before) => {
+        expect(() => program.update(Msg.BackPressed())({ ...before, isMenuOpen: false })).toThrow()
+        return true
+      })
+    })
   })
 })
 
@@ -195,6 +209,11 @@ test('the page listens to the scrolling, and its part to the clock and the stora
     return ['clock', 'changes'].every((key) => HashMap.has(subscriptions, ['Products', key]))
       && ['scrolling', 'at-top', 'close-to-top'].every((key) => HashMap.has(subscriptions, key))
   })
+})
+
+// Otherwise the button is the platform's, which leaves the app.
+test('the page observes the back button only while the menu is open', () => {
+  assertProperty([state], (s) => HashMap.has(Tea.subscriptionsOf(program)(s), 'back-button') === s.isMenuOpen)
 })
 
 test('starts its part as the part starts, with its commands', () => {

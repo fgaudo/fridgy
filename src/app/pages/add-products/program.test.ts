@@ -41,16 +41,22 @@ const productOf = (form: Editing, maybeExpirationDate: Opt.Option<DateTime.Utc>)
     ([name, creationDate]) => Product.make({ name, creationDate, maybeExpirationDate }),
   )
 
+/** A message that cannot arrive in that state: a completion while no product is being added. */
+const cannotArrive = (msg: Message, before: State) => msg._tag === 'Completed' && before._tag !== 'Submitting'
+
 describe('AddProducts update', () => {
-  test('is total and deterministic', () => {
-    assertProperty([state, message], (before, msg) => Equal.equals(outcome(msg, before), outcome(msg, before)))
+  test('is total and deterministic, but for a message that cannot arrive', () => {
+    assertProperty([state, message], (before, msg) => {
+      fc.pre(!cannotArrive(msg, before))
+      return Equal.equals(outcome(msg, before), outcome(msg, before))
+    })
   })
 
   // Each message the view sends is accepted in the state it was rendered from; sent twice from the same frame,
   // it acts once, but the keypad's keys, which are meant to repeat, and the close button, whose second press
   // the parent ignores once the page is gone. And what the user could ask for and `update` accepts is in the
   // view, but while the product is being added: the name's input and the close button are disabled then (the
-  // back button, which is never rejected, changes nothing).
+  // platform's back button, still observed so that it does not leave the app, changes nothing).
   test('the view sends what update accepts, all of it, and acts once when sent twice', () => {
     const check = dispatchViolations(program.update, {
       repeatable: (msg) => msg._tag === 'DigitTyped' || msg._tag === 'DigitErased' || msg._tag === 'BackPressed',
@@ -211,8 +217,12 @@ describe('AddProducts update', () => {
       })
     })
 
-    test('is rejected when no product is being added', () => {
-      assertProperty([editing, fc.boolean()], (before, succeeded) => rejects(Msg.Completed({ succeeded }), before))
+    // Only a completion leaves Submitting, so one that arrives elsewhere is a bug.
+    test('is a defect when no product is being added', () => {
+      assertProperty([editing, fc.boolean()], (before, succeeded) => {
+        expect(() => program.update(Msg.Completed({ succeeded }))(before)).toThrow()
+        return true
+      })
     })
   })
 
@@ -225,9 +235,12 @@ describe('AddProducts update', () => {
   })
 })
 
-test('the page listens to the clock, and to the camera until it fails', () => {
+// The back button is observed in every state: while a product is being added, so that it does not leave the app.
+test('the page listens to the clock and the back button, and to the camera until it fails', () => {
   assertProperty([state], (s) => {
     const subscriptions = Tea.subscriptionsOf(program)(s)
-    return HashMap.has(subscriptions, 'clock') && HashMap.has(subscriptions, 'scanner') === s.isCameraOn
+    return HashMap.has(subscriptions, 'clock')
+      && HashMap.has(subscriptions, 'back-button')
+      && HashMap.has(subscriptions, 'scanner') === s.isCameraOn
   })
 })

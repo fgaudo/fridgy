@@ -9,14 +9,15 @@ import * as Data from 'effect/Data'
 import * as Effect from 'effect/Effect'
 import * as Equal from 'effect/Equal'
 import * as Layer from 'effect/Layer'
+import * as Match from 'effect/Match'
 import * as Opt from 'effect/Option'
 import * as References from 'effect/References'
+import { BackButton } from '#infrastructure/back-button/back-button.ts'
 import * as SqliteMemory from '#infrastructure/sqlite/memory.layer.ts'
 import * as App from './layer.ts'
 import type * as AddProducts from './pages/add-products/program.ts'
 import type * as Home from './pages/home/program.ts'
 import { type Command, type Deps, type Message, type Model, program, type State } from './program.ts'
-import { Shell } from './services/shell/shell.ts'
 
 const Msg = Data.taggedEnum<Message>()
 
@@ -55,8 +56,16 @@ export const perform = Effect.fnUntraced(function*(user: User, choices: Readonly
   }
 })
 
-/** The back button, heard from the shell. */
-export const back = (user: User) => user.hear('back-button', Msg.BackRequested())
+/** The back button, heard by the shown page; the test fails when the page does not observe it. */
+export const back = Effect.fnUntraced(function*(user: User) {
+  const shown = Arr.lastNonEmpty((yield* user.state).stack)
+  const pressed = Match.valueTags(shown, {
+    Home: () => Msg.Home({ message: { _tag: 'BackPressed' } }),
+    AddProducts: () => Msg.AddProducts({ message: { _tag: 'BackPressed' } }),
+    About: () => Msg.About({ message: { _tag: 'BackPressed' } }),
+  })
+  yield* user.hear([shown._tag, 'back-button'], pressed)
+})
 
 /** The subscription under `key` sends its next message, the one it would send if it ran. */
 export const hearNext = Effect.fnUntraced(function*(user: User, key: unknown) {
@@ -72,10 +81,10 @@ export const hearNext = Effect.fnUntraced(function*(user: User, key: unknown) {
   yield* user.hear(key, maybeMessage.value)
 })
 
-// The phone's shell is out of reach: its back button is heard through `back`.
-const shell = Layer.succeed(Shell, { backButton: Channel.never })
+// The platform's back button is out of reach: it is heard through `back`.
+const backButton = Layer.succeed(BackButton, { presses: Channel.never })
 
-const layer = Layer.merge(App.layer.pipe(Layer.provide(SqliteMemory.layer)), shell)
+const layer = Layer.merge(App.layer.pipe(Layer.provide(SqliteMemory.layer)), backButton)
 
 /** Rehearses the app from its start; fails when a command is still pending at the end. */
 export const rehearsed = <A>(scenario: (user: User) => Effect.Effect<A, never, Deps>) =>

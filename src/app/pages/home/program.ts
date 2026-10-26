@@ -7,9 +7,11 @@ import * as Effect from 'effect/Effect'
 import * as HashMap from 'effect/HashMap'
 import * as Match from 'effect/Match'
 import * as Opt from 'effect/Option'
+import { BackButton } from '#infrastructure/back-button/back-button.ts'
+import type { Notifications } from '#infrastructure/notifications/notifications.ts'
+import { defect } from '#libs/defect/defect.ts'
 import * as Products from './parts/products/products.ts'
 import type { DeleteProducts } from './parts/products/services/delete-products/delete-products.ts'
-import type { Notifications } from './parts/products/services/notifications/notifications.ts'
 import type { ProductList } from './parts/products/services/product-list/product-list.ts'
 import { Viewport } from './services/viewport/viewport.ts'
 
@@ -20,27 +22,20 @@ export type State = Readonly<{
   products: Products.State
 }>
 
-export type ExternalMessage = Data.TaggedEnum<{
-  /** The back button, while the page is shown and `handlesBack`. */
-  BackPressed: object
-}>
-
-export const ExternalMessage = Data.taggedEnum<ExternalMessage>()
-
 /** The page's own messages: its part's are made by `compose`. */
-type Own =
-  | ExternalMessage
-  | Data.TaggedEnum<{
-    // From the view.
-    MenuOpened: object
-    MenuClosed: object
-    InfoRequested: object
-    AddRequested: object
-    // From subscriptions.
-    AtTopChanged: { isAtTop: boolean }
-    CloseToTopChanged: { isCloseToTop: boolean }
-    InteractionChanged: { isInteracting: boolean }
-  }>
+type Own = Data.TaggedEnum<{
+  // From the view.
+  MenuOpened: object
+  MenuClosed: object
+  InfoRequested: object
+  AddRequested: object
+  // From subscriptions.
+  /** The back button, heard only while the menu is open, which it closes. */
+  BackPressed: object
+  AtTopChanged: { isAtTop: boolean }
+  CloseToTopChanged: { isCloseToTop: boolean }
+  InteractionChanged: { isInteracting: boolean }
+}>
 
 const Own = Data.taggedEnum<Own>()
 
@@ -53,10 +48,7 @@ export type Event = Data.TaggedEnum<{
 
 const Event = Data.taggedEnum<Event>()
 
-/** Whether the back button is the page's: otherwise `BackPressed` changes nothing. */
-export const handlesBack = (state: State): boolean => state.isMenuOpen
-
-export type Deps = Viewport | DeleteProducts | ProductList | Notifications
+export type Deps = Viewport | BackButton | DeleteProducts | ProductList | Notifications
 
 export type Model = Readonly<{
   menu: Data.TaggedEnum<{
@@ -95,13 +87,24 @@ const closeToTop: Tea.Subscription<Own, Viewport> = Channel.unwrap(
   ),
 )
 
+// Observed only while the menu is open: otherwise the button is the platform's, which leaves the app.
+const backButton: Tea.Subscription<Own, BackButton> = Channel.unwrap(
+  Effect.map(Effect.service(BackButton), ({ presses }) => Channel.map(presses, () => Own.BackPressed())),
+)
+
+const always: HashMap.HashMap<string, Tea.Subscription<Own, Deps>> = HashMap.make(
+  ['scrolling', scrolling],
+  ['at-top', atTop],
+  ['close-to-top', closeToTop],
+)
+
 const scrollToTop = Effect.fn('ScrollToTop')(function*() {
   const { scrollToTop } = yield* Viewport
   yield* scrollToTop
   return Opt.none()
 })
 
-const { child, compose } = Tea.parent<{ state: State; command: ScrollToTop; event: Event; external: ExternalMessage }>()
+const { child, compose } = Tea.parent<{ state: State; command: ScrollToTop; event: Event }>()
 
 // The part is always there: only its subscriptions could be turned off.
 export const program = compose({
@@ -129,7 +132,10 @@ export const program = compose({
           : Tea.reject,
       // Each tap asks: the parent opens the page once.
       AddRequested: () => ({ state, events: [Event.AddRequested()] }),
-      BackPressed: () => state.isMenuOpen ? { state: { ...state, isMenuOpen: false } } : { state },
+      BackPressed: () =>
+        state.isMenuOpen
+          ? { state: { ...state, isMenuOpen: false } }
+          : defect('BackPressed with the menu closed: the button is observed only while it is open'),
       AtTopChanged: ({ isAtTop }) => ({ state: { ...state, isAtTop } }),
       InteractionChanged: ({ isInteracting }) => ({ state: { ...state, isInteracting } }),
       // Close to the top, the list snaps to it, unless the user is scrolling it.
@@ -139,7 +145,7 @@ export const program = compose({
       }),
     }),
   runCommand: scrollToTop,
-  subscriptions: () => HashMap.make(['scrolling', scrolling], ['at-top', atTop], ['close-to-top', closeToTop]),
+  subscriptions: (state) => state.isMenuOpen ? HashMap.set(always, 'back-button', backButton) : always,
   makeModel: (state, children): Model => ({
     menu: state.isMenuOpen
       ? { _tag: 'Open', close: Own.MenuClosed(), requestInfo: Own.InfoRequested() }
