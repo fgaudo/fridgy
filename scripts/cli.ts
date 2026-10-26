@@ -246,7 +246,7 @@ const licensesCommand = Cli.Command.make(
       }),
     )
     yield* fs.writeFileString(
-      resolve('src/app/pages/about/services/licenses/licenses.generated.json'),
+      resolve('src/app/children/about/services/licenses/licenses.generated.json'),
       `${JSON.stringify(Object.fromEntries(entries), null, 4)}\n`,
     )
   }),

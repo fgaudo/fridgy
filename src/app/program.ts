@@ -6,9 +6,9 @@ import * as Arr from 'effect/Array'
 import * as Data from 'effect/Data'
 import * as Match from 'effect/Match'
 import * as Opt from 'effect/Option'
-import * as About from './pages/about/program.ts'
-import * as AddProducts from './pages/add-products/program.ts'
-import * as Home from './pages/home/program.ts'
+import * as About from './children/about/program.ts'
+import * as AddProducts from './children/add-products/program.ts'
+import * as Home from './children/home/program.ts'
 
 export type Page = Data.TaggedEnum<{
   Home: Readonly<{ state: Home.State }>

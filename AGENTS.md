@@ -28,8 +28,8 @@ with an upgrade of Capacitor, checked in the emulator on the new target.
 Biome enforces import boundaries, by the role a file's name gives it:
 
 - inside `src/app`, imports go downwards only: a program knows its own folder (its services, its children),
-  never a parent or a sibling (another page, part or service), and the root reaches a page only through the page's
-  `program.ts`, `view.tsx`, `layer.ts`;
+  never a parent or a sibling (another child, another service), and a parent reaches a child only through the
+  child's `program.ts`, `view.tsx`, `layer.ts`, at every depth;
 - adapters (`<service>.<backing>.ts`) are imported only by a `layer.ts`, an entrypoint or their own test: a
   program uses its services;
 - an entrypoint imports from `src/app` its root modules and the adapters it picks, nothing else;
@@ -43,8 +43,11 @@ reports an error, the rule is intended: fix the code, do not work around the che
 
 ## Architecture rules
 
-The pages to copy are `src/app/pages/home` (a page made of parts) and `src/app/pages/about` (a page in one
-module).
+The programs to copy are `src/app/children/home` (a page with a child of its own) and `src/app/children/about`
+(a page in one module). Every program has the same shape, whatever its depth: the root (`src/app`), a page (a
+child of the root, one of the stack it shows) and a child of a page are all a folder holding `program.ts`,
+`view.tsx`, `layer.ts`, their tests, `services/` and `children/`. "Page" names a role in the UI, kept by the
+root's state, not a kind of program.
 
 The runtime of the Elm architecture is [`@fgaudo/effect-tea`](https://www.npmjs.com/package/@fgaudo/effect-tea),
 an npm dependency developed in its own repository (`github.com/fgaudo/effect-tea`). Read its README
@@ -81,17 +84,18 @@ here: a change to the library is made, released and then upgraded to in this app
   instead of shared flags. Values that depend on time are computed in `makeModel` from a `now` that a clock
   subscription keeps in the state.
 - **A program is split by concern, never by kind.** A program lives in one module until it is too large
-  (300–400 lines); then it splits into **parts** (`pages/<page>/parts/`), each a `Tea.Program` with its own
-  state, messages, commands and model, declared as a child of the page as the root declares the pages. What
-  spans the parts (the menu, the back button) stays in the page's `program.ts`; what concerns one part, even
-  how the user learns of its failure (Products' toast), stays in the part.
-  Parts that read each other's state are one part. A part has a view of its own: what only the parent's view
-  shows (Home's scrolling, which its top app bar and add button follow) is the parent's state, not a part. A
-  parent's view never reads the fields of a part's model: it hands the model to the part's view functions,
-  which draw the part's pieces where the parent leaves room for them (Products' list, and its subtitle and
-  selection bar in Home's top app bar). A part is a folder (`parts/<part>/`) holding its program
-  (`<part>.ts`), its view (`<part>.view.tsx`), their tests and arbitraries, and its `services/`.
-  Never split a program into `messages`/`state`/`update` files: they would import each other in cycles.
+  (300–400 lines); then it splits into **children** (`children/<child>/`), each a `Tea.Program` with its own
+  state, messages, commands and model, declared as the root declares its pages. What spans the children (the
+  menu, the back button) stays in the parent's `program.ts`; what concerns one child, even how the user learns
+  of its failure (Products' toast), stays in the child. Children that read each other's state are one child. A
+  child has a view of its own: what only the parent's view shows (Home's scrolling, which its top app bar and
+  add button follow) is the parent's state, not a child. A parent's view never reads the fields of a child's
+  model: it hands the model to the child's view functions, which draw the child's pieces where the parent
+  leaves room for them (Products' list, and its subtitle and selection bar in Home's top app bar), or its whole
+  screen (the root draws the page on top). A child is a folder (`children/<child>/`) holding its program
+  (`program.ts`, exporting its `Deps`), its view (`view.tsx`), its layer (`layer.ts`), their tests and
+  arbitraries, its `services/` and its own `children/`. Never split a program into `messages`/`state`/`update`
+  files: they would import each other in cycles.
 - **Children are declared, never wired.** A parent (`Tea.parent<{ state; command?; event?; external? }>()`)
   declares each child with `child` (`get`, `set`, `subscribed`); the library routes their messages
   (`{ _tag: <child>, message }`), commands, subscriptions and models. A parent decides whether a child is
@@ -101,13 +105,17 @@ here: a change to the library is made, released and then upgraded to in this app
   `Tea.dispatchTo(dispatch, '<Child>')`, which wraps the child's messages as the parent receives them. It is
   the same function in every frame, and a child's model the same object while its state is, so a view whose
   model rarely changes is drawn with snabbdom's `thunk` (e.g. Home's product list).
-- **Pages talk to their parent through events** (`Event`, handled by the parent's `onEvent`), never by
+- **A child talks to its parent through events** (`Event`, handled by the parent's `onEvent`), never by
   acting on it. A program exports its `Message`, `Event` and `Command` as types only (a parent's with
   `Tea.MessageOf` and `Tea.CommandOf`), and its `ExternalMessage` (what its parent may give it with
   `children.<Child>.update`), when it has one, as a value; tests build their own constructors with
   `Data.taggedEnum<Message>()`. A parent never asks a child about its state to decide what to do: what a
-  child needs, it gets through its own services and subscriptions. Hidden pages keep receiving their
-  completions, but their subscriptions run only while they are on top.
+  child needs, it gets through its own services and subscriptions (Products has its own clock). Only a fact
+  that several children must see as one truth (what the viewport shows, the connection) is the parent's: it
+  observes it and hands it to each child as an `ExternalMessage`. Two siblings that need to talk go through
+  the parent: an event up, an `ExternalMessage` or an `init` with a parameter down; a parent that grows logic
+  of its own there is a sign that those siblings are one child. Hidden pages keep receiving their completions,
+  but their subscriptions run only while they are on top.
 - **The back button is each page's, only while it has something to do with it.** A page observes the
   platform's `BackButton` (`src/infrastructure/back-button`, a subscription keyed `back-button`) while it has
   something to close (Home, while its menu is open), or always, when a press asks its parent to leave it (About)
@@ -127,10 +135,10 @@ here: a change to the library is made, released and then upgraded to in this app
   terms of ports and adapters) is a requirement of its consumer, listed in its program's `services`, shaped for
   it and free to change with it. It is a folder named after it in its consumer's `services/`, holding the
   service, its adapters (the layers that provide it, named after what backs them), its contract and their
-  tests: a part's (`parts/products/services/product-list/`: `product-list.ts`, `product-list.sql.ts`, …), a
-  page's (`pages/add-products/services/scanner/`). So a program's folder holds the
-  program (`program.ts`, `view.tsx`, `layer.ts`, their tests), its `services/` and its children (`parts/`,
-  `pages/`). Two consumers that need the same thing today each have their own service (the AddProducts
+  tests (`children/home/children/products/services/product-list/`: `product-list.ts`, `product-list.sql.ts`, …;
+  `children/add-products/services/scanner/`). So a program's folder holds the program (`program.ts`,
+  `view.tsx`, `layer.ts`, their tests), its `services/` and its `children/`. Two consumers that need the same
+  thing today each have their own service (the AddProducts
   page's `AddProducts` and Products' `DeleteProducts`): what they truly share is the domain and the
   infrastructure, never the service. The exception is a fact of the platform that no consumer could shape
   (`src/infrastructure/back-button`: a press is a `void`; `src/infrastructure/notifications`: a toast is a text,
@@ -149,17 +157,21 @@ here: a change to the library is made, released and then upgraded to in this app
   still be shown and deleted.
 - **Shared things move up, never sideways.** What must be one truth moves up: the rules of an entity to
   `src/domain`, how things are done (the schema, how a product is written, a platform call that is more than
-  a line) to `src/infrastructure`. Services never move up; pages never import each other.
+  a line) to `src/infrastructure`. Services never move up; a program never imports a sibling. An adapter stays
+  a thin wrapper on the infrastructure: one that grows a query of its own is doing the infrastructure's work,
+  and two of them will diverge. No program is used by two parents yet, so none has a place: the day one is
+  needed, it gets a folder of its own under `src/app`, outside every `children/`, with an alias of its own and
+  a Biome rule to match, and it knows only its own folder like any other.
 - **One storage per setup**: every adapter of the storage is written once, on `SqlClient` (providing itself
   the helpers it builds on, such as `SqlHelper`), and the entrypoint provides the engine (sqlite in a worker on
   the phone, in memory in development and tests, empty on every start).
 - **Migrations are append-only**: a phone has already run the existing ones, so a fix is a new migration.
 - **Environments exist only in `src/entrypoints/`.** Shared code never branches on `process.env.NODE_ENV`.
-  A `layer.ts` (the app's, a page's) provides every adapter that has no alternative, the infrastructure's
-  services' included (the app's provides the toasts); what has alternatives (the `SqlClient`, the platform's
-  `BackButton`) is left out of the layers, and each entrypoint picks one by importing the adapter's own module,
-  wherever its service is (`#infrastructure/back-button/browser.layer.ts`,
-  `#app/pages/home/parts/products/services/product-list/product-list.sql.ts`), never through a module that would load
+  Every program's `layer.ts` provides every adapter of its own services that has no alternative, merged with
+  its children's layers (the app's adds the infrastructure's, the toasts); what has alternatives (the
+  `SqlClient`, the platform's `BackButton`) is left out of the layers, and each entrypoint picks one by
+  importing the adapter's own module, wherever its service is (`#infrastructure/back-button/browser.layer.ts`,
+  `#app/children/home/children/products/services/product-list/product-list.sql.ts`), never through a module that would load
   the other alternatives too: a missing choice fails the typecheck, and a bundle only contains what it uses. A
   service that gains a second adapter leaves its owner's `layer.ts` the same way. When moving files, update the
   paths in `scripts/cli.ts` and `package.json`.
@@ -172,12 +184,12 @@ here: a change to the library is made, released and then upgraded to in this app
 
 ## Views
 
-TSX (`view.tsx`, `<part>.view.tsx`, and only views), rendered by snabbdom. Attach the model's messages with
+TSX (`view.tsx`, and only views), rendered by snabbdom. Attach the model's messages with
 `handlers(dispatch)` from `libs/tea-snabbdom`, matching the model's case:
 `on={menu._tag === 'Closed' ? on('click', menu.open) : {}}`. `onPreventingDefault` is the exception that
 always attaches (e.g. the native menu of a long press), with an optional message. An input the user types into
 gets its text with `initialValue` (written only when the input is created), never from `props.value`: a frame
-older than the last keys would take them back. A large view splits along the parts; components that know
+older than the last keys would take them back. A large view splits along the children; components that know
 nothing of the app (e.g. `libs/ui/overlay.tsx`) go to `libs/ui/`. The development server swaps the view in
 place when only `.tsx` and `.css` files change, wherever they are, and reloads the page otherwise.
 
@@ -211,8 +223,9 @@ outlined text fields; selected things turn the top app bar into a contextual one
   `dispatchViolations` (`@fgaudo/effect-tea/testing`), that each message it sends (`messagesSentBy`, in
   `libs/tea-snabbdom`) is accepted, and acts once when sent twice unless it is listed as `repeatable`, and
   that, of the candidates the test lists, nothing the user could ask for and `update` accepts is missing from
-  it, but what is `withheld` on purpose. Models in tests come from `program.makeModel`. A part's `update` has
-  its own tests (`parts/<part>/<part>.test.ts`). The root's tests act like a user (`app/user.test_support.ts`),
+  it, but what is `withheld` on purpose. Models in tests come from `program.makeModel`. A child whose view
+  only draws pieces the parent places (Products) has its `update` tested in its own `program.test.ts`, and its
+  pieces checked by its parent's view test. The root's tests act like a user (`app/user.test_support.ts`),
   with `rehearse`: each message is taken from what the shown page's model holds, a subscription's message is
   heard when the test says so, and commands run on the app's layer, over a database in memory, when the test
   runs them, none left pending. A tap on a frame the state has moved past is tested with `update` itself. What
@@ -225,7 +238,7 @@ outlined text fields; selected things turn the top app bar into a contextual one
   and each adapter's own `<service>.<backing>.test.ts` runs it: a second adapter passes the same contract. What
   a contract needs beyond its service (reading back a write, storing products to list or delete) comes from
   the adapter's test, through the storage itself (`infrastructure/sql/products.test_support.ts`): reads and
-  writes that only tests need never go into a service, nor into another part's.
+  writes that only tests need never go into a service, nor into another program's.
 
 ## Conventions
 

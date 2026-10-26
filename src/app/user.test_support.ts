@@ -15,8 +15,8 @@ import * as References from 'effect/References'
 import { BackButton } from '#infrastructure/back-button/back-button.ts'
 import * as SqliteMemory from '#infrastructure/sqlite/memory.layer.ts'
 import * as App from './layer.ts'
-import type * as AddProducts from './pages/add-products/program.ts'
-import type * as Home from './pages/home/program.ts'
+import type * as AddProducts from './children/add-products/program.ts'
+import type * as Home from './children/home/program.ts'
 import { type Command, type Deps, type Message, type Model, program, type State } from './program.ts'
 
 const Msg = Data.taggedEnum<Message>()

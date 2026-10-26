@@ -4,9 +4,9 @@
 import * as Tea from '@fgaudo/effect-tea'
 import * as Match from 'effect/Match'
 import type { View } from '#libs/tea-snabbdom/tea-snabbdom.ts'
-import * as About from './pages/about/view.tsx'
-import * as AddProducts from './pages/add-products/view.tsx'
-import * as Home from './pages/home/view.tsx'
+import * as About from './children/about/view.tsx'
+import * as AddProducts from './children/add-products/view.tsx'
+import * as Home from './children/home/view.tsx'
 import type { Message, Model } from './program.ts'
 
 // Each page is drawn in an element keyed by its name, so that snabbdom never patches one page's elements into

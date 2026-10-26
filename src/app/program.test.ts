@@ -6,7 +6,7 @@ import * as Effect from 'effect/Effect'
 import * as HashMap from 'effect/HashMap'
 import * as Opt from 'effect/Option'
 import { tagPath } from '#libs/testing/tag-path.test_support.ts'
-import * as Home from './pages/home/program.ts'
+import * as Home from './children/home/program.ts'
 import { type Page, program, type State } from './program.ts'
 import { view } from './view.tsx'
 import {

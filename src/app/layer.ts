@@ -1,8 +1,8 @@
 import * as Layer from 'effect/Layer'
 import * as NotificationsCapacitor from '#infrastructure/notifications/capacitor.layer.ts'
-import * as About from './pages/about/layer.ts'
-import * as AddProducts from './pages/add-products/layer.ts'
-import * as Home from './pages/home/layer.ts'
+import * as About from './children/about/layer.ts'
+import * as AddProducts from './children/add-products/layer.ts'
+import * as Home from './children/home/layer.ts'
 
 // The adapters that every setup shares: the pages' services', and the infrastructure's that have no
 // alternative (the toasts). What has alternatives is left to the entrypoint: the `SqlClient` (the database's

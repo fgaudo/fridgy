@@ -30,7 +30,7 @@ bun install
 ```
 
 It also regenerates the licenses shown on the About page
-(`src/app/pages/about/services/licenses/licenses.generated.json`, from the production dependencies): commit
+(`src/app/children/about/services/licenses/licenses.generated.json`, from the production dependencies): commit
 the file when it changes, with `bun.lock`.
 
 A file named `*.generated.*` is written by a command (`bun run update-licenses`, `bun run update-palette`) and is
@@ -131,15 +131,14 @@ What the app adds:
 
 How the code is organized:
 
-- **Pages** (`src/app/pages/`) are self-contained: each owns its messages, state, `update` and view, and
-  imports nothing of another page. Biome enforces the boundaries by a file's role: imports go downwards only,
-  and adapters are imported only by the layers and the entrypoints.
-- **Parts.** A large page is split by concern into parts, each a program the page declares as a child, in a
-  folder of its own.
+- **A tree of programs** (`src/app/children/`), all of the same shape: the root, its pages and a large page's
+  children are each a folder with a program, a view, a layer, its services and its own `children/`. Each owns
+  its messages, state, `update` and view, and imports nothing of a sibling. Biome enforces the boundaries by a
+  file's role: imports go downwards only, and adapters are imported only by the layers and the entrypoints.
 - **Services and adapters.** A service is what a program needs from outside (the product list, scrolling,
-  the back button): an Effect `Context.Service`, owned by the part, page or root that uses it, in its
-  `services/` folder with the adapters (layers) that provide it. Services are never shared: two parts that both
-  touch products each have their own.
+  the back button): an Effect `Context.Service`, owned by the program that uses it, in its `services/` folder
+  with the adapters (layers) that provide it. Services are never shared: two programs that both touch products
+  each have their own.
 - **Shared code moves up**: the entities (`Product`) to `src/domain/`, how things are done (the database's
   schema, how a product is written) to `src/infrastructure/`.
 - **Environments** (production, development) exist only in `src/entrypoints/`, which pick what has

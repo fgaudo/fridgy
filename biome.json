@@ -127,7 +127,7 @@
                     "group": [
                       "../**"
                     ],
-                    "message": "A program knows only its own folder: an import never goes up to a parent or across to a sibling (another page, another part, another service)."
+                    "message": "A program knows only its own folder: an import never goes up to a parent or across to a sibling (another child, another service)."
                   },
                   {
                     "group": [
@@ -137,9 +137,9 @@
                   },
                   {
                     "group": [
-                      "**/pages/*/*/**"
+                      "**/children/*/*/**"
                     ],
-                    "message": "The root reaches a page only through the modules at the page's root (program.ts, view.tsx, layer.ts)."
+                    "message": "A parent reaches a child only through the modules at the child's root (program.ts, view.tsx, layer.ts)."
                   },
                   {
                     "group": [
@@ -183,7 +183,7 @@
                     "group": [
                       "../**"
                     ],
-                    "message": "A program knows only its own folder: an import never goes up to a parent or across to a sibling (another page, another part, another service)."
+                    "message": "A program knows only its own folder: an import never goes up to a parent or across to a sibling (another child, another service)."
                   },
                   {
                     "group": [
@@ -193,9 +193,9 @@
                   },
                   {
                     "group": [
-                      "**/pages/*/*/**"
+                      "**/children/*/*/**"
                     ],
-                    "message": "The root reaches a page only through the modules at the page's root (program.ts, view.tsx, layer.ts)."
+                    "message": "A parent reaches a child only through the modules at the child's root (program.ts, view.tsx, layer.ts)."
                   },
                   {
                     "group": [
