@@ -5,8 +5,21 @@ description: How Fridgy's views are written - TSX rendered by snabbdom, messages
 
 # Views
 
-Only `view.tsx` files hold TSX; snabbdom renders them through `#libs/jsx` and `#libs/tea-snabbdom`. A view is a
+Only `view.tsx` files and the components of `src/libs/ui/` hold TSX; snabbdom renders them through `#libs/jsx`
+and `#libs/tea-snabbdom`. A view is a
 pure function of the model: no local state, no effects, no reading of the clock.
+
+## The model decides, the view draws
+
+A view matches the model's tags and formats its values; it never decides. Before writing a condition in a view,
+ask whether it reads a tag the model gives (`model.date._tag === 'NamingNothing'`: drawing) or computes one from
+data (`model.digits === ''`, `choices.length === 0`, `text.trim().length > 0`, a fallback such as "the name, or
+else the id": deciding). A decision moves to `makeModel`, as a case named for what the screen shows
+(`Undated | Naming | NamingNothing`, `Loading | Loaded`, `ExpiringToday | Fresh { daysLeft }`), never as a boolean
+tag, and gets a property in `program.test.ts` ("the model", e.g. "says the date is undated, names the days the
+digits name, or names nothing"). What stays in the view: texts, formatting (`formatDay`), classes and layout,
+and matching two tags to one look (the date field, disabled while submitting and in the error's colors when
+nothing is named). The model holds exactly what the view draws: a field no view reads is removed.
 
 ## Messages
 

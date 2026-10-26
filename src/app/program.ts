@@ -48,15 +48,15 @@ type PageOf<Tag extends Page['_tag']> = Page & Readonly<{ _tag: Tag; state: Page
 
 const isPage = <Tag extends Page['_tag']>(tag: Tag) => (page: Page): page is PageOf<Tag> => page._tag === tag
 
-const pageState = <Tag extends Page['_tag']>(tag: Tag) => (state: State): Opt.Option<PageStates[Tag]> =>
-  Opt.map(Arr.findFirst(state.stack, isPage(tag)), (page) => page.state)
-
-const shownPageState = <Tag extends Page['_tag']>(tag: Tag) => (state: State): Opt.Option<PageStates[Tag]> =>
-  Opt.map(Opt.liftPredicate(top(state), isPage(tag)), (page) => page.state)
-
-/** Puts `replacement` where the page with the same tag is. */
-const replacePage = (state: State, replacement: Page): State => ({
-  stack: Arr.map(state.stack, (page) => (page._tag === replacement._tag ? replacement : page)),
+/** Where a page lives: wherever it is in the stack, listening only on top. Each page is in the stack at most once. */
+const page = <Tag extends Page['_tag']>(tag: Tag) => ({
+  get: (state: State): Opt.Option<PageStates[Tag]> =>
+    Opt.map(Arr.findFirst(state.stack, isPage(tag)), (page) => page.state),
+  subscribed: (state: State): Opt.Option<PageStates[Tag]> =>
+    Opt.map(Opt.liftPredicate(top(state), isPage(tag)), (page) => page.state),
+  set: (state: State, pageState: PageStates[Tag]): State => ({
+    stack: Arr.map(state.stack, (page) => (page._tag === tag ? { _tag: tag, state: pageState } as PageOf<Tag> : page)),
+  }),
 })
 
 const push = (state: State, page: Page): State => ({ stack: Arr.append(state.stack, page) })
@@ -75,21 +75,9 @@ export const program = compose({
     return { state: { stack: [Page.Home({ state: home.state })] }, commands: home.commands }
   },
   children: {
-    Home: child(Home.program, {
-      get: pageState('Home'),
-      subscribed: shownPageState('Home'),
-      set: (state, home) => replacePage(state, Page.Home({ state: home })),
-    }),
-    AddProducts: child(AddProducts.program, {
-      get: pageState('AddProducts'),
-      subscribed: shownPageState('AddProducts'),
-      set: (state, page) => replacePage(state, Page.AddProducts({ state: page })),
-    }),
-    About: child(About.program, {
-      get: pageState('About'),
-      subscribed: shownPageState('About'),
-      set: (state, about) => replacePage(state, Page.About({ state: about })),
-    }),
+    Home: child(Home.program, page('Home')),
+    AddProducts: child(AddProducts.program, page('AddProducts')),
+    About: child(About.program, page('About')),
   },
   onEvent: {
     Home: (event, children) => (state) =>

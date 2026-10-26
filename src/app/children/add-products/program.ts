@@ -3,6 +3,7 @@
 // the one they meant, which adds the product. Adding is a state that only its completion leaves; the page then
 // stays, with the name, for the next product, until the user leaves it.
 import * as Tea from '@fgaudo/effect-tea'
+import * as Arr from 'effect/Array'
 import * as Channel from 'effect/Channel'
 import * as Data from 'effect/Data'
 import * as DateTime from 'effect/DateTime'
@@ -12,16 +13,17 @@ import * as HashMap from 'effect/HashMap'
 import * as Match from 'effect/Match'
 import * as Opt from 'effect/Option'
 import * as Product from '#domain/product.ts'
-import * as DigitDates from '#libs/dates/digit-dates.ts'
 import { BackButton } from '#infrastructure/back-button/back-button.ts'
 import { Notifications } from '#infrastructure/notifications/notifications.ts'
+import * as DigitDates from '#libs/dates/digit-dates.ts'
 import { defect } from '#libs/defect/defect.ts'
 import * as AddProducts from './services/add-products/add-products.ts'
 import { Scanner } from './services/scanner/scanner.ts'
 
 export type Digit = '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9'
 
-type Form = Readonly<{
+/** What the user has entered, kept in every state: a product being added does not interrupt the next one. */
+export type Form = Readonly<{
   maybeName: Opt.Option<string>
   /** How many scans have replaced the name: the name's input is drawn anew with each. */
   scans: number
@@ -35,8 +37,8 @@ type Form = Readonly<{
 }>
 
 export type State = Data.TaggedEnum<{
-  Editing: Form
-  Submitting: Form & Readonly<{ product: Product.Product }>
+  Editing: Readonly<{ form: Form }>
+  Submitting: Readonly<{ form: Form; product: Product.Product }>
 }>
 
 export type Message = Data.TaggedEnum<{
@@ -75,16 +77,31 @@ const Event = Data.taggedEnum<Event>()
 export type Deps = AddProducts.AddProducts | Scanner | Notifications | BackButton
 
 /** A day the digits name, which adds the product once the form names one. */
-type DateChoice = Readonly<{ date: DateTime.Utc; maybeAdd: Opt.Option<Message> }>
+export type DateChoice = Readonly<{ date: DateTime.Utc; maybeAdd: Opt.Option<Message> }>
+
+/** What the typed digits say of the expiration date. */
+export type DateField = Data.TaggedEnum<{
+  /** No digit typed: the product may be added with no expiration date, once the form names one. */
+  Undated: Readonly<{ maybeAddUndated: Opt.Option<Message> }>
+  /** The digits name these days, in order. */
+  Naming: Readonly<{ choices: Arr.NonEmptyReadonlyArray<DateChoice> }>
+  /** The digits name no day ahead. */
+  NamingNothing: object
+}>
 
 type Shown = Readonly<{
   isCameraOn: boolean
   name: string
   /** Changes when the name is replaced by a scan, not by typing. */
   nameKey: number
-  digits: string
+  /** The digits typed so far, once there are any. */
+  maybeDigits: Opt.Option<string>
   /** The product added last, for a few seconds after it was added: the snackbar that says so. */
   maybeJustAdded: Opt.Option<Product.Product>
+  /** The keypad's keys: none while a product is being added, or past a date's longest. */
+  maybeTypeDigit: Opt.Option<(digit: Digit) => Message>
+  /** None while a product is being added, or with nothing to erase. */
+  maybeEraseDigit: Opt.Option<Message>
 }>
 
 export type Model = Data.TaggedEnum<{
@@ -93,12 +110,7 @@ export type Model = Data.TaggedEnum<{
     & Readonly<{
       close: Message
       changeName: (name: string) => Message
-      /** While fewer digits than a date's longest are typed. */
-      maybeTypeDigit: Opt.Option<(digit: Digit) => Message>
-      maybeEraseDigit: Opt.Option<Message>
-      choices: ReadonlyArray<DateChoice>
-      /** Before any digit is typed, the product can be added with no expiration date. */
-      maybeAddUndated: Opt.Option<Message>
+      date: DateField
     }>
   /** The controls are disabled until the product is added. */
   Submitting: Shown
@@ -114,14 +126,8 @@ const isJustAdded = (product: Product.Product, maybeNow: Opt.Option<DateTime.Utc
     (now) => DateTime.isLessThan(now, DateTime.add(product.creationDate, { seconds: SNACKBAR_SECONDS })),
   )
 
-const formOf = ({ maybeName, scans, digits, isCameraOn, maybeNow, maybeLastAdded }: State): Form => ({
-  maybeName,
-  scans,
-  digits,
-  isCameraOn,
-  maybeNow,
-  maybeLastAdded,
-})
+/** The same state, with its form changed. */
+const withForm = (state: State, change: (form: Form) => Form): State => ({ ...state, form: change(state.form) })
 
 /** The days the digits name on which a product added now may expire. */
 const datesOf = (form: Form): ReadonlyArray<DateTime.Utc> =>
@@ -214,49 +220,53 @@ export const program: Tea.Program<{
   init: {
     state: {
       _tag: 'Editing',
-      maybeName: Opt.none(),
-      scans: 0,
-      digits: '',
-      isCameraOn: true,
-      maybeNow: Opt.none(),
-      maybeLastAdded: Opt.none(),
+      form: {
+        maybeName: Opt.none(),
+        scans: 0,
+        digits: '',
+        isCameraOn: true,
+        maybeNow: Opt.none(),
+        maybeLastAdded: Opt.none(),
+      },
     },
   },
 
   update: Match.typeTags<Message, (state: State) => Tea.Transition<State, Command, Event>>()({
     // Accepted while submitting too, though the input is disabled then: a key typed just before is kept for the
     // next product. The raw text is kept as typed; whether it is a valid name is decided when adding.
-    NameChanged: ({ name }) => (state) => ({ state: { ...state, maybeName: Opt.some(name) } }),
+    NameChanged: ({ name }) => (state) => ({
+      state: withForm(state, (form) => ({ ...form, maybeName: Opt.some(name) })),
+    }),
 
     DigitTyped: ({ digit }) => (state) =>
-      state._tag === 'Editing' && state.digits.length < DigitDates.MAX_DIGITS
-        ? { state: { ...state, digits: state.digits + digit } }
+      state._tag === 'Editing' && state.form.digits.length < DigitDates.MAX_DIGITS
+        ? { state: withForm(state, (form) => ({ ...form, digits: form.digits + digit })) }
         : Tea.reject,
 
     DigitErased: () => (state) =>
-      state._tag === 'Editing' && state.digits !== ''
-        ? { state: { ...state, digits: state.digits.slice(0, -1) } }
+      state._tag === 'Editing' && state.form.digits !== ''
+        ? { state: withForm(state, (form) => ({ ...form, digits: form.digits.slice(0, -1) })) }
         : Tea.reject,
 
-    TimeChanged: ({ now }) => (state) => ({ state: { ...state, maybeNow: Opt.some(now) } }),
+    TimeChanged: ({ now }) => (state) => ({ state: withForm(state, (form) => ({ ...form, maybeNow: Opt.some(now) })) }),
 
     // The camera keeps reading the product in front of it: only another code replaces the name, so a name
     // the user corrected stays until the next product.
     Scanned: ({ barcode }) => (state) =>
-      Opt.contains(state.maybeName, barcode)
+      Opt.contains(state.form.maybeName, barcode)
         ? { state }
-        : { state: { ...state, maybeName: Opt.some(barcode), scans: state.scans + 1 } },
+        : { state: withForm(state, (form) => ({ ...form, maybeName: Opt.some(barcode), scans: form.scans + 1 })) },
 
-    CameraFailed: () => (state) => ({ state: { ...state, isCameraOn: false } }),
+    CameraFailed: () => (state) => ({ state: withForm(state, (form) => ({ ...form, isCameraOn: false })) }),
 
     Started: ({ maybeExpirationDate }) => (state) => {
-      if (state._tag !== 'Editing' || !isOffered(state, maybeExpirationDate)) {
+      if (state._tag !== 'Editing' || !isOffered(state.form, maybeExpirationDate)) {
         return Tea.reject
       }
-      return Opt.match(productOf(state, maybeExpirationDate), {
+      return Opt.match(productOf(state.form, maybeExpirationDate), {
         onNone: () => Tea.reject,
         onSome: (product) => ({
-          state: { ...state, _tag: 'Submitting', product },
+          state: { _tag: 'Submitting', form: state.form, product },
           commands: [Command.Add({ product })],
         }),
       })
@@ -267,10 +277,12 @@ export const program: Tea.Program<{
       if (state._tag !== 'Submitting') {
         return defect('Completed while no product is being added: only a completion leaves Submitting')
       }
-      const form = formOf(state)
       return succeeded
-        ? { state: { _tag: 'Editing', ...form, digits: '', maybeLastAdded: Opt.some(state.product) } }
-        : { state: { _tag: 'Editing', ...form }, commands: [Command.ShowToast({ text: 'Could not add the product' })] }
+        ? { state: { _tag: 'Editing', form: { ...state.form, digits: '', maybeLastAdded: Opt.some(state.product) } } }
+        : {
+          state: { _tag: 'Editing', form: state.form },
+          commands: [Command.ShowToast({ text: 'Could not add the product' })],
+        }
     },
 
     // Each press asks the parent to leave, which removes the page on the first one. The page is not left while a
@@ -284,33 +296,39 @@ export const program: Tea.Program<{
   }),
 
   // Once the camera has failed, it is not tried again until the page is opened anew.
-  subscriptions: (state) =>
-    state.isCameraOn
+  subscriptions: ({ form }) =>
+    form.isCameraOn
       ? HashMap.make(['clock', clock], ['scanner', scanner], ['back-button', backButton])
       : HashMap.make(['clock', clock], ['back-button', backButton]),
 
   makeModel: (state) => {
+    const { form } = state
+    const isEditing = state._tag === 'Editing'
     const shown: Shown = {
-      isCameraOn: state.isCameraOn,
-      name: Opt.getOrElse(state.maybeName, () => ''),
-      nameKey: state.scans,
-      digits: state.digits,
-      maybeJustAdded: Opt.filter(state.maybeLastAdded, (product) => isJustAdded(product, state.maybeNow)),
+      isCameraOn: form.isCameraOn,
+      name: Opt.getOrElse(form.maybeName, () => ''),
+      nameKey: form.scans,
+      maybeDigits: Opt.liftPredicate(form.digits, (digits) => digits !== ''),
+      maybeJustAdded: Opt.filter(form.maybeLastAdded, (product) => isJustAdded(product, form.maybeNow)),
+      maybeTypeDigit: isEditing && form.digits.length < DigitDates.MAX_DIGITS
+        ? Opt.some((digit: Digit) => Message.DigitTyped({ digit }))
+        : Opt.none(),
+      maybeEraseDigit: isEditing && form.digits !== '' ? Opt.some(Message.DigitErased()) : Opt.none(),
     }
     if (state._tag === 'Submitting') {
       return { _tag: 'Submitting', ...shown }
     }
+    const choices = datesOf(form).map((date): DateChoice => ({ date, maybeAdd: startOf(form, Opt.some(date)) }))
     return {
       _tag: 'Editing',
       ...shown,
       close: Message.BackPressed(),
       changeName: (name: string) => Message.NameChanged({ name }),
-      maybeTypeDigit: state.digits.length < DigitDates.MAX_DIGITS
-        ? Opt.some((digit: Digit) => Message.DigitTyped({ digit }))
-        : Opt.none(),
-      maybeEraseDigit: state.digits !== '' ? Opt.some(Message.DigitErased()) : Opt.none(),
-      choices: datesOf(state).map((date) => ({ date, maybeAdd: startOf(state, Opt.some(date)) })),
-      maybeAddUndated: state.digits === '' ? startOf(state, Opt.none()) : Opt.none(),
+      date: form.digits === ''
+        ? { _tag: 'Undated', maybeAddUndated: startOf(form, Opt.none()) }
+        : Arr.isReadonlyArrayNonEmpty(choices)
+        ? { _tag: 'Naming', choices }
+        : { _tag: 'NamingNothing' },
     }
   },
 }

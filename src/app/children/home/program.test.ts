@@ -6,12 +6,12 @@ import * as Equal from 'effect/Equal'
 import * as HashMap from 'effect/HashMap'
 import * as Opt from 'effect/Option'
 import * as fc from 'fast-check'
-import { tagPath } from '#libs/testing/tag-path.test_support.ts'
 import { messagesSentBy } from '#libs/tea-snabbdom/view.test_support.ts'
+import { tagPath } from '#libs/testing/tag-path.test_support.ts'
 import { assertProperty, onlyChanged, outcomesOf } from '#libs/testing/update.test_support.ts'
 import * as Products from './children/products/program.ts'
-import { type Event, type Message, type Model, program, type State } from './program.ts'
 import { message, state } from './program.test_arbitrary.ts'
+import { type Event, type Message, type Model, program, type State } from './program.ts'
 import { view } from './view.tsx'
 
 const Msg = Data.taggedEnum<Message>()
@@ -47,17 +47,15 @@ describe('Home update', () => {
     // tap, or a tap on a view that has not caught up yet), it acts once, but the
     // add button, whose second tap the parent ignores once the page that adds is
     // shown. And what the user could ask for and `update` accepts is in the view,
-    // but for what the model hides on purpose: a list that is not shown, or not yet
-    // (see AGENTS.md, "Known gaps"), its invalid products, and the menu
-    // while products are selected: the selection's bar takes the place of its.
+    // but for what the model hides on purpose: a list that is not shown, or not yet,
+    // and the menu while products are selected: the selection's bar takes the place of its.
     test('the view sends what update accepts, all of it, and acts once when sent twice', () => {
       const shownItems = ({ products }: State) =>
         Opt.isSome(products.maybeNow) && products.list._tag === 'Loaded' ? products.list.items : []
       const isListShown = (state: State) => shownItems(state).length > 0
       const isShown = (state: State, id: string) =>
-        shownItems(state).some((item) => item._tag === 'Valid' && item.id === id)
-      const isSelecting = ({ products: { selection } }: State) =>
-        selection._tag === 'Deleting' || Opt.isSome(selection.maybeIds)
+        shownItems(state).some((item) => item._tag !== 'Corrupt' && item.id === id)
+      const isSelecting = ({ products: { selection } }: State) => selection._tag !== 'Idle'
       const check = dispatchViolations(program.update, {
         repeatable: (msg) => msg._tag === 'AddRequested',
         withheld: (msg, state) => {

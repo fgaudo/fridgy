@@ -6,7 +6,9 @@
     "lineWidth": 120,
     "arrowFunction.useParentheses": "force",
     "module.sortImportDeclarations": "maintain",
-    "module.sortExportDeclarations": "maintain"
+    "module.sortExportDeclarations": "maintain",
+    "importDeclaration.sortNamedImports": "maintain",
+    "exportDeclaration.sortNamedExports": "maintain"
   },
   "json": {},
   "markdown": {},

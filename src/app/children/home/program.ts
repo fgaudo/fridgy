@@ -6,8 +6,8 @@ import * as Data from 'effect/Data'
 import * as Effect from 'effect/Effect'
 import * as HashMap from 'effect/HashMap'
 import * as Match from 'effect/Match'
-import * as Opt from 'effect/Option'
 import * as Optic from 'effect/Optic'
+import * as Opt from 'effect/Option'
 import { BackButton } from '#infrastructure/back-button/back-button.ts'
 import { defect } from '#libs/defect/defect.ts'
 import * as Products from './children/products/program.ts'
@@ -37,7 +37,12 @@ type Own = Data.TaggedEnum<{
 
 const Own = Data.taggedEnum<Own>()
 
-type ScrollToTop = Readonly<{ _tag: 'ScrollToTop' }>
+/** The page's own commands: its child's are made by `compose`. */
+type OwnCommand = Data.TaggedEnum<{
+  ScrollToTop: object
+}>
+
+const OwnCommand = Data.taggedEnum<OwnCommand>()
 
 export type Event = Data.TaggedEnum<{
   InfoRequested: object
@@ -96,13 +101,16 @@ const always: HashMap.HashMap<string, Tea.Subscription<Own, Deps>> = HashMap.mak
   ['close-to-top', closeToTop],
 )
 
-const scrollToTop = Effect.fn('ScrollToTop')(function*() {
-  const { scrollToTop } = yield* Viewport
-  yield* scrollToTop
-  return Opt.none()
-})
+const scrollToTop = Effect.fn('ScrollToTop')(
+  function*() {
+    const { scrollToTop } = yield* Viewport
+    yield* scrollToTop
+    return Opt.none()
+  },
+  Effect.withLogSpan('ScrollToTop'),
+)
 
-const { child, compose } = Tea.parent<{ state: State; command: ScrollToTop; event: Event }>()
+const { child, compose } = Tea.parent<{ state: State; command: OwnCommand; event: Event }>()
 
 // The part is always there: only its subscriptions could be turned off.
 export const program = compose({
@@ -136,10 +144,10 @@ export const program = compose({
       // Close to the top, the list snaps to it, unless the user is scrolling it.
       CloseToTopChanged: ({ isCloseToTop }) => ({
         state,
-        commands: !state.isInteracting && isCloseToTop ? [{ _tag: 'ScrollToTop' } as const] : [],
+        commands: !state.isInteracting && isCloseToTop ? [OwnCommand.ScrollToTop()] : [],
       }),
     }),
-  runCommand: scrollToTop,
+  runCommand: Match.typeTags<OwnCommand>()({ ScrollToTop: scrollToTop }),
   subscriptions: (state) => state.isMenuOpen ? HashMap.set(always, 'back-button', backButton) : always,
   makeModel: (state, children): Model => ({
     menu: state.isMenuOpen

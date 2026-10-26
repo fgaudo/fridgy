@@ -1,5 +1,6 @@
 import type { Dispatch } from '@fgaudo/effect-tea'
 import * as DateTime from 'effect/DateTime'
+import * as Match from 'effect/Match'
 import * as Opt from 'effect/Option'
 import type { VNode } from 'snabbdom'
 import { handlers, initialValue, type View } from '#libs/tea-snabbdom/tea-snabbdom.ts'
@@ -133,18 +134,17 @@ const nameField = (model: Model, dispatch: Dispatch<Message>) => {
  * typed: grouping them would read them one way, which the chips leave to the user.
  */
 const dateField = (model: Model) => {
-  const isEmpty = model.digits === ''
-  const isWrong = model._tag === 'Editing' && !isEmpty && model.choices.length === 0
-  const isEnabled = model._tag === 'Editing'
+  // Disabled while the product is being added; in the error's colors when the digits name no day.
+  const look = model._tag === 'Submitting' ? 'Disabled' : model.date._tag === 'NamingNothing' ? 'Wrong' : 'Plain'
   return (
     <div props={{ className: 'flex flex-col gap-1' }}>
       <div
         props={{
           className: cn(
             'relative flex h-14 items-center rounded-extra-small border px-4 text-body-large',
-            !isEnabled
+            look === 'Disabled'
               ? 'border-on-surface/12 text-on-surface/38'
-              : isWrong
+              : look === 'Wrong'
               ? 'border-error text-on-surface'
               : 'border-outline text-on-surface',
           ),
@@ -154,18 +154,23 @@ const dateField = (model: Model) => {
           props={{
             className: cn(
               'absolute top-0 left-3 -translate-y-1/2 bg-surface px-1 text-body-small',
-              !isEnabled ? 'text-on-surface/38' : isWrong ? 'text-error' : 'text-on-surface-variant',
+              look === 'Disabled' ? 'text-on-surface/38' : look === 'Wrong' ? 'text-error' : 'text-on-surface-variant',
             ),
           }}
         >
           Expiration date
         </span>
-        {isEmpty
-          ? <span props={{ className: 'text-on-surface-variant' }}>DDMMYY</span>
-          : <span props={{ className: 'tracking-widest' }}>{model.digits}</span>}
+        {Opt.match(model.maybeDigits, {
+          onNone: () => <span props={{ className: 'text-on-surface-variant' }}>DDMMYY</span>,
+          onSome: (digits) => <span props={{ className: 'tracking-widest' }}>{digits}</span>,
+        })}
       </div>
-      <div props={{ className: cn('px-4 text-body-small', isWrong ? 'text-error' : 'text-on-surface-variant') }}>
-        {isWrong ? 'No day ahead matches these digits' : 'Day, month and, if needed, the year: then pick the day'}
+      <div
+        props={{ className: cn('px-4 text-body-small', look === 'Wrong' ? 'text-error' : 'text-on-surface-variant') }}
+      >
+        {look === 'Wrong'
+          ? 'No day ahead matches these digits'
+          : 'Day, month and, if needed, the year: then pick the day'}
       </div>
     </div>
   )
@@ -196,16 +201,16 @@ const choices = (model: Model, dispatch: Dispatch<Message>): ReadonlyArray<VNode
   if (model._tag !== 'Editing') {
     return [<span props={{ className: 'text-body-medium text-on-surface-variant' }}>Adding…</span>]
   }
-  return model.digits === ''
-    ? [chip('No expiration', model.maybeAddUndated, dispatch)]
-    : model.choices.map(({ date, maybeAdd }) => chip(formatDay(date), maybeAdd, dispatch))
+  return Match.valueTags(model.date, {
+    Undated: ({ maybeAddUndated }) => [chip('No expiration', maybeAddUndated, dispatch)],
+    Naming: ({ choices }) => choices.map(({ date, maybeAdd }) => chip(formatDay(date), maybeAdd, dispatch)),
+    NamingNothing: () => [],
+  })
 }
 
 /** A keypad of the app's own: always where the thumb expects it, and it never covers the camera. */
 const keypad = (model: Model, dispatch: Dispatch<Message>) => {
   const { on } = handlers(dispatch)
-  const maybeType = model._tag === 'Editing' ? model.maybeTypeDigit : Opt.none<(digit: Digit) => Message>()
-  const maybeErase = model._tag === 'Editing' ? model.maybeEraseDigit : Opt.none<Message>()
   const key = (label: string, maybeMessage: Opt.Option<Message>, isIcon = false) => (
     <button
       props={{
@@ -222,13 +227,13 @@ const keypad = (model: Model, dispatch: Dispatch<Message>) => {
       {label}
     </button>
   )
-  const digitKey = (digit: Digit) => key(digit, Opt.map(maybeType, (type) => type(digit)))
+  const digitKey = (digit: Digit) => key(digit, Opt.map(model.maybeTypeDigit, (type) => type(digit)))
   return (
     <div props={{ className: 'grid grid-cols-3 gap-1' }}>
       {keys.map(digitKey)}
       <div />
       {digitKey('0')}
-      {key('backspace', maybeErase, true)}
+      {key('backspace', model.maybeEraseDigit, true)}
     </div>
   )
 }

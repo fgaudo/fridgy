@@ -1,25 +1,18 @@
 import type { Dispatch } from '@fgaudo/effect-tea'
 import type * as Data from 'effect/Data'
 import * as DateTime from 'effect/DateTime'
-import * as Duration from 'effect/Duration'
+import * as Opt from 'effect/Option'
 import type { VNode } from 'snabbdom'
 import { type Handlers, handlers } from '#libs/tea-snabbdom/tea-snabbdom.ts'
 import { cn } from '#libs/ui/class-names.ts'
-import type { ItemSelection, Message, Model, ProductModel } from './program.ts'
+import type { ItemSelection, Message, Model, ProductModel, ProductStatus } from './program.ts'
 
-type ValidProduct = Data.TaggedEnum.Value<ProductModel, 'Valid'>
+type Look = 'Plain' | 'Error'
 
-const isSelected = (selection: ItemSelection) =>
-  selection._tag === 'Selected' || (selection._tag === 'Deleting' && selection.isSelected)
-
-/**
- * The list item's leading avatar: the expiration day and month, or an infinity sign when the product does not
- * expire, in the error's colors once it has expired. A selected item shows a check instead, as Material's lists do.
- */
-const avatar = (product: ValidProduct) => {
-  const { status } = product
-  if (isSelected(product.selection)) {
-    return (
+/** The list item's leading avatar, which turns into a check once the item is selected, as Material's lists do. */
+const avatar = (selection: ItemSelection, look: Look, content: ReadonlyArray<VNode>) =>
+  selection.isSelected
+    ? (
       <div
         key='selected'
         props={{
@@ -29,81 +22,119 @@ const avatar = (product: ValidProduct) => {
         <span props={{ className: 'material-symbols-rounded' }}>check</span>
       </div>
     )
-  }
-  return (
-    <div
-      key='expiration'
-      props={{
-        className: cn(
-          'flex h-10 w-10 shrink-0 flex-col items-center justify-center rounded-full leading-none',
-          status._tag === 'Stale'
-            ? 'bg-error-container text-on-error-container'
-            : 'bg-primary-container text-on-primary-container',
-        ),
-      }}
-    >
-      {status._tag === 'Everlasting'
-        ? <span props={{ className: 'text-title-medium leading-none' }}>∞</span>
-        : [
-          <span props={{ className: 'text-title-small leading-none font-bold' }}>
-            {DateTime.getPartUtc(status.expirationDate, 'day')}
-          </span>,
-          <span props={{ className: 'text-label-small leading-none' }}>
-            {DateTime.formatUtc(status.expirationDate, { month: 'short' })}
-          </span>,
-        ]}
-    </div>
-  )
-}
+    : (
+      <div
+        key='content'
+        props={{
+          className: cn(
+            'flex h-10 w-10 shrink-0 flex-col items-center justify-center rounded-full leading-none',
+            look === 'Error'
+              ? 'bg-error-container text-on-error-container'
+              : 'bg-primary-container text-on-primary-container',
+          ),
+        }}
+      >
+        {content}
+      </div>
+    )
 
-const supportingText = (status: ValidProduct['status']) => {
+/** The expiration day and month, or an infinity sign when the product does not expire. */
+const expiration = (status: ProductStatus): ReadonlyArray<VNode> =>
+  status._tag === 'Everlasting'
+    ? [<span props={{ className: 'text-title-medium leading-none' }}>∞</span>]
+    : [
+      <span props={{ className: 'text-title-small leading-none font-bold' }}>
+        {DateTime.getPartUtc(status.expirationDate, 'day')}
+      </span>,
+      <span props={{ className: 'text-label-small leading-none' }}>
+        {DateTime.formatUtc(status.expirationDate, { month: 'short' })}
+      </span>,
+    ]
+
+const supportingText = (status: ProductStatus) => {
   switch (status._tag) {
     case 'Everlasting':
       return 'No expiration'
     case 'Stale':
       return 'Expired'
-    // A product is good through its expiration day: the days left count that day too.
-    case 'Fresh': {
-      const days = Math.ceil(Duration.toDays(status.timeLeft))
-      return days === 1 ? 'Expires today' : `${days} days left`
-    }
+    case 'ExpiringToday':
+      return 'Expires today'
+    case 'Fresh':
+      return `${status.daysLeft} days left`
   }
 }
 
-/** Material's two-line list item, with a leading avatar. */
-const productItem = (product: ValidProduct, { onPreventingDefault }: Handlers<Message>) => (
+/** Material's two-line list item, with a leading avatar; a long press (a right click on desktop) selects it. */
+const item = (
+  key: string,
+  selection: ItemSelection,
+  look: Look,
+  leading: ReadonlyArray<VNode>,
+  headline: string,
+  supporting: string,
+  { onPreventingDefault }: Handlers<Message>,
+) => (
   <li
-    key={product.id}
+    key={key}
     props={{
       className: cn(
         'state-layer flex h-18 items-center gap-4 pl-4 pr-6 select-none [-webkit-touch-callout:none]',
         'transition-colors duration-200',
-        isSelected(product.selection) ? 'bg-secondary-container text-on-secondary-container' : 'text-on-surface',
+        selection.isSelected ? 'bg-secondary-container text-on-secondary-container' : 'text-on-surface',
       ),
     }}
-    // A long press on Android (a right click on desktop).
-    on={onPreventingDefault(
-      'contextmenu',
-      product.selection._tag === 'Unselected'
-        ? product.selection.select
-        : product.selection._tag === 'Selected'
-        ? product.selection.deselect
-        : undefined,
-    )}
+    on={onPreventingDefault('contextmenu', Opt.getOrUndefined(selection.maybeToggle))}
   >
-    {avatar(product)}
+    {avatar(selection, look, leading)}
     <div props={{ className: 'flex min-w-0 flex-col' }}>
-      <span props={{ className: 'truncate text-body-large' }}>{product.name}</span>
-      <span
-        props={{
-          className: cn('text-body-medium', product.status._tag === 'Stale' ? 'text-error' : 'text-on-surface-variant'),
-        }}
-      >
-        {supportingText(product.status)}
+      <span props={{ className: 'truncate text-body-large' }}>{headline}</span>
+      <span props={{ className: cn('text-body-medium', look === 'Error' ? 'text-error' : 'text-on-surface-variant') }}>
+        {supporting}
       </span>
     </div>
   </li>
 )
+
+const icon = (name: string) => [<span props={{ className: 'material-symbols-rounded' }}>{name}</span>]
+
+/** Stored data that is not a product: it can still be selected and deleted, so that the list can be cleaned. */
+const invalidItem = (product: Data.TaggedEnum.Value<ProductModel, 'Invalid'>, events: Handlers<Message>) =>
+  item(
+    product.id,
+    product.selection,
+    'Error',
+    icon('error'),
+    Opt.getOrElse(product.maybeName, () => 'Unnamed product'),
+    'Not a valid product',
+    events,
+  )
+
+/** Stored data that cannot even be referenced: nothing can be done with it. */
+const corruptItem = (
+  product: Data.TaggedEnum.Value<ProductModel, 'Corrupt'>,
+  index: number,
+  events: Handlers<Message>,
+) =>
+  item(
+    `corrupt-${index}`,
+    { isSelected: false, maybeToggle: Opt.none() },
+    'Error',
+    icon('broken_image'),
+    Opt.getOrElse(product.maybeName, () => 'Unnamed product'),
+    'Cannot be read',
+    events,
+  )
+
+const validItem = (product: Data.TaggedEnum.Value<ProductModel, 'Valid'>, events: Handlers<Message>) =>
+  item(
+    product.id,
+    product.selection,
+    product.status._tag === 'Stale' ? 'Error' : 'Plain',
+    expiration(product.status),
+    product.name,
+    supportingText(product.status),
+    events,
+  )
 
 const iconButton = (icon: string, label: string, message: Message | undefined, { on }: Handlers<Message>) => (
   <button
@@ -170,7 +201,6 @@ const subtitleOf = (model: Data.TaggedEnum.Value<Model, 'Available'>) => `${mode
  */
 export const subtitle = (model: Model): string | undefined => model._tag === 'Available' ? subtitleOf(model) : undefined
 
-// Invalid and corrupt products are not shown yet (see AGENTS.md, "Known gaps").
 export const list = (model: Model, dispatch: Dispatch<Message>) => {
   const events = handlers(dispatch)
   switch (model._tag) {
@@ -185,7 +215,16 @@ export const list = (model: Model, dispatch: Dispatch<Message>) => {
         // Below the top app bar.
         <div props={{ className: 'pt-16 pb-24' }}>
           <ul>
-            {model.products.flatMap((product) => product._tag === 'Valid' ? [productItem(product, events)] : [])}
+            {model.products.map((product, index) => {
+              switch (product._tag) {
+                case 'Valid':
+                  return validItem(product, events)
+                case 'Invalid':
+                  return invalidItem(product, events)
+                case 'Corrupt':
+                  return corruptItem(product, index, events)
+              }
+            })}
           </ul>
         </div>
       )

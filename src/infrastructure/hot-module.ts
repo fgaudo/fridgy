@@ -5,18 +5,18 @@ import * as Stream from 'effect/Stream'
 import * as SubscriptionRef from 'effect/SubscriptionRef'
 import * as Socket from 'effect/socket/Socket'
 import { CssRefresher } from '#infrastructure/css-refresher.ts'
-import { saferImport } from '#libs/dynamic-import/safer-import.ts'
 
 export const watch = Effect.fn('HotModule.watch')(function*(path: string) {
-  const refreshCss = yield* CssRefresher
+  const { refresh } = yield* CssRefresher
   const socket = yield* Socket.Socket
+  // What the module exports is not known here: whoever watches it says what it expects.
   const load = Effect.gen(function*() {
     const millis = yield* Clock.currentTimeMillis
-    return yield* saferImport(`${path}?t=${millis}`)
+    return yield* Effect.promise((): Promise<unknown> => import(`${path}?t=${millis}`))
   })
   // The page already loaded the stylesheet: it is refreshed only when a view is swapped, before the new view
   // renders, so that its new classes are never unstyled.
-  const reload = refreshCss.pipe(
+  const reload = refresh.pipe(
     Effect.catchTag('CssLoadError', ({ href }) => Effect.logWarning(`Could not reload the stylesheet ${href}`)),
     Effect.andThen(load),
   )

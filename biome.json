@@ -60,6 +60,18 @@
   "overrides": [
     {
       "includes": [
+        "src/error.html"
+      ],
+      "linter": {
+        "rules": {
+          "complexity": {
+            "useOptionalChain": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": [
         "**/*.tsx"
       ],
       "linter": {

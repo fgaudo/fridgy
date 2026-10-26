@@ -2,9 +2,9 @@ import * as Data from 'effect/Data'
 import * as fc from 'fast-check'
 import { arbitrary as product } from '#domain/product.test_arbitrary.ts'
 import { MAX_DIGITS } from '#libs/dates/digit-dates.ts'
-import { utc } from '#libs/testing/date-time.test_arbitrary.ts'
 import { arbitrary as maybe } from '#libs/option/option.test_arbitrary.ts'
-import type { Digit, Message, State } from './program.ts'
+import { utc } from '#libs/testing/date-time.test_arbitrary.ts'
+import type { Digit, Form, Message, State } from './program.ts'
 
 const Msg = Data.taggedEnum<Message>()
 
@@ -18,7 +18,7 @@ const digits = fc.oneof(
   ),
 )
 
-const form = fc.record({
+export const form: fc.Arbitrary<Form> = fc.record({
   maybeName: maybe(fc.oneof(fc.string(), fc.stringMatching(/^\d{8,13}$/))),
   scans: fc.nat(),
   digits,
@@ -27,11 +27,11 @@ const form = fc.record({
   maybeLastAdded: maybe(product),
 })
 
-export const editing = form.map((fields) => ({ _tag: 'Editing', ...fields } as const))
+export const editing = form.map((form) => ({ _tag: 'Editing', form } as const))
 
 export const submitting = fc.tuple(form, product).map((
-  [fields, product],
-) => ({ _tag: 'Submitting', ...fields, product } as const))
+  [form, product],
+) => ({ _tag: 'Submitting', form, product } as const))
 
 export const state: fc.Arbitrary<State> = fc.oneof(editing, submitting)
 

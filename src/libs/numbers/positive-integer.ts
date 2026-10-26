@@ -3,7 +3,7 @@ import * as _Schema from 'effect/Schema'
 import * as Integer from './integer.ts'
 
 /** An `Integer` greater than zero. */
-export const Schema = Integer.Schema.check(_Schema.isGreaterThan(0)).pipe(_Schema.brand('core.PositiveInteger'))
+export const Schema = Integer.Schema.check(_Schema.isGreaterThan(0)).pipe(_Schema.brand('libs.PositiveInteger'))
 
 export type PositiveInteger = typeof Schema.Type
 

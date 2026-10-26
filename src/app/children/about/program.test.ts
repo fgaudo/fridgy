@@ -6,10 +6,12 @@ import * as Equal from 'effect/Equal'
 import * as HashMap from 'effect/HashMap'
 import * as Opt from 'effect/Option'
 import * as fc from 'fast-check'
+import { defect } from '#libs/defect/defect.ts'
 import { messagesSentBy } from '#libs/tea-snabbdom/view.test_support.ts'
 import { assertProperty, outcomesOf } from '#libs/testing/update.test_support.ts'
+import { license, licenses, state } from './program.test_arbitrary.ts'
 import { type Event, type Message, type Model, program } from './program.ts'
-import { licenses, state } from './program.test_arbitrary.ts'
+import type { License } from './services/licenses/licenses.ts'
 import { view } from './view.tsx'
 
 const Msg = Data.taggedEnum<Message>()
@@ -60,10 +62,46 @@ describe('About update', () => {
     })
   })
 
-  test('the model shows the version once it is loaded, and nothing before', () => {
-    assertProperty([state], (s) => {
-      const expected = s.version._tag === 'Loaded' ? Opt.some(s.version.version) : Opt.none()
-      return Equal.equals(makeModel(s).version, expected)
+  describe('the model', () => {
+    const blank = fc.string({ unit: fc.constantFrom(' ', '\t', '\n'), maxLength: 3 })
+    const visible = (text: string) => text.trim().length > 0
+    /** The card of one loaded license. */
+    const cardOf = (l: License) => {
+      const { licenses } = makeModel({ licenses: { _tag: 'Loaded', items: [l] }, version: { _tag: 'Loading' } })
+      return licenses._tag === 'Loaded' && licenses.cards[0] !== undefined
+        ? licenses.cards[0]
+        : defect('one license makes one card')
+    }
+
+    test('shows the version and the licenses once they are loaded, and nothing before', () => {
+      assertProperty([state], (s) => {
+        const model = makeModel(s)
+        return model.version._tag === s.version._tag
+          && model.licenses._tag === s.licenses._tag
+          && (model.licenses._tag !== 'Loaded' || s.licenses._tag !== 'Loaded'
+            || model.licenses.cards.length === s.licenses.items.length)
+      })
+    })
+
+    test('a card is titled by the package name when the license has no visible name', () => {
+      assertProperty([license, fc.oneof(blank, fc.string())], (l, name) => {
+        const card = cardOf({ ...l, name: Opt.some(name) })
+        return card.title === (visible(name) ? name : l.packageName) && card.key === l.packageName
+      })
+    })
+
+    test('a card shows only the visible fields, the publisher or else the email', () => {
+      assertProperty([license], (l) => {
+        const card = cardOf(l)
+        const shown = (field: Opt.Option<string>) => Opt.filter(field, visible)
+        const expectedLines = [shown(l.copyright), Opt.orElse(shown(l.publisher), () => shown(l.email))].flatMap(
+          Opt.toArray,
+        )
+        return Equal.equals(card.maybeLicenses, shown(l.licenses))
+          && Equal.equals(card.maybeDescription, shown(l.description))
+          && Equal.equals(card.maybeRepository, shown(l.repository))
+          && Equal.equals(card.lines, expectedLines)
+      })
     })
   })
 })

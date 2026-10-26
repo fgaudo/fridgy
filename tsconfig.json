@@ -6,6 +6,8 @@
         "name": "@effect/language-service",
         "topLevelNamedReexports": "follow",
         "namespaceImportPackages": ["effect"],
+        // The unstable APIs of effect/sql and platform-browser are reported, but only an error fails the typecheck.
+        "ignoreEffectWarningsInTscExitCode": true,
 
         "diagnosticSeverity": {
           "anyUnknownInErrorContext": "error",

@@ -1,8 +1,8 @@
 import { fromEventListenerWindow } from '@effect/platform-browser/BrowserStream'
 import * as Effect from 'effect/Effect'
 import * as Layer from 'effect/Layer'
-import * as Source from '#libs/source/source.ts'
 import * as Stream from 'effect/Stream'
+import * as Source from '#libs/source/source.ts'
 import { Viewport } from './viewport.ts'
 
 const scrollY = Stream.concat(Stream.make(undefined), fromEventListenerWindow('scroll')).pipe(

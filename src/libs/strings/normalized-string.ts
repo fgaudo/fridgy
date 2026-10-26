@@ -20,7 +20,7 @@ const normalize = (string: string): string =>
 /** A non-empty string in NFC form, without control characters or invisible marks, trimmed, single-spaced. */
 export const Schema = _Schema.String.check(
   _Schema.makeFilter((string: string) => string.length > 0 && normalize(string) === string),
-).pipe(_Schema.brand('core.NormalizedString'))
+).pipe(_Schema.brand('libs.NormalizedString'))
 
 export type NormalizedString = typeof Schema.Type
 

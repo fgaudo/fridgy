@@ -1,8 +1,7 @@
 import * as Opt from 'effect/Option'
 import type { VNode } from 'snabbdom'
 import { handlers, type View } from '#libs/tea-snabbdom/tea-snabbdom.ts'
-import type { License } from './services/licenses/licenses.ts'
-import type { Message, Model } from './program.ts'
+import type { LicenseCard, Message, Model } from './program.ts'
 
 const link = (href: string, text: string): VNode => <a props={{ className: 'text-primary underline', href }}>{text}</a>
 
@@ -18,58 +17,47 @@ const row = (iconName: string, content: ReadonlyArray<VNode | string>): VNode =>
   </li>
 )
 
-const nonEmpty = (value: Opt.Option<string>) => Opt.filter(value, (text) => text.trim().length > 0)
-
-const license = (license: License): VNode => {
-  const line = (value: Opt.Option<string>): ReadonlyArray<VNode> =>
-    Opt.match(nonEmpty(value), {
-      onNone: () => [],
-      onSome: (text) => [<p props={{ className: 'text-body-small text-on-surface-variant break-words' }}>{text}</p>],
-    })
-  return (
-    <div
-      key={license.packageName}
-      style={{ contentVisibility: 'auto' }}
-      // Material's outlined card: a long list of them stays light.
-      props={{ className: 'flex flex-col gap-1 rounded-medium border border-outline-variant p-4' }}
-    >
-      <div props={{ className: 'flex items-start justify-between gap-3' }}>
-        <h3 props={{ className: 'text-title-medium text-on-surface break-all' }}>
-          {Opt.getOrElse(nonEmpty(license.name), () => license.packageName)}
-        </h3>
-        {Opt.match(nonEmpty(license.licenses), {
-          onNone: () => [],
-          onSome: (licenses) => [
-            <span
-              props={{
-                className:
-                  'flex h-6 shrink-0 items-center rounded-small border border-outline-variant px-2 text-label-medium text-on-surface-variant',
-              }}
-            >
-              {licenses}
-            </span>,
-          ],
-        })}
-      </div>
-      {Opt.match(nonEmpty(license.description), {
+const card = (card: LicenseCard): VNode => (
+  <div
+    key={card.key}
+    style={{ contentVisibility: 'auto' }}
+    // Material's outlined card: a long list of them stays light.
+    props={{ className: 'flex flex-col gap-1 rounded-medium border border-outline-variant p-4' }}
+  >
+    <div props={{ className: 'flex items-start justify-between gap-3' }}>
+      <h3 props={{ className: 'text-title-medium text-on-surface break-all' }}>{card.title}</h3>
+      {Opt.match(card.maybeLicenses, {
         onNone: () => [],
-        onSome: (
-          description,
-        ) => [<p props={{ className: 'text-body-medium text-on-surface break-words' }}>{description}</p>],
-      })}
-      {line(license.copyright)}
-      {line(Opt.orElse(nonEmpty(license.publisher), () => license.email))}
-      {Opt.match(nonEmpty(license.repository), {
-        onNone: () => [],
-        onSome: (url) => [
-          <a props={{ className: 'text-primary block truncate text-body-small underline', href: encodeURI(url) }}>
-            {url}
-          </a>,
+        onSome: (licenses) => [
+          <span
+            props={{
+              className:
+                'flex h-6 shrink-0 items-center rounded-small border border-outline-variant px-2 text-label-medium text-on-surface-variant',
+            }}
+          >
+            {licenses}
+          </span>,
         ],
       })}
     </div>
-  )
-}
+    {Opt.match(card.maybeDescription, {
+      onNone: () => [],
+      onSome: (description) => [
+        <p props={{ className: 'text-body-medium text-on-surface break-words' }}>{description}</p>,
+      ],
+    })}
+    {card.lines.map((line) => <p props={{ className: 'text-body-small text-on-surface-variant break-words' }}>{line}
+    </p>)}
+    {Opt.match(card.maybeRepository, {
+      onNone: () => [],
+      onSome: (url) => [
+        <a props={{ className: 'text-primary block truncate text-body-small underline', href: encodeURI(url) }}>
+          {url}
+        </a>,
+      ],
+    })}
+  </div>
+)
 
 export const view: View<Model, Message> = (model, dispatch) => {
   const { on } = handlers(dispatch)
@@ -108,19 +96,16 @@ export const view: View<Model, Message> = (model, dispatch) => {
               props={{ className: 'h-24 w-24 bg-contain bg-center bg-no-repeat' }}
             />
             <p props={{ className: 'mt-2 text-headline-medium text-on-surface' }}>Fridgy</p>
-            {Opt.match(model.version, {
-              onNone: () => [],
-              onSome: (version) => [
-                <span
-                  props={{
-                    className:
-                      'flex h-8 items-center rounded-small border border-outline-variant px-4 text-label-large text-on-surface-variant',
-                  }}
-                >
-                  Version {version}
-                </span>,
-              ],
-            })}
+            {model.version._tag === 'Loading' ? [] : [
+              <span
+                props={{
+                  className:
+                    'flex h-8 items-center rounded-small border border-outline-variant px-4 text-label-large text-on-surface-variant',
+                }}
+              >
+                Version {model.version.version}
+              </span>,
+            ]}
             <p props={{ className: 'mt-2 text-body-large text-on-surface-variant' }}>
               Keep track of what is in your fridge and when it expires.
             </p>
@@ -148,7 +133,7 @@ export const view: View<Model, Message> = (model, dispatch) => {
               Fridgy is built with these libraries, under their own licenses.
             </p>
           </div>
-          {model.licenses._tag === 'Loading' ? [] : model.licenses.items.map(license)}
+          {model.licenses._tag === 'Loading' ? [] : model.licenses.cards.map(card)}
         </div>
       </div>
     </div>

@@ -8,7 +8,6 @@ import * as Opt from 'effect/Option'
 import { tagPath } from '#libs/testing/tag-path.test_support.ts'
 import * as Home from './children/home/program.ts'
 import { type Page, program, type State } from './program.ts'
-import { view } from './view.tsx'
 import {
   addUndated,
   back,
@@ -20,6 +19,7 @@ import {
   requestInfo,
   typeName,
 } from './user.test_support.ts'
+import { view } from './view.tsx'
 
 const tags = (state: State) => state.stack.map((page) => page._tag)
 

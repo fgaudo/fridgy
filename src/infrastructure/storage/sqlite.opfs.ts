@@ -1,9 +1,10 @@
+// The production database engine: wa-sqlite in a worker (`sqlite.worker.ts`), on the origin private file system,
+// with the migrations run.
 import * as SqliteWasm from '@effect/sql-sqlite-wasm'
 import * as Config from 'effect/Config'
 import * as Effect from 'effect/Effect'
 import * as Layer from 'effect/Layer'
-
-import { migrations } from '#infrastructure/sql/migrations.ts'
+import { migrations } from './migrations.ts'
 
 const makeWorker = Effect.acquireRelease(
   Effect.gen(function*() {

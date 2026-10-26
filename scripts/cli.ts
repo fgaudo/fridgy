@@ -1,16 +1,18 @@
 import * as EffBun from '@effect/platform-bun'
 import * as Config from 'effect/Config'
 import * as ConfigProvider from 'effect/ConfigProvider'
+import * as Cli from 'effect/cli'
 import * as Data from 'effect/Data'
 import * as Effect from 'effect/Effect'
 import * as FS from 'effect/FileSystem'
 import * as HashSet from 'effect/HashSet'
 import * as Layer from 'effect/Layer'
+import * as Opt from 'effect/Option'
 import * as Path from 'effect/Path'
-import * as Ref from 'effect/Ref'
-import * as Stream from 'effect/Stream'
-import * as Cli from 'effect/cli'
 import * as Process from 'effect/process'
+import * as Ref from 'effect/Ref'
+import * as Schema from 'effect/Schema'
+import * as Stream from 'effect/Stream'
 import * as LicenseChecker from 'license-checker-rseidelsohn'
 import { palette, surface } from './palette.ts'
 import { tailwind } from './tailwind.ts'
@@ -51,7 +53,7 @@ const modes = {
     options: { sourcemap: 'inline' },
   },
   production: {
-    entrypoints: ['src/entrypoints/production.ts', 'src/infrastructure/sqlite/sqlite.worker.ts'],
+    entrypoints: ['src/entrypoints/production.ts', 'src/infrastructure/storage/sqlite.worker.ts'],
     assets: ['node_modules/@effect/wa-sqlite/dist/wa-sqlite.wasm', 'assets/logo.svg', 'src/error.html'],
     options: { sourcemap: 'none', minify: true },
   },
@@ -201,6 +203,29 @@ const watchCommand = Cli.Command.make(
 
 class LicensesFailed extends Data.TaggedError('LicensesFailed')<{ readonly cause: unknown }> {}
 
+// Only whether a package declares a description: the rest of its package.json is left alone.
+const PackageJson = Schema.fromJsonString(Schema.Struct({ description: Schema.optional(Schema.Unknown) }))
+
+const hasDeclaredDescription = (packageJson: string) =>
+  Opt.exists(Schema.decodeOption(PackageJson)(packageJson), (pkg) => typeof pkg.description === 'string')
+
+/** What the About page shows of each package: the shape of `licenses.generated.json`. */
+const LicensesJson = Schema.fromJsonString(
+  Schema.Record(
+    Schema.String,
+    Schema.Struct({
+      licenses: Schema.optional(Schema.String),
+      repository: Schema.optional(Schema.String),
+      publisher: Schema.optional(Schema.String),
+      email: Schema.optional(Schema.String),
+      copyright: Schema.optional(Schema.String),
+      name: Schema.optional(Schema.String),
+      description: Schema.optional(Schema.String),
+    }),
+  ),
+  { space: 4 },
+)
+
 const licensesCommand = Cli.Command.make(
   'licenses',
   {},
@@ -229,14 +254,13 @@ const licensesCommand = Cli.Command.make(
       Effect.fn('readLicense')(function*([id, info]) {
         // A package without a description gets the first paragraph of its README instead (npm's normalization of
         // package.json), which may be markdown, such as a badge.
-        const packageJson = yield* fs.readFileString(path.join(String(info.path), 'package.json'))
-        const isDeclared = yield* Effect.try({
-          try: () => typeof JSON.parse(packageJson).description === 'string',
-          catch: (cause) => new LicensesFailed({ cause }),
-        })
+        const isDeclared = hasDeclaredDescription(
+          yield* fs.readFileString(path.join(String(info.path), 'package.json')),
+        )
         const { licenses, repository, publisher, email, copyright, name, description } = info
         return [id, {
-          licenses,
+          // A package may be under several licenses.
+          licenses: Array.isArray(licenses) ? licenses.join(', ') : licenses,
           repository,
           publisher,
           email,
@@ -246,9 +270,12 @@ const licensesCommand = Cli.Command.make(
         }] as const
       }),
     )
+    const json = yield* Schema.encodeEffect(LicensesJson)(Object.fromEntries(entries)).pipe(
+      Effect.mapError((cause) => new LicensesFailed({ cause })),
+    )
     yield* fs.writeFileString(
       resolve('src/app/children/about/services/licenses/licenses.generated.json'),
-      `${JSON.stringify(Object.fromEntries(entries), null, 4)}\n`,
+      `${json}\n`,
     )
   }),
 )

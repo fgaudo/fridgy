@@ -1,7 +1,7 @@
 import * as fc from 'fast-check'
 import { arbitrary as maybe } from '#libs/option/option.test_arbitrary.ts'
-import type { License } from './services/licenses/licenses.ts'
 import type { State } from './program.ts'
+import type { License } from './services/licenses/licenses.ts'
 
 export const license: fc.Arbitrary<License> = fc.record({
   packageName: fc.string({ minLength: 1 }),

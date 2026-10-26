@@ -59,6 +59,12 @@ not a kind of program. The programs to copy are `src/app/children/home` and `src
 - **The model holds the messages, `update` decides.** The model is a union with a case per state the view
   distinguishes, each holding only the messages of its controls, picked from the state as `update` reads it.
   Views send only what the model holds, never a message they build.
+- **A view draws, it never decides.** A view matches the model's tags and formats its values (a date, a count,
+  a text): it computes no condition from data (`digits === ''`, `items.length === 0`), combines no fields,
+  applies no rule and no fallback. What a view would decide, `makeModel` decides, as a case named for the state
+  the screen distinguishes (`Undated | Naming | NamingNothing`, `Loading | Loaded`, never a boolean as a tag),
+  where a property test checks it for any state. An `Option` is such a union only when "missing" is all the
+  screen tells apart.
 - **State machines, no derived data.** One explicit state machine per concern (data, selection, form) instead
   of shared flags. Values that depend on time are computed in `makeModel` from a `now` that a clock
   subscription keeps in the state. Effects only in commands and subscriptions: `update`, `makeModel` and views
@@ -162,9 +168,6 @@ not a kind of program. The programs to copy are `src/app/children/home` and `src
 
 ## Known gaps (verify before working)
 
-- Home's view only shows `Valid` products: `Invalid` and `Corrupt` ones are in the model and counted in
-  `total`, but not rendered, so the count can exceed the rows shown and an invalid product cannot be selected
-  or deleted from the UI.
 - A scanned barcode is the product's name as it is: no lookup of the product (e.g. Open Food Facts) yet. The
   scanner (`getUserMedia` and the Shape Detection API, `scanner.browser.ts`) has not been tried on Android yet;
   on a desktop without the API (Chrome on Windows), the form says the camera is not available.

@@ -1,17 +1,16 @@
+import * as ConfigProvider from 'effect/ConfigProvider'
 import * as Layer from 'effect/Layer'
 import * as References from 'effect/References'
 import * as Stream from 'effect/Stream'
+import * as App from '#app/layer.ts'
 import * as RootView from '#app/view.tsx'
+import * as BackButtonCapacitor from '#infrastructure/back-button/back-button.capacitor.ts'
+import * as SqliteOpfs from '#infrastructure/storage/sqlite.opfs.ts'
 import { SnabbdomRenderer } from '#libs/tea-snabbdom/renderer.ts'
 import { RootViews, run } from './run.ts'
 
-import * as ConfigProvider from 'effect/ConfigProvider'
-import * as App from '#app/layer.ts'
-import * as BackButtonCapacitor from '#infrastructure/back-button/capacitor.layer.ts'
-import * as Sqlite from '#infrastructure/sqlite/layer.ts'
-
 const layer = App.layer.pipe(
-  Layer.provide(Sqlite.layer),
+  Layer.provide(SqliteOpfs.layer),
   Layer.provide(
     ConfigProvider.layer(
       ConfigProvider.fromUnknown({

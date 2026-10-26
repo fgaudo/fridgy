@@ -13,10 +13,10 @@ import {
   Fragment,
   type FunctionComponent,
   type Hooks,
-  jsx as snabbdomJsx,
   type JsxVNodeChild,
   type Key,
   type On,
+  jsx as snabbdomJsx,
   type VNode,
   type VNodeStyle,
 } from 'snabbdom'

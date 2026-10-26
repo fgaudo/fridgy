@@ -3,7 +3,7 @@ import * as _Schema from 'effect/Schema'
 
 /** A number in [0, 1], bounds included. */
 export const Schema = _Schema.Finite.check(_Schema.isBetween({ minimum: 0, maximum: 1 })).pipe(
-  _Schema.brand('core.UnitInterval'),
+  _Schema.brand('libs.UnitInterval'),
 )
 
 export type UnitInterval = typeof Schema.Type

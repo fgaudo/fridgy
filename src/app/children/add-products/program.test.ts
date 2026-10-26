@@ -12,8 +12,17 @@ import { datesOf, MAX_DIGITS } from '#libs/dates/digit-dates.ts'
 import { messagesSentBy } from '#libs/tea-snabbdom/view.test_support.ts'
 import { utc } from '#libs/testing/date-time.test_arbitrary.ts'
 import { assertProperty, outcomesOf } from '#libs/testing/update.test_support.ts'
-import { type Command, type Digit, type Event, type Message, type Model, program, type State } from './program.ts'
 import { digit, editing, message, state, submitting } from './program.test_arbitrary.ts'
+import {
+  type Command,
+  type Digit,
+  type Event,
+  type Form,
+  type Message,
+  type Model,
+  program,
+  type State,
+} from './program.ts'
 import { view } from './view.tsx'
 
 const Msg = Data.taggedEnum<Message>()
@@ -26,16 +35,17 @@ const { makeModel } = program
 
 const digits: ReadonlyArray<Digit> = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
 
-type Editing = Extract<State, { readonly _tag: 'Editing' }>
+/** The same state, with its form changed. */
+const withForm = (state: State, change: Partial<Form>): State => ({ ...state, form: { ...state.form, ...change } })
 
 /** The days the page offers, by the rules of a product: those the digits name, from the clock's time on. */
-const offeredDates = (form: State) =>
+const offeredDates = (form: Form) =>
   Opt.match(form.maybeNow, {
     onNone: () => [],
     onSome: (now) => datesOf(form.digits, now).filter(Product.canExpireOn(now)),
   })
 
-const productOf = (form: Editing, maybeExpirationDate: Opt.Option<DateTime.Utc>) =>
+const productOf = (form: Form, maybeExpirationDate: Opt.Option<DateTime.Utc>) =>
   Opt.flatMap(
     Opt.all([form.maybeName, form.maybeNow]),
     ([name, creationDate]) => Product.make({ name, creationDate, maybeExpirationDate }),
@@ -71,7 +81,7 @@ describe('AddProducts update', () => {
         ...digits.map((digit) => Msg.DigitTyped({ digit })),
         Msg.Started({ maybeExpirationDate: Opt.none() }),
         // The days the digits name, and any other.
-        ...[date, ...offeredDates(before)].map((day) => Msg.Started({ maybeExpirationDate: Opt.some(day) })),
+        ...[date, ...offeredDates(before.form)].map((day) => Msg.Started({ maybeExpirationDate: Opt.some(day) })),
       ]
       expect(check(before, messagesSentBy<Model, Message>(view, makeModel(before), inputValue), askable)).toEqual([])
     }))
@@ -83,7 +93,7 @@ describe('AddProducts update', () => {
       assertProperty(
         [state, fc.string()],
         (before, name) =>
-          Equal.equals(step(Msg.NameChanged({ name }), before).after, { ...before, maybeName: Opt.some(name) }),
+          Equal.equals(step(Msg.NameChanged({ name }), before).after, withForm(before, { maybeName: Opt.some(name) })),
       )
     })
   })
@@ -91,19 +101,22 @@ describe('AddProducts update', () => {
   describe('the keypad', () => {
     test('types a digit after the others, up to the longest date', () => {
       assertProperty([editing, digit], (before, typed) =>
-        before.digits.length >= MAX_DIGITS
+        before.form.digits.length >= MAX_DIGITS
           ? rejects(Msg.DigitTyped({ digit: typed }), before)
-          : Equal.equals(step(Msg.DigitTyped({ digit: typed }), before).after, {
-            ...before,
-            digits: before.digits + typed,
-          }))
+          : Equal.equals(
+            step(Msg.DigitTyped({ digit: typed }), before).after,
+            withForm(before, { digits: before.form.digits + typed }),
+          ))
     })
 
     test('erases the last digit, or is rejected when there is none', () => {
       assertProperty([editing], (before) =>
-        before.digits === ''
+        before.form.digits === ''
           ? rejects(Msg.DigitErased(), before)
-          : Equal.equals(step(Msg.DigitErased(), before).after, { ...before, digits: before.digits.slice(0, -1) }))
+          : Equal.equals(
+            step(Msg.DigitErased(), before).after,
+            withForm(before, { digits: before.form.digits.slice(0, -1) }),
+          ))
     })
 
     test('is rejected while a product is being added', () => {
@@ -118,23 +131,23 @@ describe('AddProducts update', () => {
     assertProperty(
       [state, utc],
       (before, now) =>
-        Equal.equals(step(Msg.TimeChanged({ now }), before).after, { ...before, maybeNow: Opt.some(now) }),
+        Equal.equals(step(Msg.TimeChanged({ now }), before).after, withForm(before, { maybeNow: Opt.some(now) })),
     )
   })
 
   test('Scanned names the product after another barcode, and draws the name anew', () => {
     assertProperty([state, fc.string()], (before, barcode) => {
       const { after } = step(Msg.Scanned({ barcode }), before)
-      return Opt.contains(before.maybeName, barcode)
+      return Opt.contains(before.form.maybeName, barcode)
         ? Equal.equals(after, before)
-        : Equal.equals(after, { ...before, maybeName: Opt.some(barcode), scans: before.scans + 1 })
+        : Equal.equals(after, withForm(before, { maybeName: Opt.some(barcode), scans: before.form.scans + 1 }))
     })
   })
 
   test('CameraFailed turns the camera off', () => {
     assertProperty(
       [state],
-      (before) => Equal.equals(step(Msg.CameraFailed(), before).after, { ...before, isCameraOn: false }),
+      (before) => Equal.equals(step(Msg.CameraFailed(), before).after, withForm(before, { isCameraOn: false })),
     )
   })
 
@@ -142,16 +155,16 @@ describe('AddProducts update', () => {
     // The product is created at the time the page last heard: the rules of a product decide.
     test('adds the product on a day the digits name, and is rejected on any other', () => {
       assertProperty([editing, utc], (before, date) => {
-        const offered = offeredDates(before)
+        const offered = offeredDates(before.form)
         return [...offered, date].every((expiration) => {
           const isOffered = offered.some((d) => DateTime.Equivalence(d, expiration))
-          const maybeProduct = isOffered ? productOf(before, Opt.some(expiration)) : Opt.none()
+          const maybeProduct = isOffered ? productOf(before.form, Opt.some(expiration)) : Opt.none()
           const msg = Msg.Started({ maybeExpirationDate: Opt.some(expiration) })
           if (Opt.isNone(maybeProduct)) {
             return rejects(msg, before)
           }
           const { after, commands } = step(msg, before)
-          return Equal.equals(after, { ...before, _tag: 'Submitting', product: maybeProduct.value })
+          return Equal.equals(after, { _tag: 'Submitting', form: before.form, product: maybeProduct.value })
             && Equal.equals(commands, [Cmd.Add({ product: maybeProduct.value })])
         })
       })
@@ -160,7 +173,7 @@ describe('AddProducts update', () => {
     test('adds a product that never expires only before any digit is typed', () => {
       assertProperty([editing], (before) => {
         const msg = Msg.Started({ maybeExpirationDate: Opt.none() })
-        const maybeProduct = before.digits === '' ? productOf(before, Opt.none()) : Opt.none()
+        const maybeProduct = before.form.digits === '' ? productOf(before.form, Opt.none()) : Opt.none()
         return Opt.match(maybeProduct, {
           onNone: () => rejects(msg, before),
           onSome: (product) => Equal.equals(step(msg, before).commands, [Cmd.Add({ product })]),
@@ -179,20 +192,68 @@ describe('AddProducts update', () => {
   // Guards against the properties above passing only on rejections.
   test('the arbitrary forms offer days to add the product on, and some that the name does not allow', () => {
     const offers = fc.sample(editing, 1_000).map(makeModel).flatMap((model) =>
-      model._tag === 'Editing' ? model.choices : []
+      model._tag === 'Editing' && model.date._tag === 'Naming' ? model.date.choices : []
     )
     expect(offers.some((choice) => Opt.isSome(choice.maybeAdd))).toBe(true)
     expect(offers.some((choice) => Opt.isNone(choice.maybeAdd))).toBe(true)
   })
 
+  // What the view draws of the date and the keypad is decided here, so that it is checked for any form.
+  describe('the model', () => {
+    test('says the date is undated, names the days the digits name, or names nothing', () => {
+      assertProperty([editing], (s) => {
+        const model = makeModel(s)
+        if (model._tag !== 'Editing') return false
+        const offered = offeredDates(s.form)
+        if (s.form.digits === '') {
+          return model.date._tag === 'Undated'
+            && Equal.equals(
+              model.date.maybeAddUndated,
+              Opt.map(productOf(s.form, Opt.none()), () => Msg.Started({ maybeExpirationDate: Opt.none() })),
+            )
+        }
+        if (offered.length === 0) return model.date._tag === 'NamingNothing'
+        return model.date._tag === 'Naming'
+          && Equal.equals(model.date.choices.map((choice) => choice.date), offered)
+          && model.date.choices.every((choice) =>
+            Equal.equals(
+              choice.maybeAdd,
+              Opt.map(productOf(s.form, Opt.some(choice.date)), () =>
+                Msg.Started({ maybeExpirationDate: Opt.some(choice.date) })),
+            )
+          )
+      })
+    })
+
+    test('shows the digits once there are any', () => {
+      assertProperty(
+        [state],
+        (s) => Equal.equals(makeModel(s).maybeDigits, s.form.digits === '' ? Opt.none() : Opt.some(s.form.digits)),
+      )
+    })
+
+    test('offers the keypad while editing: digits up to the longest date, erasing once there are any', () => {
+      assertProperty([state, digit], (s, typed) => {
+        const model = makeModel(s)
+        const canType = s._tag === 'Editing' && s.form.digits.length < MAX_DIGITS
+        const canErase = s._tag === 'Editing' && s.form.digits !== ''
+        return Equal.equals(
+          Opt.map(model.maybeTypeDigit, (type) => type(typed)),
+          canType ? Opt.some(Msg.DigitTyped({ digit: typed })) : Opt.none(),
+        )
+          && Equal.equals(model.maybeEraseDigit, canErase ? Opt.some(Msg.DigitErased()) : Opt.none())
+      })
+    })
+  })
+
   test('the model shows the product added last for 4 seconds from when it was added', () => {
     const seconds = fc.integer({ min: -10, max: 10 })
-    assertProperty([state, seconds], (form, elapsed) =>
-      Opt.match(form.maybeLastAdded, {
+    assertProperty([state, seconds], (before, elapsed) =>
+      Opt.match(before.form.maybeLastAdded, {
         onNone: () => true,
         onSome: (product) => {
           const now = DateTime.add(product.creationDate, { seconds: elapsed })
-          const model = makeModel({ ...form, maybeNow: Opt.some(now) })
+          const model = makeModel(withForm(before, { maybeNow: Opt.some(now) }))
           return Opt.isSome(model.maybeJustAdded) === elapsed < 4
         },
       }))
@@ -202,8 +263,10 @@ describe('AddProducts update', () => {
     test('success keeps the page for the next product, with its name and no digits', () => {
       assertProperty([submitting], (before) => {
         const { after, commands } = step(Msg.Completed({ succeeded: true }), before)
-        const { product, ...form } = before
-        return Equal.equals(after, { ...form, _tag: 'Editing', digits: '', maybeLastAdded: Opt.some(product) })
+        return Equal.equals(after, {
+          _tag: 'Editing',
+          form: { ...before.form, digits: '', maybeLastAdded: Opt.some(before.product) },
+        })
           && commands.length === 0
       })
     })
@@ -211,8 +274,7 @@ describe('AddProducts update', () => {
     test('failure gives the form back, as it was, and says so with a toast', () => {
       assertProperty([submitting], (before) => {
         const { after, commands } = step(Msg.Completed({ succeeded: false }), before)
-        const { product: _, ...form } = before
-        return Equal.equals(after, { ...form, _tag: 'Editing' })
+        return Equal.equals(after, { _tag: 'Editing', form: before.form })
           && Equal.equals(commands, [Cmd.ShowToast({ text: 'Could not add the product' })])
       })
     })
@@ -241,6 +303,6 @@ test('the page listens to the clock and the back button, and to the camera until
     const subscriptions = Tea.subscriptionsOf(program)(s)
     return HashMap.has(subscriptions, 'clock')
       && HashMap.has(subscriptions, 'back-button')
-      && HashMap.has(subscriptions, 'scanner') === s.isCameraOn
+      && HashMap.has(subscriptions, 'scanner') === s.form.isCameraOn
   })
 })

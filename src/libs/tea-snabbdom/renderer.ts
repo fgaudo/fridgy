@@ -1,9 +1,9 @@
+import type { Frame, View } from '@fgaudo/effect-tea'
 import * as Context from 'effect/Context'
 import * as Effect from 'effect/Effect'
 import * as Layer from 'effect/Layer'
 import * as Stream from 'effect/Stream'
 import * as Snabbdom from 'snabbdom'
-import type { Frame, View } from '@fgaudo/effect-tea'
 import * as AnimationFrame from '#libs/animation-frame/animation-frame.ts'
 
 export class SnabbdomRenderer extends Context.Service<

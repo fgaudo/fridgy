@@ -1,7 +1,7 @@
 import * as Brand from 'effect/Brand'
 import * as HashSet from 'effect/HashSet'
 
-export type NonEmptyHashSet<A> = Brand.Branded<HashSet.HashSet<A>, 'core.NonEmptyHashSet'>
+export type NonEmptyHashSet<A> = Brand.Branded<HashSet.HashSet<A>, 'libs.NonEmptyHashSet'>
 
 const NonEmptyHashSet = <A>() => Brand.make<NonEmptyHashSet<A>>((set) => HashSet.size(set) > 0)
 

@@ -1,3 +1,4 @@
+// The tables and their columns, by name: what the migrations create and the queries refer to.
 export const ProductSchema = {
   columns: {
     creationDate: 'creation_date',

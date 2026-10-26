@@ -5,8 +5,8 @@ import * as ProductArbitrary from '#domain/product.test_arbitrary.ts'
 import * as NonEmptyHashSet from '#libs/collections/non-empty-hash-set.test_arbitrary.ts'
 import { arbitrary as maybe } from '#libs/option/option.test_arbitrary.ts'
 import { utc } from '#libs/testing/date-time.test_arbitrary.ts'
-import type { StoredProduct } from './services/product-list/product-list.ts'
-import type { Message, Product, State } from './program.ts'
+import type { Message, Product, Selection, State } from './program.ts'
+import { ProductListReadError, type StoredProduct } from './services/product-list/product-list.ts'
 
 const Msg = Data.taggedEnum<Message>()
 
@@ -25,13 +25,17 @@ export const list: fc.Arbitrary<State['list']> = fc.oneof(
   fc.array(product, { maxLength: 8 }).map((items) => ({ _tag: 'Loaded', items } as const)),
 )
 
-export const selecting = maybe(NonEmptyHashSet.arbitrary(id)).map((maybeIds) => (
-  { _tag: 'Selecting', maybeIds } as const
+export const idle: fc.Arbitrary<Selection> = fc.constant({ _tag: 'Idle' } as const)
+
+export const selecting: fc.Arbitrary<Selection> = NonEmptyHashSet.arbitrary(id).map((ids) => (
+  { _tag: 'Selecting', ids } as const
 ))
 
-export const deleting = NonEmptyHashSet.arbitrary(id).map((ids) => ({ _tag: 'Deleting', ids } as const))
+export const deleting: fc.Arbitrary<Selection> = NonEmptyHashSet.arbitrary(id).map((ids) => (
+  { _tag: 'Deleting', ids } as const
+))
 
-export const selection: fc.Arbitrary<State['selection']> = fc.oneof(selecting, deleting)
+export const selection: fc.Arbitrary<Selection> = fc.oneof(idle, selecting, deleting)
 
 export const state: fc.Arbitrary<State> = fc.record({ maybeNow: maybe(utc), list, selection })
 
@@ -51,7 +55,7 @@ export const message: fc.Arbitrary<Message> = fc.oneof(
   fc.constant(Msg.DeleteStarted()),
   utc.map((now) => Msg.TimeChanged({ now })),
   fc.oneof(
-    fc.constant(Result.fail(undefined)),
+    fc.string().map((cause) => Result.fail(new ProductListReadError({ cause }))),
     storedProducts.map((products) => Result.succeed(products)),
   ).map((result) => Msg.ListChanged({ result })),
   fc.boolean().map((succeeded) => Msg.DeleteCompleted({ succeeded })),

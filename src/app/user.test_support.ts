@@ -11,10 +11,10 @@ import * as Match from 'effect/Match'
 import * as Opt from 'effect/Option'
 import * as References from 'effect/References'
 import { BackButton } from '#infrastructure/back-button/back-button.ts'
-import * as SqliteMemory from '#infrastructure/sqlite/memory.layer.ts'
-import * as App from './layer.ts'
+import * as SqliteMemory from '#infrastructure/storage/sqlite.memory.ts'
 import type * as AddProducts from './children/add-products/program.ts'
 import type * as Home from './children/home/program.ts'
+import * as App from './layer.ts'
 import { type Command, type Deps, type Message, type Model, program, type State } from './program.ts'
 
 const Msg = Data.taggedEnum<Message>()
@@ -45,7 +45,9 @@ export const typeName = (name: string) =>
   onAddProducts((form) => form._tag === 'Editing' ? Opt.some(form.changeName(name)) : Opt.none())
 
 /** Adds the product that never expires, before any digit is typed. */
-export const addUndated = onAddProducts((form) => form._tag === 'Editing' ? form.maybeAddUndated : Opt.none())
+export const addUndated = onAddProducts((form) =>
+  form._tag === 'Editing' && form.date._tag === 'Undated' ? form.date.maybeAddUndated : Opt.none()
+)
 
 /** Sends each message in turn, each from the model the previous one left. */
 export const perform = Effect.fnUntraced(function*(user: User, choices: ReadonlyArray<Choice>) {

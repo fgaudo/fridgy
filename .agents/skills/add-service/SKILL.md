@@ -50,8 +50,9 @@ subscription, never in `update` or the view.
 query of its own is doing the infrastructure's work, and two of them will diverge.
 
 - Every adapter of the storage is written on `SqlClient`, providing itself the helpers it builds on
-  (`#infrastructure/sql/sql-helper.ts`, the schema in `schema.ts`). It never reads domain fields. What every
-  storage adapter shares (the schema, the migrations, how a product is written) is in `src/infrastructure/sql`.
+  (`ProductStore` in `#infrastructure/storage/products.ts`, the schema in `schema.ts`). It never reads domain
+  fields. What every storage adapter shares (the schema, the migrations, how a product is written) is in
+  `src/infrastructure/storage`.
 - A library's stream becomes a `Source` with `Source.fromStream`, which keeps listening once the stream has
   ended.
 - A platform call longer than a line moves to `src/infrastructure`.
@@ -61,7 +62,7 @@ query of its own is doing the infrastructure's work, and two of them will diverg
 - No alternative: the program's `layer.ts` merges it.
 - Alternatives (the `SqlClient`'s engine, the platform's `BackButton`): the layers leave it out and each
   entrypoint in `src/entrypoints/` imports the adapter's own module
-  (`#infrastructure/back-button/browser.layer.ts`,
+  (`#infrastructure/back-button/back-button.browser.ts`,
   `#app/children/home/children/products/services/product-list/product-list.sql.ts`), never a module that would
   load the other alternatives too. A missing choice fails the typecheck; a bundle only contains what it uses.
   A service that gains a second adapter leaves its owner's `layer.ts` this way.
@@ -88,12 +89,12 @@ export const deleteProductsContract = <R>(
 ) => describe(`DeleteProducts contract (${name})`, () => { ... })
 ```
 
-`<service>.<backing>.test.ts` runs it with the adapter's layer over `#infrastructure/sqlite/memory.layer.ts`,
-and with the storage's own test support (`#infrastructure/sql/products.test_support.ts`): reads and writes that
+`<service>.<backing>.test.ts` runs it with the adapter's layer over `#infrastructure/storage/sqlite.memory.ts`,
+and with the storage's own test support (`#infrastructure/storage/products.test_support.ts`): reads and writes that
 only tests need never go into a service, nor into another program's. A second adapter passes the same contract.
 
 ## Migrations
 
-`src/infrastructure/sql/migrations.ts` is append-only: a phone has already run the existing ones, so a fix is
+`src/infrastructure/storage/migrations.ts` is append-only: a phone has already run the existing ones, so a fix is
 a new migration. Table and column names come from `schema.ts`. The development database (in memory, new on
-every start) gets its sample products from `src/infrastructure/sqlite/samples.ts`.
+every start) gets its sample products from `src/infrastructure/storage/samples.ts`.

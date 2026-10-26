@@ -5,11 +5,11 @@
     "": {
       "name": "fridgy",
       "dependencies": {
-        "@capacitor/android": "next",
-        "@capacitor/app": "next",
-        "@capacitor/core": "next",
-        "@capacitor/splash-screen": "next",
-        "@capacitor/toast": "next",
+        "@capacitor/android": "9.0.0-alpha.8",
+        "@capacitor/app": "9.0.0-alpha.2",
+        "@capacitor/core": "9.0.0-alpha.8",
+        "@capacitor/splash-screen": "9.0.0-alpha.2",
+        "@capacitor/toast": "9.0.0-alpha.2",
         "@effect/platform-browser": "^4.0.6",
         "@effect/sql-sqlite-wasm": "^4.0.6",
         "@fgaudo/effect-tea": "^0.7.0",
@@ -40,7 +40,7 @@
       },
       "devDependencies": {
         "@biomejs/biome": "^2.6.3",
-        "@capacitor/cli": "next",
+        "@capacitor/cli": "9.0.0-alpha.8",
         "@effect/platform-bun": "^4.0.6",
         "@effect/tsgo": "0.53.3",
         "@material/material-color-utilities": "^0.4.0",

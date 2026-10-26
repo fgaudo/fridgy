@@ -1,3 +1,5 @@
+// How products are read and written, for every adapter of the storage: the tables as models, the repository of
+// products, the insertion of a product with its expiration and the query of them all, ordered.
 import * as Context from 'effect/Context'
 import * as Effect from 'effect/Effect'
 import { flow } from 'effect/Function'
@@ -30,12 +32,12 @@ class ProductExpiration extends SchemaX.Model.Class<ProductExpiration>(
   [ProductExpirationSchema.columns.productId]: Integer.Schema,
 }) {}
 
-export class SqlHelper extends Context.Service<SqlHelper>()(
-  '35441efdc077be69',
+export class ProductStore extends Context.Service<ProductStore>()(
+  'c28d89da81ef74f7',
   {
     make: Effect.gen(function*() {
       const sql = yield* Sql.SqlClient.SqlClient
-      const productRepository = yield* Sql.SqlModel.makeRepository(
+      const repository = yield* Sql.SqlModel.makeRepository(
         Product,
         {
           idColumn: ProductSchema.columns.id,
@@ -43,7 +45,7 @@ export class SqlHelper extends Context.Service<SqlHelper>()(
           tableName: ProductSchema.table,
         } as const,
       )
-      const productExpirationRepository = yield* Sql.SqlModel.makeRepository(
+      const expirations = yield* Sql.SqlModel.makeRepository(
         ProductExpiration,
         {
           idColumn: ProductExpirationSchema.columns.id,
@@ -51,7 +53,8 @@ export class SqlHelper extends Context.Service<SqlHelper>()(
           tableName: ProductExpirationSchema.table,
         } as const,
       )
-      const insertProductWithExpirationResolver = Sql.SqlResolver.ordered({
+      /** Inserts products that expire, each with its expiration, in one transaction; answers with their ids. */
+      const insertWithExpiration = Sql.SqlResolver.ordered({
         Request: Schema.Struct({
           creationDate: Schema.DateTimeUtc,
           expirationDate: Schema.DateTimeUtc,
@@ -62,11 +65,11 @@ export class SqlHelper extends Context.Service<SqlHelper>()(
         execute: flow(
           Effect.forEach(
             Effect.fn(function*(request) {
-              const product = yield* productRepository.insert({
+              const product = yield* repository.insert({
                 creation_date: request.creationDate,
                 name: request.name,
               })
-              yield* productExpirationRepository.insert({
+              yield* expirations.insert({
                 date: request.expirationDate,
                 product_id: product.id,
               })
@@ -77,7 +80,8 @@ export class SqlHelper extends Context.Service<SqlHelper>()(
           sql.withTransaction,
         ),
       })
-      const getProducts = Sql.SqlSchema.findAll({
+      /** Every stored product with its expiration, if any, as the database holds them: those that expire first. */
+      const readAll = Sql.SqlSchema.findAll({
         Request: Schema.Void,
         Result: Schema.Struct({
           maybeCreationDate: Schema.OptionFromNullishOr(
@@ -120,11 +124,7 @@ export class SqlHelper extends Context.Service<SqlHelper>()(
                 `
         },
       })()
-      return {
-        insertProductWithExpirationResolver,
-        productRepository,
-        getProducts,
-      }
+      return { repository, insertWithExpiration, readAll }
     }),
   },
 ) {

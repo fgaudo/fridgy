@@ -5,7 +5,7 @@ import * as Arr from 'effect/Array'
 import * as Channel from 'effect/Channel'
 import * as Data from 'effect/Data'
 import * as DateTime from 'effect/DateTime'
-import type * as Duration from 'effect/Duration'
+import * as Duration from 'effect/Duration'
 import * as Effect from 'effect/Effect'
 import { pipe } from 'effect/Function'
 import * as HashMap from 'effect/HashMap'
@@ -15,12 +15,11 @@ import * as Opt from 'effect/Option'
 import * as Result from 'effect/Result'
 import * as Domain from '#domain/product.ts'
 import { Notifications } from '#infrastructure/notifications/notifications.ts'
-import * as DeleteProducts from './services/delete-products/delete-products.ts'
 import * as NonEmptyHashSet from '#libs/collections/non-empty-hash-set.ts'
 import { defect } from '#libs/defect/defect.ts'
 import * as PositiveInteger from '#libs/numbers/positive-integer.ts'
-import type * as UnitInterval from '#libs/numbers/unit-interval.ts'
-import { ProductList, type StoredProduct } from './services/product-list/product-list.ts'
+import * as DeleteProducts from './services/delete-products/delete-products.ts'
+import { ProductList, type ProductListReadError, type StoredProduct } from './services/product-list/product-list.ts'
 
 export type Product = Data.TaggedEnum<{
   /** Stored data so broken it cannot even be referenced. */
@@ -32,6 +31,16 @@ export type Product = Data.TaggedEnum<{
 
 const Product = Data.taggedEnum<Product>()
 
+export type Selection = Data.TaggedEnum<{
+  Idle: object
+  Selecting: Readonly<{ ids: NonEmptyHashSet.NonEmptyHashSet<string> }>
+  // Left only by its completion: with commands that cannot be cancelled, a
+  // completion always belongs to the deletion in progress, so it needs no id.
+  Deleting: Readonly<{ ids: NonEmptyHashSet.NonEmptyHashSet<string> }>
+}>
+
+const Selection = Data.taggedEnum<Selection>()
+
 export type State = Readonly<{
   /** The current time, once the clock has ticked: expiration statuses derive from it. */
   maybeNow: Opt.Option<DateTime.Utc>
@@ -40,12 +49,7 @@ export type State = Readonly<{
     Failed: object
     Loaded: Readonly<{ items: ReadonlyArray<Product> }>
   }>
-  selection: Data.TaggedEnum<{
-    Selecting: Readonly<{ maybeIds: Opt.Option<NonEmptyHashSet.NonEmptyHashSet<string>> }>
-    // Left only by its completion: with commands that cannot be cancelled, a
-    // completion always belongs to the deletion in progress, so it needs no id.
-    Deleting: Readonly<{ ids: NonEmptyHashSet.NonEmptyHashSet<string> }>
-  }>
+  selection: Selection
 }>
 
 export type Message = Data.TaggedEnum<{
@@ -56,7 +60,7 @@ export type Message = Data.TaggedEnum<{
   DeleteStarted: object
   // From subscriptions.
   TimeChanged: { now: DateTime.Utc }
-  ListChanged: { result: Result.Result<ReadonlyArray<StoredProduct>, void> }
+  ListChanged: { result: Result.Result<ReadonlyArray<StoredProduct>, ProductListReadError> }
   // From commands.
   DeleteCompleted: { succeeded: boolean }
 }>
@@ -70,32 +74,27 @@ export type Command = Data.TaggedEnum<{
 
 const Command = Data.taggedEnum<Command>()
 
-/** What a tap on a product does. */
-export type ItemSelection = Data.TaggedEnum<{
-  Unselected: { select: Message }
-  Selected: { deselect: Message }
-  /** The selected products are being deleted: nothing can be selected meanwhile. */
-  Deleting: { isSelected: boolean }
+/** How a row looks, and what a long press on it does. */
+export type ItemSelection = Readonly<{
+  isSelected: boolean
+  /** Selects the row, or deselects it; nothing while the selected products are being deleted. */
+  maybeToggle: Opt.Option<Message>
+}>
+
+export type ProductStatus = Data.TaggedEnum<{
+  Everlasting: object
+  Stale: Readonly<{ expirationDate: DateTime.Utc }>
+  /** Good through today, and no longer tomorrow. */
+  ExpiringToday: Readonly<{ expirationDate: DateTime.Utc }>
+  /** Good through today and `daysLeft - 1` more days: the expiration day counts. */
+  Fresh: Readonly<{ expirationDate: DateTime.Utc; daysLeft: PositiveInteger.PositiveInteger }>
 }>
 
 export type ProductModel = Data.TaggedEnum<{
   /** Cannot be referenced, so nothing can be done with it. */
   Corrupt: Readonly<{ maybeName: Opt.Option<string> }>
   Invalid: Readonly<{ id: string; selection: ItemSelection; maybeName: Opt.Option<string> }>
-  Valid: Readonly<{
-    id: string
-    selection: ItemSelection
-    name: string
-    status: Data.TaggedEnum<{
-      Everlasting: object
-      Stale: Readonly<{ expirationDate: DateTime.Utc }>
-      Fresh: Readonly<{
-        expirationDate: DateTime.Utc
-        timeLeft: Duration.Duration
-        freshnessRatio: UnitInterval.UnitInterval
-      }>
-    }>
-  }>
+  Valid: Readonly<{ id: string; selection: ItemSelection; name: string; status: ProductStatus }>
 }>
 
 export type Model = Data.TaggedEnum<{
@@ -133,17 +132,20 @@ const validate = (stored: StoredProduct): Product =>
 const idsOf = (items: ReadonlyArray<Product>) =>
   HashSet.fromIterable(Arr.flatMap(items, (product) => (product._tag === 'Corrupt' ? [] : [product.id])))
 
-type Selecting = Data.TaggedEnum.Value<State['selection'], 'Selecting'>
-type Loaded = Data.TaggedEnum.Value<State['list'], 'Loaded'>
-type WithSelection = Selecting & { readonly maybeIds: Opt.Some<NonEmptyHashSet.NonEmptyHashSet<string>> }
+/** The ids that can be selected: those of the loaded products, while nothing is being deleted. */
+const selectableIds = (state: State): HashSet.HashSet<string> =>
+  state.list._tag === 'Loaded' && state.selection._tag !== 'Deleting' ? idsOf(state.list.items) : HashSet.empty()
 
-const canChangeSelection = (state: State): state is State & { readonly list: Loaded; readonly selection: Selecting } =>
-  state.list._tag === 'Loaded' && state.selection._tag === 'Selecting'
+/** The selection, as ids: empty when there is none. */
+const selectedIds = (selection: Selection): HashSet.HashSet<string> =>
+  selection._tag === 'Idle' ? HashSet.empty() : selection.ids
 
-const hasSelection = (state: State): state is State & { readonly selection: WithSelection } =>
-  state.selection._tag === 'Selecting' && Opt.isSome(state.selection.maybeIds)
-
-const isSelected = (selection: Selecting, id: string) => Opt.exists(selection.maybeIds, HashSet.has(id))
+/** The selection of exactly those ids: none when there are none. */
+const selectionOf = (ids: HashSet.HashSet<string>): Selection =>
+  Opt.match(NonEmptyHashSet.make(ids), {
+    onNone: () => Selection.Idle(),
+    onSome: (ids) => Selection.Selecting({ ids }),
+  })
 
 // Expiration statuses derive from the current time: it is refreshed often
 // enough for days-long expirations.
@@ -193,7 +195,7 @@ const showToast = Effect.fn('ShowToast')(
   Effect.withLogSpan('ShowToast'),
 )
 
-type ProductStatus = Data.TaggedEnum.Value<ProductModel, 'Valid'>['status']
+type Deletion = Data.TaggedEnum.Value<Model, 'Available'>['deletion']
 
 const statusAt = (now: DateTime.Utc, product: Domain.Product): ProductStatus =>
   Opt.match(Domain.maybeExpiration(product), {
@@ -201,9 +203,14 @@ const statusAt = (now: DateTime.Utc, product: Domain.Product): ProductStatus =>
     onSome: (expiration) => {
       const { expirationDate } = expiration
       const status = Domain.expirationStatus(now)(expiration)
-      return status.hasExpired
-        ? { _tag: 'Stale', expirationDate }
-        : { _tag: 'Fresh', expirationDate, timeLeft: status.timeLeft, freshnessRatio: status.freshness }
+      if (status.hasExpired) {
+        return { _tag: 'Stale', expirationDate }
+      }
+      // A day begun counts: some time is left, so at least one day is.
+      const daysLeft = Math.ceil(Duration.toDays(status.timeLeft))
+      return daysLeft === 1
+        ? { _tag: 'ExpiringToday', expirationDate }
+        : { _tag: 'Fresh', expirationDate, daysLeft: PositiveInteger.makeUnsafe(daysLeft) }
     },
   })
 
@@ -217,85 +224,60 @@ export const program: Tea.Program<{
   services: Deps
 }> = {
   init: {
-    state: {
-      maybeNow: Opt.none(),
-      list: { _tag: 'Loading' },
-      selection: { _tag: 'Selecting', maybeIds: Opt.none() },
-    },
+    state: { maybeNow: Opt.none(), list: { _tag: 'Loading' }, selection: Selection.Idle() },
   },
 
   update: Match.typeTags<Message, (state: State) => Tea.Transition<State, Command>>()({
-    ListChanged: ({ result }) => (state) => {
-      if (Result.isFailure(result)) {
-        return { state: { ...state, list: { _tag: 'Failed' } } }
-      }
-      const items = Arr.map(result.success, validate)
-      return {
-        state: {
-          ...state,
-          list: { _tag: 'Loaded', items },
-          // The selection keeps the products that still exist; a deletion in
-          // progress is left alone.
-          selection: state.selection._tag === 'Selecting'
-            ? {
-              _tag: 'Selecting',
-              maybeIds: Opt.flatMap(
-                state.selection.maybeIds,
-                (ids) => NonEmptyHashSet.make(HashSet.intersection(ids, idsOf(items))),
-              ),
-            }
-            : state.selection,
+    ListChanged: ({ result }) => (state) =>
+      Result.match(result, {
+        onFailure: () => ({ state: { ...state, list: { _tag: 'Failed' } } }),
+        onSuccess: (stored) => {
+          const items = Arr.map(stored, validate)
+          return {
+            state: {
+              ...state,
+              list: { _tag: 'Loaded', items },
+              // The selection keeps the products that still exist; a deletion in progress is left alone.
+              selection: state.selection._tag === 'Deleting'
+                ? state.selection
+                : selectionOf(HashSet.intersection(selectedIds(state.selection), idsOf(items))),
+            },
+          }
         },
-      }
-    },
+      }),
 
     TimeChanged: ({ now }) => (state) => ({ state: { ...state, maybeNow: Opt.some(now) } }),
 
-    ItemSelected: ({ id }) => (state) => {
-      if (!canChangeSelection(state) || isSelected(state.selection, id)) {
-        return Tea.reject
-      }
-      const ids = Opt.match(state.selection.maybeIds, {
-        onNone: () => HashSet.make(id),
-        onSome: HashSet.add(id),
-      })
-      return {
-        state: { ...state, selection: { _tag: 'Selecting', maybeIds: Opt.some(NonEmptyHashSet.makeUnsafe(ids)) } },
-      }
-    },
-
-    ItemDeselected: ({ id }) => (state) => {
-      if (!canChangeSelection(state) || !hasSelection(state) || !isSelected(state.selection, id)) {
-        return Tea.reject
-      }
-      const maybeIds = NonEmptyHashSet.make(HashSet.remove(state.selection.maybeIds.value, id))
-      return { state: { ...state, selection: { _tag: 'Selecting', maybeIds } } }
-    },
-
-    SelectionCleared: () => (state) =>
-      hasSelection(state)
-        ? { state: { ...state, selection: { _tag: 'Selecting', maybeIds: Opt.none() } } }
+    // Only a product of the list can be selected: a tap on a row the storage has meanwhile removed does nothing.
+    ItemSelected: ({ id }) => (state) =>
+      HashSet.has(selectableIds(state), id) && !HashSet.has(selectedIds(state.selection), id)
+        ? { state: { ...state, selection: selectionOf(HashSet.add(selectedIds(state.selection), id)) } }
         : Tea.reject,
 
-    DeleteStarted: () => (state) => {
-      if (!(state.list._tag === 'Loaded' && hasSelection(state))) {
-        return Tea.reject
-      }
-      const ids = state.selection.maybeIds.value
-      return {
-        state: { ...state, selection: { _tag: 'Deleting', ids } },
-        commands: [Command.Delete({ ids })],
-      }
-    },
+    ItemDeselected: ({ id }) => (state) =>
+      state.list._tag === 'Loaded' && state.selection._tag === 'Selecting' && HashSet.has(state.selection.ids, id)
+        ? { state: { ...state, selection: selectionOf(HashSet.remove(state.selection.ids, id)) } }
+        : Tea.reject,
+
+    SelectionCleared: () => (state) =>
+      state.selection._tag === 'Selecting' ? { state: { ...state, selection: Selection.Idle() } } : Tea.reject,
+
+    DeleteStarted: () => (state) =>
+      state.list._tag === 'Loaded' && state.selection._tag === 'Selecting'
+        ? {
+          state: { ...state, selection: Selection.Deleting({ ids: state.selection.ids }) },
+          commands: [Command.Delete({ ids: state.selection.ids })],
+        }
+        : Tea.reject,
 
     DeleteCompleted: ({ succeeded }) => (state) => {
       if (state.selection._tag !== 'Deleting') {
         return defect('DeleteCompleted while no deletion is in progress: only a completion leaves Deleting')
       }
       return succeeded
-        ? { state: { ...state, selection: { _tag: 'Selecting', maybeIds: Opt.none() } } }
+        ? { state: { ...state, selection: Selection.Idle() } }
         : {
-          state: { ...state, selection: { _tag: 'Selecting', maybeIds: Opt.some(state.selection.ids) } },
+          state: { ...state, selection: Selection.Selecting({ ids: state.selection.ids }) },
           commands: [Command.ShowToast({ text: 'Could not delete the products' })],
         }
     },
@@ -321,44 +303,45 @@ export const program: Tea.Program<{
       return { _tag: 'Empty' }
     }
     const { selection } = state
-    const selectionOf = (id: string): ItemSelection => {
-      if (selection._tag === 'Deleting') {
-        return { _tag: 'Deleting', isSelected: HashSet.has(selection.ids, id) }
+    const itemSelectionOf = (id: string): ItemSelection => {
+      const isSelected = HashSet.has(selectedIds(selection), id)
+      return {
+        isSelected,
+        maybeToggle: selection._tag === 'Deleting'
+          ? Opt.none()
+          : Opt.some(isSelected ? Message.ItemDeselected({ id }) : Message.ItemSelected({ id })),
       }
-      return Opt.exists(selection.maybeIds, HashSet.has(id))
-        ? { _tag: 'Selected', deselect: Message.ItemDeselected({ id }) }
-        : { _tag: 'Unselected', select: Message.ItemSelected({ id }) }
     }
     return {
       _tag: 'Available',
-      deletion: selection._tag === 'Deleting'
-        ? { _tag: 'InProgress' }
-        : Opt.match(selection.maybeIds, {
-          onNone: () => ({ _tag: 'NothingSelected' }),
-          onSome: (ids) => ({
-            _tag: 'Possible',
-            count: PositiveInteger.makeUnsafe(HashSet.size(ids)),
-            deleteSelected: Message.DeleteStarted(),
-            clearSelection: Message.SelectionCleared(),
-          }),
+      deletion: Match.valueTags(selection, {
+        Idle: (): Deletion => ({ _tag: 'NothingSelected' }),
+        Selecting: ({ ids }): Deletion => ({
+          _tag: 'Possible',
+          count: PositiveInteger.makeUnsafe(HashSet.size(ids)),
+          deleteSelected: Message.DeleteStarted(),
+          clearSelection: Message.SelectionCleared(),
         }),
-      total: PositiveInteger.makeUnsafe(items.length),
-      products: Arr.map(items, (product): ProductModel => {
-        switch (product._tag) {
-          case 'Corrupt':
-            return { _tag: 'Corrupt', maybeName: product.maybeName }
-          case 'Invalid':
-            return { _tag: 'Invalid', id: product.id, selection: selectionOf(product.id), maybeName: product.maybeName }
-          case 'Valid':
-            return {
-              _tag: 'Valid',
-              id: product.id,
-              selection: selectionOf(product.id),
-              name: product.product.name,
-              status: statusAt(now, product.product),
-            }
-        }
+        Deleting: (): Deletion => ({ _tag: 'InProgress' }),
       }),
+      total: PositiveInteger.makeUnsafe(items.length),
+      products: Arr.map(items, (product) =>
+        Match.valueTags(product, {
+          Corrupt: ({ maybeName }): ProductModel => ({ _tag: 'Corrupt', maybeName }),
+          Invalid: ({ id, maybeName }): ProductModel => ({
+            _tag: 'Invalid',
+            id,
+            selection: itemSelectionOf(id),
+            maybeName,
+          }),
+          Valid: ({ id, product }): ProductModel => ({
+            _tag: 'Valid',
+            id,
+            selection: itemSelectionOf(id),
+            name: product.name,
+            status: statusAt(now, product),
+          }),
+        })),
     }
   },
 }

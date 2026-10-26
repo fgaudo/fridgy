@@ -2,9 +2,9 @@ import * as Tea from '@fgaudo/effect-tea'
 import { thunk, type VNode } from 'snabbdom'
 import { type Handlers, handlers, type View } from '#libs/tea-snabbdom/tea-snabbdom.ts'
 import { cn } from '#libs/ui/class-names.ts'
-import type { Message, Model } from './program.ts'
 import { backdrop } from '#libs/ui/overlay.tsx'
 import * as Products from './children/products/view.tsx'
+import type { Message, Model } from './program.ts'
 
 /**
  * Material's extended FAB: an icon and its action. While the list scrolls it shrinks to the icon alone, to leave
