@@ -60,12 +60,18 @@ traditional or simplified forms of Chinese characters.
 
 ## Visibility
 
-Visibility follows the role a file's name gives it, and biome's `noRestrictedImports` rule enforces it:
+Dependencies point inwards: `domain/` imports only `libs/`; `infrastructure/` the domain and `libs/`; `app/`
+all three; the entrypoints everything; `libs/` knows nothing of the app. Within `app/`, visibility follows the
+role a file's name gives it. Biome's `noRestrictedImports` rule (`biome.json`) enforces all of it:
 
 - inside `app/`, imports go downwards only: a program uses its own services and children, never a parent or a
-  sibling, and a child only through its `program.ts`, `view.tsx` and `layer.ts`; and the infrastructure's
-  services, for the platform's facts it takes as they are;
+  sibling (another child, another program's service), and a child only through its `program.ts`, `view.tsx`
+  and `layer.ts`, at every depth; and the infrastructure's services, for the platform's facts it takes as they
+  are;
 - adapters (`<service>.<backing>.ts`) are imported only by a `layer.ts`, by the entrypoints, which pick among
-  alternatives, and by their own tests;
+  alternatives, and by their own tests: a program uses its services;
 - from outside `app/`, only its root modules (`program.ts`, `view.tsx`, `layer.ts`) and, for the entrypoints,
-  the adapters.
+  the adapters;
+- test-only code (`*.test_*.ts`, `@fgaudo/effect-tea/testing`) is imported only by tests, so it stays out of
+  bundles; relative imports climb at most `../../`, another part of the project is reached through its alias
+  (`#app/…`, `#domain/…`, `#infrastructure/…`, `#libs/…`, from the `imports` of `package.json`).
