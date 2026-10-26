@@ -160,9 +160,9 @@ describe('Products update', () => {
     })
   })
 
-  test('SelectionCleared empties the selection, or is rejected when there is nothing to clear', () => {
+  test('SelectionCleared empties the selection, or is rejected when there is none or the list is not loaded', () => {
     assertProperty([state], (before) => {
-      if (before.selection._tag !== 'Selecting') {
+      if (before.list._tag !== 'Loaded' || before.selection._tag !== 'Selecting') {
         return rejects(Msg.SelectionCleared(), before)
       }
       const { after, commands } = step(Msg.SelectionCleared(), before)

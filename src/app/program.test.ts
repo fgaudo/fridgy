@@ -1,13 +1,16 @@
 import { describe, expect, test } from 'bun:test'
 import * as Tea from '@fgaudo/effect-tea'
 import * as Arr from 'effect/Array'
-import type * as Data from 'effect/Data'
+import * as Data from 'effect/Data'
 import * as Effect from 'effect/Effect'
 import * as HashMap from 'effect/HashMap'
 import * as Opt from 'effect/Option'
 import { tagPath } from '#libs/testing/tag-path.test_support.ts'
+import { outcomesOf } from '#libs/testing/update.test_support.ts'
+import * as About from './children/about/program.ts'
+import * as AddProducts from './children/add-products/program.ts'
 import * as Home from './children/home/program.ts'
-import { type Page, program, type State } from './program.ts'
+import { type Message, type Page, program, type State } from './program.ts'
 import {
   addUndated,
   back,
@@ -20,6 +23,13 @@ import {
   typeName,
 } from './user.test_support.ts'
 import { view } from './view.tsx'
+
+const Page = Data.taggedEnum<Page>()
+const Msg = Data.taggedEnum<Message>()
+const HomeMsg = Data.taggedEnum<Home.Message>()
+const AddProductsMsg = Data.taggedEnum<AddProducts.Message>()
+
+const { step } = outcomesOf(program.update)
 
 const tags = (state: State) => state.stack.map((page) => page._tag)
 
@@ -67,6 +77,54 @@ describe('Navigation', () => {
       expect(tags(state)).toEqual(['Home', 'About'])
       expect(Opt.map(entry, (message) => Tea.isRejected(program.update(message)(state)))).toEqual(Opt.some(true))
       yield* user.runAll
+    })))
+
+  // Home asks for About only from its menu, which the first request closes, so no user reaches this; the root
+  // does not rely on how Home filters, though: a request for the page shown changes nothing, as it does for
+  // AddProducts, which Home asks for on every tap.
+  test('About requested while it is shown stays as it is, and is not started again', () => {
+    const shown: State = {
+      stack: [
+        Page.Home({ state: { ...Home.program.init.state, isMenuOpen: true } }),
+        Page.About({ state: About.program.init.state }),
+      ],
+    }
+    const { after, commands } = step(Msg.Home({ message: HomeMsg.InfoRequested() }), shown)
+    expect(tags(after)).toEqual(['Home', 'About'])
+    expect(commands).toEqual([])
+  })
+
+  // A page asks to be left from its view or its back button, both its own only while it is shown, so the stack
+  // the app builds never has one under another. Were it to, the root would not leave the wrong page.
+  test('a page asking to be left while another is shown is a defect', () => {
+    const covered: State = {
+      stack: [
+        Page.Home({ state: Home.program.init.state }),
+        Page.AddProducts({ state: AddProducts.program.init.state }),
+        Page.About({ state: About.program.init.state }),
+      ],
+    }
+    expect(() => program.update(Msg.AddProducts({ message: AddProductsMsg.BackPressed() }))(covered)).toThrow()
+  })
+
+  // About left while its data loads, and opened again: a command cannot be cancelled, and its answer goes to
+  // the About that is there when it arrives, so the second visit is loaded by the first one's answers, then
+  // hears its own. This is why About accepts a load that completes on a page already loaded.
+  test('About opened again while its first loads were pending is loaded once they all complete', () =>
+    rehearsed(Effect.fnUntraced(function*(user) {
+      yield* perform(user, openAbout)
+      yield* back(user)
+      expect((yield* user.pending).map(tagPath)).toEqual(['About › LoadLicenses', 'About › LoadVersion'])
+      yield* perform(user, openAbout)
+      expect((yield* user.pending).length).toBe(4)
+      yield* user.runAll
+      const about = Arr.findFirst(
+        (yield* user.state).stack,
+        (page): page is Data.TaggedEnum.Value<Page, 'About'> => page._tag === 'About',
+      )
+      expect(Opt.map(about, ({ state }) => [state.licenses._tag, state.version._tag])).toEqual(
+        Opt.some(['Loaded', 'Loaded']),
+      )
     })))
 
   // Snabbdom patches an element with the same tag and key in place, keeping the

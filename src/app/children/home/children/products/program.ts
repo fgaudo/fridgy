@@ -260,7 +260,9 @@ export const program: Tea.Program<{
         : Tea.reject,
 
     SelectionCleared: () => (state) =>
-      state.selection._tag === 'Selecting' ? { state: { ...state, selection: Selection.Idle() } } : Tea.reject,
+      state.list._tag === 'Loaded' && state.selection._tag === 'Selecting'
+        ? { state: { ...state, selection: Selection.Idle() } }
+        : Tea.reject,
 
     DeleteStarted: () => (state) =>
       state.list._tag === 'Loaded' && state.selection._tag === 'Selecting'

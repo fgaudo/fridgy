@@ -117,6 +117,8 @@ export const program: Tea.Program<{
   },
 
   update: Match.typeTags<Message, (state: State) => Tea.Transition<State, Command, Event>>()({
+    // Accepted once loaded too: a command cannot be cancelled, and its answer goes to the About shown when it
+    // arrives, so a page opened again while the first visit's loads were pending hears theirs, then its own.
     LicensesLoaded: ({ licenses }) => (state) => ({
       state: { ...state, licenses: { _tag: 'Loaded', items: licenses } },
     }),

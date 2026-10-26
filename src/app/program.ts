@@ -6,6 +6,7 @@ import * as Arr from 'effect/Array'
 import * as Data from 'effect/Data'
 import * as Match from 'effect/Match'
 import * as Opt from 'effect/Option'
+import { defect } from '#libs/defect/defect.ts'
 import * as About from './children/about/program.ts'
 import * as AddProducts from './children/add-products/program.ts'
 import * as Home from './children/home/program.ts'
@@ -59,12 +60,34 @@ const page = <Tag extends Page['_tag']>(tag: Tag) => ({
   }),
 })
 
-const push = (state: State, page: Page): State => ({ stack: Arr.append(state.stack, page) })
+/**
+ * Shows a page on top, started as its program starts. Showing the page already shown changes nothing: a page
+ * asks to show another one on each tap, and the second tap of a double tap reaches a stack that has it on top.
+ */
+const show = <Tag extends Page['_tag'], Command>(
+  state: State,
+  tag: Tag,
+  start: Readonly<{ state: PageStates[Tag]; commands: ReadonlyArray<Command> }>,
+): Tea.Step<State, Command> =>
+  top(state)._tag === tag
+    ? { state }
+    : {
+      state: { stack: Arr.append(state.stack, { _tag: tag, state: start.state } as PageOf<Tag>) },
+      commands: start.commands,
+    }
 
-/** Leaves the shown page; Home, the first one, never asks to. */
-const leave = (state: State) => {
+/**
+ * Leaves the page that asks to: the shown one, since a page asks from its view or from the back button, both
+ * its own only while it is on top. Home, the first page, never asks.
+ */
+const leave = (tag: Exclude<Page['_tag'], 'Home'>) => (state: State): Tea.Step<State> => {
+  if (top(state)._tag !== tag) {
+    return defect(`${tag} asked to be left while another page is shown: a page asks only while it is on top`)
+  }
   const rest = Arr.initNonEmpty(state.stack)
-  return { state: Arr.isReadonlyArrayNonEmpty(rest) ? { stack: rest } : state }
+  return Arr.isReadonlyArrayNonEmpty(rest)
+    ? { state: { stack: rest } }
+    : defect(`${tag} was the only page: Home is always the first`)
 }
 
 const { child, compose } = Tea.parent<{ state: State }>()
@@ -82,21 +105,11 @@ export const program = compose({
   onEvent: {
     Home: (event, children) => (state) =>
       Match.valueTags(event, {
-        // Opening About again while it is shown changes nothing, so that a double tap opens it once.
-        InfoRequested: () => {
-          if (top(state)._tag === 'About') return { state }
-          const about = children.About.init
-          return { state: push(state, Page.About({ state: about.state })), commands: about.commands }
-        },
-        // Likewise, the page that adds products opens once on a double tap.
-        AddRequested: () => {
-          if (top(state)._tag === 'AddProducts') return { state }
-          const page = children.AddProducts.init
-          return { state: push(state, Page.AddProducts({ state: page.state })), commands: page.commands }
-        },
+        InfoRequested: () => show(state, 'About', children.About.init),
+        AddRequested: () => show(state, 'AddProducts', children.AddProducts.init),
       }),
-    AddProducts: () => leave,
-    About: () => leave,
+    AddProducts: () => leave('AddProducts'),
+    About: () => leave('About'),
   },
   makeModel: (state, children): Model => ({
     page: Match.valueTags(top(state), {
