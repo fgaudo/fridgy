@@ -7,7 +7,7 @@ const config: CapacitorConfig = {
   server: { errorPath: 'error.html' },
   android: {
     // Tailwind's colors (oklch) and the database (OPFS sync access handles, 109) need it.
-    minWebViewVersion: 111,
+    minWebViewVersion: 114,
   },
   plugins: {
     // The app enables it while it listens to the back button: otherwise the button is Android's.

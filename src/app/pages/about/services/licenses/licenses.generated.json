@@ -1,5 +1,5 @@
 {
-    "@capacitor/android@8.5.3": {
+    "@capacitor/android@9.0.0-alpha.8": {
         "licenses": "MIT",
         "repository": "https://github.com/ionic-team/capacitor",
         "publisher": "Ionic Team",
@@ -8,7 +8,7 @@
         "name": "@capacitor/android",
         "description": "Capacitor: Cross-platform apps with JavaScript and the web"
     },
-    "@capacitor/app@8.1.2": {
+    "@capacitor/app@9.0.0-alpha.2": {
         "licenses": "MIT",
         "repository": "https://github.com/ionic-team/capacitor-plugins",
         "publisher": "Ionic",
@@ -17,7 +17,7 @@
         "name": "@capacitor/app",
         "description": "The App API handles high level App state and events.For example, this API emits events when the app enters and leaves the foreground, handles deeplinks, opens other apps, and manages persisted plugin state."
     },
-    "@capacitor/core@8.5.2": {
+    "@capacitor/core@9.0.0-alpha.8": {
         "licenses": "MIT",
         "repository": "https://github.com/ionic-team/capacitor",
         "publisher": "Ionic Team",
@@ -26,16 +26,7 @@
         "name": "@capacitor/core",
         "description": "Capacitor: Cross-platform apps with JavaScript and the web"
     },
-    "@capacitor/core@8.5.3": {
-        "licenses": "MIT",
-        "repository": "https://github.com/ionic-team/capacitor",
-        "publisher": "Ionic Team",
-        "email": "hi@ionic.io",
-        "copyright": "Copyright (c) 2017-present Drifty Co.",
-        "name": "@capacitor/core",
-        "description": "Capacitor: Cross-platform apps with JavaScript and the web"
-    },
-    "@capacitor/splash-screen@8.0.2": {
+    "@capacitor/splash-screen@9.0.0-alpha.2": {
         "licenses": "MIT",
         "repository": "https://github.com/ionic-team/capacitor-plugins",
         "publisher": "Ionic",
@@ -44,7 +35,7 @@
         "name": "@capacitor/splash-screen",
         "description": "The Splash Screen API provides methods for showing or hiding a Splash image."
     },
-    "@capacitor/toast@8.0.1": {
+    "@capacitor/toast@9.0.0-alpha.2": {
         "licenses": "MIT",
         "repository": "https://github.com/ionic-team/capacitor-plugins",
         "publisher": "Ionic",
@@ -53,14 +44,14 @@
         "name": "@capacitor/toast",
         "description": "The Toast API provides a notification pop up for displaying important information to a user. Just like real toast!"
     },
-    "@effect/platform-browser@4.0.5": {
+    "@effect/platform-browser@4.0.6": {
         "licenses": "MIT",
         "repository": "https://github.com/Effect-TS/effect",
         "copyright": "Copyright (c) 2023 Effectful Technologies Inc",
         "name": "@effect/platform-browser",
         "description": "Platform specific implementations for the browser"
     },
-    "@effect/sql-sqlite-wasm@4.0.5": {
+    "@effect/sql-sqlite-wasm@4.0.6": {
         "licenses": "MIT",
         "repository": "https://github.com/Effect-TS/effect",
         "copyright": "Copyright (c) 2023-present The Contributors",
@@ -241,14 +232,14 @@
         "name": "clsx",
         "description": "A tiny (239B) utility for constructing className strings conditionally."
     },
-    "effect@4.0.5": {
+    "effect@4.0.6": {
         "licenses": "MIT",
         "repository": "https://github.com/Effect-TS/effect",
         "copyright": "Copyright (c) 2023 Effectful Technologies Inc",
         "name": "effect",
         "description": "The missing standard library for TypeScript, for writing production-grade software."
     },
-    "material-symbols@0.48.0": {
+    "material-symbols@0.48.1": {
         "licenses": "Apache-2.0",
         "repository": "https://github.com/marella/material-symbols",
         "copyright": "",
