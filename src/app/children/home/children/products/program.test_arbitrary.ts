@@ -1,4 +1,5 @@
 import * as Data from 'effect/Data'
+import * as HashSet from 'effect/HashSet'
 import * as Opt from 'effect/Option'
 import * as Result from 'effect/Result'
 import * as fc from 'fast-check'
@@ -7,13 +8,15 @@ import * as NonEmptyHashSet from '#libs/collections/non-empty-hash-set.test_arbi
 import * as PositiveInteger from '#libs/numbers/positive-integer.test_arbitrary.ts'
 import { arbitrary as maybe } from '#libs/option/option.test_arbitrary.ts'
 import { utc } from '#libs/testing/date-time.test_arbitrary.ts'
-import type { LastDeletion, Message, Product, Selection, State } from './program.ts'
+import type { Departure, LastDeletion, Message, Product, Selection, State } from './program.ts'
 import { ProductListReadError, type StoredProduct } from './services/product-list/product-list.ts'
 
 const Msg = Data.taggedEnum<Message>()
 
 // A small id space, so that selections and product lists overlap often.
-export const id: fc.Arbitrary<string> = fc.constantFrom('1', '2', '3', '4', '5', '6')
+const IDS = ['1', '2', '3', '4', '5', '6']
+
+export const id: fc.Arbitrary<string> = fc.constantFrom(...IDS)
 
 export const product: fc.Arbitrary<Product> = fc.oneof(
   fc.record({ id, product: ProductArbitrary.arbitrary }).map((fields) => ({ _tag: 'Valid', ...fields } as const)),
@@ -21,10 +24,63 @@ export const product: fc.Arbitrary<Product> = fc.oneof(
   maybe(fc.string()).map((maybeName) => ({ _tag: 'Corrupt', maybeName } as const)),
 )
 
+/** Whether two rows of the storage have the same id: the storage's key lists each id once. */
+const sameId = (a: Product, b: Product) => a._tag !== 'Corrupt' && b._tag !== 'Corrupt' && a.id === b.id
+
+/** The products of a list, as the storage lists them: each id once. */
+export const products = (constraints: { minLength?: number } = {}): fc.Arbitrary<ReadonlyArray<Product>> =>
+  fc.uniqueArray(product, { ...constraints, maxLength: 8, comparator: sameId })
+
+type Leaving = Departure['item']
+
+/** A product that is no longer listed, with that id. */
+const leavingWith = (leavingId: string): fc.Arbitrary<Leaving> =>
+  fc.oneof(
+    ProductArbitrary.arbitrary.map((product) => ({ _tag: 'Valid', id: leavingId, product } as const)),
+    maybe(fc.string()).map((maybeName) => ({ _tag: 'Invalid', id: leavingId, maybeName } as const)),
+  )
+
+/**
+ * The rows leaving as a change leaves them: placed among the listed ones, in the order they were shown, each after
+ * the row with an id it followed.
+ */
+const departuresAmong = (items: ReadonlyArray<Product>, leaving: ReadonlyArray<Leaving>) =>
+  fc.tuple(...leaving.map(() => fc.nat({ max: items.length }))).map((places) => {
+    const shown = leaving.reduce<ReadonlyArray<Product | { leaving: Leaving }>>(
+      (rows, item, index) => [...rows.slice(0, places[index]), { leaving: item }, ...rows.slice(places[index])],
+      items,
+    )
+    return shown.reduce<{ maybeAfter: Opt.Option<string>; departures: ReadonlyArray<Departure> }>(
+      ({ maybeAfter, departures }, row) =>
+        'leaving' in row
+          ? { maybeAfter: Opt.some(row.leaving.id), departures: [...departures, { item: row.leaving, maybeAfter }] }
+          : row._tag === 'Corrupt'
+          ? { maybeAfter, departures }
+          : { maybeAfter: Opt.some(row.id), departures },
+      { maybeAfter: Opt.none(), departures: [] },
+    ).departures
+  })
+
+/**
+ * A loaded list of those products, some of whose rows may be arriving, with rows leaving that it no longer lists.
+ */
+export const loadedOf = (items: ReadonlyArray<Product>): fc.Arbitrary<State['list']> => {
+  const ids = items.flatMap((item) => item._tag === 'Corrupt' ? [] : [item.id])
+  const freeIds = IDS.filter((id) => !ids.includes(id))
+  return fc.record({
+    arriving: fc.subarray(ids),
+    departures: fc.shuffledSubarray(freeIds, { maxLength: Math.min(3, freeIds.length) })
+      .chain((leavingIds) => fc.tuple(...leavingIds.map(leavingWith)))
+      .chain((leaving) => departuresAmong(items, leaving)),
+  }).map(({ arriving, departures }) => (
+    { _tag: 'Loaded', items, arrivals: HashSet.fromIterable(arriving), departures } as const
+  ))
+}
+
 export const list: fc.Arbitrary<State['list']> = fc.oneof(
   fc.constant({ _tag: 'Loading' } as const),
   fc.constant({ _tag: 'Failed' } as const),
-  fc.array(product, { maxLength: 8 }).map((items) => ({ _tag: 'Loaded', items } as const)),
+  products().chain(loadedOf),
 )
 
 export const idle: fc.Arbitrary<Selection> = fc.constant({ _tag: 'Idle' } as const)
@@ -55,10 +111,12 @@ export const recent: fc.Arbitrary<LastDeletion> = fc.record({
 
 export const lastDeletion: fc.Arbitrary<LastDeletion> = fc.oneof(fc.constant({ _tag: 'None' } as const), recent)
 
-/** Whether a loaded product expires: the clock runs, and the time is known, only then. */
+/** Whether a product shown, listed or leaving, expires: the clock runs, and the time is known, only then. */
 export const hasExpiringProduct = (state: State) =>
   state.list._tag === 'Loaded'
-  && state.list.items.some((item) => item._tag === 'Valid' && Opt.isSome(item.product.maybeExpirationDate))
+  && [...state.list.items, ...state.list.departures.map(({ item }) => item)].some((item) =>
+    item._tag === 'Valid' && Opt.isSome(item.product.maybeExpirationDate)
+  )
 
 /** Any state, with a time only while a product expires. */
 export const state: fc.Arbitrary<State> = fc.record({ maybeNow: maybe(utc), list, selection, lastDeletion }).map((
@@ -74,10 +132,10 @@ export const still: fc.Arbitrary<State> = state.filter((state) => !hasExpiringPr
 export const stateWith = <K extends keyof State>(key: K, arbitrary: fc.Arbitrary<State[K]>) =>
   fc.tuple(state, arbitrary).map(([base, value]): State => ({ ...base, [key]: value }))
 
-/** What the product storage may send: products with or without an id, valid or not. */
-export const storedProducts: fc.Arbitrary<ReadonlyArray<StoredProduct>> = fc.array(
+/** What the product storage may send: products with or without an id, valid or not, each id once. */
+export const storedProducts: fc.Arbitrary<ReadonlyArray<StoredProduct>> = fc.uniqueArray(
   fc.tuple(maybe(id), ProductArbitrary.unvalidatedSnapshot).map(([maybeId, snapshot]) => ({ ...snapshot, maybeId })),
-  { maxLength: 8 },
+  { maxLength: 8, comparator: (a, b) => Opt.isSome(a.maybeId) && Opt.contains(b.maybeId, a.maybeId.value) },
 )
 
 export const message: fc.Arbitrary<Message> = fc.oneof(
@@ -87,6 +145,7 @@ export const message: fc.Arbitrary<Message> = fc.oneof(
   fc.constant(Msg.DeleteStarted()),
   fc.constant(Msg.UndoRequested()),
   fc.constant(Msg.UndoExpired()),
+  fc.constant(Msg.RowsSettled()),
   fc.constant(Msg.DeleteFailed()),
   fc.constant(Msg.RestoreFailed()),
   utc.map((at) => Msg.Deleted({ at })),

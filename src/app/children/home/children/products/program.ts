@@ -34,6 +34,12 @@ export type Product = Data.TaggedEnum<{
 const Product = Data.taggedEnum<Product>()
 
 /**
+ * A row the storage no longer lists, kept where it was while it closes its place: after the row of the id it
+ * followed, or first. The rows under it then rise, rather than jump to their new place before it has closed.
+ */
+export type Departure = Readonly<{ item: Exclude<Product, { _tag: 'Corrupt' }>; maybeAfter: Opt.Option<string> }>
+
+/**
  * The products being deleted, when every one of them is a product: only then can the deletion be undone, by
  * storing them again. Stored data that is not a product is gone for good.
  */
@@ -60,13 +66,22 @@ const LastDeletion = Data.taggedEnum<LastDeletion>()
 export type State = Readonly<{
   /**
    * The current time, which the statuses of the products that expire derive from. The clock runs only while a
-   * listed product expires: `None` until it has ticked, and again once no product needs it.
+   * product shown, listed or leaving, expires: `None` until it has ticked, and again once no product needs it.
    */
   maybeNow: Opt.Option<DateTime.Utc>
   list: Data.TaggedEnum<{
     Loading: object
     Failed: object
-    Loaded: Readonly<{ items: ReadonlyArray<Product> }>
+    Loaded: Readonly<{
+      items: ReadonlyArray<Product>
+      /**
+       * The ids that changes brought into a list already shown (a product added, or put back), until the page
+       * has shown them arriving: none in a list shown for the first time, which appears whole.
+       */
+      arrivals: HashSet.HashSet<string>
+      /** The rows that changes took out of the list, in the order they were shown, until they have left. */
+      departures: ReadonlyArray<Departure>
+    }>
   }>
   selection: Selection
   lastDeletion: LastDeletion
@@ -85,6 +100,8 @@ export type Message = Data.TaggedEnum<{
   ListChanged: { result: Result.Result<ReadonlyArray<StoredProduct>, ProductListReadError> }
   /** The last deletion is a few seconds old: the offer to undo it is withdrawn. */
   UndoExpired: object
+  /** The arriving rows have opened their place, and the leaving ones closed theirs. */
+  RowsSettled: object
   // From commands.
   Deleted: { at: DateTime.Utc }
   DeleteFailed: object
@@ -125,11 +142,14 @@ export type ProductStatus = Data.TaggedEnum<{
   Fresh: Readonly<{ expirationDate: DateTime.Utc; inDays: PositiveInteger.PositiveInteger; freshness: Freshness }>
 }>
 
+/** Whether a row opens its place, has it, or closes it. */
+export type Presence = 'Arriving' | 'Listed' | 'Leaving'
+
 export type ProductModel = Data.TaggedEnum<{
   /** Cannot be referenced, so nothing can be done with it. */
   Corrupt: Readonly<{ maybeName: Opt.Option<string> }>
-  Invalid: Readonly<{ id: string; selection: ItemSelection; maybeName: Opt.Option<string> }>
-  Valid: Readonly<{ id: string; selection: ItemSelection; name: string; status: ProductStatus }>
+  Invalid: Readonly<{ id: string; selection: ItemSelection; presence: Presence; maybeName: Opt.Option<string> }>
+  Valid: Readonly<{ id: string; selection: ItemSelection; presence: Presence; name: string; status: ProductStatus }>
 }>
 
 export type ListModel = Data.TaggedEnum<{
@@ -148,6 +168,7 @@ export type ListModel = Data.TaggedEnum<{
       InProgress: object
     }>
     total: PositiveInteger.PositiveInteger
+    /** The products listed, in order, with the ones leaving where they were. */
     products: Arr.NonEmptyReadonlyArray<ProductModel>
   }>
 }>
@@ -178,11 +199,63 @@ const validate = (stored: StoredProduct): Product =>
 
 const expires = (item: Product) => item._tag === 'Valid' && Opt.isSome(item.product.maybeExpirationDate)
 
-/** Whether the time is needed: while a listed product expires. */
-const needsClock = (list: State['list']) => list._tag === 'Loaded' && Arr.some(list.items, expires)
+/** Whether the time is needed: while a product shown expires, listed or leaving. */
+const needsClock = (list: State['list']) =>
+  list._tag === 'Loaded'
+  && (Arr.some(list.items, expires) || Arr.some(list.departures, (departure) => expires(departure.item)))
 
 const idsOf = (items: ReadonlyArray<Product>) =>
   HashSet.fromIterable(Arr.flatMap(items, (product) => (product._tag === 'Corrupt' ? [] : [product.id])))
+
+type Loaded = Data.TaggedEnum.Value<State['list'], 'Loaded'>
+
+type Row = Readonly<{ item: Product; presence: Presence }>
+
+/**
+ * The rows shown: the listed products, in order, each leaving one after the row it followed, and after the rows
+ * that left from there before it, so that the leaving rows keep their order.
+ */
+const rowsOf = ({ items, arrivals, departures }: Loaded): ReadonlyArray<Row> =>
+  Arr.reduce(
+    departures,
+    Arr.map(items, (item): Row => ({
+      item,
+      presence: item._tag !== 'Corrupt' && HashSet.has(arrivals, item.id) ? 'Arriving' : 'Listed',
+    })),
+    (rows, { item, maybeAfter }) => {
+      const anchor = Opt.match(maybeAfter, {
+        onNone: () => 0,
+        onSome: (id) =>
+          pipe(
+            Arr.findFirstIndex(rows, (row) => row.item._tag !== 'Corrupt' && row.item.id === id),
+            Opt.match({ onNone: () => 0, onSome: (index) => index + 1 }),
+          ),
+      })
+      const index = pipe(
+        Arr.findFirstIndex(rows.slice(anchor), (row) => row.presence !== 'Leaving'),
+        Opt.match({ onNone: () => rows.length, onSome: (offset) => anchor + offset }),
+      )
+      return [...rows.slice(0, index), { item, presence: 'Leaving' }, ...rows.slice(index)]
+    },
+  )
+
+/** The rows shown whose ids are no longer listed, each after the id it followed. */
+const departuresFrom = (rows: ReadonlyArray<Row>, ids: HashSet.HashSet<string>): ReadonlyArray<Departure> =>
+  Arr.reduce(
+    rows,
+    { maybeAfter: Opt.none<string>(), departures: Arr.empty<Departure>() },
+    ({ maybeAfter, departures }, { item }) =>
+      item._tag === 'Corrupt'
+        ? { maybeAfter, departures }
+        : {
+          maybeAfter: Opt.some(item.id),
+          departures: HashSet.has(ids, item.id) ? departures : [...departures, { item, maybeAfter }],
+        },
+  ).departures
+
+/** Whether a row opens or closes its place. */
+const isSettling = (list: State['list']) =>
+  list._tag === 'Loaded' && (HashSet.size(list.arrivals) > 0 || Arr.isReadonlyArrayNonEmpty(list.departures))
 
 /** The ids that can be selected: those of the loaded products, while nothing is being deleted. */
 const selectableIds = (state: State): HashSet.HashSet<string> =>
@@ -237,8 +310,24 @@ const expireUndo = Effect.fn('ExpireUndo')(function*(deletedAt: DateTime.Utc) {
 const undoTimer = (deletedAt: DateTime.Utc): Tea.Subscription<Message, Deps> =>
   Channel.fromEffectDone(expireUndo(deletedAt))
 
-/** A subscription's key: the timer of the offer to undo is keyed by the deletion it times. */
-type Key = string | readonly ['undo', DateTime.Utc]
+// Longer than a row's entrance (Material's medium-4, and the frame it waits for) and its exit (short-4): a row is
+// drawn as any other, or gone, only once it has opened or closed its place. Hidden under another page, the timer
+// waits for the page to be back.
+const SETTLING_DURATION = Duration.millis(500)
+
+/** Ends once the rows have been shown arriving and leaving. */
+const settlingTimer: Tea.Subscription<Message, Deps> = Channel.fromEffectDone(
+  Effect.as(Effect.sleep(SETTLING_DURATION), Message.RowsSettled()),
+)
+
+/**
+ * A subscription's key: the timer of the offer to undo is keyed by the deletion it times, the timer of the rows
+ * settling by the ids arriving and leaving, so that a change bringing others starts it anew.
+ */
+type Key =
+  | string
+  | readonly ['undo', DateTime.Utc]
+  | readonly ['settling', HashSet.HashSet<string>, HashSet.HashSet<string>]
 
 const always: HashMap.HashMap<Key, Tea.Subscription<Message, Deps>> = HashMap.make(['changes', changes])
 
@@ -331,36 +420,39 @@ const listModel = (state: State): ListModel => {
   if (state.list._tag === 'Failed') {
     return { _tag: 'Error' }
   }
-  const items = state.list.items
+  const { items } = state.list
+  // The last rows leave with the whole list, which fades over the empty state.
   if (!Arr.isReadonlyArrayNonEmpty(items)) {
     return { _tag: 'Empty' }
   }
   const { selection, maybeNow } = state
-  const itemSelectionOf = (id: string): ItemSelection => {
-    const isSelected = HashSet.has(selectedIds(selection), id)
+  // A row leaving is no longer a product of the list: it cannot be selected.
+  const itemSelectionOf = (id: string, presence: Presence): ItemSelection => {
+    const isSelected = presence !== 'Leaving' && HashSet.has(selectedIds(selection), id)
     return {
       isSelected,
-      maybeToggle: selection._tag === 'Deleting'
+      maybeToggle: selection._tag === 'Deleting' || presence === 'Leaving'
         ? Opt.none()
         : Opt.some(isSelected ? Message.ItemDeselected({ id }) : Message.ItemSelected({ id })),
     }
   }
   // Until the clock has ticked, the products that expire have no status: the list waits for it.
-  const maybeProducts = Opt.all(Arr.map(items, (product) =>
-    Match.valueTags(product, {
+  const maybeProducts = Opt.all(Arr.map(rowsOf(state.list), ({ item, presence }) =>
+    Match.valueTags(item, {
       Corrupt: ({ maybeName }): Opt.Option<ProductModel> => Opt.some({ _tag: 'Corrupt', maybeName }),
       Invalid: ({ id, maybeName }): Opt.Option<ProductModel> =>
-        Opt.some({ _tag: 'Invalid', id, selection: itemSelectionOf(id), maybeName }),
+        Opt.some({ _tag: 'Invalid', id, selection: itemSelectionOf(id, presence), presence, maybeName }),
       Valid: ({ id, product }): Opt.Option<ProductModel> =>
         Opt.map(maybeStatusAt(maybeNow, product), (status) => ({
           _tag: 'Valid',
           id,
-          selection: itemSelectionOf(id),
+          selection: itemSelectionOf(id, presence),
+          presence,
           name: product.name,
           status,
         })),
     })))
-  if (Opt.isNone(maybeProducts)) {
+  if (Opt.isNone(maybeProducts) || !Arr.isReadonlyArrayNonEmpty(maybeProducts.value)) {
     return { _tag: 'Initial' }
   }
   return {
@@ -402,7 +494,24 @@ export const program: Tea.Program<{
     ListChanged: ({ result }) => (state) => {
       const list: State['list'] = Result.match(result, {
         onFailure: () => ({ _tag: 'Failed' }),
-        onSuccess: (stored) => ({ _tag: 'Loaded', items: Arr.map(stored, validate) }),
+        onSuccess: (stored): Loaded => {
+          const items = Arr.map(stored, validate)
+          if (state.list._tag !== 'Loaded') {
+            return { _tag: 'Loaded', items, arrivals: HashSet.empty(), departures: [] }
+          }
+          const ids = idsOf(items)
+          // The storage may tell of one write in more changes than one, before the page draws a frame: the rows
+          // still arriving keep arriving, and the ones leaving keep leaving, unless they are back.
+          return {
+            _tag: 'Loaded',
+            items,
+            arrivals: HashSet.union(
+              HashSet.difference(ids, idsOf(state.list.items)),
+              HashSet.intersection(state.list.arrivals, ids),
+            ),
+            departures: departuresFrom(rowsOf(state.list), ids),
+          }
+        },
       })
       return {
         state: {
@@ -493,6 +602,15 @@ export const program: Tea.Program<{
         ? { state: { ...state, lastDeletion: LastDeletion.None() } }
         : defect('UndoExpired while no deletion is recent: the timer runs only while one is'),
 
+    // The clock may have run only for a product leaving: the time it told goes with it.
+    RowsSettled: () => (state) => {
+      if (state.list._tag !== 'Loaded' || !isSettling(state.list)) {
+        return defect('RowsSettled while no row arrives or leaves: the timer runs only while one does')
+      }
+      const list: Loaded = { ...state.list, arrivals: HashSet.empty(), departures: [] }
+      return { state: { ...state, list, maybeNow: needsClock(list) ? state.maybeNow : Opt.none() } }
+    },
+
     // Accepted in every state: the user may have done anything since asking, and the storage is as it was.
     RestoreFailed: () => (state) => ({
       state,
@@ -508,9 +626,16 @@ export const program: Tea.Program<{
 
   subscriptions: (state) => {
     const withClock = needsClock(state.list) ? HashMap.set(always, 'clock', clock) : always
-    return state.lastDeletion._tag === 'Recent'
-      ? HashMap.set(withClock, ['undo', state.lastDeletion.at] as const, undoTimer(state.lastDeletion.at))
+    const withSettling = state.list._tag === 'Loaded' && isSettling(state.list)
+      ? HashMap.set(
+        withClock,
+        ['settling', state.list.arrivals, idsOf(Arr.map(state.list.departures, ({ item }) => item))] as const,
+        settlingTimer,
+      )
       : withClock
+    return state.lastDeletion._tag === 'Recent'
+      ? HashMap.set(withSettling, ['undo', state.lastDeletion.at] as const, undoTimer(state.lastDeletion.at))
+      : withSettling
   },
 
   makeModel: (state) => ({

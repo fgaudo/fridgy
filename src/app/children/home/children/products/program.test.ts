@@ -16,8 +16,9 @@ import {
   hasExpiringProduct,
   id,
   idle,
+  loadedOf,
   message,
-  product,
+  products,
   recent,
   selecting,
   state,
@@ -26,7 +27,15 @@ import {
   storedProducts,
   ticking,
 } from './program.test_arbitrary.ts'
-import { type Command, type Message, productsOf, program, type Selection, type State } from './program.ts'
+import {
+  type Command,
+  type Message,
+  type ProductModel,
+  productsOf,
+  program,
+  type Selection,
+  type State,
+} from './program.ts'
 import { ProductListReadError, type StoredProduct } from './services/product-list/product-list.ts'
 
 const Msg = Data.taggedEnum<Message>()
@@ -42,13 +51,33 @@ const listedIds = (state: State) =>
     state.list._tag === 'Loaded' ? state.list.items.flatMap((item) => item._tag === 'Corrupt' ? [] : [item.id]) : [],
   )
 
+/** The ids of the rows arriving: none unless the list is loaded. */
+const arrivalsOf = (state: State) => state.list._tag === 'Loaded' ? state.list.arrivals : HashSet.empty<string>()
+
+/** The ids of the rows leaving: none unless the list is loaded. */
+const departuresOf = (state: State) =>
+  HashSet.fromIterable(state.list._tag === 'Loaded' ? state.list.departures.map(({ item }) => item.id) : [])
+
+/** Whether a row arrives or leaves. */
+const isSettling = (state: State) => HashSet.size(arrivalsOf(state)) > 0 || HashSet.size(departuresOf(state)) > 0
+
+/** What the storage sends for products with those ids: not valid ones, which need no time to be shown. */
+const storedWith = (ids: ReadonlyArray<string>): ReadonlyArray<StoredProduct> =>
+  ids.map((id) => ({
+    maybeId: Opt.some(id),
+    maybeName: Opt.some(id),
+    maybeCreationDate: Opt.none(),
+    maybeExpirationDate: Opt.none(),
+  }))
+
 /**
  * A message that cannot arrive in that state: a completion while no deletion is in progress, the end of the offer
- * to undo while there is none, a tick while no product expires.
+ * to undo while there is none, the end of the rows' motion while none moves, a tick while no product expires.
  */
 const cannotArrive = (msg: Message, before: State) =>
   ((msg._tag === 'Deleted' || msg._tag === 'DeleteFailed') && before.selection._tag !== 'Deleting')
   || (msg._tag === 'UndoExpired' && before.lastDeletion._tag !== 'Recent')
+  || (msg._tag === 'RowsSettled' && !isSettling(before))
   || (msg._tag === 'TimeChanged' && !hasExpiringProduct(before))
 
 describe('Products update', () => {
@@ -120,6 +149,30 @@ describe('Products update', () => {
       })
     })
 
+    // A list shown for the first time appears whole, rather than opening every row.
+    test('the rows arriving are those new to a loaded list and those still arriving that are kept, and none in a list loaded anew', () => {
+      assertProperty([state, storedProducts], (before, stored) => {
+        const { after } = step(changed(stored), before)
+        const expected = before.list._tag === 'Loaded'
+          ? HashSet.union(
+            HashSet.difference(listedIds(after), listedIds(before)),
+            HashSet.intersection(arrivalsOf(before), listedIds(after)),
+          )
+          : HashSet.empty<string>()
+        return Equal.equals(arrivalsOf(after), expected)
+      })
+    })
+
+    test('the rows leaving are the rows shown that the change took out, and none in a list loaded anew', () => {
+      assertProperty([state, storedProducts], (before, stored) => {
+        const { after } = step(changed(stored), before)
+        const expected = before.list._tag === 'Loaded'
+          ? HashSet.difference(HashSet.union(listedIds(before), departuresOf(before)), listedIds(after))
+          : HashSet.empty<string>()
+        return Equal.equals(departuresOf(after), expected)
+      })
+    })
+
     test('the selection keeps exactly the selected products that still exist; a deletion is left alone', () => {
       assertProperty([state, storedProducts], (before, stored) => {
         const { after } = step(changed(stored), before)
@@ -136,8 +189,12 @@ describe('Products update', () => {
 
   describe('ItemSelected and ItemDeselected', () => {
     // A loaded list and no deletion in progress, with a selection that may or may not be among its products.
-    const changeable = fc.tuple(state, fc.array(product, { maxLength: 8 }), fc.oneof(idle, selecting)).map(
-      ([base, items, selection]): State => ({ ...base, list: { _tag: 'Loaded', items }, selection }),
+    const changeable = fc.tuple(state, products(), fc.oneof(idle, selecting)).map(
+      ([base, items, selection]): State => ({
+        ...base,
+        list: { _tag: 'Loaded', items, arrivals: HashSet.empty(), departures: [] },
+        selection,
+      }),
     )
 
     test('select an unselected listed id, deselect a selected one, and touch nothing else', () => {
@@ -221,7 +278,7 @@ describe('Products update', () => {
     // Only products can be stored again: a deletion that takes stored data that is not one along cannot be undone.
     test('the products of the deletion are those the ids name, in order, when every id names one', () => {
       assertProperty(
-        [fc.array(product, { maxLength: 8 }), fc.array(id, { minLength: 1, maxLength: 6 })],
+        [products(), fc.array(id, { minLength: 1, maxLength: 6 })],
         (items, ids) => {
           const set = HashSet.fromIterable(ids)
           const named = items.flatMap((item) =>
@@ -322,6 +379,27 @@ describe('Products update', () => {
     })
   })
 
+  describe('RowsSettled', () => {
+    test('makes the arriving rows rows like the others, drops the leaving ones, forgets the time unless a product still expires, and touches nothing else', () => {
+      assertProperty([state.filter(isSettling)], (before) => {
+        const { after, commands } = step(Msg.RowsSettled(), before)
+        return before.list._tag === 'Loaded'
+          && Equal.equals(after.list, { ...before.list, arrivals: HashSet.empty(), departures: [] })
+          && Equal.equals(after.maybeNow, hasExpiringProduct(after) ? before.maybeNow : Opt.none())
+          && onlyChanged(before, after, 'list', 'maybeNow')
+          && commands.length === 0
+      })
+    })
+
+    // The timer runs only while a row arrives or leaves, so its end heard otherwise is a bug.
+    test('is a defect while no row arrives or leaves', () => {
+      assertProperty([state.filter((s) => !isSettling(s))], (before) => {
+        expect(() => program.update(Msg.RowsSettled())(before)).toThrow()
+        return true
+      })
+    })
+  })
+
   // The storage is as it was: there is nothing to give back but the news.
   test('RestoreFailed says so with a toast, and changes nothing', () => {
     assertProperty([state], (before) => {
@@ -333,13 +411,15 @@ describe('Products update', () => {
 })
 
 // The storage is observed in every state; the clock ticks only for a product that expires; the offer to undo the
-// last deletion is timed from it.
-test('listens to the storage always, to the clock while a loaded product expires, and times a recent deletion', () => {
+// last deletion is timed from it; the rows' motion, by the rows arriving and leaving.
+test('listens to the storage always, to the clock while a product shown expires, and times a recent deletion and the rows moving', () => {
   assertProperty([state], (s) => {
     const subscriptions = Tea.subscriptionsOf(program)(s)
     const timesUndo = s.lastDeletion._tag === 'Recent' && HashMap.has(subscriptions, ['undo', s.lastDeletion.at])
+    const timesMotion = HashMap.has(subscriptions, ['settling', arrivalsOf(s), departuresOf(s)])
     return HashMap.has(subscriptions, 'changes') && HashMap.has(subscriptions, 'clock') === hasExpiringProduct(s)
       && (s.lastDeletion._tag === 'Recent') === timesUndo
+      && isSettling(s) === timesMotion
   })
 })
 
@@ -351,10 +431,15 @@ describe('Products model', () => {
     return list._tag === 'Available' ? list.products : []
   }
 
+  const isLeaving = (row: ProductModel) => row._tag !== 'Corrupt' && row.presence === 'Leaving'
+
+  /** The rows of the products listed, without the ones leaving. */
+  const listedRows = (state: State) => rows(state).filter((row) => !isLeaving(row))
+
   /** A loaded list of products, with a time when one of them expires. */
-  const loaded = fc.tuple(state, fc.array(product, { minLength: 1, maxLength: 8 }), maybe(utc)).map(
-    ([base, items, maybeNow]): State => {
-      const loaded: State = { ...base, list: { _tag: 'Loaded', items }, maybeNow }
+  const loaded = fc.tuple(state, products({ minLength: 1 }).chain(loadedOf), maybe(utc)).map(
+    ([base, list, maybeNow]): State => {
+      const loaded: State = { ...base, list, maybeNow }
       return hasExpiringProduct(loaded) ? loaded : { ...loaded, maybeNow: Opt.none() }
     },
   )
@@ -369,19 +454,39 @@ describe('Products model', () => {
     )
   })
 
-  test('every stored product is a row, in order, with its kind', () => {
+  test('every stored product is a row, in order, with its kind, and every row leaving is one taken out, in order', () => {
     assertProperty([shown], (s) => {
       const items = s.list._tag === 'Loaded' ? s.list.items : []
-      const drawn = rows(s)
-      return drawn.length === items.length && drawn.every((row, index) => row._tag === items[index]?._tag)
+      const departures = s.list._tag === 'Loaded' ? s.list.departures : []
+      const listed = listedRows(s)
+      const leaving = rows(s).filter(isLeaving)
+      return listed.length === items.length && listed.every((row, index) => row._tag === items[index]?._tag)
+        && Equal.equals(
+          leaving.map((row) => row._tag === 'Corrupt' ? '' : row.id),
+          departures.map(({ item }) => item.id),
+        )
     })
   })
 
-  test('a row is selected exactly when its id is, and toggles its selection unless a deletion is in progress', () => {
+  // Deleting rows apart: the rows between them stay where they are while the others close their place.
+  test('rows taken out stay where they were while they leave, and rows put back arrive there', () => {
+    const changed = (ids: ReadonlyArray<string>) => Msg.ListChanged({ result: Result.succeed(storedWith(ids)) })
+    const presences = (s: State) => rows(s).map((row) => row._tag === 'Corrupt' ? '' : `${row.id}:${row.presence}`)
+    const loaded = step(changed(['1', '2', '3', '4', '5']), program.init.state).after
+    const deleted = step(changed(['1', '3', '5']), loaded).after
+    const restored = step(changed(['1', '2', '3', '5']), deleted).after
+    expect(presences(loaded)).toEqual(['1:Listed', '2:Listed', '3:Listed', '4:Listed', '5:Listed'])
+    expect(presences(deleted)).toEqual(['1:Listed', '2:Leaving', '3:Listed', '4:Leaving', '5:Listed'])
+    expect(presences(restored)).toEqual(['1:Listed', '2:Arriving', '3:Listed', '4:Leaving', '5:Listed'])
+    expect(presences(step(Msg.RowsSettled(), restored).after)).toEqual(['1:Listed', '2:Listed', '3:Listed', '5:Listed'])
+  })
+
+  test('a row is selected exactly when its id is, and toggles its selection unless a deletion is in progress or it leaves', () => {
     assertProperty([shown], (s) => {
       const selected = selectedIds(s.selection)
       return rows(s).every((row) => {
         if (row._tag === 'Corrupt') return true
+        if (row.presence === 'Leaving') return !row.selection.isSelected && Opt.isNone(row.selection.maybeToggle)
         const isSelected = HashSet.has(selected, row.id)
         const expectedToggle = s.selection._tag === 'Deleting'
           ? Opt.none()
@@ -391,10 +496,20 @@ describe('Products model', () => {
     })
   })
 
+  test('a listed row arrives exactly when its id does', () => {
+    assertProperty(
+      [shown],
+      (s) =>
+        listedRows(s).every((row) =>
+          row._tag === 'Corrupt' || (row.presence === 'Arriving') === HashSet.has(arrivalsOf(s), row.id)
+        ),
+    )
+  })
+
   test('a valid product expired yesterday the day after its expiration day, is stale later, expiring today on that day, tomorrow on the day before, fresh earlier, and keeps the domain\'s freshness', () => {
     assertProperty([shown], (s) => {
       const items = s.list._tag === 'Loaded' ? s.list.items : []
-      return rows(s).every((row, index) => {
+      return listedRows(s).every((row, index) => {
         const item = items[index]
         if (row._tag !== 'Valid' || item?._tag !== 'Valid') return row._tag === item?._tag
         return Opt.match(Domain.maybeExpiration(item.product), {
@@ -441,9 +556,19 @@ test('arbitraries cover every variant of the state', () => {
       `now:${s.maybeNow._tag}`,
       `lastDeletion:${s.lastDeletion._tag}`,
       ...(s.lastDeletion._tag === 'Recent' ? [`restorable:${s.lastDeletion.maybeProducts._tag}`] : []),
+      ...(s.list._tag === 'Loaded'
+        ? [
+          `arrivals:${HashSet.size(s.list.arrivals) > 0 ? 'Some' : 'None'}`,
+          `departures:${s.list.departures.length > 0 ? 'Some' : 'None'}`,
+        ]
+        : []),
     ]),
   )
   expect([...tags].sort()).toEqual([
+    'arrivals:None',
+    'arrivals:Some',
+    'departures:None',
+    'departures:Some',
     'lastDeletion:None',
     'lastDeletion:Recent',
     'list:Failed',

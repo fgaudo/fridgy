@@ -6,7 +6,7 @@ import type { VNode, VNodeStyle } from 'snabbdom'
 import type * as UnitInterval from '#libs/numbers/unit-interval.ts'
 import { type Handlers, handlers } from '#libs/tea-snabbdom/tea-snabbdom.ts'
 import { cn } from '#libs/ui/class-names.ts'
-import type { ItemSelection, ListModel, Message, Model, ProductModel, ProductStatus } from './program.ts'
+import type { ItemSelection, ListModel, Message, Model, Presence, ProductModel, ProductStatus } from './program.ts'
 
 type Look = 'Plain' | 'Error'
 
@@ -140,10 +140,45 @@ const avatar = (selection: ItemSelection, badge: VNode) =>
     )
     : badge
 
+/**
+ * A row's motion, as Material moves what enters and leaves a list: an arriving row opens its place, decelerating,
+ * as it fades in, pushing the rows under it down; a leaving row fades as its place closes, accelerating, and the
+ * rows under it rise. The model keeps a leaving row where it was until it has closed its place, so that snabbdom
+ * never moves the rows around it, as it would around a row it removes with a transition; once it has arrived, its
+ * height is its class's again.
+ */
+const rowMotion = (presence: Presence): VNodeStyle => {
+  switch (presence) {
+    case 'Arriving':
+      return {
+        height: '0',
+        opacity: '0',
+        transitionProperty: 'height, opacity',
+        transitionDuration: 'var(--transition-duration-medium-4)',
+        transitionTimingFunction: 'var(--ease-emphasized-decelerate)',
+        delayed: { height: '', opacity: '1' },
+      }
+    case 'Listed':
+      return {}
+    case 'Leaving':
+      // Not the arriving row's '0': snabbdom writes only a value that differs from the last frame's, and a row
+      // still arriving holds its delayed values, written after it.
+      return {
+        height: '0px',
+        opacity: '0.0',
+        pointerEvents: 'none',
+        transitionProperty: 'height, opacity',
+        transitionDuration: 'var(--transition-duration-short-4)',
+        transitionTimingFunction: 'var(--ease-emphasized-accelerate)',
+      }
+  }
+}
+
 /** Material's two-line list item, with a leading avatar; a long press (a right click on desktop) selects it. */
 const item = (
   key: string,
   selection: ItemSelection,
+  presence: Presence,
   badge: VNode,
   headline: string,
   supporting: string,
@@ -154,11 +189,12 @@ const item = (
     key={key}
     props={{
       className: cn(
-        'state-layer flex h-18 items-center gap-4 pl-4 pr-6 select-none [-webkit-touch-callout:none]',
+        'state-layer flex h-18 items-center gap-4 overflow-hidden pl-4 pr-6 select-none [-webkit-touch-callout:none]',
         'transition-colors',
         selection.isSelected ? 'bg-secondary-container text-on-secondary-container' : 'text-on-surface',
       ),
     }}
+    style={rowMotion(presence)}
     on={onPreventingDefault('contextmenu', Opt.getOrUndefined(selection.maybeToggle))}
   >
     {avatar(selection, badge)}
@@ -182,6 +218,7 @@ const invalidItem = (product: Data.TaggedEnum.Value<ProductModel, 'Invalid'>, ev
   item(
     product.id,
     product.selection,
+    product.presence,
     errorBadge('error'),
     Opt.getOrElse(product.maybeName, () => 'Unnamed product'),
     'Not a valid product',
@@ -198,6 +235,7 @@ const corruptItem = (
   item(
     `corrupt-${index}`,
     { isSelected: false, maybeToggle: Opt.none() },
+    'Listed',
     errorBadge('broken_image'),
     Opt.getOrElse(product.maybeName, () => 'Unnamed product'),
     'Cannot be read',
@@ -209,6 +247,7 @@ const validItem = (product: Data.TaggedEnum.Value<ProductModel, 'Valid'>, events
   item(
     product.id,
     product.selection,
+    product.presence,
     freshnessBadge(product.status),
     product.name,
     supportingText(product.status),
@@ -316,9 +355,27 @@ export const snackbar = (model: Model, dispatch: Dispatch<Message>): VNode | und
   )
 }
 
+/**
+ * What the list's place shows leaves fading, accelerating, out of the flow, over what takes its place: the last row
+ * deleted fades with the list over the empty state, and the empty state over the rows put back.
+ */
+const leaving: VNodeStyle = {
+  remove: {
+    position: 'absolute',
+    top: '0',
+    right: '0',
+    left: '0',
+    opacity: '0',
+    pointerEvents: 'none',
+    transitionProperty: 'opacity',
+    transitionDuration: 'var(--transition-duration-short-4)',
+    transitionTimingFunction: 'var(--ease-emphasized-accelerate)',
+  },
+}
+
 /** Material's empty state: what is missing, as an icon on a disc in a role's container colors, and what to do about it. */
-const emptyState = (colors: string, icon: string, title: string, text: string) => (
-  <div props={{ className: 'flex flex-col items-center gap-2 px-8 pt-44 text-center' }}>
+const emptyState = (key: string, colors: string, icon: string, title: string, text: string) => (
+  <div key={key} style={leaving} props={{ className: 'flex flex-col items-center gap-2 px-8 pt-44 text-center' }}>
     <div props={{ className: cn('mb-2 flex h-24 w-24 items-center justify-center rounded-full', colors) }}>
       <span props={{ className: 'material-symbols-rounded icon-large' }}>{icon}</span>
     </div>
@@ -336,13 +393,14 @@ const subtitleOf = (list: Data.TaggedEnum.Value<ListModel, 'Available'>) => `${l
 export const subtitle = (model: Model): string | undefined =>
   model.list._tag === 'Available' ? subtitleOf(model.list) : undefined
 
-export const list = (model: Model, dispatch: Dispatch<Message>) => {
+const content = (model: Model, dispatch: Dispatch<Message>) => {
   const events = handlers(dispatch)
   switch (model.list._tag) {
     case 'Initial':
-      return <div />
+      return <div key='initial' />
     case 'Error':
       return emptyState(
+        'error',
         'bg-error-container text-on-error-container',
         'error',
         'Could not load the products',
@@ -350,6 +408,7 @@ export const list = (model: Model, dispatch: Dispatch<Message>) => {
       )
     case 'Empty':
       return emptyState(
+        'empty',
         'bg-primary-container text-on-primary-container',
         'kitchen',
         'Nothing in the fridge',
@@ -358,7 +417,7 @@ export const list = (model: Model, dispatch: Dispatch<Message>) => {
     case 'Available':
       return (
         // Below the top app bar, at its full height.
-        <div props={{ className: 'pt-31 pb-24' }}>
+        <div key='list' style={leaving} props={{ className: 'pt-31 pb-24' }}>
           <ul>
             {model.list.products.map((product, index) => {
               switch (product._tag) {
@@ -375,3 +434,8 @@ export const list = (model: Model, dispatch: Dispatch<Message>) => {
       )
   }
 }
+
+/** The list, or why there is none, in a place that stays while they replace each other. */
+export const list = (model: Model, dispatch: Dispatch<Message>) => (
+  <div props={{ className: 'relative' }}>{[content(model, dispatch)]}</div>
+)

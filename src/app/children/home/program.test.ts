@@ -4,6 +4,7 @@ import { dispatchViolations } from '@fgaudo/effect-tea/testing'
 import * as Data from 'effect/Data'
 import * as Equal from 'effect/Equal'
 import * as HashMap from 'effect/HashMap'
+import * as HashSet from 'effect/HashSet'
 import * as Opt from 'effect/Option'
 import * as fc from 'fast-check'
 import { messagesSentBy } from '#libs/tea-snabbdom/view.test_support.ts'
@@ -30,13 +31,17 @@ const fromProducts = (message: ProductsMessage): Message => ({ _tag: 'Products',
 
 /**
  * A message that cannot arrive in that state: a back heard with the menu closed, a completion outside its deletion,
- * the end of the offer to undo while there is none, a tick while no product expires.
+ * the end of the offer to undo while there is none, the end of the rows' motion while none moves, a tick while no
+ * product expires.
  */
 const cannotArrive = (msg: Message, before: State) =>
   (msg._tag === 'BackPressed' && !before.isMenuOpen)
   || (msg._tag === 'Products' && (msg.message._tag === 'Deleted' || msg.message._tag === 'DeleteFailed')
     && before.products.selection._tag !== 'Deleting')
   || (msg._tag === 'Products' && msg.message._tag === 'UndoExpired' && before.products.lastDeletion._tag !== 'Recent')
+  || (msg._tag === 'Products' && msg.message._tag === 'RowsSettled'
+    && (before.products.list._tag !== 'Loaded'
+      || (HashSet.size(before.products.list.arrivals) === 0 && before.products.list.departures.length === 0)))
   || (msg._tag === 'Products' && msg.message._tag === 'TimeChanged' && !hasExpiringProduct(before.products))
 
 describe('Home update', () => {
