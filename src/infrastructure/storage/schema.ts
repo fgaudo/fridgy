@@ -8,6 +8,15 @@ export const ProductSchema = {
   table: 'product',
 } as const
 
+/** The user's settings, one row each, by name. */
+export const SettingSchema = {
+  columns: {
+    key: 'key',
+    value: 'value',
+  },
+  table: 'setting',
+} as const
+
 export const ProductExpirationSchema = {
   columns: {
     date: 'date',

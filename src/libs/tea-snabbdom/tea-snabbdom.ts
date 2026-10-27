@@ -43,3 +43,11 @@ export type Handlers<Message> = ReturnType<typeof handlers<Message>>
 export const initialValue = (text: string): NonNullable<Hooks['create']> => (_, vnode) => {
   ;(vnode.elm as HTMLInputElement).value = text
 }
+
+/**
+ * Focuses an input once it is in the document, so that the keyboard is up where the user is about to type.
+ * Only then: a focus on every frame would fight the user's own. To focus again, give the input a new `key`.
+ */
+export const focusOnInsert: NonNullable<Hooks['insert']> = (vnode) => {
+  ;(vnode.elm as HTMLInputElement).focus()
+}

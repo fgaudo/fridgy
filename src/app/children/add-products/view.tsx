@@ -2,10 +2,12 @@ import type { Dispatch } from '@fgaudo/effect-tea'
 import * as DateTime from 'effect/DateTime'
 import * as Match from 'effect/Match'
 import * as Opt from 'effect/Option'
+import type { VNode } from 'snabbdom'
 import type * as Product from '#domain/product.ts'
-import { handlers, initialValue, type View } from '#libs/tea-snabbdom/tea-snabbdom.ts'
+import type { DateOrder } from '#libs/dates/date-order.ts'
+import { focusOnInsert, handlers, initialValue, type View } from '#libs/tea-snabbdom/tea-snabbdom.ts'
 import { cn } from '#libs/ui/class-names.ts'
-import type { DateChoice, DateShown, Digit, JustAdded, Message, Model, NameShown } from './program.ts'
+import type { DateChoice, DateShown, Digit, JustAdded, Message, Model, NameShown, OrderChoice } from './program.ts'
 
 const inputValue = (event: Event) => (event.target as HTMLInputElement).value
 
@@ -13,6 +15,21 @@ const inputValue = (event: Event) => (event.target as HTMLInputElement).value
 const formatDay = (date: DateTime.Utc) => DateTime.formatUtc(date, { day: 'numeric', month: 'short', year: 'numeric' })
 
 const keys: ReadonlyArray<Digit> = ['1', '2', '3', '4', '5', '6', '7', '8', '9']
+
+/** How the digits are read in each order: the field's placeholder, the strip's hint and each segment's title. */
+const placeholders: Readonly<Record<DateOrder, string>> = { DMY: 'DDMMYY', MDY: 'MMDDYY', YMD: 'YYMMDD' }
+
+const hints: Readonly<Record<DateOrder, string>> = {
+  DMY: 'Day, month and, if needed, the year',
+  MDY: 'Month, day and, if needed, the year',
+  YMD: 'The year, if needed, then month and day',
+}
+
+const orderTitles: Readonly<Record<DateOrder, string>> = {
+  DMY: 'Day, month, year',
+  MDY: 'Month, day, year',
+  YMD: 'Year, month, day',
+}
 
 /**
  * What the first step does: its controls take, it is hidden under the scanner, it waits under the second step,
@@ -62,12 +79,15 @@ const appBar = (
   )
 }
 
+/** What the snackbar's room holds besides it, which the snackbar stays above, as Material says it must a FAB. */
+type Above = 'Nothing' | 'Fab'
+
 /**
- * Material's snackbar, in the room above a step's controls: it says that the product was added, with the action
- * that adds it again while it can be. Keyed by the product, so that the next one, a repeat included, appears
- * anew.
+ * Material's snackbar, in the room above a step's controls, and above its FAB: it says that the product was
+ * added, with the action that adds it again while it can be. Keyed by the product, so that the next one, a
+ * repeat included, appears anew.
  */
-const snackbar = ({ product, maybeRepeat }: JustAdded, dispatch: Dispatch<Message>) => {
+const snackbar = ({ product, maybeRepeat }: JustAdded, above: Above, dispatch: Dispatch<Message>) => {
   const { on } = handlers(dispatch)
   return (
     <div
@@ -87,13 +107,14 @@ const snackbar = ({ product, maybeRepeat }: JustAdded, dispatch: Dispatch<Messag
       }}
       props={{
         className: cn(
-          'absolute right-0 bottom-2 left-0 flex min-h-12 items-center gap-2 rounded-extra-small bg-inverse-surface',
+          'absolute right-0 left-0 flex min-h-12 items-center gap-2 rounded-extra-small bg-inverse-surface',
           'py-1 pl-4 text-body-medium text-inverse-on-surface shadow-elevation-3',
           Opt.isSome(maybeRepeat) ? 'pr-2' : 'pr-4',
+          above === 'Fab' ? 'bottom-21' : 'bottom-2',
         ),
       }}
     >
-      <span props={{ className: 'min-w-0 flex-1 py-2' }}>
+      <span props={{ className: 'min-w-0 flex-1 py-2 wrap-anywhere' }}>
         {Opt.match(product.maybeExpirationDate, {
           onNone: () => `Added ${product.name}, with no expiration`,
           onSome: (date) => `Added ${product.name}, expiring ${formatDay(date)}`,
@@ -114,10 +135,19 @@ const snackbar = ({ product, maybeRepeat }: JustAdded, dispatch: Dispatch<Messag
   )
 }
 
-/** The snackbar's room: the spare height, so that a step fits a short screen; it then draws over what is above. */
-const room = (maybeJustAdded: Opt.Option<JustAdded>, dispatch: Dispatch<Message>) => (
+/**
+ * The snackbar's room, and the FAB's: the spare height, so that a step fits a short screen; they then draw over
+ * what is above.
+ */
+const room = (
+  maybeJustAdded: Opt.Option<JustAdded>,
+  dispatch: Dispatch<Message>,
+  above: Above,
+  ...held: ReadonlyArray<VNode>
+) => (
   <div props={{ className: 'relative flex-1' }}>
-    {Opt.match(maybeJustAdded, { onNone: () => [], onSome: (justAdded) => [snackbar(justAdded, dispatch)] })}
+    {Opt.match(maybeJustAdded, { onNone: () => [], onSome: (justAdded) => [snackbar(justAdded, above, dispatch)] })}
+    {held}
   </div>
 )
 
@@ -155,35 +185,20 @@ const button = (
 }
 
 /**
- * Material's outlined text field with its trailing icon buttons: one clears the name, shown while there is one,
- * and one opens the scanner, disabled until the device is known to read barcodes. Drawn anew (with the new name)
- * when a scan or a clearing replaces it. Its supporting text says when the camera is not available.
+ * Material's outlined text field of the name, with its trailing icon button, which clears it, shown while there
+ * is one. Drawn anew (with the new name) and focused, so that the keyboard is up, when a scan or a clearing
+ * replaces it and when a product was added. Its supporting text says when the camera is not available, and the
+ * name can only be typed.
  */
 const nameField = (shown: NameShown, activity: NameActivity, dispatch: Dispatch<Message>) => {
   const { on, onValue } = handlers(dispatch)
   const maybeClearName = activity._tag === 'Editing' ? activity.controls.maybeClearName : Opt.none()
-  const maybeScan = activity._tag === 'Editing' ? activity.controls.maybeScan : Opt.none()
-  const iconButton = (icon: string, title: string, maybeMessage: Opt.Option<Message>) => (
-    <button
-      props={{
-        className: cn(
-          'state-layer material-symbols-rounded flex h-12 w-12 items-center justify-center rounded-full',
-          'text-on-surface-variant disabled:text-on-surface/38',
-        ),
-        title,
-        disabled: Opt.isNone(maybeMessage),
-      }}
-      on={Opt.match(maybeMessage, { onNone: () => ({}), onSome: (message) => on('click', message) })}
-    >
-      {icon}
-    </button>
-  )
   return (
     <div key={`name-${shown.nameKey}`} props={{ className: 'flex flex-col gap-1' }}>
       <div props={{ className: 'relative' }}>
         <label props={{ className: 'block' }}>
           <input
-            hook={{ create: initialValue(shown.name) }}
+            hook={{ create: initialValue(shown.name), insert: focusOnInsert }}
             props={{
               type: 'text',
               enterKeyHint: 'next',
@@ -194,7 +209,7 @@ const nameField = (shown: NameShown, activity: NameActivity, dispatch: Dispatch<
                 'text-body-large text-on-surface caret-primary outline-none inset-ring-primary',
                 'placeholder:text-transparent hover:border-on-surface focus:border-primary focus:inset-ring-1',
                 'disabled:border-on-surface/12 disabled:text-on-surface/38',
-                Opt.isSome(maybeClearName) ? 'pr-25' : 'pr-13',
+                Opt.isSome(maybeClearName) ? 'pr-13' : 'pr-4',
               ),
             }}
             on={activity._tag === 'Editing' ? onValue('input', activity.controls.changeName, inputValue) : {}}
@@ -212,13 +227,23 @@ const nameField = (shown: NameShown, activity: NameActivity, dispatch: Dispatch<
             Name
           </span>
         </label>
-        <div props={{ className: 'absolute top-1 right-1 flex' }}>
-          {Opt.match(maybeClearName, {
-            onNone: () => [],
-            onSome: (clear) => [iconButton('cancel', 'Clear the name', Opt.some(clear))],
-          })}
-          {iconButton('barcode_scanner', 'Scan a barcode', maybeScan)}
-        </div>
+        {Opt.match(maybeClearName, {
+          onNone: () => [],
+          onSome: (clear) => [
+            <button
+              props={{
+                className: cn(
+                  'state-layer material-symbols-rounded absolute top-1 right-1 flex h-12 w-12 items-center',
+                  'justify-center rounded-full text-on-surface-variant',
+                ),
+                title: 'Clear the name',
+              }}
+              on={on('click', clear)}
+            >
+              cancel
+            </button>,
+          ],
+        })}
       </div>
       {shown.camera === 'Unavailable'
         ? [
@@ -232,10 +257,36 @@ const nameField = (shown: NameShown, activity: NameActivity, dispatch: Dispatch<
 }
 
 /**
- * The first step, docked at the bottom, within the thumb's reach, and above the keyboard that the name field
- * opens: the name, then the two ways out, going on to the date, or adding the product as it is. Hidden once the
- * scanner has risen over it, so that the camera, drawn behind the page, shows through the scanner's window; shown
- * at once when the scanner sinks away.
+ * Material's FAB that opens the scanner, at the bottom right, over the step's filled button, within the thumb's
+ * reach: in the tertiary's color, as the step's secondary action beside the primary's. Disabled, flat, until
+ * the device is known to read barcodes.
+ */
+const scanFab = (maybeScan: Opt.Option<Message>, dispatch: Dispatch<Message>) => {
+  const { on } = handlers(dispatch)
+  return (
+    <button
+      props={{
+        className: cn(
+          'state-layer material-symbols-rounded absolute right-0 bottom-1 flex h-14 w-14 items-center',
+          'justify-center rounded-large bg-tertiary-container text-on-tertiary-container shadow-elevation-3',
+          'transition-colors disabled:bg-on-surface/12 disabled:text-on-surface/38 disabled:shadow-none',
+        ),
+        title: 'Scan a barcode',
+        disabled: Opt.isNone(maybeScan),
+      }}
+      on={Opt.match(maybeScan, { onNone: () => ({}), onSome: (scan) => on('click', scan) })}
+    >
+      barcode_scanner
+    </button>
+  )
+}
+
+/**
+ * The first step, as a form read from the top: the name, under the app bar, and, docked at the bottom, within
+ * the thumb's reach and above the keyboard that the name opens, the two ways out, going on to the date, or
+ * adding the product as it is, with the scanner's FAB over them. Hidden once the scanner has risen over it, so
+ * that the camera, drawn behind the page, shows through the scanner's window; shown at once when the scanner
+ * sinks away.
  */
 const nameStep = (
   shown: NameShown,
@@ -253,9 +304,9 @@ const nameStep = (
       props={{ className: 'absolute inset-0 flex flex-col bg-surface text-on-surface' }}
     >
       {appBar('Add products', 'close', 'Close', Opt.map(controls, ({ close }) => close), dispatch)}
-      <div props={{ className: cn('flex flex-1 flex-col gap-3', stepPadding) }}>
-        {room(maybeJustAdded, dispatch)}
+      <div props={{ className: cn('flex flex-1 flex-col gap-3 pt-2', stepPadding) }}>
         {nameField(shown, activity, dispatch)}
+        {room(maybeJustAdded, dispatch, 'Fab', scanFab(Opt.flatMap(controls, ({ maybeScan }) => maybeScan), dispatch))}
         {button(
           'Set the expiration',
           Opt.flatMap(controls, ({ maybeRequestDate }) => maybeRequestDate),
@@ -274,10 +325,50 @@ const nameStep = (
 }
 
 /**
+ * Material's segmented button of the orders the digits can be read in, one segment each, the one in use
+ * selected with its check; disabled while the product is being added. Its row stays empty until the order is
+ * known, so that nothing moves when it is.
+ */
+const orderSegments = (shown: DateShown, activity: DateActivity, dispatch: Dispatch<Message>) => {
+  const { on } = handlers(dispatch)
+  const segment = ({ order, choice }: OrderChoice) => {
+    const maybePick = choice._tag === 'Offered' ? choice.maybePick : Opt.none()
+    return (
+      <button
+        props={{
+          className: cn(
+            'state-layer -ml-px flex h-10 flex-1 items-center justify-center gap-2 border text-label-large',
+            'transition-colors first:ml-0 first:rounded-l-full last:rounded-r-full',
+            'disabled:border-on-surface/12 disabled:text-on-surface/38',
+            choice._tag === 'Current'
+              ? 'z-10 border-outline bg-secondary-container text-on-secondary-container disabled:bg-on-surface/12'
+              : 'border-outline text-on-surface',
+          ),
+          disabled: activity._tag === 'Adding',
+          title: orderTitles[order],
+        }}
+        on={Opt.match(maybePick, { onNone: () => ({}), onSome: (pick) => on('click', pick) })}
+      >
+        {/* Keyed: the label must not take over the check's element, and its font, once the check goes. */}
+        {choice._tag === 'Current'
+          ? [<span key='check' props={{ className: 'material-symbols-rounded text-[18px]' }}>check</span>]
+          : []}
+        <span key='label'>{order}</span>
+      </button>
+    )
+  }
+  return (
+    <div props={{ className: 'flex h-10' }}>
+      {Match.valueTags(shown.order, { Unknown: () => [], Known: ({ choices }) => choices.map(segment) })}
+    </div>
+  )
+}
+
+/**
  * Material's outlined text field of the expiration date, typed into with the keypad rather than the keyboard,
  * which keeps the thumb where it is: a read-only input, whose text is the program's, the digits as typed, since
- * grouping them would read them one way. A tap focuses it, as a text field, and shows the hint; the label floats
- * once there are digits. What it says is in the strip under it.
+ * grouping them would read them one way. A tap focuses it, as a text field, and shows the hint, the order the
+ * digits are read in; the label floats once there are digits. What it says is in the strip under it.
  */
 const dateField = (shown: DateShown, activity: DateActivity) => {
   // Disabled while the product is being added; in the error's colors when the digits name no day.
@@ -291,7 +382,7 @@ const dateField = (shown: DateShown, activity: DateActivity) => {
             readOnly: true,
             inputMode: 'none',
             disabled: look === 'Disabled',
-            placeholder: 'DDMMYY',
+            placeholder: shown.order._tag === 'Known' ? placeholders[shown.order.order] : ' ',
             value: shown.digits,
             className: cn(
               'peer h-14 w-full rounded-extra-small border bg-transparent px-4 text-body-large text-on-surface',
@@ -306,7 +397,7 @@ const dateField = (shown: DateShown, activity: DateActivity) => {
         <span
           props={{
             className: cn(
-              'pointer-events-none absolute top-0 left-3 -translate-y-1/2 bg-surface-container-low px-1',
+              'pointer-events-none absolute top-0 left-3 -translate-y-1/2 bg-surface px-1',
               'text-body-small transition-all duration-short-3 peer-placeholder-shown:top-1/2',
               'peer-placeholder-shown:text-body-large peer-focus:top-0 peer-focus:text-body-small',
               'peer-disabled:text-on-surface/38',
@@ -352,10 +443,10 @@ const chip = ({ date, choice }: DateChoice, activity: DateActivity, dispatch: Di
 }
 
 /**
- * The strip between the field and the keypad, as the keyboard's suggestions are: how to type a date, the chips of
- * the days the digits name, or that they name none, in the error's colors. Two rows of chips tall, whatever it
- * shows, so that a change moves nothing: the digits name two days at most, which fit one row, or one row each on
- * the narrowest phone.
+ * The strip between the field and the keypad, as the keyboard's suggestions are: how to type a date in the order
+ * in use, the chips of the days the digits name, or that they name none, in the error's colors. Two rows of
+ * chips tall, whatever it shows, so that a change moves nothing: the digits name two days at most, which fit
+ * one row, or one row each on the narrowest phone.
  */
 const strip = (shown: DateShown, activity: DateActivity, dispatch: Dispatch<Message>) => (
   <div
@@ -367,7 +458,9 @@ const strip = (shown: DateShown, activity: DateActivity, dispatch: Dispatch<Mess
     }}
   >
     {Match.valueTags(shown.strip, {
-      Hint: () => [<span props={{ className: 'px-4' }}>Day, month and, if needed, the year</span>],
+      Hint: () => [
+        <span props={{ className: 'px-4' }}>{shown.order._tag === 'Known' ? hints[shown.order.order] : ''}</span>,
+      ],
       Naming: ({ choices }) => choices.map((choice) => chip(choice, activity, dispatch)),
       NamingNothing: () => [<span props={{ className: 'px-4' }}>No day ahead matches these digits</span>],
     })}
@@ -418,9 +511,10 @@ const keypad = (activity: DateActivity, dispatch: Dispatch<Message>) => {
 }
 
 /**
- * The second step, over the first: the product's name as its heading, and docked at the bottom, within the
- * thumb's reach, the date's panel (its field, the days it can name and the keypad, together: the keypad types
- * there and nowhere else) and the button that adds the product. It comes and goes along Material's shared axis.
+ * The second step, over the first, laid out as a dialer: read from the top, the product's name under its label,
+ * on two lines at most, the order the digits are read in, the date's field and the days it can name; docked at
+ * the bottom, within the thumb's reach, as a keyboard would be, the keypad's panel and the button that adds the
+ * product. It comes and goes along Material's shared axis.
  */
 const dateStep = (
   shown: DateShown,
@@ -451,11 +545,15 @@ const dateStep = (
     >
       {appBar('Add products', 'arrow_back', 'Back to the name', Opt.map(controls, ({ back }) => back), dispatch)}
       <div props={{ className: cn('flex flex-1 flex-col gap-3', stepPadding) }}>
-        <h3 props={{ className: 'truncate px-4 text-headline-small' }}>{shown.name}</h3>
-        {room(maybeJustAdded, dispatch)}
-        <div props={{ className: 'flex flex-col gap-3 rounded-extra-large bg-surface-container-low p-4' }}>
-          {dateField(shown, activity)}
-          {strip(shown, activity, dispatch)}
+        <div props={{ className: 'flex flex-col px-4 pb-2' }}>
+          <span props={{ className: 'text-label-medium text-on-surface-variant' }}>Product</span>
+          <h3 props={{ className: 'line-clamp-2 wrap-anywhere text-title-large' }}>{shown.name}</h3>
+        </div>
+        {orderSegments(shown, activity, dispatch)}
+        {dateField(shown, activity)}
+        {strip(shown, activity, dispatch)}
+        {room(maybeJustAdded, dispatch, 'Nothing')}
+        <div props={{ className: 'rounded-extra-large bg-surface-container-low p-4' }}>
           {keypad(activity, dispatch)}
         </div>
         {button(

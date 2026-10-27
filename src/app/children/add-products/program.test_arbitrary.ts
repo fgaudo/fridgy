@@ -4,6 +4,7 @@ import * as Opt from 'effect/Option'
 import * as fc from 'fast-check'
 import { arbitrary as product } from '#domain/product.test_arbitrary.ts'
 import * as Product from '#domain/product.ts'
+import { arbitrary as order } from '#libs/dates/date-order.test_arbitrary.ts'
 import { datesOf, MAX_DIGITS } from '#libs/dates/digit-dates.ts'
 import { arbitrary as maybe } from '#libs/option/option.test_arbitrary.ts'
 import { utc } from '#libs/testing/date-time.test_arbitrary.ts'
@@ -23,9 +24,9 @@ const digits = fc.oneof(
 
 /** The days the digits name, by the rules of a product: what can be picked. */
 const offeredDates = (form: Form, digits: string) =>
-  Opt.match(form.maybeNow, {
+  Opt.match(Opt.all([form.maybeNow, form.maybeOrder]), {
     onNone: () => [],
-    onSome: (now) => datesOf(digits, now).filter(Product.canExpireOn(now)),
+    onSome: ([now, order]) => datesOf(digits, now, order).filter(Product.canExpireOn(now)),
   })
 
 export const form: fc.Arbitrary<Form> = fc.tuple(
@@ -34,6 +35,7 @@ export const form: fc.Arbitrary<Form> = fc.tuple(
     replacements: fc.nat(),
     camera: fc.constantFrom<Camera>('Checking', 'Available', 'Unavailable'),
     maybeNow: maybe(utc),
+    maybeOrder: maybe(order),
     maybeLastAdded: maybe(product),
   }),
   fc.option(fc.integer({ min: -2, max: 10 })),
@@ -102,7 +104,10 @@ export const message: fc.Arbitrary<Message> = fc.oneof(
   digit.map((digit) => Msg.DigitTyped({ digit })),
   fc.constant(Msg.Started()),
   utc.map((date) => Msg.DateChosen({ date })),
+  order.map((order) => Msg.OrderPicked({ order })),
   utc.map((now) => Msg.TimeChanged({ now })),
+  order.map((order) => Msg.OrderChanged({ order })),
+  fc.boolean().map((succeeded) => Msg.OrderKept({ succeeded })),
   fc.string().map((barcode) => Msg.Scanned({ barcode })),
   fc.boolean().map((succeeded) => Msg.Completed({ succeeded })),
 )

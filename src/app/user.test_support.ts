@@ -12,6 +12,7 @@ import * as Opt from 'effect/Option'
 import * as References from 'effect/References'
 import { BackButton } from '#infrastructure/back-button/back-button.ts'
 import * as SqliteMemory from '#infrastructure/storage/sqlite.memory.ts'
+import type { DateOrder } from '#libs/dates/date-order.ts'
 import { tagPath } from '#libs/testing/tag-path.test_support.ts'
 import type * as AddProducts from './children/add-products/program.ts'
 import { Scanner } from './children/add-products/services/scanner/scanner.ts'
@@ -78,6 +79,16 @@ export const requestDate = onAddProducts((form) => form._tag === 'Naming' ? form
 /** The keypad's key of a digit, on the second step, while a digit can be typed. */
 export const typeDigit = (digit: AddProducts.Digit) =>
   onAddProducts((form) => form._tag === 'Dating' ? Opt.map(form.maybeTypeDigit, (type) => type(digit)) : Opt.none())
+
+/** A segment of the second step's segmented button: an order other than the one in use, once it is known. */
+export const pickOrder = (picked: DateOrder) =>
+  onAddProducts((form) =>
+    form._tag === 'Dating' && form.order._tag === 'Known'
+      ? Arr.findFirst(form.order.choices, ({ order }) => order === picked).pipe(
+        Opt.flatMap(({ choice }) => choice._tag === 'Offered' ? choice.maybePick : Opt.none()),
+      )
+      : Opt.none()
+  )
 
 /** The name field's scan button, while the camera is on. */
 export const openScanner = onAddProducts((form) => form._tag === 'Naming' ? form.maybeScan : Opt.none())

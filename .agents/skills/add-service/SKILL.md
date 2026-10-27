@@ -51,10 +51,12 @@ subscription, never in `update` or the view.
 how the storage is read or written is doing the infrastructure's work, and two of them will diverge.
 
 - Every adapter of the storage is written on `SqlClient`, providing itself the helpers it builds on
-  (`ProductStore` in `#infrastructure/storage/products.ts`, the schema in `schema.ts`). It never reads domain
-  fields. What every storage adapter shares (the schema, the migrations, how a product is written and deleted, how
-  each column is encoded and how a product joins its expiration: `ProductStore.withExpiration`) is in
-  `src/infrastructure/storage`.
+  (`ProductStore` in `#infrastructure/storage/products.ts`, `SettingStore` in `settings.ts`, the schema in
+  `schema.ts`). It never reads domain fields. What every storage adapter shares (the schema, the migrations, how a
+  product is written and deleted, how each column is encoded and how a product joins its expiration:
+  `ProductStore.withExpiration`; how a setting, a text under a name, is read and written) is in
+  `src/infrastructure/storage`. What a setting's text stands for is its adapter's own (`DateOrderSetting`'s sql
+  adapter decodes it with the order's `Schema`, and falls back to the device's locale's).
 - What one consumer alone asks of the storage is its adapter's own query, written on those pieces: which
   columns, which products and in what order (`ProductList`'s `SELECT` and `ORDER BY`) is the list's view, not
   how a product is read. It moves up the day a second adapter asks the same.
@@ -95,7 +97,8 @@ export const deleteProductsContract = <R>(
 ```
 
 `<service>.<backing>.test.ts` runs it with the adapter's layer over `#infrastructure/storage/sqlite.memory.ts`,
-and with the storage's own test support (`#infrastructure/storage/products.test_support.ts`): reads and writes that
+and with the storage's own test support (`#infrastructure/storage/products.test_support.ts`,
+`settings.test_support.ts`): reads and writes that
 only tests need never go into a service, nor into another program's. A second adapter passes the same contract.
 
 ## Migrations

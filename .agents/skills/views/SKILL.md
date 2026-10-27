@@ -28,8 +28,10 @@ nothing is named). The model holds exactly what the view draws: a field no view 
 - `onPreventingDefault` is the exception that always attaches (the native menu of a long press), with an
   optional message.
 - An input the user types into gets its text with `initialValue` (written only when the input is created),
-  never from `props.value`: a frame older than the last keys would take them back. An input the program types
-  into (the date the keypad fills, read-only) takes `props.value`, as any other text of the model.
+  never from `props.value`: a frame older than the last keys would take them back, and its focus with
+  `focusOnInsert` (once, when it enters the document): to write or focus again, the model gives it a new `key`.
+  An input the program types into (the date the keypad fills, read-only) takes `props.value`, as any other text
+  of the model.
 - A parent's view hands each child's view its own dispatch, `Tea.dispatchTo(dispatch, '<Child>')`, and the
   child's model whole; it never reads the model's fields. The child draws its pieces where the parent leaves
   room (Products' list in Home, its subtitle and selection bar in Home's top app bar), or its whole screen

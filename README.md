@@ -6,8 +6,9 @@ architecture.
 
 > **Status:** work in progress. The main page (product list, selecting products, expiration tracking), the page
 > that adds products one after another, in two steps (the name is typed or read from a barcode in the scanner's
-> dialog, and the product is added as it is or goes on to its expiration date, typed as digits, from which the
-> user picks the day they meant; a snackbar adds the same product again) and the About page (version, links,
+> dialog, and the product is added as it is or goes on to its expiration date, typed as digits in the order of
+> day, month and year the user keeps, from which the user picks the day they meant; a snackbar adds the same
+> product again) and the About page (version, links,
 > licenses) run on the current architecture, with navigation between them and Android's back button. What is
 > still missing is listed under "Known gaps" in [`AGENTS.md`](AGENTS.md).
 

@@ -1,6 +1,7 @@
 // The page that adds products one after another, in two steps. First the name, typed or read from a barcode in
 // the scanner's dialog (which names the product for now): from there the product is added as it is, never
-// expiring, or the user goes on to its expiration date. Then the date: the keypad types its digits, and the
+// expiring, or the user goes on to its expiration date. Then the date: the keypad types its digits, read in the
+// order the user keeps (day, month or year first, the device's locale's until they pick one), and the
 // user picks, among the days they can name, the one they meant, and adds the product. Adding is a state that
 // only its completion leaves; the page then starts at the name again, kept for the next product, with a snackbar
 // whose action adds the same product again, until the user leaves it. The scanner is offered once the page knows
@@ -18,9 +19,11 @@ import * as Opt from 'effect/Option'
 import * as Product from '#domain/product.ts'
 import { BackButton } from '#infrastructure/back-button/back-button.ts'
 import { Notifications } from '#infrastructure/notifications/notifications.ts'
+import * as DateOrder from '#libs/dates/date-order.ts'
 import * as DigitDates from '#libs/dates/digit-dates.ts'
 import { defect } from '#libs/defect/defect.ts'
 import * as AddProducts from './services/add-products/add-products.ts'
+import { DateOrderSetting } from './services/date-order-setting/date-order-setting.ts'
 import { Scanner } from './services/scanner/scanner.ts'
 
 export type Digit = '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9'
@@ -34,11 +37,16 @@ export type Camera = 'Checking' | 'Available' | 'Unavailable'
 /** What is kept in every state: a product being added does not interrupt the next one. */
 export type Form = Readonly<{
   maybeName: Opt.Option<string>
-  /** How many times a scan or a clearing replaced the name: the name's input is drawn anew with each. */
+  /**
+   * How many times the name's input was drawn anew, and focused: with each scan or clearing that replaced the
+   * name, and with each product added from a step, the next starting at the name.
+   */
   replacements: number
   camera: Camera
   /** The current time, once the clock has ticked: the product is created then. */
   maybeNow: Opt.Option<DateTime.Utc>
+  /** The order the digits of a date are read in, once the setting has been read. */
+  maybeOrder: Opt.Option<DateOrder.DateOrder>
   maybeLastAdded: Opt.Option<Product.Product>
 }>
 
@@ -89,6 +97,8 @@ export type Message = Data.TaggedEnum<{
   DateCleared: object
   /** Picks, among the days the digits name, the one the product expires on. */
   DateChosen: { date: DateTime.Utc }
+  /** The second step's segmented button: the order the digits are read in, kept for every date to come. */
+  OrderPicked: { order: DateOrder.DateOrder }
   /** Adds the product the step describes: never expiring from the first, expiring on the day named from the second. */
   Started: object
   /** The snackbar's "Add another": adds the product added last again, created now. */
@@ -97,12 +107,15 @@ export type Message = Data.TaggedEnum<{
   Closed: object
   // From subscriptions.
   TimeChanged: { now: DateTime.Utc }
+  /** The order kept: the setting reports it when the page opens, and after every pick. */
+  OrderChanged: { order: DateOrder.DateOrder }
   Scanned: { barcode: string }
   CameraFailed: object
   /** The platform's back button, while the page is shown. */
   BackPressed: object
   // From commands.
   CameraChecked: { isAvailable: boolean }
+  OrderKept: { succeeded: boolean }
   Completed: { succeeded: boolean }
 }>
 
@@ -113,6 +126,8 @@ export type Command = Data.TaggedEnum<{
   CheckCamera: object
   /** Adds a product that `update` has already validated. */
   Add: { product: Product.Product }
+  /** Keeps the order the digits of a date are read in, which the setting then reports. */
+  KeepOrder: { order: DateOrder.DateOrder }
   ShowToast: { text: string }
 }>
 
@@ -124,7 +139,7 @@ export type Event = Data.TaggedEnum<{
 
 const Event = Data.taggedEnum<Event>()
 
-export type Deps = AddProducts.AddProducts | Scanner | Notifications | BackButton
+export type Deps = AddProducts.AddProducts | DateOrderSetting | Scanner | Notifications | BackButton
 
 /** A day the digits name: the one the product expires on, or one to pick instead, while the step takes it. */
 export type DateChoice = Readonly<{
@@ -132,18 +147,35 @@ export type DateChoice = Readonly<{
   choice: Data.TaggedEnum<{ Chosen: object; Offered: Readonly<{ maybeChoose: Opt.Option<Message> }> }>
 }>
 
+/** An order the digits can be read in: the one in use, or one to pick instead, while the step takes it. */
+export type OrderChoice = Readonly<{
+  order: DateOrder.DateOrder
+  choice: Data.TaggedEnum<{ Current: object; Offered: Readonly<{ maybePick: Opt.Option<Message> }> }>
+}>
+
 /** The first step, drawn in every state: under the scanner, and under the second step. */
 export type NameShown = Readonly<{
   /** Once unavailable, the name field and the scanner say that the name can only be typed. */
   camera: Camera
   name: string
-  /** Changes when the name is replaced by a scan or a clearing, not by typing. */
+  /** Changes when the name is replaced by a scan or a clearing, or a product was added, not by typing. */
   nameKey: number
 }>
 
-/** The second step, over the first: the product's name as its heading, the date's field and its strip. */
+/**
+ * The second step, over the first: the product's name as its heading, the order the digits are read in, the
+ * date's field and its strip.
+ */
 export type DateShown = Readonly<{
   name: string
+  /**
+   * The segmented button of the orders, the one in use selected, and what the field and the hint say the digits
+   * are read in; nothing until the setting has been read, a moment after the page opens.
+   */
+  order: Data.TaggedEnum<{
+    Unknown: object
+    Known: Readonly<{ order: DateOrder.DateOrder; choices: Arr.NonEmptyReadonlyArray<OrderChoice> }>
+  }>
   /** The date's field: the digits as typed. */
   digits: string
   /**
@@ -235,11 +267,11 @@ const stepOf = (state: State & { _tag: 'Naming' | 'Dating' }): Step =>
 const resume = (step: Step, form: Form): State =>
   step._tag === 'Naming' ? { _tag: 'Naming', form } : { _tag: 'Dating', form, date: step.date }
 
-/** The days the digits name on which a product added now may expire. */
+/** The days the digits name, read in the order in use, on which a product added now may expire. */
 const datesOf = (form: Form, date: DateForm): ReadonlyArray<DateTime.Utc> =>
-  Opt.match(form.maybeNow, {
+  Opt.match(Opt.all([form.maybeNow, form.maybeOrder]), {
     onNone: () => [],
-    onSome: (now) => DigitDates.datesOf(date.digits, now).filter(Product.canExpireOn(now)),
+    onSome: ([now, order]) => DigitDates.datesOf(date.digits, now, order).filter(Product.canExpireOn(now)),
   })
 
 const isAmong = (dates: ReadonlyArray<DateTime.Utc>) => (date: DateTime.Utc) =>
@@ -282,6 +314,13 @@ const clock = Channel.forever(
   Channel.fromEffect(DateTime.now).pipe(
     Channel.map((now) => Message.TimeChanged({ now })),
     Channel.concatWith(() => Channel.fromEffectDrain(Effect.sleep('1 second'))),
+  ),
+)
+
+const dateOrder: Tea.Subscription<Message, DateOrderSetting> = Channel.unwrap(
+  Effect.map(
+    Effect.service(DateOrderSetting),
+    ({ changes }) => Channel.map(changes, (order) => Message.OrderChanged({ order })),
   ),
 )
 
@@ -332,6 +371,22 @@ const add = Effect.fn('AddProduct')(
   Effect.withLogSpan('AddProduct'),
 )
 
+const keepOrder = Effect.fn('KeepOrder')(
+  function*({ order }: Readonly<{ order: DateOrder.DateOrder }>) {
+    const { set } = yield* DateOrderSetting
+    yield* set(order).pipe(
+      Effect.tapError((error) => Effect.logWarning('Could not keep the date order', error.cause)),
+    )
+    yield* Effect.logInfo('Kept the date order', { order })
+  },
+  Effect.match({
+    onSuccess: () => Message.OrderKept({ succeeded: true }),
+    onFailure: () => Message.OrderKept({ succeeded: false }),
+  }),
+  Effect.asSome,
+  Effect.withLogSpan('KeepOrder'),
+)
+
 const showToast = Effect.fn('ShowToast')(
   function*({ text }: Readonly<{ text: string }>) {
     const { showToast } = yield* Notifications
@@ -369,6 +424,7 @@ export const program: Tea.Program<{
         replacements: 0,
         camera: 'Checking',
         maybeNow: Opt.none(),
+        maybeOrder: Opt.none(),
         maybeLastAdded: Opt.none(),
       },
     },
@@ -435,7 +491,26 @@ export const program: Tea.Program<{
         ? { state: withDate(state, (typed) => ({ ...typed, maybeChosenDate: Opt.some(date) })) }
         : Tea.reject,
 
+    // Only another order than the one in use, once it is known: a tap on the selected segment does nothing. The
+    // order applies at once, and is kept for the dates to come: the setting then reports it back, unchanged.
+    OrderPicked: ({ order }) => (state) =>
+      state._tag === 'Dating' && Opt.isSome(state.form.maybeOrder) && !Opt.contains(state.form.maybeOrder, order)
+        ? {
+          state: withForm(state, (form) => ({ ...form, maybeOrder: Opt.some(order) })),
+          commands: [Command.KeepOrder({ order })],
+        }
+        : Tea.reject,
+
     TimeChanged: ({ now }) => (state) => ({ state: withForm(state, (form) => ({ ...form, maybeNow: Opt.some(now) })) }),
+
+    // The day picked stays, while the digits still name it in the new order.
+    OrderChanged: ({ order }) => (state) => ({
+      state: withForm(state, (form) => ({ ...form, maybeOrder: Opt.some(order) })),
+    }),
+
+    // The order picked stays in use for this visit either way: only the failure to keep it is told.
+    OrderKept: ({ succeeded }) => (state) =>
+      succeeded ? { state } : { state, commands: [Command.ShowToast({ text: 'Could not keep the date format' })] },
 
     // The first barcode read closes the scanner, on the first step: whether the product expires is still to be
     // said.
@@ -476,15 +551,20 @@ export const program: Tea.Program<{
         })
         : Tea.reject,
 
-    // After a step's product, the next one starts at the name, this one's: a second package of it may be next.
-    // After the snackbar's, the step goes on as it was: the digits typed meanwhile are the next product's.
+    // After a step's product, the next one starts at the name, this one's, drawn anew so that it takes the focus
+    // the button took: a second package of it may be next. After the snackbar's, the step goes on as it was: the
+    // digits typed meanwhile are the next product's.
     Completed: ({ succeeded }) => (state) => {
       if (state._tag !== 'Submitting') {
         return defect('Completed while no product is being added: only a completion leaves Submitting')
       }
       const form = { ...state.form, maybeLastAdded: Opt.some(state.product) }
       return succeeded
-        ? { state: state.from === 'Form' ? { _tag: 'Naming', form } : resume(state.step, form) }
+        ? {
+          state: state.from === 'Form'
+            ? { _tag: 'Naming', form: { ...form, replacements: form.replacements + 1 } }
+            : resume(state.step, form),
+        }
         : {
           state: resume(state.step, state.form),
           commands: [Command.ShowToast({ text: 'Could not add the product' })],
@@ -507,6 +587,7 @@ export const program: Tea.Program<{
   runCommand: Match.typeTags<Command>()({
     CheckCamera: checkCamera,
     Add: add,
+    KeepOrder: keepOrder,
     ShowToast: showToast,
   }),
 
@@ -514,21 +595,37 @@ export const program: Tea.Program<{
   // so this is what makes the same product readable again.
   subscriptions: (state) =>
     isScanning(state)
-      ? HashMap.make(['clock', clock], ['scanner', scanner], ['back-button', backButton])
-      : HashMap.make(['clock', clock], ['back-button', backButton]),
+      ? HashMap.make(['clock', clock], ['date-order', dateOrder], ['scanner', scanner], ['back-button', backButton])
+      : HashMap.make(['clock', clock], ['date-order', dateOrder], ['back-button', backButton]),
 
   makeModel: (state): Model => {
     const { form } = state
     const name = Opt.getOrElse(form.maybeName, () => '')
     const nameShown: NameShown = { camera: form.camera, name, nameKey: form.replacements }
-    const dateShown = (date: DateForm, maybeChoose: (day: DateTime.Utc) => Opt.Option<Message>): DateShown => {
+    const dateShown = (
+      date: DateForm,
+      maybeChoose: (day: DateTime.Utc) => Opt.Option<Message>,
+      maybePick: (order: DateOrder.DateOrder) => Opt.Option<Message>,
+    ): DateShown => {
       const maybeNamed = maybeNamedDate(form, date)
       const choices = datesOf(form, date).map((day): DateChoice => ({
         date: day,
         choice: Opt.contains(maybeNamed, day) ? { _tag: 'Chosen' } : { _tag: 'Offered', maybeChoose: maybeChoose(day) },
       }))
+      const order: DateShown['order'] = Opt.match(form.maybeOrder, {
+        onNone: () => ({ _tag: 'Unknown' }),
+        onSome: (current) => ({
+          _tag: 'Known',
+          order: current,
+          choices: Arr.map(DateOrder.all, (order): OrderChoice => ({
+            order,
+            choice: order === current ? { _tag: 'Current' } : { _tag: 'Offered', maybePick: maybePick(order) },
+          })),
+        }),
+      })
       return {
         name,
+        order,
         digits: date.digits,
         strip: date.digits === ''
           ? { _tag: 'Hint' }
@@ -561,7 +658,11 @@ export const program: Tea.Program<{
         return {
           _tag: 'Dating',
           ...nameShown,
-          ...dateShown(date, (day) => Opt.some(Message.DateChosen({ date: day }))),
+          ...dateShown(
+            date,
+            (day) => Opt.some(Message.DateChosen({ date: day })),
+            (order) => Opt.some(Message.OrderPicked({ order })),
+          ),
           back: Message.DateDismissed(),
           maybeTypeDigit: date.digits.length < DigitDates.MAX_DIGITS
             ? Opt.some((digit: Digit) => Message.DigitTyped({ digit }))
@@ -577,7 +678,7 @@ export const program: Tea.Program<{
         ...nameShown,
         step: step._tag === 'Naming'
           ? { _tag: 'Naming' }
-          : { _tag: 'Dating', ...dateShown(step.date, () => Opt.none()) },
+          : { _tag: 'Dating', ...dateShown(step.date, () => Opt.none(), () => Opt.none()) },
         maybeJustAdded,
       }),
     })

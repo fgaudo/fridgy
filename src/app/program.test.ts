@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test'
 import * as Tea from '@fgaudo/effect-tea'
 import * as Arr from 'effect/Array'
 import * as Data from 'effect/Data'
+import * as DateTime from 'effect/DateTime'
 import * as Effect from 'effect/Effect'
 import * as HashMap from 'effect/HashMap'
 import * as Opt from 'effect/Option'
@@ -23,6 +24,7 @@ import {
   openMenu,
   openScanner,
   perform,
+  pickOrder,
   rehearsed,
   requestDate,
   requestInfo,
@@ -269,6 +271,27 @@ describe('Navigation', () => {
       yield* back(user)
       yield* user.hearNext(['Home', ['Products', 'changes']])
       expect(yield* listedNames(user)).toEqual(Opt.some(['Milk', 'Milk']))
+    })))
+
+  // The order is the storage's when the page opens; a pick applies at once, and is kept there.
+  test('the order picked for the date is kept, and the digits are read in it', () =>
+    rehearsed(Effect.fnUntraced(function*(user) {
+      yield* perform(user, [openAddProducts, typeName('Milk')])
+      yield* checkCamera(user)
+      yield* user.hearNext(['AddProducts', 'clock'])
+      yield* user.hearNext(['AddProducts', 'date-order'])
+      yield* perform(user, [requestDate, pickOrder('MDY')])
+      yield* user.run((command) => tagPath(command) === 'AddProducts › KeepOrder')
+      expect(yield* user.hearNext(['AddProducts', 'date-order'])).toEqual(
+        Msg.AddProducts({ message: AddProductsMsg.OrderChanged({ order: 'MDY' }) }),
+      )
+      // Read month first, 1231 names December 31; day first, it would name a 31st month.
+      yield* perform(user, [typeDigit('1'), typeDigit('2'), typeDigit('3'), typeDigit('1')])
+      const { page } = yield* user.model
+      const named = page._tag === 'AddProducts' && page.model._tag === 'Dating' && page.model.strip._tag === 'Naming'
+        ? page.model.strip.choices.map(({ date }) => DateTime.toPartsUtc(date))
+        : []
+      expect(named.some(({ month, day }) => month === 12 && day === 31)).toBe(true)
     })))
 
   test('a product named anew, once the name is cleared, is listed with the first', () =>

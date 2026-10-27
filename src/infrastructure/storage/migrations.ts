@@ -1,7 +1,7 @@
 // Append-only once released: a phone has already run the existing migrations, so a fix is a new one.
 import * as Effect from 'effect/Effect'
 import * as Sql from 'effect/sql'
-import { ProductExpirationSchema, ProductSchema } from './schema.ts'
+import { ProductExpirationSchema, ProductSchema, SettingSchema } from './schema.ts'
 
 export const migrations = {
   // Dates are ISO 8601 strings (`DateTimeUtcFromString` in `products.ts`), which order as text. The trigger, not
@@ -13,8 +13,13 @@ export const migrations = {
       Effect.gen(function*() {
         const product = ProductSchema
         const expiration = ProductExpirationSchema
+        const setting = SettingSchema
         const productId = sql(product.columns.id)
         yield* sql`
+          CREATE TABLE ${sql(setting.table)}(
+            ${sql(setting.columns.key)} TEXT PRIMARY KEY,
+            ${sql(setting.columns.value)} TEXT NOT NULL
+          );
           CREATE TABLE ${sql(product.table)}(
             ${sql(product.columns.id)} INTEGER PRIMARY KEY,
             ${sql(product.columns.name)} VARCHAR(255) NOT NULL,

@@ -1,6 +1,7 @@
 import * as Arr from 'effect/Array'
 import * as DateTime from 'effect/DateTime'
 import * as Opt from 'effect/Option'
+import type { DateOrder } from './date-order.ts'
 
 /** The most digits a date can be typed with: `DDMMYYYY`. */
 export const MAX_DIGITS = 8
@@ -22,21 +23,39 @@ const nextDayOf = (month: number, day: number, today: DateTime.Utc): Opt.Option<
   )
 }
 
-const readingsOf = (digits: string, today: DateTime.Utc): ReadonlyArray<DateTime.Utc> =>
+type Field = 'day' | 'month' | 'year'
+
+const fieldsIn: Readonly<Record<DateOrder, ReadonlyArray<Field>>> = {
+  DMY: ['day', 'month', 'year'],
+  MDY: ['month', 'day', 'year'],
+  YMD: ['year', 'month', 'day'],
+}
+
+/** The digits cut into the fields, each as long as given, in the order they are typed in. */
+const fieldsOf = (digits: string, order: DateOrder, lengths: Readonly<Record<Field, number>>) => {
+  const fields: Record<Field, string> = { day: '', month: '', year: '' }
+  let from = 0
+  for (const field of fieldsIn[order]) {
+    fields[field] = digits.slice(from, from + lengths[field])
+    from += lengths[field]
+  }
+  return fields
+}
+
+const readingsOf = (digits: string, today: DateTime.Utc, order: DateOrder): ReadonlyArray<DateTime.Utc> =>
   [1, 2].flatMap((dayLength) =>
     [1, 2].flatMap((monthLength) => {
-      const yearDigits = digits.slice(dayLength + monthLength)
-      if (digits.length < dayLength + monthLength) return []
-      const day = Number(digits.slice(0, dayLength))
-      const month = Number(digits.slice(dayLength, dayLength + monthLength))
-      switch (yearDigits.length) {
+      const yearLength = digits.length - dayLength - monthLength
+      if (yearLength < 0) return []
+      const { day, month, year } = fieldsOf(digits, order, { day: dayLength, month: monthLength, year: yearLength })
+      switch (yearLength) {
         case 0:
-          return Opt.toArray(nextDayOf(month, day, today))
+          return Opt.toArray(nextDayOf(Number(month), Number(day), today))
         // Two digits name a year of this century.
         case 2:
-          return Opt.toArray(dayOf(2000 + Number(yearDigits), month, day))
+          return Opt.toArray(dayOf(2000 + Number(year), Number(month), Number(day)))
         case 4:
-          return Opt.toArray(dayOf(Number(yearDigits), month, day))
+          return Opt.toArray(dayOf(Number(year), Number(month), Number(day)))
         default:
           return []
       }
@@ -44,11 +63,15 @@ const readingsOf = (digits: string, today: DateTime.Utc): ReadonlyArray<DateTime
   )
 
 /**
- * The days that `digits`, typed with no separators, can name: a day and a month of one or two digits each, then
- * no year, two digits (this century) or four. With no year, the day is the next one on or after `today`. The
- * days start at midnight, in UTC, and are sorted, without repeats. A string that is not only digits names none.
+ * The days that `digits`, typed with no separators in `order`, can name: a day and a month of one or two digits
+ * each, and no year, two digits (this century) or four, the year last or first as `order` says. With no year,
+ * the day is the next one on or after `today`. The days start at midnight, in UTC, and are sorted, without
+ * repeats. A string that is not only digits names none.
+ *
+ * They are two at most: of the four ways to cut a day and a month, only those that leave the year 0, 2 or 4
+ * digits read, and for a given count of digits, that is two of them.
  */
-export const datesOf = (digits: string, today: DateTime.Utc): ReadonlyArray<DateTime.Utc> =>
+export const datesOf = (digits: string, today: DateTime.Utc, order: DateOrder): ReadonlyArray<DateTime.Utc> =>
   /^\d*$/.test(digits)
-    ? Arr.dedupeWith(Arr.sort(readingsOf(digits, today), DateTime.Order), DateTime.Equivalence)
+    ? Arr.dedupeWith(Arr.sort(readingsOf(digits, today, order), DateTime.Order), DateTime.Equivalence)
     : []

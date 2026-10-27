@@ -8,6 +8,8 @@ import * as HashMap from 'effect/HashMap'
 import * as Opt from 'effect/Option'
 import * as fc from 'fast-check'
 import * as Product from '#domain/product.ts'
+import { arbitrary as order } from '#libs/dates/date-order.test_arbitrary.ts'
+import * as DateOrder from '#libs/dates/date-order.ts'
 import { datesOf, MAX_DIGITS } from '#libs/dates/digit-dates.ts'
 import { messagesSentBy } from '#libs/tea-snabbdom/view.test_support.ts'
 import { utc } from '#libs/testing/date-time.test_arbitrary.ts'
@@ -54,11 +56,14 @@ const stepOf = (state: State & { _tag: 'Naming' | 'Dating' }): Step =>
 const resumed = (step: Step, form: Form): State =>
   step._tag === 'Naming' ? { _tag: 'Naming', form } : { _tag: 'Dating', form, date: step.date }
 
-/** The days the page offers, by the rules of a product: those the digits name, from the clock's time on. */
+/**
+ * The days the page offers, by the rules of a product: those the digits name, read in the order in use, from the
+ * clock's time on.
+ */
 const offeredDates = (form: Form, date: DateForm) =>
-  Opt.match(form.maybeNow, {
+  Opt.match(Opt.all([form.maybeNow, form.maybeOrder]), {
     onNone: () => [],
-    onSome: (now) => datesOf(date.digits, now).filter(Product.canExpireOn(now)),
+    onSome: ([now, order]) => datesOf(date.digits, now, order).filter(Product.canExpireOn(now)),
   })
 
 /** The day the form names: the one picked, while the digits name it, or else the only one they name. */
@@ -156,6 +161,7 @@ describe('AddProducts update', () => {
         Msg.Started(),
         // The days the digits name, and any other.
         ...[date, ...offered].map((day) => Msg.DateChosen({ date: day })),
+        ...DateOrder.all.map((order) => Msg.OrderPicked({ order })),
       ]
       expect(check(before, messagesSentBy<Model, Message>(view, makeModel(before), inputValue), askable)).toEqual([])
     }))
@@ -321,6 +327,41 @@ describe('AddProducts update', () => {
     )
   })
 
+  // The pick applies at once, and is kept in the setting, which reports it back.
+  test('OrderPicked takes another order than the one in use and keeps it, on the second step, and is rejected otherwise', () => {
+    assertProperty(
+      [state, order],
+      (before, picked) =>
+        before._tag === 'Dating' && Opt.isSome(before.form.maybeOrder) && !Opt.contains(before.form.maybeOrder, picked)
+          ? Equal.equals(step(Msg.OrderPicked({ order: picked }), before), {
+            rejected: false,
+            after: withForm(before, { maybeOrder: Opt.some(picked) }),
+            commands: [Cmd.KeepOrder({ order: picked })],
+            events: [],
+          })
+          : rejects(Msg.OrderPicked({ order: picked }), before),
+    )
+  })
+
+  test('OrderChanged keeps the order, in any state', () => {
+    assertProperty(
+      [state, order],
+      (before, order) =>
+        Equal.equals(
+          step(Msg.OrderChanged({ order }), before).after,
+          withForm(before, { maybeOrder: Opt.some(order) }),
+        ),
+    )
+  })
+
+  test('OrderKept changes nothing, and says so with a toast when the order could not be kept', () => {
+    assertProperty([state, fc.boolean()], (before, succeeded) => {
+      const { after, commands } = step(Msg.OrderKept({ succeeded }), before)
+      return Equal.equals(after, before)
+        && Equal.equals(commands, succeeded ? [] : [Cmd.ShowToast({ text: 'Could not keep the date format' })])
+    })
+  })
+
   describe('DateChosen', () => {
     test('picks a day the digits name, unless the form already names it, and is rejected on any other day', () => {
       assertProperty([dating, utc], (before, date) => {
@@ -405,8 +446,14 @@ describe('AddProducts update', () => {
     expect(namings.some((model) => model._tag === 'Naming' && Opt.isNone(model.maybeAdd))).toBe(true)
     expect(datings.some((model) => model._tag === 'Dating' && Opt.isSome(model.maybeAdd))).toBe(true)
     expect(datings.some((model) => model._tag === 'Dating' && Opt.isNone(model.maybeAdd))).toBe(true)
+    const orders = datings.flatMap((model) =>
+      model._tag === 'Dating' && model.order._tag === 'Known' ? model.order.choices : []
+    )
     expect(choices.some((choice) => choice.choice._tag === 'Chosen')).toBe(true)
     expect(choices.some((choice) => choice.choice._tag === 'Offered')).toBe(true)
+    expect(datings.some((model) => model._tag === 'Dating' && model.order._tag === 'Unknown')).toBe(true)
+    expect(orders.some((choice) => choice.choice._tag === 'Current')).toBe(true)
+    expect(orders.some((choice) => choice.choice._tag === 'Offered')).toBe(true)
     expect(repeats.some(Opt.isSome)).toBe(true)
     expect(namings.some((model) => model._tag === 'Naming' && Opt.isNone(model.maybeJustAdded))).toBe(true)
   })
@@ -477,7 +524,7 @@ describe('AddProducts update', () => {
     })
 
     // The days can be picked only while the step takes them: not while the product is being added.
-    test('the date field shows the digits as typed; the strip the hint, the days they name with the one picked, or that they name none', () => {
+    test('the date field shows the digits as typed; the strip the hint, the days they name in the order in use with the one picked, or that they name none', () => {
       assertProperty([fc.oneof(dating, submitting)], (s) => {
         const maybeDate = s._tag === 'Dating'
           ? Opt.some(s.date)
@@ -521,6 +568,36 @@ describe('AddProducts update', () => {
       })
     })
 
+    // The orders can be picked only while the step takes them: not while the product is being added.
+    test('the second step shows the order in use with the others to pick, once known, exactly while update accepts them', () => {
+      assertProperty([fc.oneof(dating, submitting)], (s) => {
+        const model = makeModel(s)
+        const shown = model._tag === 'Dating'
+          ? Opt.some(model.order)
+          : model._tag === 'Adding' && model.step._tag === 'Dating'
+          ? Opt.some(model.step.order)
+          : Opt.none()
+        const expected = Opt.match(s.form.maybeOrder, {
+          onNone: () => ({ _tag: 'Unknown' }),
+          onSome: (current) => ({
+            _tag: 'Known',
+            order: current,
+            choices: DateOrder.all.map((order) => ({
+              order,
+              choice: order === current
+                ? { _tag: 'Current' }
+                : {
+                  _tag: 'Offered',
+                  maybePick: rejects(Msg.OrderPicked({ order }), s) ? Opt.none() : Opt.some(Msg.OrderPicked({ order })),
+                },
+            })),
+          }),
+        })
+        return (s._tag === 'Dating' || s.step._tag === 'Dating') === Opt.isSome(shown)
+          && Opt.match(shown, { onNone: () => true, onSome: (order) => Equal.equals(order, expected) })
+      })
+    })
+
     test('offers to clear the name exactly while update accepts it', () => {
       assertProperty([naming], (s) => {
         const model = makeModel(s)
@@ -549,13 +626,17 @@ describe('AddProducts update', () => {
   })
 
   describe('Completed', () => {
-    test('success after a step\'s product starts the next one at the name, this one\'s kept', () => {
+    test('success after a step\'s product starts the next one at the name, this one\'s kept and drawn anew', () => {
       assertProperty([submitting], (before) => {
         fc.pre(before.from === 'Form')
         const { after, commands } = step(Msg.Completed({ succeeded: true }), before)
         return Equal.equals(after, {
           _tag: 'Naming',
-          form: { ...before.form, maybeLastAdded: Opt.some(before.product) },
+          form: {
+            ...before.form,
+            maybeLastAdded: Opt.some(before.product),
+            replacements: before.form.replacements + 1,
+          },
         })
           && commands.length === 0
       })
@@ -602,10 +683,11 @@ describe('AddProducts update', () => {
 })
 
 // The back button is observed in every state: while a product is being added, so that it does not leave the app.
-test('the page listens to the clock and the back button, and to the camera while the scanner is open until it fails', () => {
+test('the page listens to the clock, the date order and the back button, and to the camera while the scanner is open until it fails', () => {
   assertProperty([state], (s) => {
     const subscriptions = Tea.subscriptionsOf(program)(s)
     return HashMap.has(subscriptions, 'clock')
+      && HashMap.has(subscriptions, 'date-order')
       && HashMap.has(subscriptions, 'back-button')
       && HashMap.has(subscriptions, 'scanner') === readsCamera(s)
   })
