@@ -34,6 +34,7 @@ import {
   type Digit,
   type Event,
   type Form,
+  type LastAdded,
   type Message,
   type Model,
   program,
@@ -103,11 +104,11 @@ const productOfStep = (state: State & { _tag: 'Naming' | 'Dating' }) =>
     ? productOf(state.form, Opt.none())
     : Opt.flatMap(namedDate(state.form, state.date), (date) => productOf(state.form, Opt.some(date)))
 
-/** The product added last, while less than 6 seconds have passed since it was. */
+/** The product added last, while less than 6 seconds have passed since it was: its snackbar shows. */
 const justAdded = (form: Form) =>
   Opt.filter(
     form.maybeLastAdded,
-    (product) =>
+    ({ product }) =>
       Opt.exists(form.maybeNow, (now) => DateTime.isLessThan(now, DateTime.add(product.creationDate, { seconds: 6 }))),
   )
 
@@ -115,14 +116,21 @@ const justAdded = (form: Form) =>
 const repeatOf = (form: Form) =>
   Opt.flatMap(
     Opt.all([justAdded(form), form.maybeNow]),
-    ([{ name, maybeExpirationDate }, creationDate]) => Product.make({ name, creationDate, maybeExpirationDate }),
+    ([{ product: { name, maybeExpirationDate } }, creationDate]) =>
+      Product.make({ name, creationDate, maybeExpirationDate }),
   )
+
+/** `product`, once added from `form`: its snackbar comes after the one showing, when one is, or alone. */
+const added = (form: Form, product: Product.Product): LastAdded => ({
+  product,
+  entrance: Opt.isSome(justAdded(form)) ? 'AfterAnother' : 'Alone',
+})
 
 /** Whether the step's own button would add the product added last again: the same name and expiration. */
 const addsLastAgain = (s: State & { _tag: 'Naming' | 'Dating' }) =>
   Opt.exists(
     Opt.all([productOfStep(s), s.form.maybeLastAdded]),
-    ([product, last]) =>
+    ([product, { product: last }]) =>
       product.name === last.name
       && Opt.makeEquivalence(DateTime.Equivalence)(product.maybeExpirationDate, last.maybeExpirationDate),
   )
@@ -592,21 +600,25 @@ describe('AddProducts update', () => {
       })
     })
 
-    test('shows the snackbar for 6 seconds from when the product was added, but under the scanner and while the lookup goes on', () => {
+    test('shows the snackbar for 6 seconds from when the product was added, coming as the state says, but under the scanner and while the lookup goes on', () => {
       const seconds = fc.integer({ min: -10, max: 10 })
       assertProperty([state, seconds], (before, elapsed) =>
         Opt.match(before.form.maybeLastAdded, {
           onNone: () => true,
-          onSome: (product) => {
+          onSome: (lastAdded) => {
             const model = makeModel(
-              withForm(before, { maybeNow: Opt.some(DateTime.add(product.creationDate, { seconds: elapsed })) }),
+              withForm(before, {
+                maybeNow: Opt.some(DateTime.add(lastAdded.product.creationDate, { seconds: elapsed })),
+              }),
             )
             const shown = model._tag === 'Naming' || model._tag === 'Dating' || model._tag === 'Adding'
-              ? Opt.map(model.maybeJustAdded, (justAdded) => justAdded.product)
+              ? Opt.map(model.maybeJustAdded, ({ product, entrance }): LastAdded => ({ product, entrance }))
               : Opt.none()
             return Equal.equals(
               shown,
-              before._tag !== 'Scanning' && before._tag !== 'LookingUp' && elapsed < 6 ? Opt.some(product) : Opt.none(),
+              before._tag !== 'Scanning' && before._tag !== 'LookingUp' && elapsed < 6
+                ? Opt.some(lastAdded)
+                : Opt.none(),
             )
           },
         }))
@@ -778,9 +790,9 @@ describe('AddProducts update', () => {
   })
 
   describe('Completed', () => {
-    // The second step leaves with its own transition, and the snackbar comes anew: only the first step's button
-    // acknowledges the product it added.
-    test('success after a step\'s product starts the next one at the name, this one\'s kept and drawn anew, acknowledged by the first step\'s button', () => {
+    // The second step leaves with its own transition, and the snackbar comes anew, after the one still showing
+    // when there is one: only the first step's button acknowledges the product it added.
+    test('success after a step\'s product starts the next one at the name, this one\'s kept and drawn anew, acknowledged by the first step\'s button, its snackbar after the one showing', () => {
       assertProperty([submitting], (before) => {
         fc.pre(before.from === 'Form')
         const { after, commands } = step(Msg.Completed({ succeeded: true }), before)
@@ -788,7 +800,7 @@ describe('AddProducts update', () => {
           _tag: 'Naming',
           form: {
             ...before.form,
-            maybeLastAdded: Opt.some(before.product),
+            maybeLastAdded: Opt.some(added(before.form, before.product)),
             replacements: before.form.replacements + 1,
             maybeAcknowledging: before.step._tag === 'Naming'
               ? Opt.some(before.product.creationDate)
@@ -799,12 +811,16 @@ describe('AddProducts update', () => {
       })
     })
 
-    // The digits typed while the snackbar's product was being added are the next product's.
-    test('success after the snackbar keeps the step as it is', () => {
+    // The digits typed while the snackbar's product was being added are the next product's. The snackbar's product
+    // is repeated while its snackbar shows, so the repeat's comes after it, unless it has meanwhile gone.
+    test('success after the snackbar keeps the step as it is, the repeat\'s snackbar after the one showing', () => {
       assertProperty([submitting], (before) => {
         fc.pre(before.from === 'Snackbar')
         const { after, commands } = step(Msg.Completed({ succeeded: true }), before)
-        return Equal.equals(after, resumed(before.step, { ...before.form, maybeLastAdded: Opt.some(before.product) }))
+        return Equal.equals(
+          after,
+          resumed(before.step, { ...before.form, maybeLastAdded: Opt.some(added(before.form, before.product)) }),
+        )
           && commands.length === 0
       })
     })

@@ -294,7 +294,8 @@ describe('Products update', () => {
   describe('Deleted', () => {
     const deletingState = stateWith('selection', deleting)
 
-    test('clears the selection and offers to undo the deletion, of its products, for a while', () => {
+    // The snackbar comes after the one of a deletion still recent, which leaves first.
+    test('clears the selection and offers to undo the deletion, of its products, for a while, its snackbar after the one showing', () => {
       assertProperty([deletingState, utc], (before, at) => {
         const { after, commands } = step(Msg.Deleted({ at }), before)
         return before.selection._tag === 'Deleting'
@@ -304,6 +305,7 @@ describe('Products update', () => {
             at,
             count: HashSet.size(before.selection.ids),
             maybeProducts: before.selection.maybeProducts,
+            entrance: before.lastDeletion._tag === 'Recent' ? 'AfterAnother' : 'Alone',
           })
           && onlyChanged(before, after, 'selection', 'lastDeletion')
           && commands.length === 0
@@ -536,12 +538,14 @@ describe('Products model', () => {
   })
 
   // Whatever the list shows: the last products may have just been deleted.
-  test('the snackbar says how many products were deleted while the deletion is recent, with the way to undo it when its products can come back', () => {
+  test('the snackbar says when and how many products were deleted while the deletion is recent, coming as the state says, with the way to undo it when its products can come back', () => {
     assertProperty([state], (s) => {
       const { lastDeletion } = program.makeModel(s)
       if (s.lastDeletion._tag === 'None') return lastDeletion._tag === 'None'
       return lastDeletion._tag === 'Deleted'
+        && Equal.equals(lastDeletion.at, s.lastDeletion.at)
         && lastDeletion.count === s.lastDeletion.count
+        && lastDeletion.entrance === s.lastDeletion.entrance
         && Equal.equals(lastDeletion.maybeUndo, Opt.map(s.lastDeletion.maybeProducts, () => Msg.UndoRequested()))
     })
   })

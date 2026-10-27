@@ -45,7 +45,10 @@ nothing is named). The model holds exactly what the view draws: a field no view 
 - A page is drawn anew each time it comes back on top, so an entrance in `delayed` plays on every return. An
   element that enters because something changed (a row added or put back), not because the page is drawn, gets
   its entrance from the model (Products' `presence`, `Arriving`; AddProducts' `acknowledging`), which the state keeps until a timer, running
-  only while the page is on top, says it has been shown. A list's rows leave the same way (`Leaving`), kept by
+  only while the page is on top, says it has been shown. An element keyed by what it shows (a snackbar, by its
+  product or its deletion) is replaced by the next one while it leaves, the two drawn at once in the same place: the model
+  says that the next comes after another (its `entrance`), and the view delays its entrance (`transitionDelay`)
+  by the exit's duration, resetting the delay in `remove`. A list's rows leave the same way (`Leaving`), kept by
   the state where they were until they have closed their place: a row removed with a `remove` transition stays
   in the DOM, and snabbdom moves the rows around it when others go too, which jumps them over it. A list's rows
   leave by closing their place (`height` and `opacity`, overflow hidden), and arrive by opening it; a row that

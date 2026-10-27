@@ -78,13 +78,22 @@ export type Form = Readonly<{
   maybeNow: Opt.Option<DateTime.Utc>
   /** The order the digits of a date are read in, once the setting has been read. */
   maybeOrder: Opt.Option<DateOrder.DateOrder>
-  maybeLastAdded: Opt.Option<Product.Product>
+  maybeLastAdded: Opt.Option<LastAdded>
   /**
    * When the product added last from the first step's own button was created, while the button acknowledges it,
    * until a timer says it has been shown: the write is too quick for the wait to be seen.
    */
   maybeAcknowledging: Opt.Option<DateTime.Utc>
 }>
+
+/**
+ * How the snackbar of the product added last comes: alone, or after the one before it, which was still showing when
+ * the product was added and leaves first, as Material shows one snackbar at a time.
+ */
+export type Entrance = 'Alone' | 'AfterAnother'
+
+/** The product added last, and how its snackbar comes. */
+export type LastAdded = Readonly<{ product: Product.Product; entrance: Entrance }>
 
 /** The expiration date being typed: it exists only in the second step, and starts anew with each. */
 export type DateForm = Readonly<{
@@ -250,10 +259,10 @@ export type DateShown = Readonly<{
 }>
 
 /**
- * The snackbar: the product added last, for a few seconds after it was added, with its action, unless the step's
- * own button would add the same product, or a product is being added.
+ * The snackbar: the product added last, for a few seconds after it was added, how it comes, and its action,
+ * unless the step's own button would add the same product, or a product is being added.
  */
-export type JustAdded = Readonly<{ product: Product.Product; maybeRepeat: Opt.Option<Message> }>
+export type JustAdded = Readonly<{ product: Product.Product; entrance: Entrance; maybeRepeat: Opt.Option<Message> }>
 
 export type Model = Data.TaggedEnum<{
   Naming:
@@ -395,14 +404,19 @@ const isSameProduct = (one: Product.Product, other: Product.Product) =>
   one.name === other.name
   && Opt.makeEquivalence(DateTime.Equivalence)(one.maybeExpirationDate, other.maybeExpirationDate)
 
+/** The product added last, while its snackbar shows. */
+const justAddedOf = (form: Form) =>
+  Opt.filter(form.maybeLastAdded, ({ product }) => isJustAdded(product, form.maybeNow))
+
 /**
  * The product added last, again, created now, while its snackbar shows: none once its expiration has meanwhile
  * passed (a product expiring today, repeated after midnight).
  */
 const repeatOf = (form: Form) =>
   Opt.flatMap(
-    Opt.all([Opt.filter(form.maybeLastAdded, (product) => isJustAdded(product, form.maybeNow)), form.maybeNow]),
-    ([{ name, maybeExpirationDate }, creationDate]) => Product.make({ name, creationDate, maybeExpirationDate }),
+    Opt.all([justAddedOf(form), form.maybeNow]),
+    ([{ product: { name, maybeExpirationDate } }, creationDate]) =>
+      Product.make({ name, creationDate, maybeExpirationDate }),
   )
 
 // Refreshed often, so that the creation date is close to when the user adds the product.
@@ -728,12 +742,17 @@ export const program: Tea.Program<{
     // After a step's product, the next one starts at the name, this one's, drawn anew so that it takes the focus
     // the button took: a second package of it may be next. After the snackbar's, the step goes on as it was: the
     // digits typed meanwhile are the next product's. The first step's button acknowledges the product it added:
-    // the second step leaves with its own, and the snackbar comes anew with its.
+    // the second step leaves with its own, and the snackbar comes anew with its, after the one still showing when
+    // there is one.
     Completed: ({ succeeded }) => (state) => {
       if (state._tag !== 'Submitting') {
         return defect('Completed while no product is being added: only a completion leaves Submitting')
       }
-      const form = { ...state.form, maybeLastAdded: Opt.some(state.product) }
+      const lastAdded: LastAdded = {
+        product: state.product,
+        entrance: Opt.isSome(justAddedOf(state.form)) ? 'AfterAnother' : 'Alone',
+      }
+      const form = { ...state.form, maybeLastAdded: Opt.some(lastAdded) }
       return succeeded
         ? {
           state: state.from === 'Form'
@@ -839,13 +858,14 @@ export const program: Tea.Program<{
           : { _tag: 'NamingNothing' },
       }
     }
-    const maybeJustAdded = Opt.filter(form.maybeLastAdded, (product) => isJustAdded(product, form.maybeNow))
+    const maybeJustAdded = justAddedOf(form)
     // The action is withheld while it would add what the step's button adds: after a product added as it is, the
     // name stays, and "Add without date" adds it again; after the snackbar's, the second step keeps its
     // digits, which may still name the same day.
     const justAdded = (maybeStepProduct: Opt.Option<Product.Product>) =>
-      Opt.map(maybeJustAdded, (product): JustAdded => ({
+      Opt.map(maybeJustAdded, ({ product, entrance }): JustAdded => ({
         product,
+        entrance,
         maybeRepeat: pipe(
           repeatOf(form),
           Opt.filter((repeat) => !Opt.exists(maybeStepProduct, (stepProduct) => isSameProduct(repeat, stepProduct))),
@@ -904,7 +924,7 @@ export const program: Tea.Program<{
         step: step._tag === 'Naming'
           ? { _tag: 'Naming' }
           : { _tag: 'Dating', ...dateShown(step.date, () => Opt.none(), () => Opt.none()) },
-        maybeJustAdded: Opt.map(maybeJustAdded, (product): JustAdded => ({ product, maybeRepeat: Opt.none() })),
+        maybeJustAdded: Opt.map(maybeJustAdded, (lastAdded): JustAdded => ({ ...lastAdded, maybeRepeat: Opt.none() })),
       }),
     })
   },

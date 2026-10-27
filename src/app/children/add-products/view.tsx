@@ -96,9 +96,11 @@ type Above = 'Nothing' | 'Fab'
  * Material's snackbar, in the room above a step's controls, and above its FAB: its two lines say that the product
  * was added, its name emphasized and cut to the line, and when it expires, as the list says it, with the action that adds it
  * again while it can be, and while the step's own button would not. Keyed by the product, so that the next one, a
- * repeat included, appears anew.
+ * repeat included, appears anew: it rises from where it is placed, and sinks away. One that comes after another
+ * waits, unseen, for the other to sink, which takes the exit's duration: both drawn at once in the same place,
+ * one fading into the other, would look like nothing happened.
  */
-const snackbar = ({ product, maybeRepeat }: JustAdded, above: Above, dispatch: Dispatch<Message>) => {
+const snackbar = ({ product, entrance, maybeRepeat }: JustAdded, above: Above, dispatch: Dispatch<Message>) => {
   const { on } = handlers(dispatch)
   return (
     <div
@@ -109,11 +111,14 @@ const snackbar = ({ product, maybeRepeat }: JustAdded, above: Above, dispatch: D
         transitionProperty: 'opacity, transform',
         transitionDuration: 'var(--transition-duration-short-3)',
         transitionTimingFunction: 'var(--ease-standard-decelerate)',
+        transitionDelay: entrance === 'AfterAnother' ? 'var(--transition-duration-short-2)' : '0s',
         delayed: { opacity: '1', transform: 'translateY(0)' },
         remove: {
           opacity: '0',
+          transform: 'translateY(0.5rem)',
           transitionDuration: 'var(--transition-duration-short-2)',
           transitionTimingFunction: 'var(--ease-standard-accelerate)',
+          transitionDelay: '0s',
         },
       }}
       props={{

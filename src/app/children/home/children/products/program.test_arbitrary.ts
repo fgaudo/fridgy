@@ -8,7 +8,7 @@ import * as NonEmptyHashSet from '#libs/collections/non-empty-hash-set.test_arbi
 import * as PositiveInteger from '#libs/numbers/positive-integer.test_arbitrary.ts'
 import { arbitrary as maybe } from '#libs/option/option.test_arbitrary.ts'
 import { utc } from '#libs/testing/date-time.test_arbitrary.ts'
-import type { Departure, LastDeletion, Message, Product, Selection, State } from './program.ts'
+import type { Departure, Entrance, LastDeletion, Message, Product, Selection, State } from './program.ts'
 import { ProductListReadError, type StoredProduct } from './services/product-list/product-list.ts'
 
 const Msg = Data.taggedEnum<Message>()
@@ -107,6 +107,7 @@ export const recent: fc.Arbitrary<LastDeletion> = fc.record({
   at: utc,
   count: PositiveInteger.arbitrary({ max: 6 }),
   maybeProducts: restorable,
+  entrance: fc.constantFrom<Entrance>('Alone', 'AfterAnother'),
 }).map((fields) => ({ _tag: 'Recent', ...fields } as const))
 
 export const lastDeletion: fc.Arbitrary<LastDeletion> = fc.oneof(fc.constant({ _tag: 'None' } as const), recent)

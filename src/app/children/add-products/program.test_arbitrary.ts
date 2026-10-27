@@ -8,7 +8,18 @@ import { arbitrary as order } from '#libs/dates/date-order.test_arbitrary.ts'
 import { datesOf, MAX_DIGITS } from '#libs/dates/digit-dates.ts'
 import { arbitrary as maybe } from '#libs/option/option.test_arbitrary.ts'
 import { utc } from '#libs/testing/date-time.test_arbitrary.ts'
-import type { Camera, DateForm, Digit, Form, Lookup, LookupOutcome, Message, State } from './program.ts'
+import type {
+  Camera,
+  DateForm,
+  Digit,
+  Entrance,
+  Form,
+  LastAdded,
+  Lookup,
+  LookupOutcome,
+  Message,
+  State,
+} from './program.ts'
 
 const Msg = Data.taggedEnum<Message>()
 
@@ -43,6 +54,11 @@ const outcome: fc.Arbitrary<LookupOutcome> = fc.oneof(
   fc.constant<LookupOutcome>({ _tag: 'Failed' }),
 )
 
+const lastAdded: fc.Arbitrary<LastAdded> = fc.record({
+  product,
+  entrance: fc.constantFrom<Entrance>('Alone', 'AfterAnother'),
+})
+
 /** The days the digits name, by the rules of a product: what can be picked. */
 const offeredDates = (form: Form, digits: string) =>
   Opt.match(Opt.all([form.maybeNow, form.maybeOrder]), {
@@ -58,7 +74,7 @@ export const form: fc.Arbitrary<Form> = fc.tuple(
     lookup,
     maybeNow: maybe(utc),
     maybeOrder: maybe(order),
-    maybeLastAdded: maybe(product),
+    maybeLastAdded: maybe(lastAdded),
     maybeAcknowledging: maybe(utc),
   }),
   fc.option(fc.integer({ min: -2, max: 10 })),
@@ -68,7 +84,7 @@ export const form: fc.Arbitrary<Form> = fc.tuple(
   // The clock often ticks a few seconds after the last product was added: its snackbar shows, or has just gone.
   const maybeNow = Opt.match(form.maybeLastAdded, {
     onNone: () => form.maybeNow,
-    onSome: ({ creationDate }) =>
+    onSome: ({ product: { creationDate } }) =>
       maybeSinceAdded === null ? form.maybeNow : Opt.some(DateTime.add(creationDate, { seconds: maybeSinceAdded })),
   })
   // The name is often the last product's, as the page keeps it after adding one; when the lookup did not name
@@ -76,7 +92,7 @@ export const form: fc.Arbitrary<Form> = fc.tuple(
   const maybeName = form.lookup._tag === 'NotFound' || form.lookup._tag === 'Failed'
     ? Opt.some(scanned)
     : keepsName
-    ? Opt.orElse(Opt.map(form.maybeLastAdded, ({ name }) => name), () => form.maybeName)
+    ? Opt.orElse(Opt.map(form.maybeLastAdded, ({ product: { name } }) => name), () => form.maybeName)
     : form.maybeName
   return { ...form, maybeNow, maybeName }
 })

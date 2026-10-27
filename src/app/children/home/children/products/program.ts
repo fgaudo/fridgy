@@ -55,10 +55,21 @@ export type Selection = Data.TaggedEnum<{
 
 const Selection = Data.taggedEnum<Selection>()
 
+/**
+ * How the snackbar of the last deletion comes: alone, or after the one before it, which was still showing when the
+ * products were deleted and leaves first, as Material shows one snackbar at a time.
+ */
+export type Entrance = 'Alone' | 'AfterAnother'
+
 /** The last deletion, for a few seconds after it: a snackbar says so, and offers to undo it. */
 export type LastDeletion = Data.TaggedEnum<{
   None: object
-  Recent: Readonly<{ at: DateTime.Utc; count: PositiveInteger.PositiveInteger; maybeProducts: Restorable }>
+  Recent: Readonly<{
+    at: DateTime.Utc
+    count: PositiveInteger.PositiveInteger
+    maybeProducts: Restorable
+    entrance: Entrance
+  }>
 }>
 
 const LastDeletion = Data.taggedEnum<LastDeletion>()
@@ -175,10 +186,18 @@ export type ListModel = Data.TaggedEnum<{
 
 export type Model = Readonly<{
   list: ListModel
-  /** The snackbar of the last deletion: how many products went and, while they can come back, the way to undo it. */
+  /**
+   * The snackbar of the last deletion: when it was, how many products went, how the snackbar comes and, while
+   * the products can come back, the way to undo it.
+   */
   lastDeletion: Data.TaggedEnum<{
     None: object
-    Deleted: Readonly<{ count: PositiveInteger.PositiveInteger; maybeUndo: Opt.Option<Message> }>
+    Deleted: Readonly<{
+      at: DateTime.Utc
+      count: PositiveInteger.PositiveInteger
+      entrance: Entrance
+      maybeUndo: Opt.Option<Message>
+    }>
   }>
 }>
 
@@ -564,7 +583,8 @@ export const program: Tea.Program<{
         }
         : Tea.reject,
 
-    // A new deletion replaces the offer to undo the last one: that one is gone for good.
+    // A new deletion replaces the offer to undo the last one: that one is gone for good, its snackbar leaving
+    // before the new one comes.
     Deleted: ({ at }) => (state) =>
       state.selection._tag === 'Deleting'
         ? {
@@ -575,6 +595,7 @@ export const program: Tea.Program<{
               at,
               count: PositiveInteger.makeUnsafe(HashSet.size(state.selection.ids)),
               maybeProducts: state.selection.maybeProducts,
+              entrance: state.lastDeletion._tag === 'Recent' ? 'AfterAnother' : 'Alone',
             }),
           },
         }
@@ -642,9 +663,11 @@ export const program: Tea.Program<{
     list: listModel(state),
     lastDeletion: Match.valueTags(state.lastDeletion, {
       None: (): Model['lastDeletion'] => ({ _tag: 'None' }),
-      Recent: ({ count, maybeProducts }): Model['lastDeletion'] => ({
+      Recent: ({ at, count, maybeProducts, entrance }): Model['lastDeletion'] => ({
         _tag: 'Deleted',
+        at,
         count,
+        entrance,
         maybeUndo: Opt.map(maybeProducts, () => Message.UndoRequested()),
       }),
     }),

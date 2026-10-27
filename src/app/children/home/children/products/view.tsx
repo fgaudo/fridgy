@@ -301,29 +301,34 @@ export const selectionBar = (model: Model, dispatch: Dispatch<Message>): Selecti
 
 /**
  * Material's snackbar, once products have been deleted: how many, and the action that puts them back while they
- * can come back. It rises from where the parent places it, and sinks away.
+ * can come back. Keyed by the deletion, so that the next one's appears anew: it rises from where the parent
+ * places it, and sinks away. One that comes after another waits, unseen, for the other to sink, which takes the
+ * exit's duration: both drawn at once in the same place, one fading into the other, would look like nothing
+ * happened.
  */
 export const snackbar = (model: Model, dispatch: Dispatch<Message>): VNode | undefined => {
   if (model.lastDeletion._tag === 'None') {
     return undefined
   }
   const { on } = handlers(dispatch)
-  const { count, maybeUndo } = model.lastDeletion
+  const { at, count, entrance, maybeUndo } = model.lastDeletion
   return (
     <div
-      key='snackbar'
+      key={`deleted-${DateTime.toEpochMillis(at)}`}
       style={{
         opacity: '0',
         transform: 'translateY(0.5rem)',
         transitionProperty: 'opacity, transform',
         transitionDuration: 'var(--transition-duration-short-3)',
         transitionTimingFunction: 'var(--ease-standard-decelerate)',
+        transitionDelay: entrance === 'AfterAnother' ? 'var(--transition-duration-short-2)' : '0s',
         delayed: { opacity: '1', transform: 'translateY(0)' },
         remove: {
           opacity: '0',
           transform: 'translateY(0.5rem)',
           transitionDuration: 'var(--transition-duration-short-2)',
           transitionTimingFunction: 'var(--ease-standard-accelerate)',
+          transitionDelay: '0s',
         },
       }}
       props={{
