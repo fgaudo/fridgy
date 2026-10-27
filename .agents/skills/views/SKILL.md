@@ -5,8 +5,7 @@ description: How Fridgy's views are written - TSX rendered by snabbdom, messages
 
 # Views
 
-Only `view.tsx` files and the components of `src/libs/ui/` hold TSX; snabbdom renders them through `#libs/jsx`
-and `#libs/tea-snabbdom`. A view is a
+Only `view.tsx` files hold TSX; snabbdom renders them through `#libs/jsx` and `#libs/tea-snabbdom`. A view is a
 pure function of the model: no local state, no effects, no reading of the clock.
 
 ## The model decides, the view draws
@@ -53,12 +52,14 @@ Tailwind's own colors, font sizes, radii and shadows:
   scale (`rounded-medium`, `rounded-full`), shadows the elevation levels (`shadow-elevation-3`, a FAB's), all
   in `src/styles.css`. A surface's level is its component's, and a raised surface takes its tone from its
   container role (`bg-surface-container-low` for a drawer), not from a shadow alone;
-- what can be pressed carries `state-layer`, Material's feedback on hover, focus and press;
+- what can be pressed carries `state-layer`, Material's feedback on hover, focus and press; the layer behind a
+  modal or a menu is `scrim`, both in `src/styles.css`;
 - icons are `material-symbols-rounded` spans; the safe areas are the `sait`, `saib`, `sail`, `sair` spacings
   (`pt-sait`, `mr-sair`).
 
-Components that know nothing of the app (`#libs/ui/overlay.tsx`'s backdrop, `cn` for class names) go to
-`src/libs/ui/`. The app has no dark theme.
+A look that Material or the app fixes (a utility in `src/styles.css`) is written once there, never in a component
+under `src/libs/`, which knows nothing of the app: `src/libs/ui/` holds only `cn`, which joins class names. The app
+has no dark theme.
 
 ## Checking
 

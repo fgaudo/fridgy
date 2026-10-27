@@ -1,8 +1,7 @@
 import * as Tea from '@fgaudo/effect-tea'
-import { thunk, type VNode } from 'snabbdom'
+import { thunk, type VNode, type VNodeStyle } from 'snabbdom'
 import { type Handlers, handlers, type View } from '#libs/tea-snabbdom/tea-snabbdom.ts'
 import { cn } from '#libs/ui/class-names.ts'
-import { backdrop } from '#libs/ui/overlay.tsx'
 import * as Products from './children/products/view.tsx'
 import type { Message, Model } from './program.ts'
 
@@ -36,11 +35,19 @@ const addButton = (model: Model, { on }: Handlers<Message>) => (
   </button>
 )
 
-/** Material's modal navigation drawer. */
+/** Fades in once inserted, and out before being removed. */
+const fade: VNodeStyle = {
+  opacity: '0',
+  transition: 'opacity 200ms',
+  delayed: { opacity: '1' },
+  remove: { opacity: '0' },
+}
+
+/** Material's modal navigation drawer, over the scrim; a tap on the scrim closes it. */
 const sideMenu = (menu: Model['menu'], { on }: Handlers<Message>): ReadonlyArray<VNode> =>
   menu._tag === 'Open'
     ? [
-      backdrop('side-menu-background', 'z-50', on('click', menu.close)),
+      <div key='side-menu-background' style={fade} on={on('click', menu.close)} props={{ className: 'scrim z-50' }} />,
       <div
         key='side-menu'
         style={{

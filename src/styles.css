@@ -184,6 +184,17 @@ html {
   }
 }
 
+/*
+ * Material's scrim: the dimmed layer behind a modal or a menu, at the opacity Material sets. The blur is this
+ * app's touch, not Material's.
+ */
+@utility scrim {
+  position: fixed;
+  inset: 0;
+  background-color: color-mix(in oklab, var(--color-scrim) 32%, transparent);
+  backdrop-filter: blur(4px);
+}
+
 a {
   white-space: nowrap;
 }
