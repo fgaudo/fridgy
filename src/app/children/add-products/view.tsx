@@ -3,7 +3,6 @@ import * as DateTime from 'effect/DateTime'
 import * as Match from 'effect/Match'
 import * as Opt from 'effect/Option'
 import type { VNode } from 'snabbdom'
-import type * as Product from '#domain/product.ts'
 import type { DateOrder } from '#libs/dates/date-order.ts'
 import { focusOnInsert, handlers, initialValue, type View } from '#libs/tea-snabbdom/tea-snabbdom.ts'
 import { cn } from '#libs/ui/class-names.ts'
@@ -168,10 +167,6 @@ const room = (
     {held}
   </div>
 )
-
-/** The snackbar of a product being added: the one added before, with no action. */
-const noRepeat = (maybeJustAdded: Opt.Option<Product.Product>) =>
-  Opt.map(maybeJustAdded, (product): JustAdded => ({ product, maybeRepeat: Opt.none() }))
 
 /**
  * Material's filled button, the one action of a step, where the thumb rests; and its text button, the other
@@ -698,10 +693,10 @@ export const view: View<Model, Message> = (model, dispatch) => (
       ],
       Adding: (adding) =>
         Match.valueTags(adding.step, {
-          Naming: () => [nameStep(adding, { _tag: 'Adding' }, noRepeat(adding.maybeJustAdded), dispatch)],
+          Naming: () => [nameStep(adding, { _tag: 'Adding' }, adding.maybeJustAdded, dispatch)],
           Dating: (date) => [
             nameStep(adding, { _tag: 'UnderDate' }, Opt.none(), dispatch),
-            dateStep(date, { _tag: 'Adding' }, noRepeat(adding.maybeJustAdded), dispatch),
+            dateStep(date, { _tag: 'Adding' }, adding.maybeJustAdded, dispatch),
           ],
         }),
     })}

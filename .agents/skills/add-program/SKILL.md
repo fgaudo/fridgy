@@ -27,7 +27,12 @@ Every program is a folder of the same shape, at any depth:
 Never split a program into `messages`/`state`/`update` files: they would import each other in cycles. A
 program splits only when it is too large (300–400 lines), into children by concern, never by kind: what spans
 the children (the menu, the back button) stays in the parent; what concerns one child, even how the user
-learns of its failure, stays in the child. Children that read each other's state are one child.
+learns of its failure, stays in the child. Children that read each other's state are one child, and the size
+yields to that: a candidate child whose controls the parent would have to enable from its state, or whose state
+the parent would have to copy down and back up, is not one. `add-products` is the example, and stays one
+program past 800 lines: its second step needs the name, the clock and the product added last, and its "Add"
+and the snackbar's "Add again" need the day the digits name; even the scanner's dialog would cost a second
+service and a module of the infrastructure to move its sixty lines.
 
 ## `program.ts`
 

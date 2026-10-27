@@ -624,15 +624,17 @@ Where the code departs from the design above:
   `layer`; the device's language falls back to `Intl`'s locale where `navigator.language` is missing (Bun).
 - **`bunx cap sync android`** was not run: the synced `capacitor.config.json` is ignored by git and written by the
   release's build (`android-release` skill); `bunx cap config` shows the appended User-Agent.
-- **The first step is blocked while the lookup runs**, with a `Cancel` button (`LookupCancelled`, a model case
-  `LookingUp` of its own). In the design the step stayed usable: "Add without date" saved the product under the
-  barcode while the found name arrived a moment later, and "Set expiration" carried the barcode to the date
-  step. Cancelling moves `lookup` to `Idle`: the runtime interrupts the subscription, which aborts the request,
-  and nothing it sent reaches `update` afterwards, so no stale answer needs handling. `update` still accepts
-  the step's other messages while looking (a model shows less than `update` accepts); the view withholds them.
-  The snackbar is hidden rather than shown without its action: the scanner, which the lookup follows, hides it
-  too.
+- **The first step is blocked while the lookup runs**, with a `Cancel` button (`LookupCancelled`). In the design
+  the step stayed usable: "Add without date" saved the product under the barcode while the found name arrived a
+  moment later, and "Set expiration" carried the barcode to the date step. The lookup is a state of the page,
+  `LookingUp { form, barcode }`, as the runtime's guide asks of an operation, not the `Looking` case of
+  `Form.lookup`, which keeps only the answer (`Idle | Found { url } | NotFound | Failed`): `update` rejects the
+  step's other messages while looking, instead of the view withholding them, and the subscription is keyed by
+  the state's barcode. A key typed just before the scan leaves the state, as it drops the answer. Cancelling
+  returns to `Naming`: the runtime interrupts the subscription, which aborts the request, and nothing it sent
+  reaches `update` afterwards, so no stale answer needs handling. The snackbar is hidden rather than shown
+  without its action: the scanner, which the lookup follows, hides it too.
 - **The timeout is 5 seconds**, not 10: the user now waits on a blocked screen rather than typing meanwhile, and
   `Cancel` is there for a slower network.
-- `src/app/children/add-products/program.ts` grows past 800 lines: the lookup is the page's name, and splitting
-  the page into children is left to its own change.
+- `src/app/children/add-products/program.ts` grows past 800 lines and stays one program: its parts share one
+  form and one submission (`AGENTS.md`, "A program is split by concern").

@@ -75,8 +75,9 @@ not a kind of program. The programs to copy are `src/app/children/home` and `src
 - **A program is split by concern, never by kind.** It lives in one module until it is too large (300–400
   lines), then splits into children, each a program of its own. What spans the children stays in the parent;
   what concerns one child, even how the user learns of its failure, stays in the child; children that read
-  each other's state are one child. Never `messages`/`state`/`update` files: they would import each other in
-  cycles.
+  each other's state are one child. The size yields to that: a page whose parts share one form and one
+  submission (`add-products`: the two steps, the scanner, the snackbar) stays one program, however long. Never
+  `messages`/`state`/`update` files: they would import each other in cycles.
 - **Children are declared, never wired; a child talks up through events.** A parent declares a child and the
   library routes its messages, commands, subscriptions and models; a parent never reads a child's state to
   decide, nor rejects its messages to hide it. What a child needs, it gets from its own services; only a fact

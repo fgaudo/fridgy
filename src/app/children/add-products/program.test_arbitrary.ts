@@ -25,13 +25,12 @@ const digits = fc.oneof(
 /** A barcode as the scanner reads it: EAN-8, UPC-A or EAN-13. */
 export const barcode = fc.stringMatching(/^\d{8}$|^\d{12,13}$/)
 
-/** A lookup, of any barcode; most often none. */
+/** A lookup's answer; most often none. */
 const lookup: fc.Arbitrary<Lookup> = fc.oneof(
   { arbitrary: fc.constant<Lookup>({ _tag: 'Idle' }), weight: 3 },
-  barcode.map((barcode): Lookup => ({ _tag: 'Looking', barcode })),
-  fc.tuple(barcode, fc.webUrl()).map(([barcode, url]): Lookup => ({ _tag: 'Found', barcode, url })),
-  barcode.map((barcode): Lookup => ({ _tag: 'NotFound', barcode })),
-  barcode.map((barcode): Lookup => ({ _tag: 'Failed', barcode })),
+  fc.webUrl().map((url): Lookup => ({ _tag: 'Found', url })),
+  fc.constant<Lookup>({ _tag: 'NotFound' }),
+  fc.constant<Lookup>({ _tag: 'Failed' }),
 )
 
 const outcome: fc.Arbitrary<LookupOutcome> = fc.oneof(
@@ -63,17 +62,18 @@ export const form: fc.Arbitrary<Form> = fc.tuple(
   }),
   fc.option(fc.integer({ min: -2, max: 10 })),
   fc.boolean(),
-).map(([form, maybeSinceAdded, keepsName]): Form => {
+  barcode,
+).map(([form, maybeSinceAdded, keepsName, scanned]): Form => {
   // The clock often ticks a few seconds after the last product was added: its snackbar shows, or has just gone.
   const maybeNow = Opt.match(form.maybeLastAdded, {
     onNone: () => form.maybeNow,
     onSome: ({ creationDate }) =>
       maybeSinceAdded === null ? form.maybeNow : Opt.some(DateTime.add(creationDate, { seconds: maybeSinceAdded })),
   })
-  // The name is often the last product's, as the page keeps it after adding one; while a lookup is going on or
-  // did not name the product, it is the barcode.
-  const maybeName = form.lookup._tag === 'Looking' || form.lookup._tag === 'NotFound' || form.lookup._tag === 'Failed'
-    ? Opt.some(form.lookup.barcode)
+  // The name is often the last product's, as the page keeps it after adding one; when the lookup did not name
+  // the product, it is the barcode scanned.
+  const maybeName = form.lookup._tag === 'NotFound' || form.lookup._tag === 'Failed'
+    ? Opt.some(scanned)
     : keepsName
     ? Opt.orElse(Opt.map(form.maybeLastAdded, ({ name }) => name), () => form.maybeName)
     : form.maybeName
@@ -99,6 +99,13 @@ const formAndDate: fc.Arbitrary<[Form, DateForm]> = fc.tuple(
 
 export const naming = form.map((form) => ({ _tag: 'Naming', form } as const))
 
+// The barcode looked up is the name, and no answer has come yet.
+export const lookingUp = fc.tuple(form, barcode).map(([form, barcode]) => ({
+  _tag: 'LookingUp',
+  form: { ...form, maybeName: Opt.some(barcode), lookup: { _tag: 'Idle' } },
+  barcode,
+} as const))
+
 // The scanner opens once the device can read barcodes; the answer changes then only when the camera fails.
 export const scanning = fc.tuple(form, fc.constantFrom<Camera>('Available', 'Unavailable')).map((
   [form, camera],
@@ -116,7 +123,7 @@ export const submitting = fc.tuple(formAndDate, product, fc.boolean(), fc.consta
   from,
 } as const))
 
-export const state: fc.Arbitrary<State> = fc.oneof(naming, scanning, dating, submitting)
+export const state: fc.Arbitrary<State> = fc.oneof(naming, lookingUp, scanning, dating, submitting)
 
 export const message: fc.Arbitrary<Message> = fc.oneof(
   fc.constant(Msg.BackPressed()),
