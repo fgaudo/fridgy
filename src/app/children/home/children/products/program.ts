@@ -113,11 +113,16 @@ type Freshness = UnitInterval.UnitInterval
 
 export type ProductStatus = Data.TaggedEnum<{
   Everlasting: object
-  Stale: Readonly<{ expirationDate: DateTime.Utc }>
+  /** Expired `daysAgo` days ago, two at least: yesterday has a case of its own. */
+  Stale: Readonly<{ expirationDate: DateTime.Utc; daysAgo: PositiveInteger.PositiveInteger }>
+  /** Good through yesterday, and no longer today. */
+  ExpiredYesterday: Readonly<{ expirationDate: DateTime.Utc }>
   /** Good through today, and no longer tomorrow. */
   ExpiringToday: Readonly<{ expirationDate: DateTime.Utc; freshness: Freshness }>
-  /** Good through today and `daysLeft - 1` more days: the expiration day counts. */
-  Fresh: Readonly<{ expirationDate: DateTime.Utc; daysLeft: PositiveInteger.PositiveInteger; freshness: Freshness }>
+  /** Good through tomorrow. */
+  ExpiringTomorrow: Readonly<{ expirationDate: DateTime.Utc; freshness: Freshness }>
+  /** Good through the day `inDays` days ahead, two at least: today and tomorrow have cases of their own. */
+  Fresh: Readonly<{ expirationDate: DateTime.Utc; inDays: PositiveInteger.PositiveInteger; freshness: Freshness }>
 }>
 
 export type ProductModel = Data.TaggedEnum<{
@@ -296,14 +301,20 @@ const expirationStatusAt = (now: DateTime.Utc, expiration: Domain.Expiration): P
   const { expirationDate } = expiration
   const status = Domain.expirationStatus(now)(expiration)
   if (status.hasExpired) {
-    return { _tag: 'Stale', expirationDate }
+    const { daysSinceExpiration } = status
+    return daysSinceExpiration === 1
+      ? { _tag: 'ExpiredYesterday', expirationDate }
+      : { _tag: 'Stale', expirationDate, daysAgo: PositiveInteger.makeUnsafe(daysSinceExpiration) }
   }
-  const { freshness } = status
-  // A day begun counts: some time is left, so at least one day is.
-  const daysLeft = Math.ceil(Duration.toDays(status.timeLeft))
-  return daysLeft === 1
-    ? { _tag: 'ExpiringToday', expirationDate, freshness }
-    : { _tag: 'Fresh', expirationDate, daysLeft: PositiveInteger.makeUnsafe(daysLeft), freshness }
+  const { freshness, daysUntilExpiration } = status
+  switch (daysUntilExpiration) {
+    case 0:
+      return { _tag: 'ExpiringToday', expirationDate, freshness }
+    case 1:
+      return { _tag: 'ExpiringTomorrow', expirationDate, freshness }
+    default:
+      return { _tag: 'Fresh', expirationDate, inDays: PositiveInteger.makeUnsafe(daysUntilExpiration), freshness }
+  }
 }
 
 /** The status of a product: `None` for one that expires while the clock has not ticked yet. */
@@ -464,7 +475,7 @@ export const program: Tea.Program<{
       state.selection._tag === 'Deleting'
         ? {
           state: { ...state, selection: Selection.Selecting({ ids: state.selection.ids }) },
-          commands: [Command.ShowToast({ text: 'Could not delete the products' })],
+          commands: [Command.ShowToast({ text: 'Couldn\'t delete the products' })],
         }
         : defect('DeleteFailed while no deletion is in progress: only a completion leaves Deleting'),
 
@@ -485,7 +496,7 @@ export const program: Tea.Program<{
     // Accepted in every state: the user may have done anything since asking, and the storage is as it was.
     RestoreFailed: () => (state) => ({
       state,
-      commands: [Command.ShowToast({ text: 'Could not put the products back' })],
+      commands: [Command.ShowToast({ text: 'Couldn\'t put the products back' })],
     }),
   }),
 

@@ -95,8 +95,10 @@ const freshnessBadge = (status: ProductStatus): VNode => {
         <span props={{ className: 'text-title-medium leading-none' }}>∞</span>,
       ])
     case 'Stale':
+    case 'ExpiredYesterday':
       return disc('bg-error text-on-error', expirationDay(status.expirationDate))
     case 'ExpiringToday':
+    case 'ExpiringTomorrow':
     case 'Fresh':
       return disc(
         'freshness-badge',
@@ -111,11 +113,15 @@ const supportingText = (status: ProductStatus) => {
     case 'Everlasting':
       return 'No expiration'
     case 'Stale':
-      return 'Expired'
+      return `Expired ${status.daysAgo} days ago`
+    case 'ExpiredYesterday':
+      return 'Expired yesterday'
     case 'ExpiringToday':
       return 'Expires today'
+    case 'ExpiringTomorrow':
+      return 'Expires tomorrow'
     case 'Fresh':
-      return `${status.daysLeft} days left`
+      return `Expires in ${status.inDays} days`
   }
 }
 
@@ -206,7 +212,7 @@ const validItem = (product: Data.TaggedEnum.Value<ProductModel, 'Valid'>, events
     freshnessBadge(product.status),
     product.name,
     supportingText(product.status),
-    product.status._tag === 'Stale' ? 'Error' : 'Plain',
+    product.status._tag === 'Stale' || product.status._tag === 'ExpiredYesterday' ? 'Error' : 'Plain',
     events,
   )
 
@@ -238,7 +244,7 @@ export const selectionBar = (model: Model, dispatch: Dispatch<Message>): VNode |
     <div props={{ className: 'flex h-16 items-center gap-1 px-1' }}>
       {iconButton(
         'close',
-        'Clear the selection',
+        'Clear selection',
         deletion._tag === 'Possible' ? deletion.clearSelection : undefined,
         events,
       )}
@@ -250,7 +256,7 @@ export const selectionBar = (model: Model, dispatch: Dispatch<Message>): VNode |
       </div>
       {iconButton(
         'delete',
-        'Delete the selected products',
+        'Delete',
         deletion._tag === 'Possible' ? deletion.deleteSelected : undefined,
         events,
       )}

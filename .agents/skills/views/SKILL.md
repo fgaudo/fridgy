@@ -14,7 +14,7 @@ A view matches the model's tags and formats its values; it never decides. Before
 ask whether it reads a tag the model gives (`model.support._tag === 'NamingNothing'`: drawing) or computes one from
 data (`model.digits === ''`, `choices.length === 0`, `text.trim().length > 0`, a fallback such as "the name, or
 else the id": deciding). A decision moves to `makeModel`, as a case named for what the screen shows
-(`Undated | Naming | NamingNothing`, `Loading | Loaded`, `ExpiringToday | Fresh { daysLeft }`), never as a boolean
+(`Undated | Naming | NamingNothing`, `Loading | Loaded`, `ExpiringToday | ExpiringTomorrow | Fresh { inDays }`), never as a boolean
 tag, and gets a property in `program.test.ts` ("the model", e.g. "says the date is undated, names the days the
 digits name, or names nothing"). What stays in the view: texts, formatting (`formatDay`), classes and layout,
 and matching two tags to one look (the date field, disabled while submitting and in the error's colors when
@@ -52,7 +52,7 @@ destinations); a form that opens over the page is a modal bottom sheet, within t
 text fields; selected things turn the top app bar into a contextual one with their actions; something undone in
 a few seconds (a deletion) gets a snackbar with its action, never a dialog; what only informs is a toast; a
 choice among a few values is a row of filter chips, the one taken drawn selected, and the action that commits
-a step is a filled button where the thumb rests, whose label says what it does ("Add without expiration"),
+a step is a filled button where the thumb rests, whose label says what it does ("Add without date"),
 never a chip nor a key of the keypad, which types the date and nothing else. A chip
 or a button that does nothing is text. Every top app bar is the same: a 64dp bar, the emphasized title, the
 surface's color at rest and `surface-container` once the page scrolls under it, which the page learns from its

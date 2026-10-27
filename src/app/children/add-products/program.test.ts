@@ -370,7 +370,7 @@ describe('AddProducts update', () => {
     assertProperty([state, fc.boolean()], (before, succeeded) => {
       const { after, commands } = step(Msg.OrderKept({ succeeded }), before)
       return Equal.equals(after, before)
-        && Equal.equals(commands, succeeded ? [] : [Cmd.ShowToast({ text: 'Could not keep the date format' })])
+        && Equal.equals(commands, succeeded ? [] : [Cmd.ShowToast({ text: 'Couldn\'t save the date order' })])
     })
   })
 
@@ -502,7 +502,7 @@ describe('AddProducts update', () => {
       })
     })
 
-    // After a product added as it is, the name stays: "Add without expiration" adds it again, so the snackbar's
+    // After a product added as it is, the name stays: "Add without date" adds it again, so the snackbar's
     // action would do the same; so would the second step's button, while its digits name the last product's day.
     test('offers to add the last product again exactly while update accepts it and the button of the step would not add it, on either step', () => {
       assertProperty([onAStep], (s) => {
@@ -677,7 +677,7 @@ describe('AddProducts update', () => {
       assertProperty([submitting], (before) => {
         const { after, commands } = step(Msg.Completed({ succeeded: false }), before)
         return Equal.equals(after, resumed(before.step, before.form))
-          && Equal.equals(commands, [Cmd.ShowToast({ text: 'Could not add the product' })])
+          && Equal.equals(commands, [Cmd.ShowToast({ text: 'Couldn\'t add the product' })])
       })
     })
   })

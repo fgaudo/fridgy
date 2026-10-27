@@ -13,7 +13,7 @@ import * as AddProducts from './children/add-products/program.ts'
 import * as Home from './children/home/program.ts'
 import { type Message, type Page, program, type State } from './program.ts'
 import {
-  addAnother,
+  addAgain,
   addProduct,
   back,
   checkCamera,
@@ -250,7 +250,7 @@ describe('Navigation', () => {
       expect(yield* listedNames(user)).toEqual(Opt.some(['4006381333931']))
     })))
 
-  test('a product added twice with Add another is listed twice', () =>
+  test('a product added twice with Add again is listed twice', () =>
     rehearsed(Effect.fnUntraced(function*(user) {
       yield* perform(user, [openAddProducts, typeName('Milk')])
       yield* checkCamera(user)
@@ -260,7 +260,7 @@ describe('Navigation', () => {
       // A moment later, as a user taps it: the repeat is created at the clock's time. The digits typed for the next
       // product meanwhile stay.
       yield* user.hearNext(['AddProducts', 'clock'])
-      yield* perform(user, [requestDate, typeDigit('3'), addAnother])
+      yield* perform(user, [requestDate, typeDigit('3'), addAgain])
       yield* user.run((command) => tagPath(command) === 'AddProducts › Add')
       expect(
         Opt.flatMap(addProductsState(yield* user.state), (page) =>

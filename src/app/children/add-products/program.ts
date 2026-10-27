@@ -88,7 +88,7 @@ export type Message = Data.TaggedEnum<{
   ScanRequested: object
   /** The scanner's close button. */
   ScanClosed: object
-  /** The first step's "Set the expiration": goes on to the second step. */
+  /** The first step's "Set expiration": goes on to the second step. */
   DateRequested: object
   /** The second step's back arrow: back to the name, the date forgotten. */
   DateDismissed: object
@@ -102,7 +102,7 @@ export type Message = Data.TaggedEnum<{
   OrderPicked: { order: DateOrder.DateOrder }
   /** Adds the product the step describes: never expiring from the first, expiring on the day named from the second. */
   Started: object
-  /** The snackbar's "Add another": adds the product added last again, created now. */
+  /** The snackbar's "Add again": adds the product added last again, created now. */
   Repeated: object
   /** The page's close button, on the first step. */
   Closed: object
@@ -519,7 +519,7 @@ export const program: Tea.Program<{
 
     // The order picked stays in use for this visit either way: only the failure to keep it is told.
     OrderKept: ({ succeeded }) => (state) =>
-      succeeded ? { state } : { state, commands: [Command.ShowToast({ text: 'Could not keep the date format' })] },
+      succeeded ? { state } : { state, commands: [Command.ShowToast({ text: 'Couldn\'t save the date order' })] },
 
     // The first barcode read closes the scanner, on the first step: whether the product expires is still to be
     // said.
@@ -576,7 +576,7 @@ export const program: Tea.Program<{
         }
         : {
           state: resume(state.step, state.form),
-          commands: [Command.ShowToast({ text: 'Could not add the product' })],
+          commands: [Command.ShowToast({ text: 'Couldn\'t add the product' })],
         }
     },
 
@@ -645,7 +645,7 @@ export const program: Tea.Program<{
     }
     const maybeJustAdded = Opt.filter(form.maybeLastAdded, (product) => isJustAdded(product, form.maybeNow))
     // The action is withheld while it would add what the step's button adds: after a product added as it is, the
-    // name stays, and "Add without expiration" adds it again; after the snackbar's, the second step keeps its
+    // name stays, and "Add without date" adds it again; after the snackbar's, the second step keeps its
     // digits, which may still name the same day.
     const justAdded = (maybeStepProduct: Opt.Option<Product.Product>) =>
       Opt.map(maybeJustAdded, (product): JustAdded => ({

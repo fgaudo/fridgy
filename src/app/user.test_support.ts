@@ -73,7 +73,7 @@ export const typeName = (name: string) =>
 /** The name field's clear button, while there is a name. */
 export const clearName = onAddProducts((form) => form._tag === 'Naming' ? form.maybeClearName : Opt.none())
 
-/** The first step's "Set the expiration", while the name is a product's. */
+/** The first step's "Set expiration", while the name is a product's. */
 export const requestDate = onAddProducts((form) => form._tag === 'Naming' ? form.maybeRequestDate : Opt.none())
 
 /** The keypad's key of a digit, on the second step, while a digit can be typed. */
@@ -98,8 +98,8 @@ export const addProduct = onAddProducts((form) =>
   form._tag === 'Naming' || form._tag === 'Dating' ? form.maybeAdd : Opt.none()
 )
 
-/** The snackbar's "Add another", while the product added last can be added again. */
-export const addAnother = onAddProducts((form) =>
+/** The snackbar's "Add again", while the product added last can be added again. */
+export const addAgain = onAddProducts((form) =>
   form._tag === 'Naming' || form._tag === 'Dating'
     ? Opt.flatMap(form.maybeJustAdded, ({ maybeRepeat }) => maybeRepeat)
     : Opt.none()

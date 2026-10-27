@@ -1,7 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 import * as Tea from '@fgaudo/effect-tea'
 import * as Data from 'effect/Data'
-import * as Duration from 'effect/Duration'
 import * as Equal from 'effect/Equal'
 import * as HashMap from 'effect/HashMap'
 import * as HashSet from 'effect/HashSet'
@@ -271,7 +270,7 @@ describe('Products update', () => {
         return after.selection._tag === 'Selecting'
           && Equal.equals(selectedIds(after.selection), selectedIds(before.selection))
           && onlyChanged(before, after, 'selection')
-          && Equal.equals(commands, [Cmd.ShowToast({ text: 'Could not delete the products' })])
+          && Equal.equals(commands, [Cmd.ShowToast({ text: 'Couldn\'t delete the products' })])
       })
     })
 
@@ -328,7 +327,7 @@ describe('Products update', () => {
     assertProperty([state], (before) => {
       const { after, commands } = step(Msg.RestoreFailed(), before)
       return Equal.equals(after, before)
-        && Equal.equals(commands, [Cmd.ShowToast({ text: 'Could not put the products back' })])
+        && Equal.equals(commands, [Cmd.ShowToast({ text: 'Couldn\'t put the products back' })])
     })
   })
 })
@@ -346,8 +345,6 @@ test('listens to the storage always, to the clock while a loaded product expires
 
 // A row's look and action, a product's status and the snackbar are decided here, not in the view.
 describe('Products model', () => {
-  const DAY = 86_400_000
-
   /** The rows of a loaded list at a known time. */
   const rows = (state: State) => {
     const { list } = program.makeModel(state)
@@ -394,7 +391,7 @@ describe('Products model', () => {
     })
   })
 
-  test('a valid product is stale once its expiration day is over, expiring on its last day, fresh before, and keeps the domain\'s freshness', () => {
+  test('a valid product expired yesterday the day after its expiration day, is stale later, expiring today on that day, tomorrow on the day before, fresh earlier, and keeps the domain\'s freshness', () => {
     assertProperty([shown], (s) => {
       const items = s.list._tag === 'Loaded' ? s.list.items : []
       return rows(s).every((row, index) => {
@@ -405,11 +402,17 @@ describe('Products model', () => {
           onSome: (expiration) => {
             // A product that expires is shown only at a known time.
             const status = Domain.expirationStatus(Opt.getOrThrow(s.maybeNow))(expiration)
-            if (status.hasExpired) return row.status._tag === 'Stale'
-            const daysLeft = Math.ceil(Duration.toMillis(status.timeLeft) / DAY)
-            return daysLeft === 1
+            if (status.hasExpired) {
+              return status.daysSinceExpiration === 1
+                ? row.status._tag === 'ExpiredYesterday'
+                : row.status._tag === 'Stale' && row.status.daysAgo === status.daysSinceExpiration
+            }
+            const { daysUntilExpiration } = status
+            return daysUntilExpiration === 0
               ? row.status._tag === 'ExpiringToday' && row.status.freshness === status.freshness
-              : row.status._tag === 'Fresh' && row.status.daysLeft === daysLeft
+              : daysUntilExpiration === 1
+              ? row.status._tag === 'ExpiringTomorrow' && row.status.freshness === status.freshness
+              : row.status._tag === 'Fresh' && row.status.inDays === daysUntilExpiration
                 && row.status.freshness === status.freshness
           },
         })

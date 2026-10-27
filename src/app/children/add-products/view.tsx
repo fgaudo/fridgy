@@ -20,9 +20,9 @@ const keys: ReadonlyArray<Digit> = ['1', '2', '3', '4', '5', '6', '7', '8', '9']
 const placeholders: Readonly<Record<DateOrder, string>> = { DMY: 'DDMMYY', MDY: 'MMDDYY', YMD: 'YYMMDD' }
 
 const hints: Readonly<Record<DateOrder, string>> = {
-  DMY: 'Day, month and, if needed, the year',
-  MDY: 'Month, day and, if needed, the year',
-  YMD: 'The year, if needed, then month and day',
+  DMY: 'Day and month, then year if needed',
+  MDY: 'Month and day, then year if needed',
+  YMD: 'Year if needed, then month and day',
 }
 
 const orderTitles: Readonly<Record<DateOrder, string>> = {
@@ -83,9 +83,10 @@ const appBar = (
 type Above = 'Nothing' | 'Fab'
 
 /**
- * Material's snackbar, in the room above a step's controls, and above its FAB: it says that the product was
- * added, with the action that adds it again while it can be, and while the step's own button would not. Keyed by
- * the product, so that the next one, a repeat included, appears anew.
+ * Material's snackbar, in the room above a step's controls, and above its FAB: its two lines say that the product
+ * was added, its name cut to the line, and when it expires, as the list says it, with the action that adds it
+ * again while it can be, and while the step's own button would not. Keyed by the product, so that the next one, a
+ * repeat included, appears anew.
  */
 const snackbar = ({ product, maybeRepeat }: JustAdded, above: Above, dispatch: Dispatch<Message>) => {
   const { on } = handlers(dispatch)
@@ -114,12 +115,18 @@ const snackbar = ({ product, maybeRepeat }: JustAdded, above: Above, dispatch: D
         ),
       }}
     >
-      <span props={{ className: 'min-w-0 flex-1 py-2 wrap-anywhere' }}>
-        {Opt.match(product.maybeExpirationDate, {
-          onNone: () => `Added ${product.name}, with no expiration`,
-          onSome: (date) => `Added ${product.name}, expiring ${formatDay(date)}`,
-        })}
-      </span>
+      <div props={{ className: 'flex min-w-0 flex-1 flex-col py-2' }}>
+        <span props={{ className: 'flex' }}>
+          <span props={{ className: 'min-w-0 truncate' }}>{product.name}</span>
+          <span props={{ className: 'shrink-0' }}>{' added'}</span>
+        </span>
+        <span>
+          {Opt.match(product.maybeExpirationDate, {
+            onNone: () => 'No expiration',
+            onSome: (date) => `Expires ${formatDay(date)}`,
+          })}
+        </span>
+      </div>
       {Opt.match(maybeRepeat, {
         onNone: () => [],
         onSome: (repeat) => [
@@ -127,7 +134,7 @@ const snackbar = ({ product, maybeRepeat }: JustAdded, above: Above, dispatch: D
             props={{ className: 'state-layer h-10 shrink-0 rounded-full px-3 text-label-large text-inverse-primary' }}
             on={on('click', repeat)}
           >
-            Add another
+            Add again
           </button>,
         ],
       })}
@@ -236,7 +243,7 @@ const nameField = (shown: NameShown, activity: NameActivity, dispatch: Dispatch<
                   'state-layer material-symbols-rounded absolute top-1 right-1 flex h-12 w-12 items-center',
                   'justify-center rounded-full text-on-surface-variant',
                 ),
-                title: 'Clear the name',
+                title: 'Clear name',
               }}
               on={on('click', clear)}
             >
@@ -248,7 +255,7 @@ const nameField = (shown: NameShown, activity: NameActivity, dispatch: Dispatch<
       {shown.camera === 'Unavailable'
         ? [
           <div props={{ className: 'px-4 text-body-small text-on-surface-variant' }}>
-            The camera is not available: type the product's name
+            Camera not available. Type the name
           </div>,
         ]
         : []}
@@ -271,7 +278,7 @@ const scanFab = (maybeScan: Opt.Option<Message>, dispatch: Dispatch<Message>) =>
           'justify-center rounded-large bg-tertiary-container text-on-tertiary-container shadow-elevation-3',
           'transition-colors disabled:bg-on-surface/12 disabled:text-on-surface/38 disabled:shadow-none',
         ),
-        title: 'Scan a barcode',
+        title: 'Scan barcode',
         disabled: Opt.isNone(maybeScan),
       }}
       on={Opt.match(maybeScan, { onNone: () => ({}), onSome: (scan) => on('click', scan) })}
@@ -308,13 +315,13 @@ const nameStep = (
         {nameField(shown, activity, dispatch)}
         {room(maybeJustAdded, dispatch, 'Fab', scanFab(Opt.flatMap(controls, ({ maybeScan }) => maybeScan), dispatch))}
         {button(
-          'Set the expiration',
+          'Set expiration',
           Opt.flatMap(controls, ({ maybeRequestDate }) => maybeRequestDate),
           'Filled',
           dispatch,
         )}
         {button(
-          activity._tag === 'Adding' ? 'Adding…' : 'Add without expiration',
+          activity._tag === 'Adding' ? 'Adding…' : 'Add without date',
           Opt.flatMap(controls, ({ maybeAdd }) => maybeAdd),
           'Text',
           dispatch,
@@ -462,7 +469,7 @@ const strip = (shown: DateShown, activity: DateActivity, dispatch: Dispatch<Mess
         <span props={{ className: 'px-4' }}>{shown.order._tag === 'Known' ? hints[shown.order.order] : ''}</span>,
       ],
       Naming: ({ choices }) => choices.map((choice) => chip(choice, activity, dispatch)),
-      NamingNothing: () => [<span props={{ className: 'px-4' }}>No day ahead matches these digits</span>],
+      NamingNothing: () => [<span props={{ className: 'px-4' }}>Not an upcoming date</span>],
     })}
   </div>
 )
@@ -498,12 +505,12 @@ const keypad = (activity: DateActivity, dispatch: Dispatch<Message>) => {
     <div props={{ className: 'grid grid-cols-3 gap-2' }}>
       {keys.map(digitKey)}
       {key('cancel', Opt.flatMap(controls, ({ maybeClearDate }) => maybeClearDate), {
-        title: 'Clear the date',
+        title: 'Clear date',
         isIcon: true,
       })}
       {digitKey('0')}
       {key('backspace', Opt.flatMap(controls, ({ maybeEraseDigit }) => maybeEraseDigit), {
-        title: 'Erase a digit',
+        title: 'Backspace',
         isIcon: true,
       })}
     </div>
@@ -543,7 +550,7 @@ const dateStep = (
       }}
       props={{ className: 'absolute inset-0 flex flex-col bg-surface text-on-surface' }}
     >
-      {appBar('Add products', 'arrow_back', 'Back to the name', Opt.map(controls, ({ back }) => back), dispatch)}
+      {appBar('Add products', 'arrow_back', 'Back', Opt.map(controls, ({ back }) => back), dispatch)}
       <div props={{ className: cn('flex flex-1 flex-col gap-3', stepPadding) }}>
         <div props={{ className: 'flex flex-col px-4 pb-2' }}>
           <span props={{ className: 'text-label-medium text-on-surface-variant' }}>Product</span>
@@ -587,7 +594,7 @@ const scanner = (model: Model & { _tag: 'Scanning' }, dispatch: Dispatch<Message
     }}
     props={{ className: 'absolute inset-0 flex flex-col' }}
   >
-    {appBar('Scan a barcode', 'close', 'Close', Opt.some(model.closeScanner), dispatch)}
+    {appBar('Scan barcode', 'close', 'Close', Opt.some(model.closeScanner), dispatch)}
     <div
       style={{
         backgroundColor: 'var(--color-surface)',
@@ -602,12 +609,12 @@ const scanner = (model: Model & { _tag: 'Scanning' }, dispatch: Dispatch<Message
         : (
           <div props={{ className: 'flex flex-col items-center gap-2 px-4 text-center text-on-surface-variant' }}>
             <span props={{ className: 'material-symbols-rounded icon-large' }}>no_photography</span>
-            <span props={{ className: 'text-body-medium' }}>The camera is not available: type the product's name</span>
+            <span props={{ className: 'text-body-medium' }}>Camera not available. Type the name</span>
           </div>
         )}
     </div>
     <div props={{ className: cn('bg-surface pt-4 text-center text-body-medium text-on-surface-variant', stepPadding) }}>
-      {model.camera === 'Available' ? 'Point the camera at the product\'s barcode' : ''}
+      {model.camera === 'Available' ? 'Point the camera at a barcode' : ''}
     </div>
   </div>
 )

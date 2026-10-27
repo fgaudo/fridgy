@@ -114,15 +114,24 @@ const freshness = (currentDate: DateTime.Utc, creationDate: DateTime.Utc, end: D
   return UnitInterval.makeUnsafe(Duration.toMillis(remainingDuration) / Duration.toMillis(totalDuration))
 }
 
+/** The days from the day of `from` to the day of `to`: whole, and 0 on the same day. */
+const daysBetween = (from: DateTime.Utc, to: DateTime.Utc) =>
+  Duration.toDays(DateTime.distance(DateTime.startOf(from, 'day'), DateTime.startOf(to, 'day')))
+
+/**
+ * Whether a product has expired at `currentDate`, and since how many days (1 the day after its expiration day),
+ * or how much of its life is left and in how many days it expires (0 on the expiration day, 1 the day before):
+ * the calendar's counts, which change at midnight only, as the user counts from the date on the package.
+ */
 export const expirationStatus = (currentDate: DateTime.Utc) => ({ creationDate, expirationDate }: Expiration) => {
   const end = expiresAt(expirationDate)
   if (DateTime.isGreaterThanOrEqualTo(currentDate, end)) {
-    return { hasExpired: true } as const
+    return { hasExpired: true, daysSinceExpiration: daysBetween(expirationDate, currentDate) } as const
   }
   return {
     // A product ends after it is created (see `canExpireOn`), so the total duration is never zero.
     freshness: freshness(currentDate, creationDate, end),
     hasExpired: false,
-    timeLeft: DateTime.distance(currentDate, end),
+    daysUntilExpiration: daysBetween(currentDate, expirationDate),
   } as const
 }

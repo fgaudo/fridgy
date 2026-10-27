@@ -1,6 +1,5 @@
 import { describe, expect, test } from 'bun:test'
 import * as DateTime from 'effect/DateTime'
-import * as Duration from 'effect/Duration'
 import * as Equal from 'effect/Equal'
 import * as Opt from 'effect/Option'
 import * as fc from 'fast-check'
@@ -120,19 +119,43 @@ describe('Product expiration', () => {
       })))
   })
 
-  test('before expiring, the time left reaches the end of the expiration day and freshness is in [0, 1]', () => {
+  test('the days until the expiration day, or since it, count the midnights between now and it, and freshness is in [0, 1] before it', () => {
     fc.assert(fc.property(product, date, (p, now) =>
       Opt.match(Product.maybeExpiration(p), {
         onNone: () => true,
         onSome: (expiration) => {
           const status = Product.expirationStatus(now)(expiration)
-          if (status.hasExpired) return true
-          const end = endOfDay(expiration.expirationDate)
-          return Duration.toMillis(status.timeLeft) === DateTime.toEpochMillis(end) - DateTime.toEpochMillis(now)
+          const midnights = (DateTime.toEpochMillis(DateTime.startOf(expiration.expirationDate, 'day'))
+            - DateTime.toEpochMillis(DateTime.startOf(now, 'day'))) / DAY
+          if (status.hasExpired) return status.daysSinceExpiration === -midnights && midnights < 0
+          return status.daysUntilExpiration === midnights
+            && midnights >= 0
             && status.freshness >= 0
             && status.freshness <= 1
         },
       })))
+  })
+
+  // Expiring on the third day: the counts change at midnight only, whatever the time of day.
+  test('the days until the expiration day are 0 on it and 1 the day before, those since it 1 the day after, and both change at midnight only', () => {
+    const expiration = Opt.getOrThrow(Product.maybeExpiration(Opt.getOrThrow(Product.make({
+      name: 'Milk',
+      creationDate: DateTime.makeUnsafe(0),
+      maybeExpirationDate: Opt.some(DateTime.makeUnsafe(2 * DAY + 1_000)),
+    }))))
+    const daysAt = (ms: number) => {
+      const status = Product.expirationStatus(DateTime.makeUnsafe(ms))(expiration)
+      return status.hasExpired ? `${status.daysSinceExpiration} since` : `${status.daysUntilExpiration} until`
+    }
+    expect(daysAt(0)).toBe('2 until')
+    expect(daysAt(DAY - 1)).toBe('2 until')
+    expect(daysAt(DAY)).toBe('1 until')
+    expect(daysAt(2 * DAY - 1)).toBe('1 until')
+    expect(daysAt(2 * DAY)).toBe('0 until')
+    expect(daysAt(3 * DAY - 1)).toBe('0 until')
+    expect(daysAt(3 * DAY)).toBe('1 since')
+    expect(daysAt(4 * DAY - 1)).toBe('1 since')
+    expect(daysAt(4 * DAY)).toBe('2 since')
   })
 
   // Created at the start of a day and expiring that same day: fresh for the whole day.
