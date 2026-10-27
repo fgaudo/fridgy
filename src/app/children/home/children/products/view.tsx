@@ -79,7 +79,7 @@ const item = (
     props={{
       className: cn(
         'state-layer flex h-18 items-center gap-4 pl-4 pr-6 select-none [-webkit-touch-callout:none]',
-        'transition-colors duration-200',
+        'transition-colors',
         selection.isSelected ? 'bg-secondary-container text-on-secondary-container' : 'text-on-surface',
       ),
     }}

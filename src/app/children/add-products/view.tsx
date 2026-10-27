@@ -48,9 +48,15 @@ const snackbar = (model: Model): ReadonlyArray<VNode> =>
         style={{
           opacity: '0',
           transform: 'translateY(0.5rem)',
-          transition: 'opacity 150ms, transform 150ms',
+          transitionProperty: 'opacity, transform',
+          transitionDuration: 'var(--transition-duration-short-3)',
+          transitionTimingFunction: 'var(--ease-standard-decelerate)',
           delayed: { opacity: '1', transform: 'translateY(0)' },
-          remove: { opacity: '0' },
+          remove: {
+            opacity: '0',
+            transitionDuration: 'var(--transition-duration-short-2)',
+            transitionTimingFunction: 'var(--ease-standard-accelerate)',
+          },
         }}
         props={{
           className:
@@ -115,7 +121,7 @@ const nameField = (model: Model, dispatch: Dispatch<Message>) => {
         props={{
           className: cn(
             'pointer-events-none absolute top-0 left-3 -translate-y-1/2 bg-surface px-1 text-body-small',
-            'text-on-surface-variant transition-all duration-150 peer-placeholder-shown:top-1/2',
+            'text-on-surface-variant transition-all duration-short-3 peer-placeholder-shown:top-1/2',
             'peer-placeholder-shown:text-body-large peer-focus:top-0 peer-focus:text-body-small',
             'peer-focus:text-primary peer-disabled:text-on-surface/38',
           ),
@@ -246,7 +252,7 @@ export const view: View<Model, Message> = (model, dispatch) => (
   <div
     style={{
       transform: 'translateY(100%)',
-      transition: 'transform 250ms cubic-bezier(0.05, 0.7, 0.1, 1)',
+      transition: 'transform var(--transition-duration-medium-4) var(--ease-emphasized-decelerate)',
       delayed: { transform: 'translateY(0)' },
     }}
     props={{ className: 'fixed inset-0 flex flex-col' }}

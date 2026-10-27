@@ -2,9 +2,9 @@
 @import "material-symbols/rounded.css";
 
 /*
- * Material 3: the color roles of `palette.generated.css`, and here its type scale, shapes and elevation. Views use
- * only these (`bg-surface-container`, `text-title-medium`, `rounded-large`), as Material's components do:
- * Tailwind's own colors, font sizes, radii and shadows are left out.
+ * Material 3: the color roles of `palette.generated.css`, and here its type scale, shapes, elevation and motion.
+ * Views use only these (`bg-surface-container`, `text-title-medium`, `rounded-large`, `duration-short-3`), as
+ * Material's components do: Tailwind's own colors, font sizes, radii, shadows, easings and durations are left out.
  */
 @import "./palette.generated.css";
 
@@ -81,6 +81,35 @@
   --shadow-elevation-5:
     0 4px 4px 0 color-mix(in oklab, var(--color-shadow) 30%, transparent),
     0 8px 12px 6px color-mix(in oklab, var(--color-shadow) 15%, transparent);
+  /*
+   * Material's motion: its easing curves and its durations. A simple change (a color, an elevation, a size)
+   * takes the standard curve over a short duration, the default of the `transition-*` utilities; what enters
+   * decelerates, emphasized, over a medium one, and what leaves accelerates over a short one.
+   */
+  --ease-*: initial;
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ease-standard-decelerate: cubic-bezier(0, 0, 0, 1);
+  --ease-standard-accelerate: cubic-bezier(0.3, 0, 1, 1);
+  --ease-emphasized-decelerate: cubic-bezier(0.05, 0.7, 0.1, 1);
+  --ease-emphasized-accelerate: cubic-bezier(0.3, 0, 0.8, 0.15);
+  --transition-duration-short-1: 50ms;
+  --transition-duration-short-2: 100ms;
+  --transition-duration-short-3: 150ms;
+  --transition-duration-short-4: 200ms;
+  --transition-duration-medium-1: 250ms;
+  --transition-duration-medium-2: 300ms;
+  --transition-duration-medium-3: 350ms;
+  --transition-duration-medium-4: 400ms;
+  --transition-duration-long-1: 450ms;
+  --transition-duration-long-2: 500ms;
+  --transition-duration-long-3: 550ms;
+  --transition-duration-long-4: 600ms;
+  --transition-duration-extra-long-1: 700ms;
+  --transition-duration-extra-long-2: 800ms;
+  --transition-duration-extra-long-3: 900ms;
+  --transition-duration-extra-long-4: 1000ms;
+  --default-transition-timing-function: var(--ease-standard);
+  --default-transition-duration: var(--transition-duration-short-4);
   --spacing-sait: var(--safe-area-inset-top, env(safe-area-inset-top, 0px));
   --spacing-saib: var(
     --safe-area-inset-bottom,
@@ -171,7 +200,7 @@ html {
     background-color: currentColor;
     opacity: 0;
     pointer-events: none;
-    transition: opacity 150ms;
+    transition: opacity var(--transition-duration-short-3) var(--ease-standard);
   }
   @media (hover: hover) {
     &:hover::after {

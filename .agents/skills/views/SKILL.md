@@ -42,7 +42,7 @@ A control is the Material component that does its job, built to that component's
 elevation): a list of things is a list, not cards; an action of the page is a FAB or a top app bar's icon
 button; a form that opens over the page is a modal bottom sheet, within the thumb's reach, with outlined text
 fields; selected things turn the top app bar into a contextual one with their actions. The theme leaves out
-Tailwind's own colors, font sizes, radii and shadows:
+Tailwind's own colors, font sizes, radii, shadows, easings and durations:
 
 - colors are Material's roles (`src/palette.generated.css`, generated from the key colors in
   `scripts/palette.ts`: change those and run `bun run update-palette`, never the generated file). What is
@@ -54,6 +54,12 @@ Tailwind's own colors, font sizes, radii and shadows:
   container role (`bg-surface-container-low` for a drawer), not from a shadow alone;
 - what can be pressed carries `state-layer`, Material's feedback on hover, focus and press; the layer behind a
   modal or a menu is `scrim`, both in `src/styles.css`;
+- motion is Material's easing curves (`ease-standard`, `ease-emphasized-decelerate`) and durations
+  (`duration-short-3`, `duration-medium-4`), in `src/styles.css`. A simple change (a color, an elevation, a size)
+  takes the standard curve over `short-4`, the default of the `transition-*` utilities. What enters decelerates,
+  emphasized, over `medium-4`, and what leaves accelerates over `short-4`: an element inserted and removed sets
+  its `transition` in snabbdom's `delayed` and `remove` styles, with `var(--transition-duration-medium-4)` and
+  `var(--ease-emphasized-decelerate)`, never a number of milliseconds or a `cubic-bezier`;
 - icons are `material-symbols-rounded` spans; the safe areas are the `sait`, `saib`, `sail`, `sair` spacings
   (`pt-sait`, `mr-sair`).
 

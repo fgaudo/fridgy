@@ -66,7 +66,9 @@ export const view: View<Model, Message> = (model, dispatch) => {
       style={{
         opacity: '0',
         transform: 'translateY(30px)',
-        transition: 'opacity 400ms, transform 400ms cubic-bezier(0.33, 1, 0.68, 1)',
+        transitionProperty: 'opacity, transform',
+        transitionDuration: 'var(--transition-duration-medium-4)',
+        transitionTimingFunction: 'var(--ease-emphasized-decelerate)',
         delayed: { opacity: '1', transform: 'none' },
       }}
     >

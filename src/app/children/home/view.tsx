@@ -15,7 +15,7 @@ const addButton = (model: Model, { on }: Handlers<Message>) => (
       className: cn(
         'state-layer fixed right-4 bottom-4 z-30 mr-sair mb-saib flex h-14 items-center rounded-large px-4',
         'bg-primary-container text-on-primary-container shadow-elevation-3 hover:shadow-elevation-4',
-        'transition-shadow duration-200',
+        'transition-shadow',
       ),
       title: 'Add products',
     }}
@@ -25,7 +25,7 @@ const addButton = (model: Model, { on }: Handlers<Message>) => (
     <span
       props={{
         className: cn(
-          'overflow-hidden whitespace-nowrap text-label-large transition-[max-width,margin,opacity] duration-200',
+          'overflow-hidden whitespace-nowrap text-label-large transition-[max-width,margin,opacity]',
           model.isInteracting ? 'ml-0 max-w-0 opacity-0' : 'ml-3 max-w-40 opacity-100',
         ),
       }}
@@ -35,12 +35,12 @@ const addButton = (model: Model, { on }: Handlers<Message>) => (
   </button>
 )
 
-/** Fades in once inserted, and out before being removed. */
+/** Fades in once inserted, and out before being removed, at the pace of the drawer it covers for. */
 const fade: VNodeStyle = {
   opacity: '0',
-  transition: 'opacity 200ms',
+  transition: 'opacity var(--transition-duration-medium-4) var(--ease-emphasized-decelerate)',
   delayed: { opacity: '1' },
-  remove: { opacity: '0' },
+  remove: { opacity: '0', transition: 'opacity var(--transition-duration-short-4) var(--ease-emphasized-accelerate)' },
 }
 
 /** Material's modal navigation drawer, over the scrim; a tap on the scrim closes it. */
@@ -52,9 +52,12 @@ const sideMenu = (menu: Model['menu'], { on }: Handlers<Message>): ReadonlyArray
         key='side-menu'
         style={{
           transform: 'translateX(-100%)',
-          transition: 'transform 200ms',
+          transition: 'transform var(--transition-duration-medium-4) var(--ease-emphasized-decelerate)',
           delayed: { transform: 'translateX(0)' },
-          remove: { transform: 'translateX(-100%)' },
+          remove: {
+            transform: 'translateX(-100%)',
+            transition: 'transform var(--transition-duration-short-4) var(--ease-emphasized-accelerate)',
+          },
         }}
         props={{
           className:
@@ -108,7 +111,7 @@ export const view: View<Model, Message> = (model, dispatch) => {
     <div
       props={{
         className: cn(
-          'fixed top-0 z-40 w-full pt-sait pl-sail pr-sair transition-colors duration-200',
+          'fixed top-0 z-40 w-full pt-sait pl-sail pr-sair transition-colors',
           selectionBar !== undefined
             ? 'bg-secondary-container text-on-secondary-container'
             : isAtTop
