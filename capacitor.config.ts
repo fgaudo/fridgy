@@ -6,7 +6,9 @@ const config: CapacitorConfig = {
   webDir: 'dist',
   server: { errorPath: 'error.html' },
   android: {
-    // Tailwind 4 (`@property`, `color-mix`: 111) and the database (OPFS sync access handles: 109) need it.
+    // The lowest version with everything the app uses: the `scrollend` event (114; without it the list never snaps
+    // back to the top after the first scroll), Tailwind 4 and the shadows' `color-mix` (111), the database's
+    // synchronous OPFS access handles (108).
     minWebViewVersion: 114,
   },
   plugins: {

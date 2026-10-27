@@ -38,4 +38,8 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- The barcode scanner: the WebView asks for it at runtime when the page opens the camera. The feature is
+         optional, or the store would hide the app from devices without a camera, where the name is typed. -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
 </manifest>
