@@ -156,7 +156,7 @@ describe('OpenFoodFacts.fetchProduct', () => {
       Effect.gen(function*() {
         const { fetchProduct } = yield* OpenFoodFacts
         const fiber = yield* Effect.forkChild(fetchProduct('8076800195057', 'it'))
-        yield* TestClock.adjust('9 seconds')
+        yield* TestClock.adjust('4 seconds')
         expect(fiber.pollUnsafe()).toBeUndefined()
         yield* TestClock.adjust('1 second')
         return yield* Fiber.await(fiber)

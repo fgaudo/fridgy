@@ -138,6 +138,12 @@ const looking = fc.tuple(state, barcode).map(([s, code]) =>
   [withForm(s, { lookup: { _tag: 'Looking', barcode: code }, maybeName: Opt.some(code) }), code] as const
 )
 
+/** Whether the page waits for the lookup on the first step, which then takes only its cancellation and closing. */
+const waitsForLookup = (state: State) => state._tag === 'Naming' && state.form.lookup._tag === 'Looking'
+
+/** The first step, its controls offered: no lookup is going on. */
+const editingName = naming.filter((s) => !waitsForLookup(s))
+
 const onAStep = fc.oneof(naming, dating)
 
 const offAnyStep = fc.oneof(scanning, submitting)
@@ -161,14 +167,16 @@ describe('AddProducts update', () => {
   // Each message the view sends is accepted in the state it was rendered from; sent twice from the same frame,
   // it acts once, but the keypad's digit keys, which are meant to repeat, and the close button, whose second
   // press the parent ignores once the page is gone. And what the user could ask for and `update` accepts is in
-  // the view, but the name's input off the first step, where it is covered or disabled, and the snackbar's
-  // action where the step's own button would add the same product.
+  // the view, but the name's input off the first step, where it is covered or disabled, the snackbar's action
+  // where the step's own button would add the same product, and every control of the first step but cancelling
+  // and closing while the lookup goes on.
   test('the view sends what update accepts, all of it, and acts once when sent twice', () => {
     const check = dispatchViolations(program.update, {
       repeatable: (msg) => msg._tag === 'DigitTyped' || msg._tag === 'DigitErased' || msg._tag === 'Closed',
       withheld: (msg, state) =>
         (msg._tag === 'NameChanged' && state._tag !== 'Naming')
-        || (msg._tag === 'Repeated' && (state._tag === 'Naming' || state._tag === 'Dating') && addsLastAgain(state)),
+        || (msg._tag === 'Repeated' && (state._tag === 'Naming' || state._tag === 'Dating') && addsLastAgain(state))
+        || (waitsForLookup(state) && msg._tag !== 'LookupCancelled' && msg._tag !== 'Closed'),
     })
     fc.assert(fc.property(state, fc.string(), utc, (before, inputValue, date) => {
       const offered = before._tag === 'Dating' ? offeredDates(before.form, before.date) : []
@@ -180,6 +188,7 @@ describe('AddProducts update', () => {
         Msg.DateRequested(),
         Msg.DateDismissed(),
         Msg.Closed(),
+        Msg.LookupCancelled(),
         Msg.Repeated(),
         Msg.DigitErased(),
         Msg.DateCleared(),
@@ -298,6 +307,19 @@ describe('AddProducts update', () => {
           }),
       )
     })
+  })
+
+  // The runtime interrupts the lookup's subscription: its answer never arrives.
+  test('LookupCancelled stops the lookup on the first step, the barcode kept as the name, and is rejected otherwise', () => {
+    assertProperty([fc.oneof(state, looking.map(([s]) => s))], (before) =>
+      waitsForLookup(before)
+        ? Equal.equals(step(Msg.LookupCancelled(), before), {
+          rejected: false,
+          after: withForm(before, { lookup: { _tag: 'Idle' } }),
+          commands: [],
+          events: [],
+        })
+        : rejects(Msg.LookupCancelled(), before))
   })
 
   // The scanner stays open, saying so, until the user closes it.
@@ -533,7 +555,7 @@ describe('AddProducts update', () => {
   // What the view draws is decided here, so that it is checked for any state.
   describe('the model', () => {
     test('offers both ways out of the first step exactly while the name is a product\'s', () => {
-      assertProperty([naming], (s) => {
+      assertProperty([editingName], (s) => {
         const model = makeModel(s)
         const maybeProduct = productOf(s.form, Opt.none())
         return model._tag === 'Naming'
@@ -551,7 +573,7 @@ describe('AddProducts update', () => {
     })
 
     test('offers the scanner once the device can read barcodes', () => {
-      assertProperty([naming], (s) => {
+      assertProperty([editingName], (s) => {
         const model = makeModel(s)
         return model._tag === 'Naming'
           && Equal.equals(model.maybeScan, s.form.camera === 'Available' ? Opt.some(Msg.ScanRequested()) : Opt.none())
@@ -561,7 +583,7 @@ describe('AddProducts update', () => {
     // After a product added as it is, the name stays: "Add without date" adds it again, so the snackbar's
     // action would do the same; so would the second step's button, while its digits name the last product's day.
     test('offers to add the last product again exactly while update accepts it and the button of the step would not add it, on either step', () => {
-      assertProperty([onAStep], (s) => {
+      assertProperty([fc.oneof(editingName, dating)], (s) => {
         const model = makeModel(s)
         if (model._tag !== 'Naming' && model._tag !== 'Dating') return false
         const maybeRepeat = Opt.flatMap(model.maybeJustAdded, ({ maybeRepeat }) => maybeRepeat)
@@ -572,7 +594,7 @@ describe('AddProducts update', () => {
       })
     })
 
-    test('shows the snackbar for 6 seconds from when the product was added, but under the scanner', () => {
+    test('shows the snackbar for 6 seconds from when the product was added, but under the scanner and while the lookup goes on', () => {
       const seconds = fc.integer({ min: -10, max: 10 })
       assertProperty([state, seconds], (before, elapsed) =>
         Opt.match(before.form.maybeLastAdded, {
@@ -586,9 +608,28 @@ describe('AddProducts update', () => {
               : model._tag === 'Adding'
               ? model.maybeJustAdded
               : Opt.none()
-            return Equal.equals(shown, before._tag !== 'Scanning' && elapsed < 6 ? Opt.some(product) : Opt.none())
+            return Equal.equals(
+              shown,
+              before._tag !== 'Scanning' && !waitsForLookup(before) && elapsed < 6 ? Opt.some(product) : Opt.none(),
+            )
           },
         }))
+    })
+
+    test('waits for the lookup on the first step exactly while it goes on, offering only to cancel it and to close', () => {
+      assertProperty([fc.oneof(state, looking.map(([s]) => s))], (s) => {
+        const model = makeModel(s)
+        return waitsForLookup(s)
+          ? Equal.equals(model, {
+            _tag: 'LookingUp',
+            supporting: { _tag: 'LookingUp' },
+            name: Opt.getOrElse(s.form.maybeName, () => ''),
+            nameKey: s.form.replacements,
+            close: Msg.Closed(),
+            cancelLookup: Msg.LookupCancelled(),
+          })
+          : model._tag !== 'LookingUp'
+      })
     })
 
     test('the first step shows the name, drawn anew with each replacement, in every state, and the scanner the camera', () => {
@@ -695,7 +736,7 @@ describe('AddProducts update', () => {
     })
 
     test('offers to clear the name exactly while update accepts it', () => {
-      assertProperty([naming], (s) => {
+      assertProperty([editingName], (s) => {
         const model = makeModel(s)
         return model._tag === 'Naming'
           && Equal.equals(

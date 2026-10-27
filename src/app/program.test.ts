@@ -16,6 +16,7 @@ import {
   addAgain,
   addProduct,
   back,
+  cancelLookup,
   checkCamera,
   clearName,
   deleteSelected,
@@ -281,14 +282,22 @@ describe('Navigation', () => {
       expect(yield* listedNames(user)).toEqual(Opt.some(['4006381333931']))
     })))
 
-  test('typing the name while a barcode is looked up stops the lookup', () =>
+  // The page waits for the lookup: the name it would add may be replaced a moment later.
+  test('a lookup cancelled stops, and the barcode names the product added', () =>
     rehearsed(Effect.fnUntraced(function*(user) {
       yield* user.send(openAddProducts)
       yield* checkCamera(user)
+      yield* user.hearNext(['AddProducts', 'clock'])
       yield* scan(user, '4006381333931')
       expect(looksUp(yield* user.state)).toBe(true)
-      yield* user.send(typeName('Milk'))
+      expect(addProduct(yield* user.model)).toEqual(Opt.none())
+      yield* user.send(cancelLookup)
       expect(looksUp(yield* user.state)).toBe(false)
+      yield* user.send(addProduct)
+      yield* user.run((command) => tagPath(command) === 'AddProducts › Add')
+      yield* back(user)
+      yield* user.hearNext(['Home', ['Products', 'changes']])
+      expect(yield* listedNames(user)).toEqual(Opt.some(['4006381333931']))
     })))
 
   test('a product added twice with Add again is listed twice', () =>

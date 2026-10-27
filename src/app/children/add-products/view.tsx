@@ -42,11 +42,12 @@ const orderTitles: Readonly<Record<DateOrder, string>> = {
 }
 
 /**
- * What the first step does: its controls take, it is hidden under the scanner, it waits under the second step,
- * or it is disabled while adding.
+ * What the first step does: its controls take, it waits for the lookup, which only its cancel and close buttons
+ * take, it is hidden under the scanner, it waits under the second step, or it is disabled while adding.
  */
 type NameActivity = Readonly<
   | { _tag: 'Editing'; controls: Model & { _tag: 'Naming' } }
+  | { _tag: 'LookingUp'; controls: Model & { _tag: 'LookingUp' } }
   | { _tag: 'UnderScanner' }
   | { _tag: 'UnderDate' }
   | { _tag: 'Adding' }
@@ -222,9 +223,24 @@ const supportingText = (supporting: Supporting) => (
   </div>
 )
 
+/** Material's circular progress indicator, 24dp, where the field's trailing icon button goes. */
+const progress = (
+  <span
+    props={{
+      className: cn(
+        'material-symbols-rounded pointer-events-none absolute top-1 right-1 flex h-12 w-12 items-center',
+        'justify-center text-primary',
+      ),
+      title: 'Looking up the product',
+    }}
+  >
+    <span props={{ className: 'animate-spin' }}>progress_activity</span>
+  </span>
+)
+
 /**
  * Material's outlined text field of the name, with its trailing icon button, which clears it, shown while there
- * is one. Drawn anew (with the new name) and focused, so that the keyboard is up, when a scan or a clearing
+ * is one, or the progress of the lookup, while the field is disabled. Drawn anew (with the new name) and focused, so that the keyboard is up, when a scan or a clearing
  * replaces it and when a product was added. Its supporting text says where a scanned name came from, or when the
  * camera is not available, and the name can only be typed.
  */
@@ -240,14 +256,14 @@ const nameField = (shown: NameShown, activity: NameActivity, dispatch: Dispatch<
             props={{
               type: 'text',
               enterKeyHint: 'next',
-              disabled: activity._tag === 'Adding' || activity._tag === 'UnderDate',
+              disabled: activity._tag === 'Adding' || activity._tag === 'UnderDate' || activity._tag === 'LookingUp',
               placeholder: ' ',
               className: cn(
                 'peer h-14 w-full rounded-extra-small border border-outline bg-transparent pl-4',
                 'text-body-large text-on-surface caret-primary outline-none inset-ring-primary',
                 'placeholder:text-transparent hover:border-on-surface focus:border-primary focus:inset-ring-1',
                 'disabled:border-on-surface/12 disabled:text-on-surface/38',
-                Opt.isSome(maybeClearName) ? 'pr-13' : 'pr-4',
+                Opt.isSome(maybeClearName) || activity._tag === 'LookingUp' ? 'pr-13' : 'pr-4',
               ),
             }}
             on={activity._tag === 'Editing' ? onValue('input', activity.controls.changeName, inputValue) : {}}
@@ -266,7 +282,7 @@ const nameField = (shown: NameShown, activity: NameActivity, dispatch: Dispatch<
           </span>
         </label>
         {Opt.match(maybeClearName, {
-          onNone: () => [],
+          onNone: () => activity._tag === 'LookingUp' ? [progress] : [],
           onSome: (clear) => [
             <button
               props={{
@@ -327,6 +343,9 @@ const nameStep = (
   dispatch: Dispatch<Message>,
 ) => {
   const controls = activity._tag === 'Editing' ? Opt.some(activity.controls) : Opt.none()
+  const maybeClose = activity._tag === 'Editing' || activity._tag === 'LookingUp'
+    ? Opt.some(activity.controls.close)
+    : Opt.none()
   return (
     <div
       key='naming'
@@ -335,7 +354,7 @@ const nameStep = (
         : { visibility: 'visible', transition: 'none' }}
       props={{ className: 'absolute inset-0 flex flex-col bg-surface text-on-surface' }}
     >
-      {appBar('Add products', 'close', 'Close', Opt.map(controls, ({ close }) => close), dispatch)}
+      {appBar('Add products', 'close', 'Close', maybeClose, dispatch)}
       <div props={{ className: cn('flex flex-1 flex-col gap-3 pt-2', stepPadding) }}>
         {nameField(shown, activity, dispatch)}
         {room(maybeJustAdded, dispatch, 'Fab', scanFab(Opt.flatMap(controls, ({ maybeScan }) => maybeScan), dispatch))}
@@ -345,12 +364,14 @@ const nameStep = (
           'Filled',
           dispatch,
         )}
-        {button(
-          activity._tag === 'Adding' ? 'Adding…' : 'Add without date',
-          Opt.flatMap(controls, ({ maybeAdd }) => maybeAdd),
-          'Text',
-          dispatch,
-        )}
+        {activity._tag === 'LookingUp'
+          ? button('Cancel', Opt.some(activity.controls.cancelLookup), 'Text', dispatch)
+          : button(
+            activity._tag === 'Adding' ? 'Adding…' : 'Add without date',
+            Opt.flatMap(controls, ({ maybeAdd }) => maybeAdd),
+            'Text',
+            dispatch,
+          )}
       </div>
     </div>
   )
@@ -666,6 +687,7 @@ export const view: View<Model, Message> = (model, dispatch) => (
   >
     {Match.valueTags(model, {
       Naming: (naming) => [nameStep(naming, { _tag: 'Editing', controls: naming }, naming.maybeJustAdded, dispatch)],
+      LookingUp: (lookingUp) => [nameStep(lookingUp, { _tag: 'LookingUp', controls: lookingUp }, Opt.none(), dispatch)],
       Scanning: (scanning) => [
         nameStep(scanning, { _tag: 'UnderScanner' }, Opt.none(), dispatch),
         scanner(scanning, dispatch),

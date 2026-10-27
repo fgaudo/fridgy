@@ -72,9 +72,13 @@ is **verified** unless marked otherwise.
 
 On the first step of the page that adds products, after a scan:
 
-1. The scanner closes, the name field shows the barcode, drawn anew and focused as today, and its supporting
-   text (the line under the field, where "Camera not available. Type the name" goes today) says
-   `Looking up the product…`. The field is editable: typing replaces the barcode and drops the lookup.
+1. The scanner closes, the name field shows the barcode, and its supporting text (the line under the field,
+   where "Camera not available. Type the name" goes) says `Looking up the product…`. Until the answer comes, the
+   first step is blocked: the field is disabled, a circular progress indicator takes the place of its clear
+   button, "Set expiration" and the scanner's FAB are disabled, the snackbar of the product added last is
+   hidden, and a `Cancel` text button takes the place of "Add without date". The app bar's close button and the
+   back button leave the page as always. `Cancel` stops the lookup: the barcode stays the name, with no
+   supporting text, and the step works again. The lookup gives up after 5 seconds (step 4).
 2. **Known product**: the field is drawn anew with the product's name and focused; the supporting text says
    `From Open Food Facts`, where "Open Food Facts" links to the product's page
    (`https://world.openfoodfacts.org/product/<normalized code>`). The text stays until the name is edited,
@@ -82,7 +86,9 @@ On the first step of the page that adds products, after a scan:
 3. **Unknown product**: the barcode stays; the supporting text says `Not on Open Food Facts. Type the name`.
 4. **Lookup failed** (offline, timeout, server error, bad answer): the barcode stays; the supporting text says
    `Couldn't reach Open Food Facts. Type the name`.
-5. In every case "Set expiration" and "Add without date" work as today, the barcode being a valid name.
+5. Once the lookup has answered or was cancelled, "Set expiration" and "Add without date" work as before the
+   scan, the barcode being a valid name; never while it goes on, so that a product is never added, nor dated,
+   under a name about to be replaced.
 
 The camera's "Camera not available. Type the name" keeps its place: it shows when the camera is unavailable
 and no lookup text applies (a lookup text comes from a scan, which needs the camera, so the two rarely meet;
@@ -618,5 +624,15 @@ Where the code departs from the design above:
   `layer`; the device's language falls back to `Intl`'s locale where `navigator.language` is missing (Bun).
 - **`bunx cap sync android`** was not run: the synced `capacitor.config.json` is ignored by git and written by the
   release's build (`android-release` skill); `bunx cap config` shows the appended User-Agent.
+- **The first step is blocked while the lookup runs**, with a `Cancel` button (`LookupCancelled`, a model case
+  `LookingUp` of its own). In the design the step stayed usable: "Add without date" saved the product under the
+  barcode while the found name arrived a moment later, and "Set expiration" carried the barcode to the date
+  step. Cancelling moves `lookup` to `Idle`: the runtime interrupts the subscription, which aborts the request,
+  and nothing it sent reaches `update` afterwards, so no stale answer needs handling. `update` still accepts
+  the step's other messages while looking (a model shows less than `update` accepts); the view withholds them.
+  The snackbar is hidden rather than shown without its action: the scanner, which the lookup follows, hides it
+  too.
+- **The timeout is 5 seconds**, not 10: the user now waits on a blocked screen rather than typing meanwhile, and
+  `Cancel` is there for a slower network.
 - `src/app/children/add-products/program.ts` grows past 800 lines: the lookup is the page's name, and splitting
   the page into children is left to its own change.

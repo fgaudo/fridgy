@@ -7,7 +7,8 @@
 // whose action adds the same product again, until the user leaves it; the action is withheld while the step's own
 // button would add the same product. The scanner is offered once the page knows the device can read barcodes,
 // and the camera runs only while its dialog is open. A scanned barcode is looked up on Open Food Facts while it
-// is the name: the product's name replaces it when the product is known.
+// is the name: the product's name replaces it when the product is known. While the lookup runs, the first step
+// takes nothing but cancelling it, which leaves the barcode as the name, and leaving the page.
 import * as Tea from '@fgaudo/effect-tea'
 import * as Arr from 'effect/Array'
 import * as Channel from 'effect/Channel'
@@ -133,6 +134,8 @@ export type Message = Data.TaggedEnum<{
   Repeated: object
   /** The page's close button, on the first step. */
   Closed: object
+  /** The first step's "Cancel", while a scanned barcode is looked up: the barcode stays the name. */
+  LookupCancelled: object
   // From subscriptions.
   TimeChanged: { now: DateTime.Utc }
   /** The order kept: the setting reports it when the page opens, and after every pick. */
@@ -253,6 +256,16 @@ export type Model = Data.TaggedEnum<{
       /** Adds the product, never expiring, once the name is a product's. */
       maybeAdd: Opt.Option<Message>
       maybeJustAdded: Opt.Option<JustAdded>
+    }>
+  /**
+   * The first step while a scanned barcode is looked up: the barcode is the name, and only the lookup can be
+   * cancelled, or the page left. The snackbar is hidden, as under the scanner the lookup follows.
+   */
+  LookingUp:
+    & NameShown
+    & Readonly<{
+      close: Message
+      cancelLookup: Message
     }>
   /** The scanner's dialog, over the first step, which takes nothing until it closes. */
   Scanning:
@@ -638,6 +651,13 @@ export const program: Tea.Program<{
       }
     },
 
+    // The lookup stops: the runtime interrupts its subscription, whose answer never arrives. The barcode stays,
+    // a valid name.
+    LookupCancelled: () => (state) =>
+      state._tag === 'Naming' && state.form.lookup._tag === 'Looking'
+        ? { state: withForm(state, (form) => ({ ...form, lookup: { _tag: 'Idle' } })) }
+        : Tea.reject,
+
     // The scanner stays open, saying why it cannot read, until the user closes it: a dialog that vanished by
     // itself would say nothing.
     CameraFailed: () => (state) =>
@@ -778,18 +798,22 @@ export const program: Tea.Program<{
         ),
       }))
     return Match.valueTags(state, {
-      // Both ways out need the product the name describes, never expiring: the date is that product's.
-      Naming: (naming): Model => ({
-        _tag: 'Naming',
-        ...nameShown,
-        close: Message.Closed(),
-        changeName: (name: string) => Message.NameChanged({ name }),
-        maybeClearName: hasName(form) ? Opt.some(Message.NameCleared()) : Opt.none(),
-        maybeScan: form.camera === 'Available' ? Opt.some(Message.ScanRequested()) : Opt.none(),
-        maybeRequestDate: Opt.map(productOfStep(naming), () => Message.DateRequested()),
-        maybeAdd: Opt.map(productOfStep(naming), () => Message.Started()),
-        maybeJustAdded: justAdded(productOfStep(naming)),
-      }),
+      // Both ways out need the product the name describes, never expiring: the date is that product's. Neither is
+      // offered while the barcode is looked up: the name it would add may be replaced a moment later.
+      Naming: (naming): Model =>
+        form.lookup._tag === 'Looking'
+          ? { _tag: 'LookingUp', ...nameShown, close: Message.Closed(), cancelLookup: Message.LookupCancelled() }
+          : {
+            _tag: 'Naming',
+            ...nameShown,
+            close: Message.Closed(),
+            changeName: (name: string) => Message.NameChanged({ name }),
+            maybeClearName: hasName(form) ? Opt.some(Message.NameCleared()) : Opt.none(),
+            maybeScan: form.camera === 'Available' ? Opt.some(Message.ScanRequested()) : Opt.none(),
+            maybeRequestDate: Opt.map(productOfStep(naming), () => Message.DateRequested()),
+            maybeAdd: Opt.map(productOfStep(naming), () => Message.Started()),
+            maybeJustAdded: justAdded(productOfStep(naming)),
+          },
       Scanning: (): Model => ({
         _tag: 'Scanning',
         ...nameShown,

@@ -41,8 +41,8 @@ export const normalizeCode = (raw: string): Opt.Option<string> => {
   return Opt.some(digits)
 }
 
-// Decided without measurement: on a slow mobile network, the most the user waits before typing the name.
-export const TIMEOUT = '10 seconds'
+// Decided without measurement: on a slow mobile network, the most a lookup makes the user wait.
+export const TIMEOUT = '5 seconds'
 
 const Answer = Schema.Struct({
   // 1 found, 0 not found.

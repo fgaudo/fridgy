@@ -125,6 +125,7 @@ export const message: fc.Arbitrary<Message> = fc.oneof(
   fc.constant(Msg.DateRequested()),
   fc.constant(Msg.DateDismissed()),
   fc.constant(Msg.Closed()),
+  fc.constant(Msg.LookupCancelled()),
   fc.constant(Msg.Repeated()),
   fc.constant(Msg.DigitErased()),
   fc.constant(Msg.DateCleared()),

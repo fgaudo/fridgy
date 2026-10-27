@@ -101,6 +101,11 @@ export const scan = Effect.fnUntraced(function*(user: User, barcode: string) {
   yield* user.hear(['AddProducts', 'scanner'], Msg.AddProducts({ message: { _tag: 'Scanned', barcode } }))
 })
 
+/** The first step's "Cancel", while a scanned barcode is looked up. */
+export const cancelLookup = onAddProducts((form) =>
+  form._tag === 'LookingUp' ? Opt.some(form.cancelLookup) : Opt.none()
+)
+
 /** The button that adds the product the step describes: on the first step, one that never expires. */
 export const addProduct = onAddProducts((form) =>
   form._tag === 'Naming' || form._tag === 'Dating' ? form.maybeAdd : Opt.none()
