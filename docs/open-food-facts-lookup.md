@@ -1,7 +1,8 @@
 # Design: naming a scanned product from Open Food Facts
 
-Status: designed on 2026-10-27, not implemented. This document is the brief for whoever implements it, person
-or agent: read [`AGENTS.md`](../AGENTS.md), the `add-service` and `add-program` skills and the "Guide" of
+Status: designed on 2026-10-27, implemented on 2026-10-27 but not yet tried on Android (step 7 of "Order of
+work", and "Known gaps" in `AGENTS.md`). Where the implementation departs from this design, and why, is in
+"As implemented" at the end. This document was the brief for whoever implemented it, person or agent: read [`AGENTS.md`](../AGENTS.md), the `add-service` and `add-program` skills and the "Guide" of
 `node_modules/@fgaudo/effect-tea/README.md` first; their rules apply to every part of this change and are not
 repeated here. Every fact about the Open Food Facts API below was checked against the live server on
 2026-10-27 with `curl`; re-check what the code relies on (marked **verified**) before trusting it, the API may
@@ -35,8 +36,10 @@ Endpoint: `GET https://world.openfoodfacts.org/api/v2/product/<code>` with query
 is **verified** unless marked otherwise.
 
 - **Found**: HTTP 200, body `{"code":"8076800195057","product":{...},"status":1,"status_verbose":"product found"}`.
-- **Not found**: HTTP 200 too, body `{"code":"20267422","status":0,"status_verbose":"product not found"}`, no
-  `product` key. Never rely on a 404: decode `status` from the JSON.
+- **Not found**: body `{"code":"20267422","status":0,"status_verbose":"product not found"}`, no `product` key.
+  Recorded first as HTTP 200; on the same day, with `fields`, `app_name` and `app_version`, the server answered
+  **HTTP 404** with that body (verified with `curl` and with the client itself). Accept both: decode `status`
+  from the JSON of a 2xx or a 404 alike.
 - **A non-numeric code** (`/product/abc`) answers HTTP 200 with `"code":""` and no product: never send one.
 - **`fields`** selects the keys of `product`. Without it a product is about 135 KB; with
   `fields=product_name,product_name_it,brands,quantity` it is under 300 bytes. Always send `fields`.
@@ -375,7 +378,7 @@ anything else falls back to `'en'` (the key `product_name_<language>` goes into 
   `OpenFoodFactsError`. Decided without measurement: on a slow mobile network 10 s is the most the user
   waits before typing the name; make it a named constant.
 - No retry: a second request a second later rarely helps and counts against the rate limit.
-- Status: `HttpClientResponse.filterStatusOk`; a non-2xx (503 under global overload) is an error.
+- Status: a 2xx or a 404 is decoded (see "Not found"); any other (503 under global overload) is an error.
 - Decoding: `HttpClientResponse.schemaBodyJson(Answer)` with
 
   ```ts
@@ -597,3 +600,23 @@ Each step leaves the typecheck, the lint and the tests green:
 - A retry action on `Failed`.
 - Refreshing `found` rows older than some months, serving the stale row when the refresh fails.
 - Storing the barcode with the product, for images or a later re-lookup.
+
+## As implemented
+
+Where the code departs from the design above:
+
+- **Tracing headers** are turned off by the client itself (`Effect.provideService(HttpClient.TracerPropagationEnabled,
+  false)` around the request in `open-food-facts.ts`), not by the entrypoints: `TracerPropagationEnabled` is a
+  reference read from the fiber that sends the request, a subscription's, which a layer provided to `App.layer`
+  does not reach; and the server's CORS headers are a fact of the API, which the client is the module to know.
+  The entrypoints provide only `FetchHttpClient.layer`.
+- **The client's `Product` carries every brand** (`brands`, the non-blank ones in the server's order), not
+  `maybeBrand`: the cache stores them comma-separated, as the design's table says, and the adapter takes the
+  first for `FoundProduct.maybeBrand`.
+- **`productUrl`** is built on the configured base URL, which defaults to the production site.
+- **The adapter** exports `layerOnClient` (on a given `OpenFoodFacts`, for the contract's fake server) beside
+  `layer`; the device's language falls back to `Intl`'s locale where `navigator.language` is missing (Bun).
+- **`bunx cap sync android`** was not run: the synced `capacitor.config.json` is ignored by git and written by the
+  release's build (`android-release` skill); `bunx cap config` shows the appended User-Agent.
+- `src/app/children/add-products/program.ts` grows past 800 lines: the lookup is the page's name, and splitting
+  the page into children is left to its own change.

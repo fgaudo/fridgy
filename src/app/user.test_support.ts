@@ -6,6 +6,7 @@ import * as Arr from 'effect/Array'
 import * as Channel from 'effect/Channel'
 import * as Data from 'effect/Data'
 import * as Effect from 'effect/Effect'
+import * as HttpClient from 'effect/http/HttpClient'
 import * as Layer from 'effect/Layer'
 import * as Match from 'effect/Match'
 import * as Opt from 'effect/Option'
@@ -15,6 +16,7 @@ import * as SqliteMemory from '#infrastructure/storage/sqlite.memory.ts'
 import type { DateOrder } from '#libs/dates/date-order.ts'
 import { tagPath } from '#libs/testing/tag-path.test_support.ts'
 import type * as AddProducts from './children/add-products/program.ts'
+import { ProductLookup } from './children/add-products/services/product-lookup/product-lookup.ts'
 import { Scanner } from './children/add-products/services/scanner/scanner.ts'
 import type * as Products from './children/home/children/products/program.ts'
 import type * as Home from './children/home/program.ts'
@@ -93,6 +95,12 @@ export const pickOrder = (picked: DateOrder) =>
 /** The name field's scan button, while the camera is on. */
 export const openScanner = onAddProducts((form) => form._tag === 'Naming' ? form.maybeScan : Opt.none())
 
+/** Opens the scanner, which reads `barcode`: the page then looks it up. */
+export const scan = Effect.fnUntraced(function*(user: User, barcode: string) {
+  yield* user.send(openScanner)
+  yield* user.hear(['AddProducts', 'scanner'], Msg.AddProducts({ message: { _tag: 'Scanned', barcode } }))
+})
+
 /** The button that adds the product the step describes: on the first step, one that never expires. */
 export const addProduct = onAddProducts((form) =>
   form._tag === 'Naming' || form._tag === 'Dating' ? form.maybeAdd : Opt.none()
@@ -129,9 +137,23 @@ const backButton = Layer.succeed(BackButton, { presses: Channel.never })
 // A device that reads barcodes, whose camera reads nothing by itself: the barcodes are heard through `hear`.
 const scanner = Layer.succeed(Scanner, { isAvailable: Effect.succeed(true), barcodes: Channel.never })
 
-// The app's layer holds the browser's scanner, which cannot read barcodes here: merged after it, the test's one
-// wins, as the last of a merge does.
-const layer = Layer.mergeAll(App.layer.pipe(Layer.provide(SqliteMemory.layer)), backButton, scanner)
+// A lookup that never answers by itself: its answers are heard through `hear`.
+const productLookup = Layer.succeed(ProductLookup, { lookup: () => Effect.never })
+
+// The app's layer holds the browser's scanner, which cannot read barcodes here, and the lookup on Open Food Facts,
+// which the tests do not reach: merged after it, the test's ones win, as the last of a merge does. Its client
+// is never asked.
+const layer = Layer.mergeAll(
+  App.layer.pipe(
+    Layer.provide([
+      SqliteMemory.layer,
+      Layer.succeed(HttpClient.HttpClient, HttpClient.make(() => Effect.die('No network in tests'))),
+    ]),
+  ),
+  backButton,
+  scanner,
+  productLookup,
+)
 
 /** Rehearses the app from its start; fails when a command is still pending at the end. */
 export const rehearsed = <A>(scenario: (user: User) => Effect.Effect<A, never, Deps>) =>

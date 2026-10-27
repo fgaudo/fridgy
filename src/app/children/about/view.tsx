@@ -127,6 +127,14 @@ export const view: View<Model, Message> = (model, dispatch) => {
               ' license.',
             ])}
             {row('code', ['The source code is on ', link('https://github.com/fgaudo/fridgy', 'GitHub'), '.'])}
+            {/* The attribution Open Food Facts' licence asks for: the licenses below come from npm and cannot carry it. */}
+            {row('barcode', [
+              'Product names from ',
+              link('https://openfoodfacts.org', 'Open Food Facts'),
+              ', under the ',
+              link('https://opendatacommons.org/licenses/odbl/1-0/', 'Open Database License'),
+              '.',
+            ])}
             {row('bug_report', [
               'Found a bug, or have an idea? ',
               link('https://github.com/fgaudo/fridgy/issues', 'Open an issue'),

@@ -7,7 +7,17 @@ import type * as Product from '#domain/product.ts'
 import type { DateOrder } from '#libs/dates/date-order.ts'
 import { focusOnInsert, handlers, initialValue, type View } from '#libs/tea-snabbdom/tea-snabbdom.ts'
 import { cn } from '#libs/ui/class-names.ts'
-import type { DateChoice, DateShown, Digit, JustAdded, Message, Model, NameShown, OrderChoice } from './program.ts'
+import type {
+  DateChoice,
+  DateShown,
+  Digit,
+  JustAdded,
+  Message,
+  Model,
+  NameShown,
+  OrderChoice,
+  Supporting,
+} from './program.ts'
 
 const inputValue = (event: Event) => (event.target as HTMLInputElement).value
 
@@ -192,10 +202,31 @@ const button = (
 }
 
 /**
+ * The text field's supporting text: where the name came from when a scan named it, or that it can only be typed.
+ * The line is there even when empty, so that a text appearing moves nothing.
+ */
+const supportingText = (supporting: Supporting) => (
+  <div props={{ className: 'min-h-4 px-4 text-body-small text-on-surface-variant' }}>
+    {Match.valueTags(supporting, {
+      Nothing: () => [],
+      CameraUnavailable: () => ['Camera not available. Type the name'],
+      LookingUp: () => ['Looking up the product…'],
+      // The attribution Open Food Facts' licence asks for, with the product's page.
+      FromOpenFoodFacts: ({ url }) => [
+        'From ',
+        <a props={{ className: 'text-primary underline', href: url }}>Open Food Facts</a>,
+      ],
+      NotOnOpenFoodFacts: () => ['Not on Open Food Facts. Type the name'],
+      LookupFailed: () => ['Couldn\'t reach Open Food Facts. Type the name'],
+    })}
+  </div>
+)
+
+/**
  * Material's outlined text field of the name, with its trailing icon button, which clears it, shown while there
  * is one. Drawn anew (with the new name) and focused, so that the keyboard is up, when a scan or a clearing
- * replaces it and when a product was added. Its supporting text says when the camera is not available, and the
- * name can only be typed.
+ * replaces it and when a product was added. Its supporting text says where a scanned name came from, or when the
+ * camera is not available, and the name can only be typed.
  */
 const nameField = (shown: NameShown, activity: NameActivity, dispatch: Dispatch<Message>) => {
   const { on, onValue } = handlers(dispatch)
@@ -252,13 +283,7 @@ const nameField = (shown: NameShown, activity: NameActivity, dispatch: Dispatch<
           ],
         })}
       </div>
-      {shown.camera === 'Unavailable'
-        ? [
-          <div props={{ className: 'px-4 text-body-small text-on-surface-variant' }}>
-            Camera not available. Type the name
-          </div>,
-        ]
-        : []}
+      {supportingText(shown.supporting)}
     </div>
   )
 }

@@ -1,6 +1,7 @@
 // `view.js` and the hot reload socket are served by `scripts/cli.ts watch`.
 import * as Browser from '@effect/platform-browser'
 import * as Effect from 'effect/Effect'
+import * as FetchHttpClient from 'effect/http/FetchHttpClient'
 import * as Layer from 'effect/Layer'
 import * as References from 'effect/References'
 import * as Stream from 'effect/Stream'
@@ -28,8 +29,11 @@ const HotRootViews = Layer.effect(
 
 run(
   Layer.mergeAll(
-    // A database in memory, with sample products: every reload starts from the same data.
-    App.layer.pipe(Layer.provide(Layer.provideMerge(SqliteSamples.layer, SqliteMemory.layer))),
+    // A database in memory, with sample products: every reload starts from the same data. Products are looked up
+    // on Open Food Facts itself: its staging server asks for a password.
+    App.layer.pipe(
+      Layer.provide([Layer.provideMerge(SqliteSamples.layer, SqliteMemory.layer), FetchHttpClient.layer]),
+    ),
     BackButtonBrowser.layer,
     HotRootViews,
     SnabbdomRenderer.layer('#root'),

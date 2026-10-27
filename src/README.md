@@ -6,8 +6,10 @@ Rules and conventions are in [`AGENTS.md`](../AGENTS.md).
 ```
 src/
 ├─ entrypoints/          how the app is started, one file per environment: each picks what has alternatives
-│  ├─ production.ts      sqlite in a worker (OPFS), Capacitor's back button, bundled view
-│  ├─ development.ts     sqlite in memory with sample products, the browser's back button, hot-reloaded view
+│  ├─ production.ts      sqlite in a worker (OPFS), `fetch` as the HTTP client, Capacitor's back button,
+│  │                     bundled view
+│  ├─ development.ts     sqlite in memory with sample products, `fetch` as the HTTP client, the browser's back
+│  │                     button, hot-reloaded view
 │  └─ run.ts             shared: runs the program (`@fgaudo/effect-tea` `run`) with the snabbdom renderer
 │
 ├─ domain/               the entities and their rules (`Product`): imports nothing but libs/
@@ -16,24 +18,27 @@ src/
 │  ├─ program.ts         public: the root Program: the stack of pages
 │  ├─ view.tsx           public: the root view (hot-reload entry in development)
 │  ├─ layer.ts           public: every adapter that has no alternative, the toasts' included; needs a
-│  │                     `SqlClient`
+│  │                     `SqlClient` and an `HttpClient`
 │  └─ children/<child>/  a child Program (of the root: a page), of the same shape as the root, at any depth; of
 │     │                  app/, it imports only its own folder, and the infrastructure's services
 │     ├─ program.ts · view.tsx · layer.ts   its public API: the only modules its parent imports
 │     ├─ services/<service>/   a service of its own, with its adapters, contract and tests
-│     │                        (`add-products/services/scanner/`)
+│     │                        (`add-products/services/scanner/`, `add-products/services/product-lookup/`)
 │     └─ children/<child>/     its own children (`home/children/products/`, with
 │                              `services/product-list/`)
 │
 ├─ infrastructure/       what the app's adapters share: the storage (storage/: the database's engine, sqlite in
 │                        a worker on OPFS or in memory, its schema and migrations, how a product is written, deleted and
 │                        how its rows are joined and encoded, `ProductStore`, how a setting is read and written,
-│                        `SettingStore`, and the sample data), hot reload,
+│                        `SettingStore`, how Open Food Facts' answers are cached, `BarcodeCache` in
+│                        `barcodes.ts`, and the sample data), the client of Open Food Facts' API
+│                        (open-food-facts/: how a code is normalized, asked for and decoded), hot reload,
 │                        fonts; and the platform's facts the programs use as they are: the back button
 │                        (back-button/: Capacitor's, or the browser's history; the entrypoints pick one) and the
 │                        toasts (notifications/). Its adapters are named as the app's, `<service>.<backing>.ts`
 ├─ libs/                 generic, reusable code: the snabbdom bridge (tea-snabbdom: handlers, renderer,
-│                        test support) and JSX runtime, sources, branded numbers, `defect`, test helpers, …
+│                        test support) and JSX runtime, sources, branded numbers, barcodes (the expansion of
+│                        a UPC-E), `defect`, test helpers, …
 ├─ index.html            the page template: the build fills in the fonts and the entrypoint
 ├─ error.html            shown by Capacitor instead of the app on a WebView older than it needs
 ├─ palette.generated.css the Material 3 color roles, written by `bun run update-palette`

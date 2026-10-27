@@ -22,12 +22,12 @@ import {
   openAbout,
   openAddProducts,
   openMenu,
-  openScanner,
   perform,
   pickOrder,
   rehearsed,
   requestDate,
   requestInfo,
+  scan,
   selectFirstProduct,
   typeDigit,
   typeName,
@@ -60,6 +60,13 @@ const addProductsState = (state: State) =>
       (page): page is Data.TaggedEnum.Value<Page, 'AddProducts'> => page._tag === 'AddProducts',
     ),
     (page) => page.state,
+  )
+
+/** Whether the page that adds products looks a barcode up: its subscription's key is `lookup:<barcode>`. */
+const looksUp = (state: State) =>
+  Arr.some(
+    Arr.fromIterable(HashMap.keys(Tea.subscriptionsOf(program)(state))),
+    (key) => Array.isArray(key) && key[0] === 'AddProducts' && String(key[1]).startsWith('lookup:'),
   )
 
 /** The pages whose subscriptions run, from the namespaced keys (`['Home', 'clock']`, …). */
@@ -232,15 +239,39 @@ describe('Navigation', () => {
       expect(yield* listedNames(user)).toEqual(Opt.some(['Milk']))
     })))
 
-  test('a barcode read by the scanner names the product added', () =>
+  test('a barcode read by the scanner is looked up, and the product found names the product added', () =>
     rehearsed(Effect.fnUntraced(function*(user) {
       yield* user.send(openAddProducts)
       // The scanner is offered once the page knows that the device can read barcodes.
       yield* checkCamera(user)
-      yield* user.send(openScanner)
+      yield* scan(user, '4006381333931')
       yield* user.hear(
-        ['AddProducts', 'scanner'],
-        Msg.AddProducts({ message: AddProductsMsg.Scanned({ barcode: '4006381333931' }) }),
+        ['AddProducts', 'lookup:4006381333931'],
+        Msg.AddProducts({
+          message: AddProductsMsg.LookedUp({
+            barcode: '4006381333931',
+            outcome: { _tag: 'Found', name: 'Milk', url: 'https://world.openfoodfacts.org/product/4006381333931' },
+          }),
+        }),
+      )
+      yield* user.hearNext(['AddProducts', 'clock'])
+      yield* user.send(addProduct)
+      yield* user.run((command) => tagPath(command) === 'AddProducts › Add')
+      yield* back(user)
+      yield* user.hearNext(['Home', ['Products', 'changes']])
+      expect(yield* listedNames(user)).toEqual(Opt.some(['Milk']))
+    })))
+
+  test('a barcode unknown to Open Food Facts names the product added', () =>
+    rehearsed(Effect.fnUntraced(function*(user) {
+      yield* user.send(openAddProducts)
+      yield* checkCamera(user)
+      yield* scan(user, '4006381333931')
+      yield* user.hear(
+        ['AddProducts', 'lookup:4006381333931'],
+        Msg.AddProducts({
+          message: AddProductsMsg.LookedUp({ barcode: '4006381333931', outcome: { _tag: 'NotFound' } }),
+        }),
       )
       yield* user.hearNext(['AddProducts', 'clock'])
       yield* user.send(addProduct)
@@ -248,6 +279,16 @@ describe('Navigation', () => {
       yield* back(user)
       yield* user.hearNext(['Home', ['Products', 'changes']])
       expect(yield* listedNames(user)).toEqual(Opt.some(['4006381333931']))
+    })))
+
+  test('typing the name while a barcode is looked up stops the lookup', () =>
+    rehearsed(Effect.fnUntraced(function*(user) {
+      yield* user.send(openAddProducts)
+      yield* checkCamera(user)
+      yield* scan(user, '4006381333931')
+      expect(looksUp(yield* user.state)).toBe(true)
+      yield* user.send(typeName('Milk'))
+      expect(looksUp(yield* user.state)).toBe(false)
     })))
 
   test('a product added twice with Add again is listed twice', () =>

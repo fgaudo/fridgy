@@ -6,6 +6,6 @@ import * as Home from './children/home/layer.ts'
 
 // The adapters that every setup shares: the pages' services', and the infrastructure's that have no
 // alternative (the toasts). What has alternatives is left to the entrypoint: the `SqlClient` (the database's
-// engine) and the platform's `BackButton` (`#infrastructure/back-button/back-button.capacitor.ts`,
+// engine), the `HttpClient` and the platform's `BackButton` (`#infrastructure/back-button/back-button.capacitor.ts`,
 // `#infrastructure/back-button/back-button.browser.ts`).
 export const layer = Layer.mergeAll(Home.layer, AddProducts.layer, About.layer, NotificationsCapacitor.layer)

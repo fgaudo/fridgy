@@ -62,12 +62,17 @@ how the storage is read or written is doing the infrastructure's work, and two o
   how a product is read. It moves up the day a second adapter asks the same.
 - A library's stream becomes a `Source` with `Source.fromStream`, which keeps listening once the stream has
   ended.
-- A platform call longer than a line moves to `src/infrastructure`.
+- A platform call longer than a line moves to `src/infrastructure`: an external API's client too, the only
+  module that knows its shape (`OpenFoodFacts` in `#infrastructure/open-food-facts/open-food-facts.ts`: how a code
+  is normalized, which fields are asked for, how the answer is decoded, its timeout), which the adapter
+  (`product-lookup.open-food-facts.ts`) wraps with the cache. An adapter on such a client also exports its layer
+  without the client (`layerOnClient`), so that its test runs the contract on a fake one.
 
 ## Where the adapter is provided
 
 - No alternative: the program's `layer.ts` merges it.
-- Alternatives (the `SqlClient`'s engine, the platform's `BackButton`): the layers leave it out and each
+- Alternatives (the `SqlClient`'s engine, the `HttpClient`, the platform's `BackButton`): the layers leave it
+  out and each
   entrypoint in `src/entrypoints/` imports the adapter's own module
   (`#infrastructure/back-button/back-button.browser.ts`,
   `#app/children/home/children/products/services/product-list/product-list.sql.ts`), never a module that would

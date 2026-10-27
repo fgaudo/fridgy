@@ -1,4 +1,5 @@
 import type { CapacitorConfig } from '@capacitor/cli'
+import packageJson from './package.json' with { type: 'json' }
 
 const config: CapacitorConfig = {
   appId: 'net.gaudo.fridgy',
@@ -10,6 +11,8 @@ const config: CapacitorConfig = {
     // back to the top after the first scroll), Tailwind 4 and the shadows' `color-mix` (111), the database's
     // synchronous OPFS access handles (108).
     minWebViewVersion: 114,
+    // How Open Food Facts asks every app to identify itself: the WebView's own User-Agent, with this after it.
+    appendUserAgent: `Fridgy/${packageJson.version} (fgaudo@gmail.com)`,
   },
   plugins: {
     // The app enables it while it listens to the back button: otherwise the button is Android's.

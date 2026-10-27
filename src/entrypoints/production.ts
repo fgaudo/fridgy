@@ -1,4 +1,5 @@
 import * as ConfigProvider from 'effect/ConfigProvider'
+import * as FetchHttpClient from 'effect/http/FetchHttpClient'
 import * as Layer from 'effect/Layer'
 import * as References from 'effect/References'
 import * as Stream from 'effect/Stream'
@@ -10,7 +11,7 @@ import { SnabbdomRenderer } from '#libs/tea-snabbdom/renderer.ts'
 import { RootViews, run } from './run.ts'
 
 const layer = App.layer.pipe(
-  Layer.provide(SqliteOpfs.layer),
+  Layer.provide([SqliteOpfs.layer, FetchHttpClient.layer]),
   Layer.provide(
     ConfigProvider.layer(
       ConfigProvider.fromUnknown({

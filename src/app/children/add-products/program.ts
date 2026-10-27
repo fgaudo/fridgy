@@ -6,7 +6,8 @@
 // only its completion leaves; the page then starts at the name again, kept for the next product, with a snackbar
 // whose action adds the same product again, until the user leaves it; the action is withheld while the step's own
 // button would add the same product. The scanner is offered once the page knows the device can read barcodes,
-// and the camera runs only while its dialog is open.
+// and the camera runs only while its dialog is open. A scanned barcode is looked up on Open Food Facts while it
+// is the name: the product's name replaces it when the product is known.
 import * as Tea from '@fgaudo/effect-tea'
 import * as Arr from 'effect/Array'
 import * as Channel from 'effect/Channel'
@@ -25,6 +26,7 @@ import * as DigitDates from '#libs/dates/digit-dates.ts'
 import { defect } from '#libs/defect/defect.ts'
 import * as AddProducts from './services/add-products/add-products.ts'
 import { DateOrderSetting } from './services/date-order-setting/date-order-setting.ts'
+import { type FoundProduct, ProductLookup } from './services/product-lookup/product-lookup.ts'
 import { Scanner } from './services/scanner/scanner.ts'
 
 export type Digit = '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9'
@@ -35,6 +37,30 @@ export type Digit = '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9'
  */
 export type Camera = 'Checking' | 'Available' | 'Unavailable'
 
+/**
+ * Open Food Facts' answer for the barcode last scanned. While it is not `Idle`, the name is the one the lookup put
+ * there, the barcode or the product's name: every other change of the name makes it `Idle`.
+ */
+export type Lookup = Data.TaggedEnum<{
+  /** No lookup: nothing was scanned, or the name was changed since. */
+  Idle: object
+  /** The product sold under `barcode` is being looked up: the name is the barcode. */
+  Looking: Readonly<{ barcode: string }>
+  /** The name is the product found for `barcode`: `url` is its page, for the attribution. */
+  Found: Readonly<{ barcode: string; url: string }>
+  /** The name is the barcode: Open Food Facts does not know it. */
+  NotFound: Readonly<{ barcode: string }>
+  /** The name is the barcode: the lookup failed. */
+  Failed: Readonly<{ barcode: string }>
+}>
+
+/** What the lookup answered: the product's name as the page proposes it, never empty, and its page. */
+export type LookupOutcome = Data.TaggedEnum<{
+  Found: Readonly<{ name: string; url: string }>
+  NotFound: object
+  Failed: object
+}>
+
 /** What is kept in every state: a product being added does not interrupt the next one. */
 export type Form = Readonly<{
   maybeName: Opt.Option<string>
@@ -44,6 +70,7 @@ export type Form = Readonly<{
    */
   replacements: number
   camera: Camera
+  lookup: Lookup
   /** The current time, once the clock has ticked: the product is created then. */
   maybeNow: Opt.Option<DateTime.Utc>
   /** The order the digits of a date are read in, once the setting has been read. */
@@ -111,6 +138,8 @@ export type Message = Data.TaggedEnum<{
   /** The order kept: the setting reports it when the page opens, and after every pick. */
   OrderChanged: { order: DateOrder.DateOrder }
   Scanned: { barcode: string }
+  /** The lookup of the barcode being looked up has answered. */
+  LookedUp: { barcode: string; outcome: LookupOutcome }
   CameraFailed: object
   /** The platform's back button, while the page is shown. */
   BackPressed: object
@@ -140,7 +169,7 @@ export type Event = Data.TaggedEnum<{
 
 const Event = Data.taggedEnum<Event>()
 
-export type Deps = AddProducts.AddProducts | DateOrderSetting | Scanner | Notifications | BackButton
+export type Deps = AddProducts.AddProducts | DateOrderSetting | Scanner | ProductLookup | Notifications | BackButton
 
 /** A day the digits name: the one the product expires on, or one to pick instead, while the step takes it. */
 export type DateChoice = Readonly<{
@@ -154,10 +183,23 @@ export type OrderChoice = Readonly<{
   choice: Data.TaggedEnum<{ Current: object; Offered: Readonly<{ maybePick: Opt.Option<Message> }> }>
 }>
 
+/**
+ * The line under the name field: what the lookup of a scanned barcode found, or else, once the camera is
+ * unavailable, that the name can only be typed.
+ */
+export type Supporting = Data.TaggedEnum<{
+  Nothing: object
+  CameraUnavailable: object
+  LookingUp: object
+  /** The name comes from Open Food Facts: `url` is the product's page there. */
+  FromOpenFoodFacts: Readonly<{ url: string }>
+  NotOnOpenFoodFacts: object
+  LookupFailed: object
+}>
+
 /** The first step, drawn in every state: under the scanner, and under the second step. */
 export type NameShown = Readonly<{
-  /** Once unavailable, the name field and the scanner say that the name can only be typed. */
-  camera: Camera
+  supporting: Supporting
   name: string
   /** Changes when the name is replaced by a scan or a clearing, or a product was added, not by typing. */
   nameKey: number
@@ -213,7 +255,13 @@ export type Model = Data.TaggedEnum<{
       maybeJustAdded: Opt.Option<JustAdded>
     }>
   /** The scanner's dialog, over the first step, which takes nothing until it closes. */
-  Scanning: NameShown & Readonly<{ closeScanner: Message }>
+  Scanning:
+    & NameShown
+    & Readonly<{
+      /** Once unavailable, the scanner says that the name can only be typed. */
+      camera: Camera
+      closeScanner: Message
+    }>
   Dating:
     & NameShown
     & DateShown
@@ -280,6 +328,16 @@ const datesOf = (form: Form, date: DateForm): ReadonlyArray<DateTime.Utc> =>
 
 const isAmong = (dates: ReadonlyArray<DateTime.Utc>) => (date: DateTime.Utc) =>
   dates.some((offered) => DateTime.Equivalence(offered, date))
+
+/**
+ * The product's name as the page proposes it: the first brand, then the name, unless the name already says the
+ * brand. The quantity is left out.
+ */
+const composeName = ({ name, maybeBrand }: FoundProduct): string =>
+  Opt.match(maybeBrand, {
+    onNone: () => name,
+    onSome: (brand) => name.toLocaleLowerCase().includes(brand.toLocaleLowerCase()) ? name : `${brand} ${name}`,
+  })
 
 /** The day the digits name: the one picked, while they still name it, or else the only one they name. */
 const maybeNamedDate = (form: Form, date: DateForm): Opt.Option<DateTime.Utc> => {
@@ -349,6 +407,25 @@ const scanner = Channel.unwrap(
 const backButton: Tea.Subscription<Message, BackButton> = Channel.unwrap(
   Effect.map(Effect.service(BackButton), ({ presses }) => Channel.map(presses, () => Message.BackPressed())),
 )
+
+// Keyed by the barcode: a scan of another one, or a change of the name, interrupts it. It answers once.
+const lookup = (barcode: string): Tea.Subscription<Message, ProductLookup> =>
+  Channel.fromEffectDone(
+    Effect.gen(function*() {
+      const { lookup } = yield* ProductLookup
+      return yield* lookup(barcode).pipe(
+        Effect.map(Opt.match({
+          onNone: () => Message.LookedUp({ barcode, outcome: { _tag: 'NotFound' } }),
+          onSome: (found) =>
+            Message.LookedUp({ barcode, outcome: { _tag: 'Found', name: composeName(found), url: found.url } }),
+        })),
+        Effect.catchTag('ProductLookupError', (error) =>
+          Effect.logWarning('Could not look the product up', error.cause).pipe(
+            Effect.as(Message.LookedUp({ barcode, outcome: { _tag: 'Failed' } })),
+          )),
+      )
+    }).pipe(Effect.withLogSpan('Lookup')),
+  )
 
 const checkCamera = Effect.fn('CheckCamera')(
   function*() {
@@ -432,6 +509,7 @@ export const program: Tea.Program<{
         maybeName: Opt.none(),
         replacements: 0,
         camera: 'Checking',
+        lookup: { _tag: 'Idle' },
         maybeNow: Opt.none(),
         maybeOrder: Opt.none(),
         maybeLastAdded: Opt.none(),
@@ -443,16 +521,21 @@ export const program: Tea.Program<{
   update: Match.typeTags<Message, (state: State) => Tea.Transition<State, Command, Event>>()({
     // Accepted under the scanner, the second step and while submitting too, where the input is covered or
     // disabled: a key typed just before is kept. The raw text is kept as typed; whether it is a valid name is
-    // decided when going on or adding.
+    // decided when going on or adding. The name is no longer the lookup's: a lookup still going on stops.
     NameChanged: ({ name }) => (state) => ({
-      state: withForm(state, (form) => ({ ...form, maybeName: Opt.some(name) })),
+      state: withForm(state, (form) => ({ ...form, maybeName: Opt.some(name), lookup: { _tag: 'Idle' } })),
     }),
 
     // The input is drawn anew, empty: the user owns its text until the program replaces it.
     NameCleared: () => (state) =>
       state._tag === 'Naming' && hasName(state.form)
         ? {
-          state: withForm(state, (form) => ({ ...form, maybeName: Opt.none(), replacements: form.replacements + 1 })),
+          state: withForm(state, (form) => ({
+            ...form,
+            maybeName: Opt.none(),
+            replacements: form.replacements + 1,
+            lookup: { _tag: 'Idle' },
+          })),
         }
         : Tea.reject,
 
@@ -522,15 +605,37 @@ export const program: Tea.Program<{
       succeeded ? { state } : { state, commands: [Command.ShowToast({ text: 'Couldn\'t save the date order' })] },
 
     // The first barcode read closes the scanner, on the first step: whether the product expires is still to be
-    // said.
+    // said. It is looked up, even when it is the name already: scanning again is how a failed lookup is retried.
     Scanned: ({ barcode }) => (state) => {
       if (!isScanning(state)) {
         return defect('Scanned while the camera is off: only the scanner reads it, until it fails')
       }
-      const form = Opt.contains(state.form.maybeName, barcode)
+      const named = Opt.contains(state.form.maybeName, barcode)
         ? state.form
         : { ...state.form, maybeName: Opt.some(barcode), replacements: state.form.replacements + 1 }
-      return { state: { _tag: 'Naming', form } }
+      return { state: { _tag: 'Naming', form: { ...named, lookup: { _tag: 'Looking', barcode } } } }
+    },
+
+    // A product found replaces the barcode, drawn anew and focused; otherwise the barcode stays, a valid name.
+    LookedUp: ({ barcode, outcome }) => (state) => {
+      if (state.form.lookup._tag !== 'Looking' || state.form.lookup.barcode !== barcode) {
+        return defect(
+          'LookedUp for a barcode that is not being looked up: only the lookup subscription sends it, while its key is in the state',
+        )
+      }
+      return {
+        state: withForm(state, (form) =>
+          Match.valueTags(outcome, {
+            Found: ({ name, url }): Form => ({
+              ...form,
+              maybeName: Opt.some(name),
+              replacements: form.replacements + 1,
+              lookup: { _tag: 'Found', barcode, url },
+            }),
+            NotFound: (): Form => ({ ...form, lookup: { _tag: 'NotFound', barcode } }),
+            Failed: (): Form => ({ ...form, lookup: { _tag: 'Failed', barcode } }),
+          })),
+      }
     },
 
     // The scanner stays open, saying why it cannot read, until the user closes it: a dialog that vanished by
@@ -601,16 +706,32 @@ export const program: Tea.Program<{
   }),
 
   // The camera starts anew with each opening of the scanner: the scanner reports a barcode once until another,
-  // so this is what makes the same product readable again.
-  subscriptions: (state) =>
-    isScanning(state)
-      ? HashMap.make(['clock', clock], ['date-order', dateOrder], ['scanner', scanner], ['back-button', backButton])
-      : HashMap.make(['clock', clock], ['date-order', dateOrder], ['back-button', backButton]),
+  // so this is what makes the same product readable again. The lookup runs while the barcode is the name.
+  subscriptions: (state) => {
+    const always: ReadonlyArray<readonly [string, Tea.Subscription<Message, Deps>]> = [
+      ['clock', clock],
+      ['date-order', dateOrder],
+      ['back-button', backButton],
+    ]
+    const scanning: typeof always = isScanning(state) ? [['scanner', scanner]] : []
+    const looking: typeof always = state.form.lookup._tag === 'Looking'
+      ? [[`lookup:${state.form.lookup.barcode}`, lookup(state.form.lookup.barcode)]]
+      : []
+    return HashMap.fromIterable([...always, ...scanning, ...looking])
+  },
 
   makeModel: (state): Model => {
     const { form } = state
     const name = Opt.getOrElse(form.maybeName, () => '')
-    const nameShown: NameShown = { camera: form.camera, name, nameKey: form.replacements }
+    // A lookup's text comes from a scan, which needs the camera: it wins when the camera failed on a later opening.
+    const supporting = Match.valueTags(form.lookup, {
+      Idle: (): Supporting => form.camera === 'Unavailable' ? { _tag: 'CameraUnavailable' } : { _tag: 'Nothing' },
+      Looking: (): Supporting => ({ _tag: 'LookingUp' }),
+      Found: ({ url }): Supporting => ({ _tag: 'FromOpenFoodFacts', url }),
+      NotFound: (): Supporting => ({ _tag: 'NotOnOpenFoodFacts' }),
+      Failed: (): Supporting => ({ _tag: 'LookupFailed' }),
+    })
+    const nameShown: NameShown = { supporting, name, nameKey: form.replacements }
     const dateShown = (
       date: DateForm,
       maybeChoose: (day: DateTime.Utc) => Opt.Option<Message>,
@@ -669,7 +790,12 @@ export const program: Tea.Program<{
         maybeAdd: Opt.map(productOfStep(naming), () => Message.Started()),
         maybeJustAdded: justAdded(productOfStep(naming)),
       }),
-      Scanning: (): Model => ({ _tag: 'Scanning', ...nameShown, closeScanner: Message.ScanClosed() }),
+      Scanning: (): Model => ({
+        _tag: 'Scanning',
+        ...nameShown,
+        camera: form.camera,
+        closeScanner: Message.ScanClosed(),
+      }),
       Dating: (dating): Model => {
         const { date } = dating
         return {

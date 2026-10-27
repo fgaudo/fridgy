@@ -25,3 +25,17 @@ export const ProductExpirationSchema = {
   },
   table: 'product_expiration',
 } as const
+
+/** What Open Food Facts answered for a barcode, one row per normalized code: the lookup's cache. */
+export const BarcodeLookupSchema = {
+  columns: {
+    barcode: 'barcode',
+    status: 'status',
+    name: 'name',
+    brands: 'brands',
+    quantity: 'quantity',
+    language: 'language',
+    lookedUpAt: 'looked_up_at',
+  },
+  table: 'barcode_lookup',
+} as const

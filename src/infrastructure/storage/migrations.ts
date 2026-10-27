@@ -1,12 +1,14 @@
 // Append-only once released: a phone has already run the existing migrations, so a fix is a new one.
 import * as Effect from 'effect/Effect'
 import * as Sql from 'effect/sql'
-import { ProductExpirationSchema, ProductSchema, SettingSchema } from './schema.ts'
+import { BarcodeLookupSchema, ProductExpirationSchema, ProductSchema, SettingSchema } from './schema.ts'
 
 export const migrations = {
   // Dates are ISO 8601 strings (`DateTimeUtcFromString` in `products.ts`), which order as text. The trigger, not
   // a cascade, deletes a product's expiration with it: SQLite enforces foreign keys, and their actions, only on a
   // connection that asked for them with a pragma, which the clients give no way to do; the key is a declaration.
+  // The lookup's cache keeps Open Food Facts' answer as it came (`name`, `brands` and `quantity` NULL unless
+  // `status` is 'found'), not the name the page composes from it, which may change without refetching.
   '0000001_create_db': Effect.gen(function*() {
     const sql = yield* Sql.SqlClient.SqlClient
     yield* sql.withTransaction(
@@ -14,6 +16,7 @@ export const migrations = {
         const product = ProductSchema
         const expiration = ProductExpirationSchema
         const setting = SettingSchema
+        const lookup = BarcodeLookupSchema
         const productId = sql(product.columns.id)
         yield* sql`
           CREATE TABLE ${sql(setting.table)}(
@@ -36,6 +39,15 @@ export const migrations = {
           BEGIN
             DELETE FROM ${sql(expiration.table)} WHERE ${sql(expiration.columns.productId)} = OLD.${productId};
           END;
+          CREATE TABLE ${sql(lookup.table)}(
+            ${sql(lookup.columns.barcode)} TEXT PRIMARY KEY,
+            ${sql(lookup.columns.status)} TEXT NOT NULL,
+            ${sql(lookup.columns.name)} TEXT,
+            ${sql(lookup.columns.brands)} TEXT,
+            ${sql(lookup.columns.quantity)} TEXT,
+            ${sql(lookup.columns.language)} TEXT,
+            ${sql(lookup.columns.lookedUpAt)} TEXT NOT NULL
+          );
         `
       }),
     )

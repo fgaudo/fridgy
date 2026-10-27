@@ -1,11 +1,14 @@
 import { describe, expect, test } from 'bun:test'
 import * as Tea from '@fgaudo/effect-tea'
 import { dispatchViolations } from '@fgaudo/effect-tea/testing'
+import * as Channel from 'effect/Channel'
 import * as Data from 'effect/Data'
 import * as DateTime from 'effect/DateTime'
+import * as Effect from 'effect/Effect'
 import * as Equal from 'effect/Equal'
 import * as HashMap from 'effect/HashMap'
 import * as Opt from 'effect/Option'
+import * as References from 'effect/References'
 import * as fc from 'fast-check'
 import * as Product from '#domain/product.ts'
 import { arbitrary as order } from '#libs/dates/date-order.test_arbitrary.ts'
@@ -14,7 +17,7 @@ import { datesOf, MAX_DIGITS } from '#libs/dates/digit-dates.ts'
 import { messagesSentBy } from '#libs/tea-snabbdom/view.test_support.ts'
 import { utc } from '#libs/testing/date-time.test_arbitrary.ts'
 import { assertProperty, outcomesOf } from '#libs/testing/update.test_support.ts'
-import { dating, digit, message, naming, scanning, state, submitting } from './program.test_arbitrary.ts'
+import { barcode, dating, digit, message, naming, scanning, state, submitting } from './program.test_arbitrary.ts'
 import {
   type Command,
   type DateForm,
@@ -27,6 +30,7 @@ import {
   type State,
   type Step,
 } from './program.ts'
+import { type FoundProduct, ProductLookup, ProductLookupError } from './services/product-lookup/product-lookup.ts'
 import { view } from './view.tsx'
 
 const Msg = Data.taggedEnum<Message>()
@@ -116,13 +120,23 @@ const addsLastAgain = (s: State & { _tag: 'Naming' | 'Dating' }) =>
 /** Whether the page reads the camera: while the scanner is open, until it fails. */
 const readsCamera = (state: State) => state._tag === 'Scanning' && state.form.camera === 'Available'
 
+/** Whether the page looks `barcode` up. */
+const looksUp = (state: State, barcode: string) =>
+  state.form.lookup._tag === 'Looking' && state.form.lookup.barcode === barcode
+
 /**
- * A message that cannot arrive in that state: a completion while no product is being added, or the camera's while
- * the page does not read it.
+ * A message that cannot arrive in that state: a completion while no product is being added, the camera's while
+ * the page does not read it, or a lookup's answer for a barcode it does not look up.
  */
 const cannotArrive = (msg: Message, before: State) =>
   (msg._tag === 'Completed' && before._tag !== 'Submitting')
   || ((msg._tag === 'Scanned' || msg._tag === 'CameraFailed') && !readsCamera(before))
+  || (msg._tag === 'LookedUp' && !looksUp(before, msg.barcode))
+
+/** A state that looks a barcode up, the barcode being the name, and that barcode. */
+const looking = fc.tuple(state, barcode).map(([s, code]) =>
+  [withForm(s, { lookup: { _tag: 'Looking', barcode: code }, maybeName: Opt.some(code) }), code] as const
+)
 
 const onAStep = fc.oneof(naming, dating)
 
@@ -180,24 +194,32 @@ describe('AddProducts update', () => {
   })
 
   describe('NameChanged', () => {
-    // Off the first step the input is covered or disabled, but a key typed just before must not be lost.
-    test('stores what is typed, as typed, in any state', () => {
+    // Off the first step the input is covered or disabled, but a key typed just before must not be lost. The name
+    // is no longer the lookup's: one going on stops.
+    test('stores what is typed, as typed, in any state, and drops the lookup', () => {
       assertProperty(
         [state, fc.string()],
         (before, name) =>
-          Equal.equals(step(Msg.NameChanged({ name }), before).after, withForm(before, { maybeName: Opt.some(name) })),
+          Equal.equals(
+            step(Msg.NameChanged({ name }), before).after,
+            withForm(before, { maybeName: Opt.some(name), lookup: { _tag: 'Idle' } }),
+          ),
       )
     })
   })
 
-  test('NameCleared empties the name, drawing the input anew, and is rejected with no name to clear', () => {
+  test('NameCleared empties the name, drawing the input anew, drops the lookup, and is rejected with no name to clear', () => {
     assertProperty(
       [state],
       (before) =>
         before._tag === 'Naming' && Opt.exists(before.form.maybeName, (name) => name !== '')
           ? Equal.equals(step(Msg.NameCleared(), before), {
             rejected: false,
-            after: withForm(before, { maybeName: Opt.none(), replacements: before.form.replacements + 1 }),
+            after: withForm(before, {
+              maybeName: Opt.none(),
+              replacements: before.form.replacements + 1,
+              lookup: { _tag: 'Idle' },
+            }),
             commands: [],
             events: [],
           })
@@ -229,18 +251,52 @@ describe('AddProducts update', () => {
         : rejects(Msg.ScanClosed(), before))
   })
 
-  test('Scanned names the product and closes the scanner, on the first step', () => {
-    assertProperty([scanning, fc.oneof(fc.string(), fc.constant('4006381333931'))], (before, barcode) => {
+  // Scanning the barcode the name already is draws nothing anew, but looks it up again: that is how a failed
+  // lookup is retried.
+  test('Scanned names the product, closes the scanner, on the first step, and looks the barcode up', () => {
+    assertProperty([scanning, fc.oneof(fc.string(), barcode)], (before, scanned) => {
       fc.pre(readsCamera(before))
-      const form = Opt.contains(before.form.maybeName, barcode)
+      const named = Opt.contains(before.form.maybeName, scanned)
         ? before.form
-        : { ...before.form, maybeName: Opt.some(barcode), replacements: before.form.replacements + 1 }
-      return Equal.equals(step(Msg.Scanned({ barcode }), before), {
+        : { ...before.form, maybeName: Opt.some(scanned), replacements: before.form.replacements + 1 }
+      return Equal.equals(step(Msg.Scanned({ barcode: scanned }), before), {
         rejected: false,
-        after: { _tag: 'Naming', form },
+        after: { _tag: 'Naming', form: { ...named, lookup: { _tag: 'Looking', barcode: scanned } } },
         commands: [],
         events: [],
       })
+    })
+  })
+
+  describe('LookedUp', () => {
+    test('a product found replaces the barcode, drawing the input anew, and says where the name came from', () => {
+      assertProperty(
+        [looking, fc.string({ minLength: 1 }), fc.webUrl()],
+        ([before, code], name, url) =>
+          Equal.equals(step(Msg.LookedUp({ barcode: code, outcome: { _tag: 'Found', name, url } }), before), {
+            rejected: false,
+            after: withForm(before, {
+              maybeName: Opt.some(name),
+              replacements: before.form.replacements + 1,
+              lookup: { _tag: 'Found', barcode: code, url },
+            }),
+            commands: [],
+            events: [],
+          }),
+      )
+    })
+
+    test('a product unknown, or a failed lookup, keeps the barcode, and says so', () => {
+      assertProperty(
+        [looking, fc.constantFrom('NotFound' as const, 'Failed' as const)],
+        ([before, code], tag) =>
+          Equal.equals(step(Msg.LookedUp({ barcode: code, outcome: { _tag: tag } }), before), {
+            rejected: false,
+            after: withForm(before, { lookup: { _tag: tag, barcode: code } }),
+            commands: [],
+            events: [],
+          }),
+      )
     })
   })
 
@@ -535,12 +591,31 @@ describe('AddProducts update', () => {
         }))
     })
 
-    test('the first step shows the name, drawn anew with each replacement, and the camera, in every state', () => {
+    test('the first step shows the name, drawn anew with each replacement, in every state, and the scanner the camera', () => {
       assertProperty([state], (s) => {
         const model = makeModel(s)
         return model.name === Opt.getOrElse(s.form.maybeName, () => '')
           && model.nameKey === s.form.replacements
-          && model.camera === s.form.camera
+          && (model._tag !== 'Scanning' || model.camera === s.form.camera)
+      })
+    })
+
+    // A lookup's text comes from a scan, which needs the camera: it wins when the camera failed on a later opening.
+    test('the name\'s supporting text says what the lookup found, or else that the camera is unavailable, in every state', () => {
+      assertProperty([state], (s) => {
+        const { lookup, camera } = s.form
+        const expected = lookup._tag === 'Looking'
+          ? { _tag: 'LookingUp' }
+          : lookup._tag === 'Found'
+          ? { _tag: 'FromOpenFoodFacts', url: lookup.url }
+          : lookup._tag === 'NotFound'
+          ? { _tag: 'NotOnOpenFoodFacts' }
+          : lookup._tag === 'Failed'
+          ? { _tag: 'LookupFailed' }
+          : camera === 'Unavailable'
+          ? { _tag: 'CameraUnavailable' }
+          : { _tag: 'Nothing' }
+        return Equal.equals(makeModel(s).supporting, expected)
       })
     })
 
@@ -704,12 +779,78 @@ describe('AddProducts update', () => {
 })
 
 // The back button is observed in every state: while a product is being added, so that it does not leave the app.
-test('the page listens to the clock, the date order and the back button, and to the camera while the scanner is open until it fails', () => {
+test('the page listens to the clock, the date order and the back button, to the camera while the scanner is open until it fails, and to the lookup of the barcode it looks up', () => {
   assertProperty([state], (s) => {
     const subscriptions = Tea.subscriptionsOf(program)(s)
+    const lookups = [...HashMap.keys(subscriptions)].filter((key) => String(key).startsWith('lookup:'))
     return HashMap.has(subscriptions, 'clock')
       && HashMap.has(subscriptions, 'date-order')
       && HashMap.has(subscriptions, 'back-button')
       && HashMap.has(subscriptions, 'scanner') === readsCamera(s)
+      && Equal.equals(lookups, s.form.lookup._tag === 'Looking' ? [`lookup:${s.form.lookup.barcode}`] : [])
+  })
+})
+
+describe('the lookup', () => {
+  const code = '8076800195057'
+
+  /** The messages the lookup's subscription sends, and the one it ends with, on a service that answers `answer`. */
+  const endsWith = async (answer: Effect.Effect<Opt.Option<FoundProduct>, ProductLookupError>) => {
+    const s: State = {
+      _tag: 'Naming',
+      form: {
+        maybeName: Opt.some(code),
+        replacements: 0,
+        camera: 'Available',
+        lookup: { _tag: 'Looking', barcode: code },
+        maybeNow: Opt.none(),
+        maybeOrder: Opt.none(),
+        maybeLastAdded: Opt.none(),
+      },
+    }
+    // Typed with every service of the page, of which it reads the lookup's only.
+    const subscription = Opt.getOrThrow(
+      HashMap.get(Tea.subscriptionsOf(program)(s), `lookup:${code}`),
+    ) as Tea.Subscription<Message, ProductLookup>
+    const [elements, done] = await Effect.runPromise(
+      Effect.zip(Channel.runCollect(subscription), Channel.runDrain(subscription)).pipe(
+        Effect.provideService(ProductLookup, { lookup: () => answer }),
+        Effect.provideService(References.MinimumLogLevel, 'None'),
+      ),
+    )
+    return { elements, done }
+  }
+
+  const found = (name: string, maybeBrand: Opt.Option<string>): FoundProduct => ({
+    name,
+    maybeBrand,
+    maybeQuantity: Opt.some('500 g'),
+    url: `https://world.openfoodfacts.org/product/${code}`,
+  })
+
+  test('names a product found with its first brand in front, unless the name already says it', async () => {
+    const cases = [
+      [found('Spaghetti n.5', Opt.some('Barilla')), 'Barilla Spaghetti n.5'],
+      [found('Nutella', Opt.some('Nutella')), 'Nutella'],
+      [found('Coca cola can', Opt.some('Coca Cola')), 'Coca cola can'],
+      [found('Milk', Opt.none()), 'Milk'],
+    ] as const
+    for (const [product, name] of cases) {
+      expect(await endsWith(Effect.succeedSome(product))).toEqual({
+        elements: [],
+        done: Msg.LookedUp({ barcode: code, outcome: { _tag: 'Found', name, url: product.url } }),
+      })
+    }
+  })
+
+  test('ends with a message of its own when the product is unknown, and when the lookup failed', async () => {
+    expect(await endsWith(Effect.succeedNone)).toEqual({
+      elements: [],
+      done: Msg.LookedUp({ barcode: code, outcome: { _tag: 'NotFound' } }),
+    })
+    expect(await endsWith(Effect.fail(new ProductLookupError({ cause: new Error('Offline') })))).toEqual({
+      elements: [],
+      done: Msg.LookedUp({ barcode: code, outcome: { _tag: 'Failed' } }),
+    })
   })
 })

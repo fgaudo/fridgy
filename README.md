@@ -6,11 +6,15 @@ architecture.
 
 > **Status:** work in progress. The main page (product list, selecting products, expiration tracking), the page
 > that adds products one after another, in two steps (the name is typed or read from a barcode in the scanner's
-> dialog, and the product is added as it is or goes on to its expiration date, typed as digits in the order of
+> dialog, which looks the product up on [Open Food Facts](https://openfoodfacts.org) and caches the answer on the
+> phone, and the product is added as it is or goes on to its expiration date, typed as digits in the order of
 > day, month and year the user keeps, from which the user picks the day they meant; a snackbar adds the same
 > product again) and the About page (version, links,
 > licenses) run on the current architecture, with navigation between them and Android's back button. What is
 > still missing is listed under "Known gaps" in [`AGENTS.md`](AGENTS.md).
+
+**Privacy:** scanning a barcode sends the barcode, and the phone's IP address, to Open Food Facts; nothing else
+leaves the phone.
 
 ## Stack
 
@@ -117,7 +121,7 @@ How the code is organized:
 - **Shared code moves up**: the entities (`Product`) to `src/domain/`, how things are done (the database's
   schema, how a product is written) to `src/infrastructure/`.
 - **Environments** (production, development) exist only in `src/entrypoints/`, which pick what has
-  alternatives: the database's engine and the platform's back button.
+  alternatives: the database's engine, the HTTP client and the platform's back button.
 - **Views** are TSX, rendered by snabbdom through a small bridge (`src/libs/tea-snabbdom/`, `src/libs/jsx/`),
   following Material 3.
 
@@ -143,4 +147,5 @@ domain type has a `*.test_arbitrary.ts` file with its generators. Among others, 
 
 The rules of the codebase are in [`AGENTS.md`](AGENTS.md), written for both people and coding agents; the
 procedures (adding a program or a service, writing a view, releasing) are skills under `.agents/skills/`,
-plain Markdown that any agent reads. Code, comments and documentation are in English.
+plain Markdown that any agent reads. The designs of larger features, with the facts they rely on (an external
+API's behaviour, checked against it), are under `docs/`. Code, comments and documentation are in English.

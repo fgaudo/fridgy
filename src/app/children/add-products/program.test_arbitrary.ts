@@ -8,7 +8,7 @@ import { arbitrary as order } from '#libs/dates/date-order.test_arbitrary.ts'
 import { datesOf, MAX_DIGITS } from '#libs/dates/digit-dates.ts'
 import { arbitrary as maybe } from '#libs/option/option.test_arbitrary.ts'
 import { utc } from '#libs/testing/date-time.test_arbitrary.ts'
-import type { Camera, DateForm, Digit, Form, Message, State } from './program.ts'
+import type { Camera, DateForm, Digit, Form, Lookup, LookupOutcome, Message, State } from './program.ts'
 
 const Msg = Data.taggedEnum<Message>()
 
@@ -20,6 +20,28 @@ const digits = fc.oneof(
   fc.tuple(fc.integer({ min: 1, max: 31 }), fc.integer({ min: 1, max: 12 })).map(([day, month]) =>
     String(day).padStart(2, '0') + String(month).padStart(2, '0')
   ),
+)
+
+/** A barcode as the scanner reads it: EAN-8, UPC-A or EAN-13. */
+export const barcode = fc.stringMatching(/^\d{8}$|^\d{12,13}$/)
+
+/** A lookup, of any barcode; most often none. */
+const lookup: fc.Arbitrary<Lookup> = fc.oneof(
+  { arbitrary: fc.constant<Lookup>({ _tag: 'Idle' }), weight: 3 },
+  barcode.map((barcode): Lookup => ({ _tag: 'Looking', barcode })),
+  fc.tuple(barcode, fc.webUrl()).map(([barcode, url]): Lookup => ({ _tag: 'Found', barcode, url })),
+  barcode.map((barcode): Lookup => ({ _tag: 'NotFound', barcode })),
+  barcode.map((barcode): Lookup => ({ _tag: 'Failed', barcode })),
+)
+
+const outcome: fc.Arbitrary<LookupOutcome> = fc.oneof(
+  fc.tuple(fc.string({ minLength: 1 }), fc.webUrl()).map(([name, url]): LookupOutcome => ({
+    _tag: 'Found',
+    name,
+    url,
+  })),
+  fc.constant<LookupOutcome>({ _tag: 'NotFound' }),
+  fc.constant<LookupOutcome>({ _tag: 'Failed' }),
 )
 
 /** The days the digits name, by the rules of a product: what can be picked. */
@@ -34,6 +56,7 @@ export const form: fc.Arbitrary<Form> = fc.tuple(
     maybeName: maybe(fc.oneof(fc.string(), fc.stringMatching(/^\d{8,13}$/))),
     replacements: fc.nat(),
     camera: fc.constantFrom<Camera>('Checking', 'Available', 'Unavailable'),
+    lookup,
     maybeNow: maybe(utc),
     maybeOrder: maybe(order),
     maybeLastAdded: maybe(product),
@@ -47,8 +70,11 @@ export const form: fc.Arbitrary<Form> = fc.tuple(
     onSome: ({ creationDate }) =>
       maybeSinceAdded === null ? form.maybeNow : Opt.some(DateTime.add(creationDate, { seconds: maybeSinceAdded })),
   })
-  // The name is often the last product's, as the page keeps it after adding one.
-  const maybeName = keepsName
+  // The name is often the last product's, as the page keeps it after adding one; while a lookup is going on or
+  // did not name the product, it is the barcode.
+  const maybeName = form.lookup._tag === 'Looking' || form.lookup._tag === 'NotFound' || form.lookup._tag === 'Failed'
+    ? Opt.some(form.lookup.barcode)
+    : keepsName
     ? Opt.orElse(Opt.map(form.maybeLastAdded, ({ name }) => name), () => form.maybeName)
     : form.maybeName
   return { ...form, maybeNow, maybeName }
@@ -114,5 +140,6 @@ export const message: fc.Arbitrary<Message> = fc.oneof(
   order.map((order) => Msg.OrderChanged({ order })),
   fc.boolean().map((succeeded) => Msg.OrderKept({ succeeded })),
   fc.string().map((barcode) => Msg.Scanned({ barcode })),
+  fc.tuple(barcode, outcome).map(([barcode, outcome]) => Msg.LookedUp({ barcode, outcome })),
   fc.boolean().map((succeeded) => Msg.Completed({ succeeded })),
 )
