@@ -1,4 +1,5 @@
 import * as Data from 'effect/Data'
+import * as Opt from 'effect/Option'
 import * as Result from 'effect/Result'
 import * as fc from 'fast-check'
 import * as ProductArbitrary from '#domain/product.test_arbitrary.ts'
@@ -37,7 +38,21 @@ export const deleting: fc.Arbitrary<Selection> = NonEmptyHashSet.arbitrary(id).m
 
 export const selection: fc.Arbitrary<Selection> = fc.oneof(idle, selecting, deleting)
 
-export const state: fc.Arbitrary<State> = fc.record({ maybeNow: maybe(utc), list, selection })
+/** Whether a loaded product expires: the clock runs, and the time is known, only then. */
+export const hasExpiringProduct = (state: State) =>
+  state.list._tag === 'Loaded'
+  && state.list.items.some((item) => item._tag === 'Valid' && Opt.isSome(item.product.maybeExpirationDate))
+
+/** Any state, with a time only while a product expires. */
+export const state: fc.Arbitrary<State> = fc.record({ maybeNow: maybe(utc), list, selection }).map((state) =>
+  hasExpiringProduct(state) ? state : { ...state, maybeNow: Opt.none() }
+)
+
+/** The states in which the clock runs. */
+export const ticking: fc.Arbitrary<State> = state.filter(hasExpiringProduct)
+
+/** The states in which it does not. */
+export const still: fc.Arbitrary<State> = state.filter((state) => !hasExpiringProduct(state))
 
 export const stateWith = <K extends keyof State>(key: K, arbitrary: fc.Arbitrary<State[K]>) =>
   fc.tuple(state, arbitrary).map(([base, value]): State => ({ ...base, [key]: value }))

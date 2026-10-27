@@ -18,6 +18,7 @@ import { Notifications } from '#infrastructure/notifications/notifications.ts'
 import * as NonEmptyHashSet from '#libs/collections/non-empty-hash-set.ts'
 import { defect } from '#libs/defect/defect.ts'
 import * as PositiveInteger from '#libs/numbers/positive-integer.ts'
+import type * as UnitInterval from '#libs/numbers/unit-interval.ts'
 import * as DeleteProducts from './services/delete-products/delete-products.ts'
 import { ProductList, type ProductListReadError, type StoredProduct } from './services/product-list/product-list.ts'
 
@@ -42,7 +43,10 @@ export type Selection = Data.TaggedEnum<{
 const Selection = Data.taggedEnum<Selection>()
 
 export type State = Readonly<{
-  /** The current time, once the clock has ticked: expiration statuses derive from it. */
+  /**
+   * The current time, which the statuses of the products that expire derive from. The clock runs only while a
+   * listed product expires: `None` until it has ticked, and again once no product needs it.
+   */
   maybeNow: Opt.Option<DateTime.Utc>
   list: Data.TaggedEnum<{
     Loading: object
@@ -81,13 +85,16 @@ export type ItemSelection = Readonly<{
   maybeToggle: Opt.Option<Message>
 }>
 
+/** How much of a product's life is left, from its creation to the end of its expiration day. */
+type Freshness = UnitInterval.UnitInterval
+
 export type ProductStatus = Data.TaggedEnum<{
   Everlasting: object
   Stale: Readonly<{ expirationDate: DateTime.Utc }>
   /** Good through today, and no longer tomorrow. */
-  ExpiringToday: Readonly<{ expirationDate: DateTime.Utc }>
+  ExpiringToday: Readonly<{ expirationDate: DateTime.Utc; freshness: Freshness }>
   /** Good through today and `daysLeft - 1` more days: the expiration day counts. */
-  Fresh: Readonly<{ expirationDate: DateTime.Utc; daysLeft: PositiveInteger.PositiveInteger }>
+  Fresh: Readonly<{ expirationDate: DateTime.Utc; daysLeft: PositiveInteger.PositiveInteger; freshness: Freshness }>
 }>
 
 export type ProductModel = Data.TaggedEnum<{
@@ -98,7 +105,7 @@ export type ProductModel = Data.TaggedEnum<{
 }>
 
 export type Model = Data.TaggedEnum<{
-  /** Until both the list and the time are known. */
+  /** Until the list is known, and the time with it when a product expires. */
   Initial: object
   Error: object
   Empty: object
@@ -129,6 +136,11 @@ const validate = (stored: StoredProduct): Product =>
       }),
   })
 
+const expires = (item: Product) => item._tag === 'Valid' && Opt.isSome(item.product.maybeExpirationDate)
+
+/** Whether the time is needed: while a listed product expires. */
+const needsClock = (list: State['list']) => list._tag === 'Loaded' && Arr.some(list.items, expires)
+
 const idsOf = (items: ReadonlyArray<Product>) =>
   HashSet.fromIterable(Arr.flatMap(items, (product) => (product._tag === 'Corrupt' ? [] : [product.id])))
 
@@ -149,19 +161,21 @@ const selectionOf = (ids: HashSet.HashSet<string>): Selection =>
 
 // Expiration statuses derive from the current time: it is refreshed often
 // enough for days-long expirations.
-const clock = Channel.forever(
+const clock: Tea.Subscription<Message, Deps> = Channel.forever(
   Channel.fromEffect(DateTime.now).pipe(
     Channel.map((now) => Message.TimeChanged({ now })),
     Channel.concatWith(() => Channel.fromEffectDrain(Effect.sleep('30 seconds'))),
   ),
 )
 
-const changes = Channel.unwrap(
+const changes: Tea.Subscription<Message, Deps> = Channel.unwrap(
   Effect.map(
     Effect.service(ProductList),
     ({ changes }) => Channel.map(changes, (result) => Message.ListChanged({ result })),
   ),
 )
+
+const always = HashMap.make(['changes', changes])
 
 const deleteProducts = Effect.fn('DeleteProducts')(
   function*({ ids }: Readonly<{ ids: NonEmptyHashSet.NonEmptyHashSet<string> }>) {
@@ -197,21 +211,25 @@ const showToast = Effect.fn('ShowToast')(
 
 type Deletion = Data.TaggedEnum.Value<Model, 'Available'>['deletion']
 
-const statusAt = (now: DateTime.Utc, product: Domain.Product): ProductStatus =>
+const expirationStatusAt = (now: DateTime.Utc, expiration: Domain.Expiration): ProductStatus => {
+  const { expirationDate } = expiration
+  const status = Domain.expirationStatus(now)(expiration)
+  if (status.hasExpired) {
+    return { _tag: 'Stale', expirationDate }
+  }
+  const { freshness } = status
+  // A day begun counts: some time is left, so at least one day is.
+  const daysLeft = Math.ceil(Duration.toDays(status.timeLeft))
+  return daysLeft === 1
+    ? { _tag: 'ExpiringToday', expirationDate, freshness }
+    : { _tag: 'Fresh', expirationDate, daysLeft: PositiveInteger.makeUnsafe(daysLeft), freshness }
+}
+
+/** The status of a product: `None` for one that expires while the clock has not ticked yet. */
+const maybeStatusAt = (maybeNow: Opt.Option<DateTime.Utc>, product: Domain.Product): Opt.Option<ProductStatus> =>
   Opt.match(Domain.maybeExpiration(product), {
-    onNone: () => ({ _tag: 'Everlasting' }),
-    onSome: (expiration) => {
-      const { expirationDate } = expiration
-      const status = Domain.expirationStatus(now)(expiration)
-      if (status.hasExpired) {
-        return { _tag: 'Stale', expirationDate }
-      }
-      // A day begun counts: some time is left, so at least one day is.
-      const daysLeft = Math.ceil(Duration.toDays(status.timeLeft))
-      return daysLeft === 1
-        ? { _tag: 'ExpiringToday', expirationDate }
-        : { _tag: 'Fresh', expirationDate, daysLeft: PositiveInteger.makeUnsafe(daysLeft) }
-    },
+    onNone: () => Opt.some({ _tag: 'Everlasting' }),
+    onSome: (expiration) => Opt.map(maybeNow, (now) => expirationStatusAt(now, expiration)),
   })
 
 export type Deps = DeleteProducts.DeleteProducts | ProductList | Notifications
@@ -228,25 +246,29 @@ export const program: Tea.Program<{
   },
 
   update: Match.typeTags<Message, (state: State) => Tea.Transition<State, Command>>()({
-    ListChanged: ({ result }) => (state) =>
-      Result.match(result, {
-        onFailure: () => ({ state: { ...state, list: { _tag: 'Failed' } } }),
-        onSuccess: (stored) => {
-          const items = Arr.map(stored, validate)
-          return {
-            state: {
-              ...state,
-              list: { _tag: 'Loaded', items },
-              // The selection keeps the products that still exist; a deletion in progress is left alone.
-              selection: state.selection._tag === 'Deleting'
-                ? state.selection
-                : selectionOf(HashSet.intersection(selectedIds(state.selection), idsOf(items))),
-            },
-          }
+    ListChanged: ({ result }) => (state) => {
+      const list: State['list'] = Result.match(result, {
+        onFailure: () => ({ _tag: 'Failed' }),
+        onSuccess: (stored) => ({ _tag: 'Loaded', items: Arr.map(stored, validate) }),
+      })
+      return {
+        state: {
+          ...state,
+          list,
+          // The clock stops with the last product that expires: the time it told goes with it.
+          maybeNow: needsClock(list) ? state.maybeNow : Opt.none(),
+          // The selection keeps the products that still exist; a deletion in progress is left alone.
+          selection: list._tag === 'Failed' || state.selection._tag === 'Deleting'
+            ? state.selection
+            : selectionOf(HashSet.intersection(selectedIds(state.selection), idsOf(list.items))),
         },
-      }),
+      }
+    },
 
-    TimeChanged: ({ now }) => (state) => ({ state: { ...state, maybeNow: Opt.some(now) } }),
+    TimeChanged: ({ now }) => (state) =>
+      needsClock(state.list)
+        ? { state: { ...state, maybeNow: Opt.some(now) } }
+        : defect('TimeChanged while no listed product expires: the clock runs only while one does'),
 
     // Only a product of the list can be selected: a tap on a row the storage has meanwhile removed does nothing.
     ItemSelected: ({ id }) => (state) =>
@@ -290,13 +312,12 @@ export const program: Tea.Program<{
     ShowToast: showToast,
   }),
 
-  subscriptions: () => HashMap.make(['clock', clock], ['changes', changes]),
+  subscriptions: (state) => needsClock(state.list) ? HashMap.set(always, 'clock', clock) : always,
 
   makeModel: (state) => {
-    if (state.list._tag === 'Loading' || Opt.isNone(state.maybeNow)) {
+    if (state.list._tag === 'Loading') {
       return { _tag: 'Initial' }
     }
-    const now = state.maybeNow.value
     if (state.list._tag === 'Failed') {
       return { _tag: 'Error' }
     }
@@ -304,7 +325,7 @@ export const program: Tea.Program<{
     if (!Arr.isReadonlyArrayNonEmpty(items)) {
       return { _tag: 'Empty' }
     }
-    const { selection } = state
+    const { selection, maybeNow } = state
     const itemSelectionOf = (id: string): ItemSelection => {
       const isSelected = HashSet.has(selectedIds(selection), id)
       return {
@@ -313,6 +334,24 @@ export const program: Tea.Program<{
           ? Opt.none()
           : Opt.some(isSelected ? Message.ItemDeselected({ id }) : Message.ItemSelected({ id })),
       }
+    }
+    // Until the clock has ticked, the products that expire have no status: the list waits for it.
+    const maybeProducts = Opt.all(Arr.map(items, (product) =>
+      Match.valueTags(product, {
+        Corrupt: ({ maybeName }): Opt.Option<ProductModel> => Opt.some({ _tag: 'Corrupt', maybeName }),
+        Invalid: ({ id, maybeName }): Opt.Option<ProductModel> =>
+          Opt.some({ _tag: 'Invalid', id, selection: itemSelectionOf(id), maybeName }),
+        Valid: ({ id, product }): Opt.Option<ProductModel> =>
+          Opt.map(maybeStatusAt(maybeNow, product), (status) => ({
+            _tag: 'Valid',
+            id,
+            selection: itemSelectionOf(id),
+            name: product.name,
+            status,
+          })),
+      })))
+    if (Opt.isNone(maybeProducts)) {
+      return { _tag: 'Initial' }
     }
     return {
       _tag: 'Available',
@@ -327,23 +366,7 @@ export const program: Tea.Program<{
         Deleting: (): Deletion => ({ _tag: 'InProgress' }),
       }),
       total: PositiveInteger.makeUnsafe(items.length),
-      products: Arr.map(items, (product) =>
-        Match.valueTags(product, {
-          Corrupt: ({ maybeName }): ProductModel => ({ _tag: 'Corrupt', maybeName }),
-          Invalid: ({ id, maybeName }): ProductModel => ({
-            _tag: 'Invalid',
-            id,
-            selection: itemSelectionOf(id),
-            maybeName,
-          }),
-          Valid: ({ id, product }): ProductModel => ({
-            _tag: 'Valid',
-            id,
-            selection: itemSelectionOf(id),
-            name: product.name,
-            status: statusAt(now, product),
-          }),
-        })),
+      products: maybeProducts.value,
     }
   },
 }

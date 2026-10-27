@@ -9,6 +9,7 @@ import * as fc from 'fast-check'
 import { messagesSentBy } from '#libs/tea-snabbdom/view.test_support.ts'
 import { tagPath } from '#libs/testing/tag-path.test_support.ts'
 import { assertProperty, onlyChanged, outcomesOf } from '#libs/testing/update.test_support.ts'
+import { hasExpiringProduct } from './children/products/program.test_arbitrary.ts'
 import * as Products from './children/products/program.ts'
 import { message, state } from './program.test_arbitrary.ts'
 import { type Event, type Message, type Model, program, type State } from './program.ts'
@@ -27,11 +28,15 @@ type ProductsMessage = Products.Message
 // A child's message as the page receives it: the library makes it, the test builds it.
 const fromProducts = (message: ProductsMessage): Message => ({ _tag: 'Products', message })
 
-/** A message that cannot arrive in that state: a back heard with the menu closed, a completion outside its deletion. */
+/**
+ * A message that cannot arrive in that state: a back heard with the menu closed, a completion outside its deletion,
+ * a tick while no product expires.
+ */
 const cannotArrive = (msg: Message, before: State) =>
   (msg._tag === 'BackPressed' && !before.isMenuOpen)
   || (msg._tag === 'Products' && msg.message._tag === 'DeleteCompleted'
     && before.products.selection._tag !== 'Deleting')
+  || (msg._tag === 'Products' && msg.message._tag === 'TimeChanged' && !hasExpiringProduct(before.products))
 
 describe('Home update', () => {
   test('is total and deterministic, but for a message that cannot arrive', () => {
@@ -50,8 +55,11 @@ describe('Home update', () => {
     // but for what the model hides on purpose: a list that is not shown, or not yet,
     // and the menu while products are selected: the selection's bar takes the place of its.
     test('the view sends what update accepts, all of it, and acts once when sent twice', () => {
+      // A loaded list, at a known time when a product expires.
       const shownItems = ({ products }: State) =>
-        Opt.isSome(products.maybeNow) && products.list._tag === 'Loaded' ? products.list.items : []
+        products.list._tag === 'Loaded' && (Opt.isSome(products.maybeNow) || !hasExpiringProduct(products))
+          ? products.list.items
+          : []
       const isListShown = (state: State) => shownItems(state).length > 0
       const isShown = (state: State, id: string) =>
         shownItems(state).some((item) => item._tag !== 'Corrupt' && item.id === id)
@@ -201,10 +209,11 @@ describe('scrolling', () => {
 })
 
 // A child's subscriptions run only if the page passes them on.
-test('the page listens to the scrolling, and its child to the clock and the storage', () => {
+test('the page listens to the scrolling, and its child to the storage, and to the clock while a product expires', () => {
   assertProperty([state], (s) => {
     const subscriptions = Tea.subscriptionsOf(program)(s)
-    return ['clock', 'changes'].every((key) => HashMap.has(subscriptions, ['Products', key]))
+    return HashMap.has(subscriptions, ['Products', 'changes'])
+      && HashMap.has(subscriptions, ['Products', 'clock']) === hasExpiringProduct(s.products)
       && ['scrolling', 'at-top', 'close-to-top'].every((key) => HashMap.has(subscriptions, key))
   })
 })

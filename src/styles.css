@@ -226,6 +226,49 @@ html {
   backdrop-filter: blur(4px);
 }
 
+/*
+ * The badge of a product's freshness, `--freshness` (1 with all of its life left, 0 with none): the tertiary
+ * role's colors at 1, the primary role's at 0.5 and the error role's at 0, mixed between them in between. The
+ * disc takes the containers, its text and the ring around it the roles themselves; each is a mix of two roles'
+ * values, so it follows the theme as they do. One mix per rule: the bundler (Bun's CSS, as Lightning CSS) gives
+ * `color-mix` a static fallback, and keeps only the first of a rule's.
+ */
+@utility freshness-badge {
+  --freshness-tertiary: clamp(0%, (var(--freshness) - 0.5) * 200%, 100%);
+  --freshness-primary: clamp(0%, var(--freshness) * 200%, 100%);
+  background-color: color-mix(
+    in oklab,
+    var(--color-tertiary-container) var(--freshness-tertiary),
+    color-mix(
+      in oklab,
+      var(--color-primary-container) var(--freshness-primary),
+      var(--color-error-container)
+    )
+  );
+  & > span {
+    color: color-mix(
+      in oklab,
+      var(--color-on-tertiary-container) var(--freshness-tertiary),
+      color-mix(
+        in oklab,
+        var(--color-on-primary-container) var(--freshness-primary),
+        var(--color-on-error-container)
+      )
+    );
+  }
+  & > svg {
+    stroke: color-mix(
+      in oklab,
+      var(--color-tertiary) var(--freshness-tertiary),
+      color-mix(
+        in oklab,
+        var(--color-primary) var(--freshness-primary),
+        var(--color-error)
+      )
+    );
+  }
+}
+
 a {
   white-space: nowrap;
 }

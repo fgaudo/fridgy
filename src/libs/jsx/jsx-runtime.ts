@@ -56,10 +56,16 @@ export const jsxs = jsx
 
 export { Fragment }
 
+/** The elements of a markup language, by tag. */
+type Elements<TagNameMap> = {
+  [Tag in keyof TagNameMap]: Attributes<TagNameMap[Tag]> & Readonly<{ children?: Children }>
+}
+
 export declare namespace JSX {
   type Element = VNode
-  type IntrinsicElements = {
-    [Tag in keyof HTMLElementTagNameMap]: Attributes<HTMLElementTagNameMap[Tag]> & Readonly<{ children?: Children }>
-  }
+  // SVG elements under their own tags only: a tag of both languages (`a`, `title`) is the HTML element.
+  type IntrinsicElements =
+    & Elements<HTMLElementTagNameMap>
+    & Elements<Omit<SVGElementTagNameMap, keyof HTMLElementTagNameMap>>
   type ElementChildrenAttribute = { children: unknown }
 }

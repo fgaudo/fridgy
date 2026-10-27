@@ -1,16 +1,20 @@
 import { describe, expect, test } from 'bun:test'
+import * as Tea from '@fgaudo/effect-tea'
 import * as Data from 'effect/Data'
 import * as Duration from 'effect/Duration'
 import * as Equal from 'effect/Equal'
+import * as HashMap from 'effect/HashMap'
 import * as HashSet from 'effect/HashSet'
 import * as Opt from 'effect/Option'
 import * as Result from 'effect/Result'
 import * as fc from 'fast-check'
 import * as Domain from '#domain/product.ts'
+import { arbitrary as maybe } from '#libs/option/option.test_arbitrary.ts'
 import { utc } from '#libs/testing/date-time.test_arbitrary.ts'
 import { assertProperty, onlyChanged, outcomesOf } from '#libs/testing/update.test_support.ts'
 import {
   deleting,
+  hasExpiringProduct,
   id,
   idle,
   message,
@@ -18,7 +22,9 @@ import {
   selecting,
   state,
   stateWith,
+  still,
   storedProducts,
+  ticking,
 } from './program.test_arbitrary.ts'
 import { type Command, type Message, program, type Selection, type State } from './program.ts'
 import { ProductListReadError, type StoredProduct } from './services/product-list/product-list.ts'
@@ -36,9 +42,13 @@ const listedIds = (state: State) =>
     state.list._tag === 'Loaded' ? state.list.items.flatMap((item) => item._tag === 'Corrupt' ? [] : [item.id]) : [],
   )
 
-/** A message that cannot arrive in that state: a completion while no deletion is in progress. */
+/**
+ * A message that cannot arrive in that state: a completion while no deletion is in progress, a tick while no
+ * product expires.
+ */
 const cannotArrive = (msg: Message, before: State) =>
-  msg._tag === 'DeleteCompleted' && before.selection._tag !== 'Deleting'
+  (msg._tag === 'DeleteCompleted' && before.selection._tag !== 'Deleting')
+  || (msg._tag === 'TimeChanged' && !hasExpiringProduct(before))
 
 describe('Products update', () => {
   test('is total and deterministic, but for a message that cannot arrive', () => {
@@ -48,22 +58,42 @@ describe('Products update', () => {
     })
   })
 
-  test('TimeChanged stores the time and touches nothing else', () => {
-    assertProperty([state, utc], (before, now) => {
-      const { after, commands } = step(Msg.TimeChanged({ now }), before)
-      return Equal.equals(after.maybeNow, Opt.some(now)) && onlyChanged(before, after, 'maybeNow')
-        && commands.length === 0
+  describe('TimeChanged', () => {
+    test('stores the time and touches nothing else, while a product expires', () => {
+      assertProperty([ticking, utc], (before, now) => {
+        const { after, commands } = step(Msg.TimeChanged({ now }), before)
+        return Equal.equals(after.maybeNow, Opt.some(now)) && onlyChanged(before, after, 'maybeNow')
+          && commands.length === 0
+      })
+    })
+
+    // The clock runs only while a product expires, so a tick heard otherwise is a bug.
+    test('is a defect while no product expires', () => {
+      assertProperty([still, utc], (before, now) => {
+        expect(() => program.update(Msg.TimeChanged({ now }))(before)).toThrow()
+        return true
+      })
     })
   })
 
   describe('ListChanged', () => {
     const changed = (products: ReadonlyArray<StoredProduct>) => Msg.ListChanged({ result: Result.succeed(products) })
 
-    test('a failure marks the list as failed and touches nothing else', () => {
+    test('a failure marks the list as failed, forgets the time and touches nothing else', () => {
       assertProperty([state, fc.string()], (before, cause) => {
         const failed = Msg.ListChanged({ result: Result.fail(new ProductListReadError({ cause })) })
         const { after, commands } = step(failed, before)
-        return after.list._tag === 'Failed' && onlyChanged(before, after, 'list') && commands.length === 0
+        return after.list._tag === 'Failed' && Opt.isNone(after.maybeNow)
+          && onlyChanged(before, after, 'list', 'maybeNow')
+          && commands.length === 0
+      })
+    })
+
+    // The clock stops with the last product that expires, and starts anew with the next one.
+    test('the time is kept while a product still expires, and forgotten otherwise', () => {
+      assertProperty([state, storedProducts], (before, stored) => {
+        const { after } = step(changed(stored), before)
+        return Equal.equals(after.maybeNow, hasExpiringProduct(after) ? before.maybeNow : Opt.none())
       })
     })
 
@@ -84,7 +114,7 @@ describe('Products update', () => {
                 }),
             })
           })
-          && onlyChanged(before, after, 'list', 'selection')
+          && onlyChanged(before, after, 'list', 'selection', 'maybeNow')
           && commands.length === 0
       })
     })
@@ -214,6 +244,14 @@ describe('Products update', () => {
   })
 })
 
+// The storage is observed in every state; the clock ticks only for a product that expires.
+test('listens to the storage always, and to the clock while a loaded product expires', () => {
+  assertProperty([state], (s) => {
+    const subscriptions = Tea.subscriptionsOf(program)(s)
+    return HashMap.has(subscriptions, 'changes') && HashMap.has(subscriptions, 'clock') === hasExpiringProduct(s)
+  })
+})
+
 // A row's look and action, and a product's status, are decided here, not in the view.
 describe('Products model', () => {
   const DAY = 86_400_000
@@ -224,9 +262,23 @@ describe('Products model', () => {
     return model._tag === 'Available' ? model.products : []
   }
 
-  const shown = fc.tuple(state, fc.array(product, { minLength: 1, maxLength: 8 }), utc).map(
-    ([base, items, now]): State => ({ ...base, list: { _tag: 'Loaded', items }, maybeNow: Opt.some(now) }),
+  /** A loaded list of products, with a time when one of them expires. */
+  const loaded = fc.tuple(state, fc.array(product, { minLength: 1, maxLength: 8 }), maybe(utc)).map(
+    ([base, items, maybeNow]): State => {
+      const loaded: State = { ...base, list: { _tag: 'Loaded', items }, maybeNow }
+      return hasExpiringProduct(loaded) ? loaded : { ...loaded, maybeNow: Opt.none() }
+    },
   )
+
+  const shown = loaded.filter((s) => !hasExpiringProduct(s) || Opt.isSome(s.maybeNow))
+
+  // Nothing is drawn, rather than products without their status, or with one from a time that is not known.
+  test('a loaded list is shown at once when no product expires, and once the clock has ticked otherwise', () => {
+    assertProperty(
+      [loaded],
+      (s) => (program.makeModel(s)._tag === 'Available') === (!hasExpiringProduct(s) || Opt.isSome(s.maybeNow)),
+    )
+  })
 
   test('every stored product is a row, in order, with its kind', () => {
     assertProperty([shown], (s) => {
@@ -250,9 +302,8 @@ describe('Products model', () => {
     })
   })
 
-  test('a valid product is stale once its expiration day is over, expiring on its last day, fresh before', () => {
+  test('a valid product is stale once its expiration day is over, expiring on its last day, fresh before, and keeps the domain\'s freshness', () => {
     assertProperty([shown], (s) => {
-      const now = Opt.getOrThrow(s.maybeNow)
       const items = s.list._tag === 'Loaded' ? s.list.items : []
       return rows(s).every((row, index) => {
         const item = items[index]
@@ -260,12 +311,14 @@ describe('Products model', () => {
         return Opt.match(Domain.maybeExpiration(item.product), {
           onNone: () => row.status._tag === 'Everlasting',
           onSome: (expiration) => {
-            const status = Domain.expirationStatus(now)(expiration)
+            // A product that expires is shown only at a known time.
+            const status = Domain.expirationStatus(Opt.getOrThrow(s.maybeNow))(expiration)
             if (status.hasExpired) return row.status._tag === 'Stale'
             const daysLeft = Math.ceil(Duration.toMillis(status.timeLeft) / DAY)
             return daysLeft === 1
-              ? row.status._tag === 'ExpiringToday'
+              ? row.status._tag === 'ExpiringToday' && row.status.freshness === status.freshness
               : row.status._tag === 'Fresh' && row.status.daysLeft === daysLeft
+                && row.status.freshness === status.freshness
           },
         })
       })
@@ -275,6 +328,6 @@ describe('Products model', () => {
 
 // Guards against the arbitraries silently collapsing to trivial values.
 test('arbitraries cover every variant of the state', () => {
-  const tags = new Set(fc.sample(state, 500).flatMap((s) => [s.list._tag, s.selection._tag]))
-  expect([...tags].sort()).toEqual(['Deleting', 'Failed', 'Idle', 'Loaded', 'Loading', 'Selecting'])
+  const tags = new Set(fc.sample(state, 500).flatMap((s) => [s.list._tag, s.selection._tag, s.maybeNow._tag]))
+  expect([...tags].sort()).toEqual(['Deleting', 'Failed', 'Idle', 'Loaded', 'Loading', 'None', 'Selecting', 'Some'])
 })

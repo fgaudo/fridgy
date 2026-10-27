@@ -9,7 +9,8 @@ import {
   Variant,
 } from '@material/material-color-utilities'
 
-// The app's key colors: the orange of the expiration badges, and the green and the red of the app's first palette.
+// The app's key colors: the orange of the expiration badges, with the green and the red of the app's first palette,
+// which the badges of freshness go through, from fresh to expired.
 const source = '#fba551'
 const tertiary = '#4fa34a'
 const error = '#c43921'
