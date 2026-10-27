@@ -643,6 +643,15 @@ describe('AddProducts update', () => {
       })
     })
 
+    // The view draws the indicator in the step's button only when it is the one adding: a product added again from
+    // the snackbar may have a date, which the first step's button would deny.
+    test('says whose button adds the product while one is being added, as the state does', () => {
+      assertProperty([submitting], (s) => {
+        const model = makeModel(s)
+        return model._tag === 'Adding' && model.from === s.from
+      })
+    })
+
     test('waits for the lookup exactly while it goes on, offering only to cancel it and to close', () => {
       assertProperty([state], (s) => {
         const model = makeModel(s)

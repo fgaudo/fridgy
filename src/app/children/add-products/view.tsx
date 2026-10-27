@@ -7,6 +7,7 @@ import type { DateOrder } from '#libs/dates/date-order.ts'
 import { focusOnInsert, handlers, initialValue, type View } from '#libs/tea-snabbdom/tea-snabbdom.ts'
 import { cn } from '#libs/ui/class-names.ts'
 import type {
+  Adder,
   DateChoice,
   DateShown,
   Digit,
@@ -49,11 +50,13 @@ type NameActivity = Readonly<
   | { _tag: 'LookingUp'; controls: Model & { _tag: 'LookingUp' } }
   | { _tag: 'UnderScanner' }
   | { _tag: 'UnderDate' }
-  | { _tag: 'Adding' }
+  | { _tag: 'Adding'; from: Adder }
 >
 
 /** What the second step does: its controls take, or are disabled while adding. */
-type DateActivity = Readonly<{ _tag: 'Editing'; controls: Model & { _tag: 'Dating' } } | { _tag: 'Adding' }>
+type DateActivity = Readonly<
+  { _tag: 'Editing'; controls: Model & { _tag: 'Dating' } } | { _tag: 'Adding'; from: Adder }
+>
 
 const stepPadding =
   'pb-[calc(1rem+var(--spacing-saib))] pl-[calc(1.5rem+var(--spacing-sail))] pr-[calc(1.5rem+var(--spacing-sair))]'
@@ -408,7 +411,8 @@ const nameStep = (
           : button(
             'Add without date',
             Opt.flatMap(controls, ({ maybeAdd }) => maybeAdd),
-            activity._tag === 'Adding' || (activity._tag === 'Editing' && activity.controls.acknowledging === 'Added')
+            (activity._tag === 'Adding' && activity.from === 'Form')
+              || (activity._tag === 'Editing' && activity.controls.acknowledging === 'Added')
               ? 'Progress'
               : 'Label',
             'Text',
@@ -654,7 +658,7 @@ const dateStep = (
         {button(
           'Add',
           Opt.flatMap(controls, ({ maybeAdd }) => maybeAdd),
-          activity._tag === 'Adding' ? 'Progress' : 'Label',
+          activity._tag === 'Adding' && activity.from === 'Form' ? 'Progress' : 'Label',
           'Filled',
           dispatch,
         )}
@@ -741,10 +745,10 @@ export const view: View<Model, Message> = (model, dispatch) => (
       ],
       Adding: (adding) =>
         Match.valueTags(adding.step, {
-          Naming: () => [nameStep(adding, { _tag: 'Adding' }, adding.maybeJustAdded, dispatch)],
+          Naming: () => [nameStep(adding, { _tag: 'Adding', from: adding.from }, adding.maybeJustAdded, dispatch)],
           Dating: (date) => [
             nameStep(adding, { _tag: 'UnderDate' }, Opt.none(), dispatch),
-            dateStep(date, { _tag: 'Adding' }, adding.maybeJustAdded, dispatch),
+            dateStep(date, { _tag: 'Adding', from: adding.from }, adding.maybeJustAdded, dispatch),
           ],
         }),
     })}

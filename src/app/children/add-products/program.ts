@@ -5,8 +5,9 @@
 // user picks, among the days they can name, the one they meant, and adds the product. Adding is a state that
 // only its completion leaves; the page then starts at the name again, kept for the next product, with a snackbar
 // whose action adds the same product again, until the user leaves it; the action is withheld while the step's own
-// button would add the same product, and the first step's own button keeps its indicator a moment after the
-// product it added: the write is too quick for the wait to be seen. The scanner is offered once the page knows the
+// button would add the same product. A step's button shows its indicator only while it is the one adding, and the
+// first step's keeps it a moment after the product it added: the write is too quick for the wait to be seen; after
+// the snackbar's, the next snackbar is the only acknowledgement. The scanner is offered once the page knows the
 // device can read barcodes, and the camera runs only while its dialog is open. A scanned barcode is looked up on
 // Open Food Facts while it is the name, a state of the first step that takes nothing but cancelling the lookup,
 // which leaves the barcode as the name, and leaving the page: the product's name replaces the barcode when the
@@ -103,6 +104,9 @@ export type DateForm = Readonly<{
   maybeChosenDate: Opt.Option<DateTime.Utc>
 }>
 
+/** Whose button adds the product: the step's own, or the snackbar's. */
+export type Adder = 'Form' | 'Snackbar'
+
 /** The step a product is being added from, to come back to. */
 export type Step = Data.TaggedEnum<{
   Naming: object
@@ -125,7 +129,7 @@ export type State = Data.TaggedEnum<{
    * The product is being added, from a step's button, after which the next product starts at the name, or from
    * the snackbar, which leaves the step as it is.
    */
-  Submitting: Readonly<{ form: Form; product: Product.Product; step: Step; from: 'Form' | 'Snackbar' }>
+  Submitting: Readonly<{ form: Form; product: Product.Product; step: Step; from: Adder }>
 }>
 
 export type Message = Data.TaggedEnum<{
@@ -315,11 +319,15 @@ export type Model = Data.TaggedEnum<{
       maybeAdd: Opt.Option<Message>
       maybeJustAdded: Opt.Option<JustAdded>
     }>
-  /** The product is being added: the step it is added from, its controls disabled; the snackbar has no action. */
+  /**
+   * The product is being added: the step it is added from, its controls disabled, and whose button adds it, as
+   * only the step's own shows its indicator; the snackbar has no action.
+   */
   Adding:
     & NameShown
     & Readonly<{
       step: Data.TaggedEnum<{ Naming: object; Dating: DateShown }>
+      from: Adder
       maybeJustAdded: Opt.Option<JustAdded>
     }>
 }>
@@ -918,9 +926,10 @@ export const program: Tea.Program<{
           maybeJustAdded: justAdded(productOfStep(dating)),
         }
       },
-      Submitting: ({ step }): Model => ({
+      Submitting: ({ step, from }): Model => ({
         _tag: 'Adding',
         ...nameShown,
+        from,
         step: step._tag === 'Naming'
           ? { _tag: 'Naming' }
           : { _tag: 'Dating', ...dateShown(step.date, () => Opt.none(), () => Opt.none()) },
