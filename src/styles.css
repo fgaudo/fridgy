@@ -1,5 +1,6 @@
 @import "tailwindcss";
-@import "material-symbols/rounded.css";
+/* In a layer, so that the utilities below (a size, a color) win over the icons' own rules. */
+@import "material-symbols/rounded.css" layer(base);
 
 /*
  * Material 3: the color roles of `palette.generated.css`, and here its type scale, shapes, elevation and motion.
@@ -267,6 +268,19 @@ html {
       )
     );
   }
+}
+
+/*
+ * Material Symbols, drawn for their size: 24dp as they come, 48dp for an empty state's; filled for what is selected.
+ * The optical size follows the font size, which the font's axis would do on its own, but the font says so itself.
+ */
+@utility icon-large {
+  font-size: 3rem;
+  font-variation-settings: "opsz" 48;
+}
+
+@utility icon-filled {
+  font-variation-settings: "FILL" 1;
 }
 
 a {

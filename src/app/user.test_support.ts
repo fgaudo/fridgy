@@ -13,6 +13,7 @@ import * as References from 'effect/References'
 import { BackButton } from '#infrastructure/back-button/back-button.ts'
 import * as SqliteMemory from '#infrastructure/storage/sqlite.memory.ts'
 import type * as AddProducts from './children/add-products/program.ts'
+import type * as Products from './children/home/children/products/program.ts'
 import type * as Home from './children/home/program.ts'
 import * as App from './layer.ts'
 import { type Command, type Deps, type Message, type Model, program, type State } from './program.ts'
@@ -35,19 +36,36 @@ export const openMenu = onHome(({ menu }) => menu._tag === 'Closed' ? Opt.some(m
 
 export const requestInfo = onHome(({ menu }) => menu._tag === 'Open' ? Opt.some(menu.requestInfo) : Opt.none())
 
-/** About is reached from Home's side menu. */
+/** About is reached from Home's menu. */
 export const openAbout = [openMenu, requestInfo]
 
 /** The page that adds products is reached from Home's button. */
 export const openAddProducts = onHome(({ add }) => Opt.some(add))
 
+// Home's child draws its pieces in Home: its messages are wrapped twice.
+const onProducts = (pick: (model: Products.Model) => Opt.Option<Products.Message>): Choice =>
+  onHome(({ products }) => Opt.map(pick(products), (message) => ({ _tag: 'Products', message })))
+
+/** A long press on the first product of the list, which selects it. */
+export const selectFirstProduct = onProducts(({ list }) =>
+  list._tag === 'Available' && list.products[0]._tag !== 'Corrupt' ? list.products[0].selection.maybeToggle : Opt.none()
+)
+
+/** The contextual top app bar's delete button. */
+export const deleteSelected = onProducts(({ list }) =>
+  list._tag === 'Available' && list.deletion._tag === 'Possible' ? Opt.some(list.deletion.deleteSelected) : Opt.none()
+)
+
+/** The snackbar's "Undo", while the last deletion can be undone. */
+export const undoDeletion = onProducts(({ lastDeletion }) =>
+  lastDeletion._tag === 'Deleted' ? lastDeletion.maybeUndo : Opt.none()
+)
+
 export const typeName = (name: string) =>
   onAddProducts((form) => form._tag === 'Editing' ? Opt.some(form.changeName(name)) : Opt.none())
 
-/** Adds the product that never expires, before any digit is typed. */
-export const addUndated = onAddProducts((form) =>
-  form._tag === 'Editing' && form.date._tag === 'Undated' ? form.date.maybeAddUndated : Opt.none()
-)
+/** The keypad's key that adds the product the form describes: before any digit is typed, one that never expires. */
+export const addProduct = onAddProducts((form) => form._tag === 'Editing' ? form.maybeAdd : Opt.none())
 
 /** Sends each message in turn, each from the model the previous one left. */
 export const perform = Effect.fnUntraced(function*(user: User, choices: ReadonlyArray<Choice>) {

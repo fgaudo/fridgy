@@ -5,7 +5,7 @@ import * as Opt from 'effect/Option'
 import type { VNode } from 'snabbdom'
 import { handlers, initialValue, type View } from '#libs/tea-snabbdom/tea-snabbdom.ts'
 import { cn } from '#libs/ui/class-names.ts'
-import type { Digit, Message, Model } from './program.ts'
+import type { DateChoice, Digit, Message, Model } from './program.ts'
 
 const inputValue = (event: Event) => (event.target as HTMLInputElement).value
 
@@ -30,7 +30,7 @@ const appBar = (model: Model, dispatch: Dispatch<Message>) => {
       >
         close
       </button>
-      <h2 props={{ className: 'truncate px-1 text-title-large' }}>Add products</h2>
+      <h2 props={{ className: 'truncate px-1 text-title-large-emphasized' }}>Add products</h2>
     </div>
   )
 }
@@ -60,10 +60,9 @@ const snackbar = (model: Model): ReadonlyArray<VNode> =>
         }}
         props={{
           className:
-            'absolute right-4 bottom-4 left-4 flex min-h-12 items-center gap-3 rounded-extra-small bg-inverse-surface px-4 py-3 text-body-medium text-inverse-on-surface shadow-elevation-3',
+            'absolute right-4 bottom-4 left-4 flex min-h-12 items-center rounded-extra-small bg-inverse-surface px-4 py-3 text-body-medium text-inverse-on-surface shadow-elevation-3',
         }}
       >
-        <span props={{ className: 'material-symbols-rounded text-inverse-primary' }}>check_circle</span>
         <span props={{ className: 'min-w-0 flex-1' }}>
           {Opt.match(product.maybeExpirationDate, {
             onNone: () => `Added ${product.name}, with no expiration`,
@@ -134,71 +133,84 @@ const nameField = (model: Model, dispatch: Dispatch<Message>) => {
 }
 
 /**
- * Material's outlined text field, typed into with the keypad: never focused, as the name's field may be, but its
- * label stays on the outline, over a hint, and its supporting text says how to type a date, or that the digits name
- * no day. The digits are shown as
- * typed: grouping them would read them one way, which the chips leave to the user.
+ * Material's outlined text field of the expiration date, typed into with the keypad rather than the keyboard, which
+ * would cover the camera: a read-only input, whose text is the program's (the digits as typed, since grouping them
+ * would read them one way, until the form names a day, which is then written out). A tap focuses it, as a text
+ * field, and shows the hint; the label floats once there are digits. Its supporting text says how to type a
+ * date, or that the digits name no day.
  */
 const dateField = (model: Model) => {
   // Disabled while the product is being added; in the error's colors when the digits name no day.
   const look = model._tag === 'Submitting' ? 'Disabled' : model.date._tag === 'NamingNothing' ? 'Wrong' : 'Plain'
   return (
     <div props={{ className: 'flex flex-col gap-1' }}>
-      <div
-        props={{
-          className: cn(
-            'relative flex h-14 items-center rounded-extra-small border px-4 text-body-large',
-            look === 'Disabled'
-              ? 'border-on-surface/12 text-on-surface/38'
-              : look === 'Wrong'
-              ? 'border-error text-on-surface'
-              : 'border-outline text-on-surface',
-          ),
-        }}
-      >
+      <label props={{ className: 'relative block' }}>
+        <input
+          props={{
+            type: 'text',
+            readOnly: true,
+            inputMode: 'none',
+            disabled: look === 'Disabled',
+            placeholder: 'DDMMYY',
+            value: Match.valueTags(model.field, {
+              Blank: () => '',
+              Digits: ({ digits }) => digits,
+              Day: ({ date }) => formatDay(date),
+            }),
+            className: cn(
+              'peer h-14 w-full rounded-extra-small border bg-transparent px-4 text-body-large text-on-surface',
+              'caret-transparent outline-none placeholder:text-transparent focus:inset-ring-1',
+              'focus:placeholder:text-on-surface-variant disabled:border-on-surface/12 disabled:text-on-surface/38',
+              look === 'Wrong'
+                ? 'border-error inset-ring-error'
+                : 'border-outline inset-ring-primary hover:border-on-surface focus:border-primary',
+            ),
+          }}
+        />
         <span
           props={{
             className: cn(
-              'absolute top-0 left-3 -translate-y-1/2 bg-surface px-1 text-body-small',
-              look === 'Disabled' ? 'text-on-surface/38' : look === 'Wrong' ? 'text-error' : 'text-on-surface-variant',
+              'pointer-events-none absolute top-0 left-3 -translate-y-1/2 bg-surface px-1 text-body-small',
+              'transition-all duration-short-3 peer-placeholder-shown:top-1/2 peer-placeholder-shown:text-body-large',
+              'peer-focus:top-0 peer-focus:text-body-small peer-disabled:text-on-surface/38',
+              look === 'Wrong' ? 'text-error' : 'text-on-surface-variant peer-focus:text-primary',
             ),
           }}
         >
           Expiration date
         </span>
-        {Opt.match(model.maybeDigits, {
-          onNone: () => <span props={{ className: 'text-on-surface-variant' }}>DDMMYY</span>,
-          onSome: (digits) => <span props={{ className: 'tracking-widest' }}>{digits}</span>,
-        })}
-      </div>
+      </label>
       <div
         props={{ className: cn('px-4 text-body-small', look === 'Wrong' ? 'text-error' : 'text-on-surface-variant') }}
       >
         {look === 'Wrong'
           ? 'No day ahead matches these digits'
-          : 'Day, month and, if needed, the year: then pick the day'}
+          : 'Day, month and, if needed, the year; nothing for no expiration'}
       </div>
     </div>
   )
 }
 
-/** Material's suggestion chip: tapping a day adds the product with it. */
-const chip = (label: string, maybeMessage: Opt.Option<Message>, dispatch: Dispatch<Message>) => {
+/** Material's filter chip, one per day the digits name: selected, with its check, once it is the product's. */
+const chip = ({ date, choice }: DateChoice, dispatch: Dispatch<Message>) => {
   const { on } = handlers(dispatch)
   return (
     <button
       props={{
         className: cn(
-          'state-layer h-8 shrink-0 rounded-small border px-4 text-label-large',
-          Opt.isSome(maybeMessage)
-            ? 'border-outline-variant text-on-surface-variant'
-            : 'border-on-surface/12 text-on-surface/38',
+          'state-layer flex h-8 shrink-0 items-center gap-2 rounded-small text-label-large whitespace-nowrap',
+          choice._tag === 'Chosen'
+            ? 'bg-secondary-container pr-4 pl-2 text-on-secondary-container'
+            : 'border border-outline-variant px-4 text-on-surface-variant',
         ),
-        disabled: Opt.isNone(maybeMessage),
       }}
-      on={Opt.match(maybeMessage, { onNone: () => ({}), onSome: (message) => on('click', message) })}
+      on={choice._tag === 'Offered' ? on('click', choice.choose) : {}}
     >
-      {label}
+      {/* Keyed: snabbdom would otherwise patch the check's span into the label's, which keeps its classes. */}
+      {choice._tag === 'Chosen'
+        ? [<span key='check' props={{ className: 'material-symbols-rounded text-[18px]' }}>check</span>]
+        : []}
+      <span key='label'>{formatDay(date)}</span>
     </button>
   )
 }
@@ -208,25 +220,34 @@ const choices = (model: Model, dispatch: Dispatch<Message>): ReadonlyArray<VNode
     return [<span props={{ className: 'text-body-medium text-on-surface-variant' }}>Adding…</span>]
   }
   return Match.valueTags(model.date, {
-    Undated: ({ maybeAddUndated }) => [chip('No expiration', maybeAddUndated, dispatch)],
-    Naming: ({ choices }) => choices.map(({ date, maybeAdd }) => chip(formatDay(date), maybeAdd, dispatch)),
+    Undated: () => [],
+    Naming: ({ choices }) => choices.map((choice) => chip(choice, dispatch)),
     NamingNothing: () => [],
   })
 }
 
-/** A keypad of the app's own: always where the thumb expects it, and it never covers the camera. */
+/**
+ * A keypad of the app's own: always where the thumb expects it, and it never covers the camera. Its keys are
+ * Material's tonal buttons, in the pills of a button group; the one that adds the product sits where the thumb
+ * rests, next to the zero, in the FAB's colors.
+ */
 const keypad = (model: Model, dispatch: Dispatch<Message>) => {
   const { on } = handlers(dispatch)
-  const key = (label: string, maybeMessage: Opt.Option<Message>, isIcon = false) => (
+  const key = (
+    label: string,
+    maybeMessage: Opt.Option<Message>,
+    { title = label, isIcon = false, colors = 'bg-surface-container text-on-surface' } = {},
+  ) => (
     <button
       props={{
         className: cn(
-          'state-layer flex h-14 items-center justify-center rounded-full text-headline-small text-on-surface',
-          'disabled:text-on-surface/38',
+          'state-layer flex h-14 items-center justify-center rounded-full text-headline-small transition-colors',
+          'disabled:bg-on-surface/12 disabled:text-on-surface/38',
+          colors,
           { 'material-symbols-rounded': isIcon },
         ),
         disabled: Opt.isNone(maybeMessage),
-        title: isIcon ? 'Erase a digit' : label,
+        title,
       }}
       on={Opt.match(maybeMessage, { onNone: () => ({}), onSome: (message) => on('click', message) })}
     >
@@ -235,27 +256,38 @@ const keypad = (model: Model, dispatch: Dispatch<Message>) => {
   )
   const digitKey = (digit: Digit) => key(digit, Opt.map(model.maybeTypeDigit, (type) => type(digit)))
   return (
-    <div props={{ className: 'grid grid-cols-3 gap-1' }}>
+    <div props={{ className: 'grid grid-cols-3 gap-2' }}>
       {keys.map(digitKey)}
-      <div />
+      {key('check', model._tag === 'Editing' ? model.maybeAdd : Opt.none(), {
+        title: 'Add the product',
+        isIcon: true,
+        colors: 'bg-primary-container text-on-primary-container',
+      })}
       {digitKey('0')}
-      {key('backspace', model.maybeEraseDigit, true)}
+      {key('backspace', model.maybeEraseDigit, { title: 'Erase a digit', isIcon: true })}
     </div>
   )
 }
 
 /**
  * Material's full-screen dialog, as a page: the camera above, within sight, and below, within the thumb's reach,
- * the name, the date being typed, the days it can name and the keypad.
+ * the name, the date being typed, the days it can name and the keypad. It rises over the page that opened it,
+ * and sinks back, letting nothing through while it does.
  */
 export const view: View<Model, Message> = (model, dispatch) => (
   <div
+    key='AddProducts'
     style={{
       transform: 'translateY(100%)',
       transition: 'transform var(--transition-duration-medium-4) var(--ease-emphasized-decelerate)',
       delayed: { transform: 'translateY(0)' },
+      remove: {
+        transform: 'translateY(100%)',
+        pointerEvents: 'none',
+        transition: 'transform var(--transition-duration-short-4) var(--ease-emphasized-accelerate)',
+      },
     }}
-    props={{ className: 'fixed inset-0 flex flex-col' }}
+    props={{ className: 'fixed inset-0 z-70 flex flex-col' }}
   >
     {appBar(model, dispatch)}
     {viewfinder(model)}
@@ -267,7 +299,8 @@ export const view: View<Model, Message> = (model, dispatch) => (
     >
       {nameField(model, dispatch)}
       {dateField(model)}
-      <div props={{ className: 'flex h-8 items-center gap-2 overflow-x-auto' }}>{choices(model, dispatch)}</div>
+      {/* The chips wrap: a row that scrolled would show a scrollbar on desktop, over the chips. */}
+      <div props={{ className: 'flex min-h-8 flex-wrap items-center gap-2' }}>{choices(model, dispatch)}</div>
       {keypad(model, dispatch)}
     </div>
   </div>

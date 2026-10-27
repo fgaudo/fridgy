@@ -25,6 +25,7 @@ const message: fc.Arbitrary<Message> = fc.oneof(
   licenses.map((licenses) => Msg.LicensesLoaded({ licenses })),
   fc.string().map((version) => Msg.VersionLoaded({ version })),
   fc.constant(Msg.BackPressed()),
+  fc.integer({ min: -10, max: 10_000 }).map((top) => Msg.Scrolled({ top })),
 )
 
 describe('About update', () => {
@@ -33,11 +34,15 @@ describe('About update', () => {
   })
 
   // Going back asks the parent to leave on every tap: the parent removes the page
-  // on the first one, so a second tap from the same frame is rejected there.
+  // on the first one, so a second tap from the same frame is rejected there. The page tells how far it scrolled
+  // on every scroll (to its top, in the test's events).
   test('the view sends what update accepts, all of it, and acts once when sent twice', () => {
-    const check = dispatchViolations(program.update, { repeatable: (msg) => msg._tag === 'BackPressed' })
+    const check = dispatchViolations(program.update, {
+      repeatable: (msg) => msg._tag === 'BackPressed' || msg._tag === 'Scrolled',
+    })
     fc.assert(fc.property(state, (before) => {
-      expect(check(before, messagesSentBy<Model, Message>(view, makeModel(before)), [Msg.BackPressed()])).toEqual([])
+      const askable = [Msg.BackPressed(), Msg.Scrolled({ top: 0 })]
+      expect(check(before, messagesSentBy<Model, Message>(view, makeModel(before)), askable)).toEqual([])
     }))
   })
 
@@ -62,21 +67,35 @@ describe('About update', () => {
     })
   })
 
+  test('Scrolled says whether the page is at its top, keeping the very same state while that does not change', () => {
+    assertProperty([state, fc.integer({ min: -10, max: 10_000 })], (before, top) => {
+      const { after, commands } = step(Msg.Scrolled({ top }), before)
+      const isAtTop = top <= 0
+      return after.isAtTop === isAtTop && (isAtTop !== before.isAtTop || after === before)
+        && Equal.equals(after, { ...before, isAtTop }) && commands.length === 0
+    })
+  })
+
   describe('the model', () => {
     const blank = fc.string({ unit: fc.constantFrom(' ', '\t', '\n'), maxLength: 3 })
     const visible = (text: string) => text.trim().length > 0
     /** The card of one loaded license. */
     const cardOf = (l: License) => {
-      const { licenses } = makeModel({ licenses: { _tag: 'Loaded', items: [l] }, version: { _tag: 'Loading' } })
+      const { licenses } = makeModel({
+        isAtTop: true,
+        licenses: { _tag: 'Loaded', items: [l] },
+        version: { _tag: 'Loading' },
+      })
       return licenses._tag === 'Loaded' && licenses.cards[0] !== undefined
         ? licenses.cards[0]
         : defect('one license makes one card')
     }
 
-    test('shows the version and the licenses once they are loaded, and nothing before', () => {
+    test('shows the version and the licenses once they are loaded, and nothing before, and whether it is at its top', () => {
       assertProperty([state], (s) => {
         const model = makeModel(s)
-        return model.version._tag === s.version._tag
+        return model.isAtTop === s.isAtTop
+          && model.version._tag === s.version._tag
           && model.licenses._tag === s.licenses._tag
           && (model.licenses._tag !== 'Loaded' || s.licenses._tag !== 'Loaded'
             || model.licenses.cards.length === s.licenses.items.length)

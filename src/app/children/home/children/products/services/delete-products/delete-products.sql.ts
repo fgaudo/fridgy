@@ -7,6 +7,7 @@ import * as Request from 'effect/Request'
 import * as RequestResolver from 'effect/RequestResolver'
 import * as Result from 'effect/Result'
 import * as SqlClient from 'effect/sql/SqlClient'
+import * as SqlResolver from 'effect/sql/SqlResolver'
 import { ProductStore } from '#infrastructure/storage/products.ts'
 import * as Integer from '#libs/numbers/integer.ts'
 import * as DeleteProducts from './delete-products.ts'
@@ -14,7 +15,7 @@ import * as DeleteProducts from './delete-products.ts'
 export const layer = Layer.effect(
   DeleteProducts.DeleteProducts,
   Effect.gen(function*() {
-    const { deleteById: deleteStored } = yield* ProductStore
+    const { deleteById: deleteStored, insert } = yield* ProductStore
     const sql = yield* SqlClient.SqlClient
     const deleteById = RequestResolver.make<DeleteProducts.DeleteProductById>(
       Effect.fn(function*(entries) {
@@ -54,6 +55,22 @@ export const layer = Layer.effect(
         )
       }),
     )
-    return { deleteById }
+    const restore = RequestResolver.make<DeleteProducts.RestoreProduct>(
+      Effect.fn(function*(entries) {
+        // All or nothing, as the deletion was. The requests only learn that they failed: the cause is logged here.
+        const outcome = yield* pipe(
+          entries,
+          Effect.forEach(({ request: { snapshot } }) => SqlResolver.request(snapshot, insert), { discard: true }),
+          sql.withTransaction,
+          Effect.tapError((error) => Effect.logWarning('Could not put products back', error)),
+          Effect.result,
+        )
+        return yield* Effect.forEach(
+          entries,
+          (entry) => Result.isFailure(outcome) ? Request.fail(entry, undefined) : Request.succeed(entry, undefined),
+        )
+      }),
+    )
+    return { deleteById, restore }
   }),
 ).pipe(Layer.provide(ProductStore.layer))

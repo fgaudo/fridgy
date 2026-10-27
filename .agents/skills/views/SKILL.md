@@ -28,21 +28,34 @@ nothing is named). The model holds exactly what the view draws: a field no view 
 - `onPreventingDefault` is the exception that always attaches (the native menu of a long press), with an
   optional message.
 - An input the user types into gets its text with `initialValue` (written only when the input is created),
-  never from `props.value`: a frame older than the last keys would take them back.
+  never from `props.value`: a frame older than the last keys would take them back. An input the program types
+  into (the date the keypad fills, read-only) takes `props.value`, as any other text of the model.
 - A parent's view hands each child's view its own dispatch, `Tea.dispatchTo(dispatch, '<Child>')`, and the
   child's model whole; it never reads the model's fields. The child draws its pieces where the parent leaves
   room (Products' list in Home, its subtitle and selection bar in Home's top app bar), or its whole screen
   (the root draws the page on top). A model that rarely changes is drawn with snabbdom's `thunk`.
 - An element that animates in and out takes a `key` and snabbdom's `style` hooks (`delayed`, `remove`), as
-  Home's side menu does.
+  Home's menu does. The hooks run on the element removed, not on its children: a piece a parent places (Products'
+  snackbar in Home) is drawn in a slot that is always there. A page's view keys its root by the page's name
+  (`key='About'`): the root draws the page on top with no wrapper, so that the page replaced leaves with its own
+  `remove` transition, letting nothing through (`pointerEvents: 'none'`), over the next page (`z-70`) or under it
+  (Home, held until the next page's entrance is over).
 
 ## Material 3
 
 A control is the Material component that does its job, built to that component's spec (colors, size, shape,
 elevation): a list of things is a list, not cards; an action of the page is a FAB or a top app bar's icon
-button; a form that opens over the page is a modal bottom sheet, within the thumb's reach, with outlined text
-fields; selected things turn the top app bar into a contextual one with their actions. The theme leaves out
-Tailwind's own colors, font sizes, radii, shadows, easings and durations:
+button; a secondary action is an item of the bar's overflow menu (a navigation drawer is for five or more
+destinations); a form that opens over the page is a modal bottom sheet, within the thumb's reach, with outlined
+text fields; selected things turn the top app bar into a contextual one with their actions; something undone in
+a few seconds (a deletion) gets a snackbar with its action, never a dialog; what only informs is a toast; a
+choice among a few values is a row of filter chips, the one taken drawn selected, and the action that commits
+the form is a button where the thumb rests (the keypad's check), never a chip. A chip
+or a button that does nothing is text. Every top app bar is the same: a 64dp bar, the emphasized title, the
+surface's color at rest and `surface-container` once the page scrolls under it, which the page learns from its
+scroll (Home from its `Viewport`, About from its own scroll event). Pages come and go with Material's
+transitions, symmetric: what enters decelerates, what leaves accelerates. The theme leaves out Tailwind's own
+colors, font sizes, radii, shadows, easings and durations:
 
 - colors are Material's roles (`src/palette.generated.css`, generated from the key colors in
   `scripts/palette.ts`: change those and run `bun run update-palette`, never the generated file). What is
@@ -62,8 +75,9 @@ Tailwind's own colors, font sizes, radii, shadows, easings and durations:
   emphasized, over `medium-4`, and what leaves accelerates over `short-4`: an element inserted and removed sets
   its `transition` in snabbdom's `delayed` and `remove` styles, with `var(--transition-duration-medium-4)` and
   `var(--ease-emphasized-decelerate)`, never a number of milliseconds or a `cubic-bezier`;
-- icons are `material-symbols-rounded` spans; the safe areas are the `sait`, `saib`, `sail`, `sair` spacings
-  (`pt-sait`, `mr-sair`).
+- icons are `material-symbols-rounded` spans, 24dp as they come, `icon-large` (48dp, at its optical size) for an
+  empty state's, `icon-filled` for a selected state's; the safe areas are the `sait`, `saib`, `sail`, `sair`
+  spacings (`pt-sait`, `mr-sair`).
 
 A look that Material or the app fixes (a utility in `src/styles.css`) is written once there, never in a component
 under `src/libs/`, which knows nothing of the app: `src/libs/ui/` holds only `cn`, which joins class names.

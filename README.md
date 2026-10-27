@@ -134,7 +134,8 @@ domain type has a `*.test_arbitrary.ts` file with its generators. Among others, 
   sent twice (a double tap), unless it is meant to repeat;
 - a stored product reads back as the same product;
 - every storage adapter passes its service's contract on SQLite with the real migrations: what is written reads
-  back as itself, deletions remove exactly what they should, Home's list is ordered and sees every write.
+  back as itself, deletions remove exactly what they should and an undone one puts its products back, Home's list
+  is ordered and sees every write.
 
 ## Contributing
 

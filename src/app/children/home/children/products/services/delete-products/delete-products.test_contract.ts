@@ -17,12 +17,19 @@ const deleteById = Effect.fnUntraced(function*(id: string) {
   return yield* Effect.request(DeleteProducts.DeleteProductById({ id }), deleteById)
 })
 
+const restore = Effect.fnUntraced(function*(product: Product.Product) {
+  const { restore } = yield* DeleteProducts.DeleteProducts
+  return yield* Effect.request(DeleteProducts.RestoreProduct({ snapshot: Product.toSnapshot(product) }), restore)
+})
+
 /** The adapter's storage, reached without a service. */
 export type Storage<R> = Readonly<{
   /** Stores a product, answering with its id. */
   insert: (snapshot: Product.Snapshot) => Effect.Effect<string, never, R>
   /** What is stored under `id`. */
   readBack: (id: string) => Effect.Effect<Opt.Option<Product.UnvalidatedSnapshot>, never, R>
+  /** Everything that is stored. */
+  readAll: Effect.Effect<ReadonlyArray<Product.UnvalidatedSnapshot>, never, R>
 }>
 
 // Strings that a loose parser would read as a stored id (the first product gets id 1).
@@ -35,7 +42,7 @@ const unknownId = fc.oneof(
 export const deleteProductsContract = <R>(
   name: string,
   adapter: () => Layer.Layer<DeleteProducts.DeleteProducts | R>,
-  { insert, readBack }: Storage<R>,
+  { insert, readBack, readAll }: Storage<R>,
 ) =>
   describe(`DeleteProducts contract (${name})`, () => {
     const store = (product: Product.Product) => insert(Product.toSnapshot(product))
@@ -44,6 +51,8 @@ export const deleteProductsContract = <R>(
         Effect.map((stored) => Opt.exists(stored, (s) => Equal.equals(Product.fromSnapshot(s), Opt.some(product)))),
       )
     const isStored = (id: string) => readBack(id).pipe(Effect.map(Opt.isSome))
+    const isProductOf = (product: Product.Product) => (stored: Product.UnvalidatedSnapshot) =>
+      Equal.equals(Product.fromSnapshot(stored), Opt.some(product))
 
     test('deleting a product removes it, and only it', () =>
       checkOnFreshLayer(
@@ -81,6 +90,19 @@ export const deleteProductsContract = <R>(
           if (yield* isStored(unknownId)) return true
           yield* deleteById(unknownId).pipe(Effect.ignore)
           return yield* readsBackAs(id, product)
+        }),
+      ))
+
+    test('a deleted product put back reads back as itself, once', () =>
+      checkOnFreshLayer(
+        adapter,
+        fc.tuple(ProductArbitrary.arbitrary, ProductArbitrary.arbitrary),
+        Effect.fnUntraced(function*([kept, deleted]) {
+          const keptId = yield* store(kept)
+          yield* deleteById(yield* store(deleted))
+          yield* restore(deleted)
+          const stored = yield* readAll
+          return stored.filter(isProductOf(deleted)).length === 1 && (yield* readsBackAs(keptId, kept))
         }),
       ))
   })

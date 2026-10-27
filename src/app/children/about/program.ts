@@ -11,6 +11,8 @@ import { type License, Licenses } from './services/licenses/licenses.ts'
 import { Version } from './services/version/version.ts'
 
 export type State = Readonly<{
+  /** Whether the page is scrolled to its top, where the top app bar rests on the surface. */
+  isAtTop: boolean
   licenses: Data.TaggedEnum<{
     Loading: object
     Loaded: Readonly<{ items: ReadonlyArray<License> }>
@@ -24,6 +26,8 @@ export type State = Readonly<{
 export type Message = Data.TaggedEnum<{
   /** The page's own back button, and the platform's, while the page is shown. */
   BackPressed: object
+  /** The page scrolled, to `top` pixels from its top. */
+  Scrolled: { top: number }
   // From commands.
   LicensesLoaded: { licenses: ReadonlyArray<License> }
   VersionLoaded: { version: string }
@@ -78,6 +82,9 @@ export type LicenseCard = Readonly<{
 
 export type Model = Readonly<{
   back: Message
+  scroll: (top: number) => Message
+  /** The top app bar takes a container's color once the page scrolls under it. */
+  isAtTop: boolean
   licenses: Data.TaggedEnum<{
     Loading: object
     Loaded: Readonly<{ cards: ReadonlyArray<LicenseCard> }>
@@ -112,7 +119,7 @@ export const program: Tea.Program<{
   event: Event
 }> = {
   init: {
-    state: { licenses: { _tag: 'Loading' }, version: { _tag: 'Loading' } },
+    state: { isAtTop: true, licenses: { _tag: 'Loading' }, version: { _tag: 'Loading' } },
     commands: [Command.LoadLicenses(), Command.LoadVersion()],
   },
 
@@ -128,6 +135,12 @@ export const program: Tea.Program<{
     }),
 
     BackPressed: () => (state) => ({ state, events: [Event.LeaveRequested()] }),
+
+    // The same state while the answer is the same: the page scrolls often, and only a change draws a frame.
+    Scrolled: ({ top }) => (state) => {
+      const isAtTop = top <= 0
+      return { state: isAtTop === state.isAtTop ? state : { ...state, isAtTop } }
+    },
   }),
 
   runCommand: Match.typeTags<Command>()({
@@ -139,6 +152,8 @@ export const program: Tea.Program<{
 
   makeModel: (state) => ({
     back: Message.BackPressed(),
+    scroll: (top) => Message.Scrolled({ top }),
+    isAtTop: state.isAtTop,
     licenses: state.licenses._tag === 'Loaded'
       ? { _tag: 'Loaded', cards: Arr.map(state.licenses.items, cardOf) }
       : { _tag: 'Loading' },

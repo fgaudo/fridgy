@@ -8,5 +8,5 @@ import { deleteProductsContract } from './delete-products.test_contract.ts'
 deleteProductsContract(
   'sqlite',
   () => DeleteProductsSql.layer.pipe(Layer.provideMerge(ProductStore.layer), Layer.provideMerge(SqliteMemory.layer)),
-  { insert: StoredProducts.insert, readBack: StoredProducts.readBack },
+  { insert: StoredProducts.insert, readBack: StoredProducts.readBack, readAll: StoredProducts.readAll },
 )

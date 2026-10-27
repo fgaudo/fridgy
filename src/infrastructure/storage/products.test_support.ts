@@ -49,3 +49,26 @@ export const readBack = Effect.fnUntraced(function*(id: string) {
   })
   return Opt.map(Arr.head(rows), (row): Product.UnvalidatedSnapshot => row)
 })
+
+/** Everything that is stored, as the database holds it. */
+export const readAll = Effect.gen(function*() {
+  const { withExpiration: { from, columns } } = yield* ProductStore
+  const sql = yield* SqlClient.SqlClient
+  const rows = yield* SqlSchema.findAll({
+    Request: Schema.Void,
+    Result: Schema.Struct({
+      maybeName: Schema.OptionFromNullishOr(ProductColumns.name),
+      maybeCreationDate: Schema.OptionFromNullishOr(ProductColumns.creationDate),
+      maybeExpirationDate: Schema.OptionFromNullishOr(ProductExpirationColumns.date),
+    }),
+    execute: () =>
+      sql`
+        SELECT
+          ${columns.name} AS maybeName,
+          ${columns.creationDate} AS maybeCreationDate,
+          ${columns.expirationDate} AS maybeExpirationDate
+        ${from}
+      `,
+  })().pipe(Effect.orDie)
+  return Arr.map(rows, (row): Product.UnvalidatedSnapshot => row)
+})

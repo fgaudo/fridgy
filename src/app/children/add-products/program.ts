@@ -1,7 +1,7 @@
 // The page that adds products one after another: the camera reads a product's barcode, which names it for now,
 // the keypad types the digits of its expiration date, and the user picks, among the days the digits can name,
-// the one they meant, which adds the product. Adding is a state that only its completion leaves; the page then
-// stays, with the name, for the next product, until the user leaves it.
+// the one they meant (or none: no digits, no expiration), then adds the product. Adding is a state that only its
+// completion leaves; the page then stays, with the name, for the next product, until the user leaves it.
 import * as Tea from '@fgaudo/effect-tea'
 import * as Arr from 'effect/Array'
 import * as Channel from 'effect/Channel'
@@ -29,6 +29,8 @@ export type Form = Readonly<{
   scans: number
   /** Typed on the keypad, at most `DigitDates.MAX_DIGITS`. */
   digits: string
+  /** The day picked among those the digits name, until a digit is typed or erased. */
+  maybeChosenDate: Opt.Option<DateTime.Utc>
   /** Until the camera fails: then the name is typed. */
   isCameraOn: boolean
   /** The current time, once the clock has ticked: the product is created then. */
@@ -46,8 +48,10 @@ export type Message = Data.TaggedEnum<{
   NameChanged: { name: string }
   DigitTyped: { digit: Digit }
   DigitErased: object
-  /** Adds the product, expiring on one of the days the digits name, or never when no digit is typed. */
-  Started: { maybeExpirationDate: Opt.Option<DateTime.Utc> }
+  /** Picks, among the days the digits name, the one the product expires on. */
+  DateChosen: { date: DateTime.Utc }
+  /** Adds the product the form describes: named, expiring on the day it names, or never when no digit is typed. */
+  Started: object
   /** The page's close button, and the back button, while the page is shown. */
   BackPressed: object
   // From subscriptions.
@@ -76,13 +80,16 @@ const Event = Data.taggedEnum<Event>()
 
 export type Deps = AddProducts.AddProducts | Scanner | Notifications | BackButton
 
-/** A day the digits name, which adds the product once the form names one. */
-export type DateChoice = Readonly<{ date: DateTime.Utc; maybeAdd: Opt.Option<Message> }>
+/** A day the digits name: the one the product expires on, or one to pick instead. */
+export type DateChoice = Readonly<{
+  date: DateTime.Utc
+  choice: Data.TaggedEnum<{ Chosen: object; Offered: Readonly<{ choose: Message }> }>
+}>
 
 /** What the typed digits say of the expiration date. */
 export type DateField = Data.TaggedEnum<{
-  /** No digit typed: the product may be added with no expiration date, once the form names one. */
-  Undated: Readonly<{ maybeAddUndated: Opt.Option<Message> }>
+  /** No digit typed: the product never expires. */
+  Undated: object
   /** The digits name these days, in order. */
   Naming: Readonly<{ choices: Arr.NonEmptyReadonlyArray<DateChoice> }>
   /** The digits name no day ahead. */
@@ -94,8 +101,12 @@ type Shown = Readonly<{
   name: string
   /** Changes when the name is replaced by a scan, not by typing. */
   nameKey: number
-  /** The digits typed so far, once there are any. */
-  maybeDigits: Opt.Option<string>
+  /** The date's field: the digits typed so far, or the day they name once the form has one. */
+  field: Data.TaggedEnum<{
+    Blank: object
+    Digits: Readonly<{ digits: string }>
+    Day: Readonly<{ date: DateTime.Utc }>
+  }>
   /** The product added last, for a few seconds after it was added: the snackbar that says so. */
   maybeJustAdded: Opt.Option<Product.Product>
   /** The keypad's keys: none while a product is being added, or past a date's longest. */
@@ -111,6 +122,8 @@ export type Model = Data.TaggedEnum<{
       close: Message
       changeName: (name: string) => Message
       date: DateField
+      /** Adds the product, once the form describes one. */
+      maybeAdd: Opt.Option<Message>
     }>
   /** The controls are disabled until the product is added. */
   Submitting: Shown
@@ -136,22 +149,28 @@ const datesOf = (form: Form): ReadonlyArray<DateTime.Utc> =>
     onSome: (now) => DigitDates.datesOf(form.digits, now).filter(Product.canExpireOn(now)),
   })
 
-/** Whether the form offers to add the product with that expiration. */
-const isOffered = (form: Form, maybeExpirationDate: Opt.Option<DateTime.Utc>) =>
-  Opt.match(maybeExpirationDate, {
-    onNone: () => form.digits === '',
-    onSome: (date) => datesOf(form).some((offered) => DateTime.Equivalence(offered, date)),
-  })
+const isAmong = (dates: ReadonlyArray<DateTime.Utc>) => (date: DateTime.Utc) =>
+  dates.some((offered) => DateTime.Equivalence(offered, date))
 
-/** The product the form describes with that expiration, created now, if it is one. */
-const productOf = (form: Form, maybeExpirationDate: Opt.Option<DateTime.Utc>) =>
-  Opt.flatMap(
-    Opt.all([form.maybeName, form.maybeNow]),
-    ([name, creationDate]) => Product.make({ name, creationDate, maybeExpirationDate }),
+/** The day the digits name: the one picked, while they still name it, or else the only one they name. */
+const maybeNamedDate = (form: Form): Opt.Option<DateTime.Utc> => {
+  const offered = datesOf(form)
+  return Opt.orElse(
+    Opt.filter(form.maybeChosenDate, isAmong(offered)),
+    () => offered.length === 1 ? Arr.head(offered) : Opt.none(),
   )
+}
 
-const startOf = (form: Form, maybeExpirationDate: Opt.Option<DateTime.Utc>) =>
-  Opt.map(productOf(form, maybeExpirationDate), () => Message.Started({ maybeExpirationDate }))
+/** When the product expires: never with no digits, on the day they name, or nothing while they name none. */
+const maybeExpirationOf = (form: Form): Opt.Option<Opt.Option<DateTime.Utc>> =>
+  form.digits === '' ? Opt.some(Opt.none()) : Opt.map(maybeNamedDate(form), Opt.some)
+
+/** The product the form describes, created now, if it is one. */
+const productOf = (form: Form) =>
+  Opt.flatMap(
+    Opt.all([form.maybeName, form.maybeNow, maybeExpirationOf(form)]),
+    ([name, creationDate, maybeExpirationDate]) => Product.make({ name, creationDate, maybeExpirationDate }),
+  )
 
 // Refreshed often, so that the creation date is close to when the user adds the product.
 const clock = Channel.forever(
@@ -224,6 +243,7 @@ export const program: Tea.Program<{
         maybeName: Opt.none(),
         scans: 0,
         digits: '',
+        maybeChosenDate: Opt.none(),
         isCameraOn: true,
         maybeNow: Opt.none(),
         maybeLastAdded: Opt.none(),
@@ -238,14 +258,30 @@ export const program: Tea.Program<{
       state: withForm(state, (form) => ({ ...form, maybeName: Opt.some(name) })),
     }),
 
+    // New digits name other days: the day picked goes with the old ones.
     DigitTyped: ({ digit }) => (state) =>
       state._tag === 'Editing' && state.form.digits.length < DigitDates.MAX_DIGITS
-        ? { state: withForm(state, (form) => ({ ...form, digits: form.digits + digit })) }
+        ? {
+          state: withForm(state, (form) => ({ ...form, digits: form.digits + digit, maybeChosenDate: Opt.none() })),
+        }
         : Tea.reject,
 
     DigitErased: () => (state) =>
       state._tag === 'Editing' && state.form.digits !== ''
-        ? { state: withForm(state, (form) => ({ ...form, digits: form.digits.slice(0, -1) })) }
+        ? {
+          state: withForm(state, (form) => ({
+            ...form,
+            digits: form.digits.slice(0, -1),
+            maybeChosenDate: Opt.none(),
+          })),
+        }
+        : Tea.reject,
+
+    // Only a day the digits name, and not the one the form already names: a tap on the chosen chip does nothing.
+    DateChosen: ({ date }) => (state) =>
+      state._tag === 'Editing' && isAmong(datesOf(state.form))(date)
+        && !Opt.contains(maybeNamedDate(state.form), date)
+        ? { state: withForm(state, (form) => ({ ...form, maybeChosenDate: Opt.some(date) })) }
         : Tea.reject,
 
     TimeChanged: ({ now }) => (state) => ({ state: withForm(state, (form) => ({ ...form, maybeNow: Opt.some(now) })) }),
@@ -259,18 +295,16 @@ export const program: Tea.Program<{
 
     CameraFailed: () => (state) => ({ state: withForm(state, (form) => ({ ...form, isCameraOn: false })) }),
 
-    Started: ({ maybeExpirationDate }) => (state) => {
-      if (state._tag !== 'Editing' || !isOffered(state.form, maybeExpirationDate)) {
-        return Tea.reject
-      }
-      return Opt.match(productOf(state.form, maybeExpirationDate), {
-        onNone: () => Tea.reject,
-        onSome: (product) => ({
-          state: { _tag: 'Submitting', form: state.form, product },
-          commands: [Command.Add({ product })],
-        }),
-      })
-    },
+    Started: () => (state) =>
+      state._tag === 'Editing'
+        ? Opt.match(productOf(state.form), {
+          onNone: () => Tea.reject,
+          onSome: (product) => ({
+            state: { _tag: 'Submitting', form: state.form, product },
+            commands: [Command.Add({ product })],
+          }),
+        })
+        : Tea.reject,
 
     // The next product starts with no digits, and the name of this one: a second package of it may be next.
     Completed: ({ succeeded }) => (state) => {
@@ -278,7 +312,12 @@ export const program: Tea.Program<{
         return defect('Completed while no product is being added: only a completion leaves Submitting')
       }
       return succeeded
-        ? { state: { _tag: 'Editing', form: { ...state.form, digits: '', maybeLastAdded: Opt.some(state.product) } } }
+        ? {
+          state: {
+            _tag: 'Editing',
+            form: { ...state.form, digits: '', maybeChosenDate: Opt.none(), maybeLastAdded: Opt.some(state.product) },
+          },
+        }
         : {
           state: { _tag: 'Editing', form: state.form },
           commands: [Command.ShowToast({ text: 'Could not add the product' })],
@@ -304,11 +343,17 @@ export const program: Tea.Program<{
   makeModel: (state) => {
     const { form } = state
     const isEditing = state._tag === 'Editing'
+    const maybeNamed = maybeNamedDate(form)
     const shown: Shown = {
       isCameraOn: form.isCameraOn,
       name: Opt.getOrElse(form.maybeName, () => ''),
       nameKey: form.scans,
-      maybeDigits: Opt.liftPredicate(form.digits, (digits) => digits !== ''),
+      field: form.digits === ''
+        ? { _tag: 'Blank' }
+        : Opt.match(maybeNamed, {
+          onNone: () => ({ _tag: 'Digits', digits: form.digits }),
+          onSome: (date) => ({ _tag: 'Day', date }),
+        }),
       maybeJustAdded: Opt.filter(form.maybeLastAdded, (product) => isJustAdded(product, form.maybeNow)),
       maybeTypeDigit: isEditing && form.digits.length < DigitDates.MAX_DIGITS
         ? Opt.some((digit: Digit) => Message.DigitTyped({ digit }))
@@ -318,17 +363,23 @@ export const program: Tea.Program<{
     if (state._tag === 'Submitting') {
       return { _tag: 'Submitting', ...shown }
     }
-    const choices = datesOf(form).map((date): DateChoice => ({ date, maybeAdd: startOf(form, Opt.some(date)) }))
+    const choices = datesOf(form).map((date): DateChoice => ({
+      date,
+      choice: Opt.contains(maybeNamed, date)
+        ? { _tag: 'Chosen' }
+        : { _tag: 'Offered', choose: Message.DateChosen({ date }) },
+    }))
     return {
       _tag: 'Editing',
       ...shown,
       close: Message.BackPressed(),
       changeName: (name: string) => Message.NameChanged({ name }),
       date: form.digits === ''
-        ? { _tag: 'Undated', maybeAddUndated: startOf(form, Opt.none()) }
+        ? { _tag: 'Undated' }
         : Arr.isReadonlyArrayNonEmpty(choices)
         ? { _tag: 'Naming', choices }
         : { _tag: 'NamingNothing' },
+      maybeAdd: Opt.map(productOf(form), () => Message.Started()),
     }
   },
 }

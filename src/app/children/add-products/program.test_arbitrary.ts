@@ -1,7 +1,9 @@
 import * as Data from 'effect/Data'
+import * as Opt from 'effect/Option'
 import * as fc from 'fast-check'
 import { arbitrary as product } from '#domain/product.test_arbitrary.ts'
-import { MAX_DIGITS } from '#libs/dates/digit-dates.ts'
+import * as Product from '#domain/product.ts'
+import { datesOf, MAX_DIGITS } from '#libs/dates/digit-dates.ts'
 import { arbitrary as maybe } from '#libs/option/option.test_arbitrary.ts'
 import { utc } from '#libs/testing/date-time.test_arbitrary.ts'
 import type { Digit, Form, Message, State } from './program.ts'
@@ -18,13 +20,34 @@ const digits = fc.oneof(
   ),
 )
 
-export const form: fc.Arbitrary<Form> = fc.record({
-  maybeName: maybe(fc.oneof(fc.string(), fc.stringMatching(/^\d{8,13}$/))),
-  scans: fc.nat(),
-  digits,
-  isCameraOn: fc.boolean(),
-  maybeNow: maybe(utc),
-  maybeLastAdded: maybe(product),
+/** The days the form's digits name, by the rules of a product: what can be picked. */
+const offeredDates = (form: Form) =>
+  Opt.match(form.maybeNow, {
+    onNone: () => [],
+    onSome: (now) => datesOf(form.digits, now).filter(Product.canExpireOn(now)),
+  })
+
+// The day picked is often one the digits name, and sometimes one they no longer do, or none.
+export const form: fc.Arbitrary<Form> = fc.tuple(
+  fc.record({
+    maybeName: maybe(fc.oneof(fc.string(), fc.stringMatching(/^\d{8,13}$/))),
+    scans: fc.nat(),
+    digits,
+    isCameraOn: fc.boolean(),
+    maybeNow: maybe(utc),
+    maybeLastAdded: maybe(product),
+  }),
+  fc.oneof(fc.constant('offered'), fc.constant('other'), fc.constant('none')),
+  fc.nat(),
+  utc,
+).map(([form, picked, index, other]): Form => {
+  const offered = offeredDates({ ...form, maybeChosenDate: Opt.none() })
+  const maybeChosenDate = picked === 'offered' && offered.length > 0
+    ? Opt.fromNullishOr(offered[index % offered.length])
+    : picked === 'other'
+    ? Opt.some(other)
+    : Opt.none()
+  return { ...form, maybeChosenDate }
 })
 
 export const editing = form.map((form) => ({ _tag: 'Editing', form } as const))
@@ -41,7 +64,8 @@ export const message: fc.Arbitrary<Message> = fc.oneof(
   fc.constant(Msg.CameraFailed()),
   fc.string().map((name) => Msg.NameChanged({ name })),
   digit.map((digit) => Msg.DigitTyped({ digit })),
-  maybe(utc).map((maybeExpirationDate) => Msg.Started({ maybeExpirationDate })),
+  fc.constant(Msg.Started()),
+  utc.map((date) => Msg.DateChosen({ date })),
   utc.map((now) => Msg.TimeChanged({ now })),
   fc.string().map((barcode) => Msg.Scanned({ barcode })),
   fc.boolean().map((succeeded) => Msg.Completed({ succeeded })),

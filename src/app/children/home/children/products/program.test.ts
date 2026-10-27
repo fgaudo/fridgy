@@ -19,6 +19,7 @@ import {
   idle,
   message,
   product,
+  recent,
   selecting,
   state,
   stateWith,
@@ -26,7 +27,7 @@ import {
   storedProducts,
   ticking,
 } from './program.test_arbitrary.ts'
-import { type Command, type Message, program, type Selection, type State } from './program.ts'
+import { type Command, type Message, productsOf, program, type Selection, type State } from './program.ts'
 import { ProductListReadError, type StoredProduct } from './services/product-list/product-list.ts'
 
 const Msg = Data.taggedEnum<Message>()
@@ -43,11 +44,12 @@ const listedIds = (state: State) =>
   )
 
 /**
- * A message that cannot arrive in that state: a completion while no deletion is in progress, a tick while no
- * product expires.
+ * A message that cannot arrive in that state: a completion while no deletion is in progress, the end of the offer
+ * to undo while there is none, a tick while no product expires.
  */
 const cannotArrive = (msg: Message, before: State) =>
-  (msg._tag === 'DeleteCompleted' && before.selection._tag !== 'Deleting')
+  ((msg._tag === 'Deleted' || msg._tag === 'DeleteFailed') && before.selection._tag !== 'Deleting')
+  || (msg._tag === 'UndoExpired' && before.lastDeletion._tag !== 'Recent')
   || (msg._tag === 'TimeChanged' && !hasExpiringProduct(before))
 
 describe('Products update', () => {
@@ -200,32 +202,72 @@ describe('Products update', () => {
     })
   })
 
-  test('DeleteStarted deletes the selection, or is rejected when there is none or the list is not loaded', () => {
-    assertProperty([state], (before) => {
-      if (before.list._tag !== 'Loaded' || before.selection._tag !== 'Selecting') {
-        return rejects(Msg.DeleteStarted(), before)
-      }
-      const { after, commands } = step(Msg.DeleteStarted(), before)
-      return after.selection._tag === 'Deleting'
-        && Equal.equals(selectedIds(after.selection), selectedIds(before.selection))
-        && onlyChanged(before, after, 'selection')
-        && Equal.equals(commands, [Cmd.Delete({ ids: before.selection.ids })])
-    })
-  })
-
-  describe('DeleteCompleted', () => {
-    const deletingState = stateWith('selection', deleting)
-
-    test('success clears the selection', () => {
-      assertProperty([deletingState], (before) => {
-        const { after, commands } = step(Msg.DeleteCompleted({ succeeded: true }), before)
-        return after.selection._tag === 'Idle' && onlyChanged(before, after, 'selection') && commands.length === 0
+  describe('DeleteStarted', () => {
+    test('deletes the selection, keeping its products, or is rejected when there is none or the list is not loaded', () => {
+      assertProperty([state], (before) => {
+        if (before.list._tag !== 'Loaded' || before.selection._tag !== 'Selecting') {
+          return rejects(Msg.DeleteStarted(), before)
+        }
+        const { after, commands } = step(Msg.DeleteStarted(), before)
+        return Equal.equals(after.selection, {
+          _tag: 'Deleting',
+          ids: before.selection.ids,
+          maybeProducts: productsOf(before.list.items, before.selection.ids),
+        })
+          && onlyChanged(before, after, 'selection')
+          && Equal.equals(commands, [Cmd.Delete({ ids: before.selection.ids })])
       })
     })
 
-    test('failure gives the selection back and says so with a toast', () => {
-      assertProperty([deletingState], (before) => {
-        const { after, commands } = step(Msg.DeleteCompleted({ succeeded: false }), before)
+    // Only products can be stored again: a deletion that takes stored data that is not one along cannot be undone.
+    test('the products of the deletion are those the ids name, in order, when every id names one', () => {
+      assertProperty(
+        [fc.array(product, { maxLength: 8 }), fc.array(id, { minLength: 1, maxLength: 6 })],
+        (items, ids) => {
+          const set = HashSet.fromIterable(ids)
+          const named = items.flatMap((item) =>
+            item._tag === 'Valid' && HashSet.has(set, item.id) ? [item.product] : []
+          )
+          const everyIdNamesOne = ids.every((id) => items.some((item) => item._tag === 'Valid' && item.id === id))
+          return Equal.equals(productsOf(items, set), everyIdNamesOne ? Opt.some(named) : Opt.none())
+        },
+      )
+    })
+  })
+
+  describe('Deleted', () => {
+    const deletingState = stateWith('selection', deleting)
+
+    test('clears the selection and offers to undo the deletion, of its products, for a while', () => {
+      assertProperty([deletingState, utc], (before, at) => {
+        const { after, commands } = step(Msg.Deleted({ at }), before)
+        return before.selection._tag === 'Deleting'
+          && after.selection._tag === 'Idle'
+          && Equal.equals(after.lastDeletion, {
+            _tag: 'Recent',
+            at,
+            count: HashSet.size(before.selection.ids),
+            maybeProducts: before.selection.maybeProducts,
+          })
+          && onlyChanged(before, after, 'selection', 'lastDeletion')
+          && commands.length === 0
+      })
+    })
+
+    // Only a completion leaves Deleting, so one that arrives elsewhere is a bug.
+    test('is a defect when no deletion is in progress', () => {
+      assertProperty([state, utc], (before, at) => {
+        fc.pre(before.selection._tag !== 'Deleting')
+        expect(() => program.update(Msg.Deleted({ at }))(before)).toThrow()
+        return true
+      })
+    })
+  })
+
+  describe('DeleteFailed', () => {
+    test('gives the selection back and says so with a toast', () => {
+      assertProperty([stateWith('selection', deleting)], (before) => {
+        const { after, commands } = step(Msg.DeleteFailed(), before)
         return after.selection._tag === 'Selecting'
           && Equal.equals(selectedIds(after.selection), selectedIds(before.selection))
           && onlyChanged(before, after, 'selection')
@@ -233,33 +275,83 @@ describe('Products update', () => {
       })
     })
 
-    // Only a completion leaves Deleting, so one that arrives elsewhere is a bug.
     test('is a defect when no deletion is in progress', () => {
-      assertProperty([state, fc.boolean()], (before, succeeded) => {
+      assertProperty([state], (before) => {
         fc.pre(before.selection._tag !== 'Deleting')
-        expect(() => program.update(Msg.DeleteCompleted({ succeeded }))(before)).toThrow()
+        expect(() => program.update(Msg.DeleteFailed())(before)).toThrow()
         return true
       })
     })
   })
-})
 
-// The storage is observed in every state; the clock ticks only for a product that expires.
-test('listens to the storage always, and to the clock while a loaded product expires', () => {
-  assertProperty([state], (s) => {
-    const subscriptions = Tea.subscriptionsOf(program)(s)
-    return HashMap.has(subscriptions, 'changes') && HashMap.has(subscriptions, 'clock') === hasExpiringProduct(s)
+  describe('UndoRequested', () => {
+    test('stores the deleted products again and withdraws the offer, while it stands', () => {
+      assertProperty([stateWith('lastDeletion', recent)], (before) => {
+        if (before.lastDeletion._tag !== 'Recent' || Opt.isNone(before.lastDeletion.maybeProducts)) {
+          return rejects(Msg.UndoRequested(), before)
+        }
+        const { after, commands } = step(Msg.UndoRequested(), before)
+        return after.lastDeletion._tag === 'None'
+          && onlyChanged(before, after, 'lastDeletion')
+          && Equal.equals(commands, [Cmd.Restore({ products: before.lastDeletion.maybeProducts.value })])
+      })
+    })
+
+    test('is rejected when no deletion is recent', () => {
+      assertProperty(
+        [stateWith('lastDeletion', fc.constant({ _tag: 'None' } as const))],
+        (before) => rejects(Msg.UndoRequested(), before),
+      )
+    })
+  })
+
+  describe('UndoExpired', () => {
+    test('withdraws the offer and touches nothing else', () => {
+      assertProperty([stateWith('lastDeletion', recent)], (before) => {
+        const { after, commands } = step(Msg.UndoExpired(), before)
+        return after.lastDeletion._tag === 'None' && onlyChanged(before, after, 'lastDeletion')
+          && commands.length === 0
+      })
+    })
+
+    // The timer runs only while a deletion is recent, so its end heard otherwise is a bug.
+    test('is a defect when no deletion is recent', () => {
+      assertProperty([stateWith('lastDeletion', fc.constant({ _tag: 'None' } as const))], (before) => {
+        expect(() => program.update(Msg.UndoExpired())(before)).toThrow()
+        return true
+      })
+    })
+  })
+
+  // The storage is as it was: there is nothing to give back but the news.
+  test('RestoreFailed says so with a toast, and changes nothing', () => {
+    assertProperty([state], (before) => {
+      const { after, commands } = step(Msg.RestoreFailed(), before)
+      return Equal.equals(after, before)
+        && Equal.equals(commands, [Cmd.ShowToast({ text: 'Could not put the products back' })])
+    })
   })
 })
 
-// A row's look and action, and a product's status, are decided here, not in the view.
+// The storage is observed in every state; the clock ticks only for a product that expires; the offer to undo the
+// last deletion is timed from it.
+test('listens to the storage always, to the clock while a loaded product expires, and times a recent deletion', () => {
+  assertProperty([state], (s) => {
+    const subscriptions = Tea.subscriptionsOf(program)(s)
+    const timesUndo = s.lastDeletion._tag === 'Recent' && HashMap.has(subscriptions, ['undo', s.lastDeletion.at])
+    return HashMap.has(subscriptions, 'changes') && HashMap.has(subscriptions, 'clock') === hasExpiringProduct(s)
+      && (s.lastDeletion._tag === 'Recent') === timesUndo
+  })
+})
+
+// A row's look and action, a product's status and the snackbar are decided here, not in the view.
 describe('Products model', () => {
   const DAY = 86_400_000
 
   /** The rows of a loaded list at a known time. */
   const rows = (state: State) => {
-    const model = program.makeModel(state)
-    return model._tag === 'Available' ? model.products : []
+    const { list } = program.makeModel(state)
+    return list._tag === 'Available' ? list.products : []
   }
 
   /** A loaded list of products, with a time when one of them expires. */
@@ -276,7 +368,7 @@ describe('Products model', () => {
   test('a loaded list is shown at once when no product expires, and once the clock has ticked otherwise', () => {
     assertProperty(
       [loaded],
-      (s) => (program.makeModel(s)._tag === 'Available') === (!hasExpiringProduct(s) || Opt.isSome(s.maybeNow)),
+      (s) => (program.makeModel(s).list._tag === 'Available') === (!hasExpiringProduct(s) || Opt.isSome(s.maybeNow)),
     )
   })
 
@@ -324,10 +416,42 @@ describe('Products model', () => {
       })
     })
   })
+
+  // Whatever the list shows: the last products may have just been deleted.
+  test('the snackbar says how many products were deleted while the deletion is recent, with the way to undo it when its products can come back', () => {
+    assertProperty([state], (s) => {
+      const { lastDeletion } = program.makeModel(s)
+      if (s.lastDeletion._tag === 'None') return lastDeletion._tag === 'None'
+      return lastDeletion._tag === 'Deleted'
+        && lastDeletion.count === s.lastDeletion.count
+        && Equal.equals(lastDeletion.maybeUndo, Opt.map(s.lastDeletion.maybeProducts, () => Msg.UndoRequested()))
+    })
+  })
 })
 
 // Guards against the arbitraries silently collapsing to trivial values.
 test('arbitraries cover every variant of the state', () => {
-  const tags = new Set(fc.sample(state, 500).flatMap((s) => [s.list._tag, s.selection._tag, s.maybeNow._tag]))
-  expect([...tags].sort()).toEqual(['Deleting', 'Failed', 'Idle', 'Loaded', 'Loading', 'None', 'Selecting', 'Some'])
+  const tags = new Set(
+    fc.sample(state, 500).flatMap((s) => [
+      `list:${s.list._tag}`,
+      `selection:${s.selection._tag}`,
+      `now:${s.maybeNow._tag}`,
+      `lastDeletion:${s.lastDeletion._tag}`,
+      ...(s.lastDeletion._tag === 'Recent' ? [`restorable:${s.lastDeletion.maybeProducts._tag}`] : []),
+    ]),
+  )
+  expect([...tags].sort()).toEqual([
+    'lastDeletion:None',
+    'lastDeletion:Recent',
+    'list:Failed',
+    'list:Loaded',
+    'list:Loading',
+    'now:None',
+    'now:Some',
+    'restorable:None',
+    'restorable:Some',
+    'selection:Deleting',
+    'selection:Idle',
+    'selection:Selecting',
+  ])
 })

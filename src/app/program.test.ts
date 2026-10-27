@@ -12,15 +12,19 @@ import * as AddProducts from './children/add-products/program.ts'
 import * as Home from './children/home/program.ts'
 import { type Message, type Page, program, type State } from './program.ts'
 import {
-  addUndated,
+  addProduct,
   back,
+  deleteSelected,
   openAbout,
   openAddProducts,
   openMenu,
   perform,
   rehearsed,
   requestInfo,
+  selectFirstProduct,
   typeName,
+  type User,
+  undoDeletion,
 } from './user.test_support.ts'
 import { view } from './view.tsx'
 
@@ -66,7 +70,7 @@ describe('Navigation', () => {
       yield* user.runAll
     })))
 
-  // The menu's entry tapped twice from the same frame: the second tap reaches a
+  // The menu's item tapped twice from the same frame: the second tap reaches a
   // state that has moved on, which the program ignores.
   test('About opens once on a double tap', () =>
     rehearsed(Effect.fnUntraced(function*(user) {
@@ -128,7 +132,8 @@ describe('Navigation', () => {
     })))
 
   // Snabbdom patches an element with the same tag and key in place, keeping the
-  // props the new page does not set: Home's `scroll-locked` stopped About from scrolling.
+  // props the new page does not set: Home's `scroll-locked` stopped About from scrolling. Keyed by the page's
+  // name, each page's element is its own, and leaves with its own transition.
   test('each page is drawn in an element of its own', () =>
     rehearsed(Effect.fnUntraced(function*(user) {
       const drawn = Effect.map(user.model, (model) => view(model, () => Effect.void).key)
@@ -169,21 +174,46 @@ describe('Navigation', () => {
       expect(tags(yield* user.state)).toEqual(['Home', 'AddProducts'])
     })))
 
+  /** The names of the valid products in Home's list. */
+  const listedNames = (user: User) =>
+    Effect.map(
+      user.state,
+      (state) =>
+        Opt.map(homeState(state), ({ products: { list } }) =>
+          list._tag === 'Loaded'
+            ? list.items.flatMap((item): ReadonlyArray<string> => item._tag === 'Valid' ? [item.product.name] : [])
+            : []),
+    )
+
   test('a product added on its page is in the list of Home once the page is left', () =>
     rehearsed(Effect.fnUntraced(function*(user) {
       yield* perform(user, [openAddProducts, typeName('Milk')])
       // The page adds a product only once it knows the time.
       yield* user.hearNext(['AddProducts', 'clock'])
-      yield* user.send(addUndated)
+      yield* user.send(addProduct)
       yield* user.run((command) => tagPath(command) === 'AddProducts › Add')
       yield* back(user)
       expect(tags(yield* user.state)).toEqual(['Home'])
       yield* user.hearNext(['Home', ['Products', 'changes']])
-      const names = Opt.map(homeState(yield* user.state), ({ products: { list } }) =>
-        list._tag === 'Loaded'
-          ? list.items.flatMap((item): ReadonlyArray<string> => item._tag === 'Valid' ? [item.product.name] : [])
-          : [])
-      expect(names).toEqual(Opt.some(['Milk']))
+      expect(yield* listedNames(user)).toEqual(Opt.some(['Milk']))
+    })))
+
+  test('a product deleted from the list comes back when the deletion is undone in time', () =>
+    rehearsed(Effect.fnUntraced(function*(user) {
+      yield* perform(user, [openAddProducts, typeName('Milk')])
+      yield* user.hearNext(['AddProducts', 'clock'])
+      yield* user.send(addProduct)
+      yield* user.run((command) => tagPath(command) === 'AddProducts › Add')
+      yield* back(user)
+      yield* user.hearNext(['Home', ['Products', 'changes']])
+      yield* perform(user, [selectFirstProduct, deleteSelected])
+      yield* user.run((command) => tagPath(command) === 'Home › Products › Delete')
+      yield* user.hearNext(['Home', ['Products', 'changes']])
+      expect(yield* listedNames(user)).toEqual(Opt.some([]))
+      yield* user.send(undoDeletion)
+      yield* user.run((command) => tagPath(command) === 'Home › Products › Restore')
+      yield* user.hearNext(['Home', ['Products', 'changes']])
+      expect(yield* listedNames(user)).toEqual(Opt.some(['Milk']))
     })))
 })
 

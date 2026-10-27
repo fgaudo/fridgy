@@ -4,10 +4,10 @@ import type { VNode } from 'snabbdom'
 
 /**
  * Renders `view` for `model` and fires every event handler in the tree, with a
- * fake event whose target holds `inputValue` (and whose `preventDefault` and
- * `stopPropagation` do nothing). Returns the messages the handlers sent, as the
- * root of the program receives them. Hooks are not run: they only touch the
- * DOM; a snabbdom `thunk` is drawn as the renderer would.
+ * fake event whose target holds `inputValue` and is scrolled to its top (and
+ * whose `preventDefault` and `stopPropagation` do nothing). Returns the messages
+ * the handlers sent, as the root of the program receives them. Hooks are not
+ * run: they only touch the DOM; a snabbdom `thunk` is drawn as the renderer would.
  */
 export const messagesSentBy = <Model, Message>(
   view: View<Model, Message, VNode>,
@@ -25,7 +25,7 @@ export const messagesSentBy = <Model, Message>(
     for (const [type, handler] of Object.entries(node.data?.on ?? {})) {
       const event = {
         type,
-        target: { value: inputValue },
+        target: { value: inputValue, scrollTop: 0 },
         preventDefault: () => {},
         stopPropagation: () => {},
       } as unknown as Event

@@ -1,6 +1,7 @@
 import * as Opt from 'effect/Option'
 import type { VNode } from 'snabbdom'
 import { handlers, type View } from '#libs/tea-snabbdom/tea-snabbdom.ts'
+import { cn } from '#libs/ui/class-names.ts'
 import type { LicenseCard, Message, Model } from './program.ts'
 
 const link = (href: string, text: string): VNode => <a props={{ className: 'text-primary underline', href }}>{text}</a>
@@ -24,19 +25,12 @@ const card = (card: LicenseCard): VNode => (
     // Material's outlined card: a long list of them stays light.
     props={{ className: 'flex flex-col gap-1 rounded-medium border border-outline-variant p-4' }}
   >
-    <div props={{ className: 'flex items-start justify-between gap-3' }}>
+    <div props={{ className: 'flex items-baseline justify-between gap-3' }}>
       <h3 props={{ className: 'text-title-medium text-on-surface break-all' }}>{card.title}</h3>
       {Opt.match(card.maybeLicenses, {
         onNone: () => [],
         onSome: (licenses) => [
-          <span
-            props={{
-              className:
-                'flex h-6 shrink-0 items-center rounded-small border border-outline-variant px-2 text-label-medium text-on-surface-variant',
-            }}
-          >
-            {licenses}
-          </span>,
+          <span props={{ className: 'shrink-0 text-label-medium text-on-surface-variant' }}>{licenses}</span>,
         ],
       })}
     </div>
@@ -59,10 +53,17 @@ const card = (card: LicenseCard): VNode => (
   </div>
 )
 
+const scrollTop = (event: Event) => (event.target as HTMLElement).scrollTop
+
+/**
+ * The page, scrolling on its own over the one that opened it: it slides in and fades, Material's shared axis,
+ * and leaves the same way, letting nothing through while it does.
+ */
 export const view: View<Model, Message> = (model, dispatch) => {
-  const { on } = handlers(dispatch)
+  const { on, onValue } = handlers(dispatch)
   return (
     <div
+      key='About'
       style={{
         opacity: '0',
         transform: 'translateY(30px)',
@@ -70,11 +71,24 @@ export const view: View<Model, Message> = (model, dispatch) => {
         transitionDuration: 'var(--transition-duration-medium-4)',
         transitionTimingFunction: 'var(--ease-emphasized-decelerate)',
         delayed: { opacity: '1', transform: 'none' },
+        remove: {
+          opacity: '0',
+          transform: 'translateY(30px)',
+          pointerEvents: 'none',
+          transitionDuration: 'var(--transition-duration-short-4)',
+          transitionTimingFunction: 'var(--ease-emphasized-accelerate)',
+        },
       }}
+      props={{ className: 'fixed inset-0 z-70 overflow-y-auto overscroll-y-none bg-surface text-on-surface' }}
+      on={onValue('scroll', model.scroll, scrollTop)}
     >
+      {/* Material's small top app bar: the surface's color at rest, filled with a container's once the page scrolls under it. */}
       <div
         props={{
-          className: 'bg-surface-container text-on-surface fixed top-0 z-20 w-full pt-sait pl-sail pr-sair',
+          className: cn(
+            'sticky top-0 z-20 pt-sait pl-sail pr-sair transition-colors',
+            model.isAtTop ? 'bg-surface' : 'bg-surface-container',
+          ),
         }}
       >
         <div props={{ className: 'flex h-16 items-center px-1' }}>
@@ -87,11 +101,11 @@ export const view: View<Model, Message> = (model, dispatch) => {
           >
             arrow_back
           </button>
-          <h1 props={{ className: 'px-1 text-title-large' }}>About</h1>
+          <h1 props={{ className: 'px-1 text-title-large-emphasized' }}>About</h1>
         </div>
       </div>
-      <div props={{ className: 'bg-surface pt-sait pb-saib pl-sail pr-sair' }}>
-        <div props={{ className: 'mx-auto flex max-w-2xl flex-col gap-4 px-4 pt-24 pb-8' }}>
+      <div props={{ className: 'pb-saib pl-sail pr-sair' }}>
+        <div props={{ className: 'mx-auto flex max-w-2xl flex-col gap-4 px-4 pt-8 pb-8' }}>
           <div props={{ className: 'flex flex-col items-center gap-2 py-4 text-center' }}>
             <div
               style={{ backgroundImage: 'url(./logo.svg)' }}
@@ -99,14 +113,7 @@ export const view: View<Model, Message> = (model, dispatch) => {
             />
             <p props={{ className: 'mt-2 text-headline-medium text-on-surface' }}>Fridgy</p>
             {model.version._tag === 'Loading' ? [] : [
-              <span
-                props={{
-                  className:
-                    'flex h-8 items-center rounded-small border border-outline-variant px-4 text-label-large text-on-surface-variant',
-                }}
-              >
-                Version {model.version.version}
-              </span>,
+              <p props={{ className: 'text-label-large text-on-surface-variant' }}>Version {model.version.version}</p>,
             ]}
             <p props={{ className: 'mt-2 text-body-large text-on-surface-variant' }}>
               Keep track of what is in your fridge and when it expires.

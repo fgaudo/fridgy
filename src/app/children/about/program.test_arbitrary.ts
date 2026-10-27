@@ -17,6 +17,7 @@ export const license: fc.Arbitrary<License> = fc.record({
 export const licenses = fc.uniqueArray(license, { selector: (l) => l.packageName, maxLength: 8 })
 
 export const state: fc.Arbitrary<State> = fc.record({
+  isAtTop: fc.boolean(),
   licenses: fc.oneof(
     fc.constant({ _tag: 'Loading' } as const),
     licenses.map((items) => ({ _tag: 'Loaded', items } as const)),

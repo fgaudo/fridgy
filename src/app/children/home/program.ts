@@ -1,5 +1,5 @@
-// The page: its child (the products), and what is the page's own (the side menu, the back button, the way to the
-// page that adds products, and the scrolling, which the top app bar and the add button follow).
+// The page: its child (the products), and what is the page's own (the top app bar's menu, the back button, the
+// way to the page that adds products, and the scrolling, which the top app bar and the add button follow).
 import * as Tea from '@fgaudo/effect-tea'
 import * as Channel from 'effect/Channel'
 import * as Data from 'effect/Data'
@@ -128,7 +128,7 @@ export const program = compose({
     Match.valueTags(message, {
       MenuOpened: () => !state.isMenuOpen ? { state: { ...state, isMenuOpen: true } } : Tea.reject,
       MenuClosed: () => state.isMenuOpen ? { state: { ...state, isMenuOpen: false } } : Tea.reject,
-      // Asked from the side menu, which closes on the way.
+      // Asked from the menu, which closes on the way.
       InfoRequested: () =>
         state.isMenuOpen
           ? { state: { ...state, isMenuOpen: false }, events: [Event.InfoRequested()] }

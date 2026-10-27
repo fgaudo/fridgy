@@ -1,5 +1,6 @@
-// The stored products, as of the latest change of the storage, and the selection
-// of some of them for deletion. The selection follows the list, so they are one program.
+// The stored products, as of the latest change of the storage, the selection of some of them for deletion, and
+// the last deletion, which the user may undo for a few seconds. The selection follows the list, so they are one
+// program.
 import * as Tea from '@fgaudo/effect-tea'
 import * as Arr from 'effect/Array'
 import * as Channel from 'effect/Channel'
@@ -32,15 +33,29 @@ export type Product = Data.TaggedEnum<{
 
 const Product = Data.taggedEnum<Product>()
 
+/**
+ * The products being deleted, when every one of them is a product: only then can the deletion be undone, by
+ * storing them again. Stored data that is not a product is gone for good.
+ */
+type Restorable = Opt.Option<Arr.NonEmptyReadonlyArray<Domain.Product>>
+
 export type Selection = Data.TaggedEnum<{
   Idle: object
   Selecting: Readonly<{ ids: NonEmptyHashSet.NonEmptyHashSet<string> }>
   // Left only by its completion: with commands that cannot be cancelled, a
   // completion always belongs to the deletion in progress, so it needs no id.
-  Deleting: Readonly<{ ids: NonEmptyHashSet.NonEmptyHashSet<string> }>
+  Deleting: Readonly<{ ids: NonEmptyHashSet.NonEmptyHashSet<string>; maybeProducts: Restorable }>
 }>
 
 const Selection = Data.taggedEnum<Selection>()
+
+/** The last deletion, for a few seconds after it: a snackbar says so, and offers to undo it. */
+export type LastDeletion = Data.TaggedEnum<{
+  None: object
+  Recent: Readonly<{ at: DateTime.Utc; count: PositiveInteger.PositiveInteger; maybeProducts: Restorable }>
+}>
+
+const LastDeletion = Data.taggedEnum<LastDeletion>()
 
 export type State = Readonly<{
   /**
@@ -54,6 +69,7 @@ export type State = Readonly<{
     Loaded: Readonly<{ items: ReadonlyArray<Product> }>
   }>
   selection: Selection
+  lastDeletion: LastDeletion
 }>
 
 export type Message = Data.TaggedEnum<{
@@ -62,17 +78,24 @@ export type Message = Data.TaggedEnum<{
   ItemDeselected: { id: string }
   SelectionCleared: object
   DeleteStarted: object
+  /** The snackbar's action: the products deleted last are stored again. */
+  UndoRequested: object
   // From subscriptions.
   TimeChanged: { now: DateTime.Utc }
   ListChanged: { result: Result.Result<ReadonlyArray<StoredProduct>, ProductListReadError> }
+  /** The last deletion is a few seconds old: the offer to undo it is withdrawn. */
+  UndoExpired: object
   // From commands.
-  DeleteCompleted: { succeeded: boolean }
+  Deleted: { at: DateTime.Utc }
+  DeleteFailed: object
+  RestoreFailed: object
 }>
 
 const Message = Data.taggedEnum<Message>()
 
 export type Command = Data.TaggedEnum<{
   Delete: { ids: NonEmptyHashSet.NonEmptyHashSet<string> }
+  Restore: { products: Arr.NonEmptyReadonlyArray<Domain.Product> }
   ShowToast: { text: string }
 }>
 
@@ -104,7 +127,7 @@ export type ProductModel = Data.TaggedEnum<{
   Valid: Readonly<{ id: string; selection: ItemSelection; name: string; status: ProductStatus }>
 }>
 
-export type Model = Data.TaggedEnum<{
+export type ListModel = Data.TaggedEnum<{
   /** Until the list is known, and the time with it when a product expires. */
   Initial: object
   Error: object
@@ -123,6 +146,18 @@ export type Model = Data.TaggedEnum<{
     products: Arr.NonEmptyReadonlyArray<ProductModel>
   }>
 }>
+
+export type Model = Readonly<{
+  list: ListModel
+  /** The snackbar of the last deletion: how many products went and, while they can come back, the way to undo it. */
+  lastDeletion: Data.TaggedEnum<{
+    None: object
+    Deleted: Readonly<{ count: PositiveInteger.PositiveInteger; maybeUndo: Opt.Option<Message> }>
+  }>
+}>
+
+// Material's snackbar with an action stays up to 10 seconds: long enough to read it and reach for "Undo".
+const UNDO_DURATION = Duration.seconds(5)
 
 // Products that still have an id can be selected and deleted, even when invalid;
 // the ones without an id cannot be referenced at all.
@@ -159,6 +194,16 @@ const selectionOf = (ids: HashSet.HashSet<string>): Selection =>
     onSome: (ids) => Selection.Selecting({ ids }),
   })
 
+/** The products the ids name, in the list's order, when every id names one. */
+export const productsOf = (items: ReadonlyArray<Product>, ids: HashSet.HashSet<string>): Restorable => {
+  const isProduct = (id: string) => items.some((item) => item._tag === 'Valid' && item.id === id)
+  const products = Arr.flatMap(
+    items,
+    (item) => item._tag === 'Valid' && HashSet.has(ids, item.id) ? [item.product] : [],
+  )
+  return HashSet.every(ids, isProduct) && Arr.isReadonlyArrayNonEmpty(products) ? Opt.some(products) : Opt.none()
+}
+
 // Expiration statuses derive from the current time: it is refreshed often
 // enough for days-long expirations.
 const clock: Tea.Subscription<Message, Deps> = Channel.forever(
@@ -175,7 +220,22 @@ const changes: Tea.Subscription<Message, Deps> = Channel.unwrap(
   ),
 )
 
-const always = HashMap.make(['changes', changes])
+// The offer stands for a while from the deletion, not from when the page is shown: hidden under another page
+// past its end, it is withdrawn as soon as the page is back.
+const expireUndo = Effect.fn('ExpireUndo')(function*(deletedAt: DateTime.Utc) {
+  const now = yield* DateTime.now
+  yield* Effect.sleep(Duration.max(Duration.zero, Duration.subtract(UNDO_DURATION, DateTime.distance(deletedAt, now))))
+  return Message.UndoExpired()
+})
+
+/** Ends, with its message, once the last deletion is old enough. */
+const undoTimer = (deletedAt: DateTime.Utc): Tea.Subscription<Message, Deps> =>
+  Channel.fromEffectDone(expireUndo(deletedAt))
+
+/** A subscription's key: the timer of the offer to undo is keyed by the deletion it times. */
+type Key = string | readonly ['undo', DateTime.Utc]
+
+const always: HashMap.HashMap<Key, Tea.Subscription<Message, Deps>> = HashMap.make(['changes', changes])
 
 const deleteProducts = Effect.fn('DeleteProducts')(
   function*({ ids }: Readonly<{ ids: NonEmptyHashSet.NonEmptyHashSet<string> }>) {
@@ -189,13 +249,34 @@ const deleteProducts = Effect.fn('DeleteProducts')(
       Effect.tapError(() => Effect.logWarning('Could not delete the products')),
     )
     yield* Effect.logInfo('Deleted products', { count: HashSet.size(ids) })
+    return yield* DateTime.now
   },
   Effect.match({
-    onSuccess: () => Message.DeleteCompleted({ succeeded: true }),
-    onFailure: () => Message.DeleteCompleted({ succeeded: false }),
+    onSuccess: (at) => Message.Deleted({ at }),
+    onFailure: () => Message.DeleteFailed(),
   }),
   Effect.asSome,
   Effect.withLogSpan('DeleteProducts'),
+)
+
+const restoreProducts = Effect.fn('RestoreProducts')(
+  function*({ products }: Readonly<{ products: Arr.NonEmptyReadonlyArray<Domain.Product> }>) {
+    const { restore } = yield* DeleteProducts.DeleteProducts
+    yield* Effect.logDebug('Putting products back', { count: products.length })
+    yield* pipe(
+      products,
+      Arr.map((product) => DeleteProducts.RestoreProduct({ snapshot: Domain.toSnapshot(product) })),
+      Effect.forEach(Effect.request(restore), { concurrency: 'unbounded', discard: true }),
+      // The storage logs the cause.
+      Effect.tapError(() => Effect.logWarning('Could not put the products back')),
+    )
+    yield* Effect.logInfo('Put products back', { count: products.length })
+  },
+  Effect.match({
+    onSuccess: () => Opt.none(),
+    onFailure: () => Opt.some(Message.RestoreFailed()),
+  }),
+  Effect.withLogSpan('RestoreProducts'),
 )
 
 const showToast = Effect.fn('ShowToast')(
@@ -209,7 +290,7 @@ const showToast = Effect.fn('ShowToast')(
   Effect.withLogSpan('ShowToast'),
 )
 
-type Deletion = Data.TaggedEnum.Value<Model, 'Available'>['deletion']
+type Deletion = Data.TaggedEnum.Value<ListModel, 'Available'>['deletion']
 
 const expirationStatusAt = (now: DateTime.Utc, expiration: Domain.Expiration): ProductStatus => {
   const { expirationDate } = expiration
@@ -232,6 +313,62 @@ const maybeStatusAt = (maybeNow: Opt.Option<DateTime.Utc>, product: Domain.Produ
     onSome: (expiration) => Opt.map(maybeNow, (now) => expirationStatusAt(now, expiration)),
   })
 
+const listModel = (state: State): ListModel => {
+  if (state.list._tag === 'Loading') {
+    return { _tag: 'Initial' }
+  }
+  if (state.list._tag === 'Failed') {
+    return { _tag: 'Error' }
+  }
+  const items = state.list.items
+  if (!Arr.isReadonlyArrayNonEmpty(items)) {
+    return { _tag: 'Empty' }
+  }
+  const { selection, maybeNow } = state
+  const itemSelectionOf = (id: string): ItemSelection => {
+    const isSelected = HashSet.has(selectedIds(selection), id)
+    return {
+      isSelected,
+      maybeToggle: selection._tag === 'Deleting'
+        ? Opt.none()
+        : Opt.some(isSelected ? Message.ItemDeselected({ id }) : Message.ItemSelected({ id })),
+    }
+  }
+  // Until the clock has ticked, the products that expire have no status: the list waits for it.
+  const maybeProducts = Opt.all(Arr.map(items, (product) =>
+    Match.valueTags(product, {
+      Corrupt: ({ maybeName }): Opt.Option<ProductModel> => Opt.some({ _tag: 'Corrupt', maybeName }),
+      Invalid: ({ id, maybeName }): Opt.Option<ProductModel> =>
+        Opt.some({ _tag: 'Invalid', id, selection: itemSelectionOf(id), maybeName }),
+      Valid: ({ id, product }): Opt.Option<ProductModel> =>
+        Opt.map(maybeStatusAt(maybeNow, product), (status) => ({
+          _tag: 'Valid',
+          id,
+          selection: itemSelectionOf(id),
+          name: product.name,
+          status,
+        })),
+    })))
+  if (Opt.isNone(maybeProducts)) {
+    return { _tag: 'Initial' }
+  }
+  return {
+    _tag: 'Available',
+    deletion: Match.valueTags(selection, {
+      Idle: (): Deletion => ({ _tag: 'NothingSelected' }),
+      Selecting: ({ ids }): Deletion => ({
+        _tag: 'Possible',
+        count: PositiveInteger.makeUnsafe(HashSet.size(ids)),
+        deleteSelected: Message.DeleteStarted(),
+        clearSelection: Message.SelectionCleared(),
+      }),
+      Deleting: (): Deletion => ({ _tag: 'InProgress' }),
+    }),
+    total: PositiveInteger.makeUnsafe(items.length),
+    products: maybeProducts.value,
+  }
+}
+
 export type Deps = DeleteProducts.DeleteProducts | ProductList | Notifications
 
 export const program: Tea.Program<{
@@ -242,7 +379,12 @@ export const program: Tea.Program<{
   services: Deps
 }> = {
   init: {
-    state: { maybeNow: Opt.none(), list: { _tag: 'Loading' }, selection: Selection.Idle() },
+    state: {
+      maybeNow: Opt.none(),
+      list: { _tag: 'Loading' },
+      selection: Selection.Idle(),
+      lastDeletion: LastDeletion.None(),
+    },
   },
 
   update: Match.typeTags<Message, (state: State) => Tea.Transition<State, Command>>()({
@@ -286,87 +428,89 @@ export const program: Tea.Program<{
         ? { state: { ...state, selection: Selection.Idle() } }
         : Tea.reject,
 
+    // The products are kept from the list as it is now: the storage's change may reach the page before the
+    // deletion's completion, and then they are gone from it.
     DeleteStarted: () => (state) =>
       state.list._tag === 'Loaded' && state.selection._tag === 'Selecting'
         ? {
-          state: { ...state, selection: Selection.Deleting({ ids: state.selection.ids }) },
+          state: {
+            ...state,
+            selection: Selection.Deleting({
+              ids: state.selection.ids,
+              maybeProducts: productsOf(state.list.items, state.selection.ids),
+            }),
+          },
           commands: [Command.Delete({ ids: state.selection.ids })],
         }
         : Tea.reject,
 
-    DeleteCompleted: ({ succeeded }) => (state) => {
-      if (state.selection._tag !== 'Deleting') {
-        return defect('DeleteCompleted while no deletion is in progress: only a completion leaves Deleting')
-      }
-      return succeeded
-        ? { state: { ...state, selection: Selection.Idle() } }
-        : {
+    // A new deletion replaces the offer to undo the last one: that one is gone for good.
+    Deleted: ({ at }) => (state) =>
+      state.selection._tag === 'Deleting'
+        ? {
+          state: {
+            ...state,
+            selection: Selection.Idle(),
+            lastDeletion: LastDeletion.Recent({
+              at,
+              count: PositiveInteger.makeUnsafe(HashSet.size(state.selection.ids)),
+              maybeProducts: state.selection.maybeProducts,
+            }),
+          },
+        }
+        : defect('Deleted while no deletion is in progress: only a completion leaves Deleting'),
+
+    DeleteFailed: () => (state) =>
+      state.selection._tag === 'Deleting'
+        ? {
           state: { ...state, selection: Selection.Selecting({ ids: state.selection.ids }) },
           commands: [Command.ShowToast({ text: 'Could not delete the products' })],
         }
-    },
+        : defect('DeleteFailed while no deletion is in progress: only a completion leaves Deleting'),
+
+    // Only a deletion of products alone can be undone; the offer is taken at once, so a second tap does nothing.
+    UndoRequested: () => (state) =>
+      state.lastDeletion._tag === 'Recent' && Opt.isSome(state.lastDeletion.maybeProducts)
+        ? {
+          state: { ...state, lastDeletion: LastDeletion.None() },
+          commands: [Command.Restore({ products: state.lastDeletion.maybeProducts.value })],
+        }
+        : Tea.reject,
+
+    UndoExpired: () => (state) =>
+      state.lastDeletion._tag === 'Recent'
+        ? { state: { ...state, lastDeletion: LastDeletion.None() } }
+        : defect('UndoExpired while no deletion is recent: the timer runs only while one is'),
+
+    // Accepted in every state: the user may have done anything since asking, and the storage is as it was.
+    RestoreFailed: () => (state) => ({
+      state,
+      commands: [Command.ShowToast({ text: 'Could not put the products back' })],
+    }),
   }),
 
   runCommand: Match.typeTags<Command>()({
     Delete: deleteProducts,
+    Restore: restoreProducts,
     ShowToast: showToast,
   }),
 
-  subscriptions: (state) => needsClock(state.list) ? HashMap.set(always, 'clock', clock) : always,
-
-  makeModel: (state) => {
-    if (state.list._tag === 'Loading') {
-      return { _tag: 'Initial' }
-    }
-    if (state.list._tag === 'Failed') {
-      return { _tag: 'Error' }
-    }
-    const items = state.list.items
-    if (!Arr.isReadonlyArrayNonEmpty(items)) {
-      return { _tag: 'Empty' }
-    }
-    const { selection, maybeNow } = state
-    const itemSelectionOf = (id: string): ItemSelection => {
-      const isSelected = HashSet.has(selectedIds(selection), id)
-      return {
-        isSelected,
-        maybeToggle: selection._tag === 'Deleting'
-          ? Opt.none()
-          : Opt.some(isSelected ? Message.ItemDeselected({ id }) : Message.ItemSelected({ id })),
-      }
-    }
-    // Until the clock has ticked, the products that expire have no status: the list waits for it.
-    const maybeProducts = Opt.all(Arr.map(items, (product) =>
-      Match.valueTags(product, {
-        Corrupt: ({ maybeName }): Opt.Option<ProductModel> => Opt.some({ _tag: 'Corrupt', maybeName }),
-        Invalid: ({ id, maybeName }): Opt.Option<ProductModel> =>
-          Opt.some({ _tag: 'Invalid', id, selection: itemSelectionOf(id), maybeName }),
-        Valid: ({ id, product }): Opt.Option<ProductModel> =>
-          Opt.map(maybeStatusAt(maybeNow, product), (status) => ({
-            _tag: 'Valid',
-            id,
-            selection: itemSelectionOf(id),
-            name: product.name,
-            status,
-          })),
-      })))
-    if (Opt.isNone(maybeProducts)) {
-      return { _tag: 'Initial' }
-    }
-    return {
-      _tag: 'Available',
-      deletion: Match.valueTags(selection, {
-        Idle: (): Deletion => ({ _tag: 'NothingSelected' }),
-        Selecting: ({ ids }): Deletion => ({
-          _tag: 'Possible',
-          count: PositiveInteger.makeUnsafe(HashSet.size(ids)),
-          deleteSelected: Message.DeleteStarted(),
-          clearSelection: Message.SelectionCleared(),
-        }),
-        Deleting: (): Deletion => ({ _tag: 'InProgress' }),
-      }),
-      total: PositiveInteger.makeUnsafe(items.length),
-      products: maybeProducts.value,
-    }
+  subscriptions: (state) => {
+    const withClock = needsClock(state.list) ? HashMap.set(always, 'clock', clock) : always
+    return state.lastDeletion._tag === 'Recent'
+      ? HashMap.set(withClock, ['undo', state.lastDeletion.at] as const, undoTimer(state.lastDeletion.at))
+      : withClock
   },
+
+  makeModel: (state) => ({
+    list: listModel(state),
+    lastDeletion: Match.valueTags(state.lastDeletion, {
+      None: (): Model['lastDeletion'] => ({ _tag: 'None' }),
+      Recent: ({ count, maybeProducts }): Model['lastDeletion'] => ({
+        _tag: 'Deleted',
+        count,
+        maybeUndo: Opt.map(maybeProducts, () => Message.UndoRequested()),
+      }),
+    }),
+  }),
 }

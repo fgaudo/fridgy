@@ -30,12 +30,13 @@ const fromProducts = (message: ProductsMessage): Message => ({ _tag: 'Products',
 
 /**
  * A message that cannot arrive in that state: a back heard with the menu closed, a completion outside its deletion,
- * a tick while no product expires.
+ * the end of the offer to undo while there is none, a tick while no product expires.
  */
 const cannotArrive = (msg: Message, before: State) =>
   (msg._tag === 'BackPressed' && !before.isMenuOpen)
-  || (msg._tag === 'Products' && msg.message._tag === 'DeleteCompleted'
+  || (msg._tag === 'Products' && (msg.message._tag === 'Deleted' || msg.message._tag === 'DeleteFailed')
     && before.products.selection._tag !== 'Deleting')
+  || (msg._tag === 'Products' && msg.message._tag === 'UndoExpired' && before.products.lastDeletion._tag !== 'Recent')
   || (msg._tag === 'Products' && msg.message._tag === 'TimeChanged' && !hasExpiringProduct(before.products))
 
 describe('Home update', () => {
@@ -53,7 +54,7 @@ describe('Home update', () => {
     // add button, whose second tap the parent ignores once the page that adds is
     // shown. And what the user could ask for and `update` accepts is in the view,
     // but for what the model hides on purpose: a list that is not shown, or not yet,
-    // and the menu while products are selected: the selection's bar takes the place of its.
+    // and the menu while products are selected: the selection's bar takes the place of the bar that opens it.
     test('the view sends what update accepts, all of it, and acts once when sent twice', () => {
       // A loaded list, at a known time when a product expires.
       const shownItems = ({ products }: State) =>
@@ -89,6 +90,7 @@ describe('Home update', () => {
           ...[
             ProductsMsg.SelectionCleared(),
             ProductsMsg.DeleteStarted(),
+            ProductsMsg.UndoRequested(),
             ...items.flatMap((item) =>
               item._tag === 'Corrupt'
                 ? []
@@ -117,6 +119,7 @@ describe('Home update', () => {
           'Products › ItemDeselected',
           'Products › SelectionCleared',
           'Products › DeleteStarted',
+          'Products › UndoRequested',
         ]
       ) {
         expect(sent.has(expected)).toBe(true)
