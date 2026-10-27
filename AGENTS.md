@@ -170,7 +170,7 @@ not a kind of program. The programs to copy are `src/app/children/home` and `src
 
 - A scanned barcode is the product's name as it is: no lookup of the product (e.g. Open Food Facts) yet. The
   scanner (`getUserMedia` and the Shape Detection API, `scanner.browser.ts`) has not been tried on Android yet;
-  on a desktop without the API (Chrome on Windows), the form says the camera is not available.
+  on a desktop without the API (Chrome on Windows), the scan button is disabled and the name field says why.
 - Capacitor 9 alpha (API 37, WebView 114) has not been built or run in the emulator yet.
 - The dark theme has been checked in a browser only: not yet on Android, where the WebView should match
   `prefers-color-scheme` from the system's theme, nor its night splash screens.

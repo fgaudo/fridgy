@@ -12,7 +12,9 @@ type BarcodeDetector = Readonly<{
   detect: (source: HTMLVideoElement) => Promise<ReadonlyArray<Readonly<{ rawValue: string }>>>
 }>
 
-type BarcodeDetectorClass = new(options: Readonly<{ formats: ReadonlyArray<string> }>) => BarcodeDetector
+type BarcodeDetectorClass = (new(options: Readonly<{ formats: ReadonlyArray<string> }>) => BarcodeDetector) & {
+  getSupportedFormats: () => Promise<ReadonlyArray<string>>
+}
 
 // The codes of retail products.
 const formats = ['ean_13', 'ean_8', 'upc_a', 'upc_e']
@@ -22,6 +24,20 @@ const detectorClass = Effect.suspend(() => {
   return maybeClass === undefined
     ? Effect.fail(new ScannerError({ cause: new Error('This browser cannot read barcodes') }))
     : Effect.succeed(maybeClass)
+})
+
+// Some systems have the class but read none of the formats: those cannot read a product's code either.
+const isAvailable = Effect.suspend(() => {
+  const maybeClass = (globalThis as { BarcodeDetector?: BarcodeDetectorClass }).BarcodeDetector
+  if (maybeClass === undefined || navigator.mediaDevices === undefined) {
+    return Effect.succeed(false)
+  }
+  return Effect.tryPromise(() => maybeClass.getSupportedFormats()).pipe(
+    Effect.map((supported) => formats.some((format) => supported.includes(format))),
+    Effect.catch((error) =>
+      Effect.logWarning('Could not ask which barcodes can be read', error).pipe(Effect.as(false))
+    ),
+  )
 })
 
 const camera = Effect.acquireRelease(
@@ -73,5 +89,6 @@ const scan = Effect.fn('Scan')(function*(queue: Queue.Queue<string, ScannerError
 })
 
 export const layer = Layer.succeed(Scanner, {
+  isAvailable,
   barcodes: Source.fromStream(Stream.callback(scan).pipe(Stream.changes)),
 })

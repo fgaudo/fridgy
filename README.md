@@ -5,10 +5,10 @@ during development) written in TypeScript, with a strictly functional, [Elm](htt
 architecture.
 
 > **Status:** work in progress. The main page (product list, selecting products, expiration tracking), the page
-> that adds products one after another (a scanned barcode names the product, and the date is typed as digits,
-> from which the user picks the day they meant) and the About page (version, links, licenses) run on the current
-> architecture, with navigation between them and Android's back button. What is still missing is listed under
-> "Known gaps" in [`AGENTS.md`](AGENTS.md).
+> that adds products one after another (the name is typed or read from a barcode in the scanner's dialog, the
+> date is typed as digits, from which the user picks the day they meant, and a snackbar adds the same product
+> again) and the About page (version, links, licenses) run on the current architecture, with navigation between
+> them and Android's back button. What is still missing is listed under "Known gaps" in [`AGENTS.md`](AGENTS.md).
 
 ## Stack
 

@@ -25,6 +25,7 @@ what they share is the domain and the infrastructure. The examples to copy are
 
 ```ts
 export class Scanner extends Context.Service<Scanner, {
+  readonly isAvailable: Effect.Effect<boolean>
   readonly barcodes: Source<string, never, ScannerError>
 }>()('18d5c486d206cb02') {}
 ```

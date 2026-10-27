@@ -12,7 +12,7 @@ import { datesOf, MAX_DIGITS } from '#libs/dates/digit-dates.ts'
 import { messagesSentBy } from '#libs/tea-snabbdom/view.test_support.ts'
 import { utc } from '#libs/testing/date-time.test_arbitrary.ts'
 import { assertProperty, outcomesOf } from '#libs/testing/update.test_support.ts'
-import { digit, editing, message, state, submitting } from './program.test_arbitrary.ts'
+import { digit, editing, message, scanning, state, submitting } from './program.test_arbitrary.ts'
 import {
   type Command,
   type Digit,
@@ -66,8 +66,31 @@ const productOf = (form: Form) =>
     ([name, creationDate, maybeExpirationDate]) => Product.make({ name, creationDate, maybeExpirationDate }),
   )
 
-/** A message that cannot arrive in that state: a completion while no product is being added. */
-const cannotArrive = (msg: Message, before: State) => msg._tag === 'Completed' && before._tag !== 'Submitting'
+/** The product added last, while less than 6 seconds have passed since it was. */
+const justAdded = (form: Form) =>
+  Opt.filter(
+    form.maybeLastAdded,
+    (product) =>
+      Opt.exists(form.maybeNow, (now) => DateTime.isLessThan(now, DateTime.add(product.creationDate, { seconds: 6 }))),
+  )
+
+/** The product added last, again, created at the clock's time, while its snackbar shows. */
+const repeatOf = (form: Form) =>
+  Opt.flatMap(
+    Opt.all([justAdded(form), form.maybeNow]),
+    ([{ name, maybeExpirationDate }, creationDate]) => Product.make({ name, creationDate, maybeExpirationDate }),
+  )
+
+/** Whether the page reads the camera: while the scanner is open, until it fails. */
+const readsCamera = (state: State) => state._tag === 'Scanning' && state.form.camera === 'Available'
+
+/**
+ * A message that cannot arrive in that state: a completion while no product is being added, or the camera's while
+ * the page does not read it.
+ */
+const cannotArrive = (msg: Message, before: State) =>
+  (msg._tag === 'Completed' && before._tag !== 'Submitting')
+  || ((msg._tag === 'Scanned' || msg._tag === 'CameraFailed') && !readsCamera(before))
 
 describe('AddProducts update', () => {
   test('is total and deterministic, but for a message that cannot arrive', () => {
@@ -77,21 +100,31 @@ describe('AddProducts update', () => {
     })
   })
 
+  test('a message that cannot arrive is a defect', () => {
+    assertProperty([state, message], (before, msg) => {
+      fc.pre(cannotArrive(msg, before))
+      expect(() => program.update(msg)(before)).toThrow()
+      return true
+    })
+  })
+
   // Each message the view sends is accepted in the state it was rendered from; sent twice from the same frame,
-  // it acts once, but the keypad's keys, which are meant to repeat, and the close button, whose second press
-  // the parent ignores once the page is gone. And what the user could ask for and `update` accepts is in the
-  // view, but while the product is being added: the name's input and the close button are disabled then (the
-  // platform's back button, still observed so that it does not leave the app, changes nothing).
+  // it acts once, but the keypad's keys, which are meant to repeat, and the close button, whose second press the
+  // parent ignores once the page is gone. And what the user could ask for and `update` accepts is in the view, but
+  // the name's input under the scanner and while a product is being added, where it is covered or disabled.
   test('the view sends what update accepts, all of it, and acts once when sent twice', () => {
     const check = dispatchViolations(program.update, {
-      repeatable: (msg) => msg._tag === 'DigitTyped' || msg._tag === 'DigitErased' || msg._tag === 'BackPressed',
-      withheld: (msg, state) =>
-        (msg._tag === 'NameChanged' || msg._tag === 'BackPressed') && state._tag === 'Submitting',
+      repeatable: (msg) => msg._tag === 'DigitTyped' || msg._tag === 'DigitErased' || msg._tag === 'Closed',
+      withheld: (msg, state) => msg._tag === 'NameChanged' && state._tag !== 'Editing',
     })
     fc.assert(fc.property(state, fc.string(), utc, (before, inputValue, date) => {
       const askable = [
-        Msg.BackPressed(),
         Msg.NameChanged({ name: inputValue }),
+        Msg.NameCleared(),
+        Msg.ScanRequested(),
+        Msg.ScanClosed(),
+        Msg.Closed(),
+        Msg.Repeated(),
         Msg.DigitErased(),
         ...digits.map((digit) => Msg.DigitTyped({ digit })),
         Msg.Started(),
@@ -103,7 +136,8 @@ describe('AddProducts update', () => {
   })
 
   describe('NameChanged', () => {
-    // While submitting the input is disabled, but a key typed just before must not be lost.
+    // Under the scanner and while submitting the input is covered or disabled, but a key typed just before must
+    // not be lost.
     test('stores what is typed, as typed, in any state', () => {
       assertProperty(
         [state, fc.string()],
@@ -111,6 +145,87 @@ describe('AddProducts update', () => {
           Equal.equals(step(Msg.NameChanged({ name }), before).after, withForm(before, { maybeName: Opt.some(name) })),
       )
     })
+  })
+
+  test('NameCleared empties the name, drawing the input anew, and is rejected with no name to clear', () => {
+    assertProperty(
+      [state],
+      (before) =>
+        before._tag === 'Editing' && Opt.exists(before.form.maybeName, (name) => name !== '')
+          ? Equal.equals(step(Msg.NameCleared(), before), {
+            rejected: false,
+            after: withForm(before, { maybeName: Opt.none(), replacements: before.form.replacements + 1 }),
+            commands: [],
+            events: [],
+          })
+          : rejects(Msg.NameCleared(), before),
+    )
+  })
+
+  test('ScanRequested opens the scanner once the device can read barcodes', () => {
+    assertProperty([state], (before) =>
+      before._tag === 'Editing' && before.form.camera === 'Available'
+        ? Equal.equals(step(Msg.ScanRequested(), before), {
+          rejected: false,
+          after: { _tag: 'Scanning', form: before.form },
+          commands: [],
+          events: [],
+        })
+        : rejects(Msg.ScanRequested(), before))
+  })
+
+  test('ScanClosed closes the scanner with the form kept', () => {
+    assertProperty([state], (before) =>
+      before._tag === 'Scanning'
+        ? Equal.equals(step(Msg.ScanClosed(), before), {
+          rejected: false,
+          after: { _tag: 'Editing', form: before.form },
+          commands: [],
+          events: [],
+        })
+        : rejects(Msg.ScanClosed(), before))
+  })
+
+  test('Scanned names the product and closes the scanner, clearing the date for another product', () => {
+    assertProperty([scanning, fc.oneof(fc.string(), fc.constant('4006381333931'))], (before, barcode) => {
+      fc.pre(readsCamera(before))
+      const form = Opt.contains(before.form.maybeName, barcode)
+        ? before.form
+        : {
+          ...before.form,
+          maybeName: Opt.some(barcode),
+          replacements: before.form.replacements + 1,
+          digits: '',
+          maybeChosenDate: Opt.none(),
+        }
+      return Equal.equals(step(Msg.Scanned({ barcode }), before), {
+        rejected: false,
+        after: { _tag: 'Editing', form },
+        commands: [],
+        events: [],
+      })
+    })
+  })
+
+  // The scanner stays open, saying so, until the user closes it.
+  test('CameraFailed makes the camera unavailable', () => {
+    assertProperty([scanning], (before) => {
+      fc.pre(readsCamera(before))
+      return Equal.equals(step(Msg.CameraFailed(), before).after, withForm(before, { camera: 'Unavailable' }))
+    })
+  })
+
+  // The page opened, left and opened again before its check answered gets two answers: the second is late.
+  test('CameraChecked says whether the device can read barcodes, in any state, and is rejected once it is known', () => {
+    assertProperty([state, fc.boolean()], (before, isAvailable) =>
+      before.form.camera === 'Checking'
+        ? Equal.equals(step(Msg.CameraChecked({ isAvailable }), before), {
+          rejected: false,
+          after: withForm(before, { camera: isAvailable ? 'Available' : 'Unavailable' }),
+          commands: [],
+          events: [],
+        })
+        : rejects(Msg.CameraChecked({ isAvailable }), before))
   })
 
   describe('the keypad', () => {
@@ -134,9 +249,9 @@ describe('AddProducts update', () => {
           ))
     })
 
-    test('is rejected while a product is being added', () => {
+    test('is rejected under the scanner and while a product is being added', () => {
       assertProperty(
-        [submitting, digit],
+        [fc.oneof(scanning, submitting), digit],
         (before, typed) => rejects(Msg.DigitTyped({ digit: typed }), before) && rejects(Msg.DigitErased(), before),
       )
     })
@@ -147,22 +262,6 @@ describe('AddProducts update', () => {
       [state, utc],
       (before, now) =>
         Equal.equals(step(Msg.TimeChanged({ now }), before).after, withForm(before, { maybeNow: Opt.some(now) })),
-    )
-  })
-
-  test('Scanned names the product after another barcode, and draws the name anew', () => {
-    assertProperty([state, fc.string()], (before, barcode) => {
-      const { after } = step(Msg.Scanned({ barcode }), before)
-      return Opt.contains(before.form.maybeName, barcode)
-        ? Equal.equals(after, before)
-        : Equal.equals(after, withForm(before, { maybeName: Opt.some(barcode), scans: before.form.scans + 1 }))
-    })
-  })
-
-  test('CameraFailed turns the camera off', () => {
-    assertProperty(
-      [state],
-      (before) => Equal.equals(step(Msg.CameraFailed(), before).after, withForm(before, { isCameraOn: false })),
     )
   })
 
@@ -180,8 +279,8 @@ describe('AddProducts update', () => {
       })
     })
 
-    test('is rejected while a product is being added', () => {
-      assertProperty([submitting, utc], (before, date) => rejects(Msg.DateChosen({ date }), before))
+    test('is rejected under the scanner and while a product is being added', () => {
+      assertProperty([fc.oneof(scanning, submitting), utc], (before, date) => rejects(Msg.DateChosen({ date }), before))
     })
   })
 
@@ -193,30 +292,50 @@ describe('AddProducts update', () => {
           onNone: () => rejects(Msg.Started(), before),
           onSome: (product) => {
             const { after, commands } = step(Msg.Started(), before)
-            return Equal.equals(after, { _tag: 'Submitting', form: before.form, product })
+            return Equal.equals(after, { _tag: 'Submitting', form: before.form, product, from: 'Form' })
               && Equal.equals(commands, [Cmd.Add({ product })])
           },
         }))
     })
 
-    test('is rejected while a product is being added', () => {
-      assertProperty([submitting], (before) => rejects(Msg.Started(), before))
+    test('is rejected under the scanner and while a product is being added', () => {
+      assertProperty([fc.oneof(scanning, submitting)], (before) => rejects(Msg.Started(), before))
+    })
+  })
+
+  test('Repeated adds the last product again while its snackbar shows, created now', () => {
+    assertProperty([state], (before) => {
+      const maybeRepeat = before._tag === 'Editing' ? repeatOf(before.form) : Opt.none()
+      return Opt.match(maybeRepeat, {
+        onNone: () => rejects(Msg.Repeated(), before),
+        onSome: (product) => {
+          const { after, commands, events } = step(Msg.Repeated(), before)
+          return Equal.equals(after, { _tag: 'Submitting', form: before.form, product, from: 'Snackbar' })
+            && Equal.equals(commands, [Cmd.Add({ product })])
+            && events.length === 0
+        },
+      })
     })
   })
 
   // Guards against the properties above passing only on rejections.
-  test('the arbitrary forms describe a product at times, and at times not, with days picked and days to pick', () => {
+  test('the arbitrary forms describe a product at times, and at times not, with days to pick and repeats', () => {
     const models = fc.sample(editing, 1_000).map(makeModel)
     const choices = models.flatMap((model) =>
       model._tag === 'Editing' && model.date._tag === 'Naming' ? model.date.choices : []
+    )
+    const repeats = models.flatMap((model) =>
+      model._tag === 'Editing' ? Opt.toArray(model.maybeJustAdded).map(({ maybeRepeat }) => maybeRepeat) : []
     )
     expect(models.some((model) => model._tag === 'Editing' && Opt.isSome(model.maybeAdd))).toBe(true)
     expect(models.some((model) => model._tag === 'Editing' && Opt.isNone(model.maybeAdd))).toBe(true)
     expect(choices.some((choice) => choice.choice._tag === 'Chosen')).toBe(true)
     expect(choices.some((choice) => choice.choice._tag === 'Offered')).toBe(true)
+    expect(repeats.some(Opt.isSome)).toBe(true)
+    expect(models.some((model) => model._tag === 'Editing' && Opt.isNone(model.maybeJustAdded))).toBe(true)
   })
 
-  // What the view draws of the date and the keypad is decided here, so that it is checked for any form.
+  // What the view draws is decided here, so that it is checked for any state.
   describe('the model', () => {
     test('says the date is undated, names the days the digits name, the one picked among them, or names nothing', () => {
       assertProperty([editing], (s) => {
@@ -246,15 +365,63 @@ describe('AddProducts update', () => {
       })
     })
 
-    test('the field is blank, the digits, or the day the form names', () => {
+    test('offers the scanner once the device can read barcodes', () => {
+      assertProperty([editing], (s) => {
+        const model = makeModel(s)
+        return model._tag === 'Editing'
+          && Equal.equals(model.maybeScan, s.form.camera === 'Available' ? Opt.some(Msg.ScanRequested()) : Opt.none())
+      })
+    })
+
+    test('offers to add the last product again exactly while update accepts it', () => {
+      assertProperty([editing], (s) => {
+        const model = makeModel(s)
+        if (model._tag !== 'Editing') return false
+        const maybeRepeat = Opt.flatMap(model.maybeJustAdded, ({ maybeRepeat }) => maybeRepeat)
+        return Equal.equals(maybeRepeat, rejects(Msg.Repeated(), s) ? Opt.none() : Opt.some(Msg.Repeated()))
+      })
+    })
+
+    test('shows the snackbar for 6 seconds from when the product was added, but under the scanner', () => {
+      const seconds = fc.integer({ min: -10, max: 10 })
+      assertProperty([state, seconds], (before, elapsed) =>
+        Opt.match(before.form.maybeLastAdded, {
+          onNone: () => true,
+          onSome: (product) => {
+            const model = makeModel(
+              withForm(before, { maybeNow: Opt.some(DateTime.add(product.creationDate, { seconds: elapsed })) }),
+            )
+            const shown = model._tag === 'Editing'
+              ? Opt.map(model.maybeJustAdded, (justAdded) => justAdded.product)
+              : model._tag === 'Submitting'
+              ? model.maybeJustAdded
+              : Opt.none()
+            return Equal.equals(shown, before._tag !== 'Scanning' && elapsed < 6 ? Opt.some(product) : Opt.none())
+          },
+        }))
+    })
+
+    test('the field shows the digits as typed; the support the hint, the day the form names, or that it names none', () => {
       assertProperty([state], (s) => {
         const expected = s.form.digits === ''
-          ? { _tag: 'Blank' }
+          ? { _tag: 'Hint' }
           : Opt.match(namedDate(s.form), {
-            onNone: () => ({ _tag: 'Digits', digits: s.form.digits }),
-            onSome: (date) => ({ _tag: 'Day', date }),
+            onSome: (date) => ({ _tag: 'Named', date }),
+            onNone: () => offeredDates(s.form).length > 0 ? { _tag: 'Hint' } : { _tag: 'NamingNothing' },
           })
-        return Equal.equals(makeModel(s).field, expected)
+        const model = makeModel(s)
+        return model.digits === s.form.digits && Equal.equals(model.support, expected)
+      })
+    })
+
+    test('offers to clear the name exactly while update accepts it', () => {
+      assertProperty([editing], (s) => {
+        const model = makeModel(s)
+        return model._tag === 'Editing'
+          && Equal.equals(
+            model.maybeClearName,
+            rejects(Msg.NameCleared(), s) ? Opt.none() : Opt.some(Msg.NameCleared()),
+          )
       })
     })
 
@@ -272,26 +439,27 @@ describe('AddProducts update', () => {
     })
   })
 
-  test('the model shows the product added last for 4 seconds from when it was added', () => {
-    const seconds = fc.integer({ min: -10, max: 10 })
-    assertProperty([state, seconds], (before, elapsed) =>
-      Opt.match(before.form.maybeLastAdded, {
-        onNone: () => true,
-        onSome: (product) => {
-          const now = DateTime.add(product.creationDate, { seconds: elapsed })
-          const model = makeModel(withForm(before, { maybeNow: Opt.some(now) }))
-          return Opt.isSome(model.maybeJustAdded) === elapsed < 4
-        },
-      }))
-  })
-
   describe('Completed', () => {
-    test('success keeps the page for the next product, with its name, no digits and no day picked', () => {
+    test('success after the form keeps the page for the next product, with its name, no digits and no day picked', () => {
       assertProperty([submitting], (before) => {
+        fc.pre(before.from === 'Form')
         const { after, commands } = step(Msg.Completed({ succeeded: true }), before)
         return Equal.equals(after, {
           _tag: 'Editing',
           form: { ...before.form, digits: '', maybeChosenDate: Opt.none(), maybeLastAdded: Opt.some(before.product) },
+        })
+          && commands.length === 0
+      })
+    })
+
+    // The digits typed while the snackbar's product was being added are the next product's.
+    test('success after the snackbar keeps the form as it is', () => {
+      assertProperty([submitting], (before) => {
+        fc.pre(before.from === 'Snackbar')
+        const { after, commands } = step(Msg.Completed({ succeeded: true }), before)
+        return Equal.equals(after, {
+          _tag: 'Editing',
+          form: { ...before.form, maybeLastAdded: Opt.some(before.product) },
         })
           && commands.length === 0
       })
@@ -304,31 +472,35 @@ describe('AddProducts update', () => {
           && Equal.equals(commands, [Cmd.ShowToast({ text: 'Could not add the product' })])
       })
     })
+  })
 
-    // Only a completion leaves Submitting, so one that arrives elsewhere is a bug.
-    test('is a defect when no product is being added', () => {
-      assertProperty([editing, fc.boolean()], (before, succeeded) => {
-        expect(() => program.update(Msg.Completed({ succeeded }))(before)).toThrow()
-        return true
-      })
+  test('Closed asks the parent to leave the page while editing, and is rejected otherwise', () => {
+    assertProperty([state], (before) => {
+      if (before._tag !== 'Editing') return rejects(Msg.Closed(), before)
+      const { after, commands, events } = step(Msg.Closed(), before)
+      return Equal.equals(after, before) && commands.length === 0 && Equal.equals(events, [Ev.LeaveRequested()])
     })
   })
 
-  test('BackPressed asks the parent to leave the page, but while a product is being added', () => {
+  test('BackPressed leaves the page, closes the scanner first, and is held while adding', () => {
     assertProperty([state], (before) => {
       const { after, commands, events } = step(Msg.BackPressed(), before)
-      const expected = before._tag === 'Editing' ? [Ev.LeaveRequested()] : []
-      return Equal.equals(after, before) && commands.length === 0 && Equal.equals(events, expected)
+      const expected = before._tag === 'Editing'
+        ? { after: before, events: [Ev.LeaveRequested()] }
+        : before._tag === 'Scanning'
+        ? { after: { _tag: 'Editing', form: before.form }, events: [] }
+        : { after: before, events: [] }
+      return Equal.equals(after, expected.after) && commands.length === 0 && Equal.equals(events, expected.events)
     })
   })
 })
 
 // The back button is observed in every state: while a product is being added, so that it does not leave the app.
-test('the page listens to the clock and the back button, and to the camera until it fails', () => {
+test('the page listens to the clock and the back button, and to the camera while the scanner is open until it fails', () => {
   assertProperty([state], (s) => {
     const subscriptions = Tea.subscriptionsOf(program)(s)
     return HashMap.has(subscriptions, 'clock')
       && HashMap.has(subscriptions, 'back-button')
-      && HashMap.has(subscriptions, 'scanner') === s.form.isCameraOn
+      && HashMap.has(subscriptions, 'scanner') === readsCamera(s)
   })
 })

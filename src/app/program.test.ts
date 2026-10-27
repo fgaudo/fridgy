@@ -12,16 +12,21 @@ import * as AddProducts from './children/add-products/program.ts'
 import * as Home from './children/home/program.ts'
 import { type Message, type Page, program, type State } from './program.ts'
 import {
+  addAnother,
   addProduct,
   back,
+  checkCamera,
+  clearName,
   deleteSelected,
   openAbout,
   openAddProducts,
   openMenu,
+  openScanner,
   perform,
   rehearsed,
   requestInfo,
   selectFirstProduct,
+  typeDigit,
   typeName,
   type User,
   undoDeletion,
@@ -41,6 +46,16 @@ const tags = (state: State) => state.stack.map((page) => page._tag)
 const homeState = (state: State) =>
   Opt.map(
     Arr.findFirst(state.stack, (page): page is Data.TaggedEnum.Value<Page, 'Home'> => page._tag === 'Home'),
+    (page) => page.state,
+  )
+
+/** The state of the page that adds products, wherever it is in the stack. */
+const addProductsState = (state: State) =>
+  Opt.map(
+    Arr.findFirst(
+      state.stack,
+      (page): page is Data.TaggedEnum.Value<Page, 'AddProducts'> => page._tag === 'AddProducts',
+    ),
     (page) => page.state,
   )
 
@@ -172,6 +187,21 @@ describe('Navigation', () => {
       yield* user.send(() => add)
       yield* user.send(() => add)
       expect(tags(yield* user.state)).toEqual(['Home', 'AddProducts'])
+      expect((yield* user.pending).map(tagPath)).toEqual(['AddProducts › CheckCamera'])
+      yield* checkCamera(user)
+    })))
+
+  // The check of the first opening answers the second page, and the second check finds the camera known.
+  test('the page that adds products, opened again before its camera check answered, takes both answers', () =>
+    rehearsed(Effect.fnUntraced(function*(user) {
+      yield* user.send(openAddProducts)
+      yield* back(user)
+      yield* user.send(openAddProducts)
+      expect((yield* user.pending).map(tagPath)).toEqual(['AddProducts › CheckCamera', 'AddProducts › CheckCamera'])
+      yield* checkCamera(user)
+      yield* checkCamera(user)
+      expect(tags(yield* user.state)).toEqual(['Home', 'AddProducts'])
+      expect((yield* user.ignored).map(tagPath)).toEqual(['AddProducts › CameraChecked'])
     })))
 
   /** The names of the valid products in Home's list. */
@@ -188,6 +218,7 @@ describe('Navigation', () => {
   test('a product added on its page is in the list of Home once the page is left', () =>
     rehearsed(Effect.fnUntraced(function*(user) {
       yield* perform(user, [openAddProducts, typeName('Milk')])
+      yield* checkCamera(user)
       // The page adds a product only once it knows the time.
       yield* user.hearNext(['AddProducts', 'clock'])
       yield* user.send(addProduct)
@@ -198,9 +229,60 @@ describe('Navigation', () => {
       expect(yield* listedNames(user)).toEqual(Opt.some(['Milk']))
     })))
 
+  test('a barcode read by the scanner names the product added', () =>
+    rehearsed(Effect.fnUntraced(function*(user) {
+      yield* user.send(openAddProducts)
+      // The scanner is offered once the page knows that the device can read barcodes.
+      yield* checkCamera(user)
+      yield* user.send(openScanner)
+      yield* user.hear(
+        ['AddProducts', 'scanner'],
+        Msg.AddProducts({ message: AddProductsMsg.Scanned({ barcode: '4006381333931' }) }),
+      )
+      yield* user.hearNext(['AddProducts', 'clock'])
+      yield* user.send(addProduct)
+      yield* user.run((command) => tagPath(command) === 'AddProducts › Add')
+      yield* back(user)
+      yield* user.hearNext(['Home', ['Products', 'changes']])
+      expect(yield* listedNames(user)).toEqual(Opt.some(['4006381333931']))
+    })))
+
+  test('a product added twice with Add another is listed twice', () =>
+    rehearsed(Effect.fnUntraced(function*(user) {
+      yield* perform(user, [openAddProducts, typeName('Milk')])
+      yield* checkCamera(user)
+      yield* user.hearNext(['AddProducts', 'clock'])
+      yield* user.send(addProduct)
+      yield* user.run((command) => tagPath(command) === 'AddProducts › Add')
+      // A moment later, as a user taps it: the repeat is created at the clock's time. The digits typed for the next
+      // product meanwhile stay.
+      yield* user.hearNext(['AddProducts', 'clock'])
+      yield* perform(user, [typeDigit('3'), addAnother])
+      yield* user.run((command) => tagPath(command) === 'AddProducts › Add')
+      expect(Opt.map(addProductsState(yield* user.state), ({ form }) => form.digits)).toEqual(Opt.some('3'))
+      yield* back(user)
+      yield* user.hearNext(['Home', ['Products', 'changes']])
+      expect(yield* listedNames(user)).toEqual(Opt.some(['Milk', 'Milk']))
+    })))
+
+  test('a product named anew, once the name is cleared, is listed with the first', () =>
+    rehearsed(Effect.fnUntraced(function*(user) {
+      yield* perform(user, [openAddProducts, typeName('Milk')])
+      yield* checkCamera(user)
+      yield* user.hearNext(['AddProducts', 'clock'])
+      yield* user.send(addProduct)
+      yield* user.run((command) => tagPath(command) === 'AddProducts › Add')
+      yield* perform(user, [clearName, typeName('Bread'), addProduct])
+      yield* user.run((command) => tagPath(command) === 'AddProducts › Add')
+      yield* back(user)
+      yield* user.hearNext(['Home', ['Products', 'changes']])
+      expect(yield* listedNames(user)).toEqual(Opt.some(['Milk', 'Bread']))
+    })))
+
   test('a product deleted from the list comes back when the deletion is undone in time', () =>
     rehearsed(Effect.fnUntraced(function*(user) {
       yield* perform(user, [openAddProducts, typeName('Milk')])
+      yield* checkCamera(user)
       yield* user.hearNext(['AddProducts', 'clock'])
       yield* user.send(addProduct)
       yield* user.run((command) => tagPath(command) === 'AddProducts › Add')
@@ -262,5 +344,6 @@ describe('Subscriptions', () => {
       expect(yield* listensToBack).toBe(false)
       yield* user.send(openAddProducts)
       expect(yield* listensToBack).toBe(true)
+      yield* checkCamera(user)
     })))
 })

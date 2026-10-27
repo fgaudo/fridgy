@@ -12,7 +12,9 @@ import * as Opt from 'effect/Option'
 import * as References from 'effect/References'
 import { BackButton } from '#infrastructure/back-button/back-button.ts'
 import * as SqliteMemory from '#infrastructure/storage/sqlite.memory.ts'
+import { tagPath } from '#libs/testing/tag-path.test_support.ts'
 import type * as AddProducts from './children/add-products/program.ts'
+import { Scanner } from './children/add-products/services/scanner/scanner.ts'
 import type * as Products from './children/home/children/products/program.ts'
 import type * as Home from './children/home/program.ts'
 import * as App from './layer.ts'
@@ -42,6 +44,9 @@ export const openAbout = [openMenu, requestInfo]
 /** The page that adds products is reached from Home's button. */
 export const openAddProducts = onHome(({ add }) => Opt.some(add))
 
+/** The answer to the page that adds products, which asks when it opens whether the device can read barcodes. */
+export const checkCamera = (user: User) => user.run((command) => tagPath(command) === 'AddProducts › CheckCamera')
+
 // Home's child draws its pieces in Home: its messages are wrapped twice.
 const onProducts = (pick: (model: Products.Model) => Opt.Option<Products.Message>): Choice =>
   onHome(({ products }) => Opt.map(pick(products), (message) => ({ _tag: 'Products', message })))
@@ -64,8 +69,23 @@ export const undoDeletion = onProducts(({ lastDeletion }) =>
 export const typeName = (name: string) =>
   onAddProducts((form) => form._tag === 'Editing' ? Opt.some(form.changeName(name)) : Opt.none())
 
+/** The name field's clear button, while there is a name. */
+export const clearName = onAddProducts((form) => form._tag === 'Editing' ? form.maybeClearName : Opt.none())
+
+/** The keypad's key of a digit, while a digit can be typed. */
+export const typeDigit = (digit: AddProducts.Digit) =>
+  onAddProducts(({ maybeTypeDigit }) => Opt.map(maybeTypeDigit, (type) => type(digit)))
+
+/** The name field's scan button, while the camera is on. */
+export const openScanner = onAddProducts((form) => form._tag === 'Editing' ? form.maybeScan : Opt.none())
+
 /** The keypad's key that adds the product the form describes: before any digit is typed, one that never expires. */
 export const addProduct = onAddProducts((form) => form._tag === 'Editing' ? form.maybeAdd : Opt.none())
+
+/** The snackbar's "Add another", while the product added last can be added again. */
+export const addAnother = onAddProducts((form) =>
+  form._tag === 'Editing' ? Opt.flatMap(form.maybeJustAdded, ({ maybeRepeat }) => maybeRepeat) : Opt.none()
+)
 
 /** Sends each message in turn, each from the model the previous one left. */
 export const perform = Effect.fnUntraced(function*(user: User, choices: ReadonlyArray<Choice>) {
@@ -88,7 +108,12 @@ export const back = Effect.fnUntraced(function*(user: User) {
 // The platform's back button is out of reach: it is heard through `back`.
 const backButton = Layer.succeed(BackButton, { presses: Channel.never })
 
-const layer = Layer.merge(App.layer.pipe(Layer.provide(SqliteMemory.layer)), backButton)
+// A device that reads barcodes, whose camera reads nothing by itself: the barcodes are heard through `hear`.
+const scanner = Layer.succeed(Scanner, { isAvailable: Effect.succeed(true), barcodes: Channel.never })
+
+// The app's layer holds the browser's scanner, which cannot read barcodes here: merged after it, the test's one
+// wins, as the last of a merge does.
+const layer = Layer.mergeAll(App.layer.pipe(Layer.provide(SqliteMemory.layer)), backButton, scanner)
 
 /** Rehearses the app from its start; fails when a command is still pending at the end. */
 export const rehearsed = <A>(scenario: (user: User) => Effect.Effect<A, never, Deps>) =>
