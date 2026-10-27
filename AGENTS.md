@@ -172,6 +172,8 @@ not a kind of program. The programs to copy are `src/app/children/home` and `src
   scanner (`getUserMedia` and the Shape Detection API, `scanner.browser.ts`) has not been tried on Android yet;
   on a desktop without the API (Chrome on Windows), the scan button is disabled and the name field says why.
 - Capacitor 9 alpha (API 37, WebView 114) has not been built or run in the emulator yet.
+- The app has not been run on WebView 114 exactly: the procedure in the `android-release` skill comes from
+  APKMirror's listing and Chromium's docs, and has not been followed yet.
 - The dark theme has been checked in a browser only: not yet on Android, where the WebView should match
   `prefers-color-scheme` from the system's theme, nor its night splash screens.
 

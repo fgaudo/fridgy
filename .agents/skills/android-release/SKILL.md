@@ -34,12 +34,39 @@ An Android version is supported only if the app can be tested on it, in the Andr
 
 - on a Google Play image for x86_64: below API 28, Google's Play images are x86 only, at 32 bits;
 - with Android System WebView as the WebView: Android 7 to 9 use Chrome instead;
-- with that WebView updated through the Play Store to `minWebViewVersion` or later, signed in with a test
-  account: the images ship an older one (74 on API 29).
+- with that WebView at exactly `minWebViewVersion`, installed by hand as below: the images ship an older one
+  (74 on API 29), and the Play Store would install the latest, which proves nothing about the lowest.
 
 API 29 is the lowest version that meets all three, hence `minSdkVersion` 29 in `android/variables.gradle`. A
 change of `minSdkVersion`, of these rules or of `minWebViewVersion` (which can move the lowest version that
 meets them) is checked in the emulator first, and `README.md` and this file change with it.
+
+`minWebViewVersion` is the lowest WebView with everything the app uses; the comment on it in
+`capacitor.config.ts` names what needs the highest version. The bundle is not transpiled (`Bun.build`, the
+`ESNext` target), so every syntax, API and CSS feature in it counts, Tailwind's and Effect's included, and an
+upgrade of a dependency can raise what the app needs without a change in `src/`. Nothing checks this
+statically: the check is the emulator on that exact WebView, before a release and after an upgrade of
+Capacitor, Effect, Tailwind or `@effect/wa-sqlite`.
+
+### The emulator on the lowest WebView
+
+1. Download Android System WebView `minWebViewVersion` (e.g. `114.0.5735.196`) from APKMirror,
+   `apkmirror.com/apk/google-inc/android-system-webview/`: the APK variant for "x86 + x86_64", "Android 7.0+",
+   signature `1f38`. It is the standalone WebView, which Android 10 and later run too; the "Android 10+"
+   variants are the Trichrome ones, which need a Trichrome Library APK of the same version and have no x86_64
+   build.
+2. Install it on the emulator, over the image's own:
+
+   ```bash
+   adb install -r android-system-webview.apk
+   ```
+
+   `adb shell dumpsys webviewupdate` must then show `com.google.android.webview` with that version as the
+   current package. Nothing else is selected: a Play image has no other WebView provider.
+3. Do not sign the emulator into a Google account: the Play Store would update the WebView to the latest.
+   If it did, `adb uninstall com.google.android.webview` removes the update and puts the image's own back.
+4. Run the app: it must start (not `src/error.html`), and what the comment on `minWebViewVersion` lists must
+   work: the database, the shadows and the scrim, the list snapping back to the top after a scroll.
 
 `compileSdkVersion` and `targetSdkVersion`, the Android Gradle Plugin and Gradle are those of the Android
 template of the Capacitor release in use (`assets/android-template.tar.gz` in `@capacitor/cli`): API 37 for
