@@ -67,24 +67,31 @@ export const undoDeletion = onProducts(({ lastDeletion }) =>
 )
 
 export const typeName = (name: string) =>
-  onAddProducts((form) => form._tag === 'Editing' ? Opt.some(form.changeName(name)) : Opt.none())
+  onAddProducts((form) => form._tag === 'Naming' ? Opt.some(form.changeName(name)) : Opt.none())
 
 /** The name field's clear button, while there is a name. */
-export const clearName = onAddProducts((form) => form._tag === 'Editing' ? form.maybeClearName : Opt.none())
+export const clearName = onAddProducts((form) => form._tag === 'Naming' ? form.maybeClearName : Opt.none())
 
-/** The keypad's key of a digit, while a digit can be typed. */
+/** The first step's "Set the expiration", while the name is a product's. */
+export const requestDate = onAddProducts((form) => form._tag === 'Naming' ? form.maybeRequestDate : Opt.none())
+
+/** The keypad's key of a digit, on the second step, while a digit can be typed. */
 export const typeDigit = (digit: AddProducts.Digit) =>
-  onAddProducts(({ maybeTypeDigit }) => Opt.map(maybeTypeDigit, (type) => type(digit)))
+  onAddProducts((form) => form._tag === 'Dating' ? Opt.map(form.maybeTypeDigit, (type) => type(digit)) : Opt.none())
 
 /** The name field's scan button, while the camera is on. */
-export const openScanner = onAddProducts((form) => form._tag === 'Editing' ? form.maybeScan : Opt.none())
+export const openScanner = onAddProducts((form) => form._tag === 'Naming' ? form.maybeScan : Opt.none())
 
-/** The keypad's key that adds the product the form describes: before any digit is typed, one that never expires. */
-export const addProduct = onAddProducts((form) => form._tag === 'Editing' ? form.maybeAdd : Opt.none())
+/** The button that adds the product the step describes: on the first step, one that never expires. */
+export const addProduct = onAddProducts((form) =>
+  form._tag === 'Naming' || form._tag === 'Dating' ? form.maybeAdd : Opt.none()
+)
 
 /** The snackbar's "Add another", while the product added last can be added again. */
 export const addAnother = onAddProducts((form) =>
-  form._tag === 'Editing' ? Opt.flatMap(form.maybeJustAdded, ({ maybeRepeat }) => maybeRepeat) : Opt.none()
+  form._tag === 'Naming' || form._tag === 'Dating'
+    ? Opt.flatMap(form.maybeJustAdded, ({ maybeRepeat }) => maybeRepeat)
+    : Opt.none()
 )
 
 /** Sends each message in turn, each from the model the previous one left. */

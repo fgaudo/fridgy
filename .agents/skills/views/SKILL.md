@@ -50,7 +50,8 @@ destinations); a form that opens over the page is a modal bottom sheet, within t
 text fields; selected things turn the top app bar into a contextual one with their actions; something undone in
 a few seconds (a deletion) gets a snackbar with its action, never a dialog; what only informs is a toast; a
 choice among a few values is a row of filter chips, the one taken drawn selected, and the action that commits
-the form is a button where the thumb rests (the keypad's check), never a chip. A chip
+a step is a filled button where the thumb rests, whose label says what it does ("Add without expiration"),
+never a chip nor a key of the keypad, which types the date and nothing else. A chip
 or a button that does nothing is text. Every top app bar is the same: a 64dp bar, the emphasized title, the
 surface's color at rest and `surface-container` once the page scrolls under it, which the page learns from its
 scroll (Home from its `Viewport`, About from its own scroll event). Pages come and go with Material's

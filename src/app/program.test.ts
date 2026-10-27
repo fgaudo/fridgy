@@ -24,6 +24,7 @@ import {
   openScanner,
   perform,
   rehearsed,
+  requestDate,
   requestInfo,
   selectFirstProduct,
   typeDigit,
@@ -257,9 +258,14 @@ describe('Navigation', () => {
       // A moment later, as a user taps it: the repeat is created at the clock's time. The digits typed for the next
       // product meanwhile stay.
       yield* user.hearNext(['AddProducts', 'clock'])
-      yield* perform(user, [typeDigit('3'), addAnother])
+      yield* perform(user, [requestDate, typeDigit('3'), addAnother])
       yield* user.run((command) => tagPath(command) === 'AddProducts › Add')
-      expect(Opt.map(addProductsState(yield* user.state), ({ form }) => form.digits)).toEqual(Opt.some('3'))
+      expect(
+        Opt.flatMap(addProductsState(yield* user.state), (page) =>
+          page._tag === 'Dating' ? Opt.some(page.date.digits) : Opt.none()),
+      ).toEqual(Opt.some('3'))
+      // The first press leaves the date for the name, the second leaves the page.
+      yield* back(user)
       yield* back(user)
       yield* user.hearNext(['Home', ['Products', 'changes']])
       expect(yield* listedNames(user)).toEqual(Opt.some(['Milk', 'Milk']))
