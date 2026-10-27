@@ -94,7 +94,7 @@ type Above = 'Nothing' | 'Fab'
 
 /**
  * Material's snackbar, in the room above a step's controls, and above its FAB: its two lines say that the product
- * was added, its name cut to the line, and when it expires, as the list says it, with the action that adds it
+ * was added, its name emphasized and cut to the line, and when it expires, as the list says it, with the action that adds it
  * again while it can be, and while the step's own button would not. Keyed by the product, so that the next one, a
  * repeat included, appears anew.
  */
@@ -127,8 +127,9 @@ const snackbar = ({ product, maybeRepeat }: JustAdded, above: Above, dispatch: D
     >
       <div props={{ className: 'flex min-w-0 flex-1 flex-col py-2' }}>
         <span props={{ className: 'flex' }}>
-          <span props={{ className: 'min-w-0 truncate' }}>{product.name}</span>
-          <span props={{ className: 'shrink-0' }}>{' added'}</span>
+          <span props={{ className: 'min-w-0 truncate text-body-medium-emphasized' }}>{product.name}</span>
+          {/* A flex item drops its leading space, unless it is preserved. */}
+          <span props={{ className: 'shrink-0 whitespace-pre' }}>{' added'}</span>
         </span>
         <span>
           {Opt.match(product.maybeExpirationDate, {
