@@ -59,6 +59,7 @@ export const form: fc.Arbitrary<Form> = fc.tuple(
     maybeNow: maybe(utc),
     maybeOrder: maybe(order),
     maybeLastAdded: maybe(product),
+    maybeAcknowledging: maybe(utc),
   }),
   fc.option(fc.integer({ min: -2, max: 10 })),
   fc.boolean(),
@@ -150,4 +151,5 @@ export const message: fc.Arbitrary<Message> = fc.oneof(
   fc.string().map((barcode) => Msg.Scanned({ barcode })),
   fc.tuple(barcode, outcome).map(([barcode, outcome]) => Msg.LookedUp({ barcode, outcome })),
   fc.boolean().map((succeeded) => Msg.Completed({ succeeded })),
+  utc.map((at) => Msg.AddedShown({ at })),
 )

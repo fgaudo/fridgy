@@ -612,6 +612,14 @@ describe('AddProducts update', () => {
         }))
     })
 
+    test('the first step\'s button acknowledges the product it added exactly while its timer runs', () => {
+      assertProperty([naming], (s) => {
+        const model = makeModel(s)
+        return model._tag === 'Naming'
+          && (model.acknowledging === 'Added') === Opt.isSome(s.form.maybeAcknowledging)
+      })
+    })
+
     test('withholds the snackbar\'s action while a product is being added', () => {
       assertProperty([submitting], (s) => {
         const model = makeModel(s)
@@ -770,7 +778,9 @@ describe('AddProducts update', () => {
   })
 
   describe('Completed', () => {
-    test('success after a step\'s product starts the next one at the name, this one\'s kept and drawn anew', () => {
+    // The second step leaves with its own transition, and the snackbar comes anew: only the first step's button
+    // acknowledges the product it added.
+    test('success after a step\'s product starts the next one at the name, this one\'s kept and drawn anew, acknowledged by the first step\'s button', () => {
       assertProperty([submitting], (before) => {
         fc.pre(before.from === 'Form')
         const { after, commands } = step(Msg.Completed({ succeeded: true }), before)
@@ -780,6 +790,9 @@ describe('AddProducts update', () => {
             ...before.form,
             maybeLastAdded: Opt.some(before.product),
             replacements: before.form.replacements + 1,
+            maybeAcknowledging: before.step._tag === 'Naming'
+              ? Opt.some(before.product.creationDate)
+              : before.form.maybeAcknowledging,
           },
         })
           && commands.length === 0
@@ -805,6 +818,21 @@ describe('AddProducts update', () => {
     })
   })
 
+  test('AddedShown ends the acknowledgement of the product it names, in any state, and is rejected for any other', () => {
+    assertProperty([state, utc], (before, other) => {
+      const ended = Opt.match(before.form.maybeAcknowledging, {
+        onNone: () => true,
+        onSome: (at) =>
+          Equal.equals(
+            step(Msg.AddedShown({ at }), before).after,
+            withForm(before, { maybeAcknowledging: Opt.none() }),
+          ),
+      })
+      fc.pre(!Opt.contains(before.form.maybeAcknowledging, other))
+      return ended && rejects(Msg.AddedShown({ at: other }), before)
+    })
+  })
+
   test('Closed asks the parent to leave the page on the first step, the lookup going on or not, and is rejected otherwise', () => {
     assertProperty([state], (before) => {
       if (before._tag !== 'Naming' && before._tag !== 'LookingUp') return rejects(Msg.Closed(), before)
@@ -827,15 +855,21 @@ describe('AddProducts update', () => {
 })
 
 // The back button is observed in every state: while a product is being added, so that it does not leave the app.
-test('the page listens to the clock, the date order and the back button, to the camera while the scanner is open until it fails, and to the lookup of the barcode it looks up', () => {
-  assertProperty([state], (s) => {
+test('the page listens to the clock, the date order and the back button, to the camera while the scanner is open until it fails, to the lookup of the barcode it looks up, and times the acknowledgement of the product added', () => {
+  assertProperty([state, utc], (s, other) => {
     const subscriptions = Tea.subscriptionsOf(program)(s)
     const lookups = [...HashMap.keys(subscriptions)].filter((key) => String(key).startsWith('lookup:'))
+    fc.pre(!Opt.contains(s.form.maybeAcknowledging, other))
     return HashMap.has(subscriptions, 'clock')
       && HashMap.has(subscriptions, 'date-order')
       && HashMap.has(subscriptions, 'back-button')
       && HashMap.has(subscriptions, 'scanner') === readsCamera(s)
       && Equal.equals(lookups, s._tag === 'LookingUp' ? [`lookup:${s.barcode}`] : [])
+      && Opt.match(s.form.maybeAcknowledging, {
+        onNone: () => true,
+        onSome: (at) => HashMap.has(subscriptions, ['acknowledging', at]),
+      })
+      && !HashMap.has(subscriptions, ['acknowledging', other])
   })
 })
 
@@ -854,6 +888,7 @@ describe('the lookup', () => {
         maybeNow: Opt.none(),
         maybeOrder: Opt.none(),
         maybeLastAdded: Opt.none(),
+        maybeAcknowledging: Opt.none(),
       },
       barcode: code,
     }

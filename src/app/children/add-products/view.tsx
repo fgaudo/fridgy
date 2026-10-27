@@ -169,13 +169,20 @@ const room = (
   </div>
 )
 
+/** What a step's button shows in place of its label: Material's circular indicator while its action is done. */
+type ButtonShows = 'Label' | 'Progress'
+
 /**
  * Material's filled button, the one action of a step, where the thumb rests; and its text button, the other
- * way out of the first step. Both say what they do, and the one tapped says that it is being done.
+ * way out of the first step. Both say what they do, and the one tapped shows, in its own colors, Material's
+ * circular indicator in place of its label while its action is being done, and for the moment the model keeps it
+ * after: the write is mostly quicker than a frame, and the indicator would otherwise never be drawn. The
+ * indicator appears at once, as the label leaves at once under it, and leaves fading as the label fades back in.
  */
 const button = (
   label: string,
   maybeMessage: Opt.Option<Message>,
+  shows: ButtonShows,
   kind: 'Filled' | 'Text',
   dispatch: Dispatch<Message>,
 ) => {
@@ -184,16 +191,46 @@ const button = (
     <button
       props={{
         className: cn(
-          'state-layer shrink-0 rounded-full px-6 text-label-large transition-colors',
-          kind === 'Filled'
-            ? 'h-14 bg-primary text-on-primary disabled:bg-on-surface/12 disabled:text-on-surface/38'
-            : 'h-10 text-primary disabled:text-on-surface/38',
+          'state-layer relative shrink-0 rounded-full px-6 text-label-large transition-colors',
+          kind === 'Filled' ? 'h-14 bg-primary text-on-primary' : 'h-10 text-primary',
+          shows === 'Label' && 'disabled:text-on-surface/38',
+          shows === 'Label' && kind === 'Filled' && 'disabled:bg-on-surface/12',
         ),
         disabled: Opt.isNone(maybeMessage),
       }}
       on={Opt.match(maybeMessage, { onNone: () => ({}), onSome: (message) => on('click', message) })}
     >
-      {label}
+      <span
+        props={{
+          className: shows === 'Label'
+            ? 'opacity-100 transition-opacity duration-short-4 ease-standard-decelerate'
+            : 'opacity-0 transition-none',
+        }}
+      >
+        {label}
+      </span>
+      {shows === 'Progress'
+        ? [
+          <span
+            key='progress'
+            style={{
+              remove: {
+                opacity: '0',
+                transition: 'opacity var(--transition-duration-short-4) var(--ease-standard-accelerate)',
+              },
+            }}
+            props={{
+              className: cn(
+                'material-symbols-rounded pointer-events-none absolute inset-0 flex items-center justify-center',
+                'text-[18px]',
+              ),
+              title: 'Adding the product',
+            }}
+          >
+            <span props={{ className: 'animate-spin' }}>progress_activity</span>
+          </span>,
+        ]
+        : []}
     </button>
   )
 }
@@ -357,14 +394,18 @@ const nameStep = (
         {button(
           'Set expiration',
           Opt.flatMap(controls, ({ maybeRequestDate }) => maybeRequestDate),
+          'Label',
           'Filled',
           dispatch,
         )}
         {activity._tag === 'LookingUp'
-          ? button('Cancel', Opt.some(activity.controls.cancelLookup), 'Text', dispatch)
+          ? button('Cancel', Opt.some(activity.controls.cancelLookup), 'Label', 'Text', dispatch)
           : button(
-            activity._tag === 'Adding' ? 'Adding…' : 'Add without date',
+            'Add without date',
             Opt.flatMap(controls, ({ maybeAdd }) => maybeAdd),
+            activity._tag === 'Adding' || (activity._tag === 'Editing' && activity.controls.acknowledging === 'Added')
+              ? 'Progress'
+              : 'Label',
             'Text',
             dispatch,
           )}
@@ -606,8 +647,9 @@ const dateStep = (
           {keypad(activity, dispatch)}
         </div>
         {button(
-          activity._tag === 'Adding' ? 'Adding…' : 'Add',
+          'Add',
           Opt.flatMap(controls, ({ maybeAdd }) => maybeAdd),
+          activity._tag === 'Adding' ? 'Progress' : 'Label',
           'Filled',
           dispatch,
         )}
