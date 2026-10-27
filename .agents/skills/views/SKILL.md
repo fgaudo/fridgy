@@ -54,10 +54,17 @@ a few seconds (a deletion) gets a snackbar with its action, never a dialog; what
 choice among a few values is a row of filter chips, the one taken drawn selected, and the action that commits
 a step is a filled button where the thumb rests, whose label says what it does ("Add without date"),
 never a chip nor a key of the keypad, which types the date and nothing else. A chip
-or a button that does nothing is text. Every top app bar is the same: a 64dp bar, the emphasized title, the
-surface's color at rest and `surface-container` once the page scrolls under it, which the page learns from its
-scroll (Home from its `Viewport`, About from its own scroll event). Pages come and go with Material's
-transitions, symmetric: what enters decelerates, what leaves accelerates. The theme leaves out Tailwind's own
+or a button that does nothing is text. An empty state is an icon on a 96dp disc in a role's container colors
+(`primary-container` for what is merely missing, `error-container` for what could not be read), a `headline-small`
+title and a `body-large` text. Every top app bar is the surface's color at rest and `surface-container` once the
+page scrolls under it, which the page learns from its scroll (Home from its `Viewport`, About from its own
+scroll event), with the emphasized title. A page that is opened over another has a small bar, 64dp; Home, the
+app's own screen, has a medium one: a 124dp bar with the row of its icons on top and the headline
+(`headline-medium-emphasized`) with its subtitle at the bottom, which collapses to the small bar, the headline
+shrunk to `title-large-emphasized` after the leading icon, once the list scrolls under it. The contextual bar of
+the selected products takes the same shape, in its own colors: the child gives Home its pieces (the icon
+buttons, the title), and Home draws them in its bar. The list leaves the bar's full height above itself. Pages
+come and go with Material's transitions, symmetric: what enters decelerates, what leaves accelerates. The theme leaves out Tailwind's own
 colors, font sizes, radii, shadows, easings and durations:
 
 - colors are Material's roles (`src/palette.generated.css`, generated from the key colors in

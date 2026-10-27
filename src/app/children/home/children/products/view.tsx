@@ -230,38 +230,34 @@ const iconButton = (icon: string, label: string, message: Message | undefined, {
   </button>
 )
 
+/** The pieces of the contextual top app bar: its leading and trailing icon buttons, and its title. */
+export type SelectionBar = Readonly<{ leading: VNode; title: string; trailing: VNode }>
+
 /**
- * Material's contextual top app bar, which takes the place of the page's own while products are selected: how many,
- * out of how many, and what can be done with them. Nothing when none are.
+ * Material's contextual top app bar, which takes the place of the page's own while products are selected: how many
+ * are selected, and what can be done with them, as the pieces Home draws in its bar's shape. Nothing when none are.
  */
-export const selectionBar = (model: Model, dispatch: Dispatch<Message>): VNode | undefined => {
+export const selectionBar = (model: Model, dispatch: Dispatch<Message>): SelectionBar | undefined => {
   if (model.list._tag !== 'Available' || model.list.deletion._tag === 'NothingSelected') {
     return undefined
   }
   const events = handlers(dispatch)
   const { deletion } = model.list
-  return (
-    <div props={{ className: 'flex h-16 items-center gap-1 px-1' }}>
-      {iconButton(
-        'close',
-        'Clear selection',
-        deletion._tag === 'Possible' ? deletion.clearSelection : undefined,
-        events,
-      )}
-      <div props={{ className: 'flex min-w-0 grow flex-col px-1' }}>
-        <span props={{ className: 'truncate text-title-large-emphasized' }}>
-          {deletion._tag === 'Possible' ? `${deletion.count} selected` : 'Deleting…'}
-        </span>
-        <span props={{ className: 'truncate text-label-medium' }}>{subtitleOf(model.list)}</span>
-      </div>
-      {iconButton(
-        'delete',
-        'Delete',
-        deletion._tag === 'Possible' ? deletion.deleteSelected : undefined,
-        events,
-      )}
-    </div>
-  )
+  return {
+    leading: iconButton(
+      'close',
+      'Clear selection',
+      deletion._tag === 'Possible' ? deletion.clearSelection : undefined,
+      events,
+    ),
+    title: deletion._tag === 'Possible' ? `${deletion.count} selected` : 'Deleting…',
+    trailing: iconButton(
+      'delete',
+      'Delete',
+      deletion._tag === 'Possible' ? deletion.deleteSelected : undefined,
+      events,
+    ),
+  }
 }
 
 /**
@@ -320,12 +316,14 @@ export const snackbar = (model: Model, dispatch: Dispatch<Message>): VNode | und
   )
 }
 
-/** Material's empty state: what is missing, and what to do about it. */
-const emptyState = (icon: string, title: string, text: string) => (
-  <div props={{ className: 'flex flex-col items-center gap-2 px-8 pt-32 text-center' }}>
-    <span props={{ className: 'material-symbols-rounded icon-large text-on-surface-variant' }}>{icon}</span>
-    <div props={{ className: 'text-title-medium text-on-surface' }}>{title}</div>
-    <div props={{ className: 'text-body-medium text-on-surface-variant' }}>{text}</div>
+/** Material's empty state: what is missing, as an icon on a disc in a role's container colors, and what to do about it. */
+const emptyState = (colors: string, icon: string, title: string, text: string) => (
+  <div props={{ className: 'flex flex-col items-center gap-2 px-8 pt-44 text-center' }}>
+    <div props={{ className: cn('mb-2 flex h-24 w-24 items-center justify-center rounded-full', colors) }}>
+      <span props={{ className: 'material-symbols-rounded icon-large' }}>{icon}</span>
+    </div>
+    <div props={{ className: 'text-headline-small text-on-surface' }}>{title}</div>
+    <div props={{ className: 'text-body-large text-on-surface-variant' }}>{text}</div>
   </div>
 )
 
@@ -344,13 +342,23 @@ export const list = (model: Model, dispatch: Dispatch<Message>) => {
     case 'Initial':
       return <div />
     case 'Error':
-      return emptyState('error', 'Could not load the products', 'Try opening Fridgy again.')
+      return emptyState(
+        'bg-error-container text-on-error-container',
+        'error',
+        'Could not load the products',
+        'Try opening Fridgy again.',
+      )
     case 'Empty':
-      return emptyState('kitchen', 'Nothing in the fridge', 'Add what you buy with the button below.')
+      return emptyState(
+        'bg-primary-container text-on-primary-container',
+        'kitchen',
+        'Nothing in the fridge',
+        'Add what you buy with the button below.',
+      )
     case 'Available':
       return (
-        // Below the top app bar.
-        <div props={{ className: 'pt-16 pb-24' }}>
+        // Below the top app bar, at its full height.
+        <div props={{ className: 'pt-31 pb-24' }}>
           <ul>
             {model.list.products.map((product, index) => {
               switch (product._tag) {

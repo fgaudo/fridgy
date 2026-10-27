@@ -6,8 +6,8 @@ import * as Products from './children/products/view.tsx'
 import type { Message, Model } from './program.ts'
 
 /**
- * Material's extended FAB: an icon and its action. While the list scrolls it shrinks to the icon alone, to leave
- * the products in view; it rises above the snackbar while one is shown.
+ * Material's extended FAB, with its icon filled: an icon and its action. While the list scrolls it shrinks to the
+ * icon alone, to leave the products in view; it rises above the snackbar while one is shown.
  */
 const addButton = (model: Model, isAboveSnackbar: boolean, { on }: Handlers<Message>) => (
   <button
@@ -22,7 +22,7 @@ const addButton = (model: Model, isAboveSnackbar: boolean, { on }: Handlers<Mess
     }}
     on={on('click', model.add)}
   >
-    <span props={{ className: 'material-symbols-rounded' }}>barcode_scanner</span>
+    <span props={{ className: 'material-symbols-rounded icon-filled' }}>barcode_scanner</span>
     <span
       props={{
         className: cn(
@@ -83,37 +83,31 @@ export const view: View<Model, Message> = (model, dispatch) => {
   const events = handlers(dispatch)
   const { on } = events
   const toProducts = Tea.dispatchTo(dispatch, 'Products')
-  const selectionBar = Products.selectionBar(model.products, toProducts)
+  const selection = Products.selectionBar(model.products, toProducts)
   const subtitle = Products.subtitle(model.products)
   const snackbar = Products.snackbar(model.products, toProducts)
   const { isAtTop } = model
-  // Material's small top app bar, with the emphasized title and a subtitle of Material 3 Expressive: the surface's
-  // color at rest, filled with a container's once the list scrolls under it.
-  const appBar = (
-    <div props={{ className: 'flex h-16 items-center gap-1 px-1' }}>
-      <div props={{ className: 'flex min-w-0 grow flex-col px-3' }}>
-        <h1 props={{ className: 'truncate text-title-large-emphasized' }}>Fridgy</h1>
-        {subtitle === undefined
-          ? []
-          : [<span props={{ className: 'truncate text-label-medium text-on-surface-variant' }}>{subtitle}</span>]}
-      </div>
-      <button
-        props={{
-          className: 'state-layer material-symbols-rounded flex h-12 w-12 items-center justify-center rounded-full',
-          title: 'More options',
-        }}
-        on={model.menu._tag === 'Closed' ? on('click', model.menu.open) : {}}
-      >
-        more_vert
-      </button>
-    </div>
+  const moreButton = (
+    <button
+      props={{
+        className: 'state-layer material-symbols-rounded flex h-12 w-12 items-center justify-center rounded-full',
+        title: 'More options',
+      }}
+      on={model.menu._tag === 'Closed' ? on('click', model.menu.open) : {}}
+    >
+      more_vert
+    </button>
   )
+  // Material's medium top app bar, with the emphasized headline and a subtitle of Material 3 Expressive under the
+  // row of its icons: the surface's color at rest, filled with a container's and collapsed to a small bar, its
+  // headline shrunk into the row after the leading icon, once the list scrolls under it. The contextual bar of the
+  // selected products takes the same shape, in its own colors. The list leaves the bar's full height above itself.
   const topBar = (
     <div
       props={{
         className: cn(
           'fixed top-0 z-40 w-full pt-sait pl-sail pr-sair transition-colors',
-          selectionBar !== undefined
+          selection !== undefined
             ? 'bg-secondary-container text-on-secondary-container'
             : isAtTop
             ? 'bg-surface text-on-surface'
@@ -121,8 +115,44 @@ export const view: View<Model, Message> = (model, dispatch) => {
         ),
       }}
     >
-      <div props={{ className: 'relative' }}>
-        {selectionBar ?? appBar}
+      <div props={{ className: cn('relative transition-[height]', isAtTop ? 'h-31' : 'h-16') }}>
+        <div props={{ className: 'absolute inset-x-0 top-0 flex h-16 items-center justify-between px-1' }}>
+          <div>{selection === undefined ? [] : [selection.leading]}</div>
+          {selection === undefined ? moreButton : selection.trailing}
+        </div>
+        <div
+          props={{
+            className: cn(
+              'absolute right-16 bottom-0 flex flex-col transition-[left,padding]',
+              isAtTop ? 'pb-5' : 'pb-2.5',
+              isAtTop || selection === undefined ? 'left-4' : 'left-14',
+            ),
+          }}
+        >
+          <h1
+            props={{
+              className: cn(
+                'truncate transition-[font-size,line-height]',
+                isAtTop ? 'text-headline-medium-emphasized' : 'text-title-large-emphasized',
+              ),
+            }}
+          >
+            {selection === undefined ? 'Fridgy' : selection.title}
+          </h1>
+          {subtitle === undefined ? [] : [
+            <span
+              props={{
+                className: cn(
+                  'truncate transition-[font-size,line-height]',
+                  selection === undefined && 'text-on-surface-variant',
+                  isAtTop ? 'text-label-large' : 'text-label-medium',
+                ),
+              }}
+            >
+              {subtitle}
+            </span>,
+          ]}
+        </div>
         {menu(model.menu, events)}
       </div>
     </div>

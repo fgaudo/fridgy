@@ -4,7 +4,7 @@ import {
   Hct,
   hexFromArgb,
   MaterialDynamicColors,
-  SchemeTonalSpot,
+  SchemeVibrant,
   TonalPalette,
   Variant,
 } from '@material/material-color-utilities'
@@ -15,26 +15,26 @@ const source = '#fba551'
 const tertiary = '#4fa34a'
 const error = '#c43921'
 
-// Material's default variant, tonal spot, in the 2025 spec: everything but the tertiary and the error comes from
-// the source, a soft orange for the containers and warm surfaces. The launcher icons and the splash screens are
-// drawn on its surface.
+// Material's vibrant variant, in the 2025 spec: everything but the tertiary and the error comes from the source, at
+// a higher chroma than the default (tonal spot) keeps, for a saturated orange in the containers and warmer surfaces.
+// The launcher icons and the splash screens are drawn on its surface.
 const specVersion = '2025'
 
 const scheme = (isDark: boolean) => {
   const sourceColorHct = Hct.fromInt(argbFromHex(source))
-  const tonalSpot = new SchemeTonalSpot(sourceColorHct, isDark, 0, specVersion)
+  const vibrant = new SchemeVibrant(sourceColorHct, isDark, 0, specVersion)
   return new DynamicScheme({
     sourceColorHct,
-    variant: Variant.TONAL_SPOT,
+    variant: Variant.VIBRANT,
     contrastLevel: 0,
     isDark,
     specVersion,
     platform: 'phone',
-    primaryPalette: tonalSpot.primaryPalette,
-    secondaryPalette: tonalSpot.secondaryPalette,
+    primaryPalette: vibrant.primaryPalette,
+    secondaryPalette: vibrant.secondaryPalette,
     tertiaryPalette: TonalPalette.fromInt(argbFromHex(tertiary)),
-    neutralPalette: tonalSpot.neutralPalette,
-    neutralVariantPalette: tonalSpot.neutralVariantPalette,
+    neutralPalette: vibrant.neutralPalette,
+    neutralVariantPalette: vibrant.neutralVariantPalette,
     errorPalette: TonalPalette.fromInt(argbFromHex(error)),
   })
 }
