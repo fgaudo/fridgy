@@ -149,12 +149,17 @@ const button = (
         ? [
           <span
             key='progress'
-            style={{
-              remove: {
-                opacity: '0',
-                transition: 'opacity var(--transition-duration-short-4) var(--ease-standard-accelerate)',
-              },
-            }}
+            // The fade on removal only while the indicator is still shown (the step given back after a failure):
+            // once `indicator-leave` holds it at opacity 0, a transition to 0 never ends, and snabbdom would keep
+            // the element in the button.
+            style={shows === 'Progress'
+              ? {
+                remove: {
+                  opacity: '0',
+                  transition: 'opacity var(--transition-duration-short-4) var(--ease-standard-accelerate)',
+                },
+              }
+              : {}}
             props={{
               className: cn(
                 'material-symbols-rounded pointer-events-none absolute inset-0 flex items-center justify-center',
