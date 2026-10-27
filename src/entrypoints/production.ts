@@ -14,7 +14,7 @@ const layer = App.layer.pipe(
   Layer.provide(
     ConfigProvider.layer(
       ConfigProvider.fromUnknown({
-        sqlite: { workerPath: './sqlite.worker.js' },
+        sqlite: { workerPath: './sqlite.opfs.worker.js' },
       }),
     ),
   ),

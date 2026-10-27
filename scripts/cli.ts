@@ -53,7 +53,7 @@ const modes = {
     options: { sourcemap: 'inline' },
   },
   production: {
-    entrypoints: ['src/entrypoints/production.ts', 'src/infrastructure/storage/sqlite.worker.ts'],
+    entrypoints: ['src/entrypoints/production.ts', 'src/infrastructure/storage/sqlite.opfs.worker.ts'],
     assets: ['node_modules/@effect/wa-sqlite/dist/wa-sqlite.wasm', 'assets/logo.svg', 'src/error.html'],
     options: { sourcemap: 'none', minify: true },
   },

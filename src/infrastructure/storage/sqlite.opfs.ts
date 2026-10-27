@@ -1,4 +1,4 @@
-// The production database engine: wa-sqlite in a worker (`sqlite.worker.ts`), on the origin private file system,
+// The production database engine: wa-sqlite in a worker (`sqlite.opfs.worker.ts`), on the origin private file system,
 // with the migrations run.
 import * as SqliteWasm from '@effect/sql-sqlite-wasm'
 import * as Config from 'effect/Config'
