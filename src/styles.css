@@ -182,6 +182,8 @@ html {
      once that animation is over, and the view treats the page as scrolling
      until then (the add button stays faded). */
   overscroll-behavior-y: none;
+  /* The palette has a dark scheme: the browser's own controls and the WebView follow the system with it. */
+  color-scheme: light dark;
   background-color: var(--color-surface);
   color: var(--color-on-surface);
 }

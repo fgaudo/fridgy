@@ -6,7 +6,7 @@ const config: CapacitorConfig = {
   webDir: 'dist',
   server: { errorPath: 'error.html' },
   android: {
-    // Tailwind's colors (oklch) and the database (OPFS sync access handles, 109) need it.
+    // Tailwind 4 (`@property`, `color-mix`: 111) and the database (OPFS sync access handles: 109) need it.
     minWebViewVersion: 114,
   },
   plugins: {
@@ -18,7 +18,8 @@ const config: CapacitorConfig = {
       hidden: false,
       animation: 'NONE',
     },
-    // The surface and the primary of `src/palette.generated.css`, in hex.
+    // The surface and the primary of the light scheme of `src/palette.generated.css`, in hex: the plugin takes one
+    // color for both themes, and the splash image, which has a night variant, covers the background.
     SplashScreen: {
       launchAutoHide: false,
       launchFadeOutDuration: 250,

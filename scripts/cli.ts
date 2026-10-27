@@ -292,31 +292,26 @@ const paletteCommand = Cli.Command.make(
 
 class AssetsFailed extends Data.TaggedError('AssetsFailed')<{ readonly exitCode: number }> {}
 
-const generateAssets = Effect.fn('generateAssets')(function*(background: string) {
+const generateAssets = Effect.fn('generateAssets')(function*(background: { light: string; dark: string }) {
   const resolve = yield* root
-  const path = yield* Path.Path
-  const fs = yield* FS.FileSystem
   const generate = yield* Process.ChildProcess.make('bun', [
     'x',
     '@capacitor/assets@3.0.5',
     'generate',
     '--android',
     '--iconBackgroundColor',
-    background,
+    background.light,
+    '--iconBackgroundColorDark',
+    background.dark,
     '--splashBackgroundColor',
-    background,
+    background.light,
+    '--splashBackgroundColorDark',
+    background.dark,
   ], { cwd: resolve(), stdout: 'inherit', stderr: 'inherit' })
   const exitCode = yield* generate.exitCode
   if (exitCode !== 0) {
     return yield* new AssetsFailed({ exitCode })
   }
-  // The app has no dark theme: the splashes for one, drawn from assets/logo-dark.svg, are not kept.
-  const res = resolve('android/app/src/main/res')
-  const folders = yield* fs.readDirectory(res)
-  yield* Effect.forEach(
-    folders.filter((folder) => folder.includes('night')),
-    (folder) => fs.remove(path.join(res, folder), { recursive: true }),
-  )
 }, Effect.scoped)
 
 const assetsCommand = Cli.Command.make(
@@ -328,7 +323,7 @@ const assetsCommand = Cli.Command.make(
     const manifest = resolve('android/app/src/main/AndroidManifest.xml')
     // The generator rewrites the manifest, reformatted: it is put back as it was, however the run ends.
     const manifestXml = yield* fs.readFileString(manifest)
-    const outcome = yield* Effect.exit(generateAssets(surface()))
+    const outcome = yield* Effect.exit(generateAssets({ light: surface(false), dark: surface(true) }))
     yield* fs.writeFileString(manifest, manifestXml)
     return yield* outcome
   }),

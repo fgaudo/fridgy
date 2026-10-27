@@ -49,16 +49,16 @@ not yet checked is listed under "Known gaps" in `AGENTS.md` until it is.
 ## Icons and splash screens
 
 The launcher icons and the splash screens in `android/app/src/main/res` are generated from `assets/logo.svg`
-by `@capacitor/assets`, on the app's surface color (`surface` in `scripts/palette.ts`):
+by `@capacitor/assets`, on the app's surface color (`surface` in `scripts/palette.ts`); the splashes of the dark
+theme (`drawable-*night*`) from `assets/logo-dark.svg`, on the dark scheme's surface:
 
 ```bash
 bun run update-assets
 ```
 
-The app has no dark theme, so the command deletes the `drawable-*night*` splashes the generator also makes
-(from `assets/logo-dark.svg`), and puts `AndroidManifest.xml` back as it was, since the generator reformats
-it. These files are the exception to `*.generated.*` naming: their tool fixes their names. After a change of
-the logo or of the surface color, run the command and commit the images it changed.
+The command puts `AndroidManifest.xml` back as it was, since the generator reformats it. These files are the
+exception to `*.generated.*` naming: their tool fixes their names. After a change of a logo or of a surface
+color, run the command and commit the images it changed.
 
 ## Version and release
 

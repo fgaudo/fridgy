@@ -47,7 +47,9 @@ Tailwind's own colors, font sizes, radii, shadows, easings and durations:
 - colors are Material's roles (`src/palette.generated.css`, generated from the key colors in
   `scripts/palette.ts`: change those and run `bun run update-palette`, never the generated file). What is
   drawn on a role takes its `on-` role (`bg-primary-container text-on-primary-container`); dimmed text is
-  `text-on-surface-variant`; an opacity only where Material sets one (a disabled control, 38%; the scrim, 32%);
+  `text-on-surface-variant`; an opacity only where Material sets one (a disabled control, 38%; the scrim, 32%).
+  Every role has a light and a dark value, picked by the system's theme (`prefers-color-scheme`): a view names
+  the role and never the theme, so no `dark:` variant and no color of its own;
 - text sizes are the type scale (`text-title-medium`, `text-body-small`, `text-label-large`), radii the shape
   scale (`rounded-medium`, `rounded-full`), shadows the elevation levels (`shadow-elevation-3`, a FAB's), all
   in `src/styles.css`. A surface's level is its component's, and a raised surface takes its tone from its
@@ -64,8 +66,7 @@ Tailwind's own colors, font sizes, radii, shadows, easings and durations:
   (`pt-sait`, `mr-sair`).
 
 A look that Material or the app fixes (a utility in `src/styles.css`) is written once there, never in a component
-under `src/libs/`, which knows nothing of the app: `src/libs/ui/` holds only `cn`, which joins class names. The app
-has no dark theme.
+under `src/libs/`, which knows nothing of the app: `src/libs/ui/` holds only `cn`, which joins class names.
 
 ## Checking
 
