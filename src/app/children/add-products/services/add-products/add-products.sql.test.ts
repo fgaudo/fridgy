@@ -7,6 +7,6 @@ import { addProductsContract } from './add-products.test_contract.ts'
 
 addProductsContract(
   'sqlite',
-  () => AddProductsSql.layer.pipe(Layer.provideMerge(ProductStore.layer), Layer.provide(SqliteMemory.layer)),
+  () => AddProductsSql.layer.pipe(Layer.provideMerge(ProductStore.layer), Layer.provideMerge(SqliteMemory.layer)),
   StoredProducts.readBack,
 )

@@ -4,7 +4,8 @@ import * as Sql from 'effect/sql'
 import { ProductExpirationSchema, ProductSchema } from './schema.ts'
 
 export const migrations = {
-  // Dates are ISO 8601 strings (`DateTimeUtcFromString` in `products.ts`), which order as text.
+  // Dates are ISO 8601 strings (`DateTimeUtcFromString` in `products.ts`), which order as text. The cascade is
+  // declared, but not relied upon: SQLite enforces it only when a pragma asks on each connection (`products.ts`).
   '0000001_create_db': Effect.gen(function*() {
     const sql = yield* Sql.SqlClient.SqlClient
     yield* sql.withTransaction(

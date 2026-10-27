@@ -26,11 +26,11 @@ src/
 │                              `services/product-list/`)
 │
 ├─ infrastructure/       what the app's adapters share: the storage (storage/: the database's engine, sqlite in
-│                        a worker on OPFS or in memory, its schema and migrations, how products are read and
-│                        written, `ProductStore`, and the sample data), hot reload, fonts; and the platform's
-│                        facts the programs use as they are: the back button (back-button/: Capacitor's, or the
-│                        browser's history; the entrypoints pick one) and the toasts (notifications/). Its
-│                        adapters are named as the app's, `<service>.<backing>.ts`
+│                        a worker on OPFS or in memory, its schema and migrations, how a product is written, deleted and
+│                        how its rows are joined and encoded, `ProductStore`, and the sample data), hot reload,
+│                        fonts; and the platform's facts the programs use as they are: the back button
+│                        (back-button/: Capacitor's, or the browser's history; the entrypoints pick one) and the
+│                        toasts (notifications/). Its adapters are named as the app's, `<service>.<backing>.ts`
 ├─ libs/                 generic, reusable code: the snabbdom bridge (tea-snabbdom: handlers, renderer,
 │                        test support) and JSX runtime, sources, branded numbers, `defect`, test helpers, …
 ├─ index.html            the page template: the build fills in the fonts and the entrypoint

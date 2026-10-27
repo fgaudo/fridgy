@@ -57,6 +57,20 @@ export const deleteProductsContract = <R>(
         }),
       ))
 
+    // SQLite gives the next product the id of the last one deleted: an expiration left behind would be its.
+    test('a product stored after a deletion has no expiration but its own', () =>
+      checkOnFreshLayer(
+        adapter,
+        fc.tuple(
+          ProductArbitrary.arbitrary.filter((product) => Opt.isSome(product.maybeExpirationDate)),
+          ProductArbitrary.arbitrary.filter((product) => Opt.isNone(product.maybeExpirationDate)),
+        ),
+        Effect.fnUntraced(function*([expiring, everlasting]) {
+          yield* deleteById(yield* store(expiring))
+          return yield* readsBackAs(yield* store(everlasting), everlasting)
+        }),
+      ))
+
     test('deleting an id that is not stored completes and changes nothing', () =>
       checkOnFreshLayer(
         adapter,

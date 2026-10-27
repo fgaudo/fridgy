@@ -14,7 +14,7 @@ import * as DeleteProducts from './delete-products.ts'
 export const layer = Layer.effect(
   DeleteProducts.DeleteProducts,
   Effect.gen(function*() {
-    const { repository } = yield* ProductStore
+    const { deleteById: deleteStored } = yield* ProductStore
     const sql = yield* SqlClient.SqlClient
     const deleteById = RequestResolver.make<DeleteProducts.DeleteProductById>(
       Effect.fn(function*(entries) {
@@ -36,7 +36,7 @@ export const layer = Layer.effect(
         const outcome = Arr.isArrayNonEmpty(validEntries)
           ? yield* pipe(
             validEntries,
-            Effect.forEach(([, id]) => repository.delete(id), { discard: true }),
+            Effect.forEach(([, id]) => deleteStored(id), { discard: true }),
             sql.withTransaction,
             Effect.tapError((error) => Effect.logWarning('Could not delete products', error)),
             Effect.result,

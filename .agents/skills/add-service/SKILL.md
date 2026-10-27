@@ -46,13 +46,17 @@ subscription, never in `update` or the view.
 
 ## The adapter
 
-`<service>.<backing>.ts` exports `layer`. It is a thin wrapper on the infrastructure: an adapter that grows a
-query of its own is doing the infrastructure's work, and two of them will diverge.
+`<service>.<backing>.ts` exports `layer`. It is a thin wrapper on the infrastructure: an adapter that repeats
+how the storage is read or written is doing the infrastructure's work, and two of them will diverge.
 
 - Every adapter of the storage is written on `SqlClient`, providing itself the helpers it builds on
   (`ProductStore` in `#infrastructure/storage/products.ts`, the schema in `schema.ts`). It never reads domain
-  fields. What every storage adapter shares (the schema, the migrations, how a product is written) is in
+  fields. What every storage adapter shares (the schema, the migrations, how a product is written and deleted, how
+  each column is encoded and how a product joins its expiration: `ProductStore.withExpiration`) is in
   `src/infrastructure/storage`.
+- What one consumer alone asks of the storage is its adapter's own query, written on those pieces: which
+  columns, which products and in what order (`ProductList`'s `SELECT` and `ORDER BY`) is the list's view, not
+  how a product is read. It moves up the day a second adapter asks the same.
 - A library's stream becomes a `Source` with `Source.fromStream`, which keeps listening once the stream has
   ended.
 - A platform call longer than a line moves to `src/infrastructure`.
