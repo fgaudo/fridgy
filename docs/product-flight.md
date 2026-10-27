@@ -11,9 +11,9 @@ Decisions already taken by the owner:
 - **No position, no tick, no new state.** The flight is drawing: the state holds only that a product is being
   acknowledged, as it already does (`maybeAcknowledging` in `src/app/children/add-products/program.ts`), and the
   browser interpolates. Nothing of the choreography (where the product is, whether the fridge has bounced) is
-  ever in the state or in the model. Why this is the right split for this app, and for anything heavier, is in
-  the conversation that led here: the engine costs microseconds per message; a tick per frame would cost a
-  model, a view and a patch per frame, for a motion that CSS runs off the main thread.
+  ever in the state or in the model. The rule that decides this, here and for anything heavier, is "Motion" in
+  the `views` skill: the destination is known at the start, so the browser interpolates; a tick per frame would
+  cost a model, a view and a patch per frame, for a motion that CSS runs off the main thread.
 - **The flight starts when the write has completed, not when the button is pressed.** A failed write would
   otherwise have to fly back. The write is mostly quicker than a frame, so nothing perceptible is lost.
 - **Every successful add flies**: from the first step's button, from the second step's, and from the snackbar's

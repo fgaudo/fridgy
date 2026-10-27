@@ -1,6 +1,6 @@
 ---
 name: views
-description: How Fridgy's views are written - TSX rendered by snabbdom, messages attached from the model, Material 3 through the theme's color roles, type scale, shapes and elevation. Use when creating or editing a view.tsx, src/styles.css or the palette.
+description: How Fridgy's views are written - TSX rendered by snabbdom, messages attached from the model, motion driven by CSS or by a tick, Material 3 through the theme's color roles, type scale, shapes and elevation. Use when creating or editing a view.tsx, src/styles.css or the palette.
 ---
 
 # Views
@@ -55,6 +55,33 @@ nothing is named). The model holds exactly what the view draws: a field no view 
   leaves has no `remove` style, whose transition would never end on a place already closed. What replaces the
   whole list (an empty state) leaves with `remove`, out of the flow (`position: absolute`), over what takes its
   place.
+
+## Motion
+
+Two choices, taken in this order: the first decides almost everything, the second is the view's.
+
+- **Who drives it.** When the start, the end and the duration are known as the movement starts, and nothing can
+  change them on the way, the browser interpolates: a CSS transition or `@keyframes`, on `transform` and
+  `opacity` only. The compositor runs those on its own thread, so a write to the storage that holds the main
+  thread does not stutter them; `height`, `top` or a color go back to the main thread every frame. The state
+  keeps the phase ("in flight": AddProducts' `acknowledging`, Products' `presence`), never a position: that is
+  every motion of the app today. When the state depends on time or on input while the movement runs (a spring
+  that follows a finger and is released, a physics, objects that interact, a destination that moves), the
+  program drives it: a subscription sends `Tick({ delta })` on every animation frame (`#libs/animation-frame`),
+  the delta from the previous frame's timestamp, which the subscription keeps, and `update` integrates it
+  (position by velocity by delta). The position is then state of its own, not derived data, and the time elapsed
+  is summed only when something reads it. The question is "is the destination known at the start?", never "can
+  CSS be made to do it?": the second leads to acrobatics of keyframes, the first cuts clean.
+- **Where it is drawn.** A few objects that must be real elements (pressable, read by a screen reader, colored
+  by a role) are DOM, under a tick too: a drag runs on the main thread anyway, with its input. Many objects, or
+  purely decorative ones, are a 2D `<canvas>`: the view gives the scene as data on the vnode and a `postpatch`
+  hook draws it, so the view stays pure and the program knows of no canvas. The canvas issues its commands
+  from JavaScript, on the main thread, like any tick; WebGL only when 2D cannot. The two choices cross freely:
+  a tick may move a `div` by `transform`, and a canvas drawn once may be moved by CSS.
+- A motion the program drives is a child of its own, drawn by its parent with `thunk`, so that a tick redraws
+  only its subtree. Its durations are constants of the program, named after the tokens of `src/styles.css` they
+  match, not numbers in the view. `prefers-reduced-motion` has a branch in both: a media query in CSS, a phase
+  that jumps to the end under a tick.
 
 ## Material 3
 
