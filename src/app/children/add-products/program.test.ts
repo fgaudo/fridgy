@@ -104,6 +104,15 @@ const repeatOf = (form: Form) =>
     ([{ name, maybeExpirationDate }, creationDate]) => Product.make({ name, creationDate, maybeExpirationDate }),
   )
 
+/** Whether the step's own button would add the product added last again: the same name and expiration. */
+const addsLastAgain = (s: State & { _tag: 'Naming' | 'Dating' }) =>
+  Opt.exists(
+    Opt.all([productOfStep(s), s.form.maybeLastAdded]),
+    ([product, last]) =>
+      product.name === last.name
+      && Opt.makeEquivalence(DateTime.Equivalence)(product.maybeExpirationDate, last.maybeExpirationDate),
+  )
+
 /** Whether the page reads the camera: while the scanner is open, until it fails. */
 const readsCamera = (state: State) => state._tag === 'Scanning' && state.form.camera === 'Available'
 
@@ -138,11 +147,14 @@ describe('AddProducts update', () => {
   // Each message the view sends is accepted in the state it was rendered from; sent twice from the same frame,
   // it acts once, but the keypad's digit keys, which are meant to repeat, and the close button, whose second
   // press the parent ignores once the page is gone. And what the user could ask for and `update` accepts is in
-  // the view, but the name's input off the first step, where it is covered or disabled.
+  // the view, but the name's input off the first step, where it is covered or disabled, and the snackbar's
+  // action where the step's own button would add the same product.
   test('the view sends what update accepts, all of it, and acts once when sent twice', () => {
     const check = dispatchViolations(program.update, {
       repeatable: (msg) => msg._tag === 'DigitTyped' || msg._tag === 'DigitErased' || msg._tag === 'Closed',
-      withheld: (msg, state) => msg._tag === 'NameChanged' && state._tag !== 'Naming',
+      withheld: (msg, state) =>
+        (msg._tag === 'NameChanged' && state._tag !== 'Naming')
+        || (msg._tag === 'Repeated' && (state._tag === 'Naming' || state._tag === 'Dating') && addsLastAgain(state)),
     })
     fc.assert(fc.property(state, fc.string(), utc, (before, inputValue, date) => {
       const offered = before._tag === 'Dating' ? offeredDates(before.form, before.date) : []
@@ -456,6 +468,10 @@ describe('AddProducts update', () => {
     expect(orders.some((choice) => choice.choice._tag === 'Offered')).toBe(true)
     expect(repeats.some(Opt.isSome)).toBe(true)
     expect(namings.some((model) => model._tag === 'Naming' && Opt.isNone(model.maybeJustAdded))).toBe(true)
+    expect(namings.some((model) =>
+      model._tag === 'Naming' && Opt.isSome(model.maybeAdd)
+      && Opt.exists(model.maybeJustAdded, ({ maybeRepeat }) => Opt.isNone(maybeRepeat))
+    )).toBe(true)
   })
 
   // What the view draws is decided here, so that it is checked for any state.
@@ -486,12 +502,17 @@ describe('AddProducts update', () => {
       })
     })
 
-    test('offers to add the last product again exactly while update accepts it, on either step', () => {
+    // After a product added as it is, the name stays: "Add without expiration" adds it again, so the snackbar's
+    // action would do the same; so would the second step's button, while its digits name the last product's day.
+    test('offers to add the last product again exactly while update accepts it and the button of the step would not add it, on either step', () => {
       assertProperty([onAStep], (s) => {
         const model = makeModel(s)
         if (model._tag !== 'Naming' && model._tag !== 'Dating') return false
         const maybeRepeat = Opt.flatMap(model.maybeJustAdded, ({ maybeRepeat }) => maybeRepeat)
-        return Equal.equals(maybeRepeat, rejects(Msg.Repeated(), s) ? Opt.none() : Opt.some(Msg.Repeated()))
+        return Equal.equals(
+          maybeRepeat,
+          rejects(Msg.Repeated(), s) || addsLastAgain(s) ? Opt.none() : Opt.some(Msg.Repeated()),
+        )
       })
     })
 

@@ -84,8 +84,8 @@ type Above = 'Nothing' | 'Fab'
 
 /**
  * Material's snackbar, in the room above a step's controls, and above its FAB: it says that the product was
- * added, with the action that adds it again while it can be. Keyed by the product, so that the next one, a
- * repeat included, appears anew.
+ * added, with the action that adds it again while it can be, and while the step's own button would not. Keyed by
+ * the product, so that the next one, a repeat included, appears anew.
  */
 const snackbar = ({ product, maybeRepeat }: JustAdded, above: Above, dispatch: Dispatch<Message>) => {
   const { on } = handlers(dispatch)

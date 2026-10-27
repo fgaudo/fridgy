@@ -39,14 +39,19 @@ export const form: fc.Arbitrary<Form> = fc.tuple(
     maybeLastAdded: maybe(product),
   }),
   fc.option(fc.integer({ min: -2, max: 10 })),
-).map(([form, maybeSinceAdded]): Form => {
+  fc.boolean(),
+).map(([form, maybeSinceAdded, keepsName]): Form => {
   // The clock often ticks a few seconds after the last product was added: its snackbar shows, or has just gone.
   const maybeNow = Opt.match(form.maybeLastAdded, {
     onNone: () => form.maybeNow,
     onSome: ({ creationDate }) =>
       maybeSinceAdded === null ? form.maybeNow : Opt.some(DateTime.add(creationDate, { seconds: maybeSinceAdded })),
   })
-  return { ...form, maybeNow }
+  // The name is often the last product's, as the page keeps it after adding one.
+  const maybeName = keepsName
+    ? Opt.orElse(Opt.map(form.maybeLastAdded, ({ name }) => name), () => form.maybeName)
+    : form.maybeName
+  return { ...form, maybeNow, maybeName }
 })
 
 // The day picked is often one the digits name, and sometimes one they no longer do, or none.

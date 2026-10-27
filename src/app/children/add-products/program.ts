@@ -4,8 +4,9 @@
 // order the user keeps (day, month or year first, the device's locale's until they pick one), and the
 // user picks, among the days they can name, the one they meant, and adds the product. Adding is a state that
 // only its completion leaves; the page then starts at the name again, kept for the next product, with a snackbar
-// whose action adds the same product again, until the user leaves it. The scanner is offered once the page knows
-// the device can read barcodes, and the camera runs only while its dialog is open.
+// whose action adds the same product again, until the user leaves it; the action is withheld while the step's own
+// button would add the same product. The scanner is offered once the page knows the device can read barcodes,
+// and the camera runs only while its dialog is open.
 import * as Tea from '@fgaudo/effect-tea'
 import * as Arr from 'effect/Array'
 import * as Channel from 'effect/Channel'
@@ -189,7 +190,10 @@ export type DateShown = Readonly<{
   }>
 }>
 
-/** The snackbar: the product added last, with its action, for a few seconds after it was added. */
+/**
+ * The snackbar: the product added last, for a few seconds after it was added, with its action, unless the step's
+ * own button would add the same product.
+ */
 export type JustAdded = Readonly<{ product: Product.Product; maybeRepeat: Opt.Option<Message> }>
 
 export type Model = Data.TaggedEnum<{
@@ -298,6 +302,11 @@ const productOfStep = (state: State & { _tag: 'Naming' | 'Dating' }) =>
   state._tag === 'Naming'
     ? productOf(state.form, Opt.none())
     : Opt.flatMap(maybeNamedDate(state.form, state.date), (date) => productOf(state.form, Opt.some(date)))
+
+/** Whether two products added now would be the same product: a name and an expiration, created at the same time. */
+const isSameProduct = (one: Product.Product, other: Product.Product) =>
+  one.name === other.name
+  && Opt.makeEquivalence(DateTime.Equivalence)(one.maybeExpirationDate, other.maybeExpirationDate)
 
 /**
  * The product added last, again, created now, while its snackbar shows: none once its expiration has meanwhile
@@ -635,10 +644,18 @@ export const program: Tea.Program<{
       }
     }
     const maybeJustAdded = Opt.filter(form.maybeLastAdded, (product) => isJustAdded(product, form.maybeNow))
-    const justAdded = Opt.map(maybeJustAdded, (product): JustAdded => ({
-      product,
-      maybeRepeat: Opt.map(repeatOf(form), () => Message.Repeated()),
-    }))
+    // The action is withheld while it would add what the step's button adds: after a product added as it is, the
+    // name stays, and "Add without expiration" adds it again; after the snackbar's, the second step keeps its
+    // digits, which may still name the same day.
+    const justAdded = (maybeStepProduct: Opt.Option<Product.Product>) =>
+      Opt.map(maybeJustAdded, (product): JustAdded => ({
+        product,
+        maybeRepeat: pipe(
+          repeatOf(form),
+          Opt.filter((repeat) => !Opt.exists(maybeStepProduct, (stepProduct) => isSameProduct(repeat, stepProduct))),
+          Opt.map(() => Message.Repeated()),
+        ),
+      }))
     return Match.valueTags(state, {
       // Both ways out need the product the name describes, never expiring: the date is that product's.
       Naming: (naming): Model => ({
@@ -650,7 +667,7 @@ export const program: Tea.Program<{
         maybeScan: form.camera === 'Available' ? Opt.some(Message.ScanRequested()) : Opt.none(),
         maybeRequestDate: Opt.map(productOfStep(naming), () => Message.DateRequested()),
         maybeAdd: Opt.map(productOfStep(naming), () => Message.Started()),
-        maybeJustAdded: justAdded,
+        maybeJustAdded: justAdded(productOfStep(naming)),
       }),
       Scanning: (): Model => ({ _tag: 'Scanning', ...nameShown, closeScanner: Message.ScanClosed() }),
       Dating: (dating): Model => {
@@ -670,7 +687,7 @@ export const program: Tea.Program<{
           maybeEraseDigit: date.digits !== '' ? Opt.some(Message.DigitErased()) : Opt.none(),
           maybeClearDate: date.digits !== '' ? Opt.some(Message.DateCleared()) : Opt.none(),
           maybeAdd: Opt.map(productOfStep(dating), () => Message.Started()),
-          maybeJustAdded: justAdded,
+          maybeJustAdded: justAdded(productOfStep(dating)),
         }
       },
       Submitting: ({ step }): Model => ({
