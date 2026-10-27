@@ -4,14 +4,16 @@ import * as Sql from 'effect/sql'
 import { ProductExpirationSchema, ProductSchema } from './schema.ts'
 
 export const migrations = {
-  // Dates are ISO 8601 strings (`DateTimeUtcFromString` in `products.ts`), which order as text. The cascade is
-  // declared, but not relied upon: SQLite enforces it only when a pragma asks on each connection (`products.ts`).
+  // Dates are ISO 8601 strings (`DateTimeUtcFromString` in `products.ts`), which order as text. The trigger, not
+  // a cascade, deletes a product's expiration with it: SQLite enforces foreign keys, and their actions, only on a
+  // connection that asked for them with a pragma, which the clients give no way to do; the key is a declaration.
   '0000001_create_db': Effect.gen(function*() {
     const sql = yield* Sql.SqlClient.SqlClient
     yield* sql.withTransaction(
       Effect.gen(function*() {
         const product = ProductSchema
         const expiration = ProductExpirationSchema
+        const productId = sql(product.columns.id)
         yield* sql`
           CREATE TABLE ${sql(product.table)}(
             ${sql(product.columns.id)} INTEGER PRIMARY KEY,
@@ -24,8 +26,11 @@ export const migrations = {
             ${sql(expiration.columns.productId)} INT NOT NULL UNIQUE,
             FOREIGN KEY(${sql(expiration.columns.productId)})
                 REFERENCES ${sql(product.table)}(${sql(product.columns.id)})
-                ON DELETE CASCADE
           );
+          CREATE TRIGGER delete_expiration_with_product AFTER DELETE ON ${sql(product.table)}
+          BEGIN
+            DELETE FROM ${sql(expiration.table)} WHERE ${sql(expiration.columns.productId)} = OLD.${productId};
+          END;
         `
       }),
     )

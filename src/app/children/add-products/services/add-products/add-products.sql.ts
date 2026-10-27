@@ -13,23 +13,14 @@ import * as AddProducts from './add-products.ts'
 export const layer = Layer.effect(
   AddProducts.AddProducts,
   Effect.gen(function*() {
-    const { repository, insertWithExpiration } = yield* ProductStore
+    const { insert } = yield* ProductStore
     const sql = yield* SqlClient.SqlClient
     const add = RequestResolver.make<AddProducts.AddProduct>(
       Effect.fn(function*(entries) {
         // All or nothing. The requests only learn that they failed: the cause is logged here, where it is known.
         const outcome = yield* pipe(
           entries,
-          Effect.forEach(({ request: { snapshot } }) =>
-            Opt.match(snapshot.maybeExpirationDate, {
-              onNone: () => repository.insert({ creation_date: snapshot.creationDate, name: snapshot.name }),
-              onSome: (expirationDate) =>
-                SqlResolver.request(
-                  { creationDate: snapshot.creationDate, expirationDate, name: snapshot.name },
-                  insertWithExpiration,
-                ),
-            })
-          ),
+          Effect.forEach(({ request: { snapshot } }) => SqlResolver.request(snapshot, insert)),
           sql.withTransaction,
           Effect.tapError((error) => Effect.logWarning('Could not insert products', error)),
           Effect.result,

@@ -5,6 +5,7 @@ import * as Context from 'effect/Context'
 import * as Effect from 'effect/Effect'
 import { flow } from 'effect/Function'
 import * as Layer from 'effect/Layer'
+import * as Opt from 'effect/Option'
 import * as Schema from 'effect/Schema'
 import * as SchemaX from 'effect/schema'
 import * as Sql from 'effect/sql'
@@ -67,12 +68,12 @@ export class ProductStore extends Context.Service<ProductStore>()(
           tableName: ProductExpirationSchema.table,
         } as const,
       )
-      /** Inserts products that expire, each with its expiration, in one transaction; answers with their ids. */
-      const insertWithExpiration = Sql.SqlResolver.ordered({
+      /** Inserts products, each with its expiration if it has one, in one transaction; answers with their ids. */
+      const insert = Sql.SqlResolver.ordered({
         Request: Schema.Struct({
-          creationDate: Schema.DateTimeUtc,
-          expirationDate: Schema.DateTimeUtc,
           name: Schema.String,
+          creationDate: Schema.DateTimeUtc,
+          maybeExpirationDate: Schema.Option(Schema.DateTimeUtc),
         }),
         // Decoded from what `execute` returns, so it must describe encoded values: only the id is needed.
         Result: Schema.Struct({ id: Integer.Schema }),
@@ -83,9 +84,9 @@ export class ProductStore extends Context.Service<ProductStore>()(
                 creation_date: request.creationDate,
                 name: request.name,
               })
-              yield* expirations.insert({
-                date: request.expirationDate,
-                product_id: product.id,
+              yield* Opt.match(request.maybeExpirationDate, {
+                onNone: () => Effect.void,
+                onSome: (date) => Effect.asVoid(expirations.insert({ date, product_id: product.id })),
               })
               return { id: product.id }
             }),
@@ -101,18 +102,8 @@ export class ProductStore extends Context.Service<ProductStore>()(
       const creationDate = sql(`${product_table}.${product.creationDate}`)
       const expirationDate = sql(`${expiration_table}.${expiration.date}`)
       const productId = sql(`${expiration_table}.${expiration.productId}`)
-      /**
-       * Deletes a product with its expiration, if any, in one transaction. The schema declares the cascade, but
-       * SQLite enforces it only on a connection that asked for it with a pragma, and the worker-backed client may
-       * reopen its connection: the storage removes both rows itself.
-       */
-      const deleteById = (id: Integer.Integer) =>
-        sql.withTransaction(
-          Effect.andThen(
-            sql`DELETE FROM ${sql(expiration_table)} WHERE ${sql(expiration.productId)} = ${id}`,
-            repository.delete(id),
-          ),
-        )
+      /** Deletes a product; the schema's trigger deletes its expiration with it (`migrations.ts`). */
+      const deleteById = (id: Integer.Integer) => repository.delete(id)
       /**
        * A product with its expiration, if any, for the queries that read products: the `FROM` of a product
        * left-joined to its expiration, the columns a query may select or refer to, and the tables it reads, for a
@@ -123,7 +114,7 @@ export class ProductStore extends Context.Service<ProductStore>()(
         columns: { id, name, creationDate, expirationDate },
         tables: [product_table, expiration_table],
       }
-      return { repository, insertWithExpiration, deleteById, withExpiration }
+      return { insert, deleteById, withExpiration }
     }),
   },
 ) {

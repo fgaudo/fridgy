@@ -13,15 +13,8 @@ import { ProductColumns, ProductExpirationColumns, ProductStore } from './produc
 
 /** Stores a product, answering with its id. */
 export const insert = Effect.fnUntraced(function*(snapshot: Product.Snapshot) {
-  const { repository, insertWithExpiration } = yield* ProductStore
-  const { id } = yield* Opt.match(snapshot.maybeExpirationDate, {
-    onNone: () => repository.insert({ name: snapshot.name, creation_date: snapshot.creationDate }),
-    onSome: (expirationDate) =>
-      SqlResolver.request(
-        { name: snapshot.name, creationDate: snapshot.creationDate, expirationDate },
-        insertWithExpiration,
-      ),
-  }).pipe(Effect.orDie)
+  const { insert } = yield* ProductStore
+  const { id } = yield* SqlResolver.request(snapshot, insert).pipe(Effect.orDie)
   return id.toString(10)
 })
 
