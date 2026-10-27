@@ -29,12 +29,13 @@ import {
   submitting,
 } from './program.test_arbitrary.ts'
 import {
+  type Acknowledging,
   type Command,
   type DateForm,
   type Digit,
+  type Entering,
   type Event,
   type Form,
-  type LastAdded,
   type Message,
   type Model,
   program,
@@ -104,36 +105,11 @@ const productOfStep = (state: State & { _tag: 'Naming' | 'Dating' }) =>
     ? productOf(state.form, Opt.none())
     : Opt.flatMap(namedDate(state.form, state.date), (date) => productOf(state.form, Opt.some(date)))
 
-/** The product added last, while less than 6 seconds have passed since it was: its snackbar shows. */
-const justAdded = (form: Form) =>
-  Opt.filter(
-    form.maybeLastAdded,
-    ({ product }) =>
-      Opt.exists(form.maybeNow, (now) => DateTime.isLessThan(now, DateTime.add(product.creationDate, { seconds: 6 }))),
-  )
-
-/** The product added last, again, created at the clock's time, while its snackbar shows. */
-const repeatOf = (form: Form) =>
-  Opt.flatMap(
-    Opt.all([justAdded(form), form.maybeNow]),
-    ([{ product: { name, maybeExpirationDate } }, creationDate]) =>
-      Product.make({ name, creationDate, maybeExpirationDate }),
-  )
-
-/** `product`, once added from `form`: its snackbar comes after the one showing, when one is, or alone. */
-const added = (form: Form, product: Product.Product): LastAdded => ({
-  product,
-  entrance: Opt.isSome(justAdded(form)) ? 'AfterAnother' : 'Alone',
-})
-
-/** Whether the step's own button would add the product added last again: the same name and expiration. */
-const addsLastAgain = (s: State & { _tag: 'Naming' | 'Dating' }) =>
-  Opt.exists(
-    Opt.all([productOfStep(s), s.form.maybeLastAdded]),
-    ([product, { product: last }]) =>
-      product.name === last.name
-      && Opt.makeEquivalence(DateTime.Equivalence)(product.maybeExpirationDate, last.maybeExpirationDate),
-  )
+/** The control a product leaves from, into the fridge, after what added it. */
+const leavesFrom: Readonly<Record<Acknowledging['by'], Entering['from']>> = {
+  NameButton: 'NameField',
+  DateButton: 'DateHeading',
+}
 
 /** Whether the page reads the camera: while the scanner is open, until it fails. */
 const readsCamera = (state: State) => state._tag === 'Scanning' && state.form.camera === 'Available'
@@ -175,14 +151,11 @@ describe('AddProducts update', () => {
   // Each message the view sends is accepted in the state it was rendered from; sent twice from the same frame,
   // it acts once, but the keypad's digit keys, which are meant to repeat, and the close button, whose second
   // press the parent ignores once the page is gone. And what the user could ask for and `update` accepts is in
-  // the view, but the name's input off the first step, where it is covered or disabled, and the snackbar's
-  // action where the step's own button would add the same product.
+  // the view, but the name's input off the first step, where it is covered or disabled.
   test('the view sends what update accepts, all of it, and acts once when sent twice', () => {
     const check = dispatchViolations(program.update, {
       repeatable: (msg) => msg._tag === 'DigitTyped' || msg._tag === 'DigitErased' || msg._tag === 'Closed',
-      withheld: (msg, state) =>
-        (msg._tag === 'NameChanged' && state._tag !== 'Naming')
-        || (msg._tag === 'Repeated' && (state._tag === 'Naming' || state._tag === 'Dating') && addsLastAgain(state)),
+      withheld: (msg, state) => msg._tag === 'NameChanged' && state._tag !== 'Naming',
     })
     fc.assert(fc.property(state, fc.string(), utc, (before, inputValue, date) => {
       const offered = before._tag === 'Dating' ? offeredDates(before.form, before.date) : []
@@ -195,7 +168,6 @@ describe('AddProducts update', () => {
         Msg.DateDismissed(),
         Msg.Closed(),
         Msg.LookupCancelled(),
-        Msg.Repeated(),
         Msg.DigitErased(),
         Msg.DateCleared(),
         ...digits.map((digit) => Msg.DigitTyped({ digit })),
@@ -493,7 +465,6 @@ describe('AddProducts update', () => {
               form: before.form,
               product,
               step: stepOf(before),
-              from: 'Form',
             })
               && Equal.equals(commands, [Cmd.Add({ product })])
               && (before._tag === 'Naming') === Opt.isNone(product.maybeExpirationDate)
@@ -506,37 +477,12 @@ describe('AddProducts update', () => {
     })
   })
 
-  test('Repeated adds the last product again while its snackbar shows, created now, from either step', () => {
-    assertProperty([state], (before) => {
-      const maybeRepeat = before._tag === 'Naming' || before._tag === 'Dating' ? repeatOf(before.form) : Opt.none()
-      return Opt.match(maybeRepeat, {
-        onNone: () => rejects(Msg.Repeated(), before),
-        onSome: (product) => {
-          if (before._tag !== 'Naming' && before._tag !== 'Dating') return false
-          const { after, commands, events } = step(Msg.Repeated(), before)
-          return Equal.equals(after, {
-            _tag: 'Submitting',
-            form: before.form,
-            product,
-            step: stepOf(before),
-            from: 'Snackbar',
-          })
-            && Equal.equals(commands, [Cmd.Add({ product })])
-            && events.length === 0
-        },
-      })
-    })
-  })
-
   // Guards against the properties above passing only on rejections.
-  test('the arbitrary steps describe a product at times, and at times not, with days to pick and repeats', () => {
+  test('the arbitrary steps describe a product at times, and at times not, with days to pick', () => {
     const namings = fc.sample(naming, 1_000).map(makeModel)
     const datings = fc.sample(dating, 1_000).map(makeModel)
     const choices = datings.flatMap((model) =>
       model._tag === 'Dating' && model.strip._tag === 'Naming' ? model.strip.choices : []
-    )
-    const repeats = namings.flatMap((model) =>
-      model._tag === 'Naming' ? Opt.toArray(model.maybeJustAdded).map(({ maybeRepeat }) => maybeRepeat) : []
     )
     expect(namings.some((model) => model._tag === 'Naming' && Opt.isSome(model.maybeAdd))).toBe(true)
     expect(namings.some((model) => model._tag === 'Naming' && Opt.isNone(model.maybeAdd))).toBe(true)
@@ -550,12 +496,6 @@ describe('AddProducts update', () => {
     expect(datings.some((model) => model._tag === 'Dating' && model.order._tag === 'Unknown')).toBe(true)
     expect(orders.some((choice) => choice.choice._tag === 'Current')).toBe(true)
     expect(orders.some((choice) => choice.choice._tag === 'Offered')).toBe(true)
-    expect(repeats.some(Opt.isSome)).toBe(true)
-    expect(namings.some((model) => model._tag === 'Naming' && Opt.isNone(model.maybeJustAdded))).toBe(true)
-    expect(namings.some((model) =>
-      model._tag === 'Naming' && Opt.isSome(model.maybeAdd)
-      && Opt.exists(model.maybeJustAdded, ({ maybeRepeat }) => Opt.isNone(maybeRepeat))
-    )).toBe(true)
   })
 
   // What the view draws is decided here, so that it is checked for any state.
@@ -586,69 +526,28 @@ describe('AddProducts update', () => {
       })
     })
 
-    // After a product added as it is, the name stays: "Add without date" adds it again, so the snackbar's
-    // action would do the same; so would the second step's button, while its digits name the last product's day.
-    test('offers to add the last product again exactly while update accepts it and the button of the step would not add it, on either step', () => {
-      assertProperty([onAStep], (s) => {
-        const model = makeModel(s)
-        if (model._tag !== 'Naming' && model._tag !== 'Dating') return false
-        const maybeRepeat = Opt.flatMap(model.maybeJustAdded, ({ maybeRepeat }) => maybeRepeat)
-        return Equal.equals(
-          maybeRepeat,
-          rejects(Msg.Repeated(), s) || addsLastAgain(s) ? Opt.none() : Opt.some(Msg.Repeated()),
-        )
-      })
-    })
-
-    test('shows the snackbar for 6 seconds from when the product was added, coming as the state says, but under the scanner and while the lookup goes on', () => {
-      const seconds = fc.integer({ min: -10, max: 10 })
-      assertProperty([state, seconds], (before, elapsed) =>
-        Opt.match(before.form.maybeLastAdded, {
-          onNone: () => true,
-          onSome: (lastAdded) => {
-            const model = makeModel(
-              withForm(before, {
-                maybeNow: Opt.some(DateTime.add(lastAdded.product.creationDate, { seconds: elapsed })),
-              }),
-            )
-            const shown = model._tag === 'Naming' || model._tag === 'Dating' || model._tag === 'Adding'
-              ? Opt.map(model.maybeJustAdded, ({ product, entrance }): LastAdded => ({ product, entrance }))
-              : Opt.none()
-            return Equal.equals(
-              shown,
-              before._tag !== 'Scanning' && before._tag !== 'LookingUp' && elapsed < 6
-                ? Opt.some(lastAdded)
-                : Opt.none(),
-            )
-          },
-        }))
-    })
-
-    test('the first step\'s button acknowledges the product it added exactly while its timer runs', () => {
+    test('the first step\'s button keeps its indicator exactly while the product it added is acknowledged', () => {
       assertProperty([naming], (s) => {
         const model = makeModel(s)
         return model._tag === 'Naming'
-          && (model.acknowledging === 'Added') === Opt.isSome(s.form.maybeAcknowledging)
+          && (model.acknowledging === 'Added')
+            === Opt.exists(s.form.maybeAcknowledging, ({ by }) => by === 'NameButton')
       })
     })
 
-    test('withholds the snackbar\'s action while a product is being added', () => {
-      assertProperty([submitting], (s) => {
+    // The scanner rises over the step, and the product in flight goes with the frame.
+    test('shows the product entering the fridge exactly while it is acknowledged, from the control that added it, but under the scanner and while the lookup goes on', () => {
+      assertProperty([state], (s) => {
         const model = makeModel(s)
-        return model._tag === 'Adding'
-          && Opt.match(model.maybeJustAdded, {
-            onNone: () => true,
-            onSome: ({ maybeRepeat }) => Opt.isNone(maybeRepeat),
-          })
-      })
-    })
-
-    // The view draws the indicator in the step's button only when it is the one adding: a product added again from
-    // the snackbar may have a date, which the first step's button would deny.
-    test('says whose button adds the product while one is being added, as the state does', () => {
-      assertProperty([submitting], (s) => {
-        const model = makeModel(s)
-        return model._tag === 'Adding' && model.from === s.from
+        const shown = model._tag === 'Naming' || model._tag === 'Dating' || model._tag === 'Adding'
+          ? model.maybeEntering
+          : Opt.none()
+        return Equal.equals(
+          shown,
+          s._tag === 'Scanning' || s._tag === 'LookingUp'
+            ? Opt.none()
+            : Opt.map(s.form.maybeAcknowledging, ({ product, by }): Entering => ({ product, from: leavesFrom[by] })),
+        )
       })
     })
 
@@ -799,37 +698,21 @@ describe('AddProducts update', () => {
   })
 
   describe('Completed', () => {
-    // The second step leaves with its own transition, and the snackbar comes anew, after the one still showing
-    // when there is one: only the first step's button acknowledges the product it added.
-    test('success after a step\'s product starts the next one at the name, this one\'s kept and drawn anew, acknowledged by the first step\'s button, its snackbar after the one showing', () => {
+    // The second step leaves with its own transition.
+    test('success starts the next product at the name, this one\'s kept and drawn anew, acknowledged as added by the step\'s button', () => {
       assertProperty([submitting], (before) => {
-        fc.pre(before.from === 'Form')
         const { after, commands } = step(Msg.Completed({ succeeded: true }), before)
         return Equal.equals(after, {
           _tag: 'Naming',
           form: {
             ...before.form,
-            maybeLastAdded: Opt.some(added(before.form, before.product)),
             replacements: before.form.replacements + 1,
-            maybeAcknowledging: before.step._tag === 'Naming'
-              ? Opt.some(before.product.creationDate)
-              : before.form.maybeAcknowledging,
+            maybeAcknowledging: Opt.some({
+              product: before.product,
+              by: before.step._tag === 'Naming' ? 'NameButton' : 'DateButton',
+            }),
           },
         })
-          && commands.length === 0
-      })
-    })
-
-    // The digits typed while the snackbar's product was being added are the next product's. The snackbar's product
-    // is repeated while its snackbar shows, so the repeat's comes after it, unless it has meanwhile gone.
-    test('success after the snackbar keeps the step as it is, the repeat\'s snackbar after the one showing', () => {
-      assertProperty([submitting], (before) => {
-        fc.pre(before.from === 'Snackbar')
-        const { after, commands } = step(Msg.Completed({ succeeded: true }), before)
-        return Equal.equals(
-          after,
-          resumed(before.step, { ...before.form, maybeLastAdded: Opt.some(added(before.form, before.product)) }),
-        )
           && commands.length === 0
       })
     })
@@ -847,13 +730,15 @@ describe('AddProducts update', () => {
     assertProperty([state, utc], (before, other) => {
       const ended = Opt.match(before.form.maybeAcknowledging, {
         onNone: () => true,
-        onSome: (at) =>
+        onSome: ({ product: { creationDate } }) =>
           Equal.equals(
-            step(Msg.AddedShown({ at }), before).after,
+            step(Msg.AddedShown({ at: creationDate }), before).after,
             withForm(before, { maybeAcknowledging: Opt.none() }),
           ),
       })
-      fc.pre(!Opt.contains(before.form.maybeAcknowledging, other))
+      fc.pre(
+        !Opt.exists(before.form.maybeAcknowledging, ({ product }) => DateTime.Equivalence(product.creationDate, other)),
+      )
       return ended && rejects(Msg.AddedShown({ at: other }), before)
     })
   })
@@ -884,7 +769,7 @@ test('the page listens to the clock, the date order and the back button, to the 
   assertProperty([state, utc], (s, other) => {
     const subscriptions = Tea.subscriptionsOf(program)(s)
     const lookups = [...HashMap.keys(subscriptions)].filter((key) => String(key).startsWith('lookup:'))
-    fc.pre(!Opt.contains(s.form.maybeAcknowledging, other))
+    fc.pre(!Opt.exists(s.form.maybeAcknowledging, ({ product }) => DateTime.Equivalence(product.creationDate, other)))
     return HashMap.has(subscriptions, 'clock')
       && HashMap.has(subscriptions, 'date-order')
       && HashMap.has(subscriptions, 'back-button')
@@ -892,7 +777,7 @@ test('the page listens to the clock, the date order and the back button, to the 
       && Equal.equals(lookups, s._tag === 'LookingUp' ? [`lookup:${s.barcode}`] : [])
       && Opt.match(s.form.maybeAcknowledging, {
         onNone: () => true,
-        onSome: (at) => HashMap.has(subscriptions, ['acknowledging', at]),
+        onSome: ({ product }) => HashMap.has(subscriptions, ['acknowledging', product.creationDate]),
       })
       && !HashMap.has(subscriptions, ['acknowledging', other])
   })
@@ -912,7 +797,6 @@ describe('the lookup', () => {
         lookup: { _tag: 'Idle' },
         maybeNow: Opt.none(),
         maybeOrder: Opt.none(),
-        maybeLastAdded: Opt.none(),
         maybeAcknowledging: Opt.none(),
       },
       barcode: code,

@@ -111,13 +111,6 @@ export const addProduct = onAddProducts((form) =>
   form._tag === 'Naming' || form._tag === 'Dating' ? form.maybeAdd : Opt.none()
 )
 
-/** The snackbar's "Add again", while the product added last can be added again. */
-export const addAgain = onAddProducts((form) =>
-  form._tag === 'Naming' || form._tag === 'Dating'
-    ? Opt.flatMap(form.maybeJustAdded, ({ maybeRepeat }) => maybeRepeat)
-    : Opt.none()
-)
-
 /** Sends each message in turn, each from the model the previous one left. */
 export const perform = Effect.fnUntraced(function*(user: User, choices: ReadonlyArray<Choice>) {
   for (const choice of choices) {

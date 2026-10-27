@@ -293,6 +293,198 @@ html {
   font-variation-settings: "FILL" 1;
 }
 
+/*
+ * A product added enters the fridge (see docs/product-flight.md). The letters of its name gather into it where
+ * the name is written, as the fridge appears; it flies, on an arc that two elements make (the outer one moves in
+ * X, the inner one in Y), into the fridge, whose door has opened; it is handed to a copy inside the fridge as it
+ * arrives, so that the door closes over it; the fridge settles, and fades away as the view removes it. The ways,
+ * as `--gather-*` and `--flight-*`, are measured by the view when the product enters the document. AddProducts'
+ * `ACKNOWLEDGING_DURATION` is the sum of the four phases. With reduced motion, the letters fade into the product,
+ * which fades away, and the fridge only fades in and out.
+ */
+:root {
+  --choreography-gather: var(--transition-duration-medium-2);
+  --choreography-flight: var(--transition-duration-long-2);
+  --choreography-door: var(--transition-duration-short-4);
+  --choreography-settle: var(--transition-duration-medium-1);
+  --choreography-arrival: calc(
+    var(--choreography-gather) + var(--choreography-flight)
+  );
+}
+
+@keyframes gather-letter {
+  to {
+    transform: translate(var(--gather-dx), var(--gather-dy)) scale(0.2);
+    opacity: 0;
+  }
+}
+
+@keyframes pack-in {
+  from {
+    transform: scale(0);
+    opacity: 0;
+  }
+}
+
+@keyframes flight-x {
+  to {
+    transform: translateX(var(--flight-dx));
+  }
+}
+
+@keyframes flight-y {
+  to {
+    transform: translateY(var(--flight-dy));
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes door-open {
+  to {
+    transform: rotateY(100deg);
+  }
+}
+
+@keyframes door-close {
+  from {
+    transform: rotateY(100deg);
+  }
+  to {
+    transform: rotateY(0);
+  }
+}
+
+@keyframes fridge-settle {
+  0%,
+  100% {
+    transform: none;
+  }
+  30% {
+    transform: translateY(-6%) rotate(-3deg);
+  }
+  65% {
+    transform: rotate(2deg);
+  }
+}
+
+/* A letter of the name: it waits its turn, from the first to the last within `short-2`. */
+@utility gather-letter {
+  animation: gather-letter var(--transition-duration-short-4)
+    var(--ease-emphasized-accelerate)
+    calc(var(--stagger) * var(--transition-duration-short-2)) forwards;
+  @media (prefers-reduced-motion: reduce) {
+    animation: fade-out var(--transition-duration-short-4) var(--ease-standard)
+      forwards;
+  }
+}
+
+/* The product flying, outside: across, then gone as the copy inside the fridge takes its place. */
+@utility traveller-x {
+  animation:
+    flight-x var(--choreography-flight) var(--ease-standard)
+    var(--choreography-gather) both,
+    fade-out 0s linear var(--choreography-arrival) forwards;
+  @media (prefers-reduced-motion: reduce) {
+    animation: fade-out var(--transition-duration-short-4) var(--ease-standard)
+      var(--choreography-arrival) forwards;
+  }
+}
+
+/* The product flying, inside: up or down. */
+@utility traveller-y {
+  animation: flight-y var(--choreography-flight)
+    var(--ease-emphasized-decelerate) var(--choreography-gather) both;
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+
+/* The product, born of the letters as they gather. */
+@utility pack-in {
+  animation: pack-in var(--transition-duration-short-4)
+    var(--ease-emphasized-decelerate) var(--transition-duration-short-2) both;
+  @media (prefers-reduced-motion: reduce) {
+    animation: fade-in var(--transition-duration-short-4) var(--ease-standard)
+      var(--transition-duration-short-2) both;
+  }
+}
+
+/* The fridge's door: open while the product flies, closed over it once it is in. */
+@utility fridge-door {
+  transform-origin: right;
+  animation:
+    door-open var(--choreography-door) var(--ease-standard)
+    var(--choreography-gather) forwards,
+    door-close var(--choreography-door) var(--ease-standard)
+    var(--choreography-arrival) forwards;
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+
+/* The product inside the fridge, from when it arrives. */
+@utility fridge-content {
+  animation: fade-in 0s linear var(--choreography-arrival) both;
+}
+
+/*
+ * The fridge's visit: it appears as the letters gather, and settles once its door has closed. Neither fills
+ * forwards, so that the fade of its removal, a transition, is not overridden.
+ */
+@utility fridge-visit {
+  transform-origin: center bottom;
+  animation:
+    fridge-appear var(--choreography-gather) var(--ease-emphasized-decelerate)
+    backwards,
+    fridge-settle var(--choreography-settle) var(--ease-standard)
+    calc(var(--choreography-arrival) + var(--choreography-door));
+  @media (prefers-reduced-motion: reduce) {
+    animation: fade-in var(--choreography-gather) var(--ease-standard)
+      backwards;
+  }
+}
+
+@keyframes fridge-appear {
+  from {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+}
+
+/* The name, drawn anew in its field, comes back once its letters have left. */
+@utility name-return {
+  animation: fade-in-text var(--transition-duration-short-4)
+    var(--ease-standard) var(--choreography-gather) backwards;
+}
+
+@keyframes fade-in-text {
+  from {
+    color: transparent;
+  }
+}
+
+/* A button's indicator leaves, and its label comes back, as the product it added leaves the button's step. */
+@utility indicator-leave {
+  animation: fade-out var(--transition-duration-short-4) var(--ease-standard)
+    var(--choreography-gather) forwards;
+}
+
+@utility label-return {
+  animation: fade-in var(--transition-duration-short-4) var(--ease-standard)
+    var(--choreography-gather) backwards;
+}
+
 a {
   white-space: nowrap;
 }

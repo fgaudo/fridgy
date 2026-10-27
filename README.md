@@ -8,8 +8,8 @@ architecture.
 > that adds products one after another, in two steps (the name is typed or read from a barcode in the scanner's
 > dialog, which looks the product up on [Open Food Facts](https://openfoodfacts.org) and caches the answer on the
 > phone, and the product is added as it is or goes on to its expiration date, typed as digits in the order of
-> day, month and year the user keeps, from which the user picks the day they meant; a snackbar adds the same
-> product again) and the About page (version, links,
+> day, month and year the user keeps, from which the user picks the day they meant; the product added then flies
+> into a fridge) and the About page (version, links,
 > licenses) run on the current architecture, with navigation between them and Android's back button. What is
 > still missing is listed under "Known gaps" in [`AGENTS.md`](AGENTS.md).
 

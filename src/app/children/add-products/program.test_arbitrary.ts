@@ -1,5 +1,4 @@
 import * as Data from 'effect/Data'
-import * as DateTime from 'effect/DateTime'
 import * as Opt from 'effect/Option'
 import * as fc from 'fast-check'
 import { arbitrary as product } from '#domain/product.test_arbitrary.ts'
@@ -8,18 +7,7 @@ import { arbitrary as order } from '#libs/dates/date-order.test_arbitrary.ts'
 import { datesOf, MAX_DIGITS } from '#libs/dates/digit-dates.ts'
 import { arbitrary as maybe } from '#libs/option/option.test_arbitrary.ts'
 import { utc } from '#libs/testing/date-time.test_arbitrary.ts'
-import type {
-  Camera,
-  DateForm,
-  Digit,
-  Entrance,
-  Form,
-  LastAdded,
-  Lookup,
-  LookupOutcome,
-  Message,
-  State,
-} from './program.ts'
+import type { Acknowledging, Camera, DateForm, Digit, Form, Lookup, LookupOutcome, Message, State } from './program.ts'
 
 const Msg = Data.taggedEnum<Message>()
 
@@ -54,9 +42,9 @@ const outcome: fc.Arbitrary<LookupOutcome> = fc.oneof(
   fc.constant<LookupOutcome>({ _tag: 'Failed' }),
 )
 
-const lastAdded: fc.Arbitrary<LastAdded> = fc.record({
+const acknowledging: fc.Arbitrary<Acknowledging> = fc.record({
   product,
-  entrance: fc.constantFrom<Entrance>('Alone', 'AfterAnother'),
+  by: fc.constantFrom<Acknowledging['by']>('NameButton', 'DateButton'),
 })
 
 /** The days the digits name, by the rules of a product: what can be picked. */
@@ -74,27 +62,19 @@ export const form: fc.Arbitrary<Form> = fc.tuple(
     lookup,
     maybeNow: maybe(utc),
     maybeOrder: maybe(order),
-    maybeLastAdded: maybe(lastAdded),
-    maybeAcknowledging: maybe(utc),
+    maybeAcknowledging: maybe(acknowledging),
   }),
-  fc.option(fc.integer({ min: -2, max: 10 })),
   fc.boolean(),
   barcode,
-).map(([form, maybeSinceAdded, keepsName, scanned]): Form => {
-  // The clock often ticks a few seconds after the last product was added: its snackbar shows, or has just gone.
-  const maybeNow = Opt.match(form.maybeLastAdded, {
-    onNone: () => form.maybeNow,
-    onSome: ({ product: { creationDate } }) =>
-      maybeSinceAdded === null ? form.maybeNow : Opt.some(DateTime.add(creationDate, { seconds: maybeSinceAdded })),
-  })
-  // The name is often the last product's, as the page keeps it after adding one; when the lookup did not name
-  // the product, it is the barcode scanned.
+).map(([form, keepsName, scanned]): Form => {
+  // The name is often the product's just added, as the page keeps it after adding one; when the lookup did not
+  // name the product, it is the barcode scanned.
   const maybeName = form.lookup._tag === 'NotFound' || form.lookup._tag === 'Failed'
     ? Opt.some(scanned)
     : keepsName
-    ? Opt.orElse(Opt.map(form.maybeLastAdded, ({ product: { name } }) => name), () => form.maybeName)
+    ? Opt.orElse(Opt.map(form.maybeAcknowledging, ({ product: { name } }) => name), () => form.maybeName)
     : form.maybeName
-  return { ...form, maybeNow, maybeName }
+  return { ...form, maybeName }
 })
 
 // The day picked is often one the digits name, and sometimes one they no longer do, or none.
@@ -130,14 +110,13 @@ export const scanning = fc.tuple(form, fc.constantFrom<Camera>('Available', 'Una
 
 export const dating = formAndDate.map(([form, date]) => ({ _tag: 'Dating', form, date } as const))
 
-export const submitting = fc.tuple(formAndDate, product, fc.boolean(), fc.constantFrom('Form', 'Snackbar')).map((
-  [[form, date], product, isDating, from],
+export const submitting = fc.tuple(formAndDate, product, fc.boolean()).map((
+  [[form, date], product, isDating],
 ) => ({
   _tag: 'Submitting',
   form,
   product,
   step: isDating ? { _tag: 'Dating', date } as const : { _tag: 'Naming' } as const,
-  from,
 } as const))
 
 export const state: fc.Arbitrary<State> = fc.oneof(naming, lookingUp, scanning, dating, submitting)
@@ -150,7 +129,6 @@ export const message: fc.Arbitrary<Message> = fc.oneof(
   fc.constant(Msg.DateDismissed()),
   fc.constant(Msg.Closed()),
   fc.constant(Msg.LookupCancelled()),
-  fc.constant(Msg.Repeated()),
   fc.constant(Msg.DigitErased()),
   fc.constant(Msg.DateCleared()),
   fc.constant(Msg.CameraFailed()),

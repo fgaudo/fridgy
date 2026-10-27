@@ -51,3 +51,108 @@ export const initialValue = (text: string): NonNullable<Hooks['create']> => (_, 
 export const focusOnInsert: NonNullable<Hooks['insert']> = (vnode) => {
   ;(vnode.elm as HTMLInputElement).focus()
 }
+
+type Point = Readonly<{ x: number; y: number }>
+
+const centreOf = ({ left, top, width, height }: DOMRect): Point => ({ x: left + width / 2, y: top + height / 2 })
+
+/** The last match of `selector`: the one drawn on top. */
+const lastOf = (selector: string) => Array.from(document.querySelectorAll(selector)).at(-1)
+
+const setPoint = (element: HTMLElement, name: string, { x, y }: Point) => {
+  element.style.setProperty(`--${name}-dx`, `${x}px`)
+  element.style.setProperty(`--${name}-dy`, `${y}px`)
+}
+
+/** Where the text of an element is drawn, inside its border and padding, and how tall a line of it is. */
+const textBoxOf = (element: Element) => {
+  const rect = element.getBoundingClientRect()
+  const style = getComputedStyle(element)
+  const px = Number.parseFloat
+  const left = rect.left + px(style.borderLeftWidth) + px(style.paddingLeft)
+  const top = rect.top + px(style.borderTopWidth) + px(style.paddingTop)
+  const width = rect.right - px(style.borderRightWidth) - px(style.paddingRight) - left
+  const height = rect.bottom - px(style.borderBottomWidth) - px(style.paddingBottom) - top
+  // An input centres its one line; other elements start at the top. A `normal` line height is the font's own,
+  // about 1.2 times its size.
+  const lineHeight = element instanceof HTMLInputElement
+    ? height
+    : style.lineHeight === 'normal'
+    ? px(style.fontSize) * 1.2
+    : px(style.lineHeight)
+  return { left, top, width, lineHeight, style }
+}
+
+/**
+ * Turns the text of the last match of `from` into an element that then travels to the last match of `to`, once it
+ * is in the document: the keyframes do the moving, with what this measures. Measured once, on insertion: a measure
+ * on every frame would fight the animation.
+ *
+ * The element is positioned (`absolute` or `fixed`) at the top left of its containing block, which may be moved by
+ * a transform: its own place is measured first. It holds `[data-letters]`, whose `[data-letter]` pieces are the
+ * text, and `[data-traveller]`. The letters are laid over the text, in its font, one line of it (those
+ * past its width are hidden), each given the way to their centre (`--gather-dx`, `--gather-dy`) and its place
+ * among them, from 0 to 1 (`--stagger`); the traveller is placed at that centre and given the way to `to`
+ * (`--flight-dx`, `--flight-dy`). Without `from`, the traveller starts where `to` is, with no letters; without
+ * `to`, everything is hidden.
+ */
+export const gatherAndFly = (from: string, to: string): NonNullable<Hooks['insert']> => (vnode) => {
+  const element = vnode.elm as HTMLElement
+  const letters = element.querySelector<HTMLElement>('[data-letters]')
+  const traveller = element.querySelector<HTMLElement>('[data-traveller]')
+  const maybeTo = lastOf(to)
+  if (letters === null || traveller === null || maybeTo === undefined) {
+    element.style.visibility = 'hidden'
+    return
+  }
+  const origin = element.getBoundingClientRect()
+  const end = centreOf(maybeTo.getBoundingClientRect())
+  const maybeFrom = lastOf(from)
+  const start = maybeFrom === undefined ? end : gather(letters, maybeFrom, origin)
+  if (maybeFrom === undefined) letters.style.visibility = 'hidden'
+  const size = traveller.getBoundingClientRect()
+  traveller.style.left = `${start.x - origin.left - size.width / 2}px`
+  traveller.style.top = `${start.y - origin.top - size.height / 2}px`
+  setPoint(traveller, 'flight', { x: end.x - start.x, y: end.y - start.y })
+}
+
+/** Lays the letters over the text of `source`, sends each to their centre, and returns it. */
+const gather = (letters: HTMLElement, source: Element, origin: DOMRect): Point => {
+  const box = textBoxOf(source)
+  letters.style.font = box.style.font
+  letters.style.letterSpacing = box.style.letterSpacing
+  letters.style.left = `${box.left - origin.left}px`
+  letters.style.top = `${box.top - origin.top}px`
+  letters.style.width = `${box.width}px`
+  letters.style.height = `${box.lineHeight}px`
+  // The letters take the direction of their own text: they start where the source's text does.
+  letters.style.justifyContent = getComputedStyle(letters).direction === box.style.direction
+    ? 'flex-start'
+    : 'flex-end'
+  const right = box.left + box.width
+  const shown = Array.from(letters.querySelectorAll<HTMLElement>('[data-letter]')).flatMap((letter) => {
+    const rect = letter.getBoundingClientRect()
+    if (rect.left < box.left - 1 || rect.right > right + 1) {
+      letter.style.visibility = 'hidden'
+      return []
+    }
+    return [{ letter, rect }]
+  })
+  if (shown.length === 0) return centreOf(letters.getBoundingClientRect())
+  const left = Math.min(...shown.map(({ rect }) => rect.left))
+  const top = Math.min(...shown.map(({ rect }) => rect.top))
+  const centre = centreOf(
+    new DOMRect(
+      left,
+      top,
+      Math.max(...shown.map(({ rect }) => rect.right)) - left,
+      Math.max(...shown.map(({ rect }) => rect.bottom)) - top,
+    ),
+  )
+  shown.forEach(({ letter, rect }, index) => {
+    const own = centreOf(rect)
+    setPoint(letter, 'gather', { x: centre.x - own.x, y: centre.y - own.y })
+    letter.style.setProperty('--stagger', String(shown.length > 1 ? index / (shown.length - 1) : 0))
+  })
+  return centre
+}

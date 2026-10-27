@@ -3,11 +3,10 @@
 // expiring, or the user goes on to its expiration date. Then the date: the keypad types its digits, read in the
 // order the user keeps (day, month or year first, the device's locale's until they pick one), and the
 // user picks, among the days they can name, the one they meant, and adds the product. Adding is a state that
-// only its completion leaves; the page then starts at the name again, kept for the next product, with a snackbar
-// whose action adds the same product again, until the user leaves it; the action is withheld while the step's own
-// button would add the same product. A step's button shows its indicator only while it is the one adding, and the
-// first step's keeps it a moment after the product it added: the write is too quick for the wait to be seen; after
-// the snackbar's, the next snackbar is the only acknowledgement. The scanner is offered once the page knows the
+// only its completion leaves; the page then starts at the name again, kept for the next product, and the product
+// added enters the fridge, its name turning into it where it is written, once the write has completed. A step's
+// button shows its indicator while it adds, and the first step's keeps it while the product leaves: the write is
+// too quick for the wait to be seen. The scanner is offered once the page knows the
 // device can read barcodes, and the camera runs only while its dialog is open. A scanned barcode is looked up on
 // Open Food Facts while it is the name, a state of the first step that takes nothing but cancelling the lookup,
 // which leaves the barcode as the name, and leaving the page: the product's name replaces the barcode when the
@@ -79,22 +78,11 @@ export type Form = Readonly<{
   maybeNow: Opt.Option<DateTime.Utc>
   /** The order the digits of a date are read in, once the setting has been read. */
   maybeOrder: Opt.Option<DateOrder.DateOrder>
-  maybeLastAdded: Opt.Option<LastAdded>
-  /**
-   * When the product added last from the first step's own button was created, while the button acknowledges it,
-   * until a timer says it has been shown: the write is too quick for the wait to be seen.
-   */
-  maybeAcknowledging: Opt.Option<DateTime.Utc>
+  maybeAcknowledging: Opt.Option<Acknowledging>
 }>
 
-/**
- * How the snackbar of the product added last comes: alone, or after the one before it, which was still showing when
- * the product was added and leaves first, as Material shows one snackbar at a time.
- */
-export type Entrance = 'Alone' | 'AfterAnother'
-
-/** The product added last, and how its snackbar comes. */
-export type LastAdded = Readonly<{ product: Product.Product; entrance: Entrance }>
+/** The product added a moment ago, until a timer says its arrival has been shown, and the button that added it. */
+export type Acknowledging = Readonly<{ product: Product.Product; by: 'NameButton' | 'DateButton' }>
 
 /** The expiration date being typed: it exists only in the second step, and starts anew with each. */
 export type DateForm = Readonly<{
@@ -103,9 +91,6 @@ export type DateForm = Readonly<{
   /** The day picked among those the digits name, until a digit is typed, erased or cleared. */
   maybeChosenDate: Opt.Option<DateTime.Utc>
 }>
-
-/** Whose button adds the product: the step's own, or the snackbar's. */
-export type Adder = 'Form' | 'Snackbar'
 
 /** The step a product is being added from, to come back to. */
 export type Step = Data.TaggedEnum<{
@@ -125,11 +110,8 @@ export type State = Data.TaggedEnum<{
   Scanning: Readonly<{ form: Form }>
   /** The second step: the expiration date. */
   Dating: Readonly<{ form: Form; date: DateForm }>
-  /**
-   * The product is being added, from a step's button, after which the next product starts at the name, or from
-   * the snackbar, which leaves the step as it is.
-   */
-  Submitting: Readonly<{ form: Form; product: Product.Product; step: Step; from: Adder }>
+  /** The product is being added, from a step's button, after which the next product starts at the name. */
+  Submitting: Readonly<{ form: Form; product: Product.Product; step: Step }>
 }>
 
 export type Message = Data.TaggedEnum<{
@@ -155,8 +137,6 @@ export type Message = Data.TaggedEnum<{
   OrderPicked: { order: DateOrder.DateOrder }
   /** Adds the product the step describes: never expiring from the first, expiring on the day named from the second. */
   Started: object
-  /** The snackbar's "Add again": adds the product added last again, created now. */
-  Repeated: object
   /** The page's close button, on the first step. */
   Closed: object
   /** The first step's "Cancel", while a scanned barcode is looked up: the barcode stays the name. */
@@ -171,7 +151,7 @@ export type Message = Data.TaggedEnum<{
   CameraFailed: object
   /** The platform's back button, while the page is shown. */
   BackPressed: object
-  /** The first step's button has shown the product it added, the one created at `at`. */
+  /** The arrival of the product created at `at` has been shown. */
   AddedShown: { at: DateTime.Utc }
   // From commands.
   CameraChecked: { isAvailable: boolean }
@@ -263,10 +243,10 @@ export type DateShown = Readonly<{
 }>
 
 /**
- * The snackbar: the product added last, for a few seconds after it was added, how it comes, and its action,
- * unless the step's own button would add the same product, or a product is being added.
+ * The product entering the fridge, and where its name is written, whose letters become it: the name field, or the
+ * second step's heading.
  */
-export type JustAdded = Readonly<{ product: Product.Product; entrance: Entrance; maybeRepeat: Opt.Option<Message> }>
+export type Entering = Readonly<{ product: Product.Product; from: 'NameField' | 'DateHeading' }>
 
 export type Model = Data.TaggedEnum<{
   Naming:
@@ -284,11 +264,11 @@ export type Model = Data.TaggedEnum<{
       maybeAdd: Opt.Option<Message>
       /** Whether the button that adds the product keeps showing its indicator, for a moment after it added one. */
       acknowledging: 'Added' | 'Nothing'
-      maybeJustAdded: Opt.Option<JustAdded>
+      maybeEntering: Opt.Option<Entering>
     }>
   /**
    * The first step while a scanned barcode is looked up: the barcode is the name, and only the lookup can be
-   * cancelled, or the page left. The snackbar is hidden, as under the scanner the lookup follows.
+   * cancelled, or the page left.
    */
   LookingUp:
     & NameShown
@@ -317,31 +297,17 @@ export type Model = Data.TaggedEnum<{
       maybeClearDate: Opt.Option<Message>
       /** Adds the product, expiring on the day the digits name, once they name one. */
       maybeAdd: Opt.Option<Message>
-      maybeJustAdded: Opt.Option<JustAdded>
+      maybeEntering: Opt.Option<Entering>
     }>
-  /**
-   * The product is being added: the step it is added from, its controls disabled, and whose button adds it, as
-   * only the step's own shows its indicator; the snackbar has no action.
-   */
+  /** The product is being added: the step it is added from, its controls disabled. */
   Adding:
     & NameShown
     & Readonly<{
       step: Data.TaggedEnum<{ Naming: object; Dating: DateShown }>
-      from: Adder
-      maybeJustAdded: Opt.Option<JustAdded>
+      /** The flight of the product added before goes on while the next is written. */
+      maybeEntering: Opt.Option<Entering>
     }>
 }>
-
-// Material's snackbar stays from 4 to 10 seconds: with an action, long enough to tap it once the first package
-// is put away.
-const SNACKBAR_SECONDS = 6
-
-/** Whether `product` was added a moment ago: it is created when it is added. */
-const isJustAdded = (product: Product.Product, maybeNow: Opt.Option<DateTime.Utc>) =>
-  Opt.exists(
-    maybeNow,
-    (now) => DateTime.isLessThan(now, DateTime.add(product.creationDate, { seconds: SNACKBAR_SECONDS })),
-  )
 
 /** Whether the camera is read: while the scanner is open, until it fails. */
 const isScanning = (state: State) => state._tag === 'Scanning' && state.form.camera === 'Available'
@@ -407,26 +373,6 @@ const productOfStep = (state: State & { _tag: 'Naming' | 'Dating' }) =>
     ? productOf(state.form, Opt.none())
     : Opt.flatMap(maybeNamedDate(state.form, state.date), (date) => productOf(state.form, Opt.some(date)))
 
-/** Whether two products added now would be the same product: a name and an expiration, created at the same time. */
-const isSameProduct = (one: Product.Product, other: Product.Product) =>
-  one.name === other.name
-  && Opt.makeEquivalence(DateTime.Equivalence)(one.maybeExpirationDate, other.maybeExpirationDate)
-
-/** The product added last, while its snackbar shows. */
-const justAddedOf = (form: Form) =>
-  Opt.filter(form.maybeLastAdded, ({ product }) => isJustAdded(product, form.maybeNow))
-
-/**
- * The product added last, again, created now, while its snackbar shows: none once its expiration has meanwhile
- * passed (a product expiring today, repeated after midnight).
- */
-const repeatOf = (form: Form) =>
-  Opt.flatMap(
-    Opt.all([justAddedOf(form), form.maybeNow]),
-    ([{ product: { name, maybeExpirationDate } }, creationDate]) =>
-      Product.make({ name, creationDate, maybeExpirationDate }),
-  )
-
 // Refreshed often, so that the creation date is close to when the user adds the product.
 const clock = Channel.forever(
   Channel.fromEffect(DateTime.now).pipe(
@@ -435,11 +381,14 @@ const clock = Channel.forever(
   ),
 )
 
-// A moment in view, and the frame it waits for; the view then fades it. Hidden under another page, the timer
+// The choreography of `src/styles.css`: the letters becoming the product (`--transition-duration-medium-2`), its
+// flight into the open fridge (`--transition-duration-long-2`), the door closing (`--transition-duration-short-4`)
+// and the fridge settling (`--transition-duration-medium-1`). The view's keyframes must fit in it, as its
+// elements are removed when the phase ends, wherever their animation is. Hidden under another page, the timer
 // waits for the page to be back.
-const ACKNOWLEDGING_DURATION = Duration.millis(300)
+const ACKNOWLEDGING_DURATION = Duration.millis(300 + 500 + 200 + 250)
 
-/** Ends once the first step's button has shown the product created at `at`. */
+/** Ends once the arrival of the product created at `at` has been shown. */
 const acknowledgingTimer = (at: DateTime.Utc): Tea.Subscription<Message, Deps> =>
   Channel.fromEffectDone(Effect.as(Effect.sleep(ACKNOWLEDGING_DURATION), Message.AddedShown({ at })))
 
@@ -554,7 +503,7 @@ const start = (state: State & { _tag: 'Naming' | 'Dating' }): Tea.Transition<Sta
   Opt.match(productOfStep(state), {
     onNone: () => Tea.reject,
     onSome: (product) => ({
-      state: { _tag: 'Submitting', form: state.form, product, step: stepOf(state), from: 'Form' },
+      state: { _tag: 'Submitting', form: state.form, product, step: stepOf(state) },
       commands: [Command.Add({ product })],
     }),
   })
@@ -577,7 +526,6 @@ export const program: Tea.Program<{
         lookup: { _tag: 'Idle' },
         maybeNow: Opt.none(),
         maybeOrder: Opt.none(),
-        maybeLastAdded: Opt.none(),
         maybeAcknowledging: Opt.none(),
       },
     },
@@ -670,7 +618,10 @@ export const program: Tea.Program<{
 
     // The timer of an acknowledgement that another has meanwhile replaced may still end: it ends only its own.
     AddedShown: ({ at }) => (state) =>
-      Opt.contains(state.form.maybeAcknowledging, at)
+      Opt.exists(
+          state.form.maybeAcknowledging,
+          ({ product }) => DateTime.Equivalence(product.creationDate, at),
+        )
         ? { state: withForm(state, (form) => ({ ...form, maybeAcknowledging: Opt.none() })) }
         : Tea.reject,
 
@@ -736,45 +687,26 @@ export const program: Tea.Program<{
 
     Started: () => (state) => state._tag === 'Naming' || state._tag === 'Dating' ? start(state) : Tea.reject,
 
-    Repeated: () => (state) =>
-      state._tag === 'Naming' || state._tag === 'Dating'
-        ? Opt.match(repeatOf(state.form), {
-          onNone: () => Tea.reject,
-          onSome: (product) => ({
-            state: { _tag: 'Submitting', form: state.form, product, step: stepOf(state), from: 'Snackbar' },
-            commands: [Command.Add({ product })],
-          }),
-        })
-        : Tea.reject,
-
-    // After a step's product, the next one starts at the name, this one's, drawn anew so that it takes the focus
-    // the button took: a second package of it may be next. After the snackbar's, the step goes on as it was: the
-    // digits typed meanwhile are the next product's. The first step's button acknowledges the product it added:
-    // the second step leaves with its own, and the snackbar comes anew with its, after the one still showing when
-    // there is one.
+    // The next product starts at the name, this one's, drawn anew so that it takes the focus the button took: a
+    // second package of it may be next. The product added is acknowledged, with the button that added it.
     Completed: ({ succeeded }) => (state) => {
       if (state._tag !== 'Submitting') {
         return defect('Completed while no product is being added: only a completion leaves Submitting')
       }
-      const lastAdded: LastAdded = {
+      const acknowledging: Acknowledging = {
         product: state.product,
-        entrance: Opt.isSome(justAddedOf(state.form)) ? 'AfterAnother' : 'Alone',
+        by: state.step._tag === 'Naming' ? 'NameButton' : 'DateButton',
       }
-      const form = { ...state.form, maybeLastAdded: Opt.some(lastAdded) }
       return succeeded
         ? {
-          state: state.from === 'Form'
-            ? {
-              _tag: 'Naming',
-              form: {
-                ...form,
-                replacements: form.replacements + 1,
-                maybeAcknowledging: state.step._tag === 'Naming'
-                  ? Opt.some(state.product.creationDate)
-                  : form.maybeAcknowledging,
-              },
-            }
-            : resume(state.step, form),
+          state: {
+            _tag: 'Naming',
+            form: {
+              ...state.form,
+              replacements: state.form.replacements + 1,
+              maybeAcknowledging: Opt.some(acknowledging),
+            },
+          },
         }
         : {
           state: resume(state.step, state.form),
@@ -818,7 +750,9 @@ export const program: Tea.Program<{
       : []
     const acknowledging: typeof always = Opt.match(state.form.maybeAcknowledging, {
       onNone: () => [],
-      onSome: (at) => [[['acknowledging', at] as const, acknowledgingTimer(at)]],
+      onSome: ({ product: { creationDate } }) => [
+        [['acknowledging', creationDate] as const, acknowledgingTimer(creationDate)],
+      ],
     })
     return HashMap.fromIterable([...always, ...scanning, ...looking, ...acknowledging])
   },
@@ -866,20 +800,10 @@ export const program: Tea.Program<{
           : { _tag: 'NamingNothing' },
       }
     }
-    const maybeJustAdded = justAddedOf(form)
-    // The action is withheld while it would add what the step's button adds: after a product added as it is, the
-    // name stays, and "Add without date" adds it again; after the snackbar's, the second step keeps its
-    // digits, which may still name the same day.
-    const justAdded = (maybeStepProduct: Opt.Option<Product.Product>) =>
-      Opt.map(maybeJustAdded, ({ product, entrance }): JustAdded => ({
-        product,
-        entrance,
-        maybeRepeat: pipe(
-          repeatOf(form),
-          Opt.filter((repeat) => !Opt.exists(maybeStepProduct, (stepProduct) => isSameProduct(repeat, stepProduct))),
-          Opt.map(() => Message.Repeated()),
-        ),
-      }))
+    const maybeEntering = Opt.map(form.maybeAcknowledging, ({ product, by }): Entering => ({
+      product,
+      from: by === 'NameButton' ? 'NameField' : 'DateHeading',
+    }))
     return Match.valueTags(state, {
       // Both ways out need the product the name describes, never expiring: the date is that product's.
       Naming: (naming): Model => ({
@@ -891,8 +815,8 @@ export const program: Tea.Program<{
         maybeScan: form.camera === 'Available' ? Opt.some(Message.ScanRequested()) : Opt.none(),
         maybeRequestDate: Opt.map(productOfStep(naming), () => Message.DateRequested()),
         maybeAdd: Opt.map(productOfStep(naming), () => Message.Started()),
-        acknowledging: Opt.isSome(form.maybeAcknowledging) ? 'Added' : 'Nothing',
-        maybeJustAdded: justAdded(productOfStep(naming)),
+        acknowledging: Opt.exists(form.maybeAcknowledging, ({ by }) => by === 'NameButton') ? 'Added' : 'Nothing',
+        maybeEntering,
       }),
       LookingUp: (): Model => ({
         _tag: 'LookingUp',
@@ -923,17 +847,16 @@ export const program: Tea.Program<{
           maybeEraseDigit: date.digits !== '' ? Opt.some(Message.DigitErased()) : Opt.none(),
           maybeClearDate: date.digits !== '' ? Opt.some(Message.DateCleared()) : Opt.none(),
           maybeAdd: Opt.map(productOfStep(dating), () => Message.Started()),
-          maybeJustAdded: justAdded(productOfStep(dating)),
+          maybeEntering,
         }
       },
-      Submitting: ({ step, from }): Model => ({
+      Submitting: ({ step }): Model => ({
         _tag: 'Adding',
         ...nameShown,
-        from,
         step: step._tag === 'Naming'
           ? { _tag: 'Naming' }
           : { _tag: 'Dating', ...dateShown(step.date, () => Opt.none(), () => Opt.none()) },
-        maybeJustAdded: Opt.map(maybeJustAdded, (lastAdded): JustAdded => ({ ...lastAdded, maybeRepeat: Opt.none() })),
+        maybeEntering,
       }),
     })
   },

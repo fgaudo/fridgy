@@ -4,14 +4,14 @@ import * as Match from 'effect/Match'
 import * as Opt from 'effect/Option'
 import type { VNode } from 'snabbdom'
 import type { DateOrder } from '#libs/dates/date-order.ts'
-import { focusOnInsert, handlers, initialValue, type View } from '#libs/tea-snabbdom/tea-snabbdom.ts'
+import { piecesOf } from '#libs/strings/pieces.ts'
+import { focusOnInsert, gatherAndFly, handlers, initialValue, type View } from '#libs/tea-snabbdom/tea-snabbdom.ts'
 import { cn } from '#libs/ui/class-names.ts'
 import type {
-  Adder,
   DateChoice,
   DateShown,
   Digit,
-  JustAdded,
+  Entering,
   Message,
   Model,
   NameShown,
@@ -50,12 +50,12 @@ type NameActivity = Readonly<
   | { _tag: 'LookingUp'; controls: Model & { _tag: 'LookingUp' } }
   | { _tag: 'UnderScanner' }
   | { _tag: 'UnderDate' }
-  | { _tag: 'Adding'; from: Adder }
+  | { _tag: 'Adding' }
 >
 
 /** What the second step does: its controls take, or are disabled while adding. */
 type DateActivity = Readonly<
-  { _tag: 'Editing'; controls: Model & { _tag: 'Dating' } } | { _tag: 'Adding'; from: Adder }
+  { _tag: 'Editing'; controls: Model & { _tag: 'Dating' } } | { _tag: 'Adding' }
 >
 
 const stepPadding =
@@ -92,100 +92,26 @@ const appBar = (
   )
 }
 
-/** What the snackbar's room holds besides it, which the snackbar stays above, as Material says it must a FAB. */
-type Above = 'Nothing' | 'Fab'
+/**
+ * The spare height between a step's fields and its controls, so that a step fits a short screen: what it holds
+ * draws over what is above.
+ */
+const room = (...held: ReadonlyArray<VNode>) => <div props={{ className: 'relative flex-1' }}>{held}</div>
 
 /**
- * Material's snackbar, in the room above a step's controls, and above its FAB: its two lines say that the product
- * was added, its name emphasized and cut to the line, and when it expires, as the list says it, with the action that adds it
- * again while it can be, and while the step's own button would not. Keyed by the product, so that the next one, a
- * repeat included, appears anew: it rises from where it is placed, and sinks away. One that comes after another
- * waits, unseen, for the other to sink, which takes the exit's duration: both drawn at once in the same place,
- * one fading into the other, would look like nothing happened.
+ * What a step's button shows in place of its label: Material's circular indicator while its action is done, and
+ * while the product it added leaves the step, after which the label comes back.
  */
-const snackbar = ({ product, entrance, maybeRepeat }: JustAdded, above: Above, dispatch: Dispatch<Message>) => {
-  const { on } = handlers(dispatch)
-  return (
-    <div
-      key={`added-${DateTime.toEpochMillis(product.creationDate)}`}
-      style={{
-        opacity: '0',
-        transform: 'translateY(0.5rem)',
-        transitionProperty: 'opacity, transform',
-        transitionDuration: 'var(--transition-duration-short-3)',
-        transitionTimingFunction: 'var(--ease-standard-decelerate)',
-        transitionDelay: entrance === 'AfterAnother' ? 'var(--transition-duration-short-2)' : '0s',
-        delayed: { opacity: '1', transform: 'translateY(0)' },
-        remove: {
-          opacity: '0',
-          transform: 'translateY(0.5rem)',
-          transitionDuration: 'var(--transition-duration-short-2)',
-          transitionTimingFunction: 'var(--ease-standard-accelerate)',
-          transitionDelay: '0s',
-        },
-      }}
-      props={{
-        className: cn(
-          'absolute right-0 left-0 flex min-h-12 items-center gap-2 rounded-extra-small bg-inverse-surface',
-          'py-1 pl-4 text-body-medium text-inverse-on-surface shadow-elevation-3',
-          Opt.isSome(maybeRepeat) ? 'pr-2' : 'pr-4',
-          above === 'Fab' ? 'bottom-21' : 'bottom-2',
-        ),
-      }}
-    >
-      <div props={{ className: 'flex min-w-0 flex-1 flex-col py-2' }}>
-        <span props={{ className: 'flex' }}>
-          <span props={{ className: 'min-w-0 truncate text-body-medium-emphasized' }}>{product.name}</span>
-          {/* A flex item drops its leading space, unless it is preserved. */}
-          <span props={{ className: 'shrink-0 whitespace-pre' }}>{' added'}</span>
-        </span>
-        <span>
-          {Opt.match(product.maybeExpirationDate, {
-            onNone: () => 'No expiration',
-            onSome: (date) => `Expires ${formatDay(date)}`,
-          })}
-        </span>
-      </div>
-      {Opt.match(maybeRepeat, {
-        onNone: () => [],
-        onSome: (repeat) => [
-          <button
-            props={{ className: 'state-layer h-10 shrink-0 rounded-full px-3 text-label-large text-inverse-primary' }}
-            on={on('click', repeat)}
-          >
-            Add again
-          </button>,
-        ],
-      })}
-    </div>
-  )
-}
-
-/**
- * The snackbar's room, and the FAB's: the spare height, so that a step fits a short screen; they then draw over
- * what is above.
- */
-const room = (
-  maybeJustAdded: Opt.Option<JustAdded>,
-  dispatch: Dispatch<Message>,
-  above: Above,
-  ...held: ReadonlyArray<VNode>
-) => (
-  <div props={{ className: 'relative flex-1' }}>
-    {Opt.match(maybeJustAdded, { onNone: () => [], onSome: (justAdded) => [snackbar(justAdded, above, dispatch)] })}
-    {held}
-  </div>
-)
-
-/** What a step's button shows in place of its label: Material's circular indicator while its action is done. */
-type ButtonShows = 'Label' | 'Progress'
+type ButtonShows = 'Label' | 'Progress' | 'Acknowledging'
 
 /**
  * Material's filled button, the one action of a step, where the thumb rests; and its text button, the other
  * way out of the first step. Both say what they do, and the one tapped shows, in its own colors, Material's
- * circular indicator in place of its label while its action is being done, and for the moment the model keeps it
- * after: the write is mostly quicker than a frame, and the indicator would otherwise never be drawn. The
- * indicator appears at once, as the label leaves at once under it, and leaves fading as the label fades back in.
+ * circular indicator in place of its label while its action is being done, and while the product it added
+ * becomes a package: the write is mostly quicker than a frame, and the indicator would otherwise never be drawn.
+ * The indicator appears at once, as the label leaves at once under it, and leaves fading as the label fades back
+ * in, once the package has left; the model keeps the indicator for the whole flight, which the keyframes cut
+ * short.
  */
 const button = (
   label: string,
@@ -201,8 +127,8 @@ const button = (
         className: cn(
           'state-layer relative shrink-0 rounded-full px-6 text-label-large transition-colors',
           kind === 'Filled' ? 'h-14 bg-primary text-on-primary' : 'h-10 text-primary',
-          shows === 'Label' && 'disabled:text-on-surface/38',
-          shows === 'Label' && kind === 'Filled' && 'disabled:bg-on-surface/12',
+          shows !== 'Progress' && 'disabled:text-on-surface/38',
+          shows !== 'Progress' && kind === 'Filled' && 'disabled:bg-on-surface/12',
         ),
         disabled: Opt.isNone(maybeMessage),
       }}
@@ -212,12 +138,14 @@ const button = (
         props={{
           className: shows === 'Label'
             ? 'opacity-100 transition-opacity duration-short-4 ease-standard-decelerate'
+            : shows === 'Acknowledging'
+            ? 'label-return opacity-100'
             : 'opacity-0 transition-none',
         }}
       >
         {label}
       </span>
-      {shows === 'Progress'
+      {shows !== 'Label'
         ? [
           <span
             key='progress'
@@ -231,6 +159,7 @@ const button = (
               className: cn(
                 'material-symbols-rounded pointer-events-none absolute inset-0 flex items-center justify-center',
                 'text-[18px]',
+                shows === 'Acknowledging' && 'indicator-leave',
               ),
               title: 'Adding the product',
             }}
@@ -283,9 +212,11 @@ const progress = (
  * Material's outlined text field of the name, with its trailing icon button, which clears it, shown while there
  * is one, or the progress of the lookup, while the field is disabled. Drawn anew (with the new name) and focused, so that the keyboard is up, when a scan or a clearing
  * replaces it and when a product was added. Its supporting text says where a scanned name came from, or when the
- * camera is not available, and the name can only be typed.
+ * camera is not available, and the name can only be typed. Once the letters of the product just added have become
+ * it, the name comes back in the field drawn anew, for the next product: after an add from the second step too,
+ * whose heading's letters would otherwise gather over the same name, already back.
  */
-const nameField = (shown: NameShown, activity: NameActivity, dispatch: Dispatch<Message>) => {
+const nameField = (shown: NameShown, activity: NameActivity, isReturning: boolean, dispatch: Dispatch<Message>) => {
   const { on, onValue } = handlers(dispatch)
   const maybeClearName = activity._tag === 'Editing' ? activity.controls.maybeClearName : Opt.none()
   return (
@@ -294,6 +225,7 @@ const nameField = (shown: NameShown, activity: NameActivity, dispatch: Dispatch<
         <label props={{ className: 'block' }}>
           <input
             hook={{ create: initialValue(shown.name), insert: focusOnInsert }}
+            attrs={{ 'data-flies-from': 'NameField' }}
             props={{
               type: 'text',
               enterKeyHint: 'next',
@@ -305,6 +237,7 @@ const nameField = (shown: NameShown, activity: NameActivity, dispatch: Dispatch<
                 'placeholder:text-transparent hover:border-on-surface focus:border-primary focus:inset-ring-1',
                 'disabled:border-on-surface/12 disabled:text-on-surface/38',
                 Opt.isSome(maybeClearName) || activity._tag === 'LookingUp' ? 'pr-13' : 'pr-4',
+                isReturning && 'name-return',
               ),
             }}
             on={activity._tag === 'Editing' ? onValue('input', activity.controls.changeName, inputValue) : {}}
@@ -373,14 +306,14 @@ const scanFab = (maybeScan: Opt.Option<Message>, dispatch: Dispatch<Message>) =>
 /**
  * The first step, as a form read from the top: the name, under the app bar, and, docked at the bottom, within
  * the thumb's reach and above the keyboard that the name opens, the two ways out, going on to the date, or
- * adding the product as it is, with the scanner's FAB over them. Hidden once the scanner has risen over it, so
- * that the camera, drawn behind the page, shows through the scanner's window; shown at once when the scanner
- * sinks away.
+ * adding the product as it is, with the scanner's FAB over them, and the fridge in the space between. Hidden once
+ * the scanner has risen over it, so that the camera, drawn behind the page, shows through the scanner's window;
+ * shown at once when the scanner sinks away.
  */
 const nameStep = (
   shown: NameShown,
   activity: NameActivity,
-  maybeJustAdded: Opt.Option<JustAdded>,
+  maybeEntering: Opt.Option<Entering>,
   dispatch: Dispatch<Message>,
 ) => {
   const controls = activity._tag === 'Editing' ? Opt.some(activity.controls) : Opt.none()
@@ -397,8 +330,8 @@ const nameStep = (
     >
       {appBar('Add products', 'close', 'Close', maybeClose, dispatch)}
       <div props={{ className: cn('flex flex-1 flex-col gap-3 pt-2', stepPadding) }}>
-        {nameField(shown, activity, dispatch)}
-        {room(maybeJustAdded, dispatch, 'Fab', scanFab(Opt.flatMap(controls, ({ maybeScan }) => maybeScan), dispatch))}
+        {nameField(shown, activity, Opt.isSome(maybeEntering), dispatch)}
+        {room(fridge(maybeEntering), scanFab(Opt.flatMap(controls, ({ maybeScan }) => maybeScan), dispatch))}
         {button(
           'Set expiration',
           Opt.flatMap(controls, ({ maybeRequestDate }) => maybeRequestDate),
@@ -411,9 +344,10 @@ const nameStep = (
           : button(
             'Add without date',
             Opt.flatMap(controls, ({ maybeAdd }) => maybeAdd),
-            (activity._tag === 'Adding' && activity.from === 'Form')
-              || (activity._tag === 'Editing' && activity.controls.acknowledging === 'Added')
+            activity._tag === 'Adding'
               ? 'Progress'
+              : activity._tag === 'Editing' && activity.controls.acknowledging === 'Added'
+              ? 'Acknowledging'
               : 'Label',
             'Text',
             dispatch,
@@ -618,7 +552,6 @@ const keypad = (activity: DateActivity, dispatch: Dispatch<Message>) => {
 const dateStep = (
   shown: DateShown,
   activity: DateActivity,
-  maybeJustAdded: Opt.Option<JustAdded>,
   dispatch: Dispatch<Message>,
 ) => {
   const controls = activity._tag === 'Editing' ? Opt.some(activity.controls) : Opt.none()
@@ -646,19 +579,24 @@ const dateStep = (
       <div props={{ className: cn('flex flex-1 flex-col gap-3', stepPadding) }}>
         <div props={{ className: 'flex flex-col px-4 pb-2' }}>
           <span props={{ className: 'text-label-medium text-on-surface-variant' }}>Product</span>
-          <h3 props={{ className: 'line-clamp-2 wrap-anywhere text-title-large' }}>{shown.name}</h3>
+          <h3
+            attrs={{ 'data-flies-from': 'DateHeading' }}
+            props={{ className: 'line-clamp-2 wrap-anywhere text-title-large' }}
+          >
+            {shown.name}
+          </h3>
         </div>
         {orderSegments(shown, activity, dispatch)}
         {dateField(shown, activity)}
         {strip(shown, activity, dispatch)}
-        {room(maybeJustAdded, dispatch, 'Nothing')}
+        {room()}
         <div props={{ className: 'rounded-extra-large bg-surface-container-low p-4' }}>
           {keypad(activity, dispatch)}
         </div>
         {button(
           'Add',
           Opt.flatMap(controls, ({ maybeAdd }) => maybeAdd),
-          activity._tag === 'Adding' && activity.from === 'Form' ? 'Progress' : 'Label',
+          activity._tag === 'Adding' ? 'Progress' : 'Label',
           'Filled',
           dispatch,
         )}
@@ -713,6 +651,130 @@ const scanner = (model: Model & { _tag: 'Scanning' }, dispatch: Dispatch<Message
 )
 
 /**
+ * A stylized fridge, in the primary's colors: the freezer's door on top, and the fridge's below it, hinged on the
+ * right, with the inside behind it. It is there only while a product enters it, in the middle of the first step's
+ * empty space, above the FAB, 96dp tall, smaller when the keyboard leaves less room: it appears
+ * as the letters gather, its door opens, the product is put inside, the door closes over it, the fridge settles,
+ * and it fades away. Keyed by the product, so that the next one plays it anew, over the one fading; the door turns
+ * in the inside's perspective, out of the fridge. Decoration: the announcement says what was added.
+ */
+const fridge = (maybeEntering: Opt.Option<Entering>) => (
+  <div
+    key='fridge'
+    props={{ className: 'pointer-events-none absolute inset-x-0 top-0 bottom-16 grid place-items-center' }}
+  >
+    {Opt.match(maybeEntering, {
+      onNone: () => [],
+      onSome: ({ product }) => [
+        <div
+          key={`fridge-${DateTime.toEpochMillis(product.creationDate)}`}
+          style={{
+            remove: {
+              opacity: '0',
+              transition: 'opacity var(--transition-duration-short-4) var(--ease-standard-accelerate)',
+            },
+          }}
+          attrs={{ 'aria-hidden': 'true' }}
+          props={{ className: 'fridge-visit col-start-1 row-start-1 flex aspect-5/8 h-24 max-h-full flex-col' }}
+        >
+          <div
+            props={{
+              className: 'relative h-1/3 shrink-0 rounded-t-small border-[1.5px] border-primary bg-primary-container',
+            }}
+          >
+            <span props={{ className: 'absolute top-2 left-2 h-4 w-1 rounded-full bg-on-primary-container' }} />
+          </div>
+          <div
+            props={{
+              className: cn(
+                'relative -mt-[1.5px] flex-1 rounded-b-small border-[1.5px] border-primary',
+                'bg-surface-container-highest perspective-near',
+              ),
+            }}
+          >
+            <div
+              attrs={{ 'data-fridge': true }}
+              props={{ className: 'absolute inset-0 flex items-center justify-center' }}
+            >
+              <span props={{ className: 'fridge-content material-symbols-rounded text-primary' }}>package_2</span>
+            </div>
+            <div
+              props={{
+                className: cn(
+                  'fridge-door absolute -inset-[1.5px] rounded-b-small border-[1.5px] border-primary',
+                  'bg-primary-container',
+                ),
+              }}
+            >
+              <span props={{ className: 'absolute top-3 left-2 h-6 w-1 rounded-full bg-on-primary-container' }} />
+            </div>
+          </div>
+        </div>,
+      ],
+    })}
+  </div>
+)
+
+/**
+ * The product added, entering the fridge: the letters of its name, laid over the name where it is written,
+ * gather into a package, which flies into the fridge on an arc that two elements make, one moving across and the
+ * other up or down. Keyed by the product: the next one's is a new element, and this one is dropped where it is.
+ */
+const enteringProduct = ({ product, from }: Entering) => (
+  <div
+    key={`entering-${DateTime.toEpochMillis(product.creationDate)}`}
+    hook={{ insert: gatherAndFly(`[data-flies-from="${from}"]`, '[data-fridge]') }}
+    attrs={{ 'aria-hidden': 'true' }}
+    props={{ className: 'absolute top-0 left-0' }}
+  >
+    <div
+      attrs={{ 'data-letters': true, dir: 'auto' }}
+      props={{ className: 'absolute flex items-center whitespace-pre text-on-surface' }}
+    >
+      {piecesOf(product.name).map((piece) => (
+        <span attrs={{ 'data-letter': true }} props={{ className: 'gather-letter shrink-0' }}>{piece}</span>
+      ))}
+    </div>
+    <div attrs={{ 'data-traveller': true }} props={{ className: 'traveller-x absolute h-6 w-6' }}>
+      <div props={{ className: 'traveller-y' }}>
+        <span props={{ className: 'pack-in material-symbols-rounded block text-primary' }}>package_2</span>
+      </div>
+    </div>
+  </div>
+)
+
+/**
+ * The product entering the fridge, over both steps and under the scanner. It takes no input: the controls under it
+ * stay pressable.
+ */
+const flightLayer = (maybeEntering: Opt.Option<Entering>) => (
+  <div key='flight' props={{ className: 'pointer-events-none absolute inset-0' }}>
+    {Opt.match(maybeEntering, { onNone: () => [], onSome: (entering) => [enteringProduct(entering)] })}
+  </div>
+)
+
+/**
+ * What a screen reader says once a product has been added, for which the fridge and the flight are decoration: its
+ * name and when it expires, as the list says it. A live region is announced when its text changes, so it is always
+ * there, empty while nothing is added.
+ */
+const announcement = (maybeEntering: Opt.Option<Entering>) => (
+  <div key='announcement' attrs={{ 'aria-live': 'polite' }} props={{ className: 'sr-only' }}>
+    {Opt.match(maybeEntering, {
+      onNone: () => [],
+      onSome: ({ product: { name, maybeExpirationDate } }) => [
+        `${name} added. ${
+          Opt.match(maybeExpirationDate, {
+            onNone: () => 'No expiration',
+            onSome: (date) => `Expires ${formatDay(date)}`,
+          })
+        }`,
+      ],
+    })}
+  </div>
+)
+
+/**
  * Material's full-screen dialog, as a page, in two steps: the name, which the scanner can read from a barcode,
  * and then, over it, the expiration date, typed on the keypad. It rises over the page that opened it, and sinks
  * back, letting nothing through while it does.
@@ -733,22 +795,40 @@ export const view: View<Model, Message> = (model, dispatch) => (
     props={{ className: 'fixed inset-0 z-70' }}
   >
     {Match.valueTags(model, {
-      Naming: (naming) => [nameStep(naming, { _tag: 'Editing', controls: naming }, naming.maybeJustAdded, dispatch)],
-      LookingUp: (lookingUp) => [nameStep(lookingUp, { _tag: 'LookingUp', controls: lookingUp }, Opt.none(), dispatch)],
+      Naming: (naming) => [
+        nameStep(naming, { _tag: 'Editing', controls: naming }, naming.maybeEntering, dispatch),
+        flightLayer(naming.maybeEntering),
+        announcement(naming.maybeEntering),
+      ],
+      LookingUp: (lookingUp) => [
+        nameStep(lookingUp, { _tag: 'LookingUp', controls: lookingUp }, Opt.none(), dispatch),
+        flightLayer(Opt.none()),
+        announcement(Opt.none()),
+      ],
       Scanning: (scanning) => [
         nameStep(scanning, { _tag: 'UnderScanner' }, Opt.none(), dispatch),
+        flightLayer(Opt.none()),
         scanner(scanning, dispatch),
+        announcement(Opt.none()),
       ],
       Dating: (dating) => [
-        nameStep(dating, { _tag: 'UnderDate' }, Opt.none(), dispatch),
-        dateStep(dating, { _tag: 'Editing', controls: dating }, dating.maybeJustAdded, dispatch),
+        nameStep(dating, { _tag: 'UnderDate' }, dating.maybeEntering, dispatch),
+        dateStep(dating, { _tag: 'Editing', controls: dating }, dispatch),
+        flightLayer(dating.maybeEntering),
+        announcement(dating.maybeEntering),
       ],
       Adding: (adding) =>
         Match.valueTags(adding.step, {
-          Naming: () => [nameStep(adding, { _tag: 'Adding', from: adding.from }, adding.maybeJustAdded, dispatch)],
+          Naming: () => [
+            nameStep(adding, { _tag: 'Adding' }, adding.maybeEntering, dispatch),
+            flightLayer(adding.maybeEntering),
+            announcement(adding.maybeEntering),
+          ],
           Dating: (date) => [
-            nameStep(adding, { _tag: 'UnderDate' }, Opt.none(), dispatch),
-            dateStep(date, { _tag: 'Adding', from: adding.from }, adding.maybeJustAdded, dispatch),
+            nameStep(adding, { _tag: 'UnderDate' }, adding.maybeEntering, dispatch),
+            dateStep(date, { _tag: 'Adding' }, dispatch),
+            flightLayer(adding.maybeEntering),
+            announcement(adding.maybeEntering),
           ],
         }),
     })}

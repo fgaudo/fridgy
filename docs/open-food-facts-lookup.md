@@ -75,8 +75,7 @@ On the first step of the page that adds products, after a scan:
 1. The scanner closes, the name field shows the barcode, and its supporting text (the line under the field,
    where "Camera not available. Type the name" goes) says `Looking up the product…`. Until the answer comes, the
    first step is blocked: the field is disabled, a circular progress indicator takes the place of its clear
-   button, "Set expiration" and the scanner's FAB are disabled, the snackbar of the product added last is
-   hidden, and a `Cancel` text button takes the place of "Add without date". The app bar's close button and the
+   button, "Set expiration" and the scanner's FAB are disabled, and a `Cancel` text button takes the place of "Add without date". The app bar's close button and the
    back button leave the page as always. `Cancel` stops the lookup: the barcode stays the name, with no
    supporting text, and the step works again. The lookup gives up after 5 seconds (step 4).
 2. **Known product**: the field is drawn anew with the product's name and focused; the supporting text says
@@ -143,7 +142,7 @@ found name). Every message that changes the name by any other way resets `lookup
   pending lookup, as wanted.
 - Every other message leaves `lookup` as it is: `Completed` keeps the name and so keeps `lookup` (after a
   product was added from a found name, the field still says it comes from Open Food Facts, which is true);
-  `BackPressed`, `DateRequested`, `DateDismissed`, `Started`, `Repeated` do not touch the name.
+  `BackPressed`, `DateRequested`, `DateDismissed`, `Started` do not touch the name.
 
 No new command: the lookup is a subscription.
 
@@ -632,8 +631,7 @@ Where the code departs from the design above:
   step's other messages while looking, instead of the view withholding them, and the subscription is keyed by
   the state's barcode. A key typed just before the scan leaves the state, as it drops the answer. Cancelling
   returns to `Naming`: the runtime interrupts the subscription, which aborts the request, and nothing it sent
-  reaches `update` afterwards, so no stale answer needs handling. The snackbar is hidden rather than shown
-  without its action: the scanner, which the lookup follows, hides it too.
+  reaches `update` afterwards, so no stale answer needs handling.
 - **The timeout is 5 seconds**, not 10: the user now waits on a blocked screen rather than typing meanwhile, and
   `Cancel` is there for a slower network.
 - `src/app/children/add-products/program.ts` grows past 800 lines and stays one program: its parts share one

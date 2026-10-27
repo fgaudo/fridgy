@@ -46,7 +46,7 @@ nothing is named). The model holds exactly what the view draws: a field no view 
   element that enters because something changed (a row added or put back), not because the page is drawn, gets
   its entrance from the model (Products' `presence`, `Arriving`; AddProducts' `acknowledging`), which the state keeps until a timer, running
   only while the page is on top, says it has been shown. An element keyed by what it shows (a snackbar, by its
-  product or its deletion) is replaced by the next one while it leaves, the two drawn at once in the same place: the model
+  deletion) is replaced by the next one while it leaves, the two drawn at once in the same place: the model
   says that the next comes after another (its `entrance`), and the view delays its entrance (`transitionDelay`)
   by the exit's duration, resetting the delay in `remove`. A list's rows leave the same way (`Leaving`), kept by
   the state where they were until they have closed their place: a row removed with a `remove` transition stays
@@ -78,6 +78,17 @@ Two choices, taken in this order: the first decides almost everything, the secon
   hook draws it, so the view stays pure and the program knows of no canvas. The canvas issues its commands
   from JavaScript, on the main thread, like any tick; WebGL only when 2D cannot. The two choices cross freely:
   a tick may move a `div` by `transform`, and a canvas drawn once may be moved by CSS.
+- A choreography of movements in sequence, the destination known at the start (AddProducts' name becoming a
+  product that flies into the fridge, whose door opens and closes over it), is `@keyframes` in `src/styles.css`,
+  each phase's delay a sum of the phases before it (named durations on `:root`, of the tokens), played by
+  utilities there on keyed elements that play them when inserted. Two animations of one property on one element
+  go in one utility, the later overriding the earlier from its delay on; an element that must pass behind another
+  is handed, at that moment, to a copy drawn there. Geometry the layout does not fix (where a text is and each of
+  its letters, where the fridge is) is measured once, in an `insert` hook (`gatherAndFly`, `#libs/tea-snabbdom`),
+  and given to the keyframes as custom properties: never on every frame, and never by the program, which learns
+  no numbers. Text animated by its letters is split with `piecesOf` (`#libs/strings/pieces.ts`), by word in a
+  script whose letters join. Under `prefers-reduced-motion` the movements become fades, in each utility's media
+  query.
 - A motion the program drives is a child of its own, drawn by its parent with `thunk`, so that a tick redraws
   only its subtree. Its durations are constants of the program, named after the tokens of `src/styles.css` they
   match, not numbers in the view. `prefers-reduced-motion` has a branch in both: a media query in CSS, a phase

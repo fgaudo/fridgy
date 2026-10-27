@@ -62,8 +62,8 @@ not a kind of program. The programs to copy are `src/app/children/home` and `src
   `Source<A, Done, E>` (`libs/source`), `Done` being `never` for one that never ends. Only on-going observation
   is a `Source`; a one-off read is an `Effect`.
 - **A page stays one program while its parts share one form and one submission** (`add-products`: the two
-  steps, the scanner, the snackbar), however long: the Guide's size for splitting yields to its rule that
-  children reading each other's state are one child.
+  steps, the scanner, the product entering the fridge), however long: the Guide's size for splitting yields to
+  its rule that children reading each other's state are one child.
 - **Hidden pages keep receiving their completions**, but their subscriptions run only while they are on top
   (`subscribed`, in the root).
 - **The back button is each page's, only while it has something to do with it.** A page observes the
