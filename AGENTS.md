@@ -15,10 +15,12 @@ for the task before starting it:
 | building for Android, upgrading Capacitor, releasing            | [`android-release`](.agents/skills/android-release/SKILL.md) |
 
 Before changing a program, read the "Guide" of the runtime, `node_modules/@fgaudo/effect-tea/README.md`: its
-rules (intents instead of toggles, one-shot actions moving to a state that rejects them, input never a reason
-to reject, an operation as a state that only its completion leaves, a model that shows less than `update`
-accepts, never more) are rules of this app, and are not repeated here. Never patch the library from here: a
-change to it is made in `github.com/fgaudo/effect-tea`, released and then upgraded to.
+rules (intents instead of toggles, an operation as a state that only its completion leaves, input never a
+reason to reject, a model that shows less than `update` accepts and never more, one state machine per concern
+with no derived data, a view that draws and never decides, `reject` for a message that may arrive and a defect
+for one that cannot, when a program splits into children and by what, how a program's tests are written) are
+rules of this app, and are not repeated here. Never patch the library from here: a change to it is made in
+`github.com/fgaudo/effect-tea`, released and then upgraded to.
 
 ## Language
 
@@ -48,41 +50,22 @@ it shows) and a child of a page are all such folders; "page" names a role in the
 not a kind of program. The programs to copy are `src/app/children/home` and `src/app/children/about`.
 
 - **Expected errors are typed, bugs crash.** Expected failures go through Effect's error channel
-  (`Effect.tryPromise`, `Effect.try`; no `try/catch`, no bare Promises): commands turn them into messages with
-  `Effect.match` and `Effect.asSome`, subscriptions with a message of their own. A violated invariant is a
-  defect (`Effect.die`, `defect(reason)` from `libs/defect`), never silenced, retried or turned into a message;
-  crash reporting goes around `run` (`Effect.tapCause`) and never recovers from it.
-- **`Tea.reject` is for a message that does not apply but may arrive** (a tap on a frame the state has moved
-  past). A message the invariants rule out (an operation's completion outside the state that only it leaves, a
-  subscription's message outside the states that list its key) is a defect: the tests skip those pairs of
-  state and message in `update`'s properties, and check them as defects.
-- **The model holds the messages, `update` decides.** The model is a union with a case per state the view
-  distinguishes, each holding only the messages of its controls, picked from the state as `update` reads it.
-  Views send only what the model holds, never a message they build.
-- **A view draws, it never decides.** A view matches the model's tags and formats its values (a date, a count,
-  a text): it computes no condition from data (`digits === ''`, `items.length === 0`), combines no fields,
-  applies no rule and no fallback. What a view would decide, `makeModel` decides, as a case named for the state
-  the screen distinguishes (`Undated | Naming | NamingNothing`, `Loading | Loaded`, never a boolean as a tag),
-  where a property test checks it for any state. An `Option` is such a union only when "missing" is all the
-  screen tells apart.
-- **State machines, no derived data.** One explicit state machine per concern (data, selection, form) instead
-  of shared flags. Values that depend on time are computed in `makeModel` from a `now` that a clock
-  subscription keeps in the state. Effects only in commands and subscriptions: `update`, `makeModel` and views
-  are pure; one global state, no local view state, no mutable singletons.
+  (`Effect.tryPromise`, `Effect.try`; no `try/catch`, no bare Promises), and a subscription's failure is a
+  message of its own. A violated invariant is a defect (`Effect.die`, or `defect(reason)` from `libs/defect`
+  where the Guide throws), never silenced, retried or turned into a message; crash reporting goes around `run`
+  (`Effect.tapCause`) and never recovers from it.
+- **The model holds the messages.** Of the two ways the Guide allows, this app's views send only what the model
+  holds, never a message they build: `Message` is exported as a type only.
+- **One global state, no local view state, no mutable singletons.** Effects only in commands and subscriptions:
+  `update`, `makeModel` and views are pure.
 - **A service says in its type how its data ends.** One value is an `Effect<A, E>`; values over time are a
   `Source<A, Done, E>` (`libs/source`), `Done` being `never` for one that never ends. Only on-going observation
   is a `Source`; a one-off read is an `Effect`.
-- **A program is split by concern, never by kind.** It lives in one module until it is too large (300–400
-  lines), then splits into children, each a program of its own. What spans the children stays in the parent;
-  what concerns one child, even how the user learns of its failure, stays in the child; children that read
-  each other's state are one child. The size yields to that: a page whose parts share one form and one
-  submission (`add-products`: the two steps, the scanner, the snackbar) stays one program, however long. Never
-  `messages`/`state`/`update` files: they would import each other in cycles.
-- **Children are declared, never wired; a child talks up through events.** A parent declares a child and the
-  library routes its messages, commands, subscriptions and models; a parent never reads a child's state to
-  decide, nor rejects its messages to hide it. What a child needs, it gets from its own services; only a fact
-  several children must see as one truth is the parent's, handed down as an `ExternalMessage`. Hidden pages
-  keep receiving their completions, but their subscriptions run only while they are on top.
+- **A page stays one program while its parts share one form and one submission** (`add-products`: the two
+  steps, the scanner, the snackbar), however long: the Guide's size for splitting yields to its rule that
+  children reading each other's state are one child.
+- **Hidden pages keep receiving their completions**, but their subscriptions run only while they are on top
+  (`subscribed`, in the root).
 - **The back button is each page's, only while it has something to do with it.** A page observes the
   platform's `BackButton` (`src/infrastructure/back-button`, the subscription keyed `back-button`) while it has
   something to close, or always, when a press asks its parent to leave it or must be held. The root knows
@@ -129,10 +112,8 @@ not a kind of program. The programs to copy are `src/app/children/home` and `src
   `test_support`): Biome lets only `*.test.ts` and other `*.test_*.ts` files import them, and `bun test` does
   not run them. Branded and domain types have a `*.test_arbitrary.ts` producing only valid values; generators
   are built from them, never from `*Unsafe` constructors.
-- Every program's `program.test.ts` checks that the real view sends only what `update` accepts, all of it, once
-  (`dispatchViolations`); the root's tests act like a user (`src/app/user.test_support.ts`, `rehearse`), over
-  a database in memory. Assert commands and events by value, rejections with `Tea.isRejected`, never as
-  "state unchanged". Generic helpers are in `libs/testing/`.
+- Every program's `program.test.ts` tests it as the Guide's "Testing" says, with the helpers of `libs/testing/`;
+  the root's tests act like a user (`src/app/user.test_support.ts`, `rehearse`), over a database in memory.
 - A service's contract (`<service>.test_contract.ts`) says what every adapter must do, and each adapter's test
   runs it. What a contract needs beyond its service comes from the adapter's test, through the storage itself:
   reads and writes that only tests need never go into a service.
