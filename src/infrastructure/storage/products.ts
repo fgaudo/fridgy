@@ -1,7 +1,8 @@
 // How products are written and read, for every adapter of the storage: how each column is encoded, the tables
-// as models, the repository of products, the insertion and the deletion of a product with its expiration, and
-// the join of a product to its expiration. What a query over them selects, filters and orders is the query's own.
+// as models, the repository of products, the insertion, the update and the deletion of a product with its
+// expiration, and the join of a product to its expiration. What a query over them selects, filters and orders is the query's own.
 import * as Context from 'effect/Context'
+import type * as DateTime from 'effect/DateTime'
 import * as Effect from 'effect/Effect'
 import { flow } from 'effect/Function'
 import * as Layer from 'effect/Layer'
@@ -9,6 +10,7 @@ import * as Opt from 'effect/Option'
 import * as Schema from 'effect/Schema'
 import * as SchemaX from 'effect/schema'
 import * as Sql from 'effect/sql'
+import * as SqlSchema from 'effect/sql/SqlSchema'
 import * as Integer from '#libs/numbers/integer.ts'
 import { ProductExpirationSchema, ProductSchema } from './schema.ts'
 
@@ -102,6 +104,59 @@ export class ProductStore extends Context.Service<ProductStore>()(
       const creationDate = sql(`${product_table}.${product.creationDate}`)
       const expirationDate = sql(`${expiration_table}.${expiration.date}`)
       const productId = sql(`${expiration_table}.${expiration.productId}`)
+      const updateRow = SqlSchema.findOneOption({
+        Request: Schema.Struct({
+          id: ProductColumns.id,
+          name: ProductColumns.name,
+          creationDate: ProductColumns.creationDate,
+        }),
+        Result: Schema.Struct({ id: ProductColumns.id }),
+        execute: (request) =>
+          sql`
+            UPDATE ${sql(product_table)}
+            SET ${sql(product.name)} = ${request.name}, ${sql(product.creationDate)} = ${request.creationDate}
+            WHERE ${sql(product.id)} = ${request.id}
+            RETURNING ${sql(product.id)} AS id
+          `,
+      })
+      // `product_id` is unique (`migrations.ts`): a product has one expiration at most.
+      const upsertExpiration = SqlSchema.void({
+        Request: Schema.Struct({ productId: ProductExpirationColumns.productId, date: ProductExpirationColumns.date }),
+        execute: (request) => {
+          const [date, productId] = [sql(expiration.date), sql(expiration.productId)]
+          return sql`
+            INSERT INTO ${sql(expiration_table)} (${date}, ${productId}) VALUES (${request.date}, ${request.productId})
+            ON CONFLICT (${productId}) DO UPDATE SET ${date} = excluded.${date}
+          `
+        },
+      })
+      const deleteExpiration = SqlSchema.void({
+        Request: ProductExpirationColumns.productId,
+        execute: (productId) =>
+          sql`DELETE FROM ${sql(expiration_table)} WHERE ${sql(expiration.productId)} = ${productId}`,
+      })
+      /**
+       * Writes a product under `id`, its expiration added, changed or removed with it, in one transaction; `None`
+       * when nothing is stored under `id`. Not the repository's `update`, which makes a missing row a defect: a
+       * product deleted since it was read is a state of the world.
+       */
+      const update = Effect.fn('ProductStore.update')(
+        function*(
+          id: Integer.Integer,
+          snapshot: Readonly<
+            { name: string; creationDate: DateTime.Utc; maybeExpirationDate: Opt.Option<DateTime.Utc> }
+          >,
+        ) {
+          const maybeUpdated = yield* updateRow({ id, name: snapshot.name, creationDate: snapshot.creationDate })
+          if (Opt.isNone(maybeUpdated)) return Opt.none<void>()
+          yield* Opt.match(snapshot.maybeExpirationDate, {
+            onNone: () => deleteExpiration(id),
+            onSome: (date) => upsertExpiration({ productId: id, date }),
+          })
+          return Opt.some<void>(undefined)
+        },
+        sql.withTransaction,
+      )
       /** Deletes a product; the schema's trigger deletes its expiration with it (`migrations.ts`). */
       const deleteById = (id: Integer.Integer) => repository.delete(id)
       /**
@@ -114,7 +169,7 @@ export class ProductStore extends Context.Service<ProductStore>()(
         columns: { id, name, creationDate, expirationDate },
         tables: [product_table, expiration_table],
       }
-      return { insert, deleteById, withExpiration }
+      return { insert, update, deleteById, withExpiration }
     }),
   },
 ) {

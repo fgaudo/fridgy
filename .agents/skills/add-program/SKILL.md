@@ -141,10 +141,12 @@ it to the subtree: written with the first such program.
 
 ## A page of the root
 
-Declare it in `src/app/program.ts` (`children`, `subscribed: shownPageState('<Page>')`, its events in
-`onEvent`, its model in `makeModel`), merge its layer in `src/app/layer.ts`, and add how a user reaches it to
-`src/app/user.test_support.ts`, where the root's tests pick each message from the shown page's model
-(`rehearse`). The root knows nothing of the back button: a page observes it while it has something to close,
+Declare it in `src/app/program.ts` (`children`, `page('<Page>')` for where it lives and when it listens, its
+events in `onEvent`, its model in `makeModel`), merge its layer in `src/app/layer.ts`, and add how a user reaches
+it to `src/app/user.test_support.ts`, where the root's tests pick each message from the shown page's model
+(`rehearse`). A page that cannot start the same way every time declares `flags` (`EditProduct`: the product
+tapped, and its id) and is started from them in `onEvent`, `show(state, '<Page>', children.<Page>.init(flags))`;
+what it starts from comes in the event that asks for it, never from another program's state. The root knows nothing of the back button: a page observes it while it has something to close,
 or always, when a press asks the parent to leave it.
 
 ## Moving files

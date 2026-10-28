@@ -96,6 +96,8 @@ export type Message = Data.TaggedEnum<{
   // From the view.
   ItemSelected: { id: string }
   ItemDeselected: { id: string }
+  /** A tap on a product while nothing is selected: opens it to be edited. */
+  EditRequested: { id: string }
   SelectionCleared: object
   DeleteStarted: object
   /** The snackbar's action: the products deleted last are stored again. */
@@ -123,11 +125,23 @@ export type Command = Data.TaggedEnum<{
 
 const Command = Data.taggedEnum<Command>()
 
-/** How a row looks, and what a long press on it does. */
+export type Event = Data.TaggedEnum<{
+  /** The product to edit, as the row shows it. */
+  EditRequested: { id: string; product: Domain.Product }
+}>
+
+const Event = Data.taggedEnum<Event>()
+
+/** How a row looks, and what a long press and a tap on it do. */
 export type ItemSelection = Readonly<{
   isSelected: boolean
   /** Selects the row, or deselects it; nothing while the selected products are being deleted. */
   maybeToggle: Opt.Option<Message>
+  /**
+   * Opens the product while nothing is selected, as Material's lists do; toggles the row once something is.
+   * Nothing on stored data that is not a product, while deleting, and on a row leaving.
+   */
+  maybeTap: Opt.Option<Message>
 }>
 
 /** How much of a product's life is left, from its creation to the end of its expiration day. */
@@ -433,14 +447,20 @@ const listModel = (state: State): ListModel => {
     return { _tag: 'Empty' }
   }
   const { selection, maybeNow } = state
-  // A row leaving is no longer a product of the list: it cannot be selected.
-  const itemSelectionOf = (id: string, presence: Presence): ItemSelection => {
+  // A row leaving is no longer a product of the list: it cannot be selected, nor opened.
+  const itemSelectionOf = (id: string, presence: Presence, isProduct: boolean): ItemSelection => {
     const isSelected = presence !== 'Leaving' && HashSet.has(selectedIds(selection), id)
+    const maybeToggle = selection._tag === 'Deleting' || presence === 'Leaving'
+      ? Opt.none()
+      : Opt.some(isSelected ? Message.ItemDeselected({ id }) : Message.ItemSelected({ id }))
     return {
       isSelected,
-      maybeToggle: selection._tag === 'Deleting' || presence === 'Leaving'
-        ? Opt.none()
-        : Opt.some(isSelected ? Message.ItemDeselected({ id }) : Message.ItemSelected({ id })),
+      maybeToggle,
+      maybeTap: selection._tag === 'Selecting'
+        ? maybeToggle
+        : selection._tag === 'Idle' && isProduct && presence !== 'Leaving'
+        ? Opt.some(Message.EditRequested({ id }))
+        : Opt.none(),
     }
   }
   // Until the clock has ticked, the products that expire have no status: the list waits for it.
@@ -448,12 +468,12 @@ const listModel = (state: State): ListModel => {
     Match.valueTags(item, {
       Corrupt: ({ maybeName }): Opt.Option<ProductModel> => Opt.some({ _tag: 'Corrupt', maybeName }),
       Invalid: ({ id, maybeName }): Opt.Option<ProductModel> =>
-        Opt.some({ _tag: 'Invalid', id, selection: itemSelectionOf(id, presence), presence, maybeName }),
+        Opt.some({ _tag: 'Invalid', id, selection: itemSelectionOf(id, presence, false), presence, maybeName }),
       Valid: ({ id, product }): Opt.Option<ProductModel> =>
         Opt.map(maybeStatusAt(maybeNow, product), (status) => ({
           _tag: 'Valid',
           id,
-          selection: itemSelectionOf(id, presence),
+          selection: itemSelectionOf(id, presence, true),
           presence,
           name: product.name,
           status,
@@ -487,6 +507,7 @@ export const program: Tea.Program<{
   message: Message
   command: Command
   services: Deps
+  event: Event
 }> = {
   init: {
     state: {
@@ -497,7 +518,7 @@ export const program: Tea.Program<{
     },
   },
 
-  update: Match.typeTags<Message, (state: State) => Tea.Transition<State, Command>>()({
+  update: Match.typeTags<Message, (state: State) => Tea.Transition<State, Command, Event>>()({
     ListChanged: ({ result }) => (state) => {
       const list: State['list'] = Result.match(result, {
         onFailure: () => ({ _tag: 'Failed' }),
@@ -548,6 +569,22 @@ export const program: Tea.Program<{
     ItemDeselected: ({ id }) => (state) =>
       state.list._tag === 'Loaded' && state.selection._tag === 'Selecting' && HashSet.has(state.selection.ids, id)
         ? { state: { ...state, selection: selectionOf(HashSet.remove(state.selection.ids, id)) } }
+        : Tea.reject,
+
+    // Only a product of the list, while nothing is selected or deleted. The product goes with the event, as the
+    // row shows it, so that no parent reads the list.
+    EditRequested: ({ id }) => (state) =>
+      state.list._tag === 'Loaded' && state.selection._tag === 'Idle'
+        ? Opt.match(
+          Arr.findFirst(
+            state.list.items,
+            (item): item is Data.TaggedEnum.Value<Product, 'Valid'> => item._tag === 'Valid' && item.id === id,
+          ),
+          {
+            onNone: () => Tea.reject,
+            onSome: ({ product }) => ({ state, events: [Event.EditRequested({ id, product })] }),
+          },
+        )
         : Tea.reject,
 
     SelectionCleared: () => (state) =>

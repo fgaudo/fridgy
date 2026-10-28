@@ -63,6 +63,20 @@ const readingsOf = (digits: string, today: DateTime.Utc, order: DateOrder): Read
   )
 
 /**
+ * The digits that name `date` alone in `order`: a date's longest form, a day and a month of two digits each and a
+ * year of four (`DDMMYYYY` in `DMY`). Eight digits name one day at most (see `datesOf`).
+ */
+export const digitsOf = (date: DateTime.Utc, order: DateOrder): string => {
+  const { year, month, day } = DateTime.toPartsUtc(date)
+  const fields: Readonly<Record<Field, string>> = {
+    day: String(day).padStart(2, '0'),
+    month: String(month).padStart(2, '0'),
+    year: String(year).padStart(4, '0'),
+  }
+  return fieldsIn[order].map((field) => fields[field]).join('')
+}
+
+/**
  * The days that `digits`, typed with no separators in `order`, can name: a day and a month of one or two digits
  * each, and no year, two digits (this century) or four, the year last or first as `order` says. With no year,
  * the day is the next one on or after `today`. The days start at midnight, in UTC, and are sorted, without

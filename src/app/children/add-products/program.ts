@@ -16,14 +16,16 @@ import * as Product from '#domain/product.ts'
 import { BackButton } from '#infrastructure/back-button/back-button.ts'
 import { Notifications } from '#infrastructure/notifications/notifications.ts'
 import * as DateOrder from '#libs/dates/date-order.ts'
-import * as DigitDates from '#libs/dates/digit-dates.ts'
+import * as DigitDateEntry from '#libs/dates/digit-date-entry.ts'
 import { defect } from '#libs/defect/defect.ts'
 import * as AddProducts from './services/add-products/add-products.ts'
 import { DateOrderSetting } from './services/date-order-setting/date-order-setting.ts'
 import { type FoundProduct, ProductLookup } from './services/product-lookup/product-lookup.ts'
 import { Scanner } from './services/scanner/scanner.ts'
 
-export type Digit = '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9'
+export type { Digit } from '#libs/dates/digit-date-entry.ts'
+
+type Digit = DigitDateEntry.Digit
 
 /** Asked once per visit of the page. `Unavailable` also once the camera has failed: it is not tried again. */
 export type Camera = 'Checking' | 'Available' | 'Unavailable'
@@ -66,12 +68,7 @@ export type Form = Readonly<{
 export type Acknowledging = Readonly<{ product: Product.Product; by: 'NameButton' | 'DateButton' }>
 
 /** The expiration date being typed: it exists only in the second step, and starts anew with each. */
-export type DateForm = Readonly<{
-  /** Typed on the keypad, at most `DigitDates.MAX_DIGITS`. */
-  digits: string
-  /** The day picked among those the digits name, until a digit is typed, erased or cleared. */
-  maybeChosenDate: Opt.Option<DateTime.Utc>
-}>
+export type DateForm = DigitDateEntry.Entry
 
 /** The step a product is being added from, to come back to. */
 export type Step = Data.TaggedEnum<{
@@ -278,11 +275,6 @@ const hasName = (form: Form) => Opt.exists(form.maybeName, (name) => name !== ''
 
 const withForm = (state: State, change: (form: Form) => Form): State => ({ ...state, form: change(state.form) })
 
-const withDate = (state: State & { _tag: 'Dating' }, change: (date: DateForm) => DateForm): State => ({
-  ...state,
-  date: change(state.date),
-})
-
 const stepOf = (state: State & { _tag: 'Naming' | 'Dating' }): Step =>
   state._tag === 'Naming' ? { _tag: 'Naming' } : { _tag: 'Dating', date: state.date }
 
@@ -290,14 +282,11 @@ const resume = (step: Step, form: Form): State =>
   step._tag === 'Naming' ? { _tag: 'Naming', form } : { _tag: 'Dating', form, date: step.date }
 
 /** The days the digits name, read in the order in use, on which a product added now may expire. */
-const datesOf = (form: Form, date: DateForm): ReadonlyArray<DateTime.Utc> =>
+const offeredDates = (form: Form, date: DateForm): ReadonlyArray<DateTime.Utc> =>
   Opt.match(Opt.all([form.maybeNow, form.maybeOrder]), {
     onNone: () => [],
-    onSome: ([now, order]) => DigitDates.datesOf(date.digits, now, order).filter(Product.canExpireOn(now)),
+    onSome: ([now, order]) => DigitDateEntry.offered(date, now, order, Product.canExpireOn(now)),
   })
-
-const isAmong = (dates: ReadonlyArray<DateTime.Utc>) => (date: DateTime.Utc) =>
-  dates.some((offered) => DateTime.Equivalence(offered, date))
 
 /** The first brand, then the name, unless the name already says the brand. The quantity is left out. */
 const composeName = ({ name, maybeBrand }: FoundProduct): string =>
@@ -307,13 +296,20 @@ const composeName = ({ name, maybeBrand }: FoundProduct): string =>
   })
 
 /** The day the digits name: the one picked, while they still name it, or else the only one they name. */
-const maybeNamedDate = (form: Form, date: DateForm): Opt.Option<DateTime.Utc> => {
-  const offered = datesOf(form, date)
-  return Opt.orElse(
-    Opt.filter(date.maybeChosenDate, isAmong(offered)),
-    () => offered.length === 1 ? Arr.head(offered) : Opt.none(),
-  )
-}
+const maybeNamedDate = (form: Form, date: DateForm): Opt.Option<DateTime.Utc> =>
+  DigitDateEntry.named(date, offeredDates(form, date))
+
+/** The second step with its date changed by a key, or rejected when the key does not apply. */
+const keyed = (
+  state: State,
+  key: (form: Form, date: DateForm) => Opt.Option<DateForm>,
+): Tea.Transition<State, Command, Event> =>
+  state._tag === 'Dating'
+    ? Opt.match(key(state.form, state.date), {
+      onNone: () => Tea.reject,
+      onSome: (date) => ({ state: { ...state, date } }),
+    })
+    : Tea.reject
 
 const productOf = (form: Form, maybeExpirationDate: Opt.Option<DateTime.Utc>) =>
   Opt.flatMap(
@@ -513,38 +509,20 @@ export const program: Tea.Program<{
     // The date is the product's: only a name that is one goes on to it.
     DateRequested: () => (state) =>
       state._tag === 'Naming' && Opt.isSome(productOf(state.form, Opt.none()))
-        ? { state: { _tag: 'Dating', form: state.form, date: { digits: '', maybeChosenDate: Opt.none() } } }
+        ? { state: { _tag: 'Dating', form: state.form, date: DigitDateEntry.empty } }
         : Tea.reject,
 
     DateDismissed: () => (state) =>
       state._tag === 'Dating' ? { state: { _tag: 'Naming', form: state.form } } : Tea.reject,
 
-    // New digits name other days: the day picked goes with the old ones.
-    DigitTyped: ({ digit }) => (state) =>
-      state._tag === 'Dating' && state.date.digits.length < DigitDates.MAX_DIGITS
-        ? {
-          state: withDate(state, (date) => ({ digits: date.digits + digit, maybeChosenDate: Opt.none() })),
-        }
-        : Tea.reject,
+    DigitTyped: ({ digit }) => (state) => keyed(state, (_, date) => DigitDateEntry.typeDigit(digit)(date)),
 
-    DigitErased: () => (state) =>
-      state._tag === 'Dating' && state.date.digits !== ''
-        ? {
-          state: withDate(state, (date) => ({ digits: date.digits.slice(0, -1), maybeChosenDate: Opt.none() })),
-        }
-        : Tea.reject,
+    DigitErased: () => (state) => keyed(state, (_, date) => DigitDateEntry.eraseDigit(date)),
 
-    DateCleared: () => (state) =>
-      state._tag === 'Dating' && state.date.digits !== ''
-        ? { state: withDate(state, () => ({ digits: '', maybeChosenDate: Opt.none() })) }
-        : Tea.reject,
+    DateCleared: () => (state) => keyed(state, (_, date) => DigitDateEntry.clear(date)),
 
-    // Only a day the digits name, and not the one the form already names: a tap on the chosen chip does nothing.
     DateChosen: ({ date }) => (state) =>
-      state._tag === 'Dating' && isAmong(datesOf(state.form, state.date))(date)
-        && !Opt.contains(maybeNamedDate(state.form, state.date), date)
-        ? { state: withDate(state, (typed) => ({ ...typed, maybeChosenDate: Opt.some(date) })) }
-        : Tea.reject,
+      keyed(state, (form, typed) => DigitDateEntry.choose(date, offeredDates(form, typed))(typed)),
 
     // Only another order than the one in use, once it is known: a tap on the selected segment does nothing. The
     // order applies at once, and is kept for the dates to come: the setting then reports it back, unchanged.
@@ -721,7 +699,7 @@ export const program: Tea.Program<{
       maybePick: (order: DateOrder.DateOrder) => Opt.Option<Message>,
     ): DateShown => {
       const maybeNamed = maybeNamedDate(form, date)
-      const choices = datesOf(form, date).map((day): DateChoice => ({
+      const choices = offeredDates(form, date).map((day): DateChoice => ({
         date: day,
         choice: Opt.contains(maybeNamed, day) ? { _tag: 'Chosen' } : { _tag: 'Offered', maybeChoose: maybeChoose(day) },
       }))
@@ -788,11 +766,13 @@ export const program: Tea.Program<{
             (order) => Opt.some(Message.OrderPicked({ order })),
           ),
           back: Message.DateDismissed(),
-          maybeTypeDigit: date.digits.length < DigitDates.MAX_DIGITS
-            ? Opt.some((digit: Digit) => Message.DigitTyped({ digit }))
-            : Opt.none(),
-          maybeEraseDigit: date.digits !== '' ? Opt.some(Message.DigitErased()) : Opt.none(),
-          maybeClearDate: date.digits !== '' ? Opt.some(Message.DateCleared()) : Opt.none(),
+          // A key is there exactly where its rule applies: every digit applies, or none does.
+          maybeTypeDigit: Opt.map(
+            DigitDateEntry.typeDigit('0')(date),
+            () => (digit: Digit) => Message.DigitTyped({ digit }),
+          ),
+          maybeEraseDigit: Opt.map(DigitDateEntry.eraseDigit(date), () => Message.DigitErased()),
+          maybeClearDate: Opt.map(DigitDateEntry.clear(date), () => Message.DateCleared()),
           maybeAdd: Opt.map(productOfStep(dating), () => Message.Started()),
           maybeEntering,
         }

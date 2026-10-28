@@ -48,6 +48,18 @@ upgrade of a dependency can raise what the app needs without a change in `src/`.
 statically: the check is the emulator on that exact WebView, before a release and after an upgrade of
 Capacitor, Effect, Tailwind or `@effect/wa-sqlite`.
 
+## Supported screen sizes
+
+The pages are laid out for a screen at least **320dp wide**, Android's "normal" bucket and the narrowest phone
+still made, and for **no height at all**: the keyboard, the user's "Font size" and "Display size" settings (up to
+200% of text) and split-screen shorten any phone's viewport, so a page's column scrolls when the screen is shorter
+than its content (the steps of `add-products`, the page that edits a product) instead of docking anything out of
+reach. The manifest declares the width (`<supports-screens android:requiresSmallestWidthDp="320" />`), which
+only the Play Store reads, to hide the app from narrower devices: an APK installs anywhere, and today no phone is
+narrower. Every page is checked at that size before a release: in the emulator on the Nexus S image (480×800 hdpi,
+320×533dp), with the font at 200% in the system settings and with the keyboard open on each field. The width
+moves only as the versions above do: checked in the emulator first, with `README.md`, `AGENTS.md` and this file.
+
 ### The emulator on the lowest WebView
 
 1. Download Android System WebView `minWebViewVersion` (e.g. `114.0.5735.196`) from APKMirror,

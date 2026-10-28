@@ -8,5 +8,5 @@ import { productListContract } from './product-list.test_contract.ts'
 productListContract(
   'sqlite',
   () => ProductListSql.layer.pipe(Layer.provideMerge(ProductStore.layer), Layer.provideMerge(SqliteMemory.layer)),
-  { insert: StoredProducts.insert, remove: StoredProducts.remove },
+  { insert: StoredProducts.insert, update: StoredProducts.update, remove: StoredProducts.remove },
 )

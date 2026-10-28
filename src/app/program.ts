@@ -9,11 +9,13 @@ import * as Opt from 'effect/Option'
 import { defect } from '#libs/defect/defect.ts'
 import * as About from './children/about/program.ts'
 import * as AddProducts from './children/add-products/program.ts'
+import * as EditProduct from './children/edit-product/program.ts'
 import * as Home from './children/home/program.ts'
 
 export type Page = Data.TaggedEnum<{
   Home: Readonly<{ state: Home.State }>
   AddProducts: Readonly<{ state: AddProducts.State }>
+  EditProduct: Readonly<{ state: EditProduct.State }>
   About: Readonly<{ state: About.State }>
 }>
 
@@ -24,13 +26,14 @@ export type State = Readonly<{
   stack: Arr.NonEmptyReadonlyArray<Page>
 }>
 
-export type Deps = Home.Deps | AddProducts.Deps | About.Deps
+export type Deps = Home.Deps | AddProducts.Deps | EditProduct.Deps | About.Deps
 
 /** Only the page on top is drawn. */
 export type Model = Readonly<{
   page: Data.TaggedEnum<{
     Home: { model: Home.Model }
     AddProducts: { model: AddProducts.Model }
+    EditProduct: { model: EditProduct.Model }
     About: { model: About.Model }
   }>
 }>
@@ -100,6 +103,7 @@ export const program = compose({
   children: {
     Home: child(Home.program, page('Home')),
     AddProducts: child(AddProducts.program, page('AddProducts')),
+    EditProduct: child(EditProduct.program, page('EditProduct')),
     About: child(About.program, page('About')),
   },
   onEvent: {
@@ -107,14 +111,17 @@ export const program = compose({
       Match.valueTags(event, {
         InfoRequested: () => show(state, 'About', children.About.init),
         AddRequested: () => show(state, 'AddProducts', children.AddProducts.init),
+        EditRequested: ({ id, product }) => show(state, 'EditProduct', children.EditProduct.init({ id, product })),
       }),
     AddProducts: () => leave('AddProducts'),
+    EditProduct: () => leave('EditProduct'),
     About: () => leave('About'),
   },
   makeModel: (state, children): Model => ({
     page: Match.valueTags(top(state), {
       Home: () => PageModel.Home({ model: children.Home(state) }),
       AddProducts: () => PageModel.AddProducts({ model: children.AddProducts(state) }),
+      EditProduct: () => PageModel.EditProduct({ model: children.EditProduct(state) }),
       About: () => PageModel.About({ model: children.About(state) }),
     }),
   }),

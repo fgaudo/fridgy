@@ -1,0 +1,534 @@
+import { describe, expect, test } from 'bun:test'
+import * as Tea from '@fgaudo/effect-tea'
+import { dispatchViolations } from '@fgaudo/effect-tea/testing'
+import * as Data from 'effect/Data'
+import * as DateTime from 'effect/DateTime'
+import * as Equal from 'effect/Equal'
+import * as HashMap from 'effect/HashMap'
+import * as Opt from 'effect/Option'
+import * as fc from 'fast-check'
+import * as Product from '#domain/product.ts'
+import { arbitrary as order } from '#libs/dates/date-order.test_arbitrary.ts'
+import * as DateOrder from '#libs/dates/date-order.ts'
+import * as DigitDateEntry from '#libs/dates/digit-date-entry.ts'
+import * as DigitDates from '#libs/dates/digit-dates.ts'
+import { messagesSentBy } from '#libs/tea-snabbdom/view.test_support.ts'
+import { utc } from '#libs/testing/date-time.test_arbitrary.ts'
+import { assertProperty, outcomesOf } from '#libs/testing/update.test_support.ts'
+import { digit, editing, loading, message, outcome, saving, state } from './program.test_arbitrary.ts'
+import {
+  type Command,
+  type Digit,
+  type Event,
+  type Form,
+  type Message,
+  type Model,
+  program,
+  type State,
+} from './program.ts'
+import { view } from './view.tsx'
+
+const Msg = Data.taggedEnum<Message>()
+const Cmd = Data.taggedEnum<Command>()
+const Ev = Data.taggedEnum<Event>()
+
+const { outcome: outcomeOf, rejects, step } = outcomesOf(program.update)
+
+const { makeModel } = program
+
+const digits: ReadonlyArray<Digit> = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
+
+/** The entry the fields show: the stored date's digits in the order in use until a key is pressed. */
+const entryShown = (form: Form): DigitDateEntry.Entry =>
+  form.date._tag === 'Typed'
+    ? form.date.entry
+    : {
+      digits: Opt.match(form.original.maybeExpirationDate, {
+        onNone: () => '',
+        onSome: (date) => DigitDates.digitsOf(date, form.order),
+      }),
+      maybeChosenDate: Opt.none(),
+    }
+
+/** The days the page offers: those the digits name, from the day the product was created on. */
+const offeredDates = (form: Form) =>
+  DigitDateEntry.offered(entryShown(form), form.now, form.order, Product.canExpireOn(form.original.creationDate))
+
+/** The product the fields describe: the stored date while untouched, none on no digits, or the day named. */
+const productOf = (form: Form): Opt.Option<Product.Product> => {
+  const maybeExpiration = form.date._tag === 'Kept'
+    ? Opt.some(form.original.maybeExpirationDate)
+    : form.date.entry.digits === ''
+    ? Opt.some(Opt.none())
+    : Opt.map(DigitDateEntry.named(form.date.entry, offeredDates(form)), Opt.some)
+  return Opt.flatMap(
+    maybeExpiration,
+    (maybeExpirationDate) =>
+      Product.make({ name: form.name, creationDate: form.original.creationDate, maybeExpirationDate }),
+  )
+}
+
+const dayOf = (date: DateTime.Utc) => DateTime.formatIsoDateUtc(date)
+
+/** The product "Save" writes: the one the fields describe, when it differs from the stored one by its name or day. */
+const savedProduct = (form: Form) =>
+  Opt.filter(productOf(form), (product) =>
+    product.name !== form.original.name
+    || !Equal.equals(
+      Opt.map(product.maybeExpirationDate, dayOf),
+      Opt.map(form.original.maybeExpirationDate, dayOf),
+    ))
+
+const withForm = (state: State & { _tag: 'Editing' | 'Saving' }, change: Partial<Form>): State => ({
+  ...state,
+  form: { ...state.form, ...change },
+})
+
+/** A completion while nothing is being saved, or an order kept before any was picked. */
+const cannotArrive = (msg: Message, before: State) =>
+  (msg._tag === 'Saved' && before._tag !== 'Saving') || (msg._tag === 'OrderKept' && before._tag === 'Loading')
+
+const notEditing = fc.oneof(loading, saving)
+
+describe('EditProduct update', () => {
+  test('is total and deterministic, but for a message that cannot arrive', () => {
+    assertProperty([state, message], (before, msg) => {
+      fc.pre(!cannotArrive(msg, before))
+      return Equal.equals(outcomeOf(msg, before), outcomeOf(msg, before))
+    })
+  })
+
+  test('a message that cannot arrive is a defect', () => {
+    assertProperty([state, message], (before, msg) => {
+      fc.pre(cannotArrive(msg, before))
+      expect(() => program.update(msg)(before)).toThrow()
+      return true
+    })
+  })
+
+  // The digit keys and the backspace are meant to repeat; a second press of the close button is ignored by the
+  // parent, once the page is gone. The name's input is disabled while saving.
+  test('the view sends what update accepts, all of it, and acts once when sent twice', () => {
+    const check = dispatchViolations(program.update, {
+      repeatable: (msg) => msg._tag === 'DigitTyped' || msg._tag === 'DigitErased' || msg._tag === 'Closed',
+      withheld: (msg, state) => msg._tag === 'NameChanged' && state._tag === 'Saving',
+    })
+    fc.assert(fc.property(state, fc.string(), utc, (before, inputValue, date) => {
+      const offered = before._tag === 'Loading' ? [] : offeredDates(before.form)
+      const askable = [
+        Msg.NameChanged({ name: inputValue }),
+        Msg.NameCleared(),
+        ...digits.map((digit) => Msg.DigitTyped({ digit })),
+        Msg.DigitErased(),
+        Msg.DateCleared(),
+        ...[date, ...offered].map((day) => Msg.DateChosen({ date: day })),
+        ...DateOrder.all.map((order) => Msg.OrderPicked({ order })),
+        Msg.SaveStarted(),
+        Msg.Closed(),
+      ]
+      expect(check(before, messagesSentBy<Model, Message>(view, makeModel(before), inputValue), askable)).toEqual([])
+    }))
+  })
+
+  test('NameChanged keeps the name as typed, while saving too, and is rejected while loading', () => {
+    assertProperty([state, fc.string()], (before, name) =>
+      before._tag === 'Loading'
+        ? rejects(Msg.NameChanged({ name }), before)
+        : Equal.equals(step(Msg.NameChanged({ name }), before), {
+          rejected: false,
+          after: withForm(before, { name }),
+          commands: [],
+          events: [],
+        }))
+  })
+
+  test('NameCleared empties the name, drawing the input anew, and is rejected with no name or off the form', () => {
+    assertProperty([state], (before) =>
+      before._tag === 'Editing' && before.form.name !== ''
+        ? Equal.equals(step(Msg.NameCleared(), before), {
+          rejected: false,
+          after: withForm(before, { name: '', replacements: before.form.replacements + 1 }),
+          commands: [],
+          events: [],
+        })
+        : rejects(Msg.NameCleared(), before))
+  })
+
+  describe('the keypad', () => {
+    /** The form after a key, by its rule on the entry shown: rejected where the rule does not apply. */
+    const acts = (
+      before: State & { _tag: 'Editing' },
+      msg: Message,
+      rule: (entry: DigitDateEntry.Entry) => Opt.Option<DigitDateEntry.Entry>,
+    ) =>
+      Opt.match(rule(entryShown(before.form)), {
+        onNone: () => rejects(msg, before),
+        onSome: (entry) => Equal.equals(step(msg, before).after, withForm(before, { date: { _tag: 'Typed', entry } })),
+      })
+
+    test('types, erases and clears the digits shown, the stored date\'s at first, as the rules say', () => {
+      assertProperty(
+        [editing, digit],
+        (before, typed) =>
+          acts(before, Msg.DigitTyped({ digit: typed }), DigitDateEntry.typeDigit(typed))
+          && acts(before, Msg.DigitErased(), DigitDateEntry.eraseDigit)
+          && acts(before, Msg.DateCleared(), DigitDateEntry.clear),
+      )
+    })
+
+    test('picks a day the digits name, unless it is the one named, and is rejected on any other', () => {
+      assertProperty(
+        [editing, utc],
+        (before, other) =>
+          [...offeredDates(before.form), other].every((date) =>
+            acts(before, Msg.DateChosen({ date }), DigitDateEntry.choose(date, offeredDates(before.form)))
+          ),
+      )
+    })
+
+    // A stored date is a date's longest: its digits take no more.
+    test('a digit on the untouched stored date is rejected; the backspace erases its last digit', () => {
+      assertProperty([editing, digit], (before, typed) => {
+        fc.pre(before.form.date._tag === 'Kept' && Opt.isSome(before.form.original.maybeExpirationDate))
+        const digits = entryShown(before.form).digits
+        return rejects(Msg.DigitTyped({ digit: typed }), before)
+          && Equal.equals(
+            step(Msg.DigitErased(), before).after,
+            withForm(before, {
+              date: { _tag: 'Typed', entry: { digits: digits.slice(0, -1), maybeChosenDate: Opt.none() } },
+            }),
+          )
+      })
+    })
+
+    test('is rejected while loading and while saving', () => {
+      assertProperty(
+        [notEditing, digit, utc],
+        (before, typed, date) =>
+          rejects(Msg.DigitTyped({ digit: typed }), before) && rejects(Msg.DigitErased(), before)
+          && rejects(Msg.DateCleared(), before) && rejects(Msg.DateChosen({ date }), before),
+      )
+    })
+  })
+
+  // The pick applies at once, and is kept in the setting, which reports it back.
+  test('OrderPicked takes another order than the one in use and keeps it, and is rejected otherwise', () => {
+    assertProperty([state, order], (before, picked) =>
+      before._tag === 'Editing' && before.form.order !== picked
+        ? Equal.equals(step(Msg.OrderPicked({ order: picked }), before), {
+          rejected: false,
+          after: withForm(before, { order: picked }),
+          commands: [Cmd.KeepOrder({ order: picked })],
+          events: [],
+        })
+        : rejects(Msg.OrderPicked({ order: picked }), before))
+  })
+
+  test('SaveStarted saves the product the fields describe, once it differs from the stored one, and is rejected otherwise', () => {
+    assertProperty([state], (before) => {
+      if (before._tag !== 'Editing') return rejects(Msg.SaveStarted(), before)
+      return Opt.match(savedProduct(before.form), {
+        onNone: () => rejects(Msg.SaveStarted(), before),
+        onSome: (product) =>
+          Equal.equals(step(Msg.SaveStarted(), before), {
+            rejected: false,
+            after: { _tag: 'Saving', form: before.form, product },
+            commands: [Cmd.Save({ id: before.form.id, product })],
+            events: [],
+          }) && DateTime.Equivalence(product.creationDate, before.form.original.creationDate),
+      })
+    })
+  })
+
+  test('Closed asks the parent to leave the page, the changes discarded, and is rejected while saving', () => {
+    assertProperty([state], (before) =>
+      before._tag === 'Saving'
+        ? rejects(Msg.Closed(), before)
+        : Equal.equals(step(Msg.Closed(), before), {
+          rejected: false,
+          after: before,
+          commands: [],
+          events: [Ev.LeaveRequested()],
+        }))
+  })
+
+  test('BackPressed asks the parent to leave the page, and is held while saving', () => {
+    assertProperty([state], (before) =>
+      Equal.equals(step(Msg.BackPressed(), before), {
+        rejected: false,
+        after: before,
+        commands: [],
+        events: before._tag === 'Saving' ? [] : [Ev.LeaveRequested()],
+      }))
+  })
+
+  describe('the time and the order', () => {
+    test('are kept by the form, in the order\'s case with the stored date shown in it', () => {
+      assertProperty(
+        [fc.oneof(editing, saving), utc, order],
+        (before, now, order) =>
+          Equal.equals(step(Msg.TimeChanged({ now }), before).after, withForm(before, { now }))
+          && Equal.equals(step(Msg.OrderChanged({ order }), before).after, withForm(before, { order })),
+      )
+    })
+
+    test('end the loading once both are known, with the stored product in the fields', () => {
+      assertProperty([loading, utc, order], (before, now, order) => {
+        const afterTime = step(Msg.TimeChanged({ now }), before).after
+        const afterOrder = step(Msg.OrderChanged({ order }), before).after
+        const form: Omit<Form, 'now' | 'order'> = {
+          id: before.id,
+          original: before.original,
+          name: before.original.name,
+          replacements: 0,
+          date: { _tag: 'Kept' },
+        }
+        return Equal.equals(
+          afterTime,
+          Opt.match(before.maybeOrder, {
+            onNone: () => ({ ...before, maybeNow: Opt.some(now) }),
+            onSome: (order) => ({ _tag: 'Editing', form: { ...form, now, order } }),
+          }),
+        )
+          && Equal.equals(
+            afterOrder,
+            Opt.match(before.maybeNow, {
+              onNone: () => ({ ...before, maybeOrder: Opt.some(order) }),
+              onSome: (now) => ({ _tag: 'Editing', form: { ...form, now, order } }),
+            }),
+          )
+      })
+    })
+  })
+
+  test('OrderKept changes nothing, and says so with a toast when the order could not be kept', () => {
+    assertProperty(
+      [fc.oneof(editing, saving), fc.boolean()],
+      (before, succeeded) =>
+        Equal.equals(step(Msg.OrderKept({ succeeded }), before), {
+          rejected: false,
+          after: before,
+          commands: succeeded ? [] : [Cmd.ShowToast({ text: 'Couldn\'t save the date order' })],
+          events: [],
+        }),
+    )
+  })
+
+  test('Saved gives the form back, and leaves the page once saved, or once the product is gone, with a toast on a failure', () => {
+    assertProperty([saving, outcome], (before, outcome) => {
+      const expected = {
+        Saved: { commands: [], events: [Ev.LeaveRequested()] },
+        Failed: { commands: [Cmd.ShowToast({ text: 'Couldn\'t save the product' })], events: [] },
+        Gone: {
+          commands: [Cmd.ShowToast({ text: 'This product no longer exists' })],
+          events: [Ev.LeaveRequested()],
+        },
+      }[outcome]
+      return Equal.equals(step(Msg.Saved({ outcome }), before), {
+        rejected: false,
+        after: { _tag: 'Editing', form: before.form },
+        ...expected,
+      })
+    })
+  })
+})
+
+test('the page listens to the clock, the date order and the back button, in every state', () => {
+  assertProperty([state], (s) => {
+    const subscriptions = Tea.subscriptionsOf(program)(s)
+    return HashMap.size(subscriptions) === 3 && HashMap.has(subscriptions, 'clock')
+      && HashMap.has(subscriptions, 'date-order') && HashMap.has(subscriptions, 'back-button')
+  })
+})
+
+// Guards against the properties above passing only on rejections.
+test('the arbitrary forms describe a product to save at times, and at times not, with days to pick', () => {
+  const models = fc.sample(editing, 1_000).map(makeModel)
+  const choices = models.flatMap((model) =>
+    model._tag === 'Editing' && model.strip._tag === 'Naming' ? model.strip.choices : []
+  )
+  expect(models.some((model) => model._tag === 'Editing' && Opt.isSome(model.maybeSave))).toBe(true)
+  expect(models.some((model) => model._tag === 'Editing' && Opt.isNone(model.maybeSave))).toBe(true)
+  expect(models.some((model) => model._tag === 'Editing' && model.strip._tag === 'Empty')).toBe(true)
+  expect(models.some((model) => model._tag === 'Editing' && model.strip._tag === 'NamingNothing')).toBe(true)
+  expect(choices.some((choice) => choice.choice._tag === 'Chosen')).toBe(true)
+  expect(choices.some((choice) => choice.choice._tag === 'Offered')).toBe(true)
+  expect(models.some((model) => model._tag === 'Editing' && Opt.isSome(model.maybeTypeDigit))).toBe(true)
+  expect(models.some((model) => model._tag === 'Editing' && Opt.isNone(model.maybeTypeDigit))).toBe(true)
+})
+
+describe('the model', () => {
+  test('draws the app bar alone while loading', () => {
+    assertProperty([loading], (s) => Equal.equals(makeModel(s), { _tag: 'Loading', close: Msg.Closed() }))
+  })
+
+  // The digits of the stored date name its day alone, which is the day named.
+  test('shows the untouched stored date as its digits in the order in use, its one chip chosen, or no expiration', () => {
+    assertProperty([editing, order], (s, other) => {
+      fc.pre(s.form.date._tag === 'Kept')
+      const shownIn = (form: Form) => {
+        const model = makeModel({ _tag: 'Editing', form })
+        return Opt.match(form.original.maybeExpirationDate, {
+          onNone: () => model._tag === 'Editing' && model.digits === '' && model.strip._tag === 'Empty',
+          onSome: (date) =>
+            model._tag === 'Editing' && model.digits === DigitDates.digitsOf(date, form.order)
+            && Equal.equals(model.strip, {
+              _tag: 'Naming',
+              choices: [{ date: DateTime.startOf(date, 'day'), choice: { _tag: 'Chosen' } }],
+            }),
+        })
+      }
+      return shownIn(s.form) && shownIn({ ...s.form, order: other })
+    })
+  })
+
+  test('shows typed digits as typed, with the days they name and the one named, or that they name none', () => {
+    assertProperty([fc.oneof(editing, saving)], (s) => {
+      fc.pre(s.form.date._tag === 'Typed')
+      const model = makeModel(s)
+      const entry = entryShown(s.form)
+      const offered = offeredDates(s.form)
+      const named = DigitDateEntry.named(entry, offered)
+      const expected = entry.digits === ''
+        ? { _tag: 'Empty' }
+        : offered.length === 0
+        ? { _tag: 'NamingNothing' }
+        : {
+          _tag: 'Naming',
+          choices: offered.map((date) => ({
+            date,
+            choice: Opt.contains(named, date)
+              ? { _tag: 'Chosen' }
+              : {
+                _tag: 'Offered',
+                maybeChoose: s._tag === 'Editing' ? Opt.some(Msg.DateChosen({ date })) : Opt.none(),
+              },
+          })),
+        }
+      return model._tag !== 'Loading' && model.digits === entry.digits && Equal.equals(model.strip, expected)
+        && model.name === s.form.name && model.nameKey === s.form.replacements
+    })
+  })
+
+  test('shows the order in use with the others to pick, exactly while update accepts them', () => {
+    assertProperty([fc.oneof(editing, saving)], (s) => {
+      const model = makeModel(s)
+      return model._tag !== 'Loading' && model.order === s.form.order
+        && Equal.equals(
+          model.orders,
+          DateOrder.all.map((order) => ({
+            order,
+            choice: order === s.form.order
+              ? { _tag: 'Current' }
+              : {
+                _tag: 'Offered',
+                maybePick: rejects(Msg.OrderPicked({ order }), s) ? Opt.none() : Opt.some(Msg.OrderPicked({ order })),
+              },
+          })),
+        )
+    })
+  })
+
+  test('offers each key exactly where its rule applies to the entry shown, and the name\'s clearing while there is one', () => {
+    assertProperty([editing, digit], (s, typed) => {
+      const model = makeModel(s)
+      const entry = entryShown(s.form)
+      return model._tag === 'Editing'
+        && Equal.equals(
+          Opt.map(model.maybeTypeDigit, (type) => type(typed)),
+          Opt.map(DigitDateEntry.typeDigit(typed)(entry), () => Msg.DigitTyped({ digit: typed })),
+        )
+        && Equal.equals(model.maybeEraseDigit, Opt.map(DigitDateEntry.eraseDigit(entry), () => Msg.DigitErased()))
+        && Equal.equals(model.maybeClearDate, Opt.map(DigitDateEntry.clear(entry), () => Msg.DateCleared()))
+        && Equal.equals(model.maybeClearName, s.form.name !== '' ? Opt.some(Msg.NameCleared()) : Opt.none())
+    })
+  })
+
+  test('offers to save exactly while the fields describe a product other than the stored one', () => {
+    assertProperty([editing], (s) => {
+      const model = makeModel(s)
+      return model._tag === 'Editing'
+        && Equal.equals(model.maybeSave, Opt.map(savedProduct(s.form), () => Msg.SaveStarted()))
+    })
+  })
+
+  test('offers nothing while saving', () => {
+    assertProperty([saving], (s) => {
+      const model = makeModel(s)
+      return model._tag === 'Saving'
+        && model.orders.every(({ choice }) => choice._tag === 'Current' || Opt.isNone(choice.maybePick))
+    })
+  })
+
+  describe('on a product', () => {
+    const creationDate = DateTime.makeUnsafe('2026-10-20T10:00:00Z')
+    const now = DateTime.makeUnsafe('2026-10-28T12:00:00Z')
+    const day = (iso: string) => DateTime.makeUnsafe(`${iso}T00:00:00Z`)
+    const milk = Opt.getOrThrow(
+      Product.make({ name: 'Milk', creationDate, maybeExpirationDate: Opt.some(day('2026-11-05')) }),
+    )
+    const opened: Form = {
+      id: '1',
+      original: milk,
+      name: 'Milk',
+      replacements: 0,
+      now,
+      order: 'DMY',
+      date: { _tag: 'Kept' },
+    }
+    const typed = (digits: string): Form => ({
+      ...opened,
+      date: { _tag: 'Typed', entry: { digits, maybeChosenDate: Opt.none() } },
+    })
+    const save = (form: Form) => {
+      const model = makeModel({ _tag: 'Editing', form })
+      return model._tag === 'Editing' ? model.maybeSave : Opt.none()
+    }
+    const strip = (form: Form) => {
+      const model = makeModel({ _tag: 'Editing', form })
+      return model._tag === 'Editing' ? model.strip : undefined
+    }
+
+    test('withholds "Save" on the product unchanged, on a blank name and on digits naming no day', () => {
+      expect(Opt.isNone(save(opened))).toBe(true)
+      expect(Opt.isNone(save({ ...opened, name: '  Milk ' }))).toBe(true)
+      expect(Opt.isNone(save(typed('05112026')))).toBe(true)
+      expect(Opt.isNone(save({ ...opened, name: '   ' }))).toBe(true)
+      expect(Opt.isNone(save(typed('4040')))).toBe(true)
+    })
+
+    test('offers "Save" on each kind of change', () => {
+      const everlasting = Opt.getOrThrow(Product.make({ name: 'Salt', creationDate, maybeExpirationDate: Opt.none() }))
+      expect(Opt.isSome(save({ ...opened, name: 'Oat milk' }))).toBe(true)
+      expect(Opt.isSome(save(typed('06112026')))).toBe(true)
+      expect(Opt.isSome(save(typed('')))).toBe(true)
+      expect(Opt.isSome(save({ ...typed('0612'), original: everlasting, name: 'Salt' }))).toBe(true)
+    })
+
+    // A day typed with its year may be past: a typo corrected, or a product bought past its date.
+    test('offers a day between the creation day and today, and never a day before the creation day', () => {
+      expect(strip(typed('22102026'))).toEqual({
+        _tag: 'Naming',
+        choices: [{ date: day('2026-10-22'), choice: { _tag: 'Chosen' } }],
+      })
+      expect(strip(typed('20102026'))?._tag).toBe('Naming')
+      expect(strip(typed('19102026'))).toEqual({ _tag: 'NamingNothing' })
+    })
+
+    test('rewrites the untouched stored date in another order, and leaves typed digits as typed', () => {
+      const inMdy = makeModel({ _tag: 'Editing', form: { ...opened, order: 'MDY' } })
+      const typedInMdy = makeModel({ _tag: 'Editing', form: { ...typed('0511'), order: 'MDY' } })
+      expect(inMdy._tag === 'Editing' && inMdy.digits).toBe('11052026')
+      expect(typedInMdy._tag === 'Editing' && typedInMdy.digits).toBe('0511')
+    })
+  })
+})
+
+// Guards against a variant that the arbitraries never make.
+test('the arbitrary states cover every state and both dates', () => {
+  const states = fc.sample(state, 1_000)
+  expect(states.some((s) => s._tag === 'Loading')).toBe(true)
+  expect(states.some((s) => s._tag === 'Editing' && s.form.date._tag === 'Kept')).toBe(true)
+  expect(states.some((s) => s._tag === 'Editing' && s.form.date._tag === 'Typed')).toBe(true)
+  expect(states.some((s) => s._tag === 'Saving')).toBe(true)
+})

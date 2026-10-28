@@ -4,22 +4,15 @@ import * as fc from 'fast-check'
 import { arbitrary as product } from '#domain/product.test_arbitrary.ts'
 import * as Product from '#domain/product.ts'
 import { arbitrary as order } from '#libs/dates/date-order.test_arbitrary.ts'
-import { datesOf, MAX_DIGITS } from '#libs/dates/digit-dates.ts'
+import { digit, digits } from '#libs/dates/digit-date-entry.test_arbitrary.ts'
+import * as DigitDateEntry from '#libs/dates/digit-date-entry.ts'
 import { arbitrary as maybe } from '#libs/option/option.test_arbitrary.ts'
 import { utc } from '#libs/testing/date-time.test_arbitrary.ts'
-import type { Acknowledging, Camera, DateForm, Digit, Form, Lookup, LookupOutcome, Message, State } from './program.ts'
+import type { Acknowledging, Camera, DateForm, Form, Lookup, LookupOutcome, Message, State } from './program.ts'
 
 const Msg = Data.taggedEnum<Message>()
 
-export const digit: fc.Arbitrary<Digit> = fc.constantFrom('0', '1', '2', '3', '4', '5', '6', '7', '8', '9')
-
-/** Digits that often name a day and a month, and sometimes nothing. */
-const digits = fc.oneof(
-  fc.string({ unit: digit, maxLength: MAX_DIGITS }),
-  fc.tuple(fc.integer({ min: 1, max: 31 }), fc.integer({ min: 1, max: 12 })).map(([day, month]) =>
-    String(day).padStart(2, '0') + String(month).padStart(2, '0')
-  ),
-)
+export { digit }
 
 /** A barcode as the scanner reads it: EAN-8, UPC-A or EAN-13. */
 export const barcode = fc.stringMatching(/^\d{8}$|^\d{12,13}$/)
@@ -51,7 +44,8 @@ const acknowledging: fc.Arbitrary<Acknowledging> = fc.record({
 const offeredDates = (form: Form, digits: string) =>
   Opt.match(Opt.all([form.maybeNow, form.maybeOrder]), {
     onNone: () => [],
-    onSome: ([now, order]) => datesOf(digits, now, order).filter(Product.canExpireOn(now)),
+    onSome: ([now, order]) =>
+      DigitDateEntry.offered({ ...DigitDateEntry.empty, digits }, now, order, Product.canExpireOn(now)),
   })
 
 export const form: fc.Arbitrary<Form> = fc.tuple(

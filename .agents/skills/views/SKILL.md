@@ -97,7 +97,8 @@ Two choices, taken in this order: the first decides almost everything, the secon
 ## Material 3
 
 A control is the Material component that does its job, built to that component's spec (colors, size, shape,
-elevation): a list of things is a list, not cards; an action of the page is a FAB or a top app bar's icon
+elevation): a list of things is a list, not cards, where a tap opens an item, a long press selects it, and
+once something is selected a tap selects too (Products' `maybeTap`); an action of the page is a FAB or a top app bar's icon
 button; a secondary action is an item of the bar's overflow menu (a navigation drawer is for five or more
 destinations); a form that opens over the page is a modal bottom sheet, within the thumb's reach, with outlined
 text fields; selected things turn the top app bar into a contextual one with their actions; something undone in
@@ -115,7 +116,10 @@ app's own screen, has a medium one: a 124dp bar with the row of its icons on top
 shrunk to `title-large-emphasized` after the leading icon, once the list scrolls under it. The contextual bar of
 the selected products takes the same shape, in its own colors: the child gives Home its pieces (the icon
 buttons, the title), and Home draws them in its bar. The list leaves the bar's full height above itself. Pages
-come and go with Material's transitions, symmetric: what enters decelerates, what leaves accelerates. The theme leaves out Tailwind's own
+come and go with Material's transitions, symmetric: what enters decelerates, what leaves accelerates. A page is laid
+out for a screen 320dp wide and of any height (the `android-release` skill, "Supported screen sizes"): a column
+that docks a button at the bottom scrolls (`overflow-y-auto`) when the screen is shorter than its content, as the
+keyboard or a large font makes it. The theme leaves out Tailwind's own
 colors, font sizes, radii, shadows, easings and durations:
 
 - colors are Material's roles (`src/palette.generated.css`, generated from the key colors in
@@ -129,7 +133,10 @@ colors, font sizes, radii, shadows, easings and durations:
   in `src/styles.css`. A surface's level is its component's, and a raised surface takes its tone from its
   container role (`bg-surface-container-low` for a drawer), not from a shadow alone;
 - what can be pressed carries `state-layer`, Material's feedback on hover, focus and press; the layer behind a
-  modal or a menu is `scrim`, both in `src/styles.css`;
+  modal or a menu is `scrim`, both in `src/styles.css`. A component of Material's that more than one view draws,
+  with its states, is a utility there too, its state an attribute it reads (`filter-chip` and `segment`, selected
+  by `aria-pressed`): a copy of its classes changed on its own would be a bug. A line of layout stays inline,
+  written twice (a key of the keypad);
 - motion is Material's easing curves (`ease-standard`, `ease-emphasized-decelerate`) and durations
   (`duration-short-3`, `duration-medium-4`), in `src/styles.css`. A simple change (a color, an elevation, a size)
   takes the standard curve over `short-4`, the default of the `transition-*` utilities. What enters decelerates,

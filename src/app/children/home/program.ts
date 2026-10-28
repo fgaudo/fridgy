@@ -1,5 +1,5 @@
 // The page: its child (the products), and what is the page's own (the top app bar's menu, the back button, the
-// way to the page that adds products, and the scrolling, which the top app bar and the add button follow).
+// ways to the pages that add and edit products, and the scrolling, which the top app bar and the add button follow).
 import * as Tea from '@fgaudo/effect-tea'
 import * as Channel from 'effect/Channel'
 import * as Data from 'effect/Data'
@@ -8,6 +8,7 @@ import * as HashMap from 'effect/HashMap'
 import * as Match from 'effect/Match'
 import * as Optic from 'effect/Optic'
 import * as Opt from 'effect/Option'
+import type * as Product from '#domain/product.ts'
 import { BackButton } from '#infrastructure/back-button/back-button.ts'
 import { defect } from '#libs/defect/defect.ts'
 import * as Products from './children/products/program.ts'
@@ -47,6 +48,8 @@ const OwnCommand = Data.taggedEnum<OwnCommand>()
 export type Event = Data.TaggedEnum<{
   InfoRequested: object
   AddRequested: object
+  /** A product of the list, to be edited. */
+  EditRequested: { id: string; product: Product.Product }
 }>
 
 const Event = Data.taggedEnum<Event>()
@@ -123,6 +126,9 @@ export const program = compose({
   },
   children: {
     Products: child(Products.program, { at: Optic.id<State>().key('products') }),
+  },
+  onEvent: {
+    Products: ({ id, product }) => (state) => ({ state, events: [Event.EditRequested({ id, product })] }),
   },
   update: (message: Own) => (state) =>
     Match.valueTags(message, {

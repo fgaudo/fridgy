@@ -6,6 +6,7 @@ import * as DateTime from 'effect/DateTime'
 import * as Effect from 'effect/Effect'
 import * as HashMap from 'effect/HashMap'
 import * as Opt from 'effect/Option'
+import * as DigitDates from '#libs/dates/digit-dates.ts'
 import { tagPath } from '#libs/testing/tag-path.test_support.ts'
 import { outcomesOf } from '#libs/testing/update.test_support.ts'
 import * as About from './children/about/program.ts'
@@ -17,8 +18,10 @@ import {
   back,
   cancelLookup,
   checkCamera,
+  clearEditedDate,
   clearName,
   deleteSelected,
+  loadEditPage,
   openAbout,
   openAddProducts,
   openMenu,
@@ -27,9 +30,12 @@ import {
   rehearsed,
   requestDate,
   requestInfo,
+  saveProduct,
   scan,
   selectFirstProduct,
+  tapFirstProduct,
   typeDigit,
+  typeEditedName,
   typeName,
   type User,
   undoDeletion,
@@ -339,6 +345,108 @@ describe('Navigation', () => {
       yield* back(user)
       yield* user.hearNext(['Home', ['Products', 'changes']])
       expect(yield* listedNames(user)).toEqual(Opt.some(['Milk', 'Bread']))
+    })))
+
+  /** Home's list: each valid product's id, name and whether it expires, in order. */
+  const listed = (user: User) =>
+    Effect.map(
+      user.state,
+      (state) =>
+        Opt.map(homeState(state), ({ products: { list } }) =>
+          list._tag === 'Loaded'
+            ? list.items.flatMap((item): ReadonlyArray<Readonly<{ id: string; name: string; expires: boolean }>> =>
+              item._tag === 'Valid'
+                ? [{ id: item.id, name: item.product.name, expires: Opt.isSome(item.product.maybeExpirationDate) }]
+                : []
+            )
+            : []),
+    )
+
+  /** Adds Salt, which never expires, then Milk, which expires at the end of 2099: Milk is listed first. */
+  const addSaltAndMilk = Effect.fnUntraced(function*(user: User) {
+    yield* perform(user, [openAddProducts, typeName('Salt')])
+    yield* checkCamera(user)
+    yield* user.hearNext(['AddProducts', 'clock'])
+    const heard = yield* user.hearNext(['AddProducts', 'date-order'])
+    const order = heard._tag === 'AddProducts' && heard.message._tag === 'OrderChanged' ? heard.message.order : 'DMY'
+    yield* user.send(addProduct)
+    yield* user.run((command) => tagPath(command) === 'AddProducts › Add')
+    yield* perform(user, [typeName('Milk'), requestDate])
+    const digits = DigitDates.digitsOf(DateTime.makeUnsafe('2099-12-31T00:00:00Z'), order)
+    yield* perform(user, Arr.map([...digits], (digit) => typeDigit(digit as AddProducts.Digit)))
+    yield* user.send(addProduct)
+    yield* user.run((command) => tagPath(command) === 'AddProducts › Add')
+    yield* back(user)
+    yield* user.hearNext(['Home', ['Products', 'changes']])
+    // The list is drawn once the time is known: Milk expires.
+    yield* user.hearNext(['Home', ['Products', 'clock']])
+  })
+
+  // A double tap reaches a stack that has the page on top, which opens it once.
+  test('a tap on a product opens the page that edits it on top, once on a double tap, with the product once loaded', () =>
+    rehearsed(Effect.fnUntraced(function*(user) {
+      yield* addSaltAndMilk(user)
+      const tap = tapFirstProduct(yield* user.model)
+      yield* user.send(() => tap)
+      yield* user.send(() => tap)
+      expect(tags(yield* user.state)).toEqual(['Home', 'EditProduct'])
+      const loading = (yield* user.model).page
+      expect(loading._tag === 'EditProduct' && loading.model._tag).toBe('Loading')
+      yield* loadEditPage(user)
+      const { page } = yield* user.model
+      expect(page._tag === 'EditProduct' && page.model._tag === 'Editing' && page.model.name).toBe('Milk')
+    })))
+
+  test('a product renamed and saved is listed under its new name, with the same id, once the page has left', () =>
+    rehearsed(Effect.fnUntraced(function*(user) {
+      yield* addSaltAndMilk(user)
+      const before = yield* listed(user)
+      yield* user.send(tapFirstProduct)
+      yield* loadEditPage(user)
+      yield* perform(user, [typeEditedName('Oat milk'), saveProduct])
+      yield* user.run((command) => tagPath(command) === 'EditProduct › Save')
+      expect(tags(yield* user.state)).toEqual(['Home'])
+      yield* user.hearNext(['Home', ['Products', 'changes']])
+      expect(Opt.map(yield* listed(user), Arr.map(({ id, name }) => [id, name]))).toEqual(
+        Opt.map(before, Arr.map(({ id, name }) => [id, name === 'Milk' ? 'Oat milk' : name])),
+      )
+    })))
+
+  test('a product whose expiration is cleared and saved is listed last, never expiring', () =>
+    rehearsed(Effect.fnUntraced(function*(user) {
+      yield* addSaltAndMilk(user)
+      yield* user.send(tapFirstProduct)
+      yield* loadEditPage(user)
+      yield* perform(user, [clearEditedDate, saveProduct])
+      yield* user.run((command) => tagPath(command) === 'EditProduct › Save')
+      yield* user.hearNext(['Home', ['Products', 'changes']])
+      expect(Opt.map(yield* listed(user), Arr.map(({ name, expires }) => [name, expires]))).toEqual(
+        Opt.some([['Salt', false], ['Milk', false]]),
+      )
+    })))
+
+  test('back from the page that edits a product leaves it, the product as it was', () =>
+    rehearsed(Effect.fnUntraced(function*(user) {
+      yield* addSaltAndMilk(user)
+      const before = yield* listed(user)
+      yield* user.send(tapFirstProduct)
+      yield* loadEditPage(user)
+      yield* user.send(typeEditedName('Oat milk'))
+      yield* back(user)
+      expect(tags(yield* user.state)).toEqual(['Home'])
+      expect(yield* user.pending).toEqual([])
+      expect(yield* listed(user)).toEqual(before)
+    })))
+
+  test('a tap on a product while it is selected deselects it, and opens nothing', () =>
+    rehearsed(Effect.fnUntraced(function*(user) {
+      yield* addSaltAndMilk(user)
+      yield* user.send(selectFirstProduct)
+      yield* user.send(tapFirstProduct)
+      expect(tags(yield* user.state)).toEqual(['Home'])
+      expect(Opt.map(homeState(yield* user.state), ({ products }) => products.selection._tag)).toEqual(
+        Opt.some('Idle'),
+      )
     })))
 
   test('a product deleted from the list comes back when the deletion is undone in time', () =>

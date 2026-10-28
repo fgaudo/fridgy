@@ -23,7 +23,8 @@ src/
 │  │  │                  app/, it imports only its own folder, and the infrastructure's services
 │  │  ├─ program.ts · view.tsx · layer.ts   its public API: the only modules its parent imports
 │  │  ├─ services/<service>/   a service of its own, with its adapters, contract and tests
-│  │  │                        (`add-products/services/scanner/`, `add-products/services/product-lookup/`)
+│  │  │                        (`add-products/services/scanner/`, `add-products/services/product-lookup/`,
+│  │  │                        `edit-product/services/update-product/`)
 │  │  ├─ children/<child>/     its own children (`home/children/products/`, with
 │  │  │                        `services/product-list/`)
 │  │  └─ programs/<program>/   none yet: a program two programs of this subtree use, of this same shape
@@ -31,9 +32,10 @@ src/
 │                          (see "Visibility")
 │
 ├─ infrastructure/       what the app's adapters share: the storage (storage/: the database's engine, sqlite in
-│                        a worker on OPFS or in memory, its schema and migrations, how a product is written, deleted and
-│                        how its rows are joined and encoded, `ProductStore`, how a setting is read and written,
-│                        `SettingStore`, how Open Food Facts' answers are cached, `BarcodeCache` in
+│                        a worker on OPFS or in memory, its schema and migrations, how a product is written, updated,
+│                        deleted and how its rows are joined and encoded, `ProductStore`, how a setting is read and
+│                        written, `SettingStore`, how the order of a date's digits is kept, `DateOrderStore` in
+│                        `date-order.ts`, how Open Food Facts' answers are cached, `BarcodeCache` in
 │                        `barcodes.ts`, and the sample data), the client of Open Food Facts' API
 │                        (open-food-facts/: how a code is normalized, asked for and decoded), hot reload,
 │                        fonts; and the platform's facts the programs use as they are: the back button
@@ -41,11 +43,13 @@ src/
 │                        toasts (notifications/). Its adapters are named as the app's, `<service>.<backing>.ts`
 ├─ libs/                 generic, reusable code: the snabbdom bridge (tea-snabbdom: handlers, renderer,
 │                        test support) and JSX runtime, sources, branded numbers, barcodes (the expansion of
-│                        a UPC-E), `defect`, test helpers, …
+│                        a UPC-E), dates (the orders of a date's digits, the days they name, the rules of typing
+│                        them on a keypad), `defect`, test helpers, …
 ├─ index.html            the page template: the build fills in the fonts and the entrypoint
 ├─ error.html            shown by Capacitor instead of the app on a WebView older than it needs
 ├─ palette.generated.css the Material 3 color roles, written by `bun run update-palette`
-└─ styles.css            the stylesheet (Tailwind): Material's type scale, shapes, elevation, motion and state layer
+└─ styles.css            the stylesheet (Tailwind): Material's type scale, shapes, elevation, motion, state layer
+                         and the looks two views draw (a filter chip, a segment)
 ```
 
 The runtime of the Elm architecture is a library, an npm dependency:

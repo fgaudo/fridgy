@@ -1,6 +1,7 @@
 # Design: editing a product
 
-Status: designed on 2026-10-28, not implemented. This document is the brief for whoever implements it, person or
+Status: designed on 2026-10-28, implemented on 2026-10-28, with the departures listed in "As implemented"; not
+yet seen on Android (see "Known gaps" in `AGENTS.md`). This document was the brief for whoever implemented it, person or
 agent: read [`AGENTS.md`](../AGENTS.md), the `add-program`, `add-service` and `views` skills and the "Guide" of
 `node_modules/@fgaudo/effect-tea/README.md` first; their rules apply to every part of this change and are not
 repeated here. The facts about the code below (what the storage can do, what the runtime offers) were checked
@@ -580,6 +581,24 @@ Each step leaves the typecheck, the lint and the tests green:
    the keypad, and `add-products` as before; on Android (with the Capacitor 9 build from "Known gaps"): that a
    long press does not also fire a tap, and that the back button, with the keyboard open, closes the keyboard
    first.
+
+## As implemented
+
+Where the code departs from the design above, and why:
+
+- **`Loading` waits for the clock too**, and `Form` holds `now`, not `maybeNow`. Without today, no day is offered:
+  the stored date would show "Not an upcoming date" and "Save" would be withheld for a frame, the wrong strip the
+  design itself judged worse than an honest state.
+- **The untouched stored date names the stored expiration itself**, not the day its digits name: a stored date
+  that is not at midnight (data written by an older build, or a test's arbitrary) would otherwise read as a change.
+  For the same reason `isChanged` compares expirations by their day, which is what an expiration names.
+- **A tap on an `Invalid` row selects it once something is selected**, as on any other row: `maybeTap` is the
+  toggle whenever the selection is `Selecting`, and opens only a `Valid` row, while nothing is selected.
+- **`DateOrderStore`** (`src/infrastructure/storage/date-order.ts`) is a service of the infrastructure on
+  `SettingStore`, with `current`, `set` and `tables`, as `ProductStore` is on the `SqlClient`.
+- **The fields' column scrolls** when the screen is shorter than it: at 320×568 the keypad's last row and "Save"
+  were out of reach, the page being fixed and its column not scrolling. The second step of `add-products` had the
+  same height and got the same scroll. The narrowest screen is now stated in the `android-release` skill.
 
 ## Open points, and what was decided
 

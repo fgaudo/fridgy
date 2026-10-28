@@ -18,6 +18,7 @@ import { tagPath } from '#libs/testing/tag-path.test_support.ts'
 import type * as AddProducts from './children/add-products/program.ts'
 import { ProductLookup } from './children/add-products/services/product-lookup/product-lookup.ts'
 import { Scanner } from './children/add-products/services/scanner/scanner.ts'
+import type * as EditProduct from './children/edit-product/program.ts'
 import type * as Products from './children/home/children/products/program.ts'
 import type * as Home from './children/home/program.ts'
 import * as App from './layer.ts'
@@ -36,6 +37,9 @@ const onHome = (pick: (model: Home.Model) => Opt.Option<Home.Message>): Choice =
 
 const onAddProducts = (pick: (model: AddProducts.Model) => Opt.Option<AddProducts.Message>): Choice => ({ page }) =>
   page._tag === 'AddProducts' ? Opt.map(pick(page.model), (message) => Msg.AddProducts({ message })) : Opt.none()
+
+const onEditProduct = (pick: (model: EditProduct.Model) => Opt.Option<EditProduct.Message>): Choice => ({ page }) =>
+  page._tag === 'EditProduct' ? Opt.map(pick(page.model), (message) => Msg.EditProduct({ message })) : Opt.none()
 
 export const openMenu = onHome(({ menu }) => menu._tag === 'Closed' ? Opt.some(menu.open) : Opt.none())
 
@@ -57,6 +61,11 @@ const onProducts = (pick: (model: Products.Model) => Opt.Option<Products.Message
 /** A long press on the first product of the list, which selects it. */
 export const selectFirstProduct = onProducts(({ list }) =>
   list._tag === 'Available' && list.products[0]._tag !== 'Corrupt' ? list.products[0].selection.maybeToggle : Opt.none()
+)
+
+/** A tap on the first product of the list: it opens the product, or toggles it once something is selected. */
+export const tapFirstProduct = onProducts(({ list }) =>
+  list._tag === 'Available' && list.products[0]._tag !== 'Corrupt' ? list.products[0].selection.maybeTap : Opt.none()
 )
 
 /** The contextual top app bar's delete button. */
@@ -111,6 +120,21 @@ export const addProduct = onAddProducts((form) =>
   form._tag === 'Naming' || form._tag === 'Dating' ? form.maybeAdd : Opt.none()
 )
 
+/** The page that edits a product shows its fields once it knows the time and the order of a date's digits. */
+export const loadEditPage = Effect.fnUntraced(function*(user: User) {
+  yield* user.hearNext(['EditProduct', 'clock'])
+  yield* user.hearNext(['EditProduct', 'date-order'])
+})
+
+export const typeEditedName = (name: string) =>
+  onEditProduct((form) => form._tag === 'Editing' ? Opt.some(form.changeName(name)) : Opt.none())
+
+/** The keypad's clear key, on the page that edits a product, while there are digits. */
+export const clearEditedDate = onEditProduct((form) => form._tag === 'Editing' ? form.maybeClearDate : Opt.none())
+
+/** "Save", on the page that edits a product, once the fields describe a product other than the stored one. */
+export const saveProduct = onEditProduct((form) => form._tag === 'Editing' ? form.maybeSave : Opt.none())
+
 /** Sends each message in turn, each from the model the previous one left. */
 export const perform = Effect.fnUntraced(function*(user: User, choices: ReadonlyArray<Choice>) {
   for (const choice of choices) {
@@ -124,6 +148,7 @@ export const back = Effect.fnUntraced(function*(user: User) {
   const pressed = Match.valueTags(shown, {
     Home: () => Msg.Home({ message: { _tag: 'BackPressed' } }),
     AddProducts: () => Msg.AddProducts({ message: { _tag: 'BackPressed' } }),
+    EditProduct: () => Msg.EditProduct({ message: { _tag: 'BackPressed' } }),
     About: () => Msg.About({ message: { _tag: 'BackPressed' } }),
   })
   yield* user.hear([shown._tag, 'back-button'], pressed)

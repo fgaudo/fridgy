@@ -29,6 +29,7 @@ import {
 } from './program.test_arbitrary.ts'
 import {
   type Command,
+  type Event,
   type Message,
   type ProductModel,
   productsOf,
@@ -40,6 +41,7 @@ import { ProductListReadError, type StoredProduct } from './services/product-lis
 
 const Msg = Data.taggedEnum<Message>()
 const Cmd = Data.taggedEnum<Command>()
+const Ev = Data.taggedEnum<Event>()
 
 const { outcome, rejects, step } = outcomesOf(program.update)
 
@@ -244,6 +246,36 @@ describe('Products update', () => {
       assertProperty([state, id], (before, itemId) => {
         fc.pre(before.list._tag !== 'Loaded' || before.selection._tag === 'Deleting')
         return rejects(Msg.ItemSelected({ id: itemId }), before) && rejects(Msg.ItemDeselected({ id: itemId }), before)
+      })
+    })
+  })
+
+  describe('EditRequested', () => {
+    /** The product listed under `id`, when it is a valid one. */
+    const productUnder = (state: State, id: string) =>
+      state.list._tag === 'Loaded'
+        ? Opt.fromNullishOr(state.list.items.find((item) => item._tag === 'Valid' && item.id === id))
+        : Opt.none()
+
+    test('asks to edit the listed product, as the row shows it, while nothing is selected, and changes nothing', () => {
+      assertProperty([state, id], (before, itemId) => {
+        const maybeItem = productUnder(before, itemId)
+        fc.pre(before.selection._tag === 'Idle' && Opt.isSome(maybeItem))
+        const item = Opt.getOrThrow(maybeItem)
+        return item._tag === 'Valid'
+          && Equal.equals(step(Msg.EditRequested({ id: itemId }), before), {
+            rejected: false,
+            after: before,
+            commands: [],
+            events: [Ev.EditRequested({ id: itemId, product: item.product })],
+          })
+      })
+    })
+
+    test('is rejected while products are selected or deleted, and on an id that names no valid product', () => {
+      assertProperty([state, id], (before, itemId) => {
+        fc.pre(before.selection._tag !== 'Idle' || Opt.isNone(productUnder(before, itemId)))
+        return rejects(Msg.EditRequested({ id: itemId }), before)
       })
     })
   })
@@ -496,6 +528,20 @@ describe('Products model', () => {
         return row.selection.isSelected === isSelected && Equal.equals(row.selection.maybeToggle, expectedToggle)
       })
     })
+  })
+
+  // As Material's lists do: a tap opens an item, and selects once something is selected.
+  test('a tap on a row opens its product while nothing is selected, toggles it while selecting, and does nothing otherwise', () => {
+    assertProperty([shown], (s) =>
+      rows(s).every((row) => {
+        if (row._tag === 'Corrupt') return true
+        const expected = s.selection._tag === 'Selecting'
+          ? row.selection.maybeToggle
+          : s.selection._tag === 'Idle' && row._tag === 'Valid' && row.presence !== 'Leaving'
+          ? Opt.some(Msg.EditRequested({ id: row.id }))
+          : Opt.none()
+        return Equal.equals(row.selection.maybeTap, expected)
+      }))
   })
 
   test('a listed row arrives exactly when its id does', () => {

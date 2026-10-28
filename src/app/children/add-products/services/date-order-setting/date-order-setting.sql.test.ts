@@ -2,6 +2,7 @@ import * as Effect from 'effect/Effect'
 import * as Layer from 'effect/Layer'
 import * as Opt from 'effect/Option'
 import * as Schema from 'effect/Schema'
+import { KEY } from '#infrastructure/storage/date-order.ts'
 import { readSetting, writeSetting } from '#infrastructure/storage/settings.test_support.ts'
 import { SettingStore } from '#infrastructure/storage/settings.ts'
 import * as SqliteMemory from '#infrastructure/storage/sqlite.memory.ts'
@@ -19,7 +20,7 @@ dateOrderSettingContract(
       Layer.provideMerge(SqliteMemory.layer),
     ),
   {
-    stored: Effect.map(readSetting(DateOrderSettingSql.KEY), Opt.flatMap(decode)),
-    store: (order) => writeSetting(DateOrderSettingSql.KEY, order),
+    stored: Effect.map(readSetting(KEY), Opt.flatMap(decode)),
+    store: (order) => writeSetting(KEY, order),
   },
 )

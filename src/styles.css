@@ -294,6 +294,39 @@ html {
 }
 
 /*
+ * Material's filter chip. Selected (`aria-pressed`), it takes the secondary container. Its outline turns
+ * transparent then, and keeps its size: picking a chip moves none.
+ */
+@utility filter-chip {
+  @apply state-layer flex h-8 shrink-0 items-center gap-2 rounded-small border border-outline-variant pr-4 pl-2;
+  @apply text-label-large whitespace-nowrap text-on-surface-variant;
+  &[aria-pressed="true"] {
+    @apply border-transparent bg-secondary-container text-on-secondary-container;
+  }
+  &:disabled {
+    @apply border-on-surface/12 text-on-surface/38;
+  }
+  &:disabled[aria-pressed="true"] {
+    @apply bg-on-surface/12;
+  }
+}
+
+/* A segment of Material's segmented button, in a row of them. The current one (`aria-pressed`) is filled. */
+@utility segment {
+  @apply state-layer -ml-px flex h-10 flex-1 items-center justify-center gap-2 border border-outline;
+  @apply text-label-large text-on-surface transition-colors first:ml-0 first:rounded-l-full last:rounded-r-full;
+  &[aria-pressed="true"] {
+    @apply z-10 bg-secondary-container text-on-secondary-container;
+  }
+  &:disabled {
+    @apply border-on-surface/12 text-on-surface/38;
+  }
+  &:disabled[aria-pressed="true"] {
+    @apply bg-on-surface/12;
+  }
+}
+
+/*
  * A product added enters the fridge (see docs/product-flight.md). The letters of its name gather into it where
  * the name is written, as the fridge appears; it flies, on an arc that two elements make (the outer one moves in
  * X, the inner one in Y), into the fridge, whose door has opened; it is handed to a copy inside the fridge as it

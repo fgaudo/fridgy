@@ -167,7 +167,10 @@ const rowMotion = (presence: Presence): VNodeStyle => {
   }
 }
 
-/** Material's two-line list item, with a leading avatar; a long press (a right click on desktop) selects it. */
+/**
+ * Material's two-line list item, with a leading avatar. A long press (a right click on desktop) selects it; a tap
+ * does what the model says.
+ */
 const item = (
   key: string,
   selection: ItemSelection,
@@ -176,7 +179,7 @@ const item = (
   headline: string,
   supporting: string,
   look: Look,
-  { onPreventingDefault }: Handlers<Message>,
+  { on, onPreventingDefault }: Handlers<Message>,
 ) => (
   <li
     key={key}
@@ -188,7 +191,10 @@ const item = (
       ),
     }}
     style={rowMotion(presence)}
-    on={onPreventingDefault('contextmenu', Opt.getOrUndefined(selection.maybeToggle))}
+    on={{
+      ...onPreventingDefault('contextmenu', Opt.getOrUndefined(selection.maybeToggle)),
+      ...Opt.match(selection.maybeTap, { onNone: () => ({}), onSome: (tap) => on('click', tap) }),
+    }}
   >
     {avatar(selection, badge)}
     <div props={{ className: 'flex min-w-0 flex-col' }}>
@@ -227,7 +233,7 @@ const corruptItem = (
 ) =>
   item(
     `corrupt-${index}`,
-    { isSelected: false, maybeToggle: Opt.none() },
+    { isSelected: false, maybeToggle: Opt.none(), maybeTap: Opt.none() },
     'Listed',
     errorBadge('broken_image'),
     Opt.getOrElse(product.maybeName, () => 'Unnamed product'),

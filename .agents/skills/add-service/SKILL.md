@@ -55,8 +55,10 @@ how the storage is read or written is doing the infrastructure's work, and two o
   `schema.ts`). It never reads domain fields. What every storage adapter shares (the schema, the migrations, how a
   product is written and deleted, how each column is encoded and how a product joins its expiration:
   `ProductStore.withExpiration`; how a setting, a text under a name, is read and written) is in
-  `src/infrastructure/storage`. What a setting's text stands for is its adapter's own (`DateOrderSetting`'s sql
-  adapter decodes it with the order's `Schema`, and falls back to the device's locale's).
+  `src/infrastructure/storage`. What a setting's text stands for is its adapter's own until a second adapter
+  reads it: then it moves to the infrastructure, as the date order's did (`DateOrderStore` in `date-order.ts`:
+  the setting's name, the order's `Schema`, the fall-back to the device's locale's), and each adapter of a
+  `DateOrderSetting` is a few lines on it.
 - What one consumer alone asks of the storage is its adapter's own query, written on those pieces: which
   columns, which products and in what order (`ProductList`'s `SELECT` and `ORDER BY`) is the list's view, not
   how a product is read. It moves up the day a second adapter asks the same.

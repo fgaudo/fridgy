@@ -141,6 +141,7 @@ export const storedProducts: fc.Arbitrary<ReadonlyArray<StoredProduct>> = fc.uni
 
 export const message: fc.Arbitrary<Message> = fc.oneof(
   id.map((id) => Msg.ItemSelected({ id })),
+  id.map((id) => Msg.EditRequested({ id })),
   id.map((id) => Msg.ItemDeselected({ id })),
   fc.constant(Msg.SelectionCleared()),
   fc.constant(Msg.DeleteStarted()),

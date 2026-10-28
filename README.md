@@ -9,8 +9,9 @@ architecture.
 > dialog, which looks the product up on [Open Food Facts](https://openfoodfacts.org) and caches the answer on the
 > phone, and the product is added as it is or goes on to its expiration date, typed as digits in the order of
 > day, month and year the user keeps, from which the user picks the day they meant; the product added then flies
-> into a fridge) and the About page (version, links,
-> licenses) run on the current architecture, with navigation between them and Android's back button. What is
+> into a fridge), the page that edits a product (opened with a tap on it, its name and its expiration date, typed
+> on the same keypad) and the About page (version, links, licenses) run on the current architecture, with
+> navigation between them and Android's back button. What is
 > still missing is listed under "Known gaps" in [`AGENTS.md`](AGENTS.md).
 
 **Privacy:** scanning a barcode sends the barcode, and the phone's IP address, to Open Food Facts; nothing else
@@ -70,7 +71,8 @@ bunx cap open android
 ```
 
 The app needs Android 10 (API 29) and Android System WebView 114: on an older WebView, Capacitor shows
-`src/error.html` instead. Why these versions, how the icons and splash screens are generated and how a release
+`src/error.html` instead. Its pages are laid out for a screen at least 320dp wide, and for any height: every page
+scrolls when the screen is shorter than it. Why these versions, how the icons and splash screens are generated and how a release
 is versioned and tagged is in [`.agents/skills/android-release/SKILL.md`](.agents/skills/android-release/SKILL.md).
 
 ## Development
@@ -106,7 +108,8 @@ explains how.
 What the app adds:
 
 - **The root owns navigation**, a stack of pages. Pages ask for it through events (Elm's "OutMsg"), e.g. to
-  open About or the page that adds products, or to be left.
+  open About, the page that adds products or the one that edits a product, or to be left. A page that cannot
+  start the same way every time starts from flags: the page that edits a product, from the product tapped.
 - **An asynchronous operation is a state that waits for its completion**, which only that state accepts.
 - **Bugs crash the app**; expected errors are typed and handled with Effect.
 

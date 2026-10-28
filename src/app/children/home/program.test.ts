@@ -71,14 +71,16 @@ describe('Home update', () => {
         shownItems(state).some((item) => item._tag !== 'Corrupt' && item.id === id)
       const isSelecting = ({ products: { selection } }: State) => selection._tag !== 'Idle'
       const check = dispatchViolations(program.update, {
-        repeatable: (msg) => msg._tag === 'AddRequested',
+        // Each tap asks: the parent opens the page once.
+        repeatable: (msg) =>
+          msg._tag === 'AddRequested' || (msg._tag === 'Products' && msg.message._tag === 'EditRequested'),
         withheld: (msg, state) => {
           if (msg._tag === 'MenuOpened') {
             return isListShown(state) && isSelecting(state)
           }
           if (msg._tag === 'Products') {
             const inner = msg.message
-            return inner._tag === 'ItemSelected' || inner._tag === 'ItemDeselected'
+            return inner._tag === 'ItemSelected' || inner._tag === 'ItemDeselected' || inner._tag === 'EditRequested'
               ? !isShown(state, inner.id)
               : !isListShown(state)
           }
@@ -99,7 +101,11 @@ describe('Home update', () => {
             ...items.flatMap((item) =>
               item._tag === 'Corrupt'
                 ? []
-                : [ProductsMsg.ItemSelected({ id: item.id }), ProductsMsg.ItemDeselected({ id: item.id })]
+                : [
+                  ProductsMsg.ItemSelected({ id: item.id }),
+                  ProductsMsg.ItemDeselected({ id: item.id }),
+                  ProductsMsg.EditRequested({ id: item.id }),
+                ]
             ),
           ].map(fromProducts),
         ]
@@ -122,6 +128,7 @@ describe('Home update', () => {
           'AddRequested',
           'Products › ItemSelected',
           'Products › ItemDeselected',
+          'Products › EditRequested',
           'Products › SelectionCleared',
           'Products › DeleteStarted',
           'Products › UndoRequested',

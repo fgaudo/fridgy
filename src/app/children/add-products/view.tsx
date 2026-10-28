@@ -342,15 +342,9 @@ const orderSegments = (shown: DateShown, activity: DateActivity, dispatch: Dispa
     const maybePick = choice._tag === 'Offered' ? choice.maybePick : Opt.none()
     return (
       <button
+        attrs={{ 'aria-pressed': choice._tag === 'Current' ? 'true' : 'false' }}
         props={{
-          className: cn(
-            'state-layer -ml-px flex h-10 flex-1 items-center justify-center gap-2 border text-label-large',
-            'transition-colors first:ml-0 first:rounded-l-full last:rounded-r-full',
-            'disabled:border-on-surface/12 disabled:text-on-surface/38',
-            choice._tag === 'Current'
-              ? 'z-10 border-outline bg-secondary-container text-on-secondary-container disabled:bg-on-surface/12'
-              : 'border-outline text-on-surface',
-          ),
+          className: 'segment',
           disabled: activity._tag === 'Adding',
           title: orderTitles[order],
         }}
@@ -417,23 +411,15 @@ const dateField = (shown: DateShown, activity: DateActivity) => {
   )
 }
 
-/**
- * Material's filter chip of a day the digits name. The icon and the outline, transparent once selected, keep its
- * size, so that picking a day moves no chip.
- */
+/** Material's filter chip of a day the digits name. */
 const chip = ({ date, choice }: DateChoice, activity: DateActivity, dispatch: Dispatch<Message>) => {
   const { on } = handlers(dispatch)
   const maybeChoose = choice._tag === 'Offered' ? choice.maybeChoose : Opt.none()
   return (
     <button
+      attrs={{ 'aria-pressed': choice._tag === 'Chosen' ? 'true' : 'false' }}
       props={{
-        className: cn(
-          'state-layer flex h-8 shrink-0 items-center gap-2 rounded-small border pr-4 pl-2 text-label-large',
-          'whitespace-nowrap disabled:border-on-surface/12 disabled:text-on-surface/38',
-          choice._tag === 'Chosen'
-            ? 'border-transparent bg-secondary-container text-on-secondary-container disabled:bg-on-surface/12'
-            : 'border-outline-variant text-on-surface-variant',
-        ),
+        className: 'filter-chip',
         disabled: activity._tag === 'Adding',
       }}
       on={Opt.match(maybeChoose, { onNone: () => ({}), onSome: (choose) => on('click', choose) })}
@@ -539,7 +525,8 @@ const dateStep = (
       props={{ className: 'absolute inset-0 flex flex-col bg-surface text-on-surface' }}
     >
       {appBar('Add products', 'arrow_back', 'Back', Opt.map(controls, ({ back }) => back), dispatch)}
-      <div props={{ className: cn('flex flex-1 flex-col gap-3', stepPadding) }}>
+      {/* Scrolls when the screen is shorter than the step (the narrowest phone, the keyboard open). */}
+      <div props={{ className: cn('flex flex-1 flex-col gap-3 overflow-y-auto', stepPadding) }}>
         <div props={{ className: 'flex flex-col px-4 pb-2' }}>
           <span props={{ className: 'text-label-medium text-on-surface-variant' }}>Product</span>
           <h3

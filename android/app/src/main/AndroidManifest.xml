@@ -35,6 +35,10 @@
         </provider>
     </application>
 
+    <!-- The narrowest screen the pages are laid out for (the `android-release` skill, "Supported screen sizes").
+         Only the Play Store reads it, to hide the app from narrower devices: an APK installs anywhere. -->
+    <supports-screens android:requiresSmallestWidthDp="320" />
+
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />

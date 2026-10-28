@@ -1,6 +1,6 @@
 // What every adapter of `ProductList` must do. It holds no implementation: each adapter's
-// `<service>.<backing>.test.ts` runs it with its own layer, and with the storage's own `insert` and `remove`, which
-// write to that adapter's storage without a service.
+// `<service>.<backing>.test.ts` runs it with its own layer, and with the storage's own `insert`, `update` and
+// `remove`, which write to that adapter's storage without a service.
 import { describe, test } from 'bun:test'
 import * as Arr from 'effect/Array'
 import * as Channel from 'effect/Channel'
@@ -21,6 +21,8 @@ import { ProductList, type StoredProduct } from './product-list.ts'
 export type Storage<R> = Readonly<{
   /** Stores a product, answering with its id. */
   insert: (snapshot: Product.Snapshot) => Effect.Effect<string, never, R>
+  /** Writes a product under `id`, in place of what was there. */
+  update: (id: string, snapshot: Product.Snapshot) => Effect.Effect<void, never, R>
   /** Removes the product stored under `id`. */
   remove: (id: string) => Effect.Effect<void, never, R>
 }>
@@ -57,7 +59,7 @@ const isExpiringFirst = (products: ReadonlyArray<StoredProduct>) =>
 export const productListContract = <R>(
   name: string,
   adapter: () => Layer.Layer<ProductList | R>,
-  { insert, remove }: Storage<R>,
+  { insert, update, remove }: Storage<R>,
 ) =>
   describe(`ProductList contract (${name})`, () => {
     const add = (product: Product.Product) => insert(Product.toSnapshot(product))
@@ -80,6 +82,25 @@ export const productListContract = <R>(
         Effect.fnUntraced(function*(products) {
           yield* Effect.forEach(products, add)
           return isExpiringFirst(yield* list)
+        }),
+      ))
+
+    test('the list shows an updated product as written, under its id, in its new place', () =>
+      checkOnFreshLayer(
+        adapter,
+        fc.tuple(
+          fc.array(ProductArbitrary.arbitrary, { maxLength: 6 }),
+          ProductArbitrary.arbitrary,
+          ProductArbitrary.arbitrary,
+        ),
+        Effect.fnUntraced(function*([products, before, updated]) {
+          const ids = yield* Effect.forEach(products, add)
+          const id = yield* add(before)
+          yield* update(id, Product.toSnapshot(updated))
+          const listed = yield* list
+          const stored = withId(listed, id)
+          return ids.every((other) => Opt.isSome(withId(listed, other))) && isExpiringFirst(listed)
+            && Opt.exists(stored, (s) => Equal.equals(Product.fromSnapshot(s), Opt.some(updated)))
         }),
       ))
 

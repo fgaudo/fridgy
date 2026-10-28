@@ -1,12 +1,13 @@
 import { describe, expect, test } from 'bun:test'
 import * as Arr from 'effect/Array'
 import * as DateTime from 'effect/DateTime'
+import * as Equal from 'effect/Equal'
 import * as fc from 'fast-check'
 import { utc } from '#libs/testing/date-time.test_arbitrary.ts'
 import { assertProperty } from '#libs/testing/update.test_support.ts'
 import { arbitrary as order } from './date-order.test_arbitrary.ts'
 import type { DateOrder } from './date-order.ts'
-import { datesOf, MAX_DIGITS } from './digit-dates.ts'
+import { datesOf, digitsOf, MAX_DIGITS } from './digit-dates.ts'
 
 const digits = fc.string({ unit: fc.constantFrom(...'0123456789'), maxLength: MAX_DIGITS })
 
@@ -116,5 +117,22 @@ describe('datesOf', () => {
     sameDays(datesOf('27122', today, 'YMD'), [day('2027-01-22'), day('2027-12-02')])
     sameDays(datesOf('20261024', today, 'YMD'), [day('2026-10-24')])
     sameDays(datesOf('4040', today, 'YMD'), [])
+  })
+})
+
+describe('digitsOf', () => {
+  test('names its day alone, in every order, from any today', () => {
+    assertProperty(
+      [utc, utc, order],
+      (date, now, order) =>
+        Equal.equals(datesOf(digitsOf(date, order), now, order), [DateTime.startOf(date, 'day')])
+        && digitsOf(date, order).length === MAX_DIGITS,
+    )
+  })
+
+  test('writes the day, the month and the year where the order puts them', () => {
+    expect(digitsOf(day('2027-03-05'), 'DMY')).toBe('05032027')
+    expect(digitsOf(day('2027-03-05'), 'MDY')).toBe('03052027')
+    expect(digitsOf(day('2027-03-05'), 'YMD')).toBe('20270305')
   })
 })

@@ -18,6 +18,10 @@ export const insert = Effect.fnUntraced(function*(snapshot: Product.Snapshot) {
   return id.toString(10)
 })
 
+/** Writes a product under an id that `insert` gave, in place of what was there. */
+export const update = (id: string, snapshot: Product.Snapshot) =>
+  ProductStore.use(({ update }) => update(Integer.makeUnsafe(Number(id)), snapshot)).pipe(Effect.orDie, Effect.asVoid)
+
 /** Removes the product stored under an id that `insert` gave. */
 export const remove = (id: string) =>
   ProductStore.use(({ deleteById }) => deleteById(Integer.makeUnsafe(Number(id)))).pipe(Effect.orDie)

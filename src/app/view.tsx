@@ -6,6 +6,7 @@ import * as Match from 'effect/Match'
 import type { View } from '#libs/tea-snabbdom/tea-snabbdom.ts'
 import * as About from './children/about/view.tsx'
 import * as AddProducts from './children/add-products/view.tsx'
+import * as EditProduct from './children/edit-product/view.tsx'
 import * as Home from './children/home/view.tsx'
 import type { Message, Model } from './program.ts'
 
@@ -17,5 +18,6 @@ export const view: View<Model, Message> = (model, dispatch) =>
   Match.valueTags(model.page, {
     Home: ({ model }) => Home.view(model, Tea.dispatchTo(dispatch, 'Home')),
     AddProducts: ({ model }) => AddProducts.view(model, Tea.dispatchTo(dispatch, 'AddProducts')),
+    EditProduct: ({ model }) => EditProduct.view(model, Tea.dispatchTo(dispatch, 'EditProduct')),
     About: ({ model }) => About.view(model, Tea.dispatchTo(dispatch, 'About')),
   })

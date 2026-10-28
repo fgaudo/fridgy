@@ -13,7 +13,8 @@ import * as fc from 'fast-check'
 import * as Product from '#domain/product.ts'
 import { arbitrary as order } from '#libs/dates/date-order.test_arbitrary.ts'
 import * as DateOrder from '#libs/dates/date-order.ts'
-import { datesOf, MAX_DIGITS } from '#libs/dates/digit-dates.ts'
+import * as DigitDateEntry from '#libs/dates/digit-date-entry.ts'
+import { MAX_DIGITS } from '#libs/dates/digit-dates.ts'
 import { messagesSentBy } from '#libs/tea-snabbdom/view.test_support.ts'
 import { utc } from '#libs/testing/date-time.test_arbitrary.ts'
 import { assertProperty, outcomesOf } from '#libs/testing/update.test_support.ts'
@@ -79,18 +80,12 @@ const resumed = (step: Step, form: Form): State =>
 const offeredDates = (form: Form, date: DateForm) =>
   Opt.match(Opt.all([form.maybeNow, form.maybeOrder]), {
     onNone: () => [],
-    onSome: ([now, order]) => datesOf(date.digits, now, order).filter(Product.canExpireOn(now)),
+    onSome: ([now, order]) => DigitDateEntry.offered(date, now, order, Product.canExpireOn(now)),
   })
 
 /** The day the form names: the one picked, while the digits name it, or else the only one they name. */
-const namedDate = (form: Form, date: DateForm): Opt.Option<DateTime.Utc> => {
-  const offered = offeredDates(form, date)
-  const isOffered = (day: DateTime.Utc) => offered.some((d) => DateTime.Equivalence(d, day))
-  return Opt.orElse(
-    Opt.filter(date.maybeChosenDate, isOffered),
-    () => offered.length === 1 ? Opt.fromNullishOr(offered[0]) : Opt.none(),
-  )
-}
+const namedDate = (form: Form, date: DateForm): Opt.Option<DateTime.Utc> =>
+  DigitDateEntry.named(date, offeredDates(form, date))
 
 /** The product the name describes, created at the clock's time, with that expiration. */
 const productOf = (form: Form, maybeExpirationDate: Opt.Option<DateTime.Utc>) =>
