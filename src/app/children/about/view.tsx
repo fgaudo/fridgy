@@ -109,8 +109,13 @@ export const view: View<Model, Message> = (model, dispatch) => {
         <div props={{ className: 'mx-auto flex max-w-2xl flex-col gap-4 px-4 pt-8 pb-8' }}>
           <div props={{ className: 'flex flex-col items-center gap-2 py-4 text-center' }}>
             <div
-              style={{ backgroundImage: 'url(./logo.svg)' }}
-              props={{ className: 'h-24 w-24 bg-contain bg-center bg-no-repeat' }}
+              // The logo, a solid shape, in on-surface's color of either theme: the SVG masks a box of that role.
+              // The WebView floor (114) has only `-webkit-mask`; `mask` came in 120, and no tool prefixes it.
+              style={{
+                '-webkit-mask': 'url(./logo.svg) center / contain no-repeat',
+                mask: 'url(./logo.svg) center / contain no-repeat',
+              }}
+              props={{ className: 'h-24 w-24 bg-on-surface' }}
             />
             <p props={{ className: 'mt-2 text-headline-medium text-on-surface' }}>Fridgy</p>
             {model.version._tag === 'Loading' ? [] : [
