@@ -13,10 +13,7 @@ import * as Process from 'effect/process'
 import * as Ref from 'effect/Ref'
 import * as Schema from 'effect/Schema'
 import * as Stream from 'effect/Stream'
-import { convert } from 'fontverter'
-import * as hb from 'harfbuzzjs'
 import * as LicenseChecker from 'license-checker-rseidelsohn'
-import subsetFont from 'subset-font'
 import { palette, surface } from './palette.ts'
 import { tailwind } from './tailwind.ts'
 
@@ -77,88 +74,21 @@ const build = Effect.fn('build')(function*(mode: Mode) {
   }
 })
 
-class IconFontFailed extends Data.TaggedError('IconFontFailed')<{ readonly cause: unknown }> {}
-
 /**
- * The names of the Material Symbols the views may draw: every word of a string or of a text in a `.tsx` that
- * names one. A word used for something else keeps one glyph too many, which costs less than reading the syntax.
- */
-const iconNames = Effect.fn('iconNames')(function*() {
-  const resolve = yield* root
-  const fs = yield* FS.FileSystem
-  const known = new Set(
-    Array.from(
-      (yield* fs.readFileString(resolve('node_modules/material-symbols/index.d.ts'))).matchAll(/"([^"]+)"/g),
-      ([, name]) => name,
-    ),
-  )
-  const names = new Set<string>()
-  for (const file of yield* fs.readDirectory(resolve('src'), { recursive: true })) {
-    if (!file.endsWith('.tsx')) continue
-    const source = yield* fs.readFileString(resolve('src', file))
-    for (const [, ...groups] of source.matchAll(/'([^'\n]*)'|"([^"\n]*)"|`([^`]*)`|>([^<{]*)</g)) {
-      for (const word of (groups.find((group) => group !== undefined) ?? '').split(/\s+/)) {
-        if (known.has(word)) names.add(word)
-      }
-    }
-  }
-  return Array.from(names).sort()
-})
-
-/**
- * The text that keeps the glyphs of `names` in Material Symbols: the characters of the names and, for each
- * icon, the codepoint the font also gives it. An icon is a ligature of its name, which the subsetter keeps
- * only when its glyph is kept, and with the closure over the substitutions turned off: with it on, the
- * letters alone would keep every icon they can spell.
- */
-const iconText = (sfnt: Uint8Array, names: ReadonlyArray<string>) => {
-  const face = new hb.Face(new hb.Blob(sfnt))
-  const font = new hb.Font(face)
-  const glyphOf = (text: string) => {
-    const buffer = new hb.Buffer()
-    buffer.addText(text)
-    buffer.guessSegmentProperties()
-    hb.shape(font, buffer)
-    const glyphs = buffer.getGlyphInfos()
-    return glyphs.length === 1 ? glyphs[0]?.codepoint : undefined
-  }
-  // Shaping may grow the wasm memory, which detaches the view: the codepoints are copied out first.
-  const codepoints = Array.from(face.collectUnicodes())
-  const codepointOf = new Map(codepoints.map((codepoint) => [glyphOf(String.fromCodePoint(codepoint)), codepoint]))
-  return names.reduce((text, name) => {
-    const codepoint = codepointOf.get(glyphOf(name))
-    if (codepoint === undefined) throw new Error(`Material Symbols has no icon named ${name}`)
-    return text + String.fromCodePoint(codepoint)
-  }, 'abcdefghijklmnopqrstuvwxyz0123456789_')
-}
-
-/**
- * Writes Material Symbols into `dist/fonts/`, cut down to the icons the views name, with its stylesheet in the
- * `base` layer so that a view's size wins over the icons' own. The views vary only `FILL` and `opsz`: the other
- * axes are pinned. Linked from `index.html`, not imported in `styles.css`: the CSS bundler would inline it.
- * Returns the names, so that the watch knows when the font changed.
+ * Writes Material Symbols into `dist/fonts/`, whole: every icon, so that a view may name any. Its stylesheet goes
+ * in the `base` layer, so that a view's size wins over the icons' own. Linked from `index.html`, not imported in
+ * `styles.css`: the CSS bundler would inline it.
  */
 const writeIconFont = Effect.fn('writeIconFont')(function*() {
   const resolve = yield* root
   const fs = yield* FS.FileSystem
-  const names = yield* iconNames()
-  const woff2 = yield* fs.readFile(resolve('node_modules/material-symbols/material-symbols-rounded.woff2'))
-  const subset = yield* Effect.tryPromise({
-    try: async () => {
-      const text = iconText(await convert(Buffer.from(woff2), 'sfnt'), names)
-      return subsetFont(Buffer.from(woff2), text, {
-        targetFormat: 'woff2',
-        noLayoutClosure: true,
-        variationAxes: { GRAD: 0, wght: 400 },
-      })
-    },
-    catch: (cause) => new IconFontFailed({ cause }),
-  })
   const css = yield* fs.readFileString(resolve('node_modules/material-symbols/rounded.css'))
   yield* fs.makeDirectory(resolve('dist/fonts'), { recursive: true })
-  yield* fs.writeFile(resolve('dist/fonts/material-symbols-rounded.woff2'), subset)
+  yield* fs.copyFile(
+    resolve('node_modules/material-symbols/material-symbols-rounded.woff2'),
+    resolve('dist/fonts/material-symbols-rounded.woff2'),
+  )
   yield* fs.writeFileString(resolve('dist/fonts/material-symbols-rounded.css'), `@layer base {\n${css}}\n`)
-  return names
 })
 
 const prepareDist = Effect.fn('prepareDist')(function*(mode: Mode) {
@@ -172,7 +102,7 @@ const prepareDist = Effect.fn('prepareDist')(function*(mode: Mode) {
   }
   const html = yield* fs.readFileString(resolve('src/index.html'))
   yield* fs.writeFileString(resolve('dist', 'index.html'), html.replaceAll('%ENTRY%', mode))
-  return yield* writeIconFont()
+  yield* writeIconFont()
 })
 
 const devServerConfig = Config.all({
@@ -180,14 +110,9 @@ const devServerConfig = Config.all({
   port: Config.Port('DEV_SERVER_PORT').pipe(Config.withDefault(3000)),
 })
 
-/**
- * Views (the only `.tsx` files) and styles can be swapped in place; any other change, a new icon among them,
- * needs a full page reload.
- */
-const reloadFor = (path: Path.Path, changed: HashSet.HashSet<string>, iconsChanged: boolean) =>
-  !iconsChanged && HashSet.every(changed, (file) => ['.tsx', '.css'].includes(path.extname(file)))
-    ? 'reload-view'
-    : 'reload-page'
+/** Views (the only `.tsx` files) and styles can be swapped in place; any other change needs a full page reload. */
+const reloadFor = (path: Path.Path, changed: HashSet.HashSet<string>) =>
+  HashSet.every(changed, (file) => ['.tsx', '.css'].includes(path.extname(file))) ? 'reload-view' : 'reload-page'
 
 const watchCommand = Cli.Command.make(
   'watch',
@@ -198,7 +123,7 @@ const watchCommand = Cli.Command.make(
     const fs = yield* FS.FileSystem
     const { host, port } = yield* devServerConfig
     const dist = resolve('dist')
-    const icons = yield* Ref.make(yield* prepareDist('development'))
+    yield* prepareDist('development')
     yield* build('development')
     const server = yield* Effect.acquireRelease(
       Effect.sync(() =>
@@ -235,16 +160,10 @@ const watchCommand = Cli.Command.make(
         Effect.fn('rebuild')(
           function*() {
             const files = yield* Ref.getAndSet(changed, HashSet.empty())
-            const previous = yield* Ref.get(icons)
-            const next = HashSet.some(files, (file) => file.endsWith('.tsx')) ? yield* writeIconFont() : previous
-            yield* Ref.set(icons, next)
             yield* build('development')
-            server.publish('reload', reloadFor(path, files, previous.join() !== next.join()))
+            server.publish('reload', reloadFor(path, files))
           },
-          Effect.catchTags({
-            BuildFailed: ({ logs }) => Effect.logError(`Build failed:\n${logs}`),
-            IconFontFailed: ({ cause }) => Effect.logError('Could not write the icon font', cause),
-          }),
+          Effect.catchTag('BuildFailed', ({ logs }) => Effect.logError(`Build failed:\n${logs}`)),
         ),
       ),
     )

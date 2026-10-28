@@ -58,9 +58,10 @@ The runtime of the Elm architecture is a library, an npm dependency:
 
 The text is drawn in the system's fonts: Android has a family for every script, and picks the forms of Chinese
 characters by the device's language (set as `lang` by `index.html`). The only font the app ships is its icons,
-Material Symbols, cut down by the build to the icons the views name (`writeIconFont` in `scripts/cli.ts`) and
-written into `dist/fonts/`, linked from `index.html` rather than imported in `styles.css`, which would inline it.
-It is loaded before the splash screen hides (`infrastructure/fonts.ts`), so that the first view has its icons.
+Material Symbols, whole (every icon, 5.4 MB: a view may name any), copied by the build into `dist/fonts/`
+(`writeIconFont` in `scripts/cli.ts`) and linked from `index.html` rather than imported in `styles.css`, which
+would inline it. It is loaded before the splash screen hides (`infrastructure/fonts.ts`), so that the first view
+has its icons.
 
 ## Reading order
 
