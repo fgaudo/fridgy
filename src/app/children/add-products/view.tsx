@@ -75,6 +75,7 @@ const appBar = (
       }}
     >
       <button
+        attrs={{ 'aria-label': iconTitle }}
         props={{
           className:
             'state-layer material-symbols-rounded flex h-12 w-12 items-center justify-center rounded-full disabled:text-on-surface/38',
@@ -247,6 +248,7 @@ const nameField = (shown: NameShown, activity: NameActivity, isReturning: boolea
           onNone: () => activity._tag === 'LookingUp' ? [progress] : [],
           onSome: (clear) => [
             <button
+              attrs={{ 'aria-label': 'Clear name' }}
               props={{
                 className: cn(
                   'state-layer material-symbols-rounded absolute top-1 right-1 flex h-12 w-12 items-center',
@@ -271,6 +273,7 @@ const scanFab = (maybeScan: Opt.Option<Message>, dispatch: Dispatch<Message>) =>
   const { on } = handlers(dispatch)
   return (
     <button
+      attrs={{ 'aria-label': 'Scan barcode' }}
       props={{
         className: cn(
           'state-layer material-symbols-rounded absolute right-0 bottom-1 flex h-14 w-14 items-center',
@@ -356,7 +359,15 @@ const orderSegments = (shown: DateShown, activity: DateActivity, dispatch: Dispa
       >
         {/* Keyed: the label must not take over the check's element, and its font, once the check goes. */}
         {choice._tag === 'Current'
-          ? [<span key='check' props={{ className: 'material-symbols-rounded text-[18px]' }}>check</span>]
+          ? [
+            <span
+              key='check'
+              attrs={{ 'aria-hidden': 'true' }}
+              props={{ className: 'material-symbols-rounded text-[18px]' }}
+            >
+              check
+            </span>,
+          ]
           : []}
         <span key='label'>{order}</span>
       </button>
@@ -429,7 +440,7 @@ const chip = ({ date, choice }: DateChoice, activity: DateActivity, dispatch: Di
       }}
       on={Opt.match(maybeChoose, { onNone: () => ({}), onSome: (choose) => on('click', choose) })}
     >
-      <span props={{ className: 'material-symbols-rounded text-[18px]' }}>
+      <span attrs={{ 'aria-hidden': 'true' }} props={{ className: 'material-symbols-rounded text-[18px]' }}>
         {choice._tag === 'Chosen' ? 'check' : 'event'}
       </span>
       <span>{formatDay(date)}</span>
@@ -466,6 +477,7 @@ const keypad = (activity: DateActivity, dispatch: Dispatch<Message>) => {
   const { on } = handlers(dispatch)
   const key = (label: string, maybeMessage: Opt.Option<Message>, { title = label, isIcon = false } = {}) => (
     <button
+      attrs={{ 'aria-label': title }}
       props={{
         className: cn(
           'state-layer flex h-14 items-center justify-center rounded-full bg-surface-container-highest',

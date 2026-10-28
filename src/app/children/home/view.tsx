@@ -22,7 +22,9 @@ const addButton = (model: Model, isAboveSnackbar: boolean, { on }: Handlers<Mess
     }}
     on={on('click', model.add)}
   >
-    <span props={{ className: 'material-symbols-rounded icon-filled' }}>barcode_scanner</span>
+    <span attrs={{ 'aria-hidden': 'true' }} props={{ className: 'material-symbols-rounded icon-filled' }}>
+      barcode_scanner
+    </span>
     <span
       props={{
         className: cn(
@@ -72,7 +74,12 @@ const menu = (menu: Model['menu'], { on }: Handlers<Message>): ReadonlyArray<VNo
           props={{ className: 'state-layer flex h-12 items-center gap-3 px-3 text-left text-label-large' }}
           on={on('click', menu.requestInfo)}
         >
-          <span props={{ className: 'material-symbols-rounded text-on-surface-variant' }}>info</span>
+          <span
+            attrs={{ 'aria-hidden': 'true' }}
+            props={{ className: 'material-symbols-rounded text-on-surface-variant' }}
+          >
+            info
+          </span>
           <span props={{ className: 'pr-3' }}>About</span>
         </button>
       </div>,
@@ -89,6 +96,7 @@ export const view: View<Model, Message> = (model, dispatch) => {
   const { isAtTop } = model
   const moreButton = (
     <button
+      attrs={{ 'aria-label': 'More options' }}
       props={{
         className: 'state-layer material-symbols-rounded flex h-12 w-12 items-center justify-center rounded-full',
         title: 'More options',

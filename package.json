@@ -3,6 +3,7 @@
   "version": "2026.10.0",
   "private": true,
   "type": "module",
+  "packageManager": "bun@1.4.2",
   "imports": {
     "#app/*": "./src/app/*",
     "#domain/*": "./src/domain/*",
@@ -17,9 +18,11 @@
     "update-palette": "bun ./scripts/cli.ts palette",
     "update-assets": "bun ./scripts/cli.ts assets",
     "build": "bun ./scripts/cli.ts build",
+    "check-floor": "es-check --module es2023 \"dist/*.js\"",
+    "e2e": "bun run build && bun test ./e2e/production.e2e.ts",
     "watch": "bun ./scripts/cli.ts watch",
     "typecheck": "tsc --noEmit",
-    "lint": "biome check src scripts && oxlint --type-aware src scripts",
+    "lint": "biome check src scripts e2e && oxlint --type-aware src scripts e2e",
     "test": "bun test",
     "prepare": "effect-tsgo patch --typescript --no-oxlint && bun run update-licenses"
   },
@@ -51,12 +54,14 @@
     "@types/bun": "^1.4.4",
     "@types/subset-font": "^2.3.0",
     "dprint": "^0.63.0",
+    "es-check": "^9.8.1",
     "fast-check": "^4.10.2",
     "fontverter": "^2.0.0",
     "harfbuzzjs": "^1.6.4",
     "license-checker-rseidelsohn": "^5.0.1",
     "oxlint": "^1.89.0",
     "oxlint-tsgolint": "^7.0.2005",
+    "playwright": "^1.64.1",
     "subset-font": "^2.9.0",
     "typescript": "^7.0.2"
   }

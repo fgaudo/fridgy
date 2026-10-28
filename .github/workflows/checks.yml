@@ -1,0 +1,37 @@
+name: Checks
+
+on:
+  push:
+  pull_request:
+
+concurrency:
+  group: checks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - run: bun install --frozen-lockfile
+      # The install regenerates the file: a difference means the committed one is stale.
+      - name: Licenses up to date
+        run: git diff --exit-code -- src/app/children/about/services/licenses/licenses.generated.json
+      - run: bun run typecheck
+      - run: bun run test
+      - run: bun run lint
+      - run: bun run build
+      - run: bun run check-floor
+      - run: bunx playwright install --with-deps chromium
+      - run: bun run e2e
+      - name: Screenshots of the failed run
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: e2e-screenshots
+          path: ${{ runner.temp }}/e2e
+          if-no-files-found: ignore

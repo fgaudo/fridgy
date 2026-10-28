@@ -9,7 +9,8 @@ const config: CapacitorConfig = {
   android: {
     // The lowest version with everything the app uses: the `scrollend` event (114; without it the list never snaps
     // back to the top after the first scroll), Tailwind 4 and the shadows' `color-mix` (111), the database's
-    // synchronous OPFS access handles (108).
+    // synchronous OPFS access handles (108). The edition in `check-floor` (`package.json`) is the last one this WebView
+    // implements whole, and moves with this number.
     minWebViewVersion: 114,
     // How Open Food Facts asks every app to identify itself: the WebView's own User-Agent, with this after it.
     appendUserAgent: `Fridgy/${packageJson.version} (fgaudo@gmail.com)`,

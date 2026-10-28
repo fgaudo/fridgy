@@ -260,6 +260,7 @@ const validItem = (product: Data.TaggedEnum.Value<ProductModel, 'Valid'>, events
 
 const iconButton = (icon: string, label: string, message: Message | undefined, { on }: Handlers<Message>) => (
   <button
+    attrs={{ 'aria-label': label }}
     props={{
       className:
         'state-layer material-symbols-rounded flex h-12 w-12 shrink-0 items-center justify-center rounded-full disabled:text-on-surface/38',

@@ -144,6 +144,8 @@ colors, font sizes, radii, shadows, easings and durations:
   emphasized, over `medium-4`, and what leaves accelerates over `short-4`: an element inserted and removed sets
   its `transition` in snabbdom's `delayed` and `remove` styles, with `var(--transition-duration-medium-4)` and
   `var(--ease-emphasized-decelerate)`, never a number of milliseconds or a `cubic-bezier`;
+- an icon is a ligature, a word that a screen reader would read: an icon button is named by an `aria-label`
+  (its `title` too, for the pointer), and an icon beside a label is `aria-hidden`;
 - icons are `material-symbols-rounded` spans, 24dp as they come, `icon-large` (48dp, at its optical size) for an
   empty state's, `icon-filled` for a selected state's; the safe areas are the `sait`, `saib`, `sail`, `sair`
   spacings (`pt-sait`, `mr-sair`). A bar that pads for an inset keeps its height with `box-content`: with the

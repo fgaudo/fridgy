@@ -62,8 +62,9 @@ One end-to-end run of `dist/`, served over HTTP on `localhost` (the OPFS databas
 headless Chromium, which is the WebView's engine: the app starts, a product entered by hand appears in the
 list, is opened, edited and deleted; and on each page, at 320×640, nothing scrolls. It is the only check of
 the production entrypoint: the development server (`bun run watch`) runs the app on a database in memory,
-and the tests never load the bundle. Before it, the floor check (`es-check` on `dist/*.js`, in the skill)
-answers the one question about the bundle that has no user-visible symptom but a blank page.
+and the tests never load the bundle. It is `e2e/production.e2e.ts`, run by `bun run e2e`. Before it, the
+floor check (`bun run check-floor`, `es-check` on `dist/*.js`) answers the one question about the bundle that
+has no user-visible symptom but a blank page.
 
 ### The emulator, on the target image
 
@@ -81,12 +82,16 @@ and after the first release of each of those. Its result is written in the commi
 
 ## Verified, and not
 
-- Verified on 2026-10-28: `bunx es-check --module es2023 "dist/*.js"` passes on the bundle as built, and
-  fails on the same bundle for an older edition, so the check bites. ES2023 is the last edition that WebView
-  114 implements whole.
-- Not yet: the production bundle in a browser, and CI, do not exist ("Known gaps" in `AGENTS.md`). Until
-  they do, the production entrypoint runs only in the emulator, and the release pass in the emulator also
-  does what the browser layer would.
+- Verified on 2026-10-28: `bun run check-floor` passes on the bundle as built, and fails on the same bundle
+  for an older edition, or with a `using` declaration (ES2026) in it, so the check bites. ES2023 is the last
+  edition that WebView 114 implements whole.
+- Verified on 2026-10-28: `bun run e2e` passes on the bundle as built, fails at the start on a bundle whose
+  worker is missing, and fails its check of scrolling on a screen 400px tall. It covers the start on the
+  worker over OPFS, a product added by hand, its reload from the database, its edit and its deletion, About's
+  version, and that Home, both steps of `add-products` and the page that edits a product do not scroll at
+  320×640. About is left out of that check: it is a page to read, longer than any screen.
+- CI is `.github/workflows/checks.yml`: on every push and pull request, the tests, the build, the floor check
+  and the run above, on Ubuntu.
 - Not yet: the emulator pass as the skill lists it has not been run as such. The passes of 2026-10-28 followed the
   previous procedure (API 29 on WebView 114 installed by hand, and API 37), and what they settled is already
   in the code and the docs.

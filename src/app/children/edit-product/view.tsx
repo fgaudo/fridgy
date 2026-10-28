@@ -41,6 +41,7 @@ const appBar = (maybeClose: Opt.Option<Message>, dispatch: Dispatch<Message>) =>
       }}
     >
       <button
+        attrs={{ 'aria-label': 'Close' }}
         props={{
           className:
             'state-layer material-symbols-rounded flex h-12 w-12 items-center justify-center rounded-full disabled:text-on-surface/38',
@@ -137,6 +138,7 @@ const nameField = (shown: FieldsShown, activity: Activity, dispatch: Dispatch<Me
         onNone: () => [],
         onSome: (clear) => [
           <button
+            attrs={{ 'aria-label': 'Clear name' }}
             props={{
               className: cn(
                 'state-layer material-symbols-rounded absolute top-1 right-1 flex h-12 w-12 items-center',
@@ -167,7 +169,15 @@ const orderSegments = (shown: FieldsShown, activity: Activity, dispatch: Dispatc
       >
         {/* Keyed: the label must not take over the check's element, and its font, once the check goes. */}
         {choice._tag === 'Current'
-          ? [<span key='check' props={{ className: 'material-symbols-rounded text-[18px]' }}>check</span>]
+          ? [
+            <span
+              key='check'
+              attrs={{ 'aria-hidden': 'true' }}
+              props={{ className: 'material-symbols-rounded text-[18px]' }}
+            >
+              check
+            </span>,
+          ]
           : []}
         <span key='label'>{order}</span>
       </button>
@@ -231,7 +241,7 @@ const chip = ({ date, choice }: DateChoice, activity: Activity, dispatch: Dispat
       props={{ className: 'filter-chip', disabled: activity._tag === 'Saving' }}
       on={Opt.match(maybeChoose, { onNone: () => ({}), onSome: (choose) => on('click', choose) })}
     >
-      <span props={{ className: 'material-symbols-rounded text-[18px]' }}>
+      <span attrs={{ 'aria-hidden': 'true' }} props={{ className: 'material-symbols-rounded text-[18px]' }}>
         {choice._tag === 'Chosen' ? 'check' : 'event'}
       </span>
       <span>{formatDay(date)}</span>
@@ -265,6 +275,7 @@ const keypad = (activity: Activity, dispatch: Dispatch<Message>) => {
   const { on } = handlers(dispatch)
   const key = (label: string, maybeMessage: Opt.Option<Message>, { title = label, isIcon = false } = {}) => (
     <button
+      attrs={{ 'aria-label': title }}
       props={{
         className: cn(
           'state-layer flex h-14 items-center justify-center rounded-full bg-surface-container-highest',

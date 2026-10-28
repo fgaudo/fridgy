@@ -84,6 +84,8 @@ how the app is tested, and why a release is checked where it is, in [`docs/testi
 | `bun run typecheck`       | Type-check the project                                                                              |
 | `bun run test`            | Run the tests                                                                                       |
 | `bun run lint`            | Lint, including the import boundaries and the order of imports, and warn about deprecated APIs      |
+| `bun run check-floor`     | Check that `dist/` parses on the lowest WebView the app supports, after a build                     |
+| `bun run e2e`             | Build, and run the production bundle in headless Chromium (`bunx playwright install chromium` once) |
 | `bunx dprint fmt <files>` | Format the files you changed                                                                        |
 | `bun run update-palette`  | Regenerate `src/palette.generated.css`, the colors, from the key colors in `scripts/palette.ts`     |
 | `bun run update-assets`   | Regenerate the Android launcher icons and splash screens from `assets/logo.svg` and `logo-dark.svg` |

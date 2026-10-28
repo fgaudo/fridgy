@@ -47,7 +47,7 @@ change with it.
 (`docs/testing.md` says why): the floor is checked on the bundle, after a build,
 
 ```bash
-bunx es-check --module es2023 "dist/*.js"
+bun run check-floor
 ```
 
 which fails on a syntax that ES2023, the last edition WebView 114 implements whole, does not have. The bundle
@@ -138,9 +138,9 @@ The version is `YEAR.MONTH.N`, N counting the releases of the month from 0 (`202
    (`src/app/children/about/services/licenses/licenses.generated.json`), and commits the file with `bun.lock`
    when it changes;
 3. runs `bun run typecheck`, `bun run test` and `bun run lint`, builds and syncs as above, and runs the floor
-   check on `dist/`;
-4. runs the production bundle in a browser as `docs/testing.md` says, once that check exists ("Known gaps" in
-   `AGENTS.md`), and the emulator pass above on the target image; every item under "Known gaps" that the
+   check on `dist/`; CI (`.github/workflows/checks.yml`) runs the same checks on the push;
+4. runs the production bundle in a browser (`bun run e2e`, which CI runs too), and the emulator pass above on
+   the target image; every item under "Known gaps" that the
    emulator can settle is settled then, and removed;
 5. is uploaded to the Play Console as an AAB signed with the upload key of the previous releases (Play App
    Signing holds the app's key; `build.gradle` has no signing config), with the AAB's size noted (`dist/` is

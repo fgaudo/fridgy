@@ -120,6 +120,10 @@ folders; "page" names a role in the UI, kept by the root's state, not a kind of 
   satisfy yet stays as `test.failing` with the bug in its name.
 - A test's name says what it checks. When a change touches a test, or what it tests, check that its name, its
   `describe` and its comments still say what the assertions check.
+- The production bundle in a browser is `e2e/production.e2e.ts`, outside `src/` and outside `bun test`'s
+  pattern: `bun run e2e` builds and runs it, in headless Chromium with Playwright. It imports nothing from
+  `src/`, and finds elements as a user does, by role and visible text, never by a test id: a control it cannot
+  name has no accessible name, which its view gives it.
 - Code used only by tests lives in `*.test_<kind>.ts` files (`test_arbitrary`, `test_contract`,
   `test_support`): Biome lets only `*.test.ts` and other `*.test_*.ts` files import them, and `bun test` does
   not run them. Branded and domain types have a `*.test_arbitrary.ts` producing only valid values; generators
@@ -179,13 +183,6 @@ folders; "page" names a role in the UI, kept by the root's state, not a kind of 
 - A defect leaves the app frozen on its last frame: `src/entrypoints/run.ts` runs the program with nothing
   around it, so the cause goes to the console only, and the user sees neither a message nor a way to restart.
   Whether the production entrypoint shows something instead is not decided.
-- The production bundle has no test: the run of `docs/testing.md` ("The production bundle in a browser") is
-  to be written, with Playwright, in a file of its own that `bun test` does not pick up, run by a script of
-  `package.json`. Until it exists, the production entrypoint (`src/entrypoints/production.ts`, the SQLite
-  worker on OPFS) runs only in the emulator, and the emulator pass before a release does what this run would.
-- No CI runs the checks. A GitHub Actions workflow is to run, on every push, `bun run typecheck`,
-  `bun run test`, `bun run lint`, `bun run build`, the floor check of the `android-release` skill (to become
-  a script of `package.json` with the workflow) and, once it exists, the run above.
 - The vibrations (`docs/haptics.md`) have not been felt on a phone: whether each pattern feels like the constant
   it stands for. The emulator only shows their delivery.
 

@@ -93,6 +93,7 @@ export const view: View<Model, Message> = (model, dispatch) => {
       >
         <div props={{ className: 'flex h-16 items-center px-1' }}>
           <button
+            attrs={{ 'aria-label': 'Back' }}
             props={{
               className: 'state-layer material-symbols-rounded flex h-12 w-12 items-center justify-center rounded-full',
               title: 'Back',
