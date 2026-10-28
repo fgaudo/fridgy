@@ -176,9 +176,6 @@ folders; "page" names a role in the UI, kept by the root's state, not a kind of 
   field says why. Neither has the expansion of a UPC-E, which assumes that the detector reports one as its 8
   digits. The lookup itself runs from the WebView (`docs/open-food-facts-lookup.md`, "Verified, and not"). How
   both are checked is in the `android-release` skill ("The emulator").
-- A defect leaves the app frozen on its last frame: `src/entrypoints/run.ts` runs the program with nothing
-  around it, so the cause goes to the console only, and the user sees neither a message nor a way to restart.
-  Whether the production entrypoint shows something instead is not decided.
 - The vibrations (`docs/haptics.md`) have not been felt on a phone: whether each pattern feels like the constant
   it stands for. The emulator only shows their delivery; the author feels them before the release.
 

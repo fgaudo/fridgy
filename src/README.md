@@ -38,7 +38,8 @@ src/
 │                        `date-order.ts`, how Open Food Facts' answers are cached, `BarcodeCache` in
 │                        `barcodes.ts`, and the sample data), the client of Open Food Facts' API
 │                        (open-food-facts/: how a code is normalized, asked for and decoded), hot reload,
-│                        fonts; and the platform's facts the programs use as they are: the back button
+│                        fonts, the screen a crash leaves (crash-screen.ts, which the production entrypoint
+│                        hands to `run`); and the platform's facts the programs use as they are: the back button
 │                        (back-button/: Capacitor's, or the browser's history; the entrypoints pick one), the
 │                        toasts (notifications/) and the vibrations (haptics/, `docs/haptics.md`). Its adapters
 │                        are named as the app's, `<service>.<backing>.ts`

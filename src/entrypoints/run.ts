@@ -2,6 +2,7 @@
 // import anything environment-specific (sqlite, hot reload, …).
 import * as Browser from '@effect/platform-browser'
 import * as Tea from '@fgaudo/effect-tea'
+import * as Cause from 'effect/Cause'
 import * as Context from 'effect/Context'
 import * as Effect from 'effect/Effect'
 import type * as Layer from 'effect/Layer'
@@ -34,7 +35,13 @@ const program = Effect.gen(function*() {
   )
 })
 
-export const run = (layer: Layer.Layer<App.Deps | RootViews | SnabbdomRenderer>) =>
+// `onCrash` runs when the program ends by anything but the page's discarding, which interrupts it: the program never
+// ends by itself, so that end is a bug. The runtime writes the cause to the console once the program has ended;
+// `onCrash` never recovers from it.
+export const run = (layer: Layer.Layer<App.Deps | RootViews | SnabbdomRenderer>, onCrash: Effect.Effect<void>) =>
   Browser.BrowserRuntime.runMain(
-    program.pipe(Effect.provide(layer)),
+    program.pipe(
+      Effect.provide(layer),
+      Effect.tapCause((cause) => Cause.hasInterruptsOnly(cause) ? Effect.void : onCrash),
+    ),
   )

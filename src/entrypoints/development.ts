@@ -39,4 +39,6 @@ run(
     SnabbdomRenderer.layer('#root'),
     Layer.succeed(References.MinimumLogLevel, 'Debug'),
   ).pipe(Layer.orDie),
+  // A crash leaves the last frame and the console as they are: what a developer reads.
+  Effect.void,
 )

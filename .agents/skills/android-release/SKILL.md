@@ -186,5 +186,8 @@ Play Store, as an update: `versionCode` 20261000 over its 10. Decided, and to be
   as "The emulator" says.
 - **The vibrations are felt by the author on a phone** (`docs/haptics.md`: whether each pattern feels like the
   constant it stands for); the emulator only shows their delivery.
+- **A defect shows a screen with a restart button** (decided and done on 2026-10-28:
+  `src/infrastructure/crash-screen.ts`, which the production entrypoint hands to `run`). Nothing of the cause
+  leaves the phone; development keeps the frozen frame and the console.
 
 Remove this section once the release is out.

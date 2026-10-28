@@ -6,6 +6,7 @@ import * as Stream from 'effect/Stream'
 import * as App from '#app/layer.ts'
 import * as RootView from '#app/view.tsx'
 import * as BackButtonCapacitor from '#infrastructure/back-button/back-button.capacitor.ts'
+import * as CrashScreen from '#infrastructure/crash-screen.ts'
 import * as SqliteOpfs from '#infrastructure/storage/sqlite.opfs.ts'
 import { SnabbdomRenderer } from '#libs/tea-snabbdom/renderer.ts'
 import { RootViews, run } from './run.ts'
@@ -29,4 +30,5 @@ run(
     SnabbdomRenderer.layer('#root'),
     Layer.succeed(References.MinimumLogLevel, 'Info'),
   ).pipe(Layer.orDie),
+  CrashScreen.show,
 )
