@@ -15,7 +15,7 @@ architecture.
 > still missing is listed under "Known gaps" in [`AGENTS.md`](AGENTS.md).
 
 **Privacy:** scanning a barcode sends the barcode, and the phone's IP address, to Open Food Facts; nothing else
-leaves the phone.
+leaves the phone. The whole of it is in [`PRIVACY.md`](PRIVACY.md), the policy the store listing links to.
 
 ## Stack
 

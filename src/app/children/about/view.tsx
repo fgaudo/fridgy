@@ -135,6 +135,11 @@ export const view: View<Model, Message> = (model, dispatch) => {
               link('https://opendatacommons.org/licenses/odbl/1-0/', 'Open Database License'),
               '.',
             ])}
+            {row('privacy_tip', [
+              'Your products stay on your phone: read the ',
+              link('https://github.com/fgaudo/fridgy/blob/main/PRIVACY.md', 'privacy policy'),
+              '.',
+            ])}
             {row('bug_report', [
               'Found a bug, or have an idea? ',
               link('https://github.com/fgaudo/fridgy/issues', 'Open an issue'),

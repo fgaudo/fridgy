@@ -178,5 +178,9 @@ folders; "page" names a role in the UI, kept by the root's state, not a kind of 
   and 320×533: not yet in the emulator, nor with the font at 200%, nor with the keyboard open on each field.
 - The dark theme has been checked in a browser only: not yet on Android, where the WebView should match
   `prefers-color-scheme` from the system's theme, nor its night splash screens.
+- The manifest keeps `allowBackup`, so that Android's backup carries the products across a phone change, and
+  `PRIVACY.md` says so. The restore has not been tried: the database lives in the WebView's profile
+  (`app_webview`), which a restore is not known to bring back whole. Check it in the emulator:
+  `adb shell bmgr backupnow net.gaudo.fridgy`, uninstall, reinstall, and see the products again.
 
 When an item is resolved, remove it.
