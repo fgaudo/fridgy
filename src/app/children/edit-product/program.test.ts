@@ -301,26 +301,31 @@ describe('EditProduct update', () => {
     })
   })
 
-  test('OrderKept changes nothing, and says so with a toast when the order could not be kept', () => {
+  test('OrderKept changes nothing, and says so with a toast and a vibration when the order could not be kept', () => {
     assertProperty(
       [fc.oneof(editing, saving), fc.boolean()],
       (before, succeeded) =>
         Equal.equals(step(Msg.OrderKept({ succeeded }), before), {
           rejected: false,
           after: before,
-          commands: succeeded ? [] : [Cmd.ShowToast({ text: 'Couldn\'t save the date order' })],
+          commands: succeeded
+            ? []
+            : [Cmd.ShowToast({ text: 'Couldn\'t save the date order' }), Cmd.Vibrate({ feedback: 'Reject' })],
           events: [],
         }),
     )
   })
 
-  test('Saved gives the form back, and leaves the page once saved, or once the product is gone, with a toast on a failure', () => {
+  test('Saved gives the form back, and leaves the page once saved, or once the product is gone, with a vibration, and a toast on a failure', () => {
     assertProperty([saving, outcome], (before, outcome) => {
       const expected = {
-        Saved: { commands: [], events: [Ev.LeaveRequested()] },
-        Failed: { commands: [Cmd.ShowToast({ text: 'Couldn\'t save the product' })], events: [] },
+        Saved: { commands: [Cmd.Vibrate({ feedback: 'Confirm' })], events: [Ev.LeaveRequested()] },
+        Failed: {
+          commands: [Cmd.ShowToast({ text: 'Couldn\'t save the product' }), Cmd.Vibrate({ feedback: 'Reject' })],
+          events: [],
+        },
         Gone: {
-          commands: [Cmd.ShowToast({ text: 'This product no longer exists' })],
+          commands: [Cmd.ShowToast({ text: 'This product no longer exists' }), Cmd.Vibrate({ feedback: 'Reject' })],
           events: [Ev.LeaveRequested()],
         },
       }[outcome]

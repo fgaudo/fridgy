@@ -8,7 +8,7 @@ import * as NonEmptyHashSet from '#libs/collections/non-empty-hash-set.test_arbi
 import * as PositiveInteger from '#libs/numbers/positive-integer.test_arbitrary.ts'
 import { arbitrary as maybe } from '#libs/option/option.test_arbitrary.ts'
 import { utc } from '#libs/testing/date-time.test_arbitrary.ts'
-import type { Departure, Entrance, LastDeletion, Message, Product, Selection, State } from './program.ts'
+import type { Departure, Entrance, Gesture, LastDeletion, Message, Product, Selection, State } from './program.ts'
 import { ProductListReadError, type StoredProduct } from './services/product-list/product-list.ts'
 
 const Msg = Data.taggedEnum<Message>()
@@ -17,6 +17,8 @@ const Msg = Data.taggedEnum<Message>()
 const IDS = ['1', '2', '3', '4', '5', '6']
 
 export const id: fc.Arbitrary<string> = fc.constantFrom(...IDS)
+
+export const gesture: fc.Arbitrary<Gesture> = fc.constantFrom('Tap', 'LongPress')
 
 export const product: fc.Arbitrary<Product> = fc.oneof(
   fc.record({ id, product: ProductArbitrary.arbitrary }).map((fields) => ({ _tag: 'Valid', ...fields } as const)),
@@ -140,9 +142,9 @@ export const storedProducts: fc.Arbitrary<ReadonlyArray<StoredProduct>> = fc.uni
 )
 
 export const message: fc.Arbitrary<Message> = fc.oneof(
-  id.map((id) => Msg.ItemSelected({ id })),
+  fc.record({ id, by: gesture }).map(Msg.ItemSelected),
   id.map((id) => Msg.EditRequested({ id })),
-  id.map((id) => Msg.ItemDeselected({ id })),
+  fc.record({ id, by: gesture }).map(Msg.ItemDeselected),
   fc.constant(Msg.SelectionCleared()),
   fc.constant(Msg.DeleteStarted()),
   fc.constant(Msg.UndoRequested()),

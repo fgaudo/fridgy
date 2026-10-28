@@ -14,6 +14,7 @@ import * as Match from 'effect/Match'
 import * as Opt from 'effect/Option'
 import * as Product from '#domain/product.ts'
 import { BackButton } from '#infrastructure/back-button/back-button.ts'
+import { type Feedback, Haptics } from '#infrastructure/haptics/haptics.ts'
 import { Notifications } from '#infrastructure/notifications/notifications.ts'
 import * as DateOrder from '#libs/dates/date-order.ts'
 import * as DigitDateEntry from '#libs/dates/digit-date-entry.ts'
@@ -146,6 +147,7 @@ export type Command = Data.TaggedEnum<{
   /** Keeps the order the digits of a date are read in, which the setting then reports. */
   KeepOrder: { order: DateOrder.DateOrder }
   ShowToast: { text: string }
+  Vibrate: { feedback: Feedback }
 }>
 
 const Command = Data.taggedEnum<Command>()
@@ -156,7 +158,14 @@ export type Event = Data.TaggedEnum<{
 
 const Event = Data.taggedEnum<Event>()
 
-export type Deps = AddProducts.AddProducts | DateOrderSetting | Scanner | ProductLookup | Notifications | BackButton
+export type Deps =
+  | AddProducts.AddProducts
+  | DateOrderSetting
+  | Scanner
+  | ProductLookup
+  | Notifications
+  | Haptics
+  | BackButton
 
 /** A day the digits name: the chosen one, or one to pick while the step takes input. */
 export type DateChoice = Readonly<{
@@ -443,6 +452,17 @@ const showToast = Effect.fn('ShowToast')(
   Effect.withLogSpan('ShowToast'),
 )
 
+const vibrate = Effect.fn('Vibrate')(
+  function*({ feedback }: Readonly<{ feedback: Feedback }>) {
+    const { perform } = yield* Haptics
+    yield* perform(feedback).pipe(
+      Effect.catchTag('HapticsError', (error) => Effect.logWarning('Could not vibrate', error.cause)),
+    )
+    return Opt.none()
+  },
+  Effect.withLogSpan('Vibrate'),
+)
+
 /** Adds the product a step describes, when it describes one. */
 const start = (state: State & { _tag: 'Naming' | 'Dating' }): Tea.Transition<State, Command, Event> =>
   Opt.match(productOfStep(state), {
@@ -552,10 +572,17 @@ export const program: Tea.Program<{
 
     // The order picked stays in use for this visit either way: only the failure to keep it is told.
     OrderKept: ({ succeeded }) => (state) =>
-      succeeded ? { state } : { state, commands: [Command.ShowToast({ text: 'Couldn\'t save the date order' })] },
+      succeeded ? { state } : {
+        state,
+        commands: [
+          Command.ShowToast({ text: 'Couldn\'t save the date order' }),
+          Command.Vibrate({ feedback: 'Reject' }),
+        ],
+      },
 
-    // The first barcode read closes the scanner. It is looked up even when it is the name already: scanning again
-    // is how a failed lookup is retried.
+    // The first barcode read closes the scanner, with a vibration: the phone is pointed at the product, not
+    // looked at. It is looked up even when it is the name already: scanning again is how a failed lookup is
+    // retried.
     Scanned: ({ barcode }) => (state) => {
       if (!isScanning(state)) {
         return defect('Scanned while the camera is off: only the scanner reads it, until it fails')
@@ -563,7 +590,10 @@ export const program: Tea.Program<{
       const named = Opt.contains(state.form.maybeName, barcode)
         ? state.form
         : { ...state.form, maybeName: Opt.some(barcode), replacements: state.form.replacements + 1 }
-      return { state: { _tag: 'LookingUp', form: { ...named, lookup: { _tag: 'Idle' } }, barcode } }
+      return {
+        state: { _tag: 'LookingUp', form: { ...named, lookup: { _tag: 'Idle' } }, barcode },
+        commands: [Command.Vibrate({ feedback: 'Confirm' })],
+      }
     },
 
     // A product found replaces the barcode, drawn anew and focused; otherwise the barcode stays, a valid name.
@@ -600,7 +630,10 @@ export const program: Tea.Program<{
     // itself would say nothing.
     CameraFailed: () => (state) =>
       isScanning(state)
-        ? { state: withForm(state, (form) => ({ ...form, camera: 'Unavailable' })) }
+        ? {
+          state: withForm(state, (form) => ({ ...form, camera: 'Unavailable' })),
+          commands: [Command.Vibrate({ feedback: 'Reject' })],
+        }
         : defect('CameraFailed while the camera is off: only the scanner reads it, until it fails'),
 
     // The check of an earlier opening of the page may answer too (opened, left and opened again before it did):
@@ -632,10 +665,14 @@ export const program: Tea.Program<{
               maybeAcknowledging: Opt.some(acknowledging),
             },
           },
+          commands: [Command.Vibrate({ feedback: 'Confirm' })],
         }
         : {
           state: resume(state.step, state.form),
-          commands: [Command.ShowToast({ text: 'Couldn\'t add the product' })],
+          commands: [
+            Command.ShowToast({ text: 'Couldn\'t add the product' }),
+            Command.Vibrate({ feedback: 'Reject' }),
+          ],
         }
     },
 
@@ -659,6 +696,7 @@ export const program: Tea.Program<{
     Add: add,
     KeepOrder: keepOrder,
     ShowToast: showToast,
+    Vibrate: vibrate,
   }),
 
   // The camera starts anew with each opening of the scanner: the scanner reports a barcode once, so this is what

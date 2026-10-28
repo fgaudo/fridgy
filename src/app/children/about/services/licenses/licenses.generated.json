@@ -26,6 +26,15 @@
         "name": "@capacitor/core",
         "description": "Capacitor: Cross-platform apps with JavaScript and the web"
     },
+    "@capacitor/haptics@9.0.0-next.1": {
+        "licenses": "MIT",
+        "repository": "https://github.com/ionic-team/capacitor-haptics",
+        "publisher": "Ionic",
+        "email": "hi@ionicframework.com",
+        "copyright": "Copyright 2020-present Ionic. https://ionic.io",
+        "name": "@capacitor/haptics",
+        "description": "The Haptics API provides physical feedback to the user through touch or vibration."
+    },
     "@capacitor/splash-screen@9.0.0-alpha.2": {
         "licenses": "MIT",
         "repository": "https://github.com/ionic-team/capacitor-plugins",

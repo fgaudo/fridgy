@@ -234,7 +234,7 @@ describe('AddProducts update', () => {
 
   // Scanning the barcode the name already is draws nothing anew, but looks it up again: that is how a failed
   // lookup is retried. The answer of an earlier lookup is gone with it.
-  test('Scanned names the product, closes the scanner, and waits for the lookup of the barcode', () => {
+  test('Scanned names the product, closes the scanner with a vibration, and waits for the lookup of the barcode', () => {
     assertProperty([scanning, fc.oneof(fc.string(), barcode)], (before, scanned) => {
       fc.pre(readsCamera(before))
       const named = Opt.contains(before.form.maybeName, scanned)
@@ -243,7 +243,7 @@ describe('AddProducts update', () => {
       return Equal.equals(step(Msg.Scanned({ barcode: scanned }), before), {
         rejected: false,
         after: { _tag: 'LookingUp', form: { ...named, lookup: { _tag: 'Idle' } }, barcode: scanned },
-        commands: [],
+        commands: [Cmd.Vibrate({ feedback: 'Confirm' })],
         events: [],
       })
     })
@@ -299,10 +299,12 @@ describe('AddProducts update', () => {
   })
 
   // The scanner stays open, saying so, until the user closes it.
-  test('CameraFailed makes the camera unavailable', () => {
+  test('CameraFailed makes the camera unavailable, and says so with a vibration', () => {
     assertProperty([scanning], (before) => {
       fc.pre(readsCamera(before))
-      return Equal.equals(step(Msg.CameraFailed(), before).after, withForm(before, { camera: 'Unavailable' }))
+      const { after, commands } = step(Msg.CameraFailed(), before)
+      return Equal.equals(after, withForm(before, { camera: 'Unavailable' }))
+        && Equal.equals(commands, [Cmd.Vibrate({ feedback: 'Reject' })])
     })
   })
 
@@ -420,11 +422,16 @@ describe('AddProducts update', () => {
     )
   })
 
-  test('OrderKept changes nothing, and says so with a toast when the order could not be kept', () => {
+  test('OrderKept changes nothing, and says so with a toast and a vibration when the order could not be kept', () => {
     assertProperty([state, fc.boolean()], (before, succeeded) => {
       const { after, commands } = step(Msg.OrderKept({ succeeded }), before)
       return Equal.equals(after, before)
-        && Equal.equals(commands, succeeded ? [] : [Cmd.ShowToast({ text: 'Couldn\'t save the date order' })])
+        && Equal.equals(
+          commands,
+          succeeded
+            ? []
+            : [Cmd.ShowToast({ text: 'Couldn\'t save the date order' }), Cmd.Vibrate({ feedback: 'Reject' })],
+        )
     })
   })
 
@@ -694,7 +701,7 @@ describe('AddProducts update', () => {
 
   describe('Completed', () => {
     // The second step leaves with its own transition.
-    test('success starts the next product at the name, this one\'s kept and drawn anew, acknowledged as added by the step\'s button', () => {
+    test('success starts the next product at the name, this one\'s kept and drawn anew, acknowledged as added by the step\'s button and a vibration', () => {
       assertProperty([submitting], (before) => {
         const { after, commands } = step(Msg.Completed({ succeeded: true }), before)
         return Equal.equals(after, {
@@ -708,15 +715,18 @@ describe('AddProducts update', () => {
             }),
           },
         })
-          && commands.length === 0
+          && Equal.equals(commands, [Cmd.Vibrate({ feedback: 'Confirm' })])
       })
     })
 
-    test('failure gives the step back, as it was, and says so with a toast', () => {
+    test('failure gives the step back, as it was, and says so with a toast and a vibration', () => {
       assertProperty([submitting], (before) => {
         const { after, commands } = step(Msg.Completed({ succeeded: false }), before)
         return Equal.equals(after, resumed(before.step, before.form))
-          && Equal.equals(commands, [Cmd.ShowToast({ text: 'Couldn\'t add the product' })])
+          && Equal.equals(commands, [
+            Cmd.ShowToast({ text: 'Couldn\'t add the product' }),
+            Cmd.Vibrate({ feedback: 'Reject' }),
+          ])
       })
     })
   })

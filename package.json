@@ -27,6 +27,7 @@
     "@capacitor/android": "9.0.0-alpha.8",
     "@capacitor/app": "9.0.0-alpha.2",
     "@capacitor/core": "9.0.0-alpha.8",
+    "@capacitor/haptics": "9.0.0-next.1",
     "@capacitor/splash-screen": "9.0.0-alpha.2",
     "@capacitor/toast": "9.0.0-alpha.2",
     "@effect/platform-browser": "^4.0.6",

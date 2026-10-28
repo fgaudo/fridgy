@@ -15,6 +15,7 @@ import * as Match from 'effect/Match'
 import * as Opt from 'effect/Option'
 import * as Result from 'effect/Result'
 import * as Domain from '#domain/product.ts'
+import { type Feedback, Haptics } from '#infrastructure/haptics/haptics.ts'
 import { Notifications } from '#infrastructure/notifications/notifications.ts'
 import * as NonEmptyHashSet from '#libs/collections/non-empty-hash-set.ts'
 import { defect } from '#libs/defect/defect.ts'
@@ -94,8 +95,9 @@ export type State = Readonly<{
 
 export type Message = Data.TaggedEnum<{
   // From the view.
-  ItemSelected: { id: string }
-  ItemDeselected: { id: string }
+  /** A long press says so with a vibration; a tap does not. */
+  ItemSelected: { id: string; by: Gesture }
+  ItemDeselected: { id: string; by: Gesture }
   /** A tap on a product while nothing is selected: opens it to be edited. */
   EditRequested: { id: string }
   SelectionCleared: object
@@ -117,13 +119,21 @@ export type Message = Data.TaggedEnum<{
 
 const Message = Data.taggedEnum<Message>()
 
+/** How a row was selected or deselected. */
+export type Gesture = 'Tap' | 'LongPress'
+
 export type Command = Data.TaggedEnum<{
   Delete: { ids: NonEmptyHashSet.NonEmptyHashSet<string> }
   Restore: { products: Arr.NonEmptyReadonlyArray<Domain.Product> }
   ShowToast: { text: string }
+  Vibrate: { feedback: Feedback }
 }>
 
 const Command = Data.taggedEnum<Command>()
+
+/** Only a long press vibrates, as Android's do: a tap is feedback enough. */
+const feedbackOf = (by: Gesture): ReadonlyArray<Command> =>
+  by === 'LongPress' ? [Command.Vibrate({ feedback: 'LongPress' })] : []
 
 export type Event = Data.TaggedEnum<{
   /** The product to edit, as the row shows it. */
@@ -135,7 +145,7 @@ const Event = Data.taggedEnum<Event>()
 /** How a row looks, and what a long press and a tap on it do. */
 export type ItemSelection = Readonly<{
   isSelected: boolean
-  /** Selects the row, or deselects it; nothing while the selected products are being deleted. */
+  /** A long press: selects the row, or deselects it; nothing while the selected products are being deleted. */
   maybeToggle: Opt.Option<Message>
   /**
    * Opens the product while nothing is selected, as Material's lists do; toggles the row once something is.
@@ -394,6 +404,17 @@ const restoreProducts = Effect.fn('RestoreProducts')(
   Effect.withLogSpan('RestoreProducts'),
 )
 
+const vibrate = Effect.fn('Vibrate')(
+  function*({ feedback }: Readonly<{ feedback: Feedback }>) {
+    const { perform } = yield* Haptics
+    yield* perform(feedback).pipe(
+      Effect.catchTag('HapticsError', (error) => Effect.logWarning('Could not vibrate', error.cause)),
+    )
+    return Opt.none()
+  },
+  Effect.withLogSpan('Vibrate'),
+)
+
 const showToast = Effect.fn('ShowToast')(
   function*({ text }: Readonly<{ text: string }>) {
     const { showToast } = yield* Notifications
@@ -450,14 +471,15 @@ const listModel = (state: State): ListModel => {
   // A row leaving is no longer a product of the list: it cannot be selected, nor opened.
   const itemSelectionOf = (id: string, presence: Presence, isProduct: boolean): ItemSelection => {
     const isSelected = presence !== 'Leaving' && HashSet.has(selectedIds(selection), id)
-    const maybeToggle = selection._tag === 'Deleting' || presence === 'Leaving'
-      ? Opt.none()
-      : Opt.some(isSelected ? Message.ItemDeselected({ id }) : Message.ItemSelected({ id }))
+    const toggle = (by: Gesture) =>
+      selection._tag === 'Deleting' || presence === 'Leaving'
+        ? Opt.none()
+        : Opt.some(isSelected ? Message.ItemDeselected({ id, by }) : Message.ItemSelected({ id, by }))
     return {
       isSelected,
-      maybeToggle,
+      maybeToggle: toggle('LongPress'),
       maybeTap: selection._tag === 'Selecting'
-        ? maybeToggle
+        ? toggle('Tap')
         : selection._tag === 'Idle' && isProduct && presence !== 'Leaving'
         ? Opt.some(Message.EditRequested({ id }))
         : Opt.none(),
@@ -499,7 +521,7 @@ const listModel = (state: State): ListModel => {
   }
 }
 
-export type Deps = DeleteProducts.DeleteProducts | ProductList | Notifications
+export type Deps = DeleteProducts.DeleteProducts | ProductList | Notifications | Haptics
 
 export const program: Tea.Program<{
   state: State
@@ -561,14 +583,20 @@ export const program: Tea.Program<{
         : defect('TimeChanged while no listed product expires: the clock runs only while one does'),
 
     // Only a product of the list can be selected: a tap on a row the storage has meanwhile removed does nothing.
-    ItemSelected: ({ id }) => (state) =>
+    ItemSelected: ({ id, by }) => (state) =>
       HashSet.has(selectableIds(state), id) && !HashSet.has(selectedIds(state.selection), id)
-        ? { state: { ...state, selection: selectionOf(HashSet.add(selectedIds(state.selection), id)) } }
+        ? {
+          state: { ...state, selection: selectionOf(HashSet.add(selectedIds(state.selection), id)) },
+          commands: feedbackOf(by),
+        }
         : Tea.reject,
 
-    ItemDeselected: ({ id }) => (state) =>
+    ItemDeselected: ({ id, by }) => (state) =>
       state.list._tag === 'Loaded' && state.selection._tag === 'Selecting' && HashSet.has(state.selection.ids, id)
-        ? { state: { ...state, selection: selectionOf(HashSet.remove(state.selection.ids, id)) } }
+        ? {
+          state: { ...state, selection: selectionOf(HashSet.remove(state.selection.ids, id)) },
+          commands: feedbackOf(by),
+        }
         : Tea.reject,
 
     // Only a product of the list, while nothing is selected or deleted. The product goes with the event, as the
@@ -623,6 +651,7 @@ export const program: Tea.Program<{
               entrance: state.lastDeletion._tag === 'Recent' ? 'AfterAnother' : 'Alone',
             }),
           },
+          commands: [Command.Vibrate({ feedback: 'Confirm' })],
         }
         : defect('Deleted while no deletion is in progress: only a completion leaves Deleting'),
 
@@ -630,7 +659,10 @@ export const program: Tea.Program<{
       state.selection._tag === 'Deleting'
         ? {
           state: { ...state, selection: Selection.Selecting({ ids: state.selection.ids }) },
-          commands: [Command.ShowToast({ text: 'Couldn\'t delete the products' })],
+          commands: [
+            Command.ShowToast({ text: 'Couldn\'t delete the products' }),
+            Command.Vibrate({ feedback: 'Reject' }),
+          ],
         }
         : defect('DeleteFailed while no deletion is in progress: only a completion leaves Deleting'),
 
@@ -660,7 +692,10 @@ export const program: Tea.Program<{
     // Accepted in every state: the user may have done anything since asking, and the storage is as it was.
     RestoreFailed: () => (state) => ({
       state,
-      commands: [Command.ShowToast({ text: 'Couldn\'t put the products back' })],
+      commands: [
+        Command.ShowToast({ text: 'Couldn\'t put the products back' }),
+        Command.Vibrate({ feedback: 'Reject' }),
+      ],
     }),
   }),
 
@@ -668,6 +703,7 @@ export const program: Tea.Program<{
     Delete: deleteProducts,
     Restore: restoreProducts,
     ShowToast: showToast,
+    Vibrate: vibrate,
   }),
 
   subscriptions: (state) => {

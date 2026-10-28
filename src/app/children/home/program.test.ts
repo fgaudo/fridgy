@@ -59,7 +59,8 @@ describe('Home update', () => {
     // add button, whose second tap the parent ignores once the page that adds is
     // shown. And what the user could ask for and `update` accepts is in the view,
     // but for what the model hides on purpose: a list that is not shown, or not yet,
-    // and the menu while products are selected: the selection's bar takes the place of the bar that opens it.
+    // the menu while products are selected: the selection's bar takes the place of the bar that opens it,
+    // and a tap that selects while nothing is: it opens the product instead.
     test('the view sends what update accepts, all of it, and acts once when sent twice', () => {
       // A loaded list, at a known time when a product expires.
       const shownItems = ({ products }: State) =>
@@ -80,6 +81,9 @@ describe('Home update', () => {
           }
           if (msg._tag === 'Products') {
             const inner = msg.message
+            if (inner._tag === 'ItemSelected' && inner.by === 'Tap' && !isSelecting(state)) {
+              return true
+            }
             return inner._tag === 'ItemSelected' || inner._tag === 'ItemDeselected' || inner._tag === 'EditRequested'
               ? !isShown(state, inner.id)
               : !isListShown(state)
@@ -102,8 +106,10 @@ describe('Home update', () => {
               item._tag === 'Corrupt'
                 ? []
                 : [
-                  ProductsMsg.ItemSelected({ id: item.id }),
-                  ProductsMsg.ItemDeselected({ id: item.id }),
+                  ...(['Tap', 'LongPress'] as const).flatMap((by) => [
+                    ProductsMsg.ItemSelected({ id: item.id, by }),
+                    ProductsMsg.ItemDeselected({ id: item.id, by }),
+                  ]),
                   ProductsMsg.EditRequested({ id: item.id }),
                 ]
             ),

@@ -12,6 +12,7 @@ import * as Match from 'effect/Match'
 import * as Opt from 'effect/Option'
 import * as References from 'effect/References'
 import { BackButton } from '#infrastructure/back-button/back-button.ts'
+import { Haptics } from '#infrastructure/haptics/haptics.ts'
 import * as SqliteMemory from '#infrastructure/storage/sqlite.memory.ts'
 import type { DateOrder } from '#libs/dates/date-order.ts'
 import { tagPath } from '#libs/testing/tag-path.test_support.ts'
@@ -157,6 +158,22 @@ export const back = Effect.fnUntraced(function*(user: User) {
 // The platform's back button is out of reach: it is heard through `back`.
 const backButton = Layer.succeed(BackButton, { presses: Channel.never })
 
+// A device without a vibrator: a vibration does nothing, and answers nothing.
+const haptics = Layer.succeed(Haptics, { perform: () => Effect.void })
+
+/** Whether the command is a vibration, of any page. */
+const isVibration = (command: Command) => tagPath(command).endsWith(' › Vibrate')
+
+/** The commands still pending that would write or answer: what a vibration is not. */
+export const pendingWork = (user: User) => Effect.map(user.pending, Arr.filter((command) => !isVibration(command)))
+
+/** Runs the vibrations still pending: what a scenario leaves of them is not its concern. */
+const vibrateAll = (user: User): Effect.Effect<void, never, Deps> =>
+  Effect.flatMap(
+    user.pending,
+    (pending) => Arr.some(pending, isVibration) ? Effect.andThen(user.run(isVibration), vibrateAll(user)) : Effect.void,
+  )
+
 // A device that reads barcodes, whose camera reads nothing by itself: the barcodes are heard through `hear`.
 const scanner = Layer.succeed(Scanner, { isAvailable: Effect.succeed(true), barcodes: Channel.never })
 
@@ -174,14 +191,15 @@ const layer = Layer.mergeAll(
     ]),
   ),
   backButton,
+  haptics,
   scanner,
   productLookup,
 )
 
-/** Rehearses the app from its start; fails when a command is still pending at the end. */
+/** Rehearses the app from its start; fails when a command other than a vibration is still pending at the end. */
 export const rehearsed = <A>(scenario: (user: User) => Effect.Effect<A, never, Deps>) =>
   Effect.runPromise(
-    rehearse(program, scenario).pipe(
+    rehearse(program, (user) => Effect.tap(scenario(user), () => vibrateAll(user))).pipe(
       Effect.provide(layer),
       // Every rehearsal builds a storage, which logs that it is ready: only warnings are worth showing.
       Effect.provideService(References.MinimumLogLevel, 'Warn'),

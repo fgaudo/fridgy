@@ -13,6 +13,7 @@ import { utc } from '#libs/testing/date-time.test_arbitrary.ts'
 import { assertProperty, onlyChanged, outcomesOf } from '#libs/testing/update.test_support.ts'
 import {
   deleting,
+  gesture,
   hasExpiringProduct,
   id,
   idle,
@@ -199,53 +200,57 @@ describe('Products update', () => {
       }),
     )
 
-    test('select an unselected listed id, deselect a selected one, and touch nothing else', () => {
-      assertProperty([changeable, id], (before, itemId) => {
+    test('select an unselected listed id, deselect a selected one, touch nothing else, and vibrate on a long press only', () => {
+      assertProperty([changeable, id, gesture], (before, itemId, by) => {
         const wasSelected = HashSet.has(selectedIds(before.selection), itemId)
         fc.pre(wasSelected || HashSet.has(listedIds(before), itemId))
-        const msg = wasSelected ? Msg.ItemDeselected({ id: itemId }) : Msg.ItemSelected({ id: itemId })
+        const msg = wasSelected ? Msg.ItemDeselected({ id: itemId, by }) : Msg.ItemSelected({ id: itemId, by })
         const { after, commands } = step(msg, before)
         return HashSet.has(selectedIds(after.selection), itemId) === !wasSelected
           && onlyChanged(before, after, 'selection')
-          && commands.length === 0
+          && Equal.equals(commands, by === 'LongPress' ? [Cmd.Vibrate({ feedback: 'LongPress' })] : [])
       })
     })
 
     test('selecting then deselecting restores the state', () => {
-      assertProperty([changeable, id], (before, itemId) => {
+      assertProperty([changeable, id, gesture, gesture], (before, itemId, selectedBy, deselectedBy) => {
         fc.pre(!HashSet.has(selectedIds(before.selection), itemId) && HashSet.has(listedIds(before), itemId))
-        const selected = step(Msg.ItemSelected({ id: itemId }), before).after
-        return Equal.equals(step(Msg.ItemDeselected({ id: itemId }), selected).after, before)
+        const selected = step(Msg.ItemSelected({ id: itemId, by: selectedBy }), before).after
+        return Equal.equals(step(Msg.ItemDeselected({ id: itemId, by: deselectedBy }), selected).after, before)
       })
     })
 
     test('deselecting the last selected id leaves no selection', () => {
-      assertProperty([changeable, id], (before, itemId) => {
+      assertProperty([changeable, id, gesture], (before, itemId, by) => {
         fc.pre(Equal.equals(selectedIds(before.selection), HashSet.make(itemId)))
-        return step(Msg.ItemDeselected({ id: itemId }), before).after.selection._tag === 'Idle'
+        return step(Msg.ItemDeselected({ id: itemId, by }), before).after.selection._tag === 'Idle'
       })
     })
 
     test('are rejected when the id is already in the state they ask for', () => {
-      assertProperty([changeable, id], (before, itemId) =>
-        HashSet.has(selectedIds(before.selection), itemId)
-          ? rejects(Msg.ItemSelected({ id: itemId }), before)
-          : rejects(Msg.ItemDeselected({ id: itemId }), before))
+      assertProperty(
+        [changeable, id, gesture],
+        (before, itemId, by) =>
+          HashSet.has(selectedIds(before.selection), itemId)
+            ? rejects(Msg.ItemSelected({ id: itemId, by }), before)
+            : rejects(Msg.ItemDeselected({ id: itemId, by }), before),
+      )
     })
 
     // A tap on a row that the storage has meanwhile removed: the selection would otherwise hold a product that
     // is not in the list.
     test('selecting an id that is not in the list is rejected', () => {
-      assertProperty([state, id], (before, itemId) => {
+      assertProperty([state, id, gesture], (before, itemId, by) => {
         fc.pre(!HashSet.has(listedIds(before), itemId))
-        return rejects(Msg.ItemSelected({ id: itemId }), before)
+        return rejects(Msg.ItemSelected({ id: itemId, by }), before)
       })
     })
 
     test('are rejected unless the list is loaded and nothing is being deleted', () => {
-      assertProperty([state, id], (before, itemId) => {
+      assertProperty([state, id, gesture], (before, itemId, by) => {
         fc.pre(before.list._tag !== 'Loaded' || before.selection._tag === 'Deleting')
-        return rejects(Msg.ItemSelected({ id: itemId }), before) && rejects(Msg.ItemDeselected({ id: itemId }), before)
+        return rejects(Msg.ItemSelected({ id: itemId, by }), before)
+          && rejects(Msg.ItemDeselected({ id: itemId, by }), before)
       })
     })
   })
@@ -327,7 +332,7 @@ describe('Products update', () => {
     const deletingState = stateWith('selection', deleting)
 
     // The snackbar comes after the one of a deletion still recent, which leaves first.
-    test('clears the selection and offers to undo the deletion, of its products, for a while, its snackbar after the one showing', () => {
+    test('clears the selection and offers to undo the deletion, of its products, for a while, its snackbar after the one showing, with a vibration', () => {
       assertProperty([deletingState, utc], (before, at) => {
         const { after, commands } = step(Msg.Deleted({ at }), before)
         return before.selection._tag === 'Deleting'
@@ -340,7 +345,7 @@ describe('Products update', () => {
             entrance: before.lastDeletion._tag === 'Recent' ? 'AfterAnother' : 'Alone',
           })
           && onlyChanged(before, after, 'selection', 'lastDeletion')
-          && commands.length === 0
+          && Equal.equals(commands, [Cmd.Vibrate({ feedback: 'Confirm' })])
       })
     })
 
@@ -355,13 +360,16 @@ describe('Products update', () => {
   })
 
   describe('DeleteFailed', () => {
-    test('gives the selection back and says so with a toast', () => {
+    test('gives the selection back and says so with a toast and a vibration', () => {
       assertProperty([stateWith('selection', deleting)], (before) => {
         const { after, commands } = step(Msg.DeleteFailed(), before)
         return after.selection._tag === 'Selecting'
           && Equal.equals(selectedIds(after.selection), selectedIds(before.selection))
           && onlyChanged(before, after, 'selection')
-          && Equal.equals(commands, [Cmd.ShowToast({ text: 'Couldn\'t delete the products' })])
+          && Equal.equals(commands, [
+            Cmd.ShowToast({ text: 'Couldn\'t delete the products' }),
+            Cmd.Vibrate({ feedback: 'Reject' }),
+          ])
       })
     })
 
@@ -435,11 +443,14 @@ describe('Products update', () => {
   })
 
   // The storage is as it was: there is nothing to give back but the news.
-  test('RestoreFailed says so with a toast, and changes nothing', () => {
+  test('RestoreFailed says so with a toast and a vibration, and changes nothing', () => {
     assertProperty([state], (before) => {
       const { after, commands } = step(Msg.RestoreFailed(), before)
       return Equal.equals(after, before)
-        && Equal.equals(commands, [Cmd.ShowToast({ text: 'Couldn\'t put the products back' })])
+        && Equal.equals(commands, [
+          Cmd.ShowToast({ text: 'Couldn\'t put the products back' }),
+          Cmd.Vibrate({ feedback: 'Reject' }),
+        ])
     })
   })
 })
@@ -515,7 +526,7 @@ describe('Products model', () => {
     expect(presences(step(Msg.RowsSettled(), restored).after)).toEqual(['1:Listed', '2:Listed', '3:Listed', '5:Listed'])
   })
 
-  test('a row is selected exactly when its id is, and toggles its selection unless a deletion is in progress or it leaves', () => {
+  test('a row is selected exactly when its id is, and a long press toggles its selection unless a deletion is in progress or it leaves', () => {
     assertProperty([shown], (s) => {
       const selected = selectedIds(s.selection)
       return rows(s).every((row) => {
@@ -524,7 +535,11 @@ describe('Products model', () => {
         const isSelected = HashSet.has(selected, row.id)
         const expectedToggle = s.selection._tag === 'Deleting'
           ? Opt.none()
-          : Opt.some(isSelected ? Msg.ItemDeselected({ id: row.id }) : Msg.ItemSelected({ id: row.id }))
+          : Opt.some(
+            isSelected
+              ? Msg.ItemDeselected({ id: row.id, by: 'LongPress' })
+              : Msg.ItemSelected({ id: row.id, by: 'LongPress' }),
+          )
         return row.selection.isSelected === isSelected && Equal.equals(row.selection.maybeToggle, expectedToggle)
       })
     })
@@ -536,7 +551,13 @@ describe('Products model', () => {
       rows(s).every((row) => {
         if (row._tag === 'Corrupt') return true
         const expected = s.selection._tag === 'Selecting'
-          ? row.selection.maybeToggle
+          ? Opt.map(
+            row.selection.maybeToggle,
+            () =>
+              row.selection.isSelected
+                ? Msg.ItemDeselected({ id: row.id, by: 'Tap' })
+                : Msg.ItemSelected({ id: row.id, by: 'Tap' }),
+          )
           : s.selection._tag === 'Idle' && row._tag === 'Valid' && row.presence !== 'Leaving'
           ? Opt.some(Msg.EditRequested({ id: row.id }))
           : Opt.none()

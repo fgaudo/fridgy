@@ -25,6 +25,7 @@ import {
   openAbout,
   openAddProducts,
   openMenu,
+  pendingWork,
   perform,
   pickOrder,
   rehearsed,
@@ -434,7 +435,7 @@ describe('Navigation', () => {
       yield* user.send(typeEditedName('Oat milk'))
       yield* back(user)
       expect(tags(yield* user.state)).toEqual(['Home'])
-      expect(yield* user.pending).toEqual([])
+      expect(yield* pendingWork(user)).toEqual([])
       expect(yield* listed(user)).toEqual(before)
     })))
 

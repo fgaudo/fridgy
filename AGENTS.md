@@ -75,9 +75,9 @@ folders; "page" names a role in the UI, kept by the root's state, not a kind of 
 - **A service belongs to what uses it, and is never shared.** A service (a `Context.Service`: a port) is a
   requirement of its consumer, in its `services/`, shaped for it. Two consumers that need the same thing each
   have their own; what they share is the domain and the infrastructure. The exception is a fact of the platform
-  that no consumer could shape (`src/infrastructure/back-button`, `src/infrastructure/notifications`), a
-  service of the infrastructure that programs list directly. Write services have no read: a program learns
-  about writes from the storage's changes. Persistence services take a domain `Snapshot` and return
+  that no consumer could shape (`src/infrastructure/back-button`, `src/infrastructure/notifications`,
+  `src/infrastructure/haptics`), a service of the infrastructure that programs list directly. Write services
+  have no read: a program learns about writes from the storage's changes. Persistence services take a domain `Snapshot` and return
   `UnvalidatedSnapshot`s; adapters never read domain fields.
 - **The domain decides what an entity is.** A new one is made with its `make` (`Product.make`), and a form
   lets the user submit only what `make` accepts, asking the domain's rules (`Product.canExpireOn`) rather than
@@ -181,6 +181,9 @@ folders; "page" names a role in the UI, kept by the root's state, not a kind of 
   where the back button, with the keyboard open, should close the keyboard first.
 - The reference screen (320×640dp, the `android-release` skill) has been checked in a browser only, at 320×640
   and 320×533: not yet in the emulator, nor with the font at 200%, nor with the keyboard open on each field.
+- The vibrations (`docs/haptics.md`, Capacitor's `Haptics` 9.0.0-next.1, its only release for Capacitor 9) have
+  not been felt on Android: whether each pattern feels like the constant it stands for, and whether the WebView
+  vibrates on its own on a long press too.
 - The dark theme has been checked in a browser only: not yet on Android, where the WebView should match
   `prefers-color-scheme` from the system's theme, nor its night splash screens.
 - The manifest keeps `allowBackup`, so that Android's backup carries the products across a phone change, and

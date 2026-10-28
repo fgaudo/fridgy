@@ -12,6 +12,7 @@ import * as Match from 'effect/Match'
 import * as Opt from 'effect/Option'
 import * as Product from '#domain/product.ts'
 import { BackButton } from '#infrastructure/back-button/back-button.ts'
+import { type Feedback, Haptics } from '#infrastructure/haptics/haptics.ts'
 import { Notifications } from '#infrastructure/notifications/notifications.ts'
 import * as DateOrder from '#libs/dates/date-order.ts'
 import * as DigitDateEntry from '#libs/dates/digit-date-entry.ts'
@@ -105,6 +106,7 @@ export type Command = Data.TaggedEnum<{
   /** Keeps the order the digits of a date are read in, which the setting then reports. */
   KeepOrder: { order: DateOrder.DateOrder }
   ShowToast: { text: string }
+  Vibrate: { feedback: Feedback }
 }>
 
 const Command = Data.taggedEnum<Command>()
@@ -115,7 +117,7 @@ export type Event = Data.TaggedEnum<{
 
 const Event = Data.taggedEnum<Event>()
 
-export type Deps = UpdateProduct | DateOrderSetting | Notifications | BackButton
+export type Deps = UpdateProduct | DateOrderSetting | Notifications | Haptics | BackButton
 
 /** A day the digits name: the chosen one, or one to pick while the page takes input. */
 export type DateChoice = Readonly<{
@@ -328,6 +330,17 @@ const showToast = Effect.fn('ShowToast')(
   Effect.withLogSpan('ShowToast'),
 )
 
+const vibrate = Effect.fn('Vibrate')(
+  function*({ feedback }: Readonly<{ feedback: Feedback }>) {
+    const { perform } = yield* Haptics
+    yield* perform(feedback).pipe(
+      Effect.catchTag('HapticsError', (error) => Effect.logWarning('Could not vibrate', error.cause)),
+    )
+    return Opt.none()
+  },
+  Effect.withLogSpan('Vibrate'),
+)
+
 const fieldsOf = (form: Form, takesInput: boolean): FieldsShown => {
   const entry = entryOf(form)
   const offered = offeredDates(form)
@@ -437,7 +450,13 @@ export const program: Tea.Program<{
         ? defect('OrderKept while loading: an order is picked only once the form is there, which never goes')
         : succeeded
         ? { state }
-        : { state, commands: [Command.ShowToast({ text: 'Couldn\'t save the date order' })] },
+        : {
+          state,
+          commands: [
+            Command.ShowToast({ text: 'Couldn\'t save the date order' }),
+            Command.Vibrate({ feedback: 'Reject' }),
+          ],
+        },
 
     // Once saved, or once there is nothing to save to, the page asks to be left: Home's list shows the change.
     Saved: ({ outcome }) => (state) => {
@@ -447,13 +466,26 @@ export const program: Tea.Program<{
       const editing: State = { _tag: 'Editing', form: state.form }
       switch (outcome) {
         case 'Saved':
-          return { state: editing, events: [Event.LeaveRequested()] }
+          return {
+            state: editing,
+            commands: [Command.Vibrate({ feedback: 'Confirm' })],
+            events: [Event.LeaveRequested()],
+          }
         case 'Failed':
-          return { state: editing, commands: [Command.ShowToast({ text: 'Couldn\'t save the product' })] }
+          return {
+            state: editing,
+            commands: [
+              Command.ShowToast({ text: 'Couldn\'t save the product' }),
+              Command.Vibrate({ feedback: 'Reject' }),
+            ],
+          }
         case 'Gone':
           return {
             state: editing,
-            commands: [Command.ShowToast({ text: 'This product no longer exists' })],
+            commands: [
+              Command.ShowToast({ text: 'This product no longer exists' }),
+              Command.Vibrate({ feedback: 'Reject' }),
+            ],
             events: [Event.LeaveRequested()],
           }
       }
@@ -464,6 +496,7 @@ export const program: Tea.Program<{
     Save: save,
     KeepOrder: keepOrder,
     ShowToast: showToast,
+    Vibrate: vibrate,
   }),
 
   // The back button is observed in every state: while saving, so that a press is held.
