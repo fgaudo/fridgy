@@ -19,8 +19,11 @@ import { tailwind } from './tailwind.ts'
 
 type Mode = 'development' | 'production'
 
+// Each mode builds into a folder of its own, so that a production build (`bun run e2e`) while the watch runs
+// never replaces what the watch serves.
 const modes = {
   development: {
+    outdir: 'dist-dev',
     entrypoints: [
       'src/entrypoints/development.ts',
       // Built separately so it can be hot reloaded.
@@ -30,6 +33,7 @@ const modes = {
     options: { sourcemap: 'inline' },
   },
   production: {
+    outdir: 'dist',
     entrypoints: ['src/entrypoints/production.ts', 'src/infrastructure/storage/sqlite.opfs.worker.ts'],
     assets: ['node_modules/@effect/wa-sqlite/dist/wa-sqlite.wasm', 'assets/logo.svg', 'src/error.html'],
     options: { sourcemap: 'none', minify: true },
@@ -37,6 +41,7 @@ const modes = {
 } satisfies Record<
   Mode,
   {
+    outdir: string
     entrypoints: ReadonlyArray<string>
     assets: ReadonlyArray<string>
     options: Partial<Bun.BuildConfig>
@@ -53,12 +58,12 @@ const root = Effect.gen(function*() {
 const build = Effect.fn('build')(function*(mode: Mode) {
   const resolve = yield* root
   const path = yield* Path.Path
-  const { entrypoints, options } = modes[mode]
+  const { outdir, entrypoints, options } = modes[mode]
   const output = yield* Effect.tryPromise({
     try: () =>
       Bun.build({
         entrypoints: [resolve('src/styles.css'), ...entrypoints.map((entry) => resolve(entry))],
-        outdir: resolve('dist'),
+        outdir: resolve(outdir),
         target: 'browser',
         loader: { '.css': 'css', '.woff2': 'file' },
         naming: { asset: '[name].[ext]', chunk: '[name].[ext]', entry: '[name].[ext]' },
@@ -75,34 +80,35 @@ const build = Effect.fn('build')(function*(mode: Mode) {
 })
 
 /**
- * Writes Material Symbols into `dist/fonts/`, whole: every icon, so that a view may name any. Its stylesheet goes
- * in the `base` layer, so that a view's size wins over the icons' own. Linked from `index.html`, not imported in
- * `styles.css`: the CSS bundler would inline it.
+ * Writes Material Symbols into the output's `fonts/`, whole: every icon, so that a view may name any. Its
+ * stylesheet goes in the `base` layer, so that a view's size wins over the icons' own. Linked from `index.html`,
+ * not imported in `styles.css`: the CSS bundler would inline it.
  */
-const writeIconFont = Effect.fn('writeIconFont')(function*() {
+const writeIconFont = Effect.fn('writeIconFont')(function*(outdir: string) {
   const resolve = yield* root
   const fs = yield* FS.FileSystem
   const css = yield* fs.readFileString(resolve('node_modules/material-symbols/rounded.css'))
-  yield* fs.makeDirectory(resolve('dist/fonts'), { recursive: true })
+  yield* fs.makeDirectory(resolve(outdir, 'fonts'), { recursive: true })
   yield* fs.copyFile(
     resolve('node_modules/material-symbols/material-symbols-rounded.woff2'),
-    resolve('dist/fonts/material-symbols-rounded.woff2'),
+    resolve(outdir, 'fonts/material-symbols-rounded.woff2'),
   )
-  yield* fs.writeFileString(resolve('dist/fonts/material-symbols-rounded.css'), `@layer base {\n${css}}\n`)
+  yield* fs.writeFileString(resolve(outdir, 'fonts/material-symbols-rounded.css'), `@layer base {\n${css}}\n`)
 })
 
-const prepareDist = Effect.fn('prepareDist')(function*(mode: Mode) {
+const prepareOutdir = Effect.fn('prepareOutdir')(function*(mode: Mode) {
   const resolve = yield* root
   const path = yield* Path.Path
   const fs = yield* FS.FileSystem
-  yield* fs.remove(resolve('dist'), { force: true, recursive: true })
-  yield* fs.makeDirectory(resolve('dist'))
-  for (const asset of modes[mode].assets) {
-    yield* fs.copyFile(resolve(asset), resolve('dist', path.basename(asset)))
+  const { outdir, assets } = modes[mode]
+  yield* fs.remove(resolve(outdir), { force: true, recursive: true })
+  yield* fs.makeDirectory(resolve(outdir))
+  for (const asset of assets) {
+    yield* fs.copyFile(resolve(asset), resolve(outdir, path.basename(asset)))
   }
   const html = yield* fs.readFileString(resolve('src/index.html'))
-  yield* fs.writeFileString(resolve('dist', 'index.html'), html.replaceAll('%ENTRY%', mode))
-  yield* writeIconFont()
+  yield* fs.writeFileString(resolve(outdir, 'index.html'), html.replaceAll('%ENTRY%', mode))
+  yield* writeIconFont(outdir)
 })
 
 const devServerConfig = Config.all({
@@ -122,8 +128,8 @@ const watchCommand = Cli.Command.make(
     const path = yield* Path.Path
     const fs = yield* FS.FileSystem
     const { host, port } = yield* devServerConfig
-    const dist = resolve('dist')
-    yield* prepareDist('development')
+    const dist = resolve(modes.development.outdir)
+    yield* prepareOutdir('development')
     yield* build('development')
     const server = yield* Effect.acquireRelease(
       Effect.sync(() =>
@@ -151,7 +157,7 @@ const watchCommand = Cli.Command.make(
       ),
       (server) => Effect.promise(() => server.stop(true)),
     )
-    yield* Effect.logInfo(`Serving dist/ at http://${host}:${port}`)
+    yield* Effect.logInfo(`Serving ${modes.development.outdir}/ at http://${host}:${port}`)
     const changed = yield* Ref.make(HashSet.empty<string>())
     return yield* fs.watch(resolve('src'), { recursive: true }).pipe(
       Stream.tap((event) => Ref.update(changed, HashSet.add(event.path))),
@@ -302,7 +308,7 @@ const buildCommand = Cli.Command.make(
   'build',
   {},
   Effect.fn('buildCommand')(function*() {
-    yield* prepareDist('production')
+    yield* prepareOutdir('production')
     yield* build('production')
   }),
 )

@@ -47,9 +47,10 @@ the file when it changes, with `bun.lock`.
 bun run watch
 ```
 
-builds the development version into `dist/` (a database in memory, with sample products, new on every
+builds the development version into `dist-dev/` (a database in memory, with sample products, new on every
 reload), serves it, and rebuilds on every change under `src/`; open the address it prints. Editing a view or
-the CSS swaps the view in place, keeping the application state; any other change reloads the page.
+the CSS swaps the view in place, keeping the application state; any other change reloads the page. The
+production build has `dist/` to itself, so it can be made while the watch runs.
 
 The first run creates `.env` from `.env.default`, where you can change the server host and port.
 
