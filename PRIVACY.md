@@ -3,7 +3,7 @@
 Last updated: 28 October 2026.
 
 This policy applies to Fridgy, the Android app with the package name `net.gaudo.fridgy`, published by Francesco
-Gaudenzi (fgaudo@gmail.com). It says what the app does with your data. Fridgy is free software: its source code is
+Gaudenzi (fgaudo+fridgy@gmail.com). It says what the app does with your data. Fridgy is free software: its source code is
 at <https://github.com/fgaudo/fridgy>, and anyone can check that it does what this page says.
 
 ## In short
@@ -52,4 +52,4 @@ the one of the last change.
 
 ## Contact
 
-Francesco Gaudenzi, fgaudo@gmail.com.
+Francesco Gaudenzi, fgaudo+fridgy@gmail.com.

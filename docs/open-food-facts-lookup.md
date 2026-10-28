@@ -205,7 +205,7 @@ expanded form; an 8-digit one that does not expand is logged and not offered.
 
 The client against the recorded answers, the adapter's cache rules under `TestClock`, the page and the root's
 scenarios are tested (`bun test`); the flow was seen in a browser. On Android, in the emulator on 2026-10-28 (API
-29 and 37): the WebView's `navigator.userAgent` ends with `Fridgy/2026.10.0 (fgaudo@gmail.com)`, and a request
+29 and 37): the WebView's `navigator.userAgent` ends with the `Fridgy/<version> (<email>)` that `capacitor.config.ts` appends, and a request
 for `8076800195057` from the app's origin answered with the product and no CORS error. Not yet, for want of a
 camera ("Known gaps" in `AGENTS.md`): scan a product known to Open Food Facts, one unknown, one UPC-E, one in
 airplane mode.

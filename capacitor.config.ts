@@ -13,7 +13,7 @@ const config: CapacitorConfig = {
     // implements whole, and moves with this number.
     minWebViewVersion: 114,
     // How Open Food Facts asks every app to identify itself: the WebView's own User-Agent, with this after it.
-    appendUserAgent: `Fridgy/${packageJson.version} (fgaudo@gmail.com)`,
+    appendUserAgent: `Fridgy/${packageJson.version} (fgaudo+fridgy@gmail.com)`,
   },
   plugins: {
     // The app enables it while it listens to the back button: otherwise the button is Android's.
