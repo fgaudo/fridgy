@@ -179,17 +179,13 @@ folders; "page" names a role in the UI, kept by the root's state, not a kind of 
 - A defect leaves the app frozen on its last frame: `src/entrypoints/run.ts` runs the program with nothing
   around it, so the cause goes to the console only, and the user sees neither a message nor a way to restart.
   Whether the production entrypoint shows something instead is not decided.
-- The production bundle has no test (`docs/testing.md`, "The production bundle in a browser"): one end-to-end
-  run of `dist/` is to be written, in headless Chromium through Playwright, in a file of its own that
-  `bun test` does not pick up and a script of `package.json` runs. It serves `dist/` over HTTP on `localhost`
-  (the OPFS database needs a secure context), opens the app, enters a product by hand, sees it in the list,
-  opens it, edits it and deletes it, and, on each page, at a viewport of 320×640, asserts that nothing
-  scrolls. Until it exists, the production entrypoint (`src/entrypoints/production.ts`, the SQLite worker on
-  OPFS) runs only in the emulator, and the emulator pass before a release does what this run would.
+- The production bundle has no test: the run of `docs/testing.md` ("The production bundle in a browser") is
+  to be written, with Playwright, in a file of its own that `bun test` does not pick up, run by a script of
+  `package.json`. Until it exists, the production entrypoint (`src/entrypoints/production.ts`, the SQLite
+  worker on OPFS) runs only in the emulator, and the emulator pass before a release does what this run would.
 - No CI runs the checks. A GitHub Actions workflow is to run, on every push, `bun run typecheck`,
-  `bun run test`, `bun run lint`, `bun run build`, the floor check of the `android-release` skill
-  (`bunx es-check --module es2023 "dist/*.js"`, to become a script of `package.json` with the workflow) and,
-  once it exists, the end-to-end run above.
+  `bun run test`, `bun run lint`, `bun run build`, the floor check of the `android-release` skill (to become
+  a script of `package.json` with the workflow) and, once it exists, the run above.
 - The vibrations (`docs/haptics.md`) have not been felt on a phone: whether each pattern feels like the constant
   it stands for. The emulator only shows their delivery.
 

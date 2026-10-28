@@ -91,6 +91,20 @@ Google Play image, with the image's WebView brought up to date by the Play Store
 (`minSdkVersion`'s image, the same way) is checked only after a change of `minSdkVersion`, of Capacitor or of a
 plugin.
 
+The pass, on both reference screens of "Supported screen sizes":
+
+- the app starts: the splash, then the app, not `src/error.html`, in the light and the dark theme (the
+  WebView follows the system's theme; the night splash);
+- the system bars: the app bars sit below the top inset and the content above the navigation bar, on every
+  page;
+- the back button, on every page: with something to close it closes it, with the keyboard open it closes
+  the keyboard, with nothing left it leaves the page, and from the home it leaves the app;
+- the screens: on 320×712dp no page scrolls; on 320×533dp with the font at 200% and the keyboard open on
+  each field, every page still reaches its button;
+- a long press selects without delivering the tap that opens the product, and vibrates;
+- the scanner: the camera's permission is asked once, a barcode is read, and the lookup on Open Food Facts
+  answers from the WebView.
+
 Install the app from a clean state (`adb shell pm clear net.gaudo.fridgy`): an install over an older schema
 fails on the first read. The dark theme: `adb shell cmd uimode night yes`. A vibration's delivery:
 `adb shell dumpsys vibrator_manager` lists each one with its usage and whether the system ignored it. The

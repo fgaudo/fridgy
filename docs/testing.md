@@ -49,7 +49,7 @@ listed under "Known gaps" in `AGENTS.md`, not here.
 | --------------------------------------- | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
 | The tests (`bun test`, typecheck, lint) | every change                      | every program's transitions, commands and subscriptions; every service through its contract, on each adapter; the domain; the root as a user over a database in memory (`src/app/user.test_support.ts`) | the production entrypoint, the build, the worker, the OPFS database, a browser, a screen                 |
 | The production bundle in a browser      | every push (CI), before a release | `dist/` as built: the entrypoint `src/entrypoints/production.ts`, the SQLite worker on OPFS, the bundle parsing (the floor check) and running; that no page scrolls on the reference screen (320×640)   | the system bars, the keyboard, the back button, the camera, the vibrations, the backup, the font at 200% |
-| The emulator, on the target image       | before a release                  | what only Android has (the list below)                                                                                                                                                                  | the lowest Android, unless `minSdkVersion`, Capacitor or a plugin changed since the last pass            |
+| The emulator, on the target image       | before a release                  | what only Android has (the skill's list)                                                                                                                                                                | the lowest Android, unless `minSdkVersion`, Capacitor or a plugin changed since the last pass            |
 
 ### The tests on every change
 
@@ -68,23 +68,11 @@ answers the one question about the bundle that has no user-visible symptom but a
 ### The emulator, on the target image
 
 A pass before a release, by hand, on the AVD of the target API with the WebView up to date, on the reference
-screens of the skill ("Supported screen sizes"). It checks what a change of the app can break and only Android
-shows:
-
-- the app starts: the splash, then the app, not `src/error.html`, in the light and the dark theme (the
-  WebView follows the system's theme; the night splash);
-- the system bars: the app bars sit below the top inset and the content above the navigation bar, on every
-  page;
-- the back button, on every page: with something to close it closes it, with the keyboard open it closes
-  the keyboard, with nothing left it leaves the page, and from the home it leaves the app;
-- the screens: on 320×712dp no page scrolls; on 320×533dp with the font at 200% and the keyboard open on
-  each field, every page still reaches its button;
-- a long press selects without delivering the tap that opens the product, and vibrates;
-- the scanner: the camera's permission is asked once, a barcode is read, and the lookup on Open Food Facts
-  answers from the WebView.
-
-What is not on this list and concerns Android (a plugin's behaviour, the backup, a setting of the system) is a
-doubt to settle once, listed under "Known gaps" in `AGENTS.md` until it is.
+screens. Its checklist is in the `android-release` skill ("The emulator"), and holds only what a change of the
+app can break and only Android shows: the start and the splash, the system bars, the back button, the screens
+with the keyboard and the font at 200%, the long press, the scanner. What is not on it and concerns Android (a
+plugin's behaviour, the backup, a setting of the system) is a doubt to settle once, listed under "Known gaps" in
+`AGENTS.md` until it is.
 
 ### The lowest Android
 
@@ -99,6 +87,6 @@ and after the first release of each of those. Its result is written in the commi
 - Not yet: the production bundle in a browser, and CI, do not exist ("Known gaps" in `AGENTS.md`). Until
   they do, the production entrypoint runs only in the emulator, and the release pass in the emulator also
   does what the browser layer would.
-- Not yet: the emulator pass as listed above has not been run as such. The passes of 2026-10-28 followed the
+- Not yet: the emulator pass as the skill lists it has not been run as such. The passes of 2026-10-28 followed the
   previous procedure (API 29 on WebView 114 installed by hand, and API 37), and what they settled is already
   in the code and the docs.
