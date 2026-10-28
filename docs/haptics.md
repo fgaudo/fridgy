@@ -10,7 +10,7 @@ Android (see "Verified, and not"). Read [`AGENTS.md`](../AGENTS.md), the `add-se
   same effect for the same kind of event, and no haptics rather than buzzy ones. The app has three, named after
   Android's `HapticFeedbackConstants` (`Feedback` in `src/infrastructure/haptics/haptics.ts`): `LongPress`,
   `Confirm` and `Reject`.
-- **A vibration is a command, started by `update`.** Its transition decides it, as it decides a toast, so the
+- **A vibration is a command, started by `update`.** Its transition decides it, as it decides a snackbar, so the
   programs' tests check it. A program lists `Haptics`, a service of the infrastructure, directly: a feedback means
   the same to every page.
 - **Capacitor's `Haptics` plays it**: the heavy impact for `LongPress`, the medium one for `Confirm`, the error's
@@ -29,7 +29,7 @@ Android (see "Verified, and not"). Read [`AGENTS.md`](../AGENTS.md), the `add-se
 | ----------- | ---------------------------------------------------------------------------------------------------- |
 | `LongPress` | a long press on a row of Home's list, whether it selects the row or deselects it                     |
 | `Confirm`   | a product added; a product edited and saved; the selected products deleted; a barcode read           |
-| `Reject`    | every failure that a toast tells (add, save, delete, undo, keeping the date order); the camera fails |
+| `Reject`    | every failure a snackbar tells (add, save, delete, undo, date order, product gone); the camera fails |
 
 A barcode read vibrates because the phone is then pointed at the product, not looked at. A product that is gone
 when saved is a `Reject`: the save did not happen.

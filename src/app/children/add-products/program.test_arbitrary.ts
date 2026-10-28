@@ -8,7 +8,17 @@ import { digit, digits } from '#libs/dates/digit-date-entry.test_arbitrary.ts'
 import * as DigitDateEntry from '#libs/dates/digit-date-entry.ts'
 import { arbitrary as maybe } from '#libs/option/option.test_arbitrary.ts'
 import { utc } from '#libs/testing/date-time.test_arbitrary.ts'
-import type { Acknowledging, Camera, DateForm, Form, Lookup, LookupOutcome, Message, State } from './program.ts'
+import type {
+  Acknowledging,
+  Camera,
+  DateForm,
+  Form,
+  Lookup,
+  LookupOutcome,
+  Message,
+  Snackbar,
+  State,
+} from './program.ts'
 
 const Msg = Data.taggedEnum<Message>()
 
@@ -16,6 +26,16 @@ export { digit }
 
 /** A barcode as the scanner reads it: EAN-8, UPC-A or EAN-13. */
 export const barcode = fc.stringMatching(/^\d{8}$|^\d{12,13}$/)
+
+/** The snackbar; most often none. */
+export const snackbar: fc.Arbitrary<Snackbar> = fc.oneof(
+  { arbitrary: fc.constant<Snackbar>({ _tag: 'None' }), weight: 3 },
+  fc.record({
+    id: fc.nat({ max: 5 }),
+    failure: fc.constantFrom('AddFailed', 'OrderNotKept'),
+    entrance: fc.constantFrom('Alone', 'AfterAnother'),
+  }).map((fields): Snackbar => ({ _tag: 'Shown', ...fields })),
+)
 
 /** A lookup's answer; most often none. */
 const lookup: fc.Arbitrary<Lookup> = fc.oneof(
@@ -57,6 +77,7 @@ export const form: fc.Arbitrary<Form> = fc.tuple(
     maybeNow: maybe(utc),
     maybeOrder: maybe(order),
     maybeAcknowledging: maybe(acknowledging),
+    snackbar,
   }),
   fc.boolean(),
   barcode,
@@ -136,6 +157,7 @@ export const message: fc.Arbitrary<Message> = fc.oneof(
   utc.map((now) => Msg.TimeChanged({ now })),
   order.map((order) => Msg.OrderChanged({ order })),
   fc.boolean().map((succeeded) => Msg.OrderKept({ succeeded })),
+  fc.constant(Msg.SnackbarExpired()),
   fc.string().map((barcode) => Msg.Scanned({ barcode })),
   fc.tuple(barcode, outcome).map(([barcode, outcome]) => Msg.LookedUp({ barcode, outcome })),
   fc.boolean().map((succeeded) => Msg.Completed({ succeeded })),

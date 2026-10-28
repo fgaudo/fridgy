@@ -1,6 +1,7 @@
 // The page that adds products, one after another, in two steps: the name, typed or scanned, then the expiration
 // date, typed on a keypad. The states are the first step (`Naming`, with `LookingUp` and `Scanning` over it), the
-// second (`Dating`) and the write (`Submitting`). A product added starts the next at the name.
+// second (`Dating`) and the write (`Submitting`). A product added starts the next at the name. A failure is told
+// by a snackbar, which leaves on its own.
 import * as Tea from '@fgaudo/effect-tea'
 import * as Arr from 'effect/Array'
 import * as Channel from 'effect/Channel'
@@ -15,7 +16,6 @@ import * as Opt from 'effect/Option'
 import * as Product from '#domain/product.ts'
 import { BackButton } from '#infrastructure/back-button/back-button.ts'
 import { type Feedback, Haptics } from '#infrastructure/haptics/haptics.ts'
-import { Notifications } from '#infrastructure/notifications/notifications.ts'
 import * as DateOrder from '#libs/dates/date-order.ts'
 import * as DigitDateEntry from '#libs/dates/digit-date-entry.ts'
 import { defect } from '#libs/defect/defect.ts'
@@ -63,6 +63,19 @@ export type Form = Readonly<{
   /** The order the digits of a date are read in, once the setting has been read. */
   maybeOrder: Opt.Option<DateOrder.DateOrder>
   maybeAcknowledging: Opt.Option<Acknowledging>
+  snackbar: Snackbar
+}>
+
+/** Material shows one snackbar at a time: one that comes after another waits for it to leave. */
+export type Entrance = 'Alone' | 'AfterAnother'
+
+/** What failed: the snackbar says so. */
+export type Failure = 'AddFailed' | 'OrderNotKept'
+
+/** The snackbar, until it has stood its time. `id` tells one from the next. */
+export type Snackbar = Data.TaggedEnum<{
+  None: object
+  Shown: Readonly<{ id: number; failure: Failure; entrance: Entrance }>
 }>
 
 /** The product just added, until its arrival has been shown, and the button that added it. */
@@ -131,6 +144,8 @@ export type Message = Data.TaggedEnum<{
   BackPressed: object
   /** The arrival of the product created at `at` has been shown. */
   AddedShown: { at: DateTime.Utc }
+  /** The snackbar has stood its time. */
+  SnackbarExpired: object
   // From commands.
   CameraChecked: { isAvailable: boolean }
   OrderKept: { succeeded: boolean }
@@ -146,7 +161,6 @@ export type Command = Data.TaggedEnum<{
   Add: { product: Product.Product }
   /** Keeps the order the digits of a date are read in, which the setting then reports. */
   KeepOrder: { order: DateOrder.DateOrder }
-  ShowToast: { text: string }
   Vibrate: { feedback: Feedback }
 }>
 
@@ -163,7 +177,6 @@ export type Deps =
   | DateOrderSetting
   | Scanner
   | ProductLookup
-  | Notifications
   | Haptics
   | BackButton
 
@@ -196,6 +209,8 @@ export type NameShown = Readonly<{
   name: string
   /** Changes when the name is replaced by a scan or a clearing, or a product was added, not by typing. */
   nameKey: number
+  /** Over every step, and over the scanner. */
+  snackbar: Snackbar
 }>
 
 /** The second step, over the first. */
@@ -284,6 +299,17 @@ const hasName = (form: Form) => Opt.exists(form.maybeName, (name) => name !== ''
 
 const withForm = (state: State, change: (form: Form) => Form): State => ({ ...state, form: change(state.form) })
 
+// Material's snackbar without an action: long enough to read it.
+const SNACKBAR_DURATION = Duration.seconds(4)
+
+/** A snackbar telling of a failure, after the one standing, if any. */
+const told = (failure: Failure) => (form: Form): Form => ({
+  ...form,
+  snackbar: form.snackbar._tag === 'Shown'
+    ? { _tag: 'Shown', id: form.snackbar.id + 1, failure, entrance: 'AfterAnother' }
+    : { _tag: 'Shown', id: 0, failure, entrance: 'Alone' },
+})
+
 const stepOf = (state: State & { _tag: 'Naming' | 'Dating' }): Step =>
   state._tag === 'Naming' ? { _tag: 'Naming' } : { _tag: 'Dating', date: state.date }
 
@@ -349,8 +375,15 @@ const ACKNOWLEDGING_DURATION = Duration.millis(300 + 500 + 200 + 250)
 const acknowledgingTimer = (at: DateTime.Utc): Tea.Subscription<Message, Deps> =>
   Channel.fromEffectDone(Effect.as(Effect.sleep(ACKNOWLEDGING_DURATION), Message.AddedShown({ at })))
 
-/** The acknowledgement's timer is keyed by its product: the next product starts it anew. */
-type Key = string | readonly ['acknowledging', DateTime.Utc]
+/** Ends once the snackbar has stood its time. */
+const snackbarTimer: Tea.Subscription<Message, Deps> = Channel.fromEffectDone(
+  Effect.as(Effect.sleep(SNACKBAR_DURATION), Message.SnackbarExpired()),
+)
+
+/**
+ * The acknowledgement's timer is keyed by its product, the snackbar's by its id: the next one starts it anew.
+ */
+type Key = string | readonly ['acknowledging', DateTime.Utc] | readonly ['snackbar', number]
 
 const dateOrder: Tea.Subscription<Message, DateOrderSetting> = Channel.unwrap(
   Effect.map(
@@ -441,17 +474,6 @@ const keepOrder = Effect.fn('KeepOrder')(
   Effect.withLogSpan('KeepOrder'),
 )
 
-const showToast = Effect.fn('ShowToast')(
-  function*({ text }: Readonly<{ text: string }>) {
-    const { showToast } = yield* Notifications
-    yield* showToast(text).pipe(
-      Effect.catchTag('NotificationError', (error) => Effect.logWarning('Could not show toast', error.cause)),
-    )
-    return Opt.none()
-  },
-  Effect.withLogSpan('ShowToast'),
-)
-
 const vibrate = Effect.fn('Vibrate')(
   function*({ feedback }: Readonly<{ feedback: Feedback }>) {
     const { perform } = yield* Haptics
@@ -492,6 +514,7 @@ export const program: Tea.Program<{
         maybeNow: Opt.none(),
         maybeOrder: Opt.none(),
         maybeAcknowledging: Opt.none(),
+        snackbar: { _tag: 'None' },
       },
     },
     commands: [Command.CheckCamera()],
@@ -572,13 +595,14 @@ export const program: Tea.Program<{
 
     // The order picked stays in use for this visit either way: only the failure to keep it is told.
     OrderKept: ({ succeeded }) => (state) =>
-      succeeded ? { state } : {
-        state,
-        commands: [
-          Command.ShowToast({ text: 'Couldn\'t save the date order' }),
-          Command.Vibrate({ feedback: 'Reject' }),
-        ],
-      },
+      succeeded
+        ? { state }
+        : { state: withForm(state, told('OrderNotKept')), commands: [Command.Vibrate({ feedback: 'Reject' })] },
+
+    SnackbarExpired: () => (state) =>
+      state.form.snackbar._tag === 'Shown'
+        ? { state: withForm(state, (form) => ({ ...form, snackbar: { _tag: 'None' } })) }
+        : defect('SnackbarExpired while no snackbar is shown: the timer runs only while one is'),
 
     // The first barcode read closes the scanner, with a vibration: the phone is pointed at the product, not
     // looked at. It is looked up even when it is the name already: scanning again is how a failed lookup is
@@ -668,11 +692,8 @@ export const program: Tea.Program<{
           commands: [Command.Vibrate({ feedback: 'Confirm' })],
         }
         : {
-          state: resume(state.step, state.form),
-          commands: [
-            Command.ShowToast({ text: 'Couldn\'t add the product' }),
-            Command.Vibrate({ feedback: 'Reject' }),
-          ],
+          state: resume(state.step, told('AddFailed')(state.form)),
+          commands: [Command.Vibrate({ feedback: 'Reject' })],
         }
     },
 
@@ -695,7 +716,6 @@ export const program: Tea.Program<{
     CheckCamera: checkCamera,
     Add: add,
     KeepOrder: keepOrder,
-    ShowToast: showToast,
     Vibrate: vibrate,
   }),
 
@@ -717,7 +737,10 @@ export const program: Tea.Program<{
         [['acknowledging', creationDate] as const, acknowledgingTimer(creationDate)],
       ],
     })
-    return HashMap.fromIterable([...always, ...scanning, ...looking, ...acknowledging])
+    const telling: typeof always = state.form.snackbar._tag === 'Shown'
+      ? [[['snackbar', state.form.snackbar.id] as const, snackbarTimer]]
+      : []
+    return HashMap.fromIterable([...always, ...scanning, ...looking, ...acknowledging, ...telling])
   },
 
   makeModel: (state): Model => {
@@ -730,7 +753,7 @@ export const program: Tea.Program<{
       NotFound: (): Supporting => ({ _tag: 'NotOnOpenFoodFacts' }),
       Failed: (): Supporting => ({ _tag: 'LookupFailed' }),
     })
-    const nameShown: NameShown = { supporting, name, nameKey: form.replacements }
+    const nameShown: NameShown = { supporting, name, nameKey: form.replacements, snackbar: form.snackbar }
     const dateShown = (
       date: DateForm,
       maybeChoose: (day: DateTime.Utc) => Opt.Option<Message>,

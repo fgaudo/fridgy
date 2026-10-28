@@ -1,11 +1,13 @@
 // The page that edits a stored product: its name and its expiration date, typed on a keypad
 // (`docs/edit-product.md`). The states are the wait for the date order and the clock (`Loading`), the form
-// (`Editing`) and the write (`Saving`). Once the product is saved, the page asks to be left.
+// (`Editing`) and the write (`Saving`). Once the product is saved, the page asks to be left. A failure is told by
+// a snackbar, which leaves on its own.
 import * as Tea from '@fgaudo/effect-tea'
 import * as Arr from 'effect/Array'
 import * as Channel from 'effect/Channel'
 import * as Data from 'effect/Data'
 import * as DateTime from 'effect/DateTime'
+import * as Duration from 'effect/Duration'
 import * as Effect from 'effect/Effect'
 import * as HashMap from 'effect/HashMap'
 import * as Match from 'effect/Match'
@@ -13,7 +15,6 @@ import * as Opt from 'effect/Option'
 import * as Product from '#domain/product.ts'
 import { BackButton } from '#infrastructure/back-button/back-button.ts'
 import { type Feedback, Haptics } from '#infrastructure/haptics/haptics.ts'
-import { Notifications } from '#infrastructure/notifications/notifications.ts'
 import * as DateOrder from '#libs/dates/date-order.ts'
 import * as DigitDateEntry from '#libs/dates/digit-date-entry.ts'
 import * as DigitDates from '#libs/dates/digit-dates.ts'
@@ -49,6 +50,19 @@ export type Form = Readonly<{
   /** The order the digits of a date are read in. */
   order: DateOrder.DateOrder
   date: DateForm
+  snackbar: Snackbar
+}>
+
+/** Material shows one snackbar at a time: one that comes after another waits for it to leave. */
+export type Entrance = 'Alone' | 'AfterAnother'
+
+/** What failed: the snackbar says so. */
+export type Failure = 'SaveFailed' | 'OrderNotKept'
+
+/** The snackbar, until it has stood its time. `id` tells one from the next. */
+export type Snackbar = Data.TaggedEnum<{
+  None: object
+  Shown: Readonly<{ id: number; failure: Failure; entrance: Entrance }>
 }>
 
 export type State = Data.TaggedEnum<{
@@ -67,8 +81,12 @@ export type State = Data.TaggedEnum<{
   Saving: Readonly<{ form: Form; product: Product.Product }>
 }>
 
-/** What the write answered: done, failed, or nothing is stored under the id any more. */
-export type Outcome = 'Saved' | 'Failed' | 'Gone'
+/** What the write answered: done, failed, or nothing is stored under the id any more, as of `at`. */
+export type Outcome = Data.TaggedEnum<{
+  Saved: object
+  Failed: object
+  Gone: Readonly<{ at: DateTime.Utc }>
+}>
 
 export type Message = Data.TaggedEnum<{
   // From the view.
@@ -93,6 +111,8 @@ export type Message = Data.TaggedEnum<{
   OrderChanged: { order: DateOrder.DateOrder }
   /** The platform's back button, while the page is shown. */
   BackPressed: object
+  /** The snackbar has stood its time. */
+  SnackbarExpired: object
   // From commands.
   OrderKept: { succeeded: boolean }
   Saved: { outcome: Outcome }
@@ -105,7 +125,6 @@ export type Command = Data.TaggedEnum<{
   Save: { id: string; product: Product.Product }
   /** Keeps the order the digits of a date are read in, which the setting then reports. */
   KeepOrder: { order: DateOrder.DateOrder }
-  ShowToast: { text: string }
   Vibrate: { feedback: Feedback }
 }>
 
@@ -113,11 +132,16 @@ const Command = Data.taggedEnum<Command>()
 
 export type Event = Data.TaggedEnum<{
   LeaveRequested: object
+  /**
+   * Nothing was stored under the id any more, at `at`: the page asks to be left, and the page under it to say
+   * so, since this one goes.
+   */
+  ProductGone: { at: DateTime.Utc }
 }>
 
 const Event = Data.taggedEnum<Event>()
 
-export type Deps = UpdateProduct | DateOrderSetting | Notifications | Haptics | BackButton
+export type Deps = UpdateProduct | DateOrderSetting | Haptics | BackButton
 
 /** A day the digits name: the chosen one, or one to pick while the page takes input. */
 export type DateChoice = Readonly<{
@@ -131,7 +155,7 @@ export type OrderChoice = Readonly<{
   choice: Data.TaggedEnum<{ Current: object; Offered: Readonly<{ maybePick: Opt.Option<Message> }> }>
 }>
 
-/** The fields, in every state but `Loading`. */
+/** What is drawn in every state but `Loading`: the fields, and the snackbar over them. */
 export type FieldsShown = Readonly<{
   name: string
   /** Changes when the name is cleared, not by typing. */
@@ -146,6 +170,8 @@ export type FieldsShown = Readonly<{
     Naming: Readonly<{ choices: Arr.NonEmptyReadonlyArray<DateChoice> }>
     NamingNothing: object
   }>
+  /** Over the fields. */
+  snackbar: Snackbar
 }>
 
 export type Model = Data.TaggedEnum<{
@@ -170,6 +196,17 @@ export type Model = Data.TaggedEnum<{
   /** The product is being saved: the fields, their controls disabled. */
   Saving: FieldsShown
 }>
+
+// Material's snackbar without an action: long enough to read it.
+const SNACKBAR_DURATION = Duration.seconds(4)
+
+/** A snackbar telling of a failure, after the one standing, if any. */
+const told = (failure: Failure) => (form: Form): Form => ({
+  ...form,
+  snackbar: form.snackbar._tag === 'Shown'
+    ? { _tag: 'Shown', id: form.snackbar.id + 1, failure, entrance: 'AfterAnother' }
+    : { _tag: 'Shown', id: 0, failure, entrance: 'Alone' },
+})
 
 /**
  * The entry the fields show: the stored date's digits in the order in use, none for a product that never expires,
@@ -238,6 +275,7 @@ const editingOnceKnown = (loading: State & { _tag: 'Loading' }): State =>
         now,
         order,
         date: { _tag: 'Kept' },
+        snackbar: { _tag: 'None' },
       },
     }),
   })
@@ -286,6 +324,11 @@ const always: HashMap.HashMap<string, Tea.Subscription<Message, Deps>> = HashMap
   ['back-button', backButton],
 )
 
+/** Ends once the snackbar has stood its time. */
+const snackbarTimer: Tea.Subscription<Message, Deps> = Channel.fromEffectDone(
+  Effect.as(Effect.sleep(SNACKBAR_DURATION), Message.SnackbarExpired()),
+)
+
 const save = Effect.fn('SaveProduct')(
   function*({ id, product }: Readonly<{ id: string; product: Product.Product }>) {
     const { update } = yield* UpdateProduct
@@ -294,11 +337,13 @@ const save = Effect.fn('SaveProduct')(
       Effect.tapError((error) => Effect.logWarning('Could not save the product', error)),
     )
     yield* Effect.logInfo('Saved a product', { id })
+    return Message.Saved({ outcome: { _tag: 'Saved' } })
   },
-  Effect.match({
-    onSuccess: () => Message.Saved({ outcome: 'Saved' }),
-    onFailure: (error) => Message.Saved({ outcome: error._tag === 'ProductNotStored' ? 'Gone' : 'Failed' }),
-  }),
+  Effect.catch((error) =>
+    error._tag === 'ProductNotStored'
+      ? Effect.map(DateTime.now, (at) => Message.Saved({ outcome: { _tag: 'Gone', at } }))
+      : Effect.succeed(Message.Saved({ outcome: { _tag: 'Failed' } }))
+  ),
   Effect.asSome,
   Effect.withLogSpan('SaveProduct'),
 )
@@ -317,17 +362,6 @@ const keepOrder = Effect.fn('KeepOrder')(
   }),
   Effect.asSome,
   Effect.withLogSpan('KeepOrder'),
-)
-
-const showToast = Effect.fn('ShowToast')(
-  function*({ text }: Readonly<{ text: string }>) {
-    const { showToast } = yield* Notifications
-    yield* showToast(text).pipe(
-      Effect.catchTag('NotificationError', (error) => Effect.logWarning('Could not show toast', error.cause)),
-    )
-    return Opt.none()
-  },
-  Effect.withLogSpan('ShowToast'),
 )
 
 const vibrate = Effect.fn('Vibrate')(
@@ -372,6 +406,7 @@ const fieldsOf = (form: Form, takesInput: boolean): FieldsShown => {
       : Arr.isReadonlyArrayNonEmpty(choices)
       ? { _tag: 'Naming', choices }
       : { _tag: 'NamingNothing' },
+    snackbar: form.snackbar,
   }
 }
 
@@ -444,63 +479,57 @@ export const program: Tea.Program<{
     // The page is not left in the middle of a write: the press is held, so that the platform does not leave the app.
     BackPressed: () => (state) => state._tag === 'Saving' ? { state } : { state, events: [Event.LeaveRequested()] },
 
+    SnackbarExpired: () => (state) =>
+      state._tag !== 'Loading' && state.form.snackbar._tag === 'Shown'
+        ? { state: withForm(state, (form) => ({ ...form, snackbar: { _tag: 'None' } })) }
+        : defect('SnackbarExpired while no snackbar is shown: the timer runs only while one is'),
+
     // The order picked stays in use for this visit either way: only the failure to keep it is told.
     OrderKept: ({ succeeded }) => (state) =>
       state._tag === 'Loading'
         ? defect('OrderKept while loading: an order is picked only once the form is there, which never goes')
         : succeeded
         ? { state }
-        : {
-          state,
-          commands: [
-            Command.ShowToast({ text: 'Couldn\'t save the date order' }),
-            Command.Vibrate({ feedback: 'Reject' }),
-          ],
-        },
+        : { state: withForm(state, told('OrderNotKept')), commands: [Command.Vibrate({ feedback: 'Reject' })] },
 
-    // Once saved, or once there is nothing to save to, the page asks to be left: Home's list shows the change.
+    // Once saved, or once there is nothing to save to, the page asks to be left: Home's list shows the change, and
+    // Home says that the product is gone, as this page goes.
     Saved: ({ outcome }) => (state) => {
       if (state._tag !== 'Saving') {
         return defect('Saved while no product is being saved: only a completion leaves Saving')
       }
-      const editing: State = { _tag: 'Editing', form: state.form }
-      switch (outcome) {
-        case 'Saved':
-          return {
-            state: editing,
-            commands: [Command.Vibrate({ feedback: 'Confirm' })],
-            events: [Event.LeaveRequested()],
-          }
-        case 'Failed':
-          return {
-            state: editing,
-            commands: [
-              Command.ShowToast({ text: 'Couldn\'t save the product' }),
-              Command.Vibrate({ feedback: 'Reject' }),
-            ],
-          }
-        case 'Gone':
-          return {
-            state: editing,
-            commands: [
-              Command.ShowToast({ text: 'This product no longer exists' }),
-              Command.Vibrate({ feedback: 'Reject' }),
-            ],
-            events: [Event.LeaveRequested()],
-          }
-      }
+      const editing: State & { _tag: 'Editing' } = { _tag: 'Editing', form: state.form }
+      return Match.valueTags(outcome, {
+        Saved: (): Tea.Transition<State, Command, Event> => ({
+          state: editing,
+          commands: [Command.Vibrate({ feedback: 'Confirm' })],
+          events: [Event.LeaveRequested()],
+        }),
+        Failed: (): Tea.Transition<State, Command, Event> => ({
+          state: withForm(editing, told('SaveFailed')),
+          commands: [Command.Vibrate({ feedback: 'Reject' })],
+        }),
+        Gone: ({ at }): Tea.Transition<State, Command, Event> => ({
+          state: editing,
+          commands: [Command.Vibrate({ feedback: 'Reject' })],
+          events: [Event.ProductGone({ at })],
+        }),
+      })
     },
   }),
 
   runCommand: Match.typeTags<Command>()({
     Save: save,
     KeepOrder: keepOrder,
-    ShowToast: showToast,
     Vibrate: vibrate,
   }),
 
-  // The back button is observed in every state: while saving, so that a press is held.
-  subscriptions: () => always,
+  // The back button is observed in every state: while saving, so that a press is held. The snackbar's timer is
+  // keyed by its id: the next one starts it anew.
+  subscriptions: (state) =>
+    state._tag !== 'Loading' && state.form.snackbar._tag === 'Shown'
+      ? HashMap.set(always, `snackbar:${state.form.snackbar.id}`, snackbarTimer)
+      : always,
 
   makeModel: (state): Model =>
     Match.valueTags(state, {

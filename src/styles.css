@@ -258,6 +258,48 @@ html {
 }
 
 /*
+ * Where Material's snackbar stands: at the bottom, 16dp from the edges. It takes no input: what is under it, out
+ * of the snackbar's way, stays pressable.
+ */
+@utility snackbar-slot {
+  @apply pointer-events-none fixed right-4 bottom-4 left-4 z-30 mr-sair mb-saib ml-sail;
+}
+
+/*
+ * Material's snackbar, with its text in a `span` and its action, if any, in a `button`. It rises in fading; one
+ * that comes after another (`data-entrance="AfterAnother"`) waits for that one to sink first. The view sinks it
+ * on removal, to `opacity: 0` and `transform: translateY(0.5rem)`, which its transition then animates.
+ */
+@utility snackbar {
+  @apply pointer-events-auto flex min-h-12 items-center gap-2 rounded-extra-small bg-inverse-surface py-1 pr-4 pl-4;
+  @apply text-body-medium text-inverse-on-surface shadow-elevation-3;
+  animation: snackbar-enter var(--transition-duration-short-3)
+    var(--ease-standard-decelerate) backwards;
+  transition-property: opacity, transform;
+  transition-duration: var(--transition-duration-short-2);
+  transition-timing-function: var(--ease-standard-accelerate);
+  &[data-entrance="AfterAnother"] {
+    animation-delay: var(--transition-duration-short-2);
+  }
+  &:has(> button) {
+    @apply pr-2;
+  }
+  & > span {
+    @apply min-w-0 flex-1 py-2;
+  }
+  & > button {
+    @apply state-layer h-10 shrink-0 rounded-full px-3 text-label-large text-inverse-primary;
+  }
+}
+
+@keyframes snackbar-enter {
+  from {
+    opacity: 0;
+    transform: translateY(0.5rem);
+  }
+}
+
+/*
  * A product added enters the fridge (see docs/product-flight.md). The letters of its name gather into it where
  * the name is written, as the fridge appears; it flies, on an arc that two elements make (the outer one moves in
  * X, the inner one in Y), into the fridge, whose door has opened; it is handed to a copy inside the fridge as it

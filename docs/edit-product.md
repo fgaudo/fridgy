@@ -64,9 +64,9 @@ decided".
 5. **Saving.** "Save" is enabled only while the fields describe a valid product (`Product.make` accepts it)
    that differs from the stored one. A tap disables every control, shows the circular indicator in the button
    and writes the product; when the write has completed, the page leaves, and Home shows the product changed,
-   where its new expiration orders it. When the write fails, the page gives the form back and a toast says
-   `Couldn't save the product`; when nothing is stored under the id any more, a toast says
-   `This product no longer exists` and the page leaves.
+   where its new expiration orders it. When the write fails, the page gives the form back and a snackbar says
+   `Couldn't save the product`; when nothing is stored under the id any more, the page leaves and Home's
+   snackbar says `This product no longer exists`. A snackbar of the page leaves by itself after 4 seconds.
 6. **Leaving.** The app bar's close button and the back button leave the page, the changes discarded, without
    asking. While the product is being saved, the close button is disabled and a press of the back button is
    held: the page is not left in the middle of a write.
@@ -132,7 +132,8 @@ starts it with `children.EditProduct.init(flags)` from Home's event). Same shape
   other spacing is not a change.
 - **Only a completion leaves `Saving`**: its controls are disabled, `Saved` outside it is a defect, and a key
   typed just before is kept, as `add-products` does. `Saved` leaves the page; `Failed` gives the form back with
-  the toast; `Gone` gives the form back, says so and leaves.
+  the snackbar; `Gone` gives the form back and asks to be left with `ProductGone`, which the root hands to Home
+  (an `external` message, down to Products), since the page's own snackbar would go with it.
 - **Subscriptions**, always on, run by the root only while the page is on top (`subscribed`): the clock every
   30 seconds, as Products' (only `today` is needed, for a date typed without a year; `add-products` ticks every
   second because the creation date is taken from it, which this page never does); the page's own

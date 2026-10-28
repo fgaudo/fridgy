@@ -75,8 +75,8 @@ export const deleteSelected = onProducts(({ list }) =>
 )
 
 /** The snackbar's "Undo", while the last deletion can be undone. */
-export const undoDeletion = onProducts(({ lastDeletion }) =>
-  lastDeletion._tag === 'Deleted' ? lastDeletion.maybeUndo : Opt.none()
+export const undoDeletion = onProducts(({ snackbar }) =>
+  snackbar._tag === 'Shown' && snackbar.notice._tag === 'Deleted' ? snackbar.notice.maybeUndo : Opt.none()
 )
 
 export const typeName = (name: string) =>

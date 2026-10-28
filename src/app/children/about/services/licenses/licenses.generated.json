@@ -44,15 +44,6 @@
         "name": "@capacitor/splash-screen",
         "description": "The Splash Screen API provides methods for showing or hiding a Splash image."
     },
-    "@capacitor/toast@9.0.0-alpha.2": {
-        "licenses": "MIT",
-        "repository": "https://github.com/ionic-team/capacitor-plugins",
-        "publisher": "Ionic",
-        "email": "hi@ionicframework.com",
-        "copyright": "Copyright 2020-present Ionic. https://ionic.io",
-        "name": "@capacitor/toast",
-        "description": "The Toast API provides a notification pop up for displaying important information to a user. Just like real toast!"
-    },
     "@effect/platform-browser@4.0.6": {
         "licenses": "MIT",
         "repository": "https://github.com/Effect-TS/effect",
@@ -79,14 +70,6 @@
         "copyright": "Copyright (c) 2026 Francesco Gaudenzi",
         "name": "@fgaudo/effect-tea",
         "description": "The Elm architecture on Effect v4"
-    },
-    "@ionic/pwa-elements@3.4.0": {
-        "licenses": "MIT",
-        "repository": "https://github.com/ionic-team/ionic-pwa-elements",
-        "publisher": "Ionic Team",
-        "copyright": "Copyright (c) 2017 Ionic",
-        "name": "@ionic/pwa-elements",
-        "description": "Stencil Component Starter"
     },
     "clsx@2.1.1": {
         "licenses": "MIT",
