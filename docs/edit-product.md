@@ -93,9 +93,10 @@ pages may legitimately differ in it, and sharing it would take parameters that d
   construction, since both call the same rule (`typeDigit` answering `None` is `reject` in `update` and a key
   withheld in the model), and `dispatchViolations` checks it on the real view, as it does today.
 
-A shared module of model fragments and view pieces under `src/app`, generic in the page's message, was designed
-and set aside (see "Open points"): nothing in the tree today is such a thing, and two uses are too few to know
-what the third would need.
+A shared module of model fragments and view pieces under `src/app`, generic in the page's message, was designed and set
+aside: `AGENTS.md` now rules it out ("never shared through parameters that describe the caller"), and says where the one
+thing that moves up as it is goes, a whole program two programs use, into `programs/` of their lowest common parent,
+which the date entry is not today (see "Open points").
 
 ### The rules: `src/libs/dates/digit-date-entry.ts`
 
@@ -554,13 +555,12 @@ excluded.date`, and for `None`, `DELETE FROM product_expiration WHERE product_id
 ## Documentation to update with the change
 
 `README.md` (status: the edit page), `src/README.md` (the tree: `edit-product` and its services,
-`infrastructure/storage/date-order.ts`, `libs/dates`' entry), `AGENTS.md` ("Shared things move up": what two
-programs compute alike is a function of `libs/`; what two views draw alike is written in each, and a look of
-Material's they share, with its states, is a utility of `styles.css`; "Known gaps": the page not yet seen on
-Android), the `add-program` skill ("A page of the root": one started from flags, `children.<Page>.init(flags)` in
-`onEvent`), the `add-service` skill (the setting's text shared by two adapters), the `views` skill (when a list
-of classes becomes a utility: a look of Material's with its states, drawn by more than one view; Material's
-list: a tap opens an item, a long press selects, a tap selects once something is).
+`infrastructure/storage/date-order.ts`, `libs/dates`' entry), `AGENTS.md` ("Known gaps": the page not yet seen on
+Android; the criterion for what moves up is already there, since 1b434df), the `add-program` skill ("A page of the
+root": one started from flags, `children.<Page>.init(flags)` in `onEvent`), the `add-service` skill (the setting's text
+shared by two adapters), the `views` skill (when a list of classes becomes a utility: a look of Material's with its
+states, drawn by more than one view; Material's list: a tap opens an item, a long press selects, a tap selects once
+something is).
 
 ## Order of work
 
@@ -583,24 +583,25 @@ Each step leaves the typecheck, the lint and the tests green:
 
 ## Open points, and what was decided
 
-- **Sharing the date entry.** Its state, `update` handlers, model and view pieces are about 400 lines in
-  `add-products`, which the new page needs nearly as they are. Three ways were weighed with the owner. (a) Share
-  only the rules, in `libs/`, and write the rest twice: the state is the rules' `Entry`, the handlers are four
-  lines that delegate, the model's fifty lines agree with `update` by construction in each page, and what is
-  truly written twice is the view's two hundred lines of TSX, which the utilities of `styles.css` cut to the
-  markup alone. (b) A shared child program, `src/app/date-entry/`, as `AGENTS.md` foresees for "a program used
-  by two parents": ruled out by the `add-program` skill's own test, a child whose state the parent would have to
-  copy down and back up is not one, and `add-products` needs the day named in its own `update` to submit, so it
-  would copy it from every event, and hand down the clock, the order and the lower bound. (c) A module under
-  `src/app` with no program of its own, holding the model fragments and the view pieces generic in the page's
-  message, which the pages fill with their own messages: nothing copied up or down and the model agreeing with
-  `update` by the same rules, but a new kind of thing in the tree (named in `src/README.md`, `AGENTS.md` and an
-  exception to Biome's ban on `#app/**` inside `src/app`), and pieces that already needed two parameters
-  describing the caller (what the empty strip reads as, whether the page takes input), the mark of two things
-  made one. **Decided: (a).** The owner's rule, which the docs now state: a thing is shared when its truth lies
-  outside the pages that use it (the rules, Material's looks), and written twice when the pages may legitimately
-  differ in it (the composition). Two uses are too few to know what a third would need; the day the creation
-  date gets an entry of its own, (c) is weighed again, with three examples instead of one and a half.
+- **Sharing the date entry.** Its state, `update` handlers, model and view pieces are about 400 lines in `add-products`,
+  which the new page needs nearly as they are. Three ways were weighed with the owner. (a) Share only the rules, in
+  `libs/`, and write the rest twice: the state is the rules' `Entry`, the handlers are four lines that delegate, the
+  model's fifty lines agree with `update` by construction in each page, and what is truly written twice is the view's
+  two hundred lines of TSX, which the utilities of `styles.css` cut to the markup alone. (b) A shared child program, in
+  the `programs/` that `AGENTS.md` now defines for a program two programs use (`src/app/programs/date-entry/`, both
+  pages declaring it as a child): ruled out by the `add-program` skill's own test, a child whose state the parent would
+  have to copy down and back up is not one, and `add-products` needs the day named in its own `update` to submit, so it
+  would copy it from every event, and hand down the clock, the order and the lower bound. (c) A module under `src/app`
+  with no program of its own, holding the model fragments and the view pieces generic in the page's message, which the
+  pages fill with their own messages: nothing copied up or down and the model agreeing with `update` by the same rules,
+  but a kind of thing `AGENTS.md` now rules out ("never shared through parameters that describe the caller", "never as
+  fragments of model or view"), and pieces that already needed two parameters describing the caller (what the empty
+  strip reads as, whether the page takes input), the mark of two things made one. **Decided: (a).** The owner's rule,
+  now in `AGENTS.md` and the `add-program` skill: a thing is shared when its truth lies outside the pages that use it
+  (the rules, Material's looks), and written twice when the pages may legitimately differ in it (the composition). Two
+  uses are too few to know what a third would need; the day the creation date gets an entry of its own, moving the entry
+  up is weighed again, with three examples instead of one and a half, and the only shape it may then take is (b), a
+  whole program in `programs/`, if by then the pages share a state machine and not only its pieces.
 - **A tap to open, a long press to select.** Today a tap on a row does nothing. Material's lists open an item on a
   tap, select on a long press, and once in selection mode select on a tap; this is what point 1 adopts, and it is
   the one behaviour of Home this change alters. To check on the device (not in the browser): that Android's long
@@ -637,8 +638,8 @@ Each step leaves the typecheck, the lint and the tests green:
 
 - Deleting from the page (an overflow item in the app bar, with Home's snackbar on return).
 - The scanner and the lookup on this page, to rename a product from its barcode.
-- Editing the creation date ("bought on"), with the ring's meaning in mind: a third date entry, when the shared
-  view of "Open points" is weighed again.
+- Editing the creation date ("bought on"), with the ring's meaning in mind: a third date entry, when moving the entry up
+  as a program of `programs/` is weighed again.
 - Repairing an `Invalid` row (a stored expiration before the creation date) from this page, which today can only
   be deleted: the page would start from an `UnvalidatedSnapshot` and a `fromSnapshot` that forgives the date.
 - A transition for a row that moves in Home's list.
