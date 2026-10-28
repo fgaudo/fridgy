@@ -106,12 +106,16 @@ folders; "page" names a role in the UI, kept by the root's state, not a kind of 
   (only for values valid by construction) derived from it; `Brand.make` only for a generic type,
   `Brand.nominal` for a brand without a rule. A constructor that converts its input first is named after it
   (`NormalizedString.fromString`). Export only what is used, plus a library module's intended API.
-- **Only what can be tested is supported.** `minSdkVersion`, `minWebViewVersion`, the target SDK and the reference
-  screen (320dp wide, 640dp between the system bars, which every page fits without scrolling) move only as the
-  `android-release` skill says, checked in the emulator first, with the docs.
+- **Only what can be tested is supported.** `minSdkVersion`, the target SDK and the reference screen (320dp
+  wide, 640dp between the system bars, which every page fits without scrolling) move only as the
+  `android-release` skill says, checked in the emulator first, with the docs. `minWebViewVersion` is derived
+  from what the bundle uses and checked on the bundle, never in the emulator: `docs/testing.md` says why.
 
 ## Tests
 
+- What is checked where (the tests on every change, the production bundle in a browser, the emulator on the
+  target image), what each layer covers and why, is `docs/testing.md`. A check goes in the lowest layer that
+  can make it.
 - `bun:test` and fast-check property tests, in a `*.test.ts` next to the module. A property the code does not
   satisfy yet stays as `test.failing` with the bug in its name.
 - A test's name says what it checks. When a change touches a test, or what it tests, check that its name, its
@@ -168,16 +172,23 @@ folders; "page" names a role in the UI, kept by the root's state, not a kind of 
   why. Neither has the lookup on Open Food Facts (`docs/open-food-facts-lookup.md`): its requests from the
   WebView (no CORS error, the appended User-Agent), nor the expansion of a UPC-E, which assumes that the
   detector reports one as its 8 digits.
-- Capacitor 9 alpha (API 37, WebView 114) has not been built or run in the emulator yet, and whether the
-  release ships on it or on the stable line (8.5.3) is not decided: the stable line is to be checked for the
-  `SystemBars` plugin with `insetsHandling: 'css'`, which the app relies on.
+- Capacitor 9 alpha (API 37) has not been built or run in the emulator yet, and whether the release ships on
+  it or on the stable line (8.5.3) is not decided: the stable line is to be checked for the `SystemBars` plugin
+  with `insetsHandling: 'css'`, which the app relies on.
 - A defect leaves the app frozen on its last frame: `src/entrypoints/run.ts` runs the program with nothing
   around it, so the cause goes to the console only, and the user sees neither a message nor a way to restart.
   Whether the production entrypoint shows something instead is not decided.
-- On WebView 114 exactly (the `android-release` skill's procedure, followed in the emulator on 2026-10-28) the
-  database, the `color-mix` shadows, `scrollend` and `lh` work. In most starts the renderer died about 1.5 s
-  after the first view, under the Noto fonts then loaded at start, since replaced by the system's: that a start
-  survives with the icon font alone has not been checked.
+- The production bundle has no test (`docs/testing.md`, "The production bundle in a browser"): one end-to-end
+  run of `dist/` is to be written, in headless Chromium through Playwright, in a file of its own that
+  `bun test` does not pick up and a script of `package.json` runs. It serves `dist/` over HTTP on `localhost`
+  (the OPFS database needs a secure context), opens the app, enters a product by hand, sees it in the list,
+  opens it, edits it and deletes it, and, on each page, at a viewport of 320×640, asserts that nothing
+  scrolls. Until it exists, the production entrypoint (`src/entrypoints/production.ts`, the SQLite worker on
+  OPFS) runs only in the emulator, and the emulator pass before a release does what this run would.
+- No CI runs the checks. A GitHub Actions workflow is to run, on every push, `bun run typecheck`,
+  `bun run test`, `bun run lint`, `bun run build`, the floor check of the `android-release` skill
+  (`bunx es-check --module es2023 "dist/*.js"`, to become a script of `package.json` with the workflow) and,
+  once it exists, the end-to-end run above.
 - The page that edits a product (`docs/edit-product.md`) has been checked in a browser only: not yet on Android,
   where a long press, which fires `contextmenu`, must not also deliver a `click` that opens the product, and
   where the back button, with the keyboard open, should close the keyboard first.

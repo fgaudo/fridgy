@@ -1,9 +1,12 @@
 ---
 name: android-release
-description: How to build Fridgy for Android, which Android versions it supports and why, how to regenerate the launcher icons and splash screens, and how to version, tag and release. Use when building the Android app, upgrading Capacitor, changing minSdkVersion or minWebViewVersion, or making a release.
+description: How to build Fridgy for Android, which Android versions it supports and why, how the WebView floor is checked, how to regenerate the launcher icons and splash screens, how a release is checked in the emulator, and how to version, tag and release. Use when building the Android app, upgrading Capacitor, changing minSdkVersion or minWebViewVersion, or making a release.
 ---
 
 # Android and releases
+
+What is checked where, and why, is [`docs/testing.md`](../../../docs/testing.md); this skill holds the
+commands.
 
 ## Build
 
@@ -27,26 +30,37 @@ them as it leaves them.
 
 ## Supported Android versions
 
-Only what can be tested is supported. The app needs Android 10 (API 29) and Android System WebView 114: on an
-older WebView, Capacitor shows `src/error.html` instead (`minWebViewVersion` in `capacitor.config.ts`).
+The app needs Android 10 (API 29) and Android System WebView 114: on an older WebView, Capacitor shows
+`src/error.html` instead (`minWebViewVersion` in `capacitor.config.ts`).
 
 An Android version is supported only if the app can be tested on it, in the Android emulator:
 
 - on a Google Play image for x86_64: below API 28, Google's Play images are x86 only, at 32 bits;
-- with Android System WebView as the WebView: Android 7 to 9 use Chrome instead;
-- with that WebView at exactly `minWebViewVersion`, installed by hand as below: the images ship an older one
-  (74 on API 29), and the Play Store would install the latest, which proves nothing about the lowest.
+- with Android System WebView as the WebView: Android 7 to 9 use Chrome instead.
 
-API 29 is the lowest version that meets all three, hence `minSdkVersion` 29 in `android/variables.gradle`. A
-change of `minSdkVersion`, of these rules or of `minWebViewVersion` (which can move the lowest version that
-meets them) is checked in the emulator first, and `README.md` and this file change with it.
+API 29 is the lowest version that meets both, hence `minSdkVersion` 29 in `android/variables.gradle`. A
+change of `minSdkVersion` or of these rules is checked in the emulator first, and `README.md` and this file
+change with it.
 
 `minWebViewVersion` is the lowest WebView with everything the app uses; the comment on it in
-`capacitor.config.ts` names what needs the highest version. The bundle is not transpiled (`Bun.build`, the
-`ESNext` target), so every syntax, API and CSS feature in it counts, Tailwind's and Effect's included, and an
-upgrade of a dependency can raise what the app needs without a change in `src/`. Nothing checks this
-statically: the check is the emulator on that exact WebView, before a release and after an upgrade of
-Capacitor, Effect, Tailwind or `@effect/wa-sqlite`.
+`capacitor.config.ts` names what needs the highest version. The app is never run on that version
+(`docs/testing.md` says why): the floor is checked on the bundle, after a build,
+
+```bash
+bunx es-check --module es2023 "dist/*.js"
+```
+
+which fails on a syntax that ES2023, the last edition WebView 114 implements whole, does not have. The bundle
+is not transpiled (`Bun.build`, the `ESNext` target), so every syntax in it counts, Tailwind's and Effect's
+included, and an upgrade of a dependency can raise what the app needs without a change in `src/`: run the
+check before a release and after an upgrade of Capacitor, Effect, Tailwind or `@effect/wa-sqlite`. The APIs
+and the CSS features the comment lists have no check: when `minWebViewVersion` moves, re-derive the list from
+what the app uses, on caniuse.
+
+`compileSdkVersion` and `targetSdkVersion`, the Android Gradle Plugin and Gradle are those of the Android
+template of the Capacitor release in use (`assets/android-template.tar.gz` in `@capacitor/cli`): API 37 for
+Capacitor 9. They move only with an upgrade of Capacitor, checked in the emulator on the new target; an upgrade
+not yet checked is listed under "Known gaps" in `AGENTS.md` until it is.
 
 ## Supported screen sizes
 
@@ -59,39 +73,29 @@ to 200% of text) and split-screen shorten any phone's viewport, so a page's colu
 shorter than its content (the steps of `add-products`, the page that edits a product) instead of docking anything
 out of reach. The manifest declares the width (`<supports-screens android:requiresSmallestWidthDp="320" />`),
 which only the Play Store reads, to hide the app from narrower devices: an APK installs anywhere, and today no
-phone is narrower. Every page is checked before a release, in the emulator: on a device profile of 960×2136 px at
-480 dpi (320×712dp, 640dp between the status bar and the three-button navigation bar), where no page scrolls, and
-on the Nexus S image (480×800 hdpi, 320×533dp), with the font at 200% in the system settings and with the keyboard
-open on each field, where every page still reaches its button. Any AVD gives those screens with `adb shell wm size
-960x2136` and `wm density 480`, or `wm size 480x800` and `wm density 240` (`wm size reset` and `wm density reset`
-after), and the font with `settings put system font_scale 2.0`. In a browser, the pane at 320×640 and 320×533
-stands in, with no bars. The sizes move only as the versions above do: checked in the emulator first, with `README.md`, `AGENTS.md`, the
-`views` skill and this file.
+phone is narrower. The sizes move only as the versions above do: checked in the emulator first, with
+`README.md`, `AGENTS.md`, the `views` skill and this file.
 
-### The emulator on the lowest WebView
+In the emulator, the reference screens are a device profile of 960×2136 px at 480 dpi (320×712dp, 640dp between
+the status bar and the three-button navigation bar), where no page scrolls, and the Nexus S image (480×800 hdpi,
+320×533dp), with the font at 200% in the system settings and the keyboard open on each field, where every page
+still reaches its button. Any AVD gives those screens with `adb shell wm size 960x2136` and `wm density 480`,
+or `wm size 480x800` and `wm density 240` (`wm size reset` and `wm density reset` after), and the font with
+`settings put system font_scale 2.0`. In a browser, the pane at 320×640 and 320×533 stands in, with no bars.
 
-1. Download Android System WebView `minWebViewVersion` (e.g. `114.0.5735.196`) from APKMirror,
-   `apkmirror.com/apk/google-inc/android-system-webview/`: the APK variant for "x86 + x86_64", "Android 7.0+",
-   signature `1f38`. It is the standalone WebView, which Android 10 and later run too; the "Android 10+"
-   variants are the Trichrome ones, which need a Trichrome Library APK of the same version and have no x86_64
-   build.
-2. Install it on the emulator, over the image's own:
+## The emulator
 
-   ```bash
-   adb install -r android-system-webview.apk
-   ```
+The pass of `docs/testing.md` ("The emulator, on the target image") runs on the AVD of `targetSdkVersion`'s
+Google Play image, with the image's WebView brought up to date by the Play Store, as on a phone:
+`adb shell dumpsys webviewupdate` shows the current package and its version. The lowest version
+(`minSdkVersion`'s image, the same way) is checked only after a change of `minSdkVersion`, of Capacitor or of a
+plugin.
 
-   `adb shell dumpsys webviewupdate` must then show `com.google.android.webview` with that version as the
-   current package. Nothing else is selected: a Play image has no other WebView provider.
-3. Do not sign the emulator into a Google account: the Play Store would update the WebView to the latest.
-   If it did, `adb uninstall com.google.android.webview` removes the update and puts the image's own back.
-4. Run the app: it must start (not `src/error.html`), and what the comment on `minWebViewVersion` lists must
-   work: the database, the shadows and the scrim, the list snapping back to the top after a scroll.
-
-`compileSdkVersion` and `targetSdkVersion`, the Android Gradle Plugin and Gradle are those of the Android
-template of the Capacitor release in use (`assets/android-template.tar.gz` in `@capacitor/cli`): API 37 for
-Capacitor 9. They move only with an upgrade of Capacitor, checked in the emulator on the new target; an upgrade
-not yet checked is listed under "Known gaps" in `AGENTS.md` until it is.
+Install the app from a clean state (`adb shell pm clear net.gaudo.fridgy`): an install over an older schema
+fails on the first read. The dark theme: `adb shell cmd uimode night yes`. A vibration's delivery:
+`adb shell dumpsys vibrator_manager` lists each one with its usage and whether the system ignored it. The
+backup: `adb shell bmgr enable true`, `bmgr transport com.android.localtransport/.LocalTransport`,
+`bmgr backupnow net.gaudo.fridgy`, then uninstall and reinstall.
 
 ## Icons and splash screens
 
@@ -118,9 +122,11 @@ The version is `YEAR.MONTH.N`, N counting the releases of the month from 0 (`202
 2. runs `bun install`, which regenerates the licenses shown on the About page
    (`src/app/children/about/services/licenses/licenses.generated.json`), and commits the file with `bun.lock`
    when it changes;
-3. runs `bun run typecheck`, `bun run test` and `bun run lint`, then builds and syncs as above;
-4. is checked in the emulator on the lowest supported version and on the target, and every item under "Known
-   gaps" in `AGENTS.md` that the emulator or a phone can settle is checked then;
+3. runs `bun run typecheck`, `bun run test` and `bun run lint`, builds and syncs as above, and runs the floor
+   check on `dist/`;
+4. runs the production bundle in a browser as `docs/testing.md` says, once that check exists ("Known gaps" in
+   `AGENTS.md`), and the emulator pass above on the target image; every item under "Known gaps" that the
+   emulator can settle is settled then, and removed;
 5. is uploaded to the Play Console as an AAB signed with the upload key of the previous releases (Play App
    Signing holds the app's key; `build.gradle` has no signing config), with the AAB's size noted (`dist/` is
    1.4 MB), and the console brought up to date with it: the store listing (screenshots
