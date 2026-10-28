@@ -250,12 +250,11 @@ selection):
   disappears the same way (it is not a departure: its id still exists). A FLIP of the rows is in
   `edit-product.md`'s "Later", and would cover both.
 - **The keyboard.** The manifest sets no `windowSoftInputMode` (**verified**: none in
-  `android/app/src/main/AndroidManifest.xml`), so whether the keyboard shrinks the viewport, lifting the fixed add
-  button and the snackbar's slot above it, or covers the bottom of the page, is to be seen in the emulator. If
-  it covers them, the add button is hidden while the search is `Open`
-  (a case of the model, not a reading of the focus, which the view cannot have). Also to be seen: that
-  Android's back button, with the keyboard open, closes the keyboard first and reaches the app on the second
-  press (the same gap `edit-product.md` lists); that a query that clamps the scroll to the top fires `scroll`,
+  `android/app/src/main/AndroidManifest.xml`), and the keyboard shrinks the viewport
+  (**verified** in the emulator on 2026-10-28, on the pages that add and edit a product: `innerHeight` 914 to
+  578 on a Pixel 6), lifting the fixed add button and the snackbar's slot above it; Android's back button, with
+  the keyboard open, closes the keyboard first and reaches the app on the second press (**verified** there too).
+  Still to be seen: that a query that clamps the scroll to the top fires `scroll`,
   so that `isAtTop` is true when the search closes and the bar grows back; and that the keyboard's search key
   leaves the keyboard up, which the owner may want otherwise (see "Open points").
 - **Reduced motion:** the height and padding transitions are the app's standard ones and follow the existing

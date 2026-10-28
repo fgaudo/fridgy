@@ -1,6 +1,7 @@
 # Design: naming a scanned product from Open Food Facts
 
-Implemented on 2026-10-27; not yet tried on Android (see "Verified, and not", and "Known gaps" in `AGENTS.md`).
+Implemented on 2026-10-27; the lookup tried on Android, the scanner not yet (see "Verified, and not", and "Known
+gaps" in `AGENTS.md`).
 The code is the page that adds products (`src/app/children/add-products/`, its `product-lookup` service and the
 scanner adapter), the client `src/infrastructure/open-food-facts/`, the cache `src/infrastructure/storage/barcodes.ts`
 and the barcode library `src/libs/barcodes/`. Read [`AGENTS.md`](../AGENTS.md), the `add-service` and `add-program`
@@ -203,11 +204,11 @@ expanded form; an 8-digit one that does not expand is logged and not offered.
 ## Verified, and not
 
 The client against the recorded answers, the adapter's cache rules under `TestClock`, the page and the root's
-scenarios are tested (`bun test`); the flow was seen in a browser. Not yet on Android, which needs the Capacitor 9
-build ("Known gaps" in `AGENTS.md`): scan a product known to Open Food Facts, one unknown, one UPC-E, one in
-airplane mode; check in the device's logs that the request carries the appended User-Agent and that no CORS error
-appears. `bunx cap sync android` was not run: the synced `capacitor.config.json` is ignored by git and written by
-the release's build (`android-release` skill); `bunx cap config` shows the appended User-Agent.
+scenarios are tested (`bun test`); the flow was seen in a browser. On Android, in the emulator on 2026-10-28 (API
+29 and 37): the WebView's `navigator.userAgent` ends with `Fridgy/2026.10.0 (fgaudo@gmail.com)`, and a request
+for `8076800195057` from the app's origin answered with the product and no CORS error. Not yet, for want of a
+camera ("Known gaps" in `AGENTS.md`): scan a product known to Open Food Facts, one unknown, one UPC-E, one in
+airplane mode.
 
 ## Later, not in this change
 

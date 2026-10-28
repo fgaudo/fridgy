@@ -107,9 +107,9 @@ Seen in a browser on 2026-10-28 by freezing copies of the animated elements at c
 the setting): an add from each step, two adds in a row, names in Latin, Arabic (by word, right to left) and
 Devanagari (by word) laid exactly over the field's text, a long name whose letters past the field's width are
 hidden, and the announcement ("Yogurt greco added. Expires 12 Dec 2027"). A write in the browser took up to two
-seconds, so a second add landing while the first is still entering was not seen. Not seen on Android: the WebView
-follows "Remove animations" with `prefers-reduced-motion`; check it in the emulator (see "Known gaps" in
-`AGENTS.md`). `gatherAndFly` has no test: `tea-snabbdom` has no fake DOM.
+seconds, so a second add landing while the first is still entering was not seen. Seen in the emulator on 2026-10-28: on Android 17 the
+WebView follows "Remove animations" with `prefers-reduced-motion`; on Android 10 (WebView 139) it does not, and
+the movements play. `gatherAndFly` has no test: `tea-snabbdom` has no fake DOM.
 
 ## Later
 

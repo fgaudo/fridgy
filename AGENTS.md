@@ -168,13 +168,14 @@ folders; "page" names a role in the UI, kept by the root's state, not a kind of 
 ## Known gaps (verify before working)
 
 - The scanner (`getUserMedia` and the Shape Detection API, `scanner.browser.ts`) has not been tried on Android
-  yet; on a desktop without the API (Chrome on Windows), the scan button is disabled and the name field says
-  why. Neither has the lookup on Open Food Facts (`docs/open-food-facts-lookup.md`): its requests from the
-  WebView (no CORS error, the appended User-Agent), nor the expansion of a UPC-E, which assumes that the
-  detector reports one as its 8 digits.
-- Capacitor 9 alpha (API 37) has not been built or run in the emulator yet, and whether the release ships on
-  it or on the stable line (8.5.3) is not decided: the stable line is to be checked for the `SystemBars` plugin
-  with `insetsHandling: 'css'`, which the app relies on.
+  with a camera yet; on a desktop without the API (Chrome on Windows), the scan button is disabled and the name
+  field says why. Neither has the expansion of a UPC-E, which assumes that the detector reports one as its 8
+  digits. The lookup itself runs from the WebView (`docs/open-food-facts-lookup.md`, "Verified, and not").
+- Whether the release ships on Capacitor 9 alpha (built and run in the emulator on API 29 and 37 on 2026-10-28)
+  or on the stable line (8.5.3) is not decided: the stable line is to be checked for the `SystemBars` plugin
+  with `insetsHandling: 'css'`, which the app relies on. The alpha's `SystemBars` logs `Error injecting safe
+  area CSS` at start, harmlessly: its script runs before the document exists, and the next injection sets the
+  insets.
 - A defect leaves the app frozen on its last frame: `src/entrypoints/run.ts` runs the program with nothing
   around it, so the cause goes to the console only, and the user sees neither a message nor a way to restart.
   Whether the production entrypoint shows something instead is not decided.
@@ -189,17 +190,7 @@ folders; "page" names a role in the UI, kept by the root's state, not a kind of 
   `bun run test`, `bun run lint`, `bun run build`, the floor check of the `android-release` skill
   (`bunx es-check --module es2023 "dist/*.js"`, to become a script of `package.json` with the workflow) and,
   once it exists, the end-to-end run above.
-- The page that edits a product (`docs/edit-product.md`) has been checked in a browser only: not yet on Android,
-  where a long press, which fires `contextmenu`, must not also deliver a `click` that opens the product, and
-  where the back button, with the keyboard open, should close the keyboard first.
-- The vibrations (`docs/haptics.md`, Capacitor's `Haptics` 9.0.0-next.1, its only release for Capacitor 9) have
-  not been felt on Android: whether each pattern feels like the constant it stands for, whether the WebView
-  vibrates on its own on a long press too, and whether the "Touch feedback" setting silences them.
-- The dark theme has been checked in a browser only: not yet on Android, where the WebView should match
-  `prefers-color-scheme` from the system's theme, nor its night splash screens.
-- The manifest keeps `allowBackup`, so that Android's backup carries the products across a phone change, and
-  `PRIVACY.md` says so. The restore has not been tried: the database lives in the WebView's profile
-  (`app_webview`), which a restore is not known to bring back whole. Check it in the emulator:
-  `adb shell bmgr backupnow net.gaudo.fridgy`, uninstall, reinstall, and see the products again.
+- The vibrations (`docs/haptics.md`) have not been felt on a phone: whether each pattern feels like the constant
+  it stands for. The emulator only shows their delivery.
 
 When an item is resolved, remove it.

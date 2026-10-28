@@ -1,6 +1,6 @@
 # Design: editing a product
 
-Implemented on 2026-10-28; not yet seen on Android (see "Verified, and not", and "Known gaps" in `AGENTS.md`).
+Implemented on 2026-10-28, and seen on Android in the emulator the same day (see "Verified, and not").
 The code is the page `src/app/children/edit-product/` with its services, the rules of the date entry in
 `src/libs/dates/`, the tap on a row in `src/app/children/home/children/products/`, `ProductStore.update` and
 `DateOrderStore` in `src/infrastructure/storage/`. Read [`AGENTS.md`](../AGENTS.md), the `add-program`,
@@ -237,17 +237,20 @@ expiration is upserted, or deleted when the snapshot has none.
 - **The row's move in the list.** After an edit, Home's list comes back with the product in its new place
   (ordered by expiration, `ProductList`), which snabbdom moves without a transition: a jump. Acceptable for now;
   a FLIP of the rows, measured in hooks as `gatherAndFly` measures, is in "Later".
-- **The keyboard over the keypad.** While the name field is focused, the keyboard covers the keypad's panel and
-  the button, as it covers the first step's buttons on the page that adds products; a tap on the date field
-  (read-only, `inputMode: 'none'`) dismisses it, and the column scrolls meanwhile. To be seen on Android.
+- **The keyboard over the keypad.** While the name field is focused, the keyboard takes the bottom of the
+  viewport (the WebView shrinks: `innerHeight` 914 to 578 on a Pixel 6, seen in the emulator on 2026-10-28), so
+  the keypad's panel and the button are below the fold, as the first step's buttons are on the page that adds
+  products; a tap on the date field (read-only, `inputMode: 'none'`) dismisses it, and the column scrolls
+  meanwhile.
 
 ## Verified, and not
 
 The rules, the page, `Products`, the contracts (the update's, and the list seeing an update) and the root's
 scenarios are tested (`bun test`); the whole flow was seen in a browser, on the reference screen too (320×640 and
-320×533, "Known gaps" in `AGENTS.md` for what the browser could not show). Not yet on Android (with the Capacitor 9 build from "Known gaps"
-in `AGENTS.md`): that a long press does not also fire a tap, and that the back button, with the keyboard open,
-closes the keyboard first.
+320×533). On Android, in the emulator on 2026-10-28 (API 29 and 37, the Capacitor 9 build): a long press selects
+the row and no tap opens the product; a tap opens it; the back button, with the keyboard open, closes the
+keyboard first, then the page; on 320×712dp the page fits, and on 320×533dp with the font at 200% its column
+scrolls to "Save", keyboard open or not.
 
 ## Later, not in this change
 

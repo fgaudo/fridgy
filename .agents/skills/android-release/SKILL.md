@@ -95,7 +95,8 @@ Install the app from a clean state (`adb shell pm clear net.gaudo.fridgy`): an i
 fails on the first read. The dark theme: `adb shell cmd uimode night yes`. A vibration's delivery:
 `adb shell dumpsys vibrator_manager` lists each one with its usage and whether the system ignored it. The
 backup: `adb shell bmgr enable true`, `bmgr transport com.android.localtransport/.LocalTransport`,
-`bmgr backupnow net.gaudo.fridgy`, then uninstall and reinstall.
+`bmgr backupnow net.gaudo.fridgy`, then uninstall and reinstall: `restoreAtInstall` brings `app_webview`, the
+OPFS database, back with the products (verified on 2026-10-28 on API 29).
 
 ## Icons and splash screens
 
