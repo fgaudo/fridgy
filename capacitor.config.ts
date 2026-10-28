@@ -3,7 +3,7 @@ import packageJson from './package.json' with { type: 'json' }
 
 const config: CapacitorConfig = {
   appId: 'net.gaudo.fridgy',
-  appName: 'fridgy',
+  appName: 'Fridgy',
   webDir: 'dist',
   server: { errorPath: 'error.html' },
   android: {

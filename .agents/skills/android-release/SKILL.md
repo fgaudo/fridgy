@@ -105,6 +105,15 @@ The pass, on both reference screens of "Supported screen sizes":
 - the scanner: the camera's permission is asked once, a barcode is read, and the lookup on Open Food Facts
   answers from the WebView.
 
+The camera: the emulator's back camera is the host's webcam (`emulator -avd <name> -camera-back webcam0`;
+`emulator -webcam-list` names them) or the virtual scene, whose wall takes an image (Extended controls, Camera,
+"Wall": a barcode's PNG, from any generator). A product's EAN-13 held to it is enough for the pass. How the
+detector reports a UPC-E is read once, with one whose expansion is known (`04252614`, the UPC-A
+`042100005264`): the name field shows the UPC-A either way, so the raw value is asked in the WebView's DevTools
+while the scanner is open, `new BarcodeDetector({ formats: ['upc_e'] }).detect(document.querySelector('video'))`.
+The answer goes into `docs/open-food-facts-lookup.md` ("Barcodes: what the scanner reports"), and `offered` in
+`scanner.browser.ts` keeps only the branch that happens.
+
 Install the app from a clean state (`adb shell pm clear net.gaudo.fridgy`): an install over an older schema
 fails on the first read. At start, `SystemBars` logs `Error injecting safe area CSS`, harmlessly: its script
 runs before the document exists, and the next injection sets the insets. The dark theme:
@@ -170,10 +179,12 @@ Play Store, as an update: `versionCode` 20261000 over its 10. Decided, and to be
   the `next` tag). The beta was built and run on 2026-10-28 on the target image, API 37, on the 960×2136
   screen: the start in both themes, the system bars' insets and the back button on every page. Not run on it
   yet: API 29, the 320×533dp screen, the camera and the vibrations. Before the release, upgrade to the newest
-  9 pre-release and run the whole pass on both images.
-- The tree has no `LICENSE` file, though About says AGPL-3.0-or-later and 1.0.8 had one (`git show
-  1.0.8:LICENSE`): restore it, and set `license` in `package.json`.
-- `app_name` in `android/app/src/main/res/values/strings.xml` and `appName` in `capacitor.config.ts` say
-  `fridgy`; 1.0.8 showed `Fridgy` in the launcher.
+  9 pre-release and run the whole pass on both images. The pre-release's `SystemBars` logs `Error injecting
+  safe area CSS` at start, harmlessly: its script runs before the document exists, and the next injection sets
+  the insets.
+- **The scanner is checked in the emulator with a camera**, and how the detector reports a UPC-E with it, once,
+  as "The emulator" says.
+- **The vibrations are felt by the author on a phone** (`docs/haptics.md`: whether each pattern feels like the
+  constant it stands for); the emulator only shows their delivery.
 
 Remove this section once the release is out.
