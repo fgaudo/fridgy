@@ -20,6 +20,7 @@ import * as NonEmptyHashSet from '#libs/collections/non-empty-hash-set.ts'
 import { defect } from '#libs/defect/defect.ts'
 import * as PositiveInteger from '#libs/numbers/positive-integer.ts'
 import type * as UnitInterval from '#libs/numbers/unit-interval.ts'
+import { after, every } from '#libs/timers/timers.ts'
 import * as DeleteProducts from './services/delete-products/delete-products.ts'
 import { ProductList, type ProductListReadError, type StoredProduct } from './services/product-list/product-list.ts'
 
@@ -340,12 +341,7 @@ export const productsOf = (items: ReadonlyArray<Product>, ids: HashSet.HashSet<s
 
 // Expiration statuses derive from the current time: it is refreshed often
 // enough for days-long expirations.
-const clock: Tea.Subscription<Message, Deps> = Channel.forever(
-  Channel.fromEffect(DateTime.now).pipe(
-    Channel.map((now) => Message.TimeChanged({ now })),
-    Channel.concatWith(() => Channel.fromEffectDrain(Effect.sleep('30 seconds'))),
-  ),
-)
+const clock: Tea.Subscription<Message, Deps> = every('30 seconds', (now) => Message.TimeChanged({ now }))
 
 const changes: Tea.Subscription<Message, Deps> = Channel.unwrap(
   Effect.map(
@@ -372,9 +368,7 @@ const snackbarTimer = (at: DateTime.Utc, notice: Notice): Tea.Subscription<Messa
 const SETTLING_DURATION = Duration.millis(500)
 
 /** Ends once the rows have been shown arriving and leaving. */
-const settlingTimer: Tea.Subscription<Message, Deps> = Channel.fromEffectDone(
-  Effect.as(Effect.sleep(SETTLING_DURATION), Message.RowsSettled()),
-)
+const settlingTimer: Tea.Subscription<Message, Deps> = after(SETTLING_DURATION, Message.RowsSettled())
 
 /**
  * The snackbar's timer is keyed by its notice, the settling timer by the ids arriving and leaving: a new one starts

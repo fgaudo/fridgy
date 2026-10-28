@@ -19,6 +19,7 @@ import * as DateOrder from '#libs/dates/date-order.ts'
 import * as DigitDateEntry from '#libs/dates/digit-date-entry.ts'
 import * as DigitDates from '#libs/dates/digit-dates.ts'
 import { defect } from '#libs/defect/defect.ts'
+import { after, every } from '#libs/timers/timers.ts'
 import { DateOrderSetting } from './services/date-order-setting/date-order-setting.ts'
 import { UpdateProduct } from './services/update-product/update-product.ts'
 
@@ -298,12 +299,7 @@ const keyed = (
     : Tea.reject
 
 // Only today is needed, for a date typed without a year: the product's own dates never come from the clock.
-const clock = Channel.forever(
-  Channel.fromEffect(DateTime.now).pipe(
-    Channel.map((now) => Message.TimeChanged({ now })),
-    Channel.concatWith(() => Channel.fromEffectDrain(Effect.sleep('30 seconds'))),
-  ),
-)
+const clock = every('30 seconds', (now) => Message.TimeChanged({ now }))
 
 const dateOrder: Tea.Subscription<Message, DateOrderSetting> = Channel.unwrap(
   Effect.map(
@@ -325,9 +321,7 @@ const always: HashMap.HashMap<string, Tea.Subscription<Message, Deps>> = HashMap
 )
 
 /** Ends once the snackbar has stood its time. */
-const snackbarTimer: Tea.Subscription<Message, Deps> = Channel.fromEffectDone(
-  Effect.as(Effect.sleep(SNACKBAR_DURATION), Message.SnackbarExpired()),
-)
+const snackbarTimer: Tea.Subscription<Message, Deps> = after(SNACKBAR_DURATION, Message.SnackbarExpired())
 
 const save = Effect.fn('SaveProduct')(
   function*({ id, product }: Readonly<{ id: string; product: Product.Product }>) {

@@ -19,6 +19,7 @@ import { type Feedback, Haptics } from '#infrastructure/haptics/haptics.ts'
 import * as DateOrder from '#libs/dates/date-order.ts'
 import * as DigitDateEntry from '#libs/dates/digit-date-entry.ts'
 import { defect } from '#libs/defect/defect.ts'
+import { after, every } from '#libs/timers/timers.ts'
 import * as AddProducts from './services/add-products/add-products.ts'
 import { DateOrderSetting } from './services/date-order-setting/date-order-setting.ts'
 import { type FoundProduct, ProductLookup } from './services/product-lookup/product-lookup.ts'
@@ -359,12 +360,7 @@ const productOfStep = (state: State & { _tag: 'Naming' | 'Dating' }) =>
     : Opt.flatMap(maybeNamedDate(state.form, state.date), (date) => productOf(state.form, Opt.some(date)))
 
 // Refreshed often, so that the creation date is close to when the user adds the product.
-const clock = Channel.forever(
-  Channel.fromEffect(DateTime.now).pipe(
-    Channel.map((now) => Message.TimeChanged({ now })),
-    Channel.concatWith(() => Channel.fromEffectDrain(Effect.sleep('1 second'))),
-  ),
-)
+const clock = every('1 second', (now) => Message.TimeChanged({ now }))
 
 // The sum of the choreography's phases in `src/styles.css` (`docs/product-flight.md`): medium-2, long-2, short-4
 // and medium-1. The view's keyframes must fit in it, as its elements are removed when it ends. Under another
@@ -373,12 +369,10 @@ const ACKNOWLEDGING_DURATION = Duration.millis(300 + 500 + 200 + 250)
 
 /** Ends once the arrival of the product created at `at` has been shown. */
 const acknowledgingTimer = (at: DateTime.Utc): Tea.Subscription<Message, Deps> =>
-  Channel.fromEffectDone(Effect.as(Effect.sleep(ACKNOWLEDGING_DURATION), Message.AddedShown({ at })))
+  after(ACKNOWLEDGING_DURATION, Message.AddedShown({ at }))
 
 /** Ends once the snackbar has stood its time. */
-const snackbarTimer: Tea.Subscription<Message, Deps> = Channel.fromEffectDone(
-  Effect.as(Effect.sleep(SNACKBAR_DURATION), Message.SnackbarExpired()),
-)
+const snackbarTimer: Tea.Subscription<Message, Deps> = after(SNACKBAR_DURATION, Message.SnackbarExpired())
 
 /**
  * The acknowledgement's timer is keyed by its product, the snackbar's by its id: the next one starts it anew.
