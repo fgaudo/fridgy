@@ -133,9 +133,11 @@ moves up as it is: into `programs/<program>/` of their lowest common parent, of 
 them declares it as a child, through its three modules, as in "Declaring a child". It belongs to no parent:
 it knows nothing of who contains it, and a change made for one user that the other cannot take is a sign
 that they share less than a program. Two uses are few: copy first (`docs/edit-product.md`, the date entry),
-and move up when the copies start to cost. There is none yet: the first brings the Biome rule that lets the
-parent's subtree import `programs/*/{program.ts,view.tsx,layer.ts}`, today refused as an import that climbs,
-and an alias where a relative import would pass `../../`.
+and move up when the copies start to cost. There is none yet; `biome.json` already lets a child of the
+parent import `../../programs/<program>/`, and any program `#app/programs/<program>/` (the root's), the modules
+at the program's root only, as for a child, its arbitraries from tests included. A deeper parent's `programs/`
+from a grandchild of it needs an alias past `../../`, and the override on that parent's folder that confines
+it to the subtree: written with the first such program.
 
 ## A page of the root
 

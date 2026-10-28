@@ -91,8 +91,9 @@ folders; "page" names a role in the UI, kept by the root's state, not a kind of 
   legitimately differ, it is written twice, never shared through parameters that describe the caller. The one
   thing of the app that moves up as it is, is a whole program: used by two programs, it lives in `programs/`
   of their lowest common parent, and each uses it as a child, through its three modules, never as fragments
-  of model or view. None exists yet: the first brings the Biome rule that lets a parent's subtree reach
-  its `programs/`.
+  of model or view. None exists yet; Biome already lets a child of the parent reach it
+  (`../../programs/<program>/`) and, from any depth, one of the root's (`#app/programs/<program>/`), by the modules
+  at its root only, as a child.
 - **One storage per setup; migrations are append-only.** Every adapter of the storage is written once, on
   `SqlClient`; the entrypoint provides the engine. A phone has already run the existing migrations, so a fix is
   a new one.

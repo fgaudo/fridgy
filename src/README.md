@@ -80,8 +80,10 @@ role a file's name gives it. Biome's `noRestrictedImports` rule (`biome.json`) e
   are;
 - a program two programs use lives in `programs/` of their lowest common parent, and every program of that
   parent's subtree reaches it as it reaches a child, through its three modules, by a relative import
-  (`../../programs/<program>/program.ts`) or, from deeper than `../../`, an alias. None exists yet: today
-  every import that climbs is refused, and the rule that allows these is added with the first such program;
+  (`../../programs/<program>/program.ts`) or, from deeper than `../../`, an alias. None exists yet, but Biome
+  already allows these: `../../programs/<program>/` from a child of the parent, `#app/programs/<program>/` for
+  the root's from any depth; a deeper parent's, from a grandchild of it, needs an override on that parent's
+  folder, added with the first such program;
 - adapters (`<service>.<backing>.ts`) are imported only by a `layer.ts`, by the entrypoints, which pick among
   alternatives, and by their own tests: a program uses its services;
 - from outside `app/`, only its root modules (`program.ts`, `view.tsx`, `layer.ts`) and, for the entrypoints,

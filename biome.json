@@ -137,21 +137,24 @@
                 "patterns": [
                   {
                     "group": [
-                      "../**"
+                      "../**",
+                      "!../../programs/*/*"
                     ],
-                    "message": "A program knows only its own folder: an import never goes up to a parent or across to a sibling (another child, another service)."
+                    "message": "A program knows only its own folder: an import never goes up to a parent or across to a sibling (another child, another service), except to a program of its parent's programs/ (../../programs/<program>/)."
                   },
                   {
                     "group": [
-                      "#app/**"
+                      "#app/**",
+                      "!#app/programs/*/*"
                     ],
-                    "message": "Inside src/app, files reach each other through relative imports, downwards."
+                    "message": "Inside src/app, files reach each other through relative imports, downwards; the alias is only for the root's programs/, from deeper than ../../."
                   },
                   {
                     "group": [
-                      "**/children/*/*/**"
+                      "**/children/*/*/**",
+                      "**/programs/*/*/**"
                     ],
-                    "message": "A parent reaches a child only through the modules at the child's root (program.ts, view.tsx, layer.ts)."
+                    "message": "A parent reaches a child, and a program a program of programs/, only through the modules at its root (program.ts, view.tsx, layer.ts)."
                   },
                   {
                     "group": [
@@ -193,21 +196,24 @@
                 "patterns": [
                   {
                     "group": [
-                      "../**"
+                      "../**",
+                      "!../../programs/*/*"
                     ],
-                    "message": "A program knows only its own folder: an import never goes up to a parent or across to a sibling (another child, another service)."
+                    "message": "A program knows only its own folder: an import never goes up to a parent or across to a sibling (another child, another service), except to a program of its parent's programs/ (../../programs/<program>/)."
                   },
                   {
                     "group": [
-                      "#app/**"
+                      "#app/**",
+                      "!#app/programs/*/*"
                     ],
-                    "message": "Inside src/app, files reach each other through relative imports, downwards."
+                    "message": "Inside src/app, files reach each other through relative imports, downwards; the alias is only for the root's programs/, from deeper than ../../."
                   },
                   {
                     "group": [
-                      "**/children/*/*/**"
+                      "**/children/*/*/**",
+                      "**/programs/*/*/**"
                     ],
-                    "message": "A parent reaches a child only through the modules at the child's root (program.ts, view.tsx, layer.ts)."
+                    "message": "A parent reaches a child, and a program a program of programs/, only through the modules at its root (program.ts, view.tsx, layer.ts)."
                   },
                   {
                     "group": [
