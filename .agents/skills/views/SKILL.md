@@ -146,7 +146,10 @@ colors, font sizes, radii, shadows, easings and durations:
   `var(--ease-emphasized-decelerate)`, never a number of milliseconds or a `cubic-bezier`;
 - icons are `material-symbols-rounded` spans, 24dp as they come, `icon-large` (48dp, at its optical size) for an
   empty state's, `icon-filled` for a selected state's; the safe areas are the `sait`, `saib`, `sail`, `sair`
-  spacings (`pt-sait`, `mr-sair`).
+  spacings (`pt-sait`, `mr-sair`). A bar that pads for an inset keeps its height with `box-content`: with the
+  default box sizing the padding eats into it. The user's font size (up to 200%) scales text and no length but
+  `lh`: a box that must hold scaled text (Products' avatar, the FAB's label) takes its size in `lh`, and a fixed
+  height a label may wrap under is a `min-h-*`.
 
 A look that Material or the app fixes (a utility in `src/styles.css`) is written once there, never in a component
 under `src/libs/`, which knows nothing of the app: `src/libs/ui/` holds only `cn`, which joins class names.

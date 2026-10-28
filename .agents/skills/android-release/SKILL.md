@@ -62,7 +62,9 @@ which only the Play Store reads, to hide the app from narrower devices: an APK i
 phone is narrower. Every page is checked before a release, in the emulator: on a device profile of 960×2136 px at
 480 dpi (320×712dp, 640dp between the status bar and the three-button navigation bar), where no page scrolls, and
 on the Nexus S image (480×800 hdpi, 320×533dp), with the font at 200% in the system settings and with the keyboard
-open on each field, where every page still reaches its button. In a browser, the pane at 320×640 and 320×533
+open on each field, where every page still reaches its button. Any AVD gives those screens with `adb shell wm size
+960x2136` and `wm density 480`, or `wm size 480x800` and `wm density 240` (`wm size reset` and `wm density reset`
+after), and the font with `settings put system font_scale 2.0`. In a browser, the pane at 320×640 and 320×533
 stands in, with no bars. The sizes move only as the versions above do: checked in the emulator first, with `README.md`, `AGENTS.md`, the
 `views` skill and this file.
 

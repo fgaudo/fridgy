@@ -10,15 +10,19 @@ import type { ItemSelection, ListModel, Message, Model, Presence, ProductModel, 
 
 type Look = 'Plain' | 'Error'
 
-/** A 40dp disc, the list item's leading avatar, in the colors of a role's container. */
+/**
+ * The avatar's size: 40dp, or the height of the badge's two lines when the user's font size is larger. The WebView
+ * scales text but no length, except `lh`: the two lines, with the ascenders and descenders that overhang their line
+ * boxes (`leading-none`), are twice the avatar's own line (the body's size).
+ */
+const avatarSize = 'aspect-square h-[max(2.5rem,2lh)] shrink-0 rounded-full leading-none'
+
+/** A disc, the list item's leading avatar, in the colors of a role's container. */
 const disc = (colors: string, content: ReadonlyArray<VNode>, style: VNodeStyle = {}) => (
   <div
     key='content'
     props={{
-      className: cn(
-        'relative flex h-10 w-10 shrink-0 flex-col items-center justify-center rounded-full leading-none',
-        colors,
-      ),
+      className: cn('relative flex flex-col items-center justify-center', avatarSize, colors),
     }}
     style={style}
   >
@@ -128,7 +132,7 @@ const avatar = (selection: ItemSelection, badge: VNode) =>
       <div
         key='selected'
         props={{
-          className: 'flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-on-primary',
+          className: cn('flex items-center justify-center bg-primary text-on-primary', avatarSize),
         }}
       >
         <span props={{ className: 'material-symbols-rounded icon-filled' }}>check</span>

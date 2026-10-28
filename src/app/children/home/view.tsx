@@ -27,7 +27,8 @@ const addButton = (model: Model, isAboveSnackbar: boolean, { on }: Handlers<Mess
       props={{
         className: cn(
           'overflow-hidden whitespace-nowrap text-label-large transition-[max-width,margin,opacity]',
-          model.isInteracting ? 'ml-0 max-w-0 opacity-0' : 'ml-3 max-w-40 opacity-100',
+          // The cap in the label's own lines (`lh`): the one length the WebView scales with the user's font size.
+          model.isInteracting ? 'ml-0 max-w-0 opacity-0' : 'ml-3 max-w-[8lh] opacity-100',
         ),
       }}
     >

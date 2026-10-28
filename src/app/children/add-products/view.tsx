@@ -69,7 +69,9 @@ const appBar = (
   return (
     <div
       props={{
-        className: 'flex h-16 shrink-0 items-center gap-1 bg-surface px-1 pt-sait pl-sail pr-sair text-on-surface',
+        // `box-content`: the bar is 64dp below the top inset, which `pt-sait` would otherwise take from its height.
+        className:
+          'box-content flex h-16 shrink-0 items-center gap-1 bg-surface px-1 pt-sait pl-sail pr-sair text-on-surface',
       }}
     >
       <button
@@ -88,8 +90,8 @@ const appBar = (
   )
 }
 
-/** The spare height between a step's fields and its controls, given up first on a short screen. */
-const room = (...held: ReadonlyArray<VNode>) => <div props={{ className: 'relative flex-1' }}>{held}</div>
+/** The spare height between a step's fields and its controls, given up first on a short screen, down to the scan FAB's. */
+const room = (...held: ReadonlyArray<VNode>) => <div props={{ className: 'relative min-h-16 flex-1' }}>{held}</div>
 
 /** The indicator replaces the label while the action runs, and stays while the product added leaves the step. */
 type ButtonShows = 'Label' | 'Progress' | 'Acknowledging'
@@ -112,7 +114,8 @@ const button = (
       props={{
         className: cn(
           'state-layer relative shrink-0 rounded-full px-6 text-label-large transition-colors',
-          kind === 'Filled' ? 'h-14 bg-primary text-on-primary' : 'h-10 text-primary',
+          // Minimum heights: a label that wraps on a narrow screen with a large font grows the button.
+          kind === 'Filled' ? 'min-h-14 bg-primary text-on-primary' : 'min-h-10 text-primary',
           shows !== 'Progress' && 'disabled:text-on-surface/38',
           shows !== 'Progress' && kind === 'Filled' && 'disabled:bg-on-surface/12',
         ),
@@ -307,7 +310,8 @@ const nameStep = (
       props={{ className: 'absolute inset-0 flex flex-col bg-surface text-on-surface' }}
     >
       {appBar('Add products', 'close', 'Close', maybeClose, dispatch)}
-      <div props={{ className: cn('flex flex-1 flex-col gap-3 pt-2', stepPadding) }}>
+      {/* Fits the reference screen; scrolls when the screen is shorter (the keyboard open, a large font). */}
+      <div props={{ className: cn('flex flex-1 flex-col gap-3 overflow-y-auto pt-2', stepPadding) }}>
         {nameField(shown, activity, Opt.isSome(maybeEntering), dispatch)}
         {room(fridge(maybeEntering), scanFab(Opt.flatMap(controls, ({ maybeScan }) => maybeScan), dispatch))}
         {button(

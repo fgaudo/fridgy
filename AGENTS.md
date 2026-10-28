@@ -179,8 +179,6 @@ folders; "page" names a role in the UI, kept by the root's state, not a kind of 
 - The page that edits a product (`docs/edit-product.md`) has been checked in a browser only: not yet on Android,
   where a long press, which fires `contextmenu`, must not also deliver a `click` that opens the product, and
   where the back button, with the keyboard open, should close the keyboard first.
-- The reference screen (320×640dp, the `android-release` skill) has been checked in a browser only, at 320×640
-  and 320×533: not yet in the emulator, nor with the font at 200%, nor with the keyboard open on each field.
 - The vibrations (`docs/haptics.md`, Capacitor's `Haptics` 9.0.0-next.1, its only release for Capacitor 9) have
   not been felt on Android: whether each pattern feels like the constant it stands for, whether the WebView
   vibrates on its own on a long press too, and whether the "Touch feedback" setting silences them.
