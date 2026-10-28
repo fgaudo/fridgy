@@ -147,7 +147,12 @@ folders; "page" names a role in the UI, kept by the root's state, not a kind of 
   resources and untouched code.
 - Comments only for what the code cannot say: a reason, an invariant the types do not show, a platform
   behaviour relied upon, a choice that would look like a mistake. Never a repetition of names, of the next
-  line or of this file.
+  line, of a type's shape or of this file. A design (a choreography, a layout, why a widget is Material's) is
+  told once, in `docs/`; the code points at it and keeps only what it needs on the spot.
+- A comment is written to be read once, at a glance: short sentences, one fact each, in the order the reader
+  needs them; no chain of clauses hinged on colons and commas. A header comment names the concern and its
+  states in two or three lines, no more: the behaviour is told where it lives, on the state, the message or
+  the handler. A doc comment on a view function says what it draws and the one choice that is not obvious.
 - No blank lines between the statements of a block; blank lines separate declarations, object entries of
   large tables (`update`'s handlers) and `describe`/`test` calls.
 - Logging only where effects run: `error` for a bug right before the app dies, `warn` for a handled failure

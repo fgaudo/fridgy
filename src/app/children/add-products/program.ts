@@ -1,16 +1,6 @@
-// The page that adds products one after another, in two steps. First the name, typed or read from a barcode in
-// the scanner's dialog (which names the product for now): from there the product is added as it is, never
-// expiring, or the user goes on to its expiration date. Then the date: the keypad types its digits, read in the
-// order the user keeps (day, month or year first, the device's locale's until they pick one), and the
-// user picks, among the days they can name, the one they meant, and adds the product. Adding is a state that
-// only its completion leaves; the page then starts at the name again, kept for the next product, and the product
-// added enters the fridge, its name turning into it where it is written, once the write has completed. A step's
-// button shows its indicator while it adds, and the first step's keeps it while the product leaves: the write is
-// too quick for the wait to be seen. The scanner is offered once the page knows the
-// device can read barcodes, and the camera runs only while its dialog is open. A scanned barcode is looked up on
-// Open Food Facts while it is the name, a state of the first step that takes nothing but cancelling the lookup,
-// which leaves the barcode as the name, and leaving the page: the product's name replaces the barcode when the
-// product is known.
+// The page that adds products, one after another, in two steps: the name, typed or scanned, then the expiration
+// date, typed on a keypad. The states are the first step (`Naming`, with `LookingUp` and `Scanning` over it), the
+// second (`Dating`) and the write (`Submitting`). A product added starts the next at the name.
 import * as Tea from '@fgaudo/effect-tea'
 import * as Arr from 'effect/Array'
 import * as Channel from 'effect/Channel'
@@ -35,25 +25,19 @@ import { Scanner } from './services/scanner/scanner.ts'
 
 export type Digit = '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9'
 
-/**
- * Whether the device can read barcodes: asked when the page opens, until the answer comes; unavailable from then
- * on, too, once the camera has failed. It is not tried again until the page is opened anew.
- */
+/** Asked once per visit of the page. `Unavailable` also once the camera has failed: it is not tried again. */
 export type Camera = 'Checking' | 'Available' | 'Unavailable'
 
 /**
- * Open Food Facts' answer for the barcode last scanned, once it came. While it is not `Idle`, the name is the one
- * the lookup put there, the barcode or the product's name: every other change of the name makes it `Idle`, and so
- * does a scan, whose lookup is the state `LookingUp`.
+ * Open Food Facts' answer for the barcode last scanned. While it is not `Idle`, the name is the lookup's: the
+ * product's name, or the barcode. Typing, clearing or scanning makes it `Idle` again.
  */
 export type Lookup = Data.TaggedEnum<{
-  /** No answer: nothing was scanned, the name was changed since, or the barcode is still being looked up. */
+  /** Nothing scanned, the name changed since, or the lookup still going on (the state `LookingUp`). */
   Idle: object
-  /** The name is the product found: `url` is its page, for the attribution. */
+  /** `url` is the product's page, for the attribution. */
   Found: Readonly<{ url: string }>
-  /** The name is the barcode: Open Food Facts does not know it. */
   NotFound: object
-  /** The name is the barcode: the lookup failed. */
   Failed: object
 }>
 
@@ -67,10 +51,7 @@ export type LookupOutcome = Data.TaggedEnum<{
 /** What is kept in every state: a product being added does not interrupt the next one. */
 export type Form = Readonly<{
   maybeName: Opt.Option<string>
-  /**
-   * How many times the name's input was drawn anew, and focused: with each scan or clearing that replaced the
-   * name, and with each product added from a step, the next starting at the name.
-   */
+  /** Bumped each time the program replaces the name (a scan, a clearing, a product added): the input is drawn anew. */
   replacements: number
   camera: Camera
   lookup: Lookup
@@ -81,7 +62,7 @@ export type Form = Readonly<{
   maybeAcknowledging: Opt.Option<Acknowledging>
 }>
 
-/** The product added a moment ago, until a timer says its arrival has been shown, and the button that added it. */
+/** The product just added, until its arrival has been shown, and the button that added it. */
 export type Acknowledging = Readonly<{ product: Product.Product; by: 'NameButton' | 'DateButton' }>
 
 /** The expiration date being typed: it exists only in the second step, and starts anew with each. */
@@ -102,11 +83,11 @@ export type State = Data.TaggedEnum<{
   /** The first step: the name. */
   Naming: Readonly<{ form: Form }>
   /**
-   * The first step, while the barcode last scanned, the name, is looked up: only the lookup's answer, its
-   * cancellation or a key typed just before leaves it. The form's `lookup` is `Idle`: the answer is still to come.
+   * The first step while the scanned barcode, now the name, is looked up. Left by the answer, a cancel, or a key
+   * typed just before.
    */
   LookingUp: Readonly<{ form: Form; barcode: string }>
-  /** The scanner's dialog is open, over the first step: it says so if the camera fails meanwhile. */
+  /** The scanner's dialog, over the first step. */
   Scanning: Readonly<{ form: Form }>
   /** The second step: the expiration date. */
   Dating: Readonly<{ form: Form; date: DateForm }>
@@ -135,7 +116,7 @@ export type Message = Data.TaggedEnum<{
   DateChosen: { date: DateTime.Utc }
   /** The second step's segmented button: the order the digits are read in, kept for every date to come. */
   OrderPicked: { order: DateOrder.DateOrder }
-  /** Adds the product the step describes: never expiring from the first, expiring on the day named from the second. */
+  /** Adds the product the step describes. */
   Started: object
   /** The page's close button, on the first step. */
   Closed: object
@@ -146,7 +127,6 @@ export type Message = Data.TaggedEnum<{
   /** The order kept: the setting reports it when the page opens, and after every pick. */
   OrderChanged: { order: DateOrder.DateOrder }
   Scanned: { barcode: string }
-  /** The lookup of the barcode being looked up has answered. */
   LookedUp: { barcode: string; outcome: LookupOutcome }
   CameraFailed: object
   /** The platform's back button, while the page is shown. */
@@ -181,22 +161,19 @@ const Event = Data.taggedEnum<Event>()
 
 export type Deps = AddProducts.AddProducts | DateOrderSetting | Scanner | ProductLookup | Notifications | BackButton
 
-/** A day the digits name: the one the product expires on, or one to pick instead, while the step takes it. */
+/** A day the digits name: the chosen one, or one to pick while the step takes input. */
 export type DateChoice = Readonly<{
   date: DateTime.Utc
   choice: Data.TaggedEnum<{ Chosen: object; Offered: Readonly<{ maybeChoose: Opt.Option<Message> }> }>
 }>
 
-/** An order the digits can be read in: the one in use, or one to pick instead, while the step takes it. */
+/** An order the digits can be read in: the one in use, or one to pick while the step takes input. */
 export type OrderChoice = Readonly<{
   order: DateOrder.DateOrder
   choice: Data.TaggedEnum<{ Current: object; Offered: Readonly<{ maybePick: Opt.Option<Message> }> }>
 }>
 
-/**
- * The line under the name field: what the lookup of a scanned barcode found, or else, once the camera is
- * unavailable, that the name can only be typed.
- */
+/** The line under the name field: what the lookup found, or that the name can only be typed. */
 export type Supporting = Data.TaggedEnum<{
   Nothing: object
   CameraUnavailable: object
@@ -215,26 +192,17 @@ export type NameShown = Readonly<{
   nameKey: number
 }>
 
-/**
- * The second step, over the first: the product's name as its heading, the order the digits are read in, the
- * date's field and its strip.
- */
+/** The second step, over the first. */
 export type DateShown = Readonly<{
   name: string
-  /**
-   * The segmented button of the orders, the one in use selected, and what the field and the hint say the digits
-   * are read in; nothing until the setting has been read, a moment after the page opens.
-   */
+  /** `Unknown` until the setting has been read, a moment after the page opens. */
   order: Data.TaggedEnum<{
     Unknown: object
     Known: Readonly<{ order: DateOrder.DateOrder; choices: Arr.NonEmptyReadonlyArray<OrderChoice> }>
   }>
   /** The date's field: the digits as typed. */
   digits: string
-  /**
-   * The strip between the field and the keypad: how to type a date, the days the digits name, in order (the one
-   * chosen being the product's), or that they name none.
-   */
+  /** Under the field: how to type a date, the days the digits name, or that they name none. */
   strip: Data.TaggedEnum<{
     Hint: object
     Naming: Readonly<{ choices: Arr.NonEmptyReadonlyArray<DateChoice> }>
@@ -242,10 +210,7 @@ export type DateShown = Readonly<{
   }>
 }>
 
-/**
- * The product entering the fridge, and where its name is written, whose letters become it: the name field, or the
- * second step's heading.
- */
+/** The product entering the fridge, and the element whose letters become it. */
 export type Entering = Readonly<{ product: Product.Product; from: 'NameField' | 'DateHeading' }>
 
 export type Model = Data.TaggedEnum<{
@@ -266,10 +231,7 @@ export type Model = Data.TaggedEnum<{
       acknowledging: 'Added' | 'Nothing'
       maybeEntering: Opt.Option<Entering>
     }>
-  /**
-   * The first step while a scanned barcode is looked up: the barcode is the name, and only the lookup can be
-   * cancelled, or the page left.
-   */
+  /** The first step during the lookup: only cancelling it and leaving the page take. */
   LookingUp:
     & NameShown
     & Readonly<{
@@ -314,20 +276,16 @@ const isScanning = (state: State) => state._tag === 'Scanning' && state.form.cam
 
 const hasName = (form: Form) => Opt.exists(form.maybeName, (name) => name !== '')
 
-/** The same state, with its form changed. */
 const withForm = (state: State, change: (form: Form) => Form): State => ({ ...state, form: change(state.form) })
 
-/** The second step, with its date changed. */
 const withDate = (state: State & { _tag: 'Dating' }, change: (date: DateForm) => DateForm): State => ({
   ...state,
   date: change(state.date),
 })
 
-/** The step a product is added from, and comes back to. */
 const stepOf = (state: State & { _tag: 'Naming' | 'Dating' }): Step =>
   state._tag === 'Naming' ? { _tag: 'Naming' } : { _tag: 'Dating', date: state.date }
 
-/** Back to the step a product was added from. */
 const resume = (step: Step, form: Form): State =>
   step._tag === 'Naming' ? { _tag: 'Naming', form } : { _tag: 'Dating', form, date: step.date }
 
@@ -341,10 +299,7 @@ const datesOf = (form: Form, date: DateForm): ReadonlyArray<DateTime.Utc> =>
 const isAmong = (dates: ReadonlyArray<DateTime.Utc>) => (date: DateTime.Utc) =>
   dates.some((offered) => DateTime.Equivalence(offered, date))
 
-/**
- * The product's name as the page proposes it: the first brand, then the name, unless the name already says the
- * brand. The quantity is left out.
- */
+/** The first brand, then the name, unless the name already says the brand. The quantity is left out. */
 const composeName = ({ name, maybeBrand }: FoundProduct): string =>
   Opt.match(maybeBrand, {
     onNone: () => name,
@@ -360,7 +315,6 @@ const maybeNamedDate = (form: Form, date: DateForm): Opt.Option<DateTime.Utc> =>
   )
 }
 
-/** The product the form names, created now, with that expiration, if it is one. */
 const productOf = (form: Form, maybeExpirationDate: Opt.Option<DateTime.Utc>) =>
   Opt.flatMap(
     Opt.all([form.maybeName, form.maybeNow]),
@@ -381,21 +335,16 @@ const clock = Channel.forever(
   ),
 )
 
-// The choreography of `src/styles.css`: the letters becoming the product (`--transition-duration-medium-2`), its
-// flight into the open fridge (`--transition-duration-long-2`), the door closing (`--transition-duration-short-4`)
-// and the fridge settling (`--transition-duration-medium-1`). The view's keyframes must fit in it, as its
-// elements are removed when the phase ends, wherever their animation is. Hidden under another page, the timer
-// waits for the page to be back.
+// The sum of the choreography's phases in `src/styles.css` (`docs/product-flight.md`): medium-2, long-2, short-4
+// and medium-1. The view's keyframes must fit in it, as its elements are removed when it ends. Under another
+// page, the timer waits for the page to be back.
 const ACKNOWLEDGING_DURATION = Duration.millis(300 + 500 + 200 + 250)
 
 /** Ends once the arrival of the product created at `at` has been shown. */
 const acknowledgingTimer = (at: DateTime.Utc): Tea.Subscription<Message, Deps> =>
   Channel.fromEffectDone(Effect.as(Effect.sleep(ACKNOWLEDGING_DURATION), Message.AddedShown({ at })))
 
-/**
- * A subscription's key: the acknowledgement's timer is keyed by the product it times, so that the next starts it
- * anew.
- */
+/** The acknowledgement's timer is keyed by its product: the next product starts it anew. */
 type Key = string | readonly ['acknowledging', DateTime.Utc]
 
 const dateOrder: Tea.Subscription<Message, DateOrderSetting> = Channel.unwrap(
@@ -533,10 +482,8 @@ export const program: Tea.Program<{
   },
 
   update: Match.typeTags<Message, (state: State) => Tea.Transition<State, Command, Event>>()({
-    // Accepted under the scanner, the second step and while submitting too, where the input is covered or
-    // disabled: a key typed just before is kept. The raw text is kept as typed; whether it is a valid name is
-    // decided when going on or adding. The name is no longer the lookup's: one still going on stops, and the
-    // first step takes its controls back.
+    // Accepted while the input is covered or disabled too (scanner, second step, submitting): a key typed just
+    // before is kept. Validity is decided when going on or adding. A lookup going on stops: the name is no longer its.
     NameChanged: ({ name }) => (state) => {
       const named = withForm(state, (form) => ({ ...form, maybeName: Opt.some(name), lookup: { _tag: 'Idle' } }))
       return { state: named._tag === 'LookingUp' ? { _tag: 'Naming', form: named.form } : named }
@@ -629,8 +576,8 @@ export const program: Tea.Program<{
     OrderKept: ({ succeeded }) => (state) =>
       succeeded ? { state } : { state, commands: [Command.ShowToast({ text: 'Couldn\'t save the date order' })] },
 
-    // The first barcode read closes the scanner, on the first step: whether the product expires is still to be
-    // said. It is looked up, even when it is the name already: scanning again is how a failed lookup is retried.
+    // The first barcode read closes the scanner. It is looked up even when it is the name already: scanning again
+    // is how a failed lookup is retried.
     Scanned: ({ barcode }) => (state) => {
       if (!isScanning(state)) {
         return defect('Scanned while the camera is off: only the scanner reads it, until it fails')
@@ -687,8 +634,8 @@ export const program: Tea.Program<{
 
     Started: () => (state) => state._tag === 'Naming' || state._tag === 'Dating' ? start(state) : Tea.reject,
 
-    // The next product starts at the name, this one's, drawn anew so that it takes the focus the button took: a
-    // second package of it may be next. The product added is acknowledged, with the button that added it.
+    // The next product starts at the name, kept (a second package may be next) and drawn anew, so that it takes
+    // the focus back from the button.
     Completed: ({ succeeded }) => (state) => {
       if (state._tag !== 'Submitting') {
         return defect('Completed while no product is being added: only a completion leaves Submitting')
@@ -736,8 +683,8 @@ export const program: Tea.Program<{
     ShowToast: showToast,
   }),
 
-  // The camera starts anew with each opening of the scanner: the scanner reports a barcode once until another,
-  // so this is what makes the same product readable again. The lookup runs while the barcode is the name.
+  // The camera starts anew with each opening of the scanner: the scanner reports a barcode once, so this is what
+  // lets the same product be read again.
   subscriptions: (state) => {
     const always: ReadonlyArray<readonly [Key, Tea.Subscription<Message, Deps>]> = [
       ['clock', clock],

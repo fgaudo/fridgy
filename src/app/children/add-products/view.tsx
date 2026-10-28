@@ -41,10 +41,7 @@ const orderTitles: Readonly<Record<DateOrder, string>> = {
   YMD: 'Year, month, day',
 }
 
-/**
- * What the first step does: its controls take, it waits for the lookup, which only its cancel and close buttons
- * take, it is hidden under the scanner, it waits under the second step, or it is disabled while adding.
- */
+/** What the first step is doing, and which of its controls take. */
 type NameActivity = Readonly<
   | { _tag: 'Editing'; controls: Model & { _tag: 'Naming' } }
   | { _tag: 'LookingUp'; controls: Model & { _tag: 'LookingUp' } }
@@ -53,7 +50,6 @@ type NameActivity = Readonly<
   | { _tag: 'Adding' }
 >
 
-/** What the second step does: its controls take, or are disabled while adding. */
 type DateActivity = Readonly<
   { _tag: 'Editing'; controls: Model & { _tag: 'Dating' } } | { _tag: 'Adding' }
 >
@@ -92,26 +88,16 @@ const appBar = (
   )
 }
 
-/**
- * The spare height between a step's fields and its controls, so that a step fits a short screen: what it holds
- * draws over what is above.
- */
+/** The spare height between a step's fields and its controls, given up first on a short screen. */
 const room = (...held: ReadonlyArray<VNode>) => <div props={{ className: 'relative flex-1' }}>{held}</div>
 
-/**
- * What a step's button shows in place of its label: Material's circular indicator while its action is done, and
- * while the product it added leaves the step, after which the label comes back.
- */
+/** The indicator replaces the label while the action runs, and stays while the product added leaves the step. */
 type ButtonShows = 'Label' | 'Progress' | 'Acknowledging'
 
 /**
- * Material's filled button, the one action of a step, where the thumb rests; and its text button, the other
- * way out of the first step. Both say what they do, and the one tapped shows, in its own colors, Material's
- * circular indicator in place of its label while its action is being done, and while the product it added
- * becomes a package: the write is mostly quicker than a frame, and the indicator would otherwise never be drawn.
- * The indicator appears at once, as the label leaves at once under it, and leaves fading as the label fades back
- * in, once the package has left; the model keeps the indicator for the whole flight, which the keyframes cut
- * short.
+ * Material's filled or text button. The write is mostly quicker than a frame, so the indicator would never be
+ * seen for it alone: it stays while the product added becomes a package (`docs/product-flight.md`), and leaves
+ * fading as the label comes back.
  */
 const button = (
   label: string,
@@ -177,10 +163,7 @@ const button = (
   )
 }
 
-/**
- * The text field's supporting text: where the name came from when a scan named it, or that it can only be typed.
- * The line is there even when empty, so that a text appearing moves nothing.
- */
+/** The field's supporting text. The line is there even when empty, so that a text appearing moves nothing. */
 const supportingText = (supporting: Supporting) => (
   <div props={{ className: 'min-h-4 px-4 text-body-small text-on-surface-variant' }}>
     {Match.valueTags(supporting, {
@@ -214,12 +197,9 @@ const progress = (
 )
 
 /**
- * Material's outlined text field of the name, with its trailing icon button, which clears it, shown while there
- * is one, or the progress of the lookup, while the field is disabled. Drawn anew (with the new name) and focused, so that the keyboard is up, when a scan or a clearing
- * replaces it and when a product was added. Its supporting text says where a scanned name came from, or when the
- * camera is not available, and the name can only be typed. Once the letters of the product just added have become
- * it, the name comes back in the field drawn anew, for the next product: after an add from the second step too,
- * whose heading's letters would otherwise gather over the same name, already back.
+ * Material's outlined text field of the name, drawn anew and focused whenever the program replaces the name, so
+ * that the keyboard is up. While a product enters the fridge, its text comes back only once the letters have
+ * gathered (`name-return`): they would otherwise gather over the same name, already there.
  */
 const nameField = (shown: NameShown, activity: NameActivity, isReturning: boolean, dispatch: Dispatch<Message>) => {
   const { on, onValue } = handlers(dispatch)
@@ -283,11 +263,7 @@ const nameField = (shown: NameShown, activity: NameActivity, isReturning: boolea
   )
 }
 
-/**
- * Material's FAB that opens the scanner, at the bottom right, over the step's filled button, within the thumb's
- * reach: in the tertiary's color, as the step's secondary action beside the primary's. Disabled, flat, until
- * the device is known to read barcodes.
- */
+/** Material's FAB that opens the scanner: the step's secondary action, in the tertiary's color, under the thumb. */
 const scanFab = (maybeScan: Opt.Option<Message>, dispatch: Dispatch<Message>) => {
   const { on } = handlers(dispatch)
   return (
@@ -309,11 +285,8 @@ const scanFab = (maybeScan: Opt.Option<Message>, dispatch: Dispatch<Message>) =>
 }
 
 /**
- * The first step, as a form read from the top: the name, under the app bar, and, docked at the bottom, within
- * the thumb's reach and above the keyboard that the name opens, the two ways out, going on to the date, or
- * adding the product as it is, with the scanner's FAB over them, and the fridge in the space between. Hidden once
- * the scanner has risen over it, so that the camera, drawn behind the page, shows through the scanner's window;
- * shown at once when the scanner sinks away.
+ * The first step: the name under the app bar, the two ways out docked at the bottom, the fridge between. Hidden
+ * once the scanner has risen over it, so that the camera, drawn behind the page, shows through the scanner's window.
  */
 const nameStep = (
   shown: NameShown,
@@ -362,11 +335,7 @@ const nameStep = (
   )
 }
 
-/**
- * Material's segmented button of the orders the digits can be read in, one segment each, the one in use
- * selected with its check; disabled while the product is being added. Its row stays empty until the order is
- * known, so that nothing moves when it is.
- */
+/** Material's segmented button of the orders. Its row stays empty until the order is known: nothing moves then. */
 const orderSegments = (shown: DateShown, activity: DateActivity, dispatch: Dispatch<Message>) => {
   const { on } = handlers(dispatch)
   const segment = ({ order, choice }: OrderChoice) => {
@@ -403,10 +372,8 @@ const orderSegments = (shown: DateShown, activity: DateActivity, dispatch: Dispa
 }
 
 /**
- * Material's outlined text field of the expiration date, typed into with the keypad rather than the keyboard,
- * which keeps the thumb where it is: a read-only input, whose text is the program's, the digits as typed, since
- * grouping them would read them one way. A tap focuses it, as a text field, and shows the hint, the order the
- * digits are read in; the label floats once there are digits. What it says is in the strip under it.
+ * Material's outlined text field of the date: read-only, typed into with the keypad, so that the thumb stays where
+ * it is. The digits are shown as typed: grouping them would read them one way.
  */
 const dateField = (shown: DateShown, activity: DateActivity) => {
   // Disabled while the product is being added; in the error's colors when the digits name no day.
@@ -451,9 +418,8 @@ const dateField = (shown: DateShown, activity: DateActivity) => {
 }
 
 /**
- * Material's filter chip with a leading icon, one per day the digits name: selected, its check in place of the
- * icon, once it is the product's; disabled while the product is being added. The icon and the outline,
- * transparent once selected, keep the chip's size, so that picking a day moves no chip.
+ * Material's filter chip of a day the digits name. The icon and the outline, transparent once selected, keep its
+ * size, so that picking a day moves no chip.
  */
 const chip = ({ date, choice }: DateChoice, activity: DateActivity, dispatch: Dispatch<Message>) => {
   const { on } = handlers(dispatch)
@@ -481,10 +447,8 @@ const chip = ({ date, choice }: DateChoice, activity: DateActivity, dispatch: Di
 }
 
 /**
- * The strip between the field and the keypad, as the keyboard's suggestions are: how to type a date in the order
- * in use, the chips of the days the digits name, or that they name none, in the error's colors. Two rows of
- * chips tall, whatever it shows, so that a change moves nothing: the digits name two days at most, which fit
- * one row, or one row each on the narrowest phone.
+ * Under the field, where a keyboard's suggestions would be. Two rows of chips tall whatever it shows, so that a
+ * change moves nothing: the digits name two days at most, one row each on the narrowest phone.
  */
 const strip = (shown: DateShown, activity: DateActivity, dispatch: Dispatch<Message>) => (
   <div
@@ -505,11 +469,7 @@ const strip = (shown: DateShown, activity: DateActivity, dispatch: Dispatch<Mess
   </div>
 )
 
-/**
- * A keypad of the app's own: always where the thumb expects it. Its keys are Material's tonal buttons, in the
- * pills of a button group, in the tone that stands out on the date's panel; the ones that erase a digit and
- * clear them all sit beside the zero.
- */
+/** A keypad of the app's own, always where the thumb expects it: Material's tonal buttons in a button group's pills. */
 const keypad = (activity: DateActivity, dispatch: Dispatch<Message>) => {
   const { on } = handlers(dispatch)
   const key = (label: string, maybeMessage: Opt.Option<Message>, { title = label, isIcon = false } = {}) => (
@@ -549,10 +509,8 @@ const keypad = (activity: DateActivity, dispatch: Dispatch<Message>) => {
 }
 
 /**
- * The second step, over the first, laid out as a dialer: read from the top, the product's name under its label,
- * on two lines at most, the order the digits are read in, the date's field and the days it can name; docked at
- * the bottom, within the thumb's reach, as a keyboard would be, the keypad's panel and the button that adds the
- * product. It comes and goes along Material's shared axis.
+ * The second step, over the first, laid out as a dialer: the fields read from the top, the keypad and the button
+ * docked at the bottom. It comes and goes along Material's shared axis.
  */
 const dateStep = (
   shown: DateShown,
@@ -611,9 +569,8 @@ const dateStep = (
 }
 
 /**
- * The scanner, Material's full-screen dialog over the first step: a transparent window over the camera, which
- * the scanner draws behind the page. It rises opaque, the surface's color, which then fades from the window, and
- * sinks back with the step already shown through it.
+ * Material's full-screen dialog over the first step, with a transparent window over the camera, drawn behind the
+ * page. It rises opaque; the surface's color fades from the window once it is in place.
  */
 const scanner = (model: Model & { _tag: 'Scanning' }, dispatch: Dispatch<Message>) => (
   <div
@@ -656,12 +613,8 @@ const scanner = (model: Model & { _tag: 'Scanning' }, dispatch: Dispatch<Message
 )
 
 /**
- * A stylized fridge, in the primary's colors: the freezer's door on top, and the fridge's below it, hinged on the
- * right, with the inside behind it. It is there only while a product enters it, in the middle of the first step's
- * empty space, above the FAB, 96dp tall, smaller when the keyboard leaves less room: it appears
- * as the letters gather, its door opens, the product is put inside, the door closes over it, the fridge settles,
- * and it fades away. Keyed by the product, so that the next one plays it anew, over the one fading; the door turns
- * in the inside's perspective, out of the fridge. Decoration: the announcement says what was added.
+ * A stylized fridge, there only while a product enters it (`docs/product-flight.md`). Keyed by the product, so
+ * that the next one plays it anew over the one fading. Decoration: the announcement says what was added.
  */
 const fridge = (maybeEntering: Opt.Option<Entering>) => (
   <div
@@ -721,9 +674,8 @@ const fridge = (maybeEntering: Opt.Option<Entering>) => (
 )
 
 /**
- * The product added, entering the fridge: the letters of its name, laid over the name where it is written,
- * gather into a package, which flies into the fridge on an arc that two elements make, one moving across and the
- * other up or down. Keyed by the product: the next one's is a new element, and this one is dropped where it is.
+ * The name's letters, laid over where it is written, gathering into a package that flies into the fridge
+ * (`docs/product-flight.md`). Keyed by the product: the next one's is a new element.
  */
 const enteringProduct = ({ product, from }: Entering) => (
   <div
@@ -748,10 +700,7 @@ const enteringProduct = ({ product, from }: Entering) => (
   </div>
 )
 
-/**
- * The product entering the fridge, over both steps and under the scanner. It takes no input: the controls under it
- * stay pressable.
- */
+/** Over both steps and under the scanner. It takes no input: the controls under it stay pressable. */
 const flightLayer = (maybeEntering: Opt.Option<Entering>) => (
   <div key='flight' props={{ className: 'pointer-events-none absolute inset-0' }}>
     {Opt.match(maybeEntering, { onNone: () => [], onSome: (entering) => [enteringProduct(entering)] })}
@@ -759,9 +708,8 @@ const flightLayer = (maybeEntering: Opt.Option<Entering>) => (
 )
 
 /**
- * What a screen reader says once a product has been added, for which the fridge and the flight are decoration: its
- * name and when it expires, as the list says it. A live region is announced when its text changes, so it is always
- * there, empty while nothing is added.
+ * What a screen reader hears once a product is added, the fridge and the flight being decoration. The live region
+ * is always there: it is announced when its text changes.
  */
 const announcement = (maybeEntering: Opt.Option<Entering>) => (
   <div key='announcement' attrs={{ 'aria-live': 'polite' }} props={{ className: 'sr-only' }}>
@@ -779,11 +727,7 @@ const announcement = (maybeEntering: Opt.Option<Entering>) => (
   </div>
 )
 
-/**
- * Material's full-screen dialog, as a page, in two steps: the name, which the scanner can read from a barcode,
- * and then, over it, the expiration date, typed on the keypad. It rises over the page that opened it, and sinks
- * back, letting nothing through while it does.
- */
+/** Material's full-screen dialog, as a page: it rises over the page that opened it, and sinks back over it. */
 export const view: View<Model, Message> = (model, dispatch) => (
   <div
     key='AddProducts'

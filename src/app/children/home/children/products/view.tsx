@@ -33,10 +33,8 @@ const RING_LENGTH = 2 * Math.PI * RING_RADIUS
 const RING_GAP = 8
 
 /**
- * Material's determinate circular progress indicator, around the disc, with how much of the product's life is
- * left: full when it is bought, and gone at the end of its expiration day. It starts at the top and, as the time
- * passes, shortens at the pace of a simple change; its color is the disc's stroke. The track, a gap after it,
- * shows the rest.
+ * Material's determinate circular indicator around the disc: how much of the product's life is left, from the top,
+ * shortening as the time passes. The track, a gap after it, shows the rest.
  */
 const ring = (freshness: UnitInterval.UnitInterval) => {
   const activeLength = RING_LENGTH * freshness
@@ -83,10 +81,8 @@ const expirationDay = (expirationDate: DateTime.Utc): ReadonlyArray<VNode> => [
 ]
 
 /**
- * The product's freshness, on the avatar of its expiration day: tonal, ringed by how much of its life is left, in
- * colors that go from the tertiary role's, with all of it, through the primary role's to the error role's
- * (`freshness-badge` in `styles.css`); filled with the error color once it has expired, with no life left to ring
- * it; an infinity sign when it never does.
+ * The expiration day on a disc ringed by the life left, colored from tertiary through primary to error
+ * (`freshness-badge` in `styles.css`); filled with the error color once expired; an infinity sign when it never does.
  */
 const freshnessBadge = (status: ProductStatus): VNode => {
   switch (status._tag) {
@@ -141,11 +137,8 @@ const avatar = (selection: ItemSelection, badge: VNode) =>
     : badge
 
 /**
- * A row's motion, as Material moves what enters and leaves a list: an arriving row opens its place, decelerating,
- * as it fades in, pushing the rows under it down; a leaving row fades as its place closes, accelerating, and the
- * rows under it rise. The model keeps a leaving row where it was until it has closed its place, so that snabbdom
- * never moves the rows around it, as it would around a row it removes with a transition; once it has arrived, its
- * height is its class's again.
+ * Material's motion for a list: an arriving row opens its place as it fades in, a leaving one fades as it closes
+ * it. The model keeps a leaving row where it was until then, so that snabbdom never moves the rows around it.
  */
 const rowMotion = (presence: Presence): VNodeStyle => {
   switch (presence) {
@@ -272,10 +265,7 @@ const iconButton = (icon: string, label: string, message: Message | undefined, {
 /** The pieces of the contextual top app bar: its leading and trailing icon buttons, and its title. */
 export type SelectionBar = Readonly<{ leading: VNode; title: string; trailing: VNode }>
 
-/**
- * Material's contextual top app bar, which takes the place of the page's own while products are selected: how many
- * are selected, and what can be done with them, as the pieces Home draws in its bar's shape. Nothing when none are.
- */
+/** Material's contextual top app bar, as pieces Home draws in its bar's shape. Nothing while no product is selected. */
 export const selectionBar = (model: Model, dispatch: Dispatch<Message>): SelectionBar | undefined => {
   if (model.list._tag !== 'Available' || model.list.deletion._tag === 'NothingSelected') {
     return undefined
@@ -300,11 +290,9 @@ export const selectionBar = (model: Model, dispatch: Dispatch<Message>): Selecti
 }
 
 /**
- * Material's snackbar, once products have been deleted: how many, and the action that puts them back while they
- * can come back. Keyed by the deletion, so that the next one's appears anew: it rises from where the parent
- * places it, and sinks away. One that comes after another waits, unseen, for the other to sink, which takes the
- * exit's duration: both drawn at once in the same place, one fading into the other, would look like nothing
- * happened.
+ * Material's snackbar of the last deletion, keyed by it so that the next one's appears anew. One that comes after
+ * another waits for the other to sink: both in the same place at once, one fading into the other, would look like
+ * nothing happened.
  */
 export const snackbar = (model: Model, dispatch: Dispatch<Message>): VNode | undefined => {
   if (model.lastDeletion._tag === 'None') {
@@ -361,8 +349,8 @@ export const snackbar = (model: Model, dispatch: Dispatch<Message>): VNode | und
 }
 
 /**
- * What the list's place shows leaves fading, accelerating, out of the flow, over what takes its place: the last row
- * deleted fades with the list over the empty state, and the empty state over the rows put back.
+ * What the list's place shows leaves fading, out of the flow, over what takes its place: the list over the empty
+ * state, and the empty state over the rows put back.
  */
 const leaving: VNodeStyle = {
   remove: {
@@ -391,10 +379,7 @@ const emptyState = (key: string, colors: string, icon: string, title: string, te
 
 const subtitleOf = (list: Data.TaggedEnum.Value<ListModel, 'Available'>) => `${list.total} items`
 
-/**
- * The top app bar's subtitle, how many products there are: in the bar, it stays in view while the list scrolls.
- * Nothing while there is no list.
- */
+/** The top app bar's subtitle, in the bar so that it stays in view while the list scrolls. Nothing without a list. */
 export const subtitle = (model: Model): string | undefined =>
   model.list._tag === 'Available' ? subtitleOf(model.list) : undefined
 

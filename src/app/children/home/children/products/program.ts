@@ -34,8 +34,8 @@ export type Product = Data.TaggedEnum<{
 const Product = Data.taggedEnum<Product>()
 
 /**
- * A row the storage no longer lists, kept where it was while it closes its place: after the row of the id it
- * followed, or first. The rows under it then rise, rather than jump to their new place before it has closed.
+ * A row the storage no longer lists, kept after the row it followed (or first) while it closes its place: the rows
+ * under it rise, rather than jump to their new place.
  */
 export type Departure = Readonly<{ item: Exclude<Product, { _tag: 'Corrupt' }>; maybeAfter: Opt.Option<string> }>
 
@@ -55,10 +55,7 @@ export type Selection = Data.TaggedEnum<{
 
 const Selection = Data.taggedEnum<Selection>()
 
-/**
- * How the snackbar of the last deletion comes: alone, or after the one before it, which was still showing when the
- * products were deleted and leaves first, as Material shows one snackbar at a time.
- */
+/** Material shows one snackbar at a time: one that comes after another waits for it to leave. */
 export type Entrance = 'Alone' | 'AfterAnother'
 
 /** The last deletion, for a few seconds after it: a snackbar says so, and offers to undo it. */
@@ -85,10 +82,7 @@ export type State = Readonly<{
     Failed: object
     Loaded: Readonly<{
       items: ReadonlyArray<Product>
-      /**
-       * The ids that changes brought into a list already shown (a product added, or put back), until the page
-       * has shown them arriving: none in a list shown for the first time, which appears whole.
-       */
+      /** The ids a change brought into a list already shown, until they have arrived. A first list appears whole. */
       arrivals: HashSet.HashSet<string>
       /** The rows that changes took out of the list, in the order they were shown, until they have left. */
       departures: ReadonlyArray<Departure>
@@ -186,10 +180,7 @@ export type ListModel = Data.TaggedEnum<{
 
 export type Model = Readonly<{
   list: ListModel
-  /**
-   * The snackbar of the last deletion: when it was, how many products went, how the snackbar comes and, while
-   * the products can come back, the way to undo it.
-   */
+  /** The snackbar of the last deletion. `maybeUndo` only while the products can come back. */
   lastDeletion: Data.TaggedEnum<{
     None: object
     Deleted: Readonly<{
@@ -230,10 +221,7 @@ type Loaded = Data.TaggedEnum.Value<State['list'], 'Loaded'>
 
 type Row = Readonly<{ item: Product; presence: Presence }>
 
-/**
- * The rows shown: the listed products, in order, each leaving one after the row it followed, and after the rows
- * that left from there before it, so that the leaving rows keep their order.
- */
+/** The listed rows, each leaving one after the row it followed and after the rows that left from there before it. */
 const rowsOf = ({ items, arrivals, departures }: Loaded): ReadonlyArray<Row> =>
   Arr.reduce(
     departures,
@@ -340,8 +328,8 @@ const settlingTimer: Tea.Subscription<Message, Deps> = Channel.fromEffectDone(
 )
 
 /**
- * A subscription's key: the timer of the offer to undo is keyed by the deletion it times, the timer of the rows
- * settling by the ids arriving and leaving, so that a change bringing others starts it anew.
+ * The undo timer is keyed by its deletion, the settling timer by the ids arriving and leaving: a new one starts it
+ * anew.
  */
 type Key =
   | string

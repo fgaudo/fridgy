@@ -37,9 +37,8 @@ const addButton = (model: Model, isAboveSnackbar: boolean, { on }: Handlers<Mess
 )
 
 /**
- * Material's menu, under the top app bar's trailing icon button, growing from it; a tap anywhere else closes it.
- * Both are drawn in the bar, whose stacking context keeps the menu above what the tap catcher covers, whichever
- * bar is shown: a menu opened stays open until it is closed.
+ * Material's menu, growing from the bar's trailing icon button; a tap anywhere else closes it. Both are drawn in
+ * the bar, whose stacking context keeps the menu above the tap catcher.
  */
 const menu = (menu: Model['menu'], { on }: Handlers<Message>): ReadonlyArray<VNode> =>
   menu._tag === 'Open'
@@ -98,10 +97,8 @@ export const view: View<Model, Message> = (model, dispatch) => {
       more_vert
     </button>
   )
-  // Material's medium top app bar, with the emphasized headline and a subtitle of Material 3 Expressive under the
-  // row of its icons: the surface's color at rest, filled with a container's and collapsed to a small bar, its
-  // headline shrunk into the row after the leading icon, once the list scrolls under it. The contextual bar of the
-  // selected products takes the same shape, in its own colors. The list leaves the bar's full height above itself.
+  // Material's medium top app bar, collapsed to a small one in a container's color once the list scrolls under it.
+  // The contextual bar of the selected products takes the same shape, in its own colors.
   const topBar = (
     <div
       props={{
