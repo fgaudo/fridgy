@@ -10,7 +10,7 @@ import * as DigitDateEntry from '#libs/dates/digit-date-entry.ts'
 import * as DigitDates from '#libs/dates/digit-dates.ts'
 import { arbitrary as maybe } from '#libs/option/option.test_arbitrary.ts'
 import { utc } from '#libs/testing/date-time.test_arbitrary.ts'
-import type { DateForm, Form, Message, Outcome, State } from './program.ts'
+import type { DateForm, Form, Message, Outcome, Snackbar, State } from './program.ts'
 
 const Msg = Data.taggedEnum<Message>()
 
@@ -67,13 +67,23 @@ const dateForm = (form: Omit<Form, 'date'>): fc.Arbitrary<DateForm> =>
   )
 
 // The name is often the stored one, at times with other spacing, and at times anything typed.
-export const form: fc.Arbitrary<Form> = fc.tuple(opened, id, fc.nat(), order, fc.string(), fc.nat({ max: 3 })).chain((
-  [{ original, now }, id, replacements, order, typed, kind],
-) => {
-  const name = kind === 0 ? original.name : kind === 1 ? ` ${original.name}  ` : kind === 2 ? '' : typed
-  const rest = { id, original, name, replacements, now, order }
-  return dateForm(rest).map((date): Form => ({ ...rest, date }))
-})
+export const snackbar: fc.Arbitrary<Snackbar> = fc.oneof(
+  fc.constant({ _tag: 'None' } as const),
+  fc.record({
+    id: fc.nat({ max: 5 }),
+    failure: fc.constantFrom('SaveFailed', 'OrderNotKept'),
+    entrance: fc.constantFrom('Alone', 'AfterAnother'),
+  }).map((fields) => ({ _tag: 'Shown', ...fields } as const)),
+)
+
+export const form: fc.Arbitrary<Form> = fc.tuple(opened, id, fc.nat(), order, fc.string(), fc.nat({ max: 3 }), snackbar)
+  .chain((
+    [{ original, now }, id, replacements, order, typed, kind, snackbar],
+  ) => {
+    const name = kind === 0 ? original.name : kind === 1 ? ` ${original.name}  ` : kind === 2 ? '' : typed
+    const rest = { id, original, name, replacements, now, order, snackbar }
+    return dateForm(rest).map((date): Form => ({ ...rest, date }))
+  })
 
 // Never both known: the form is made as soon as they are.
 export const loading = fc.tuple(id, opened, maybe(order), fc.boolean()).map((
@@ -92,7 +102,11 @@ export const saving = fc.tuple(form, product).map(([form, product]) => ({ _tag: 
 
 export const state: fc.Arbitrary<State> = fc.oneof(loading, editing, saving)
 
-export const outcome = fc.constantFrom<Outcome>('Saved', 'Failed', 'Gone')
+export const outcome: fc.Arbitrary<Outcome> = fc.oneof(
+  fc.constant({ _tag: 'Saved' } as const),
+  fc.constant({ _tag: 'Failed' } as const),
+  utc.map((at) => ({ _tag: 'Gone', at } as const)),
+)
 
 export const message: fc.Arbitrary<Message> = fc.oneof(
   fc.string().map((name) => Msg.NameChanged({ name })),
@@ -107,6 +121,7 @@ export const message: fc.Arbitrary<Message> = fc.oneof(
   utc.map((now) => Msg.TimeChanged({ now })),
   order.map((order) => Msg.OrderChanged({ order })),
   fc.constant(Msg.BackPressed()),
+  fc.constant(Msg.SnackbarExpired()),
   fc.boolean().map((succeeded) => Msg.OrderKept({ succeeded })),
   outcome.map((outcome) => Msg.Saved({ outcome })),
 )

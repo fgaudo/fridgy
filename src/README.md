@@ -17,8 +17,8 @@ src/
 ├─ app/                  the application (environment-agnostic)
 │  ├─ program.ts         public: the root Program: the stack of pages
 │  ├─ view.tsx           public: the root view (hot-reload entry in development)
-│  ├─ layer.ts           public: every adapter that has no alternative, the toasts' and the vibrations'
-│  │                     included; needs a `SqlClient` and an `HttpClient`
+│  ├─ layer.ts           public: every adapter that has no alternative, the vibrations' included;
+│  │                     needs a `SqlClient` and an `HttpClient`
 │  ├─ children/<child>/  a child Program (of the root: a page), of the same shape as the root, at any depth; of
 │  │  │                  app/, it imports only its own folder, and the infrastructure's services
 │  │  ├─ program.ts · view.tsx · layer.ts   its public API: the only modules its parent imports
@@ -40,9 +40,9 @@ src/
 │                        (open-food-facts/: how a code is normalized, asked for and decoded), hot reload,
 │                        fonts, the screen a crash leaves (crash-screen.ts, which the production entrypoint
 │                        hands to `run`); and the platform's facts the programs use as they are: the back button
-│                        (back-button/: Capacitor's, or the browser's history; the entrypoints pick one), the
-│                        toasts (notifications/) and the vibrations (haptics/, `docs/haptics.md`). Its adapters
-│                        are named as the app's, `<service>.<backing>.ts`
+│                        (back-button/: Capacitor's, or the browser's history; the entrypoints pick one), and
+│                        the vibrations (haptics/, `docs/haptics.md`). Its adapters are named as the app's,
+│                        `<service>.<backing>.ts`
 ├─ libs/                 generic, reusable code: the snabbdom bridge (tea-snabbdom: handlers, renderer,
 │                        test support) and JSX runtime, sources, branded numbers, barcodes (the expansion of
 │                        a UPC-E), dates (the orders of a date's digits, the days they name, the rules of typing

@@ -189,7 +189,7 @@ export const view: View<Model, Message> = (model, dispatch) => {
         }
       </div>
       {/* Always there, so that the snackbar enters and leaves with its own transitions. */}
-      <div props={{ className: 'pointer-events-none fixed right-4 bottom-4 left-4 z-30 mr-sair mb-saib ml-sail' }}>
+      <div props={{ className: 'snackbar-slot' }}>
         {snackbar === undefined ? [] : [snackbar]}
       </div>
     </div>

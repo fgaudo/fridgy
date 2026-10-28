@@ -36,10 +36,12 @@ import {
   type Digit,
   type Entering,
   type Event,
+  type Failure,
   type Form,
   type Message,
   type Model,
   program,
+  type Snackbar,
   type State,
   type Step,
 } from './program.ts'
@@ -112,12 +114,19 @@ const readsCamera = (state: State) => state._tag === 'Scanning' && state.form.ca
 /** Whether the page looks `barcode` up. */
 const looksUp = (state: State, barcode: string) => state._tag === 'LookingUp' && state.barcode === barcode
 
+/** The snackbar of a failure, after the one standing, if any. */
+const told = (form: Form, failure: Failure): Snackbar =>
+  form.snackbar._tag === 'Shown'
+    ? { _tag: 'Shown', id: form.snackbar.id + 1, failure, entrance: 'AfterAnother' }
+    : { _tag: 'Shown', id: 0, failure, entrance: 'Alone' }
+
 /**
  * A message that cannot arrive in that state: a completion while no product is being added, the camera's while
- * the page does not read it, or a lookup's answer for a barcode it does not look up.
+ * the page does not read it, a lookup's answer for a barcode it does not look up, or a snackbar's end without one.
  */
 const cannotArrive = (msg: Message, before: State) =>
   (msg._tag === 'Completed' && before._tag !== 'Submitting')
+  || (msg._tag === 'SnackbarExpired' && before.form.snackbar._tag === 'None')
   || ((msg._tag === 'Scanned' || msg._tag === 'CameraFailed') && !readsCamera(before))
   || (msg._tag === 'LookedUp' && !looksUp(before, msg.barcode))
 
@@ -422,16 +431,30 @@ describe('AddProducts update', () => {
     )
   })
 
-  test('OrderKept changes nothing, and says so with a toast and a vibration when the order could not be kept', () => {
+  test('OrderKept changes nothing, and says so with a snackbar, after the one standing, and a vibration when the order could not be kept', () => {
     assertProperty([state, fc.boolean()], (before, succeeded) => {
       const { after, commands } = step(Msg.OrderKept({ succeeded }), before)
-      return Equal.equals(after, before)
-        && Equal.equals(
-          commands,
-          succeeded
-            ? []
-            : [Cmd.ShowToast({ text: 'Couldn\'t save the date order' }), Cmd.Vibrate({ feedback: 'Reject' })],
-        )
+      return Equal.equals(after, succeeded ? before : withForm(before, { snackbar: told(before.form, 'OrderNotKept') }))
+        && Equal.equals(commands, succeeded ? [] : [Cmd.Vibrate({ feedback: 'Reject' })])
+    })
+  })
+
+  describe('SnackbarExpired', () => {
+    test('withdraws the snackbar, in any state, and touches nothing else', () => {
+      assertProperty([state], (before) => {
+        fc.pre(before.form.snackbar._tag === 'Shown')
+        const { after, commands } = step(Msg.SnackbarExpired(), before)
+        return Equal.equals(after, withForm(before, { snackbar: { _tag: 'None' } })) && commands.length === 0
+      })
+    })
+
+    // The timer runs only while a snackbar is shown, so its end heard otherwise is a bug.
+    test('is a defect when no snackbar is shown', () => {
+      assertProperty([state], (before) => {
+        fc.pre(before.form.snackbar._tag === 'None')
+        expect(() => program.update(Msg.SnackbarExpired())(before)).toThrow()
+        return true
+      })
     })
   })
 
@@ -562,6 +585,7 @@ describe('AddProducts update', () => {
             supporting: { _tag: 'LookingUp' },
             name: Opt.getOrElse(s.form.maybeName, () => ''),
             nameKey: s.form.replacements,
+            snackbar: s.form.snackbar,
             close: Msg.Closed(),
             cancelLookup: Msg.LookupCancelled(),
           })
@@ -569,11 +593,12 @@ describe('AddProducts update', () => {
       })
     })
 
-    test('the first step shows the name, drawn anew with each replacement, in every state, and the scanner the camera', () => {
+    test('the first step shows the name, drawn anew with each replacement, in every state, the scanner the camera, and every state the snackbar the form holds', () => {
       assertProperty([state], (s) => {
         const model = makeModel(s)
         return model.name === Opt.getOrElse(s.form.maybeName, () => '')
           && model.nameKey === s.form.replacements
+          && Equal.equals(model.snackbar, s.form.snackbar)
           && (model._tag !== 'Scanning' || model.camera === s.form.camera)
       })
     })
@@ -719,14 +744,11 @@ describe('AddProducts update', () => {
       })
     })
 
-    test('failure gives the step back, as it was, and says so with a toast and a vibration', () => {
+    test('failure gives the step back, as it was, and says so with a snackbar, after the one standing, and a vibration', () => {
       assertProperty([submitting], (before) => {
         const { after, commands } = step(Msg.Completed({ succeeded: false }), before)
-        return Equal.equals(after, resumed(before.step, before.form))
-          && Equal.equals(commands, [
-            Cmd.ShowToast({ text: 'Couldn\'t add the product' }),
-            Cmd.Vibrate({ feedback: 'Reject' }),
-          ])
+        return Equal.equals(after, resumed(before.step, { ...before.form, snackbar: told(before.form, 'AddFailed') }))
+          && Equal.equals(commands, [Cmd.Vibrate({ feedback: 'Reject' })])
       })
     })
   })
@@ -770,7 +792,7 @@ describe('AddProducts update', () => {
 })
 
 // The back button is observed in every state: while a product is being added, so that it does not leave the app.
-test('the page listens to the clock, the date order and the back button, to the camera while the scanner is open until it fails, to the lookup of the barcode it looks up, and times the acknowledgement of the product added', () => {
+test('the page listens to the clock, the date order and the back button, to the camera while the scanner is open until it fails, to the lookup of the barcode it looks up, and times the acknowledgement of the product added and the snackbar', () => {
   assertProperty([state, utc], (s, other) => {
     const subscriptions = Tea.subscriptionsOf(program)(s)
     const lookups = [...HashMap.keys(subscriptions)].filter((key) => String(key).startsWith('lookup:'))
@@ -785,6 +807,7 @@ test('the page listens to the clock, the date order and the back button, to the 
         onSome: ({ product }) => HashMap.has(subscriptions, ['acknowledging', product.creationDate]),
       })
       && !HashMap.has(subscriptions, ['acknowledging', other])
+      && (s.form.snackbar._tag === 'None' || HashMap.has(subscriptions, ['snackbar', s.form.snackbar.id]))
   })
 })
 
@@ -803,6 +826,7 @@ describe('the lookup', () => {
         maybeNow: Opt.none(),
         maybeOrder: Opt.none(),
         maybeAcknowledging: Opt.none(),
+        snackbar: { _tag: 'None' },
       },
       barcode: code,
     }

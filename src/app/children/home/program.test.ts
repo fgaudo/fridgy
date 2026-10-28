@@ -8,6 +8,7 @@ import * as HashSet from 'effect/HashSet'
 import * as Opt from 'effect/Option'
 import * as fc from 'fast-check'
 import { messagesSentBy } from '#libs/tea-snabbdom/view.test_support.ts'
+import { utc } from '#libs/testing/date-time.test_arbitrary.ts'
 import { tagPath } from '#libs/testing/tag-path.test_support.ts'
 import { assertProperty, onlyChanged, outcomesOf } from '#libs/testing/update.test_support.ts'
 import { hasExpiringProduct } from './children/products/program.test_arbitrary.ts'
@@ -31,14 +32,14 @@ const fromProducts = (message: ProductsMessage): Message => ({ _tag: 'Products',
 
 /**
  * A message that cannot arrive in that state: a back heard with the menu closed, a completion outside its deletion,
- * the end of the offer to undo while there is none, the end of the rows' motion while none moves, a tick while no
+ * the end of the snackbar while there is none, the end of the rows' motion while none moves, a tick while no
  * product expires.
  */
 const cannotArrive = (msg: Message, before: State) =>
   (msg._tag === 'BackPressed' && !before.isMenuOpen)
   || (msg._tag === 'Products' && (msg.message._tag === 'Deleted' || msg.message._tag === 'DeleteFailed')
     && before.products.selection._tag !== 'Deleting')
-  || (msg._tag === 'Products' && msg.message._tag === 'UndoExpired' && before.products.lastDeletion._tag !== 'Recent')
+  || (msg._tag === 'Products' && msg.message._tag === 'SnackbarExpired' && before.products.snackbar._tag !== 'Shown')
   || (msg._tag === 'Products' && msg.message._tag === 'RowsSettled'
     && (before.products.list._tag !== 'Loaded'
       || (HashSet.size(before.products.list.arrivals) === 0 && before.products.list.departures.length === 0)))
@@ -185,6 +186,16 @@ describe('Home update', () => {
     assertProperty([state], (before) => {
       const { after, commands, events } = step(Msg.AddRequested(), before)
       return Equal.equals(after, before) && commands.length === 0 && Equal.equals(events, [Ev.AddRequested()])
+    })
+  })
+
+  // The products tell it in their snackbar; the page holds nothing of it.
+  test('ProductGone is the products\' to tell, and changes nothing of the page\'s own', () => {
+    assertProperty([state, utc], (before, at) => {
+      const { after, commands, events } = step(Msg.ProductGone({ at }), before)
+      const told = Products.program.update(ProductsMsg.ProductGone({ at }))(before.products)
+      return told !== Tea.reject && Equal.equals(after.products, told.state)
+        && onlyChanged(before, after, 'products') && commands.length === 0 && events.length === 0
     })
   })
 

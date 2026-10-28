@@ -85,10 +85,9 @@ how the storage is read or written is doing the infrastructure's work, and two o
 ## The infrastructure's services
 
 A fact of the platform that no consumer could shape (`src/infrastructure/back-button`: a press is a `void`;
-`src/infrastructure/notifications`: a toast is a text; `src/infrastructure/haptics`: a vibration is one of
-Android's feedbacks) is a service of the infrastructure, with its adapters, listed directly in the `Deps` of the
-programs that need it. The day a consumer needs it shaped (a toast with an action), that consumer gets a service
-of its own, written on the infrastructure's.
+`src/infrastructure/haptics`: a vibration is one of Android's feedbacks) is a service of the infrastructure, with
+its adapters, listed directly in the `Deps` of the programs that need it. The day a consumer needs it shaped (a
+vibration of its own), that consumer gets a service of its own, written on the infrastructure's.
 
 ## The contract
 

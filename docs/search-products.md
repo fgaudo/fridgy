@@ -80,7 +80,7 @@ what was decided".
 
 ## The program: `Products` (`src/app/children/home/children/products/program.ts`)
 
-One more state machine, beside the list, the selection and the last deletion:
+One more state machine, beside the list, the selection and the snackbar:
 
 ```ts
 type Search = Data.TaggedEnum<{

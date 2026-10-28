@@ -5,7 +5,7 @@ import * as Opt from 'effect/Option'
 import type { DateOrder } from '#libs/dates/date-order.ts'
 import { handlers, initialValue, type View } from '#libs/tea-snabbdom/tea-snabbdom.ts'
 import { cn } from '#libs/ui/class-names.ts'
-import type { DateChoice, Digit, FieldsShown, Message, Model, OrderChoice } from './program.ts'
+import type { DateChoice, Digit, Failure, FieldsShown, Message, Model, OrderChoice, Snackbar } from './program.ts'
 
 const inputValue = (event: Event) => (event.target as HTMLInputElement).value
 
@@ -327,6 +327,30 @@ const fields = (shown: FieldsShown, activity: Activity, dispatch: Dispatch<Messa
   </div>
 )
 
+const failureTexts: Readonly<Record<Failure, string>> = {
+  SaveFailed: 'Couldn\'t save the product',
+  OrderNotKept: 'Couldn\'t save the date order',
+}
+
+/**
+ * Material's snackbar (`snackbar` in `styles.css`) over the docked controls, keyed by its id so that the next one
+ * appears anew, after this one has sunk. The place stays, so that it enters and leaves with its own transitions.
+ */
+const snackbar = (shown: Snackbar) => (
+  <div key='snackbar' props={{ className: 'snackbar-slot' }}>
+    {shown._tag === 'None' ? [] : [
+      <div
+        key={`snackbar-${shown.id}`}
+        attrs={{ 'data-entrance': shown.entrance }}
+        style={{ remove: { opacity: '0', transform: 'translateY(0.5rem)' } }}
+        props={{ className: 'snackbar' }}
+      >
+        <span>{failureTexts[shown.failure]}</span>
+      </div>,
+    ]}
+  </div>
+)
+
 /** Material's full-screen dialog, as a page: it rises over the page that opened it, and sinks back over it. */
 export const view: View<Model, Message> = (model, dispatch) => (
   <div
@@ -344,12 +368,17 @@ export const view: View<Model, Message> = (model, dispatch) => (
     props={{ className: 'fixed inset-0 z-70 flex flex-col bg-surface text-on-surface' }}
   >
     {Match.valueTags(model, {
-      Loading: ({ close }) => [appBar(Opt.some(close), dispatch)],
+      Loading: ({ close }) => [appBar(Opt.some(close), dispatch), snackbar({ _tag: 'None' })],
       Editing: (editing) => [
         appBar(Opt.some(editing.close), dispatch),
         fields(editing, { _tag: 'Editing', controls: editing }, dispatch),
+        snackbar(editing.snackbar),
       ],
-      Saving: (saving) => [appBar(Opt.none(), dispatch), fields(saving, { _tag: 'Saving' }, dispatch)],
+      Saving: (saving) => [
+        appBar(Opt.none(), dispatch),
+        fields(saving, { _tag: 'Saving' }, dispatch),
+        snackbar(saving.snackbar),
+      ],
     })}
   </div>
 )

@@ -20,10 +20,12 @@ import {
   type Command,
   type Digit,
   type Event,
+  type Failure,
   type Form,
   type Message,
   type Model,
   program,
+  type Snackbar,
   type State,
 } from './program.ts'
 import { view } from './view.tsx'
@@ -84,9 +86,16 @@ const withForm = (state: State & { _tag: 'Editing' | 'Saving' }, change: Partial
   form: { ...state.form, ...change },
 })
 
-/** A completion while nothing is being saved, or an order kept before any was picked. */
+/** The snackbar of a failure, after the one standing, if any. */
+const told = (form: Form, failure: Failure): Snackbar =>
+  form.snackbar._tag === 'Shown'
+    ? { _tag: 'Shown', id: form.snackbar.id + 1, failure, entrance: 'AfterAnother' }
+    : { _tag: 'Shown', id: 0, failure, entrance: 'Alone' }
+
+/** A completion while nothing is being saved, an order kept before any was picked, a snackbar's end without one. */
 const cannotArrive = (msg: Message, before: State) =>
   (msg._tag === 'Saved' && before._tag !== 'Saving') || (msg._tag === 'OrderKept' && before._tag === 'Loading')
+  || (msg._tag === 'SnackbarExpired' && (before._tag === 'Loading' || before.form.snackbar._tag === 'None'))
 
 const notEditing = fc.oneof(loading, saving)
 
@@ -282,6 +291,7 @@ describe('EditProduct update', () => {
           name: before.original.name,
           replacements: 0,
           date: { _tag: 'Kept' },
+          snackbar: { _tag: 'None' },
         }
         return Equal.equals(
           afterTime,
@@ -301,48 +311,76 @@ describe('EditProduct update', () => {
     })
   })
 
-  test('OrderKept changes nothing, and says so with a toast and a vibration when the order could not be kept', () => {
+  test('OrderKept changes nothing, and says so with a snackbar, after the one standing, and a vibration when the order could not be kept', () => {
     assertProperty(
       [fc.oneof(editing, saving), fc.boolean()],
       (before, succeeded) =>
         Equal.equals(step(Msg.OrderKept({ succeeded }), before), {
           rejected: false,
-          after: before,
-          commands: succeeded
-            ? []
-            : [Cmd.ShowToast({ text: 'Couldn\'t save the date order' }), Cmd.Vibrate({ feedback: 'Reject' })],
+          after: succeeded ? before : withForm(before, { snackbar: told(before.form, 'OrderNotKept') }),
+          commands: succeeded ? [] : [Cmd.Vibrate({ feedback: 'Reject' })],
           events: [],
         }),
     )
   })
 
-  test('Saved gives the form back, and leaves the page once saved, or once the product is gone, with a vibration, and a toast on a failure', () => {
+  // A product that is gone is told by the page under this one, as this one goes.
+  test('Saved gives the form back, and leaves the page once saved, or once the product is gone, with a vibration, and a snackbar on a failure', () => {
     assertProperty([saving, outcome], (before, outcome) => {
+      const editing: State = { _tag: 'Editing', form: before.form }
       const expected = {
-        Saved: { commands: [Cmd.Vibrate({ feedback: 'Confirm' })], events: [Ev.LeaveRequested()] },
+        Saved: {
+          after: editing,
+          commands: [Cmd.Vibrate({ feedback: 'Confirm' })],
+          events: [Ev.LeaveRequested()],
+        },
         Failed: {
-          commands: [Cmd.ShowToast({ text: 'Couldn\'t save the product' }), Cmd.Vibrate({ feedback: 'Reject' })],
+          after: { _tag: 'Editing', form: { ...before.form, snackbar: told(before.form, 'SaveFailed') } },
+          commands: [Cmd.Vibrate({ feedback: 'Reject' })],
           events: [],
         },
         Gone: {
-          commands: [Cmd.ShowToast({ text: 'This product no longer exists' }), Cmd.Vibrate({ feedback: 'Reject' })],
-          events: [Ev.LeaveRequested()],
+          after: editing,
+          commands: [Cmd.Vibrate({ feedback: 'Reject' })],
+          events: outcome._tag === 'Gone' ? [Ev.ProductGone({ at: outcome.at })] : [],
         },
-      }[outcome]
-      return Equal.equals(step(Msg.Saved({ outcome }), before), {
-        rejected: false,
-        after: { _tag: 'Editing', form: before.form },
-        ...expected,
+      }[outcome._tag]
+      return Equal.equals(step(Msg.Saved({ outcome }), before), { rejected: false, ...expected })
+    })
+  })
+
+  describe('SnackbarExpired', () => {
+    test('withdraws the snackbar and touches nothing else', () => {
+      assertProperty([fc.oneof(editing, saving)], (before) => {
+        fc.pre(before.form.snackbar._tag === 'Shown')
+        return Equal.equals(step(Msg.SnackbarExpired(), before), {
+          rejected: false,
+          after: withForm(before, { snackbar: { _tag: 'None' } }),
+          commands: [],
+          events: [],
+        })
+      })
+    })
+
+    // The timer runs only while a snackbar is shown, so its end heard otherwise is a bug.
+    test('is a defect when no snackbar is shown', () => {
+      assertProperty([state], (before) => {
+        fc.pre(before._tag === 'Loading' || before.form.snackbar._tag === 'None')
+        expect(() => program.update(Msg.SnackbarExpired())(before)).toThrow()
+        return true
       })
     })
   })
 })
 
-test('the page listens to the clock, the date order and the back button, in every state', () => {
+// The snackbar's timer is keyed by its id: the next one starts it anew.
+test('the page listens to the clock, the date order and the back button in every state, and times the snackbar', () => {
   assertProperty([state], (s) => {
     const subscriptions = Tea.subscriptionsOf(program)(s)
-    return HashMap.size(subscriptions) === 3 && HashMap.has(subscriptions, 'clock')
+    const snackbar = s._tag === 'Loading' ? { _tag: 'None' } as const : s.form.snackbar
+    return HashMap.size(subscriptions) === (snackbar._tag === 'Shown' ? 4 : 3) && HashMap.has(subscriptions, 'clock')
       && HashMap.has(subscriptions, 'date-order') && HashMap.has(subscriptions, 'back-button')
+      && (snackbar._tag === 'None' || HashMap.has(subscriptions, `snackbar:${snackbar.id}`))
   })
 })
 
@@ -465,6 +503,13 @@ describe('the model', () => {
     })
   })
 
+  test('shows the snackbar the form holds, while editing and while saving', () => {
+    assertProperty([fc.oneof(editing, saving)], (s) => {
+      const model = makeModel(s)
+      return model._tag !== 'Loading' && Equal.equals(model.snackbar, s.form.snackbar)
+    })
+  })
+
   describe('on a product', () => {
     const creationDate = DateTime.makeUnsafe('2026-10-20T10:00:00Z')
     const now = DateTime.makeUnsafe('2026-10-28T12:00:00Z')
@@ -480,6 +525,7 @@ describe('the model', () => {
       now,
       order: 'DMY',
       date: { _tag: 'Kept' },
+      snackbar: { _tag: 'None' },
     }
     const typed = (digits: string): Form => ({
       ...opened,
@@ -536,4 +582,6 @@ test('the arbitrary states cover every state and both dates', () => {
   expect(states.some((s) => s._tag === 'Editing' && s.form.date._tag === 'Kept')).toBe(true)
   expect(states.some((s) => s._tag === 'Editing' && s.form.date._tag === 'Typed')).toBe(true)
   expect(states.some((s) => s._tag === 'Saving')).toBe(true)
+  expect(states.some((s) => s._tag !== 'Loading' && s.form.snackbar._tag === 'None')).toBe(true)
+  expect(states.some((s) => s._tag !== 'Loading' && s.form.snackbar._tag === 'Shown')).toBe(true)
 })

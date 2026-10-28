@@ -38,17 +38,17 @@ nothing is named). The model holds exactly what the view draws: a field no view 
   (the root draws the page on top). A model that rarely changes is drawn with snabbdom's `thunk`.
 - An element that animates in and out takes a `key` and snabbdom's `style` hooks (`delayed`, `remove`), as
   Home's menu does. The hooks run on the element removed, not on its children: a piece a parent places (Products'
-  snackbar in Home) is drawn in a slot that is always there. A page's view keys its root by the page's name
+  snackbar in Home, a page's own snackbar) is drawn in a slot that is always there (`snackbar-slot`). A page's view keys its root by the page's name
   (`key='About'`): the root draws the page on top with no wrapper, so that the page replaced leaves with its own
   `remove` transition, letting nothing through (`pointerEvents: 'none'`), over the next page (`z-70`) or under it
   (Home, held until the next page's entrance is over).
 - A page is drawn anew each time it comes back on top, so an entrance in `delayed` plays on every return. An
   element that enters because something changed (a row added or put back), not because the page is drawn, gets
   its entrance from the model (Products' `presence`, `Arriving`; AddProducts' `acknowledging`), which the state keeps until a timer, running
-  only while the page is on top, says it has been shown. An element keyed by what it shows (a snackbar, by its
-  deletion) is replaced by the next one while it leaves, the two drawn at once in the same place: the model
-  says that the next comes after another (its `entrance`), and the view delays its entrance (`transitionDelay`)
-  by the exit's duration, resetting the delay in `remove`. A list's rows leave the same way (`Leaving`), kept by
+  only while the page is on top, says it has been shown. An element keyed by what it shows (a snackbar, by what it
+  tells) is replaced by the next one while it leaves, the two drawn at once in the same place: the model
+  says that the next comes after another (its `entrance`), and the view marks it (`data-entrance`), whose
+  entrance the `snackbar` class of `styles.css` delays by the exit's duration. A list's rows leave the same way (`Leaving`), kept by
   the state where they were until they have closed their place: a row removed with a `remove` transition stays
   in the DOM, and snabbdom moves the rows around it when others go too, which jumps them over it. A list's rows
   leave by closing their place (`height` and `opacity`, overflow hidden), and arrive by opening it; a row that
@@ -102,7 +102,7 @@ once something is selected a tap selects too (Products' `maybeTap`); an action o
 button; a secondary action is an item of the bar's overflow menu (a navigation drawer is for five or more
 destinations); a form that opens over the page is a modal bottom sheet, within the thumb's reach, with outlined
 text fields; selected things turn the top app bar into a contextual one with their actions; something undone in
-a few seconds (a deletion) gets a snackbar with its action, never a dialog; what only informs is a toast; a
+a few seconds (a deletion) gets a snackbar with its action, never a dialog; what only informs (a failure) is a snackbar without an action, drawn by the page, never Android's toast; a
 choice among a few values is a row of filter chips, the one taken drawn selected, and the action that commits
 a step is a filled button where the thumb rests, whose label says what it does ("Add without date"),
 never a chip nor a key of the keypad, which types the date and nothing else. A chip

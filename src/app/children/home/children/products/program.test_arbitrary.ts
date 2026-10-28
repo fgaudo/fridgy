@@ -8,7 +8,7 @@ import * as NonEmptyHashSet from '#libs/collections/non-empty-hash-set.test_arbi
 import * as PositiveInteger from '#libs/numbers/positive-integer.test_arbitrary.ts'
 import { arbitrary as maybe } from '#libs/option/option.test_arbitrary.ts'
 import { utc } from '#libs/testing/date-time.test_arbitrary.ts'
-import type { Departure, Entrance, Gesture, LastDeletion, Message, Product, Selection, State } from './program.ts'
+import type { Departure, Entrance, Gesture, Message, Notice, Product, Selection, Snackbar, State } from './program.ts'
 import { ProductListReadError, type StoredProduct } from './services/product-list/product-list.ts'
 
 const Msg = Data.taggedEnum<Message>()
@@ -105,14 +105,22 @@ export const deleting: fc.Arbitrary<Selection> = fc.record({
 
 export const selection: fc.Arbitrary<Selection> = fc.oneof(idle, selecting, deleting)
 
-export const recent: fc.Arbitrary<LastDeletion> = fc.record({
-  at: utc,
-  count: PositiveInteger.arbitrary({ max: 6 }),
-  maybeProducts: restorable,
-  entrance: fc.constantFrom<Entrance>('Alone', 'AfterAnother'),
-}).map((fields) => ({ _tag: 'Recent', ...fields } as const))
+export const notice: fc.Arbitrary<Notice> = fc.oneof(
+  fc.record({ count: PositiveInteger.arbitrary({ max: 6 }), maybeProducts: restorable }).map((fields) => (
+    { _tag: 'Deleted', ...fields } as const
+  )),
+  fc.constant({ _tag: 'DeleteFailed' } as const),
+  fc.constant({ _tag: 'RestoreFailed' } as const),
+  fc.constant({ _tag: 'ProductGone' } as const),
+)
 
-export const lastDeletion: fc.Arbitrary<LastDeletion> = fc.oneof(fc.constant({ _tag: 'None' } as const), recent)
+export const shown: fc.Arbitrary<Snackbar> = fc.record({
+  at: utc,
+  notice,
+  entrance: fc.constantFrom<Entrance>('Alone', 'AfterAnother'),
+}).map((fields) => ({ _tag: 'Shown', ...fields } as const))
+
+export const snackbar: fc.Arbitrary<Snackbar> = fc.oneof(fc.constant({ _tag: 'None' } as const), shown)
 
 /** Whether a product shown, listed or leaving, expires: the clock runs, and the time is known, only then. */
 export const hasExpiringProduct = (state: State) =>
@@ -122,7 +130,7 @@ export const hasExpiringProduct = (state: State) =>
   )
 
 /** Any state, with a time only while a product expires. */
-export const state: fc.Arbitrary<State> = fc.record({ maybeNow: maybe(utc), list, selection, lastDeletion }).map((
+export const state: fc.Arbitrary<State> = fc.record({ maybeNow: maybe(utc), list, selection, snackbar }).map((
   state,
 ) => hasExpiringProduct(state) ? state : { ...state, maybeNow: Opt.none() })
 
@@ -148,10 +156,11 @@ export const message: fc.Arbitrary<Message> = fc.oneof(
   fc.constant(Msg.SelectionCleared()),
   fc.constant(Msg.DeleteStarted()),
   fc.constant(Msg.UndoRequested()),
-  fc.constant(Msg.UndoExpired()),
+  fc.constant(Msg.SnackbarExpired()),
   fc.constant(Msg.RowsSettled()),
-  fc.constant(Msg.DeleteFailed()),
-  fc.constant(Msg.RestoreFailed()),
+  utc.map((at) => Msg.DeleteFailed({ at })),
+  utc.map((at) => Msg.RestoreFailed({ at })),
+  utc.map((at) => Msg.ProductGone({ at })),
   utc.map((at) => Msg.Deleted({ at })),
   utc.map((now) => Msg.TimeChanged({ now })),
   fc.oneof(

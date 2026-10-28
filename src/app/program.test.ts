@@ -6,11 +6,13 @@ import * as DateTime from 'effect/DateTime'
 import * as Effect from 'effect/Effect'
 import * as HashMap from 'effect/HashMap'
 import * as Opt from 'effect/Option'
+import * as Product from '#domain/product.ts'
 import * as DigitDates from '#libs/dates/digit-dates.ts'
 import { tagPath } from '#libs/testing/tag-path.test_support.ts'
 import { outcomesOf } from '#libs/testing/update.test_support.ts'
 import * as About from './children/about/program.ts'
 import * as AddProducts from './children/add-products/program.ts'
+import type * as EditProduct from './children/edit-product/program.ts'
 import * as Home from './children/home/program.ts'
 import { type Message, type Page, program, type State } from './program.ts'
 import {
@@ -47,6 +49,7 @@ const Page = Data.taggedEnum<Page>()
 const Msg = Data.taggedEnum<Message>()
 const HomeMsg = Data.taggedEnum<Home.Message>()
 const AddProductsMsg = Data.taggedEnum<AddProducts.Message>()
+const EditProductMsg = Data.taggedEnum<EditProduct.Message>()
 
 const { step } = outcomesOf(program.update)
 
@@ -442,6 +445,44 @@ describe('Navigation', () => {
       expect(yield* pendingWork(user)).toEqual([])
       expect(yield* listed(user)).toEqual(before)
     })))
+
+  // No user reaches this through the storage of the tests, whose products go only from Home's list, hidden under
+  // the page. The page goes, so Home tells it, in its snackbar.
+  test('a product found gone when saved leaves the page that edits it, and Home says so', () => {
+    const creationDate = DateTime.makeUnsafe('2026-10-20T10:00:00Z')
+    const milk = Opt.getOrThrow(Product.make({ name: 'Milk', creationDate, maybeExpirationDate: Opt.none() }))
+    const saving: State = {
+      stack: [
+        Page.Home({ state: Home.program.init.state }),
+        Page.EditProduct({
+          state: {
+            _tag: 'Saving',
+            product: milk,
+            form: {
+              id: '1',
+              original: milk,
+              name: 'Milk 2',
+              replacements: 0,
+              now: creationDate,
+              order: 'DMY',
+              date: { _tag: 'Kept' },
+              snackbar: { _tag: 'None' },
+            },
+          },
+        }),
+      ],
+    }
+    const at = DateTime.makeUnsafe('2026-10-28T12:00:00Z')
+    const { after, commands } = step(
+      Msg.EditProduct({ message: EditProductMsg.Saved({ outcome: { _tag: 'Gone', at } }) }),
+      saving,
+    )
+    expect(tags(after)).toEqual(['Home'])
+    expect(Opt.map(homeState(after), ({ products }) => products.snackbar)).toEqual(
+      Opt.some({ _tag: 'Shown', at, notice: { _tag: 'ProductGone' }, entrance: 'Alone' }),
+    )
+    expect(commands.map(tagPath)).toEqual(['EditProduct › Vibrate'])
+  })
 
   test('a tap on a product while it is selected deselects it, and opens nothing', () =>
     rehearsed(Effect.fnUntraced(function*(user) {

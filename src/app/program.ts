@@ -114,7 +114,12 @@ export const program = compose({
         EditRequested: ({ id, product }) => show(state, 'EditProduct', children.EditProduct.init({ id, product })),
       }),
     AddProducts: () => leave('AddProducts'),
-    EditProduct: () => leave('EditProduct'),
+    // A product that is gone is told by Home, as the page that edited it goes.
+    EditProduct: (event, children) => (state) =>
+      Match.valueTags(event, {
+        LeaveRequested: () => leave('EditProduct')(state),
+        ProductGone: ({ at }) => children.Home.update({ _tag: 'ProductGone', at })(leave('EditProduct')(state).state),
+      }),
     About: () => leave('About'),
   },
   makeModel: (state, children): Model => ({

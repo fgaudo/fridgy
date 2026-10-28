@@ -302,61 +302,46 @@ export const selectionBar = (model: Model, dispatch: Dispatch<Message>): Selecti
   }
 }
 
+type Notice = Data.TaggedEnum.Value<Model['snackbar'], 'Shown'>['notice']
+
+const noticeText = (notice: Notice) => {
+  switch (notice._tag) {
+    case 'Deleted':
+      return notice.count === 1 ? 'Product deleted' : `${notice.count} products deleted`
+    case 'DeleteFailed':
+      return 'Couldn\'t delete the products'
+    case 'RestoreFailed':
+      return 'Couldn\'t put the products back'
+    case 'ProductGone':
+      return 'This product no longer exists'
+  }
+}
+
 /**
- * Material's snackbar of the last deletion, keyed by it so that the next one's appears anew. One that comes after
- * another waits for the other to sink: both in the same place at once, one fading into the other, would look like
- * nothing happened.
+ * Material's snackbar (`snackbar` in `styles.css`), keyed by what it tells so that the next one appears anew. One
+ * that comes after another waits for the other to sink: both in the same place at once, one fading into the other,
+ * would look like nothing happened.
  */
 export const snackbar = (model: Model, dispatch: Dispatch<Message>): VNode | undefined => {
-  if (model.lastDeletion._tag === 'None') {
+  if (model.snackbar._tag === 'None') {
     return undefined
   }
   const { on } = handlers(dispatch)
-  const { at, count, entrance, maybeUndo } = model.lastDeletion
+  const { at, entrance, notice } = model.snackbar
   return (
     <div
-      key={`deleted-${DateTime.toEpochMillis(at)}`}
-      style={{
-        opacity: '0',
-        transform: 'translateY(0.5rem)',
-        transitionProperty: 'opacity, transform',
-        transitionDuration: 'var(--transition-duration-short-3)',
-        transitionTimingFunction: 'var(--ease-standard-decelerate)',
-        transitionDelay: entrance === 'AfterAnother' ? 'var(--transition-duration-short-2)' : '0s',
-        delayed: { opacity: '1', transform: 'translateY(0)' },
-        remove: {
-          opacity: '0',
-          transform: 'translateY(0.5rem)',
-          transitionDuration: 'var(--transition-duration-short-2)',
-          transitionTimingFunction: 'var(--ease-standard-accelerate)',
-          transitionDelay: '0s',
-        },
-      }}
-      props={{
-        className: cn(
-          'pointer-events-auto flex min-h-12 items-center gap-2 rounded-extra-small bg-inverse-surface py-1 pl-4',
-          'text-body-medium',
-          'text-inverse-on-surface shadow-elevation-3',
-          Opt.isSome(maybeUndo) ? 'pr-2' : 'pr-4',
-        ),
-      }}
+      key={`${notice._tag}-${DateTime.toEpochMillis(at)}`}
+      attrs={{ 'data-entrance': entrance }}
+      style={{ remove: { opacity: '0', transform: 'translateY(0.5rem)' } }}
+      props={{ className: 'snackbar' }}
     >
-      <span props={{ className: 'min-w-0 flex-1 py-2' }}>
-        {count === 1 ? 'Product deleted' : `${count} products deleted`}
-      </span>
-      {Opt.match(maybeUndo, {
-        onNone: () => [],
-        onSome: (undo) => [
-          <button
-            props={{
-              className: 'state-layer h-10 shrink-0 rounded-full px-3 text-label-large text-inverse-primary',
-            }}
-            on={on('click', undo)}
-          >
-            Undo
-          </button>,
-        ],
-      })}
+      <span>{noticeText(notice)}</span>
+      {notice._tag === 'Deleted'
+        ? Opt.match(notice.maybeUndo, {
+          onNone: () => [],
+          onSome: (undo) => [<button on={on('click', undo)}>Undo</button>],
+        })
+        : []}
     </div>
   )
 }

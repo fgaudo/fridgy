@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import * as Tea from '@fgaudo/effect-tea'
 import * as Data from 'effect/Data'
+import type * as DateTime from 'effect/DateTime'
 import * as Equal from 'effect/Equal'
 import * as HashMap from 'effect/HashMap'
 import * as HashSet from 'effect/HashSet'
@@ -8,6 +9,7 @@ import * as Opt from 'effect/Option'
 import * as Result from 'effect/Result'
 import * as fc from 'fast-check'
 import * as Domain from '#domain/product.ts'
+import * as PositiveInteger from '#libs/numbers/positive-integer.ts'
 import { arbitrary as maybe } from '#libs/option/option.test_arbitrary.ts'
 import { utc } from '#libs/testing/date-time.test_arbitrary.ts'
 import { assertProperty, onlyChanged, outcomesOf } from '#libs/testing/update.test_support.ts'
@@ -20,8 +22,8 @@ import {
   loadedOf,
   message,
   products,
-  recent,
   selecting,
+  shown,
   state,
   stateWith,
   still,
@@ -32,10 +34,12 @@ import {
   type Command,
   type Event,
   type Message,
+  type Notice,
   type ProductModel,
   productsOf,
   program,
   type Selection,
+  type Snackbar,
   type State,
 } from './program.ts'
 import { ProductListReadError, type StoredProduct } from './services/product-list/product-list.ts'
@@ -73,13 +77,21 @@ const storedWith = (ids: ReadonlyArray<string>): ReadonlyArray<StoredProduct> =>
     maybeExpirationDate: Opt.none(),
   }))
 
+/** The snackbar of a notice from `at`, after the one standing, if any. */
+const told = (before: State, at: DateTime.Utc, notice: Notice): Snackbar => ({
+  _tag: 'Shown',
+  at,
+  notice,
+  entrance: before.snackbar._tag === 'Shown' ? 'AfterAnother' : 'Alone',
+})
+
 /**
- * A message that cannot arrive in that state: a completion while no deletion is in progress, the end of the offer
- * to undo while there is none, the end of the rows' motion while none moves, a tick while no product expires.
+ * A message that cannot arrive in that state: a completion while no deletion is in progress, the end of the
+ * snackbar while there is none, the end of the rows' motion while none moves, a tick while no product expires.
  */
 const cannotArrive = (msg: Message, before: State) =>
   ((msg._tag === 'Deleted' || msg._tag === 'DeleteFailed') && before.selection._tag !== 'Deleting')
-  || (msg._tag === 'UndoExpired' && before.lastDeletion._tag !== 'Recent')
+  || (msg._tag === 'SnackbarExpired' && before.snackbar._tag !== 'Shown')
   || (msg._tag === 'RowsSettled' && !isSettling(before))
   || (msg._tag === 'TimeChanged' && !hasExpiringProduct(before))
 
@@ -331,20 +343,21 @@ describe('Products update', () => {
   describe('Deleted', () => {
     const deletingState = stateWith('selection', deleting)
 
-    // The snackbar comes after the one of a deletion still recent, which leaves first.
-    test('clears the selection and offers to undo the deletion, of its products, for a while, its snackbar after the one showing, with a vibration', () => {
+    // The snackbar comes after the one standing, which leaves first.
+    test('clears the selection and offers to undo the deletion, of its products, for a while, its snackbar after the one standing, with a vibration', () => {
       assertProperty([deletingState, utc], (before, at) => {
         const { after, commands } = step(Msg.Deleted({ at }), before)
         return before.selection._tag === 'Deleting'
           && after.selection._tag === 'Idle'
-          && Equal.equals(after.lastDeletion, {
-            _tag: 'Recent',
-            at,
-            count: HashSet.size(before.selection.ids),
-            maybeProducts: before.selection.maybeProducts,
-            entrance: before.lastDeletion._tag === 'Recent' ? 'AfterAnother' : 'Alone',
-          })
-          && onlyChanged(before, after, 'selection', 'lastDeletion')
+          && Equal.equals(
+            after.snackbar,
+            told(before, at, {
+              _tag: 'Deleted',
+              count: PositiveInteger.makeUnsafe(HashSet.size(before.selection.ids)),
+              maybeProducts: before.selection.maybeProducts,
+            }),
+          )
+          && onlyChanged(before, after, 'selection', 'snackbar')
           && Equal.equals(commands, [Cmd.Vibrate({ feedback: 'Confirm' })])
       })
     })
@@ -360,62 +373,63 @@ describe('Products update', () => {
   })
 
   describe('DeleteFailed', () => {
-    test('gives the selection back and says so with a toast and a vibration', () => {
-      assertProperty([stateWith('selection', deleting)], (before) => {
-        const { after, commands } = step(Msg.DeleteFailed(), before)
+    // Its snackbar replaces the one standing, an offer to undo included.
+    test('gives the selection back and says so with a snackbar, after the one standing, and a vibration', () => {
+      assertProperty([stateWith('selection', deleting), utc], (before, at) => {
+        const { after, commands } = step(Msg.DeleteFailed({ at }), before)
         return after.selection._tag === 'Selecting'
           && Equal.equals(selectedIds(after.selection), selectedIds(before.selection))
-          && onlyChanged(before, after, 'selection')
-          && Equal.equals(commands, [
-            Cmd.ShowToast({ text: 'Couldn\'t delete the products' }),
-            Cmd.Vibrate({ feedback: 'Reject' }),
-          ])
+          && Equal.equals(after.snackbar, told(before, at, { _tag: 'DeleteFailed' }))
+          && onlyChanged(before, after, 'selection', 'snackbar')
+          && Equal.equals(commands, [Cmd.Vibrate({ feedback: 'Reject' })])
       })
     })
 
     test('is a defect when no deletion is in progress', () => {
-      assertProperty([state], (before) => {
+      assertProperty([state, utc], (before, at) => {
         fc.pre(before.selection._tag !== 'Deleting')
-        expect(() => program.update(Msg.DeleteFailed())(before)).toThrow()
+        expect(() => program.update(Msg.DeleteFailed({ at }))(before)).toThrow()
         return true
       })
     })
   })
 
   describe('UndoRequested', () => {
-    test('stores the deleted products again and withdraws the offer, while it stands', () => {
-      assertProperty([stateWith('lastDeletion', recent)], (before) => {
-        if (before.lastDeletion._tag !== 'Recent' || Opt.isNone(before.lastDeletion.maybeProducts)) {
+    test('stores the deleted products again and withdraws the snackbar, while it offers to', () => {
+      assertProperty([stateWith('snackbar', shown)], (before) => {
+        if (
+          before.snackbar._tag !== 'Shown' || before.snackbar.notice._tag !== 'Deleted'
+          || Opt.isNone(before.snackbar.notice.maybeProducts)
+        ) {
           return rejects(Msg.UndoRequested(), before)
         }
         const { after, commands } = step(Msg.UndoRequested(), before)
-        return after.lastDeletion._tag === 'None'
-          && onlyChanged(before, after, 'lastDeletion')
-          && Equal.equals(commands, [Cmd.Restore({ products: before.lastDeletion.maybeProducts.value })])
+        return after.snackbar._tag === 'None'
+          && onlyChanged(before, after, 'snackbar')
+          && Equal.equals(commands, [Cmd.Restore({ products: before.snackbar.notice.maybeProducts.value })])
       })
     })
 
-    test('is rejected when no deletion is recent', () => {
+    test('is rejected when no snackbar is shown', () => {
       assertProperty(
-        [stateWith('lastDeletion', fc.constant({ _tag: 'None' } as const))],
+        [stateWith('snackbar', fc.constant({ _tag: 'None' } as const))],
         (before) => rejects(Msg.UndoRequested(), before),
       )
     })
   })
 
-  describe('UndoExpired', () => {
-    test('withdraws the offer and touches nothing else', () => {
-      assertProperty([stateWith('lastDeletion', recent)], (before) => {
-        const { after, commands } = step(Msg.UndoExpired(), before)
-        return after.lastDeletion._tag === 'None' && onlyChanged(before, after, 'lastDeletion')
-          && commands.length === 0
+  describe('SnackbarExpired', () => {
+    test('withdraws the snackbar, and an offer to undo with it, and touches nothing else', () => {
+      assertProperty([stateWith('snackbar', shown)], (before) => {
+        const { after, commands } = step(Msg.SnackbarExpired(), before)
+        return after.snackbar._tag === 'None' && onlyChanged(before, after, 'snackbar') && commands.length === 0
       })
     })
 
-    // The timer runs only while a deletion is recent, so its end heard otherwise is a bug.
-    test('is a defect when no deletion is recent', () => {
-      assertProperty([stateWith('lastDeletion', fc.constant({ _tag: 'None' } as const))], (before) => {
-        expect(() => program.update(Msg.UndoExpired())(before)).toThrow()
+    // The timer runs only while a snackbar is shown, so its end heard otherwise is a bug.
+    test('is a defect when no snackbar is shown', () => {
+      assertProperty([stateWith('snackbar', fc.constant({ _tag: 'None' } as const))], (before) => {
+        expect(() => program.update(Msg.SnackbarExpired())(before)).toThrow()
         return true
       })
     })
@@ -443,27 +457,36 @@ describe('Products update', () => {
   })
 
   // The storage is as it was: there is nothing to give back but the news.
-  test('RestoreFailed says so with a toast and a vibration, and changes nothing', () => {
-    assertProperty([state], (before) => {
-      const { after, commands } = step(Msg.RestoreFailed(), before)
-      return Equal.equals(after, before)
-        && Equal.equals(commands, [
-          Cmd.ShowToast({ text: 'Couldn\'t put the products back' }),
-          Cmd.Vibrate({ feedback: 'Reject' }),
-        ])
+  test('RestoreFailed says so with a snackbar, after the one standing, and a vibration, and changes nothing else', () => {
+    assertProperty([state, utc], (before, at) => {
+      const { after, commands } = step(Msg.RestoreFailed({ at }), before)
+      return Equal.equals(after.snackbar, told(before, at, { _tag: 'RestoreFailed' }))
+        && onlyChanged(before, after, 'snackbar')
+        && Equal.equals(commands, [Cmd.Vibrate({ feedback: 'Reject' })])
+    })
+  })
+
+  // Home tells it once the edit page has left, which vibrated.
+  test('ProductGone says so with a snackbar, after the one standing, and changes nothing else', () => {
+    assertProperty([state, utc], (before, at) => {
+      const { after, commands } = step(Msg.ProductGone({ at }), before)
+      return Equal.equals(after.snackbar, told(before, at, { _tag: 'ProductGone' }))
+        && onlyChanged(before, after, 'snackbar')
+        && commands.length === 0
     })
   })
 })
 
-// The storage is observed in every state; the clock ticks only for a product that expires; the offer to undo the
-// last deletion is timed from it; the rows' motion, by the rows arriving and leaving.
-test('listens to the storage always, to the clock while a product shown expires, and times a recent deletion and the rows moving', () => {
+// The storage is observed in every state; the clock ticks only for a product that expires; the snackbar is timed
+// from what it tells; the rows' motion, by the rows arriving and leaving.
+test('listens to the storage always, to the clock while a product shown expires, and times the snackbar and the rows moving', () => {
   assertProperty([state], (s) => {
     const subscriptions = Tea.subscriptionsOf(program)(s)
-    const timesUndo = s.lastDeletion._tag === 'Recent' && HashMap.has(subscriptions, ['undo', s.lastDeletion.at])
+    const timesSnackbar = s.snackbar._tag === 'Shown'
+      && HashMap.has(subscriptions, ['snackbar', s.snackbar.at, s.snackbar.notice._tag])
     const timesMotion = HashMap.has(subscriptions, ['settling', arrivalsOf(s), departuresOf(s)])
     return HashMap.has(subscriptions, 'changes') && HashMap.has(subscriptions, 'clock') === hasExpiringProduct(s)
-      && (s.lastDeletion._tag === 'Recent') === timesUndo
+      && (s.snackbar._tag === 'Shown') === timesSnackbar
       && isSettling(s) === timesMotion
   })
 })
@@ -605,15 +628,19 @@ describe('Products model', () => {
   })
 
   // Whatever the list shows: the last products may have just been deleted.
-  test('the snackbar says when and how many products were deleted while the deletion is recent, coming as the state says, with the way to undo it when its products can come back', () => {
+  test('the snackbar tells what the state says, coming as it says, with the way to undo a deletion when its products can come back', () => {
     assertProperty([state], (s) => {
-      const { lastDeletion } = program.makeModel(s)
-      if (s.lastDeletion._tag === 'None') return lastDeletion._tag === 'None'
-      return lastDeletion._tag === 'Deleted'
-        && Equal.equals(lastDeletion.at, s.lastDeletion.at)
-        && lastDeletion.count === s.lastDeletion.count
-        && lastDeletion.entrance === s.lastDeletion.entrance
-        && Equal.equals(lastDeletion.maybeUndo, Opt.map(s.lastDeletion.maybeProducts, () => Msg.UndoRequested()))
+      const { snackbar } = program.makeModel(s)
+      if (s.snackbar._tag === 'None') return snackbar._tag === 'None'
+      if (snackbar._tag !== 'Shown') return false
+      const { notice } = s.snackbar
+      return Equal.equals(snackbar.at, s.snackbar.at)
+        && snackbar.entrance === s.snackbar.entrance
+        && (notice._tag === 'Deleted'
+          ? snackbar.notice._tag === 'Deleted'
+            && snackbar.notice.count === notice.count
+            && Equal.equals(snackbar.notice.maybeUndo, Opt.map(notice.maybeProducts, () => Msg.UndoRequested()))
+          : snackbar.notice._tag === notice._tag)
     })
   })
 })
@@ -625,8 +652,10 @@ test('arbitraries cover every variant of the state', () => {
       `list:${s.list._tag}`,
       `selection:${s.selection._tag}`,
       `now:${s.maybeNow._tag}`,
-      `lastDeletion:${s.lastDeletion._tag}`,
-      ...(s.lastDeletion._tag === 'Recent' ? [`restorable:${s.lastDeletion.maybeProducts._tag}`] : []),
+      `snackbar:${s.snackbar._tag === 'Shown' ? s.snackbar.notice._tag : 'None'}`,
+      ...(s.snackbar._tag === 'Shown' && s.snackbar.notice._tag === 'Deleted'
+        ? [`restorable:${s.snackbar.notice.maybeProducts._tag}`]
+        : []),
       ...(s.list._tag === 'Loaded'
         ? [
           `arrivals:${HashSet.size(s.list.arrivals) > 0 ? 'Some' : 'None'}`,
@@ -640,8 +669,6 @@ test('arbitraries cover every variant of the state', () => {
     'arrivals:Some',
     'departures:None',
     'departures:Some',
-    'lastDeletion:None',
-    'lastDeletion:Recent',
     'list:Failed',
     'list:Loaded',
     'list:Loading',
@@ -652,5 +679,10 @@ test('arbitraries cover every variant of the state', () => {
     'selection:Deleting',
     'selection:Idle',
     'selection:Selecting',
+    'snackbar:DeleteFailed',
+    'snackbar:Deleted',
+    'snackbar:None',
+    'snackbar:ProductGone',
+    'snackbar:RestoreFailed',
   ])
 })

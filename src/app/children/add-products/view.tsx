@@ -12,10 +12,12 @@ import type {
   DateShown,
   Digit,
   Entering,
+  Failure,
   Message,
   Model,
   NameShown,
   OrderChoice,
+  Snackbar,
   Supporting,
 } from './program.ts'
 
@@ -723,11 +725,36 @@ const announcement = (maybeEntering: Opt.Option<Entering>) => (
         `${name} added. ${
           Opt.match(maybeExpirationDate, {
             onNone: () => 'No expiration',
-            onSome: (date) => `Expires ${formatDay(date)}`,
+            onSome: (date) =>
+              `Expires ${formatDay(date)}`,
           })
         }`,
       ],
     })}
+  </div>
+)
+
+const failureTexts: Readonly<Record<Failure, string>> = {
+  AddFailed: 'Couldn\'t add the product',
+  OrderNotKept: 'Couldn\'t save the date order',
+}
+
+/**
+ * Material's snackbar (`snackbar` in `styles.css`) over the docked controls, keyed by its id so that the next one
+ * appears anew, after this one has sunk. The place stays, so that it enters and leaves with its own transitions.
+ */
+const snackbar = (shown: Snackbar) => (
+  <div key='snackbar' props={{ className: 'snackbar-slot' }}>
+    {shown._tag === 'None' ? [] : [
+      <div
+        key={`snackbar-${shown.id}`}
+        attrs={{ 'data-entrance': shown.entrance }}
+        style={{ remove: { opacity: '0', transform: 'translateY(0.5rem)' } }}
+        props={{ className: 'snackbar' }}
+      >
+        <span>{failureTexts[shown.failure]}</span>
+      </div>,
+    ]}
   </div>
 )
 
@@ -747,43 +774,46 @@ export const view: View<Model, Message> = (model, dispatch) => (
     }}
     props={{ className: 'fixed inset-0 z-70' }}
   >
-    {Match.valueTags(model, {
-      Naming: (naming) => [
-        nameStep(naming, { _tag: 'Editing', controls: naming }, naming.maybeEntering, dispatch),
-        flightLayer(naming.maybeEntering),
-        announcement(naming.maybeEntering),
-      ],
-      LookingUp: (lookingUp) => [
-        nameStep(lookingUp, { _tag: 'LookingUp', controls: lookingUp }, Opt.none(), dispatch),
-        flightLayer(Opt.none()),
-        announcement(Opt.none()),
-      ],
-      Scanning: (scanning) => [
-        nameStep(scanning, { _tag: 'UnderScanner' }, Opt.none(), dispatch),
-        flightLayer(Opt.none()),
-        scanner(scanning, dispatch),
-        announcement(Opt.none()),
-      ],
-      Dating: (dating) => [
-        nameStep(dating, { _tag: 'UnderDate' }, dating.maybeEntering, dispatch),
-        dateStep(dating, { _tag: 'Editing', controls: dating }, dispatch),
-        flightLayer(dating.maybeEntering),
-        announcement(dating.maybeEntering),
-      ],
-      Adding: (adding) =>
-        Match.valueTags(adding.step, {
-          Naming: () => [
-            nameStep(adding, { _tag: 'Adding' }, adding.maybeEntering, dispatch),
-            flightLayer(adding.maybeEntering),
-            announcement(adding.maybeEntering),
-          ],
-          Dating: (date) => [
-            nameStep(adding, { _tag: 'UnderDate' }, adding.maybeEntering, dispatch),
-            dateStep(date, { _tag: 'Adding' }, dispatch),
-            flightLayer(adding.maybeEntering),
-            announcement(adding.maybeEntering),
-          ],
-        }),
-    })}
+    {[
+      ...Match.valueTags(model, {
+        Naming: (naming) => [
+          nameStep(naming, { _tag: 'Editing', controls: naming }, naming.maybeEntering, dispatch),
+          flightLayer(naming.maybeEntering),
+          announcement(naming.maybeEntering),
+        ],
+        LookingUp: (lookingUp) => [
+          nameStep(lookingUp, { _tag: 'LookingUp', controls: lookingUp }, Opt.none(), dispatch),
+          flightLayer(Opt.none()),
+          announcement(Opt.none()),
+        ],
+        Scanning: (scanning) => [
+          nameStep(scanning, { _tag: 'UnderScanner' }, Opt.none(), dispatch),
+          flightLayer(Opt.none()),
+          scanner(scanning, dispatch),
+          announcement(Opt.none()),
+        ],
+        Dating: (dating) => [
+          nameStep(dating, { _tag: 'UnderDate' }, dating.maybeEntering, dispatch),
+          dateStep(dating, { _tag: 'Editing', controls: dating }, dispatch),
+          flightLayer(dating.maybeEntering),
+          announcement(dating.maybeEntering),
+        ],
+        Adding: (adding) =>
+          Match.valueTags(adding.step, {
+            Naming: () => [
+              nameStep(adding, { _tag: 'Adding' }, adding.maybeEntering, dispatch),
+              flightLayer(adding.maybeEntering),
+              announcement(adding.maybeEntering),
+            ],
+            Dating: (date) => [
+              nameStep(adding, { _tag: 'UnderDate' }, adding.maybeEntering, dispatch),
+              dateStep(date, { _tag: 'Adding' }, dispatch),
+              flightLayer(adding.maybeEntering),
+              announcement(adding.maybeEntering),
+            ],
+          }),
+      }),
+      snackbar(model.snackbar),
+    ]}
   </div>
 )
