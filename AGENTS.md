@@ -45,9 +45,10 @@ error, the rule is intended: fix the code, do not work around the check.
 ## Architecture rules
 
 Every program has the same shape, whatever its depth: a folder holding `program.ts`, `view.tsx`, `layer.ts`,
-their tests, `services/` and `children/`. The root (`src/app`), a page (a child of the root, one of the stack
-it shows) and a child of a page are all such folders; "page" names a role in the UI, kept by the root's state,
-not a kind of program. The programs to copy are `src/app/children/home` and `src/app/children/about`.
+their tests, `services/`, `children/` and, once two programs of its subtree use the same one, `programs/`. The
+root (`src/app`), a page (a child of the root, one of the stack it shows) and a child of a page are all such
+folders; "page" names a role in the UI, kept by the root's state, not a kind of program. The programs to copy are
+`src/app/children/home` and `src/app/children/about`.
 
 - **Expected errors are typed, bugs crash.** Expected failures go through Effect's error channel
   (`Effect.tryPromise`, `Effect.try`; no `try/catch`, no bare Promises), and a subscription's failure is a
@@ -84,9 +85,14 @@ not a kind of program. The programs to copy are `src/app/children/home` and `src
   and is more forgiving, so that what was stored can still be shown and deleted.
 - **Shared things move up, never sideways.** The rules of an entity to `src/domain`; how things are done (the
   schema, how a product is written, a platform call longer than a line) to `src/infrastructure`. Services never
-  move up; a program never imports a sibling; an adapter stays a thin wrapper on the infrastructure. No program
-  is used by two parents yet: the day one is, it gets a folder of its own under `src/app`, outside every
-  `children/`, with an alias and a Biome rule of its own.
+  move up; a program never imports a sibling; an adapter stays a thin wrapper on the infrastructure. A thing
+  two programs have in common moves up when its truth lies outside them, so that a copy changed on its own
+  would be a bug (a rule of the domain, a look of Material's, in `src/styles.css`); where they may
+  legitimately differ, it is written twice, never shared through parameters that describe the caller. The one
+  thing of the app that moves up as it is, is a whole program: used by two programs, it lives in `programs/`
+  of their lowest common parent, and each uses it as a child, through its three modules, never as fragments
+  of model or view. None exists yet: the first brings the Biome rule that lets a parent's subtree reach
+  its `programs/`.
 - **One storage per setup; migrations are append-only.** Every adapter of the storage is written once, on
   `SqlClient`; the entrypoint provides the engine. A phone has already run the existing migrations, so a fix is
   a new one.

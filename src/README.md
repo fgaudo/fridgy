@@ -19,13 +19,16 @@ src/
 │  ├─ view.tsx           public: the root view (hot-reload entry in development)
 │  ├─ layer.ts           public: every adapter that has no alternative, the toasts' included; needs a
 │  │                     `SqlClient` and an `HttpClient`
-│  └─ children/<child>/  a child Program (of the root: a page), of the same shape as the root, at any depth; of
-│     │                  app/, it imports only its own folder, and the infrastructure's services
-│     ├─ program.ts · view.tsx · layer.ts   its public API: the only modules its parent imports
-│     ├─ services/<service>/   a service of its own, with its adapters, contract and tests
-│     │                        (`add-products/services/scanner/`, `add-products/services/product-lookup/`)
-│     └─ children/<child>/     its own children (`home/children/products/`, with
-│                              `services/product-list/`)
+│  ├─ children/<child>/  a child Program (of the root: a page), of the same shape as the root, at any depth; of
+│  │  │                  app/, it imports only its own folder, and the infrastructure's services
+│  │  ├─ program.ts · view.tsx · layer.ts   its public API: the only modules its parent imports
+│  │  ├─ services/<service>/   a service of its own, with its adapters, contract and tests
+│  │  │                        (`add-products/services/scanner/`, `add-products/services/product-lookup/`)
+│  │  ├─ children/<child>/     its own children (`home/children/products/`, with
+│  │  │                        `services/product-list/`)
+│  │  └─ programs/<program>/   none yet: a program two programs of this subtree use, of this same shape
+│  └─ programs/<program>/  none yet: a program two pages use, of the same shape as a child and used like one
+│                          (see "Visibility")
 │
 ├─ infrastructure/       what the app's adapters share: the storage (storage/: the database's engine, sqlite in
 │                        a worker on OPFS or in memory, its schema and migrations, how a product is written, deleted and
@@ -75,6 +78,10 @@ role a file's name gives it. Biome's `noRestrictedImports` rule (`biome.json`) e
   sibling (another child, another program's service), and a child only through its `program.ts`, `view.tsx`
   and `layer.ts`, at every depth; and the infrastructure's services, for the platform's facts it takes as they
   are;
+- a program two programs use lives in `programs/` of their lowest common parent, and every program of that
+  parent's subtree reaches it as it reaches a child, through its three modules, by a relative import
+  (`../../programs/<program>/program.ts`) or, from deeper than `../../`, an alias. None exists yet: today
+  every import that climbs is refused, and the rule that allows these is added with the first such program;
 - adapters (`<service>.<backing>.ts`) are imported only by a `layer.ts`, by the entrypoints, which pick among
   alternatives, and by their own tests: a program uses its services;
 - from outside `app/`, only its root modules (`program.ts`, `view.tsx`, `layer.ts`) and, for the entrypoints,

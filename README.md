@@ -119,7 +119,8 @@ How the code is organized:
   back button), owned by the program that uses it, with the adapters that provide it. Two programs that both
   touch products each have their own.
 - **Shared code moves up**: the entities (`Product`) to `src/domain/`, how things are done (the database's
-  schema, how a product is written) to `src/infrastructure/`.
+  schema, how a product is written) to `src/infrastructure/`, a whole program two programs use to the
+  `programs/` of their common parent (none yet).
 - **Environments** (production, development) exist only in `src/entrypoints/`, which pick what has
   alternatives: the database's engine, the HTTP client and the platform's back button.
 - **Views** are TSX, rendered by snabbdom through a small bridge (`src/libs/tea-snabbdom/`, `src/libs/jsx/`),

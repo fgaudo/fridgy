@@ -21,7 +21,9 @@ Every program is a folder of the same shape, at any depth:
 ├─ program.test.ts          property tests of update, the view and the subscriptions
 ├─ program.test_arbitrary.ts  generators of its states and messages, valid values only
 ├─ services/<service>/      what it needs from outside (see the `add-service` skill)
-└─ children/<child>/        its own children, of this same shape
+├─ children/<child>/        its own children, of this same shape
+└─ programs/<program>/      a program two programs of this subtree use, of this same shape (see "A program
+                            two programs use")
 ```
 
 Never split a program into `messages`/`state`/`update` files: they would import each other in cycles. A
@@ -120,6 +122,20 @@ from the domain's `*.test_arbitrary.ts` files, never from `*Unsafe` constructors
 
 A child whose view only draws pieces the parent places (Products) has its `update` tested in its own
 `program.test.ts`, and its pieces checked by its parent's view test.
+
+## A program two programs use
+
+What two programs have in common moves up when its truth lies outside them (a rule, to `src/libs/` or
+`src/domain/`; a look of Material's, to `src/styles.css`), and is written twice where they may legitimately
+differ (a line of layout, the composition of a page): never a module of model fragments or view pieces
+generic in the caller's message. When what they share is a whole program, a state machine with its view, it
+moves up as it is: into `programs/<program>/` of their lowest common parent, of the shape above, and each of
+them declares it as a child, through its three modules, as in "Declaring a child". It belongs to no parent:
+it knows nothing of who contains it, and a change made for one user that the other cannot take is a sign
+that they share less than a program. Two uses are few: copy first (`docs/edit-product.md`, the date entry),
+and move up when the copies start to cost. There is none yet: the first brings the Biome rule that lets the
+parent's subtree import `programs/*/{program.ts,view.tsx,layer.ts}`, today refused as an import that climbs,
+and an alias where a relative import would pass `../../`.
 
 ## A page of the root
 
