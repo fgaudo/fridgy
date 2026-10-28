@@ -1,6 +1,4 @@
 @import "tailwindcss";
-/* In a layer, so that the utilities below (a size, a color) win over the icons' own rules. */
-@import "material-symbols/rounded.css" layer(base);
 
 /*
  * Material 3: the color roles of `palette.generated.css`, and here its type scale, shapes, elevation and motion.
@@ -131,56 +129,11 @@
 }
 
 /*
- * One Noto family per script. Some scripts are shared by several languages with their own styles: the language
- * of the document (`lang` on <html>, set from the device's) picks which family comes first. Arabic script is
- * written in Nastaliq for Urdu; Chinese characters take the forms of Japanese, Korean, traditional or simplified
- * Chinese.
+ * The system's fonts: Android has a family for every script, chosen by the text, and the forms of Chinese
+ * characters by the document's language (`lang` on <html>, set from the device's). The app ships only its icons.
  */
 body {
-  --font-arabic: "Noto Sans Arabic Variable", "Noto Nastaliq Urdu Variable";
-  --font-han:
-    "Noto Sans SC Variable",
-    "Noto Sans TC Variable",
-    "Noto Sans JP Variable",
-    "Noto Sans KR Variable";
-  font-family:
-    "Noto Sans Variable", var(--font-arabic), "Noto Sans Hebrew Variable",
-    "Noto Sans Bengali Variable", "Noto Sans Gujarati Variable",
-    "Noto Sans Gurmukhi Variable", "Noto Sans Kannada Variable",
-    "Noto Sans Malayalam Variable", "Noto Sans Oriya Variable",
-    "Noto Sans Tamil Variable", "Noto Sans Telugu Variable",
-    "Noto Sans Thai Variable", var(--font-han), sans-serif;
-}
-
-body:lang(ur) {
-  --font-arabic: "Noto Nastaliq Urdu Variable", "Noto Sans Arabic Variable";
-}
-
-body:lang(ja) {
-  --font-han:
-    "Noto Sans JP Variable",
-    "Noto Sans SC Variable",
-    "Noto Sans TC Variable",
-    "Noto Sans KR Variable";
-}
-
-body:lang(ko) {
-  --font-han:
-    "Noto Sans KR Variable",
-    "Noto Sans SC Variable",
-    "Noto Sans TC Variable",
-    "Noto Sans JP Variable";
-}
-
-body:lang(zh-TW),
-body:lang(zh-HK),
-body:lang(zh-MO),
-body:lang(zh-Hant) {
-  --font-han:
-    "Noto Sans TC Variable",
-    "Noto Sans SC Variable",
-    "Noto Sans JP Variable",
-    "Noto Sans KR Variable";
+  font-family: system-ui, sans-serif;
 }
 
 /* A view marks itself `scroll-locked` while a modal or a menu covers it. */

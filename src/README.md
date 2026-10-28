@@ -46,7 +46,7 @@ src/
 │                        test support) and JSX runtime, sources, branded numbers, barcodes (the expansion of
 │                        a UPC-E), dates (the orders of a date's digits, the days they name, the rules of typing
 │                        them on a keypad), `defect`, test helpers, …
-├─ index.html            the page template: the build fills in the fonts and the entrypoint
+├─ index.html            the page template: it links the icon font, and the build fills in the entrypoint
 ├─ error.html            shown by Capacitor instead of the app on a WebView older than it needs
 ├─ palette.generated.css the Material 3 color roles, written by `bun run update-palette`
 └─ styles.css            the stylesheet (Tailwind): Material's type scale, shapes, elevation, motion, state layer
@@ -56,12 +56,11 @@ src/
 The runtime of the Elm architecture is a library, an npm dependency:
 [`@fgaudo/effect-tea`](https://github.com/fgaudo/effect-tea).
 
-The Noto fonts, for every script the app shows, are copied by the build into `dist/fonts/` and linked from
-`index.html` (`fontStylesheets` in `scripts/cli.ts`), not imported in `styles.css`: the CSS bundler would inline
-them. Every font face is loaded before the splash screen hides (`infrastructure/fonts.ts`), so no text ever
-swaps fonts while the app is in use. Where several languages share a script, the device's language (set as
-`lang` by `index.html`) picks the family in `styles.css`: Nastaliq for Urdu, and the Japanese, Korean,
-traditional or simplified forms of Chinese characters.
+The text is drawn in the system's fonts: Android has a family for every script, and picks the forms of Chinese
+characters by the device's language (set as `lang` by `index.html`). The only font the app ships is its icons,
+Material Symbols, cut down by the build to the icons the views name (`writeIconFont` in `scripts/cli.ts`) and
+written into `dist/fonts/`, linked from `index.html` rather than imported in `styles.css`, which would inline it.
+It is loaded before the splash screen hides (`infrastructure/fonts.ts`), so that the first view has its icons.
 
 ## Reading order
 

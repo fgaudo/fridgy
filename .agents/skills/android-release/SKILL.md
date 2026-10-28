@@ -123,7 +123,7 @@ The version is `YEAR.MONTH.N`, N counting the releases of the month from 0 (`202
    gaps" in `AGENTS.md` that the emulator or a phone can settle is checked then;
 5. is uploaded to the Play Console as an AAB signed with the upload key of the previous releases (Play App
    Signing holds the app's key; `build.gradle` has no signing config), with the AAB's size noted (`dist/` is
-   38 MB, mostly the Noto fonts), and the console brought up to date with it: the store listing (screenshots
+   1.4 MB), and the console brought up to date with it: the store listing (screenshots
    and description of the app as it is, the "What's new" text), the Data safety form (the developer collects
    nothing; the camera, for the scanner; a scanned barcode is sent to Open Food Facts), the privacy policy's
    URL (`https://github.com/fgaudo/fridgy/blob/main/PRIVACY.md`, the one About links) and no link to the old

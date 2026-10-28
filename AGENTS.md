@@ -174,8 +174,10 @@ folders; "page" names a role in the UI, kept by the root's state, not a kind of 
 - A defect leaves the app frozen on its last frame: `src/entrypoints/run.ts` runs the program with nothing
   around it, so the cause goes to the console only, and the user sees neither a message nor a way to restart.
   Whether the production entrypoint shows something instead is not decided.
-- The app has not been run on WebView 114 exactly: the procedure in the `android-release` skill comes from
-  APKMirror's listing and Chromium's docs, and has not been followed yet.
+- On WebView 114 exactly (the `android-release` skill's procedure, followed in the emulator on 2026-10-28) the
+  database, the `color-mix` shadows, `scrollend` and `lh` work. In most starts the renderer died about 1.5 s
+  after the first view, under the Noto fonts then loaded at start, since replaced by the system's: that a start
+  survives with the icon font alone has not been checked.
 - The page that edits a product (`docs/edit-product.md`) has been checked in a browser only: not yet on Android,
   where a long press, which fires `contextmenu`, must not also deliver a `click` that opens the product, and
   where the back button, with the keyboard open, should close the keyboard first.
