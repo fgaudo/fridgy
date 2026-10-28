@@ -106,7 +106,9 @@ The pass, on both reference screens of "Supported screen sizes":
   answers from the WebView.
 
 Install the app from a clean state (`adb shell pm clear net.gaudo.fridgy`): an install over an older schema
-fails on the first read. The dark theme: `adb shell cmd uimode night yes`. A vibration's delivery:
+fails on the first read. At start, `SystemBars` logs `Error injecting safe area CSS`, harmlessly: its script
+runs before the document exists, and the next injection sets the insets. The dark theme:
+`adb shell cmd uimode night yes`. A vibration's delivery:
 `adb shell dumpsys vibrator_manager` lists each one with its usage and whether the system ignored it. The
 backup: `adb shell bmgr enable true`, `bmgr transport com.android.localtransport/.LocalTransport`,
 `bmgr backupnow net.gaudo.fridgy`, then uninstall and reinstall: `restoreAtInstall` brings `app_webview`, the
@@ -162,6 +164,13 @@ Play Store, as an update: `versionCode` 20261000 over its 10. Decided, and to be
   products are to be entered again.
 - `minSdkVersion` goes from 23 to 29 ("Supported Android versions"): phones on Android 6 to 9 keep 1.0.8 and
   get no update, which the Play Console reports.
+- **It ships on Capacitor 9's pre-releases**, not on the stable 8 line (decided on 2026-10-28): the app relies
+  on the `SystemBars` plugin with `insetsHandling: 'css'`, which 8 does not have. The tree is on 9.0.0-beta.0
+  of core, android and the CLI, with the plugins at their newest 9 pre-release (`npm view <pkg> dist-tags`,
+  the `next` tag). The beta was built and run on 2026-10-28 on the target image, API 37, on the 960×2136
+  screen: the start in both themes, the system bars' insets and the back button on every page. Not run on it
+  yet: API 29, the 320×533dp screen, the camera and the vibrations. Before the release, upgrade to the newest
+  9 pre-release and run the whole pass on both images.
 - The tree has no `LICENSE` file, though About says AGPL-3.0-or-later and 1.0.8 had one (`git show
   1.0.8:LICENSE`): restore it, and set `license` in `package.json`.
 - `app_name` in `android/app/src/main/res/values/strings.xml` and `appName` in `capacitor.config.ts` say

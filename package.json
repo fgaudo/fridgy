@@ -27,9 +27,9 @@
     "prepare": "effect-tsgo patch --typescript --no-oxlint && bun run update-licenses"
   },
   "dependencies": {
-    "@capacitor/android": "9.0.0-alpha.8",
+    "@capacitor/android": "9.0.0-beta.0",
     "@capacitor/app": "9.0.0-alpha.2",
-    "@capacitor/core": "9.0.0-alpha.8",
+    "@capacitor/core": "9.0.0-beta.0",
     "@capacitor/haptics": "9.0.0-next.1",
     "@capacitor/splash-screen": "9.0.0-alpha.2",
     "@capacitor/toast": "9.0.0-alpha.2",
@@ -45,7 +45,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.6.3",
-    "@capacitor/cli": "9.0.0-alpha.8",
+    "@capacitor/cli": "9.0.0-beta.0",
     "@effect/platform-bun": "^4.0.6",
     "@effect/tsgo": "0.53.3",
     "@material/material-color-utilities": "^0.4.0",

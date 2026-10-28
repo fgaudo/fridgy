@@ -175,11 +175,6 @@ folders; "page" names a role in the UI, kept by the root's state, not a kind of 
   with a camera yet; on a desktop without the API (Chrome on Windows), the scan button is disabled and the name
   field says why. Neither has the expansion of a UPC-E, which assumes that the detector reports one as its 8
   digits. The lookup itself runs from the WebView (`docs/open-food-facts-lookup.md`, "Verified, and not").
-- Whether the release ships on Capacitor 9 alpha (built and run in the emulator on API 29 and 37 on 2026-10-28)
-  or on the stable line (8.5.3) is not decided: the stable line is to be checked for the `SystemBars` plugin
-  with `insetsHandling: 'css'`, which the app relies on. The alpha's `SystemBars` logs `Error injecting safe
-  area CSS` at start, harmlessly: its script runs before the document exists, and the next injection sets the
-  insets.
 - A defect leaves the app frozen on its last frame: `src/entrypoints/run.ts` runs the program with nothing
   around it, so the cause goes to the console only, and the user sees neither a message nor a way to restart.
   Whether the production entrypoint shows something instead is not decided.

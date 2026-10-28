@@ -1,5 +1,5 @@
 {
-    "@capacitor/android@9.0.0-alpha.8": {
+    "@capacitor/android@9.0.0-beta.0": {
         "licenses": "MIT",
         "repository": "https://github.com/ionic-team/capacitor",
         "publisher": "Ionic Team",
@@ -17,7 +17,7 @@
         "name": "@capacitor/app",
         "description": "The App API handles high level App state and events.For example, this API emits events when the app enters and leaves the foreground, handles deeplinks, opens other apps, and manages persisted plugin state."
     },
-    "@capacitor/core@9.0.0-alpha.8": {
+    "@capacitor/core@9.0.0-beta.0": {
         "licenses": "MIT",
         "repository": "https://github.com/ionic-team/capacitor",
         "publisher": "Ionic Team",
