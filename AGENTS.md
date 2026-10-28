@@ -168,7 +168,12 @@ folders; "page" names a role in the UI, kept by the root's state, not a kind of 
   why. Neither has the lookup on Open Food Facts (`docs/open-food-facts-lookup.md`): its requests from the
   WebView (no CORS error, the appended User-Agent), nor the expansion of a UPC-E, which assumes that the
   detector reports one as its 8 digits.
-- Capacitor 9 alpha (API 37, WebView 114) has not been built or run in the emulator yet.
+- Capacitor 9 alpha (API 37, WebView 114) has not been built or run in the emulator yet, and whether the
+  release ships on it or on the stable line (8.5.3) is not decided: the stable line is to be checked for the
+  `SystemBars` plugin with `insetsHandling: 'css'`, which the app relies on.
+- A defect leaves the app frozen on its last frame: `src/entrypoints/run.ts` runs the program with nothing
+  around it, so the cause goes to the console only, and the user sees neither a message nor a way to restart.
+  Whether the production entrypoint shows something instead is not decided.
 - The app has not been run on WebView 114 exactly: the procedure in the `android-release` skill comes from
   APKMirror's listing and Chromium's docs, and has not been followed yet.
 - The page that edits a product (`docs/edit-product.md`) has been checked in a browser only: not yet on Android,

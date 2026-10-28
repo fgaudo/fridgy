@@ -117,5 +117,31 @@ The version is `YEAR.MONTH.N`, N counting the releases of the month from 0 (`202
    (`src/app/children/about/services/licenses/licenses.generated.json`), and commits the file with `bun.lock`
    when it changes;
 3. runs `bun run typecheck`, `bun run test` and `bun run lint`, then builds and syncs as above;
-4. is checked in the emulator on the lowest supported version and on the target;
-5. is tagged in git (`v2026.10.0`).
+4. is checked in the emulator on the lowest supported version and on the target, and every item under "Known
+   gaps" in `AGENTS.md` that the emulator or a phone can settle is checked then;
+5. is uploaded to the Play Console as an AAB signed with the upload key of the previous releases (Play App
+   Signing holds the app's key; `build.gradle` has no signing config), with the AAB's size noted (`dist/` is
+   38 MB, mostly the Noto fonts), and the console brought up to date with it: the store listing (screenshots
+   and description of the app as it is, the "What's new" text), the Data safety form (the developer collects
+   nothing; the camera, for the scanner; a scanned barcode is sent to Open Food Facts), the privacy policy's
+   URL (`https://github.com/fgaudo/fridgy/blob/main/PRIVACY.md`, the one About links) and no link to the old
+   docs site (`fgaudo.github.io/fridgy`, gone);
+6. is tagged in git (`v2026.10.0`).
+
+### The first release of this app, 2026.10.0
+
+It replaces 1.0.8 (August 2025, another codebase: SvelteKit, Capacitor 7, minSdkVersion 23), the one on the
+Play Store, as an update: `versionCode` 20261000 over its 10. Decided, and to be done before it:
+
+- **The products of 1.0.8 are not carried over.** 1.0.8 kept them in a native SQLite database (`fridgy.db`,
+  written by its own `SQLiteOpenHelper`), which nothing in this app reads, and it had `allowBackup="false"`,
+  so no backup brings them back either. Decided on 2026-10-28: no import; the "What's new" text says that the
+  products are to be entered again.
+- `minSdkVersion` goes from 23 to 29 ("Supported Android versions"): phones on Android 6 to 9 keep 1.0.8 and
+  get no update, which the Play Console reports.
+- The tree has no `LICENSE` file, though About says AGPL-3.0-or-later and 1.0.8 had one (`git show
+  1.0.8:LICENSE`): restore it, and set `license` in `package.json`.
+- `app_name` in `android/app/src/main/res/values/strings.xml` and `appName` in `capacitor.config.ts` say
+  `fridgy`; 1.0.8 showed `Fridgy` in the launcher.
+
+Remove this section once the release is out.
