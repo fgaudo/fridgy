@@ -14,6 +14,7 @@ import * as Ref from 'effect/Ref'
 import * as Schema from 'effect/Schema'
 import * as Stream from 'effect/Stream'
 import * as LicenseChecker from 'license-checker-rseidelsohn'
+import { Entries } from '#app/children/about/services/licenses/licenses.bundled.ts'
 import { palette, surface } from './palette.ts'
 import { tailwind } from './tailwind.ts'
 
@@ -116,14 +117,17 @@ const devServerConfig = Config.all({
   port: Config.Port('DEV_SERVER_PORT').pipe(Config.withDefault(3000)),
 })
 
-/** Views (the only `.tsx` files) and styles can be swapped in place; any other change needs a full page reload. */
+/**
+ * Views (the only `.tsx` files) and styles can be swapped in place; any other change needs a full page reload.
+ * The signal goes over the `/hot-reload` socket to `src/infrastructure/hot-module.ts`, which reads these two words.
+ */
 const reloadFor = (path: Path.Path, changed: HashSet.HashSet<string>) =>
   HashSet.every(changed, (file) => ['.tsx', '.css'].includes(path.extname(file))) ? 'reload-view' : 'reload-page'
 
 const watchCommand = Cli.Command.make(
   'watch',
   {},
-  Effect.fn(function*() {
+  Effect.fn('watchCommand')(function*() {
     const resolve = yield* root
     const path = yield* Path.Path
     const fs = yield* FS.FileSystem
@@ -184,22 +188,7 @@ const PackageJson = Schema.fromJsonString(Schema.Struct({ description: Schema.op
 const hasDeclaredDescription = (packageJson: string) =>
   Opt.exists(Schema.decodeOption(PackageJson)(packageJson), (pkg) => typeof pkg.description === 'string')
 
-/** What the About page shows of each package: the shape of `licenses.generated.json`. */
-const LicensesJson = Schema.fromJsonString(
-  Schema.Record(
-    Schema.String,
-    Schema.Struct({
-      licenses: Schema.optional(Schema.String),
-      repository: Schema.optional(Schema.String),
-      publisher: Schema.optional(Schema.String),
-      email: Schema.optional(Schema.String),
-      copyright: Schema.optional(Schema.String),
-      name: Schema.optional(Schema.String),
-      description: Schema.optional(Schema.String),
-    }),
-  ),
-  { space: 4 },
-)
+const LicensesJson = Schema.fromJsonString(Entries, { space: 4 })
 
 const licensesCommand = Cli.Command.make(
   'licenses',

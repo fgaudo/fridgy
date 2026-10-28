@@ -127,6 +127,46 @@
     },
     {
       "includes": [
+        "scripts/**"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [
+                      "#app/*/**",
+                      "**/app/*/**",
+                      "!#app/children/about/services/licenses/licenses.bundled.ts"
+                    ],
+                    "message": "A script imports from src/app its root modules (program.ts, view.tsx, layer.ts) and, to write a generated file, the adapter that reads it, for its schema."
+                  },
+                  {
+                    "group": [
+                      "fast-check",
+                      "**/*.test_*.ts",
+                      "@fgaudo/effect-tea/testing"
+                    ],
+                    "message": "Test-only code: fast-check, *.test_*.ts files (arbitraries, contracts, test support) and @fgaudo/effect-tea/testing may only be imported by *.test.ts and *.test_*.ts files."
+                  },
+                  {
+                    "group": [
+                      "../../../**"
+                    ],
+                    "message": "Relative imports stay within their part of the project: reach another part through its alias (#app/…, #domain/…, #libs/…, #infrastructure/…)."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": [
         "src/app/**"
       ],
       "linter": {

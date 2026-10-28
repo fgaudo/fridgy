@@ -23,7 +23,7 @@ export const watch = Effect.fn('HotModule.watch')(function*(path: string) {
   const moduleRef = yield* SubscriptionRef.make(yield* load)
   yield* Socket.toStream(socket).pipe(
     Stream.map((frame) => new TextDecoder().decode(frame)),
-    // The dev server says whether only the view changed, or something it
+    // The dev server (`reloadFor` in `scripts/cli.ts`) says whether only the view changed, or something it
     // cannot swap in place.
     Stream.runForEach((signal) =>
       signal === 'reload-page'

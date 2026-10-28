@@ -92,8 +92,9 @@ role a file's name gives it. Biome's `noRestrictedImports` rule (`biome.json`) e
   folder, added with the first such program;
 - adapters (`<service>.<backing>.ts`) are imported only by a `layer.ts`, by the entrypoints, which pick among
   alternatives, and by their own tests: a program uses its services;
-- from outside `app/`, only its root modules (`program.ts`, `view.tsx`, `layer.ts`) and, for the entrypoints,
-  the adapters;
+- from outside `app/`, only its root modules (`program.ts`, `view.tsx`, `layer.ts`); the entrypoints also reach
+  the adapters, and `scripts/cli.ts` the one that reads the file it generates (`licenses.bundled.ts`), for the
+  schema it writes with;
 - test-only code (`*.test_*.ts`, `@fgaudo/effect-tea/testing`) is imported only by tests, so it stays out of
   bundles; relative imports climb at most `../../`, another part of the project is reached through its alias
   (`#app/…`, `#domain/…`, `#infrastructure/…`, `#libs/…`, from the `imports` of `package.json`).
