@@ -17,7 +17,6 @@ import * as Result from 'effect/Result'
 import * as Domain from '#domain/product.ts'
 import { type Feedback, Haptics } from '#infrastructure/haptics/haptics.ts'
 import * as NonEmptyHashSet from '#libs/collections/non-empty-hash-set.ts'
-import { defect } from '#libs/defect/defect.ts'
 import * as PositiveInteger from '#libs/numbers/positive-integer.ts'
 import type * as UnitInterval from '#libs/numbers/unit-interval.ts'
 import { after, every } from '#libs/timers/timers.ts'
@@ -584,7 +583,7 @@ export const program: Tea.Program<{
     TimeChanged: ({ now }) => (state) =>
       needsClock(state.list)
         ? { state: { ...state, maybeNow: Opt.some(now) } }
-        : defect('TimeChanged while no listed product expires: the clock runs only while one does'),
+        : Tea.defect('TimeChanged while no listed product expires: the clock runs only while one does'),
 
     // Only a product of the list can be selected: a tap on a row the storage has meanwhile removed does nothing.
     ItemSelected: ({ id, by }) => (state) =>
@@ -659,7 +658,7 @@ export const program: Tea.Program<{
           },
           commands: [Command.Vibrate({ feedback: 'Confirm' })],
         }
-        : defect('Deleted while no deletion is in progress: only a completion leaves Deleting'),
+        : Tea.defect('Deleted while no deletion is in progress: only a completion leaves Deleting'),
 
     // Its snackbar replaces the one standing, and the offer to undo with it.
     DeleteFailed: ({ at }) => (state) =>
@@ -672,7 +671,7 @@ export const program: Tea.Program<{
           },
           commands: [Command.Vibrate({ feedback: 'Reject' })],
         }
-        : defect('DeleteFailed while no deletion is in progress: only a completion leaves Deleting'),
+        : Tea.defect('DeleteFailed while no deletion is in progress: only a completion leaves Deleting'),
 
     // Only a deletion of products alone can be undone; the offer is taken at once, so a second tap does nothing.
     UndoRequested: () => (state) =>
@@ -692,12 +691,12 @@ export const program: Tea.Program<{
     SnackbarExpired: () => (state) =>
       state.snackbar._tag === 'Shown'
         ? { state: { ...state, snackbar: Snackbar.None() } }
-        : defect('SnackbarExpired while no snackbar is shown: the timer runs only while one is'),
+        : Tea.defect('SnackbarExpired while no snackbar is shown: the timer runs only while one is'),
 
     // The clock may have run only for a product leaving: the time it told goes with it.
     RowsSettled: () => (state) => {
       if (state.list._tag !== 'Loaded' || !isSettling(state.list)) {
-        return defect('RowsSettled while no row arrives or leaves: the timer runs only while one does')
+        return Tea.defect('RowsSettled while no row arrives or leaves: the timer runs only while one does')
       }
       const list: Loaded = { ...state.list, arrivals: HashSet.empty(), departures: [] }
       return { state: { ...state, list, maybeNow: needsClock(list) ? state.maybeNow : Opt.none() } }

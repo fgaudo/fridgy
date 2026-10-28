@@ -133,7 +133,9 @@ describe('Navigation', () => {
         Page.About({ state: About.program.init.state }),
       ],
     }
-    expect(() => program.update(Msg.AddProducts({ message: AddProductsMsg.BackPressed() }))(covered)).toThrow()
+    expect(() => program.update(Msg.AddProducts({ message: AddProductsMsg.BackPressed() }))(covered)).toThrow(
+      Tea.InvariantDefect,
+    )
   })
 
   // About left while its data loads, and opened again: a command cannot be cancelled, and its answer goes to

@@ -110,7 +110,7 @@ describe('EditProduct update', () => {
   test('a message that cannot arrive is a defect', () => {
     assertProperty([state, message], (before, msg) => {
       fc.pre(cannotArrive(msg, before))
-      expect(() => program.update(msg)(before)).toThrow()
+      expect(() => program.update(msg)(before)).toThrow(Tea.InvariantDefect)
       return true
     })
   })
@@ -366,7 +366,7 @@ describe('EditProduct update', () => {
     test('is a defect when no snackbar is shown', () => {
       assertProperty([state], (before) => {
         fc.pre(before._tag === 'Loading' || before.form.snackbar._tag === 'None')
-        expect(() => program.update(Msg.SnackbarExpired())(before)).toThrow()
+        expect(() => program.update(Msg.SnackbarExpired())(before)).toThrow(Tea.InvariantDefect)
         return true
       })
     })

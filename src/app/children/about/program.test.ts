@@ -6,7 +6,6 @@ import * as Equal from 'effect/Equal'
 import * as HashMap from 'effect/HashMap'
 import * as Opt from 'effect/Option'
 import * as fc from 'fast-check'
-import { defect } from '#libs/defect/defect.ts'
 import { messagesSentBy } from '#libs/tea-snabbdom/view.test_support.ts'
 import { assertProperty, outcomesOf } from '#libs/testing/update.test_support.ts'
 import { license, licenses, state } from './program.test_arbitrary.ts'
@@ -88,7 +87,7 @@ describe('About update', () => {
       })
       return licenses._tag === 'Loaded' && licenses.cards[0] !== undefined
         ? licenses.cards[0]
-        : defect('one license makes one card')
+        : Tea.defect('one license makes one card')
     }
 
     test('shows the version and the licenses once they are loaded, and nothing before, and whether it is at its top', () => {

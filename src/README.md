@@ -46,7 +46,7 @@ src/
 ├─ libs/                 generic, reusable code: the snabbdom bridge (tea-snabbdom: handlers, renderer,
 │                        test support) and JSX runtime, sources, timers (a clock, a one-shot timer), branded
 │                        numbers, barcodes (the expansion of a UPC-E), dates (the orders of a date's digits,
-│                        the days they name, the rules of typing them on a keypad), `defect`, test helpers, …
+│                        the days they name, the rules of typing them on a keypad), test helpers, …
 ├─ index.html            the page template: it links the icon font, and the build fills in the entrypoint
 ├─ error.html            shown by Capacitor instead of the app on a WebView older than it needs
 ├─ palette.generated.css the Material 3 color roles, written by `bun run update-palette`

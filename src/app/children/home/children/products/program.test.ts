@@ -115,7 +115,7 @@ describe('Products update', () => {
     // The clock runs only while a product expires, so a tick heard otherwise is a bug.
     test('is a defect while no product expires', () => {
       assertProperty([still, utc], (before, now) => {
-        expect(() => program.update(Msg.TimeChanged({ now }))(before)).toThrow()
+        expect(() => program.update(Msg.TimeChanged({ now }))(before)).toThrow(Tea.InvariantDefect)
         return true
       })
     })
@@ -366,7 +366,7 @@ describe('Products update', () => {
     test('is a defect when no deletion is in progress', () => {
       assertProperty([state, utc], (before, at) => {
         fc.pre(before.selection._tag !== 'Deleting')
-        expect(() => program.update(Msg.Deleted({ at }))(before)).toThrow()
+        expect(() => program.update(Msg.Deleted({ at }))(before)).toThrow(Tea.InvariantDefect)
         return true
       })
     })
@@ -388,7 +388,7 @@ describe('Products update', () => {
     test('is a defect when no deletion is in progress', () => {
       assertProperty([state, utc], (before, at) => {
         fc.pre(before.selection._tag !== 'Deleting')
-        expect(() => program.update(Msg.DeleteFailed({ at }))(before)).toThrow()
+        expect(() => program.update(Msg.DeleteFailed({ at }))(before)).toThrow(Tea.InvariantDefect)
         return true
       })
     })
@@ -429,7 +429,7 @@ describe('Products update', () => {
     // The timer runs only while a snackbar is shown, so its end heard otherwise is a bug.
     test('is a defect when no snackbar is shown', () => {
       assertProperty([stateWith('snackbar', fc.constant({ _tag: 'None' } as const))], (before) => {
-        expect(() => program.update(Msg.SnackbarExpired())(before)).toThrow()
+        expect(() => program.update(Msg.SnackbarExpired())(before)).toThrow(Tea.InvariantDefect)
         return true
       })
     })
@@ -450,7 +450,7 @@ describe('Products update', () => {
     // The timer runs only while a row arrives or leaves, so its end heard otherwise is a bug.
     test('is a defect while no row arrives or leaves', () => {
       assertProperty([state.filter((s) => !isSettling(s))], (before) => {
-        expect(() => program.update(Msg.RowsSettled())(before)).toThrow()
+        expect(() => program.update(Msg.RowsSettled())(before)).toThrow(Tea.InvariantDefect)
         return true
       })
     })

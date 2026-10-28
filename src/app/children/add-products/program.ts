@@ -18,7 +18,6 @@ import { BackButton } from '#infrastructure/back-button/back-button.ts'
 import { type Feedback, Haptics } from '#infrastructure/haptics/haptics.ts'
 import * as DateOrder from '#libs/dates/date-order.ts'
 import * as DigitDateEntry from '#libs/dates/digit-date-entry.ts'
-import { defect } from '#libs/defect/defect.ts'
 import { after, every } from '#libs/timers/timers.ts'
 import * as AddProducts from './services/add-products/add-products.ts'
 import { DateOrderSetting } from './services/date-order-setting/date-order-setting.ts'
@@ -596,14 +595,14 @@ export const program: Tea.Program<{
     SnackbarExpired: () => (state) =>
       state.form.snackbar._tag === 'Shown'
         ? { state: withForm(state, (form) => ({ ...form, snackbar: { _tag: 'None' } })) }
-        : defect('SnackbarExpired while no snackbar is shown: the timer runs only while one is'),
+        : Tea.defect('SnackbarExpired while no snackbar is shown: the timer runs only while one is'),
 
     // The first barcode read closes the scanner, with a vibration: the phone is pointed at the product, not
     // looked at. It is looked up even when it is the name already: scanning again is how a failed lookup is
     // retried.
     Scanned: ({ barcode }) => (state) => {
       if (!isScanning(state)) {
-        return defect('Scanned while the camera is off: only the scanner reads it, until it fails')
+        return Tea.defect('Scanned while the camera is off: only the scanner reads it, until it fails')
       }
       const named = Opt.contains(state.form.maybeName, barcode)
         ? state.form
@@ -617,7 +616,7 @@ export const program: Tea.Program<{
     // A product found replaces the barcode, drawn anew and focused; otherwise the barcode stays, a valid name.
     LookedUp: ({ barcode, outcome }) => (state) => {
       if (state._tag !== 'LookingUp' || state.barcode !== barcode) {
-        return defect(
+        return Tea.defect(
           'LookedUp for a barcode that is not being looked up: only the lookup subscription sends it, while its key is in the state',
         )
       }
@@ -652,7 +651,7 @@ export const program: Tea.Program<{
           state: withForm(state, (form) => ({ ...form, camera: 'Unavailable' })),
           commands: [Command.Vibrate({ feedback: 'Reject' })],
         }
-        : defect('CameraFailed while the camera is off: only the scanner reads it, until it fails'),
+        : Tea.defect('CameraFailed while the camera is off: only the scanner reads it, until it fails'),
 
     // The check of an earlier opening of the page may answer too (opened, left and opened again before it did):
     // once the camera is known, a late answer changes nothing.
@@ -667,7 +666,7 @@ export const program: Tea.Program<{
     // the focus back from the button.
     Completed: ({ succeeded }) => (state) => {
       if (state._tag !== 'Submitting') {
-        return defect('Completed while no product is being added: only a completion leaves Submitting')
+        return Tea.defect('Completed while no product is being added: only a completion leaves Submitting')
       }
       const acknowledging: Acknowledging = {
         product: state.product,

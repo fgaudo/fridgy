@@ -6,7 +6,6 @@ import * as Arr from 'effect/Array'
 import * as Data from 'effect/Data'
 import * as Match from 'effect/Match'
 import * as Opt from 'effect/Option'
-import { defect } from '#libs/defect/defect.ts'
 import * as About from './children/about/program.ts'
 import * as AddProducts from './children/add-products/program.ts'
 import * as EditProduct from './children/edit-product/program.ts'
@@ -85,12 +84,12 @@ const show = <Tag extends Page['_tag'], Command>(
  */
 const leave = (tag: Exclude<Page['_tag'], 'Home'>) => (state: State): Tea.Step<State> => {
   if (top(state)._tag !== tag) {
-    return defect(`${tag} asked to be left while another page is shown: a page asks only while it is on top`)
+    return Tea.defect(`${tag} asked to be left while another page is shown: a page asks only while it is on top`)
   }
   const rest = Arr.initNonEmpty(state.stack)
   return Arr.isReadonlyArrayNonEmpty(rest)
     ? { state: { stack: rest } }
-    : defect(`${tag} was the only page: Home is always the first`)
+    : Tea.defect(`${tag} was the only page: Home is always the first`)
 }
 
 const { child, compose } = Tea.parent<{ state: State }>()
@@ -118,7 +117,8 @@ export const program = compose({
     EditProduct: (event, children) => (state) =>
       Match.valueTags(event, {
         LeaveRequested: () => leave('EditProduct')(state),
-        ProductGone: ({ at }) => children.Home.update({ _tag: 'ProductGone', at })(leave('EditProduct')(state).state),
+        ProductGone: ({ at }) =>
+          Tea.andThen(leave('EditProduct')(state), children.Home.update({ _tag: 'ProductGone', at })),
       }),
     About: () => leave('About'),
   },

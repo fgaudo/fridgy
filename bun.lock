@@ -12,7 +12,7 @@
         "@capacitor/splash-screen": "9.0.0-alpha.2",
         "@effect/platform-browser": "^4.0.6",
         "@effect/sql-sqlite-wasm": "^4.0.6",
-        "@fgaudo/effect-tea": "^0.7.0",
+        "@fgaudo/effect-tea": "^0.7.1",
         "clsx": "^2.1.1",
         "effect": "^4.0.6",
         "material-symbols": "^0.48.1",
@@ -138,7 +138,7 @@
 
     "@effect/wa-sqlite": ["@effect/wa-sqlite@0.1.2", "", {}, "sha512-2JvJ9BDkBOwfeY/gXsC0XwEKC0AwisP2W5ABJ6mx14QyXTK12MGDIybDlHieuZt1TEFSMiKfpg7yyqyRWRooJQ=="],
 
-    "@fgaudo/effect-tea": ["@fgaudo/effect-tea@0.7.0", "", { "peerDependencies": { "effect": "^4.0.0" } }, "sha512-weckZv+LGDFLc77v8xUqTNaeRR3QkOXuCy8JZKgxxr8mdDCCdjbngqTxcUCCUT0wgsQAjZWK5qUhQPvHCMs4MA=="],
+    "@fgaudo/effect-tea": ["@fgaudo/effect-tea@0.7.1", "", { "peerDependencies": { "effect": "^4.0.0" } }, "sha512-Jap6WtG6eEWzzsb4qAp68MHvkr+8K460w4CZLzD32+obMWI23W5h5BnAjOU1UEIdJwnAXXqAR00LPy90m6XqtQ=="],
 
     "@gar/promise-retry": ["@gar/promise-retry@1.0.3", "", {}, "sha512-GmzA9ckNokPypTg10pgpeHNQe7ph+iIKKmhKu3Ob9ANkswreCx7R3cKmY781K8QK3AqVL3xVh9A42JvIAbkkSA=="],
 

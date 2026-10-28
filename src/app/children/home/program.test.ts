@@ -212,7 +212,7 @@ describe('Home update', () => {
     // The button is observed only while the menu is open, so a press with it closed is a bug.
     test('is a defect while the menu is closed', () => {
       assertProperty([state], (before) => {
-        expect(() => program.update(Msg.BackPressed())({ ...before, isMenuOpen: false })).toThrow()
+        expect(() => program.update(Msg.BackPressed())({ ...before, isMenuOpen: false })).toThrow(Tea.InvariantDefect)
         return true
       })
     })

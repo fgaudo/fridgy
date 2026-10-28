@@ -52,8 +52,8 @@ folders; "page" names a role in the UI, kept by the root's state, not a kind of 
 
 - **Expected errors are typed, bugs crash.** Expected failures go through Effect's error channel
   (`Effect.tryPromise`, `Effect.try`; no `try/catch`, no bare Promises), and a subscription's failure is a
-  message of its own. A violated invariant is a defect (`Effect.die`, or `defect(reason)` from `libs/defect`
-  where the Guide throws), never silenced, retried or turned into a message; crash reporting goes around `run`
+  message of its own. A violated invariant is a defect (`Effect.die`, or `Tea.defect(reason)` where the Guide
+  throws), never silenced, retried or turned into a message; crash reporting goes around `run`
   (`Effect.tapCause`) and never recovers from it.
 - **The model holds the messages.** Of the two ways the Guide allows, this app's views send only what the model
   holds, never a message they build: `Message` is exported as a type only.

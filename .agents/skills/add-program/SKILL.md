@@ -48,7 +48,7 @@ service and a module of the infrastructure to move its sixty lines.
 - `update` returns `Tea.reject` for a message that does not apply in this state but may still arrive (a tap
   on a frame the state has moved past). A message the invariants rule out, such as an operation's completion
   outside the state that only it leaves, or a subscription's message outside the states that list its key,
-  ends the run with `defect(reason)` (`#libs/defect/defect.ts`).
+  ends the run with `Tea.defect(reason)`, which throws an `InvariantDefect`.
 - `Model` is what the view distinguishes: a union with a case per state, each holding only the messages of
   its controls (`open: Message`, `changeName: (name: string) => Message`), picked from the state as `update`
   reads it, never by calling `update`. The view sends only what the model holds.
@@ -94,6 +94,9 @@ export const program = compose({
   truth (the viewport, the connection) is the parent's, handed down as an `ExternalMessage` with
   `children.<Child>.update`. Two siblings talk through the parent: an event up, an `ExternalMessage` or an
   `init` parameter down; a parent that grows logic there is a sign that the siblings are one child.
+- An event the parent only passes up, it raises as its own: `onEvent: { Products: Tea.raise }`. A parent's
+  own step followed by a child's is `Tea.andThen(step, children.<Child>.update(…))`, which keeps the commands
+  and the events of both.
 - The view gives each child's view `Tea.dispatchTo(dispatch, '<Child>')`, the same function in every frame,
   and hands it the child's model whole: it never reads a child model's fields. A child's model is the same
   object while its state is, so a view that rarely changes is drawn with snabbdom's `thunk`.
@@ -115,8 +118,8 @@ from the domain's `*.test_arbitrary.ts` files, never from `*Unsafe` constructors
   messages `messagesSentBy(view, makeModel(state))` sends, with the candidates the test lists, `repeatable`
   for what may act on every tap, `withheld` for what the view hides on purpose;
 - one test per message, asserting the next state, the commands and the events by value, rejections with
-  `Tea.isRejected`, never as "state unchanged"; a message that cannot arrive is checked as a defect, and the
-  pairs of state and message it rules out are skipped;
+  `Tea.isRejected`, never as "state unchanged"; a message that cannot arrive is checked as a defect
+  (`toThrow(Tea.InvariantDefect)`), and the pairs of state and message it rules out are skipped;
 - what the program listens to in each state, from `Tea.subscriptionsOf(program)` (`HashMap.has(…, 'back-button')`);
 - the arbitraries cover every variant of the state.
 

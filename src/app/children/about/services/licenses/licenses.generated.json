@@ -63,7 +63,7 @@
         "copyright": "Copyright (c) 2023 Roy T. Hashimoto",
         "name": "@effect/wa-sqlite"
     },
-    "@fgaudo/effect-tea@0.7.0": {
+    "@fgaudo/effect-tea@0.7.1": {
         "licenses": "MIT",
         "repository": "https://github.com/fgaudo/effect-tea",
         "publisher": "Francesco Gaudenzi",

@@ -18,7 +18,6 @@ import { type Feedback, Haptics } from '#infrastructure/haptics/haptics.ts'
 import * as DateOrder from '#libs/dates/date-order.ts'
 import * as DigitDateEntry from '#libs/dates/digit-date-entry.ts'
 import * as DigitDates from '#libs/dates/digit-dates.ts'
-import { defect } from '#libs/defect/defect.ts'
 import { after, every } from '#libs/timers/timers.ts'
 import { DateOrderSetting } from './services/date-order-setting/date-order-setting.ts'
 import { UpdateProduct } from './services/update-product/update-product.ts'
@@ -476,12 +475,12 @@ export const program: Tea.Program<{
     SnackbarExpired: () => (state) =>
       state._tag !== 'Loading' && state.form.snackbar._tag === 'Shown'
         ? { state: withForm(state, (form) => ({ ...form, snackbar: { _tag: 'None' } })) }
-        : defect('SnackbarExpired while no snackbar is shown: the timer runs only while one is'),
+        : Tea.defect('SnackbarExpired while no snackbar is shown: the timer runs only while one is'),
 
     // The order picked stays in use for this visit either way: only the failure to keep it is told.
     OrderKept: ({ succeeded }) => (state) =>
       state._tag === 'Loading'
-        ? defect('OrderKept while loading: an order is picked only once the form is there, which never goes')
+        ? Tea.defect('OrderKept while loading: an order is picked only once the form is there, which never goes')
         : succeeded
         ? { state }
         : { state: withForm(state, told('OrderNotKept')), commands: [Command.Vibrate({ feedback: 'Reject' })] },
@@ -490,7 +489,7 @@ export const program: Tea.Program<{
     // Home says that the product is gone, as this page goes.
     Saved: ({ outcome }) => (state) => {
       if (state._tag !== 'Saving') {
-        return defect('Saved while no product is being saved: only a completion leaves Saving')
+        return Tea.defect('Saved while no product is being saved: only a completion leaves Saving')
       }
       const editing: State & { _tag: 'Editing' } = { _tag: 'Editing', form: state.form }
       return Match.valueTags(outcome, {

@@ -11,7 +11,6 @@ import * as Optic from 'effect/Optic'
 import * as Opt from 'effect/Option'
 import type * as Product from '#domain/product.ts'
 import { BackButton } from '#infrastructure/back-button/back-button.ts'
-import { defect } from '#libs/defect/defect.ts'
 import * as Products from './children/products/program.ts'
 import { Viewport } from './services/viewport/viewport.ts'
 
@@ -135,7 +134,7 @@ export const program = compose({
     Products: child(Products.program, { at: Optic.id<State>().key('products') }),
   },
   onEvent: {
-    Products: ({ id, product }) => (state) => ({ state, events: [Event.EditRequested({ id, product })] }),
+    Products: Tea.raise,
   },
   update: (message: Own, children) => (state) =>
     Match.valueTags(message, {
@@ -151,7 +150,7 @@ export const program = compose({
       BackPressed: () =>
         state.isMenuOpen
           ? { state: { ...state, isMenuOpen: false } }
-          : defect('BackPressed with the menu closed: the button is observed only while it is open'),
+          : Tea.defect('BackPressed with the menu closed: the button is observed only while it is open'),
       AtTopChanged: ({ isAtTop }) => ({ state: { ...state, isAtTop } }),
       InteractionChanged: ({ isInteracting }) => ({ state: { ...state, isInteracting } }),
       // Close to the top, the list snaps to it, unless the user is scrolling it.
