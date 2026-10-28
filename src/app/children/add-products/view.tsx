@@ -372,9 +372,10 @@ const orderSegments = (shown: DateShown, activity: DateActivity, dispatch: Dispa
 const dateField = (shown: DateShown, activity: DateActivity) => {
   // Disabled while the product is being added; in the error's colors when the digits name no day.
   const look = activity._tag === 'Adding' ? 'Disabled' : shown.strip._tag === 'NamingNothing' ? 'Wrong' : 'Plain'
+  // The margin above is the floating label's upper half, which Material's own field reserves.
   return (
     <div props={{ className: 'flex flex-col' }}>
-      <label props={{ className: 'relative block' }}>
+      <label props={{ className: 'relative mt-2 block' }}>
         <input
           props={{
             type: 'text',
@@ -433,14 +434,15 @@ const chip = ({ date, choice }: DateChoice, activity: DateActivity, dispatch: Di
 }
 
 /**
- * Under the field, where a keyboard's suggestions would be. Two rows of chips tall whatever it shows, so that a
- * change moves nothing: the digits name two days at most, one row each on the narrowest phone.
+ * Under the field, where a keyboard's suggestions would be. One row of chips tall whatever it shows, so that a
+ * change moves nothing. Two chips fit the row on the narrowest phone in English; a language with long month names
+ * may wrap the second one.
  */
 const strip = (shown: DateShown, activity: DateActivity, dispatch: Dispatch<Message>) => (
   <div
     props={{
       className: cn(
-        'flex h-18 shrink-0 flex-wrap content-start gap-2 text-body-small',
+        'flex min-h-8 shrink-0 flex-wrap content-start gap-2 text-body-small',
         shown.strip._tag === 'NamingNothing' ? 'text-error' : 'text-on-surface-variant',
       ),
     }}
@@ -525,8 +527,8 @@ const dateStep = (
       props={{ className: 'absolute inset-0 flex flex-col bg-surface text-on-surface' }}
     >
       {appBar('Add products', 'arrow_back', 'Back', Opt.map(controls, ({ back }) => back), dispatch)}
-      {/* Scrolls when the screen is shorter than the step (the narrowest phone, the keyboard open). */}
-      <div props={{ className: cn('flex flex-1 flex-col gap-3 overflow-y-auto', stepPadding) }}>
+      {/* Fits the reference screen; scrolls when the screen is shorter (the keyboard open, a large font). */}
+      <div props={{ className: cn('flex flex-1 flex-col gap-2 overflow-y-auto', stepPadding) }}>
         <div props={{ className: 'flex flex-col px-4 pb-2' }}>
           <span props={{ className: 'text-label-medium text-on-surface-variant' }}>Product</span>
           <h3
@@ -539,8 +541,7 @@ const dateStep = (
         {orderSegments(shown, activity, dispatch)}
         {dateField(shown, activity)}
         {strip(shown, activity, dispatch)}
-        {room()}
-        <div props={{ className: 'rounded-extra-large bg-surface-container-low p-4' }}>
+        <div props={{ className: 'mt-auto rounded-extra-large bg-surface-container-low p-2' }}>
           {keypad(activity, dispatch)}
         </div>
         {button(

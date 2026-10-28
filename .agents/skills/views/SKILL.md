@@ -117,9 +117,10 @@ shrunk to `title-large-emphasized` after the leading icon, once the list scrolls
 the selected products takes the same shape, in its own colors: the child gives Home its pieces (the icon
 buttons, the title), and Home draws them in its bar. The list leaves the bar's full height above itself. Pages
 come and go with Material's transitions, symmetric: what enters decelerates, what leaves accelerates. A page is laid
-out for a screen 320dp wide and of any height (the `android-release` skill, "Supported screen sizes"): a column
-that docks a button at the bottom scrolls (`overflow-y-auto`) when the screen is shorter than its content, as the
-keyboard or a large font makes it. The theme leaves out Tailwind's own
+out for the reference screen, 320dp wide and 640dp between the system bars (the `android-release` skill,
+"Supported screen sizes"): it fits the reference without scrolling, and a column that docks a button at the
+bottom scrolls (`overflow-y-auto`) when the screen is shorter than its content, as the keyboard or a large font
+makes it. The theme leaves out Tailwind's own
 colors, font sizes, radii, shadows, easings and durations:
 
 - colors are Material's roles (`src/palette.generated.css`, generated from the key colors in

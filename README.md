@@ -71,8 +71,9 @@ bunx cap open android
 ```
 
 The app needs Android 10 (API 29) and Android System WebView 114: on an older WebView, Capacitor shows
-`src/error.html` instead. Its pages are laid out for a screen at least 320dp wide, and for any height: every page
-scrolls when the screen is shorter than it. Why these versions, how the icons and splash screens are generated and how a release
+`src/error.html` instead. Its pages are laid out for a screen 320dp wide with 640dp between the system bars, which every
+page fits without scrolling: a page scrolls when the screen is shorter than it, as the keyboard or a large font
+makes it. Why these versions, how the icons and splash screens are generated and how a release
 is versioned and tagged is in [`.agents/skills/android-release/SKILL.md`](.agents/skills/android-release/SKILL.md).
 
 ## Development

@@ -181,8 +181,9 @@ const orderSegments = (shown: FieldsShown, activity: Activity, dispatch: Dispatc
 const dateField = (shown: FieldsShown, activity: Activity) => {
   // Disabled while the product is being saved; in the error's colors when the digits name no day.
   const look = activity._tag === 'Saving' ? 'Disabled' : shown.strip._tag === 'NamingNothing' ? 'Wrong' : 'Plain'
+  // The margin above is the floating label's upper half, which Material's own field reserves.
   return (
-    <label props={{ className: 'relative block' }}>
+    <label props={{ className: 'relative mt-2 block' }}>
       <input
         props={{
           type: 'text',
@@ -237,14 +238,14 @@ const chip = ({ date, choice }: DateChoice, activity: Activity, dispatch: Dispat
 }
 
 /**
- * Under the field, what it means. Two rows of chips tall whatever it shows, so that a change moves nothing: the
- * digits name two days at most, one row each on the narrowest phone.
+ * Under the field, what it means. One row of chips tall whatever it shows, so that a change moves nothing. Two
+ * chips fit the row on the narrowest phone in English; a language with long month names may wrap the second one.
  */
 const strip = (shown: FieldsShown, activity: Activity, dispatch: Dispatch<Message>) => (
   <div
     props={{
       className: cn(
-        'flex h-18 shrink-0 flex-wrap content-start gap-2 text-body-small',
+        'flex min-h-8 shrink-0 flex-wrap content-start gap-2 text-body-small',
         shown.strip._tag === 'NamingNothing' ? 'text-error' : 'text-on-surface-variant',
       ),
     }}
@@ -298,16 +299,17 @@ const keypad = (activity: Activity, dispatch: Dispatch<Message>) => {
 
 /**
  * The fields read from the top, the keypad and the button docked at the bottom, where the thumb rests. The column
- * scrolls when the screen is shorter than it (the narrowest phone, the keyboard open): no height is assumed.
+ * fits the reference screen, and scrolls when the screen is shorter (the keyboard open, a large font).
  */
 const fields = (shown: FieldsShown, activity: Activity, dispatch: Dispatch<Message>) => (
-  <div key='fields' props={{ className: cn('flex flex-1 flex-col gap-3 overflow-y-auto pt-2', padding) }}>
+  <div key='fields' props={{ className: cn('flex flex-1 flex-col gap-2 overflow-y-auto pt-2', padding) }}>
     {nameField(shown, activity, dispatch)}
     {orderSegments(shown, activity, dispatch)}
     {dateField(shown, activity)}
     {strip(shown, activity, dispatch)}
-    <div props={{ className: 'flex-1' }} />
-    <div props={{ className: 'rounded-extra-large bg-surface-container-low p-4' }}>{keypad(activity, dispatch)}</div>
+    <div props={{ className: 'mt-auto rounded-extra-large bg-surface-container-low p-2' }}>
+      {keypad(activity, dispatch)}
+    </div>
     {saveButton(activity, dispatch)}
   </div>
 )

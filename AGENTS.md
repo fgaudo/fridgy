@@ -106,8 +106,8 @@ folders; "page" names a role in the UI, kept by the root's state, not a kind of 
   (only for values valid by construction) derived from it; `Brand.make` only for a generic type,
   `Brand.nominal` for a brand without a rule. A constructor that converts its input first is named after it
   (`NormalizedString.fromString`). Export only what is used, plus a library module's intended API.
-- **Only what can be tested is supported.** `minSdkVersion`, `minWebViewVersion`, the target SDK and the narrowest
-  screen (320dp, and no height: a page scrolls when the screen is shorter than it) move only as the
+- **Only what can be tested is supported.** `minSdkVersion`, `minWebViewVersion`, the target SDK and the reference
+  screen (320dp wide, 640dp between the system bars, which every page fits without scrolling) move only as the
   `android-release` skill says, checked in the emulator first, with the docs.
 
 ## Tests
@@ -174,8 +174,8 @@ folders; "page" names a role in the UI, kept by the root's state, not a kind of 
 - The page that edits a product (`docs/edit-product.md`) has been checked in a browser only: not yet on Android,
   where a long press, which fires `contextmenu`, must not also deliver a `click` that opens the product, and
   where the back button, with the keyboard open, should close the keyboard first.
-- The narrowest screen (320dp, the `android-release` skill) has been checked in a browser at 320×533 only: not yet
-  in the emulator on the Nexus S image, nor with the font at 200%, nor with the keyboard open on each field.
+- The reference screen (320×640dp, the `android-release` skill) has been checked in a browser only, at 320×640
+  and 320×533: not yet in the emulator, nor with the font at 200%, nor with the keyboard open on each field.
 - The dark theme has been checked in a browser only: not yet on Android, where the WebView should match
   `prefers-color-scheme` from the system's theme, nor its night splash screens.
 
