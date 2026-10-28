@@ -16,9 +16,11 @@ Android (see "Verified, and not"). Read [`AGENTS.md`](../AGENTS.md), the `add-se
 - **Capacitor's `Haptics` plays it**: the heavy impact for `LongPress`, the medium one for `Confirm`, the error's
   two pulses for `Reject` (`haptics.capacitor.ts`). The plugin plays its own waveforms on Android's vibrator, not
   the system's constants through `View.performHapticFeedback`.
-- **The plugin is kept, though it ignores Android's "Touch feedback" setting.** The owner accepted the limit,
-  hoping the plugin changes. The alternative is a local plugin that calls `performHapticFeedback` on the
-  WebView: the system's own effects, the setting respected, and a key click short enough for the keypad.
+- **The plugin is kept, though it may ignore Android's "Touch feedback" setting.** The plugin's vibrations
+  carry no attributes, so whether the setting silences them is the system's call, which only the phone can
+  answer (see "Verified, and not"). The owner accepted the limit, hoping the plugin changes. The alternative is
+  a local plugin that calls `performHapticFeedback` on the WebView: the system's own effects, the setting
+  respected, and a key click short enough for the keypad.
 
 ## What vibrates
 
@@ -45,5 +47,7 @@ when saved is a `Reject`: the save did not happen.
   a vibrator.
 - Not felt on Android yet: whether each pattern feels like the constant it stands for, and whether the WebView
   adds a vibration of its own to a long press, whose `contextmenu` the row prevents.
-- Android's "Touch feedback" setting does not silence the plugin's vibrations, which are not marked as touch
-  feedback; only the system's vibration switch does.
+- Not checked either: whether Android's "Touch feedback" setting silences the plugin's vibrations. They carry no
+  attributes, and from Android 12 the system classes a short vibration without them as touch feedback, so the
+  setting probably does silence them, though the plugin never marks them so. Check with the setting off, and
+  with the system's vibration switch off.
