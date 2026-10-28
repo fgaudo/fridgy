@@ -1,11 +1,8 @@
 # Design: the product added enters the fridge
 
-Status: implemented on 2026-10-27, in rounds: first a product flying into a fridge in the app bar, which
-bounced; then, at the owner's request, the fridge moved to the middle of the first step's empty space and the
-choreography below, the fridge drawn only while a product enters it; then, the choreography saying what was
-added, the snackbar removed with its "Add again", a live region telling a screen reader instead. Not yet seen
-on Android (see "Verified, and not"). Read [`AGENTS.md`](../AGENTS.md), the `views` and `add-program` skills
-and the "Guide" of `node_modules/@fgaudo/effect-tea/README.md` before changing it.
+Implemented on 2026-10-27, in `src/app/children/add-products` and `src/styles.css`; not yet seen on Android (see
+"Verified, and not"). Read [`AGENTS.md`](../AGENTS.md), the `views` and `add-program` skills and the "Guide" of
+`node_modules/@fgaudo/effect-tea/README.md` before changing it.
 
 ## Decisions
 
@@ -23,6 +20,9 @@ and the "Guide" of `node_modules/@fgaudo/effect-tea/README.md` before changing i
   one tap from the first step, whose name stays; one with an expiration date has its digits typed again. A
   screen reader hears the product's name and expiration from a polite live region, for which the choreography is
   decoration (`aria-hidden`).
+- **The fridge is there only while a product enters it.** It was first drawn always, in the app bar, and the
+  product bounced into it; the owner asked for it in the middle of the first step's empty space, appearing with
+  the letters and fading away when the phase ends.
 - **Motion is Material's**: easing curves and durations from `src/styles.css`'s tokens, never a number of
   milliseconds in a view.
 
@@ -58,10 +58,10 @@ and the "Guide" of `node_modules/@fgaudo/effect-tea/README.md` before changing i
    it vanishes and a copy drawn inside the fridge, between the inside and the door, appears in its place; the
    door then closes over the copy.
 4. **Settle.** The fridge hops and sways once from its base.
-5. **Away.** The fridge is there only while a product enters it, as the owner asked once it had been drawn always:
-   it appears with the letters (fading in, from 90% of its size) and fades away when the phase ends, with
-   snabbdom's `remove` style. Its keyframes do not fill forwards, so that they do not override that transition. A
-   product added while the fridge is still there brings a fridge of its own, which appears over the one fading.
+5. **Away.** The fridge appears with the letters (fading in, from 90% of its size) and fades away when the phase
+   ends, with snabbdom's `remove` style. Its keyframes do not fill forwards, so that they do not override that
+   transition. A product added while the fridge is still there brings a fridge of its own, which appears over the
+   one fading.
 
 The first step's button keeps its indicator for the whole phase, as the state says, and the keyframes cut it
 short: the indicator fades out and the label back in at the end of phase 1 (`indicator-leave`, `label-return`).
@@ -106,13 +106,10 @@ Seen in a browser on 2026-10-28 by freezing copies of the animated elements at c
 320×568, light and dark, and with the stylesheet's reduced-motion rules applied by hand (the pane cannot emulate
 the setting): an add from each step, two adds in a row, names in Latin, Arabic (by word, right to left) and
 Devanagari (by word) laid exactly over the field's text, a long name whose letters past the field's width are
-hidden, and the announcement ("Yogurt greco added. Expires 12 Dec 2027"). The check found and fixed: the letters
-invisible, as they copied the color of the field fading its text in; the field showing the name again under the
-heading's letters after an add from the second step; the handles drawn in `primary` on `primary-container`,
-faint in the dark theme, now `on-primary-container`. A write in the browser took up to two seconds, so a second
-add landing while the first is still entering was not seen. Not seen on Android: the WebView follows "Remove
-animations" with `prefers-reduced-motion`; check it in the emulator (see "Known gaps" in `AGENTS.md`).
-`gatherAndFly` has no test: `tea-snabbdom` has no fake DOM.
+hidden, and the announcement ("Yogurt greco added. Expires 12 Dec 2027"). A write in the browser took up to two
+seconds, so a second add landing while the first is still entering was not seen. Not seen on Android: the WebView
+follows "Remove animations" with `prefers-reduced-motion`; check it in the emulator (see "Known gaps" in
+`AGENTS.md`). `gatherAndFly` has no test: `tea-snabbdom` has no fake DOM.
 
 ## Later
 
