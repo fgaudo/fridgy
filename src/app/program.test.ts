@@ -313,20 +313,24 @@ describe('Navigation', () => {
       expect(yield* listedNames(user)).toEqual(Opt.some(['Milk', 'Milk']))
     })))
 
-  // The order is the storage's when the page opens; a pick applies at once, and is kept there.
+  // The order is the storage's when the page opens, the machine's locale's until one is kept: the test picks
+  // whichever is not in use. A pick applies at once, and is kept there.
   test('the order picked for the date is kept, and the digits are read in it', () =>
     rehearsed(Effect.fnUntraced(function*(user) {
       yield* perform(user, [openAddProducts, typeName('Milk')])
       yield* checkCamera(user)
       yield* user.hearNext(['AddProducts', 'clock'])
-      yield* user.hearNext(['AddProducts', 'date-order'])
-      yield* perform(user, [requestDate, pickOrder('MDY')])
+      const heard = yield* user.hearNext(['AddProducts', 'date-order'])
+      const inUse = heard._tag === 'AddProducts' && heard.message._tag === 'OrderChanged' ? heard.message.order : 'DMY'
+      const picked = inUse === 'MDY' ? 'DMY' : 'MDY'
+      yield* perform(user, [requestDate, pickOrder(picked)])
       yield* user.run((command) => tagPath(command) === 'AddProducts › KeepOrder')
       expect(yield* user.hearNext(['AddProducts', 'date-order'])).toEqual(
-        Msg.AddProducts({ message: AddProductsMsg.OrderChanged({ order: 'MDY' }) }),
+        Msg.AddProducts({ message: AddProductsMsg.OrderChanged({ order: picked }) }),
       )
-      // Read month first, 1231 names December 31; day first, it would name a 31st month.
-      yield* perform(user, [typeDigit('1'), typeDigit('2'), typeDigit('3'), typeDigit('1')])
+      // December 31 in the order picked: 1231 month first, 3112 day first. Read in the other, they name a 31st month.
+      const digits = picked === 'MDY' ? '1231' : '3112'
+      yield* perform(user, Arr.map([...digits], (digit) => typeDigit(digit as AddProducts.Digit)))
       const { page } = yield* user.model
       const named = page._tag === 'AddProducts' && page.model._tag === 'Dating' && page.model.strip._tag === 'Naming'
         ? page.model.strip.choices.map(({ date }) => DateTime.toPartsUtc(date))
