@@ -1,12 +1,10 @@
 import * as EffBun from '@effect/platform-bun'
 import * as Config from 'effect/Config'
-import * as ConfigProvider from 'effect/ConfigProvider'
 import * as Cli from 'effect/cli'
 import * as Data from 'effect/Data'
 import * as Effect from 'effect/Effect'
 import * as FS from 'effect/FileSystem'
 import * as HashSet from 'effect/HashSet'
-import * as Layer from 'effect/Layer'
 import * as Opt from 'effect/Option'
 import * as Path from 'effect/Path'
 import * as Process from 'effect/process'
@@ -112,10 +110,25 @@ const prepareOutdir = Effect.fn('prepareOutdir')(function*(mode: Mode) {
   yield* writeIconFont(outdir)
 })
 
+// `localhost` binds one loopback family only. On Windows, a second watch on the same port then binds the other,
+// silently, and the browser reaches either. `PORT` comes from the preview tool, which moves off a taken port.
+// Port 0 lets the system pick a free one.
 const devServerConfig = Config.all({
-  host: Config.String('DEV_SERVER_HOST').pipe(Config.withDefault('localhost')),
-  port: Config.Port('DEV_SERVER_PORT').pipe(Config.withDefault(3000)),
+  host: Config.String('DEV_SERVER_HOST').pipe(Config.withDefault('127.0.0.1')),
+  port: Config.Port('PORT').pipe(
+    Config.orElse(() => Config.Port('DEV_SERVER_PORT')),
+    Config.withDefault(0),
+  ),
 })
+
+class ServeFailed extends Data.TaggedError('ServeFailed')<{ readonly message: string }> {}
+
+const serveFailed = (host: string, port: number) => (error: unknown) =>
+  new ServeFailed({
+    message: error instanceof Error && 'code' in error && error.code === 'EADDRINUSE'
+      ? `Port ${port} of ${host} is in use (EADDRINUSE), perhaps by another watch: set another DEV_SERVER_PORT, or unset it to get a free port.`
+      : `Cannot serve on ${host}:${port}: ${String(error)}`,
+  })
 
 /**
  * Views (the only `.tsx` files) and styles can be swapped in place; any other change needs a full page reload.
@@ -132,36 +145,43 @@ const watchCommand = Cli.Command.make(
     const path = yield* Path.Path
     const fs = yield* FS.FileSystem
     const { host, port } = yield* devServerConfig
+    if (host === 'localhost') {
+      yield* Effect.logWarning(
+        'DEV_SERVER_HOST is localhost: another watch on the same port may serve beside this one. Use 127.0.0.1.',
+      )
+    }
     const dist = resolve(modes.development.outdir)
     yield* prepareOutdir('development')
     yield* build('development')
     const server = yield* Effect.acquireRelease(
-      Effect.sync(() =>
-        Bun.serve({
-          hostname: host,
-          port,
-          async fetch(request, server) {
-            const { pathname } = new URL(request.url)
-            if (pathname === '/hot-reload') {
-              return server.upgrade(request) ? undefined : new Response('Upgrade failed', { status: 400 })
-            }
-            const file = path.join(dist, pathname === '/' ? 'index.html' : pathname)
-            const isInDist = file.startsWith(dist)
-            return isInDist && (await Bun.file(file).exists())
-              ? new Response(Bun.file(file))
-              : new Response('Not found', { status: 404 })
-          },
-          websocket: {
-            message() {},
-            open(socket) {
-              socket.subscribe('reload')
+      Effect.try({
+        try: () =>
+          Bun.serve({
+            hostname: host,
+            port,
+            async fetch(request, server) {
+              const { pathname } = new URL(request.url)
+              if (pathname === '/hot-reload') {
+                return server.upgrade(request) ? undefined : new Response('Upgrade failed', { status: 400 })
+              }
+              const file = path.join(dist, pathname === '/' ? 'index.html' : pathname)
+              const isInDist = file.startsWith(dist)
+              return isInDist && (await Bun.file(file).exists())
+                ? new Response(Bun.file(file))
+                : new Response('Not found', { status: 404 })
             },
-          },
-        })
-      ),
+            websocket: {
+              message() {},
+              open(socket) {
+                socket.subscribe('reload')
+              },
+            },
+          }),
+        catch: serveFailed(host, port),
+      }),
       (server) => Effect.promise(() => server.stop(true)),
     )
-    yield* Effect.logInfo(`Serving ${modes.development.outdir}/ at http://${host}:${port}`)
+    yield* Effect.logInfo(`Serving ${modes.development.outdir}/ at ${server.url.href}`)
     const changed = yield* Ref.make(HashSet.empty<string>())
     return yield* fs.watch(resolve('src'), { recursive: true }).pipe(
       Stream.tap((event) => Ref.update(changed, HashSet.add(event.path))),
@@ -302,20 +322,10 @@ const buildCommand = Cli.Command.make(
   }),
 )
 
-// `.env` is created from `.env.default` on the first run, then read from disk:
-// Bun only loads it when the process starts, before it exists.
-const DotEnv = Layer.unwrap(Effect.gen(function*() {
-  const resolve = yield* root
-  const fs = yield* FS.FileSystem
-  yield* fs.copy(resolve('.env.default'), resolve('.env'), { overwrite: false })
-  const dotEnv = yield* ConfigProvider.fromDotEnv({ path: resolve('.env') })
-  return ConfigProvider.layer(ConfigProvider.orElse(dotEnv, ConfigProvider.fromEnv()))
-}))
-
 EffBun.BunRuntime.runMain(
   Cli.Command.make('cli.ts').pipe(
     Cli.Command.withSubcommands([buildCommand, watchCommand, licensesCommand, paletteCommand, assetsCommand]),
     Cli.Command.run({ version: '1.0' }),
-    Effect.provide(Layer.provideMerge(DotEnv, EffBun.BunServices.layer)),
+    Effect.provide(EffBun.BunServices.layer),
   ),
 )

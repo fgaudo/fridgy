@@ -52,7 +52,9 @@ reload), serves it, and rebuilds on every change under `src/`; open the address 
 the CSS swaps the view in place, keeping the application state; any other change reloads the page. The
 production build has `dist/` to itself, so it can be made while the watch runs.
 
-The first run creates `.env` from `.env.default`, where you can change the server host and port.
+It serves on `127.0.0.1` and a free port, and prints the address. To fix the port (or the host), set
+`DEV_SERVER_PORT` (`DEV_SERVER_HOST`) in the environment or in a `.env` file, which Bun loads at startup. The
+preview tool of Claude's desktop app sets `PORT` instead, which wins, to a free port from `.claude/launch.json`'s.
 
 ### Build the Android app
 
