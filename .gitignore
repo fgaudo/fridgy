@@ -34,3 +34,11 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 # Finder (MacOS) folder config
 .DS_Store
 
+
+# The React Native prototype
+android-rn/.gradle/
+android-rn/.kotlin/
+android-rn/build/
+android-rn/app/build/
+android-rn/app/.cxx/
+android-rn/local.properties

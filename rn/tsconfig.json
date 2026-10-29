@@ -1,0 +1,10 @@
+{
+  // The React Native prototype: the app's settings, with React's JSX and without the DOM.
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "lib": ["ESNext"],
+    "jsxImportSource": "react",
+    "types": ["bun"]
+  },
+  "include": ["./**/*"]
+}
