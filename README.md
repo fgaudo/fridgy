@@ -107,8 +107,8 @@ What the app adds:
   open About, the page that adds products or the one that edits a product, or to be left. A page that cannot
   start the same way every time starts from flags: the page that edits a product, from the product tapped.
 - **An asynchronous operation is a state that waits for its completion**, which only that state accepts.
-- **Bugs crash the app**; expected errors are typed and handled with Effect. The cause goes to the log, and
-  nothing leaves the phone.
+- **Bugs crash the app**; expected errors are typed and handled with Effect. A crash shows a screen with a
+  button that restarts the app; the cause goes to the log, and nothing leaves the phone.
 
 How the code is organized:
 

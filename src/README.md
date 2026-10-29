@@ -6,8 +6,9 @@ Rules and conventions are in [`AGENTS.md`](../AGENTS.md).
 ```
 src/
 ├─ entrypoints/
-│  └─ native.ts          how the app is started on Android: op-sqlite as the storage, `fetch` as the HTTP client,
-│                        Android's back button, the root view drawn by React; the tests pick their own
+│  ├─ native.ts          how the app is started on Android: op-sqlite as the storage, `fetch` as the HTTP client,
+│  │                     Android's back button, the root view drawn by React; the tests pick their own
+│  └─ crash/view.tsx     the screen a crash leaves, with a button that runs the program again
 │
 ├─ domain/               the entities and their rules (`Product`): imports nothing but libs/
 │
