@@ -98,7 +98,11 @@ the status bar and the three-button navigation bar), where no page scrolls, and 
 320×533dp), with the font at 200% in the system settings and the keyboard open on each field, where every page
 still reaches its button. Any AVD gives those screens with `adb shell wm size 960x2136` and `wm density 480`,
 or `wm size 480x800` and `wm density 240` (`wm size reset` and `wm density reset` after), and the font with
-`settings put system font_scale 2.0`. In a browser, the pane at 320×640 and 320×533 stands in, with no bars.
+`settings put system font_scale 2.0`. The three buttons:
+`adb shell cmd overlay enable-exclusive --category com.android.internal.systemui.navbar.threebutton`. The 640dp
+need a status bar of 24dp: on a profile whose display has a cutout (the Pixel 6), it is 38dp, which `wm size`
+does not change, and 626dp remain (seen on 2026-10-29 on API 37). A page that scrolls there by less than 14dp
+still fits the reference. In a browser, the pane at 320×640 and 320×533 stands in, with no bars.
 
 ## The emulator
 
@@ -134,7 +138,8 @@ The answer goes into `docs/open-food-facts-lookup.md` ("Barcodes: what the scann
 Install the app from a clean state (`adb shell pm clear net.gaudo.fridgy`): an install over an older schema
 fails on the first read. At start, `SystemBars` logs `Error injecting safe area CSS`, harmlessly: its script
 runs before the document exists, and the next injection sets the insets. The dark theme:
-`adb shell cmd uimode night yes`. A vibration's delivery:
+`adb shell cmd uimode night yes`; API 29 refuses it, and resets `ui_night_mode` at boot, so there it is the
+switch in Settings, Display. A vibration's delivery:
 `adb shell dumpsys vibrator_manager` lists each one with its usage and whether the system ignored it. The
 backup: `adb shell bmgr enable true`, `bmgr transport com.android.localtransport/.LocalTransport`,
 `bmgr backupnow net.gaudo.fridgy`, then uninstall and reinstall: `restoreAtInstall` brings `app_webview`, the
@@ -196,12 +201,11 @@ Play Store, as an update: `versionCode` 20261000 over its 10. Decided, and to be
 - **It ships on Capacitor 9's pre-releases**, not on the stable 8 line (decided on 2026-10-28): the app relies
   on the `SystemBars` plugin with `insetsHandling: 'css'`, which 8 does not have. The tree is on 9.0.0-beta.0
   of core, android and the CLI, with the plugins at their newest 9 pre-release (`npm view <pkg> dist-tags`,
-  the `next` tag). The beta was built and run on 2026-10-28 on the target image, API 37, on the 960×2136
-  screen: the start in both themes, the system bars' insets and the back button on every page. Not run on it
-  yet: API 29, the 320×533dp screen, the camera and the vibrations. Before the release, upgrade to the newest
-  9 pre-release and run the whole pass on both images. The pre-release's `SystemBars` logs `Error injecting
-  safe area CSS` at start, harmlessly: its script runs before the document exists, and the next injection sets
-  the insets.
+  the `next` tag), still the newest on 2026-10-29. The whole pass but the scanner ran on it on 2026-10-29, on
+  both images and both screens: API 37 on WebView 156 and API 29 on WebView 139, each the Play Store's that day
+  (`docs/testing.md`, "Verified, and not"). Before the release, upgrade to the newest 9 pre-release, if any, and
+  run the pass again. The pre-release's `SystemBars` logs `Error injecting safe area CSS` at start, harmlessly:
+  its script runs before the document exists, and the next injection sets the insets.
 - **The scanner is checked in the emulator with a camera**, and how the detector reports a UPC-E with it, once,
   as "The emulator" says.
 - **The vibrations are felt by the author on a phone** (`docs/haptics.md`: whether each pattern feels like the

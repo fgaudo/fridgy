@@ -118,6 +118,11 @@ and after the first release of each of those. Its result is written in the commi
   a browser" but the gone product's, 16dp above the FAB or the docked button, which stays put. On the page that
   edits a product, `Couldn't save the date order` covers the keypad's bottom row, and the order picked stays
   shown there; the next page opens on the order stored.
-- Not yet: the emulator pass as the skill lists it has not been run as such. The passes of 2026-10-28 followed the
-  previous procedure (API 29 on WebView 114 installed by hand, and API 37), and what they settled is already
-  in the code and the docs.
+- Verified on 2026-10-29, in the emulator: the skill's pass but the scanner, on API 37 (WebView 156) and API 29
+  (WebView 139, the Play Store's for Android 10 that day), on both reference screens. It found three bugs, fixed
+  the same day: the back button left the app while products were selected; the list's rows, 72dp high, cut their
+  text at 200%; the splash of Android 12 and later stood on the system's colors, not the app's surface. On API
+  37's Pixel 6 the bars leave 626dp, not 640 (the skill's "Supported screen sizes"). The author found two more,
+  fixed the same day on API 37: the package of an add landed under the fridge, which the keyboard had moved
+  (`docs/product-flight.md`); at 200%, the chips of the date wrapped and the keypad moved under the finger.
+- Not yet: the scanner, with a camera, in the emulator; and, on API 29, a field's keyboard on 320×533dp at 200%.
