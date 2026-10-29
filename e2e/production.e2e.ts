@@ -95,8 +95,10 @@ const expectNoScroll = async (page: Page, pageName: string) => {
   await page.evaluate(() => Promise.all(document.getAnimations().map((animation) => animation.finished)))
   await page.evaluate(() => document.fonts.ready)
   expect(
-    await page.evaluate(() => [...document.fonts].some((face) => face.family === 'Roboto Variable')),
-    'Roboto is not in place, so the measurement would be of another font',
+    await page.evaluate(() =>
+      [...document.fonts].some((face) => face.family === 'Roboto Variable' && face.status === 'loaded')
+    ),
+    'Roboto has not loaded, so the measurement would be of another font',
   ).toBe(true)
   const scrolling = await page.evaluate(() => {
     const found: Array<string> = []

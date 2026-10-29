@@ -73,8 +73,9 @@ has no user-visible symptom but a blank page.
 The font comes from the harness, not from the bundle. `dist/` ships none: on the phone `system-ui` already is
 Roboto. In a browser it is whatever the machine running the tests calls `system-ui`, and the 320×640 check is a
 measurement, so it would be made in the wrong metrics. The server therefore serves Roboto out of `node_modules`
-and links it into the page it serves, and the check fails if it is missing. It is the font the development build
-carries too (`writeTextFont`, in `scripts/cli.ts`). It is still an approximation: the Roboto on a phone comes
+and links it into the page it serves, and the check fails unless a face of it has loaded: a missing file would
+leave the fallback in place, and the measurement would pass for the wrong font. It is the font the development
+build carries too (`writeTextFont`, in `scripts/cli.ts`). It is still an approximation: the Roboto on a phone comes
 with its Android version, so the emulator remains the authority on what fits.
 
 ### The failure snackbars, by hand in a browser
