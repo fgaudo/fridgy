@@ -589,14 +589,15 @@ export const program: Tea.Program<{
       state: withForm(state, (form) => ({ ...form, maybeOrder: Opt.some(order) })),
     }),
 
-    // The timer of an acknowledgement that another has meanwhile replaced may still end: it ends only its own.
     AddedShown: ({ at }) => (state) =>
       Opt.exists(
           state.form.maybeAcknowledging,
           ({ product }) => DateTime.Equivalence(product.creationDate, at),
         )
         ? { state: withForm(state, (form) => ({ ...form, maybeAcknowledging: Opt.none() })) }
-        : Tea.reject,
+        : Tea.defect(
+          'AddedShown for a product not being acknowledged: its timer runs only while its product is, keyed by it',
+        ),
 
     // The order picked stays in use for this visit either way: only the failure to keep it is told.
     OrderKept: ({ succeeded }) => (state) =>

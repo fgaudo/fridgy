@@ -55,7 +55,7 @@
     },
     {
       "label": "dev server",
-      "detail": "builds on every change and serves dist/ with live reload",
+      "detail": "builds on every change and serves dist-dev/ with live reload",
       "type": "shell",
       "command": "bun run watch",
       "isBackground": true,

@@ -123,6 +123,10 @@ const readsCamera = (state: State) => state._tag === 'Scanning' && state.form.ca
 /** Whether the page looks `barcode` up. */
 const looksUp = (state: State, barcode: string) => state._tag === 'LookingUp' && state.barcode === barcode
 
+/** Whether the page acknowledges the product created `at`. */
+const acknowledges = (state: State, at: DateTime.Utc) =>
+  Opt.exists(state.form.maybeAcknowledging, ({ product }) => DateTime.Equivalence(product.creationDate, at))
+
 /** The snackbar of a failure, after the one standing, if any. */
 const told = (form: Form, failure: Failure): Snackbar =>
   form.snackbar._tag === 'Shown'
@@ -138,6 +142,7 @@ const cannotArrive = (msg: Message, before: State) =>
   || (msg._tag === 'SnackbarExpired' && before.form.snackbar._tag === 'None')
   || ((msg._tag === 'Scanned' || msg._tag === 'CameraFailed') && !readsCamera(before))
   || (msg._tag === 'LookedUp' && !looksUp(before, msg.barcode))
+  || (msg._tag === 'AddedShown' && !acknowledges(before, msg.at))
 
 const onAStep = fc.oneof(naming, dating)
 
@@ -760,20 +765,24 @@ describe('AddProducts update', () => {
     })
   })
 
-  test('AddedShown ends the acknowledgement of the product it names, in any state, and is rejected for any other', () => {
-    assertProperty([state, utc], (before, other) => {
-      const ended = Opt.match(before.form.maybeAcknowledging, {
+  test('AddedShown ends the acknowledgement of the product it names, in any state', () => {
+    assertProperty([state], (before) =>
+      Opt.match(before.form.maybeAcknowledging, {
         onNone: () => true,
         onSome: ({ product: { creationDate } }) =>
           Equal.equals(
             step(Msg.AddedShown({ at: creationDate }), before).after,
             withForm(before, { maybeAcknowledging: Opt.none() }),
           ),
-      })
-      fc.pre(
-        !Opt.exists(before.form.maybeAcknowledging, ({ product }) => DateTime.Equivalence(product.creationDate, other)),
-      )
-      return ended && rejects(Msg.AddedShown({ at: other }), before)
+      }))
+  })
+
+  // The timer is keyed by the product it acknowledges, so its end heard for any other is a bug.
+  test('AddedShown is a defect for a product not being acknowledged', () => {
+    assertProperty([state, utc], (before, other) => {
+      fc.pre(!acknowledges(before, other))
+      expect(() => program.update(Msg.AddedShown({ at: other }))(before)).toThrow(Tea.InvariantDefect)
+      return true
     })
   })
 

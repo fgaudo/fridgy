@@ -110,7 +110,7 @@ export const view: View<Model, Message> = (model, dispatch) => {
           <div props={{ className: 'flex flex-col items-center gap-2 py-4 text-center' }}>
             <div
               // The logo, a solid shape, in on-surface's color of either theme: the SVG masks a box of that role.
-              // The WebView floor (114) has only `-webkit-mask`; `mask` came in 120, and no tool prefixes it.
+              // The WebView floor (115) has only `-webkit-mask`; `mask` came in 120, and no tool prefixes it.
               style={{
                 '-webkit-mask': 'url(./logo.svg) center / contain no-repeat',
                 mask: 'url(./logo.svg) center / contain no-repeat',

@@ -2,7 +2,7 @@
 
 What the app is and its commands are in [`README.md`](README.md); the source tree, a reading order and the
 import boundaries are in [`src/README.md`](src/README.md). This file holds the rules that apply to every change.
-The app is in the middle of a refactoring: see "Known gaps" before working.
+Read "Known gaps" before working.
 
 Procedures live in skills, plain Markdown that any agent or person reads, under `.agents/skills/`. Read the one
 for the task before starting it:
