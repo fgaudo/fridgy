@@ -9,9 +9,9 @@ listed under "Known gaps" in `AGENTS.md`, not here.
 ## Decisions
 
 - **Three layers, each for what the others cannot reach.** The tests on every change cover the logic; one run of
-  the production bundle in a browser covers what only the bundle has; one pass in the emulator covers what
-  only Android has. A check that a lower layer can make is never made in a higher one, which costs more and
-  tells less.
+  the production bundle in a browser covers what only the bundle has, and a person's look in a browser what no
+  check sees; one pass in the emulator covers what only Android has. A check that a lower layer can make is
+  never made in a higher one, which costs more and tells less.
 - **The floor of the WebView is a number checked on the bundle, not a device tested.** `minWebViewVersion`
   (`capacitor.config.ts`) has one job: on an older WebView, Capacitor shows `src/error.html` instead of an app
   that fails half-way. The app is never run on that version. Why:
@@ -53,6 +53,7 @@ listed under "Known gaps" in `AGENTS.md`, not here.
 | --------------------------------------- | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
 | The tests (`bun test`, typecheck, lint) | every change                      | every program's transitions, commands and subscriptions; every service through its contract, on each adapter; the domain; the root as a user over a database in memory (`src/app/user.test_support.ts`) | the production entrypoint, the build, the worker, the OPFS database, a browser, a screen                 |
 | The production bundle in a browser      | every push (CI), before a release | `dist/` as built: the entrypoint `src/entrypoints/production.ts`, the SQLite worker on OPFS, the bundle parsing (the floor check) and running; that no page scrolls on the reference screen (320×640)   | the system bars, the keyboard, the back button, the camera, the vibrations, the backup, the font at 200% |
+| By hand in a browser                    | before a release                  | what the run above does not look at: Home's bar collapsing and snapping, the motions, the selection, the date entry, the colors of the states, the failure snackbars                                    | what the emulator covers                                                                                 |
 | The emulator, on the target image       | before a release                  | what only Android has (the skill's list)                                                                                                                                                                | the lowest Android, unless `minSdkVersion`, Capacitor or a plugin changed since the last pass            |
 
 ### The tests on every change
@@ -77,6 +78,42 @@ and links it into the page it serves, and the check fails unless a face of it ha
 leave the fallback in place, and the measurement would pass for the wrong font. It is the font the development
 build carries too (`writeTextFont`, in `scripts/cli.ts`). It is still an approximation: the Roboto on a phone comes
 with its Android version, so the emulator remains the authority on what fits.
+
+### By hand in a browser, before a release
+
+What moves, snaps or is colored, no check sees: the tests see no CSS, the run above measures only that nothing
+scrolls, and the emulator pass holds only what Android has. This pass is a person's look at what remains, on the
+development server (`bun run watch`, with its sample products), in a pane at 320×640, in the light and the dark
+theme (the system's, or `prefers-color-scheme` emulated in DevTools), and the motions once more with
+`prefers-reduced-motion` emulated there. It holds only what no layer below can check and a change of the app
+can break, and each item names what it covers, so that an item leaves when a check of the bundle takes it over,
+and nothing is listed twice. What was settled once (how a letter is placed in the flight, what a waveform is)
+stays in its design's "Verified, and not" and is not repeated here.
+
+- **Home's top app bar** (the scroll-driven animations `bar-slide` and `bar-headline` in `src/styles.css`, the
+  `Viewport` adapter): as the list scrolls, the medium bar collapses into the small one in step with the finger,
+  its color to `surface-container` and its one title shrinking into the small bar; a scroll that ends between
+  the two shapes snaps to the nearer one, and at the top the bar is expanded again. The FAB shrinks to its icon
+  while the list scrolls and grows back at rest.
+- **The list's motion** (`presence`, the rows' grid track): a product added, deleted or put back opens or closes
+  its place as it fades, the rows around it staying still; the last row deleted fades into the empty state, and
+  "Undo" the empty state into the rows put back.
+- **The selection** (the contextual bar's pieces, the avatar as a check): a long press (a right click on a
+  desktop) selects a row, and the bar takes the selection's shape and colors with its count; a tap then selects
+  or deselects and opens nothing; the deletion's snackbar stands 16dp above the FAB, which stays put, and a
+  second snackbar waits for the first to sink.
+- **The product entering the fridge** (`docs/product-flight.md`), from each step of the page that adds products:
+  the name's letters fly into a fridge that opens and closes over them, a long name clipped at the field's
+  width; under reduced motion, fades.
+- **The date entry**, on both pages that take a date: the strip's hint while the digits name no day, the chips
+  of the days they name with the nearest first, `Not an upcoming date` in the error's colors, the date rewritten
+  when another order is picked; the keys and the chips sized as `docs/font-size.md` says.
+- **The pages' entrances**: a page rises from the bottom over Home and leaves the same way; the menu grows from
+  the overflow button, and a tap anywhere else closes it.
+- **The colors of the states**: the freshness disc from green through orange to red, the expired product on
+  the red the scale ends on, the infinity sign on the neutral disc; an `Invalid` row in the error's tonal
+  colors; the empty states' discs.
+- **The failure snackbars**, as the next section says.
 
 ### The failure snackbars, by hand in a browser
 
@@ -134,3 +171,5 @@ and after the first release of each of those. Its result is written in the commi
   fixed the same day on API 37: the package of an add landed under the fridge, which the keyboard had moved
   (`docs/product-flight.md`); at 200%, the chips of the date wrapped and the keypad moved under the finger.
 - Not yet: the scanner, with a camera, in the emulator; and, on API 29, a field's keyboard on 320×533dp at 200%.
+- Not yet run as one pass: "By hand in a browser, before a release", written on 2026-10-29. Each of its items was
+  seen when its change landed, as the designs' "Verified, and not" record, never all of them on one build.

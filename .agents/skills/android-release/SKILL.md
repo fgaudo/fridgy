@@ -175,9 +175,9 @@ The version is `YEAR.MONTH.N`, N counting the releases of the month from 0 (`202
    when it changes;
 3. runs `bun run typecheck`, `bun run test` and `bun run lint`, builds and syncs as above, and runs the floor
    check on `dist/`; CI (`.github/workflows/checks.yml`) runs the same checks on the push;
-4. runs the production bundle in a browser (`bun run e2e`, which CI runs too), and the emulator pass above on
-   the target image; every item under "Known gaps" that the
-   emulator can settle is settled then, and removed;
+4. runs the production bundle in a browser (`bun run e2e`, which CI runs too), the pass by hand in a browser
+   (`docs/testing.md`, "By hand in a browser, before a release") and the emulator pass above on the target
+   image; every item under "Known gaps" that the emulator can settle is settled then, and removed;
 5. is uploaded to the Play Console as an AAB signed with the upload key of the previous releases (Play App
    Signing holds the app's key; `build.gradle` has no signing config), with the AAB's size noted (`dist/` is
    6.5 MB, 5.4 of them the icon font), and the console brought up to date with it: the store listing (screenshots
