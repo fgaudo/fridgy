@@ -144,7 +144,8 @@ describe('the production bundle', () => {
       await page.getByRole('heading', { name: 'Edit product' }).waitFor()
       await expectNoScroll(page, 'Edit product')
       await page.getByRole('textbox', { name: 'Name' }).fill('Butter')
-      await button(page, 'Save').click()
+      // Milk was added without a date, which the button says it keeps.
+      await button(page, 'Save without date').click()
       await page.getByRole('heading', { name: 'Edit product' }).waitFor({ state: 'detached' })
       await page.getByText('Butter').waitFor()
       await page.getByText('Milk').waitFor({ state: 'detached' })

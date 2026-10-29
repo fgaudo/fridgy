@@ -50,11 +50,11 @@ decided".
    program"). The fields' column scrolls when the screen is shorter than it (the keyboard open, a large font), as
    the `android-release` skill says of every page, and "Save" stays in sight, above the navigation bar or the
    keyboard.
-3. **The strip** says what the date field means: `No expiration` when the field is empty (the product will not
-   expire), the chips of the days the digits name, the stored one drawn selected while the digits are the stored
-   date's, nothing while the digits name no day yet but more digits can (the fifth to the seventh of a date
-   typed with its year), or `Not an upcoming date` in the error's colors once no more digits can name a day the
-   product may expire on.
+3. **The strip** says what the date field means, as on the page that adds products: the hint of how to type a
+   date in the order in use while the digits name no day yet (the field empty, or the fifth to the seventh digit
+   of a date typed with its year), the chips of the days the digits name, the stored one drawn selected while
+   the digits are the stored date's, or `Not an upcoming date` in the error's colors once no more digits can
+   name a day the product may expire on.
 4. **The date.** The keypad types, erases and clears the digits, as on the page that adds products; the
    backspace on the untouched stored date erases its last digit, and the clear key empties the field, which
    removes the expiration. A product that never expired gets one by typing. Picking another order rewrites the
@@ -64,7 +64,9 @@ decided".
    be correcting a typo or recording a product bought past its date; without a year, or a month, a day is
    the next one on or after today, and the chips start from the day nearest today, as `DigitDates.datesOf`
    reads them.
-5. **Saving.** "Save" is enabled only while the fields describe a valid product (`Product.make` accepts it)
+5. **Saving.** The button reads "Save without date" while the date field is empty, as "Add without date" on the
+   page that adds products, since the strip shows the hint there and not that the product will not expire. The
+   button is enabled only while the fields describe a valid product (`Product.make` accepts it)
    that differs from the stored one. A tap disables every control, shows the circular indicator in the button
    and writes the product; when the write has completed, the page leaves, and Home shows the product changed,
    where its new expiration orders it. When the write fails, the page gives the form back and a snackbar says
@@ -152,7 +154,7 @@ starts it with `children.EditProduct.init(flags)` from Home's event). Same shape
   the platform does not leave the app.
 - **The view** is the app bar and the name field of `add-products`, the latter without the scanner's button and
   the supporting text, and its order segments, date field, strip, chips, keypad and button, copied, with
-  `No expiration` as the strip's empty text and the controls disabled while `Saving` and `Gone` (the close button
+  the button's label following the date field and the controls disabled while `Saving` and `Gone` (the close button
   stays in `Gone`). `Loading` draws the app bar alone. The page's root is keyed `EditProduct`, rising and sinking as
   `AddProducts` does. No acknowledgement: the page leaves, and the list shows the change.
 

@@ -411,7 +411,8 @@ test('the arbitrary forms describe a product to save at times, and at times not,
   )
   expect(models.some((model) => model._tag === 'Editing' && Opt.isSome(model.maybeSave))).toBe(true)
   expect(models.some((model) => model._tag === 'Editing' && Opt.isNone(model.maybeSave))).toBe(true)
-  expect(models.some((model) => model._tag === 'Editing' && model.strip._tag === 'Empty')).toBe(true)
+  expect(models.some((model) => model._tag === 'Editing' && model.withoutDate)).toBe(true)
+  expect(models.some((model) => model._tag === 'Editing' && model.strip._tag === 'Hint')).toBe(true)
   expect(models.some((model) => model._tag === 'Editing' && model.strip._tag === 'NamingNothing')).toBe(true)
   expect(choices.some((choice) => choice.choice._tag === 'Chosen')).toBe(true)
   expect(choices.some((choice) => choice.choice._tag === 'Offered')).toBe(true)
@@ -425,15 +426,16 @@ describe('the model', () => {
   })
 
   // The digits of the stored date name its day alone, which is the day named.
-  test('shows the untouched stored date as its digits in the order in use, its one chip chosen, or no expiration', () => {
+  test('shows the untouched stored date as its digits in the order in use, its one chip chosen, or the hint and saving without a date', () => {
     assertProperty([editing, order], (s, other) => {
       fc.pre(s.form.date._tag === 'Kept')
       const shownIn = (form: Form) => {
         const model = makeModel({ _tag: 'Editing', form })
         return Opt.match(form.original.maybeExpirationDate, {
-          onNone: () => model._tag === 'Editing' && model.digits === '' && model.strip._tag === 'Empty',
+          onNone: () =>
+            model._tag === 'Editing' && model.digits === '' && model.strip._tag === 'Hint' && model.withoutDate,
           onSome: (date) =>
-            model._tag === 'Editing' && model.digits === DigitDates.digitsOf(date, form.order)
+            model._tag === 'Editing' && model.digits === DigitDates.digitsOf(date, form.order) && !model.withoutDate
             && Equal.equals(model.strip, {
               _tag: 'Naming',
               choices: [{ date: DateTime.startOf(date, 'day'), choice: { _tag: 'Chosen' } }],
@@ -444,17 +446,15 @@ describe('the model', () => {
     })
   })
 
-  test('shows typed digits as typed, with nothing while they name no day yet, the days they name and the one named, or that no more digits can name one', () => {
+  test('shows typed digits as typed, with the hint while they name no day yet, the days they name and the one named, or that no more digits can name one, and saving without a date on none', () => {
     assertProperty([withFields], (s) => {
       fc.pre(s.form.date._tag === 'Typed')
       const model = makeModel(s)
       const entry = entryShown(s.form)
       const offered = offeredDates(s.form)
       const named = DigitDateEntry.named(entry, offered)
-      const expected = entry.digits === ''
-        ? { _tag: 'Empty' }
-        : offered.length === 0
-        ? canCompleteDate(s.form) ? { _tag: 'NamingNothingYet' } : { _tag: 'NamingNothing' }
+      const expected = offered.length === 0
+        ? entry.digits === '' || canCompleteDate(s.form) ? { _tag: 'Hint' } : { _tag: 'NamingNothing' }
         : {
           _tag: 'Naming',
           choices: offered.map((date) => ({
@@ -468,7 +468,8 @@ describe('the model', () => {
           })),
         }
       return model._tag !== 'Loading' && model.digits === entry.digits && Equal.equals(model.strip, expected)
-        && model.name === s.form.name && model.nameKey === s.form.replacements
+        && model.withoutDate === (entry.digits === '') && model.name === s.form.name
+        && model.nameKey === s.form.replacements
     })
   })
 
@@ -590,10 +591,10 @@ describe('the model', () => {
 
     // Typing a date with its year, the fifth to the seventh digit name no day: a year of one or three digits, or
     // one of two already past.
-    test('says nothing while more digits can name a day, and that the digits name none once none can', () => {
-      expect(strip(typed('06112'))).toEqual({ _tag: 'NamingNothingYet' })
-      expect(strip(typed('061120'))).toEqual({ _tag: 'NamingNothingYet' })
-      expect(strip(typed('0611202'))).toEqual({ _tag: 'NamingNothingYet' })
+    test('shows the hint while more digits can name a day, and that the digits name none once none can', () => {
+      expect(strip(typed('06112'))).toEqual({ _tag: 'Hint' })
+      expect(strip(typed('061120'))).toEqual({ _tag: 'Hint' })
+      expect(strip(typed('0611202'))).toEqual({ _tag: 'Hint' })
       expect(strip(typed('0611201'))).toEqual({ _tag: 'NamingNothing' })
       expect(strip(typed('00'))).toEqual({ _tag: 'NamingNothing' })
     })

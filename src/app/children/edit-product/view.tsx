@@ -17,6 +17,12 @@ const keys: ReadonlyArray<Digit> = ['1', '2', '3', '4', '5', '6', '7', '8', '9']
 /** How the digits are read in each order: the field's placeholder and each segment's title. */
 const placeholders: Readonly<Record<DateOrder, string>> = { DMY: 'DDMMYY', MDY: 'MMDDYY', YMD: 'YYMMDD' }
 
+const hints: Readonly<Record<DateOrder, string>> = {
+  DMY: 'Day and month, then year if needed',
+  MDY: 'Month and day, then year if needed',
+  YMD: 'Year if needed, then month and day',
+}
+
 const orderTitles: Readonly<Record<DateOrder, string>> = {
   DMY: 'Day, month, year',
   MDY: 'Month, day, year',
@@ -58,8 +64,11 @@ const appBar = (maybeClose: Opt.Option<Message>, dispatch: Dispatch<Message>) =>
   )
 }
 
-/** Material's filled button "Save", whose label the circular indicator replaces while the product is saved. */
-const saveButton = (activity: Activity, dispatch: Dispatch<Message>) => {
+/**
+ * Material's filled button "Save", or "Save without date" on an empty date field, as "Add without date" on the page
+ * that adds products. The circular indicator replaces its label while the product is saved.
+ */
+const saveButton = (shown: FieldsShown, activity: Activity, dispatch: Dispatch<Message>) => {
   const { on } = handlers(dispatch)
   const maybeSave = activity._tag === 'Editing' ? activity.controls.maybeSave : Opt.none()
   return (
@@ -74,7 +83,9 @@ const saveButton = (activity: Activity, dispatch: Dispatch<Message>) => {
       }}
       on={Opt.match(maybeSave, { onNone: () => ({}), onSome: (save) => on('click', save) })}
     >
-      <span props={{ className: activity._tag === 'Saving' ? 'opacity-0' : 'opacity-100' }}>Save</span>
+      <span props={{ className: activity._tag === 'Saving' ? 'opacity-0' : 'opacity-100' }}>
+        {shown.withoutDate ? 'Save without date' : 'Save'}
+      </span>
       {activity._tag === 'Saving'
         ? [
           <span
@@ -250,12 +261,10 @@ const chip = ({ date, choice }: DateChoice, activity: Activity, dispatch: Dispat
   )
 }
 
-const NOT_UPCOMING = 'Not an upcoming date'
-
 /**
- * Under the field, what it means: a text, or the chips on one line that scrolls sideways. The longest text stays
- * laid out, unseen, under what is shown, so that the strip keeps its height while the user types: nothing under it
- * moves, whatever the font's size.
+ * Under the field, what it means: the hint, the chips on one line that scrolls sideways, or the error. The hint
+ * stays laid out, unseen, under what replaces it, so that the strip keeps its height while the user types: nothing
+ * under it moves, whatever the font's size.
  */
 const strip = (shown: FieldsShown, activity: Activity, dispatch: Dispatch<Message>) => (
   <div
@@ -266,13 +275,14 @@ const strip = (shown: FieldsShown, activity: Activity, dispatch: Dispatch<Messag
       ),
     }}
   >
-    <span props={{ className: 'invisible col-start-1 row-start-1 px-4' }}>{NOT_UPCOMING}</span>
+    <span props={{ className: cn('col-start-1 row-start-1 px-4', shown.strip._tag !== 'Hint' && 'invisible') }}>
+      {hints[shown.order]}
+    </span>
     <div props={{ className: 'col-start-1 row-start-1 flex min-h-8 items-start gap-2 overflow-x-auto' }}>
       {Match.valueTags(shown.strip, {
-        Empty: () => [<span props={{ className: 'px-4' }}>No expiration</span>],
-        NamingNothingYet: () => [],
+        Hint: () => [],
         Naming: ({ choices }) => choices.map((choice) => chip(choice, activity, dispatch)),
-        NamingNothing: () => [<span props={{ className: 'px-4' }}>{NOT_UPCOMING}</span>],
+        NamingNothing: () => [<span props={{ className: 'px-4' }}>Not an upcoming date</span>],
       })}
     </div>
   </div>
@@ -335,7 +345,7 @@ const fields = (shown: FieldsShown, activity: Activity, dispatch: Dispatch<Messa
       </div>
     </div>
     <div props={{ className: cn('flex shrink-0 flex-col pb-[calc(1rem+var(--spacing-saib))]', sidePadding) }}>
-      {saveButton(activity, dispatch)}
+      {saveButton(shown, activity, dispatch)}
     </div>
   </div>
 )

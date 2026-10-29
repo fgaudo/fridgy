@@ -165,15 +165,16 @@ export type FieldsShown = Readonly<{
   /** The date's field: the digits shown, the stored date's or the typed ones. */
   digits: string
   /**
-   * Under the field: that the product never expires; nothing, while the digits name no day yet; the days they
-   * name; or that they name none, and no digits typed after them can.
+   * Under the field: how to type a date, while the digits name no day yet; the days they name; or that they name
+   * none, and no digits typed after them can.
    */
   strip: Data.TaggedEnum<{
-    Empty: object
-    NamingNothingYet: object
+    Hint: object
     Naming: Readonly<{ choices: Arr.NonEmptyReadonlyArray<DateChoice> }>
     NamingNothing: object
   }>
+  /** Whether saving leaves the product without an expiration: the date's field is empty. */
+  withoutDate: boolean
   /** Over the fields. */
   snackbar: Snackbar
 }>
@@ -404,13 +405,12 @@ const fieldsOf = (form: Form, takesInput: boolean): FieldsShown => {
         : { _tag: 'Offered', maybePick: takesInput ? Opt.some(Message.OrderPicked({ order })) : Opt.none() },
     })),
     digits: entry.digits,
-    strip: entry.digits === ''
-      ? { _tag: 'Empty' }
-      : Arr.isReadonlyArrayNonEmpty(choices)
+    strip: Arr.isReadonlyArrayNonEmpty(choices)
       ? { _tag: 'Naming', choices }
-      : canCompleteDate(form)
-      ? { _tag: 'NamingNothingYet' }
+      : entry.digits === '' || canCompleteDate(form)
+      ? { _tag: 'Hint' }
       : { _tag: 'NamingNothing' },
+    withoutDate: entry.digits === '',
     snackbar: form.snackbar,
   }
 }
