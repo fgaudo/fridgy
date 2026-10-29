@@ -220,8 +220,10 @@ misread as another valid one (`04751610`): its check digit guards little.
 On React Native, in the emulator on 2026-10-30 (API 37, the release build, the host's webcam as the back camera):
 the camera's permission is asked on the first opening of the scanner; a refusal shows `Camera not available. Type
 the name`; once granted, the camera shows in the frame in about two seconds, and `8076800195057`, shown on a
-screen, is read and named "Barilla Spaghetti Nº5", `From Open Food Facts`. Not yet on React Native: a UPC-E, an
-unknown code, airplane mode, and a phone's own camera. The preview leaves a dark band above and below the webcam's
+screen, is read and named "Barilla Spaghetti Nº5", `From Open Food Facts`; the UPC-E `04963406` is looked up as
+`0049000006346` and named "Coca cola can cokes LG"; the UPC-E `04252614`, unknown, shows `0042100005264 isn't on
+Open Food Facts. Type the name`, on two lines at 1080 px; in airplane mode, `3017620422003` shows `Couldn't reach
+Open Food Facts. Type the name`. Not yet on React Native: a phone's own camera. The preview leaves a dark band above and below the webcam's
 picture, which may be the emulator's frame.
 
 ## Later, not in this change
