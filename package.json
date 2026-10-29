@@ -13,6 +13,14 @@
     "#styles": "./src/styles.ts",
     "#package.json": "./package.json"
   },
+  "codegenConfig": {
+    "name": "FridgySpecs",
+    "type": "all",
+    "jsSrcsDir": "src/infrastructure/barcode-camera",
+    "android": {
+      "javaPackageName": "net.gaudo.fridgy.barcodecamera"
+    }
+  },
   "scripts": {
     "update-licenses": "bun ./scripts/cli.ts licenses",
     "update-android-licenses": "bun ./scripts/cli.ts android-licenses",

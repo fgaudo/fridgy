@@ -3,6 +3,9 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- The vibrations of docs/haptics.md. -->
     <uses-permission android:name="android.permission.VIBRATE" />
+    <!-- The barcode scanner. A phone without a camera installs the app too: the name is typed. -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
 
     <!-- The narrowest screen the pages are laid out for (the `android-release` skill, "Supported screen sizes").
          Only the Play Store reads it, to hide the app from narrower devices: an APK installs anywhere. -->

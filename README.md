@@ -10,7 +10,8 @@ architecture.
 > digits in the order of day, month and year the user keeps, from which the user picks the day they meant), the
 > page that edits a product (opened with a tap on it, its name and its expiration date, typed on the same keypad)
 > and the About page (version, links, licenses) run on the current architecture, with navigation between them and
-> Android's back button. They are drawn without animations, and the barcode scanner is not drawn yet. What is still
+> Android's back button, and the barcode scanner names a product from Open Food Facts. They are drawn without
+> animations. What is still
 > missing is listed under "Known gaps" in [`AGENTS.md`](AGENTS.md).
 
 **Privacy:** scanning a barcode sends the barcode, and the phone's IP address, to Open Food Facts; nothing else
@@ -18,15 +19,16 @@ leaves the phone. The whole of it is in [`PRIVACY.md`](PRIVACY.md), the policy t
 
 ## Stack
 
-|                            |                                                                                        |
-| -------------------------- | -------------------------------------------------------------------------------------- |
-| Language                   | TypeScript, with the Effect language service (`@effect/tsgo`)                          |
-| Effects, services, streams | [Effect](https://effect.website) v4                                                    |
-| View                       | [React Native](https://reactnative.dev) (written in TSX), on Hermes                    |
-| Storage                    | SQLite, through [op-sqlite](https://github.com/OP-Engineering/op-sqlite)               |
-| Bundler                    | Metro, with Babel                                                                      |
-| Runtime, tests             | [Bun](https://bun.com), with [fast-check](https://fast-check.dev) for property tests   |
-| Lint                       | [Biome](https://biomejs.dev), and [Oxlint](https://oxc.rs) for uses of deprecated APIs |
+|                            |                                                                                               |
+| -------------------------- | --------------------------------------------------------------------------------------------- |
+| Language                   | TypeScript, with the Effect language service (`@effect/tsgo`)                                 |
+| Effects, services, streams | [Effect](https://effect.website) v4                                                           |
+| View                       | [React Native](https://reactnative.dev) (written in TSX), on Hermes                           |
+| Storage                    | SQLite, through [op-sqlite](https://github.com/OP-Engineering/op-sqlite)                      |
+| Barcodes                   | [zxing-cpp](https://github.com/zxing-cpp/zxing-cpp) on CameraX, in a native module of the app |
+| Bundler                    | Metro, with Babel                                                                             |
+| Runtime, tests             | [Bun](https://bun.com), with [fast-check](https://fast-check.dev) for property tests          |
+| Lint                       | [Biome](https://biomejs.dev), and [Oxlint](https://oxc.rs) for uses of deprecated APIs        |
 
 ## Getting started
 

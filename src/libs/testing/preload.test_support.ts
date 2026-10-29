@@ -5,6 +5,7 @@ import { mock } from 'bun:test'
 mock.module('react-native', () => ({
   ActivityIndicator: 'ActivityIndicator',
   BackHandler: { addEventListener: () => ({ remove: () => {} }) },
+  codegenNativeComponent: (name: string) => name,
   Linking: { openURL: () => Promise.resolve() },
   PlatformColor: (resource: string) => resource,
   Pressable: 'Pressable',
@@ -17,6 +18,7 @@ mock.module('react-native', () => ({
   },
   Text: 'Text',
   TextInput: 'TextInput',
+  TurboModuleRegistry: { getEnforcing: (name: string) => ({ name }) },
   Vibration: { vibrate: () => {} },
   View: 'View',
 }))

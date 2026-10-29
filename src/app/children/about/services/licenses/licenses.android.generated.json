@@ -6,7 +6,7 @@
         "name": "Activity",
         "description": "Provides the base Activity subclass and the relevant hooks to build a composable structure on top."
     },
-    "androidx.annotation:annotation-experimental@1.4.0": {
+    "androidx.annotation:annotation-experimental@1.4.1": {
         "licenses": "Apache-2.0",
         "repository": "https://cs.android.com/androidx/platform/frameworks/support",
         "publisher": "The Android Open Source Project",
@@ -55,6 +55,62 @@
         "name": "Autofill",
         "description": "AndroidX Autofill"
     },
+    "androidx.camera:camera-camera2-pipe@1.6.2": {
+        "licenses": "Apache-2.0",
+        "repository": "https://cs.android.com/androidx/platform/frameworks/support",
+        "publisher": "The Android Open Source Project",
+        "name": "Camera2 Pipe",
+        "description": "A set of opinionated camera interfaces and implementations on top of Camera2 that will form a flexible shim layer to power Frameserver and CameraX."
+    },
+    "androidx.camera:camera-camera2@1.6.2": {
+        "licenses": "Apache-2.0",
+        "repository": "https://cs.android.com/androidx/platform/frameworks/support",
+        "publisher": "The Android Open Source Project",
+        "name": "Camera2",
+        "description": "A Camera2 Pipe implementation of CameraX, a library providing a consistent and reliable camera foundation that enables great camera driven experiences across all of Android."
+    },
+    "androidx.camera:camera-core@1.6.2": {
+        "licenses": "Apache-2.0 AND BSD-3-Clause",
+        "repository": "https://cs.android.com/androidx/platform/frameworks/support",
+        "publisher": "The Android Open Source Project",
+        "name": "Camera Core",
+        "description": "Core components for the Jetpack Camera Library, a library providing a consistent and reliable camera foundation that enables great camera driven experiences across all of Android. This library includes code from libyuv, which is licensed under the BSD-3-Clause license."
+    },
+    "androidx.camera:camera-lifecycle@1.6.2": {
+        "licenses": "Apache-2.0",
+        "repository": "https://cs.android.com/androidx/platform/frameworks/support",
+        "publisher": "The Android Open Source Project",
+        "name": "Camera Lifecycle",
+        "description": "Lifecycle components for the Jetpack Camera Library, a library providing a consistent and reliable camera foundation that enables great camera driven experiences across all of Android."
+    },
+    "androidx.camera:camera-video@1.6.2": {
+        "licenses": "Apache-2.0",
+        "repository": "https://cs.android.com/androidx/platform/frameworks/support",
+        "publisher": "The Android Open Source Project",
+        "name": "Camera Video",
+        "description": "Video components for the Jetpack Camera Library, a library providing a consistent and reliable camera foundation that enables great camera driven experiences across all of Android."
+    },
+    "androidx.camera:camera-view@1.6.2": {
+        "licenses": "Apache-2.0",
+        "repository": "https://cs.android.com/androidx/platform/frameworks/support",
+        "publisher": "The Android Open Source Project",
+        "name": "Camera View",
+        "description": "UI tools for the Jetpack Camera Library, a library providing a consistent and reliable camera foundation that enables great camera driven experiences across all of Android."
+    },
+    "androidx.camera.featurecombinationquery:featurecombinationquery@1.6.2": {
+        "licenses": "Apache-2.0",
+        "repository": "https://cs.android.com/androidx/platform/frameworks/support",
+        "publisher": "The Android Open Source Project",
+        "name": "Camera Feature Combination Query",
+        "description": "Camera feature combination components for the Camera Library, a library providing a seamless experience for querying camera features across all of Android."
+    },
+    "androidx.camera.viewfinder:viewfinder-core@1.5.1": {
+        "licenses": "Apache-2.0",
+        "repository": "https://cs.android.com/androidx/platform/frameworks/support",
+        "publisher": "The Android Open Source Project",
+        "name": "Camera Viewfinder Core",
+        "description": "Core dependencies for Viewfinder"
+    },
     "androidx.collection:collection@1.4.4": {
         "licenses": "Apache-2.0",
         "repository": "https://cs.android.com/androidx/platform/frameworks/support",
@@ -62,12 +118,26 @@
         "name": "collections",
         "description": "Standalone efficient collections."
     },
+    "androidx.concurrent:concurrent-futures-ktx@1.1.0": {
+        "licenses": "Apache-2.0",
+        "repository": "http://source.android.com",
+        "publisher": "The Android Open Source Project",
+        "name": "AndroidX Futures Kotlin Extensions",
+        "description": "Kotlin Extensions for Androidx implementation of Guava's ListenableFuture"
+    },
     "androidx.concurrent:concurrent-futures@1.1.0": {
         "licenses": "Apache-2.0",
         "repository": "http://source.android.com",
         "publisher": "The Android Open Source Project",
         "name": "AndroidX Futures",
         "description": "Androidx implementation of Guava's ListenableFuture"
+    },
+    "androidx.core:core-backported-fixes@1.0.0": {
+        "licenses": "Apache-2.0",
+        "repository": "https://cs.android.com/androidx/platform/frameworks/support",
+        "publisher": "The Android Open Source Project",
+        "name": "androidx.core:core-backported-fixes",
+        "description": "This library makes it easy for developers to use check if a known critical issue is fixed on a device."
     },
     "androidx.core:core-ktx@1.13.1": {
         "licenses": "Apache-2.0",
@@ -117,6 +187,13 @@
         "publisher": "The Android Open Source Project",
         "name": "Android Emoji2 Compat",
         "description": "Core library to enable emoji compatibility in Kitkat and newer devices to avoid the empty emoji characters."
+    },
+    "androidx.exifinterface:exifinterface@1.4.2": {
+        "licenses": "Apache-2.0",
+        "repository": "https://cs.android.com/androidx/platform/frameworks/support",
+        "publisher": "The Android Open Source Project",
+        "name": "ExifInterface",
+        "description": "Android Support ExifInterface"
     },
     "androidx.fragment:fragment@1.5.4": {
         "licenses": "Apache-2.0",
@@ -188,6 +265,27 @@
         "name": "Support loader",
         "description": "The Support Library is a static library that you can add to your Android application in order to use APIs that are either not available for older platform versions or utility APIs that aren't a part of the framework APIs. Compatible on devices running API 14 or later."
     },
+    "androidx.media3:media3-common@1.9.0": {
+        "licenses": "Apache-2.0",
+        "repository": "https://github.com/androidx/media",
+        "publisher": "The Android Open Source Project",
+        "name": "Media3 common module",
+        "description": "Media3 common module"
+    },
+    "androidx.media3:media3-container@1.9.0": {
+        "licenses": "Apache-2.0",
+        "repository": "https://github.com/androidx/media",
+        "publisher": "The Android Open Source Project",
+        "name": "Media3 Container module",
+        "description": "Media3 Container module"
+    },
+    "androidx.media3:media3-muxer@1.9.0": {
+        "licenses": "Apache-2.0",
+        "repository": "https://github.com/androidx/media",
+        "publisher": "The Android Open Source Project",
+        "name": "Media3 Muxer module",
+        "description": "Media3 Muxer module"
+    },
     "androidx.profileinstaller:profileinstaller@1.3.1": {
         "licenses": "Apache-2.0",
         "repository": "https://cs.android.com/androidx/platform/frameworks/support",
@@ -223,11 +321,18 @@
         "name": "Support Custom View",
         "description": "The Support Library is a static library that you can add to your Android application in order to use APIs that are either not available for older platform versions or utility APIs that aren't a part of the framework APIs. Compatible on devices running API 14 or later."
     },
-    "androidx.tracing:tracing@1.1.0": {
+    "androidx.tracing:tracing-ktx@1.3.0": {
         "licenses": "Apache-2.0",
         "repository": "https://cs.android.com/androidx/platform/frameworks/support",
         "publisher": "The Android Open Source Project",
-        "name": "Android Tracing",
+        "name": "Tracing Kotlin Extensions",
+        "description": "Android Tracing"
+    },
+    "androidx.tracing:tracing@1.3.0": {
+        "licenses": "Apache-2.0",
+        "repository": "https://cs.android.com/androidx/platform/frameworks/support",
+        "publisher": "The Android Open Source Project",
+        "name": "Tracing",
         "description": "Android Tracing"
     },
     "androidx.vectordrawable:vectordrawable-animated@1.1.0": {
@@ -452,18 +557,60 @@
         "name": "Proguard Annotations",
         "description": "Shared annotations for use with Proguard"
     },
+    "com.google.auto.value:auto-value-annotations@1.6.3": {
+        "licenses": "Apache-2.0",
+        "repository": "http://github.com/google/auto",
+        "publisher": "Google, Inc.",
+        "name": "AutoValue Annotations",
+        "description": "Immutable value-type code generation for Java 1.6+."
+    },
     "com.google.code.findbugs:jsr305@3.0.2": {
         "licenses": "Apache-2.0",
         "repository": "https://code.google.com/p/jsr-305/",
         "name": "FindBugs-jsr305",
         "description": "JSR305 Annotations for Findbugs"
     },
-    "com.google.guava:listenablefuture@1.0": {
+    "com.google.dagger:dagger@2.59": {
+        "licenses": "Apache-2.0",
+        "repository": "https://github.com/google/dagger/",
+        "publisher": "Google, Inc.",
+        "name": "Dagger",
+        "description": "A fast dependency injector for Android and Java."
+    },
+    "com.google.errorprone:error_prone_annotations@2.28.0": {
+        "licenses": "Apache-2.0",
+        "repository": "https://github.com/google/error-prone/error_prone_annotations",
+        "publisher": "Google LLC",
+        "name": "error-prone annotations",
+        "description": "Error Prone is a static analysis tool for Java that catches common programming mistakes at compile-time."
+    },
+    "com.google.guava:failureaccess@1.0.2": {
+        "licenses": "Apache-2.0",
+        "repository": "https://github.com/google/guava/failureaccess",
+        "publisher": "Kevin Bourrillion",
+        "name": "Guava InternalFutureFailureAccess and InternalFutures",
+        "description": "Contains\n    com.google.common.util.concurrent.internal.InternalFutureFailureAccess and\n    InternalFutures. Most users will never need to use this artifact. Its\n    classes are conceptually a part of Guava, but they're in this separate\n    artifact so that Android libraries can use them without pulling in all of\n    Guava (just as they can use ListenableFuture by depending on the\n    listenablefuture artifact)."
+    },
+    "com.google.guava:guava@33.3.1-android": {
+        "licenses": "Apache-2.0",
+        "repository": "https://github.com/google/guava/guava",
+        "publisher": "Kevin Bourrillion",
+        "name": "Guava: Google Core Libraries for Java",
+        "description": "Guava is a suite of core and expanded libraries that include\n    utility classes, Google's collections, I/O classes, and\n    much more."
+    },
+    "com.google.guava:listenablefuture@9999.0-empty-to-avoid-conflict-with-guava": {
         "licenses": "Apache-2.0",
         "repository": "https://github.com/google/guava/listenablefuture",
         "publisher": "Kevin Bourrillion",
         "name": "Guava ListenableFuture only",
-        "description": "Contains Guava's com.google.common.util.concurrent.ListenableFuture class,\n    without any of its other classes -- but is also available in a second\n    \"version\" that omits the class to avoid conflicts with the copy in Guava\n    itself. The idea is:\n\n    - If users want only ListenableFuture, they depend on listenablefuture-1.0.\n\n    - If users want all of Guava, they depend on guava, which, as of Guava\n    27.0, depends on\n    listenablefuture-9999.0-empty-to-avoid-conflict-with-guava. The 9999.0-...\n    version number is enough for some build systems (notably, Gradle) to select\n    that empty artifact over the \"real\" listenablefuture-1.0 -- avoiding a\n    conflict with the copy of ListenableFuture in guava itself. If users are\n    using an older version of Guava or a build system other than Gradle, they\n    may see class conflicts. If so, they can solve them by manually excluding\n    the listenablefuture artifact or manually forcing their build systems to\n    use 9999.0-...."
+        "description": "An empty artifact that Guava depends on to signal that it is providing\n    ListenableFuture -- but is also available in a second \"version\" that\n    contains com.google.common.util.concurrent.ListenableFuture class, without\n    any other Guava classes. The idea is:\n\n    - If users want only ListenableFuture, they depend on listenablefuture-1.0.\n\n    - If users want all of Guava, they depend on guava, which, as of Guava\n    27.0, depends on\n    listenablefuture-9999.0-empty-to-avoid-conflict-with-guava. The 9999.0-...\n    version number is enough for some build systems (notably, Gradle) to select\n    that empty artifact over the \"real\" listenablefuture-1.0 -- avoiding a\n    conflict with the copy of ListenableFuture in guava itself. If users are\n    using an older version of Guava or a build system other than Gradle, they\n    may see class conflicts. If so, they can solve them by manually excluding\n    the listenablefuture artifact or manually forcing their build systems to\n    use 9999.0-...."
+    },
+    "com.google.j2objc:j2objc-annotations@3.0.0": {
+        "licenses": "Apache-2.0",
+        "repository": "http://github.com/google/j2objc",
+        "publisher": "Tom Ball",
+        "name": "J2ObjC Annotations",
+        "description": "A set of annotations that provide additional information to the J2ObjC\n    translator to modify the result of translation."
     },
     "com.squareup.okhttp3:okhttp-urlconnection@4.9.2": {
         "licenses": "Apache-2.0",
@@ -542,6 +689,20 @@
         "name": "Hermes",
         "description": "The JavaScript engine the app runs on."
     },
+    "io.github.zxing-cpp:android@3.1.1": {
+        "licenses": "Apache-2.0",
+        "repository": "https://github.com/zxing-cpp/zxing-cpp",
+        "publisher": "zxing-cpp community",
+        "name": "zxing-cpp",
+        "description": "Wrapper for zxing-cpp barcode image processing library"
+    },
+    "jakarta.inject:jakarta.inject-api@2.0.1": {
+        "licenses": "Apache-2.0",
+        "repository": "https://github.com/eclipse-ee4j/injection-api",
+        "publisher": "Eclipse Foundation",
+        "name": "Jakarta Dependency Injection",
+        "description": "Jakarta Dependency Injection"
+    },
     "javax.inject:javax.inject@1": {
         "licenses": "Apache-2.0",
         "repository": "http://code.google.com/p/atinject/source/checkout",
@@ -561,11 +722,25 @@
         "name": "libjpeg-turbo",
         "description": "JPEG coding, compiled into Fresco's image transcoder."
     },
+    "libzueci@zxing-cpp-3.1.1": {
+        "licenses": "BSD-3-Clause AND MIT",
+        "repository": "https://github.com/zxing-cpp/zxing-cpp/tree/v3.1.1/core/src/libzueci",
+        "copyright": "Copyright (C) 2022 gitlost; Copyright (c) 2008-2009 Bjoern Hoehrmann",
+        "name": "libzueci",
+        "description": "Conversions of a barcode's character sets, compiled into zxing-cpp."
+    },
     "llvh": {
         "licenses": "Apache-2.0 WITH LLVM-exception AND NCSA",
         "repository": "https://github.com/facebook/hermes/tree/main/external/llvh",
         "name": "LLVM support libraries",
         "description": "The copy of LLVM's libraries that Hermes is built on."
+    },
+    "org.checkerframework:checker-qual@3.43.0": {
+        "licenses": "MIT",
+        "repository": "https://github.com/typetools/checker-framework.git",
+        "publisher": "Michael Ernst",
+        "name": "Checker Qual",
+        "description": "checker-qual contains annotations (type qualifiers) that a programmer\nwrites to specify Java code for type-checking by the Checker Framework."
     },
     "org.jetbrains:annotations@23.0.0": {
         "licenses": "Apache-2.0",
@@ -581,7 +756,14 @@
         "name": "kotlin-annotations-jvm",
         "description": "Kotlin annotations for JVM"
     },
-    "org.jetbrains.kotlin:kotlin-stdlib-common@2.2.10": {
+    "org.jetbrains.kotlin:kotlin-bom@1.8.0": {
+        "licenses": "Apache-2.0",
+        "repository": "https://github.com/JetBrains/kotlin",
+        "publisher": "JetBrains Team",
+        "name": "Kotlin Libraries bill-of-materials",
+        "description": "Kotlin is a statically typed programming language that compiles to JVM byte codes and JavaScript"
+    },
+    "org.jetbrains.kotlin:kotlin-stdlib-common@2.3.20": {
         "licenses": "Apache-2.0",
         "repository": "https://github.com/JetBrains/kotlin",
         "publisher": "Kotlin Team",
@@ -602,28 +784,35 @@
         "name": "Kotlin Stdlib Jdk8",
         "description": "Kotlin Standard Library JDK 8 extension"
     },
-    "org.jetbrains.kotlin:kotlin-stdlib@2.2.10": {
+    "org.jetbrains.kotlin:kotlin-stdlib@2.3.20": {
         "licenses": "Apache-2.0",
         "repository": "https://github.com/JetBrains/kotlin",
         "publisher": "Kotlin Team",
         "name": "Kotlin Stdlib",
         "description": "Kotlin Standard Library"
     },
-    "org.jetbrains.kotlinx:kotlinx-coroutines-android@1.8.1": {
+    "org.jetbrains.kotlinx:atomicfu@0.28.0": {
+        "licenses": "Apache-2.0",
+        "repository": "https://github.com/Kotlin/kotlinx.atomicfu",
+        "publisher": "JetBrains Team",
+        "name": "atomicfu",
+        "description": "AtomicFU utilities"
+    },
+    "org.jetbrains.kotlinx:kotlinx-coroutines-android@1.9.0": {
         "licenses": "Apache-2.0",
         "repository": "https://github.com/Kotlin/kotlinx.coroutines",
         "publisher": "JetBrains Team",
         "name": "kotlinx-coroutines-android",
         "description": "Coroutines support libraries for Kotlin"
     },
-    "org.jetbrains.kotlinx:kotlinx-coroutines-bom@1.8.1": {
+    "org.jetbrains.kotlinx:kotlinx-coroutines-bom@1.9.0": {
         "licenses": "Apache-2.0",
         "repository": "https://github.com/Kotlin/kotlinx.coroutines",
         "publisher": "JetBrains Team",
         "name": "kotlinx-coroutines-bom",
         "description": "Coroutines support libraries for Kotlin"
     },
-    "org.jetbrains.kotlinx:kotlinx-coroutines-core@1.8.1": {
+    "org.jetbrains.kotlinx:kotlinx-coroutines-core@1.9.0": {
         "licenses": "Apache-2.0",
         "repository": "https://github.com/Kotlin/kotlinx.coroutines",
         "publisher": "JetBrains Team",

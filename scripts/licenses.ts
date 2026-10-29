@@ -118,7 +118,9 @@ export const disallowed = (entries: ReadonlyArray<readonly [string, Entry]>): Re
  * the native libraries (`lib/<abi>/*.so`), and the module built from sources. Read on 2026-10-29 from React Native
  * 0.88.1 (the headers of `react-android`'s prefab, the versions of its `gradle/libs.versions.toml`), Hermes' `external/`,
  * libjpeg-turbo's version string in Fresco's `libnative-imagetranscoder.so`, op-sqlite's `sqlite3.h` and the NDK of
- * `android/build.gradle`. Read again after an upgrade of React Native, of Fresco, of op-sqlite or of the NDK.
+ * `android/build.gradle`; on 2026-10-30, from zxing-cpp 3.1.1's `core/CMakeLists.txt` (CameraX's POM names the
+ * libyuv it compiles in). Read again after an upgrade of React Native, of Fresco, of op-sqlite, of the NDK or of
+ * zxing-cpp.
  */
 export const nativeEntries: ReadonlyArray<readonly [string, Entry]> = [
   ['bolts-tasks@5465bcc3b', {
@@ -203,6 +205,13 @@ export const nativeEntries: ReadonlyArray<readonly [string, Entry]> = [
       'Copyright (C) 2009-2023 D. R. Commander; this software is based in part on the work of the Independent JPEG Group.',
     name: 'libjpeg-turbo',
     description: 'JPEG coding, compiled into Fresco\'s image transcoder.',
+  }],
+  ['libzueci@zxing-cpp-3.1.1', {
+    licenses: 'BSD-3-Clause AND MIT',
+    repository: 'https://github.com/zxing-cpp/zxing-cpp/tree/v3.1.1/core/src/libzueci',
+    copyright: 'Copyright (C) 2022 gitlost; Copyright (c) 2008-2009 Bjoern Hoehrmann',
+    name: 'libzueci',
+    description: 'Conversions of a barcode\'s character sets, compiled into zxing-cpp.',
   }],
   ['llvh', {
     licenses: 'Apache-2.0 WITH LLVM-exception AND NCSA',

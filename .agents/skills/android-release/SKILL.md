@@ -27,7 +27,10 @@ the release, an unsigned AAB in `android/app/build/outputs/bundle/release/`, min
 Android Studio's JDK (`JAVA_HOME` set to its `jbr`) and installs the NDK the native modules need on the first build.
 `-PreactNativeArchitectures=x86_64` builds for the emulator only, in a fraction of the time. The native modules
 (op-sqlite, the safe area) are linked from `node_modules` by React Native's CLI, which Gradle runs from the
-repository's root.
+repository's root. The app's own, the camera that reads barcodes (CameraX and zxing-cpp, in
+`android/app/src/main/java/net/gaudo/fridgy/barcodecamera`, registered in `MainApplication.kt`), is written on the
+interfaces that React Native's codegen makes from the specs in `src/infrastructure/barcode-camera`
+(`codegenConfig` in `package.json`) on every build.
 
 The JavaScript alone, without Android's toolchain, is checked by `bun run bundle` (Metro's bundle into `out/`) and
 `hermesc` (`node_modules/hermes-compiler/hermesc/<platform>/hermesc -emit-binary -O -out out/index.android.hbc
@@ -109,7 +112,11 @@ The pass, on both reference screens of "Supported screen sizes":
   each field, every page still reaches its button;
 - each page and each state a change touched: Home's list and its colors of freshness, the selection and the
   deletion with "Undo", both steps of the page that adds products, the page that edits a product, About;
-- a long press selects without delivering the tap that opens the product, and vibrates.
+- a long press selects without delivering the tap that opens the product, and vibrates;
+- the scanner: its permission is asked on the first opening, a refusal says "Camera not available. Type the name",
+  and a code held to the camera (the emulator's back camera is the host's webcam with
+  `emulator -avd <avd> -camera-back webcam0`; a code shown on a phone's screen reads) closes it and names the
+  product.
 
 The app installs over a debug build only after `adb uninstall net.gaudo.fridgy`: the two are signed with the same
 key, but an install over an older schema fails on the first read, so start from a clean state anyway. The JavaScript's

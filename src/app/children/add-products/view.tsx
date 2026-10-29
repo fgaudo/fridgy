@@ -13,6 +13,7 @@ import {
   TextInput,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import CameraPreview from '#infrastructure/barcode-camera/BarcodeCameraPreviewNativeComponent.ts'
 import type { DateOrder } from '#libs/dates/date-order.ts'
 import * as Day from '#libs/dates/day.ts'
 import { handlers, type View } from '#libs/tea-react/tea-react.ts'
@@ -160,6 +161,15 @@ const styles = StyleSheet.create({
   keyLabel: { ...type.headlineSmall },
   scanner: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8, paddingHorizontal: 32 },
   scannerText: { ...type.bodyMedium, textAlign: 'center', color: color.onSurfaceVariant },
+  viewfinder: {
+    width: 288,
+    maxWidth: '100%',
+    height: 176,
+    borderRadius: shape.large,
+    borderWidth: 2,
+    borderColor: color.inverseOnSurface,
+  },
+  scannerHint: { minHeight: 56, justifyContent: 'center', paddingHorizontal: 24 },
   snackbar: {
     position: 'absolute',
     right: 16,
@@ -559,13 +569,28 @@ const dateStep = (shown: DateShown, activity: DateActivity, dispatch: Dispatch<M
   ]
 }
 
-/** Material's full-screen dialog over the first step. The camera is not drawn yet: it says so. */
+/**
+ * Material's full-screen dialog over the first step: the camera under a frame to hold the code in, or why there is
+ * none. The camera draws itself while the program reads it.
+ */
 const scanner = (model: Model & { _tag: 'Scanning' }, dispatch: Dispatch<Message>) => [
   <Box key='bar'>{appBar('Scan barcode', 'close', 'Close', Opt.some(model.closeScanner), dispatch)}</Box>,
-  <Box key='scanner' style={styles.scanner}>
-    {icon('no_photography', color.onSurfaceVariant, { fontSize: 36, lineHeight: 36 })}
-    <Text style={styles.scannerText}>Camera not available. Type the name</Text>
-  </Box>,
+  ...(model.camera === 'Available'
+    ? [
+      <Box key='camera' style={styles.scanner}>
+        <CameraPreview style={StyleSheet.absoluteFill} />
+        <Box style={styles.viewfinder} />
+      </Box>,
+      <Box key='hint' style={styles.scannerHint}>
+        <Text style={styles.scannerText}>Point the camera at a barcode</Text>
+      </Box>,
+    ]
+    : [
+      <Box key='unavailable' style={styles.scanner}>
+        {icon('no_photography', color.onSurfaceVariant, { fontSize: 36, lineHeight: 36 })}
+        <Text style={styles.scannerText}>Camera not available. Type the name</Text>
+      </Box>,
+    ]),
 ]
 
 const failureTexts: Readonly<Record<Failure, string>> = {

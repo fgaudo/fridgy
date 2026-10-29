@@ -4,11 +4,12 @@
 > the program, its states, messages and services stands; what it says of the view (snabbdom, `styles.css`, the
 > WebView, Capacitor, the browser) describes the web build, and is drawn again on React Native as the `views`
 > skill says.
+> The scanner was brought back on React Native on 2026-10-30, on the app's own camera (see "Barcodes").
 
 Implemented on 2026-10-27; the lookup and the scanner tried on Android in the emulator (see "Verified, and not").
 The code is the page that adds products (`src/app/children/add-products/`, its `product-lookup` service and the
-scanner adapter), the client `src/infrastructure/open-food-facts/`, the cache `src/infrastructure/storage/barcodes.ts`
-and the barcode library `src/libs/barcodes/`. Read [`AGENTS.md`](../AGENTS.md), the `add-service` and `add-program`
+scanner adapter), the camera `src/infrastructure/barcode-camera/` with its native module, the client
+`src/infrastructure/open-food-facts/` and the cache `src/infrastructure/storage/barcodes.ts`. Read [`AGENTS.md`](../AGENTS.md), the `add-service` and `add-program`
 skills and the "Guide" of `node_modules/@fgaudo/effect-tea/README.md` before changing them. Every fact about the
 Open Food Facts API below was checked against the live server on 2026-10-27 with `curl`; re-check what the code
 relies on (marked **verified**) before trusting it, the API may have moved.
@@ -147,8 +148,8 @@ browser through an intent, as it does for About's links, and in the development 
 
 ## The lookup, from the scan to the cache
 
-- **The scanner adapter** (`scanner.browser.ts`) offers EAN-8, EAN-13 or UPC-A digits only: a UPC-E is expanded
-  first (see "Barcodes"). The program and the service never see anything else; the lookup's adapter still
+- **The scanner adapter** (`scanner.react-native.ts`) offers the digits of an EAN-8 or an EAN-13 only: a UPC-A
+  and a UPC-E arrive as the EAN-13 they stand for (see "Barcodes"). The program and the service never see anything else; the lookup's adapter still
   answers `None` to a non-digit barcode without a request, defensively.
 - **The service** `ProductLookup` is a one-off read, an `Effect`, not a `Source`: `Some(found)` with the name in
   the device's language when Open Food Facts has it, else the main one, the first brand, the quantity and the
@@ -172,33 +173,23 @@ browser through an intent, as it does for About's links, and in the development 
 
 ## Barcodes: what the scanner reports
 
-`scanner.browser.ts` reads `rawValue` of the first `DetectedBarcode` and the formats `ean_13`, `ean_8`,
-`upc_a`, `upc_e`. Two facts matter:
+The camera is a native module of the app (`android/app/src/main/java/net/gaudo/fridgy/barcodecamera`): CameraX
+frames the back camera, and zxing-cpp 3.1.1 reads each frame for an EAN-13, an EAN-8, a UPC-A or a UPC-E. Both are
+under Apache-2.0, and read on the phone, with no Play services: Google's ML Kit, which the libraries of React
+Native's cameras read with, ships under Google's terms, which an AGPL app cannot pass on (decided on 2026-10-30).
+The module sends each code read as an event, for as long as the stream (`reads`, in `barcode-camera.ts`) is
+consumed: the scanner's subscription. The view draws only where the camera shows (`BarcodeCameraPreview`), so the
+codes never pass through it, and the program kept its states and messages. The camera's permission is asked by
+`start`, the first time the scanner opens in a visit of the page; a refusal fails the stream, and the scanner says
+`Camera not available. Type the name`.
 
-- EAN-13, EAN-8 and UPC-A values are the digits printed under the bars, check digit included: the server's
-  normalization handles them (UPC-A gets its leading zero).
-- **UPC-E is a compressed 8-digit form** (number system digit, 6 data digits, check digit) of a 12-digit UPC-A.
-  No documentation of the Shape Detection API or ML Kit says which form `rawValue` holds. Android's WebView
-  reports the 8-digit form, with the format `upc_e` (seen on 2026-10-29, "Verified, and not"). An 8-digit
-  UPC-E sent as it is would be padded like an EAN-8 and never match.
+The codes come as zxing-cpp gives them, which is what Open Food Facts reads:
 
-So the scanner adapter expands UPC-E itself, from the `format` of the `DetectedBarcode`, before offering the
-value. The expansion is generic, so it lives in `src/libs/barcodes/barcode.ts` (`expandUpcE`), with nothing of
-the app:
-
-```
-UPC-E = N D1 D2 D3 D4 D5 D6 C   (N ∈ {0,1}: number system; C: check digit, the same as the UPC-A's)
-
-D6 = 0, 1, 2:  UPC-A = N D1 D2 D6 0 0 0 0 D3 D4 D5 C
-D6 = 3:        UPC-A = N D1 D2 D3 0 0 0 0 0 D4 D5 C
-D6 = 4:        UPC-A = N D1 D2 D3 D4 0 0 0 0 0 D5 C
-D6 = 5..9:     UPC-A = N D1 D2 D3 D4 D5 0 0 0 0 D6 C
-```
-
-`expandUpcE` answers `None` unless given 8 digits with `N` 0 or 1; a 6-digit value (some readers drop `N` and
-`C`) is out of scope. Its test checks that the UPC-A's check digit (odd positions ×3 + even positions, mod 10,
-complement) equals `C` for every expansion of a generated valid UPC-E, and the known pair `04252614` →
-`042100005264`. In the adapter, a `upc_e` that does not expand is logged and not offered.
+- an EAN-13 and an EAN-8 as the digits printed under the bars, check digit included;
+- **a UPC-A as an EAN-13**, with its leading 0, and **a UPC-E as the EAN-13 of the UPC-A it compresses**
+  (`ODMultiUPCEANReader.cpp`: `"0" + ConvertUPCEtoUPCA`, as ISO/IEC 15420 asks). The web build's detector gave a
+  UPC-E's 8 digits, which Open Food Facts would pad like an EAN-8, and the app expanded them itself; zxing-cpp
+  needs none of it.
 
 ## Attribution and privacy
 
@@ -225,6 +216,13 @@ shows `Not on Open Food Facts`; the UPC-E `04252614` is read and offered as `042
 lookup shows `Couldn't reach Open Food Facts`. The detector, run in the WebView's DevTools on a generated image
 of each code, reports `3017620422003` as `ean_13` and `04252614` as `upc_e`, 8 digits. A blurred UPC-E was once
 misread as another valid one (`04751610`): its check digit guards little.
+
+On React Native, in the emulator on 2026-10-30 (API 37, the release build, the host's webcam as the back camera):
+the camera's permission is asked on the first opening of the scanner; a refusal shows `Camera not available. Type
+the name`; once granted, the camera shows in the frame in about two seconds, and `8076800195057`, shown on a
+screen, is read and named "Barilla Spaghetti Nº5", `From Open Food Facts`. Not yet on React Native: a UPC-E, an
+unknown code, airplane mode, and a phone's own camera. The preview leaves a dark band above and below the webcam's
+picture, which may be the emulator's frame.
 
 ## Later, not in this change
 

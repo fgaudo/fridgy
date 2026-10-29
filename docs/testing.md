@@ -57,8 +57,10 @@ A pass before a release, by hand, on the AVD of the target API, on the reference
 runs the same bundle, but starts slower and draws React Native's red screen on an error). Its checklist is in the
 skill ("The emulator"), and holds what a change of the app can break: the pages, the motions once they exist, the
 colors of the states, the failure snackbars, the start and the splash, the system bars, the back button, the
-keyboard and the font at 200%, the long press. What is not on it and concerns Android (a module's behaviour, the
-backup, a setting of the system) is a doubt to settle once, listed under "Known gaps" in `AGENTS.md` until it is.
+keyboard and the font at 200%, the long press, the scanner (its permission, its camera, a code read: the app's
+native module does them, and the tests' scanner reads nothing by itself). What is not on it and concerns Android
+(a module's behaviour, the backup, a setting of the system) is a doubt to settle once, listed under "Known gaps"
+in `AGENTS.md` until it is.
 
 ### The lowest Android
 

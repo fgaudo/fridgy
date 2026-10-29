@@ -77,4 +77,11 @@ dependencies {
     // The version of react-native is set by the React Native Gradle Plugin
     implementation("com.facebook.react:react-android")
     implementation("com.facebook.react:hermes-android")
+    // The barcode scanner (`src/main/java/net/gaudo/fridgy/barcodecamera`): CameraX draws and frames the back camera,
+    // zxing-cpp reads the codes, both under Apache-2.0.
+    def cameraxVersion = "1.6.2"
+    implementation("androidx.camera:camera-camera2:${cameraxVersion}")
+    implementation("androidx.camera:camera-lifecycle:${cameraxVersion}")
+    implementation("androidx.camera:camera-view:${cameraxVersion}")
+    implementation("io.github.zxing-cpp:android:3.1.1")
 }
