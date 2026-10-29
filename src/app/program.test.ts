@@ -268,9 +268,10 @@ describe('Navigation', () => {
       expect(yield* listedNames(user)).toEqual(Opt.some(['Milk']))
     })))
 
-  test('a barcode unknown to Open Food Facts names the product added', () =>
+  // The name typed before the scan is gone: nothing is added before the user has seen the answer.
+  test('a barcode unknown to Open Food Facts leaves the name to type before the product can be added', () =>
     rehearsed(Effect.fnUntraced(function*(user) {
-      yield* user.send(openAddProducts)
+      yield* perform(user, [openAddProducts, typeName('Bread')])
       yield* checkCamera(user)
       yield* scan(user, '4006381333931')
       yield* user.hear(
@@ -280,15 +281,16 @@ describe('Navigation', () => {
         }),
       )
       yield* user.hearNext(['AddProducts', 'clock'])
-      yield* user.send(addProduct)
+      expect(addProduct(yield* user.model)).toEqual(Opt.none())
+      yield* perform(user, [typeName('Milk'), addProduct])
       yield* user.run((command) => tagPath(command) === 'AddProducts › Add')
       yield* back(user)
       yield* user.hearNext(['Home', ['Products', 'changes']])
-      expect(yield* listedNames(user)).toEqual(Opt.some(['4006381333931']))
+      expect(yield* listedNames(user)).toEqual(Opt.some(['Milk']))
     })))
 
   // The page waits for the lookup: the name it would add may be replaced a moment later.
-  test('a lookup cancelled stops, and the barcode names the product added', () =>
+  test('a lookup cancelled stops, and leaves the name to type before the product can be added', () =>
     rehearsed(Effect.fnUntraced(function*(user) {
       yield* user.send(openAddProducts)
       yield* checkCamera(user)
@@ -298,11 +300,12 @@ describe('Navigation', () => {
       expect(addProduct(yield* user.model)).toEqual(Opt.none())
       yield* user.send(cancelLookup)
       expect(looksUp(yield* user.state)).toBe(false)
-      yield* user.send(addProduct)
+      expect(addProduct(yield* user.model)).toEqual(Opt.none())
+      yield* perform(user, [typeName('Milk'), addProduct])
       yield* user.run((command) => tagPath(command) === 'AddProducts › Add')
       yield* back(user)
       yield* user.hearNext(['Home', ['Products', 'changes']])
-      expect(yield* listedNames(user)).toEqual(Opt.some(['4006381333931']))
+      expect(yield* listedNames(user)).toEqual(Opt.some(['Milk']))
     })))
 
   // The name stays once its product is added: a second package of it is one tap.

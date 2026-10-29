@@ -43,7 +43,7 @@ export const snackbar: fc.Arbitrary<Snackbar> = fc.oneof(
 const lookup: fc.Arbitrary<Lookup> = fc.oneof(
   { arbitrary: fc.constant<Lookup>({ _tag: 'Idle' }), weight: 3 },
   fc.webUrl().map((url): Lookup => ({ _tag: 'Found', url })),
-  fc.constant<Lookup>({ _tag: 'NotFound' }),
+  barcode.map((scanned): Lookup => ({ _tag: 'NotFound', barcode: scanned })),
   fc.constant<Lookup>({ _tag: 'Failed' }),
 )
 
@@ -87,12 +87,11 @@ export const form: fc.Arbitrary<Form> = fc.tuple(
     snackbar,
   }),
   fc.boolean(),
-  barcode,
-).map(([form, keepsName, scanned]): Form => {
+).map(([form, keepsName]): Form => {
   // The name is often the product's just added, as the page keeps it after adding one; when the lookup did not
-  // name the product, it is the barcode scanned.
+  // name the product, there is none.
   const maybeName = form.lookup._tag === 'NotFound' || form.lookup._tag === 'Failed'
-    ? Opt.some(scanned)
+    ? Opt.none()
     : keepsName
     ? Opt.orElse(Opt.map(form.maybeAcknowledging, ({ product: { name } }) => name), () => form.maybeName)
     : form.maybeName
@@ -118,10 +117,10 @@ const formAndDate: fc.Arbitrary<[Form, DateForm]> = fc.tuple(
 
 export const naming = form.map((form) => ({ _tag: 'Naming', form } as const))
 
-// The barcode looked up is the name, and no answer has come yet.
+// The scan emptied the name, and no answer has come yet.
 export const lookingUp = fc.tuple(form, barcode).map(([form, barcode]) => ({
   _tag: 'LookingUp',
-  form: { ...form, maybeName: Opt.some(barcode), lookup: { _tag: 'Idle' } },
+  form: { ...form, maybeName: Opt.none(), lookup: { _tag: 'Idle' } },
   barcode,
 } as const))
 

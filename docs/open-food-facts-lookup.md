@@ -11,8 +11,8 @@ relies on (marked **verified**) before trusting it, the API may have moved.
 ## What it does
 
 A scanned barcode is looked up on Open Food Facts, the answer is cached in the app's SQLite database, and the
-barcode in the name field is replaced by the product's name when the product is known. The barcode stays in the
-field when the product is unknown or the lookup fails, so that the product can still be added. Out of scope:
+name field, emptied by the scan, takes the product's name when the product is known. When it is unknown or the
+lookup fails, the field stays empty, for the user to type the name. Out of scope:
 product images, nutrition data, contributing products to Open Food Facts, looking up a typed barcode, a column
 linking a stored product to its barcode (see "Later").
 
@@ -24,13 +24,20 @@ linking a stored product to its barcode (see "Later").
   instead of the view withholding them, so that a product is never added, nor dated, under a name about to be
   replaced. The first design let the step work meanwhile ("Add without date" saving the product under the
   barcode while the found name arrived a moment later); the blocked step was chosen as the simpler state.
+- **A scan empties the name**, and only a product found fills it. A barcode is no name anyone recognizes a
+  product by, and a name typed before the scan, kept after an unknown product, could be added by a tap made
+  before the user read the answer: an empty name cannot be added at all. The first design put the barcode in the
+  field and kept it there when nothing was found.
+- **The answer is told in the field's supporting text, never in the error's colors**: Material's error state
+  says that the field's content is wrong, and a product unknown to Open Food Facts is an ordinary outcome. The
+  barcode is in the text while looking it up and when it is unknown, so that a misread code shows.
 - **The lookup is a subscription, keyed by the barcode** (`lookup:<barcode>`, which the root's tests hear by that
   key). Work that must stop when the state no longer wants it is a subscription, not a command: it stops when
   the user types, cancels, scans again or leaves the page. Cancelling returns to `Naming`: the runtime interrupts
   the subscription, which aborts the request, and nothing it sent reaches `update` afterwards, so no stale answer
   needs handling. A key typed just before the scan leaves the state, as it drops the answer.
 - **The invariant** `update` keeps and the subscription relies upon: while `lookup` is not `Idle`, the name
-  field's text is the one the lookup put there (the barcode, or the found name). Every message that changes the
+  field's text is the one the lookup left there (the found name, or none). Every message that changes the
   name by any other way resets `lookup` to `Idle`; `Completed` keeps the name and so keeps `lookup` (after a
   product was added from a found name, the field still says it comes from Open Food Facts, which is true).
 - **`LookedUp` for a barcode not being looked up is a defect**: only the subscription sends it, while its key is
@@ -108,22 +115,23 @@ is **verified** unless marked otherwise.
 
 On the first step of the page that adds products, after a scan:
 
-1. The scanner closes, the name field shows the barcode, and its supporting text (the line under the field,
-   where "Camera not available. Type the name" goes) says `Looking up the product…`. Until the answer comes, the
+1. The scanner closes, the name field is emptied, and its supporting text (the line under the field, where
+   "Camera not available. Type the name" goes) says `Looking up <barcode>…`. Until the answer comes, the
    first step is blocked: the field is disabled, a circular progress indicator takes the place of its clear
    button, "Set expiration" and the scanner's FAB are disabled, and a `Cancel` text button takes the place of
    "Add without date". The app bar's close button and the back button leave the page as always. `Cancel` stops
-   the lookup: the barcode stays the name, with no supporting text, and the step works again. The lookup gives
-   up after 5 seconds (step 4).
+   the lookup: the name stays empty, with no supporting text, and the step works again. The lookup gives up after
+   5 seconds (step 4).
 2. **Known product**: the field is drawn anew with the product's name and focused; the supporting text says
    `From Open Food Facts`, where "Open Food Facts" links to the product's page
    (`https://world.openfoodfacts.org/product/<normalized code>`). The text stays until the name is edited,
    cleared or replaced by another scan.
-3. **Unknown product**: the barcode stays; the supporting text says `Not on Open Food Facts. Type the name`.
-4. **Lookup failed** (offline, timeout, server error, bad answer): the barcode stays; the supporting text says
-   `Couldn't reach Open Food Facts. Type the name`.
+3. **Unknown product**: the name stays empty; the supporting text says
+   `<barcode> isn't on Open Food Facts. Type the name`.
+4. **Lookup failed** (offline, timeout, server error, bad answer): the name stays empty; the supporting text says
+   `Couldn't reach Open Food Facts. Type the name`. The barcode is left out: it is not the cause.
 5. Once the lookup has answered or was cancelled, "Set expiration" and "Add without date" work as before the
-   scan, the barcode being a valid name.
+   scan, once a name is typed.
 
 The camera's "Camera not available. Type the name" keeps its place: it shows when the camera is unavailable
 and no lookup text applies (a lookup text comes from a scan, which needs the camera, so the two rarely meet;

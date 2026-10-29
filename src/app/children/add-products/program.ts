@@ -34,14 +34,15 @@ export type Camera = 'Checking' | 'Available' | 'Unavailable'
 
 /**
  * Open Food Facts' answer for the barcode last scanned. While it is not `Idle`, the name is the lookup's: the
- * product's name, or the barcode. Typing, clearing or scanning makes it `Idle` again.
+ * product's name, or none. Typing, clearing or scanning makes it `Idle` again.
  */
 export type Lookup = Data.TaggedEnum<{
   /** Nothing scanned, the name changed since, or the lookup still going on (the state `LookingUp`). */
   Idle: object
   /** `url` is the product's page, for the attribution. */
   Found: Readonly<{ url: string }>
-  NotFound: object
+  /** `barcode` is told, so that a misread code shows. */
+  NotFound: Readonly<{ barcode: string }>
   Failed: object
 }>
 
@@ -95,8 +96,8 @@ export type State = Data.TaggedEnum<{
   /** The first step: the name. */
   Naming: Readonly<{ form: Form }>
   /**
-   * The first step while the scanned barcode, now the name, is looked up. Left by the answer, a cancel, or a key
-   * typed just before.
+   * The first step while the scanned barcode is looked up, the name emptied. Left by the answer, a cancel, or a
+   * key typed just before.
    */
   LookingUp: Readonly<{ form: Form; barcode: string }>
   /** The scanner's dialog, over the first step. */
@@ -132,7 +133,7 @@ export type Message = Data.TaggedEnum<{
   Started: object
   /** The page's close button, on the first step. */
   Closed: object
-  /** The first step's "Cancel", while a scanned barcode is looked up: the barcode stays the name. */
+  /** The first step's "Cancel", while a scanned barcode is looked up: the name stays empty. */
   LookupCancelled: object
   // From subscriptions.
   TimeChanged: { now: DateTime.Zoned }
@@ -198,10 +199,10 @@ export type OrderChoice = Readonly<{
 export type Supporting = Data.TaggedEnum<{
   Nothing: object
   CameraUnavailable: object
-  LookingUp: object
+  LookingUp: Readonly<{ barcode: string }>
   /** The name comes from Open Food Facts: `url` is the product's page there. */
   FromOpenFoodFacts: Readonly<{ url: string }>
-  NotOnOpenFoodFacts: object
+  NotOnOpenFoodFacts: Readonly<{ barcode: string }>
   LookupFailed: object
 }>
 
@@ -611,22 +612,26 @@ export const program: Tea.Program<{
         : Tea.defect('SnackbarExpired while no snackbar is shown: the timer runs only while one is'),
 
     // The first barcode read closes the scanner, with a vibration: the phone is pointed at the product, not
-    // looked at. It is looked up even when it is the name already: scanning again is how a failed lookup is
-    // retried.
-    Scanned: ({ barcode }) => (state) => {
-      if (!isScanning(state)) {
-        return Tea.defect('Scanned while the camera is off: only the scanner reads it, until it fails')
-      }
-      const named = Opt.contains(state.form.maybeName, barcode)
-        ? state.form
-        : { ...state.form, maybeName: Opt.some(barcode), replacements: state.form.replacements + 1 }
-      return {
-        state: { _tag: 'LookingUp', form: { ...named, lookup: { _tag: 'Idle' } }, barcode },
-        commands: [Command.Vibrate({ feedback: 'Confirm' })],
-      }
-    },
+    // looked at. The name is emptied, drawn anew: nothing is added under it before the user has seen the answer.
+    // Scanning again is how a failed lookup is retried.
+    Scanned: ({ barcode }) => (state) =>
+      isScanning(state)
+        ? {
+          state: {
+            _tag: 'LookingUp',
+            form: {
+              ...state.form,
+              maybeName: Opt.none(),
+              replacements: state.form.replacements + 1,
+              lookup: { _tag: 'Idle' },
+            },
+            barcode,
+          },
+          commands: [Command.Vibrate({ feedback: 'Confirm' })],
+        }
+        : Tea.defect('Scanned while the camera is off: only the scanner reads it, until it fails'),
 
-    // A product found replaces the barcode, drawn anew and focused; otherwise the barcode stays, a valid name.
+    // A product found names it, drawn anew and focused; otherwise the name stays empty, for the user to type.
     LookedUp: ({ barcode, outcome }) => (state) => {
       if (state._tag !== 'LookingUp' || state.barcode !== barcode) {
         return Tea.defect(
@@ -644,15 +649,15 @@ export const program: Tea.Program<{
               replacements: form.replacements + 1,
               lookup: { _tag: 'Found', url },
             }),
-            NotFound: (): Form => ({ ...form, lookup: { _tag: 'NotFound' } }),
+            NotFound: (): Form => ({ ...form, lookup: { _tag: 'NotFound', barcode } }),
             Failed: (): Form => ({ ...form, lookup: { _tag: 'Failed' } }),
           }),
         },
       }
     },
 
-    // The lookup stops: the runtime interrupts its subscription, whose answer never arrives. The barcode stays,
-    // a valid name.
+    // The lookup stops: the runtime interrupts its subscription, whose answer never arrives. The name stays
+    // empty.
     LookupCancelled: () => (state) =>
       state._tag === 'LookingUp' ? { state: { _tag: 'Naming', form: state.form } } : Tea.reject,
 
@@ -753,12 +758,14 @@ export const program: Tea.Program<{
     const { form } = state
     const name = Opt.getOrElse(form.maybeName, () => '')
     // A lookup's text comes from a scan, which needs the camera: it wins when the camera failed on a later opening.
-    const supporting: Supporting = state._tag === 'LookingUp' ? { _tag: 'LookingUp' } : Match.valueTags(form.lookup, {
-      Idle: (): Supporting => form.camera === 'Unavailable' ? { _tag: 'CameraUnavailable' } : { _tag: 'Nothing' },
-      Found: ({ url }): Supporting => ({ _tag: 'FromOpenFoodFacts', url }),
-      NotFound: (): Supporting => ({ _tag: 'NotOnOpenFoodFacts' }),
-      Failed: (): Supporting => ({ _tag: 'LookupFailed' }),
-    })
+    const supporting: Supporting = state._tag === 'LookingUp'
+      ? { _tag: 'LookingUp', barcode: state.barcode }
+      : Match.valueTags(form.lookup, {
+        Idle: (): Supporting => form.camera === 'Unavailable' ? { _tag: 'CameraUnavailable' } : { _tag: 'Nothing' },
+        Found: ({ url }): Supporting => ({ _tag: 'FromOpenFoodFacts', url }),
+        NotFound: ({ barcode }): Supporting => ({ _tag: 'NotOnOpenFoodFacts', barcode }),
+        Failed: (): Supporting => ({ _tag: 'LookupFailed' }),
+      })
     const nameShown: NameShown = { supporting, name, nameKey: form.replacements, snackbar: form.snackbar }
     const dateShown = (
       date: DateForm,

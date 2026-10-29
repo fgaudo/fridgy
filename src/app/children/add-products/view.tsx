@@ -177,13 +177,13 @@ const supportingText = (supporting: Supporting) => (
     {Match.valueTags(supporting, {
       Nothing: () => [],
       CameraUnavailable: () => ['Camera not available. Type the name'],
-      LookingUp: () => ['Looking up the product…'],
+      LookingUp: ({ barcode }) => [`Looking up ${barcode}…`],
       // The attribution Open Food Facts' licence asks for, with the product's page.
       FromOpenFoodFacts: ({ url }) => [
         'From ',
         <a props={{ className: 'text-primary underline', href: url }}>Open Food Facts</a>,
       ],
-      NotOnOpenFoodFacts: () => ['Not on Open Food Facts. Type the name'],
+      NotOnOpenFoodFacts: ({ barcode }) => [`${barcode} isn't on Open Food Facts. Type the name`],
       LookupFailed: () => ['Couldn\'t reach Open Food Facts. Type the name'],
     })}
   </div>

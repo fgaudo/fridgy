@@ -255,17 +255,22 @@ describe('AddProducts update', () => {
         : rejects(Msg.ScanClosed(), before))
   })
 
-  // Scanning the barcode the name already is draws nothing anew, but looks it up again: that is how a failed
-  // lookup is retried. The answer of an earlier lookup is gone with it.
-  test('Scanned names the product, closes the scanner with a vibration, and waits for the lookup of the barcode', () => {
+  // Scanning again is how a failed lookup is retried. The answer of an earlier lookup is gone with it.
+  test('Scanned empties the name, drawing the input anew, closes the scanner with a vibration, and waits for the lookup of the barcode', () => {
     assertProperty([scanning, fc.oneof(fc.string(), barcode)], (before, scanned) => {
       fc.pre(readsCamera(before))
-      const named = Opt.contains(before.form.maybeName, scanned)
-        ? before.form
-        : { ...before.form, maybeName: Opt.some(scanned), replacements: before.form.replacements + 1 }
       return Equal.equals(step(Msg.Scanned({ barcode: scanned }), before), {
         rejected: false,
-        after: { _tag: 'LookingUp', form: { ...named, lookup: { _tag: 'Idle' } }, barcode: scanned },
+        after: {
+          _tag: 'LookingUp',
+          form: {
+            ...before.form,
+            maybeName: Opt.none(),
+            replacements: before.form.replacements + 1,
+            lookup: { _tag: 'Idle' },
+          },
+          barcode: scanned,
+        },
         commands: [Cmd.Vibrate({ feedback: 'Confirm' })],
         events: [],
       })
@@ -273,7 +278,7 @@ describe('AddProducts update', () => {
   })
 
   describe('LookedUp', () => {
-    test('a product found replaces the barcode, drawing the input anew, and says where the name came from, back on the first step', () => {
+    test('a product found names it, drawing the input anew, and says where the name came from, back on the first step', () => {
       assertProperty(
         [lookingUp, fc.string({ minLength: 1 }), fc.webUrl()],
         (before, name, url) =>
@@ -294,13 +299,26 @@ describe('AddProducts update', () => {
       )
     })
 
-    test('a product unknown, or a failed lookup, keeps the barcode, and says so, back on the first step', () => {
+    test('a product unknown leaves the name empty, and says so with the barcode, back on the first step', () => {
       assertProperty(
-        [lookingUp, fc.constantFrom('NotFound' as const, 'Failed' as const)],
-        (before, tag) =>
-          Equal.equals(step(Msg.LookedUp({ barcode: before.barcode, outcome: { _tag: tag } }), before), {
+        [lookingUp],
+        (before) =>
+          Equal.equals(step(Msg.LookedUp({ barcode: before.barcode, outcome: { _tag: 'NotFound' } }), before), {
             rejected: false,
-            after: { _tag: 'Naming', form: { ...before.form, lookup: { _tag: tag } } },
+            after: { _tag: 'Naming', form: { ...before.form, lookup: { _tag: 'NotFound', barcode: before.barcode } } },
+            commands: [],
+            events: [],
+          }),
+      )
+    })
+
+    test('a failed lookup leaves the name empty, and says so, back on the first step', () => {
+      assertProperty(
+        [lookingUp],
+        (before) =>
+          Equal.equals(step(Msg.LookedUp({ barcode: before.barcode, outcome: { _tag: 'Failed' } }), before), {
+            rejected: false,
+            after: { _tag: 'Naming', form: { ...before.form, lookup: { _tag: 'Failed' } } },
             commands: [],
             events: [],
           }),
@@ -309,7 +327,7 @@ describe('AddProducts update', () => {
   })
 
   // The runtime interrupts the lookup's subscription: its answer never arrives.
-  test('LookupCancelled stops the lookup, the barcode kept as the name, back on the first step, and is rejected otherwise', () => {
+  test('LookupCancelled stops the lookup, the name left empty, back on the first step, and is rejected otherwise', () => {
     assertProperty([state], (before) =>
       before._tag === 'LookingUp'
         ? Equal.equals(step(Msg.LookupCancelled(), before), {
@@ -596,7 +614,7 @@ describe('AddProducts update', () => {
         return s._tag === 'LookingUp'
           ? Equal.equals(model, {
             _tag: 'LookingUp',
-            supporting: { _tag: 'LookingUp' },
+            supporting: { _tag: 'LookingUp', barcode: s.barcode },
             name: Opt.getOrElse(s.form.maybeName, () => ''),
             nameKey: s.form.replacements,
             snackbar: s.form.snackbar,
@@ -622,11 +640,11 @@ describe('AddProducts update', () => {
       assertProperty([state], (s) => {
         const { lookup, camera } = s.form
         const expected = s._tag === 'LookingUp'
-          ? { _tag: 'LookingUp' }
+          ? { _tag: 'LookingUp', barcode: s.barcode }
           : lookup._tag === 'Found'
           ? { _tag: 'FromOpenFoodFacts', url: lookup.url }
           : lookup._tag === 'NotFound'
-          ? { _tag: 'NotOnOpenFoodFacts' }
+          ? { _tag: 'NotOnOpenFoodFacts', barcode: lookup.barcode }
           : lookup._tag === 'Failed'
           ? { _tag: 'LookupFailed' }
           : camera === 'Unavailable'
