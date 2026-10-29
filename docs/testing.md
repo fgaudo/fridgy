@@ -114,10 +114,10 @@ and after the first release of each of those. Its result is written in the commi
   320×640. About is left out of that check: it is a page to read, longer than any screen.
 - CI is `.github/workflows/checks.yml`: on every push and pull request, an audit of the dependencies for known
   vulnerabilities (`bun audit`), the tests, the build, the floor check and the run above, on Ubuntu.
-- Not yet: the failure snackbars have not all been looked at as "The failure snackbars, by hand in a browser"
-  says. Seen on 2026-10-29, in a browser at 360×720, with `?storage=failing`: `Couldn't save the product` 16dp
-  above "Save", `Couldn't delete the products` above Home's FAB and `Couldn't add the product` above the scan FAB
-  of the first step, both FABs still. The date order's, the second step's and the undo's are still to look at.
+- Verified on 2026-10-29, in a browser at 360×720: each failure snackbar of "The failure snackbars, by hand in
+  a browser" but the gone product's, 16dp above the FAB or the docked button, which stays put. On the page that
+  edits a product, `Couldn't save the date order` covers the keypad's bottom row, and the order picked stays
+  shown there; the next page opens on the order stored.
 - Not yet: the emulator pass as the skill lists it has not been run as such. The passes of 2026-10-28 followed the
   previous procedure (API 29 on WebView 114 installed by hand, and API 37), and what they settled is already
   in the code and the docs.
