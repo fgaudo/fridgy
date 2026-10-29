@@ -251,24 +251,30 @@ const chip = ({ date, choice }: DateChoice, activity: Activity, dispatch: Dispat
   )
 }
 
+const NOT_UPCOMING = 'Not an upcoming date'
+
 /**
- * Under the field, what it means. One row of chips tall whatever it shows, so that a change moves nothing. Two
- * chips fit the row on the narrowest phone in English; a language with long month names may wrap the second one.
+ * Under the field, what it means: a text, or the chips on one line that scrolls sideways. The longest text stays
+ * laid out, unseen, under what is shown, so that the strip keeps its height while the user types: nothing under it
+ * moves, whatever the font's size.
  */
 const strip = (shown: FieldsShown, activity: Activity, dispatch: Dispatch<Message>) => (
   <div
     props={{
       className: cn(
-        'flex min-h-8 shrink-0 flex-wrap content-start gap-2 text-body-small',
+        'grid shrink-0 text-body-small',
         shown.strip._tag === 'NamingNothing' ? 'text-error' : 'text-on-surface-variant',
       ),
     }}
   >
-    {Match.valueTags(shown.strip, {
-      Empty: () => [<span props={{ className: 'px-4' }}>No expiration</span>],
-      Naming: ({ choices }) => choices.map((choice) => chip(choice, activity, dispatch)),
-      NamingNothing: () => [<span props={{ className: 'px-4' }}>Not an upcoming date</span>],
-    })}
+    <span props={{ className: 'invisible col-start-1 row-start-1 px-4' }}>{NOT_UPCOMING}</span>
+    <div props={{ className: 'col-start-1 row-start-1 flex min-h-8 items-start gap-2 overflow-x-auto' }}>
+      {Match.valueTags(shown.strip, {
+        Empty: () => [<span props={{ className: 'px-4' }}>No expiration</span>],
+        Naming: ({ choices }) => choices.map((choice) => chip(choice, activity, dispatch)),
+        NamingNothing: () => [<span props={{ className: 'px-4' }}>{NOT_UPCOMING}</span>],
+      })}
+    </div>
   </div>
 )
 

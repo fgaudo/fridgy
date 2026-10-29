@@ -451,26 +451,31 @@ const chip = ({ date, choice }: DateChoice, activity: DateActivity, dispatch: Di
 }
 
 /**
- * Under the field, where a keyboard's suggestions would be. One row of chips tall whatever it shows, so that a
- * change moves nothing. Two chips fit the row on the narrowest phone in English; a language with long month names
- * may wrap the second one.
+ * Under the field, where a keyboard's suggestions would be: the hint, then the chips, on one line that scrolls
+ * sideways. The hint stays laid out, unseen, under what replaces it, so that the strip keeps its height from the
+ * first digit to the last: nothing under it moves while the user types, whatever the font's size.
  */
 const strip = (shown: DateShown, activity: DateActivity, dispatch: Dispatch<Message>) => (
   <div
     props={{
       className: cn(
-        'flex min-h-8 shrink-0 flex-wrap content-start gap-2 text-body-small',
+        'grid shrink-0 text-body-small',
         shown.strip._tag === 'NamingNothing' ? 'text-error' : 'text-on-surface-variant',
       ),
     }}
   >
-    {Match.valueTags(shown.strip, {
-      Hint: () => [
-        <span props={{ className: 'px-4' }}>{shown.order._tag === 'Known' ? hints[shown.order.order] : ''}</span>,
-      ],
-      Naming: ({ choices }) => choices.map((choice) => chip(choice, activity, dispatch)),
-      NamingNothing: () => [<span props={{ className: 'px-4' }}>Not an upcoming date</span>],
-    })}
+    <span
+      props={{ className: cn('col-start-1 row-start-1 px-4', shown.strip._tag !== 'Hint' && 'invisible') }}
+    >
+      {shown.order._tag === 'Known' ? hints[shown.order.order] : ''}
+    </span>
+    <div props={{ className: 'col-start-1 row-start-1 flex min-h-8 items-start gap-2 overflow-x-auto' }}>
+      {Match.valueTags(shown.strip, {
+        Hint: () => [],
+        Naming: ({ choices }) => choices.map((choice) => chip(choice, activity, dispatch)),
+        NamingNothing: () => [<span props={{ className: 'px-4' }}>Not an upcoming date</span>],
+      })}
+    </div>
   </div>
 )
 
