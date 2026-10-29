@@ -1,0 +1,14 @@
+// Bolts' tasks, as Meta relicensed them under MIT in 2018 (BoltsFramework/Bolts-Android, commit 5465bcc3b), which it
+// never published: Maven's last release, 1.4.0, which Fresco depends on, is under BSD with Facebook's PATENTS, which
+// the app does not ship. The sources are that commit's, unchanged; `app/build.gradle` puts this module in the
+// place of `com.parse.bolts:bolts-tasks`. The code differs from 1.4.0 by its headers and one fix, in
+// `CancellationTokenSource`.
+apply plugin: "com.android.library"
+
+android {
+    namespace "bolts"
+    compileSdk rootProject.ext.compileSdkVersion
+    defaultConfig {
+        minSdkVersion rootProject.ext.minSdkVersion
+    }
+}

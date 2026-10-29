@@ -1,0 +1,9 @@
+bolts.bolts-tasks-pngs-0 C:\Users\fgaud\Project\fgaudo\fridgy-rn\android\bolts-tasks\build\generated\res\pngs\release
+bolts.bolts-tasks-updated_navigation_xml-1 C:\Users\fgaud\Project\fgaudo\fridgy-rn\android\bolts-tasks\build\generated\updated_navigation_xml\release
+bolts.bolts-tasks-mergeReleaseResources-2 C:\Users\fgaud\Project\fgaudo\fridgy-rn\android\bolts-tasks\build\intermediates\incremental\release\mergeReleaseResources\merged.dir
+bolts.bolts-tasks-mergeReleaseResources-3 C:\Users\fgaud\Project\fgaudo\fridgy-rn\android\bolts-tasks\build\intermediates\incremental\release\mergeReleaseResources\stripped.dir
+bolts.bolts-tasks-release-4 C:\Users\fgaud\Project\fgaudo\fridgy-rn\android\bolts-tasks\build\intermediates\merged_res\release\mergeReleaseResources
+bolts.bolts-tasks-release-5 C:\Users\fgaud\Project\fgaudo\fridgy-rn\android\bolts-tasks\build\intermediates\packaged_res\release\packageReleaseResources
+bolts.bolts-tasks-main-6 C:\Users\fgaud\Project\fgaudo\fridgy-rn\android\bolts-tasks\src\main\res
+bolts.bolts-tasks-release-7 C:\Users\fgaud\Project\fgaudo\fridgy-rn\android\bolts-tasks\src\release\res
+gradleHome-0 C:\Users\fgaud\.gradle

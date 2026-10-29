@@ -150,7 +150,8 @@ folders; "page" names a role in the UI, kept by the root's state, not a kind of 
   replace a use found in passing.
 - A file a tool writes is never edited by hand: change what it is made from and run the tool again. Such a file
   is named `<name>.generated.<ext>` (`src/palette.generated.ts`, by `bun run update-palette`;
-  `licenses.generated.json`, by `bun run update-licenses`), and a new one is too; dprint and Biome skip them.
+  the About page's `licenses.npm.generated.json` and `licenses.android.generated.json`, by `bun run update-licenses`
+  and `bun run update-android-licenses`), and a new one is too; dprint and Biome skip them.
   The files whose name their tool fixes are the exception: the launcher icons (by `bun run update-assets`), and
   the icon font, `MaterialSymbolsRounded.ttf` in the Android project's assets (by `bun run update-icons`, and
   not committed).

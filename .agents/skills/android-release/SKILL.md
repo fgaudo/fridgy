@@ -139,6 +139,22 @@ The icon font, `android/app/src/main/assets/fonts/MaterialSymbolsRounded.ttf`, i
 writes it (`bun run update-icons`), decompressing the package's WOFF2, which Android cannot read. It is 15 MB,
 every icon: a view may name any.
 
+## Licenses
+
+The About page lists what the release ships: the packages of Metro's bundle (`bun run update-licenses`, which CI
+checks), and the Android libraries, as AboutLibraries' Gradle plugin exports them from their POMs, with what no POM
+describes, listed by hand in `nativeEntries` (`scripts/licenses.ts`): the C and C++ compiled into the native libraries
+(React Native's, Hermes', Fresco's, op-sqlite's SQLite, the NDK's libc++) and the modules built from sources
+(`bun run update-android-licenses`, which needs Gradle). Both fail on a license outside `ALLOWED`, the ones an AGPL
+app may ship with: a new one is the author's decision, never a line added to pass. After an upgrade of React Native,
+of Fresco, of op-sqlite or of the NDK, `nativeEntries` is read again, as its comment says.
+
+Fresco depends on Bolts' tasks 1.4.0, under BSD with Facebook's PATENTS, which Meta relicensed under MIT in 2018
+without publishing a release ([meta/fresco#2257](https://github.com/meta/fresco/issues/2257)). `android/bolts-tasks` is
+that MIT code, from the commit of the relicensing, built as a module of the app; `android/app/build.gradle` puts it in
+the place of `com.parse.bolts:bolts-tasks` for every library that asks for it. Should Fresco drop Bolts, or a release
+of it under MIT appear, the module goes.
+
 ## Version and release
 
 The version is `YEAR.MONTH.N`, N counting the releases of the month from 0 (`2026.10.0`, `2026.10.1`,
@@ -147,9 +163,8 @@ The version is `YEAR.MONTH.N`, N counting the releases of the month from 0 (`202
 1. sets the version only in `package.json`, which the About page shows; `android/app/build.gradle` reads it as
    `versionName` and derives the `versionCode`, `YEAR * 10000 + MONTH * 100 + N` (20261000), always higher
    than the last one, as the Play Store requires;
-2. runs `bun install`, which regenerates the licenses shown on the About page
-   (`src/app/children/about/services/licenses/licenses.generated.json`), and commits the file with `bun.lock`
-   when it changes;
+2. regenerates the licenses shown on the About page, `bun run update-licenses` and `bun run update-android-licenses`
+   ("Licenses" below), and commits the files when they change;
 3. runs `bun run typecheck`, `bun run test`, `bun run lint` and the bundle check; CI
    (`.github/workflows/checks.yml`) runs the same checks on the push;
 4. runs the emulator pass above on the target image, on the release build; every item under "Known gaps" that the

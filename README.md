@@ -30,17 +30,23 @@ leaves the phone. The whole of it is in [`PRIVACY.md`](PRIVACY.md), the policy t
 
 ## Getting started
 
-Requirements: [Bun](https://bun.com), Node.js 22.11 or later (React Native's command line runs on it) and Android
-Studio with an Android SDK; Gradle installs the NDK the native modules need.
+Requirements: [Bun](https://bun.com), Node.js 22.11 or later and Android Studio with an Android SDK; Gradle installs
+the NDK the native modules need. Node is a tool of React Native's build, as the JDK is: its command line, Metro, the
+autolinking and the codegen, which Gradle runs, are supported on Node only. Everything of the project's own (the
+tests, the scripts, the packages) runs on Bun.
 
 ```bash
 bun install
 ```
 
-It also regenerates the licenses shown on the About page
-(`src/app/children/about/services/licenses/licenses.generated.json`, from the production dependencies): commit
-the file when it changes, with `bun.lock`. And it writes the icon font into the Android project's assets
-(`bun run update-icons`): Android reads TrueType, and the font's package ships WOFF2.
+It also writes the icon font into the Android project's assets (`bun run update-icons`): Android reads TrueType,
+and the font's package ships WOFF2.
+
+The About page lists what the app ships, with its licenses, from two files in
+`src/app/children/about/services/licenses/`: `bun run update-licenses` writes the packages of the JavaScript bundle
+(from Metro's source map), and `bun run update-android-licenses` the Android libraries (with Gradle) and, from a
+list kept by hand in `scripts/licenses.ts`, what the native libraries compile in. Both fail on a license outside
+the ones the app may ship with, being AGPL (`ALLOWED`, there). Commit the files when they change.
 
 ### Build the Android app
 
@@ -61,16 +67,18 @@ is tested, and why a release is checked where it is, in [`docs/testing.md`](docs
 
 ## Development
 
-| Command                   |                                                                                                         |
-| ------------------------- | ------------------------------------------------------------------------------------------------------- |
-| `bun run typecheck`       | Type-check the project                                                                                  |
-| `bun run test`            | Run the tests                                                                                           |
-| `bun run lint`            | Lint, including the import boundaries and the order of imports, and warn about deprecated APIs          |
-| `bun audit`               | Check the dependencies for known vulnerabilities, from the lockfile                                     |
-| `bunx dprint fmt <files>` | Format the files you changed; CI checks the whole tree with `bunx dprint check`                         |
-| `bun run update-palette`  | Regenerate `src/palette.generated.ts`, the colors, from the key colors in `scripts/palette.ts`          |
-| `bun run update-icons`    | Write the Material Symbols font into the Android project's assets, as TrueType                          |
-| `bun run update-assets`   | Regenerate the Android launcher icons and the splash's color from `assets/logo.svg` and `logo-dark.svg` |
+| Command                           |                                                                                                         |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `bun run typecheck`               | Type-check the project                                                                                  |
+| `bun run test`                    | Run the tests                                                                                           |
+| `bun run lint`                    | Lint, including the import boundaries and the order of imports, and warn about deprecated APIs          |
+| `bun audit`                       | Check the dependencies for known vulnerabilities, from the lockfile                                     |
+| `bunx dprint fmt <files>`         | Format the files you changed; CI checks the whole tree with `bunx dprint check`                         |
+| `bun run update-licenses`         | Regenerate the About page's list of the JavaScript's packages, from Metro's bundle                      |
+| `bun run update-android-licenses` | Regenerate its list of the Android libraries, with Gradle                                               |
+| `bun run update-palette`          | Regenerate `src/palette.generated.ts`, the colors, from the key colors in `scripts/palette.ts`          |
+| `bun run update-icons`            | Write the Material Symbols font into the Android project's assets, as TrueType                          |
+| `bun run update-assets`           | Regenerate the Android launcher icons and the splash's color from `assets/logo.svg` and `logo-dark.svg` |
 
 A file named `*.generated.*` is written by a command and never edited by hand: change what it is made from and
 run the command again.

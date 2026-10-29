@@ -1,0 +1,175 @@
+{
+    "@babel/runtime@7.29.10": {
+        "licenses": "MIT",
+        "repository": "https://github.com/babel/babel",
+        "publisher": "The Babel Team",
+        "copyright": "Copyright (c) 2014-present Sebastian McKenzie and other contributors",
+        "name": "@babel/runtime",
+        "description": "babel's modular runtime helpers"
+    },
+    "@effect/sql-sqlite-react-native@4.1.0": {
+        "licenses": "MIT",
+        "repository": "https://github.com/Effect-TS/effect",
+        "copyright": "Copyright (c) 2023-present The Contributors",
+        "name": "@effect/sql-sqlite-react-native",
+        "description": "A SQLite toolkit for Effect"
+    },
+    "@fgaudo/effect-tea@0.7.1": {
+        "licenses": "MIT",
+        "repository": "https://github.com/fgaudo/effect-tea",
+        "publisher": "Francesco Gaudenzi",
+        "copyright": "Copyright (c) 2026 Francesco Gaudenzi",
+        "name": "@fgaudo/effect-tea",
+        "description": "The Elm architecture on Effect v4"
+    },
+    "@op-engineering/op-sqlite@18.2.5": {
+        "licenses": "MIT",
+        "repository": "https://github.com/OP-Engineering/op-sqlite",
+        "publisher": "Oscar Franco",
+        "email": "ospfranco@gmail.com",
+        "copyright": "Copyright 2021 Oscar Franco",
+        "name": "@op-engineering/op-sqlite",
+        "description": "Fastest SQLite for React Native (with node.js support)"
+    },
+    "@react-native/asset-utils@0.88.1": {
+        "licenses": "MIT",
+        "repository": "https://github.com/react/react-native",
+        "copyright": "",
+        "name": "@react-native/asset-utils",
+        "description": "Asset path utilities for React Native."
+    },
+    "@react-native/js-polyfills@0.88.1": {
+        "licenses": "MIT",
+        "repository": "https://github.com/react/react-native",
+        "copyright": "",
+        "name": "@react-native/js-polyfills",
+        "description": "Polyfills for React Native."
+    },
+    "@react-native/normalize-colors@0.88.1": {
+        "licenses": "MIT",
+        "repository": "https://github.com/react/react-native",
+        "copyright": "",
+        "name": "@react-native/normalize-colors",
+        "description": "Color normalization for React Native."
+    },
+    "@react-native/virtualized-lists@0.88.1": {
+        "licenses": "MIT",
+        "repository": "https://github.com/react/react-native",
+        "copyright": "",
+        "name": "@react-native/virtualized-lists",
+        "description": "Virtualized lists for React Native."
+    },
+    "base64-js@1.5.1": {
+        "licenses": "MIT",
+        "repository": "https://github.com/beatgammit/base64-js",
+        "publisher": "T. Jameson Little",
+        "email": "t.jameson.little@gmail.com",
+        "copyright": "Copyright (c) 2014 Jameson Little",
+        "name": "base64-js",
+        "description": "Base64 encoding/decoding in pure JS"
+    },
+    "effect@4.1.0": {
+        "licenses": "MIT",
+        "repository": "https://github.com/Effect-TS/effect",
+        "copyright": "Copyright (c) 2023 Effectful Technologies Inc",
+        "name": "effect",
+        "description": "The missing standard library for TypeScript, for writing production-grade software."
+    },
+    "invariant@2.2.4": {
+        "licenses": "MIT",
+        "repository": "https://github.com/zertosh/invariant",
+        "publisher": "Andres Suarez",
+        "email": "zertosh@gmail.com",
+        "copyright": "Copyright (c) 2013-present, Facebook, Inc.",
+        "name": "invariant",
+        "description": "invariant"
+    },
+    "memoize-one@5.2.1": {
+        "licenses": "MIT",
+        "repository": "https://github.com/alexreardon/memoize-one",
+        "publisher": "Alex Reardon",
+        "email": "alexreardon@gmail.com",
+        "copyright": "Copyright (c) 2019 Alexander Reardon",
+        "name": "memoize-one",
+        "description": "A memoization library which only remembers the latest invocation"
+    },
+    "metro-runtime@0.87.2": {
+        "licenses": "MIT",
+        "repository": "https://github.com/react/metro",
+        "copyright": "",
+        "name": "metro-runtime",
+        "description": "🚇 Module required for evaluating Metro bundles."
+    },
+    "nullthrows@1.1.1": {
+        "licenses": "MIT",
+        "repository": "https://github.com/zertosh/nullthrows",
+        "publisher": "Andres Suarez",
+        "email": "zertosh@gmail.com",
+        "copyright": "",
+        "name": "nullthrows",
+        "description": "flow typed nullthrows"
+    },
+    "promise@8.3.0": {
+        "licenses": "MIT",
+        "repository": "https://github.com/then/promise",
+        "publisher": "ForbesLindesay",
+        "copyright": "Copyright (c) 2014 Forbes Lindesay",
+        "name": "promise",
+        "description": "Bare bones Promises/A+ implementation"
+    },
+    "react-native-safe-area-context@5.11.0": {
+        "licenses": "MIT",
+        "repository": "https://github.com/appandflow/react-native-safe-area-context",
+        "publisher": "Janic Duplessis",
+        "email": "janicduplessis@gmail.com",
+        "copyright": "Copyright (c) 2019 Th3rd Wave",
+        "name": "react-native-safe-area-context",
+        "description": "A flexible way to handle safe area, also works on Android and web."
+    },
+    "react-native@0.88.1": {
+        "licenses": "MIT",
+        "repository": "https://github.com/react/react-native",
+        "copyright": "Copyright (c) Meta Platforms, Inc. and affiliates.",
+        "name": "react-native",
+        "description": "A framework for building native apps using React"
+    },
+    "react@19.3.0": {
+        "licenses": "MIT",
+        "repository": "https://github.com/react/react",
+        "copyright": "Copyright (c) Meta Platforms, Inc. and affiliates.",
+        "name": "react",
+        "description": "React is a JavaScript library for building user interfaces."
+    },
+    "regenerator-runtime@0.13.11": {
+        "licenses": "MIT",
+        "repository": "https://github.com/facebook/regenerator.git#main",
+        "publisher": "Ben Newman",
+        "email": "bn@cs.stanford.edu",
+        "copyright": "Copyright (c) 2014-present, Facebook, Inc.",
+        "name": "regenerator-runtime",
+        "description": "Runtime for Regenerator-compiled generator and async functions."
+    },
+    "scheduler@0.28.0": {
+        "licenses": "MIT",
+        "repository": "https://github.com/react/react",
+        "copyright": "Copyright (c) Meta Platforms, Inc. and affiliates.",
+        "name": "scheduler",
+        "description": "Cooperative scheduler for the browser environment."
+    },
+    "stacktrace-parser@0.1.11": {
+        "licenses": "MIT",
+        "repository": "https://github.com/errwischt/stacktrace-parser",
+        "publisher": "Georg Tavonius",
+        "email": "g.tavonius@gmail.com",
+        "copyright": "Copyright (c) 2014-2019 Georg Tavonius",
+        "name": "stacktrace-parser",
+        "description": "Parses every stack trace into a nicely formatted array of hashes."
+    },
+    "whatwg-fetch@3.6.20": {
+        "licenses": "MIT",
+        "repository": "https://github.com/github/fetch",
+        "copyright": "Copyright (c) 2014-2023 GitHub, Inc.",
+        "name": "whatwg-fetch",
+        "description": "A window.fetch polyfill."
+    }
+}

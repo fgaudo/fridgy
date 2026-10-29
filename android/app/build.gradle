@@ -1,5 +1,11 @@
 import groovy.json.JsonSlurper
 
+plugins {
+    // Exports the libraries the release packages, with their licenses, for the About page (`bun run
+    // update-android-licenses`): it adds a task and nothing to the build.
+    id "com.mikepenz.aboutlibraries.plugin" version "15.3.0"
+}
+
 apply plugin: "com.android.application"
 apply plugin: "org.jetbrains.kotlin.android"
 apply plugin: "com.facebook.react"
@@ -56,6 +62,14 @@ android {
             minifyEnabled true
             proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
         }
+    }
+}
+
+// Fresco depends on Bolts' tasks 1.4.0, under BSD with Facebook's PATENTS: the same code, under MIT, replaces it
+// (`../bolts-tasks/build.gradle`).
+configurations.configureEach {
+    resolutionStrategy.dependencySubstitution {
+        substitute(module("com.parse.bolts:bolts-tasks")).using(project(":bolts-tasks"))
     }
 }
 

@@ -23,9 +23,6 @@ jobs:
           node-version: 24
       - run: bun install --frozen-lockfile
       - run: bun audit
-      # The install regenerates the file: a difference means the committed one is stale.
-      - name: Licenses up to date
-        run: git diff --exit-code -- src/app/children/about/services/licenses/licenses.generated.json
       - run: bun run typecheck
       - run: bun run test
       - run: bun run lint
@@ -34,3 +31,8 @@ jobs:
       # A module Metro cannot resolve, or a syntax Hermes rejects, fails here rather than on a phone.
       - run: bun run bundle
       - run: node_modules/hermes-compiler/hermesc/linux64-bin/hermesc -emit-binary -O -out out/index.android.hbc out/index.android.bundle
+      # The packages the bundle ships: the command fails on a license the app may not ship with, and a difference
+      # means the committed list is stale. The Android libraries need Gradle, and are checked before a release.
+      - run: bun run update-licenses
+      - name: Licenses up to date
+        run: git diff --exit-code -- src/app/children/about/services/licenses/licenses.npm.generated.json

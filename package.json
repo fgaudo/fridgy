@@ -15,6 +15,7 @@
   },
   "scripts": {
     "update-licenses": "bun ./scripts/cli.ts licenses",
+    "update-android-licenses": "bun ./scripts/cli.ts android-licenses",
     "update-palette": "bun ./scripts/cli.ts palette",
     "update-icons": "bun ./scripts/cli.ts icons",
     "update-assets": "bun ./scripts/cli.ts assets",
@@ -22,7 +23,7 @@
     "typecheck": "tsc --noEmit",
     "lint": "biome check src scripts && oxlint --type-aware src scripts",
     "test": "bun test",
-    "prepare": "effect-tsgo patch --typescript --no-oxlint && bun run update-licenses && bun run update-icons"
+    "prepare": "effect-tsgo patch --typescript --no-oxlint && bun run update-icons"
   },
   "dependencies": {
     "@effect/sql-sqlite-react-native": "4.1.0",
