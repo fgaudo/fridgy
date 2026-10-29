@@ -552,7 +552,7 @@ const dateStep = (
     >
       {appBar('Add products', 'arrow_back', 'Back', Opt.map(controls, ({ back }) => back), dispatch)}
       {/* Fits the reference screen; scrolls when the screen is shorter (a large font), "Add" docked under it. */}
-      <div props={{ className: cn('flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto pb-2', sidePadding) }}>
+      <div props={{ className: cn('flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto', sidePadding) }}>
         <div props={{ className: 'flex flex-col px-4 pb-2' }}>
           <span props={{ className: 'text-label-medium text-on-surface-variant' }}>Product</span>
           <h3
@@ -569,7 +569,8 @@ const dateStep = (
           {keypad(activity, dispatch)}
         </div>
       </div>
-      <div props={{ className: cn('flex shrink-0 flex-col', stepPadding) }}>
+      {/* The gap above "Add" is its own, not the column's: it stays when the column scrolls under it. */}
+      <div props={{ className: cn('flex shrink-0 flex-col pt-2', stepPadding) }}>
         {button(
           'Add',
           Opt.flatMap(controls, ({ maybeAdd }) => maybeAdd),

@@ -335,7 +335,7 @@ const keypad = (activity: Activity, dispatch: Dispatch<Message>) => {
  */
 const fields = (shown: FieldsShown, activity: Activity, dispatch: Dispatch<Message>) => (
   <div key='fields' props={{ className: 'flex min-h-0 flex-1 flex-col' }}>
-    <div props={{ className: cn('flex flex-1 flex-col gap-2 overflow-y-auto pb-2', sidePadding) }}>
+    <div props={{ className: cn('flex flex-1 flex-col gap-2 overflow-y-auto', sidePadding) }}>
       {nameField(shown, activity, dispatch)}
       {orderSegments(shown, activity, dispatch)}
       {dateField(shown, activity)}
@@ -344,7 +344,8 @@ const fields = (shown: FieldsShown, activity: Activity, dispatch: Dispatch<Messa
         {keypad(activity, dispatch)}
       </div>
     </div>
-    <div props={{ className: cn('flex shrink-0 flex-col pb-[calc(1rem+var(--spacing-saib))]', sidePadding) }}>
+    {/* The gap above "Save" is its own, not the column's: it stays when the column scrolls under it. */}
+    <div props={{ className: cn('flex shrink-0 flex-col pt-2 pb-[calc(1rem+var(--spacing-saib))]', sidePadding) }}>
       {saveButton(shown, activity, dispatch)}
     </div>
   </div>
