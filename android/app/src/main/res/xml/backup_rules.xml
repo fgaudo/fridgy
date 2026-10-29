@@ -1,0 +1,3 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 10 and 11, where `dataExtractionRules` is ignored: the same choice, nothing excluded. -->
+<full-backup-content />

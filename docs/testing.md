@@ -90,8 +90,8 @@ and after the first release of each of those. Its result is written in the commi
   worker over OPFS, a product added by hand, its reload from the database, its edit and its deletion, About's
   version, and that Home, both steps of `add-products` and the page that edits a product do not scroll at
   320×640. About is left out of that check: it is a page to read, longer than any screen.
-- CI is `.github/workflows/checks.yml`: on every push and pull request, the tests, the build, the floor check
-  and the run above, on Ubuntu.
+- CI is `.github/workflows/checks.yml`: on every push and pull request, an audit of the dependencies for known
+  vulnerabilities (`bun audit`), the tests, the build, the floor check and the run above, on Ubuntu.
 - Not yet: the emulator pass as the skill lists it has not been run as such. The passes of 2026-10-28 followed the
   previous procedure (API 29 on WebView 114 installed by hand, and API 37), and what they settled is already
   in the code and the docs.
