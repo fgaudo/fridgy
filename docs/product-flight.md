@@ -1,8 +1,8 @@
 # Design: the product added enters the fridge
 
-Implemented on 2026-10-27, in `src/app/children/add-products` and `src/styles.css`; not yet seen on Android (see
-"Verified, and not"). Read [`AGENTS.md`](../AGENTS.md), the `views` and `add-program` skills and the "Guide" of
-`node_modules/@fgaudo/effect-tea/README.md` before changing it.
+Implemented on 2026-10-27, in `src/app/children/add-products` and `src/styles.css`; seen in the emulator on
+2026-10-28 (see "Verified, and not"). Read [`AGENTS.md`](../AGENTS.md), the `views` and `add-program` skills and
+the "Guide" of `node_modules/@fgaudo/effect-tea/README.md` before changing it.
 
 ## Decisions
 
@@ -108,7 +108,7 @@ the setting): an add from each step, two adds in a row, names in Latin, Arabic (
 Devanagari (by word) laid exactly over the field's text, a long name whose letters past the field's width are
 hidden, and the announcement ("Yogurt greco added. Expires 12 Dec 2027"). A write in the browser took up to two
 seconds, so a second add landing while the first is still entering was not seen. Seen in the emulator on 2026-10-28: on Android 17 the
-WebView follows "Remove animations" with `prefers-reduced-motion`; on Android 10 (WebView 139) it does not, and
+WebView follows "Remove animations" with `prefers-reduced-motion`; on Android 10 (WebView 114) it does not, and
 the movements play. `gatherAndFly` has no test: `tea-snabbdom` has no fake DOM.
 
 ## Later
