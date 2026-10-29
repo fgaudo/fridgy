@@ -2,32 +2,42 @@
 // (`android/bolts-tasks/build.gradle`): its record holds the commit and each file's git blob id there, which anyone
 // can compare with the repository's tree.
 import { describe, expect, test } from 'bun:test'
-import { createHash } from 'node:crypto'
-import { readdirSync, readFileSync } from 'node:fs'
-import { join, relative } from 'node:path'
+import * as EffBun from '@effect/platform-bun'
+import * as Effect from 'effect/Effect'
+import * as FS from 'effect/FileSystem'
+import * as Path from 'effect/Path'
+import * as Schema from 'effect/Schema'
 
-const MODULE = join(import.meta.dir, '..', 'android', 'bolts-tasks')
-
-type Provenance = Readonly<{ commit: string; files: Readonly<Record<string, string>> }>
-
-const provenance = JSON.parse(readFileSync(join(MODULE, 'provenance.json'), 'utf8')) as Provenance
+const Provenance = Schema.fromJsonString(Schema.Struct({
+  commit: Schema.String,
+  files: Schema.Record(Schema.String, Schema.String),
+}))
 
 /** Git's id of a file's content: the SHA-1 of `blob <size>\0` and the bytes. */
-const blobId = (bytes: Buffer) => createHash('sha1').update(`blob ${bytes.length}\0`).update(bytes).digest('hex')
+const blobId = (bytes: Uint8Array) =>
+  new Bun.CryptoHasher('sha1').update(`blob ${bytes.length}\0`).update(bytes).digest('hex')
 
-const filesUnder = (folder: string): ReadonlyArray<string> =>
-  readdirSync(folder, { withFileTypes: true, recursive: true })
-    .filter((entry) => entry.isFile())
-    .map((entry) => relative(MODULE, join(entry.parentPath, entry.name)).replaceAll('\\', '/'))
+/** The record, the module's sources and LICENSE with their blob ids. */
+const read = Effect.gen(function*() {
+  const fs = yield* FS.FileSystem
+  const path = yield* Path.Path
+  const module = path.join(import.meta.dir, '..', 'android', 'bolts-tasks')
+  const provenance = yield* Schema.decodeEffect(Provenance)(
+    yield* fs.readFileString(path.join(module, 'provenance.json')),
+  )
+  const sources = (yield* fs.readDirectory(path.join(module, 'src'), { recursive: true }))
+    .map((file) => `src/${file.replaceAll('\\', '/')}`)
+    .filter((file) => file.endsWith('.java'))
+  const files = yield* Effect.forEach(
+    [...sources, 'LICENSE'],
+    (file) => Effect.map(fs.readFile(path.join(module, file)), (bytes) => [file, blobId(bytes)] as const),
+  )
+  return { provenance, files: Object.fromEntries(files) }
+}).pipe(Effect.provide(EffBun.BunServices.layer))
 
 describe('android/bolts-tasks', () => {
-  test('holds the files of the relicensing commit, and no other source', () => {
-    expect(new Set([...filesUnder(join(MODULE, 'src')), 'LICENSE'])).toEqual(new Set(Object.keys(provenance.files)))
-  })
-
-  test('holds each file byte for byte as that commit has it', () => {
-    for (const [file, id] of Object.entries(provenance.files)) {
-      expect({ file, id: blobId(readFileSync(join(MODULE, file))) }).toEqual({ file, id })
-    }
+  test('holds the files of the relicensing commit, byte for byte, and no other source', async () => {
+    const { provenance, files } = await Effect.runPromise(read)
+    expect(files).toEqual(provenance.files)
   })
 })
