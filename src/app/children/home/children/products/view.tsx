@@ -3,7 +3,6 @@ import type * as Data from 'effect/Data'
 import * as DateTime from 'effect/DateTime'
 import * as Opt from 'effect/Option'
 import type { VNode, VNodeStyle } from 'snabbdom'
-import type * as UnitInterval from '#libs/numbers/unit-interval.ts'
 import { type Handlers, handlers } from '#libs/tea-snabbdom/tea-snabbdom.ts'
 import { cn } from '#libs/ui/class-names.ts'
 import type { ItemSelection, ListModel, Message, Model, Presence, ProductModel, ProductStatus } from './program.ts'
@@ -20,11 +19,12 @@ const avatarSize = cn(
 )
 
 /** A disc, the list item's leading avatar, in the colors of a role's container. */
-const disc = (colors: string, content: ReadonlyArray<VNode>) => (
+const disc = (colors: string, content: ReadonlyArray<VNode>, style: VNodeStyle = {}) => (
   <div
     key='content'
+    style={style}
     props={{
-      className: cn('relative flex flex-col items-center justify-center', avatarSize, colors),
+      className: cn('flex flex-col items-center justify-center', avatarSize, colors),
     }}
   >
     {content}
@@ -33,57 +33,7 @@ const disc = (colors: string, content: ReadonlyArray<VNode>) => (
 
 const NEUTRAL_DISC = 'bg-surface-container-highest text-on-surface'
 const ERROR_DISC = 'bg-error-container text-on-error-container'
-
-// Along the disc's edge: in its 40dp, a 4dp stroke around a radius of 18dp.
-const RING_RADIUS = 18
-const RING_LENGTH = 2 * Math.PI * RING_RADIUS
-// Material's gap between the active indicator and the track, 4dp, past the round caps (half a stroke each).
-const RING_GAP = 8
-
-/**
- * Material's determinate circular indicator around the disc: how much of the product's life is left, from the top,
- * shortening as the time passes, in a color going from tertiary through primary to error (`freshness-ring` in
- * `styles.css`). The track, a gap after it, shows the rest.
- */
-const ring = (freshness: UnitInterval.UnitInterval) => {
-  const activeLength = RING_LENGTH * freshness
-  const trackLength = Math.max(0, RING_LENGTH - activeLength - 2 * RING_GAP)
-  return (
-    <svg
-      attrs={{
-        class: 'freshness-ring absolute inset-0 fill-none stroke-4 [stroke-linecap:round]',
-        viewBox: '0 0 40 40',
-      }}
-      style={{ '--freshness': `${freshness}` }}
-    >
-      <title>{`${Math.round(freshness * 100)}% of its life left`}</title>
-      <circle
-        attrs={{
-          class: 'stroke-secondary-container transition-[stroke-dasharray,stroke-dashoffset]',
-          cx: 20,
-          cy: 20,
-          r: RING_RADIUS,
-          transform: 'rotate(-90 20 20)',
-        }}
-        style={{
-          strokeDasharray: `${trackLength} ${RING_LENGTH}`,
-          strokeDashoffset: `${-(activeLength + RING_GAP)}`,
-        }}
-      />
-      <circle
-        attrs={{
-          class: 'transition-[stroke-dashoffset]',
-          cx: 20,
-          cy: 20,
-          r: RING_RADIUS,
-          transform: 'rotate(-90 20 20)',
-          'stroke-dasharray': RING_LENGTH,
-        }}
-        style={{ strokeDashoffset: `${RING_LENGTH - activeLength}` }}
-      />
-    </svg>
-  )
-}
+const FRESHNESS_DISC = 'freshness-disc freshness-text transition-colors'
 
 /** The expiration day and month. */
 const expirationDay = (expirationDate: DateTime.Utc): ReadonlyArray<VNode> => [
@@ -96,9 +46,9 @@ const expirationDay = (expirationDate: DateTime.Utc): ReadonlyArray<VNode> => [
 ]
 
 /**
- * The expiration day on a neutral disc, ringed by the life left; an infinity sign when it never ends. The ring alone
- * carries the freshness, so that the rows leave the emphasis to the FAB: only an expired product, the one thing
- * that asks for an action, takes the error's tonal colors, as the rows that are not products do.
+ * The expiration day on a disc colored by the life left, green through orange to red (`freshness-disc` in
+ * `styles.css`); an infinity sign on a neutral disc when it never ends. An expired product is the red the scale
+ * ends on, its life left being none.
  */
 const freshnessBadge = (status: ProductStatus): VNode => {
   switch (status._tag) {
@@ -106,11 +56,11 @@ const freshnessBadge = (status: ProductStatus): VNode => {
       return disc(NEUTRAL_DISC, [<span props={{ className: 'text-title-medium leading-none' }}>∞</span>])
     case 'Stale':
     case 'ExpiredYesterday':
-      return disc(ERROR_DISC, expirationDay(status.expirationDate))
+      return disc(FRESHNESS_DISC, expirationDay(status.expirationDate), { '--freshness': '0' })
     case 'ExpiringToday':
     case 'ExpiringTomorrow':
     case 'Fresh':
-      return disc(NEUTRAL_DISC, [...expirationDay(status.expirationDate), ring(status.freshness)])
+      return disc(FRESHNESS_DISC, expirationDay(status.expirationDate), { '--freshness': `${status.freshness}` })
   }
 }
 

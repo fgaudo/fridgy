@@ -213,22 +213,44 @@ html {
 }
 
 /*
- * The ring of a product's freshness, `--freshness` (1 with all of its life left, 0 with none): the tertiary role
- * down to 0.75, the primary at 0.5 and the error from 0.25 down, mixed between them in between, so it follows the
- * theme as they do. The tertiary and the primary are both dark, and their mix an olive: the green is held
- * through the first quarter so that a fresh product reads as green. The bundler (Bun's CSS, as Lightning CSS)
- * gives `color-mix` a static fallback.
+ * The disc of a product's freshness, `--freshness` (1 with all of its life left, 0 with none, as an expired
+ * product has): the tertiary container down to 0.75, the primary's at 0.5 and the red end from 0.25 down, mixed
+ * between them in between, so it follows the theme as the roles do. The green is held through the first quarter
+ * so that a fresh product reads as green. The tertiary and the primary containers are light in both themes, as
+ * this palette makes them; the error's container is not, so the dark theme ends the scale on the error role
+ * itself, a light red of the same tone, and the whole disc keeps one polarity: a light fill under dark text.
+ * The text takes the matching mix of the `on-` roles, in a utility of its own: the bundler (Bun's CSS, as
+ * Lightning CSS) gives `color-mix` a static fallback, and keeps the mix of one declaration per rule only, the
+ * other staying its fallback. The two utilities are always worn together.
  */
-@utility freshness-ring {
+@utility freshness-disc {
   --freshness-tertiary: clamp(0%, (var(--freshness) - 0.5) * 400%, 100%);
   --freshness-primary: clamp(0%, (var(--freshness) - 0.25) * 400%, 100%);
-  stroke: color-mix(
+  --freshness-end: var(--color-error-container);
+  --freshness-on-end: var(--color-on-error-container);
+  @media (prefers-color-scheme: dark) {
+    --freshness-end: var(--color-error);
+    --freshness-on-end: var(--color-on-error);
+  }
+  background-color: color-mix(
     in oklab,
-    var(--color-tertiary) var(--freshness-tertiary),
+    var(--color-tertiary-container) var(--freshness-tertiary),
     color-mix(
       in oklab,
-      var(--color-primary) var(--freshness-primary),
-      var(--color-error)
+      var(--color-primary-container) var(--freshness-primary),
+      var(--freshness-end)
+    )
+  );
+}
+
+@utility freshness-text {
+  color: color-mix(
+    in oklab,
+    var(--color-on-tertiary-container) var(--freshness-tertiary),
+    color-mix(
+      in oklab,
+      var(--color-on-primary-container) var(--freshness-primary),
+      var(--freshness-on-end)
     )
   );
 }

@@ -231,8 +231,8 @@ expiration is upserted, or deleted when the snapshot has none.
   product whose date was mistyped as a later one after it had passed, and recording a product bought past its
   date. **Decided: from the creation day**, the domain's own rule.
 - **Which fields.** The creation date is not editable: nothing in the UI shows it as a date, only as the
-  freshness ring's start, and a form for it would need a second date entry. Changing the expiration of an old
-  product stretches or shrinks that ring, which is what the ring means.
+  start of the life the badge's disc colors, and a form for it would need a second date entry. Changing the
+  expiration of an old product stretches or shrinks that life, which is what the disc's color means.
 - **The product in the flags, not re-read.** The page trusts the row the user tapped. A product that changes
   under the page cannot happen today (nothing writes while Home is covered: `Products`' subscriptions, its undo
   timer included, run only while Home is on top, and its commands only insert or delete, never touch another id),
@@ -263,7 +263,7 @@ scrolls to "Save", keyboard open or not.
 
 - Deleting from the page (an overflow item in the app bar, with Home's snackbar on return).
 - The scanner and the lookup on this page, to rename a product from its barcode.
-- Editing the creation date ("bought on"), with the ring's meaning in mind: a third date entry, when moving the
+- Editing the creation date ("bought on"), with the disc's meaning in mind: a third date entry, when moving the
   entry up as a program of `programs/` is weighed again.
 - Repairing an `Invalid` row (a stored expiration before the creation date) from this page, which today can only
   be deleted: the page would start from an `UnvalidatedSnapshot` and a `fromSnapshot` that forgives the date.
