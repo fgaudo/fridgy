@@ -23,8 +23,10 @@ const orderTitles: Readonly<Record<DateOrder, string>> = {
   YMD: 'Year, month, day',
 }
 
-/** Whether the fields take input, and with which controls. */
-type Activity = Readonly<{ _tag: 'Editing'; controls: Model & { _tag: 'Editing' } } | { _tag: 'Saving' }>
+/** Whether the fields take input, and with which controls; if not, whether the product is being saved. */
+type Activity = Readonly<
+  { _tag: 'Editing'; controls: Model & { _tag: 'Editing' } } | { _tag: 'Saving' } | { _tag: 'Gone' }
+>
 
 const padding =
   'pb-[calc(1rem+var(--spacing-saib))] pl-[calc(1.5rem+var(--spacing-sail))] pr-[calc(1.5rem+var(--spacing-sair))]'
@@ -67,13 +69,13 @@ const saveButton = (activity: Activity, dispatch: Dispatch<Message>) => {
         className: cn(
           'state-layer relative h-14 shrink-0 rounded-full bg-primary px-6 text-label-large text-on-primary',
           'transition-colors',
-          activity._tag === 'Editing' && 'disabled:bg-on-surface/12 disabled:text-on-surface/38',
+          activity._tag !== 'Saving' && 'disabled:bg-on-surface/12 disabled:text-on-surface/38',
         ),
         disabled: Opt.isNone(maybeSave),
       }}
       on={Opt.match(maybeSave, { onNone: () => ({}), onSome: (save) => on('click', save) })}
     >
-      <span props={{ className: activity._tag === 'Editing' ? 'opacity-100' : 'opacity-0' }}>Save</span>
+      <span props={{ className: activity._tag === 'Saving' ? 'opacity-0' : 'opacity-100' }}>Save</span>
       {activity._tag === 'Saving'
         ? [
           <span
@@ -109,7 +111,7 @@ const nameField = (shown: FieldsShown, activity: Activity, dispatch: Dispatch<Me
           props={{
             type: 'text',
             enterKeyHint: 'done',
-            disabled: activity._tag === 'Saving',
+            disabled: activity._tag !== 'Editing',
             placeholder: ' ',
             className: cn(
               'peer h-14 w-full rounded-extra-small border border-outline bg-transparent pl-4',
@@ -164,7 +166,7 @@ const orderSegments = (shown: FieldsShown, activity: Activity, dispatch: Dispatc
     return (
       <button
         attrs={{ 'aria-pressed': choice._tag === 'Current' ? 'true' : 'false' }}
-        props={{ className: 'segment', disabled: activity._tag === 'Saving', title: orderTitles[order] }}
+        props={{ className: 'segment', disabled: activity._tag !== 'Editing', title: orderTitles[order] }}
         on={Opt.match(maybePick, { onNone: () => ({}), onSome: (pick) => on('click', pick) })}
       >
         {/* Keyed: the label must not take over the check's element, and its font, once the check goes. */}
@@ -191,8 +193,8 @@ const orderSegments = (shown: FieldsShown, activity: Activity, dispatch: Dispatc
  * it is. The digits are shown as they are: grouping them would read them one way.
  */
 const dateField = (shown: FieldsShown, activity: Activity) => {
-  // Disabled while the product is being saved; in the error's colors when the digits name no day.
-  const look = activity._tag === 'Saving' ? 'Disabled' : shown.strip._tag === 'NamingNothing' ? 'Wrong' : 'Plain'
+  // Disabled while the fields take no input; in the error's colors when the digits name no day.
+  const look = activity._tag !== 'Editing' ? 'Disabled' : shown.strip._tag === 'NamingNothing' ? 'Wrong' : 'Plain'
   // The margin above is the floating label's upper half, which Material's own field reserves.
   return (
     <label props={{ className: 'relative mt-2 block' }}>
@@ -238,7 +240,7 @@ const chip = ({ date, choice }: DateChoice, activity: Activity, dispatch: Dispat
   return (
     <button
       attrs={{ 'aria-pressed': choice._tag === 'Chosen' ? 'true' : 'false' }}
-      props={{ className: 'filter-chip', disabled: activity._tag === 'Saving' }}
+      props={{ className: 'filter-chip', disabled: activity._tag !== 'Editing' }}
       on={Opt.match(maybeChoose, { onNone: () => ({}), onSome: (choose) => on('click', choose) })}
     >
       <span attrs={{ 'aria-hidden': 'true' }} props={{ className: 'material-symbols-rounded text-[18px]' }}>
@@ -330,14 +332,16 @@ const fields = (shown: FieldsShown, activity: Activity, dispatch: Dispatch<Messa
 const failureTexts: Readonly<Record<Failure, string>> = {
   SaveFailed: 'Couldn\'t save the product',
   OrderNotKept: 'Couldn\'t save the date order',
+  ProductGone: 'This product no longer exists',
 }
 
 /**
- * Material's snackbar (`snackbar` in `styles.css`) over the docked controls, keyed by its id so that the next one
- * appears anew, after this one has sunk. The place stays, so that it enters and leaves with its own transitions.
+ * Material's snackbar (`snackbar` in `styles.css`) 16dp above the docked "Save" button, keyed by its id so that the
+ * next one appears anew, after this one has sunk. The place stays, so that it enters and leaves with its own
+ * transitions.
  */
 const snackbar = (shown: Snackbar) => (
-  <div key='snackbar' props={{ className: 'snackbar-slot' }}>
+  <div key='snackbar' props={{ className: 'snackbar-slot [--snackbar-clearance:4.5rem]' }}>
     {shown._tag === 'None' ? [] : [
       <div
         key={`snackbar-${shown.id}`}
@@ -378,6 +382,11 @@ export const view: View<Model, Message> = (model, dispatch) => (
         appBar(Opt.none(), dispatch),
         fields(saving, { _tag: 'Saving' }, dispatch),
         snackbar(saving.snackbar),
+      ],
+      Gone: (gone) => [
+        appBar(Opt.some(gone.close), dispatch),
+        fields(gone, { _tag: 'Gone' }, dispatch),
+        snackbar(gone.snackbar),
       ],
     })}
   </div>

@@ -1,6 +1,5 @@
 import * as Data from 'effect/Data'
 import * as fc from 'fast-check'
-import { utc } from '#libs/testing/date-time.test_arbitrary.ts'
 import * as Products from './children/products/program.test_arbitrary.ts'
 import type * as ProductsProgram from './children/products/program.ts'
 import type { Message, State } from './program.ts'
@@ -30,6 +29,5 @@ export const message: fc.Arbitrary<Message> = fc.oneof(
   fc.boolean().map((isAtTop) => Msg.AtTopChanged({ isAtTop })),
   fc.boolean().map((isCloseToTop) => Msg.CloseToTopChanged({ isCloseToTop })),
   fc.boolean().map((isInteracting) => Msg.InteractionChanged({ isInteracting })),
-  utc.map((at) => Msg.ProductGone({ at })),
   Products.message.map(fromProducts),
 )

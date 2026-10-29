@@ -258,11 +258,13 @@ html {
 }
 
 /*
- * Where Material's snackbar stands: at the bottom, 16dp from the edges. It takes no input: what is under it, out
- * of the snackbar's way, stays pressable.
+ * Where Material's snackbar stands: at the bottom, 16dp from the edges. A page that docks controls at the bottom
+ * sets `--snackbar-clearance` to their height and the 16dp above them: the snackbar stands above them, moving
+ * nothing. It takes no input: what is under it, out of the snackbar's way, stays pressable.
  */
 @utility snackbar-slot {
-  @apply pointer-events-none fixed right-4 bottom-4 left-4 z-30 mr-sair mb-saib ml-sail;
+  @apply pointer-events-none fixed right-4 left-4 z-30 mr-sair mb-saib ml-sail;
+  bottom: calc(1rem + var(--snackbar-clearance, 0rem));
 }
 
 /*

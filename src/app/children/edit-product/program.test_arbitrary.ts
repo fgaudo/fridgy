@@ -10,7 +10,7 @@ import * as DigitDateEntry from '#libs/dates/digit-date-entry.ts'
 import * as DigitDates from '#libs/dates/digit-dates.ts'
 import { arbitrary as maybe } from '#libs/option/option.test_arbitrary.ts'
 import { utc } from '#libs/testing/date-time.test_arbitrary.ts'
-import type { DateForm, Form, Message, Outcome, Snackbar, State } from './program.ts'
+import type { DateForm, Failure, Form, Message, Outcome, Snackbar, State } from './program.ts'
 
 const Msg = Data.taggedEnum<Message>()
 
@@ -66,15 +66,20 @@ const dateForm = (form: Omit<Form, 'date'>): fc.Arbitrary<DateForm> =>
     }),
   )
 
+const snackbarOf = (...failures: ReadonlyArray<Failure>): fc.Arbitrary<Snackbar> =>
+  fc.oneof(
+    fc.constant({ _tag: 'None' } as const),
+    fc.record({
+      id: fc.nat({ max: 5 }),
+      failure: fc.constantFrom(...failures),
+      entrance: fc.constantFrom('Alone', 'AfterAnother'),
+    }).map((fields) => ({ _tag: 'Shown', ...fields } as const)),
+  )
+
+// A product gone is told only once the page has stopped taking input.
+export const snackbar = snackbarOf('SaveFailed', 'OrderNotKept')
+
 // The name is often the stored one, at times with other spacing, and at times anything typed.
-export const snackbar: fc.Arbitrary<Snackbar> = fc.oneof(
-  fc.constant({ _tag: 'None' } as const),
-  fc.record({
-    id: fc.nat({ max: 5 }),
-    failure: fc.constantFrom('SaveFailed', 'OrderNotKept'),
-    entrance: fc.constantFrom('Alone', 'AfterAnother'),
-  }).map((fields) => ({ _tag: 'Shown', ...fields } as const)),
-)
 
 export const form: fc.Arbitrary<Form> = fc.tuple(opened, id, fc.nat(), order, fc.string(), fc.nat({ max: 3 }), snackbar)
   .chain((
@@ -100,12 +105,17 @@ export const editing = form.map((form) => ({ _tag: 'Editing', form } as const))
 
 export const saving = fc.tuple(form, product).map(([form, product]) => ({ _tag: 'Saving', form, product } as const))
 
-export const state: fc.Arbitrary<State> = fc.oneof(loading, editing, saving)
+// Its snackbar says so until it has stood its time, which leaves the page.
+export const gone = fc.tuple(form, snackbarOf('ProductGone')).map(([form, snackbar]) => (
+  { _tag: 'Gone', form: { ...form, snackbar } } as const
+))
+
+export const state: fc.Arbitrary<State> = fc.oneof(loading, editing, saving, gone)
 
 export const outcome: fc.Arbitrary<Outcome> = fc.oneof(
   fc.constant({ _tag: 'Saved' } as const),
   fc.constant({ _tag: 'Failed' } as const),
-  utc.map((at) => ({ _tag: 'Gone', at } as const)),
+  fc.constant({ _tag: 'Gone' } as const),
 )
 
 export const message: fc.Arbitrary<Message> = fc.oneof(

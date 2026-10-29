@@ -1,7 +1,7 @@
 // The page that edits a stored product: its name and its expiration date, typed on a keypad
 // (`docs/edit-product.md`). The states are the wait for the date order and the clock (`Loading`), the form
-// (`Editing`) and the write (`Saving`). Once the product is saved, the page asks to be left. A failure is told by
-// a snackbar, which leaves on its own.
+// (`Editing`), the write (`Saving`) and a product no longer stored (`Gone`). Once the product is saved, the page
+// asks to be left. A failure is told by a snackbar, which leaves on its own.
 import * as Tea from '@fgaudo/effect-tea'
 import * as Arr from 'effect/Array'
 import * as Channel from 'effect/Channel'
@@ -57,7 +57,7 @@ export type Form = Readonly<{
 export type Entrance = 'Alone' | 'AfterAnother'
 
 /** What failed: the snackbar says so. */
-export type Failure = 'SaveFailed' | 'OrderNotKept'
+export type Failure = 'SaveFailed' | 'OrderNotKept' | 'ProductGone'
 
 /** The snackbar, until it has stood its time. `id` tells one from the next. */
 export type Snackbar = Data.TaggedEnum<{
@@ -79,13 +79,18 @@ export type State = Data.TaggedEnum<{
   Editing: Readonly<{ form: Form }>
   /** The product is being saved: only its completion leaves this state. */
   Saving: Readonly<{ form: Form; product: Product.Product }>
+  /**
+   * Nothing is stored under the id any more: the form stays, taking no input, while its snackbar says so. Its end
+   * asks to be left.
+   */
+  Gone: Readonly<{ form: Form }>
 }>
 
-/** What the write answered: done, failed, or nothing is stored under the id any more, as of `at`. */
+/** What the write answered: done, failed, or nothing is stored under the id any more. */
 export type Outcome = Data.TaggedEnum<{
   Saved: object
   Failed: object
-  Gone: Readonly<{ at: DateTime.Utc }>
+  Gone: object
 }>
 
 export type Message = Data.TaggedEnum<{
@@ -132,11 +137,6 @@ const Command = Data.taggedEnum<Command>()
 
 export type Event = Data.TaggedEnum<{
   LeaveRequested: object
-  /**
-   * Nothing was stored under the id any more, at `at`: the page asks to be left, and the page under it to say
-   * so, since this one goes.
-   */
-  ProductGone: { at: DateTime.Utc }
 }>
 
 const Event = Data.taggedEnum<Event>()
@@ -195,6 +195,8 @@ export type Model = Data.TaggedEnum<{
     }>
   /** The product is being saved: the fields, their controls disabled. */
   Saving: FieldsShown
+  /** The product is no longer stored: the fields, their controls disabled, and the app bar's close button. */
+  Gone: FieldsShown & Readonly<{ close: Message }>
 }>
 
 // Material's snackbar without an action: long enough to read it.
@@ -280,7 +282,7 @@ const editingOnceKnown = (loading: State & { _tag: 'Loading' }): State =>
     }),
   })
 
-const withForm = (state: State & { _tag: 'Editing' | 'Saving' }, change: (form: Form) => Form): State => ({
+const withForm = (state: State & { _tag: 'Editing' | 'Saving' | 'Gone' }, change: (form: Form) => Form): State => ({
   ...state,
   form: change(state.form),
 })
@@ -334,7 +336,7 @@ const save = Effect.fn('SaveProduct')(
   },
   Effect.catch((error) =>
     error._tag === 'ProductNotStored'
-      ? Effect.map(DateTime.now, (at) => Message.Saved({ outcome: { _tag: 'Gone', at } }))
+      ? Effect.succeed(Message.Saved({ outcome: { _tag: 'Gone' } }))
       : Effect.succeed(Message.Saved({ outcome: { _tag: 'Failed' } }))
   ),
   Effect.asSome,
@@ -418,9 +420,11 @@ export const program: Tea.Program<{
 
   update: Match.typeTags<Message, (state: State) => Tea.Transition<State, Command, Event>>()({
     // Accepted while saving too, the input disabled: a key typed just before is kept. Whether it is a name is
-    // decided when saving.
+    // decided when saving. A product that is gone has nothing to save to.
     NameChanged: ({ name }) => (state) =>
-      state._tag === 'Loading' ? Tea.reject : { state: withForm(state, (form) => ({ ...form, name })) },
+      state._tag === 'Editing' || state._tag === 'Saving'
+        ? { state: withForm(state, (form) => ({ ...form, name })) }
+        : Tea.reject,
 
     // The input is drawn anew, empty: the user owns its text until the program replaces it.
     NameCleared: () => (state) =>
@@ -472,21 +476,26 @@ export const program: Tea.Program<{
     // The page is not left in the middle of a write: the press is held, so that the platform does not leave the app.
     BackPressed: () => (state) => state._tag === 'Saving' ? { state } : { state, events: [Event.LeaveRequested()] },
 
+    // A product that is gone has been told: the page asks to be left.
     SnackbarExpired: () => (state) =>
       state._tag !== 'Loading' && state.form.snackbar._tag === 'Shown'
-        ? { state: withForm(state, (form) => ({ ...form, snackbar: { _tag: 'None' } })) }
+        ? {
+          state: withForm(state, (form) => ({ ...form, snackbar: { _tag: 'None' } })),
+          events: state._tag === 'Gone' ? [Event.LeaveRequested()] : [],
+        }
         : Tea.defect('SnackbarExpired while no snackbar is shown: the timer runs only while one is'),
 
-    // The order picked stays in use for this visit either way: only the failure to keep it is told.
+    // The order picked stays in use for this visit either way: only the failure to keep it is told, unless the
+    // product is gone, whose snackbar stands until the page goes.
     OrderKept: ({ succeeded }) => (state) =>
       state._tag === 'Loading'
         ? Tea.defect('OrderKept while loading: an order is picked only once the form is there, which never goes')
-        : succeeded
+        : succeeded || state._tag === 'Gone'
         ? { state }
         : { state: withForm(state, told('OrderNotKept')), commands: [Command.Vibrate({ feedback: 'Reject' })] },
 
-    // Once saved, or once there is nothing to save to, the page asks to be left: Home's list shows the change, and
-    // Home says that the product is gone, as this page goes.
+    // Once saved, the page asks to be left: Home's list shows the change. Once there is nothing to save to, the
+    // page says so, and is left when its snackbar is.
     Saved: ({ outcome }) => (state) => {
       if (state._tag !== 'Saving') {
         return Tea.defect('Saved while no product is being saved: only a completion leaves Saving')
@@ -502,10 +511,9 @@ export const program: Tea.Program<{
           state: withForm(editing, told('SaveFailed')),
           commands: [Command.Vibrate({ feedback: 'Reject' })],
         }),
-        Gone: ({ at }): Tea.Transition<State, Command, Event> => ({
-          state: editing,
+        Gone: (): Tea.Transition<State, Command, Event> => ({
+          state: { _tag: 'Gone', form: told('ProductGone')(state.form) },
           commands: [Command.Vibrate({ feedback: 'Reject' })],
-          events: [Event.ProductGone({ at })],
         }),
       })
     },
@@ -546,5 +554,6 @@ export const program: Tea.Program<{
         }
       },
       Saving: ({ form }): Model => ({ _tag: 'Saving', ...fieldsOf(form, false) }),
+      Gone: ({ form }): Model => ({ _tag: 'Gone', ...fieldsOf(form, false), close: Message.Closed() }),
     }),
 }

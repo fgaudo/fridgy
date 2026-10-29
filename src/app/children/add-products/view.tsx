@@ -740,11 +740,22 @@ const failureTexts: Readonly<Record<Failure, string>> = {
 }
 
 /**
- * Material's snackbar (`snackbar` in `styles.css`) over the docked controls, keyed by its id so that the next one
- * appears anew, after this one has sunk. The place stays, so that it enters and leaves with its own transitions.
+ * The heights of the controls docked at the bottom of each step, at their minimum, and the 16dp above them. On the
+ * first step: its two buttons, the 12dp between them and above, and the scan FAB with its 4dp, which the snackbar
+ * stands above, as Material's does; on the second, the "Add" button.
  */
-const snackbar = (shown: Snackbar) => (
-  <div key='snackbar' props={{ className: 'snackbar-slot' }}>
+const clearances = {
+  Naming: '[--snackbar-clearance:12.25rem]',
+  Dating: '[--snackbar-clearance:4.5rem]',
+} as const
+
+/**
+ * Material's snackbar (`snackbar` in `styles.css`) 16dp above the controls docked at the bottom of the step shown,
+ * keyed by its id so that the next one appears anew, after this one has sunk. The place stays, so that it enters
+ * and leaves with its own transitions.
+ */
+const snackbar = (shown: Snackbar, step: keyof typeof clearances) => (
+  <div key='snackbar' props={{ className: cn('snackbar-slot', clearances[step]) }}>
     {shown._tag === 'None' ? [] : [
       <div
         key={`snackbar-${shown.id}`}
@@ -813,7 +824,10 @@ export const view: View<Model, Message> = (model, dispatch) => (
             ],
           }),
       }),
-      snackbar(model.snackbar),
+      snackbar(
+        model.snackbar,
+        model._tag === 'Dating' || (model._tag === 'Adding' && model.step._tag === 'Dating') ? 'Dating' : 'Naming',
+      ),
     ]}
   </div>
 )

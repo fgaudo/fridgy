@@ -111,7 +111,6 @@ export const notice: fc.Arbitrary<Notice> = fc.oneof(
   )),
   fc.constant({ _tag: 'DeleteFailed' } as const),
   fc.constant({ _tag: 'RestoreFailed' } as const),
-  fc.constant({ _tag: 'ProductGone' } as const),
 )
 
 export const shown: fc.Arbitrary<Snackbar> = fc.record({
@@ -160,7 +159,6 @@ export const message: fc.Arbitrary<Message> = fc.oneof(
   fc.constant(Msg.RowsSettled()),
   utc.map((at) => Msg.DeleteFailed({ at })),
   utc.map((at) => Msg.RestoreFailed({ at })),
-  utc.map((at) => Msg.ProductGone({ at })),
   utc.map((at) => Msg.Deleted({ at })),
   utc.map((now) => Msg.TimeChanged({ now })),
   fc.oneof(

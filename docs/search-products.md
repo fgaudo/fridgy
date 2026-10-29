@@ -225,7 +225,7 @@ selection):
 - **An undo after the query changed.** `Deleted` ends the lock; the user may type before tapping "Undo", so the
   restored products may not match: they are back in the storage, hidden by the filter. The snackbar is
   honest ("Product deleted" was undone: it is back), the storage is the truth, and closing the search shows it.
-  Locking the search while the snackbar stands (five seconds) was judged worse than this edge.
+  Locking the search while the snackbar stands (ten seconds) was judged worse than this edge.
 - **Hidden pages.** `Products`' subscriptions, the back button's included, run only while Home is on top
   (**verified**: `page('Home').subscribed` in the root), so the search's back button never steals a press from
   the page over Home. The storage's change caused by an edit or an add reaches Home when it is back on top.

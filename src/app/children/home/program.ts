@@ -3,7 +3,6 @@
 import * as Tea from '@fgaudo/effect-tea'
 import * as Channel from 'effect/Channel'
 import * as Data from 'effect/Data'
-import type * as DateTime from 'effect/DateTime'
 import * as Effect from 'effect/Effect'
 import * as HashMap from 'effect/HashMap'
 import * as Match from 'effect/Match'
@@ -34,15 +33,9 @@ type Own = Data.TaggedEnum<{
   AtTopChanged: { isAtTop: boolean }
   CloseToTopChanged: { isCloseToTop: boolean }
   InteractionChanged: { isInteracting: boolean }
-  // From the parent.
-  /** The product opened to be edited was no longer stored, at `at`: the products say so. */
-  ProductGone: { at: DateTime.Utc }
 }>
 
 const Own = Data.taggedEnum<Own>()
-
-/** What the parent sends. */
-export type ProductGone = Data.TaggedEnum.Value<Own, 'ProductGone'>
 
 /** The page's own commands: its child's are made by `compose`. */
 type OwnCommand = Data.TaggedEnum<{
@@ -119,7 +112,7 @@ const scrollToTop = Effect.fn('ScrollToTop')(
   Effect.withLogSpan('ScrollToTop'),
 )
 
-const { child, compose } = Tea.parent<{ state: State; command: OwnCommand; event: Event; external: ProductGone }>()
+const { child, compose } = Tea.parent<{ state: State; command: OwnCommand; event: Event }>()
 
 // The part is always there: only its subscriptions could be turned off.
 export const program = compose({
@@ -136,7 +129,7 @@ export const program = compose({
   onEvent: {
     Products: Tea.raise,
   },
-  update: (message: Own, children) => (state) =>
+  update: (message: Own) => (state) =>
     Match.valueTags(message, {
       MenuOpened: () => !state.isMenuOpen ? { state: { ...state, isMenuOpen: true } } : Tea.reject,
       MenuClosed: () => state.isMenuOpen ? { state: { ...state, isMenuOpen: false } } : Tea.reject,
@@ -158,7 +151,6 @@ export const program = compose({
         state,
         commands: !state.isInteracting && isCloseToTop ? [OwnCommand.ScrollToTop()] : [],
       }),
-      ProductGone: ({ at }) => children.Products.update({ _tag: 'ProductGone', at })(state),
     }),
   runCommand: Match.typeTags<OwnCommand>()({ ScrollToTop: scrollToTop }),
   subscriptions: (state) => state.isMenuOpen ? HashMap.set(always, 'back-button', backButton) : always,

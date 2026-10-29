@@ -8,7 +8,6 @@ import * as HashSet from 'effect/HashSet'
 import * as Opt from 'effect/Option'
 import * as fc from 'fast-check'
 import { messagesSentBy } from '#libs/tea-snabbdom/view.test_support.ts'
-import { utc } from '#libs/testing/date-time.test_arbitrary.ts'
 import { tagPath } from '#libs/testing/tag-path.test_support.ts'
 import { assertProperty, onlyChanged, outcomesOf } from '#libs/testing/update.test_support.ts'
 import { hasExpiringProduct } from './children/products/program.test_arbitrary.ts'
@@ -186,16 +185,6 @@ describe('Home update', () => {
     assertProperty([state], (before) => {
       const { after, commands, events } = step(Msg.AddRequested(), before)
       return Equal.equals(after, before) && commands.length === 0 && Equal.equals(events, [Ev.AddRequested()])
-    })
-  })
-
-  // The products tell it in their snackbar; the page holds nothing of it.
-  test('ProductGone is the products\' to tell, and changes nothing of the page\'s own', () => {
-    assertProperty([state, utc], (before, at) => {
-      const { after, commands, events } = step(Msg.ProductGone({ at }), before)
-      const told = Products.program.update(ProductsMsg.ProductGone({ at }))(before.products)
-      return told !== Tea.reject && Equal.equals(after.products, told.state)
-        && onlyChanged(before, after, 'products') && commands.length === 0 && events.length === 0
     })
   })
 

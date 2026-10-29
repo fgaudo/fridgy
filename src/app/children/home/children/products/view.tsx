@@ -312,8 +312,6 @@ const noticeText = (notice: Notice) => {
       return 'Couldn\'t delete the products'
     case 'RestoreFailed':
       return 'Couldn\'t put the products back'
-    case 'ProductGone':
-      return 'This product no longer exists'
   }
 }
 

@@ -7,16 +7,15 @@ import type { Message, Model } from './program.ts'
 
 /**
  * Material's extended FAB, with its icon filled: an icon and its action. While the list scrolls it shrinks to the
- * icon alone, to leave the products in view; it rises above the snackbar while one is shown.
+ * icon alone, to leave the products in view. It stays put while a snackbar is shown: the snackbar stands above it.
  */
-const addButton = (model: Model, isAboveSnackbar: boolean, { on }: Handlers<Message>) => (
+const addButton = (model: Model, { on }: Handlers<Message>) => (
   <button
     props={{
       className: cn(
-        'state-layer fixed right-4 z-30 mr-sair mb-saib flex h-14 items-center rounded-large px-4',
+        'state-layer fixed right-4 bottom-4 z-30 mr-sair mb-saib flex h-14 items-center rounded-large px-4',
         'bg-primary-container text-on-primary-container shadow-elevation-3 hover:shadow-elevation-4',
-        'transition-[bottom,box-shadow]',
-        isAboveSnackbar ? 'bottom-20' : 'bottom-4',
+        'transition-[box-shadow]',
       ),
       title: 'Add products',
     }}
@@ -179,7 +178,7 @@ export const view: View<Model, Message> = (model, dispatch) => {
       }}
       props={{ className: cn({ 'scroll-locked': model.menu._tag === 'Open' }) }}
     >
-      {addButton(model, snackbar !== undefined, events)}
+      {addButton(model, events)}
       {topBar}
       <div props={{ className: 'ml-sail mt-sait mr-sair overflow-x-clip' }}>
         {
@@ -188,8 +187,8 @@ export const view: View<Model, Message> = (model, dispatch) => {
           thunk('div', 'products', Products.list, [model.products, toProducts])
         }
       </div>
-      {/* Always there, so that the snackbar enters and leaves with its own transitions. */}
-      <div props={{ className: 'snackbar-slot' }}>
+      {/* Always there, so that the snackbar enters and leaves with its own transitions; 16dp above the FAB. */}
+      <div props={{ className: 'snackbar-slot [--snackbar-clearance:4.5rem]' }}>
         {snackbar === undefined ? [] : [snackbar]}
       </div>
     </div>

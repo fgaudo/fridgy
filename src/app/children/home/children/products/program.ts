@@ -64,8 +64,6 @@ export type Notice = Data.TaggedEnum<{
   Deleted: Readonly<{ count: PositiveInteger.PositiveInteger; maybeProducts: Restorable }>
   DeleteFailed: object
   RestoreFailed: object
-  /** The product being edited was no longer stored: its page has left. */
-  ProductGone: object
 }>
 
 const Notice = Data.taggedEnum<Notice>()
@@ -110,9 +108,6 @@ export type Message = Data.TaggedEnum<{
   DeleteStarted: object
   /** The snackbar's action: the products deleted last are stored again. */
   UndoRequested: object
-  // From the parent.
-  /** The product being edited was no longer stored, at `at`. */
-  ProductGone: { at: DateTime.Utc }
   // From subscriptions.
   TimeChanged: { now: DateTime.Utc }
   ListChanged: { result: Result.Result<ReadonlyArray<StoredProduct>, ProductListReadError> }
@@ -127,9 +122,6 @@ export type Message = Data.TaggedEnum<{
 }>
 
 const Message = Data.taggedEnum<Message>()
-
-/** What Home sends: the product it opened to be edited is gone. */
-export type ProductGone = Data.TaggedEnum.Value<Message, 'ProductGone'>
 
 /** How a row was selected or deselected. */
 export type Gesture = 'Tap' | 'LongPress'
@@ -225,14 +217,13 @@ export type Model = Readonly<{
         Deleted: Readonly<{ count: PositiveInteger.PositiveInteger; maybeUndo: Opt.Option<Message> }>
         DeleteFailed: object
         RestoreFailed: object
-        ProductGone: object
       }>
     }>
   }>
 }>
 
-// Material's snackbar with an action stays up to 10 seconds: long enough to read it and reach for "Undo".
-const UNDO_DURATION = Duration.seconds(5)
+// Material's long duration, for a snackbar with an action: long enough to read it and reach for "Undo".
+const UNDO_DURATION = Duration.seconds(10)
 
 // Material's snackbar without an action: long enough to read it.
 const NOTICE_DURATION = Duration.seconds(4)
@@ -532,7 +523,6 @@ export const program: Tea.Program<{
   command: Command
   services: Deps
   event: Event
-  external: ProductGone
 }> = {
   init: {
     state: {
@@ -682,11 +672,6 @@ export const program: Tea.Program<{
           commands: [Command.Restore({ products: state.snackbar.notice.maybeProducts.value })],
         }
         : Tea.reject,
-
-    // Accepted in every state: Home tells it once the edit page has left. The vibration was the page's.
-    ProductGone: ({ at }) => (state) => ({
-      state: { ...state, snackbar: snackbarOf(state, at, Notice.ProductGone()) },
-    }),
 
     SnackbarExpired: () => (state) =>
       state.snackbar._tag === 'Shown'

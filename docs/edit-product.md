@@ -65,11 +65,13 @@ decided".
    that differs from the stored one. A tap disables every control, shows the circular indicator in the button
    and writes the product; when the write has completed, the page leaves, and Home shows the product changed,
    where its new expiration orders it. When the write fails, the page gives the form back and a snackbar says
-   `Couldn't save the product`; when nothing is stored under the id any more, the page leaves and Home's
-   snackbar says `This product no longer exists`. A snackbar of the page leaves by itself after 4 seconds.
+   `Couldn't save the product`; when nothing is stored under the id any more, the page keeps the form, every
+   control disabled but the close button, and its snackbar says `This product no longer exists`; the page leaves
+   when that snackbar does. A snackbar of the page leaves by itself after 4 seconds, 16dp above the "Save"
+   button, which it never covers.
 6. **Leaving.** The app bar's close button and the back button leave the page, the changes discarded, without
-   asking. While the product is being saved, the close button is disabled and a press of the back button is
-   held: the page is not left in the middle of a write.
+   asking, also while it says that the product no longer exists. While the product is being saved, the close
+   button is disabled and a press of the back button is held: the page is not left in the middle of a write.
 
 ## The date entry: what is shared, and what is not
 
@@ -132,8 +134,11 @@ starts it with `children.EditProduct.init(flags)` from Home's event). Same shape
   other spacing is not a change.
 - **Only a completion leaves `Saving`**: its controls are disabled, `Saved` outside it is a defect, and a key
   typed just before is kept, as `add-products` does. `Saved` leaves the page; `Failed` gives the form back with
-  the snackbar; `Gone` gives the form back and asks to be left with `ProductGone`, which the root hands to Home
-  (an `external` message, down to Products), since the page's own snackbar would go with it.
+  the snackbar; `Gone` enters `Gone`.
+- **`Gone` tells its own failure.** How the user learns of a child's failure stays in that child, so the page
+  stays, the form shown and taking no input, until its snackbar has stood its time; its `SnackbarExpired` then
+  asks to be left with `LeaveRequested`, as the close and back buttons do at once. Its snackbar stands until the
+  page goes: an order not kept is not told over it.
 - **Subscriptions**, always on, run by the root only while the page is on top (`subscribed`): the clock every
   30 seconds, as Products' (only `today` is needed, for a date typed without a year; `add-products` ticks every
   second because the creation date is taken from it, which this page never does); the page's own
@@ -141,9 +146,9 @@ starts it with `children.EditProduct.init(flags)` from Home's event). Same shape
   the platform does not leave the app.
 - **The view** is the app bar and the name field of `add-products`, the latter without the scanner's button and
   the supporting text, and its order segments, date field, strip, chips, keypad and button, copied, with
-  `No expiration` as the strip's empty text and the controls disabled while `Saving`. `Loading` draws the app bar
-  alone. The page's root is keyed `EditProduct`, rising and sinking as `AddProducts` does. No acknowledgement:
-  the page leaves, and the list shows the change.
+  `No expiration` as the strip's empty text and the controls disabled while `Saving` and `Gone` (the close button
+  stays in `Gone`). `Loading` draws the app bar alone. The page's root is keyed `EditProduct`, rising and sinking as
+  `AddProducts` does. No acknowledgement: the page leaves, and the list shows the change.
 
 ## Home and its child
 
@@ -231,7 +236,7 @@ expiration is upserted, or deleted when the snapshot has none.
   under the page cannot happen today (nothing writes while Home is covered: `Products`' subscriptions, its undo
   timer included, run only while Home is on top, and its commands only insert or delete, never touch another id),
   and the storage still refuses a save of a deleted product (`ProductNotStored`). Observing the product from the
-  page would add a read service and a `Gone` state for a case the write already handles.
+  page would add a read service for a case the write already handles, and tell it no better than `Gone` does.
 - **The fields a moment late.** `Loading` draws the app bar alone until the setting and the clock answer, a
   database read of a few milliseconds under the page's entrance transition. The alternative, drawing the fields
   with an empty date field and a wrong strip for a frame, was judged worse than an honest state.

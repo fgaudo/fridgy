@@ -15,7 +15,7 @@ import * as DigitDates from '#libs/dates/digit-dates.ts'
 import { messagesSentBy } from '#libs/tea-snabbdom/view.test_support.ts'
 import { utc } from '#libs/testing/date-time.test_arbitrary.ts'
 import { assertProperty, outcomesOf } from '#libs/testing/update.test_support.ts'
-import { digit, editing, loading, message, outcome, saving, state } from './program.test_arbitrary.ts'
+import { digit, editing, gone, loading, message, outcome, saving, state } from './program.test_arbitrary.ts'
 import {
   type Command,
   type Digit,
@@ -81,7 +81,7 @@ const savedProduct = (form: Form) =>
       Opt.map(form.original.maybeExpirationDate, dayOf),
     ))
 
-const withForm = (state: State & { _tag: 'Editing' | 'Saving' }, change: Partial<Form>): State => ({
+const withForm = (state: State & { _tag: 'Editing' | 'Saving' | 'Gone' }, change: Partial<Form>): State => ({
   ...state,
   form: { ...state.form, ...change },
 })
@@ -97,7 +97,9 @@ const cannotArrive = (msg: Message, before: State) =>
   (msg._tag === 'Saved' && before._tag !== 'Saving') || (msg._tag === 'OrderKept' && before._tag === 'Loading')
   || (msg._tag === 'SnackbarExpired' && (before._tag === 'Loading' || before.form.snackbar._tag === 'None'))
 
-const notEditing = fc.oneof(loading, saving)
+const notEditing = fc.oneof(loading, saving, gone)
+
+const withFields = fc.oneof(editing, saving, gone)
 
 describe('EditProduct update', () => {
   test('is total and deterministic, but for a message that cannot arrive', () => {
@@ -139,9 +141,9 @@ describe('EditProduct update', () => {
     }))
   })
 
-  test('NameChanged keeps the name as typed, while saving too, and is rejected while loading', () => {
+  test('NameChanged keeps the name as typed, while saving too, and is rejected while loading and once the product is gone', () => {
     assertProperty([state, fc.string()], (before, name) =>
-      before._tag === 'Loading'
+      before._tag === 'Loading' || before._tag === 'Gone'
         ? rejects(Msg.NameChanged({ name }), before)
         : Equal.equals(step(Msg.NameChanged({ name }), before), {
           rejected: false,
@@ -210,7 +212,7 @@ describe('EditProduct update', () => {
       })
     })
 
-    test('is rejected while loading and while saving', () => {
+    test('is rejected while loading, while saving and once the product is gone', () => {
       assertProperty(
         [notEditing, digit, utc],
         (before, typed, date) =>
@@ -274,7 +276,7 @@ describe('EditProduct update', () => {
   describe('the time and the order', () => {
     test('are kept by the form, in the order\'s case with the stored date shown in it', () => {
       assertProperty(
-        [fc.oneof(editing, saving), utc, order],
+        [withFields, utc, order],
         (before, now, order) =>
           Equal.equals(step(Msg.TimeChanged({ now }), before).after, withForm(before, { now }))
           && Equal.equals(step(Msg.OrderChanged({ order }), before).after, withForm(before, { order })),
@@ -324,8 +326,21 @@ describe('EditProduct update', () => {
     )
   })
 
-  // A product that is gone is told by the page under this one, as this one goes.
-  test('Saved gives the form back, and leaves the page once saved, or once the product is gone, with a vibration, and a snackbar on a failure', () => {
+  // The snackbar telling that the product is gone stands until the page goes.
+  test('OrderKept changes nothing once the product is gone, and tells nothing', () => {
+    assertProperty(
+      [gone, fc.boolean()],
+      (before, succeeded) =>
+        Equal.equals(step(Msg.OrderKept({ succeeded }), before), {
+          rejected: false,
+          after: before,
+          commands: [],
+          events: [],
+        }),
+    )
+  })
+
+  test('Saved leaves the page once saved, gives the form back with a snackbar on a failure, and keeps it without input, saying so, once the product is gone, each with a vibration', () => {
     assertProperty([saving, outcome], (before, outcome) => {
       const editing: State = { _tag: 'Editing', form: before.form }
       const expected = {
@@ -340,9 +355,9 @@ describe('EditProduct update', () => {
           events: [],
         },
         Gone: {
-          after: editing,
+          after: { _tag: 'Gone', form: { ...before.form, snackbar: told(before.form, 'ProductGone') } },
           commands: [Cmd.Vibrate({ feedback: 'Reject' })],
-          events: outcome._tag === 'Gone' ? [Ev.ProductGone({ at: outcome.at })] : [],
+          events: [],
         },
       }[outcome._tag]
       return Equal.equals(step(Msg.Saved({ outcome }), before), { rejected: false, ...expected })
@@ -350,14 +365,14 @@ describe('EditProduct update', () => {
   })
 
   describe('SnackbarExpired', () => {
-    test('withdraws the snackbar and touches nothing else', () => {
-      assertProperty([fc.oneof(editing, saving)], (before) => {
+    test('withdraws the snackbar, and asks to leave the page once the product is gone', () => {
+      assertProperty([withFields], (before) => {
         fc.pre(before.form.snackbar._tag === 'Shown')
         return Equal.equals(step(Msg.SnackbarExpired(), before), {
           rejected: false,
           after: withForm(before, { snackbar: { _tag: 'None' } }),
           commands: [],
-          events: [],
+          events: before._tag === 'Gone' ? [Ev.LeaveRequested()] : [],
         })
       })
     })
@@ -426,7 +441,7 @@ describe('the model', () => {
   })
 
   test('shows typed digits as typed, with the days they name and the one named, or that they name none', () => {
-    assertProperty([fc.oneof(editing, saving)], (s) => {
+    assertProperty([withFields], (s) => {
       fc.pre(s.form.date._tag === 'Typed')
       const model = makeModel(s)
       const entry = entryShown(s.form)
@@ -454,7 +469,7 @@ describe('the model', () => {
   })
 
   test('shows the order in use with the others to pick, exactly while update accepts them', () => {
-    assertProperty([fc.oneof(editing, saving)], (s) => {
+    assertProperty([withFields], (s) => {
       const model = makeModel(s)
       return model._tag !== 'Loading' && model.order === s.form.order
         && Equal.equals(
@@ -495,16 +510,19 @@ describe('the model', () => {
     })
   })
 
-  test('offers nothing while saving', () => {
-    assertProperty([saving], (s) => {
+  test('offers nothing while saving, and only to close once the product is gone', () => {
+    assertProperty([fc.oneof(saving, gone)], (s) => {
       const model = makeModel(s)
-      return model._tag === 'Saving'
+      const choices = model._tag !== 'Loading' && model.strip._tag === 'Naming' ? model.strip.choices : []
+      return model._tag === (s._tag === 'Gone' ? 'Gone' : 'Saving')
+        && (model._tag !== 'Gone' || Equal.equals(model.close, Msg.Closed()))
         && model.orders.every(({ choice }) => choice._tag === 'Current' || Opt.isNone(choice.maybePick))
+        && choices.every(({ choice }) => choice._tag === 'Chosen' || Opt.isNone(choice.maybeChoose))
     })
   })
 
-  test('shows the snackbar the form holds, while editing and while saving', () => {
-    assertProperty([fc.oneof(editing, saving)], (s) => {
+  test('shows the snackbar the form holds, in every state but loading', () => {
+    assertProperty([withFields], (s) => {
       const model = makeModel(s)
       return model._tag !== 'Loading' && Equal.equals(model.snackbar, s.form.snackbar)
     })
@@ -582,6 +600,7 @@ test('the arbitrary states cover every state and both dates', () => {
   expect(states.some((s) => s._tag === 'Editing' && s.form.date._tag === 'Kept')).toBe(true)
   expect(states.some((s) => s._tag === 'Editing' && s.form.date._tag === 'Typed')).toBe(true)
   expect(states.some((s) => s._tag === 'Saving')).toBe(true)
+  expect(states.some((s) => s._tag === 'Gone' && s.form.snackbar._tag === 'Shown')).toBe(true)
   expect(states.some((s) => s._tag !== 'Loading' && s.form.snackbar._tag === 'None')).toBe(true)
   expect(states.some((s) => s._tag !== 'Loading' && s.form.snackbar._tag === 'Shown')).toBe(true)
 })

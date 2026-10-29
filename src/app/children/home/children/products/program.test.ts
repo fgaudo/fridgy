@@ -465,16 +465,6 @@ describe('Products update', () => {
         && Equal.equals(commands, [Cmd.Vibrate({ feedback: 'Reject' })])
     })
   })
-
-  // Home tells it once the edit page has left, which vibrated.
-  test('ProductGone says so with a snackbar, after the one standing, and changes nothing else', () => {
-    assertProperty([state, utc], (before, at) => {
-      const { after, commands } = step(Msg.ProductGone({ at }), before)
-      return Equal.equals(after.snackbar, told(before, at, { _tag: 'ProductGone' }))
-        && onlyChanged(before, after, 'snackbar')
-        && commands.length === 0
-    })
-  })
 })
 
 // The storage is observed in every state; the clock ticks only for a product that expires; the snackbar is timed
@@ -682,7 +672,6 @@ test('arbitraries cover every variant of the state', () => {
     'snackbar:DeleteFailed',
     'snackbar:Deleted',
     'snackbar:None',
-    'snackbar:ProductGone',
     'snackbar:RestoreFailed',
   ])
 })

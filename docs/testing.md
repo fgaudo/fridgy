@@ -70,6 +70,24 @@ and the tests never load the bundle. It is `e2e/production.e2e.ts`, run by `bun 
 floor check (`bun run check-floor`, `es-check` on `dist/*.js`) answers the one question about the bundle that
 has no user-visible symptom but a blank page.
 
+### The failure snackbars, by hand in a browser
+
+The storage in memory never fails, so the programs' tests are the only automatic check of a failure's snackbar.
+To look at them, the development server (`bun run watch`) is opened at the address it prints, with
+`?storage=failing`: the development entrypoint then makes every write of a product or a setting fail, while the
+sample products are still listed. Then:
+
+- add a product, on either step of the page that adds products: `Couldn't add the product`, 16dp above the
+  scan FAB on the first step and above "Add" on the second, which do not move;
+- edit a product and save it: `Couldn't save the product`, 16dp above "Save";
+- pick another date order, on either page: `Couldn't save the date order`;
+- select a product on Home and delete it: `Couldn't delete the products`.
+
+With `?storage=failing-but-deletes`, a deletion goes through and its "Undo" fails: `Couldn't put the products
+back`. `This product no longer exists` cannot be reached there: the development storage lives in the tab, so no
+other tab can delete the product being edited, and nothing writes while Home is covered. Only the tests of the
+edit page's `Gone` state and the root's cover it.
+
 ### The emulator, on the target image
 
 A pass before a release, by hand, on the AVD of the target API with the WebView up to date, on the reference
@@ -96,6 +114,10 @@ and after the first release of each of those. Its result is written in the commi
   320×640. About is left out of that check: it is a page to read, longer than any screen.
 - CI is `.github/workflows/checks.yml`: on every push and pull request, an audit of the dependencies for known
   vulnerabilities (`bun audit`), the tests, the build, the floor check and the run above, on Ubuntu.
+- Not yet: the failure snackbars have not all been looked at as "The failure snackbars, by hand in a browser"
+  says. Seen on 2026-10-29, in a browser at 360×720, with `?storage=failing`: `Couldn't save the product` 16dp
+  above "Save", `Couldn't delete the products` above Home's FAB and `Couldn't add the product` above the scan FAB
+  of the first step, both FABs still. The date order's, the second step's and the undo's are still to look at.
 - Not yet: the emulator pass as the skill lists it has not been run as such. The passes of 2026-10-28 followed the
   previous procedure (API 29 on WebView 114 installed by hand, and API 37), and what they settled is already
   in the code and the docs.

@@ -449,8 +449,8 @@ describe('Navigation', () => {
     })))
 
   // No user reaches this through the storage of the tests, whose products go only from Home's list, hidden under
-  // the page. The page goes, so Home tells it, in its snackbar.
-  test('a product found gone when saved leaves the page that edits it, and Home says so', () => {
+  // the page.
+  test('a product found gone when saved keeps the page that edits it, which says so, until its snackbar leaves', () => {
     const creationDate = DateTime.makeUnsafe('2026-10-20T10:00:00Z')
     const milk = Opt.getOrThrow(Product.make({ name: 'Milk', creationDate, maybeExpirationDate: Opt.none() }))
     const saving: State = {
@@ -474,16 +474,15 @@ describe('Navigation', () => {
         }),
       ],
     }
-    const at = DateTime.makeUnsafe('2026-10-28T12:00:00Z')
-    const { after, commands } = step(
-      Msg.EditProduct({ message: EditProductMsg.Saved({ outcome: { _tag: 'Gone', at } }) }),
+    const { after: gone, commands } = step(
+      Msg.EditProduct({ message: EditProductMsg.Saved({ outcome: { _tag: 'Gone' } }) }),
       saving,
     )
-    expect(tags(after)).toEqual(['Home'])
-    expect(Opt.map(homeState(after), ({ products }) => products.snackbar)).toEqual(
-      Opt.some({ _tag: 'Shown', at, notice: { _tag: 'ProductGone' }, entrance: 'Alone' }),
-    )
+    expect(tags(gone)).toEqual(['Home', 'EditProduct'])
+    const top = Arr.last(gone.stack)
+    expect(Opt.map(top, (page) => page._tag === 'EditProduct' && page.state._tag)).toEqual(Opt.some('Gone'))
     expect(commands.map(tagPath)).toEqual(['EditProduct › Vibrate'])
+    expect(tags(step(Msg.EditProduct({ message: EditProductMsg.SnackbarExpired() }), gone).after)).toEqual(['Home'])
   })
 
   test('a tap on a product while it is selected deselects it, and opens nothing', () =>
