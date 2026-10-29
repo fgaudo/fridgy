@@ -44,14 +44,14 @@
         "name": "@capacitor/splash-screen",
         "description": "The Splash Screen API provides methods for showing or hiding a Splash image."
     },
-    "@effect/platform-browser@4.0.6": {
+    "@effect/platform-browser@4.1.0": {
         "licenses": "MIT",
         "repository": "https://github.com/Effect-TS/effect",
         "copyright": "Copyright (c) 2023 Effectful Technologies Inc",
         "name": "@effect/platform-browser",
         "description": "Platform specific implementations for the browser"
     },
-    "@effect/sql-sqlite-wasm@4.0.6": {
+    "@effect/sql-sqlite-wasm@4.1.0": {
         "licenses": "MIT",
         "repository": "https://github.com/Effect-TS/effect",
         "copyright": "Copyright (c) 2023-present The Contributors",
@@ -80,14 +80,14 @@
         "name": "clsx",
         "description": "A tiny (239B) utility for constructing className strings conditionally."
     },
-    "effect@4.0.6": {
+    "effect@4.1.0": {
         "licenses": "MIT",
         "repository": "https://github.com/Effect-TS/effect",
         "copyright": "Copyright (c) 2023 Effectful Technologies Inc",
         "name": "effect",
         "description": "The missing standard library for TypeScript, for writing production-grade software."
     },
-    "material-symbols@0.48.1": {
+    "material-symbols@0.48.2": {
         "licenses": "Apache-2.0",
         "repository": "https://github.com/marella/material-symbols",
         "copyright": "",
