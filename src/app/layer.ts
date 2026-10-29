@@ -7,8 +7,9 @@ import * as Home from './children/home/layer.ts'
 
 // The adapters that every setup shares: the pages' services', and the infrastructure's that have no
 // alternative (the vibrations). What has alternatives is left to the entrypoint: the `SqlClient` (the
-// database's engine), the `HttpClient` and the platform's `BackButton`
-// (`#infrastructure/back-button/back-button.capacitor.ts`, `#infrastructure/back-button/back-button.browser.ts`).
+// database's engine), the `HttpClient`, the platform's `BackButton`
+// (`#infrastructure/back-button/back-button.capacitor.ts`, `#infrastructure/back-button/back-button.browser.ts`)
+// and the zone the days are counted in, `DateTime.CurrentTimeZone`: the device's, or a test's.
 export const layer = Layer.mergeAll(
   Home.layer,
   AddProducts.layer,

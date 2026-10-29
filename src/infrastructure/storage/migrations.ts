@@ -4,9 +4,10 @@ import * as Sql from 'effect/sql'
 import { BarcodeLookupSchema, ProductExpirationSchema, ProductSchema, SettingSchema } from './schema.ts'
 
 export const migrations = {
-  // Dates are ISO 8601 strings (`DateTimeUtcFromString` in `products.ts`), which order as text. The trigger, not
-  // a cascade, deletes a product's expiration with it: SQLite enforces foreign keys, and their actions, only on a
-  // connection that asked for them with a pragma, which the clients give no way to do; the key is a declaration.
+  // A creation date is an instant, in ISO 8601 and UTC; an expiration date is a day, `YYYY-MM-DD` (`products.ts`).
+  // Both order as text. The trigger, not a cascade, deletes a product's expiration with it: SQLite enforces foreign
+  // keys, and their actions, only on a connection that asked for them with a pragma, which the clients give no way
+  // to do; the key is a declaration.
   // The lookup's cache keeps Open Food Facts' answer as it came (`name`, `brands` and `quantity` NULL unless
   // `status` is 'found'), not the name the page composes from it, which may change without refetching.
   '0000001_create_db': Effect.gen(function*() {

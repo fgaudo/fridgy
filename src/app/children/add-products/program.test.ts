@@ -13,10 +13,12 @@ import * as fc from 'fast-check'
 import * as Product from '#domain/product.ts'
 import { arbitrary as order } from '#libs/dates/date-order.test_arbitrary.ts'
 import * as DateOrder from '#libs/dates/date-order.ts'
+import { arbitrary as anyDay } from '#libs/dates/day.test_arbitrary.ts'
+import * as Day from '#libs/dates/day.ts'
 import * as DigitDateEntry from '#libs/dates/digit-date-entry.ts'
 import { MAX_DIGITS } from '#libs/dates/digit-dates.ts'
 import { messagesSentBy } from '#libs/tea-snabbdom/view.test_support.ts'
-import { utc } from '#libs/testing/date-time.test_arbitrary.ts'
+import { utc, zoned } from '#libs/testing/date-time.test_arbitrary.ts'
 import { assertProperty, outcomesOf } from '#libs/testing/update.test_support.ts'
 import {
   barcode,
@@ -82,22 +84,22 @@ const resumed = (step: Step, form: Form): State =>
 const offeredDates = (form: Form, date: DateForm) =>
   Opt.match(Opt.all([form.maybeNow, form.maybeOrder]), {
     onNone: () => [],
-    onSome: ([now, order]) => DigitDateEntry.offered(date, now, order, Product.canExpireOn(now)),
+    onSome: ([now, order]) => DigitDateEntry.offered(date, Day.fromDateTime(now), order, Product.canExpireOn(now)),
   })
 
 /** Whether more digits typed after the form's can name a day a product added now may expire on. */
 const canCompleteDate = (form: Form, date: DateForm) =>
   Opt.match(Opt.all([form.maybeNow, form.maybeOrder]), {
     onNone: () => false,
-    onSome: ([now, order]) => DigitDateEntry.canComplete(date, now, order, Product.canExpireOn(now)),
+    onSome: ([now, order]) => DigitDateEntry.canComplete(date, Day.fromDateTime(now), order, Product.canExpireOn(now)),
   })
 
 /** The day the form names: the one picked, while the digits name it, or else the only one they name. */
-const namedDate = (form: Form, date: DateForm): Opt.Option<DateTime.Utc> =>
+const namedDate = (form: Form, date: DateForm): Opt.Option<Day.Day> =>
   DigitDateEntry.named(date, offeredDates(form, date))
 
 /** The product the name describes, created at the clock's time, with that expiration. */
-const productOf = (form: Form, maybeExpirationDate: Opt.Option<DateTime.Utc>) =>
+const productOf = (form: Form, maybeExpirationDate: Opt.Option<Day.Day>) =>
   Opt.flatMap(
     Opt.all([form.maybeName, form.maybeNow]),
     ([name, creationDate]) => Product.make({ name, creationDate, maybeExpirationDate }),
@@ -168,7 +170,7 @@ describe('AddProducts update', () => {
       repeatable: (msg) => msg._tag === 'DigitTyped' || msg._tag === 'DigitErased' || msg._tag === 'Closed',
       withheld: (msg, state) => msg._tag === 'NameChanged' && state._tag !== 'Naming',
     })
-    fc.assert(fc.property(state, fc.string(), utc, (before, inputValue, date) => {
+    fc.assert(fc.property(state, fc.string(), anyDay, (before, inputValue, date) => {
       const offered = before._tag === 'Dating' ? offeredDates(before.form, before.date) : []
       const askable = [
         Msg.NameChanged({ name: inputValue }),
@@ -405,7 +407,7 @@ describe('AddProducts update', () => {
 
   test('TimeChanged keeps the time', () => {
     assertProperty(
-      [state, utc],
+      [state, zoned],
       (before, now) =>
         Equal.equals(step(Msg.TimeChanged({ now }), before).after, withForm(before, { maybeNow: Opt.some(now) })),
     )
@@ -467,11 +469,11 @@ describe('AddProducts update', () => {
 
   describe('DateChosen', () => {
     test('picks a day the digits name, unless the form already names it, and is rejected on any other day', () => {
-      assertProperty([dating, utc], (before, date) => {
+      assertProperty([dating, anyDay], (before, date) => {
         const offered = offeredDates(before.form, before.date)
         return [...offered, date].every((day) => {
           const msg = Msg.DateChosen({ date: day })
-          const isOffered = offered.some((d) => DateTime.Equivalence(d, day))
+          const isOffered = offered.some((d) => d === day)
           return isOffered && !Opt.contains(namedDate(before.form, before.date), day)
             ? Equal.equals(step(msg, before).after, withDate(before, { maybeChosenDate: Opt.some(day) }))
             : rejects(msg, before)
@@ -480,7 +482,7 @@ describe('AddProducts update', () => {
     })
 
     test('is rejected off the second step', () => {
-      assertProperty([offTheDate, utc], (before, date) => rejects(Msg.DateChosen({ date }), before))
+      assertProperty([offTheDate, anyDay], (before, date) => rejects(Msg.DateChosen({ date }), before))
     })
   })
 

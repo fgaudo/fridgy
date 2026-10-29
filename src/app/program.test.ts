@@ -6,7 +6,9 @@ import * as DateTime from 'effect/DateTime'
 import * as Effect from 'effect/Effect'
 import * as HashMap from 'effect/HashMap'
 import * as Opt from 'effect/Option'
+import * as Schema from 'effect/Schema'
 import * as Product from '#domain/product.ts'
+import * as Day from '#libs/dates/day.ts'
 import * as DigitDates from '#libs/dates/digit-dates.ts'
 import { tagPath } from '#libs/testing/tag-path.test_support.ts'
 import { outcomesOf } from '#libs/testing/update.test_support.ts'
@@ -14,7 +16,7 @@ import * as About from './children/about/program.ts'
 import * as AddProducts from './children/add-products/program.ts'
 import type * as EditProduct from './children/edit-product/program.ts'
 import * as Home from './children/home/program.ts'
-import { type Message, type Page, program, type State } from './program.ts'
+import { type Message, type Model, type Page, program, type State } from './program.ts'
 import {
   addProduct,
   back,
@@ -52,6 +54,8 @@ const AddProductsMsg = Data.taggedEnum<AddProducts.Message>()
 const EditProductMsg = Data.taggedEnum<EditProduct.Message>()
 
 const { step } = outcomesOf(program.update)
+
+const day = Schema.decodeSync(Day.Schema)
 
 const tags = (state: State) => state.stack.map((page) => page._tag)
 
@@ -338,7 +342,7 @@ describe('Navigation', () => {
       yield* perform(user, Arr.map([...digits], (digit) => typeDigit(digit as AddProducts.Digit)))
       const { page } = yield* user.model
       const named = page._tag === 'AddProducts' && page.model._tag === 'Dating' && page.model.strip._tag === 'Naming'
-        ? page.model.strip.choices.map(({ date }) => DateTime.toPartsUtc(date))
+        ? page.model.strip.choices.map(({ date }) => Day.toParts(date))
         : []
       expect(named.some(({ month, day }) => month === 12 && day === 31)).toBe(true)
     })))
@@ -382,7 +386,7 @@ describe('Navigation', () => {
     yield* user.send(addProduct)
     yield* user.run((command) => tagPath(command) === 'AddProducts › Add')
     yield* perform(user, [typeName('Milk'), requestDate])
-    const digits = DigitDates.digitsOf(DateTime.makeUnsafe('2099-12-31T00:00:00Z'), order)
+    const digits = DigitDates.digitsOf(day('2099-12-31'), order)
     yield* perform(user, Arr.map([...digits], (digit) => typeDigit(digit as AddProducts.Digit)))
     yield* user.send(addProduct)
     yield* user.run((command) => tagPath(command) === 'AddProducts › Add')
@@ -451,7 +455,7 @@ describe('Navigation', () => {
   // No user reaches this through the storage of the tests, whose products go only from Home's list, hidden under
   // the page.
   test('a product found gone when saved keeps the page that edits it, which says so, until its snackbar leaves', () => {
-    const creationDate = DateTime.makeUnsafe('2026-10-20T10:00:00Z')
+    const creationDate = DateTime.makeZonedUnsafe('2026-10-20T10:00:00Z', { timeZone: 'UTC' })
     const milk = Opt.getOrThrow(Product.make({ name: 'Milk', creationDate, maybeExpirationDate: Opt.none() }))
     const saving: State = {
       stack: [
@@ -525,6 +529,53 @@ describe('Navigation', () => {
       yield* user.hearNext(['Home', ['Products', 'changes']])
       expect(yield* listedNames(user)).toEqual(Opt.some(['Milk']))
     })))
+})
+
+// In UTC, it is already October 31 in New York at 20:30, and still October 29 in Tokyo at 08:30.
+describe('Days, in a zone far from UTC', () => {
+  const october30 = day('2026-10-30')
+
+  const cases = [
+    { zone: 'America/New_York', time: DateTime.makeUnsafe('2026-10-31T00:30:00Z') },
+    { zone: 'Asia/Tokyo', time: DateTime.makeUnsafe('2026-10-29T23:30:00Z') },
+  ]
+
+  /** The statuses of Home's rows, once the list is shown. */
+  const statuses = (model: Model) =>
+    model.page._tag === 'Home' && model.page.model.products.list._tag === 'Available'
+      ? model.page.model.products.list.products.map((row) => row._tag === 'Valid' ? row.status._tag : row._tag)
+      : []
+
+  for (const { zone, time } of cases) {
+    test(`today is typed with its year and offered, and a product expiring today expires today, in ${zone}`, () =>
+      rehearsed(
+        Effect.fnUntraced(function*(user) {
+          yield* perform(user, [openAddProducts, typeName('Milk')])
+          yield* checkCamera(user)
+          yield* user.hearNext(['AddProducts', 'clock'])
+          const heard = yield* user.hearNext(['AddProducts', 'date-order'])
+          const order = heard._tag === 'AddProducts' && heard.message._tag === 'OrderChanged'
+            ? heard.message.order
+            : 'DMY'
+          yield* user.send(requestDate)
+          const digits = DigitDates.digitsOf(october30, order)
+          yield* perform(user, Arr.map([...digits], (digit) => typeDigit(digit as AddProducts.Digit)))
+          const { page } = yield* user.model
+          expect(
+            page._tag === 'AddProducts' && page.model._tag === 'Dating' && page.model.strip._tag === 'Naming'
+              ? page.model.strip.choices.map(({ date }) => date)
+              : [],
+          ).toEqual([october30])
+          yield* user.send(addProduct)
+          yield* user.run((command) => tagPath(command) === 'AddProducts › Add')
+          yield* back(user)
+          yield* user.hearNext(['Home', ['Products', 'changes']])
+          yield* user.hearNext(['Home', ['Products', 'clock']])
+          expect(statuses(yield* user.model)).toEqual(['ExpiringToday'])
+        }),
+        { zone, maybeTime: Opt.some(time) },
+      ))
+  }
 })
 
 describe('Subscriptions', () => {

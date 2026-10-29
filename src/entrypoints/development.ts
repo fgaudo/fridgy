@@ -1,5 +1,6 @@
 // `view.js` and the hot reload socket are served by `scripts/cli.ts watch`.
 import * as Browser from '@effect/platform-browser'
+import * as DateTime from 'effect/DateTime'
 import * as Effect from 'effect/Effect'
 import * as FetchHttpClient from 'effect/http/FetchHttpClient'
 import * as Layer from 'effect/Layer'
@@ -62,7 +63,8 @@ const storage = Match.value(new URLSearchParams(location.search).get('storage'))
 run(
   Layer.mergeAll(
     // Products are looked up on Open Food Facts itself: its staging server asks for a password.
-    App.layer.pipe(Layer.provide([storage, FetchHttpClient.layer])),
+    // One zone serves the samples, which expire from today, and the programs.
+    App.layer.pipe(Layer.provide([storage, FetchHttpClient.layer]), Layer.provideMerge(DateTime.layerCurrentZoneLocal)),
     BackButtonBrowser.layer,
     HotRootViews,
     SnabbdomRenderer.layer('#root'),

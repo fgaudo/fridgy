@@ -11,6 +11,7 @@ import * as Schema from 'effect/Schema'
 import * as SchemaX from 'effect/schema'
 import * as Sql from 'effect/sql'
 import * as SqlSchema from 'effect/sql/SqlSchema'
+import * as Day from '#libs/dates/day.ts'
 import * as Integer from '#libs/numbers/integer.ts'
 import { ProductExpirationSchema, ProductSchema } from './schema.ts'
 
@@ -23,7 +24,7 @@ export const ProductColumns = {
 
 export const ProductExpirationColumns = {
   id: Integer.Schema,
-  date: Schema.DateTimeUtcFromString,
+  date: Day.Schema,
   productId: Integer.Schema,
 } as const
 
@@ -75,7 +76,7 @@ export class ProductStore extends Context.Service<ProductStore>()(
         Request: Schema.Struct({
           name: Schema.String,
           creationDate: Schema.DateTimeUtc,
-          maybeExpirationDate: Schema.Option(Schema.DateTimeUtc),
+          maybeExpirationDate: Schema.Option(Schema.toType(Day.Schema)),
         }),
         // Decoded from what `execute` returns, so it must describe encoded values: only the id is needed.
         Result: Schema.Struct({ id: Integer.Schema }),
@@ -144,7 +145,7 @@ export class ProductStore extends Context.Service<ProductStore>()(
         function*(
           id: Integer.Integer,
           snapshot: Readonly<
-            { name: string; creationDate: DateTime.Utc; maybeExpirationDate: Opt.Option<DateTime.Utc> }
+            { name: string; creationDate: DateTime.Utc; maybeExpirationDate: Opt.Option<Day.Day> }
           >,
         ) {
           const maybeUpdated = yield* updateRow({ id, name: snapshot.name, creationDate: snapshot.creationDate })

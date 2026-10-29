@@ -1,50 +1,45 @@
 import * as Arr from 'effect/Array'
-import * as DateTime from 'effect/DateTime'
 import * as Iterable from 'effect/Iterable'
 import * as Opt from 'effect/Option'
 import * as Order from 'effect/Order'
 import type { DateOrder } from './date-order.ts'
+import * as Day from './day.ts'
 
 /** The most digits a date can be typed with: `DDMMYYYY`. */
 export const MAX_DIGITS = 8
 
-/** The day of `year`, `month` (from 1) and `day`, if the calendar has it, at its start. */
-const dayOf = (year: number, month: number, day: number): Opt.Option<DateTime.Utc> => {
-  const date = DateTime.makeUnsafe({ year, month, day })
-  const parts = DateTime.toPartsUtc(date)
-  return parts.year === year && parts.month === month && parts.day === day ? Opt.some(date) : Opt.none()
-}
+/** The day of `year`, `month` (from 1) and `day`, if the calendar has it. */
+const dayOf = (year: number, month: number, day: number): Opt.Option<Day.Day> => Day.make({ year, month, day })
+
+const isOnOrAfter = Order.isGreaterThanOrEqualTo(Day.Order)
 
 // A day with no year is the next one on or after today; February 29 may be up to eight years away.
-const nextDayOf = (month: number, day: number, today: DateTime.Utc): Opt.Option<DateTime.Utc> => {
-  const start = DateTime.startOf(today, 'day')
-  const year = DateTime.getPartUtc(today, 'year')
-  return Arr.findFirst(
-    Arr.getSomes(Arr.makeBy(9, (offset) => dayOf(year + offset, month, day))),
-    (date) => DateTime.isGreaterThanOrEqualTo(date, start),
+const nextDayOf = (month: number, day: number, today: Day.Day): Opt.Option<Day.Day> =>
+  Arr.findFirst(
+    Arr.getSomes(Arr.makeBy(9, (offset) => dayOf(Day.toParts(today).year + offset, month, day))),
+    (date) => isOnOrAfter(date, today),
   )
-}
 
 // A day with no month either is the next such day on or after today; the 30th may be two months away, past February.
-const nextDayOfMonth = (day: number, today: DateTime.Utc): Opt.Option<DateTime.Utc> => {
-  const firstOfMonth = DateTime.startOf(today, 'month')
+const nextDayOfMonth = (day: number, today: Day.Day): Opt.Option<Day.Day> => {
+  const { year, month } = Day.toParts(today)
   return Arr.findFirst(
-    Arr.getSomes(Arr.makeBy(3, (offset) => {
-      const { year, month } = DateTime.toPartsUtc(DateTime.add(firstOfMonth, { months: offset }))
-      return dayOf(year, month, day)
-    })),
-    (date) => DateTime.isGreaterThanOrEqualTo(date, DateTime.startOf(today, 'day')),
+    Arr.getSomes(
+      Arr.makeBy(
+        3,
+        (offset) => dayOf(year + Math.floor((month - 1 + offset) / 12), (month - 1 + offset) % 12 + 1, day),
+      ),
+    ),
+    (date) => isOnOrAfter(date, today),
   )
 }
 
 // Of two days as near, the later comes first: an expiration is more often ahead than behind.
-const nearestFirst = (today: DateTime.Utc): Order.Order<DateTime.Utc> => {
-  const start = DateTime.toEpochMillis(DateTime.startOf(today, 'day'))
-  return Order.combine(
-    Order.mapInput(Order.Number, (date: DateTime.Utc) => Math.abs(DateTime.toEpochMillis(date) - start)),
-    Order.flip(DateTime.Order),
+const nearestFirst = (today: Day.Day): Order.Order<Day.Day> =>
+  Order.combine(
+    Order.mapInput(Order.Number, (date: Day.Day) => Math.abs(Day.daysBetween(today, date))),
+    Order.flip(Day.Order),
   )
-}
 
 type Field = 'day' | 'month' | 'year'
 
@@ -65,7 +60,7 @@ const fieldsOf = (digits: string, order: DateOrder, lengths: Readonly<Record<Fie
   return fields
 }
 
-const readingsOf = (digits: string, today: DateTime.Utc, order: DateOrder): ReadonlyArray<DateTime.Utc> => [
+const readingsOf = (digits: string, today: Day.Day, order: DateOrder): ReadonlyArray<Day.Day> => [
   ...(digits.length === 1 || digits.length === 2 ? Opt.toArray(nextDayOfMonth(Number(digits), today)) : []),
   ...[1, 2].flatMap((dayLength) =>
     [1, 2].flatMap((monthLength) => {
@@ -91,8 +86,8 @@ const readingsOf = (digits: string, today: DateTime.Utc, order: DateOrder): Read
  * The digits that name `date` alone in `order`: a date's longest form, a day and a month of two digits each and a
  * year of four (`DDMMYYYY` in `DMY`). Eight digits name one day at most (see `datesOf`).
  */
-export const digitsOf = (date: DateTime.Utc, order: DateOrder): string => {
-  const { year, month, day } = DateTime.toPartsUtc(date)
+export const digitsOf = (date: Day.Day, order: DateOrder): string => {
+  const { year, month, day } = Day.toParts(date)
   const fields: Readonly<Record<Field, string>> = {
     day: String(day).padStart(2, '0'),
     month: String(month).padStart(2, '0'),
@@ -104,17 +99,16 @@ export const digitsOf = (date: DateTime.Utc, order: DateOrder): string => {
 /**
  * The days that `digits`, typed with no separators in `order`, can name: a day of one or two digits alone, or a
  * day and a month of one or two digits each, and no year, two digits (this century) or four, the year last or
- * first as `order` says. With no month or no year, the day is the next one on or after `today`. The days start
- * at midnight, in UTC, the nearest to `today` first, without repeats. A string that is not only digits names
- * none.
+ * first as `order` says. With no month or no year, the day is the next one on or after `today`. They come the
+ * nearest to `today` first, without repeats. A string that is not only digits names none.
  *
  * They are two at most: of the four ways to cut a day and a month, only those that leave the year 0, 2 or 4
  * digits read, and for a given count of digits, that is two of them. A day alone adds one only to one or two
  * digits, which a day and a month can cut in one way only.
  */
-export const datesOf = (digits: string, today: DateTime.Utc, order: DateOrder): ReadonlyArray<DateTime.Utc> =>
+export const datesOf = (digits: string, today: Day.Day, order: DateOrder): ReadonlyArray<Day.Day> =>
   /^\d*$/.test(digits)
-    ? Arr.dedupeWith(Arr.sort(readingsOf(digits, today, order), nearestFirst(today)), DateTime.Equivalence)
+    ? Arr.dedupe(Arr.sort(readingsOf(digits, today, order), nearestFirst(today)))
     : []
 
 /** `value` written in `length` digits, or `None` when it needs more. A field of one digit is never `0`. */
@@ -143,7 +137,7 @@ const latestLeapYear = (length: number, digits: string, from: number, yearOf: (t
 // For each way to cut the digits and each day and month they agree with, only the latest year is tried, as a later
 // day is allowed wherever an earlier one is; February 29 takes the latest leap year. Lazy, as the first allowed day
 // ends the search.
-function* completions(digits: string, today: DateTime.Utc, order: DateOrder): Generator<DateTime.Utc> {
+function* completions(digits: string, today: Day.Day, order: DateOrder): Generator<Day.Day> {
   for (const length of [1, 2].filter((length) => length >= digits.length)) {
     for (const day of valuesAgreeing(31, length, digits, 0)) yield* Opt.toArray(nextDayOfMonth(day, today))
   }
@@ -179,7 +173,7 @@ function* completions(digits: string, today: DateTime.Utc, order: DateOrder): Ge
  */
 export const canComplete = (
   digits: string,
-  today: DateTime.Utc,
+  today: Day.Day,
   order: DateOrder,
-  isAllowed: (date: DateTime.Utc) => boolean,
+  isAllowed: (date: Day.Day) => boolean,
 ): boolean => /^\d*$/.test(digits) && Iterable.some(completions(digits, today, order), isAllowed)

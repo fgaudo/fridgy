@@ -17,6 +17,7 @@ import * as Product from '#domain/product.ts'
 import { BackButton } from '#infrastructure/back-button/back-button.ts'
 import { type Feedback, Haptics } from '#infrastructure/haptics/haptics.ts'
 import * as DateOrder from '#libs/dates/date-order.ts'
+import * as Day from '#libs/dates/day.ts'
 import * as DigitDateEntry from '#libs/dates/digit-date-entry.ts'
 import { after, every } from '#libs/timers/timers.ts'
 import * as AddProducts from './services/add-products/add-products.ts'
@@ -58,8 +59,8 @@ export type Form = Readonly<{
   replacements: number
   camera: Camera
   lookup: Lookup
-  /** The current time, once the clock has ticked: the product is created then. */
-  maybeNow: Opt.Option<DateTime.Utc>
+  /** The current time, in the device's zone, once the clock has ticked: the product is created then. */
+  maybeNow: Opt.Option<DateTime.Zoned>
   /** The order the digits of a date are read in, once the setting has been read. */
   maybeOrder: Opt.Option<DateOrder.DateOrder>
   maybeAcknowledging: Opt.Option<Acknowledging>
@@ -124,7 +125,7 @@ export type Message = Data.TaggedEnum<{
   /** The keypad's clear key: erases every digit. */
   DateCleared: object
   /** Picks, among the days the digits name, the one the product expires on. */
-  DateChosen: { date: DateTime.Utc }
+  DateChosen: { date: Day.Day }
   /** The second step's segmented button: the order the digits are read in, kept for every date to come. */
   OrderPicked: { order: DateOrder.DateOrder }
   /** Adds the product the step describes. */
@@ -134,7 +135,7 @@ export type Message = Data.TaggedEnum<{
   /** The first step's "Cancel", while a scanned barcode is looked up: the barcode stays the name. */
   LookupCancelled: object
   // From subscriptions.
-  TimeChanged: { now: DateTime.Utc }
+  TimeChanged: { now: DateTime.Zoned }
   /** The order kept: the setting reports it when the page opens, and after every pick. */
   OrderChanged: { order: DateOrder.DateOrder }
   Scanned: { barcode: string }
@@ -179,10 +180,11 @@ export type Deps =
   | ProductLookup
   | Haptics
   | BackButton
+  | DateTime.CurrentTimeZone
 
 /** A day the digits name: the chosen one, or one to pick while the step takes input. */
 export type DateChoice = Readonly<{
-  date: DateTime.Utc
+  date: Day.Day
   choice: Data.TaggedEnum<{ Chosen: object; Offered: Readonly<{ maybeChoose: Opt.Option<Message> }> }>
 }>
 
@@ -320,17 +322,17 @@ const resume = (step: Step, form: Form): State =>
   step._tag === 'Naming' ? { _tag: 'Naming', form } : { _tag: 'Dating', form, date: step.date }
 
 /** The days the digits name, read in the order in use, on which a product added now may expire. */
-const offeredDates = (form: Form, date: DateForm): ReadonlyArray<DateTime.Utc> =>
+const offeredDates = (form: Form, date: DateForm): ReadonlyArray<Day.Day> =>
   Opt.match(Opt.all([form.maybeNow, form.maybeOrder]), {
     onNone: () => [],
-    onSome: ([now, order]) => DigitDateEntry.offered(date, now, order, Product.canExpireOn(now)),
+    onSome: ([now, order]) => DigitDateEntry.offered(date, Day.fromDateTime(now), order, Product.canExpireOn(now)),
   })
 
 /** Whether the digits, or more typed after them, name a day on which a product added now may expire. */
 const canCompleteDate = (form: Form, date: DateForm): boolean =>
   Opt.match(Opt.all([form.maybeNow, form.maybeOrder]), {
     onNone: () => false,
-    onSome: ([now, order]) => DigitDateEntry.canComplete(date, now, order, Product.canExpireOn(now)),
+    onSome: ([now, order]) => DigitDateEntry.canComplete(date, Day.fromDateTime(now), order, Product.canExpireOn(now)),
   })
 
 /** The first brand, then the name, unless the name already says the brand. The quantity is left out. */
@@ -341,7 +343,7 @@ const composeName = ({ name, maybeBrand }: FoundProduct): string =>
   })
 
 /** The day the digits name: the one picked, while they still name it, or else the only one they name. */
-const maybeNamedDate = (form: Form, date: DateForm): Opt.Option<DateTime.Utc> =>
+const maybeNamedDate = (form: Form, date: DateForm): Opt.Option<Day.Day> =>
   DigitDateEntry.named(date, offeredDates(form, date))
 
 /** The second step with its date changed by a key, or rejected when the key does not apply. */
@@ -356,7 +358,7 @@ const keyed = (
     })
     : Tea.reject
 
-const productOf = (form: Form, maybeExpirationDate: Opt.Option<DateTime.Utc>) =>
+const productOf = (form: Form, maybeExpirationDate: Opt.Option<Day.Day>) =>
   Opt.flatMap(
     Opt.all([form.maybeName, form.maybeNow]),
     ([name, creationDate]) => Product.make({ name, creationDate, maybeExpirationDate }),
@@ -759,7 +761,7 @@ export const program: Tea.Program<{
     const nameShown: NameShown = { supporting, name, nameKey: form.replacements, snackbar: form.snackbar }
     const dateShown = (
       date: DateForm,
-      maybeChoose: (day: DateTime.Utc) => Opt.Option<Message>,
+      maybeChoose: (day: Day.Day) => Opt.Option<Message>,
       maybePick: (order: DateOrder.DateOrder) => Opt.Option<Message>,
     ): DateShown => {
       const maybeNamed = maybeNamedDate(form, date)

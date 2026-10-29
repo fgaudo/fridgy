@@ -6,14 +6,17 @@ import * as DateTime from 'effect/DateTime'
 import * as Equal from 'effect/Equal'
 import * as HashMap from 'effect/HashMap'
 import * as Opt from 'effect/Option'
+import * as Schema from 'effect/Schema'
 import * as fc from 'fast-check'
 import * as Product from '#domain/product.ts'
 import { arbitrary as order } from '#libs/dates/date-order.test_arbitrary.ts'
 import * as DateOrder from '#libs/dates/date-order.ts'
+import { arbitrary as anyDay } from '#libs/dates/day.test_arbitrary.ts'
+import * as Day from '#libs/dates/day.ts'
 import * as DigitDateEntry from '#libs/dates/digit-date-entry.ts'
 import * as DigitDates from '#libs/dates/digit-dates.ts'
 import { messagesSentBy } from '#libs/tea-snabbdom/view.test_support.ts'
-import { utc } from '#libs/testing/date-time.test_arbitrary.ts'
+import { zoned } from '#libs/testing/date-time.test_arbitrary.ts'
 import { assertProperty, outcomesOf } from '#libs/testing/update.test_support.ts'
 import { digit, editing, gone, loading, message, outcome, saving, state } from './program.test_arbitrary.ts'
 import {
@@ -52,13 +55,15 @@ const entryShown = (form: Form): DigitDateEntry.Entry =>
       maybeChosenDate: Opt.none(),
     }
 
+const isAllowed = (form: Form) => Product.canBeEditedToExpireOn(form.original, form.now.zone)
+
 /** The days the page offers: those the digits name, from the day the product was created on. */
 const offeredDates = (form: Form) =>
-  DigitDateEntry.offered(entryShown(form), form.now, form.order, Product.canExpireOn(form.original.creationDate))
+  DigitDateEntry.offered(entryShown(form), Day.fromDateTime(form.now), form.order, isAllowed(form))
 
 /** Whether more digits typed after those shown can name a day the product may expire on. */
 const canCompleteDate = (form: Form) =>
-  DigitDateEntry.canComplete(entryShown(form), form.now, form.order, Product.canExpireOn(form.original.creationDate))
+  DigitDateEntry.canComplete(entryShown(form), Day.fromDateTime(form.now), form.order, isAllowed(form))
 
 /** The product the fields describe: the stored date while untouched, none on no digits, or the day named. */
 const productOf = (form: Form): Opt.Option<Product.Product> => {
@@ -69,21 +74,15 @@ const productOf = (form: Form): Opt.Option<Product.Product> => {
     : Opt.map(DigitDateEntry.named(form.date.entry, offeredDates(form)), Opt.some)
   return Opt.flatMap(
     maybeExpiration,
-    (maybeExpirationDate) =>
-      Product.make({ name: form.name, creationDate: form.original.creationDate, maybeExpirationDate }),
+    (maybeExpirationDate) => Product.edit(form.original, { name: form.name, maybeExpirationDate }, form.now.zone),
   )
 }
-
-const dayOf = (date: DateTime.Utc) => DateTime.formatIsoDateUtc(date)
 
 /** The product "Save" writes: the one the fields describe, when it differs from the stored one by its name or day. */
 const savedProduct = (form: Form) =>
   Opt.filter(productOf(form), (product) =>
     product.name !== form.original.name
-    || !Equal.equals(
-      Opt.map(product.maybeExpirationDate, dayOf),
-      Opt.map(form.original.maybeExpirationDate, dayOf),
-    ))
+    || !Equal.equals(product.maybeExpirationDate, form.original.maybeExpirationDate))
 
 const withForm = (state: State & { _tag: 'Editing' | 'Saving' | 'Gone' }, change: Partial<Form>): State => ({
   ...state,
@@ -128,7 +127,7 @@ describe('EditProduct update', () => {
       repeatable: (msg) => msg._tag === 'DigitTyped' || msg._tag === 'DigitErased' || msg._tag === 'Closed',
       withheld: (msg, state) => msg._tag === 'NameChanged' && state._tag === 'Saving',
     })
-    fc.assert(fc.property(state, fc.string(), utc, (before, inputValue, date) => {
+    fc.assert(fc.property(state, fc.string(), anyDay, (before, inputValue, date) => {
       const offered = before._tag === 'Loading' ? [] : offeredDates(before.form)
       const askable = [
         Msg.NameChanged({ name: inputValue }),
@@ -193,7 +192,7 @@ describe('EditProduct update', () => {
 
     test('picks a day the digits name, unless it is the one named, and is rejected on any other', () => {
       assertProperty(
-        [editing, utc],
+        [editing, anyDay],
         (before, other) =>
           [...offeredDates(before.form), other].every((date) =>
             acts(before, Msg.DateChosen({ date }), DigitDateEntry.choose(date, offeredDates(before.form)))
@@ -218,7 +217,7 @@ describe('EditProduct update', () => {
 
     test('is rejected while loading, while saving and once the product is gone', () => {
       assertProperty(
-        [notEditing, digit, utc],
+        [notEditing, digit, anyDay],
         (before, typed, date) =>
           rejects(Msg.DigitTyped({ digit: typed }), before) && rejects(Msg.DigitErased(), before)
           && rejects(Msg.DateCleared(), before) && rejects(Msg.DateChosen({ date }), before),
@@ -280,7 +279,7 @@ describe('EditProduct update', () => {
   describe('the time and the order', () => {
     test('are kept by the form, in the order\'s case with the stored date shown in it', () => {
       assertProperty(
-        [withFields, utc, order],
+        [withFields, zoned, order],
         (before, now, order) =>
           Equal.equals(step(Msg.TimeChanged({ now }), before).after, withForm(before, { now }))
           && Equal.equals(step(Msg.OrderChanged({ order }), before).after, withForm(before, { order })),
@@ -288,7 +287,7 @@ describe('EditProduct update', () => {
     })
 
     test('end the loading once both are known, with the stored product in the fields', () => {
-      assertProperty([loading, utc, order], (before, now, order) => {
+      assertProperty([loading, zoned, order], (before, now, order) => {
         const afterTime = step(Msg.TimeChanged({ now }), before).after
         const afterOrder = step(Msg.OrderChanged({ order }), before).after
         const form: Omit<Form, 'now' | 'order'> = {
@@ -438,7 +437,7 @@ describe('the model', () => {
             model._tag === 'Editing' && model.digits === DigitDates.digitsOf(date, form.order) && !model.withoutDate
             && Equal.equals(model.strip, {
               _tag: 'Naming',
-              choices: [{ date: DateTime.startOf(date, 'day'), choice: { _tag: 'Chosen' } }],
+              choices: [{ date, choice: { _tag: 'Chosen' } }],
             }),
         })
       }
@@ -534,9 +533,9 @@ describe('the model', () => {
   })
 
   describe('on a product', () => {
-    const creationDate = DateTime.makeUnsafe('2026-10-20T10:00:00Z')
-    const now = DateTime.makeUnsafe('2026-10-28T12:00:00Z')
-    const day = (iso: string) => DateTime.makeUnsafe(`${iso}T00:00:00Z`)
+    const creationDate = DateTime.makeZonedUnsafe('2026-10-20T10:00:00Z', { timeZone: 'Europe/Rome' })
+    const now = DateTime.makeZonedUnsafe('2026-10-28T12:00:00Z', { timeZone: 'Europe/Rome' })
+    const day = Schema.decodeSync(Day.Schema)
     const milk = Opt.getOrThrow(
       Product.make({ name: 'Milk', creationDate, maybeExpirationDate: Opt.some(day('2026-11-05')) }),
     )

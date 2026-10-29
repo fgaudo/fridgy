@@ -6,7 +6,7 @@ import * as Tea from '@fgaudo/effect-tea'
 import * as Arr from 'effect/Array'
 import * as Channel from 'effect/Channel'
 import * as Data from 'effect/Data'
-import * as DateTime from 'effect/DateTime'
+import type * as DateTime from 'effect/DateTime'
 import * as Duration from 'effect/Duration'
 import * as Effect from 'effect/Effect'
 import * as HashMap from 'effect/HashMap'
@@ -16,6 +16,7 @@ import * as Product from '#domain/product.ts'
 import { BackButton } from '#infrastructure/back-button/back-button.ts'
 import { type Feedback, Haptics } from '#infrastructure/haptics/haptics.ts'
 import * as DateOrder from '#libs/dates/date-order.ts'
+import * as Day from '#libs/dates/day.ts'
 import * as DigitDateEntry from '#libs/dates/digit-date-entry.ts'
 import * as DigitDates from '#libs/dates/digit-dates.ts'
 import { after, every } from '#libs/timers/timers.ts'
@@ -45,8 +46,8 @@ export type Form = Readonly<{
   name: string
   /** How many times the name's input was drawn anew: with each clearing. */
   replacements: number
-  /** The current time: a date typed without a year is read from today. */
-  now: DateTime.Utc
+  /** The current time, in the device's zone: a date typed without a year is read from today. */
+  now: DateTime.Zoned
   /** The order the digits of a date are read in. */
   order: DateOrder.DateOrder
   date: DateForm
@@ -73,7 +74,7 @@ export type State = Data.TaggedEnum<{
   Loading: Readonly<{
     id: string
     original: Product.Product
-    maybeNow: Opt.Option<DateTime.Utc>
+    maybeNow: Opt.Option<DateTime.Zoned>
     maybeOrder: Opt.Option<DateOrder.DateOrder>
   }>
   Editing: Readonly<{ form: Form }>
@@ -103,7 +104,7 @@ export type Message = Data.TaggedEnum<{
   /** The keypad's clear key: erases every digit, which removes the expiration. */
   DateCleared: object
   /** Picks, among the days the digits name, the one the product expires on. */
-  DateChosen: { date: DateTime.Utc }
+  DateChosen: { date: Day.Day }
   /** The segmented button: the order the digits are read in, kept for every date to come. */
   OrderPicked: { order: DateOrder.DateOrder }
   /** Saves the product the fields describe. */
@@ -111,7 +112,7 @@ export type Message = Data.TaggedEnum<{
   /** The app bar's close button. */
   Closed: object
   // From subscriptions.
-  TimeChanged: { now: DateTime.Utc }
+  TimeChanged: { now: DateTime.Zoned }
   /** The order kept: the setting reports it when the page opens, and after every pick. */
   OrderChanged: { order: DateOrder.DateOrder }
   /** The platform's back button, while the page is shown. */
@@ -141,11 +142,11 @@ export type Event = Data.TaggedEnum<{
 
 const Event = Data.taggedEnum<Event>()
 
-export type Deps = UpdateProduct | DateOrderSetting | Haptics | BackButton
+export type Deps = UpdateProduct | DateOrderSetting | Haptics | BackButton | DateTime.CurrentTimeZone
 
 /** A day the digits name: the chosen one, or one to pick while the page takes input. */
 export type DateChoice = Readonly<{
-  date: DateTime.Utc
+  date: Day.Day
   choice: Data.TaggedEnum<{ Chosen: object; Offered: Readonly<{ maybeChoose: Opt.Option<Message> }> }>
 }>
 
@@ -230,20 +231,23 @@ const entryOf = (form: Form): DigitDateEntry.Entry =>
       maybeChosenDate: Opt.none(),
     }
 
+/** The days the product may expire on, as edited now. */
+const isAllowed = (form: Form) => Product.canBeEditedToExpireOn(form.original, form.now.zone)
+
 // A past day may be entered with its year: the user may be correcting a typo, or recording a product bought past
 // its date. Only a day before the product was created is not one it may expire on.
-const offeredDates = (form: Form): ReadonlyArray<DateTime.Utc> =>
-  DigitDateEntry.offered(entryOf(form), form.now, form.order, Product.canExpireOn(form.original.creationDate))
+const offeredDates = (form: Form): ReadonlyArray<Day.Day> =>
+  DigitDateEntry.offered(entryOf(form), Day.fromDateTime(form.now), form.order, isAllowed(form))
 
 /** Whether the digits, or more typed after them, name a day the product may expire on. */
 const canCompleteDate = (form: Form): boolean =>
-  DigitDateEntry.canComplete(entryOf(form), form.now, form.order, Product.canExpireOn(form.original.creationDate))
+  DigitDateEntry.canComplete(entryOf(form), Day.fromDateTime(form.now), form.order, isAllowed(form))
 
 /**
  * The expiration the fields name: the stored one while untouched, none on no digits, the day the digits name;
  * `None` when they name no day the product may expire on.
  */
-const maybeNamedExpiration = (form: Form): Opt.Option<Opt.Option<DateTime.Utc>> =>
+const maybeNamedExpiration = (form: Form): Opt.Option<Opt.Option<Day.Day>> =>
   form.date._tag === 'Kept'
     ? Opt.some(form.original.maybeExpirationDate)
     : form.date.entry.digits === ''
@@ -254,14 +258,10 @@ const maybeNamedExpiration = (form: Form): Opt.Option<Opt.Option<DateTime.Utc>> 
 const productOf = (form: Form): Opt.Option<Product.Product> =>
   Opt.flatMap(
     maybeNamedExpiration(form),
-    (maybeExpirationDate) =>
-      Product.make({ name: form.name, creationDate: form.original.creationDate, maybeExpirationDate }),
+    (maybeExpirationDate) => Product.edit(form.original, { name: form.name, maybeExpirationDate }, form.now.zone),
   )
 
-// An expiration names a day: the same day typed again is no change.
-const isSameExpiration = Opt.makeEquivalence((a: DateTime.Utc, b: DateTime.Utc) =>
-  DateTime.Equivalence(DateTime.startOf(a, 'day'), DateTime.startOf(b, 'day'))
-)
+const isSameExpiration = Opt.makeEquivalence((a: Day.Day, b: Day.Day) => a === b)
 
 // The made product, not the typed text: a name retyped with other spacing is no change.
 const isChanged = (form: Form, product: Product.Product) =>

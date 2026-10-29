@@ -4,16 +4,17 @@
 import { describe, test } from 'bun:test'
 import * as Arr from 'effect/Array'
 import * as Channel from 'effect/Channel'
-import * as DateTime from 'effect/DateTime'
 import * as Effect from 'effect/Effect'
 import * as Equal from 'effect/Equal'
 import type * as Layer from 'effect/Layer'
 import * as Opt from 'effect/Option'
+import * as Order from 'effect/Order'
 import * as Queue from 'effect/Queue'
 import * as Result from 'effect/Result'
 import * as fc from 'fast-check'
 import * as ProductArbitrary from '#domain/product.test_arbitrary.ts'
 import * as Product from '#domain/product.ts'
+import * as Day from '#libs/dates/day.ts'
 import { checkOnFreshLayer } from '#libs/testing/fresh-layer.test_support.ts'
 import { ProductList, type StoredProduct } from './product-list.ts'
 
@@ -51,7 +52,7 @@ const isExpiringFirst = (products: ReadonlyArray<StoredProduct>) =>
       onSome: (date) =>
         Opt.match(next.maybeExpirationDate, {
           onNone: () => true,
-          onSome: (later) => DateTime.isLessThanOrEqualTo(date, later),
+          onSome: (later) => Order.isLessThanOrEqualTo(Day.Order)(date, later),
         }),
     })
   })

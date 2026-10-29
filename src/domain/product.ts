@@ -2,6 +2,8 @@ import * as Brand from 'effect/Brand'
 import * as DateTime from 'effect/DateTime'
 import * as Duration from 'effect/Duration'
 import * as Opt from 'effect/Option'
+import * as Order from 'effect/Order'
+import * as Day from '#libs/dates/day.ts'
 import * as UnitInterval from '#libs/numbers/unit-interval.ts'
 import * as NormalizedString from '#libs/strings/normalized-string.ts'
 
@@ -10,16 +12,16 @@ export type Product = Brand.Branded<
   Readonly<{
     name: NormalizedString.NormalizedString
     creationDate: DateTime.Utc
-    maybeExpirationDate: Opt.Option<DateTime.Utc>
+    maybeExpirationDate: Opt.Option<Day.Day>
   }>,
   'Product'
 >
 
 const _Product = Brand.nominal<Product>()
 
-/** The expiration of a product, which never ends before the product is created. */
+/** The expiration of a product: the day it is good through, and when the product was created. */
 export type Expiration = Brand.Branded<
-  Readonly<{ creationDate: DateTime.Utc; expirationDate: DateTime.Utc }>,
+  Readonly<{ creationDate: DateTime.Utc; expirationDate: Day.Day }>,
   'ProductExpiration'
 >
 
@@ -34,7 +36,7 @@ export type Snapshot = Brand.Branded<
   Readonly<{
     name: string
     creationDate: DateTime.Utc
-    maybeExpirationDate: Opt.Option<DateTime.Utc>
+    maybeExpirationDate: Opt.Option<Day.Day>
   }>,
   'ProductSnapshot'
 >
@@ -44,42 +46,67 @@ const _Snapshot = Brand.nominal<Snapshot>()
 export type UnvalidatedSnapshot = Readonly<{
   maybeName: Opt.Option<string>
   maybeCreationDate: Opt.Option<DateTime.Utc>
-  maybeExpirationDate: Opt.Option<DateTime.Utc>
+  maybeExpirationDate: Opt.Option<Day.Day>
 }>
 
 /** A product's name, from what the user typed: normalized, and never blank. */
 const nameFrom = (text: string): Opt.Option<NormalizedString.NormalizedString> => NormalizedString.fromString(text)
 
-// An expiration date names a day: the product is good through that day, and has
-// expired from the start of the next one.
-const expiresAt = (expirationDate: DateTime.Utc) => DateTime.add(DateTime.startOf(expirationDate, 'day'), { days: 1 })
+// An expiration date is a day of the calendar (`docs/dates.md`). The product is good through that day. It has
+// expired from the start of the next one, in the zone of the device.
+const expiresAt = (expirationDate: Day.Day, zone: DateTime.TimeZone) =>
+  Day.startIn(Day.addDays(expirationDate, 1), zone)
 
-/** Whether a product created at `creationDate` may expire on the day of `expirationDate`: not on a day before. */
-export const canExpireOn = (creationDate: DateTime.Utc) => (expirationDate: DateTime.Utc) =>
-  DateTime.isLessThan(creationDate, expiresAt(expirationDate))
+/** Whether a product created at `creationDate` may expire on `expirationDate`: not before its creation's day there. */
+export const canExpireOn = (creationDate: DateTime.Zoned) => (expirationDate: Day.Day): boolean =>
+  Order.isGreaterThanOrEqualTo(Day.Order)(expirationDate, Day.fromDateTime(creationDate))
 
-const mayExpireOn = (creationDate: DateTime.Utc, maybeExpirationDate: Opt.Option<DateTime.Utc>) =>
-  Opt.isNone(maybeExpirationDate) || canExpireOn(creationDate)(maybeExpirationDate.value)
-
-/** A new product, from what the user entered; `None` when it breaks a rule of a product. */
+/**
+ * A new product, from what the user entered, created at `creationDate` in the zone the expiration was named in;
+ * `None` when it breaks a rule of a product.
+ */
 export const make = (
   input: Readonly<{
     name: string
-    creationDate: DateTime.Utc
-    maybeExpirationDate: Opt.Option<DateTime.Utc>
+    creationDate: DateTime.Zoned
+    maybeExpirationDate: Opt.Option<Day.Day>
   }>,
 ): Opt.Option<Product> =>
   Opt.gen(function*() {
     const name = yield* nameFrom(input.name)
-    if (!mayExpireOn(input.creationDate, input.maybeExpirationDate)) {
+    if (Opt.exists(input.maybeExpirationDate, (date) => !canExpireOn(input.creationDate)(date))) {
       return yield* Opt.none()
     }
-    return _Product({ name, creationDate: input.creationDate, maybeExpirationDate: input.maybeExpirationDate })
+    const creationDate = DateTime.toUtc(input.creationDate)
+    return _Product({ name, creationDate, maybeExpirationDate: input.maybeExpirationDate })
+  })
+
+/**
+ * Whether `product`, edited in `zone`, may expire on `expirationDate`: not before its creation's day there, nor
+ * before the day it expires on already, which may have been set in a zone further west.
+ */
+export const canBeEditedToExpireOn = (product: Product, zone: DateTime.TimeZone) => (expirationDate: Day.Day) =>
+  canExpireOn(DateTime.setZone(product.creationDate, zone))(expirationDate)
+  || Opt.exists(product.maybeExpirationDate, (date) => Order.isGreaterThanOrEqualTo(Day.Order)(expirationDate, date))
+
+/** `product` with the name and the expiration edited in `zone`; `None` when they break a rule of a product. */
+export const edit = (
+  product: Product,
+  input: Readonly<{ name: string; maybeExpirationDate: Opt.Option<Day.Day> }>,
+  zone: DateTime.TimeZone,
+): Opt.Option<Product> =>
+  Opt.gen(function*() {
+    const name = yield* nameFrom(input.name)
+    if (Opt.exists(input.maybeExpirationDate, (date) => !canBeEditedToExpireOn(product, zone)(date))) {
+      return yield* Opt.none()
+    }
+    return _Product({ name, creationDate: product.creationDate, maybeExpirationDate: input.maybeExpirationDate })
   })
 
 /**
  * A stored product, as a storage gives it back. More forgiving than `make`: a name that is no longer valid
- * is replaced, so that the product can still be shown and deleted.
+ * is replaced, so that the product can still be shown and deleted. The expiration is not checked against the
+ * creation: the creation's day depends on the zone the product was created in.
  */
 export const fromSnapshot = (p: UnvalidatedSnapshot): Opt.Option<Product> =>
   Opt.gen(function*() {
@@ -93,9 +120,6 @@ export const fromSnapshot = (p: UnvalidatedSnapshot): Opt.Option<Product> =>
       }),
       p.maybeCreationDate,
     ])
-    if (!mayExpireOn(creationDate, p.maybeExpirationDate)) {
-      return yield* Opt.none()
-    }
     return _Product({ creationDate, maybeExpirationDate: p.maybeExpirationDate, name })
   })
 
@@ -105,7 +129,7 @@ export const toSnapshot = ({ name, creationDate, maybeExpirationDate }: Product)
 export const maybeExpiration = ({ creationDate, maybeExpirationDate }: Product): Opt.Option<Expiration> =>
   Opt.map(maybeExpirationDate, (expirationDate) => _Expiration({ creationDate, expirationDate }))
 
-const freshness = (currentDate: DateTime.Utc, creationDate: DateTime.Utc, end: DateTime.Utc) => {
+const freshness = (currentDate: DateTime.DateTime, creationDate: DateTime.Utc, end: DateTime.DateTime) => {
   if (DateTime.isLessThan(currentDate, creationDate)) {
     return UnitInterval.makeUnsafe(1)
   }
@@ -114,24 +138,21 @@ const freshness = (currentDate: DateTime.Utc, creationDate: DateTime.Utc, end: D
   return UnitInterval.makeUnsafe(Duration.toMillis(remainingDuration) / Duration.toMillis(totalDuration))
 }
 
-/** The days from the day of `from` to the day of `to`: whole, and 0 on the same day. */
-const daysBetween = (from: DateTime.Utc, to: DateTime.Utc) =>
-  Duration.toDays(DateTime.distance(DateTime.startOf(from, 'day'), DateTime.startOf(to, 'day')))
-
 /**
  * Whether a product has expired at `currentDate`, and since how many days (1 the day after its expiration day),
  * or how much of its life is left and in how many days it expires (0 on the expiration day, 1 the day before):
- * the calendar's counts, which change at midnight only, as the user counts from the date on the package.
+ * the calendar's counts, which change at midnight only, as the user counts from the date on the package. The
+ * days are those of the zone of `currentDate`.
  */
-export const expirationStatus = (currentDate: DateTime.Utc) => ({ creationDate, expirationDate }: Expiration) => {
-  const end = expiresAt(expirationDate)
-  if (DateTime.isGreaterThanOrEqualTo(currentDate, end)) {
-    return { hasExpired: true, daysSinceExpiration: daysBetween(expirationDate, currentDate) } as const
+export const expirationStatus = (currentDate: DateTime.Zoned) => ({ creationDate, expirationDate }: Expiration) => {
+  const today = Day.fromDateTime(currentDate)
+  if (Order.isLessThan(Day.Order)(expirationDate, today)) {
+    return { hasExpired: true, daysSinceExpiration: Day.daysBetween(expirationDate, today) } as const
   }
   return {
-    // A product ends after it is created (see `canExpireOn`), so the total duration is never zero.
-    freshness: freshness(currentDate, creationDate, end),
+    // Now is before the end, and past the creation when freshness divides: the total duration is never zero.
+    freshness: freshness(currentDate, creationDate, expiresAt(expirationDate, currentDate.zone)),
     hasExpired: false,
-    daysUntilExpiration: daysBetween(currentDate, expirationDate),
+    daysUntilExpiration: Day.daysBetween(today, expirationDate),
   } as const
 }

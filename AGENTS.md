@@ -79,6 +79,10 @@ folders; "page" names a role in the UI, kept by the root's state, not a kind of 
   that no consumer could shape (`src/infrastructure/back-button`, `src/infrastructure/haptics`), a service of the infrastructure that programs list directly. Write services
   have no read: a program learns about writes from the storage's changes. Persistence services take a domain `Snapshot` and return
   `UnvalidatedSnapshot`s; adapters never read domain fields.
+- **An expiration is a day of the calendar, and days are the device's.** An expiration date is a `Day`
+  (`libs/dates/day.ts`), stored as `YYYY-MM-DD`; a creation date is an instant. "Today" is the day of the clock's
+  `DateTime.Zoned` time, in the `DateTime.CurrentTimeZone` that the entrypoints provide; never UTC's
+  (`docs/dates.md`).
 - **The domain decides what an entity is.** A new one is made with its `make` (`Product.make`), and a form
   lets the user submit only what `make` accepts, asking the domain's rules (`Product.canExpireOn`) rather than
   repeating them; the command carries the entity, valid by construction. `fromSnapshot` only reads stored data,

@@ -55,16 +55,25 @@ afterAll(async () => {
 
 /**
  * Runs `act` on the app, in a context of its own: a new context has an empty OPFS, so every test starts with no
- * products. An error of the page fails the test; a failure leaves a screenshot where CI keeps it.
+ * products. An error of the page fails the test; a failure leaves a screenshot where CI keeps it. With
+ * `maybeZone`, the device is in that zone, in English, and its clock stands at `time`.
  */
-const onApp = async (name: string, act: (page: Page) => Promise<void>) => {
+const onApp = async (
+  name: string,
+  act: (page: Page) => Promise<void>,
+  maybeZone?: Readonly<{ timezoneId: string; time: string }>,
+) => {
   const context = await browser.newContext({
     viewport: { width: 320, height: 640 },
     deviceScaleFactor: 2,
     isMobile: true,
     hasTouch: true,
+    ...(maybeZone === undefined ? {} : { timezoneId: maybeZone.timezoneId, locale: 'en-US' }),
   })
   const page = await context.newPage()
+  if (maybeZone !== undefined) {
+    await page.clock.setFixedTime(maybeZone.time)
+  }
   const errors: Array<string> = []
   page.on('pageerror', (error) => errors.push(error.stack ?? error.message))
   page.on('console', (message) => {
@@ -161,6 +170,23 @@ describe('the production bundle', () => {
       await button(page, 'Delete').click()
       await page.getByText('Nothing in the fridge').waitFor()
     })
+  }, 60_000)
+
+  // In UTC, it is already October 31 (`docs/dates.md`). The device's zone reaches the app through the entrypoint.
+  test('in New York at 20:30 on October 30, today is offered, and a product expiring today expires today', async () => {
+    await onApp('zone', async (page) => {
+      await button(page, 'Add products').click()
+      await page.getByRole('textbox', { name: 'Name' }).fill('Milk')
+      await button(page, 'Set expiration').click()
+      for (const digit of '10302026') {
+        await button(page, digit).click()
+      }
+      await page.getByText('Oct 30, 2026').waitFor()
+      await button(page, 'Add').click()
+      await page.getByText('Milk added.').waitFor({ state: 'attached' })
+      await button(page, 'Close').click()
+      await page.getByText('Expires today').waitFor()
+    }, { timezoneId: 'America/New_York', time: '2026-10-31T00:30:00Z' })
   }, 60_000)
 
   test('About shows package.json\'s version', async () => {

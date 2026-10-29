@@ -60,13 +60,13 @@ decided".
    removes the expiration. A product that never expired gets one by typing. Picking another order rewrites the
    untouched stored date in that order; digits already typed stay as typed and are read in the new order, as on
    the page that adds products. The days offered are those the digits name on or after the day the product was
-   created (`Product.canExpireOn(creationDate)`): a past date can be entered with its year, since the user may
-   be correcting a typo or recording a product bought past its date; without a year, or a month, a day is
-   the next one on or after today, and the chips start from the day nearest today, as `DigitDates.datesOf`
-   reads them.
+   created, or on or after its stored date (`Product.canBeEditedToExpireOn`, `docs/dates.md`): a past date can be
+   entered with its year, since the user may be correcting a typo or recording a product bought past its date;
+   without a year, or a month, a day is the next one on or after today, and the chips start from the day nearest
+   today, as `DigitDates.datesOf` reads them. The days are the device's.
 5. **Saving.** The button reads "Save without date" while the date field is empty, as "Add without date" on the
    page that adds products, since the strip shows the hint there and not that the product will not expire. The
-   button is enabled only while the fields describe a valid product (`Product.make` accepts it)
+   button is enabled only while the fields describe a valid product (`Product.edit` accepts it)
    that differs from the stored one. A tap disables every control, shows the circular indicator in the button
    and writes the product; when the write has completed, the page leaves, and Home shows the product changed,
    where its new expiration orders it. When the write fails, the page gives the form back and a snackbar says
@@ -135,11 +135,10 @@ starts it with `children.EditProduct.init(flags)` from Home's event). Same shape
   its last digit and the clear key empties the field, a digit is rejected (eight is a date's longest) and so is a
   tap on its chip (the only day offered, already named); on no stored date, a digit starts typing, and there is
   nothing to erase. A `Some` from a rule becomes `Typed { entry }`.
-- **The untouched stored date names the stored expiration itself**, not the day its digits name: a stored date
-  that is not at midnight (data written by an older build, or a test's arbitrary) would otherwise read as a
-  change. For the same reason "changed" compares expirations by their day, which is what an expiration names,
-  and compares the made product, not the typed text: `Product.make` normalizes the name, so a name retyped with
-  other spacing is not a change.
+- **The untouched stored date names the stored expiration itself**, not the day its digits name, and an edit
+  allows it even when it falls before the creation's day in the zone the phone is in now (`docs/dates.md`).
+  "Changed" compares the made product, not the typed text: `Product.edit` normalizes the name, so a name retyped
+  with other spacing is not a change.
 - **Only a completion leaves `Saving`**: its controls are disabled, `Saved` outside it is a defect, and a key
   typed just before is kept, as `add-products` does. `Saved` leaves the page; `Failed` gives the form back with
   the snackbar; `Gone` enters `Gone`.
@@ -272,7 +271,5 @@ scrolls to "Save", keyboard open or not.
 - The scanner and the lookup on this page, to rename a product from its barcode.
 - Editing the creation date ("bought on"), with the disc's meaning in mind: a third date entry, when moving the
   entry up as a program of `programs/` is weighed again.
-- Repairing an `Invalid` row (a stored expiration before the creation date) from this page, which today can only
-  be deleted: the page would start from an `UnvalidatedSnapshot` and a `fromSnapshot` that forgives the date.
 - A transition for a row that moves in Home's list.
 - A confirmation before discarding changes, should the owner want one.

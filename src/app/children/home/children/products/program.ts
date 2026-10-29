@@ -18,6 +18,7 @@ import * as Domain from '#domain/product.ts'
 import { BackButton } from '#infrastructure/back-button/back-button.ts'
 import { type Feedback, Haptics } from '#infrastructure/haptics/haptics.ts'
 import * as NonEmptyHashSet from '#libs/collections/non-empty-hash-set.ts'
+import type * as Day from '#libs/dates/day.ts'
 import * as PositiveInteger from '#libs/numbers/positive-integer.ts'
 import type * as UnitInterval from '#libs/numbers/unit-interval.ts'
 import { after, every } from '#libs/timers/timers.ts'
@@ -79,10 +80,11 @@ const Snackbar = Data.taggedEnum<Snackbar>()
 
 export type State = Readonly<{
   /**
-   * The current time, which the statuses of the products that expire derive from. The clock runs only while a
-   * product shown, listed or leaving, expires: `None` until it has ticked, and again once no product needs it.
+   * The current time, in the device's zone, which the statuses of the products that expire derive from. The clock
+   * runs only while a product shown, listed or leaving, expires: `None` until it has ticked, and again once no
+   * product needs it.
    */
-  maybeNow: Opt.Option<DateTime.Utc>
+  maybeNow: Opt.Option<DateTime.Zoned>
   list: Data.TaggedEnum<{
     Loading: object
     Failed: object
@@ -112,7 +114,7 @@ export type Message = Data.TaggedEnum<{
   // From subscriptions.
   /** The back button, heard only while something is selected: it clears the selection, or waits for its deletion. */
   BackPressed: object
-  TimeChanged: { now: DateTime.Utc }
+  TimeChanged: { now: DateTime.Zoned }
   ListChanged: { result: Result.Result<ReadonlyArray<StoredProduct>, ProductListReadError> }
   /** The snackbar has stood its time: it leaves, and the offer to undo with it. */
   SnackbarExpired: object
@@ -166,15 +168,15 @@ type Freshness = UnitInterval.UnitInterval
 export type ProductStatus = Data.TaggedEnum<{
   Everlasting: object
   /** Expired `daysAgo` days ago, two at least: yesterday has a case of its own. */
-  Stale: Readonly<{ expirationDate: DateTime.Utc; daysAgo: PositiveInteger.PositiveInteger }>
+  Stale: Readonly<{ expirationDate: Day.Day; daysAgo: PositiveInteger.PositiveInteger }>
   /** Good through yesterday, and no longer today. */
-  ExpiredYesterday: Readonly<{ expirationDate: DateTime.Utc }>
+  ExpiredYesterday: Readonly<{ expirationDate: Day.Day }>
   /** Good through today, and no longer tomorrow. */
-  ExpiringToday: Readonly<{ expirationDate: DateTime.Utc; freshness: Freshness }>
+  ExpiringToday: Readonly<{ expirationDate: Day.Day; freshness: Freshness }>
   /** Good through tomorrow. */
-  ExpiringTomorrow: Readonly<{ expirationDate: DateTime.Utc; freshness: Freshness }>
+  ExpiringTomorrow: Readonly<{ expirationDate: Day.Day; freshness: Freshness }>
   /** Good through the day `inDays` days ahead, two at least: today and tomorrow have cases of their own. */
-  Fresh: Readonly<{ expirationDate: DateTime.Utc; inDays: PositiveInteger.PositiveInteger; freshness: Freshness }>
+  Fresh: Readonly<{ expirationDate: Day.Day; inDays: PositiveInteger.PositiveInteger; freshness: Freshness }>
 }>
 
 /** Whether a row opens its place, has it, or closes it. */
@@ -431,7 +433,7 @@ const vibrate = Effect.fn('Vibrate')(
 
 type Deletion = Data.TaggedEnum.Value<ListModel, 'Available'>['deletion']
 
-const expirationStatusAt = (now: DateTime.Utc, expiration: Domain.Expiration): ProductStatus => {
+const expirationStatusAt = (now: DateTime.Zoned, expiration: Domain.Expiration): ProductStatus => {
   const { expirationDate } = expiration
   const status = Domain.expirationStatus(now)(expiration)
   if (status.hasExpired) {
@@ -452,7 +454,7 @@ const expirationStatusAt = (now: DateTime.Utc, expiration: Domain.Expiration): P
 }
 
 /** The status of a product: `None` for one that expires while the clock has not ticked yet. */
-const maybeStatusAt = (maybeNow: Opt.Option<DateTime.Utc>, product: Domain.Product): Opt.Option<ProductStatus> =>
+const maybeStatusAt = (maybeNow: Opt.Option<DateTime.Zoned>, product: Domain.Product): Opt.Option<ProductStatus> =>
   Opt.match(Domain.maybeExpiration(product), {
     onNone: () => Opt.some({ _tag: 'Everlasting' }),
     onSome: (expiration) => Opt.map(maybeNow, (now) => expirationStatusAt(now, expiration)),
@@ -524,7 +526,7 @@ const listModel = (state: State): ListModel => {
   }
 }
 
-export type Deps = DeleteProducts.DeleteProducts | ProductList | Haptics | BackButton
+export type Deps = DeleteProducts.DeleteProducts | ProductList | Haptics | BackButton | DateTime.CurrentTimeZone
 
 export const program: Tea.Program<{
   state: State

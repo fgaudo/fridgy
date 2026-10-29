@@ -44,9 +44,10 @@ src/
 │                        the vibrations (haptics/, `docs/haptics.md`). Its adapters are named as the app's,
 │                        `<service>.<backing>.ts`
 ├─ libs/                 generic, reusable code: the snabbdom bridge (tea-snabbdom: handlers, renderer,
-│                        test support) and JSX runtime, sources, timers (a clock, a one-shot timer), branded
-│                        numbers, barcodes (the expansion of a UPC-E), dates (the orders of a date's digits,
-│                        the days they name, the rules of typing them on a keypad), test helpers, …
+│                        test support) and JSX runtime, sources, timers (a zoned clock, a one-shot timer), branded
+│                        numbers, barcodes (the expansion of a UPC-E), dates (a day of the calendar, with no
+│                        zone; the orders of a date's digits, the days they name, the rules of typing them on
+│                        a keypad), test helpers, …
 ├─ index.html            the page template: it links the icon font, and the build fills in the entrypoint
 ├─ error.html            shown by Capacitor instead of the app on a WebView older than it needs
 ├─ palette.generated.css the Material 3 color roles, written by `bun run update-palette`

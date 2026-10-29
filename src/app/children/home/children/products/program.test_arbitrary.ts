@@ -7,7 +7,7 @@ import * as ProductArbitrary from '#domain/product.test_arbitrary.ts'
 import * as NonEmptyHashSet from '#libs/collections/non-empty-hash-set.test_arbitrary.ts'
 import * as PositiveInteger from '#libs/numbers/positive-integer.test_arbitrary.ts'
 import { arbitrary as maybe } from '#libs/option/option.test_arbitrary.ts'
-import { utc } from '#libs/testing/date-time.test_arbitrary.ts'
+import { utc, zoned } from '#libs/testing/date-time.test_arbitrary.ts'
 import type { Departure, Entrance, Gesture, Message, Notice, Product, Selection, Snackbar, State } from './program.ts'
 import { ProductListReadError, type StoredProduct } from './services/product-list/product-list.ts'
 
@@ -129,7 +129,7 @@ export const hasExpiringProduct = (state: State) =>
   )
 
 /** Any state, with a time only while a product expires. */
-export const state: fc.Arbitrary<State> = fc.record({ maybeNow: maybe(utc), list, selection, snackbar }).map((
+export const state: fc.Arbitrary<State> = fc.record({ maybeNow: maybe(zoned), list, selection, snackbar }).map((
   state,
 ) => hasExpiringProduct(state) ? state : { ...state, maybeNow: Opt.none() })
 
@@ -161,7 +161,7 @@ export const message: fc.Arbitrary<Message> = fc.oneof(
   utc.map((at) => Msg.DeleteFailed({ at })),
   utc.map((at) => Msg.RestoreFailed({ at })),
   utc.map((at) => Msg.Deleted({ at })),
-  utc.map((now) => Msg.TimeChanged({ now })),
+  zoned.map((now) => Msg.TimeChanged({ now })),
   fc.oneof(
     fc.string().map((cause) => Result.fail(new ProductListReadError({ cause }))),
     storedProducts.map((products) => Result.succeed(products)),

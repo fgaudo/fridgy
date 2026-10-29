@@ -4,6 +4,7 @@ import * as Match from 'effect/Match'
 import * as Opt from 'effect/Option'
 import type { VNode } from 'snabbdom'
 import type { DateOrder } from '#libs/dates/date-order.ts'
+import * as Day from '#libs/dates/day.ts'
 import { piecesOf } from '#libs/strings/pieces.ts'
 import { focusOnInsert, gatherAndFly, handlers, initialValue, type View } from '#libs/tea-snabbdom/tea-snabbdom.ts'
 import { cn } from '#libs/ui/class-names.ts'
@@ -24,7 +25,7 @@ import type {
 const inputValue = (event: Event) => (event.target as HTMLInputElement).value
 
 // No weekday: a date read off a package has none, and two chips must fit a row of the narrowest phone.
-const formatDay = (date: DateTime.Utc) => DateTime.formatUtc(date, { day: 'numeric', month: 'short', year: 'numeric' })
+const formatDay = (date: Day.Day) => Day.format(date, { day: 'numeric', month: 'short', year: 'numeric' })
 
 const keys: ReadonlyArray<Digit> = ['1', '2', '3', '4', '5', '6', '7', '8', '9']
 

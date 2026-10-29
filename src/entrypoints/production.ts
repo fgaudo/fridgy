@@ -1,4 +1,5 @@
 import * as ConfigProvider from 'effect/ConfigProvider'
+import * as DateTime from 'effect/DateTime'
 import * as FetchHttpClient from 'effect/http/FetchHttpClient'
 import * as Layer from 'effect/Layer'
 import * as References from 'effect/References'
@@ -26,6 +27,7 @@ run(
   Layer.mergeAll(
     layer,
     BackButtonCapacitor.layer,
+    DateTime.layerCurrentZoneLocal,
     Layer.succeed(RootViews, Stream.make(RootView.view)),
     SnabbdomRenderer.layer('#root'),
     Layer.succeed(References.MinimumLogLevel, 'Info'),

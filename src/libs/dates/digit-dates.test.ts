@@ -1,39 +1,42 @@
 import { describe, expect, test } from 'bun:test'
 import * as Arr from 'effect/Array'
-import * as DateTime from 'effect/DateTime'
 import * as Equal from 'effect/Equal'
+import * as Order from 'effect/Order'
+import * as Schema from 'effect/Schema'
 import * as fc from 'fast-check'
-import { utc } from '#libs/testing/date-time.test_arbitrary.ts'
 import { assertProperty } from '#libs/testing/update.test_support.ts'
 import { arbitrary as order } from './date-order.test_arbitrary.ts'
 import type { DateOrder } from './date-order.ts'
+import { arbitrary as anyDay } from './day.test_arbitrary.ts'
+import * as Day from './day.ts'
 import { canComplete, datesOf, digitsOf, MAX_DIGITS } from './digit-dates.ts'
 
 const digits = fc.string({ unit: fc.constantFrom(...'0123456789'), maxLength: MAX_DIGITS })
+
+const isOnOrAfter = Order.isGreaterThanOrEqualTo(Day.Order)
+
+/** The day `months` months before `date`'s, if that month has it. */
+const monthsBefore = (date: Day.Day, months: number) => {
+  const { year, month, day } = Day.toParts(date)
+  const index = year * 12 + month - 1 - months
+  return Day.make({ year: Math.floor(index / 12), month: index % 12 + 1, day })
+}
 
 /**
  * Every way `date` can be typed in `order`: the day alone, with or without a leading zero, or the day and the
  * month so, then no year, two or four, the year where the order puts it.
  */
-const spellings = (date: DateTime.Utc, today: DateTime.Utc, order: DateOrder): ReadonlyArray<string> => {
-  const { year, month, day } = DateTime.toPartsUtc(date)
+const spellings = (date: Day.Day, today: Day.Day, order: DateOrder): ReadonlyArray<string> => {
+  const { year, month, day } = Day.toParts(date)
   const both = (n: number) => Arr.dedupe([String(n), String(n).padStart(2, '0')])
-  const start = DateTime.startOf(today, 'day')
   const years = [String(year).padStart(4, '0')]
   if (year >= 2000 && year <= 2099) years.push(String(year - 2000).padStart(2, '0'))
   // With no year, only the next such day is meant: none in the eight years before is on or after today.
-  const earlierYears = Arr.makeBy(8, (back) => DateTime.subtract(date, { years: back + 1 }))
-    .filter((before) => DateTime.getPartUtc(before, 'day') === day)
-  if (
-    DateTime.isGreaterThanOrEqualTo(date, start) && earlierYears.every((before) => DateTime.isLessThan(before, start))
-  ) years.push('')
+  const earlierYears = Arr.getSomes(Arr.makeBy(8, (back) => monthsBefore(date, 12 * (back + 1))))
+  if (isOnOrAfter(date, today) && earlierYears.every((before) => !isOnOrAfter(before, today))) years.push('')
   // With no month either, only the next such day is meant: none in the two months before is on or after today.
-  const earlier = Arr.makeBy(2, (back) => DateTime.subtract(date, { months: back + 1 }))
-    .filter((before) => DateTime.getPartUtc(before, 'day') === day)
-  const alone = DateTime.isGreaterThanOrEqualTo(date, start)
-      && earlier.every((before) => DateTime.isLessThan(before, start))
-    ? both(day)
-    : []
+  const earlier = Arr.getSomes(Arr.makeBy(2, (back) => monthsBefore(date, back + 1)))
+  const alone = isOnOrAfter(date, today) && earlier.every((before) => !isOnOrAfter(before, today)) ? both(day) : []
   return [
     ...alone,
     ...both(day).flatMap((d) =>
@@ -44,78 +47,71 @@ const spellings = (date: DateTime.Utc, today: DateTime.Utc, order: DateOrder): R
   ]
 }
 
-/** How far `date` is from the start of `today`, either way. */
-const distanceFrom = (today: DateTime.Utc) => (date: DateTime.Utc) =>
-  Math.abs(DateTime.toEpochMillis(date) - DateTime.toEpochMillis(DateTime.startOf(today, 'day')))
+/** How far `date` is from `today`, either way, in days. */
+const distanceFrom = (today: Day.Day) => (date: Day.Day) => Math.abs(Day.daysBetween(today, date))
 
-const sameDays = (a: ReadonlyArray<DateTime.Utc>, b: ReadonlyArray<DateTime.Utc>) =>
-  expect(a.map(DateTime.formatIsoDateUtc)).toEqual(b.map(DateTime.formatIsoDateUtc))
+const sameDays = (a: ReadonlyArray<Day.Day>, b: ReadonlyArray<Day.Day>) => expect(a).toEqual(b)
 
-const today = DateTime.makeUnsafe('2026-10-24T15:30:00Z')
+const day = Schema.decodeSync(Day.Schema)
 
-const day = (iso: string) => DateTime.makeUnsafe(`${iso}T00:00:00Z`)
+const today = day('2026-10-24')
 
 describe('datesOf', () => {
-  test('names only days that the digits spell in the order, at their start', () => {
+  test('names only days that the digits spell in the order', () => {
     assertProperty(
-      [digits, utc, order],
-      (typed, now, order) =>
-        datesOf(typed, now, order).every((date) =>
-          Arr.contains(spellings(date, now, order), typed) && DateTime.Equivalence(date, DateTime.startOf(date, 'day'))
-        ),
+      [digits, anyDay, order],
+      (typed, today, order) =>
+        datesOf(typed, today, order).every((date) => Arr.contains(spellings(date, today, order), typed)),
     )
   })
 
   test('names every day from each way it can be typed in the order', () => {
-    const days = utc.map((date) => DateTime.startOf(date, 'day'))
     assertProperty(
-      [days, utc, order],
+      [anyDay, anyDay, order],
       (date, now, order) =>
-        spellings(date, now, order).every((typed) =>
-          datesOf(typed, now, order).some((named) => DateTime.Equivalence(named, date))
-        ),
+        spellings(date, now, order).every((typed) => datesOf(typed, now, order).some((named) => named === date)),
     )
   })
 
   test('names a day with no year on the next such day, today included', () => {
     const offsets = fc.integer({ min: 0, max: 364 })
-    assertProperty([utc, offsets, order], (now, offset, order) => {
-      const date = DateTime.add(DateTime.startOf(now, 'day'), { days: offset })
-      const { month, day } = DateTime.toPartsUtc(date)
+    assertProperty([anyDay, offsets, order], (now, offset, order) => {
+      const date = Day.addDays(now, offset)
+      const { month, day } = Day.toParts(date)
       const [d, m] = [String(day).padStart(2, '0'), String(month).padStart(2, '0')]
       const typed = order === 'DMY' ? d + m : m + d
-      return datesOf(typed, now, order).some((named) => DateTime.Equivalence(named, date))
+      return datesOf(typed, now, order).some((named) => named === date)
     })
   })
 
   test('names a day alone on the next such day, today included', () => {
     const offsets = fc.integer({ min: 0, max: 27 })
-    assertProperty([utc, offsets, order], (now, offset, order) => {
-      const date = DateTime.add(DateTime.startOf(now, 'day'), { days: offset })
-      const typed = String(DateTime.getPartUtc(date, 'day'))
-      return datesOf(typed, now, order).some((named) => DateTime.Equivalence(named, date))
+    assertProperty([anyDay, offsets, order], (now, offset, order) => {
+      const date = Day.addDays(now, offset)
+      const typed = String(Day.toParts(date).day)
+      return datesOf(typed, now, order).some((named) => named === date)
     })
   })
 
   test('sorts the days nearest to today first, the later of two as near, without repeats', () => {
-    assertProperty([digits, utc, order], (typed, now, order) => {
+    assertProperty([digits, anyDay, order], (typed, now, order) => {
       const dates = datesOf(typed, now, order)
       const distance = distanceFrom(now)
       return Arr.zip(dates, dates.slice(1)).every(([first, second]) =>
         distance(first) < distance(second)
-        || (distance(first) === distance(second) && DateTime.isGreaterThan(first, second))
+        || (distance(first) === distance(second) && Order.isGreaterThan(Day.Order)(first, second))
       )
     })
   })
 
   // The view relies on it: two chips fit a row of the narrowest phone.
   test('names two days at most', () => {
-    assertProperty([digits, utc, order], (typed, now, order) => datesOf(typed, now, order).length <= 2)
+    assertProperty([digits, anyDay, order], (typed, now, order) => datesOf(typed, now, order).length <= 2)
   })
 
   test('names nothing from what is not only digits', () => {
     assertProperty(
-      [fc.string().filter((text) => /\D/.test(text)), utc, order],
+      [fc.string().filter((text) => /\D/.test(text)), anyDay, order],
       (text, now, order) => datesOf(text, now, order).length === 0,
     )
   })
@@ -159,17 +155,15 @@ describe('datesOf', () => {
 })
 
 describe('canComplete', () => {
-  /** Days on or after the start of the day of `from`: what `canComplete` takes, every later day allowed. */
-  const onOrAfter = (from: DateTime.Utc) => (date: DateTime.Utc) =>
-    DateTime.isGreaterThanOrEqualTo(date, DateTime.startOf(from, 'day'))
+  /** Days on or after `from`: what `canComplete` takes, every later day allowed. */
+  const onOrAfter = (from: Day.Day) => (date: Day.Day) => isOnOrAfter(date, from)
 
   /** Every string of digits up to `length` long. */
   const allDigits = (length: number): ReadonlyArray<string> =>
     length === 0 ? [''] : ['', ...allDigits(length - 1).flatMap((rest) => [...'0123456789'].map((d) => d + rest))]
 
   test('holds for every beginning of a way to type an allowed day', () => {
-    const days = utc.map((date) => DateTime.startOf(date, 'day'))
-    assertProperty([days, utc, utc, order], (date, now, from, order) =>
+    assertProperty([anyDay, anyDay, anyDay, order], (date, now, from, order) =>
       !onOrAfter(from)(date)
       || spellings(date, now, order).every((typed) =>
         Arr.makeBy(typed.length + 1, (length) => typed.slice(0, length)).every((start) =>
@@ -181,7 +175,7 @@ describe('canComplete', () => {
   test('holds from five digits on only when some digits typed after them name an allowed day', () => {
     const typed = fc.string({ unit: fc.constantFrom(...'0123456789'), minLength: 5, maxLength: MAX_DIGITS })
     assertProperty(
-      [typed, utc, utc, order],
+      [typed, anyDay, anyDay, order],
       (typed, now, from, order) =>
         canComplete(typed, now, order, onOrAfter(from))
           === allDigits(MAX_DIGITS - typed.length).some((more) =>
@@ -192,7 +186,7 @@ describe('canComplete', () => {
 
   test('holds whenever the digits name an allowed day', () => {
     assertProperty(
-      [digits, utc, utc, order],
+      [digits, anyDay, anyDay, order],
       (typed, now, from, order) =>
         !datesOf(typed, now, order).some(onOrAfter(from)) || canComplete(typed, now, order, onOrAfter(from)),
     )
@@ -219,9 +213,9 @@ describe('canComplete', () => {
 describe('digitsOf', () => {
   test('names its day alone, in every order, from any today', () => {
     assertProperty(
-      [utc, utc, order],
+      [anyDay, anyDay, order],
       (date, now, order) =>
-        Equal.equals(datesOf(digitsOf(date, order), now, order), [DateTime.startOf(date, 'day')])
+        Equal.equals(datesOf(digitsOf(date, order), now, order), [date])
         && digitsOf(date, order).length === MAX_DIGITS,
     )
   })

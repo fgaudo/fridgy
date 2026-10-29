@@ -6,6 +6,7 @@ import { type Rehearsal, rehearse } from '@fgaudo/effect-tea/testing'
 import * as Arr from 'effect/Array'
 import * as Channel from 'effect/Channel'
 import * as Data from 'effect/Data'
+import * as DateTime from 'effect/DateTime'
 import * as Effect from 'effect/Effect'
 import * as HashMap from 'effect/HashMap'
 import * as HttpClient from 'effect/http/HttpClient'
@@ -13,6 +14,7 @@ import * as Layer from 'effect/Layer'
 import * as Match from 'effect/Match'
 import * as Opt from 'effect/Option'
 import * as References from 'effect/References'
+import * as TestClock from 'effect/testing/TestClock'
 import { BackButton } from '#infrastructure/back-button/back-button.ts'
 import { Haptics } from '#infrastructure/haptics/haptics.ts'
 import * as SqliteMemory from '#infrastructure/storage/sqlite.memory.ts'
@@ -204,11 +206,26 @@ const layer = Layer.mergeAll(
   productLookup,
 )
 
-/** Rehearses the app from its start; fails when a command other than a vibration is still pending at the end. */
-export const rehearsed = <A>(scenario: (user: User) => Effect.Effect<A, never, Deps>) =>
+/**
+ * Rehearses the app from its start; fails when a command other than a vibration is still pending at the end. The
+ * device is in `zone`, UTC unless given. At `time`, a test clock stands still: a timer never ends.
+ */
+export const rehearsed = <A>(
+  scenario: (user: User) => Effect.Effect<A, never, Deps>,
+  { zone = 'UTC', maybeTime = Opt.none() }: Readonly<{ zone?: string; maybeTime?: Opt.Option<DateTime.Utc> }> = {},
+) =>
   Effect.runPromise(
     rehearse(program, (user) => Effect.tap(scenario(user), () => vibrateAll(user))).pipe(
       Effect.provide(layer),
+      Effect.provideService(DateTime.CurrentTimeZone, DateTime.zoneMakeNamedUnsafe(zone)),
+      (rehearsal) =>
+        Opt.match(maybeTime, {
+          onNone: () => rehearsal,
+          onSome: (time) =>
+            Effect.andThen(TestClock.setTime(DateTime.toEpochMillis(time)), rehearsal).pipe(
+              Effect.provide(TestClock.layer()),
+            ),
+        }),
       // Every rehearsal builds a storage, which logs that it is ready: only warnings are worth showing.
       Effect.provideService(References.MinimumLogLevel, 'Warn'),
     ),

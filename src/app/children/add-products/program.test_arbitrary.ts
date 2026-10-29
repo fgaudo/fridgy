@@ -4,10 +4,12 @@ import * as fc from 'fast-check'
 import { arbitrary as product } from '#domain/product.test_arbitrary.ts'
 import * as Product from '#domain/product.ts'
 import { arbitrary as order } from '#libs/dates/date-order.test_arbitrary.ts'
+import { arbitrary as day } from '#libs/dates/day.test_arbitrary.ts'
+import * as Day from '#libs/dates/day.ts'
 import { digit, digits } from '#libs/dates/digit-date-entry.test_arbitrary.ts'
 import * as DigitDateEntry from '#libs/dates/digit-date-entry.ts'
 import { arbitrary as maybe } from '#libs/option/option.test_arbitrary.ts'
-import { utc } from '#libs/testing/date-time.test_arbitrary.ts'
+import { utc, zoned } from '#libs/testing/date-time.test_arbitrary.ts'
 import type {
   Acknowledging,
   Camera,
@@ -65,7 +67,12 @@ const offeredDates = (form: Form, digits: string) =>
   Opt.match(Opt.all([form.maybeNow, form.maybeOrder]), {
     onNone: () => [],
     onSome: ([now, order]) =>
-      DigitDateEntry.offered({ ...DigitDateEntry.empty, digits }, now, order, Product.canExpireOn(now)),
+      DigitDateEntry.offered(
+        { ...DigitDateEntry.empty, digits },
+        Day.fromDateTime(now),
+        order,
+        Product.canExpireOn(now),
+      ),
   })
 
 export const form: fc.Arbitrary<Form> = fc.tuple(
@@ -74,7 +81,7 @@ export const form: fc.Arbitrary<Form> = fc.tuple(
     replacements: fc.nat(),
     camera: fc.constantFrom<Camera>('Checking', 'Available', 'Unavailable'),
     lookup,
-    maybeNow: maybe(utc),
+    maybeNow: maybe(zoned),
     maybeOrder: maybe(order),
     maybeAcknowledging: maybe(acknowledging),
     snackbar,
@@ -98,7 +105,7 @@ const formAndDate: fc.Arbitrary<[Form, DateForm]> = fc.tuple(
   digits,
   fc.constantFrom('offered', 'other', 'none'),
   fc.nat(),
-  utc,
+  day,
 ).map(([form, digits, picked, index, other]) => {
   const offered = offeredDates(form, digits)
   const maybeChosenDate = picked === 'offered' && offered.length > 0
@@ -152,9 +159,9 @@ export const message: fc.Arbitrary<Message> = fc.oneof(
   fc.constant(Msg.NameCleared()),
   digit.map((digit) => Msg.DigitTyped({ digit })),
   fc.constant(Msg.Started()),
-  utc.map((date) => Msg.DateChosen({ date })),
+  day.map((date) => Msg.DateChosen({ date })),
   order.map((order) => Msg.OrderPicked({ order })),
-  utc.map((now) => Msg.TimeChanged({ now })),
+  zoned.map((now) => Msg.TimeChanged({ now })),
   order.map((order) => Msg.OrderChanged({ order })),
   fc.boolean().map((succeeded) => Msg.OrderKept({ succeeded })),
   fc.constant(Msg.SnackbarExpired()),

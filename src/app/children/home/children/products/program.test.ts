@@ -11,7 +11,7 @@ import * as fc from 'fast-check'
 import * as Domain from '#domain/product.ts'
 import * as PositiveInteger from '#libs/numbers/positive-integer.ts'
 import { arbitrary as maybe } from '#libs/option/option.test_arbitrary.ts'
-import { utc } from '#libs/testing/date-time.test_arbitrary.ts'
+import { utc, zoned } from '#libs/testing/date-time.test_arbitrary.ts'
 import { assertProperty, onlyChanged, outcomesOf } from '#libs/testing/update.test_support.ts'
 import {
   deleting,
@@ -110,7 +110,7 @@ describe('Products update', () => {
 
   describe('TimeChanged', () => {
     test('stores the time and touches nothing else, while a product expires', () => {
-      assertProperty([ticking, utc], (before, now) => {
+      assertProperty([ticking, zoned], (before, now) => {
         const { after, commands } = step(Msg.TimeChanged({ now }), before)
         return Equal.equals(after.maybeNow, Opt.some(now)) && onlyChanged(before, after, 'maybeNow')
           && commands.length === 0
@@ -119,7 +119,7 @@ describe('Products update', () => {
 
     // The clock runs only while a product expires, so a tick heard otherwise is a bug.
     test('is a defect while no product expires', () => {
-      assertProperty([still, utc], (before, now) => {
+      assertProperty([still, zoned], (before, now) => {
         expect(() => program.update(Msg.TimeChanged({ now }))(before)).toThrow(Tea.InvariantDefect)
         return true
       })
@@ -517,7 +517,7 @@ describe('Products model', () => {
   const listedRows = (state: State) => rows(state).filter((row) => !isLeaving(row))
 
   /** A loaded list of products, with a time when one of them expires. */
-  const loaded = fc.tuple(state, products({ minLength: 1 }).chain(loadedOf), maybe(utc)).map(
+  const loaded = fc.tuple(state, products({ minLength: 1 }).chain(loadedOf), maybe(zoned)).map(
     ([base, list, maybeNow]): State => {
       const loaded: State = { ...base, list, maybeNow }
       return hasExpiringProduct(loaded) ? loaded : { ...loaded, maybeNow: Opt.none() }

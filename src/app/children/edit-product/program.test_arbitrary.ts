@@ -5,11 +5,13 @@ import * as fc from 'fast-check'
 import { arbitrary as product } from '#domain/product.test_arbitrary.ts'
 import * as Product from '#domain/product.ts'
 import { arbitrary as order } from '#libs/dates/date-order.test_arbitrary.ts'
+import { arbitrary as day } from '#libs/dates/day.test_arbitrary.ts'
+import * as Day from '#libs/dates/day.ts'
 import { digit, digits } from '#libs/dates/digit-date-entry.test_arbitrary.ts'
 import * as DigitDateEntry from '#libs/dates/digit-date-entry.ts'
 import * as DigitDates from '#libs/dates/digit-dates.ts'
 import { arbitrary as maybe } from '#libs/option/option.test_arbitrary.ts'
-import { utc } from '#libs/testing/date-time.test_arbitrary.ts'
+import { zone, zoned } from '#libs/testing/date-time.test_arbitrary.ts'
 import type { DateForm, Failure, Form, Message, Outcome, Snackbar, State } from './program.ts'
 
 const Msg = Data.taggedEnum<Message>()
@@ -19,22 +21,25 @@ export { digit }
 const id = fc.nat().map(String)
 
 // Today is often after the product's creation, as it is on a phone, and at times before it, as a clock set back.
-const opened = fc.tuple(product, fc.integer({ min: -10, max: 1_000 }), utc, fc.boolean()).map((
-  [original, days, other, isAfter],
-) => ({ original, now: isAfter ? DateTime.add(original.creationDate, { days }) : other }))
+const opened = fc.tuple(product, fc.integer({ min: -10, max: 1_000 }), zone, zoned, fc.boolean()).map((
+  [original, days, zone, other, isAfter],
+) => ({ original, now: isAfter ? DateTime.setZone(DateTime.add(original.creationDate, { days }), zone) : other }))
 
 /**
  * Digits as typed, at times those of a day before the creation day, of a day after it, or of the stored date, in
  * the order in use or another.
  */
-const typedDigits = (original: Product.Product, now: DateTime.Utc) =>
+const typedDigits = (original: Product.Product, now: DateTime.Zoned) =>
   fc.oneof(
     digits,
     fc.tuple(fc.integer({ min: -400, max: 400 }), order).map(([days, order]) =>
-      DigitDates.digitsOf(DateTime.add(original.creationDate, { days }), order)
+      DigitDates.digitsOf(
+        Day.fromDateTime(DateTime.setZone(DateTime.add(original.creationDate, { days }), now.zone)),
+        order,
+      )
     ),
     fc.tuple(fc.integer({ min: 0, max: 400 }), order).map(([days, order]) =>
-      DigitDates.digitsOf(DateTime.add(now, { days }), order).slice(0, 4)
+      DigitDates.digitsOf(Day.fromDateTime(DateTime.add(now, { days })), order).slice(0, 4)
     ),
     order.map((order) =>
       Opt.match(original.maybeExpirationDate, {
@@ -48,14 +53,14 @@ const typedDigits = (original: Product.Product, now: DateTime.Utc) =>
 const dateForm = (form: Omit<Form, 'date'>): fc.Arbitrary<DateForm> =>
   fc.oneof(
     fc.constant<DateForm>({ _tag: 'Kept' }),
-    fc.tuple(typedDigits(form.original, form.now), fc.constantFrom('offered', 'other', 'none'), fc.nat(), utc).map((
+    fc.tuple(typedDigits(form.original, form.now), fc.constantFrom('offered', 'other', 'none'), fc.nat(), day).map((
       [digits, picked, index, other],
     ): DateForm => {
       const offered = DigitDateEntry.offered(
         { ...DigitDateEntry.empty, digits },
-        form.now,
+        Day.fromDateTime(form.now),
         form.order,
-        Product.canExpireOn(form.original.creationDate),
+        Product.canBeEditedToExpireOn(form.original, form.now.zone),
       )
       const maybeChosenDate = picked === 'offered' && offered.length > 0
         ? Opt.fromNullishOr(offered[index % offered.length])
@@ -124,11 +129,11 @@ export const message: fc.Arbitrary<Message> = fc.oneof(
   digit.map((digit) => Msg.DigitTyped({ digit })),
   fc.constant(Msg.DigitErased()),
   fc.constant(Msg.DateCleared()),
-  utc.map((date) => Msg.DateChosen({ date })),
+  day.map((date) => Msg.DateChosen({ date })),
   order.map((order) => Msg.OrderPicked({ order })),
   fc.constant(Msg.SaveStarted()),
   fc.constant(Msg.Closed()),
-  utc.map((now) => Msg.TimeChanged({ now })),
+  zoned.map((now) => Msg.TimeChanged({ now })),
   order.map((order) => Msg.OrderChanged({ order })),
   fc.constant(Msg.BackPressed()),
   fc.constant(Msg.SnackbarExpired()),

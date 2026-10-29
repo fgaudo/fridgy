@@ -65,7 +65,8 @@ first, and the two layers above only confirm that the bundle and the platform ca
 
 One end-to-end run of `dist/`, served over HTTP on `localhost` (the OPFS database needs a secure context), in
 headless Chromium, which is the WebView's engine: the app starts, a product entered by hand appears in the
-list, is opened, edited and deleted; and on each page, at 320×640, nothing scrolls. It is the only check of
+list, is opened, edited and deleted; and on each page, at 320×640, nothing scrolls. The device's zone reaches
+the app through the entrypoint, and one run fakes a zone far from UTC (`docs/dates.md`). It is the only check of
 the production entrypoint: the development server (`bun run watch`) runs the app on a database in memory,
 and the tests never load the bundle. It is `e2e/production.e2e.ts`, run by `bun run e2e`. Before it, the
 floor check (`bun run check-floor`, `es-check` on `dist/*.js`) answers the one question about the bundle that
@@ -157,6 +158,9 @@ and after the first release of each of those. Its result is written in the commi
   worker over OPFS, a product added by hand, its reload from the database, its edit and its deletion, About's
   version, and that Home, both steps of `add-products` and the page that edits a product do not scroll at
   320×640. About is left out of that check: it is a page to read, longer than any screen.
+- Verified on 2026-10-29: `bun run e2e` runs the bundle in New York at 20:30 on October 30, the clock fixed by
+  Playwright: today, typed with its year, is offered, and the product then reads "Expires today". The run fails
+  on a bundle whose entrypoint provides UTC as the zone.
 - CI is `.github/workflows/checks.yml`: on every push and pull request, an audit of the dependencies for known
   vulnerabilities (`bun audit`), the tests, the build, the floor check and the run above, on Ubuntu.
 - Verified on 2026-10-29, in a browser at 360×720: each failure snackbar of "The failure snackbars, by hand in

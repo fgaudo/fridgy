@@ -3,6 +3,7 @@ import type * as Data from 'effect/Data'
 import * as DateTime from 'effect/DateTime'
 import * as Opt from 'effect/Option'
 import type { VNode, VNodeStyle } from 'snabbdom'
+import * as Day from '#libs/dates/day.ts'
 import { type Handlers, handlers } from '#libs/tea-snabbdom/tea-snabbdom.ts'
 import { cn } from '#libs/ui/class-names.ts'
 import type { ItemSelection, ListModel, Message, Model, Presence, ProductModel, ProductStatus } from './program.ts'
@@ -36,12 +37,12 @@ const ERROR_DISC = 'bg-error-container text-on-error-container'
 const FRESHNESS_DISC = 'freshness-disc freshness-text transition-colors'
 
 /** The expiration day and month. */
-const expirationDay = (expirationDate: DateTime.Utc): ReadonlyArray<VNode> => [
+const expirationDay = (expirationDate: Day.Day): ReadonlyArray<VNode> => [
   <span props={{ className: 'text-title-small leading-none' }}>
-    {DateTime.getPartUtc(expirationDate, 'day')}
+    {Day.toParts(expirationDate).day}
   </span>,
   <span props={{ className: 'text-label-small leading-none' }}>
-    {DateTime.formatUtc(expirationDate, { month: 'short' })}
+    {Day.format(expirationDate, { month: 'short' })}
   </span>,
 ]
 
