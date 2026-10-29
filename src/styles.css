@@ -182,10 +182,11 @@
 }
 
 /*
- * Home's medium bar follows the scroll over its first `--bar-collapse`, as Compose's does. Its lower part slides
- * under the upper one (`bar-slide`) and the headline fades (`bar-headline`). The small title fades in
- * (`bar-title`), and the container takes its scrolled color (`bar-scrolled`). Only transforms and opacities: the
- * compositor runs them in step with the scroll.
+ * Home's medium bar follows the scroll over its first `--bar-collapse`. Its color slides up until it is as tall as
+ * the small bar (`bar-slide`), and darkens to the scrolled color (`bar-scrolled`). On the way, its one title shrinks
+ * into the small bar's, its size and place following the scroll (`bar-headline`), as Material's
+ * CollapsingToolbarLayout draws it. The slide and the color are composited; the title's type is laid out anew on
+ * every frame, on a line of text. Each animation starts from what the view's classes draw.
  */
 @keyframes bar-slide {
   to {
@@ -199,17 +200,49 @@
   animation-range: 0px var(--bar-collapse);
 }
 
-@utility bar-headline {
-  animation: fade-out linear both;
-  animation-timeline: scroll(root);
-  animation-range: 0px var(--bar-collapse);
+/*
+ * The title's block: to the small bar's padding, after its leading icon if any (`--bar-title-left`). It is past
+ * the icon before it rises into the icon's row.
+ */
+@keyframes bar-headline {
+  40% {
+    left: var(--bar-title-left, 1rem);
+  }
+  to {
+    left: var(--bar-title-left, 1rem);
+    padding-bottom: 0.625rem;
+  }
 }
 
-/* Compose's easing of the small title: it appears late in the collapse. */
-@utility bar-title {
-  animation: fade-in cubic-bezier(0.8, 0, 0.8, 0.15) both;
+@keyframes bar-headline-title {
+  to {
+    font-size: var(--text-title-large-emphasized);
+    line-height: var(--text-title-large-emphasized--line-height);
+  }
+}
+
+@keyframes bar-headline-subtitle {
+  to {
+    font-size: var(--text-label-medium);
+    line-height: var(--text-label-medium--line-height);
+    letter-spacing: var(--text-label-medium--letter-spacing);
+  }
+}
+
+@utility bar-headline {
+  animation: bar-headline linear both;
   animation-timeline: scroll(root);
   animation-range: 0px var(--bar-collapse);
+  & > :first-child {
+    animation: bar-headline-title linear both;
+    animation-timeline: scroll(root);
+    animation-range: 0px var(--bar-collapse);
+  }
+  & > :nth-child(2) {
+    animation: bar-headline-subtitle linear both;
+    animation-timeline: scroll(root);
+    animation-range: 0px var(--bar-collapse);
+  }
 }
 
 /* Compose's easing of the container color, fast out and linear in. */

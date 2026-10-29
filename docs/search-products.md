@@ -169,7 +169,7 @@ should they, a press goes to the last one to start observing (**verified** in `o
 `src/infrastructure/back-button/back-button.ts`: a `Set` in insertion order, `.at(-1)`), which closes what
 opened last. `Products.list` reads the model to pad the list by the bar's height: `pt-16` in search mode,
 `pt-medium-bar` otherwise, with `transition-[padding]` so that the rows follow the bar as it shrinks and grows. The
-medium bar itself never changes height: it slides under its upper part as the list scrolls, and the list keeps
+medium bar itself never changes height: its color and title slide up under the icons as the list scrolls, and the list keeps
 `pt-medium-bar` (**verified** 2026-10-29).
 
 Home's `program.ts` does not change. Its view test's `withheld` gains the cases the model hides on purpose: the

@@ -104,15 +104,9 @@ export const view: View<Model, Message> = (model, dispatch) => {
       more_vert
     </button>
   )
-  const title = selection === undefined ? 'Fridgy' : selection.title
-  const subtitleIn = (size: string) =>
-    subtitle === undefined ? [] : [
-      <span props={{ className: cn('truncate', size, selection === undefined && 'text-on-surface-variant') }}>
-        {subtitle}
-      </span>,
-    ]
-  // Material's medium top app bar, which collapses to a small one as the list scrolls (`bar-slide` in `styles.css`).
-  // The contextual bar of the selected products takes the same shape, in its own colors.
+  // Material's medium top app bar, which collapses to a small one as the list scrolls (`bar-slide` and
+  // `bar-headline` in `styles.css`). The contextual bar of the selected products takes the same shape, in its own
+  // colors, its title collapsing after the leading icon.
   const topBar = (
     <div
       props={{
@@ -122,11 +116,11 @@ export const view: View<Model, Message> = (model, dispatch) => {
         ),
       }}
     >
-      {/* The bar's color, under the whole bar. It slides up until it is as tall as the small bar. */}
+      {/* The bar's color and its title, under the whole bar. They slide up until the bar is as tall as the small one. */}
       <div
         props={{
           className: cn(
-            'bar-slide absolute inset-x-0 top-0 box-content h-medium-bar pt-sait transition-colors',
+            'bar-slide absolute inset-x-0 top-0 pt-sait pl-sail pr-sair transition-colors',
             selection === undefined ? 'bg-surface' : 'bg-secondary-container',
           ),
         }}
@@ -139,20 +133,27 @@ export const view: View<Model, Message> = (model, dispatch) => {
             ),
           }}
         />
-      </div>
-      {/* The headline's row starts 48dp down, below the icons: the headline slides with the color, out of its row. */}
-      <div
-        props={{
-          className: cn(
-            'pointer-events-none absolute inset-x-0 top-[calc(var(--spacing-sait)+3rem)] overflow-hidden pl-sail',
-            'h-[calc(var(--spacing-medium-bar)-3rem)] pr-sair',
-          ),
-        }}
-      >
-        <div props={{ className: 'bar-slide absolute inset-0' }}>
-          <div props={{ className: 'bar-headline absolute right-16 bottom-0 left-4 flex flex-col pb-5' }}>
-            <h1 props={{ className: 'truncate text-headline-medium-emphasized' }}>{title}</h1>
-            {subtitleIn('text-label-large')}
+        <div props={{ className: 'relative h-medium-bar' }}>
+          <div
+            props={{
+              className: cn(
+                'bar-headline absolute right-16 bottom-0 left-4 flex flex-col pb-5',
+                selection !== undefined && '[--bar-title-left:3.5rem]',
+              ),
+            }}
+          >
+            <h1 props={{ className: 'truncate text-headline-medium-emphasized' }}>
+              {selection === undefined ? 'Fridgy' : selection.title}
+            </h1>
+            {subtitle === undefined ? [] : [
+              <span
+                props={{
+                  className: cn('truncate text-label-large', selection === undefined && 'text-on-surface-variant'),
+                }}
+              >
+                {subtitle}
+              </span>,
+            ]}
           </div>
         </div>
       </div>
@@ -161,19 +162,6 @@ export const view: View<Model, Message> = (model, dispatch) => {
           <div props={{ className: 'absolute inset-x-0 top-0 flex h-16 items-center justify-between px-1' }}>
             <div>{selection === undefined ? [] : [selection.leading]}</div>
             {selection === undefined ? moreButton : selection.trailing}
-          </div>
-          {/* The headline's copy, which a screen reader skips. */}
-          <div
-            attrs={{ 'aria-hidden': 'true' }}
-            props={{
-              className: cn(
-                'bar-title absolute right-16 bottom-0 flex flex-col pb-2.5',
-                selection === undefined ? 'left-4' : 'left-14',
-              ),
-            }}
-          >
-            <span props={{ className: 'truncate text-title-large-emphasized' }}>{title}</span>
-            {subtitleIn('text-label-medium')}
           </div>
           {menu(model.menu, events)}
         </div>
