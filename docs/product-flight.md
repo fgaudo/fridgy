@@ -86,7 +86,10 @@ fades out at the arrival, and the door stays closed: the fridge only fades in an
   place there and its way to the fridge's inside. It searches the whole document and takes the last match of
   each selector, the one drawn on top; it measures its own place first, as its containing block (the page's
   root) is transformed. Without the source, the package starts in the fridge, with no letters; without the
-  fridge, nothing is shown.
+  fridge, nothing is shown. The fridge's place is measured again on every `resize` and `scroll` until the
+  element goes: on Android an add closes the keyboard and opens it again (the field, drawn anew, loses the focus
+  and takes it back), which moves the fridge with the room; the user may too. The package then jumps with it,
+  and lands in it all the same (seen in the emulator on 2026-10-29: measured once, it landed 150px under it).
 - **View** (`view.tsx`): the fridge is drawn by the first step, while a product enters, in its room, centred
   above the FAB (`bottom-16`), 96dp tall and smaller when the keyboard leaves less room (`max-h-full`); keyed by
   the product entering, so that the next one plays it all anew, in

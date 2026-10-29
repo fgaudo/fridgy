@@ -686,7 +686,7 @@ const fridge = (maybeEntering: Opt.Option<Entering>) => (
 const enteringProduct = ({ product, from }: Entering) => (
   <div
     key={`entering-${DateTime.toEpochMillis(product.creationDate)}`}
-    hook={{ insert: gatherAndFly(`[data-flies-from="${from}"]`, '[data-fridge]') }}
+    hook={gatherAndFly(`[data-flies-from="${from}"]`, '[data-fridge]')}
     attrs={{ 'aria-hidden': 'true' }}
     props={{ className: 'absolute top-0 left-0' }}
   >

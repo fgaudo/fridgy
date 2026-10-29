@@ -83,10 +83,15 @@ const textBoxOf = (element: Element) => {
   return { left, top, width, lineHeight, style }
 }
 
+/** What stops a traveller from following its destination, once it is removed. */
+const following = new WeakMap<Element, AbortController>()
+
 /**
  * Turns the text of the last match of `from` into an element that then travels to the last match of `to`, once it
- * is in the document: the keyframes do the moving, with what this measures. Measured once, on insertion: a measure
- * on every frame would fight the animation.
+ * is in the document: the keyframes do the moving, with what this measures. The start is measured once, on
+ * insertion. The destination is measured again whenever the window resizes or a box scrolls, never on every frame,
+ * which would fight the animation: the keyboard, a scroll or the user may move `to` while the traveller flies, and
+ * the traveller then jumps with it, to land on it all the same.
  *
  * The element is positioned (`absolute` or `fixed`) at the top left of its containing block, which may be moved by
  * a transform: its own place is measured first. It holds `[data-letters]`, whose `[data-letter]` pieces are the
@@ -96,25 +101,46 @@ const textBoxOf = (element: Element) => {
  * (`--flight-dx`, `--flight-dy`). Without `from`, the traveller starts where `to` is, with no letters; without
  * `to`, everything is hidden.
  */
-export const gatherAndFly = (from: string, to: string): NonNullable<Hooks['insert']> => (vnode) => {
-  const element = vnode.elm as HTMLElement
-  const letters = element.querySelector<HTMLElement>('[data-letters]')
-  const traveller = element.querySelector<HTMLElement>('[data-traveller]')
-  const maybeTo = lastOf(to)
-  if (letters === null || traveller === null || maybeTo === undefined) {
-    element.style.visibility = 'hidden'
-    return
-  }
-  const origin = element.getBoundingClientRect()
-  const end = centreOf(maybeTo.getBoundingClientRect())
-  const maybeFrom = lastOf(from)
-  const start = maybeFrom === undefined ? end : gather(letters, maybeFrom, origin)
-  if (maybeFrom === undefined) letters.style.visibility = 'hidden'
-  const size = traveller.getBoundingClientRect()
-  traveller.style.left = `${start.x - origin.left - size.width / 2}px`
-  traveller.style.top = `${start.y - origin.top - size.height / 2}px`
-  setPoint(traveller, 'flight', { x: end.x - start.x, y: end.y - start.y })
-}
+export const gatherAndFly = (from: string, to: string): Pick<Hooks, 'insert' | 'destroy'> => ({
+  insert: (vnode) => {
+    const element = vnode.elm as HTMLElement
+    const letters = element.querySelector<HTMLElement>('[data-letters]')
+    const traveller = element.querySelector<HTMLElement>('[data-traveller]')
+    const maybeTo = lastOf(to)
+    if (letters === null || traveller === null || maybeTo === undefined) {
+      element.style.visibility = 'hidden'
+      return
+    }
+    const origin = element.getBoundingClientRect()
+    const end = centreOf(maybeTo.getBoundingClientRect())
+    const maybeFrom = lastOf(from)
+    const start = maybeFrom === undefined ? end : gather(letters, maybeFrom, origin)
+    if (maybeFrom === undefined) letters.style.visibility = 'hidden'
+    const size = traveller.getBoundingClientRect()
+    traveller.style.left = `${start.x - origin.left - size.width / 2}px`
+    traveller.style.top = `${start.y - origin.top - size.height / 2}px`
+    setPoint(traveller, 'flight', { x: end.x - start.x, y: end.y - start.y })
+    // The start, from the element's own place: the element may move too.
+    const fromOrigin = { x: start.x - origin.left, y: start.y - origin.top }
+    const follow = () => {
+      const maybeNow = lastOf(to)
+      if (maybeNow === undefined) return
+      const now = centreOf(maybeNow.getBoundingClientRect())
+      const place = element.getBoundingClientRect()
+      setPoint(traveller, 'flight', {
+        x: now.x - place.left - fromOrigin.x,
+        y: now.y - place.top - fromOrigin.y,
+      })
+    }
+    const controller = new AbortController()
+    window.addEventListener('resize', follow, { signal: controller.signal })
+    document.addEventListener('scroll', follow, { capture: true, passive: true, signal: controller.signal })
+    following.set(element, controller)
+  },
+  destroy: (vnode) => {
+    if (vnode.elm instanceof Element) following.get(vnode.elm)?.abort()
+  },
+})
 
 /** Lays the letters over the text of `source`, sends each to their centre, and returns it. */
 const gather = (letters: HTMLElement, source: Element, origin: DOMRect): Point => {

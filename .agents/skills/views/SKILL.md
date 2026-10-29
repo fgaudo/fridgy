@@ -85,9 +85,10 @@ Two choices, taken in this order: the first decides almost everything, the secon
   utilities there on keyed elements that play them when inserted. Two animations of one property on one element
   go in one utility, the later overriding the earlier from its delay on; an element that must pass behind another
   is handed, at that moment, to a copy drawn there. Geometry the layout does not fix (where a text is and each of
-  its letters, where the fridge is) is measured once, in an `insert` hook (`gatherAndFly`, `#libs/tea-snabbdom`),
-  and given to the keyframes as custom properties: never on every frame, and never by the program, which learns
-  no numbers. Text animated by its letters is split with `piecesOf` (`#libs/strings/pieces.ts`), by word in a
+  its letters, where the fridge is) is measured in an `insert` hook (`gatherAndFly`, `#libs/tea-snabbdom`), and
+  given to the keyframes as custom properties: never on every frame, and never by the program, which learns no
+  numbers. A destination the layout may move meanwhile (the keyboard, a scroll) is measured again on `resize` and
+  `scroll`, and what flies to it jumps with it. Text animated by its letters is split with `piecesOf` (`#libs/strings/pieces.ts`), by word in a
   script whose letters join. Under `prefers-reduced-motion` the movements become fades, in each utility's media
   query.
 - A motion the program drives is a child of its own, drawn by its parent with `thunk`, so that a tick redraws
