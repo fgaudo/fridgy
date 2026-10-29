@@ -30,7 +30,9 @@ Android Studio's JDK (`JAVA_HOME` set to its `jbr`) and installs the NDK the nat
 repository's root. The app's own, the camera that reads barcodes (CameraX and zxing-cpp, in
 `android/app/src/main/java/net/gaudo/fridgy/barcodecamera`, registered in `MainApplication.kt`), is written on the
 interfaces that React Native's codegen makes from the specs in `src/infrastructure/barcode-camera`
-(`codegenConfig` in `package.json`) on every build.
+(`codegenConfig` in `package.json`) on every build. After a new spec file, delete `android/app/.cxx`: CMake keeps
+the configuration it made before the generated code existed, and the app then starts without the module
+(`TurboModuleRegistry.getEnforcing(...): 'BarcodeCamera' could not be found`).
 
 The JavaScript alone, without Android's toolchain, is checked by `bun run bundle` (Metro's bundle into `out/`) and
 `hermesc` (`node_modules/hermes-compiler/hermesc/<platform>/hermesc -emit-binary -O -out out/index.android.hbc
