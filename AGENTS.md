@@ -181,11 +181,6 @@ folders; "page" names a role in the UI, kept by the root's state, not a kind of 
 
 ## Known gaps (verify before working)
 
-- The scanner (`getUserMedia` and the Shape Detection API, `scanner.browser.ts`) has not been tried on Android
-  with a camera yet; on a desktop without the API (Chrome on Windows), the scan button is disabled and the name
-  field says why. Neither has the expansion of a UPC-E, which assumes that the detector reports one as its 8
-  digits. The lookup itself runs from the WebView (`docs/open-food-facts-lookup.md`, "Verified, and not"). How
-  both are checked is in the `android-release` skill ("The emulator").
 - The vibrations (`docs/haptics.md`) have not been felt on a phone: whether each pattern feels like the constant
   it stands for. The emulator only shows their delivery; the author feels them before the release.
 - Two taps in one frame can stack two pages. `show` (`src/app/program.ts`) pushes a page unless that same page

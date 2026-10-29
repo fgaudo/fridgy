@@ -69,10 +69,10 @@ const video = (media: MediaStream) =>
   )
 
 // A UPC-E is a UPC-A compressed to 8 digits, which Open Food Facts would read as an EAN-8: it is offered expanded,
-// so that only EAN-8, EAN-13 and UPC-A digits leave the scanner. Whether the detector's `rawValue` is already
-// expanded is documented nowhere: a 12-digit one is offered as it is.
+// so that only EAN-8, EAN-13 and UPC-A digits leave the scanner. Android's detector reports a UPC-E as its 8
+// digits (seen in the emulator, docs/open-food-facts-lookup.md).
 const offered = ({ rawValue, format }: Readonly<{ rawValue: string; format: string }>) =>
-  format !== 'upc_e' || rawValue.length === 12
+  format !== 'upc_e'
     ? Effect.succeedSome(rawValue)
     : Opt.match(expandUpcE(rawValue), {
       onNone: () => Effect.logWarning('Read a UPC-E that cannot be expanded', rawValue).pipe(Effect.as(Opt.none())),

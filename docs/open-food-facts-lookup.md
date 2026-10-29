@@ -1,7 +1,6 @@
 # Design: naming a scanned product from Open Food Facts
 
-Implemented on 2026-10-27; the lookup tried on Android, the scanner not yet (see "Verified, and not", and "Known
-gaps" in `AGENTS.md`).
+Implemented on 2026-10-27; the lookup and the scanner tried on Android in the emulator (see "Verified, and not").
 The code is the page that adds products (`src/app/children/add-products/`, its `product-lookup` service and the
 scanner adapter), the client `src/infrastructure/open-food-facts/`, the cache `src/infrastructure/storage/barcodes.ts`
 and the barcode library `src/libs/barcodes/`. Read [`AGENTS.md`](../AGENTS.md), the `add-service` and `add-program`
@@ -166,9 +165,9 @@ browser through an intent, as it does for About's links, and in the development 
 - EAN-13, EAN-8 and UPC-A values are the digits printed under the bars, check digit included: the server's
   normalization handles them (UPC-A gets its leading zero).
 - **UPC-E is a compressed 8-digit form** (number system digit, 6 data digits, check digit) of a 12-digit UPC-A.
-  Whether the detector's `rawValue` is the 8-digit form or the expanded UPC-A is **not verified**: no
-  documentation of the Shape Detection API or ML Kit says it, and the scanner has not run on Android yet
-  (`AGENTS.md`, "Known gaps"). An 8-digit UPC-E sent as it is would be padded like an EAN-8 and never match.
+  No documentation of the Shape Detection API or ML Kit says which form `rawValue` holds. Android's WebView
+  reports the 8-digit form, with the format `upc_e` (seen on 2026-10-29, "Verified, and not"). An 8-digit
+  UPC-E sent as it is would be padded like an EAN-8 and never match.
 
 So the scanner adapter expands UPC-E itself, from the `format` of the `DetectedBarcode`, before offering the
 value. The expansion is generic, so it lives in `src/libs/barcodes/barcode.ts` (`expandUpcE`), with nothing of
@@ -186,8 +185,7 @@ D6 = 5..9:     UPC-A = N D1 D2 D3 D4 D5 0 0 0 0 D6 C
 `expandUpcE` answers `None` unless given 8 digits with `N` 0 or 1; a 6-digit value (some readers drop `N` and
 `C`) is out of scope. Its test checks that the UPC-A's check digit (odd positions ×3 + even positions, mod 10,
 complement) equals `C` for every expansion of a generated valid UPC-E, and the known pair `04252614` →
-`042100005264`. In the adapter, a `upc_e` of 12 digits is offered as it is, should `rawValue` turn out to be the
-expanded form; an 8-digit one that does not expand is logged and not offered.
+`042100005264`. In the adapter, a `upc_e` that does not expand is logged and not offered.
 
 ## Attribution and privacy
 
@@ -204,11 +202,16 @@ expanded form; an 8-digit one that does not expand is logged and not offered.
 ## Verified, and not
 
 The client against the recorded answers, the adapter's cache rules under `TestClock`, the page and the root's
-scenarios are tested (`bun test`); the flow was seen in a browser. On Android, in the emulator on 2026-10-28 (API
+scenarios are tested (`bun test`); the flow was seen in a browser. On a desktop without the Shape Detection API
+(Chrome on Windows), the scan button is disabled and the name field says why. On Android, in the emulator on 2026-10-28 (API
 29 and 37): the WebView's `navigator.userAgent` ends with the `Fridgy/<version> (<email>)` that `capacitor.config.ts` appends, and a request
-for `8076800195057` from the app's origin answered with the product and no CORS error. Not yet, for want of a
-camera ("Known gaps" in `AGENTS.md`): scan a product known to Open Food Facts, one unknown, one UPC-E, one in
-airplane mode.
+for `8076800195057` from the app's origin answered with the product and no CORS error. In the emulator on
+2026-10-29 (API 37, WebView 156, the host's webcam as the back camera, codes shown on a screen): the camera's
+permission is asked once; `3017620422003` is read and named "Nutella", `From Open Food Facts`; an unknown code
+shows `Not on Open Food Facts`; the UPC-E `04252614` is read and offered as `042100005264`; in airplane mode the
+lookup shows `Couldn't reach Open Food Facts`. The detector, run in the WebView's DevTools on a generated image
+of each code, reports `3017620422003` as `ean_13` and `04252614` as `upc_e`, 8 digits. A blurred UPC-E was once
+misread as another valid one (`04751610`): its check digit guards little.
 
 ## Later, not in this change
 

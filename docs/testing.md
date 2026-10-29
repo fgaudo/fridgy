@@ -175,6 +175,9 @@ and after the first release of each of those. Its result is written in the commi
   37's Pixel 6 the bars leave 626dp, not 640 (the skill's "Supported screen sizes"). The author found two more,
   fixed the same day on API 37: the package of an add landed under the fridge, which the keyboard had moved
   (`docs/product-flight.md`); at 200%, the chips of the date wrapped and the keypad moved under the finger.
-- Not yet: the scanner, with a camera, in the emulator; and, on API 29, a field's keyboard on 320×533dp at 200%.
+- Verified on 2026-10-29, in the emulator on API 37 (WebView 156), the app installed from scratch: the scanner,
+  with the host's webcam, and how the detector reports a UPC-E (`docs/open-food-facts-lookup.md`, "Verified, and
+  not"). The virtual scene's camera does not do: its poster is out of the frame until the scene is walked by hand.
+- Not yet: on API 29, a field's keyboard on 320×533dp at 200%.
 - Not yet run as one pass: "By hand in a browser, before a release", written on 2026-10-29. Each of its items was
   seen when its change landed, as the designs' "Verified, and not" record, never all of them on one build.

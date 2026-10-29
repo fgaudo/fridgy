@@ -127,13 +127,11 @@ The pass, on both reference screens of "Supported screen sizes":
   answers from the WebView.
 
 The camera: the emulator's back camera is the host's webcam (`emulator -avd <name> -camera-back webcam0`;
-`emulator -webcam-list` names them) or the virtual scene, whose wall takes an image (Extended controls, Camera,
-"Wall": a barcode's PNG, from any generator). A product's EAN-13 held to it is enough for the pass. How the
-detector reports a UPC-E is read once, with one whose expansion is known (`04252614`, the UPC-A
-`042100005264`): the name field shows the UPC-A either way, so the raw value is asked in the WebView's DevTools
-while the scanner is open, `new BarcodeDetector({ formats: ['upc_e'] }).detect(document.querySelector('video'))`.
-The answer goes into `docs/open-food-facts-lookup.md` ("Barcodes: what the scanner reports"), and `offered` in
-`scanner.browser.ts` keeps only the branch that happens.
+`emulator -webcam-list` names them), with a product's EAN-13 held to it, printed or on a phone's screen: that is
+enough for the pass. The virtual scene (`-camera-back virtualscene`) starts with its poster out of the frame,
+reached only by walking the scene by hand. A webcam blurs: a UPC-E may be misread as another valid one. What the
+detector makes of a code is asked without the camera, in the WebView's DevTools, on an image of it:
+`new BarcodeDetector({ formats: ['ean_13', 'upc_e'] }).detect(img)`.
 
 Install the app from a clean state (`adb shell pm clear net.gaudo.fridgy`): an install over an older schema
 fails on the first read. At start, `SystemBars` logs `Error injecting safe area CSS`, harmlessly: its script
@@ -201,13 +199,11 @@ Play Store, as an update: `versionCode` 20261000 over its 10. Decided, and to be
 - **It ships on Capacitor 9's pre-releases**, not on the stable 8 line (decided on 2026-10-28): the app relies
   on the `SystemBars` plugin with `insetsHandling: 'css'`, which 8 does not have. The tree is on 9.0.0-beta.0
   of core, android and the CLI, with the plugins at their newest 9 pre-release (`npm view <pkg> dist-tags`,
-  the `next` tag), still the newest on 2026-10-29. The whole pass but the scanner ran on it on 2026-10-29, on
-  both images and both screens: API 37 on WebView 156 and API 29 on WebView 139, each the Play Store's that day
-  (`docs/testing.md`, "Verified, and not"). Before the release, upgrade to the newest 9 pre-release, if any, and
+  the `next` tag), still the newest on 2026-10-29. The whole pass ran on it on 2026-10-29, on both images and
+  both screens: API 37 on WebView 156 and API 29 on WebView 139, each the Play Store's that day; the scanner on
+  API 37 only (`docs/testing.md`, "Verified, and not"). Before the release, upgrade to the newest 9 pre-release, if any, and
   run the pass again. The pre-release's `SystemBars` logs `Error injecting safe area CSS` at start, harmlessly:
   its script runs before the document exists, and the next injection sets the insets.
-- **The scanner is checked in the emulator with a camera**, and how the detector reports a UPC-E with it, once,
-  as "The emulator" says.
 - **The vibrations are felt by the author on a phone** (`docs/haptics.md`: whether each pattern feels like the
   constant it stands for); the emulator only shows their delivery.
 - **A defect shows a screen with a restart button** (decided and done on 2026-10-28:
