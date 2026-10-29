@@ -225,6 +225,12 @@ misread as another valid one (`04751610`): its check digit guards little.
 
 - Looking up a typed name of 8, 12 or 13 digits (with a valid check digit): makes the feature usable on a
   desktop and on phones without a camera; needs a debounce, and the rate limit in mind.
+- Names remembered per barcode, after the release and only if typing unknown products proves a nuisance.
+  Discussed on 2026-10-29: a checkbox under the field, `Remember this name for <barcode>`, unticked by default,
+  when the name is not Open Food Facts' (unknown, or found and edited); the name is stored when the product is
+  added. Never remembered implicitly: a name may hold a one-off note (`2 milk`). The remembered name wins over
+  Open Food Facts (a choice of the user's, instant and offline); `Your name for this barcode · Forget` under the
+  field, where `Forget` deletes it and looks the barcode up. No page to manage them until use asks for one.
 - A retry action on `Failed`.
 - Refreshing `found` rows older than some months, serving the stale row when the refresh fails.
 - Storing the barcode with the product, for images or a later re-lookup.
