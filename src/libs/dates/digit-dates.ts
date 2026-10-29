@@ -1,6 +1,7 @@
 import * as Arr from 'effect/Array'
 import * as DateTime from 'effect/DateTime'
 import * as Opt from 'effect/Option'
+import * as Order from 'effect/Order'
 import type { DateOrder } from './date-order.ts'
 
 /** The most digits a date can be typed with: `DDMMYYYY`. */
@@ -23,6 +24,27 @@ const nextDayOf = (month: number, day: number, today: DateTime.Utc): Opt.Option<
   )
 }
 
+// A day with no month either is the next such day on or after today; the 30th may be two months away, past February.
+const nextDayOfMonth = (day: number, today: DateTime.Utc): Opt.Option<DateTime.Utc> => {
+  const firstOfMonth = DateTime.startOf(today, 'month')
+  return Arr.findFirst(
+    Arr.getSomes(Arr.makeBy(3, (offset) => {
+      const { year, month } = DateTime.toPartsUtc(DateTime.add(firstOfMonth, { months: offset }))
+      return dayOf(year, month, day)
+    })),
+    (date) => DateTime.isGreaterThanOrEqualTo(date, DateTime.startOf(today, 'day')),
+  )
+}
+
+// Of two days as near, the later comes first: an expiration is more often ahead than behind.
+const nearestFirst = (today: DateTime.Utc): Order.Order<DateTime.Utc> => {
+  const start = DateTime.toEpochMillis(DateTime.startOf(today, 'day'))
+  return Order.combine(
+    Order.mapInput(Order.Number, (date: DateTime.Utc) => Math.abs(DateTime.toEpochMillis(date) - start)),
+    Order.flip(DateTime.Order),
+  )
+}
+
 type Field = 'day' | 'month' | 'year'
 
 const fieldsIn: Readonly<Record<DateOrder, ReadonlyArray<Field>>> = {
@@ -42,8 +64,9 @@ const fieldsOf = (digits: string, order: DateOrder, lengths: Readonly<Record<Fie
   return fields
 }
 
-const readingsOf = (digits: string, today: DateTime.Utc, order: DateOrder): ReadonlyArray<DateTime.Utc> =>
-  [1, 2].flatMap((dayLength) =>
+const readingsOf = (digits: string, today: DateTime.Utc, order: DateOrder): ReadonlyArray<DateTime.Utc> => [
+  ...(digits.length === 1 || digits.length === 2 ? Opt.toArray(nextDayOfMonth(Number(digits), today)) : []),
+  ...[1, 2].flatMap((dayLength) =>
     [1, 2].flatMap((monthLength) => {
       const yearLength = digits.length - dayLength - monthLength
       if (yearLength < 0) return []
@@ -60,7 +83,8 @@ const readingsOf = (digits: string, today: DateTime.Utc, order: DateOrder): Read
           return []
       }
     })
-  )
+  ),
+]
 
 /**
  * The digits that name `date` alone in `order`: a date's longest form, a day and a month of two digits each and a
@@ -77,15 +101,17 @@ export const digitsOf = (date: DateTime.Utc, order: DateOrder): string => {
 }
 
 /**
- * The days that `digits`, typed with no separators in `order`, can name: a day and a month of one or two digits
- * each, and no year, two digits (this century) or four, the year last or first as `order` says. With no year,
- * the day is the next one on or after `today`. The days start at midnight, in UTC, and are sorted, without
- * repeats. A string that is not only digits names none.
+ * The days that `digits`, typed with no separators in `order`, can name: a day of one or two digits alone, or a
+ * day and a month of one or two digits each, and no year, two digits (this century) or four, the year last or
+ * first as `order` says. With no month or no year, the day is the next one on or after `today`. The days start
+ * at midnight, in UTC, the nearest to `today` first, without repeats. A string that is not only digits names
+ * none.
  *
  * They are two at most: of the four ways to cut a day and a month, only those that leave the year 0, 2 or 4
- * digits read, and for a given count of digits, that is two of them.
+ * digits read, and for a given count of digits, that is two of them. A day alone adds one only to one or two
+ * digits, which a day and a month can cut in one way only.
  */
 export const datesOf = (digits: string, today: DateTime.Utc, order: DateOrder): ReadonlyArray<DateTime.Utc> =>
   /^\d*$/.test(digits)
-    ? Arr.dedupeWith(Arr.sort(readingsOf(digits, today, order), DateTime.Order), DateTime.Equivalence)
+    ? Arr.dedupeWith(Arr.sort(readingsOf(digits, today, order), nearestFirst(today)), DateTime.Equivalence)
     : []

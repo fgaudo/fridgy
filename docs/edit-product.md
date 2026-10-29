@@ -60,8 +60,9 @@ decided".
    untouched stored date in that order; digits already typed stay as typed and are read in the new order, as on
    the page that adds products. The days offered are those the digits name on or after the day the product was
    created (`Product.canExpireOn(creationDate)`): a past date can be entered with its year, since the user may
-   be correcting a typo or recording a product bought past its date; without a year, a day is the next one on
-   or after today, as `DigitDates.datesOf` reads it.
+   be correcting a typo or recording a product bought past its date; without a year, or a month, a day is
+   the next one on or after today, and the chips start from the day nearest today, as `DigitDates.datesOf`
+   reads them.
 5. **Saving.** "Save" is enabled only while the fields describe a valid product (`Product.make` accepts it)
    that differs from the stored one. A tap disables every control, shows the circular indicator in the button
    and writes the product; when the write has completed, the page leaves, and Home shows the product changed,
