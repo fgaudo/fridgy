@@ -149,7 +149,8 @@
 
 /*
  * The system's fonts: Android has a family for every script, chosen by the text, and the forms of Chinese
- * characters by the document's language (`lang` on <html>, set from the device's). The app ships only its icons.
+ * characters by the document's language (`lang` on <html>, set from the device's). The app ships only its icons:
+ * on the phone `system-ui` is Roboto already. Only what runs in a browser carries it (`scripts/cli.ts`).
  */
 /* Text that names no role is body-large, the browser's own size, so that it follows the user's font size too. */
 body {

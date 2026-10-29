@@ -52,6 +52,9 @@ reload), serves it, and rebuilds on every change under `src/`; open the address 
 the CSS swaps the view in place, keeping the application state; any other change reloads the page. The
 production build has `dist/` to itself, so it can be made while the watch runs.
 
+The development version carries Roboto, which the production bundle does not: a browser on a desktop would
+otherwise draw the app in that desktop's font, and the app is read on Android, where Roboto is `system-ui`.
+
 It serves on `127.0.0.1` and a free port, and prints the address. To fix the port (or the host), set
 `DEV_SERVER_PORT` (`DEV_SERVER_HOST`) in the environment or in a `.env` file, which Bun loads at startup. The
 preview tool of Claude's desktop app sets `PORT` instead, which wins, to a free port from `.claude/launch.json`'s.

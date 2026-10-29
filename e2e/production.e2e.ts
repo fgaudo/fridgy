@@ -8,6 +8,13 @@ import packageJson from '../package.json' with { type: 'json' }
 
 const DIST = new URL('../dist/', import.meta.url)
 
+// Roboto, which the bundle does not ship (`scripts/cli.ts`): the harness serves it so that the reference screen
+// is measured with the metrics the phone has, and not with the fonts of whoever runs the tests.
+const ROBOTO = new URL('../node_modules/@fontsource-variable/roboto/', import.meta.url)
+const ROBOTO_PATH = '/fonts/roboto/'
+const ROBOTO_HEAD = `<link rel="stylesheet" href="${ROBOTO_PATH}wght.css" />
+    <style>body { font-family: 'Roboto Variable', system-ui, sans-serif }</style>`
+
 // Where CI keeps what a failed run leaves (`checks.yml`).
 const { RUNNER_TEMP } = Bun.env
 const SCREENSHOTS = `${RUNNER_TEMP ?? os.tmpdir()}/e2e`
@@ -24,7 +31,17 @@ beforeAll(async () => {
     port: 0,
     fetch: async (request) => {
       const { pathname } = new URL(request.url)
-      const file = Bun.file(new URL(pathname === '/' ? 'index.html' : `.${pathname}`, DIST))
+      if (pathname.startsWith(ROBOTO_PATH)) {
+        const font = Bun.file(new URL(pathname.slice(ROBOTO_PATH.length), ROBOTO))
+        return (await font.exists()) ? new Response(font) : new Response('Not found', { status: 404 })
+      }
+      if (pathname === '/') {
+        const html = await Bun.file(new URL('index.html', DIST)).text()
+        return new Response(html.replace('</head>', `  ${ROBOTO_HEAD}\n  </head>`), {
+          headers: { 'content-type': 'text/html' },
+        })
+      }
+      const file = Bun.file(new URL(`.${pathname}`, DIST))
       return (await file.exists()) ? new Response(file) : new Response('Not found', { status: 404 })
     },
   })
@@ -73,8 +90,14 @@ const onApp = async (name: string, act: (page: Page) => Promise<void>) => {
 
 /** Fails unless the page fits the reference screen: neither the document nor a scrolling box scrolls. */
 const expectNoScroll = async (page: Page, pageName: string) => {
-  // Measured once the entrances are over: a page sliding in overflows while it moves.
+  // Measured once the entrances are over: a page sliding in overflows while it moves, and once Roboto is in,
+  // since a fallback font's metrics are not the ones the page is laid out for.
   await page.evaluate(() => Promise.all(document.getAnimations().map((animation) => animation.finished)))
+  await page.evaluate(() => document.fonts.ready)
+  expect(
+    await page.evaluate(() => [...document.fonts].some((face) => face.family === 'Roboto Variable')),
+    'Roboto is not in place, so the measurement would be of another font',
+  ).toBe(true)
   const scrolling = await page.evaluate(() => {
     const found: Array<string> = []
     const root = document.scrollingElement

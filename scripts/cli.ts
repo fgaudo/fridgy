@@ -95,6 +95,32 @@ const writeIconFont = Effect.fn('writeIconFont')(function*(outdir: string) {
   yield* fs.writeFileString(resolve(outdir, 'fonts/material-symbols-rounded.css'), `@layer base {\n${css}}\n`)
 })
 
+/**
+ * Writes Roboto into the output's `fonts/`, whole: every script it covers, as the phone's own Roboto does. Only
+ * the development build carries it. On the phone `system-ui` already is Roboto, and a copy in the bundle would
+ * override the font the user chose there; in a browser nothing provides it, so what runs in one brings it along.
+ */
+const writeTextFont = Effect.fn('writeTextFont')(function*(outdir: string) {
+  const resolve = yield* root
+  const path = yield* Path.Path
+  const fs = yield* FS.FileSystem
+  const pkg = (...parts: ReadonlyArray<string>) => resolve('node_modules/@fontsource-variable/roboto', ...parts)
+  // Only the upright weight axis: the app sets no italic, and the `wdth` axis is Roboto Flex's, not Android's.
+  const css = yield* fs.readFileString(pkg('wght.css'))
+  yield* fs.makeDirectory(resolve(outdir, 'fonts'), { recursive: true })
+  for (const [reference] of css.matchAll(/\.\/files\/[\w-]+\.woff2/g)) {
+    const file = path.basename(reference)
+    yield* fs.copyFile(pkg('files', file), resolve(outdir, 'fonts', file))
+  }
+  // Unlayered and linked after `styles.css`, whose `body` rule is unlayered too: later wins.
+  yield* fs.writeFileString(
+    resolve(outdir, 'fonts/roboto.css'),
+    `${css.replaceAll('./files/', './')}\nbody {\n  font-family: 'Roboto Variable', system-ui, sans-serif;\n}\n`,
+  )
+})
+
+const textFontLink = '<link rel="stylesheet" href="./fonts/roboto.css" />'
+
 const prepareOutdir = Effect.fn('prepareOutdir')(function*(mode: Mode) {
   const resolve = yield* root
   const path = yield* Path.Path
@@ -106,8 +132,17 @@ const prepareOutdir = Effect.fn('prepareOutdir')(function*(mode: Mode) {
     yield* fs.copyFile(resolve(asset), resolve(outdir, path.basename(asset)))
   }
   const html = yield* fs.readFileString(resolve('src/index.html'))
-  yield* fs.writeFileString(resolve(outdir, 'index.html'), html.replaceAll('%ENTRY%', mode))
+  yield* fs.writeFileString(
+    resolve(outdir, 'index.html'),
+    html.replaceAll('%ENTRY%', mode).replaceAll(
+      '    %HEAD%\n',
+      mode === 'development' ? `    ${textFontLink}\n` : '',
+    ),
+  )
   yield* writeIconFont(outdir)
+  if (mode === 'development') {
+    yield* writeTextFont(outdir)
+  }
 })
 
 // `localhost` binds one loopback family only. On Windows, a second watch on the same port then binds the other,
