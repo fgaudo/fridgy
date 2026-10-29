@@ -151,8 +151,11 @@ bun run update-assets
 ```
 
 The command puts `AndroidManifest.xml` back as it was, since the generator reformats it. These files are the
-exception to `*.generated.*` naming: their tool fixes their names. After a change of a logo or of a surface
-color, run the command and commit the images it changed.
+exception to `*.generated.*` naming: their tool fixes their names. Those images show only below Android 12. From
+12, the system draws the splash itself, with the launcher icon, on `windowSplashScreenBackground` (in
+`values/styles.xml`): the same command writes that color, both surfaces, into `values/splash.generated.xml` and
+`values-night/splash.generated.xml`. After a change of a logo or of a surface color, run the command and commit
+the files it changed.
 
 ## Version and release
 

@@ -298,6 +298,16 @@ const generateAssets = Effect.fn('generateAssets')(function*(background: { light
   }
 }, Effect.scoped)
 
+// From Android 12 the system draws the splash itself, on `windowSplashScreenBackground`: the generator's images
+// show only below it.
+const splashColor = (color: string) =>
+  `<?xml version="1.0" encoding="utf-8"?>
+<!-- Written by \`bun run update-assets\` from scripts/palette.ts. -->
+<resources>
+    <color name="splash_background">${color}</color>
+</resources>
+`
+
 const assetsCommand = Cli.Command.make(
   'assets',
   {},
@@ -309,7 +319,16 @@ const assetsCommand = Cli.Command.make(
     const manifestXml = yield* fs.readFileString(manifest)
     const outcome = yield* Effect.exit(generateAssets({ light: surface(false), dark: surface(true) }))
     yield* fs.writeFileString(manifest, manifestXml)
-    return yield* outcome
+    yield* outcome
+    yield* fs.makeDirectory(resolve('android/app/src/main/res/values-night'), { recursive: true })
+    yield* fs.writeFileString(
+      resolve('android/app/src/main/res/values/splash.generated.xml'),
+      splashColor(surface(false)),
+    )
+    yield* fs.writeFileString(
+      resolve('android/app/src/main/res/values-night/splash.generated.xml'),
+      splashColor(surface(true)),
+    )
   }),
 )
 

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Written by `bun run update-assets` from scripts/palette.ts. -->
+<resources>
+    <color name="splash_background">#180b00</color>
+</resources>
