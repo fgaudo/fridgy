@@ -33,9 +33,9 @@ Implemented on 2026-10-29, in `android/app/src/main/java/net/gaudo/fridgy/TypeSc
 
 ## Known limits
 
-- **The pages scroll at 200%.** On 320×712dp, the second step of `add-products` and the page that edits a
-  product are taller than the screen, by about 95dp, so their button starts below the navigation bar until the
-  column is scrolled.
+- **The pages scroll at 200%.** On 320×712dp, the columns of the second step of `add-products` and of the page
+  that edits a product are taller than the screen, by about 95dp, and scroll; their button is docked under them,
+  16dp above the navigation bar or the keyboard (seen on 2026-10-29 on API 37).
 
 ## Verified, and not
 

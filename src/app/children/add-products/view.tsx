@@ -56,8 +56,9 @@ type DateActivity = Readonly<
   { _tag: 'Editing'; controls: Model & { _tag: 'Dating' } } | { _tag: 'Adding' }
 >
 
-const stepPadding =
-  'pb-[calc(1rem+var(--spacing-saib))] pl-[calc(1.5rem+var(--spacing-sail))] pr-[calc(1.5rem+var(--spacing-sair))]'
+const sidePadding = 'pl-[calc(1.5rem+var(--spacing-sail))] pr-[calc(1.5rem+var(--spacing-sair))]'
+
+const stepPadding = cn('pb-[calc(1rem+var(--spacing-saib))]', sidePadding)
 
 /** The top app bar of Material's full-screen dialog: its leading icon button and its title. */
 const appBar = (
@@ -550,8 +551,8 @@ const dateStep = (
       props={{ className: 'absolute inset-0 flex flex-col bg-surface text-on-surface' }}
     >
       {appBar('Add products', 'arrow_back', 'Back', Opt.map(controls, ({ back }) => back), dispatch)}
-      {/* Fits the reference screen; scrolls when the screen is shorter (the keyboard open, a large font). */}
-      <div props={{ className: cn('flex flex-1 flex-col gap-2 overflow-y-auto', stepPadding) }}>
+      {/* Fits the reference screen; scrolls when the screen is shorter (a large font), "Add" docked under it. */}
+      <div props={{ className: cn('flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto pb-2', sidePadding) }}>
         <div props={{ className: 'flex flex-col px-4 pb-2' }}>
           <span props={{ className: 'text-label-medium text-on-surface-variant' }}>Product</span>
           <h3
@@ -567,6 +568,8 @@ const dateStep = (
         <div props={{ className: 'mt-auto rounded-extra-large bg-surface-container-low p-2' }}>
           {keypad(activity, dispatch)}
         </div>
+      </div>
+      <div props={{ className: cn('flex shrink-0 flex-col', stepPadding) }}>
         {button(
           'Add',
           Opt.flatMap(controls, ({ maybeAdd }) => maybeAdd),

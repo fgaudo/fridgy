@@ -45,10 +45,11 @@ decided".
    the product's name in it and a clear button, not focused (the keyboard would cover the keypad, and the user
    may have come for the date); under it the segmented button of the order the digits are read in, the
    expiration date's field, holding the stored date as digits in that order (empty for a product that never
-   expires), and the strip under it; docked at the bottom, the keypad's panel and the filled button "Save". The
-   fields appear once the order and the time are known, a moment after the page opens (see "The program"). The
-   fields' column scrolls when the screen is shorter than it (the keyboard open, a large font), as the
-   `android-release` skill says of every page.
+   expires), and the strip under it; at the bottom, the keypad's panel, and the filled button "Save" docked under
+   the column. The fields appear once the order and the time are known, a moment after the page opens (see "The
+   program"). The fields' column scrolls when the screen is shorter than it (the keyboard open, a large font), as
+   the `android-release` skill says of every page, and "Save" stays in sight, above the navigation bar or the
+   keyboard.
 3. **The strip** says what the date field means: `No expiration` when the field is empty (the product will not
    expire), the chips of the days the digits name, the stored one drawn selected while the digits are the stored
    date's, or `Not an upcoming date` in the error's colors when the digits name no day the product may expire

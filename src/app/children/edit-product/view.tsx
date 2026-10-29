@@ -28,8 +28,7 @@ type Activity = Readonly<
   { _tag: 'Editing'; controls: Model & { _tag: 'Editing' } } | { _tag: 'Saving' } | { _tag: 'Gone' }
 >
 
-const padding =
-  'pb-[calc(1rem+var(--spacing-saib))] pl-[calc(1.5rem+var(--spacing-sail))] pr-[calc(1.5rem+var(--spacing-sair))]'
+const sidePadding = 'pl-[calc(1.5rem+var(--spacing-sail))] pr-[calc(1.5rem+var(--spacing-sair))]'
 
 /** The top app bar of Material's full-screen dialog: its close button and its title. */
 const appBar = (maybeClose: Opt.Option<Message>, dispatch: Dispatch<Message>) => {
@@ -319,19 +318,24 @@ const keypad = (activity: Activity, dispatch: Dispatch<Message>) => {
 }
 
 /**
- * The fields read from the top, the keypad and the button docked at the bottom, where the thumb rests. The column
- * fits the reference screen, and scrolls when the screen is shorter (the keyboard open, a large font).
+ * The fields read from the top, the keypad at the bottom of their column, where the thumb rests, and "Save" docked
+ * under it. The column fits the reference screen, and scrolls when the screen is shorter (the keyboard open, a
+ * large font): "Save" stays in sight, above the navigation bar or the keyboard.
  */
 const fields = (shown: FieldsShown, activity: Activity, dispatch: Dispatch<Message>) => (
-  <div key='fields' props={{ className: cn('flex flex-1 flex-col gap-2 overflow-y-auto pt-2', padding) }}>
-    {nameField(shown, activity, dispatch)}
-    {orderSegments(shown, activity, dispatch)}
-    {dateField(shown, activity)}
-    {strip(shown, activity, dispatch)}
-    <div props={{ className: 'mt-auto rounded-extra-large bg-surface-container-low p-2' }}>
-      {keypad(activity, dispatch)}
+  <div key='fields' props={{ className: 'flex min-h-0 flex-1 flex-col' }}>
+    <div props={{ className: cn('flex flex-1 flex-col gap-2 overflow-y-auto pb-2', sidePadding) }}>
+      {nameField(shown, activity, dispatch)}
+      {orderSegments(shown, activity, dispatch)}
+      {dateField(shown, activity)}
+      {strip(shown, activity, dispatch)}
+      <div props={{ className: 'mt-auto rounded-extra-large bg-surface-container-low p-2' }}>
+        {keypad(activity, dispatch)}
+      </div>
     </div>
-    {saveButton(activity, dispatch)}
+    <div props={{ className: cn('flex shrink-0 flex-col pb-[calc(1rem+var(--spacing-saib))]', sidePadding) }}>
+      {saveButton(activity, dispatch)}
+    </div>
   </div>
 )
 
