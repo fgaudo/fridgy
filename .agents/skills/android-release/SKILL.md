@@ -151,9 +151,9 @@ of Fresco, of op-sqlite or of the NDK, `nativeEntries` is read again, as its com
 
 Fresco depends on Bolts' tasks 1.4.0, under BSD with Facebook's PATENTS, which Meta relicensed under MIT in 2018
 without publishing a release ([meta/fresco#2257](https://github.com/meta/fresco/issues/2257)). `android/bolts-tasks` is
-that MIT code, byte for byte the commit of the relicensing (`provenance.json` holds the commit and each file's git
-blob id, which a test checks, and `.gitattributes` keeps git from converting their line endings), built as a module
-of the app; `android/app/build.gradle` puts it in
+that MIT code, which entered the repository as the commit of the relicensing has it (`provenance.json` holds the
+commit and each file's git blob id there; the license allows changing it, and a change shows in the history), built
+as a module of the app; `android/app/build.gradle` puts it in
 the place of `com.parse.bolts:bolts-tasks` for every library that asks for it. Should Fresco drop Bolts, or a release
 of it under MIT appear, the module goes.
 
