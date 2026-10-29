@@ -1,5 +1,10 @@
 # Design: naming a scanned product from Open Food Facts
 
+> **Written for the web build.** This design predates the move to React Native (2026-10-29). What it decides of
+> the program, its states, messages and services stands; what it says of the view (snabbdom, `styles.css`, the
+> WebView, Capacitor, the browser) describes the web build, and is drawn again on React Native as the `views`
+> skill says.
+
 Implemented on 2026-10-27; the lookup and the scanner tried on Android in the emulator (see "Verified, and not").
 The code is the page that adds products (`src/app/children/add-products/`, its `product-lookup` service and the
 scanner adapter), the client `src/infrastructure/open-food-facts/`, the cache `src/infrastructure/storage/barcodes.ts`
@@ -61,10 +66,10 @@ linking a stored product to its barcode (see "Later").
   of the API, which the client is the module to know. The entrypoints provide only `FetchHttpClient.layer`.
 - **Effect's `effect/http` module** (`HttpClient`, `FetchHttpClient`), marked `@stability unstable`, may be used:
   the app already depends on unstable modules.
-- **The app identifies itself** as the API's docs ask: on the WebView, through the appended User-Agent
-  `Fridgy/<version> (<owner's email>)` in `capacitor.config.ts`, the email being what Open Food Facts asks for and
-  visible in every request's headers; in the browser build, which can send no User-Agent, through the
-  `app_name` and `app_version` query parameters only, which every build sends.
+- **The app identifies itself** as the API's docs ask: the client sends the User-Agent
+  `Fridgy/<version> (<owner's email>)`, the email being what Open Food Facts asks for and visible in every request's
+  headers, and the `app_name` and `app_version` query parameters. (The web build appended the User-Agent to the
+  WebView's own, through Capacitor, and the browser, which can send none, the parameters only.)
 - **Reads go to the production API, in development too**: the staging server needs basic auth and reads at this
   volume do not need it. The base URL is configured (`openFoodFacts.baseUrl`), for tests and a future staging run.
 

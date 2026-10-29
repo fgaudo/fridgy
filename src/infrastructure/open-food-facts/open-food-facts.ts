@@ -15,6 +15,8 @@ import * as Schema from 'effect/Schema'
 import * as NormalizedString from '#libs/strings/normalized-string.ts'
 import { version } from '#package.json'
 
+const USER_AGENT = `Fridgy/${version} (fgaudo+fridgy@gmail.com)`
+
 export class OpenFoodFactsError extends Data.TaggedError('OpenFoodFactsError')<{
   readonly cause: unknown
 }> {}
@@ -98,8 +100,10 @@ export class OpenFoodFacts extends Context.Service<OpenFoodFacts>()(
           const lang = languageOf(language)
           yield* Effect.logDebug('Looking up a product', code)
           const request = HttpClientRequest.get(`${baseUrl}/api/v2/product/${code}`).pipe(
-            // `fields` keeps the answer under a kilobyte; `app_name` and `app_version` identify the app, which in
-            // a browser can send no `User-Agent`.
+            // How the API asks every app to identify itself: its name, its version and a contact, in the
+            // `User-Agent` and in the query.
+            HttpClientRequest.setHeader('User-Agent', USER_AGENT),
+            // `fields` keeps the answer under a kilobyte.
             HttpClientRequest.setUrlParams({
               fields: `product_name,product_name_${lang},brands,quantity`,
               app_name: 'fridgy',
@@ -108,7 +112,7 @@ export class OpenFoodFacts extends Context.Service<OpenFoodFacts>()(
           )
           const answer = yield* client.execute(request).pipe(
             Effect.flatMap(HttpClientResponse.schemaBodyJson(Answer)),
-            // The server's CORS headers allow neither `b3` nor `traceparent`: with them, the preflight fails.
+            // A trace's headers (`b3`, `traceparent`) would tell the server what it does not need.
             Effect.provideService(HttpClient.TracerPropagationEnabled, false),
             Effect.timeout(TIMEOUT),
           )

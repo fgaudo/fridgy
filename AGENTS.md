@@ -11,8 +11,8 @@ for the task before starting it:
 | --------------------------------------------------------------- | ------------------------------------------------------------ |
 | adding a page or a child, or changing how a parent declares one | [`add-program`](.agents/skills/add-program/SKILL.md)         |
 | adding a service, an adapter or a migration                     | [`add-service`](.agents/skills/add-service/SKILL.md)         |
-| editing a `view.tsx`, `src/styles.css` or the palette           | [`views`](.agents/skills/views/SKILL.md)                     |
-| building for Android, upgrading Capacitor, releasing            | [`android-release`](.agents/skills/android-release/SKILL.md) |
+| editing a `view.tsx`, `src/styles.ts` or the palette            | [`views`](.agents/skills/views/SKILL.md)                     |
+| building for Android, upgrading React Native, releasing         | [`android-release`](.agents/skills/android-release/SKILL.md) |
 
 Before changing a program, read the "Guide" of the runtime, `node_modules/@fgaudo/effect-tea/README.md`: its
 rules (intents instead of toggles, an operation as a state that only its completion leaves, input never a
@@ -37,8 +37,7 @@ why, or what the diff and the docs do not, never what they already describe.
 
 Biome enforces the import boundaries ("Visibility" in `src/README.md`), and keeps test-only code
 (`*.test_*.ts`, `@fgaudo/effect-tea/testing`) out of bundles and relative imports short. The typecheck
-enforces the strict typing of views (`dispatch` only takes the program's own messages; JSX elements only
-accept snabbdom's modules) and the Effect language service's rules (no `console`, `Date`, `Math.random`, `fetch`
+enforces the strict typing of views (`dispatch` only takes the program's own messages) and the Effect language service's rules (no `console`, `Date`, `Math.random`, `fetch`
 or timers inside Effect; hashed service keys). Oxlint warns about deprecated APIs. When one of them reports an
 error, the rule is intended: fix the code, do not work around the check.
 
@@ -58,7 +57,8 @@ folders; "page" names a role in the UI, kept by the root's state, not a kind of 
 - **The model holds the messages.** Of the two ways the Guide allows, this app's views send only what the model
   holds, never a message they build: `Message` is exported as a type only.
 - **One global state, no local view state, no mutable singletons.** Effects only in commands and subscriptions:
-  `update`, `makeModel` and views are pure.
+  `update`, `makeModel` and views are pure. A view is a function of its model, never a React component with
+  state or hooks; what the platform holds itself (a text field's text) is left to it, as the `views` skill says.
 - **A service says in its type how its data ends.** One value is an `Effect<A, E>`; values over time are a
   `Source<A, Done, E>` (`libs/source`), `Done` being `never` for one that never ends. Only on-going observation
   is a `Source`; a one-off read is an `Effect`.
@@ -91,7 +91,7 @@ folders; "page" names a role in the UI, kept by the root's state, not a kind of 
   schema, how a product is written, a platform call longer than a line) to `src/infrastructure`. Services never
   move up; a program never imports a sibling; an adapter stays a thin wrapper on the infrastructure. A thing
   two programs have in common moves up when its truth lies outside them, so that a copy changed on its own
-  would be a bug (a rule of the domain, a look of Material's, in `src/styles.css`); where they may
+  would be a bug (a rule of the domain, a look of Material's, in `src/styles.ts`); where they may
   legitimately differ, it is written twice, never shared through parameters that describe the caller. The one
   thing of the app that moves up as it is, is a whole program: used by two programs, it lives in `programs/`
   of their lowest common parent, and each uses it as a child, through its three modules, never as fragments
@@ -101,10 +101,11 @@ folders; "page" names a role in the UI, kept by the root's state, not a kind of 
 - **One storage per setup; migrations are append-only.** Every adapter of the storage is written once, on
   `SqlClient`; the entrypoint provides the engine. A phone has already run the existing migrations, so a fix is
   a new one.
-- **Environments exist only in `src/entrypoints/`.** Shared code never branches on `process.env.NODE_ENV`.
-  Every `layer.ts` provides the adapters of its own services that have no alternative, merged with its
-  children's; what has alternatives (the `SqlClient`, the `BackButton`) is left out, and each entrypoint
-  imports the adapter it picks by its own module. A missing choice fails the typecheck.
+- **Choices of the platform exist only in `src/entrypoints/` and in tests.** Shared code never branches on
+  `process.env.NODE_ENV` or `Platform.OS`. Every `layer.ts` provides the adapters of its own services that have no
+  alternative, merged with its children's; what has alternatives (the `SqlClient`, the `BackButton`) is left out,
+  and the entrypoint imports the adapter it picks by its own module, as a test picks its own. A missing choice
+  fails the typecheck.
 - **`src/libs/` is generic**: no knowledge of the app. A branded type with a rule is a `Schema`
   (`Schema.Int.pipe(Schema.brand(…))`, `.check(…)`), with its type, `make` (an `Option`) and `makeUnsafe`
   (only for values valid by construction) derived from it; `Brand.make` only for a generic type,
@@ -113,33 +114,24 @@ folders; "page" names a role in the UI, kept by the root's state, not a kind of 
 - **Only what can be tested is supported.** `minSdkVersion`, the target SDK and the reference screen (320dp
   wide, 640dp between the system bars, which every page fits without scrolling) move only as the
   `android-release` skill says, checked in the emulator first, with the docs.
-- **The WebView floor follows the app, never the other way round.** `minWebViewVersion` is derived from what
-  the bundle uses and checked on the bundle, never in the emulator (`docs/testing.md` says why), and it is no
-  constraint on a change: a change is designed against the WebView phones have today. When an API or a CSS
-  feature the floor lacks would make it simpler, faster or clearer, propose it, with the version it needs and
-  what it replaces, and let the author decide. The floor then moves as the `android-release` skill says: up to
-  the version released six months before the app's release, and never past the last one `minSdkVersion` still
-  receives.
 
 ## Tests
 
-- What is checked where (the tests on every change, the production bundle in a browser, the emulator on the
-  target image), what each layer covers and why, is `docs/testing.md`. A check goes in the lowest layer that
+- What is checked where (the tests on every change, the app on the emulator), what each layer covers and why, is
+  `docs/testing.md`. A check goes in the lowest layer that
   can make it.
 - `bun:test` and fast-check property tests, in a `*.test.ts` next to the module. A property the code does not
   satisfy yet stays as `test.failing` with the bug in its name.
 - A test's name says what it checks. When a change touches a test, or what it tests, check that its name, its
   `describe` and its comments still say what the assertions check.
-- The production bundle in a browser is `e2e/production.e2e.ts`, outside `src/` and outside `bun test`'s
-  pattern: `bun run e2e` builds and runs it, in headless Chromium with Playwright. It imports nothing from
-  `src/`, and finds elements as a user does, by role and visible text, never by a test id: a control it cannot
-  name has no accessible name, which its view gives it.
 - Code used only by tests lives in `*.test_<kind>.ts` files (`test_arbitrary`, `test_contract`,
   `test_support`): Biome lets only `*.test.ts` and other `*.test_*.ts` files import them, and `bun test` does
   not run them. Branded and domain types have a `*.test_arbitrary.ts` producing only valid values; generators
   are built from them, never from `*Unsafe` constructors.
 - Every program's `program.test.ts` tests it as the Guide's "Testing" says, with the helpers of `libs/testing/`;
-  the root's tests act like a user (`src/app/user.test_support.ts`, `rehearse`), over a database in memory.
+  the root's tests act like a user (`src/app/user.test_support.ts`, `rehearse`), over a database in memory. A view
+  is drawn without being rendered (`messagesSentBy`, `libs/tea-react/view.test_support.ts`): `bun test` cannot load
+  React Native, whose modules the preload replaces with their names (`libs/testing/preload.test_support.ts`).
 - A service's contract (`<service>.test_contract.ts`) says what every adapter must do, and each adapter's test
   runs it. What a contract needs beyond its service comes from the adapter's test, through the storage itself:
   reads and writes that only tests need never go into a service.
@@ -157,11 +149,11 @@ folders; "page" names a role in the UI, kept by the root's state, not a kind of 
 - Nothing deprecated, of any dependency, in code, tests or scripts: use what the deprecation names instead, and
   replace a use found in passing.
 - A file a tool writes is never edited by hand: change what it is made from and run the tool again. Such a file
-  is named `<name>.generated.<ext>` (`src/palette.generated.css`, by `bun run update-palette`;
+  is named `<name>.generated.<ext>` (`src/palette.generated.ts`, by `bun run update-palette`;
   `licenses.generated.json`, by `bun run update-licenses`), and a new one is too; dprint and Biome skip them.
-  The files whose name their tool fixes are the exception: `android/app/capacitor.build.gradle` and
-  `android/capacitor.settings.gradle` (by `bunx cap sync`), the launcher icons and the splash screens (by
-  `bun run update-assets`).
+  The files whose name their tool fixes are the exception: the launcher icons (by `bun run update-assets`), and
+  the icon font, `MaterialSymbolsRounded.ttf` in the Android project's assets (by `bun run update-icons`, and
+  not committed).
 - Format only the files you changed (`bunx dprint fmt <files>`); CI checks the whole tree (`bunx dprint check`),
   which leaves out the Android resources and `assets/`.
 - Comments only for what the code cannot say: a reason, an invariant the types do not show, a platform
@@ -181,6 +173,16 @@ folders; "page" names a role in the UI, kept by the root's state, not a kind of 
 
 ## Known gaps (verify before working)
 
+- The move to React Native is not over. The views are drawn without motion: the choreographies of the web build
+  (a page's entrance, the menu, a row arriving or leaving, the product flying into the fridge of
+  `docs/product-flight.md`) are to be designed again on React Native, and the product added is told by a line of
+  text meanwhile. Home's viewport is fixed (`viewport.fixed.ts`: the bar never collapses, the FAB keeps its label),
+  the scanner is unavailable (`scanner.unavailable.ts`, until a camera is drawn natively), the theme is the light
+  one only (`color` in `src/styles.ts`), and a crash leaves the page as it was, with no screen to restart from.
+- The freshness of a product is drawn in steps, the nearest role (`freshnessColors`, in Home's `products`), where
+  the web build mixed the roles: whether that is enough is the author's call.
+- A debug build takes about five seconds on the emulator before its JavaScript runs; a release, a tenth of a
+  second. The release has been run on the emulator only, signed with the debug key.
 - The vibrations (`docs/haptics.md`) have not been felt on a phone: whether each pattern feels like the constant
   it stands for. The emulator only shows their delivery; the author feels them before the release.
 - Two taps in one frame can stack two pages. `show` (`src/app/program.ts`) pushes a page unless that same page

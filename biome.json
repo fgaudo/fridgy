@@ -8,8 +8,6 @@
   "files": {
     "includes": [
       "**",
-      "!!**/dist",
-      "!!**/dist-dev",
       "!**/*.generated.*"
     ]
   },
@@ -60,18 +58,6 @@
     }
   },
   "overrides": [
-    {
-      "includes": [
-        "src/error.html"
-      ],
-      "linter": {
-        "rules": {
-          "complexity": {
-            "useOptionalChain": "off"
-          }
-        }
-      }
-    },
     {
       "includes": [
         "**/*.tsx"
@@ -424,11 +410,6 @@
       }
     }
   ],
-  "css": {
-    "parser": {
-      "tailwindDirectives": true
-    }
-  },
   "javascript": {},
   "assist": {
     "enabled": true,

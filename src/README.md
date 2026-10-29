@@ -5,18 +5,15 @@ Rules and conventions are in [`AGENTS.md`](../AGENTS.md).
 
 ```
 src/
-├─ entrypoints/          how the app is started, one file per environment: each picks what has alternatives
-│  ├─ production.ts      sqlite in a worker (OPFS), `fetch` as the HTTP client, Capacitor's back button,
-│  │                     bundled view
-│  ├─ development.ts     sqlite in memory with sample products, `fetch` as the HTTP client, the browser's back
-│  │                     button, hot-reloaded view
-│  └─ run.ts             shared: runs the program (`@fgaudo/effect-tea` `run`) with the snabbdom renderer
+├─ entrypoints/
+│  └─ native.ts          how the app is started on Android: op-sqlite as the storage, `fetch` as the HTTP client,
+│                        Android's back button, the root view drawn by React; the tests pick their own
 │
 ├─ domain/               the entities and their rules (`Product`): imports nothing but libs/
 │
-├─ app/                  the application (environment-agnostic)
+├─ app/                  the application (platform-agnostic)
 │  ├─ program.ts         public: the root Program: the stack of pages
-│  ├─ view.tsx           public: the root view (hot-reload entry in development)
+│  ├─ view.tsx           public: the root view: the page on top, keyed by its name
 │  ├─ layer.ts           public: every adapter that has no alternative, the vibrations' included;
 │  │                     needs a `SqlClient` and an `HttpClient`
 │  ├─ children/<child>/  a child Program (of the root: a page), of the same shape as the root, at any depth; of
@@ -31,39 +28,32 @@ src/
 │  └─ programs/<program>/  none yet: a program two pages use, of the same shape as a child and used like one
 │                          (see "Visibility")
 │
-├─ infrastructure/       what the app's adapters share: the storage (storage/: the database's engine, sqlite in
-│                        a worker on OPFS or in memory, its schema and migrations, how a product is written, updated,
-│                        deleted and how its rows are joined and encoded, `ProductStore`, how a setting is read and
-│                        written, `SettingStore`, how the order of a date's digits is kept, `DateOrderStore` in
-│                        `date-order.ts`, how Open Food Facts' answers are cached, `BarcodeCache` in
-│                        `barcodes.ts`, and the sample data), the client of Open Food Facts' API
-│                        (open-food-facts/: how a code is normalized, asked for and decoded), hot reload,
-│                        fonts, the screen a crash leaves (crash-screen.ts, which the production entrypoint
-│                        hands to `run`); and the platform's facts the programs use as they are: the back button
-│                        (back-button/: Capacitor's, or the browser's history; the entrypoints pick one), and
-│                        the vibrations (haptics/, `docs/haptics.md`). Its adapters are named as the app's,
+├─ infrastructure/       what the app's adapters share: the storage (storage/: the database's engine, op-sqlite on
+│                        the phone or wa-sqlite in memory for the tests, its schema and migrations, how a product is
+│                        written, updated, deleted and how its rows are joined and encoded, `ProductStore`, how a
+│                        setting is read and written, `SettingStore`, how the order of a date's digits is kept,
+│                        `DateOrderStore` in `date-order.ts`, how Open Food Facts' answers are cached,
+│                        `BarcodeCache` in `barcodes.ts`, and the sample data), the client of Open Food Facts'
+│                        API (open-food-facts/: how a code is normalized, asked for and decoded); and the
+│                        platform's facts the programs use as they are: the back button (back-button/), and the
+│                        vibrations (haptics/, `docs/haptics.md`). Its adapters are named as the app's,
 │                        `<service>.<backing>.ts`
-├─ libs/                 generic, reusable code: the snabbdom bridge (tea-snabbdom: handlers, renderer,
-│                        test support) and JSX runtime, sources, timers (a zoned clock, a one-shot timer), branded
-│                        numbers, barcodes (the expansion of a UPC-E), dates (a day of the calendar, with no
-│                        zone; the orders of a date's digits, the days they name, the rules of typing them on
-│                        a keypad), test helpers, …
-├─ index.html            the page template: it links the icon font, and the build fills in the entrypoint
-├─ error.html            shown by Capacitor instead of the app on a WebView older than it needs
-├─ palette.generated.css the Material 3 color roles, written by `bun run update-palette`
-└─ styles.css            the stylesheet (Tailwind): Material's type scale, shapes, elevation, motion, state layer
-                         and the looks two views draw (a filter chip, a segment)
+├─ libs/                 generic, reusable code: the React bridge (tea-react: handlers, renderer, test support),
+│                        sources, timers (a zoned clock, a one-shot timer), branded numbers, barcodes (the
+│                        expansion of a UPC-E), dates (a day of the calendar, with no zone; the orders of a date's
+│                        digits, the days they name, the rules of typing them on a keypad), test helpers, …
+├─ palette.generated.ts  the Material 3 color roles, written by `bun run update-palette`
+└─ styles.ts             Material's look, which every view uses (`#styles`): the color roles of the scheme in
+                         use, the type scale, shapes, elevation and the icons
 ```
 
 The runtime of the Elm architecture is a library, an npm dependency:
 [`@fgaudo/effect-tea`](https://github.com/fgaudo/effect-tea).
 
-The text is drawn in the system's fonts: Android has a family for every script, and picks the forms of Chinese
-characters by the device's language (set as `lang` by `index.html`). The only font the app ships is its icons,
-Material Symbols, whole (every icon, 5.4 MB: a view may name any), copied by the build into `dist/fonts/`
-(`writeIconFont` in `scripts/cli.ts`) and linked from `index.html` rather than imported in `styles.css`, which
-would inline it. It is loaded before the splash screen hides (`infrastructure/fonts.ts`), so that the first view
-has its icons.
+The text is drawn in the system's fonts: Android has a family for every script, and scales it with the user's font
+size. The only font the app ships is its icons, Material Symbols, whole (every icon: a view may name any), which
+`bun run update-icons` decompresses into the Android project's assets, where React Native finds a family by its
+file's name. A view draws an icon by its name (`icon` in `styles.ts`), which the font turns into its glyph.
 
 ## Reading order
 
@@ -73,12 +63,12 @@ has its icons.
    root.
 4. `app/children/home/children/products/services/` — what a program needs from the
    outside world, each service owned by what uses it; `domain/` — the entities and their rules.
-5. `entrypoints/` — how everything is wired for each environment.
+5. `entrypoints/native.ts` — how everything is wired on the phone.
 
 ## Visibility
 
 Dependencies point inwards: `domain/` imports only `libs/`; `infrastructure/` the domain and `libs/`; `app/`
-all three; the entrypoints everything; `libs/` knows nothing of the app. Within `app/`, visibility follows the
+all three, and `styles.ts` (`#styles`); the entrypoints everything; `libs/` knows nothing of the app. Within `app/`, visibility follows the
 role a file's name gives it. Biome's `noRestrictedImports` rule (`biome.json`) enforces all of it:
 
 - inside `app/`, imports go downwards only: a program uses its own services and children, never a parent or a
@@ -98,4 +88,4 @@ role a file's name gives it. Biome's `noRestrictedImports` rule (`biome.json`) e
   schema it writes with;
 - test-only code (`*.test_*.ts`, `@fgaudo/effect-tea/testing`) is imported only by tests, so it stays out of
   bundles; relative imports climb at most `../../`, another part of the project is reached through its alias
-  (`#app/…`, `#domain/…`, `#infrastructure/…`, `#libs/…`, from the `imports` of `package.json`).
+  (`#app/…`, `#domain/…`, `#infrastructure/…`, `#libs/…`, `#styles`, from the `imports` of `package.json`).

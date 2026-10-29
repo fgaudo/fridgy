@@ -467,51 +467,6 @@
         "name": "@babel/types",
         "description": "Babel Types is a Lodash-esque utility library for AST nodes"
     },
-    "@capacitor/android@9.0.0-beta.0": {
-        "licenses": "MIT",
-        "repository": "https://github.com/ionic-team/capacitor",
-        "publisher": "Ionic Team",
-        "email": "hi@ionic.io",
-        "copyright": "Copyright (c) 2017-present Drifty Co.",
-        "name": "@capacitor/android",
-        "description": "Capacitor: Cross-platform apps with JavaScript and the web"
-    },
-    "@capacitor/app@9.0.0-alpha.2": {
-        "licenses": "MIT",
-        "repository": "https://github.com/ionic-team/capacitor-plugins",
-        "publisher": "Ionic",
-        "email": "hi@ionicframework.com",
-        "copyright": "Copyright 2020-present Ionic. https://ionic.io",
-        "name": "@capacitor/app",
-        "description": "The App API handles high level App state and events.For example, this API emits events when the app enters and leaves the foreground, handles deeplinks, opens other apps, and manages persisted plugin state."
-    },
-    "@capacitor/core@9.0.0-beta.0": {
-        "licenses": "MIT",
-        "repository": "https://github.com/ionic-team/capacitor",
-        "publisher": "Ionic Team",
-        "email": "hi@ionic.io",
-        "copyright": "Copyright (c) 2017-present Drifty Co.",
-        "name": "@capacitor/core",
-        "description": "Capacitor: Cross-platform apps with JavaScript and the web"
-    },
-    "@capacitor/haptics@9.0.0-next.1": {
-        "licenses": "MIT",
-        "repository": "https://github.com/ionic-team/capacitor-haptics",
-        "publisher": "Ionic",
-        "email": "hi@ionicframework.com",
-        "copyright": "Copyright 2020-present Ionic. https://ionic.io",
-        "name": "@capacitor/haptics",
-        "description": "The Haptics API provides physical feedback to the user through touch or vibration."
-    },
-    "@capacitor/splash-screen@9.0.0-alpha.2": {
-        "licenses": "MIT",
-        "repository": "https://github.com/ionic-team/capacitor-plugins",
-        "publisher": "Ionic",
-        "email": "hi@ionicframework.com",
-        "copyright": "Copyright 2020-present Ionic. https://ionic.io",
-        "name": "@capacitor/splash-screen",
-        "description": "The Splash Screen API provides methods for showing or hiding a Splash image."
-    },
     "@effect/sql-sqlite-react-native@4.1.0": {
         "licenses": "MIT",
         "repository": "https://github.com/Effect-TS/effect",
@@ -3435,14 +3390,6 @@
         "copyright": "Copyright (c) 2016 Douglas Christopher Wilson <doug@somethingdoug.com>",
         "name": "toidentifier",
         "description": "Convert a string of words to a JavaScript identifier"
-    },
-    "tslib@2.8.1": {
-        "licenses": "0BSD",
-        "repository": "https://github.com/Microsoft/tslib",
-        "publisher": "Microsoft Corp.",
-        "copyright": "Copyright (c) Microsoft Corporation.",
-        "name": "tslib",
-        "description": "Runtime library for TypeScript helper functions"
     },
     "type-fest@0.7.1": {
         "licenses": "(MIT OR CC0-1.0)",

@@ -1,0 +1,10 @@
+<resources>
+
+    <!-- From Android 12 the system draws the splash: the launcher icon on the surface's color. -->
+    <style name="AppTheme" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="android:editTextBackground">@drawable/rn_edit_text_material</item>
+        <item name="android:windowBackground">@color/splash_background</item>
+        <item name="android:windowSplashScreenBackground">@color/splash_background</item>
+    </style>
+
+</resources>

@@ -99,7 +99,7 @@ export const program = compose({
   and the events of both.
 - The view gives each child's view `Tea.dispatchTo(dispatch, '<Child>')`, the same function in every frame,
   and hands it the child's model whole: it never reads a child model's fields. A child's model is the same
-  object while its state is, so a view that rarely changes is drawn with snabbdom's `thunk`.
+  object while its state is.
 
 ## `layer.ts`
 
@@ -129,7 +129,7 @@ A child whose view only draws pieces the parent places (Products) has its `updat
 ## A program two programs use
 
 What two programs have in common moves up when its truth lies outside them (a rule, to `src/libs/` or
-`src/domain/`; a look of Material's, to `src/styles.css`), and is written twice where they may legitimately
+`src/domain/`; a look of Material's, to `src/styles.ts`), and is written twice where they may legitimately
 differ (a line of layout, the composition of a page): never a module of model fragments or view pieces
 generic in the caller's message. When what they share is a whole program, a state machine with its view, it
 moves up as it is: into `programs/<program>/` of their lowest common parent, of the shape above, and each of

@@ -13,15 +13,13 @@ Android (see "Verified, and not"). Read [`AGENTS.md`](../AGENTS.md), the `add-se
 - **A vibration is a command, started by `update`.** Its transition decides it, as it decides a snackbar, so the
   programs' tests check it. A program lists `Haptics`, a service of the infrastructure, directly: a feedback means
   the same to every page.
-- **Capacitor's `Haptics` plays it**: the heavy impact for `LongPress`, the medium one for `Confirm`, the error's
-  two pulses for `Reject` (`haptics.capacitor.ts`). The plugin plays its own waveforms on Android's vibrator, not
-  the system's constants through `View.performHapticFeedback`.
-- **The plugin is kept, though Android 10 plays its vibrations with "Touch feedback" off.** The plugin's
-  vibrations carry no attributes: Android 17 files them as touch feedback and the setting silences them, Android
-  10 does neither, since there the setting only governs `performHapticFeedback`, which the plugin does not use
-  (see "Verified, and not"). The owner accepted the limit, hoping the plugin changes. The alternative is a
-  local plugin that calls `performHapticFeedback` on the WebView: the system's own effects, the setting
-  respected on every version, and a key click short enough for the keypad.
+- **React Native's `Vibration` plays it**, as patterns (`haptics.react-native.ts`): a short pulse for `Confirm`,
+  a longer one for `LongPress`, two for `Reject`. React Native has no access to the system's constants
+  (`View.performHapticFeedback`), which would respect "Touch feedback" on every version and give the keypad a
+  key click; a small native module would. Until then the patterns stand for the constants, and the app
+  declares `VIBRATE`. A vibration the platform refuses is a `HapticsError`, which the programs log as a warning and go past.
+- **The web build played them through Capacitor's `Haptics`** (the heavy impact, the medium one, the error's two
+  pulses); what "Verified, and not" says of its waveforms is that plugin's.
 
 ## What vibrates
 

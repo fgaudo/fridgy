@@ -1,5 +1,10 @@
 # Design: searching the list
 
+> **Written for the web build.** This design predates the move to React Native (2026-10-29). What it decides of
+> the program, its states, messages and services stands; what it says of the view (snabbdom, `styles.css`, the
+> WebView, Capacitor, the browser) describes the web build, and is drawn again on React Native as the `views`
+> skill says.
+
 Designed on 2026-10-28, not implemented yet: this document is the plan, to be turned into code and then pruned to
 the design, the facts verified and the decisions, as `edit-product.md` was. The code it touches is Home's child
 `src/app/children/home/children/products/` (the query, the rows shown, the selection), Home's view

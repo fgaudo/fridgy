@@ -1,37 +1,37 @@
 # Fridgy
 
-Fridgy keeps track of the food in your fridge and of when it expires. It is an Android app (and a web app
-during development) written in TypeScript, with a strictly functional, [Elm](https://elm-lang.org)-style
+Fridgy keeps track of the food in your fridge and of when it expires. It is an Android app written in TypeScript
+and drawn with [React Native](https://reactnative.dev), with a strictly functional, [Elm](https://elm-lang.org)-style
 architecture.
 
-> **Status:** work in progress. The main page (product list, selecting products, expiration tracking), the page
-> that adds products one after another, in two steps (the name is typed or read from a barcode in the scanner's
-> dialog, which looks the product up on [Open Food Facts](https://openfoodfacts.org) and caches the answer on the
-> phone, and the product is added as it is or goes on to its expiration date, typed as digits in the order of
-> day, month and year the user keeps, from which the user picks the day they meant; the product added then flies
-> into a fridge), the page that edits a product (opened with a tap on it, its name and its expiration date, typed
-> on the same keypad) and the About page (version, links, licenses) run on the current architecture, with
-> navigation between them and Android's back button. What is
-> still missing is listed under "Known gaps" in [`AGENTS.md`](AGENTS.md).
+> **Status:** work in progress, in the middle of its move from a WebView (Capacitor) to React Native. The main
+> page (product list, selecting products, expiration tracking), the page that adds products one after another, in
+> two steps (the name is typed, and the product is added as it is or goes on to its expiration date, typed as
+> digits in the order of day, month and year the user keeps, from which the user picks the day they meant), the
+> page that edits a product (opened with a tap on it, its name and its expiration date, typed on the same keypad)
+> and the About page (version, links, licenses) run on the current architecture, with navigation between them and
+> Android's back button. They are drawn without animations, and the barcode scanner is not drawn yet. What is still
+> missing is listed under "Known gaps" in [`AGENTS.md`](AGENTS.md).
 
 **Privacy:** scanning a barcode sends the barcode, and the phone's IP address, to Open Food Facts; nothing else
 leaves the phone. The whole of it is in [`PRIVACY.md`](PRIVACY.md), the policy the store listing links to.
 
 ## Stack
 
-|                            |                                                                                                                            |
-| -------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| Language                   | TypeScript, with the Effect language service (`@effect/tsgo`)                                                              |
-| Effects, services, streams | [Effect](https://effect.website) v4                                                                                        |
-| View                       | [snabbdom](https://github.com/snabbdom/snabbdom) (virtual DOM, written in TSX) and [Tailwind CSS](https://tailwindcss.com) |
-| Storage                    | SQLite (WebAssembly, in a worker)                                                                                          |
-| Android packaging          | [Capacitor](https://capacitorjs.com)                                                                                       |
-| Runtime, bundler, tests    | [Bun](https://bun.com), with [fast-check](https://fast-check.dev) for property tests                                       |
-| Lint                       | [Biome](https://biomejs.dev), and [Oxlint](https://oxc.rs) for uses of deprecated APIs                                     |
+|                            |                                                                                        |
+| -------------------------- | -------------------------------------------------------------------------------------- |
+| Language                   | TypeScript, with the Effect language service (`@effect/tsgo`)                          |
+| Effects, services, streams | [Effect](https://effect.website) v4                                                    |
+| View                       | [React Native](https://reactnative.dev) (written in TSX), on Hermes                    |
+| Storage                    | SQLite, through [op-sqlite](https://github.com/OP-Engineering/op-sqlite)               |
+| Bundler                    | Metro, with Babel                                                                      |
+| Runtime, tests             | [Bun](https://bun.com), with [fast-check](https://fast-check.dev) for property tests   |
+| Lint                       | [Biome](https://biomejs.dev), and [Oxlint](https://oxc.rs) for uses of deprecated APIs |
 
 ## Getting started
 
-Requirements: [Bun](https://bun.com) and, to build the Android app, Android Studio with an Android SDK.
+Requirements: [Bun](https://bun.com), Node.js 22.11 or later (React Native's command line runs on it) and Android
+Studio with an Android SDK; Gradle installs the NDK the native modules need.
 
 ```bash
 bun install
@@ -39,63 +39,38 @@ bun install
 
 It also regenerates the licenses shown on the About page
 (`src/app/children/about/services/licenses/licenses.generated.json`, from the production dependencies): commit
-the file when it changes, with `bun.lock`.
-
-### Run it in the browser
-
-```bash
-bun run watch
-```
-
-builds the development version into `dist-dev/` (a database in memory, with sample products, new on every
-reload), serves it, and rebuilds on every change under `src/`; open the address it prints. Editing a view or
-the CSS swaps the view in place, keeping the application state; any other change reloads the page. The
-production build has `dist/` to itself, so it can be made while the watch runs.
-
-The development version carries Roboto, which the production bundle does not: a browser on a desktop would
-otherwise draw the app in that desktop's font, and the app is read on Android, where Roboto is `system-ui`.
-
-It serves on `127.0.0.1` and a free port, and prints the address. To fix the port (or the host), set
-`DEV_SERVER_PORT` (`DEV_SERVER_HOST`) in the environment or in a `.env` file, which Bun loads at startup. The
-preview tool of Claude's desktop app sets `PORT` instead, which wins, to a free port from `.claude/launch.json`'s.
+the file when it changes, with `bun.lock`. And it writes the icon font into the Android project's assets
+(`bun run update-icons`): Android reads TrueType, and the font's package ships WOFF2.
 
 ### Build the Android app
 
 ```bash
-bun run build
+cd android && ./gradlew assembleDebug
 ```
 
-builds the production version (SQLite storage) into `dist/`. Then copy it into the Android project and open it
-in Android Studio:
+builds `android/app/build/outputs/apk/debug/app-debug.apk`, which `adb install` puts on a phone or an emulator.
+Every build carries its JavaScript bundle, compiled to Hermes bytecode: the app runs without Metro's server.
+Gradle runs on Android Studio's JDK (`JAVA_HOME` set to its `jbr`). Add `-PreactNativeArchitectures=x86_64` to build
+for the emulator only, in a fraction of the time.
 
-```bash
-bunx cap sync android
-```
-
-```bash
-bunx cap open android
-```
-
-The app needs Android 10 (API 29) and Android System WebView 115: on an older WebView, Capacitor shows
-`src/error.html` instead. Its pages are laid out for a screen 320dp wide with 640dp between the system bars, which every
-page fits without scrolling: a page scrolls when the screen is shorter than it, as the keyboard or a large font
-makes it. Why these versions, how the icons and splash screens are generated and how a release
-is versioned and tagged is in [`.agents/skills/android-release/SKILL.md`](.agents/skills/android-release/SKILL.md);
-how the app is tested, and why a release is checked where it is, in [`docs/testing.md`](docs/testing.md).
+The app needs Android 10 (API 29). Its pages are laid out for a screen 320dp wide with 640dp between the system
+bars, which every page fits without scrolling: a page scrolls when the screen is shorter than it, as the keyboard
+or a large font makes it. Why these versions, how the icons are generated and how a release is versioned, built
+and tagged is in [`.agents/skills/android-release/SKILL.md`](.agents/skills/android-release/SKILL.md); how the app
+is tested, and why a release is checked where it is, in [`docs/testing.md`](docs/testing.md).
 
 ## Development
 
-| Command                   |                                                                                                     |
-| ------------------------- | --------------------------------------------------------------------------------------------------- |
-| `bun run typecheck`       | Type-check the project                                                                              |
-| `bun run test`            | Run the tests                                                                                       |
-| `bun run lint`            | Lint, including the import boundaries and the order of imports, and warn about deprecated APIs      |
-| `bun audit`               | Check the dependencies for known vulnerabilities, from the lockfile                                 |
-| `bun run check-floor`     | Check that `dist/` parses on the lowest WebView the app supports, after a build                     |
-| `bun run e2e`             | Build, and run the production bundle in headless Chromium (`bunx playwright install chromium` once) |
-| `bunx dprint fmt <files>` | Format the files you changed; CI checks the whole tree with `bunx dprint check`                     |
-| `bun run update-palette`  | Regenerate `src/palette.generated.css`, the colors, from the key colors in `scripts/palette.ts`     |
-| `bun run update-assets`   | Regenerate the Android launcher icons and splash screens from `assets/logo.svg` and `logo-dark.svg` |
+| Command                   |                                                                                                         |
+| ------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `bun run typecheck`       | Type-check the project                                                                                  |
+| `bun run test`            | Run the tests                                                                                           |
+| `bun run lint`            | Lint, including the import boundaries and the order of imports, and warn about deprecated APIs          |
+| `bun audit`               | Check the dependencies for known vulnerabilities, from the lockfile                                     |
+| `bunx dprint fmt <files>` | Format the files you changed; CI checks the whole tree with `bunx dprint check`                         |
+| `bun run update-palette`  | Regenerate `src/palette.generated.ts`, the colors, from the key colors in `scripts/palette.ts`          |
+| `bun run update-icons`    | Write the Material Symbols font into the Android project's assets, as TrueType                          |
+| `bun run update-assets`   | Regenerate the Android launcher icons and the splash's color from `assets/logo.svg` and `logo-dark.svg` |
 
 A file named `*.generated.*` is written by a command and never edited by hand: change what it is made from and
 run the command again.
@@ -106,10 +81,10 @@ The whole app is one Elm-style program:
 
 - a **single global state**, changed only by a pure `update(message)(state)`;
 - **effects as data**: `update` returns _commands_ (data that the program's `runCommand` turns into Effects
-  that may produce a message), and _subscriptions_ turn the outside world (database changes, scrolling, a
+  that may produce a message), and _subscriptions_ turn the outside world (database changes, the back button, a
   clock) into messages;
 - a **pure view**: `makeModel` projects the state onto what the view needs, and the view turns that model
-  into a virtual DOM.
+  into React Native elements, with no state and no hooks of its own.
 
 The runtime is [`@fgaudo/effect-tea`](https://github.com/fgaudo/effect-tea), a library of its own. On top of
 plain Elm, `update` rejects what does not apply, so a double tap is harmless; its testing tools check that the
@@ -122,24 +97,23 @@ What the app adds:
   open About, the page that adds products or the one that edits a product, or to be left. A page that cannot
   start the same way every time starts from flags: the page that edits a product, from the product tapped.
 - **An asynchronous operation is a state that waits for its completion**, which only that state accepts.
-- **Bugs crash the app**; expected errors are typed and handled with Effect. In production a crash shows a
-  screen with a button that restarts the app; the cause goes to the console, and nothing leaves the phone.
+- **Bugs crash the app**; expected errors are typed and handled with Effect. The cause goes to the log, and
+  nothing leaves the phone.
 
 How the code is organized:
 
 - **A tree of programs** (`src/app/children/`), all of the same shape: the root, its pages and a large page's
   children are each a folder with a program, a view, a layer, its services and its own `children/`. Each
   imports nothing of a sibling; Biome enforces the boundaries.
-- **Services and adapters.** A service is what a program needs from outside (the product list, scrolling, the
+- **Services and adapters.** A service is what a program needs from outside (the product list, the scanner, the
   back button), owned by the program that uses it, with the adapters that provide it. Two programs that both
   touch products each have their own.
 - **Shared code moves up**: the entities (`Product`) to `src/domain/`, how things are done (the database's
-  schema, how a product is written) to `src/infrastructure/`, a whole program two programs use to the
-  `programs/` of their common parent (none yet).
-- **Environments** (production, development) exist only in `src/entrypoints/`, which pick what has
-  alternatives: the database's engine, the HTTP client and the platform's back button.
-- **Views** are TSX, rendered by snabbdom through a small bridge (`src/libs/tea-snabbdom/`, `src/libs/jsx/`),
-  following Material 3.
+  schema, how a product is written) to `src/infrastructure/`, Material's look to `src/styles.ts`, a whole program
+  two programs use to the `programs/` of their common parent (none yet).
+- **The entrypoint** (`src/entrypoints/native.ts`) picks what has alternatives: the database's engine, the HTTP
+  client and the platform's back button. The tests pick their own.
+- **Views** are TSX, drawn by React through a small bridge (`src/libs/tea-react/`), following Material 3.
 
 See [`src/README.md`](src/README.md) for a map of the source tree, a suggested reading order and the import
 boundaries.

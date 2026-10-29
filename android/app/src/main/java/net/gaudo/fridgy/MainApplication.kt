@@ -1,4 +1,4 @@
-package net.gaudo.fridgy.rn
+package net.gaudo.fridgy
 
 import android.app.Application
 import com.facebook.react.PackageList

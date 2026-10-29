@@ -16,7 +16,7 @@ what they share is the domain and the infrastructure. The examples to copy are
 ```
 <program>/services/<service>/
 ├─ <service>.ts                 the service: a Context.Service, its requests and errors
-├─ <service>.<backing>.ts       an adapter: the layer that provides it, named after what backs it (sql, browser, bundled)
+├─ <service>.<backing>.ts       an adapter: the layer that provides it, named after what backs it (sql, react-native, bundled)
 ├─ <service>.test_contract.ts   what every adapter must do
 └─ <service>.<backing>.test.ts  runs the contract on that adapter
 ```
@@ -74,13 +74,13 @@ how the storage is read or written is doing the infrastructure's work, and two o
 
 - No alternative: the program's `layer.ts` merges it.
 - Alternatives (the `SqlClient`'s engine, the `HttpClient`, the platform's `BackButton`): the layers leave it
-  out and each
-  entrypoint in `src/entrypoints/` imports the adapter's own module
-  (`#infrastructure/back-button/back-button.browser.ts`,
+  out and the entrypoint, `src/entrypoints/native.ts`, imports the adapter's own module, as a test does its own
+  (`#infrastructure/back-button/back-button.react-native.ts`,
   `#app/children/home/children/products/services/product-list/product-list.sql.ts`), never a module that would
   load the other alternatives too. A missing choice fails the typecheck; a bundle only contains what it uses.
   A service that gains a second adapter leaves its owner's `layer.ts` this way.
-- Shared code never branches on `process.env.NODE_ENV`: environments exist only in the entrypoints.
+- Shared code never branches on `process.env.NODE_ENV` or `Platform.OS`: choices of the platform exist only in the
+  entrypoint and in tests.
 
 ## The infrastructure's services
 

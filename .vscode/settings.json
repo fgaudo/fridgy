@@ -1,17 +1,10 @@
 {
   "editor.defaultFormatter": "dprint.dprint",
-  "tailwindCSS.classFunctions": ["cn"],
-  "tailwindCSS.experimental.classRegex": [
-    ["h\\([^,]+,\\s*\\{[^}]*props:\\s*\\{[^}]*className:\\s*['\"`]([^'\"`]*?)['\"`][^}]*\\}", "([^\\s'\"`]+)"]
-  ],
   "js/ts.tsdk.promptToUseWorkspaceVersion": true,
   "js/ts.experimental.useTsgo": true,
   "js/ts.tsdk.path": "node_modules/typescript",
   "js/ts.preferences.importModuleSpecifierEnding": "js",
   "js/ts.preferences.importModuleSpecifier": "non-relative",
-  "files.associations": {
-    "*.css": "tailwindcss"
-  },
   "editor.codeActionsOnSave": {
     "source.organizeImports.biome": "explicit"
   },

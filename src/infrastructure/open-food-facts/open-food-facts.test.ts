@@ -168,7 +168,7 @@ describe('OpenFoodFacts.fetchProduct', () => {
     expect(Exit.findErrorOption(exit).pipe(Opt.map((error) => error._tag))).toEqual(Opt.some('OpenFoodFactsError'))
   })
 
-  test('asks for the product\'s code with the fields it needs and the app\'s name, without tracing headers', async () => {
+  test('asks for the product\'s code with the fields it needs, as the app it is, without tracing headers', async () => {
     const { requests } = await fetchWith(Effect.succeed(json(found)), '8076800195057', 'it')
     expect(requests.length).toBe(1)
     const [request] = requests
@@ -180,6 +180,7 @@ describe('OpenFoodFacts.fetchProduct', () => {
       app_name: 'fridgy',
       app_version: version,
     })
+    expect(Headers.get(request.headers, 'user-agent')).toEqual(Opt.some(`Fridgy/${version} (fgaudo+fridgy@gmail.com)`))
     expect(Headers.has(request.headers, 'b3')).toBe(false)
     expect(Headers.has(request.headers, 'traceparent')).toBe(false)
   })

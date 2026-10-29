@@ -106,13 +106,16 @@ const iconsCommand = Cli.Command.make(
       try: () => Woff2.decompress(woff2),
       catch: (cause) => new IconsFailed({ cause }),
     })
-    const fonts = resolve('android-rn/app/src/main/assets/fonts')
+    const fonts = resolve('android/app/src/main/assets/fonts')
     yield* fs.makeDirectory(fonts, { recursive: true })
     yield* fs.writeFile(`${fonts}/MaterialSymbolsRounded.ttf`, ttf)
   }),
 )
 
 class AssetsFailed extends Data.TaggedError('AssetsFailed')<{ readonly exitCode: number }> {}
+
+// The generator is Capacitor's, but writes plain Android resources: the launcher icons, and splash images that the
+// app does not draw (`splashColor`), which are removed after it.
 
 const generateAssets = Effect.fn('generateAssets')(function*(background: { light: string; dark: string }) {
   const resolve = yield* root
@@ -136,8 +139,8 @@ const generateAssets = Effect.fn('generateAssets')(function*(background: { light
   }
 }, Effect.scoped)
 
-// From Android 12 the system draws the splash itself, on `windowSplashScreenBackground`: the generator's images
-// show only below it.
+// Android draws the splash itself, in this color: from Android 12 on `windowSplashScreenBackground`, before it on
+// the window's background (`res/values*/styles.xml`).
 const splashColor = (color: string) =>
   `<?xml version="1.0" encoding="utf-8"?>
 <!-- Written by \`bun run update-assets\` from scripts/palette.ts. -->
@@ -158,6 +161,10 @@ const assetsCommand = Cli.Command.make(
     const outcome = yield* Effect.exit(generateAssets({ light: surface(false), dark: surface(true) }))
     yield* fs.writeFileString(manifest, manifestXml)
     yield* outcome
+    const res = resolve('android/app/src/main/res')
+    const splashFolders = (yield* fs.readDirectory(res)).filter((name) => /^drawable-(port|land|night)/.test(name))
+    yield* Effect.forEach(splashFolders, (name) => fs.remove(`${res}/${name}`, { recursive: true }))
+    yield* fs.remove(`${res}/drawable/splash.png`, { force: true })
     yield* fs.makeDirectory(resolve('android/app/src/main/res/values-night'), { recursive: true })
     yield* fs.writeFileString(
       resolve('android/app/src/main/res/values/splash.generated.xml'),

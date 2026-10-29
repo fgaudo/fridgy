@@ -1,5 +1,10 @@
 # Design: editing a product
 
+> **Written for the web build.** This design predates the move to React Native (2026-10-29). What it decides of
+> the program, its states, messages and services stands; what it says of the view (snabbdom, `styles.css`, the
+> WebView, Capacitor, the browser) describes the web build, and is drawn again on React Native as the `views`
+> skill says.
+
 Implemented on 2026-10-28, and seen on Android in the emulator the same day (see "Verified, and not").
 The code is the page `src/app/children/edit-product/` with its services, the rules of the date entry in
 `src/libs/dates/`, the tap on a row in `src/app/children/home/children/products/`, `ProductStore.update` and

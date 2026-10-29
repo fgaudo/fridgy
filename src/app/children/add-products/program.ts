@@ -374,9 +374,9 @@ const productOfStep = (state: State & { _tag: 'Naming' | 'Dating' }) =>
 // Refreshed often, so that the creation date is close to when the user adds the product.
 const clock = every('1 second', (now) => Message.TimeChanged({ now }))
 
-// The sum of the choreography's phases in `src/styles.css` (`docs/product-flight.md`): medium-2, long-2, short-4
-// and medium-1. The view's keyframes must fit in it, as its elements are removed when it ends. Under another
-// page, the timer waits for the page to be back.
+// The sum of the choreography's phases (`docs/product-flight.md`): medium-2, long-2, short-4 and medium-1. The
+// view's motion must fit in it, as what it draws is removed when it ends. Under another page, the timer waits for
+// the page to be back.
 const ACKNOWLEDGING_DURATION = Duration.millis(300 + 500 + 200 + 250)
 
 /** Ends once the arrival of the product created at `at` has been shown. */

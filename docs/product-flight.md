@@ -1,5 +1,10 @@
 # Design: the product added enters the fridge
 
+> **Written for the web build.** This design predates the move to React Native (2026-10-29). What it decides of
+> the program, its states, messages and services stands; what it says of the view (snabbdom, `styles.css`, the
+> WebView, Capacitor, the browser) describes the web build, and is drawn again on React Native as the `views`
+> skill says.
+
 Implemented on 2026-10-27, in `src/app/children/add-products` and `src/styles.css`; seen in the emulator on
 2026-10-28 (see "Verified, and not"). Read [`AGENTS.md`](../AGENTS.md), the `views` and `add-program` skills and
 the "Guide" of `node_modules/@fgaudo/effect-tea/README.md` before changing it.

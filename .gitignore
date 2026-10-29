@@ -3,8 +3,6 @@ node_modules
 
 # output
 out
-dist
-dist-dev
 *.tgz
 
 # code coverage
@@ -35,11 +33,11 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 .DS_Store
 
 
-# The React Native prototype
-android-rn/.gradle/
-android-rn/.kotlin/
-android-rn/build/
-android-rn/app/build/
-android-rn/app/.cxx/
-android-rn/local.properties
-android-rn/app/src/main/assets/fonts/MaterialSymbolsRounded.ttf
+# Android: Gradle's outputs, and the icon font that `bun run update-icons` writes
+android/.gradle/
+android/.kotlin/
+android/build/
+android/app/build/
+android/app/.cxx/
+android/local.properties
+android/app/src/main/assets/fonts/MaterialSymbolsRounded.ttf
