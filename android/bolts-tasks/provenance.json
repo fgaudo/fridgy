@@ -1,0 +1,22 @@
+{
+  "repository": "https://github.com/BoltsFramework/Bolts-Android",
+  "commit": "5465bcc3bbea3350dbb2affb4511a5726efb321e",
+  "committed": "2018-11-26T17:46:22Z",
+  "subject": "Update to MIT license (#150)",
+  "files": {
+    "LICENSE": "b96dcb0480a0b0be0727976e5202a1e7b23edc3f",
+    "src/main/java/bolts/AggregateException.java": "19638abeca455bc946d971836c3199a041a7ef91",
+    "src/main/java/bolts/AndroidExecutors.java": "81e767080a9bfb5913aa18320bd539cbd5606ef3",
+    "src/main/java/bolts/BoltsExecutors.java": "4173365fc3d36090c42657e7229f0861c97c02db",
+    "src/main/java/bolts/CancellationToken.java": "1913a3a6109cf8e1381f487c435c768e01752fd0",
+    "src/main/java/bolts/CancellationTokenRegistration.java": "4be4c81aa731abbb5194be85306bf7b1b37544a6",
+    "src/main/java/bolts/CancellationTokenSource.java": "2fc1688e6d26a7a4437098352895f6cf7af0d6e7",
+    "src/main/java/bolts/Capture.java": "0ebad3015544bbc6a99932c7ac5191b49e308f1c",
+    "src/main/java/bolts/Continuation.java": "f383080869ff8cf25e1720b6e8077b01b50223c0",
+    "src/main/java/bolts/ExecutorException.java": "03a915e6140659918d74eba807dbdb7dfb2947cb",
+    "src/main/java/bolts/Task.java": "30871af207b28580ed72c7f618d2e7dbcceabc8c",
+    "src/main/java/bolts/TaskCompletionSource.java": "402bfbeb90ec7a404de17450db19d46120d18fc9",
+    "src/main/java/bolts/UnobservedErrorNotifier.java": "7cbb5fd344af90d0e2cdb29d57ad524acdf04115",
+    "src/main/java/bolts/UnobservedTaskException.java": "18872c4e7fe66cef0c6993d52f6e9a7cb3c88334"
+  }
+}
