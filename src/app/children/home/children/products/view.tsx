@@ -11,11 +11,13 @@ import type { ItemSelection, ListModel, Message, Model, Presence, ProductModel, 
 type Look = 'Plain' | 'Error'
 
 /**
- * The avatar's size: 40dp, or the height of the badge's two lines when the user's font size is larger. The WebView
- * scales text but no length, except `lh`: the two lines, with the ascenders and descenders that overhang their line
- * boxes (`leading-none`), are twice the avatar's own line (the body's size).
+ * The avatar's size: 40dp, or more when the user's font size makes the badge's two lines, the day and the month,
+ * taller than the disc holds: the font size scales text and no length, and small text more than large.
  */
-const avatarSize = 'aspect-square h-[max(2.5rem,2lh)] shrink-0 rounded-full leading-none'
+const avatarSize = cn(
+  'aspect-square h-[max(2.5rem,calc((var(--text-title-small)+var(--text-label-small))*1.3))]',
+  'shrink-0 rounded-full leading-none',
+)
 
 /** A disc, the list item's leading avatar, in the colors of a role's container. */
 const disc = (colors: string, content: ReadonlyArray<VNode>) => (

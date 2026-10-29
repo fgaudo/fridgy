@@ -192,7 +192,7 @@ const progress = (
   <span
     props={{
       className: cn(
-        'material-symbols-rounded pointer-events-none absolute top-1 right-1 flex h-12 w-12 items-center',
+        'material-symbols-rounded pointer-events-none absolute top-1/2 right-1 flex h-12 w-12 -translate-y-1/2 items-center',
         'justify-center text-primary',
       ),
       title: 'Looking up the product',
@@ -211,7 +211,7 @@ const nameField = (shown: NameShown, activity: NameActivity, isReturning: boolea
   const { on, onValue } = handlers(dispatch)
   const maybeClearName = activity._tag === 'Editing' ? activity.controls.maybeClearName : Opt.none()
   return (
-    <div key={`name-${shown.nameKey}`} props={{ className: 'flex flex-col gap-1' }}>
+    <div key={`name-${shown.nameKey}`} props={{ className: 'label-room flex flex-col gap-1' }}>
       <div props={{ className: 'relative' }}>
         <label props={{ className: 'block' }}>
           <input
@@ -223,7 +223,7 @@ const nameField = (shown: NameShown, activity: NameActivity, isReturning: boolea
               disabled: activity._tag === 'Adding' || activity._tag === 'UnderDate' || activity._tag === 'LookingUp',
               placeholder: ' ',
               className: cn(
-                'peer h-14 w-full rounded-extra-small border border-outline bg-transparent pl-4',
+                'peer min-h-14 w-full py-3.75 rounded-extra-small border border-outline bg-transparent pl-4',
                 'text-body-large text-on-surface caret-primary outline-none inset-ring-primary',
                 'placeholder:text-transparent hover:border-on-surface focus:border-primary focus:inset-ring-1',
                 'disabled:border-on-surface/12 disabled:text-on-surface/38',
@@ -253,7 +253,7 @@ const nameField = (shown: NameShown, activity: NameActivity, isReturning: boolea
               attrs={{ 'aria-label': 'Clear name' }}
               props={{
                 className: cn(
-                  'state-layer material-symbols-rounded absolute top-1 right-1 flex h-12 w-12 items-center',
+                  'state-layer material-symbols-rounded absolute top-1/2 right-1 flex h-12 w-12 -translate-y-1/2 items-center',
                   'justify-center rounded-full text-on-surface-variant',
                 ),
                 title: 'Clear name',
@@ -316,7 +316,7 @@ const nameStep = (
     >
       {appBar('Add products', 'close', 'Close', maybeClose, dispatch)}
       {/* Fits the reference screen; scrolls when the screen is shorter (the keyboard open, a large font). */}
-      <div props={{ className: cn('flex flex-1 flex-col gap-3 overflow-y-auto pt-2', stepPadding) }}>
+      <div props={{ className: cn('flex flex-1 flex-col gap-3 overflow-y-auto', stepPadding) }}>
         {nameField(shown, activity, Opt.isSome(maybeEntering), dispatch)}
         {room(fridge(maybeEntering), scanFab(Opt.flatMap(controls, ({ maybeScan }) => maybeScan), dispatch))}
         {button(
@@ -376,7 +376,7 @@ const orderSegments = (shown: DateShown, activity: DateActivity, dispatch: Dispa
     )
   }
   return (
-    <div props={{ className: 'flex h-10' }}>
+    <div props={{ className: 'flex min-h-10' }}>
       {Match.valueTags(shown.order, { Unknown: () => [], Known: ({ choices }) => choices.map(segment) })}
     </div>
   )
@@ -392,7 +392,7 @@ const dateField = (shown: DateShown, activity: DateActivity) => {
   // The margin above is the floating label's upper half, which Material's own field reserves.
   return (
     <div props={{ className: 'flex flex-col' }}>
-      <label props={{ className: 'relative mt-2 block' }}>
+      <label props={{ className: 'label-room relative block' }}>
         <input
           props={{
             type: 'text',
@@ -402,7 +402,7 @@ const dateField = (shown: DateShown, activity: DateActivity) => {
             placeholder: shown.order._tag === 'Known' ? placeholders[shown.order.order] : ' ',
             value: shown.digits,
             className: cn(
-              'peer h-14 w-full rounded-extra-small border bg-transparent px-4 text-body-large text-on-surface',
+              'peer min-h-14 w-full py-3.75 rounded-extra-small border bg-transparent px-4 text-body-large text-on-surface',
               'caret-transparent outline-none placeholder:text-transparent focus:inset-ring-1',
               'focus:placeholder:text-on-surface-variant disabled:border-on-surface/12 disabled:text-on-surface/38',
               look === 'Wrong'

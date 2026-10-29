@@ -8,64 +8,83 @@
 @import "./palette.generated.css";
 
 @theme {
+  /*
+   * Each size is the user's font size applied to its sp, as Android applies it (`--sp-<size>`, from the app's
+   * `TypeScale`, `docs/font-size.md`), or the sp itself where nothing sets it (a browser). A line height grows with
+   * its size, as Android's does.
+   */
   --text-*: initial;
-  --text-display-large: 3.5625rem;
-  --text-display-large--line-height: 4rem;
+  --text-display-large: var(--sp-57, 3.5625rem);
+  --text-display-large--line-height: calc(var(--text-display-large) * 64 / 57);
   --text-display-large--letter-spacing: -0.015625rem;
-  --text-display-medium: 2.8125rem;
-  --text-display-medium--line-height: 3.25rem;
-  --text-display-small: 2.25rem;
-  --text-display-small--line-height: 2.75rem;
-  --text-headline-large: 2rem;
-  --text-headline-large--line-height: 2.5rem;
-  --text-headline-medium: 1.75rem;
-  --text-headline-medium--line-height: 2.25rem;
-  --text-headline-small: 1.5rem;
-  --text-headline-small--line-height: 2rem;
-  --text-title-large: 1.375rem;
-  --text-title-large--line-height: 1.75rem;
-  --text-title-medium: 1rem;
-  --text-title-medium--line-height: 1.5rem;
+  --text-display-medium: var(--sp-45, 2.8125rem);
+  --text-display-medium--line-height: calc(
+    var(--text-display-medium) * 52 / 45
+  );
+  --text-display-small: var(--sp-36, 2.25rem);
+  --text-display-small--line-height: calc(var(--text-display-small) * 44 / 36);
+  --text-headline-large: var(--sp-32, 2rem);
+  --text-headline-large--line-height: calc(
+    var(--text-headline-large) * 40 / 32
+  );
+  --text-headline-medium: var(--sp-28, 1.75rem);
+  --text-headline-medium--line-height: calc(
+    var(--text-headline-medium) * 36 / 28
+  );
+  --text-headline-small: var(--sp-24, 1.5rem);
+  --text-headline-small--line-height: calc(
+    var(--text-headline-small) * 32 / 24
+  );
+  --text-title-large: var(--sp-22, 1.375rem);
+  --text-title-large--line-height: calc(var(--text-title-large) * 28 / 22);
+  --text-title-medium: var(--sp-16, 1rem);
+  --text-title-medium--line-height: calc(var(--text-title-medium) * 24 / 16);
   --text-title-medium--letter-spacing: 0.009375rem;
   --text-title-medium--font-weight: 500;
-  --text-title-small: 0.875rem;
-  --text-title-small--line-height: 1.25rem;
+  --text-title-small: var(--sp-14, 0.875rem);
+  --text-title-small--line-height: calc(var(--text-title-small) * 20 / 14);
   --text-title-small--letter-spacing: 0.00625rem;
   --text-title-small--font-weight: 500;
-  --text-body-large: 1rem;
-  --text-body-large--line-height: 1.5rem;
+  --text-body-large: var(--sp-16, 1rem);
+  --text-body-large--line-height: calc(var(--text-body-large) * 24 / 16);
   --text-body-large--letter-spacing: 0.03125rem;
-  --text-body-medium: 0.875rem;
-  --text-body-medium--line-height: 1.25rem;
+  --text-body-medium: var(--sp-14, 0.875rem);
+  --text-body-medium--line-height: calc(var(--text-body-medium) * 20 / 14);
   --text-body-medium--letter-spacing: 0.015625rem;
-  --text-body-small: 0.75rem;
-  --text-body-small--line-height: 1rem;
+  --text-body-small: var(--sp-12, 0.75rem);
+  --text-body-small--line-height: calc(var(--text-body-small) * 16 / 12);
   --text-body-small--letter-spacing: 0.025rem;
-  --text-label-large: 0.875rem;
-  --text-label-large--line-height: 1.25rem;
+  --text-label-large: var(--sp-14, 0.875rem);
+  --text-label-large--line-height: calc(var(--text-label-large) * 20 / 14);
   --text-label-large--letter-spacing: 0.00625rem;
   --text-label-large--font-weight: 500;
-  --text-label-medium: 0.75rem;
-  --text-label-medium--line-height: 1rem;
+  --text-label-medium: var(--sp-12, 0.75rem);
+  --text-label-medium--line-height: calc(var(--text-label-medium) * 16 / 12);
   --text-label-medium--letter-spacing: 0.03125rem;
   --text-label-medium--font-weight: 500;
-  --text-label-small: 0.6875rem;
-  --text-label-small--line-height: 1rem;
+  --text-label-small: var(--sp-11, 0.6875rem);
+  --text-label-small--line-height: calc(var(--text-label-small) * 16 / 11);
   --text-label-small--letter-spacing: 0.03125rem;
   --text-label-small--font-weight: 500;
   /*
    * Material 3 Expressive's emphasized styles, for what a screen puts forward (an app bar's title, the product a
    * snackbar names).
    */
-  --text-body-medium-emphasized: 0.875rem;
-  --text-body-medium-emphasized--line-height: 1.25rem;
+  --text-body-medium-emphasized: var(--sp-14, 0.875rem);
+  --text-body-medium-emphasized--line-height: calc(
+    var(--text-body-medium-emphasized) * 20 / 14
+  );
   --text-body-medium-emphasized--letter-spacing: 0.015625rem;
   --text-body-medium-emphasized--font-weight: 500;
-  --text-headline-medium-emphasized: 1.75rem;
-  --text-headline-medium-emphasized--line-height: 2.25rem;
+  --text-headline-medium-emphasized: var(--sp-28, 1.75rem);
+  --text-headline-medium-emphasized--line-height: calc(
+    var(--text-headline-medium-emphasized) * 36 / 28
+  );
   --text-headline-medium-emphasized--font-weight: 500;
-  --text-title-large-emphasized: 1.375rem;
-  --text-title-large-emphasized--line-height: 1.75rem;
+  --text-title-large-emphasized: var(--sp-22, 1.375rem);
+  --text-title-large-emphasized--line-height: calc(
+    var(--text-title-large-emphasized) * 28 / 22
+  );
   --text-title-large-emphasized--font-weight: 500;
   --radius-*: initial;
   --radius-extra-small: 0.25rem;
@@ -132,8 +151,11 @@
  * The system's fonts: Android has a family for every script, chosen by the text, and the forms of Chinese
  * characters by the document's language (`lang` on <html>, set from the device's). The app ships only its icons.
  */
+/* Text that names no role is body-large, the browser's own size, so that it follows the user's font size too. */
 body {
   font-family: system-ui, sans-serif;
+  font-size: var(--text-body-large);
+  line-height: var(--text-body-large--line-height);
 }
 
 /* A view marks itself `scroll-locked` while a modal or a menu covers it. */
@@ -229,7 +251,8 @@ html {
  * transparent then, and keeps its size: picking a chip moves none.
  */
 @utility filter-chip {
-  @apply state-layer flex h-8 shrink-0 items-center gap-2 rounded-small border border-outline-variant pr-4 pl-2;
+  @apply state-layer flex min-h-8 shrink-0 items-center gap-2 rounded-small border border-outline-variant py-1.25 pr-4;
+  @apply pl-2;
   @apply text-label-large whitespace-nowrap text-on-surface-variant;
   &[aria-pressed="true"] {
     @apply border-transparent bg-secondary-container text-on-secondary-container;
@@ -242,9 +265,17 @@ html {
   }
 }
 
+/*
+ * Above an outlined text field, the room its floating label takes over the border: half the label's line, so that a
+ * large font keeps it clear of what is above.
+ */
+@utility label-room {
+  margin-top: calc(var(--text-body-small--line-height) / 2);
+}
+
 /* A segment of Material's segmented button, in a row of them. The current one (`aria-pressed`) is filled. */
 @utility segment {
-  @apply state-layer -ml-px flex h-10 flex-1 items-center justify-center gap-2 border border-outline;
+  @apply state-layer -ml-px flex min-h-10 flex-1 items-center justify-center gap-2 border border-outline py-2.25;
   @apply text-label-large text-on-surface transition-colors first:ml-0 first:rounded-l-full last:rounded-r-full;
   &[aria-pressed="true"] {
     @apply z-10 bg-secondary-container text-on-secondary-container;
