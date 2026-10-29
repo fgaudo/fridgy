@@ -162,8 +162,8 @@ folders; "page" names a role in the UI, kept by the root's state, not a kind of 
   The files whose name their tool fixes are the exception: `android/app/capacitor.build.gradle` and
   `android/capacitor.settings.gradle` (by `bunx cap sync`), the launcher icons and the splash screens (by
   `bun run update-assets`).
-- Format only the files you changed (`bunx dprint fmt <files>`): a bare `dprint fmt` rewrites Android
-  resources and untouched code.
+- Format only the files you changed (`bunx dprint fmt <files>`); CI checks the whole tree (`bunx dprint check`),
+  which leaves out the Android resources and `assets/`.
 - Comments only for what the code cannot say: a reason, an invariant the types do not show, a platform
   behaviour relied upon, a choice that would look like a mistake. Never a repetition of names, of the next
   line, of a type's shape or of this file. A design (a choreography, a layout, why a widget is Material's) is

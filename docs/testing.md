@@ -162,7 +162,8 @@ and after the first release of each of those. Its result is written in the commi
   Playwright: today, typed with its year, is offered, and the product then reads "Expires today". The run fails
   on a bundle whose entrypoint provides UTC as the zone.
 - CI is `.github/workflows/checks.yml`: on every push and pull request, an audit of the dependencies for known
-  vulnerabilities (`bun audit`), the tests, the build, the floor check and the run above, on Ubuntu.
+  vulnerabilities (`bun audit`), the tests, the lint, the formatting (`bunx dprint check`), the build, the floor
+  check and the run above, on Ubuntu.
 - Verified on 2026-10-29, in a browser at 360×720: each failure snackbar of "The failure snackbars, by hand in
   a browser" but the gone product's, 16dp above the FAB or the docked button, which stays put. On the page that
   edits a product, `Couldn't save the date order` covers the keypad's bottom row, and the order picked stays

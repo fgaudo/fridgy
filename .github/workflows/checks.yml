@@ -25,6 +25,7 @@ jobs:
       - run: bun run typecheck
       - run: bun run test
       - run: bun run lint
+      - run: bunx dprint check
       - run: bun run build
       - run: bun run check-floor
       - run: bunx playwright install --with-deps chromium
