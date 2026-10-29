@@ -57,6 +57,23 @@ check before a release and after an upgrade of Capacitor, Effect, Tailwind or `@
 and the CSS features the comment lists have no check: when `minWebViewVersion` moves, re-derive the list from
 what the app uses, on caniuse.
 
+The floor follows the app, never the other way round. A change is designed against the WebView phones have
+today, not against the floor: when an API or a CSS feature the floor lacks would make it simpler, faster or
+clearer, the agent proposes it, with the version it needs and what it replaces, and the author decides. The
+floor then moves, within two bounds:
+
+- up to the version released at least six months before the app's release. The WebView follows Chrome's
+  stable releases, one every four weeks, and on a phone with the Play Store it converges on a new one in
+  weeks: six months cover the phones that update slowly and leave a feature's first bugs behind. A newer
+  feature is still proposed, with the note that the floor waits for it.
+- never past the last version that `minSdkVersion` still receives. Chrome drops old Android versions in steps
+  (Android 7 stopped at 119, Android 8 and 9 at 138), and a phone left behind keeps that version for good: a
+  floor above it would publish, to phones the Play Store still offers the app to, an app that only shows
+  `error.html`. Either the floor stops there, or `minSdkVersion` rises with it.
+
+When the floor moves, so do the number, the comment's list (re-derived on caniuse), the edition in
+`check-floor`, `README.md` and this file.
+
 `compileSdkVersion` and `targetSdkVersion`, the Android Gradle Plugin and Gradle are those of the Android
 template of the Capacitor release in use (`assets/android-template.tar.gz` in `@capacitor/cli`): API 37 for
 Capacitor 9. They move only with an upgrade of Capacitor, checked in the emulator on the new target; an upgrade

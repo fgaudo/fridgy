@@ -27,6 +27,10 @@ listed under "Known gaps" in `AGENTS.md`, not here.
   - the residual risk is accepted. An API or a CSS feature the WebView lacks fails only where it is used (a
     list that does not snap back, a shadow that is not drawn): the comment on `minWebViewVersion` lists what
     needs the highest version, and that list is re-derived when the number moves. No tool checks it.
+  - the number follows the app, not the other way round. A change is designed against the WebView phones have
+    today, and a feature the floor lacks is proposed, with the version it needs, for the author to decide; the
+    floor moves within the bounds the `android-release` skill gives (six months behind the release, never past
+    the last version `minSdkVersion` receives).
 - **The lowest Android is tested only when what differs between Android versions changes.** From Android 10
   to the target, the web platform is the same WebView, from the same store; what differs is the system: the
   insets, the back dispatcher, the permissions, the backup. Those change with `minSdkVersion`, with Capacitor

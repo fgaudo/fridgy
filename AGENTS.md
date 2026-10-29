@@ -107,8 +107,14 @@ folders; "page" names a role in the UI, kept by the root's state, not a kind of 
   (`NormalizedString.fromString`). Export only what is used, plus a library module's intended API.
 - **Only what can be tested is supported.** `minSdkVersion`, the target SDK and the reference screen (320dp
   wide, 640dp between the system bars, which every page fits without scrolling) move only as the
-  `android-release` skill says, checked in the emulator first, with the docs. `minWebViewVersion` is derived
-  from what the bundle uses and checked on the bundle, never in the emulator: `docs/testing.md` says why.
+  `android-release` skill says, checked in the emulator first, with the docs.
+- **The WebView floor follows the app, never the other way round.** `minWebViewVersion` is derived from what
+  the bundle uses and checked on the bundle, never in the emulator (`docs/testing.md` says why), and it is no
+  constraint on a change: a change is designed against the WebView phones have today. When an API or a CSS
+  feature the floor lacks would make it simpler, faster or clearer, propose it, with the version it needs and
+  what it replaces, and let the author decide. The floor then moves as the `android-release` skill says: up to
+  the version released six months before the app's release, and never past the last one `minSdkVersion` still
+  receives.
 
 ## Tests
 
