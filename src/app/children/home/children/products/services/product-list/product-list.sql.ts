@@ -16,7 +16,10 @@ export const layer = Layer.effect(
   Effect.gen(function*() {
     const { withExpiration: { from, columns, tables } } = yield* ProductStore
     const sql = yield* SqlClient.SqlClient
-    /** Every stored product as the snapshot it was stored from, with its id: those that expire first, the soonest first. */
+    /**
+     * Every stored product as the snapshot it was stored from, with its id: those that expire first, the soonest
+     * first. The id breaks ties, since SQLite keeps no order among equal keys and the rows would move between reads.
+     */
     const readAll = SqlSchema.findAll({
       Request: Schema.Void,
       Result: Schema.Struct({
@@ -33,7 +36,7 @@ export const layer = Layer.effect(
             ${columns.creationDate} AS maybeCreationDate,
             ${columns.expirationDate} AS maybeExpirationDate
           ${from}
-          ORDER BY ${columns.expirationDate} IS NULL, ${columns.expirationDate}
+          ORDER BY ${columns.expirationDate} IS NULL, ${columns.expirationDate}, ${columns.id}
         `,
     })()
     const changes = Source.fromStream(

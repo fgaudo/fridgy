@@ -57,6 +57,21 @@ const isExpiringFirst = (products: ReadonlyArray<StoredProduct>) =>
     })
   })
 
+/** Products with the same expiration, or with none, are listed in the order they were written, `ids`. */
+const isWrittenOrderAmongEquals = (products: ReadonlyArray<StoredProduct>, ids: ReadonlyArray<string>) => {
+  const writtenAt = (product: StoredProduct) => ids.indexOf(Opt.getOrElse(product.maybeId, () => ''))
+  return products.every((current, index) => {
+    const next = products[index + 1]
+    if (next === undefined || !Equal.equals(current.maybeExpirationDate, next.maybeExpirationDate)) return true
+    return writtenAt(current) !== -1 && writtenAt(current) < writtenAt(next)
+  })
+}
+
+// Products drawn from a few, so that some share an expiration.
+const withEqualExpirations = fc.array(ProductArbitrary.arbitrary, { minLength: 1, maxLength: 3 }).chain((few) =>
+  fc.array(fc.constantFrom(...few), { maxLength: 8 })
+)
+
 export const productListContract = <R>(
   name: string,
   adapter: () => Layer.Layer<ProductList | R>,
@@ -76,13 +91,14 @@ export const productListContract = <R>(
         }),
       ))
 
-    test('the list is ordered by expiration, those that never expire last', () =>
+    test('the list is ordered by expiration, those that never expire last, and by writing among equals', () =>
       checkOnFreshLayer(
         adapter,
-        fc.array(ProductArbitrary.arbitrary, { maxLength: 8 }),
+        fc.oneof(fc.array(ProductArbitrary.arbitrary, { maxLength: 8 }), withEqualExpirations),
         Effect.fnUntraced(function*(products) {
-          yield* Effect.forEach(products, add)
-          return isExpiringFirst(yield* list)
+          const ids = yield* Effect.forEach(products, add)
+          const listed = yield* list
+          return isExpiringFirst(listed) && isWrittenOrderAmongEquals(listed, ids)
         }),
       ))
 
