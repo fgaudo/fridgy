@@ -149,7 +149,8 @@ folders; "page" names a role in the UI, kept by the root's state, not a kind of 
 - Nothing deprecated, of any dependency, in code, tests or scripts: use what the deprecation names instead, and
   replace a use found in passing.
 - A file a tool writes is never edited by hand: change what it is made from and run the tool again. Such a file
-  is named `<name>.generated.<ext>` (`src/palette.generated.ts`, by `bun run update-palette`;
+  is named `<name>.generated.<ext>` (`src/palette.generated.ts` and the Android project's `palette.generated.xml`,
+  by `bun run update-palette`;
   the About page's `licenses.npm.generated.json` and `licenses.android.generated.json`, by `bun run update-licenses`
   and `bun run update-android-licenses`), and a new one is too; dprint and Biome skip them.
   The files whose name their tool fixes are the exception: the launcher icons (by `bun run update-assets`), and
@@ -178,8 +179,8 @@ folders; "page" names a role in the UI, kept by the root's state, not a kind of 
   (a page's entrance, the menu, a row arriving or leaving, the product flying into the fridge of
   `docs/product-flight.md`) are to be designed again on React Native, and the product added is told by a line of
   text meanwhile. Home's viewport is fixed (`viewport.fixed.ts`: the bar never collapses, the FAB keeps its label),
-  the scanner is unavailable (`scanner.unavailable.ts`, until a camera is drawn natively), the theme is the light
-  one only (`color` in `src/styles.ts`), and a crash leaves the page as it was, with no screen to restart from.
+  the scanner is unavailable (`scanner.unavailable.ts`, until a camera is drawn natively), and a crash leaves the
+  page as it was, with no screen to restart from.
 - The freshness of a product is drawn in steps, the nearest role (`freshnessColors`, in Home's `products`), where
   the web build mixed the roles: whether that is enough is the author's call.
 - A debug build takes about five seconds on the emulator before its JavaScript runs; a release, a tenth of a

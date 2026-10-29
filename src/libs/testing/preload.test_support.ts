@@ -6,6 +6,7 @@ mock.module('react-native', () => ({
   ActivityIndicator: 'ActivityIndicator',
   BackHandler: { addEventListener: () => ({ remove: () => {} }) },
   Linking: { openURL: () => Promise.resolve() },
+  PlatformColor: (resource: string) => resource,
   Pressable: 'Pressable',
   ScrollView: 'ScrollView',
   StatusBar: { currentHeight: 24 },

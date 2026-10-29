@@ -98,7 +98,9 @@ native module.
 
 The pass, on both reference screens of "Supported screen sizes":
 
-- the app starts: the splash on the surface's color, then Home, in the light theme (the dark one is not drawn yet);
+- the app starts: the splash on the surface's color, then Home, in the light and the dark theme
+  (`adb shell cmd uimode night yes`), the system bars' icons readable on both; a change of the theme while a page is
+  open redraws it in the other scheme, on the same page;
 - the system bars: the app bars sit below the top inset and the content above the navigation bar, on every
   page;
 - the back button, on every page: with something to close it closes it, with the keyboard open it closes
@@ -192,7 +194,7 @@ Play Store, as an update: its `versionCode` over 1.0.8's 10. Decided, and to be 
 - `minSdkVersion` goes from 23 to 29 ("Supported Android versions"): phones on Android 6 to 9 keep 1.0.8 and
   get no update, which the Play Console reports.
 - **It ships on React Native**, not on the WebView the app was first written for (decided on 2026-10-29). The
-  items of "Known gaps" in `AGENTS.md` that concern the move (motion, the scanner, the dark theme, Home's viewport,
+  items of "Known gaps" in `AGENTS.md` that concern the move (motion, the scanner, Home's viewport,
   a screen after a crash) are settled or accepted by the author before it.
 - **The vibrations are felt by the author on a phone** (`docs/haptics.md`: whether each pattern feels like the
   constant it stands for); the emulator only shows their delivery.

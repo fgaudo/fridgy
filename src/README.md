@@ -42,9 +42,10 @@ src/
 │                        sources, timers (a zoned clock, a one-shot timer), branded numbers, barcodes (the
 │                        expansion of a UPC-E), dates (a day of the calendar, with no zone; the orders of a date's
 │                        digits, the days they name, the rules of typing them on a keypad), test helpers, …
-├─ palette.generated.ts  the Material 3 color roles, written by `bun run update-palette`
-└─ styles.ts             Material's look, which every view uses (`#styles`): the color roles of the scheme in
-                         use, the type scale, shapes, elevation and the icons
+├─ palette.generated.ts  the names of Material 3's color roles, whose values, per theme, are Android's resources;
+│                        both written by `bun run update-palette`
+└─ styles.ts             Material's look, which every view uses (`#styles`): the color roles, as Android's
+                         resources of the theme in use, the type scale, shapes, elevation and the icons
 ```
 
 The runtime of the Elm architecture is a library, an npm dependency:

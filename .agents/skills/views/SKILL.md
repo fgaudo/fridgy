@@ -81,11 +81,14 @@ has a small bar, 64dp. A page is laid out for the reference screen, 320dp wide a
 docks a button at the bottom scrolls (`ScrollView`) when the screen is shorter than its content, as the keyboard or
 a large font makes it. Everything is in `src/styles.ts` (`#styles`):
 
-- colors are Material's roles (`color.primaryContainer`; `src/palette.generated.ts`, generated from the key colors
-  in `scripts/palette.ts`: change those and run `bun run update-palette`, never the generated file). What is drawn
-  on a role takes its `on` role (`primaryContainer` under `onPrimaryContainer`); dimmed text is
-  `onSurfaceVariant`; an opacity only where Material sets one (a disabled control's content, 38%, its container,
-  12%). A view names the role and never a hex;
+- colors are Material's roles (`color.primaryContainer`), Android's color resources of both schemes
+  (`palette.generated.xml` in `values/` and `values-night/`), which Android picks by the system's theme, named by
+  `PlatformColor`. They are generated from the key colors in `scripts/palette.ts`: change those and run
+  `bun run update-palette`, never the generated files. What is drawn on a role takes its `on` role
+  (`primaryContainer` under `onPrimaryContainer`); dimmed text is `onSurfaceVariant`; a disabled control's content
+  is `disabledContent` and its container `disabledContainer` (on-surface at 38% and 12%, Material's). A view names
+  the role and never a hex or a scheme: a change of the system's theme recreates the activity, which draws the same
+  model again in the other scheme;
 - text sizes are the type scale (`type.titleMedium`, `type.bodySmall`, `type.labelLarge`), in sp, which Android
   scales with the user's font size; radii the shape scale (`shape.medium`, `shape.full`); shadows the elevation
   levels (`elevation.level3`, a FAB's). A box that holds text has a minimum height and Material's padding, never a

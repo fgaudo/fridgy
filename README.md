@@ -76,7 +76,7 @@ is tested, and why a release is checked where it is, in [`docs/testing.md`](docs
 | `bunx dprint fmt <files>`         | Format the files you changed; CI checks the whole tree with `bunx dprint check`                         |
 | `bun run update-licenses`         | Regenerate the About page's list of the JavaScript's packages, from Metro's bundle                      |
 | `bun run update-android-licenses` | Regenerate its list of the Android libraries, with Gradle                                               |
-| `bun run update-palette`          | Regenerate `src/palette.generated.ts`, the colors, from the key colors in `scripts/palette.ts`          |
+| `bun run update-palette`          | Regenerate the colors of both themes, Android's resources and their names, from `scripts/palette.ts`    |
 | `bun run update-icons`            | Write the Material Symbols font into the Android project's assets, as TrueType                          |
 | `bun run update-assets`           | Regenerate the Android launcher icons and the splash's color from `assets/logo.svg` and `logo-dark.svg` |
 

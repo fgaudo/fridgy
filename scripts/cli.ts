@@ -11,7 +11,7 @@ import * as LicenseChecker from 'license-checker-rseidelsohn'
 import * as Woff2 from 'wawoff2'
 import { Entries } from '#app/children/about/services/licenses/licenses.bundled.ts'
 import * as Licenses from './licenses.ts'
-import { paletteModule, surface } from './palette.ts'
+import { colorResources, paletteModule, surface } from './palette.ts'
 
 const root = Effect.gen(function*() {
   const path = yield* Path.Path
@@ -169,6 +169,10 @@ const paletteCommand = Cli.Command.make(
     const resolve = yield* root
     const fs = yield* FS.FileSystem
     yield* fs.writeFileString(resolve('src/palette.generated.ts'), paletteModule())
+    const res = resolve('android/app/src/main/res')
+    yield* fs.makeDirectory(`${res}/values-night`, { recursive: true })
+    yield* fs.writeFileString(`${res}/values/palette.generated.xml`, colorResources(false))
+    yield* fs.writeFileString(`${res}/values-night/palette.generated.xml`, colorResources(true))
   }),
 )
 

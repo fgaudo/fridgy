@@ -1,14 +1,17 @@
 // Material 3: the color roles of `palette.generated.ts`, and here its type scale, shapes and elevation, with its
 // icons. Views use only these, as Material's components do: never a hex, a font size or a radius of their own.
 import { createElement, type ReactNode } from 'react'
-import { type ColorValue, StyleSheet, Text, type TextStyle } from 'react-native'
-import { light } from './palette.generated.ts'
+import { type ColorValue, PlatformColor, StyleSheet, Text, type TextStyle } from 'react-native'
+import { roles } from './palette.generated.ts'
 
 /**
- * The light scheme only, for now. The dark one waits for the system's scheme to reach the views as a fact of the
- * platform, as the back button does.
+ * Each role as Android's color resource, which holds a value per scheme: Android picks the system's theme, and a
+ * change of it recreates the activity, which draws the views again in the other scheme. A view names a role, never
+ * a scheme; the disabled roles are Material's, on-surface at 38% (`disabledContent`) and 12% (`disabledContainer`).
  */
-export const color = light
+export const color = Object.fromEntries(
+  Object.entries(roles).map(([role, resource]) => [role, PlatformColor(`@color/${resource}`)]),
+) as Readonly<Record<keyof typeof roles, ColorValue>>
 
 /** Material's type scale, in sp: Android scales it with the user's font size. */
 export const type = StyleSheet.create({

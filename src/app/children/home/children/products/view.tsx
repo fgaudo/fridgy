@@ -3,7 +3,7 @@ import type * as Data from 'effect/Data'
 import * as DateTime from 'effect/DateTime'
 import * as Opt from 'effect/Option'
 import type { ReactNode } from 'react'
-import { View as Box, Pressable, StyleSheet, Text } from 'react-native'
+import { View as Box, type ColorValue, Pressable, StyleSheet, Text } from 'react-native'
 import * as Day from '#libs/dates/day.ts'
 import { type Handlers, handlers } from '#libs/tea-react/tea-react.ts'
 import { color, elevation, icon, shape, type } from '#styles'
@@ -57,7 +57,7 @@ const styles = StyleSheet.create({
   list: { paddingBottom: 96 },
 })
 
-type Colors = Readonly<{ fill: string; text: string }>
+type Colors = Readonly<{ fill: ColorValue; text: ColorValue }>
 
 const neutral: Colors = { fill: color.surfaceContainerHighest, text: color.onSurface }
 
@@ -75,12 +75,12 @@ const freshnessColors = (freshness: number): Colors =>
     : errorColors
 
 /** A disc, the list item's leading avatar. */
-const disc = ({ fill, text }: Colors, content: (tint: string) => ReactNode) => (
+const disc = ({ fill, text }: Colors, content: (tint: ColorValue) => ReactNode) => (
   <Box style={[styles.avatar, { backgroundColor: fill }]}>{content(text)}</Box>
 )
 
 /** The expiration day and month. */
-const expirationDay = (expirationDate: Day.Day) => (tint: string) => [
+const expirationDay = (expirationDate: Day.Day) => (tint: ColorValue) => [
   <Text key='day' style={[styles.avatarDay, { color: tint }]}>{Day.toParts(expirationDate).day}</Text>,
   <Text key='month' style={[styles.avatarMonth, { color: tint }]}>
     {Day.format(expirationDate, { month: 'short' })}

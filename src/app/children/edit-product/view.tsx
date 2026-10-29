@@ -30,12 +30,6 @@ const orderTitles: Readonly<Record<DateOrder, string>> = {
   YMD: 'Year, month, day',
 }
 
-// Material's disabled content: the on-surface role at 38%.
-const disabledContent = `${color.onSurface}61`
-
-// Material's disabled container: the on-surface role at 12%.
-const disabledContainer = `${color.onSurface}1f`
-
 const styles = StyleSheet.create({
   // Edge to edge: the page keeps clear of the system bars, and draws its surface under them.
   page: { flex: 1, backgroundColor: color.surface },
@@ -150,7 +144,7 @@ const appBar = (maybeClose: Opt.Option<Message>, dispatch: Dispatch<Message>) =>
         style={styles.iconButton}
         onPress={Opt.match(maybeClose, { onNone: () => undefined, onSome: on })}
       >
-        {icon('close', Opt.isNone(maybeClose) ? disabledContent : color.onSurface)}
+        {icon('close', Opt.isNone(maybeClose) ? color.disabledContent : color.onSurface)}
       </Pressable>
       <Text accessibilityRole='header' numberOfLines={1} style={styles.title}>Edit product</Text>
     </Box>
@@ -169,13 +163,13 @@ const saveButton = (shown: FieldsShown, activity: Activity, dispatch: Dispatch<M
     <Pressable
       accessibilityRole='button'
       accessibilityState={{ disabled: Opt.isNone(maybeSave), busy: activity._tag === 'Saving' }}
-      style={[styles.save, { backgroundColor: isEnabled ? color.primary : disabledContainer }]}
+      style={[styles.save, { backgroundColor: isEnabled ? color.primary : color.disabledContainer }]}
       onPress={Opt.match(maybeSave, { onNone: () => undefined, onSome: on })}
     >
       {activity._tag === 'Saving'
         ? <ActivityIndicator accessibilityLabel='Saving the product' color={color.onPrimary} />
         : (
-          <Text style={[styles.saveLabel, { color: isEnabled ? color.onPrimary : disabledContent }]}>
+          <Text style={[styles.saveLabel, { color: isEnabled ? color.onPrimary : color.disabledContent }]}>
             {shown.withoutDate ? 'Save without date' : 'Save'}
           </Text>
         )}
@@ -195,7 +189,7 @@ const nameField = (shown: FieldsShown, activity: Activity, dispatch: Dispatch<Me
   return (
     <Box
       key={`name-${shown.nameKey}`}
-      style={[styles.field, { borderColor: isEditing ? color.outline : disabledContainer }]}
+      style={[styles.field, { borderColor: isEditing ? color.outline : color.disabledContainer }]}
     >
       <TextInput
         accessibilityLabel='Name'
@@ -203,10 +197,10 @@ const nameField = (shown: FieldsShown, activity: Activity, dispatch: Dispatch<Me
         editable={isEditing}
         enterKeyHint='done'
         cursorColor={color.primary}
-        style={[styles.input, { color: isEditing ? color.onSurface : disabledContent }]}
+        style={[styles.input, { color: isEditing ? color.onSurface : color.disabledContent }]}
         onChangeText={isEditing ? onValue(activity.controls.changeName) : undefined}
       />
-      <Text style={[styles.label, { color: isEditing ? color.onSurfaceVariant : disabledContent }]}>Name</Text>
+      <Text style={[styles.label, { color: isEditing ? color.onSurfaceVariant : color.disabledContent }]}>Name</Text>
       {Opt.match(maybeClearName, {
         onNone: () => null,
         onSome: (clear) => (
@@ -233,7 +227,7 @@ const orderSegments = (shown: FieldsShown, activity: Activity, dispatch: Dispatc
     const isCurrent = choice._tag === 'Current'
     const tint = activity._tag === 'Editing'
       ? (isCurrent ? color.onSecondaryContainer : color.onSurface)
-      : disabledContent
+      : color.disabledContent
     return (
       <Pressable
         key={order}
@@ -264,13 +258,13 @@ const orderSegments = (shown: FieldsShown, activity: Activity, dispatch: Dispatc
 const dateField = (shown: FieldsShown, activity: Activity) => {
   // Disabled while the fields take no input; in the error's colors when the digits name no day.
   const look = activity._tag !== 'Editing' ? 'Disabled' : shown.strip._tag === 'NamingNothing' ? 'Wrong' : 'Plain'
-  const tint = look === 'Disabled' ? disabledContent : look === 'Wrong' ? color.error : color.onSurfaceVariant
+  const tint = look === 'Disabled' ? color.disabledContent : look === 'Wrong' ? color.error : color.onSurfaceVariant
   return (
     <Box
       accessible
       accessibilityLabel={`Expiration date, ${shown.digits === '' ? 'empty' : shown.digits}`}
       style={[styles.field, {
-        borderColor: look === 'Disabled' ? disabledContainer : look === 'Wrong' ? color.error : color.outline,
+        borderColor: look === 'Disabled' ? color.disabledContainer : look === 'Wrong' ? color.error : color.outline,
       }]}
     >
       <Text style={[styles.digits, { color: shown.digits === '' ? color.onSurfaceVariant : color.onSurface }]}>
@@ -288,7 +282,7 @@ const chip = ({ date, choice }: DateChoice, activity: Activity, dispatch: Dispat
   const isChosen = choice._tag === 'Chosen'
   const tint = activity._tag === 'Editing'
     ? (isChosen ? color.onSecondaryContainer : color.onSurfaceVariant)
-    : disabledContent
+    : color.disabledContent
   return (
     <Pressable
       key={date}
@@ -330,14 +324,14 @@ const keypad = (activity: Activity, dispatch: Dispatch<Message>) => {
   const { on } = handlers(dispatch)
   const key = (id: string, label: ReactNode | string, title: string, maybeMessage: Opt.Option<Message>) => {
     const isEnabled = Opt.isSome(maybeMessage)
-    const tint = isEnabled ? color.onSurface : disabledContent
+    const tint = isEnabled ? color.onSurface : color.disabledContent
     return (
       <Pressable
         key={id}
         accessibilityRole='button'
         accessibilityLabel={title}
         accessibilityState={{ disabled: !isEnabled }}
-        style={[styles.key, { backgroundColor: isEnabled ? color.surfaceContainerHighest : disabledContainer }]}
+        style={[styles.key, { backgroundColor: isEnabled ? color.surfaceContainerHighest : color.disabledContainer }]}
         onPress={Opt.match(maybeMessage, { onNone: () => undefined, onSome: on })}
       >
         {typeof label === 'string' ? <Text style={[styles.keyLabel, { color: tint }]}>{label}</Text> : label}
@@ -345,7 +339,7 @@ const keypad = (activity: Activity, dispatch: Dispatch<Message>) => {
     )
   }
   const controls = activity._tag === 'Editing' ? Opt.some(activity.controls) : Opt.none()
-  const enabledTint = (maybe: Opt.Option<Message>) => (Opt.isSome(maybe) ? color.onSurface : disabledContent)
+  const enabledTint = (maybe: Opt.Option<Message>) => (Opt.isSome(maybe) ? color.onSurface : color.disabledContent)
   const digitKey = (digit: Digit) =>
     key(
       digit,
