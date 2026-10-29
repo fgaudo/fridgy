@@ -168,8 +168,9 @@ the menu is (its tap catcher takes the tap), so the two observers of the back bu
 should they, a press goes to the last one to start observing (**verified** in `observed`,
 `src/infrastructure/back-button/back-button.ts`: a `Set` in insertion order, `.at(-1)`), which closes what
 opened last. `Products.list` reads the model to pad the list by the bar's height: `pt-16` in search mode,
-`pt-31` otherwise, with `transition-[padding]` so that the rows follow the bar as it shrinks and grows (the bar
-already transitions its height; **verified**: `transition-[height]` on the bar, `pt-31` on the list's `div`).
+`pt-medium-bar` otherwise, with `transition-[padding]` so that the rows follow the bar as it shrinks and grows (the
+bar already transitions its height; **verified**: `transition-[height]` on the bar, `pt-medium-bar` on the list's
+`div`).
 
 Home's `program.ts` does not change. Its view test's `withheld` gains the cases the model hides on purpose: the
 menu while the search is open (the overflow button is not drawn), the search's messages while a selection

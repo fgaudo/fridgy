@@ -115,7 +115,9 @@ page scrolls under it, which the page learns from its scroll (Home from its `Vie
 scroll event), with the emphasized title. A page that is opened over another has a small bar, 64dp; Home, the
 app's own screen, has a medium one: a 124dp bar with the row of its icons on top and the headline
 (`headline-medium-emphasized`) with its subtitle at the bottom, which collapses to the small bar, the headline
-shrunk to `title-large-emphasized` after the leading icon, once the list scrolls under it. The contextual bar of
+shrunk to `title-large-emphasized` after the leading icon, once the list scrolls under it. Both heights grow
+with the text (`h-medium-bar`, `h-small-bar`, in `src/styles.css`), which a larger font would otherwise push into
+the icons or the status bar. The contextual bar of
 the selected products takes the same shape, in its own colors: the child gives Home its pieces (the icon
 buttons, the title), and Home draws them in its bar. The list leaves the bar's full height above itself. Pages
 come and go with Material's transitions, symmetric: what enters decelerates, what leaves accelerates. A page is laid

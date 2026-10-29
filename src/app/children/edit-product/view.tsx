@@ -38,7 +38,7 @@ const appBar = (maybeClose: Opt.Option<Message>, dispatch: Dispatch<Message>) =>
       props={{
         // `box-content`: the bar is 64dp below the top inset, which `pt-sait` would otherwise take from its height.
         className:
-          'box-content flex h-16 shrink-0 items-center gap-1 bg-surface px-1 pt-sait pl-sail pr-sair text-on-surface',
+          'box-content flex h-16 shrink-0 items-center gap-1 bg-surface pt-sait pr-[calc(0.25rem+var(--spacing-sair))] pl-[calc(0.25rem+var(--spacing-sail))] text-on-surface',
       }}
     >
       <button

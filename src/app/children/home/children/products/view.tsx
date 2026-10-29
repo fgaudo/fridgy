@@ -362,7 +362,7 @@ const content = (model: Model, dispatch: Dispatch<Message>) => {
     case 'Available':
       return (
         // Below the top app bar, at its full height.
-        <div key='list' style={leaving} props={{ className: 'pt-31 pb-24' }}>
+        <div key='list' style={leaving} props={{ className: 'pt-medium-bar pb-24' }}>
           <ul>
             {model.list.products.map((product, index) => {
               switch (product._tag) {

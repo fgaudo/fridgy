@@ -145,6 +145,26 @@
   );
   --spacing-sail: var(--safe-area-inset-left, env(safe-area-inset-left, 0px));
   --spacing-sair: var(--safe-area-inset-right, env(safe-area-inset-right, 0px));
+  /*
+   * Home's bars, which hold a title and a subtitle. They grow with the user's font size.
+   * At 100% they are Material's 124dp and 64dp. The medium bar's title starts 48dp down, below its icons.
+   */
+  --spacing-medium-bar: max(
+    7.75rem,
+    calc(
+      3rem + var(--text-headline-medium-emphasized--line-height) +
+        var(--text-label-large--line-height) +
+        1.25rem
+    )
+  );
+  --spacing-small-bar: max(
+    4rem,
+    calc(
+      var(--text-title-large-emphasized--line-height) +
+        var(--text-label-medium--line-height) +
+        1.25rem
+    )
+  );
 }
 
 /*

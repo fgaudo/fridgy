@@ -120,7 +120,7 @@ export const view: View<Model, Message> = (model, dispatch) => {
         ),
       }}
     >
-      <div props={{ className: cn('relative transition-[height]', isAtTop ? 'h-31' : 'h-16') }}>
+      <div props={{ className: cn('relative transition-[height]', isAtTop ? 'h-medium-bar' : 'h-small-bar') }}>
         <div props={{ className: 'absolute inset-x-0 top-0 flex h-16 items-center justify-between px-1' }}>
           <div>{selection === undefined ? [] : [selection.leading]}</div>
           {selection === undefined ? moreButton : selection.trailing}
