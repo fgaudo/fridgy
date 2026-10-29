@@ -111,7 +111,7 @@ export const view: View<Model, Message> = (model, dispatch) => {
     <div
       props={{
         className: cn(
-          'fixed top-0 z-40 w-full',
+          'fixed top-0 z-40 w-full transition-colors',
           selection === undefined ? 'text-on-surface' : 'text-on-secondary-container',
         ),
       }}

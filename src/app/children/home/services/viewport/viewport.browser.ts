@@ -5,8 +5,8 @@ import * as Stream from 'effect/Stream'
 import * as Source from '#libs/source/source.ts'
 import { Position, Viewport } from './viewport.ts'
 
-// `--bar-collapse` of `styles.css`, in pixels: a registered length computes to them. A page that scrolls less ends
-// the collapse sooner.
+// `--bar-collapse` of `styles.css`, in pixels: a registered length computes to them. Capped at what the page can
+// scroll, where the snap stops; the bar still collapses over the whole length, so there it rests half collapsed.
 const collapse = () =>
   Math.min(
     Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--bar-collapse')),

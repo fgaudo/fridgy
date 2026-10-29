@@ -114,7 +114,7 @@ and after the first release of each of those. Its result is written in the commi
 
 - Verified on 2026-10-28: `bun run check-floor` passes on the bundle as built, and fails on the same bundle
   for an older edition, or with a `using` declaration (ES2026) in it, so the check bites. ES2023 is the last
-  edition that WebView 114 implements whole.
+  edition that WebView 115 implements whole.
 - Verified on 2026-10-28: `bun run e2e` passes on the bundle as built, fails at the start on a bundle whose
   worker is missing, and fails its check of scrolling on a screen 400px tall. It covers the start on the
   worker over OPFS, a product added by hand, its reload from the database, its edit and its deletion, About's
