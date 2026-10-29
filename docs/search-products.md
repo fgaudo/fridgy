@@ -139,10 +139,9 @@ type Search = Data.TaggedEnum<{
   }>
   ```
 
-- **Subscriptions:** the back button, keyed `back-button`, while the search is `Open` and the selection `Idle`.
-  The key leaves the map when a selection starts, so the button is the platform's again meanwhile, as it is
-  today while selecting, and comes back when the selection ends. `Deps` gains `BackButton`; `layer.ts` does not
-  change (**verified**: the entrypoints provide the back button's adapter, which Home already lists).
+- **Subscriptions:** the back button, keyed `back-button`, which `Products` already observes while the list shows
+  a selection (the press clears it), also while the search is `Open` and nothing is selected: the press goes to
+  the selection while there is one, then to the search. `Deps` already has `BackButton`.
 - **Performance:** the names are folded on every frame the renderer reads, once per row: a normalization and a
   regular expression per name, for tens of rows. Keeping the folded names in the state would be derived data,
   and is not worth a rule's exception at this size; should a fridge of hundreds stutter while typing, fold them
@@ -266,9 +265,8 @@ selection):
   would go down to `Products` as an `ExternalMessage`, which would keep the query too, to filter: the same state
   in two programs, which the `add-program` skill names as the mark of a wrong boundary; and Home would have to
   read the child's selection to hide the field, which a parent never does. **Decided: `Products`**, which gives
-  Home the pieces, as it does for the selection. The cost is a child of a page observing the back button, which
-  `AGENTS.md` words as a page's: the rule is really "the program that has something to close", and `AGENTS.md`
-  is amended with the change ("Documentation", below).
+  Home the pieces, as it does for the selection. `Products` already observes the back button for its selection,
+  as `AGENTS.md`'s rule allows a page's child.
 - **Live filtering against a search request.** A `ProductList` that took the query (`WHERE name LIKE`) would
   restart its subscription on every keystroke (the key would hold the query), reload the list each time, lose the
   arrivals and departures across keystrokes, match case-insensitively for ASCII only and know nothing of
@@ -327,8 +325,7 @@ selection):
 
 ## Documentation
 
-With the change: `AGENTS.md`, the back button's rule ("The back button is each program's, only while it has
-something to do with it: a page, or a child of one, such as Home's list while its search is open"); `README.md`,
+With the change: `README.md`,
 the status paragraph (searching the list); `src/README.md`, `libs/` (the text search) and Products' folder
 (the query); the `views` skill, where it lists the pieces `Products` gives Home (the search button and the
 search bar). This document is then pruned to what was built.
@@ -336,8 +333,8 @@ search bar). This document is then pruned to what was built.
 ## Later, not in this change
 
 - Filter chips on the expiration, as a second criterion of the same search.
-- The back button clearing the selection, as Material's contextual action bar does, which today is left to the
-  platform (the press leaves the app); with the search, the two would be closed in order, the selection first.
+- With the search, the back button closing the selection first, then the search. The selection's own press is
+  done: `Products` observes the button while the list shows a selection, and the press clears it.
 - A FLIP of the rows, for a row that moves or stops matching after an edit.
 - Highlighting the matched text in a row's headline.
 - The keyboard's search key dismissing the keyboard, if the device does not.

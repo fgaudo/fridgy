@@ -92,7 +92,8 @@ const closeToTop: Tea.Subscription<Own, Viewport> = Channel.unwrap(
   ),
 )
 
-// Observed only while the menu is open: otherwise the button is the platform's, which leaves the app.
+// Observed only while the menu is open: otherwise the button is the list's while it shows a selection, or the
+// platform's, which leaves the app.
 const backButton: Tea.Subscription<Own, BackButton> = Channel.unwrap(
   Effect.map(Effect.service(BackButton), ({ presses }) => Channel.map(presses, () => Own.BackPressed())),
 )

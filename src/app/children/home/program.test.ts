@@ -30,12 +30,14 @@ type ProductsMessage = Products.Message
 const fromProducts = (message: ProductsMessage): Message => ({ _tag: 'Products', message })
 
 /**
- * A message that cannot arrive in that state: a back heard with the menu closed, a completion outside its deletion,
- * the end of the snackbar while there is none, the end of the rows' motion while none moves, a tick while no
- * product expires.
+ * A message that cannot arrive in that state: a back heard with the menu closed, or by the list while it shows no
+ * selection, a completion outside its deletion, the end of the snackbar while there is none, the end of the rows'
+ * motion while none moves, a tick while no product expires.
  */
 const cannotArrive = (msg: Message, before: State) =>
   (msg._tag === 'BackPressed' && !before.isMenuOpen)
+  || (msg._tag === 'Products' && msg.message._tag === 'BackPressed'
+    && (before.products.list._tag !== 'Loaded' || before.products.selection._tag === 'Idle'))
   || (msg._tag === 'Products' && (msg.message._tag === 'Deleted' || msg.message._tag === 'DeleteFailed')
     && before.products.selection._tag !== 'Deleting')
   || (msg._tag === 'Products' && msg.message._tag === 'SnackbarExpired' && before.products.snackbar._tag !== 'Shown')

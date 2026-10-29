@@ -15,6 +15,7 @@ import * as Match from 'effect/Match'
 import * as Opt from 'effect/Option'
 import * as Result from 'effect/Result'
 import * as Domain from '#domain/product.ts'
+import { BackButton } from '#infrastructure/back-button/back-button.ts'
 import { type Feedback, Haptics } from '#infrastructure/haptics/haptics.ts'
 import * as NonEmptyHashSet from '#libs/collections/non-empty-hash-set.ts'
 import * as PositiveInteger from '#libs/numbers/positive-integer.ts'
@@ -109,6 +110,8 @@ export type Message = Data.TaggedEnum<{
   /** The snackbar's action: the products deleted last are stored again. */
   UndoRequested: object
   // From subscriptions.
+  /** The back button, heard only while something is selected: it clears the selection, or waits for its deletion. */
+  BackPressed: object
   TimeChanged: { now: DateTime.Utc }
   ListChanged: { result: Result.Result<ReadonlyArray<StoredProduct>, ProductListReadError> }
   /** The snackbar has stood its time: it leaves, and the offer to undo with it. */
@@ -369,6 +372,13 @@ type Key =
   | readonly ['snackbar', DateTime.Utc, Notice['_tag']]
   | readonly ['settling', HashSet.HashSet<string>, HashSet.HashSet<string>]
 
+// Observed only while the list shows a selection: otherwise the press is Home's, or the platform's.
+const backButton: Tea.Subscription<Message, Deps> = Channel.unwrap(
+  Effect.map(Effect.service(BackButton), ({ presses }) => Channel.map(presses, () => Message.BackPressed())),
+)
+
+const showsSelection = (state: State) => state.list._tag === 'Loaded' && state.selection._tag !== 'Idle'
+
 const always: HashMap.HashMap<Key, Tea.Subscription<Message, Deps>> = HashMap.make(['changes', changes])
 
 const deleteProducts = Effect.fn('DeleteProducts')(
@@ -514,7 +524,7 @@ const listModel = (state: State): ListModel => {
   }
 }
 
-export type Deps = DeleteProducts.DeleteProducts | ProductList | Haptics
+export type Deps = DeleteProducts.DeleteProducts | ProductList | Haptics | BackButton
 
 export const program: Tea.Program<{
   state: State
@@ -613,6 +623,15 @@ export const program: Tea.Program<{
         ? { state: { ...state, selection: Selection.Idle() } }
         : Tea.reject,
 
+    // As Material's contextual action bar: the press clears the selection. It is held while the selection is being
+    // deleted, so that the app is not left in the middle of a write.
+    BackPressed: () => (state) =>
+      !showsSelection(state)
+        ? Tea.defect('BackPressed while no selection is shown: the button is observed only while one is')
+        : state.selection._tag === 'Selecting'
+        ? { state: { ...state, selection: Selection.Idle() } }
+        : { state },
+
     // The products are kept from the list as it is now: the storage's change may reach the page before the
     // deletion's completion, and then they are gone from it.
     DeleteStarted: () => (state) =>
@@ -701,7 +720,8 @@ export const program: Tea.Program<{
   }),
 
   subscriptions: (state) => {
-    const withClock = needsClock(state.list) ? HashMap.set(always, 'clock', clock) : always
+    const withBack = showsSelection(state) ? HashMap.set(always, 'back-button', backButton) : always
+    const withClock = needsClock(state.list) ? HashMap.set(withBack, 'clock', clock) : withBack
     const withSettling = state.list._tag === 'Loaded' && isSettling(state.list)
       ? HashMap.set(
         withClock,

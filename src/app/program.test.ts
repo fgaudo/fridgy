@@ -496,6 +496,17 @@ describe('Navigation', () => {
       )
     })))
 
+  test('back on Home clears the selection, and stays on Home', () =>
+    rehearsed(Effect.fnUntraced(function*(user) {
+      yield* addSaltAndMilk(user)
+      yield* user.send(selectFirstProduct)
+      yield* back(user)
+      expect(tags(yield* user.state)).toEqual(['Home'])
+      expect(Opt.map(homeState(yield* user.state), ({ products }) => products.selection._tag)).toEqual(
+        Opt.some('Idle'),
+      )
+    })))
+
   test('a product deleted from the list comes back when the deletion is undone in time', () =>
     rehearsed(Effect.fnUntraced(function*(user) {
       yield* perform(user, [openAddProducts, typeName('Milk')])

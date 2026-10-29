@@ -56,7 +56,7 @@ service and a module of the infrastructure to move its sixty lines.
   `Effect.asSome`, as the last steps of their `Effect.fn`, and carry `Effect.withLogSpan`.
   Subscriptions map a service's `Source<A, never>` into messages (`Channel.unwrap` to read the service,
   `Channel.map`); a process that ends turns its `Done` into a message. The back button is the subscription
-  keyed `back-button`, observed only while the page has something to do with a press.
+  keyed `back-button`, observed only while the program has something to do with a press: a page, or the child that holds what a press closes (Home's `Products`, its selection).
 - Effects only in commands and subscriptions: `update`, `makeModel` and the view are pure.
 
 ## Declaring a child
@@ -149,7 +149,7 @@ events in `onEvent`, its model in `makeModel`), merge its layer in `src/app/laye
 it to `src/app/user.test_support.ts`, where the root's tests pick each message from the shown page's model
 (`rehearse`). A page that cannot start the same way every time declares `flags` (`EditProduct`: the product
 tapped, and its id) and is started from them in `onEvent`, `show(state, '<Page>', children.<Page>.init(flags))`;
-what it starts from comes in the event that asks for it, never from another program's state. The root knows nothing of the back button: a page observes it while it has something to close,
+what it starts from comes in the event that asks for it, never from another program's state. The root knows nothing of the back button: a page, or its child, observes it while it has something to close,
 or always, when a press asks the parent to leave it.
 
 ## Moving files

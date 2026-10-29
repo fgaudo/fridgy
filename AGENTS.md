@@ -67,11 +67,12 @@ folders; "page" names a role in the UI, kept by the root's state, not a kind of 
   its rule that children reading each other's state are one child.
 - **Hidden pages keep receiving their completions**, but their subscriptions run only while they are on top
   (`subscribed`, in the root).
-- **The back button is each page's, only while it has something to do with it.** A page observes the
-  platform's `BackButton` (`src/infrastructure/back-button`, the subscription keyed `back-button`) while it has
-  something to close, or always, when a press asks its parent to leave it or must be held. The root knows
-  nothing of it. A press goes to the last observer only, as Android's own back dispatcher does; when no page
-  observes it, the platform leaves the app.
+- **The back button is the program's that has something to do with it, only while it has.** A page, or the child
+  of a page that holds what a press closes (Home's `Products`, its selection), observes the platform's
+  `BackButton` (`src/infrastructure/back-button`, the subscription keyed `back-button`) while it has something to
+  close, or always, when a press asks its parent to leave it or must be held. The root knows nothing of it. A
+  press goes to the last observer only, as Android's own back dispatcher does; when no program observes it, the
+  platform leaves the app.
 - **A service belongs to what uses it, and is never shared.** A service (a `Context.Service`: a port) is a
   requirement of its consumer, in its `services/`, shaped for it. Two consumers that need the same thing each
   have their own; what they share is the domain and the infrastructure. The exception is a fact of the platform

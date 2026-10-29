@@ -153,6 +153,7 @@ export const message: fc.Arbitrary<Message> = fc.oneof(
   id.map((id) => Msg.EditRequested({ id })),
   fc.record({ id, by: gesture }).map(Msg.ItemDeselected),
   fc.constant(Msg.SelectionCleared()),
+  fc.constant(Msg.BackPressed()),
   fc.constant(Msg.DeleteStarted()),
   fc.constant(Msg.UndoRequested()),
   fc.constant(Msg.SnackbarExpired()),

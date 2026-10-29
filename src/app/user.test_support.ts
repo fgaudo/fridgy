@@ -1,11 +1,13 @@
 // The root's tests act like a user: each message is one the shown page's model
 // holds, never one built by hand. Nothing runs by itself: a command runs,
 // on the app's layer over a database in memory, and a subscription sends, when the test says so.
+import * as Tea from '@fgaudo/effect-tea'
 import { type Rehearsal, rehearse } from '@fgaudo/effect-tea/testing'
 import * as Arr from 'effect/Array'
 import * as Channel from 'effect/Channel'
 import * as Data from 'effect/Data'
 import * as Effect from 'effect/Effect'
+import * as HashMap from 'effect/HashMap'
 import * as HttpClient from 'effect/http/HttpClient'
 import * as Layer from 'effect/Layer'
 import * as Match from 'effect/Match'
@@ -145,7 +147,13 @@ export const perform = Effect.fnUntraced(function*(user: User, choices: Readonly
 
 /** The back button, heard by the shown page; the test fails when the page does not observe it. */
 export const back = Effect.fnUntraced(function*(user: User) {
-  const shown = Arr.lastNonEmpty((yield* user.state).stack)
+  const state = yield* user.state
+  const shown = Arr.lastNonEmpty(state.stack)
+  // On Home, the list observes the button while it shows a selection, and Home while its menu is open.
+  const listKey = ['Home', ['Products', 'back-button']]
+  if (shown._tag === 'Home' && HashMap.has(Tea.subscriptionsOf(program)(state), listKey)) {
+    return yield* user.hear(listKey, Msg.Home({ message: { _tag: 'Products', message: { _tag: 'BackPressed' } } }))
+  }
   const pressed = Match.valueTags(shown, {
     Home: () => Msg.Home({ message: { _tag: 'BackPressed' } }),
     AddProducts: () => Msg.AddProducts({ message: { _tag: 'BackPressed' } }),

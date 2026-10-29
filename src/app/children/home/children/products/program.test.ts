@@ -65,6 +65,9 @@ const arrivalsOf = (state: State) => state.list._tag === 'Loaded' ? state.list.a
 const departuresOf = (state: State) =>
   HashSet.fromIterable(state.list._tag === 'Loaded' ? state.list.departures.map(({ item }) => item.id) : [])
 
+/** Whether the list shows a selection: what the back button closes. */
+const showsSelection = (state: State) => state.list._tag === 'Loaded' && state.selection._tag !== 'Idle'
+
 /** Whether a row arrives or leaves. */
 const isSettling = (state: State) => HashSet.size(arrivalsOf(state)) > 0 || HashSet.size(departuresOf(state)) > 0
 
@@ -87,10 +90,12 @@ const told = (before: State, at: DateTime.Utc, notice: Notice): Snackbar => ({
 
 /**
  * A message that cannot arrive in that state: a completion while no deletion is in progress, the end of the
- * snackbar while there is none, the end of the rows' motion while none moves, a tick while no product expires.
+ * snackbar while there is none, the end of the rows' motion while none moves, a tick while no product expires, a
+ * press of the back button while no selection is shown.
  */
 const cannotArrive = (msg: Message, before: State) =>
   ((msg._tag === 'Deleted' || msg._tag === 'DeleteFailed') && before.selection._tag !== 'Deleting')
+  || (msg._tag === 'BackPressed' && !showsSelection(before))
   || (msg._tag === 'SnackbarExpired' && before.snackbar._tag !== 'Shown')
   || (msg._tag === 'RowsSettled' && !isSettling(before))
   || (msg._tag === 'TimeChanged' && !hasExpiringProduct(before))
@@ -307,6 +312,18 @@ describe('Products update', () => {
     })
   })
 
+  // As Material's contextual action bar; a deletion in progress holds the press, so that the app stays.
+  test('BackPressed empties the selection, and changes nothing while it is being deleted', () => {
+    assertProperty([state], (before) => {
+      fc.pre(showsSelection(before))
+      const { after, commands } = step(Msg.BackPressed(), before)
+      return (before.selection._tag === 'Deleting'
+        ? Equal.equals(after, before)
+        : after.selection._tag === 'Idle' && onlyChanged(before, after, 'selection'))
+        && commands.length === 0
+    })
+  })
+
   describe('DeleteStarted', () => {
     test('deletes the selection, keeping its products, or is rejected when there is none or the list is not loaded', () => {
       assertProperty([state], (before) => {
@@ -479,6 +496,11 @@ test('listens to the storage always, to the clock while a product shown expires,
       && (s.snackbar._tag === 'Shown') === timesSnackbar
       && isSettling(s) === timesMotion
   })
+})
+
+// Otherwise the press is Home's, or the platform's, which leaves the app.
+test('observes the back button only while the list shows a selection', () => {
+  assertProperty([state], (s) => HashMap.has(Tea.subscriptionsOf(program)(s), 'back-button') === showsSelection(s))
 })
 
 // A row's look and action, a product's status and the snackbar are decided here, not in the view.
