@@ -17,7 +17,7 @@ import { arbitrary as anyDay } from '#libs/dates/day.test_arbitrary.ts'
 import * as Day from '#libs/dates/day.ts'
 import * as DigitDateEntry from '#libs/dates/digit-date-entry.ts'
 import { MAX_DIGITS } from '#libs/dates/digit-dates.ts'
-import { messagesSentBy } from '#libs/tea-snabbdom/view.test_support.ts'
+import { messagesSentBy } from '#libs/tea-react/view.test_support.ts'
 import { utc, zoned } from '#libs/testing/date-time.test_arbitrary.ts'
 import { assertProperty, outcomesOf } from '#libs/testing/update.test_support.ts'
 import {

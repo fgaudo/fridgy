@@ -42,15 +42,15 @@
       }
     ],
     // Environment setup & latest features
-    "lib": ["ESNext", "DOM"],
+    "lib": ["ESNext"],
     "target": "ESNext",
     "module": "preserve",
     "moduleDetection": "force",
     "allowJs": false,
 
-    // Views are TSX, rendered by snabbdom through src/libs/jsx/jsx-runtime.ts.
+    // Views are TSX, drawn by React Native.
     "jsx": "react-jsx",
-    "jsxImportSource": "#libs/jsx",
+    "jsxImportSource": "react",
 
     // Bundler mode
     "moduleResolution": "bundler",
@@ -75,7 +75,7 @@
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "noPropertyAccessFromIndexSignature": true,
-    "types": ["snabbdom", "bun"]
+    "types": ["bun"]
   },
-  "include": ["src/**/*", "scripts/**/*", "e2e/**/*"]
+  "include": ["src/**/*", "scripts/**/*"]
 }

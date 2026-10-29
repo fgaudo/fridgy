@@ -1,13 +1,22 @@
 import type { Dispatch } from '@fgaudo/effect-tea'
-import * as DateTime from 'effect/DateTime'
 import * as Match from 'effect/Match'
 import * as Opt from 'effect/Option'
-import type { VNode } from 'snabbdom'
+import type { ReactNode } from 'react'
+import {
+  ActivityIndicator,
+  View as Box,
+  Linking,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+} from 'react-native'
+import { SafeAreaView } from 'react-native-safe-area-context'
 import type { DateOrder } from '#libs/dates/date-order.ts'
 import * as Day from '#libs/dates/day.ts'
-import { piecesOf } from '#libs/strings/pieces.ts'
-import { focusOnInsert, gatherAndFly, handlers, initialValue, type View } from '#libs/tea-snabbdom/tea-snabbdom.ts'
-import { cn } from '#libs/ui/class-names.ts'
+import { handlers, type View } from '#libs/tea-react/tea-react.ts'
+import { color, elevation, icon, shape, type } from '#styles'
 import type {
   DateChoice,
   DateShown,
@@ -22,14 +31,12 @@ import type {
   Supporting,
 } from './program.ts'
 
-const inputValue = (event: Event) => (event.target as HTMLInputElement).value
-
 // No weekday: a date read off a package has none, and two chips must fit a row of the narrowest phone.
 const formatDay = (date: Day.Day) => Day.format(date, { day: 'numeric', month: 'short', year: 'numeric' })
 
 const keys: ReadonlyArray<Digit> = ['1', '2', '3', '4', '5', '6', '7', '8', '9']
 
-/** How the digits are read in each order: the field's placeholder, the strip's hint and each segment's title. */
+/** How the digits are read in each order: the field's placeholder, the strip's hint and each segment's label. */
 const placeholders: Readonly<Record<DateOrder, string>> = { DMY: 'DDMMYY', MDY: 'MMDDYY', YMD: 'YYMMDD' }
 
 const hints: Readonly<Record<DateOrder, string>> = {
@@ -44,231 +51,263 @@ const orderTitles: Readonly<Record<DateOrder, string>> = {
   YMD: 'Year, month, day',
 }
 
+// Material's disabled content: the on-surface role at 38%.
+const disabledContent = `${color.onSurface}61`
+
+// Material's disabled container: the on-surface role at 12%.
+const disabledContainer = `${color.onSurface}1f`
+
+const styles = StyleSheet.create({
+  // Edge to edge: the page keeps clear of the system bars, and draws its surface under them.
+  page: { flex: 1, backgroundColor: color.surface },
+  // What an absolute position is measured from: inside the bars.
+  frame: { flex: 1 },
+  bar: { height: 64, flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 4 },
+  title: { ...type.titleLargeEmphasized, flex: 1, paddingHorizontal: 4, color: color.onSurface },
+  iconButton: { width: 48, height: 48, borderRadius: shape.full, alignItems: 'center', justifyContent: 'center' },
+  column: { flexGrow: 1, gap: 12, paddingHorizontal: 24, paddingTop: 8 },
+  dateColumn: { flexGrow: 1, gap: 8, paddingHorizontal: 24 },
+  field: {
+    minHeight: 56,
+    justifyContent: 'center',
+    borderRadius: shape.extraSmall,
+    borderWidth: 1,
+    paddingHorizontal: 16,
+  },
+  label: {
+    ...type.bodySmall,
+    position: 'absolute',
+    top: -9,
+    left: 12,
+    paddingHorizontal: 4,
+    backgroundColor: color.surface,
+  },
+  input: { ...type.bodyLarge, paddingVertical: 0, paddingRight: 40 },
+  trailing: { position: 'absolute', right: 4 },
+  supporting: { ...type.bodySmall, minHeight: 16, paddingHorizontal: 16, color: color.onSurfaceVariant },
+  link: { color: color.primary, textDecorationLine: 'underline' },
+  room: { flex: 1, minHeight: 64, alignItems: 'center', justifyContent: 'center' },
+  added: { ...type.bodyMedium, textAlign: 'center', color: color.onSurfaceVariant },
+  scanFab: {
+    position: 'absolute',
+    right: 0,
+    bottom: 4,
+    width: 56,
+    height: 56,
+    borderRadius: shape.large,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dock: { gap: 12, paddingHorizontal: 24, paddingTop: 8, paddingBottom: 16 },
+  filledButton: {
+    minHeight: 56,
+    borderRadius: shape.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+  },
+  textButton: {
+    minHeight: 40,
+    borderRadius: shape.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 12,
+  },
+  buttonLabel: { ...type.labelLarge },
+  heading: { paddingHorizontal: 16, paddingBottom: 8 },
+  headingLabel: { ...type.labelMedium, color: color.onSurfaceVariant },
+  headingName: { ...type.titleLarge, color: color.onSurface },
+  segments: { minHeight: 40, flexDirection: 'row' },
+  segment: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    borderWidth: 1,
+    borderColor: color.outline,
+  },
+  segmentFirst: { borderTopLeftRadius: shape.full, borderBottomLeftRadius: shape.full },
+  segmentLast: { borderTopRightRadius: shape.full, borderBottomRightRadius: shape.full },
+  segmentNext: { marginLeft: -1 },
+  segmentLabel: { ...type.labelLarge },
+  digits: { ...type.bodyLarge },
+  strip: { minHeight: 32 },
+  stripText: { ...type.bodySmall, paddingHorizontal: 16 },
+  chips: { gap: 8 },
+  chip: {
+    height: 32,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingLeft: 8,
+    paddingRight: 16,
+    borderRadius: shape.small,
+    borderWidth: 1,
+  },
+  chipLabel: { ...type.labelLarge },
+  keypad: {
+    marginTop: 'auto',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    padding: 8,
+    borderRadius: shape.extraLarge,
+    backgroundColor: color.surfaceContainerLow,
+  },
+  key: {
+    height: 56,
+    flexBasis: '30%',
+    flexGrow: 1,
+    borderRadius: shape.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  keyLabel: { ...type.headlineSmall },
+  scanner: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8, paddingHorizontal: 32 },
+  scannerText: { ...type.bodyMedium, textAlign: 'center', color: color.onSurfaceVariant },
+  snackbar: {
+    position: 'absolute',
+    right: 16,
+    left: 16,
+    minHeight: 48,
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+    borderRadius: shape.extraSmall,
+    backgroundColor: color.inverseSurface,
+    elevation: elevation.level3,
+  },
+  snackbarText: { ...type.bodyMedium, paddingVertical: 14, color: color.inverseOnSurface },
+})
+
 /** What the first step is doing, and which of its controls take. */
-type NameActivity = Readonly<
+type NameActivity =
   | { _tag: 'Editing'; controls: Model & { _tag: 'Naming' } }
   | { _tag: 'LookingUp'; controls: Model & { _tag: 'LookingUp' } }
-  | { _tag: 'UnderScanner' }
-  | { _tag: 'UnderDate' }
   | { _tag: 'Adding' }
->
 
 type DateActivity = Readonly<
   { _tag: 'Editing'; controls: Model & { _tag: 'Dating' } } | { _tag: 'Adding' }
 >
 
-const sidePadding = 'pl-[calc(1.5rem+var(--spacing-sail))] pr-[calc(1.5rem+var(--spacing-sair))]'
-
-const stepPadding = cn('pb-[calc(1rem+var(--spacing-saib))]', sidePadding)
-
 /** The top app bar of Material's full-screen dialog: its leading icon button and its title. */
 const appBar = (
   title: string,
-  icon: string,
+  iconName: string,
   iconTitle: string,
   maybeMessage: Opt.Option<Message>,
   dispatch: Dispatch<Message>,
 ) => {
   const { on } = handlers(dispatch)
   return (
-    <div
-      props={{
-        // `box-content`: the bar is 64dp below the top inset, which `pt-sait` would otherwise take from its height.
-        className:
-          'box-content flex h-16 shrink-0 items-center gap-1 bg-surface pt-sait pr-[calc(0.25rem+var(--spacing-sair))] pl-[calc(0.25rem+var(--spacing-sail))] text-on-surface',
-      }}
-    >
-      <button
-        attrs={{ 'aria-label': iconTitle }}
-        props={{
-          className:
-            'state-layer material-symbols-rounded flex h-12 w-12 items-center justify-center rounded-full disabled:text-on-surface/38',
-          title: iconTitle,
-          disabled: Opt.isNone(maybeMessage),
-        }}
-        on={Opt.match(maybeMessage, { onNone: () => ({}), onSome: (message) => on('click', message) })}
+    <Box style={styles.bar}>
+      <Pressable
+        accessibilityRole='button'
+        accessibilityLabel={iconTitle}
+        accessibilityState={{ disabled: Opt.isNone(maybeMessage) }}
+        style={styles.iconButton}
+        onPress={Opt.match(maybeMessage, { onNone: () => undefined, onSome: on })}
       >
-        {icon}
-      </button>
-      <h2 props={{ className: 'truncate px-1 text-title-large-emphasized' }}>{title}</h2>
-    </div>
+        {icon(iconName, Opt.isNone(maybeMessage) ? disabledContent : color.onSurface)}
+      </Pressable>
+      <Text accessibilityRole='header' numberOfLines={1} style={styles.title}>{title}</Text>
+    </Box>
   )
 }
 
-/** The spare height between a step's fields and its controls, given up first on a short screen, down to the scan FAB's. */
-const room = (...held: ReadonlyArray<VNode>) => <div props={{ className: 'relative min-h-16 flex-1' }}>{held}</div>
-
-/** The indicator replaces the label while the action runs, and stays while the product added leaves the step. */
-type ButtonShows = 'Label' | 'Progress' | 'Acknowledging'
-
-/**
- * Material's filled or text button. The write is mostly quicker than a frame, so the indicator would never be
- * seen for it alone: it stays while the product added becomes a package (`docs/product-flight.md`), and leaves
- * fading as the label comes back.
- */
+/** Material's filled or text button. The circular indicator replaces the label while the action runs. */
 const button = (
   label: string,
   maybeMessage: Opt.Option<Message>,
-  shows: ButtonShows,
+  isRunning: boolean,
   kind: 'Filled' | 'Text',
   dispatch: Dispatch<Message>,
 ) => {
   const { on } = handlers(dispatch)
+  const isEnabled = Opt.isSome(maybeMessage) || isRunning
+  const tint = kind === 'Filled'
+    ? (isEnabled ? color.onPrimary : disabledContent)
+    : (isEnabled ? color.primary : disabledContent)
   return (
-    <button
-      props={{
-        className: cn(
-          'state-layer relative shrink-0 rounded-full px-6 text-label-large transition-colors',
-          // Minimum heights: a label that wraps on a narrow screen with a large font grows the button.
-          kind === 'Filled' ? 'min-h-14 bg-primary text-on-primary' : 'min-h-10 text-primary',
-          shows !== 'Progress' && 'disabled:text-on-surface/38',
-          shows !== 'Progress' && kind === 'Filled' && 'disabled:bg-on-surface/12',
-        ),
-        disabled: Opt.isNone(maybeMessage),
-      }}
-      on={Opt.match(maybeMessage, { onNone: () => ({}), onSome: (message) => on('click', message) })}
+    <Pressable
+      accessibilityRole='button'
+      accessibilityState={{ disabled: Opt.isNone(maybeMessage), busy: isRunning }}
+      style={[
+        kind === 'Filled' ? styles.filledButton : styles.textButton,
+        kind === 'Filled' && { backgroundColor: isEnabled ? color.primary : disabledContainer },
+      ]}
+      onPress={Opt.match(maybeMessage, { onNone: () => undefined, onSome: on })}
     >
-      <span
-        props={{
-          className: shows === 'Label'
-            ? 'opacity-100 transition-opacity duration-short-4 ease-standard-decelerate'
-            : shows === 'Acknowledging'
-            ? 'label-return opacity-100'
-            : 'opacity-0 transition-none',
-        }}
-      >
-        {label}
-      </span>
-      {shows !== 'Label'
-        ? [
-          <span
-            key='progress'
-            // The fade on removal only while the indicator is still shown (the step given back after a failure):
-            // once `indicator-leave` holds it at opacity 0, a transition to 0 never ends, and snabbdom would keep
-            // the element in the button.
-            style={shows === 'Progress'
-              ? {
-                remove: {
-                  opacity: '0',
-                  transition: 'opacity var(--transition-duration-short-4) var(--ease-standard-accelerate)',
-                },
-              }
-              : {}}
-            props={{
-              className: cn(
-                'material-symbols-rounded pointer-events-none absolute inset-0 flex items-center justify-center',
-                'text-[18px]',
-                shows === 'Acknowledging' && 'indicator-leave',
-              ),
-              title: 'Adding the product',
-            }}
-          >
-            <span props={{ className: 'animate-spin' }}>progress_activity</span>
-          </span>,
-        ]
-        : []}
-    </button>
+      {isRunning
+        ? <ActivityIndicator accessibilityLabel='Adding the product' color={tint} />
+        : <Text style={[styles.buttonLabel, { color: tint }]}>{label}</Text>}
+    </Pressable>
   )
 }
 
 /** The field's supporting text. The line is there even when empty, so that a text appearing moves nothing. */
 const supportingText = (supporting: Supporting) => (
-  <div props={{ className: 'min-h-4 px-4 text-body-small text-on-surface-variant' }}>
+  <Text style={styles.supporting}>
     {Match.valueTags(supporting, {
-      Nothing: () => [],
-      CameraUnavailable: () => ['Camera not available. Type the name'],
-      LookingUp: ({ barcode }) => [`Looking up ${barcode}…`],
+      Nothing: () => '',
+      CameraUnavailable: () => 'Camera not available. Type the name',
+      LookingUp: ({ barcode }) => `Looking up ${barcode}…`,
       // The attribution Open Food Facts' licence asks for, with the product's page.
       FromOpenFoodFacts: ({ url }) => [
         'From ',
-        <a props={{ className: 'text-primary underline', href: url }}>Open Food Facts</a>,
+        <Text key='link' style={styles.link} accessibilityRole='link' onPress={() => Linking.openURL(url)}>
+          Open Food Facts
+        </Text>,
       ],
-      NotOnOpenFoodFacts: ({ barcode }) => [`${barcode} isn't on Open Food Facts. Type the name`],
-      LookupFailed: () => ['Couldn\'t reach Open Food Facts. Type the name'],
+      NotOnOpenFoodFacts: ({ barcode }) => `${barcode} isn't on Open Food Facts. Type the name`,
+      LookupFailed: () => 'Couldn\'t reach Open Food Facts. Type the name',
     })}
-  </div>
-)
-
-/** Material's circular progress indicator, 24dp, where the field's trailing icon button goes. */
-const progress = (
-  <span
-    props={{
-      className: cn(
-        'material-symbols-rounded pointer-events-none absolute top-1/2 right-1 flex h-12 w-12 -translate-y-1/2 items-center',
-        'justify-center text-primary',
-      ),
-      title: 'Looking up the product',
-    }}
-  >
-    <span props={{ className: 'animate-spin' }}>progress_activity</span>
-  </span>
+  </Text>
 )
 
 /**
- * Material's outlined text field of the name, drawn anew and focused whenever the program replaces the name, so
- * that the keyboard is up. While a product enters the fridge, its text comes back only once the letters have
- * gathered (`name-return`): they would otherwise gather over the same name, already there.
+ * Material's outlined text field of the name, drawn anew when the name is replaced (a scan, a clearing, a product
+ * added). From then on the user owns its text, and the program learns it from the field's messages.
  */
-const nameField = (shown: NameShown, activity: NameActivity, isReturning: boolean, dispatch: Dispatch<Message>) => {
+const nameField = (shown: NameShown, activity: NameActivity, dispatch: Dispatch<Message>) => {
   const { on, onValue } = handlers(dispatch)
-  const maybeClearName = activity._tag === 'Editing' ? activity.controls.maybeClearName : Opt.none()
+  const isEditing = activity._tag === 'Editing'
+  const maybeClearName = isEditing ? activity.controls.maybeClearName : Opt.none()
   return (
-    <div key={`name-${shown.nameKey}`} props={{ className: 'label-room flex flex-col gap-1' }}>
-      <div props={{ className: 'relative' }}>
-        <label props={{ className: 'block' }}>
-          <input
-            hook={{ create: initialValue(shown.name), insert: focusOnInsert }}
-            attrs={{ 'data-flies-from': 'NameField' }}
-            props={{
-              type: 'text',
-              enterKeyHint: 'next',
-              disabled: activity._tag === 'Adding' || activity._tag === 'UnderDate' || activity._tag === 'LookingUp',
-              placeholder: ' ',
-              className: cn(
-                'peer min-h-14 w-full py-3.75 rounded-extra-small border border-outline bg-transparent pl-4',
-                'text-body-large text-on-surface caret-primary outline-none inset-ring-primary',
-                'placeholder:text-transparent hover:border-on-surface focus:border-primary focus:inset-ring-1',
-                'disabled:border-on-surface/12 disabled:text-on-surface/38',
-                Opt.isSome(maybeClearName) || activity._tag === 'LookingUp' ? 'pr-13' : 'pr-4',
-                isReturning && 'name-return',
-              ),
-            }}
-            on={activity._tag === 'Editing' ? onValue('input', activity.controls.changeName, inputValue) : {}}
-          />
-          <span
-            props={{
-              className: cn(
-                'pointer-events-none absolute top-0 left-3 -translate-y-1/2 bg-surface px-1 text-body-small',
-                'text-on-surface-variant transition-all duration-short-3 peer-placeholder-shown:top-1/2',
-                'peer-placeholder-shown:text-body-large peer-focus:top-0 peer-focus:text-body-small',
-                'peer-focus:text-primary peer-disabled:text-on-surface/38',
-              ),
-            }}
-          >
-            Name
-          </span>
-        </label>
-        {Opt.match(maybeClearName, {
-          onNone: () => activity._tag === 'LookingUp' ? [progress] : [],
-          onSome: (clear) => [
-            <button
-              attrs={{ 'aria-label': 'Clear name' }}
-              props={{
-                className: cn(
-                  'state-layer material-symbols-rounded absolute top-1/2 right-1 flex h-12 w-12 -translate-y-1/2 items-center',
-                  'justify-center rounded-full text-on-surface-variant',
-                ),
-                title: 'Clear name',
-              }}
-              on={on('click', clear)}
-            >
-              cancel
-            </button>,
-          ],
-        })}
-      </div>
+    <Box key={`name-${shown.nameKey}`}>
+      <Box style={[styles.field, { borderColor: isEditing ? color.outline : disabledContainer }]}>
+        <TextInput
+          accessibilityLabel='Name'
+          defaultValue={shown.name}
+          editable={isEditing}
+          enterKeyHint='done'
+          cursorColor={color.primary}
+          style={[styles.input, { color: isEditing ? color.onSurface : disabledContent }]}
+          onChangeText={isEditing ? onValue(activity.controls.changeName) : undefined}
+        />
+        <Text style={[styles.label, { color: isEditing ? color.onSurfaceVariant : disabledContent }]}>Name</Text>
+        {activity._tag === 'LookingUp'
+          ? (
+            <Box style={[styles.iconButton, styles.trailing]}>
+              <ActivityIndicator accessibilityLabel='Looking up the product' color={color.primary} />
+            </Box>
+          )
+          : Opt.match(maybeClearName, {
+            onNone: () => null,
+            onSome: (clear) => (
+              <Pressable
+                accessibilityRole='button'
+                accessibilityLabel='Clear name'
+                style={[styles.iconButton, styles.trailing]}
+                onPress={on(clear)}
+              >
+                {icon('cancel', color.onSurfaceVariant)}
+              </Pressable>
+            ),
+          })}
+      </Box>
       {supportingText(shown.supporting)}
-    </div>
+    </Box>
   )
 }
 
@@ -276,28 +315,42 @@ const nameField = (shown: NameShown, activity: NameActivity, isReturning: boolea
 const scanFab = (maybeScan: Opt.Option<Message>, dispatch: Dispatch<Message>) => {
   const { on } = handlers(dispatch)
   return (
-    <button
-      attrs={{ 'aria-label': 'Scan barcode' }}
-      props={{
-        className: cn(
-          'state-layer material-symbols-rounded absolute right-0 bottom-1 flex h-14 w-14 items-center',
-          'justify-center rounded-large bg-tertiary-container text-on-tertiary-container shadow-elevation-3',
-          'transition-colors disabled:bg-on-surface/12 disabled:text-on-surface/38 disabled:shadow-none',
-        ),
-        title: 'Scan barcode',
-        disabled: Opt.isNone(maybeScan),
-      }}
-      on={Opt.match(maybeScan, { onNone: () => ({}), onSome: (scan) => on('click', scan) })}
+    <Pressable
+      accessibilityRole='button'
+      accessibilityLabel='Scan barcode'
+      accessibilityState={{ disabled: Opt.isNone(maybeScan) }}
+      style={[styles.scanFab, {
+        backgroundColor: Opt.isSome(maybeScan) ? color.tertiaryContainer : disabledContainer,
+        // A disabled FAB lies flat: a shadow under a translucent container shows through it.
+        elevation: Opt.isSome(maybeScan) ? elevation.level3 : 0,
+      }]}
+      onPress={Opt.match(maybeScan, { onNone: () => undefined, onSome: on })}
     >
-      barcode_scanner
-    </button>
+      {icon('barcode_scanner', Opt.isSome(maybeScan) ? color.onTertiaryContainer : disabledContent)}
+    </Pressable>
   )
 }
 
 /**
- * The first step: the name under the app bar, the two ways out docked at the bottom, the fridge between. Hidden
- * once the scanner has risen over it, so that the camera, drawn behind the page, shows through the scanner's window.
+ * What was just added, said where the fridge's animation will be, and heard by a screen reader from its live
+ * region.
  */
+const added = (maybeEntering: Opt.Option<Entering>) => (
+  <Text accessibilityLiveRegion='polite' style={styles.added}>
+    {Opt.match(maybeEntering, {
+      onNone: () => '',
+      onSome: ({ product: { name, maybeExpirationDate } }) =>
+        `${name} added. ${
+          Opt.match(maybeExpirationDate, {
+            onNone: () => 'No expiration',
+            onSome: (date) => `Expires ${formatDay(date)}`,
+          })
+        }`,
+    })}
+  </Text>
+)
+
+/** The first step: the name under the app bar, the two ways out docked at the bottom, the scan FAB above them. */
 const nameStep = (
   shown: NameShown,
   activity: NameActivity,
@@ -305,444 +358,221 @@ const nameStep = (
   dispatch: Dispatch<Message>,
 ) => {
   const controls = activity._tag === 'Editing' ? Opt.some(activity.controls) : Opt.none()
-  const maybeClose = activity._tag === 'Editing' || activity._tag === 'LookingUp'
-    ? Opt.some(activity.controls.close)
-    : Opt.none()
-  return (
-    <div
-      key='naming'
-      style={activity._tag === 'UnderScanner'
-        ? { visibility: 'hidden', transition: 'visibility 0s linear var(--transition-duration-medium-4)' }
-        : { visibility: 'visible', transition: 'none' }}
-      props={{ className: 'absolute inset-0 flex flex-col bg-surface text-on-surface' }}
-    >
-      {appBar('Add products', 'close', 'Close', maybeClose, dispatch)}
-      {/* Fits the reference screen; scrolls when the screen is shorter (the keyboard open, a large font). */}
-      <div props={{ className: cn('flex flex-1 flex-col gap-3 overflow-y-auto', stepPadding) }}>
-        {nameField(shown, activity, Opt.isSome(maybeEntering), dispatch)}
-        {room(fridge(maybeEntering), scanFab(Opt.flatMap(controls, ({ maybeScan }) => maybeScan), dispatch))}
-        {button(
-          'Set expiration',
-          Opt.flatMap(controls, ({ maybeRequestDate }) => maybeRequestDate),
-          'Label',
-          'Filled',
+  const maybeClose = activity._tag === 'Adding' ? Opt.none() : Opt.some(activity.controls.close)
+  return [
+    <Box key='bar'>{appBar('Add products', 'close', 'Close', maybeClose, dispatch)}</Box>,
+    <ScrollView key='naming' keyboardShouldPersistTaps='handled' contentContainerStyle={styles.column}>
+      {nameField(shown, activity, dispatch)}
+      <Box style={styles.room}>
+        {added(maybeEntering)}
+        {scanFab(Opt.flatMap(controls, ({ maybeScan }) => maybeScan), dispatch)}
+      </Box>
+    </ScrollView>,
+    <Box key='dock' style={styles.dock}>
+      {button(
+        'Set expiration',
+        Opt.flatMap(controls, ({ maybeRequestDate }) => maybeRequestDate),
+        false,
+        'Filled',
+        dispatch,
+      )}
+      {activity._tag === 'LookingUp'
+        ? button('Cancel', Opt.some(activity.controls.cancelLookup), false, 'Text', dispatch)
+        : button(
+          'Add without date',
+          Opt.flatMap(controls, ({ maybeAdd }) => maybeAdd),
+          activity._tag === 'Adding',
+          'Text',
           dispatch,
         )}
-        {activity._tag === 'LookingUp'
-          ? button('Cancel', Opt.some(activity.controls.cancelLookup), 'Label', 'Text', dispatch)
-          : button(
-            'Add without date',
-            Opt.flatMap(controls, ({ maybeAdd }) => maybeAdd),
-            activity._tag === 'Adding'
-              ? 'Progress'
-              : activity._tag === 'Editing' && activity.controls.acknowledging === 'Added'
-              ? 'Acknowledging'
-              : 'Label',
-            'Text',
-            dispatch,
-          )}
-      </div>
-    </div>
-  )
+    </Box>,
+  ]
 }
 
 /** Material's segmented button of the orders. Its row stays empty until the order is known: nothing moves then. */
 const orderSegments = (shown: DateShown, activity: DateActivity, dispatch: Dispatch<Message>) => {
   const { on } = handlers(dispatch)
-  const segment = ({ order, choice }: OrderChoice) => {
-    const maybePick = choice._tag === 'Offered' ? choice.maybePick : Opt.none()
+  if (shown.order._tag === 'Unknown') {
+    return <Box style={styles.segments} />
+  }
+  const last = shown.order.choices.length - 1
+  const segment = ({ order, choice }: OrderChoice, index: number) => {
+    const maybePick = choice._tag === 'Offered' && activity._tag === 'Editing' ? choice.maybePick : Opt.none()
+    const isCurrent = choice._tag === 'Current'
+    const tint = activity._tag === 'Editing'
+      ? (isCurrent ? color.onSecondaryContainer : color.onSurface)
+      : disabledContent
     return (
-      <button
-        attrs={{ 'aria-pressed': choice._tag === 'Current' ? 'true' : 'false' }}
-        props={{
-          className: 'segment',
-          disabled: activity._tag === 'Adding',
-          title: orderTitles[order],
-        }}
-        on={Opt.match(maybePick, { onNone: () => ({}), onSome: (pick) => on('click', pick) })}
+      <Pressable
+        key={order}
+        accessibilityRole='button'
+        accessibilityLabel={orderTitles[order]}
+        accessibilityState={{ selected: isCurrent, disabled: activity._tag !== 'Editing' }}
+        style={[
+          styles.segment,
+          index === 0 && styles.segmentFirst,
+          index === last && styles.segmentLast,
+          index > 0 && styles.segmentNext,
+          isCurrent && { backgroundColor: color.secondaryContainer },
+        ]}
+        onPress={Opt.match(maybePick, { onNone: () => undefined, onSome: on })}
       >
-        {/* Keyed: the label must not take over the check's element, and its font, once the check goes. */}
-        {choice._tag === 'Current'
-          ? [
-            <span
-              key='check'
-              attrs={{ 'aria-hidden': 'true' }}
-              props={{ className: 'material-symbols-rounded text-[18px]' }}
-            >
-              check
-            </span>,
-          ]
-          : []}
-        <span key='label'>{order}</span>
-      </button>
+        {isCurrent ? icon('check', tint, { fontSize: 18, lineHeight: 18 }) : null}
+        <Text style={[styles.segmentLabel, { color: tint }]}>{order}</Text>
+      </Pressable>
     )
   }
-  return (
-    <div props={{ className: 'flex min-h-10' }}>
-      {Match.valueTags(shown.order, { Unknown: () => [], Known: ({ choices }) => choices.map(segment) })}
-    </div>
-  )
+  return <Box style={styles.segments}>{shown.order.choices.map(segment)}</Box>
 }
 
 /**
- * Material's outlined text field of the date: read-only, typed into with the keypad, so that the thumb stays where
- * it is. The digits are shown as typed: grouping them would read them one way.
+ * Material's outlined text field of the date: read-only, typed into with the keypad, so that the thumb stays where it
+ * is. The digits are shown as they are: grouping them would read them one way.
  */
 const dateField = (shown: DateShown, activity: DateActivity) => {
-  // Disabled while the product is being added; in the error's colors when the digits name no day.
+  // Disabled while the step takes no input; in the error's colors when the digits name no day.
   const look = activity._tag === 'Adding' ? 'Disabled' : shown.strip._tag === 'NamingNothing' ? 'Wrong' : 'Plain'
-  // The margin above is the floating label's upper half, which Material's own field reserves.
+  const tint = look === 'Disabled' ? disabledContent : look === 'Wrong' ? color.error : color.onSurfaceVariant
+  const placeholder = shown.order._tag === 'Known' ? placeholders[shown.order.order] : ''
   return (
-    <div props={{ className: 'flex flex-col' }}>
-      <label props={{ className: 'label-room relative block' }}>
-        <input
-          props={{
-            type: 'text',
-            readOnly: true,
-            inputMode: 'none',
-            disabled: look === 'Disabled',
-            placeholder: shown.order._tag === 'Known' ? placeholders[shown.order.order] : ' ',
-            value: shown.digits,
-            className: cn(
-              'peer min-h-14 w-full py-3.75 rounded-extra-small border bg-transparent px-4 text-body-large text-on-surface',
-              'caret-transparent outline-none placeholder:text-transparent focus:inset-ring-1',
-              'focus:placeholder:text-on-surface-variant disabled:border-on-surface/12 disabled:text-on-surface/38',
-              look === 'Wrong'
-                ? 'border-error inset-ring-error'
-                : 'border-outline inset-ring-primary hover:border-on-surface focus:border-primary',
-            ),
-          }}
-        />
-        <span
-          props={{
-            className: cn(
-              'pointer-events-none absolute top-0 left-3 -translate-y-1/2 bg-surface px-1',
-              'text-body-small transition-all duration-short-3 peer-placeholder-shown:top-1/2',
-              'peer-placeholder-shown:text-body-large peer-focus:top-0 peer-focus:text-body-small',
-              'peer-disabled:text-on-surface/38',
-              look === 'Wrong' ? 'text-error' : 'text-on-surface-variant peer-focus:text-primary',
-            ),
-          }}
-        >
-          Expiration date
-        </span>
-      </label>
-    </div>
+    <Box
+      accessible
+      accessibilityLabel={`Expiration date, ${shown.digits === '' ? 'empty' : shown.digits}`}
+      style={[styles.field, {
+        borderColor: look === 'Disabled' ? disabledContainer : look === 'Wrong' ? color.error : color.outline,
+      }]}
+    >
+      <Text style={[styles.digits, { color: shown.digits === '' ? color.onSurfaceVariant : color.onSurface }]}>
+        {shown.digits === '' ? placeholder : shown.digits}
+      </Text>
+      <Text style={[styles.label, { color: tint }]}>Expiration date</Text>
+    </Box>
   )
 }
 
 /** Material's filter chip of a day the digits name. */
 const chip = ({ date, choice }: DateChoice, activity: DateActivity, dispatch: Dispatch<Message>) => {
   const { on } = handlers(dispatch)
-  const maybeChoose = choice._tag === 'Offered' ? choice.maybeChoose : Opt.none()
+  const maybeChoose = choice._tag === 'Offered' && activity._tag === 'Editing' ? choice.maybeChoose : Opt.none()
+  const isChosen = choice._tag === 'Chosen'
+  const tint = activity._tag === 'Editing'
+    ? (isChosen ? color.onSecondaryContainer : color.onSurfaceVariant)
+    : disabledContent
   return (
-    <button
-      attrs={{ 'aria-pressed': choice._tag === 'Chosen' ? 'true' : 'false' }}
-      props={{
-        className: 'filter-chip',
-        disabled: activity._tag === 'Adding',
-      }}
-      on={Opt.match(maybeChoose, { onNone: () => ({}), onSome: (choose) => on('click', choose) })}
+    <Pressable
+      key={date}
+      accessibilityRole='button'
+      accessibilityState={{ selected: isChosen, disabled: activity._tag !== 'Editing' }}
+      style={[styles.chip, {
+        borderColor: isChosen ? color.secondaryContainer : color.outlineVariant,
+        backgroundColor: isChosen ? color.secondaryContainer : 'transparent',
+      }]}
+      onPress={Opt.match(maybeChoose, { onNone: () => undefined, onSome: on })}
     >
-      <span attrs={{ 'aria-hidden': 'true' }} props={{ className: 'material-symbols-rounded text-[18px]' }}>
-        {choice._tag === 'Chosen' ? 'check' : 'event'}
-      </span>
-      <span>{formatDay(date)}</span>
-    </button>
+      {icon(isChosen ? 'check' : 'event', tint, { fontSize: 18, lineHeight: 18 })}
+      <Text style={[styles.chipLabel, { color: isChosen ? color.onSecondaryContainer : color.onSurface }]}>
+        {formatDay(date)}
+      </Text>
+    </Pressable>
   )
 }
 
-/**
- * Under the field, where a keyboard's suggestions would be: the hint, then the chips, on one line that scrolls
- * sideways. The hint stays laid out, unseen, under what replaces it, so that the strip keeps its height from the
- * first digit to the last: nothing under it moves while the user types, whatever the font's size.
- */
+/** Under the field, what it means: the hint, the chips on one line that scrolls sideways, or the error. */
 const strip = (shown: DateShown, activity: DateActivity, dispatch: Dispatch<Message>) => (
-  <div
-    props={{
-      className: cn(
-        'grid shrink-0 text-body-small',
-        shown.strip._tag === 'NamingNothing' ? 'text-error' : 'text-on-surface-variant',
+  <Box style={styles.strip}>
+    {Match.valueTags(shown.strip, {
+      Hint: () => (
+        <Text style={[styles.stripText, { color: color.onSurfaceVariant }]}>
+          {shown.order._tag === 'Known' ? hints[shown.order.order] : ''}
+        </Text>
       ),
-    }}
-  >
-    <span
-      props={{ className: cn('col-start-1 row-start-1 px-4', shown.strip._tag !== 'Hint' && 'invisible') }}
-    >
-      {shown.order._tag === 'Known' ? hints[shown.order.order] : ''}
-    </span>
-    <div props={{ className: 'col-start-1 row-start-1 flex min-h-8 items-start gap-2 overflow-x-auto' }}>
-      {Match.valueTags(shown.strip, {
-        Hint: () => [],
-        Naming: ({ choices }) => choices.map((choice) => chip(choice, activity, dispatch)),
-        NamingNothing: () => [<span props={{ className: 'px-4' }}>Not an upcoming date</span>],
-      })}
-    </div>
-  </div>
+      Naming: ({ choices }) => (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
+          {choices.map((choice) =>
+            chip(choice, activity, dispatch)
+          )}
+        </ScrollView>
+      ),
+      NamingNothing: () => <Text style={[styles.stripText, { color: color.error }]}>Not an upcoming date</Text>,
+    })}
+  </Box>
 )
 
 /** A keypad of the app's own, always where the thumb expects it: Material's tonal buttons in a button group's pills. */
 const keypad = (activity: DateActivity, dispatch: Dispatch<Message>) => {
   const { on } = handlers(dispatch)
-  const key = (label: string, maybeMessage: Opt.Option<Message>, { title = label, isIcon = false } = {}) => (
-    <button
-      attrs={{ 'aria-label': title }}
-      props={{
-        className: cn(
-          'state-layer flex h-14 items-center justify-center rounded-full bg-surface-container-highest',
-          'text-headline-small text-on-surface transition-colors disabled:bg-on-surface/12',
-          'disabled:text-on-surface/38',
-          { 'material-symbols-rounded': isIcon },
-        ),
-        disabled: Opt.isNone(maybeMessage),
-        title,
-      }}
-      on={Opt.match(maybeMessage, { onNone: () => ({}), onSome: (message) => on('click', message) })}
-    >
-      {label}
-    </button>
-  )
+  const key = (id: string, label: ReactNode, title: string, maybeMessage: Opt.Option<Message>) => {
+    const isEnabled = Opt.isSome(maybeMessage)
+    return (
+      <Pressable
+        key={id}
+        accessibilityRole='button'
+        accessibilityLabel={title}
+        accessibilityState={{ disabled: !isEnabled }}
+        style={[styles.key, { backgroundColor: isEnabled ? color.surfaceContainerHighest : disabledContainer }]}
+        onPress={Opt.match(maybeMessage, { onNone: () => undefined, onSome: on })}
+      >
+        {label}
+      </Pressable>
+    )
+  }
   const controls = activity._tag === 'Editing' ? Opt.some(activity.controls) : Opt.none()
-  const digitKey = (digit: Digit) =>
-    key(digit, Opt.flatMap(controls, ({ maybeTypeDigit }) => Opt.map(maybeTypeDigit, (type) => type(digit))))
+  const tintOf = (maybe: Opt.Option<unknown>) => (Opt.isSome(maybe) ? color.onSurface : disabledContent)
+  const digitKey = (digit: Digit) => {
+    const maybeMessage = Opt.flatMap(
+      controls,
+      ({ maybeTypeDigit }) => Opt.map(maybeTypeDigit, (typeDigit) => typeDigit(digit)),
+    )
+    return key(
+      digit,
+      <Text style={[styles.keyLabel, { color: tintOf(maybeMessage) }]}>{digit}</Text>,
+      digit,
+      maybeMessage,
+    )
+  }
+  const clear = Opt.flatMap(controls, ({ maybeClearDate }) => maybeClearDate)
+  const erase = Opt.flatMap(controls, ({ maybeEraseDigit }) => maybeEraseDigit)
   return (
-    <div props={{ className: 'grid grid-cols-3 gap-2' }}>
+    <Box style={styles.keypad}>
       {keys.map(digitKey)}
-      {key('cancel', Opt.flatMap(controls, ({ maybeClearDate }) => maybeClearDate), {
-        title: 'Clear date',
-        isIcon: true,
-      })}
+      {key('clear', icon('cancel', tintOf(clear)), 'Clear date', clear)}
       {digitKey('0')}
-      {key('backspace', Opt.flatMap(controls, ({ maybeEraseDigit }) => maybeEraseDigit), {
-        title: 'Backspace',
-        isIcon: true,
-      })}
-    </div>
+      {key('erase', icon('backspace', tintOf(erase)), 'Backspace', erase)}
+    </Box>
   )
 }
 
-/**
- * The second step, over the first, laid out as a dialer: the fields read from the top, the keypad and the button
- * docked at the bottom. It comes and goes along Material's shared axis.
- */
-const dateStep = (
-  shown: DateShown,
-  activity: DateActivity,
-  dispatch: Dispatch<Message>,
-) => {
+/** The second step, laid out as a dialer: the fields read from the top, the keypad and the button at the bottom. */
+const dateStep = (shown: DateShown, activity: DateActivity, dispatch: Dispatch<Message>) => {
   const controls = activity._tag === 'Editing' ? Opt.some(activity.controls) : Opt.none()
-  return (
-    <div
-      key='dating'
-      style={{
-        opacity: '0',
-        transform: 'translateX(2rem)',
-        transitionProperty: 'opacity, transform',
-        transitionDuration: 'var(--transition-duration-medium-4)',
-        transitionTimingFunction: 'var(--ease-emphasized-decelerate)',
-        delayed: { opacity: '1', transform: 'translateX(0)' },
-        remove: {
-          opacity: '0',
-          transform: 'translateX(2rem)',
-          pointerEvents: 'none',
-          transitionDuration: 'var(--transition-duration-short-4)',
-          transitionTimingFunction: 'var(--ease-emphasized-accelerate)',
-        },
-      }}
-      props={{ className: 'absolute inset-0 flex flex-col bg-surface text-on-surface' }}
-    >
+  return [
+    <Box key='bar'>
       {appBar('Add products', 'arrow_back', 'Back', Opt.map(controls, ({ back }) => back), dispatch)}
-      {/* Fits the reference screen; scrolls when the screen is shorter (a large font), "Add" docked under it. */}
-      <div props={{ className: cn('flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto', sidePadding) }}>
-        <div props={{ className: 'flex flex-col px-4 pb-2' }}>
-          <span props={{ className: 'text-label-medium text-on-surface-variant' }}>Product</span>
-          <h3
-            attrs={{ 'data-flies-from': 'DateHeading' }}
-            props={{ className: 'line-clamp-2 wrap-anywhere text-title-large' }}
-          >
-            {shown.name}
-          </h3>
-        </div>
-        {orderSegments(shown, activity, dispatch)}
-        {dateField(shown, activity)}
-        {strip(shown, activity, dispatch)}
-        <div props={{ className: 'mt-auto rounded-extra-large bg-surface-container-low p-2' }}>
-          {keypad(activity, dispatch)}
-        </div>
-      </div>
-      {/* The gap above "Add" is its own, not the column's: it stays when the column scrolls under it. */}
-      <div props={{ className: cn('flex shrink-0 flex-col pt-2', stepPadding) }}>
-        {button(
-          'Add',
-          Opt.flatMap(controls, ({ maybeAdd }) => maybeAdd),
-          activity._tag === 'Adding' ? 'Progress' : 'Label',
-          'Filled',
-          dispatch,
-        )}
-      </div>
-    </div>
-  )
+    </Box>,
+    <ScrollView key='dating' contentContainerStyle={styles.dateColumn}>
+      <Box style={styles.heading}>
+        <Text style={styles.headingLabel}>Product</Text>
+        <Text accessibilityRole='header' numberOfLines={2} style={styles.headingName}>{shown.name}</Text>
+      </Box>
+      {orderSegments(shown, activity, dispatch)}
+      {dateField(shown, activity)}
+      {strip(shown, activity, dispatch)}
+      {keypad(activity, dispatch)}
+    </ScrollView>,
+    <Box key='dock' style={styles.dock}>
+      {button('Add', Opt.flatMap(controls, ({ maybeAdd }) => maybeAdd), activity._tag === 'Adding', 'Filled', dispatch)}
+    </Box>,
+  ]
 }
 
-/**
- * Material's full-screen dialog over the first step, with a transparent window over the camera, drawn behind the
- * page. It rises opaque; the surface's color fades from the window once it is in place.
- */
-const scanner = (model: Model & { _tag: 'Scanning' }, dispatch: Dispatch<Message>) => (
-  <div
-    key='scanner'
-    style={{
-      transform: 'translateY(100%)',
-      transition: 'transform var(--transition-duration-medium-4) var(--ease-emphasized-decelerate)',
-      delayed: { transform: 'translateY(0)' },
-      remove: {
-        transform: 'translateY(100%)',
-        pointerEvents: 'none',
-        transition: 'transform var(--transition-duration-short-4) var(--ease-emphasized-accelerate)',
-      },
-    }}
-    props={{ className: 'absolute inset-0 flex flex-col' }}
-  >
-    {appBar('Scan barcode', 'close', 'Close', Opt.some(model.closeScanner), dispatch)}
-    <div
-      style={{
-        backgroundColor: 'var(--color-surface)',
-        transition:
-          'background-color var(--transition-duration-short-4) var(--ease-standard) var(--transition-duration-medium-4)',
-        delayed: { backgroundColor: 'transparent' },
-      }}
-      props={{ className: 'flex flex-1 items-center justify-center px-4' }}
-    >
-      {model.camera === 'Available'
-        ? <div props={{ className: 'h-44 w-72 max-w-full rounded-large border-2 border-inverse-on-surface' }} />
-        : (
-          <div props={{ className: 'flex flex-col items-center gap-2 px-4 text-center text-on-surface-variant' }}>
-            <span props={{ className: 'material-symbols-rounded icon-large' }}>no_photography</span>
-            <span props={{ className: 'text-body-medium' }}>Camera not available. Type the name</span>
-          </div>
-        )}
-    </div>
-    <div props={{ className: cn('bg-surface pt-4 text-center text-body-medium text-on-surface-variant', stepPadding) }}>
-      {model.camera === 'Available' ? 'Point the camera at a barcode' : ''}
-    </div>
-  </div>
-)
-
-/**
- * A stylized fridge, there only while a product enters it (`docs/product-flight.md`). Keyed by the product, so
- * that the next one plays it anew over the one fading. Decoration: the announcement says what was added.
- */
-const fridge = (maybeEntering: Opt.Option<Entering>) => (
-  <div
-    key='fridge'
-    props={{ className: 'pointer-events-none absolute inset-x-0 top-0 bottom-16 grid place-items-center' }}
-  >
-    {Opt.match(maybeEntering, {
-      onNone: () => [],
-      onSome: ({ product }) => [
-        <div
-          key={`fridge-${DateTime.toEpochMillis(product.creationDate)}`}
-          style={{
-            remove: {
-              opacity: '0',
-              transition: 'opacity var(--transition-duration-short-4) var(--ease-standard-accelerate)',
-            },
-          }}
-          attrs={{ 'aria-hidden': 'true' }}
-          props={{ className: 'fridge-visit col-start-1 row-start-1 flex aspect-5/8 h-24 max-h-full flex-col' }}
-        >
-          <div
-            props={{
-              className: 'relative h-1/3 shrink-0 rounded-t-small border-[1.5px] border-primary bg-primary-container',
-            }}
-          >
-            <span props={{ className: 'absolute top-2 left-2 h-4 w-1 rounded-full bg-on-primary-container' }} />
-          </div>
-          <div
-            props={{
-              className: cn(
-                'relative -mt-[1.5px] flex-1 rounded-b-small border-[1.5px] border-primary',
-                'bg-surface-container-highest perspective-near',
-              ),
-            }}
-          >
-            <div
-              attrs={{ 'data-fridge': true }}
-              props={{ className: 'absolute inset-0 flex items-center justify-center' }}
-            >
-              <span props={{ className: 'fridge-content material-symbols-rounded text-primary' }}>package_2</span>
-            </div>
-            <div
-              props={{
-                className: cn(
-                  'fridge-door absolute -inset-[1.5px] rounded-b-small border-[1.5px] border-primary',
-                  'bg-primary-container',
-                ),
-              }}
-            >
-              <span props={{ className: 'absolute top-3 left-2 h-6 w-1 rounded-full bg-on-primary-container' }} />
-            </div>
-          </div>
-        </div>,
-      ],
-    })}
-  </div>
-)
-
-/**
- * The name's letters, laid over where it is written, gathering into a package that flies into the fridge
- * (`docs/product-flight.md`). Keyed by the product: the next one's is a new element.
- */
-const enteringProduct = ({ product, from }: Entering) => (
-  <div
-    key={`entering-${DateTime.toEpochMillis(product.creationDate)}`}
-    hook={gatherAndFly(`[data-flies-from="${from}"]`, '[data-fridge]')}
-    attrs={{ 'aria-hidden': 'true' }}
-    props={{ className: 'absolute top-0 left-0' }}
-  >
-    <div
-      attrs={{ 'data-letters': true, dir: 'auto' }}
-      props={{ className: 'absolute flex items-center whitespace-pre text-on-surface' }}
-    >
-      {piecesOf(product.name).map((piece) => (
-        <span attrs={{ 'data-letter': true }} props={{ className: 'gather-letter shrink-0' }}>{piece}</span>
-      ))}
-    </div>
-    <div attrs={{ 'data-traveller': true }} props={{ className: 'traveller-x absolute h-6 w-6' }}>
-      <div props={{ className: 'traveller-y' }}>
-        <span props={{ className: 'pack-in material-symbols-rounded block text-primary' }}>package_2</span>
-      </div>
-    </div>
-  </div>
-)
-
-/** Over both steps and under the scanner. It takes no input: the controls under it stay pressable. */
-const flightLayer = (maybeEntering: Opt.Option<Entering>) => (
-  <div key='flight' props={{ className: 'pointer-events-none absolute inset-0' }}>
-    {Opt.match(maybeEntering, { onNone: () => [], onSome: (entering) => [enteringProduct(entering)] })}
-  </div>
-)
-
-/**
- * What a screen reader hears once a product is added, the fridge and the flight being decoration. The live region
- * is always there: it is announced when its text changes.
- */
-const announcement = (maybeEntering: Opt.Option<Entering>) => (
-  <div key='announcement' attrs={{ 'aria-live': 'polite' }} props={{ className: 'sr-only' }}>
-    {Opt.match(maybeEntering, {
-      onNone: () => [],
-      onSome: ({ product: { name, maybeExpirationDate } }) => [
-        `${name} added. ${
-          Opt.match(maybeExpirationDate, {
-            onNone: () => 'No expiration',
-            onSome: (date) =>
-              `Expires ${formatDay(date)}`,
-          })
-        }`,
-      ],
-    })}
-  </div>
-)
+/** Material's full-screen dialog over the first step. The camera is not drawn yet: it says so. */
+const scanner = (model: Model & { _tag: 'Scanning' }, dispatch: Dispatch<Message>) => [
+  <Box key='bar'>{appBar('Scan barcode', 'close', 'Close', Opt.some(model.closeScanner), dispatch)}</Box>,
+  <Box key='scanner' style={styles.scanner}>
+    {icon('no_photography', color.onSurfaceVariant, { fontSize: 36, lineHeight: 36 })}
+    <Text style={styles.scannerText}>Camera not available. Type the name</Text>
+  </Box>,
+]
 
 const failureTexts: Readonly<Record<Failure, string>> = {
   AddFailed: 'Couldn\'t add the product',
@@ -750,94 +580,42 @@ const failureTexts: Readonly<Record<Failure, string>> = {
 }
 
 /**
- * The heights of the controls docked at the bottom of each step, at their minimum, and the 16dp above them. On the
- * first step: its two buttons, the 12dp between them and above, and the scan FAB with its 4dp, which the snackbar
- * stands above, as Material's does; on the second, the "Add" button.
+ * The heights of the controls docked at the bottom of each step, and the 16dp above them: on the first step, its two
+ * buttons and the scan FAB; on the second, the "Add" button.
  */
-const clearances = {
-  Naming: '[--snackbar-clearance:12.25rem]',
-  Dating: '[--snackbar-clearance:4.5rem]',
-} as const
+const clearances = { Naming: 196, Dating: 88 } as const
 
-/**
- * Material's snackbar (`snackbar` in `styles.css`) 16dp above the controls docked at the bottom of the step shown,
- * keyed by its id so that the next one appears anew, after this one has sunk. The place stays, so that it enters
- * and leaves with its own transitions.
- */
-const snackbar = (shown: Snackbar, step: keyof typeof clearances) => (
-  <div key='snackbar' props={{ className: cn('snackbar-slot', clearances[step]) }}>
-    {shown._tag === 'None' ? [] : [
-      <div
-        key={`snackbar-${shown.id}`}
-        attrs={{ 'data-entrance': shown.entrance }}
-        style={{ remove: { opacity: '0', transform: 'translateY(0.5rem)' } }}
-        props={{ className: 'snackbar' }}
-      >
-        <span>{failureTexts[shown.failure]}</span>
-      </div>,
-    ]}
-  </div>
-)
+/** Material's snackbar 16dp above the controls docked at the bottom of the step shown, drawn anew for each id. */
+const snackbar = (shown: Snackbar, step: keyof typeof clearances) =>
+  shown._tag === 'None' ? null : (
+    <Box
+      key={`snackbar-${shown.id}`}
+      accessibilityLiveRegion='polite'
+      style={[styles.snackbar, { bottom: clearances[step] }]}
+    >
+      <Text style={styles.snackbarText}>{failureTexts[shown.failure]}</Text>
+    </Box>
+  )
 
-/** Material's full-screen dialog, as a page: it rises over the page that opened it, and sinks back over it. */
+/** Material's full-screen dialog, as a page over the one that opened it: one step at a time. */
 export const view: View<Model, Message> = (model, dispatch) => (
-  <div
-    key='AddProducts'
-    style={{
-      transform: 'translateY(100%)',
-      transition: 'transform var(--transition-duration-medium-4) var(--ease-emphasized-decelerate)',
-      delayed: { transform: 'translateY(0)' },
-      remove: {
-        transform: 'translateY(100%)',
-        pointerEvents: 'none',
-        transition: 'transform var(--transition-duration-short-4) var(--ease-emphasized-accelerate)',
-      },
-    }}
-    props={{ className: 'fixed inset-0 z-70' }}
-  >
-    {[
-      ...Match.valueTags(model, {
-        Naming: (naming) => [
-          nameStep(naming, { _tag: 'Editing', controls: naming }, naming.maybeEntering, dispatch),
-          flightLayer(naming.maybeEntering),
-          announcement(naming.maybeEntering),
-        ],
-        LookingUp: (lookingUp) => [
-          nameStep(lookingUp, { _tag: 'LookingUp', controls: lookingUp }, Opt.none(), dispatch),
-          flightLayer(Opt.none()),
-          announcement(Opt.none()),
-        ],
-        Scanning: (scanning) => [
-          nameStep(scanning, { _tag: 'UnderScanner' }, Opt.none(), dispatch),
-          flightLayer(Opt.none()),
-          scanner(scanning, dispatch),
-          announcement(Opt.none()),
-        ],
-        Dating: (dating) => [
-          nameStep(dating, { _tag: 'UnderDate' }, dating.maybeEntering, dispatch),
-          dateStep(dating, { _tag: 'Editing', controls: dating }, dispatch),
-          flightLayer(dating.maybeEntering),
-          announcement(dating.maybeEntering),
-        ],
+  <SafeAreaView style={styles.page}>
+    <Box style={styles.frame}>
+      {Match.valueTags(model, {
+        Naming: (naming) => nameStep(naming, { _tag: 'Editing', controls: naming }, naming.maybeEntering, dispatch),
+        LookingUp: (lookingUp) => nameStep(lookingUp, { _tag: 'LookingUp', controls: lookingUp }, Opt.none(), dispatch),
+        Scanning: (scanning) => scanner(scanning, dispatch),
+        Dating: (dating) => dateStep(dating, { _tag: 'Editing', controls: dating }, dispatch),
         Adding: (adding) =>
           Match.valueTags(adding.step, {
-            Naming: () => [
-              nameStep(adding, { _tag: 'Adding' }, adding.maybeEntering, dispatch),
-              flightLayer(adding.maybeEntering),
-              announcement(adding.maybeEntering),
-            ],
-            Dating: (date) => [
-              nameStep(adding, { _tag: 'UnderDate' }, adding.maybeEntering, dispatch),
-              dateStep(date, { _tag: 'Adding' }, dispatch),
-              flightLayer(adding.maybeEntering),
-              announcement(adding.maybeEntering),
-            ],
+            Naming: () => nameStep(adding, { _tag: 'Adding' }, adding.maybeEntering, dispatch),
+            Dating: (date) => dateStep(date, { _tag: 'Adding' }, dispatch),
           }),
-      }),
-      snackbar(
+      })}
+      {snackbar(
         model.snackbar,
         model._tag === 'Dating' || (model._tag === 'Adding' && model.step._tag === 'Dating') ? 'Dating' : 'Naming',
-      ),
-    ]}
-  </div>
+      )}
+    </Box>
+  </SafeAreaView>
 )

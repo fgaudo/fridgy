@@ -42,3 +42,4 @@ android-rn/build/
 android-rn/app/build/
 android-rn/app/.cxx/
 android-rn/local.properties
+android-rn/app/src/main/assets/fonts/MaterialSymbolsRounded.ttf

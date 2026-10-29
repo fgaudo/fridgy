@@ -7,12 +7,12 @@ apply plugin: "com.facebook.react"
  * By default you don't need to apply any configuration, just uncomment the lines you need.
  */
 react {
-    // The project is the repository's root; the entry is in `rn/`.
+    // The project is the repository's root.
     root = file("../../")
     reactNativeDir = file("../../node_modules/react-native")
     codegenDir = file("../../node_modules/@react-native/codegen")
     cliFile = file("../../node_modules/react-native/cli.js")
-    entryFile = file("../../rn/index.js")
+    entryFile = file("../../src/entrypoints/native.ts")
     // Every variant embeds its bundle, compiled by hermesc: the prototype runs without Metro's server.
     debuggableVariants = []
 

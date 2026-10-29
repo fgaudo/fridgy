@@ -1,20 +1,21 @@
 import type { Dispatch } from '@fgaudo/effect-tea'
 import * as Match from 'effect/Match'
 import * as Opt from 'effect/Option'
+import type { ReactNode } from 'react'
+import { ActivityIndicator, View as Box, Pressable, ScrollView, StyleSheet, Text, TextInput } from 'react-native'
+import { SafeAreaView } from 'react-native-safe-area-context'
 import type { DateOrder } from '#libs/dates/date-order.ts'
 import * as Day from '#libs/dates/day.ts'
-import { handlers, initialValue, type View } from '#libs/tea-snabbdom/tea-snabbdom.ts'
-import { cn } from '#libs/ui/class-names.ts'
+import { handlers, type View } from '#libs/tea-react/tea-react.ts'
+import { color, elevation, icon, shape, type } from '#styles'
 import type { DateChoice, Digit, Failure, FieldsShown, Message, Model, OrderChoice, Snackbar } from './program.ts'
-
-const inputValue = (event: Event) => (event.target as HTMLInputElement).value
 
 // No weekday: a date read off a package has none, and two chips must fit a row of the narrowest phone.
 const formatDay = (date: Day.Day) => Day.format(date, { day: 'numeric', month: 'short', year: 'numeric' })
 
 const keys: ReadonlyArray<Digit> = ['1', '2', '3', '4', '5', '6', '7', '8', '9']
 
-/** How the digits are read in each order: the field's placeholder and each segment's title. */
+/** How the digits are read in each order: the field's placeholder and each segment's label. */
 const placeholders: Readonly<Record<DateOrder, string>> = { DMY: 'DDMMYY', MDY: 'MMDDYY', YMD: 'YYMMDD' }
 
 const hints: Readonly<Record<DateOrder, string>> = {
@@ -29,327 +30,355 @@ const orderTitles: Readonly<Record<DateOrder, string>> = {
   YMD: 'Year, month, day',
 }
 
+// Material's disabled content: the on-surface role at 38%.
+const disabledContent = `${color.onSurface}61`
+
+// Material's disabled container: the on-surface role at 12%.
+const disabledContainer = `${color.onSurface}1f`
+
+const styles = StyleSheet.create({
+  // Edge to edge: the page keeps clear of the system bars, and draws its surface under them.
+  page: { flex: 1, backgroundColor: color.surface },
+  // What an absolute position is measured from: inside the bars.
+  frame: { flex: 1 },
+  bar: { height: 64, flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 4 },
+  title: { ...type.titleLargeEmphasized, flex: 1, paddingHorizontal: 4, color: color.onSurface },
+  iconButton: { width: 48, height: 48, borderRadius: shape.full, alignItems: 'center', justifyContent: 'center' },
+  column: { flexGrow: 1, gap: 8, paddingHorizontal: 24, paddingTop: 8 },
+  field: {
+    minHeight: 56,
+    justifyContent: 'center',
+    borderRadius: shape.extraSmall,
+    borderWidth: 1,
+    paddingHorizontal: 16,
+  },
+  label: {
+    ...type.bodySmall,
+    position: 'absolute',
+    top: -9,
+    left: 12,
+    paddingHorizontal: 4,
+    backgroundColor: color.surface,
+  },
+  input: { ...type.bodyLarge, paddingVertical: 0, paddingRight: 40, color: color.onSurface },
+  clearName: { position: 'absolute', right: 4 },
+  segments: { minHeight: 40, flexDirection: 'row' },
+  segment: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    borderWidth: 1,
+    borderColor: color.outline,
+  },
+  segmentFirst: { borderTopLeftRadius: shape.full, borderBottomLeftRadius: shape.full },
+  segmentLast: { borderTopRightRadius: shape.full, borderBottomRightRadius: shape.full },
+  segmentNext: { marginLeft: -1 },
+  segmentLabel: { ...type.labelLarge },
+  digits: { ...type.bodyLarge },
+  strip: { minHeight: 32 },
+  stripText: { ...type.bodySmall, paddingHorizontal: 16 },
+  chips: { gap: 8 },
+  chip: {
+    height: 32,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingLeft: 8,
+    paddingRight: 16,
+    borderRadius: shape.small,
+    borderWidth: 1,
+  },
+  chipLabel: { ...type.labelLarge },
+  keypad: {
+    marginTop: 'auto',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    padding: 8,
+    borderRadius: shape.extraLarge,
+    backgroundColor: color.surfaceContainerLow,
+  },
+  key: {
+    height: 56,
+    flexBasis: '30%',
+    flexGrow: 1,
+    borderRadius: shape.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  keyLabel: { ...type.headlineSmall },
+  dock: { paddingHorizontal: 24, paddingTop: 8, paddingBottom: 16 },
+  save: {
+    minHeight: 56,
+    borderRadius: shape.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+  },
+  saveLabel: { ...type.labelLarge },
+  snackbar: {
+    position: 'absolute',
+    right: 16,
+    bottom: 88,
+    left: 16,
+    minHeight: 48,
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+    borderRadius: shape.extraSmall,
+    backgroundColor: color.inverseSurface,
+    elevation: elevation.level3,
+  },
+  snackbarText: { ...type.bodyMedium, paddingVertical: 14, color: color.inverseOnSurface },
+})
+
 /** Whether the fields take input, and with which controls; if not, whether the product is being saved. */
 type Activity = Readonly<
   { _tag: 'Editing'; controls: Model & { _tag: 'Editing' } } | { _tag: 'Saving' } | { _tag: 'Gone' }
 >
 
-const sidePadding = 'pl-[calc(1.5rem+var(--spacing-sail))] pr-[calc(1.5rem+var(--spacing-sair))]'
-
 /** The top app bar of Material's full-screen dialog: its close button and its title. */
 const appBar = (maybeClose: Opt.Option<Message>, dispatch: Dispatch<Message>) => {
   const { on } = handlers(dispatch)
   return (
-    <div
-      props={{
-        // `box-content`: the bar is 64dp below the top inset, which `pt-sait` would otherwise take from its height.
-        className:
-          'box-content flex h-16 shrink-0 items-center gap-1 bg-surface pt-sait pr-[calc(0.25rem+var(--spacing-sair))] pl-[calc(0.25rem+var(--spacing-sail))] text-on-surface',
-      }}
-    >
-      <button
-        attrs={{ 'aria-label': 'Close' }}
-        props={{
-          className:
-            'state-layer material-symbols-rounded flex h-12 w-12 items-center justify-center rounded-full disabled:text-on-surface/38',
-          title: 'Close',
-          disabled: Opt.isNone(maybeClose),
-        }}
-        on={Opt.match(maybeClose, { onNone: () => ({}), onSome: (close) => on('click', close) })}
+    <Box key='bar' style={styles.bar}>
+      <Pressable
+        accessibilityRole='button'
+        accessibilityLabel='Close'
+        accessibilityState={{ disabled: Opt.isNone(maybeClose) }}
+        style={styles.iconButton}
+        onPress={Opt.match(maybeClose, { onNone: () => undefined, onSome: on })}
       >
-        close
-      </button>
-      <h2 props={{ className: 'truncate px-1 text-title-large-emphasized' }}>Edit product</h2>
-    </div>
+        {icon('close', Opt.isNone(maybeClose) ? disabledContent : color.onSurface)}
+      </Pressable>
+      <Text accessibilityRole='header' numberOfLines={1} style={styles.title}>Edit product</Text>
+    </Box>
   )
 }
 
 /**
- * Material's filled button "Save", or "Save without date" on an empty date field, as "Add without date" on the page
- * that adds products. The circular indicator replaces its label while the product is saved.
+ * Material's filled button "Save", or "Save without date" on an empty date field. The circular indicator replaces
+ * its label while the product is saved.
  */
 const saveButton = (shown: FieldsShown, activity: Activity, dispatch: Dispatch<Message>) => {
   const { on } = handlers(dispatch)
   const maybeSave = activity._tag === 'Editing' ? activity.controls.maybeSave : Opt.none()
+  const isEnabled = Opt.isSome(maybeSave) || activity._tag === 'Saving'
   return (
-    <button
-      props={{
-        className: cn(
-          'state-layer relative min-h-14 shrink-0 rounded-full bg-primary px-6 text-label-large text-on-primary',
-          'transition-colors',
-          activity._tag !== 'Saving' && 'disabled:bg-on-surface/12 disabled:text-on-surface/38',
-        ),
-        disabled: Opt.isNone(maybeSave),
-      }}
-      on={Opt.match(maybeSave, { onNone: () => ({}), onSome: (save) => on('click', save) })}
+    <Pressable
+      accessibilityRole='button'
+      accessibilityState={{ disabled: Opt.isNone(maybeSave), busy: activity._tag === 'Saving' }}
+      style={[styles.save, { backgroundColor: isEnabled ? color.primary : disabledContainer }]}
+      onPress={Opt.match(maybeSave, { onNone: () => undefined, onSome: on })}
     >
-      <span props={{ className: activity._tag === 'Saving' ? 'opacity-0' : 'opacity-100' }}>
-        {shown.withoutDate ? 'Save without date' : 'Save'}
-      </span>
       {activity._tag === 'Saving'
-        ? [
-          <span
-            key='progress'
-            props={{
-              className: cn(
-                'material-symbols-rounded pointer-events-none absolute inset-0 flex items-center justify-center',
-                'text-[18px]',
-              ),
-              title: 'Saving the product',
-            }}
-          >
-            <span props={{ className: 'animate-spin' }}>progress_activity</span>
-          </span>,
-        ]
-        : []}
-    </button>
+        ? <ActivityIndicator accessibilityLabel='Saving the product' color={color.onPrimary} />
+        : (
+          <Text style={[styles.saveLabel, { color: isEnabled ? color.onPrimary : disabledContent }]}>
+            {shown.withoutDate ? 'Save without date' : 'Save'}
+          </Text>
+        )}
+    </Pressable>
   )
 }
 
 /**
- * Material's outlined text field of the name, drawn anew when it is cleared. Not focused when the page opens: the
- * keyboard would cover the keypad, and the user may have come for the date.
+ * Material's outlined text field of the name, drawn anew when it is cleared. From then on the user owns its text, and
+ * the program learns it from the field's messages. Not focused when the page opens: the keyboard would cover the
+ * keypad, and the user may have come for the date.
  */
 const nameField = (shown: FieldsShown, activity: Activity, dispatch: Dispatch<Message>) => {
   const { on, onValue } = handlers(dispatch)
-  const maybeClearName = activity._tag === 'Editing' ? activity.controls.maybeClearName : Opt.none()
+  const isEditing = activity._tag === 'Editing'
+  const maybeClearName = isEditing ? activity.controls.maybeClearName : Opt.none()
   return (
-    <div key={`name-${shown.nameKey}`} props={{ className: 'label-room relative' }}>
-      <label props={{ className: 'block' }}>
-        <input
-          hook={{ create: initialValue(shown.name) }}
-          props={{
-            type: 'text',
-            enterKeyHint: 'done',
-            disabled: activity._tag !== 'Editing',
-            placeholder: ' ',
-            className: cn(
-              'peer min-h-14 w-full py-3.75 rounded-extra-small border border-outline bg-transparent pl-4',
-              'text-body-large text-on-surface caret-primary outline-none inset-ring-primary',
-              'placeholder:text-transparent hover:border-on-surface focus:border-primary focus:inset-ring-1',
-              'disabled:border-on-surface/12 disabled:text-on-surface/38',
-              Opt.isSome(maybeClearName) ? 'pr-13' : 'pr-4',
-            ),
-          }}
-          on={activity._tag === 'Editing' ? onValue('input', activity.controls.changeName, inputValue) : {}}
-        />
-        <span
-          props={{
-            className: cn(
-              'pointer-events-none absolute top-0 left-3 -translate-y-1/2 bg-surface px-1 text-body-small',
-              'text-on-surface-variant transition-all duration-short-3 peer-placeholder-shown:top-1/2',
-              'peer-placeholder-shown:text-body-large peer-focus:top-0 peer-focus:text-body-small',
-              'peer-focus:text-primary peer-disabled:text-on-surface/38',
-            ),
-          }}
-        >
-          Name
-        </span>
-      </label>
+    <Box
+      key={`name-${shown.nameKey}`}
+      style={[styles.field, { borderColor: isEditing ? color.outline : disabledContainer }]}
+    >
+      <TextInput
+        accessibilityLabel='Name'
+        defaultValue={shown.name}
+        editable={isEditing}
+        enterKeyHint='done'
+        cursorColor={color.primary}
+        style={[styles.input, { color: isEditing ? color.onSurface : disabledContent }]}
+        onChangeText={isEditing ? onValue(activity.controls.changeName) : undefined}
+      />
+      <Text style={[styles.label, { color: isEditing ? color.onSurfaceVariant : disabledContent }]}>Name</Text>
       {Opt.match(maybeClearName, {
-        onNone: () => [],
-        onSome: (clear) => [
-          <button
-            attrs={{ 'aria-label': 'Clear name' }}
-            props={{
-              className: cn(
-                'state-layer material-symbols-rounded absolute top-1/2 right-1 flex h-12 w-12 -translate-y-1/2 items-center',
-                'justify-center rounded-full text-on-surface-variant',
-              ),
-              title: 'Clear name',
-            }}
-            on={on('click', clear)}
+        onNone: () => null,
+        onSome: (clear) => (
+          <Pressable
+            accessibilityRole='button'
+            accessibilityLabel='Clear name'
+            style={[styles.iconButton, styles.clearName]}
+            onPress={on(clear)}
           >
-            cancel
-          </button>,
-        ],
+            {icon('cancel', color.onSurfaceVariant)}
+          </Pressable>
+        ),
       })}
-    </div>
+    </Box>
   )
 }
 
 /** Material's segmented button of the orders. */
 const orderSegments = (shown: FieldsShown, activity: Activity, dispatch: Dispatch<Message>) => {
   const { on } = handlers(dispatch)
-  const segment = ({ order, choice }: OrderChoice) => {
-    const maybePick = choice._tag === 'Offered' ? choice.maybePick : Opt.none()
+  const last = shown.orders.length - 1
+  const segment = ({ order, choice }: OrderChoice, index: number) => {
+    const maybePick = choice._tag === 'Offered' && activity._tag === 'Editing' ? choice.maybePick : Opt.none()
+    const isCurrent = choice._tag === 'Current'
+    const tint = activity._tag === 'Editing'
+      ? (isCurrent ? color.onSecondaryContainer : color.onSurface)
+      : disabledContent
     return (
-      <button
-        attrs={{ 'aria-pressed': choice._tag === 'Current' ? 'true' : 'false' }}
-        props={{ className: 'segment', disabled: activity._tag !== 'Editing', title: orderTitles[order] }}
-        on={Opt.match(maybePick, { onNone: () => ({}), onSome: (pick) => on('click', pick) })}
+      <Pressable
+        key={order}
+        accessibilityRole='button'
+        accessibilityLabel={orderTitles[order]}
+        accessibilityState={{ selected: isCurrent, disabled: activity._tag !== 'Editing' }}
+        style={[
+          styles.segment,
+          index === 0 && styles.segmentFirst,
+          index === last && styles.segmentLast,
+          index > 0 && styles.segmentNext,
+          isCurrent && { backgroundColor: color.secondaryContainer },
+        ]}
+        onPress={Opt.match(maybePick, { onNone: () => undefined, onSome: on })}
       >
-        {/* Keyed: the label must not take over the check's element, and its font, once the check goes. */}
-        {choice._tag === 'Current'
-          ? [
-            <span
-              key='check'
-              attrs={{ 'aria-hidden': 'true' }}
-              props={{ className: 'material-symbols-rounded text-[18px]' }}
-            >
-              check
-            </span>,
-          ]
-          : []}
-        <span key='label'>{order}</span>
-      </button>
+        {isCurrent ? icon('check', tint, { fontSize: 18, lineHeight: 18 }) : null}
+        <Text style={[styles.segmentLabel, { color: tint }]}>{order}</Text>
+      </Pressable>
     )
   }
-  return <div props={{ className: 'flex min-h-10' }}>{shown.orders.map(segment)}</div>
+  return <Box style={styles.segments}>{shown.orders.map(segment)}</Box>
 }
 
 /**
- * Material's outlined text field of the date: read-only, typed into with the keypad, so that the thumb stays where
- * it is. The digits are shown as they are: grouping them would read them one way.
+ * Material's outlined text field of the date: read-only, typed into with the keypad, so that the thumb stays where it
+ * is. The digits are shown as they are: grouping them would read them one way.
  */
 const dateField = (shown: FieldsShown, activity: Activity) => {
   // Disabled while the fields take no input; in the error's colors when the digits name no day.
   const look = activity._tag !== 'Editing' ? 'Disabled' : shown.strip._tag === 'NamingNothing' ? 'Wrong' : 'Plain'
-  // The margin above is the floating label's upper half, which Material's own field reserves.
+  const tint = look === 'Disabled' ? disabledContent : look === 'Wrong' ? color.error : color.onSurfaceVariant
   return (
-    <label props={{ className: 'label-room relative block' }}>
-      <input
-        props={{
-          type: 'text',
-          readOnly: true,
-          inputMode: 'none',
-          disabled: look === 'Disabled',
-          placeholder: placeholders[shown.order],
-          value: shown.digits,
-          className: cn(
-            'peer min-h-14 w-full py-3.75 rounded-extra-small border bg-transparent px-4 text-body-large text-on-surface',
-            'caret-transparent outline-none placeholder:text-transparent focus:inset-ring-1',
-            'focus:placeholder:text-on-surface-variant disabled:border-on-surface/12 disabled:text-on-surface/38',
-            look === 'Wrong'
-              ? 'border-error inset-ring-error'
-              : 'border-outline inset-ring-primary hover:border-on-surface focus:border-primary',
-          ),
-        }}
-      />
-      <span
-        props={{
-          className: cn(
-            'pointer-events-none absolute top-0 left-3 -translate-y-1/2 bg-surface px-1',
-            'text-body-small transition-all duration-short-3 peer-placeholder-shown:top-1/2',
-            'peer-placeholder-shown:text-body-large peer-focus:top-0 peer-focus:text-body-small',
-            'peer-disabled:text-on-surface/38',
-            look === 'Wrong' ? 'text-error' : 'text-on-surface-variant peer-focus:text-primary',
-          ),
-        }}
-      >
-        Expiration date
-      </span>
-    </label>
+    <Box
+      accessible
+      accessibilityLabel={`Expiration date, ${shown.digits === '' ? 'empty' : shown.digits}`}
+      style={[styles.field, {
+        borderColor: look === 'Disabled' ? disabledContainer : look === 'Wrong' ? color.error : color.outline,
+      }]}
+    >
+      <Text style={[styles.digits, { color: shown.digits === '' ? color.onSurfaceVariant : color.onSurface }]}>
+        {shown.digits === '' ? placeholders[shown.order] : shown.digits}
+      </Text>
+      <Text style={[styles.label, { color: tint }]}>Expiration date</Text>
+    </Box>
   )
 }
 
 /** Material's filter chip of a day the digits name. */
 const chip = ({ date, choice }: DateChoice, activity: Activity, dispatch: Dispatch<Message>) => {
   const { on } = handlers(dispatch)
-  const maybeChoose = choice._tag === 'Offered' ? choice.maybeChoose : Opt.none()
+  const maybeChoose = choice._tag === 'Offered' && activity._tag === 'Editing' ? choice.maybeChoose : Opt.none()
+  const isChosen = choice._tag === 'Chosen'
+  const tint = activity._tag === 'Editing'
+    ? (isChosen ? color.onSecondaryContainer : color.onSurfaceVariant)
+    : disabledContent
   return (
-    <button
-      attrs={{ 'aria-pressed': choice._tag === 'Chosen' ? 'true' : 'false' }}
-      props={{ className: 'filter-chip', disabled: activity._tag !== 'Editing' }}
-      on={Opt.match(maybeChoose, { onNone: () => ({}), onSome: (choose) => on('click', choose) })}
+    <Pressable
+      key={date}
+      accessibilityRole='button'
+      accessibilityState={{ selected: isChosen, disabled: activity._tag !== 'Editing' }}
+      style={[styles.chip, {
+        borderColor: isChosen ? color.secondaryContainer : color.outlineVariant,
+        backgroundColor: isChosen ? color.secondaryContainer : 'transparent',
+      }]}
+      onPress={Opt.match(maybeChoose, { onNone: () => undefined, onSome: on })}
     >
-      <span attrs={{ 'aria-hidden': 'true' }} props={{ className: 'material-symbols-rounded text-[18px]' }}>
-        {choice._tag === 'Chosen' ? 'check' : 'event'}
-      </span>
-      <span>{formatDay(date)}</span>
-    </button>
+      {icon(isChosen ? 'check' : 'event', tint, { fontSize: 18, lineHeight: 18 })}
+      <Text style={[styles.chipLabel, { color: isChosen ? color.onSecondaryContainer : color.onSurface }]}>
+        {formatDay(date)}
+      </Text>
+    </Pressable>
   )
 }
 
-/**
- * Under the field, what it means: the hint, the chips on one line that scrolls sideways, or the error. The hint
- * stays laid out, unseen, under what replaces it, so that the strip keeps its height while the user types: nothing
- * under it moves, whatever the font's size.
- */
+/** Under the field, what it means: the hint, the chips on one line that scrolls sideways, or the error. */
 const strip = (shown: FieldsShown, activity: Activity, dispatch: Dispatch<Message>) => (
-  <div
-    props={{
-      className: cn(
-        'grid shrink-0 text-body-small',
-        shown.strip._tag === 'NamingNothing' ? 'text-error' : 'text-on-surface-variant',
+  <Box style={styles.strip}>
+    {Match.valueTags(shown.strip, {
+      Hint: () => <Text style={[styles.stripText, { color: color.onSurfaceVariant }]}>{hints[shown.order]}</Text>,
+      Naming: ({ choices }) => (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
+          {choices.map((choice) =>
+            chip(choice, activity, dispatch)
+          )}
+        </ScrollView>
       ),
-    }}
-  >
-    <span props={{ className: cn('col-start-1 row-start-1 px-4', shown.strip._tag !== 'Hint' && 'invisible') }}>
-      {hints[shown.order]}
-    </span>
-    <div props={{ className: 'col-start-1 row-start-1 flex min-h-8 items-start gap-2 overflow-x-auto' }}>
-      {Match.valueTags(shown.strip, {
-        Hint: () => [],
-        Naming: ({ choices }) => choices.map((choice) => chip(choice, activity, dispatch)),
-        NamingNothing: () => [<span props={{ className: 'px-4' }}>Not an upcoming date</span>],
-      })}
-    </div>
-  </div>
+      NamingNothing: () => <Text style={[styles.stripText, { color: color.error }]}>Not an upcoming date</Text>,
+    })}
+  </Box>
 )
 
 /** A keypad of the app's own, always where the thumb expects it: Material's tonal buttons in a button group's pills. */
 const keypad = (activity: Activity, dispatch: Dispatch<Message>) => {
   const { on } = handlers(dispatch)
-  const key = (label: string, maybeMessage: Opt.Option<Message>, { title = label, isIcon = false } = {}) => (
-    <button
-      attrs={{ 'aria-label': title }}
-      props={{
-        className: cn(
-          'state-layer flex h-14 items-center justify-center rounded-full bg-surface-container-highest',
-          'text-headline-small text-on-surface transition-colors disabled:bg-on-surface/12',
-          'disabled:text-on-surface/38',
-          { 'material-symbols-rounded': isIcon },
-        ),
-        disabled: Opt.isNone(maybeMessage),
-        title,
-      }}
-      on={Opt.match(maybeMessage, { onNone: () => ({}), onSome: (message) => on('click', message) })}
-    >
-      {label}
-    </button>
-  )
+  const key = (id: string, label: ReactNode | string, title: string, maybeMessage: Opt.Option<Message>) => {
+    const isEnabled = Opt.isSome(maybeMessage)
+    const tint = isEnabled ? color.onSurface : disabledContent
+    return (
+      <Pressable
+        key={id}
+        accessibilityRole='button'
+        accessibilityLabel={title}
+        accessibilityState={{ disabled: !isEnabled }}
+        style={[styles.key, { backgroundColor: isEnabled ? color.surfaceContainerHighest : disabledContainer }]}
+        onPress={Opt.match(maybeMessage, { onNone: () => undefined, onSome: on })}
+      >
+        {typeof label === 'string' ? <Text style={[styles.keyLabel, { color: tint }]}>{label}</Text> : label}
+      </Pressable>
+    )
+  }
   const controls = activity._tag === 'Editing' ? Opt.some(activity.controls) : Opt.none()
+  const enabledTint = (maybe: Opt.Option<Message>) => (Opt.isSome(maybe) ? color.onSurface : disabledContent)
   const digitKey = (digit: Digit) =>
-    key(digit, Opt.flatMap(controls, ({ maybeTypeDigit }) => Opt.map(maybeTypeDigit, (type) => type(digit))))
+    key(
+      digit,
+      digit,
+      digit,
+      Opt.flatMap(controls, ({ maybeTypeDigit }) => Opt.map(maybeTypeDigit, (typeDigit) => typeDigit(digit))),
+    )
+  const clear = Opt.flatMap(controls, ({ maybeClearDate }) => maybeClearDate)
+  const erase = Opt.flatMap(controls, ({ maybeEraseDigit }) => maybeEraseDigit)
   return (
-    <div props={{ className: 'grid grid-cols-3 gap-2' }}>
+    <Box style={styles.keypad}>
       {keys.map(digitKey)}
-      {key('cancel', Opt.flatMap(controls, ({ maybeClearDate }) => maybeClearDate), {
-        title: 'Clear date',
-        isIcon: true,
-      })}
+      {key('clear', icon('cancel', enabledTint(clear)), 'Clear date', clear)}
       {digitKey('0')}
-      {key('backspace', Opt.flatMap(controls, ({ maybeEraseDigit }) => maybeEraseDigit), {
-        title: 'Backspace',
-        isIcon: true,
-      })}
-    </div>
+      {key('erase', icon('backspace', enabledTint(erase)), 'Backspace', erase)}
+    </Box>
   )
 }
 
 /**
  * The fields read from the top, the keypad at the bottom of their column, where the thumb rests, and "Save" docked
- * under it. The column fits the reference screen, and scrolls when the screen is shorter (the keyboard open, a
- * large font): "Save" stays in sight, above the navigation bar or the keyboard.
+ * under it. The column scrolls when the screen is shorter (the keyboard open, a large font): "Save" stays in sight.
  */
-const fields = (shown: FieldsShown, activity: Activity, dispatch: Dispatch<Message>) => (
-  <div key='fields' props={{ className: 'flex min-h-0 flex-1 flex-col' }}>
-    <div props={{ className: cn('flex flex-1 flex-col gap-2 overflow-y-auto', sidePadding) }}>
-      {nameField(shown, activity, dispatch)}
-      {orderSegments(shown, activity, dispatch)}
-      {dateField(shown, activity)}
-      {strip(shown, activity, dispatch)}
-      <div props={{ className: 'mt-auto rounded-extra-large bg-surface-container-low p-2' }}>
-        {keypad(activity, dispatch)}
-      </div>
-    </div>
-    {/* The gap above "Save" is its own, not the column's: it stays when the column scrolls under it. */}
-    <div props={{ className: cn('flex shrink-0 flex-col pt-2 pb-[calc(1rem+var(--spacing-saib))]', sidePadding) }}>
-      {saveButton(shown, activity, dispatch)}
-    </div>
-  </div>
-)
+const fields = (shown: FieldsShown, activity: Activity, dispatch: Dispatch<Message>) => [
+  <ScrollView key='fields' keyboardShouldPersistTaps='handled' contentContainerStyle={styles.column}>
+    {nameField(shown, activity, dispatch)}
+    {orderSegments(shown, activity, dispatch)}
+    {dateField(shown, activity)}
+    {strip(shown, activity, dispatch)}
+    {keypad(activity, dispatch)}
+  </ScrollView>,
+  <Box key='dock' style={styles.dock}>{saveButton(shown, activity, dispatch)}</Box>,
+]
 
 const failureTexts: Readonly<Record<Failure, string>> = {
   SaveFailed: 'Couldn\'t save the product',
@@ -357,59 +386,36 @@ const failureTexts: Readonly<Record<Failure, string>> = {
   ProductGone: 'This product no longer exists',
 }
 
-/**
- * Material's snackbar (`snackbar` in `styles.css`) 16dp above the docked "Save" button, keyed by its id so that the
- * next one appears anew, after this one has sunk. The place stays, so that it enters and leaves with its own
- * transitions.
- */
-const snackbar = (shown: Snackbar) => (
-  <div key='snackbar' props={{ className: 'snackbar-slot [--snackbar-clearance:4.5rem]' }}>
-    {shown._tag === 'None' ? [] : [
-      <div
-        key={`snackbar-${shown.id}`}
-        attrs={{ 'data-entrance': shown.entrance }}
-        style={{ remove: { opacity: '0', transform: 'translateY(0.5rem)' } }}
-        props={{ className: 'snackbar' }}
-      >
-        <span>{failureTexts[shown.failure]}</span>
-      </div>,
-    ]}
-  </div>
-)
+/** Material's snackbar 16dp above the docked "Save" button, keyed by its id so that the next one is drawn anew. */
+const snackbar = (shown: Snackbar) =>
+  shown._tag === 'None' ? null : (
+    <Box key={`snackbar-${shown.id}`} accessibilityLiveRegion='polite' style={styles.snackbar}>
+      <Text style={styles.snackbarText}>{failureTexts[shown.failure]}</Text>
+    </Box>
+  )
 
-/** Material's full-screen dialog, as a page: it rises over the page that opened it, and sinks back over it. */
+/** Material's full-screen dialog, as a page over the one that opened it. */
 export const view: View<Model, Message> = (model, dispatch) => (
-  <div
-    key='EditProduct'
-    style={{
-      transform: 'translateY(100%)',
-      transition: 'transform var(--transition-duration-medium-4) var(--ease-emphasized-decelerate)',
-      delayed: { transform: 'translateY(0)' },
-      remove: {
-        transform: 'translateY(100%)',
-        pointerEvents: 'none',
-        transition: 'transform var(--transition-duration-short-4) var(--ease-emphasized-accelerate)',
-      },
-    }}
-    props={{ className: 'fixed inset-0 z-70 flex flex-col bg-surface text-on-surface' }}
-  >
-    {Match.valueTags(model, {
-      Loading: ({ close }) => [appBar(Opt.some(close), dispatch), snackbar({ _tag: 'None' })],
-      Editing: (editing) => [
-        appBar(Opt.some(editing.close), dispatch),
-        fields(editing, { _tag: 'Editing', controls: editing }, dispatch),
-        snackbar(editing.snackbar),
-      ],
-      Saving: (saving) => [
-        appBar(Opt.none(), dispatch),
-        fields(saving, { _tag: 'Saving' }, dispatch),
-        snackbar(saving.snackbar),
-      ],
-      Gone: (gone) => [
-        appBar(Opt.some(gone.close), dispatch),
-        fields(gone, { _tag: 'Gone' }, dispatch),
-        snackbar(gone.snackbar),
-      ],
-    })}
-  </div>
+  <SafeAreaView style={styles.page}>
+    <Box style={styles.frame}>
+      {Match.valueTags(model, {
+        Loading: ({ close }) => [appBar(Opt.some(close), dispatch)],
+        Editing: (editing) => [
+          appBar(Opt.some(editing.close), dispatch),
+          ...fields(editing, { _tag: 'Editing', controls: editing }, dispatch),
+          snackbar(editing.snackbar),
+        ],
+        Saving: (saving) => [
+          appBar(Opt.none(), dispatch),
+          ...fields(saving, { _tag: 'Saving' }, dispatch),
+          snackbar(saving.snackbar),
+        ],
+        Gone: (gone) => [
+          appBar(Opt.some(gone.close), dispatch),
+          ...fields(gone, { _tag: 'Gone' }, dispatch),
+          snackbar(gone.snackbar),
+        ],
+      })}
+    </Box>
+  </SafeAreaView>
 )

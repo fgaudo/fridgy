@@ -20,7 +20,8 @@
     "enabled": true,
     "rules": {
       "correctness": {
-        "useImportExtensions": "error"
+        "useImportExtensions": "error",
+        "noComponentHookFactories": "off"
       },
       "style": {
         "noRestrictedImports": {

@@ -8,12 +8,12 @@ import * as Effect from 'effect/Effect'
 import * as Layer from 'effect/Layer'
 import * as Reactivity from 'effect/reactivity/Reactivity'
 import * as Semaphore from 'effect/Semaphore'
+import * as Stream from 'effect/Stream'
 import * as Client from 'effect/sql/SqlClient'
 import type * as Connection from 'effect/sql/SqlConnection'
 import { classifySqliteError, SqlError } from 'effect/sql/SqlError'
 import * as Statement from 'effect/sql/Statement'
-import * as Stream from 'effect/Stream'
-import { migrations } from '#infrastructure/storage/migrations.ts'
+import { migrations } from './migrations.ts'
 
 const failure = (cause: unknown, message: string) =>
   new SqlError({ reason: classifySqliteError(cause, { message, operation: 'execute' }) })

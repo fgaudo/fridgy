@@ -7,6 +7,7 @@ import * as Effect from 'effect/Effect'
 import * as HashMap from 'effect/HashMap'
 import * as Opt from 'effect/Option'
 import * as Schema from 'effect/Schema'
+import { isValidElement } from 'react'
 import * as Product from '#domain/product.ts'
 import * as Day from '#libs/dates/day.ts'
 import * as DigitDates from '#libs/dates/digit-dates.ts'
@@ -162,12 +163,14 @@ describe('Navigation', () => {
       )
     })))
 
-  // Snabbdom patches an element with the same tag and key in place, keeping the
-  // props the new page does not set: Home's `scroll-locked` stopped About from scrolling. Keyed by the page's
-  // name, each page's element is its own, and leaves with its own transition.
+  // React reuses an element of the same type in the same place: a page drawn in another's would keep its native
+  // views, and the text of their fields. Keyed by the page's name, each page's element is its own.
   test('each page is drawn in an element of its own', () =>
     rehearsed(Effect.fnUntraced(function*(user) {
-      const drawn = Effect.map(user.model, (model) => view(model, () => Effect.void).key)
+      const drawn = Effect.map(user.model, (model) => {
+        const element = view(model, () => Effect.void)
+        return isValidElement(element) ? element.key : null
+      })
       expect(yield* drawn).toBe('Home')
       yield* perform(user, openAbout)
       expect(yield* drawn).toBe('About')
