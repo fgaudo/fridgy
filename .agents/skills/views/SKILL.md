@@ -91,6 +91,9 @@ Two choices, taken in this order: the first decides almost everything, the secon
   `scroll`, and what flies to it jumps with it. Text animated by its letters is split with `piecesOf` (`#libs/strings/pieces.ts`), by word in a
   script whose letters join. Under `prefers-reduced-motion` the movements become fades, in each utility's media
   query.
+- A motion that follows the scroll, and nothing else, is a scroll-driven animation (`animation-timeline:
+  scroll(root)`, on `transform` and `opacity`): the compositor runs it in step with the scroll, which a message
+  per scroll event could not. Home's top app bar is one (`bar-slide` and its siblings in `src/styles.css`).
 - A motion the program drives is a child of its own, drawn by its parent with `thunk`, so that a tick redraws
   only its subtree. Its durations are constants of the program, named after the tokens of `src/styles.css` they
   match, not numbers in the view. `prefers-reduced-motion` has a branch in both: a media query in CSS, a phase
@@ -111,11 +114,12 @@ never a chip nor a key of the keypad, which types the date and nothing else. A c
 or a button that does nothing is text. An empty state is an icon on a 96dp disc in a role's container colors
 (`primary-container` for what is merely missing, `error-container` for what could not be read), a `headline-small`
 title and a `body-large` text. Every top app bar is the surface's color at rest and `surface-container` once the
-page scrolls under it, which the page learns from its scroll (Home from its `Viewport`, About from its own
-scroll event), with the emphasized title. A page that is opened over another has a small bar, 64dp; Home, the
+page scrolls under it, with the emphasized title: About learns it from its own scroll event, and Home's bar follows
+the scroll in CSS. A page that is opened over another has a small bar, 64dp; Home, the
 app's own screen, has a medium one: a 124dp bar with the row of its icons on top and the headline
-(`headline-medium-emphasized`) with its subtitle at the bottom, which collapses to the small bar, the headline
-shrunk to `title-large-emphasized` after the leading icon, once the list scrolls under it. Both heights grow
+(`headline-medium-emphasized`) with its subtitle at the bottom, which collapses to the small bar as the list scrolls, as Compose's does. Its lower part slides under the upper one,
+the headline fading, while the small title (`title-large-emphasized`, after the leading icon) fades in; at the end
+of a scroll it snaps to the nearer shape (Home's `Viewport`). Both heights grow
 with the text (`h-medium-bar`, `h-small-bar`, in `src/styles.css`), which a larger font would otherwise push into
 the icons or the status bar. The contextual bar of
 the selected products takes the same shape, in its own colors: the child gives Home its pieces (the icon

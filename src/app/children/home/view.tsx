@@ -92,7 +92,6 @@ export const view: View<Model, Message> = (model, dispatch) => {
   const selection = Products.selectionBar(model.products, toProducts)
   const subtitle = Products.subtitle(model.products)
   const snackbar = Products.snackbar(model.products, toProducts)
-  const { isAtTop } = model
   const moreButton = (
     <button
       attrs={{ 'aria-label': 'More options' }}
@@ -105,60 +104,79 @@ export const view: View<Model, Message> = (model, dispatch) => {
       more_vert
     </button>
   )
-  // Material's medium top app bar, collapsed to a small one in a container's color once the list scrolls under it.
+  const title = selection === undefined ? 'Fridgy' : selection.title
+  const subtitleIn = (size: string) =>
+    subtitle === undefined ? [] : [
+      <span props={{ className: cn('truncate', size, selection === undefined && 'text-on-surface-variant') }}>
+        {subtitle}
+      </span>,
+    ]
+  // Material's medium top app bar, which collapses to a small one as the list scrolls (`bar-slide` in `styles.css`).
   // The contextual bar of the selected products takes the same shape, in its own colors.
   const topBar = (
     <div
       props={{
         className: cn(
-          'fixed top-0 z-40 w-full pt-sait pl-sail pr-sair transition-colors',
-          selection !== undefined
-            ? 'bg-secondary-container text-on-secondary-container'
-            : isAtTop
-            ? 'bg-surface text-on-surface'
-            : 'bg-surface-container text-on-surface',
+          'fixed top-0 z-40 w-full',
+          selection === undefined ? 'text-on-surface' : 'text-on-secondary-container',
         ),
       }}
     >
-      <div props={{ className: cn('relative transition-[height]', isAtTop ? 'h-medium-bar' : 'h-small-bar') }}>
-        <div props={{ className: 'absolute inset-x-0 top-0 flex h-16 items-center justify-between px-1' }}>
-          <div>{selection === undefined ? [] : [selection.leading]}</div>
-          {selection === undefined ? moreButton : selection.trailing}
-        </div>
+      {/* The bar's color, under the whole bar. It slides up until it is as tall as the small bar. */}
+      <div
+        props={{
+          className: cn(
+            'bar-slide absolute inset-x-0 top-0 box-content h-medium-bar pt-sait transition-colors',
+            selection === undefined ? 'bg-surface' : 'bg-secondary-container',
+          ),
+        }}
+      >
         <div
           props={{
             className: cn(
-              'absolute right-16 bottom-0 flex flex-col transition-[left,padding]',
-              isAtTop ? 'pb-5' : 'pb-2.5',
-              isAtTop || selection === undefined ? 'left-4' : 'left-14',
+              'bar-scrolled absolute inset-0 transition-colors',
+              selection === undefined ? 'bg-surface-container' : 'bg-secondary-container',
             ),
           }}
-        >
-          <h1
+        />
+      </div>
+      {/* The headline's row starts 48dp down, below the icons: the headline slides with the color, out of its row. */}
+      <div
+        props={{
+          className: cn(
+            'pointer-events-none absolute inset-x-0 top-[calc(var(--spacing-sait)+3rem)] overflow-hidden pl-sail',
+            'h-[calc(var(--spacing-medium-bar)-3rem)] pr-sair',
+          ),
+        }}
+      >
+        <div props={{ className: 'bar-slide absolute inset-0' }}>
+          <div props={{ className: 'bar-headline absolute right-16 bottom-0 left-4 flex flex-col pb-5' }}>
+            <h1 props={{ className: 'truncate text-headline-medium-emphasized' }}>{title}</h1>
+            {subtitleIn('text-label-large')}
+          </div>
+        </div>
+      </div>
+      <div props={{ className: 'relative pt-sait pl-sail pr-sair' }}>
+        <div props={{ className: 'relative h-small-bar' }}>
+          <div props={{ className: 'absolute inset-x-0 top-0 flex h-16 items-center justify-between px-1' }}>
+            <div>{selection === undefined ? [] : [selection.leading]}</div>
+            {selection === undefined ? moreButton : selection.trailing}
+          </div>
+          {/* The headline's copy, which a screen reader skips. */}
+          <div
+            attrs={{ 'aria-hidden': 'true' }}
             props={{
               className: cn(
-                'truncate transition-[font-size,line-height]',
-                isAtTop ? 'text-headline-medium-emphasized' : 'text-title-large-emphasized',
+                'bar-title absolute right-16 bottom-0 flex flex-col pb-2.5',
+                selection === undefined ? 'left-4' : 'left-14',
               ),
             }}
           >
-            {selection === undefined ? 'Fridgy' : selection.title}
-          </h1>
-          {subtitle === undefined ? [] : [
-            <span
-              props={{
-                className: cn(
-                  'truncate transition-[font-size,line-height]',
-                  selection === undefined && 'text-on-surface-variant',
-                  isAtTop ? 'text-label-large' : 'text-label-medium',
-                ),
-              }}
-            >
-              {subtitle}
-            </span>,
-          ]}
+            <span props={{ className: 'truncate text-title-large-emphasized' }}>{title}</span>
+            {subtitleIn('text-label-medium')}
+          </div>
+          {menu(model.menu, events)}
         </div>
-        {menu(model.menu, events)}
       </div>
     </div>
   )

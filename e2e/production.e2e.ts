@@ -92,7 +92,14 @@ const onApp = async (name: string, act: (page: Page) => Promise<void>) => {
 const expectNoScroll = async (page: Page, pageName: string) => {
   // Measured once the entrances are over: a page sliding in overflows while it moves, and once Roboto is in,
   // since a fallback font's metrics are not the ones the page is laid out for.
-  await page.evaluate(() => Promise.all(document.getAnimations().map((animation) => animation.finished)))
+  // An animation that follows the scroll never finishes.
+  await page.evaluate(() =>
+    Promise.all(
+      document.getAnimations()
+        .filter((animation) => animation.timeline instanceof DocumentTimeline)
+        .map((animation) => animation.finished),
+    )
+  )
   await page.evaluate(() => document.fonts.ready)
   expect(
     await page.evaluate(() =>

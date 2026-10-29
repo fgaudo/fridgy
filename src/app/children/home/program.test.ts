@@ -12,8 +12,9 @@ import { tagPath } from '#libs/testing/tag-path.test_support.ts'
 import { assertProperty, onlyChanged, outcomesOf } from '#libs/testing/update.test_support.ts'
 import { hasExpiringProduct } from './children/products/program.test_arbitrary.ts'
 import * as Products from './children/products/program.ts'
-import { message, state } from './program.test_arbitrary.ts'
+import { message, position, state } from './program.test_arbitrary.ts'
 import { type Event, type Message, type Model, program, type State } from './program.ts'
+import { Position } from './services/viewport/viewport.ts'
 import { view } from './view.tsx'
 
 const Msg = Data.taggedEnum<Message>()
@@ -211,22 +212,30 @@ describe('Home update', () => {
 })
 
 describe('scrolling', () => {
-  test('InteractionChanged and AtTopChanged store their flag, and nothing else', () => {
-    assertProperty([state, fc.boolean()], (before, flag) => {
-      const interacting = step(Msg.InteractionChanged({ isInteracting: flag }), before)
-      const atTop = step(Msg.AtTopChanged({ isAtTop: flag }), before)
-      return Equal.equals(interacting.after, { ...before, isInteracting: flag })
-        && Equal.equals(atTop.after, { ...before, isAtTop: flag })
-        && interacting.commands.length === 0
-        && atTop.commands.length === 0
+  test('PositionChanged stores the position, and nothing else', () => {
+    assertProperty([state, position], (before, position) => {
+      const { after, commands } = step(Msg.PositionChanged({ position }), before)
+      return Equal.equals(after, { ...before, position }) && commands.length === 0
     })
   })
 
-  test('CloseToTopChanged scrolls to the top only when close to it and not interacting', () => {
-    assertProperty([state, fc.boolean()], (before, isCloseToTop) => {
-      const { after, commands } = step(Msg.CloseToTopChanged({ isCloseToTop }), before)
-      const shouldScroll = isCloseToTop && !before.isInteracting
-      return Equal.equals(after, before) && Equal.equals(commands, shouldScroll ? [{ _tag: 'ScrollToTop' }] : [])
+  test('InteractionChanged stores its flag, and nothing else while the user scrolls', () => {
+    assertProperty([state], (before) => {
+      const { after, commands } = step(Msg.InteractionChanged({ isInteracting: true }), before)
+      return Equal.equals(after, { ...before, isInteracting: true }) && commands.length === 0
+    })
+  })
+
+  test('a scroll that ends with the bar half collapsed snaps it to the nearer shape', () => {
+    assertProperty([state], (before) => {
+      const { after, commands } = step(Msg.InteractionChanged({ isInteracting: false }), before)
+      const snap = {
+        Expanded: [],
+        CloserToExpanded: [{ _tag: 'ExpandBar' }],
+        CloserToCollapsed: [{ _tag: 'CollapseBar' }],
+        Collapsed: [],
+      }[before.position._tag]
+      return Equal.equals(after, { ...before, isInteracting: false }) && Equal.equals(commands, snap)
     })
   })
 })
@@ -237,7 +246,7 @@ test('the page listens to the scrolling, and its child to the storage, and to th
     const subscriptions = Tea.subscriptionsOf(program)(s)
     return HashMap.has(subscriptions, ['Products', 'changes'])
       && HashMap.has(subscriptions, ['Products', 'clock']) === hasExpiringProduct(s.products)
-      && ['scrolling', 'at-top', 'close-to-top'].every((key) => HashMap.has(subscriptions, key))
+      && ['scrolling', 'position'].every((key) => HashMap.has(subscriptions, key))
   })
 })
 
@@ -249,7 +258,7 @@ test('the page observes the back button only while the menu is open', () => {
 test('starts its child as the child starts, with its commands', () => {
   expect(program.init.state).toEqual({
     isMenuOpen: false,
-    isAtTop: true,
+    position: Position.Expanded(),
     isInteracting: false,
     products: Products.program.init.state,
   })

@@ -168,6 +168,58 @@
 }
 
 /*
+ * The scroll that collapses Home's medium bar into the small one. Home's `Viewport` reads it to snap to the nearer
+ * shape. Registered as a length so that it computes to pixels.
+ */
+@property --bar-collapse {
+  syntax: "<length>";
+  inherits: true;
+  initial-value: 0px;
+}
+
+:root {
+  --bar-collapse: calc(var(--spacing-medium-bar) - var(--spacing-small-bar));
+}
+
+/*
+ * Home's medium bar follows the scroll over its first `--bar-collapse`, as Compose's does. Its lower part slides
+ * under the upper one (`bar-slide`) and the headline fades (`bar-headline`). The small title fades in
+ * (`bar-title`), and the container takes its scrolled color (`bar-scrolled`). Only transforms and opacities: the
+ * compositor runs them in step with the scroll.
+ */
+@keyframes bar-slide {
+  to {
+    transform: translateY(calc(-1 * var(--bar-collapse)));
+  }
+}
+
+@utility bar-slide {
+  animation: bar-slide linear both;
+  animation-timeline: scroll(root);
+  animation-range: 0px var(--bar-collapse);
+}
+
+@utility bar-headline {
+  animation: fade-out linear both;
+  animation-timeline: scroll(root);
+  animation-range: 0px var(--bar-collapse);
+}
+
+/* Compose's easing of the small title: it appears late in the collapse. */
+@utility bar-title {
+  animation: fade-in cubic-bezier(0.8, 0, 0.8, 0.15) both;
+  animation-timeline: scroll(root);
+  animation-range: 0px var(--bar-collapse);
+}
+
+/* Compose's easing of the container color, fast out and linear in. */
+@utility bar-scrolled {
+  animation: fade-in cubic-bezier(0.4, 0, 1, 1) both;
+  animation-timeline: scroll(root);
+  animation-range: 0px var(--bar-collapse);
+}
+
+/*
  * The system's fonts: Android has a family for every script, chosen by the text, and the forms of Chinese
  * characters by the document's language (`lang` on <html>, set from the device's). The app ships only its icons:
  * on the phone `system-ui` is Roboto already. Only what runs in a browser carries it (`scripts/cli.ts`).

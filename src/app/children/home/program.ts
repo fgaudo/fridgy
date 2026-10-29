@@ -11,11 +11,11 @@ import * as Opt from 'effect/Option'
 import type * as Product from '#domain/product.ts'
 import { BackButton } from '#infrastructure/back-button/back-button.ts'
 import * as Products from './children/products/program.ts'
-import { Viewport } from './services/viewport/viewport.ts'
+import { Position, Viewport } from './services/viewport/viewport.ts'
 
 export type State = Readonly<{
   isMenuOpen: boolean
-  isAtTop: boolean
+  position: Position
   isInteracting: boolean
   products: Products.State
 }>
@@ -30,8 +30,7 @@ type Own = Data.TaggedEnum<{
   // From subscriptions.
   /** The back button, heard only while the menu is open, which it closes. */
   BackPressed: object
-  AtTopChanged: { isAtTop: boolean }
-  CloseToTopChanged: { isCloseToTop: boolean }
+  PositionChanged: { position: Position }
   InteractionChanged: { isInteracting: boolean }
 }>
 
@@ -39,7 +38,8 @@ const Own = Data.taggedEnum<Own>()
 
 /** The page's own commands: its child's are made by `compose`. */
 type OwnCommand = Data.TaggedEnum<{
-  ScrollToTop: object
+  ExpandBar: object
+  CollapseBar: object
 }>
 
 const OwnCommand = Data.taggedEnum<OwnCommand>()
@@ -61,14 +61,10 @@ export type Model = Readonly<{
     Open: { close: Own; requestInfo: Own }
   }>
   add: Own
-  /** The top app bar takes a container's color once the list scrolls under it. */
-  isAtTop: boolean
   /** The add button shrinks while the user scrolls. */
   isInteracting: boolean
   products: Products.Model
 }>
-
-const CLOSE_TO_TOP_THRESHOLD = 30
 
 const scrolling: Tea.Subscription<Own, Viewport> = Channel.unwrap(
   Effect.map(
@@ -77,18 +73,10 @@ const scrolling: Tea.Subscription<Own, Viewport> = Channel.unwrap(
   ),
 )
 
-const atTop: Tea.Subscription<Own, Viewport> = Channel.unwrap(
+const scrollPosition: Tea.Subscription<Own, Viewport> = Channel.unwrap(
   Effect.map(
     Effect.service(Viewport),
-    ({ isNearTop }) => Channel.map(isNearTop(0), (isAtTop) => Own.AtTopChanged({ isAtTop })),
-  ),
-)
-
-const closeToTop: Tea.Subscription<Own, Viewport> = Channel.unwrap(
-  Effect.map(
-    Effect.service(Viewport),
-    ({ isNearTop }) =>
-      Channel.map(isNearTop(CLOSE_TO_TOP_THRESHOLD), (isCloseToTop) => Own.CloseToTopChanged({ isCloseToTop })),
+    ({ position }) => Channel.map(position, (position) => Own.PositionChanged({ position })),
   ),
 )
 
@@ -100,18 +88,35 @@ const backButton: Tea.Subscription<Own, BackButton> = Channel.unwrap(
 
 const always: HashMap.HashMap<string, Tea.Subscription<Own, Deps>> = HashMap.make(
   ['scrolling', scrolling],
-  ['at-top', atTop],
-  ['close-to-top', closeToTop],
+  ['position', scrollPosition],
 )
 
-const scrollToTop = Effect.fn('ScrollToTop')(
+const expandBar = Effect.fn('ExpandBar')(
   function*() {
-    const { scrollToTop } = yield* Viewport
-    yield* scrollToTop
+    const { expandBar } = yield* Viewport
+    yield* expandBar
     return Opt.none()
   },
-  Effect.withLogSpan('ScrollToTop'),
+  Effect.withLogSpan('ExpandBar'),
 )
+
+const collapseBar = Effect.fn('CollapseBar')(
+  function*() {
+    const { collapseBar } = yield* Viewport
+    yield* collapseBar
+    return Opt.none()
+  },
+  Effect.withLogSpan('CollapseBar'),
+)
+
+// As Material's top app bar, a scroll never ends with the bar half collapsed: it snaps to the nearer shape.
+const snap = (position: Position): ReadonlyArray<OwnCommand> =>
+  Match.valueTags(position, {
+    Expanded: () => [],
+    CloserToExpanded: () => [OwnCommand.ExpandBar()],
+    CloserToCollapsed: () => [OwnCommand.CollapseBar()],
+    Collapsed: () => [],
+  })
 
 const { child, compose } = Tea.parent<{ state: State; command: OwnCommand; event: Event }>()
 
@@ -120,7 +125,7 @@ export const program = compose({
   init: (children) => {
     const products = children.Products.init
     return {
-      state: { isMenuOpen: false, isAtTop: true, isInteracting: false, products: products.state },
+      state: { isMenuOpen: false, position: Position.Expanded(), isInteracting: false, products: products.state },
       commands: products.commands,
     }
   },
@@ -145,22 +150,19 @@ export const program = compose({
         state.isMenuOpen
           ? { state: { ...state, isMenuOpen: false } }
           : Tea.defect('BackPressed with the menu closed: the button is observed only while it is open'),
-      AtTopChanged: ({ isAtTop }) => ({ state: { ...state, isAtTop } }),
-      InteractionChanged: ({ isInteracting }) => ({ state: { ...state, isInteracting } }),
-      // Close to the top, the list snaps to it, unless the user is scrolling it.
-      CloseToTopChanged: ({ isCloseToTop }) => ({
-        state,
-        commands: !state.isInteracting && isCloseToTop ? [OwnCommand.ScrollToTop()] : [],
+      PositionChanged: ({ position }) => ({ state: { ...state, position } }),
+      InteractionChanged: ({ isInteracting }) => ({
+        state: { ...state, isInteracting },
+        commands: isInteracting ? [] : snap(state.position),
       }),
     }),
-  runCommand: Match.typeTags<OwnCommand>()({ ScrollToTop: scrollToTop }),
+  runCommand: Match.typeTags<OwnCommand>()({ ExpandBar: expandBar, CollapseBar: collapseBar }),
   subscriptions: (state) => state.isMenuOpen ? HashMap.set(always, 'back-button', backButton) : always,
   makeModel: (state, children): Model => ({
     menu: state.isMenuOpen
       ? { _tag: 'Open', close: Own.MenuClosed(), requestInfo: Own.InfoRequested() }
       : { _tag: 'Closed', open: Own.MenuOpened() },
     add: Own.AddRequested(),
-    isAtTop: state.isAtTop,
     isInteracting: state.isInteracting,
     products: children.Products(state),
   }),

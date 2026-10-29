@@ -149,8 +149,8 @@ type Search = Data.TaggedEnum<{
 
 ## Home: the bar's three shapes (`src/app/children/home/view.tsx`)
 
-The top app bar already has two shapes: the medium bar of the page, collapsing to the small one once the list
-scrolls under it, and the contextual bar of the selection, drawn from the pieces `Products` gives
+The top app bar already has two shapes: the medium bar of the page, collapsing to the small one as the list
+scrolls (scroll-driven animations, `bar-slide` in `src/styles.css`, since 2026-10-29), and the contextual bar of the selection, drawn from the pieces `Products` gives
 (`selectionBar`, `subtitle`; **verified**). The search adds a third, from two more pieces of `Products`:
 
 - `searchButton(model, dispatch)`: the icon button that opens the search, or nothing (`Closed` without
@@ -162,15 +162,15 @@ scrolls under it, and the contextual bar of the selection, drawn from the pieces
   `maybeClear` is `Some`.
 
 Home picks the shape in this order: the selection's bar, then the search bar, then its own. In search mode the
-bar is `h-16` and `surface-container` whatever `isAtTop`, the headline and subtitle block is not drawn, and the
+bar is `h-16` and `surface-container` whatever the scroll, without the bar's scroll-driven utilities, the headline and subtitle block is not drawn, and the
 overflow button is not there: the menu cannot open while the search is open, and the search cannot open while
 the menu is (its tap catcher takes the tap), so the two observers of the back button from Home never coexist;
 should they, a press goes to the last one to start observing (**verified** in `observed`,
 `src/infrastructure/back-button/back-button.ts`: a `Set` in insertion order, `.at(-1)`), which closes what
 opened last. `Products.list` reads the model to pad the list by the bar's height: `pt-16` in search mode,
-`pt-medium-bar` otherwise, with `transition-[padding]` so that the rows follow the bar as it shrinks and grows (the
-bar already transitions its height; **verified**: `transition-[height]` on the bar, `pt-medium-bar` on the list's
-`div`).
+`pt-medium-bar` otherwise, with `transition-[padding]` so that the rows follow the bar as it shrinks and grows. The
+medium bar itself never changes height: it slides under its upper part as the list scrolls, and the list keeps
+`pt-medium-bar` (**verified** 2026-10-29).
 
 Home's `program.ts` does not change. Its view test's `withheld` gains the cases the model hides on purpose: the
 menu while the search is open (the overflow button is not drawn), the search's messages while a selection
@@ -254,9 +254,7 @@ selection):
   (**verified** in the emulator on 2026-10-28, on the pages that add and edit a product: `innerHeight` 914 to
   578 on a Pixel 6), lifting the fixed add button and the snackbar's slot above it; Android's back button, with
   the keyboard open, closes the keyboard first and reaches the app on the second press (**verified** there too).
-  Still to be seen: that a query that clamps the scroll to the top fires `scroll`,
-  so that `isAtTop` is true when the search closes and the bar grows back; and that the keyboard's search key
-  leaves the keyboard up, which the owner may want otherwise (see "Open points").
+  Still to be seen: that the keyboard's search key leaves the keyboard up, which the owner may want otherwise (see "Open points").
 - **Reduced motion:** the height and padding transitions are the app's standard ones and follow the existing
   media query; nothing new is animated.
 

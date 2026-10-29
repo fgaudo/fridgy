@@ -3,11 +3,25 @@ import * as Effect from 'effect/Effect'
 import * as Layer from 'effect/Layer'
 import * as Stream from 'effect/Stream'
 import * as Source from '#libs/source/source.ts'
-import { Viewport } from './viewport.ts'
+import { Position, Viewport } from './viewport.ts'
 
-const scrollY = Stream.concat(Stream.make(undefined), fromEventListenerWindow('scroll')).pipe(
-  Stream.mapEffect(() => Effect.sync(() => window.scrollY)),
-)
+// `--bar-collapse` of `styles.css`, in pixels: a registered length computes to them. A page that scrolls less ends
+// the collapse sooner.
+const collapse = () =>
+  Math.min(
+    Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--bar-collapse')),
+    document.documentElement.scrollHeight - window.innerHeight,
+  )
+
+// A scroll to a fractional length lands on a device pixel, up to a pixel short of it.
+const positionOf = (y: number, collapse: number) =>
+  y <= 0
+    ? Position.Expanded()
+    : y >= collapse - 1
+    ? Position.Collapsed()
+    : y < collapse / 2
+    ? Position.CloserToExpanded()
+    : Position.CloserToCollapsed()
 
 export const layer = Layer.succeed(Viewport, {
   isScrolling: Source.fromStream(
@@ -17,7 +31,14 @@ export const layer = Layer.succeed(Viewport, {
     ).pipe(Stream.changes),
   ),
 
-  isNearTop: (offset) => Source.fromStream(scrollY.pipe(Stream.map((y) => y <= offset), Stream.changes)),
+  position: Source.fromStream(
+    Stream.concat(Stream.make(undefined), fromEventListenerWindow('scroll')).pipe(
+      Stream.mapEffect(() => Effect.sync(() => positionOf(window.scrollY, collapse()))),
+      Stream.changesWith((a, b) => a._tag === b._tag),
+    ),
+  ),
 
-  scrollToTop: Effect.sync(() => window.scrollTo({ top: 0, behavior: 'smooth' })),
+  expandBar: Effect.sync(() => window.scrollTo({ top: 0, behavior: 'smooth' })),
+
+  collapseBar: Effect.sync(() => window.scrollTo({ top: collapse(), behavior: 'smooth' })),
 })

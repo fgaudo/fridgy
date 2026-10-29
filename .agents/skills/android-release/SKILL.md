@@ -30,7 +30,7 @@ them as it leaves them.
 
 ## Supported Android versions
 
-The app needs Android 10 (API 29) and Android System WebView 114: on an older WebView, Capacitor shows
+The app needs Android 10 (API 29) and Android System WebView 115: on an older WebView, Capacitor shows
 `src/error.html` instead (`minWebViewVersion` in `capacitor.config.ts`).
 
 An Android version is supported only if the app can be tested on it, in the Android emulator:
@@ -50,7 +50,7 @@ change with it.
 bun run check-floor
 ```
 
-which fails on a syntax that ES2023, the last edition WebView 114 implements whole, does not have. The bundle
+which fails on a syntax that ES2023, the last edition WebView 115 implements whole, does not have. The bundle
 is not transpiled (`Bun.build`, the `ESNext` target), so every syntax in it counts, Tailwind's and Effect's
 included, and an upgrade of a dependency can raise what the app needs without a change in `src/`: run the
 check before a release and after an upgrade of Capacitor, Effect, Tailwind or `@effect/wa-sqlite`. The APIs
