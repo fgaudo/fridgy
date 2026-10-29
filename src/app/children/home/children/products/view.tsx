@@ -146,29 +146,31 @@ const avatar = (selection: ItemSelection, badge: VNode) =>
 
 /**
  * Material's motion for a list: an arriving row opens its place as it fades in, a leaving one fades as it closes
- * it. The model keeps a leaving row where it was until then, so that snabbdom never moves the rows around it.
+ * it. The model keeps a leaving row where it was until then, so that snabbdom never moves the rows around it. The
+ * place is the row's one grid track, from `0fr` to `1fr`: a row's height follows its text, which a large font
+ * wraps, and a transition cannot reach an `auto` height.
  */
 const rowMotion = (presence: Presence): VNodeStyle => {
   switch (presence) {
     case 'Arriving':
       return {
-        height: '0',
+        gridTemplateRows: '0fr',
         opacity: '0',
-        transitionProperty: 'height, opacity',
+        transitionProperty: 'grid-template-rows, opacity',
         transitionDuration: 'var(--transition-duration-medium-4)',
         transitionTimingFunction: 'var(--ease-emphasized-decelerate)',
-        delayed: { height: '', opacity: '1' },
+        delayed: { gridTemplateRows: '', opacity: '1' },
       }
     case 'Listed':
       return {}
     case 'Leaving':
-      // Not the arriving row's '0': snabbdom writes only a value that differs from the last frame's, and a row
+      // Not the arriving row's '0fr': snabbdom writes only a value that differs from the last frame's, and a row
       // still arriving holds its delayed values, written after it.
       return {
-        height: '0px',
+        gridTemplateRows: '0.0fr',
         opacity: '0.0',
         pointerEvents: 'none',
-        transitionProperty: 'height, opacity',
+        transitionProperty: 'grid-template-rows, opacity',
         transitionDuration: 'var(--transition-duration-short-4)',
         transitionTimingFunction: 'var(--ease-emphasized-accelerate)',
       }
@@ -176,8 +178,8 @@ const rowMotion = (presence: Presence): VNodeStyle => {
 }
 
 /**
- * Material's two-line list item, with a leading avatar. A long press (a right click on desktop) selects it; a tap
- * does what the model says.
+ * Material's two-line list item, with a leading avatar: 72dp at least, taller when a large font wraps the supporting
+ * text. A long press (a right click on desktop) selects it; a tap does what the model says.
  */
 const item = (
   key: string,
@@ -193,8 +195,7 @@ const item = (
     key={key}
     props={{
       className: cn(
-        'state-layer flex h-18 items-center gap-4 overflow-hidden pl-4 pr-6 select-none [-webkit-touch-callout:none]',
-        'transition-colors',
+        'state-layer grid grid-rows-[1fr] select-none [-webkit-touch-callout:none] transition-colors',
         selection.isSelected ? 'bg-secondary-container text-on-secondary-container' : 'text-on-surface',
       ),
     }}
@@ -204,12 +205,18 @@ const item = (
       ...Opt.match(selection.maybeTap, { onNone: () => ({}), onSome: (tap) => on('click', tap) }),
     }}
   >
-    {avatar(selection, badge)}
-    <div props={{ className: 'flex min-w-0 flex-col' }}>
-      <span props={{ className: 'truncate text-body-large' }}>{headline}</span>
-      <span props={{ className: cn('text-body-medium', look === 'Error' ? 'text-error' : 'text-on-surface-variant') }}>
-        {supporting}
-      </span>
+    <div props={{ className: 'min-h-0 overflow-hidden' }}>
+      <div props={{ className: 'flex min-h-18 items-center gap-4 py-2 pl-4 pr-6' }}>
+        {avatar(selection, badge)}
+        <div props={{ className: 'flex min-w-0 flex-col' }}>
+          <span props={{ className: 'truncate text-body-large' }}>{headline}</span>
+          <span
+            props={{ className: cn('text-body-medium', look === 'Error' ? 'text-error' : 'text-on-surface-variant') }}
+          >
+            {supporting}
+          </span>
+        </div>
+      </div>
     </div>
   </li>
 )

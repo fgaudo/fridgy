@@ -51,7 +51,8 @@ nothing is named). The model holds exactly what the view draws: a field no view 
   entrance the `snackbar` class of `styles.css` delays by the exit's duration. A list's rows leave the same way (`Leaving`), kept by
   the state where they were until they have closed their place: a row removed with a `remove` transition stays
   in the DOM, and snabbdom moves the rows around it when others go too, which jumps them over it. A list's rows
-  leave by closing their place (`height` and `opacity`, overflow hidden), and arrive by opening it; a row that
+  leave by closing their place (their one grid track from `1fr` to `0fr`, overflow hidden, and `opacity`: a row's
+  height follows its text, and a transition cannot reach an `auto` height), and arrive by opening it; a row that
   leaves has no `remove` style, whose transition would never end on a place already closed. What replaces the
   whole list (an empty state) leaves with `remove`, out of the flow (`position: absolute`), over what takes its
   place.
