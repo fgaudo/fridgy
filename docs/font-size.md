@@ -16,6 +16,23 @@ Implemented on 2026-10-29, in `android/app/src/main/java/net/gaudo/fridgy/TypeSc
   script (`WebViewCompat.addDocumentStartJavaScript`) that adopts a style sheet of its own: at that moment the
   document may have no element to style. A change of the setting recreates the activity (`fontScale` is not
   among the manifest's `configChanges`), and the plugin with it.
+- **A recreation leaves one page.** The new activity loads its page while the old one's may still run. The old
+  page's SQLite worker holds the database's access handles, and a second worker cannot open it.
+  - Capacitor destroys a WebView only when the activity's window detaches, which a recreation can skip. An
+    activity recreated during its launch never added its window. One recreated by `recreate()` hands its window
+    to the new activity; the system does so only for a change of size alone, which `configChanges` handles. The
+    old page then lived on for good. In `onDestroy`, `MainActivity` destroys the WebView at once when it is in
+    no window, and when the WebView itself leaves its window otherwise. Capacitor waits for the window because a
+    WebView must not be destroyed while in one, so the usual path is unchanged.
+  - The worker opens the database under a Web Lock, which the browser releases with the worker. The new page
+    waits for the old one's worker to be terminated: a few milliseconds on API 37.
+  - The wait is bounded (10 s). A page that keeps the database is a bug, and the waiting page shows the crash
+    screen instead of the splash screen for good.
+  - A worker that fails reports it as its uncaught error, and the page's storage layer dies of it: the client of
+    `@effect/sql-sqlite-wasm` would otherwise wait for the worker's "ready" message forever.
+
+  Seen on 2026-10-29 on API 37: the font size changed within a second of the launch left the splash screen up
+  for good, both workers failing to open the database.
 - **The type scale reads the sizes.** Each `--text-<role>` of `src/styles.css` is `var(--sp-<size>, <rem>)`, the
   sp itself in a browser, where nothing sets them; its line height is the same multiple of it as in Material's
   scale, as Android 14 scales a line height with its text. Text that names no role is `body-large`, set on
@@ -43,3 +60,9 @@ On 2026-10-29, in the emulator on API 37 at 200%: the sizes of the scale as abov
 24px; every page laid out with no text overlapping its box (fields, segments, chips, rows, Products' avatar). The
 production bundle at 100% fits 320×640 as before (`bun run e2e`). Not yet seen on API 29, whose largest font
 size is 130%, linear.
+
+On 2026-10-29, the recreation: the font size or the bold text changed from 0.2 s to 1.6 s after a cold launch,
+while the app runs, while it is in the background, four times in a row, and the app left with the back button
+and launched again; on API 37, `recreate()` while the app runs, from a temporary trigger. On API 37 and API 29,
+every case left one page in the WebView's DevTools, showing the app. In
+headless Chromium, 110 handovers between two pages of one database all started the second.

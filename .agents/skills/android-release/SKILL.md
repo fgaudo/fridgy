@@ -122,6 +122,9 @@ The pass, on both reference screens of "Supported screen sizes":
   the keyboard, with nothing left it leaves the page, and from the home it leaves the app;
 - the screens: on 320×712dp no page scrolls; on 320×533dp with the font at 200% and the keyboard open on
   each field, every page still reaches its button;
+- the font size changed within a second of the launch (`adb shell settings put system font_scale 1.3`):
+  the activity is recreated and the app still opens, with one page in the WebView's DevTools
+  (`docs/font-size.md`);
 - a long press selects without delivering the tap that opens the product, and vibrates;
 - the scanner: the camera's permission is asked once, a barcode is read, and the lookup on Open Food Facts
   answers from the WebView.

@@ -189,6 +189,56 @@ describe('the production bundle', () => {
     }, { timezoneId: 'America/New_York', time: '2026-10-31T00:30:00Z' })
   }, 60_000)
 
+  // An activity recreated by a change of the font size loads a second page while the first one's worker still holds
+  // the database. The second waits, and starts once the first is gone.
+  test('a page opened while another holds the database starts once that one closes', async () => {
+    const context = await browser.newContext({ viewport: { width: 320, height: 640 } })
+    try {
+      const first = await context.newPage()
+      await first.goto(server.url.href)
+      await first.getByText('Nothing in the fridge').waitFor({ timeout: START_TIMEOUT })
+      const second = await context.newPage()
+      await second.goto(server.url.href)
+      await second.waitForTimeout(2_000)
+      expect(await second.getByText(/Nothing in the fridge|Fridgy stopped/).count()).toBe(0)
+      await first.close()
+      await second.getByText('Nothing in the fridge').waitFor({ timeout: START_TIMEOUT })
+    } finally {
+      await context.close()
+    }
+  }, 60_000)
+
+  // A page that stays is a bug: the one waiting for it crashes, after the bound of the worker's lock.
+  test('a page opened while another keeps the database shows the crash screen', async () => {
+    const context = await browser.newContext({ viewport: { width: 320, height: 640 } })
+    try {
+      const first = await context.newPage()
+      await first.goto(server.url.href)
+      await first.getByText('Nothing in the fridge').waitFor({ timeout: START_TIMEOUT })
+      const second = await context.newPage()
+      await second.goto(server.url.href)
+      await second.getByRole('heading', { name: 'Fridgy stopped' }).waitFor({ timeout: START_TIMEOUT })
+      await first.getByText('Nothing in the fridge').waitFor()
+    } finally {
+      await context.close()
+    }
+  }, 60_000)
+
+  test('a worker that fails shows the crash screen', async () => {
+    const context = await browser.newContext({ viewport: { width: 320, height: 640 } })
+    try {
+      const page = await context.newPage()
+      await page.route(
+        '**/sqlite.opfs.worker.js',
+        (route) => route.fulfill({ contentType: 'text/javascript', body: 'throw new Error("The worker failed")' }),
+      )
+      await page.goto(server.url.href)
+      await page.getByRole('heading', { name: 'Fridgy stopped' }).waitFor({ timeout: START_TIMEOUT })
+    } finally {
+      await context.close()
+    }
+  }, 60_000)
+
   test('About shows package.json\'s version', async () => {
     await onApp('about', async (page) => {
       await button(page, 'More options').click()
