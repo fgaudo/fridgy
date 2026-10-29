@@ -36,6 +36,17 @@ export const offered = (
   isAllowed: (date: DateTime.Utc) => boolean,
 ): ReadonlyArray<DateTime.Utc> => DigitDates.datesOf(entry.digits, today, order).filter(isAllowed)
 
+/**
+ * Whether the digits, or more typed after them, name a day `isAllowed` (`DigitDates.canComplete`): while they do,
+ * digits that name none are a date not typed yet, not a wrong one.
+ */
+export const canComplete = (
+  entry: Entry,
+  today: DateTime.Utc,
+  order: DateOrder,
+  isAllowed: (date: DateTime.Utc) => boolean,
+): boolean => DigitDates.canComplete(entry.digits, today, order, isAllowed)
+
 const isAmong = (dates: ReadonlyArray<DateTime.Utc>) => (date: DateTime.Utc) =>
   dates.some((day) => DateTime.Equivalence(day, date))
 

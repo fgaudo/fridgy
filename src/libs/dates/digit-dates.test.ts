@@ -7,7 +7,7 @@ import { utc } from '#libs/testing/date-time.test_arbitrary.ts'
 import { assertProperty } from '#libs/testing/update.test_support.ts'
 import { arbitrary as order } from './date-order.test_arbitrary.ts'
 import type { DateOrder } from './date-order.ts'
-import { datesOf, digitsOf, MAX_DIGITS } from './digit-dates.ts'
+import { canComplete, datesOf, digitsOf, MAX_DIGITS } from './digit-dates.ts'
 
 const digits = fc.string({ unit: fc.constantFrom(...'0123456789'), maxLength: MAX_DIGITS })
 
@@ -155,6 +155,64 @@ describe('datesOf', () => {
     sameDays(datesOf('27122', today, 'YMD'), [day('2027-01-22'), day('2027-12-02')])
     sameDays(datesOf('20261024', today, 'YMD'), [day('2026-10-24')])
     sameDays(datesOf('4040', today, 'YMD'), [])
+  })
+})
+
+describe('canComplete', () => {
+  /** Days on or after the start of the day of `from`: what `canComplete` takes, every later day allowed. */
+  const onOrAfter = (from: DateTime.Utc) => (date: DateTime.Utc) =>
+    DateTime.isGreaterThanOrEqualTo(date, DateTime.startOf(from, 'day'))
+
+  /** Every string of digits up to `length` long. */
+  const allDigits = (length: number): ReadonlyArray<string> =>
+    length === 0 ? [''] : ['', ...allDigits(length - 1).flatMap((rest) => [...'0123456789'].map((d) => d + rest))]
+
+  test('holds for every beginning of a way to type an allowed day', () => {
+    const days = utc.map((date) => DateTime.startOf(date, 'day'))
+    assertProperty([days, utc, utc, order], (date, now, from, order) =>
+      !onOrAfter(from)(date)
+      || spellings(date, now, order).every((typed) =>
+        Arr.makeBy(typed.length + 1, (length) => typed.slice(0, length)).every((start) =>
+          canComplete(start, now, order, onOrAfter(from))
+        )
+      ))
+  })
+
+  test('holds from five digits on only when some digits typed after them name an allowed day', () => {
+    const typed = fc.string({ unit: fc.constantFrom(...'0123456789'), minLength: 5, maxLength: MAX_DIGITS })
+    assertProperty(
+      [typed, utc, utc, order],
+      (typed, now, from, order) =>
+        canComplete(typed, now, order, onOrAfter(from))
+          === allDigits(MAX_DIGITS - typed.length).some((more) =>
+            datesOf(typed + more, now, order).some(onOrAfter(from))
+          ),
+    )
+  })
+
+  test('holds whenever the digits name an allowed day', () => {
+    assertProperty(
+      [digits, utc, utc, order],
+      (typed, now, from, order) =>
+        !datesOf(typed, now, order).some(onOrAfter(from)) || canComplete(typed, now, order, onOrAfter(from)),
+    )
+  })
+
+  test('reads the examples as a person would, the day first', () => {
+    const allowed = onOrAfter(today)
+    expect(canComplete('', today, 'DMY', allowed)).toBe(true)
+    expect(canComplete('0', today, 'DMY', allowed)).toBe(true)
+    expect(canComplete('24102', today, 'DMY', allowed)).toBe(true)
+    expect(canComplete('241020', today, 'DMY', allowed)).toBe(true)
+    expect(canComplete('2410202', today, 'DMY', allowed)).toBe(true)
+    expect(canComplete('290220', today, 'DMY', allowed)).toBe(true)
+    expect(canComplete('2902202', today, 'DMY', allowed)).toBe(true)
+    expect(canComplete('2902202', today, 'DMY', onOrAfter(day('2030-01-01')))).toBe(false)
+    expect(canComplete('00', today, 'DMY', allowed)).toBe(false)
+    expect(canComplete('4040', today, 'DMY', allowed)).toBe(false)
+    expect(canComplete('2310201', today, 'DMY', allowed)).toBe(false)
+    expect(canComplete('23102026', today, 'DMY', allowed)).toBe(false)
+    expect(canComplete('2a', today, 'DMY', allowed)).toBe(false)
   })
 })
 

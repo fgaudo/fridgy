@@ -52,8 +52,9 @@ decided".
    keyboard.
 3. **The strip** says what the date field means: `No expiration` when the field is empty (the product will not
    expire), the chips of the days the digits name, the stored one drawn selected while the digits are the stored
-   date's, or `Not an upcoming date` in the error's colors when the digits name no day the product may expire
-   on.
+   date's, nothing while the digits name no day yet but more digits can (the fifth to the seventh of a date
+   typed with its year), or `Not an upcoming date` in the error's colors once no more digits can name a day the
+   product may expire on.
 4. **The date.** The keypad types, erases and clears the digits, as on the page that adds products; the
    backspace on the untouched stored date erases its last digit, and the clear key empties the field, which
    removes the expiration. A product that never expired gets one by typing. Picking another order rewrites the
@@ -90,7 +91,10 @@ the caller.
   and drop the day picked, as new digits name other days; `offered` reads the days the digits name, in an order
   from a day, among those allowed; `named` is the day picked while still offered, or else the only one offered;
   `choose` answers `None` when the day is not offered or is the one already named, so that a tap on the chosen
-  chip does nothing. `digit-dates.ts` has the inverse of `datesOf` for a date's longest form, `digitsOf`
+  chip does nothing; `canComplete` says whether more digits can still name a day allowed, so that a date half
+  typed is not shown as a wrong one. It tries, for each way to cut the digits and each day and month they agree
+  with, only the latest year, which is enough because a later day is allowed wherever an earlier one is
+  (**verified** against every way of typing more digits after five or more). `digit-dates.ts` has the inverse of `datesOf` for a date's longest form, `digitsOf`
   (`DDMMYYYY` in `DMY`), with the property that `datesOf(digitsOf(date, order), today, order)` is `[date]` for
   every date, order and today (**verified** on `datesOf`: of the four ways to cut eight digits, only two digits
   of day and two of month leave the year 0, 2 or 4 digits, so eight digits name one day at most). In each page,

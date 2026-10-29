@@ -1,5 +1,6 @@
 import * as Arr from 'effect/Array'
 import * as DateTime from 'effect/DateTime'
+import * as Iterable from 'effect/Iterable'
 import * as Opt from 'effect/Option'
 import * as Order from 'effect/Order'
 import type { DateOrder } from './date-order.ts'
@@ -115,3 +116,70 @@ export const datesOf = (digits: string, today: DateTime.Utc, order: DateOrder): 
   /^\d*$/.test(digits)
     ? Arr.dedupeWith(Arr.sort(readingsOf(digits, today, order), nearestFirst(today)), DateTime.Equivalence)
     : []
+
+/** `value` written in `length` digits, or `None` when it needs more. A field of one digit is never `0`. */
+const written = (value: number, length: number): Opt.Option<string> =>
+  value > 0 && String(value).length <= length ? Opt.some(String(value).padStart(length, '0')) : Opt.none()
+
+/** Whether `text`, as a field from `from` on, agrees with what is typed there: nothing is, past the end. */
+const agrees = (digits: string, from: number) => (text: string) =>
+  text.split('').every((digit, at) => (digits[from + at] ?? digit) === digit)
+
+/** The values from 1 to `count` that agree, written in a field of `length` digits from `from` on. */
+const valuesAgreeing = (count: number, length: number, digits: string, from: number): ReadonlyArray<number> =>
+  Arr.makeBy(count, (index) => index + 1).filter((value) => Opt.exists(written(value, length), agrees(digits, from)))
+
+const isLeap = (year: number) => (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0
+
+/** The latest leap year that agrees, written in a field of `length` digits from `from` on. */
+const latestLeapYear = (length: number, digits: string, from: number, yearOf: (text: string) => number) => {
+  for (let value = 10 ** length - 1; value >= 0; value--) {
+    const text = String(value).padStart(length, '0')
+    if (agrees(digits, from)(text) && isLeap(yearOf(text))) return Opt.some(yearOf(text))
+  }
+  return Opt.none()
+}
+
+// For each way to cut the digits and each day and month they agree with, only the latest year is tried, as a later
+// day is allowed wherever an earlier one is; February 29 takes the latest leap year. Lazy, as the first allowed day
+// ends the search.
+function* completions(digits: string, today: DateTime.Utc, order: DateOrder): Generator<DateTime.Utc> {
+  for (const length of [1, 2].filter((length) => length >= digits.length)) {
+    for (const day of valuesAgreeing(31, length, digits, 0)) yield* Opt.toArray(nextDayOfMonth(day, today))
+  }
+  for (const dayLength of [1, 2]) {
+    for (const monthLength of [1, 2]) {
+      for (const yearLength of [0, 2, 4].filter((length) => dayLength + monthLength + length >= digits.length)) {
+        const lengths: Readonly<Record<Field, number>> = { day: dayLength, month: monthLength, year: yearLength }
+        const fields = fieldsIn[order]
+        const from = (field: Field) =>
+          fields.slice(0, fields.indexOf(field)).reduce((sum, before) => sum + lengths[before], 0)
+        // Two digits name a year of this century, as in `readingsOf`.
+        const yearOf = (text: string) => yearLength === 2 ? 2000 + Number(text) : Number(text)
+        const latestYear = yearOf(Arr.makeBy(yearLength, (at) => digits[from('year') + at] ?? '9').join(''))
+        for (const month of valuesAgreeing(12, monthLength, digits, from('month'))) {
+          for (const day of valuesAgreeing(31, dayLength, digits, from('day'))) {
+            yield* Opt.toArray(
+              yearLength === 0
+                ? nextDayOf(month, day, today)
+                : month === 2 && day === 29
+                ? Opt.flatMap(latestLeapYear(yearLength, digits, from('year'), yearOf), (year) => dayOf(year, 2, 29))
+                : dayOf(latestYear, month, day),
+            )
+          }
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Whether `digits`, or some more digits typed after them, up to `MAX_DIGITS`, name a day that `isAllowed` (see
+ * `datesOf`). `isAllowed` must allow every day after one it allows.
+ */
+export const canComplete = (
+  digits: string,
+  today: DateTime.Utc,
+  order: DateOrder,
+  isAllowed: (date: DateTime.Utc) => boolean,
+): boolean => /^\d*$/.test(digits) && Iterable.some(completions(digits, today, order), isAllowed)

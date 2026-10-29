@@ -223,7 +223,10 @@ export type DateShown = Readonly<{
   }>
   /** The date's field: the digits as typed. */
   digits: string
-  /** Under the field: how to type a date, the days the digits name, or that they name none. */
+  /**
+   * Under the field: how to type a date, while the digits name no day yet; the days they name; or that they name
+   * none, and no digits typed after them can.
+   */
   strip: Data.TaggedEnum<{
     Hint: object
     Naming: Readonly<{ choices: Arr.NonEmptyReadonlyArray<DateChoice> }>
@@ -321,6 +324,13 @@ const offeredDates = (form: Form, date: DateForm): ReadonlyArray<DateTime.Utc> =
   Opt.match(Opt.all([form.maybeNow, form.maybeOrder]), {
     onNone: () => [],
     onSome: ([now, order]) => DigitDateEntry.offered(date, now, order, Product.canExpireOn(now)),
+  })
+
+/** Whether the digits, or more typed after them, name a day on which a product added now may expire. */
+const canCompleteDate = (form: Form, date: DateForm): boolean =>
+  Opt.match(Opt.all([form.maybeNow, form.maybeOrder]), {
+    onNone: () => false,
+    onSome: ([now, order]) => DigitDateEntry.canComplete(date, now, order, Product.canExpireOn(now)),
   })
 
 /** The first brand, then the name, unless the name already says the brand. The quantity is left out. */
@@ -772,10 +782,10 @@ export const program: Tea.Program<{
         name,
         order,
         digits: date.digits,
-        strip: date.digits === ''
-          ? { _tag: 'Hint' }
-          : Arr.isReadonlyArrayNonEmpty(choices)
+        strip: Arr.isReadonlyArrayNonEmpty(choices)
           ? { _tag: 'Naming', choices }
+          : date.digits === '' || canCompleteDate(form, date)
+          ? { _tag: 'Hint' }
           : { _tag: 'NamingNothing' },
       }
     }

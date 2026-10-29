@@ -270,6 +270,7 @@ const strip = (shown: FieldsShown, activity: Activity, dispatch: Dispatch<Messag
     <div props={{ className: 'col-start-1 row-start-1 flex min-h-8 items-start gap-2 overflow-x-auto' }}>
       {Match.valueTags(shown.strip, {
         Empty: () => [<span props={{ className: 'px-4' }}>No expiration</span>],
+        NamingNothingYet: () => [],
         Naming: ({ choices }) => choices.map((choice) => chip(choice, activity, dispatch)),
         NamingNothing: () => [<span props={{ className: 'px-4' }}>{NOT_UPCOMING}</span>],
       })}

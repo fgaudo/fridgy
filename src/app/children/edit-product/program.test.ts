@@ -56,6 +56,10 @@ const entryShown = (form: Form): DigitDateEntry.Entry =>
 const offeredDates = (form: Form) =>
   DigitDateEntry.offered(entryShown(form), form.now, form.order, Product.canExpireOn(form.original.creationDate))
 
+/** Whether more digits typed after those shown can name a day the product may expire on. */
+const canCompleteDate = (form: Form) =>
+  DigitDateEntry.canComplete(entryShown(form), form.now, form.order, Product.canExpireOn(form.original.creationDate))
+
 /** The product the fields describe: the stored date while untouched, none on no digits, or the day named. */
 const productOf = (form: Form): Opt.Option<Product.Product> => {
   const maybeExpiration = form.date._tag === 'Kept'
@@ -440,7 +444,7 @@ describe('the model', () => {
     })
   })
 
-  test('shows typed digits as typed, with the days they name and the one named, or that they name none', () => {
+  test('shows typed digits as typed, with nothing while they name no day yet, the days they name and the one named, or that no more digits can name one', () => {
     assertProperty([withFields], (s) => {
       fc.pre(s.form.date._tag === 'Typed')
       const model = makeModel(s)
@@ -450,7 +454,7 @@ describe('the model', () => {
       const expected = entry.digits === ''
         ? { _tag: 'Empty' }
         : offered.length === 0
-        ? { _tag: 'NamingNothing' }
+        ? canCompleteDate(s.form) ? { _tag: 'NamingNothingYet' } : { _tag: 'NamingNothing' }
         : {
           _tag: 'Naming',
           choices: offered.map((date) => ({
@@ -582,6 +586,16 @@ describe('the model', () => {
       })
       expect(strip(typed('20102026'))?._tag).toBe('Naming')
       expect(strip(typed('19102026'))).toEqual({ _tag: 'NamingNothing' })
+    })
+
+    // Typing a date with its year, the fifth to the seventh digit name no day: a year of one or three digits, or
+    // one of two already past.
+    test('says nothing while more digits can name a day, and that the digits name none once none can', () => {
+      expect(strip(typed('06112'))).toEqual({ _tag: 'NamingNothingYet' })
+      expect(strip(typed('061120'))).toEqual({ _tag: 'NamingNothingYet' })
+      expect(strip(typed('0611202'))).toEqual({ _tag: 'NamingNothingYet' })
+      expect(strip(typed('0611201'))).toEqual({ _tag: 'NamingNothing' })
+      expect(strip(typed('00'))).toEqual({ _tag: 'NamingNothing' })
     })
 
     test('rewrites the untouched stored date in another order, and leaves typed digits as typed', () => {
