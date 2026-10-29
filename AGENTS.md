@@ -188,5 +188,10 @@ folders; "page" names a role in the UI, kept by the root's state, not a kind of 
   both are checked is in the `android-release` skill ("The emulator").
 - The vibrations (`docs/haptics.md`) have not been felt on a phone: whether each pattern feels like the constant
   it stands for. The emulator only shows their delivery; the author feels them before the release.
+- Two taps in one frame can stack two pages. `show` (`src/app/program.ts`) pushes a page unless that same page
+  is on top, and Home accepts `AddRequested` in every state: a product's row and "Add products", tapped with two
+  fingers, push EditProduct and then AddProducts over it. Nothing crashes, and each page leaves in turn, but the
+  design never meant that stack. The guard (a page's request only while Home is on top, or one push per frame)
+  is to be decided apart.
 
 When an item is resolved, remove it.
