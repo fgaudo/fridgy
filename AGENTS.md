@@ -192,8 +192,4 @@ folders; "page" names a role in the UI, kept by the root's state, not a kind of 
   second. The release has been run on the emulator only (API 37 and API 29), signed with the debug key.
 - Seen on a phone (Galaxy S21, Android 15) on 2026-10-30, not yet looked into: every product added in AddProducts
   makes its components flicker.
-- AddProducts' name field is never focused. The web build focused it whenever it was drawn anew (`focusOnInsert`):
-  as the page opened, after a scan that names the product, and after an add. The field is still keyed anew
-  (`nameKey`), but has no `autoFocus`. Whether this is the flicker above is not known.
-
-When an item is resolved, remove it.
+  When an item is resolved, remove it.

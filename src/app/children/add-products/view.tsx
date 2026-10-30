@@ -447,7 +447,8 @@ const supportingText = (supporting: Supporting) => (
 
 /**
  * Material's outlined text field of the name, drawn anew when the name is replaced (a scan, a clearing, a product
- * added). From then on the user owns its text, and the program learns it from the field's messages.
+ * added). From then on the user owns its text, and the program learns it from the field's messages. Focused whenever
+ * it is drawn anew and editable: as the step opens, after a product found, a clearing and an add.
  */
 const nameField = (shown: NameShown, activity: NameActivity, dispatch: Dispatch<Message>) => {
   const { on, onValue } = handlers(dispatch)
@@ -460,6 +461,7 @@ const nameField = (shown: NameShown, activity: NameActivity, dispatch: Dispatch<
           accessibilityLabel='Name'
           defaultValue={shown.name}
           editable={isEditing}
+          autoFocus={isEditing}
           enterKeyHint='done'
           cursorColor={color.primary}
           style={[styles.input, { color: isEditing ? color.onSurface : color.disabledContent }]}
