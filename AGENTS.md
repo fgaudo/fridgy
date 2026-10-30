@@ -77,10 +77,19 @@ folders; "page" names a role in the UI, kept by the root's state, not a kind of 
   close, or always, when a press asks its parent to leave it or must be held. The root knows nothing of it. A
   press goes to the last observer only, as Android's own back dispatcher does; when no program observes it, the
   platform leaves the app.
+- **A page keeps clear of the keyboard itself.** The window of an app drawn edge to edge is never resized,
+  whatever `windowSoftInputMode` asks for: a page with a field observes the platform's `Keyboard`
+  (`src/infrastructure/keyboard`, the subscription keyed `keyboard`), holds how far it covers the window and
+  keeps its bottom clear of it, so that what is docked at the bottom stays in sight. The inset is the window's
+  own, so it covers the navigation bar: the page keeps clear of the larger of the two, never of their sum
+  (`SafeAreaView`'s `maximum` edge). It is read from the window's insets, by
+  `react-native-keyboard-controller`: React Native's own keyboard events come from the root view's layout
+  passes, and a root view made anew, as an activity recreated gives, tells nothing of a keyboard that was up.
 - **A service belongs to what uses it, and is never shared.** A service (a `Context.Service`: a port) is a
   requirement of its consumer, in its `services/`, shaped for it. Two consumers that need the same thing each
   have their own; what they share is the domain and the infrastructure. The exception is a fact of the platform
-  that no consumer could shape (`src/infrastructure/back-button`, `src/infrastructure/haptics`), a service of the infrastructure that programs list directly. Write services
+  that no consumer could shape (`src/infrastructure/back-button`, `src/infrastructure/haptics`,
+  `src/infrastructure/keyboard`), a service of the infrastructure that programs list directly. Write services
   have no read: a program learns about writes from the storage's changes. Persistence services take a domain `Snapshot` and return
   `UnvalidatedSnapshot`s; adapters never read domain fields.
 - **An expiration is a day of the calendar, and days are the device's.** An expiration date is a `Day`
@@ -183,10 +192,6 @@ folders; "page" names a role in the UI, kept by the root's state, not a kind of 
   second. The release has been run on the emulator only (API 37 and API 29), signed with the debug key.
 - Seen on a phone (Galaxy S21, Android 15) on 2026-10-30, not yet looked into: every product added in AddProducts
   makes its components flicker.
-- AddProducts' buttons stay under the keyboard: the web build drew them above it. The manifest's `adjustResize`
-  resizes nothing for an app drawn edge to edge, which a target of API 35 or more always is: the page has to keep
-  clear of the keyboard's inset itself. The emulator showed it on API 29 too (2026-10-30), so it is the app's
-  layout, not a recent Android's doing.
 - AddProducts' name field is never focused. The web build focused it whenever it was drawn anew (`focusOnInsert`):
   as the page opened, after a scan that names the product, and after an add. The field is still keyed anew
   (`nameKey`), but has no `autoFocus`. Whether this is the flicker above is not known.

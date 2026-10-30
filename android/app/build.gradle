@@ -16,7 +16,7 @@ react {
     reactNativeDir = file("../../node_modules/react-native")
     codegenDir = file("../../node_modules/@react-native/codegen")
     cliFile = file("../../node_modules/react-native/cli.js")
-    entryFile = file("../../src/entrypoints/native.ts")
+    entryFile = file("../../src/entrypoints/native.tsx")
     // Every variant embeds its bundle, compiled by hermesc: a debug build runs without Metro's server, as a release
     // does.
     debuggableVariants = []

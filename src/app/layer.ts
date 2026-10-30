@@ -7,7 +7,7 @@ import * as Home from './children/home/layer.ts'
 
 // The adapters that every setup shares: the pages' services', and the infrastructure's that have no
 // alternative (the vibrations). What has alternatives is left to the entrypoint: the `SqlClient` (the
-// database's engine), the `HttpClient`, the platform's `BackButton`
+// database's engine), the `HttpClient`, the platform's `BackButton` and `Keyboard`
 // (`#infrastructure/back-button/back-button.react-native.ts`, or a test's) and the zone the days are counted in,
 // `DateTime.CurrentTimeZone`: the device's, or a test's.
 export const layer = Layer.mergeAll(

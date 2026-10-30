@@ -24,6 +24,7 @@ import {
   barcode,
   dating,
   digit,
+  keyboardInset,
   lookingUp,
   message,
   naming,
@@ -436,6 +437,14 @@ describe('AddProducts update', () => {
     )
   })
 
+  test('KeyboardMoved keeps how far the keyboard covers the page', () => {
+    assertProperty(
+      [state, keyboardInset],
+      (before, inset) =>
+        Equal.equals(step(Msg.KeyboardMoved({ inset }), before).after, withForm(before, { keyboardInset: inset })),
+    )
+  })
+
   // The pick applies at once, and is kept in the setting, which reports it back.
   test('OrderPicked takes another order than the one in use and keeps it, on the second step, and is rejected otherwise', () => {
     assertProperty(
@@ -628,6 +637,7 @@ describe('AddProducts update', () => {
         return s._tag === 'LookingUp'
           ? Equal.equals(model, {
             _tag: 'LookingUp',
+            keyboardInset: s.form.keyboardInset,
             supporting: { _tag: 'LookingUp', barcode: s.barcode },
             name: Opt.getOrElse(s.form.maybeName, () => ''),
             nameKey: s.form.replacements,
@@ -637,6 +647,10 @@ describe('AddProducts update', () => {
           })
           : model._tag !== 'LookingUp'
       })
+    })
+
+    test('every state draws how far the page keeps clear of the keyboard', () => {
+      assertProperty([state], (s) => makeModel(s).keyboardInset === s.form.keyboardInset)
     })
 
     test('the first step shows the name, drawn anew with each replacement, in every state, the scanner the camera, and every state the snackbar the form holds', () => {
@@ -882,7 +896,7 @@ describe('AddProducts update', () => {
 })
 
 // The back button is observed in every state: while a product is being added, so that it does not leave the app.
-test('the page listens to the clock, the date order and the back button, to the camera while the scanner is open until it fails, to the lookup of the barcode it looks up, and times each product on its way into the fridge, the fridge\'s closing and the snackbar', () => {
+test('the page listens to the clock, the date order, the back button and the keyboard, to the camera while the scanner is open until it fails, to the lookup of the barcode it looks up, and times each product on its way into the fridge, the fridge\'s closing and the snackbar', () => {
   assertProperty([state, fc.nat({ max: 12 })], (s, id) => {
     const subscriptions = Tea.subscriptionsOf(program)(s)
     const lookups = [...HashMap.keys(subscriptions)].filter((key) => String(key).startsWith('lookup:'))
@@ -890,6 +904,7 @@ test('the page listens to the clock, the date order and the back button, to the 
     return HashMap.has(subscriptions, 'clock')
       && HashMap.has(subscriptions, 'date-order')
       && HashMap.has(subscriptions, 'back-button')
+      && HashMap.has(subscriptions, 'keyboard')
       && HashMap.has(subscriptions, 'scanner') === readsCamera(s)
       && Equal.equals(lookups, s._tag === 'LookingUp' ? [`lookup:${s.barcode}`] : [])
       && HashMap.has(subscriptions, ['arriving', id]) === onTheirWay(fridge).includes(id)
@@ -915,6 +930,7 @@ describe('the lookup', () => {
         added: 0,
         fridge: { _tag: 'Away' },
         snackbar: { _tag: 'None' },
+        keyboardInset: 0,
       },
       barcode: code,
     }

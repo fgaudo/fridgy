@@ -11,7 +11,7 @@ commands.
 ## Build
 
 The Android project is `android/`, React Native's own, whose Gradle plugin bundles the JavaScript of
-`src/entrypoints/native.ts` with Metro and compiles it to Hermes bytecode. Every variant carries its bundle
+`src/entrypoints/native.tsx` with Metro and compiles it to Hermes bytecode. Every variant carries its bundle
 (`debuggableVariants = []` in `android/app/build.gradle`): no build needs Metro's server.
 
 ```bash
@@ -124,6 +124,8 @@ The pass, on both reference screens of "Supported screen sizes":
   the keyboard, with nothing left it leaves the page, and from Home it leaves the app;
 - the screens: on 320×712dp no page scrolls; on 320×533dp with the font at 200% and the keyboard open on
   each field, every page still reaches its button;
+- the keyboard, on each page with a field: what is docked at the bottom sits right above it, and once it is
+  closed goes back down — after a change of the theme or of the font size too, which recreate the activity;
 - each page and each state a change touched: Home's list and its colors of freshness, the selection and the
   deletion with "Undo", both steps of the page that adds products, the page that edits a product, About;
 - a long press selects without delivering the tap that opens the product, and vibrates;

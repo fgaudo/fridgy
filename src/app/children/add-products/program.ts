@@ -16,6 +16,7 @@ import * as Opt from 'effect/Option'
 import * as Product from '#domain/product.ts'
 import { BackButton } from '#infrastructure/back-button/back-button.ts'
 import { type Feedback, Haptics } from '#infrastructure/haptics/haptics.ts'
+import { Keyboard } from '#infrastructure/keyboard/keyboard.ts'
 import * as DateOrder from '#libs/dates/date-order.ts'
 import * as Day from '#libs/dates/day.ts'
 import * as DigitDateEntry from '#libs/dates/digit-date-entry.ts'
@@ -68,6 +69,8 @@ export type Form = Readonly<{
   added: number
   fridge: Fridge
   snackbar: Snackbar
+  /** How far the keyboard covers the page's bottom, in dp, navigation bar included: the window is never resized. */
+  keyboardInset: number
 }>
 
 /** Material shows one snackbar at a time: one that comes after another waits for it to leave. */
@@ -161,6 +164,8 @@ export type Message = Data.TaggedEnum<{
   CameraFailed: object
   /** The platform's back button, while the page is shown. */
   BackPressed: object
+  /** The keyboard has come up, changed height or gone down. */
+  KeyboardMoved: { inset: number }
   /** The product added as the `id`th is in the fridge. */
   Arrived: { id: number }
   /** The fridge has closed behind the product added as the `id`th, and settled. */
@@ -200,6 +205,7 @@ export type Deps =
   | ProductLookup
   | Haptics
   | BackButton
+  | Keyboard
   | DateTime.CurrentTimeZone
 
 /** A day the digits name: the chosen one, or one to pick while the step takes input. */
@@ -224,6 +230,9 @@ export type Supporting = Data.TaggedEnum<{
   NotOnOpenFoodFacts: Readonly<{ barcode: string }>
   LookupFailed: object
 }>
+
+/** What every state draws: how far the page keeps clear of the keyboard, which covers whatever is under it. */
+type PageShown = Readonly<{ keyboardInset: number }>
 
 /** The first step, drawn in every state: under the scanner, and under the second step. */
 export type NameShown = Readonly<{
@@ -280,6 +289,7 @@ export type FridgeShown = Data.TaggedEnum<{
 
 export type Model = Data.TaggedEnum<{
   Naming:
+    & PageShown
     & NameShown
     & Readonly<{
       close: Message
@@ -296,6 +306,7 @@ export type Model = Data.TaggedEnum<{
     }>
   /** The first step during the lookup: only cancelling it and leaving the page take. */
   LookingUp:
+    & PageShown
     & NameShown
     & Readonly<{
       close: Message
@@ -303,6 +314,7 @@ export type Model = Data.TaggedEnum<{
     }>
   /** The scanner's dialog, over the first step, which takes nothing until it closes. */
   Scanning:
+    & PageShown
     & NameShown
     & Readonly<{
       /** Once unavailable, the scanner says that the name can only be typed. */
@@ -310,6 +322,7 @@ export type Model = Data.TaggedEnum<{
       closeScanner: Message
     }>
   Dating:
+    & PageShown
     & NameShown
     & DateShown
     & Readonly<{
@@ -328,6 +341,7 @@ export type Model = Data.TaggedEnum<{
    * added before go on entering the fridge.
    */
   Adding:
+    & PageShown
     & NameShown
     & Readonly<{
       step: Data.TaggedEnum<{ Naming: Readonly<{ fridge: FridgeShown }>; Dating: DateShown }>
@@ -518,6 +532,14 @@ const backButton: Tea.Subscription<Message, BackButton> = Channel.unwrap(
   Effect.map(Effect.service(BackButton), ({ presses }) => Channel.map(presses, () => Message.BackPressed())),
 )
 
+// Observed as long as the page is shown: the keyboard covers the step shown, whichever it is.
+const keyboard: Tea.Subscription<Message, Keyboard> = Channel.unwrap(
+  Effect.map(
+    Effect.service(Keyboard),
+    ({ insets }) => Channel.map(insets, (inset) => Message.KeyboardMoved({ inset })),
+  ),
+)
+
 // Keyed by the barcode: a scan of another one, or a change of the name, interrupts it. It answers once.
 const lookup = (barcode: string): Tea.Subscription<Message, ProductLookup> =>
   Channel.fromEffectDone(
@@ -625,6 +647,7 @@ export const program: Tea.Program<{
         added: 0,
         fridge: { _tag: 'Away' },
         snackbar: { _tag: 'None' },
+        keyboardInset: 0,
       },
     },
     commands: [Command.CheckCamera()],
@@ -688,6 +711,10 @@ export const program: Tea.Program<{
         : Tea.reject,
 
     TimeChanged: ({ now }) => (state) => ({ state: withForm(state, (form) => ({ ...form, maybeNow: Opt.some(now) })) }),
+
+    KeyboardMoved: ({ inset }) => (state) => ({
+      state: withForm(state, (form) => ({ ...form, keyboardInset: inset })),
+    }),
 
     // The day picked stays, while the digits still name it in the new order.
     OrderChanged: ({ order }) => (state) => ({
@@ -852,6 +879,7 @@ export const program: Tea.Program<{
       ['clock', clock],
       ['date-order', dateOrder],
       ['back-button', backButton],
+      ['keyboard', keyboard],
     ]
     const scanning: typeof always = isScanning(state) ? [['scanner', scanner]] : []
     const looking: typeof always = state._tag === 'LookingUp'
@@ -881,6 +909,7 @@ export const program: Tea.Program<{
         NotFound: ({ barcode }): Supporting => ({ _tag: 'NotOnOpenFoodFacts', barcode }),
         Failed: (): Supporting => ({ _tag: 'LookupFailed' }),
       })
+    const pageShown: PageShown = { keyboardInset: form.keyboardInset }
     const nameShown: NameShown = { supporting, name, nameKey: form.replacements, snackbar: form.snackbar }
     const dateShown = (
       date: DateForm,
@@ -918,6 +947,7 @@ export const program: Tea.Program<{
       // Both ways out need the product the name describes, never expiring: the date is that product's.
       Naming: (naming): Model => ({
         _tag: 'Naming',
+        ...pageShown,
         ...nameShown,
         close: Message.Closed(),
         changeName: (name: string) => Message.NameChanged({ name }),
@@ -929,12 +959,14 @@ export const program: Tea.Program<{
       }),
       LookingUp: (): Model => ({
         _tag: 'LookingUp',
+        ...pageShown,
         ...nameShown,
         close: Message.Closed(),
         cancelLookup: Message.LookupCancelled(),
       }),
       Scanning: (): Model => ({
         _tag: 'Scanning',
+        ...pageShown,
         ...nameShown,
         camera: form.camera,
         closeScanner: Message.ScanClosed(),
@@ -943,6 +975,7 @@ export const program: Tea.Program<{
         const { date } = dating
         return {
           _tag: 'Dating',
+          ...pageShown,
           ...nameShown,
           ...dateShown(
             date,
@@ -962,6 +995,7 @@ export const program: Tea.Program<{
       },
       Submitting: ({ step }): Model => ({
         _tag: 'Adding',
+        ...pageShown,
         ...nameShown,
         step: step._tag === 'Naming'
           ? { _tag: 'Naming', fridge: fridgeShown(form) }

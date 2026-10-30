@@ -20,17 +20,18 @@ leaves the phone. The whole of it is in [`PRIVACY.md`](PRIVACY.md), the policy t
 
 ## Stack
 
-|                            |                                                                                               |
-| -------------------------- | --------------------------------------------------------------------------------------------- |
-| Language                   | TypeScript, with the Effect language service (`@effect/tsgo`)                                 |
-| Effects, services, streams | [Effect](https://effect.website) v4                                                           |
-| View                       | [React Native](https://reactnative.dev) (written in TSX), on Hermes                           |
-| Storage                    | SQLite, through [op-sqlite](https://github.com/OP-Engineering/op-sqlite)                      |
-| Barcodes                   | [zxing-cpp](https://github.com/zxing-cpp/zxing-cpp) on CameraX, in a native module of the app |
-| Motion                     | [Reanimated](https://docs.swmansion.com/react-native-reanimated/)'s layout animations         |
-| Bundler                    | Metro, with Babel                                                                             |
-| Runtime, tests             | [Bun](https://bun.com), with [fast-check](https://fast-check.dev) for property tests          |
-| Lint                       | [Biome](https://biomejs.dev), and [Oxlint](https://oxc.rs) for uses of deprecated APIs        |
+|                            |                                                                                                                 |
+| -------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| Language                   | TypeScript, with the Effect language service (`@effect/tsgo`)                                                   |
+| Effects, services, streams | [Effect](https://effect.website) v4                                                                             |
+| View                       | [React Native](https://reactnative.dev) (written in TSX), on Hermes                                             |
+| Storage                    | SQLite, through [op-sqlite](https://github.com/OP-Engineering/op-sqlite)                                        |
+| Barcodes                   | [zxing-cpp](https://github.com/zxing-cpp/zxing-cpp) on CameraX, in a native module of the app                   |
+| Motion                     | [Reanimated](https://docs.swmansion.com/react-native-reanimated/)'s layout animations                           |
+| Keyboard                   | [Keyboard Controller](https://kirillzyusko.github.io/react-native-keyboard-controller/), for the window's inset |
+| Bundler                    | Metro, with Babel                                                                                               |
+| Runtime, tests             | [Bun](https://bun.com), with [fast-check](https://fast-check.dev) for property tests                            |
+| Lint                       | [Biome](https://biomejs.dev), and [Oxlint](https://oxc.rs) for uses of deprecated APIs                          |
 
 ## Getting started
 
@@ -123,8 +124,8 @@ How the code is organized:
 - **Shared code moves up**: the entities (`Product`) to `src/domain/`, how things are done (the database's
   schema, how a product is written) to `src/infrastructure/`, Material's look to `src/styles.ts`, a whole program
   two programs use to the `programs/` of their common parent (none yet).
-- **The entrypoint** (`src/entrypoints/native.ts`) picks what has alternatives: the database's engine, the HTTP
-  client and the platform's back button. The tests pick their own.
+- **The entrypoint** (`src/entrypoints/native.tsx`) picks what has alternatives: the database's engine, the HTTP
+  client and the platform's back button and keyboard. The tests pick their own.
 - **Views** are TSX, drawn by React through a small bridge (`src/libs/tea-react/`), following Material 3.
 
 See [`src/README.md`](src/README.md) for a map of the source tree, a suggested reading order and the import

@@ -110,6 +110,9 @@ const offeredDates = (form: Form, digits: string) =>
       ),
   })
 
+/** How far the keyboard covers the page: down most often, otherwise as tall as a keyboard. */
+export const keyboardInset = fc.oneof({ arbitrary: fc.constant(0), weight: 3 }, fc.integer({ min: 120, max: 400 }))
+
 export const form: fc.Arbitrary<Form> = fc.tuple(
   fc.record({
     maybeName: maybe(fc.oneof(fc.string(), fc.stringMatching(/^\d{8,13}$/))),
@@ -120,6 +123,7 @@ export const form: fc.Arbitrary<Form> = fc.tuple(
     maybeOrder: maybe(order),
     fridgeAndAdded,
     snackbar,
+    keyboardInset,
   }),
   fc.boolean(),
 ).map(([{ fridgeAndAdded: [fridge, added], ...fields }, keepsName]): Form => {

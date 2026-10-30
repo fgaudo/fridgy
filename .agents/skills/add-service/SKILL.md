@@ -73,8 +73,8 @@ how the storage is read or written is doing the infrastructure's work, and two o
 ## Where the adapter is provided
 
 - No alternative: the program's `layer.ts` merges it.
-- Alternatives (the `SqlClient`'s engine, the `HttpClient`, the platform's `BackButton`): the layers leave it
-  out and the entrypoint, `src/entrypoints/native.ts`, imports the adapter's own module, as a test does its own
+- Alternatives (the `SqlClient`'s engine, the `HttpClient`, the platform's `BackButton` and `Keyboard`): the layers leave it
+  out and the entrypoint, `src/entrypoints/native.tsx`, imports the adapter's own module, as a test does its own
   (`#infrastructure/back-button/back-button.react-native.ts`,
   `#app/children/home/children/products/services/product-list/product-list.sql.ts`), never a module that would
   load the other alternatives too. A missing choice fails the typecheck; a bundle only contains what it uses.

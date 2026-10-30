@@ -86,24 +86,29 @@ export const snackbar = snackbarOf('SaveFailed', 'OrderNotKept')
 
 // The name is often the stored one, at times with other spacing, and at times anything typed.
 
-export const form: fc.Arbitrary<Form> = fc.tuple(opened, id, fc.nat(), order, fc.string(), fc.nat({ max: 3 }), snackbar)
+/** How far the keyboard covers the page: down most often, otherwise as tall as a keyboard. */
+export const keyboardInset = fc.oneof({ arbitrary: fc.constant(0), weight: 3 }, fc.integer({ min: 120, max: 400 }))
+
+export const form: fc.Arbitrary<Form> = fc
+  .tuple(opened, id, fc.nat(), order, fc.string(), fc.nat({ max: 3 }), snackbar, keyboardInset)
   .chain((
-    [{ original, now }, id, replacements, order, typed, kind, snackbar],
+    [{ original, now }, id, replacements, order, typed, kind, snackbar, keyboardInset],
   ) => {
     const name = kind === 0 ? original.name : kind === 1 ? ` ${original.name}  ` : kind === 2 ? '' : typed
-    const rest = { id, original, name, replacements, now, order, snackbar }
+    const rest = { id, original, name, replacements, now, order, snackbar, keyboardInset }
     return dateForm(rest).map((date): Form => ({ ...rest, date }))
   })
 
 // Never both known: the form is made as soon as they are.
-export const loading = fc.tuple(id, opened, maybe(order), fc.boolean()).map((
-  [id, { original, now }, maybeOrder, hasNow],
+export const loading = fc.tuple(id, opened, maybe(order), fc.boolean(), keyboardInset).map((
+  [id, { original, now }, maybeOrder, hasNow, keyboardInset],
 ) => ({
   _tag: 'Loading',
   id,
   original,
   maybeNow: Opt.isSome(maybeOrder) || !hasNow ? Opt.none() : Opt.some(now),
   maybeOrder,
+  keyboardInset,
 } as const))
 
 export const editing = form.map((form) => ({ _tag: 'Editing', form } as const))

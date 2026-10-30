@@ -499,6 +499,7 @@ describe('Navigation', () => {
               order: 'DMY',
               date: { _tag: 'Kept' },
               snackbar: { _tag: 'None' },
+              keyboardInset: 0,
             },
           },
         }),

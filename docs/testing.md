@@ -46,7 +46,7 @@ first, and the layers above only confirm that the bundle and the platform carry 
 
 ### The bundle check
 
-`bun run bundle` writes Metro's bundle of `src/entrypoints/native.ts` into `out/`, and CI compiles it with the
+`bun run bundle` writes Metro's bundle of `src/entrypoints/native.tsx` into `out/`, and CI compiles it with the
 `hermesc` that React Native ships. It runs nothing: a module that fails when it is loaded (a global Hermes lacks,
 read at the top of a module) passes it, and shows on the emulator.
 

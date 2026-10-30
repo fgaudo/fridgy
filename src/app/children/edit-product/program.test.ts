@@ -18,7 +18,17 @@ import * as DigitDates from '#libs/dates/digit-dates.ts'
 import { messagesSentBy } from '#libs/tea-react/view.test_support.ts'
 import { zoned } from '#libs/testing/date-time.test_arbitrary.ts'
 import { assertProperty, outcomesOf } from '#libs/testing/update.test_support.ts'
-import { digit, editing, gone, loading, message, outcome, saving, state } from './program.test_arbitrary.ts'
+import {
+  digit,
+  editing,
+  gone,
+  keyboardInset,
+  loading,
+  message,
+  outcome,
+  saving,
+  state,
+} from './program.test_arbitrary.ts'
 import {
   type Command,
   type Digit,
@@ -276,6 +286,14 @@ describe('EditProduct update', () => {
       }))
   })
 
+  test('KeyboardMoved keeps how far the keyboard covers the page, in every state', () => {
+    assertProperty([state, keyboardInset], (before, inset) =>
+      Equal.equals(
+        step(Msg.KeyboardMoved({ inset }), before).after,
+        before._tag === 'Loading' ? { ...before, keyboardInset: inset } : withForm(before, { keyboardInset: inset }),
+      ))
+  })
+
   describe('the time and the order', () => {
     test('are kept by the form, in the order\'s case with the stored date shown in it', () => {
       assertProperty(
@@ -297,6 +315,7 @@ describe('EditProduct update', () => {
           replacements: 0,
           date: { _tag: 'Kept' },
           snackbar: { _tag: 'None' },
+          keyboardInset: before.keyboardInset,
         }
         return Equal.equals(
           afterTime,
@@ -392,12 +411,13 @@ describe('EditProduct update', () => {
 })
 
 // The snackbar's timer is keyed by its id: the next one starts it anew.
-test('the page listens to the clock, the date order and the back button in every state, and times the snackbar', () => {
+test('the page listens to the clock, the date order, the back button and the keyboard in every state, and times the snackbar', () => {
   assertProperty([state], (s) => {
     const subscriptions = Tea.subscriptionsOf(program)(s)
     const snackbar = s._tag === 'Loading' ? { _tag: 'None' } as const : s.form.snackbar
-    return HashMap.size(subscriptions) === (snackbar._tag === 'Shown' ? 4 : 3) && HashMap.has(subscriptions, 'clock')
+    return HashMap.size(subscriptions) === (snackbar._tag === 'Shown' ? 5 : 4) && HashMap.has(subscriptions, 'clock')
       && HashMap.has(subscriptions, 'date-order') && HashMap.has(subscriptions, 'back-button')
+      && HashMap.has(subscriptions, 'keyboard')
       && (snackbar._tag === 'None' || HashMap.has(subscriptions, `snackbar:${snackbar.id}`))
   })
 })
@@ -421,7 +441,17 @@ test('the arbitrary forms describe a product to save at times, and at times not,
 
 describe('the model', () => {
   test('draws the app bar alone while loading', () => {
-    assertProperty([loading], (s) => Equal.equals(makeModel(s), { _tag: 'Loading', close: Msg.Closed() }))
+    assertProperty(
+      [loading],
+      (s) => Equal.equals(makeModel(s), { _tag: 'Loading', keyboardInset: s.keyboardInset, close: Msg.Closed() }),
+    )
+  })
+
+  test('draws in every state how far the page keeps clear of the keyboard', () => {
+    assertProperty(
+      [state],
+      (s) => makeModel(s).keyboardInset === (s._tag === 'Loading' ? s.keyboardInset : s.form.keyboardInset),
+    )
   })
 
   // The digits of the stored date name its day alone, which is the day named.
@@ -548,6 +578,7 @@ describe('the model', () => {
       order: 'DMY',
       date: { _tag: 'Kept' },
       snackbar: { _tag: 'None' },
+      keyboardInset: 0,
     }
     const typed = (digits: string): Form => ({
       ...opened,

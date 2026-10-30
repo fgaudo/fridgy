@@ -78,7 +78,7 @@ const licensesCommand = Cli.Command.make(
       '--dev',
       'false',
       '--entry-file',
-      'src/entrypoints/native.ts',
+      'src/entrypoints/native.tsx',
       '--bundle-output',
       'out/licenses.android.bundle',
       '--sourcemap-output',

@@ -31,10 +31,14 @@ const orderTitles: Readonly<Record<DateOrder, string>> = {
   YMD: 'Year, month, day',
 }
 
+// The page's bottom is held clear of the keyboard or of the navigation bar, whichever reaches further up: the
+// keyboard's inset is the window's own, and covers the bar. The other edges only keep clear of their bar.
+const edges = { top: 'additive', right: 'additive', bottom: 'maximum', left: 'additive' } as const
+
 const styles = StyleSheet.create({
   // Edge to edge: the page keeps clear of the system bars, and draws its surface under them.
   page: { flex: 1, backgroundColor: color.surface },
-  // What an absolute position is measured from: inside the bars.
+  // What an absolute position is measured from: inside what the page keeps clear of.
   frame: { flex: 1 },
   bar: { height: 64, flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 4 },
   title: { ...type.titleLargeEmphasized, flex: 1, paddingHorizontal: 4, color: color.onSurface },
@@ -392,7 +396,7 @@ const snackbar = (shown: Snackbar) =>
 
 /** Material's full-screen dialog, as a page over the one that opened it. */
 export const view: View<Model, Message> = (model, dispatch) => (
-  <SafeAreaView style={styles.page}>
+  <SafeAreaView edges={edges} style={[styles.page, { paddingBottom: model.keyboardInset }]}>
     <Box style={styles.frame}>
       {Match.valueTags(model, {
         Loading: ({ close }) => [appBar(Opt.some(close), dispatch)],

@@ -6,8 +6,9 @@ Rules and conventions are in [`AGENTS.md`](../AGENTS.md).
 ```
 src/
 ├─ entrypoints/
-│  ├─ native.ts          how the app is started on Android: op-sqlite as the storage, `fetch` as the HTTP client,
-│  │                     Android's back button, the root view drawn by React; the tests pick their own
+│  ├─ native.tsx         how the app is started on Android: op-sqlite as the storage, `fetch` as the HTTP client,
+│  │                     Android's back button and keyboard, the root view drawn by React; the tests pick their
+│  │                     own
 │  └─ crash/view.tsx     the screen a crash leaves, with a button that runs the program again
 │
 ├─ domain/               the entities and their rules (`Product`): imports nothing but libs/
@@ -36,7 +37,8 @@ src/
 │                        `DateOrderStore` in `date-order.ts`, how Open Food Facts' answers are cached,
 │                        `BarcodeCache` in `barcodes.ts`, and the sample data), the client of Open Food Facts'
 │                        API (open-food-facts/: how a code is normalized, asked for and decoded); and the
-│                        platform's facts the programs use as they are: the back button (back-button/), and the
+│                        platform's facts the programs use as they are: the back button (back-button/), how far the
+│                        keyboard covers the window (keyboard/), and the
 │                        vibrations (haptics/, `docs/haptics.md`); and the app's own native module, the camera that
 │                        reads barcodes (barcode-camera/: the specs React Native's codegen reads, and its reads as a
 │                        stream). Its adapters are named as the app's,
@@ -67,7 +69,7 @@ file's name. A view draws an icon by its name (`icon` in `styles.ts`), which the
    root.
 4. `app/children/home/children/products/services/` — what a program needs from the
    outside world, each service owned by what uses it; `domain/` — the entities and their rules.
-5. `entrypoints/native.ts` — how everything is wired on the phone.
+5. `entrypoints/native.tsx` — how everything is wired on the phone.
 
 ## Visibility
 

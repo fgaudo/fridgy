@@ -17,6 +17,7 @@ import * as References from 'effect/References'
 import * as TestClock from 'effect/testing/TestClock'
 import { BackButton } from '#infrastructure/back-button/back-button.ts'
 import { Haptics } from '#infrastructure/haptics/haptics.ts'
+import { Keyboard } from '#infrastructure/keyboard/keyboard.ts'
 import * as SqliteMemory from '#infrastructure/storage/sqlite.memory.ts'
 import type { DateOrder } from '#libs/dates/date-order.ts'
 import { tagPath } from '#libs/testing/tag-path.test_support.ts'
@@ -168,6 +169,9 @@ export const back = Effect.fnUntraced(function*(user: User) {
 // The platform's back button is out of reach: it is heard through `back`.
 const backButton = Layer.succeed(BackButton, { presses: Channel.never })
 
+// A keyboard that never comes up: the pages are drawn whole.
+const keyboard = Layer.succeed(Keyboard, { insets: Channel.never })
+
 // A device without a vibrator: a vibration does nothing, and answers nothing.
 const haptics = Layer.succeed(Haptics, { perform: () => Effect.void })
 
@@ -201,6 +205,7 @@ const layer = Layer.mergeAll(
     ]),
   ),
   backButton,
+  keyboard,
   haptics,
   scanner,
   productLookup,

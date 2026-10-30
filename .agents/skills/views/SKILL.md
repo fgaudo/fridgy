@@ -5,8 +5,9 @@ description: How Fridgy's views are written - TSX drawn by React Native as a pur
 
 # Views
 
-Only `view.tsx` files hold TSX; React Native draws them through `#libs/tea-react`. A view is a pure function of
-the model: no state, no hooks, no effects, no reading of the clock or of the platform. It is never a component:
+Only `view.tsx` files and the entrypoint that mounts React hold TSX; React Native draws the views through
+`#libs/tea-react`. A view is a pure function of the model: no state, no hooks, no effects, no reading of the
+clock or of the platform. It is never a component:
 React calls nothing of the app's but the root, which `#libs/tea-react/renderer.ts` makes, and every view below is
 a function that returns elements.
 
@@ -42,7 +43,10 @@ when nothing is named). The model holds exactly what the view draws: a field no 
   page drawn in another's would keep its native views, and the text of their fields.
 - A page draws itself whole: a `SafeAreaView` with the surface's color, keeping clear of the system bars (the app
   is drawn edge to edge), and a frame inside it, from which an absolute position is measured (a menu, a snackbar):
-  an absolute position ignores the padding of its parent.
+  an absolute position ignores the padding of its parent. A page with a field also keeps clear of the keyboard,
+  which no window of an edge-to-edge app is resized for: the inset its model holds (`keyboardInset`) is the
+  `SafeAreaView`'s `paddingBottom`, on a `bottom` edge in `maximum` mode, which keeps the larger of that and the
+  navigation bar's inset rather than their sum — the keyboard covers the bar.
 
 ## Motion
 

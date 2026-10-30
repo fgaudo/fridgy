@@ -15,6 +15,7 @@ import * as Opt from 'effect/Option'
 import * as Product from '#domain/product.ts'
 import { BackButton } from '#infrastructure/back-button/back-button.ts'
 import { type Feedback, Haptics } from '#infrastructure/haptics/haptics.ts'
+import { Keyboard } from '#infrastructure/keyboard/keyboard.ts'
 import * as DateOrder from '#libs/dates/date-order.ts'
 import * as Day from '#libs/dates/day.ts'
 import * as DigitDateEntry from '#libs/dates/digit-date-entry.ts'
@@ -52,6 +53,8 @@ export type Form = Readonly<{
   order: DateOrder.DateOrder
   date: DateForm
   snackbar: Snackbar
+  /** How far the keyboard covers the page's bottom, in dp, navigation bar included: the window is never resized. */
+  keyboardInset: number
 }>
 
 /** Material shows one snackbar at a time: one that comes after another waits for it to leave. */
@@ -76,6 +79,7 @@ export type State = Data.TaggedEnum<{
     original: Product.Product
     maybeNow: Opt.Option<DateTime.Zoned>
     maybeOrder: Opt.Option<DateOrder.DateOrder>
+    keyboardInset: number
   }>
   Editing: Readonly<{ form: Form }>
   /** The product is being saved: only its completion leaves this state. */
@@ -117,6 +121,8 @@ export type Message = Data.TaggedEnum<{
   OrderChanged: { order: DateOrder.DateOrder }
   /** The platform's back button, while the page is shown. */
   BackPressed: object
+  /** The keyboard has come up, changed height or gone down. */
+  KeyboardMoved: { inset: number }
   /** The snackbar has stood its time. */
   SnackbarExpired: object
   // From commands.
@@ -142,7 +148,7 @@ export type Event = Data.TaggedEnum<{
 
 const Event = Data.taggedEnum<Event>()
 
-export type Deps = UpdateProduct | DateOrderSetting | Haptics | BackButton | DateTime.CurrentTimeZone
+export type Deps = UpdateProduct | DateOrderSetting | Haptics | BackButton | Keyboard | DateTime.CurrentTimeZone
 
 /** A day the digits name: the chosen one, or one to pick while the page takes input. */
 export type DateChoice = Readonly<{
@@ -155,6 +161,9 @@ export type OrderChoice = Readonly<{
   order: DateOrder.DateOrder
   choice: Data.TaggedEnum<{ Current: object; Offered: Readonly<{ maybePick: Opt.Option<Message> }> }>
 }>
+
+/** What every state draws: how far the page keeps clear of the keyboard, which covers whatever is under it. */
+type PageShown = Readonly<{ keyboardInset: number }>
 
 /** What is drawn in every state but `Loading`: the fields, and the snackbar over them. */
 export type FieldsShown = Readonly<{
@@ -182,8 +191,9 @@ export type FieldsShown = Readonly<{
 
 export type Model = Data.TaggedEnum<{
   /** The app bar alone, until the fields can be drawn. */
-  Loading: Readonly<{ close: Message }>
+  Loading: PageShown & Readonly<{ close: Message }>
   Editing:
+    & PageShown
     & FieldsShown
     & Readonly<{
       close: Message
@@ -200,9 +210,9 @@ export type Model = Data.TaggedEnum<{
       maybeSave: Opt.Option<Message>
     }>
   /** The product is being saved: the fields, their controls disabled. */
-  Saving: FieldsShown
+  Saving: PageShown & FieldsShown
   /** The product is no longer stored: the fields, their controls disabled, and the app bar's close button. */
-  Gone: FieldsShown & Readonly<{ close: Message }>
+  Gone: PageShown & FieldsShown & Readonly<{ close: Message }>
 }>
 
 // Material's snackbar without an action: long enough to read it.
@@ -287,6 +297,7 @@ const editingOnceKnown = (loading: State & { _tag: 'Loading' }): State =>
         order,
         date: { _tag: 'Kept' },
         snackbar: { _tag: 'None' },
+        keyboardInset: loading.keyboardInset,
       },
     }),
   })
@@ -324,10 +335,19 @@ const backButton: Tea.Subscription<Message, BackButton> = Channel.unwrap(
   Effect.map(Effect.service(BackButton), ({ presses }) => Channel.map(presses, () => Message.BackPressed())),
 )
 
+// Observed as long as the page is shown: the keyboard covers the fields and the button docked under them.
+const keyboard: Tea.Subscription<Message, Keyboard> = Channel.unwrap(
+  Effect.map(
+    Effect.service(Keyboard),
+    ({ insets }) => Channel.map(insets, (inset) => Message.KeyboardMoved({ inset })),
+  ),
+)
+
 const always: HashMap.HashMap<string, Tea.Subscription<Message, Deps>> = HashMap.make(
   ['clock', clock],
   ['date-order', dateOrder],
   ['back-button', backButton],
+  ['keyboard', keyboard],
 )
 
 /** Ends once the snackbar has stood its time. */
@@ -425,7 +445,7 @@ export const program: Tea.Program<{
   flags: Flags
 }> = {
   init: ({ id, product }) => ({
-    state: { _tag: 'Loading', id, original: product, maybeNow: Opt.none(), maybeOrder: Opt.none() },
+    state: { _tag: 'Loading', id, original: product, maybeNow: Opt.none(), maybeOrder: Opt.none(), keyboardInset: 0 },
   }),
 
   update: Match.typeTags<Message, (state: State) => Tea.Transition<State, Command, Event>>()({
@@ -482,6 +502,11 @@ export const program: Tea.Program<{
       state._tag === 'Loading'
         ? { state: editingOnceKnown({ ...state, maybeOrder: Opt.some(order) }) }
         : { state: withForm(state, (form) => ({ ...form, order })) },
+
+    KeyboardMoved: ({ inset }) => (state) =>
+      state._tag === 'Loading'
+        ? { state: { ...state, keyboardInset: inset } }
+        : { state: withForm(state, (form) => ({ ...form, keyboardInset: inset })) },
 
     // The page is not left in the middle of a write: the press is held, so that the platform does not leave the app.
     BackPressed: () => (state) => state._tag === 'Saving' ? { state } : { state, events: [Event.LeaveRequested()] },
@@ -544,12 +569,13 @@ export const program: Tea.Program<{
 
   makeModel: (state): Model =>
     Match.valueTags(state, {
-      Loading: (): Model => ({ _tag: 'Loading', close: Message.Closed() }),
+      Loading: ({ keyboardInset }): Model => ({ _tag: 'Loading', keyboardInset, close: Message.Closed() }),
       // A key is there exactly where its rule applies to the entry shown: every digit applies, or none does.
       Editing: ({ form }): Model => {
         const entry = entryOf(form)
         return {
           _tag: 'Editing',
+          keyboardInset: form.keyboardInset,
           ...fieldsOf(form, true),
           close: Message.Closed(),
           changeName: (name: string) => Message.NameChanged({ name }),
@@ -563,7 +589,12 @@ export const program: Tea.Program<{
           maybeSave: Opt.map(maybeSaved(form), () => Message.SaveStarted()),
         }
       },
-      Saving: ({ form }): Model => ({ _tag: 'Saving', ...fieldsOf(form, false) }),
-      Gone: ({ form }): Model => ({ _tag: 'Gone', ...fieldsOf(form, false), close: Message.Closed() }),
+      Saving: ({ form }): Model => ({ _tag: 'Saving', keyboardInset: form.keyboardInset, ...fieldsOf(form, false) }),
+      Gone: ({ form }): Model => ({
+        _tag: 'Gone',
+        keyboardInset: form.keyboardInset,
+        ...fieldsOf(form, false),
+        close: Message.Closed(),
+      }),
     }),
 }
