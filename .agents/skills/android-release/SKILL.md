@@ -101,6 +101,18 @@ an error; on Android 17 it also asks for "nearby devices", looking for Metro's s
 lowest version (`minSdkVersion`'s image) is checked only after a change of `minSdkVersion`, of React Native or of a
 native module.
 
+Before judging a motion, switch Android's renderer to Vulkan, once after each boot of the emulator, then restart the
+app:
+
+```bash
+adb shell setprop debug.hwui.renderer skiavk
+```
+
+The image draws with OpenGL (`skiagl`), which the emulator translates call by call for the host's GPU: every app,
+Android's Settings too, then runs at about 18 ms a frame, under 60 fps. On Vulkan, which recent phones use, the
+motions run at 60 fps (`docs/motion.md`, "The frames"). The property is lost at the next boot: a Google Play image
+has no root to make it last. `adb shell dumpsys gfxinfo net.gaudo.fridgy` gives the frame times (`reset` before).
+
 The pass, on both reference screens of "Supported screen sizes":
 
 - the app starts: the splash on the surface's color, then Home, in the light and the dark theme

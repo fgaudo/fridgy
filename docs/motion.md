@@ -106,11 +106,14 @@ token ×10), and at the real speed:
   right corner and shrinks back into it.
 - **An interrupted movement (verified).** EditProduct, closed with Android's back button while it rose, sank from
   where it was, without jumping to the top first.
-- **The frames (measured).** `adb shell dumpsys gfxinfo`, over three openings and closings of each. On this
-  emulator nothing keeps 60 fps: Android's Settings, flung, has a median frame of 18 ms, 12 ms of it on the GPU, and
-  a native scroll of About the same. The motions stay at that floor (90th percentile: About 26 ms, the menu 36 ms,
-  the dialogs 25 ms), but for one long frame per opening, the one that builds the page. With `SlideInDown`, the
-  dialogs' 90th percentile was 65 ms. How smooth they are on a phone is not measured.
+- **The frames (measured).** `adb shell dumpsys gfxinfo`, over three openings and closings of each. With the
+  image's OpenGL renderer, which the emulator translates for the host's GPU, nothing keeps 60 fps: Android's
+  Settings, flung, has a median frame of 18 ms, 12 ms of it on the GPU, and a native scroll of About the same. The
+  motions stayed at that floor (90th percentile: About 26 ms, the menu 36 ms, the dialogs 25 ms). With
+  `SlideInDown`, the dialogs' 90th percentile was 65 ms. On Vulkan (`debug.hwui.renderer` set to `skiavk`, as the
+  `android-release` skill says), the GPU takes 1 ms: About scrolls at a median of 8 ms (90th percentile 10 ms), and
+  AddProducts opens and closes at 6 ms (90th percentile 14 ms), under a 60 Hz frame. How smooth they are on a
+  phone is not measured.
 - **The tests (verified).** `bun test` cannot load Reanimated. The preload (`libs/testing/preload.test_support.ts`)
   replaces it, as it replaces React Native: `Animated.View` becomes its name, and the builders become values that
   the tests ignore.
