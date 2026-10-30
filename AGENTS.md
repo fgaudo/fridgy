@@ -68,7 +68,9 @@ folders; "page" names a role in the UI, kept by the root's state, not a kind of 
   steps, the scanner, the product entering the fridge), however long: the Guide's size for splitting yields to
   its rule that children reading each other's state are one child.
 - **Hidden pages keep receiving their completions**, but their subscriptions run only while they are on top
-  (`subscribed`, in the root).
+  (`subscribed`, in the root). A covered page's request to show another page is dropped: a tap of a frame
+  already covered asks for what the user has moved past, and two taps in one frame would otherwise stack two
+  pages. A request to be left is honoured from under another page: a save completes wherever the page is.
 - **The back button is the program's that has something to do with it, only while it has.** A page, or the child
   of a page that holds what a press closes (Home's `Products`, its selection), observes the platform's
   `BackButton` (`src/infrastructure/back-button`, the subscription keyed `back-button`) while it has something to
@@ -187,10 +189,5 @@ folders; "page" names a role in the UI, kept by the root's state, not a kind of 
 - AddProducts' name field is never focused. The web build focused it whenever it was drawn anew (`focusOnInsert`):
   as the page opened, after a scan that names the product, and after an add. The field is still keyed anew
   (`nameKey`), but has no `autoFocus`. Whether this is the flicker above is not known.
-- Two taps in one frame can stack two pages. `show` (`src/app/program.ts`) pushes a page unless that same page
-  is on top, and Home accepts `AddRequested` in every state: a product's row and "Add products", tapped with two
-  fingers, push EditProduct and then AddProducts over it. Nothing crashes, and each page leaves in turn, but the
-  design never meant that stack. The guard (a page's request only while Home is on top, or one push per frame)
-  is to be decided apart.
 
 When an item is resolved, remove it.

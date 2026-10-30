@@ -114,8 +114,7 @@ describe('Navigation', () => {
     })))
 
   // Home asks for About only from its menu, which the first request closes, so no user reaches this; the root
-  // does not rely on how Home filters, though: a request for the page shown changes nothing, as it does for
-  // AddProducts, which Home asks for on every tap.
+  // does not rely on how Home filters, though: it hears nothing from Home while a page covers it.
   test('About requested while it is shown stays as it is, and is not started again', () => {
     const shown: State = {
       stack: [
@@ -422,6 +421,20 @@ describe('Navigation', () => {
       yield* loadEditPage(user)
       const { page } = yield* user.model
       expect(page._tag === 'EditProduct' && page.model._tag === 'Editing' && page.model.name).toBe('Milk')
+    })))
+
+  // Two fingers in the same frame, on a product's row and on "Add products": the second tap asks from a Home the
+  // first one covered, and the page it would open is never started (nothing of it is left pending).
+  test('two taps of one frame, on different controls, open the first page only', () =>
+    rehearsed(Effect.fnUntraced(function*(user) {
+      yield* addSaltAndMilk(user)
+      const drawn = yield* user.model
+      const tapProduct = tapFirstProduct(drawn)
+      const tapAdd = openAddProducts(drawn)
+      yield* user.send(() => tapProduct)
+      yield* user.send(() => tapAdd)
+      expect(tags(yield* user.state)).toEqual(['Home', 'EditProduct'])
+      yield* loadEditPage(user)
     })))
 
   test('a product renamed and saved is listed under its new name, with the same id, once the page has left', () =>

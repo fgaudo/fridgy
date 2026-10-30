@@ -63,20 +63,17 @@ const page = <Tag extends Page['_tag']>(tag: Tag) => ({
 })
 
 /**
- * Shows a page on top, started as its program starts. Showing the page already shown changes nothing: a page
- * asks to show another one on each tap, and the second tap of a double tap reaches a stack that has it on top.
+ * Shows a page over Home, started as its program starts. Only Home asks, and only while it is on top, where the
+ * stack is Home alone: a page is in the stack at most once, and the stack never goes deeper than two.
  */
 const show = <Tag extends Page['_tag'], Command>(
   state: State,
   tag: Tag,
   start: Readonly<{ state: PageStates[Tag]; commands: ReadonlyArray<Command> }>,
-): Tea.Step<State, Command> =>
-  top(state)._tag === tag
-    ? { state }
-    : {
-      state: { stack: Arr.append(state.stack, { _tag: tag, state: start.state } as PageOf<Tag>) },
-      commands: start.commands,
-    }
+): Tea.Step<State, Command> => ({
+  state: { stack: Arr.append(state.stack, { _tag: tag, state: start.state } as PageOf<Tag>) },
+  commands: start.commands,
+})
 
 /**
  * Leaves the page that asks to, wherever it is in the stack. Only its back button is its own only while it is on
@@ -104,12 +101,17 @@ export const program = compose({
     About: child(About.program, page('About')),
   },
   onEvent: {
+    // Home's requests are honoured only while it is on top. Its view asks on every tap, so two taps of one frame,
+    // or a tap from a frame drawn before a page covered Home, ask for what the user has already moved past: the
+    // second of them reaches a stack Home is no longer on top of. Asking to be left is the opposite (`leave`).
     Home: (event, children) => (state) =>
-      Match.valueTags(event, {
-        InfoRequested: () => show(state, 'About', children.About.init),
-        AddRequested: () => show(state, 'AddProducts', children.AddProducts.init),
-        EditRequested: ({ id, product }) => show(state, 'EditProduct', children.EditProduct.init({ id, product })),
-      }),
+      top(state)._tag !== 'Home'
+        ? { state }
+        : Match.valueTags(event, {
+          InfoRequested: () => show(state, 'About', children.About.init),
+          AddRequested: () => show(state, 'AddProducts', children.AddProducts.init),
+          EditRequested: ({ id, product }) => show(state, 'EditProduct', children.EditProduct.init({ id, product })),
+        }),
     AddProducts: () => leave('AddProducts'),
     EditProduct: () => leave('EditProduct'),
     About: () => leave('About'),
