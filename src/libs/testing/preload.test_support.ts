@@ -39,6 +39,7 @@ mock.module('react-native-reanimated', () => ({
     return builder
   },
   LayoutAnimationConfig: 'LayoutAnimationConfig',
+  LinearTransition: builder,
   withTiming: (to: number) => to,
 }))
 

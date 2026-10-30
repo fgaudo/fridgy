@@ -5,7 +5,8 @@ seen in the emulator the same day (see "Verified, and not"). Read [`AGENTS.md`](
 ("Motion") and the "Guide" of `node_modules/@fgaudo/effect-tea/README.md` before changing it.
 
 These are the motions of the web build that React Native draws again (`AGENTS.md`, "Known gaps"): how a page
-enters and leaves, how Home's menu opens and closes, AddProducts' steps and scanner, and the snackbars. The other
+enters and leaves, how Home's menu opens and closes, AddProducts' steps and scanner, the snackbars, and Home's rows
+arriving and leaving. The other
 motions are listed in "Later", each to be designed here, or in a doc of its own, before it is drawn.
 
 ## What the web build did
@@ -161,6 +162,54 @@ The new tokens, Material's:
 | `standardDecelerate` | `cubic-bezier(0, 0, 0, 1)`   |
 | `standardAccelerate` | `cubic-bezier(0.3, 0, 1, 1)` |
 
+## Home's rows
+
+Designed on 2026-10-30, after the steps and the snackbars. Implemented in
+`src/app/children/home/children/products/view.tsx`.
+
+### What the web build did
+
+- **A row arriving** opened its place as it faded in: its one grid track went from `0fr` to `1fr`, with its
+  opacity from 0 to 1, over `medium-4`, emphasized decelerate. The rows under it moved down with the track.
+- **A row leaving** closed its place as it faded out, over `short-4`, emphasized accelerate. The model keeps it
+  where it was until then (`Leaving`, in Products' `presence`), and takes no tap on it.
+- **The last row** did not close: the whole list faded out over the empty state, over `short-4`, emphasized
+  accelerate. The empty state faded out the same way over the rows put back.
+
+### Decisions
+
+1. **The platform drives them, from the model's phase.** Products' state already keeps each row's presence and
+   ends it with `RowsSettled`, after 500 ms. A row arriving is a new element, so it takes an entering animation. A
+   row leaving stays the same element: it turns to a height of 0 and an opacity of 0, and a layout transition plays
+   the change. A height to `auto` is not a value that React Native, nor Reanimated's CSS, can interpolate.
+2. **Every row is clipped by its own frame.** The row's `Animated.View` has `overflow: hidden`, and its height is
+   what Reanimated animates. The list item inside keeps its own height: the row's frame uncovers it from the top
+   as it opens, and covers it back as it closes, as the grid track did.
+3. **The rows that stay move by layout transitions.** A layout animation moves only its own view: the rows under
+   one that opens are at their new place at once. Each row takes Reanimated's `LinearTransition`, so that it moves
+   from where it was. Its duration and curve follow the row that changes: the model's `settling` says `Opening`
+   while a row arrives, `Closing` while one leaves (the shorter motion wins when both happen), and `Still`
+   otherwise, when no row has a layout transition. Reanimated publishes a changed `layout` prop before the commit
+   that moves the views (`getSnapshotBeforeUpdate`), so the transition of a change is the one drawn with it.
+4. **A row arriving opens its place even as Home enters.** Home is drawn anew when the page over it leaves, and the
+   root skips the entering animations of what a page draws as it enters. A product added in AddProducts arrives
+   while AddProducts sinks back. So the list is wrapped in its own `LayoutAnimationConfig`, which does not skip
+   them: only a row the model says is arriving has an entering animation.
+5. **The list and the empty state are layers.** The empty state is drawn in a layer at the top of the scroll's
+   content, and the list in a layer above it, both `collapsable={false}`, as the root's pages are. The list leaving
+   fades over the empty state. The empty state leaving fades under the rows put back, which cover it as they open.
+
+### The choreographies
+
+| What                      | Enters                                                        | Leaves                                                     |
+| ------------------------- | ------------------------------------------------------------- | ---------------------------------------------------------- |
+| A row                     | from height 0 and opacity 0, `medium4`, emphasized decelerate | to height 0 and opacity 0, `short4`, emphasized accelerate |
+| The rows under it         | move down, `medium4`, emphasized decelerate                   | move up, `short4`, emphasized accelerate                   |
+| The list, the empty state | no motion                                                     | opacity to 0, `short4`, emphasized accelerate              |
+
+A row leaving is a layout transition of its own, a worklet that also fades it. A row that came back while it left
+opens again with the transition of the rows that stay, and is drawn opaque at once.
+
 ## Verified, and not
 
 Seen on 2026-10-30, on the emulator's API 37 image, in builds that slowed the motion (About's to 3 s, then every
@@ -212,8 +261,23 @@ build with every token ×10, then at the real speed):
   (`AGENTS.md`, "Known gaps"). Home's deletions and undos, with their snackbars: a median of 8 ms, none over 29 ms,
   with the list's rows changing too.
 
+Seen on 2026-10-30, on the same image and on Vulkan, for Home's rows (in a build with every token and the settling
+timer ×10, then at the real speed):
+
+- **A row leaving (verified).** Deleted in the middle of the list, it fades and its frame covers it from the
+  bottom, while the row under it rises in step. Two rows apart close their places at once.
+- **A row arriving (verified).** Put back by "Undo", it opens its place at the end of the list as it fades in, and
+  ends at its full height and opacity.
+- **The last rows (verified).** Deleting every row fades the whole list over the empty state. "Undo" brings the
+  rows back opening, over the empty state that fades out under them. The rows' surface hides the part of the disc
+  they cover, for the 200 ms of the fade.
+- **The frames (measured).** Three deletions and undos, at the real speed: a median of 7 ms, the 90th percentile
+  15 ms, 9 frames out of 138 over 16 ms.
+
 Not yet seen:
 
+- **A row arriving as Home enters.** A product added in AddProducts should open its place as AddProducts sinks
+  (decision 4 of "Home's rows"); the frames were not caught.
 - **AddProducts' and EditProduct's snackbars.** They tell of failures that the emulator does not give (a write
   that fails, a setting not kept). They are drawn as Home's is, at a place of their frame that does not move.
 - **A snackbar under a page that opens or leaves.** `LayoutAnimationConfig` keeps it still (decision 6 of the
@@ -231,7 +295,6 @@ Not yet seen:
 
 Each of these is designed before it is drawn:
 
-- the rows of Home arriving and leaving, closing and opening their place;
 - Home's top app bar, collapsing with the scroll (the "fixed viewport" of the known gaps), and its FAB's label;
 - the product entering the fridge (`docs/product-flight.md`);
 - Android's predictive back, which the web build never had.

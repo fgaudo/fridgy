@@ -182,6 +182,9 @@ export type ProductStatus = Data.TaggedEnum<{
 /** Whether a row opens its place, has it, or closes it. */
 export type Presence = 'Arriving' | 'Listed' | 'Leaving'
 
+/** How the rows that stay move: after a row arriving, which opens its place, or one leaving, which closes it. */
+export type Settling = 'Still' | 'Opening' | 'Closing'
+
 export type ProductModel = Data.TaggedEnum<{
   /** Cannot be referenced, so nothing can be done with it. */
   Corrupt: Readonly<{ maybeName: Opt.Option<string> }>
@@ -205,6 +208,8 @@ export type ListModel = Data.TaggedEnum<{
       InProgress: object
     }>
     total: PositiveInteger.PositiveInteger
+    /** The shorter motion, closing, wins when rows arrive and leave at once. */
+    settling: Settling
     /** The products listed, in order, with the ones leaving where they were. */
     products: Arr.NonEmptyReadonlyArray<ProductModel>
   }>
@@ -522,6 +527,11 @@ const listModel = (state: State): ListModel => {
       Deleting: (): Deletion => ({ _tag: 'InProgress' }),
     }),
     total: PositiveInteger.makeUnsafe(items.length),
+    settling: Arr.isReadonlyArrayNonEmpty(state.list.departures)
+      ? 'Closing'
+      : HashSet.size(state.list.arrivals) > 0
+      ? 'Opening'
+      : 'Still',
     products: maybeProducts.value,
   }
 }

@@ -610,6 +610,18 @@ describe('Products model', () => {
     )
   })
 
+  test('the rows that stay close up while a row leaves, open while one arrives and none leaves, and are still otherwise', () => {
+    assertProperty([shown], (s) => {
+      const { list } = program.makeModel(s)
+      const expected = HashSet.size(departuresOf(s)) > 0
+        ? 'Closing'
+        : HashSet.size(arrivalsOf(s)) > 0
+        ? 'Opening'
+        : 'Still'
+      return list._tag !== 'Available' || list.settling === expected
+    })
+  })
+
   test('a valid product expired yesterday the day after its expiration day, is stale later, expiring today on that day, tomorrow on the day before, fresh earlier, and keeps the domain\'s freshness', () => {
     assertProperty([shown], (s) => {
       const items = s.list._tag === 'Loaded' ? s.list.items : []
