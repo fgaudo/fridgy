@@ -79,14 +79,12 @@ const show = <Tag extends Page['_tag'], Command>(
     }
 
 /**
- * Leaves the page that asks to: the shown one, since a page asks from its view or from the back button, both
- * its own only while it is on top. Home, the first page, never asks.
+ * Leaves the page that asks to, wherever it is in the stack. Only its back button is its own only while it is on
+ * top: a tap from a frame drawn before, or a save that completes, may ask while another page covers it. Home,
+ * the first page, never asks.
  */
 const leave = (tag: Exclude<Page['_tag'], 'Home'>) => (state: State): Tea.Step<State> => {
-  if (top(state)._tag !== tag) {
-    return Tea.defect(`${tag} asked to be left while another page is shown: a page asks only while it is on top`)
-  }
-  const rest = Arr.initNonEmpty(state.stack)
+  const rest = Arr.filter(state.stack, (page) => page._tag !== tag)
   return Arr.isReadonlyArrayNonEmpty(rest)
     ? { state: { stack: rest } }
     : Tea.defect(`${tag} was the only page: Home is always the first`)

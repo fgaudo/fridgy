@@ -128,9 +128,9 @@ describe('Navigation', () => {
     expect(commands).toEqual([])
   })
 
-  // A page asks to be left from its view or its back button, both its own only while it is shown, so the stack
-  // the app builds never has one under another. Were it to, the root would not leave the wrong page.
-  test('a page asking to be left while another is shown is a defect', () => {
+  // A page asks to be left from its view too, whose tap may come from a frame drawn before another page covered
+  // it, or once a save completes, while it is hidden.
+  test('a page asking to be left while another is shown leaves from under it, the page shown staying', () => {
     const covered: State = {
       stack: [
         Page.Home({ state: Home.program.init.state }),
@@ -138,9 +138,9 @@ describe('Navigation', () => {
         Page.About({ state: About.program.init.state }),
       ],
     }
-    expect(() => program.update(Msg.AddProducts({ message: AddProductsMsg.BackPressed() }))(covered)).toThrow(
-      Tea.InvariantDefect,
-    )
+    const { after } = step(Msg.AddProducts({ message: AddProductsMsg.Closed() }), covered)
+    expect(tags(after)).toEqual(['Home', 'About'])
+    expect(after.stack[1]).toBe(covered.stack[2])
   })
 
   // About left while its data loads, and opened again: a command cannot be cancelled, and its answer goes to

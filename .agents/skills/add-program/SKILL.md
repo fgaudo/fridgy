@@ -48,7 +48,8 @@ service and a module of the infrastructure to move its sixty lines.
 - `update` returns `Tea.reject` for a message that does not apply in this state but may still arrive (a tap
   on a frame the state has moved past). A message the invariants rule out, such as an operation's completion
   outside the state that only it leaves, or a subscription's message outside the states that list its key,
-  ends the run with `Tea.defect(reason)`, which throws an `InvariantDefect`.
+  ends the run with `Tea.defect(reason)`, which throws an `InvariantDefect`. Only the state and the run rule a
+  message out: a message of the view, or an event raised for one, is never a defect, whatever the view draws.
 - `Model` is what the view distinguishes: a union with a case per state, each holding only the messages of
   its controls (`open: Message`, `changeName: (name: string) => Message`), picked from the state as `update`
   reads it, never by calling `update`. The view sends only what the model holds.

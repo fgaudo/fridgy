@@ -285,9 +285,9 @@ Seen on 2026-10-30, on the emulator's API 37 image, in builds that slowed the mo
 token ×10), and at the real speed:
 
 - **A leaving page is inert (verified).** The web build set `pointerEvents: 'none'` on what left. A removed element
-  cannot take new props, and needs none. A tap on About's back arrow while About sank over Home sent nothing: a
-  second `leave` would have been a defect (`leave` in `src/app/program.ts`), and the app went on. A tap on the
-  place of Home's row, under the leaving About, did not open the row either.
+  cannot take new props, and needs none. A tap on About's back arrow while About sank over Home sent nothing. A tap
+  on the place of Home's row, under the leaving About, did not open the row either. The program does not rely on
+  it: a tap that did arrive would reach an About no longer in the stack, and be rejected.
 - **About enters over Home, held under it (verified).** Home stays under About as it rises, with its menu, which
   Home's own leaving keeps as it was. Home's layer is under About's, and About's exit plays over the Home drawn
   again (decision 4).

@@ -53,7 +53,9 @@ folders; "page" names a role in the UI, kept by the root's state, not a kind of 
   (`Effect.tryPromise`, `Effect.try`; no `try/catch`, no bare Promises), and a subscription's failure is a
   message of its own. A violated invariant is a defect (`Effect.die`, or `Tea.defect(reason)` where the Guide
   throws), never silenced, retried or turned into a message; crash reporting goes around `run`
-  (`Effect.tapCause`) and never recovers from it.
+  (`Effect.tapCause`) and never recovers from it. An invariant is the state's, kept by the run, never the
+  view's: what a view draws, the motion and the hit-testing included, rules no message out, so a tap and an
+  event raised for one are rejected, never a defect.
 - **The model holds the messages.** Of the two ways the Guide allows, this app's views send only what the model
   holds, never a message they build: `Message` is exported as a type only.
 - **One global state, no local view state, no mutable singletons.** Effects only in commands and subscriptions:
