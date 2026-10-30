@@ -36,8 +36,7 @@ mock.module('react-native-reanimated', () => ({
   Keyframe: function Keyframe() {
     return builder
   },
-  SlideInDown: builder,
-  SlideOutDown: builder,
+  withTiming: (to: number) => to,
 }))
 
 mock.module('react-native-safe-area-context', () => ({ SafeAreaView: 'SafeAreaView' }))

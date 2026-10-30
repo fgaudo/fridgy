@@ -71,10 +71,12 @@ The durations and curves are those of the web build.
 | Home                     | no motion                                                               | opacity to 0 in `short1`, after a delay of `medium4`        |
 | Home's menu              | from opacity 0 and scale 0.8, `medium4`, emphasized decelerate          | to opacity 0 and scale 0.8, `short4`, emphasized accelerate |
 
-Reanimated has builders for the first three. `SlideInDown` and `SlideOutDown` move by the window's height, which
-they read when the movement starts. About rises with `FadeInUp`, from the initial values it is given, and sinks with
+Every motion moves `transform` and `opacity` only, which Android composes without laying the page out again. The
+dialogs are two worklets of the app, on `translateY`, by the window's height that Reanimated gives when the movement
+starts. Reanimated's `SlideInDown` and `SlideOutDown` move the view in the layout instead (`originY`), and laid the
+page out on every frame. About rises with `FadeInUp`, from the initial values it is given, and sinks with
 `FadeOutDown`, by Reanimated's 25dp: a `Keyframe` would give 30dp, for a difference no one sees. `FadeOut` takes a
-delay. The menu needs a `Keyframe`, for the scale from 0.8. None of these needs a worklet written in the app.
+delay. The menu is a `Keyframe`, for the scale from 0.8.
 
 Home enters with no motion: going back, it is drawn at once under the page that leaves over it. The page's own
 leaving uncovers it.
@@ -104,6 +106,11 @@ token ×10), and at the real speed:
   right corner and shrinks back into it.
 - **An interrupted movement (verified).** EditProduct, closed with Android's back button while it rose, sank from
   where it was, without jumping to the top first.
+- **The frames (measured).** `adb shell dumpsys gfxinfo`, over three openings and closings of each. On this
+  emulator nothing keeps 60 fps: Android's Settings, flung, has a median frame of 18 ms, 12 ms of it on the GPU, and
+  a native scroll of About the same. The motions stay at that floor (90th percentile: About 26 ms, the menu 36 ms,
+  the dialogs 25 ms), but for one long frame per opening, the one that builds the page. With `SlideInDown`, the
+  dialogs' 90th percentile was 65 ms. How smooth they are on a phone is not measured.
 - **The tests (verified).** `bun test` cannot load Reanimated. The preload (`libs/testing/preload.test_support.ts`)
   replaces it, as it replaces React Native: `Animated.View` becomes its name, and the builders become values that
   the tests ignore.

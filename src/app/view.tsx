@@ -2,7 +2,15 @@ import * as Tea from '@fgaudo/effect-tea'
 import * as Match from 'effect/Match'
 import { type ComponentProps, Fragment, type ReactNode } from 'react'
 import { View as Box, StyleSheet } from 'react-native'
-import Animated, { FadeInUp, FadeOut, FadeOutDown, SlideInDown, SlideOutDown } from 'react-native-reanimated'
+import Animated, {
+  type EntryAnimationsValues,
+  type ExitAnimationsValues,
+  FadeInUp,
+  FadeOut,
+  FadeOutDown,
+  type LayoutAnimation,
+  withTiming,
+} from 'react-native-reanimated'
 import type { View } from '#libs/tea-react/tea-react.ts'
 import { duration, easing } from '#styles'
 import * as About from './children/about/view.tsx'
@@ -13,10 +21,27 @@ import type { Message, Model } from './program.ts'
 
 type Motion = Readonly<Pick<ComponentProps<typeof Animated.View>, 'entering' | 'exiting'> & { isOver: boolean }>
 
-// Material's full-screen dialog: it rises from the bottom edge, and sinks back to it.
+// Material's full-screen dialog: it rises from the bottom edge, and sinks back to it. A `translateY`, not
+// Reanimated's `SlideInDown`, which moves the view in the layout and lays the page out again on every frame.
 const dialog = {
-  entering: SlideInDown.duration(duration.medium4).easing(easing.emphasizedDecelerate),
-  exiting: SlideOutDown.duration(duration.short4).easing(easing.emphasizedAccelerate),
+  entering: (values: EntryAnimationsValues): LayoutAnimation => {
+    'worklet'
+    return {
+      initialValues: { translateY: values.windowHeight },
+      animations: {
+        translateY: withTiming(0, { duration: duration.medium4, easing: easing.emphasizedDecelerate }),
+      },
+    }
+  },
+  exiting: (values: ExitAnimationsValues): LayoutAnimation => {
+    'worklet'
+    return {
+      initialValues: { translateY: 0 },
+      animations: {
+        translateY: withTiming(values.windowHeight, { duration: duration.short4, easing: easing.emphasizedAccelerate }),
+      },
+    }
+  },
 }
 
 // The choreographies of `docs/motion.md`.
