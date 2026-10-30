@@ -180,12 +180,13 @@ folders; "page" names a role in the UI, kept by the root's state, not a kind of 
 ## Known gaps (verify before working)
 
 - A debug build takes about five seconds on the emulator before its JavaScript runs; a release, a tenth of a
-  second. The release has been run on the emulator only, signed with the debug key.
+  second. The release has been run on the emulator only (API 37 and API 29), signed with the debug key.
 - Seen on a phone (Galaxy S21, Android 15) on 2026-10-30, not yet looked into: every product added in AddProducts
   makes its components flicker.
 - AddProducts' buttons stay under the keyboard: the web build drew them above it. The manifest's `adjustResize`
   resizes nothing for an app drawn edge to edge, which a target of API 35 or more always is: the page has to keep
-  clear of the keyboard's inset itself.
+  clear of the keyboard's inset itself. The emulator showed it on API 29 too (2026-10-30), so it is the app's
+  layout, not a recent Android's doing.
 - AddProducts' name field is never focused. The web build focused it whenever it was drawn anew (`focusOnInsert`):
   as the page opened, after a scan that names the product, and after an add. The field is still keyed anew
   (`nameKey`), but has no `autoFocus`. Whether this is the flicker above is not known.

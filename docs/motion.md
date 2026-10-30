@@ -386,8 +386,9 @@ Not yet seen:
 - **"Remove animations"**, which should make every motion instant.
 - **Two pages stacked in one frame.** The "Known gaps" item (EditProduct and AddProducts pushed together) gives
   two pages in the upper layer. The motion does not make it worse, but it shows it.
-- **The release on `minSdkVersion`'s image.** Reanimated is a native module: the `android-release` skill asks for
-  the pass on API 29 too.
+- **The frames of the motions on `minSdkVersion`'s image.** The release ran on API 29 on 2026-10-30
+  (`docs/testing.md`): the pages opened and left, the rows opened, the selection's bar took its color and the
+  snackbar came, with nothing in logcat. Only the frames were not caught there, as they were on API 37.
 
 ## Later
 

@@ -74,5 +74,12 @@ module, and after the first release of each of those. Its result is written in t
   page that edits a product, About, Android's back button on each page and out of the app. The pass found two
   bugs, fixed the same day: the vibrations needed `VIBRATE`, which Capacitor's plugin had declared, and a refused
   vibration crashed the app; the FAB stood under the navigation bar.
-- Not yet: the lowest Android (API 29), the reference screens, the font at 200%, the failure snackbars (the
-  storage on the phone does not fail on demand, as the web build's development server could).
+- Verified on 2026-10-30, in the emulator on API 29, `minSdkVersion`'s Google Play image for x86_64: the release
+  build (minified, signed with the debug key). Home, the page that adds products, the scanner (the permission,
+  which API 29 asks as "allow" or "deny" alone, the camera opening, the preview drawn under the app's own views),
+  the selection and the deletion with "Undo", the page that edits a product, About's list, Android's back button
+  on each page and out of the app. The storage opened again after a recreated activity. Nothing in the app's
+  logcat; the migration ran. The pass found no bug of its own, and showed that AddProducts' buttons stand under
+  the keyboard there too.
+- Not yet: the reference screens, the font at 200%, the failure snackbars (the storage on the phone does not fail
+  on demand, as the web build's development server could).
