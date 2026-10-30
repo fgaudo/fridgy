@@ -1,6 +1,6 @@
 import * as Opt from 'effect/Option'
-import type { ReactNode } from 'react'
-import { View as Box, Linking, Pressable, ScrollView, StyleSheet, Text } from 'react-native'
+import type { ReactElement, ReactNode } from 'react'
+import { View as Box, FlatList, Linking, Pressable, StyleSheet, Text } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { handlers, type View } from '#libs/tea-react/tea-react.ts'
 import { color, icon, shape, type } from '#styles'
@@ -15,6 +15,7 @@ const styles = StyleSheet.create({
   iconButton: { width: 48, height: 48, borderRadius: shape.full, alignItems: 'center', justifyContent: 'center' },
   title: { ...type.titleLargeEmphasized, paddingHorizontal: 4, color: color.onSurface },
   content: { paddingHorizontal: 16, paddingTop: 32, paddingBottom: 32, gap: 16 },
+  intro: { gap: 16 },
   header: { alignItems: 'center', gap: 8, paddingVertical: 16 },
   appName: { ...type.headlineMedium, marginTop: 8, color: color.onSurface },
   version: { ...type.labelLarge, color: color.onSurfaceVariant },
@@ -86,7 +87,10 @@ const card = (card: LicenseCard): ReactNode => (
   </Box>
 )
 
-/** The page: Material's small top app bar over a scrolling column, the bar filled once the page scrolls under it. */
+/**
+ * The page: Material's small top app bar over a scrolling column, the bar filled once the page scrolls under it.
+ * The cards are a list that mounts only what is near the screen (`docs/motion.md`, "The frames").
+ */
 export const view: View<Model, Message> = (model, dispatch) => {
   const { on, onValue } = handlers(dispatch)
   const scrolled = onValue((top: number) => model.scroll(top))
@@ -104,54 +108,64 @@ export const view: View<Model, Message> = (model, dispatch) => {
           </Pressable>
           <Text accessibilityRole='header' style={styles.title}>About</Text>
         </Box>
-        <ScrollView
+        <FlatList
           contentContainerStyle={styles.content}
           scrollEventThrottle={16}
           overScrollMode='never'
           onScroll={(event) => scrolled(event.nativeEvent.contentOffset.y)}
-        >
-          <Box style={styles.header}>
-            <Text style={styles.appName}>Fridgy</Text>
-            {model.version._tag === 'Loading'
-              ? null
-              : <Text style={styles.version}>Version {model.version.version}</Text>}
-            <Text style={styles.tagline}>Keep track of what is in your fridge and when it expires.</Text>
-          </Box>
-          {/* Material's filled card, holding a list. */}
-          <Box style={styles.filledCard}>
-            {row('balance', [
-              'Free software, released under the ',
-              link('https://spdx.org/licenses/AGPL-3.0-or-later.html', 'AGPL-3.0-or-later'),
-              ' license.',
-            ], true)}
-            {row('code', ['The source code is on ', link('https://github.com/fgaudo/fridgy', 'GitHub'), '.'])}
-            {/* The attribution Open Food Facts' licence asks for: the licenses below come from npm and cannot carry it. */}
-            {row('barcode', [
-              'Product names from ',
-              link('https://openfoodfacts.org', 'Open Food Facts'),
-              ', under the ',
-              link('https://opendatacommons.org/licenses/odbl/1-0/', 'Open Database License'),
-              '.',
-            ])}
-            {row('privacy_tip', [
-              'Your products stay on your phone: read the ',
-              link('https://github.com/fgaudo/fridgy/blob/main/PRIVACY.md', 'privacy policy'),
-              '.',
-            ])}
-            {row('bug_report', [
-              'Found a bug, or have an idea? ',
-              link('https://github.com/fgaudo/fridgy/issues', 'Open an issue'),
-              '.',
-            ])}
-          </Box>
-          <Text style={styles.copyright}>© 2024–2026 Francesco Gaudenzi</Text>
-          <Box>
-            <Text accessibilityRole='header' style={styles.heading}>Open source libraries</Text>
-            <Text style={styles.headingText}>Fridgy is built with these libraries, under their own licenses.</Text>
-          </Box>
-          {model.licenses._tag === 'Loading' ? null : model.licenses.cards.map(card)}
-        </ScrollView>
+          data={model.licenses._tag === 'Loading' ? [] : model.licenses.cards}
+          keyExtractor={(licenseCard) => licenseCard.key}
+          renderItem={({ item }) => card(item)}
+          // A screen above and below. The default, ten of each, still mounted most cards as the page rose.
+          windowSize={3}
+          ListHeaderComponent={intro(model)}
+        />
       </Box>
     </SafeAreaView>
   )
 }
+
+/** What comes before the cards: the app, the project's card, and the heading of the cards. */
+const intro = (model: Model): ReactElement => (
+  <Box style={styles.intro}>
+    <Box style={styles.header}>
+      <Text style={styles.appName}>Fridgy</Text>
+      {model.version._tag === 'Loading'
+        ? null
+        : <Text style={styles.version}>Version {model.version.version}</Text>}
+      <Text style={styles.tagline}>Keep track of what is in your fridge and when it expires.</Text>
+    </Box>
+    {/* Material's filled card, holding a list. */}
+    <Box style={styles.filledCard}>
+      {row('balance', [
+        'Free software, released under the ',
+        link('https://spdx.org/licenses/AGPL-3.0-or-later.html', 'AGPL-3.0-or-later'),
+        ' license.',
+      ], true)}
+      {row('code', ['The source code is on ', link('https://github.com/fgaudo/fridgy', 'GitHub'), '.'])}
+      {/* The attribution Open Food Facts' licence asks for: the licenses below come from npm and cannot carry it. */}
+      {row('barcode', [
+        'Product names from ',
+        link('https://openfoodfacts.org', 'Open Food Facts'),
+        ', under the ',
+        link('https://opendatacommons.org/licenses/odbl/1-0/', 'Open Database License'),
+        '.',
+      ])}
+      {row('privacy_tip', [
+        'Your products stay on your phone: read the ',
+        link('https://github.com/fgaudo/fridgy/blob/main/PRIVACY.md', 'privacy policy'),
+        '.',
+      ])}
+      {row('bug_report', [
+        'Found a bug, or have an idea? ',
+        link('https://github.com/fgaudo/fridgy/issues', 'Open an issue'),
+        '.',
+      ])}
+    </Box>
+    <Text style={styles.copyright}>© 2024–2026 Francesco Gaudenzi</Text>
+    <Box>
+      <Text accessibilityRole='header' style={styles.heading}>Open source libraries</Text>
+      <Text style={styles.headingText}>Fridgy is built with these libraries, under their own licenses.</Text>
+    </Box>
+  </Box>
+)

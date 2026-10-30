@@ -307,6 +307,11 @@ token ×10), and at the real speed:
   `android-release` skill says), the GPU takes 1 ms: About scrolls at a median of 8 ms (90th percentile 10 ms), and
   AddProducts opens and closes at 6 ms (90th percentile 14 ms), under a 60 Hz frame. How smooth they are on a
   phone is not measured.
+- **About's opening (measured).** On Vulkan, in a release, five openings each. The 142 license cards, all in a
+  `ScrollView`, mounted in the first frame: one frame of 150 to 350 ms, felt as a tap that waits, before the page
+  rose. A `FlatList` with its default window (ten screens on each side) spread them over the entrance: three or
+  four frames of 25 to 35 ms. With a window of one screen on each side, the worst frame is 23 to 32 ms, and the
+  90th percentile 8 to 10 ms. A fast fling still finds the cards drawn.
 - **The tests (verified).** `bun test` cannot load Reanimated. The preload (`libs/testing/preload.test_support.ts`)
   replaces it, as it replaces React Native: `Animated.View` becomes its name, and the builders become values that
   the tests ignore.

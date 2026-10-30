@@ -1,11 +1,27 @@
 // Preloaded by `bun test` (bunfig.toml). React Native's own modules are Flow, which Bun cannot load: the tests draw
 // the views without rendering them, so host components are their names and the platform's modules do nothing.
 import { mock } from 'bun:test'
+import { createElement, type ReactNode } from 'react'
+
+type FlatListProps = Readonly<{
+  data: ReadonlyArray<unknown>
+  keyExtractor: (item: unknown) => string
+  renderItem: (info: { item: unknown }) => ReactNode
+  ListHeaderComponent?: ReactNode
+}>
 
 mock.module('react-native', () => ({
   ActivityIndicator: 'ActivityIndicator',
   BackHandler: { addEventListener: () => ({ remove: () => {} }) },
   codegenNativeComponent: (name: string) => name,
+  // A scroll view of every item: the tests see all that the list could draw.
+  FlatList: ({ data, keyExtractor, renderItem, ListHeaderComponent, ...props }: FlatListProps) =>
+    createElement(
+      'ScrollView',
+      props,
+      ListHeaderComponent,
+      data.map((item) => createElement('View', { key: keyExtractor(item) }, renderItem({ item }))),
+    ),
   Linking: { openURL: () => Promise.resolve() },
   PlatformColor: (resource: string) => resource,
   Pressable: 'Pressable',

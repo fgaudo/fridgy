@@ -180,11 +180,6 @@ folders; "page" names a role in the UI, kept by the root's state, not a kind of 
 - Opening the scanner has one to three frames of 100 to 400 ms on the emulator, as the camera starts: its rise
   loses them. Whether a phone does is not measured; if it does, the camera could start once the scanner is in
   place.
-- About draws its 142 license cards at once, in the frames of its entrance. Both lists are bundled JSON
-  (`services/licenses/licenses.bundled.ts`), so `LicensesLoaded` arrives at once, and the view draws nothing while
-  `Loading`. To consider: read the files only when asked, show Material's circular progress indicator while
-  `Loading`, and draw the cards once the page is in place (or in a list that draws only what is in view). Opening
-  About was not measured alone: every page's opening has one long frame (`docs/motion.md`, "The frames").
 - A debug build takes about five seconds on the emulator before its JavaScript runs; a release, a tenth of a
   second. The release has been run on the emulator only, signed with the debug key.
 - The vibrations (`docs/haptics.md`) have not been felt on a phone: whether each pattern feels like the constant
