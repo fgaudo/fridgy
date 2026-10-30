@@ -57,6 +57,12 @@ const titleAlpha = Easing.bezier(0.8, 0, 0.8, 0.15).factory()
 
 const containerAlpha = Easing.bezier(0.4, 0, 1, 1).factory()
 
+// The headline's top is cut by the list's edge from the first pixel: it is gone, quickly at first, by half the
+// collapse, so that little of it is seen cut.
+const headlineFade = Easing.bezier(0, 0, 0, 1).factory()
+
+const headlineAlpha = (collapse: number) => 1 - headlineFade(Math.min(collapse * 2, 1))
+
 const labelEntering = FadeIn.duration(duration.short4).easing(easing.standardDecelerate).delay(duration.short2)
 
 const labelExiting = FadeOut.duration(duration.short2).easing(easing.standardAccelerate)
@@ -182,7 +188,7 @@ export const view: View<Model, Message> = (model, dispatch) => {
             onLayout={(event) => layOutHeadline(event.nativeEvent.layout.height)}
           >
             {scrolledColor}
-            <Box style={{ opacity: 1 - model.collapse }}>
+            <Box style={{ opacity: headlineAlpha(model.collapse) }}>
               <Text accessibilityRole='header' numberOfLines={1} style={[styles.headlineTitle, { color: onBar }]}>
                 {title}
               </Text>

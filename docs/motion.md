@@ -232,7 +232,10 @@ Designed on 2026-10-30, after the rows. Implemented in `src/app/children/home/vi
    and out. The bar above the list is the small one, 64dp: its icons, and its title.
 2. **The fades follow the finger, and the program drives them.** The second case of "Who drives it": what they
    show depends on the scroll while it runs. The state holds how far the bar has collapsed (`collapse`, from 0 to
-   1): how much of the headline is out of view. The headline fades out as `1 - collapse`. The small title fades in
+   1): how much of the headline is out of view. The headline fades out by half the collapse, quickly at first (standard decelerate). The list's edge cuts its top
+   from the first pixel, and a fade over the whole collapse showed it cut and opaque (seen on the emulator). The
+   fades also follow the scroll a frame or two late, since the program draws them: the quicker fade hides that too.
+   The small title fades in
    late, and the bar's color early, by the curves of Compose's bar (`cubic-bezier(0.8, 0, 0.8, 0.15)` and
    `(0.4, 0, 1, 1)`). The collapse is held in twentieths. Each step draws Home again, so a whole collapse is at most
    twenty frames, and a scroll outside the headline draws none.
