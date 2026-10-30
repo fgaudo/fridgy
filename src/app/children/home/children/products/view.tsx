@@ -307,7 +307,19 @@ const item = (
         >
           {headline}
         </Text>
-        <Text style={[styles.supporting, { color: look === 'Error' ? color.error : color.onSurfaceVariant }]}>
+        {/* On the selected row's container, neither `error` nor `onSurfaceVariant` reaches 4.5:1 in the dark scheme. */}
+        <Text
+          style={[
+            styles.supporting,
+            {
+              color: selection.isSelected
+                ? color.onSecondaryContainer
+                : look === 'Error'
+                ? color.error
+                : color.onSurfaceVariant,
+            },
+          ]}
+        >
           {supporting}
         </Text>
       </Box>
@@ -383,7 +395,7 @@ const iconButton = (name: string, label: string, message: Message | undefined, {
     style={styles.iconButton}
     onPress={message === undefined ? undefined : on(message)}
   >
-    {icon(name, message === undefined ? color.onSurfaceVariant : color.onSecondaryContainer)}
+    {icon(name, message === undefined ? color.disabledContent : color.onSecondaryContainer)}
   </Pressable>
 )
 
