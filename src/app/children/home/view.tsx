@@ -138,6 +138,7 @@ export const view: View<Model, Message> = (model, dispatch) => {
   const layOutList = onValue((height: number) => model.layOutList(height))
   const sizeContent = onValue((height: number) => model.sizeContent(height))
   const scrolled = onValue((top: number) => model.scroll(top))
+  const scrollEnded = onValue((top: number) => model.endScroll(top))
   // Over both rows of the bar, which are one surface. The selection's color does not change.
   const scrolledColor = selection === undefined
     ? <Box style={[styles.scrolled, { opacity: containerAlpha(model.collapse) }]} />
@@ -172,6 +173,8 @@ export const view: View<Model, Message> = (model, dispatch) => {
         </Box>
         <ScrollView
           key={model.listKey}
+          // Android scrolls to it whenever it changes. It changes only to where the list already rests.
+          contentOffset={{ x: 0, y: model.rest }}
           overScrollMode='never'
           scrollEnabled={model.menu._tag === 'Closed'}
           scrollEventThrottle={16}
@@ -181,7 +184,7 @@ export const view: View<Model, Message> = (model, dispatch) => {
           onContentSizeChange={(_width, height) => sizeContent(height)}
           onScroll={(event) => scrolled(event.nativeEvent.contentOffset.y)}
           onScrollBeginDrag={on(model.startScroll)}
-          onMomentumScrollEnd={on(model.endScroll)}
+          onMomentumScrollEnd={(event) => scrollEnded(event.nativeEvent.contentOffset.y)}
         >
           <Box
             style={[styles.headline, { backgroundColor: container }]}

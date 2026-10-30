@@ -23,6 +23,8 @@ export type State = Readonly<{
    * (`docs/motion.md`, "Home's top app bar and its FAB"). In twentieths.
    */
   collapse: number
+  /** Where the list last came to rest, from the top. */
+  rest: number
   /** Counts the times the list was drawn anew, at its top. */
   generation: number
   /** From the drag to the end of its momentum. */
@@ -42,7 +44,7 @@ type Own = Data.TaggedEnum<{
   ContentSized: { height: number }
   Scrolled: { top: number }
   ScrollStarted: object
-  ScrollEnded: object
+  ScrollEnded: { top: number }
   // From subscriptions.
   /** The back button, heard only while the menu is open, which it closes. */
   BackPressed: object
@@ -71,6 +73,11 @@ export type Model = Readonly<{
   collapse: number
   /** A new key draws the list anew, at its top. */
   listKey: number
+  /**
+   * Where the list is drawn from: where it last rested. Home is drawn anew when a page over it leaves, and its list
+   * would be at its top under a bar still collapsed.
+   */
+  rest: number
   /** Where the list rests: at its top, or with the headline just out of view. Free until the headline is laid out. */
   snap: Data.TaggedEnum<{ Free: object; Snapping: { offsets: ReadonlyArray<number> } }>
   /** The add button is the icon alone while the user scrolls. */
@@ -80,7 +87,7 @@ export type Model = Readonly<{
   sizeContent: (height: number) => Own
   scroll: (top: number) => Own
   startScroll: Own
-  endScroll: Own
+  endScroll: (top: number) => Own
   products: Products.Model
 }>
 
@@ -107,7 +114,7 @@ const collapseAt = (top: number, { headline }: Layout) =>
 const laidOut = (state: State, layout: Layout): State => {
   const isResized = layout.headline !== state.layout.headline || layout.list !== state.layout.list
   if (isResized && state.collapse > 0) {
-    return { ...state, layout, collapse: 0, generation: state.generation + 1 }
+    return { ...state, layout, collapse: 0, rest: 0, generation: state.generation + 1 }
   }
   const collapse = Math.min(state.collapse, collapseAt(layout.content - layout.list, layout))
   return Equal.equals(layout, state.layout) && collapse === state.collapse ? state : { ...state, layout, collapse }
@@ -124,6 +131,7 @@ export const program = compose({
         isMenuOpen: false,
         layout: { headline: 0, list: 0, content: 0 },
         collapse: 0,
+        rest: 0,
         generation: 0,
         isScrolling: false,
         products: products.state,
@@ -157,7 +165,9 @@ export const program = compose({
         return { state: collapse === state.collapse ? state : { ...state, collapse } }
       },
       ScrollStarted: () => ({ state: state.isScrolling ? state : { ...state, isScrolling: true } }),
-      ScrollEnded: () => ({ state: state.isScrolling ? { ...state, isScrolling: false } : state }),
+      ScrollEnded: ({ top }) => ({
+        state: state.isScrolling || top !== state.rest ? { ...state, isScrolling: false, rest: top } : state,
+      }),
       BackPressed: () =>
         state.isMenuOpen
           ? { state: { ...state, isMenuOpen: false } }
@@ -171,6 +181,7 @@ export const program = compose({
     add: Own.AddRequested(),
     collapse: state.collapse,
     listKey: state.generation,
+    rest: state.rest,
     snap: state.layout.headline > 0 ? { _tag: 'Snapping', offsets: [0, state.layout.headline] } : { _tag: 'Free' },
     fab: state.isScrolling ? { _tag: 'Icon' } : { _tag: 'Extended' },
     layOutHeadline: (height) => Own.HeadlineLaidOut({ height }),
@@ -178,7 +189,7 @@ export const program = compose({
     sizeContent: (height) => Own.ContentSized({ height }),
     scroll: (top) => Own.Scrolled({ top }),
     startScroll: Own.ScrollStarted(),
-    endScroll: Own.ScrollEnded(),
+    endScroll: (top) => Own.ScrollEnded({ top }),
     products: children.Products(state),
   }),
 })

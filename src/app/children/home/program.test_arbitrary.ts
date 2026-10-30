@@ -28,6 +28,7 @@ export const state: fc.Arbitrary<State> = fc.record({
   isMenuOpen: fc.boolean(),
   layout,
   collapse,
+  rest: top,
   generation: fc.nat({ max: 5 }),
   isScrolling: fc.boolean(),
   products: Products.state,
@@ -45,6 +46,6 @@ export const message: fc.Arbitrary<Message> = fc.oneof(
   height.map((height) => Msg.ContentSized({ height })),
   top.map((top) => Msg.Scrolled({ top })),
   fc.constant(Msg.ScrollStarted()),
-  fc.constant(Msg.ScrollEnded()),
+  top.map((top) => Msg.ScrollEnded({ top })),
   Products.message.map(fromProducts),
 )

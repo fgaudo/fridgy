@@ -114,7 +114,7 @@ describe('Home update', () => {
           Msg.ContentSized({ height: 0 }),
           Msg.Scrolled({ top: 0 }),
           Msg.ScrollStarted(),
-          Msg.ScrollEnded(),
+          Msg.ScrollEnded({ top: 0 }),
           ...[
             ProductsMsg.SelectionCleared(),
             ProductsMsg.DeleteStarted(),
@@ -244,7 +244,7 @@ describe('scrolling', () => {
           fc.pre(before.collapse > 0 && before.layout[key] !== height)
           const { after, commands } = step(make(height), before)
           const layout = { ...before.layout, [key]: height }
-          return Equal.equals(after, { ...before, layout, collapse: 0, generation: before.generation + 1 })
+          return Equal.equals(after, { ...before, layout, collapse: 0, rest: 0, generation: before.generation + 1 })
             && commands.length === 0
         }),
     )
@@ -289,21 +289,30 @@ describe('scrolling', () => {
     })
   })
 
-  test('ScrollStarted and ScrollEnded say whether the user scrolls, keeping the very same state when it does not change', () => {
-    assertProperty(
-      [state],
-      (before) =>
-        ([[Msg.ScrollStarted(), true], [Msg.ScrollEnded(), false]] as const).every(([msg, isScrolling]) => {
-          const { after, commands } = step(msg, before)
-          return Equal.equals(after, { ...before, isScrolling })
-            && (isScrolling !== before.isScrolling || after === before) && commands.length === 0
-        }),
-    )
+  test('ScrollStarted says that the user scrolls, keeping the very same state when they already did', () => {
+    assertProperty([state], (before) => {
+      const { after, commands } = step(Msg.ScrollStarted(), before)
+      return Equal.equals(after, { ...before, isScrolling: true }) && (!before.isScrolling || after === before)
+        && commands.length === 0
+    })
+  })
+
+  test('ScrollEnded says that the user no longer scrolls, and where the list rests, keeping the very same state when neither changes', () => {
+    assertProperty([state, top], (before, top) => {
+      const { after, commands } = step(Msg.ScrollEnded({ top }), before)
+      return Equal.equals(after, { ...before, isScrolling: false, rest: top })
+        && (before.isScrolling || top !== before.rest || after === before) && commands.length === 0
+    })
   })
 
   describe('the model', () => {
     test('collapses the bar as far as the state says, and keys the list by its generation', () => {
       assertProperty([state], (s) => makeModel(s).collapse === s.collapse && makeModel(s).listKey === s.generation)
+    })
+
+    // Home is drawn anew when a page over it leaves: its list starts where it was, under the bar as it was.
+    test('draws the list from where it last rested', () => {
+      assertProperty([state], (s) => makeModel(s).rest === s.rest)
     })
 
     test('snaps the list to its top and to the end of the headline, once it is laid out', () => {
@@ -341,6 +350,7 @@ test('starts its child as the child starts, with its commands', () => {
     isMenuOpen: false,
     layout: { headline: 0, list: 0, content: 0 },
     collapse: 0,
+    rest: 0,
     generation: 0,
     isScrolling: false,
     products: Products.program.init.state,

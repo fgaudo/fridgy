@@ -250,6 +250,10 @@ Designed on 2026-10-30, after the rows. Implemented in `src/app/children/home/vi
    headline row without its title, and the small title above it. The scroll is not known after that, so the program
    makes it known. Under a collapsed bar, such a change gives the list a new `key`: React draws it anew at its top,
    and the bar expands. An expanded bar needs nothing.
+   Home itself is drawn anew when a page over it leaves, and its list started at its top under a bar still
+   collapsed (seen on a phone). So `ScrollEnded` carries where the list rests (`rest`), and the list is drawn from
+   there (`contentOffset`). Android scrolls to `contentOffset` whenever it changes, and it changes only to where the
+   list already rests.
 4. **Android snaps.** The list snaps to `[0, height of the headline]` (`snapToOffsets`, with `snapToEnd` off), so
    that a scroll never ends with the headline cut, nor the fades halfway. No command scrolls. The price: a fling released before the
    headline is gone stops where the headline is gone, as React Native's snap clamps it there (`flingAndSnap`).
