@@ -73,6 +73,8 @@ const styles = StyleSheet.create({
   segment: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   segmentNext: { borderLeftWidth: 1, borderLeftColor: color.outline },
   segmentLabel: { ...type.labelLarge },
+  // Room for the label, which rises 9dp above the outline, under the segments.
+  dateField: { marginTop: 8 },
   digits: { ...type.bodyLarge },
   strip: { minHeight: 32 },
   stripText: { ...type.bodySmall, paddingHorizontal: 16 },
@@ -106,6 +108,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   keyLabel: { ...type.headlineSmall },
+  // 8dp over "Save", not AddProducts' 16: the name field takes them, and the page must fit the reference screen.
   dock: { paddingHorizontal: 24, paddingTop: 8, paddingBottom: 16 },
   save: {
     minHeight: 56,
@@ -263,7 +266,7 @@ const dateField = (shown: FieldsShown, activity: Activity) => {
     <Box
       accessible
       accessibilityLabel={`Expiration date, ${shown.digits === '' ? 'empty' : shown.digits}`}
-      style={[styles.field, {
+      style={[styles.field, styles.dateField, {
         borderColor: look === 'Disabled' ? color.disabledContainer : look === 'Wrong' ? color.error : color.outline,
       }]}
     >

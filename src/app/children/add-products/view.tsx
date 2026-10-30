@@ -177,7 +177,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  dock: { gap: 12, paddingHorizontal: 24, paddingTop: 8, paddingBottom: 16 },
+  dock: { gap: 12, paddingHorizontal: 24, paddingTop: 16, paddingBottom: 16 },
   filledButton: {
     minHeight: 56,
     borderRadius: shape.full,
@@ -209,6 +209,8 @@ const styles = StyleSheet.create({
   segment: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   segmentNext: { borderLeftWidth: 1, borderLeftColor: color.outline },
   segmentLabel: { ...type.labelLarge },
+  // Room for the label, which rises 9dp above the outline, under the segments.
+  dateField: { marginTop: 8 },
   digits: { ...type.bodyLarge },
   strip: { minHeight: 32 },
   stripText: { ...type.bodySmall, paddingHorizontal: 16 },
@@ -688,7 +690,7 @@ const dateField = (shown: DateShown, activity: DateActivity) => {
     <Box
       accessible
       accessibilityLabel={`Expiration date, ${shown.digits === '' ? 'empty' : shown.digits}`}
-      style={[styles.field, {
+      style={[styles.field, styles.dateField, {
         borderColor: look === 'Disabled' ? color.disabledContainer : look === 'Wrong' ? color.error : color.outline,
       }]}
     >
