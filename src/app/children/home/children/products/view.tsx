@@ -299,7 +299,8 @@ const emptyState = (colors: Colors, name: string, title: string, text: string) =
   </Box>
 )
 
-const subtitleOf = (list: Data.TaggedEnum.Value<ListModel, 'Available'>) => `${list.total} items`
+const subtitleOf = (list: Data.TaggedEnum.Value<ListModel, 'Available'>) =>
+  list.total === 1 ? '1 item' : `${list.total} items`
 
 /** The top app bar's subtitle, in the bar so that it stays in view while the list scrolls. Nothing without a list. */
 export const subtitle = (model: Model): string | undefined =>

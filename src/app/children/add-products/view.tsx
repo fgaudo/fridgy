@@ -81,12 +81,13 @@ const styles = StyleSheet.create({
   trailing: { position: 'absolute', right: 4 },
   supporting: { ...type.bodySmall, minHeight: 16, paddingHorizontal: 16, color: color.onSurfaceVariant },
   link: { color: color.primary, textDecorationLine: 'underline' },
-  room: { flex: 1, minHeight: 64, alignItems: 'center', justifyContent: 'center' },
+  // The FAB's margin is Material's, and leaves its shadow inside the scroll, which clips what it holds.
+  room: { flex: 1, minHeight: 80, alignItems: 'center', justifyContent: 'center' },
   added: { ...type.bodyMedium, textAlign: 'center', color: color.onSurfaceVariant },
   scanFab: {
     position: 'absolute',
     right: 0,
-    bottom: 4,
+    bottom: 16,
     width: 56,
     height: 56,
     borderRadius: shape.large,
@@ -112,19 +113,18 @@ const styles = StyleSheet.create({
   heading: { paddingHorizontal: 16, paddingBottom: 8 },
   headingLabel: { ...type.labelMedium, color: color.onSurfaceVariant },
   headingName: { ...type.titleLarge, color: color.onSurface },
-  segments: { minHeight: 40, flexDirection: 'row' },
-  segment: {
-    flex: 1,
+  // One outline around the row, which clips the selected segment's container to its corners.
+  segments: {
+    minHeight: 40,
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
     borderWidth: 1,
+    borderRadius: shape.full,
     borderColor: color.outline,
+    overflow: 'hidden',
   },
-  segmentFirst: { borderTopLeftRadius: shape.full, borderBottomLeftRadius: shape.full },
-  segmentLast: { borderTopRightRadius: shape.full, borderBottomRightRadius: shape.full },
-  segmentNext: { marginLeft: -1 },
+  noSegments: { minHeight: 40 },
+  segment: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  segmentNext: { borderLeftWidth: 1, borderLeftColor: color.outline },
   segmentLabel: { ...type.labelLarge },
   digits: { ...type.bodyLarge },
   strip: { minHeight: 32 },
@@ -397,9 +397,8 @@ const nameStep = (
 const orderSegments = (shown: DateShown, activity: DateActivity, dispatch: Dispatch<Message>) => {
   const { on } = handlers(dispatch)
   if (shown.order._tag === 'Unknown') {
-    return <Box style={styles.segments} />
+    return <Box style={styles.noSegments} />
   }
-  const last = shown.order.choices.length - 1
   const segment = ({ order, choice }: OrderChoice, index: number) => {
     const maybePick = choice._tag === 'Offered' && activity._tag === 'Editing' ? choice.maybePick : Opt.none()
     const isCurrent = choice._tag === 'Current'
@@ -414,8 +413,6 @@ const orderSegments = (shown: DateShown, activity: DateActivity, dispatch: Dispa
         accessibilityState={{ selected: isCurrent, disabled: activity._tag !== 'Editing' }}
         style={[
           styles.segment,
-          index === 0 && styles.segmentFirst,
-          index === last && styles.segmentLast,
           index > 0 && styles.segmentNext,
           isCurrent && { backgroundColor: color.secondaryContainer },
         ]}

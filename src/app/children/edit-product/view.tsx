@@ -56,19 +56,17 @@ const styles = StyleSheet.create({
   },
   input: { ...type.bodyLarge, paddingVertical: 0, paddingRight: 40, color: color.onSurface },
   clearName: { position: 'absolute', right: 4 },
-  segments: { minHeight: 40, flexDirection: 'row' },
-  segment: {
-    flex: 1,
+  // One outline around the row, which clips the selected segment's container to its corners.
+  segments: {
+    minHeight: 40,
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
     borderWidth: 1,
+    borderRadius: shape.full,
     borderColor: color.outline,
+    overflow: 'hidden',
   },
-  segmentFirst: { borderTopLeftRadius: shape.full, borderBottomLeftRadius: shape.full },
-  segmentLast: { borderTopRightRadius: shape.full, borderBottomRightRadius: shape.full },
-  segmentNext: { marginLeft: -1 },
+  segment: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  segmentNext: { borderLeftWidth: 1, borderLeftColor: color.outline },
   segmentLabel: { ...type.labelLarge },
   digits: { ...type.bodyLarge },
   strip: { minHeight: 32 },
@@ -221,7 +219,6 @@ const nameField = (shown: FieldsShown, activity: Activity, dispatch: Dispatch<Me
 /** Material's segmented button of the orders. */
 const orderSegments = (shown: FieldsShown, activity: Activity, dispatch: Dispatch<Message>) => {
   const { on } = handlers(dispatch)
-  const last = shown.orders.length - 1
   const segment = ({ order, choice }: OrderChoice, index: number) => {
     const maybePick = choice._tag === 'Offered' && activity._tag === 'Editing' ? choice.maybePick : Opt.none()
     const isCurrent = choice._tag === 'Current'
@@ -236,8 +233,6 @@ const orderSegments = (shown: FieldsShown, activity: Activity, dispatch: Dispatc
         accessibilityState={{ selected: isCurrent, disabled: activity._tag !== 'Editing' }}
         style={[
           styles.segment,
-          index === 0 && styles.segmentFirst,
-          index === last && styles.segmentLast,
           index > 0 && styles.segmentNext,
           isCurrent && { backgroundColor: color.secondaryContainer },
         ]}

@@ -7,6 +7,8 @@
         <item name="android:windowBackground">@color/splash_background</item>
         <item name="android:windowLightStatusBar">@bool/light_system_bars</item>
         <item name="android:windowLightNavigationBar">@bool/light_system_bars</item>
+        <!-- The three-button bar is the page's surface, as the gesture bar is: its icons follow light_system_bars. -->
+        <item name="android:enforceNavigationBarContrast">false</item>
     </style>
 
 </resources>
