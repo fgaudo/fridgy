@@ -193,6 +193,17 @@ folders; "page" names a role in the UI, kept by the root's state, not a kind of 
   second. The release has been run on the emulator only, signed with the debug key.
 - The vibrations (`docs/haptics.md`) have not been felt on a phone: whether each pattern feels like the constant
   it stands for. The emulator only shows their delivery; the author feels them before the release.
+- Seen on a phone (Galaxy S21, Android 15) on 2026-10-30, not yet looked into: every product added in AddProducts
+  makes its components flicker.
+- AddProducts' buttons stay under the keyboard: the web build drew them above it. The manifest's `adjustResize`
+  resizes nothing for an app drawn edge to edge, which a target of API 35 or more always is: the page has to keep
+  clear of the keyboard's inset itself.
+- AddProducts' name field is never focused. The web build focused it whenever it was drawn anew (`focusOnInsert`):
+  as the page opened, after a scan that names the product, and after an add. The field is still keyed anew
+  (`nameKey`), but has no `autoFocus`. Whether this is the flicker above is not known.
+- Home's bar snaps to the nearer of its two shapes (decision 4 of `docs/motion.md`'s "Home's top app bar and its
+  FAB", as Compose's medium bar does). Released past half the headline, it collapses, though the small title,
+  which fades in late, has barely begun to show. Whether to keep it is the author's call.
 - Two taps in one frame can stack two pages. `show` (`src/app/program.ts`) pushes a page unless that same page
   is on top, and Home accepts `AddRequested` in every state: a product's row and "Add products", tapped with two
   fingers, push EditProduct and then AddProducts over it. Nothing crashes, and each page leaves in turn, but the
