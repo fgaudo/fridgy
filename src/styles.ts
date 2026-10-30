@@ -2,6 +2,7 @@
 // icons. Views use only these, as Material's components do: never a hex, a font size or a radius of their own.
 import { createElement, type ReactNode } from 'react'
 import { type ColorValue, PlatformColor, StyleSheet, Text, type TextStyle } from 'react-native'
+import { Easing } from 'react-native-reanimated'
 import { roles } from './palette.generated.ts'
 
 /**
@@ -44,6 +45,15 @@ export const shape = {
 
 /** Material's elevation levels, as Android's shadows. */
 export const elevation = { level1: 1, level2: 3, level3: 6, level4: 8 } as const
+
+/** Material's durations, in ms, for the motions of `docs/motion.md`. */
+export const duration = { short1: 50, short4: 200, medium4: 400 } as const
+
+/** Material's easing curves: what enters decelerates, what leaves accelerates. */
+export const easing = {
+  emphasizedDecelerate: Easing.bezier(0.05, 0.7, 0.1, 1),
+  emphasizedAccelerate: Easing.bezier(0.3, 0, 0.8, 0.15),
+} as const
 
 /** Material's state layer: the opacity of a pressed element's overlay. */
 export const pressedOpacity = 0.1

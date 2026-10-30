@@ -7,7 +7,7 @@ import * as Effect from 'effect/Effect'
 import * as HashMap from 'effect/HashMap'
 import * as Opt from 'effect/Option'
 import * as Schema from 'effect/Schema'
-import { isValidElement } from 'react'
+import { isValidElement, type ReactNode } from 'react'
 import * as Product from '#domain/product.ts'
 import * as Day from '#libs/dates/day.ts'
 import * as DigitDates from '#libs/dates/digit-dates.ts'
@@ -165,15 +165,22 @@ describe('Navigation', () => {
 
   // React reuses an element of the same type in the same place: a page drawn in another's would keep its native
   // views, and the text of their fields. Keyed by the page's name, each page's element is its own.
-  test('each page is drawn in an element of its own', () =>
+  test('each page is drawn in an element of its own, keyed by its name', () =>
     rehearsed(Effect.fnUntraced(function*(user) {
-      const drawn = Effect.map(user.model, (model) => {
-        const element = view(model, () => Effect.void)
-        return isValidElement(element) ? element.key : null
-      })
-      expect(yield* drawn).toBe('Home')
+      const keysOf = (node: ReactNode): ReadonlyArray<string> =>
+        typeof node === 'object' && node !== null && Symbol.iterator in node
+          ? Arr.flatMap(Arr.fromIterable(node), keysOf)
+          : isValidElement<{ children?: ReactNode }>(node)
+          ? [...(node.key === null ? [] : [node.key]), ...keysOf(node.props.children)]
+          : []
+      const pages: ReadonlyArray<string> = ['Home', 'AddProducts', 'EditProduct', 'About']
+      const drawn = Effect.map(
+        user.model,
+        (model) => keysOf(view(model, () => Effect.void)).filter((key) => pages.includes(key)),
+      )
+      expect(yield* drawn).toEqual(['Home'])
       yield* perform(user, openAbout)
-      expect(yield* drawn).toBe('About')
+      expect(yield* drawn).toEqual(['About'])
       yield* user.runAll
     })))
 

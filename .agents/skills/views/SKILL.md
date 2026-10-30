@@ -46,8 +46,8 @@ when nothing is named). The model holds exactly what the view draws: a field no 
 
 ## Motion
 
-Not drawn yet: the views of the web build moved, these do not (`AGENTS.md`, "Known gaps"). When motion comes back,
-two choices, taken in this order:
+The views of the web build moved. Of theirs, these draw About's entrance and exit, over Home (`docs/motion.md`);
+the rest is to come (`AGENTS.md`, "Known gaps"). A motion takes two choices, in this order:
 
 - **Who drives it.** When the start, the end and the duration are known as the movement starts, and nothing can
   change them on the way, the platform interpolates, on the UI thread: an entering or exiting animation declared
@@ -59,7 +59,8 @@ two choices, taken in this order:
   made to do it?".
 - **What it says.** A motion tells what happened (a product entering the fridge, a row closing its place), and is
   designed once, in `docs/`, with its phases and durations, before it is drawn. Durations and curves are Material's
-  tokens, named in `src/styles.ts`, never a number in a view. Android's "Remove animations" turns them into fades.
+  tokens, named in `src/styles.ts`, never a number in a view. Android's "Remove animations" makes them instant, as
+  Android's own are: Reanimated's default.
 
 ## Material 3
 

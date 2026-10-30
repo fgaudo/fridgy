@@ -11,7 +11,7 @@ architecture.
 > page that edits a product (opened with a tap on it, its name and its expiration date, typed on the same keypad)
 > and the About page (version, links, licenses) run on the current architecture, with navigation between them and
 > Android's back button, and the barcode scanner names a product from Open Food Facts. They are drawn without
-> animations. What is still
+> animations, but for About's entrance and exit. What is still
 > missing is listed under "Known gaps" in [`AGENTS.md`](AGENTS.md).
 
 **Privacy:** scanning a barcode sends the barcode, and the phone's IP address, to Open Food Facts; nothing else
@@ -26,6 +26,7 @@ leaves the phone. The whole of it is in [`PRIVACY.md`](PRIVACY.md), the policy t
 | View                       | [React Native](https://reactnative.dev) (written in TSX), on Hermes                           |
 | Storage                    | SQLite, through [op-sqlite](https://github.com/OP-Engineering/op-sqlite)                      |
 | Barcodes                   | [zxing-cpp](https://github.com/zxing-cpp/zxing-cpp) on CameraX, in a native module of the app |
+| Motion                     | [Reanimated](https://docs.swmansion.com/react-native-reanimated/)'s layout animations         |
 | Bundler                    | Metro, with Babel                                                                             |
 | Runtime, tests             | [Bun](https://bun.com), with [fast-check](https://fast-check.dev) for property tests          |
 | Lint                       | [Biome](https://biomejs.dev), and [Oxlint](https://oxc.rs) for uses of deprecated APIs        |

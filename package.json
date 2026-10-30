@@ -42,7 +42,9 @@
     "material-symbols": "^0.48.2",
     "react": "19.3.0",
     "react-native": "0.88.1",
-    "react-native-safe-area-context": "^5.11.0"
+    "react-native-reanimated": "4.7.1",
+    "react-native-safe-area-context": "^5.11.0",
+    "react-native-worklets": "0.13.1"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",

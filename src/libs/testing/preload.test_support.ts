@@ -23,4 +23,15 @@ mock.module('react-native', () => ({
   View: 'View',
 }))
 
+// A layout animation's builder chains its settings; the tests draw no frame, so every setting returns it again.
+const builder: object = new Proxy({}, { get: () => () => builder })
+
+mock.module('react-native-reanimated', () => ({
+  default: { View: 'Animated.View' },
+  Easing: { bezier: () => ({ factory: () => (x: number) => x }) },
+  FadeInUp: builder,
+  FadeOut: builder,
+  FadeOutDown: builder,
+}))
+
 mock.module('react-native-safe-area-context', () => ({ SafeAreaView: 'SafeAreaView' }))
