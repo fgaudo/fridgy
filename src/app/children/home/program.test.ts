@@ -12,9 +12,8 @@ import { tagPath } from '#libs/testing/tag-path.test_support.ts'
 import { assertProperty, onlyChanged, outcomesOf } from '#libs/testing/update.test_support.ts'
 import { hasExpiringProduct } from './children/products/program.test_arbitrary.ts'
 import * as Products from './children/products/program.ts'
-import { message, position, state } from './program.test_arbitrary.ts'
+import { height, message, state, top } from './program.test_arbitrary.ts'
 import { type Event, type Message, type Model, program, type State } from './program.ts'
-import { Position } from './services/viewport/viewport.ts'
 import { view } from './view.tsx'
 
 const Msg = Data.taggedEnum<Message>()
@@ -75,9 +74,17 @@ describe('Home update', () => {
         shownItems(state).some((item) => item._tag !== 'Corrupt' && item.id === id)
       const isSelecting = ({ products: { selection } }: State) => selection._tag !== 'Idle'
       const check = dispatchViolations(program.update, {
-        // Each tap asks: the parent opens the page once.
+        // Each tap asks: the parent opens the page once. The list tells of its layout and its scroll as often as
+        // they happen.
         repeatable: (msg) =>
-          msg._tag === 'AddRequested' || (msg._tag === 'Products' && msg.message._tag === 'EditRequested'),
+          msg._tag === 'AddRequested'
+          || msg._tag === 'HeadlineLaidOut'
+          || msg._tag === 'ListLaidOut'
+          || msg._tag === 'ContentSized'
+          || msg._tag === 'Scrolled'
+          || msg._tag === 'ScrollStarted'
+          || msg._tag === 'ScrollEnded'
+          || (msg._tag === 'Products' && msg.message._tag === 'EditRequested'),
         withheld: (msg, state) => {
           if (msg._tag === 'MenuOpened') {
             return isListShown(state) && isSelecting(state)
@@ -101,6 +108,13 @@ describe('Home update', () => {
           Msg.MenuClosed(),
           Msg.InfoRequested(),
           Msg.AddRequested(),
+          // As the test's events give them: a layout of nothing, a scroll to the top.
+          Msg.HeadlineLaidOut({ height: 0 }),
+          Msg.ListLaidOut({ height: 0 }),
+          Msg.ContentSized({ height: 0 }),
+          Msg.Scrolled({ top: 0 }),
+          Msg.ScrollStarted(),
+          Msg.ScrollEnded(),
           ...[
             ProductsMsg.SelectionCleared(),
             ProductsMsg.DeleteStarted(),
@@ -212,41 +226,108 @@ describe('Home update', () => {
 })
 
 describe('scrolling', () => {
-  test('PositionChanged stores the position, and nothing else', () => {
-    assertProperty([state, position], (before, position) => {
-      const { after, commands } = step(Msg.PositionChanged({ position }), before)
-      return Equal.equals(after, { ...before, position }) && commands.length === 0
+  // How far the headline is out of view, in twentieths, rounded.
+  const collapseAt = (top: number, headline: number) =>
+    headline > 0 ? Math.round(Math.min(Math.max(top / headline, 0), 1) * 20) / 20 : 0
+
+  const layoutMessages = [
+    { make: (height: number) => Msg.HeadlineLaidOut({ height }), key: 'headline' },
+    { make: (height: number) => Msg.ListLaidOut({ height }), key: 'list' },
+    { make: (height: number) => Msg.ContentSized({ height }), key: 'content' },
+  ] as const
+
+  test('a new height of the list or the headline draws the list anew at its top, under a collapsed bar', () => {
+    assertProperty(
+      [state, height],
+      (before, height) =>
+        layoutMessages.filter(({ key }) => key !== 'content').every(({ make, key }) => {
+          fc.pre(before.collapse > 0 && before.layout[key] !== height)
+          const { after, commands } = step(make(height), before)
+          const layout = { ...before.layout, [key]: height }
+          return Equal.equals(after, { ...before, layout, collapse: 0, generation: before.generation + 1 })
+            && commands.length === 0
+        }),
+    )
+  })
+
+  test('any other layout is stored, and the bar collapses no further than the list can scroll', () => {
+    assertProperty([state, height], (before, height) =>
+      layoutMessages.every(({ make, key }) => {
+        const layout = { ...before.layout, [key]: height }
+        if (key !== 'content' && before.collapse > 0 && before.layout[key] !== height) {
+          return true
+        }
+        const { after, commands } = step(make(height), before)
+        const collapse = Math.min(before.collapse, collapseAt(layout.content - layout.list, layout.headline))
+        return Equal.equals(after, { ...before, layout, collapse }) && commands.length === 0
+      }))
+  })
+
+  test('a layout that changes nothing keeps the very same state', () => {
+    assertProperty([state], (before) =>
+      layoutMessages.every(({ make, key }) => {
+        const { layout } = before
+        return before.collapse > collapseAt(layout.content - layout.list, layout.headline)
+          || step(make(layout[key]), before).after === before
+      }))
+  })
+
+  test('Scrolled collapses the bar as far as the headline is out of view, keeping the very same state within a step', () => {
+    assertProperty([state, top], (before, top) => {
+      const { after, commands } = step(Msg.Scrolled({ top }), before)
+      const collapse = collapseAt(top, before.layout.headline)
+      return Equal.equals(after, { ...before, collapse }) && (collapse !== before.collapse || after === before)
+        && commands.length === 0
     })
   })
 
-  test('InteractionChanged stores its flag, and nothing else while the user scrolls', () => {
-    assertProperty([state], (before) => {
-      const { after, commands } = step(Msg.InteractionChanged({ isInteracting: true }), before)
-      return Equal.equals(after, { ...before, isInteracting: true }) && commands.length === 0
+  // The snap lands on a device pixel: up to half a dp short, at a density of 2 or more.
+  test('a scroll up to half a dp short of the headline collapses the bar whole', () => {
+    assertProperty([state, fc.integer({ min: 20, max: 400 })], (before, headline) => {
+      const from = { ...before, layout: { ...before.layout, headline } }
+      return step(Msg.Scrolled({ top: headline - 0.5 }), from).after.collapse === 1
     })
   })
 
-  test('a scroll that ends with the bar half collapsed snaps it to the nearer shape', () => {
-    assertProperty([state], (before) => {
-      const { after, commands } = step(Msg.InteractionChanged({ isInteracting: false }), before)
-      const snap = {
-        Expanded: [],
-        CloserToExpanded: [{ _tag: 'ExpandBar' }],
-        CloserToCollapsed: [{ _tag: 'CollapseBar' }],
-        Collapsed: [],
-      }[before.position._tag]
-      return Equal.equals(after, { ...before, isInteracting: false }) && Equal.equals(commands, snap)
+  test('ScrollStarted and ScrollEnded say whether the user scrolls, keeping the very same state when it does not change', () => {
+    assertProperty(
+      [state],
+      (before) =>
+        ([[Msg.ScrollStarted(), true], [Msg.ScrollEnded(), false]] as const).every(([msg, isScrolling]) => {
+          const { after, commands } = step(msg, before)
+          return Equal.equals(after, { ...before, isScrolling })
+            && (isScrolling !== before.isScrolling || after === before) && commands.length === 0
+        }),
+    )
+  })
+
+  describe('the model', () => {
+    test('collapses the bar as far as the state says, and keys the list by its generation', () => {
+      assertProperty([state], (s) => makeModel(s).collapse === s.collapse && makeModel(s).listKey === s.generation)
+    })
+
+    test('snaps the list to its top and to the end of the headline, once it is laid out', () => {
+      assertProperty([state], (s) =>
+        Equal.equals(
+          makeModel(s).snap,
+          s.layout.headline > 0
+            ? { _tag: 'Snapping', offsets: [0, s.layout.headline] }
+            : { _tag: 'Free' },
+        ))
+    })
+
+    test('draws the add button as its icon alone while the user scrolls', () => {
+      assertProperty([state], (s) => makeModel(s).fab._tag === (s.isScrolling ? 'Icon' : 'Extended'))
     })
   })
 })
 
 // A child's subscriptions run only if the page passes them on.
-test('the page listens to the scrolling, and its child to the storage, and to the clock while a product expires', () => {
+test('its child listens to the storage, and to the clock while a product expires', () => {
   assertProperty([state], (s) => {
     const subscriptions = Tea.subscriptionsOf(program)(s)
     return HashMap.has(subscriptions, ['Products', 'changes'])
       && HashMap.has(subscriptions, ['Products', 'clock']) === hasExpiringProduct(s.products)
-      && ['scrolling', 'position'].every((key) => HashMap.has(subscriptions, key))
   })
 })
 
@@ -258,8 +339,10 @@ test('the page observes the back button only while the menu is open', () => {
 test('starts its child as the child starts, with its commands', () => {
   expect(program.init.state).toEqual({
     isMenuOpen: false,
-    position: Position.Expanded(),
-    isInteracting: false,
+    layout: { headline: 0, list: 0, content: 0 },
+    collapse: 0,
+    generation: 0,
+    isScrolling: false,
     products: Products.program.init.state,
   })
   expect(program.init.commands).toEqual(

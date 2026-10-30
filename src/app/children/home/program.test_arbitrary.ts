@@ -3,7 +3,6 @@ import * as fc from 'fast-check'
 import * as Products from './children/products/program.test_arbitrary.ts'
 import type * as ProductsProgram from './children/products/program.ts'
 import type { Message, State } from './program.ts'
-import { Position } from './services/viewport/viewport.ts'
 
 type ProductsMessage = ProductsProgram.Message
 
@@ -12,19 +11,25 @@ const fromProducts = (message: ProductsMessage): Message => ({ _tag: 'Products',
 
 const Msg = Data.taggedEnum<Message>()
 
-/** Any position of the page along the top app bar's collapse. */
-export const position: fc.Arbitrary<Position> = fc.constantFrom(
-  Position.Expanded(),
-  Position.CloserToExpanded(),
-  Position.CloserToCollapsed(),
-  Position.Collapsed(),
-)
+/** A height, as a layout gives it. */
+export const height = fc.integer({ min: 0, max: 400 })
+
+/** A scroll's distance from the top, a little past it too. */
+export const top = fc.integer({ min: -10, max: 10_000 })
+
+/** Any layout of the list, laid out or not. */
+const layout = fc.record({ headline: height, list: height, content: fc.integer({ min: 0, max: 2_000 }) })
+
+/** A collapse of the bar, in twentieths. */
+const collapse = fc.integer({ min: 0, max: 20 }).map((step) => step / 20)
 
 /** Any state of the page. */
 export const state: fc.Arbitrary<State> = fc.record({
   isMenuOpen: fc.boolean(),
-  position: position,
-  isInteracting: fc.boolean(),
+  layout,
+  collapse,
+  generation: fc.nat({ max: 5 }),
+  isScrolling: fc.boolean(),
   products: Products.state,
 })
 
@@ -35,7 +40,11 @@ export const message: fc.Arbitrary<Message> = fc.oneof(
   fc.constant(Msg.InfoRequested()),
   fc.constant(Msg.AddRequested()),
   fc.constant(Msg.BackPressed()),
-  position.map((position) => Msg.PositionChanged({ position })),
-  fc.boolean().map((isInteracting) => Msg.InteractionChanged({ isInteracting })),
+  height.map((height) => Msg.HeadlineLaidOut({ height })),
+  height.map((height) => Msg.ListLaidOut({ height })),
+  height.map((height) => Msg.ContentSized({ height })),
+  top.map((top) => Msg.Scrolled({ top })),
+  fc.constant(Msg.ScrollStarted()),
+  fc.constant(Msg.ScrollEnded()),
   Products.message.map(fromProducts),
 )

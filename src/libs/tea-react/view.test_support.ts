@@ -4,7 +4,8 @@ import type { View } from './tea-react.ts'
 
 /**
  * Draws `view` for `model` and calls every `on…` callback in the tree: a text input's `onChangeText` with
- * `inputValue`, the others with a fake event of a scroll to the top. Returns the messages the callbacks sent.
+ * `inputValue`, `onContentSizeChange` with a size of nothing, the others with a fake event of a scroll to the top,
+ * which is also a layout of nothing. Returns the messages the callbacks sent.
  * Function components are called as React would; the views are pure, so they use no hooks.
  */
 export const messagesSentBy = <Model, Message>(
@@ -14,7 +15,11 @@ export const messagesSentBy = <Model, Message>(
 ): ReadonlyArray<Message> => {
   const sent: Array<Message> = []
   const event = {
-    nativeEvent: { contentOffset: { x: 0, y: 0 }, text: inputValue },
+    nativeEvent: {
+      contentOffset: { x: 0, y: 0 },
+      layout: { x: 0, y: 0, width: 0, height: 0 },
+      text: inputValue,
+    },
     preventDefault: () => {},
     stopPropagation: () => {},
   }
@@ -32,6 +37,7 @@ export const messagesSentBy = <Model, Message>(
     for (const [name, value] of Object.entries(props)) {
       if (!name.startsWith('on') || typeof value !== 'function') continue
       if (name === 'onChangeText') value(inputValue)
+      else if (name === 'onContentSizeChange') value(0, 0)
       else value(event)
     }
     visit(props['children'] as ReactNode)

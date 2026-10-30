@@ -44,7 +44,7 @@ service and a module of the infrastructure to move its sixty lines.
 - Messages are a `Data.TaggedEnum`. Export `Message`, `Event` and `Command` as types only (a parent takes
   them with `Tea.MessageOf` and `Tea.CommandOf`); export `ExternalMessage`, when the parent may give the
   program one, as a value. Tests build their own constructors with `Data.taggedEnum<Message>()`.
-- `services: Deps` lists the program's services, its children's included (`Viewport | BackButton | Products.Deps`).
+- `services: Deps` lists the program's services, its children's included (`BackButton | Products.Deps`).
 - `update` returns `Tea.reject` for a message that does not apply in this state but may still arrive (a tap
   on a frame the state has moved past). A message the invariants rule out, such as an operation's completion
   outside the state that only it leaves, or a subscription's message outside the states that list its key,

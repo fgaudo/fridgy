@@ -47,7 +47,7 @@ when nothing is named). The model holds exactly what the view draws: a field no 
 ## Motion
 
 The views of the web build moved. Of their motions, these draw the pages', the menu's, AddProducts' steps and scanner,
-the snackbars and Home's rows (`docs/motion.md`); the rest is to come (`AGENTS.md`, "Known gaps"). A motion takes two choices, in this order:
+the snackbars, Home's rows, and Home's top app bar and FAB (`docs/motion.md`); the rest is to come (`AGENTS.md`, "Known gaps"). A motion takes two choices, in this order:
 
 - **Who drives it.** When the start, the end and the duration are known as the movement starts, and nothing can
   change them on the way, the platform interpolates, on the UI thread: an entering or exiting animation declared

@@ -1,6 +1,6 @@
 import * as Tea from '@fgaudo/effect-tea'
 import { View as Box, Pressable, ScrollView, StyleSheet, Text } from 'react-native'
-import Animated, { Keyframe } from 'react-native-reanimated'
+import Animated, { Easing, FadeIn, FadeOut, Keyframe, LinearTransition } from 'react-native-reanimated'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { type Handlers, handlers, type View } from '#libs/tea-react/tea-react.ts'
 import { color, duration, easing, elevation, icon, shape, type } from '#styles'
@@ -13,9 +13,14 @@ const styles = StyleSheet.create({
   // What an absolute position is measured from: inside the bars.
   frame: { flex: 1 },
   bar: { height: 64, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 4, zIndex: 2 },
+  scrolled: { ...StyleSheet.absoluteFill, backgroundColor: color.surfaceContainer },
   titles: { flex: 1, paddingHorizontal: 12 },
   title: { ...type.titleLargeEmphasized },
   subtitle: { ...type.labelMedium },
+  // The medium bar's lower row: as tall as its text, which grows with the user's font size.
+  headline: { minHeight: 48, justifyContent: 'flex-end', paddingHorizontal: 16, paddingBottom: 20 },
+  headlineTitle: { ...type.headlineMediumEmphasized },
+  headlineSubtitle: { ...type.labelLarge },
   iconButton: { width: 48, height: 48, borderRadius: shape.full, alignItems: 'center', justifyContent: 'center' },
   scrim: { ...StyleSheet.absoluteFill, zIndex: 1 },
   menu: {
@@ -37,28 +42,49 @@ const styles = StyleSheet.create({
   snackbarLayer: { position: 'absolute', top: 0, right: 0, bottom: 88, left: 0, justifyContent: 'flex-end' },
   fabSlot: { position: 'absolute', right: 0, bottom: 16 },
   fab: {
-    height: 56,
     marginRight: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    paddingHorizontal: 16,
+    overflow: 'hidden',
     borderRadius: shape.large,
     backgroundColor: color.primaryContainer,
     elevation: elevation.level3,
   },
-  fabLabel: { ...type.labelLarge, color: color.onPrimaryContainer },
+  fabContent: { height: 56, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16 },
+  fabLabel: { ...type.labelLarge, marginLeft: 12, color: color.onPrimaryContainer },
 })
+
+// The curves of Compose's medium top app bar: its small title shows late, its color darkens early.
+const titleAlpha = Easing.bezier(0.8, 0, 0.8, 0.15).factory()
+
+const containerAlpha = Easing.bezier(0.4, 0, 1, 1).factory()
+
+const labelEntering = FadeIn.duration(duration.short4).easing(easing.standardDecelerate).delay(duration.short2)
+
+const labelExiting = FadeOut.duration(duration.short2).easing(easing.standardAccelerate)
+
+const fabGrowing = LinearTransition.duration(duration.medium4).easing(easing.emphasizedDecelerate)
+
+const fabShrinking = LinearTransition.duration(duration.short4).easing(easing.emphasizedAccelerate)
 
 /**
  * Material's extended FAB: an icon and its action. While the list scrolls it is the icon alone, to leave the products
  * in view.
  */
 const addButton = (model: Model, { on }: Handlers<Message>) => (
-  <Pressable accessibilityRole='button' accessibilityLabel='Add products' style={styles.fab} onPress={on(model.add)}>
-    {icon('barcode_scanner', color.onPrimaryContainer)}
-    {model.isInteracting ? null : <Text style={styles.fabLabel}>Add products</Text>}
-  </Pressable>
+  <Animated.View layout={model.fab._tag === 'Icon' ? fabShrinking : fabGrowing} style={styles.fab}>
+    <Pressable
+      accessibilityRole='button'
+      accessibilityLabel='Add products'
+      style={styles.fabContent}
+      onPress={on(model.add)}
+    >
+      {icon('barcode_scanner', color.onPrimaryContainer)}
+      {model.fab._tag === 'Icon' ? null : (
+        <Animated.View key='label' entering={labelEntering} exiting={labelExiting}>
+          <Text numberOfLines={1} style={styles.fabLabel}>Add products</Text>
+        </Animated.View>
+      )}
+    </Pressable>
+  </Animated.View>
 )
 
 const menuEntering = new Keyframe({
@@ -86,36 +112,44 @@ const menu = (menu: Model['menu'], { on }: Handlers<Message>) =>
     : []
 
 /**
- * The page: Material's small top app bar, the products' list under it, and the FAB with the snackbar above it. The
- * contextual bar of the selected products takes the bar's place, in its own colors.
+ * The page: Material's medium top app bar over the products' list, and the FAB with the snackbar above it. The bar's
+ * lower row, the headline, is the top of the list: it fades as it scrolls out from under the small bar, whose title
+ * and color fade in (`docs/motion.md`). The contextual bar of the selected products takes the bar's shape, in its
+ * own colors.
  */
 export const view: View<Model, Message> = (model, dispatch) => {
   const events = handlers(dispatch)
-  const { on } = events
+  const { on, onValue } = events
   const toProducts = Tea.dispatchTo(dispatch, 'Products')
   const selection = Products.selectionBar(model.products, toProducts)
   const subtitle = Products.subtitle(model.products)
   const snackbar = Products.snackbar(model.products, toProducts)
+  const title = selection === undefined ? 'Fridgy' : selection.title
+  const container = selection === undefined ? color.surface : color.secondaryContainer
   const onBar = selection === undefined ? color.onSurface : color.onSecondaryContainer
+  const onBarVariant = selection === undefined ? color.onSurfaceVariant : onBar
+  const layOutHeadline = onValue((height: number) => model.layOutHeadline(height))
+  const layOutList = onValue((height: number) => model.layOutList(height))
+  const sizeContent = onValue((height: number) => model.sizeContent(height))
+  const scrolled = onValue((top: number) => model.scroll(top))
+  // Over both rows of the bar, which are one surface. The selection's color does not change.
+  const scrolledColor = selection === undefined
+    ? <Box style={[styles.scrolled, { opacity: containerAlpha(model.collapse) }]} />
+    : null
   return (
     <SafeAreaView style={styles.page}>
       <Box style={styles.frame}>
-        <Box
-          style={[styles.bar, { backgroundColor: selection === undefined ? color.surface : color.secondaryContainer }]}
-        >
+        <Box style={[styles.bar, { backgroundColor: container }]}>
+          {scrolledColor}
           {selection === undefined ? null : selection.leading}
-          <Box style={styles.titles}>
-            <Text accessibilityRole='header' numberOfLines={1} style={[styles.title, { color: onBar }]}>
-              {selection === undefined ? 'Fridgy' : selection.title}
-            </Text>
-            {subtitle === undefined ? null : (
-              <Text
-                numberOfLines={1}
-                style={[styles.subtitle, { color: selection === undefined ? color.onSurfaceVariant : onBar }]}
-              >
-                {subtitle}
-              </Text>
-            )}
+          {/* It repeats the headline, which a screen reader reads. */}
+          <Box importantForAccessibility='no-hide-descendants' style={styles.titles}>
+            <Box style={{ opacity: titleAlpha(model.collapse) }}>
+              <Text numberOfLines={1} style={[styles.title, { color: onBar }]}>{title}</Text>
+              {subtitle === undefined
+                ? null
+                : <Text numberOfLines={1} style={[styles.subtitle, { color: onBarVariant }]}>{subtitle}</Text>}
+            </Box>
           </Box>
           {selection === undefined
             ? (
@@ -130,7 +164,33 @@ export const view: View<Model, Message> = (model, dispatch) => {
             )
             : selection.trailing}
         </Box>
-        <ScrollView overScrollMode='never' scrollEnabled={model.menu._tag === 'Closed'}>
+        <ScrollView
+          key={model.listKey}
+          overScrollMode='never'
+          scrollEnabled={model.menu._tag === 'Closed'}
+          scrollEventThrottle={16}
+          snapToOffsets={model.snap._tag === 'Snapping' ? model.snap.offsets : undefined}
+          snapToEnd={false}
+          onLayout={(event) => layOutList(event.nativeEvent.layout.height)}
+          onContentSizeChange={(_width, height) => sizeContent(height)}
+          onScroll={(event) => scrolled(event.nativeEvent.contentOffset.y)}
+          onScrollBeginDrag={on(model.startScroll)}
+          onMomentumScrollEnd={on(model.endScroll)}
+        >
+          <Box
+            style={[styles.headline, { backgroundColor: container }]}
+            onLayout={(event) => layOutHeadline(event.nativeEvent.layout.height)}
+          >
+            {scrolledColor}
+            <Box style={{ opacity: 1 - model.collapse }}>
+              <Text accessibilityRole='header' numberOfLines={1} style={[styles.headlineTitle, { color: onBar }]}>
+                {title}
+              </Text>
+              {subtitle === undefined
+                ? null
+                : <Text numberOfLines={1} style={[styles.headlineSubtitle, { color: onBarVariant }]}>{subtitle}</Text>}
+            </Box>
+          </Box>
           {Products.list(model.products, toProducts)}
         </ScrollView>
         <Box collapsable={false} pointerEvents='box-none' style={styles.snackbarLayer}>{snackbar}</Box>

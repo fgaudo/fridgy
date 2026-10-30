@@ -210,6 +210,68 @@ Designed on 2026-10-30, after the steps and the snackbars. Implemented in
 A row leaving is a layout transition of its own, a worklet that also fades it. A row that came back while it left
 opens again with the transition of the rows that stay, and is drawn opaque at once.
 
+## Home's top app bar and its FAB
+
+Designed on 2026-10-30, after the rows. Implemented in `src/app/children/home/view.tsx` and `program.ts`.
+
+### What the web build did
+
+- **The bar** was Material's medium top app bar, collapsing to the small one over the first stretch of the scroll.
+  Its color and title slid up under the icons, the title shrinking from `headline-medium` to `title-large`, and its
+  color darkened to `surface-container`. Scroll-driven animations played it, on the browser's compositor.
+- **The snap.** A scroll that ended with the bar half collapsed scrolled on to the nearer shape. The program did
+  it, with the commands `ExpandBar` and `CollapseBar` of the `Viewport` service.
+- **The FAB** lost its label while the page scrolled (from `scroll` to `scrollend`), and got it back after.
+
+### Decisions
+
+1. **The headline is the top of the list, and the platform scrolls it.** The title is not morphed, which would
+   lay it out again on every frame. It is drawn in the scroll's content, above the rows, in
+   `headlineMediumEmphasized` with its subtitle. Android scrolls it out from under the bar's icons, on the UI
+   thread. This is what Compose's medium bar does (`TwoRowsTopAppBar`): its lower row, with the large title, goes up
+   and out. The bar above the list is the small one, 64dp: its icons, and its title.
+2. **The fades follow the finger, and the program drives them.** The second case of "Who drives it": what they
+   show depends on the scroll while it runs. The state holds how far the bar has collapsed (`collapse`, from 0 to
+   1): how much of the headline is out of view. The headline fades out as `1 - collapse`. The small title fades in
+   late, and the bar's color early, by the curves of Compose's bar (`cubic-bezier(0.8, 0, 0.8, 0.15)` and
+   `(0.4, 0, 1, 1)`). The collapse is held in twentieths. Each step draws Home again, so a whole collapse is at most
+   twenty frames, and a scroll outside the headline draws none.
+3. **The scroll reaches the program as About's does.** The view sends `Scrolled({ top })` on every scroll event.
+   The state changes only when the collapse reaches another step. The headline's height is measured by its layout (`HeadlineLaidOut`), since it grows with the user's font size. Until
+   it is measured, the bar is expanded and does not snap. The `Viewport` service goes: React Native's scroll is the
+   view's, and no service observes it.
+   The list's own height (`ListLaidOut`) and its content's (`ContentSized`) are measured too. Android moves the
+   scroll with no scroll event in two cases. A list that gets shorter (products deleted) is pulled back within its
+   end: the bar then collapses no further than the list can scroll. A new size of the screen or of the font (a new
+   height of the list or the headline) put the list back at its top on the emulator, under a bar still collapsed: a
+   headline row without its title, and the small title above it. The scroll is not known after that, so the program
+   makes it known. Under a collapsed bar, such a change gives the list a new `key`: React draws it anew at its top,
+   and the bar expands. An expanded bar needs nothing.
+4. **Android snaps.** The list snaps to `[0, height of the headline]` (`snapToOffsets`, with `snapToEnd` off), so
+   that a scroll never ends with the headline cut, nor the fades halfway. No command scrolls. The price: a fling released before the
+   headline is gone stops where the headline is gone, as React Native's snap clamps it there (`flingAndSnap`).
+   A second fling scrolls on. A short list that cannot scroll as far as the headline rests where it ends.
+5. **The color is a layer's opacity.** `PlatformColor` is not a value that can be mixed, so a layer of
+   `surfaceContainer` lies under the content of both rows, the small bar and the headline, which are one surface.
+   Its opacity follows the collapse, as the web build's `bar-scrolled` did.
+6. **The selection's bar has the same shape.** Its title, "2 selected", is the headline in the list, and the small
+   title once the headline is gone. The headline and the bar take the selection's `secondaryContainer`, at rest and
+   scrolled.
+7. **The FAB loses its label from the drag to the end of the momentum.** `onScrollBeginDrag` sends
+   `ScrollStarted`, and `onMomentumScrollEnd`, which Android sends after every touch, even without a fling,
+   `ScrollEnded`. The label fades. The FAB's width follows by a layout transition, which moves only the FAB.
+8. **One headline for a screen reader.** The headline in the list is the header. The small title repeats it, and is
+   hidden from accessibility.
+
+### The choreographies
+
+The headline, the small title and the color follow the scroll (decision 2), and have no duration.
+
+| What            | Enters                                                        | Leaves                                      |
+| --------------- | ------------------------------------------------------------- | ------------------------------------------- |
+| The FAB's label | opacity from 0, `short4`, standard decelerate, after `short2` | opacity to 0, `short2`, standard accelerate |
+| The FAB's width | grows, `medium4`, emphasized decelerate                       | shrinks, `short4`, emphasized accelerate    |
+
 ## Verified, and not
 
 Seen on 2026-10-30, on the emulator's API 37 image, in builds that slowed the motion (About's to 3 s, then every
@@ -274,7 +336,26 @@ timer ×10, then at the real speed):
 - **The frames (measured).** Three deletions and undos, at the real speed: a median of 7 ms, the 90th percentile
   15 ms, 9 frames out of 138 over 16 ms.
 
+Seen on 2026-10-30, on the same image, for Home's top app bar and FAB (a debug build, on the reference screen at a
+font scale of 1.3, with seven, then twelve products, at the real speed):
+
+- **The two shapes (verified).** At rest, the headline "Fridgy" and "7 items" lie under the small bar's icon, on
+  the surface. Scrolled past it, the small bar holds "Fridgy" and "7 items" on `surfaceContainer`. A fling back to
+  the top expands it again. The selection's bar takes both shapes, in `secondaryContainer`.
+- **The fades (verified).** Halfway through a drag, the headline is half faded as it rises, the small title only
+  begins to show, and both rows have begun to darken, as one surface.
+- **The snap (verified).** Released halfway with no speed, the list went back to its top. Drags of 30dp and 60dp
+  from the top, released with some speed, ended with the headline just out of view.
+- **A fling from the top (verified).** On twelve products, it stopped with the headline just out of view, as
+  decision 4 says.
+- **A new screen and font (verified).** Collapsed on the reference screen at 1.3, then back to the emulator's own
+  screen at 1.0: the list was drawn anew at its top, the bar expanded with one title, and the list scrolled and
+  collapsed the bar again.
+- **The FAB (verified).** During a drag it is the icon alone, and it has its label back once the scroll ends.
+
 Not yet seen:
+
+- **The frames of the bar and the FAB**, and how the FAB's width moves at the real speed.
 
 - **A row arriving as Home enters.** A product added in AddProducts should open its place as AddProducts sinks
   (decision 4 of "Home's rows"); the frames were not caught.
@@ -295,7 +376,6 @@ Not yet seen:
 
 Each of these is designed before it is drawn:
 
-- Home's top app bar, collapsing with the scroll (the "fixed viewport" of the known gaps), and its FAB's label;
 - the product entering the fridge (`docs/product-flight.md`);
 - Android's predictive back, which the web build never had.
 

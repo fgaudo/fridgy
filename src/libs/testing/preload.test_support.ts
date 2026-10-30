@@ -29,6 +29,7 @@ const builder: object = new Proxy({}, { get: () => () => builder })
 mock.module('react-native-reanimated', () => ({
   default: { View: 'Animated.View' },
   Easing: { bezier: () => ({ factory: () => (x: number) => x }) },
+  FadeIn: builder,
   FadeInRight: builder,
   FadeInUp: builder,
   FadeOut: builder,
