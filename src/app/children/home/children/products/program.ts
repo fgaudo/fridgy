@@ -175,9 +175,9 @@ export type ProductStatus = Data.TaggedEnum<{
   ExpiringToday: Readonly<{ expirationDate: Day.Day; freshness: Freshness }>
   /** Good through tomorrow. */
   ExpiringTomorrow: Readonly<{ expirationDate: Day.Day; freshness: Freshness }>
-  /** Good through the day `inDays` days ahead, two at least and `SOON_DAYS` at most. */
+  /** Good through the day `inDays` days ahead, two at least and `Domain.SOON_DAYS` at most. */
   ExpiringSoon: Readonly<{ expirationDate: Day.Day; inDays: PositiveInteger.PositiveInteger; freshness: Freshness }>
-  /** Good through the day `inDays` days ahead, more than `SOON_DAYS`. */
+  /** Good through the day `inDays` days ahead, more than `Domain.SOON_DAYS`. */
   Fresh: Readonly<{ expirationDate: Day.Day; inDays: PositiveInteger.PositiveInteger; freshness: Freshness }>
 }>
 
@@ -233,9 +233,6 @@ export type Model = Readonly<{
     }>
   }>
 }>
-
-// The days ahead within which a product is to be eaten soon: a few days of a weekly shopping (`docs/freshness.md`).
-const SOON_DAYS = 3
 
 // Material's long duration, for a snackbar with an action: long enough to read it and reach for "Undo".
 const UNDO_DURATION = Duration.seconds(10)
@@ -460,7 +457,7 @@ const expirationStatusAt = (now: DateTime.Zoned, expiration: Domain.Expiration):
       return { _tag: 'ExpiringTomorrow', expirationDate, freshness }
     default: {
       const inDays = PositiveInteger.makeUnsafe(daysUntilExpiration)
-      return inDays <= SOON_DAYS
+      return inDays <= Domain.SOON_DAYS
         ? { _tag: 'ExpiringSoon', expirationDate, inDays, freshness }
         : { _tag: 'Fresh', expirationDate, inDays, freshness }
     }

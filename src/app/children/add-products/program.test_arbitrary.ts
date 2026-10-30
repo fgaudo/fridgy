@@ -1,3 +1,4 @@
+import * as Arr from 'effect/Array'
 import * as Data from 'effect/Data'
 import * as Opt from 'effect/Option'
 import * as fc from 'fast-check'
@@ -9,12 +10,13 @@ import * as Day from '#libs/dates/day.ts'
 import { digit, digits } from '#libs/dates/digit-date-entry.test_arbitrary.ts'
 import * as DigitDateEntry from '#libs/dates/digit-date-entry.ts'
 import { arbitrary as maybe } from '#libs/option/option.test_arbitrary.ts'
-import { utc, zoned } from '#libs/testing/date-time.test_arbitrary.ts'
+import { zoned } from '#libs/testing/date-time.test_arbitrary.ts'
 import type {
-  Acknowledging,
+  Arrival,
   Camera,
   DateForm,
   Form,
+  Fridge,
   Lookup,
   LookupOutcome,
   Message,
@@ -57,10 +59,43 @@ const outcome: fc.Arbitrary<LookupOutcome> = fc.oneof(
   fc.constant<LookupOutcome>({ _tag: 'Failed' }),
 )
 
-const acknowledging: fc.Arbitrary<Acknowledging> = fc.record({
-  product,
-  by: fc.constantFrom<Acknowledging['by']>('NameButton', 'DateButton'),
-})
+const arrival = (id: number): fc.Arbitrary<Arrival> =>
+  fc.record({ product, entrance: fc.constantFrom<Arrival['entrance']>('WithFridge', 'IntoOpenFridge') }).map((
+    fields,
+  ) => ({ id, ...fields }))
+
+/**
+ * The fridge, and how many products the page has added: each product in it has an id below that count, its own,
+ * and the visit is named by an id no greater than theirs.
+ */
+const fridgeAndAdded: fc.Arbitrary<readonly [Fridge, number]> = fc.oneof(
+  fc.nat({ max: 9 }).map((added) => [{ _tag: 'Away' }, added] as const),
+  fc.uniqueArray(fc.nat({ max: 9 }), { minLength: 1, maxLength: 4 }).chain((ids) => {
+    const sorted = ids.toSorted((a, b) => a - b)
+    return fc.tuple(
+      fc.tuple(...sorted.map(arrival)),
+      fc.nat({ max: sorted[0] ?? 0 }),
+      fc.constantFrom<'WithFridge' | 'Again'>('WithFridge', 'Again'),
+      fc.nat({ max: 2 }),
+    ).map(([arrivals, visit, opening, more]): readonly [Fridge, number] => [
+      Arr.isReadonlyArrayNonEmpty(arrivals) ? { _tag: 'Open', visit, opening, arrivals } : { _tag: 'Away' },
+      (sorted[sorted.length - 1] ?? 0) + 1 + more,
+    ])
+  }),
+  fc.nat({ max: 9 }).chain((id) =>
+    fc.tuple(arrival(id), fc.nat({ max: id }), fc.nat({ max: 2 })).map((
+      [last, visit, more],
+    ): readonly [Fridge, number] => [{ _tag: 'Closing', visit, last }, id + 1 + more])
+  ),
+)
+
+/** The last product added, while the fridge shows it. */
+const lastIn = (fridge: Fridge): Opt.Option<Product.Product> =>
+  fridge._tag === 'Open'
+    ? Opt.some(Arr.lastNonEmpty(fridge.arrivals).product)
+    : fridge._tag === 'Closing'
+    ? Opt.some(fridge.last.product)
+    : Opt.none()
 
 /** The days the digits name, by the rules of a product: what can be picked. */
 const offeredDates = (form: Form, digits: string) =>
@@ -83,17 +118,18 @@ export const form: fc.Arbitrary<Form> = fc.tuple(
     lookup,
     maybeNow: maybe(zoned),
     maybeOrder: maybe(order),
-    maybeAcknowledging: maybe(acknowledging),
+    fridgeAndAdded,
     snackbar,
   }),
   fc.boolean(),
-).map(([form, keepsName]): Form => {
+).map(([{ fridgeAndAdded: [fridge, added], ...fields }, keepsName]): Form => {
+  const form = { ...fields, fridge, added }
   // The name is often the product's just added, as the page keeps it after adding one; when the lookup did not
   // name the product, there is none.
   const maybeName = form.lookup._tag === 'NotFound' || form.lookup._tag === 'Failed'
     ? Opt.none()
     : keepsName
-    ? Opt.orElse(Opt.map(form.maybeAcknowledging, ({ product: { name } }) => name), () => form.maybeName)
+    ? Opt.orElse(Opt.map(lastIn(fridge), ({ name }) => name), () => form.maybeName)
     : form.maybeName
   return { ...form, maybeName }
 })
@@ -167,5 +203,6 @@ export const message: fc.Arbitrary<Message> = fc.oneof(
   fc.string().map((barcode) => Msg.Scanned({ barcode })),
   fc.tuple(barcode, outcome).map(([barcode, outcome]) => Msg.LookedUp({ barcode, outcome })),
   fc.boolean().map((succeeded) => Msg.Completed({ succeeded })),
-  utc.map((at) => Msg.AddedShown({ at })),
+  fc.nat({ max: 12 }).map((id) => Msg.Arrived({ id })),
+  fc.nat({ max: 12 }).map((id) => Msg.FridgeClosed({ id })),
 )

@@ -1,10 +1,12 @@
 import type { Dispatch } from '@fgaudo/effect-tea'
+import * as Arr from 'effect/Array'
 import * as Match from 'effect/Match'
 import * as Opt from 'effect/Option'
 import type { ReactNode } from 'react'
 import {
   ActivityIndicator,
   View as Box,
+  type ColorValue,
   Linking,
   Pressable,
   ScrollView,
@@ -12,19 +14,31 @@ import {
   Text,
   TextInput,
 } from 'react-native'
-import Animated, { FadeInRight, FadeOut, FadeOutRight, Keyframe } from 'react-native-reanimated'
+import Animated, {
+  type EntryAnimationsValues,
+  FadeInRight,
+  FadeOut,
+  FadeOutRight,
+  Keyframe,
+  type LayoutAnimation,
+  withDelay,
+  withTiming,
+} from 'react-native-reanimated'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import type { Product } from '#domain/product.ts'
 import CameraPreview from '#infrastructure/barcode-camera/BarcodeCameraPreviewNativeComponent.ts'
 import type { DateOrder } from '#libs/dates/date-order.ts'
 import * as Day from '#libs/dates/day.ts'
 import { handlers, type View } from '#libs/tea-react/tea-react.ts'
 import { color, duration, easing, elevation, icon, motion, shape, type } from '#styles'
 import type {
+  ArrivalShown,
   DateChoice,
   DateShown,
   Digit,
-  Entering,
+  Due,
   Failure,
+  FridgeShown,
   Message,
   Model,
   NameShown,
@@ -86,8 +100,69 @@ const styles = StyleSheet.create({
   supporting: { ...type.bodySmall, minHeight: 16, paddingHorizontal: 16, color: color.onSurfaceVariant },
   link: { color: color.primary, textDecorationLine: 'underline' },
   // The FAB's margin is Material's, and leaves its shadow inside the scroll, which clips what it holds.
-  room: { flex: 1, minHeight: 80, alignItems: 'center', justifyContent: 'center' },
-  added: { ...type.bodyMedium, textAlign: 'center', color: color.onSurfaceVariant },
+  room: { flex: 1, minHeight: 80 },
+  // Heard, not seen: the products' flight shows what was added.
+  announcement: { position: 'absolute', opacity: 0 },
+  // Centred above the FAB and its margin.
+  stage: { ...StyleSheet.absoluteFill, bottom: 72, alignItems: 'center', justifyContent: 'center' },
+  // 96dp tall, smaller when the keyboard leaves less room.
+  fridge: { height: 96, maxHeight: '100%', aspectRatio: 5 / 8, transformOrigin: 'bottom' },
+  body: { flex: 1, transformOrigin: 'bottom' },
+  freezer: {
+    flex: 1,
+    borderWidth: 1.5,
+    borderTopLeftRadius: shape.small,
+    borderTopRightRadius: shape.small,
+    borderColor: color.primary,
+    backgroundColor: color.primaryContainer,
+  },
+  compartment: {
+    flex: 2,
+    marginTop: -1.5,
+    borderWidth: 1.5,
+    borderBottomLeftRadius: shape.small,
+    borderBottomRightRadius: shape.small,
+    borderColor: color.primary,
+    // Lit: the lightest of the surfaces, under any disc.
+    backgroundColor: color.surfaceContainerLowest,
+  },
+  // Over the compartment's border, hinged on its right.
+  door: {
+    position: 'absolute',
+    top: -1.5,
+    right: -1.5,
+    bottom: -1.5,
+    left: -1.5,
+    borderWidth: 1.5,
+    borderBottomLeftRadius: shape.small,
+    borderBottomRightRadius: shape.small,
+    borderColor: color.primary,
+    backgroundColor: color.primaryContainer,
+    transformOrigin: 'right',
+  },
+  handle: {
+    position: 'absolute',
+    top: 8,
+    left: 8,
+    width: 4,
+    height: 16,
+    borderRadius: shape.full,
+    backgroundColor: color.onPrimaryContainer,
+  },
+  doorHandle: { top: 12, height: 24 },
+  slot: { ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'center' },
+  // Home's disc, without its ring. Where it rests, inside: the flight ends there, and never shows it.
+  disc: {
+    width: 40,
+    height: 40,
+    borderRadius: shape.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+    opacity: 0,
+    transform: [{ scale: 0.2 }],
+  },
+  discDay: { ...type.titleSmall, lineHeight: 16 },
+  discMonth: { ...type.labelSmall, lineHeight: 12 },
   scanFab: {
     position: 'absolute',
     right: 0,
@@ -207,6 +282,77 @@ const reveal = new Keyframe({
 })
   .delay(duration.medium4)
   .duration(duration.short4)
+
+// The product entering the fridge (`docs/product-flight.md`). The fridge appears, its door opens, each product's
+// disc comes in from the left edge and shrinks into it. The door closes behind the last, and the fridge settles.
+const fridgeAppearing = new Keyframe({
+  0: { opacity: 0, transform: [{ scale: 0.9 }] },
+  100: { opacity: 1, transform: [{ scale: 1 }], easing: easing.emphasizedDecelerate },
+}).duration(duration.medium2)
+
+const fridgeLeaving = new Keyframe({
+  0: { opacity: 1 },
+  100: { opacity: 0, easing: easing.standardAccelerate },
+}).duration(duration.short4)
+
+const fridgeSettling = new Keyframe({
+  0: { transform: [{ translateY: 0 }, { rotate: '0deg' }] },
+  30: { transform: [{ translateY: -6 }, { rotate: '-3deg' }], easing: easing.standard },
+  65: { transform: [{ translateY: 0 }, { rotate: '2deg' }], easing: easing.standard },
+  100: { transform: [{ translateY: 0 }, { rotate: '0deg' }], easing: easing.standard },
+})
+  .delay(duration.short4)
+  .duration(duration.medium1)
+
+// The door turns out of the fridge, in a perspective.
+const doorClosed = [{ perspective: 300 }, { rotateY: '0deg' }]
+
+const doorOpen = [{ perspective: 300 }, { rotateY: '100deg' }]
+
+const doorOpening = (from: FridgeShown & { _tag: 'Open' }) => {
+  const opening = new Keyframe({
+    0: { transform: doorClosed },
+    100: { transform: doorOpen, easing: easing.standard },
+  }).duration(duration.short4)
+  // Once the fridge has appeared.
+  return from.opening === 'WithFridge' ? opening.delay(duration.medium2) : opening
+}
+
+const doorClosing = new Keyframe({
+  0: { transform: doorOpen },
+  100: { transform: doorClosed, easing: easing.standard },
+}).duration(duration.short4)
+
+/**
+ * A disc's flight into the compartment, where it shrinks and fades in the last `short4`. It starts a window's width to
+ * the left, past the edge: its global origin reads 0 when the fridge mounts with it. One that brings the fridge waits
+ * for it to appear.
+ */
+const flight = (delay: number) => (values: EntryAnimationsValues): LayoutAnimation => {
+  'worklet'
+  const shrinking = delay + duration.long2 - duration.short4
+  const shrink = { duration: duration.short4, easing: easing.emphasizedAccelerate }
+  return {
+    initialValues: {
+      opacity: 1,
+      transform: [{ translateX: -values.windowWidth }, { scale: 1 }],
+    },
+    animations: {
+      opacity: withDelay(shrinking, withTiming(0, shrink)),
+      transform: [
+        {
+          translateX: withDelay(
+            delay,
+            withTiming(0, { duration: duration.long2, easing: easing.emphasizedDecelerate }),
+          ),
+        },
+        { scale: withDelay(shrinking, withTiming(0.2, shrink)) },
+      ],
+    },
+  }
+}
+
+const flights = { WithFridge: flight(duration.medium2), IntoOpenFridge: flight(0) } as const
 
 /** What the first step is doing, and which of its controls take. */
 type NameActivity =
@@ -359,30 +505,102 @@ const scanFab = (maybeScan: Opt.Option<Message>, dispatch: Dispatch<Message>) =>
   )
 }
 
-/**
- * What was just added, said where the fridge's animation will be, and heard by a screen reader from its live
- * region.
- */
-const added = (maybeEntering: Opt.Option<Entering>) => (
-  <Text accessibilityLiveRegion='polite' style={styles.added}>
-    {Opt.match(maybeEntering, {
-      onNone: () => '',
-      onSome: ({ product: { name, maybeExpirationDate } }) =>
-        `${name} added. ${
-          Opt.match(maybeExpirationDate, {
-            onNone: () => 'No expiration',
-            onSome: (date) => `Expires ${formatDay(date)}`,
-          })
-        }`,
+/** The last product added, heard by a screen reader from a live region, which is announced when its text changes. */
+const announcement = (fridge: FridgeShown) => (
+  <Text accessibilityLiveRegion='polite' style={styles.announcement}>
+    {Match.valueTags(fridge, {
+      Away: () => '',
+      Open: ({ arrivals }) => announced(Arr.lastNonEmpty(arrivals).product),
+      Closing: ({ last }) => announced(last.product),
     })}
   </Text>
 )
+
+const announced = ({ name, maybeExpirationDate }: Product) =>
+  `${name} added. ${
+    Opt.match(maybeExpirationDate, {
+      onNone: () => 'No expiration',
+      onSome: (date) => `Expires ${formatDay(date)}`,
+    })
+  }`
+
+/**
+ * The fridge, while products enter it: each product's disc flies into its compartment, between the inside and the
+ * door. Its body is drawn anew as it starts closing, which plays the settle.
+ */
+type Colors = Readonly<{ fill: ColorValue; text: ColorValue }>
+
+/** The colors of Home's disc, by when the product is due (`docs/freshness.md`). */
+const dueColors: Readonly<Record<Due['_tag'], Colors>> = {
+  Never: { fill: color.surfaceContainerHighest, text: color.onSurface },
+  Now: { fill: color.errorContainer, text: color.onErrorContainer },
+  Soon: { fill: color.primaryContainer, text: color.onPrimaryContainer },
+  Later: { fill: color.tertiaryContainer, text: color.onTertiaryContainer },
+}
+
+/** A product's disc, as Home's list draws it: its expiration day and month, or an infinity sign when it never ends. */
+const disc = ({ entrance, due }: ArrivalShown) => {
+  const { fill, text } = dueColors[due._tag]
+  return (
+    <Animated.View entering={flights[entrance]} style={[styles.disc, { backgroundColor: fill }]}>
+      {due._tag === 'Never'
+        ? <Text style={[type.titleMedium, { color: text }]}>∞</Text>
+        : [
+          <Text key='day' style={[styles.discDay, { color: text }]}>{Day.toParts(due.expirationDate).day}</Text>,
+          <Text key='month' style={[styles.discMonth, { color: text }]}>
+            {Day.format(due.expirationDate, { month: 'short' })}
+          </Text>,
+        ]}
+    </Animated.View>
+  )
+}
+
+const fridge = (shown: FridgeShown) =>
+  shown._tag === 'Away' ? null : (
+    <Box
+      key='stage'
+      pointerEvents='none'
+      accessibilityElementsHidden
+      importantForAccessibility='no-hide-descendants'
+      style={styles.stage}
+    >
+      <Animated.View
+        key={`fridge-${shown.visit}`}
+        entering={fridgeAppearing}
+        exiting={fridgeLeaving}
+        style={styles.fridge}
+      >
+        <Animated.View
+          key={shown._tag}
+          {...(shown._tag === 'Closing' ? { entering: fridgeSettling } : {})}
+          style={styles.body}
+        >
+          <Box style={styles.freezer}>
+            <Box style={styles.handle} />
+          </Box>
+          <Box style={styles.compartment}>
+            {shown._tag === 'Open'
+              ? shown.arrivals.map((arrival) => (
+                <Box key={`product-${arrival.id}`} style={styles.slot}>{disc(arrival)}</Box>
+              ))
+              : null}
+            <Animated.View
+              entering={shown._tag === 'Open' ? doorOpening(shown) : doorClosing}
+              style={[styles.door, { transform: shown._tag === 'Open' ? doorOpen : doorClosed }]}
+            >
+              <Box style={[styles.handle, styles.doorHandle]} />
+            </Animated.View>
+          </Box>
+        </Animated.View>
+      </Animated.View>
+    </Box>
+  )
 
 /** The first step: the name under the app bar, the two ways out docked at the bottom, the scan FAB above them. */
 const nameStep = (
   shown: NameShown,
   activity: NameActivity,
-  maybeEntering: Opt.Option<Entering>,
+  fridgeShown: FridgeShown,
   dispatch: Dispatch<Message>,
 ) => {
   const controls = activity._tag === 'Editing' ? Opt.some(activity.controls) : Opt.none()
@@ -393,7 +611,8 @@ const nameStep = (
       <ScrollView keyboardShouldPersistTaps='handled' contentContainerStyle={styles.column}>
         {nameField(shown, activity, dispatch)}
         <Box style={styles.room}>
-          {added(maybeEntering)}
+          {announcement(fridgeShown)}
+          {fridge(fridgeShown)}
           {scanFab(Opt.flatMap(controls, ({ maybeScan }) => maybeScan), dispatch)}
         </Box>
       </ScrollView>
@@ -669,17 +888,17 @@ export const view: View<Model, Message> = (model, dispatch) => {
   const layers: Layers = Match.valueTags(model, {
     Naming: (naming) => ({
       ...nothing,
-      naming: nameStep(naming, { _tag: 'Editing', controls: naming }, naming.maybeEntering, dispatch),
+      naming: nameStep(naming, { _tag: 'Editing', controls: naming }, naming.fridge, dispatch),
     }),
     LookingUp: (lookingUp) => ({
       ...nothing,
-      naming: nameStep(lookingUp, { _tag: 'LookingUp', controls: lookingUp }, Opt.none(), dispatch),
+      naming: nameStep(lookingUp, { _tag: 'LookingUp', controls: lookingUp }, { _tag: 'Away' }, dispatch),
     }),
     Scanning: (scanning) => ({ ...nothing, scanner: scanner(scanning, dispatch) }),
     Dating: (dating) => ({ ...nothing, dating: dateStep(dating, { _tag: 'Editing', controls: dating }, dispatch) }),
     Adding: (adding) =>
       Match.valueTags(adding.step, {
-        Naming: () => ({ ...nothing, naming: nameStep(adding, { _tag: 'Adding' }, adding.maybeEntering, dispatch) }),
+        Naming: ({ fridge }) => ({ ...nothing, naming: nameStep(adding, { _tag: 'Adding' }, fridge, dispatch) }),
         Dating: (date) => ({ ...nothing, dating: dateStep(date, { _tag: 'Adding' }, dispatch) }),
       }),
   })

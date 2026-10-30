@@ -55,7 +55,16 @@ export const shape = {
 export const elevation = { level1: 1, level2: 3, level3: 6, level4: 8 } as const
 
 /** Material's durations, in ms, for the motions of `docs/motion.md`. */
-export const duration = { short1: 50, short2: 100, short3: 150, short4: 200, medium4: 400 } as const
+export const duration = {
+  short1: 50,
+  short2: 100,
+  short3: 150,
+  short4: 200,
+  medium1: 250,
+  medium2: 300,
+  medium4: 400,
+  long2: 500,
+} as const
 
 /** Material's easing curves: what enters decelerates, what leaves accelerates. */
 export const easing = {

@@ -1,9 +1,9 @@
 import { describe, expect, test } from 'bun:test'
 import * as Tea from '@fgaudo/effect-tea'
 import { dispatchViolations } from '@fgaudo/effect-tea/testing'
+import * as Arr from 'effect/Array'
 import * as Channel from 'effect/Channel'
 import * as Data from 'effect/Data'
-import * as DateTime from 'effect/DateTime'
 import * as Effect from 'effect/Effect'
 import * as Equal from 'effect/Equal'
 import * as HashMap from 'effect/HashMap'
@@ -18,7 +18,7 @@ import * as Day from '#libs/dates/day.ts'
 import * as DigitDateEntry from '#libs/dates/digit-date-entry.ts'
 import { MAX_DIGITS } from '#libs/dates/digit-dates.ts'
 import { messagesSentBy } from '#libs/tea-react/view.test_support.ts'
-import { utc, zoned } from '#libs/testing/date-time.test_arbitrary.ts'
+import { zoned } from '#libs/testing/date-time.test_arbitrary.ts'
 import { assertProperty, outcomesOf } from '#libs/testing/update.test_support.ts'
 import {
   barcode,
@@ -32,14 +32,15 @@ import {
   submitting,
 } from './program.test_arbitrary.ts'
 import {
-  type Acknowledging,
   type Command,
   type DateForm,
   type Digit,
-  type Entering,
+  type Due,
   type Event,
   type Failure,
   type Form,
+  type Fridge,
+  type FridgeShown,
   type Message,
   type Model,
   program,
@@ -111,21 +112,18 @@ const productOfStep = (state: State & { _tag: 'Naming' | 'Dating' }) =>
     ? productOf(state.form, Opt.none())
     : Opt.flatMap(namedDate(state.form, state.date), (date) => productOf(state.form, Opt.some(date)))
 
-/** The control a product leaves from, into the fridge, after what added it. */
-const leavesFrom: Readonly<Record<Acknowledging['by'], Entering['from']>> = {
-  NameButton: 'NameField',
-  DateButton: 'DateHeading',
-}
-
 /** Whether the page reads the camera: while the scanner is open, until it fails. */
 const readsCamera = (state: State) => state._tag === 'Scanning' && state.form.camera === 'Available'
 
 /** Whether the page looks `barcode` up. */
 const looksUp = (state: State, barcode: string) => state._tag === 'LookingUp' && state.barcode === barcode
 
-/** Whether the page acknowledges the product created `at`. */
-const acknowledges = (state: State, at: DateTime.Utc) =>
-  Opt.exists(state.form.maybeAcknowledging, ({ product }) => DateTime.Equivalence(product.creationDate, at))
+/** The numbers of the products on their way into the fridge. */
+const onTheirWay = (fridge: Fridge): ReadonlyArray<number> =>
+  fridge._tag === 'Open' ? fridge.arrivals.map(({ id }) => id) : []
+
+/** Whether the fridge is closing behind the product added as the `id`th. */
+const closesBehind = (fridge: Fridge, id: number) => fridge._tag === 'Closing' && fridge.last.id === id
 
 /** The snackbar of a failure, after the one standing, if any. */
 const told = (form: Form, failure: Failure): Snackbar =>
@@ -135,14 +133,16 @@ const told = (form: Form, failure: Failure): Snackbar =>
 
 /**
  * A message that cannot arrive in that state: a completion while no product is being added, the camera's while
- * the page does not read it, a lookup's answer for a barcode it does not look up, or a snackbar's end without one.
+ * the page does not read it, a lookup's answer for a barcode it does not look up, a snackbar's end without one, the
+ * arrival of a product not on its way, or the fridge's closing behind a product it is not closing behind.
  */
 const cannotArrive = (msg: Message, before: State) =>
   (msg._tag === 'Completed' && before._tag !== 'Submitting')
   || (msg._tag === 'SnackbarExpired' && before.form.snackbar._tag === 'None')
   || ((msg._tag === 'Scanned' || msg._tag === 'CameraFailed') && !readsCamera(before))
   || (msg._tag === 'LookedUp' && !looksUp(before, msg.barcode))
-  || (msg._tag === 'AddedShown' && !acknowledges(before, msg.at))
+  || (msg._tag === 'Arrived' && !onTheirWay(before.form.fridge).includes(msg.id))
+  || (msg._tag === 'FridgeClosed' && !closesBehind(before.form.fridge, msg.id))
 
 const onAStep = fc.oneof(naming, dating)
 
@@ -583,28 +583,42 @@ describe('AddProducts update', () => {
       })
     })
 
-    test('the first step\'s button keeps its indicator exactly while the product it added is acknowledged', () => {
-      assertProperty([naming], (s) => {
-        const model = makeModel(s)
-        return model._tag === 'Naming'
-          && (model.acknowledging === 'Added')
-            === Opt.exists(s.form.maybeAcknowledging, ({ by }) => by === 'NameButton')
-      })
-    })
-
-    // The scanner rises over the step, and the product in flight goes with the frame.
-    test('shows the product entering the fridge exactly while it is acknowledged, from the control that added it, but under the scanner and while the lookup goes on', () => {
+    // The scanner rises over the first step and the date step covers it: neither draws the fridge.
+    // A product is made once the clock has ticked: before, nothing is on its way.
+    test('shows the fridge on the first step, while it takes input and while it adds, each product on its way due as Home tells it, and nowhere else', () => {
       assertProperty([state], (s) => {
         const model = makeModel(s)
-        const shown = model._tag === 'Naming' || model._tag === 'Dating' || model._tag === 'Adding'
-          ? model.maybeEntering
+        const shown = model._tag === 'Naming'
+          ? Opt.some(model.fridge)
+          : model._tag === 'Adding' && model.step._tag === 'Naming'
+          ? Opt.some(model.step.fridge)
           : Opt.none()
-        return Equal.equals(
-          shown,
-          s._tag === 'Scanning' || s._tag === 'LookingUp'
-            ? Opt.none()
-            : Opt.map(s.form.maybeAcknowledging, ({ product, by }): Entering => ({ product, from: leavesFrom[by] })),
-        )
+        const onFirstStep = s._tag === 'Naming' || (s._tag === 'Submitting' && s.step._tag === 'Naming')
+        const { fridge, maybeNow } = s.form
+        const expected: FridgeShown = Opt.match(maybeNow, {
+          onNone: (): FridgeShown => ({ _tag: 'Away' }),
+          onSome: (now): FridgeShown =>
+            fridge._tag === 'Open'
+              ? {
+                ...fridge,
+                arrivals: Arr.map(fridge.arrivals, (arrival) => ({
+                  ...arrival,
+                  due: Opt.match(arrival.product.maybeExpirationDate, {
+                    onNone: (): Due => ({ _tag: 'Never' }),
+                    onSome: (expirationDate): Due => {
+                      const days = Day.daysBetween(Day.fromDateTime(now), expirationDate)
+                      return days <= 1
+                        ? { _tag: 'Now', expirationDate }
+                        : days <= Product.SOON_DAYS
+                        ? { _tag: 'Soon', expirationDate }
+                        : { _tag: 'Later', expirationDate }
+                    },
+                  }),
+                })),
+              }
+              : fridge,
+        })
+        return Equal.equals(shown, onFirstStep ? Opt.some(expected) : Opt.none())
       })
     })
 
@@ -756,21 +770,41 @@ describe('AddProducts update', () => {
 
   describe('Completed', () => {
     // The second step leaves with its own transition.
-    test('success starts the next product at the name, this one\'s kept and drawn anew, acknowledged as added by the step\'s button and a vibration', () => {
+    test('success starts the next product at the name, this one\'s kept and drawn anew, sends it into the fridge by its number, and vibrates', () => {
       assertProperty([submitting], (before) => {
         const { after, commands } = step(Msg.Completed({ succeeded: true }), before)
+        const { fridge, added } = before.form
+        const coming = { id: added, product: before.product }
+        const expected: Fridge = fridge._tag === 'Away'
+          ? { _tag: 'Open', visit: added, opening: 'WithFridge', arrivals: [{ ...coming, entrance: 'WithFridge' }] }
+          : fridge._tag === 'Open'
+          ? { ...fridge, arrivals: [...fridge.arrivals, { ...coming, entrance: 'IntoOpenFridge' }] }
+          : {
+            _tag: 'Open',
+            visit: fridge.visit,
+            opening: 'Again',
+            arrivals: [{ ...coming, entrance: 'IntoOpenFridge' }],
+          }
         return Equal.equals(after, {
           _tag: 'Naming',
-          form: {
-            ...before.form,
-            replacements: before.form.replacements + 1,
-            maybeAcknowledging: Opt.some({
-              product: before.product,
-              by: before.step._tag === 'Naming' ? 'NameButton' : 'DateButton',
-            }),
-          },
+          form: { ...before.form, replacements: before.form.replacements + 1, added: added + 1, fridge: expected },
         })
           && Equal.equals(commands, [Cmd.Vibrate({ feedback: 'Confirm' })])
+      })
+    })
+
+    // Two products added within a second have the same creation date: their numbers tell them apart.
+    test('two successes in a row send both products on their way, each by a number of its own', () => {
+      assertProperty([submitting], (before) => {
+        const after = step(Msg.Completed({ succeeded: true }), before).after
+        const again = step(Msg.Completed({ succeeded: true }), {
+          _tag: 'Submitting',
+          form: after.form,
+          product: before.product,
+          step: { _tag: 'Naming' },
+        }).after
+        const ids = onTheirWay(again.form.fridge)
+        return ids.length >= 2 && new Set(ids).size === ids.length
       })
     })
 
@@ -783,24 +817,46 @@ describe('AddProducts update', () => {
     })
   })
 
-  test('AddedShown ends the acknowledgement of the product it names, in any state', () => {
-    assertProperty([state], (before) =>
-      Opt.match(before.form.maybeAcknowledging, {
-        onNone: () => true,
-        onSome: ({ product: { creationDate } }) =>
-          Equal.equals(
-            step(Msg.AddedShown({ at: creationDate }), before).after,
-            withForm(before, { maybeAcknowledging: Opt.none() }),
-          ),
-      }))
-  })
+  describe('the fridge', () => {
+    test('Arrived takes the product out of those on their way, in any state, and closes the door behind the last', () => {
+      assertProperty([state], (before) => {
+        const { fridge } = before.form
+        return fridge._tag !== 'Open' || fridge.arrivals.every((arrival) => {
+          const rest = fridge.arrivals.filter(({ id }) => id !== arrival.id)
+          const expected: Fridge = Arr.isReadonlyArrayNonEmpty(rest)
+            ? { ...fridge, arrivals: rest }
+            : { _tag: 'Closing', visit: fridge.visit, last: arrival }
+          return Equal.equals(
+            step(Msg.Arrived({ id: arrival.id }), before).after,
+            withForm(before, { fridge: expected }),
+          )
+        })
+      })
+    })
 
-  // The timer is keyed by the product it acknowledges, so its end heard for any other is a bug.
-  test('AddedShown is a defect for a product not being acknowledged', () => {
-    assertProperty([state, utc], (before, other) => {
-      fc.pre(!acknowledges(before, other))
-      expect(() => program.update(Msg.AddedShown({ at: other }))(before)).toThrow(Tea.InvariantDefect)
-      return true
+    test('FridgeClosed sends the fridge away, in any state', () => {
+      assertProperty([state], (before) => {
+        const { fridge } = before.form
+        return fridge._tag !== 'Closing'
+          || Equal.equals(
+            step(Msg.FridgeClosed({ id: fridge.last.id }), before).after,
+            withForm(before, { fridge: { _tag: 'Away' } }),
+          )
+      })
+    })
+
+    // The timers are keyed by the product they wait for, so an end heard for any other is a bug.
+    test('Arrived is a defect for a product not on its way, FridgeClosed for one the fridge is not closing behind', () => {
+      assertProperty([state, fc.nat({ max: 12 })], (before, id) => {
+        const { fridge } = before.form
+        if (!onTheirWay(fridge).includes(id)) {
+          expect(() => program.update(Msg.Arrived({ id }))(before)).toThrow(Tea.InvariantDefect)
+        }
+        if (!closesBehind(fridge, id)) {
+          expect(() => program.update(Msg.FridgeClosed({ id }))(before)).toThrow(Tea.InvariantDefect)
+        }
+        return true
+      })
     })
   })
 
@@ -826,21 +882,18 @@ describe('AddProducts update', () => {
 })
 
 // The back button is observed in every state: while a product is being added, so that it does not leave the app.
-test('the page listens to the clock, the date order and the back button, to the camera while the scanner is open until it fails, to the lookup of the barcode it looks up, and times the acknowledgement of the product added and the snackbar', () => {
-  assertProperty([state, utc], (s, other) => {
+test('the page listens to the clock, the date order and the back button, to the camera while the scanner is open until it fails, to the lookup of the barcode it looks up, and times each product on its way into the fridge, the fridge\'s closing and the snackbar', () => {
+  assertProperty([state, fc.nat({ max: 12 })], (s, id) => {
     const subscriptions = Tea.subscriptionsOf(program)(s)
     const lookups = [...HashMap.keys(subscriptions)].filter((key) => String(key).startsWith('lookup:'))
-    fc.pre(!Opt.exists(s.form.maybeAcknowledging, ({ product }) => DateTime.Equivalence(product.creationDate, other)))
+    const { fridge } = s.form
     return HashMap.has(subscriptions, 'clock')
       && HashMap.has(subscriptions, 'date-order')
       && HashMap.has(subscriptions, 'back-button')
       && HashMap.has(subscriptions, 'scanner') === readsCamera(s)
       && Equal.equals(lookups, s._tag === 'LookingUp' ? [`lookup:${s.barcode}`] : [])
-      && Opt.match(s.form.maybeAcknowledging, {
-        onNone: () => true,
-        onSome: ({ product }) => HashMap.has(subscriptions, ['acknowledging', product.creationDate]),
-      })
-      && !HashMap.has(subscriptions, ['acknowledging', other])
+      && HashMap.has(subscriptions, ['arriving', id]) === onTheirWay(fridge).includes(id)
+      && HashMap.has(subscriptions, ['closing', id]) === closesBehind(fridge, id)
       && (s.form.snackbar._tag === 'None' || HashMap.has(subscriptions, ['snackbar', s.form.snackbar.id]))
   })
 })
@@ -859,7 +912,8 @@ describe('the lookup', () => {
         lookup: { _tag: 'Idle' },
         maybeNow: Opt.none(),
         maybeOrder: Opt.none(),
-        maybeAcknowledging: Opt.none(),
+        added: 0,
+        fridge: { _tag: 'Away' },
         snackbar: { _tag: 'None' },
       },
       barcode: code,

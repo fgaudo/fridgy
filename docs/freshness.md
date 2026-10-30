@@ -16,7 +16,8 @@ color follows the days left. It follows the calendar's counts of `docs/dates.md`
 | `Fresh`                             | more             | `tertiaryContainer`                      |
 | `Everlasting`                       | none             | `surfaceContainerHighest`, with a ∞ sign |
 
-`SOON_DAYS` is 3, in the program: a few days of a weekly shopping. The program decides the case, the view only
+`SOON_DAYS` is 3, in `src/domain/product.ts`: a few days of a weekly shopping. AddProducts colors the disc of a
+product entering the fridge by it too (`docs/product-flight.md`). The program decides the case, the view only
 gives it a look.
 
 An expired product takes the error's solid role, louder than the container of a product about to expire. Its

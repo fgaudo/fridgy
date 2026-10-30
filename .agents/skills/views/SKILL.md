@@ -46,13 +46,13 @@ when nothing is named). The model holds exactly what the view draws: a field no 
 
 ## Motion
 
-The views of the web build moved. Of their motions, these draw the pages', the menu's, AddProducts' steps and scanner,
-the snackbars, Home's rows, and Home's top app bar and FAB (`docs/motion.md`); the rest is to come (`AGENTS.md`, "Known gaps"). A motion takes two choices, in this order:
+The motions are told in `docs/motion.md`, and the product entering the fridge in `docs/product-flight.md`. A motion
+takes two choices, in this order:
 
 - **Who drives it.** When the start, the end and the duration are known as the movement starts, and nothing can
   change them on the way, the platform interpolates, on the UI thread: an entering or exiting animation declared
   on the element (Reanimated's layout animations take one as a prop, which a pure view can give), on `transform`
-  and `opacity`. The state keeps the phase ("in flight": AddProducts' `acknowledging`, Products' `presence`), never
+  and `opacity`. The state keeps the phase ("open", "closing": AddProducts' `fridge`, Products' `presence`), never
   a position. When the state depends on time or on input while the movement runs (a spring that follows a finger, a
   physics, a destination that moves), the program drives it: a subscription sends `Tick({ delta })` on every frame,
   and `update` integrates it. The question is "is the destination known at the start?", never "can the platform be

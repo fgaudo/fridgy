@@ -138,6 +138,9 @@ const freshness = (currentDate: DateTime.DateTime, creationDate: DateTime.Utc, e
   return UnitInterval.makeUnsafe(Duration.toMillis(remainingDuration) / Duration.toMillis(totalDuration))
 }
 
+// The days ahead within which a product is to be eaten soon: a few days of a weekly shopping (`docs/freshness.md`).
+export const SOON_DAYS = 3
+
 /**
  * Whether a product has expired at `currentDate`, and since how many days (1 the day after its expiration day),
  * or how much of its life is left and in how many days it expires (0 on the expiration day, 1 the day before):

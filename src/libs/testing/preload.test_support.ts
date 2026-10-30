@@ -41,6 +41,7 @@ mock.module('react-native-reanimated', () => ({
   },
   LayoutAnimationConfig: 'LayoutAnimationConfig',
   LinearTransition: builder,
+  withDelay: (_delay: number, animation: unknown) => animation,
   withTiming: (to: number) => to,
 }))
 

@@ -1,12 +1,12 @@
 // The page that adds products, one after another, in two steps: the name, typed or scanned, then the expiration
 // date, typed on a keypad. The states are the first step (`Naming`, with `LookingUp` and `Scanning` over it), the
-// second (`Dating`) and the write (`Submitting`). A product added starts the next at the name. A failure is told
-// by a snackbar, which leaves on its own.
+// second (`Dating`) and the write (`Submitting`). A product added enters the fridge, and starts the next at the
+// name. A failure is told by a snackbar, which leaves on its own.
 import * as Tea from '@fgaudo/effect-tea'
 import * as Arr from 'effect/Array'
 import * as Channel from 'effect/Channel'
 import * as Data from 'effect/Data'
-import * as DateTime from 'effect/DateTime'
+import type * as DateTime from 'effect/DateTime'
 import * as Duration from 'effect/Duration'
 import * as Effect from 'effect/Effect'
 import { pipe } from 'effect/Function'
@@ -64,7 +64,9 @@ export type Form = Readonly<{
   maybeNow: Opt.Option<DateTime.Zoned>
   /** The order the digits of a date are read in, once the setting has been read. */
   maybeOrder: Opt.Option<DateOrder.DateOrder>
-  maybeAcknowledging: Opt.Option<Acknowledging>
+  /** How many products this visit of the page has added: each one's arrival in the fridge goes by its number. */
+  added: number
+  fridge: Fridge
   snackbar: Snackbar
 }>
 
@@ -80,8 +82,23 @@ export type Snackbar = Data.TaggedEnum<{
   Shown: Readonly<{ id: number; failure: Failure; entrance: Entrance }>
 }>
 
-/** The product just added, until its arrival has been shown, and the button that added it. */
-export type Acknowledging = Readonly<{ product: Product.Product; by: 'NameButton' | 'DateButton' }>
+/**
+ * A product added, on its way into the fridge (`docs/product-flight.md`). `id` is its number among those added.
+ * `entrance` says whether the fridge appeared with it, or was there already.
+ */
+export type Arrival = Readonly<{ id: number; product: Product.Product; entrance: 'WithFridge' | 'IntoOpenFridge' }>
+
+/**
+ * The fridge that products added enter: away, open while any is on its way, then closing behind the last. A visit
+ * is named by the first product's id, so that a fridge that comes back is drawn anew.
+ */
+export type Fridge = Data.TaggedEnum<{
+  Away: object
+  /** `opening` says whether the door opens as the fridge appears, or again, as it was closing. */
+  Open: Readonly<{ visit: number; opening: 'WithFridge' | 'Again'; arrivals: Arr.NonEmptyReadonlyArray<Arrival> }>
+  /** The door closes behind `last` and the fridge settles; then it goes. */
+  Closing: Readonly<{ visit: number; last: Arrival }>
+}>
 
 /** The expiration date being typed: it exists only in the second step, and starts anew with each. */
 export type DateForm = DigitDateEntry.Entry
@@ -144,8 +161,10 @@ export type Message = Data.TaggedEnum<{
   CameraFailed: object
   /** The platform's back button, while the page is shown. */
   BackPressed: object
-  /** The arrival of the product created at `at` has been shown. */
-  AddedShown: { at: DateTime.Utc }
+  /** The product added as the `id`th is in the fridge. */
+  Arrived: { id: number }
+  /** The fridge has closed behind the product added as the `id`th, and settled. */
+  FridgeClosed: { id: number }
   /** The snackbar has stood its time. */
   SnackbarExpired: object
   // From commands.
@@ -237,8 +256,27 @@ export type DateShown = Readonly<{
   }>
 }>
 
-/** The product entering the fridge, and the element whose letters become it. */
-export type Entering = Readonly<{ product: Product.Product; from: 'NameField' | 'DateHeading' }>
+/**
+ * When a product entering the fridge is due, as the disc of its row in Home's list tells it, by the days left
+ * (`docs/freshness.md`). A product just added has not expired: one whose day ends during its flight is due now.
+ */
+export type Due = Data.TaggedEnum<{
+  Never: object
+  /** Today or tomorrow. */
+  Now: Readonly<{ expirationDate: Day.Day }>
+  /** Within `Product.SOON_DAYS`. */
+  Soon: Readonly<{ expirationDate: Day.Day }>
+  Later: Readonly<{ expirationDate: Day.Day }>
+}>
+
+/** A product on its way into the fridge, as its disc. */
+export type ArrivalShown = Arrival & Readonly<{ due: Due }>
+
+export type FridgeShown = Data.TaggedEnum<{
+  Away: object
+  Open: Readonly<{ visit: number; opening: 'WithFridge' | 'Again'; arrivals: Arr.NonEmptyReadonlyArray<ArrivalShown> }>
+  Closing: Readonly<{ visit: number; last: Arrival }>
+}>
 
 export type Model = Data.TaggedEnum<{
   Naming:
@@ -254,9 +292,7 @@ export type Model = Data.TaggedEnum<{
       maybeRequestDate: Opt.Option<Message>
       /** Adds the product, never expiring, once the name is a product's. */
       maybeAdd: Opt.Option<Message>
-      /** Whether the button that adds the product keeps showing its indicator, for a moment after it added one. */
-      acknowledging: 'Added' | 'Nothing'
-      maybeEntering: Opt.Option<Entering>
+      fridge: FridgeShown
     }>
   /** The first step during the lookup: only cancelling it and leaving the page take. */
   LookingUp:
@@ -286,15 +322,15 @@ export type Model = Data.TaggedEnum<{
       maybeClearDate: Opt.Option<Message>
       /** Adds the product, expiring on the day the digits name, once they name one. */
       maybeAdd: Opt.Option<Message>
-      maybeEntering: Opt.Option<Entering>
     }>
-  /** The product is being added: the step it is added from, its controls disabled. */
+  /**
+   * The product is being added: the step it is added from, its controls disabled. On the first step, the products
+   * added before go on entering the fridge.
+   */
   Adding:
     & NameShown
     & Readonly<{
-      step: Data.TaggedEnum<{ Naming: object; Dating: DateShown }>
-      /** The flight of the product added before goes on while the next is written. */
-      maybeEntering: Opt.Option<Entering>
+      step: Data.TaggedEnum<{ Naming: Readonly<{ fridge: FridgeShown }>; Dating: DateShown }>
     }>
 }>
 
@@ -374,22 +410,89 @@ const productOfStep = (state: State & { _tag: 'Naming' | 'Dating' }) =>
 // Refreshed often, so that the creation date is close to when the user adds the product.
 const clock = every('1 second', (now) => Message.TimeChanged({ now }))
 
-// The sum of the choreography's phases (`docs/product-flight.md`): medium-2, long-2, short-4 and medium-1. The
-// view's motion must fit in it, as what it draws is removed when it ends. Under another page, the timer waits for
-// the page to be back.
-const ACKNOWLEDGING_DURATION = Duration.millis(300 + 500 + 200 + 250)
+// The phases of `docs/product-flight.md`, which the view's motion must fit in: what it draws is removed when they
+// end. A product's flight is long-2, after the fridge's appearance (medium-2) when it brings the fridge. The door
+// closes in short-4 and the fridge settles in medium-1. Under another page, the timers wait for the page to be back.
+const ARRIVAL_DURATIONS: Readonly<Record<Arrival['entrance'], Duration.Duration>> = {
+  WithFridge: Duration.millis(300 + 500),
+  IntoOpenFridge: Duration.millis(500),
+}
 
-/** Ends once the arrival of the product created at `at` has been shown. */
-const acknowledgingTimer = (at: DateTime.Utc): Tea.Subscription<Message, Deps> =>
-  after(ACKNOWLEDGING_DURATION, Message.AddedShown({ at }))
+const CLOSING_DURATION = Duration.millis(200 + 250)
+
+/** Ends once the arrival's product is in the fridge. */
+const arrivalTimer = ({ id, entrance }: Arrival): Tea.Subscription<Message, Deps> =>
+  after(ARRIVAL_DURATIONS[entrance], Message.Arrived({ id }))
+
+/** Ends once the fridge has closed behind the product added as the `id`th. */
+const closingTimer = (id: number): Tea.Subscription<Message, Deps> =>
+  after(CLOSING_DURATION, Message.FridgeClosed({ id }))
 
 /** Ends once the snackbar has stood its time. */
 const snackbarTimer: Tea.Subscription<Message, Deps> = after(SNACKBAR_DURATION, Message.SnackbarExpired())
 
 /**
- * The acknowledgement's timer is keyed by its product, the snackbar's by its id: the next one starts it anew.
+ * An arrival's timer is keyed by its id, the closing's by the last arrival's, the snackbar's by its id: the next one
+ * starts it anew.
  */
-type Key = string | readonly ['acknowledging', DateTime.Utc] | readonly ['snackbar', number]
+type Key =
+  | string
+  | readonly ['arriving', number]
+  | readonly ['closing', number]
+  | readonly ['snackbar', number]
+
+/** When a product is due, by the days from `today`. */
+const dueOf = (today: Day.Day, { maybeExpirationDate }: Product.Product): Due =>
+  Opt.match(maybeExpirationDate, {
+    onNone: (): Due => ({ _tag: 'Never' }),
+    onSome: (expirationDate): Due => {
+      const days = Day.daysBetween(today, expirationDate)
+      return days <= 1
+        ? { _tag: 'Now', expirationDate }
+        : days <= Product.SOON_DAYS
+        ? { _tag: 'Soon', expirationDate }
+        : { _tag: 'Later', expirationDate }
+    },
+  })
+
+/**
+ * The fridge with each product on its way as its disc, by the clock's day. A product is made only once the clock has
+ * ticked, so the fridge is away until then.
+ */
+const fridgeShown = (form: Form): FridgeShown =>
+  Opt.match(form.maybeNow, {
+    onNone: (): FridgeShown => ({ _tag: 'Away' }),
+    onSome: (now): FridgeShown => {
+      const { fridge } = form
+      if (fridge._tag !== 'Open') return fridge
+      const today = Day.fromDateTime(now)
+      return {
+        ...fridge,
+        arrivals: Arr.map(fridge.arrivals, (arrival) => ({ ...arrival, due: dueOf(today, arrival.product) })),
+      }
+    },
+  })
+
+/** The fridge with a product added: it appears with the first, stays open for the next, and opens again for one. */
+const admitted = (fridge: Fridge, id: number, product: Product.Product): Fridge =>
+  Match.valueTags(fridge, {
+    Away: (): Fridge => ({
+      _tag: 'Open',
+      visit: id,
+      opening: 'WithFridge',
+      arrivals: [{ id, product, entrance: 'WithFridge' }],
+    }),
+    Open: (open): Fridge => ({
+      ...open,
+      arrivals: Arr.append(open.arrivals, { id, product, entrance: 'IntoOpenFridge' }),
+    }),
+    Closing: ({ visit }): Fridge => ({
+      _tag: 'Open',
+      visit,
+      opening: 'Again',
+      arrivals: [{ id, product, entrance: 'IntoOpenFridge' }],
+    }),
+  })
 
 const dateOrder: Tea.Subscription<Message, DateOrderSetting> = Channel.unwrap(
   Effect.map(
@@ -519,7 +622,8 @@ export const program: Tea.Program<{
         lookup: { _tag: 'Idle' },
         maybeNow: Opt.none(),
         maybeOrder: Opt.none(),
-        maybeAcknowledging: Opt.none(),
+        added: 0,
+        fridge: { _tag: 'Away' },
         snackbar: { _tag: 'None' },
       },
     },
@@ -590,14 +694,27 @@ export const program: Tea.Program<{
       state: withForm(state, (form) => ({ ...form, maybeOrder: Opt.some(order) })),
     }),
 
-    AddedShown: ({ at }) => (state) =>
-      Opt.exists(
-          state.form.maybeAcknowledging,
-          ({ product }) => DateTime.Equivalence(product.creationDate, at),
-        )
-        ? { state: withForm(state, (form) => ({ ...form, maybeAcknowledging: Opt.none() })) }
+    // The door stays open while another product is on its way.
+    Arrived: ({ id }) => (state) => {
+      const { fridge } = state.form
+      const maybeArrival = fridge._tag === 'Open'
+        ? Arr.findFirst(fridge.arrivals, (arrival) => arrival.id === id)
+        : Opt.none()
+      if (fridge._tag !== 'Open' || Opt.isNone(maybeArrival)) {
+        return Tea.defect('Arrived for a product not on its way: its timer runs only while it is, keyed by its id')
+      }
+      const arrivals = Arr.filter(fridge.arrivals, (arrival) => arrival.id !== id)
+      const next: Fridge = Arr.isReadonlyArrayNonEmpty(arrivals)
+        ? { ...fridge, arrivals }
+        : { _tag: 'Closing', visit: fridge.visit, last: maybeArrival.value }
+      return { state: withForm(state, (form) => ({ ...form, fridge: next })) }
+    },
+
+    FridgeClosed: ({ id }) => (state) =>
+      state.form.fridge._tag === 'Closing' && state.form.fridge.last.id === id
+        ? { state: withForm(state, (form) => ({ ...form, fridge: { _tag: 'Away' } })) }
         : Tea.defect(
-          'AddedShown for a product not being acknowledged: its timer runs only while its product is, keyed by it',
+          'FridgeClosed while the fridge is not closing behind that product: its timer runs only while it is',
         ),
 
     // The order picked stays in use for this visit either way: only the failure to keep it is told.
@@ -686,24 +803,22 @@ export const program: Tea.Program<{
       if (state._tag !== 'Submitting') {
         return Tea.defect('Completed while no product is being added: only a completion leaves Submitting')
       }
-      const acknowledging: Acknowledging = {
-        product: state.product,
-        by: state.step._tag === 'Naming' ? 'NameButton' : 'DateButton',
-      }
+      const { form } = state
       return succeeded
         ? {
           state: {
             _tag: 'Naming',
             form: {
-              ...state.form,
-              replacements: state.form.replacements + 1,
-              maybeAcknowledging: Opt.some(acknowledging),
+              ...form,
+              replacements: form.replacements + 1,
+              added: form.added + 1,
+              fridge: admitted(form.fridge, form.added, state.product),
             },
           },
           commands: [Command.Vibrate({ feedback: 'Confirm' })],
         }
         : {
-          state: resume(state.step, told('AddFailed')(state.form)),
+          state: resume(state.step, told('AddFailed')(form)),
           commands: [Command.Vibrate({ feedback: 'Reject' })],
         }
     },
@@ -742,16 +857,16 @@ export const program: Tea.Program<{
     const looking: typeof always = state._tag === 'LookingUp'
       ? [[`lookup:${state.barcode}`, lookup(state.barcode)]]
       : []
-    const acknowledging: typeof always = Opt.match(state.form.maybeAcknowledging, {
-      onNone: () => [],
-      onSome: ({ product: { creationDate } }) => [
-        [['acknowledging', creationDate] as const, acknowledgingTimer(creationDate)],
-      ],
+    const entering: typeof always = Match.valueTags(state.form.fridge, {
+      Away: (): typeof always => [],
+      Open: ({ arrivals }): typeof always =>
+        arrivals.map((arrival) => [['arriving', arrival.id] as const, arrivalTimer(arrival)]),
+      Closing: ({ last }): typeof always => [[['closing', last.id] as const, closingTimer(last.id)]],
     })
     const telling: typeof always = state.form.snackbar._tag === 'Shown'
       ? [[['snackbar', state.form.snackbar.id] as const, snackbarTimer]]
       : []
-    return HashMap.fromIterable([...always, ...scanning, ...looking, ...acknowledging, ...telling])
+    return HashMap.fromIterable([...always, ...scanning, ...looking, ...entering, ...telling])
   },
 
   makeModel: (state): Model => {
@@ -799,10 +914,6 @@ export const program: Tea.Program<{
           : { _tag: 'NamingNothing' },
       }
     }
-    const maybeEntering = Opt.map(form.maybeAcknowledging, ({ product, by }): Entering => ({
-      product,
-      from: by === 'NameButton' ? 'NameField' : 'DateHeading',
-    }))
     return Match.valueTags(state, {
       // Both ways out need the product the name describes, never expiring: the date is that product's.
       Naming: (naming): Model => ({
@@ -814,8 +925,7 @@ export const program: Tea.Program<{
         maybeScan: form.camera === 'Available' ? Opt.some(Message.ScanRequested()) : Opt.none(),
         maybeRequestDate: Opt.map(productOfStep(naming), () => Message.DateRequested()),
         maybeAdd: Opt.map(productOfStep(naming), () => Message.Started()),
-        acknowledging: Opt.exists(form.maybeAcknowledging, ({ by }) => by === 'NameButton') ? 'Added' : 'Nothing',
-        maybeEntering,
+        fridge: fridgeShown(form),
       }),
       LookingUp: (): Model => ({
         _tag: 'LookingUp',
@@ -848,16 +958,14 @@ export const program: Tea.Program<{
           maybeEraseDigit: Opt.map(DigitDateEntry.eraseDigit(date), () => Message.DigitErased()),
           maybeClearDate: Opt.map(DigitDateEntry.clear(date), () => Message.DateCleared()),
           maybeAdd: Opt.map(productOfStep(dating), () => Message.Started()),
-          maybeEntering,
         }
       },
       Submitting: ({ step }): Model => ({
         _tag: 'Adding',
         ...nameShown,
         step: step._tag === 'Naming'
-          ? { _tag: 'Naming' }
+          ? { _tag: 'Naming', fridge: fridgeShown(form) }
           : { _tag: 'Dating', ...dateShown(step.date, () => Opt.none(), () => Opt.none()) },
-        maybeEntering,
       }),
     })
   },

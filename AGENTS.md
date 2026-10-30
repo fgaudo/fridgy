@@ -177,10 +177,6 @@ folders; "page" names a role in the UI, kept by the root's state, not a kind of 
 
 ## Known gaps (verify before working)
 
-- The move to React Native is not over. The pages, Home's menu, rows, top app bar and FAB, the steps of AddProducts, its scanner and
-  the snackbars move as the web build's did (`docs/motion.md`). Its other choreography, the product flying into the
-  fridge of `docs/product-flight.md`, is to be drawn again on React Native, and the product added is told by a line
-  of text meanwhile.
 - Opening the scanner has one to three frames of 100 to 400 ms on the emulator, as the camera starts: its rise
   loses them. Whether a phone does is not measured; if it does, the camera could start once the scanner is in
   place.

@@ -55,7 +55,10 @@ until that page covers it, so the page never rises over nothing.
    | ---------------------- | --------------------------------- |
    | `short1`               | 50 ms                             |
    | `short4`               | 200 ms                            |
+   | `medium1`              | 250 ms                            |
+   | `medium2`              | 300 ms                            |
    | `medium4`              | 400 ms                            |
+   | `long2`                | 500 ms                            |
    | `emphasizedDecelerate` | `cubic-bezier(0.05, 0.7, 0.1, 1)` |
    | `emphasizedAccelerate` | `cubic-bezier(0.3, 0, 0.8, 0.15)` |
 
@@ -383,7 +386,6 @@ Not yet seen:
 
 Each of these is designed before it is drawn:
 
-- the product entering the fridge (`docs/product-flight.md`);
 - Android's predictive back, which the web build never had.
 
 ## What to check in the emulator
