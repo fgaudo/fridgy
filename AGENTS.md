@@ -189,8 +189,6 @@ folders; "page" names a role in the UI, kept by the root's state, not a kind of 
   `Loading`. To consider: read the files only when asked, show Material's circular progress indicator while
   `Loading`, and draw the cards once the page is in place (or in a list that draws only what is in view). Opening
   About was not measured alone: every page's opening has one long frame (`docs/motion.md`, "The frames").
-- The freshness of a product is drawn in steps, the nearest role (`freshnessColors`, in Home's `products`), where
-  the web build mixed the roles: whether that is enough is the author's call.
 - A debug build takes about five seconds on the emulator before its JavaScript runs; a release, a tenth of a
   second. The release has been run on the emulator only, signed with the debug key.
 - The vibrations (`docs/haptics.md`) have not been felt on a phone: whether each pattern feels like the constant

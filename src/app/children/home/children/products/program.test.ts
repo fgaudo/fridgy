@@ -1,17 +1,19 @@
 import { describe, expect, test } from 'bun:test'
 import * as Tea from '@fgaudo/effect-tea'
 import * as Data from 'effect/Data'
-import type * as DateTime from 'effect/DateTime'
+import * as DateTime from 'effect/DateTime'
 import * as Equal from 'effect/Equal'
 import * as HashMap from 'effect/HashMap'
 import * as HashSet from 'effect/HashSet'
 import * as Opt from 'effect/Option'
 import * as Result from 'effect/Result'
 import * as fc from 'fast-check'
+import * as ProductArbitrary from '#domain/product.test_arbitrary.ts'
 import * as Domain from '#domain/product.ts'
+import * as Day from '#libs/dates/day.ts'
 import * as PositiveInteger from '#libs/numbers/positive-integer.ts'
 import { arbitrary as maybe } from '#libs/option/option.test_arbitrary.ts'
-import { utc, zoned } from '#libs/testing/date-time.test_arbitrary.ts'
+import { utc, zone, zoned } from '#libs/testing/date-time.test_arbitrary.ts'
 import { assertProperty, onlyChanged, outcomesOf } from '#libs/testing/update.test_support.ts'
 import {
   deleting,
@@ -622,33 +624,60 @@ describe('Products model', () => {
     })
   })
 
-  test('a valid product expired yesterday the day after its expiration day, is stale later, expiring today on that day, tomorrow on the day before, fresh earlier, and keeps the domain\'s freshness', () => {
-    assertProperty([shown], (s) => {
-      const items = s.list._tag === 'Loaded' ? s.list.items : []
-      return listedRows(s).every((row, index) => {
-        const item = items[index]
-        if (row._tag !== 'Valid' || item?._tag !== 'Valid') return row._tag === item?._tag
-        return Opt.match(Domain.maybeExpiration(item.product), {
-          onNone: () => row.status._tag === 'Everlasting',
-          onSome: (expiration) => {
-            // A product that expires is shown only at a known time.
-            const status = Domain.expirationStatus(Opt.getOrThrow(s.maybeNow))(expiration)
-            if (status.hasExpired) {
-              return status.daysSinceExpiration === 1
-                ? row.status._tag === 'ExpiredYesterday'
-                : row.status._tag === 'Stale' && row.status.daysAgo === status.daysSinceExpiration
-            }
-            const { daysUntilExpiration } = status
-            return daysUntilExpiration === 0
-              ? row.status._tag === 'ExpiringToday' && row.status.freshness === status.freshness
-              : daysUntilExpiration === 1
-              ? row.status._tag === 'ExpiringTomorrow' && row.status.freshness === status.freshness
-              : row.status._tag === 'Fresh' && row.status.inDays === daysUntilExpiration
-                && row.status.freshness === status.freshness
-          },
-        })
+  /** A loaded list of one product, at a time within a week before its expiration day, where the statuses differ. */
+  const dueWithinAWeek = fc.tuple(
+    state,
+    ProductArbitrary.arbitrary.filter((product) => Opt.isSome(product.maybeExpirationDate)),
+    zone,
+    fc.integer({ min: 0, max: 6 }),
+    // Less than the shortest day a clock change makes.
+    fc.integer({ min: 0, max: 22 * 60 }),
+  ).chain(([base, product, timeZone, daysBefore, minutes]) => {
+    const expirationDate = Opt.getOrThrow(product.maybeExpirationDate)
+    const now = Day.startIn(Day.addDays(expirationDate, -daysBefore), timeZone).pipe(DateTime.add({ minutes }))
+    return loadedOf([{ _tag: 'Valid', id: '1', product }]).map((list): State => ({
+      ...base,
+      list,
+      maybeNow: Opt.some(now),
+    }))
+  })
+
+  /** Whether each listed row of a valid product has the status the domain gives it at the state's time. */
+  const hasDomainStatus = (s: State) => {
+    const items = s.list._tag === 'Loaded' ? s.list.items : []
+    return listedRows(s).every((row, index) => {
+      const item = items[index]
+      if (row._tag !== 'Valid' || item?._tag !== 'Valid') return row._tag === item?._tag
+      return Opt.match(Domain.maybeExpiration(item.product), {
+        onNone: () => row.status._tag === 'Everlasting',
+        onSome: (expiration) => {
+          // A product that expires is shown only at a known time.
+          const status = Domain.expirationStatus(Opt.getOrThrow(s.maybeNow))(expiration)
+          if (status.hasExpired) {
+            return status.daysSinceExpiration === 1
+              ? row.status._tag === 'ExpiredYesterday'
+              : row.status._tag === 'Stale' && row.status.daysAgo === status.daysSinceExpiration
+          }
+          const { daysUntilExpiration } = status
+          return daysUntilExpiration === 0
+            ? row.status._tag === 'ExpiringToday' && row.status.freshness === status.freshness
+            : daysUntilExpiration === 1
+            ? row.status._tag === 'ExpiringTomorrow' && row.status.freshness === status.freshness
+            : (row.status._tag === 'ExpiringSoon' || row.status._tag === 'Fresh')
+              && row.status._tag === (daysUntilExpiration <= 3 ? 'ExpiringSoon' : 'Fresh')
+              && row.status.inDays === daysUntilExpiration
+              && row.status.freshness === status.freshness
+        },
       })
     })
+  }
+
+  test('a valid product expired yesterday the day after its expiration day, is stale later, expiring today on that day, tomorrow on the day before, soon up to three days ahead, fresh earlier, and keeps the domain\'s freshness', () => {
+    assertProperty([shown], hasDomainStatus)
+  })
+
+  test('a valid product within a week of its expiration day has the status of the days left, soon up to three days ahead', () => {
+    assertProperty([dueWithinAWeek], hasDomainStatus)
   })
 
   // Whatever the list shows: the last products may have just been deleted.

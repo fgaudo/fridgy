@@ -13,6 +13,7 @@ import Animated, {
   LinearTransition,
   withTiming,
 } from 'react-native-reanimated'
+import Svg, { Circle } from 'react-native-svg'
 import * as Day from '#libs/dates/day.ts'
 import { type Handlers, handlers } from '#libs/tea-react/tea-react.ts'
 import { color, duration, easing, elevation, icon, motion, shape, type } from '#styles'
@@ -29,9 +30,15 @@ import type {
 
 type Look = 'Plain' | 'Error'
 
+const RING_WIDTH = 3
+
+// The disc, 40dp, a gap of 2dp, and the ring.
+const AVATAR_SLOT = 40 + 2 * (2 + RING_WIDTH)
+
 const styles = StyleSheet.create({
   row: { overflow: 'hidden' },
   rowClosed: { height: 0, opacity: 0 },
+  avatarSlot: { width: AVATAR_SLOT, height: AVATAR_SLOT, alignItems: 'center', justifyContent: 'center' },
   avatar: { width: 40, height: 40, borderRadius: shape.full, alignItems: 'center', justifyContent: 'center' },
   avatarDay: { ...type.titleSmall, lineHeight: 16 },
   avatarMonth: { ...type.labelSmall, lineHeight: 12 },
@@ -84,20 +91,59 @@ const neutral: Colors = { fill: color.surfaceContainerHighest, text: color.onSur
 
 const errorColors: Colors = { fill: color.errorContainer, text: color.onErrorContainer }
 
-/**
- * The colors of a product's freshness, green through orange to red: the role nearest to its life left, where the
- * web build mixed the two around it. The green holds through the first quarter, the red from the last.
- */
-const freshnessColors = (freshness: number): Colors =>
-  freshness >= 0.625
-    ? { fill: color.tertiaryContainer, text: color.onTertiaryContainer }
-    : freshness >= 0.375
-    ? { fill: color.primaryContainer, text: color.onPrimaryContainer }
-    : errorColors
+/** An expired product's: the error's solid role, louder than the container that a product about to expire has. */
+const expiredColors: Colors = { fill: color.error, text: color.onError }
 
-/** A disc, the list item's leading avatar. */
-const disc = ({ fill, text }: Colors, content: (tint: ColorValue) => ReactNode) => (
-  <Box style={[styles.avatar, { backgroundColor: fill }]}>{content(text)}</Box>
+/** The look of a product that has not expired, by its days left: a disc in a role's container, an arc in the role. */
+type Urgency = Readonly<{ disc: Colors; arc: ColorValue }>
+
+const dueNow: Urgency = { disc: errorColors, arc: color.error }
+
+const dueSoon: Urgency = { disc: { fill: color.primaryContainer, text: color.onPrimaryContainer }, arc: color.primary }
+
+const dueLater: Urgency = {
+  disc: { fill: color.tertiaryContainer, text: color.onTertiaryContainer },
+  arc: color.tertiary,
+}
+
+/** A disc, the list item's leading avatar, in a slot that leaves room for a ring. */
+const disc = ({ fill, text }: Colors, content: (tint: ColorValue) => ReactNode, ring: ReactNode = null) => (
+  <Box style={styles.avatarSlot}>
+    {ring}
+    <Box style={[styles.avatar, { backgroundColor: fill }]}>{content(text)}</Box>
+  </Box>
+)
+
+const RING_RADIUS = (AVATAR_SLOT - RING_WIDTH) / 2
+
+const RING_LENGTH = 2 * Math.PI * RING_RADIUS
+
+/**
+ * Material's determinate circular progress indicator around the disc: the share of the product's time in the fridge
+ * still ahead, from twelve o'clock, clockwise (`docs/freshness.md`).
+ */
+const ring = (freshness: number, arc: ColorValue) => (
+  <Svg width={AVATAR_SLOT} height={AVATAR_SLOT} style={StyleSheet.absoluteFill}>
+    <Circle
+      cx={AVATAR_SLOT / 2}
+      cy={AVATAR_SLOT / 2}
+      r={RING_RADIUS}
+      fill='none'
+      stroke={color.secondaryContainer}
+      strokeWidth={RING_WIDTH}
+    />
+    <Circle
+      cx={AVATAR_SLOT / 2}
+      cy={AVATAR_SLOT / 2}
+      r={RING_RADIUS}
+      fill='none'
+      stroke={arc}
+      strokeWidth={RING_WIDTH}
+      strokeLinecap='round'
+      strokeDasharray={[RING_LENGTH * freshness, RING_LENGTH]}
+      transform={`rotate(-90 ${AVATAR_SLOT / 2} ${AVATAR_SLOT / 2})`}
+    />
+  </Svg>
 )
 
 /** The expiration day and month. */
@@ -108,18 +154,42 @@ const expirationDay = (expirationDate: Day.Day) => (tint: ColorValue) => [
   </Text>,
 ]
 
-/** The expiration day on a disc colored by the life left; an infinity sign on a neutral disc when it never ends. */
+const dueDisc = ({ disc: colors, arc }: Urgency, expirationDate: Day.Day, freshness: number) =>
+  disc(colors, expirationDay(expirationDate), ring(freshness, arc))
+
+/**
+ * The expiration day on a disc colored by the days left, ringed by the time left; in the error's solid colors once
+ * expired; an infinity sign on a neutral disc when it never ends.
+ */
 const freshnessBadge = (status: ProductStatus): ReactNode => {
   switch (status._tag) {
     case 'Everlasting':
       return disc(neutral, (tint) => <Text style={[type.titleMedium, { color: tint }]}>∞</Text>)
     case 'Stale':
     case 'ExpiredYesterday':
-      return disc(freshnessColors(0), expirationDay(status.expirationDate))
+      return disc(expiredColors, expirationDay(status.expirationDate))
     case 'ExpiringToday':
     case 'ExpiringTomorrow':
+      return dueDisc(dueNow, status.expirationDate, status.freshness)
+    case 'ExpiringSoon':
+      return dueDisc(dueSoon, status.expirationDate, status.freshness)
     case 'Fresh':
-      return disc(freshnessColors(status.freshness), expirationDay(status.expirationDate))
+      return dueDisc(dueLater, status.expirationDate, status.freshness)
+  }
+}
+
+/** What TalkBack reads of the ring, which draws no text. */
+const timeLeftText = (status: ProductStatus): Opt.Option<string> => {
+  switch (status._tag) {
+    case 'Everlasting':
+    case 'Stale':
+    case 'ExpiredYesterday':
+      return Opt.none()
+    case 'ExpiringToday':
+    case 'ExpiringTomorrow':
+    case 'ExpiringSoon':
+    case 'Fresh':
+      return Opt.some(`${Math.round(status.freshness * 100)}% of its time left`)
   }
 }
 
@@ -135,6 +205,7 @@ const supportingText = (status: ProductStatus) => {
       return 'Expires today'
     case 'ExpiringTomorrow':
       return 'Expires tomorrow'
+    case 'ExpiringSoon':
     case 'Fresh':
       return `Expires in ${status.inDays} days`
   }
@@ -202,6 +273,7 @@ const item = (
   badge: ReactNode,
   headline: string,
   supporting: string,
+  maybeNote: Opt.Option<string>,
   look: Look,
   { on }: Handlers<Message>,
 ) => (
@@ -212,6 +284,7 @@ const item = (
     style={[styles.row, presence === 'Leaving' ? styles.rowClosed : undefined]}
   >
     <Pressable
+      accessibilityLabel={[headline, supporting, ...Opt.toArray(maybeNote)].join(', ')}
       accessibilityState={{ selected: selection.isSelected }}
       style={({ pressed }) => [
         styles.item,
@@ -259,6 +332,7 @@ const invalidItem = (
     errorBadge('error'),
     Opt.getOrElse(product.maybeName, () => 'Unnamed product'),
     'Not a valid product',
+    Opt.none(),
     'Error',
     events,
   )
@@ -278,6 +352,7 @@ const corruptItem = (
     errorBadge('broken_image'),
     Opt.getOrElse(product.maybeName, () => 'Unnamed product'),
     'Cannot be read',
+    Opt.none(),
     'Error',
     events,
   )
@@ -295,6 +370,7 @@ const validItem = (
     freshnessBadge(product.status),
     product.name,
     supportingText(product.status),
+    timeLeftText(product.status),
     product.status._tag === 'Stale' || product.status._tag === 'ExpiredYesterday' ? 'Error' : 'Plain',
     events,
   )

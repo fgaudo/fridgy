@@ -26,7 +26,7 @@ The debug APK is `android/app/build/outputs/apk/debug/app-debug.apk`, signed wit
 the release, an unsigned AAB in `android/app/build/outputs/bundle/release/`, minified by R8. Gradle runs on
 Android Studio's JDK (`JAVA_HOME` set to its `jbr`) and installs the NDK the native modules need on the first build.
 `-PreactNativeArchitectures=x86_64` builds for the emulator only, in a fraction of the time. The native modules
-(op-sqlite, the safe area) are linked from `node_modules` by React Native's CLI, which Gradle runs from the
+(op-sqlite, the safe area, the SVG of Home's rings) are linked from `node_modules` by React Native's CLI, which Gradle runs from the
 repository's root. The app's own, the camera that reads barcodes (CameraX and zxing-cpp, in
 `android/app/src/main/java/net/gaudo/fridgy/barcodecamera`, registered in `MainApplication.kt`), is written on the
 interfaces that React Native's codegen makes from the specs in `src/infrastructure/barcode-camera`

@@ -45,3 +45,5 @@ mock.module('react-native-reanimated', () => ({
 }))
 
 mock.module('react-native-safe-area-context', () => ({ SafeAreaView: 'SafeAreaView' }))
+
+mock.module('react-native-svg', () => ({ default: 'Svg', Circle: 'Circle' }))
