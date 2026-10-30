@@ -3,11 +3,12 @@ import * as Match from 'effect/Match'
 import * as Opt from 'effect/Option'
 import type { ReactNode } from 'react'
 import { ActivityIndicator, View as Box, Pressable, ScrollView, StyleSheet, Text, TextInput } from 'react-native'
+import Animated from 'react-native-reanimated'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import type { DateOrder } from '#libs/dates/date-order.ts'
 import * as Day from '#libs/dates/day.ts'
 import { handlers, type View } from '#libs/tea-react/tea-react.ts'
-import { color, elevation, icon, shape, type } from '#styles'
+import { color, elevation, icon, motion, shape, type } from '#styles'
 import type { DateChoice, Digit, Failure, FieldsShown, Message, Model, OrderChoice, Snackbar } from './program.ts'
 
 // No weekday: a date read off a package has none, and two chips must fit a row of the narrowest phone.
@@ -378,9 +379,15 @@ const failureTexts: Readonly<Record<Failure, string>> = {
 /** Material's snackbar 16dp above the docked "Save" button, keyed by its id so that the next one is drawn anew. */
 const snackbar = (shown: Snackbar) =>
   shown._tag === 'None' ? null : (
-    <Box key={`snackbar-${shown.id}`} accessibilityLiveRegion='polite' style={styles.snackbar}>
+    <Animated.View
+      key={`snackbar-${shown.id}`}
+      entering={motion.snackbar.entering[shown.entrance]}
+      exiting={motion.snackbar.exiting}
+      accessibilityLiveRegion='polite'
+      style={styles.snackbar}
+    >
       <Text style={styles.snackbarText}>{failureTexts[shown.failure]}</Text>
-    </Box>
+    </Animated.View>
   )
 
 /** Material's full-screen dialog, as a page over the one that opened it. */

@@ -29,13 +29,16 @@ const builder: object = new Proxy({}, { get: () => () => builder })
 mock.module('react-native-reanimated', () => ({
   default: { View: 'Animated.View' },
   Easing: { bezier: () => ({ factory: () => (x: number) => x }) },
+  FadeInRight: builder,
   FadeInUp: builder,
   FadeOut: builder,
   FadeOutDown: builder,
+  FadeOutRight: builder,
   // A function that returns an object gives that object to `new`.
   Keyframe: function Keyframe() {
     return builder
   },
+  LayoutAnimationConfig: 'LayoutAnimationConfig',
   withTiming: (to: number) => to,
 }))
 

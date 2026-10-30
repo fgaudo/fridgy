@@ -12,12 +12,13 @@ import {
   Text,
   TextInput,
 } from 'react-native'
+import Animated, { FadeInRight, FadeOut, FadeOutRight, Keyframe } from 'react-native-reanimated'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import CameraPreview from '#infrastructure/barcode-camera/BarcodeCameraPreviewNativeComponent.ts'
 import type { DateOrder } from '#libs/dates/date-order.ts'
 import * as Day from '#libs/dates/day.ts'
 import { handlers, type View } from '#libs/tea-react/tea-react.ts'
-import { color, elevation, icon, shape, type } from '#styles'
+import { color, duration, easing, elevation, icon, motion, shape, type } from '#styles'
 import type {
   DateChoice,
   DateShown,
@@ -57,6 +58,9 @@ const styles = StyleSheet.create({
   page: { flex: 1, backgroundColor: color.surface },
   // What an absolute position is measured from: inside the bars.
   frame: { flex: 1 },
+  layer: StyleSheet.absoluteFill,
+  // Opaque: it covers the step under it.
+  step: { ...StyleSheet.absoluteFill, backgroundColor: color.surface },
   bar: { height: 64, flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 4 },
   title: { ...type.titleLargeEmphasized, flex: 1, paddingHorizontal: 4, color: color.onSurface },
   iconButton: { width: 48, height: 48, borderRadius: shape.full, alignItems: 'center', justifyContent: 'center' },
@@ -169,6 +173,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: color.inverseOnSurface,
   },
+  cover: { ...StyleSheet.absoluteFill, opacity: 0, backgroundColor: color.surface },
   scannerHint: { minHeight: 56, justifyContent: 'center', paddingHorizontal: 24 },
   snackbar: {
     position: 'absolute',
@@ -183,6 +188,25 @@ const styles = StyleSheet.create({
   },
   snackbarText: { ...type.bodyMedium, paddingVertical: 14, color: color.inverseOnSurface },
 })
+
+// The choreographies of `docs/motion.md`. The name step is held under the date step or the scanner until it covers it.
+const heldUnder = FadeOut.delay(duration.medium4).duration(duration.short1)
+
+// Material's shared axis X.
+const sharedAxis = {
+  entering: FadeInRight.withInitialValues({ opacity: 0, translateX: 32 })
+    .duration(duration.medium4)
+    .easing(easing.emphasizedDecelerate),
+  exiting: FadeOutRight.duration(duration.short4).easing(easing.emphasizedAccelerate),
+}
+
+// The scanner rises opaque, then shows the camera.
+const reveal = new Keyframe({
+  0: { opacity: 1 },
+  100: { opacity: 0, easing: easing.standard },
+})
+  .delay(duration.medium4)
+  .duration(duration.short4)
 
 /** What the first step is doing, and which of its controls take. */
 type NameActivity =
@@ -363,34 +387,36 @@ const nameStep = (
 ) => {
   const controls = activity._tag === 'Editing' ? Opt.some(activity.controls) : Opt.none()
   const maybeClose = activity._tag === 'Adding' ? Opt.none() : Opt.some(activity.controls.close)
-  return [
-    <Box key='bar'>{appBar('Add products', 'close', 'Close', maybeClose, dispatch)}</Box>,
-    <ScrollView key='naming' keyboardShouldPersistTaps='handled' contentContainerStyle={styles.column}>
-      {nameField(shown, activity, dispatch)}
-      <Box style={styles.room}>
-        {added(maybeEntering)}
-        {scanFab(Opt.flatMap(controls, ({ maybeScan }) => maybeScan), dispatch)}
-      </Box>
-    </ScrollView>,
-    <Box key='dock' style={styles.dock}>
-      {button(
-        'Set expiration',
-        Opt.flatMap(controls, ({ maybeRequestDate }) => maybeRequestDate),
-        false,
-        'Filled',
-        dispatch,
-      )}
-      {activity._tag === 'LookingUp'
-        ? button('Cancel', Opt.some(activity.controls.cancelLookup), false, 'Text', dispatch)
-        : button(
-          'Add without date',
-          Opt.flatMap(controls, ({ maybeAdd }) => maybeAdd),
-          activity._tag === 'Adding',
-          'Text',
+  return (
+    <Animated.View key='naming' exiting={heldUnder} style={styles.step}>
+      {appBar('Add products', 'close', 'Close', maybeClose, dispatch)}
+      <ScrollView keyboardShouldPersistTaps='handled' contentContainerStyle={styles.column}>
+        {nameField(shown, activity, dispatch)}
+        <Box style={styles.room}>
+          {added(maybeEntering)}
+          {scanFab(Opt.flatMap(controls, ({ maybeScan }) => maybeScan), dispatch)}
+        </Box>
+      </ScrollView>
+      <Box style={styles.dock}>
+        {button(
+          'Set expiration',
+          Opt.flatMap(controls, ({ maybeRequestDate }) => maybeRequestDate),
+          false,
+          'Filled',
           dispatch,
         )}
-    </Box>,
-  ]
+        {activity._tag === 'LookingUp'
+          ? button('Cancel', Opt.some(activity.controls.cancelLookup), false, 'Text', dispatch)
+          : button(
+            'Add without date',
+            Opt.flatMap(controls, ({ maybeAdd }) => maybeAdd),
+            activity._tag === 'Adding',
+            'Text',
+            dispatch,
+          )}
+      </Box>
+    </Animated.View>
+  )
 }
 
 /** Material's segmented button of the orders. Its row stays empty until the order is known: nothing moves then. */
@@ -546,49 +572,58 @@ const keypad = (activity: DateActivity, dispatch: Dispatch<Message>) => {
 /** The second step, laid out as a dialer: the fields read from the top, the keypad and the button at the bottom. */
 const dateStep = (shown: DateShown, activity: DateActivity, dispatch: Dispatch<Message>) => {
   const controls = activity._tag === 'Editing' ? Opt.some(activity.controls) : Opt.none()
-  return [
-    <Box key='bar'>
+  return (
+    <Animated.View key='dating' {...sharedAxis} style={styles.step}>
       {appBar('Add products', 'arrow_back', 'Back', Opt.map(controls, ({ back }) => back), dispatch)}
-    </Box>,
-    <ScrollView key='dating' contentContainerStyle={styles.dateColumn}>
-      <Box style={styles.heading}>
-        <Text style={styles.headingLabel}>Product</Text>
-        <Text accessibilityRole='header' numberOfLines={2} style={styles.headingName}>{shown.name}</Text>
+      <ScrollView contentContainerStyle={styles.dateColumn}>
+        <Box style={styles.heading}>
+          <Text style={styles.headingLabel}>Product</Text>
+          <Text accessibilityRole='header' numberOfLines={2} style={styles.headingName}>{shown.name}</Text>
+        </Box>
+        {orderSegments(shown, activity, dispatch)}
+        {dateField(shown, activity)}
+        {strip(shown, activity, dispatch)}
+        {keypad(activity, dispatch)}
+      </ScrollView>
+      <Box style={styles.dock}>
+        {button(
+          'Add',
+          Opt.flatMap(controls, ({ maybeAdd }) => maybeAdd),
+          activity._tag === 'Adding',
+          'Filled',
+          dispatch,
+        )}
       </Box>
-      {orderSegments(shown, activity, dispatch)}
-      {dateField(shown, activity)}
-      {strip(shown, activity, dispatch)}
-      {keypad(activity, dispatch)}
-    </ScrollView>,
-    <Box key='dock' style={styles.dock}>
-      {button('Add', Opt.flatMap(controls, ({ maybeAdd }) => maybeAdd), activity._tag === 'Adding', 'Filled', dispatch)}
-    </Box>,
-  ]
+    </Animated.View>
+  )
 }
 
 /**
  * Material's full-screen dialog over the first step: the camera under a frame to hold the code in, or why there is
- * none. The camera draws itself while the program reads it.
+ * none. The camera draws itself while the program reads it, under a cover that fades once the dialog is in place.
  */
-const scanner = (model: Model & { _tag: 'Scanning' }, dispatch: Dispatch<Message>) => [
-  <Box key='bar'>{appBar('Scan barcode', 'close', 'Close', Opt.some(model.closeScanner), dispatch)}</Box>,
-  ...(model.camera === 'Available'
-    ? [
-      <Box key='camera' style={styles.scanner}>
-        <CameraPreview style={StyleSheet.absoluteFill} />
-        <Box style={styles.viewfinder} />
-      </Box>,
-      <Box key='hint' style={styles.scannerHint}>
-        <Text style={styles.scannerText}>Point the camera at a barcode</Text>
-      </Box>,
-    ]
-    : [
-      <Box key='unavailable' style={styles.scanner}>
-        {icon('no_photography', color.onSurfaceVariant, { fontSize: 36, lineHeight: 36 })}
-        <Text style={styles.scannerText}>Camera not available. Type the name</Text>
-      </Box>,
-    ]),
-]
+const scanner = (model: Model & { _tag: 'Scanning' }, dispatch: Dispatch<Message>) => (
+  <Animated.View key='scanner' {...motion.fullScreenDialog} style={styles.step}>
+    {appBar('Scan barcode', 'close', 'Close', Opt.some(model.closeScanner), dispatch)}
+    {model.camera === 'Available'
+      ? [
+        <Box key='camera' style={styles.scanner}>
+          <CameraPreview style={StyleSheet.absoluteFill} />
+          <Animated.View entering={reveal} pointerEvents='none' style={styles.cover} />
+          <Box style={styles.viewfinder} />
+        </Box>,
+        <Box key='hint' style={styles.scannerHint}>
+          <Text style={styles.scannerText}>Point the camera at a barcode</Text>
+        </Box>,
+      ]
+      : (
+        <Box key='unavailable' style={styles.scanner}>
+          {icon('no_photography', color.onSurfaceVariant, { fontSize: 36, lineHeight: 36 })}
+          <Text style={styles.scannerText}>Camera not available. Type the name</Text>
+        </Box>
+      )}
+  </Animated.View>
+)
 
 const failureTexts: Readonly<Record<Failure, string>> = {
   AddFailed: 'Couldn\'t add the product',
@@ -601,37 +636,64 @@ const failureTexts: Readonly<Record<Failure, string>> = {
  */
 const clearances = { Naming: 196, Dating: 88 } as const
 
-/** Material's snackbar 16dp above the controls docked at the bottom of the step shown, drawn anew for each id. */
+/**
+ * Material's snackbar 16dp above the controls docked at the bottom of the step shown, drawn anew for each id. One
+ * that leaves stays where it stood.
+ */
 const snackbar = (shown: Snackbar, step: keyof typeof clearances) =>
   shown._tag === 'None' ? null : (
-    <Box
+    <Animated.View
       key={`snackbar-${shown.id}`}
+      entering={motion.snackbar.entering[shown.entrance]}
+      exiting={motion.snackbar.exiting}
       accessibilityLiveRegion='polite'
       style={[styles.snackbar, { bottom: clearances[step] }]}
     >
       <Text style={styles.snackbarText}>{failureTexts[shown.failure]}</Text>
-    </Box>
+    </Animated.View>
   )
 
-/** Material's full-screen dialog, as a page over the one that opened it: one step at a time. */
-export const view: View<Model, Message> = (model, dispatch) => (
-  <SafeAreaView style={styles.page}>
-    <Box style={styles.frame}>
-      {Match.valueTags(model, {
-        Naming: (naming) => nameStep(naming, { _tag: 'Editing', controls: naming }, naming.maybeEntering, dispatch),
-        LookingUp: (lookingUp) => nameStep(lookingUp, { _tag: 'LookingUp', controls: lookingUp }, Opt.none(), dispatch),
-        Scanning: (scanning) => scanner(scanning, dispatch),
-        Dating: (dating) => dateStep(dating, { _tag: 'Editing', controls: dating }, dispatch),
-        Adding: (adding) =>
-          Match.valueTags(adding.step, {
-            Naming: () => nameStep(adding, { _tag: 'Adding' }, adding.maybeEntering, dispatch),
-            Dating: (date) => dateStep(date, { _tag: 'Adding' }, dispatch),
-          }),
-      })}
-      {snackbar(
-        model.snackbar,
-        model._tag === 'Dating' || (model._tag === 'Adding' && model.step._tag === 'Dating') ? 'Dating' : 'Naming',
-      )}
-    </Box>
-  </SafeAreaView>
+/** What each layer of the page draws: a step, or the scanner. */
+type Layers = Readonly<Record<'naming' | 'dating' | 'scanner', ReactNode>>
+
+const nothing: Layers = { naming: null, dating: null, scanner: null }
+
+// What leaves stays where it was in the native tree, under what is drawn in its place. In a layer of its own, a step
+// leaving to the name step stays above it. Fabric drops a view that only lays out: `collapsable` keeps them.
+const layer = (name: keyof Layers, drawn: ReactNode) => (
+  <Box key={name} collapsable={false} pointerEvents='box-none' style={styles.layer}>{drawn}</Box>
 )
+
+/** Material's full-screen dialog, as a page over the one that opened it: one step at a time. */
+export const view: View<Model, Message> = (model, dispatch) => {
+  const layers: Layers = Match.valueTags(model, {
+    Naming: (naming) => ({
+      ...nothing,
+      naming: nameStep(naming, { _tag: 'Editing', controls: naming }, naming.maybeEntering, dispatch),
+    }),
+    LookingUp: (lookingUp) => ({
+      ...nothing,
+      naming: nameStep(lookingUp, { _tag: 'LookingUp', controls: lookingUp }, Opt.none(), dispatch),
+    }),
+    Scanning: (scanning) => ({ ...nothing, scanner: scanner(scanning, dispatch) }),
+    Dating: (dating) => ({ ...nothing, dating: dateStep(dating, { _tag: 'Editing', controls: dating }, dispatch) }),
+    Adding: (adding) =>
+      Match.valueTags(adding.step, {
+        Naming: () => ({ ...nothing, naming: nameStep(adding, { _tag: 'Adding' }, adding.maybeEntering, dispatch) }),
+        Dating: (date) => ({ ...nothing, dating: dateStep(date, { _tag: 'Adding' }, dispatch) }),
+      }),
+  })
+  return (
+    <SafeAreaView style={styles.page}>
+      <Box style={styles.frame}>
+        {layer('naming', layers.naming)}
+        {layer('dating', layers.dating)}
+        {layer('scanner', layers.scanner)}
+        {snackbar(
+          model.snackbar,
+          model._tag === 'Dating' || (model._tag === 'Adding' && model.step._tag === 'Dating') ? 'Dating' : 'Naming',
+        )}
+      </Box>
+    </SafeAreaView>
+  )
+}

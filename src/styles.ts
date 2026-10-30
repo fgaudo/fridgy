@@ -2,7 +2,15 @@
 // icons. Views use only these, as Material's components do: never a hex, a font size or a radius of their own.
 import { createElement, type ReactNode } from 'react'
 import { type ColorValue, PlatformColor, StyleSheet, Text, type TextStyle } from 'react-native'
-import { Easing } from 'react-native-reanimated'
+import {
+  Easing,
+  type EntryAnimationsValues,
+  type ExitAnimationsValues,
+  FadeInUp,
+  Keyframe,
+  type LayoutAnimation,
+  withTiming,
+} from 'react-native-reanimated'
 import { roles } from './palette.generated.ts'
 
 /**
@@ -47,13 +55,57 @@ export const shape = {
 export const elevation = { level1: 1, level2: 3, level3: 6, level4: 8 } as const
 
 /** Material's durations, in ms, for the motions of `docs/motion.md`. */
-export const duration = { short1: 50, short4: 200, medium4: 400 } as const
+export const duration = { short1: 50, short2: 100, short3: 150, short4: 200, medium4: 400 } as const
 
 /** Material's easing curves: what enters decelerates, what leaves accelerates. */
 export const easing = {
+  standard: Easing.bezier(0.2, 0, 0, 1),
+  standardDecelerate: Easing.bezier(0, 0, 0, 1),
+  standardAccelerate: Easing.bezier(0.3, 0, 1, 1),
   emphasizedDecelerate: Easing.bezier(0.05, 0.7, 0.1, 1),
   emphasizedAccelerate: Easing.bezier(0.3, 0, 0.8, 0.15),
 } as const
+
+// Material's full-screen dialog: it rises from the bottom edge, and sinks back to it. A `translateY`, not
+// Reanimated's `SlideInDown`, which moves the view in the layout and lays the page out again on every frame.
+const fullScreenDialog = {
+  entering: (values: EntryAnimationsValues): LayoutAnimation => {
+    'worklet'
+    return {
+      initialValues: { translateY: values.windowHeight },
+      animations: {
+        translateY: withTiming(0, { duration: duration.medium4, easing: easing.emphasizedDecelerate }),
+      },
+    }
+  },
+  exiting: (values: ExitAnimationsValues): LayoutAnimation => {
+    'worklet'
+    return {
+      initialValues: { translateY: 0 },
+      animations: {
+        translateY: withTiming(values.windowHeight, { duration: duration.short4, easing: easing.emphasizedAccelerate }),
+      },
+    }
+  },
+}
+
+const snackbarEntering = () =>
+  FadeInUp.withInitialValues({ opacity: 0, translateY: 8 })
+    .duration(duration.short3)
+    .easing(easing.standardDecelerate)
+
+// Material's snackbar: it rises by 8dp in fading in, and sinks by as much in fading out. One that comes after
+// another waits for that one to leave.
+const snackbar = {
+  entering: { Alone: snackbarEntering(), AfterAnother: snackbarEntering().delay(duration.short2) },
+  exiting: new Keyframe({
+    0: { opacity: 1, transform: [{ translateY: 0 }] },
+    100: { opacity: 0, transform: [{ translateY: 8 }], easing: easing.standardAccelerate },
+  }).duration(duration.short2),
+} as const
+
+/** The motions of Material's components that more than one page draws (`docs/motion.md`). */
+export const motion = { fullScreenDialog, snackbar } as const
 
 /** Material's state layer: the opacity of a pressed element's overlay. */
 export const pressedOpacity = 0.1

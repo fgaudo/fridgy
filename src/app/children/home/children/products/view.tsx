@@ -4,9 +4,10 @@ import * as DateTime from 'effect/DateTime'
 import * as Opt from 'effect/Option'
 import type { ReactNode } from 'react'
 import { View as Box, type ColorValue, Pressable, StyleSheet, Text } from 'react-native'
+import Animated from 'react-native-reanimated'
 import * as Day from '#libs/dates/day.ts'
 import { type Handlers, handlers } from '#libs/tea-react/tea-react.ts'
-import { color, elevation, icon, shape, type } from '#styles'
+import { color, elevation, icon, motion, shape, type } from '#styles'
 import type { ItemSelection, ListModel, Message, Model, ProductModel, ProductStatus } from './program.ts'
 
 type Look = 'Plain' | 'Error'
@@ -269,14 +270,19 @@ export const snackbar = (model: Model, dispatch: Dispatch<Message>): ReactNode |
     return undefined
   }
   const { on } = handlers(dispatch)
-  const { at, notice } = model.snackbar
+  const { at, notice, entrance } = model.snackbar
   return (
-    <Box key={`${notice._tag}-${DateTime.toEpochMillis(at)}`} accessibilityLiveRegion='polite' style={styles.snackbar}>
+    <Animated.View
+      key={`${notice._tag}-${DateTime.toEpochMillis(at)}`}
+      entering={motion.snackbar.entering[entrance]}
+      exiting={motion.snackbar.exiting}
+      accessibilityLiveRegion='polite'
+      style={styles.snackbar}
+    >
       <Text style={styles.snackbarText}>{noticeText(notice)}</Text>
       {notice._tag === 'Deleted'
         ? Opt.match(notice.maybeUndo, {
-          onNone: () =>
-            null,
+          onNone: () => null,
           onSome: (undo) => (
             <Pressable accessibilityRole='button' style={styles.snackbarAction} onPress={on(undo)}>
               <Text style={styles.snackbarActionText}>Undo</Text>
@@ -284,7 +290,7 @@ export const snackbar = (model: Model, dispatch: Dispatch<Message>): ReactNode |
           ),
         })
         : null}
-    </Box>
+    </Animated.View>
   )
 }
 

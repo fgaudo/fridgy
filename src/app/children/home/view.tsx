@@ -33,8 +33,9 @@ const styles = StyleSheet.create({
   },
   menuItem: { height: 48, flexDirection: 'row', alignItems: 'center', gap: 12, paddingLeft: 12, paddingRight: 24 },
   menuItemText: { ...type.labelLarge, color: color.onSurface },
-  bottom: { position: 'absolute', right: 0, bottom: 16, left: 0, gap: 16, alignItems: 'flex-end' },
-  snackbarSlot: { alignSelf: 'stretch' },
+  // 16dp above the FAB. Its size never changes: a snackbar that leaves keeps its place in it.
+  snackbarLayer: { position: 'absolute', top: 0, right: 0, bottom: 88, left: 0, justifyContent: 'flex-end' },
+  fabSlot: { position: 'absolute', right: 0, bottom: 16 },
   fab: {
     height: 56,
     marginRight: 16,
@@ -132,10 +133,8 @@ export const view: View<Model, Message> = (model, dispatch) => {
         <ScrollView overScrollMode='never' scrollEnabled={model.menu._tag === 'Closed'}>
           {Products.list(model.products, toProducts)}
         </ScrollView>
-        <Box pointerEvents='box-none' style={styles.bottom}>
-          {snackbar === undefined ? null : <Box style={styles.snackbarSlot}>{snackbar}</Box>}
-          {addButton(model, events)}
-        </Box>
+        <Box collapsable={false} pointerEvents='box-none' style={styles.snackbarLayer}>{snackbar}</Box>
+        <Box style={styles.fabSlot}>{addButton(model, events)}</Box>
         {menu(model.menu, events)}
       </Box>
     </SafeAreaView>

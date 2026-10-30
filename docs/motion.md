@@ -1,12 +1,12 @@
-# Design: motion on React Native, the pages and the menu
+# Design: motion on React Native
 
 Implemented on 2026-10-30, in `src/app/view.tsx` (the pages) and `src/app/children/home/view.tsx` (the menu), and
 seen in the emulator the same day (see "Verified, and not"). Read [`AGENTS.md`](../AGENTS.md), the `views` skill
 ("Motion") and the "Guide" of `node_modules/@fgaudo/effect-tea/README.md` before changing it.
 
-This is the first of the motions the web build had that React Native draws again (`AGENTS.md`, "Known gaps"). It
-covers how a page enters and leaves, and how Home's menu opens and closes. The other motions are listed in "Later",
-each to be designed here, or in a doc of its own, before it is drawn.
+These are the motions of the web build that React Native draws again (`AGENTS.md`, "Known gaps"): how a page
+enters and leaves, how Home's menu opens and closes, AddProducts' steps and scanner, and the snackbars. The other
+motions are listed in "Later", each to be designed here, or in a doc of its own, before it is drawn.
 
 ## What the web build did
 
@@ -89,6 +89,78 @@ Nothing is in the model. The web build turned its motions into fades, as `prefer
 here would need the setting as a source of the platform, observed by the root, and a tag in every model that
 animates, for a look the platform already decides.
 
+## AddProducts' steps and scanner, and the snackbars
+
+Designed on 2026-10-30, after the pages and the menu, with the same decisions: the platform drives them, as
+Reanimated's layout animations on `transform` and `opacity`, with Material's tokens, instant under "Remove
+animations". Implemented in `src/app/children/add-products/view.tsx`, the snackbars also in
+`src/app/children/edit-product/view.tsx` and Home's (`src/app/children/home/view.tsx`, drawn by `Products`).
+
+### What the web build did
+
+- **The steps.** The date step was drawn over the name step, which stayed under it. The date step came along
+  Material's shared axis X: from opacity 0 and `translateX(2rem)`, over `medium-4`, emphasized decelerate; and back
+  to them over `short-4`, emphasized accelerate. Going back, the date step left over the name step.
+- **The scanner.** Material's full-screen dialog over the name step, rising from the bottom edge as the pages do,
+  and sinking back. It rose opaque. Once in place (after `medium-4`), the surface's color left the camera's area
+  over `short-4`, on the standard curve, to show the camera drawn behind the page.
+- **The snackbars.** One rose by 0.5rem in fading in, over `short-3`, standard decelerate. One that came after
+  another (`entrance: 'AfterAnother'` in the model) waited `short-2` for that one to leave. One left by sinking
+  0.5rem in fading out, over `short-2`, standard accelerate.
+
+### Decisions
+
+1. **Each step and the scanner are a layer of AddProducts' frame**, in this order: the name step, the date step,
+   the scanner, then the snackbar. Each is drawn in a `collapsable={false}` layer, as the root's pages are, so that
+   what leaves stays above what is drawn under it: the date step and the scanner leave over the name step drawn
+   again. A step is an `Animated.View` that fills its layer with the surface's color, keyed by the step
+   (`naming`, `dating`, `scanner`). Its states keep the same key: `Naming`, `LookingUp` and an `Adding` from the
+   name step are one name step, and do not play anything between them.
+2. **The name step is held under what covers it, as Home is under a page.** The model has no state for "the name
+   step under the date step". Drawing it there would need controls that take nothing, and a screen reader would
+   read it. It leaves instead, holding still for `medium4` and then vanishing in `short1`, by when the date step
+   or the scanner covers it. It enters with no motion: going back, it is drawn at once under what leaves.
+3. **The scanner moves as the full-screen dialogs do.** Its two worklets are the pages' (`motion.fullScreenDialog`, now
+   in `src/styles.ts`, a look of Material's that the root and AddProducts both draw). The camera's area holds a cover
+   of the surface's color, over the camera and under the viewfinder's frame. It fades out on entering, after
+   `medium4`, over `short4`, on the standard curve, and stays at opacity 0. It takes no touch.
+4. **The snackbar's motion is Material's, in `src/styles.ts`** (`motion.snackbar`), the same for the three pages that draw
+   one: an entering animation for each `entrance`, and one exiting. The snackbar stays keyed by what it tells, so
+   the next one enters as the last one leaves.
+5. **A snackbar's ghost keeps its place.** A leaving element keeps its last frame in its parent. Home's snackbar
+   stood in a column that it sized, above the FAB: as it left, the column shrank and the ghost would have dropped
+   onto the FAB. Home now draws it at the bottom of a layer that ends 16dp above the FAB, whose size never changes.
+   AddProducts' and EditProduct's stand at an absolute place in their frame already.
+6. **What a page draws is not played again by the page's own entrance or exit.** The root wraps each page in
+   Reanimated's `LayoutAnimationConfig`, with `skipEntering` and `skipExiting`. By default, a removed subtree plays
+   the exiting animations of the elements in it: Home's snackbar would fade out as Home is held under a dialog, and
+   would rise again as Home comes back.
+
+### The choreographies
+
+| What                     | Enters                                                                 | Leaves                                                           |
+| ------------------------ | ---------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| The date step            | from opacity 0 and `translateX` 32dp, `medium4`, emphasized decelerate | to opacity 0 and 25dp, `short4`, emphasized accelerate           |
+| The name step            | no motion                                                              | opacity to 0 in `short1`, after a delay of `medium4`             |
+| The scanner              | as the dialogs                                                         | as the dialogs                                                   |
+| The scanner's cover      | opacity from 1 to 0, after `medium4`, over `short4`, standard          | (leaves with the scanner)                                        |
+| A snackbar               | from opacity 0 and `translateY` 8dp, `short3`, standard decelerate     | to opacity 0 and `translateY` 8dp, `short2`, standard accelerate |
+| A snackbar after another | the same, after a delay of `short2`                                    | the same                                                         |
+
+The date step enters with `FadeInRight`, from the initial values it is given, and leaves with `FadeOutRight`, by
+Reanimated's 25dp, as About does. The snackbar leaves by a `Keyframe`, for its 8dp: `FadeOutDown`'s 25dp would be
+three times what it rises. The cover is a `Keyframe` too, for its delay before it fades.
+
+The new tokens, Material's:
+
+| Token                | Value                        |
+| -------------------- | ---------------------------- |
+| `short2`             | 100 ms                       |
+| `short3`             | 150 ms                       |
+| `standard`           | `cubic-bezier(0.2, 0, 0, 1)` |
+| `standardDecelerate` | `cubic-bezier(0, 0, 0, 1)`   |
+| `standardAccelerate` | `cubic-bezier(0.3, 0, 1, 1)` |
+
 ## Verified, and not
 
 Seen on 2026-10-30, on the emulator's API 37 image, in builds that slowed the motion (About's to 3 s, then every
@@ -120,7 +192,32 @@ token ×10), and at the real speed:
 - **The bundle (verified).** Worklets' plugin (`react-native-worklets/plugin`) is the last in `babel.config.cjs`.
   `bun run bundle` and `hermesc` compile it.
 
+Seen on 2026-10-30, on the same image and on Vulkan, for AddProducts' steps and scanner and the snackbars (in a
+build with every token ×10, then at the real speed):
+
+- **The steps (verified).** The date step comes from the right in fading in, over the name step, which holds still
+  under it and is gone once it is covered. Going back, the date step leaves to the right over the name step drawn
+  again.
+- **The scanner (verified).** It rises opaque over the name step, the viewfinder's frame already drawn. The cover
+  holds the surface's color until the scanner is in place, then fades to the camera (the emulator's webcam). It
+  sinks back over the name step drawn again, with the camera still in it.
+- **Home's snackbar (verified).** "Product deleted" rises 16dp above the FAB, and the FAB does not move. Undone, it
+  sinks where it stood, and a second tap on "Undo" while it left sent nothing. A second deletion's snackbar waits
+  for the first to leave, then rises in its place.
+- **"Remove animations" (verified).** With Android's three scales at 0, the scanner was in place, its cover gone,
+  a quarter of a second after the tap.
+- **The frames (measured).** `dumpsys gfxinfo`, three times each, at the real speed. The steps, forth and back: a
+  median of 8 ms, 5 frames out of 132 over 16 ms, none over 24 ms. The scanner's closing: under 40 ms, most frames
+  under 12 ms. Its opening: most frames under 12 ms, and one to three of 100 to 400 ms as the camera starts
+  (`AGENTS.md`, "Known gaps"). Home's deletions and undos, with their snackbars: a median of 8 ms, none over 29 ms,
+  with the list's rows changing too.
+
 Not yet seen:
+
+- **AddProducts' and EditProduct's snackbars.** They tell of failures that the emulator does not give (a write
+  that fails, a setting not kept). They are drawn as Home's is, at a place of their frame that does not move.
+- **A snackbar under a page that opens or leaves.** `LayoutAnimationConfig` keeps it still (decision 6 of the
+  second design); no frame was caught with a snackbar standing as a page opened.
 
 - **The feel at the real speed.** Each motion was seen in frames of the slowed builds. At 400 ms and 200 ms the
   screenshots catch only the end: whether they feel right is the owner's to judge, on the emulator or a phone.
@@ -134,9 +231,6 @@ Not yet seen:
 
 Each of these is designed before it is drawn:
 
-- the steps of AddProducts (shared axis X, from 2rem) and its scanner (rising, then its surface fading to show the
-  camera);
-- the snackbars (rising by 0.5rem and fading in, `short3`; fading out, `short2`);
 - the rows of Home arriving and leaving, closing and opening their place;
 - Home's top app bar, collapsing with the scroll (the "fixed viewport" of the known gaps), and its FAB's label;
 - the product entering the fridge (`docs/product-flight.md`);
