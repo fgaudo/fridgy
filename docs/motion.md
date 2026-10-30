@@ -142,17 +142,26 @@ animations". Implemented in `src/app/children/add-products/view.tsx`, the snackb
 
 ### The choreographies
 
-| What                     | Enters                                                                 | Leaves                                                           |
-| ------------------------ | ---------------------------------------------------------------------- | ---------------------------------------------------------------- |
-| The date step            | from opacity 0 and `translateX` 32dp, `medium4`, emphasized decelerate | to opacity 0 and 25dp, `short4`, emphasized accelerate           |
-| The name step            | no motion                                                              | opacity to 0 in `short1`, after a delay of `medium4`             |
-| The scanner              | as the dialogs                                                         | as the dialogs                                                   |
-| The scanner's cover      | opacity from 1 to 0, after `medium4`, over `short4`, standard          | (leaves with the scanner)                                        |
-| A snackbar               | from opacity 0 and `translateY` 8dp, `short3`, standard decelerate     | to opacity 0 and `translateY` 8dp, `short2`, standard accelerate |
-| A snackbar after another | the same, after a delay of `short2`                                    | the same                                                         |
+| What                     | Enters                                                                | Leaves                                                           |
+| ------------------------ | --------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| The date step's surface  | opacity from 0 to 1 by 35% of `medium4`, standard                     | opacity from 1 to 0 after 35% of `short4`, standard              |
+| The date step's controls | from opacity 0 after 35% and `translateX` 32dp, `medium4`, emph. dec. | to opacity 0 by 35% and 32dp, `short4`, emphasized accelerate    |
+| The name step            | no motion                                                             | opacity to 0 in `short1`, after a delay of `medium4`             |
+| The scanner              | as the dialogs                                                        | as the dialogs                                                   |
+| The scanner's cover      | opacity from 1 to 0, after `medium4`, over `short4`, standard         | (leaves with the scanner)                                        |
+| A snackbar               | from opacity 0 and `translateY` 8dp, `short3`, standard decelerate    | to opacity 0 and `translateY` 8dp, `short2`, standard accelerate |
+| A snackbar after another | the same, after a delay of `short2`                                   | the same                                                         |
 
-The date step enters with `FadeInRight`, from the initial values it is given, and leaves with `FadeOutRight`, by
-Reanimated's 25dp, as About does. The snackbar leaves by a `Keyframe`, for its 8dp: `FadeOutDown`'s 25dp would be
+The steps are Material's shared axis X, its fade through included: the two steps never show together. The web
+build's date step faded in over the name step, which showed through it. The name step cannot fade out itself: it is
+removed as it was last drawn, before the model knows whether the date step or the scanner comes next, and under the
+scanner it must hold. So the date step does both halves. Its surface covers the name step by 35% of the way, the
+threshold of Material's fade through, and its controls fade in only after. Leaving, its controls are gone by 35%, and
+its surface uncovers the name step drawn again. The surface and the controls are siblings, each a `Keyframe`, for that
+threshold. Nested, they would hold back every change above them until both had left: Reanimated plays an exit inside
+another exit that way, and the page's room for the keyboard, rising as the name step comes back, would follow the
+keyboard instead of moving with it. The
+snackbar leaves by a `Keyframe`, for its 8dp: `FadeOutDown`'s 25dp would be
 three times what it rises. The cover is a `Keyframe` too, for its delay before it fades.
 
 The new tokens, Material's:

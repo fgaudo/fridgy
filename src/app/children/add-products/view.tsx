@@ -16,9 +16,7 @@ import {
 } from 'react-native'
 import Animated, {
   type EntryAnimationsValues,
-  FadeInRight,
   FadeOut,
-  FadeOutRight,
   Keyframe,
   type LayoutAnimation,
   withDelay,
@@ -273,12 +271,34 @@ const styles = StyleSheet.create({
 // The choreographies of `docs/motion.md`. The name step is held under the date step or the scanner until it covers it.
 const heldUnder = FadeOut.delay(duration.medium4).duration(duration.short1)
 
-// Material's shared axis X.
+// Material's shared axis X: forward as the date step enters, backward as it leaves. The two steps never show
+// together. The date step's surface covers the name step by 35% of the way, and only then do its controls appear;
+// leaving, its controls are gone by then, and its surface uncovers the name step.
 const sharedAxis = {
-  entering: FadeInRight.withInitialValues({ opacity: 0, translateX: 32 })
-    .duration(duration.medium4)
-    .easing(easing.emphasizedDecelerate),
-  exiting: FadeOutRight.duration(duration.short4).easing(easing.emphasizedAccelerate),
+  surface: {
+    entering: new Keyframe({
+      0: { opacity: 0 },
+      35: { opacity: 1, easing: easing.standard },
+      100: { opacity: 1 },
+    }).duration(duration.medium4),
+    exiting: new Keyframe({
+      0: { opacity: 1 },
+      35: { opacity: 1 },
+      100: { opacity: 0, easing: easing.standard },
+    }).duration(duration.short4),
+  },
+  controls: {
+    entering: new Keyframe({
+      0: { opacity: 0, transform: [{ translateX: 32 }] },
+      35: { opacity: 0 },
+      100: { opacity: 1, transform: [{ translateX: 0 }], easing: easing.emphasizedDecelerate },
+    }).duration(duration.medium4),
+    exiting: new Keyframe({
+      0: { opacity: 1, transform: [{ translateX: 0 }] },
+      35: { opacity: 0, easing: easing.standard },
+      100: { transform: [{ translateX: 32 }], easing: easing.emphasizedAccelerate },
+    }).duration(duration.short4),
+  },
 }
 
 // The scanner rises opaque, then shows the camera.
@@ -799,29 +819,34 @@ const keypad = (activity: DateActivity, dispatch: Dispatch<Message>) => {
 /** The second step, laid out as a dialer: the fields read from the top, the keypad and the button at the bottom. */
 const dateStep = (shown: DateShown, activity: DateActivity, dispatch: Dispatch<Message>) => {
   const controls = activity._tag === 'Editing' ? Opt.some(activity.controls) : Opt.none()
+  // The surface and the controls are siblings. An exit inside another exit holds back every change above them
+  // until both end: the page's room for a keyboard rising as the name step comes back.
   return (
-    <Animated.View key='dating' {...sharedAxis} style={styles.step}>
-      {appBar('Add products', 'arrow_back', 'Back', Opt.map(controls, ({ back }) => back), dispatch)}
-      <ScrollView contentContainerStyle={styles.dateColumn}>
-        <Box style={styles.heading}>
-          <Text style={styles.headingLabel}>Product</Text>
-          <Text accessibilityRole='header' numberOfLines={2} style={styles.headingName}>{shown.name}</Text>
+    <>
+      <Animated.View key='dating-surface' {...sharedAxis.surface} style={styles.step} />
+      <Animated.View key='dating' {...sharedAxis.controls} style={styles.layer}>
+        {appBar('Add products', 'arrow_back', 'Back', Opt.map(controls, ({ back }) => back), dispatch)}
+        <ScrollView contentContainerStyle={styles.dateColumn}>
+          <Box style={styles.heading}>
+            <Text style={styles.headingLabel}>Product</Text>
+            <Text accessibilityRole='header' numberOfLines={2} style={styles.headingName}>{shown.name}</Text>
+          </Box>
+          {orderSegments(shown, activity, dispatch)}
+          {dateField(shown, activity)}
+          {strip(shown, activity, dispatch)}
+          {keypad(activity, dispatch)}
+        </ScrollView>
+        <Box style={styles.dock}>
+          {button(
+            'Add',
+            Opt.flatMap(controls, ({ maybeAdd }) => maybeAdd),
+            activity._tag === 'Adding',
+            'Filled',
+            dispatch,
+          )}
         </Box>
-        {orderSegments(shown, activity, dispatch)}
-        {dateField(shown, activity)}
-        {strip(shown, activity, dispatch)}
-        {keypad(activity, dispatch)}
-      </ScrollView>
-      <Box style={styles.dock}>
-        {button(
-          'Add',
-          Opt.flatMap(controls, ({ maybeAdd }) => maybeAdd),
-          activity._tag === 'Adding',
-          'Filled',
-          dispatch,
-        )}
-      </Box>
-    </Animated.View>
+      </Animated.View>
+    </>
   )
 }
 
