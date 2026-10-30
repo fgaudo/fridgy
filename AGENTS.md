@@ -179,6 +179,11 @@ folders; "page" names a role in the UI, kept by the root's state, not a kind of 
   Its other choreographies (the steps of AddProducts, its scanner, the snackbars, a row arriving or leaving, the
   product flying into the fridge of `docs/product-flight.md`) are to be drawn again on React Native, and the
   product added is told by a line of text meanwhile. Home's viewport is fixed (`viewport.fixed.ts`: the bar never collapses, the FAB keeps its label).
+- About draws its 142 license cards at once, in the frames of its entrance. Both lists are bundled JSON
+  (`services/licenses/licenses.bundled.ts`), so `LicensesLoaded` arrives at once, and the view draws nothing while
+  `Loading`. To consider: read the files only when asked, show Material's circular progress indicator while
+  `Loading`, and draw the cards once the page is in place (or in a list that draws only what is in view). Opening
+  About was not measured alone: every page's opening has one long frame (`docs/motion.md`, "The frames").
 - The freshness of a product is drawn in steps, the nearest role (`freshnessColors`, in Home's `products`), where
   the web build mixed the roles: whether that is enough is the author's call.
 - A debug build takes about five seconds on the emulator before its JavaScript runs; a release, a tenth of a
