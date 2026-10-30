@@ -51,4 +51,4 @@ when saved is a `Reject`: the save did not happen.
   (`performHapticFeedback(LONG_PRESS)`, a `HEAVY_CLICK`), though the row prevents `contextmenu`, 3 ms before
   the plugin's, which supersedes it (`cancelled_superseded`); on Android 10 it does not. The system's vibration
   switch was not tried.
-- Not felt on a phone yet: whether each pattern feels like the constant it stands for.
+- Felt on a phone (Galaxy S21, Android 15) on 2026-10-30: each pattern feels like the constant it stands for.

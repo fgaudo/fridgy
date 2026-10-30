@@ -261,6 +261,8 @@ Designed on 2026-10-30, after the rows. Implemented in `src/app/children/home/vi
    that a scroll never ends with the headline cut, nor the fades halfway. No command scrolls. The price: a fling released before the
    headline is gone stops where the headline is gone, as React Native's snap clamps it there (`flingAndSnap`).
    A second fling scrolls on. A short list that cannot scroll as far as the headline rests where it ends.
+   Felt on a phone on 2026-10-30 and kept: released past half the headline the bar collapses, though the small
+   title, which fades in late, has barely begun to show.
 5. **The color is a layer's opacity.** `PlatformColor` is not a value that can be mixed, so a layer of
    `surfaceContainer` lies under the content of both rows, the small bar and the headline, which are one surface.
    Its opacity follows the collapse, as the web build's `bar-scrolled` did.
@@ -334,9 +336,9 @@ build with every token ×10, then at the real speed):
   a quarter of a second after the tap.
 - **The frames (measured).** `dumpsys gfxinfo`, three times each, at the real speed. The steps, forth and back: a
   median of 8 ms, 5 frames out of 132 over 16 ms, none over 24 ms. The scanner's closing: under 40 ms, most frames
-  under 12 ms. Its opening: most frames under 12 ms, and one to three of 100 to 400 ms as the camera starts
-  (`AGENTS.md`, "Known gaps"). Home's deletions and undos, with their snackbars: a median of 8 ms, none over 29 ms,
-  with the list's rows changing too.
+  under 12 ms. Its opening: most frames under 12 ms, and one to three of 100 to 400 ms as the camera starts,
+  which is the emulator's webcam: on a phone (Galaxy S21, Android 15, 2026-10-30) the rise loses nothing. Home's
+  deletions and undos, with their snackbars: a median of 8 ms, none over 29 ms, with the list's rows changing too.
 
 Seen on 2026-10-30, on the same image and on Vulkan, for Home's rows (in a build with every token and the settling
 timer ×10, then at the real speed):
