@@ -2,7 +2,7 @@ import * as Tea from '@fgaudo/effect-tea'
 import * as Match from 'effect/Match'
 import { type ComponentProps, Fragment, type ReactNode } from 'react'
 import { View as Box, StyleSheet } from 'react-native'
-import Animated, { FadeInUp, FadeOut, FadeOutDown } from 'react-native-reanimated'
+import Animated, { FadeInUp, FadeOut, FadeOutDown, SlideInDown, SlideOutDown } from 'react-native-reanimated'
 import type { View } from '#libs/tea-react/tea-react.ts'
 import { duration, easing } from '#styles'
 import * as About from './children/about/view.tsx'
@@ -13,12 +13,18 @@ import type { Message, Model } from './program.ts'
 
 type Motion = Readonly<Pick<ComponentProps<typeof Animated.View>, 'entering' | 'exiting'> & { isOver: boolean }>
 
+// Material's full-screen dialog: it rises from the bottom edge, and sinks back to it.
+const dialog = {
+  entering: SlideInDown.duration(duration.medium4).easing(easing.emphasizedDecelerate),
+  exiting: SlideOutDown.duration(duration.short4).easing(easing.emphasizedAccelerate),
+}
+
 // The choreographies of `docs/motion.md`.
 const motions = {
   // Held under the page that opens over it until that page covers it.
   Home: { exiting: FadeOut.delay(duration.medium4).duration(duration.short1), isOver: false },
-  AddProducts: { isOver: true },
-  EditProduct: { isOver: true },
+  AddProducts: { ...dialog, isOver: true },
+  EditProduct: { ...dialog, isOver: true },
   About: {
     entering: FadeInUp.withInitialValues({ opacity: 0, translateY: 30 })
       .duration(duration.medium4)

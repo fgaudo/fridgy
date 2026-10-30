@@ -1,8 +1,9 @@
 import * as Tea from '@fgaudo/effect-tea'
 import { View as Box, Pressable, ScrollView, StyleSheet, Text } from 'react-native'
+import Animated, { Keyframe } from 'react-native-reanimated'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { type Handlers, handlers, type View } from '#libs/tea-react/tea-react.ts'
-import { color, elevation, icon, shape, type } from '#styles'
+import { color, duration, easing, elevation, icon, shape, type } from '#styles'
 import * as Products from './children/products/view.tsx'
 import type { Message, Model } from './program.ts'
 
@@ -24,6 +25,8 @@ const styles = StyleSheet.create({
     zIndex: 2,
     minWidth: 112,
     paddingVertical: 8,
+    // It grows from the icon button that opens it.
+    transformOrigin: 'top right',
     borderRadius: shape.extraSmall,
     backgroundColor: color.surfaceContainer,
     elevation: elevation.level2,
@@ -57,17 +60,27 @@ const addButton = (model: Model, { on }: Handlers<Message>) => (
   </Pressable>
 )
 
+const menuEntering = new Keyframe({
+  0: { opacity: 0, transform: [{ scale: 0.8 }] },
+  100: { opacity: 1, transform: [{ scale: 1 }], easing: easing.emphasizedDecelerate },
+}).duration(duration.medium4)
+
+const menuExiting = new Keyframe({
+  0: { opacity: 1, transform: [{ scale: 1 }] },
+  100: { opacity: 0, transform: [{ scale: 0.8 }], easing: easing.emphasizedAccelerate },
+}).duration(duration.short4)
+
 /** Material's menu, under the bar's trailing icon button; a tap anywhere else closes it. */
 const menu = (menu: Model['menu'], { on }: Handlers<Message>) =>
   menu._tag === 'Open'
     ? [
       <Pressable key='scrim' accessible={false} style={styles.scrim} onPress={on(menu.close)} />,
-      <Box key='menu' style={styles.menu}>
+      <Animated.View key='menu' entering={menuEntering} exiting={menuExiting} style={styles.menu}>
         <Pressable accessibilityRole='menuitem' style={styles.menuItem} onPress={on(menu.requestInfo)}>
           {icon('info', color.onSurfaceVariant)}
           <Text style={styles.menuItemText}>About</Text>
         </Pressable>
-      </Box>,
+      </Animated.View>,
     ]
     : []
 

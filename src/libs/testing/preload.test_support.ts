@@ -32,6 +32,12 @@ mock.module('react-native-reanimated', () => ({
   FadeInUp: builder,
   FadeOut: builder,
   FadeOutDown: builder,
+  // A function that returns an object gives that object to `new`.
+  Keyframe: function Keyframe() {
+    return builder
+  },
+  SlideInDown: builder,
+  SlideOutDown: builder,
 }))
 
 mock.module('react-native-safe-area-context', () => ({ SafeAreaView: 'SafeAreaView' }))

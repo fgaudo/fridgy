@@ -1,8 +1,8 @@
 # Design: motion on React Native, the pages and the menu
 
-Proposed on 2026-10-30. About's motion and Home's under it are drawn, as a first try of the design, and seen in
-the emulator the same day (see "Verified, and not"). The other pages and the menu are not drawn yet. Read [`AGENTS.md`](../AGENTS.md), the `views` skill ("Motion") and the "Guide" of
-`node_modules/@fgaudo/effect-tea/README.md` before implementing it.
+Implemented on 2026-10-30, in `src/app/view.tsx` (the pages) and `src/app/children/home/view.tsx` (the menu), and
+seen in the emulator the same day (see "Verified, and not"). Read [`AGENTS.md`](../AGENTS.md), the `views` skill
+("Motion") and the "Guide" of `node_modules/@fgaudo/effect-tea/README.md` before changing it.
 
 This is the first of the motions the web build had that React Native draws again (`AGENTS.md`, "Known gaps"). It
 covers how a page enters and leaves, and how Home's menu opens and closes. The other motions are listed in "Later",
@@ -24,7 +24,7 @@ AddProducts and EditProduct are Material's full-screen dialogs: a task opened ov
 is a page of its own, with a back arrow: Material's shared axis, on Y. Home is kept under the page that opens
 until that page covers it, so the page never rises over nothing.
 
-## Decisions (proposed)
+## Decisions
 
 1. **The platform drives every one of them.** The start, the end and the duration are known when the movement
    starts, and nothing changes them on the way. This is the first case of "Who drives it" in the `views` skill. No
@@ -89,7 +89,8 @@ animates, for a look the platform already decides.
 
 ## Verified, and not
 
-Seen on 2026-10-30, on the emulator's API 37 image, with About's motion slowed to 3 s in a build made for it:
+Seen on 2026-10-30, on the emulator's API 37 image, in builds that slowed the motion (About's to 3 s, then every
+token ×10), and at the real speed:
 
 - **A leaving page is inert (verified).** The web build set `pointerEvents: 'none'` on what left. A removed element
   cannot take new props, and needs none. A tap on About's back arrow while About sank over Home sent nothing: a
@@ -98,6 +99,11 @@ Seen on 2026-10-30, on the emulator's API 37 image, with About's motion slowed t
 - **About enters over Home, held under it (verified).** Home stays under About as it rises, with its menu, which
   Home's own leaving keeps as it was. Home's layer is under About's, and About's exit plays over the Home drawn
   again (decision 4).
+- **The dialogs and the menu (verified).** AddProducts and EditProduct rise over Home and sink back over it. Their
+  surface is Home's, as in the web build: no edge is seen, only the content moving. The menu grows from its top
+  right corner and shrinks back into it.
+- **An interrupted movement (verified).** EditProduct, closed with Android's back button while it rose, sank from
+  where it was, without jumping to the top first.
 - **The tests (verified).** `bun test` cannot load Reanimated. The preload (`libs/testing/preload.test_support.ts`)
   replaces it, as it replaces React Native: `Animated.View` becomes its name, and the builders become values that
   the tests ignore.
@@ -106,10 +112,9 @@ Seen on 2026-10-30, on the emulator's API 37 image, with About's motion slowed t
 
 Not yet seen:
 
-- **The speed.** At 400 ms and 200 ms, on the emulator; and with "Remove animations", which should be instant.
-- **An interrupted movement.** A page closed while it rises (back pressed within 400 ms) should sink from where it
-  is. Whether Reanimated starts the exiting animation from the current position, or jumps to the end first, is to
-  be seen.
+- **The feel at the real speed.** Each motion was seen in frames of the slowed builds. At 400 ms and 200 ms the
+  screenshots catch only the end: whether they feel right is the owner's to judge, on the emulator or a phone.
+- **"Remove animations"**, which should make every motion instant.
 - **Two pages stacked in one frame.** The "Known gaps" item (EditProduct and AddProducts pushed together) gives
   two pages in the upper layer. The motion does not make it worse, but it shows it.
 - **The release on `minSdkVersion`'s image.** Reanimated is a native module: the `android-release` skill asks for

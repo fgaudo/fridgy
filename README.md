@@ -10,8 +10,8 @@ architecture.
 > digits in the order of day, month and year the user keeps, from which the user picks the day they meant), the
 > page that edits a product (opened with a tap on it, its name and its expiration date, typed on the same keypad)
 > and the About page (version, links, licenses) run on the current architecture, with navigation between them and
-> Android's back button, and the barcode scanner names a product from Open Food Facts. They are drawn without
-> animations, but for About's entrance and exit. What is still
+> Android's back button, and the barcode scanner names a product from Open Food Facts. The pages and the menu move as
+> in the web build; the rest is drawn without animations. What is still
 > missing is listed under "Known gaps" in [`AGENTS.md`](AGENTS.md).
 
 **Privacy:** scanning a barcode sends the barcode, and the phone's IP address, to Open Food Facts; nothing else
