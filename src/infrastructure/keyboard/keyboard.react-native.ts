@@ -19,10 +19,12 @@ export const layer = Layer.succeed(Keyboard, {
           // The keyboard may be up already when a page starts observing: its height is told at once.
           Queue.offerUnsafe(queue, KeyboardController.isVisible() ? KeyboardController.state().height : 0)
           return [
-            KeyboardEvents.addListener('keyboardDidShow', ({ height }) => {
+            // Told as the keyboard starts moving, with where it is going. A page told when it has arrived would draw
+            // its bottom over the empty room of a keyboard gone, until the end of its slide.
+            KeyboardEvents.addListener('keyboardWillShow', ({ height }) => {
               Queue.offerUnsafe(queue, height)
             }),
-            KeyboardEvents.addListener('keyboardDidHide', () => {
+            KeyboardEvents.addListener('keyboardWillHide', () => {
               Queue.offerUnsafe(queue, 0)
             }),
           ]

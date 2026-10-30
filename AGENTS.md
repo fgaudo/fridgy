@@ -85,6 +85,8 @@ folders; "page" names a role in the UI, kept by the root's state, not a kind of 
   (`SafeAreaView`'s `maximum` edge). It is read from the window's insets, by
   `react-native-keyboard-controller`: React Native's own keyboard events come from the root view's layout
   passes, and a root view made anew, as an activity recreated gives, tells nothing of a keyboard that was up.
+  The inset is told as the keyboard starts to move, never once it has: a keyboard sliding away covers the page
+  it leaves, and one told late leaves the page's bottom in mid-air.
 - **A service belongs to what uses it, and is never shared.** A service (a `Context.Service`: a port) is a
   requirement of its consumer, in its `services/`, shaped for it. Two consumers that need the same thing each
   have their own; what they share is the domain and the infrastructure. The exception is a fact of the platform
