@@ -238,7 +238,7 @@ type PageShown = Readonly<{ keyboardInset: number }>
 export type NameShown = Readonly<{
   supporting: Supporting
   name: string
-  /** Changes when the name is replaced by a scan or a clearing, or a product was added, not by typing. */
+  /** Changes when the name is replaced by a scan or a clearing, not by typing. */
   nameKey: number
   /** Over every step, and over the scanner. */
   snackbar: Snackbar
@@ -337,14 +337,23 @@ export type Model = Data.TaggedEnum<{
       maybeAdd: Opt.Option<Message>
     }>
   /**
-   * The product is being added: the step it is added from, its controls disabled. On the first step, the products
-   * added before go on entering the fridge.
+   * The product is being added: the step it is added from, its controls taking nothing. On the first step, the name
+   * still takes what is typed, and keeps the focus and the keyboard, and the products added before go on entering
+   * the fridge.
    */
   Adding:
     & PageShown
     & NameShown
     & Readonly<{
-      step: Data.TaggedEnum<{ Naming: Readonly<{ fridge: FridgeShown }>; Dating: DateShown }>
+      step: Data.TaggedEnum<{
+        Naming: Readonly<{
+          fridge: FridgeShown
+          changeName: (name: string) => Message
+          /** Whether the scanner opened before: the step is drawn as it was. */
+          canScan: boolean
+        }>
+        Dating: DateShown
+      }>
     }>
 }>
 
@@ -824,8 +833,8 @@ export const program: Tea.Program<{
 
     Started: () => (state) => state._tag === 'Naming' || state._tag === 'Dating' ? start(state) : Tea.reject,
 
-    // The next product starts at the name, kept (a second package may be next) and drawn anew, so that it takes
-    // the focus back from the button.
+    // The next product starts at the name, kept: a second package may be next. The field is not drawn anew. It has
+    // kept the focus, and a new one would close the keyboard and open it again.
     Completed: ({ succeeded }) => (state) => {
       if (state._tag !== 'Submitting') {
         return Tea.defect('Completed while no product is being added: only a completion leaves Submitting')
@@ -837,7 +846,6 @@ export const program: Tea.Program<{
             _tag: 'Naming',
             form: {
               ...form,
-              replacements: form.replacements + 1,
               added: form.added + 1,
               fridge: admitted(form.fridge, form.added, state.product),
             },
@@ -998,7 +1006,12 @@ export const program: Tea.Program<{
         ...pageShown,
         ...nameShown,
         step: step._tag === 'Naming'
-          ? { _tag: 'Naming', fridge: fridgeShown(form) }
+          ? {
+            _tag: 'Naming',
+            fridge: fridgeShown(form),
+            changeName: (name: string) => Message.NameChanged({ name }),
+            canScan: form.camera === 'Available',
+          }
           : { _tag: 'Dating', ...dateShown(step.date, () => Opt.none(), () => Opt.none()) },
       }),
     })

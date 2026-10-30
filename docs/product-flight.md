@@ -26,6 +26,11 @@ of `node_modules/@fgaudo/effect-tea/README.md` before changing it.
   its inside and its door. The inside is the lightest surface, under any disc.
 - **It is the only acknowledgement on screen.** A screen reader hears the last product's name and expiration from
   a live region, drawn invisible in every state; the fridge is hidden from it.
+- **The first step stays still while the write runs.** The write takes a frame or two. Its controls take nothing
+  then, but keep their look, with no circular indicator: greyed for those frames, they flashed at every add. The
+  name stays editable and is not drawn anew, so it keeps the focus. A disabled field closed the keyboard, and a new
+  one opened it again, the page falling and rising with it. Seen on a phone (Galaxy S21) on 2026-10-30. The second
+  step keeps its indicator: it leaves at once, with its own transition.
 - **Motion is Material's**: durations and curves from `src/styles.ts`, never a number of milliseconds in a view.
 
 ## The choreography

@@ -170,11 +170,13 @@ describe('AddProducts update', () => {
   // Each message the view sends is accepted in the state it was rendered from; sent twice from the same frame,
   // it acts once, but the keypad's digit keys, which are meant to repeat, and the close button, whose second
   // press the parent ignores once the page is gone. And what the user could ask for and `update` accepts is in
-  // the view, but the name's input off the first step, where it is covered or disabled.
+  // the view, but the name's input off the first step, where it is covered.
   test('the view sends what update accepts, all of it, and acts once when sent twice', () => {
     const check = dispatchViolations(program.update, {
       repeatable: (msg) => msg._tag === 'DigitTyped' || msg._tag === 'DigitErased' || msg._tag === 'Closed',
-      withheld: (msg, state) => msg._tag === 'NameChanged' && state._tag !== 'Naming',
+      withheld: (msg, state) =>
+        msg._tag === 'NameChanged' && state._tag !== 'Naming'
+        && !(state._tag === 'Submitting' && state.step._tag === 'Naming'),
     })
     fc.assert(fc.property(state, fc.string(), anyDay, (before, inputValue, date) => {
       const offered = before._tag === 'Dating' ? offeredDates(before.form, before.date) : []
@@ -592,6 +594,14 @@ describe('AddProducts update', () => {
       })
     })
 
+    test('while adding from the first step, tells whether the scanner was offered, so that the step is drawn as it was', () => {
+      assertProperty([submitting], (s) => {
+        const model = makeModel(s)
+        return model._tag === 'Adding'
+          && (model.step._tag !== 'Naming' || model.step.canScan === (s.form.camera === 'Available'))
+      })
+    })
+
     // The scanner rises over the first step and the date step covers it: neither draws the fridge.
     // A product is made once the clock has ticked: before, nothing is on its way.
     test('shows the fridge on the first step, while it takes input and while it adds, each product on its way due as Home tells it, and nowhere else', () => {
@@ -784,7 +794,7 @@ describe('AddProducts update', () => {
 
   describe('Completed', () => {
     // The second step leaves with its own transition.
-    test('success starts the next product at the name, this one\'s kept and drawn anew, sends it into the fridge by its number, and vibrates', () => {
+    test('success starts the next product at the name, this one\'s kept in the same field, sends it into the fridge by its number, and vibrates', () => {
       assertProperty([submitting], (before) => {
         const { after, commands } = step(Msg.Completed({ succeeded: true }), before)
         const { fridge, added } = before.form
@@ -801,7 +811,7 @@ describe('AddProducts update', () => {
           }
         return Equal.equals(after, {
           _tag: 'Naming',
-          form: { ...before.form, replacements: before.form.replacements + 1, added: added + 1, fridge: expected },
+          form: { ...before.form, added: added + 1, fridge: expected },
         })
           && Equal.equals(commands, [Cmd.Vibrate({ feedback: 'Confirm' })])
       })

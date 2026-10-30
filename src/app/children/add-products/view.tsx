@@ -384,61 +384,63 @@ const flights = { WithFridge: flight(duration.medium2), IntoOpenFridge: flight(0
 type NameActivity =
   | { _tag: 'Editing'; controls: Model & { _tag: 'Naming' } }
   | { _tag: 'LookingUp'; controls: Model & { _tag: 'LookingUp' } }
-  | { _tag: 'Adding' }
+  | { _tag: 'Adding'; changeName: (name: string) => Message; canScan: boolean }
 
 type DateActivity = Readonly<
   { _tag: 'Editing'; controls: Model & { _tag: 'Dating' } } | { _tag: 'Adding' }
 >
 
+/**
+ * A control that takes a tap, or takes none. One that takes none is drawn disabled, or as it was while a product is
+ * added from the first step (`Held`): the add is over in a frame or two, and controls greyed for them would flash.
+ * `Running` is the button whose action runs, drawn with the circular indicator.
+ */
+type Control = Readonly<{ _tag: 'Takes'; message: Message } | { _tag: 'Held' } | { _tag: 'Running' } | { _tag: 'Off' }>
+
+const held: Control = { _tag: 'Held' }
+
+const control = (maybeMessage: Opt.Option<Message>): Control =>
+  Opt.match(maybeMessage, {
+    onNone: (): Control => ({ _tag: 'Off' }),
+    onSome: (message) => ({ _tag: 'Takes', message }),
+  })
+
+const pressed = (shown: Control, dispatch: Dispatch<Message>) =>
+  shown._tag === 'Takes' ? handlers(dispatch).on(shown.message) : undefined
+
 /** The top app bar of Material's full-screen dialog: its leading icon button and its title. */
-const appBar = (
-  title: string,
-  iconName: string,
-  iconTitle: string,
-  maybeMessage: Opt.Option<Message>,
-  dispatch: Dispatch<Message>,
-) => {
-  const { on } = handlers(dispatch)
-  return (
-    <Box style={styles.bar}>
-      <Pressable
-        accessibilityRole='button'
-        accessibilityLabel={iconTitle}
-        accessibilityState={{ disabled: Opt.isNone(maybeMessage) }}
-        style={styles.iconButton}
-        onPress={Opt.match(maybeMessage, { onNone: () => undefined, onSome: on })}
-      >
-        {icon(iconName, Opt.isNone(maybeMessage) ? color.disabledContent : color.onSurface)}
-      </Pressable>
-      <Text accessibilityRole='header' numberOfLines={1} style={styles.title}>{title}</Text>
-    </Box>
-  )
-}
+const appBar = (title: string, iconName: string, iconTitle: string, shown: Control, dispatch: Dispatch<Message>) => (
+  <Box style={styles.bar}>
+    <Pressable
+      accessibilityRole='button'
+      accessibilityLabel={iconTitle}
+      accessibilityState={{ disabled: shown._tag !== 'Takes' }}
+      style={styles.iconButton}
+      onPress={pressed(shown, dispatch)}
+    >
+      {icon(iconName, shown._tag === 'Off' ? color.disabledContent : color.onSurface)}
+    </Pressable>
+    <Text accessibilityRole='header' numberOfLines={1} style={styles.title}>{title}</Text>
+  </Box>
+)
 
 /** Material's filled or text button. The circular indicator replaces the label while the action runs. */
-const button = (
-  label: string,
-  maybeMessage: Opt.Option<Message>,
-  isRunning: boolean,
-  kind: 'Filled' | 'Text',
-  dispatch: Dispatch<Message>,
-) => {
-  const { on } = handlers(dispatch)
-  const isEnabled = Opt.isSome(maybeMessage) || isRunning
+const button = (label: string, shown: Control, kind: 'Filled' | 'Text', dispatch: Dispatch<Message>) => {
+  const isEnabled = shown._tag !== 'Off'
   const tint = kind === 'Filled'
     ? (isEnabled ? color.onPrimary : color.disabledContent)
     : (isEnabled ? color.primary : color.disabledContent)
   return (
     <Pressable
       accessibilityRole='button'
-      accessibilityState={{ disabled: Opt.isNone(maybeMessage), busy: isRunning }}
+      accessibilityState={{ disabled: shown._tag !== 'Takes', busy: shown._tag === 'Running' }}
       style={[
         kind === 'Filled' ? styles.filledButton : styles.textButton,
         kind === 'Filled' && { backgroundColor: isEnabled ? color.primary : color.disabledContainer },
       ]}
-      onPress={Opt.match(maybeMessage, { onNone: () => undefined, onSome: on })}
+      onPress={pressed(shown, dispatch)}
     >
-      {isRunning
+      {shown._tag === 'Running'
         ? <ActivityIndicator accessibilityLabel='Adding the product' color={tint} />
         : <Text style={[styles.buttonLabel, { color: tint }]}>{label}</Text>}
     </Pressable>
@@ -466,14 +468,20 @@ const supportingText = (supporting: Supporting) => (
 )
 
 /**
- * Material's outlined text field of the name, drawn anew when the name is replaced (a scan, a clearing, a product
- * added). From then on the user owns its text, and the program learns it from the field's messages. Focused whenever
- * it is drawn anew and editable: as the step opens, after a product found, a clearing and an add.
+ * Material's outlined text field of the name, drawn anew when the name is replaced (a scan, a clearing). From then on
+ * the user owns its text, and the program learns it from the field's messages. Focused whenever it is drawn anew and
+ * editable: as the step opens, after a product found and a clearing. It stays editable while a product is added: a
+ * disabled field would close the keyboard.
  */
 const nameField = (shown: NameShown, activity: NameActivity, dispatch: Dispatch<Message>) => {
-  const { on, onValue } = handlers(dispatch)
-  const isEditing = activity._tag === 'Editing'
-  const maybeClearName = isEditing ? activity.controls.maybeClearName : Opt.none()
+  const { onValue } = handlers(dispatch)
+  const isEditing = activity._tag !== 'LookingUp'
+  // A product is added only with a name, which the clearing button stays on.
+  const clearName: Control = activity._tag === 'Editing'
+    ? control(activity.controls.maybeClearName)
+    : activity._tag === 'Adding'
+    ? held
+    : { _tag: 'Off' }
   return (
     <Box key={`name-${shown.nameKey}`}>
       <Box style={[styles.field, { borderColor: isEditing ? color.outline : color.disabledContainer }]}>
@@ -485,7 +493,11 @@ const nameField = (shown: NameShown, activity: NameActivity, dispatch: Dispatch<
           enterKeyHint='done'
           cursorColor={color.primary}
           style={[styles.input, { color: isEditing ? color.onSurface : color.disabledContent }]}
-          onChangeText={isEditing ? onValue(activity.controls.changeName) : undefined}
+          onChangeText={activity._tag === 'Editing'
+            ? onValue(activity.controls.changeName)
+            : activity._tag === 'Adding'
+            ? onValue(activity.changeName)
+            : undefined}
         />
         <Text style={[styles.label, { color: isEditing ? color.onSurfaceVariant : color.disabledContent }]}>Name</Text>
         {activity._tag === 'LookingUp'
@@ -494,19 +506,19 @@ const nameField = (shown: NameShown, activity: NameActivity, dispatch: Dispatch<
               <ActivityIndicator accessibilityLabel='Looking up the product' color={color.primary} />
             </Box>
           )
-          : Opt.match(maybeClearName, {
-            onNone: () => null,
-            onSome: (clear) => (
-              <Pressable
-                accessibilityRole='button'
-                accessibilityLabel='Clear name'
-                style={[styles.iconButton, styles.trailing]}
-                onPress={on(clear)}
-              >
-                {icon('cancel', color.onSurfaceVariant)}
-              </Pressable>
-            ),
-          })}
+          : clearName._tag === 'Off'
+          ? null
+          : (
+            <Pressable
+              accessibilityRole='button'
+              accessibilityLabel='Clear name'
+              accessibilityState={{ disabled: clearName._tag !== 'Takes' }}
+              style={[styles.iconButton, styles.trailing]}
+              onPress={pressed(clearName, dispatch)}
+            >
+              {icon('cancel', color.onSurfaceVariant)}
+            </Pressable>
+          )}
       </Box>
       {supportingText(shown.supporting)}
     </Box>
@@ -514,21 +526,21 @@ const nameField = (shown: NameShown, activity: NameActivity, dispatch: Dispatch<
 }
 
 /** Material's FAB that opens the scanner: the step's secondary action, in the tertiary's color, under the thumb. */
-const scanFab = (maybeScan: Opt.Option<Message>, dispatch: Dispatch<Message>) => {
-  const { on } = handlers(dispatch)
+const scanFab = (shown: Control, dispatch: Dispatch<Message>) => {
+  const isEnabled = shown._tag !== 'Off'
   return (
     <Pressable
       accessibilityRole='button'
       accessibilityLabel='Scan barcode'
-      accessibilityState={{ disabled: Opt.isNone(maybeScan) }}
+      accessibilityState={{ disabled: shown._tag !== 'Takes' }}
       style={[styles.scanFab, {
-        backgroundColor: Opt.isSome(maybeScan) ? color.tertiaryContainer : color.disabledContainer,
+        backgroundColor: isEnabled ? color.tertiaryContainer : color.disabledContainer,
         // A disabled FAB lies flat: a shadow under a translucent container shows through it.
-        elevation: Opt.isSome(maybeScan) ? elevation.level3 : 0,
+        elevation: isEnabled ? elevation.level3 : 0,
       }]}
-      onPress={Opt.match(maybeScan, { onNone: () => undefined, onSome: on })}
+      onPress={pressed(shown, dispatch)}
     >
-      {icon('barcode_scanner', Opt.isSome(maybeScan) ? color.onTertiaryContainer : color.disabledContent)}
+      {icon('barcode_scanner', isEnabled ? color.onTertiaryContainer : color.disabledContent)}
     </Pressable>
   )
 }
@@ -632,35 +644,33 @@ const nameStep = (
   dispatch: Dispatch<Message>,
 ) => {
   const controls = activity._tag === 'Editing' ? Opt.some(activity.controls) : Opt.none()
-  const maybeClose = activity._tag === 'Adding' ? Opt.none() : Opt.some(activity.controls.close)
+  // While a product is added, the controls are drawn as they were: both ways out took, since one started it.
+  const editing = (maybeMessage: Opt.Option<Message>) => activity._tag === 'Adding' ? held : control(maybeMessage)
+  const close = activity._tag === 'Adding' ? held : control(Opt.some(activity.controls.close))
+  const scan = activity._tag === 'Adding'
+    ? (activity.canScan ? held : control(Opt.none()))
+    : control(Opt.flatMap(controls, ({ maybeScan }) => maybeScan))
   return (
     <Animated.View key='naming' exiting={heldUnder} style={styles.step}>
-      {appBar('Add products', 'close', 'Close', maybeClose, dispatch)}
+      {appBar('Add products', 'close', 'Close', close, dispatch)}
       <ScrollView keyboardShouldPersistTaps='handled' contentContainerStyle={styles.column}>
         {nameField(shown, activity, dispatch)}
         <Box style={styles.room}>
           {announcement(fridgeShown)}
           {fridge(fridgeShown)}
-          {scanFab(Opt.flatMap(controls, ({ maybeScan }) => maybeScan), dispatch)}
+          {scanFab(scan, dispatch)}
         </Box>
       </ScrollView>
       <Box style={styles.dock}>
         {button(
           'Set expiration',
-          Opt.flatMap(controls, ({ maybeRequestDate }) => maybeRequestDate),
-          false,
+          editing(Opt.flatMap(controls, ({ maybeRequestDate }) => maybeRequestDate)),
           'Filled',
           dispatch,
         )}
         {activity._tag === 'LookingUp'
-          ? button('Cancel', Opt.some(activity.controls.cancelLookup), false, 'Text', dispatch)
-          : button(
-            'Add without date',
-            Opt.flatMap(controls, ({ maybeAdd }) => maybeAdd),
-            activity._tag === 'Adding',
-            'Text',
-            dispatch,
-          )}
+          ? button('Cancel', control(Opt.some(activity.controls.cancelLookup)), 'Text', dispatch)
+          : button('Add without date', editing(Opt.flatMap(controls, ({ maybeAdd }) => maybeAdd)), 'Text', dispatch)}
       </Box>
     </Animated.View>
   )
@@ -825,7 +835,7 @@ const dateStep = (shown: DateShown, activity: DateActivity, dispatch: Dispatch<M
     <>
       <Animated.View key='dating-surface' {...sharedAxis.surface} style={styles.step} />
       <Animated.View key='dating' {...sharedAxis.controls} style={styles.layer}>
-        {appBar('Add products', 'arrow_back', 'Back', Opt.map(controls, ({ back }) => back), dispatch)}
+        {appBar('Add products', 'arrow_back', 'Back', control(Opt.map(controls, ({ back }) => back)), dispatch)}
         <ScrollView contentContainerStyle={styles.dateColumn}>
           <Box style={styles.heading}>
             <Text style={styles.headingLabel}>Product</Text>
@@ -839,8 +849,9 @@ const dateStep = (shown: DateShown, activity: DateActivity, dispatch: Dispatch<M
         <Box style={styles.dock}>
           {button(
             'Add',
-            Opt.flatMap(controls, ({ maybeAdd }) => maybeAdd),
-            activity._tag === 'Adding',
+            activity._tag === 'Adding'
+              ? { _tag: 'Running' }
+              : control(Opt.flatMap(controls, ({ maybeAdd }) => maybeAdd)),
             'Filled',
             dispatch,
           )}
@@ -856,7 +867,7 @@ const dateStep = (shown: DateShown, activity: DateActivity, dispatch: Dispatch<M
  */
 const scanner = (model: Model & { _tag: 'Scanning' }, dispatch: Dispatch<Message>) => (
   <Animated.View key='scanner' {...motion.fullScreenDialog} style={styles.step}>
-    {appBar('Scan barcode', 'close', 'Close', Opt.some(model.closeScanner), dispatch)}
+    {appBar('Scan barcode', 'close', 'Close', control(Opt.some(model.closeScanner)), dispatch)}
     {model.camera === 'Available'
       ? [
         <Box key='camera' style={styles.scanner}>
@@ -931,7 +942,10 @@ export const view: View<Model, Message> = (model, dispatch) => {
     Dating: (dating) => ({ ...nothing, dating: dateStep(dating, { _tag: 'Editing', controls: dating }, dispatch) }),
     Adding: (adding) =>
       Match.valueTags(adding.step, {
-        Naming: ({ fridge }) => ({ ...nothing, naming: nameStep(adding, { _tag: 'Adding' }, fridge, dispatch) }),
+        Naming: ({ fridge, changeName, canScan }) => ({
+          ...nothing,
+          naming: nameStep(adding, { _tag: 'Adding', changeName, canScan }, fridge, dispatch),
+        }),
         Dating: (date) => ({ ...nothing, dating: dateStep(date, { _tag: 'Adding' }, dispatch) }),
       }),
   })
