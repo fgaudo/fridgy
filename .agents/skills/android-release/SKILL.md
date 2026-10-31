@@ -73,7 +73,7 @@ Store reads, to hide the app from narrower devices: an APK installs anywhere, an
 sizes move only as the versions above do: checked in the emulator first, with `README.md`, `AGENTS.md`, the `views`
 skill and this file.
 
-In the emulator, the two screens are:
+In the emulator, the two checks are on one screen:
 
 - **the reference**, where the app is developed, and where no page scrolls: on the Pixel 6 of the target's AVD,
   `adb shell wm size 960x2178` and `wm density 480`, with the three-button navigation bar
@@ -81,9 +81,12 @@ In the emulator, the two screens are:
   320×726dp: the status bar takes 38dp there, for the display's cutout, and the three buttons 48dp, which leaves
   640dp between them. On a profile without a cutout the status bar is 24dp, and the screen 320×712dp
   (`wm size 960x2136`);
-- **the worst case**, 320×533dp (`wm size 480x800`, `wm density 240`), with the font at 200%
-  (`settings put system font_scale 2.0`) and the keyboard open on each field: no text is clipped or covers another,
-  every page reaches its main action, and the field being typed stays in sight.
+- **the worst case**, the reference with the font at 200% (`adb shell settings put system font_scale 2.0`) and the
+  keyboard open on each field: no text is clipped or covers another, every page reaches its main action, and the
+  field being typed stays in sight. A page may scroll there, and look crowded. The 200% is the "Resize text" of
+  WCAG (1.4.4), which asks for no loss of content or function, not for the same look; and the reference is what a
+  phone of today shows at the largest "Display size". A smaller screen at 200% (a 16:9 phone, 320×533dp) is a
+  combination no phone sold today makes, and is not checked.
 
 Every change to a view is looked at on the reference; one that touches layout or text (a field, a row, a button, a
 shape of fixed size) on the worst case too. The release's pass covers both, whole. `wm size reset`,
