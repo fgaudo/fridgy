@@ -126,12 +126,14 @@ const iconStyle = StyleSheet.create({
 
 /**
  * A Material Symbol by its name, which the font draws as one glyph through a ligature. Decoration: the element that
- * holds it carries the label.
+ * holds it carries the label. Its size is in dp, as Android's own icons: a large font grows the text beside it, never
+ * the icon.
  */
 export const icon = (name: string, tint: ColorValue, style?: TextStyle): ReactNode =>
   createElement(
     Text,
     {
+      allowFontScaling: false,
       style: [iconStyle.icon, { color: tint }, style],
       accessible: false,
       importantForAccessibility: 'no',

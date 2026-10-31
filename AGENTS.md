@@ -192,8 +192,5 @@ folders; "page" names a role in the UI, kept by the root's state, not a kind of 
 
 - A debug build takes about five seconds on the emulator before its JavaScript runs; a release, a tenth of a
   second. The release has been run on the emulator only (API 37 and API 29), signed with the debug key.
-- On the worst case of the `android-release` skill (the reference at 200%), seen on 2026-10-31: the "Y" of "MDY"
-  touches the divider of the date order's segments, the check and the label filling a third of the row; and "Dec"
-  touches the ring of a product's disc, whose text grows to 1.3 (`DISC_TEXT_SCALE`), where 1.2 would fit.
 
 When an item is resolved, remove it.

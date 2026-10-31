@@ -588,21 +588,21 @@ const dueColors: Readonly<Record<Due['_tag'], Colors>> = {
   Later: { fill: color.tertiaryContainer, text: color.onTertiaryContainer },
 }
 
-// Home's disc is 40dp, so its text grows with the font only as far as it still fits inside.
-const DISC_TEXT_SCALE = 1.3
-
-/** A product's disc, as Home's list draws it: its expiration day and month, or an infinity sign when it never ends. */
+/**
+ * A product's disc, as Home's list draws it: its expiration day and month, or an infinity sign when it never ends. Its
+ * text keeps its size whatever the font, as Home's does.
+ */
 const disc = ({ entrance, due }: ArrivalShown) => {
   const { fill, text } = dueColors[due._tag]
   return (
     <Animated.View entering={flights[entrance]} style={[styles.disc, { backgroundColor: fill }]}>
       {due._tag === 'Never'
-        ? <Text maxFontSizeMultiplier={DISC_TEXT_SCALE} style={[type.titleMedium, { color: text }]}>∞</Text>
+        ? <Text allowFontScaling={false} style={[type.titleMedium, { color: text }]}>∞</Text>
         : [
-          <Text key='day' maxFontSizeMultiplier={DISC_TEXT_SCALE} style={[styles.discDay, { color: text }]}>
+          <Text key='day' allowFontScaling={false} style={[styles.discDay, { color: text }]}>
             {Day.toParts(due.expirationDate).day}
           </Text>,
-          <Text key='month' maxFontSizeMultiplier={DISC_TEXT_SCALE} style={[styles.discMonth, { color: text }]}>
+          <Text key='month' allowFontScaling={false} style={[styles.discMonth, { color: text }]}>
             {Day.format(due.expirationDate, { month: 'short' })}
           </Text>,
         ]}
