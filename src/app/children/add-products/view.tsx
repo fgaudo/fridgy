@@ -895,9 +895,9 @@ const failureTexts: Readonly<Record<Failure, string>> = {
 
 /**
  * The heights of the controls docked at the bottom of each step, and the 16dp above them: on the first step, its two
- * buttons and the scan FAB; on the second, the "Add" button.
+ * buttons (140) and the scan FAB, 16dp over them; on the second, the "Add" button.
  */
-const clearances = { Naming: 196, Dating: 88 } as const
+const clearances = { Naming: 140 + 16 + 56 + 16, Dating: 88 } as const
 
 /**
  * Material's snackbar 16dp above the controls docked at the bottom of the step shown, drawn anew for each id. One
