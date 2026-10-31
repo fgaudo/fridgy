@@ -112,7 +112,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   keyLabel: { ...type.headlineSmall },
-  // 8dp over "Save", not AddProducts' 16: the name field takes them, and the page must fit the reference screen.
+  // 8dp over "Save", not AddProducts' 16: the name field takes them, so that a common phone shows the page whole.
   dock: { paddingHorizontal: 24, paddingTop: 8, paddingBottom: 16 },
   save: {
     minHeight: 56,

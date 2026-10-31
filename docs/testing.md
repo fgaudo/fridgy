@@ -37,7 +37,7 @@ is written is in [`AGENTS.md`](../AGENTS.md) ("Tests") and in the "Guide" of
 | --------------------------------------- | ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
 | The tests (`bun test`, typecheck, lint) | every change              | every program's transitions, commands and subscriptions; what every view sends; every service through its contract, on each adapter; the domain; the root as a user over a database in memory | the entrypoint, the native modules, op-sqlite, the bundle, a screen                       |
 | The bundle check (`bun run bundle`)     | every push (CI)           | that Metro resolves every module from the entrypoint, that Hermes compiles the result, and that the About page lists the bundle's packages, each under a license the app may ship with        | running it                                                                                |
-| The emulator, on the target image       | before a release, by hand | the release build as a user runs it: what is drawn, on the reference screens and at 200%, and what only Android has (the skill's list)                                                        | the lowest Android, unless `minSdkVersion`, React Native or a native module changed since |
+| The emulator, on the target image       | before a release, by hand | the release build as a user runs it: what is drawn, on a typical phone and on the worst case at 200%, and what only Android has (the skill's list)                                            | the lowest Android, unless `minSdkVersion`, React Native or a native module changed since |
 
 ### The tests on every change
 
@@ -52,7 +52,7 @@ read at the top of a module) passes it, and shows on the emulator.
 
 ### The emulator, on the target image
 
-A pass before a release, by hand, on the AVD of the target API, on the reference screens, with the release build
+A pass before a release, by hand, on the AVD of the target API, on the skill's two screens, with the release build
 (the `android-release` skill says how to build it and sign it with the debug key for the emulator: a debug build
 runs the same bundle, but starts slower and draws React Native's red screen on an error). Its checklist is in the
 skill ("The emulator"), and holds what a change of the app can break: the pages, the motions once they exist, the

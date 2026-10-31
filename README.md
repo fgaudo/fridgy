@@ -64,9 +64,8 @@ Every build carries its JavaScript bundle, compiled to Hermes bytecode: the app 
 Gradle runs on Android Studio's JDK (`JAVA_HOME` set to its `jbr`). Add `-PreactNativeArchitectures=x86_64` to build
 for the emulator only, in a fraction of the time.
 
-The app needs Android 10 (API 29). Its pages are laid out for a screen 320dp wide with 640dp between the system
-bars, which every page fits without scrolling: a page scrolls when the screen is shorter than it, as the keyboard
-or a large font makes it. Why these versions, how the icons are generated and how a release is versioned, built
+The app needs Android 10 (API 29), on a screen 320dp wide or wider, at any height: a page scrolls when the screen
+is shorter than it, as the keyboard or a large font makes it, and keeps its main action in sight. Why these versions, how the icons are generated and how a release is versioned, built
 and tagged is in [`.agents/skills/android-release/SKILL.md`](.agents/skills/android-release/SKILL.md); how the app
 is tested, and why a release is checked where it is, in [`docs/testing.md`](docs/testing.md).
 
