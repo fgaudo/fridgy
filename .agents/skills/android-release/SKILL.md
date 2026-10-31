@@ -59,31 +59,36 @@ together, at one version.
 
 ## Supported screen sizes
 
-The app supports screens **320dp wide** and wider, at any height. The width is what a 360dp phone, the narrowest
-still made, gives at the largest "Display size". The manifest declares it
-(`<supports-screens android:requiresSmallestWidthDp="320" />`), which only the Play Store reads, to hide the app from
-narrower devices: an APK installs anywhere.
-
-No height is guaranteed. The keyboard, the user's "Font size" and "Display size" settings (up to 200% of text) and
-split-screen shorten any phone's viewport. So a page's column scrolls when the screen is shorter than its content,
-and the page's main action stays docked under it, in sight ("Add" of the second step of `add-products`, "Save").
-The first step of `add-products` docks nothing: its two buttons scroll with the name, which a short screen with the
-keyboard open would otherwise hide. That a page fits a common phone without scrolling is an aim of its design, seen
-on the typical phone below, never a measure.
-
-Two screens are checked, and no other:
-
-- **the typical phone**, the target AVD's own screen (the Pixel 6, 411×914dp), at the default font: what the pages
-  look like;
-- **the worst case**, 320×533dp (the Nexus S, 480×800 px at 240 dpi), with the font at 200%, the three-button
-  navigation bar and the keyboard open on each field: that nothing breaks. No text is clipped or covers another,
-  the main action is reached, and the field being typed stays in sight.
-
-Any AVD gives the worst case with `adb shell wm size 480x800`, `wm density 240` and
-`settings put system font_scale 2.0` (then `wm size reset`, `wm density reset` and `font_scale 1.0`). The three
-buttons: `adb shell cmd overlay enable-exclusive --category com.android.internal.systemui.navbar.threebutton`. The
+The pages are laid out for a reference screen **320dp wide, with 640dp between the system bars** (the status bar
+and the navigation bar, which the app draws under), and every page fits it without scrolling. The width is
+Android's "normal" bucket and the narrowest phone still made; the height is that of the smallest phone frame in
+common use (Figma's "Android Small", 360×640dp), no phone narrower than that frame being taller than it.
+No height below the reference is guaranteed: the keyboard, the user's "Font size" and "Display size" settings (up
+to 200% of text) and split-screen shorten any phone's viewport, so a page's column scrolls when the screen is
+shorter than its content (the steps of `add-products`, the page that edits a product), while the page's main
+action stays docked under it, in sight ("Add" of the second step, "Save"). The first step of `add-products` docks
+nothing: its two buttons scroll with the name, which a short screen with the keyboard open would otherwise hide.
+The manifest declares the width (`<supports-screens android:requiresSmallestWidthDp="320" />`), which only the Play
+Store reads, to hide the app from narrower devices: an APK installs anywhere, and today no phone is narrower. The
 sizes move only as the versions above do: checked in the emulator first, with `README.md`, `AGENTS.md`, the `views`
 skill and this file.
+
+In the emulator, the two screens are:
+
+- **the reference**, where the app is developed, and where no page scrolls: on the Pixel 6 of the target's AVD,
+  `adb shell wm size 960x2178` and `wm density 480`, with the three-button navigation bar
+  (`adb shell cmd overlay enable-exclusive --category com.android.internal.systemui.navbar.threebutton`). That is
+  320×726dp: the status bar takes 38dp there, for the display's cutout, and the three buttons 48dp, which leaves
+  640dp between them. On a profile without a cutout the status bar is 24dp, and the screen 320×712dp
+  (`wm size 960x2136`);
+- **the worst case**, 320×533dp (`wm size 480x800`, `wm density 240`), with the font at 200%
+  (`settings put system font_scale 2.0`) and the keyboard open on each field: no text is clipped or covers another,
+  every page reaches its main action, and the field being typed stays in sight.
+
+Every change to a view is looked at on the reference; one that touches layout or text (a field, a row, a button, a
+shape of fixed size) on the worst case too. The release's pass covers both, whole. `wm size reset`,
+`wm density reset` and `font_scale 1.0` give the AVD its own screen back, where the pages look as most phones show
+them.
 
 ## The emulator
 
@@ -125,8 +130,8 @@ The pass, on both screens of "Supported screen sizes":
   page;
 - the back button, on every page: with something to close it closes it, with the keyboard open it closes
   the keyboard, with nothing left it leaves the page, and from Home it leaves the app;
-- the screens: on the typical phone, how each page looks; on the worst case, with the keyboard open on each
-  field, no text clipped or covering another, every page's main action reached, the field being typed in sight;
+- the screens: on the reference no page scrolls; on the worst case, with the keyboard open on each field, no text
+  is clipped or covers another, every page reaches its main action, and the field being typed stays in sight;
 - the keyboard, on each page with a field: what is docked at the bottom sits right above it, and once it is
   closed goes back down — after a change of the theme or of the font size too, which recreate the activity;
 - each page and each state a change touched: Home's list and its colors of freshness, the selection and the

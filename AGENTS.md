@@ -126,8 +126,8 @@ folders; "page" names a role in the UI, kept by the root's state, not a kind of 
   (only for values valid by construction) derived from it; `Brand.make` only for a generic type,
   `Brand.nominal` for a brand without a rule. A constructor that converts its input first is named after it
   (`NormalizedString.fromString`). Export only what is used, plus a library module's intended API.
-- **Only what can be tested is supported.** `minSdkVersion`, the target SDK and the supported screens (320dp
-  wide or wider, at any height, checked on a typical phone and on a worst case) move only as the
+- **Only what can be tested is supported.** `minSdkVersion`, the target SDK and the reference screen (320dp
+  wide, 640dp between the system bars, which every page fits without scrolling) move only as the
   `android-release` skill says, checked in the emulator first, with the docs.
 
 ## Tests

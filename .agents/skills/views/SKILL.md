@@ -81,10 +81,10 @@ keypad, which types the date and nothing else. An empty state is an icon on a 96
 colors (`primaryContainer` for what is merely missing, `errorContainer` for what could not be read), a
 `headlineSmall` title and a `bodyLarge` text. Every top app bar is the surface's color at rest and
 `surfaceContainer` once the page scrolls under it, with the emphasized title. A page that is opened over another
-has a small bar, 64dp. A page is designed to fit a common phone without scrolling, and works on any screen 320dp
-wide or wider, at any height (the `android-release` skill, "Supported screen sizes"): a column that docks a button
-at the bottom scrolls (`ScrollView`) when the screen is shorter than its content, as the keyboard or a large font
-makes it. Everything is in `src/styles.ts` (`#styles`):
+has a small bar, 64dp. A page is laid out for the reference screen, 320dp wide and 640dp between the system bars
+(the `android-release` skill, "Supported screen sizes"): it fits the reference without scrolling, and a column that
+docks a button at the bottom scrolls (`ScrollView`) when the screen is shorter than its content, as the keyboard or
+a large font makes it. Everything is in `src/styles.ts` (`#styles`):
 
 - colors are Material's roles (`color.primaryContainer`), Android's color resources of both schemes
   (`palette.generated.xml` in `values/` and `values-night/`), which Android picks by the system's theme, named by
@@ -114,5 +114,5 @@ keypad of the two pages that take a date).
 The program's `program.test.ts` draws the real view for arbitrary states and checks, with `dispatchViolations` and
 `messagesSentBy` (`#libs/tea-react/view.test_support.ts`), that every message it sends is accepted and that nothing
 the user could ask for is missing (see the `add-program` skill). What it looks like is seen in the emulator (the
-`android-release` skill): build, install, and look at each state the change touches, on the typical phone and on
-the worst case, at 200%.
+`android-release` skill): build, install, and look at each state the change touches on the reference screen, where the
+app is developed, and, when the change touches layout or text, on the worst case, at 200%.
