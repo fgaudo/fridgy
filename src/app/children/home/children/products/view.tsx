@@ -35,6 +35,9 @@ const RING_WIDTH = 3
 // The disc, 40dp, a gap of 2dp, and the ring.
 const AVATAR_SLOT = 40 + 2 * (2 + RING_WIDTH)
 
+// The disc keeps Material's 40dp, so its text grows with the font only as far as it still fits inside.
+const DISC_TEXT_SCALE = 1.3
+
 const styles = StyleSheet.create({
   row: { overflow: 'hidden' },
   rowClosed: { height: 0, opacity: 0 },
@@ -148,8 +151,10 @@ const ring = (freshness: number, arc: ColorValue) => (
 
 /** The expiration day and month. */
 const expirationDay = (expirationDate: Day.Day) => (tint: ColorValue) => [
-  <Text key='day' style={[styles.avatarDay, { color: tint }]}>{Day.toParts(expirationDate).day}</Text>,
-  <Text key='month' style={[styles.avatarMonth, { color: tint }]}>
+  <Text key='day' maxFontSizeMultiplier={DISC_TEXT_SCALE} style={[styles.avatarDay, { color: tint }]}>
+    {Day.toParts(expirationDate).day}
+  </Text>,
+  <Text key='month' maxFontSizeMultiplier={DISC_TEXT_SCALE} style={[styles.avatarMonth, { color: tint }]}>
     {Day.format(expirationDate, { month: 'short' })}
   </Text>,
 ]
@@ -164,7 +169,10 @@ const dueDisc = ({ disc: colors, arc }: Urgency, expirationDate: Day.Day, freshn
 const freshnessBadge = (status: ProductStatus): ReactNode => {
   switch (status._tag) {
     case 'Everlasting':
-      return disc(neutral, (tint) => <Text style={[type.titleMedium, { color: tint }]}>∞</Text>)
+      return disc(
+        neutral,
+        (tint) => <Text maxFontSizeMultiplier={DISC_TEXT_SCALE} style={[type.titleMedium, { color: tint }]}>∞</Text>,
+      )
     case 'Stale':
     case 'ExpiredYesterday':
       return disc(expiredColors, expirationDay(status.expirationDate))

@@ -97,7 +97,8 @@ a large font makes it. Everything is in `src/styles.ts` (`#styles`):
 - text sizes are the type scale (`type.titleMedium`, `type.bodySmall`, `type.labelLarge`), in sp, which Android
   scales with the user's font size; radii the shape scale (`shape.medium`, `shape.full`); shadows the elevation
   levels (`elevation.level3`, a FAB's). A box that holds text has a minimum height and Material's padding, never a
-  fixed height, so that a large font grows it;
+  fixed height, so that a large font grows it: an outlined field's label is in the flow, above its text. A shape whose
+  size Material fixes (the 40dp disc of a product) caps the scale of its text instead (`maxFontSizeMultiplier`);
 - icons are Material Symbols, drawn by name (`icon('more_vert', color.onSurface)`), 24dp as they come: decoration,
   so the element that holds an icon carries the label (`accessibilityLabel='More options'`), and an icon beside a
   label adds nothing;

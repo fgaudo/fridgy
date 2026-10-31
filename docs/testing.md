@@ -102,4 +102,9 @@ module, and after the first release of each of those. Its result is written in t
 - Verified on 2026-10-31, in the emulator on API 37, with the debug build and `bun run failing-storage`: each
   failure's snackbar of "The failure snackbars". The pass found one bug, fixed the same day: on the first step of
   the page that adds products, the snackbar covered the scan FAB.
-- Not yet: the reference screens, the font at 200%.
+- Verified on 2026-10-31, in the emulator on API 37, with the release build: both reference screens, the font at
+  200% and the keyboard open on each field. On 320×712dp the second step of the page that adds products scrolls by
+  10dp and the page that edits a product by 14dp, of the 14dp that the profile's cutout takes: both fit the
+  reference. The pass found three bugs at 200%, fixed the same day: the day and month spilled out of a product's
+  disc; the label of an outlined field covered its text; on the first step of the page that adds products, its two
+  docked buttons left the name 13dp under the app bar, with the keyboard open.

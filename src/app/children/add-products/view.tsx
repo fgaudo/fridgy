@@ -88,12 +88,16 @@ const styles = StyleSheet.create({
     borderRadius: shape.extraSmall,
     borderWidth: 1,
     paddingHorizontal: 16,
+    paddingBottom: 15,
   },
+  // Above the text, in the flow: a large font grows the field instead of covering the text. It rises 9dp over the
+  // outline, which its surface hides.
   label: {
     ...type.bodySmall,
-    position: 'absolute',
-    top: -9,
-    left: 12,
+    alignSelf: 'flex-start',
+    marginTop: -9,
+    marginBottom: 8,
+    marginLeft: -4,
     paddingHorizontal: 4,
     backgroundColor: color.surface,
   },
@@ -176,6 +180,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   dock: { gap: 12, paddingHorizontal: 24, paddingTop: 16, paddingBottom: 16 },
+  // The dock, inside the column: its padding and gap already give the sides and 12dp of the top.
+  nameDock: { gap: 12, paddingTop: 4, paddingBottom: 16 },
   filledButton: {
     minHeight: 56,
     borderRadius: shape.full,
@@ -485,6 +491,7 @@ const nameField = (shown: NameShown, activity: NameActivity, dispatch: Dispatch<
   return (
     <Box key={`name-${shown.nameKey}`}>
       <Box style={[styles.field, { borderColor: isEditing ? color.outline : color.disabledContainer }]}>
+        <Text style={[styles.label, { color: isEditing ? color.onSurfaceVariant : color.disabledContent }]}>Name</Text>
         <TextInput
           accessibilityLabel='Name'
           defaultValue={shown.name}
@@ -499,7 +506,6 @@ const nameField = (shown: NameShown, activity: NameActivity, dispatch: Dispatch<
             ? onValue(activity.changeName)
             : undefined}
         />
-        <Text style={[styles.label, { color: isEditing ? color.onSurfaceVariant : color.disabledContent }]}>Name</Text>
         {activity._tag === 'LookingUp'
           ? (
             <Box style={[styles.iconButton, styles.trailing]}>
@@ -578,16 +584,21 @@ const dueColors: Readonly<Record<Due['_tag'], Colors>> = {
   Later: { fill: color.tertiaryContainer, text: color.onTertiaryContainer },
 }
 
+// Home's disc is 40dp, so its text grows with the font only as far as it still fits inside.
+const DISC_TEXT_SCALE = 1.3
+
 /** A product's disc, as Home's list draws it: its expiration day and month, or an infinity sign when it never ends. */
 const disc = ({ entrance, due }: ArrivalShown) => {
   const { fill, text } = dueColors[due._tag]
   return (
     <Animated.View entering={flights[entrance]} style={[styles.disc, { backgroundColor: fill }]}>
       {due._tag === 'Never'
-        ? <Text style={[type.titleMedium, { color: text }]}>∞</Text>
+        ? <Text maxFontSizeMultiplier={DISC_TEXT_SCALE} style={[type.titleMedium, { color: text }]}>∞</Text>
         : [
-          <Text key='day' style={[styles.discDay, { color: text }]}>{Day.toParts(due.expirationDate).day}</Text>,
-          <Text key='month' style={[styles.discMonth, { color: text }]}>
+          <Text key='day' maxFontSizeMultiplier={DISC_TEXT_SCALE} style={[styles.discDay, { color: text }]}>
+            {Day.toParts(due.expirationDate).day}
+          </Text>,
+          <Text key='month' maxFontSizeMultiplier={DISC_TEXT_SCALE} style={[styles.discMonth, { color: text }]}>
             {Day.format(due.expirationDate, { month: 'short' })}
           </Text>,
         ]}
@@ -636,7 +647,10 @@ const fridge = (shown: FridgeShown) =>
     </Box>
   )
 
-/** The first step: the name under the app bar, the two ways out docked at the bottom, the scan FAB above them. */
+/**
+ * The first step: the name under the app bar, the two ways out at the bottom, the scan FAB above them. The ways out
+ * scroll with the name: docked, they would leave a short screen with the keyboard open no room to show it.
+ */
 const nameStep = (
   shown: NameShown,
   activity: NameActivity,
@@ -660,18 +674,18 @@ const nameStep = (
           {fridge(fridgeShown)}
           {scanFab(scan, dispatch)}
         </Box>
+        <Box style={styles.nameDock}>
+          {button(
+            'Set expiration',
+            editing(Opt.flatMap(controls, ({ maybeRequestDate }) => maybeRequestDate)),
+            'Filled',
+            dispatch,
+          )}
+          {activity._tag === 'LookingUp'
+            ? button('Cancel', control(Opt.some(activity.controls.cancelLookup)), 'Text', dispatch)
+            : button('Add without date', editing(Opt.flatMap(controls, ({ maybeAdd }) => maybeAdd)), 'Text', dispatch)}
+        </Box>
       </ScrollView>
-      <Box style={styles.dock}>
-        {button(
-          'Set expiration',
-          editing(Opt.flatMap(controls, ({ maybeRequestDate }) => maybeRequestDate)),
-          'Filled',
-          dispatch,
-        )}
-        {activity._tag === 'LookingUp'
-          ? button('Cancel', control(Opt.some(activity.controls.cancelLookup)), 'Text', dispatch)
-          : button('Add without date', editing(Opt.flatMap(controls, ({ maybeAdd }) => maybeAdd)), 'Text', dispatch)}
-      </Box>
     </Animated.View>
   )
 }
@@ -726,10 +740,10 @@ const dateField = (shown: DateShown, activity: DateActivity) => {
         borderColor: look === 'Disabled' ? color.disabledContainer : look === 'Wrong' ? color.error : color.outline,
       }]}
     >
+      <Text style={[styles.label, { color: tint }]}>Expiration date</Text>
       <Text style={[styles.digits, { color: shown.digits === '' ? color.onSurfaceVariant : color.onSurface }]}>
         {shown.digits === '' ? placeholder : shown.digits}
       </Text>
-      <Text style={[styles.label, { color: tint }]}>Expiration date</Text>
     </Box>
   )
 }
@@ -894,14 +908,14 @@ const failureTexts: Readonly<Record<Failure, string>> = {
 }
 
 /**
- * The heights of the controls docked at the bottom of each step, and the 16dp above them: on the first step, its two
- * buttons (140) and the scan FAB, 16dp over them; on the second, the "Add" button.
+ * The heights of the controls at the bottom of each step, and the 16dp above them: on the first step, its two buttons
+ * (140) and the scan FAB, 16dp over them; on the second, the "Add" button.
  */
 const clearances = { Naming: 140 + 16 + 56 + 16, Dating: 88 } as const
 
 /**
- * Material's snackbar 16dp above the controls docked at the bottom of the step shown, drawn anew for each id. One
- * that leaves stays where it stood.
+ * Material's snackbar 16dp above the controls at the bottom of the step shown, drawn anew for each id. One that leaves
+ * stays where it stood.
  */
 const snackbar = (shown: Snackbar, step: keyof typeof clearances) =>
   shown._tag === 'None' ? null : (

@@ -66,7 +66,8 @@ common use (Figma's "Android Small", 360×640dp), no phone narrower than that fr
 No height below the reference is guaranteed: the keyboard, the user's "Font size" and "Display size" settings (up
 to 200% of text) and split-screen shorten any phone's viewport, so a page's column scrolls when the screen is
 shorter than its content (the steps of `add-products`, the page that edits a product), while the page's main
-action stays docked under it, in sight ("Add" of the second step, "Save"). The manifest declares the width
+action stays docked under it, in sight ("Add" of the second step, "Save"). The first step of `add-products` docks
+nothing: its two buttons scroll with the name, which a short screen with the keyboard open would otherwise hide. The manifest declares the width
 (`<supports-screens android:requiresSmallestWidthDp="320" />`), which only the Play Store reads, to hide the app
 from narrower devices: an APK installs anywhere, and today no phone is narrower. The sizes move only as the
 versions above do: checked in the emulator first, with `README.md`, `AGENTS.md`, the `views` skill and this file.

@@ -50,12 +50,16 @@ const styles = StyleSheet.create({
     borderRadius: shape.extraSmall,
     borderWidth: 1,
     paddingHorizontal: 16,
+    paddingBottom: 15,
   },
+  // Above the text, in the flow: a large font grows the field instead of covering the text. It rises 9dp over the
+  // outline, which its surface hides.
   label: {
     ...type.bodySmall,
-    position: 'absolute',
-    top: -9,
-    left: 12,
+    alignSelf: 'flex-start',
+    marginTop: -9,
+    marginBottom: 8,
+    marginLeft: -4,
     paddingHorizontal: 4,
     backgroundColor: color.surface,
   },
@@ -197,6 +201,7 @@ const nameField = (shown: FieldsShown, activity: Activity, dispatch: Dispatch<Me
       key={`name-${shown.nameKey}`}
       style={[styles.field, { borderColor: isEditing ? color.outline : color.disabledContainer }]}
     >
+      <Text style={[styles.label, { color: isEditing ? color.onSurfaceVariant : color.disabledContent }]}>Name</Text>
       <TextInput
         accessibilityLabel='Name'
         defaultValue={shown.name}
@@ -206,7 +211,6 @@ const nameField = (shown: FieldsShown, activity: Activity, dispatch: Dispatch<Me
         style={[styles.input, { color: isEditing ? color.onSurface : color.disabledContent }]}
         onChangeText={isEditing ? onValue(activity.controls.changeName) : undefined}
       />
-      <Text style={[styles.label, { color: isEditing ? color.onSurfaceVariant : color.disabledContent }]}>Name</Text>
       {Opt.match(maybeClearName, {
         onNone: () => null,
         onSome: (clear) => (
@@ -270,10 +274,10 @@ const dateField = (shown: FieldsShown, activity: Activity) => {
         borderColor: look === 'Disabled' ? color.disabledContainer : look === 'Wrong' ? color.error : color.outline,
       }]}
     >
+      <Text style={[styles.label, { color: tint }]}>Expiration date</Text>
       <Text style={[styles.digits, { color: shown.digits === '' ? color.onSurfaceVariant : color.onSurface }]}>
         {shown.digits === '' ? placeholders[shown.order] : shown.digits}
       </Text>
-      <Text style={[styles.label, { color: tint }]}>Expiration date</Text>
     </Box>
   )
 }
