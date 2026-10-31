@@ -27,6 +27,7 @@
     "update-palette": "bun ./scripts/cli.ts palette",
     "update-icons": "bun ./scripts/cli.ts icons",
     "update-assets": "bun ./scripts/cli.ts assets",
+    "failing-storage": "bun ./scripts/cli.ts failing-storage",
     "bundle": "react-native bundle --platform android --dev false --entry-file src/entrypoints/native.tsx --bundle-output out/index.android.bundle --assets-dest out/assets",
     "typecheck": "tsc --noEmit",
     "lint": "biome check src scripts && oxlint --type-aware src scripts",

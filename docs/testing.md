@@ -62,6 +62,24 @@ native module does them, and the tests' scanner reads nothing by itself). What i
 (a module's behaviour, the backup, a setting of the system) is a doubt to settle once, listed under "Known gaps"
 in `AGENTS.md` until it is.
 
+### The failure snackbars
+
+The storage on a phone does not fail on demand, so the programs' tests are the only automatic check of a
+failure's snackbar. To look at them, `bun run failing-storage writes` gives the database of the app that `adb`
+reaches triggers that make every write of a product or a setting fail, while reads still work. The app must be a
+debug build: the script goes through `run-as`, which a release refuses. It stops the app, which is then opened
+again. Then:
+
+- add a product, on either step of the page that adds products: `Couldn't add the product`, 16dp above the
+  scan FAB on the first step and above "Add" on the second, which do not move;
+- edit a product and save it: `Couldn't save the product`, 16dp above "Save";
+- pick another date order, on either page: `Couldn't save the date order`;
+- select a product on Home and delete it: `Couldn't delete the products`.
+
+With `writes-but-deletes`, a deletion goes through and its "Undo" fails: `Couldn't put the products back`.
+`off` removes the triggers. `This product no longer exists` cannot be reached: nothing else writes while the
+edit page is open. Only the tests of the edit page's `Gone` state and the root's cover it.
+
 ### The lowest Android
 
 The same pass, on the AVD of `minSdkVersion`, after a change of `minSdkVersion`, of React Native or of a native
@@ -81,5 +99,7 @@ module, and after the first release of each of those. Its result is written in t
   on each page and out of the app. The storage opened again after a recreated activity. Nothing in the app's
   logcat; the migration ran. The pass found no bug of its own, and showed that AddProducts' buttons stand under
   the keyboard there too.
-- Not yet: the reference screens, the font at 200%, the failure snackbars (the storage on the phone does not fail
-  on demand, as the web build's development server could).
+- Verified on 2026-10-31, in the emulator on API 37, with the debug build and `bun run failing-storage`: each
+  failure's snackbar of "The failure snackbars". The pass found one bug, fixed the same day: on the first step of
+  the page that adds products, the snackbar covered the scan FAB.
+- Not yet: the reference screens, the font at 200%.

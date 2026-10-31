@@ -1,3 +1,4 @@
+import { Database } from 'bun:sqlite'
 import * as EffBun from '@effect/platform-bun'
 import * as Cli from 'effect/cli'
 import * as Data from 'effect/Data'
@@ -10,6 +11,7 @@ import * as Schema from 'effect/Schema'
 import * as LicenseChecker from 'license-checker-rseidelsohn'
 import * as Woff2 from 'wawoff2'
 import { Entries } from '#app/children/about/services/licenses/licenses.bundled.ts'
+import { ProductExpirationSchema, ProductSchema, SettingSchema } from '#infrastructure/storage/schema.ts'
 import * as Licenses from './licenses.ts'
 import { colorResources, paletteModule, surface } from './palette.ts'
 
@@ -255,9 +257,104 @@ const assetsCommand = Cli.Command.make(
   }),
 )
 
+class FailingStorageFailed extends Data.TaggedError('FailingStorageFailed')<{ readonly cause: unknown }> {}
+
+const appId = 'net.gaudo.fridgy'
+
+// What op-sqlite opens: `fridgy.sqlite` in the app's `databases/`, with the journal of its WAL mode beside it.
+const databaseFiles = ['fridgy.sqlite', 'fridgy.sqlite-wal', 'fridgy.sqlite-shm']
+
+/** Runs a command in the device's shell, as its `shell` user: its redirections may write `/data/local/tmp`. */
+const adbShell = (command: string) => run('adb', ['shell', command], '.')
+
+// The writes each mode fails, on the tables of the products and of the settings, while reads still work.
+const failingOperations = {
+  writes: ['INSERT', 'UPDATE', 'DELETE'],
+  'writes-but-deletes': ['INSERT', 'UPDATE'],
+  off: [],
+} as const
+
+/**
+ * The triggers that make each write of `operations` fail, after dropping those of a previous run. Its message is
+ * what SQLite reports, and the app logs.
+ */
+const failingTriggers = (operations: ReadonlyArray<string>) => {
+  const tables = [ProductSchema.table, ProductExpirationSchema.table, SettingSchema.table]
+  const name = (operation: string, table: string) => `failing_${operation.toLowerCase()}_${table}`
+  return [
+    ...tables.flatMap((table) =>
+      failingOperations.writes.map((operation) => `DROP TRIGGER IF EXISTS ${name(operation, table)}`)
+    ),
+    ...tables.flatMap((table) =>
+      operations.map((operation) =>
+        `CREATE TRIGGER ${name(operation, table)} BEFORE ${operation} ON ${table}
+         BEGIN SELECT RAISE(ABORT, 'Failing on purpose: failing-storage'); END`
+      )
+    ),
+  ]
+}
+
+// The debug build's database on the device or emulator that `adb` reaches, given triggers that make its writes
+// fail, so that each failure's snackbar can be looked at (`docs/testing.md`). The app is stopped first, and the
+// file goes through `/data/local/tmp`, which `run-as` cannot write but the shell's redirections can. A release is
+// not debuggable: `run-as` refuses it.
+const failingStorageCommand = Cli.Command.make(
+  'failing-storage',
+  { mode: Cli.Argument.Literals('mode', ['writes', 'writes-but-deletes', 'off']) },
+  Effect.fn('failingStorageCommand')(function*({ mode }) {
+    const resolve = yield* root
+    const fs = yield* FS.FileSystem
+    const local = resolve('out/failing-storage')
+    const remote = '/data/local/tmp/failing-storage'
+    yield* fs.remove(local, { recursive: true, force: true })
+    yield* fs.makeDirectory(resolve('out'), { recursive: true })
+    // Fails here, with its exit code, when the app is missing or is a release.
+    yield* adbShell(`run-as ${appId} true`)
+    yield* adbShell(`am force-stop ${appId}`)
+    // A journal is missing when the app closed the database cleanly: only the files there are copied.
+    yield* adbShell(
+      [
+        `rm -rf ${remote}`,
+        `mkdir ${remote}`,
+        ...databaseFiles.map((file) =>
+          `(run-as ${appId} cat databases/${file} > ${remote}/${file} 2>/dev/null || rm ${remote}/${file})`
+        ),
+      ].join('; '),
+    )
+    yield* run('adb', ['pull', remote, resolve('out')], '.')
+    // Closing the database checkpoints the journal into the file and removes it: the file alone goes back.
+    yield* Effect.try({
+      try: () => {
+        // Never created: an app that has not opened its database yet would get an empty one.
+        const db = new Database(`${local}/fridgy.sqlite`, { readwrite: true, create: false })
+        for (const statement of failingTriggers(failingOperations[mode])) db.run(statement)
+        db.close()
+      },
+      catch: (cause) => new FailingStorageFailed({ cause }),
+    })
+    yield* run('adb', ['push', `${local}/fridgy.sqlite`, `${remote}/fridgy.sqlite`], '.')
+    yield* adbShell(
+      [
+        `chmod 644 ${remote}/fridgy.sqlite`,
+        `run-as ${appId} rm -f databases/fridgy.sqlite-wal databases/fridgy.sqlite-shm`,
+        `run-as ${appId} sh -c 'cat > databases/fridgy.sqlite' < ${remote}/fridgy.sqlite`,
+        `rm -rf ${remote}`,
+      ].join(' && '),
+    )
+    yield* Effect.logInfo('Storage on the device ready', { failing: failingOperations[mode] })
+  }),
+)
+
 EffBun.BunRuntime.runMain(
   Cli.Command.make('cli.ts').pipe(
-    Cli.Command.withSubcommands([licensesCommand, androidLicensesCommand, paletteCommand, iconsCommand, assetsCommand]),
+    Cli.Command.withSubcommands([
+      licensesCommand,
+      androidLicensesCommand,
+      paletteCommand,
+      iconsCommand,
+      assetsCommand,
+      failingStorageCommand,
+    ]),
     Cli.Command.run({ version: '1.0' }),
     Effect.provide(EffBun.BunServices.layer),
   ),

@@ -128,6 +128,7 @@ The pass, on both reference screens of "Supported screen sizes":
   closed goes back down — after a change of the theme or of the font size too, which recreate the activity;
 - each page and each state a change touched: Home's list and its colors of freshness, the selection and the
   deletion with "Undo", both steps of the page that adds products, the page that edits a product, About;
+- each failure's snackbar, on a debug build, as `docs/testing.md` ("The failure snackbars") says;
 - a long press selects without delivering the tap that opens the product, and vibrates;
 - the scanner: its permission is asked on the first opening, a refusal says "Camera not available. Type the name",
   and a code held to the camera (the emulator's back camera is the host's webcam with
