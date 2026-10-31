@@ -200,6 +200,10 @@ const styles = StyleSheet.create({
   heading: { paddingHorizontal: 16, paddingBottom: 8 },
   headingLabel: { ...type.labelMedium, color: color.onSurfaceVariant },
   headingName: { ...type.titleLarge, color: color.onSurface },
+  // One line, whole: a long name scrolls sideways, across the screen's width, rather than taking a second line, which
+  // the reference screen has no room for.
+  nameScroll: { marginHorizontal: -40 },
+  nameScrollContent: { paddingHorizontal: 40 },
   // One outline around the row, which clips the selected segment's container to its corners.
   segments: {
     minHeight: 40,
@@ -853,7 +857,14 @@ const dateStep = (shown: DateShown, activity: DateActivity, dispatch: Dispatch<M
         <ScrollView contentContainerStyle={styles.dateColumn}>
           <Box style={styles.heading}>
             <Text style={styles.headingLabel}>Product</Text>
-            <Text accessibilityRole='header' numberOfLines={2} style={styles.headingName}>{shown.name}</Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.nameScroll}
+              contentContainerStyle={styles.nameScrollContent}
+            >
+              <Text accessibilityRole='header' style={styles.headingName}>{shown.name}</Text>
+            </ScrollView>
           </Box>
           {orderSegments(shown, activity, dispatch)}
           {dateField(shown, activity)}
