@@ -385,16 +385,14 @@ Not yet seen:
 
 - **A row arriving as Home enters.** A product added in AddProducts should open its place as AddProducts sinks
   (decision 4 of "Home's rows"); the frames were not caught.
-- **AddProducts' and EditProduct's snackbars.** They tell of failures that the emulator does not give (a write
-  that fails, a setting not kept). They are drawn as Home's is, at a place of their frame that does not move.
+- **The frames of AddProducts' and EditProduct's snackbars.** Each was seen standing on 2026-10-31, with the
+  failures of `bun run failing-storage` ("The failure snackbars" in `docs/testing.md`); their rise was not caught.
 - **A snackbar under a page that opens or leaves.** `LayoutAnimationConfig` keeps it still (decision 6 of the
   second design); no frame was caught with a snackbar standing as a page opened.
 
 - **The feel at the real speed.** Each motion was seen in frames of the slowed builds. At 400 ms and 200 ms the
   screenshots catch only the end: whether they feel right is the owner's to judge, on the emulator or a phone.
 - **"Remove animations"**, which should make every motion instant.
-- **Two pages stacked in one frame.** The "Known gaps" item (EditProduct and AddProducts pushed together) gives
-  two pages in the upper layer. The motion does not make it worse, but it shows it.
 - **The frames of the motions on `minSdkVersion`'s image.** The release ran on API 29 on 2026-10-30
   (`docs/testing.md`): the pages opened and left, the rows opened, the selection's bar took its color and the
   snackbar came, with nothing in logcat. Only the frames were not caught there, as they were on API 37.

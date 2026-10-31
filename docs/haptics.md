@@ -1,7 +1,7 @@
 # Design: vibrations
 
-Implemented on 2026-10-28, in `src/infrastructure/haptics` and in the programs that vibrate; not yet felt on
-Android (see "Verified, and not"). Read [`AGENTS.md`](../AGENTS.md), the `add-service` skill and the "Guide" of
+Implemented on 2026-10-28, in `src/infrastructure/haptics` and in the programs that vibrate; felt on a phone on
+2026-10-30 (see "Verified, and not"). Read [`AGENTS.md`](../AGENTS.md), the `add-service` skill and the "Guide" of
 `node_modules/@fgaudo/effect-tea/README.md` before changing it.
 
 ## Decisions
