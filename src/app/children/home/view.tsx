@@ -2,7 +2,7 @@ import * as Tea from '@fgaudo/effect-tea'
 import { View as Box, Pressable, ScrollView, StyleSheet, Text } from 'react-native'
 import Animated, { Easing, FadeIn, FadeOut, Keyframe, LinearTransition } from 'react-native-reanimated'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { type Handlers, handlers, type View } from '#libs/tea-react/tea-react.ts'
+import { type Handlers, handlers, type View, write } from '#libs/tea-react/tea-react.ts'
 import { color, duration, easing, elevation, icon, shape, type } from '#styles'
 import * as Products from './children/products/view.tsx'
 import type { Message, Model } from './program.ts'
@@ -125,8 +125,8 @@ const menu = (menu: Model['menu'], { on }: Handlers<Message>) =>
  */
 export const view: View<Model, Message> = (model, dispatch) => {
   const events = handlers(dispatch)
-  const { on, onValue } = events
-  const toProducts = Tea.dispatchTo(dispatch, 'Products')
+  const { on } = events
+  const toProducts = Tea.forwardTo(dispatch, 'Products')
   const selection = Products.selectionBar(model.products, toProducts)
   const subtitle = Products.subtitle(model.products)
   const snackbar = Products.snackbar(model.products, toProducts)
@@ -134,11 +134,12 @@ export const view: View<Model, Message> = (model, dispatch) => {
   const container = selection === undefined ? color.surface : color.secondaryContainer
   const onBar = selection === undefined ? color.onSurface : color.onSecondaryContainer
   const onBarVariant = selection === undefined ? color.onSurfaceVariant : onBar
-  const layOutHeadline = onValue((height: number) => model.layOutHeadline(height))
-  const layOutList = onValue((height: number) => model.layOutList(height))
-  const sizeContent = onValue((height: number) => model.sizeContent(height))
-  const scrolled = onValue((top: number) => model.scroll(top))
-  const scrollEnded = onValue((top: number) => model.endScroll(top))
+  const layOutHeadline = write(Tea.forwardTo(dispatch, 'HeadlineHeight'))
+  const layOutList = write(Tea.forwardTo(dispatch, 'ListHeight'))
+  const sizeContent = write(Tea.forwardTo(dispatch, 'ContentHeight'))
+  const scrolled = write(Tea.forwardTo(dispatch, 'Scroll'))
+  const rested = write(Tea.forwardTo(dispatch, 'Rest'))
+  const scrollEnded = on(model.endScroll)
   // Over both rows of the bar, which are one surface. The selection's color does not change.
   const scrolledColor = selection === undefined
     ? <Box style={[styles.scrolled, { opacity: containerAlpha(model.collapse) }]} />
@@ -184,7 +185,10 @@ export const view: View<Model, Message> = (model, dispatch) => {
           onContentSizeChange={(_width, height) => sizeContent(height)}
           onScroll={(event) => scrolled(event.nativeEvent.contentOffset.y)}
           onScrollBeginDrag={on(model.startScroll)}
-          onMomentumScrollEnd={(event) => scrollEnded(event.nativeEvent.contentOffset.y)}
+          onMomentumScrollEnd={(event) => {
+            rested(event.nativeEvent.contentOffset.y)
+            scrollEnded()
+          }}
         >
           <Box
             style={[styles.headline, { backgroundColor: container }]}

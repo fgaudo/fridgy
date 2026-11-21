@@ -1,10 +1,8 @@
 import { describe, expect, mock, test } from 'bun:test'
-import type * as Tea from '@fgaudo/effect-tea'
+import * as Tea from '@fgaudo/effect-tea'
 import * as Cause from 'effect/Cause'
 import * as Effect from 'effect/Effect'
 import * as Exit from 'effect/Exit'
-import * as Fiber from 'effect/Fiber'
-import * as Stream from 'effect/Stream'
 import * as React from 'react'
 
 // Bun renders nothing: a hook reads its store at once, so that `Root` can be called as a function.
@@ -43,50 +41,58 @@ const textsOf = (node: React.ReactNode): ReadonlyArray<string> => {
   return textsOf(props.children)
 }
 
-const frame = (model: string): Tea.Frame<string, never> => ({ model, dispatch: () => Effect.void })
+/** A program that shows its text, and takes a new one. */
+const shows = (text: string) =>
+  Tea.program<{ state: { text: string }; message: { _tag: 'Shown'; text: string } }>().make({
+    init: { state: { text } },
+    update: (message) => () => ({ state: { text: message.text } }),
+    makeModel: (state) => state.text,
+  })
 
 const screen = React.createElement('Text', null, 'Crashed')
 
 const make = () =>
-  Renderer.make<string, never>((model) => {
+  Renderer.make<string, { _tag: 'Shown'; text: string }>((model) => {
     if (model === 'throws') throw new Error('The view threw')
     return React.createElement('Text', null, model)
   })
 
 describe('make', () => {
-  test('draws nothing before the first frame, then the newest frame', () =>
+  test('draws nothing before an app, then the model of its current state', () => {
+    const { Root, draw } = make()
+    expect(textsOf(React.createElement(Root))).toEqual([])
+    const { app } = Tea.start(shows('first'))
+    draw(app)
+    expect(textsOf(React.createElement(Root))).toEqual(['first'])
+    app.dispatch({ _tag: 'Shown', text: 'second' })
+    expect(textsOf(React.createElement(Root))).toEqual(['second'])
+  })
+
+  test('draws the screen shown in the app\'s place, before any app and after one', () => {
+    const { Root, draw, show } = make()
+    show(screen)
+    expect(textsOf(React.createElement(Root))).toEqual(['Crashed'])
+    draw(Tea.start(shows('first')).app)
+    show(screen)
+    expect(textsOf(React.createElement(Root))).toEqual(['Crashed'])
+  })
+
+  test('draws an app drawn after the screen over it', () => {
+    const { Root, draw, show } = make()
+    show(screen)
+    draw(Tea.start(shows('restarted')).app)
+    expect(textsOf(React.createElement(Root))).toEqual(['restarted'])
+  })
+
+  test('ends the run with the defect of a view that throws, as drawn, and draws nothing of it', () =>
     Effect.runPromise(Effect.gen(function*() {
-      const { Root, render } = make()
+      const { Root, draw } = make()
+      const { app, run } = Tea.start(shows('throws'))
+      draw(app)
       expect(textsOf(React.createElement(Root))).toEqual([])
-      yield* render(Stream.make(frame('first'), frame('second')))
-      expect(textsOf(React.createElement(Root))).toEqual(['second'])
-    })))
-
-  test('draws the screen shown in the frames\' place, before any frame and after the last one', () =>
-    Effect.runPromise(Effect.gen(function*() {
-      const { Root, render, show } = make()
-      yield* show(screen)
-      expect(textsOf(React.createElement(Root))).toEqual(['Crashed'])
-      yield* render(Stream.make(frame('first')))
-      yield* show(screen)
-      expect(textsOf(React.createElement(Root))).toEqual(['Crashed'])
-    })))
-
-  test('draws the frames of a new render over the screen', () =>
-    Effect.runPromise(Effect.gen(function*() {
-      const { Root, render, show } = make()
-      yield* show(screen)
-      yield* render(Stream.make(frame('restarted')))
-      expect(textsOf(React.createElement(Root))).toEqual(['restarted'])
-    })))
-
-  test('ends the render with the defect of a view that throws, and draws nothing of it', () =>
-    Effect.runPromise(Effect.gen(function*() {
-      const { Root, render } = make()
-      const rendering = yield* Effect.forkChild(render(Stream.concat(Stream.make(frame('throws')), Stream.never)))
-      yield* Effect.yieldNow
-      expect(textsOf(React.createElement(Root))).toEqual([])
-      const exit = yield* Fiber.await(rendering)
-      expect(Exit.isFailure(exit) && Cause.squash(exit.cause)).toEqual(new Error('The view threw'))
+      const exit = yield* Effect.exit(run)
+      const died = Exit.isFailure(exit) ? Cause.squash(exit.cause) : undefined
+      expect(died instanceof Tea.ProgramDefect && died.where).toBe('render')
+      expect(died instanceof Tea.ProgramDefect && died.cause).toEqual(new Error('The view threw'))
     })))
 })

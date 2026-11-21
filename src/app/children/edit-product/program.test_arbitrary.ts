@@ -129,7 +129,7 @@ export const outcome: fc.Arbitrary<Outcome> = fc.oneof(
 )
 
 export const message: fc.Arbitrary<Message> = fc.oneof(
-  fc.string().map((name) => Msg.NameChanged({ name })),
+  fc.string().map((value) => Msg.Name({ message: { _tag: 'Written', value } })),
   fc.constant(Msg.NameCleared()),
   digit.map((digit) => Msg.DigitTyped({ digit })),
   fc.constant(Msg.DigitErased()),

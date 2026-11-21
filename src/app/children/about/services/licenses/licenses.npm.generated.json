@@ -7,14 +7,14 @@
         "name": "@babel/runtime",
         "description": "babel's modular runtime helpers"
     },
-    "@effect/sql-sqlite-react-native@4.1.0": {
+    "@effect/sql-sqlite-react-native@4.1.5": {
         "licenses": "MIT",
         "repository": "https://github.com/Effect-TS/effect",
         "copyright": "Copyright (c) 2023-present The Contributors",
         "name": "@effect/sql-sqlite-react-native",
         "description": "A SQLite toolkit for Effect"
     },
-    "@fgaudo/effect-tea@0.7.1": {
+    "@fgaudo/effect-tea@0.8.0": {
         "licenses": "MIT",
         "repository": "https://github.com/fgaudo/effect-tea",
         "publisher": "Francesco Gaudenzi",
@@ -68,7 +68,7 @@
         "name": "base64-js",
         "description": "Base64 encoding/decoding in pure JS"
     },
-    "effect@4.1.0": {
+    "effect@4.1.5": {
         "licenses": "MIT",
         "repository": "https://github.com/Effect-TS/effect",
         "copyright": "Copyright (c) 2023 Effectful Technologies Inc",

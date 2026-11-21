@@ -42,8 +42,8 @@ export class Scanner extends Context.Service<Scanner, {
   `Product.fromSnapshot`. Writes that batch are `Req.Request`s with a `RequestResolver` (`DeleteProducts`).
 - Document each member: what it does, when it fails, what observing it turns on (the camera).
 
-The program lists the service in its `Deps` (`services: Deps` in its program) and reads it in a command or a
-subscription, never in `update` or the view.
+The program reads the service in a command or a subscription, never in `update` or the view; its type infers it
+from them.
 
 ## The adapter
 

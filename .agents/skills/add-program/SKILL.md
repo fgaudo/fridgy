@@ -5,8 +5,8 @@ description: How to add a program to Fridgy's tree of Elm-style programs in src/
 
 # Add a program
 
-Read `node_modules/@fgaudo/effect-tea/README.md` ("Guide" and "Testing") first: its rules are this app's. The
-programs to copy are `src/app/children/about` (a page in one module) and `src/app/children/home` (a page with a
+Read the runtime's guide first, which the package holds: `node_modules/@fgaudo/effect-tea/skills/effect-tea/SKILL.md`
+says which of its pages to read for what, and its rules are this app's. The programs to copy are `src/app/children/about` (a page in one module) and `src/app/children/home` (a page with a
 child of its own, declared like the root declares its pages).
 
 ## The folder
@@ -15,7 +15,7 @@ Every program is a folder of the same shape, at any depth:
 
 ```
 <program>/
-├─ program.ts               State, Message, Event, Command, Deps, Model, program
+├─ program.ts               State, Message, Event, Command, Model, program
 ├─ view.tsx                 the view (see the `views` skill)
 ├─ layer.ts                 the adapters of its services, merged with its children's layers
 ├─ program.test.ts          property tests of update, the view and the subscriptions
@@ -41,18 +41,28 @@ service and a module of the infrastructure to move its sixty lines.
 - `State` is one explicit state machine per concern (data, selection, form): a union with a case per state,
   no shared flags, no derived data. A value that depends on time is computed in `makeModel` from a `now` a
   clock subscription keeps in the state.
+- The program names its types, then is made: `const { input, child, make } = Tea.program<{ state: State;
+  message: Own; command: Command; event: Event }>()`, then `export const program = make({ … })`. `message` names
+  the program's own messages only: `make` adds its children's and the writes into its inputs, and the program
+  exports all of them as `type Message = Tea.MessageOf<typeof program>`. Its services are inferred.
 - Messages are a `Data.TaggedEnum`. Export `Message`, `Event` and `Command` as types only (a parent takes
-  them with `Tea.MessageOf` and `Tea.CommandOf`); export `ExternalMessage`, when the parent may give the
-  program one, as a value. Tests build their own constructors with `Data.taggedEnum<Message>()`.
-- `services: Deps` lists the program's services, its children's included (`BackButton | Products.Deps`).
+  them with `Tea.MessageOf` and `Tea.CommandOf`). The messages a parent may send are named `external`, and the
+  program answers them in `external`, apart from `update`, in every state. Tests build their own constructors
+  with `Data.taggedEnum<Message>()`.
 - `update` returns `Tea.reject` for a message that does not apply in this state but may still arrive (a tap
   on a frame the state has moved past). A message the invariants rule out, such as an operation's completion
   outside the state that only it leaves, or a subscription's message outside the states that list its key,
   ends the run with `Tea.defect(reason)`, which throws an `InvariantDefect`. Only the state and the run rule a
   message out: a message of the view, or an event raised for one, is never a defect, whatever the view draws.
 - `Model` is what the view distinguishes: a union with a case per state, each holding only the messages of
-  its controls (`open: Message`, `changeName: (name: string) => Message`), picked from the state as `update`
-  reads it, never by calling `update`. The view sends only what the model holds.
+  its controls (`open: Message`), picked from the state as `update` reads it, never by calling `update`. The
+  view sends only what the model holds. A model is data and holds no function: a message for each value of a
+  small set is held for each value (a keypad's digits), and a value the view gives is written into an input.
+- An input (`inputs: { Name: input({ at }) }`) is a place of the state that the view writes into, through
+  `Tea.forwardTo(dispatch, 'Name')`: the text of a field, and a value of the platform that only an element's event
+  gives (a layout's height, a scroll's offset). No `update` sees a write. An input whose `set` keeps less than
+  what is written (Home's scroll, of which it keeps how far the top app bar collapses) returns the very same
+  state while what it keeps does not change, and its `get` gives a value that `set` would keep as it is.
 - Commands turn expected failures into messages with `Effect.match({ onSuccess, onFailure })` followed by
   `Effect.asSome`, as the last steps of their `Effect.fn`, and carry `Effect.withLogSpan`.
   Subscriptions map a service's `Source<A, never>` into messages (`Channel.unwrap` to read the service,
@@ -66,9 +76,9 @@ A parent declares a child; the library routes its messages (`{ _tag: '<Child>', 
 subscriptions and models.
 
 ```ts
-const { child, compose } = Tea.parent<{ state: State; command?: Command; event?: Event }>()
+const { child, make } = Tea.program<{ state: State; message: Own; event: Event }>()
 
-export const program = compose({
+export const program = make({
   init: (children) => {
     const products = children.Products.init // started here, and its commands go out with the parent's
     return { state: { ..., products: products.state }, commands: products.commands }
@@ -81,7 +91,7 @@ export const program = compose({
     }),
   },
   onEvent: { Products: (event, children) => (state) => ... }, // the child's events, handled here
-  update: (message: Own) => (state) => ...,
+  update: (message, children) => (state) => ...,
   makeModel: (state, children) => ({ ..., products: children.Products(state) }),
 })
 ```
@@ -92,13 +102,13 @@ export const program = compose({
   `children.<Child>.init`: reading its program's `init.state` would leave its commands behind.
 - A child talks to its parent only through events; a parent never reads a child's state to decide. What a
   child needs, it gets from its own services and subscriptions. Only a fact several children must see as one
-  truth (the viewport, the connection) is the parent's, handed down as an `ExternalMessage` with
-  `children.<Child>.update`. Two siblings talk through the parent: an event up, an `ExternalMessage` or an
-  `init` parameter down; a parent that grows logic there is a sign that the siblings are one child.
-- An event the parent only passes up, it raises as its own: `onEvent: { Products: Tea.raise }`. A parent's
-  own step followed by a child's is `Tea.andThen(step, children.<Child>.update(…))`, which keeps the commands
-  and the events of both.
-- The view gives each child's view `Tea.dispatchTo(dispatch, '<Child>')`, the same function in every frame,
+  truth (the viewport, the connection) is the parent's, handed down as an external message with
+  `children.<Child>.external`. Two siblings talk through the parent: an event up, an external message or the
+  child's flags down; a parent that grows logic there is a sign that the siblings are one child.
+- An event the parent only passes up, it raises as its own:
+  `onEvent: { Products: (event) => (state) => ({ state, events: [event] }) }`. A parent's own step followed by a
+  child's is `Tea.andThen(step, children.<Child>.external(…))`, which keeps the commands and the events of both.
+- The view gives each child's view `Tea.forwardTo(dispatch, '<Child>')`, the same function in every draw,
   and hands it the child's model whole: it never reads a child model's fields. A child's model is the same
   object while its state is.
 
@@ -115,13 +125,14 @@ from the domain's `*.test_arbitrary.ts` files, never from `*Unsafe` constructors
 `assertProperty` and `outcomesOf` (`#libs/testing/update.test_support.ts`):
 
 - `update` is total and deterministic;
-- the view sends what `update` accepts, all of it, and acts once when sent twice: `dispatchViolations` on the
-  messages `messagesSentBy(view, makeModel(state))` sends, with the candidates the test lists, `repeatable`
-  for what may act on every tap, `withheld` for what the view hides on purpose;
-- one test per message, asserting the next state, the commands and the events by value, rejections with
-  `Tea.isRejected`, never as "state unchanged"; a message that cannot arrive is checked as a defect
+- the view sends what `update` accepts, all of it, and acts once when sent twice:
+  `dispatchViolations(program.update, { state, held, candidates, repeatable, withheld })`, `held` being the
+  messages `messagesSentBy(view, makeModel(state))` sends, the writes into inputs among them, `candidates` what the
+  test lists, `repeatable` what may act on every tap, `withheld` what the view hides on purpose;
+- one test per message, asserting the next state, the commands and the events by value, rejections as
+  `Tea.reject` itself, never as "state unchanged"; a message that cannot arrive is checked as a defect
   (`toThrow(Tea.InvariantDefect)`), and the pairs of state and message it rules out are skipped;
-- what the program listens to in each state, from `Tea.subscriptionsOf(program)` (`HashMap.has(…, 'back-button')`);
+- what the program listens to in each state, from `program.subscriptions(state)` (`HashMap.has(…, 'back-button')`);
 - the arbitraries cover every variant of the state.
 
 A child whose view only draws pieces the parent places (Products) has its `update` tested in its own

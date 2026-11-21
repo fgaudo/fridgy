@@ -62,6 +62,16 @@ const { makeModel } = program
 
 const digits: ReadonlyArray<Digit> = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
 
+/** What the name field writes as the user types `value` into it. */
+const written = (value: string): Message => ({ _tag: 'Name', message: { _tag: 'Written', value } })
+
+/** The name as the field shows it. */
+const nameOf = (form: Form) => Opt.getOrElse(form.maybeName, () => '')
+
+/** Whether the model draws the name's field to type into: on the first step, while it takes input and while it adds. */
+const isNameEditable = (model: Model) =>
+  model._tag === 'Naming' || (model._tag === 'Adding' && model.step._tag === 'Naming')
+
 /** The same state, with its form changed. */
 const withForm = (state: State, change: Partial<Form>): State => ({ ...state, form: { ...state.form, ...change } })
 
@@ -167,21 +177,14 @@ describe('AddProducts update', () => {
     })
   })
 
-  // Each message the view sends is accepted in the state it was rendered from; sent twice from the same frame,
-  // it acts once, but the keypad's digit keys, which are meant to repeat, and the close button, whose second
-  // press the parent ignores once the page is gone. And what the user could ask for and `update` accepts is in
-  // the view, but the name's input off the first step, where it is covered.
+  // Each message the view sends, a write into the name included, is accepted in the state it was rendered from;
+  // sent twice from the same frame, it acts once, but the keypad's digit keys, which are meant to repeat, and the
+  // close button, whose second press the parent ignores once the page is gone. And what the user could ask for and
+  // `update` accepts is in the view.
   test('the view sends what update accepts, all of it, and acts once when sent twice', () => {
-    const check = dispatchViolations(program.update, {
-      repeatable: (msg) => msg._tag === 'DigitTyped' || msg._tag === 'DigitErased' || msg._tag === 'Closed',
-      withheld: (msg, state) =>
-        msg._tag === 'NameChanged' && state._tag !== 'Naming'
-        && !(state._tag === 'Submitting' && state.step._tag === 'Naming'),
-    })
     fc.assert(fc.property(state, fc.string(), anyDay, (before, inputValue, date) => {
       const offered = before._tag === 'Dating' ? offeredDates(before.form, before.date) : []
       const askable = [
-        Msg.NameChanged({ name: inputValue }),
         Msg.NameCleared(),
         Msg.ScanRequested(),
         Msg.ScanClosed(),
@@ -197,21 +200,65 @@ describe('AddProducts update', () => {
         ...[date, ...offered].map((day) => Msg.DateChosen({ date: day })),
         ...DateOrder.all.map((order) => Msg.OrderPicked({ order })),
       ]
-      expect(check(before, messagesSentBy<Model, Message>(view, makeModel(before), inputValue), askable)).toEqual([])
+      expect(dispatchViolations(program.update, {
+        state: before,
+        held: messagesSentBy<Model, Message>(view, makeModel(before), inputValue),
+        candidates: askable,
+        repeatable: (msg) => msg._tag === 'DigitTyped' || msg._tag === 'DigitErased' || msg._tag === 'Closed',
+      })).toEqual([])
     }))
   })
 
-  describe('NameChanged', () => {
-    // Off the first step the input is covered or disabled, but a key typed just before must not be lost. The name
-    // is no longer the lookup's: one going on stops, and the first step takes its controls back.
-    test('stores what is typed, as typed, in any state, drops the lookup\'s answer and leaves its wait', () => {
+  // A write of another name than the one shown: held where the field is drawn to type into, a candidate wherever the
+  // name is shown. Covered by the scanner or the second step, the name still takes a key typed in the frame before,
+  // which nothing drawn sends: withheld there.
+  test('draws the name to type into exactly where a write over it is stored, once', () => {
+    fc.assert(fc.property(state, (before) => {
+      const model = makeModel(before)
+      const over = written(`${model.name}1`)
+      expect(dispatchViolations(program.update, {
+        state: before,
+        held: isNameEditable(model) ? [over] : [],
+        candidates: [over],
+        withheld: (_, s) =>
+          s._tag === 'Scanning' || s._tag === 'Dating' || (s._tag === 'Submitting' && s.step._tag === 'Dating'),
+      })).toEqual([])
+    }))
+  })
+
+  test('the view writes what the name field holds into the name, exactly where the model draws it to type into', () => {
+    fc.assert(fc.property(state, fc.string(), (before, inputValue) => {
+      const model = makeModel(before)
+      const writes: ReadonlyArray<Message> = messagesSentBy<Model, Message>(view, model, inputValue).filter((msg) =>
+        msg._tag === 'Name'
+      )
+      expect(writes).toEqual(isNameEditable(model) ? [written(inputValue)] : [])
+    }))
+  })
+
+  describe('a write into the name', () => {
+    // Covered or disabled, the name still takes a key typed just before. The name is no longer the lookup's.
+    test('stores what is typed, as typed, and drops the lookup\'s answer, in any state but the lookup\'s', () => {
       assertProperty([state, fc.string()], (before, name) => {
-        const named = withForm(before, { maybeName: Opt.some(name), lookup: { _tag: 'Idle' } })
+        fc.pre(before._tag !== 'LookingUp' && name !== nameOf(before.form))
         return Equal.equals(
-          step(Msg.NameChanged({ name }), before).after,
-          named._tag === 'LookingUp' ? { _tag: 'Naming', form: named.form } : named,
+          step(written(name), before).after,
+          withForm(before, { maybeName: Opt.some(name), lookup: { _tag: 'Idle' } }),
         )
       })
+    })
+
+    test('of the name already there leaves the very same state, the lookup\'s answer kept', () => {
+      assertProperty([state], (before) => {
+        fc.pre(before._tag !== 'LookingUp')
+        const { after, commands, events } = step(written(nameOf(before.form)), before)
+        return after === before && commands.length === 0 && events.length === 0
+      })
+    })
+
+    // The field is drawn read-only meanwhile: the name is the scan's.
+    test('is rejected while the scanned barcode is looked up', () => {
+      assertProperty([lookingUp, fc.string()], (before, name) => rejects(written(name), before))
     })
   })
 
@@ -783,7 +830,7 @@ describe('AddProducts update', () => {
         const canType = s.date.digits.length < MAX_DIGITS
         const hasDigits = s.date.digits !== ''
         return Equal.equals(
-          Opt.map(model.maybeTypeDigit, (type) => type(typed)),
+          Opt.map(model.maybeTypeDigit, (keys) => keys[typed]),
           canType ? Opt.some(Msg.DigitTyped({ digit: typed })) : Opt.none(),
         )
           && Equal.equals(model.maybeEraseDigit, hasDigits ? Opt.some(Msg.DigitErased()) : Opt.none())
@@ -908,7 +955,7 @@ describe('AddProducts update', () => {
 // The back button is observed in every state: while a product is being added, so that it does not leave the app.
 test('the page listens to the clock, the date order, the back button and the keyboard, to the camera while the scanner is open until it fails, to the lookup of the barcode it looks up, and times each product on its way into the fridge, the fridge\'s closing and the snackbar', () => {
   assertProperty([state, fc.nat({ max: 12 })], (s, id) => {
-    const subscriptions = Tea.subscriptionsOf(program)(s)
+    const subscriptions = program.subscriptions(s)
     const lookups = [...HashMap.keys(subscriptions)].filter((key) => String(key).startsWith('lookup:'))
     const { fridge } = s.form
     return HashMap.has(subscriptions, 'clock')
@@ -946,7 +993,7 @@ describe('the lookup', () => {
     }
     // Typed with every service of the page, of which it reads the lookup's only.
     const subscription = Opt.getOrThrow(
-      HashMap.get(Tea.subscriptionsOf(program)(s), `lookup:${code}`),
+      HashMap.get(program.subscriptions(s), `lookup:${code}`),
     ) as Tea.Subscription<Message, ProductLookup>
     const [elements, done] = await Effect.runPromise(
       Effect.zip(Channel.runCollect(subscription), Channel.runDrain(subscription)).pipe(

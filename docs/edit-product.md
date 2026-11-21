@@ -9,7 +9,7 @@ Implemented on 2026-10-28, and seen on Android in the emulator the same day (see
 The code is the page `src/app/children/edit-product/` with its services, the rules of the date entry in
 `src/libs/dates/`, the tap on a row in `src/app/children/home/children/products/`, `ProductStore.update` and
 `DateOrderStore` in `src/infrastructure/storage/`. Read [`AGENTS.md`](../AGENTS.md), the `add-program`,
-`add-service` and `views` skills and the "Guide" of `node_modules/@fgaudo/effect-tea/README.md` before changing
+`add-service` and `views` skills and the guide of the runtime, `node_modules/@fgaudo/effect-tea/site/guide/`, before changing
 them. The facts about the code below marked **verified** were checked against the tree on 2026-10-28; re-check
 them before relying on them.
 

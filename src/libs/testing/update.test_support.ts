@@ -12,7 +12,7 @@ export const outcomesOf = <State, Message extends Readonly<{ _tag: string }>, Co
 ) => {
   const outcome = (message: Message, before: State): Outcome<State, Command, Event> => {
     const result = update(message)(before)
-    return Tea.isRejected(result)
+    return result === Tea.reject
       ? { rejected: true }
       : { rejected: false, after: result.state, commands: result.commands ?? [], events: result.events ?? [] }
   }

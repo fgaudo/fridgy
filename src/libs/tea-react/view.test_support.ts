@@ -1,11 +1,10 @@
-import * as Effect from 'effect/Effect'
 import { isValidElement, type ReactElement, type ReactNode } from 'react'
 import type { View } from './tea-react.ts'
 
 /**
  * Draws `view` for `model` and calls every `on…` callback in the tree: a text input's `onChangeText` with
  * `inputValue`, `onContentSizeChange` with a size of nothing, the others with a fake event of a scroll to the top,
- * which is also a layout of nothing. Returns the messages the callbacks sent.
+ * which is also a layout of nothing. Returns the messages the callbacks sent, the writes into inputs included.
  * Function components are called as React would; the views are pure, so they use no hooks.
  */
 export const messagesSentBy = <Model, Message>(
@@ -42,9 +41,8 @@ export const messagesSentBy = <Model, Message>(
     }
     visit(props['children'] as ReactNode)
   }
-  visit(view(model, (message) =>
-    Effect.sync(() => {
-      sent.push(message)
-    })))
+  visit(view(model, (message) => {
+    sent.push(message)
+  }))
   return sent
 }

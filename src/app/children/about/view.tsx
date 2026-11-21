@@ -1,8 +1,9 @@
+import * as Tea from '@fgaudo/effect-tea'
 import * as Opt from 'effect/Option'
 import type { ReactElement, ReactNode } from 'react'
 import { View as Box, FlatList, Linking, Pressable, StyleSheet, Text } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { handlers, type View } from '#libs/tea-react/tea-react.ts'
+import { handlers, type View, write } from '#libs/tea-react/tea-react.ts'
 import { color, icon, shape, type } from '#styles'
 import type { LicenseCard, Message, Model } from './program.ts'
 
@@ -92,8 +93,8 @@ const card = (card: LicenseCard): ReactNode => (
  * The cards are a list that mounts only what is near the screen (`docs/motion.md`, "The frames").
  */
 export const view: View<Model, Message> = (model, dispatch) => {
-  const { on, onValue } = handlers(dispatch)
-  const scrolled = onValue((top: number) => model.scroll(top))
+  const { on } = handlers(dispatch)
+  const scrolled = write(Tea.forwardTo(dispatch, 'Scroll'))
   return (
     <SafeAreaView style={styles.page}>
       <Box style={styles.frame}>

@@ -43,7 +43,7 @@ export type Form = Readonly<{
   id: string
   /** The product as it was opened: what the fields started from, and what "changed" is measured against. */
   original: Product.Product
-  /** The name as typed; whether it is a name is decided when saving. */
+  /** The name as typed, the input `Name`; whether it is a name is decided when saving. */
   name: string
   /** How many times the name's input was drawn anew: with each clearing. */
   replacements: number
@@ -98,9 +98,9 @@ export type Outcome = Data.TaggedEnum<{
   Gone: object
 }>
 
-export type Message = Data.TaggedEnum<{
+/** The page's own messages: the writes into its input are made by `make`. */
+type Own = Data.TaggedEnum<{
   // From the view.
-  NameChanged: { name: string }
   /** The name field's clear button: empties the name. */
   NameCleared: object
   DigitTyped: { digit: Digit }
@@ -130,7 +130,7 @@ export type Message = Data.TaggedEnum<{
   Saved: { outcome: Outcome }
 }>
 
-const Message = Data.taggedEnum<Message>()
+const Own = Data.taggedEnum<Own>()
 
 export type Command = Data.TaggedEnum<{
   /** Writes a product that `update` has already validated, under its id. */
@@ -148,18 +148,18 @@ export type Event = Data.TaggedEnum<{
 
 const Event = Data.taggedEnum<Event>()
 
-export type Deps = UpdateProduct | DateOrderSetting | Haptics | BackButton | Keyboard | DateTime.CurrentTimeZone
+type Deps = DateOrderSetting | BackButton | Keyboard | DateTime.CurrentTimeZone
 
 /** A day the digits name: the chosen one, or one to pick while the page takes input. */
 export type DateChoice = Readonly<{
   date: Day.Day
-  choice: Data.TaggedEnum<{ Chosen: object; Offered: Readonly<{ maybeChoose: Opt.Option<Message> }> }>
+  choice: Data.TaggedEnum<{ Chosen: object; Offered: Readonly<{ maybeChoose: Opt.Option<Own> }> }>
 }>
 
 /** An order the digits can be read in: the one in use, or one to pick while the page takes input. */
 export type OrderChoice = Readonly<{
   order: DateOrder.DateOrder
-  choice: Data.TaggedEnum<{ Current: object; Offered: Readonly<{ maybePick: Opt.Option<Message> }> }>
+  choice: Data.TaggedEnum<{ Current: object; Offered: Readonly<{ maybePick: Opt.Option<Own> }> }>
 }>
 
 /** What every state draws: how far the page keeps clear of the keyboard, which covers whatever is under it. */
@@ -191,28 +191,27 @@ export type FieldsShown = Readonly<{
 
 export type Model = Data.TaggedEnum<{
   /** The app bar alone, until the fields can be drawn. */
-  Loading: PageShown & Readonly<{ close: Message }>
+  Loading: PageShown & Readonly<{ close: Own }>
   Editing:
     & PageShown
     & FieldsShown
     & Readonly<{
-      close: Message
-      changeName: (name: string) => Message
+      close: Own
       /** Empties the name, while there is one. */
-      maybeClearName: Opt.Option<Message>
-      /** The keypad's keys: none past a date's longest. */
-      maybeTypeDigit: Opt.Option<(digit: Digit) => Message>
+      maybeClearName: Opt.Option<Own>
+      /** The keypad's keys, by digit: none past a date's longest. */
+      maybeTypeDigit: Opt.Option<Readonly<Record<Digit, Own>>>
       /** None with nothing to erase. */
-      maybeEraseDigit: Opt.Option<Message>
+      maybeEraseDigit: Opt.Option<Own>
       /** None with nothing to clear. */
-      maybeClearDate: Opt.Option<Message>
+      maybeClearDate: Opt.Option<Own>
       /** Saves, once the fields describe a product other than the stored one. */
-      maybeSave: Opt.Option<Message>
+      maybeSave: Opt.Option<Own>
     }>
   /** The product is being saved: the fields, their controls disabled. */
   Saving: PageShown & FieldsShown
   /** The product is no longer stored: the fields, their controls disabled, and the app bar's close button. */
-  Gone: PageShown & FieldsShown & Readonly<{ close: Message }>
+  Gone: PageShown & FieldsShown & Readonly<{ close: Own }>
 }>
 
 // Material's snackbar without an action: long enough to read it.
@@ -320,30 +319,30 @@ const keyed = (
     : Tea.reject
 
 // Only today is needed, for a date typed without a year: the product's own dates never come from the clock.
-const clock = every('30 seconds', (now) => Message.TimeChanged({ now }))
+const clock = every('30 seconds', (now) => Own.TimeChanged({ now }))
 
-const dateOrder: Tea.Subscription<Message, DateOrderSetting> = Channel.unwrap(
+const dateOrder: Tea.Subscription<Own, DateOrderSetting> = Channel.unwrap(
   Effect.map(
     Effect.service(DateOrderSetting),
-    ({ changes }) => Channel.map(changes, (order) => Message.OrderChanged({ order })),
+    ({ changes }) => Channel.map(changes, (order) => Own.OrderChanged({ order })),
   ),
 )
 
 // Observed as long as the page is shown: while the product is being saved, the press is heard and held, so that
 // the platform does not leave the app.
-const backButton: Tea.Subscription<Message, BackButton> = Channel.unwrap(
-  Effect.map(Effect.service(BackButton), ({ presses }) => Channel.map(presses, () => Message.BackPressed())),
+const backButton: Tea.Subscription<Own, BackButton> = Channel.unwrap(
+  Effect.map(Effect.service(BackButton), ({ presses }) => Channel.map(presses, () => Own.BackPressed())),
 )
 
 // Observed as long as the page is shown: the keyboard covers the fields and the button docked under them.
-const keyboard: Tea.Subscription<Message, Keyboard> = Channel.unwrap(
+const keyboard: Tea.Subscription<Own, Keyboard> = Channel.unwrap(
   Effect.map(
     Effect.service(Keyboard),
-    ({ insets }) => Channel.map(insets, (inset) => Message.KeyboardMoved({ inset })),
+    ({ insets }) => Channel.map(insets, (inset) => Own.KeyboardMoved({ inset })),
   ),
 )
 
-const always: HashMap.HashMap<string, Tea.Subscription<Message, Deps>> = HashMap.make(
+const always: HashMap.HashMap<string, Tea.Subscription<Own, Deps>> = HashMap.make(
   ['clock', clock],
   ['date-order', dateOrder],
   ['back-button', backButton],
@@ -351,7 +350,7 @@ const always: HashMap.HashMap<string, Tea.Subscription<Message, Deps>> = HashMap
 )
 
 /** Ends once the snackbar has stood its time. */
-const snackbarTimer: Tea.Subscription<Message, Deps> = after(SNACKBAR_DURATION, Message.SnackbarExpired())
+const snackbarTimer: Tea.Subscription<Own, Deps> = after(SNACKBAR_DURATION, Own.SnackbarExpired())
 
 const save = Effect.fn('SaveProduct')(
   function*({ id, product }: Readonly<{ id: string; product: Product.Product }>) {
@@ -361,12 +360,12 @@ const save = Effect.fn('SaveProduct')(
       Effect.tapError((error) => Effect.logWarning('Could not save the product', error)),
     )
     yield* Effect.logInfo('Saved a product', { id })
-    return Message.Saved({ outcome: { _tag: 'Saved' } })
+    return Own.Saved({ outcome: { _tag: 'Saved' } })
   },
   Effect.catch((error) =>
     error._tag === 'ProductNotStored'
-      ? Effect.succeed(Message.Saved({ outcome: { _tag: 'Gone' } }))
-      : Effect.succeed(Message.Saved({ outcome: { _tag: 'Failed' } }))
+      ? Effect.succeed(Own.Saved({ outcome: { _tag: 'Gone' } }))
+      : Effect.succeed(Own.Saved({ outcome: { _tag: 'Failed' } }))
   ),
   Effect.asSome,
   Effect.withLogSpan('SaveProduct'),
@@ -381,8 +380,8 @@ const keepOrder = Effect.fn('KeepOrder')(
     yield* Effect.logInfo('Kept the date order', { order })
   },
   Effect.match({
-    onSuccess: () => Message.OrderKept({ succeeded: true }),
-    onFailure: () => Message.OrderKept({ succeeded: false }),
+    onSuccess: () => Own.OrderKept({ succeeded: true }),
+    onFailure: () => Own.OrderKept({ succeeded: false }),
   }),
   Effect.asSome,
   Effect.withLogSpan('KeepOrder'),
@@ -410,7 +409,7 @@ const fieldsOf = (form: Form, takesInput: boolean): FieldsShown => {
       : {
         _tag: 'Offered',
         maybeChoose: takesInput
-          ? Opt.map(DigitDateEntry.choose(day, offered)(entry), () => Message.DateChosen({ date: day }))
+          ? Opt.map(DigitDateEntry.choose(day, offered)(entry), () => Own.DateChosen({ date: day }))
           : Opt.none(),
       },
   }))
@@ -422,7 +421,7 @@ const fieldsOf = (form: Form, takesInput: boolean): FieldsShown => {
       order,
       choice: order === form.order
         ? { _tag: 'Current' }
-        : { _tag: 'Offered', maybePick: takesInput ? Opt.some(Message.OrderPicked({ order })) : Opt.none() },
+        : { _tag: 'Offered', maybePick: takesInput ? Opt.some(Own.OrderPicked({ order })) : Opt.none() },
     })),
     digits: entry.digits,
     strip: Arr.isReadonlyArrayNonEmpty(choices)
@@ -435,27 +434,46 @@ const fieldsOf = (form: Form, takesInput: boolean): FieldsShown => {
   }
 }
 
-export const program: Tea.Program<{
+const typed = (digit: Digit) => Own.DigitTyped({ digit })
+
+const typeDigit: Readonly<Record<Digit, Own>> = {
+  '0': typed('0'),
+  '1': typed('1'),
+  '2': typed('2'),
+  '3': typed('3'),
+  '4': typed('4'),
+  '5': typed('5'),
+  '6': typed('6'),
+  '7': typed('7'),
+  '8': typed('8'),
+  '9': typed('9'),
+}
+
+const { input, make } = Tea.program<{
   state: State
   model: Model
-  message: Message
+  message: Own
   command: Command
-  services: Deps
   event: Event
   flags: Flags
-}> = {
+}>()
+
+// Written while saving too, the field disabled: a key typed just before is kept. A product that is gone has nothing
+// to save to: its name has no place.
+const name = input({
+  get: (state) => state._tag === 'Editing' || state._tag === 'Saving' ? Opt.some(state.form.name) : Opt.none(),
+  set: (state, text: string) =>
+    state._tag === 'Editing' || state._tag === 'Saving' ? withForm(state, (form) => ({ ...form, name: text })) : state,
+})
+
+export const program = make({
   init: ({ id, product }) => ({
     state: { _tag: 'Loading', id, original: product, maybeNow: Opt.none(), maybeOrder: Opt.none(), keyboardInset: 0 },
   }),
 
-  update: Match.typeTags<Message, (state: State) => Tea.Transition<State, Command, Event>>()({
-    // Accepted while saving too, the input disabled: a key typed just before is kept. Whether it is a name is
-    // decided when saving. A product that is gone has nothing to save to.
-    NameChanged: ({ name }) => (state) =>
-      state._tag === 'Editing' || state._tag === 'Saving'
-        ? { state: withForm(state, (form) => ({ ...form, name })) }
-        : Tea.reject,
+  inputs: { Name: name },
 
+  update: Match.typeTags<Own, (state: State) => Tea.Transition<State, Command, Event>>()({
     // The input is drawn anew, empty: the user owns its text until the program replaces it.
     NameCleared: () => (state) =>
       state._tag === 'Editing' && state.form.name !== ''
@@ -569,7 +587,7 @@ export const program: Tea.Program<{
 
   makeModel: (state): Model =>
     Match.valueTags(state, {
-      Loading: ({ keyboardInset }): Model => ({ _tag: 'Loading', keyboardInset, close: Message.Closed() }),
+      Loading: ({ keyboardInset }): Model => ({ _tag: 'Loading', keyboardInset, close: Own.Closed() }),
       // A key is there exactly where its rule applies to the entry shown: every digit applies, or none does.
       Editing: ({ form }): Model => {
         const entry = entryOf(form)
@@ -577,16 +595,12 @@ export const program: Tea.Program<{
           _tag: 'Editing',
           keyboardInset: form.keyboardInset,
           ...fieldsOf(form, true),
-          close: Message.Closed(),
-          changeName: (name: string) => Message.NameChanged({ name }),
-          maybeClearName: form.name !== '' ? Opt.some(Message.NameCleared()) : Opt.none(),
-          maybeTypeDigit: Opt.map(
-            DigitDateEntry.typeDigit('0')(entry),
-            () => (digit: Digit) => Message.DigitTyped({ digit }),
-          ),
-          maybeEraseDigit: Opt.map(DigitDateEntry.eraseDigit(entry), () => Message.DigitErased()),
-          maybeClearDate: Opt.map(DigitDateEntry.clear(entry), () => Message.DateCleared()),
-          maybeSave: Opt.map(maybeSaved(form), () => Message.SaveStarted()),
+          close: Own.Closed(),
+          maybeClearName: form.name !== '' ? Opt.some(Own.NameCleared()) : Opt.none(),
+          maybeTypeDigit: Opt.map(DigitDateEntry.typeDigit('0')(entry), () => typeDigit),
+          maybeEraseDigit: Opt.map(DigitDateEntry.eraseDigit(entry), () => Own.DigitErased()),
+          maybeClearDate: Opt.map(DigitDateEntry.clear(entry), () => Own.DateCleared()),
+          maybeSave: Opt.map(maybeSaved(form), () => Own.SaveStarted()),
         }
       },
       Saving: ({ form }): Model => ({ _tag: 'Saving', keyboardInset: form.keyboardInset, ...fieldsOf(form, false) }),
@@ -594,7 +608,9 @@ export const program: Tea.Program<{
         _tag: 'Gone',
         keyboardInset: form.keyboardInset,
         ...fieldsOf(form, false),
-        close: Message.Closed(),
+        close: Own.Closed(),
       }),
     }),
-}
+})
+
+export type Message = Tea.MessageOf<typeof program>

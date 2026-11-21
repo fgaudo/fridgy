@@ -27,11 +27,11 @@ const layer = Layer.mergeAll(
   Layer.succeed(References.MinimumLogLevel, 'Info'),
 )
 
-const { Root, render, show } = Renderer.make(view)
+const { Root, draw, show } = Renderer.make(view)
 
 // The program never ends by itself: an end that is not an interruption is a bug. Its cause goes to the log, and the
-// crash screen takes the page's place. Its button runs the program again, which builds a fresh layer: a restart
-// from scratch, with no native code. A second press of it starts nothing.
+// crash screen takes the page's place. Its button starts the program again, from its `init`, and runs it on a fresh
+// layer: a restart from scratch, with no native code. A second press of it starts nothing.
 const start = (): void => {
   let hasRestarted = false
   const restart = () => {
@@ -39,13 +39,17 @@ const start = (): void => {
     hasRestarted = true
     start()
   }
+  const { app, run } = Tea.start(App.program)
+  draw(app)
   Effect.runFork(
-    Tea.run(App.program, render).pipe(
+    run.pipe(
       Effect.provide(layer),
       Effect.tapCause((cause) =>
         Cause.hasInterruptsOnly(cause)
           ? Effect.void
-          : Effect.logError('The app crashed', cause).pipe(Effect.andThen(show(Crash.view(restart))))
+          : Effect.logError('The app crashed', cause).pipe(
+            Effect.andThen(Effect.sync(() => show(Crash.view(restart)))),
+          )
       ),
     ),
   )

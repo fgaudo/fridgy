@@ -1,4 +1,4 @@
-import type { Dispatch } from '@fgaudo/effect-tea'
+import * as Tea from '@fgaudo/effect-tea'
 import * as Arr from 'effect/Array'
 import * as Match from 'effect/Match'
 import * as Opt from 'effect/Option'
@@ -27,7 +27,7 @@ import type { Product } from '#domain/product.ts'
 import CameraPreview from '#infrastructure/barcode-camera/BarcodeCameraPreviewNativeComponent.ts'
 import type { DateOrder } from '#libs/dates/date-order.ts'
 import * as Day from '#libs/dates/day.ts'
-import { handlers, type View } from '#libs/tea-react/tea-react.ts'
+import { handlers, type View, write } from '#libs/tea-react/tea-react.ts'
 import { color, duration, easing, elevation, icon, motion, shape, type } from '#styles'
 import type {
   ArrivalShown,
@@ -392,7 +392,7 @@ const flights = { WithFridge: flight(duration.medium2), IntoOpenFridge: flight(0
 type NameActivity =
   | { _tag: 'Editing'; controls: Model & { _tag: 'Naming' } }
   | { _tag: 'LookingUp'; controls: Model & { _tag: 'LookingUp' } }
-  | { _tag: 'Adding'; changeName: (name: string) => Message; canScan: boolean }
+  | { _tag: 'Adding'; canScan: boolean }
 
 type DateActivity = Readonly<
   { _tag: 'Editing'; controls: Model & { _tag: 'Dating' } } | { _tag: 'Adding' }
@@ -413,11 +413,17 @@ const control = (maybeMessage: Opt.Option<Message>): Control =>
     onSome: (message) => ({ _tag: 'Takes', message }),
   })
 
-const pressed = (shown: Control, dispatch: Dispatch<Message>) =>
+const pressed = (shown: Control, dispatch: Tea.Dispatch<Message>) =>
   shown._tag === 'Takes' ? handlers(dispatch).on(shown.message) : undefined
 
 /** The top app bar of Material's full-screen dialog: its leading icon button and its title. */
-const appBar = (title: string, iconName: string, iconTitle: string, shown: Control, dispatch: Dispatch<Message>) => (
+const appBar = (
+  title: string,
+  iconName: string,
+  iconTitle: string,
+  shown: Control,
+  dispatch: Tea.Dispatch<Message>,
+) => (
   <Box style={styles.bar}>
     <Pressable
       accessibilityRole='button'
@@ -433,7 +439,7 @@ const appBar = (title: string, iconName: string, iconTitle: string, shown: Contr
 )
 
 /** Material's filled or text button. The circular indicator replaces the label while the action runs. */
-const button = (label: string, shown: Control, kind: 'Filled' | 'Text', dispatch: Dispatch<Message>) => {
+const button = (label: string, shown: Control, kind: 'Filled' | 'Text', dispatch: Tea.Dispatch<Message>) => {
   const isEnabled = shown._tag !== 'Off'
   const tint = kind === 'Filled'
     ? (isEnabled ? color.onPrimary : color.disabledContent)
@@ -477,12 +483,11 @@ const supportingText = (supporting: Supporting) => (
 
 /**
  * Material's outlined text field of the name, drawn anew when the name is replaced (a scan, a clearing). From then on
- * the user owns its text, and the program learns it from the field's messages. Focused whenever it is drawn anew and
+ * the user owns its text, which the field writes into the input `Name`. Focused whenever it is drawn anew and
  * editable: as the step opens, after a product found and a clearing. It stays editable while a product is added: a
  * disabled field would close the keyboard.
  */
-const nameField = (shown: NameShown, activity: NameActivity, dispatch: Dispatch<Message>) => {
-  const { onValue } = handlers(dispatch)
+const nameField = (shown: NameShown, activity: NameActivity, dispatch: Tea.Dispatch<Message>) => {
   const isEditing = activity._tag !== 'LookingUp'
   // A product is added only with a name, which the clearing button stays on.
   const clearName: Control = activity._tag === 'Editing'
@@ -502,11 +507,7 @@ const nameField = (shown: NameShown, activity: NameActivity, dispatch: Dispatch<
           enterKeyHint='done'
           cursorColor={color.primary}
           style={[styles.input, { color: isEditing ? color.onSurface : color.disabledContent }]}
-          onChangeText={activity._tag === 'Editing'
-            ? onValue(activity.controls.changeName)
-            : activity._tag === 'Adding'
-            ? onValue(activity.changeName)
-            : undefined}
+          onChangeText={activity._tag === 'LookingUp' ? undefined : write(Tea.forwardTo(dispatch, 'Name'))}
         />
         {activity._tag === 'LookingUp'
           ? (
@@ -534,7 +535,7 @@ const nameField = (shown: NameShown, activity: NameActivity, dispatch: Dispatch<
 }
 
 /** Material's FAB that opens the scanner: the step's secondary action, in the tertiary's color, under the thumb. */
-const scanFab = (shown: Control, dispatch: Dispatch<Message>) => {
+const scanFab = (shown: Control, dispatch: Tea.Dispatch<Message>) => {
   const isEnabled = shown._tag !== 'Off'
   return (
     <Pressable
@@ -657,7 +658,7 @@ const nameStep = (
   shown: NameShown,
   activity: NameActivity,
   fridgeShown: FridgeShown,
-  dispatch: Dispatch<Message>,
+  dispatch: Tea.Dispatch<Message>,
 ) => {
   const controls = activity._tag === 'Editing' ? Opt.some(activity.controls) : Opt.none()
   // While a product is added, the controls are drawn as they were: both ways out took, since one started it.
@@ -693,7 +694,7 @@ const nameStep = (
 }
 
 /** Material's segmented button of the orders. Its row stays empty until the order is known: nothing moves then. */
-const orderSegments = (shown: DateShown, activity: DateActivity, dispatch: Dispatch<Message>) => {
+const orderSegments = (shown: DateShown, activity: DateActivity, dispatch: Tea.Dispatch<Message>) => {
   const { on } = handlers(dispatch)
   if (shown.order._tag === 'Unknown') {
     return <Box style={styles.noSegments} />
@@ -751,7 +752,7 @@ const dateField = (shown: DateShown, activity: DateActivity) => {
 }
 
 /** Material's filter chip of a day the digits name. */
-const chip = ({ date, choice }: DateChoice, activity: DateActivity, dispatch: Dispatch<Message>) => {
+const chip = ({ date, choice }: DateChoice, activity: DateActivity, dispatch: Tea.Dispatch<Message>) => {
   const { on } = handlers(dispatch)
   const maybeChoose = choice._tag === 'Offered' && activity._tag === 'Editing' ? choice.maybeChoose : Opt.none()
   const isChosen = choice._tag === 'Chosen'
@@ -778,7 +779,7 @@ const chip = ({ date, choice }: DateChoice, activity: DateActivity, dispatch: Di
 }
 
 /** Under the field, what it means: the hint, the chips on one line that scrolls sideways, or the error. */
-const strip = (shown: DateShown, activity: DateActivity, dispatch: Dispatch<Message>) => (
+const strip = (shown: DateShown, activity: DateActivity, dispatch: Tea.Dispatch<Message>) => (
   <Box style={styles.strip}>
     {Match.valueTags(shown.strip, {
       Hint: () => (
@@ -799,7 +800,7 @@ const strip = (shown: DateShown, activity: DateActivity, dispatch: Dispatch<Mess
 )
 
 /** A keypad of the app's own, always where the thumb expects it: Material's tonal buttons in a button group's pills. */
-const keypad = (activity: DateActivity, dispatch: Dispatch<Message>) => {
+const keypad = (activity: DateActivity, dispatch: Tea.Dispatch<Message>) => {
   const { on } = handlers(dispatch)
   const key = (id: string, label: ReactNode, title: string, maybeMessage: Opt.Option<Message>) => {
     const isEnabled = Opt.isSome(maybeMessage)
@@ -821,7 +822,7 @@ const keypad = (activity: DateActivity, dispatch: Dispatch<Message>) => {
   const digitKey = (digit: Digit) => {
     const maybeMessage = Opt.flatMap(
       controls,
-      ({ maybeTypeDigit }) => Opt.map(maybeTypeDigit, (typeDigit) => typeDigit(digit)),
+      ({ maybeTypeDigit }) => Opt.map(maybeTypeDigit, (typeDigit) => typeDigit[digit]),
     )
     return key(
       digit,
@@ -843,7 +844,7 @@ const keypad = (activity: DateActivity, dispatch: Dispatch<Message>) => {
 }
 
 /** The second step, laid out as a dialer: the fields read from the top, the keypad and the button at the bottom. */
-const dateStep = (shown: DateShown, activity: DateActivity, dispatch: Dispatch<Message>) => {
+const dateStep = (shown: DateShown, activity: DateActivity, dispatch: Tea.Dispatch<Message>) => {
   const controls = activity._tag === 'Editing' ? Opt.some(activity.controls) : Opt.none()
   // The surface and the controls are siblings. An exit inside another exit holds back every change above them
   // until both end: the page's room for a keyboard rising as the name step comes back.
@@ -883,7 +884,7 @@ const dateStep = (shown: DateShown, activity: DateActivity, dispatch: Dispatch<M
  * Material's full-screen dialog over the first step: the camera under a frame to hold the code in, or why there is
  * none. The camera draws itself while the program reads it, under a cover that fades once the dialog is in place.
  */
-const scanner = (model: Model & { _tag: 'Scanning' }, dispatch: Dispatch<Message>) => (
+const scanner = (model: Model & { _tag: 'Scanning' }, dispatch: Tea.Dispatch<Message>) => (
   <Animated.View key='scanner' {...motion.fullScreenDialog} style={styles.step}>
     {appBar('Scan barcode', 'close', 'Close', control(Opt.some(model.closeScanner)), dispatch)}
     {model.camera === 'Available'
@@ -960,9 +961,9 @@ export const view: View<Model, Message> = (model, dispatch) => {
     Dating: (dating) => ({ ...nothing, dating: dateStep(dating, { _tag: 'Editing', controls: dating }, dispatch) }),
     Adding: (adding) =>
       Match.valueTags(adding.step, {
-        Naming: ({ fridge, changeName, canScan }) => ({
+        Naming: ({ fridge, canScan }) => ({
           ...nothing,
-          naming: nameStep(adding, { _tag: 'Adding', changeName, canScan }, fridge, dispatch),
+          naming: nameStep(adding, { _tag: 'Adding', canScan }, fridge, dispatch),
         }),
         Dating: (date) => ({ ...nothing, dating: dateStep(date, { _tag: 'Adding' }, dispatch) }),
       }),

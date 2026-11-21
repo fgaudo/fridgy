@@ -8,8 +8,9 @@ description: How Fridgy's views are written - TSX drawn by React Native as a pur
 Only `view.tsx` files and the entrypoint that mounts React hold TSX; React Native draws the views through
 `#libs/tea-react`. A view is a pure function of the model: no state, no hooks, no effects, no reading of the
 clock or of the platform. It is never a component:
-React calls nothing of the app's but the root, which `#libs/tea-react/renderer.ts` makes, and every view below is
-a function that returns elements.
+React calls nothing of the app's but the root, which `#libs/tea-react/renderer.ts` makes, the app's bridge to React
+Native, and every view below is a function that returns elements. The root reads the model of the program's current
+state as effect-tea's bridge to React does, with `useSyncExternalStore`.
 
 ## The model decides, the view draws
 
@@ -28,13 +29,16 @@ when nothing is named). The model holds exactly what the view draws: a field no 
 - Attach the model's messages with `handlers(dispatch)` (`#libs/tea-react/tea-react.ts`), matching the model's
   case: `onPress={model.menu._tag === 'Closed' ? on(model.menu.open) : undefined}`. A view never builds a message:
   it sends what the model holds, and a control shown where `update` rejects its message is a bug the tests find.
-  `onValue` builds a callback from a function the model holds, for what the callback carries (a field's text, a
-  scroll's offset).
+  A dispatch applies its message before it returns: when a callback returns, `update` has seen it.
+- What a callback carries (a field's text, a scroll's offset, a layout's height) is written into an input of the
+  program, with `write(Tea.forwardTo(dispatch, '<Input>'))`: the model holds no function to make a message of it.
 - A text field the user types into is uncontrolled: its text is `defaultValue`, read only when the field is
-  created, and the program learns the text from `onChangeText`. A `value` written on every frame would take back
-  the keys typed since that frame. To replace the text (a clearing, a scan), the model gives the field a new `key`.
-  A field the program types into (the date the keypad fills) is no field: a `Text` in a field's frame.
-- A parent's view hands each child's view its own dispatch, `Tea.dispatchTo(dispatch, '<Child>')`, and the
+  created, and the field writes its text into the program's input from `onChangeText`. A `value` written on every
+  frame would take back the keys typed since that frame: React Native's field tells the program of a key after it
+  has shown it, and effect-tea's controlled elements are its bridges' to the DOM. To replace the text (a clearing,
+  a scan), the model gives the field a new `key`. A field the program types into (the date the keypad fills) is no
+  field: a `Text` in a field's frame.
+- A parent's view hands each child's view its own dispatch, `Tea.forwardTo(dispatch, '<Child>')`, and the
   child's model whole; it never reads the model's fields. The child draws its pieces where the parent leaves
   room (Products' list in Home, its subtitle and selection bar in Home's top app bar), or its whole screen (the
   root draws the page on top).

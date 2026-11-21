@@ -12,7 +12,7 @@ import { tagPath } from '#libs/testing/tag-path.test_support.ts'
 import { assertProperty, onlyChanged, outcomesOf } from '#libs/testing/update.test_support.ts'
 import { hasExpiringProduct } from './children/products/program.test_arbitrary.ts'
 import * as Products from './children/products/program.ts'
-import { height, message, state, top } from './program.test_arbitrary.ts'
+import { height, message, state, top, written } from './program.test_arbitrary.ts'
 import { type Event, type Message, type Model, program, type State } from './program.ts'
 import { view } from './view.tsx'
 
@@ -55,14 +55,13 @@ describe('Home update', () => {
   })
 
   describe('view and update agree', () => {
-    // Each message the view sends is accepted in the state it was rendered from,
-    // or its control would do nothing; sent twice from the same frame (a double
-    // tap, or a tap on a view that has not caught up yet), it acts once, but the
-    // add button, whose second tap the parent ignores once the page that adds is
-    // shown. And what the user could ask for and `update` accepts is in the view,
-    // but for what the model hides on purpose: a list that is not shown, or not yet,
-    // the menu while products are selected: the selection's bar takes the place of the bar that opens it,
-    // and a tap that selects while nothing is: it opens the product instead.
+    // Each message the view sends, and each write into an input, is accepted in the state it was rendered from,
+    // or its control would do nothing. Sent twice from the same frame (a double tap, or a tap on a view that has
+    // not caught up yet), it acts once. The add button is the exception: the parent ignores its second tap once
+    // the page that adds is shown. A layout or a scroll written twice leaves the state the first write left.
+    // What the user could ask for and `update` accepts is in the view, but for what the model hides on purpose:
+    // a list that is not shown, or not yet; the menu while products are selected, as the selection's bar takes
+    // the place of the bar that opens it; a tap that selects while nothing is, as it opens the product instead.
     test('the view sends what update accepts, all of it, and acts once when sent twice', () => {
       // A loaded list, at a known time when a product expires.
       const shownItems = ({ products }: State) =>
@@ -73,34 +72,24 @@ describe('Home update', () => {
       const isShown = (state: State, id: string) =>
         shownItems(state).some((item) => item._tag !== 'Corrupt' && item.id === id)
       const isSelecting = ({ products: { selection } }: State) => selection._tag !== 'Idle'
-      const check = dispatchViolations(program.update, {
-        // Each tap asks: the parent opens the page once. The list tells of its layout and its scroll as often as
-        // they happen.
-        repeatable: (msg) =>
-          msg._tag === 'AddRequested'
-          || msg._tag === 'HeadlineLaidOut'
-          || msg._tag === 'ListLaidOut'
-          || msg._tag === 'ContentSized'
-          || msg._tag === 'Scrolled'
-          || msg._tag === 'ScrollStarted'
-          || msg._tag === 'ScrollEnded'
-          || (msg._tag === 'Products' && msg.message._tag === 'EditRequested'),
-        withheld: (msg, state) => {
-          if (msg._tag === 'MenuOpened') {
-            return isListShown(state) && isSelecting(state)
+      // Each tap asks: the parent opens the page once.
+      const repeatable = (msg: Message) =>
+        msg._tag === 'AddRequested' || (msg._tag === 'Products' && msg.message._tag === 'EditRequested')
+      const withheld = (msg: Message, state: State) => {
+        if (msg._tag === 'MenuOpened') {
+          return isListShown(state) && isSelecting(state)
+        }
+        if (msg._tag === 'Products') {
+          const inner = msg.message
+          if (inner._tag === 'ItemSelected' && inner.by === 'Tap' && !isSelecting(state)) {
+            return true
           }
-          if (msg._tag === 'Products') {
-            const inner = msg.message
-            if (inner._tag === 'ItemSelected' && inner.by === 'Tap' && !isSelecting(state)) {
-              return true
-            }
-            return inner._tag === 'ItemSelected' || inner._tag === 'ItemDeselected' || inner._tag === 'EditRequested'
-              ? !isShown(state, inner.id)
-              : !isListShown(state)
-          }
-          return false
-        },
-      })
+          return inner._tag === 'ItemSelected' || inner._tag === 'ItemDeselected' || inner._tag === 'EditRequested'
+            ? !isShown(state, inner.id)
+            : !isListShown(state)
+        }
+        return false
+      }
       fc.assert(fc.property(state, (before) => {
         const items = before.products.list._tag === 'Loaded' ? before.products.list.items : []
         const askable = [
@@ -109,12 +98,13 @@ describe('Home update', () => {
           Msg.InfoRequested(),
           Msg.AddRequested(),
           // As the test's events give them: a layout of nothing, a scroll to the top.
-          Msg.HeadlineLaidOut({ height: 0 }),
-          Msg.ListLaidOut({ height: 0 }),
-          Msg.ContentSized({ height: 0 }),
-          Msg.Scrolled({ top: 0 }),
+          written('HeadlineHeight', 0),
+          written('ListHeight', 0),
+          written('ContentHeight', 0),
+          written('Scroll', 0),
           Msg.ScrollStarted(),
-          Msg.ScrollEnded({ top: 0 }),
+          Msg.ScrollEnded(),
+          written('Rest', 0),
           ...[
             ProductsMsg.SelectionCleared(),
             ProductsMsg.DeleteStarted(),
@@ -132,7 +122,13 @@ describe('Home update', () => {
             ),
           ].map(fromProducts),
         ]
-        expect(check(before, messagesSentBy<Model, Message>(view, makeModel(before)), askable)).toEqual([])
+        expect(dispatchViolations(program.update, {
+          state: before,
+          held: messagesSentBy<Model, Message>(view, makeModel(before)),
+          candidates: askable,
+          repeatable,
+          withheld,
+        })).toEqual([])
       }))
     })
 
@@ -231,9 +227,9 @@ describe('scrolling', () => {
     headline > 0 ? Math.round(Math.min(Math.max(top / headline, 0), 1) * 20) / 20 : 0
 
   const layoutMessages = [
-    { make: (height: number) => Msg.HeadlineLaidOut({ height }), key: 'headline' },
-    { make: (height: number) => Msg.ListLaidOut({ height }), key: 'list' },
-    { make: (height: number) => Msg.ContentSized({ height }), key: 'content' },
+    { make: (height: number) => written('HeadlineHeight', height), key: 'headline' },
+    { make: (height: number) => written('ListHeight', height), key: 'list' },
+    { make: (height: number) => written('ContentHeight', height), key: 'content' },
   ] as const
 
   test('a new height of the list or the headline draws the list anew at its top, under a collapsed bar', () => {
@@ -250,11 +246,11 @@ describe('scrolling', () => {
     )
   })
 
-  test('any other layout is stored, and the bar collapses no further than the list can scroll', () => {
+  test('any other new height is stored, and the bar collapses no further than the list can scroll', () => {
     assertProperty([state, height], (before, height) =>
       layoutMessages.every(({ make, key }) => {
         const layout = { ...before.layout, [key]: height }
-        if (key !== 'content' && before.collapse > 0 && before.layout[key] !== height) {
+        if (before.layout[key] === height || (key !== 'content' && before.collapse > 0)) {
           return true
         }
         const { after, commands } = step(make(height), before)
@@ -263,18 +259,17 @@ describe('scrolling', () => {
       }))
   })
 
-  test('a layout that changes nothing keeps the very same state', () => {
-    assertProperty([state], (before) =>
-      layoutMessages.every(({ make, key }) => {
-        const { layout } = before
-        return before.collapse > collapseAt(layout.content - layout.list, layout.headline)
-          || step(make(layout[key]), before).after === before
-      }))
+  // An input stores what is written: a height equal to the one held leaves the state as it is.
+  test('a height the layout already has keeps the very same state', () => {
+    assertProperty(
+      [state],
+      (before) => layoutMessages.every(({ make, key }) => step(make(before.layout[key]), before).after === before),
+    )
   })
 
-  test('Scrolled collapses the bar as far as the headline is out of view, keeping the very same state within a step', () => {
+  test('a scroll collapses the bar as far as the headline is out of view, keeping the very same state within a step', () => {
     assertProperty([state, top], (before, top) => {
-      const { after, commands } = step(Msg.Scrolled({ top }), before)
+      const { after, commands } = step(written('Scroll', top), before)
       const collapse = collapseAt(top, before.layout.headline)
       return Equal.equals(after, { ...before, collapse }) && (collapse !== before.collapse || after === before)
         && commands.length === 0
@@ -285,7 +280,7 @@ describe('scrolling', () => {
   test('a scroll up to half a dp short of the headline collapses the bar whole', () => {
     assertProperty([state, fc.integer({ min: 20, max: 400 })], (before, headline) => {
       const from = { ...before, layout: { ...before.layout, headline } }
-      return step(Msg.Scrolled({ top: headline - 0.5 }), from).after.collapse === 1
+      return step(written('Scroll', headline - 0.5), from).after.collapse === 1
     })
   })
 
@@ -297,11 +292,19 @@ describe('scrolling', () => {
     })
   })
 
-  test('ScrollEnded says that the user no longer scrolls, and where the list rests, keeping the very same state when neither changes', () => {
+  test('ScrollEnded says that the user no longer scrolls, keeping the very same state when they already did not', () => {
+    assertProperty([state], (before) => {
+      const { after, commands } = step(Msg.ScrollEnded(), before)
+      return Equal.equals(after, { ...before, isScrolling: false }) && (before.isScrolling || after === before)
+        && commands.length === 0
+    })
+  })
+
+  test('a rest stores where the list rests, keeping the very same state when it already rests there', () => {
     assertProperty([state, top], (before, top) => {
-      const { after, commands } = step(Msg.ScrollEnded({ top }), before)
-      return Equal.equals(after, { ...before, isScrolling: false, rest: top })
-        && (before.isScrolling || top !== before.rest || after === before) && commands.length === 0
+      const { after, commands } = step(written('Rest', top), before)
+      return Equal.equals(after, { ...before, rest: top }) && (top !== before.rest || after === before)
+        && commands.length === 0
     })
   })
 
@@ -334,7 +337,7 @@ describe('scrolling', () => {
 // A child's subscriptions run only if the page passes them on.
 test('its child listens to the storage, and to the clock while a product expires', () => {
   assertProperty([state], (s) => {
-    const subscriptions = Tea.subscriptionsOf(program)(s)
+    const subscriptions = program.subscriptions(s)
     return HashMap.has(subscriptions, ['Products', 'changes'])
       && HashMap.has(subscriptions, ['Products', 'clock']) === hasExpiringProduct(s.products)
   })
@@ -342,7 +345,7 @@ test('its child listens to the storage, and to the clock while a product expires
 
 // Otherwise the button is the platform's, which leaves the app.
 test('the page observes the back button only while the menu is open', () => {
-  assertProperty([state], (s) => HashMap.has(Tea.subscriptionsOf(program)(s), 'back-button') === s.isMenuOpen)
+  assertProperty([state], (s) => HashMap.has(program.subscriptions(s), 'back-button') === s.isMenuOpen)
 })
 
 test('starts its child as the child starts, with its commands', () => {

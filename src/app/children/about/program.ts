@@ -1,4 +1,4 @@
-import type * as Tea from '@fgaudo/effect-tea'
+import * as Tea from '@fgaudo/effect-tea'
 import * as Arr from 'effect/Array'
 import * as Channel from 'effect/Channel'
 import * as Data from 'effect/Data'
@@ -11,7 +11,7 @@ import { type License, Licenses } from './services/licenses/licenses.ts'
 import { Version } from './services/version/version.ts'
 
 export type State = Readonly<{
-  /** Whether the page is scrolled to its top, where the top app bar rests on the surface. */
+  /** Whether the page is scrolled to its top, where the top app bar rests on the surface: the input `Scroll`. */
   isAtTop: boolean
   licenses: Data.TaggedEnum<{
     Loading: object
@@ -23,17 +23,16 @@ export type State = Readonly<{
   }>
 }>
 
-export type Message = Data.TaggedEnum<{
+/** The page's own messages: the writes into its input are made by `make`. */
+type Own = Data.TaggedEnum<{
   /** The page's own back button, and the platform's, while the page is shown. */
   BackPressed: object
-  /** The page scrolled, to `top` pixels from its top. */
-  Scrolled: { top: number }
   // From commands.
   LicensesLoaded: { licenses: ReadonlyArray<License> }
   VersionLoaded: { version: string }
 }>
 
-const Message = Data.taggedEnum<Message>()
+const Own = Data.taggedEnum<Own>()
 
 export type Event = Data.TaggedEnum<{
   LeaveRequested: object
@@ -45,16 +44,14 @@ export type Command = Data.TaggedEnum<{ LoadLicenses: object; LoadVersion: objec
 
 const Command = Data.taggedEnum<Command>()
 
-export type Deps = Licenses | Version | BackButton
-
-const backButton: Tea.Subscription<Message, BackButton> = Channel.unwrap(
-  Effect.map(Effect.service(BackButton), ({ presses }) => Channel.map(presses, () => Message.BackPressed())),
+const backButton: Tea.Subscription<Own, BackButton> = Channel.unwrap(
+  Effect.map(Effect.service(BackButton), ({ presses }) => Channel.map(presses, () => Own.BackPressed())),
 )
 
 const loadLicenses = Effect.fn('LoadLicenses')(
   function*() {
     const { all } = yield* Licenses
-    return Opt.some(Message.LicensesLoaded({ licenses: yield* all }))
+    return Opt.some(Own.LicensesLoaded({ licenses: yield* all }))
   },
   Effect.withLogSpan('LoadLicenses'),
 )
@@ -62,7 +59,7 @@ const loadLicenses = Effect.fn('LoadLicenses')(
 const loadVersion = Effect.fn('LoadVersion')(
   function*() {
     const { current } = yield* Version
-    return Opt.some(Message.VersionLoaded({ version: yield* current }))
+    return Opt.some(Own.VersionLoaded({ version: yield* current }))
   },
   Effect.withLogSpan('LoadVersion'),
 )
@@ -81,8 +78,7 @@ export type LicenseCard = Readonly<{
 }>
 
 export type Model = Readonly<{
-  back: Message
-  scroll: (top: number) => Message
+  back: Own
   /** The top app bar takes a container's color once the page scrolls under it. */
   isAtTop: boolean
   licenses: Data.TaggedEnum<{
@@ -110,20 +106,29 @@ const cardOf = (license: License): LicenseCard => ({
   maybeRepository: nonBlank(license.repository),
 })
 
-export const program: Tea.Program<{
-  state: State
-  model: Model
-  message: Message
-  command: Command
-  services: Deps
-  event: Event
-}> = {
+const { input, make } = Tea.program<{ state: State; model: Model; message: Own; command: Command; event: Event }>()
+
+/**
+ * How far the page has scrolled, in pixels from its top, as far as the top app bar tells it apart: 0 at its top, 1
+ * under it. The very same state while that does not change: the page scrolls often, and only a change draws a frame.
+ */
+const scroll = input({
+  get: (state) => Opt.some(state.isAtTop ? 0 : 1),
+  set: (state, top: number) => {
+    const isAtTop = top <= 0
+    return isAtTop === state.isAtTop ? state : { ...state, isAtTop }
+  },
+})
+
+export const program = make({
   init: {
     state: { isAtTop: true, licenses: { _tag: 'Loading' }, version: { _tag: 'Loading' } },
     commands: [Command.LoadLicenses(), Command.LoadVersion()],
   },
 
-  update: Match.typeTags<Message, (state: State) => Tea.Transition<State, Command, Event>>()({
+  inputs: { Scroll: scroll },
+
+  update: Match.typeTags<Own, (state: State) => Tea.Transition<State, Command, Event>>()({
     // Accepted once loaded too: a command cannot be cancelled, and its answer goes to the About shown when it
     // arrives, so a page opened again while the first visit's loads were pending hears theirs, then its own.
     LicensesLoaded: ({ licenses }) => (state) => ({
@@ -135,12 +140,6 @@ export const program: Tea.Program<{
     }),
 
     BackPressed: () => (state) => ({ state, events: [Event.LeaveRequested()] }),
-
-    // The same state while the answer is the same: the page scrolls often, and only a change draws a frame.
-    Scrolled: ({ top }) => (state) => {
-      const isAtTop = top <= 0
-      return { state: isAtTop === state.isAtTop ? state : { ...state, isAtTop } }
-    },
   }),
 
   runCommand: Match.typeTags<Command>()({
@@ -151,12 +150,13 @@ export const program: Tea.Program<{
   subscriptions: () => HashMap.make(['back-button', backButton]),
 
   makeModel: (state) => ({
-    back: Message.BackPressed(),
-    scroll: (top) => Message.Scrolled({ top }),
+    back: Own.BackPressed(),
     isAtTop: state.isAtTop,
     licenses: state.licenses._tag === 'Loaded'
       ? { _tag: 'Loaded', cards: Arr.map(state.licenses.items, cardOf) }
       : { _tag: 'Loading' },
     version: state.version,
   }),
-}
+})
+
+export type Message = Tea.MessageOf<typeof program>

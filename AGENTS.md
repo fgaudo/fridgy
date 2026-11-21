@@ -14,9 +14,11 @@ for the task before starting it:
 | editing a `view.tsx`, `src/styles.ts` or the palette            | [`views`](.agents/skills/views/SKILL.md)                     |
 | building for Android, upgrading React Native, releasing         | [`android-release`](.agents/skills/android-release/SKILL.md) |
 
-Before changing a program, read the "Guide" of the runtime, `node_modules/@fgaudo/effect-tea/README.md`: its
+Before changing a program, read the runtime's guide, which the package holds at the version installed:
+`node_modules/@fgaudo/effect-tea/skills/effect-tea/SKILL.md` says where each thing is, and the guide itself,
+`site/guide/` in the package, is the library's specification. Its
 rules (intents instead of toggles, an operation as a state that only its completion leaves, input never a
-reason to reject, a model that shows less than `update` accepts and never more, one state machine per concern
+reason to reject, a model that holds no function and shows less than `update` accepts and never more, one state machine per concern
 with no derived data, a view that draws and never decides, `reject` for a message that may arrive and a defect
 for one that cannot, when a program splits into children and by what, how a program's tests are written) are
 rules of this app, and are not repeated here. Never patch the library from here: a change to it is made in
@@ -51,13 +53,11 @@ folders; "page" names a role in the UI, kept by the root's state, not a kind of 
 
 - **Expected errors are typed, bugs crash.** Expected failures go through Effect's error channel
   (`Effect.tryPromise`, `Effect.try`; no `try/catch`, no bare Promises), and a subscription's failure is a
-  message of its own. A violated invariant is a defect (`Effect.die`, or `Tea.defect(reason)` where the Guide
+  message of its own. A violated invariant is a defect (`Effect.die`, or `Tea.defect(reason)` where the guide
   throws), never silenced, retried or turned into a message; crash reporting goes around `run`
   (`Effect.tapCause`) and never recovers from it. An invariant is the state's, kept by the run, never the
   view's: what a view draws, the motion and the hit-testing included, rules no message out, so a tap and an
   event raised for one are rejected, never a defect.
-- **The model holds the messages.** Of the two ways the Guide allows, this app's views send only what the model
-  holds, never a message they build: `Message` is exported as a type only.
 - **One global state, no local view state, no mutable singletons.** Effects only in commands and subscriptions:
   `update`, `makeModel` and views are pure. A view is a function of its model, never a React component with
   state or hooks; what the platform holds itself (a text field's text) is left to it, as the `views` skill says.
@@ -65,7 +65,7 @@ folders; "page" names a role in the UI, kept by the root's state, not a kind of 
   `Source<A, Done, E>` (`libs/source`), `Done` being `never` for one that never ends. Only on-going observation
   is a `Source`; a one-off read is an `Effect`.
 - **A page stays one program while its parts share one form and one submission** (`add-products`: the two
-  steps, the scanner, the product entering the fridge), however long: the Guide's size for splitting yields to
+  steps, the scanner, the product entering the fridge), however long: the guide's size for splitting yields to
   its rule that children reading each other's state are one child.
 - **Hidden pages keep receiving their completions**, but their subscriptions run only while they are on top
   (`subscribed`, in the root). A covered page's request to show another page is dropped: a tap of a frame
@@ -143,7 +143,7 @@ folders; "page" names a role in the UI, kept by the root's state, not a kind of 
   `test_support`): Biome lets only `*.test.ts` and other `*.test_*.ts` files import them, and `bun test` does
   not run them. Branded and domain types have a `*.test_arbitrary.ts` producing only valid values; generators
   are built from them, never from `*Unsafe` constructors.
-- Every program's `program.test.ts` tests it as the Guide's "Testing" says, with the helpers of `libs/testing/`;
+- Every program's `program.test.ts` tests it as the guide's "Testing" says, with the helpers of `libs/testing/`;
   the root's tests act like a user (`src/app/user.test_support.ts`, `rehearse`), over a database in memory. A view
   is drawn without being rendered (`messagesSentBy`, `libs/tea-react/view.test_support.ts`): `bun test` cannot load
   React Native, whose modules the preload replaces with their names (`libs/testing/preload.test_support.ts`).
@@ -184,7 +184,8 @@ folders; "page" names a role in the UI, kept by the root's state, not a kind of 
 - No blank lines between the statements of a block; blank lines separate declarations, object entries of
   large tables (`update`'s handlers) and `describe`/`test` calls.
 - Logging only where effects run: `error` for a bug right before the app dies, `warn` for a handled failure
-  with its cause, `info` for rare events, `debug` for the program's loop. Commands carry `Effect.withLogSpan`.
+  with its cause, `info` for rare events, `debug` for the detail of an operation. The run of
+  the program logs nothing of its own. Commands carry `Effect.withLogSpan`.
 - Documentation is part of the change: update `README.md`, `src/README.md`, this file and the skills when what
   they describe changes, and remove what is no longer true.
 

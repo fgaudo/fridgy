@@ -70,14 +70,14 @@ const homeState = (state: State) =>
 /** Whether the page that adds products looks a barcode up: its subscription's key is `lookup:<barcode>`. */
 const looksUp = (state: State) =>
   Arr.some(
-    Arr.fromIterable(HashMap.keys(Tea.subscriptionsOf(program)(state))),
+    Arr.fromIterable(HashMap.keys(program.subscriptions(state))),
     (key) => Array.isArray(key) && key[0] === 'AddProducts' && String(key[1]).startsWith('lookup:'),
   )
 
 /** The pages whose subscriptions run, from the namespaced keys (`['Home', 'clock']`, …). */
 const subscribedPages = (state: State) =>
   new Set(
-    Array.from(HashMap.keys(Tea.subscriptionsOf(program)(state))).flatMap((key) => Array.isArray(key) ? [key[0]] : []),
+    Array.from(HashMap.keys(program.subscriptions(state))).flatMap((key) => Array.isArray(key) ? [key[0]] : []),
   )
 
 describe('Navigation', () => {
@@ -109,7 +109,7 @@ describe('Navigation', () => {
       yield* user.send(() => entry)
       const state = yield* user.state
       expect(tags(state)).toEqual(['Home', 'About'])
-      expect(Opt.map(entry, (message) => Tea.isRejected(program.update(message)(state)))).toEqual(Opt.some(true))
+      expect(Opt.map(entry, (message) => program.update(message)(state) === Tea.reject)).toEqual(Opt.some(true))
       yield* user.runAll
     })))
 
@@ -262,12 +262,13 @@ describe('Navigation', () => {
       yield* scan(user, '4006381333931')
       yield* user.hear(
         ['AddProducts', 'lookup:4006381333931'],
-        Msg.AddProducts({
+        {
+          _tag: 'AddProducts',
           message: AddProductsMsg.LookedUp({
             barcode: '4006381333931',
             outcome: { _tag: 'Found', name: 'Milk', url: 'https://world.openfoodfacts.org/product/4006381333931' },
           }),
-        }),
+        },
       )
       yield* user.hearNext(['AddProducts', 'clock'])
       yield* user.send(addProduct)
@@ -285,9 +286,10 @@ describe('Navigation', () => {
       yield* scan(user, '4006381333931')
       yield* user.hear(
         ['AddProducts', 'lookup:4006381333931'],
-        Msg.AddProducts({
+        {
+          _tag: 'AddProducts',
           message: AddProductsMsg.LookedUp({ barcode: '4006381333931', outcome: { _tag: 'NotFound' } }),
-        }),
+        },
       )
       yield* user.hearNext(['AddProducts', 'clock'])
       expect(addProduct(yield* user.model)).toEqual(Opt.none())
@@ -634,7 +636,7 @@ describe('Subscriptions', () => {
         user.state,
         (state) =>
           Arr.some(
-            Arr.fromIterable(HashMap.keys(Tea.subscriptionsOf(program)(state))),
+            Arr.fromIterable(HashMap.keys(program.subscriptions(state))),
             (key) => Array.isArray(key) && key[1] === 'back-button',
           ),
       )

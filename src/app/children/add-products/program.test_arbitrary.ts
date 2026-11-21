@@ -194,7 +194,7 @@ export const message: fc.Arbitrary<Message> = fc.oneof(
   fc.constant(Msg.DateCleared()),
   fc.constant(Msg.CameraFailed()),
   fc.boolean().map((isAvailable) => Msg.CameraChecked({ isAvailable })),
-  fc.string().map((name) => Msg.NameChanged({ name })),
+  fc.string().map((value) => Msg.Name({ message: { _tag: 'Written', value } })),
   fc.constant(Msg.NameCleared()),
   digit.map((digit) => Msg.DigitTyped({ digit })),
   fc.constant(Msg.Started()),

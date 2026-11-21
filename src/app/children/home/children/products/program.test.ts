@@ -490,7 +490,7 @@ describe('Products update', () => {
 // from what it tells; the rows' motion, by the rows arriving and leaving.
 test('listens to the storage always, to the clock while a product shown expires, and times the snackbar and the rows moving', () => {
   assertProperty([state], (s) => {
-    const subscriptions = Tea.subscriptionsOf(program)(s)
+    const subscriptions = program.subscriptions(s)
     const timesSnackbar = s.snackbar._tag === 'Shown'
       && HashMap.has(subscriptions, ['snackbar', s.snackbar.at, s.snackbar.notice._tag])
     const timesMotion = HashMap.has(subscriptions, ['settling', arrivalsOf(s), departuresOf(s)])
@@ -502,7 +502,7 @@ test('listens to the storage always, to the clock while a product shown expires,
 
 // Otherwise the press is Home's, or the platform's, which leaves the app.
 test('observes the back button only while the list shows a selection', () => {
-  assertProperty([state], (s) => HashMap.has(Tea.subscriptionsOf(program)(s), 'back-button') === showsSelection(s))
+  assertProperty([state], (s) => HashMap.has(program.subscriptions(s), 'back-button') === showsSelection(s))
 })
 
 // A row's look and action, a product's status and the snackbar are decided here, not in the view.

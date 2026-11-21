@@ -2,8 +2,8 @@
 
 Decided on 2026-10-28, for the WebView; redrawn on 2026-10-29 for React Native. This document says which checks
 the app has, what each one covers and what none of them does, and why a release is checked where it is. How a test
-is written is in [`AGENTS.md`](../AGENTS.md) ("Tests") and in the "Guide" of
-`node_modules/@fgaudo/effect-tea/README.md`; the commands, and how the emulator is set up, are in the
+is written is in [`AGENTS.md`](../AGENTS.md) ("Tests") and in the guide of
+the runtime, `node_modules/@fgaudo/effect-tea/site/guide/`; the commands, and how the emulator is set up, are in the
 `android-release` skill. What this design asks for and does not exist yet is listed under "Known gaps" in
 `AGENTS.md`, not here.
 

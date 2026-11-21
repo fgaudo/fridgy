@@ -9,8 +9,7 @@ Designed on 2026-10-28, not implemented yet: this document is the plan, to be tu
 the design, the facts verified and the decisions, as `edit-product.md` was. The code it touches is Home's child
 `src/app/children/home/children/products/` (the query, the rows shown, the selection), Home's view
 `src/app/children/home/view.tsx` (the top app bar in its search mode) and a new module of `src/libs/strings/` (the
-matching rule). Read [`AGENTS.md`](../AGENTS.md), the `add-program` and `views` skills and the "Guide" of
-`node_modules/@fgaudo/effect-tea/README.md` before changing them. The facts about the code below marked
+matching rule). Read [`AGENTS.md`](../AGENTS.md), the `add-program` and `views` skills and the guide of the runtime, `node_modules/@fgaudo/effect-tea/site/guide/`, before changing them. The facts about the code below marked
 **verified** were checked against the tree on 2026-10-28; re-check them before relying on them.
 
 ## What it does
@@ -98,13 +97,13 @@ type Search = Data.TaggedEnum<{
 - **The query is the text as typed**, never trimmed or folded in the state: the input owns it while the user
   types, and `update` accepts it whatever it is (the Guide: input is never a reason to reject). What it filters
   by is derived: `TextSearch.fromString(query)`, `None` for a blank query, which filters nothing.
-- **Messages**, from the view unless said otherwise: `SearchOpened`, `SearchClosed`, `QueryChanged { query }`,
-  `QueryCleared`, and `BackPressed` from the back button's subscription.
+- **Messages**, from the view unless said otherwise: `SearchOpened`, `SearchClosed`, `QueryCleared`, and
+  `BackPressed` from the back button's subscription. The query is an input, `Query`, which the field writes.
 - **`update`:**
   - `SearchOpened`: accepted while the search is `Closed`, the list is `Loaded` with at least one item and the
     selection is `Idle`; otherwise rejected (the icon is withheld). Opens with an empty query.
-  - `QueryChanged`: accepted while `Open` and `Idle`: stores the text. Rejected while a selection exists (see
-    "Concurrency": the field is not on screen then).
+  - A write into `Query` is stored while `Open` and `Idle`, whatever the text. Its `get` gives `None` while a
+    selection exists, so the library rejects a write then (see "Concurrency": the field is not on screen).
   - `QueryCleared`: accepted while `Open`, `Idle` and the query has text (the clear button is withheld on an
     empty field): empties the query and bumps `inputKey`.
   - `SearchClosed` and `BackPressed`: accepted while `Open` and `Idle`: `Closed`. `BackPressed` outside those
@@ -135,7 +134,6 @@ type Search = Data.TaggedEnum<{
     Open: {
       query: string
       inputKey: number
-      change: (query: string) => Message
       maybeClear: Opt.Option<Message>
       close: Message
     }
@@ -163,7 +161,7 @@ scrolls (scroll-driven animations, `bar-slide` in `src/styles.css`, since 2026-1
 - `searchBar(model, dispatch)`: the field's row, or nothing: the leading `arrow_back` icon button (`close`), the
   `input` (`type: 'search'`, `enterKeyHint: 'search'`, `autocapitalize: 'none'`, `autocomplete: 'off'`, no
   outline, `body-large`, `caret-primary`, its text written with `initialValue` and focused with `focusOnInsert`,
-  keyed by `inputKey`, `onValue('input', change, inputValue)`) and the trailing `close` icon button while
+  keyed by `inputKey`, writing with `write(Tea.forwardTo(dispatch, 'Query'))`) and the trailing `close` icon button while
   `maybeClear` is `Some`.
 
 Home picks the shape in this order: the selection's bar, then the search bar, then its own. In search mode the
@@ -218,7 +216,7 @@ selection):
   messages are rejected in them. `Deleting` is left only by its completion (**verified**, the comment on
   `Selection`), so the lock lasts exactly as long as the deletion, with no id to match the answer to.
 - **A keystroke on the frame of a long press.** A key typed between a long press that selects and the frame that
-  replaces the bar reaches `update` as `QueryChanged` while `Selecting`, and is rejected: the field then shows,
+  replaces the bar is a write into `Query` while `Selecting`, which has no place there and is rejected: the field then shows,
   for that frame, a character the state does not have. The next frame removes the field; when the selection ends
   the field is created anew from the state's query. The one case where the Guide's rule and the lock disagree,
   bounded to a frame and resolved by the input's own re-creation.
@@ -312,8 +310,8 @@ selection):
 - `products/program.test_arbitrary.ts`: `search` (`Closed`, `Open` with any string and any key), in `state`; the
   new messages in `message`; `shown` helpers for the tests. The coverage test lists the new variants.
 - `products/program.test.ts`: one test per new message, as the existing ones (`SearchOpened` opens only while
-  closed, loaded with items and idle; `QueryChanged` stores any text while open and idle, and is rejected
-  otherwise; `QueryCleared` empties and bumps the key only while there is text; `SearchClosed` and `BackPressed`
+  closed, loaded with items and idle; a write into `Query` is stored, whatever the text, while open and idle, and is
+  rejected otherwise; `QueryCleared` empties and bumps the key only while there is text; `SearchClosed` and `BackPressed`
   close while open and idle, `BackPressed` a defect otherwise); `ItemSelected` and `EditRequested` rejected on
   an id hidden by the filter; `ListChanged` keeps exactly the selected ids still shown; the model: the rows
   shown are exactly the rows of the whole order whose name matches, in order, the leaving ones included;

@@ -2,8 +2,8 @@
 
 Redesigned for React Native on 2026-10-30, in `src/app/children/add-products`. The web build's choreography (the
 letters of the name gathering into a package, which flew on an arc) is gone: its measuring of the DOM has no
-counterpart in a pure view. Read [`AGENTS.md`](../AGENTS.md), the `views` and `add-program` skills and the "Guide"
-of `node_modules/@fgaudo/effect-tea/README.md` before changing it.
+counterpart in a pure view. Read [`AGENTS.md`](../AGENTS.md), the `views` and `add-program` skills and the guide of the runtime,
+`node_modules/@fgaudo/effect-tea/site/guide/`, before changing it.
 
 ## Decisions
 

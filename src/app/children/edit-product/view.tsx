@@ -1,4 +1,4 @@
-import type { Dispatch } from '@fgaudo/effect-tea'
+import * as Tea from '@fgaudo/effect-tea'
 import * as Match from 'effect/Match'
 import * as Opt from 'effect/Option'
 import type { ReactNode } from 'react'
@@ -7,7 +7,7 @@ import Animated from 'react-native-reanimated'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import type { DateOrder } from '#libs/dates/date-order.ts'
 import * as Day from '#libs/dates/day.ts'
-import { handlers, type View } from '#libs/tea-react/tea-react.ts'
+import { handlers, type View, write } from '#libs/tea-react/tea-react.ts'
 import { color, elevation, icon, motion, shape, type } from '#styles'
 import type { DateChoice, Digit, Failure, FieldsShown, Message, Model, OrderChoice, Snackbar } from './program.ts'
 
@@ -143,7 +143,7 @@ type Activity = Readonly<
 >
 
 /** The top app bar of Material's full-screen dialog: its close button and its title. */
-const appBar = (maybeClose: Opt.Option<Message>, dispatch: Dispatch<Message>) => {
+const appBar = (maybeClose: Opt.Option<Message>, dispatch: Tea.Dispatch<Message>) => {
   const { on } = handlers(dispatch)
   return (
     <Box key='bar' style={styles.bar}>
@@ -165,7 +165,7 @@ const appBar = (maybeClose: Opt.Option<Message>, dispatch: Dispatch<Message>) =>
  * Material's filled button "Save", or "Save without date" on an empty date field. The circular indicator replaces
  * its label while the product is saved.
  */
-const saveButton = (shown: FieldsShown, activity: Activity, dispatch: Dispatch<Message>) => {
+const saveButton = (shown: FieldsShown, activity: Activity, dispatch: Tea.Dispatch<Message>) => {
   const { on } = handlers(dispatch)
   const maybeSave = activity._tag === 'Editing' ? activity.controls.maybeSave : Opt.none()
   const isEnabled = Opt.isSome(maybeSave) || activity._tag === 'Saving'
@@ -189,11 +189,11 @@ const saveButton = (shown: FieldsShown, activity: Activity, dispatch: Dispatch<M
 
 /**
  * Material's outlined text field of the name, drawn anew when it is cleared. From then on the user owns its text, and
- * the program learns it from the field's messages. Not focused when the page opens: the keyboard would cover the
- * keypad, and the user may have come for the date.
+ * the field writes it into the input `Name`. Not focused when the page opens: the keyboard would cover the keypad,
+ * and the user may have come for the date.
  */
-const nameField = (shown: FieldsShown, activity: Activity, dispatch: Dispatch<Message>) => {
-  const { on, onValue } = handlers(dispatch)
+const nameField = (shown: FieldsShown, activity: Activity, dispatch: Tea.Dispatch<Message>) => {
+  const { on } = handlers(dispatch)
   const isEditing = activity._tag === 'Editing'
   const maybeClearName = isEditing ? activity.controls.maybeClearName : Opt.none()
   return (
@@ -209,7 +209,7 @@ const nameField = (shown: FieldsShown, activity: Activity, dispatch: Dispatch<Me
         enterKeyHint='done'
         cursorColor={color.primary}
         style={[styles.input, { color: isEditing ? color.onSurface : color.disabledContent }]}
-        onChangeText={isEditing ? onValue(activity.controls.changeName) : undefined}
+        onChangeText={isEditing ? write(Tea.forwardTo(dispatch, 'Name')) : undefined}
       />
       {Opt.match(maybeClearName, {
         onNone: () => null,
@@ -229,7 +229,7 @@ const nameField = (shown: FieldsShown, activity: Activity, dispatch: Dispatch<Me
 }
 
 /** Material's segmented button of the orders. */
-const orderSegments = (shown: FieldsShown, activity: Activity, dispatch: Dispatch<Message>) => {
+const orderSegments = (shown: FieldsShown, activity: Activity, dispatch: Tea.Dispatch<Message>) => {
   const { on } = handlers(dispatch)
   const segment = ({ order, choice }: OrderChoice, index: number) => {
     const maybePick = choice._tag === 'Offered' && activity._tag === 'Editing' ? choice.maybePick : Opt.none()
@@ -283,7 +283,7 @@ const dateField = (shown: FieldsShown, activity: Activity) => {
 }
 
 /** Material's filter chip of a day the digits name. */
-const chip = ({ date, choice }: DateChoice, activity: Activity, dispatch: Dispatch<Message>) => {
+const chip = ({ date, choice }: DateChoice, activity: Activity, dispatch: Tea.Dispatch<Message>) => {
   const { on } = handlers(dispatch)
   const maybeChoose = choice._tag === 'Offered' && activity._tag === 'Editing' ? choice.maybeChoose : Opt.none()
   const isChosen = choice._tag === 'Chosen'
@@ -310,7 +310,7 @@ const chip = ({ date, choice }: DateChoice, activity: Activity, dispatch: Dispat
 }
 
 /** Under the field, what it means: the hint, the chips on one line that scrolls sideways, or the error. */
-const strip = (shown: FieldsShown, activity: Activity, dispatch: Dispatch<Message>) => (
+const strip = (shown: FieldsShown, activity: Activity, dispatch: Tea.Dispatch<Message>) => (
   <Box style={styles.strip}>
     {Match.valueTags(shown.strip, {
       Hint: () => <Text style={[styles.stripText, { color: color.onSurfaceVariant }]}>{hints[shown.order]}</Text>,
@@ -327,7 +327,7 @@ const strip = (shown: FieldsShown, activity: Activity, dispatch: Dispatch<Messag
 )
 
 /** A keypad of the app's own, always where the thumb expects it: Material's tonal buttons in a button group's pills. */
-const keypad = (activity: Activity, dispatch: Dispatch<Message>) => {
+const keypad = (activity: Activity, dispatch: Tea.Dispatch<Message>) => {
   const { on } = handlers(dispatch)
   const key = (id: string, label: ReactNode | string, title: string, maybeMessage: Opt.Option<Message>) => {
     const isEnabled = Opt.isSome(maybeMessage)
@@ -352,7 +352,7 @@ const keypad = (activity: Activity, dispatch: Dispatch<Message>) => {
       digit,
       digit,
       digit,
-      Opt.flatMap(controls, ({ maybeTypeDigit }) => Opt.map(maybeTypeDigit, (typeDigit) => typeDigit(digit))),
+      Opt.flatMap(controls, ({ maybeTypeDigit }) => Opt.map(maybeTypeDigit, (typeDigit) => typeDigit[digit])),
     )
   const clear = Opt.flatMap(controls, ({ maybeClearDate }) => maybeClearDate)
   const erase = Opt.flatMap(controls, ({ maybeEraseDigit }) => maybeEraseDigit)
@@ -370,7 +370,7 @@ const keypad = (activity: Activity, dispatch: Dispatch<Message>) => {
  * The fields read from the top, the keypad at the bottom of their column, where the thumb rests, and "Save" docked
  * under it. The column scrolls when the screen is shorter (the keyboard open, a large font): "Save" stays in sight.
  */
-const fields = (shown: FieldsShown, activity: Activity, dispatch: Dispatch<Message>) => [
+const fields = (shown: FieldsShown, activity: Activity, dispatch: Tea.Dispatch<Message>) => [
   <ScrollView key='fields' keyboardShouldPersistTaps='handled' contentContainerStyle={styles.column}>
     {nameField(shown, activity, dispatch)}
     {orderSegments(shown, activity, dispatch)}

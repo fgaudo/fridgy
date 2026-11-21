@@ -56,6 +56,7 @@ export type LookupOutcome = Data.TaggedEnum<{
 
 /** What is kept in every state: a product being added does not interrupt the next one. */
 export type Form = Readonly<{
+  /** The input `Name`, as typed. */
   maybeName: Opt.Option<string>
   /** Bumped each time the program replaces the name (a scan, a clearing, a product added): the input is drawn anew. */
   replacements: number
@@ -116,8 +117,8 @@ export type State = Data.TaggedEnum<{
   /** The first step: the name. */
   Naming: Readonly<{ form: Form }>
   /**
-   * The first step while the scanned barcode is looked up, the name emptied. Left by the answer, a cancel, or a
-   * key typed just before.
+   * The first step while the scanned barcode is looked up, the name emptied and the lookup's: it takes nothing
+   * typed. Left by the answer or a cancel.
    */
   LookingUp: Readonly<{ form: Form; barcode: string }>
   /** The scanner's dialog, over the first step. */
@@ -128,9 +129,9 @@ export type State = Data.TaggedEnum<{
   Submitting: Readonly<{ form: Form; product: Product.Product; step: Step }>
 }>
 
-export type Message = Data.TaggedEnum<{
+/** The page's own messages: the writes into its input are made by `make`. */
+type Own = Data.TaggedEnum<{
   // From the view.
-  NameChanged: { name: string }
   /** The name field's clear button: empties the name. */
   NameCleared: object
   /** The name field's scan button: opens the scanner's dialog. */
@@ -178,7 +179,7 @@ export type Message = Data.TaggedEnum<{
   Completed: { succeeded: boolean }
 }>
 
-const Message = Data.taggedEnum<Message>()
+const Own = Data.taggedEnum<Own>()
 
 export type Command = Data.TaggedEnum<{
   /** Asks whether the device can read barcodes. */
@@ -198,7 +199,7 @@ export type Event = Data.TaggedEnum<{
 
 const Event = Data.taggedEnum<Event>()
 
-export type Deps =
+type Deps =
   | AddProducts.AddProducts
   | DateOrderSetting
   | Scanner
@@ -211,13 +212,13 @@ export type Deps =
 /** A day the digits name: the chosen one, or one to pick while the step takes input. */
 export type DateChoice = Readonly<{
   date: Day.Day
-  choice: Data.TaggedEnum<{ Chosen: object; Offered: Readonly<{ maybeChoose: Opt.Option<Message> }> }>
+  choice: Data.TaggedEnum<{ Chosen: object; Offered: Readonly<{ maybeChoose: Opt.Option<Own> }> }>
 }>
 
 /** An order the digits can be read in: the one in use, or one to pick while the step takes input. */
 export type OrderChoice = Readonly<{
   order: DateOrder.DateOrder
-  choice: Data.TaggedEnum<{ Current: object; Offered: Readonly<{ maybePick: Opt.Option<Message> }> }>
+  choice: Data.TaggedEnum<{ Current: object; Offered: Readonly<{ maybePick: Opt.Option<Own> }> }>
 }>
 
 /** The line under the name field: what the lookup found, or that the name can only be typed. */
@@ -237,6 +238,7 @@ type PageShown = Readonly<{ keyboardInset: number }>
 /** The first step, drawn in every state: under the scanner, and under the second step. */
 export type NameShown = Readonly<{
   supporting: Supporting
+  /** The input `Name`: written into on the first step, while it takes input and while it adds. */
   name: string
   /** Changes when the name is replaced by a scan or a clearing, not by typing. */
   nameKey: number
@@ -292,25 +294,24 @@ export type Model = Data.TaggedEnum<{
     & PageShown
     & NameShown
     & Readonly<{
-      close: Message
-      changeName: (name: string) => Message
+      close: Own
       /** Empties the name, while there is one. */
-      maybeClearName: Opt.Option<Message>
+      maybeClearName: Opt.Option<Own>
       /** Opens the scanner, once the device can read barcodes. */
-      maybeScan: Opt.Option<Message>
+      maybeScan: Opt.Option<Own>
       /** Goes on to the date, once the name is a product's. */
-      maybeRequestDate: Opt.Option<Message>
+      maybeRequestDate: Opt.Option<Own>
       /** Adds the product, never expiring, once the name is a product's. */
-      maybeAdd: Opt.Option<Message>
+      maybeAdd: Opt.Option<Own>
       fridge: FridgeShown
     }>
-  /** The first step during the lookup: only cancelling it and leaving the page take. */
+  /** The first step during the lookup: only cancelling it and leaving the page take, and the name is read-only. */
   LookingUp:
     & PageShown
     & NameShown
     & Readonly<{
-      close: Message
-      cancelLookup: Message
+      close: Own
+      cancelLookup: Own
     }>
   /** The scanner's dialog, over the first step, which takes nothing until it closes. */
   Scanning:
@@ -319,22 +320,22 @@ export type Model = Data.TaggedEnum<{
     & Readonly<{
       /** Once unavailable, the scanner says that the name can only be typed. */
       camera: Camera
-      closeScanner: Message
+      closeScanner: Own
     }>
   Dating:
     & PageShown
     & NameShown
     & DateShown
     & Readonly<{
-      back: Message
-      /** The keypad's keys: none past a date's longest. */
-      maybeTypeDigit: Opt.Option<(digit: Digit) => Message>
+      back: Own
+      /** The keypad's keys, by digit: none past a date's longest. */
+      maybeTypeDigit: Opt.Option<Readonly<Record<Digit, Own>>>
       /** None with nothing to erase. */
-      maybeEraseDigit: Opt.Option<Message>
+      maybeEraseDigit: Opt.Option<Own>
       /** None with nothing to clear. */
-      maybeClearDate: Opt.Option<Message>
+      maybeClearDate: Opt.Option<Own>
       /** Adds the product, expiring on the day the digits name, once they name one. */
-      maybeAdd: Opt.Option<Message>
+      maybeAdd: Opt.Option<Own>
     }>
   /**
    * The product is being added: the step it is added from, its controls taking nothing. On the first step, the name
@@ -348,7 +349,6 @@ export type Model = Data.TaggedEnum<{
       step: Data.TaggedEnum<{
         Naming: Readonly<{
           fridge: FridgeShown
-          changeName: (name: string) => Message
           /** Whether the scanner opened before: the step is drawn as it was. */
           canScan: boolean
         }>
@@ -361,6 +361,9 @@ export type Model = Data.TaggedEnum<{
 const isScanning = (state: State) => state._tag === 'Scanning' && state.form.camera === 'Available'
 
 const hasName = (form: Form) => Opt.exists(form.maybeName, (name) => name !== '')
+
+/** The name as the field shows it: empty before any is typed. */
+const nameOf = (form: Form) => Opt.getOrElse(form.maybeName, () => '')
 
 const withForm = (state: State, change: (form: Form) => Form): State => ({ ...state, form: change(state.form) })
 
@@ -431,7 +434,7 @@ const productOfStep = (state: State & { _tag: 'Naming' | 'Dating' }) =>
     : Opt.flatMap(maybeNamedDate(state.form, state.date), (date) => productOf(state.form, Opt.some(date)))
 
 // Refreshed often, so that the creation date is close to when the user adds the product.
-const clock = every('1 second', (now) => Message.TimeChanged({ now }))
+const clock = every('1 second', (now) => Own.TimeChanged({ now }))
 
 // The phases of `docs/product-flight.md`, which the view's motion must fit in: what it draws is removed when they
 // end. A product's flight is long-2, after the fridge's appearance (medium-2) when it brings the fridge. The door
@@ -444,15 +447,14 @@ const ARRIVAL_DURATIONS: Readonly<Record<Arrival['entrance'], Duration.Duration>
 const CLOSING_DURATION = Duration.millis(200 + 250)
 
 /** Ends once the arrival's product is in the fridge. */
-const arrivalTimer = ({ id, entrance }: Arrival): Tea.Subscription<Message, Deps> =>
-  after(ARRIVAL_DURATIONS[entrance], Message.Arrived({ id }))
+const arrivalTimer = ({ id, entrance }: Arrival): Tea.Subscription<Own, Deps> =>
+  after(ARRIVAL_DURATIONS[entrance], Own.Arrived({ id }))
 
 /** Ends once the fridge has closed behind the product added as the `id`th. */
-const closingTimer = (id: number): Tea.Subscription<Message, Deps> =>
-  after(CLOSING_DURATION, Message.FridgeClosed({ id }))
+const closingTimer = (id: number): Tea.Subscription<Own, Deps> => after(CLOSING_DURATION, Own.FridgeClosed({ id }))
 
 /** Ends once the snackbar has stood its time. */
-const snackbarTimer: Tea.Subscription<Message, Deps> = after(SNACKBAR_DURATION, Message.SnackbarExpired())
+const snackbarTimer: Tea.Subscription<Own, Deps> = after(SNACKBAR_DURATION, Own.SnackbarExpired())
 
 /**
  * An arrival's timer is keyed by its id, the closing's by the last arrival's, the snackbar's by its id: the next one
@@ -517,52 +519,52 @@ const admitted = (fridge: Fridge, id: number, product: Product.Product): Fridge 
     }),
   })
 
-const dateOrder: Tea.Subscription<Message, DateOrderSetting> = Channel.unwrap(
+const dateOrder: Tea.Subscription<Own, DateOrderSetting> = Channel.unwrap(
   Effect.map(
     Effect.service(DateOrderSetting),
-    ({ changes }) => Channel.map(changes, (order) => Message.OrderChanged({ order })),
+    ({ changes }) => Channel.map(changes, (order) => Own.OrderChanged({ order })),
   ),
 )
 
 const scanner = Channel.unwrap(
   Effect.map(Effect.service(Scanner), ({ barcodes }) =>
     barcodes.pipe(
-      Channel.map((barcode) => Message.Scanned({ barcode })),
+      Channel.map((barcode) => Own.Scanned({ barcode })),
       Channel.catchTag('ScannerError', (error) =>
         Channel.fromEffectDone(
-          Effect.logWarning('Could not use the camera', error.cause).pipe(Effect.as(Message.CameraFailed())),
+          Effect.logWarning('Could not use the camera', error.cause).pipe(Effect.as(Own.CameraFailed())),
         )),
     )),
 )
 
 // Observed as long as the page is shown: while a product is being added, the press is heard and held, so that
 // the platform does not leave the app.
-const backButton: Tea.Subscription<Message, BackButton> = Channel.unwrap(
-  Effect.map(Effect.service(BackButton), ({ presses }) => Channel.map(presses, () => Message.BackPressed())),
+const backButton: Tea.Subscription<Own, BackButton> = Channel.unwrap(
+  Effect.map(Effect.service(BackButton), ({ presses }) => Channel.map(presses, () => Own.BackPressed())),
 )
 
 // Observed as long as the page is shown: the keyboard covers the step shown, whichever it is.
-const keyboard: Tea.Subscription<Message, Keyboard> = Channel.unwrap(
+const keyboard: Tea.Subscription<Own, Keyboard> = Channel.unwrap(
   Effect.map(
     Effect.service(Keyboard),
-    ({ insets }) => Channel.map(insets, (inset) => Message.KeyboardMoved({ inset })),
+    ({ insets }) => Channel.map(insets, (inset) => Own.KeyboardMoved({ inset })),
   ),
 )
 
-// Keyed by the barcode: a scan of another one, or a change of the name, interrupts it. It answers once.
-const lookup = (barcode: string): Tea.Subscription<Message, ProductLookup> =>
+// Keyed by the barcode: a cancel, or the page left, interrupts it. It answers once.
+const lookup = (barcode: string): Tea.Subscription<Own, ProductLookup> =>
   Channel.fromEffectDone(
     Effect.gen(function*() {
       const { lookup } = yield* ProductLookup
       return yield* lookup(barcode).pipe(
         Effect.map(Opt.match({
-          onNone: () => Message.LookedUp({ barcode, outcome: { _tag: 'NotFound' } }),
+          onNone: () => Own.LookedUp({ barcode, outcome: { _tag: 'NotFound' } }),
           onSome: (found) =>
-            Message.LookedUp({ barcode, outcome: { _tag: 'Found', name: composeName(found), url: found.url } }),
+            Own.LookedUp({ barcode, outcome: { _tag: 'Found', name: composeName(found), url: found.url } }),
         })),
         Effect.catchTag('ProductLookupError', (error) =>
           Effect.logWarning('Could not look the product up', error.cause).pipe(
-            Effect.as(Message.LookedUp({ barcode, outcome: { _tag: 'Failed' } })),
+            Effect.as(Own.LookedUp({ barcode, outcome: { _tag: 'Failed' } })),
           )),
       )
     }).pipe(Effect.withLogSpan('Lookup')),
@@ -573,7 +575,7 @@ const checkCamera = Effect.fn('CheckCamera')(
     const { isAvailable } = yield* Scanner
     const isAvailableNow = yield* isAvailable
     yield* Effect.logInfo(isAvailableNow ? 'The device can read barcodes' : 'The device cannot read barcodes')
-    return Opt.some(Message.CameraChecked({ isAvailable: isAvailableNow }))
+    return Opt.some(Own.CameraChecked({ isAvailable: isAvailableNow }))
   },
   Effect.withLogSpan('CheckCamera'),
 )
@@ -591,8 +593,8 @@ const add = Effect.fn('AddProduct')(
     yield* Effect.logInfo('Added a product', { id })
   },
   Effect.match({
-    onSuccess: () => Message.Completed({ succeeded: true }),
-    onFailure: () => Message.Completed({ succeeded: false }),
+    onSuccess: () => Own.Completed({ succeeded: true }),
+    onFailure: () => Own.Completed({ succeeded: false }),
   }),
   Effect.asSome,
   Effect.withLogSpan('AddProduct'),
@@ -607,8 +609,8 @@ const keepOrder = Effect.fn('KeepOrder')(
     yield* Effect.logInfo('Kept the date order', { order })
   },
   Effect.match({
-    onSuccess: () => Message.OrderKept({ succeeded: true }),
-    onFailure: () => Message.OrderKept({ succeeded: false }),
+    onSuccess: () => Own.OrderKept({ succeeded: true }),
+    onFailure: () => Own.OrderKept({ succeeded: false }),
   }),
   Effect.asSome,
   Effect.withLogSpan('KeepOrder'),
@@ -635,14 +637,34 @@ const start = (state: State & { _tag: 'Naming' | 'Dating' }): Tea.Transition<Sta
     }),
   })
 
-export const program: Tea.Program<{
-  state: State
-  model: Model
-  message: Message
-  command: Command
-  services: Deps
-  event: Event
-}> = {
+/** The keypad's keys, by digit. */
+const digitKeys: Readonly<Record<Digit, Own>> = {
+  '0': Own.DigitTyped({ digit: '0' }),
+  '1': Own.DigitTyped({ digit: '1' }),
+  '2': Own.DigitTyped({ digit: '2' }),
+  '3': Own.DigitTyped({ digit: '3' }),
+  '4': Own.DigitTyped({ digit: '4' }),
+  '5': Own.DigitTyped({ digit: '5' }),
+  '6': Own.DigitTyped({ digit: '6' }),
+  '7': Own.DigitTyped({ digit: '7' }),
+  '8': Own.DigitTyped({ digit: '8' }),
+  '9': Own.DigitTyped({ digit: '9' }),
+}
+
+const { input, make } = Tea.program<{ state: State; model: Model; message: Own; command: Command; event: Event }>()
+
+/**
+ * The name, as typed. Its place is there in every state but the lookup's, whose name is the scan's. Covered or
+ * disabled (scanner, second step, submitting), it still takes a key typed in the frame before. Validity is decided
+ * when going on or adding. A name that changes is no longer the lookup's, whose answer is dropped.
+ */
+const name = input({
+  get: (state) => state._tag === 'LookingUp' ? Opt.none() : Opt.some(nameOf(state.form)),
+  set: (state, typed: string) =>
+    withForm(state, (form) => ({ ...form, maybeName: Opt.some(typed), lookup: { _tag: 'Idle' } })),
+})
+
+export const program = make({
   init: {
     state: {
       _tag: 'Naming',
@@ -662,14 +684,9 @@ export const program: Tea.Program<{
     commands: [Command.CheckCamera()],
   },
 
-  update: Match.typeTags<Message, (state: State) => Tea.Transition<State, Command, Event>>()({
-    // Accepted while the input is covered or disabled too (scanner, second step, submitting): a key typed just
-    // before is kept. Validity is decided when going on or adding. A lookup going on stops: the name is no longer its.
-    NameChanged: ({ name }) => (state) => {
-      const named = withForm(state, (form) => ({ ...form, maybeName: Opt.some(name), lookup: { _tag: 'Idle' } }))
-      return { state: named._tag === 'LookingUp' ? { _tag: 'Naming', form: named.form } : named }
-    },
+  inputs: { Name: name },
 
+  update: Match.typeTags<Own, (state: State) => Tea.Transition<State, Command, Event>>()({
     // The input is drawn anew, empty: the user owns its text until the program replaces it.
     NameCleared: () => (state) =>
       state._tag === 'Naming' && hasName(state.form)
@@ -883,7 +900,7 @@ export const program: Tea.Program<{
   // The camera starts anew with each opening of the scanner: the scanner reports a barcode once, so this is what
   // lets the same product be read again.
   subscriptions: (state) => {
-    const always: ReadonlyArray<readonly [Key, Tea.Subscription<Message, Deps>]> = [
+    const always: ReadonlyArray<readonly [Key, Tea.Subscription<Own, Deps>]> = [
       ['clock', clock],
       ['date-order', dateOrder],
       ['back-button', backButton],
@@ -907,7 +924,7 @@ export const program: Tea.Program<{
 
   makeModel: (state): Model => {
     const { form } = state
-    const name = Opt.getOrElse(form.maybeName, () => '')
+    const name = nameOf(form)
     // A lookup's text comes from a scan, which needs the camera: it wins when the camera failed on a later opening.
     const supporting: Supporting = state._tag === 'LookingUp'
       ? { _tag: 'LookingUp', barcode: state.barcode }
@@ -921,8 +938,8 @@ export const program: Tea.Program<{
     const nameShown: NameShown = { supporting, name, nameKey: form.replacements, snackbar: form.snackbar }
     const dateShown = (
       date: DateForm,
-      maybeChoose: (day: Day.Day) => Opt.Option<Message>,
-      maybePick: (order: DateOrder.DateOrder) => Opt.Option<Message>,
+      maybeChoose: (day: Day.Day) => Opt.Option<Own>,
+      maybePick: (order: DateOrder.DateOrder) => Opt.Option<Own>,
     ): DateShown => {
       const maybeNamed = maybeNamedDate(form, date)
       const choices = offeredDates(form, date).map((day): DateChoice => ({
@@ -957,27 +974,26 @@ export const program: Tea.Program<{
         _tag: 'Naming',
         ...pageShown,
         ...nameShown,
-        close: Message.Closed(),
-        changeName: (name: string) => Message.NameChanged({ name }),
-        maybeClearName: hasName(form) ? Opt.some(Message.NameCleared()) : Opt.none(),
-        maybeScan: form.camera === 'Available' ? Opt.some(Message.ScanRequested()) : Opt.none(),
-        maybeRequestDate: Opt.map(productOfStep(naming), () => Message.DateRequested()),
-        maybeAdd: Opt.map(productOfStep(naming), () => Message.Started()),
+        close: Own.Closed(),
+        maybeClearName: hasName(form) ? Opt.some(Own.NameCleared()) : Opt.none(),
+        maybeScan: form.camera === 'Available' ? Opt.some(Own.ScanRequested()) : Opt.none(),
+        maybeRequestDate: Opt.map(productOfStep(naming), () => Own.DateRequested()),
+        maybeAdd: Opt.map(productOfStep(naming), () => Own.Started()),
         fridge: fridgeShown(form),
       }),
       LookingUp: (): Model => ({
         _tag: 'LookingUp',
         ...pageShown,
         ...nameShown,
-        close: Message.Closed(),
-        cancelLookup: Message.LookupCancelled(),
+        close: Own.Closed(),
+        cancelLookup: Own.LookupCancelled(),
       }),
       Scanning: (): Model => ({
         _tag: 'Scanning',
         ...pageShown,
         ...nameShown,
         camera: form.camera,
-        closeScanner: Message.ScanClosed(),
+        closeScanner: Own.ScanClosed(),
       }),
       Dating: (dating): Model => {
         const { date } = dating
@@ -987,18 +1003,15 @@ export const program: Tea.Program<{
           ...nameShown,
           ...dateShown(
             date,
-            (day) => Opt.some(Message.DateChosen({ date: day })),
-            (order) => Opt.some(Message.OrderPicked({ order })),
+            (day) => Opt.some(Own.DateChosen({ date: day })),
+            (order) => Opt.some(Own.OrderPicked({ order })),
           ),
-          back: Message.DateDismissed(),
+          back: Own.DateDismissed(),
           // A key is there exactly where its rule applies: every digit applies, or none does.
-          maybeTypeDigit: Opt.map(
-            DigitDateEntry.typeDigit('0')(date),
-            () => (digit: Digit) => Message.DigitTyped({ digit }),
-          ),
-          maybeEraseDigit: Opt.map(DigitDateEntry.eraseDigit(date), () => Message.DigitErased()),
-          maybeClearDate: Opt.map(DigitDateEntry.clear(date), () => Message.DateCleared()),
-          maybeAdd: Opt.map(productOfStep(dating), () => Message.Started()),
+          maybeTypeDigit: Opt.map(DigitDateEntry.typeDigit('0')(date), () => digitKeys),
+          maybeEraseDigit: Opt.map(DigitDateEntry.eraseDigit(date), () => Own.DigitErased()),
+          maybeClearDate: Opt.map(DigitDateEntry.clear(date), () => Own.DateCleared()),
+          maybeAdd: Opt.map(productOfStep(dating), () => Own.Started()),
         }
       },
       Submitting: ({ step }): Model => ({
@@ -1009,11 +1022,12 @@ export const program: Tea.Program<{
           ? {
             _tag: 'Naming',
             fridge: fridgeShown(form),
-            changeName: (name: string) => Message.NameChanged({ name }),
             canScan: form.camera === 'Available',
           }
           : { _tag: 'Dating', ...dateShown(step.date, () => Opt.none(), () => Opt.none()) },
       }),
     })
   },
-}
+})
+
+export type Message = Tea.MessageOf<typeof program>

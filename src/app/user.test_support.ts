@@ -1,7 +1,7 @@
 // The root's tests act like a user: each message is one the shown page's model
 // holds, never one built by hand. Nothing runs by itself: a command runs,
 // on the app's layer over a database in memory, and a subscription sends, when the test says so.
-import * as Tea from '@fgaudo/effect-tea'
+import type * as Tea from '@fgaudo/effect-tea'
 import { type Rehearsal, rehearse } from '@fgaudo/effect-tea/testing'
 import * as Arr from 'effect/Array'
 import * as Channel from 'effect/Channel'
@@ -28,16 +28,27 @@ import type * as EditProduct from './children/edit-product/program.ts'
 import type * as Products from './children/home/children/products/program.ts'
 import type * as Home from './children/home/program.ts'
 import * as App from './layer.ts'
-import { type Command, type Deps, type Message, type Model, program, type State } from './program.ts'
+import { type Command, type Message, type Model, program, type State } from './program.ts'
 
 const Msg = Data.taggedEnum<Message>()
 
-export type User = Rehearsal<State, Model, Message, Command, never, Deps>
+/** What the app's commands and subscriptions need: what the test's layer gives. */
+type Deps = Tea.CommandServicesOf<typeof program> | Tea.SubscriptionServicesOf<typeof program>
+
+export type User = Rehearsal<
+  State,
+  Model,
+  Message,
+  Command,
+  never,
+  Tea.CommandServicesOf<typeof program>,
+  Tea.SubscriptionServicesOf<typeof program>
+>
 
 /** A message of the shown page, when its model holds it, as the root receives it. */
 export type Choice = (model: Model) => Opt.Option<Message>
 
-// The models hold each program's own messages: wrapped here as the view's `dispatchTo` wraps them.
+// The models hold each program's own messages: wrapped here as the view's `forwardTo` wraps them.
 const onHome = (pick: (model: Home.Model) => Opt.Option<Home.Message>): Choice => ({ page }) =>
   page._tag === 'Home' ? Opt.map(pick(page.model), (message) => Msg.Home({ message })) : Opt.none()
 
@@ -84,8 +95,13 @@ export const undoDeletion = onProducts(({ snackbar }) =>
   snackbar._tag === 'Shown' && snackbar.notice._tag === 'Deleted' ? snackbar.notice.maybeUndo : Opt.none()
 )
 
+/** What the name field writes as the user types `name`, on the first step. */
 export const typeName = (name: string) =>
-  onAddProducts((form) => form._tag === 'Naming' ? Opt.some(form.changeName(name)) : Opt.none())
+  onAddProducts((form) =>
+    form._tag === 'Naming'
+      ? Opt.some<AddProducts.Message>({ _tag: 'Name', message: { _tag: 'Written', value: name } })
+      : Opt.none()
+  )
 
 /** The name field's clear button, while there is a name. */
 export const clearName = onAddProducts((form) => form._tag === 'Naming' ? form.maybeClearName : Opt.none())
@@ -95,7 +111,7 @@ export const requestDate = onAddProducts((form) => form._tag === 'Naming' ? form
 
 /** The keypad's key of a digit, on the second step, while a digit can be typed. */
 export const typeDigit = (digit: AddProducts.Digit) =>
-  onAddProducts((form) => form._tag === 'Dating' ? Opt.map(form.maybeTypeDigit, (type) => type(digit)) : Opt.none())
+  onAddProducts((form) => form._tag === 'Dating' ? Opt.map(form.maybeTypeDigit, (keys) => keys[digit]) : Opt.none())
 
 /** A segment of the second step's segmented button: an order other than the one in use, once it is known. */
 export const pickOrder = (picked: DateOrder) =>
@@ -113,7 +129,7 @@ export const openScanner = onAddProducts((form) => form._tag === 'Naming' ? form
 /** Opens the scanner, which reads `barcode`: the page then looks it up. */
 export const scan = Effect.fnUntraced(function*(user: User, barcode: string) {
   yield* user.send(openScanner)
-  yield* user.hear(['AddProducts', 'scanner'], Msg.AddProducts({ message: { _tag: 'Scanned', barcode } }))
+  yield* user.hear(['AddProducts', 'scanner'], { _tag: 'AddProducts', message: { _tag: 'Scanned', barcode } })
 })
 
 /** The first step's "Cancel", while a scanned barcode is looked up. */
@@ -132,8 +148,13 @@ export const loadEditPage = Effect.fnUntraced(function*(user: User) {
   yield* user.hearNext(['EditProduct', 'date-order'])
 })
 
+/** What the name field writes as the user types `name`, while it takes input. */
 export const typeEditedName = (name: string) =>
-  onEditProduct((form) => form._tag === 'Editing' ? Opt.some(form.changeName(name)) : Opt.none())
+  onEditProduct((form) =>
+    form._tag === 'Editing'
+      ? Opt.some<EditProduct.Message>({ _tag: 'Name', message: { _tag: 'Written', value: name } })
+      : Opt.none()
+  )
 
 /** The keypad's clear key, on the page that edits a product, while there are digits. */
 export const clearEditedDate = onEditProduct((form) => form._tag === 'Editing' ? form.maybeClearDate : Opt.none())
@@ -154,14 +175,15 @@ export const back = Effect.fnUntraced(function*(user: User) {
   const shown = Arr.lastNonEmpty(state.stack)
   // On Home, the list observes the button while it shows a selection, and Home while its menu is open.
   const listKey = ['Home', ['Products', 'back-button']]
-  if (shown._tag === 'Home' && HashMap.has(Tea.subscriptionsOf(program)(state), listKey)) {
-    return yield* user.hear(listKey, Msg.Home({ message: { _tag: 'Products', message: { _tag: 'BackPressed' } } }))
+  if (shown._tag === 'Home' && HashMap.has(program.subscriptions(state), listKey)) {
+    return yield* user.hear(listKey, { _tag: 'Home', message: { _tag: 'Products', message: { _tag: 'BackPressed' } } })
   }
+  // Written whole: a subscription sends no write into an input, which a message of `Msg` may be.
   const pressed = Match.valueTags(shown, {
-    Home: () => Msg.Home({ message: { _tag: 'BackPressed' } }),
-    AddProducts: () => Msg.AddProducts({ message: { _tag: 'BackPressed' } }),
-    EditProduct: () => Msg.EditProduct({ message: { _tag: 'BackPressed' } }),
-    About: () => Msg.About({ message: { _tag: 'BackPressed' } }),
+    Home: () => ({ _tag: 'Home', message: { _tag: 'BackPressed' } }) as const,
+    AddProducts: () => ({ _tag: 'AddProducts', message: { _tag: 'BackPressed' } }) as const,
+    EditProduct: () => ({ _tag: 'EditProduct', message: { _tag: 'BackPressed' } }) as const,
+    About: () => ({ _tag: 'About', message: { _tag: 'BackPressed' } }) as const,
   })
   yield* user.hear([shown._tag, 'back-button'], pressed)
 })

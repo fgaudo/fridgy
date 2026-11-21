@@ -25,8 +25,6 @@ export type State = Readonly<{
   stack: Arr.NonEmptyReadonlyArray<Page>
 }>
 
-export type Deps = Home.Deps | AddProducts.Deps | EditProduct.Deps | About.Deps
-
 /** Only the page on top is drawn. */
 export type Model = Readonly<{
   page: Data.TaggedEnum<{
@@ -87,9 +85,9 @@ const leave = (tag: Exclude<Page['_tag'], 'Home'>) => (state: State): Tea.Step<S
     : Tea.defect(`${tag} was the only page: Home is always the first`)
 }
 
-const { child, compose } = Tea.parent<{ state: State }>()
+const { child, make } = Tea.program<{ state: State }>()
 
-export const program = compose({
+export const program = make({
   init: (children) => {
     const home = children.Home.init
     return { state: { stack: [Page.Home({ state: home.state })] }, commands: home.commands }

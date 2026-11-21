@@ -341,6 +341,9 @@ export const productsOf = (items: ReadonlyArray<Product>, ids: HashSet.HashSet<s
   return HashSet.every(ids, isProduct) && Arr.isReadonlyArrayNonEmpty(products) ? Opt.some(products) : Opt.none()
 }
 
+/** The services of the subscriptions: the commands' are inferred from `runCommand`. */
+type Deps = ProductList | BackButton | DateTime.CurrentTimeZone
+
 // Expiration statuses derive from the current time: it is refreshed often
 // enough for days-long expirations.
 const clock: Tea.Subscription<Message, Deps> = every('30 seconds', (now) => Message.TimeChanged({ now }))
@@ -542,16 +545,9 @@ const listModel = (state: State): ListModel => {
   }
 }
 
-export type Deps = DeleteProducts.DeleteProducts | ProductList | Haptics | BackButton | DateTime.CurrentTimeZone
+const { make } = Tea.program<{ state: State; model: Model; message: Message; command: Command; event: Event }>()
 
-export const program: Tea.Program<{
-  state: State
-  model: Model
-  message: Message
-  command: Command
-  services: Deps
-  event: Event
-}> = {
+export const program = make({
   init: {
     state: {
       maybeNow: Opt.none(),
@@ -772,4 +768,4 @@ export const program: Tea.Program<{
       }),
     }),
   }),
-}
+})

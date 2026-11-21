@@ -43,7 +43,8 @@ src/
 │                        reads barcodes (barcode-camera/: the specs React Native's codegen reads, and its reads as a
 │                        stream). Its adapters are named as the app's,
 │                        `<service>.<backing>.ts`
-├─ libs/                 generic, reusable code: the React bridge (tea-react: handlers, renderer, test support),
+├─ libs/                 generic, reusable code: the bridge to React Native (tea-react: handlers, renderer, test
+│                        support),
 │                        sources, timers (a zoned clock, a one-shot timer), branded numbers, dates (a day of the
 │                        calendar, with no zone; the orders of a date's digits, the days they name, the rules of
 │                        typing them on a keypad), test helpers, …

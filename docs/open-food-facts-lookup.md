@@ -10,7 +10,7 @@ Implemented on 2026-10-27; the lookup and the scanner tried on Android in the em
 The code is the page that adds products (`src/app/children/add-products/`, its `product-lookup` service and the
 scanner adapter), the camera `src/infrastructure/barcode-camera/` with its native module, the client
 `src/infrastructure/open-food-facts/` and the cache `src/infrastructure/storage/barcodes.ts`. Read [`AGENTS.md`](../AGENTS.md), the `add-service` and `add-program`
-skills and the "Guide" of `node_modules/@fgaudo/effect-tea/README.md` before changing them. Every fact about the
+skills and the guide of the runtime, `node_modules/@fgaudo/effect-tea/site/guide/`, before changing them. Every fact about the
 Open Food Facts API below was checked against the live server on 2026-10-27 with `curl`; re-check what the code
 relies on (marked **verified**) before trusting it, the API may have moved.
 
@@ -39,12 +39,14 @@ linking a stored product to its barcode (see "Later").
   barcode is in the text while looking it up and when it is unknown, so that a misread code shows.
 - **The lookup is a subscription, keyed by the barcode** (`lookup:<barcode>`, which the root's tests hear by that
   key). Work that must stop when the state no longer wants it is a subscription, not a command: it stops when
-  the user types, cancels, scans again or leaves the page. Cancelling returns to `Naming`: the runtime interrupts
-  the subscription, which aborts the request, and nothing it sent reaches `update` afterwards, so no stale answer
-  needs handling. A key typed just before the scan leaves the state, as it drops the answer.
+  the user cancels or leaves the page. Cancelling returns to `Naming`: the runtime interrupts the subscription,
+  which aborts the request, and nothing it sent reaches `update` afterwards, so no stale answer needs handling.
+  While it looks up, the name field takes no input: the input `Name` has no place there, and a key typed in a frame
+  drawn before is rejected.
 - **The invariant** `update` keeps and the subscription relies upon: while `lookup` is not `Idle`, the name
-  field's text is the one the lookup left there (the found name, or none). Every message that changes the
-  name by any other way resets `lookup` to `Idle`; `Completed` keeps the name and so keeps `lookup` (after a
+  field's text is the one the lookup left there (the found name, or none). Every change of the name by any
+  other way resets `lookup` to `Idle`, a write into the input `Name` included (its `set` does), unless the write is
+  of the name already there; `Completed` keeps the name and so keeps `lookup` (after a
   product was added from a found name, the field still says it comes from Open Food Facts, which is true).
 - **`LookedUp` for a barcode not being looked up is a defect**: only the subscription sends it, while its key is
   in the state, so a mismatch cannot happen in a running program.

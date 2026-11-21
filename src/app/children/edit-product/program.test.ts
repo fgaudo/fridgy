@@ -53,6 +53,9 @@ const { makeModel } = program
 
 const digits: ReadonlyArray<Digit> = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
 
+/** What the name's field writes, as the user types `text` into it. */
+const typing = (text: string) => Msg.Name({ message: { _tag: 'Written', value: text } })
+
 /** The entry the fields show: the stored date's digits in the order in use until a key is pressed. */
 const entryShown = (form: Form): DigitDateEntry.Entry =>
   form.date._tag === 'Typed'
@@ -131,16 +134,14 @@ describe('EditProduct update', () => {
   })
 
   // The digit keys and the backspace are meant to repeat; a second press of the close button is ignored by the
-  // parent, once the page is gone. The name's input is disabled while saving.
+  // parent, once the page is gone. The name's field is disabled while saving, though a write is still stored there.
+  // The field writes a name other than the one shown, so that the write does something.
   test('the view sends what update accepts, all of it, and acts once when sent twice', () => {
-    const check = dispatchViolations(program.update, {
-      repeatable: (msg) => msg._tag === 'DigitTyped' || msg._tag === 'DigitErased' || msg._tag === 'Closed',
-      withheld: (msg, state) => msg._tag === 'NameChanged' && state._tag === 'Saving',
-    })
-    fc.assert(fc.property(state, fc.string(), anyDay, (before, inputValue, date) => {
+    fc.assert(fc.property(state, fc.string({ minLength: 1 }), anyDay, (before, more, date) => {
       const offered = before._tag === 'Loading' ? [] : offeredDates(before.form)
-      const askable = [
-        Msg.NameChanged({ name: inputValue }),
+      const text = `${before._tag === 'Loading' ? '' : before.form.name}${more}`
+      const candidates = [
+        typing(text),
         Msg.NameCleared(),
         ...digits.map((digit) => Msg.DigitTyped({ digit })),
         Msg.DigitErased(),
@@ -150,15 +151,21 @@ describe('EditProduct update', () => {
         Msg.SaveStarted(),
         Msg.Closed(),
       ]
-      expect(check(before, messagesSentBy<Model, Message>(view, makeModel(before), inputValue), askable)).toEqual([])
+      expect(dispatchViolations(program.update, {
+        state: before,
+        held: messagesSentBy<Model, Message>(view, makeModel(before), text),
+        candidates,
+        repeatable: (msg) => msg._tag === 'DigitTyped' || msg._tag === 'DigitErased' || msg._tag === 'Closed',
+        withheld: (msg, state) => msg._tag === 'Name' && state._tag === 'Saving',
+      })).toEqual([])
     }))
   })
 
-  test('NameChanged keeps the name as typed, while saving too, and is rejected while loading and once the product is gone', () => {
+  test('a write into the name keeps it as typed, while saving too, and is rejected while loading and once the product is gone', () => {
     assertProperty([state, fc.string()], (before, name) =>
       before._tag === 'Loading' || before._tag === 'Gone'
-        ? rejects(Msg.NameChanged({ name }), before)
-        : Equal.equals(step(Msg.NameChanged({ name }), before), {
+        ? rejects(typing(name), before)
+        : Equal.equals(step(typing(name), before), {
           rejected: false,
           after: withForm(before, { name }),
           commands: [],
@@ -413,7 +420,7 @@ describe('EditProduct update', () => {
 // The snackbar's timer is keyed by its id: the next one starts it anew.
 test('the page listens to the clock, the date order, the back button and the keyboard in every state, and times the snackbar', () => {
   assertProperty([state], (s) => {
-    const subscriptions = Tea.subscriptionsOf(program)(s)
+    const subscriptions = program.subscriptions(s)
     const snackbar = s._tag === 'Loading' ? { _tag: 'None' } as const : s.form.snackbar
     return HashMap.size(subscriptions) === (snackbar._tag === 'Shown' ? 5 : 4) && HashMap.has(subscriptions, 'clock')
       && HashMap.has(subscriptions, 'date-order') && HashMap.has(subscriptions, 'back-button')
@@ -440,6 +447,17 @@ test('the arbitrary forms describe a product to save at times, and at times not,
 })
 
 describe('the model', () => {
+  // A function in a model, made anew by each `makeModel`, would tell the two apart.
+  test('is data: equal states, built apart, have equal models', () => {
+    fc.assert(fc.property(fc.integer(), (seed) => {
+      const [one] = fc.sample(state, { seed, numRuns: 1 })
+      const [other] = fc.sample(state, { seed, numRuns: 1 })
+      if (one === undefined || other === undefined) throw new Error('Nothing sampled')
+      expect(one).not.toBe(other)
+      expect(Equal.equals(makeModel(one), makeModel(other))).toBe(true)
+    }))
+  })
+
   test('draws the app bar alone while loading', () => {
     assertProperty(
       [loading],
@@ -527,7 +545,7 @@ describe('the model', () => {
       const entry = entryShown(s.form)
       return model._tag === 'Editing'
         && Equal.equals(
-          Opt.map(model.maybeTypeDigit, (type) => type(typed)),
+          Opt.map(model.maybeTypeDigit, (type) => type[typed]),
           Opt.map(DigitDateEntry.typeDigit(typed)(entry), () => Msg.DigitTyped({ digit: typed })),
         )
         && Equal.equals(model.maybeEraseDigit, Opt.map(DigitDateEntry.eraseDigit(entry), () => Msg.DigitErased()))

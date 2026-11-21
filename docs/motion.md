@@ -2,7 +2,7 @@
 
 Implemented on 2026-10-30, in `src/app/view.tsx` (the pages) and `src/app/children/home/view.tsx` (the menu), and
 seen in the emulator the same day (see "Verified, and not"). Read [`AGENTS.md`](../AGENTS.md), the `views` skill
-("Motion") and the "Guide" of `node_modules/@fgaudo/effect-tea/README.md` before changing it.
+("Motion") and the guide of the runtime, `node_modules/@fgaudo/effect-tea/site/guide/`, before changing it.
 
 These are the motions of the web build that React Native draws again (`AGENTS.md`, "Known gaps"): how a page
 enters and leaves, how Home's menu opens and closes, AddProducts' steps and scanner, the snackbars, and Home's rows
@@ -251,11 +251,12 @@ Designed on 2026-10-30, after the rows. Implemented in `src/app/children/home/vi
    late, and the bar's color early, by the curves of Compose's bar (`cubic-bezier(0.8, 0, 0.8, 0.15)` and
    `(0.4, 0, 1, 1)`). The collapse is held in twentieths. Each step draws Home again, so a whole collapse is at most
    twenty frames, and a scroll outside the headline draws none.
-3. **The scroll reaches the program as About's does.** The view sends `Scrolled({ top })` on every scroll event.
-   The state changes only when the collapse reaches another step. The headline's height is measured by its layout (`HeadlineLaidOut`), since it grows with the user's font size. Until
+3. **The scroll reaches the program as About's does.** The view writes the offset into the input `Scroll` on every
+   scroll event, which keeps only the collapse: the state changes only when the collapse reaches another step. The
+   headline's height is written by its layout into `HeadlineHeight`, since it grows with the user's font size. Until
    it is measured, the bar is expanded and does not snap. The `Viewport` service goes: React Native's scroll is the
    view's, and no service observes it.
-   The list's own height (`ListLaidOut`) and its content's (`ContentSized`) are measured too. Android moves the
+   The list's own height (`ListHeight`) and its content's (`ContentHeight`) are measured too. Android moves the
    scroll with no scroll event in two cases. A list that gets shorter (products deleted) is pulled back within its
    end: the bar then collapses no further than the list can scroll. A new size of the screen or of the font (a new
    height of the list or the headline) put the list back at its top on the emulator, under a bar still collapsed: a
@@ -263,8 +264,8 @@ Designed on 2026-10-30, after the rows. Implemented in `src/app/children/home/vi
    makes it known. Under a collapsed bar, such a change gives the list a new `key`: React draws it anew at its top,
    and the bar expands. An expanded bar needs nothing.
    Home itself is drawn anew when a page over it leaves, and its list started at its top under a bar still
-   collapsed (seen on a phone). So `ScrollEnded` carries where the list rests (`rest`), and the list is drawn from
-   there (`contentOffset`). Android scrolls to `contentOffset` whenever it changes, and it changes only to where the
+   collapsed (seen on a phone). So the end of a scroll writes where the list rests into the input `Rest`, and the
+   list is drawn from there (`contentOffset`). Android scrolls to `contentOffset` whenever it changes, and it changes only to where the
    list already rests.
 4. **Android snaps.** The list snaps to `[0, height of the headline]` (`snapToOffsets`, with `snapToEnd` off), so
    that a scroll never ends with the headline cut, nor the fades halfway. No command scrolls. The price: a fling released before the
@@ -280,7 +281,7 @@ Designed on 2026-10-30, after the rows. Implemented in `src/app/children/home/vi
    scrolled.
 7. **The FAB loses its label from the drag to the end of the momentum.** `onScrollBeginDrag` sends
    `ScrollStarted`, and `onMomentumScrollEnd`, which Android sends after every touch, even without a fling,
-   `ScrollEnded`. The label fades. The FAB's width follows by a layout transition, which moves only the FAB.
+   writes the rest (decision 3), then sends `ScrollEnded`. The label fades. The FAB's width follows by a layout transition, which moves only the FAB.
 8. **One headline for a screen reader.** The headline in the list is the header. The small title repeats it, and is
    hidden from accessibility.
 

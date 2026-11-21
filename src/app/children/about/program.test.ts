@@ -20,11 +20,14 @@ const { outcome, step } = outcomesOf(program.update)
 
 const { makeModel } = program
 
+/** What the page's list writes as it scrolls, `top` pixels from its top. */
+const scrolledTo = (top: number) => Msg.Scroll({ message: { _tag: 'Written', value: top } })
+
 const message: fc.Arbitrary<Message> = fc.oneof(
   licenses.map((licenses) => Msg.LicensesLoaded({ licenses })),
   fc.string().map((version) => Msg.VersionLoaded({ version })),
   fc.constant(Msg.BackPressed()),
-  fc.integer({ min: -10, max: 10_000 }).map((top) => Msg.Scrolled({ top })),
+  fc.integer({ min: -10, max: 10_000 }).map(scrolledTo),
 )
 
 describe('About update', () => {
@@ -33,15 +36,16 @@ describe('About update', () => {
   })
 
   // Going back asks the parent to leave on every tap: the parent removes the page
-  // on the first one, so a second tap from the same frame is rejected there. The page tells how far it scrolled
+  // on the first one, so a second tap from the same frame is rejected there. The page writes how far it scrolled
   // on every scroll (to its top, in the test's events).
   test('the view sends what update accepts, all of it, and acts once when sent twice', () => {
-    const check = dispatchViolations(program.update, {
-      repeatable: (msg) => msg._tag === 'BackPressed' || msg._tag === 'Scrolled',
-    })
     fc.assert(fc.property(state, (before) => {
-      const askable = [Msg.BackPressed(), Msg.Scrolled({ top: 0 })]
-      expect(check(before, messagesSentBy<Model, Message>(view, makeModel(before)), askable)).toEqual([])
+      expect(dispatchViolations(program.update, {
+        state: before,
+        held: messagesSentBy<Model, Message>(view, makeModel(before)),
+        candidates: [Msg.BackPressed(), scrolledTo(0)],
+        repeatable: (msg) => msg._tag === 'BackPressed',
+      })).toEqual([])
     }))
   })
 
@@ -66,9 +70,9 @@ describe('About update', () => {
     })
   })
 
-  test('Scrolled says whether the page is at its top, keeping the very same state while that does not change', () => {
+  test('a scroll keeps whether the page is at its top, and the very same state while that does not change', () => {
     assertProperty([state, fc.integer({ min: -10, max: 10_000 })], (before, top) => {
-      const { after, commands } = step(Msg.Scrolled({ top }), before)
+      const { after, commands } = step(scrolledTo(top), before)
       const isAtTop = top <= 0
       return after.isAtTop === isAtTop && (isAtTop !== before.isAtTop || after === before)
         && Equal.equals(after, { ...before, isAtTop }) && commands.length === 0
@@ -126,7 +130,7 @@ describe('About update', () => {
 
 // The page always has something to do on back: leave.
 test('the page observes the back button in every state', () => {
-  assertProperty([state], (s) => HashMap.has(Tea.subscriptionsOf(program)(s), 'back-button'))
+  assertProperty([state], (s) => HashMap.has(program.subscriptions(s), 'back-button'))
 })
 
 test('arbitraries cover every variant of the state', () => {

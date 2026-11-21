@@ -53,8 +53,8 @@ const page = (name: keyof typeof motions, drawn: ReactNode) => {
 /** The page on top, alone: a page is drawn whole, over nothing but the page that leaves. */
 export const view: View<Model, Message> = (model, dispatch) =>
   Match.valueTags(model.page, {
-    Home: ({ model }) => page('Home', Home.view(model, Tea.dispatchTo(dispatch, 'Home'))),
-    AddProducts: ({ model }) => page('AddProducts', AddProducts.view(model, Tea.dispatchTo(dispatch, 'AddProducts'))),
-    EditProduct: ({ model }) => page('EditProduct', EditProduct.view(model, Tea.dispatchTo(dispatch, 'EditProduct'))),
-    About: ({ model }) => page('About', About.view(model, Tea.dispatchTo(dispatch, 'About'))),
+    Home: ({ model }) => page('Home', Home.view(model, Tea.forwardTo(dispatch, 'Home'))),
+    AddProducts: ({ model }) => page('AddProducts', AddProducts.view(model, Tea.forwardTo(dispatch, 'AddProducts'))),
+    EditProduct: ({ model }) => page('EditProduct', EditProduct.view(model, Tea.forwardTo(dispatch, 'EditProduct'))),
+    About: ({ model }) => page('About', About.view(model, Tea.forwardTo(dispatch, 'About'))),
   })

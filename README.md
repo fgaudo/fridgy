@@ -101,8 +101,8 @@ The whole app is one Elm-style program:
 
 The runtime is [`@fgaudo/effect-tea`](https://github.com/fgaudo/effect-tea), a library of its own. On top of
 plain Elm, `update` rejects what does not apply, so a double tap is harmless; its testing tools check that the
-view sends only what `update` accepts, and all of it; and pages are composed by declaring them. Its README
-explains how.
+view sends only what `update` accepts, and all of it; and pages are composed by declaring them. Its guide,
+which the package holds, explains how.
 
 What the app adds:
 
