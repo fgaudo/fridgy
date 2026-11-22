@@ -80,6 +80,9 @@ decides on a write, no test of the model sees it, and an equal write skips it. T
   reads the height from the state (the guide of 0.8.1, "Inputs", "A fact that comes with a value is a write, then a
   message"; Home's `Rest` and `ScrollEnded` already do it). What only follows from the heights, as the collapse
   kept within what the list can scroll, is computed in `makeModel`.
+- Home, reasoned on 22 November 2026 and not tried: `laidOut` tells a new layout by comparing it with the one the
+  state holds, and once a height is written the one before is gone. So `update` cannot tell a layout it has acted
+  on from a new one, unless the state also keeps the heights that the scroll's place was last settled for.
 - AddProducts: the lookup keeps the name it left, and `makeModel` shows its line only while the name is still that
   one: what follows a write is computed where the state is read. A name typed back to the one found shows the
   attribution again, as it is that product's name.
@@ -89,7 +92,11 @@ decides on a write, no test of the model sees it, and an equal write skips it. T
 **Done when** no `set` under `src/app/` changes anything but its place: each place is an optic, or a property test
 holds its `get` and `set` to the three laws of a lens, until the runtime's own check takes its place; the programs'
 tests check the same behaviour as before; and Home is checked on the emulator, as the `android-release` skill says:
-the bar collapses and snaps, and a change of the font size or of the screen draws the list anew at its top.
+the bar collapses and snaps, and a change of the font size or of the screen draws the list anew at its top. And what
+"a write, then a message" cost Home is written under "Waiting for effect-tea": each field the state keeps only to
+know what the event knew, and what is drawn between the write and the message. It is the first fact of the app
+whose `update` needs the value before and the one after, and the evidence that the runtime's parked "What reaches
+`update`, declared as data" asks for, should its owner take it up for a value that an element reports.
 
 ### 3. A link is opened by a command
 
@@ -298,4 +305,12 @@ out, or goes when the runtime rejects it.
   there is no second. Its contract and the test that runs it could be one file: a change of the `add-service`
   skill's convention.
 - **`programs/` is described in four documents and allowed by Biome, and nothing uses it.** Step 6 says why the
-  date entry is not its first. Keep it as the place of a program to come, or cut it to a line.
+  date entry is not its first. Keep it as the place of a program to come, or cut it to a line. The snackbar was
+  weighed too, and step 6 shares its queueing as data instead: two candidates, and neither a program.
+- **`AddProducts` is a thousand lines in one module.** `src/app/children/add-products/program.ts` holds seven
+  concerns beside the name and the step (the camera, the lookup, the clock, the date order, the fridge, the
+  snackbar, the keyboard), kept in `Form`, which every case of the state carries and `withForm` reaches. It stays
+  one program (`AGENTS.md`, "A page stays one program"). To weigh: a concern as a module of the page, its data and
+  its pure transitions, holding no message, as `DigitDateEntry` is in `src/libs/`; the fridge first (`Fridge`,
+  `admitted`, its timers, `fridgeShown`). And the state as a record with the step as one field, in place of five
+  cases that each carry `form`. Both change what `AGENTS.md` says a program's folder holds.
