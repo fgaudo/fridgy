@@ -272,7 +272,7 @@ selection):
   in two programs, which the `add-program` skill names as the mark of a wrong boundary; and Home would have to
   read the child's selection to hide the field, which a parent never does. **Decided: `Products`**, which gives
   Home the pieces, as it does for the selection. `Products` already observes the back button for its selection,
-  as `AGENTS.md`'s rule allows a page's child.
+  as the `add-program` skill allows a page's child.
 - **Live filtering against a search request.** A list in the store that took the query (`WHERE name LIKE`) would
   restart its subscription on every keystroke (the key would hold the query), reload the list each time, lose the
   arrivals and departures across keystrokes, match case-insensitively for ASCII only and know nothing of

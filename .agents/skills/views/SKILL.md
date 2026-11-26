@@ -1,6 +1,6 @@
 ---
 name: views
-description: How Fridgy's views are written - TSX drawn by React Native as a pure function of the model, messages attached from the model, Material 3 through src/styles.ts (color roles, type scale, shapes, elevation, icons). Use when creating or editing a view.tsx, src/styles.ts or the palette.
+description: How Fridgy's views are written - TSX drawn by React Native as a pure function of the model, messages attached from the model, Material 3 through src/styles.ts (color roles, type scale, shapes, elevation, icons). Use when creating or editing a view.tsx, src/styles.ts or the palette, or how a page keeps clear of the keyboard.
 ---
 
 # Views
@@ -53,10 +53,17 @@ when nothing is named). The model holds exactly what the view draws: a field no 
   their fields.
 - A page draws itself whole: a `SafeAreaView` with the surface's color, keeping clear of the system bars (the app
   is drawn edge to edge), and a frame inside it, from which an absolute position is measured (a menu, a snackbar):
-  an absolute position ignores the padding of its parent. A page with a field also keeps clear of the keyboard,
-  which no window of an edge-to-edge app is resized for: the inset its model holds (`keyboardInset`) is the
-  `SafeAreaView`'s `paddingBottom`, on a `bottom` edge in `maximum` mode, which keeps the larger of that and the
-  navigation bar's inset rather than their sum — the keyboard covers the bar.
+  an absolute position ignores the padding of its parent.
+- A page with a field keeps clear of the keyboard itself, so that what is docked at the bottom stays in sight.
+  The window of an app drawn edge to edge is never resized, whatever `windowSoftInputMode` asks for. The page
+  observes the platform's `Keyboard` (`src/infrastructure/keyboard`, the subscription keyed `keyboard`) and holds
+  how far it covers the window (`keyboardInset`), which is the `SafeAreaView`'s `paddingBottom`, on a `bottom` edge
+  in `maximum` mode. The inset is the window's own and covers the navigation bar, so the page keeps clear of the
+  larger of the two, never of their sum. It is read from the window's insets, by
+  `react-native-keyboard-controller`: React Native's own keyboard events come from the root view's layout passes,
+  and a root view made anew, as an activity recreated gives, tells nothing of a keyboard that was up. The inset is
+  told as the keyboard starts to move, never once it has: a keyboard sliding away covers the page it leaves, and
+  one told late leaves the page's bottom in mid-air.
 
 ## Motion
 

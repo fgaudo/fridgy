@@ -98,9 +98,13 @@ says. `add-products` (`name.ts`, with the lookup that replaces the name; `scanne
   into messages (`Channel.unwrap` to read the service, `Channel.map`); a process that ends turns its `Done` into
   a message. A service that every program uses the same way writes that use once, beside it: the subscriptions
   `pressesAs` (`back-button.ts`) and `insetsAs` (`keyboard.ts`), the commands `vibrate` (`haptics.ts`) and
-  `openLink` (`links.ts`). The back button is the subscription keyed `back-button`, observed only while the program has
-  something to do with a press: a page, or the child that holds what a press closes (Home's `Products`, its
-  selection).
+  `openLink` (`links.ts`).
+- The back button (`BackButton`, `src/infrastructure/back-button`) is the program's that has something to do
+  with a press, only while it has: the subscription keyed `back-button`, in a page or in the child of a page that
+  holds what a press closes (Home's `Products`, its selection). It runs while there is something to close, or
+  always, when a press asks the parent to leave the page or must be held. A press goes to the last observer only,
+  as Android's own back dispatcher does; when no program observes it, the platform leaves the app. The root knows
+  nothing of it.
 - Effects only in commands and subscriptions: `update`, `makeModel` and the view are pure.
 
 ## Declaring a child
@@ -199,14 +203,20 @@ it to the subtree: written with the first such program.
 
 ## A page of the root
 
+Home is always there, and at most one page is shown over it. Covered, Home keeps its state and receives its
+completions, but its subscriptions run only while it is shown (`listening`, in the root), and its requests to show
+a page are dropped: a tap of a frame already covered asks for what the user has moved past, and two taps in one
+frame would otherwise open a second page in the first one's place. A page over Home is a child by the number of
+its visit, and that number is never used again: a page left is gone with its state, and neither an answer nor a tap
+meant for a visit that is over reaches a later one. A page asks to be left with its event.
+
 Declare it in `src/app/program.ts` as a child by the number of its visit (`childById`, with `ids` or, for a page
 with flags, `flags`, from `visitsOf` and the root's `maybeVisit`), a case of `Page`, its event in `onEvent`
 (`leave`), its model in `makeModel` and its view, keyed by its visit, in `src/app/view.tsx`, and add how a user reaches it to `src/app/user.test_support.ts`, where the root's tests pick
 each message from the shown page's model (`rehearse`). A page is shown from Home's event, as `show(state, page)`,
 which starts a new visit. A page that cannot start the same way every time declares `flags` (`EditProduct`: the
 product tapped, and its id), carried by its case of `Page`; what it starts from comes in the event that asks for
-it, never from another program's state. The root knows nothing of the back button: a page, or its child,
-observes it while it has something to close, or always, when a press asks the parent to leave it.
+it, never from another program's state. The back button is the page's, as "`program.ts`" says.
 
 ## Moving files
 

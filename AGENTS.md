@@ -4,15 +4,16 @@ What the app is and its commands are in [`README.md`](README.md); the source tre
 import boundaries are in [`src/README.md`](src/README.md). This file holds the rules that apply to every change.
 Read "Known gaps" before working.
 
-Procedures live in skills, plain Markdown that any agent or person reads, under `.agents/skills/`. Read the one
-for the task before starting it:
+Procedures live in skills, plain Markdown that any agent or person reads, under `.agents/skills/`, and the design
+of a feature in `docs/`. Read the one for the task before starting it:
 
-| Before…                                                         | read                                                         |
-| --------------------------------------------------------------- | ------------------------------------------------------------ |
-| adding a page or a child, or changing how a parent declares one | [`add-program`](.agents/skills/add-program/SKILL.md)         |
-| adding a service, an adapter or a migration                     | [`add-service`](.agents/skills/add-service/SKILL.md)         |
-| editing a `view.tsx`, `src/styles.ts` or the palette            | [`views`](.agents/skills/views/SKILL.md)                     |
-| building for Android, upgrading React Native, releasing         | [`android-release`](.agents/skills/android-release/SKILL.md) |
+| Before…                                                                                       | read                                                         |
+| --------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| adding a page or a child, changing how a parent declares one, or who hears the back button    | [`add-program`](.agents/skills/add-program/SKILL.md)         |
+| adding a service, an adapter or a migration                                                   | [`add-service`](.agents/skills/add-service/SKILL.md)         |
+| editing a `view.tsx`, `src/styles.ts`, the palette, or how a page keeps clear of the keyboard | [`views`](.agents/skills/views/SKILL.md)                     |
+| building for Android, upgrading React Native, releasing                                       | [`android-release`](.agents/skills/android-release/SKILL.md) |
+| touching a date, a day or the clock                                                           | [`docs/dates.md`](docs/dates.md)                             |
 
 Before changing a program, read the runtime's guide, which the package holds at the version installed:
 `node_modules/@fgaudo/effect-tea/skills/effect-tea/SKILL.md` says where each thing is, and the guide itself,
@@ -70,28 +71,6 @@ folders; "page" names a role in the UI, kept by the root's state, not a kind of 
   submission) and `products` (the list, the selection, the clock). A part with a state of its own, which the page reads only as a value
   it declares, if at all, is a child: the date (`programs/expiration`, whose `output` the page makes a product
   of) and the fridge (`add-products/children/fridge`, told each product added).
-- **Home is always there, and at most one page is shown over it.** Covered, Home keeps its state and receives
-  its completions, but its subscriptions run only while it is shown (`listening`, in the root), and its requests
-  to show a page are dropped: a tap of a frame already covered asks for what the user has moved past, and two
-  taps in one frame would otherwise open a second page in the first one's place. A page over Home is a child by
-  the number of its visit, never used again: a page left is gone with its state, and neither an answer nor a tap
-  meant for a visit that is over reaches a later one. A page asks to be left with its event.
-- **The back button is the program's that has something to do with it, only while it has.** A page, or the child
-  of a page that holds what a press closes (Home's `Products`, its selection), observes the platform's
-  `BackButton` (`src/infrastructure/back-button`, the subscription keyed `back-button`) while it has something to
-  close, or always, when a press asks its parent to leave it or must be held. The root knows nothing of it. A
-  press goes to the last observer only, as Android's own back dispatcher does; when no program observes it, the
-  platform leaves the app.
-- **A page keeps clear of the keyboard itself.** The window of an app drawn edge to edge is never resized,
-  whatever `windowSoftInputMode` asks for: a page with a field observes the platform's `Keyboard`
-  (`src/infrastructure/keyboard`, the subscription keyed `keyboard`), holds how far it covers the window and
-  keeps its bottom clear of it, so that what is docked at the bottom stays in sight. The inset is the window's
-  own, so it covers the navigation bar: the page keeps clear of the larger of the two, never of their sum
-  (`SafeAreaView`'s `maximum` edge). It is read from the window's insets, by
-  `react-native-keyboard-controller`: React Native's own keyboard events come from the root view's layout
-  passes, and a root view made anew, as an activity recreated gives, tells nothing of a keyboard that was up.
-  The inset is told as the keyboard starts to move, never once it has: a keyboard sliding away covers the page
-  it leaves, and one told late leaves the page's bottom in mid-air.
 - **What a program needs from outside is the infrastructure's, and it asks for it as it is.** `src/app/` holds no
   service, adapter or layer but the root's. A store (`ProductStore`, `DateOrderStore`, in
   `src/infrastructure/storage/`) has one implementation, on `SqlClient`. What has alternatives is a service with an
@@ -100,10 +79,6 @@ folders; "page" names a role in the UI, kept by the root's state, not a kind of 
   or a constant, is a module (`src/infrastructure/licenses`, `#package.json`), never a service. A program learns
   about writes from the storage's changes alone, never from what a write answers. A store takes a domain
   `Snapshot` and returns `UnvalidatedSnapshot`s, and never reads domain fields.
-- **An expiration is a day of the calendar, and days are the device's.** An expiration date is a `Day`
-  (`libs/dates/day.ts`), stored as `YYYY-MM-DD`; a creation date is an instant. "Today" is the day of the clock's
-  `DateTime.Zoned` time, in the `DateTime.CurrentTimeZone` that the entrypoints provide; never UTC's
-  (`docs/dates.md`).
 - **The domain decides what an entity is.** A new one is made with its `make` (`Product.make`), and a form
   lets the user submit only what `make` accepts, asking the domain's rules (`Product.canExpireOn`) rather than
   repeating them; the command carries the entity, valid by construction. `fromSnapshot` only reads stored data,
