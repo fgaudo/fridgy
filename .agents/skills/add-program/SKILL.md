@@ -16,6 +16,7 @@ Every program is a folder of the same shape, at any depth:
 ```
 <program>/
 ├─ program.ts               State, Message, Event, Command, Model, program
+├─ <concern>.ts             once the program is split: a concern's messages, update and model (see "Splitting")
 ├─ view.tsx                 the view (see the `views` skill); none where the parent draws the model (the snackbar)
 ├─ program.test.ts          property tests of update, the view and the subscriptions
 ├─ program.test_arbitrary.ts  generators of its states and messages, valid values only
@@ -24,16 +25,40 @@ Every program is a folder of the same shape, at any depth:
                             two programs use")
 ```
 
-Never split a program into `messages`/`state`/`update` files: they would import each other in cycles. A
-program splits only when it is too large (300–400 lines), by concern, never by kind: what spans the children
-(the menu, the back button, the page's one snackbar) stays in the parent; what concerns one child stays in the
-child. Parts that read each other's state are one program, and the size yields to that: a candidate child whose
+A program splits only when it is too large (300–400 lines), by concern, never by kind: never into
+`messages`/`state`/`update` files, which spread each concern over three. What spans the children (the menu, the
+back button, the page's one snackbar) stays in the parent; what concerns one child stays in the child. Parts
+that read each other's state are one program, and the size yields to that: a candidate child whose
 controls the parent would have to enable from its state, or whose state the parent would have to copy down and
 back up, is not one. A part with a state of its own, which the parent reads only as a value the part declares,
 is a child, and that value its `output`. `add-products` is the example: its name, scanner, lookup and
 submission read one another and stay one program, however long, while the date (`programs/expiration`, whose
 `output` the submission makes a product of) and the fridge (`children/fridge`, told each product added) are
 children.
+
+### Splitting
+
+Such a program is split into modules of its own folder, one per concern, as the guide's "Splitting a program"
+says. `add-products` (`name.ts`, with the lookup that replaces the name; `scanner.ts`; `submission.ts`) and
+`home/children/products` (`list.ts`, `selection.ts`, `clock.ts`) are the examples.
+
+- `program.ts` keeps the types the program is made from (`State`, `Command`, `Event`, `Model`, what it tells
+  its children and reads of them, the type of a step), its declaration, and an `update` whose `switch` gives each
+  message to the one concern that owns it. A concern too small to pay for a module stays in it: the page's own
+  messages of `add-products` (closing, the back button, the keyboard, the clock).
+- A concern's module holds its messages, its state's types, the effects of its commands, its subscriptions and
+  the keys that list them, its `update`, typed with the program's `Command`, and the parts of the model it makes,
+  all functions of the whole state. It makes the program's commands and events with
+  `Data.taggedEnum<Command>()` of the type `program.ts` exports. It exports what the other concerns read
+  (`Scanner.canScan`), and what it asks of another is that one's function returning a step, combined with
+  `Tea.andThen` (`Name.lookingUp`, `Selection.listChanged`).
+- A concern imports `program.ts` with `import type` alone, and the concerns import each other's values one way
+  only (`products`: the list asks the selection and the clock; `add-products`: the scanner asks the name). A
+  cycle of values leaves a module's exports undefined while the other loads. Where two concerns would write each
+  other, they are one (the name and the lookup); a concern that only reads another's field reads it from the
+  state.
+- The modules are private to the folder: Biome lets a parent import only `program.ts` and `view.tsx`. The
+  view, the tests and the arbitraries import each type from the module that declares it.
 
 ## `program.ts`
 

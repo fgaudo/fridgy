@@ -46,8 +46,8 @@ error, the rule is intended: fix the code, do not work around the check.
 ## Architecture rules
 
 Every program has the same shape, whatever its depth: a folder holding `program.ts` and its tests, `view.tsx`
-unless its parent draws its model (the snackbar's), `children/` and, once two programs of its subtree use the
-same one, `programs/`. The root
+unless its parent draws its model (the snackbar's), a module for each of its concerns once it is split,
+`children/` and, once two programs of its subtree use the same one, `programs/`. The root
 (`src/app`), a page (a child of the root: Home, or the one page shown over it) and a child of a page are all such
 folders; "page" names a role in the UI, kept by the root's state, not a kind of program. The programs to copy are
 `src/app/children/home` and `src/app/children/about`.
@@ -65,8 +65,9 @@ folders; "page" names a role in the UI, kept by the root's state, not a kind of 
 - **A service says in its type how its data ends.** One value is an `Effect<A, E>`; values over time are a
   `Source<A, Done, E>` (`libs/source`), `Done` being `never` for one that never ends. Only on-going observation
   is a `Source`; a one-off read is an `Effect`.
-- **Parts that read each other's state stay one program, however long** (`add-products`: the name, the
-  scanner, the lookup and the submission). A part with a state of its own, which the page reads only as a value
+- **Parts that read each other's state stay one program, however long**, split into modules by concern once it
+  is large, as the guide's "Splitting a program" says: `add-products` (the name with its lookup, the scanner, the
+  submission) and `products` (the list, the selection, the clock). A part with a state of its own, which the page reads only as a value
   it declares, if at all, is a child: the date (`programs/expiration`, whose `output` the page makes a product
   of) and the fridge (`add-products/children/fridge`, told each product added).
 - **Home is always there, and at most one page is shown over it.** Covered, Home keeps its state and receives

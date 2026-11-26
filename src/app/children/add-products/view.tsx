@@ -11,7 +11,8 @@ import { handlers, type View } from '#libs/tea-react/tea-react.ts'
 import { color, duration, easing, elevation, icon, motion, shape, type } from '#styles'
 import type * as FridgeProgram from './children/fridge/program.ts'
 import * as Fridge from './children/fridge/view.tsx'
-import type { DateShown, Failure, Message, Model, NameShown, NameTyped, SnackbarShown, Supporting } from './program.ts'
+import type { NameTyped, Supporting } from './name.ts'
+import type { DateShown, Failure, Message, Model, NameShown, SnackbarShown } from './program.ts'
 
 // The page's bottom is held clear of the keyboard or of the navigation bar, whichever reaches further up: the
 // keyboard's inset is the window's own, and covers the bar. The other edges only keep clear of their bar.

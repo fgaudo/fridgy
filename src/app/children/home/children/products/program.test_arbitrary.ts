@@ -14,16 +14,9 @@ import * as NonEmptyHashSet from '#libs/collections/non-empty-hash-set.test_arbi
 import * as PositiveInteger from '#libs/numbers/positive-integer.test_arbitrary.ts'
 import { arbitrary as maybe } from '#libs/option/option.test_arbitrary.ts'
 import { zoned } from '#libs/testing/date-time.test_arbitrary.ts'
-import {
-  type Departure,
-  type Gesture,
-  type Message,
-  type Notice,
-  type Product,
-  program,
-  type Selection,
-  type State,
-} from './program.ts'
+import type { Departure, Product } from './list.ts'
+import { type Message, program, type State } from './program.ts'
+import type { Gesture, Notice, Selection } from './selection.ts'
 
 const Msg = Data.taggedEnum<Message>()
 

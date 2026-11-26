@@ -98,10 +98,16 @@
                   },
                   {
                     "group": [
+                      "**/children/*/**",
+                      "!**/children/*/program.ts",
+                      "!**/children/*/view.tsx",
                       "**/children/*/*/**",
+                      "**/programs/*/**",
+                      "!**/programs/*/program.ts",
+                      "!**/programs/*/view.tsx",
                       "**/programs/*/*/**"
                     ],
-                    "message": "A parent reaches a child, and a program a program of programs/, only through the modules at its root (program.ts, view.tsx)."
+                    "message": "A parent reaches a child, and a program a program of programs/, only through program.ts and view.tsx: the other modules of its folder are its concerns', private to it."
                   },
                   {
                     "group": [

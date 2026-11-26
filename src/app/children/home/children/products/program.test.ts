@@ -17,6 +17,7 @@ import * as PositiveInteger from '#libs/numbers/positive-integer.ts'
 import { arbitrary as maybe } from '#libs/option/option.test_arbitrary.ts'
 import { zone, zoned } from '#libs/testing/date-time.test_arbitrary.ts'
 import { assertProperty, onlyChanged, outcomesOf } from '#libs/testing/update.test_support.ts'
+import type { ProductModel } from './list.ts'
 import {
   deleting,
   gesture,
@@ -37,17 +38,8 @@ import {
   type Whole,
   wholeOf,
 } from './program.test_arbitrary.ts'
-import {
-  type Command,
-  type Event,
-  type Message,
-  type Notice,
-  type ProductModel,
-  productsOf,
-  program,
-  type Selection,
-  type State,
-} from './program.ts'
+import { type Command, type Event, type Message, program, type State } from './program.ts'
+import { type Notice, productsOf, type Selection } from './selection.ts'
 
 const Msg = Data.taggedEnum<Message>()
 const Cmd = Data.taggedEnum<Command>()

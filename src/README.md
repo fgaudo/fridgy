@@ -21,6 +21,8 @@ src/
 │  ├─ children/<child>/  a child Program (of the root: a page), of the same shape as the root, at any depth; of
 │  │  │                  app/, it imports only its own folder, and the infrastructure's services
 │  │  ├─ program.ts · view.tsx   its public API: the only modules its parent imports
+│  │  ├─ <concern>.ts          a module of a program split by concern (`add-products/`, `home/children/products/`),
+│  │  │                        private to its folder
 │  │  ├─ children/<child>/     its own children (`home/children/products/`, `add-products/children/fridge/`)
 │  │  └─ programs/<program>/   a program two programs of this subtree use, of this same shape (none yet)
 │  └─ programs/<program>/  a program two pages use, of the same shape as a child and used like one (see
@@ -78,7 +80,7 @@ all three, and `styles.ts` (`#styles`); the entrypoints everything; `libs/` know
 role a file's name gives it. Biome's `noRestrictedImports` rule (`biome.json`) enforces all of it:
 
 - inside `app/`, imports go downwards only: a program uses its own children, never a parent or a sibling, and a
-  child only through its `program.ts` and `view.tsx`, at every depth; and the infrastructure's services, which it
+  child only through its `program.ts` and `view.tsx`, at every depth, never through the modules of its concerns; and the infrastructure's services, which it
   takes as they are;
 - a program two programs use lives in `programs/` of their lowest common parent, and every program of that
   parent's subtree reaches it as it reaches a child, through the modules at its root, by a relative import

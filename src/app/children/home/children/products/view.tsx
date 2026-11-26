@@ -16,17 +16,10 @@ import Svg, { Circle } from 'react-native-svg'
 import * as Day from '#libs/dates/day.ts'
 import { type Handlers, handlers } from '#libs/tea-react/tea-react.ts'
 import { color, duration, easing, elevation, icon, motion, shape, type } from '#styles'
-import type {
-  ItemSelection,
-  ListModel,
-  Message,
-  Model,
-  NoticeModel,
-  Presence,
-  ProductModel,
-  ProductStatus,
-  Settling,
-} from './program.ts'
+import type { ProductStatus } from './clock.ts'
+import type { ListModel, Presence, ProductModel, Settling } from './list.ts'
+import type { Message, Model } from './program.ts'
+import type { ItemSelection, NoticeModel } from './selection.ts'
 
 type Look = 'Plain' | 'Error'
 

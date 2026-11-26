@@ -13,17 +13,9 @@ import { arbitrary as maybe } from '#libs/option/option.test_arbitrary.ts'
 import { zoned } from '#libs/testing/date-time.test_arbitrary.ts'
 import * as FridgeArbitrary from './children/fridge/program.test_arbitrary.ts'
 import type * as Fridge from './children/fridge/program.ts'
-import {
-  type Camera,
-  type Failure,
-  type Lookup,
-  type LookupOutcome,
-  type Message,
-  type Phase,
-  program,
-  type State,
-  type Step,
-} from './program.ts'
+import type { Lookup, LookupOutcome } from './name.ts'
+import { type Failure, type Message, type Phase, program, type State, type Step } from './program.ts'
+import type { Camera } from './scanner.ts'
 
 const Msg = Data.taggedEnum<Message>()
 

@@ -1,122 +1,29 @@
 // The stored products, as of the latest change of the storage, and the selection of some of them for deletion. The
-// selection follows the list, so they are one program. Its child, the snackbar, tells of the last deletion, offering
-// to undo it for a few seconds, or of a failure.
+// selection follows the list, so they are one program, in modules by concern: the list, the selection with its
+// deletion and its undo, and the clock. Its child, the snackbar, tells of the last deletion, or of a failure.
 import * as Tea from '@fgaudo/effect-tea'
-import * as Arr from 'effect/Array'
-import * as Channel from 'effect/Channel'
-import * as Data from 'effect/Data'
+import type * as Arr from 'effect/Array'
+import type * as Data from 'effect/Data'
 import type * as DateTime from 'effect/DateTime'
-import * as Duration from 'effect/Duration'
-import * as Effect from 'effect/Effect'
-import { pipe } from 'effect/Function'
-import * as HashSet from 'effect/HashSet'
 import * as Match from 'effect/Match'
 import * as Opt from 'effect/Option'
-import * as Result from 'effect/Result'
 import * as SnackbarProgram from '#app/programs/snackbar/program.ts'
-import * as Domain from '#domain/product.ts'
-import { type BackButton, pressesAs } from '#infrastructure/back-button/back-button.ts'
+import type * as Domain from '#domain/product.ts'
 import { type Feedback, vibrate } from '#infrastructure/haptics/haptics.ts'
-import { ProductStore, type ProductsReadError, type StoredProduct } from '#infrastructure/storage/products.ts'
-import * as NonEmptyHashSet from '#libs/collections/non-empty-hash-set.ts'
-import type * as Day from '#libs/dates/day.ts'
-import { duration } from '#libs/material/durations.ts'
-import * as PositiveInteger from '#libs/numbers/positive-integer.ts'
-import type * as UnitInterval from '#libs/numbers/unit-interval.ts'
-import { after, every } from '#libs/timers/timers.ts'
-
-export type Product = Data.TaggedEnum<{
-  /** Stored, but not a valid product: it can still be selected and deleted. */
-  Invalid: Readonly<{ id: Domain.ProductId; maybeName: Opt.Option<string> }>
-  Valid: Readonly<{ id: Domain.ProductId; product: Domain.Product }>
-}>
-
-const Product = Data.taggedEnum<Product>()
-
-/**
- * A row the storage no longer lists, kept after the row it followed (or first) while it closes its place: the rows
- * under it rise, rather than jump to their new place.
- */
-export type Departure = Readonly<{ item: Product; maybeAfter: Opt.Option<Domain.ProductId> }>
-
-/**
- * The products being deleted, when every one of them is a product: only then can the deletion be undone, by
- * storing them again. Stored data that is not a product is gone for good.
- */
-type Restorable = Opt.Option<Arr.NonEmptyReadonlyArray<Domain.Product>>
-
-export type Selection = Data.TaggedEnum<{
-  Idle: object
-  Selecting: Readonly<{ ids: NonEmptyHashSet.NonEmptyHashSet<Domain.ProductId> }>
-  // Left only by its completion: with commands that cannot be cancelled, a
-  // completion always belongs to the deletion in progress, so it needs no id.
-  Deleting: Readonly<{ ids: NonEmptyHashSet.NonEmptyHashSet<Domain.ProductId>; maybeProducts: Restorable }>
-}>
-
-const Selection = Data.taggedEnum<Selection>()
-
-/** What the snackbar tells. */
-export type Notice = Data.TaggedEnum<{
-  /** The last deletion, which the snackbar offers to undo while its products can come back. */
-  Deleted: Readonly<{ count: PositiveInteger.PositiveInteger; maybeProducts: Restorable }>
-  DeleteFailed: object
-  RestoreFailed: object
-}>
-
-const Notice = Data.taggedEnum<Notice>()
-
-const Snackbar = SnackbarProgram.make<Notice>()
+import type * as NonEmptyHashSet from '#libs/collections/non-empty-hash-set.ts'
+import * as Clock from './clock.ts'
+import * as List from './list.ts'
+import * as Selection from './selection.ts'
 
 export type State = Readonly<{
-  /**
-   * The current time, in the device's zone, which the statuses of the products that expire derive from. The clock
-   * runs only while a product shown, listed or leaving, expires: `None` until it has ticked, and again once no
-   * product needs it.
-   */
+  /** The current time, in the device's zone, while the clock runs (`clock.ts`). */
   maybeNow: Opt.Option<DateTime.Zoned>
-  list: Data.TaggedEnum<{
-    Loading: object
-    Failed: object
-    Loaded: Readonly<{
-      items: ReadonlyArray<Product>
-      /** The ids a change brought into a list already shown, until they have arrived. A first list appears whole. */
-      arrivals: HashSet.HashSet<Domain.ProductId>
-      /** The rows that changes took out of the list, in the order they were shown, until they have left. */
-      departures: ReadonlyArray<Departure>
-    }>
-  }>
-  selection: Selection
+  list: List.List
+  selection: Selection.Selection
 }>
 
 /** The program's own messages: its child's are made by `withChildren`. */
-type Own = Data.TaggedEnum<{
-  // From the view.
-  /** A long press says so with a vibration; a tap does not. */
-  ItemSelected: { id: Domain.ProductId; by: Gesture }
-  ItemDeselected: { id: Domain.ProductId; by: Gesture }
-  /** A tap on a product while nothing is selected: opens it to be edited. */
-  EditRequested: { id: Domain.ProductId }
-  SelectionCleared: object
-  DeleteStarted: object
-  /** The snackbar's action: the products deleted last are stored again. */
-  UndoRequested: object
-  // From subscriptions.
-  /** The back button, heard only while something is selected: it clears the selection, or waits for its deletion. */
-  BackPressed: object
-  TimeChanged: { now: DateTime.Zoned }
-  ListChanged: { result: Result.Result<ReadonlyArray<StoredProduct>, ProductsReadError> }
-  /** The arriving rows have opened their place, and the leaving ones closed theirs. */
-  RowsSettled: object
-  // From commands.
-  Deleted: object
-  DeleteFailed: object
-  RestoreFailed: object
-}>
-
-const Own = Data.taggedEnum<Own>()
-
-/** How a row was selected or deselected. */
-export type Gesture = 'Tap' | 'LongPress'
+type Own = List.Message | Selection.Message | Clock.Message
 
 export type Command = Data.TaggedEnum<{
   Delete: { ids: NonEmptyHashSet.NonEmptyHashSet<Domain.ProductId> }
@@ -124,540 +31,28 @@ export type Command = Data.TaggedEnum<{
   Vibrate: { feedback: Feedback }
 }>
 
-const Command = Data.taggedEnum<Command>()
-
-/** Only a long press vibrates, as Android's do: a tap is feedback enough. */
-const feedbackOf = (by: Gesture): ReadonlyArray<Command> =>
-  by === 'LongPress' ? [Command.Vibrate({ feedback: 'LongPress' })] : []
-
 export type Event = Data.TaggedEnum<{
   /** The product to edit, as the row shows it. */
   EditRequested: { id: Domain.ProductId; product: Domain.Product }
 }>
 
-const Event = Data.taggedEnum<Event>()
-
-/** How a row looks, and what a long press and a tap on it do. */
-export type ItemSelection = Readonly<{
-  isSelected: boolean
-  /** A long press: selects the row, or deselects it; nothing while the selected products are being deleted. */
-  maybeToggle: Opt.Option<Own>
-  /**
-   * Opens the product while nothing is selected, as Material's lists do; toggles the row once something is.
-   * Nothing on stored data that is not a product, while deleting, and on a row leaving.
-   */
-  maybeTap: Opt.Option<Own>
-}>
-
-/** How much of a product's life is left, from its creation to the end of its expiration day. */
-type Freshness = UnitInterval.UnitInterval
-
-export type ProductStatus = Data.TaggedEnum<{
-  Everlasting: object
-  /** Expired `daysAgo` days ago, two at least: yesterday has a case of its own. */
-  Stale: Readonly<{ expirationDate: Day.Day; daysAgo: PositiveInteger.PositiveInteger }>
-  /** Good through yesterday, and no longer today. */
-  ExpiredYesterday: Readonly<{ expirationDate: Day.Day }>
-  /** Good through today, and no longer tomorrow. */
-  ExpiringToday: Readonly<{ expirationDate: Day.Day; freshness: Freshness }>
-  /** Good through tomorrow. */
-  ExpiringTomorrow: Readonly<{ expirationDate: Day.Day; freshness: Freshness }>
-  /** Good through the day `inDays` days ahead, two at least and `Domain.SOON_DAYS` at most. */
-  ExpiringSoon: Readonly<{ expirationDate: Day.Day; inDays: PositiveInteger.PositiveInteger; freshness: Freshness }>
-  /** Good through the day `inDays` days ahead, more than `Domain.SOON_DAYS`. */
-  Fresh: Readonly<{ expirationDate: Day.Day; inDays: PositiveInteger.PositiveInteger; freshness: Freshness }>
-}>
-
-/** Whether a row opens its place, has it, or closes it. */
-export type Presence = 'Arriving' | 'Listed' | 'Leaving'
-
-/** How the rows that stay move: after a row arriving, which opens its place, or one leaving, which closes it. */
-export type Settling = 'Still' | 'Opening' | 'Closing'
-
-export type ProductModel = Data.TaggedEnum<{
-  Invalid: Readonly<
-    { id: Domain.ProductId; selection: ItemSelection; presence: Presence; maybeName: Opt.Option<string> }
-  >
-  Valid: Readonly<
-    { id: Domain.ProductId; selection: ItemSelection; presence: Presence; name: string; status: ProductStatus }
-  >
-}>
-
-export type ListModel = Data.TaggedEnum<{
-  /** Until the list is known, and the time with it when a product expires. */
-  Initial: object
-  Error: object
-  Empty: object
-  Available: Readonly<{
-    deletion: Data.TaggedEnum<{
-      NothingSelected: object
-      Possible: {
-        count: PositiveInteger.PositiveInteger
-        deleteSelected: Own
-        clearSelection: Own
-      }
-      InProgress: object
-    }>
-    total: PositiveInteger.PositiveInteger
-    /** The shorter motion, closing, wins when rows arrive and leave at once. */
-    settling: Settling
-    /** The products listed, in order, with the ones leaving where they were. */
-    products: Arr.NonEmptyReadonlyArray<ProductModel>
-  }>
-}>
-
-/** What the snackbar standing tells: `maybeUndo` only while the products deleted can come back. */
-export type NoticeModel = Data.TaggedEnum<{
-  Deleted: Readonly<{ count: PositiveInteger.PositiveInteger; maybeUndo: Opt.Option<Own> }>
-  DeleteFailed: object
-  RestoreFailed: object
-}>
+type Key = List.Key | Selection.Key | Clock.Key
 
 export type Model = Readonly<{
-  list: ListModel
-  /** The snackbar standing. `id` tells one snackbar from the next. */
-  snackbar: Opt.Option<Readonly<{ id: number; entrance: SnackbarProgram.Entrance; notice: NoticeModel }>>
+  list: List.ListModel
+  snackbar: Selection.SnackbarModel
 }>
 
-/** The products a notice offers to store again: those of a deletion that can be undone. */
-const restorableOf = (notice: Notice): Restorable => notice._tag === 'Deleted' ? notice.maybeProducts : Opt.none()
+const Snackbar = SnackbarProgram.make<Selection.Notice>()
 
-/** What "Undo" stores again, while the snackbar standing offers it: `update` and `makeModel` both ask this. */
-const undoable = (standing: Opt.Option<Notice>): Restorable => Opt.flatMap(standing, restorableOf)
-
-type Tell = Readonly<{ _tag: 'Snackbar'; message: SnackbarProgram.External<Notice> }>
-
-/** A notice for the snackbar: Material's long duration for one with an action, to read it and reach for "Undo". */
-const tell = (notice: Notice): Tell => ({
-  _tag: 'Snackbar',
-  message: { _tag: 'Told', notice, lasting: Opt.isSome(restorableOf(notice)) ? 'Long' : 'Short' },
-})
-
-// Stored data that is not a product can still be selected and deleted, by its id.
-const validate = (stored: StoredProduct): Product =>
-  Opt.match(Domain.fromSnapshot(stored), {
-    onNone: () => Product.Invalid({ id: stored.id, maybeName: stored.maybeName }),
-    onSome: (product) => Product.Valid({ id: stored.id, product }),
-  })
-
-const expires = (item: Product) => item._tag === 'Valid' && Opt.isSome(item.product.maybeExpirationDate)
-
-/** Whether the time is needed: while a product shown expires, listed or leaving. */
-const needsClock = (list: State['list']) =>
-  list._tag === 'Loaded'
-  && (Arr.some(list.items, expires) || Arr.some(list.departures, (departure) => expires(departure.item)))
-
-const idsOf = (items: ReadonlyArray<Product>) => HashSet.fromIterable(Arr.map(items, (product) => product.id))
-
-type Loaded = Data.TaggedEnum.Value<State['list'], 'Loaded'>
-
-type Row = Readonly<{ item: Product; presence: Presence }>
-
-/** The listed rows, each leaving one after the row it followed and after the rows that left from there before it. */
-const rowsOf = ({ items, arrivals, departures }: Loaded): ReadonlyArray<Row> =>
-  Arr.reduce(
-    departures,
-    Arr.map(items, (item): Row => ({
-      item,
-      presence: HashSet.has(arrivals, item.id) ? 'Arriving' : 'Listed',
-    })),
-    (rows, { item, maybeAfter }) => {
-      const anchor = Opt.match(maybeAfter, {
-        onNone: () => 0,
-        onSome: (id) =>
-          pipe(
-            Arr.findFirstIndex(rows, (row) => row.item.id === id),
-            Opt.match({ onNone: () => 0, onSome: (index) => index + 1 }),
-          ),
-      })
-      const index = pipe(
-        Arr.findFirstIndex(rows.slice(anchor), (row) => row.presence !== 'Leaving'),
-        Opt.match({ onNone: () => rows.length, onSome: (offset) => anchor + offset }),
-      )
-      return [...rows.slice(0, index), { item, presence: 'Leaving' }, ...rows.slice(index)]
-    },
-  )
-
-/** The rows shown whose ids are no longer listed, each after the id it followed. */
-const departuresFrom = (rows: ReadonlyArray<Row>, ids: HashSet.HashSet<Domain.ProductId>): ReadonlyArray<Departure> =>
-  Arr.reduce(
-    rows,
-    { maybeAfter: Opt.none<Domain.ProductId>(), departures: Arr.empty<Departure>() },
-    ({ maybeAfter, departures }, { item }) => ({
-      maybeAfter: Opt.some(item.id),
-      departures: HashSet.has(ids, item.id) ? departures : [...departures, { item, maybeAfter }],
-    }),
-  ).departures
-
-/** Whether a row opens or closes its place. */
-const isSettling = (list: State['list']) =>
-  list._tag === 'Loaded' && (HashSet.size(list.arrivals) > 0 || Arr.isReadonlyArrayNonEmpty(list.departures))
-
-/** The ids that can be selected: those of the loaded products, while nothing is being deleted. */
-const selectableIds = (state: State): HashSet.HashSet<Domain.ProductId> =>
-  state.list._tag === 'Loaded' && state.selection._tag !== 'Deleting' ? idsOf(state.list.items) : HashSet.empty()
-
-/** The selection, as ids: empty when there is none. */
-const selectedIds = (selection: Selection): HashSet.HashSet<Domain.ProductId> =>
-  selection._tag === 'Idle' ? HashSet.empty() : selection.ids
-
-/** The selection of exactly those ids: none when there are none. */
-const selectionOf = (ids: HashSet.HashSet<Domain.ProductId>): Selection =>
-  Opt.match(NonEmptyHashSet.make(ids), {
-    onNone: () => Selection.Idle(),
-    onSome: (ids) => Selection.Selecting({ ids }),
-  })
-
-/** The products the ids name, in the list's order, when every id names one. */
-export const productsOf = (items: ReadonlyArray<Product>, ids: HashSet.HashSet<Domain.ProductId>): Restorable => {
-  const isProduct = (id: Domain.ProductId) => items.some((item) => item._tag === 'Valid' && item.id === id)
-  const products = Arr.flatMap(
-    items,
-    (item) => item._tag === 'Valid' && HashSet.has(ids, item.id) ? [item.product] : [],
-  )
-  return HashSet.every(ids, isProduct) && Arr.isReadonlyArrayNonEmpty(products) ? Opt.some(products) : Opt.none()
-}
-
-/** The services of the subscriptions: the commands' are inferred from `runCommand`. */
-type Deps = ProductStore | BackButton | DateTime.CurrentTimeZone
-
-// Expiration statuses derive from the current time: it is refreshed often
-// enough for days-long expirations.
-const clock: Tea.Subscription<Own, Deps> = every('30 seconds', (now) => Own.TimeChanged({ now }))
-
-const changes: Tea.Subscription<Own, Deps> = Channel.unwrap(
-  Effect.map(
-    Effect.service(ProductStore),
-    ({ changes }) => Channel.map(changes, (result) => Own.ListChanged({ result })),
-  ),
-)
-
-// Longer than a row's entrance (medium-4, and the frame it waits for) and its exit (short-4): a row is drawn as any
-// other, or gone, only once it has opened or closed its place. Hidden under another page, the timer waits for the
-// page to be back.
-const SETTLING_DURATION = Duration.millis(duration.long2)
-
-/** Ends once the rows have been shown arriving and leaving. */
-const settlingTimer: Tea.Subscription<Own, Deps> = after(SETTLING_DURATION, Own.RowsSettled())
-
-/** The settling timer is keyed by the ids arriving and leaving: a new one starts it anew. */
-type Settle = Data.TaggedEnum<{
-  Settling: { arrivals: HashSet.HashSet<Domain.ProductId>; departures: HashSet.HashSet<Domain.ProductId> }
-}>
-
-const Settle = Data.taggedEnum<Settle>()
-
-type Key = 'changes' | 'back-button' | 'clock' | Settle
-
-// Observed only while the list shows a selection: otherwise the press is Home's, or the platform's.
-const backButton: Tea.Subscription<Own, Deps> = pressesAs(Own.BackPressed())
-
-const showsSelection = (state: State) => state.list._tag === 'Loaded' && state.selection._tag !== 'Idle'
-
-const deleteProducts = Effect.fn('DeleteProducts')(
-  function*({ ids }: Readonly<{ ids: NonEmptyHashSet.NonEmptyHashSet<Domain.ProductId> }>) {
-    const { deleteAll } = yield* ProductStore
-    yield* Effect.logDebug('Deleting products', { count: HashSet.size(ids) })
-    yield* deleteAll(ids).pipe(
-      Effect.tapError((error) => Effect.logWarning('Could not delete the products', error)),
-    )
-    yield* Effect.logInfo('Deleted products', { count: HashSet.size(ids) })
-    return Own.Deleted()
-  },
-  Effect.orElseSucceed(() => Own.DeleteFailed()),
-  Effect.asSome,
-  Effect.withLogSpan('DeleteProducts'),
-)
-
-const restoreProducts = Effect.fn('RestoreProducts')(
-  function*({ products }: Readonly<{ products: Arr.NonEmptyReadonlyArray<Domain.Product> }>) {
-    const { insertAll } = yield* ProductStore
-    yield* Effect.logDebug('Putting products back', { count: products.length })
-    yield* insertAll(Arr.map(products, Domain.toSnapshot)).pipe(
-      Effect.tapError((error) => Effect.logWarning('Could not put the products back', error)),
-    )
-    yield* Effect.logInfo('Put products back', { count: products.length })
-    return Opt.none()
-  },
-  Effect.orElseSucceed(() => Opt.some(Own.RestoreFailed())),
-  Effect.withLogSpan('RestoreProducts'),
-)
-
-type Deletion = Data.TaggedEnum.Value<ListModel, 'Available'>['deletion']
-
-const expirationStatusAt = (now: DateTime.Zoned, expiration: Domain.Expiration): ProductStatus => {
-  const { expirationDate } = expiration
-  const status = Domain.expirationStatus(now)(expiration)
-  if (status.hasExpired) {
-    const { daysSinceExpiration } = status
-    return daysSinceExpiration === 1
-      ? { _tag: 'ExpiredYesterday', expirationDate }
-      : { _tag: 'Stale', expirationDate, daysAgo: PositiveInteger.makeUnsafe(daysSinceExpiration) }
-  }
-  const { freshness, daysUntilExpiration } = status
-  switch (daysUntilExpiration) {
-    case 0:
-      return { _tag: 'ExpiringToday', expirationDate, freshness }
-    case 1:
-      return { _tag: 'ExpiringTomorrow', expirationDate, freshness }
-    default: {
-      const inDays = PositiveInteger.makeUnsafe(daysUntilExpiration)
-      return inDays <= Domain.SOON_DAYS
-        ? { _tag: 'ExpiringSoon', expirationDate, inDays, freshness }
-        : { _tag: 'Fresh', expirationDate, inDays, freshness }
-    }
-  }
-}
-
-/** The status of a product: `None` for one that expires while the clock has not ticked yet. */
-const maybeStatusAt = (maybeNow: Opt.Option<DateTime.Zoned>, product: Domain.Product): Opt.Option<ProductStatus> =>
-  Opt.match(Domain.maybeExpiration(product), {
-    onNone: () => Opt.some({ _tag: 'Everlasting' }),
-    onSome: (expiration) => Opt.map(maybeNow, (now) => expirationStatusAt(now, expiration)),
-  })
-
-const listModel = (state: State): ListModel => {
-  if (state.list._tag === 'Loading') {
-    return { _tag: 'Initial' }
-  }
-  if (state.list._tag === 'Failed') {
-    return { _tag: 'Error' }
-  }
-  const { items } = state.list
-  // The last rows leave with the whole list, which fades over the empty state.
-  if (!Arr.isReadonlyArrayNonEmpty(items)) {
-    return { _tag: 'Empty' }
-  }
-  const { selection, maybeNow } = state
-  // A row leaving is no longer a product of the list: it cannot be selected, nor opened.
-  const itemSelectionOf = (id: Domain.ProductId, presence: Presence, isProduct: boolean): ItemSelection => {
-    const isSelected = presence !== 'Leaving' && HashSet.has(selectedIds(selection), id)
-    const toggle = (by: Gesture) =>
-      selection._tag === 'Deleting' || presence === 'Leaving'
-        ? Opt.none()
-        : Opt.some(isSelected ? Own.ItemDeselected({ id, by }) : Own.ItemSelected({ id, by }))
-    return {
-      isSelected,
-      maybeToggle: toggle('LongPress'),
-      maybeTap: selection._tag === 'Selecting'
-        ? toggle('Tap')
-        : selection._tag === 'Idle' && isProduct && presence !== 'Leaving'
-        ? Opt.some(Own.EditRequested({ id }))
-        : Opt.none(),
-    }
-  }
-  // Until the clock has ticked, the products that expire have no status: the list waits for it.
-  const maybeProducts = Opt.all(Arr.map(rowsOf(state.list), ({ item, presence }) =>
-    Match.valueTags(item, {
-      Invalid: ({ id, maybeName }): Opt.Option<ProductModel> =>
-        Opt.some({ _tag: 'Invalid', id, selection: itemSelectionOf(id, presence, false), presence, maybeName }),
-      Valid: ({ id, product }): Opt.Option<ProductModel> =>
-        Opt.map(maybeStatusAt(maybeNow, product), (status) => ({
-          _tag: 'Valid',
-          id,
-          selection: itemSelectionOf(id, presence, true),
-          presence,
-          name: product.name,
-          status,
-        })),
-    })))
-  if (Opt.isNone(maybeProducts) || !Arr.isReadonlyArrayNonEmpty(maybeProducts.value)) {
-    return { _tag: 'Initial' }
-  }
-  return {
-    _tag: 'Available',
-    deletion: Match.valueTags(selection, {
-      Idle: (): Deletion => ({ _tag: 'NothingSelected' }),
-      Selecting: ({ ids }): Deletion => ({
-        _tag: 'Possible',
-        count: PositiveInteger.makeUnsafe(HashSet.size(ids)),
-        deleteSelected: Own.DeleteStarted(),
-        clearSelection: Own.SelectionCleared(),
-      }),
-      Deleting: (): Deletion => ({ _tag: 'InProgress' }),
-    }),
-    total: PositiveInteger.makeUnsafe(items.length),
-    settling: Arr.isReadonlyArrayNonEmpty(state.list.departures)
-      ? 'Closing'
-      : HashSet.size(state.list.arrivals) > 0
-      ? 'Opening'
-      : 'Still',
-    products: maybeProducts.value,
-  }
-}
-
-/** The snackbar standing, as its child draws it, with the way to undo where it applies. */
-const snackbarModel = (snackbar: SnackbarProgram.Model<Notice>, maybeUndo: Opt.Option<Own>): Model['snackbar'] =>
-  Opt.map(snackbar, ({ id, entrance, notice }) => ({
-    id,
-    entrance,
-    notice: notice._tag === 'Deleted' ? { _tag: 'Deleted', count: notice.count, maybeUndo } : notice,
-  }))
+export type Tell = Readonly<{ _tag: 'Snackbar'; message: SnackbarProgram.External<Selection.Notice> }>
 
 /** What `update` reads of its child, as the library gives it. */
-type Outputs = Readonly<{ Snackbar: Readonly<{ output: () => Opt.Option<Notice> }> }>
+export type Outputs = Readonly<{ Snackbar: Readonly<{ output: () => Opt.Option<Selection.Notice> }> }>
 
-type Step = Tea.Transition<State, Command, Event, Tell>
+export type Step = Tea.Step<State, Command, Event, Tell>
 
-const updateOwn = Match.typeTags<Own, (state: State, children: Outputs) => Step>()({
-  ListChanged: ({ result }) => (state) => {
-    const list: State['list'] = Result.match(result, {
-      onFailure: () => ({ _tag: 'Failed' }),
-      onSuccess: (stored): Loaded => {
-        const items = Arr.map(stored, validate)
-        if (state.list._tag !== 'Loaded') {
-          return { _tag: 'Loaded', items, arrivals: HashSet.empty(), departures: [] }
-        }
-        const ids = idsOf(items)
-        // The storage may tell of one write in more changes than one, before the page draws a frame: the rows
-        // still arriving keep arriving, and the ones leaving keep leaving, unless they are back.
-        return {
-          _tag: 'Loaded',
-          items,
-          arrivals: HashSet.union(
-            HashSet.difference(ids, idsOf(state.list.items)),
-            HashSet.intersection(state.list.arrivals, ids),
-          ),
-          departures: departuresFrom(rowsOf(state.list), ids),
-        }
-      },
-    })
-    return {
-      state: {
-        ...state,
-        list,
-        // The clock stops with the last product that expires: the time it told goes with it.
-        maybeNow: needsClock(list) ? state.maybeNow : Opt.none(),
-        // The selection keeps the products that still exist; a deletion in progress is left alone.
-        selection: list._tag === 'Failed' || state.selection._tag === 'Deleting'
-          ? state.selection
-          : selectionOf(HashSet.intersection(selectedIds(state.selection), idsOf(list.items))),
-      },
-    }
-  },
-
-  TimeChanged: ({ now }) => (state) =>
-    needsClock(state.list)
-      ? { state: { ...state, maybeNow: Opt.some(now) } }
-      : Tea.defect('TimeChanged while no listed product expires: the clock runs only while one does'),
-
-  // Only a product of the list can be selected: a tap on a row the storage has meanwhile removed does nothing.
-  ItemSelected: ({ id, by }) => (state) =>
-    HashSet.has(selectableIds(state), id) && !HashSet.has(selectedIds(state.selection), id)
-      ? {
-        state: { ...state, selection: selectionOf(HashSet.add(selectedIds(state.selection), id)) },
-        commands: feedbackOf(by),
-      }
-      : Tea.reject,
-
-  ItemDeselected: ({ id, by }) => (state) =>
-    state.list._tag === 'Loaded' && state.selection._tag === 'Selecting' && HashSet.has(state.selection.ids, id)
-      ? {
-        state: { ...state, selection: selectionOf(HashSet.remove(state.selection.ids, id)) },
-        commands: feedbackOf(by),
-      }
-      : Tea.reject,
-
-  // Only a product of the list, while nothing is selected or deleted. The product goes with the event, as the
-  // row shows it, so that no parent reads the list.
-  EditRequested: ({ id }) => (state) =>
-    state.list._tag === 'Loaded' && state.selection._tag === 'Idle'
-      ? Opt.match(
-        Arr.findFirst(
-          state.list.items,
-          (item): item is Data.TaggedEnum.Value<Product, 'Valid'> => item._tag === 'Valid' && item.id === id,
-        ),
-        {
-          onNone: () => Tea.reject,
-          onSome: ({ product }) => ({ state, events: [Event.EditRequested({ id, product })] }),
-        },
-      )
-      : Tea.reject,
-
-  SelectionCleared: () => (state) =>
-    state.list._tag === 'Loaded' && state.selection._tag === 'Selecting'
-      ? { state: { ...state, selection: Selection.Idle() } }
-      : Tea.reject,
-
-  // As Material's contextual action bar: the press clears the selection. It is held while the selection is being
-  // deleted, so that the app is not left in the middle of a write.
-  BackPressed: () => (state) =>
-    !showsSelection(state)
-      ? Tea.defect('BackPressed while no selection is shown: the button is observed only while one is')
-      : state.selection._tag === 'Selecting'
-      ? { state: { ...state, selection: Selection.Idle() } }
-      : { state },
-
-  // The products are kept from the list as it is now: the storage's change may reach the page before the
-  // deletion's completion, and then they are gone from it.
-  DeleteStarted: () => (state) =>
-    state.list._tag === 'Loaded' && state.selection._tag === 'Selecting'
-      ? {
-        state: {
-          ...state,
-          selection: Selection.Deleting({
-            ids: state.selection.ids,
-            maybeProducts: productsOf(state.list.items, state.selection.ids),
-          }),
-        },
-        commands: [Command.Delete({ ids: state.selection.ids })],
-      }
-      : Tea.reject,
-
-  // A new deletion replaces the offer to undo the last one: that one is gone for good, its snackbar leaving
-  // before the new one comes.
-  Deleted: () => (state) =>
-    state.selection._tag === 'Deleting'
-      ? {
-        state: { ...state, selection: Selection.Idle() },
-        commands: [Command.Vibrate({ feedback: 'Confirm' })],
-        tell: [
-          tell(Notice.Deleted({
-            count: PositiveInteger.makeUnsafe(HashSet.size(state.selection.ids)),
-            maybeProducts: state.selection.maybeProducts,
-          })),
-        ],
-      }
-      : Tea.defect('Deleted while no deletion is in progress: only a completion leaves Deleting'),
-
-  // Its snackbar replaces the one standing, and the offer to undo with it.
-  DeleteFailed: () => (state) =>
-    state.selection._tag === 'Deleting'
-      ? {
-        state: { ...state, selection: Selection.Selecting({ ids: state.selection.ids }) },
-        commands: [Command.Vibrate({ feedback: 'Reject' })],
-        tell: [tell(Notice.DeleteFailed())],
-      }
-      : Tea.defect('DeleteFailed while no deletion is in progress: only a completion leaves Deleting'),
-
-  // Only a deletion of products alone can be undone; the offer is taken at once, its snackbar leaving with it, so a
-  // second tap does nothing.
-  UndoRequested: () => (state, children) =>
-    Opt.match(undoable(children.Snackbar.output()), {
-      onNone: () => Tea.reject,
-      onSome: (products): Step => ({
-        state,
-        commands: [Command.Restore({ products })],
-        tell: [{ _tag: 'Snackbar', message: { _tag: 'Dismissed' } }],
-      }),
-    }),
-
-  // The clock may have run only for a product leaving: the time it told goes with it.
-  RowsSettled: () => (state) => {
-    if (state.list._tag !== 'Loaded' || !isSettling(state.list)) {
-      return Tea.defect('RowsSettled while no row arrives or leaves: the timer runs only while one does')
-    }
-    const list: Loaded = { ...state.list, arrivals: HashSet.empty(), departures: [] }
-    return { state: { ...state, list, maybeNow: needsClock(list) ? state.maybeNow : Opt.none() } }
-  },
-
-  // Accepted in every state: the user may have done anything since asking, and the storage is as it was.
-  RestoreFailed: () => (state) => ({
-    state,
-    commands: [Command.Vibrate({ feedback: 'Reject' })],
-    tell: [tell(Notice.RestoreFailed())],
-  }),
-})
+export type Transition = Tea.Transition<State, Command, Event, Tell>
 
 const { child, withChildren } = Tea.program<{
   state: State
@@ -673,49 +68,57 @@ export const program = withChildren({ Snackbar: child(Snackbar) }).make({
     state: {
       maybeNow: Opt.none(),
       list: { _tag: 'Loading' },
-      selection: Selection.Idle(),
+      selection: { _tag: 'Idle' },
     },
   },
 
-  update: (message, children) => (state) => updateOwn(message)(state, children),
+  update: (message, children) => (state) => {
+    switch (message._tag) {
+      case 'ListChanged':
+      case 'RowsSettled':
+        return List.update(message)(state)
+      case 'ItemSelected':
+      case 'ItemDeselected':
+      case 'EditRequested':
+      case 'SelectionCleared':
+      case 'DeleteStarted':
+      case 'UndoRequested':
+      case 'BackPressed':
+      case 'Deleted':
+      case 'DeleteFailed':
+      case 'RestoreFailed':
+        return Selection.update(message)(state, children)
+      case 'TimeChanged':
+        return Clock.update(message)(state)
+    }
+  },
 
   // The snackbar's notice has stood its time: nothing is left to do.
   onEvent: { Snackbar: () => (state) => ({ state }) },
 
   runCommand: Match.typeTags<Command>()({
-    Delete: deleteProducts,
-    Restore: restoreProducts,
+    Delete: Selection.deleteProducts,
+    Restore: Selection.restoreProducts,
     Vibrate: vibrate,
   }),
 
   subscriptions: (state): ReadonlyArray<Key> => [
-    'changes',
-    ...(showsSelection(state) ? ['back-button' as const] : []),
-    ...(needsClock(state.list) ? ['clock' as const] : []),
-    ...(state.list._tag === 'Loaded' && isSettling(state.list)
-      ? [
-        Settle.Settling({
-          arrivals: state.list.arrivals,
-          departures: idsOf(Arr.map(state.list.departures, ({ item }) => item)),
-        }),
-      ]
-      : []),
+    ...List.subscriptions(state),
+    ...Selection.subscriptions(state),
+    ...Clock.subscriptions(state),
   ],
 
   listen: Match.type<Key>().pipe(
-    Match.when('changes', () => changes),
-    Match.when('back-button', () => backButton),
-    Match.when('clock', () => clock),
-    Match.tag('Settling', () => settlingTimer),
+    Match.when('changes', () => List.changes),
+    Match.tag('Settling', () => List.settlingTimer),
+    Match.when('back-button', () => Selection.backButton),
+    Match.when('clock', () => Clock.clock),
     Match.exhaustive,
   ),
 
   makeModel: (state, children) => ({
-    list: listModel(state),
-    snackbar: snackbarModel(
-      children.Snackbar(),
-      Opt.map(undoable(children.Snackbar.output()), () => Own.UndoRequested()),
-    ),
+    list: List.model(state),
+    snackbar: Selection.snackbarModel(children.Snackbar(), children.Snackbar.output()),
   }),
 })
 

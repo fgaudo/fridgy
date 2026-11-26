@@ -82,9 +82,10 @@ what was decided".
    button empties the field and keeps the search open, the field focused again. Pressing the keyboard's search
    key does nothing: the list already shows the matches (see "Open points" for the keyboard).
 
-## The program: `Products` (`src/app/children/home/children/products/program.ts`)
+## The program: `Products` (`src/app/children/home/children/products/`)
 
-One more state machine, beside the list, the selection and the snackbar:
+One more state machine, beside the list, the selection and the snackbar, and with it a concern of the program's
+own, beside `list.ts`, `selection.ts` and `clock.ts`:
 
 ```ts
 type Search = Data.TaggedEnum<{
@@ -110,11 +111,11 @@ type Search = Data.TaggedEnum<{
   - `SearchClosed` and `BackPressed`: accepted while `Open` and `Idle`: `Closed`. `BackPressed` outside those
     states is a defect, since its subscription runs only in them.
   - `ItemSelected` and `EditRequested` take only an id among the **rows shown**: a listed item whose name matches
-    the filter (`shownIds`, in place of today's `selectableIds`; **verified**: today's rule already rejects an id
+    the filter (`shownIds`, in place of today's `isSelectable`, in `selection.ts`; **verified**: today's rule already rejects an id
     the storage has removed, so a tap on a row that a keystroke has since hidden becomes one more such case).
   - `ListChanged` keeps in the selection the ids that still exist **and are still shown**, in place of today's
-    "still exist" (**verified** in `ListChanged`: the selection is intersected with the new ids, a deletion in
-    progress left alone). Nothing writes a name while Home is shown today, so no change can hide a selected
+    "still exist" (**verified** in `selection.ts`'s `listChanged`: the selection keeps the ids still listed, a
+    deletion in progress left alone). Nothing writes a name while Home is shown today, so no change can hide a selected
     row; the rule makes the invariant hold whatever a future writer does.
   - Nothing else changes: the selection, the deletion, the undo, the arrivals and departures are computed on the
     whole stored list, as today.
@@ -147,7 +148,7 @@ type Search = Data.TaggedEnum<{
 
 - **Subscriptions:** the back button, keyed `back-button`, which `Products` already observes while the list shows
   a selection (the press clears it), also while the search is `Open` and nothing is selected: the press goes to
-  the selection while there is one, then to the search. `Deps` already has `BackButton`.
+  the selection while there is one, then to the search.
 - **Performance:** the names are folded on every frame the renderer reads, once per row: a normalization and a
   regular expression per name, for tens of rows. Keeping the folded names in the state would be derived data,
   and is not worth a rule's exception at this size; should a fridge of hundreds stutter while typing, fold them
