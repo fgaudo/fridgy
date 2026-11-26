@@ -10,7 +10,8 @@ src/
 │  │                     Facts through `fetch`, Android's back button, camera, vibrator, keyboard and links, the
 │  │                     program started here, not by a component, so that a recreated activity keeps the page
 │  │                     shown, and drawn by React; the tests pick their own
-│  └─ crash/view.tsx     the screen a crash leaves, with a button that runs the program again
+│  └─ crash/             the screen a crash leaves, with the cause's text (detail.ts) and a button that runs the
+│                        program again
 │
 ├─ domain/               the entities and their rules (`Product`): imports nothing but libs/
 │

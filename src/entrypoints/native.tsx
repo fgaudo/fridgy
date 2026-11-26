@@ -22,6 +22,7 @@ import * as LinksReactNative from '#infrastructure/links/links.react-native.ts'
 import * as ProductLookupOpenFoodFacts from '#infrastructure/product-lookup/product-lookup.open-food-facts.ts'
 import * as SqliteOpSqlite from '#infrastructure/storage/sqlite.op-sqlite.ts'
 import * as Renderer from '#libs/tea-react/renderer.ts'
+import { detail } from './crash/detail.ts'
 import * as Crash from './crash/view.tsx'
 
 const layer = Layer.mergeAll(
@@ -42,7 +43,7 @@ const { Root, draw, show } = Renderer.make(view)
 // The program is started here, not by effect-tea's `Host`, whose run lives as long as it is mounted. A change of the
 // system's theme recreates the activity, which mounts `Root` again, and the page shown must stay.
 // The program never ends by itself: an end that is not an interruption is a bug. Its cause goes to the log, and the
-// crash screen takes the page's place. Its button starts the program again, from its `init`, and runs it on a fresh
+// crash screen takes the page's place, with the cause's text. Its button starts the program again, from its `init`, and runs it on a fresh
 // layer: a restart from scratch, with no native code. A second press of it starts nothing.
 const start = (): void => {
   let hasRestarted = false
@@ -60,7 +61,7 @@ const start = (): void => {
         Cause.hasInterruptsOnly(cause)
           ? Effect.void
           : Effect.logError('The app crashed', cause).pipe(
-            Effect.andThen(Effect.sync(() => show(Crash.view(restart)))),
+            Effect.andThen(Effect.sync(() => show(Crash.view(detail(cause), restart)))),
           )
       ),
     ),

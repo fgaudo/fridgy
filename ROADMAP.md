@@ -26,27 +26,23 @@ that describe what it changed brought up to date (`AGENTS.md`, "Conventions").
 
 **Depends on** no other step. It comes before step 4, which sees the screen.
 
-**Why.** The crash screen shows nothing of the cause (`src/entrypoints/crash/view.tsx`), by a decision that the
-owner reversed on 26 November 2026. The cause goes to the log, which a user cannot reach: a crash on a phone cannot
-be told apart from another.
+**Why.** A crash on a phone could not be told apart from another: the cause went to the log alone, which a user
+cannot reach. The owner reversed that decision on 26 November 2026.
 
-**How.**
+**Where it stands.** The code is done, on 26 November 2026: `src/entrypoints/crash/detail.ts` makes the cause's
+text (each defect's sentence and those it wraps, a line each, tested), and `Crash.view` draws it under the text, in a
+box of its own height that scrolls, selectable. The stack is left out: Metro's release bundle mangles the names of
+functions (`w`, `b`), so a stack under Hermes would name none of the app's. The detail is the cause's text, never
+the app's: step 3 translates none of it.
 
-- `src/entrypoints/native.tsx` holds the cause where it shows the screen (`Effect.tapCause`): it gives
-  `Crash.view` a text made of it, beside `restart`.
-- What tells a crash apart is the defect's own sentence (`Tea.defect`, `Effect.die`), which names the invariant
-  broken. To check first: what a release's stack reads like, under Hermes. If it names no function, it is left
-  out.
-- The screen is drawn outside the program, and holds no state: the detail is always there, under the text, small,
-  within a height of its own, as a text the user can select and copy. No button opens it, nothing is sent, and no
-  dependency is added.
-- The detail is the cause's text, never the app's: step 3 translates none of it.
-- No procedure raises a crash on demand yet: a defect raised on purpose, in a change that is not committed, shows
-  the screen. Should the `android-release` skill need it again, the skill says how.
+**Left: the emulator.** It was not run: on that day the machine had no hypervisor driver (`emulator -accel-check`:
+"Android Emulator hypervisor driver is not installed"), which the owner installs, or enables Windows Hypervisor
+Platform. Then, in a change that is not committed, a defect raised on purpose shows the screen: for instance
+`InfoRequested: () => Tea.defect('A crash raised on purpose')` in `src/app/program.ts`, and the info button on Home.
 
-**Done when** a crash on the emulator shows the defect's sentence, which can be selected and copied; the screen
-still fits the reference screen; and the view's comment, with any document that says nothing is shown, says what
-is.
+**Done when** that crash, on the emulator, on a release, shows `ProgramDefect: A defect in update on …` and the
+`InvariantDefect`'s sentence under it, which can be selected and copied; the screen still fits the reference screen,
+and the restart works.
 
 ### 2. The name's field, controlled
 

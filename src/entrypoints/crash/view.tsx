@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { View as Box, Pressable, StyleSheet, Text } from 'react-native'
+import { View as Box, Pressable, ScrollView, StyleSheet, Text } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { color, icon, shape, type } from '#styles'
 
@@ -17,6 +17,15 @@ const styles = StyleSheet.create({
   },
   title: { ...type.headlineSmall, textAlign: 'center', color: color.onSurface },
   text: { ...type.bodyLarge, textAlign: 'center', color: color.onSurfaceVariant },
+  detail: {
+    alignSelf: 'stretch',
+    maxHeight: 160,
+    marginTop: 16,
+    borderRadius: shape.medium,
+    backgroundColor: color.surfaceContainer,
+  },
+  detailContent: { padding: 12 },
+  detailText: { ...type.bodySmall, fontFamily: 'monospace', color: color.onSurfaceVariant },
   button: {
     minHeight: 56,
     marginTop: 24,
@@ -30,15 +39,19 @@ const styles = StyleSheet.create({
 })
 
 /**
- * The screen a crash leaves: Material's empty state in the error's colors, and a filled button that restarts the
- * app. The products are on disk, so a restart finds them. Nothing of the cause is shown.
+ * The screen a crash leaves: Material's empty state in the error's colors, the cause's text, and a filled button that
+ * restarts the app. The products are on disk, so a restart finds them. The cause is small, in a box of its own height
+ * that scrolls, and can be selected and copied: it is what tells one crash from another.
  */
-export const view = (restart: () => void): ReactNode => (
+export const view = (detail: string, restart: () => void): ReactNode => (
   <SafeAreaView style={styles.page}>
     <Box style={styles.column}>
       <Box style={styles.disc}>{icon('error', color.onErrorContainer, { fontSize: 36, lineHeight: 36 })}</Box>
       <Text style={styles.title}>Fridgy stopped</Text>
       <Text style={styles.text}>Something went wrong inside the app. Your products are kept.</Text>
+      <ScrollView style={styles.detail} contentContainerStyle={styles.detailContent}>
+        <Text selectable style={styles.detailText}>{detail}</Text>
+      </ScrollView>
       <Pressable accessibilityRole='button' style={styles.button} onPress={restart}>
         <Text style={styles.label}>Restart Fridgy</Text>
       </Pressable>
