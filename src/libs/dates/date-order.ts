@@ -11,7 +11,7 @@ export const all: Arr.NonEmptyReadonlyArray<DateOrder> = ['DMY', 'MDY', 'YMD']
 
 /**
  * The order a locale writes a numeric date in (`it-IT`, `en-GB`: `DMY`; `en-US`: `MDY`; `ja-JP`, `hu-HU`: `YMD`),
- * the runtime's own locale's when none is given: in a browser, the device's language.
+ * the runtime's own locale's when none is given: on the phone, the device's language.
  */
 export const ofLocale = (locale?: string): DateOrder => {
   const parts = new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'numeric', year: 'numeric' }).formatToParts(0)

@@ -13,7 +13,7 @@ import { checkOnFreshLayer } from '#libs/testing/fresh-layer.test_support.ts'
 import { DateOrderStore, KEY } from './date-order.ts'
 import { readSetting, writeSetting } from './settings.test_support.ts'
 import { SettingStore } from './settings.ts'
-import * as SqliteMemory from './sqlite.memory.ts'
+import * as SqliteMemory from './sqlite.memory.test_support.ts'
 
 const decode = Schema.decodeUnknownOption(DateOrder.Schema)
 

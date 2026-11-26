@@ -17,7 +17,7 @@ import {
 } from '#infrastructure/open-food-facts/open-food-facts.ts'
 import { readRow, writeRow } from '#infrastructure/storage/barcodes.test_support.ts'
 import { BarcodeCache } from '#infrastructure/storage/barcodes.ts'
-import * as SqliteMemory from '#infrastructure/storage/sqlite.memory.ts'
+import * as SqliteMemory from '#infrastructure/storage/sqlite.memory.test_support.ts'
 import * as NormalizedString from '#libs/strings/normalized-string.ts'
 import * as ProductLookupOpenFoodFacts from './product-lookup.open-food-facts.ts'
 import { ProductLookup } from './product-lookup.ts'

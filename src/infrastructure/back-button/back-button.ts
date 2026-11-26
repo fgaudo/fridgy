@@ -12,7 +12,7 @@ export class BackButtonError extends Data.TaggedError('BackButtonError')<{
 }> {}
 
 /**
- * The platform's back button (Android's, the browser's), which the pages observe directly: a press has no
+ * The platform's back button (Android's), which the pages observe directly: a press has no
  * shape for a page to give it. The button is the app's only while it is observed: otherwise the platform acts
  * on it, and leaves the app. A press goes to the last observer only: what opened last is on top, and closes
  * first, as Android's own back dispatcher does with its callbacks.

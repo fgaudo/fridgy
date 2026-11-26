@@ -15,7 +15,7 @@ import * as Day from '#libs/dates/day.ts'
 import { checkOnFreshLayer } from '#libs/testing/fresh-layer.test_support.ts'
 import { insertRow, refuseWritesOf } from './products.test_support.ts'
 import { ProductStore, type StoredProduct } from './products.ts'
-import * as SqliteMemory from './sqlite.memory.ts'
+import * as SqliteMemory from './sqlite.memory.test_support.ts'
 
 const layer = () => ProductStore.layer.pipe(Layer.provideMerge(SqliteMemory.layer))
 

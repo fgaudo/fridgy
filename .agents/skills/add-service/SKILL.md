@@ -93,7 +93,7 @@ written once in the service's module, typed with `Source` or as a command's effe
 ## The test
 
 Each implementation's test checks it directly, with `checkOnFreshLayer` properties
-(`#libs/testing/fresh-layer.test_support.ts`), over `#infrastructure/storage/sqlite.memory.ts` for what the
+(`#libs/testing/fresh-layer.test_support.ts`), over `#infrastructure/storage/sqlite.memory.test_support.ts` for what the
 storage holds. What a test needs beyond the service (reading back a write, storing what the service reads, a row
 no write of the app makes) comes from the storage's own test support (`settings.test_support.ts`,
 `barcodes.test_support.ts`, `products.test_support.ts`): reads and writes that only tests need never go into a

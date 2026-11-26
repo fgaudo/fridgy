@@ -4,7 +4,7 @@ What is to be done or decided now, and nothing else. A step done is removed, wit
 later step needs to know of it is written on that step. The steps come from a review of the architecture that the
 owner asked for on 22 November 2026, from the move to effect-tea 0.9.0 on 26 November 2026, which closed the
 steps on the root and on the inputs, and what waited for that release, and from a review of the structure on that
-same day, for which the owner set every rule of the project aside. Steps 1 to 3 and step 6 waited under "Any time"
+same day, for which the owner set every rule of the project aside. Steps 1, 2 and 5 waited under "Any time"
 and "Waiting for the owner", until the owner took them up on that day too.
 
 That last review found one thing, which steps done acted on. The app has three boundaries where one thing
@@ -20,32 +20,11 @@ that describe what it changed brought up to date (`AGENTS.md`, "Conventions").
 
 ## Next, in order
 
-### 1. What the web build left behind
-
-**Model and effort.** Sonnet 5.5, `medium`.
-
-**Depends on** no other step.
-
-**Why.** `sqlite.memory.ts` is imported only by tests and their support, under a name that bundles may import, and
-`@effect/sql-sqlite-wasm` is a dependency of the app. Comments still name the browser.
-
-**How.**
-
-- The file becomes `sqlite.memory.test_support.ts`, in its four imports (`src/app/user.test_support.ts`,
-  `products.test.ts`, `date-order.test.ts`, `product-lookup.open-food-facts.test.ts`) and in the `add-service`
-  skill, which names it.
-- Its package becomes a `devDependency`: `bun install` writes the lockfile.
-- The comments are those of `src/infrastructure/back-button/back-button.ts` and `src/libs/dates/date-order.ts`;
-  `tsconfig.json` names `platform-browser`.
-
-**Done when** `browser` is found under `src/` only where it is true (the generated licenses quote their packages'
-descriptions), `bun run bundle` passes, and `bun run update-licenses` leaves its file as it is.
-
-### 2. The crash screen tells the cause
+### 1. The crash screen tells the cause
 
 **Model and effort.** Opus 5.5, `medium`.
 
-**Depends on** no other step. It comes before step 5, which sees the screen.
+**Depends on** no other step. It comes before step 4, which sees the screen.
 
 **Why.** The crash screen shows nothing of the cause (`src/entrypoints/crash/view.tsx`), by a decision that the
 owner reversed on 26 November 2026. The cause goes to the log, which a user cannot reach: a crash on a phone cannot
@@ -61,7 +40,7 @@ be told apart from another.
 - The screen is drawn outside the program, and holds no state: the detail is always there, under the text, small,
   within a height of its own, as a text the user can select and copy. No button opens it, nothing is sent, and no
   dependency is added.
-- The detail is the cause's text, never the app's: step 4 translates none of it.
+- The detail is the cause's text, never the app's: step 3 translates none of it.
 - No procedure raises a crash on demand yet: a defect raised on purpose, in a change that is not committed, shows
   the screen. Should the `android-release` skill need it again, the skill says how.
 
@@ -69,11 +48,11 @@ be told apart from another.
 still fits the reference screen; and the view's comment, with any document that says nothing is shown, says what
 is.
 
-### 3. The name's field, controlled
+### 2. The name's field, controlled
 
 **Model and effort.** Opus 5.5, `high`: two state machines lose a field, with their properties.
 
-**Depends on** the owner's phone, for the trial. It comes before step 5, which sees the field.
+**Depends on** the owner's phone, for the trial. It comes before step 4, which sees the field.
 
 **Why.** A text field is uncontrolled, by the `views` skill: its text is `defaultValue`, and a new `key` replaces
 it, which makes the field anew at every clearing and every scan. The choice was made when the runtime drew no
@@ -99,7 +78,7 @@ and `nameKey` and `replacements` go, from `AddProducts` and `EditProduct`.
 nowhere under `src/app`, the skill describes the controlled field, and the owner has typed into both pages' fields
 on the phone.
 
-### 4. Design: the app in the user's language
+### 3. Design: the app in the user's language
 
 **Model and effort.** Fable 5.2, `high`: a design, whose steps are then written here, each with its own model.
 
@@ -108,7 +87,7 @@ on the phone.
 **Why.** The texts are English, literals in the views (about 65), in the crash screen, and one in the domain
 (`'Undefined name'`, `fromSnapshot`). The dates, the order of a date's digits and the language Open Food Facts is
 asked in follow the device. The models hold tags and values, never text, so the views are the only place the texts
-are. The crash screen's detail (step 2) is the cause's text, and is not translated.
+are. The crash screen's detail (step 1) is the cause's text, and is not translated.
 
 **How.** The design decides:
 
@@ -124,11 +103,11 @@ are. The crash screen's detail (step 2) is the cause's text, and is not translat
 **Done when** `docs/localization.md` holds the decisions and the facts they rely on, checked; the steps that
 implement it are written here; the owner has read it.
 
-### 5. The app on effect-tea 0.9.0, seen on the emulator
+### 4. The app on effect-tea 0.9.0, seen on the emulator
 
 **Model and effort.** Opus 5.5, `medium`.
 
-**Depends on** steps 2 and 3, which change what it looks at. It comes last of the steps that change a view, as the
+**Depends on** steps 1 and 2, which change what it looks at. It comes last of the steps that change a view, as the
 owner decided on 26 November 2026: the views are seen once, as the steps before it leave them.
 
 **Why.** The move to 0.9.0 changed every program and every view, and was checked by the tests, the typecheck,
@@ -141,7 +120,7 @@ at:
 - **Home's scroll.** The heights, the offset and the end of a scroll are messages that the view fills, where they
   were inputs: the bar collapses and snaps, the add button shrinks while the list scrolls, a change of the font
   size or of the screen draws the list anew at its top, and Home comes back from a page where it rested.
-- **The name's field**, in both pages, as step 3 left it: typing, clearing, a scan that replaces it, a key typed
+- **The name's field**, in both pages, as step 2 left it: typing, clearing, a scan that replaces it, a key typed
   just before "Add" and "Save".
 - **The date**, drawn by one view for both pages (`src/app/programs/expiration/view.tsx`): the segments, the
   field, the strip and the keypad lay out in each page's column as before. Its keys take nothing until the order
@@ -156,16 +135,16 @@ at:
   (`src/infrastructure/links/`).
 - **The root that draws.** The system theme changed while a page over Home is shown keeps that page
   (`src/entrypoints/native.tsx` starts the program itself, for this). The crash screen, the cause it tells
-  (step 2), and its restart.
+  (step 1), and its restart.
 
 **Done when** each item above was seen on the emulator, on a debug build and on a release, and what was found is
 fixed, or written here as a step; `docs/motion.md` and `docs/testing.md` say what was seen, and when.
 
-### 6. Home's scroll, seen on a phone
+### 5. Home's scroll, seen on a phone
 
 **Model and effort.** Opus 5.5, `medium`: a measurement, and no change to the code.
 
-**Depends on** step 5, for its release build and a scroll already seen on the emulator, and on the owner's phone.
+**Depends on** step 4, for its release build and a scroll already seen on the emulator, and on the owner's phone.
 
 **Why.** Every scroll event is a message through `update`, the root's `makeModel` and React; the twenty steps of
 `collapse` soften it. The runtime says what a step at each event costs, and that such a value is sent once, as its
@@ -229,6 +208,6 @@ a step when a release takes it up, or goes when the runtime rejects it.
   must be worked out before they can be followed ("A page over Home is a child by the number of its visit, never
   used again"). An agent reads the file at every session. To weigh: plain statements, one fact each, as the file
   asks of a comment. It is the owner's voice, so nothing changes it without the owner.
-- **What the move to 0.9.0 changed for the user**, each decided in passing and seen on no screen yet (step 5): the
+- **What the move to 0.9.0 changed for the user**, each decided in passing and seen on no screen yet (step 4): the
   keypad of a date takes no key until the order of its digits is read; the disc of a product entering the fridge
   is colored by the day it was added on, where it followed the clock during its flight.

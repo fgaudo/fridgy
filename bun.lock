@@ -6,7 +6,6 @@
       "name": "fridgy",
       "dependencies": {
         "@effect/sql-sqlite-react-native": "4.1.5",
-        "@effect/sql-sqlite-wasm": "^4.1.5",
         "@fgaudo/effect-tea": "^0.9.0",
         "@op-engineering/op-sqlite": "18.2.5",
         "effect": "^4.1.5",
@@ -26,6 +25,7 @@
         "@babel/runtime": "^7.25.0",
         "@biomejs/biome": "^2.6.4",
         "@effect/platform-bun": "^4.1.5",
+        "@effect/sql-sqlite-wasm": "^4.1.5",
         "@effect/tsgo": "0.63.0",
         "@material/material-color-utilities": "^0.4.0",
         "@react-native-community/cli": "20.2.0",
