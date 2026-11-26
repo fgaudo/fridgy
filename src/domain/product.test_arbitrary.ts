@@ -14,7 +14,7 @@ const DAY = 86_400_000
 export const unvalidatedSnapshot: fc.Arbitrary<Product.UnvalidatedSnapshot> = fc.record({
   maybeName: maybe(fc.string()),
   maybeCreationDate: maybe(utc),
-  maybeExpirationDate: maybe(day),
+  maybeExpirationDate: maybe(maybe(day)),
 })
 
 // Expirations are an offset from the creation date, as a product is made: from the day before it in UTC, which
@@ -27,7 +27,9 @@ export const validSnapshot: fc.Arbitrary<Product.UnvalidatedSnapshot> = fc.recor
 }).map(({ name, creation, maybeLifetime }) => ({
   maybeName: Opt.some(name),
   maybeCreationDate: Opt.some(DateTime.makeUnsafe(creation)),
-  maybeExpirationDate: Opt.map(maybeLifetime, (lifetime) => Day.fromDateTime(DateTime.makeUnsafe(creation + lifetime))),
+  maybeExpirationDate: Opt.some(
+    Opt.map(maybeLifetime, (lifetime) => Day.fromDateTime(DateTime.makeUnsafe(creation + lifetime))),
+  ),
 }))
 
 export const arbitrary: fc.Arbitrary<Product.Product> = validSnapshot.map((snapshot) =>

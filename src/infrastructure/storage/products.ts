@@ -1,16 +1,19 @@
 // How products are written and read, for every adapter of the storage: how each column is encoded, the tables
 // as models, the repository of products, the insertion, the update and the deletion of a product with its
-// expiration, and the join of a product to its expiration. What a query over them selects, filters and orders is the query's own.
+// expiration, and a product's row joined to its expiration, as it is selected and read. What a query filters and
+// orders is its own.
 import * as Context from 'effect/Context'
 import type * as DateTime from 'effect/DateTime'
 import * as Effect from 'effect/Effect'
 import { flow } from 'effect/Function'
 import * as Layer from 'effect/Layer'
 import * as Opt from 'effect/Option'
+import * as Predicate from 'effect/Predicate'
 import * as Schema from 'effect/Schema'
 import * as SchemaX from 'effect/schema'
 import * as Sql from 'effect/sql'
 import * as SqlSchema from 'effect/sql/SqlSchema'
+import type * as Domain from '#domain/product.ts'
 import * as Day from '#libs/dates/day.ts'
 import * as Integer from '#libs/numbers/integer.ts'
 import { ProductExpirationSchema, ProductSchema } from './schema.ts'
@@ -27,6 +30,33 @@ export const ProductExpirationColumns = {
   date: Day.Schema,
   productId: Integer.Schema,
 } as const
+
+/**
+ * A product's row as `withExpiration.select` gives it. The id is the rowid, always there. The other columns are
+ * read one by one (`readRow`), so that one that cannot be read leaves the others, and the other rows.
+ */
+const Row = Schema.Struct({
+  id: ProductColumns.id,
+  name: Schema.Unknown,
+  creationDate: Schema.Unknown,
+  expirationDate: Schema.Unknown,
+})
+
+const readName = Schema.decodeUnknownOption(ProductColumns.name)
+const readCreationDate = Schema.decodeUnknownOption(ProductColumns.creationDate)
+const readExpirationDate = Schema.decodeUnknownOption(ProductExpirationColumns.date)
+
+/** What a row holds. A missing expiration is a product that never expires: the schema stores no `NULL` date. */
+const readRow = (row: typeof Row.Type): Readonly<{ id: Integer.Integer; snapshot: Domain.UnvalidatedSnapshot }> => ({
+  id: row.id,
+  snapshot: {
+    maybeName: readName(row.name),
+    maybeCreationDate: readCreationDate(row.creationDate),
+    maybeExpirationDate: Predicate.isNullish(row.expirationDate)
+      ? Opt.some(Opt.none())
+      : Opt.map(readExpirationDate(row.expirationDate), Opt.some),
+  },
+})
 
 class Product extends SchemaX.Model.Class<Product>('Product')({
   [ProductSchema.columns.id]: SchemaX.Model.Field({
@@ -161,11 +191,17 @@ export class ProductStore extends Context.Service<ProductStore>()(
       /** Deletes a product; the schema's trigger deletes its expiration with it (`migrations.ts`). */
       const deleteById = (id: Integer.Integer) => repository.delete(id)
       /**
-       * A product with its expiration, if any, for the queries that read products: the `FROM` of a product
-       * left-joined to its expiration, the columns a query may select or refer to, and the tables it reads, for a
-       * query that reacts to their changes. What a query selects, filters and orders is its own.
+       * A product with its expiration, if any, for the queries that read products: the `SELECT` of a row, the
+       * schema of what it gives and how a row is read, the `FROM` of a product left-joined to its expiration, the
+       * columns a query may refer to, and the tables it reads, for a query that reacts to their changes. What a
+       * query filters and orders is its own.
        */
       const withExpiration = {
+        select: sql`
+          SELECT ${id} AS id, ${name} AS name, ${creationDate} AS creationDate, ${expirationDate} AS expirationDate
+        `,
+        Row,
+        readRow,
         from: sql`FROM ${sql(product_table)} LEFT JOIN ${sql(expiration_table)} ON ${id} = ${productId}`,
         columns: { id, name, creationDate, expirationDate },
         tables: [product_table, expiration_table],

@@ -36,20 +36,14 @@ export const gesture: fc.Arbitrary<Gesture> = fc.constantFrom('Tap', 'LongPress'
 export const product: fc.Arbitrary<Product> = fc.oneof(
   fc.record({ id, product: ProductArbitrary.arbitrary }).map((fields) => ({ _tag: 'Valid', ...fields } as const)),
   fc.record({ id, maybeName: maybe(fc.string()) }).map((fields) => ({ _tag: 'Invalid', ...fields } as const)),
-  maybe(fc.string()).map((maybeName) => ({ _tag: 'Corrupt', maybeName } as const)),
 )
-
-/** Whether two rows of the storage have the same id: the storage's key lists each id once. */
-const sameId = (a: Product, b: Product) => a._tag !== 'Corrupt' && b._tag !== 'Corrupt' && a.id === b.id
 
 /** The products of a list, as the storage lists them: each id once. */
 export const products = (constraints: { minLength?: number } = {}): fc.Arbitrary<ReadonlyArray<Product>> =>
-  fc.uniqueArray(product, { ...constraints, maxLength: 8, comparator: sameId })
-
-type Leaving = Departure['item']
+  fc.uniqueArray(product, { ...constraints, maxLength: 8, selector: (item) => item.id })
 
 /** A product that is no longer listed, with that id. */
-const leavingWith = (leavingId: string): fc.Arbitrary<Leaving> =>
+const leavingWith = (leavingId: string): fc.Arbitrary<Product> =>
   fc.oneof(
     ProductArbitrary.arbitrary.map((product) => ({ _tag: 'Valid', id: leavingId, product } as const)),
     maybe(fc.string()).map((maybeName) => ({ _tag: 'Invalid', id: leavingId, maybeName } as const)),
@@ -59,9 +53,9 @@ const leavingWith = (leavingId: string): fc.Arbitrary<Leaving> =>
  * The rows leaving as a change leaves them: placed among the listed ones, in the order they were shown, each after
  * the row with an id it followed.
  */
-const departuresAmong = (items: ReadonlyArray<Product>, leaving: ReadonlyArray<Leaving>) =>
+const departuresAmong = (items: ReadonlyArray<Product>, leaving: ReadonlyArray<Product>) =>
   fc.tuple(...leaving.map(() => fc.nat({ max: items.length }))).map((places) => {
-    const shown = leaving.reduce<ReadonlyArray<Product | { leaving: Leaving }>>(
+    const shown = leaving.reduce<ReadonlyArray<Product | { leaving: Product }>>(
       (rows, item, index) => [...rows.slice(0, places[index]), { leaving: item }, ...rows.slice(places[index])],
       items,
     )
@@ -69,8 +63,6 @@ const departuresAmong = (items: ReadonlyArray<Product>, leaving: ReadonlyArray<L
       ({ maybeAfter, departures }, row) =>
         'leaving' in row
           ? { maybeAfter: Opt.some(row.leaving.id), departures: [...departures, { item: row.leaving, maybeAfter }] }
-          : row._tag === 'Corrupt'
-          ? { maybeAfter, departures }
           : { maybeAfter: Opt.some(row.id), departures },
       { maybeAfter: Opt.none(), departures: [] },
     ).departures
@@ -80,7 +72,7 @@ const departuresAmong = (items: ReadonlyArray<Product>, leaving: ReadonlyArray<L
  * A loaded list of those products, some of whose rows may be arriving, with rows leaving that it no longer lists.
  */
 export const loadedOf = (items: ReadonlyArray<Product>): fc.Arbitrary<State['list']> => {
-  const ids = items.flatMap((item) => item._tag === 'Corrupt' ? [] : [item.id])
+  const ids = items.map((item) => item.id)
   const freeIds = IDS.filter((id) => !ids.includes(id))
   return fc.record({
     arriving: fc.subarray(ids),
@@ -162,10 +154,10 @@ export const still: fc.Arbitrary<Whole> = wholeOf(own.filter((state) => !hasExpi
 export const stateWith = <K extends keyof State>(key: K, arbitrary: fc.Arbitrary<State[K]>) =>
   wholeOf(fc.tuple(own, arbitrary).map(([base, value]): State => ({ ...base, [key]: value })))
 
-/** What the product storage may send: products with or without an id, valid or not, each id once. */
+/** What the product storage may send: products valid or not, each id once. */
 export const storedProducts: fc.Arbitrary<ReadonlyArray<StoredProduct>> = fc.uniqueArray(
-  fc.tuple(maybe(id), ProductArbitrary.unvalidatedSnapshot).map(([maybeId, snapshot]) => ({ ...snapshot, maybeId })),
-  { maxLength: 8, comparator: (a, b) => Opt.isSome(a.maybeId) && Opt.contains(b.maybeId, a.maybeId.value) },
+  fc.tuple(id, ProductArbitrary.unvalidatedSnapshot).map(([id, snapshot]) => ({ ...snapshot, id })),
+  { maxLength: 8, selector: (stored) => stored.id },
 )
 
 /** Any message of Products' own: the snackbar's are tested in its own folder. */

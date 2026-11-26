@@ -1,14 +1,11 @@
 import * as Context from 'effect/Context'
 import * as Data from 'effect/Data'
-import type * as Opt from 'effect/Option'
 import type * as Result from 'effect/Result'
 import type * as Product from '#domain/product.ts'
 import type { Source } from '#libs/source/source.ts'
 
-/** A stored product, still unvalidated: storage may contain anything. */
-export type StoredProduct = Product.UnvalidatedSnapshot & {
-  maybeId: Opt.Option<string>
-}
+/** A stored product under its id, still unvalidated: storage may contain anything, and every row has an id. */
+export type StoredProduct = Product.UnvalidatedSnapshot & Readonly<{ id: string }>
 
 /** The storage could not be read: the list stays as it was until the next change. */
 export class ProductListReadError extends Data.TaggedError('ProductListReadError')<{

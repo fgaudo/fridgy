@@ -44,8 +44,7 @@ decided".
    as the page that adds products does. A long press selects the row; once a selection exists, a tap on any row
    selects or deselects it, `Invalid` rows included, and opens nothing; the contextual bar's close button ends the
    selection and gives taps their meaning back. While nothing is selected, a tap does nothing on a row that is
-   leaving, on an `Invalid` row (it can only be deleted) and on a `Corrupt` one, and while a deletion is in
-   progress.
+   leaving and on an `Invalid` row (it can only be deleted), and while a deletion is in progress.
 2. **The page.** Material's full-screen dialog, laid out as the second step of `add-products` is, read from the
    top: the app bar with its close button and the title "Edit product"; the name's outlined text field, with
    the product's name in it and a clear button, not focused (the keyboard would cover the keypad, and the user
@@ -173,7 +172,7 @@ form one union: `Loading | Editing | Saving | Gone`.
 no parent reads the child's state; `Home` forwards it, and the root shows the page (it honours Home's requests
 only while Home is shown, so a double tap opens it once). The model decides what a tap does (`maybeTap` in
 `ItemSelection`): opening a `Valid` row while nothing is selected, the row's toggle while selecting, nothing
-while deleting, on a leaving row and on `Corrupt` rows; the view attaches whatever message it holds to `click`.
+while deleting and on a leaving row; the view attaches whatever message it holds to `click`.
 
 ## The service (`src/app/children/edit-product/services/update-product/`)
 

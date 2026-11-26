@@ -119,10 +119,10 @@ type Search = Data.TaggedEnum<{
   - Nothing else changes: the selection, the deletion, the undo, the arrivals and departures are computed on the
     whole stored list, as today.
 - **`makeModel`:** the rows are `rowsOf(list)`, the whole list in order with the rows leaving where they were,
-  **then** filtered by the query on each row's name (`Valid`: `product.name`; `Invalid`: `maybeName`;
-  `Corrupt`: its `maybeName` too). Filtering after placing keeps a leaving row right after the last row shown
-  that preceded it, even when the row it followed is hidden (`maybeAfter` names a row of the whole list;
-  **verified** in `rowsOf`: an anchor not found puts the row first, which would be wrong among the rows shown).
+  **then** filtered by the query on each row's name (`Valid`: `product.name`; `Invalid`: `maybeName`). Filtering
+  after placing keeps a leaving row right after the last row shown that preceded it, even when the row it followed
+  is hidden (`maybeAfter` names a row of the whole list; **verified** in `rowsOf`: an anchor not found puts the row
+  first, which would be wrong among the rows shown).
   The list model gains a case: `NoMatches` when a filter is on and no **item** matches (rows only leaving go
   with the list's fade, as the last rows do today when the storage empties); `Empty` stays the storage's, and
   wins. `Available` gains `maybeMatching: Option<PositiveInteger>`, the count of items matching while a filter is

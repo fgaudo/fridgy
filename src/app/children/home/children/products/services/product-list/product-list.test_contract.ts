@@ -1,6 +1,6 @@
 // What every adapter of `ProductList` must do. It holds no implementation: each adapter's
-// `<service>.<backing>.test.ts` runs it with its own layer, and with the storage's own `insert`, `update` and
-// `remove`, which write to that adapter's storage without a service.
+// `<service>.<backing>.test.ts` runs it with its own layer, and with the storage's own `insert`, `insertRow`,
+// `update` and `remove`, which write to that adapter's storage without a service.
 import { describe, test } from 'bun:test'
 import * as Arr from 'effect/Array'
 import * as Channel from 'effect/Channel'
@@ -22,6 +22,13 @@ import { ProductList, type StoredProduct } from './product-list.ts'
 export type Storage<R> = Readonly<{
   /** Stores a product, answering with its id. */
   insert: (snapshot: Product.Snapshot) => Effect.Effect<string, never, R>
+  /**
+   * Stores what no write of the app stores, answering with its id: the creation date and the expiration are any
+   * text, and `None` stores no expiration.
+   */
+  insertRow: (
+    row: Readonly<{ name: string; creationDate: string; maybeExpirationDate: Opt.Option<string> }>,
+  ) => Effect.Effect<string, never, R>
   /** Writes a product under `id`, in place of what was there. */
   update: (id: string, snapshot: Product.Snapshot) => Effect.Effect<void, never, R>
   /** Removes the product stored under `id`. */
@@ -40,17 +47,17 @@ const list = Effect.gen(function*() {
 })
 
 const withId = (products: ReadonlyArray<StoredProduct>, id: string) =>
-  Arr.findFirst(products, (stored) => Opt.contains(stored.maybeId, id))
+  Arr.findFirst(products, (stored) => stored.id === id)
 
 /** Products that expire come first, the soonest first; those that never expire come last. */
 const isExpiringFirst = (products: ReadonlyArray<StoredProduct>) =>
   products.every((current, index) => {
     const next = products[index + 1]
     if (next === undefined) return true
-    return Opt.match(current.maybeExpirationDate, {
-      onNone: () => Opt.isNone(next.maybeExpirationDate),
+    return Opt.match(Opt.flatten(current.maybeExpirationDate), {
+      onNone: () => Opt.isNone(Opt.flatten(next.maybeExpirationDate)),
       onSome: (date) =>
-        Opt.match(next.maybeExpirationDate, {
+        Opt.match(Opt.flatten(next.maybeExpirationDate), {
           onNone: () => true,
           onSome: (later) => Order.isLessThanOrEqualTo(Day.Order)(date, later),
         }),
@@ -59,7 +66,7 @@ const isExpiringFirst = (products: ReadonlyArray<StoredProduct>) =>
 
 /** Products with the same expiration, or with none, are listed in the order they were written, `ids`. */
 const isWrittenOrderAmongEquals = (products: ReadonlyArray<StoredProduct>, ids: ReadonlyArray<string>) => {
-  const writtenAt = (product: StoredProduct) => ids.indexOf(Opt.getOrElse(product.maybeId, () => ''))
+  const writtenAt = (product: StoredProduct) => ids.indexOf(product.id)
   return products.every((current, index) => {
     const next = products[index + 1]
     if (next === undefined || !Equal.equals(current.maybeExpirationDate, next.maybeExpirationDate)) return true
@@ -75,7 +82,7 @@ const withEqualExpirations = fc.array(ProductArbitrary.arbitrary, { minLength: 1
 export const productListContract = <R>(
   name: string,
   adapter: () => Layer.Layer<ProductList | R>,
-  { insert, update, remove }: Storage<R>,
+  { insert, insertRow, update, remove }: Storage<R>,
 ) =>
   describe(`ProductList contract (${name})`, () => {
     const add = (product: Product.Product) => insert(Product.toSnapshot(product))
@@ -118,6 +125,37 @@ export const productListContract = <R>(
           const stored = withId(listed, id)
           return ids.every((other) => Opt.isSome(withId(listed, other))) && isExpiringFirst(listed)
             && Opt.exists(stored, (s) => Equal.equals(Product.fromSnapshot(s), Opt.some(updated)))
+        }),
+      ))
+
+    // One row that cannot be read takes neither the others nor itself out of the list: it can still be deleted.
+    test('rows whose creation date or expiration cannot be read are listed, under their id and name, as no products, beside the products', () =>
+      checkOnFreshLayer(
+        adapter,
+        fc.array(ProductArbitrary.arbitrary, { maxLength: 6 }),
+        Effect.fnUntraced(function*(products) {
+          const ids = yield* Effect.forEach(products, add)
+          const unreadable = yield* Effect.forEach([
+            { name: 'Milk', creationDate: 'not a date', maybeExpirationDate: Opt.none() },
+            { name: 'Eggs', creationDate: '2026-11-26T10:00:00.000Z', maybeExpirationDate: Opt.some('not a day') },
+          ], (row) => Effect.map(insertRow(row), (id) => ({ id, name: row.name })))
+          const listed = yield* list
+          return listed.length === products.length + unreadable.length
+            && unreadable.every(({ id, name }) =>
+              Opt.exists(
+                withId(listed, id),
+                (stored) =>
+                  Opt.contains(stored.maybeName, name) && Opt.isNone(Product.fromSnapshot(stored))
+                  // Each row is no product by one field alone.
+                  && Opt.isNone(stored.maybeCreationDate) !== Opt.isNone(stored.maybeExpirationDate),
+              )
+            )
+            && products.every((product, index) =>
+              Opt.exists(
+                Arr.get(ids, index).pipe(Opt.flatMap((id) => withId(listed, id))),
+                (stored) => Equal.equals(Product.fromSnapshot(stored), Opt.some(product)),
+              )
+            )
         }),
       ))
 

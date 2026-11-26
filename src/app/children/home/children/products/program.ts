@@ -26,9 +26,7 @@ import * as DeleteProducts from './services/delete-products/delete-products.ts'
 import { ProductList, type ProductListReadError, type StoredProduct } from './services/product-list/product-list.ts'
 
 export type Product = Data.TaggedEnum<{
-  /** Stored data so broken it cannot even be referenced. */
-  Corrupt: Readonly<{ maybeName: Opt.Option<string> }>
-  /** Stored with an id, but not a valid product: it can still be selected and deleted. */
+  /** Stored, but not a valid product: it can still be selected and deleted. */
   Invalid: Readonly<{ id: string; maybeName: Opt.Option<string> }>
   Valid: Readonly<{ id: string; product: Domain.Product }>
 }>
@@ -39,7 +37,7 @@ const Product = Data.taggedEnum<Product>()
  * A row the storage no longer lists, kept after the row it followed (or first) while it closes its place: the rows
  * under it rise, rather than jump to their new place.
  */
-export type Departure = Readonly<{ item: Exclude<Product, { _tag: 'Corrupt' }>; maybeAfter: Opt.Option<string> }>
+export type Departure = Readonly<{ item: Product; maybeAfter: Opt.Option<string> }>
 
 /**
  * The products being deleted, when every one of them is a product: only then can the deletion be undone, by
@@ -177,8 +175,6 @@ export type Presence = 'Arriving' | 'Listed' | 'Leaving'
 export type Settling = 'Still' | 'Opening' | 'Closing'
 
 export type ProductModel = Data.TaggedEnum<{
-  /** Cannot be referenced, so nothing can be done with it. */
-  Corrupt: Readonly<{ maybeName: Opt.Option<string> }>
   Invalid: Readonly<{ id: string; selection: ItemSelection; presence: Presence; maybeName: Opt.Option<string> }>
   Valid: Readonly<{ id: string; selection: ItemSelection; presence: Presence; name: string; status: ProductStatus }>
 }>
@@ -233,16 +229,11 @@ const tell = (notice: Notice): Tell => ({
   message: { _tag: 'Told', notice, lasting: Opt.isSome(restorableOf(notice)) ? 'Long' : 'Short' },
 })
 
-// Products that still have an id can be selected and deleted, even when invalid;
-// the ones without an id cannot be referenced at all.
+// Stored data that is not a product can still be selected and deleted, by its id.
 const validate = (stored: StoredProduct): Product =>
-  Opt.match(stored.maybeId, {
-    onNone: () => Product.Corrupt({ maybeName: stored.maybeName }),
-    onSome: (id) =>
-      Opt.match(Domain.fromSnapshot(stored), {
-        onNone: () => Product.Invalid({ id, maybeName: stored.maybeName }),
-        onSome: (product) => Product.Valid({ id, product }),
-      }),
+  Opt.match(Domain.fromSnapshot(stored), {
+    onNone: () => Product.Invalid({ id: stored.id, maybeName: stored.maybeName }),
+    onSome: (product) => Product.Valid({ id: stored.id, product }),
   })
 
 const expires = (item: Product) => item._tag === 'Valid' && Opt.isSome(item.product.maybeExpirationDate)
@@ -252,8 +243,7 @@ const needsClock = (list: State['list']) =>
   list._tag === 'Loaded'
   && (Arr.some(list.items, expires) || Arr.some(list.departures, (departure) => expires(departure.item)))
 
-const idsOf = (items: ReadonlyArray<Product>) =>
-  HashSet.fromIterable(Arr.flatMap(items, (product) => (product._tag === 'Corrupt' ? [] : [product.id])))
+const idsOf = (items: ReadonlyArray<Product>) => HashSet.fromIterable(Arr.map(items, (product) => product.id))
 
 type Loaded = Data.TaggedEnum.Value<State['list'], 'Loaded'>
 
@@ -265,14 +255,14 @@ const rowsOf = ({ items, arrivals, departures }: Loaded): ReadonlyArray<Row> =>
     departures,
     Arr.map(items, (item): Row => ({
       item,
-      presence: item._tag !== 'Corrupt' && HashSet.has(arrivals, item.id) ? 'Arriving' : 'Listed',
+      presence: HashSet.has(arrivals, item.id) ? 'Arriving' : 'Listed',
     })),
     (rows, { item, maybeAfter }) => {
       const anchor = Opt.match(maybeAfter, {
         onNone: () => 0,
         onSome: (id) =>
           pipe(
-            Arr.findFirstIndex(rows, (row) => row.item._tag !== 'Corrupt' && row.item.id === id),
+            Arr.findFirstIndex(rows, (row) => row.item.id === id),
             Opt.match({ onNone: () => 0, onSome: (index) => index + 1 }),
           ),
       })
@@ -289,13 +279,10 @@ const departuresFrom = (rows: ReadonlyArray<Row>, ids: HashSet.HashSet<string>):
   Arr.reduce(
     rows,
     { maybeAfter: Opt.none<string>(), departures: Arr.empty<Departure>() },
-    ({ maybeAfter, departures }, { item }) =>
-      item._tag === 'Corrupt'
-        ? { maybeAfter, departures }
-        : {
-          maybeAfter: Opt.some(item.id),
-          departures: HashSet.has(ids, item.id) ? departures : [...departures, { item, maybeAfter }],
-        },
+    ({ maybeAfter, departures }, { item }) => ({
+      maybeAfter: Opt.some(item.id),
+      departures: HashSet.has(ids, item.id) ? departures : [...departures, { item, maybeAfter }],
+    }),
   ).departures
 
 /** Whether a row opens or closes its place. */
@@ -479,7 +466,6 @@ const listModel = (state: State): ListModel => {
   // Until the clock has ticked, the products that expire have no status: the list waits for it.
   const maybeProducts = Opt.all(Arr.map(rowsOf(state.list), ({ item, presence }) =>
     Match.valueTags(item, {
-      Corrupt: ({ maybeName }): Opt.Option<ProductModel> => Opt.some({ _tag: 'Corrupt', maybeName }),
       Invalid: ({ id, maybeName }): Opt.Option<ProductModel> =>
         Opt.some({ _tag: 'Invalid', id, selection: itemSelectionOf(id, presence, false), presence, maybeName }),
       Valid: ({ id, product }): Opt.Option<ProductModel> =>

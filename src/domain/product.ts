@@ -43,10 +43,14 @@ export type Snapshot = Brand.Branded<
 
 const _Snapshot = Brand.nominal<Snapshot>()
 
+/**
+ * A product as a storage reads it back: each field is `None` when what is stored cannot be read. The expiration
+ * read is itself an `Option`: `Some(None)` is a product that never expires.
+ */
 export type UnvalidatedSnapshot = Readonly<{
   maybeName: Opt.Option<string>
   maybeCreationDate: Opt.Option<DateTime.Utc>
-  maybeExpirationDate: Opt.Option<Day.Day>
+  maybeExpirationDate: Opt.Option<Opt.Option<Day.Day>>
 }>
 
 /** A product's name, from what the user typed: normalized, and never blank. */
@@ -105,12 +109,13 @@ export const edit = (
 
 /**
  * A stored product, as a storage gives it back. More forgiving than `make`: a name that is no longer valid
- * is replaced, so that the product can still be shown and deleted. The expiration is not checked against the
- * creation: the creation's day depends on the zone the product was created in.
+ * is replaced, so that the product can still be shown and deleted. An expiration that cannot be read is no
+ * product, never one that never expires. The expiration is not checked against the creation: the creation's day
+ * depends on the zone the product was created in.
  */
 export const fromSnapshot = (p: UnvalidatedSnapshot): Opt.Option<Product> =>
   Opt.gen(function*() {
-    const [name, creationDate] = yield* Opt.all([
+    const [name, creationDate, maybeExpirationDate] = yield* Opt.all([
       Opt.gen(function*() {
         const maybeName = NormalizedString.fromString(yield* p.maybeName)
         if (Opt.isNone(maybeName)) {
@@ -119,8 +124,9 @@ export const fromSnapshot = (p: UnvalidatedSnapshot): Opt.Option<Product> =>
         return maybeName.value
       }),
       p.maybeCreationDate,
+      p.maybeExpirationDate,
     ])
-    return _Product({ creationDate, maybeExpirationDate: p.maybeExpirationDate, name })
+    return _Product({ creationDate, maybeExpirationDate, name })
   })
 
 export const toSnapshot = ({ name, creationDate, maybeExpirationDate }: Product): Snapshot =>

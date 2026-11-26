@@ -357,26 +357,6 @@ const invalidItem = (
     events,
   )
 
-/** Stored data that cannot even be referenced: nothing can be done with it. */
-const corruptItem = (
-  product: Data.TaggedEnum.Value<ProductModel, 'Corrupt'>,
-  index: number,
-  settling: Settling,
-  events: Handlers<Message>,
-) =>
-  item(
-    `corrupt-${index}`,
-    { isSelected: false, maybeToggle: Opt.none(), maybeTap: Opt.none() },
-    'Listed',
-    settling,
-    errorBadge('broken_image'),
-    Opt.getOrElse(product.maybeName, () => 'Unnamed product'),
-    'Cannot be read',
-    Opt.none(),
-    'Error',
-    events,
-  )
-
 const validItem = (
   product: Data.TaggedEnum.Value<ProductModel, 'Valid'>,
   settling: Settling,
@@ -497,14 +477,12 @@ export const subtitle = (model: Model): string | undefined =>
 const rows = (list: Data.TaggedEnum.Value<ListModel, 'Available'>, events: Handlers<Message>) => (
   <LayoutAnimationConfig skipEntering={false}>
     <Animated.View key='list' exiting={fadingOut} style={styles.list}>
-      {list.products.map((product, index) => {
+      {list.products.map((product) => {
         switch (product._tag) {
           case 'Valid':
             return validItem(product, list.settling, events)
           case 'Invalid':
             return invalidItem(product, list.settling, events)
-          case 'Corrupt':
-            return corruptItem(product, index, list.settling, events)
         }
       })}
     </Animated.View>

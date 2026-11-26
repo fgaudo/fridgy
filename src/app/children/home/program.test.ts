@@ -83,7 +83,7 @@ describe('Home update', () => {
       const isShown = (state: Whole, id: string) => {
         const list = listOf(state)
         return list._tag === 'Available'
-          && list.products.some((row) => row._tag !== 'Corrupt' && row.id === id && row.presence !== 'Leaving')
+          && list.products.some((row) => row.id === id && row.presence !== 'Leaving')
       }
       const isSelecting = (state: Whole) => {
         const list = listOf(state)
@@ -126,17 +126,13 @@ describe('Home update', () => {
             ProductsMsg.SelectionCleared(),
             ProductsMsg.DeleteStarted(),
             ProductsMsg.UndoRequested(),
-            ...items.flatMap((item) =>
-              item._tag === 'Corrupt'
-                ? []
-                : [
-                  ...(['Tap', 'LongPress'] as const).flatMap((by) => [
-                    ProductsMsg.ItemSelected({ id: item.id, by }),
-                    ProductsMsg.ItemDeselected({ id: item.id, by }),
-                  ]),
-                  ProductsMsg.EditRequested({ id: item.id }),
-                ]
-            ),
+            ...items.flatMap((item) => [
+              ...(['Tap', 'LongPress'] as const).flatMap((by) => [
+                ProductsMsg.ItemSelected({ id: item.id, by }),
+                ProductsMsg.ItemDeselected({ id: item.id, by }),
+              ]),
+              ProductsMsg.EditRequested({ id: item.id }),
+            ]),
           ].map(fromProducts),
         ]
         expect(dispatchViolations(program.update, {

@@ -60,7 +60,7 @@ const selectedIds = (selection: Selection) => selection._tag === 'Idle' ? HashSe
 /** The ids of the loaded products: what can be selected. */
 const listedIds = (state: State) =>
   HashSet.fromIterable(
-    state.list._tag === 'Loaded' ? state.list.items.flatMap((item) => item._tag === 'Corrupt' ? [] : [item.id]) : [],
+    state.list._tag === 'Loaded' ? state.list.items.map((item) => item.id) : [],
   )
 
 /** The ids of the rows arriving: none unless the list is loaded. */
@@ -79,10 +79,10 @@ const isSettling = (state: State) => HashSet.size(arrivalsOf(state)) > 0 || Hash
 /** What the storage sends for products with those ids: not valid ones, which need no time to be shown. */
 const storedWith = (ids: ReadonlyArray<string>): ReadonlyArray<StoredProduct> =>
   ids.map((id) => ({
-    maybeId: Opt.some(id),
+    id,
     maybeName: Opt.some(id),
     maybeCreationDate: Opt.none(),
-    maybeExpirationDate: Opt.none(),
+    maybeExpirationDate: Opt.some(Opt.none()),
   }))
 
 /** The snackbar standing in a state, as the library keeps it. */
@@ -178,14 +178,10 @@ describe('Products update', () => {
           && list.items.length === stored.length
           && stored.every((input, index) => {
             const item = list.items[index]
-            return Opt.match(input.maybeId, {
-              onNone: () => item?._tag === 'Corrupt',
-              onSome: (id) =>
-                Opt.match(Domain.fromSnapshot(input), {
-                  onNone: () => item?._tag === 'Invalid' && item.id === id,
-                  onSome: (validated) =>
-                    item?._tag === 'Valid' && item.id === id && Equal.equals(item.product, validated),
-                }),
+            return Opt.match(Domain.fromSnapshot(input), {
+              onNone: () => item?._tag === 'Invalid' && item.id === input.id,
+              onSome: (validated) =>
+                item?._tag === 'Valid' && item.id === input.id && Equal.equals(item.product, validated),
             })
           })
           && onlyChanged(before.own, after.own, 'list', 'selection', 'maybeNow')
@@ -224,7 +220,7 @@ describe('Products update', () => {
         if (before.own.selection._tag === 'Deleting') {
           return Equal.equals(after.own.selection, before.own.selection)
         }
-        const existingIds = HashSet.fromIterable(stored.flatMap((input) => Opt.toArray(input.maybeId)))
+        const existingIds = HashSet.fromIterable(stored.map((input) => input.id))
         const kept = HashSet.intersection(selectedIds(before.own.selection), existingIds)
         return after.own.selection._tag === (HashSet.size(kept) === 0 ? 'Idle' : 'Selecting')
           && Equal.equals(selectedIds(after.own.selection), kept)
@@ -532,7 +528,7 @@ describe('Products model', () => {
     return list._tag === 'Available' ? list.products : []
   }
 
-  const isLeaving = (row: ProductModel) => row._tag !== 'Corrupt' && row.presence === 'Leaving'
+  const isLeaving = (row: ProductModel) => row.presence === 'Leaving'
 
   /** The rows of the products listed, without the ones leaving. */
   const listedRows = (state: Whole) => rows(state).filter((row) => !isLeaving(row))
@@ -565,7 +561,7 @@ describe('Products model', () => {
       const leaving = rows(s).filter(isLeaving)
       return listed.length === items.length && listed.every((row, index) => row._tag === items[index]?._tag)
         && Equal.equals(
-          leaving.map((row) => row._tag === 'Corrupt' ? '' : row.id),
+          leaving.map((row) => row.id),
           departures.map(({ item }) => item.id),
         )
     })
@@ -574,7 +570,7 @@ describe('Products model', () => {
   // Deleting rows apart: the rows between them stay where they are while the others close their place.
   test('rows taken out stay where they were while they leave, and rows put back arrive there', () => {
     const changed = (ids: ReadonlyArray<string>) => Msg.ListChanged({ result: Result.succeed(storedWith(ids)) })
-    const presences = (s: Whole) => rows(s).map((row) => row._tag === 'Corrupt' ? '' : `${row.id}:${row.presence}`)
+    const presences = (s: Whole) => rows(s).map((row) => `${row.id}:${row.presence}`)
     const loaded = step(changed(['1', '2', '3', '4', '5']), program.init.state).after
     const deleted = step(changed(['1', '3', '5']), loaded).after
     const restored = step(changed(['1', '2', '3', '5']), deleted).after
@@ -588,7 +584,6 @@ describe('Products model', () => {
     assertProperty([shown], (s) => {
       const selected = selectedIds(s.own.selection)
       return rows(s).every((row) => {
-        if (row._tag === 'Corrupt') return true
         if (row.presence === 'Leaving') return !row.selection.isSelected && Opt.isNone(row.selection.maybeToggle)
         const isSelected = HashSet.has(selected, row.id)
         const expectedToggle = s.own.selection._tag === 'Deleting'
@@ -607,7 +602,6 @@ describe('Products model', () => {
   test('a tap on a row opens its product while nothing is selected, toggles it while selecting, and does nothing otherwise', () => {
     assertProperty([shown], (s) =>
       rows(s).every((row) => {
-        if (row._tag === 'Corrupt') return true
         const expected = s.own.selection._tag === 'Selecting'
           ? Opt.map(
             row.selection.maybeToggle,
@@ -626,10 +620,7 @@ describe('Products model', () => {
   test('a listed row arrives exactly when its id does', () => {
     assertProperty(
       [shown],
-      (s) =>
-        listedRows(s).every((row) =>
-          row._tag === 'Corrupt' || (row.presence === 'Arriving') === HashSet.has(arrivalsOf(s.own), row.id)
-        ),
+      (s) => listedRows(s).every((row) => (row.presence === 'Arriving') === HashSet.has(arrivalsOf(s.own), row.id)),
     )
   })
 

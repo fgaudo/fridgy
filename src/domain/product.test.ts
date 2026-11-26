@@ -37,7 +37,7 @@ const endOfDay = (expirationDate: Day.Day, now: DateTime.Zoned) => Day.startIn(D
 const readBack = (snapshot: Product.Snapshot): Product.UnvalidatedSnapshot => ({
   maybeName: Opt.some(snapshot.name),
   maybeCreationDate: Opt.some(snapshot.creationDate),
-  maybeExpirationDate: snapshot.maybeExpirationDate,
+  maybeExpirationDate: Opt.some(snapshot.maybeExpirationDate),
 })
 
 describe('Product snapshots', () => {
@@ -68,7 +68,17 @@ describe('Product snapshots', () => {
       fc.property(
         validInput,
         maybe(anyDay),
-        (input, maybeExpirationDate) => Opt.isSome(Product.fromSnapshot({ ...input, maybeExpirationDate })),
+        (input, maybeExpirationDate) =>
+          Opt.isSome(Product.fromSnapshot({ ...input, maybeExpirationDate: Opt.some(maybeExpirationDate) })),
+      ),
+    )
+  })
+
+  test('a stored product whose expiration cannot be read is no product', () => {
+    fc.assert(
+      fc.property(
+        validInput,
+        (input) => Opt.isNone(Product.fromSnapshot({ ...input, maybeExpirationDate: Opt.none() })),
       ),
     )
   })
@@ -104,7 +114,7 @@ describe('New products', () => {
     expect(Opt.isSome(Product.fromSnapshot({
       maybeName: Opt.some(' \t '),
       maybeCreationDate: Opt.some(DateTime.toUtc(creationDate)),
-      maybeExpirationDate: Opt.none(),
+      maybeExpirationDate: Opt.some(Opt.none()),
     }))).toBe(true)
   })
 
@@ -235,7 +245,7 @@ describe('Product expiration', () => {
       Opt.getOrThrow(Product.maybeExpiration(Opt.getOrThrow(Product.fromSnapshot({
         maybeName: Opt.some('Milk'),
         maybeCreationDate: Opt.some(DateTime.makeUnsafe('2026-10-01T00:00:00Z')),
-        maybeExpirationDate: Opt.some(day(date)),
+        maybeExpirationDate: Opt.some(Opt.some(day(date))),
       }))))
     const statusAt = (now: DateTime.Zoned, date: string) => {
       const status = Product.expirationStatus(now)(expiringOn(date))

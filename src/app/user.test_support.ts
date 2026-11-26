@@ -139,12 +139,12 @@ const onProducts = (pick: (model: Products.Model) => Opt.Option<Products.Message
 
 /** A long press on the first product of the list, which selects it. */
 export const selectFirstProduct = onProducts(({ list }) =>
-  list._tag === 'Available' && list.products[0]._tag !== 'Corrupt' ? list.products[0].selection.maybeToggle : Opt.none()
+  list._tag === 'Available' ? list.products[0].selection.maybeToggle : Opt.none()
 )
 
 /** A tap on the first product of the list: it opens the product, or toggles it once something is selected. */
 export const tapFirstProduct = onProducts(({ list }) =>
-  list._tag === 'Available' && list.products[0]._tag !== 'Corrupt' ? list.products[0].selection.maybeTap : Opt.none()
+  list._tag === 'Available' ? list.products[0].selection.maybeTap : Opt.none()
 )
 
 /** The contextual top app bar's delete button. */
