@@ -91,8 +91,9 @@ vibration of its own), that consumer gets a service of its own, written on the i
 The products' store (`ProductStore`, `src/infrastructure/storage/products.ts`) is one too, provided by
 `src/app/layer.ts`. Every program that reads or writes products asks it as it is: the list's `changes`, each row
 under its id and read on its own, and the writes, `insertAll`, `deleteAll` and `update`, each in one transaction,
-failing with tagged errors (`ProductsWriteError`, `ProductNotStored`). How a row is selected, joined and read, and
-how an id is parsed, stay inside it. A port over it would have one adapter forever: what changes from the phone to
+failing with tagged errors (`ProductsWriteError`, `ProductNotStored`). How a row is selected, joined and read stays
+inside it, and so does what an id holds: a `ProductId` (`src/domain/product.ts`) is made only by the store, from a
+row it decodes, and the programs only compare ids and key by them. A port over it would have one adapter forever: what changes from the phone to
 a test is the engine, under it. What is given up is a type: a program could ask the store for more than it needs.
 That a program learns of a write from `changes` alone is a rule, which a review checks.
 

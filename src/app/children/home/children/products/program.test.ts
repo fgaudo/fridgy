@@ -55,7 +55,8 @@ const Ev = Data.taggedEnum<Event>()
 
 const { outcome, rejects, step } = outcomesOf(program.update)
 
-const selectedIds = (selection: Selection) => selection._tag === 'Idle' ? HashSet.empty<string>() : selection.ids
+const selectedIds = (selection: Selection) =>
+  selection._tag === 'Idle' ? HashSet.empty<Domain.ProductId>() : selection.ids
 
 /** The ids of the loaded products: what can be selected. */
 const listedIds = (state: State) =>
@@ -64,7 +65,8 @@ const listedIds = (state: State) =>
   )
 
 /** The ids of the rows arriving: none unless the list is loaded. */
-const arrivalsOf = (state: State) => state.list._tag === 'Loaded' ? state.list.arrivals : HashSet.empty<string>()
+const arrivalsOf = (state: State) =>
+  state.list._tag === 'Loaded' ? state.list.arrivals : HashSet.empty<Domain.ProductId>()
 
 /** The ids of the rows leaving: none unless the list is loaded. */
 const departuresOf = (state: State) =>
@@ -77,10 +79,10 @@ const showsSelection = (state: State) => state.list._tag === 'Loaded' && state.s
 const isSettling = (state: State) => HashSet.size(arrivalsOf(state)) > 0 || HashSet.size(departuresOf(state)) > 0
 
 /** What the storage sends for products with those ids: not valid ones, which need no time to be shown. */
-const storedWith = (ids: ReadonlyArray<string>): ReadonlyArray<StoredProduct> =>
+const storedWith = (ids: ReadonlyArray<Domain.ProductId>): ReadonlyArray<StoredProduct> =>
   ids.map((id) => ({
     id,
-    maybeName: Opt.some(id),
+    maybeName: Opt.some(`Product ${id}`),
     maybeCreationDate: Opt.none(),
     maybeExpirationDate: Opt.some(Opt.none()),
   }))
@@ -199,7 +201,7 @@ describe('Products update', () => {
             HashSet.difference(listedIds(after.own), listedIds(before.own)),
             HashSet.intersection(arrivalsOf(before.own), listedIds(after.own)),
           )
-          : HashSet.empty<string>()
+          : HashSet.empty<Domain.ProductId>()
         return Equal.equals(arrivalsOf(after.own), expected)
       })
     })
@@ -209,7 +211,7 @@ describe('Products update', () => {
         const { after } = step(changed(stored), before)
         const expected = before.own.list._tag === 'Loaded'
           ? HashSet.difference(HashSet.union(listedIds(before.own), departuresOf(before.own)), listedIds(after.own))
-          : HashSet.empty<string>()
+          : HashSet.empty<Domain.ProductId>()
         return Equal.equals(departuresOf(after.own), expected)
       })
     })
@@ -296,7 +298,7 @@ describe('Products update', () => {
 
   describe('EditRequested', () => {
     /** The product listed under `id`, when it is a valid one. */
-    const productUnder = (state: State, id: string) =>
+    const productUnder = (state: State, id: Domain.ProductId) =>
       state.list._tag === 'Loaded'
         ? Opt.fromNullishOr(state.list.items.find((item) => item._tag === 'Valid' && item.id === id))
         : Opt.none()
@@ -569,11 +571,12 @@ describe('Products model', () => {
 
   // Deleting rows apart: the rows between them stay where they are while the others close their place.
   test('rows taken out stay where they were while they leave, and rows put back arrive there', () => {
-    const changed = (ids: ReadonlyArray<string>) => Msg.ListChanged({ result: Result.succeed(storedWith(ids)) })
+    const changed = (ns: ReadonlyArray<number>) =>
+      Msg.ListChanged({ result: Result.succeed(storedWith(ns.map(ProductArbitrary.nthId))) })
     const presences = (s: Whole) => rows(s).map((row) => `${row.id}:${row.presence}`)
-    const loaded = step(changed(['1', '2', '3', '4', '5']), program.init.state).after
-    const deleted = step(changed(['1', '3', '5']), loaded).after
-    const restored = step(changed(['1', '2', '3', '5']), deleted).after
+    const loaded = step(changed([1, 2, 3, 4, 5]), program.init.state).after
+    const deleted = step(changed([1, 3, 5]), loaded).after
+    const restored = step(changed([1, 2, 3, 5]), deleted).after
     expect(presences(loaded)).toEqual(['1:Listed', '2:Listed', '3:Listed', '4:Listed', '5:Listed'])
     expect(presences(deleted)).toEqual(['1:Listed', '2:Leaving', '3:Listed', '4:Leaving', '5:Listed'])
     expect(presences(restored)).toEqual(['1:Listed', '2:Arriving', '3:Listed', '4:Leaving', '5:Listed'])
@@ -648,7 +651,7 @@ describe('Products model', () => {
     ).chain(([base, product, timeZone, daysBefore, minutes]) => {
       const expirationDate = Opt.getOrThrow(product.maybeExpirationDate)
       const now = Day.startIn(Day.addDays(expirationDate, -daysBefore), timeZone).pipe(DateTime.add({ minutes }))
-      return loadedOf([{ _tag: 'Valid', id: '1', product }]).map((list): State => ({
+      return loadedOf([{ _tag: 'Valid', id: ProductArbitrary.nthId(1), product }]).map((list): State => ({
         ...base,
         list,
         maybeNow: Opt.some(now),

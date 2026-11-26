@@ -180,9 +180,10 @@ The page's command asks the products' store. `update(id, snapshot)` writes the s
 expiration added, changed or removed with it, in one transaction; the pages see the change through the store's
 `changes`, not through the write. It fails with `ProductsWriteError` when the storage could not be written and
 with `ProductNotStored` when nothing is stored under the id: the product was deleted since it was opened, an
-expected state of the world. A plain effect: one product is saved at a time. The store parses the id where it
-parses every id (only the form an integer is written in, so that `"1 "` is not `1`), a string that is not an id
-being `ProductNotStored` too.
+expected state of the world. A plain effect: one product is saved at a time. The id is a `ProductId`, which only
+the store makes, from a row it read: an id that names no row is one whose product was deleted. SQLite gives a new
+row the id of the last one deleted (`INTEGER PRIMARY KEY`, no `AUTOINCREMENT`), but no product is added while the
+page is shown.
 
 In one transaction: the product's row is updated and read back with `SqlSchema.findOneOption` (`None` ends the
 transaction, nothing written), then the expiration is upserted, or deleted when the snapshot has none.

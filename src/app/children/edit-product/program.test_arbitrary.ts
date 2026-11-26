@@ -8,7 +8,7 @@ import { state as expirationState } from '#app/programs/expiration/program.test_
 import type * as Expiration from '#app/programs/expiration/program.ts'
 import * as Snackbar from '#app/programs/snackbar/program.test_arbitrary.ts'
 import type * as SnackbarProgram from '#app/programs/snackbar/program.ts'
-import { arbitrary as product } from '#domain/product.test_arbitrary.ts'
+import { id, arbitrary as product } from '#domain/product.test_arbitrary.ts'
 import type * as Product from '#domain/product.ts'
 import { zoned } from '#libs/testing/date-time.test_arbitrary.ts'
 import type { Failure, Fields, Message, Outcome } from './program.ts'
@@ -18,8 +18,6 @@ import { program } from './program.ts'
 export type Whole = Tea.StateOf<typeof program>
 
 const Msg = Data.taggedEnum<Message>()
-
-const id = fc.nat().map(String)
 
 /** How far the keyboard covers the page: down most often, otherwise as tall as a keyboard. */
 export const keyboardInset = fc.oneof({ arbitrary: fc.constant(0), weight: 3 }, fc.integer({ min: 120, max: 400 }))

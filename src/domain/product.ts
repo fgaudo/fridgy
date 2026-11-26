@@ -28,6 +28,12 @@ export type Expiration = Brand.Branded<
 const _Expiration = Brand.nominal<Expiration>()
 
 /**
+ * A stored product's id. Only the storage makes one, and only it reads the number in it: anything else compares
+ * ids, and keys by them.
+ */
+export type ProductId = Brand.Branded<number, 'ProductId'>
+
+/**
  * What is stored of a product: its persistent fields, never the derived ones
  * (expiration status, freshness, …). Only `toSnapshot` can make one, so a
  * snapshot always comes from a valid product.

@@ -30,7 +30,7 @@ const list = Effect.gen(function*() {
   })
 })
 
-const withId = (products: ReadonlyArray<StoredProduct>, id: string) =>
+const withId = (products: ReadonlyArray<StoredProduct>, id: Product.ProductId) =>
   Arr.findFirst(products, (stored) => stored.id === id)
 
 const isProductOf = (product: Product.Product) => (stored: StoredProduct) =>
@@ -45,15 +45,13 @@ const add = (product: Product.Product) =>
 const addAll = (products: ReadonlyArray<Product.Product>) =>
   ProductStore.use(({ insertAll }) => insertAll(Arr.map(products, Product.toSnapshot)))
 
-const deleteAll = (ids: ReadonlyArray<string>) => ProductStore.use(({ deleteAll }) => deleteAll(ids))
+const deleteAll = (ids: ReadonlyArray<Product.ProductId>) => ProductStore.use(({ deleteAll }) => deleteAll(ids))
 
-const update = (id: string, product: Product.Product) =>
+const update = (id: Product.ProductId, product: Product.Product) =>
   ProductStore.use(({ update }) => update(id, Product.toSnapshot(product)))
 
-const readsBackAs = (id: string, product: Product.Product) =>
+const readsBackAs = (id: Product.ProductId, product: Product.Product) =>
   Effect.map(list, (listed) => Opt.exists(withId(listed, id), isProductOf(product)))
-
-const isStored = (id: string) => Effect.map(list, (listed) => Opt.isSome(withId(listed, id)))
 
 /** Products that expire come first, the soonest first; those that never expire come last. */
 const isExpiringFirst = (products: ReadonlyArray<StoredProduct>) =>
@@ -71,7 +69,7 @@ const isExpiringFirst = (products: ReadonlyArray<StoredProduct>) =>
   })
 
 /** Products with the same expiration, or with none, are listed in the order they were written, `ids`. */
-const isWrittenOrderAmongEquals = (products: ReadonlyArray<StoredProduct>, ids: ReadonlyArray<string>) => {
+const isWrittenOrderAmongEquals = (products: ReadonlyArray<StoredProduct>, ids: ReadonlyArray<Product.ProductId>) => {
   const writtenAt = (product: StoredProduct) => ids.indexOf(product.id)
   return products.every((current, index) => {
     const next = products[index + 1]
@@ -83,13 +81,6 @@ const isWrittenOrderAmongEquals = (products: ReadonlyArray<StoredProduct>, ids: 
 // Products drawn from a few, so that some share an expiration.
 const withEqualExpirations = fc.array(ProductArbitrary.arbitrary, { minLength: 1, maxLength: 3 }).chain((few) =>
   fc.array(fc.constantFrom(...few), { maxLength: 8 })
-)
-
-// Strings that a loose parser would read as a stored id (the first product gets id 1).
-const unknownId = fc.oneof(
-  fc.string(),
-  fc.integer({ min: 1_000_000 }).map(String),
-  fc.constantFrom('1 ', ' 1', '01', '1.0', '1e0', '+1'),
 )
 
 const expiring = ProductArbitrary.arbitrary.filter((product) => Opt.isSome(product.maybeExpirationDate))
@@ -253,15 +244,16 @@ describe('deleteAll', () => {
       }),
     ))
 
-  test('completes and changes nothing for an id that is not stored', () =>
+  test('completes and changes nothing for a product deleted already', () =>
     checkOnFreshLayer(
       layer,
-      fc.tuple(ProductArbitrary.arbitrary, unknownId),
-      Effect.fnUntraced(function*([product, unknownId]) {
-        const id = yield* add(product)
-        if (yield* isStored(unknownId)) return true
-        yield* deleteAll([unknownId])
-        return yield* readsBackAs(id, product)
+      fc.tuple(ProductArbitrary.arbitrary, ProductArbitrary.arbitrary),
+      Effect.fnUntraced(function*([kept, deleted]) {
+        const keptId = yield* add(kept)
+        const deletedId = yield* add(deleted)
+        yield* deleteAll([deletedId])
+        yield* deleteAll([deletedId])
+        return (yield* readsBackAs(keptId, kept)) && (yield* list).length === 1
       }),
     ))
 
@@ -329,14 +321,15 @@ describe('update', () => {
       }),
     ))
 
-  test('fails with ProductNotStored for an id that is not stored, and changes nothing', () =>
+  test('fails with ProductNotStored for a product deleted since it was read, and changes nothing', () =>
     checkOnFreshLayer(
       layer,
-      fc.tuple(ProductArbitrary.arbitrary, ProductArbitrary.arbitrary, unknownId),
-      Effect.fnUntraced(function*([stored, written, unknownId]) {
+      fc.tuple(ProductArbitrary.arbitrary, ProductArbitrary.arbitrary, ProductArbitrary.arbitrary),
+      Effect.fnUntraced(function*([stored, deleted, written]) {
         const id = yield* add(stored)
-        if (yield* isStored(unknownId)) return true
-        const failure = yield* Effect.flip(update(unknownId, written))
+        const deletedId = yield* add(deleted)
+        yield* deleteAll([deletedId])
+        const failure = yield* Effect.flip(update(deletedId, written))
         return failure._tag === 'ProductNotStored' && (yield* readsBackAs(id, stored))
           && (yield* list).length === 1
       }),

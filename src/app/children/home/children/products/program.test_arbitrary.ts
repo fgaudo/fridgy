@@ -8,6 +8,7 @@ import * as fc from 'fast-check'
 import * as SnackbarArbitrary from '#app/programs/snackbar/program.test_arbitrary.ts'
 import type * as Snackbar from '#app/programs/snackbar/program.ts'
 import * as ProductArbitrary from '#domain/product.test_arbitrary.ts'
+import type { ProductId } from '#domain/product.ts'
 import { ProductsReadError, type StoredProduct } from '#infrastructure/storage/products.ts'
 import * as NonEmptyHashSet from '#libs/collections/non-empty-hash-set.test_arbitrary.ts'
 import * as PositiveInteger from '#libs/numbers/positive-integer.test_arbitrary.ts'
@@ -27,9 +28,9 @@ import {
 const Msg = Data.taggedEnum<Message>()
 
 // A small id space, so that selections and product lists overlap often.
-const IDS = ['1', '2', '3', '4', '5', '6']
+const IDS = [1, 2, 3, 4, 5, 6].map(ProductArbitrary.nthId)
 
-export const id: fc.Arbitrary<string> = fc.constantFrom(...IDS)
+export const id: fc.Arbitrary<ProductId> = fc.constantFrom(...IDS)
 
 export const gesture: fc.Arbitrary<Gesture> = fc.constantFrom('Tap', 'LongPress')
 
@@ -43,7 +44,7 @@ export const products = (constraints: { minLength?: number } = {}): fc.Arbitrary
   fc.uniqueArray(product, { ...constraints, maxLength: 8, selector: (item) => item.id })
 
 /** A product that is no longer listed, with that id. */
-const leavingWith = (leavingId: string): fc.Arbitrary<Product> =>
+const leavingWith = (leavingId: ProductId): fc.Arbitrary<Product> =>
   fc.oneof(
     ProductArbitrary.arbitrary.map((product) => ({ _tag: 'Valid', id: leavingId, product } as const)),
     maybe(fc.string()).map((maybeName) => ({ _tag: 'Invalid', id: leavingId, maybeName } as const)),
@@ -59,7 +60,7 @@ const departuresAmong = (items: ReadonlyArray<Product>, leaving: ReadonlyArray<P
       (rows, item, index) => [...rows.slice(0, places[index]), { leaving: item }, ...rows.slice(places[index])],
       items,
     )
-    return shown.reduce<{ maybeAfter: Opt.Option<string>; departures: ReadonlyArray<Departure> }>(
+    return shown.reduce<{ maybeAfter: Opt.Option<ProductId>; departures: ReadonlyArray<Departure> }>(
       ({ maybeAfter, departures }, row) =>
         'leaving' in row
           ? { maybeAfter: Opt.some(row.leaving.id), departures: [...departures, { item: row.leaving, maybeAfter }] }

@@ -1,3 +1,4 @@
+import * as Brand from 'effect/Brand'
 import * as DateTime from 'effect/DateTime'
 import * as Opt from 'effect/Option'
 import * as fc from 'fast-check'
@@ -31,6 +32,12 @@ export const validSnapshot: fc.Arbitrary<Product.UnvalidatedSnapshot> = fc.recor
     Opt.map(maybeLifetime, (lifetime) => Day.fromDateTime(DateTime.makeUnsafe(creation + lifetime))),
   ),
 }))
+
+/** The `n`th id the storage gives, from 1: a row's id. For tests whose ids must meet. */
+export const nthId: (n: number) => Product.ProductId = Brand.nominal<Product.ProductId>()
+
+/** Ids as the storage gives them. */
+export const id: fc.Arbitrary<Product.ProductId> = fc.integer({ min: 1 }).map(nthId)
 
 export const arbitrary: fc.Arbitrary<Product.Product> = validSnapshot.map((snapshot) =>
   Opt.getOrThrow(Product.fromSnapshot(snapshot))

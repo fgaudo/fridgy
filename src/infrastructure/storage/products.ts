@@ -4,7 +4,6 @@ import * as Arr from 'effect/Array'
 import * as Context from 'effect/Context'
 import * as Data from 'effect/Data'
 import * as Effect from 'effect/Effect'
-import { pipe } from 'effect/Function'
 import * as Layer from 'effect/Layer'
 import * as Opt from 'effect/Option'
 import * as Predicate from 'effect/Predicate'
@@ -21,7 +20,7 @@ import * as Source from '#libs/source/source.ts'
 import { ProductExpirationSchema, ProductSchema } from './schema.ts'
 
 /** A stored product under its id, still unvalidated: storage may contain anything, and every row has an id. */
-export type StoredProduct = Domain.UnvalidatedSnapshot & Readonly<{ id: string }>
+export type StoredProduct = Domain.UnvalidatedSnapshot & Readonly<{ id: Domain.ProductId }>
 
 /** The storage could not be read: the list stays as it was until the next change. */
 export class ProductsReadError extends Data.TaggedError('ProductsReadError')<{ readonly cause: unknown }> {}
@@ -29,14 +28,17 @@ export class ProductsReadError extends Data.TaggedError('ProductsReadError')<{ r
 /** The storage could not be written: nothing of the write is stored. */
 export class ProductsWriteError extends Data.TaggedError('ProductsWriteError')<{ readonly cause: unknown }> {}
 
-/** Nothing is stored under the id: the product was deleted since it was read, or the id was never one. */
-export class ProductNotStored extends Data.TaggedError('ProductNotStored')<{ readonly id: string }> {}
+/** Nothing is stored under the id: the product was deleted since it was read. */
+export class ProductNotStored extends Data.TaggedError('ProductNotStored')<{ readonly id: Domain.ProductId }> {}
 
 export type StoredProducts = Result.Result<ReadonlyArray<StoredProduct>, ProductsReadError>
 
+/** A product's id is its row's: the app makes one only by decoding a row. */
+const ProductIdColumn = Schema.Int.pipe(Schema.brand('ProductId'))
+
 /** How the values of each column are encoded: what a query decodes its rows with. */
 const ProductColumns = {
-  id: Integer.Schema,
+  id: ProductIdColumn,
   name: Schema.String,
   creationDate: Schema.DateTimeUtcFromString,
 } as const
@@ -44,7 +46,7 @@ const ProductColumns = {
 const ProductExpirationColumns = {
   id: Integer.Schema,
   date: Day.Schema,
-  productId: Integer.Schema,
+  productId: ProductIdColumn,
 } as const
 
 /**
@@ -64,16 +66,13 @@ const readExpirationDate = Schema.decodeUnknownOption(ProductExpirationColumns.d
 
 /** What a row holds. A missing expiration is a product that never expires: the schema stores no `NULL` date. */
 const readRow = (row: typeof Row.Type): StoredProduct => ({
-  id: row.id.toString(10),
+  id: row.id,
   maybeName: readName(row.name),
   maybeCreationDate: readCreationDate(row.creationDate),
   maybeExpirationDate: Predicate.isNullish(row.expirationDate)
     ? Opt.some(Opt.none())
     : Opt.map(readExpirationDate(row.expirationDate), Opt.some),
 })
-
-/** The row an id names. Only the form ids are written in: `parseInt` would read "1 " or "1abc" as 1. */
-const rowIdOf = (id: string) => pipe(Number(id), Integer.make, Opt.filter((integer) => integer.toString(10) === id))
 
 class Product extends SchemaX.Model.Class<Product>('Product')({
   [ProductSchema.columns.id]: SchemaX.Model.Field({
@@ -168,7 +167,7 @@ export class ProductStore extends Context.Service<ProductStore>()(
           onNone: () => Effect.void,
           onSome: (date) => Effect.asVoid(expirations.insert({ date, product_id: stored.id })),
         })
-        return stored.id.toString(10)
+        return stored.id
       })
       /** Stores products, each with its expiration if it has one, all or nothing; answers with their ids, in order. */
       const insertAll = Effect.fn('ProductStore.insertAll')(
@@ -180,14 +179,12 @@ export class ProductStore extends Context.Service<ProductStore>()(
       )
       /**
        * Deletes products, all or nothing: a selection deleted in part would leave the user to guess which products
-       * are gone. An id that names no product has nothing to delete. The schema's trigger deletes each expiration
-       * with its product (`migrations.ts`).
+       * are gone. A product deleted already has nothing to delete. The schema's trigger deletes each expiration with
+       * its product (`migrations.ts`).
        */
       const deleteAll = Effect.fn('ProductStore.deleteAll')(
-        function*(ids: Iterable<string>) {
-          yield* Effect.forEach(Arr.getSomes(Arr.map(Arr.fromIterable(ids), rowIdOf)), repository.delete, {
-            discard: true,
-          })
+        function*(ids: Iterable<Domain.ProductId>) {
+          yield* Effect.forEach(ids, repository.delete, { discard: true })
         },
         sql.withTransaction,
         Effect.mapError(toWriteError),
@@ -229,7 +226,7 @@ export class ProductStore extends Context.Service<ProductStore>()(
        * state of the world.
        */
       const write = Effect.fnUntraced(
-        function*(id: Integer.Integer, snapshot: Domain.Snapshot) {
+        function*(id: Domain.ProductId, snapshot: Domain.Snapshot) {
           const maybeUpdated = yield* updateRow({ id, name: snapshot.name, creationDate: snapshot.creationDate })
           if (Opt.isNone(maybeUpdated)) return Opt.none<void>()
           yield* Opt.match(snapshot.maybeExpirationDate, {
@@ -243,10 +240,8 @@ export class ProductStore extends Context.Service<ProductStore>()(
       )
       /** Writes a product under `id` in place of what was there, its expiration added, changed or removed with it. */
       const update = Effect.fn('ProductStore.update')(
-        function*(id: string, snapshot: Domain.Snapshot) {
-          const maybeRowId = rowIdOf(id)
-          if (Opt.isNone(maybeRowId)) return yield* new ProductNotStored({ id })
-          const maybeUpdated = yield* write(maybeRowId.value, snapshot)
+        function*(id: Domain.ProductId, snapshot: Domain.Snapshot) {
+          const maybeUpdated = yield* write(id, snapshot)
           if (Opt.isNone(maybeUpdated)) return yield* new ProductNotStored({ id })
         },
       )

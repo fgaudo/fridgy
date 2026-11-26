@@ -20,7 +20,7 @@ import type * as Day from '#libs/dates/day.ts'
 import { every } from '#libs/timers/timers.ts'
 
 /** What the page starts from: the product as the row the user tapped shows it, and its id in the storage. */
-export type Flags = Readonly<{ id: string; product: Product.Product }>
+export type Flags = Readonly<{ id: Product.ProductId; product: Product.Product }>
 
 /** What the fields hold once the time is known: a save that fails gives them back. */
 export type Fields = Readonly<{
@@ -48,7 +48,7 @@ export type Form = Data.TaggedEnum<{
 const Form = Data.taggedEnum<Form>()
 
 export type State = Readonly<{
-  id: string
+  id: Product.ProductId
   /** The product as it was opened: what the fields started from, and what "changed" is measured against. */
   original: Product.Product
   /** How far the keyboard covers the page's bottom, in dp, navigation bar included: the window is never resized. */
@@ -90,7 +90,7 @@ const Own = Data.taggedEnum<Own>()
 
 export type Command = Data.TaggedEnum<{
   /** Writes a product that `update` has already validated, under its id. */
-  Save: { id: string; product: Product.Product }
+  Save: { id: Product.ProductId; product: Product.Product }
   Vibrate: { feedback: Feedback }
 }>
 
@@ -216,7 +216,7 @@ const keyboard: Tea.Subscription<Own, Keyboard> = Channel.unwrap(
 const keys: ReadonlyArray<Key> = ['clock', 'back-button', 'keyboard']
 
 const save = Effect.fn('SaveProduct')(
-  function*({ id, product }: Readonly<{ id: string; product: Product.Product }>) {
+  function*({ id, product }: Readonly<{ id: Product.ProductId; product: Product.Product }>) {
     const { update } = yield* ProductStore
     yield* Effect.logDebug('Saving a product', { id })
     yield* update(id, Product.toSnapshot(product)).pipe(

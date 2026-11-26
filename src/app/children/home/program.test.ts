@@ -6,6 +6,7 @@ import * as Equal from 'effect/Equal'
 import * as HashSet from 'effect/HashSet'
 import * as Opt from 'effect/Option'
 import * as fc from 'fast-check'
+import type { ProductId } from '#domain/product.ts'
 import { messagesSentBy } from '#libs/tea-react/view.test_support.ts'
 import { tagPath } from '#libs/testing/tag-path.test_support.ts'
 import { assertProperty, onlyChanged, outcomesOf } from '#libs/testing/update.test_support.ts'
@@ -80,7 +81,7 @@ describe('Home update', () => {
     test('the view sends what update accepts, all of it, and acts once when sent twice', () => {
       const listOf = (state: Whole) => makeModel(state).products.list
       const isListShown = (state: Whole) => listOf(state)._tag === 'Available'
-      const isShown = (state: Whole, id: string) => {
+      const isShown = (state: Whole, id: ProductId) => {
         const list = listOf(state)
         return list._tag === 'Available'
           && list.products.some((row) => row.id === id && row.presence !== 'Leaving')

@@ -1,10 +1,12 @@
 // What the store's test needs of the stored products beyond the store: a row that no write of the app makes, and
 // writes that the storage refuses. No service carries reads or writes that only tests need.
+import * as Brand from 'effect/Brand'
 import * as Effect from 'effect/Effect'
 import * as Opt from 'effect/Option'
 import * as Schema from 'effect/Schema'
 import * as SqlClient from 'effect/sql/SqlClient'
 import * as SqlSchema from 'effect/sql/SqlSchema'
+import type * as Domain from '#domain/product.ts'
 import * as Integer from '#libs/numbers/integer.ts'
 import { ProductExpirationSchema, ProductSchema } from './schema.ts'
 
@@ -36,7 +38,7 @@ export const insertRow = Effect.fnUntraced(function*(
         VALUES (${date}, ${id})
       `.pipe(Effect.orDie, Effect.asVoid),
   })
-  return id.toString(10)
+  return Brand.nominal<Domain.ProductId>()(id)
 })
 
 /**

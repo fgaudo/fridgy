@@ -59,7 +59,7 @@ export type Event = Data.TaggedEnum<{
   InfoRequested: object
   AddRequested: object
   /** A product of the list, to be edited. */
-  EditRequested: { id: string; product: Product.Product }
+  EditRequested: { id: Product.ProductId; product: Product.Product }
 }>
 
 const Event = Data.taggedEnum<Event>()

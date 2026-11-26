@@ -9,6 +9,7 @@ import * as Schema from 'effect/Schema'
 import * as fc from 'fast-check'
 import * as Expiration from '#app/programs/expiration/program.ts'
 import type * as SnackbarProgram from '#app/programs/snackbar/program.ts'
+import { nthId } from '#domain/product.test_arbitrary.ts'
 import * as Product from '#domain/product.ts'
 import * as DateOrder from '#libs/dates/date-order.ts'
 import { arbitrary as anyDay } from '#libs/dates/day.test_arbitrary.ts'
@@ -446,6 +447,7 @@ describe('the model', () => {
   })
 
   describe('on a product', () => {
+    const id = nthId(1)
     const creationDate = DateTime.makeZonedUnsafe('2026-10-20T10:00:00Z', { timeZone: 'Europe/Rome' })
     const now = DateTime.makeZonedUnsafe('2026-10-28T12:00:00Z', { timeZone: 'Europe/Rome' })
     const day = Schema.decodeSync(Day.Schema)
@@ -462,7 +464,7 @@ describe('the model', () => {
       }>,
     ) =>
       stateOf(program, {
-        id: '1',
+        id,
         original,
         keyboardInset: 0,
         form: { _tag: 'Editing', fields: { now, name, replacements: 0 } },
@@ -503,7 +505,7 @@ describe('the model', () => {
       const { commands } = applyAll(program.update, [Msg.SaveStarted()], opened({ date: typed('06112026') }))
       expect(commands).toEqual([
         Cmd.Save({
-          id: '1',
+          id,
           product: Opt.getOrThrow(
             Product.edit(milk, { name: 'Milk', maybeExpirationDate: Opt.some(day('2026-11-06')) }, now.zone),
           ),

@@ -1,7 +1,7 @@
 import type { Dispatch } from '@fgaudo/effect-tea'
 import type * as Data from 'effect/Data'
 import * as Opt from 'effect/Option'
-import { Fragment, type ReactNode } from 'react'
+import { Fragment, type Key, type ReactNode } from 'react'
 import { View as Box, type ColorValue, Pressable, StyleSheet, Text } from 'react-native'
 import Animated, {
   type EntryAnimationsValues,
@@ -274,7 +274,7 @@ const fadingOut = FadeOut.duration(duration.short4).easing(easing.emphasizedAcce
  * opacity at 0, and its layout transition plays the change.
  */
 const item = (
-  key: string,
+  key: Key,
   selection: ItemSelection,
   presence: Presence,
   settling: Settling,

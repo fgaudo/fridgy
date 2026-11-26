@@ -26,8 +26,8 @@ import { after, every } from '#libs/timers/timers.ts'
 
 export type Product = Data.TaggedEnum<{
   /** Stored, but not a valid product: it can still be selected and deleted. */
-  Invalid: Readonly<{ id: string; maybeName: Opt.Option<string> }>
-  Valid: Readonly<{ id: string; product: Domain.Product }>
+  Invalid: Readonly<{ id: Domain.ProductId; maybeName: Opt.Option<string> }>
+  Valid: Readonly<{ id: Domain.ProductId; product: Domain.Product }>
 }>
 
 const Product = Data.taggedEnum<Product>()
@@ -36,7 +36,7 @@ const Product = Data.taggedEnum<Product>()
  * A row the storage no longer lists, kept after the row it followed (or first) while it closes its place: the rows
  * under it rise, rather than jump to their new place.
  */
-export type Departure = Readonly<{ item: Product; maybeAfter: Opt.Option<string> }>
+export type Departure = Readonly<{ item: Product; maybeAfter: Opt.Option<Domain.ProductId> }>
 
 /**
  * The products being deleted, when every one of them is a product: only then can the deletion be undone, by
@@ -46,10 +46,10 @@ type Restorable = Opt.Option<Arr.NonEmptyReadonlyArray<Domain.Product>>
 
 export type Selection = Data.TaggedEnum<{
   Idle: object
-  Selecting: Readonly<{ ids: NonEmptyHashSet.NonEmptyHashSet<string> }>
+  Selecting: Readonly<{ ids: NonEmptyHashSet.NonEmptyHashSet<Domain.ProductId> }>
   // Left only by its completion: with commands that cannot be cancelled, a
   // completion always belongs to the deletion in progress, so it needs no id.
-  Deleting: Readonly<{ ids: NonEmptyHashSet.NonEmptyHashSet<string>; maybeProducts: Restorable }>
+  Deleting: Readonly<{ ids: NonEmptyHashSet.NonEmptyHashSet<Domain.ProductId>; maybeProducts: Restorable }>
 }>
 
 const Selection = Data.taggedEnum<Selection>()
@@ -79,7 +79,7 @@ export type State = Readonly<{
     Loaded: Readonly<{
       items: ReadonlyArray<Product>
       /** The ids a change brought into a list already shown, until they have arrived. A first list appears whole. */
-      arrivals: HashSet.HashSet<string>
+      arrivals: HashSet.HashSet<Domain.ProductId>
       /** The rows that changes took out of the list, in the order they were shown, until they have left. */
       departures: ReadonlyArray<Departure>
     }>
@@ -91,10 +91,10 @@ export type State = Readonly<{
 type Own = Data.TaggedEnum<{
   // From the view.
   /** A long press says so with a vibration; a tap does not. */
-  ItemSelected: { id: string; by: Gesture }
-  ItemDeselected: { id: string; by: Gesture }
+  ItemSelected: { id: Domain.ProductId; by: Gesture }
+  ItemDeselected: { id: Domain.ProductId; by: Gesture }
   /** A tap on a product while nothing is selected: opens it to be edited. */
-  EditRequested: { id: string }
+  EditRequested: { id: Domain.ProductId }
   SelectionCleared: object
   DeleteStarted: object
   /** The snackbar's action: the products deleted last are stored again. */
@@ -118,7 +118,7 @@ const Own = Data.taggedEnum<Own>()
 export type Gesture = 'Tap' | 'LongPress'
 
 export type Command = Data.TaggedEnum<{
-  Delete: { ids: NonEmptyHashSet.NonEmptyHashSet<string> }
+  Delete: { ids: NonEmptyHashSet.NonEmptyHashSet<Domain.ProductId> }
   Restore: { products: Arr.NonEmptyReadonlyArray<Domain.Product> }
   Vibrate: { feedback: Feedback }
 }>
@@ -131,7 +131,7 @@ const feedbackOf = (by: Gesture): ReadonlyArray<Command> =>
 
 export type Event = Data.TaggedEnum<{
   /** The product to edit, as the row shows it. */
-  EditRequested: { id: string; product: Domain.Product }
+  EditRequested: { id: Domain.ProductId; product: Domain.Product }
 }>
 
 const Event = Data.taggedEnum<Event>()
@@ -174,8 +174,12 @@ export type Presence = 'Arriving' | 'Listed' | 'Leaving'
 export type Settling = 'Still' | 'Opening' | 'Closing'
 
 export type ProductModel = Data.TaggedEnum<{
-  Invalid: Readonly<{ id: string; selection: ItemSelection; presence: Presence; maybeName: Opt.Option<string> }>
-  Valid: Readonly<{ id: string; selection: ItemSelection; presence: Presence; name: string; status: ProductStatus }>
+  Invalid: Readonly<
+    { id: Domain.ProductId; selection: ItemSelection; presence: Presence; maybeName: Opt.Option<string> }
+  >
+  Valid: Readonly<
+    { id: Domain.ProductId; selection: ItemSelection; presence: Presence; name: string; status: ProductStatus }
+  >
 }>
 
 export type ListModel = Data.TaggedEnum<{
@@ -274,10 +278,10 @@ const rowsOf = ({ items, arrivals, departures }: Loaded): ReadonlyArray<Row> =>
   )
 
 /** The rows shown whose ids are no longer listed, each after the id it followed. */
-const departuresFrom = (rows: ReadonlyArray<Row>, ids: HashSet.HashSet<string>): ReadonlyArray<Departure> =>
+const departuresFrom = (rows: ReadonlyArray<Row>, ids: HashSet.HashSet<Domain.ProductId>): ReadonlyArray<Departure> =>
   Arr.reduce(
     rows,
-    { maybeAfter: Opt.none<string>(), departures: Arr.empty<Departure>() },
+    { maybeAfter: Opt.none<Domain.ProductId>(), departures: Arr.empty<Departure>() },
     ({ maybeAfter, departures }, { item }) => ({
       maybeAfter: Opt.some(item.id),
       departures: HashSet.has(ids, item.id) ? departures : [...departures, { item, maybeAfter }],
@@ -289,23 +293,23 @@ const isSettling = (list: State['list']) =>
   list._tag === 'Loaded' && (HashSet.size(list.arrivals) > 0 || Arr.isReadonlyArrayNonEmpty(list.departures))
 
 /** The ids that can be selected: those of the loaded products, while nothing is being deleted. */
-const selectableIds = (state: State): HashSet.HashSet<string> =>
+const selectableIds = (state: State): HashSet.HashSet<Domain.ProductId> =>
   state.list._tag === 'Loaded' && state.selection._tag !== 'Deleting' ? idsOf(state.list.items) : HashSet.empty()
 
 /** The selection, as ids: empty when there is none. */
-const selectedIds = (selection: Selection): HashSet.HashSet<string> =>
+const selectedIds = (selection: Selection): HashSet.HashSet<Domain.ProductId> =>
   selection._tag === 'Idle' ? HashSet.empty() : selection.ids
 
 /** The selection of exactly those ids: none when there are none. */
-const selectionOf = (ids: HashSet.HashSet<string>): Selection =>
+const selectionOf = (ids: HashSet.HashSet<Domain.ProductId>): Selection =>
   Opt.match(NonEmptyHashSet.make(ids), {
     onNone: () => Selection.Idle(),
     onSome: (ids) => Selection.Selecting({ ids }),
   })
 
 /** The products the ids name, in the list's order, when every id names one. */
-export const productsOf = (items: ReadonlyArray<Product>, ids: HashSet.HashSet<string>): Restorable => {
-  const isProduct = (id: string) => items.some((item) => item._tag === 'Valid' && item.id === id)
+export const productsOf = (items: ReadonlyArray<Product>, ids: HashSet.HashSet<Domain.ProductId>): Restorable => {
+  const isProduct = (id: Domain.ProductId) => items.some((item) => item._tag === 'Valid' && item.id === id)
   const products = Arr.flatMap(
     items,
     (item) => item._tag === 'Valid' && HashSet.has(ids, item.id) ? [item.product] : [],
@@ -337,7 +341,7 @@ const settlingTimer: Tea.Subscription<Own, Deps> = after(SETTLING_DURATION, Own.
 
 /** The settling timer is keyed by the ids arriving and leaving: a new one starts it anew. */
 type Settle = Data.TaggedEnum<{
-  Settling: { arrivals: HashSet.HashSet<string>; departures: HashSet.HashSet<string> }
+  Settling: { arrivals: HashSet.HashSet<Domain.ProductId>; departures: HashSet.HashSet<Domain.ProductId> }
 }>
 
 const Settle = Data.taggedEnum<Settle>()
@@ -352,7 +356,7 @@ const backButton: Tea.Subscription<Own, Deps> = Channel.unwrap(
 const showsSelection = (state: State) => state.list._tag === 'Loaded' && state.selection._tag !== 'Idle'
 
 const deleteProducts = Effect.fn('DeleteProducts')(
-  function*({ ids }: Readonly<{ ids: NonEmptyHashSet.NonEmptyHashSet<string> }>) {
+  function*({ ids }: Readonly<{ ids: NonEmptyHashSet.NonEmptyHashSet<Domain.ProductId> }>) {
     const { deleteAll } = yield* ProductStore
     yield* Effect.logDebug('Deleting products', { count: HashSet.size(ids) })
     yield* deleteAll(ids).pipe(
@@ -438,7 +442,7 @@ const listModel = (state: State): ListModel => {
   }
   const { selection, maybeNow } = state
   // A row leaving is no longer a product of the list: it cannot be selected, nor opened.
-  const itemSelectionOf = (id: string, presence: Presence, isProduct: boolean): ItemSelection => {
+  const itemSelectionOf = (id: Domain.ProductId, presence: Presence, isProduct: boolean): ItemSelection => {
     const isSelected = presence !== 'Leaving' && HashSet.has(selectedIds(selection), id)
     const toggle = (by: Gesture) =>
       selection._tag === 'Deleting' || presence === 'Leaving'

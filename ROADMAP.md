@@ -6,7 +6,7 @@ owner asked for on 22 November 2026, from the move to effect-tea 0.9.0 on 26 Nov
 steps on the root and on the inputs, and what waited for that release, and from a review of the structure on that
 same day, for which the owner set every rule of the project aside.
 
-That last review found one thing, which steps 2, 4 and 5 act on. The app has three boundaries where one thing
+That last review found one thing, which steps 1, 3 and 4 act on. The app has three boundaries where one thing
 is put in another's place. A program says what it asks of the world as data, its commands and the keys of its
 subscriptions, and `update` is tested with none of it run. The entrypoint, or a test, picks the database's engine,
 the HTTP client and the platform's services. The model stands between a program and its view. A boundary beside
@@ -19,25 +19,7 @@ that describe what it changed brought up to date (`AGENTS.md`, "Conventions").
 
 ## Next, in order
 
-### 1. An id that is the storage's
-
-**Model and effort.** Opus 5.5, `high`.
-
-**Depends on** no other step. One module reads an id: the products' store (`src/infrastructure/storage/products.ts`,
-`rowIdOf`), whose `StoredProduct` gives every row its id. The store's test feeds `deleteAll` and `update` strings
-that name no row (`unknownId`, `products.test.ts`): with an opaque id they go, and an id that is not stored is one
-deleted.
-
-**Why.** An id is a `string` in every state, message, event and key. The store parses it back into the row's
-integer, with a branch for one that was never written.
-
-**How.** An opaque `ProductId` in `src/domain/product.ts`, which only `src/infrastructure/storage/products.ts`
-makes and reads. The store's functions, the programs' states, messages and events carry it, and the flags of
-`EditProduct`, which the root keeps and compares; a view makes its key from it.
-
-**Done when** nothing parses an id, and no branch is left for one that was never written.
-
-### 2. No service and no layer below the root
+### 1. No service and no layer below the root
 
 **Model and effort.** Opus 5.5, `medium`.
 
@@ -83,7 +65,7 @@ is left under `src/`; `user.test_support.ts` replaces nothing by the order of a 
 services away fails the typecheck; the item "The storage's checks on op-sqlite", below, names the stores' tests;
 the documents above say what is true.
 
-### 3. What has one truth is written once
+### 2. What has one truth is written once
 
 **Model and effort.** Opus 5.5, `medium`.
 
@@ -109,11 +91,11 @@ the documents above say what is true.
 
 **Done when** each has one definition, and the programs' tests check what they checked.
 
-### 4. A large program is modules, by concern
+### 3. A large program is modules, by concern
 
 **Model and effort.** Opus 5.5, `high`.
 
-**Depends on** steps 1 to 3, which change the same programs.
+**Depends on** steps 1 and 2, which change the same programs.
 
 **Why.** `home/children/products/program.ts` is 753 lines and `add-products/program.ts` 689 (26 November 2026,
 before the steps above). Each holds concerns that read each other's state, and so is one program, "however long"
@@ -137,11 +119,11 @@ program's folder holds, and names no such module: none was written.
 checked, changed only in what they import; `AGENTS.md` and the `add-program` skill say what a program's folder
 holds and when a program is split, by the guide's words.
 
-### 5. `AGENTS.md` holds the rules of every change
+### 4. `AGENTS.md` holds the rules of every change
 
 **Model and effort.** Opus 5.5, `medium`.
 
-**Depends on** steps 2 and 4, which rewrite the rules it sorts.
+**Depends on** steps 1 and 3, which rewrite the rules it sorts.
 
 **Why.** "Architecture rules" mixes rules that hold for any program with the design of single features: "Home is
 always there, and at most one page is shown over it", "The back button is the program's that has something to do
@@ -156,11 +138,11 @@ without it would be a bug, and says where the rest is.
 **Done when** every item of "Architecture rules" holds for any program or service; each paragraph moved is reached
 from `AGENTS.md`, by its table or by a line; nothing is said in two places.
 
-### 6. Design: the app in the user's language
+### 5. Design: the app in the user's language
 
 **Model and effort.** Fable 5.2, `high`: a design, whose steps are then written here, each with its own model.
 
-**Depends on** step 3, which changes the views it reads. The owner is asked first: which languages.
+**Depends on** step 2, which changes the views it reads. The owner is asked first: which languages.
 
 **Why.** The texts are English, literals in the views (about 65), in the crash screen, and one in the domain
 (`'Undefined name'`, `fromSnapshot`). The dates, the order of a date's digits and the language Open Food Facts is
@@ -181,7 +163,7 @@ are.
 **Done when** `docs/localization.md` holds the decisions and the facts they rely on, checked; the steps that
 implement it are written here; the owner has read it.
 
-### 7. The app on effect-tea 0.9.0, seen on the emulator
+### 6. The app on effect-tea 0.9.0, seen on the emulator
 
 **Model and effort.** Opus 5.5, `medium`.
 
@@ -277,7 +259,7 @@ a step when a release takes it up, or goes when the runtime rejects it.
   command could stamp the product instead, against "the command carries the entity, valid by construction".
 - **The storage's checks on op-sqlite.** The phone's engine is a client written here (`sqlite.op-sqlite.ts`), whose
   update hook every list relies on; every test runs on wa-sqlite, and `docs/testing.md` says so. Running the
-  storage's checks on the emulator (the products' store's test, and the contracts, until step 2 makes them the
+  storage's checks on the emulator (the products' store's test, and the contracts, until step 1 makes them the
   stores' tests) needs them apart from `bun:test`. The engine is the one thing of the storage that has two
   implementations: these checks are the contract that has two adapters to run on. To weigh: whether that is worth its cost.
 - **The crash screen shows nothing of the cause**, by decision (`src/entrypoints/crash/view.tsx`). The cause goes
@@ -286,13 +268,13 @@ a step when a release takes it up, or goes when the runtime rejects it.
 - **How `AGENTS.md` is written.** A review's opinion, of 26 November 2026: its sentences are compressed, and some
   must be worked out before they can be followed ("A page over Home is a child by the number of its visit, never
   used again"). An agent reads the file at every session. To weigh: plain statements, one fact each, as the file
-  asks of a comment. It is the owner's voice, so nothing changes it without the owner; step 5 moves paragraphs,
+  asks of a comment. It is the owner's voice, so nothing changes it without the owner; step 4 moves paragraphs,
   and rewrites none.
 - **A text field is uncontrolled**, by the `views` skill: its text is `defaultValue`, and a new `key` replaces
   it. The choice was made when the runtime drew no controlled element on React Native. Its bridge now draws a
   controlled `TextInput`, and promises nothing of what it shows until its native view takes the model's value. To
   weigh, on a phone: whether a controlled field keeps up with fast typing. It would let a locked state take a key
   back, and `nameKey` and `replacements` go.
-- **What the move to 0.9.0 changed for the user**, each decided in passing and seen on no screen yet (step 7): the
+- **What the move to 0.9.0 changed for the user**, each decided in passing and seen on no screen yet (step 6): the
   keypad of a date takes no key until the order of its digits is read; the disc of a product entering the fridge
   is colored by the day it was added on, where it followed the clock during its flight.

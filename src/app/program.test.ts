@@ -6,6 +6,7 @@ import * as Effect from 'effect/Effect'
 import * as Opt from 'effect/Option'
 import * as Schema from 'effect/Schema'
 import { isValidElement, type ReactNode } from 'react'
+import type { ProductId } from '#domain/product.ts'
 import type { DateOrder } from '#libs/dates/date-order.ts'
 import * as Day from '#libs/dates/day.ts'
 import { tagPath } from '#libs/testing/tag-path.test_support.ts'
@@ -70,7 +71,7 @@ const listed = (user: User) =>
   Effect.map(user.model, (model) =>
     Opt.map(homeShown(model), ({ products: { list } }) =>
       list._tag === 'Available'
-        ? list.products.flatMap((row): ReadonlyArray<Readonly<{ id: string; name: string; expires: boolean }>> =>
+        ? list.products.flatMap((row): ReadonlyArray<Readonly<{ id: ProductId; name: string; expires: boolean }>> =>
           row._tag === 'Valid' && row.presence !== 'Leaving'
             ? [{ id: row.id, name: row.name, expires: row.status._tag !== 'Everlasting' }]
             : []
