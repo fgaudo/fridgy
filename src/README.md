@@ -41,7 +41,7 @@ src/
 │                        `BarcodeCache` in `barcodes.ts`, and the sample data), the client of Open Food Facts'
 │                        API (open-food-facts/: how a code is normalized, asked for and decoded); and the
 │                        platform's facts the programs use as they are: the back button (back-button/), how far the
-│                        keyboard covers the window (keyboard/), and the
+│                        keyboard covers the window (keyboard/), the opening of a link (links/), and the
 │                        vibrations (haptics/, `docs/haptics.md`); and the app's own native module, the camera that
 │                        reads barcodes (barcode-camera/: the specs React Native's codegen reads, and its reads as a
 │                        stream). Its adapters are named as the app's,

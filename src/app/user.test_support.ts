@@ -16,6 +16,7 @@ import * as TestClock from 'effect/testing/TestClock'
 import { BackButton } from '#infrastructure/back-button/back-button.ts'
 import { Haptics } from '#infrastructure/haptics/haptics.ts'
 import { Keyboard } from '#infrastructure/keyboard/keyboard.ts'
+import { Links } from '#infrastructure/links/links.ts'
 import * as SqliteMemory from '#infrastructure/storage/sqlite.memory.ts'
 import type { DateOrder } from '#libs/dates/date-order.ts'
 import type * as Day from '#libs/dates/day.ts'
@@ -297,6 +298,9 @@ const keyboard = Layer.succeed(Keyboard, { insets: Channel.never })
 // A device without a vibrator: a vibration does nothing, and answers nothing.
 const haptics = Layer.succeed(Haptics, { perform: () => Effect.void })
 
+// A device that opens no link: a press does nothing that a test sees.
+const links = Layer.succeed(Links, { open: () => Effect.void })
+
 /** Whether the command is a vibration, of any page. */
 const isVibration = (command: Command) => tagPath(command).endsWith(' › Vibrate')
 
@@ -329,6 +333,7 @@ const layer = Layer.mergeAll(
   backButton,
   keyboard,
   haptics,
+  links,
   scanner,
   productLookup,
 )

@@ -16,6 +16,7 @@ import * as Product from '#domain/product.ts'
 import { BackButton } from '#infrastructure/back-button/back-button.ts'
 import { type Feedback, Haptics } from '#infrastructure/haptics/haptics.ts'
 import { Keyboard } from '#infrastructure/keyboard/keyboard.ts'
+import { Links } from '#infrastructure/links/links.ts'
 import * as Day from '#libs/dates/day.ts'
 import { every } from '#libs/timers/timers.ts'
 import * as Fridge from './children/fridge/program.ts'
@@ -104,6 +105,8 @@ type Own = Data.TaggedEnum<{
   Closed: object
   /** The first step's "Cancel", while a scanned barcode is looked up: the name stays empty. */
   LookupCancelled: object
+  /** The attribution's link, which opens `url` on every press. */
+  LinkPressed: { url: string }
   // From subscriptions.
   TimeChanged: { now: DateTime.Zoned }
   Scanned: { barcode: string }
@@ -126,6 +129,7 @@ export type Command = Data.TaggedEnum<{
   /** Adds a product that `update` has already validated. */
   Add: { product: Product.Product }
   Vibrate: { feedback: Feedback }
+  OpenLink: { url: string }
 }>
 
 const Command = Data.taggedEnum<Command>()
@@ -148,8 +152,8 @@ export type Supporting = Data.TaggedEnum<{
   Nothing: object
   CameraUnavailable: object
   LookingUp: Readonly<{ barcode: string }>
-  /** The name comes from Open Food Facts: `url` is the product's page there. */
-  FromOpenFoodFacts: Readonly<{ url: string }>
+  /** The name comes from Open Food Facts: `open` opens the product's page there. */
+  FromOpenFoodFacts: Readonly<{ open: Own }>
   NotOnOpenFoodFacts: Readonly<{ barcode: string }>
   LookupFailed: object
 }>
@@ -393,6 +397,17 @@ const vibrate = Effect.fn('Vibrate')(
   Effect.withLogSpan('Vibrate'),
 )
 
+const openLink = Effect.fn('OpenLink')(
+  function*({ url }: Readonly<{ url: string }>) {
+    const { open } = yield* Links
+    yield* open(url).pipe(
+      Effect.catchTag('LinksError', (error) => Effect.logWarning('Could not open a link', error.cause)),
+    )
+    return Opt.none()
+  },
+  Effect.withLogSpan('OpenLink'),
+)
+
 const { child, withChildren } = Tea.program<{
   state: State
   model: Model
@@ -461,6 +476,8 @@ export const program = withChildren({
 
       DateDismissed: () => (state) =>
         state.phase._tag === 'Dating' ? { state: { ...state, phase: { _tag: 'Naming' } } } : Tea.reject,
+
+      LinkPressed: ({ url }) => (state) => ({ state, commands: [Command.OpenLink({ url })] }),
 
       TimeChanged: ({ now }) => (state) => ({ state: { ...state, maybeNow: Opt.some(now) } }),
 
@@ -592,6 +609,7 @@ export const program = withChildren({
     CheckCamera: checkCamera,
     Add: add,
     Vibrate: vibrate,
+    OpenLink: openLink,
   }),
 
   // The camera starts anew with each opening of the scanner: the scanner reports a barcode once, so this is what
@@ -621,7 +639,7 @@ export const program = withChildren({
       ? { _tag: 'LookingUp', barcode: phase.barcode }
       : Match.valueTags(state.lookup, {
         Idle: (): Supporting => state.camera === 'Unavailable' ? { _tag: 'CameraUnavailable' } : { _tag: 'Nothing' },
-        Found: ({ url }): Supporting => ({ _tag: 'FromOpenFoodFacts', url }),
+        Found: ({ url }): Supporting => ({ _tag: 'FromOpenFoodFacts', open: Own.LinkPressed({ url }) }),
         NotFound: ({ barcode }): Supporting => ({ _tag: 'NotOnOpenFoodFacts', barcode }),
         Failed: (): Supporting => ({ _tag: 'LookupFailed' }),
       })

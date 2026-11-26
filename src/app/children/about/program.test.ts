@@ -8,12 +8,13 @@ import * as fc from 'fast-check'
 import { messagesSentBy } from '#libs/tea-react/view.test_support.ts'
 import { assertProperty, outcomesOf } from '#libs/testing/update.test_support.ts'
 import { license, licenses, state } from './program.test_arbitrary.ts'
-import { type Event, type Message, type Model, program, type State } from './program.ts'
+import { type Command, type Event, type Message, type Model, program, type State } from './program.ts'
 import type { License } from './services/licenses/licenses.ts'
 import { view } from './view.tsx'
 
 const Msg = Data.taggedEnum<Message>()
 const Ev = Data.taggedEnum<Event>()
+const Cmd = Data.taggedEnum<Command>()
 
 const { outcome, step } = outcomesOf(program.update)
 
@@ -26,6 +27,15 @@ const offset = fc.double({ min: -10, max: 10_000, noNaN: true })
 const messagesOf = (model: Model, at: number): ReadonlyArray<Message> => [
   model.back,
   { ...model.scrolled, offset: at },
+  model.links.license,
+  model.links.source,
+  model.links.openFoodFacts,
+  model.links.openDatabaseLicense,
+  model.links.privacyPolicy,
+  model.links.issues,
+  ...(model.licenses._tag === 'Loaded'
+    ? model.licenses.cards.flatMap((card) => Opt.toArray(Opt.map(card.maybeRepository, ({ open }) => open)))
+    : []),
 ]
 
 /** A message that may arrive in `before`: a load's answer only while it loads. */
@@ -33,6 +43,7 @@ const arriving = (before: State): fc.Arbitrary<Message> =>
   fc.oneof(
     fc.constant(Msg.BackPressed()),
     offset.map((at) => Msg.Scrolled({ offset: at })),
+    fc.webUrl().map((url) => Msg.LinkPressed({ url })),
     ...(before.licenses._tag === 'Loading' ? [licenses.map((items) => Msg.LicensesLoaded({ licenses: items }))] : []),
     ...(before.version._tag === 'Loading' ? [fc.string().map((version) => Msg.VersionLoaded({ version }))] : []),
   )
@@ -57,14 +68,15 @@ describe('About update', () => {
 
   // Going back asks the parent to leave on every tap: the parent removes the page on the first one, so a second
   // tap from the same frame goes to a visit that is over, and the library drops it. A scroll that stays on the
-  // same side of the top changes nothing, and is held all the same: the list reports every scroll.
+  // same side of the top changes nothing, and is held all the same: the list reports every scroll. A link opens on
+  // every press.
   test('the model holds what update accepts, all of it, and acts once when sent twice', () => {
     fc.assert(fc.property(state, offset, (before, at) => {
       expect(dispatchViolations(program.update, {
         state: before,
         held: messagesOf(makeModel(before), at),
         candidates: [Msg.BackPressed(), Msg.Scrolled({ offset: at })],
-        repeatable: (msg) => msg._tag === 'BackPressed',
+        repeatable: (msg) => msg._tag === 'BackPressed' || msg._tag === 'LinkPressed',
         inert: (msg, s) => msg._tag === 'Scrolled' && msg.offset <= 0 === s.isAtTop,
       })).toEqual([])
     }))
@@ -109,6 +121,13 @@ describe('About update', () => {
     assertProperty([state], (before) => {
       const { after, events } = step(Msg.BackPressed(), before)
       return Equal.equals(after, before) && Equal.equals(events, [Ev.LeaveRequested()])
+    })
+  })
+
+  test('LinkPressed opens its URL, and changes nothing', () => {
+    assertProperty([state, fc.webUrl()], (before, url) => {
+      const { after, commands, events } = step(Msg.LinkPressed({ url }), before)
+      return after === before && Equal.equals(commands, [Cmd.OpenLink({ url })]) && events.length === 0
     })
   })
 
@@ -166,7 +185,7 @@ describe('About update', () => {
       })
     })
 
-    test('a card shows only the visible fields, the publisher or else the email', () => {
+    test('a card shows only the visible fields, the publisher or else the email, and opens its repository', () => {
       assertProperty([license], (l) => {
         const card = cardOf(l)
         const shown = (field: Opt.Option<string>) => Opt.filter(field, visible)
@@ -175,7 +194,10 @@ describe('About update', () => {
         )
         return Equal.equals(card.maybeLicenses, shown(l.licenses))
           && Equal.equals(card.maybeDescription, shown(l.description))
-          && Equal.equals(card.maybeRepository, shown(l.repository))
+          && Equal.equals(
+            card.maybeRepository,
+            Opt.map(shown(l.repository), (url) => ({ url, open: Msg.LinkPressed({ url }) })),
+          )
           && Equal.equals(card.lines, expectedLines)
       })
     })

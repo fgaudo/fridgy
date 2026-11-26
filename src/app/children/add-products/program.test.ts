@@ -136,8 +136,9 @@ describe('AddProducts update', () => {
 
   // Each message the view sends, what the name field gives and the date's keys included, is accepted in the state it
   // was rendered from; sent twice from the same frame, it acts once, but the keypad's digit and erase keys, which are
-  // meant to repeat, and the close button, whose second press the parent ignores once the page is gone. The name
-  // already there means nothing. And what the user could ask for and `update` accepts is in the view.
+  // meant to repeat, the attribution's link, which opens on every press, and the close button, whose second press the
+  // parent ignores once the page is gone. The name already there means nothing. And what the user could ask for and
+  // `update` accepts is in the view.
   test('the view sends what update accepts, all of it, and acts once when sent twice', () => {
     fc.assert(fc.property(state, fc.string(), anyDay, (before, inputValue, date) => {
       const model = makeModel(before)
@@ -167,7 +168,7 @@ describe('AddProducts update', () => {
         held: messagesSentBy<Model, Message>(view, model, inputValue),
         candidates: askable,
         repeatable: (msg) =>
-          msg._tag === 'Closed'
+          msg._tag === 'Closed' || msg._tag === 'LinkPressed'
           || (msg._tag === 'Expiration' && (msg.message._tag === 'DigitTyped' || msg.message._tag === 'DigitErased')),
         inert: (msg, s) => msg._tag === 'NameTyped' && msg.value === nameOf(s),
       })).toEqual([])
@@ -291,6 +292,13 @@ describe('AddProducts update', () => {
       )
         && Equal.equals(commands, [Cmd.Vibrate({ feedback: 'Confirm' })])
         && events.length === 0
+    })
+  })
+
+  test('LinkPressed opens its URL in every state, and changes nothing', () => {
+    assertProperty([state, fc.webUrl()], (before, url) => {
+      const { after, commands, events } = step(Msg.LinkPressed({ url }), before)
+      return Equal.equals(after, before) && Equal.equals(commands, [Cmd.OpenLink({ url })]) && events.length === 0
     })
   })
 
@@ -592,7 +600,7 @@ describe('AddProducts update', () => {
         const expected = phase._tag === 'LookingUp'
           ? { _tag: 'LookingUp', barcode: phase.barcode }
           : lookup._tag === 'Found'
-          ? { _tag: 'FromOpenFoodFacts', url: lookup.url }
+          ? { _tag: 'FromOpenFoodFacts', open: Msg.LinkPressed({ url: lookup.url }) }
           : lookup._tag === 'NotFound'
           ? { _tag: 'NotOnOpenFoodFacts', barcode: lookup.barcode }
           : lookup._tag === 'Failed'

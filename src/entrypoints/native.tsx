@@ -1,5 +1,5 @@
 // The app on Android, through React Native: op-sqlite as the storage, `fetch` as the HTTP client, Android's back
-// button and keyboard, drawn by React, and the screen a crash leaves.
+// button, keyboard and links, drawn by React, and the screen a crash leaves.
 import * as Tea from '@fgaudo/effect-tea'
 import * as Cause from 'effect/Cause'
 import * as DateTime from 'effect/DateTime'
@@ -15,6 +15,7 @@ import * as App from '#app/program.ts'
 import { view } from '#app/view.tsx'
 import * as BackButtonReactNative from '#infrastructure/back-button/back-button.react-native.ts'
 import * as KeyboardReactNative from '#infrastructure/keyboard/keyboard.react-native.ts'
+import * as LinksReactNative from '#infrastructure/links/links.react-native.ts'
 import * as SqliteOpSqlite from '#infrastructure/storage/sqlite.op-sqlite.ts'
 import * as Renderer from '#libs/tea-react/renderer.ts'
 import * as Crash from './crash/view.tsx'
@@ -23,6 +24,7 @@ const layer = Layer.mergeAll(
   AppLayer.layer.pipe(Layer.provide([SqliteOpSqlite.layer, FetchHttpClient.layer])),
   BackButtonReactNative.layer,
   KeyboardReactNative.layer,
+  LinksReactNative.layer,
   DateTime.layerCurrentZoneLocal,
   Layer.succeed(References.MinimumLogLevel, 'Info'),
 )

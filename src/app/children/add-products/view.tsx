@@ -2,16 +2,7 @@ import * as Tea from '@fgaudo/effect-tea'
 import * as Match from 'effect/Match'
 import * as Opt from 'effect/Option'
 import type { ReactNode } from 'react'
-import {
-  ActivityIndicator,
-  View as Box,
-  Linking,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-} from 'react-native'
+import { ActivityIndicator, View as Box, Pressable, ScrollView, StyleSheet, Text, TextInput } from 'react-native'
 import Animated, { FadeOut, Keyframe } from 'react-native-reanimated'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import * as Expiration from '#app/programs/expiration/view.tsx'
@@ -238,16 +229,16 @@ const button = (label: string, shown: Control, kind: 'Filled' | 'Text', dispatch
 }
 
 /** The field's supporting text. The line is there even when empty, so that a text appearing moves nothing. */
-const supportingText = (supporting: Supporting) => (
+const supportingText = (supporting: Supporting, dispatch: Tea.Dispatch<Message>) => (
   <Text style={styles.supporting}>
     {Match.valueTags(supporting, {
       Nothing: () => '',
       CameraUnavailable: () => 'Camera not available. Type the name',
       LookingUp: ({ barcode }) => `Looking up ${barcode}…`,
       // The attribution Open Food Facts' licence asks for, with the product's page.
-      FromOpenFoodFacts: ({ url }) => [
+      FromOpenFoodFacts: ({ open }) => [
         'From ',
-        <Text key='link' style={styles.link} accessibilityRole='link' onPress={() => Linking.openURL(url)}>
+        <Text key='link' style={styles.link} accessibilityRole='link' onPress={handlers(dispatch).on(open)}>
           Open Food Facts
         </Text>,
       ],
@@ -313,7 +304,7 @@ const nameField = (shown: NameShown, activity: NameActivity, dispatch: Tea.Dispa
             </Pressable>
           )}
       </Box>
-      {supportingText(shown.supporting)}
+      {supportingText(shown.supporting, dispatch)}
     </Box>
   )
 }

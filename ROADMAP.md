@@ -6,7 +6,7 @@ owner asked for on 22 November 2026, from the move to effect-tea 0.9.0 on 26 Nov
 steps on the root and on the inputs, and what waited for that release, and from a review of the structure on that
 same day, for which the owner set every rule of the project aside.
 
-That last review found one thing, which steps 4, 6, 8 and 9 act on. The app has three boundaries where one thing
+That last review found one thing, which steps 2, 4, 6 and 7 act on. The app has three boundaries where one thing
 is put in another's place. A program says what it asks of the world as data, its commands and the keys of its
 subscriptions, and `update` is tested with none of it run. The entrypoint, or a test, picks the database's engine,
 the HTTP client and the platform's services. The model stands between a program and its view. A boundary beside
@@ -19,63 +19,7 @@ that describe what it changed brought up to date (`AGENTS.md`, "Conventions").
 
 ## Next, in order
 
-### 1. The app on effect-tea 0.9.0, seen on the emulator
-
-**Model and effort.** Opus 5.5, `medium`.
-
-**Depends on** no other step. It comes first: the steps after it change the same views.
-
-**Why.** The move to 0.9.0 changed every program and every view, and was checked by the tests, the typecheck,
-Metro's bundle and Hermes' bytecode alone. No test sees what a view draws, nor what the platform does with it
-(`docs/testing.md`).
-
-**How.** As the `android-release` skill says, on a debug build and then a release. What changed, and what to look
-at:
-
-- **Home's scroll.** The heights, the offset and the end of a scroll are messages that the view fills, where they
-  were inputs: the bar collapses and snaps, the add button shrinks while the list scrolls, a change of the font
-  size or of the screen draws the list anew at its top, and Home comes back from a page where it rested.
-- **The name's field**, in both pages: typing, clearing, a scan that replaces it, a key typed just before "Add"
-  and "Save".
-- **The date**, drawn by one view for both pages (`src/app/programs/expiration/view.tsx`): the segments, the
-  field, the strip and the keypad lay out in each page's column as before. Its keys take nothing until the order
-  is read, a moment after the date is first shown: nothing should be seen of it.
-- **The fridge**, drawn by its own view (`src/app/children/add-products/children/fridge/view.tsx`), with no
-  wrapper of its own in the name step's room: the flight of `docs/product-flight.md`.
-- **The snackbars** of the three pages, and "Undo". One stands from when it was told: Home's, hidden under a page
-  past its time, is gone when Home is back.
-- **A page opened twice.** Each visit is drawn under a key of its own (`src/app/view.tsx`): the second shows
-  nothing of the first, its fields' text included.
-- **The root that draws.** The system theme changed while a page over Home is shown keeps that page
-  (`src/entrypoints/native.tsx` starts the program itself, for this). The crash screen, and its restart.
-
-**Done when** each item above was seen on the emulator, on a debug build and on a release, and what was found is
-fixed, or written here as a step; `docs/motion.md` and `docs/testing.md` say what was seen, and when.
-
-### 2. A link is opened by a command
-
-**Model and effort.** Opus 5.5, `medium`.
-
-**Depends on** no other step.
-
-**Why.** Three views call `Linking.openURL` in an `onPress`: `src/app/children/about/view.tsx` (the `link` helper,
-for six fixed links, and a card's repository) and `src/app/children/add-products/view.tsx` (Open Food Facts'
-attribution). It is an effect in a view, and a bare Promise, which rejects when nothing opens the URL. It runs
-outside `update`, and outside what `messagesSentBy` checks.
-
-**How.**
-
-- A service of the infrastructure, `src/infrastructure/links/`, as `haptics/` is: a fact of the platform that no
-  page could shape. It has alternatives, so `src/app/layer.ts` leaves it out, as it does the `BackButton`: the
-  entrypoint gives React Native's, and `src/app/user.test_support.ts` one that opens nothing.
-- In each program, a message that the model holds for each link, and a command that opens it. A failure is logged
-  as a warning and not told, as a vibration's is.
-
-**Done when** no module outside `src/infrastructure/` names `Linking`; each view's test sees the links' messages,
-and `update` accepts them; `AGENTS.md` lists `links` with the infrastructure's other services ("A service belongs
-to what uses it").
-
-### 3. A stored row is read on its own
+### 1. A stored row is read on its own
 
 **Model and effort.** Opus 5.5, `high`.
 
@@ -102,11 +46,11 @@ to what uses it").
 date and one with a malformed expiration, and finds both listed as no products beside the good ones; `Corrupt` is
 gone from the program, the view, the arbitraries and the tests.
 
-### 4. The programs ask the products' store
+### 2. The programs ask the products' store
 
 **Model and effort.** Opus 5.5, `high`.
 
-**Depends on** step 3: how it leaves the rows read, and the checks of it, move here as they are.
+**Depends on** step 1: how it leaves the rows read, and the checks of it, move here as they are.
 
 **Why.** Counted on 26 November 2026:
 
@@ -130,13 +74,13 @@ gone from the program, the view, the arbitraries and the tests.
 
 - `ProductStore` (`src/infrastructure/storage/products.ts`) gives what the programs' commands and subscriptions
   run, and keeps the rest to itself (its resolvers, its columns, the join): the list's `changes`, as `ProductList`
-  gives them after step 3; `insertAll`, for a product added and for the ones an undo puts back; `deleteAll`;
+  gives them after step 1; `insertAll`, for a product added and for the ones an undo puts back; `deleteAll`;
   `update`. Each write is a function that returns an `Effect` with tagged errors, in one transaction.
 - The effects of the commands, and the list's subscription, ask `ProductStore`, which `src/app/layer.ts` provides.
   The four ports go, with their adapters and Home's two `layer.ts`; the other pages' layers lose those entries.
 - The contracts' checks become the store's test, on `SqliteMemory`, each one kept. What they need beyond the store
   stays in `products.test_support.ts`.
-- An id stays a string until step 5, parsed in one place: the store.
+- An id stays a string until step 3, parsed in one place: the store.
 - What is given up: a program could ask the store for more than it needs, and "write services have no read" is no
   longer a type. A program still learns of a write from `changes` alone: a rule of `AGENTS.md`, which a review
   checks.
@@ -147,11 +91,11 @@ order and its changes, all or nothing, each failure by its tag); the root's test
 ("A service belongs to what uses it", "Tests"), `src/README.md`, `docs/testing.md`, `docs/edit-product.md` and the
 `add-service` skill say what is true of the products.
 
-### 5. An id that is the storage's
+### 3. An id that is the storage's
 
 **Model and effort.** Opus 5.5, `high`.
 
-**Depends on** step 3, which makes the id always there, and on step 4, which leaves one module that reads it.
+**Depends on** step 1, which makes the id always there, and on step 2, which leaves one module that reads it.
 
 **Why.** An id is a `string` in every state, message, event and key. The store parses it back into the row's
 integer, with a branch for one that was never written.
@@ -162,13 +106,13 @@ makes and reads. The store's functions, the programs' states, messages and event
 
 **Done when** nothing parses an id, and no branch is left for one that was never written.
 
-### 6. No service and no layer below the root
+### 4. No service and no layer below the root
 
 **Model and effort.** Opus 5.5, `medium`.
 
-**Depends on** step 4, which leaves five services under `src/app/`.
+**Depends on** step 2, which leaves five services under `src/app/`.
 
-**Why.** Counted on 26 November 2026, of what step 4 leaves:
+**Why.** Counted on 26 November 2026, of what step 2 leaves:
 
 - **`DateOrderSetting`** (`programs/expiration`) has one adapter. It adds to `DateOrderStore` a read that follows
   the changes, and a name for its error.
@@ -206,7 +150,7 @@ is left under `src/`; `user.test_support.ts` replaces nothing by the order of a 
 services away fails the typecheck; the item "The storage's checks on op-sqlite", below, names the stores' tests;
 the documents above say what is true.
 
-### 7. What has one truth is written once
+### 5. What has one truth is written once
 
 **Model and effort.** Opus 5.5, `medium`.
 
@@ -215,14 +159,15 @@ the documents above say what is true.
 **Why.** Counted on 26 November 2026, after the snackbar and the date became programs of `src/app/programs/`:
 
 - The subscription to `BackButton` is the same lines in five programs (`Home`, `Products`, `About`, `AddProducts`,
-  `EditProduct`), the one to `Keyboard` in two, and the effect of the `Vibrate` command in three.
+  `EditProduct`), the one to `Keyboard` in two, the effect of the `Vibrate` command in three, and that of
+  `OpenLink` in two (`About`, `AddProducts`).
 - The programs' timers repeat, as numbers, the durations that the views take from `#styles`: the fridge
   (`add-products/children/fridge/program.ts`: `300 + 500`, `500`, `200 + 250`) and `products/program.ts` (`500`).
   Only a comment ties them.
 
 **How.**
 
-- Beside each service of the infrastructure (`back-button.ts`, `keyboard.ts`, `haptics.ts`), what every program
+- Beside each service of the infrastructure (`back-button.ts`, `keyboard.ts`, `haptics.ts`, `links.ts`), what every program
   writes to use it: the subscription, taking the message to send, which a program's `listen` returns for its key,
   or the command's effect. Typed with `Source`, and kept small.
 - Material's durations in a module of `src/libs/` with no React Native in it. `src/styles.ts` takes them from
@@ -231,11 +176,11 @@ the documents above say what is true.
 
 **Done when** each has one definition, and the programs' tests check what they checked.
 
-### 8. A large program is modules, by concern
+### 6. A large program is modules, by concern
 
 **Model and effort.** Opus 5.5, `high`.
 
-**Depends on** steps 3 to 7, which change the same programs.
+**Depends on** steps 1 to 5, which change the same programs.
 
 **Why.** `home/children/products/program.ts` is 753 lines and `add-products/program.ts` 689 (26 November 2026,
 before the steps above). Each holds concerns that read each other's state, and so is one program, "however long"
@@ -259,11 +204,11 @@ program's folder holds, and names no such module: none was written.
 checked, changed only in what they import; `AGENTS.md` and the `add-program` skill say what a program's folder
 holds and when a program is split, by the guide's words.
 
-### 9. `AGENTS.md` holds the rules of every change
+### 7. `AGENTS.md` holds the rules of every change
 
 **Model and effort.** Opus 5.5, `medium`.
 
-**Depends on** steps 6 and 8, which rewrite the rules it sorts.
+**Depends on** steps 4 and 6, which rewrite the rules it sorts.
 
 **Why.** "Architecture rules" mixes rules that hold for any program with the design of single features: "Home is
 always there, and at most one page is shown over it", "The back button is the program's that has something to do
@@ -278,11 +223,11 @@ without it would be a bug, and says where the rest is.
 **Done when** every item of "Architecture rules" holds for any program or service; each paragraph moved is reached
 from `AGENTS.md`, by its table or by a line; nothing is said in two places.
 
-### 10. Design: the app in the user's language
+### 8. Design: the app in the user's language
 
 **Model and effort.** Fable 5.2, `high`: a design, whose steps are then written here, each with its own model.
 
-**Depends on** steps 2 and 7, which change the views it reads. The owner is asked first: which languages.
+**Depends on** step 5, which changes the views it reads. The owner is asked first: which languages.
 
 **Why.** The texts are English, literals in the views (about 65), in the crash screen, and one in the domain
 (`'Undefined name'`, `fromSnapshot`). The dates, the order of a date's digits and the language Open Food Facts is
@@ -302,6 +247,42 @@ are.
 
 **Done when** `docs/localization.md` holds the decisions and the facts they rely on, checked; the steps that
 implement it are written here; the owner has read it.
+
+### 9. The app on effect-tea 0.9.0, seen on the emulator
+
+**Model and effort.** Opus 5.5, `medium`.
+
+**Depends on** no other step. It comes last, as the owner decided on 26 November 2026: the views are seen once,
+as the steps before it leave them.
+
+**Why.** The move to 0.9.0 changed every program and every view, and was checked by the tests, the typecheck,
+Metro's bundle and Hermes' bytecode alone. No test sees what a view draws, nor what the platform does with it
+(`docs/testing.md`).
+
+**How.** As the `android-release` skill says, on a debug build and then a release. What changed, and what to look
+at:
+
+- **Home's scroll.** The heights, the offset and the end of a scroll are messages that the view fills, where they
+  were inputs: the bar collapses and snaps, the add button shrinks while the list scrolls, a change of the font
+  size or of the screen draws the list anew at its top, and Home comes back from a page where it rested.
+- **The name's field**, in both pages: typing, clearing, a scan that replaces it, a key typed just before "Add"
+  and "Save".
+- **The date**, drawn by one view for both pages (`src/app/programs/expiration/view.tsx`): the segments, the
+  field, the strip and the keypad lay out in each page's column as before. Its keys take nothing until the order
+  is read, a moment after the date is first shown: nothing should be seen of it.
+- **The fridge**, drawn by its own view (`src/app/children/add-products/children/fridge/view.tsx`), with no
+  wrapper of its own in the name step's room: the flight of `docs/product-flight.md`.
+- **The snackbars** of the three pages, and "Undo". One stands from when it was told: Home's, hidden under a page
+  past its time, is gone when Home is back.
+- **A page opened twice.** Each visit is drawn under a key of its own (`src/app/view.tsx`): the second shows
+  nothing of the first, its fields' text included.
+- **The links**, About's and the attribution of a product found: each opens its page, through a command
+  (`src/infrastructure/links/`).
+- **The root that draws.** The system theme changed while a page over Home is shown keeps that page
+  (`src/entrypoints/native.tsx` starts the program itself, for this). The crash screen, and its restart.
+
+**Done when** each item above was seen on the emulator, on a debug build and on a release, and what was found is
+fixed, or written here as a step; `docs/motion.md` and `docs/testing.md` say what was seen, and when.
 
 ## Any time
 
@@ -364,7 +345,7 @@ a step when a release takes it up, or goes when the runtime rejects it.
   command could stamp the product instead, against "the command carries the entity, valid by construction".
 - **The storage's checks on op-sqlite.** The phone's engine is a client written here (`sqlite.op-sqlite.ts`), whose
   update hook every list relies on; every test runs on wa-sqlite, and `docs/testing.md` says so. Running the
-  storage's checks on the emulator (the contracts, until steps 4 and 6 make them the stores' tests) needs them
+  storage's checks on the emulator (the contracts, until steps 2 and 4 make them the stores' tests) needs them
   apart from `bun:test`. The engine is the one thing of the storage that has two implementations: these checks are
   the contract that has two adapters to run on. To weigh: whether that is worth its cost.
 - **The crash screen shows nothing of the cause**, by decision (`src/entrypoints/crash/view.tsx`). The cause goes
@@ -373,13 +354,13 @@ a step when a release takes it up, or goes when the runtime rejects it.
 - **How `AGENTS.md` is written.** A review's opinion, of 26 November 2026: its sentences are compressed, and some
   must be worked out before they can be followed ("A page over Home is a child by the number of its visit, never
   used again"). An agent reads the file at every session. To weigh: plain statements, one fact each, as the file
-  asks of a comment. It is the owner's voice, so nothing changes it without the owner; step 9 moves paragraphs,
+  asks of a comment. It is the owner's voice, so nothing changes it without the owner; step 7 moves paragraphs,
   and rewrites none.
 - **A text field is uncontrolled**, by the `views` skill: its text is `defaultValue`, and a new `key` replaces
   it. The choice was made when the runtime drew no controlled element on React Native. Its bridge now draws a
   controlled `TextInput`, and promises nothing of what it shows until its native view takes the model's value. To
   weigh, on a phone: whether a controlled field keeps up with fast typing. It would let a locked state take a key
   back, and `nameKey` and `replacements` go.
-- **What the move to 0.9.0 changed for the user**, each decided in passing and seen on no screen yet (step 1): the
+- **What the move to 0.9.0 changed for the user**, each decided in passing and seen on no screen yet (step 9): the
   keypad of a date takes no key until the order of its digits is read; the disc of a product entering the fridge
   is colored by the day it was added on, where it followed the clock during its flight.

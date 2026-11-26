@@ -147,6 +147,7 @@ export const message: fc.Arbitrary<Message> = fc.oneof(
   fc.constant(Msg.DateDismissed()),
   fc.constant(Msg.Closed()),
   fc.constant(Msg.LookupCancelled()),
+  fc.webUrl().map((url) => Msg.LinkPressed({ url })),
   fc.constant(Msg.CameraFailed()),
   fc.boolean().map((isAvailable) => Msg.CameraChecked({ isAvailable })),
   fc.string().map((value) => Msg.NameTyped({ value })),

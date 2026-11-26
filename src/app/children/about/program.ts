@@ -6,6 +6,7 @@ import * as Effect from 'effect/Effect'
 import * as Match from 'effect/Match'
 import * as Opt from 'effect/Option'
 import { BackButton } from '#infrastructure/back-button/back-button.ts'
+import { Links } from '#infrastructure/links/links.ts'
 import { type License, Licenses } from './services/licenses/licenses.ts'
 import { Version } from './services/version/version.ts'
 
@@ -27,6 +28,8 @@ type Own = Data.TaggedEnum<{
   BackPressed: object
   /** The list scrolled, to `offset` pixels from its top. */
   Scrolled: { offset: number }
+  /** A link of the page, which opens `url` on every press. */
+  LinkPressed: { url: string }
   // From commands.
   LicensesLoaded: { licenses: ReadonlyArray<License> }
   VersionLoaded: { version: string }
@@ -40,7 +43,7 @@ export type Event = Data.TaggedEnum<{
 
 const Event = Data.taggedEnum<Event>()
 
-export type Command = Data.TaggedEnum<{ LoadLicenses: object; LoadVersion: object }>
+export type Command = Data.TaggedEnum<{ LoadLicenses: object; LoadVersion: object; OpenLink: { url: string } }>
 
 const Command = Data.taggedEnum<Command>()
 
@@ -64,6 +67,27 @@ const loadVersion = Effect.fn('LoadVersion')(
   Effect.withLogSpan('LoadVersion'),
 )
 
+const openLink = Effect.fn('OpenLink')(
+  function*({ url }: Readonly<{ url: string }>) {
+    const { open } = yield* Links
+    yield* open(url).pipe(
+      Effect.catchTag('LinksError', (error) => Effect.logWarning('Could not open a link', error.cause)),
+    )
+    return Opt.none()
+  },
+  Effect.withLogSpan('OpenLink'),
+)
+
+/** The links of the page's own card, in the order it draws them. */
+const linkUrls = {
+  license: 'https://spdx.org/licenses/AGPL-3.0-or-later.html',
+  source: 'https://github.com/fgaudo/fridgy',
+  openFoodFacts: 'https://openfoodfacts.org',
+  openDatabaseLicense: 'https://opendatacommons.org/licenses/odbl/1-0/',
+  privacyPolicy: 'https://github.com/fgaudo/fridgy/blob/main/PRIVACY.md',
+  issues: 'https://github.com/fgaudo/fridgy/issues',
+} as const
+
 /** A package's card: what is known of it, with nothing blank. */
 export type LicenseCard = Readonly<{
   /** The package's name and version, unique among the cards. */
@@ -74,7 +98,7 @@ export type LicenseCard = Readonly<{
   maybeDescription: Opt.Option<string>
   /** The copyright, then the publisher, or else their email. */
   lines: ReadonlyArray<string>
-  maybeRepository: Opt.Option<string>
+  maybeRepository: Opt.Option<Readonly<{ url: string; open: Own }>>
 }>
 
 export type Model = Readonly<{
@@ -83,6 +107,8 @@ export type Model = Readonly<{
   scrolled: Readonly<{ _tag: 'Scrolled' }>
   /** The top app bar takes a container's color once the page scrolls under it. */
   isAtTop: boolean
+  /** What each link of the page's own card sends. */
+  links: Readonly<{ [Link in keyof typeof linkUrls]: Own }>
   licenses: Data.TaggedEnum<{
     Loading: object
     Loaded: Readonly<{ cards: ReadonlyArray<LicenseCard> }>
@@ -105,7 +131,7 @@ const cardOf = (license: License): LicenseCard => ({
     nonBlank(license.copyright),
     Opt.orElse(nonBlank(license.publisher), () => nonBlank(license.email)),
   ]),
-  maybeRepository: nonBlank(license.repository),
+  maybeRepository: Opt.map(nonBlank(license.repository), (url) => ({ url, open: Own.LinkPressed({ url }) })),
 })
 
 const { make } = Tea.program<{
@@ -143,11 +169,14 @@ export const program = make({
       const isAtTop = offset <= 0
       return isAtTop === state.isAtTop ? { state } : { state: { ...state, isAtTop } }
     },
+
+    LinkPressed: ({ url }) => (state) => ({ state, commands: [Command.OpenLink({ url })] }),
   }),
 
   runCommand: Match.typeTags<Command>()({
     LoadLicenses: loadLicenses,
     LoadVersion: loadVersion,
+    OpenLink: openLink,
   }),
 
   subscriptions: () => ['back-button'],
@@ -158,6 +187,14 @@ export const program = make({
     back: Own.BackPressed(),
     scrolled: { _tag: 'Scrolled' } as const,
     isAtTop: state.isAtTop,
+    links: {
+      license: Own.LinkPressed({ url: linkUrls.license }),
+      source: Own.LinkPressed({ url: linkUrls.source }),
+      openFoodFacts: Own.LinkPressed({ url: linkUrls.openFoodFacts }),
+      openDatabaseLicense: Own.LinkPressed({ url: linkUrls.openDatabaseLicense }),
+      privacyPolicy: Own.LinkPressed({ url: linkUrls.privacyPolicy }),
+      issues: Own.LinkPressed({ url: linkUrls.issues }),
+    },
     licenses: state.licenses._tag === 'Loaded'
       ? { _tag: 'Loaded', cards: Arr.map(state.licenses.items, cardOf) }
       : { _tag: 'Loading' },

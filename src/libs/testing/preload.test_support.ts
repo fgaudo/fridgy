@@ -22,7 +22,6 @@ mock.module('react-native', () => ({
       ListHeaderComponent,
       data.map((item) => createElement('View', { key: keyExtractor(item) }, renderItem({ item }))),
     ),
-  Linking: { openURL: () => Promise.resolve() },
   PlatformColor: (resource: string) => resource,
   Pressable: 'Pressable',
   ScrollView: 'ScrollView',

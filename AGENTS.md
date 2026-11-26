@@ -95,7 +95,7 @@ folders; "page" names a role in the UI, kept by the root's state, not a kind of 
   requirement of its consumer, in its `services/`, shaped for it. Two consumers that need the same thing each
   have their own; what they share is the domain and the infrastructure. The exception is a fact of the platform
   that no consumer could shape (`src/infrastructure/back-button`, `src/infrastructure/haptics`,
-  `src/infrastructure/keyboard`), a service of the infrastructure that programs list directly. Write services
+  `src/infrastructure/keyboard`, `src/infrastructure/links`), a service of the infrastructure that programs list directly. Write services
   have no read: a program learns about writes from the storage's changes. Persistence services take a domain `Snapshot` and return
   `UnvalidatedSnapshot`s; adapters never read domain fields.
 - **An expiration is a day of the calendar, and days are the device's.** An expiration date is a `Day`

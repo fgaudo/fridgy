@@ -1,8 +1,8 @@
 import * as Opt from 'effect/Option'
 import type { ReactElement, ReactNode } from 'react'
-import { View as Box, FlatList, Linking, Pressable, StyleSheet, Text } from 'react-native'
+import { View as Box, FlatList, Pressable, StyleSheet, Text } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { handlers, type View } from '#libs/tea-react/tea-react.ts'
+import { type Handlers, handlers, type View } from '#libs/tea-react/tea-react.ts'
 import { color, icon, shape, type } from '#styles'
 import type { LicenseCard, Message, Model } from './program.ts'
 
@@ -43,8 +43,10 @@ const styles = StyleSheet.create({
   cardLine: { ...type.bodySmall, color: color.onSurfaceVariant },
 })
 
-const link = (href: string, text: string): ReactNode => (
-  <Text key={href} style={styles.link} accessibilityRole='link' onPress={() => Linking.openURL(href)}>
+type On = Handlers<Message>['on']
+
+const link = (on: On, open: Message, text: string): ReactNode => (
+  <Text key={text} style={styles.link} accessibilityRole='link' onPress={on(open)}>
     {text}
   </Text>
 )
@@ -58,7 +60,7 @@ const row = (iconName: string, content: ReadonlyArray<ReactNode>, isFirst = fals
 )
 
 /** Material's outlined card: a long list of them stays light. */
-const card = (card: LicenseCard): ReactNode => (
+const card = (on: On, card: LicenseCard): ReactNode => (
   <Box key={card.key} style={styles.outlinedCard}>
     <Box style={styles.cardHeader}>
       <Text style={styles.cardTitle}>{card.title}</Text>
@@ -74,11 +76,12 @@ const card = (card: LicenseCard): ReactNode => (
     {card.lines.map((line) => <Text key={line} style={styles.cardLine}>{line}</Text>)}
     {Opt.match(card.maybeRepository, {
       onNone: () => null,
-      onSome: (url) => (
+      onSome: ({ url, open }) => (
         <Text
           style={[styles.cardLine, styles.link]}
           numberOfLines={1}
-          onPress={() => Linking.openURL(url)}
+          accessibilityRole='link'
+          onPress={on(open)}
         >
           {url}
         </Text>
@@ -114,10 +117,10 @@ export const view: View<Model, Message> = (model, dispatch) => {
           onScroll={(event) => dispatch({ ...model.scrolled, offset: event.nativeEvent.contentOffset.y })}
           data={model.licenses._tag === 'Loading' ? [] : model.licenses.cards}
           keyExtractor={(licenseCard) => licenseCard.key}
-          renderItem={({ item }) => card(item)}
+          renderItem={({ item }) => card(on, item)}
           // A screen above and below. The default, ten of each, still mounted most cards as the page rose.
           windowSize={3}
-          ListHeaderComponent={intro(model)}
+          ListHeaderComponent={intro(model, on)}
         />
       </Box>
     </SafeAreaView>
@@ -125,7 +128,7 @@ export const view: View<Model, Message> = (model, dispatch) => {
 }
 
 /** What comes before the cards: the app, the project's card, and the heading of the cards. */
-const intro = (model: Model): ReactElement => (
+const intro = (model: Model, on: On): ReactElement => (
   <Box style={styles.intro}>
     <Box style={styles.header}>
       <Text style={styles.appName}>Fridgy</Text>
@@ -138,26 +141,26 @@ const intro = (model: Model): ReactElement => (
     <Box style={styles.filledCard}>
       {row('balance', [
         'Free software, released under the ',
-        link('https://spdx.org/licenses/AGPL-3.0-or-later.html', 'AGPL-3.0-or-later'),
+        link(on, model.links.license, 'AGPL-3.0-or-later'),
         ' license.',
       ], true)}
-      {row('code', ['The source code is on ', link('https://github.com/fgaudo/fridgy', 'GitHub'), '.'])}
+      {row('code', ['The source code is on ', link(on, model.links.source, 'GitHub'), '.'])}
       {/* The attribution Open Food Facts' licence asks for: the licenses below come from npm and cannot carry it. */}
       {row('barcode', [
         'Product names from ',
-        link('https://openfoodfacts.org', 'Open Food Facts'),
+        link(on, model.links.openFoodFacts, 'Open Food Facts'),
         ', under the ',
-        link('https://opendatacommons.org/licenses/odbl/1-0/', 'Open Database License'),
+        link(on, model.links.openDatabaseLicense, 'Open Database License'),
         '.',
       ])}
       {row('privacy_tip', [
         'Your products stay on your phone: read the ',
-        link('https://github.com/fgaudo/fridgy/blob/main/PRIVACY.md', 'privacy policy'),
+        link(on, model.links.privacyPolicy, 'privacy policy'),
         '.',
       ])}
       {row('bug_report', [
         'Found a bug, or have an idea? ',
-        link('https://github.com/fgaudo/fridgy/issues', 'Open an issue'),
+        link(on, model.links.issues, 'Open an issue'),
         '.',
       ])}
     </Box>
