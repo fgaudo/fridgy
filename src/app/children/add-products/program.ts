@@ -13,15 +13,15 @@ import * as Expiration from '#app/programs/expiration/program.ts'
 import * as SnackbarProgram from '#app/programs/snackbar/program.ts'
 import * as Product from '#domain/product.ts'
 import { BackButton } from '#infrastructure/back-button/back-button.ts'
+import { BarcodeCamera } from '#infrastructure/barcode-camera/barcode-camera.ts'
 import { type Feedback, Haptics } from '#infrastructure/haptics/haptics.ts'
 import { Keyboard } from '#infrastructure/keyboard/keyboard.ts'
 import { Links } from '#infrastructure/links/links.ts'
+import { type FoundProduct, ProductLookup } from '#infrastructure/product-lookup/product-lookup.ts'
 import { ProductStore } from '#infrastructure/storage/products.ts'
 import * as Day from '#libs/dates/day.ts'
 import { every } from '#libs/timers/timers.ts'
 import * as Fridge from './children/fridge/program.ts'
-import { type FoundProduct, ProductLookup } from './services/product-lookup/product-lookup.ts'
-import { Scanner } from './services/scanner/scanner.ts'
 
 /** Asked once per visit of the page. `Unavailable` also once the camera has failed: it is not tried again. */
 export type Camera = 'Checking' | 'Available' | 'Unavailable'
@@ -312,10 +312,10 @@ const productOfStep = (state: State, step: Step, maybeConcluded: Opt.Option<Expi
 const clock = every('1 second', (now) => Own.TimeChanged({ now }))
 
 const scanner = Channel.unwrap(
-  Effect.map(Effect.service(Scanner), ({ barcodes }) =>
+  Effect.map(Effect.service(BarcodeCamera), ({ barcodes }) =>
     barcodes.pipe(
       Channel.map((barcode) => Own.Scanned({ barcode })),
-      Channel.catchTag('ScannerError', (error) =>
+      Channel.catchTag('BarcodeCameraError', (error) =>
         Channel.fromEffectDone(
           Effect.logWarning('Could not use the camera', error.cause).pipe(Effect.as(Own.CameraFailed())),
         )),
@@ -357,7 +357,7 @@ const lookup = (barcode: string): Tea.Subscription<Own, ProductLookup> =>
 
 const checkCamera = Effect.fn('CheckCamera')(
   function*() {
-    const { isAvailable } = yield* Scanner
+    const { isAvailable } = yield* BarcodeCamera
     const isAvailableNow = yield* isAvailable
     yield* Effect.logInfo(isAvailableNow ? 'The device can read barcodes' : 'The device cannot read barcodes')
     return Opt.some(Own.CameraChecked({ isAvailable: isAvailableNow }))

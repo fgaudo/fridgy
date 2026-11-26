@@ -11,6 +11,7 @@ import * as fc from 'fast-check'
 import * as Expiration from '#app/programs/expiration/program.ts'
 import * as SnackbarProgram from '#app/programs/snackbar/program.ts'
 import * as Product from '#domain/product.ts'
+import { type FoundProduct, ProductLookup, ProductLookupError } from '#infrastructure/product-lookup/product-lookup.ts'
 import * as DateOrder from '#libs/dates/date-order.ts'
 import { arbitrary as anyDay } from '#libs/dates/day.test_arbitrary.ts'
 import * as Day from '#libs/dates/day.ts'
@@ -32,7 +33,6 @@ import {
   type Whole,
 } from './program.test_arbitrary.ts'
 import { type Command, type Event, type Failure, type Message, type Model, program, type State } from './program.ts'
-import { type FoundProduct, ProductLookup, ProductLookupError } from './services/product-lookup/product-lookup.ts'
 import { view } from './view.tsx'
 
 const Msg = Data.taggedEnum<Message>()

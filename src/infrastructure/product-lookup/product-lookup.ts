@@ -31,4 +31,4 @@ export class ProductLookup extends Context.Service<
      */
     readonly lookup: (barcode: string) => Effect.Effect<Opt.Option<FoundProduct>, ProductLookupError>
   }
->()('91fa9890c15a396d') {}
+>()('afd51efb8ae8dda9') {}

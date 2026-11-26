@@ -48,7 +48,7 @@ It also writes the icon font into the Android project's assets (`bun run update-
 and the font's package ships WOFF2.
 
 The About page lists what the app ships, with its licenses, from two files in
-`src/app/children/about/services/licenses/`: `bun run update-licenses` writes the packages of the JavaScript bundle
+`src/infrastructure/licenses/`: `bun run update-licenses` writes the packages of the JavaScript bundle
 (from Metro's source map), and `bun run update-android-licenses` the Android libraries (with Gradle) and, from a
 list kept by hand in `scripts/licenses.ts`, what the native libraries compile in. Both fail on a license outside
 the ones the app may ship with, being AGPL (`ALLOWED`, there). Commit the files when they change.
@@ -147,7 +147,8 @@ domain type has a `*.test_arbitrary.ts` file with its generators. Among others, 
 - a stored product reads back as the same product;
 - the products' store keeps its promises on SQLite with the real migrations: what is written reads back as
   itself, a write is all or nothing, deletions remove exactly what they should and an undone one puts its products
-  back, Home's list is ordered and sees every write; every other storage adapter passes its service's contract.
+  back, Home's list is ordered and sees every write; the date order's store and the lookup's cache keep theirs, each
+  checked by its own test.
 
 ## Contributing
 

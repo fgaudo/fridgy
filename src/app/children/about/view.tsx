@@ -132,9 +132,7 @@ const intro = (model: Model, on: On): ReactElement => (
   <Box style={styles.intro}>
     <Box style={styles.header}>
       <Text style={styles.appName}>Fridgy</Text>
-      {model.version._tag === 'Loading'
-        ? null
-        : <Text style={styles.version}>Version {model.version.version}</Text>}
+      <Text style={styles.version}>Version {model.version}</Text>
       <Text style={styles.tagline}>Keep track of what is in your fridge and when it expires.</Text>
     </Box>
     {/* Material's filled card, holding a list. */}

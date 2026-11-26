@@ -39,7 +39,7 @@
                   "**/*.test_*.ts",
                   "@fgaudo/effect-tea/testing"
                 ],
-                "message": "Test-only code: fast-check, *.test_*.ts files (arbitraries, contracts, test support) and @fgaudo/effect-tea/testing may only be imported by *.test.ts and *.test_*.ts files."
+                "message": "Test-only code: fast-check, *.test_*.ts files (arbitraries, test support) and @fgaudo/effect-tea/testing may only be imported by *.test.ts and *.test_*.ts files."
               },
               {
                 "group": [
@@ -73,87 +73,6 @@
     },
     {
       "includes": [
-        "src/entrypoints/**"
-      ],
-      "linter": {
-        "rules": {
-          "style": {
-            "noRestrictedImports": {
-              "level": "error",
-              "options": {
-                "patterns": [
-                  {
-                    "group": [
-                      "#app/*/**",
-                      "!#app/**/*.*.ts",
-                      "#app/**/*.test.ts",
-                      "#app/**/*.test_*.ts"
-                    ],
-                    "message": "An entrypoint imports from src/app its root modules (program.ts, view.tsx, layer.ts) and the adapters it picks (<service>.<backing>.ts); nothing else."
-                  },
-                  {
-                    "group": [
-                      "fast-check",
-                      "**/*.test_*.ts",
-                      "@fgaudo/effect-tea/testing"
-                    ],
-                    "message": "Test-only code: fast-check, *.test_*.ts files (arbitraries, contracts, test support) and @fgaudo/effect-tea/testing may only be imported by *.test.ts and *.test_*.ts files."
-                  },
-                  {
-                    "group": [
-                      "../../../**"
-                    ],
-                    "message": "Relative imports stay within their part of the project: reach another part through its alias (#app/…, #domain/…, #libs/…, #infrastructure/…)."
-                  }
-                ]
-              }
-            }
-          }
-        }
-      }
-    },
-    {
-      "includes": [
-        "scripts/**"
-      ],
-      "linter": {
-        "rules": {
-          "style": {
-            "noRestrictedImports": {
-              "level": "error",
-              "options": {
-                "patterns": [
-                  {
-                    "group": [
-                      "#app/*/**",
-                      "**/app/*/**",
-                      "!#app/children/about/services/licenses/licenses.bundled.ts"
-                    ],
-                    "message": "A script imports from src/app its root modules (program.ts, view.tsx, layer.ts) and, to write a generated file, the adapter that reads it, for its schema."
-                  },
-                  {
-                    "group": [
-                      "fast-check",
-                      "**/*.test_*.ts",
-                      "@fgaudo/effect-tea/testing"
-                    ],
-                    "message": "Test-only code: fast-check, *.test_*.ts files (arbitraries, contracts, test support) and @fgaudo/effect-tea/testing may only be imported by *.test.ts and *.test_*.ts files."
-                  },
-                  {
-                    "group": [
-                      "../../../**"
-                    ],
-                    "message": "Relative imports stay within their part of the project: reach another part through its alias (#app/…, #domain/…, #libs/…, #infrastructure/…)."
-                  }
-                ]
-              }
-            }
-          }
-        }
-      }
-    },
-    {
-      "includes": [
         "src/app/**"
       ],
       "linter": {
@@ -168,7 +87,7 @@
                       "../**",
                       "!../../programs/*/*"
                     ],
-                    "message": "A program knows only its own folder: an import never goes up to a parent or across to a sibling (another child, another service), except to a program of its parent's programs/ (../../programs/<program>/)."
+                    "message": "A program knows only its own folder: an import never goes up to a parent or across to a sibling (another child), except to a program of its parent's programs/ (../../programs/<program>/)."
                   },
                   {
                     "group": [
@@ -182,13 +101,13 @@
                       "**/children/*/*/**",
                       "**/programs/*/*/**"
                     ],
-                    "message": "A parent reaches a child, and a program a program of programs/, only through the modules at its root (program.ts, view.tsx, layer.ts)."
+                    "message": "A parent reaches a child, and a program a program of programs/, only through the modules at its root (program.ts, view.tsx)."
                   },
                   {
                     "group": [
                       "**/*.*.ts"
                     ],
-                    "message": "Adapters (<service>.<backing>.ts) are imported only by a layer.ts, an entrypoint or their own test: a program uses its services."
+                    "message": "Adapters (<service>.<backing>.ts) are picked by an entrypoint or a test: a program uses the services."
                   },
                   {
                     "group": [
@@ -196,60 +115,7 @@
                       "**/*.test_*.ts",
                       "@fgaudo/effect-tea/testing"
                     ],
-                    "message": "Test-only code: fast-check, *.test_*.ts files (arbitraries, contracts, test support) and @fgaudo/effect-tea/testing may only be imported by *.test.ts and *.test_*.ts files."
-                  },
-                  {
-                    "group": [
-                      "../../../**"
-                    ],
-                    "message": "Relative imports stay within their part of the project: reach another part through its alias (#app/…, #domain/…, #libs/…, #infrastructure/…)."
-                  }
-                ]
-              }
-            }
-          }
-        }
-      }
-    },
-    {
-      "includes": [
-        "src/app/**/layer.ts"
-      ],
-      "linter": {
-        "rules": {
-          "style": {
-            "noRestrictedImports": {
-              "level": "error",
-              "options": {
-                "patterns": [
-                  {
-                    "group": [
-                      "../**",
-                      "!../../programs/*/*"
-                    ],
-                    "message": "A program knows only its own folder: an import never goes up to a parent or across to a sibling (another child, another service), except to a program of its parent's programs/ (../../programs/<program>/)."
-                  },
-                  {
-                    "group": [
-                      "#app/**",
-                      "!#app/programs/*/*"
-                    ],
-                    "message": "Inside src/app, files reach each other through relative imports, downwards; the alias is only for the root's programs/, from deeper than ../../."
-                  },
-                  {
-                    "group": [
-                      "**/children/*/*/**",
-                      "**/programs/*/*/**"
-                    ],
-                    "message": "A parent reaches a child, and a program a program of programs/, only through the modules at its root (program.ts, view.tsx, layer.ts)."
-                  },
-                  {
-                    "group": [
-                      "fast-check",
-                      "**/*.test_*.ts",
-                      "@fgaudo/effect-tea/testing"
-                    ],
-                    "message": "Test-only code: fast-check, *.test_*.ts files (arbitraries, contracts, test support) and @fgaudo/effect-tea/testing may only be imported by *.test.ts and *.test_*.ts files."
+                    "message": "Test-only code: fast-check, *.test_*.ts files (arbitraries, test support) and @fgaudo/effect-tea/testing may only be imported by *.test.ts and *.test_*.ts files."
                   },
                   {
                     "group": [
@@ -290,7 +156,7 @@
                       "**/*.test_*.ts",
                       "@fgaudo/effect-tea/testing"
                     ],
-                    "message": "Test-only code: fast-check, *.test_*.ts files (arbitraries, contracts, test support) and @fgaudo/effect-tea/testing may only be imported by *.test.ts and *.test_*.ts files."
+                    "message": "Test-only code: fast-check, *.test_*.ts files (arbitraries, test support) and @fgaudo/effect-tea/testing may only be imported by *.test.ts and *.test_*.ts files."
                   },
                   {
                     "group": [
@@ -329,7 +195,7 @@
                       "**/*.test_*.ts",
                       "@fgaudo/effect-tea/testing"
                     ],
-                    "message": "Test-only code: fast-check, *.test_*.ts files (arbitraries, contracts, test support) and @fgaudo/effect-tea/testing may only be imported by *.test.ts and *.test_*.ts files."
+                    "message": "Test-only code: fast-check, *.test_*.ts files (arbitraries, test support) and @fgaudo/effect-tea/testing may only be imported by *.test.ts and *.test_*.ts files."
                   },
                   {
                     "group": [
@@ -369,7 +235,7 @@
                       "**/*.test_*.ts",
                       "@fgaudo/effect-tea/testing"
                     ],
-                    "message": "Test-only code: fast-check, *.test_*.ts files (arbitraries, contracts, test support) and @fgaudo/effect-tea/testing may only be imported by *.test.ts and *.test_*.ts files."
+                    "message": "Test-only code: fast-check, *.test_*.ts files (arbitraries, test support) and @fgaudo/effect-tea/testing may only be imported by *.test.ts and *.test_*.ts files."
                   },
                   {
                     "group": [

@@ -10,11 +10,11 @@ import * as Effect from 'effect/Effect'
 import * as Match from 'effect/Match'
 import * as Opt from 'effect/Option'
 import * as Product from '#domain/product.ts'
+import { DateOrderStore } from '#infrastructure/storage/date-order.ts'
 import * as DateOrder from '#libs/dates/date-order.ts'
 import * as Day from '#libs/dates/day.ts'
 import * as DigitDateEntry from '#libs/dates/digit-date-entry.ts'
 import * as DigitDates from '#libs/dates/digit-dates.ts'
-import { DateOrderSetting } from './services/date-order-setting/date-order-setting.ts'
 
 export type { Digit } from '#libs/dates/digit-date-entry.ts'
 
@@ -201,16 +201,16 @@ const keyed = (
     })
     : Tea.reject
 
-const dateOrder: Tea.Subscription<Message, DateOrderSetting> = Channel.unwrap(
+const dateOrder: Tea.Subscription<Message, DateOrderStore> = Channel.unwrap(
   Effect.map(
-    Effect.service(DateOrderSetting),
+    Effect.service(DateOrderStore),
     ({ changes }) => Channel.map(changes, (order) => Message.OrderChanged({ order })),
   ),
 )
 
 const keepOrder = Effect.fn('KeepOrder')(
   function*({ order }: Readonly<{ order: DateOrder.DateOrder }>) {
-    const { set } = yield* DateOrderSetting
+    const { set } = yield* DateOrderStore
     yield* set(order).pipe(
       Effect.tapError((error) => Effect.logWarning('Could not keep the date order', error.cause)),
     )

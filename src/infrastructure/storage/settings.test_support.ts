@@ -1,5 +1,5 @@
-// The stored settings, reached without a service: the adapters' tests use them to set up and check their
-// service's contract, so that no service carries reads or writes that only tests need.
+// The stored settings, reached without a service: the stores' tests set up and check what they keep with them,
+// so that no service carries reads or writes that only tests need.
 import * as Effect from 'effect/Effect'
 import { SettingStore } from './settings.ts'
 

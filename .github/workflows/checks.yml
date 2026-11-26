@@ -35,4 +35,4 @@ jobs:
       # means the committed list is stale. The Android libraries need Gradle, and are checked before a release.
       - run: bun run update-licenses
       - name: Licenses up to date
-        run: git diff --exit-code -- src/app/children/about/services/licenses/licenses.npm.generated.json
+        run: git diff --exit-code -- src/infrastructure/licenses/licenses.npm.generated.json

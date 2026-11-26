@@ -1,15 +1,24 @@
-// The order the user types a date's digits in, for every adapter that reads or keeps it: a setting, the order's
-// text under its name, and the device's locale's order until one is kept.
+// The order the user types a date's digits in, as the date's program asks for it: a setting, the order's text
+// under its name, and the device's locale's order until one is kept.
 import * as Context from 'effect/Context'
+import * as Data from 'effect/Data'
 import * as Effect from 'effect/Effect'
 import * as Layer from 'effect/Layer'
 import * as Opt from 'effect/Option'
 import * as Schema from 'effect/Schema'
+import * as Stream from 'effect/Stream'
+import * as Sql from 'effect/sql'
 import * as DateOrder from '#libs/dates/date-order.ts'
+import * as Source from '#libs/source/source.ts'
 import { SettingStore } from './settings.ts'
 
 /** The setting's name in the storage. */
 export const KEY = 'date-order'
+
+/** The order could not be kept: the one in use stays. */
+export class DateOrderWriteError extends Data.TaggedError('DateOrderWriteError')<{
+  readonly cause: unknown
+}> {}
 
 const decode = Schema.decodeUnknownOption(DateOrder.Schema)
 
@@ -17,10 +26,11 @@ export class DateOrderStore extends Context.Service<DateOrderStore>()(
   '7a01185863b0a606',
   {
     make: Effect.gen(function*() {
+      const sql = yield* Sql.SqlClient.SqlClient
       const { read, write, tables } = yield* SettingStore
       // The device's locale's order, until the user picks one: the one they read dates in.
       const ofLocale = Effect.sync(() => DateOrder.ofLocale())
-      /** The order kept, or the locale's: when nothing is kept, when it cannot be read, or when it is not an order. */
+      // The order kept, or the locale's: when nothing is kept, when it cannot be read, or when it is not an order.
       const current = Effect.gen(function*() {
         const maybeStored = yield* read(KEY).pipe(
           Effect.tapError((error) => Effect.logWarning('Could not read the date order', error)),
@@ -34,10 +44,14 @@ export class DateOrderStore extends Context.Service<DateOrderStore>()(
         }
         return maybeOrder.value
       })
-      /** Keeps `order` as the user's. */
-      const set = (order: DateOrder.DateOrder) => write(KEY, order)
-      // The tables the order is in, for a query that reacts to their changes.
-      return { current, set, tables }
+      /** Event: emits the order on subscription and after every change. It never ends. */
+      const changes: Source.Source<DateOrder.DateOrder, never> = Source.fromStream(
+        sql.reactive(tables, current).pipe(Stream.buffer({ capacity: 1, strategy: 'sliding' })),
+      )
+      /** Keeps `order` as the user's, which `changes` then reports. */
+      const set = (order: DateOrder.DateOrder) =>
+        write(KEY, order).pipe(Effect.mapError((cause) => new DateOrderWriteError({ cause })))
+      return { changes, set }
     }),
   },
 ) {

@@ -46,8 +46,8 @@ error, the rule is intended: fix the code, do not work around the check.
 ## Architecture rules
 
 Every program has the same shape, whatever its depth: a folder holding `program.ts` and its tests, `view.tsx`
-unless its parent draws its model (the snackbar's), `layer.ts` once it or a child of it has adapters to provide,
-`services/`, `children/` and, once two programs of its subtree use the same one, `programs/`. The root
+unless its parent draws its model (the snackbar's), `children/` and, once two programs of its subtree use the
+same one, `programs/`. The root
 (`src/app`), a page (a child of the root: Home, or the one page shown over it) and a child of a page are all such
 folders; "page" names a role in the UI, kept by the root's state, not a kind of program. The programs to copy are
 `src/app/children/home` and `src/app/children/about`.
@@ -91,15 +91,14 @@ folders; "page" names a role in the UI, kept by the root's state, not a kind of 
   passes, and a root view made anew, as an activity recreated gives, tells nothing of a keyboard that was up.
   The inset is told as the keyboard starts to move, never once it has: a keyboard sliding away covers the page
   it leaves, and one told late leaves the page's bottom in mid-air.
-- **A service belongs to what uses it, and is never shared.** A service (a `Context.Service`: a port) is a
-  requirement of its consumer, in its `services/`, shaped for it. Two consumers that need the same thing each
-  have their own; what they share is the domain and the infrastructure. The exceptions are services of the
-  infrastructure that programs list directly: a fact of the platform that no consumer could shape
-  (`src/infrastructure/back-button`, `src/infrastructure/haptics`, `src/infrastructure/keyboard`,
-  `src/infrastructure/links`), and the products' store (`src/infrastructure/storage/products.ts`), whose list and
-  writes every program that reads or writes products asks as they are. A program learns about writes from the
-  storage's changes alone, never from what a write answers. Persistence services take a domain `Snapshot` and
-  return `UnvalidatedSnapshot`s; adapters never read domain fields.
+- **What a program needs from outside is the infrastructure's, and it asks for it as it is.** `src/app/` holds no
+  service, adapter or layer but the root's. A store (`ProductStore`, `DateOrderStore`, in
+  `src/infrastructure/storage/`) has one implementation, on `SqlClient`. What has alternatives is a service with an
+  adapter for each: the platform's facts (`back-button`, `barcode-camera`, `haptics`, `keyboard`, `links`) and the
+  lookup on Open Food Facts (`product-lookup`), which a test answers itself. What runs nothing, a file of the build
+  or a constant, is a module (`src/infrastructure/licenses`, `#package.json`), never a service. A program learns
+  about writes from the storage's changes alone, never from what a write answers. A store takes a domain
+  `Snapshot` and returns `UnvalidatedSnapshot`s, and never reads domain fields.
 - **An expiration is a day of the calendar, and days are the device's.** An expiration date is a `Day`
   (`libs/dates/day.ts`), stored as `YYYY-MM-DD`; a creation date is an instant. "Today" is the day of the clock's
   `DateTime.Zoned` time, in the `DateTime.CurrentTimeZone` that the entrypoints provide; never UTC's
@@ -109,8 +108,8 @@ folders; "page" names a role in the UI, kept by the root's state, not a kind of 
   repeating them; the command carries the entity, valid by construction. `fromSnapshot` only reads stored data,
   and is more forgiving, so that what was stored can still be shown and deleted.
 - **Shared things move up, never sideways.** The rules of an entity to `src/domain`; how things are done (the
-  schema, how a product is written, a platform call longer than a line) to `src/infrastructure`. Services never
-  move up; a program never imports a sibling; an adapter stays a thin wrapper on the infrastructure. A thing
+  schema, how a product is written, a platform call longer than a line) to `src/infrastructure`. A program never
+  imports a sibling; an adapter stays a thin wrapper on what backs it. A thing
   two programs have in common moves up when its truth lies outside them, so that a copy changed on its own
   would be a bug (a rule of the domain, a look of Material's, in `src/styles.ts`); where they may
   legitimately differ, it is written twice, never shared through parameters that describe the caller. The one
@@ -119,14 +118,14 @@ folders; "page" names a role in the UI, kept by the root's state, not a kind of 
   fragments of model or view. The root's are `snackbar` and `expiration`. Biome lets a child of the parent reach
   one (`../../programs/<program>/`) and, from any depth, one of the root's (`#app/programs/<program>/`), by the
   modules at its root only, as a child.
-- **One storage per setup; migrations are append-only.** Every adapter of the storage is written once, on
-  `SqlClient`; the entrypoint provides the engine. A phone has already run the existing migrations, so a fix is
+- **One storage per setup; migrations are append-only.** Every store is written once, on `SqlClient`; the
+  entrypoint provides the engine. A phone has already run the existing migrations, so a fix is
   a new one.
 - **Choices of the platform exist only in `src/entrypoints/` and in tests.** Shared code never branches on
-  `process.env.NODE_ENV` or `Platform.OS`. Every `layer.ts` provides the adapters of its own services that have no
-  alternative, merged with its children's; what has alternatives (the `SqlClient`, the `BackButton`) is left out,
-  and the entrypoint imports the adapter it picks by its own module, as a test picks its own. A missing choice
-  fails the typecheck.
+  `process.env.NODE_ENV` or `Platform.OS`. `src/app/layer.ts` provides the stores; what has alternatives (the
+  `SqlClient`, the `HttpClient`, every service with adapters) is left out of it, and the entrypoint imports the
+  adapter it picks by its own module, as `src/app/user.test_support.ts` gives its own. Neither replaces a service
+  by the order of a merge: a missing choice fails the typecheck.
 - **`src/libs/` is generic**: no knowledge of the app. A branded type with a rule is a `Schema`
   (`Schema.Int.pipe(Schema.brand(…))`, `.check(…)`), with its type, `make` (an `Option`) and `makeUnsafe`
   (only for values valid by construction) derived from it; `Brand.make` only for a generic type,
@@ -145,7 +144,7 @@ folders; "page" names a role in the UI, kept by the root's state, not a kind of 
   satisfy yet stays as `test.failing` with the bug in its name.
 - A test's name says what it checks. When a change touches a test, or what it tests, check that its name, its
   `describe` and its comments still say what the assertions check.
-- Code used only by tests lives in `*.test_<kind>.ts` files (`test_arbitrary`, `test_contract`,
+- Code used only by tests lives in `*.test_<kind>.ts` files (`test_arbitrary`,
   `test_support`): Biome lets only `*.test.ts` and other `*.test_*.ts` files import them, and `bun test` does
   not run them. Branded and domain types have a `*.test_arbitrary.ts` producing only valid values; generators
   are built from them, never from `*Unsafe` constructors.
@@ -153,11 +152,10 @@ folders; "page" names a role in the UI, kept by the root's state, not a kind of 
   the root's tests act like a user (`src/app/user.test_support.ts`, `rehearse`), over a database in memory. A view
   is drawn without being rendered (`messagesSentBy`, `libs/tea-react/view.test_support.ts`): `bun test` cannot load
   React Native, whose modules the preload replaces with their names (`libs/testing/preload.test_support.ts`).
-- A service's contract (`<service>.test_contract.ts`) says what every adapter must do, and each adapter's test
-  runs it. What a contract needs beyond its service comes from the adapter's test, through the storage itself:
-  reads and writes that only tests need never go into a service. The products' store, which has one
-  implementation, has no contract: its own test checks it (`products.test.ts`), with what it needs beyond the store
-  in `products.test_support.ts`.
+- Each implementation of a service has its own test (`products.test.ts`, `date-order.test.ts`,
+  `product-lookup.open-food-facts.test.ts`). What it needs beyond the service comes from the storage's own test
+  support (`products.test_support.ts`, `settings.test_support.ts`, `barcodes.test_support.ts`): reads and writes
+  that only tests need never go into a service.
 
 ## Conventions
 
@@ -174,7 +172,8 @@ folders; "page" names a role in the UI, kept by the root's state, not a kind of 
 - A file a tool writes is never edited by hand: change what it is made from and run the tool again. Such a file
   is named `<name>.generated.<ext>` (`src/palette.generated.ts` and the Android project's `palette.generated.xml`,
   by `bun run update-palette`;
-  the About page's `licenses.npm.generated.json` and `licenses.android.generated.json`, by `bun run update-licenses`
+  the licenses' `licenses.npm.generated.json` and `licenses.android.generated.json`, in `src/infrastructure/licenses`,
+  by `bun run update-licenses`
   and `bun run update-android-licenses`), and a new one is too; dprint and Biome skip them.
   The files whose name their tool fixes are the exception: the launcher icons (by `bun run update-assets`), and
   the icon font, `MaterialSymbolsRounded.ttf` in the Android project's assets (by `bun run update-icons`, and

@@ -10,7 +10,7 @@ import * as Process from 'effect/process'
 import * as Schema from 'effect/Schema'
 import * as LicenseChecker from 'license-checker-rseidelsohn'
 import * as Woff2 from 'wawoff2'
-import { Entries } from '#app/children/about/services/licenses/licenses.bundled.ts'
+import { Entries } from '#infrastructure/licenses/licenses.ts'
 import { ProductExpirationSchema, ProductSchema, SettingSchema } from '#infrastructure/storage/schema.ts'
 import * as Licenses from './licenses.ts'
 import { colorResources, paletteModule, surface } from './palette.ts'
@@ -58,7 +58,7 @@ const writeEntries = Effect.fn('writeEntries')(
     const json = yield* Schema.encodeEffect(LicensesJson)(Object.fromEntries(sorted)).pipe(
       Effect.mapError((cause) => new LicensesFailed({ cause })),
     )
-    yield* fs.writeFileString(resolve('src/app/children/about/services/licenses', file), `${json}\n`)
+    yield* fs.writeFileString(resolve('src/infrastructure/licenses', file), `${json}\n`)
   },
 )
 

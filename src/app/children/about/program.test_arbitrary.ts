@@ -1,7 +1,7 @@
 import * as fc from 'fast-check'
+import type { License } from '#infrastructure/licenses/licenses.ts'
 import { arbitrary as maybe } from '#libs/option/option.test_arbitrary.ts'
 import type { State } from './program.ts'
-import type { License } from './services/licenses/licenses.ts'
 
 export const license: fc.Arbitrary<License> = fc.record({
   packageName: fc.string({ minLength: 1 }),
@@ -21,9 +21,5 @@ export const state: fc.Arbitrary<State> = fc.record({
   licenses: fc.oneof(
     fc.constant({ _tag: 'Loading' } as const),
     licenses.map((items) => ({ _tag: 'Loaded', items } as const)),
-  ),
-  version: fc.oneof(
-    fc.constant({ _tag: 'Loading' } as const),
-    fc.string().map((version) => ({ _tag: 'Loaded', version } as const)),
   ),
 })

@@ -5,11 +5,11 @@ import * as Data from 'effect/Data'
 import * as Equal from 'effect/Equal'
 import * as Opt from 'effect/Option'
 import * as fc from 'fast-check'
+import type { License } from '#infrastructure/licenses/licenses.ts'
 import { messagesSentBy } from '#libs/tea-react/view.test_support.ts'
 import { assertProperty, outcomesOf } from '#libs/testing/update.test_support.ts'
 import { license, licenses, state } from './program.test_arbitrary.ts'
 import { type Command, type Event, type Message, type Model, program, type State } from './program.ts'
-import type { License } from './services/licenses/licenses.ts'
 import { view } from './view.tsx'
 
 const Msg = Data.taggedEnum<Message>()
@@ -45,7 +45,6 @@ const arriving = (before: State): fc.Arbitrary<Message> =>
     offset.map((at) => Msg.Scrolled({ offset: at })),
     fc.webUrl().map((url) => Msg.LinkPressed({ url })),
     ...(before.licenses._tag === 'Loading' ? [licenses.map((items) => Msg.LicensesLoaded({ licenses: items }))] : []),
-    ...(before.version._tag === 'Loading' ? [fc.string().map((version) => Msg.VersionLoaded({ version }))] : []),
   )
 
 const arrival = state.chain((before) => arriving(before).map((message) => [before, message] as const))
@@ -53,10 +52,6 @@ const arrival = state.chain((before) => arriving(before).map((message) => [befor
 const loadingLicenses = state.map((s): State => ({ ...s, licenses: { _tag: 'Loading' } }))
 
 const loadedLicenses = state.filter((s) => s.licenses._tag === 'Loaded')
-
-const loadingVersion = state.map((s): State => ({ ...s, version: { _tag: 'Loading' } }))
-
-const loadedVersion = state.filter((s) => s.version._tag === 'Loaded')
 
 describe('About update', () => {
   test('accepts every message that may arrive, and is deterministic', () => {
@@ -104,19 +99,6 @@ describe('About update', () => {
     }))
   })
 
-  test('VersionLoaded stores the version while it loads, and touches nothing else', () => {
-    assertProperty([loadingVersion, fc.string()], (before, version) => {
-      const { after, commands } = step(Msg.VersionLoaded({ version }), before)
-      return Equal.equals(after, { ...before, version: { _tag: 'Loaded', version } }) && commands.length === 0
-    })
-  })
-
-  test('VersionLoaded once the version is loaded is a defect', () => {
-    fc.assert(fc.property(loadedVersion, fc.string(), (before, version) => {
-      expect(() => program.update(Msg.VersionLoaded({ version }))(before)).toThrow(Tea.InvariantDefect)
-    }))
-  })
-
   test('BackPressed asks the parent to leave the page, and changes nothing', () => {
     assertProperty([state], (before) => {
       const { after, events } = step(Msg.BackPressed(), before)
@@ -148,18 +130,16 @@ describe('About update', () => {
       const { licenses } = makeModel({
         isAtTop: true,
         licenses: { _tag: 'Loaded', items: [l] },
-        version: { _tag: 'Loading' },
       })
       return licenses._tag === 'Loaded' && licenses.cards[0] !== undefined
         ? licenses.cards[0]
         : Tea.defect('one license makes one card')
     }
 
-    test('shows the version and the licenses once they are loaded, and nothing before, and whether it is at its top', () => {
+    test('shows the licenses once they are loaded, and nothing before, and whether it is at its top', () => {
       assertProperty([state], (s) => {
         const model = makeModel(s)
         return model.isAtTop === s.isAtTop
-          && model.version._tag === s.version._tag
           && model.licenses._tag === s.licenses._tag
           && (model.licenses._tag !== 'Loaded' || s.licenses._tag !== 'Loaded'
             || model.licenses.cards.length === s.licenses.items.length)
@@ -211,7 +191,7 @@ test('the page observes the back button in every state, and nothing else', () =>
 
 test('arbitraries cover every variant of the state', () => {
   const tags = new Set(
-    fc.sample(state, 300).flatMap((s) => [`licenses:${s.licenses._tag}`, `version:${s.version._tag}`]),
+    fc.sample(state, 300).map((s) => `licenses:${s.licenses._tag}`),
   )
-  expect([...tags].sort()).toEqual(['licenses:Loaded', 'licenses:Loading', 'version:Loaded', 'version:Loading'])
+  expect([...tags].sort()).toEqual(['licenses:Loaded', 'licenses:Loading'])
 })

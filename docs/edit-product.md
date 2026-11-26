@@ -201,11 +201,10 @@ transaction, nothing written), then the expiration is upserted, or deleted when 
 
 ### The date order's setting
 
-The order the digits are read in is the date's program's: its `services/date-order-setting/`
-(`src/app/programs/expiration/`), the one service of it, which both pages reach through their child. The
-setting's key and what its text stands for (the order's `Schema`, the fall-back to the device's locale) are
-`DateOrderStore` (`src/infrastructure/storage/date-order.ts`), a service of the infrastructure on `SettingStore`
-with `current`, `set` and `tables`, as `ProductStore` is on the `SqlClient`; the adapter is a few lines on it.
+The order the digits are read in is kept by `DateOrderStore` (`src/infrastructure/storage/date-order.ts`), which
+the date's program (`src/app/programs/expiration/`) asks as it is, and both pages reach through their child. It
+holds the setting's key and what its text stands for (the order's `Schema`, the fall-back to the device's locale),
+on `SettingStore`, and gives the order's `changes` and a `set`, as `ProductStore` does on the `SqlClient`.
 
 ## Open points, and what was decided
 

@@ -1,5 +1,5 @@
-// The cached answers of Open Food Facts, reached without a service: the adapters' tests use them to set up and
-// check their service's contract, so that no service carries reads or writes that only tests need.
+// The cached answers of Open Food Facts, reached without a service: the lookup's test sets up and checks its cache
+// with them, so that no service carries reads or writes that only tests need.
 import * as Effect from 'effect/Effect'
 import { BarcodeCache, type Row } from './barcodes.ts'
 

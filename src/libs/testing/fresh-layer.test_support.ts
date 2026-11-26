@@ -3,7 +3,7 @@ import type * as Layer from 'effect/Layer'
 import * as References from 'effect/References'
 import * as fc from 'fast-check'
 
-/** Runs `property` for generated values, each time on a fresh layer built by `make`: a contract's check. */
+/** Runs `property` for generated values, each time on a fresh layer built by `make`: a service's check. */
 export const checkOnFreshLayer = <A, E, R>(
   make: () => Layer.Layer<R>,
   arbitrary: fc.Arbitrary<A>,

@@ -6,20 +6,16 @@ import * as Effect from 'effect/Effect'
 import * as Match from 'effect/Match'
 import * as Opt from 'effect/Option'
 import { BackButton } from '#infrastructure/back-button/back-button.ts'
+import * as Licenses from '#infrastructure/licenses/licenses.ts'
 import { Links } from '#infrastructure/links/links.ts'
-import { type License, Licenses } from './services/licenses/licenses.ts'
-import { Version } from './services/version/version.ts'
+import { version } from '#package.json'
 
 export type State = Readonly<{
   /** Whether the page is scrolled to its top, where the top app bar rests on the surface. */
   isAtTop: boolean
   licenses: Data.TaggedEnum<{
     Loading: object
-    Loaded: Readonly<{ items: ReadonlyArray<License> }>
-  }>
-  version: Data.TaggedEnum<{
-    Loading: object
-    Loaded: Readonly<{ version: string }>
+    Loaded: Readonly<{ items: ReadonlyArray<Licenses.License> }>
   }>
 }>
 
@@ -31,8 +27,7 @@ type Own = Data.TaggedEnum<{
   /** A link of the page, which opens `url` on every press. */
   LinkPressed: { url: string }
   // From commands.
-  LicensesLoaded: { licenses: ReadonlyArray<License> }
-  VersionLoaded: { version: string }
+  LicensesLoaded: { licenses: ReadonlyArray<Licenses.License> }
 }>
 
 const Own = Data.taggedEnum<Own>()
@@ -43,7 +38,7 @@ export type Event = Data.TaggedEnum<{
 
 const Event = Data.taggedEnum<Event>()
 
-export type Command = Data.TaggedEnum<{ LoadLicenses: object; LoadVersion: object; OpenLink: { url: string } }>
+export type Command = Data.TaggedEnum<{ LoadLicenses: object; OpenLink: { url: string } }>
 
 const Command = Data.taggedEnum<Command>()
 
@@ -53,18 +48,9 @@ const backButton: Tea.Subscription<Own, BackButton> = Channel.unwrap(
 
 const loadLicenses = Effect.fn('LoadLicenses')(
   function*() {
-    const { all } = yield* Licenses
-    return Opt.some(Own.LicensesLoaded({ licenses: yield* all }))
+    return Opt.some(Own.LicensesLoaded({ licenses: yield* Licenses.all }))
   },
   Effect.withLogSpan('LoadLicenses'),
-)
-
-const loadVersion = Effect.fn('LoadVersion')(
-  function*() {
-    const { current } = yield* Version
-    return Opt.some(Own.VersionLoaded({ version: yield* current }))
-  },
-  Effect.withLogSpan('LoadVersion'),
 )
 
 const openLink = Effect.fn('OpenLink')(
@@ -113,16 +99,14 @@ export type Model = Readonly<{
     Loading: object
     Loaded: Readonly<{ cards: ReadonlyArray<LicenseCard> }>
   }>
-  version: Data.TaggedEnum<{
-    Loading: object
-    Loaded: Readonly<{ version: string }>
-  }>
+  /** The app's version, as the build has it. */
+  version: string
 }>
 
 // What the licenses list gives is loosely typed: a field may be there and blank.
 const nonBlank = (maybeText: Opt.Option<string>) => Opt.filter(maybeText, (text) => text.trim().length > 0)
 
-const cardOf = (license: License): LicenseCard => ({
+const cardOf = (license: Licenses.License): LicenseCard => ({
   key: license.packageName,
   title: Opt.getOrElse(nonBlank(license.name), () => license.packageName),
   maybeLicenses: nonBlank(license.licenses),
@@ -145,8 +129,8 @@ const { make } = Tea.program<{
 
 export const program = make({
   init: {
-    state: { isAtTop: true, licenses: { _tag: 'Loading' }, version: { _tag: 'Loading' } },
-    commands: [Command.LoadLicenses(), Command.LoadVersion()],
+    state: { isAtTop: true, licenses: { _tag: 'Loading' } },
+    commands: [Command.LoadLicenses()],
   },
 
   update: Match.typeTags<Own, (state: State) => Tea.Transition<State, Command, Event>>()({
@@ -155,11 +139,6 @@ export const program = make({
       state.licenses._tag === 'Loading'
         ? { state: { ...state, licenses: { _tag: 'Loaded', items: licenses } } }
         : Tea.defect('the licenses are loaded once'),
-
-    VersionLoaded: ({ version }) => (state) =>
-      state.version._tag === 'Loading'
-        ? { state: { ...state, version: { _tag: 'Loaded', version } } }
-        : Tea.defect('the version is loaded once'),
 
     BackPressed: () => (state) => ({ state, events: [Event.LeaveRequested()] }),
 
@@ -175,7 +154,6 @@ export const program = make({
 
   runCommand: Match.typeTags<Command>()({
     LoadLicenses: loadLicenses,
-    LoadVersion: loadVersion,
     OpenLink: openLink,
   }),
 
@@ -198,7 +176,7 @@ export const program = make({
     licenses: state.licenses._tag === 'Loaded'
       ? { _tag: 'Loaded', cards: Arr.map(state.licenses.items, cardOf) }
       : { _tag: 'Loading' },
-    version: state.version,
+    version,
   }),
 })
 

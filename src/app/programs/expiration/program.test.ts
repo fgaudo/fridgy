@@ -12,6 +12,7 @@ import * as Stream from 'effect/Stream'
 import * as fc from 'fast-check'
 import { arbitrary as product } from '#domain/product.test_arbitrary.ts'
 import * as Product from '#domain/product.ts'
+import { DateOrderStore, DateOrderWriteError } from '#infrastructure/storage/date-order.ts'
 import { arbitrary as order } from '#libs/dates/date-order.test_arbitrary.ts'
 import * as DateOrder from '#libs/dates/date-order.ts'
 import { arbitrary as anyDay } from '#libs/dates/day.test_arbitrary.ts'
@@ -33,7 +34,6 @@ import {
   program,
   type State,
 } from './program.ts'
-import { DateOrderSetting, DateOrderWriteError } from './services/date-order-setting/date-order-setting.ts'
 import { view } from './view.tsx'
 
 const Msg = Data.taggedEnum<Message>()
@@ -322,7 +322,7 @@ describe('the date order', () => {
         )
         yield* Effect.yieldNow
         return sent
-      }).pipe(Effect.provideService(DateOrderSetting, {
+      }).pipe(Effect.provideService(DateOrderStore, {
         changes: fromStream(Stream.fromIterable<DateOrder.DateOrder>(['DMY', 'YMD'])),
         set: () => Effect.void,
       })),
@@ -335,7 +335,7 @@ describe('the date order', () => {
     const keep = (set: (order: DateOrder.DateOrder) => Effect.Effect<void, DateOrderWriteError>) =>
       Effect.runPromise(
         program.runCommand(Cmd.KeepOrder({ order: 'MDY' })).pipe(
-          Effect.provideService(DateOrderSetting, { changes: Channel.never, set }),
+          Effect.provideService(DateOrderStore, { changes: Channel.never, set }),
           Effect.provideService(References.MinimumLogLevel, 'None'),
         ),
       )

@@ -146,7 +146,7 @@ describe('Navigation', () => {
     rehearsed(Effect.fnUntraced(function*(user) {
       yield* perform(user, openAbout)
       expect(yield* shown(user)).toBe('About')
-      expect((yield* user.pending).map(tagPath)).toEqual(['About › LoadLicenses', 'About › LoadVersion'])
+      expect((yield* user.pending).map(tagPath)).toEqual(['About › LoadLicenses'])
       yield* user.runAll
     })))
 
@@ -520,16 +520,13 @@ describe('Visits', () => {
     rehearsed(Effect.fnUntraced(function*(user) {
       yield* perform(user, openAbout)
       yield* back(user)
-      expect((yield* user.pending).map(tagPath)).toEqual(['About › LoadLicenses', 'About › LoadVersion'])
+      expect((yield* user.pending).map(tagPath)).toEqual(['About › LoadLicenses'])
       yield* perform(user, openAbout)
-      expect((yield* user.pending).length).toBe(4)
+      expect((yield* user.pending).length).toBe(2)
       yield* user.runAll
-      expect((yield* user.ignored).map(tagPath)).toEqual(['About › LicensesLoaded', 'About › VersionLoaded'])
+      expect((yield* user.ignored).map(tagPath)).toEqual(['About › LicensesLoaded'])
       const { page } = yield* user.model
-      expect(page._tag === 'About' && [page.model.licenses._tag, page.model.version._tag]).toEqual([
-        'Loaded',
-        'Loaded',
-      ])
+      expect(page._tag === 'About' && page.model.licenses._tag).toBe('Loaded')
     })))
 
   test('the page that adds products, opened again before its camera check answered, knows its camera by its own', () =>

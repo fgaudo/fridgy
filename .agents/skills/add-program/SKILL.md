@@ -1,6 +1,6 @@
 ---
 name: add-program
-description: How to add a program to Fridgy's tree of Elm-style programs in src/app (a page of the root, or a child of a page), with its view, layer, services and property tests, and how a parent declares it. Use when creating a page, splitting a program into children, or changing how a parent declares, starts or draws a child.
+description: How to add a program to Fridgy's tree of Elm-style programs in src/app (a page of the root, or a child of a page), with its view and property tests, and how a parent declares it. Use when creating a page, splitting a program into children, or changing how a parent declares, starts or draws a child.
 ---
 
 # Add a program
@@ -17,10 +17,8 @@ Every program is a folder of the same shape, at any depth:
 <program>/
 ├─ program.ts               State, Message, Event, Command, Model, program
 ├─ view.tsx                 the view (see the `views` skill); none where the parent draws the model (the snackbar)
-├─ layer.ts                 the adapters of its services, merged with its children's layers; none without either
 ├─ program.test.ts          property tests of update, the view and the subscriptions
 ├─ program.test_arbitrary.ts  generators of its states and messages, valid values only
-├─ services/<service>/      what it needs from outside (see the `add-service` skill)
 ├─ children/<child>/        its own children, of this same shape
 └─ programs/<program>/      a program two programs of this subtree use, of this same shape (see "A program
                             two programs use")
@@ -110,7 +108,7 @@ export const program = withChildren({
   used again (the root's visits).
 - A child talks to its parent through events, and the parent reads what holds in it through its `output`
   (`children.<Child>.output()`, an `Option` for a child that may not be there), never a copy of it. What a child
-  needs, it gets from its flags, its own services and subscriptions. A fact of the parent's state that a child
+  needs, it gets from its flags, its own commands and subscriptions. A fact of the parent's state that a child
   must see is told by the declaration's `tell` (the date's `PageChanged`: the time, and whether the form is
   locked); a step tells a child something once with `tell: [{ _tag: '<Child>', message }]`. Two siblings talk
   through the parent: an event up, an external message or the child's flags down; a parent that grows logic
@@ -123,12 +121,12 @@ export const program = withChildren({
   except the model of a child without a view (the snackbar), which the parent's view draws. A child's model is
   the same object while its state is.
 
-## `layer.ts`
+## What it needs from outside
 
-`Layer.mergeAll` of the children's layers and of every adapter of the program's own services that has no
-alternative. An adapter with alternatives (the `SqlClient`, the platform's `BackButton`) stays out, and each
-entrypoint in `src/entrypoints/` imports the one it picks (see the `add-service` skill). A program with neither
-services nor children that have a layer has none.
+A program lists the infrastructure's services as they are, in its commands and subscriptions (see the
+`add-service` skill); it holds no service, adapter or layer of its own. `src/app/layer.ts`, the only layer of
+`src/app/`, provides the stores; the entrypoint and `src/app/user.test_support.ts` each provide the rest, and a
+service a program starts to use that one of them lacks fails the typecheck.
 
 ## Tests
 
@@ -176,8 +174,7 @@ it to the subtree: written with the first such program.
 
 Declare it in `src/app/program.ts` as a child by the number of its visit (`childById`, with `ids` or, for a page
 with flags, `flags`, from `visitsOf` and the root's `maybeVisit`), a case of `Page`, its event in `onEvent`
-(`leave`), its model in `makeModel` and its view, keyed by its visit, in `src/app/view.tsx`; merge its layer in
-`src/app/layer.ts`, and add how a user reaches it to `src/app/user.test_support.ts`, where the root's tests pick
+(`leave`), its model in `makeModel` and its view, keyed by its visit, in `src/app/view.tsx`, and add how a user reaches it to `src/app/user.test_support.ts`, where the root's tests pick
 each message from the shown page's model (`rehearse`). A page is shown from Home's event, as `show(state, page)`,
 which starts a new visit. A page that cannot start the same way every time declares `flags` (`EditProduct`: the
 product tapped, and its id), carried by its case of `Page`; what it starts from comes in the event that asks for

@@ -7,8 +7,8 @@
 > The scanner was brought back on React Native on 2026-10-30, on the app's own camera (see "Barcodes").
 
 Implemented on 2026-10-27; the lookup and the scanner tried on Android in the emulator (see "Verified, and not").
-The code is the page that adds products (`src/app/children/add-products/`, its `product-lookup` service and the
-scanner adapter), the camera `src/infrastructure/barcode-camera/` with its native module, the client
+The code is the page that adds products (`src/app/children/add-products/`), the lookup
+`src/infrastructure/product-lookup/`, the camera `src/infrastructure/barcode-camera/` with its native module, the client
 `src/infrastructure/open-food-facts/` and the cache `src/infrastructure/storage/barcodes.ts`. Read [`AGENTS.md`](../AGENTS.md), the `add-service` and `add-program`
 skills and the guide of the runtime, `node_modules/@fgaudo/effect-tea/site/guide/`, before changing them. Every fact about the
 Open Food Facts API below was checked against the live server on 2026-10-27 with `curl`; re-check what the code
@@ -150,7 +150,7 @@ browser through an intent, as it does for About's links, and in the development 
 
 ## The lookup, from the scan to the cache
 
-- **The scanner adapter** (`scanner.react-native.ts`) offers the digits of an EAN-8 or an EAN-13 only: a UPC-A
+- **The camera's adapter** (`barcode-camera.react-native.ts`) offers the digits of an EAN-8 or an EAN-13 only: a UPC-A
   and a UPC-E arrive as the EAN-13 they stand for (see "Barcodes"). The program and the service never see anything else; the lookup's adapter still
   answers `None` to a non-digit barcode without a request, defensively.
 - **The service** `ProductLookup` is a one-off read, an `Effect`, not a `Source`: `Some(found)` with the name in
@@ -162,7 +162,7 @@ browser through an intent, as it does for About's links, and in the development 
   failure is logged and treated as a miss), asks the client only on a miss or a stale `not_found` row, writes the
   answer back (a write failure is logged, the answer returned anyway), and fails without writing when the request
   fails. Its layer leaves `SqlClient` and `HttpClient` out, as both have alternatives; `layerOnClient` takes a
-  given `OpenFoodFacts`, for the contract's fake server.
+  given `OpenFoodFacts`, for its test's fake server.
 - **The client** (`OpenFoodFacts`, on `HttpClient`) is the only module that knows the API's shape: the request
   with `fields`, `app_name` and `app_version`, no headers, the timeout, the decoding of a 2xx or a 404 (any other
   status, a body that is not JSON, such as an HTML error page from a proxy, or one that is not the API's, is an
@@ -179,8 +179,8 @@ The camera is a native module of the app (`android/app/src/main/java/net/gaudo/f
 frames the back camera, and zxing-cpp 3.1.1 reads each frame for an EAN-13, an EAN-8, a UPC-A or a UPC-E. Both are
 under Apache-2.0, and read on the phone, with no Play services: Google's ML Kit, which the libraries of React
 Native's cameras read with, ships under Google's terms, which an AGPL app cannot pass on (decided on 2026-10-30).
-The module sends each code read as an event, for as long as the stream (`reads`, in `barcode-camera.ts`) is
-consumed: the scanner's subscription. The view draws only where the camera shows (`BarcodeCameraPreview`), so the
+The module sends each code read as an event, for as long as the camera's `barcodes` (`barcode-camera.react-native.ts`) are
+observed: the scanner's subscription. The view draws only where the camera shows (`BarcodeCameraPreview`), so the
 codes never pass through it, and the program kept its states and messages. The camera's permission is asked by
 `start`, the first time the scanner opens in a visit of the page; a refusal fails the stream, and the scanner says
 `Camera not available. Type the name`.

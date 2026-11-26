@@ -7,16 +7,17 @@ import * as Arr from 'effect/Array'
 import * as Channel from 'effect/Channel'
 import * as DateTime from 'effect/DateTime'
 import * as Effect from 'effect/Effect'
-import * as HttpClient from 'effect/http/HttpClient'
 import * as Layer from 'effect/Layer'
 import * as Match from 'effect/Match'
 import * as Opt from 'effect/Option'
 import * as References from 'effect/References'
 import * as TestClock from 'effect/testing/TestClock'
 import { BackButton } from '#infrastructure/back-button/back-button.ts'
+import { BarcodeCamera } from '#infrastructure/barcode-camera/barcode-camera.ts'
 import { Haptics } from '#infrastructure/haptics/haptics.ts'
 import { Keyboard } from '#infrastructure/keyboard/keyboard.ts'
 import { Links } from '#infrastructure/links/links.ts'
+import { ProductLookup } from '#infrastructure/product-lookup/product-lookup.ts'
 import * as SqliteMemory from '#infrastructure/storage/sqlite.memory.ts'
 import type { DateOrder } from '#libs/dates/date-order.ts'
 import type * as Day from '#libs/dates/day.ts'
@@ -24,8 +25,6 @@ import * as DigitDates from '#libs/dates/digit-dates.ts'
 import { tagPath } from '#libs/testing/tag-path.test_support.ts'
 import type * as About from './children/about/program.ts'
 import type * as AddProducts from './children/add-products/program.ts'
-import { ProductLookup } from './children/add-products/services/product-lookup/product-lookup.ts'
-import { Scanner } from './children/add-products/services/scanner/scanner.ts'
 import type * as EditProduct from './children/edit-product/program.ts'
 import type * as Products from './children/home/children/products/program.ts'
 import type * as Home from './children/home/program.ts'
@@ -315,26 +314,20 @@ const vibrateAll = (user: User): Effect.Effect<void, never, Deps> =>
   )
 
 // A device that reads barcodes, whose camera reads nothing by itself: the barcodes are heard through `hear`.
-const scanner = Layer.succeed(Scanner, { isAvailable: Effect.succeed(true), barcodes: Channel.never })
+const barcodeCamera = Layer.succeed(BarcodeCamera, { isAvailable: Effect.succeed(true), barcodes: Channel.never })
 
 // A lookup that never answers by itself: its answers are heard through `hear`.
 const productLookup = Layer.succeed(ProductLookup, { lookup: () => Effect.never })
 
-// The app's layer holds the browser's scanner, which cannot read barcodes here, and the lookup on Open Food Facts,
-// which the tests do not reach: merged after it, the test's ones win, as the last of a merge does. Its client
-// is never asked.
+// The app's stores, over a database in memory, and the test's own device. A service left out fails the typecheck
+// of `rehearsed`.
 const layer = Layer.mergeAll(
-  App.layer.pipe(
-    Layer.provide([
-      SqliteMemory.layer,
-      Layer.succeed(HttpClient.HttpClient, HttpClient.make(() => Effect.die('No network in tests'))),
-    ]),
-  ),
+  App.layer.pipe(Layer.provide(SqliteMemory.layer)),
   backButton,
-  keyboard,
+  barcodeCamera,
   haptics,
+  keyboard,
   links,
-  scanner,
   productLookup,
 )
 
