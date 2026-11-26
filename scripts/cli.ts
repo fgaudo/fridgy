@@ -8,7 +8,6 @@ import * as Opt from 'effect/Option'
 import * as Path from 'effect/Path'
 import * as Process from 'effect/process'
 import * as Schema from 'effect/Schema'
-import * as LicenseChecker from 'license-checker-rseidelsohn'
 import * as Woff2 from 'wawoff2'
 import { Entries } from '#infrastructure/licenses/licenses.ts'
 import { ProductExpirationSchema, ProductSchema, SettingSchema } from '#infrastructure/storage/schema.ts'
@@ -34,12 +33,6 @@ const run = Effect.fn('run')(function*(command: string, args: ReadonlyArray<stri
     return yield* new CommandFailed({ command: [command, ...args].join(' '), exitCode })
   }
 }, Effect.scoped)
-
-// Only whether a package declares a description: the rest of its package.json is left alone.
-const PackageJson = Schema.fromJsonString(Schema.Struct({ description: Schema.optional(Schema.Unknown) }))
-
-const hasDeclaredDescription = (packageJson: string) =>
-  Opt.exists(Schema.decodeOption(PackageJson)(packageJson), (pkg) => typeof pkg.description === 'string')
 
 const LicensesJson = Schema.fromJsonString(Entries, { space: 4 })
 
@@ -89,46 +82,20 @@ const licensesCommand = Cli.Command.make(
     const map = yield* Schema.decodeEffect(Licenses.SourceMap)(
       yield* fs.readFileString(resolve('out/licenses.android.bundle.map')),
     ).pipe(Effect.mapError((cause) => new LicensesFailed({ cause })))
-    // A folder relative to the root, with forward slashes, as both the source map and the checker can name it.
-    const folderOf = (folder: string) => path.relative(resolve(), path.resolve(resolve(), folder)).replaceAll('\\', '/')
-    const bundled = new Set(
-      [...Licenses.bundledPackages(map.sections.flatMap(({ map }) => map.sources))].map(folderOf),
-    )
-    const found = yield* Effect.tryPromise({
-      try: () =>
-        new Promise<LicenseChecker.ModuleInfos>((resolvePromise, reject) =>
-          LicenseChecker.init(
-            {
-              start: resolve(),
-              production: true,
-              excludePackages: 'fridgy',
-              customFormat: { name: '', description: '', copyright: '' },
-            },
-            // It reports success with `null`, not the `undefined` of its types.
-            (error, modules) => (error instanceof Error ? reject(error) : resolvePromise(modules)),
-          )
-        ),
-      catch: (cause) => new LicensesFailed({ cause }),
-    })
     const entries = yield* Effect.forEach(
-      Object.entries(found).filter(([, info]) => bundled.has(folderOf(String(info.path)))),
-      Effect.fn('readLicense')(function*([id, info]) {
-        // A package without a description gets the first paragraph of its README instead (npm's normalization of
-        // package.json), which may be markdown, such as a badge.
-        const isDeclared = hasDeclaredDescription(
-          yield* fs.readFileString(path.join(String(info.path), 'package.json')),
+      Licenses.bundledPackages(map.sections.flatMap(({ map }) => map.sources)),
+      Effect.fn('readPackage')(function*(source) {
+        const folder = path.resolve(resolve(), source)
+        const pkg = yield* Schema.decodeEffect(Licenses.PackageJson)(
+          yield* fs.readFileString(path.join(folder, 'package.json')),
+        ).pipe(Effect.mapError((cause) => new LicensesFailed({ cause: `${folder}: ${cause}` })))
+        const licenseText = yield* Effect.transposeOption(
+          Opt.map(
+            Licenses.licenseFile(yield* fs.readDirectory(folder)),
+            (file) => fs.readFileString(path.join(folder, file)),
+          ),
         )
-        const { licenses, repository, publisher, email, copyright, name, description } = info
-        return [id, {
-          // A package may be under several licenses, any of which applies.
-          licenses: Array.isArray(licenses) ? licenses.join(' OR ') : licenses,
-          repository,
-          publisher,
-          email,
-          copyright,
-          name,
-          description: isDeclared ? description : undefined,
-        }] as const
+        return Licenses.npmEntry(pkg, licenseText)
       }),
     )
     yield* writeEntries('licenses.npm.generated.json', entries)

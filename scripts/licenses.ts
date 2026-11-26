@@ -50,6 +50,80 @@ export const bundledPackages = (sources: ReadonlyArray<string>): ReadonlySet<str
     return Opt.some(`${path.slice(0, at)}node_modules/${name}`)
   })))
 
+/** The fields of a package.json that an entry reads, in each form npm accepts. */
+export const PackageJson = Schema.fromJsonString(Schema.Struct({
+  name: Schema.String,
+  version: Schema.String,
+  description: Schema.optional(Schema.String),
+  license: Schema.optional(Schema.Union([Schema.String, Schema.Struct({ type: Schema.String })])),
+  licenses: Schema.optional(Schema.Array(Schema.Struct({ type: Schema.String }))),
+  repository: Schema.optional(Schema.Union([Schema.String, Schema.Struct({ url: Schema.String })])),
+  author: Schema.optional(Schema.Union([
+    Schema.String,
+    Schema.Struct({ name: Schema.optional(Schema.String), email: Schema.optional(Schema.String) }),
+  ])),
+}))
+
+// By precedence, whatever the case or the extension. A README is no license file, even when it names one.
+const LICENSE_FILES = [
+  /^licen[cs]e(\.\w+)?$/i,
+  /^licen[cs]e-\w+(\.\w+)?$/i,
+  /^mit-license(\.\w+)?$/i,
+  /^copying(\.\w+)?$/i,
+]
+
+/** The license file among the files of a package's folder. */
+export const licenseFile = (files: ReadonlyArray<string>): Opt.Option<string> =>
+  Arr.findFirst(LICENSE_FILES, (pattern) => Arr.findFirst(files, (file) => pattern.test(file)))
+
+/**
+ * The first copyright statement of a license's text, its line alone. A statement starts with a symbol or a year,
+ * which leaves out the license's own sentences on copyright.
+ */
+export const copyrightOf = (text: string): Opt.Option<string> =>
+  Arr.findFirst(text.split(/\r?\n/).map((line) => line.trim()), (line) => /^copyright\s+(\(c\)|©|\d)/i.test(line))
+
+/** The web page of a repository: npm takes a git URL, or GitHub's `owner/repo` shorthand. */
+export const repositoryPage = (repository: string): string =>
+  /^(github:)?[\w.-]+\/[\w.-]+$/.test(repository)
+    ? `https://github.com/${repository.replace(/^github:/, '')}`
+    : repository
+      .replace(/^git\+/, '')
+      .replace(/^(git|ssh):\/\/(git@)?/, 'https://')
+      .replace(/^git@github\.com:/, 'https://github.com/')
+      .replace(/\.git$/, '')
+
+/** The author's name and email, from `Name <email> (url)` or from fields of their own. */
+const authorOf = (
+  author: typeof PackageJson.Type['author'],
+): Readonly<{ name?: string | undefined; email?: string | undefined }> => {
+  if (typeof author !== 'string') return author ?? {}
+  const [, name = '', email] = /^([^<(]*)(?:<([^>]*)>)?/.exec(author) ?? []
+  return { name: name.trim() === '' ? undefined : name.trim(), email }
+}
+
+/** A package's entry, keyed `name@version`, from its package.json and the text of its license file. */
+export const npmEntry = (
+  pkg: typeof PackageJson.Type,
+  licenseText: Opt.Option<string>,
+): readonly [string, Entry] => {
+  const author = authorOf(pkg.author)
+  const repository = typeof pkg.repository === 'string' ? pkg.repository : pkg.repository?.url
+  // The legacy `licenses`: a package may be under several, any of which applies.
+  const listed = pkg.licenses === undefined || pkg.licenses.length === 0
+    ? undefined
+    : pkg.licenses.map(({ type }) => type).join(' OR ')
+  return [`${pkg.name}@${pkg.version}`, {
+    licenses: typeof pkg.license === 'string' ? pkg.license : pkg.license?.type ?? listed,
+    repository: repository === undefined ? undefined : repositoryPage(repository),
+    publisher: author.name,
+    email: author.email,
+    copyright: Opt.getOrUndefined(Opt.flatMap(licenseText, copyrightOf)),
+    name: pkg.name,
+    description: pkg.description,
+  }] as const
+}
+
 /** Metro's source map, with a section per module: only where each module comes from is read. */
 export const SourceMap = Schema.fromJsonString(Schema.Struct({
   sections: Schema.Array(Schema.Struct({ map: Schema.Struct({ sources: Schema.Array(Schema.String) }) })),

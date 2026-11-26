@@ -66,7 +66,6 @@
     "@types/react": "^19.3.0",
     "dprint": "^0.64.3",
     "fast-check": "^4.10.2",
-    "license-checker-rseidelsohn": "^5.0.1",
     "oxlint": "^1.90.0",
     "oxlint-tsgolint": "^7.0.2005",
     "typescript": "^7.0.2",
