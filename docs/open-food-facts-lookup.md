@@ -25,10 +25,10 @@ linking a stored product to its barcode (see "Later").
 ## Decisions
 
 - **The first step is blocked while the lookup runs**, with a `Cancel` button. The lookup is a state of the page
-  (`LookingUp { form, barcode }`), as the runtime's guide asks of an operation; the form keeps only the answer
-  (`lookup: Idle | Found { url } | NotFound | Failed`). `update` rejects the step's other messages while looking,
-  instead of the view withholding them, so that a product is never added, nor dated, under a name about to be
-  replaced. The first design let the step work meanwhile ("Add without date" saving the product under the
+  (the phase `LookingUp { barcode }`), as the runtime's guide asks of an operation; the page's state keeps only the
+  answer (`lookup: Idle | Found { url } | NotFound | Failed`). `update` rejects the step's other messages while
+  looking, instead of the view withholding them, so that a product is never added, nor dated, under a name about to
+  be replaced. The first design let the step work meanwhile ("Add without date" saving the product under the
   barcode while the found name arrived a moment later); the blocked step was chosen as the simpler state.
 - **A scan empties the name**, and only a product found fills it. A barcode is no name anyone recognizes a
   product by, and a name typed before the scan, kept after an unknown product, could be added by a tap made
@@ -37,17 +37,17 @@ linking a stored product to its barcode (see "Later").
 - **The answer is told in the field's supporting text, never in the error's colors**: Material's error state
   says that the field's content is wrong, and a product unknown to Open Food Facts is an ordinary outcome. The
   barcode is in the text while looking it up and when it is unknown, so that a misread code shows.
-- **The lookup is a subscription, keyed by the barcode** (`lookup:<barcode>`, which the root's tests hear by that
-  key). Work that must stop when the state no longer wants it is a subscription, not a command: it stops when
-  the user cancels or leaves the page. Cancelling returns to `Naming`: the runtime interrupts the subscription,
-  which aborts the request, and nothing it sent reaches `update` afterwards, so no stale answer needs handling.
-  While it looks up, the name field takes no input: the input `Name` has no place there, and a key typed in a frame
-  drawn before is rejected.
+- **The lookup is a subscription, keyed by the barcode** (`Lookup { barcode }`, which the root's tests hear as
+  `AddProducts › Lookup`). Work that must stop when the state no longer wants it is a subscription, not a command:
+  it stops when the user cancels or leaves the page. Cancelling returns to `Naming`: the runtime interrupts the
+  subscription, which aborts the request, and nothing it sent reaches `update` afterwards, so no stale answer needs
+  handling. While it looks up, the name field takes no input: the model holds no `nameTyped` there, and a key typed
+  in a frame drawn before is rejected.
 - **The invariant** `update` keeps and the subscription relies upon: while `lookup` is not `Idle`, the name
   field's text is the one the lookup left there (the found name, or none). Every change of the name by any
-  other way resets `lookup` to `Idle`, a write into the input `Name` included (its `set` does), unless the write is
-  of the name already there; `Completed` keeps the name and so keeps `lookup` (after a
-  product was added from a found name, the field still says it comes from Open Food Facts, which is true).
+  other way resets `lookup` to `Idle`, a `NameTyped` included, unless it brings the name already there;
+  `Completed` keeps the name and so keeps `lookup` (after a product was added from a found name, the field still
+  says it comes from Open Food Facts, which is true).
 - **`LookedUp` for a barcode not being looked up is a defect**: only the subscription sends it, while its key is
   in the state, so a mismatch cannot happen in a running program.
 - **The timeout is 5 seconds** (`TIMEOUT` in the client), no retry: a second request a second later rarely helps

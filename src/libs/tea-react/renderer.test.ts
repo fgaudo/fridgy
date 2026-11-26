@@ -5,7 +5,8 @@ import * as Effect from 'effect/Effect'
 import * as Exit from 'effect/Exit'
 import * as React from 'react'
 
-// Bun renders nothing: a hook reads its store at once, so that `Root` can be called as a function.
+// Bun renders nothing: a hook reads its store at once, so that `Root` and effect-tea's `Draw` can be called as
+// functions.
 mock.module('react', () => ({
   ...React,
   useSyncExternalStore: (_subscribe: unknown, getSnapshot: () => unknown) => getSnapshot(),
@@ -46,7 +47,10 @@ const shows = (text: string) =>
   Tea.program<{ state: { text: string }; message: { _tag: 'Shown'; text: string } }>().make({
     init: { state: { text } },
     update: (message) => () => ({ state: { text: message.text } }),
-    makeModel: (state) => state.text,
+    makeModel: (state) => {
+      if (state.text === 'model throws') throw new Error('makeModel threw')
+      return state.text
+    },
   })
 
 const screen = React.createElement('Text', null, 'Crashed')
@@ -94,5 +98,19 @@ describe('make', () => {
       const died = Exit.isFailure(exit) ? Cause.squash(exit.cause) : undefined
       expect(died instanceof Tea.ProgramDefect && died.where).toBe('render')
       expect(died instanceof Tea.ProgramDefect && died.cause).toEqual(new Error('The view threw'))
+    })))
+
+  test('ends the run with the one defect of a makeModel that throws, and draws nothing of it', () =>
+    Effect.runPromise(Effect.gen(function*() {
+      const { Root, draw } = make()
+      const { app, run } = Tea.start(shows('model throws'))
+      draw(app)
+      expect(textsOf(React.createElement(Root))).toEqual([])
+      const exit = yield* Effect.exit(run)
+      const deaths = Exit.isFailure(exit) ? exit.cause.reasons.filter(Cause.isDieReason) : []
+      expect(deaths.length).toBe(1)
+      const died = deaths[0]?.defect
+      expect(died instanceof Tea.ProgramDefect && died.where).toBe('render')
+      expect(died instanceof Tea.ProgramDefect && died.cause).toEqual(new Error('makeModel threw'))
     })))
 })

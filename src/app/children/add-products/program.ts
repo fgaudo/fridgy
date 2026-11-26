@@ -1,34 +1,27 @@
 // The page that adds products, one after another, in two steps: the name, typed or scanned, then the expiration
-// date, typed on a keypad. The states are the first step (`Naming`, with `LookingUp` and `Scanning` over it), the
-// second (`Dating`) and the write (`Submitting`). A product added enters the fridge, and starts the next at the
-// name. A failure is told by a snackbar, which leaves on its own.
+// date, which the child `Expiration` holds. The phases are the first step (`Naming`, with `LookingUp` and `Scanning`
+// over it), the second (`Dating`) and the write (`Submitting`). A product added enters the child `Fridge`, and
+// starts the next at the name. A failure is told by the child `Snackbar`, which leaves on its own.
 import * as Tea from '@fgaudo/effect-tea'
-import * as Arr from 'effect/Array'
 import * as Channel from 'effect/Channel'
 import * as Data from 'effect/Data'
 import type * as DateTime from 'effect/DateTime'
-import * as Duration from 'effect/Duration'
 import * as Effect from 'effect/Effect'
 import { pipe } from 'effect/Function'
-import * as HashMap from 'effect/HashMap'
 import * as Match from 'effect/Match'
 import * as Opt from 'effect/Option'
+import * as Expiration from '#app/programs/expiration/program.ts'
+import * as SnackbarProgram from '#app/programs/snackbar/program.ts'
 import * as Product from '#domain/product.ts'
 import { BackButton } from '#infrastructure/back-button/back-button.ts'
 import { type Feedback, Haptics } from '#infrastructure/haptics/haptics.ts'
 import { Keyboard } from '#infrastructure/keyboard/keyboard.ts'
-import * as DateOrder from '#libs/dates/date-order.ts'
 import * as Day from '#libs/dates/day.ts'
-import * as DigitDateEntry from '#libs/dates/digit-date-entry.ts'
-import { after, every } from '#libs/timers/timers.ts'
+import { every } from '#libs/timers/timers.ts'
+import * as Fridge from './children/fridge/program.ts'
 import * as AddProducts from './services/add-products/add-products.ts'
-import { DateOrderSetting } from './services/date-order-setting/date-order-setting.ts'
 import { type FoundProduct, ProductLookup } from './services/product-lookup/product-lookup.ts'
 import { Scanner } from './services/scanner/scanner.ts'
-
-export type { Digit } from '#libs/dates/digit-date-entry.ts'
-
-type Digit = DigitDateEntry.Digit
 
 /** Asked once per visit of the page. `Unavailable` also once the camera has failed: it is not tried again. */
 export type Camera = 'Checking' | 'Available' | 'Unavailable'
@@ -38,7 +31,7 @@ export type Camera = 'Checking' | 'Available' | 'Unavailable'
  * product's name, or none. Typing, clearing or scanning makes it `Idle` again.
  */
 export type Lookup = Data.TaggedEnum<{
-  /** Nothing scanned, the name changed since, or the lookup still going on (the state `LookingUp`). */
+  /** Nothing scanned, the name changed since, or the lookup still going on (the phase `LookingUp`). */
   Idle: object
   /** `url` is the product's page, for the attribution. */
   Found: Readonly<{ url: string }>
@@ -54,84 +47,47 @@ export type LookupOutcome = Data.TaggedEnum<{
   Failed: object
 }>
 
-/** What is kept in every state: a product being added does not interrupt the next one. */
-export type Form = Readonly<{
-  /** The input `Name`, as typed. */
+/** What failed: the snackbar says so. */
+export type Failure = 'AddFailed' | 'OrderNotKept'
+
+/** The step a product is being added from, to come back to. */
+export type Step = 'Naming' | 'Dating'
+
+export type Phase = Data.TaggedEnum<{
+  /** The first step: the name. */
+  Naming: object
+  /**
+   * The first step while the scanned barcode is looked up, the name emptied and the lookup's: it takes nothing
+   * typed. Left by the answer or a cancel.
+   */
+  LookingUp: Readonly<{ barcode: string }>
+  /** The scanner's dialog, over the first step. */
+  Scanning: object
+  /** The second step: the expiration date, which the child `Expiration` holds. */
+  Dating: object
+  /** The product is being added, from a step's button, after which the next product starts at the name. */
+  Submitting: Readonly<{ product: Product.Product; from: Step }>
+}>
+
+/** The phase, and what is kept in every one: a product being added does not interrupt the next one. */
+export type State = Readonly<{
+  phase: Phase
+  /** The name, as typed. */
   maybeName: Opt.Option<string>
-  /** Bumped each time the program replaces the name (a scan, a clearing, a product added): the input is drawn anew. */
+  /** Bumped each time the program replaces the name (a scan, a clearing, a product found): the field is drawn anew. */
   replacements: number
   camera: Camera
   lookup: Lookup
   /** The current time, in the device's zone, once the clock has ticked: the product is created then. */
   maybeNow: Opt.Option<DateTime.Zoned>
-  /** The order the digits of a date are read in, once the setting has been read. */
-  maybeOrder: Opt.Option<DateOrder.DateOrder>
-  /** How many products this visit of the page has added: each one's arrival in the fridge goes by its number. */
-  added: number
-  fridge: Fridge
-  snackbar: Snackbar
   /** How far the keyboard covers the page's bottom, in dp, navigation bar included: the window is never resized. */
   keyboardInset: number
 }>
 
-/** Material shows one snackbar at a time: one that comes after another waits for it to leave. */
-export type Entrance = 'Alone' | 'AfterAnother'
-
-/** What failed: the snackbar says so. */
-export type Failure = 'AddFailed' | 'OrderNotKept'
-
-/** The snackbar, until it has stood its time. `id` tells one from the next. */
-export type Snackbar = Data.TaggedEnum<{
-  None: object
-  Shown: Readonly<{ id: number; failure: Failure; entrance: Entrance }>
-}>
-
-/**
- * A product added, on its way into the fridge (`docs/product-flight.md`). `id` is its number among those added.
- * `entrance` says whether the fridge appeared with it, or was there already.
- */
-export type Arrival = Readonly<{ id: number; product: Product.Product; entrance: 'WithFridge' | 'IntoOpenFridge' }>
-
-/**
- * The fridge that products added enter: away, open while any is on its way, then closing behind the last. A visit
- * is named by the first product's id, so that a fridge that comes back is drawn anew.
- */
-export type Fridge = Data.TaggedEnum<{
-  Away: object
-  /** `opening` says whether the door opens as the fridge appears, or again, as it was closing. */
-  Open: Readonly<{ visit: number; opening: 'WithFridge' | 'Again'; arrivals: Arr.NonEmptyReadonlyArray<Arrival> }>
-  /** The door closes behind `last` and the fridge settles; then it goes. */
-  Closing: Readonly<{ visit: number; last: Arrival }>
-}>
-
-/** The expiration date being typed: it exists only in the second step, and starts anew with each. */
-export type DateForm = DigitDateEntry.Entry
-
-/** The step a product is being added from, to come back to. */
-export type Step = Data.TaggedEnum<{
-  Naming: object
-  Dating: Readonly<{ date: DateForm }>
-}>
-
-export type State = Data.TaggedEnum<{
-  /** The first step: the name. */
-  Naming: Readonly<{ form: Form }>
-  /**
-   * The first step while the scanned barcode is looked up, the name emptied and the lookup's: it takes nothing
-   * typed. Left by the answer or a cancel.
-   */
-  LookingUp: Readonly<{ form: Form; barcode: string }>
-  /** The scanner's dialog, over the first step. */
-  Scanning: Readonly<{ form: Form }>
-  /** The second step: the expiration date. */
-  Dating: Readonly<{ form: Form; date: DateForm }>
-  /** The product is being added, from a step's button, after which the next product starts at the name. */
-  Submitting: Readonly<{ form: Form; product: Product.Product; step: Step }>
-}>
-
-/** The page's own messages: the writes into its input are made by `make`. */
 type Own = Data.TaggedEnum<{
   // From the view.
+  /** The name field's text, as the field gives it. */
+  NameTyped: { value: string }
   /** The name field's clear button: empties the name. */
   NameCleared: object
   /** The name field's scan button: opens the scanner's dialog. */
@@ -142,14 +98,6 @@ type Own = Data.TaggedEnum<{
   DateRequested: object
   /** The second step's back arrow: back to the name, the date forgotten. */
   DateDismissed: object
-  DigitTyped: { digit: Digit }
-  DigitErased: object
-  /** The keypad's clear key: erases every digit. */
-  DateCleared: object
-  /** Picks, among the days the digits name, the one the product expires on. */
-  DateChosen: { date: Day.Day }
-  /** The second step's segmented button: the order the digits are read in, kept for every date to come. */
-  OrderPicked: { order: DateOrder.DateOrder }
   /** Adds the product the step describes. */
   Started: object
   /** The page's close button, on the first step. */
@@ -158,8 +106,6 @@ type Own = Data.TaggedEnum<{
   LookupCancelled: object
   // From subscriptions.
   TimeChanged: { now: DateTime.Zoned }
-  /** The order kept: the setting reports it when the page opens, and after every pick. */
-  OrderChanged: { order: DateOrder.DateOrder }
   Scanned: { barcode: string }
   LookedUp: { barcode: string; outcome: LookupOutcome }
   CameraFailed: object
@@ -167,15 +113,8 @@ type Own = Data.TaggedEnum<{
   BackPressed: object
   /** The keyboard has come up, changed height or gone down. */
   KeyboardMoved: { inset: number }
-  /** The product added as the `id`th is in the fridge. */
-  Arrived: { id: number }
-  /** The fridge has closed behind the product added as the `id`th, and settled. */
-  FridgeClosed: { id: number }
-  /** The snackbar has stood its time. */
-  SnackbarExpired: object
   // From commands.
   CameraChecked: { isAvailable: boolean }
-  OrderKept: { succeeded: boolean }
   Completed: { succeeded: boolean }
 }>
 
@@ -186,8 +125,6 @@ export type Command = Data.TaggedEnum<{
   CheckCamera: object
   /** Adds a product that `update` has already validated. */
   Add: { product: Product.Product }
-  /** Keeps the order the digits of a date are read in, which the setting then reports. */
-  KeepOrder: { order: DateOrder.DateOrder }
   Vibrate: { feedback: Feedback }
 }>
 
@@ -199,27 +136,12 @@ export type Event = Data.TaggedEnum<{
 
 const Event = Data.taggedEnum<Event>()
 
-type Deps =
-  | AddProducts.AddProducts
-  | DateOrderSetting
-  | Scanner
-  | ProductLookup
-  | Haptics
-  | BackButton
-  | Keyboard
-  | DateTime.CurrentTimeZone
+/** The lookup of a barcode, keyed by it: a cancel, or the page left, interrupts it. */
+type LookupKey = Data.TaggedEnum<{ Lookup: { barcode: string } }>
 
-/** A day the digits name: the chosen one, or one to pick while the step takes input. */
-export type DateChoice = Readonly<{
-  date: Day.Day
-  choice: Data.TaggedEnum<{ Chosen: object; Offered: Readonly<{ maybeChoose: Opt.Option<Own> }> }>
-}>
+const LookupKey = Data.taggedEnum<LookupKey>()
 
-/** An order the digits can be read in: the one in use, or one to pick while the step takes input. */
-export type OrderChoice = Readonly<{
-  order: DateOrder.DateOrder
-  choice: Data.TaggedEnum<{ Current: object; Offered: Readonly<{ maybePick: Opt.Option<Own> }> }>
-}>
+type Key = 'clock' | 'back-button' | 'keyboard' | 'scanner' | LookupKey
 
 /** The line under the name field: what the lookup found, or that the name can only be typed. */
 export type Supporting = Data.TaggedEnum<{
@@ -232,61 +154,33 @@ export type Supporting = Data.TaggedEnum<{
   LookupFailed: object
 }>
 
-/** What every state draws: how far the page keeps clear of the keyboard, which covers whatever is under it. */
+/** What the name field gives, filled by the view. */
+export type NameTyped = Readonly<{ _tag: 'NameTyped' }>
+
+const nameTyped: NameTyped = { _tag: 'NameTyped' }
+
+/** The snackbar over the page: the failure told, drawn anew for each id. */
+export type SnackbarShown = SnackbarProgram.Model<Failure>
+
+/** What every phase draws: how far the page keeps clear of the keyboard, which covers whatever is under it. */
 type PageShown = Readonly<{ keyboardInset: number }>
 
-/** The first step, drawn in every state: under the scanner, and under the second step. */
+/** The first step, drawn in every phase: under the scanner, and under the second step. */
 export type NameShown = Readonly<{
   supporting: Supporting
-  /** The input `Name`: written into on the first step, while it takes input and while it adds. */
+  /** The name field's text: what it starts from as it is drawn. */
   name: string
-  /** Changes when the name is replaced by a scan or a clearing, not by typing. */
+  /** Changes when the name is replaced by a scan, a clearing or a product found, not by typing. */
   nameKey: number
   /** Over every step, and over the scanner. */
-  snackbar: Snackbar
+  snackbar: SnackbarShown
 }>
 
 /** The second step, over the first. */
 export type DateShown = Readonly<{
   name: string
-  /** `Unknown` until the setting has been read, a moment after the page opens. */
-  order: Data.TaggedEnum<{
-    Unknown: object
-    Known: Readonly<{ order: DateOrder.DateOrder; choices: Arr.NonEmptyReadonlyArray<OrderChoice> }>
-  }>
-  /** The date's field: the digits as typed. */
-  digits: string
-  /**
-   * Under the field: how to type a date, while the digits name no day yet; the days they name; or that they name
-   * none, and no digits typed after them can.
-   */
-  strip: Data.TaggedEnum<{
-    Hint: object
-    Naming: Readonly<{ choices: Arr.NonEmptyReadonlyArray<DateChoice> }>
-    NamingNothing: object
-  }>
-}>
-
-/**
- * When a product entering the fridge is due, as the disc of its row in Home's list tells it, by the days left
- * (`docs/freshness.md`). A product just added has not expired: one whose day ends during its flight is due now.
- */
-export type Due = Data.TaggedEnum<{
-  Never: object
-  /** Today or tomorrow. */
-  Now: Readonly<{ expirationDate: Day.Day }>
-  /** Within `Product.SOON_DAYS`. */
-  Soon: Readonly<{ expirationDate: Day.Day }>
-  Later: Readonly<{ expirationDate: Day.Day }>
-}>
-
-/** A product on its way into the fridge, as its disc. */
-export type ArrivalShown = Arrival & Readonly<{ due: Due }>
-
-export type FridgeShown = Data.TaggedEnum<{
-  Away: object
-  Open: Readonly<{ visit: number; opening: 'WithFridge' | 'Again'; arrivals: Arr.NonEmptyReadonlyArray<ArrivalShown> }>
-  Closing: Readonly<{ visit: number; last: Arrival }>
+  /** The orders, the date's field, the strip under it and the keypad, which the child draws. */
+  expiration: Expiration.Model
 }>
 
 export type Model = Data.TaggedEnum<{
@@ -295,6 +189,7 @@ export type Model = Data.TaggedEnum<{
     & NameShown
     & Readonly<{
       close: Own
+      nameTyped: NameTyped
       /** Empties the name, while there is one. */
       maybeClearName: Opt.Option<Own>
       /** Opens the scanner, once the device can read barcodes. */
@@ -303,7 +198,7 @@ export type Model = Data.TaggedEnum<{
       maybeRequestDate: Opt.Option<Own>
       /** Adds the product, never expiring, once the name is a product's. */
       maybeAdd: Opt.Option<Own>
-      fridge: FridgeShown
+      fridge: Fridge.Model
     }>
   /** The first step during the lookup: only cancelling it and leaving the page take, and the name is read-only. */
   LookingUp:
@@ -312,6 +207,8 @@ export type Model = Data.TaggedEnum<{
     & Readonly<{
       close: Own
       cancelLookup: Own
+      /** Always away: the fridge is not drawn during a lookup, and its live region is silent. */
+      fridge: Fridge.Model
     }>
   /** The scanner's dialog, over the first step, which takes nothing until it closes. */
   Scanning:
@@ -328,13 +225,7 @@ export type Model = Data.TaggedEnum<{
     & DateShown
     & Readonly<{
       back: Own
-      /** The keypad's keys, by digit: none past a date's longest. */
-      maybeTypeDigit: Opt.Option<Readonly<Record<Digit, Own>>>
-      /** None with nothing to erase. */
-      maybeEraseDigit: Opt.Option<Own>
-      /** None with nothing to clear. */
-      maybeClearDate: Opt.Option<Own>
-      /** Adds the product, expiring on the day the digits name, once they name one. */
+      /** Adds the product, expiring on the day the date concludes, once it concludes one. */
       maybeAdd: Opt.Option<Own>
     }>
   /**
@@ -348,55 +239,45 @@ export type Model = Data.TaggedEnum<{
     & Readonly<{
       step: Data.TaggedEnum<{
         Naming: Readonly<{
-          fridge: FridgeShown
+          fridge: Fridge.Model
           /** Whether the scanner opened before: the step is drawn as it was. */
           canScan: boolean
+          nameTyped: NameTyped
         }>
         Dating: DateShown
       }>
     }>
 }>
 
-/** Whether the camera is read: while the scanner is open, until it fails. */
-const isScanning = (state: State) => state._tag === 'Scanning' && state.form.camera === 'Available'
+/** What a step of the page tells its children. */
+type Tell =
+  | Readonly<{ _tag: 'Snackbar'; message: SnackbarProgram.External<Failure> }>
+  | Readonly<{ _tag: 'Fridge'; message: Fridge.External }>
 
-const hasName = (form: Form) => Opt.exists(form.maybeName, (name) => name !== '')
+type Next = Tea.Transition<State, Command, Event, Tell>
+
+const Snackbar = SnackbarProgram.make<Failure>()
+
+/** Whether the camera is read: while the scanner is open, until it fails. */
+const isScanning = (state: State) => state.phase._tag === 'Scanning' && state.camera === 'Available'
+
+const hasName = (state: State) => Opt.exists(state.maybeName, (name) => name !== '')
 
 /** The name as the field shows it: empty before any is typed. */
-const nameOf = (form: Form) => Opt.getOrElse(form.maybeName, () => '')
+const nameOf = (state: State) => Opt.getOrElse(state.maybeName, () => '')
 
-const withForm = (state: State, change: (form: Form) => Form): State => ({ ...state, form: change(state.form) })
+/** Whether the second step is shown: while it takes the date, and while a product is added from it. */
+const showsDate = (state: State) =>
+  state.phase._tag === 'Dating' || (state.phase._tag === 'Submitting' && state.phase.from === 'Dating')
 
-// Material's snackbar without an action: long enough to read it.
-const SNACKBAR_DURATION = Duration.seconds(4)
+// A product to be: the date has no stored one to start from.
+const newDate: Expiration.Flags = { maybeStored: Opt.none() }
 
-/** A snackbar telling of a failure, after the one standing, if any. */
-const told = (failure: Failure) => (form: Form): Form => ({
-  ...form,
-  snackbar: form.snackbar._tag === 'Shown'
-    ? { _tag: 'Shown', id: form.snackbar.id + 1, failure, entrance: 'AfterAnother' }
-    : { _tag: 'Shown', id: 0, failure, entrance: 'Alone' },
+/** A snackbar telling of a failure: it takes the place of the one standing. */
+const telling = (failure: Failure): Tell => ({
+  _tag: 'Snackbar',
+  message: { _tag: 'Told', notice: failure, lasting: 'Short' },
 })
-
-const stepOf = (state: State & { _tag: 'Naming' | 'Dating' }): Step =>
-  state._tag === 'Naming' ? { _tag: 'Naming' } : { _tag: 'Dating', date: state.date }
-
-const resume = (step: Step, form: Form): State =>
-  step._tag === 'Naming' ? { _tag: 'Naming', form } : { _tag: 'Dating', form, date: step.date }
-
-/** The days the digits name, read in the order in use, on which a product added now may expire. */
-const offeredDates = (form: Form, date: DateForm): ReadonlyArray<Day.Day> =>
-  Opt.match(Opt.all([form.maybeNow, form.maybeOrder]), {
-    onNone: () => [],
-    onSome: ([now, order]) => DigitDateEntry.offered(date, Day.fromDateTime(now), order, Product.canExpireOn(now)),
-  })
-
-/** Whether the digits, or more typed after them, name a day on which a product added now may expire. */
-const canCompleteDate = (form: Form, date: DateForm): boolean =>
-  Opt.match(Opt.all([form.maybeNow, form.maybeOrder]), {
-    onNone: () => false,
-    onSome: ([now, order]) => DigitDateEntry.canComplete(date, Day.fromDateTime(now), order, Product.canExpireOn(now)),
-  })
 
 /** The first brand, then the name, unless the name already says the brand. The quantity is left out. */
 const composeName = ({ name, maybeBrand }: FoundProduct): string =>
@@ -405,126 +286,27 @@ const composeName = ({ name, maybeBrand }: FoundProduct): string =>
     onSome: (brand) => name.toLocaleLowerCase().includes(brand.toLocaleLowerCase()) ? name : `${brand} ${name}`,
   })
 
-/** The day the digits name: the one picked, while they still name it, or else the only one they name. */
-const maybeNamedDate = (form: Form, date: DateForm): Opt.Option<Day.Day> =>
-  DigitDateEntry.named(date, offeredDates(form, date))
-
-/** The second step with its date changed by a key, or rejected when the key does not apply. */
-const keyed = (
-  state: State,
-  key: (form: Form, date: DateForm) => Opt.Option<DateForm>,
-): Tea.Transition<State, Command, Event> =>
-  state._tag === 'Dating'
-    ? Opt.match(key(state.form, state.date), {
-      onNone: () => Tea.reject,
-      onSome: (date) => ({ state: { ...state, date } }),
-    })
-    : Tea.reject
-
-const productOf = (form: Form, maybeExpirationDate: Opt.Option<Day.Day>) =>
+const productOf = (state: State, maybeExpirationDate: Opt.Option<Day.Day>) =>
   Opt.flatMap(
-    Opt.all([form.maybeName, form.maybeNow]),
+    Opt.all([state.maybeName, state.maybeNow]),
     ([name, creationDate]) => Product.make({ name, creationDate, maybeExpirationDate }),
   )
 
-/** The product a step describes: never expiring from the first, expiring on the day named from the second. */
-const productOfStep = (state: State & { _tag: 'Naming' | 'Dating' }) =>
-  state._tag === 'Naming'
-    ? productOf(state.form, Opt.none())
-    : Opt.flatMap(maybeNamedDate(state.form, state.date), (date) => productOf(state.form, Opt.some(date)))
+/** The day the date concludes, when it names one: digits that name none, or no digits, add nothing. */
+const dayOf = (maybeConcluded: Opt.Option<Expiration.Output>): Opt.Option<Day.Day> =>
+  Opt.flatMap(maybeConcluded, (concluded) => concluded._tag === 'On' ? Opt.some(concluded.day) : Opt.none())
+
+/**
+ * The product a step describes: never expiring from the first, expiring on the day the date concludes from the
+ * second. `update` and `makeModel` both ask this.
+ */
+const productOfStep = (state: State, step: Step, maybeConcluded: Opt.Option<Expiration.Output>) =>
+  step === 'Naming'
+    ? productOf(state, Opt.none())
+    : Opt.flatMap(dayOf(maybeConcluded), (day) => productOf(state, Opt.some(day)))
 
 // Refreshed often, so that the creation date is close to when the user adds the product.
 const clock = every('1 second', (now) => Own.TimeChanged({ now }))
-
-// The phases of `docs/product-flight.md`, which the view's motion must fit in: what it draws is removed when they
-// end. A product's flight is long-2, after the fridge's appearance (medium-2) when it brings the fridge. The door
-// closes in short-4 and the fridge settles in medium-1. Under another page, the timers wait for the page to be back.
-const ARRIVAL_DURATIONS: Readonly<Record<Arrival['entrance'], Duration.Duration>> = {
-  WithFridge: Duration.millis(300 + 500),
-  IntoOpenFridge: Duration.millis(500),
-}
-
-const CLOSING_DURATION = Duration.millis(200 + 250)
-
-/** Ends once the arrival's product is in the fridge. */
-const arrivalTimer = ({ id, entrance }: Arrival): Tea.Subscription<Own, Deps> =>
-  after(ARRIVAL_DURATIONS[entrance], Own.Arrived({ id }))
-
-/** Ends once the fridge has closed behind the product added as the `id`th. */
-const closingTimer = (id: number): Tea.Subscription<Own, Deps> => after(CLOSING_DURATION, Own.FridgeClosed({ id }))
-
-/** Ends once the snackbar has stood its time. */
-const snackbarTimer: Tea.Subscription<Own, Deps> = after(SNACKBAR_DURATION, Own.SnackbarExpired())
-
-/**
- * An arrival's timer is keyed by its id, the closing's by the last arrival's, the snackbar's by its id: the next one
- * starts it anew.
- */
-type Key =
-  | string
-  | readonly ['arriving', number]
-  | readonly ['closing', number]
-  | readonly ['snackbar', number]
-
-/** When a product is due, by the days from `today`. */
-const dueOf = (today: Day.Day, { maybeExpirationDate }: Product.Product): Due =>
-  Opt.match(maybeExpirationDate, {
-    onNone: (): Due => ({ _tag: 'Never' }),
-    onSome: (expirationDate): Due => {
-      const days = Day.daysBetween(today, expirationDate)
-      return days <= 1
-        ? { _tag: 'Now', expirationDate }
-        : days <= Product.SOON_DAYS
-        ? { _tag: 'Soon', expirationDate }
-        : { _tag: 'Later', expirationDate }
-    },
-  })
-
-/**
- * The fridge with each product on its way as its disc, by the clock's day. A product is made only once the clock has
- * ticked, so the fridge is away until then.
- */
-const fridgeShown = (form: Form): FridgeShown =>
-  Opt.match(form.maybeNow, {
-    onNone: (): FridgeShown => ({ _tag: 'Away' }),
-    onSome: (now): FridgeShown => {
-      const { fridge } = form
-      if (fridge._tag !== 'Open') return fridge
-      const today = Day.fromDateTime(now)
-      return {
-        ...fridge,
-        arrivals: Arr.map(fridge.arrivals, (arrival) => ({ ...arrival, due: dueOf(today, arrival.product) })),
-      }
-    },
-  })
-
-/** The fridge with a product added: it appears with the first, stays open for the next, and opens again for one. */
-const admitted = (fridge: Fridge, id: number, product: Product.Product): Fridge =>
-  Match.valueTags(fridge, {
-    Away: (): Fridge => ({
-      _tag: 'Open',
-      visit: id,
-      opening: 'WithFridge',
-      arrivals: [{ id, product, entrance: 'WithFridge' }],
-    }),
-    Open: (open): Fridge => ({
-      ...open,
-      arrivals: Arr.append(open.arrivals, { id, product, entrance: 'IntoOpenFridge' }),
-    }),
-    Closing: ({ visit }): Fridge => ({
-      _tag: 'Open',
-      visit,
-      opening: 'Again',
-      arrivals: [{ id, product, entrance: 'IntoOpenFridge' }],
-    }),
-  })
-
-const dateOrder: Tea.Subscription<Own, DateOrderSetting> = Channel.unwrap(
-  Effect.map(
-    Effect.service(DateOrderSetting),
-    ({ changes }) => Channel.map(changes, (order) => Own.OrderChanged({ order })),
-  ),
-)
 
 const scanner = Channel.unwrap(
   Effect.map(Effect.service(Scanner), ({ barcodes }) =>
@@ -551,7 +333,7 @@ const keyboard: Tea.Subscription<Own, Keyboard> = Channel.unwrap(
   ),
 )
 
-// Keyed by the barcode: a cancel, or the page left, interrupts it. It answers once.
+// It answers once.
 const lookup = (barcode: string): Tea.Subscription<Own, ProductLookup> =>
   Channel.fromEffectDone(
     Effect.gen(function*() {
@@ -600,22 +382,6 @@ const add = Effect.fn('AddProduct')(
   Effect.withLogSpan('AddProduct'),
 )
 
-const keepOrder = Effect.fn('KeepOrder')(
-  function*({ order }: Readonly<{ order: DateOrder.DateOrder }>) {
-    const { set } = yield* DateOrderSetting
-    yield* set(order).pipe(
-      Effect.tapError((error) => Effect.logWarning('Could not keep the date order', error.cause)),
-    )
-    yield* Effect.logInfo('Kept the date order', { order })
-  },
-  Effect.match({
-    onSuccess: () => Own.OrderKept({ succeeded: true }),
-    onFailure: () => Own.OrderKept({ succeeded: false }),
-  }),
-  Effect.asSome,
-  Effect.withLogSpan('KeepOrder'),
-)
-
 const vibrate = Effect.fn('Vibrate')(
   function*({ feedback }: Readonly<{ feedback: Feedback }>) {
     const { perform } = yield* Haptics
@@ -627,359 +393,263 @@ const vibrate = Effect.fn('Vibrate')(
   Effect.withLogSpan('Vibrate'),
 )
 
-/** Adds the product a step describes, when it describes one. */
-const start = (state: State & { _tag: 'Naming' | 'Dating' }): Tea.Transition<State, Command, Event> =>
-  Opt.match(productOfStep(state), {
-    onNone: () => Tea.reject,
-    onSome: (product) => ({
-      state: { _tag: 'Submitting', form: state.form, product, step: stepOf(state) },
-      commands: [Command.Add({ product })],
-    }),
-  })
+const { child, withChildren } = Tea.program<{
+  state: State
+  model: Model
+  message: Own
+  command: Command
+  event: Event
+  key: Key
+}>()
 
-/** The keypad's keys, by digit. */
-const digitKeys: Readonly<Record<Digit, Own>> = {
-  '0': Own.DigitTyped({ digit: '0' }),
-  '1': Own.DigitTyped({ digit: '1' }),
-  '2': Own.DigitTyped({ digit: '2' }),
-  '3': Own.DigitTyped({ digit: '3' }),
-  '4': Own.DigitTyped({ digit: '4' }),
-  '5': Own.DigitTyped({ digit: '5' }),
-  '6': Own.DigitTyped({ digit: '6' }),
-  '7': Own.DigitTyped({ digit: '7' }),
-  '8': Own.DigitTyped({ digit: '8' }),
-  '9': Own.DigitTyped({ digit: '9' }),
-}
-
-const { input, make } = Tea.program<{ state: State; model: Model; message: Own; command: Command; event: Event }>()
-
-/**
- * The name, as typed. Its place is there in every state but the lookup's, whose name is the scan's. Covered or
- * disabled (scanner, second step, submitting), it still takes a key typed in the frame before. Validity is decided
- * when going on or adding. A name that changes is no longer the lookup's, whose answer is dropped.
- */
-const name = input({
-  get: (state) => state._tag === 'LookingUp' ? Opt.none() : Opt.some(nameOf(state.form)),
-  set: (state, typed: string) =>
-    withForm(state, (form) => ({ ...form, maybeName: Opt.some(typed), lookup: { _tag: 'Idle' } })),
-})
-
-export const program = make({
+export const program = withChildren({
+  Snackbar: child(Snackbar),
+  Fridge: child(Fridge.program),
+  // There while the second step is shown: a failed add gives the step back with its digits, and a product added, or
+  // the step dismissed, forgets them. The next visit of the step starts anew.
+  Expiration: child(Expiration.program, {
+    flags: (state) => showsDate(state) ? Opt.some(newDate) : Opt.none(),
+    tell: (state) => ({ _tag: 'PageChanged', maybeNow: state.maybeNow, isLocked: state.phase._tag === 'Submitting' }),
+  }),
+}).make({
   init: {
     state: {
-      _tag: 'Naming',
-      form: {
-        maybeName: Opt.none(),
-        replacements: 0,
-        camera: 'Checking',
-        lookup: { _tag: 'Idle' },
-        maybeNow: Opt.none(),
-        maybeOrder: Opt.none(),
-        added: 0,
-        fridge: { _tag: 'Away' },
-        snackbar: { _tag: 'None' },
-        keyboardInset: 0,
-      },
+      phase: { _tag: 'Naming' },
+      maybeName: Opt.none(),
+      replacements: 0,
+      camera: 'Checking',
+      lookup: { _tag: 'Idle' },
+      maybeNow: Opt.none(),
+      keyboardInset: 0,
     },
     commands: [Command.CheckCamera()],
   },
 
-  inputs: { Name: name },
+  update: (message, children) =>
+    Match.typeTags<Own, (state: State) => Next>()({
+      // Its place is there in every phase but the lookup's, whose name is the scan's. Covered or disabled (scanner,
+      // second step, submitting), it still takes a key typed in the frame before. Validity is decided when going on
+      // or adding. A name that changes is no longer the lookup's, whose answer is dropped.
+      NameTyped: ({ value }) => (state) =>
+        state.phase._tag === 'LookingUp'
+          ? Tea.reject
+          : value === nameOf(state)
+          ? { state }
+          : { state: { ...state, maybeName: Opt.some(value), lookup: { _tag: 'Idle' } } },
 
-  update: Match.typeTags<Own, (state: State) => Tea.Transition<State, Command, Event>>()({
-    // The input is drawn anew, empty: the user owns its text until the program replaces it.
-    NameCleared: () => (state) =>
-      state._tag === 'Naming' && hasName(state.form)
-        ? {
-          state: withForm(state, (form) => ({
-            ...form,
-            maybeName: Opt.none(),
-            replacements: form.replacements + 1,
-            lookup: { _tag: 'Idle' },
-          })),
-        }
-        : Tea.reject,
+      // The field is drawn anew, empty: the user owns its text until the program replaces it.
+      NameCleared: () => (state) =>
+        state.phase._tag === 'Naming' && hasName(state)
+          ? {
+            state: { ...state, maybeName: Opt.none(), replacements: state.replacements + 1, lookup: { _tag: 'Idle' } },
+          }
+          : Tea.reject,
 
-    ScanRequested: () => (state) =>
-      state._tag === 'Naming' && state.form.camera === 'Available'
-        ? { state: { _tag: 'Scanning', form: state.form } }
-        : Tea.reject,
+      ScanRequested: () => (state) =>
+        state.phase._tag === 'Naming' && state.camera === 'Available'
+          ? { state: { ...state, phase: { _tag: 'Scanning' } } }
+          : Tea.reject,
 
-    ScanClosed: () => (state) =>
-      state._tag === 'Scanning' ? { state: { _tag: 'Naming', form: state.form } } : Tea.reject,
+      ScanClosed: () => (state) =>
+        state.phase._tag === 'Scanning' ? { state: { ...state, phase: { _tag: 'Naming' } } } : Tea.reject,
 
-    // The date is the product's: only a name that is one goes on to it.
-    DateRequested: () => (state) =>
-      state._tag === 'Naming' && Opt.isSome(productOf(state.form, Opt.none()))
-        ? { state: { _tag: 'Dating', form: state.form, date: DigitDateEntry.empty } }
-        : Tea.reject,
+      // The date is the product's: only a name that is one goes on to it.
+      DateRequested: () => (state) =>
+        state.phase._tag === 'Naming' && Opt.isSome(productOf(state, Opt.none()))
+          ? { state: { ...state, phase: { _tag: 'Dating' } } }
+          : Tea.reject,
 
-    DateDismissed: () => (state) =>
-      state._tag === 'Dating' ? { state: { _tag: 'Naming', form: state.form } } : Tea.reject,
+      DateDismissed: () => (state) =>
+        state.phase._tag === 'Dating' ? { state: { ...state, phase: { _tag: 'Naming' } } } : Tea.reject,
 
-    DigitTyped: ({ digit }) => (state) => keyed(state, (_, date) => DigitDateEntry.typeDigit(digit)(date)),
+      TimeChanged: ({ now }) => (state) => ({ state: { ...state, maybeNow: Opt.some(now) } }),
 
-    DigitErased: () => (state) => keyed(state, (_, date) => DigitDateEntry.eraseDigit(date)),
+      KeyboardMoved: ({ inset }) => (state) => ({ state: { ...state, keyboardInset: inset } }),
 
-    DateCleared: () => (state) => keyed(state, (_, date) => DigitDateEntry.clear(date)),
-
-    DateChosen: ({ date }) => (state) =>
-      keyed(state, (form, typed) => DigitDateEntry.choose(date, offeredDates(form, typed))(typed)),
-
-    // Only another order than the one in use, once it is known: a tap on the selected segment does nothing. The
-    // order applies at once, and is kept for the dates to come: the setting then reports it back, unchanged.
-    OrderPicked: ({ order }) => (state) =>
-      state._tag === 'Dating' && Opt.isSome(state.form.maybeOrder) && !Opt.contains(state.form.maybeOrder, order)
-        ? {
-          state: withForm(state, (form) => ({ ...form, maybeOrder: Opt.some(order) })),
-          commands: [Command.KeepOrder({ order })],
-        }
-        : Tea.reject,
-
-    TimeChanged: ({ now }) => (state) => ({ state: withForm(state, (form) => ({ ...form, maybeNow: Opt.some(now) })) }),
-
-    KeyboardMoved: ({ inset }) => (state) => ({
-      state: withForm(state, (form) => ({ ...form, keyboardInset: inset })),
-    }),
-
-    // The day picked stays, while the digits still name it in the new order.
-    OrderChanged: ({ order }) => (state) => ({
-      state: withForm(state, (form) => ({ ...form, maybeOrder: Opt.some(order) })),
-    }),
-
-    // The door stays open while another product is on its way.
-    Arrived: ({ id }) => (state) => {
-      const { fridge } = state.form
-      const maybeArrival = fridge._tag === 'Open'
-        ? Arr.findFirst(fridge.arrivals, (arrival) => arrival.id === id)
-        : Opt.none()
-      if (fridge._tag !== 'Open' || Opt.isNone(maybeArrival)) {
-        return Tea.defect('Arrived for a product not on its way: its timer runs only while it is, keyed by its id')
-      }
-      const arrivals = Arr.filter(fridge.arrivals, (arrival) => arrival.id !== id)
-      const next: Fridge = Arr.isReadonlyArrayNonEmpty(arrivals)
-        ? { ...fridge, arrivals }
-        : { _tag: 'Closing', visit: fridge.visit, last: maybeArrival.value }
-      return { state: withForm(state, (form) => ({ ...form, fridge: next })) }
-    },
-
-    FridgeClosed: ({ id }) => (state) =>
-      state.form.fridge._tag === 'Closing' && state.form.fridge.last.id === id
-        ? { state: withForm(state, (form) => ({ ...form, fridge: { _tag: 'Away' } })) }
-        : Tea.defect(
-          'FridgeClosed while the fridge is not closing behind that product: its timer runs only while it is',
-        ),
-
-    // The order picked stays in use for this visit either way: only the failure to keep it is told.
-    OrderKept: ({ succeeded }) => (state) =>
-      succeeded
-        ? { state }
-        : { state: withForm(state, told('OrderNotKept')), commands: [Command.Vibrate({ feedback: 'Reject' })] },
-
-    SnackbarExpired: () => (state) =>
-      state.form.snackbar._tag === 'Shown'
-        ? { state: withForm(state, (form) => ({ ...form, snackbar: { _tag: 'None' } })) }
-        : Tea.defect('SnackbarExpired while no snackbar is shown: the timer runs only while one is'),
-
-    // The first barcode read closes the scanner, with a vibration: the phone is pointed at the product, not
-    // looked at. The name is emptied, drawn anew: nothing is added under it before the user has seen the answer.
-    // Scanning again is how a failed lookup is retried.
-    Scanned: ({ barcode }) => (state) =>
-      isScanning(state)
-        ? {
-          state: {
-            _tag: 'LookingUp',
-            form: {
-              ...state.form,
+      // The first barcode read closes the scanner, with a vibration: the phone is pointed at the product, not
+      // looked at. The name is emptied, drawn anew: nothing is added under it before the user has seen the answer.
+      // Scanning again is how a failed lookup is retried.
+      Scanned: ({ barcode }) => (state) =>
+        isScanning(state)
+          ? {
+            state: {
+              ...state,
+              phase: { _tag: 'LookingUp', barcode },
               maybeName: Opt.none(),
-              replacements: state.form.replacements + 1,
+              replacements: state.replacements + 1,
               lookup: { _tag: 'Idle' },
             },
-            barcode,
-          },
-          commands: [Command.Vibrate({ feedback: 'Confirm' })],
-        }
-        : Tea.defect('Scanned while the camera is off: only the scanner reads it, until it fails'),
+            commands: [Command.Vibrate({ feedback: 'Confirm' })],
+          }
+          : Tea.defect('Scanned while the camera is off: only the scanner reads it, until it fails'),
 
-    // A product found names it, drawn anew and focused; otherwise the name stays empty, for the user to type.
-    LookedUp: ({ barcode, outcome }) => (state) => {
-      if (state._tag !== 'LookingUp' || state.barcode !== barcode) {
-        return Tea.defect(
-          'LookedUp for a barcode that is not being looked up: only the lookup subscription sends it, while its key is in the state',
-        )
-      }
-      const { form } = state
-      return {
-        state: {
-          _tag: 'Naming',
-          form: Match.valueTags(outcome, {
-            Found: ({ name, url }): Form => ({
-              ...form,
+      // A product found names it, drawn anew and focused; otherwise the name stays empty, for the user to type.
+      LookedUp: ({ barcode, outcome }) => (state) => {
+        if (state.phase._tag !== 'LookingUp' || state.phase.barcode !== barcode) {
+          return Tea.defect(
+            'LookedUp for a barcode that is not being looked up: only the lookup subscription sends it, while its key is in the state',
+          )
+        }
+        const naming: State = { ...state, phase: { _tag: 'Naming' } }
+        return {
+          state: Match.valueTags(outcome, {
+            Found: ({ name, url }): State => ({
+              ...naming,
               maybeName: Opt.some(name),
-              replacements: form.replacements + 1,
+              replacements: state.replacements + 1,
               lookup: { _tag: 'Found', url },
             }),
-            NotFound: (): Form => ({ ...form, lookup: { _tag: 'NotFound', barcode } }),
-            Failed: (): Form => ({ ...form, lookup: { _tag: 'Failed' } }),
+            NotFound: (): State => ({ ...naming, lookup: { _tag: 'NotFound', barcode } }),
+            Failed: (): State => ({ ...naming, lookup: { _tag: 'Failed' } }),
           }),
-        },
-      }
-    },
-
-    // The lookup stops: the runtime interrupts its subscription, whose answer never arrives. The name stays
-    // empty.
-    LookupCancelled: () => (state) =>
-      state._tag === 'LookingUp' ? { state: { _tag: 'Naming', form: state.form } } : Tea.reject,
-
-    // The scanner stays open, saying why it cannot read, until the user closes it: a dialog that vanished by
-    // itself would say nothing.
-    CameraFailed: () => (state) =>
-      isScanning(state)
-        ? {
-          state: withForm(state, (form) => ({ ...form, camera: 'Unavailable' })),
-          commands: [Command.Vibrate({ feedback: 'Reject' })],
         }
-        : Tea.defect('CameraFailed while the camera is off: only the scanner reads it, until it fails'),
+      },
 
-    // The check of an earlier opening of the page may answer too (opened, left and opened again before it did):
-    // once the camera is known, a late answer changes nothing.
-    CameraChecked: ({ isAvailable }) => (state) =>
-      state.form.camera === 'Checking'
-        ? { state: withForm(state, (form) => ({ ...form, camera: isAvailable ? 'Available' : 'Unavailable' })) }
-        : Tea.reject,
+      // The lookup stops: the runtime interrupts its subscription, whose answer never arrives. The name stays
+      // empty.
+      LookupCancelled: () => (state) =>
+        state.phase._tag === 'LookingUp' ? { state: { ...state, phase: { _tag: 'Naming' } } } : Tea.reject,
 
-    Started: () => (state) => state._tag === 'Naming' || state._tag === 'Dating' ? start(state) : Tea.reject,
+      // The scanner stays open, saying why it cannot read, until the user closes it: a dialog that vanished by
+      // itself would say nothing.
+      CameraFailed: () => (state) =>
+        isScanning(state)
+          ? { state: { ...state, camera: 'Unavailable' }, commands: [Command.Vibrate({ feedback: 'Reject' })] }
+          : Tea.defect('CameraFailed while the camera is off: only the scanner reads it, until it fails'),
 
-    // The next product starts at the name, kept: a second package may be next. The field is not drawn anew. It has
-    // kept the focus, and a new one would close the keyboard and open it again.
-    Completed: ({ succeeded }) => (state) => {
-      if (state._tag !== 'Submitting') {
-        return Tea.defect('Completed while no product is being added: only a completion leaves Submitting')
-      }
-      const { form } = state
-      return succeeded
-        ? {
-          state: {
-            _tag: 'Naming',
-            form: {
-              ...form,
-              added: form.added + 1,
-              fridge: admitted(form.fridge, form.added, state.product),
-            },
-          },
-          commands: [Command.Vibrate({ feedback: 'Confirm' })],
+      // The root starts each visit of the page anew, and the library rejects an answer for a visit that is gone:
+      // the check answers once, and only it leaves `Checking`.
+      CameraChecked: ({ isAvailable }) => (state) =>
+        state.camera === 'Checking'
+          ? { state: { ...state, camera: isAvailable ? 'Available' : 'Unavailable' } }
+          : Tea.defect('CameraChecked once the camera is known: the check is asked once per visit of the page'),
+
+      Started: () => (state) => {
+        if (state.phase._tag !== 'Naming' && state.phase._tag !== 'Dating') return Tea.reject
+        const from = state.phase._tag
+        return Opt.match(productOfStep(state, from, children.Expiration.output()), {
+          onNone: (): Next => Tea.reject,
+          onSome: (product): Next => ({
+            state: { ...state, phase: { _tag: 'Submitting', product, from } },
+            commands: [Command.Add({ product })],
+          }),
+        })
+      },
+
+      // The next product starts at the name, kept: a second package may be next. The field is not drawn anew. It has
+      // kept the focus, and a new one would close the keyboard and open it again. The product enters the fridge, due
+      // by the day of the clock.
+      Completed: ({ succeeded }) => (state) => {
+        if (state.phase._tag !== 'Submitting') {
+          return Tea.defect('Completed while no product is being added: only a completion leaves Submitting')
         }
-        : {
-          state: resume(state.step, told('AddFailed')(form)),
-          commands: [Command.Vibrate({ feedback: 'Reject' })],
+        const { product, from } = state.phase
+        if (!succeeded) {
+          return {
+            state: { ...state, phase: { _tag: from } },
+            commands: [Command.Vibrate({ feedback: 'Reject' })],
+            tell: [telling('AddFailed')],
+          }
         }
-    },
+        return Opt.match(state.maybeNow, {
+          onNone: () => Tea.defect('Completed before the clock has ticked: a product is made only once it has'),
+          onSome: (now): Next => ({
+            state: { ...state, phase: { _tag: 'Naming' } },
+            commands: [Command.Vibrate({ feedback: 'Confirm' })],
+            tell: [{ _tag: 'Fridge', message: { _tag: 'Admitted', product, today: Day.fromDateTime(now) } }],
+          }),
+        })
+      },
 
-    // Each press asks the parent to leave, which removes the page on the first one. Leaving while the barcode is
-    // looked up interrupts the lookup, with the page.
-    Closed: () => (state) =>
-      state._tag === 'Naming' || state._tag === 'LookingUp' ? { state, events: [Event.LeaveRequested()] } : Tea.reject,
+      // Each press asks the parent to leave, which removes the page on the first one. Leaving while the barcode is
+      // looked up interrupts the lookup, with the page.
+      Closed: () => (state) =>
+        state.phase._tag === 'Naming' || state.phase._tag === 'LookingUp'
+          ? { state, events: [Event.LeaveRequested()] }
+          : Tea.reject,
 
-    // Closes the scanner or the second step first, then leaves the page. The page is not left while a product is
-    // being added.
-    BackPressed: () => (state) =>
-      state._tag === 'Naming' || state._tag === 'LookingUp'
-        ? { state, events: [Event.LeaveRequested()] }
-        : state._tag === 'Scanning' || state._tag === 'Dating'
-        ? { state: { _tag: 'Naming', form: state.form } }
-        : { state },
-  }),
+      // Closes the scanner or the second step first, then leaves the page. The page is not left while a product is
+      // being added.
+      BackPressed: () => (state) =>
+        state.phase._tag === 'Naming' || state.phase._tag === 'LookingUp'
+          ? { state, events: [Event.LeaveRequested()] }
+          : state.phase._tag === 'Scanning' || state.phase._tag === 'Dating'
+          ? { state: { ...state, phase: { _tag: 'Naming' } } }
+          : { state },
+    })(message),
+
+  onEvent: {
+    // The order picked stays in use for this date either way: only the failure to keep it is told.
+    Expiration: () => (state) => ({
+      state,
+      commands: [Command.Vibrate({ feedback: 'Reject' })],
+      tell: [telling('OrderNotKept')],
+    }),
+    Snackbar: () => (state) => ({ state }),
+  },
 
   runCommand: Match.typeTags<Command>()({
     CheckCamera: checkCamera,
     Add: add,
-    KeepOrder: keepOrder,
     Vibrate: vibrate,
   }),
 
   // The camera starts anew with each opening of the scanner: the scanner reports a barcode once, so this is what
   // lets the same product be read again.
-  subscriptions: (state) => {
-    const always: ReadonlyArray<readonly [Key, Tea.Subscription<Own, Deps>]> = [
-      ['clock', clock],
-      ['date-order', dateOrder],
-      ['back-button', backButton],
-      ['keyboard', keyboard],
-    ]
-    const scanning: typeof always = isScanning(state) ? [['scanner', scanner]] : []
-    const looking: typeof always = state._tag === 'LookingUp'
-      ? [[`lookup:${state.barcode}`, lookup(state.barcode)]]
-      : []
-    const entering: typeof always = Match.valueTags(state.form.fridge, {
-      Away: (): typeof always => [],
-      Open: ({ arrivals }): typeof always =>
-        arrivals.map((arrival) => [['arriving', arrival.id] as const, arrivalTimer(arrival)]),
-      Closing: ({ last }): typeof always => [[['closing', last.id] as const, closingTimer(last.id)]],
-    })
-    const telling: typeof always = state.form.snackbar._tag === 'Shown'
-      ? [[['snackbar', state.form.snackbar.id] as const, snackbarTimer]]
-      : []
-    return HashMap.fromIterable([...always, ...scanning, ...looking, ...entering, ...telling])
-  },
+  subscriptions: (state): ReadonlyArray<Key> => [
+    'clock',
+    'back-button',
+    'keyboard',
+    ...(isScanning(state) ? ['scanner' as const] : []),
+    ...(state.phase._tag === 'LookingUp' ? [LookupKey.Lookup({ barcode: state.phase.barcode })] : []),
+  ],
 
-  makeModel: (state): Model => {
-    const { form } = state
-    const name = nameOf(form)
+  listen: Match.type<Key>().pipe(
+    Match.when('clock', () => clock),
+    Match.when('back-button', () => backButton),
+    Match.when('keyboard', () => keyboard),
+    Match.when('scanner', () => scanner),
+    Match.when({ _tag: 'Lookup' }, ({ barcode }) => lookup(barcode)),
+    Match.exhaustive,
+  ),
+
+  makeModel: (state, children): Model => {
+    const name = nameOf(state)
+    const { phase } = state
     // A lookup's text comes from a scan, which needs the camera: it wins when the camera failed on a later opening.
-    const supporting: Supporting = state._tag === 'LookingUp'
-      ? { _tag: 'LookingUp', barcode: state.barcode }
-      : Match.valueTags(form.lookup, {
-        Idle: (): Supporting => form.camera === 'Unavailable' ? { _tag: 'CameraUnavailable' } : { _tag: 'Nothing' },
+    const supporting: Supporting = phase._tag === 'LookingUp'
+      ? { _tag: 'LookingUp', barcode: phase.barcode }
+      : Match.valueTags(state.lookup, {
+        Idle: (): Supporting => state.camera === 'Unavailable' ? { _tag: 'CameraUnavailable' } : { _tag: 'Nothing' },
         Found: ({ url }): Supporting => ({ _tag: 'FromOpenFoodFacts', url }),
         NotFound: ({ barcode }): Supporting => ({ _tag: 'NotOnOpenFoodFacts', barcode }),
         Failed: (): Supporting => ({ _tag: 'LookupFailed' }),
       })
-    const pageShown: PageShown = { keyboardInset: form.keyboardInset }
-    const nameShown: NameShown = { supporting, name, nameKey: form.replacements, snackbar: form.snackbar }
-    const dateShown = (
-      date: DateForm,
-      maybeChoose: (day: Day.Day) => Opt.Option<Own>,
-      maybePick: (order: DateOrder.DateOrder) => Opt.Option<Own>,
-    ): DateShown => {
-      const maybeNamed = maybeNamedDate(form, date)
-      const choices = offeredDates(form, date).map((day): DateChoice => ({
-        date: day,
-        choice: Opt.contains(maybeNamed, day) ? { _tag: 'Chosen' } : { _tag: 'Offered', maybeChoose: maybeChoose(day) },
-      }))
-      const order: DateShown['order'] = Opt.match(form.maybeOrder, {
-        onNone: () => ({ _tag: 'Unknown' }),
-        onSome: (current) => ({
-          _tag: 'Known',
-          order: current,
-          choices: Arr.map(DateOrder.all, (order): OrderChoice => ({
-            order,
-            choice: order === current ? { _tag: 'Current' } : { _tag: 'Offered', maybePick: maybePick(order) },
-          })),
-        }),
-      })
-      return {
-        name,
-        order,
-        digits: date.digits,
-        strip: Arr.isReadonlyArrayNonEmpty(choices)
-          ? { _tag: 'Naming', choices }
-          : date.digits === '' || canCompleteDate(form, date)
-          ? { _tag: 'Hint' }
-          : { _tag: 'NamingNothing' },
-      }
-    }
-    return Match.valueTags(state, {
+    const pageShown: PageShown = { keyboardInset: state.keyboardInset }
+    const nameShown: NameShown = { supporting, name, nameKey: state.replacements, snackbar: children.Snackbar() }
+    const maybeAdd = (step: Step) =>
+      Opt.map(productOfStep(state, step, children.Expiration.output()), () => Own.Started())
+    // The library starts the date in the step that shows it.
+    const dateShown = (): DateShown => ({
+      name,
+      expiration: Opt.getOrElse(
+        children.Expiration(),
+        () => Tea.defect('The second step is shown, and its date is not there'),
+      ),
+    })
+    return Match.valueTags(phase, {
       // Both ways out need the product the name describes, never expiring: the date is that product's.
-      Naming: (naming): Model => ({
+      Naming: (): Model => ({
         _tag: 'Naming',
         ...pageShown,
         ...nameShown,
         close: Own.Closed(),
-        maybeClearName: hasName(form) ? Opt.some(Own.NameCleared()) : Opt.none(),
-        maybeScan: form.camera === 'Available' ? Opt.some(Own.ScanRequested()) : Opt.none(),
-        maybeRequestDate: Opt.map(productOfStep(naming), () => Own.DateRequested()),
-        maybeAdd: Opt.map(productOfStep(naming), () => Own.Started()),
-        fridge: fridgeShown(form),
+        nameTyped,
+        maybeClearName: hasName(state) ? Opt.some(Own.NameCleared()) : Opt.none(),
+        maybeScan: state.camera === 'Available' ? Opt.some(Own.ScanRequested()) : Opt.none(),
+        maybeRequestDate: Opt.map(productOf(state, Opt.none()), () => Own.DateRequested()),
+        maybeAdd: maybeAdd('Naming'),
+        fridge: children.Fridge(),
       }),
       LookingUp: (): Model => ({
         _tag: 'LookingUp',
@@ -987,44 +657,30 @@ export const program = make({
         ...nameShown,
         close: Own.Closed(),
         cancelLookup: Own.LookupCancelled(),
+        fridge: { _tag: 'Away' },
       }),
       Scanning: (): Model => ({
         _tag: 'Scanning',
         ...pageShown,
         ...nameShown,
-        camera: form.camera,
+        camera: state.camera,
         closeScanner: Own.ScanClosed(),
       }),
-      Dating: (dating): Model => {
-        const { date } = dating
-        return {
-          _tag: 'Dating',
-          ...pageShown,
-          ...nameShown,
-          ...dateShown(
-            date,
-            (day) => Opt.some(Own.DateChosen({ date: day })),
-            (order) => Opt.some(Own.OrderPicked({ order })),
-          ),
-          back: Own.DateDismissed(),
-          // A key is there exactly where its rule applies: every digit applies, or none does.
-          maybeTypeDigit: Opt.map(DigitDateEntry.typeDigit('0')(date), () => digitKeys),
-          maybeEraseDigit: Opt.map(DigitDateEntry.eraseDigit(date), () => Own.DigitErased()),
-          maybeClearDate: Opt.map(DigitDateEntry.clear(date), () => Own.DateCleared()),
-          maybeAdd: Opt.map(productOfStep(dating), () => Own.Started()),
-        }
-      },
-      Submitting: ({ step }): Model => ({
+      Dating: (): Model => ({
+        _tag: 'Dating',
+        ...pageShown,
+        ...nameShown,
+        ...dateShown(),
+        back: Own.DateDismissed(),
+        maybeAdd: maybeAdd('Dating'),
+      }),
+      Submitting: ({ from }): Model => ({
         _tag: 'Adding',
         ...pageShown,
         ...nameShown,
-        step: step._tag === 'Naming'
-          ? {
-            _tag: 'Naming',
-            fridge: fridgeShown(form),
-            canScan: form.camera === 'Available',
-          }
-          : { _tag: 'Dating', ...dateShown(step.date, () => Opt.none(), () => Opt.none()) },
+        step: from === 'Naming'
+          ? { _tag: 'Naming', fridge: children.Fridge(), canScan: state.camera === 'Available', nameTyped }
+          : { _tag: 'Dating', ...dateShown() },
       }),
     })
   },

@@ -5,17 +5,15 @@ import * as Channel from 'effect/Channel'
 import * as Data from 'effect/Data'
 import * as Effect from 'effect/Effect'
 import * as Equal from 'effect/Equal'
-import * as HashMap from 'effect/HashMap'
 import * as Match from 'effect/Match'
-import * as Optic from 'effect/Optic'
 import * as Opt from 'effect/Option'
 import type * as Product from '#domain/product.ts'
 import { BackButton } from '#infrastructure/back-button/back-button.ts'
 import * as Products from './children/products/program.ts'
 
 /**
- * The heights the list's layout gives, 0 until it gives them: its headline's, its own and its content's. The inputs
- * `HeadlineHeight`, `ListHeight` and `ContentHeight`.
+ * The heights the list's layout gives, 0 until it gives them: its headline's, its own and its content's. The messages
+ * `HeadlineLaidOut`, `ListLaidOut` and `ContentSized`.
  */
 export type Layout = Readonly<{ headline: number; list: number; content: number }>
 
@@ -24,19 +22,18 @@ export type State = Readonly<{
   layout: Layout
   /**
    * How far the top app bar has collapsed, from 0 to 1, as its headline, the top of the list, scrolls out of view
-   * (`docs/motion.md`, "Home's top app bar and its FAB"). In twentieths. The input `Scroll`.
+   * (`docs/motion.md`, "Home's top app bar and its FAB"). In twentieths. The message `Scrolled`.
    */
   collapse: number
-  /** Where the list last came to rest, from the top: the input `Rest`. */
+  /** Where the list last came to rest, from the top: the message `ScrollEnded`. */
   rest: number
   /** Counts the times the list was drawn anew, at its top. */
   generation: number
   /** From the drag to the end of its momentum. */
   isScrolling: boolean
-  products: Products.State
 }>
 
-/** The page's own messages: its child's, and the writes into its inputs, are made by `make`. */
+/** The page's own messages: its child's are made by `withChildren`. */
 type Own = Data.TaggedEnum<{
   // From the view.
   MenuOpened: object
@@ -44,8 +41,13 @@ type Own = Data.TaggedEnum<{
   InfoRequested: object
   AddRequested: object
   ScrollStarted: object
-  /** The end of the scroll's momentum: where the list rests is written into `Rest`. */
-  ScrollEnded: object
+  /** How far the list has scrolled, in pixels from its top. */
+  Scrolled: { offset: number }
+  /** The end of the scroll's momentum, with where the list rests. */
+  ScrollEnded: { offset: number }
+  HeadlineLaidOut: { height: number }
+  ListLaidOut: { height: number }
+  ContentSized: { height: number }
   // From subscriptions.
   /** The back button, heard only while the menu is open, which it closes. */
   BackPressed: object
@@ -61,6 +63,8 @@ export type Event = Data.TaggedEnum<{
 }>
 
 const Event = Data.taggedEnum<Event>()
+
+type Key = 'back-button'
 
 export type Model = Readonly<{
   menu: Data.TaggedEnum<{
@@ -81,8 +85,14 @@ export type Model = Readonly<{
   snap: Data.TaggedEnum<{ Free: object; Snapping: { offsets: ReadonlyArray<number> } }>
   /** The add button is the icon alone while the user scrolls. */
   fab: Data.TaggedEnum<{ Extended: object; Icon: object }>
-  startScroll: Own
-  endScroll: Own
+  /** Only while the user is not already scrolling. */
+  maybeStartScroll: Opt.Option<Own>
+  // Filled by the view with what the list reports.
+  scrolled: Readonly<{ _tag: 'Scrolled' }>
+  scrollEnded: Readonly<{ _tag: 'ScrollEnded' }>
+  headlineLaidOut: Readonly<{ _tag: 'HeadlineLaidOut' }>
+  listLaidOut: Readonly<{ _tag: 'ListLaidOut' }>
+  contentSized: Readonly<{ _tag: 'ContentSized' }>
   products: Products.Model
 }>
 
@@ -91,11 +101,6 @@ export type Model = Readonly<{
 const backButton: Tea.Subscription<Own, BackButton> = Channel.unwrap(
   Effect.map(Effect.service(BackButton), ({ presses }) => Channel.map(presses, () => Own.BackPressed())),
 )
-
-const withBackButton: HashMap.HashMap<string, Tea.Subscription<Own, BackButton>> = HashMap.make([
-  'back-button',
-  backButton,
-])
 
 // Each step draws a frame: twenty are a fade, and leave the frames between them to the scroll.
 const steps = 20
@@ -107,68 +112,41 @@ const collapseAt = (top: number, { headline }: Layout) =>
 /**
  * A new layout, which Android follows with no scroll event. A new size of the screen or of the font moves the scroll
  * where nothing tells: the list is drawn anew at its top, and the bar expands. A list that gets shorter is pulled back
- * within its end: the bar collapses no further than the list can scroll.
+ * within its end: the bar collapses no further than the list can scroll. The layout it already has is the very same
+ * state.
  */
 const laidOut = (state: State, layout: Layout): State => {
+  if (Equal.equals(layout, state.layout)) {
+    return state
+  }
   const isResized = layout.headline !== state.layout.headline || layout.list !== state.layout.list
   if (isResized && state.collapse > 0) {
     return { ...state, layout, collapse: 0, rest: 0, generation: state.generation + 1 }
   }
-  const collapse = Math.min(state.collapse, collapseAt(layout.content - layout.list, layout))
-  return Equal.equals(layout, state.layout) && collapse === state.collapse ? state : { ...state, layout, collapse }
+  return { ...state, layout, collapse: Math.min(state.collapse, collapseAt(layout.content - layout.list, layout)) }
 }
 
-const { input, child, make } = Tea.program<{ state: State; model: Model; message: Own; event: Event }>()
+const { child, withChildren } = Tea.program<{ state: State; model: Model; message: Own; event: Event; key: Key }>()
 
-/** A height of the layout, stored as `laidOut` takes it. */
-const height = (key: keyof Layout) =>
-  input({
-    get: (state) => Opt.some(state.layout[key]),
-    set: (state, height: number) => laidOut(state, { ...state.layout, [key]: height }),
-  })
-
-/**
- * How far the list has scrolled, in pixels from its top, as far as the bar's collapse tells it apart: the top that
- * the collapse stands for. The very same state within a step: the page scrolls often, and only a change draws a frame.
- */
-const scroll = input({
-  get: (state) => Opt.some(state.collapse * state.layout.headline),
-  set: (state, top: number) => {
-    const collapse = collapseAt(top, state.layout)
-    return collapse === state.collapse ? state : { ...state, collapse }
-  },
-})
-
-// The part is always there: only its subscriptions could be turned off.
-export const program = make({
-  init: (children) => {
-    const products = children.Products.init
-    return {
-      state: {
-        isMenuOpen: false,
-        layout: { headline: 0, list: 0, content: 0 },
-        collapse: 0,
-        rest: 0,
-        generation: 0,
-        isScrolling: false,
-        products: products.state,
-      },
-      commands: products.commands,
-    }
-  },
-  children: {
-    Products: child(Products.program, { at: Optic.id<State>().key('products') }),
-  },
-  inputs: {
-    HeadlineHeight: height('headline'),
-    ListHeight: height('list'),
-    ContentHeight: height('content'),
-    Scroll: scroll,
-    Rest: input({ at: Optic.id<State>().key('rest') }),
+export const program = withChildren({
+  // Always there: only its subscriptions are turned off, by Home's parent.
+  Products: child(Products.program),
+}).make({
+  init: {
+    state: {
+      isMenuOpen: false,
+      layout: { headline: 0, list: 0, content: 0 },
+      collapse: 0,
+      rest: 0,
+      generation: 0,
+      isScrolling: false,
+    },
   },
   onEvent: {
     Products: (event) => (state) => ({ state, events: [event] }),
   },
+  // The list reports its scroll and its layout at every event, and most change nothing: those keep the very same
+  // state, so that no frame is drawn.
   update: (message) => (state) =>
     Match.valueTags(message, {
       MenuOpened: () => !state.isMenuOpen ? { state: { ...state, isMenuOpen: true } } : Tea.reject,
@@ -180,14 +158,25 @@ export const program = make({
           : Tea.reject,
       // Each tap asks: the parent opens the page once.
       AddRequested: () => ({ state, events: [Event.AddRequested()] }),
-      ScrollStarted: () => ({ state: state.isScrolling ? state : { ...state, isScrolling: true } }),
-      ScrollEnded: () => ({ state: state.isScrolling ? { ...state, isScrolling: false } : state }),
+      ScrollStarted: () => state.isScrolling ? Tea.reject : { state: { ...state, isScrolling: true } },
+      // As far as the bar's collapse tells it apart.
+      Scrolled: ({ offset }) => {
+        const collapse = collapseAt(offset, state.layout)
+        return { state: collapse === state.collapse ? state : { ...state, collapse } }
+      },
+      ScrollEnded: ({ offset }) => ({
+        state: offset === state.rest && !state.isScrolling ? state : { ...state, rest: offset, isScrolling: false },
+      }),
+      HeadlineLaidOut: ({ height }) => ({ state: laidOut(state, { ...state.layout, headline: height }) }),
+      ListLaidOut: ({ height }) => ({ state: laidOut(state, { ...state.layout, list: height }) }),
+      ContentSized: ({ height }) => ({ state: laidOut(state, { ...state.layout, content: height }) }),
       BackPressed: () =>
         state.isMenuOpen
           ? { state: { ...state, isMenuOpen: false } }
           : Tea.defect('BackPressed with the menu closed: the button is observed only while it is open'),
     }),
-  subscriptions: (state) => state.isMenuOpen ? withBackButton : HashMap.empty(),
+  subscriptions: (state) => state.isMenuOpen ? ['back-button'] : [],
+  listen: Match.type<Key>().pipe(Match.when('back-button', () => backButton), Match.exhaustive),
   makeModel: (state, children) => ({
     menu: state.isMenuOpen
       ? { _tag: 'Open', close: Own.MenuClosed(), requestInfo: Own.InfoRequested() }
@@ -198,9 +187,13 @@ export const program = make({
     rest: state.rest,
     snap: state.layout.headline > 0 ? { _tag: 'Snapping', offsets: [0, state.layout.headline] } : { _tag: 'Free' },
     fab: state.isScrolling ? { _tag: 'Icon' } : { _tag: 'Extended' },
-    startScroll: Own.ScrollStarted(),
-    endScroll: Own.ScrollEnded(),
-    products: children.Products(state),
+    maybeStartScroll: state.isScrolling ? Opt.none() : Opt.some(Own.ScrollStarted()),
+    scrolled: { _tag: 'Scrolled' },
+    scrollEnded: { _tag: 'ScrollEnded' },
+    headlineLaidOut: { _tag: 'HeadlineLaidOut' },
+    listLaidOut: { _tag: 'ListLaidOut' },
+    contentSized: { _tag: 'ContentSized' },
+    products: children.Products(),
   }),
 })
 

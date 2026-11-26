@@ -3,7 +3,6 @@ import * as Arr from 'effect/Array'
 import * as Channel from 'effect/Channel'
 import * as Data from 'effect/Data'
 import * as Effect from 'effect/Effect'
-import * as HashMap from 'effect/HashMap'
 import * as Match from 'effect/Match'
 import * as Opt from 'effect/Option'
 import { BackButton } from '#infrastructure/back-button/back-button.ts'
@@ -11,7 +10,7 @@ import { type License, Licenses } from './services/licenses/licenses.ts'
 import { Version } from './services/version/version.ts'
 
 export type State = Readonly<{
-  /** Whether the page is scrolled to its top, where the top app bar rests on the surface: the input `Scroll`. */
+  /** Whether the page is scrolled to its top, where the top app bar rests on the surface. */
   isAtTop: boolean
   licenses: Data.TaggedEnum<{
     Loading: object
@@ -23,10 +22,11 @@ export type State = Readonly<{
   }>
 }>
 
-/** The page's own messages: the writes into its input are made by `make`. */
 type Own = Data.TaggedEnum<{
   /** The page's own back button, and the platform's, while the page is shown. */
   BackPressed: object
+  /** The list scrolled, to `offset` pixels from its top. */
+  Scrolled: { offset: number }
   // From commands.
   LicensesLoaded: { licenses: ReadonlyArray<License> }
   VersionLoaded: { version: string }
@@ -79,6 +79,8 @@ export type LicenseCard = Readonly<{
 
 export type Model = Readonly<{
   back: Own
+  /** Filled by the list with its offset, at each scroll. */
+  scrolled: Readonly<{ _tag: 'Scrolled' }>
   /** The top app bar takes a container's color once the page scrolls under it. */
   isAtTop: boolean
   licenses: Data.TaggedEnum<{
@@ -106,19 +108,14 @@ const cardOf = (license: License): LicenseCard => ({
   maybeRepository: nonBlank(license.repository),
 })
 
-const { input, make } = Tea.program<{ state: State; model: Model; message: Own; command: Command; event: Event }>()
-
-/**
- * How far the page has scrolled, in pixels from its top, as far as the top app bar tells it apart: 0 at its top, 1
- * under it. The very same state while that does not change: the page scrolls often, and only a change draws a frame.
- */
-const scroll = input({
-  get: (state) => Opt.some(state.isAtTop ? 0 : 1),
-  set: (state, top: number) => {
-    const isAtTop = top <= 0
-    return isAtTop === state.isAtTop ? state : { ...state, isAtTop }
-  },
-})
+const { make } = Tea.program<{
+  state: State
+  model: Model
+  message: Own
+  command: Command
+  event: Event
+  key: 'back-button'
+}>()
 
 export const program = make({
   init: {
@@ -126,20 +123,26 @@ export const program = make({
     commands: [Command.LoadLicenses(), Command.LoadVersion()],
   },
 
-  inputs: { Scroll: scroll },
-
   update: Match.typeTags<Own, (state: State) => Tea.Transition<State, Command, Event>>()({
-    // Accepted once loaded too: a command cannot be cancelled, and its answer goes to the About shown when it
-    // arrives, so a page opened again while the first visit's loads were pending hears theirs, then its own.
-    LicensesLoaded: ({ licenses }) => (state) => ({
-      state: { ...state, licenses: { _tag: 'Loaded', items: licenses } },
-    }),
+    // Only the load leaves `Loading`, and each visit of the page loads once.
+    LicensesLoaded: ({ licenses }) => (state) =>
+      state.licenses._tag === 'Loading'
+        ? { state: { ...state, licenses: { _tag: 'Loaded', items: licenses } } }
+        : Tea.defect('the licenses are loaded once'),
 
-    VersionLoaded: ({ version }) => (state) => ({
-      state: { ...state, version: { _tag: 'Loaded', version } },
-    }),
+    VersionLoaded: ({ version }) => (state) =>
+      state.version._tag === 'Loading'
+        ? { state: { ...state, version: { _tag: 'Loaded', version } } }
+        : Tea.defect('the version is loaded once'),
 
     BackPressed: () => (state) => ({ state, events: [Event.LeaveRequested()] }),
+
+    // The page scrolls often, and only a change draws a frame: the very same state while it stays on the same side
+    // of its top.
+    Scrolled: ({ offset }) => (state) => {
+      const isAtTop = offset <= 0
+      return isAtTop === state.isAtTop ? { state } : { state: { ...state, isAtTop } }
+    },
   }),
 
   runCommand: Match.typeTags<Command>()({
@@ -147,10 +150,13 @@ export const program = make({
     LoadVersion: loadVersion,
   }),
 
-  subscriptions: () => HashMap.make(['back-button', backButton]),
+  subscriptions: () => ['back-button'],
+
+  listen: () => backButton,
 
   makeModel: (state) => ({
     back: Own.BackPressed(),
+    scrolled: { _tag: 'Scrolled' } as const,
     isAtTop: state.isAtTop,
     licenses: state.licenses._tag === 'Loaded'
       ? { _tag: 'Loaded', cards: Arr.map(state.licenses.items, cardOf) }

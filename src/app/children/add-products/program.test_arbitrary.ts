@@ -1,45 +1,37 @@
-import * as Arr from 'effect/Array'
+import type * as Tea from '@fgaudo/effect-tea'
+import { stateOf } from '@fgaudo/effect-tea/testing'
 import * as Data from 'effect/Data'
+import type * as DateTime from 'effect/DateTime'
 import * as Opt from 'effect/Option'
 import * as fc from 'fast-check'
+import * as ExpirationArbitrary from '#app/programs/expiration/program.test_arbitrary.ts'
+import type * as Expiration from '#app/programs/expiration/program.ts'
+import * as SnackbarArbitrary from '#app/programs/snackbar/program.test_arbitrary.ts'
+import type * as Snackbar from '#app/programs/snackbar/program.ts'
 import { arbitrary as product } from '#domain/product.test_arbitrary.ts'
-import * as Product from '#domain/product.ts'
-import { arbitrary as order } from '#libs/dates/date-order.test_arbitrary.ts'
-import { arbitrary as day } from '#libs/dates/day.test_arbitrary.ts'
-import * as Day from '#libs/dates/day.ts'
-import { digit, digits } from '#libs/dates/digit-date-entry.test_arbitrary.ts'
-import * as DigitDateEntry from '#libs/dates/digit-date-entry.ts'
 import { arbitrary as maybe } from '#libs/option/option.test_arbitrary.ts'
 import { zoned } from '#libs/testing/date-time.test_arbitrary.ts'
-import type {
-  Arrival,
-  Camera,
-  DateForm,
-  Form,
-  Fridge,
-  Lookup,
-  LookupOutcome,
-  Message,
-  Snackbar,
-  State,
+import * as FridgeArbitrary from './children/fridge/program.test_arbitrary.ts'
+import type * as Fridge from './children/fridge/program.ts'
+import {
+  type Camera,
+  type Failure,
+  type Lookup,
+  type LookupOutcome,
+  type Message,
+  type Phase,
+  program,
+  type State,
+  type Step,
 } from './program.ts'
 
 const Msg = Data.taggedEnum<Message>()
 
-export { digit }
+/** The page's whole state: its own, and its children's. */
+export type Whole = Tea.StateOf<typeof program>
 
 /** A barcode as the scanner reads it: EAN-8, UPC-A or EAN-13. */
 export const barcode = fc.stringMatching(/^\d{8}$|^\d{12,13}$/)
-
-/** The snackbar; most often none. */
-export const snackbar: fc.Arbitrary<Snackbar> = fc.oneof(
-  { arbitrary: fc.constant<Snackbar>({ _tag: 'None' }), weight: 3 },
-  fc.record({
-    id: fc.nat({ max: 5 }),
-    failure: fc.constantFrom('AddFailed', 'OrderNotKept'),
-    entrance: fc.constantFrom('Alone', 'AfterAnother'),
-  }).map((fields): Snackbar => ({ _tag: 'Shown', ...fields })),
-)
 
 /** A lookup's answer; most often none. */
 const lookup: fc.Arbitrary<Lookup> = fc.oneof(
@@ -59,129 +51,94 @@ const outcome: fc.Arbitrary<LookupOutcome> = fc.oneof(
   fc.constant<LookupOutcome>({ _tag: 'Failed' }),
 )
 
-const arrival = (id: number): fc.Arbitrary<Arrival> =>
-  fc.record({ product, entrance: fc.constantFrom<Arrival['entrance']>('WithFridge', 'IntoOpenFridge') }).map((
-    fields,
-  ) => ({ id, ...fields }))
-
-/**
- * The fridge, and how many products the page has added: each product in it has an id below that count, its own,
- * and the visit is named by an id no greater than theirs.
- */
-const fridgeAndAdded: fc.Arbitrary<readonly [Fridge, number]> = fc.oneof(
-  fc.nat({ max: 9 }).map((added) => [{ _tag: 'Away' }, added] as const),
-  fc.uniqueArray(fc.nat({ max: 9 }), { minLength: 1, maxLength: 4 }).chain((ids) => {
-    const sorted = ids.toSorted((a, b) => a - b)
-    return fc.tuple(
-      fc.tuple(...sorted.map(arrival)),
-      fc.nat({ max: sorted[0] ?? 0 }),
-      fc.constantFrom<'WithFridge' | 'Again'>('WithFridge', 'Again'),
-      fc.nat({ max: 2 }),
-    ).map(([arrivals, visit, opening, more]): readonly [Fridge, number] => [
-      Arr.isReadonlyArrayNonEmpty(arrivals) ? { _tag: 'Open', visit, opening, arrivals } : { _tag: 'Away' },
-      (sorted[sorted.length - 1] ?? 0) + 1 + more,
-    ])
-  }),
-  fc.nat({ max: 9 }).chain((id) =>
-    fc.tuple(arrival(id), fc.nat({ max: id }), fc.nat({ max: 2 })).map((
-      [last, visit, more],
-    ): readonly [Fridge, number] => [{ _tag: 'Closing', visit, last }, id + 1 + more])
-  ),
-)
-
-/** The last product added, while the fridge shows it. */
-const lastIn = (fridge: Fridge): Opt.Option<Product.Product> =>
-  fridge._tag === 'Open'
-    ? Opt.some(Arr.lastNonEmpty(fridge.arrivals).product)
-    : fridge._tag === 'Closing'
-    ? Opt.some(fridge.last.product)
-    : Opt.none()
-
-/** The days the digits name, by the rules of a product: what can be picked. */
-const offeredDates = (form: Form, digits: string) =>
-  Opt.match(Opt.all([form.maybeNow, form.maybeOrder]), {
-    onNone: () => [],
-    onSome: ([now, order]) =>
-      DigitDateEntry.offered(
-        { ...DigitDateEntry.empty, digits },
-        Day.fromDateTime(now),
-        order,
-        Product.canExpireOn(now),
-      ),
-  })
-
 /** How far the keyboard covers the page: down most often, otherwise as tall as a keyboard. */
 export const keyboardInset = fc.oneof({ arbitrary: fc.constant(0), weight: 3 }, fc.integer({ min: 120, max: 400 }))
 
-export const form: fc.Arbitrary<Form> = fc.tuple(
+/** What the page keeps in every phase, and its children that are always there. */
+type World = Readonly<{
+  facts: Omit<State, 'phase'>
+  snackbar: Snackbar.State<Failure>
+  fridge: Fridge.State
+}>
+
+const world: fc.Arbitrary<World> = fc.tuple(
   fc.record({
     maybeName: maybe(fc.oneof(fc.string(), fc.stringMatching(/^\d{8,13}$/))),
     replacements: fc.nat(),
     camera: fc.constantFrom<Camera>('Checking', 'Available', 'Unavailable'),
     lookup,
     maybeNow: maybe(zoned),
-    maybeOrder: maybe(order),
-    fridgeAndAdded,
-    snackbar,
     keyboardInset,
   }),
+  SnackbarArbitrary.state(fc.constantFrom<Failure>('AddFailed', 'OrderNotKept')),
+  FridgeArbitrary.state,
   fc.boolean(),
-).map(([{ fridgeAndAdded: [fridge, added], ...fields }, keepsName]): Form => {
-  const form = { ...fields, fridge, added }
+).map(([facts, snackbar, fridge, keepsName]) => {
   // The name is often the product's just added, as the page keeps it after adding one; when the lookup did not
   // name the product, there is none.
-  const maybeName = form.lookup._tag === 'NotFound' || form.lookup._tag === 'Failed'
+  const maybeName = facts.lookup._tag === 'NotFound' || facts.lookup._tag === 'Failed'
     ? Opt.none()
     : keepsName
-    ? Opt.orElse(Opt.map(lastIn(fridge), ({ name }) => name), () => form.maybeName)
-    : form.maybeName
-  return { ...form, maybeName }
+    ? Opt.orElse(Opt.map(FridgeArbitrary.lastIn(fridge.fridge), ({ name }) => name), () => facts.maybeName)
+    : facts.maybeName
+  return { facts: { ...facts, maybeName }, snackbar, fridge }
 })
 
-// The day picked is often one the digits name, and sometimes one they no longer do, or none.
-const formAndDate: fc.Arbitrary<[Form, DateForm]> = fc.tuple(
-  form,
-  digits,
-  fc.constantFrom('offered', 'other', 'none'),
-  fc.nat(),
-  day,
-).map(([form, digits, picked, index, other]) => {
-  const offered = offeredDates(form, digits)
-  const maybeChosenDate = picked === 'offered' && offered.length > 0
-    ? Opt.fromNullishOr(offered[index % offered.length])
-    : picked === 'other'
-    ? Opt.some(other)
-    : Opt.none()
-  return [form, { digits, maybeChosenDate }]
-})
+const whole = (
+  { facts, snackbar, fridge }: World,
+  phase: Phase,
+  maybeDate: Opt.Option<Expiration.State> = Opt.none(),
+): Whole =>
+  stateOf(program, { ...facts, phase }, {
+    Snackbar: snackbar,
+    Fridge: fridge,
+    ...Opt.match(maybeDate, { onNone: () => ({}), onSome: (date) => ({ Expiration: date }) }),
+  })
 
-export const naming = form.map((form) => ({ _tag: 'Naming', form } as const))
+/**
+ * The date of a product to be, as the page told it its time and its lock: a product is made, and the step reached,
+ * only once the clock has ticked.
+ */
+const dateOf = (isLocked: boolean): fc.Arbitrary<readonly [DateTime.Zoned, Expiration.State]> =>
+  ExpirationArbitrary.state
+    .filter((date) => Opt.isNone(date.maybeStored) && Opt.isSome(date.page.maybeNow))
+    .map((date) => [Opt.getOrThrow(date.page.maybeNow), { ...date, page: { ...date.page, isLocked } }] as const)
 
-// The scan emptied the name, and no answer has come yet.
-export const lookingUp = fc.tuple(form, barcode).map(([form, barcode]) => ({
-  _tag: 'LookingUp',
-  form: { ...form, maybeName: Opt.none(), lookup: { _tag: 'Idle' } },
-  barcode,
-} as const))
+const ticked = (facts: World['facts'], now: DateTime.Zoned): World['facts'] => ({ ...facts, maybeNow: Opt.some(now) })
+
+export const naming = world.map((w) => whole(w, { _tag: 'Naming' }))
+
+// The scan emptied the name, and no answer has come yet. The scanner opened once the device could read barcodes,
+// and a camera that read the code has not failed.
+export const lookingUp = fc.tuple(world, barcode).map(([w, barcode]) =>
+  whole({
+    ...w,
+    facts: { ...w.facts, maybeName: Opt.none(), lookup: { _tag: 'Idle' }, camera: 'Available' },
+  }, { _tag: 'LookingUp', barcode })
+)
 
 // The scanner opens once the device can read barcodes; the answer changes then only when the camera fails.
-export const scanning = fc.tuple(form, fc.constantFrom<Camera>('Available', 'Unavailable')).map((
-  [form, camera],
-) => ({ _tag: 'Scanning', form: { ...form, camera } } as const))
+export const scanning = fc.tuple(world, fc.constantFrom<Camera>('Available', 'Unavailable')).map(([w, camera]) =>
+  whole({ ...w, facts: { ...w.facts, camera } }, { _tag: 'Scanning' })
+)
 
-export const dating = formAndDate.map(([form, date]) => ({ _tag: 'Dating', form, date } as const))
+export const dating = fc.tuple(world, dateOf(false)).map(([w, [now, date]]) =>
+  whole({ ...w, facts: ticked(w.facts, now) }, { _tag: 'Dating' }, Opt.some(date))
+)
 
-export const submitting = fc.tuple(formAndDate, product, fc.boolean()).map((
-  [[form, date], product, isDating],
-) => ({
-  _tag: 'Submitting',
-  form,
-  product,
-  step: isDating ? { _tag: 'Dating', date } as const : { _tag: 'Naming' } as const,
-} as const))
+export const submitting = fc.tuple(world, dateOf(true), product, fc.constantFrom<Step>('Naming', 'Dating')).map((
+  [w, [now, date], product, from],
+) =>
+  whole(
+    { ...w, facts: ticked(w.facts, now) },
+    { _tag: 'Submitting', product, from },
+    from === 'Dating' ? Opt.some(date) : Opt.none(),
+  )
+)
 
-export const state: fc.Arbitrary<State> = fc.oneof(naming, lookingUp, scanning, dating, submitting)
+export const state: fc.Arbitrary<Whole> = fc.oneof(naming, lookingUp, scanning, dating, submitting)
 
+/** The page's own messages, as they may arrive. */
 export const message: fc.Arbitrary<Message> = fc.oneof(
   fc.constant(Msg.BackPressed()),
   fc.constant(Msg.ScanRequested()),
@@ -190,23 +147,14 @@ export const message: fc.Arbitrary<Message> = fc.oneof(
   fc.constant(Msg.DateDismissed()),
   fc.constant(Msg.Closed()),
   fc.constant(Msg.LookupCancelled()),
-  fc.constant(Msg.DigitErased()),
-  fc.constant(Msg.DateCleared()),
   fc.constant(Msg.CameraFailed()),
   fc.boolean().map((isAvailable) => Msg.CameraChecked({ isAvailable })),
-  fc.string().map((value) => Msg.Name({ message: { _tag: 'Written', value } })),
+  fc.string().map((value) => Msg.NameTyped({ value })),
   fc.constant(Msg.NameCleared()),
-  digit.map((digit) => Msg.DigitTyped({ digit })),
   fc.constant(Msg.Started()),
-  day.map((date) => Msg.DateChosen({ date })),
-  order.map((order) => Msg.OrderPicked({ order })),
   zoned.map((now) => Msg.TimeChanged({ now })),
-  order.map((order) => Msg.OrderChanged({ order })),
-  fc.boolean().map((succeeded) => Msg.OrderKept({ succeeded })),
-  fc.constant(Msg.SnackbarExpired()),
+  keyboardInset.map((inset) => Msg.KeyboardMoved({ inset })),
   fc.string().map((barcode) => Msg.Scanned({ barcode })),
   fc.tuple(barcode, outcome).map(([barcode, outcome]) => Msg.LookedUp({ barcode, outcome })),
   fc.boolean().map((succeeded) => Msg.Completed({ succeeded })),
-  fc.nat({ max: 12 }).map((id) => Msg.Arrived({ id })),
-  fc.nat({ max: 12 }).map((id) => Msg.FridgeClosed({ id })),
 )

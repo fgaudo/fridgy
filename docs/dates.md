@@ -15,8 +15,9 @@ In Rome just after midnight, yesterday's product still read "Expires today".
   `Date` or `Intl`.
 - **The entrypoints provide the zone**, with `DateTime.layerCurrentZoneLocal`: it is read once, when the app
   starts. The tests provide a zone of their own (`rehearsed`'s `zone`, UTC unless given).
-- **The keypad's rules take today as a day.** `libs/dates` knows nothing of zones: a page gives it today in the
-  device's zone, and it offers days of the calendar.
+- **The keypad's rules take today as a day.** `libs/dates` knows nothing of zones: the date's program
+  (`programs/expiration`) gives it today in the device's zone, from the time its page tells it, and it offers days
+  of the calendar.
 - **A product has expired from the start of the day after its expiration day, in the device's zone**
   (`Product.expirationStatus`). The day counts ("in 3 days", "2 days ago") are differences between days, so a
   clock change never makes a day of 23 or 25 hours count wrong. The freshness is the part of the time from the

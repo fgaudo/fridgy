@@ -5,13 +5,14 @@
 > WebView, Capacitor, the browser) describes the web build, and is drawn again on React Native as the `views`
 > skill says.
 
-Implemented on 2026-10-28, and seen on Android in the emulator the same day (see "Verified, and not").
-The code is the page `src/app/children/edit-product/` with its services, the rules of the date entry in
-`src/libs/dates/`, the tap on a row in `src/app/children/home/children/products/`, `ProductStore.update` and
-`DateOrderStore` in `src/infrastructure/storage/`. Read [`AGENTS.md`](../AGENTS.md), the `add-program`,
-`add-service` and `views` skills and the guide of the runtime, `node_modules/@fgaudo/effect-tea/site/guide/`, before changing
-them. The facts about the code below marked **verified** were checked against the tree on 2026-10-28; re-check
-them before relying on them.
+Implemented on 2026-10-28, and seen on Android in the emulator the same day (see "Verified, and not"). The code is
+the page `src/app/children/edit-product/` with its services, the date entry's program
+`src/app/programs/expiration/` and its rules in `src/libs/dates/`, the snackbar's program
+`src/app/programs/snackbar/`, the tap on a row in `src/app/children/home/children/products/`, `ProductStore.update`
+and `DateOrderStore` in `src/infrastructure/storage/`. Read [`AGENTS.md`](../AGENTS.md), the `add-program`,
+`add-service` and `views` skills and the guide of the runtime, `node_modules/@fgaudo/effect-tea/site/guide/`,
+before changing them. The facts about the code below marked **verified** were checked against the tree on
+2026-10-28; re-check them before relying on them.
 
 ## What it does
 
@@ -29,10 +30,10 @@ decided".
 1. A tap on a product's row in Home opens the page; a long press keeps selecting. Once something is selected, a
    tap selects too, as Material's lists do.
 2. The page edits the name and the expiration date; the creation date stays what it was.
-3. Of the date entry (the order's segmented button, the digits, the chips of the days they name, the keypad),
-   only the rules of typing a date are shared, as functions of `src/libs/dates/digit-date-entry.ts`; each page
-   keeps its own model and view of it. A look of Material's that both views draw, with its states, is a utility
-   of `src/styles.css`. No module shared under `src/app`.
+3. The date entry (the order's segmented button, the digits, the chips of the days they name, the keypad) is
+   one program, `src/app/programs/expiration/`, with its view and the setting of its order, which both pages
+   declare as a child; the rules of typing a date are functions of `src/libs/dates/digit-date-entry.ts`. Taken
+   first as "only the rules shared", and replaced on 2026-11-26 (see "Sharing the date entry").
 4. Leaving the page discards the changes without asking.
 5. The page's "Save" is a filled button at the bottom, where the thumb rests, as the steps of `add-products`
    have theirs, not a text button in the app bar as Material's full-screen dialog draws it.
@@ -86,10 +87,10 @@ decided".
 ## The date entry: what is shared, and what is not
 
 Typing a date as digits is done by two pages. A program never imports a sibling, so what the two pages have in
-common either moves up or is written twice. The criterion, now in `AGENTS.md`, applied layer by layer: a thing is
-shared when its truth lies outside the pages that use it, so that a copy changed on its own would be a bug; it is
-written twice when the pages may legitimately differ in it, and sharing it would take parameters that describe
-the caller.
+common either moves up, a whole program to the root's `programs/`, or is written twice. The criterion, now in
+`AGENTS.md`, applied layer by layer: a thing is shared when its truth lies outside the pages that use it, so
+that a copy changed on its own would be a bug; it is written twice when the pages may legitimately differ in it,
+and sharing it would take parameters that describe the caller.
 
 - **The rules of typing a date** (which keys apply, which days the digits name, which one is the date) know
   nothing of the app: `src/libs/dates/digit-date-entry.ts`, generic as everything under `libs/`. An `Entry` is
@@ -104,69 +105,73 @@ the caller.
   (**verified** against every way of typing more digits after five or more). `digit-dates.ts` has the inverse of `datesOf` for a date's longest form, `digitsOf`
   (`DDMMYYYY` in `DMY`), with the property that `datesOf(digitsOf(date, order), today, order)` is `[date]` for
   every date, order and today (**verified** on `datesOf`: of the four ways to cut eight digits, only two digits
-  of day and two of month leave the year 0, 2 or 4 digits, so eight digits name one day at most). In each page,
-  a rule answering `None` is `reject` in `update` and a key withheld in the model, so that the model agrees with
-  `update` by construction; `dispatchViolations` checks it on the real view.
-- **A look of Material's with its states** (a filter chip selected or disabled, a segment current or disabled)
-  is Material's, not the pages': the same in both or a bug. The `views` skill puts such looks in `src/styles.css`
-  (`filter-chip`, `segment`), their state an attribute they read. A key of the keypad is a line of layout: it
-  stays inline, written twice.
-- **The composition** (which pieces, in what order, what the strip reads as with no digits, where the button
-  is, the model that holds the page's own messages) is each page's. The model's types and the view's pieces
-  were copied from `add-products` into the new page, and `add-products` was moved onto the rules first, its
-  behaviour unchanged and its tests the net.
+  of day and two of month leave the year 0, 2 or 4 digits, so eight digits name one day at most). In the date's
+  program, a rule answering `None` is `reject` in `update` and a key withheld in the model, so that the model
+  agrees with `update` by construction; `dispatchViolations` checks it on the real view.
+- **The date's state machine, its model and its view** (the digits as stored or typed, the order and its
+  setting, the segments, the field, the strip, the chips and the keypad) are one program,
+  `src/app/programs/expiration/`, a child of both pages. Its page tells it the time and whether the form is
+  locked (`PageChanged`, by its declaration's `tell`), starts it from the stored product or none (its flags),
+  and reads what it concludes as its `output`: `Undecided`, `Never` or `On { day }`. An order that could not be
+  kept is its event, `OrderNotKept`, which the page tells in its snackbar.
+- **The composition** (which pieces, in what order, where the button is and what it reads, the model that holds
+  the page's own messages) is each page's. Each page places the date's view in its column.
 
 ## The program (`src/app/children/edit-product/`)
 
-A page of the root, started from flags (**verified**: a program declares `flags` and its `init` becomes a
-function of them, `Init<State, Command, Flags>` in `node_modules/@fgaudo/effect-tea/dist/program.d.ts`; the root
-starts it with `children.EditProduct.init(flags)` from Home's event). Same shape as every program, no children.
+A page of the root, started from flags: a program that declares `flags` has an `init` that is a function of
+them, and the root declares the page a child by the number of its visit, with the flags its `Page.EditProduct`
+carries from Home's event. Same shape as every program; its children are the date (`Expiration`, there once the
+clock has ticked) and the snackbar (`Snackbar`). Its own state is `{ id, original, keyboardInset, form }`, the
+form one union: `Loading | Editing | Saving | Gone`.
 
 - **The flags are the id and the product the row shows**, valid by construction. The page edits what the user
   saw, and never reads the product again: nothing else writes it while the page is shown (Home's deletion and its
   undo act only from Home, which is under the page), and the storage still has the last word when the page saves
   (see "The service").
-- **`Loading` waits for the date order and the clock.** The order comes from the setting's subscription, a
-  moment after the page opens, and the stored date cannot be drawn as digits without it; without today, no day
-  is offered, so the stored date would show "Not an upcoming date" and "Save" would be withheld for a frame.
-  `add-products` draws nothing of the order until it is known and starts with no digits, so it needs no such
-  state; here the digits are there from the start. The first order and the first tick make the form, with the
-  date `Kept`.
-- **`Kept` is a state of the date, not digits computed once.** The digits of an untouched date are derived data
-  (the date in the order in use), which the state must not hold, and they must be rewritten when the order
+- **`Loading` waits for the clock alone, and the model stays `Loading` until the date's order is known.**
+  Without today, no day is offered, so the stored date would show "Not an upcoming date" and "Save" would be
+  withheld for a frame; the first tick makes the form `Editing`, and the date's child starts then, its date
+  `Kept`. The order comes from the child's setting, a moment after it starts, and the stored date cannot be drawn
+  as digits without it: until the child's model shows the order known, the page's model is `Loading`, the app bar
+  alone. `add-products` draws the date with the order unknown, since it starts with no digits.
+- **`Kept` is a state of the child's date, not digits computed once.** The digits of an untouched date are derived
+  data (the date in the order in use), which the state must not hold, and they must be rewritten when the order
   changes: digits typed as `31122027` in `DMY` and re-read in `MDY` would name no day, on a date the user never
-  typed. A key pressed on `Kept` acts on the entry it shows (the stored date's digits in the order in use, none
-  for a product that never expires), and the rules then say what applies: on a stored date, the backspace erases
-  its last digit and the clear key empties the field, a digit is rejected (eight is a date's longest) and so is a
-  tap on its chip (the only day offered, already named); on no stored date, a digit starts typing, and there is
-  nothing to erase. A `Some` from a rule becomes `Typed { entry }`.
+  typed. A key pressed on `Kept` acts on the entry it shows (the stored date's digits in the order in use, none for
+  a product that never expires), and the rules then say what applies: on a stored date, the backspace erases its
+  last digit and the clear key empties the field, a digit is rejected (eight is a date's longest) and so is a tap
+  on its chip (the only day offered, already named); on no stored date, a digit starts typing, and there is nothing
+  to erase. A `Some` from a rule becomes `Typed { entry }`.
 - **The untouched stored date names the stored expiration itself**, not the day its digits name, and an edit
   allows it even when it falls before the creation's day in the zone the phone is in now (`docs/dates.md`).
   "Changed" compares the made product, not the typed text: `Product.edit` normalizes the name, so a name retyped
-  with other spacing is not a change.
+  with other spacing is not a change. The page makes it from the name and the child's `output`, in `update` and
+  in `makeModel`, never from a copy of the date.
 - **Only a completion leaves `Saving`**: its controls are disabled, `Saved` outside it is a defect, and a key
   typed just before is kept, as `add-products` does. `Saved` leaves the page; `Failed` gives the form back with
   the snackbar; `Gone` enters `Gone`.
 - **`Gone` tells its own failure.** How the user learns of a child's failure stays in that child, so the page
-  stays, the form shown and taking no input, until its snackbar has stood its time; its `SnackbarExpired` then
-  asks to be left with `LeaveRequested`, as the close and back buttons do at once. Its snackbar stands until the
-  page goes: an order not kept is not told over it.
-- **Subscriptions**, always on, run by the root only while the page is on top (`subscribed`): the clock every
-  30 seconds, as Products' (only `today` is needed, for a date typed without a year; `add-products` ticks every
-  second because the creation date is taken from it, which this page never does); the page's own
-  `DateOrderSetting`'s changes; the back button, whose press leaves the page, or is held while saving, so that
-  the platform does not leave the app.
+  stays, the form shown and taking no input, until its snackbar has stood its time; the snackbar's `Expired`
+  event then asks to be left with `LeaveRequested`, as the close and back buttons do at once. Its snackbar stands
+  until the page goes: an order not kept is not told over it.
+- **Subscriptions**, always on while the page is there, which is while it is shown: the clock every 30 seconds,
+  as Products' (only `today` is needed, for a date typed without a year; `add-products` ticks every second
+  because the creation date is taken from it, which this page never does); the back button, whose press leaves
+  the page, or is held while saving, so that the platform does not leave the app; the keyboard. The changes of
+  the date order's setting are the date's own subscription, and the snackbar's timer the snackbar's.
 - **The view** is the app bar and the name field of `add-products`, the latter without the scanner's button and
-  the supporting text, and its order segments, date field, strip, chips, keypad and button, copied, with
-  the button's label following the date field and the controls disabled while `Saving` and `Gone` (the close button
-  stays in `Gone`). `Loading` draws the app bar alone. The page's root is keyed `EditProduct`, rising and sinking as
-  `AddProducts` does. No acknowledgement: the page leaves, and the list shows the change.
+  the supporting text, the date's view (`programs/expiration/view.tsx`), the snackbar and the button, with the
+  button's label following what the date concludes (`withoutDate`) and the controls disabled while `Saving` and
+  `Gone` (the close button stays in `Gone`). `Loading` draws the app bar alone. The root keys the page by its name
+  and its visit, rising and sinking as `AddProducts` does. No acknowledgement: the page leaves, and the list shows
+  the change.
 
 ## Home and its child
 
 `Products` raises the event `EditRequested { id, product }`, the product taken from the item in `update`, so that
-no parent reads the child's state; `Home` forwards it, and the root shows the page (`show` ignores the request
-when the page is on top, so a double tap opens it once). The model decides what a tap does (`maybeTap` in
+no parent reads the child's state; `Home` forwards it, and the root shows the page (it honours Home's requests
+only while Home is shown, so a double tap opens it once). The model decides what a tap does (`maybeTap` in
 `ItemSelection`): opening a `Valid` row while nothing is selected, the row's toggle while selecting, nothing
 while deleting, on a leaving row and on `Corrupt` rows; the view attaches whatever message it holds to `click`.
 
@@ -182,13 +187,11 @@ adapter parses the id as `DeleteProducts`'s does (only the form an integer is wr
 
 ### The date order's setting
 
-The page needs the order the digits are read in, which `add-products` keeps in its `DateOrderSetting`. A service
-is never shared, so the page has its own `services/date-order-setting/`, the same interface. What the two
-adapters must agree on, the setting's key and what its text stands for (the order's `Schema`, the fall-back to
-the device's locale), moved up to `DateOrderStore` (`src/infrastructure/storage/date-order.ts`), a service of the
-infrastructure on `SettingStore` with `current`, `set` and `tables`, as `ProductStore` is on the `SqlClient`; each
-adapter is a few lines on it. The `add-service` skill says it: what a setting's text stands for is its adapter's
-own until a second adapter reads it.
+The order the digits are read in is the date's program's: its `services/date-order-setting/`
+(`src/app/programs/expiration/`), the one service of it, which both pages reach through their child. The
+setting's key and what its text stands for (the order's `Schema`, the fall-back to the device's locale) are
+`DateOrderStore` (`src/infrastructure/storage/date-order.ts`), a service of the infrastructure on `SettingStore`
+with `current`, `set` and `tables`, as `ProductStore` is on the `SqlClient`; the adapter is a few lines on it.
 
 ## The infrastructure: `ProductStore.update`
 
@@ -223,10 +226,12 @@ expiration is upserted, or deleted when the snapshot has none.
   up or down and the model agreeing with `update` by the same rules, but a kind of thing `AGENTS.md` rules out
   ("never shared through parameters that describe the caller", "never as fragments of model or view"), and
   pieces that already needed two parameters describing the caller (what the empty strip reads as, whether the
-  page takes input), the mark of two things made one. **Decided: (a).** Two uses are too few to know what a third
-  would need; the day the creation date gets an entry of its own, moving the entry up is weighed again, with three
-  examples instead of one and a half, and the only shape it may then take is (b), a whole program in `programs/`,
-  if by then the pages share a state machine and not only its pieces.
+  page takes input), the mark of two things made one. Decided first: (a), two uses being too few to know what a
+  third would need. **Decided on 2026-11-26: (b)**, `src/app/programs/expiration/`. What ruled it out is gone: a
+  child's `output` gives the page the day the date concludes on, read in its `update` with no copy, and its
+  declaration's `tell` hands down the clock and the lock from the page's state. The order and its setting are the
+  child's own, and the lower bound follows from its flags, the stored product or none. The pages share a state
+  machine, not only its pieces, and one setting's service replaces two.
 - **A tap to open, a long press to select.** Before this change a tap on a row did nothing. Material's lists open
   an item on a tap, select on a long press, and once in selection mode select on a tap: the one behaviour of Home
   this change altered. To check on the device (not in the browser): that Android's long press, which fires
@@ -245,11 +250,12 @@ expiration is upserted, or deleted when the snapshot has none.
   start of the life the badge's disc colors, and a form for it would need a second date entry. Changing the
   expiration of an old product stretches or shrinks that life, which is what the disc's color means.
 - **The product in the flags, not re-read.** The page trusts the row the user tapped. A product that changes
-  under the page cannot happen today (nothing writes while Home is covered: `Products`' subscriptions, its undo
-  timer included, run only while Home is on top, and its commands only insert or delete, never touch another id),
+  under the page cannot happen today (nothing writes while Home is covered: `Products`' subscriptions, its
+  snackbar's timer included, run only while Home is shown, and its commands only insert or delete, never touch
+  another id),
   and the storage still refuses a save of a deleted product (`ProductNotStored`). Observing the product from the
   page would add a read service for a case the write already handles, and tell it no better than `Gone` does.
-- **The fields a moment late.** `Loading` draws the app bar alone until the setting and the clock answer, a
+- **The fields a moment late.** `Loading` draws the app bar alone until the clock and the date's setting answer, a
   database read of a few milliseconds under the page's entrance transition. The alternative, drawing the fields
   with an empty date field and a wrong strip for a frame, was judged worse than an honest state.
 - **The row's move in the list.** After an edit, Home's list comes back with the product in its new place
@@ -274,7 +280,7 @@ scrolls to "Save", keyboard open or not.
 
 - Deleting from the page (an overflow item in the app bar, with Home's snackbar on return).
 - The scanner and the lookup on this page, to rename a product from its barcode.
-- Editing the creation date ("bought on"), with the disc's meaning in mind: a third date entry, when moving the
-  entry up as a program of `programs/` is weighed again.
+- Editing the creation date ("bought on"), with the disc's meaning in mind: a third use of
+  `programs/expiration`, or a program of its own where its rules differ.
 - A transition for a row that moves in Home's list.
 - A confirmation before discarding changes, should the owner want one.

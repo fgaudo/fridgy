@@ -1,101 +1,150 @@
 import { describe, expect, test } from 'bun:test'
 import * as Tea from '@fgaudo/effect-tea'
 import * as Arr from 'effect/Array'
-import * as Data from 'effect/Data'
 import * as DateTime from 'effect/DateTime'
 import * as Effect from 'effect/Effect'
-import * as HashMap from 'effect/HashMap'
 import * as Opt from 'effect/Option'
 import * as Schema from 'effect/Schema'
 import { isValidElement, type ReactNode } from 'react'
-import * as Product from '#domain/product.ts'
+import type { DateOrder } from '#libs/dates/date-order.ts'
 import * as Day from '#libs/dates/day.ts'
-import * as DigitDates from '#libs/dates/digit-dates.ts'
 import { tagPath } from '#libs/testing/tag-path.test_support.ts'
-import { outcomesOf } from '#libs/testing/update.test_support.ts'
-import * as About from './children/about/program.ts'
-import * as AddProducts from './children/add-products/program.ts'
-import type * as EditProduct from './children/edit-product/program.ts'
 import * as Home from './children/home/program.ts'
-import { type Message, type Model, type Page, program, type State } from './program.ts'
+import { type Command, type Model, program } from './program.ts'
+import type * as Expiration from './programs/expiration/program.ts'
 import {
   addProduct,
   back,
   cancelLookup,
   checkCamera,
-  clearEditedDate,
+  clearDate,
   clearName,
+  closeAbout,
+  closeAddProducts,
   deleteSelected,
+  expirationShown,
+  hear,
+  hearNext,
+  listenedIn,
   loadEditPage,
+  onHome,
   openAbout,
   openAddProducts,
   openMenu,
+  orderShown,
   pendingWork,
   perform,
   pickOrder,
   rehearsed,
   requestDate,
   requestInfo,
+  type State,
   saveProduct,
   scan,
   selectFirstProduct,
   tapFirstProduct,
+  typeDay,
   typeDigit,
   typeEditedName,
   typeName,
   type User,
   undoDeletion,
+  visitShown,
 } from './user.test_support.ts'
 import { view } from './view.tsx'
 
-const Page = Data.taggedEnum<Page>()
-const Msg = Data.taggedEnum<Message>()
-const HomeMsg = Data.taggedEnum<Home.Message>()
-const AddProductsMsg = Data.taggedEnum<AddProducts.Message>()
-const EditProductMsg = Data.taggedEnum<EditProduct.Message>()
-
-const { step } = outcomesOf(program.update)
-
 const day = Schema.decodeSync(Day.Schema)
 
-const tags = (state: State) => state.stack.map((page) => page._tag)
+const isAdd = (command: Command) => tagPath(command) === 'AddProducts › Add'
 
-/** The state of Home, wherever it is in the stack. */
-const homeState = (state: State) =>
-  Opt.map(
-    Arr.findFirst(state.stack, (page): page is Data.TaggedEnum.Value<Page, 'Home'> => page._tag === 'Home'),
-    (page) => page.state,
+const isSave = (command: Command) => tagPath(command) === 'EditProduct › Save'
+
+/** The page the model draws. */
+const shown = (user: User) => Effect.map(user.model, ({ page }) => page._tag)
+
+/** Home's model, while Home is shown. */
+const homeShown = ({ page }: Model): Opt.Option<Home.Model> => page._tag === 'Home' ? Opt.some(page.model) : Opt.none()
+
+/** Home's list, while Home is shown: each valid product's id, name and whether it expires, in order. */
+const listed = (user: User) =>
+  Effect.map(user.model, (model) =>
+    Opt.map(homeShown(model), ({ products: { list } }) =>
+      list._tag === 'Available'
+        ? list.products.flatMap((row): ReadonlyArray<Readonly<{ id: string; name: string; expires: boolean }>> =>
+          row._tag === 'Valid' && row.presence !== 'Leaving'
+            ? [{ id: row.id, name: row.name, expires: row.status._tag !== 'Everlasting' }]
+            : []
+        )
+        : []))
+
+/** The names of the valid products in Home's list, while Home is shown. */
+const listedNames = (user: User) => Effect.map(listed(user), Opt.map(Arr.map(({ name }) => name)))
+
+/** What the contextual top app bar offers for the selection, while Home shows its list. */
+const deletionShown = (model: Model) =>
+  Opt.flatMap(
+    homeShown(model),
+    ({ products: { list } }) => list._tag === 'Available' ? Opt.some(list.deletion._tag) : Opt.none(),
   )
 
-/** Whether the page that adds products looks a barcode up: its subscription's key is `lookup:<barcode>`. */
-const looksUp = (state: State) =>
-  Arr.some(
-    Arr.fromIterable(HashMap.keys(program.subscriptions(state))),
-    (key) => Array.isArray(key) && key[0] === 'AddProducts' && String(key[1]).startsWith('lookup:'),
-  )
+/** The days the date's digits name, as the strip under the field offers them. */
+const daysNamed = (model: Model) =>
+  Opt.match(expirationShown(model), {
+    onNone: () => [],
+    onSome: ({ strip }) => strip._tag === 'Naming' ? strip.choices.map(({ date }) => date) : [],
+  })
 
-/** The pages whose subscriptions run, from the namespaced keys (`['Home', 'clock']`, …). */
-const subscribedPages = (state: State) =>
-  new Set(
-    Array.from(HashMap.keys(program.subscriptions(state))).flatMap((key) => Array.isArray(key) ? [key[0]] : []),
-  )
+/** The order other than `inUse` that a test picks: whichever is not in use. */
+const otherThan = (inUse: Opt.Option<DateOrder>): DateOrder => Opt.contains(inUse, 'MDY') ? 'DMY' : 'MDY'
+
+/** Adds Milk, which never expires, from the first step, and leaves the page: Home lists it. */
+const addMilk = Effect.fnUntraced(function*(user: User) {
+  yield* perform(user, [openAddProducts, typeName('Milk')])
+  yield* checkCamera(user)
+  // The page adds a product only once it knows the time.
+  yield* hearNext(user, 'AddProducts › clock')
+  yield* user.send(addProduct)
+  yield* user.run(isAdd)
+  yield* back(user)
+  yield* hearNext(user, 'Home › Products › changes')
+})
+
+/** Adds Salt, which never expires, then Milk, which expires at the end of 2099: Milk is listed first. */
+const addSaltAndMilk = Effect.fnUntraced(function*(user: User) {
+  yield* perform(user, [openAddProducts, typeName('Salt')])
+  yield* checkCamera(user)
+  yield* hearNext(user, 'AddProducts › clock')
+  yield* user.send(addProduct)
+  yield* user.run(isAdd)
+  yield* perform(user, [typeName('Milk'), requestDate])
+  // The date reads its order as the second step is shown.
+  yield* hearNext(user, 'AddProducts › Expiration › date-order')
+  yield* typeDay(user, day('2099-12-31'))
+  yield* user.send(addProduct)
+  yield* user.run(isAdd)
+  yield* back(user)
+  yield* hearNext(user, 'Home › Products › changes')
+  // The list is drawn once the time is known: Milk expires.
+  yield* hearNext(user, 'Home › Products › clock')
+})
 
 describe('Navigation', () => {
-  test('starts on Home', () => {
-    expect(tags(program.init.state)).toEqual(['Home'])
+  test('starts on Home, with no page over it', () => {
+    expect(program.init.state.own).toEqual({ visits: 0, maybeVisit: Opt.none() })
+    expect(program.makeModel(program.init.state).page._tag).toBe('Home')
   })
 
-  test('starts Home as Home starts, with its commands', () => {
-    expect(homeState(program.init.state)).toEqual(Opt.some(Home.program.init.state))
-    expect(program.init.commands).toEqual(
-      (Home.program.init.commands ?? []).map((command) => ({ _tag: 'Home', command })),
-    )
+  test('starts Home as Home starts, with no command', () => {
+    const { page } = program.makeModel(program.init.state)
+    expect(page._tag === 'Home' && page.model).toEqual(Home.program.makeModel(Home.program.init.state))
+    expect(program.init.commands ?? []).toEqual([])
+    expect(Home.program.init.commands ?? []).toEqual([])
   })
 
-  test('Home opens About on top, which loads its data', () =>
+  test('Home opens About over it, which loads its data', () =>
     rehearsed(Effect.fnUntraced(function*(user) {
       yield* perform(user, openAbout)
-      expect(tags(yield* user.state)).toEqual(['Home', 'About'])
+      expect(yield* shown(user)).toBe('About')
       expect((yield* user.pending).map(tagPath)).toEqual(['About › LoadLicenses', 'About › LoadVersion'])
       yield* user.runAll
     })))
@@ -108,63 +157,15 @@ describe('Navigation', () => {
       const entry = requestInfo(yield* user.model)
       yield* user.send(() => entry)
       const state = yield* user.state
-      expect(tags(state)).toEqual(['Home', 'About'])
+      expect(yield* shown(user)).toBe('About')
+      expect(state.own.visits).toBe(1)
       expect(Opt.map(entry, (message) => program.update(message)(state) === Tea.reject)).toEqual(Opt.some(true))
       yield* user.runAll
     })))
 
-  // Home asks for About only from its menu, which the first request closes, so no user reaches this; the root
-  // does not rely on how Home filters, though: it hears nothing from Home while a page covers it.
-  test('About requested while it is shown stays as it is, and is not started again', () => {
-    const shown: State = {
-      stack: [
-        Page.Home({ state: { ...Home.program.init.state, isMenuOpen: true } }),
-        Page.About({ state: About.program.init.state }),
-      ],
-    }
-    const { after, commands } = step(Msg.Home({ message: HomeMsg.InfoRequested() }), shown)
-    expect(tags(after)).toEqual(['Home', 'About'])
-    expect(commands).toEqual([])
-  })
-
-  // A page asks to be left from its view too, whose tap may come from a frame drawn before another page covered
-  // it, or once a save completes, while it is hidden.
-  test('a page asking to be left while another is shown leaves from under it, the page shown staying', () => {
-    const covered: State = {
-      stack: [
-        Page.Home({ state: Home.program.init.state }),
-        Page.AddProducts({ state: AddProducts.program.init.state }),
-        Page.About({ state: About.program.init.state }),
-      ],
-    }
-    const { after } = step(Msg.AddProducts({ message: AddProductsMsg.Closed() }), covered)
-    expect(tags(after)).toEqual(['Home', 'About'])
-    expect(after.stack[1]).toBe(covered.stack[2])
-  })
-
-  // About left while its data loads, and opened again: a command cannot be cancelled, and its answer goes to
-  // the About that is there when it arrives, so the second visit is loaded by the first one's answers, then
-  // hears its own. This is why About accepts a load that completes on a page already loaded.
-  test('About opened again while its first loads were pending is loaded once they all complete', () =>
-    rehearsed(Effect.fnUntraced(function*(user) {
-      yield* perform(user, openAbout)
-      yield* back(user)
-      expect((yield* user.pending).map(tagPath)).toEqual(['About › LoadLicenses', 'About › LoadVersion'])
-      yield* perform(user, openAbout)
-      expect((yield* user.pending).length).toBe(4)
-      yield* user.runAll
-      const about = Arr.findFirst(
-        (yield* user.state).stack,
-        (page): page is Data.TaggedEnum.Value<Page, 'About'> => page._tag === 'About',
-      )
-      expect(Opt.map(about, ({ state }) => [state.licenses._tag, state.version._tag])).toEqual(
-        Opt.some(['Loaded', 'Loaded']),
-      )
-    })))
-
-  // React reuses an element of the same type in the same place: a page drawn in another's would keep its native
-  // views, and the text of their fields. Keyed by the page's name, each page's element is its own.
-  test('each page is drawn in an element of its own, keyed by its name', () =>
+  // React reuses an element of the same type in the same place: a page drawn in another's, or in an earlier visit's
+  // of its own, would keep its native views, and the text of their fields.
+  test('each page is drawn in an element of its own, keyed by its name and its visit', () =>
     rehearsed(Effect.fnUntraced(function*(user) {
       const keysOf = (node: ReactNode): ReadonlyArray<string> =>
         typeof node === 'object' && node !== null && Symbol.iterator in node
@@ -172,14 +173,20 @@ describe('Navigation', () => {
           : isValidElement<{ children?: ReactNode }>(node)
           ? [...(node.key === null ? [] : [node.key]), ...keysOf(node.props.children)]
           : []
-      const pages: ReadonlyArray<string> = ['Home', 'AddProducts', 'EditProduct', 'About']
       const drawn = Effect.map(
         user.model,
-        (model) => keysOf(view(model, () => Effect.void)).filter((key) => pages.includes(key)),
+        (model) =>
+          keysOf(view(model, () => undefined)).filter((key) => /^(Home|AddProducts|EditProduct|About)/.test(key)),
       )
       expect(yield* drawn).toEqual(['Home'])
       yield* perform(user, openAbout)
-      expect(yield* drawn).toEqual(['About'])
+      const first = yield* visitShown(user)
+      expect(yield* drawn).toEqual([`About-${first}`])
+      yield* back(user)
+      yield* perform(user, openAbout)
+      const second = yield* visitShown(user)
+      expect(second).not.toBe(first)
+      expect(yield* drawn).toEqual([`About-${second}`])
       yield* user.runAll
     })))
 
@@ -188,69 +195,38 @@ describe('Navigation', () => {
       yield* perform(user, openAbout)
       yield* user.runAll
       yield* back(user)
-      const state = yield* user.state
-      expect(tags(state)).toEqual(['Home'])
+      expect(yield* shown(user)).toBe('Home')
       expect(yield* user.pending).toEqual([])
       // Opening About closed the menu: Home is otherwise untouched.
-      expect(Opt.map(homeState(state), (home) => home.isMenuOpen)).toEqual(Opt.some(false))
+      expect(Opt.map(homeShown(yield* user.model), ({ menu }) => menu._tag)).toEqual(Opt.some('Closed'))
     })))
 
   test('back on Home first closes what is open', () =>
     rehearsed(Effect.fnUntraced(function*(user) {
       yield* user.send(openMenu)
       yield* back(user)
-      const state = yield* user.state
-      expect(tags(state)).toEqual(['Home'])
-      expect(Opt.map(homeState(state), (home) => home.isMenuOpen)).toEqual(Opt.some(false))
+      expect(yield* shown(user)).toBe('Home')
+      expect(Opt.map(homeShown(yield* user.model), ({ menu }) => menu._tag)).toEqual(Opt.some('Closed'))
       expect(yield* user.pending).toEqual([])
     })))
 
   // The add button tapped twice from the same frame: the second tap asks Home again, which changes nothing.
-  test('Home opens the page that adds products on top, once on a double tap', () =>
+  test('Home opens the page that adds products over it, once on a double tap', () =>
     rehearsed(Effect.fnUntraced(function*(user) {
       const add = openAddProducts(yield* user.model)
       yield* user.send(() => add)
+      const opened = (yield* user.state).own
       yield* user.send(() => add)
-      expect(tags(yield* user.state)).toEqual(['Home', 'AddProducts'])
+      expect((yield* user.state).own).toBe(opened)
+      expect(yield* shown(user)).toBe('AddProducts')
       expect((yield* user.pending).map(tagPath)).toEqual(['AddProducts › CheckCamera'])
       yield* checkCamera(user)
     })))
 
-  // The check of the first opening answers the second page, and the second check finds the camera known.
-  test('the page that adds products, opened again before its camera check answered, takes both answers', () =>
-    rehearsed(Effect.fnUntraced(function*(user) {
-      yield* user.send(openAddProducts)
-      yield* back(user)
-      yield* user.send(openAddProducts)
-      expect((yield* user.pending).map(tagPath)).toEqual(['AddProducts › CheckCamera', 'AddProducts › CheckCamera'])
-      yield* checkCamera(user)
-      yield* checkCamera(user)
-      expect(tags(yield* user.state)).toEqual(['Home', 'AddProducts'])
-      expect((yield* user.ignored).map(tagPath)).toEqual(['AddProducts › CameraChecked'])
-    })))
-
-  /** The names of the valid products in Home's list. */
-  const listedNames = (user: User) =>
-    Effect.map(
-      user.state,
-      (state) =>
-        Opt.map(homeState(state), ({ products: { list } }) =>
-          list._tag === 'Loaded'
-            ? list.items.flatMap((item): ReadonlyArray<string> => item._tag === 'Valid' ? [item.product.name] : [])
-            : []),
-    )
-
   test('a product added on its page is in the list of Home once the page is left', () =>
     rehearsed(Effect.fnUntraced(function*(user) {
-      yield* perform(user, [openAddProducts, typeName('Milk')])
-      yield* checkCamera(user)
-      // The page adds a product only once it knows the time.
-      yield* user.hearNext(['AddProducts', 'clock'])
-      yield* user.send(addProduct)
-      yield* user.run((command) => tagPath(command) === 'AddProducts › Add')
-      yield* back(user)
-      expect(tags(yield* user.state)).toEqual(['Home'])
-      yield* user.hearNext(['Home', ['Products', 'changes']])
+      yield* addMilk(user)
+      expect(yield* shown(user)).toBe('Home')
       expect(yield* listedNames(user)).toEqual(Opt.some(['Milk']))
     })))
 
@@ -260,21 +236,20 @@ describe('Navigation', () => {
       // The scanner is offered once the page knows that the device can read barcodes.
       yield* checkCamera(user)
       yield* scan(user, '4006381333931')
-      yield* user.hear(
-        ['AddProducts', 'lookup:4006381333931'],
-        {
-          _tag: 'AddProducts',
-          message: AddProductsMsg.LookedUp({
-            barcode: '4006381333931',
-            outcome: { _tag: 'Found', name: 'Milk', url: 'https://world.openfoodfacts.org/product/4006381333931' },
-          }),
+      yield* hear(user, 'AddProducts › Lookup', {
+        _tag: 'AddProducts',
+        id: yield* visitShown(user),
+        message: {
+          _tag: 'LookedUp',
+          barcode: '4006381333931',
+          outcome: { _tag: 'Found', name: 'Milk', url: 'https://world.openfoodfacts.org/product/4006381333931' },
         },
-      )
-      yield* user.hearNext(['AddProducts', 'clock'])
+      })
+      yield* hearNext(user, 'AddProducts › clock')
       yield* user.send(addProduct)
-      yield* user.run((command) => tagPath(command) === 'AddProducts › Add')
+      yield* user.run(isAdd)
       yield* back(user)
-      yield* user.hearNext(['Home', ['Products', 'changes']])
+      yield* hearNext(user, 'Home › Products › changes')
       expect(yield* listedNames(user)).toEqual(Opt.some(['Milk']))
     })))
 
@@ -284,38 +259,37 @@ describe('Navigation', () => {
       yield* perform(user, [openAddProducts, typeName('Bread')])
       yield* checkCamera(user)
       yield* scan(user, '4006381333931')
-      yield* user.hear(
-        ['AddProducts', 'lookup:4006381333931'],
-        {
-          _tag: 'AddProducts',
-          message: AddProductsMsg.LookedUp({ barcode: '4006381333931', outcome: { _tag: 'NotFound' } }),
-        },
-      )
-      yield* user.hearNext(['AddProducts', 'clock'])
+      yield* hear(user, 'AddProducts › Lookup', {
+        _tag: 'AddProducts',
+        id: yield* visitShown(user),
+        message: { _tag: 'LookedUp', barcode: '4006381333931', outcome: { _tag: 'NotFound' } },
+      })
+      yield* hearNext(user, 'AddProducts › clock')
       expect(addProduct(yield* user.model)).toEqual(Opt.none())
       yield* perform(user, [typeName('Milk'), addProduct])
-      yield* user.run((command) => tagPath(command) === 'AddProducts › Add')
+      yield* user.run(isAdd)
       yield* back(user)
-      yield* user.hearNext(['Home', ['Products', 'changes']])
+      yield* hearNext(user, 'Home › Products › changes')
       expect(yield* listedNames(user)).toEqual(Opt.some(['Milk']))
     })))
 
   // The page waits for the lookup: the name it would add may be replaced a moment later.
   test('a lookup cancelled stops, and leaves the name to type before the product can be added', () =>
     rehearsed(Effect.fnUntraced(function*(user) {
+      const looksUp = Effect.map(user.state, (state) => listenedIn(state).includes('AddProducts › Lookup'))
       yield* user.send(openAddProducts)
       yield* checkCamera(user)
-      yield* user.hearNext(['AddProducts', 'clock'])
+      yield* hearNext(user, 'AddProducts › clock')
       yield* scan(user, '4006381333931')
-      expect(looksUp(yield* user.state)).toBe(true)
+      expect(yield* looksUp).toBe(true)
       expect(addProduct(yield* user.model)).toEqual(Opt.none())
       yield* user.send(cancelLookup)
-      expect(looksUp(yield* user.state)).toBe(false)
+      expect(yield* looksUp).toBe(false)
       expect(addProduct(yield* user.model)).toEqual(Opt.none())
       yield* perform(user, [typeName('Milk'), addProduct])
-      yield* user.run((command) => tagPath(command) === 'AddProducts › Add')
+      yield* user.run(isAdd)
       yield* back(user)
-      yield* user.hearNext(['Home', ['Products', 'changes']])
+      yield* hearNext(user, 'Home › Products › changes')
       expect(yield* listedNames(user)).toEqual(Opt.some(['Milk']))
     })))
 
@@ -324,40 +298,38 @@ describe('Navigation', () => {
     rehearsed(Effect.fnUntraced(function*(user) {
       yield* perform(user, [openAddProducts, typeName('Milk')])
       yield* checkCamera(user)
-      yield* user.hearNext(['AddProducts', 'clock'])
+      yield* hearNext(user, 'AddProducts › clock')
       yield* user.send(addProduct)
-      yield* user.run((command) => tagPath(command) === 'AddProducts › Add')
+      yield* user.run(isAdd)
       // A moment later, as a user taps it again: the second is created at the clock's time.
-      yield* user.hearNext(['AddProducts', 'clock'])
+      yield* hearNext(user, 'AddProducts › clock')
       yield* user.send(addProduct)
-      yield* user.run((command) => tagPath(command) === 'AddProducts › Add')
+      yield* user.run(isAdd)
       yield* back(user)
-      yield* user.hearNext(['Home', ['Products', 'changes']])
+      yield* hearNext(user, 'Home › Products › changes')
       expect(yield* listedNames(user)).toEqual(Opt.some(['Milk', 'Milk']))
     })))
 
-  // The order is the storage's when the page opens, the machine's locale's until one is kept: the test picks
+  // The order is the storage's when the date is shown, the machine's locale's until one is kept: the test picks
   // whichever is not in use. A pick applies at once, and is kept there.
   test('the order picked for the date is kept, and the digits are read in it', () =>
     rehearsed(Effect.fnUntraced(function*(user) {
       yield* perform(user, [openAddProducts, typeName('Milk')])
       yield* checkCamera(user)
-      yield* user.hearNext(['AddProducts', 'clock'])
-      const heard = yield* user.hearNext(['AddProducts', 'date-order'])
-      const inUse = heard._tag === 'AddProducts' && heard.message._tag === 'OrderChanged' ? heard.message.order : 'DMY'
-      const picked = inUse === 'MDY' ? 'DMY' : 'MDY'
-      yield* perform(user, [requestDate, pickOrder(picked)])
-      yield* user.run((command) => tagPath(command) === 'AddProducts › KeepOrder')
-      expect(yield* user.hearNext(['AddProducts', 'date-order'])).toEqual(
-        Msg.AddProducts({ message: AddProductsMsg.OrderChanged({ order: picked }) }),
-      )
+      yield* hearNext(user, 'AddProducts › clock')
+      yield* user.send(requestDate)
+      yield* hearNext(user, 'AddProducts › Expiration › date-order')
+      const picked = otherThan(orderShown(yield* user.model))
+      yield* user.send(pickOrder(picked))
+      expect(orderShown(yield* user.model)).toEqual(Opt.some(picked))
+      yield* user.run((command) => tagPath(command) === 'AddProducts › Expiration › KeepOrder')
+      expect(yield* hearNext(user, 'AddProducts › Expiration › date-order')).toMatchObject({
+        message: { message: { _tag: 'OrderChanged', order: picked } },
+      })
       // December 31 in the order picked: 1231 month first, 3112 day first. Read in the other, they name a 31st month.
       const digits = picked === 'MDY' ? '1231' : '3112'
-      yield* perform(user, Arr.map([...digits], (digit) => typeDigit(digit as AddProducts.Digit)))
-      const { page } = yield* user.model
-      const named = page._tag === 'AddProducts' && page.model._tag === 'Dating' && page.model.strip._tag === 'Naming'
-        ? page.model.strip.choices.map(({ date }) => Day.toParts(date))
-        : []
+      yield* perform(user, Arr.map([...digits], (digit) => typeDigit(digit as Expiration.Digit)))
+      const named = daysNamed(yield* user.model).map(Day.toParts)
       expect(named.some(({ month, day }) => month === 12 && day === 31)).toBe(true)
     })))
 
@@ -365,59 +337,25 @@ describe('Navigation', () => {
     rehearsed(Effect.fnUntraced(function*(user) {
       yield* perform(user, [openAddProducts, typeName('Milk')])
       yield* checkCamera(user)
-      yield* user.hearNext(['AddProducts', 'clock'])
+      yield* hearNext(user, 'AddProducts › clock')
       yield* user.send(addProduct)
-      yield* user.run((command) => tagPath(command) === 'AddProducts › Add')
+      yield* user.run(isAdd)
       yield* perform(user, [clearName, typeName('Bread'), addProduct])
-      yield* user.run((command) => tagPath(command) === 'AddProducts › Add')
+      yield* user.run(isAdd)
       yield* back(user)
-      yield* user.hearNext(['Home', ['Products', 'changes']])
+      yield* hearNext(user, 'Home › Products › changes')
       expect(yield* listedNames(user)).toEqual(Opt.some(['Milk', 'Bread']))
     })))
 
-  /** Home's list: each valid product's id, name and whether it expires, in order. */
-  const listed = (user: User) =>
-    Effect.map(
-      user.state,
-      (state) =>
-        Opt.map(homeState(state), ({ products: { list } }) =>
-          list._tag === 'Loaded'
-            ? list.items.flatMap((item): ReadonlyArray<Readonly<{ id: string; name: string; expires: boolean }>> =>
-              item._tag === 'Valid'
-                ? [{ id: item.id, name: item.product.name, expires: Opt.isSome(item.product.maybeExpirationDate) }]
-                : []
-            )
-            : []),
-    )
-
-  /** Adds Salt, which never expires, then Milk, which expires at the end of 2099: Milk is listed first. */
-  const addSaltAndMilk = Effect.fnUntraced(function*(user: User) {
-    yield* perform(user, [openAddProducts, typeName('Salt')])
-    yield* checkCamera(user)
-    yield* user.hearNext(['AddProducts', 'clock'])
-    const heard = yield* user.hearNext(['AddProducts', 'date-order'])
-    const order = heard._tag === 'AddProducts' && heard.message._tag === 'OrderChanged' ? heard.message.order : 'DMY'
-    yield* user.send(addProduct)
-    yield* user.run((command) => tagPath(command) === 'AddProducts › Add')
-    yield* perform(user, [typeName('Milk'), requestDate])
-    const digits = DigitDates.digitsOf(day('2099-12-31'), order)
-    yield* perform(user, Arr.map([...digits], (digit) => typeDigit(digit as AddProducts.Digit)))
-    yield* user.send(addProduct)
-    yield* user.run((command) => tagPath(command) === 'AddProducts › Add')
-    yield* back(user)
-    yield* user.hearNext(['Home', ['Products', 'changes']])
-    // The list is drawn once the time is known: Milk expires.
-    yield* user.hearNext(['Home', ['Products', 'clock']])
-  })
-
-  // A double tap reaches a stack that has the page on top, which opens it once.
-  test('a tap on a product opens the page that edits it on top, once on a double tap, with the product once loaded', () =>
+  // A double tap asks Home again under the page it opened, which changes nothing.
+  test('a tap on a product opens the page that edits it over Home, once on a double tap, with the product once loaded', () =>
     rehearsed(Effect.fnUntraced(function*(user) {
       yield* addSaltAndMilk(user)
       const tap = tapFirstProduct(yield* user.model)
       yield* user.send(() => tap)
+      const opened = (yield* user.state).own
       yield* user.send(() => tap)
-      expect(tags(yield* user.state)).toEqual(['Home', 'EditProduct'])
+      expect((yield* user.state).own).toBe(opened)
       const loading = (yield* user.model).page
       expect(loading._tag === 'EditProduct' && loading.model._tag).toBe('Loading')
       yield* loadEditPage(user)
@@ -434,8 +372,11 @@ describe('Navigation', () => {
       const tapProduct = tapFirstProduct(drawn)
       const tapAdd = openAddProducts(drawn)
       yield* user.send(() => tapProduct)
+      const opened = (yield* user.state).own
       yield* user.send(() => tapAdd)
-      expect(tags(yield* user.state)).toEqual(['Home', 'EditProduct'])
+      expect((yield* user.state).own).toBe(opened)
+      expect(yield* shown(user)).toBe('EditProduct')
+      expect((yield* pendingWork(user)).map(tagPath).filter((path) => path.startsWith('AddProducts'))).toEqual([])
       yield* loadEditPage(user)
     })))
 
@@ -446,9 +387,9 @@ describe('Navigation', () => {
       yield* user.send(tapFirstProduct)
       yield* loadEditPage(user)
       yield* perform(user, [typeEditedName('Oat milk'), saveProduct])
-      yield* user.run((command) => tagPath(command) === 'EditProduct › Save')
-      expect(tags(yield* user.state)).toEqual(['Home'])
-      yield* user.hearNext(['Home', ['Products', 'changes']])
+      yield* user.run(isSave)
+      expect(yield* shown(user)).toBe('Home')
+      yield* hearNext(user, 'Home › Products › changes')
       expect(Opt.map(yield* listed(user), Arr.map(({ id, name }) => [id, name]))).toEqual(
         Opt.map(before, Arr.map(({ id, name }) => [id, name === 'Milk' ? 'Oat milk' : name])),
       )
@@ -459,9 +400,9 @@ describe('Navigation', () => {
       yield* addSaltAndMilk(user)
       yield* user.send(tapFirstProduct)
       yield* loadEditPage(user)
-      yield* perform(user, [clearEditedDate, saveProduct])
-      yield* user.run((command) => tagPath(command) === 'EditProduct › Save')
-      yield* user.hearNext(['Home', ['Products', 'changes']])
+      yield* perform(user, [clearDate, saveProduct])
+      yield* user.run(isSave)
+      yield* hearNext(user, 'Home › Products › changes')
       expect(Opt.map(yield* listed(user), Arr.map(({ name, expires }) => [name, expires]))).toEqual(
         Opt.some([['Salt', false], ['Milk', false]]),
       )
@@ -475,58 +416,47 @@ describe('Navigation', () => {
       yield* loadEditPage(user)
       yield* user.send(typeEditedName('Oat milk'))
       yield* back(user)
-      expect(tags(yield* user.state)).toEqual(['Home'])
+      expect(yield* shown(user)).toBe('Home')
       expect(yield* pendingWork(user)).toEqual([])
       expect(yield* listed(user)).toEqual(before)
     })))
 
-  // No user reaches this through the storage of the tests, whose products go only from Home's list, hidden under
-  // the page.
-  test('a product found gone when saved keeps the page that edits it, which says so, until its snackbar leaves', () => {
-    const creationDate = DateTime.makeZonedUnsafe('2026-10-20T10:00:00Z', { timeZone: 'UTC' })
-    const milk = Opt.getOrThrow(Product.make({ name: 'Milk', creationDate, maybeExpirationDate: Opt.none() }))
-    const saving: State = {
-      stack: [
-        Page.Home({ state: Home.program.init.state }),
-        Page.EditProduct({
-          state: {
-            _tag: 'Saving',
-            product: milk,
-            form: {
-              id: '1',
-              original: milk,
-              name: 'Milk 2',
-              replacements: 0,
-              now: creationDate,
-              order: 'DMY',
-              date: { _tag: 'Kept' },
-              snackbar: { _tag: 'None' },
-              keyboardInset: 0,
-            },
-          },
-        }),
-      ],
-    }
-    const { after: gone, commands } = step(
-      Msg.EditProduct({ message: EditProductMsg.Saved({ outcome: { _tag: 'Gone' } }) }),
-      saving,
-    )
-    expect(tags(gone)).toEqual(['Home', 'EditProduct'])
-    const top = Arr.last(gone.stack)
-    expect(Opt.map(top, (page) => page._tag === 'EditProduct' && page.state._tag)).toEqual(Opt.some('Gone'))
-    expect(commands.map(tagPath)).toEqual(['EditProduct › Vibrate'])
-    expect(tags(step(Msg.EditProduct({ message: EditProductMsg.SnackbarExpired() }), gone).after)).toEqual(['Home'])
-  })
+  // The deletion completes before the storage's change reaches the list: the frame still shows the product, whose
+  // tap opens it.
+  test('a product deleted before its page saves it keeps the page, which says so, until its snackbar leaves', () =>
+    rehearsed(Effect.fnUntraced(function*(user) {
+      yield* addMilk(user)
+      yield* perform(user, [selectFirstProduct, deleteSelected])
+      yield* user.run((command) => tagPath(command) === 'Home › Products › Delete')
+      yield* user.send(tapFirstProduct)
+      yield* loadEditPage(user)
+      yield* perform(user, [typeEditedName('Oat milk'), saveProduct])
+      yield* user.run(isSave)
+      const gone = (yield* user.model).page
+      expect(gone._tag === 'EditProduct' && gone.model._tag).toBe('Gone')
+      expect((yield* user.pending).map(tagPath)).toContain('EditProduct › Vibrate')
+      yield* user.run((command) => tagPath(command) === 'EditProduct › Snackbar › Stamp')
+      const notice = Opt.getOrThrow(
+        gone._tag === 'EditProduct' && gone.model._tag === 'Gone' ? gone.model.snackbar : Opt.none(),
+      )
+      expect(notice.notice).toBe('ProductGone')
+      yield* hear(user, 'EditProduct › Snackbar › Standing', {
+        _tag: 'EditProduct',
+        id: yield* visitShown(user),
+        message: { _tag: 'Snackbar', message: { _tag: 'Expired', id: notice.id } },
+      })
+      expect(yield* shown(user)).toBe('Home')
+      // The deletion's own notice, told while the page was opened.
+      yield* user.run((command) => tagPath(command) === 'Home › Products › Snackbar › Stamp')
+    })))
 
   test('a tap on a product while it is selected deselects it, and opens nothing', () =>
     rehearsed(Effect.fnUntraced(function*(user) {
       yield* addSaltAndMilk(user)
       yield* user.send(selectFirstProduct)
       yield* user.send(tapFirstProduct)
-      expect(tags(yield* user.state)).toEqual(['Home'])
-      expect(Opt.map(homeState(yield* user.state), ({ products }) => products.selection._tag)).toEqual(
-        Opt.some('Idle'),
-      )
+      expect(yield* shown(user)).toBe('Home')
+      expect(deletionShown(yield* user.model)).toEqual(Opt.some('NothingSelected'))
     })))
 
   test('back on Home clears the selection, and stays on Home', () =>
@@ -534,29 +464,129 @@ describe('Navigation', () => {
       yield* addSaltAndMilk(user)
       yield* user.send(selectFirstProduct)
       yield* back(user)
-      expect(tags(yield* user.state)).toEqual(['Home'])
-      expect(Opt.map(homeState(yield* user.state), ({ products }) => products.selection._tag)).toEqual(
-        Opt.some('Idle'),
-      )
+      expect(yield* shown(user)).toBe('Home')
+      expect(deletionShown(yield* user.model)).toEqual(Opt.some('NothingSelected'))
     })))
 
   test('a product deleted from the list comes back when the deletion is undone in time', () =>
     rehearsed(Effect.fnUntraced(function*(user) {
-      yield* perform(user, [openAddProducts, typeName('Milk')])
-      yield* checkCamera(user)
-      yield* user.hearNext(['AddProducts', 'clock'])
-      yield* user.send(addProduct)
-      yield* user.run((command) => tagPath(command) === 'AddProducts › Add')
-      yield* back(user)
-      yield* user.hearNext(['Home', ['Products', 'changes']])
+      const standing = Effect.map(
+        user.state,
+        (state) => listenedIn(state).includes('Home › Products › Snackbar › Standing'),
+      )
+      yield* addMilk(user)
       yield* perform(user, [selectFirstProduct, deleteSelected])
       yield* user.run((command) => tagPath(command) === 'Home › Products › Delete')
-      yield* user.hearNext(['Home', ['Products', 'changes']])
+      yield* hearNext(user, 'Home › Products › changes')
       expect(yield* listedNames(user)).toEqual(Opt.some([]))
+      // The snackbar's time counts from when the clock says it was told.
+      expect(yield* standing).toBe(false)
+      yield* user.run((command) => tagPath(command) === 'Home › Products › Snackbar › Stamp')
+      expect(yield* standing).toBe(true)
       yield* user.send(undoDeletion)
+      expect(yield* standing).toBe(false)
       yield* user.run((command) => tagPath(command) === 'Home › Products › Restore')
-      yield* user.hearNext(['Home', ['Products', 'changes']])
+      yield* hearNext(user, 'Home › Products › changes')
       expect(yield* listedNames(user)).toEqual(Opt.some(['Milk']))
+    })))
+})
+
+// Each page over Home is a visit of its own, by a number never used again: an answer, or a tap of a frame, for a
+// visit that is over reaches no later one.
+describe('Visits', () => {
+  // Found on 22 November 2026: the write's answer went to the page of the same name, and the date of the second
+  // visit, not there yet, died of it.
+  test('the order kept once the page that edits a product is left is ignored, and the next visit stays as it starts', () =>
+    rehearsed(Effect.fnUntraced(function*(user) {
+      yield* addMilk(user)
+      yield* user.send(tapFirstProduct)
+      yield* loadEditPage(user)
+      const picked = otherThan(orderShown(yield* user.model))
+      yield* user.send(pickOrder(picked))
+      yield* back(user)
+      expect((yield* pendingWork(user)).map(tagPath)).toEqual(['EditProduct › Expiration › KeepOrder'])
+      yield* user.send(tapFirstProduct)
+      const started = yield* user.model
+      yield* user.runAll
+      expect((yield* user.ignored).map(tagPath)).toEqual(['EditProduct › Expiration › OrderKept'])
+      expect(yield* user.model).toEqual(started)
+      // The order was kept all the same: the second visit reads it.
+      yield* loadEditPage(user)
+      expect(orderShown(yield* user.model)).toEqual(Opt.some(picked))
+    })))
+
+  test('About opened again while its first loads were pending is loaded by its own', () =>
+    rehearsed(Effect.fnUntraced(function*(user) {
+      yield* perform(user, openAbout)
+      yield* back(user)
+      expect((yield* user.pending).map(tagPath)).toEqual(['About › LoadLicenses', 'About › LoadVersion'])
+      yield* perform(user, openAbout)
+      expect((yield* user.pending).length).toBe(4)
+      yield* user.runAll
+      expect((yield* user.ignored).map(tagPath)).toEqual(['About › LicensesLoaded', 'About › VersionLoaded'])
+      const { page } = yield* user.model
+      expect(page._tag === 'About' && [page.model.licenses._tag, page.model.version._tag]).toEqual([
+        'Loaded',
+        'Loaded',
+      ])
+    })))
+
+  test('the page that adds products, opened again before its camera check answered, knows its camera by its own', () =>
+    rehearsed(Effect.fnUntraced(function*(user) {
+      yield* user.send(openAddProducts)
+      yield* back(user)
+      yield* user.send(openAddProducts)
+      expect((yield* user.pending).map(tagPath)).toEqual(['AddProducts › CheckCamera', 'AddProducts › CheckCamera'])
+      yield* user.runAll
+      expect((yield* user.ignored).map(tagPath)).toEqual(['AddProducts › CameraChecked'])
+      const { page } = yield* user.model
+      expect(page._tag === 'AddProducts' && page.model._tag === 'Naming' && Opt.isSome(page.model.maybeScan)).toBe(
+        true,
+      )
+    })))
+
+  test('the page that edits a product, opened again before its order was kept, shows its fields by its own', () =>
+    rehearsed(Effect.fnUntraced(function*(user) {
+      yield* addMilk(user)
+      yield* user.send(tapFirstProduct)
+      yield* loadEditPage(user)
+      yield* user.send(pickOrder(otherThan(orderShown(yield* user.model))))
+      yield* back(user)
+      yield* user.send(tapFirstProduct)
+      yield* loadEditPage(user)
+      yield* user.runAll
+      expect((yield* user.ignored).map(tagPath)).toEqual(['EditProduct › Expiration › OrderKept'])
+      const { page } = yield* user.model
+      expect(page._tag === 'EditProduct' && page.model._tag === 'Editing' && page.model.name).toBe('Milk')
+    })))
+
+  // About's back button, drawn in the first visit's last frame and tapped once the second visit is shown.
+  test('a tap of a frame of a visit that is over is rejected, and the same tap of the visit under way is taken', () =>
+    rehearsed(Effect.fnUntraced(function*(user) {
+      yield* perform(user, openAbout)
+      const first = closeAbout(yield* user.model)
+      yield* back(user)
+      yield* perform(user, openAbout)
+      const second = closeAbout(yield* user.model)
+      expect(Opt.map(first, ({ message }) => message)).toEqual(Opt.map(second, ({ message }) => message))
+      const state = yield* user.state
+      expect(Opt.map(first, (message) => program.update(message)(state) === Tea.reject)).toEqual(Opt.some(true))
+      expect(Opt.map(second, (message) => program.update(message)(state) === Tea.reject)).toEqual(Opt.some(false))
+      yield* user.runAll
+    })))
+
+  // The close button tapped twice from the same frame: the first tap leaves the page, and the second is for a
+  // visit that is over.
+  test('a page asking to be left twice is left once', () =>
+    rehearsed(Effect.fnUntraced(function*(user) {
+      yield* user.send(openAddProducts)
+      const close = closeAddProducts(yield* user.model)
+      yield* user.send(() => close)
+      const left = yield* user.state
+      expect(left.own).toEqual({ visits: 1, maybeVisit: Opt.none() })
+      expect(Opt.map(close, (message) => program.update(message)(left) === Tea.reject)).toEqual(Opt.some(true))
+      yield* user.runAll
+      expect((yield* user.ignored).map(tagPath)).toEqual(['AddProducts › CameraChecked'])
     })))
 })
 
@@ -571,9 +601,11 @@ describe('Days, in a zone far from UTC', () => {
 
   /** The statuses of Home's rows, once the list is shown. */
   const statuses = (model: Model) =>
-    model.page._tag === 'Home' && model.page.model.products.list._tag === 'Available'
-      ? model.page.model.products.list.products.map((row) => row._tag === 'Valid' ? row.status._tag : row._tag)
-      : []
+    Opt.match(homeShown(model), {
+      onNone: () => [],
+      onSome: ({ products: { list } }) =>
+        list._tag === 'Available' ? list.products.map((row) => row._tag === 'Valid' ? row.status._tag : row._tag) : [],
+    })
 
   for (const { zone, time } of cases) {
     test(`today is typed with its year and offered, and a product expiring today expires today, in ${zone}`, () =>
@@ -581,25 +613,16 @@ describe('Days, in a zone far from UTC', () => {
         Effect.fnUntraced(function*(user) {
           yield* perform(user, [openAddProducts, typeName('Milk')])
           yield* checkCamera(user)
-          yield* user.hearNext(['AddProducts', 'clock'])
-          const heard = yield* user.hearNext(['AddProducts', 'date-order'])
-          const order = heard._tag === 'AddProducts' && heard.message._tag === 'OrderChanged'
-            ? heard.message.order
-            : 'DMY'
+          yield* hearNext(user, 'AddProducts › clock')
           yield* user.send(requestDate)
-          const digits = DigitDates.digitsOf(october30, order)
-          yield* perform(user, Arr.map([...digits], (digit) => typeDigit(digit as AddProducts.Digit)))
-          const { page } = yield* user.model
-          expect(
-            page._tag === 'AddProducts' && page.model._tag === 'Dating' && page.model.strip._tag === 'Naming'
-              ? page.model.strip.choices.map(({ date }) => date)
-              : [],
-          ).toEqual([october30])
+          yield* hearNext(user, 'AddProducts › Expiration › date-order')
+          yield* typeDay(user, october30)
+          expect(daysNamed(yield* user.model)).toEqual([october30])
           yield* user.send(addProduct)
-          yield* user.run((command) => tagPath(command) === 'AddProducts › Add')
+          yield* user.run(isAdd)
           yield* back(user)
-          yield* user.hearNext(['Home', ['Products', 'changes']])
-          yield* user.hearNext(['Home', ['Products', 'clock']])
+          yield* hearNext(user, 'Home › Products › changes')
+          yield* hearNext(user, 'Home › Products › clock')
           expect(statuses(yield* user.model)).toEqual(['ExpiringToday'])
         }),
         { zone, maybeTime: Opt.some(time) },
@@ -608,37 +631,64 @@ describe('Days, in a zone far from UTC', () => {
 })
 
 describe('Subscriptions', () => {
+  /** Whether every key of the state is the page's, by its name. */
+  const listensTo = (state: State, page: Model['page']['_tag']) => {
+    const keys = listenedIn(state)
+    return keys.length > 0 && keys.every((key) => key.startsWith(`${page} › `))
+  }
+
   test('Home listens while it is shown', () => {
-    expect(subscribedPages(program.init.state)).toEqual(new Set(['Home']))
+    expect(listensTo(program.init.state, 'Home')).toBe(true)
   })
 
-  // Home's scrolling subscriptions would otherwise react to About's scrolling, e.g. scroll it to the top.
-  test('a page under another one stops listening', () =>
+  // Home's scrolling subscriptions would otherwise react to another page's scrolling, e.g. scroll it to the top.
+  test('while a page is shown over Home, the app listens to that page alone, and to Home again once it is left', () =>
     rehearsed(Effect.fnUntraced(function*(user) {
+      const listening = (page: Model['page']['_tag']) => Effect.map(user.state, (state) => listensTo(state, page))
+      yield* user.send(openAddProducts)
+      expect(yield* listening('AddProducts')).toBe(true)
+      yield* checkCamera(user)
+      yield* back(user)
+      expect(yield* listening('Home')).toBe(true)
       yield* perform(user, openAbout)
-      expect(subscribedPages(yield* user.state).has('Home')).toBe(false)
-      yield* user.runAll
-    })))
-
-  test('a page listens again once it is shown again', () =>
-    rehearsed(Effect.fnUntraced(function*(user) {
-      yield* perform(user, openAbout)
+      expect(yield* listening('About')).toBe(true)
       yield* user.runAll
       yield* back(user)
-      expect(subscribedPages(yield* user.state)).toEqual(new Set(['Home']))
+      expect(yield* listening('Home')).toBe(true)
+      yield* addMilk(user)
+      yield* user.send(tapFirstProduct)
+      yield* loadEditPage(user)
+      expect(yield* listening('EditProduct')).toBe(true)
+      yield* back(user)
+      expect(yield* listening('Home')).toBe(true)
     })))
 
-  // Otherwise the button is the platform's, which leaves the app. Each page observes the button under its own
-  // key (`['Home', 'back-button']`, …): what matters here is that exactly the shown page does, when it should.
+  // The list's scroll and layout are Home's state: the top app bar has collapsed, and stays so once the page is left.
+  test('Home keeps its state under a page, and listens to the same again once the page is left', () =>
+    rehearsed(Effect.fnUntraced(function*(user) {
+      yield* perform(user, [
+        onHome(({ headlineLaidOut }) => Opt.some({ ...headlineLaidOut, height: 100 })),
+        onHome(({ listLaidOut }) => Opt.some({ ...listLaidOut, height: 500 })),
+        onHome(({ contentSized }) => Opt.some({ ...contentSized, height: 2000 })),
+        onHome(({ scrolled }) => Opt.some({ ...scrolled, offset: 100 })),
+      ])
+      const before = yield* user.model
+      const keys = listenedIn(yield* user.state)
+      expect(Opt.map(homeShown(before), ({ collapse }) => collapse)).toEqual(Opt.some(1))
+      yield* user.send(openAddProducts)
+      yield* checkCamera(user)
+      yield* back(user)
+      expect(yield* user.model).toEqual(before)
+      expect(listenedIn(yield* user.state)).toEqual(keys)
+    })))
+
+  // Otherwise the button is the platform's, which leaves the app. What matters here is that exactly the shown page
+  // observes it, when it should.
   test('the back button is observed only while the shown page has something to close', () =>
     rehearsed(Effect.fnUntraced(function*(user) {
       const listensToBack = Effect.map(
         user.state,
-        (state) =>
-          Arr.some(
-            Arr.fromIterable(HashMap.keys(program.subscriptions(state))),
-            (key) => Array.isArray(key) && key[1] === 'back-button',
-          ),
+        (state) => listenedIn(state).some((key) => key.endsWith(' › back-button')),
       )
       expect(yield* listensToBack).toBe(false)
       yield* user.send(openMenu)

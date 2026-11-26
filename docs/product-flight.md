@@ -1,21 +1,23 @@
 # Design: the product added enters the fridge
 
-Redesigned for React Native on 2026-10-30, in `src/app/children/add-products`. The web build's choreography (the
-letters of the name gathering into a package, which flew on an arc) is gone: its measuring of the DOM has no
-counterpart in a pure view. Read [`AGENTS.md`](../AGENTS.md), the `views` and `add-program` skills and the guide of the runtime,
+Redesigned for React Native on 2026-10-30. The code is `src/app/children/add-products/children/fridge`, a child
+of the page that adds products. The web build's choreography (the letters of the name gathering into a package,
+which flew on an arc) is gone: its measuring of the DOM has no counterpart in a pure view. Read
+[`AGENTS.md`](../AGENTS.md), the `views` and `add-program` skills and the guide of the runtime,
 `node_modules/@fgaudo/effect-tea/site/guide/`, before changing it.
 
 ## Decisions
 
 - **The platform interpolates; the state holds the phases.** The fridge is `Away`, `Open` while products are on
-  their way into it, or `Closing` behind the last (`Fridge` in `program.ts`). Every motion of a phase is known when
+  their way into it, or `Closing` behind the last (`Fridge` in the child's `program.ts`). Every motion of a phase
+  is known when
   the phase starts, so each is a Reanimated layout animation, declared on the element, on the UI thread. Nothing of
   it (where a disc is, the door's angle) is in the state. Timers end the phases: `Arrived` per product, then
   `FridgeClosed`.
 - **The fridge stays open while products keep coming.** A product added while the fridge is open joins those on
   their way, and the door closes only behind the last. One added while the fridge is closing opens it again. Each
-  product goes by its number among those added this visit of the page (`Form.added`): two added within a second
-  have the same creation date.
+  product goes by its number among those added this visit of the page (the child's `added`): two added within a
+  second have the same creation date.
 - **It starts when the write has completed**, not when the button is pressed: a failed write would otherwise have
   to undo it. Every successful add plays it, from either step's button. After either, the first step is shown,
   which draws the fridge.
@@ -60,15 +62,16 @@ the timers, closed for the last `short4` + `medium1`, and goes.
 
 ## Where things are, in the code
 
-- **State and model** (`program.ts`): `Form.fridge` and `Form.added`; `admitted` takes a product into the fridge.
-  The model shows the fridge on the first step (`Naming`, and `Adding` from it): not under the scanner, during a
-  lookup or on the second step, where the timers end the phases unseen.
-- **View** (`view.tsx`, `fridge`): centred in the first step's room, above the FAB, 96dp tall and smaller when the
-  keyboard leaves less room. The fridge is keyed by its visit (the first product's number), so that one fading
-  away and the next stand apart; its body by the phase, so that closing plays the settle; each disc by its
+- **State and model** (`children/fridge/program.ts`): `fridge` and `added`. The page tells the child each product
+  added, `Admitted { product, today }`, the day of the page's clock then, and `admitted` takes it into the fridge.
+  The page's model shows the child's on the first step (`Naming`, and `Adding` from it): not under the scanner,
+  during a lookup or on the second step, where the timers end the phases unseen.
+- **View** (`children/fridge/view.tsx`): centred in the first step's room, above the FAB, 96dp tall and smaller
+  when the keyboard leaves less room. The fridge is keyed by its visit (the first product's number), so that one
+  fading away and the next stand apart; its body by the phase, so that closing plays the settle; each disc by its
   product's number. A disc rests inside the compartment invisible, as its flight leaves it, until its arrival
-  removes it. The model gives each product on its way its `Due`, by the clock's day: a product is made only once the
-  clock has ticked.
+  removes it. The model gives each product on its way its `Due`, counted from the day it was added on: the
+  fridge needs no clock of its own.
 
 ## Verified, and not
 

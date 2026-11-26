@@ -30,12 +30,13 @@ const motions = {
 
 const styles = StyleSheet.create({ layer: StyleSheet.absoluteFill })
 
-// Keyed by the page's name: React reuses an element of the same type in the same place, and a page drawn in
-// another's would keep its native views, and the text of their fields.
-const page = (name: keyof typeof motions, drawn: ReactNode) => {
+// Keyed by the page's name and its visit: React reuses an element of the same type in the same place, and a page
+// drawn in another's, or in an earlier visit's of its own, would keep its native views, and the text of their
+// fields.
+const page = (name: keyof typeof motions, key: string, drawn: ReactNode) => {
   const { isOver, ...animations }: Motion = motions[name]
   const shown = (
-    <Animated.View key={name} {...animations} style={styles.layer}>
+    <Animated.View key={key} {...animations} style={styles.layer}>
       {/* A page's own motions play when they change, never as the page enters or leaves whole. */}
       <LayoutAnimationConfig skipEntering skipExiting>{drawn}</LayoutAnimationConfig>
     </Animated.View>
@@ -50,11 +51,22 @@ const page = (name: keyof typeof motions, drawn: ReactNode) => {
   )
 }
 
-/** The page on top, alone: a page is drawn whole, over nothing but the page that leaves. */
+/** The page shown, alone: a page is drawn whole, over nothing but the page that leaves. */
 export const view: View<Model, Message> = (model, dispatch) =>
   Match.valueTags(model.page, {
-    Home: ({ model }) => page('Home', Home.view(model, Tea.forwardTo(dispatch, 'Home'))),
-    AddProducts: ({ model }) => page('AddProducts', AddProducts.view(model, Tea.forwardTo(dispatch, 'AddProducts'))),
-    EditProduct: ({ model }) => page('EditProduct', EditProduct.view(model, Tea.forwardTo(dispatch, 'EditProduct'))),
-    About: ({ model }) => page('About', About.view(model, Tea.forwardTo(dispatch, 'About'))),
+    Home: ({ model }) => page('Home', 'Home', Home.view(model, Tea.forwardTo(dispatch, 'Home'))),
+    AddProducts: ({ visit, model }) =>
+      page(
+        'AddProducts',
+        `AddProducts-${visit}`,
+        AddProducts.view(model, Tea.forwardTo(dispatch, 'AddProducts', visit)),
+      ),
+    EditProduct: ({ visit, model }) =>
+      page(
+        'EditProduct',
+        `EditProduct-${visit}`,
+        EditProduct.view(model, Tea.forwardTo(dispatch, 'EditProduct', visit)),
+      ),
+    About: ({ visit, model }) =>
+      page('About', `About-${visit}`, About.view(model, Tea.forwardTo(dispatch, 'About', visit))),
   })

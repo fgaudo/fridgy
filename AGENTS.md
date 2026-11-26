@@ -16,13 +16,13 @@ for the task before starting it:
 
 Before changing a program, read the runtime's guide, which the package holds at the version installed:
 `node_modules/@fgaudo/effect-tea/skills/effect-tea/SKILL.md` says where each thing is, and the guide itself,
-`site/guide/` in the package, is the library's specification. Its
-rules (intents instead of toggles, an operation as a state that only its completion leaves, input never a
-reason to reject, a model that holds no function and shows less than `update` accepts and never more, one state machine per concern
-with no derived data, a view that draws and never decides, `reject` for a message that may arrive and a defect
-for one that cannot, when a program splits into children and by what, how a program's tests are written) are
-rules of this app, and are not repeated here. Never patch the library from here: a change to it is made in
-`github.com/fgaudo/effect-tea`, released and then upgraded to.
+`site/guide/` in the package, is the library's specification. Its rules (intents instead of toggles, an operation
+as a state that only its completion leaves, a message never rejected by its value, what an element gives as a
+message the view fills, a model that holds no function and shows less than `update` accepts and never more, one
+state machine per concern with no derived data, a view that draws and never decides, `reject` for a message that
+may arrive and a defect for one that cannot, when a program splits into children and by what, how a program's tests
+are written) are rules of this app, and are not repeated here. Never patch the library from here: a change to it is
+made in `github.com/fgaudo/effect-tea`, released and then upgraded to.
 
 ## Language
 
@@ -45,9 +45,10 @@ error, the rule is intended: fix the code, do not work around the check.
 
 ## Architecture rules
 
-Every program has the same shape, whatever its depth: a folder holding `program.ts`, `view.tsx`, `layer.ts`,
-their tests, `services/`, `children/` and, once two programs of its subtree use the same one, `programs/`. The
-root (`src/app`), a page (a child of the root, one of the stack it shows) and a child of a page are all such
+Every program has the same shape, whatever its depth: a folder holding `program.ts` and its tests, `view.tsx`
+unless its parent draws its model (the snackbar's), `layer.ts` once it or a child of it has adapters to provide,
+`services/`, `children/` and, once two programs of its subtree use the same one, `programs/`. The root
+(`src/app`), a page (a child of the root: Home, or the one page shown over it) and a child of a page are all such
 folders; "page" names a role in the UI, kept by the root's state, not a kind of program. The programs to copy are
 `src/app/children/home` and `src/app/children/about`.
 
@@ -64,13 +65,16 @@ folders; "page" names a role in the UI, kept by the root's state, not a kind of 
 - **A service says in its type how its data ends.** One value is an `Effect<A, E>`; values over time are a
   `Source<A, Done, E>` (`libs/source`), `Done` being `never` for one that never ends. Only on-going observation
   is a `Source`; a one-off read is an `Effect`.
-- **A page stays one program while its parts share one form and one submission** (`add-products`: the two
-  steps, the scanner, the product entering the fridge), however long: the guide's size for splitting yields to
-  its rule that children reading each other's state are one child.
-- **Hidden pages keep receiving their completions**, but their subscriptions run only while they are on top
-  (`subscribed`, in the root). A covered page's request to show another page is dropped: a tap of a frame
-  already covered asks for what the user has moved past, and two taps in one frame would otherwise stack two
-  pages. A request to be left is honoured from under another page: a save completes wherever the page is.
+- **Parts that read each other's state stay one program, however long** (`add-products`: the name, the
+  scanner, the lookup and the submission). A part with a state of its own, which the page reads only as a value
+  it declares, if at all, is a child: the date (`programs/expiration`, whose `output` the page makes a product
+  of) and the fridge (`add-products/children/fridge`, told each product added).
+- **Home is always there, and at most one page is shown over it.** Covered, Home keeps its state and receives
+  its completions, but its subscriptions run only while it is shown (`listening`, in the root), and its requests
+  to show a page are dropped: a tap of a frame already covered asks for what the user has moved past, and two
+  taps in one frame would otherwise open a second page in the first one's place. A page over Home is a child by
+  the number of its visit, never used again: a page left is gone with its state, and neither an answer nor a tap
+  meant for a visit that is over reaches a later one. A page asks to be left with its event.
 - **The back button is the program's that has something to do with it, only while it has.** A page, or the child
   of a page that holds what a press closes (Home's `Products`, its selection), observes the platform's
   `BackButton` (`src/infrastructure/back-button`, the subscription keyed `back-button`) while it has something to
@@ -109,10 +113,10 @@ folders; "page" names a role in the UI, kept by the root's state, not a kind of 
   would be a bug (a rule of the domain, a look of Material's, in `src/styles.ts`); where they may
   legitimately differ, it is written twice, never shared through parameters that describe the caller. The one
   thing of the app that moves up as it is, is a whole program: used by two programs, it lives in `programs/`
-  of their lowest common parent, and each uses it as a child, through its three modules, never as fragments
-  of model or view. None exists yet; Biome already lets a child of the parent reach it
-  (`../../programs/<program>/`) and, from any depth, one of the root's (`#app/programs/<program>/`), by the modules
-  at its root only, as a child.
+  of their lowest common parent, and each uses it as a child, through the modules at its root, never as
+  fragments of model or view. The root's are `snackbar` and `expiration`. Biome lets a child of the parent reach
+  one (`../../programs/<program>/`) and, from any depth, one of the root's (`#app/programs/<program>/`), by the
+  modules at its root only, as a child.
 - **One storage per setup; migrations are append-only.** Every adapter of the storage is written once, on
   `SqlClient`; the entrypoint provides the engine. A phone has already run the existing migrations, so a fix is
   a new one.

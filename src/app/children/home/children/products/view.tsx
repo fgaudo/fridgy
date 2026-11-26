@@ -1,6 +1,5 @@
 import type { Dispatch } from '@fgaudo/effect-tea'
 import type * as Data from 'effect/Data'
-import * as DateTime from 'effect/DateTime'
 import * as Opt from 'effect/Option'
 import { Fragment, type ReactNode } from 'react'
 import { View as Box, type ColorValue, Pressable, StyleSheet, Text } from 'react-native'
@@ -22,6 +21,7 @@ import type {
   ListModel,
   Message,
   Model,
+  NoticeModel,
   Presence,
   ProductModel,
   ProductStatus,
@@ -434,9 +434,7 @@ export const selectionBar = (model: Model, dispatch: Dispatch<Message>): Selecti
   }
 }
 
-type Notice = Data.TaggedEnum.Value<Model['snackbar'], 'Shown'>['notice']
-
-const noticeText = (notice: Notice) => {
+const noticeText = (notice: NoticeModel) => {
   switch (notice._tag) {
     case 'Deleted':
       return notice.count === 1 ? 'Product deleted' : `${notice.count} products deleted`
@@ -447,35 +445,35 @@ const noticeText = (notice: Notice) => {
   }
 }
 
-/** Material's snackbar, keyed by what it tells so that the next one is drawn anew. */
-export const snackbar = (model: Model, dispatch: Dispatch<Message>): ReactNode | undefined => {
-  if (model.snackbar._tag === 'None') {
-    return undefined
-  }
-  const { on } = handlers(dispatch)
-  const { at, notice, entrance } = model.snackbar
-  return (
-    <Animated.View
-      key={`${notice._tag}-${DateTime.toEpochMillis(at)}`}
-      entering={motion.snackbar.entering[entrance]}
-      exiting={motion.snackbar.exiting}
-      accessibilityLiveRegion='polite'
-      style={styles.snackbar}
-    >
-      <Text style={styles.snackbarText}>{noticeText(notice)}</Text>
-      {notice._tag === 'Deleted'
-        ? Opt.match(notice.maybeUndo, {
-          onNone: () => null,
-          onSome: (undo) => (
-            <Pressable accessibilityRole='button' style={styles.snackbarAction} onPress={on(undo)}>
-              <Text style={styles.snackbarActionText}>Undo</Text>
-            </Pressable>
-          ),
-        })
-        : null}
-    </Animated.View>
-  )
-}
+/** Material's snackbar, keyed by its id so that the next one is drawn anew. */
+export const snackbar = (model: Model, dispatch: Dispatch<Message>): ReactNode | undefined =>
+  Opt.match(model.snackbar, {
+    onNone: () => undefined,
+    onSome: ({ id, notice, entrance }) => {
+      const { on } = handlers(dispatch)
+      return (
+        <Animated.View
+          key={id}
+          entering={motion.snackbar.entering[entrance]}
+          exiting={motion.snackbar.exiting}
+          accessibilityLiveRegion='polite'
+          style={styles.snackbar}
+        >
+          <Text style={styles.snackbarText}>{noticeText(notice)}</Text>
+          {notice._tag === 'Deleted'
+            ? Opt.match(notice.maybeUndo, {
+              onNone: () => null,
+              onSome: (undo) => (
+                <Pressable accessibilityRole='button' style={styles.snackbarAction} onPress={on(undo)}>
+                  <Text style={styles.snackbarActionText}>Undo</Text>
+                </Pressable>
+              ),
+            })
+            : null}
+        </Animated.View>
+      )
+    },
+  })
 
 /** Material's empty state: what is missing, as an icon on a disc in a role's container colors, and what to do about it. */
 const emptyState = (key: string, colors: Colors, name: string, title: string, text: string) => (

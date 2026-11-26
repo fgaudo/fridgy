@@ -1,8 +1,9 @@
 import * as Tea from '@fgaudo/effect-tea'
+import * as Opt from 'effect/Option'
 import { View as Box, Pressable, ScrollView, StyleSheet, Text } from 'react-native'
 import Animated, { Easing, FadeIn, FadeOut, Keyframe, LinearTransition } from 'react-native-reanimated'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { type Handlers, handlers, type View, write } from '#libs/tea-react/tea-react.ts'
+import { type Handlers, handlers, type View } from '#libs/tea-react/tea-react.ts'
 import { color, duration, easing, elevation, icon, shape, type } from '#styles'
 import * as Products from './children/products/view.tsx'
 import type { Message, Model } from './program.ts'
@@ -134,12 +135,6 @@ export const view: View<Model, Message> = (model, dispatch) => {
   const container = selection === undefined ? color.surface : color.secondaryContainer
   const onBar = selection === undefined ? color.onSurface : color.onSecondaryContainer
   const onBarVariant = selection === undefined ? color.onSurfaceVariant : onBar
-  const layOutHeadline = write(Tea.forwardTo(dispatch, 'HeadlineHeight'))
-  const layOutList = write(Tea.forwardTo(dispatch, 'ListHeight'))
-  const sizeContent = write(Tea.forwardTo(dispatch, 'ContentHeight'))
-  const scrolled = write(Tea.forwardTo(dispatch, 'Scroll'))
-  const rested = write(Tea.forwardTo(dispatch, 'Rest'))
-  const scrollEnded = on(model.endScroll)
   // Over both rows of the bar, which are one surface. The selection's color does not change.
   const scrolledColor = selection === undefined
     ? <Box style={[styles.scrolled, { opacity: containerAlpha(model.collapse) }]} />
@@ -181,18 +176,15 @@ export const view: View<Model, Message> = (model, dispatch) => {
           scrollEventThrottle={16}
           snapToOffsets={model.snap._tag === 'Snapping' ? model.snap.offsets : undefined}
           snapToEnd={false}
-          onLayout={(event) => layOutList(event.nativeEvent.layout.height)}
-          onContentSizeChange={(_width, height) => sizeContent(height)}
-          onScroll={(event) => scrolled(event.nativeEvent.contentOffset.y)}
-          onScrollBeginDrag={on(model.startScroll)}
-          onMomentumScrollEnd={(event) => {
-            rested(event.nativeEvent.contentOffset.y)
-            scrollEnded()
-          }}
+          onLayout={(event) => dispatch({ ...model.listLaidOut, height: event.nativeEvent.layout.height })}
+          onContentSizeChange={(_width, height) => dispatch({ ...model.contentSized, height })}
+          onScroll={(event) => dispatch({ ...model.scrolled, offset: event.nativeEvent.contentOffset.y })}
+          onScrollBeginDrag={Opt.match(model.maybeStartScroll, { onNone: () => undefined, onSome: on })}
+          onMomentumScrollEnd={(event) => dispatch({ ...model.scrollEnded, offset: event.nativeEvent.contentOffset.y })}
         >
           <Box
             style={[styles.headline, { backgroundColor: container }]}
-            onLayout={(event) => layOutHeadline(event.nativeEvent.layout.height)}
+            onLayout={(event) => dispatch({ ...model.headlineLaidOut, height: event.nativeEvent.layout.height })}
           >
             {scrolledColor}
             <Box style={{ opacity: headlineAlpha(model.collapse) }}>

@@ -7,15 +7,16 @@ Rules and conventions are in [`AGENTS.md`](../AGENTS.md).
 src/
 ├─ entrypoints/
 │  ├─ native.tsx         how the app is started on Android: op-sqlite as the storage, `fetch` as the HTTP client,
-│  │                     Android's back button and keyboard, the root view drawn by React; the tests pick their
-│  │                     own
+│  │                     Android's back button and keyboard, the program started here, not by a component, so
+│  │                     that a recreated activity keeps the page shown, and drawn by React; the tests pick
+│  │                     their own
 │  └─ crash/view.tsx     the screen a crash leaves, with a button that runs the program again
 │
 ├─ domain/               the entities and their rules (`Product`): imports nothing but libs/
 │
 ├─ app/                  the application (platform-agnostic)
-│  ├─ program.ts         public: the root Program: the stack of pages
-│  ├─ view.tsx           public: the root view: the page on top, keyed by its name
+│  ├─ program.ts         public: the root Program: Home, and at most one page over it, a child by its visit
+│  ├─ view.tsx           public: the root view: the page shown, keyed by its name and its visit
 │  ├─ layer.ts           public: every adapter that has no alternative, the vibrations' included;
 │  │                     needs a `SqlClient` and an `HttpClient`
 │  ├─ children/<child>/  a child Program (of the root: a page), of the same shape as the root, at any depth; of
@@ -25,10 +26,12 @@ src/
 │  │  │                        (`add-products/services/scanner/`, `add-products/services/product-lookup/`,
 │  │  │                        `edit-product/services/update-product/`)
 │  │  ├─ children/<child>/     its own children (`home/children/products/`, with
-│  │  │                        `services/product-list/`)
-│  │  └─ programs/<program>/   none yet: a program two programs of this subtree use, of this same shape
-│  └─ programs/<program>/  none yet: a program two pages use, of the same shape as a child and used like one
-│                          (see "Visibility")
+│  │  │                        `services/product-list/`; `add-products/children/fridge/`)
+│  │  └─ programs/<program>/   a program two programs of this subtree use, of this same shape (none yet)
+│  └─ programs/<program>/  a program two pages use, of the same shape as a child and used like one (see
+│                          "Visibility"): `snackbar/` (Material's snackbar, whose model its parents draw: no view,
+│                          no layer) and `expiration/` (the expiration date typed on a keypad, with the setting of
+│                          the order its digits are read in, `services/date-order-setting/`)
 │
 ├─ infrastructure/       what the app's adapters share: the storage (storage/: the database's engine, op-sqlite on
 │                        the phone or wa-sqlite in memory for the tests, its schema and migrations, how a product is
@@ -43,8 +46,8 @@ src/
 │                        reads barcodes (barcode-camera/: the specs React Native's codegen reads, and its reads as a
 │                        stream). Its adapters are named as the app's,
 │                        `<service>.<backing>.ts`
-├─ libs/                 generic, reusable code: the bridge to React Native (tea-react: handlers, renderer, test
-│                        support),
+├─ libs/                 generic, reusable code: what the app adds to effect-tea's bridge to React (tea-react: the
+│                        views' handlers, the renderer that draws the app or a screen in its place, test support),
 │                        sources, timers (a zoned clock, a one-shot timer), branded numbers, dates (a day of the
 │                        calendar, with no zone; the orders of a date's digits, the days they name, the rules of
 │                        typing them on a keypad), test helpers, …
@@ -83,11 +86,11 @@ role a file's name gives it. Biome's `noRestrictedImports` rule (`biome.json`) e
   and `layer.ts`, at every depth; and the infrastructure's services, for the platform's facts it takes as they
   are;
 - a program two programs use lives in `programs/` of their lowest common parent, and every program of that
-  parent's subtree reaches it as it reaches a child, through its three modules, by a relative import
-  (`../../programs/<program>/program.ts`) or, from deeper than `../../`, an alias. None exists yet, but Biome
-  already allows these: `../../programs/<program>/` from a child of the parent, `#app/programs/<program>/` for
-  the root's from any depth; a deeper parent's, from a grandchild of it, needs an override on that parent's
-  folder, added with the first such program;
+  parent's subtree reaches it as it reaches a child, through the modules at its root, by a relative import
+  (`../../programs/<program>/program.ts`) or an alias. Biome allows `../../programs/<program>/` from a child of
+  the parent, and `#app/programs/<program>/` for the root's from any depth, as the pages reach theirs; a deeper
+  parent's, from a grandchild of it, needs an override on that parent's folder, added with the first such
+  program;
 - adapters (`<service>.<backing>.ts`) are imported only by a `layer.ts`, by the entrypoints, which pick among
   alternatives, and by their own tests: a program uses its services;
 - from outside `app/`, only its root modules (`program.ts`, `view.tsx`, `layer.ts`); the entrypoints also reach

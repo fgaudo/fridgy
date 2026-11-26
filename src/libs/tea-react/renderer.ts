@@ -1,4 +1,5 @@
 import type * as Tea from '@fgaudo/effect-tea'
+import { Draw } from '@fgaudo/effect-tea/react'
 import { Component, createElement, type ReactNode, useSyncExternalStore } from 'react'
 import type { View } from './tea-react.ts'
 
@@ -8,9 +9,8 @@ type Shown<Model, Message> =
   | Readonly<{ _tag: 'Screen'; screen: ReactNode }>
 
 /**
- * effect-tea's bridge to React Native: `Root` draws the model of the app it is given, read with
- * `useSyncExternalStore` as effect-tea's bridge to React reads it, or a screen in its place. React batches and
- * schedules the commits, and draws the model of the state current then.
+ * What the app draws: `Root` draws the app it is given with effect-tea's `Draw`, or a screen in its place. The app
+ * is started by its caller and outlives `Root`, which may be mounted again.
  */
 export const make = <Model, Message>(view: View<Model, Message>) => {
   let shown: Shown<Model, Message> = { _tag: 'Nothing' }
@@ -25,10 +25,9 @@ export const make = <Model, Message>(view: View<Model, Message>) => {
     shown = next
     for (const listener of listeners) listener()
   }
-  const Drawn = ({ app }: Readonly<{ app: Tea.App<Model, Message> }>): ReactNode =>
-    view(useSyncExternalStore(app.subscribe, app.model), app.dispatch)
-  // React has no hook that catches what its children throw: only a class does. What the view or `makeModel` throws
-  // ends the run, which draws nothing more.
+  // React has no hook that catches what its children throw: only a class does. `Draw` throws a view's error to it
+  // alone, and the boundary ends the run with it. What `makeModel` throws, the run already holds, as one defect. The
+  // run then draws nothing more.
   class Boundary extends Component<{ app: Tea.App<Model, Message>; children?: ReactNode }, { hasThrown: boolean }> {
     override state = { hasThrown: false }
     static getDerivedStateFromError = () => ({ hasThrown: true })
@@ -45,7 +44,7 @@ export const make = <Model, Message>(view: View<Model, Message>) => {
     return drawn._tag === 'Screen'
       ? drawn.screen
       : drawn._tag === 'App'
-      ? createElement(Boundary, { app: drawn.app }, createElement(Drawn, { app: drawn.app }))
+      ? createElement(Boundary, { app: drawn.app }, createElement(Draw<Model, Message>, { app: drawn.app, view }))
       : null
   }
   /** Draws the model of `app`, from now on. */

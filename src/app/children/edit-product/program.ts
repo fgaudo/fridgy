@@ -1,94 +1,59 @@
-// The page that edits a stored product: its name and its expiration date, typed on a keypad
-// (`docs/edit-product.md`). The states are the wait for the date order and the clock (`Loading`), the form
-// (`Editing`), the write (`Saving`) and a product no longer stored (`Gone`). Once the product is saved, the page
-// asks to be left. A failure is told by a snackbar, which leaves on its own.
+// The page that edits a stored product: its name, and its expiration date, a child typed on a keypad
+// (`docs/edit-product.md`). Its form waits for the clock (`Loading`), takes input (`Editing`), is written (`Saving`)
+// or stands for a product no longer stored (`Gone`). Once the product is saved, the page asks to be left. A failure
+// is told by its snackbar, a child that leaves on its own.
 import * as Tea from '@fgaudo/effect-tea'
-import * as Arr from 'effect/Array'
 import * as Channel from 'effect/Channel'
 import * as Data from 'effect/Data'
 import type * as DateTime from 'effect/DateTime'
-import * as Duration from 'effect/Duration'
 import * as Effect from 'effect/Effect'
-import * as HashMap from 'effect/HashMap'
 import * as Match from 'effect/Match'
 import * as Opt from 'effect/Option'
+import * as Expiration from '#app/programs/expiration/program.ts'
+import * as SnackbarProgram from '#app/programs/snackbar/program.ts'
 import * as Product from '#domain/product.ts'
 import { BackButton } from '#infrastructure/back-button/back-button.ts'
 import { type Feedback, Haptics } from '#infrastructure/haptics/haptics.ts'
 import { Keyboard } from '#infrastructure/keyboard/keyboard.ts'
-import * as DateOrder from '#libs/dates/date-order.ts'
-import * as Day from '#libs/dates/day.ts'
-import * as DigitDateEntry from '#libs/dates/digit-date-entry.ts'
-import * as DigitDates from '#libs/dates/digit-dates.ts'
-import { after, every } from '#libs/timers/timers.ts'
-import { DateOrderSetting } from './services/date-order-setting/date-order-setting.ts'
+import type * as Day from '#libs/dates/day.ts'
+import { every } from '#libs/timers/timers.ts'
 import { UpdateProduct } from './services/update-product/update-product.ts'
-
-export type { Digit } from '#libs/dates/digit-date-entry.ts'
-
-type Digit = DigitDateEntry.Digit
 
 /** What the page starts from: the product as the row the user tapped shows it, and its id in the storage. */
 export type Flags = Readonly<{ id: string; product: Product.Product }>
 
-/** The expiration date, as stored until a key is pressed, then as typed. */
-export type DateForm = Data.TaggedEnum<{
-  /** The stored expiration, or none: shown as its digits in the order in use, rewritten when the order changes. */
-  Kept: object
-  Typed: Readonly<{ entry: DigitDateEntry.Entry }>
+/** What the fields hold once the time is known: a save that fails gives them back. */
+export type Fields = Readonly<{
+  /** The current time, in the device's zone: the product is edited in its zone. */
+  now: DateTime.Zoned
+  /** The name as typed; whether it is a name is decided when saving. */
+  name: string
+  /** How many times the name's field was drawn anew: with each clearing. */
+  replacements: number
 }>
 
-/** What is kept while the product is edited and while it is saved: a save that fails gives the form back. */
-export type Form = Readonly<{
+export type Form = Data.TaggedEnum<{
+  /** Until the clock has told the time: the date offers no day without today, and a product is edited in a zone. */
+  Loading: object
+  Editing: Readonly<{ fields: Fields }>
+  /** The product is being saved: only its completion leaves this state. */
+  Saving: Readonly<{ fields: Fields; product: Product.Product }>
+  /**
+   * Nothing is stored under the id any more: the fields stay, taking no input, while its snackbar says so. Its end
+   * asks to be left.
+   */
+  Gone: Readonly<{ fields: Fields }>
+}>
+
+const Form = Data.taggedEnum<Form>()
+
+export type State = Readonly<{
   id: string
   /** The product as it was opened: what the fields started from, and what "changed" is measured against. */
   original: Product.Product
-  /** The name as typed, the input `Name`; whether it is a name is decided when saving. */
-  name: string
-  /** How many times the name's input was drawn anew: with each clearing. */
-  replacements: number
-  /** The current time, in the device's zone: a date typed without a year is read from today. */
-  now: DateTime.Zoned
-  /** The order the digits of a date are read in. */
-  order: DateOrder.DateOrder
-  date: DateForm
-  snackbar: Snackbar
   /** How far the keyboard covers the page's bottom, in dp, navigation bar included: the window is never resized. */
   keyboardInset: number
-}>
-
-/** Material shows one snackbar at a time: one that comes after another waits for it to leave. */
-export type Entrance = 'Alone' | 'AfterAnother'
-
-/** What failed: the snackbar says so. */
-export type Failure = 'SaveFailed' | 'OrderNotKept' | 'ProductGone'
-
-/** The snackbar, until it has stood its time. `id` tells one from the next. */
-export type Snackbar = Data.TaggedEnum<{
-  None: object
-  Shown: Readonly<{ id: number; failure: Failure; entrance: Entrance }>
-}>
-
-export type State = Data.TaggedEnum<{
-  /**
-   * Until the order the digits are read in and the time are known: the stored date cannot be drawn as digits
-   * without the order, nor its day offered without today.
-   */
-  Loading: Readonly<{
-    id: string
-    original: Product.Product
-    maybeNow: Opt.Option<DateTime.Zoned>
-    maybeOrder: Opt.Option<DateOrder.DateOrder>
-    keyboardInset: number
-  }>
-  Editing: Readonly<{ form: Form }>
-  /** The product is being saved: only its completion leaves this state. */
-  Saving: Readonly<{ form: Form; product: Product.Product }>
-  /**
-   * Nothing is stored under the id any more: the form stays, taking no input, while its snackbar says so. Its end
-   * asks to be left.
-   */
-  Gone: Readonly<{ form: Form }>
+  form: Form
 }>
 
 /** What the write answered: done, failed, or nothing is stored under the id any more. */
@@ -98,35 +63,26 @@ export type Outcome = Data.TaggedEnum<{
   Gone: object
 }>
 
-/** The page's own messages: the writes into its input are made by `make`. */
+/** What failed: the snackbar says so. */
+export type Failure = 'SaveFailed' | 'OrderNotKept' | 'ProductGone'
+
 type Own = Data.TaggedEnum<{
   // From the view.
+  /** The name's field, with the text it holds. */
+  NameTyped: { value: string }
   /** The name field's clear button: empties the name. */
   NameCleared: object
-  DigitTyped: { digit: Digit }
-  DigitErased: object
-  /** The keypad's clear key: erases every digit, which removes the expiration. */
-  DateCleared: object
-  /** Picks, among the days the digits name, the one the product expires on. */
-  DateChosen: { date: Day.Day }
-  /** The segmented button: the order the digits are read in, kept for every date to come. */
-  OrderPicked: { order: DateOrder.DateOrder }
   /** Saves the product the fields describe. */
   SaveStarted: object
   /** The app bar's close button. */
   Closed: object
   // From subscriptions.
   TimeChanged: { now: DateTime.Zoned }
-  /** The order kept: the setting reports it when the page opens, and after every pick. */
-  OrderChanged: { order: DateOrder.DateOrder }
-  /** The platform's back button, while the page is shown. */
+  /** The platform's back button. */
   BackPressed: object
   /** The keyboard has come up, changed height or gone down. */
   KeyboardMoved: { inset: number }
-  /** The snackbar has stood its time. */
-  SnackbarExpired: object
   // From commands.
-  OrderKept: { succeeded: boolean }
   Saved: { outcome: Outcome }
 }>
 
@@ -135,8 +91,6 @@ const Own = Data.taggedEnum<Own>()
 export type Command = Data.TaggedEnum<{
   /** Writes a product that `update` has already validated, under its id. */
   Save: { id: string; product: Product.Product }
-  /** Keeps the order the digits of a date are read in, which the setting then reports. */
-  KeepOrder: { order: DateOrder.DateOrder }
   Vibrate: { feedback: Feedback }
 }>
 
@@ -148,19 +102,9 @@ export type Event = Data.TaggedEnum<{
 
 const Event = Data.taggedEnum<Event>()
 
-type Deps = DateOrderSetting | BackButton | Keyboard | DateTime.CurrentTimeZone
+export type Key = 'clock' | 'back-button' | 'keyboard'
 
-/** A day the digits name: the chosen one, or one to pick while the page takes input. */
-export type DateChoice = Readonly<{
-  date: Day.Day
-  choice: Data.TaggedEnum<{ Chosen: object; Offered: Readonly<{ maybeChoose: Opt.Option<Own> }> }>
-}>
-
-/** An order the digits can be read in: the one in use, or one to pick while the page takes input. */
-export type OrderChoice = Readonly<{
-  order: DateOrder.DateOrder
-  choice: Data.TaggedEnum<{ Current: object; Offered: Readonly<{ maybePick: Opt.Option<Own> }> }>
-}>
+const Snackbar = SnackbarProgram.make<Failure>()
 
 /** What every state draws: how far the page keeps clear of the keyboard, which covers whatever is under it. */
 type PageShown = Readonly<{ keyboardInset: number }>
@@ -170,41 +114,26 @@ export type FieldsShown = Readonly<{
   name: string
   /** Changes when the name is cleared, not by typing. */
   nameKey: number
-  order: DateOrder.DateOrder
-  orders: Arr.NonEmptyReadonlyArray<OrderChoice>
-  /** The date's field: the digits shown, the stored date's or the typed ones. */
-  digits: string
-  /**
-   * Under the field: how to type a date, while the digits name no day yet; the days they name; or that they name
-   * none, and no digits typed after them can.
-   */
-  strip: Data.TaggedEnum<{
-    Hint: object
-    Naming: Readonly<{ choices: Arr.NonEmptyReadonlyArray<DateChoice> }>
-    NamingNothing: object
-  }>
-  /** Whether saving leaves the product without an expiration: the date's field is empty. */
+  /** The date's segments, field, strip and keypad. */
+  expiration: Expiration.Model
+  /** Whether saving leaves the product without an expiration: the date concludes on none. */
   withoutDate: boolean
   /** Over the fields. */
-  snackbar: Snackbar
+  snackbar: SnackbarProgram.Model<Failure>
 }>
 
 export type Model = Data.TaggedEnum<{
-  /** The app bar alone, until the fields can be drawn. */
+  /** The app bar alone, until the fields can be drawn: the stored date needs the order to be shown as digits. */
   Loading: PageShown & Readonly<{ close: Own }>
   Editing:
     & PageShown
     & FieldsShown
     & Readonly<{
       close: Own
+      /** The name's field, filled with the text it holds. */
+      nameTyped: Readonly<{ _tag: 'NameTyped' }>
       /** Empties the name, while there is one. */
       maybeClearName: Opt.Option<Own>
-      /** The keypad's keys, by digit: none past a date's longest. */
-      maybeTypeDigit: Opt.Option<Readonly<Record<Digit, Own>>>
-      /** None with nothing to erase. */
-      maybeEraseDigit: Opt.Option<Own>
-      /** None with nothing to clear. */
-      maybeClearDate: Opt.Option<Own>
       /** Saves, once the fields describe a product other than the stored one. */
       maybeSave: Opt.Option<Own>
     }>
@@ -214,127 +143,69 @@ export type Model = Data.TaggedEnum<{
   Gone: PageShown & FieldsShown & Readonly<{ close: Own }>
 }>
 
-// Material's snackbar without an action: long enough to read it.
-const SNACKBAR_DURATION = Duration.seconds(4)
+const Model = Data.taggedEnum<Model>()
 
-/** A snackbar telling of a failure, after the one standing, if any. */
-const told = (failure: Failure) => (form: Form): Form => ({
-  ...form,
-  snackbar: form.snackbar._tag === 'Shown'
-    ? { _tag: 'Shown', id: form.snackbar.id + 1, failure, entrance: 'AfterAnother' }
-    : { _tag: 'Shown', id: 0, failure, entrance: 'Alone' },
+type Told = Readonly<{ _tag: 'Snackbar'; message: SnackbarProgram.External<Failure> }>
+
+type Step = Tea.Step<State, Command, Event, Told>
+
+type Transition = Tea.Transition<State, Command, Event, Told>
+
+/** A failure told: its snackbar, which takes the place of the one standing, and a vibration. */
+const telling = (failure: Failure) => (state: State): Step => ({
+  state,
+  commands: [Command.Vibrate({ feedback: 'Reject' })],
+  tell: [{ _tag: 'Snackbar', message: { _tag: 'Told', notice: failure, lasting: 'Short' } }],
 })
 
-/**
- * The entry the fields show: the stored date's digits in the order in use, none for a product that never expires,
- * or the one typed.
- */
-const entryOf = (form: Form): DigitDateEntry.Entry =>
-  form.date._tag === 'Typed'
-    ? form.date.entry
-    : {
-      digits: Opt.match(form.original.maybeExpirationDate, {
-        onNone: () => '',
-        onSome: (date) => DigitDates.digitsOf(date, form.order),
-      }),
-      maybeChosenDate: Opt.none(),
-    }
+/** The form with its fields changed, in the case it is in. */
+const withFields = (
+  form: Form & { _tag: 'Editing' | 'Saving' | 'Gone' },
+  change: (fields: Fields) => Fields,
+): Form => ({
+  ...form,
+  fields: change(form.fields),
+})
 
-/** The days the product may expire on, as edited now. */
-const isAllowed = (form: Form) => Product.canBeEditedToExpireOn(form.original, form.now.zone)
-
-// A past day may be entered with its year: the user may be correcting a typo, or recording a product bought past
-// its date. Only a day before the product was created is not one it may expire on.
-const offeredDates = (form: Form): ReadonlyArray<Day.Day> =>
-  DigitDateEntry.offered(entryOf(form), Day.fromDateTime(form.now), form.order, isAllowed(form))
-
-/** Whether the digits, or more typed after them, name a day the product may expire on. */
-const canCompleteDate = (form: Form): boolean =>
-  DigitDateEntry.canComplete(entryOf(form), Day.fromDateTime(form.now), form.order, isAllowed(form))
-
-/**
- * The expiration the fields name: the stored one while untouched, none on no digits, the day the digits name;
- * `None` when they name no day the product may expire on.
- */
-const maybeNamedExpiration = (form: Form): Opt.Option<Opt.Option<Day.Day>> =>
-  form.date._tag === 'Kept'
-    ? Opt.some(form.original.maybeExpirationDate)
-    : form.date.entry.digits === ''
-    ? Opt.some(Opt.none())
-    : Opt.map(DigitDateEntry.named(form.date.entry, offeredDates(form)), Opt.some)
-
-/** The product the fields describe, created when it was: `None` when it breaks a rule of a product. */
-const productOf = (form: Form): Opt.Option<Product.Product> =>
-  Opt.flatMap(
-    maybeNamedExpiration(form),
-    (maybeExpirationDate) => Product.edit(form.original, { name: form.name, maybeExpirationDate }, form.now.zone),
-  )
+/** The expiration the date concludes on: `None` while its digits name no day. */
+const maybeExpirationOf = (output: Expiration.Output): Opt.Option<Opt.Option<Day.Day>> =>
+  Match.valueTags(output, {
+    Undecided: () => Opt.none(),
+    Never: () => Opt.some(Opt.none()),
+    On: ({ day }) => Opt.some(Opt.some(day)),
+  })
 
 const isSameExpiration = Opt.makeEquivalence((a: Day.Day, b: Day.Day) => a === b)
 
-// The made product, not the typed text: a name retyped with other spacing is no change.
-const isChanged = (form: Form, product: Product.Product) =>
-  product.name !== form.original.name
-  || !isSameExpiration(product.maybeExpirationDate, form.original.maybeExpirationDate)
-
-/** The product the fields describe, when it is one and differs from the stored one: what "Save" writes. */
-const maybeSaved = (form: Form): Opt.Option<Product.Product> =>
-  Opt.filter(productOf(form), (product) => isChanged(form, product))
-
-/** The form, once the order and the time are known: the stored product in its fields. */
-const editingOnceKnown = (loading: State & { _tag: 'Loading' }): State =>
-  Opt.match(Opt.all([loading.maybeNow, loading.maybeOrder]), {
-    onNone: () => loading,
-    onSome: ([now, order]) => ({
-      _tag: 'Editing',
-      form: {
-        id: loading.id,
-        original: loading.original,
-        name: loading.original.name,
-        replacements: 0,
-        now,
-        order,
-        date: { _tag: 'Kept' },
-        snackbar: { _tag: 'None' },
-        keyboardInset: loading.keyboardInset,
-      },
-    }),
-  })
-
-const withForm = (state: State & { _tag: 'Editing' | 'Saving' | 'Gone' }, change: (form: Form) => Form): State => ({
-  ...state,
-  form: change(state.form),
-})
-
-/** The form with its date changed by a key of the keypad, or rejected when the key does not apply. */
-const keyed = (
+/**
+ * The product "Save" writes: the one made from the name and what the date concludes, when it is one and differs
+ * from the stored one. The made product is compared, not the typed text: a name retyped with other spacing is no
+ * change.
+ */
+const maybeSaved = (
   state: State,
-  key: (entry: DigitDateEntry.Entry, form: Form) => Opt.Option<DigitDateEntry.Entry>,
-): Tea.Transition<State, Command, Event> =>
-  state._tag === 'Editing'
-    ? Opt.match(key(entryOf(state.form), state.form), {
-      onNone: () => Tea.reject,
-      onSome: (entry) => ({ state: withForm(state, (form) => ({ ...form, date: { _tag: 'Typed', entry } })) }),
-    })
-    : Tea.reject
+  fields: Fields,
+  maybeOutput: Opt.Option<Expiration.Output>,
+): Opt.Option<Product.Product> =>
+  Opt.flatMap(Opt.flatMap(maybeOutput, maybeExpirationOf), (maybeExpirationDate) =>
+    Opt.filter(
+      Product.edit(state.original, { name: fields.name, maybeExpirationDate }, fields.now.zone),
+      (product) =>
+        product.name !== state.original.name
+        || !isSameExpiration(product.maybeExpirationDate, state.original.maybeExpirationDate),
+    ))
 
-// Only today is needed, for a date typed without a year: the product's own dates never come from the clock.
+// Only today and the zone are needed: a date typed without a year is read from today, and a product is edited in
+// the zone. The product's own dates never come from the clock.
 const clock = every('30 seconds', (now) => Own.TimeChanged({ now }))
 
-const dateOrder: Tea.Subscription<Own, DateOrderSetting> = Channel.unwrap(
-  Effect.map(
-    Effect.service(DateOrderSetting),
-    ({ changes }) => Channel.map(changes, (order) => Own.OrderChanged({ order })),
-  ),
-)
-
-// Observed as long as the page is shown: while the product is being saved, the press is heard and held, so that
-// the platform does not leave the app.
+// Observed as long as the page is there: while the product is being saved, the press is heard and held, so that the
+// platform does not leave the app.
 const backButton: Tea.Subscription<Own, BackButton> = Channel.unwrap(
   Effect.map(Effect.service(BackButton), ({ presses }) => Channel.map(presses, () => Own.BackPressed())),
 )
 
-// Observed as long as the page is shown: the keyboard covers the fields and the button docked under them.
+// Observed as long as the page is there: the keyboard covers the fields and the button docked under them.
 const keyboard: Tea.Subscription<Own, Keyboard> = Channel.unwrap(
   Effect.map(
     Effect.service(Keyboard),
@@ -342,15 +213,7 @@ const keyboard: Tea.Subscription<Own, Keyboard> = Channel.unwrap(
   ),
 )
 
-const always: HashMap.HashMap<string, Tea.Subscription<Own, Deps>> = HashMap.make(
-  ['clock', clock],
-  ['date-order', dateOrder],
-  ['back-button', backButton],
-  ['keyboard', keyboard],
-)
-
-/** Ends once the snackbar has stood its time. */
-const snackbarTimer: Tea.Subscription<Own, Deps> = after(SNACKBAR_DURATION, Own.SnackbarExpired())
+const keys: ReadonlyArray<Key> = ['clock', 'back-button', 'keyboard']
 
 const save = Effect.fn('SaveProduct')(
   function*({ id, product }: Readonly<{ id: string; product: Product.Product }>) {
@@ -371,22 +234,6 @@ const save = Effect.fn('SaveProduct')(
   Effect.withLogSpan('SaveProduct'),
 )
 
-const keepOrder = Effect.fn('KeepOrder')(
-  function*({ order }: Readonly<{ order: DateOrder.DateOrder }>) {
-    const { set } = yield* DateOrderSetting
-    yield* set(order).pipe(
-      Effect.tapError((error) => Effect.logWarning('Could not keep the date order', error.cause)),
-    )
-    yield* Effect.logInfo('Kept the date order', { order })
-  },
-  Effect.match({
-    onSuccess: () => Own.OrderKept({ succeeded: true }),
-    onFailure: () => Own.OrderKept({ succeeded: false }),
-  }),
-  Effect.asSome,
-  Effect.withLogSpan('KeepOrder'),
-)
-
 const vibrate = Effect.fn('Vibrate')(
   function*({ feedback }: Readonly<{ feedback: Feedback }>) {
     const { perform } = yield* Haptics
@@ -398,219 +245,153 @@ const vibrate = Effect.fn('Vibrate')(
   Effect.withLogSpan('Vibrate'),
 )
 
-const fieldsOf = (form: Form, takesInput: boolean): FieldsShown => {
-  const entry = entryOf(form)
-  const offered = offeredDates(form)
-  const maybeNamed = DigitDateEntry.named(entry, offered)
-  const choices = offered.map((day): DateChoice => ({
-    date: day,
-    choice: Opt.contains(maybeNamed, day)
-      ? { _tag: 'Chosen' }
-      : {
-        _tag: 'Offered',
-        maybeChoose: takesInput
-          ? Opt.map(DigitDateEntry.choose(day, offered)(entry), () => Own.DateChosen({ date: day }))
-          : Opt.none(),
-      },
-  }))
-  return {
-    name: form.name,
-    nameKey: form.replacements,
-    order: form.order,
-    orders: Arr.map(DateOrder.all, (order): OrderChoice => ({
-      order,
-      choice: order === form.order
-        ? { _tag: 'Current' }
-        : { _tag: 'Offered', maybePick: takesInput ? Opt.some(Own.OrderPicked({ order })) : Opt.none() },
-    })),
-    digits: entry.digits,
-    strip: Arr.isReadonlyArrayNonEmpty(choices)
-      ? { _tag: 'Naming', choices }
-      : entry.digits === '' || canCompleteDate(form)
-      ? { _tag: 'Hint' }
-      : { _tag: 'NamingNothing' },
-    withoutDate: entry.digits === '',
-    snackbar: form.snackbar,
-  }
-}
-
-const typed = (digit: Digit) => Own.DigitTyped({ digit })
-
-const typeDigit: Readonly<Record<Digit, Own>> = {
-  '0': typed('0'),
-  '1': typed('1'),
-  '2': typed('2'),
-  '3': typed('3'),
-  '4': typed('4'),
-  '5': typed('5'),
-  '6': typed('6'),
-  '7': typed('7'),
-  '8': typed('8'),
-  '9': typed('9'),
-}
-
-const { input, make } = Tea.program<{
+const { child, withChildren } = Tea.program<{
   state: State
   model: Model
   message: Own
   command: Command
   event: Event
   flags: Flags
+  key: Key
 }>()
 
-// Written while saving too, the field disabled: a key typed just before is kept. A product that is gone has nothing
-// to save to: its name has no place.
-const name = input({
-  get: (state) => state._tag === 'Editing' || state._tag === 'Saving' ? Opt.some(state.form.name) : Opt.none(),
-  set: (state, text: string) =>
-    state._tag === 'Editing' || state._tag === 'Saving' ? withForm(state, (form) => ({ ...form, name: text })) : state,
-})
-
-export const program = make({
-  init: ({ id, product }) => ({
-    state: { _tag: 'Loading', id, original: product, maybeNow: Opt.none(), maybeOrder: Opt.none(), keyboardInset: 0 },
+export const program = withChildren({
+  // There from the clock's first tick: the stored date is edited in the zone, and its days are offered from today.
+  // It takes no key while the product is saved, nor once it is gone.
+  Expiration: child(Expiration.program, {
+    flags: (state) => state.form._tag === 'Loading' ? Opt.none() : Opt.some({ maybeStored: Opt.some(state.original) }),
+    tell: (state) => ({
+      _tag: 'PageChanged',
+      maybeNow: state.form._tag === 'Loading' ? Opt.none() : Opt.some(state.form.fields.now),
+      isLocked: state.form._tag === 'Saving' || state.form._tag === 'Gone',
+    }),
   }),
+  Snackbar: child(Snackbar),
+}).make({
+  init: ({ id, product }) => ({ state: { id, original: product, keyboardInset: 0, form: Form.Loading() } }),
 
-  inputs: { Name: name },
+  update: (message, children) => (state) =>
+    Match.valueTags(message, {
+      // Kept while saving too, the field drawn read-only: a key typed just before the save may come after it, and
+      // the field, which holds its own text, shows it. A save that fails gives the name back as the field shows it.
+      // A product that is gone has nothing to save to.
+      NameTyped: ({ value }): Transition =>
+        state.form._tag === 'Editing' || state.form._tag === 'Saving'
+          ? { state: { ...state, form: withFields(state.form, (fields) => ({ ...fields, name: value })) } }
+          : Tea.reject,
 
-  update: Match.typeTags<Own, (state: State) => Tea.Transition<State, Command, Event>>()({
-    // The input is drawn anew, empty: the user owns its text until the program replaces it.
-    NameCleared: () => (state) =>
-      state._tag === 'Editing' && state.form.name !== ''
-        ? { state: withForm(state, (form) => ({ ...form, name: '', replacements: form.replacements + 1 })) }
-        : Tea.reject,
+      // The field is drawn anew, empty: the user owns its text until the program replaces it.
+      NameCleared: (): Transition =>
+        state.form._tag === 'Editing' && state.form.fields.name !== ''
+          ? {
+            state: {
+              ...state,
+              form: withFields(
+                state.form,
+                (fields) => ({ ...fields, name: '', replacements: fields.replacements + 1 }),
+              ),
+            },
+          }
+          : Tea.reject,
 
-    // On the untouched stored date, a digit is rejected: eight are a date's longest.
-    DigitTyped: ({ digit }) => (state) => keyed(state, DigitDateEntry.typeDigit(digit)),
-
-    DigitErased: () => (state) => keyed(state, DigitDateEntry.eraseDigit),
-
-    DateCleared: () => (state) => keyed(state, DigitDateEntry.clear),
-
-    DateChosen: ({ date }) => (state) =>
-      keyed(state, (entry, form) => DigitDateEntry.choose(date, offeredDates(form))(entry)),
-
-    // Only another order than the one in use: a tap on the selected segment does nothing. The untouched stored
-    // date is then shown in the new order; typed digits stay as typed, read in it.
-    OrderPicked: ({ order }) => (state) =>
-      state._tag === 'Editing' && state.form.order !== order
-        ? { state: withForm(state, (form) => ({ ...form, order })), commands: [Command.KeepOrder({ order })] }
-        : Tea.reject,
-
-    SaveStarted: () => (state) =>
-      state._tag === 'Editing'
-        ? Opt.match(maybeSaved(state.form), {
-          onNone: () => Tea.reject,
+      SaveStarted: (): Transition => {
+        if (state.form._tag !== 'Editing') {
+          return Tea.reject
+        }
+        const { fields } = state.form
+        return Opt.match(maybeSaved(state, fields, children.Expiration.output()), {
+          onNone: (): Transition => Tea.reject,
           onSome: (product) => ({
-            state: { _tag: 'Saving', form: state.form, product },
-            commands: [Command.Save({ id: state.form.id, product })],
+            state: { ...state, form: Form.Saving({ fields, product }) },
+            commands: [Command.Save({ id: state.id, product })],
           }),
         })
-        : Tea.reject,
+      },
 
-    // Each press asks the parent to leave, which removes the page on the first one. The changes are discarded.
-    Closed: () => (state) => state._tag === 'Saving' ? Tea.reject : { state, events: [Event.LeaveRequested()] },
+      // Each press asks the parent to leave, which removes the page on the first one. The changes are discarded.
+      Closed: (): Transition => state.form._tag === 'Saving' ? Tea.reject : { state, events: [Event.LeaveRequested()] },
 
-    TimeChanged: ({ now }) => (state) =>
-      state._tag === 'Loading'
-        ? { state: editingOnceKnown({ ...state, maybeNow: Opt.some(now) }) }
-        : { state: withForm(state, (form) => ({ ...form, now })) },
+      TimeChanged: ({ now }): Step =>
+        state.form._tag === 'Loading'
+          ? { state: { ...state, form: Form.Editing({ fields: { now, name: state.original.name, replacements: 0 } }) } }
+          : { state: { ...state, form: withFields(state.form, (fields) => ({ ...fields, now })) } },
 
-    OrderChanged: ({ order }) => (state) =>
-      state._tag === 'Loading'
-        ? { state: editingOnceKnown({ ...state, maybeOrder: Opt.some(order) }) }
-        : { state: withForm(state, (form) => ({ ...form, order })) },
+      KeyboardMoved: ({ inset }): Step => ({ state: { ...state, keyboardInset: inset } }),
 
-    KeyboardMoved: ({ inset }) => (state) =>
-      state._tag === 'Loading'
-        ? { state: { ...state, keyboardInset: inset } }
-        : { state: withForm(state, (form) => ({ ...form, keyboardInset: inset })) },
+      // The page is not left in the middle of a write: the press is held, so that the platform does not leave the app.
+      BackPressed: (): Step => state.form._tag === 'Saving' ? { state } : { state, events: [Event.LeaveRequested()] },
 
-    // The page is not left in the middle of a write: the press is held, so that the platform does not leave the app.
-    BackPressed: () => (state) => state._tag === 'Saving' ? { state } : { state, events: [Event.LeaveRequested()] },
-
-    // A product that is gone has been told: the page asks to be left.
-    SnackbarExpired: () => (state) =>
-      state._tag !== 'Loading' && state.form.snackbar._tag === 'Shown'
-        ? {
-          state: withForm(state, (form) => ({ ...form, snackbar: { _tag: 'None' } })),
-          events: state._tag === 'Gone' ? [Event.LeaveRequested()] : [],
+      // Once saved, the page asks to be left: Home's list shows the change. Once there is nothing to save to, the
+      // page says so, and is left when its snackbar is.
+      Saved: ({ outcome }): Step => {
+        if (state.form._tag !== 'Saving') {
+          return Tea.defect('Saved while no product is being saved: only a completion leaves Saving')
         }
-        : Tea.defect('SnackbarExpired while no snackbar is shown: the timer runs only while one is'),
+        const { fields } = state.form
+        return Match.valueTags(outcome, {
+          Saved: (): Step => ({
+            state: { ...state, form: Form.Editing({ fields }) },
+            commands: [Command.Vibrate({ feedback: 'Confirm' })],
+            events: [Event.LeaveRequested()],
+          }),
+          Failed: () => telling('SaveFailed')({ ...state, form: Form.Editing({ fields }) }),
+          Gone: () => telling('ProductGone')({ ...state, form: Form.Gone({ fields }) }),
+        })
+      },
+    }),
 
-    // The order picked stays in use for this visit either way: only the failure to keep it is told, unless the
+  onEvent: {
+    // The order picked stays in use for this date either way: only the failure to keep it is told, unless the
     // product is gone, whose snackbar stands until the page goes.
-    OrderKept: ({ succeeded }) => (state) =>
-      state._tag === 'Loading'
-        ? Tea.defect('OrderKept while loading: an order is picked only once the form is there, which never goes')
-        : succeeded || state._tag === 'Gone'
-        ? { state }
-        : { state: withForm(state, told('OrderNotKept')), commands: [Command.Vibrate({ feedback: 'Reject' })] },
-
-    // Once saved, the page asks to be left: Home's list shows the change. Once there is nothing to save to, the
-    // page says so, and is left when its snackbar is.
-    Saved: ({ outcome }) => (state) => {
-      if (state._tag !== 'Saving') {
-        return Tea.defect('Saved while no product is being saved: only a completion leaves Saving')
-      }
-      const editing: State & { _tag: 'Editing' } = { _tag: 'Editing', form: state.form }
-      return Match.valueTags(outcome, {
-        Saved: (): Tea.Transition<State, Command, Event> => ({
-          state: editing,
-          commands: [Command.Vibrate({ feedback: 'Confirm' })],
-          events: [Event.LeaveRequested()],
-        }),
-        Failed: (): Tea.Transition<State, Command, Event> => ({
-          state: withForm(editing, told('SaveFailed')),
-          commands: [Command.Vibrate({ feedback: 'Reject' })],
-        }),
-        Gone: (): Tea.Transition<State, Command, Event> => ({
-          state: { _tag: 'Gone', form: told('ProductGone')(state.form) },
-          commands: [Command.Vibrate({ feedback: 'Reject' })],
-        }),
-      })
-    },
-  }),
+    Expiration: () => (state) => state.form._tag === 'Gone' ? { state } : telling('OrderNotKept')(state),
+    // A product that is gone has been told: the page asks to be left. Any other snackbar just leaves.
+    Snackbar: () => (state) => state.form._tag === 'Gone' ? { state, events: [Event.LeaveRequested()] } : { state },
+  },
 
   runCommand: Match.typeTags<Command>()({
     Save: save,
-    KeepOrder: keepOrder,
     Vibrate: vibrate,
   }),
 
-  // The back button is observed in every state: while saving, so that a press is held. The snackbar's timer is
-  // keyed by its id: the next one starts it anew.
-  subscriptions: (state) =>
-    state._tag !== 'Loading' && state.form.snackbar._tag === 'Shown'
-      ? HashMap.set(always, `snackbar:${state.form.snackbar.id}`, snackbarTimer)
-      : always,
+  // The back button is observed in every state: while saving, so that a press is held.
+  subscriptions: () => keys,
 
-  makeModel: (state): Model =>
-    Match.valueTags(state, {
-      Loading: ({ keyboardInset }): Model => ({ _tag: 'Loading', keyboardInset, close: Own.Closed() }),
-      // A key is there exactly where its rule applies to the entry shown: every digit applies, or none does.
-      Editing: ({ form }): Model => {
-        const entry = entryOf(form)
-        return {
-          _tag: 'Editing',
-          keyboardInset: form.keyboardInset,
-          ...fieldsOf(form, true),
+  listen: Match.type<Key>().pipe(
+    Match.when('clock', () => clock),
+    Match.when('back-button', () => backButton),
+    Match.when('keyboard', () => keyboard),
+    Match.exhaustive,
+  ),
+
+  makeModel: (state, children) => {
+    const { keyboardInset } = state
+    const maybeExpiration = Opt.filter(children.Expiration(), ({ order }) => order._tag === 'Known')
+    if (state.form._tag === 'Loading' || Opt.isNone(maybeExpiration)) {
+      return Model.Loading({ keyboardInset, close: Own.Closed() })
+    }
+    const maybeOutput = children.Expiration.output()
+    const { fields } = state.form
+    const shown = {
+      keyboardInset,
+      name: fields.name,
+      nameKey: fields.replacements,
+      expiration: maybeExpiration.value,
+      withoutDate: Opt.exists(maybeOutput, ({ _tag }) => _tag === 'Never'),
+      snackbar: children.Snackbar(),
+    }
+    return Match.valueTags(state.form, {
+      Editing: () =>
+        Model.Editing({
+          ...shown,
           close: Own.Closed(),
-          maybeClearName: form.name !== '' ? Opt.some(Own.NameCleared()) : Opt.none(),
-          maybeTypeDigit: Opt.map(DigitDateEntry.typeDigit('0')(entry), () => typeDigit),
-          maybeEraseDigit: Opt.map(DigitDateEntry.eraseDigit(entry), () => Own.DigitErased()),
-          maybeClearDate: Opt.map(DigitDateEntry.clear(entry), () => Own.DateCleared()),
-          maybeSave: Opt.map(maybeSaved(form), () => Own.SaveStarted()),
-        }
-      },
-      Saving: ({ form }): Model => ({ _tag: 'Saving', keyboardInset: form.keyboardInset, ...fieldsOf(form, false) }),
-      Gone: ({ form }): Model => ({
-        _tag: 'Gone',
-        keyboardInset: form.keyboardInset,
-        ...fieldsOf(form, false),
-        close: Own.Closed(),
-      }),
-    }),
+          nameTyped: { _tag: 'NameTyped' },
+          maybeClearName: fields.name !== '' ? Opt.some(Own.NameCleared()) : Opt.none(),
+          maybeSave: Opt.map(maybeSaved(state, fields, maybeOutput), () => Own.SaveStarted()),
+        }),
+      Saving: () => Model.Saving(shown),
+      Gone: () => Model.Gone({ ...shown, close: Own.Closed() }),
+    })
+  },
 })
 
 export type Message = Tea.MessageOf<typeof program>

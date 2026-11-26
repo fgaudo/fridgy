@@ -1,19 +1,19 @@
-// The stored products, as of the latest change of the storage, the selection of some of them for deletion, and
-// the snackbar, which tells of the last deletion, offering to undo it for a few seconds, or of a failure. The
-// selection follows the list, so they are one program.
+// The stored products, as of the latest change of the storage, and the selection of some of them for deletion. The
+// selection follows the list, so they are one program. Its child, the snackbar, tells of the last deletion, offering
+// to undo it for a few seconds, or of a failure.
 import * as Tea from '@fgaudo/effect-tea'
 import * as Arr from 'effect/Array'
 import * as Channel from 'effect/Channel'
 import * as Data from 'effect/Data'
-import * as DateTime from 'effect/DateTime'
+import type * as DateTime from 'effect/DateTime'
 import * as Duration from 'effect/Duration'
 import * as Effect from 'effect/Effect'
 import { pipe } from 'effect/Function'
-import * as HashMap from 'effect/HashMap'
 import * as HashSet from 'effect/HashSet'
 import * as Match from 'effect/Match'
 import * as Opt from 'effect/Option'
 import * as Result from 'effect/Result'
+import * as SnackbarProgram from '#app/programs/snackbar/program.ts'
 import * as Domain from '#domain/product.ts'
 import { BackButton } from '#infrastructure/back-button/back-button.ts'
 import { type Feedback, Haptics } from '#infrastructure/haptics/haptics.ts'
@@ -57,10 +57,7 @@ export type Selection = Data.TaggedEnum<{
 
 const Selection = Data.taggedEnum<Selection>()
 
-/** Material shows one snackbar at a time: one that comes after another waits for it to leave. */
-export type Entrance = 'Alone' | 'AfterAnother'
-
-/** What a snackbar tells. */
+/** What the snackbar tells. */
 export type Notice = Data.TaggedEnum<{
   /** The last deletion, which the snackbar offers to undo while its products can come back. */
   Deleted: Readonly<{ count: PositiveInteger.PositiveInteger; maybeProducts: Restorable }>
@@ -70,13 +67,7 @@ export type Notice = Data.TaggedEnum<{
 
 const Notice = Data.taggedEnum<Notice>()
 
-/** The snackbar, for a few seconds from `at`, when what it tells happened. */
-export type Snackbar = Data.TaggedEnum<{
-  None: object
-  Shown: Readonly<{ at: DateTime.Utc; notice: Notice; entrance: Entrance }>
-}>
-
-const Snackbar = Data.taggedEnum<Snackbar>()
+const Snackbar = SnackbarProgram.make<Notice>()
 
 export type State = Readonly<{
   /**
@@ -97,10 +88,10 @@ export type State = Readonly<{
     }>
   }>
   selection: Selection
-  snackbar: Snackbar
 }>
 
-export type Message = Data.TaggedEnum<{
+/** The program's own messages: its child's are made by `withChildren`. */
+type Own = Data.TaggedEnum<{
   // From the view.
   /** A long press says so with a vibration; a tap does not. */
   ItemSelected: { id: string; by: Gesture }
@@ -116,17 +107,15 @@ export type Message = Data.TaggedEnum<{
   BackPressed: object
   TimeChanged: { now: DateTime.Zoned }
   ListChanged: { result: Result.Result<ReadonlyArray<StoredProduct>, ProductListReadError> }
-  /** The snackbar has stood its time: it leaves, and the offer to undo with it. */
-  SnackbarExpired: object
   /** The arriving rows have opened their place, and the leaving ones closed theirs. */
   RowsSettled: object
   // From commands.
-  Deleted: { at: DateTime.Utc }
-  DeleteFailed: { at: DateTime.Utc }
-  RestoreFailed: { at: DateTime.Utc }
+  Deleted: object
+  DeleteFailed: object
+  RestoreFailed: object
 }>
 
-const Message = Data.taggedEnum<Message>()
+const Own = Data.taggedEnum<Own>()
 
 /** How a row was selected or deselected. */
 export type Gesture = 'Tap' | 'LongPress'
@@ -154,12 +143,12 @@ const Event = Data.taggedEnum<Event>()
 export type ItemSelection = Readonly<{
   isSelected: boolean
   /** A long press: selects the row, or deselects it; nothing while the selected products are being deleted. */
-  maybeToggle: Opt.Option<Message>
+  maybeToggle: Opt.Option<Own>
   /**
    * Opens the product while nothing is selected, as Material's lists do; toggles the row once something is.
    * Nothing on stored data that is not a product, while deleting, and on a row leaving.
    */
-  maybeTap: Opt.Option<Message>
+  maybeTap: Opt.Option<Own>
 }>
 
 /** How much of a product's life is left, from its creation to the end of its expiration day. */
@@ -204,8 +193,8 @@ export type ListModel = Data.TaggedEnum<{
       NothingSelected: object
       Possible: {
         count: PositiveInteger.PositiveInteger
-        deleteSelected: Message
-        clearSelection: Message
+        deleteSelected: Own
+        clearSelection: Own
       }
       InProgress: object
     }>
@@ -217,35 +206,32 @@ export type ListModel = Data.TaggedEnum<{
   }>
 }>
 
-export type Model = Readonly<{
-  list: ListModel
-  /** `at` tells one snackbar from the next. `maybeUndo` only while the products deleted can come back. */
-  snackbar: Data.TaggedEnum<{
-    None: object
-    Shown: Readonly<{
-      at: DateTime.Utc
-      entrance: Entrance
-      notice: Data.TaggedEnum<{
-        Deleted: Readonly<{ count: PositiveInteger.PositiveInteger; maybeUndo: Opt.Option<Message> }>
-        DeleteFailed: object
-        RestoreFailed: object
-      }>
-    }>
-  }>
+/** What the snackbar standing tells: `maybeUndo` only while the products deleted can come back. */
+export type NoticeModel = Data.TaggedEnum<{
+  Deleted: Readonly<{ count: PositiveInteger.PositiveInteger; maybeUndo: Opt.Option<Own> }>
+  DeleteFailed: object
+  RestoreFailed: object
 }>
 
-// Material's long duration, for a snackbar with an action: long enough to read it and reach for "Undo".
-const UNDO_DURATION = Duration.seconds(10)
+export type Model = Readonly<{
+  list: ListModel
+  /** The snackbar standing. `id` tells one snackbar from the next. */
+  snackbar: Opt.Option<Readonly<{ id: number; entrance: SnackbarProgram.Entrance; notice: NoticeModel }>>
+}>
 
-// Material's snackbar without an action: long enough to read it.
-const NOTICE_DURATION = Duration.seconds(4)
+/** The products a notice offers to store again: those of a deletion that can be undone. */
+const restorableOf = (notice: Notice): Restorable => notice._tag === 'Deleted' ? notice.maybeProducts : Opt.none()
 
-const durationOf = (notice: Notice) =>
-  notice._tag === 'Deleted' && Opt.isSome(notice.maybeProducts) ? UNDO_DURATION : NOTICE_DURATION
+/** What "Undo" stores again, while the snackbar standing offers it: `update` and `makeModel` both ask this. */
+const undoable = (standing: Opt.Option<Notice>): Restorable => Opt.flatMap(standing, restorableOf)
 
-/** The snackbar of a notice from `at`, after the one standing, if any. */
-const snackbarOf = (state: State, at: DateTime.Utc, notice: Notice): Snackbar =>
-  Snackbar.Shown({ at, notice, entrance: state.snackbar._tag === 'Shown' ? 'AfterAnother' : 'Alone' })
+type Tell = Readonly<{ _tag: 'Snackbar'; message: SnackbarProgram.External<Notice> }>
+
+/** A notice for the snackbar: Material's long duration for one with an action, to read it and reach for "Undo". */
+const tell = (notice: Notice): Tell => ({
+  _tag: 'Snackbar',
+  message: { _tag: 'Told', notice, lasting: Opt.isSome(restorableOf(notice)) ? 'Long' : 'Short' },
+})
 
 // Products that still have an id can be selected and deleted, even when invalid;
 // the ones without an id cannot be referenced at all.
@@ -346,26 +332,14 @@ type Deps = ProductList | BackButton | DateTime.CurrentTimeZone
 
 // Expiration statuses derive from the current time: it is refreshed often
 // enough for days-long expirations.
-const clock: Tea.Subscription<Message, Deps> = every('30 seconds', (now) => Message.TimeChanged({ now }))
+const clock: Tea.Subscription<Own, Deps> = every('30 seconds', (now) => Own.TimeChanged({ now }))
 
-const changes: Tea.Subscription<Message, Deps> = Channel.unwrap(
+const changes: Tea.Subscription<Own, Deps> = Channel.unwrap(
   Effect.map(
     Effect.service(ProductList),
-    ({ changes }) => Channel.map(changes, (result) => Message.ListChanged({ result })),
+    ({ changes }) => Channel.map(changes, (result) => Own.ListChanged({ result })),
   ),
 )
-
-// A snackbar stands for a while from what it tells, not from when the page is shown: hidden under another page
-// past its end, it leaves as soon as the page is back.
-const expireSnackbar = Effect.fn('ExpireSnackbar')(function*(at: DateTime.Utc, duration: Duration.Duration) {
-  const now = yield* DateTime.now
-  yield* Effect.sleep(Duration.max(Duration.zero, Duration.subtract(duration, DateTime.distance(at, now))))
-  return Message.SnackbarExpired()
-})
-
-/** Ends, with its message, once the snackbar has stood its time. */
-const snackbarTimer = (at: DateTime.Utc, notice: Notice): Tea.Subscription<Message, Deps> =>
-  Channel.fromEffectDone(expireSnackbar(at, durationOf(notice)))
 
 // Longer than a row's entrance (Material's medium-4, and the frame it waits for) and its exit (short-4): a row is
 // drawn as any other, or gone, only once it has opened or closed its place. Hidden under another page, the timer
@@ -373,25 +347,23 @@ const snackbarTimer = (at: DateTime.Utc, notice: Notice): Tea.Subscription<Messa
 const SETTLING_DURATION = Duration.millis(500)
 
 /** Ends once the rows have been shown arriving and leaving. */
-const settlingTimer: Tea.Subscription<Message, Deps> = after(SETTLING_DURATION, Message.RowsSettled())
+const settlingTimer: Tea.Subscription<Own, Deps> = after(SETTLING_DURATION, Own.RowsSettled())
 
-/**
- * The snackbar's timer is keyed by its notice, the settling timer by the ids arriving and leaving: a new one starts
- * it anew.
- */
-type Key =
-  | string
-  | readonly ['snackbar', DateTime.Utc, Notice['_tag']]
-  | readonly ['settling', HashSet.HashSet<string>, HashSet.HashSet<string>]
+/** The settling timer is keyed by the ids arriving and leaving: a new one starts it anew. */
+type Settle = Data.TaggedEnum<{
+  Settling: { arrivals: HashSet.HashSet<string>; departures: HashSet.HashSet<string> }
+}>
+
+const Settle = Data.taggedEnum<Settle>()
+
+type Key = 'changes' | 'back-button' | 'clock' | Settle
 
 // Observed only while the list shows a selection: otherwise the press is Home's, or the platform's.
-const backButton: Tea.Subscription<Message, Deps> = Channel.unwrap(
-  Effect.map(Effect.service(BackButton), ({ presses }) => Channel.map(presses, () => Message.BackPressed())),
+const backButton: Tea.Subscription<Own, Deps> = Channel.unwrap(
+  Effect.map(Effect.service(BackButton), ({ presses }) => Channel.map(presses, () => Own.BackPressed())),
 )
 
 const showsSelection = (state: State) => state.list._tag === 'Loaded' && state.selection._tag !== 'Idle'
-
-const always: HashMap.HashMap<Key, Tea.Subscription<Message, Deps>> = HashMap.make(['changes', changes])
 
 const deleteProducts = Effect.fn('DeleteProducts')(
   function*({ ids }: Readonly<{ ids: NonEmptyHashSet.NonEmptyHashSet<string> }>) {
@@ -405,9 +377,9 @@ const deleteProducts = Effect.fn('DeleteProducts')(
       Effect.tapError(() => Effect.logWarning('Could not delete the products')),
     )
     yield* Effect.logInfo('Deleted products', { count: HashSet.size(ids) })
-    return Message.Deleted({ at: yield* DateTime.now })
+    return Own.Deleted()
   },
-  Effect.catch(() => Effect.map(DateTime.now, (at) => Message.DeleteFailed({ at }))),
+  Effect.orElseSucceed(() => Own.DeleteFailed()),
   Effect.asSome,
   Effect.withLogSpan('DeleteProducts'),
 )
@@ -426,7 +398,7 @@ const restoreProducts = Effect.fn('RestoreProducts')(
     yield* Effect.logInfo('Put products back', { count: products.length })
     return Opt.none()
   },
-  Effect.catch(() => Effect.map(DateTime.now, (at) => Opt.some(Message.RestoreFailed({ at })))),
+  Effect.orElseSucceed(() => Opt.some(Own.RestoreFailed())),
   Effect.withLogSpan('RestoreProducts'),
 )
 
@@ -493,14 +465,14 @@ const listModel = (state: State): ListModel => {
     const toggle = (by: Gesture) =>
       selection._tag === 'Deleting' || presence === 'Leaving'
         ? Opt.none()
-        : Opt.some(isSelected ? Message.ItemDeselected({ id, by }) : Message.ItemSelected({ id, by }))
+        : Opt.some(isSelected ? Own.ItemDeselected({ id, by }) : Own.ItemSelected({ id, by }))
     return {
       isSelected,
       maybeToggle: toggle('LongPress'),
       maybeTap: selection._tag === 'Selecting'
         ? toggle('Tap')
         : selection._tag === 'Idle' && isProduct && presence !== 'Leaving'
-        ? Opt.some(Message.EditRequested({ id }))
+        ? Opt.some(Own.EditRequested({ id }))
         : Opt.none(),
     }
   }
@@ -530,8 +502,8 @@ const listModel = (state: State): ListModel => {
       Selecting: ({ ids }): Deletion => ({
         _tag: 'Possible',
         count: PositiveInteger.makeUnsafe(HashSet.size(ids)),
-        deleteSelected: Message.DeleteStarted(),
-        clearSelection: Message.SelectionCleared(),
+        deleteSelected: Own.DeleteStarted(),
+        clearSelection: Own.SelectionCleared(),
       }),
       Deleting: (): Deletion => ({ _tag: 'InProgress' }),
     }),
@@ -545,187 +517,201 @@ const listModel = (state: State): ListModel => {
   }
 }
 
-const { make } = Tea.program<{ state: State; model: Model; message: Message; command: Command; event: Event }>()
+/** The snackbar standing, as its child draws it, with the way to undo where it applies. */
+const snackbarModel = (snackbar: SnackbarProgram.Model<Notice>, maybeUndo: Opt.Option<Own>): Model['snackbar'] =>
+  Opt.map(snackbar, ({ id, entrance, notice }) => ({
+    id,
+    entrance,
+    notice: notice._tag === 'Deleted' ? { _tag: 'Deleted', count: notice.count, maybeUndo } : notice,
+  }))
 
-export const program = make({
+/** What `update` reads of its child, as the library gives it. */
+type Outputs = Readonly<{ Snackbar: Readonly<{ output: () => Opt.Option<Notice> }> }>
+
+type Step = Tea.Transition<State, Command, Event, Tell>
+
+const updateOwn = Match.typeTags<Own, (state: State, children: Outputs) => Step>()({
+  ListChanged: ({ result }) => (state) => {
+    const list: State['list'] = Result.match(result, {
+      onFailure: () => ({ _tag: 'Failed' }),
+      onSuccess: (stored): Loaded => {
+        const items = Arr.map(stored, validate)
+        if (state.list._tag !== 'Loaded') {
+          return { _tag: 'Loaded', items, arrivals: HashSet.empty(), departures: [] }
+        }
+        const ids = idsOf(items)
+        // The storage may tell of one write in more changes than one, before the page draws a frame: the rows
+        // still arriving keep arriving, and the ones leaving keep leaving, unless they are back.
+        return {
+          _tag: 'Loaded',
+          items,
+          arrivals: HashSet.union(
+            HashSet.difference(ids, idsOf(state.list.items)),
+            HashSet.intersection(state.list.arrivals, ids),
+          ),
+          departures: departuresFrom(rowsOf(state.list), ids),
+        }
+      },
+    })
+    return {
+      state: {
+        ...state,
+        list,
+        // The clock stops with the last product that expires: the time it told goes with it.
+        maybeNow: needsClock(list) ? state.maybeNow : Opt.none(),
+        // The selection keeps the products that still exist; a deletion in progress is left alone.
+        selection: list._tag === 'Failed' || state.selection._tag === 'Deleting'
+          ? state.selection
+          : selectionOf(HashSet.intersection(selectedIds(state.selection), idsOf(list.items))),
+      },
+    }
+  },
+
+  TimeChanged: ({ now }) => (state) =>
+    needsClock(state.list)
+      ? { state: { ...state, maybeNow: Opt.some(now) } }
+      : Tea.defect('TimeChanged while no listed product expires: the clock runs only while one does'),
+
+  // Only a product of the list can be selected: a tap on a row the storage has meanwhile removed does nothing.
+  ItemSelected: ({ id, by }) => (state) =>
+    HashSet.has(selectableIds(state), id) && !HashSet.has(selectedIds(state.selection), id)
+      ? {
+        state: { ...state, selection: selectionOf(HashSet.add(selectedIds(state.selection), id)) },
+        commands: feedbackOf(by),
+      }
+      : Tea.reject,
+
+  ItemDeselected: ({ id, by }) => (state) =>
+    state.list._tag === 'Loaded' && state.selection._tag === 'Selecting' && HashSet.has(state.selection.ids, id)
+      ? {
+        state: { ...state, selection: selectionOf(HashSet.remove(state.selection.ids, id)) },
+        commands: feedbackOf(by),
+      }
+      : Tea.reject,
+
+  // Only a product of the list, while nothing is selected or deleted. The product goes with the event, as the
+  // row shows it, so that no parent reads the list.
+  EditRequested: ({ id }) => (state) =>
+    state.list._tag === 'Loaded' && state.selection._tag === 'Idle'
+      ? Opt.match(
+        Arr.findFirst(
+          state.list.items,
+          (item): item is Data.TaggedEnum.Value<Product, 'Valid'> => item._tag === 'Valid' && item.id === id,
+        ),
+        {
+          onNone: () => Tea.reject,
+          onSome: ({ product }) => ({ state, events: [Event.EditRequested({ id, product })] }),
+        },
+      )
+      : Tea.reject,
+
+  SelectionCleared: () => (state) =>
+    state.list._tag === 'Loaded' && state.selection._tag === 'Selecting'
+      ? { state: { ...state, selection: Selection.Idle() } }
+      : Tea.reject,
+
+  // As Material's contextual action bar: the press clears the selection. It is held while the selection is being
+  // deleted, so that the app is not left in the middle of a write.
+  BackPressed: () => (state) =>
+    !showsSelection(state)
+      ? Tea.defect('BackPressed while no selection is shown: the button is observed only while one is')
+      : state.selection._tag === 'Selecting'
+      ? { state: { ...state, selection: Selection.Idle() } }
+      : { state },
+
+  // The products are kept from the list as it is now: the storage's change may reach the page before the
+  // deletion's completion, and then they are gone from it.
+  DeleteStarted: () => (state) =>
+    state.list._tag === 'Loaded' && state.selection._tag === 'Selecting'
+      ? {
+        state: {
+          ...state,
+          selection: Selection.Deleting({
+            ids: state.selection.ids,
+            maybeProducts: productsOf(state.list.items, state.selection.ids),
+          }),
+        },
+        commands: [Command.Delete({ ids: state.selection.ids })],
+      }
+      : Tea.reject,
+
+  // A new deletion replaces the offer to undo the last one: that one is gone for good, its snackbar leaving
+  // before the new one comes.
+  Deleted: () => (state) =>
+    state.selection._tag === 'Deleting'
+      ? {
+        state: { ...state, selection: Selection.Idle() },
+        commands: [Command.Vibrate({ feedback: 'Confirm' })],
+        tell: [
+          tell(Notice.Deleted({
+            count: PositiveInteger.makeUnsafe(HashSet.size(state.selection.ids)),
+            maybeProducts: state.selection.maybeProducts,
+          })),
+        ],
+      }
+      : Tea.defect('Deleted while no deletion is in progress: only a completion leaves Deleting'),
+
+  // Its snackbar replaces the one standing, and the offer to undo with it.
+  DeleteFailed: () => (state) =>
+    state.selection._tag === 'Deleting'
+      ? {
+        state: { ...state, selection: Selection.Selecting({ ids: state.selection.ids }) },
+        commands: [Command.Vibrate({ feedback: 'Reject' })],
+        tell: [tell(Notice.DeleteFailed())],
+      }
+      : Tea.defect('DeleteFailed while no deletion is in progress: only a completion leaves Deleting'),
+
+  // Only a deletion of products alone can be undone; the offer is taken at once, its snackbar leaving with it, so a
+  // second tap does nothing.
+  UndoRequested: () => (state, children) =>
+    Opt.match(undoable(children.Snackbar.output()), {
+      onNone: () => Tea.reject,
+      onSome: (products): Step => ({
+        state,
+        commands: [Command.Restore({ products })],
+        tell: [{ _tag: 'Snackbar', message: { _tag: 'Dismissed' } }],
+      }),
+    }),
+
+  // The clock may have run only for a product leaving: the time it told goes with it.
+  RowsSettled: () => (state) => {
+    if (state.list._tag !== 'Loaded' || !isSettling(state.list)) {
+      return Tea.defect('RowsSettled while no row arrives or leaves: the timer runs only while one does')
+    }
+    const list: Loaded = { ...state.list, arrivals: HashSet.empty(), departures: [] }
+    return { state: { ...state, list, maybeNow: needsClock(list) ? state.maybeNow : Opt.none() } }
+  },
+
+  // Accepted in every state: the user may have done anything since asking, and the storage is as it was.
+  RestoreFailed: () => (state) => ({
+    state,
+    commands: [Command.Vibrate({ feedback: 'Reject' })],
+    tell: [tell(Notice.RestoreFailed())],
+  }),
+})
+
+const { child, withChildren } = Tea.program<{
+  state: State
+  model: Model
+  message: Own
+  command: Command
+  event: Event
+  key: Key
+}>()
+
+export const program = withChildren({ Snackbar: child(Snackbar) }).make({
   init: {
     state: {
       maybeNow: Opt.none(),
       list: { _tag: 'Loading' },
       selection: Selection.Idle(),
-      snackbar: Snackbar.None(),
     },
   },
 
-  update: Match.typeTags<Message, (state: State) => Tea.Transition<State, Command, Event>>()({
-    ListChanged: ({ result }) => (state) => {
-      const list: State['list'] = Result.match(result, {
-        onFailure: () => ({ _tag: 'Failed' }),
-        onSuccess: (stored): Loaded => {
-          const items = Arr.map(stored, validate)
-          if (state.list._tag !== 'Loaded') {
-            return { _tag: 'Loaded', items, arrivals: HashSet.empty(), departures: [] }
-          }
-          const ids = idsOf(items)
-          // The storage may tell of one write in more changes than one, before the page draws a frame: the rows
-          // still arriving keep arriving, and the ones leaving keep leaving, unless they are back.
-          return {
-            _tag: 'Loaded',
-            items,
-            arrivals: HashSet.union(
-              HashSet.difference(ids, idsOf(state.list.items)),
-              HashSet.intersection(state.list.arrivals, ids),
-            ),
-            departures: departuresFrom(rowsOf(state.list), ids),
-          }
-        },
-      })
-      return {
-        state: {
-          ...state,
-          list,
-          // The clock stops with the last product that expires: the time it told goes with it.
-          maybeNow: needsClock(list) ? state.maybeNow : Opt.none(),
-          // The selection keeps the products that still exist; a deletion in progress is left alone.
-          selection: list._tag === 'Failed' || state.selection._tag === 'Deleting'
-            ? state.selection
-            : selectionOf(HashSet.intersection(selectedIds(state.selection), idsOf(list.items))),
-        },
-      }
-    },
+  update: (message, children) => (state) => updateOwn(message)(state, children),
 
-    TimeChanged: ({ now }) => (state) =>
-      needsClock(state.list)
-        ? { state: { ...state, maybeNow: Opt.some(now) } }
-        : Tea.defect('TimeChanged while no listed product expires: the clock runs only while one does'),
-
-    // Only a product of the list can be selected: a tap on a row the storage has meanwhile removed does nothing.
-    ItemSelected: ({ id, by }) => (state) =>
-      HashSet.has(selectableIds(state), id) && !HashSet.has(selectedIds(state.selection), id)
-        ? {
-          state: { ...state, selection: selectionOf(HashSet.add(selectedIds(state.selection), id)) },
-          commands: feedbackOf(by),
-        }
-        : Tea.reject,
-
-    ItemDeselected: ({ id, by }) => (state) =>
-      state.list._tag === 'Loaded' && state.selection._tag === 'Selecting' && HashSet.has(state.selection.ids, id)
-        ? {
-          state: { ...state, selection: selectionOf(HashSet.remove(state.selection.ids, id)) },
-          commands: feedbackOf(by),
-        }
-        : Tea.reject,
-
-    // Only a product of the list, while nothing is selected or deleted. The product goes with the event, as the
-    // row shows it, so that no parent reads the list.
-    EditRequested: ({ id }) => (state) =>
-      state.list._tag === 'Loaded' && state.selection._tag === 'Idle'
-        ? Opt.match(
-          Arr.findFirst(
-            state.list.items,
-            (item): item is Data.TaggedEnum.Value<Product, 'Valid'> => item._tag === 'Valid' && item.id === id,
-          ),
-          {
-            onNone: () => Tea.reject,
-            onSome: ({ product }) => ({ state, events: [Event.EditRequested({ id, product })] }),
-          },
-        )
-        : Tea.reject,
-
-    SelectionCleared: () => (state) =>
-      state.list._tag === 'Loaded' && state.selection._tag === 'Selecting'
-        ? { state: { ...state, selection: Selection.Idle() } }
-        : Tea.reject,
-
-    // As Material's contextual action bar: the press clears the selection. It is held while the selection is being
-    // deleted, so that the app is not left in the middle of a write.
-    BackPressed: () => (state) =>
-      !showsSelection(state)
-        ? Tea.defect('BackPressed while no selection is shown: the button is observed only while one is')
-        : state.selection._tag === 'Selecting'
-        ? { state: { ...state, selection: Selection.Idle() } }
-        : { state },
-
-    // The products are kept from the list as it is now: the storage's change may reach the page before the
-    // deletion's completion, and then they are gone from it.
-    DeleteStarted: () => (state) =>
-      state.list._tag === 'Loaded' && state.selection._tag === 'Selecting'
-        ? {
-          state: {
-            ...state,
-            selection: Selection.Deleting({
-              ids: state.selection.ids,
-              maybeProducts: productsOf(state.list.items, state.selection.ids),
-            }),
-          },
-          commands: [Command.Delete({ ids: state.selection.ids })],
-        }
-        : Tea.reject,
-
-    // A new deletion replaces the offer to undo the last one: that one is gone for good, its snackbar leaving
-    // before the new one comes.
-    Deleted: ({ at }) => (state) =>
-      state.selection._tag === 'Deleting'
-        ? {
-          state: {
-            ...state,
-            selection: Selection.Idle(),
-            snackbar: snackbarOf(
-              state,
-              at,
-              Notice.Deleted({
-                count: PositiveInteger.makeUnsafe(HashSet.size(state.selection.ids)),
-                maybeProducts: state.selection.maybeProducts,
-              }),
-            ),
-          },
-          commands: [Command.Vibrate({ feedback: 'Confirm' })],
-        }
-        : Tea.defect('Deleted while no deletion is in progress: only a completion leaves Deleting'),
-
-    // Its snackbar replaces the one standing, and the offer to undo with it.
-    DeleteFailed: ({ at }) => (state) =>
-      state.selection._tag === 'Deleting'
-        ? {
-          state: {
-            ...state,
-            selection: Selection.Selecting({ ids: state.selection.ids }),
-            snackbar: snackbarOf(state, at, Notice.DeleteFailed()),
-          },
-          commands: [Command.Vibrate({ feedback: 'Reject' })],
-        }
-        : Tea.defect('DeleteFailed while no deletion is in progress: only a completion leaves Deleting'),
-
-    // Only a deletion of products alone can be undone; the offer is taken at once, so a second tap does nothing.
-    UndoRequested: () => (state) =>
-      state.snackbar._tag === 'Shown' && state.snackbar.notice._tag === 'Deleted'
-        && Opt.isSome(state.snackbar.notice.maybeProducts)
-        ? {
-          state: { ...state, snackbar: Snackbar.None() },
-          commands: [Command.Restore({ products: state.snackbar.notice.maybeProducts.value })],
-        }
-        : Tea.reject,
-
-    SnackbarExpired: () => (state) =>
-      state.snackbar._tag === 'Shown'
-        ? { state: { ...state, snackbar: Snackbar.None() } }
-        : Tea.defect('SnackbarExpired while no snackbar is shown: the timer runs only while one is'),
-
-    // The clock may have run only for a product leaving: the time it told goes with it.
-    RowsSettled: () => (state) => {
-      if (state.list._tag !== 'Loaded' || !isSettling(state.list)) {
-        return Tea.defect('RowsSettled while no row arrives or leaves: the timer runs only while one does')
-      }
-      const list: Loaded = { ...state.list, arrivals: HashSet.empty(), departures: [] }
-      return { state: { ...state, list, maybeNow: needsClock(list) ? state.maybeNow : Opt.none() } }
-    },
-
-    // Accepted in every state: the user may have done anything since asking, and the storage is as it was.
-    RestoreFailed: ({ at }) => (state) => ({
-      state: { ...state, snackbar: snackbarOf(state, at, Notice.RestoreFailed()) },
-      commands: [Command.Vibrate({ feedback: 'Reject' })],
-    }),
-  }),
+  // The snackbar's notice has stood its time: nothing is left to do.
+  onEvent: { Snackbar: () => (state) => ({ state }) },
 
   runCommand: Match.typeTags<Command>()({
     Delete: deleteProducts,
@@ -733,39 +719,35 @@ export const program = make({
     Vibrate: vibrate,
   }),
 
-  subscriptions: (state) => {
-    const withBack = showsSelection(state) ? HashMap.set(always, 'back-button', backButton) : always
-    const withClock = needsClock(state.list) ? HashMap.set(withBack, 'clock', clock) : withBack
-    const withSettling = state.list._tag === 'Loaded' && isSettling(state.list)
-      ? HashMap.set(
-        withClock,
-        ['settling', state.list.arrivals, idsOf(Arr.map(state.list.departures, ({ item }) => item))] as const,
-        settlingTimer,
-      )
-      : withClock
-    if (state.snackbar._tag === 'None') {
-      return withSettling
-    }
-    const { at, notice } = state.snackbar
-    return HashMap.set(withSettling, ['snackbar', at, notice._tag] as const, snackbarTimer(at, notice))
-  },
+  subscriptions: (state): ReadonlyArray<Key> => [
+    'changes',
+    ...(showsSelection(state) ? ['back-button' as const] : []),
+    ...(needsClock(state.list) ? ['clock' as const] : []),
+    ...(state.list._tag === 'Loaded' && isSettling(state.list)
+      ? [
+        Settle.Settling({
+          arrivals: state.list.arrivals,
+          departures: idsOf(Arr.map(state.list.departures, ({ item }) => item)),
+        }),
+      ]
+      : []),
+  ],
 
-  makeModel: (state) => ({
+  listen: Match.type<Key>().pipe(
+    Match.when('changes', () => changes),
+    Match.when('back-button', () => backButton),
+    Match.when('clock', () => clock),
+    Match.tag('Settling', () => settlingTimer),
+    Match.exhaustive,
+  ),
+
+  makeModel: (state, children) => ({
     list: listModel(state),
-    snackbar: Match.valueTags(state.snackbar, {
-      None: (): Model['snackbar'] => ({ _tag: 'None' }),
-      Shown: ({ at, notice, entrance }): Model['snackbar'] => ({
-        _tag: 'Shown',
-        at,
-        entrance,
-        notice: notice._tag === 'Deleted'
-          ? {
-            _tag: 'Deleted',
-            count: notice.count,
-            maybeUndo: Opt.map(notice.maybeProducts, () => Message.UndoRequested()),
-          }
-          : notice,
-      }),
-    }),
+    snackbar: snackbarModel(
+      children.Snackbar(),
+      Opt.map(undoable(children.Snackbar.output()), () => Own.UndoRequested()),
+    ),
   }),
 })
+
+export type Message = Tea.MessageOf<typeof program>

@@ -29,6 +29,8 @@ const layer = Layer.mergeAll(
 
 const { Root, draw, show } = Renderer.make(view)
 
+// The program is started here, not by effect-tea's `Host`, whose run lives as long as it is mounted. A change of the
+// system's theme recreates the activity, which mounts `Root` again, and the page shown must stay.
 // The program never ends by itself: an end that is not an interruption is a bug. Its cause goes to the log, and the
 // crash screen takes the page's place. Its button starts the program again, from its `init`, and runs it on a fresh
 // layer: a restart from scratch, with no native code. A second press of it starts nothing.

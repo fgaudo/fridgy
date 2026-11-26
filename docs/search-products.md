@@ -42,8 +42,8 @@ what was decided".
    their places, would never be still. The storage's changes (a deletion, an undo, a product added) keep their
    motion, among the rows shown.
 5. **The search stays open under another page.** Opening a product from the filtered list and coming back shows
-   the same search; so does adding a product. The query is state of the page, kept in the root's stack like the
-   rest of it.
+   the same search; so does adding a product. The query is state of the page, which Home, always there in the
+   root, keeps under another page like the rest of it.
 6. **Matching is by name, forgiving on case and accents**, every word typed somewhere in the name, in any order.
    The rule knows nothing of products and lives in `src/libs/strings/`.
 
@@ -94,16 +94,17 @@ type Search = Data.TaggedEnum<{
 }>
 ```
 
-- **The query is the text as typed**, never trimmed or folded in the state: the input owns it while the user
-  types, and `update` accepts it whatever it is (the Guide: input is never a reason to reject). What it filters
-  by is derived: `TextSearch.fromString(query)`, `None` for a blank query, which filters nothing.
+- **The query is the text as typed**, never trimmed or folded in the state: the field owns it while the user
+  types, and `update` accepts it whatever it is (the guide: a message is never rejected by its value). What it
+  filters by is derived: `TextSearch.fromString(query)`, `None` for a blank query, which filters nothing.
 - **Messages**, from the view unless said otherwise: `SearchOpened`, `SearchClosed`, `QueryCleared`, and
-  `BackPressed` from the back button's subscription. The query is an input, `Query`, which the field writes.
+  `BackPressed` from the back button's subscription. The field gives the query as `QueryTyped { value }`, a
+  message the model holds without its value (`queryTyped`) and the field fills.
 - **`update`:**
   - `SearchOpened`: accepted while the search is `Closed`, the list is `Loaded` with at least one item and the
     selection is `Idle`; otherwise rejected (the icon is withheld). Opens with an empty query.
-  - A write into `Query` is stored while `Open` and `Idle`, whatever the text. Its `get` gives `None` while a
-    selection exists, so the library rejects a write then (see "Concurrency": the field is not on screen).
+  - `QueryTyped` is stored while `Open` and `Idle`, whatever the text, and rejected while a selection exists
+    (see "Concurrency": the field is not on screen).
   - `QueryCleared`: accepted while `Open`, `Idle` and the query has text (the clear button is withheld on an
     empty field): empties the query and bumps `inputKey`.
   - `SearchClosed` and `BackPressed`: accepted while `Open` and `Idle`: `Closed`. `BackPressed` outside those
@@ -113,7 +114,7 @@ type Search = Data.TaggedEnum<{
     the storage has removed, so a tap on a row that a keystroke has since hidden becomes one more such case).
   - `ListChanged` keeps in the selection the ids that still exist **and are still shown**, in place of today's
     "still exist" (**verified** in `ListChanged`: the selection is intersected with the new ids, a deletion in
-    progress left alone). Nothing writes a name while Home is on top today, so no change can hide a selected
+    progress left alone). Nothing writes a name while Home is shown today, so no change can hide a selected
     row; the rule makes the invariant hold whatever a future writer does.
   - Nothing else changes: the selection, the deletion, the undo, the arrivals and departures are computed on the
     whole stored list, as today.
@@ -134,6 +135,8 @@ type Search = Data.TaggedEnum<{
     Open: {
       query: string
       inputKey: number
+      /** Filled by the field with its text. */
+      queryTyped: Readonly<{ _tag: 'QueryTyped' }>
       maybeClear: Opt.Option<Message>
       close: Message
     }
@@ -161,8 +164,8 @@ scrolls (scroll-driven animations, `bar-slide` in `src/styles.css`, since 2026-1
 - `searchBar(model, dispatch)`: the field's row, or nothing: the leading `arrow_back` icon button (`close`), the
   `input` (`type: 'search'`, `enterKeyHint: 'search'`, `autocapitalize: 'none'`, `autocomplete: 'off'`, no
   outline, `body-large`, `caret-primary`, its text written with `initialValue` and focused with `focusOnInsert`,
-  keyed by `inputKey`, writing with `write(Tea.forwardTo(dispatch, 'Query'))`) and the trailing `close` icon button while
-  `maybeClear` is `Some`.
+  keyed by `inputKey`, sending its text with `dispatch({ ...open.queryTyped, value })`) and the trailing `close`
+  icon button while `maybeClear` is `Some`.
 
 Home picks the shape in this order: the selection's bar, then the search bar, then its own. In search mode the
 bar is `h-16` and `surface-container` whatever the scroll, without the bar's scroll-driven utilities, the headline and subtitle block is not drawn, and the
@@ -216,10 +219,10 @@ selection):
   messages are rejected in them. `Deleting` is left only by its completion (**verified**, the comment on
   `Selection`), so the lock lasts exactly as long as the deletion, with no id to match the answer to.
 - **A keystroke on the frame of a long press.** A key typed between a long press that selects and the frame that
-  replaces the bar is a write into `Query` while `Selecting`, which has no place there and is rejected: the field then shows,
-  for that frame, a character the state does not have. The next frame removes the field; when the selection ends
-  the field is created anew from the state's query. The one case where the Guide's rule and the lock disagree,
-  bounded to a frame and resolved by the input's own re-creation.
+  replaces the bar is a `QueryTyped` while `Selecting`, which is rejected: the field then shows, for that frame, a
+  character the state does not have. The next frame removes the field; when the selection ends the field is
+  created anew from the state's query. The one case where the guide's rule and the lock disagree, bounded to a
+  frame and resolved by the field's own re-creation.
 - **The storage changing while filtering.** `ListChanged` replaces the items, and the filter applies to the new
   ones in `makeModel`: a product added on another page shows on return if it matches; one deleted leaves; the
   selection is pruned as said. A change can also reach the page in more messages than one before a frame
@@ -229,9 +232,9 @@ selection):
   restored products may not match: they are back in the storage, hidden by the filter. The snackbar is
   honest ("Product deleted" was undone: it is back), the storage is the truth, and closing the search shows it.
   Locking the search while the snackbar stands (ten seconds) was judged worse than this edge.
-- **Hidden pages.** `Products`' subscriptions, the back button's included, run only while Home is on top
-  (**verified**: `page('Home').subscribed` in the root), so the search's back button never steals a press from
-  the page over Home. The storage's change caused by an edit or an add reaches Home when it is back on top.
+- **Hidden pages.** `Products`' subscriptions, the back button's included, run only while Home is shown (Home's
+  `listening`, in the root), so the search's back button never steals a press from the page over Home. The
+  storage's change caused by an edit or an add reaches Home when it is shown again.
 
 ## Motion, and what to check
 
@@ -310,7 +313,7 @@ selection):
 - `products/program.test_arbitrary.ts`: `search` (`Closed`, `Open` with any string and any key), in `state`; the
   new messages in `message`; `shown` helpers for the tests. The coverage test lists the new variants.
 - `products/program.test.ts`: one test per new message, as the existing ones (`SearchOpened` opens only while
-  closed, loaded with items and idle; a write into `Query` is stored, whatever the text, while open and idle, and is
+  closed, loaded with items and idle; `QueryTyped` is stored, whatever the text, while open and idle, and is
   rejected otherwise; `QueryCleared` empties and bumps the key only while there is text; `SearchClosed` and `BackPressed`
   close while open and idle, `BackPressed` a defect otherwise); `ItemSelected` and `EditRequested` rejected on
   an id hidden by the filter; `ListChanged` keeps exactly the selected ids still shown; the model: the rows

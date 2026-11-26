@@ -3,13 +3,12 @@ import * as Tea from '@fgaudo/effect-tea'
 import { dispatchViolations } from '@fgaudo/effect-tea/testing'
 import * as Data from 'effect/Data'
 import * as Equal from 'effect/Equal'
-import * as HashMap from 'effect/HashMap'
 import * as Opt from 'effect/Option'
 import * as fc from 'fast-check'
 import { messagesSentBy } from '#libs/tea-react/view.test_support.ts'
 import { assertProperty, outcomesOf } from '#libs/testing/update.test_support.ts'
 import { license, licenses, state } from './program.test_arbitrary.ts'
-import { type Event, type Message, type Model, program } from './program.ts'
+import { type Event, type Message, type Model, program, type State } from './program.ts'
 import type { License } from './services/licenses/licenses.ts'
 import { view } from './view.tsx'
 
@@ -20,47 +19,90 @@ const { outcome, step } = outcomesOf(program.update)
 
 const { makeModel } = program
 
-/** What the page's list writes as it scrolls, `top` pixels from its top. */
-const scrolledTo = (top: number) => Msg.Scroll({ message: { _tag: 'Written', value: top } })
+/** An offset of the list, in pixels from its top: above it as the list bounces, at it, or under it. */
+const offset = fc.double({ min: -10, max: 10_000, noNaN: true })
 
-const message: fc.Arbitrary<Message> = fc.oneof(
-  licenses.map((licenses) => Msg.LicensesLoaded({ licenses })),
-  fc.string().map((version) => Msg.VersionLoaded({ version })),
-  fc.constant(Msg.BackPressed()),
-  fc.integer({ min: -10, max: 10_000 }).map(scrolledTo),
-)
+/** The messages that `model` holds, the scroll filled with `at`, in the order the view draws them. */
+const messagesOf = (model: Model, at: number): ReadonlyArray<Message> => [
+  model.back,
+  { ...model.scrolled, offset: at },
+]
+
+/** A message that may arrive in `before`: a load's answer only while it loads. */
+const arriving = (before: State): fc.Arbitrary<Message> =>
+  fc.oneof(
+    fc.constant(Msg.BackPressed()),
+    offset.map((at) => Msg.Scrolled({ offset: at })),
+    ...(before.licenses._tag === 'Loading' ? [licenses.map((items) => Msg.LicensesLoaded({ licenses: items }))] : []),
+    ...(before.version._tag === 'Loading' ? [fc.string().map((version) => Msg.VersionLoaded({ version }))] : []),
+  )
+
+const arrival = state.chain((before) => arriving(before).map((message) => [before, message] as const))
+
+const loadingLicenses = state.map((s): State => ({ ...s, licenses: { _tag: 'Loading' } }))
+
+const loadedLicenses = state.filter((s) => s.licenses._tag === 'Loaded')
+
+const loadingVersion = state.map((s): State => ({ ...s, version: { _tag: 'Loading' } }))
+
+const loadedVersion = state.filter((s) => s.version._tag === 'Loaded')
 
 describe('About update', () => {
-  test('is total and deterministic', () => {
-    assertProperty([state, message], (before, msg) => Equal.equals(outcome(msg, before), outcome(msg, before)))
+  test('accepts every message that may arrive, and is deterministic', () => {
+    assertProperty(
+      [arrival],
+      ([before, msg]) => !outcome(msg, before).rejected && Equal.equals(outcome(msg, before), outcome(msg, before)),
+    )
   })
 
-  // Going back asks the parent to leave on every tap: the parent removes the page
-  // on the first one, so a second tap from the same frame is rejected there. The page writes how far it scrolled
-  // on every scroll (to its top, in the test's events).
-  test('the view sends what update accepts, all of it, and acts once when sent twice', () => {
-    fc.assert(fc.property(state, (before) => {
+  // Going back asks the parent to leave on every tap: the parent removes the page on the first one, so a second
+  // tap from the same frame goes to a visit that is over, and the library drops it. A scroll that stays on the
+  // same side of the top changes nothing, and is held all the same: the list reports every scroll.
+  test('the model holds what update accepts, all of it, and acts once when sent twice', () => {
+    fc.assert(fc.property(state, offset, (before, at) => {
       expect(dispatchViolations(program.update, {
         state: before,
-        held: messagesSentBy<Model, Message>(view, makeModel(before)),
-        candidates: [Msg.BackPressed(), scrolledTo(0)],
+        held: messagesOf(makeModel(before), at),
+        candidates: [Msg.BackPressed(), Msg.Scrolled({ offset: at })],
         repeatable: (msg) => msg._tag === 'BackPressed',
+        inert: (msg, s) => msg._tag === 'Scrolled' && msg.offset <= 0 === s.isAtTop,
       })).toEqual([])
     }))
   })
 
-  test('LicensesLoaded stores the licenses and touches nothing else', () => {
-    assertProperty([state, licenses], (before, items) => {
+  // `messagesSentBy` scrolls the list to its top.
+  test('the view sends what its model holds', () => {
+    assertProperty([state], (before) => {
+      const model = makeModel(before)
+      return Equal.equals(messagesSentBy<Model, Message>(view, model), messagesOf(model, 0))
+    })
+  })
+
+  test('LicensesLoaded stores the licenses while they load, and touches nothing else', () => {
+    assertProperty([loadingLicenses, licenses], (before, items) => {
       const { after, commands } = step(Msg.LicensesLoaded({ licenses: items }), before)
       return Equal.equals(after, { ...before, licenses: { _tag: 'Loaded', items } }) && commands.length === 0
     })
   })
 
-  test('VersionLoaded stores the version and touches nothing else', () => {
-    assertProperty([state, fc.string()], (before, version) => {
+  // An answer reaches only the visit that asked, which asks once.
+  test('LicensesLoaded once the licenses are loaded is a defect', () => {
+    fc.assert(fc.property(loadedLicenses, licenses, (before, items) => {
+      expect(() => program.update(Msg.LicensesLoaded({ licenses: items }))(before)).toThrow(Tea.InvariantDefect)
+    }))
+  })
+
+  test('VersionLoaded stores the version while it loads, and touches nothing else', () => {
+    assertProperty([loadingVersion, fc.string()], (before, version) => {
       const { after, commands } = step(Msg.VersionLoaded({ version }), before)
       return Equal.equals(after, { ...before, version: { _tag: 'Loaded', version } }) && commands.length === 0
     })
+  })
+
+  test('VersionLoaded once the version is loaded is a defect', () => {
+    fc.assert(fc.property(loadedVersion, fc.string(), (before, version) => {
+      expect(() => program.update(Msg.VersionLoaded({ version }))(before)).toThrow(Tea.InvariantDefect)
+    }))
   })
 
   test('BackPressed asks the parent to leave the page, and changes nothing', () => {
@@ -71,11 +113,11 @@ describe('About update', () => {
   })
 
   test('a scroll keeps whether the page is at its top, and the very same state while that does not change', () => {
-    assertProperty([state, fc.integer({ min: -10, max: 10_000 })], (before, top) => {
-      const { after, commands } = step(scrolledTo(top), before)
-      const isAtTop = top <= 0
+    assertProperty([state, offset], (before, at) => {
+      const { after, commands, events } = step(Msg.Scrolled({ offset: at }), before)
+      const isAtTop = at <= 0
       return after.isAtTop === isAtTop && (isAtTop !== before.isAtTop || after === before)
-        && Equal.equals(after, { ...before, isAtTop }) && commands.length === 0
+        && Equal.equals(after, { ...before, isAtTop }) && commands.length === 0 && events.length === 0
     })
   })
 
@@ -105,6 +147,18 @@ describe('About update', () => {
       })
     })
 
+    test('is data: two equal states built apart make equal models', () => {
+      fc.assert(
+        fc.property(fc.integer(), (seed) => {
+          const [one] = fc.sample(state, { seed, numRuns: 1 })
+          const [other] = fc.sample(state, { seed, numRuns: 1 })
+          if (one === undefined || other === undefined) throw new Error('nothing sampled')
+          expect(Equal.equals(makeModel(one), makeModel(other))).toBe(true)
+        }),
+        { numRuns: 20 },
+      )
+    })
+
     test('a card is titled by the package name when the license has no visible name', () => {
       assertProperty([license, fc.oneof(blank, fc.string())], (l, name) => {
         const card = cardOf({ ...l, name: Opt.some(name) })
@@ -129,8 +183,8 @@ describe('About update', () => {
 })
 
 // The page always has something to do on back: leave.
-test('the page observes the back button in every state', () => {
-  assertProperty([state], (s) => HashMap.has(program.subscriptions(s), 'back-button'))
+test('the page observes the back button in every state, and nothing else', () => {
+  assertProperty([state], (s) => Equal.equals(program.subscriptions(s), ['back-button']))
 })
 
 test('arbitraries cover every variant of the state', () => {

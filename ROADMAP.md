@@ -2,9 +2,8 @@
 
 What is to be done or decided now, and nothing else. A step done is removed, with the reason in the commit: what a
 later step needs to know of it is written on that step. The steps come from a review of the architecture that the
-owner asked for on 22 November 2026, and from what the runtime's own roadmap decides for an application
-(`ROADMAP.md` and `docs/records/application-report.md` of `github.com/fgaudo/effect-tea`, read at its commit
-`cdd1565`).
+owner asked for on 22 November 2026, and from the move to effect-tea 0.9.0 on 26 November 2026, which closed the
+steps on the root and on the inputs, and what waited for that release.
 
 Each step names its model and effort, what it depends on, and how to tell that it is done. Every step also ends
 with `bun run typecheck`, `bun run test`, `bun run lint` and `bunx dprint check` passing, and with the documents
@@ -12,93 +11,40 @@ that describe what it changed brought up to date (`AGENTS.md`, "Conventions").
 
 ## Next, in order
 
-### 1. The root: Home, and at most one page over it, by its visit
+### 1. The app on effect-tea 0.9.0, seen on the emulator
 
-**Model and effort.** Opus 5.5, `high`: code that keeps the invariants of the navigation.
+**Model and effort.** Opus 5.5, `medium`.
 
-**Depends on** no other step.
+**Depends on** no other step. It comes first: the steps after it change the same views.
 
-**Why.** Two findings, in the same code.
+**Why.** The move to 0.9.0 changed every program and every view, and was checked by the tests, the typecheck,
+Metro's bundle and Hermes' bytecode alone. No test sees what a view draws, nor what the platform does with it
+(`docs/testing.md`).
 
-- **A page is found by its name, so it hears the answers of its past visit.** A command cannot be cancelled, and its
-  answer goes to the page of that name that is there when it arrives (`page(tag)`, `src/app/program.ts`). `About`
-  accepts a load on a page already loaded, and `AddProducts` rejects a late `CameraChecked`, each by hand.
-  `EditProduct` does not: `OrderKept` while `Loading` is a defect (`src/app/children/edit-product/program.ts`), and
-  it arrives. Pick another date order, leave the page, open a product before the write completes: the app crashes.
-  Reproduced on 22 November 2026 with `rehearsed`: `ProgramDefect: A defect in update on EditProduct › OrderKept`.
-- **The stack is more general than the app.** Only Home shows a page, and only while it is on top: the stack is
-  never deeper than two, and a page is in it at most once. Only prose says so (`show`, `leave`). `leave` has a
-  defect for a case that cannot be, and a test builds a stack of three that no user reaches. The search that
-  `docs/search-products.md` designs stays inside Home.
+**How.** As the `android-release` skill says, on a debug build and then a release. What changed, and what to look
+at:
 
-**How.**
+- **Home's scroll.** The heights, the offset and the end of a scroll are messages that the view fills, where they
+  were inputs: the bar collapses and snaps, the add button shrinks while the list scrolls, a change of the font
+  size or of the screen draws the list anew at its top, and Home comes back from a page where it rested.
+- **The name's field**, in both pages: typing, clearing, a scan that replaces it, a key typed just before "Add"
+  and "Save".
+- **The date**, drawn by one view for both pages (`src/app/programs/expiration/view.tsx`): the segments, the
+  field, the strip and the keypad lay out in each page's column as before. Its keys take nothing until the order
+  is read, a moment after the date is first shown: nothing should be seen of it.
+- **The fridge**, drawn by its own view (`src/app/children/add-products/children/fridge/view.tsx`), with no
+  wrapper of its own in the name step's room: the flight of `docs/product-flight.md`.
+- **The snackbars** of the three pages, and "Undo". One stands from when it was told: Home's, hidden under a page
+  past its time, is gone when Home is back.
+- **A page opened twice.** Each visit is drawn under a key of its own (`src/app/view.tsx`): the second shows
+  nothing of the first, its fields' text included.
+- **The root that draws.** The system theme changed while a page over Home is shown keeps that page
+  (`src/entrypoints/native.tsx` starts the program itself, for this). The crash screen, and its restart.
 
-- The state is Home, the number of visits so far, and at most one page over Home, with the number of its visit. No
-  stack.
-- The pages over Home are children by id (`childById`), the id being the visit's number, never used again: the
-  guide's own remedy ("Composition", "Ids that come back"). The library then rejects an answer, and a tap of a
-  frame drawn before, for a visit that is gone.
-- An answer of a past visit can then no longer arrive. Read again each handler that puts up with one (`About`'s
-  loads, `AddProducts`' `CameraChecked`), and make the code, its comments and its tests say what is true now.
-  `EditProduct`'s defect stays a defect.
-- A page's place is a `get` and a `set` written by hand: the `set` changes its place and nothing else (step 2).
-- The subscription keys become `[<page>, <visit>, <key>]`: `src/app/user.test_support.ts` follows.
-- The new tests go through `rehearsed` and the models, not through a page's state built or read by hand: the
-  runtime weighs a child's state that its parent cannot read ("Waiting for effect-tea").
+**Done when** each item above was seen on the emulator, on a debug build and on a release, and what was found is
+fixed, or written here as a step; `docs/motion.md` and `docs/testing.md` say what was seen, and when.
 
-**Done when**
-
-- the state's type holds what prose held: Home always there, one page over it at most, no defect left for a stack
-  that cannot be;
-- this scenario is a test of `src/app/program.test.ts`: add a product, open it, hear its clock and its date order,
-  pick another order, go back, open it again, run every pending command; the app survives and the second visit is
-  as it started;
-- for each page over Home, a test opens it, leaves it with its commands pending, opens it again and runs them all:
-  nothing dies, and the second visit is loaded by its own answers;
-- `AGENTS.md` ("Hidden pages keep receiving their completions"), the `add-program` skill, `README.md` ("a stack of
-  pages") and `src/README.md` describe the root as it is.
-
-### 2. A `set` that changes its place and nothing else
-
-**Model and effort.** Opus 5.5, `high`: Home's scrolling keeps invariants that only the emulator shows.
-
-**Depends on** no other step. It comes before the upgrade to effect-tea 0.8.1, which says that a `set` that does
-more is not supported.
-
-**Why.** The runtime's owner decided it on 22 November 2026, from this application's own report
-(`application-report.md`, point 2): a `set` that changes more than its place is an `update` under another name. It
-decides on a write, no test of the model sees it, and an equal write skips it. Two inputs of the app do so:
-
-- **Home's three heights** (`src/app/children/home/program.ts`). Their `set` runs `laidOut`, which also changes
-  `collapse`, `rest` and `generation`.
-- **AddProducts' `Name`** (`src/app/children/add-products/program.ts`). Its `set` also makes `lookup` `Idle`.
-
-**How.**
-
-- Home: a height is stored as it is written. What a new layout decides (the list drawn anew at its top, the bar
-  expanded) is `update`'s: the handler writes the height, then sends a message that the model holds, and `update`
-  reads the height from the state (the guide of 0.8.1, "Inputs", "A fact that comes with a value is a write, then a
-  message"; Home's `Rest` and `ScrollEnded` already do it). What only follows from the heights, as the collapse
-  kept within what the list can scroll, is computed in `makeModel`.
-- Home, reasoned on 22 November 2026 and not tried: `laidOut` tells a new layout by comparing it with the one the
-  state holds, and once a height is written the one before is gone. So `update` cannot tell a layout it has acted
-  on from a new one, unless the state also keeps the heights that the scroll's place was last settled for.
-- AddProducts: the lookup keeps the name it left, and `makeModel` shows its line only while the name is still that
-  one: what follows a write is computed where the state is read. A name typed back to the one found shows the
-  attribution again, as it is that product's name.
-- Home's `Scroll` and About's `Scroll` store another form of what is written, which 0.8.x allows: they stay, and
-  wait for the runtime ("Waiting for effect-tea").
-
-**Done when** no `set` under `src/app/` changes anything but its place: each place is an optic, or a property test
-holds its `get` and `set` to the three laws of a lens, until the runtime's own check takes its place; the programs'
-tests check the same behaviour as before; and Home is checked on the emulator, as the `android-release` skill says:
-the bar collapses and snaps, and a change of the font size or of the screen draws the list anew at its top. And what
-"a write, then a message" cost Home is written under "Waiting for effect-tea": each field the state keeps only to
-know what the event knew, and what is drawn between the write and the message. It is the first fact of the app
-whose `update` needs the value before and the one after, and the evidence that the runtime's parked "What reaches
-`update`, declared as data" asks for, should its owner take it up for a value that an element reports.
-
-### 3. A link is opened by a command
+### 2. A link is opened by a command
 
 **Model and effort.** Opus 5.5, `medium`.
 
@@ -120,7 +66,7 @@ outside `update`, and outside what `messagesSentBy` checks.
 and `update` accepts them; `AGENTS.md` lists `links` with the infrastructure's other services ("A service belongs
 to what uses it").
 
-### 4. A stored row is read on its own
+### 3. A stored row is read on its own
 
 **Model and effort.** Opus 5.5, `high`.
 
@@ -147,11 +93,11 @@ to what uses it").
 date and one with a malformed expiration, and finds both listed as no products beside the good ones; `Corrupt` is
 gone from the program, the view, the arbitraries and the tests.
 
-### 5. An id that is the storage's, and writes that say how they fail
+### 4. An id that is the storage's, and writes that say how they fail
 
 **Model and effort.** Opus 5.5, `high`.
 
-**Depends on** step 4, which makes the id always there.
+**Depends on** step 3, which makes the id always there.
 
 **Why.**
 
@@ -166,52 +112,44 @@ gone from the program, the view, the arbitraries and the tests.
 **How.**
 
 - An opaque `ProductId` in `src/domain/product.ts`, which only `src/infrastructure/storage/products.ts` makes and
-  reads. The ports, the programs' states, messages and events carry it; a view makes its key from it.
+  reads. The ports, the programs' states, messages and events carry it, and the flags of `EditProduct`, which the
+  root keeps and compares; a view makes its key from it.
 - `AddProducts.add`, `DeleteProducts.deleteAll` and `restoreAll` as functions that return an `Effect` with tagged
   errors, each one transaction, as `UpdateProduct.update` is.
 
 **Done when** no adapter parses an id, and no branch is left for one that was never written; no `Request` is left
 under `src/app/`; the contracts check all or nothing as before, and each failure by its tag.
 
-### 6. What has one truth is written once
+### 5. What has one truth is written once
 
 **Model and effort.** Opus 5.5, `medium`.
 
 **Depends on** no other step.
 
-**Why.** Counted on 22 November 2026:
+**Why.** Counted on 26 November 2026, after the snackbar and the date became programs of `src/app/programs/`:
 
-- The subscription to `BackButton` is the same lines in five programs, the one to `Keyboard` in two, and the effect
-  of the `Vibrate` command in three.
-- The programs' timers repeat, as numbers, the durations that the views take from `#styles`:
-  `add-products/program.ts` (`300 + 500`, `200 + 250`) and `products/program.ts` (`500`). Only a comment ties them.
-- Material's rule that a snackbar after another waits for it (`Entrance`, `told`) is written in three programs.
-- What a date's digits name under the field (`Hint`, the days, `NamingNothing`) is decided by the same lines in the
-  `makeModel` of `AddProducts` and of `EditProduct`.
+- The subscription to `BackButton` is the same lines in five programs (`Home`, `Products`, `About`, `AddProducts`,
+  `EditProduct`), the one to `Keyboard` in two, and the effect of the `Vibrate` command in three.
+- The programs' timers repeat, as numbers, the durations that the views take from `#styles`: the fridge
+  (`add-products/children/fridge/program.ts`: `300 + 500`, `500`, `200 + 250`) and `products/program.ts` (`500`).
+  Only a comment ties them.
 
 **How.**
 
 - Beside each service of the infrastructure (`back-button.ts`, `keyboard.ts`, `haptics.ts`), what every program
-  writes to use it: the subscription, taking the message to send, or the command's effect. Typed with `Source`, and
-  kept small: the runtime weighs a subscription made from its key alone ("Waiting for effect-tea").
+  writes to use it: the subscription, taking the message to send, which a program's `listen` returns for its key,
+  or the command's effect. Typed with `Source`, and kept small.
 - Material's durations in a module of `src/libs/` with no React Native in it. `src/styles.ts` takes them from
-  there, and the programs' timers are written with them.
-- The snackbar's queueing in `src/libs/`, as far as the three are the same. `Products`' snackbar keeps the time of
-  what it tells (`at`), which the other two do not need: that part stays its own.
-- The rule of what the digits name in `src/libs/dates/digit-date-entry.ts`, as data that holds no message.
+  there, and the programs' timers are written with them. The snackbar's two (`programs/snackbar/program.ts`) are
+  Material's too.
 
-Not to do: the date entry as a program of `programs/`. Each page reads the day the digits name, to enable its
-button and to submit, and a parent never reads a child's state (the guide, "Structuring a program", "Splitting a
-program"), which the runtime weighs holding by its types. It is the page's own state. The two `date-order-setting`
-services stay two as well: see "Waiting for the owner".
+**Done when** each has one definition, and the programs' tests check what they checked.
 
-**Done when** each of the four has one definition, and the programs' tests check what they checked.
-
-### 7. Design: the app in the user's language
+### 6. Design: the app in the user's language
 
 **Model and effort.** Fable 5.2, `high`: a design, whose steps are then written here, each with its own model.
 
-**Depends on** steps 3 and 6, which change the views it reads. The owner is asked first: which languages.
+**Depends on** steps 2 and 5, which change the views it reads. The owner is asked first: which languages.
 
 **Why.** The texts are English, literals in the views (about 65), in the crash screen, and one in the domain
 (`'Undefined name'`, `fromSnapshot`). The dates, the order of a date's digits and the language Open Food Facts is
@@ -240,11 +178,10 @@ None of these waits for the steps above, nor holds them up.
   importer, and `src/README.md` and the `add-service` skill ("The development database") still describe it: both
   go. `sqlite.memory.ts` is imported only by tests and their support, under a name that bundles may import, and
   `@effect/sql-sqlite-wasm` is a dependency of the app: it becomes `sqlite.memory.test_support.ts`, and its package
-  a `devDependency` (`bun install` writes the lockfile). Four comments still name the browser: the header of
-  `src/app/program.ts`, `src/infrastructure/back-button/back-button.ts`, `src/app/user.test_support.ts` ("the
-  browser's scanner") and `src/libs/dates/date-order.ts`; `tsconfig.json` names `platform-browser`. Done when
-  `browser` is found under `src/` only where it is true, `bun run bundle` passes, and `bun run update-licenses`
-  leaves its file as it is.
+  a `devDependency` (`bun install` writes the lockfile). Comments still name the browser:
+  `src/infrastructure/back-button/back-button.ts`, `src/app/user.test_support.ts` ("the browser's scanner") and
+  `src/libs/dates/date-order.ts`; `tsconfig.json` names `platform-browser`. Done when `browser` is found under
+  `src/` only where it is true, `bun run bundle` passes, and `bun run update-licenses` leaves its file as it is.
 - **The Android project built on every push.** Opus 5.5, `medium`. CI makes Metro's bundle and Hermes' bytecode,
   and never runs Gradle: the Kotlin of the app's native module
   (`android/app/src/main/java/net/gaudo/fridgy/barcodecamera/`), the codegen, the autolinking and `build.gradle`
@@ -255,46 +192,37 @@ None of these waits for the steps above, nor holds them up.
 
 ## Waiting for effect-tea
 
-What the runtime's roadmap has open, and what each item decides here. An item becomes a step when its release is
-out, or goes when the runtime rejects it.
+What the move to 0.9.0 found that the runtime could take up, and what each item would change here. An item becomes
+a step when a release takes it up, or goes when the runtime rejects it.
 
-- **0.8.1, not released.** It needs step 2 done. With it, `hear` takes any message of the program: `back`, in
-  `src/app/user.test_support.ts`, no longer writes its messages whole. Its guide is to be read again for "Inputs",
-  which says what an element reports, as a scroll its offset.
-- **Its step 26, the entry for React outside a browser.** To weigh once it is decided: whether
-  `src/libs/tea-react/renderer.ts` gives way to `@fgaudo/effect-tea/react`; whether
-  `@babel/plugin-transform-class-static-block` leaves `babel.config.cjs`, should the package ship without `static`
-  blocks; and what it says of a renderer that draws after the next event, which React Native is. `EditProduct`
-  keeps the name's place while it saves, its field disabled, and `AddProducts` while it adds: the runtime's own form
-  now locks by the shape of its state instead, and that step says what holds here. Its owner looks for such a
-  renderer to run it under.
-- **Its step 29, the form of a value out of `set`.** Home's `Scroll` stores the collapse, in twentieths, from the
-  top written and the headline's height; About's stores whether the top is 0. The promise that lets them is to be
-  taken back, for a form that is a function of the value alone: Home's reads the state, which that step's spike
-  decides. Its check of a place's laws would take the place of the app's own (step 2).
-- **Its step 30, a subscription made from its key alone.** Two of the app's use what their key lacks, harmlessly:
-  `Products`' snackbar timer, keyed by `at` and the notice's tag, reads the notice's products for its duration; an
-  arrival's timer in `AddProducts`, keyed by its id, reads its `entrance`. The helpers of step 6 would change form
-  with it.
-- **Its step 31, a child's state that its parent cannot read.** No program of the app reads one: the root reads the
-  pages' tags, and Home never reads `products`. The tests do: `src/app/program.test.ts` builds pages' states by
-  hand and reads Home's list (`homeState`), and `src/app/children/home/program.test.ts` reads `before.products`.
-  What that step finds for a parent's test decides how they are written.
+- **The types of what a parent's functions take and tell** (`Outputs`, `Tells`), which the package does not export.
+  `AddProducts`, `EditProduct` and `Products` each write `Tell` and their step's type by hand, to annotate a
+  handler. `AddProducts` builds the table of its `update` at each message, to give one handler the children's
+  outputs.
+- **A child that the parent's state says is there, and whose model is an `Option`.** `AddProducts` (the date, on
+  the second step) and `EditProduct` (the date, past `Loading`) unwrap it with a defect, or a filter, that no state
+  reaches.
+- **A testing tool for what a step tells.** The whole program's `update` shows the children's states after it, not
+  the `tell`: `Products`' test reads the snackbar's `Stamp` command to know how long a notice was told to last.
+  `stateOf` takes a child's state that the declaration's `tell` would not give: the arbitraries of `AddProducts`
+  and `EditProduct` keep the date's `page` in step with the page by hand.
+- **A view's message that names the instance it was drawn for.** The root gives each visit of a page a number, and
+  a child by id, for this alone. A child that comes and goes inside a page, as the date of `AddProducts`' second
+  step, has no such number: a tap of a frame drawn for an earlier one reaches the one that is there.
+- **The parent's `subscriptions`, given the children's outputs.** The back button is each program's that has
+  something to close, heard by the last observer (`AGENTS.md`), where the guide keeps in the parent what spans the
+  children: a parent cannot list a key by what its children declare.
 
 ## Waiting for the owner
 
-- **Home's scroll in the global state.** Every scroll event goes through `update`, the root's `makeModel` and
-  React; the twenty steps of `collapse` soften it. The runtime says that such a value is an input, and what a write
-  at each event costs. It needs a measurement on a phone, with a release build: the emulator keeps no frame rate
-  (`docs/motion.md`). Should frames drop, what follows the scroll alone and the program does not decide by is the
-  platform's to keep, moved on the UI thread.
+- **Home's scroll in the global state.** Every scroll event is a message through `update`, the root's `makeModel`
+  and React; the twenty steps of `collapse` soften it. The runtime says what a step at each event costs, and that
+  such a value is sent once, as its events end, unless the program follows each. It needs a measurement on a phone,
+  with a release build: the emulator keeps no frame rate (`docs/motion.md`). Should frames drop, what follows the
+  scroll alone and the program does not decide by is the platform's to keep, moved on the UI thread.
 - **AddProducts' clock ticks every second**, to keep the creation date close to the tap: the root's model is made
-  every second while the page is shown. The command could stamp the product instead, against "the command carries
-  the entity, valid by construction".
-- **The date order as a service of the infrastructure.** `date-order-setting` is in `add-products/services/` and in
-  `edit-product/services/`, the same but for a word of a comment and the service's key, contract included. "A
-  service is never shared" means two. A setting of the user has no shape for a page to give it, as a fact of the
-  platform has none: one service would extend that exception, which is a change of the rule.
+  every second while the page is shown, and the date is told the time every second while the second step is. The
+  command could stamp the product instead, against "the command carries the entity, valid by construction".
 - **The contracts on op-sqlite.** The phone's engine is a client written here (`sqlite.op-sqlite.ts`), whose update
   hook every list relies on; every test runs on wa-sqlite, and `docs/testing.md` says so. Running the contracts on
   the emulator needs their checks apart from `bun:test`. To weigh: whether that is worth its cost.
@@ -304,13 +232,6 @@ out, or goes when the runtime rejects it.
 - **One adapter, two test files.** Every service of the storage has one adapter, and "one storage per setup" says
   there is no second. Its contract and the test that runs it could be one file: a change of the `add-service`
   skill's convention.
-- **`programs/` is described in four documents and allowed by Biome, and nothing uses it.** Step 6 says why the
-  date entry is not its first. Keep it as the place of a program to come, or cut it to a line. The snackbar was
-  weighed too, and step 6 shares its queueing as data instead: two candidates, and neither a program.
-- **`AddProducts` is a thousand lines in one module.** `src/app/children/add-products/program.ts` holds seven
-  concerns beside the name and the step (the camera, the lookup, the clock, the date order, the fridge, the
-  snackbar, the keyboard), kept in `Form`, which every case of the state carries and `withForm` reaches. It stays
-  one program (`AGENTS.md`, "A page stays one program"). To weigh: a concern as a module of the page, its data and
-  its pure transitions, holding no message, as `DigitDateEntry` is in `src/libs/`; the fridge first (`Fridge`,
-  `admitted`, its timers, `fridgeShown`). And the state as a record with the step as one field, in place of five
-  cases that each carry `form`. Both change what `AGENTS.md` says a program's folder holds.
+- **What the move to 0.9.0 changed for the user**, each decided in passing and seen on no screen yet (step 1): the
+  keypad of a date takes no key until the order of its digits is read; the disc of a product entering the fridge
+  is colored by the day it was added on, where it followed the clock during its flight.

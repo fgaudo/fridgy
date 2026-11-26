@@ -1,35 +1,13 @@
 import * as Tea from '@fgaudo/effect-tea'
 import * as Match from 'effect/Match'
 import * as Opt from 'effect/Option'
-import type { ReactNode } from 'react'
 import { ActivityIndicator, View as Box, Pressable, ScrollView, StyleSheet, Text, TextInput } from 'react-native'
 import Animated from 'react-native-reanimated'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import type { DateOrder } from '#libs/dates/date-order.ts'
-import * as Day from '#libs/dates/day.ts'
-import { handlers, type View, write } from '#libs/tea-react/tea-react.ts'
+import * as Expiration from '#app/programs/expiration/view.tsx'
+import { handlers, type View } from '#libs/tea-react/tea-react.ts'
 import { color, elevation, icon, motion, shape, type } from '#styles'
-import type { DateChoice, Digit, Failure, FieldsShown, Message, Model, OrderChoice, Snackbar } from './program.ts'
-
-// No weekday: a date read off a package has none, and two chips must fit a row of the narrowest phone.
-const formatDay = (date: Day.Day) => Day.format(date, { day: 'numeric', month: 'short', year: 'numeric' })
-
-const keys: ReadonlyArray<Digit> = ['1', '2', '3', '4', '5', '6', '7', '8', '9']
-
-/** How the digits are read in each order: the field's placeholder and each segment's label. */
-const placeholders: Readonly<Record<DateOrder, string>> = { DMY: 'DDMMYY', MDY: 'MMDDYY', YMD: 'YYMMDD' }
-
-const hints: Readonly<Record<DateOrder, string>> = {
-  DMY: 'Day and month, then year if needed',
-  MDY: 'Month and day, then year if needed',
-  YMD: 'Year if needed, then month and day',
-}
-
-const orderTitles: Readonly<Record<DateOrder, string>> = {
-  DMY: 'Day, month, year',
-  MDY: 'Month, day, year',
-  YMD: 'Year, month, day',
-}
+import type { Failure, FieldsShown, Message, Model } from './program.ts'
 
 // The page's bottom is held clear of the keyboard or of the navigation bar, whichever reaches further up: the
 // keyboard's inset is the window's own, and covers the bar. The other edges only keep clear of their bar.
@@ -65,53 +43,6 @@ const styles = StyleSheet.create({
   },
   input: { ...type.bodyLarge, paddingVertical: 0, paddingRight: 40, color: color.onSurface },
   clearName: { position: 'absolute', right: 4 },
-  // One outline around the row, which clips the selected segment's container to its corners.
-  segments: {
-    minHeight: 40,
-    flexDirection: 'row',
-    borderWidth: 1,
-    borderRadius: shape.full,
-    borderColor: color.outline,
-    overflow: 'hidden',
-  },
-  segment: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
-  segmentNext: { borderLeftWidth: 1, borderLeftColor: color.outline },
-  segmentLabel: { ...type.labelLarge },
-  // Room for the label, which rises 9dp above the outline, under the segments.
-  dateField: { marginTop: 8 },
-  digits: { ...type.bodyLarge },
-  strip: { minHeight: 32 },
-  stripText: { ...type.bodySmall, paddingHorizontal: 16 },
-  chips: { gap: 8 },
-  chip: {
-    height: 32,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingLeft: 8,
-    paddingRight: 16,
-    borderRadius: shape.small,
-    borderWidth: 1,
-  },
-  chipLabel: { ...type.labelLarge },
-  keypad: {
-    marginTop: 'auto',
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    padding: 8,
-    borderRadius: shape.extraLarge,
-    backgroundColor: color.surfaceContainerLow,
-  },
-  key: {
-    height: 56,
-    flexBasis: '30%',
-    flexGrow: 1,
-    borderRadius: shape.full,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  keyLabel: { ...type.headlineSmall },
   // 8dp over "Save", not AddProducts' 16: the name field takes them, and the page must fit the reference screen.
   dock: { paddingHorizontal: 24, paddingTop: 8, paddingBottom: 16 },
   save: {
@@ -189,8 +120,8 @@ const saveButton = (shown: FieldsShown, activity: Activity, dispatch: Tea.Dispat
 
 /**
  * Material's outlined text field of the name, drawn anew when it is cleared. From then on the user owns its text, and
- * the field writes it into the input `Name`. Not focused when the page opens: the keyboard would cover the keypad,
- * and the user may have come for the date.
+ * the field sends it as it changes. Not focused when the page opens: the keyboard would cover the keypad, and the
+ * user may have come for the date.
  */
 const nameField = (shown: FieldsShown, activity: Activity, dispatch: Tea.Dispatch<Message>) => {
   const { on } = handlers(dispatch)
@@ -209,7 +140,9 @@ const nameField = (shown: FieldsShown, activity: Activity, dispatch: Tea.Dispatc
         enterKeyHint='done'
         cursorColor={color.primary}
         style={[styles.input, { color: isEditing ? color.onSurface : color.disabledContent }]}
-        onChangeText={isEditing ? write(Tea.forwardTo(dispatch, 'Name')) : undefined}
+        onChangeText={activity._tag === 'Editing'
+          ? (value) => dispatch({ ...activity.controls.nameTyped, value })
+          : undefined}
       />
       {Opt.match(maybeClearName, {
         onNone: () => null,
@@ -228,144 +161,6 @@ const nameField = (shown: FieldsShown, activity: Activity, dispatch: Tea.Dispatc
   )
 }
 
-/** Material's segmented button of the orders. */
-const orderSegments = (shown: FieldsShown, activity: Activity, dispatch: Tea.Dispatch<Message>) => {
-  const { on } = handlers(dispatch)
-  const segment = ({ order, choice }: OrderChoice, index: number) => {
-    const maybePick = choice._tag === 'Offered' && activity._tag === 'Editing' ? choice.maybePick : Opt.none()
-    const isCurrent = choice._tag === 'Current'
-    const tint = activity._tag === 'Editing'
-      ? (isCurrent ? color.onSecondaryContainer : color.onSurface)
-      : color.disabledContent
-    return (
-      <Pressable
-        key={order}
-        accessibilityRole='button'
-        accessibilityLabel={orderTitles[order]}
-        accessibilityState={{ selected: isCurrent, disabled: activity._tag !== 'Editing' }}
-        style={[
-          styles.segment,
-          index > 0 && styles.segmentNext,
-          isCurrent && { backgroundColor: color.secondaryContainer },
-        ]}
-        onPress={Opt.match(maybePick, { onNone: () => undefined, onSome: on })}
-      >
-        {isCurrent ? icon('check', tint, { fontSize: 18, lineHeight: 18 }) : null}
-        <Text style={[styles.segmentLabel, { color: tint }]}>{order}</Text>
-      </Pressable>
-    )
-  }
-  return <Box style={styles.segments}>{shown.orders.map(segment)}</Box>
-}
-
-/**
- * Material's outlined text field of the date: read-only, typed into with the keypad, so that the thumb stays where it
- * is. The digits are shown as they are: grouping them would read them one way.
- */
-const dateField = (shown: FieldsShown, activity: Activity) => {
-  // Disabled while the fields take no input; in the error's colors when the digits name no day.
-  const look = activity._tag !== 'Editing' ? 'Disabled' : shown.strip._tag === 'NamingNothing' ? 'Wrong' : 'Plain'
-  const tint = look === 'Disabled' ? color.disabledContent : look === 'Wrong' ? color.error : color.onSurfaceVariant
-  return (
-    <Box
-      accessible
-      accessibilityLabel={`Expiration date, ${shown.digits === '' ? 'empty' : shown.digits}`}
-      style={[styles.field, styles.dateField, {
-        borderColor: look === 'Disabled' ? color.disabledContainer : look === 'Wrong' ? color.error : color.outline,
-      }]}
-    >
-      <Text style={[styles.label, { color: tint }]}>Expiration date</Text>
-      <Text style={[styles.digits, { color: shown.digits === '' ? color.onSurfaceVariant : color.onSurface }]}>
-        {shown.digits === '' ? placeholders[shown.order] : shown.digits}
-      </Text>
-    </Box>
-  )
-}
-
-/** Material's filter chip of a day the digits name. */
-const chip = ({ date, choice }: DateChoice, activity: Activity, dispatch: Tea.Dispatch<Message>) => {
-  const { on } = handlers(dispatch)
-  const maybeChoose = choice._tag === 'Offered' && activity._tag === 'Editing' ? choice.maybeChoose : Opt.none()
-  const isChosen = choice._tag === 'Chosen'
-  const tint = activity._tag === 'Editing'
-    ? (isChosen ? color.onSecondaryContainer : color.onSurfaceVariant)
-    : color.disabledContent
-  return (
-    <Pressable
-      key={date}
-      accessibilityRole='button'
-      accessibilityState={{ selected: isChosen, disabled: activity._tag !== 'Editing' }}
-      style={[styles.chip, {
-        borderColor: isChosen ? color.secondaryContainer : color.outlineVariant,
-        backgroundColor: isChosen ? color.secondaryContainer : 'transparent',
-      }]}
-      onPress={Opt.match(maybeChoose, { onNone: () => undefined, onSome: on })}
-    >
-      {icon(isChosen ? 'check' : 'event', tint, { fontSize: 18, lineHeight: 18 })}
-      <Text style={[styles.chipLabel, { color: isChosen ? color.onSecondaryContainer : color.onSurface }]}>
-        {formatDay(date)}
-      </Text>
-    </Pressable>
-  )
-}
-
-/** Under the field, what it means: the hint, the chips on one line that scrolls sideways, or the error. */
-const strip = (shown: FieldsShown, activity: Activity, dispatch: Tea.Dispatch<Message>) => (
-  <Box style={styles.strip}>
-    {Match.valueTags(shown.strip, {
-      Hint: () => <Text style={[styles.stripText, { color: color.onSurfaceVariant }]}>{hints[shown.order]}</Text>,
-      Naming: ({ choices }) => (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
-          {choices.map((choice) =>
-            chip(choice, activity, dispatch)
-          )}
-        </ScrollView>
-      ),
-      NamingNothing: () => <Text style={[styles.stripText, { color: color.error }]}>Not an upcoming date</Text>,
-    })}
-  </Box>
-)
-
-/** A keypad of the app's own, always where the thumb expects it: Material's tonal buttons in a button group's pills. */
-const keypad = (activity: Activity, dispatch: Tea.Dispatch<Message>) => {
-  const { on } = handlers(dispatch)
-  const key = (id: string, label: ReactNode | string, title: string, maybeMessage: Opt.Option<Message>) => {
-    const isEnabled = Opt.isSome(maybeMessage)
-    const tint = isEnabled ? color.onSurface : color.disabledContent
-    return (
-      <Pressable
-        key={id}
-        accessibilityRole='button'
-        accessibilityLabel={title}
-        accessibilityState={{ disabled: !isEnabled }}
-        style={[styles.key, { backgroundColor: isEnabled ? color.surfaceContainerHighest : color.disabledContainer }]}
-        onPress={Opt.match(maybeMessage, { onNone: () => undefined, onSome: on })}
-      >
-        {typeof label === 'string' ? <Text style={[styles.keyLabel, { color: tint }]}>{label}</Text> : label}
-      </Pressable>
-    )
-  }
-  const controls = activity._tag === 'Editing' ? Opt.some(activity.controls) : Opt.none()
-  const enabledTint = (maybe: Opt.Option<Message>) => (Opt.isSome(maybe) ? color.onSurface : color.disabledContent)
-  const digitKey = (digit: Digit) =>
-    key(
-      digit,
-      digit,
-      digit,
-      Opt.flatMap(controls, ({ maybeTypeDigit }) => Opt.map(maybeTypeDigit, (typeDigit) => typeDigit[digit])),
-    )
-  const clear = Opt.flatMap(controls, ({ maybeClearDate }) => maybeClearDate)
-  const erase = Opt.flatMap(controls, ({ maybeEraseDigit }) => maybeEraseDigit)
-  return (
-    <Box style={styles.keypad}>
-      {keys.map(digitKey)}
-      {key('clear', icon('cancel', enabledTint(clear)), 'Clear date', clear)}
-      {digitKey('0')}
-      {key('erase', icon('backspace', enabledTint(erase)), 'Backspace', erase)}
-    </Box>
-  )
-}
-
 /**
  * The fields read from the top, the keypad at the bottom of their column, where the thumb rests, and "Save" docked
  * under it. The column scrolls when the screen is shorter (the keyboard open, a large font): "Save" stays in sight.
@@ -373,10 +168,7 @@ const keypad = (activity: Activity, dispatch: Tea.Dispatch<Message>) => {
 const fields = (shown: FieldsShown, activity: Activity, dispatch: Tea.Dispatch<Message>) => [
   <ScrollView key='fields' keyboardShouldPersistTaps='handled' contentContainerStyle={styles.column}>
     {nameField(shown, activity, dispatch)}
-    {orderSegments(shown, activity, dispatch)}
-    {dateField(shown, activity)}
-    {strip(shown, activity, dispatch)}
-    {keypad(activity, dispatch)}
+    {Expiration.view(shown.expiration, Tea.forwardTo(dispatch, 'Expiration'))}
   </ScrollView>,
   <Box key='dock' style={styles.dock}>{saveButton(shown, activity, dispatch)}</Box>,
 ]
@@ -388,18 +180,21 @@ const failureTexts: Readonly<Record<Failure, string>> = {
 }
 
 /** Material's snackbar 16dp above the docked "Save" button, keyed by its id so that the next one is drawn anew. */
-const snackbar = (shown: Snackbar) =>
-  shown._tag === 'None' ? null : (
-    <Animated.View
-      key={`snackbar-${shown.id}`}
-      entering={motion.snackbar.entering[shown.entrance]}
-      exiting={motion.snackbar.exiting}
-      accessibilityLiveRegion='polite'
-      style={styles.snackbar}
-    >
-      <Text style={styles.snackbarText}>{failureTexts[shown.failure]}</Text>
-    </Animated.View>
-  )
+const snackbar = (shown: FieldsShown['snackbar']) =>
+  Opt.match(shown, {
+    onNone: () => null,
+    onSome: ({ id, notice, entrance }) => (
+      <Animated.View
+        key={`snackbar-${id}`}
+        entering={motion.snackbar.entering[entrance]}
+        exiting={motion.snackbar.exiting}
+        accessibilityLiveRegion='polite'
+        style={styles.snackbar}
+      >
+        <Text style={styles.snackbarText}>{failureTexts[notice]}</Text>
+      </Animated.View>
+    ),
+  })
 
 /** Material's full-screen dialog, as a page over the one that opened it. */
 export const view: View<Model, Message> = (model, dispatch) => (

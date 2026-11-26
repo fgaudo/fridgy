@@ -1,12 +1,10 @@
 import * as Tea from '@fgaudo/effect-tea'
-import * as Arr from 'effect/Array'
 import * as Match from 'effect/Match'
 import * as Opt from 'effect/Option'
 import type { ReactNode } from 'react'
 import {
   ActivityIndicator,
   View as Box,
-  type ColorValue,
   Linking,
   Pressable,
   ScrollView,
@@ -14,56 +12,15 @@ import {
   Text,
   TextInput,
 } from 'react-native'
-import Animated, {
-  type EntryAnimationsValues,
-  FadeOut,
-  Keyframe,
-  type LayoutAnimation,
-  withDelay,
-  withTiming,
-} from 'react-native-reanimated'
+import Animated, { FadeOut, Keyframe } from 'react-native-reanimated'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import type { Product } from '#domain/product.ts'
+import * as Expiration from '#app/programs/expiration/view.tsx'
 import CameraPreview from '#infrastructure/barcode-camera/BarcodeCameraPreviewNativeComponent.ts'
-import type { DateOrder } from '#libs/dates/date-order.ts'
-import * as Day from '#libs/dates/day.ts'
-import { handlers, type View, write } from '#libs/tea-react/tea-react.ts'
+import { handlers, type View } from '#libs/tea-react/tea-react.ts'
 import { color, duration, easing, elevation, icon, motion, shape, type } from '#styles'
-import type {
-  ArrivalShown,
-  DateChoice,
-  DateShown,
-  Digit,
-  Due,
-  Failure,
-  FridgeShown,
-  Message,
-  Model,
-  NameShown,
-  OrderChoice,
-  Snackbar,
-  Supporting,
-} from './program.ts'
-
-// No weekday: a date read off a package has none, and two chips must fit a row of the narrowest phone.
-const formatDay = (date: Day.Day) => Day.format(date, { day: 'numeric', month: 'short', year: 'numeric' })
-
-const keys: ReadonlyArray<Digit> = ['1', '2', '3', '4', '5', '6', '7', '8', '9']
-
-/** How the digits are read in each order: the field's placeholder, the strip's hint and each segment's label. */
-const placeholders: Readonly<Record<DateOrder, string>> = { DMY: 'DDMMYY', MDY: 'MMDDYY', YMD: 'YYMMDD' }
-
-const hints: Readonly<Record<DateOrder, string>> = {
-  DMY: 'Day and month, then year if needed',
-  MDY: 'Month and day, then year if needed',
-  YMD: 'Year if needed, then month and day',
-}
-
-const orderTitles: Readonly<Record<DateOrder, string>> = {
-  DMY: 'Day, month, year',
-  MDY: 'Month, day, year',
-  YMD: 'Year, month, day',
-}
+import type * as FridgeProgram from './children/fridge/program.ts'
+import * as Fridge from './children/fridge/view.tsx'
+import type { DateShown, Failure, Message, Model, NameShown, NameTyped, SnackbarShown, Supporting } from './program.ts'
 
 // The page's bottom is held clear of the keyboard or of the navigation bar, whichever reaches further up: the
 // keyboard's inset is the window's own, and covers the bar. The other edges only keep clear of their bar.
@@ -107,68 +64,6 @@ const styles = StyleSheet.create({
   link: { color: color.primary, textDecorationLine: 'underline' },
   // The FAB's margin is Material's, and leaves its shadow inside the scroll, which clips what it holds.
   room: { flex: 1, minHeight: 80 },
-  // Heard, not seen: the products' flight shows what was added.
-  announcement: { position: 'absolute', opacity: 0 },
-  // Centred above the FAB and its margin.
-  stage: { ...StyleSheet.absoluteFill, bottom: 72, alignItems: 'center', justifyContent: 'center' },
-  // 96dp tall, smaller when the keyboard leaves less room.
-  fridge: { height: 96, maxHeight: '100%', aspectRatio: 5 / 8, transformOrigin: 'bottom' },
-  body: { flex: 1, transformOrigin: 'bottom' },
-  freezer: {
-    flex: 1,
-    borderWidth: 1.5,
-    borderTopLeftRadius: shape.small,
-    borderTopRightRadius: shape.small,
-    borderColor: color.primary,
-    backgroundColor: color.primaryContainer,
-  },
-  compartment: {
-    flex: 2,
-    marginTop: -1.5,
-    borderWidth: 1.5,
-    borderBottomLeftRadius: shape.small,
-    borderBottomRightRadius: shape.small,
-    borderColor: color.primary,
-    // Lit: the lightest of the surfaces, under any disc.
-    backgroundColor: color.surfaceContainerLowest,
-  },
-  // Over the compartment's border, hinged on its right.
-  door: {
-    position: 'absolute',
-    top: -1.5,
-    right: -1.5,
-    bottom: -1.5,
-    left: -1.5,
-    borderWidth: 1.5,
-    borderBottomLeftRadius: shape.small,
-    borderBottomRightRadius: shape.small,
-    borderColor: color.primary,
-    backgroundColor: color.primaryContainer,
-    transformOrigin: 'right',
-  },
-  handle: {
-    position: 'absolute',
-    top: 8,
-    left: 8,
-    width: 4,
-    height: 16,
-    borderRadius: shape.full,
-    backgroundColor: color.onPrimaryContainer,
-  },
-  doorHandle: { top: 12, height: 24 },
-  slot: { ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'center' },
-  // Home's disc, without its ring. Where it rests, inside: the flight ends there, and never shows it.
-  disc: {
-    width: 40,
-    height: 40,
-    borderRadius: shape.full,
-    alignItems: 'center',
-    justifyContent: 'center',
-    opacity: 0,
-    transform: [{ scale: 0.2 }],
-  },
-  discDay: { ...type.titleSmall, lineHeight: 16 },
-  discMonth: { ...type.labelSmall, lineHeight: 12 },
   scanFab: {
     position: 'absolute',
     right: 0,
@@ -202,54 +97,6 @@ const styles = StyleSheet.create({
   // On one line: a long name scrolls sideways within the heading's edges, as in a field, rather than taking a second
   // line, which the reference screen has no room for.
   headingName: { ...type.titleLarge, color: color.onSurface },
-  // One outline around the row, which clips the selected segment's container to its corners.
-  segments: {
-    minHeight: 40,
-    flexDirection: 'row',
-    borderWidth: 1,
-    borderRadius: shape.full,
-    borderColor: color.outline,
-    overflow: 'hidden',
-  },
-  noSegments: { minHeight: 40 },
-  segment: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
-  segmentNext: { borderLeftWidth: 1, borderLeftColor: color.outline },
-  segmentLabel: { ...type.labelLarge },
-  // Room for the label, which rises 9dp above the outline, under the segments.
-  dateField: { marginTop: 8 },
-  digits: { ...type.bodyLarge },
-  strip: { minHeight: 32 },
-  stripText: { ...type.bodySmall, paddingHorizontal: 16 },
-  chips: { gap: 8 },
-  chip: {
-    height: 32,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingLeft: 8,
-    paddingRight: 16,
-    borderRadius: shape.small,
-    borderWidth: 1,
-  },
-  chipLabel: { ...type.labelLarge },
-  keypad: {
-    marginTop: 'auto',
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    padding: 8,
-    borderRadius: shape.extraLarge,
-    backgroundColor: color.surfaceContainerLow,
-  },
-  key: {
-    height: 56,
-    flexBasis: '30%',
-    flexGrow: 1,
-    borderRadius: shape.full,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  keyLabel: { ...type.headlineSmall },
   scanner: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8, paddingHorizontal: 32 },
   scannerText: { ...type.bodyMedium, textAlign: 'center', color: color.onSurfaceVariant },
   viewfinder: {
@@ -317,82 +164,11 @@ const reveal = new Keyframe({
   .delay(duration.medium4)
   .duration(duration.short4)
 
-// The product entering the fridge (`docs/product-flight.md`). The fridge appears, its door opens, each product's
-// disc comes in from the left edge and shrinks into it. The door closes behind the last, and the fridge settles.
-const fridgeAppearing = new Keyframe({
-  0: { opacity: 0, transform: [{ scale: 0.9 }] },
-  100: { opacity: 1, transform: [{ scale: 1 }], easing: easing.emphasizedDecelerate },
-}).duration(duration.medium2)
-
-const fridgeLeaving = new Keyframe({
-  0: { opacity: 1 },
-  100: { opacity: 0, easing: easing.standardAccelerate },
-}).duration(duration.short4)
-
-const fridgeSettling = new Keyframe({
-  0: { transform: [{ translateY: 0 }, { rotate: '0deg' }] },
-  30: { transform: [{ translateY: -6 }, { rotate: '-3deg' }], easing: easing.standard },
-  65: { transform: [{ translateY: 0 }, { rotate: '2deg' }], easing: easing.standard },
-  100: { transform: [{ translateY: 0 }, { rotate: '0deg' }], easing: easing.standard },
-})
-  .delay(duration.short4)
-  .duration(duration.medium1)
-
-// The door turns out of the fridge, in a perspective.
-const doorClosed = [{ perspective: 300 }, { rotateY: '0deg' }]
-
-const doorOpen = [{ perspective: 300 }, { rotateY: '100deg' }]
-
-const doorOpening = (from: FridgeShown & { _tag: 'Open' }) => {
-  const opening = new Keyframe({
-    0: { transform: doorClosed },
-    100: { transform: doorOpen, easing: easing.standard },
-  }).duration(duration.short4)
-  // Once the fridge has appeared.
-  return from.opening === 'WithFridge' ? opening.delay(duration.medium2) : opening
-}
-
-const doorClosing = new Keyframe({
-  0: { transform: doorOpen },
-  100: { transform: doorClosed, easing: easing.standard },
-}).duration(duration.short4)
-
-/**
- * A disc's flight into the compartment, where it shrinks and fades in the last `short4`. It starts a window's width to
- * the left, past the edge: its global origin reads 0 when the fridge mounts with it. One that brings the fridge waits
- * for it to appear.
- */
-const flight = (delay: number) => (values: EntryAnimationsValues): LayoutAnimation => {
-  'worklet'
-  const shrinking = delay + duration.long2 - duration.short4
-  const shrink = { duration: duration.short4, easing: easing.emphasizedAccelerate }
-  return {
-    initialValues: {
-      opacity: 1,
-      transform: [{ translateX: -values.windowWidth }, { scale: 1 }],
-    },
-    animations: {
-      opacity: withDelay(shrinking, withTiming(0, shrink)),
-      transform: [
-        {
-          translateX: withDelay(
-            delay,
-            withTiming(0, { duration: duration.long2, easing: easing.emphasizedDecelerate }),
-          ),
-        },
-        { scale: withDelay(shrinking, withTiming(0.2, shrink)) },
-      ],
-    },
-  }
-}
-
-const flights = { WithFridge: flight(duration.medium2), IntoOpenFridge: flight(0) } as const
-
 /** What the first step is doing, and which of its controls take. */
 type NameActivity =
   | { _tag: 'Editing'; controls: Model & { _tag: 'Naming' } }
   | { _tag: 'LookingUp'; controls: Model & { _tag: 'LookingUp' } }
-  | { _tag: 'Adding'; canScan: boolean }
+  | { _tag: 'Adding'; canScan: boolean; nameTyped: NameTyped }
 
 type DateActivity = Readonly<
   { _tag: 'Editing'; controls: Model & { _tag: 'Dating' } } | { _tag: 'Adding' }
@@ -483,12 +259,17 @@ const supportingText = (supporting: Supporting) => (
 
 /**
  * Material's outlined text field of the name, drawn anew when the name is replaced (a scan, a clearing). From then on
- * the user owns its text, which the field writes into the input `Name`. Focused whenever it is drawn anew and
- * editable: as the step opens, after a product found and a clearing. It stays editable while a product is added: a
- * disabled field would close the keyboard.
+ * the user owns its text, which the field sends as it changes. Focused whenever it is drawn anew and editable: as the
+ * step opens, after a product found and a clearing. It stays editable while a product is added: a disabled field
+ * would close the keyboard.
  */
 const nameField = (shown: NameShown, activity: NameActivity, dispatch: Tea.Dispatch<Message>) => {
   const isEditing = activity._tag !== 'LookingUp'
+  const maybeTyped = activity._tag === 'Editing'
+    ? Opt.some(activity.controls.nameTyped)
+    : activity._tag === 'Adding'
+    ? Opt.some(activity.nameTyped)
+    : Opt.none()
   // A product is added only with a name, which the clearing button stays on.
   const clearName: Control = activity._tag === 'Editing'
     ? control(activity.controls.maybeClearName)
@@ -507,7 +288,10 @@ const nameField = (shown: NameShown, activity: NameActivity, dispatch: Tea.Dispa
           enterKeyHint='done'
           cursorColor={color.primary}
           style={[styles.input, { color: isEditing ? color.onSurface : color.disabledContent }]}
-          onChangeText={activity._tag === 'LookingUp' ? undefined : write(Tea.forwardTo(dispatch, 'Name'))}
+          onChangeText={Opt.match(maybeTyped, {
+            onNone: () => undefined,
+            onSome: (typed) => (value: string) => dispatch({ ...typed, value }),
+          })}
         />
         {activity._tag === 'LookingUp'
           ? (
@@ -554,102 +338,6 @@ const scanFab = (shown: Control, dispatch: Tea.Dispatch<Message>) => {
   )
 }
 
-/** The last product added, heard by a screen reader from a live region, which is announced when its text changes. */
-const announcement = (fridge: FridgeShown) => (
-  <Text accessibilityLiveRegion='polite' style={styles.announcement}>
-    {Match.valueTags(fridge, {
-      Away: () => '',
-      Open: ({ arrivals }) => announced(Arr.lastNonEmpty(arrivals).product),
-      Closing: ({ last }) => announced(last.product),
-    })}
-  </Text>
-)
-
-const announced = ({ name, maybeExpirationDate }: Product) =>
-  `${name} added. ${
-    Opt.match(maybeExpirationDate, {
-      onNone: () => 'No expiration',
-      onSome: (date) => `Expires ${formatDay(date)}`,
-    })
-  }`
-
-/**
- * The fridge, while products enter it: each product's disc flies into its compartment, between the inside and the
- * door. Its body is drawn anew as it starts closing, which plays the settle.
- */
-type Colors = Readonly<{ fill: ColorValue; text: ColorValue }>
-
-/** The colors of Home's disc, by when the product is due (`docs/freshness.md`). */
-const dueColors: Readonly<Record<Due['_tag'], Colors>> = {
-  Never: { fill: color.surfaceContainerHighest, text: color.onSurface },
-  Now: { fill: color.errorContainer, text: color.onErrorContainer },
-  Soon: { fill: color.primaryContainer, text: color.onPrimaryContainer },
-  Later: { fill: color.tertiaryContainer, text: color.onTertiaryContainer },
-}
-
-/**
- * A product's disc, as Home's list draws it: its expiration day and month, or an infinity sign when it never ends. Its
- * text keeps its size whatever the font, as Home's does.
- */
-const disc = ({ entrance, due }: ArrivalShown) => {
-  const { fill, text } = dueColors[due._tag]
-  return (
-    <Animated.View entering={flights[entrance]} style={[styles.disc, { backgroundColor: fill }]}>
-      {due._tag === 'Never'
-        ? <Text allowFontScaling={false} style={[type.titleMedium, { color: text }]}>∞</Text>
-        : [
-          <Text key='day' allowFontScaling={false} style={[styles.discDay, { color: text }]}>
-            {Day.toParts(due.expirationDate).day}
-          </Text>,
-          <Text key='month' allowFontScaling={false} style={[styles.discMonth, { color: text }]}>
-            {Day.format(due.expirationDate, { month: 'short' })}
-          </Text>,
-        ]}
-    </Animated.View>
-  )
-}
-
-const fridge = (shown: FridgeShown) =>
-  shown._tag === 'Away' ? null : (
-    <Box
-      key='stage'
-      pointerEvents='none'
-      accessibilityElementsHidden
-      importantForAccessibility='no-hide-descendants'
-      style={styles.stage}
-    >
-      <Animated.View
-        key={`fridge-${shown.visit}`}
-        entering={fridgeAppearing}
-        exiting={fridgeLeaving}
-        style={styles.fridge}
-      >
-        <Animated.View
-          key={shown._tag}
-          {...(shown._tag === 'Closing' ? { entering: fridgeSettling } : {})}
-          style={styles.body}
-        >
-          <Box style={styles.freezer}>
-            <Box style={styles.handle} />
-          </Box>
-          <Box style={styles.compartment}>
-            {shown._tag === 'Open'
-              ? shown.arrivals.map((arrival) => (
-                <Box key={`product-${arrival.id}`} style={styles.slot}>{disc(arrival)}</Box>
-              ))
-              : null}
-            <Animated.View
-              entering={shown._tag === 'Open' ? doorOpening(shown) : doorClosing}
-              style={[styles.door, { transform: shown._tag === 'Open' ? doorOpen : doorClosed }]}
-            >
-              <Box style={[styles.handle, styles.doorHandle]} />
-            </Animated.View>
-          </Box>
-        </Animated.View>
-      </Animated.View>
-    </Box>
-  )
-
 /**
  * The first step: the name under the app bar, the two ways out at the bottom, the scan FAB above them. The ways out
  * scroll with the name: docked, they would leave a short screen with the keyboard open no room to show it.
@@ -657,7 +345,7 @@ const fridge = (shown: FridgeShown) =>
 const nameStep = (
   shown: NameShown,
   activity: NameActivity,
-  fridgeShown: FridgeShown,
+  fridge: FridgeProgram.Model,
   dispatch: Tea.Dispatch<Message>,
 ) => {
   const controls = activity._tag === 'Editing' ? Opt.some(activity.controls) : Opt.none()
@@ -673,8 +361,7 @@ const nameStep = (
       <ScrollView keyboardShouldPersistTaps='handled' contentContainerStyle={styles.column}>
         {nameField(shown, activity, dispatch)}
         <Box style={styles.room}>
-          {announcement(fridgeShown)}
-          {fridge(fridgeShown)}
+          {Fridge.view(fridge, Tea.forwardTo(dispatch, 'Fridge'))}
           {scanFab(scan, dispatch)}
         </Box>
         <Box style={styles.nameDock}>
@@ -690,156 +377,6 @@ const nameStep = (
         </Box>
       </ScrollView>
     </Animated.View>
-  )
-}
-
-/** Material's segmented button of the orders. Its row stays empty until the order is known: nothing moves then. */
-const orderSegments = (shown: DateShown, activity: DateActivity, dispatch: Tea.Dispatch<Message>) => {
-  const { on } = handlers(dispatch)
-  if (shown.order._tag === 'Unknown') {
-    return <Box style={styles.noSegments} />
-  }
-  const segment = ({ order, choice }: OrderChoice, index: number) => {
-    const maybePick = choice._tag === 'Offered' && activity._tag === 'Editing' ? choice.maybePick : Opt.none()
-    const isCurrent = choice._tag === 'Current'
-    const tint = activity._tag === 'Editing'
-      ? (isCurrent ? color.onSecondaryContainer : color.onSurface)
-      : color.disabledContent
-    return (
-      <Pressable
-        key={order}
-        accessibilityRole='button'
-        accessibilityLabel={orderTitles[order]}
-        accessibilityState={{ selected: isCurrent, disabled: activity._tag !== 'Editing' }}
-        style={[
-          styles.segment,
-          index > 0 && styles.segmentNext,
-          isCurrent && { backgroundColor: color.secondaryContainer },
-        ]}
-        onPress={Opt.match(maybePick, { onNone: () => undefined, onSome: on })}
-      >
-        {isCurrent ? icon('check', tint, { fontSize: 18, lineHeight: 18 }) : null}
-        <Text style={[styles.segmentLabel, { color: tint }]}>{order}</Text>
-      </Pressable>
-    )
-  }
-  return <Box style={styles.segments}>{shown.order.choices.map(segment)}</Box>
-}
-
-/**
- * Material's outlined text field of the date: read-only, typed into with the keypad, so that the thumb stays where it
- * is. The digits are shown as they are: grouping them would read them one way.
- */
-const dateField = (shown: DateShown, activity: DateActivity) => {
-  // Disabled while the step takes no input; in the error's colors when the digits name no day.
-  const look = activity._tag === 'Adding' ? 'Disabled' : shown.strip._tag === 'NamingNothing' ? 'Wrong' : 'Plain'
-  const tint = look === 'Disabled' ? color.disabledContent : look === 'Wrong' ? color.error : color.onSurfaceVariant
-  const placeholder = shown.order._tag === 'Known' ? placeholders[shown.order.order] : ''
-  return (
-    <Box
-      accessible
-      accessibilityLabel={`Expiration date, ${shown.digits === '' ? 'empty' : shown.digits}`}
-      style={[styles.field, styles.dateField, {
-        borderColor: look === 'Disabled' ? color.disabledContainer : look === 'Wrong' ? color.error : color.outline,
-      }]}
-    >
-      <Text style={[styles.label, { color: tint }]}>Expiration date</Text>
-      <Text style={[styles.digits, { color: shown.digits === '' ? color.onSurfaceVariant : color.onSurface }]}>
-        {shown.digits === '' ? placeholder : shown.digits}
-      </Text>
-    </Box>
-  )
-}
-
-/** Material's filter chip of a day the digits name. */
-const chip = ({ date, choice }: DateChoice, activity: DateActivity, dispatch: Tea.Dispatch<Message>) => {
-  const { on } = handlers(dispatch)
-  const maybeChoose = choice._tag === 'Offered' && activity._tag === 'Editing' ? choice.maybeChoose : Opt.none()
-  const isChosen = choice._tag === 'Chosen'
-  const tint = activity._tag === 'Editing'
-    ? (isChosen ? color.onSecondaryContainer : color.onSurfaceVariant)
-    : color.disabledContent
-  return (
-    <Pressable
-      key={date}
-      accessibilityRole='button'
-      accessibilityState={{ selected: isChosen, disabled: activity._tag !== 'Editing' }}
-      style={[styles.chip, {
-        borderColor: isChosen ? color.secondaryContainer : color.outlineVariant,
-        backgroundColor: isChosen ? color.secondaryContainer : 'transparent',
-      }]}
-      onPress={Opt.match(maybeChoose, { onNone: () => undefined, onSome: on })}
-    >
-      {icon(isChosen ? 'check' : 'event', tint, { fontSize: 18, lineHeight: 18 })}
-      <Text style={[styles.chipLabel, { color: isChosen ? color.onSecondaryContainer : color.onSurface }]}>
-        {formatDay(date)}
-      </Text>
-    </Pressable>
-  )
-}
-
-/** Under the field, what it means: the hint, the chips on one line that scrolls sideways, or the error. */
-const strip = (shown: DateShown, activity: DateActivity, dispatch: Tea.Dispatch<Message>) => (
-  <Box style={styles.strip}>
-    {Match.valueTags(shown.strip, {
-      Hint: () => (
-        <Text style={[styles.stripText, { color: color.onSurfaceVariant }]}>
-          {shown.order._tag === 'Known' ? hints[shown.order.order] : ''}
-        </Text>
-      ),
-      Naming: ({ choices }) => (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
-          {choices.map((choice) =>
-            chip(choice, activity, dispatch)
-          )}
-        </ScrollView>
-      ),
-      NamingNothing: () => <Text style={[styles.stripText, { color: color.error }]}>Not an upcoming date</Text>,
-    })}
-  </Box>
-)
-
-/** A keypad of the app's own, always where the thumb expects it: Material's tonal buttons in a button group's pills. */
-const keypad = (activity: DateActivity, dispatch: Tea.Dispatch<Message>) => {
-  const { on } = handlers(dispatch)
-  const key = (id: string, label: ReactNode, title: string, maybeMessage: Opt.Option<Message>) => {
-    const isEnabled = Opt.isSome(maybeMessage)
-    return (
-      <Pressable
-        key={id}
-        accessibilityRole='button'
-        accessibilityLabel={title}
-        accessibilityState={{ disabled: !isEnabled }}
-        style={[styles.key, { backgroundColor: isEnabled ? color.surfaceContainerHighest : color.disabledContainer }]}
-        onPress={Opt.match(maybeMessage, { onNone: () => undefined, onSome: on })}
-      >
-        {label}
-      </Pressable>
-    )
-  }
-  const controls = activity._tag === 'Editing' ? Opt.some(activity.controls) : Opt.none()
-  const tintOf = (maybe: Opt.Option<unknown>) => (Opt.isSome(maybe) ? color.onSurface : color.disabledContent)
-  const digitKey = (digit: Digit) => {
-    const maybeMessage = Opt.flatMap(
-      controls,
-      ({ maybeTypeDigit }) => Opt.map(maybeTypeDigit, (typeDigit) => typeDigit[digit]),
-    )
-    return key(
-      digit,
-      <Text style={[styles.keyLabel, { color: tintOf(maybeMessage) }]}>{digit}</Text>,
-      digit,
-      maybeMessage,
-    )
-  }
-  const clear = Opt.flatMap(controls, ({ maybeClearDate }) => maybeClearDate)
-  const erase = Opt.flatMap(controls, ({ maybeEraseDigit }) => maybeEraseDigit)
-  return (
-    <Box style={styles.keypad}>
-      {keys.map(digitKey)}
-      {key('clear', icon('cancel', tintOf(clear)), 'Clear date', clear)}
-      {digitKey('0')}
-      {key('erase', icon('backspace', tintOf(erase)), 'Backspace', erase)}
-    </Box>
   )
 }
 
@@ -860,10 +397,7 @@ const dateStep = (shown: DateShown, activity: DateActivity, dispatch: Tea.Dispat
               <Text accessibilityRole='header' style={styles.headingName}>{shown.name}</Text>
             </ScrollView>
           </Box>
-          {orderSegments(shown, activity, dispatch)}
-          {dateField(shown, activity)}
-          {strip(shown, activity, dispatch)}
-          {keypad(activity, dispatch)}
+          {Expiration.view(shown.expiration, Tea.forwardTo(dispatch, 'Expiration'))}
         </ScrollView>
         <Box style={styles.dock}>
           {button(
@@ -922,18 +456,21 @@ const clearances = { Naming: 140 + 16 + 56 + 16, Dating: 88 } as const
  * Material's snackbar 16dp above the controls at the bottom of the step shown, drawn anew for each id. One that leaves
  * stays where it stood.
  */
-const snackbar = (shown: Snackbar, step: keyof typeof clearances) =>
-  shown._tag === 'None' ? null : (
-    <Animated.View
-      key={`snackbar-${shown.id}`}
-      entering={motion.snackbar.entering[shown.entrance]}
-      exiting={motion.snackbar.exiting}
-      accessibilityLiveRegion='polite'
-      style={[styles.snackbar, { bottom: clearances[step] }]}
-    >
-      <Text style={styles.snackbarText}>{failureTexts[shown.failure]}</Text>
-    </Animated.View>
-  )
+const snackbar = (shown: SnackbarShown, step: keyof typeof clearances) =>
+  Opt.match(shown, {
+    onNone: () => null,
+    onSome: ({ id, notice, entrance }) => (
+      <Animated.View
+        key={`snackbar-${id}`}
+        entering={motion.snackbar.entering[entrance]}
+        exiting={motion.snackbar.exiting}
+        accessibilityLiveRegion='polite'
+        style={[styles.snackbar, { bottom: clearances[step] }]}
+      >
+        <Text style={styles.snackbarText}>{failureTexts[notice]}</Text>
+      </Animated.View>
+    ),
+  })
 
 /** What each layer of the page draws: a step, or the scanner. */
 type Layers = Readonly<Record<'naming' | 'dating' | 'scanner', ReactNode>>
@@ -955,15 +492,15 @@ export const view: View<Model, Message> = (model, dispatch) => {
     }),
     LookingUp: (lookingUp) => ({
       ...nothing,
-      naming: nameStep(lookingUp, { _tag: 'LookingUp', controls: lookingUp }, { _tag: 'Away' }, dispatch),
+      naming: nameStep(lookingUp, { _tag: 'LookingUp', controls: lookingUp }, lookingUp.fridge, dispatch),
     }),
     Scanning: (scanning) => ({ ...nothing, scanner: scanner(scanning, dispatch) }),
     Dating: (dating) => ({ ...nothing, dating: dateStep(dating, { _tag: 'Editing', controls: dating }, dispatch) }),
     Adding: (adding) =>
       Match.valueTags(adding.step, {
-        Naming: ({ fridge, canScan }) => ({
+        Naming: ({ fridge, canScan, nameTyped }) => ({
           ...nothing,
-          naming: nameStep(adding, { _tag: 'Adding', canScan }, fridge, dispatch),
+          naming: nameStep(adding, { _tag: 'Adding', canScan, nameTyped }, fridge, dispatch),
         }),
         Dating: (date) => ({ ...nothing, dating: dateStep(date, { _tag: 'Adding' }, dispatch) }),
       }),

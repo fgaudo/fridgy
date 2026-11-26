@@ -1,29 +1,27 @@
 import { describe, expect, test } from 'bun:test'
 import * as Tea from '@fgaudo/effect-tea'
 import { dispatchViolations } from '@fgaudo/effect-tea/testing'
-import * as Arr from 'effect/Array'
 import * as Channel from 'effect/Channel'
 import * as Data from 'effect/Data'
 import * as Effect from 'effect/Effect'
 import * as Equal from 'effect/Equal'
-import * as HashMap from 'effect/HashMap'
 import * as Opt from 'effect/Option'
 import * as References from 'effect/References'
 import * as fc from 'fast-check'
+import * as Expiration from '#app/programs/expiration/program.ts'
+import * as SnackbarProgram from '#app/programs/snackbar/program.ts'
 import * as Product from '#domain/product.ts'
-import { arbitrary as order } from '#libs/dates/date-order.test_arbitrary.ts'
 import * as DateOrder from '#libs/dates/date-order.ts'
 import { arbitrary as anyDay } from '#libs/dates/day.test_arbitrary.ts'
 import * as Day from '#libs/dates/day.ts'
-import * as DigitDateEntry from '#libs/dates/digit-date-entry.ts'
-import { MAX_DIGITS } from '#libs/dates/digit-dates.ts'
+import type { Digit } from '#libs/dates/digit-date-entry.ts'
 import { messagesSentBy } from '#libs/tea-react/view.test_support.ts'
 import { zoned } from '#libs/testing/date-time.test_arbitrary.ts'
 import { assertProperty, outcomesOf } from '#libs/testing/update.test_support.ts'
+import * as Fridge from './children/fridge/program.ts'
 import {
   barcode,
   dating,
-  digit,
   keyboardInset,
   lookingUp,
   message,
@@ -31,30 +29,16 @@ import {
   scanning,
   state,
   submitting,
+  type Whole,
 } from './program.test_arbitrary.ts'
-import {
-  type Command,
-  type DateForm,
-  type Digit,
-  type Due,
-  type Event,
-  type Failure,
-  type Form,
-  type Fridge,
-  type FridgeShown,
-  type Message,
-  type Model,
-  program,
-  type Snackbar,
-  type State,
-  type Step,
-} from './program.ts'
+import { type Command, type Event, type Failure, type Message, type Model, program, type State } from './program.ts'
 import { type FoundProduct, ProductLookup, ProductLookupError } from './services/product-lookup/product-lookup.ts'
 import { view } from './view.tsx'
 
 const Msg = Data.taggedEnum<Message>()
 const Cmd = Data.taggedEnum<Command>()
 const Ev = Data.taggedEnum<Event>()
+const Snackbar = SnackbarProgram.make<Failure>()
 
 const { outcome, rejects, step } = outcomesOf(program.update)
 
@@ -62,104 +46,77 @@ const { makeModel } = program
 
 const digits: ReadonlyArray<Digit> = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
 
-/** What the name field writes as the user types `value` into it. */
-const written = (value: string): Message => ({ _tag: 'Name', message: { _tag: 'Written', value } })
+/** What the name field sends as the user types `value` into it. */
+const typed = (value: string): Message => ({ _tag: 'NameTyped', value })
+
+/** A message of the date's view, as the page receives it. */
+const toDate = (message: Expiration.Message): Message => ({ _tag: 'Expiration', message })
 
 /** The name as the field shows it. */
-const nameOf = (form: Form) => Opt.getOrElse(form.maybeName, () => '')
+const nameOf = (s: Whole) => Opt.getOrElse(s.own.maybeName, () => '')
+
+/** The page's own state of a step's, changed. */
+const withOwn = (s: Whole, change: Partial<State>): State => ({ ...s.own, ...change })
 
 /** Whether the model draws the name's field to type into: on the first step, while it takes input and while it adds. */
 const isNameEditable = (model: Model) =>
   model._tag === 'Naming' || (model._tag === 'Adding' && model.step._tag === 'Naming')
 
-/** The same state, with its form changed. */
-const withForm = (state: State, change: Partial<Form>): State => ({ ...state, form: { ...state.form, ...change } })
+/** Whether the second step is shown: while it takes the date, and while a product is added from it. */
+const showsDate = ({ own: { phase } }: Whole) =>
+  phase._tag === 'Dating' || (phase._tag === 'Submitting' && phase.from === 'Dating')
 
-/** The second step, with its date changed. */
-const withDate = (state: State & { _tag: 'Dating' }, change: Partial<DateForm>): State => ({
-  ...state,
-  date: { ...state.date, ...change },
-})
+/** The date's state, where the second step is shown. */
+const dateOf = (s: Whole) => Opt.map(s.children.Expiration, ({ state }) => state)
 
-/** The step a product is added from. */
-const stepOf = (state: State & { _tag: 'Naming' | 'Dating' }): Step =>
-  state._tag === 'Naming' ? { _tag: 'Naming' } : { _tag: 'Dating', date: state.date }
-
-/** The step a product was added from, as it was. */
-const resumed = (step: Step, form: Form): State =>
-  step._tag === 'Naming' ? { _tag: 'Naming', form } : { _tag: 'Dating', form, date: step.date }
-
-/**
- * The days the page offers, by the rules of a product: those the digits name, read in the order in use, from the
- * clock's time on.
- */
-const offeredDates = (form: Form, date: DateForm) =>
-  Opt.match(Opt.all([form.maybeNow, form.maybeOrder]), {
-    onNone: () => [],
-    onSome: ([now, order]) => DigitDateEntry.offered(date, Day.fromDateTime(now), order, Product.canExpireOn(now)),
+/** The day the date concludes, when it names one. */
+const concludedDay = (s: Whole) =>
+  Opt.flatMap(dateOf(s), (date) => {
+    const output = Expiration.program.output(date)
+    return output._tag === 'On' ? Opt.some(output.day) : Opt.none()
   })
-
-/** Whether more digits typed after the form's can name a day a product added now may expire on. */
-const canCompleteDate = (form: Form, date: DateForm) =>
-  Opt.match(Opt.all([form.maybeNow, form.maybeOrder]), {
-    onNone: () => false,
-    onSome: ([now, order]) => DigitDateEntry.canComplete(date, Day.fromDateTime(now), order, Product.canExpireOn(now)),
-  })
-
-/** The day the form names: the one picked, while the digits name it, or else the only one they name. */
-const namedDate = (form: Form, date: DateForm): Opt.Option<Day.Day> =>
-  DigitDateEntry.named(date, offeredDates(form, date))
 
 /** The product the name describes, created at the clock's time, with that expiration. */
-const productOf = (form: Form, maybeExpirationDate: Opt.Option<Day.Day>) =>
+const productOf = (s: Whole, maybeExpirationDate: Opt.Option<Day.Day>) =>
   Opt.flatMap(
-    Opt.all([form.maybeName, form.maybeNow]),
+    Opt.all([s.own.maybeName, s.own.maybeNow]),
     ([name, creationDate]) => Product.make({ name, creationDate, maybeExpirationDate }),
   )
 
-/** The product a step describes: never expiring on the first, expiring on the day named on the second. */
-const productOfStep = (state: State & { _tag: 'Naming' | 'Dating' }) =>
-  state._tag === 'Naming'
-    ? productOf(state.form, Opt.none())
-    : Opt.flatMap(namedDate(state.form, state.date), (date) => productOf(state.form, Opt.some(date)))
+/** The product a step describes: never expiring on the first, expiring on the day the date concludes on the second. */
+const productOfStep = (s: Whole) =>
+  s.own.phase._tag === 'Naming'
+    ? productOf(s, Opt.none())
+    : s.own.phase._tag === 'Dating'
+    ? Opt.flatMap(concludedDay(s), (day) => productOf(s, Opt.some(day)))
+    : Opt.none()
 
 /** Whether the page reads the camera: while the scanner is open, until it fails. */
-const readsCamera = (state: State) => state._tag === 'Scanning' && state.form.camera === 'Available'
+const readsCamera = ({ own }: Whole) => own.phase._tag === 'Scanning' && own.camera === 'Available'
 
 /** Whether the page looks `barcode` up. */
-const looksUp = (state: State, barcode: string) => state._tag === 'LookingUp' && state.barcode === barcode
+const looksUp = ({ own: { phase } }: Whole, code: string) => phase._tag === 'LookingUp' && phase.barcode === code
 
-/** The numbers of the products on their way into the fridge. */
-const onTheirWay = (fridge: Fridge): ReadonlyArray<number> =>
-  fridge._tag === 'Open' ? fridge.arrivals.map(({ id }) => id) : []
+/** The snackbar's state. */
+const snackbarOf = (s: Whole) => Opt.getOrThrow(s.children.Snackbar)
 
-/** Whether the fridge is closing behind the product added as the `id`th. */
-const closesBehind = (fridge: Fridge, id: number) => fridge._tag === 'Closing' && fridge.last.id === id
-
-/** The snackbar of a failure, after the one standing, if any. */
-const told = (form: Form, failure: Failure): Snackbar =>
-  form.snackbar._tag === 'Shown'
-    ? { _tag: 'Shown', id: form.snackbar.id + 1, failure, entrance: 'AfterAnother' }
-    : { _tag: 'Shown', id: 0, failure, entrance: 'Alone' }
+/** The fridge's state. */
+const fridgeOf = (s: Whole) => Opt.getOrThrow(s.children.Fridge).state
 
 /**
- * A message that cannot arrive in that state: a completion while no product is being added, the camera's while
- * the page does not read it, a lookup's answer for a barcode it does not look up, a snackbar's end without one, the
- * arrival of a product not on its way, or the fridge's closing behind a product it is not closing behind.
+ * A message that cannot arrive in that state: a completion while no product is being added, the camera's while the
+ * page does not read it, a lookup's answer for a barcode it does not look up, or the camera's check once it is
+ * known.
  */
-const cannotArrive = (msg: Message, before: State) =>
-  (msg._tag === 'Completed' && before._tag !== 'Submitting')
-  || (msg._tag === 'SnackbarExpired' && before.form.snackbar._tag === 'None')
+const cannotArrive = (msg: Message, before: Whole) =>
+  (msg._tag === 'Completed' && before.own.phase._tag !== 'Submitting')
   || ((msg._tag === 'Scanned' || msg._tag === 'CameraFailed') && !readsCamera(before))
   || (msg._tag === 'LookedUp' && !looksUp(before, msg.barcode))
-  || (msg._tag === 'Arrived' && !onTheirWay(before.form.fridge).includes(msg.id))
-  || (msg._tag === 'FridgeClosed' && !closesBehind(before.form.fridge, msg.id))
+  || (msg._tag === 'CameraChecked' && before.own.camera !== 'Checking')
 
 const onAStep = fc.oneof(naming, dating)
 
 const offAnyStep = fc.oneof(lookingUp, scanning, submitting)
-
-const offTheDate = fc.oneof(naming, lookingUp, scanning, submitting)
 
 describe('AddProducts update', () => {
   test('is total and deterministic, but for a message that cannot arrive', () => {
@@ -177,13 +134,16 @@ describe('AddProducts update', () => {
     })
   })
 
-  // Each message the view sends, a write into the name included, is accepted in the state it was rendered from;
-  // sent twice from the same frame, it acts once, but the keypad's digit keys, which are meant to repeat, and the
-  // close button, whose second press the parent ignores once the page is gone. And what the user could ask for and
-  // `update` accepts is in the view.
+  // Each message the view sends, what the name field gives and the date's keys included, is accepted in the state it
+  // was rendered from; sent twice from the same frame, it acts once, but the keypad's digit and erase keys, which are
+  // meant to repeat, and the close button, whose second press the parent ignores once the page is gone. The name
+  // already there means nothing. And what the user could ask for and `update` accepts is in the view.
   test('the view sends what update accepts, all of it, and acts once when sent twice', () => {
     fc.assert(fc.property(state, fc.string(), anyDay, (before, inputValue, date) => {
-      const offered = before._tag === 'Dating' ? offeredDates(before.form, before.date) : []
+      const model = makeModel(before)
+      const named = model._tag === 'Dating' && model.expiration.strip._tag === 'Naming'
+        ? model.expiration.strip.choices.map((choice) => choice.date)
+        : []
       const askable = [
         Msg.NameCleared(),
         Msg.ScanRequested(),
@@ -192,88 +152,98 @@ describe('AddProducts update', () => {
         Msg.DateDismissed(),
         Msg.Closed(),
         Msg.LookupCancelled(),
-        Msg.DigitErased(),
-        Msg.DateCleared(),
-        ...digits.map((digit) => Msg.DigitTyped({ digit })),
         Msg.Started(),
-        // The days the digits name, and any other.
-        ...[date, ...offered].map((day) => Msg.DateChosen({ date: day })),
-        ...DateOrder.all.map((order) => Msg.OrderPicked({ order })),
+        ...[
+          { _tag: 'DigitErased' } as const,
+          { _tag: 'DateCleared' } as const,
+          ...digits.map((digit) => ({ _tag: 'DigitTyped', digit } as const)),
+          // The days the digits name, and any other.
+          ...[date, ...named].map((day) => ({ _tag: 'DateChosen', date: day } as const)),
+          ...DateOrder.all.map((order) => ({ _tag: 'OrderPicked', order } as const)),
+        ].map(toDate),
       ]
       expect(dispatchViolations(program.update, {
         state: before,
-        held: messagesSentBy<Model, Message>(view, makeModel(before), inputValue),
+        held: messagesSentBy<Model, Message>(view, model, inputValue),
         candidates: askable,
-        repeatable: (msg) => msg._tag === 'DigitTyped' || msg._tag === 'DigitErased' || msg._tag === 'Closed',
+        repeatable: (msg) =>
+          msg._tag === 'Closed'
+          || (msg._tag === 'Expiration' && (msg.message._tag === 'DigitTyped' || msg.message._tag === 'DigitErased')),
+        inert: (msg, s) => msg._tag === 'NameTyped' && msg.value === nameOf(s),
       })).toEqual([])
     }))
   })
 
-  // A write of another name than the one shown: held where the field is drawn to type into, a candidate wherever the
-  // name is shown. Covered by the scanner or the second step, the name still takes a key typed in the frame before,
-  // which nothing drawn sends: withheld there.
-  test('draws the name to type into exactly where a write over it is stored, once', () => {
+  // Another name than the one shown: held where the field is drawn to type into, a candidate wherever the name is
+  // stored. Covered by the scanner or the second step, the name still takes a key typed in the frame before, which
+  // nothing drawn sends: withheld there.
+  test('draws the name to type into exactly where what is typed over it is stored, once', () => {
     fc.assert(fc.property(state, (before) => {
       const model = makeModel(before)
-      const over = written(`${model.name}1`)
+      const over = typed(`${model.name}1`)
       expect(dispatchViolations(program.update, {
         state: before,
         held: isNameEditable(model) ? [over] : [],
         candidates: [over],
         withheld: (_, s) =>
-          s._tag === 'Scanning' || s._tag === 'Dating' || (s._tag === 'Submitting' && s.step._tag === 'Dating'),
+          s.own.phase._tag === 'Scanning' || s.own.phase._tag === 'Dating'
+          || (s.own.phase._tag === 'Submitting' && s.own.phase.from === 'Dating'),
       })).toEqual([])
     }))
   })
 
-  test('the view writes what the name field holds into the name, exactly where the model draws it to type into', () => {
+  test('the view fills NameTyped with what the name field gives, exactly where the model draws it to type into', () => {
     fc.assert(fc.property(state, fc.string(), (before, inputValue) => {
       const model = makeModel(before)
-      const writes: ReadonlyArray<Message> = messagesSentBy<Model, Message>(view, model, inputValue).filter((msg) =>
-        msg._tag === 'Name'
+      const sent: ReadonlyArray<Message> = messagesSentBy<Model, Message>(view, model, inputValue).filter((msg) =>
+        msg._tag === 'NameTyped'
       )
-      expect(writes).toEqual(isNameEditable(model) ? [written(inputValue)] : [])
+      expect(sent).toEqual(isNameEditable(model) ? [typed(inputValue)] : [])
     }))
   })
 
-  describe('a write into the name', () => {
+  describe('NameTyped', () => {
     // Covered or disabled, the name still takes a key typed just before. The name is no longer the lookup's.
-    test('stores what is typed, as typed, and drops the lookup\'s answer, in any state but the lookup\'s', () => {
+    test('stores what is typed, as typed, and drops the lookup\'s answer, in any phase but the lookup\'s', () => {
       assertProperty([state, fc.string()], (before, name) => {
-        fc.pre(before._tag !== 'LookingUp' && name !== nameOf(before.form))
+        fc.pre(before.own.phase._tag !== 'LookingUp' && name !== nameOf(before))
         return Equal.equals(
-          step(written(name), before).after,
-          withForm(before, { maybeName: Opt.some(name), lookup: { _tag: 'Idle' } }),
+          step(typed(name), before).after.own,
+          withOwn(before, { maybeName: Opt.some(name), lookup: { _tag: 'Idle' } }),
         )
       })
     })
 
     test('of the name already there leaves the very same state, the lookup\'s answer kept', () => {
       assertProperty([state], (before) => {
-        fc.pre(before._tag !== 'LookingUp')
-        const { after, commands, events } = step(written(nameOf(before.form)), before)
-        return after === before && commands.length === 0 && events.length === 0
+        fc.pre(before.own.phase._tag !== 'LookingUp')
+        const { after, commands, events } = step(typed(nameOf(before)), before)
+        return after.own === before.own && Equal.equals(after, before) && commands.length === 0
+          && events.length === 0
       })
     })
 
     // The field is drawn read-only meanwhile: the name is the scan's.
     test('is rejected while the scanned barcode is looked up', () => {
-      assertProperty([lookingUp, fc.string()], (before, name) => rejects(written(name), before))
+      assertProperty([lookingUp, fc.string()], (before, name) => rejects(typed(name), before))
     })
   })
 
-  test('NameCleared empties the name, drawing the input anew, drops the lookup\'s answer, and is rejected with no name to clear', () => {
+  test('NameCleared empties the name, drawing the field anew, drops the lookup\'s answer, and is rejected with no name to clear', () => {
     assertProperty(
       [state],
       (before) =>
-        before._tag === 'Naming' && Opt.exists(before.form.maybeName, (name) => name !== '')
+        before.own.phase._tag === 'Naming' && Opt.exists(before.own.maybeName, (name) => name !== '')
           ? Equal.equals(step(Msg.NameCleared(), before), {
             rejected: false,
-            after: withForm(before, {
-              maybeName: Opt.none(),
-              replacements: before.form.replacements + 1,
-              lookup: { _tag: 'Idle' },
-            }),
+            after: {
+              ...before,
+              own: withOwn(before, {
+                maybeName: Opt.none(),
+                replacements: before.own.replacements + 1,
+                lookup: { _tag: 'Idle' },
+              }),
+            },
             commands: [],
             events: [],
           })
@@ -283,22 +253,22 @@ describe('AddProducts update', () => {
 
   test('ScanRequested opens the scanner once the device can read barcodes, on the first step', () => {
     assertProperty([state], (before) =>
-      before._tag === 'Naming' && before.form.camera === 'Available'
+      before.own.phase._tag === 'Naming' && before.own.camera === 'Available'
         ? Equal.equals(step(Msg.ScanRequested(), before), {
           rejected: false,
-          after: { _tag: 'Scanning', form: before.form },
+          after: { ...before, own: withOwn(before, { phase: { _tag: 'Scanning' } }) },
           commands: [],
           events: [],
         })
         : rejects(Msg.ScanRequested(), before))
   })
 
-  test('ScanClosed closes the scanner with the form kept', () => {
+  test('ScanClosed closes the scanner with the rest kept', () => {
     assertProperty([state], (before) =>
-      before._tag === 'Scanning'
+      before.own.phase._tag === 'Scanning'
         ? Equal.equals(step(Msg.ScanClosed(), before), {
           rejected: false,
-          after: { _tag: 'Naming', form: before.form },
+          after: { ...before, own: withOwn(before, { phase: { _tag: 'Naming' } }) },
           commands: [],
           events: [],
         })
@@ -306,83 +276,77 @@ describe('AddProducts update', () => {
   })
 
   // Scanning again is how a failed lookup is retried. The answer of an earlier lookup is gone with it.
-  test('Scanned empties the name, drawing the input anew, closes the scanner with a vibration, and waits for the lookup of the barcode', () => {
+  test('Scanned empties the name, drawing the field anew, closes the scanner with a vibration, and waits for the lookup of the barcode', () => {
     assertProperty([scanning, fc.oneof(fc.string(), barcode)], (before, scanned) => {
       fc.pre(readsCamera(before))
-      return Equal.equals(step(Msg.Scanned({ barcode: scanned }), before), {
-        rejected: false,
-        after: {
-          _tag: 'LookingUp',
-          form: {
-            ...before.form,
-            maybeName: Opt.none(),
-            replacements: before.form.replacements + 1,
-            lookup: { _tag: 'Idle' },
-          },
-          barcode: scanned,
-        },
-        commands: [Cmd.Vibrate({ feedback: 'Confirm' })],
-        events: [],
-      })
+      const { after, commands, events } = step(Msg.Scanned({ barcode: scanned }), before)
+      return Equal.equals(
+        after.own,
+        withOwn(before, {
+          phase: { _tag: 'LookingUp', barcode: scanned },
+          maybeName: Opt.none(),
+          replacements: before.own.replacements + 1,
+          lookup: { _tag: 'Idle' },
+        }),
+      )
+        && Equal.equals(commands, [Cmd.Vibrate({ feedback: 'Confirm' })])
+        && events.length === 0
     })
   })
 
   describe('LookedUp', () => {
-    test('a product found names it, drawing the input anew, and says where the name came from, back on the first step', () => {
-      assertProperty(
-        [lookingUp, fc.string({ minLength: 1 }), fc.webUrl()],
-        (before, name, url) =>
-          Equal.equals(step(Msg.LookedUp({ barcode: before.barcode, outcome: { _tag: 'Found', name, url } }), before), {
-            rejected: false,
-            after: {
-              _tag: 'Naming',
-              form: {
-                ...before.form,
-                maybeName: Opt.some(name),
-                replacements: before.form.replacements + 1,
-                lookup: { _tag: 'Found', url },
-              },
-            },
-            commands: [],
-            events: [],
+    const lookedUp = (before: Whole, result: Message) => {
+      const { after, commands, events } = step(result, before)
+      return { own: after.own, quiet: commands.length === 0 && events.length === 0 }
+    }
+
+    test('a product found names it, drawing the field anew, and says where the name came from, back on the first step', () => {
+      assertProperty([lookingUp, fc.string({ minLength: 1 }), fc.webUrl()], (before, name, url) => {
+        const code = before.own.phase._tag === 'LookingUp' ? before.own.phase.barcode : ''
+        const { own, quiet } = lookedUp(
+          before,
+          Msg.LookedUp({ barcode: code, outcome: { _tag: 'Found', name, url } }),
+        )
+        return quiet && Equal.equals(
+          own,
+          withOwn(before, {
+            phase: { _tag: 'Naming' },
+            maybeName: Opt.some(name),
+            replacements: before.own.replacements + 1,
+            lookup: { _tag: 'Found', url },
           }),
-      )
+        )
+      })
     })
 
     test('a product unknown leaves the name empty, and says so with the barcode, back on the first step', () => {
-      assertProperty(
-        [lookingUp],
-        (before) =>
-          Equal.equals(step(Msg.LookedUp({ barcode: before.barcode, outcome: { _tag: 'NotFound' } }), before), {
-            rejected: false,
-            after: { _tag: 'Naming', form: { ...before.form, lookup: { _tag: 'NotFound', barcode: before.barcode } } },
-            commands: [],
-            events: [],
-          }),
-      )
+      assertProperty([lookingUp], (before) => {
+        const code = before.own.phase._tag === 'LookingUp' ? before.own.phase.barcode : ''
+        const { own, quiet } = lookedUp(before, Msg.LookedUp({ barcode: code, outcome: { _tag: 'NotFound' } }))
+        return quiet
+          && Equal.equals(
+            own,
+            withOwn(before, { phase: { _tag: 'Naming' }, lookup: { _tag: 'NotFound', barcode: code } }),
+          )
+      })
     })
 
     test('a failed lookup leaves the name empty, and says so, back on the first step', () => {
-      assertProperty(
-        [lookingUp],
-        (before) =>
-          Equal.equals(step(Msg.LookedUp({ barcode: before.barcode, outcome: { _tag: 'Failed' } }), before), {
-            rejected: false,
-            after: { _tag: 'Naming', form: { ...before.form, lookup: { _tag: 'Failed' } } },
-            commands: [],
-            events: [],
-          }),
-      )
+      assertProperty([lookingUp], (before) => {
+        const code = before.own.phase._tag === 'LookingUp' ? before.own.phase.barcode : ''
+        const { own, quiet } = lookedUp(before, Msg.LookedUp({ barcode: code, outcome: { _tag: 'Failed' } }))
+        return quiet && Equal.equals(own, withOwn(before, { phase: { _tag: 'Naming' }, lookup: { _tag: 'Failed' } }))
+      })
     })
   })
 
   // The runtime interrupts the lookup's subscription: its answer never arrives.
   test('LookupCancelled stops the lookup, the name left empty, back on the first step, and is rejected otherwise', () => {
     assertProperty([state], (before) =>
-      before._tag === 'LookingUp'
+      before.own.phase._tag === 'LookingUp'
         ? Equal.equals(step(Msg.LookupCancelled(), before), {
           rejected: false,
-          after: { _tag: 'Naming', form: before.form },
+          after: { ...before, own: withOwn(before, { phase: { _tag: 'Naming' } }) },
           commands: [],
           events: [],
         })
@@ -394,197 +358,113 @@ describe('AddProducts update', () => {
     assertProperty([scanning], (before) => {
       fc.pre(readsCamera(before))
       const { after, commands } = step(Msg.CameraFailed(), before)
-      return Equal.equals(after, withForm(before, { camera: 'Unavailable' }))
+      return Equal.equals(after.own, withOwn(before, { camera: 'Unavailable' }))
         && Equal.equals(commands, [Cmd.Vibrate({ feedback: 'Reject' })])
     })
   })
 
-  // The page opened, left and opened again before its check answered gets two answers: the second is late.
-  test('CameraChecked says whether the device can read barcodes, in any state, and is rejected once it is known', () => {
-    assertProperty([state, fc.boolean()], (before, isAvailable) =>
-      before.form.camera === 'Checking'
-        ? Equal.equals(step(Msg.CameraChecked({ isAvailable }), before), {
+  // The root starts each visit of the page anew, and the library rejects an answer for a visit gone: only the check
+  // of this visit answers, once.
+  describe('CameraChecked', () => {
+    test('says whether the device can read barcodes, in any phase, while the camera is being checked', () => {
+      assertProperty([state, fc.boolean()], (before, isAvailable) => {
+        fc.pre(before.own.camera === 'Checking')
+        return Equal.equals(step(Msg.CameraChecked({ isAvailable }), before), {
           rejected: false,
-          after: withForm(before, { camera: isAvailable ? 'Available' : 'Unavailable' }),
+          after: { ...before, own: withOwn(before, { camera: isAvailable ? 'Available' : 'Unavailable' }) },
           commands: [],
           events: [],
         })
-        : rejects(Msg.CameraChecked({ isAvailable }), before))
+      })
+    })
+
+    test('is a defect once the camera is known', () => {
+      assertProperty([state, fc.boolean()], (before, isAvailable) => {
+        fc.pre(before.own.camera !== 'Checking')
+        expect(() => program.update(Msg.CameraChecked({ isAvailable }))(before)).toThrow(Tea.InvariantDefect)
+        return true
+      })
+    })
   })
 
   // The date is the product's: only a name that is one goes on to it.
-  test('DateRequested goes on to the date, with no digit, while the name is a product\'s, on the first step', () => {
-    assertProperty([state], (before) =>
-      before._tag === 'Naming' && Opt.isSome(productOf(before.form, Opt.none()))
-        ? Equal.equals(step(Msg.DateRequested(), before), {
-          rejected: false,
-          after: { _tag: 'Dating', form: before.form, date: { digits: '', maybeChosenDate: Opt.none() } },
-          commands: [],
-          events: [],
-        })
-        : rejects(Msg.DateRequested(), before))
+  test('DateRequested goes on to the date, started anew with no digit and told the time, while the name is a product\'s, on the first step', () => {
+    assertProperty([state], (before) => {
+      if (before.own.phase._tag !== 'Naming' || Opt.isNone(productOf(before, Opt.none()))) {
+        return rejects(Msg.DateRequested(), before)
+      }
+      const { after, commands, events } = step(Msg.DateRequested(), before)
+      return Equal.equals(after.own, withOwn(before, { phase: { _tag: 'Dating' } }))
+        && Opt.exists(dateOf(after), (date) =>
+          Opt.isNone(date.maybeStored) && date.date._tag === 'Kept'
+          && Equal.equals(date.page, { maybeNow: before.own.maybeNow, isLocked: false })
+          && Expiration.program.output(date)._tag === 'Never')
+        && commands.length === 0 && events.length === 0
+    })
   })
 
   test('DateDismissed goes back to the name, the date forgotten, and is rejected off the second step', () => {
-    assertProperty([state], (before) =>
-      before._tag === 'Dating'
-        ? Equal.equals(step(Msg.DateDismissed(), before), {
-          rejected: false,
-          after: { _tag: 'Naming', form: before.form },
-          commands: [],
-          events: [],
-        })
-        : rejects(Msg.DateDismissed(), before))
-  })
-
-  describe('the keypad', () => {
-    test('types a digit after the others, up to the longest date, and forgets the day picked', () => {
-      assertProperty([dating, digit], (before, typed) =>
-        before.date.digits.length >= MAX_DIGITS
-          ? rejects(Msg.DigitTyped({ digit: typed }), before)
-          : Equal.equals(
-            step(Msg.DigitTyped({ digit: typed }), before).after,
-            withDate(before, { digits: before.date.digits + typed, maybeChosenDate: Opt.none() }),
-          ))
-    })
-
-    test('erases the last digit and forgets the day picked, or is rejected when there is no digit', () => {
-      assertProperty([dating], (before) =>
-        before.date.digits === ''
-          ? rejects(Msg.DigitErased(), before)
-          : Equal.equals(
-            step(Msg.DigitErased(), before).after,
-            withDate(before, { digits: before.date.digits.slice(0, -1), maybeChosenDate: Opt.none() }),
-          ))
-    })
-
-    test('clears every digit and forgets the day picked, or is rejected when there is no digit', () => {
-      assertProperty([dating], (before) =>
-        before.date.digits === ''
-          ? rejects(Msg.DateCleared(), before)
-          : Equal.equals(
-            step(Msg.DateCleared(), before).after,
-            withDate(before, { digits: '', maybeChosenDate: Opt.none() }),
-          ))
-    })
-
-    test('is rejected off the second step', () => {
-      assertProperty(
-        [offTheDate, digit],
-        (before, typed) =>
-          rejects(Msg.DigitTyped({ digit: typed }), before) && rejects(Msg.DigitErased(), before)
-          && rejects(Msg.DateCleared(), before),
-      )
+    assertProperty([state], (before) => {
+      if (before.own.phase._tag !== 'Dating') return rejects(Msg.DateDismissed(), before)
+      const { after, commands } = step(Msg.DateDismissed(), before)
+      return Equal.equals(after.own, withOwn(before, { phase: { _tag: 'Naming' } }))
+        && Opt.isNone(after.children.Expiration) && commands.length === 0
     })
   })
 
-  test('TimeChanged keeps the time', () => {
-    assertProperty(
-      [state, zoned],
-      (before, now) =>
-        Equal.equals(step(Msg.TimeChanged({ now }), before).after, withForm(before, { maybeNow: Opt.some(now) })),
-    )
+  // The date reads its days from the page's clock.
+  test('TimeChanged keeps the time, and tells it to the date', () => {
+    assertProperty([state, zoned], (before, now) => {
+      const { after } = step(Msg.TimeChanged({ now }), before)
+      return Equal.equals(after.own, withOwn(before, { maybeNow: Opt.some(now) }))
+        && Equal.equals(
+          Opt.map(dateOf(after), ({ page }) => page.maybeNow),
+          Opt.map(dateOf(before), () => Opt.some(now)),
+        )
+    })
   })
 
   test('KeyboardMoved keeps how far the keyboard covers the page', () => {
     assertProperty(
       [state, keyboardInset],
       (before, inset) =>
-        Equal.equals(step(Msg.KeyboardMoved({ inset }), before).after, withForm(before, { keyboardInset: inset })),
+        Equal.equals(step(Msg.KeyboardMoved({ inset }), before).after.own, withOwn(before, { keyboardInset: inset })),
     )
-  })
-
-  // The pick applies at once, and is kept in the setting, which reports it back.
-  test('OrderPicked takes another order than the one in use and keeps it, on the second step, and is rejected otherwise', () => {
-    assertProperty(
-      [state, order],
-      (before, picked) =>
-        before._tag === 'Dating' && Opt.isSome(before.form.maybeOrder) && !Opt.contains(before.form.maybeOrder, picked)
-          ? Equal.equals(step(Msg.OrderPicked({ order: picked }), before), {
-            rejected: false,
-            after: withForm(before, { maybeOrder: Opt.some(picked) }),
-            commands: [Cmd.KeepOrder({ order: picked })],
-            events: [],
-          })
-          : rejects(Msg.OrderPicked({ order: picked }), before),
-    )
-  })
-
-  test('OrderChanged keeps the order, in any state', () => {
-    assertProperty(
-      [state, order],
-      (before, order) =>
-        Equal.equals(
-          step(Msg.OrderChanged({ order }), before).after,
-          withForm(before, { maybeOrder: Opt.some(order) }),
-        ),
-    )
-  })
-
-  test('OrderKept changes nothing, and says so with a snackbar, after the one standing, and a vibration when the order could not be kept', () => {
-    assertProperty([state, fc.boolean()], (before, succeeded) => {
-      const { after, commands } = step(Msg.OrderKept({ succeeded }), before)
-      return Equal.equals(after, succeeded ? before : withForm(before, { snackbar: told(before.form, 'OrderNotKept') }))
-        && Equal.equals(commands, succeeded ? [] : [Cmd.Vibrate({ feedback: 'Reject' })])
-    })
-  })
-
-  describe('SnackbarExpired', () => {
-    test('withdraws the snackbar, in any state, and touches nothing else', () => {
-      assertProperty([state], (before) => {
-        fc.pre(before.form.snackbar._tag === 'Shown')
-        const { after, commands } = step(Msg.SnackbarExpired(), before)
-        return Equal.equals(after, withForm(before, { snackbar: { _tag: 'None' } })) && commands.length === 0
-      })
-    })
-
-    // The timer runs only while a snackbar is shown, so its end heard otherwise is a bug.
-    test('is a defect when no snackbar is shown', () => {
-      assertProperty([state], (before) => {
-        fc.pre(before.form.snackbar._tag === 'None')
-        expect(() => program.update(Msg.SnackbarExpired())(before)).toThrow(Tea.InvariantDefect)
-        return true
-      })
-    })
-  })
-
-  describe('DateChosen', () => {
-    test('picks a day the digits name, unless the form already names it, and is rejected on any other day', () => {
-      assertProperty([dating, anyDay], (before, date) => {
-        const offered = offeredDates(before.form, before.date)
-        return [...offered, date].every((day) => {
-          const msg = Msg.DateChosen({ date: day })
-          const isOffered = offered.some((d) => d === day)
-          return isOffered && !Opt.contains(namedDate(before.form, before.date), day)
-            ? Equal.equals(step(msg, before).after, withDate(before, { maybeChosenDate: Opt.some(day) }))
-            : rejects(msg, before)
-        })
-      })
-    })
-
-    test('is rejected off the second step', () => {
-      assertProperty([offTheDate, anyDay], (before, date) => rejects(Msg.DateChosen({ date }), before))
-    })
   })
 
   describe('Started', () => {
     // The product is created at the time the page last heard: the rules of a product decide.
-    test('adds the product the step describes, never expiring from the first, and is rejected while it describes none', () => {
+    test('adds the product the step describes, never expiring from the first, on the day the date concludes from the second, and is rejected while it describes none', () => {
       assertProperty([onAStep], (before) =>
         Opt.match(productOfStep(before), {
           onNone: () => rejects(Msg.Started(), before),
           onSome: (product) => {
+            const from = before.own.phase._tag === 'Naming' ? 'Naming' : 'Dating'
             const { after, commands } = step(Msg.Started(), before)
-            return Equal.equals(after, {
-              _tag: 'Submitting',
-              form: before.form,
-              product,
-              step: stepOf(before),
-            })
+            return Equal.equals(after.own, withOwn(before, { phase: { _tag: 'Submitting', product, from } }))
               && Equal.equals(commands, [Cmd.Add({ product })])
-              && (before._tag === 'Naming') === Opt.isNone(product.maybeExpirationDate)
+              && Equal.equals(product.maybeExpirationDate, from === 'Naming' ? Opt.none() : concludedDay(before))
           },
         }))
+    })
+
+    // A date step whose digits name no day, or that has none, adds nothing.
+    test('is rejected on the second step while the date concludes no day', () => {
+      assertProperty([dating], (before) => {
+        fc.pre(Opt.isNone(concludedDay(before)))
+        return rejects(Msg.Started(), before)
+      })
+    })
+
+    test('from the second step, tells the date the form is locked, and keeps it', () => {
+      assertProperty([dating], (before) => {
+        fc.pre(Opt.isSome(productOfStep(before)))
+        const { after } = step(Msg.Started(), before)
+        const model = makeModel(after)
+        return Equal.equals(Opt.map(dateOf(after), ({ page }) => page.isLocked), Opt.some(true))
+          && Equal.equals(Opt.map(dateOf(after), ({ date }) => date), dateOf(before).pipe(Opt.map(({ date }) => date)))
+          && model._tag === 'Adding' && model.step._tag === 'Dating' && Opt.isNone(model.step.expiration.maybeKeys)
+      })
     })
 
     test('is rejected while the lookup goes on, under the scanner and while a product is being added', () => {
@@ -593,24 +473,13 @@ describe('AddProducts update', () => {
   })
 
   // Guards against the properties above passing only on rejections.
-  test('the arbitrary steps describe a product at times, and at times not, with days to pick', () => {
+  test('the arbitrary steps describe a product at times, and at times not', () => {
     const namings = fc.sample(naming, 1_000).map(makeModel)
     const datings = fc.sample(dating, 1_000).map(makeModel)
-    const choices = datings.flatMap((model) =>
-      model._tag === 'Dating' && model.strip._tag === 'Naming' ? model.strip.choices : []
-    )
     expect(namings.some((model) => model._tag === 'Naming' && Opt.isSome(model.maybeAdd))).toBe(true)
     expect(namings.some((model) => model._tag === 'Naming' && Opt.isNone(model.maybeAdd))).toBe(true)
     expect(datings.some((model) => model._tag === 'Dating' && Opt.isSome(model.maybeAdd))).toBe(true)
     expect(datings.some((model) => model._tag === 'Dating' && Opt.isNone(model.maybeAdd))).toBe(true)
-    const orders = datings.flatMap((model) =>
-      model._tag === 'Dating' && model.order._tag === 'Known' ? model.order.choices : []
-    )
-    expect(choices.some((choice) => choice.choice._tag === 'Chosen')).toBe(true)
-    expect(choices.some((choice) => choice.choice._tag === 'Offered')).toBe(true)
-    expect(datings.some((model) => model._tag === 'Dating' && model.order._tag === 'Unknown')).toBe(true)
-    expect(orders.some((choice) => choice.choice._tag === 'Current')).toBe(true)
-    expect(orders.some((choice) => choice.choice._tag === 'Offered')).toBe(true)
   })
 
   // What the view draws is decided here, so that it is checked for any state.
@@ -618,14 +487,14 @@ describe('AddProducts update', () => {
     test('offers both ways out of the first step exactly while the name is a product\'s', () => {
       assertProperty([naming], (s) => {
         const model = makeModel(s)
-        const maybeProduct = productOf(s.form, Opt.none())
+        const maybeProduct = productOf(s, Opt.none())
         return model._tag === 'Naming'
           && Equal.equals(model.maybeRequestDate, Opt.map(maybeProduct, () => Msg.DateRequested()))
           && Equal.equals(model.maybeAdd, Opt.map(maybeProduct, () => Msg.Started()))
       })
     })
 
-    test('offers to add the product on the second step exactly while the digits name its day', () => {
+    test('offers to add the product on the second step exactly while the date concludes its day', () => {
       assertProperty([dating], (s) => {
         const model = makeModel(s)
         return model._tag === 'Dating'
@@ -637,7 +506,7 @@ describe('AddProducts update', () => {
       assertProperty([naming], (s) => {
         const model = makeModel(s)
         return model._tag === 'Naming'
-          && Equal.equals(model.maybeScan, s.form.camera === 'Available' ? Opt.some(Msg.ScanRequested()) : Opt.none())
+          && Equal.equals(model.maybeScan, s.own.camera === 'Available' ? Opt.some(Msg.ScanRequested()) : Opt.none())
       })
     })
 
@@ -645,87 +514,83 @@ describe('AddProducts update', () => {
       assertProperty([submitting], (s) => {
         const model = makeModel(s)
         return model._tag === 'Adding'
-          && (model.step._tag !== 'Naming' || model.step.canScan === (s.form.camera === 'Available'))
+          && (model.step._tag !== 'Naming' || model.step.canScan === (s.own.camera === 'Available'))
       })
     })
 
     // The scanner rises over the first step and the date step covers it: neither draws the fridge.
-    // A product is made once the clock has ticked: before, nothing is on its way.
-    test('shows the fridge on the first step, while it takes input and while it adds, each product on its way due as Home tells it, and nowhere else', () => {
+    test('shows the fridge on the first step, while it takes input and while it adds, away during a lookup, and nowhere else', () => {
       assertProperty([state], (s) => {
         const model = makeModel(s)
-        const shown = model._tag === 'Naming'
+        const shown = model._tag === 'Naming' || model._tag === 'LookingUp'
           ? Opt.some(model.fridge)
           : model._tag === 'Adding' && model.step._tag === 'Naming'
           ? Opt.some(model.step.fridge)
           : Opt.none()
-        const onFirstStep = s._tag === 'Naming' || (s._tag === 'Submitting' && s.step._tag === 'Naming')
-        const { fridge, maybeNow } = s.form
-        const expected: FridgeShown = Opt.match(maybeNow, {
-          onNone: (): FridgeShown => ({ _tag: 'Away' }),
-          onSome: (now): FridgeShown =>
-            fridge._tag === 'Open'
-              ? {
-                ...fridge,
-                arrivals: Arr.map(fridge.arrivals, (arrival) => ({
-                  ...arrival,
-                  due: Opt.match(arrival.product.maybeExpirationDate, {
-                    onNone: (): Due => ({ _tag: 'Never' }),
-                    onSome: (expirationDate): Due => {
-                      const days = Day.daysBetween(Day.fromDateTime(now), expirationDate)
-                      return days <= 1
-                        ? { _tag: 'Now', expirationDate }
-                        : days <= Product.SOON_DAYS
-                        ? { _tag: 'Soon', expirationDate }
-                        : { _tag: 'Later', expirationDate }
-                    },
-                  }),
-                })),
-              }
-              : fridge,
-        })
-        return Equal.equals(shown, onFirstStep ? Opt.some(expected) : Opt.none())
+        const { phase } = s.own
+        const expected = phase._tag === 'Naming' || (phase._tag === 'Submitting' && phase.from === 'Naming')
+          ? Opt.some(Fridge.program.makeModel(fridgeOf(s)))
+          : phase._tag === 'LookingUp'
+          ? Opt.some<Fridge.Model>({ _tag: 'Away' })
+          : Opt.none()
+        return Equal.equals(shown, expected)
+      })
+    })
+
+    test('shows the date as the child draws it, exactly while the second step is shown', () => {
+      assertProperty([state], (s) => {
+        const model = makeModel(s)
+        const shown = model._tag === 'Dating'
+          ? Opt.some(model.expiration)
+          : model._tag === 'Adding' && model.step._tag === 'Dating'
+          ? Opt.some(model.step.expiration)
+          : Opt.none()
+        return showsDate(s) === Opt.isSome(dateOf(s))
+          && Equal.equals(shown, Opt.map(dateOf(s), Expiration.program.makeModel))
       })
     })
 
     test('waits for the lookup exactly while it goes on, offering only to cancel it and to close', () => {
       assertProperty([state], (s) => {
         const model = makeModel(s)
-        return s._tag === 'LookingUp'
+        const { phase } = s.own
+        return phase._tag === 'LookingUp'
           ? Equal.equals(model, {
             _tag: 'LookingUp',
-            keyboardInset: s.form.keyboardInset,
-            supporting: { _tag: 'LookingUp', barcode: s.barcode },
-            name: Opt.getOrElse(s.form.maybeName, () => ''),
-            nameKey: s.form.replacements,
-            snackbar: s.form.snackbar,
+            keyboardInset: s.own.keyboardInset,
+            supporting: { _tag: 'LookingUp', barcode: phase.barcode },
+            name: nameOf(s),
+            nameKey: s.own.replacements,
+            snackbar: Snackbar.makeModel(snackbarOf(s).state),
             close: Msg.Closed(),
             cancelLookup: Msg.LookupCancelled(),
+            fridge: { _tag: 'Away' },
           })
           : model._tag !== 'LookingUp'
       })
     })
 
     test('every state draws how far the page keeps clear of the keyboard', () => {
-      assertProperty([state], (s) => makeModel(s).keyboardInset === s.form.keyboardInset)
+      assertProperty([state], (s) => makeModel(s).keyboardInset === s.own.keyboardInset)
     })
 
-    test('the first step shows the name, drawn anew with each replacement, in every state, the scanner the camera, and every state the snackbar the form holds', () => {
+    test('every state shows the name, drawn anew with each replacement, and the snackbar standing; the scanner the camera', () => {
       assertProperty([state], (s) => {
         const model = makeModel(s)
-        return model.name === Opt.getOrElse(s.form.maybeName, () => '')
-          && model.nameKey === s.form.replacements
-          && Equal.equals(model.snackbar, s.form.snackbar)
-          && (model._tag !== 'Scanning' || model.camera === s.form.camera)
+        return model.name === nameOf(s)
+          && model.nameKey === s.own.replacements
+          && Equal.equals(model.snackbar, Snackbar.makeModel(snackbarOf(s).state))
+          && (model._tag !== 'Scanning' || model.camera === s.own.camera)
+          && (model._tag !== 'Dating' || model.name === nameOf(s))
       })
     })
 
     // A lookup's text comes from a scan, which needs the camera: it wins when the camera failed on a later opening.
     test('the name\'s supporting text says what the lookup found, or else that the camera is unavailable, in every state', () => {
       assertProperty([state], (s) => {
-        const { lookup, camera } = s.form
-        const expected = s._tag === 'LookingUp'
-          ? { _tag: 'LookingUp', barcode: s.barcode }
+        const { lookup, camera, phase } = s.own
+        const expected = phase._tag === 'LookingUp'
+          ? { _tag: 'LookingUp', barcode: phase.barcode }
           : lookup._tag === 'Found'
           ? { _tag: 'FromOpenFoodFacts', url: lookup.url }
           : lookup._tag === 'NotFound'
@@ -736,79 +601,6 @@ describe('AddProducts update', () => {
           ? { _tag: 'CameraUnavailable' }
           : { _tag: 'Nothing' }
         return Equal.equals(makeModel(s).supporting, expected)
-      })
-    })
-
-    // The days can be picked only while the step takes them: not while the product is being added.
-    test('the date field shows the digits as typed; the strip the hint while they name no day yet, the days they name in the order in use with the one picked, or that no more digits can name one', () => {
-      assertProperty([fc.oneof(dating, submitting)], (s) => {
-        const maybeDate = s._tag === 'Dating'
-          ? Opt.some(s.date)
-          : s.step._tag === 'Dating'
-          ? Opt.some(s.step.date)
-          : Opt.none()
-        const model = makeModel(s)
-        const shown = model._tag === 'Dating'
-          ? Opt.some(model)
-          : model._tag === 'Adding' && model.step._tag === 'Dating'
-          ? Opt.some(model.step)
-          : Opt.none()
-        return Opt.match(maybeDate, {
-          onNone: () => Opt.isNone(shown),
-          onSome: (date) => {
-            const offered = offeredDates(s.form, date)
-            const expected = offered.length === 0
-              ? date.digits === '' || canCompleteDate(s.form, date) ? { _tag: 'Hint' } : { _tag: 'NamingNothing' }
-              : {
-                _tag: 'Naming',
-                choices: offered.map((day) => ({
-                  date: day,
-                  choice: Opt.contains(namedDate(s.form, date), day)
-                    ? { _tag: 'Chosen' }
-                    : {
-                      _tag: 'Offered',
-                      maybeChoose: s._tag === 'Dating' ? Opt.some(Msg.DateChosen({ date: day })) : Opt.none(),
-                    },
-                })),
-              }
-            return Opt.exists(
-              shown,
-              (field) =>
-                field.digits === date.digits && Equal.equals(field.strip, expected)
-                && field.name === Opt.getOrElse(s.form.maybeName, () => ''),
-            )
-          },
-        })
-      })
-    })
-
-    // The orders can be picked only while the step takes them: not while the product is being added.
-    test('the second step shows the order in use with the others to pick, once known, exactly while update accepts them', () => {
-      assertProperty([fc.oneof(dating, submitting)], (s) => {
-        const model = makeModel(s)
-        const shown = model._tag === 'Dating'
-          ? Opt.some(model.order)
-          : model._tag === 'Adding' && model.step._tag === 'Dating'
-          ? Opt.some(model.step.order)
-          : Opt.none()
-        const expected = Opt.match(s.form.maybeOrder, {
-          onNone: () => ({ _tag: 'Unknown' }),
-          onSome: (current) => ({
-            _tag: 'Known',
-            order: current,
-            choices: DateOrder.all.map((order) => ({
-              order,
-              choice: order === current
-                ? { _tag: 'Current' }
-                : {
-                  _tag: 'Offered',
-                  maybePick: rejects(Msg.OrderPicked({ order }), s) ? Opt.none() : Opt.some(Msg.OrderPicked({ order })),
-                },
-            })),
-          }),
-        })
-        return (s._tag === 'Dating' || s.step._tag === 'Dating') === Opt.isSome(shown)
-          && Opt.match(shown, { onNone: () => true, onSome: (order) => Equal.equals(order, expected) })
       })
     })
 
@@ -823,117 +615,90 @@ describe('AddProducts update', () => {
       })
     })
 
-    test('offers the keypad on the second step: digits up to the longest date, erasing and clearing once there are any', () => {
-      assertProperty([dating, digit], (s, typed) => {
-        const model = makeModel(s)
-        if (model._tag !== 'Dating') return false
-        const canType = s.date.digits.length < MAX_DIGITS
-        const hasDigits = s.date.digits !== ''
-        return Equal.equals(
-          Opt.map(model.maybeTypeDigit, (keys) => keys[typed]),
-          canType ? Opt.some(Msg.DigitTyped({ digit: typed })) : Opt.none(),
-        )
-          && Equal.equals(model.maybeEraseDigit, hasDigits ? Opt.some(Msg.DigitErased()) : Opt.none())
-          && Equal.equals(model.maybeClearDate, hasDigits ? Opt.some(Msg.DateCleared()) : Opt.none())
-      })
+    test('is data: equal states, built apart, have equal models', () => {
+      fc.assert(fc.property(fc.integer(), (seed) => {
+        const [one] = fc.sample(state, { seed, numRuns: 1 })
+        const [other] = fc.sample(state, { seed, numRuns: 1 })
+        if (one === undefined || other === undefined) throw new Error('nothing sampled')
+        expect(one).not.toBe(other)
+        expect(Equal.equals(makeModel(one), makeModel(other))).toBe(true)
+      }))
     })
   })
 
   describe('Completed', () => {
     // The second step leaves with its own transition.
-    test('success starts the next product at the name, this one\'s kept in the same field, sends it into the fridge by its number, and vibrates', () => {
+    test('success starts the next product at the name, this one\'s kept in the same field, forgets the date, sends the product into the fridge on the day of the clock, and vibrates', () => {
       assertProperty([submitting], (before) => {
+        if (before.own.phase._tag !== 'Submitting') return false
+        const { product } = before.own.phase
+        const today = Day.fromDateTime(Opt.getOrThrow(before.own.maybeNow))
         const { after, commands } = step(Msg.Completed({ succeeded: true }), before)
-        const { fridge, added } = before.form
-        const coming = { id: added, product: before.product }
-        const expected: Fridge = fridge._tag === 'Away'
-          ? { _tag: 'Open', visit: added, opening: 'WithFridge', arrivals: [{ ...coming, entrance: 'WithFridge' }] }
-          : fridge._tag === 'Open'
-          ? { ...fridge, arrivals: [...fridge.arrivals, { ...coming, entrance: 'IntoOpenFridge' }] }
-          : {
-            _tag: 'Open',
-            visit: fridge.visit,
-            opening: 'Again',
-            arrivals: [{ ...coming, entrance: 'IntoOpenFridge' }],
-          }
-        return Equal.equals(after, {
-          _tag: 'Naming',
-          form: { ...before.form, added: added + 1, fridge: expected },
-        })
+        return Equal.equals(after.own, withOwn(before, { phase: { _tag: 'Naming' } }))
+          && Opt.isNone(after.children.Expiration)
+          && Equal.equals(
+            fridgeOf(after),
+            Fridge.program.external({ _tag: 'Admitted', product, today })(fridgeOf(before)).state,
+          )
           && Equal.equals(commands, [Cmd.Vibrate({ feedback: 'Confirm' })])
       })
     })
 
-    // Two products added within a second have the same creation date: their numbers tell them apart.
-    test('two successes in a row send both products on their way, each by a number of its own', () => {
+    test('failure gives the step back, the date with its digits, unlocked, and says so with a snackbar and a vibration', () => {
       assertProperty([submitting], (before) => {
-        const after = step(Msg.Completed({ succeeded: true }), before).after
-        const again = step(Msg.Completed({ succeeded: true }), {
-          _tag: 'Submitting',
-          form: after.form,
-          product: before.product,
-          step: { _tag: 'Naming' },
-        }).after
-        const ids = onTheirWay(again.form.fridge)
-        return ids.length >= 2 && new Set(ids).size === ids.length
-      })
-    })
-
-    test('failure gives the step back, as it was, and says so with a snackbar, after the one standing, and a vibration', () => {
-      assertProperty([submitting], (before) => {
+        if (before.own.phase._tag !== 'Submitting') return false
+        const { from } = before.own.phase
         const { after, commands } = step(Msg.Completed({ succeeded: false }), before)
-        return Equal.equals(after, resumed(before.step, { ...before.form, snackbar: told(before.form, 'AddFailed') }))
-          && Equal.equals(commands, [Cmd.Vibrate({ feedback: 'Reject' })])
+        const { instance, state: snackbar } = snackbarOf(before)
+        return Equal.equals(after.own, withOwn(before, { phase: { _tag: from } }))
+          && Equal.equals(
+            dateOf(after),
+            Opt.map(dateOf(before), (date) => ({ ...date, page: { ...date.page, isLocked: false } })),
+          )
+          && Equal.equals(Snackbar.output(snackbarOf(after).state), Opt.some<Failure>('AddFailed'))
+          && Equal.equals(commands, [
+            Cmd.Vibrate({ feedback: 'Reject' }),
+            { _tag: 'Snackbar', instance, command: { _tag: 'Stamp', id: snackbar.told, lasting: 'Short' } },
+          ])
       })
     })
   })
 
-  describe('the fridge', () => {
-    test('Arrived takes the product out of those on their way, in any state, and closes the door behind the last', () => {
-      assertProperty([state], (before) => {
-        const { fridge } = before.form
-        return fridge._tag !== 'Open' || fridge.arrivals.every((arrival) => {
-          const rest = fridge.arrivals.filter(({ id }) => id !== arrival.id)
-          const expected: Fridge = Arr.isReadonlyArrayNonEmpty(rest)
-            ? { ...fridge, arrivals: rest }
-            : { _tag: 'Closing', visit: fridge.visit, last: arrival }
-          return Equal.equals(
-            step(Msg.Arrived({ id: arrival.id }), before).after,
-            withForm(before, { fridge: expected }),
-          )
-        })
+  // The date's setting answers its own command: a failure to keep the order is the page's to tell.
+  describe('the date\'s OrderNotKept', () => {
+    const keptAnswer = (s: Whole, succeeded: boolean): Message => ({
+      _tag: 'Expiration',
+      instance: Opt.getOrThrow(s.children.Expiration).instance,
+      message: { _tag: 'OrderKept', succeeded },
+    })
+
+    test('says so with a snackbar and a vibration, wherever the date is shown', () => {
+      assertProperty([fc.oneof(dating, submitting)], (before) => {
+        fc.pre(showsDate(before))
+        const { after, commands } = step(keptAnswer(before, false), before)
+        const { instance, state: snackbar } = snackbarOf(before)
+        return Equal.equals(after.own, before.own)
+          && Equal.equals(Snackbar.output(snackbarOf(after).state), Opt.some<Failure>('OrderNotKept'))
+          && Equal.equals(commands, [
+            Cmd.Vibrate({ feedback: 'Reject' }),
+            { _tag: 'Snackbar', instance, command: { _tag: 'Stamp', id: snackbar.told, lasting: 'Short' } },
+          ])
       })
     })
 
-    test('FridgeClosed sends the fridge away, in any state', () => {
-      assertProperty([state], (before) => {
-        const { fridge } = before.form
-        return fridge._tag !== 'Closing'
-          || Equal.equals(
-            step(Msg.FridgeClosed({ id: fridge.last.id }), before).after,
-            withForm(before, { fridge: { _tag: 'Away' } }),
-          )
-      })
-    })
-
-    // The timers are keyed by the product they wait for, so an end heard for any other is a bug.
-    test('Arrived is a defect for a product not on its way, FridgeClosed for one the fridge is not closing behind', () => {
-      assertProperty([state, fc.nat({ max: 12 })], (before, id) => {
-        const { fridge } = before.form
-        if (!onTheirWay(fridge).includes(id)) {
-          expect(() => program.update(Msg.Arrived({ id }))(before)).toThrow(Tea.InvariantDefect)
-        }
-        if (!closesBehind(fridge, id)) {
-          expect(() => program.update(Msg.FridgeClosed({ id }))(before)).toThrow(Tea.InvariantDefect)
-        }
-        return true
+    test('an order kept tells nothing', () => {
+      assertProperty([fc.oneof(dating, submitting)], (before) => {
+        fc.pre(showsDate(before))
+        const { after, commands, events } = step(keptAnswer(before, true), before)
+        return Equal.equals(after, before) && commands.length === 0 && events.length === 0
       })
     })
   })
 
   test('Closed asks the parent to leave the page on the first step, the lookup going on or not, and is rejected otherwise', () => {
     assertProperty([state], (before) => {
-      if (before._tag !== 'Naming' && before._tag !== 'LookingUp') return rejects(Msg.Closed(), before)
+      const { phase } = before.own
+      if (phase._tag !== 'Naming' && phase._tag !== 'LookingUp') return rejects(Msg.Closed(), before)
       const { after, commands, events } = step(Msg.Closed(), before)
       return Equal.equals(after, before) && commands.length === 0 && Equal.equals(events, [Ev.LeaveRequested()])
     })
@@ -941,32 +706,47 @@ describe('AddProducts update', () => {
 
   test('BackPressed leaves the page, closes the scanner or the second step first, and is held while adding', () => {
     assertProperty([state], (before) => {
+      const { phase } = before.own
       const { after, commands, events } = step(Msg.BackPressed(), before)
-      const expected = before._tag === 'Naming' || before._tag === 'LookingUp'
-        ? { after: before, events: [Ev.LeaveRequested()] }
-        : before._tag === 'Scanning' || before._tag === 'Dating'
-        ? { after: { _tag: 'Naming', form: before.form }, events: [] }
-        : { after: before, events: [] }
-      return Equal.equals(after, expected.after) && commands.length === 0 && Equal.equals(events, expected.events)
+      const expected = phase._tag === 'Naming' || phase._tag === 'LookingUp'
+        ? { own: before.own, events: [Ev.LeaveRequested()] }
+        : phase._tag === 'Scanning' || phase._tag === 'Dating'
+        ? { own: withOwn(before, { phase: { _tag: 'Naming' } }), events: [] }
+        : { own: before.own, events: [] }
+      return Equal.equals(after.own, expected.own) && commands.length === 0 && Equal.equals(events, expected.events)
     })
   })
 })
 
 // The back button is observed in every state: while a product is being added, so that it does not leave the app.
-test('the page listens to the clock, the date order, the back button and the keyboard, to the camera while the scanner is open until it fails, to the lookup of the barcode it looks up, and times each product on its way into the fridge, the fridge\'s closing and the snackbar', () => {
-  assertProperty([state, fc.nat({ max: 12 })], (s, id) => {
-    const subscriptions = program.subscriptions(s)
-    const lookups = [...HashMap.keys(subscriptions)].filter((key) => String(key).startsWith('lookup:'))
-    const { fridge } = s.form
-    return HashMap.has(subscriptions, 'clock')
-      && HashMap.has(subscriptions, 'date-order')
-      && HashMap.has(subscriptions, 'back-button')
-      && HashMap.has(subscriptions, 'keyboard')
-      && HashMap.has(subscriptions, 'scanner') === readsCamera(s)
-      && Equal.equals(lookups, s._tag === 'LookingUp' ? [`lookup:${s.barcode}`] : [])
-      && HashMap.has(subscriptions, ['arriving', id]) === onTheirWay(fridge).includes(id)
-      && HashMap.has(subscriptions, ['closing', id]) === closesBehind(fridge, id)
-      && (s.form.snackbar._tag === 'None' || HashMap.has(subscriptions, ['snackbar', s.form.snackbar.id]))
+test('the page listens to the clock, the back button and the keyboard, to the camera while the scanner is open until it fails, to the lookup of the barcode it looks up, and to its children\'s: the snackbar, the fridge, and the date while it is shown', () => {
+  assertProperty([state], (s) => {
+    const keys = program.subscriptions(s)
+    const has = (key: Tea.KeyOf<typeof program>) => keys.some((listed) => Equal.equals(listed, key))
+    const { phase } = s.own
+    const lookups = keys.filter((key) => typeof key === 'object' && key._tag === 'Lookup')
+    const ofChild = <K>(
+      name: 'Snackbar' | 'Fridge' | 'Expiration',
+      maybe: Opt.Option<Readonly<{ instance: number }>>,
+      childKeys: ReadonlyArray<K>,
+    ) =>
+      Opt.match(maybe, {
+        onNone: () => !keys.some((key) => typeof key === 'object' && key._tag === name),
+        onSome: ({ instance }) =>
+          childKeys.every((key) => keys.some((listed) => Equal.equals(listed, { _tag: name, instance, key }))),
+      })
+    const snackbar = snackbarOf(s)
+    const fridge = Opt.getOrThrow(s.children.Fridge)
+    return has('clock') && has('back-button') && has('keyboard')
+      && has('scanner') === readsCamera(s)
+      && Equal.equals(lookups, phase._tag === 'LookingUp' ? [{ _tag: 'Lookup', barcode: phase.barcode }] : [])
+      && ofChild('Snackbar', Opt.some(snackbar), Snackbar.subscriptions(snackbar.state))
+      && ofChild('Fridge', Opt.some(fridge), Fridge.program.subscriptions(fridge.state))
+      && ofChild(
+        'Expiration',
+        s.children.Expiration,
+        Opt.match(dateOf(s), { onNone: () => [], onSome: Expiration.program.subscriptions }),
+      )
   })
 })
 
@@ -975,26 +755,8 @@ describe('the lookup', () => {
 
   /** The messages the lookup's subscription sends, and the one it ends with, on a service that answers `answer`. */
   const endsWith = async (answer: Effect.Effect<Opt.Option<FoundProduct>, ProductLookupError>) => {
-    const s: State = {
-      _tag: 'LookingUp',
-      form: {
-        maybeName: Opt.some(code),
-        replacements: 0,
-        camera: 'Available',
-        lookup: { _tag: 'Idle' },
-        maybeNow: Opt.none(),
-        maybeOrder: Opt.none(),
-        added: 0,
-        fridge: { _tag: 'Away' },
-        snackbar: { _tag: 'None' },
-        keyboardInset: 0,
-      },
-      barcode: code,
-    }
     // Typed with every service of the page, of which it reads the lookup's only.
-    const subscription = Opt.getOrThrow(
-      HashMap.get(program.subscriptions(s), `lookup:${code}`),
-    ) as Tea.Subscription<Message, ProductLookup>
+    const subscription = program.listen({ _tag: 'Lookup', barcode: code }) as Tea.Subscription<Message, ProductLookup>
     const [elements, done] = await Effect.runPromise(
       Effect.zip(Channel.runCollect(subscription), Channel.runDrain(subscription)).pipe(
         Effect.provideService(ProductLookup, { lookup: () => answer }),

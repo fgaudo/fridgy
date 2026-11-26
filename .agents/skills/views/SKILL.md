@@ -6,21 +6,22 @@ description: How Fridgy's views are written - TSX drawn by React Native as a pur
 # Views
 
 Only `view.tsx` files and the entrypoint that mounts React hold TSX; React Native draws the views through
-`#libs/tea-react`. A view is a pure function of the model: no state, no hooks, no effects, no reading of the
-clock or of the platform. It is never a component:
-React calls nothing of the app's but the root, which `#libs/tea-react/renderer.ts` makes, the app's bridge to React
-Native, and every view below is a function that returns elements. The root reads the model of the program's current
-state as effect-tea's bridge to React does, with `useSyncExternalStore`.
+effect-tea's bridge to React (`@fgaudo/effect-tea/react`). A view is a pure function of the model: no state, no
+hooks, no effects, no reading of the clock or of the platform. It is never a component: React calls nothing of
+the app's but `Root`, which `#libs/tea-react/renderer.ts` makes, and every view below is a function that returns
+elements. `Root` draws the app with the bridge's `Draw`, inside an error boundary that gives what a view throws to
+`app.die`, or the screen a crash leaves in its place.
 
 ## The model decides, the view draws
 
 A view matches the model's tags and formats its values; it never decides. Before writing a condition in a view,
-ask whether it reads a tag the model gives (`model.support._tag === 'NamingNothing'`: drawing) or computes one from
+ask whether it reads a tag the model gives (`model.strip._tag === 'NamingNothing'`: drawing) or computes one from
 data (`model.digits === ''`, `choices.length === 0`, `text.trim().length > 0`, a fallback such as "the name, or
 else the id": deciding). A decision moves to `makeModel`, as a case named for what the screen shows
-(`Undated | Naming | NamingNothing`, `Loading | Loaded`, `ExpiringToday | ExpiringTomorrow | Fresh { inDays }`),
-never as a boolean tag, and gets a property in `program.test.ts` ("the model", e.g. "says the date is undated,
-names the days the digits name, or names nothing"). What stays in the view: texts, formatting (`formatDay`), styles
+(`Hint | Naming | NamingNothing`, `Loading | Loaded`, `ExpiringToday | ExpiringTomorrow | Fresh { inDays }`),
+never as a boolean tag, and gets a property in `program.test.ts` ("the model", e.g. "shows the digits as typed; the
+strip the hint while they name no day yet, the days they name with the one named, or that no more digits can name
+one"). What stays in the view: texts, formatting (`formatDay`), styles
 and layout, and matching two tags to one look (the date field, disabled while submitting and in the error's colors
 when nothing is named). The model holds exactly what the view draws: a field no view reads is removed.
 
@@ -30,21 +31,25 @@ when nothing is named). The model holds exactly what the view draws: a field no 
   case: `onPress={model.menu._tag === 'Closed' ? on(model.menu.open) : undefined}`. A view never builds a message:
   it sends what the model holds, and a control shown where `update` rejects its message is a bug the tests find.
   A dispatch applies its message before it returns: when a callback returns, `update` has seen it.
-- What a callback carries (a field's text, a scroll's offset, a layout's height) is written into an input of the
-  program, with `write(Tea.forwardTo(dispatch, '<Input>'))`: the model holds no function to make a message of it.
+- What a callback carries (a field's text, a scroll's offset, a layout's height) fills a message the model holds
+  without its value:
+  `onScroll={(event) => dispatch({ ...model.scrolled, offset: event.nativeEvent.contentOffset.y })}`. The view
+  copies the value as the element gives it: it combines none, compares none and converts none.
 - A text field the user types into is uncontrolled: its text is `defaultValue`, read only when the field is
-  created, and the field writes its text into the program's input from `onChangeText`. A `value` written on every
-  frame would take back the keys typed since that frame: React Native's field tells the program of a key after it
-  has shown it, and effect-tea's controlled elements are its bridges' to the DOM. To replace the text (a clearing,
-  a scan), the model gives the field a new `key`. A field the program types into (the date the keypad fills) is no
-  field: a `Text` in a field's frame.
-- A parent's view hands each child's view its own dispatch, `Tea.forwardTo(dispatch, '<Child>')`, and the
-  child's model whole; it never reads the model's fields. The child draws its pieces where the parent leaves
-  room (Products' list in Home, its subtitle and selection bar in Home's top app bar), or its whole screen (the
-  root draws the page on top).
-- An element keyed by what it shows (a snackbar, by what it tells; a field, by `nameKey`) is drawn anew when that
-  changes. The root keys each page by its name: React reuses an element of the same type in the same place, and a
-  page drawn in another's would keep its native views, and the text of their fields.
+  created, and the field sends its text from `onChangeText`, filling the model's `nameTyped`. A `value` written on
+  every frame would take back the keys typed since that frame: React Native's field tells the program of a key
+  after it has shown it, and effect-tea's controlled elements are its bridges' to the DOM. To replace the text (a
+  clearing, a scan), the model gives the field a new `key`. A field the program types into (the date the keypad
+  fills) is no field: a `Text` in a field's frame.
+- A parent's view hands each child's view its own dispatch, `Tea.forwardTo(dispatch, '<Child>')` (with its id
+  for a child by id), and the child's model whole; it never reads the model's fields. The child draws its pieces
+  where the parent leaves room (Products' list in Home, its subtitle and selection bar in Home's top app bar; the
+  date's controls in a step of AddProducts), or its whole screen (the root draws the page shown). A child without
+  a view (the snackbar) is drawn by its parent's view from its model, which the parent's model holds.
+- An element keyed by what it shows (a snackbar, by its `id`; a field, by `nameKey`) is drawn anew when that
+  changes. The root keys each page by its name and its visit: React reuses an element of the same type in the same
+  place, and a page drawn in another's, or in an earlier visit's, would keep its native views, and the text of
+  their fields.
 - A page draws itself whole: a `SafeAreaView` with the surface's color, keeping clear of the system bars (the app
   is drawn edge to edge), and a frame inside it, from which an absolute position is measured (a menu, a snackbar):
   an absolute position ignores the padding of its parent. A page with a field also keeps clear of the keyboard,
@@ -60,7 +65,7 @@ takes two choices, in this order:
 - **Who drives it.** When the start, the end and the duration are known as the movement starts, and nothing can
   change them on the way, the platform interpolates, on the UI thread: an entering or exiting animation declared
   on the element (Reanimated's layout animations take one as a prop, which a pure view can give), on `transform`
-  and `opacity`. The state keeps the phase ("open", "closing": AddProducts' `fridge`, Products' `presence`), never
+  and `opacity`. The state keeps the phase ("open", "closing": AddProducts' `Fridge`, Products' `presence`), never
   a position. When the state depends on time or on input while the movement runs (a spring that follows a finger, a
   physics, a destination that moves), the program drives it: a subscription sends `Tick({ delta })` on every frame,
   and `update` integrates it. The question is "is the destination known at the start?", never "can the platform be
@@ -112,7 +117,7 @@ a large font makes it. Everything is in `src/styles.ts` (`#styles`):
 
 A look that Material or the app fixes is written once in `src/styles.ts`, never in a component under `src/libs/`,
 which knows nothing of the app. A line of layout stays in the view, written twice where two views draw it (the
-keypad of the two pages that take a date).
+snackbar, which each page that has one places over its own controls).
 
 ## Checking
 

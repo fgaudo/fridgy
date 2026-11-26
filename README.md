@@ -106,27 +106,30 @@ which the package holds, explains how.
 
 What the app adds:
 
-- **The root owns navigation**, a stack of pages. Pages ask for it through events (Elm's "OutMsg"), e.g. to
-  open About, the page that adds products or the one that edits a product, or to be left. A page that cannot
-  start the same way every time starts from flags: the page that edits a product, from the product tapped.
+- **The root owns navigation**: Home, always there, and at most one page over it. Pages ask for it through
+  events (Elm's "OutMsg"), e.g. to open About, the page that adds products or the one that edits a product, or
+  to be left. A page that cannot start the same way every time starts from flags: the page that edits a product,
+  from the product tapped.
 - **An asynchronous operation is a state that waits for its completion**, which only that state accepts.
 - **Bugs crash the app**; expected errors are typed and handled with Effect. A crash shows a screen with a
   button that restarts the app; the cause goes to the log, and nothing leaves the phone.
 
 How the code is organized:
 
-- **A tree of programs** (`src/app/children/`), all of the same shape: the root, its pages and a large page's
-  children are each a folder with a program, a view, a layer, its services and its own `children/`. Each
-  imports nothing of a sibling; Biome enforces the boundaries.
+- **A tree of programs** (`src/app/children/`), all of the same shape: the root, its pages and their children
+  are each a folder with a program, its view, its layer, its services and its own `children/`. Each imports
+  nothing of a sibling; Biome enforces the boundaries.
 - **Services and adapters.** A service is what a program needs from outside (the product list, the scanner, the
   back button), owned by the program that uses it, with the adapters that provide it. Two programs that both
   touch products each have their own.
 - **Shared code moves up**: the entities (`Product`) to `src/domain/`, how things are done (the database's
   schema, how a product is written) to `src/infrastructure/`, Material's look to `src/styles.ts`, a whole program
-  two programs use to the `programs/` of their common parent (none yet).
+  two programs use to the `programs/` of their common parent (the snackbar, and the expiration date typed on a
+  keypad).
 - **The entrypoint** (`src/entrypoints/native.tsx`) picks what has alternatives: the database's engine, the HTTP
   client and the platform's back button and keyboard. The tests pick their own.
-- **Views** are TSX, drawn by React through a small bridge (`src/libs/tea-react/`), following Material 3.
+- **Views** are TSX, following Material 3, drawn by the runtime's bridge to React (`@fgaudo/effect-tea/react`);
+  `src/libs/tea-react/` adds the views' handlers and what shows the app, or the crash screen in its place.
 
 See [`src/README.md`](src/README.md) for a map of the source tree, a suggested reading order and the import
 boundaries.

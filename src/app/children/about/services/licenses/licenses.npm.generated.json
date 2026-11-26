@@ -14,7 +14,7 @@
         "name": "@effect/sql-sqlite-react-native",
         "description": "A SQLite toolkit for Effect"
     },
-    "@fgaudo/effect-tea@0.8.0": {
+    "@fgaudo/effect-tea@0.9.0": {
         "licenses": "MIT",
         "repository": "https://github.com/fgaudo/effect-tea",
         "publisher": "Francesco Gaudenzi",

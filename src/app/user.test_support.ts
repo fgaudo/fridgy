@@ -5,10 +5,8 @@ import type * as Tea from '@fgaudo/effect-tea'
 import { type Rehearsal, rehearse } from '@fgaudo/effect-tea/testing'
 import * as Arr from 'effect/Array'
 import * as Channel from 'effect/Channel'
-import * as Data from 'effect/Data'
 import * as DateTime from 'effect/DateTime'
 import * as Effect from 'effect/Effect'
-import * as HashMap from 'effect/HashMap'
 import * as HttpClient from 'effect/http/HttpClient'
 import * as Layer from 'effect/Layer'
 import * as Match from 'effect/Match'
@@ -20,7 +18,10 @@ import { Haptics } from '#infrastructure/haptics/haptics.ts'
 import { Keyboard } from '#infrastructure/keyboard/keyboard.ts'
 import * as SqliteMemory from '#infrastructure/storage/sqlite.memory.ts'
 import type { DateOrder } from '#libs/dates/date-order.ts'
+import type * as Day from '#libs/dates/day.ts'
+import * as DigitDates from '#libs/dates/digit-dates.ts'
 import { tagPath } from '#libs/testing/tag-path.test_support.ts'
+import type * as About from './children/about/program.ts'
 import type * as AddProducts from './children/add-products/program.ts'
 import { ProductLookup } from './children/add-products/services/product-lookup/product-lookup.ts'
 import { Scanner } from './children/add-products/services/scanner/scanner.ts'
@@ -28,9 +29,14 @@ import type * as EditProduct from './children/edit-product/program.ts'
 import type * as Products from './children/home/children/products/program.ts'
 import type * as Home from './children/home/program.ts'
 import * as App from './layer.ts'
-import { type Command, type Message, type Model, program, type State } from './program.ts'
+import { type Command, type Message, type Model, program } from './program.ts'
+import type * as Expiration from './programs/expiration/program.ts'
 
-const Msg = Data.taggedEnum<Message>()
+/** The whole state of the app: the root's own, and the pages the library keeps. */
+export type State = Tea.StateOf<typeof program>
+
+/** A key of the app's subscriptions, as the root lists it. */
+type Key = Tea.KeyOf<typeof program>
 
 /** What the app's commands and subscriptions need: what the test's layer gives. */
 type Deps = Tea.CommandServicesOf<typeof program> | Tea.SubscriptionServicesOf<typeof program>
@@ -48,15 +54,62 @@ export type User = Rehearsal<
 /** A message of the shown page, when its model holds it, as the root receives it. */
 export type Choice = (model: Model) => Opt.Option<Message>
 
-// The models hold each program's own messages: wrapped here as the view's `forwardTo` wraps them.
-const onHome = (pick: (model: Home.Model) => Opt.Option<Home.Message>): Choice => ({ page }) =>
-  page._tag === 'Home' ? Opt.map(pick(page.model), (message) => Msg.Home({ message })) : Opt.none()
+// The models hold each program's own messages: wrapped here as the view's `forwardTo` wraps them, a page over Home
+// by the number of its visit.
+export const onHome = (pick: (model: Home.Model) => Opt.Option<Home.Message>): Choice => ({ page }) =>
+  page._tag === 'Home' ? Opt.map(pick(page.model), (message) => ({ _tag: 'Home', message })) : Opt.none()
 
 const onAddProducts = (pick: (model: AddProducts.Model) => Opt.Option<AddProducts.Message>): Choice => ({ page }) =>
-  page._tag === 'AddProducts' ? Opt.map(pick(page.model), (message) => Msg.AddProducts({ message })) : Opt.none()
+  page._tag === 'AddProducts'
+    ? Opt.map(pick(page.model), (message) => ({ _tag: 'AddProducts', id: page.visit, message }))
+    : Opt.none()
 
 const onEditProduct = (pick: (model: EditProduct.Model) => Opt.Option<EditProduct.Message>): Choice => ({ page }) =>
-  page._tag === 'EditProduct' ? Opt.map(pick(page.model), (message) => Msg.EditProduct({ message })) : Opt.none()
+  page._tag === 'EditProduct'
+    ? Opt.map(pick(page.model), (message) => ({ _tag: 'EditProduct', id: page.visit, message }))
+    : Opt.none()
+
+const onAbout = (pick: (model: About.Model) => Opt.Option<About.Message>): Choice => ({ page }) =>
+  page._tag === 'About'
+    ? Opt.map(pick(page.model), (message) => ({ _tag: 'About', id: page.visit, message }))
+    : Opt.none()
+
+/** The number of the visit of the page shown over Home: the test fails on Home. */
+export const visitShown = (user: User) =>
+  Effect.flatMap(
+    user.model,
+    ({ page }) =>
+      page._tag === 'Home' ? Effect.die(new Error('Home is shown: no page is visited')) : Effect.succeed(page.visit),
+  )
+
+/** A key by what it is, without its data: its tag, then those of what it wraps (`Home › Products › changes`). */
+const keyPath = (key: unknown): string =>
+  typeof key === 'string'
+    ? key
+    : typeof key === 'object' && key !== null && '_tag' in key && typeof key._tag === 'string'
+    ? 'key' in key ? `${key._tag} › ${keyPath(key.key)}` : key._tag
+    : String(key)
+
+/** What the app listens to in a state, each key by what it is. */
+export const listenedIn = (state: State) => Arr.map(program.subscriptions(state), keyPath)
+
+/** The key that `path` names among those of the current state: the test fails when there is none. */
+const keyAt = (user: User, path: string): Effect.Effect<Key> =>
+  Effect.flatMap(
+    user.state,
+    (state) =>
+      Opt.match(Arr.findFirst(program.subscriptions(state), (key) => keyPath(key) === path), {
+        onNone: () => Effect.die(new Error(`No subscription under ${path}: ${listenedIn(state).join(', ')}`)),
+        onSome: Effect.succeed,
+      }),
+  )
+
+/** The next message of the subscription that `path` names, heard as it sends it. */
+export const hearNext = (user: User, path: string) => Effect.flatMap(keyAt(user, path), user.hearNext)
+
+/** `message`, as the subscription that `path` names would send it: the subscription does not run. */
+export const hear = (user: User, path: string, message: Message) =>
+  Effect.flatMap(keyAt(user, path), (key) => user.hear(key, message))
 
 export const openMenu = onHome(({ menu }) => menu._tag === 'Closed' ? Opt.some(menu.open) : Opt.none())
 
@@ -65,8 +118,16 @@ export const requestInfo = onHome(({ menu }) => menu._tag === 'Open' ? Opt.some(
 /** About is reached from Home's menu. */
 export const openAbout = [openMenu, requestInfo]
 
+/** About's own back button, in the top app bar. */
+export const closeAbout = onAbout(({ back }) => Opt.some(back))
+
 /** The page that adds products is reached from Home's button. */
 export const openAddProducts = onHome(({ add }) => Opt.some(add))
+
+/** The close button of the page that adds products, on the first step. */
+export const closeAddProducts = onAddProducts((form) =>
+  form._tag === 'Naming' || form._tag === 'LookingUp' ? Opt.some(form.close) : Opt.none()
+)
 
 /** The answer to the page that adds products, which asks when it opens whether the device can read barcodes. */
 export const checkCamera = (user: User) => user.run((command) => tagPath(command) === 'AddProducts › CheckCamera')
@@ -92,16 +153,12 @@ export const deleteSelected = onProducts(({ list }) =>
 
 /** The snackbar's "Undo", while the last deletion can be undone. */
 export const undoDeletion = onProducts(({ snackbar }) =>
-  snackbar._tag === 'Shown' && snackbar.notice._tag === 'Deleted' ? snackbar.notice.maybeUndo : Opt.none()
+  Opt.flatMap(snackbar, ({ notice }) => notice._tag === 'Deleted' ? notice.maybeUndo : Opt.none())
 )
 
-/** What the name field writes as the user types `name`, on the first step. */
+/** What the name field gives as the user types `name`, on the first step. */
 export const typeName = (name: string) =>
-  onAddProducts((form) =>
-    form._tag === 'Naming'
-      ? Opt.some<AddProducts.Message>({ _tag: 'Name', message: { _tag: 'Written', value: name } })
-      : Opt.none()
-  )
+  onAddProducts((form) => form._tag === 'Naming' ? Opt.some({ ...form.nameTyped, value: name }) : Opt.none())
 
 /** The name field's clear button, while there is a name. */
 export const clearName = onAddProducts((form) => form._tag === 'Naming' ? form.maybeClearName : Opt.none())
@@ -109,27 +166,14 @@ export const clearName = onAddProducts((form) => form._tag === 'Naming' ? form.m
 /** The first step's "Set expiration", while the name is a product's. */
 export const requestDate = onAddProducts((form) => form._tag === 'Naming' ? form.maybeRequestDate : Opt.none())
 
-/** The keypad's key of a digit, on the second step, while a digit can be typed. */
-export const typeDigit = (digit: AddProducts.Digit) =>
-  onAddProducts((form) => form._tag === 'Dating' ? Opt.map(form.maybeTypeDigit, (keys) => keys[digit]) : Opt.none())
-
-/** A segment of the second step's segmented button: an order other than the one in use, once it is known. */
-export const pickOrder = (picked: DateOrder) =>
-  onAddProducts((form) =>
-    form._tag === 'Dating' && form.order._tag === 'Known'
-      ? Arr.findFirst(form.order.choices, ({ order }) => order === picked).pipe(
-        Opt.flatMap(({ choice }) => choice._tag === 'Offered' ? choice.maybePick : Opt.none()),
-      )
-      : Opt.none()
-  )
-
 /** The name field's scan button, while the camera is on. */
 export const openScanner = onAddProducts((form) => form._tag === 'Naming' ? form.maybeScan : Opt.none())
 
 /** Opens the scanner, which reads `barcode`: the page then looks it up. */
 export const scan = Effect.fnUntraced(function*(user: User, barcode: string) {
   yield* user.send(openScanner)
-  yield* user.hear(['AddProducts', 'scanner'], { _tag: 'AddProducts', message: { _tag: 'Scanned', barcode } })
+  const id = yield* visitShown(user)
+  yield* hear(user, 'AddProducts › scanner', { _tag: 'AddProducts', id, message: { _tag: 'Scanned', barcode } })
 })
 
 /** The first step's "Cancel", while a scanned barcode is looked up. */
@@ -142,22 +186,67 @@ export const addProduct = onAddProducts((form) =>
   form._tag === 'Naming' || form._tag === 'Dating' ? form.maybeAdd : Opt.none()
 )
 
-/** The page that edits a product shows its fields once it knows the time and the order of a date's digits. */
-export const loadEditPage = Effect.fnUntraced(function*(user: User) {
-  yield* user.hearNext(['EditProduct', 'clock'])
-  yield* user.hearNext(['EditProduct', 'date-order'])
-})
+/** The expiration date's controls, on either page that shows them: the page's child, wrapped as its view wraps it. */
+const onExpiration = (pick: (model: Expiration.Model) => Opt.Option<Expiration.Message>): Choice => (model) =>
+  model.page._tag === 'AddProducts'
+    ? onAddProducts((form) =>
+      form._tag === 'Dating'
+        ? Opt.map(pick(form.expiration), (message) => ({ _tag: 'Expiration', message }))
+        : Opt.none()
+    )(model)
+    : onEditProduct((form) =>
+      form._tag === 'Editing'
+        ? Opt.map(pick(form.expiration), (message) => ({ _tag: 'Expiration', message }))
+        : Opt.none()
+    )(model)
 
-/** What the name field writes as the user types `name`, while it takes input. */
-export const typeEditedName = (name: string) =>
-  onEditProduct((form) =>
-    form._tag === 'Editing'
-      ? Opt.some<EditProduct.Message>({ _tag: 'Name', message: { _tag: 'Written', value: name } })
+/** The keypad's key of a digit, while a digit can be typed. */
+export const typeDigit = (digit: Expiration.Digit) =>
+  onExpiration(({ maybeKeys }) =>
+    Opt.flatMap(maybeKeys, ({ maybeTypeDigit }) => Opt.map(maybeTypeDigit, (keys) => keys[digit]))
+  )
+
+/** The keypad's clear key, while there are digits. */
+export const clearDate = onExpiration(({ maybeKeys }) => Opt.flatMap(maybeKeys, ({ maybeClearDate }) => maybeClearDate))
+
+/** A segment of the segmented button: an order other than the one in use, once it is known. */
+export const pickOrder = (picked: DateOrder) =>
+  onExpiration(({ order }) =>
+    order._tag === 'Known'
+      ? Arr.findFirst(order.choices, ({ order }) => order === picked).pipe(
+        Opt.flatMap(({ choice }) => choice._tag === 'Offered' ? choice.maybePick : Opt.none()),
+      )
       : Opt.none()
   )
 
-/** The keypad's clear key, on the page that edits a product, while there are digits. */
-export const clearEditedDate = onEditProduct((form) => form._tag === 'Editing' ? form.maybeClearDate : Opt.none())
+/** The expiration's model, on either page that shows it. */
+export const expirationShown = ({ page }: Model): Opt.Option<Expiration.Model> =>
+  page._tag === 'AddProducts' && page.model._tag === 'Dating'
+    ? Opt.some(page.model.expiration)
+    : page._tag === 'EditProduct' && page.model._tag !== 'Loading'
+    ? Opt.some(page.model.expiration)
+    : Opt.none()
+
+/** The order the date's digits are read in, once the page shows it. */
+export const orderShown = (model: Model): Opt.Option<DateOrder> =>
+  Opt.flatMap(expirationShown(model), ({ order }) => order._tag === 'Known' ? Opt.some(order.order) : Opt.none())
+
+/** Types `day` on the keypad, in the order the page shows. */
+export const typeDay = Effect.fnUntraced(function*(user: User, day: Day.Day) {
+  const order = Opt.getOrThrowWith(orderShown(yield* user.model), () => new Error('The order is not shown'))
+  yield* perform(user, Arr.map([...DigitDates.digitsOf(day, order)], (digit) => typeDigit(digit as Expiration.Digit)))
+})
+
+/** The page that edits a product shows its fields once it knows the time and the order of a date's digits. */
+export const loadEditPage = Effect.fnUntraced(function*(user: User) {
+  yield* hearNext(user, 'EditProduct › clock')
+  // The date is there from the clock's first tick.
+  yield* hearNext(user, 'EditProduct › Expiration › date-order')
+})
+
+/** What the name field gives as the user types `name`, while it takes input. */
+export const typeEditedName = (name: string) =>
+  onEditProduct((form) => form._tag === 'Editing' ? Opt.some({ ...form.nameTyped, value: name }) : Opt.none())
 
 /** "Save", on the page that edits a product, once the fields describe a product other than the stored one. */
 export const saveProduct = onEditProduct((form) => form._tag === 'Editing' ? form.maybeSave : Opt.none())
@@ -169,23 +258,34 @@ export const perform = Effect.fnUntraced(function*(user: User, choices: Readonly
   }
 })
 
-/** The back button, heard by the shown page; the test fails when the page does not observe it. */
+/** The press of the back button, as the program that observes it under `key` hears it. */
+const pressedUnder = (key: Key): Opt.Option<Message> =>
+  keyPath(key).endsWith(' › back-button')
+    ? Opt.some(Match.valueTags(key, {
+      Home: (): Message =>
+        keyPath(key) === 'Home › back-button'
+          ? { _tag: 'Home', message: { _tag: 'BackPressed' } }
+          : { _tag: 'Home', message: { _tag: 'Products', message: { _tag: 'BackPressed' } } },
+      AddProducts: ({ id }): Message => ({ _tag: 'AddProducts', id, message: { _tag: 'BackPressed' } }),
+      EditProduct: ({ id }): Message => ({ _tag: 'EditProduct', id, message: { _tag: 'BackPressed' } }),
+      About: ({ id }): Message => ({ _tag: 'About', id, message: { _tag: 'BackPressed' } }),
+    }))
+    : Opt.none()
+
+/** The back button, heard by the program that observes it; the test fails when none does. */
 export const back = Effect.fnUntraced(function*(user: User) {
   const state = yield* user.state
-  const shown = Arr.lastNonEmpty(state.stack)
-  // On Home, the list observes the button while it shows a selection, and Home while its menu is open.
-  const listKey = ['Home', ['Products', 'back-button']]
-  if (shown._tag === 'Home' && HashMap.has(program.subscriptions(state), listKey)) {
-    return yield* user.hear(listKey, { _tag: 'Home', message: { _tag: 'Products', message: { _tag: 'BackPressed' } } })
-  }
-  // Written whole: a subscription sends no write into an input, which a message of `Msg` may be.
-  const pressed = Match.valueTags(shown, {
-    Home: () => ({ _tag: 'Home', message: { _tag: 'BackPressed' } }) as const,
-    AddProducts: () => ({ _tag: 'AddProducts', message: { _tag: 'BackPressed' } }) as const,
-    EditProduct: () => ({ _tag: 'EditProduct', message: { _tag: 'BackPressed' } }) as const,
-    About: () => ({ _tag: 'About', message: { _tag: 'BackPressed' } }) as const,
-  })
-  yield* user.hear([shown._tag, 'back-button'], pressed)
+  const observers = Arr.getSomes(
+    Arr.map(program.subscriptions(state), (key) => Opt.map(pressedUnder(key), (pressed) => ({ key, pressed }))),
+  )
+  // On Home, the list observes the button while it shows a selection, and Home while its menu is open: the list is
+  // the last observer.
+  const observer = Opt.orElse(
+    Arr.findFirst(observers, ({ key }) => keyPath(key) === 'Home › Products › back-button'),
+    () => Arr.head(observers),
+  )
+  const { key, pressed } = Opt.getOrThrowWith(observer, () => new Error('No program observes the back button'))
+  yield* user.hear(key, pressed)
 })
 
 // The platform's back button is out of reach: it is heard through `back`.

@@ -14,12 +14,10 @@ const importMetaAsEmpty = ({ types }) => ({
 
 module.exports = {
   presets: ['module:@react-native/babel-preset'],
-  // Effect's modules re-export namespaces (`export * as Model from …`), which React Native's preset leaves out, and
-  // effect-tea's classes have static blocks (`static { … }`), which Hermes does not parse.
+  // Effect's modules re-export namespaces (`export * as Model from …`), which React Native's preset leaves out.
   // Worklets' plugin goes last, as its docs ask: it compiles the worklets of Reanimated's layout animations.
   plugins: [
     '@babel/plugin-transform-export-namespace-from',
-    '@babel/plugin-transform-class-static-block',
     importMetaAsEmpty,
     'react-native-worklets/plugin',
   ],

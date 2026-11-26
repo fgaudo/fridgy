@@ -77,8 +77,9 @@ again. Then:
 - select a product on Home and delete it: `Couldn't delete the products`.
 
 With `writes-but-deletes`, a deletion goes through and its "Undo" fails: `Couldn't put the products back`.
-`off` removes the triggers. `This product no longer exists` cannot be reached: nothing else writes while the
-edit page is open. Only the tests of the edit page's `Gone` state and the root's cover it.
+`off` removes the triggers. `This product no longer exists` cannot be reached at will: nothing else writes while
+the edit page is open, and only a tap on a row drawn between a deletion's end and the storage's change opens a
+product that is gone. The tests of the edit page's `Gone` state cover it, and the root's, which taps so.
 
 ### The lowest Android
 

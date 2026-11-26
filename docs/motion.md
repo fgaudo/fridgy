@@ -39,8 +39,8 @@ until that page covers it, so the page never rises over nothing.
    the `android-release` skill, on `minSdkVersion`'s image too.
 3. **The root animates the pages; a page draws itself whole, as today.** The root wraps each page it draws in an
    `Animated.View` that fills the screen and carries the page's entering and exiting animations. Which page plays
-   which motion is a matter of the stack: "page" is a role that the root's state keeps, so it is in the root. A
-   page's view stays unaware of the motion. The wrapper is keyed by the page's name, as the `Fragment` is now.
+   which motion is a matter of which page is shown: "page" is a role that the root's state keeps, so it is in the
+   root. A page's view stays unaware of the motion. The wrapper is keyed by the page's name and its visit.
 4. **Pages over Home are drawn in a layer above Home's.** The root draws two layers that fill the screen, Home's
    under the others'. A leaving element keeps its place in the native tree, under the element drawn in its place,
    whatever its `zIndex`: drawn as siblings, About left under Home, and its exit was never seen. In its own layer, a
@@ -98,7 +98,8 @@ animates, for a look the platform already decides.
 Designed on 2026-10-30, after the pages and the menu, with the same decisions: the platform drives them, as
 Reanimated's layout animations on `transform` and `opacity`, with Material's tokens, instant under "Remove
 animations". Implemented in `src/app/children/add-products/view.tsx`, the snackbars also in
-`src/app/children/edit-product/view.tsx` and Home's (`src/app/children/home/view.tsx`, drawn by `Products`).
+`src/app/children/edit-product/view.tsx` and Home's (`src/app/children/home/view.tsx`, drawn by `Products`), each
+from the model of its page's child `Snackbar` (`src/app/programs/snackbar/`).
 
 ### What the web build did
 
@@ -129,8 +130,8 @@ animations". Implemented in `src/app/children/add-products/view.tsx`, the snackb
    of the surface's color, over the camera and under the viewfinder's frame. It fades out on entering, after
    `medium4`, over `short4`, on the standard curve, and stays at opacity 0. It takes no touch.
 4. **The snackbar's motion is Material's, in `src/styles.ts`** (`motion.snackbar`), the same for the three pages that draw
-   one: an entering animation for each `entrance`, and one exiting. The snackbar stays keyed by what it tells, so
-   the next one enters as the last one leaves.
+   one: an entering animation for each `entrance`, and one exiting. The snackbar is keyed by its `id`, never used
+   again, so the next one enters as the last one leaves, even when it tells the same.
 5. **A snackbar's ghost keeps its place.** A leaving element keeps its last frame in its parent. Home's snackbar
    stood in a column that it sized, above the FAB: as it left, the column shrank and the ghost would have dropped
    onto the FAB. Home now draws it at the bottom of a layer that ends 16dp above the FAB, whose size never changes.
@@ -251,12 +252,12 @@ Designed on 2026-10-30, after the rows. Implemented in `src/app/children/home/vi
    late, and the bar's color early, by the curves of Compose's bar (`cubic-bezier(0.8, 0, 0.8, 0.15)` and
    `(0.4, 0, 1, 1)`). The collapse is held in twentieths. Each step draws Home again, so a whole collapse is at most
    twenty frames, and a scroll outside the headline draws none.
-3. **The scroll reaches the program as About's does.** The view writes the offset into the input `Scroll` on every
-   scroll event, which keeps only the collapse: the state changes only when the collapse reaches another step. The
-   headline's height is written by its layout into `HeadlineHeight`, since it grows with the user's font size. Until
-   it is measured, the bar is expanded and does not snap. The `Viewport` service goes: React Native's scroll is the
-   view's, and no service observes it.
-   The list's own height (`ListHeight`) and its content's (`ContentHeight`) are measured too. Android moves the
+3. **The scroll reaches the program as About's does.** The view sends the offset on every scroll event, filling
+   the model's `Scrolled`, and `update` keeps only the collapse: the state changes only when the collapse reaches
+   another step. The headline's height is sent by its layout (`HeadlineLaidOut`), since it grows with the user's
+   font size. Until it is measured, the bar is expanded and does not snap. The `Viewport` service goes: React
+   Native's scroll is the view's, and no service observes it.
+   The list's own height (`ListLaidOut`) and its content's (`ContentSized`) are measured too. Android moves the
    scroll with no scroll event in two cases. A list that gets shorter (products deleted) is pulled back within its
    end: the bar then collapses no further than the list can scroll. A new size of the screen or of the font (a new
    height of the list or the headline) put the list back at its top on the emulator, under a bar still collapsed: a
@@ -264,9 +265,9 @@ Designed on 2026-10-30, after the rows. Implemented in `src/app/children/home/vi
    makes it known. Under a collapsed bar, such a change gives the list a new `key`: React draws it anew at its top,
    and the bar expands. An expanded bar needs nothing.
    Home itself is drawn anew when a page over it leaves, and its list started at its top under a bar still
-   collapsed (seen on a phone). So the end of a scroll writes where the list rests into the input `Rest`, and the
-   list is drawn from there (`contentOffset`). Android scrolls to `contentOffset` whenever it changes, and it changes only to where the
-   list already rests.
+   collapsed (seen on a phone). So the end of a scroll sends where the list rests (`ScrollEnded { offset }`), and
+   the list is drawn from there (`contentOffset`). Android scrolls to `contentOffset` whenever it changes, and it
+   changes only to where the list already rests.
 4. **Android snaps.** The list snaps to `[0, height of the headline]` (`snapToOffsets`, with `snapToEnd` off), so
    that a scroll never ends with the headline cut, nor the fades halfway. No command scrolls. The price: a fling released before the
    headline is gone stops where the headline is gone, as React Native's snap clamps it there (`flingAndSnap`).
@@ -281,7 +282,8 @@ Designed on 2026-10-30, after the rows. Implemented in `src/app/children/home/vi
    scrolled.
 7. **The FAB loses its label from the drag to the end of the momentum.** `onScrollBeginDrag` sends
    `ScrollStarted`, and `onMomentumScrollEnd`, which Android sends after every touch, even without a fling,
-   writes the rest (decision 3), then sends `ScrollEnded`. The label fades. The FAB's width follows by a layout transition, which moves only the FAB.
+   sends `ScrollEnded` with where the list rests (decision 3). The label fades. The FAB's width follows by a
+   layout transition, which moves only the FAB.
 8. **One headline for a screen reader.** The headline in the list is the header. The small title repeats it, and is
    hidden from accessibility.
 
@@ -302,7 +304,7 @@ token ×10), and at the real speed:
 - **A leaving page is inert (verified).** The web build set `pointerEvents: 'none'` on what left. A removed element
   cannot take new props, and needs none. A tap on About's back arrow while About sank over Home sent nothing. A tap
   on the place of Home's row, under the leaving About, did not open the row either. The program does not rely on
-  it: a tap that did arrive would reach an About no longer in the stack, and be rejected.
+  it: a tap that did arrive would be for a visit of About that is over, which the library rejects.
 - **About enters over Home, held under it (verified).** Home stays under About as it rises, with its menu, which
   Home's own leaving keeps as it was. Home's layer is under About's, and About's exit plays over the Home drawn
   again (decision 4).

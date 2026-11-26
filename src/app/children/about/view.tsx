@@ -1,9 +1,8 @@
-import * as Tea from '@fgaudo/effect-tea'
 import * as Opt from 'effect/Option'
 import type { ReactElement, ReactNode } from 'react'
 import { View as Box, FlatList, Linking, Pressable, StyleSheet, Text } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { handlers, type View, write } from '#libs/tea-react/tea-react.ts'
+import { handlers, type View } from '#libs/tea-react/tea-react.ts'
 import { color, icon, shape, type } from '#styles'
 import type { LicenseCard, Message, Model } from './program.ts'
 
@@ -94,7 +93,6 @@ const card = (card: LicenseCard): ReactNode => (
  */
 export const view: View<Model, Message> = (model, dispatch) => {
   const { on } = handlers(dispatch)
-  const scrolled = write(Tea.forwardTo(dispatch, 'Scroll'))
   return (
     <SafeAreaView style={styles.page}>
       <Box style={styles.frame}>
@@ -113,7 +111,7 @@ export const view: View<Model, Message> = (model, dispatch) => {
           contentContainerStyle={styles.content}
           scrollEventThrottle={16}
           overScrollMode='never'
-          onScroll={(event) => scrolled(event.nativeEvent.contentOffset.y)}
+          onScroll={(event) => dispatch({ ...model.scrolled, offset: event.nativeEvent.contentOffset.y })}
           data={model.licenses._tag === 'Loading' ? [] : model.licenses.cards}
           keyExtractor={(licenseCard) => licenseCard.key}
           renderItem={({ item }) => card(item)}

@@ -1,14 +1,27 @@
+import type * as Tea from '@fgaudo/effect-tea'
+import { stateOf } from '@fgaudo/effect-tea/testing'
 import * as Data from 'effect/Data'
 import * as HashSet from 'effect/HashSet'
 import * as Opt from 'effect/Option'
 import * as Result from 'effect/Result'
 import * as fc from 'fast-check'
+import * as SnackbarArbitrary from '#app/programs/snackbar/program.test_arbitrary.ts'
+import type * as Snackbar from '#app/programs/snackbar/program.ts'
 import * as ProductArbitrary from '#domain/product.test_arbitrary.ts'
 import * as NonEmptyHashSet from '#libs/collections/non-empty-hash-set.test_arbitrary.ts'
 import * as PositiveInteger from '#libs/numbers/positive-integer.test_arbitrary.ts'
 import { arbitrary as maybe } from '#libs/option/option.test_arbitrary.ts'
-import { utc, zoned } from '#libs/testing/date-time.test_arbitrary.ts'
-import type { Departure, Entrance, Gesture, Message, Notice, Product, Selection, Snackbar, State } from './program.ts'
+import { zoned } from '#libs/testing/date-time.test_arbitrary.ts'
+import {
+  type Departure,
+  type Gesture,
+  type Message,
+  type Notice,
+  type Product,
+  program,
+  type Selection,
+  type State,
+} from './program.ts'
 import { ProductListReadError, type StoredProduct } from './services/product-list/product-list.ts'
 
 const Msg = Data.taggedEnum<Message>()
@@ -113,13 +126,8 @@ export const notice: fc.Arbitrary<Notice> = fc.oneof(
   fc.constant({ _tag: 'RestoreFailed' } as const),
 )
 
-export const shown: fc.Arbitrary<Snackbar> = fc.record({
-  at: utc,
-  notice,
-  entrance: fc.constantFrom<Entrance>('Alone', 'AfterAnother'),
-}).map((fields) => ({ _tag: 'Shown', ...fields } as const))
-
-export const snackbar: fc.Arbitrary<Snackbar> = fc.oneof(fc.constant({ _tag: 'None' } as const), shown)
+/** The snackbar, standing or not, of the notices Products tells. */
+export const snackbar: fc.Arbitrary<Snackbar.State<Notice>> = SnackbarArbitrary.state(notice)
 
 /** Whether a product shown, listed or leaving, expires: the clock runs, and the time is known, only then. */
 export const hasExpiringProduct = (state: State) =>
@@ -128,19 +136,31 @@ export const hasExpiringProduct = (state: State) =>
     item._tag === 'Valid' && Opt.isSome(item.product.maybeExpirationDate)
   )
 
-/** Any state, with a time only while a product expires. */
-export const state: fc.Arbitrary<State> = fc.record({ maybeNow: maybe(zoned), list, selection, snackbar }).map((
+/** Any state of Products' own, with a time only while a product expires. */
+export const own: fc.Arbitrary<State> = fc.record({ maybeNow: maybe(zoned), list, selection }).map((
   state,
 ) => hasExpiringProduct(state) ? state : { ...state, maybeNow: Opt.none() })
 
+/** Products' whole state: its own, and its snackbar's. */
+export type Whole = Tea.StateOf<typeof program>
+
+/** The whole states of those own states, with those of the snackbar. */
+export const wholeOf = (
+  owns: fc.Arbitrary<State>,
+  snackbars: fc.Arbitrary<Snackbar.State<Notice>> = snackbar,
+): fc.Arbitrary<Whole> => fc.tuple(owns, snackbars).map(([own, Snackbar]) => stateOf(program, own, { Snackbar }))
+
+/** Any state. */
+export const state: fc.Arbitrary<Whole> = wholeOf(own)
+
 /** The states in which the clock runs. */
-export const ticking: fc.Arbitrary<State> = state.filter(hasExpiringProduct)
+export const ticking: fc.Arbitrary<Whole> = wholeOf(own.filter(hasExpiringProduct))
 
 /** The states in which it does not. */
-export const still: fc.Arbitrary<State> = state.filter((state) => !hasExpiringProduct(state))
+export const still: fc.Arbitrary<Whole> = wholeOf(own.filter((state) => !hasExpiringProduct(state)))
 
 export const stateWith = <K extends keyof State>(key: K, arbitrary: fc.Arbitrary<State[K]>) =>
-  fc.tuple(state, arbitrary).map(([base, value]): State => ({ ...base, [key]: value }))
+  wholeOf(fc.tuple(own, arbitrary).map(([base, value]): State => ({ ...base, [key]: value })))
 
 /** What the product storage may send: products with or without an id, valid or not, each id once. */
 export const storedProducts: fc.Arbitrary<ReadonlyArray<StoredProduct>> = fc.uniqueArray(
@@ -148,6 +168,7 @@ export const storedProducts: fc.Arbitrary<ReadonlyArray<StoredProduct>> = fc.uni
   { maxLength: 8, comparator: (a, b) => Opt.isSome(a.maybeId) && Opt.contains(b.maybeId, a.maybeId.value) },
 )
 
+/** Any message of Products' own: the snackbar's are tested in its own folder. */
 export const message: fc.Arbitrary<Message> = fc.oneof(
   fc.record({ id, by: gesture }).map(Msg.ItemSelected),
   id.map((id) => Msg.EditRequested({ id })),
@@ -156,11 +177,10 @@ export const message: fc.Arbitrary<Message> = fc.oneof(
   fc.constant(Msg.BackPressed()),
   fc.constant(Msg.DeleteStarted()),
   fc.constant(Msg.UndoRequested()),
-  fc.constant(Msg.SnackbarExpired()),
   fc.constant(Msg.RowsSettled()),
-  utc.map((at) => Msg.DeleteFailed({ at })),
-  utc.map((at) => Msg.RestoreFailed({ at })),
-  utc.map((at) => Msg.Deleted({ at })),
+  fc.constant(Msg.DeleteFailed()),
+  fc.constant(Msg.RestoreFailed()),
+  fc.constant(Msg.Deleted()),
   zoned.map((now) => Msg.TimeChanged({ now })),
   fc.oneof(
     fc.string().map((cause) => Result.fail(new ProductListReadError({ cause }))),
