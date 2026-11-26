@@ -23,12 +23,11 @@ src/
 │  │  ├─ program.ts · view.tsx   its public API: the only modules its parent imports
 │  │  ├─ <concern>.ts          a module of a program split by concern (`add-products/`, `home/children/products/`),
 │  │  │                        private to its folder
-│  │  ├─ children/<child>/     its own children (`home/children/products/`, `add-products/children/fridge/`)
-│  │  └─ programs/<program>/   a program two programs of this subtree use, of this same shape (none yet)
-│  └─ programs/<program>/  a program two pages use, of the same shape as a child and used like one (see
-│                          "Visibility"): `snackbar/` (Material's snackbar, whose model its parents draw: no view)
-│                          and `expiration/` (the expiration date typed on a keypad, with the order its digits are
-│                          read in, which `DateOrderStore` keeps)
+│  │  └─ children/<child>/     its own children (`home/children/products/`, `add-products/children/fridge/`)
+│  └─ programs/<program>/  a program two programs use, at any depth, of the same shape as a child and used like
+│                          one (see "Visibility"): `snackbar/` (Material's snackbar, whose model its parents
+│                          draw: no view) and `expiration/` (the expiration date typed on a keypad, with the
+│                          order its digits are read in, which `DateOrderStore` keeps)
 │
 ├─ infrastructure/       what the programs need from outside, which they use as it is: the storage (storage/: the
 │                        database's engine, op-sqlite on the phone or wa-sqlite in memory for the tests, its schema
@@ -82,12 +81,9 @@ role a file's name gives it. Biome's `noRestrictedImports` rule (`biome.json`) e
 - inside `app/`, imports go downwards only: a program uses its own children, never a parent or a sibling, and a
   child only through its `program.ts` and `view.tsx`, at every depth, never through the modules of its concerns; and the infrastructure's services, which it
   takes as they are;
-- a program two programs use lives in `programs/` of their lowest common parent, and every program of that
-  parent's subtree reaches it as it reaches a child, through the modules at its root, by a relative import
-  (`../../programs/<program>/program.ts`) or an alias. Biome allows `../../programs/<program>/` from a child of
-  the parent, and `#app/programs/<program>/` for the root's from any depth, as the pages reach theirs; a deeper
-  parent's, from a grandchild of it, needs an override on that parent's folder, added with the first such
-  program;
+- a program two programs use lives in the root's `programs/`, whatever their depth, and no other program has a
+  `programs/`. Every program reaches one as it reaches a child, through the modules at its root: a page by
+  `../../programs/<program>/`, a deeper program by `#app/programs/<program>/`;
 - adapters (`<service>.<backing>.ts`) are imported only by the entrypoints, which pick among alternatives, and
   by tests: a program uses the services;
 - from outside `app/`, only its root modules (`program.ts`, `view.tsx`, `layer.ts`);

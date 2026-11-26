@@ -87,7 +87,7 @@
                       "../**",
                       "!../../programs/*/*"
                     ],
-                    "message": "A program knows only its own folder: an import never goes up to a parent or across to a sibling (another child), except to a program of its parent's programs/ (../../programs/<program>/)."
+                    "message": "A program knows only its own folder: an import never goes up to a parent or across to a sibling (another child), except to a program of the root's programs/ (../../programs/<program>/, from a page)."
                   },
                   {
                     "group": [
@@ -107,7 +107,7 @@
                       "!**/programs/*/view.tsx",
                       "**/programs/*/*/**"
                     ],
-                    "message": "A parent reaches a child, and a program a program of programs/, only through program.ts and view.tsx: the other modules of its folder are its concerns', private to it."
+                    "message": "A parent reaches a child, and a program a program of the root's programs/, only through program.ts and view.tsx: the other modules of its folder are its concerns', private to it."
                   },
                   {
                     "group": [

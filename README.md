@@ -124,8 +124,7 @@ How the code is organized:
   touch products each have their own.
 - **Shared code moves up**: the entities (`Product`) to `src/domain/`, how things are done (the database's
   schema, how a product is written) to `src/infrastructure/`, Material's look to `src/styles.ts`, a whole program
-  two programs use to the `programs/` of their common parent (the snackbar, and the expiration date typed on a
-  keypad).
+  two programs use to the root's `programs/` (the snackbar, and the expiration date typed on a keypad).
 - **The entrypoint** (`src/entrypoints/native.tsx`) picks what has alternatives: the database's engine, the HTTP
   client and the platform's back button and keyboard. The tests pick their own.
 - **Views** are TSX, following Material 3, drawn by the runtime's bridge to React (`@fgaudo/effect-tea/react`);

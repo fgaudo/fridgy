@@ -48,9 +48,9 @@ error, the rule is intended: fix the code, do not work around the check.
 
 Every program has the same shape, whatever its depth: a folder holding `program.ts` and its tests, `view.tsx`
 unless its parent draws its model (the snackbar's), a module for each of its concerns once it is split,
-`children/` and, once two programs of its subtree use the same one, `programs/`. The root
-(`src/app`), a page (a child of the root: Home, or the one page shown over it) and a child of a page are all such
-folders; "page" names a role in the UI, kept by the root's state, not a kind of program. The programs to copy are
+and `children/`. The root (`src/app`), a page (a child of the root: Home, or the one page shown over it) and a
+child of a page are all such folders; "page" names a role in the UI, kept by the root's state, not a kind of
+program. The root alone also has `programs/`, for a program two programs use. The programs to copy are
 `src/app/children/home` and `src/app/children/about`.
 
 - **Expected errors are typed, bugs crash.** Expected failures go through Effect's error channel
@@ -89,11 +89,11 @@ folders; "page" names a role in the UI, kept by the root's state, not a kind of 
   two programs have in common moves up when its truth lies outside them, so that a copy changed on its own
   would be a bug (a rule of the domain, a look of Material's, in `src/styles.ts`); where they may
   legitimately differ, it is written twice, never shared through parameters that describe the caller. The one
-  thing of the app that moves up as it is, is a whole program: used by two programs, it lives in `programs/`
-  of their lowest common parent, and each uses it as a child, through the modules at its root, never as
-  fragments of model or view. The root's are `snackbar` and `expiration`. Biome lets a child of the parent reach
-  one (`../../programs/<program>/`) and, from any depth, one of the root's (`#app/programs/<program>/`), by the
-  modules at its root only, as a child.
+  thing of the app that moves up as it is, is a whole program: used by two programs, it lives in the root's
+  `programs/`, whatever their depth, so that a third user elsewhere moves nothing. Each uses it as a child,
+  through the modules at its root, never as fragments of model or view. They are `snackbar` and `expiration`.
+  Biome lets a page reach one by `../../programs/<program>/`, and a deeper program by
+  `#app/programs/<program>/`.
 - **One storage per setup; migrations are append-only.** Every store is written once, on `SqlClient`; the
   entrypoint provides the engine. A phone has already run the existing migrations, so a fix is
   a new one.

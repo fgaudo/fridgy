@@ -20,10 +20,10 @@ Every program is a folder of the same shape, at any depth:
 ├─ view.tsx                 the view (see the `views` skill); none where the parent draws the model (the snackbar)
 ├─ program.test.ts          property tests of update, the view and the subscriptions
 ├─ program.test_arbitrary.ts  generators of its states and messages, valid values only
-├─ children/<child>/        its own children, of this same shape
-└─ programs/<program>/      a program two programs of this subtree use, of this same shape (see "A program
-                            two programs use")
+└─ children/<child>/        its own children, of this same shape
 ```
+
+The root alone also has `programs/<program>/`, for a program two programs use (see "A program two programs use").
 
 A program splits only when it is too large (300–400 lines), by concern, never by kind: never into
 `messages`/`state`/`update` files, which spread each concern over three. What spans the children (the menu, the
@@ -190,16 +190,15 @@ What two programs have in common moves up when its truth lies outside them (a ru
 `src/domain/`; a look of Material's, to `src/styles.ts`), and is written twice where they may legitimately
 differ (a line of layout, the composition of a page): never a module of model fragments or view pieces
 generic in the caller's message. When what they share is a whole program, a state machine with its view where
-it has one, it moves up as it is: into `programs/<program>/` of their lowest common parent, of the shape above,
-and each of them declares it as a child, through the modules at its root, as in "Declaring a child". It belongs
-to no parent: it knows nothing of who contains it, and a change made for one user that the other cannot take is
-a sign that they share less than a program. The root's are `snackbar` (generic in its notice, `make<Notice>()`,
-a child of `Products`, `AddProducts` and `EditProduct`) and `expiration` (the date typed on the keypad, with its
-view and the setting of its order, a child of `AddProducts` and `EditProduct`). `biome.json` lets a child of the
-parent import `../../programs/<program>/`, and any program `#app/programs/<program>/` (the root's), the modules
-at the program's root only, as for a child, its arbitraries from tests included. A deeper parent's `programs/`
-from a grandchild of it needs an alias past `../../`, and the override on that parent's folder that confines
-it to the subtree: written with the first such program.
+it has one, it moves up as it is: into the root's `programs/<program>/`, whatever the depth of its users, of the
+shape above, and each of them declares it as a child, through the modules at its root, as in "Declaring a
+child". It belongs to no parent: it knows nothing of who contains it, and a change made for one user that the
+other cannot take is a sign that they share less than a program. The root's are `snackbar` (generic in its
+notice, `make<Notice>()`, a child of `Products`, `AddProducts` and `EditProduct`) and `expiration` (the date typed on the keypad, with its
+view and the setting of its order, a child of `AddProducts` and `EditProduct`). Its place does not depend on
+who uses it, so a third user elsewhere moves nothing. `biome.json` lets a page import it by
+`../../programs/<program>/`, and a deeper program by `#app/programs/<program>/`, the modules at the program's
+root only, as for a child, its arbitraries from tests included.
 
 ## A page of the root
 
