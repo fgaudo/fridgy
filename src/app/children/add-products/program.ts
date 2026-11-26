@@ -7,7 +7,6 @@ import * as Channel from 'effect/Channel'
 import * as Data from 'effect/Data'
 import type * as DateTime from 'effect/DateTime'
 import * as Effect from 'effect/Effect'
-import { pipe } from 'effect/Function'
 import * as Match from 'effect/Match'
 import * as Opt from 'effect/Option'
 import * as Expiration from '#app/programs/expiration/program.ts'
@@ -17,10 +16,10 @@ import { BackButton } from '#infrastructure/back-button/back-button.ts'
 import { type Feedback, Haptics } from '#infrastructure/haptics/haptics.ts'
 import { Keyboard } from '#infrastructure/keyboard/keyboard.ts'
 import { Links } from '#infrastructure/links/links.ts'
+import { ProductStore } from '#infrastructure/storage/products.ts'
 import * as Day from '#libs/dates/day.ts'
 import { every } from '#libs/timers/timers.ts'
 import * as Fridge from './children/fridge/program.ts'
-import * as AddProducts from './services/add-products/add-products.ts'
 import { type FoundProduct, ProductLookup } from './services/product-lookup/product-lookup.ts'
 import { Scanner } from './services/scanner/scanner.ts'
 
@@ -368,15 +367,12 @@ const checkCamera = Effect.fn('CheckCamera')(
 
 const add = Effect.fn('AddProduct')(
   function*({ product }: Readonly<{ product: Product.Product }>) {
-    const { add } = yield* AddProducts.AddProducts
+    const { insertAll } = yield* ProductStore
     yield* Effect.logDebug('Adding a product', product.name)
-    const id = yield* pipe(
-      AddProducts.AddProduct({ snapshot: Product.toSnapshot(product) }),
-      Effect.request(add),
-      // The storage logs the cause.
-      Effect.tapError(() => Effect.logWarning('Could not add the product')),
+    const ids = yield* insertAll([Product.toSnapshot(product)]).pipe(
+      Effect.tapError((error) => Effect.logWarning('Could not add the product', error)),
     )
-    yield* Effect.logInfo('Added a product', { id })
+    yield* Effect.logInfo('Added a product', { ids })
   },
   Effect.match({
     onSuccess: () => Own.Completed({ succeeded: true }),

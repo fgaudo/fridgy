@@ -11,6 +11,7 @@ import * as SnackbarArbitrary from '#app/programs/snackbar/program.test_arbitrar
 import type * as Snackbar from '#app/programs/snackbar/program.ts'
 import * as ProductArbitrary from '#domain/product.test_arbitrary.ts'
 import * as Domain from '#domain/product.ts'
+import { ProductsReadError, type StoredProduct } from '#infrastructure/storage/products.ts'
 import * as Day from '#libs/dates/day.ts'
 import * as PositiveInteger from '#libs/numbers/positive-integer.ts'
 import { arbitrary as maybe } from '#libs/option/option.test_arbitrary.ts'
@@ -47,7 +48,6 @@ import {
   type Selection,
   type State,
 } from './program.ts'
-import { ProductListReadError, type StoredProduct } from './services/product-list/product-list.ts'
 
 const Msg = Data.taggedEnum<Message>()
 const Cmd = Data.taggedEnum<Command>()
@@ -153,7 +153,7 @@ describe('Products update', () => {
 
     test('a failure marks the list as failed, forgets the time and touches nothing else', () => {
       assertProperty([state, fc.string()], (before, cause) => {
-        const failed = Msg.ListChanged({ result: Result.fail(new ProductListReadError({ cause })) })
+        const failed = Msg.ListChanged({ result: Result.fail(new ProductsReadError({ cause })) })
         const { after, commands } = step(failed, before)
         return after.own.list._tag === 'Failed' && Opt.isNone(after.own.maybeNow)
           && onlyChanged(before.own, after.own, 'list', 'maybeNow')

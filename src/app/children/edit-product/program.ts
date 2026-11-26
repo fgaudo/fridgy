@@ -15,9 +15,9 @@ import * as Product from '#domain/product.ts'
 import { BackButton } from '#infrastructure/back-button/back-button.ts'
 import { type Feedback, Haptics } from '#infrastructure/haptics/haptics.ts'
 import { Keyboard } from '#infrastructure/keyboard/keyboard.ts'
+import { ProductStore } from '#infrastructure/storage/products.ts'
 import type * as Day from '#libs/dates/day.ts'
 import { every } from '#libs/timers/timers.ts'
-import { UpdateProduct } from './services/update-product/update-product.ts'
 
 /** What the page starts from: the product as the row the user tapped shows it, and its id in the storage. */
 export type Flags = Readonly<{ id: string; product: Product.Product }>
@@ -217,7 +217,7 @@ const keys: ReadonlyArray<Key> = ['clock', 'back-button', 'keyboard']
 
 const save = Effect.fn('SaveProduct')(
   function*({ id, product }: Readonly<{ id: string; product: Product.Product }>) {
-    const { update } = yield* UpdateProduct
+    const { update } = yield* ProductStore
     yield* Effect.logDebug('Saving a product', { id })
     yield* update(id, Product.toSnapshot(product)).pipe(
       Effect.tapError((error) => Effect.logWarning('Could not save the product', error)),

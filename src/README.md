@@ -17,16 +17,14 @@ src/
 ├─ app/                  the application (platform-agnostic)
 │  ├─ program.ts         public: the root Program: Home, and at most one page over it, a child by its visit
 │  ├─ view.tsx           public: the root view: the page shown, keyed by its name and its visit
-│  ├─ layer.ts           public: every adapter that has no alternative, the vibrations' included;
-│  │                     needs a `SqlClient` and an `HttpClient`
+│  ├─ layer.ts           public: every adapter that has no alternative, the products' store and the
+│  │                     vibrations' included; needs a `SqlClient` and an `HttpClient`
 │  ├─ children/<child>/  a child Program (of the root: a page), of the same shape as the root, at any depth; of
 │  │  │                  app/, it imports only its own folder, and the infrastructure's services
 │  │  ├─ program.ts · view.tsx · layer.ts   its public API: the only modules its parent imports
 │  │  ├─ services/<service>/   a service of its own, with its adapters, contract and tests
-│  │  │                        (`add-products/services/scanner/`, `add-products/services/product-lookup/`,
-│  │  │                        `edit-product/services/update-product/`)
-│  │  ├─ children/<child>/     its own children (`home/children/products/`, with
-│  │  │                        `services/product-list/`; `add-products/children/fridge/`)
+│  │  │                        (`add-products/services/scanner/`, `add-products/services/product-lookup/`)
+│  │  ├─ children/<child>/     its own children (`home/children/products/`, `add-products/children/fridge/`)
 │  │  └─ programs/<program>/   a program two programs of this subtree use, of this same shape (none yet)
 │  └─ programs/<program>/  a program two pages use, of the same shape as a child and used like one (see
 │                          "Visibility"): `snackbar/` (Material's snackbar, whose model its parents draw: no view,
@@ -34,11 +32,11 @@ src/
 │                          the order its digits are read in, `services/date-order-setting/`)
 │
 ├─ infrastructure/       what the app's adapters share: the storage (storage/: the database's engine, op-sqlite on
-│                        the phone or wa-sqlite in memory for the tests, its schema and migrations, how a product is
-│                        written, updated, deleted and how its rows are joined and encoded, `ProductStore`, how a
-│                        setting is read and written, `SettingStore`, how the order of a date's digits is kept,
-│                        `DateOrderStore` in `date-order.ts`, how Open Food Facts' answers are cached,
-│                        `BarcodeCache` in `barcodes.ts`, and the sample data), the client of Open Food Facts'
+│                        the phone or wa-sqlite in memory for the tests, its schema and migrations, the products'
+│                        store, `ProductStore`, which the programs ask as it is: the list and its changes, and the
+│                        writes, each in one transaction; how a setting is read and written, `SettingStore`, how
+│                        the order of a date's digits is kept, `DateOrderStore` in `date-order.ts`, how Open Food
+│                        Facts' answers are cached, `BarcodeCache` in `barcodes.ts`), the client of Open Food Facts'
 │                        API (open-food-facts/: how a code is normalized, asked for and decoded); and the
 │                        platform's facts the programs use as they are: the back button (back-button/), how far the
 │                        keyboard covers the window (keyboard/), the opening of a link (links/), and the
@@ -71,8 +69,9 @@ file's name. A view draws an icon by its name (`icon` in `styles.ts`), which the
 2. `app/children/about/program.ts` — a page in one module: state, messages, `update`, commands, `makeModel`.
 3. `app/children/home/program.ts` and its `children/` — a page with a child, declared like the pages in the
    root.
-4. `app/children/home/children/products/services/` — what a program needs from the
-   outside world, each service owned by what uses it; `domain/` — the entities and their rules.
+4. `app/children/add-products/services/` — what a program needs from the outside world, each service owned by
+   what uses it; `infrastructure/storage/products.ts` — the products' store, which the programs ask as it is;
+   `domain/` — the entities and their rules.
 5. `entrypoints/native.tsx` — how everything is wired on the phone.
 
 ## Visibility
@@ -83,8 +82,8 @@ role a file's name gives it. Biome's `noRestrictedImports` rule (`biome.json`) e
 
 - inside `app/`, imports go downwards only: a program uses its own services and children, never a parent or a
   sibling (another child, another program's service), and a child only through its `program.ts`, `view.tsx`
-  and `layer.ts`, at every depth; and the infrastructure's services, for the platform's facts it takes as they
-  are;
+  and `layer.ts`, at every depth; and the infrastructure's services, for the platform's facts and the products'
+  store, which it takes as they are;
 - a program two programs use lives in `programs/` of their lowest common parent, and every program of that
   parent's subtree reaches it as it reaches a child, through the modules at its root, by a relative import
   (`../../programs/<program>/program.ts`) or an alias. Biome allows `../../programs/<program>/` from a child of

@@ -272,7 +272,7 @@ selection):
   read the child's selection to hide the field, which a parent never does. **Decided: `Products`**, which gives
   Home the pieces, as it does for the selection. `Products` already observes the back button for its selection,
   as `AGENTS.md`'s rule allows a page's child.
-- **Live filtering against a search request.** A `ProductList` that took the query (`WHERE name LIKE`) would
+- **Live filtering against a search request.** A list in the store that took the query (`WHERE name LIKE`) would
   restart its subscription on every keystroke (the key would hold the query), reload the list each time, lose the
   arrivals and departures across keystrokes, match case-insensitively for ASCII only and know nothing of
   accents. In memory, the filter is pure, instant, and the whole concurrency of a request (an answer older than

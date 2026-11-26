@@ -6,7 +6,7 @@ owner asked for on 22 November 2026, from the move to effect-tea 0.9.0 on 26 Nov
 steps on the root and on the inputs, and what waited for that release, and from a review of the structure on that
 same day, for which the owner set every rule of the project aside.
 
-That last review found one thing, which steps 1, 3, 5 and 6 act on. The app has three boundaries where one thing
+That last review found one thing, which steps 2, 4 and 5 act on. The app has three boundaries where one thing
 is put in another's place. A program says what it asks of the world as data, its commands and the keys of its
 subscriptions, and `update` is tested with none of it run. The entrypoint, or a test, picks the database's engine,
 the HTTP client and the platform's services. The model stands between a program and its view. A boundary beside
@@ -19,57 +19,14 @@ that describe what it changed brought up to date (`AGENTS.md`, "Conventions").
 
 ## Next, in order
 
-### 1. The programs ask the products' store
+### 1. An id that is the storage's
 
 **Model and effort.** Opus 5.5, `high`.
 
-**Depends on** no other step.
-
-**Why.** Counted on 26 November 2026:
-
-- **Four ports stand over the products, each with one adapter.** `ProductList`, `DeleteProducts`, `AddProducts`
-  and `UpdateProduct` are sixteen files: a port, its adapter on `ProductStore`, a contract and the test that runs
-  it. No test gives a second adapter: `src/app/user.test_support.ts` runs the app's own over `SqliteMemory`, and
-  "one storage per setup" says there is none. What changes from the phone to a test is the engine, under the
-  store.
-- **A program has already said what it needs.** `Command.Delete({ ids })` is data, and `update` is tested without
-  running it. The port behind the command's effect says the same need a second time.
-- **The adapters repeat each other.** A batch in one transaction, all or nothing, with every request completed
-  after it, is written three times (`add-products.sql.ts`, and twice in `delete-products.sql.ts`). An id is parsed
-  back from its string twice, with the same lines and the same comment (`delete-products.sql.ts`,
-  `update-product.sql.ts`).
-- **The writes have three shapes.** `AddProducts.add` is a `RequestResolver` asked one request per command, whose
-  failure is `void`. `DeleteProducts` uses resolvers to put a selection in one transaction, and must complete every
-  request only once the transaction is over (its comment says why). `UpdateProduct.update`, written last, is a
-  function with tagged errors.
-
-**How.**
-
-- `ProductStore` (`src/infrastructure/storage/products.ts`) gives what the programs' commands and subscriptions
-  run, and keeps the rest to itself (its resolvers, its columns, the join): the list's `changes`, as `ProductList`
-  gives them, each row under its id and read on its own (`withExpiration`'s `select`, `Row` and `readRow`, which
-  `products.test_support.ts` reads with too); `insertAll`, for a product added and for the ones an undo puts
-  back; `deleteAll`; `update`. Each write is a function that returns an `Effect` with tagged errors, in one transaction.
-- The effects of the commands, and the list's subscription, ask `ProductStore`, which `src/app/layer.ts` provides.
-  The four ports go, with their adapters and Home's two `layer.ts`; the other pages' layers lose those entries.
-- The contracts' checks become the store's test, on `SqliteMemory`, each one kept, the rows that cannot be read
-  included. What they need beyond the store stays in `products.test_support.ts` (`insertRow` writes such a row).
-- An id stays a string until step 2, parsed in one place: the store.
-- What is given up: a program could ask the store for more than it needs, and "write services have no read" is no
-  longer a type. A program still learns of a write from `changes` alone: a rule of `AGENTS.md`, which a review
-  checks.
-
-**Done when** the four ports are gone; no module under `src/app/` names `Request` or a resolver, and none but
-`date-order-setting.sql.ts` the `SqlClient`; the store's test checks what the four contracts checked (the list's
-order and its changes, all or nothing, each failure by its tag); the root's tests pass as they are; `AGENTS.md`
-("A service belongs to what uses it", "Tests"), `src/README.md`, `docs/testing.md`, `docs/edit-product.md` and the
-`add-service` skill say what is true of the products.
-
-### 2. An id that is the storage's
-
-**Model and effort.** Opus 5.5, `high`.
-
-**Depends on** step 1, which leaves one module that reads it. Every row has its id already (`StoredProduct`).
+**Depends on** no other step. One module reads an id: the products' store (`src/infrastructure/storage/products.ts`,
+`rowIdOf`), whose `StoredProduct` gives every row its id. The store's test feeds `deleteAll` and `update` strings
+that name no row (`unknownId`, `products.test.ts`): with an opaque id they go, and an id that is not stored is one
+deleted.
 
 **Why.** An id is a `string` in every state, message, event and key. The store parses it back into the row's
 integer, with a branch for one that was never written.
@@ -80,13 +37,14 @@ makes and reads. The store's functions, the programs' states, messages and event
 
 **Done when** nothing parses an id, and no branch is left for one that was never written.
 
-### 3. No service and no layer below the root
+### 2. No service and no layer below the root
 
 **Model and effort.** Opus 5.5, `medium`.
 
-**Depends on** step 1, which leaves five services under `src/app/`.
+**Depends on** no other step.
 
-**Why.** Counted on 26 November 2026, of what step 1 leaves:
+**Why.** Counted on 26 November 2026, once the products' store had replaced their four ports, five services are
+left under `src/app/`:
 
 - **`DateOrderSetting`** (`programs/expiration`) has one adapter. It adds to `DateOrderStore` a read that follows
   the changes, and a name for its error.
@@ -96,9 +54,9 @@ makes and reads. The store's functions, the programs' states, messages and event
   holds their adapters all the same, as it holds the vibrations'. `src/app/user.test_support.ts` merges its own
   after the app's layer, where the last of a merge wins. A test that forgets one runs the phone's, and no
   typecheck fails, against "a missing choice fails the typecheck" (`AGENTS.md`).
-- **For these five**, every program's folder may hold `services/` and a `layer.ts` (six below the root, Home's a
-  line that forwards its child's), Biome keeps adapters from programs, and the tests have a kind of file,
-  `*.test_contract.ts`, for the second adapter that no service has.
+- **For these five**, every program's folder may hold `services/` and a `layer.ts` (four below the root,
+  EditProduct's a line that forwards its child's), Biome keeps adapters from programs, and the tests have a kind
+  of file, `*.test_contract.ts`, for the second adapter that no service has.
 
 **How.**
 
@@ -113,7 +71,8 @@ makes and reads. The store's functions, the programs' states, messages and event
   scanner, the lookup and the vibrations are left out of it, as the `BackButton` is: the entrypoint picks React
   Native's, and `user.test_support.ts` its own.
 - A program's folder holds `program.ts`, its tests, `view.tsx` and `children/`. A contract becomes the test of
-  its one implementation, and `test_contract` is no longer a kind of file.
+  its one implementation, as the products' store's did (`src/infrastructure/storage/products.test.ts`), and
+  `test_contract` is no longer a kind of file.
 - The rules follow: `biome.json` (the rule on adapters, the override for `src/app/**/layer.ts`), `AGENTS.md` (the
   shape of a program, "A service belongs to what uses it", "Choices of the platform", the generated files' paths,
   "Tests"), `src/README.md` (the tree, "Visibility"), the `add-service` skill, which becomes how a service of the
@@ -124,7 +83,7 @@ is left under `src/`; `user.test_support.ts` replaces nothing by the order of a 
 services away fails the typecheck; the item "The storage's checks on op-sqlite", below, names the stores' tests;
 the documents above say what is true.
 
-### 4. What has one truth is written once
+### 3. What has one truth is written once
 
 **Model and effort.** Opus 5.5, `medium`.
 
@@ -150,11 +109,11 @@ the documents above say what is true.
 
 **Done when** each has one definition, and the programs' tests check what they checked.
 
-### 5. A large program is modules, by concern
+### 4. A large program is modules, by concern
 
 **Model and effort.** Opus 5.5, `high`.
 
-**Depends on** steps 1 to 4, which change the same programs.
+**Depends on** steps 1 to 3, which change the same programs.
 
 **Why.** `home/children/products/program.ts` is 753 lines and `add-products/program.ts` 689 (26 November 2026,
 before the steps above). Each holds concerns that read each other's state, and so is one program, "however long"
@@ -178,11 +137,11 @@ program's folder holds, and names no such module: none was written.
 checked, changed only in what they import; `AGENTS.md` and the `add-program` skill say what a program's folder
 holds and when a program is split, by the guide's words.
 
-### 6. `AGENTS.md` holds the rules of every change
+### 5. `AGENTS.md` holds the rules of every change
 
 **Model and effort.** Opus 5.5, `medium`.
 
-**Depends on** steps 3 and 5, which rewrite the rules it sorts.
+**Depends on** steps 2 and 4, which rewrite the rules it sorts.
 
 **Why.** "Architecture rules" mixes rules that hold for any program with the design of single features: "Home is
 always there, and at most one page is shown over it", "The back button is the program's that has something to do
@@ -197,11 +156,11 @@ without it would be a bug, and says where the rest is.
 **Done when** every item of "Architecture rules" holds for any program or service; each paragraph moved is reached
 from `AGENTS.md`, by its table or by a line; nothing is said in two places.
 
-### 7. Design: the app in the user's language
+### 6. Design: the app in the user's language
 
 **Model and effort.** Fable 5.2, `high`: a design, whose steps are then written here, each with its own model.
 
-**Depends on** step 4, which changes the views it reads. The owner is asked first: which languages.
+**Depends on** step 3, which changes the views it reads. The owner is asked first: which languages.
 
 **Why.** The texts are English, literals in the views (about 65), in the crash screen, and one in the domain
 (`'Undefined name'`, `fromSnapshot`). The dates, the order of a date's digits and the language Open Food Facts is
@@ -222,7 +181,7 @@ are.
 **Done when** `docs/localization.md` holds the decisions and the facts they rely on, checked; the steps that
 implement it are written here; the owner has read it.
 
-### 8. The app on effect-tea 0.9.0, seen on the emulator
+### 7. The app on effect-tea 0.9.0, seen on the emulator
 
 **Model and effort.** Opus 5.5, `medium`.
 
@@ -262,11 +221,10 @@ fixed, or written here as a step; `docs/motion.md` and `docs/testing.md` say wha
 
 None of these waits for the steps above, nor holds them up.
 
-- **What the web build left behind.** Sonnet 5.5, `medium`. `src/infrastructure/storage/samples.ts` has no
-  importer, and `src/README.md` and the `add-service` skill ("The development database") still describe it: both
-  go. `sqlite.memory.ts` is imported only by tests and their support, under a name that bundles may import, and
-  `@effect/sql-sqlite-wasm` is a dependency of the app: it becomes `sqlite.memory.test_support.ts`, and its package
-  a `devDependency` (`bun install` writes the lockfile). Comments still name the browser:
+- **What the web build left behind.** Sonnet 5.5, `medium`. `sqlite.memory.ts` is imported only by tests and
+  their support, under a name that bundles may import, and `@effect/sql-sqlite-wasm` is a dependency of the app:
+  it becomes `sqlite.memory.test_support.ts`, and its package a `devDependency` (`bun install` writes the
+  lockfile). Comments still name the browser:
   `src/infrastructure/back-button/back-button.ts`, `src/app/user.test_support.ts` ("the browser's scanner") and
   `src/libs/dates/date-order.ts`; `tsconfig.json` names `platform-browser`. Done when `browser` is found under
   `src/` only where it is true, `bun run bundle` passes, and `bun run update-licenses` leaves its file as it is.
@@ -319,22 +277,22 @@ a step when a release takes it up, or goes when the runtime rejects it.
   command could stamp the product instead, against "the command carries the entity, valid by construction".
 - **The storage's checks on op-sqlite.** The phone's engine is a client written here (`sqlite.op-sqlite.ts`), whose
   update hook every list relies on; every test runs on wa-sqlite, and `docs/testing.md` says so. Running the
-  storage's checks on the emulator (the contracts, until steps 1 and 3 make them the stores' tests) needs them
-  apart from `bun:test`. The engine is the one thing of the storage that has two implementations: these checks are
-  the contract that has two adapters to run on. To weigh: whether that is worth its cost.
+  storage's checks on the emulator (the products' store's test, and the contracts, until step 2 makes them the
+  stores' tests) needs them apart from `bun:test`. The engine is the one thing of the storage that has two
+  implementations: these checks are the contract that has two adapters to run on. To weigh: whether that is worth its cost.
 - **The crash screen shows nothing of the cause**, by decision (`src/entrypoints/crash/view.tsx`). The cause goes
   to the log, which a user cannot reach: a crash on a phone cannot be told apart from another. A detail the user
   can copy would still send nothing.
 - **How `AGENTS.md` is written.** A review's opinion, of 26 November 2026: its sentences are compressed, and some
   must be worked out before they can be followed ("A page over Home is a child by the number of its visit, never
   used again"). An agent reads the file at every session. To weigh: plain statements, one fact each, as the file
-  asks of a comment. It is the owner's voice, so nothing changes it without the owner; step 6 moves paragraphs,
+  asks of a comment. It is the owner's voice, so nothing changes it without the owner; step 5 moves paragraphs,
   and rewrites none.
 - **A text field is uncontrolled**, by the `views` skill: its text is `defaultValue`, and a new `key` replaces
   it. The choice was made when the runtime drew no controlled element on React Native. Its bridge now draws a
   controlled `TextInput`, and promises nothing of what it shows until its native view takes the model's value. To
   weigh, on a phone: whether a controlled field keeps up with fast typing. It would let a locked state take a key
   back, and `nameKey` and `replacements` go.
-- **What the move to 0.9.0 changed for the user**, each decided in passing and seen on no screen yet (step 8): the
+- **What the move to 0.9.0 changed for the user**, each decided in passing and seen on no screen yet (step 7): the
   keypad of a date takes no key until the order of its digits is read; the disc of a product entering the fridge
   is colored by the day it was added on, where it followed the clock during its flight.

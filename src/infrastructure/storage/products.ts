@@ -1,39 +1,55 @@
-// How products are written and read, for every adapter of the storage: how each column is encoded, the tables
-// as models, the repository of products, the insertion, the update and the deletion of a product with its
-// expiration, and a product's row joined to its expiration, as it is selected and read. What a query filters and
-// orders is its own.
+// The stored products, as the programs' commands and subscriptions ask for them: the list and its changes, and the
+// writes. How each column is encoded, the tables as models and a product's row joined to its expiration stay here.
+import * as Arr from 'effect/Array'
 import * as Context from 'effect/Context'
-import type * as DateTime from 'effect/DateTime'
+import * as Data from 'effect/Data'
 import * as Effect from 'effect/Effect'
-import { flow } from 'effect/Function'
+import { pipe } from 'effect/Function'
 import * as Layer from 'effect/Layer'
 import * as Opt from 'effect/Option'
 import * as Predicate from 'effect/Predicate'
+import * as Result from 'effect/Result'
 import * as Schema from 'effect/Schema'
+import * as Stream from 'effect/Stream'
 import * as SchemaX from 'effect/schema'
 import * as Sql from 'effect/sql'
 import * as SqlSchema from 'effect/sql/SqlSchema'
 import type * as Domain from '#domain/product.ts'
 import * as Day from '#libs/dates/day.ts'
 import * as Integer from '#libs/numbers/integer.ts'
+import * as Source from '#libs/source/source.ts'
 import { ProductExpirationSchema, ProductSchema } from './schema.ts'
 
+/** A stored product under its id, still unvalidated: storage may contain anything, and every row has an id. */
+export type StoredProduct = Domain.UnvalidatedSnapshot & Readonly<{ id: string }>
+
+/** The storage could not be read: the list stays as it was until the next change. */
+export class ProductsReadError extends Data.TaggedError('ProductsReadError')<{ readonly cause: unknown }> {}
+
+/** The storage could not be written: nothing of the write is stored. */
+export class ProductsWriteError extends Data.TaggedError('ProductsWriteError')<{ readonly cause: unknown }> {}
+
+/** Nothing is stored under the id: the product was deleted since it was read, or the id was never one. */
+export class ProductNotStored extends Data.TaggedError('ProductNotStored')<{ readonly id: string }> {}
+
+export type StoredProducts = Result.Result<ReadonlyArray<StoredProduct>, ProductsReadError>
+
 /** How the values of each column are encoded: what a query decodes its rows with. */
-export const ProductColumns = {
+const ProductColumns = {
   id: Integer.Schema,
   name: Schema.String,
   creationDate: Schema.DateTimeUtcFromString,
 } as const
 
-export const ProductExpirationColumns = {
+const ProductExpirationColumns = {
   id: Integer.Schema,
   date: Day.Schema,
   productId: Integer.Schema,
 } as const
 
 /**
- * A product's row as `withExpiration.select` gives it. The id is the rowid, always there. The other columns are
- * read one by one (`readRow`), so that one that cannot be read leaves the others, and the other rows.
+ * A product's row as the list selects it. The id is the rowid, always there. The other columns are read one by one
+ * (`readRow`), so that one that cannot be read leaves the others, and the other rows.
  */
 const Row = Schema.Struct({
   id: ProductColumns.id,
@@ -47,16 +63,17 @@ const readCreationDate = Schema.decodeUnknownOption(ProductColumns.creationDate)
 const readExpirationDate = Schema.decodeUnknownOption(ProductExpirationColumns.date)
 
 /** What a row holds. A missing expiration is a product that never expires: the schema stores no `NULL` date. */
-const readRow = (row: typeof Row.Type): Readonly<{ id: Integer.Integer; snapshot: Domain.UnvalidatedSnapshot }> => ({
-  id: row.id,
-  snapshot: {
-    maybeName: readName(row.name),
-    maybeCreationDate: readCreationDate(row.creationDate),
-    maybeExpirationDate: Predicate.isNullish(row.expirationDate)
-      ? Opt.some(Opt.none())
-      : Opt.map(readExpirationDate(row.expirationDate), Opt.some),
-  },
+const readRow = (row: typeof Row.Type): StoredProduct => ({
+  id: row.id.toString(10),
+  maybeName: readName(row.name),
+  maybeCreationDate: readCreationDate(row.creationDate),
+  maybeExpirationDate: Predicate.isNullish(row.expirationDate)
+    ? Opt.some(Opt.none())
+    : Opt.map(readExpirationDate(row.expirationDate), Opt.some),
 })
+
+/** The row an id names. Only the form ids are written in: `parseInt` would read "1 " or "1abc" as 1. */
+const rowIdOf = (id: string) => pipe(Number(id), Integer.make, Opt.filter((integer) => integer.toString(10) === id))
 
 class Product extends SchemaX.Model.Class<Product>('Product')({
   [ProductSchema.columns.id]: SchemaX.Model.Field({
@@ -80,6 +97,8 @@ class ProductExpiration extends SchemaX.Model.Class<ProductExpiration>(
   [ProductExpirationSchema.columns.productId]: ProductExpirationColumns.productId,
 }) {}
 
+const toWriteError = (cause: unknown) => new ProductsWriteError({ cause })
+
 export class ProductStore extends Context.Service<ProductStore>()(
   'c28d89da81ef74f7',
   {
@@ -101,33 +120,6 @@ export class ProductStore extends Context.Service<ProductStore>()(
           tableName: ProductExpirationSchema.table,
         } as const,
       )
-      /** Inserts products, each with its expiration if it has one, in one transaction; answers with their ids. */
-      const insert = Sql.SqlResolver.ordered({
-        Request: Schema.Struct({
-          name: Schema.String,
-          creationDate: Schema.DateTimeUtc,
-          maybeExpirationDate: Schema.Option(Schema.toType(Day.Schema)),
-        }),
-        // Decoded from what `execute` returns, so it must describe encoded values: only the id is needed.
-        Result: Schema.Struct({ id: Integer.Schema }),
-        execute: flow(
-          Effect.forEach(
-            Effect.fn(function*(request) {
-              const product = yield* repository.insert({
-                creation_date: request.creationDate,
-                name: request.name,
-              })
-              yield* Opt.match(request.maybeExpirationDate, {
-                onNone: () => Effect.void,
-                onSome: (date) => Effect.asVoid(expirations.insert({ date, product_id: product.id })),
-              })
-              return { id: product.id }
-            }),
-            { concurrency: 'unbounded' },
-          ),
-          sql.withTransaction,
-        ),
-      })
       const { table: product_table, columns: product } = ProductSchema
       const { table: expiration_table, columns: expiration } = ProductExpirationSchema
       const id = sql(`${product_table}.${product.id}`)
@@ -135,6 +127,71 @@ export class ProductStore extends Context.Service<ProductStore>()(
       const creationDate = sql(`${product_table}.${product.creationDate}`)
       const expirationDate = sql(`${expiration_table}.${expiration.date}`)
       const productId = sql(`${expiration_table}.${expiration.productId}`)
+      /**
+       * Every stored product, left-joined to its expiration: those that expire first, the soonest first. The id
+       * breaks ties, since SQLite keeps no order among equal keys and the rows would move between reads.
+       */
+      const readAll = SqlSchema.findAll({
+        Request: Schema.Void,
+        Result: Row,
+        execute: () =>
+          sql`
+            SELECT ${id} AS id, ${name} AS name, ${creationDate} AS creationDate, ${expirationDate} AS expirationDate
+            FROM ${sql(product_table)} LEFT JOIN ${sql(expiration_table)} ON ${id} = ${productId}
+            ORDER BY ${expirationDate} IS NULL, ${expirationDate}, ${id}
+          `,
+      })()
+      /**
+       * Event: emits the list on subscription and after every change to the stored products, or why it could not
+       * be read; it never ends, a failed read included. A list is skipped while the reader is busy with the last.
+       */
+      const changes: Source.Source<StoredProducts, never> = Source.fromStream(
+        sql.reactive(
+          [product_table, expiration_table],
+          readAll.pipe(
+            Effect.tapError((error) => Effect.logWarning('Could not read the products', error)),
+            Effect.result,
+          ),
+        ).pipe(
+          Stream.buffer({ capacity: 1, strategy: 'sliding' }),
+          Stream.map((result): StoredProducts =>
+            Result.match(result, {
+              onFailure: (cause) => Result.fail(new ProductsReadError({ cause })),
+              onSuccess: (rows) => Result.succeed(Arr.map(rows, readRow)),
+            })
+          ),
+        ),
+      )
+      const insertOne = Effect.fnUntraced(function*(snapshot: Domain.Snapshot) {
+        const stored = yield* repository.insert({ creation_date: snapshot.creationDate, name: snapshot.name })
+        yield* Opt.match(snapshot.maybeExpirationDate, {
+          onNone: () => Effect.void,
+          onSome: (date) => Effect.asVoid(expirations.insert({ date, product_id: stored.id })),
+        })
+        return stored.id.toString(10)
+      })
+      /** Stores products, each with its expiration if it has one, all or nothing; answers with their ids, in order. */
+      const insertAll = Effect.fn('ProductStore.insertAll')(
+        function*(snapshots: Iterable<Domain.Snapshot>) {
+          return yield* Effect.forEach(snapshots, insertOne)
+        },
+        sql.withTransaction,
+        Effect.mapError(toWriteError),
+      )
+      /**
+       * Deletes products, all or nothing: a selection deleted in part would leave the user to guess which products
+       * are gone. An id that names no product has nothing to delete. The schema's trigger deletes each expiration
+       * with its product (`migrations.ts`).
+       */
+      const deleteAll = Effect.fn('ProductStore.deleteAll')(
+        function*(ids: Iterable<string>) {
+          yield* Effect.forEach(Arr.getSomes(Arr.map(Arr.fromIterable(ids), rowIdOf)), repository.delete, {
+            discard: true,
+          })
+        },
+        sql.withTransaction,
+        Effect.mapError(toWriteError),
+      )
       const updateRow = SqlSchema.findOneOption({
         Request: Schema.Struct({
           id: ProductColumns.id,
@@ -167,17 +224,12 @@ export class ProductStore extends Context.Service<ProductStore>()(
           sql`DELETE FROM ${sql(expiration_table)} WHERE ${sql(expiration.productId)} = ${productId}`,
       })
       /**
-       * Writes a product under `id`, its expiration added, changed or removed with it, in one transaction; `None`
-       * when nothing is stored under `id`. Not the repository's `update`, which makes a missing row a defect: a
-       * product deleted since it was read is a state of the world.
+       * The product and its expiration, written in one transaction; `None` when nothing is stored under `id`. Not
+       * the repository's `update`, which makes a missing row a defect: a product deleted since it was read is a
+       * state of the world.
        */
-      const update = Effect.fn('ProductStore.update')(
-        function*(
-          id: Integer.Integer,
-          snapshot: Readonly<
-            { name: string; creationDate: DateTime.Utc; maybeExpirationDate: Opt.Option<Day.Day> }
-          >,
-        ) {
+      const write = Effect.fnUntraced(
+        function*(id: Integer.Integer, snapshot: Domain.Snapshot) {
           const maybeUpdated = yield* updateRow({ id, name: snapshot.name, creationDate: snapshot.creationDate })
           if (Opt.isNone(maybeUpdated)) return Opt.none<void>()
           yield* Opt.match(snapshot.maybeExpirationDate, {
@@ -187,26 +239,18 @@ export class ProductStore extends Context.Service<ProductStore>()(
           return Opt.some<void>(undefined)
         },
         sql.withTransaction,
+        Effect.mapError(toWriteError),
       )
-      /** Deletes a product; the schema's trigger deletes its expiration with it (`migrations.ts`). */
-      const deleteById = (id: Integer.Integer) => repository.delete(id)
-      /**
-       * A product with its expiration, if any, for the queries that read products: the `SELECT` of a row, the
-       * schema of what it gives and how a row is read, the `FROM` of a product left-joined to its expiration, the
-       * columns a query may refer to, and the tables it reads, for a query that reacts to their changes. What a
-       * query filters and orders is its own.
-       */
-      const withExpiration = {
-        select: sql`
-          SELECT ${id} AS id, ${name} AS name, ${creationDate} AS creationDate, ${expirationDate} AS expirationDate
-        `,
-        Row,
-        readRow,
-        from: sql`FROM ${sql(product_table)} LEFT JOIN ${sql(expiration_table)} ON ${id} = ${productId}`,
-        columns: { id, name, creationDate, expirationDate },
-        tables: [product_table, expiration_table],
-      }
-      return { insert, update, deleteById, withExpiration }
+      /** Writes a product under `id` in place of what was there, its expiration added, changed or removed with it. */
+      const update = Effect.fn('ProductStore.update')(
+        function*(id: string, snapshot: Domain.Snapshot) {
+          const maybeRowId = rowIdOf(id)
+          if (Opt.isNone(maybeRowId)) return yield* new ProductNotStored({ id })
+          const maybeUpdated = yield* write(maybeRowId.value, snapshot)
+          if (Opt.isNone(maybeUpdated)) return yield* new ProductNotStored({ id })
+        },
+      )
+      return { changes, insertAll, deleteAll, update }
     }),
   },
 ) {

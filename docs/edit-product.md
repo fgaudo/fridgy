@@ -6,7 +6,7 @@
 > skill says.
 
 Implemented on 2026-10-28, and seen on Android in the emulator the same day (see "Verified, and not"). The code is
-the page `src/app/children/edit-product/` with its services, the date entry's program
+the page `src/app/children/edit-product/`, the date entry's program
 `src/app/programs/expiration/` and its rules in `src/libs/dates/`, the snackbar's program
 `src/app/programs/snackbar/`, the tap on a row in `src/app/children/home/children/products/`, `ProductStore.update`
 and `DateOrderStore` in `src/infrastructure/storage/`. Read [`AGENTS.md`](../AGENTS.md), the `add-program`,
@@ -174,29 +174,18 @@ only while Home is shown, so a double tap opens it once). The model decides what
 `ItemSelection`): opening a `Valid` row while nothing is selected, the row's toggle while selecting, nothing
 while deleting and on a leaving row; the view attaches whatever message it holds to `click`.
 
-## The service (`src/app/children/edit-product/services/update-product/`)
+## The write: `ProductStore.update` (`src/infrastructure/storage/products.ts`)
 
-`UpdateProduct.update(id, snapshot)` writes the snapshot under the id, its expiration added, changed or removed
-with it, in one transaction; the pages see the change through the storage's changes, not through this service.
-It fails with `UpdateProductError` when the storage could not be written and with `ProductNotStored` when
-nothing is stored under the id: the product was deleted since it was opened, an expected state of the world. A
-plain effect, not a `RequestResolver`: one product is saved at a time, and nothing batches with it. The sql
-adapter parses the id as `DeleteProducts`'s does (only the form an integer is written in, so that `"1 "` is not
-`1`), a string that is not an id being `ProductNotStored` too.
+The page's command asks the products' store. `update(id, snapshot)` writes the snapshot under the id, its
+expiration added, changed or removed with it, in one transaction; the pages see the change through the store's
+`changes`, not through the write. It fails with `ProductsWriteError` when the storage could not be written and
+with `ProductNotStored` when nothing is stored under the id: the product was deleted since it was opened, an
+expected state of the world. A plain effect: one product is saved at a time. The store parses the id where it
+parses every id (only the form an integer is written in, so that `"1 "` is not `1`), a string that is not an id
+being `ProductNotStored` too.
 
-### The date order's setting
-
-The order the digits are read in is the date's program's: its `services/date-order-setting/`
-(`src/app/programs/expiration/`), the one service of it, which both pages reach through their child. The
-setting's key and what its text stands for (the order's `Schema`, the fall-back to the device's locale) are
-`DateOrderStore` (`src/infrastructure/storage/date-order.ts`), a service of the infrastructure on `SettingStore`
-with `current`, `set` and `tables`, as `ProductStore` is on the `SqlClient`; the adapter is a few lines on it.
-
-## The infrastructure: `ProductStore.update`
-
-`update(id, snapshot)` answers `None` when nothing is stored under the id. In one transaction: the product's row
-is updated and read back with `SqlSchema.findOneOption` (`None` ends the transaction, nothing written), then the
-expiration is upserted, or deleted when the snapshot has none.
+In one transaction: the product's row is updated and read back with `SqlSchema.findOneOption` (`None` ends the
+transaction, nothing written), then the expiration is upserted, or deleted when the snapshot has none.
 
 - **Not `repository.update`** of the `SqlModel` repository: **verified** in
   `node_modules/effect/dist/sql/SqlModel.js`, it turns the `NoSuchElementError` of a missing row into a defect
@@ -206,8 +195,16 @@ expiration is upserted, or deleted when the snapshot has none.
   is already what makes "a product has at most one expiration" true. No migration was needed: the schema does
   not change.
 - The creation date is written too, unchanged: the store replaces what is under the id with the snapshot, so
-  that its contract is "what is written reads back as itself" and nothing else, and the page's decision to keep
-  the creation date stays the page's.
+  that what is written reads back as itself and nothing else, and the page's decision to keep the creation date
+  stays the page's.
+
+### The date order's setting
+
+The order the digits are read in is the date's program's: its `services/date-order-setting/`
+(`src/app/programs/expiration/`), the one service of it, which both pages reach through their child. The
+setting's key and what its text stands for (the order's `Schema`, the fall-back to the device's locale) are
+`DateOrderStore` (`src/infrastructure/storage/date-order.ts`), a service of the infrastructure on `SettingStore`
+with `current`, `set` and `tables`, as `ProductStore` is on the `SqlClient`; the adapter is a few lines on it.
 
 ## Open points, and what was decided
 
@@ -258,7 +255,7 @@ expiration is upserted, or deleted when the snapshot has none.
   database read of a few milliseconds under the page's entrance transition. The alternative, drawing the fields
   with an empty date field and a wrong strip for a frame, was judged worse than an honest state.
 - **The row's move in the list.** After an edit, Home's list comes back with the product in its new place
-  (ordered by expiration, `ProductList`), which snabbdom moves without a transition: a jump. Acceptable for now;
+  (ordered by expiration, the store's `changes`), which snabbdom moves without a transition: a jump. Acceptable for now;
   a FLIP of the rows, measured in hooks as `gatherAndFly` measures, is in "Later".
 - **The keyboard over the keypad.** While the name field is focused, the keyboard takes the bottom of the
   viewport (the WebView shrinks: `innerHeight` 914 to 578 on a Pixel 6, seen in the emulator on 2026-10-28), so
@@ -268,7 +265,7 @@ expiration is upserted, or deleted when the snapshot has none.
 
 ## Verified, and not
 
-The rules, the page, `Products`, the contracts (the update's, and the list seeing an update) and the root's
+The rules, the page, `Products`, the products' store (the update, and the list seeing an update) and the root's
 scenarios are tested (`bun test`); the whole flow was seen in a browser, on the reference screen too (320×640 and
 320×533). On Android, in the emulator on 2026-10-28 (API 29 and 37, the Capacitor 9 build): a long press selects
 the row and no tap opens the product; a tap opens it; the back button, with the keyboard open, closes the

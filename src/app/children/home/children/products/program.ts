@@ -17,13 +17,12 @@ import * as SnackbarProgram from '#app/programs/snackbar/program.ts'
 import * as Domain from '#domain/product.ts'
 import { BackButton } from '#infrastructure/back-button/back-button.ts'
 import { type Feedback, Haptics } from '#infrastructure/haptics/haptics.ts'
+import { ProductStore, type ProductsReadError, type StoredProduct } from '#infrastructure/storage/products.ts'
 import * as NonEmptyHashSet from '#libs/collections/non-empty-hash-set.ts'
 import type * as Day from '#libs/dates/day.ts'
 import * as PositiveInteger from '#libs/numbers/positive-integer.ts'
 import type * as UnitInterval from '#libs/numbers/unit-interval.ts'
 import { after, every } from '#libs/timers/timers.ts'
-import * as DeleteProducts from './services/delete-products/delete-products.ts'
-import { ProductList, type ProductListReadError, type StoredProduct } from './services/product-list/product-list.ts'
 
 export type Product = Data.TaggedEnum<{
   /** Stored, but not a valid product: it can still be selected and deleted. */
@@ -104,7 +103,7 @@ type Own = Data.TaggedEnum<{
   /** The back button, heard only while something is selected: it clears the selection, or waits for its deletion. */
   BackPressed: object
   TimeChanged: { now: DateTime.Zoned }
-  ListChanged: { result: Result.Result<ReadonlyArray<StoredProduct>, ProductListReadError> }
+  ListChanged: { result: Result.Result<ReadonlyArray<StoredProduct>, ProductsReadError> }
   /** The arriving rows have opened their place, and the leaving ones closed theirs. */
   RowsSettled: object
   // From commands.
@@ -315,7 +314,7 @@ export const productsOf = (items: ReadonlyArray<Product>, ids: HashSet.HashSet<s
 }
 
 /** The services of the subscriptions: the commands' are inferred from `runCommand`. */
-type Deps = ProductList | BackButton | DateTime.CurrentTimeZone
+type Deps = ProductStore | BackButton | DateTime.CurrentTimeZone
 
 // Expiration statuses derive from the current time: it is refreshed often
 // enough for days-long expirations.
@@ -323,7 +322,7 @@ const clock: Tea.Subscription<Own, Deps> = every('30 seconds', (now) => Own.Time
 
 const changes: Tea.Subscription<Own, Deps> = Channel.unwrap(
   Effect.map(
-    Effect.service(ProductList),
+    Effect.service(ProductStore),
     ({ changes }) => Channel.map(changes, (result) => Own.ListChanged({ result })),
   ),
 )
@@ -354,14 +353,10 @@ const showsSelection = (state: State) => state.list._tag === 'Loaded' && state.s
 
 const deleteProducts = Effect.fn('DeleteProducts')(
   function*({ ids }: Readonly<{ ids: NonEmptyHashSet.NonEmptyHashSet<string> }>) {
-    const { deleteById } = yield* DeleteProducts.DeleteProducts
+    const { deleteAll } = yield* ProductStore
     yield* Effect.logDebug('Deleting products', { count: HashSet.size(ids) })
-    yield* pipe(
-      ids,
-      HashSet.map((id) => DeleteProducts.DeleteProductById({ id })),
-      Effect.forEach(Effect.request(deleteById), { concurrency: 'unbounded', discard: true }),
-      // The storage logs the cause.
-      Effect.tapError(() => Effect.logWarning('Could not delete the products')),
+    yield* deleteAll(ids).pipe(
+      Effect.tapError((error) => Effect.logWarning('Could not delete the products', error)),
     )
     yield* Effect.logInfo('Deleted products', { count: HashSet.size(ids) })
     return Own.Deleted()
@@ -373,14 +368,10 @@ const deleteProducts = Effect.fn('DeleteProducts')(
 
 const restoreProducts = Effect.fn('RestoreProducts')(
   function*({ products }: Readonly<{ products: Arr.NonEmptyReadonlyArray<Domain.Product> }>) {
-    const { restore } = yield* DeleteProducts.DeleteProducts
+    const { insertAll } = yield* ProductStore
     yield* Effect.logDebug('Putting products back', { count: products.length })
-    yield* pipe(
-      products,
-      Arr.map((product) => DeleteProducts.RestoreProduct({ snapshot: Domain.toSnapshot(product) })),
-      Effect.forEach(Effect.request(restore), { concurrency: 'unbounded', discard: true }),
-      // The storage logs the cause.
-      Effect.tapError(() => Effect.logWarning('Could not put the products back')),
+    yield* insertAll(Arr.map(products, Domain.toSnapshot)).pipe(
+      Effect.tapError((error) => Effect.logWarning('Could not put the products back', error)),
     )
     yield* Effect.logInfo('Put products back', { count: products.length })
     return Opt.none()

@@ -6,10 +6,11 @@ description: How to add a service (a port) to a Fridgy program, its adapters, it
 # Add a service
 
 A service is a requirement of its consumer: shaped for it, free to change with it, never shared. Two consumers
-that need the same thing each have their own (the AddProducts page's `AddProducts`, Products' `DeleteProducts`):
-what they share is the domain and the infrastructure. The examples to copy are
-`src/app/children/home/children/products/services/product-list/` (a read, over time, on SQL) and
-`src/app/children/add-products/services/scanner/` (the platform's camera).
+that need the same thing each have their own: what they share is the domain and the infrastructure. The
+exceptions are the infrastructure's services, which programs list as they are (below): the platform's facts, and
+the products' store. The examples to copy are `src/app/programs/expiration/services/date-order-setting/` (a
+setting read over time and written, on SQL) and `src/app/children/add-products/services/scanner/` (the platform's
+camera).
 
 ## The folder
 
@@ -37,9 +38,10 @@ export class Scanner extends Context.Service<Scanner, {
   (database changes, the back button). Only on-going observation is a `Source`: a one-off read is an `Effect`.
 - Expected failures are typed errors (`Data.TaggedError`) in the error channel; a violated invariant is a
   defect, never an error.
-- Write services have no read: a program learns about writes from the storage's changes. Persistence services
-  take a domain `Snapshot` and return `UnvalidatedSnapshot`s, which the program validates with
-  `Product.fromSnapshot`. Writes that batch are `Req.Request`s with a `RequestResolver` (`DeleteProducts`).
+- A program learns about writes from the storage's changes, never from what a write answers. Persistence
+  services take a domain `Snapshot` and return `UnvalidatedSnapshot`s, which the program validates with
+  `Product.fromSnapshot`. A write is a function that returns an `Effect` with tagged errors; one that touches
+  several rows does so in one transaction, all or nothing (`ProductStore.deleteAll`).
 - Document each member: what it does, when it fails, what observing it turns on (the camera).
 
 The program reads the service in a command or a subscription, never in `update` or the view; its type infers it
@@ -51,18 +53,14 @@ from them.
 how the storage is read or written is doing the infrastructure's work, and two of them will diverge.
 
 - Every adapter of the storage is written on `SqlClient`, providing itself the helpers it builds on
-  (`ProductStore` in `#infrastructure/storage/products.ts`, `SettingStore` in `settings.ts`, the schema in
-  `schema.ts`). It never reads domain fields. What every storage adapter shares (the schema, the migrations, how a
-  product is written and deleted, how each column is encoded and how a product joins its expiration:
-  `ProductStore.withExpiration`; how a setting, a text under a name, is read and written) is in
-  `src/infrastructure/storage`. What a setting's text stands for is its adapter's own until a second adapter
+  (`SettingStore` in `#infrastructure/storage/settings.ts`, the schema in `schema.ts`). It never reads domain
+  fields. What every storage adapter shares (the schema, the migrations, how a setting, a text under a name, is
+  read and written) is in `src/infrastructure/storage`. What a setting's text stands for is its adapter's own until a second adapter
   reads it: then it moves to the infrastructure. The date order's is there (`DateOrderStore` in `date-order.ts`:
   the setting's name, the order's `Schema`, the fall-back to the device's locale's), and the adapter of
   `DateOrderSetting`, the service of `programs/expiration`, is a few lines on it.
-- What one consumer alone asks of the storage is its adapter's own query, written on those pieces: which
-  products and in what order (`ProductList`'s `ORDER BY`) is the list's view. How a product is read is not: a
-  row's `select` and its `readRow`, which reads each column on its own, are `ProductStore`'s `withExpiration`. A
-  query moves up the day a second adapter asks the same.
+- What one consumer alone asks of the storage is its adapter's own query, written on those pieces. A query
+  moves up the day a second adapter asks the same.
 - A library's stream becomes a `Source` with `Source.fromStream`, which keeps listening once the stream has
   ended.
 - A platform call longer than a line moves to `src/infrastructure`: an external API's client too, the only
@@ -76,8 +74,8 @@ how the storage is read or written is doing the infrastructure's work, and two o
 - No alternative: the program's `layer.ts` merges it.
 - Alternatives (the `SqlClient`'s engine, the `HttpClient`, the platform's `BackButton` and `Keyboard`): the layers leave it
   out and the entrypoint, `src/entrypoints/native.tsx`, imports the adapter's own module, as a test does its own
-  (`#infrastructure/back-button/back-button.react-native.ts`,
-  `#app/children/home/children/products/services/product-list/product-list.sql.ts`), never a module that would
+  (`#infrastructure/back-button/back-button.react-native.ts`, `#infrastructure/storage/sqlite.op-sqlite.ts`),
+  never a module that would
   load the other alternatives too. A missing choice fails the typecheck; a bundle only contains what it uses.
   A service that gains a second adapter leaves its owner's `layer.ts` this way.
 - Shared code never branches on `process.env.NODE_ENV` or `Platform.OS`: choices of the platform exist only in the
@@ -90,27 +88,38 @@ A fact of the platform that no consumer could shape (`src/infrastructure/back-bu
 its adapters, listed directly in the `Deps` of the programs that need it. The day a consumer needs it shaped (a
 vibration of its own), that consumer gets a service of its own, written on the infrastructure's.
 
+The products' store (`ProductStore`, `src/infrastructure/storage/products.ts`) is one too, provided by
+`src/app/layer.ts`. Every program that reads or writes products asks it as it is: the list's `changes`, each row
+under its id and read on its own, and the writes, `insertAll`, `deleteAll` and `update`, each in one transaction,
+failing with tagged errors (`ProductsWriteError`, `ProductNotStored`). How a row is selected, joined and read, and
+how an id is parsed, stay inside it. A port over it would have one adapter forever: what changes from the phone to
+a test is the engine, under it. What is given up is a type: a program could ask the store for more than it needs.
+That a program learns of a write from `changes` alone is a rule, which a review checks.
+
+A service of the infrastructure with one implementation has no contract: its test checks it directly, on SQLite in
+memory for the store (`products.test.ts`), with what it needs beyond the store (a row no write of the app makes, a
+write the storage refuses) in `products.test_support.ts`.
+
 ## The contract
 
 `<service>.test_contract.ts` exports a function that takes the adapter's name, a function making its layer,
-and what the contract needs beyond the service (reading back a write, storing products to list or delete),
+and what the contract needs beyond the service (reading back a write, storing what the service reads),
 and declares a `describe` of `checkOnFreshLayer` properties (`#libs/testing/fresh-layer.test_support.ts`):
 
 ```ts
-export const deleteProductsContract = <R>(
+export const dateOrderSettingContract = <R>(
   name: string,
-  adapter: () => Layer.Layer<DeleteProducts | R>,
-  { insert, readBack }: Storage<R>,
-) => describe(`DeleteProducts contract (${name})`, () => { ... })
+  adapter: () => Layer.Layer<DateOrderSetting | R>,
+  { stored, store }: Storage<R>,
+) => describe(`DateOrderSetting contract (${name})`, () => { ... })
 ```
 
 `<service>.<backing>.test.ts` runs it with the adapter's layer over `#infrastructure/storage/sqlite.memory.ts`,
-and with the storage's own test support (`#infrastructure/storage/products.test_support.ts`,
-`settings.test_support.ts`): reads and writes that
+and with the storage's own test support (`#infrastructure/storage/settings.test_support.ts`,
+`barcodes.test_support.ts`): reads and writes that
 only tests need never go into a service, nor into another program's. A second adapter passes the same contract.
 
 ## Migrations
 
 `src/infrastructure/storage/migrations.ts` is append-only: a phone has already run the existing ones, so a fix is
-a new migration. Table and column names come from `schema.ts`. The development database (in memory, new on
-every start) gets its sample products from `src/infrastructure/storage/samples.ts`.
+a new migration. Table and column names come from `schema.ts`.

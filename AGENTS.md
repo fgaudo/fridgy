@@ -93,11 +93,13 @@ folders; "page" names a role in the UI, kept by the root's state, not a kind of 
   it leaves, and one told late leaves the page's bottom in mid-air.
 - **A service belongs to what uses it, and is never shared.** A service (a `Context.Service`: a port) is a
   requirement of its consumer, in its `services/`, shaped for it. Two consumers that need the same thing each
-  have their own; what they share is the domain and the infrastructure. The exception is a fact of the platform
-  that no consumer could shape (`src/infrastructure/back-button`, `src/infrastructure/haptics`,
-  `src/infrastructure/keyboard`, `src/infrastructure/links`), a service of the infrastructure that programs list directly. Write services
-  have no read: a program learns about writes from the storage's changes. Persistence services take a domain `Snapshot` and return
-  `UnvalidatedSnapshot`s; adapters never read domain fields.
+  have their own; what they share is the domain and the infrastructure. The exceptions are services of the
+  infrastructure that programs list directly: a fact of the platform that no consumer could shape
+  (`src/infrastructure/back-button`, `src/infrastructure/haptics`, `src/infrastructure/keyboard`,
+  `src/infrastructure/links`), and the products' store (`src/infrastructure/storage/products.ts`), whose list and
+  writes every program that reads or writes products asks as they are. A program learns about writes from the
+  storage's changes alone, never from what a write answers. Persistence services take a domain `Snapshot` and
+  return `UnvalidatedSnapshot`s; adapters never read domain fields.
 - **An expiration is a day of the calendar, and days are the device's.** An expiration date is a `Day`
   (`libs/dates/day.ts`), stored as `YYYY-MM-DD`; a creation date is an instant. "Today" is the day of the clock's
   `DateTime.Zoned` time, in the `DateTime.CurrentTimeZone` that the entrypoints provide; never UTC's
@@ -153,7 +155,9 @@ folders; "page" names a role in the UI, kept by the root's state, not a kind of 
   React Native, whose modules the preload replaces with their names (`libs/testing/preload.test_support.ts`).
 - A service's contract (`<service>.test_contract.ts`) says what every adapter must do, and each adapter's test
   runs it. What a contract needs beyond its service comes from the adapter's test, through the storage itself:
-  reads and writes that only tests need never go into a service.
+  reads and writes that only tests need never go into a service. The products' store, which has one
+  implementation, has no contract: its own test checks it (`products.test.ts`), with what it needs beyond the store
+  in `products.test_support.ts`.
 
 ## Conventions
 

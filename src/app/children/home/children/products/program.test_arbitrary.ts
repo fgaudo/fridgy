@@ -8,6 +8,7 @@ import * as fc from 'fast-check'
 import * as SnackbarArbitrary from '#app/programs/snackbar/program.test_arbitrary.ts'
 import type * as Snackbar from '#app/programs/snackbar/program.ts'
 import * as ProductArbitrary from '#domain/product.test_arbitrary.ts'
+import { ProductsReadError, type StoredProduct } from '#infrastructure/storage/products.ts'
 import * as NonEmptyHashSet from '#libs/collections/non-empty-hash-set.test_arbitrary.ts'
 import * as PositiveInteger from '#libs/numbers/positive-integer.test_arbitrary.ts'
 import { arbitrary as maybe } from '#libs/option/option.test_arbitrary.ts'
@@ -22,7 +23,6 @@ import {
   type Selection,
   type State,
 } from './program.ts'
-import { ProductListReadError, type StoredProduct } from './services/product-list/product-list.ts'
 
 const Msg = Data.taggedEnum<Message>()
 
@@ -175,7 +175,7 @@ export const message: fc.Arbitrary<Message> = fc.oneof(
   fc.constant(Msg.Deleted()),
   zoned.map((now) => Msg.TimeChanged({ now })),
   fc.oneof(
-    fc.string().map((cause) => Result.fail(new ProductListReadError({ cause }))),
+    fc.string().map((cause) => Result.fail(new ProductsReadError({ cause }))),
     storedProducts.map((products) => Result.succeed(products)),
   ).map((result) => Msg.ListChanged({ result })),
 )

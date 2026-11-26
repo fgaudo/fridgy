@@ -1,31 +1,12 @@
-// The stored products, reached without a service: the adapters' tests use them to set up and check their
-// service's contract, so that no service carries reads or writes that only tests need.
-import * as Arr from 'effect/Array'
+// What the store's test needs of the stored products beyond the store: a row that no write of the app makes, and
+// writes that the storage refuses. No service carries reads or writes that only tests need.
 import * as Effect from 'effect/Effect'
 import * as Opt from 'effect/Option'
 import * as Schema from 'effect/Schema'
 import * as SqlClient from 'effect/sql/SqlClient'
-import * as SqlResolver from 'effect/sql/SqlResolver'
 import * as SqlSchema from 'effect/sql/SqlSchema'
-import type * as Product from '#domain/product.ts'
 import * as Integer from '#libs/numbers/integer.ts'
-import { ProductStore } from './products.ts'
 import { ProductExpirationSchema, ProductSchema } from './schema.ts'
-
-/** Stores a product, answering with its id. */
-export const insert = Effect.fnUntraced(function*(snapshot: Product.Snapshot) {
-  const { insert } = yield* ProductStore
-  const { id } = yield* SqlResolver.request(snapshot, insert).pipe(Effect.orDie)
-  return id.toString(10)
-})
-
-/** Writes a product under an id that `insert` gave, in place of what was there. */
-export const update = (id: string, snapshot: Product.Snapshot) =>
-  ProductStore.use(({ update }) => update(Integer.makeUnsafe(Number(id)), snapshot)).pipe(Effect.orDie, Effect.asVoid)
-
-/** Removes the product stored under an id that `insert` gave. */
-export const remove = (id: string) =>
-  ProductStore.use(({ deleteById }) => deleteById(Integer.makeUnsafe(Number(id)))).pipe(Effect.orDie)
 
 /**
  * Stores a row that no write of the app makes, its creation date and its expiration being any text, answering
@@ -58,39 +39,32 @@ export const insertRow = Effect.fnUntraced(function*(
   return id.toString(10)
 })
 
-/** What is stored under `id`, as the database holds it: nothing under an id that `insert` never gave. */
-export const readBack = Effect.fnUntraced(function*(id: string) {
-  const { withExpiration: { select, Row, readRow, from, columns } } = yield* ProductStore
+/**
+ * From now on, the storage refuses to write an expiration for a product named `name`, and to delete such a
+ * product: the statement fails, and with it the write it is part of. A product's own row is still written, so that
+ * a write left half done would show.
+ */
+export const refuseWritesOf = Effect.fnUntraced(function*(name: string) {
   const sql = yield* SqlClient.SqlClient
-  const rows = yield* Opt.match(Integer.make(Number(id)), {
-    onNone: () => Effect.succeed([]),
-    onSome: (id) =>
-      SqlSchema.findAll({
-        Request: Schema.Void,
-        Result: Row,
-        execute: () =>
-          sql`
-            ${select}
-            ${from}
-            WHERE ${columns.id} = ${id}
-          `,
-      })().pipe(Effect.orDie),
-  })
-  return Opt.map(Arr.head(rows), (row) => readRow(row).snapshot)
-})
-
-/** Everything that is stored, as the database holds it. */
-export const readAll = Effect.gen(function*() {
-  const { withExpiration: { select, Row, readRow, from } } = yield* ProductStore
-  const sql = yield* SqlClient.SqlClient
-  const rows = yield* SqlSchema.findAll({
-    Request: Schema.Void,
-    Result: Row,
-    execute: () =>
-      sql`
-        ${select}
-        ${from}
-      `,
-  })().pipe(Effect.orDie)
-  return Arr.map(rows, (row) => readRow(row).snapshot)
+  const { table: productTable, columns: product } = ProductSchema
+  const { table: expirationTable, columns: expiration } = ProductExpirationSchema
+  // A trigger takes no bound parameter: the name is a literal.
+  const literal = `'${name.replaceAll('\'', '\'\'')}'`
+  const nameOf = (row: 'NEW' | 'OLD') =>
+    `(SELECT ${product.name} FROM ${productTable} WHERE ${product.id} = ${row}.${expiration.productId})`
+  const refuse = `BEGIN SELECT RAISE(ABORT, 'refused by the test'); END`
+  yield* Effect.forEach(
+    [
+      `CREATE TRIGGER refuse_expiration_insert BEFORE INSERT ON ${expirationTable}
+      WHEN ${nameOf('NEW')} = ${literal} ${refuse}`,
+      `CREATE TRIGGER refuse_expiration_update BEFORE UPDATE ON ${expirationTable}
+      WHEN ${nameOf('NEW')} = ${literal} ${refuse}`,
+      `CREATE TRIGGER refuse_expiration_delete BEFORE DELETE ON ${expirationTable}
+      WHEN ${nameOf('OLD')} = ${literal} ${refuse}`,
+      `CREATE TRIGGER refuse_product_delete BEFORE DELETE ON ${productTable}
+      WHEN OLD.${product.name} = ${literal} ${refuse}`,
+    ],
+    (statement) => sql.unsafe(statement),
+    { discard: true },
+  ).pipe(Effect.orDie)
 })
