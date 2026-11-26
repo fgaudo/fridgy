@@ -232,6 +232,11 @@ a step when a release takes it up, or goes when the runtime rejects it.
 - **One adapter, two test files.** Every service of the storage has one adapter, and "one storage per setup" says
   there is no second. Its contract and the test that runs it could be one file: a change of the `add-service`
   skill's convention.
+- **A text field is uncontrolled**, by the `views` skill: its text is `defaultValue`, and a new `key` replaces
+  it. The choice was made when the runtime drew no controlled element on React Native. Its bridge now draws a
+  controlled `TextInput`, and promises nothing of what it shows until its native view takes the model's value. To
+  weigh, on a phone: whether a controlled field keeps up with fast typing. It would let a locked state take a key
+  back, and `nameKey` and `replacements` go.
 - **What the move to 0.9.0 changed for the user**, each decided in passing and seen on no screen yet (step 1): the
   keypad of a date takes no key until the order of its digits is read; the disc of a product entering the fridge
   is colored by the day it was added on, where it followed the clock during its flight.

@@ -38,7 +38,8 @@ when nothing is named). The model holds exactly what the view draws: a field no 
 - A text field the user types into is uncontrolled: its text is `defaultValue`, read only when the field is
   created, and the field sends its text from `onChangeText`, filling the model's `nameTyped`. A `value` written on
   every frame would take back the keys typed since that frame: React Native's field tells the program of a key
-  after it has shown it, and effect-tea's controlled elements are its bridges' to the DOM. To replace the text (a
+  after it has shown it, and effect-tea's bridge promises nothing of what a controlled `TextInput` shows until its
+  native view takes the value of its model. To replace the text (a
   clearing, a scan), the model gives the field a new `key`. A field the program types into (the date the keypad
   fills) is no field: a `Text` in a field's frame.
 - A parent's view hands each child's view its own dispatch, `Tea.forwardTo(dispatch, '<Child>')` (with its id
