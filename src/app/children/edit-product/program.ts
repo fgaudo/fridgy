@@ -3,7 +3,6 @@
 // or stands for a product no longer stored (`Gone`). Once the product is saved, the page asks to be left. A failure
 // is told by its snackbar, a child that leaves on its own.
 import * as Tea from '@fgaudo/effect-tea'
-import * as Channel from 'effect/Channel'
 import * as Data from 'effect/Data'
 import type * as DateTime from 'effect/DateTime'
 import * as Effect from 'effect/Effect'
@@ -12,9 +11,9 @@ import * as Opt from 'effect/Option'
 import * as Expiration from '#app/programs/expiration/program.ts'
 import * as SnackbarProgram from '#app/programs/snackbar/program.ts'
 import * as Product from '#domain/product.ts'
-import { BackButton } from '#infrastructure/back-button/back-button.ts'
-import { type Feedback, Haptics } from '#infrastructure/haptics/haptics.ts'
-import { Keyboard } from '#infrastructure/keyboard/keyboard.ts'
+import { type BackButton, pressesAs } from '#infrastructure/back-button/back-button.ts'
+import { type Feedback, vibrate } from '#infrastructure/haptics/haptics.ts'
+import { insetsAs, type Keyboard } from '#infrastructure/keyboard/keyboard.ts'
 import { ProductStore } from '#infrastructure/storage/products.ts'
 import type * as Day from '#libs/dates/day.ts'
 import { every } from '#libs/timers/timers.ts'
@@ -201,17 +200,10 @@ const clock = every('30 seconds', (now) => Own.TimeChanged({ now }))
 
 // Observed as long as the page is there: while the product is being saved, the press is heard and held, so that the
 // platform does not leave the app.
-const backButton: Tea.Subscription<Own, BackButton> = Channel.unwrap(
-  Effect.map(Effect.service(BackButton), ({ presses }) => Channel.map(presses, () => Own.BackPressed())),
-)
+const backButton: Tea.Subscription<Own, BackButton> = pressesAs(Own.BackPressed())
 
 // Observed as long as the page is there: the keyboard covers the fields and the button docked under them.
-const keyboard: Tea.Subscription<Own, Keyboard> = Channel.unwrap(
-  Effect.map(
-    Effect.service(Keyboard),
-    ({ insets }) => Channel.map(insets, (inset) => Own.KeyboardMoved({ inset })),
-  ),
-)
+const keyboard: Tea.Subscription<Own, Keyboard> = insetsAs((inset) => Own.KeyboardMoved({ inset }))
 
 const keys: ReadonlyArray<Key> = ['clock', 'back-button', 'keyboard']
 
@@ -232,17 +224,6 @@ const save = Effect.fn('SaveProduct')(
   ),
   Effect.asSome,
   Effect.withLogSpan('SaveProduct'),
-)
-
-const vibrate = Effect.fn('Vibrate')(
-  function*({ feedback }: Readonly<{ feedback: Feedback }>) {
-    const { perform } = yield* Haptics
-    yield* perform(feedback).pipe(
-      Effect.catchTag('HapticsError', (error) => Effect.logWarning('Could not vibrate', error.cause)),
-    )
-    return Opt.none()
-  },
-  Effect.withLogSpan('Vibrate'),
 )
 
 const { child, withChildren } = Tea.program<{

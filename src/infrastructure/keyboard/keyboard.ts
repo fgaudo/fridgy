@@ -1,4 +1,6 @@
+import * as Channel from 'effect/Channel'
 import * as Context from 'effect/Context'
+import * as Effect from 'effect/Effect'
 import type * as Source from '#libs/source/source.ts'
 
 /**
@@ -13,3 +15,9 @@ export class Keyboard extends Context.Service<
     readonly insets: Source.Source<number, never>
   }
 >()('d0aa9757a23a2bfb') {}
+
+/** A program's subscription to the keyboard: a message for each inset. */
+export const insetsAs = <Message>(
+  toMessage: (inset: number) => Message,
+): Source.Source<Message, never, never, Keyboard> =>
+  Channel.unwrap(Effect.map(Effect.service(Keyboard), ({ insets }) => Channel.map(insets, toMessage)))

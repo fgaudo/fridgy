@@ -9,6 +9,7 @@ import * as Duration from 'effect/Duration'
 import * as Effect from 'effect/Effect'
 import * as Match from 'effect/Match'
 import * as Opt from 'effect/Option'
+import { snackbarDuration } from '#libs/material/durations.ts'
 
 /** Material shows one snackbar at a time: one that comes after another waits for it to leave. */
 export type Entrance = 'Alone' | 'AfterAnother'
@@ -16,10 +17,9 @@ export type Entrance = 'Alone' | 'AfterAnother'
 /** How long a snackbar stands: `Long` for one with an action, to read it and reach for the action. */
 export type Lasting = 'Short' | 'Long'
 
-// Material's durations.
 const DURATIONS: Readonly<Record<Lasting, Duration.Duration>> = {
-  Short: Duration.seconds(4),
-  Long: Duration.seconds(10),
+  Short: Duration.millis(snackbarDuration.short),
+  Long: Duration.millis(snackbarDuration.long),
 }
 
 export type Standing<Notice> = Readonly<{

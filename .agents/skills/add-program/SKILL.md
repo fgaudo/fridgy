@@ -71,7 +71,9 @@ children.
   [keys]` lists those that run, and `listen: (key) => subscription` makes each, so a key carries what its
   subscription needs (the snackbar's `Standing { id, until }`). Subscriptions map a service's `Source<A, never>`
   into messages (`Channel.unwrap` to read the service, `Channel.map`); a process that ends turns its `Done` into
-  a message. The back button is the subscription keyed `back-button`, observed only while the program has
+  a message. A service that every program uses the same way writes that use once, beside it: the subscriptions
+  `pressesAs` (`back-button.ts`) and `insetsAs` (`keyboard.ts`), the commands `vibrate` (`haptics.ts`) and
+  `openLink` (`links.ts`). The back button is the subscription keyed `back-button`, observed only while the program has
   something to do with a press: a page, or the child that holds what a press closes (Home's `Products`, its
   selection).
 - Effects only in commands and subscriptions: `update`, `makeModel` and the view are pure.

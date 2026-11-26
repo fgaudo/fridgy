@@ -49,11 +49,15 @@ until that page covers it, so the page never rises over nothing.
 5. **Home's view animates its menu.** The menu is drawn in an `Animated.View`, with its scale's origin at its top
    right (`transformOrigin`). The scrim has no motion: it is invisible.
 6. **Durations and curves are Material's tokens, in `src/styles.ts`.** A view names a token (`duration.medium4`,
-   `easing.emphasizedDecelerate`), never a number of milliseconds. The tokens are the web build's (Material 3):
+   `easing.emphasizedDecelerate`), never a number of milliseconds. The durations are written in
+   `src/libs/material/durations.ts`, with no React Native, so that a program's timer that waits for a motion to end
+   (the fridge's phases, the rows that settle) names the same tokens. The tokens are the web build's (Material 3):
 
    | Token                  | Value                             |
    | ---------------------- | --------------------------------- |
    | `short1`               | 50 ms                             |
+   | `short2`               | 100 ms                            |
+   | `short3`               | 150 ms                            |
    | `short4`               | 200 ms                            |
    | `medium1`              | 250 ms                            |
    | `medium2`              | 300 ms                            |

@@ -43,9 +43,9 @@ src/
 │                        Its adapters are named `<service>.<backing>.ts`
 ├─ libs/                 generic, reusable code: what the app adds to effect-tea's bridge to React (tea-react: the
 │                        views' handlers, the renderer that draws the app or a screen in its place, test support),
-│                        sources, timers (a zoned clock, a one-shot timer), branded numbers, dates (a day of the
-│                        calendar, with no zone; the orders of a date's digits, the days they name, the rules of
-│                        typing them on a keypad), test helpers, …
+│                        sources, timers (a zoned clock, a one-shot timer), Material's durations, branded numbers,
+│                        dates (a day of the calendar, with no zone; the orders of a date's digits, the days they
+│                        name, the rules of typing them on a keypad), test helpers, …
 ├─ palette.generated.ts  the names of Material 3's color roles, whose values, per theme, are Android's resources;
 │                        both written by `bun run update-palette`
 └─ styles.ts             Material's look, which every view uses (`#styles`): the color roles, as Android's

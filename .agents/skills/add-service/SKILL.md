@@ -59,7 +59,9 @@ export class BarcodeCamera extends Context.Service<BarcodeCamera, {
 - Document each member: what it does, when it fails, what observing it turns on (the camera).
 
 The program reads the service in a command or a subscription, never in `update` or the view; its type infers it
-from them.
+from them. When every program uses it the same way (a platform's fact, heard or done the same by all), that use is
+written once in the service's module, typed with `Source` or as a command's effect, and the programs take it:
+`pressesAs` in `back-button.ts`, `vibrate` in `haptics.ts`.
 
 ## The adapter
 

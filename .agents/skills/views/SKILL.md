@@ -73,7 +73,8 @@ takes two choices, in this order:
   made to do it?".
 - **What it says.** A motion tells what happened (a product entering the fridge, a row closing its place), and is
   designed once, in `docs/`, with its phases and durations, before it is drawn. Durations and curves are Material's
-  tokens, named in `src/styles.ts`, never a number in a view. Android's "Remove animations" makes them instant, as
+  tokens, named in `src/styles.ts` (the durations from `src/libs/material/durations.ts`, which a program's timer
+  that waits for a motion uses too), never a number in a view or a timer. Android's "Remove animations" makes them instant, as
   Android's own are: Reanimated's default.
 
 ## Material 3

@@ -9,6 +9,7 @@ import * as Match from 'effect/Match'
 import * as Opt from 'effect/Option'
 import * as Product from '#domain/product.ts'
 import * as Day from '#libs/dates/day.ts'
+import { duration } from '#libs/material/durations.ts'
 import { after } from '#libs/timers/timers.ts'
 
 /** Whether the fridge appeared with a product, or was there already. */
@@ -83,14 +84,14 @@ export type Model = Data.TaggedEnum<{
 }>
 
 // The phases of `docs/product-flight.md`, which the view's motion must fit in: what it draws is removed when they
-// end. A product's flight is long-2, after the fridge's appearance (medium-2) when it brings the fridge. The door
-// closes in short-4 and the fridge settles in medium-1.
+// end. A product's flight comes after the fridge's appearance when it brings the fridge. The door closes, then the
+// fridge settles.
 const ARRIVAL_DURATIONS: Readonly<Record<Entrance, Duration.Duration>> = {
-  WithFridge: Duration.millis(300 + 500),
-  IntoOpenFridge: Duration.millis(500),
+  WithFridge: Duration.millis(duration.medium2 + duration.long2),
+  IntoOpenFridge: Duration.millis(duration.long2),
 }
 
-const CLOSING_DURATION = Duration.millis(200 + 250)
+const CLOSING_DURATION = Duration.millis(duration.short4 + duration.medium1)
 
 /** When a product is due, by the days from `today`. */
 const dueOf = (today: Day.Day, { maybeExpirationDate }: Product.Product): Due =>

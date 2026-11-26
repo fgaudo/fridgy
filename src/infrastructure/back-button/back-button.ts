@@ -1,3 +1,4 @@
+import * as Channel from 'effect/Channel'
 import * as Context from 'effect/Context'
 import * as Data from 'effect/Data'
 import * as Effect from 'effect/Effect'
@@ -51,3 +52,7 @@ export const observed = Effect.fnUntraced(function*(hold: Effect.Effect<void>, r
   }
   return { presses, press }
 })
+
+/** A program's subscription to the button: `message` at each press. */
+export const pressesAs = <Message>(message: Message): Source.Source<Message, never, never, BackButton> =>
+  Channel.unwrap(Effect.map(Effect.service(BackButton), ({ presses }) => Channel.map(presses, () => message)))

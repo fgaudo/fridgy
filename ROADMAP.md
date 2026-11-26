@@ -6,7 +6,7 @@ owner asked for on 22 November 2026, from the move to effect-tea 0.9.0 on 26 Nov
 steps on the root and on the inputs, and what waited for that release, and from a review of the structure on that
 same day, for which the owner set every rule of the project aside.
 
-That last review found one thing, which steps 2 and 3 act on, and a step done acted on first. The app has three boundaries where one thing
+That last review found one thing, which steps 1 and 2 act on, and steps done acted on first. The app has three boundaries where one thing
 is put in another's place. A program says what it asks of the world as data, its commands and the keys of its
 subscriptions, and `update` is tested with none of it run. The entrypoint, or a test, picks the database's engine,
 the HTTP client and the platform's services. The model stands between a program and its view. A boundary beside
@@ -19,39 +19,14 @@ that describe what it changed brought up to date (`AGENTS.md`, "Conventions").
 
 ## Next, in order
 
-### 1. What has one truth is written once
-
-**Model and effort.** Opus 5.5, `medium`.
-
-**Depends on** no other step.
-
-**Why.** Counted on 26 November 2026, after the snackbar and the date became programs of `src/app/programs/`:
-
-- The subscription to `BackButton` is the same lines in five programs (`Home`, `Products`, `About`, `AddProducts`,
-  `EditProduct`), the one to `Keyboard` in two, the effect of the `Vibrate` command in three, and that of
-  `OpenLink` in two (`About`, `AddProducts`).
-- The programs' timers repeat, as numbers, the durations that the views take from `#styles`: the fridge
-  (`add-products/children/fridge/program.ts`: `300 + 500`, `500`, `200 + 250`) and `products/program.ts` (`500`).
-  Only a comment ties them.
-
-**How.**
-
-- Beside each service of the infrastructure (`back-button.ts`, `keyboard.ts`, `haptics.ts`, `links.ts`), what every program
-  writes to use it: the subscription, taking the message to send, which a program's `listen` returns for its key,
-  or the command's effect. Typed with `Source`, and kept small.
-- Material's durations in a module of `src/libs/` with no React Native in it. `src/styles.ts` takes them from
-  there, and the programs' timers are written with them. The snackbar's two (`programs/snackbar/program.ts`) are
-  Material's too.
-
-**Done when** each has one definition, and the programs' tests check what they checked.
-
-### 2. A large program is modules, by concern
+### 1. A large program is modules, by concern
 
 **Model and effort.** Opus 5.5, `high`.
 
-**Depends on** step 1, which changes the same programs.
+**Depends on** no other step.
 
-**Why.** `home/children/products/program.ts` is 753 lines and `add-products/program.ts` 689 (26 November 2026, before the step above). Each holds concerns that read each other's state, and so is one program, "however long"
+**Why.** `home/children/products/program.ts` is 722 lines and `add-products/program.ts` 674 (26 November 2026, once the
+back button, the keyboard, the vibrations and the links were written beside their services). Each holds concerns that read each other's state, and so is one program, "however long"
 (`AGENTS.md`). The runtime's guide says how such a program is split ("Structuring a program", "Splitting a
 program"): into modules of the one program, by concern and never by kind, each with its messages, its commands,
 its `update` and the parts of the model it makes, as functions of the whole state. `AGENTS.md` lists what a
@@ -59,7 +34,7 @@ program's folder holds, and names no such module: none was written.
 
 **How.**
 
-- The cut is decided reading the two programs as the steps above leave them. What was seen on 26 November 2026: in
+- The cut is decided reading the two programs as they are. What was seen on 26 November 2026: in
   `Products`, the list with the rows that arrive and leave, the selection with the deletion and its undo, and the
   clock; in `AddProducts`, `AGENTS.md` names the name, the scanner, the lookup and the submission. A concern too
   small to pay for a module stays in `program.ts`.
@@ -72,11 +47,11 @@ program's folder holds, and names no such module: none was written.
 checked, changed only in what they import; `AGENTS.md` and the `add-program` skill say what a program's folder
 holds and when a program is split, by the guide's words.
 
-### 3. `AGENTS.md` holds the rules of every change
+### 2. `AGENTS.md` holds the rules of every change
 
 **Model and effort.** Opus 5.5, `medium`.
 
-**Depends on** step 2, which rewrites the rules it sorts.
+**Depends on** step 1, which rewrites the rules it sorts.
 
 **Why.** "Architecture rules" mixes rules that hold for any program with the design of single features: "Home is
 always there, and at most one page is shown over it", "The back button is the program's that has something to do
@@ -91,11 +66,11 @@ without it would be a bug, and says where the rest is.
 **Done when** every item of "Architecture rules" holds for any program or service; each paragraph moved is reached
 from `AGENTS.md`, by its table or by a line; nothing is said in two places.
 
-### 4. Design: the app in the user's language
+### 3. Design: the app in the user's language
 
 **Model and effort.** Fable 5.2, `high`: a design, whose steps are then written here, each with its own model.
 
-**Depends on** step 1, which changes the views it reads. The owner is asked first: which languages.
+**Depends on** no other step. The owner is asked first: which languages.
 
 **Why.** The texts are English, literals in the views (about 65), in the crash screen, and one in the domain
 (`'Undefined name'`, `fromSnapshot`). The dates, the order of a date's digits and the language Open Food Facts is
@@ -116,7 +91,7 @@ are.
 **Done when** `docs/localization.md` holds the decisions and the facts they rely on, checked; the steps that
 implement it are written here; the owner has read it.
 
-### 5. The app on effect-tea 0.9.0, seen on the emulator
+### 4. The app on effect-tea 0.9.0, seen on the emulator
 
 **Model and effort.** Opus 5.5, `medium`.
 
@@ -218,13 +193,13 @@ a step when a release takes it up, or goes when the runtime rejects it.
 - **How `AGENTS.md` is written.** A review's opinion, of 26 November 2026: its sentences are compressed, and some
   must be worked out before they can be followed ("A page over Home is a child by the number of its visit, never
   used again"). An agent reads the file at every session. To weigh: plain statements, one fact each, as the file
-  asks of a comment. It is the owner's voice, so nothing changes it without the owner; step 3 moves paragraphs,
+  asks of a comment. It is the owner's voice, so nothing changes it without the owner; step 2 moves paragraphs,
   and rewrites none.
 - **A text field is uncontrolled**, by the `views` skill: its text is `defaultValue`, and a new `key` replaces
   it. The choice was made when the runtime drew no controlled element on React Native. Its bridge now draws a
   controlled `TextInput`, and promises nothing of what it shows until its native view takes the model's value. To
   weigh, on a phone: whether a controlled field keeps up with fast typing. It would let a locked state take a key
   back, and `nameKey` and `replacements` go.
-- **What the move to 0.9.0 changed for the user**, each decided in passing and seen on no screen yet (step 5): the
+- **What the move to 0.9.0 changed for the user**, each decided in passing and seen on no screen yet (step 4): the
   keypad of a date takes no key until the order of its digits is read; the disc of a product entering the fridge
   is colored by the day it was added on, where it followed the clock during its flight.

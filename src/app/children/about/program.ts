@@ -1,13 +1,12 @@
 import * as Tea from '@fgaudo/effect-tea'
 import * as Arr from 'effect/Array'
-import * as Channel from 'effect/Channel'
 import * as Data from 'effect/Data'
 import * as Effect from 'effect/Effect'
 import * as Match from 'effect/Match'
 import * as Opt from 'effect/Option'
-import { BackButton } from '#infrastructure/back-button/back-button.ts'
+import { type BackButton, pressesAs } from '#infrastructure/back-button/back-button.ts'
 import * as Licenses from '#infrastructure/licenses/licenses.ts'
-import { Links } from '#infrastructure/links/links.ts'
+import { openLink } from '#infrastructure/links/links.ts'
 import { version } from '#package.json'
 
 export type State = Readonly<{
@@ -42,26 +41,13 @@ export type Command = Data.TaggedEnum<{ LoadLicenses: object; OpenLink: { url: s
 
 const Command = Data.taggedEnum<Command>()
 
-const backButton: Tea.Subscription<Own, BackButton> = Channel.unwrap(
-  Effect.map(Effect.service(BackButton), ({ presses }) => Channel.map(presses, () => Own.BackPressed())),
-)
+const backButton: Tea.Subscription<Own, BackButton> = pressesAs(Own.BackPressed())
 
 const loadLicenses = Effect.fn('LoadLicenses')(
   function*() {
     return Opt.some(Own.LicensesLoaded({ licenses: yield* Licenses.all }))
   },
   Effect.withLogSpan('LoadLicenses'),
-)
-
-const openLink = Effect.fn('OpenLink')(
-  function*({ url }: Readonly<{ url: string }>) {
-    const { open } = yield* Links
-    yield* open(url).pipe(
-      Effect.catchTag('LinksError', (error) => Effect.logWarning('Could not open a link', error.cause)),
-    )
-    return Opt.none()
-  },
-  Effect.withLogSpan('OpenLink'),
 )
 
 /** The links of the page's own card, in the order it draws them. */

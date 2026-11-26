@@ -15,11 +15,12 @@ import * as Opt from 'effect/Option'
 import * as Result from 'effect/Result'
 import * as SnackbarProgram from '#app/programs/snackbar/program.ts'
 import * as Domain from '#domain/product.ts'
-import { BackButton } from '#infrastructure/back-button/back-button.ts'
-import { type Feedback, Haptics } from '#infrastructure/haptics/haptics.ts'
+import { type BackButton, pressesAs } from '#infrastructure/back-button/back-button.ts'
+import { type Feedback, vibrate } from '#infrastructure/haptics/haptics.ts'
 import { ProductStore, type ProductsReadError, type StoredProduct } from '#infrastructure/storage/products.ts'
 import * as NonEmptyHashSet from '#libs/collections/non-empty-hash-set.ts'
 import type * as Day from '#libs/dates/day.ts'
+import { duration } from '#libs/material/durations.ts'
 import * as PositiveInteger from '#libs/numbers/positive-integer.ts'
 import type * as UnitInterval from '#libs/numbers/unit-interval.ts'
 import { after, every } from '#libs/timers/timers.ts'
@@ -331,10 +332,10 @@ const changes: Tea.Subscription<Own, Deps> = Channel.unwrap(
   ),
 )
 
-// Longer than a row's entrance (Material's medium-4, and the frame it waits for) and its exit (short-4): a row is
-// drawn as any other, or gone, only once it has opened or closed its place. Hidden under another page, the timer
-// waits for the page to be back.
-const SETTLING_DURATION = Duration.millis(500)
+// Longer than a row's entrance (medium-4, and the frame it waits for) and its exit (short-4): a row is drawn as any
+// other, or gone, only once it has opened or closed its place. Hidden under another page, the timer waits for the
+// page to be back.
+const SETTLING_DURATION = Duration.millis(duration.long2)
 
 /** Ends once the rows have been shown arriving and leaving. */
 const settlingTimer: Tea.Subscription<Own, Deps> = after(SETTLING_DURATION, Own.RowsSettled())
@@ -349,9 +350,7 @@ const Settle = Data.taggedEnum<Settle>()
 type Key = 'changes' | 'back-button' | 'clock' | Settle
 
 // Observed only while the list shows a selection: otherwise the press is Home's, or the platform's.
-const backButton: Tea.Subscription<Own, Deps> = Channel.unwrap(
-  Effect.map(Effect.service(BackButton), ({ presses }) => Channel.map(presses, () => Own.BackPressed())),
-)
+const backButton: Tea.Subscription<Own, Deps> = pressesAs(Own.BackPressed())
 
 const showsSelection = (state: State) => state.list._tag === 'Loaded' && state.selection._tag !== 'Idle'
 
@@ -382,17 +381,6 @@ const restoreProducts = Effect.fn('RestoreProducts')(
   },
   Effect.orElseSucceed(() => Opt.some(Own.RestoreFailed())),
   Effect.withLogSpan('RestoreProducts'),
-)
-
-const vibrate = Effect.fn('Vibrate')(
-  function*({ feedback }: Readonly<{ feedback: Feedback }>) {
-    const { perform } = yield* Haptics
-    yield* perform(feedback).pipe(
-      Effect.catchTag('HapticsError', (error) => Effect.logWarning('Could not vibrate', error.cause)),
-    )
-    return Opt.none()
-  },
-  Effect.withLogSpan('Vibrate'),
 )
 
 type Deletion = Data.TaggedEnum.Value<ListModel, 'Available'>['deletion']

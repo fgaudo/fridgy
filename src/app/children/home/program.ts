@@ -1,14 +1,12 @@
 // The page: its child (the products), and what is the page's own (the top app bar's menu, the back button, the
 // ways to the pages that add and edit products, and the scrolling, which the top app bar and the add button follow).
 import * as Tea from '@fgaudo/effect-tea'
-import * as Channel from 'effect/Channel'
 import * as Data from 'effect/Data'
-import * as Effect from 'effect/Effect'
 import * as Equal from 'effect/Equal'
 import * as Match from 'effect/Match'
 import * as Opt from 'effect/Option'
 import type * as Product from '#domain/product.ts'
-import { BackButton } from '#infrastructure/back-button/back-button.ts'
+import { type BackButton, pressesAs } from '#infrastructure/back-button/back-button.ts'
 import * as Products from './children/products/program.ts'
 
 /**
@@ -98,9 +96,7 @@ export type Model = Readonly<{
 
 // Observed only while the menu is open: otherwise the button is the list's while it shows a selection, or the
 // platform's, which leaves the app.
-const backButton: Tea.Subscription<Own, BackButton> = Channel.unwrap(
-  Effect.map(Effect.service(BackButton), ({ presses }) => Channel.map(presses, () => Own.BackPressed())),
-)
+const backButton: Tea.Subscription<Own, BackButton> = pressesAs(Own.BackPressed())
 
 // Each step draws a frame: twenty are a fade, and leave the frames between them to the scroll.
 const steps = 20
