@@ -9,6 +9,18 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # A job of its own: an advisory published on a dependency fails it whatever the commit, and must not stop the
+  # checks of the code.
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - run: bun audit
+
   checks:
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -22,7 +34,6 @@ jobs:
         with:
           node-version: 24
       - run: bun install --frozen-lockfile
-      - run: bun audit
       - run: bun run typecheck
       - run: bun run test
       - run: bun run lint
