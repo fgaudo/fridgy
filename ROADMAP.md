@@ -4,8 +4,8 @@ What is to be done or decided now, and nothing else. A step done is removed, wit
 later step needs to know of it is written on that step. The steps come from a review of the architecture that the
 owner asked for on 22 November 2026, from the move to effect-tea 0.9.0 on 26 November 2026, which closed the
 steps on the root and on the inputs, and what waited for that release, and from a review of the structure on that
-same day, for which the owner set every rule of the project aside. Steps 1, 2 and 5 waited under "Any time"
-and "Waiting for the owner", until the owner took them up on that day too.
+same day, for which the owner set every rule of the project aside. Steps 1 and 4 waited under "Any time" and
+"Waiting for the owner", until the owner took them up on that day too.
 
 That last review found one thing, which steps done acted on. The app has three boundaries where one thing
 is put in another's place. A program says what it asks of the world as data, its commands and the keys of its
@@ -20,35 +20,11 @@ that describe what it changed brought up to date (`AGENTS.md`, "Conventions").
 
 ## Next, in order
 
-### 1. The crash screen tells the cause
-
-**Model and effort.** Opus 5.5, `medium`.
-
-**Depends on** no other step. It comes before step 4, which sees the screen.
-
-**Why.** A crash on a phone could not be told apart from another: the cause went to the log alone, which a user
-cannot reach. The owner reversed that decision on 26 November 2026.
-
-**Where it stands.** The code is done, on 26 November 2026: `src/entrypoints/crash/detail.ts` makes the cause's
-text (each defect's sentence and those it wraps, a line each, tested), and `Crash.view` draws it under the text, in a
-box of its own height that scrolls, selectable. The stack is left out: Metro's release bundle mangles the names of
-functions (`w`, `b`), so a stack under Hermes would name none of the app's. The detail is the cause's text, never
-the app's: step 3 translates none of it.
-
-**Left: the emulator.** It was not run: on that day the machine had no hypervisor driver (`emulator -accel-check`:
-"Android Emulator hypervisor driver is not installed"), which the owner installs, or enables Windows Hypervisor
-Platform. Then, in a change that is not committed, a defect raised on purpose shows the screen: for instance
-`InfoRequested: () => Tea.defect('A crash raised on purpose')` in `src/app/program.ts`, and the info button on Home.
-
-**Done when** that crash, on the emulator, on a release, shows `ProgramDefect: A defect in update on …` and the
-`InvariantDefect`'s sentence under it, which can be selected and copied; the screen still fits the reference screen,
-and the restart works.
-
-### 2. The name's field, controlled
+### 1. The name's field, controlled
 
 **Model and effort.** Opus 5.5, `high`: two state machines lose a field, with their properties.
 
-**Depends on** the owner's phone, for the trial. It comes before step 4, which sees the field.
+**Depends on** the owner's phone, for the trial. It comes before step 3, which sees the field.
 
 **Why.** A text field is uncontrolled, by the `views` skill: its text is `defaultValue`, and a new `key` replaces
 it, which makes the field anew at every clearing and every scan. The choice was made when the runtime drew no
@@ -74,7 +50,7 @@ and `nameKey` and `replacements` go, from `AddProducts` and `EditProduct`.
 nowhere under `src/app`, the skill describes the controlled field, and the owner has typed into both pages' fields
 on the phone.
 
-### 3. Design: the app in the user's language
+### 2. Design: the app in the user's language
 
 **Model and effort.** Fable 5.2, `high`: a design, whose steps are then written here, each with its own model.
 
@@ -83,7 +59,7 @@ on the phone.
 **Why.** The texts are English, literals in the views (about 65), in the crash screen, and one in the domain
 (`'Undefined name'`, `fromSnapshot`). The dates, the order of a date's digits and the language Open Food Facts is
 asked in follow the device. The models hold tags and values, never text, so the views are the only place the texts
-are. The crash screen's detail (step 1) is the cause's text, and is not translated.
+are. The crash screen's detail is the cause's text, and is not translated.
 
 **How.** The design decides:
 
@@ -99,11 +75,11 @@ are. The crash screen's detail (step 1) is the cause's text, and is not translat
 **Done when** `docs/localization.md` holds the decisions and the facts they rely on, checked; the steps that
 implement it are written here; the owner has read it.
 
-### 4. The app on effect-tea 0.9.0, seen on the emulator
+### 3. The app on effect-tea 0.9.0, seen on the emulator
 
 **Model and effort.** Opus 5.5, `medium`.
 
-**Depends on** steps 1 and 2, which change what it looks at. It comes last of the steps that change a view, as the
+**Depends on** step 1, which changes what it looks at. It comes last of the steps that change a view, as the
 owner decided on 26 November 2026: the views are seen once, as the steps before it leave them.
 
 **Why.** The move to 0.9.0 changed every program and every view, and was checked by the tests, the typecheck,
@@ -116,7 +92,7 @@ at:
 - **Home's scroll.** The heights, the offset and the end of a scroll are messages that the view fills, where they
   were inputs: the bar collapses and snaps, the add button shrinks while the list scrolls, a change of the font
   size or of the screen draws the list anew at its top, and Home comes back from a page where it rested.
-- **The name's field**, in both pages, as step 2 left it: typing, clearing, a scan that replaces it, a key typed
+- **The name's field**, in both pages, as step 1 left it: typing, clearing, a scan that replaces it, a key typed
   just before "Add" and "Save".
 - **The date**, drawn by one view for both pages (`src/app/programs/expiration/view.tsx`): the segments, the
   field, the strip and the keypad lay out in each page's column as before. Its keys take nothing until the order
@@ -130,17 +106,17 @@ at:
 - **The links**, About's and the attribution of a product found: each opens its page, through a command
   (`src/infrastructure/links/`).
 - **The root that draws.** The system theme changed while a page over Home is shown keeps that page
-  (`src/entrypoints/native.tsx` starts the program itself, for this). The crash screen, the cause it tells
-  (step 1), and its restart.
+  (`src/entrypoints/native.tsx` starts the program itself, for this). The crash screen, the cause it tells,
+  and its restart.
 
 **Done when** each item above was seen on the emulator, on a debug build and on a release, and what was found is
 fixed, or written here as a step; `docs/motion.md` and `docs/testing.md` say what was seen, and when.
 
-### 5. Home's scroll, seen on a phone
+### 4. Home's scroll, seen on a phone
 
 **Model and effort.** Opus 5.5, `medium`: a measurement, and no change to the code.
 
-**Depends on** step 4, for its release build and a scroll already seen on the emulator, and on the owner's phone.
+**Depends on** step 3, for its release build and a scroll already seen on the emulator, and on the owner's phone.
 
 **Why.** Every scroll event is a message through `update`, the root's `makeModel` and React; the twenty steps of
 `collapse` soften it. The runtime says what a step at each event costs, and that such a value is sent once, as its
@@ -204,6 +180,6 @@ a step when a release takes it up, or goes when the runtime rejects it.
   must be worked out before they can be followed ("A page over Home is a child by the number of its visit, never
   used again"). An agent reads the file at every session. To weigh: plain statements, one fact each, as the file
   asks of a comment. It is the owner's voice, so nothing changes it without the owner.
-- **What the move to 0.9.0 changed for the user**, each decided in passing and seen on no screen yet (step 4): the
+- **What the move to 0.9.0 changed for the user**, each decided in passing and seen on no screen yet (step 3): the
   keypad of a date takes no key until the order of its digits is read; the disc of a product entering the fridge
   is colored by the day it was added on, where it followed the clock during its flight.

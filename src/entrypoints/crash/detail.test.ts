@@ -12,12 +12,17 @@ const breaks = Tea.program<{ state: { text: string }; message: { _tag: 'Shown' }
 })
 
 describe('detail', () => {
-  test('tells where a program broke, and which rule, a line each', () =>
+  test('tells where a program broke and which rule, a line each, then the stack of each', () =>
     Effect.runPromise(Effect.gen(function*() {
       const { app, run } = Tea.start(breaks)
       const exit = yield* Effect.exit(Effect.andThen(Effect.sync(() => app.dispatch({ _tag: 'Shown' })), run))
       const cause = Exit.isFailure(exit) ? exit.cause : Cause.empty
-      expect(detail(cause)).toBe('ProgramDefect: A defect in update on Shown\nInvariantDefect: A rule of the program')
+      const [sentences, ...stacks] = detail(cause).split('\n\n')
+      expect(sentences).toBe('ProgramDefect: A defect in update on Shown\nInvariantDefect: A rule of the program')
+      expect(stacks.map((stack) => stack.split('\n')[0])).toEqual([
+        'ProgramDefect: A defect in update on Shown',
+        'InvariantDefect: A rule of the program',
+      ])
     })))
 
   test('tells each defect and failure, follows what an error wraps, and leaves interruptions out', () => {
@@ -25,6 +30,8 @@ describe('detail', () => {
       Cause.combine(Cause.die(new TypeError('outer', { cause: new Error('inner') })), Cause.fail('failed')),
       Cause.interrupt(),
     )
-    expect(detail(cause)).toBe('TypeError: outer\nError: inner\nfailed')
+    const [sentences, ...stacks] = detail(cause).split('\n\n')
+    expect(sentences).toBe('TypeError: outer\nError: inner\nfailed')
+    expect(stacks.map((stack) => stack.split('\n')[0])).toEqual(['TypeError: outer', 'Error: inner'])
   })
 })
