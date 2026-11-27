@@ -12,10 +12,8 @@ export class BackButtonError extends Data.TaggedError('BackButtonError')<{
 }> {}
 
 /**
- * The platform's back button (Android's), which the pages observe directly: a press has no
- * shape for a page to give it. The button is the app's only while it is observed: otherwise the platform acts
- * on it, and leaves the app. A press goes to the last observer only: what opened last is on top, and closes
- * first, as Android's own back dispatcher does with its callbacks.
+ * The platform's back button (Android's). The button is the app's only while it is observed: otherwise the
+ * platform acts on it, and leaves the app.
  */
 export class BackButton extends Context.Service<
   BackButton,
@@ -25,9 +23,9 @@ export class BackButton extends Context.Service<
 >()('cac2da1be5d6599d') {}
 
 /**
- * `presses`, heard by the last observer, and `press`, for the platform's listener. The button is held from the
- * first observer to the last, one change at a time: when the shown page changes, the old page stops observing
- * as the new one starts, and their hold and release would otherwise run over each other.
+ * `presses`, which every observer hears, and `press`, for the platform's listener. The button is held from the
+ * first observer to the last, one change at a time: an observer that starts as another stops would otherwise have
+ * its hold and the other's release run over each other.
  */
 export const observed = Effect.fnUntraced(function*(hold: Effect.Effect<void>, release: Effect.Effect<void>) {
   const hearers = new Set<() => void>()
@@ -46,9 +44,8 @@ export const observed = Effect.fnUntraced(function*(hold: Effect.Effect<void>, r
         })),
     )
   }))
-  // A `Set` keeps the order of insertion: the last one is the observer that came last.
   const press = () => {
-    Array.from(hearers).at(-1)?.()
+    for (const hear of hearers) hear()
   }
   return { presses, press }
 })

@@ -98,8 +98,9 @@ type Search = Data.TaggedEnum<{
 - **The query is the text as typed**, never trimmed or folded in the state: the field owns it while the user
   types, and `update` accepts it whatever it is (the guide: a message is never rejected by its value). What it
   filters by is derived: `TextSearch.fromString(query)`, `None` for a blank query, which filters nothing.
-- **Messages**, from the view unless said otherwise: `SearchOpened`, `SearchClosed`, `QueryCleared`, and
-  `BackPressed` from the back button's subscription. The field gives the query as `QueryTyped { value }`, a
+- **Messages**, from the view unless said otherwise: `SearchOpened`, `SearchClosed`, `QueryCleared`. The back
+  button is the external message `BackPressed`, which Home tells while `Products`' output says that a press is
+  its own. The field gives the query as `QueryTyped { value }`, a
   message the model holds without its value (`queryTyped`) and the field fills.
 - **`update`:**
   - `SearchOpened`: accepted while the search is `Closed`, the list is `Loaded` with at least one item and the
@@ -146,9 +147,9 @@ type Search = Data.TaggedEnum<{
   }>
   ```
 
-- **Subscriptions:** the back button, keyed `back-button`, which `Products` already observes while the list shows
-  a selection (the press clears it), also while the search is `Open` and nothing is selected: the press goes to
-  the selection while there is one, then to the search.
+- **The back button** is the root's subscription, told down as `BackPressed` (the `add-program` skill).
+  `Products`' output, `takesBack`, already holds while the list shows a selection (the press clears it); it holds
+  also while the search is `Open`: the press goes to the selection while there is one, then to the search.
 - **Performance:** the names are folded on every frame the renderer reads, once per row: a normalization and a
   regular expression per name, for tens of rows. Keeping the folded names in the state would be derived data,
   and is not worth a rule's exception at this size; should a fridge of hundreds stutter while typing, fold them
@@ -171,10 +172,8 @@ scrolls (scroll-driven animations, `bar-slide` in `src/styles.css`, since 2026-1
 Home picks the shape in this order: the selection's bar, then the search bar, then its own. In search mode the
 bar is `h-16` and `surface-container` whatever the scroll, without the bar's scroll-driven utilities, the headline and subtitle block is not drawn, and the
 overflow button is not there: the menu cannot open while the search is open, and the search cannot open while
-the menu is (its tap catcher takes the tap), so the two observers of the back button from Home never coexist;
-should they, a press goes to the last one to start observing (**verified** in `observed`,
-`src/infrastructure/back-button/back-button.ts`: a `Set` in insertion order, `.at(-1)`), which closes what
-opened last. `Products.list` reads the model to pad the list by the bar's height: `pt-16` in search mode,
+the menu is (its tap catcher takes the tap), so the two never take a press of the back button at once; should
+they, Home closes its menu first, then passes the press to `Products` (Home's `external`). `Products.list` reads the model to pad the list by the bar's height: `pt-16` in search mode,
 `pt-medium-bar` otherwise, with `transition-[padding]` so that the rows follow the bar as it shrinks and grows. The
 medium bar itself never changes height: its color and title slide up under the icons as the list scrolls, and the list keeps
 `pt-medium-bar` (**verified** 2026-10-29).
@@ -233,9 +232,9 @@ selection):
   restored products may not match: they are back in the storage, hidden by the filter. The snackbar is
   honest ("Product deleted" was undone: it is back), the storage is the truth, and closing the search shows it.
   Locking the search while the snackbar stands (ten seconds) was judged worse than this edge.
-- **Hidden pages.** `Products`' subscriptions, the back button's included, run only while Home is shown (Home's
-  `listening`, in the root), so the search's back button never steals a press from the page over Home. The
-  storage's change caused by an edit or an add reaches Home when it is shown again.
+- **Hidden pages.** `Products`' subscriptions run only while Home is shown (Home's `listening`, in the root), and
+  the root tells a press of the back button to the page shown, so the search never takes a press from the page
+  over Home. The storage's change caused by an edit or an add reaches Home when it is shown again.
 
 ## Motion, and what to check
 
@@ -271,8 +270,8 @@ selection):
   would go down to `Products` as an `ExternalMessage`, which would keep the query too, to filter: the same state
   in two programs, which the `add-program` skill names as the mark of a wrong boundary; and Home would have to
   read the child's selection to hide the field, which a parent never does. **Decided: `Products`**, which gives
-  Home the pieces, as it does for the selection. `Products` already observes the back button for its selection,
-  as the `add-program` skill allows a page's child.
+  Home the pieces, as it does for the selection. `Products` already takes the back button for its selection,
+  through its output, as the `add-program` skill says of a page's child.
 - **Live filtering against a search request.** A list in the store that took the query (`WHERE name LIKE`) would
   restart its subscription on every keystroke (the key would hold the query), reload the list each time, lose the
   arrivals and departures across keystrokes, match case-insensitively for ASCII only and know nothing of
@@ -321,7 +320,7 @@ selection):
   shown are exactly the rows of the whole order whose name matches, in order, the leaving ones included;
   `NoMatches` exactly when a filter is on and no item matches; `maybeMatching` counts the items shown while a
   filter is on; `search` is `Covered` exactly while a selection exists and the search is open, `maybeOpen` exactly
-  when the list has items and nothing is selected; the subscriptions test gains the back button's key. The
+  when the list has items and nothing is selected; the output's test gains the open search. The
   invariant "every selected id is shown" as a property over `applyAll` of arbitrary message sequences from any
   valid state.
 - `home/program.test.ts`: the view test's `askable` gains the search's messages, `withheld` the cases above;
@@ -340,7 +339,7 @@ search bar). This document is then pruned to what was built.
 
 - Filter chips on the expiration, as a second criterion of the same search.
 - With the search, the back button closing the selection first, then the search. The selection's own press is
-  done: `Products` observes the button while the list shows a selection, and the press clears it.
+  done: `Products`' output takes the button while the list shows a selection, and the press clears it.
 - A FLIP of the rows, for a row that moves or stops matching after an edit.
 - Highlighting the matched text in a row's headline.
 - The keyboard's search key dismissing the keyboard, if the device does not.

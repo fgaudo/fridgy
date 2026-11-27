@@ -53,34 +53,35 @@ const toSnackbar = (message: SnackbarProgram.Message): Message => ({ _tag: 'Snac
 const fieldsOf = (s: Whole): Opt.Option<Fields> =>
   s.own.form._tag === 'Loading' ? Opt.none() : Opt.some(s.own.form.fields)
 
-const dateOf = (s: Whole) => Opt.map(s.children.Expiration, ({ state }) => state)
+const dateOf = (s: Whole) => Opt.getOrThrow(s.children.Expiration).state
 
 const snackbarOf = (s: Whole) => Opt.getOrThrow(s.children.Snackbar).state
 
 /** What the date concludes, as the page reads it. */
-const concluded = (s: Whole) => Opt.map(dateOf(s), Expiration.program.output)
+const concluded = (s: Whole) => Expiration.program.output(dateOf(s))
 
 /**
  * The product "Save" writes: the one made from the name and what the date concludes, when it differs from the
  * stored one by its name or its day.
  */
-const savedProduct = (s: Whole, fields: Fields): Opt.Option<Product.Product> =>
-  Opt.flatMap(concluded(s), (output) =>
-    output._tag === 'Undecided' ? Opt.none() : Opt.filter(
-      Product.edit(
-        s.own.original,
-        { name: fields.name, maybeExpirationDate: output._tag === 'On' ? Opt.some(output.day) : Opt.none() },
-        fields.now.zone,
-      ),
-      (product) =>
-        product.name !== s.own.original.name
-        || !Equal.equals(product.maybeExpirationDate, s.own.original.maybeExpirationDate),
-    ))
+const savedProduct = (s: Whole, fields: Fields): Opt.Option<Product.Product> => {
+  const output = concluded(s)
+  return output._tag === 'Undecided' ? Opt.none() : Opt.filter(
+    Product.edit(
+      s.own.original,
+      { name: fields.name, maybeExpirationDate: output._tag === 'On' ? Opt.some(output.day) : Opt.none() },
+      fields.now.zone,
+    ),
+    (product) =>
+      product.name !== s.own.original.name
+      || !Equal.equals(product.maybeExpirationDate, s.own.original.maybeExpirationDate),
+  )
+}
 
-/** What the page tells its date in a state: the time, and whether the form is locked. */
+/** What the page tells its date in a state: the time, and that the form is locked unless it is edited. */
 const toldOf = (s: Whole) => ({
   maybeNow: Opt.map(fieldsOf(s), ({ now }) => now),
-  isLocked: s.own.form._tag === 'Saving' || s.own.form._tag === 'Gone',
+  isLocked: s.own.form._tag !== 'Editing',
 })
 
 /** The whole state with the page's own state changed, its children as they were. */
@@ -206,14 +207,12 @@ describe('EditProduct update', () => {
         }))
   })
 
-  test('BackPressed asks the parent to leave the page, and is held while saving', () => {
-    assertProperty([state], (before) =>
-      Equal.equals(step(Msg.BackPressed(), before), {
-        rejected: false,
-        after: before,
-        commands: [],
-        events: before.own.form._tag === 'Saving' ? [] : [Ev.LeaveRequested()],
-      }))
+  test('the back button, which the root tells, asks the parent to leave the page, and is held while saving', () => {
+    assertProperty([state], (before) => {
+      const { state: after, commands, events } = program.external({ _tag: 'BackPressed' })(before)
+      return after === before && (commands ?? []).length === 0
+        && Equal.equals(events ?? [], before.own.form._tag === 'Saving' ? [] : [Ev.LeaveRequested()])
+    })
   })
 
   test('KeyboardMoved keeps how far the keyboard covers the page, in every state', () => {
@@ -228,22 +227,14 @@ describe('EditProduct update', () => {
   })
 
   describe('the time', () => {
-    test('ends the loading with the stored name in the fields, and starts the date from the stored product, told the time', () => {
+    test('ends the loading with the stored name in the fields, and tells the date the time, which then takes input', () => {
       assertProperty([loading, zoned], (before, now) => {
         const { state: after } = applyAll(program.update, [Msg.TimeChanged({ now })], before)
         return Equal.equals(after.own, {
           ...before.own,
           form: { _tag: 'Editing', fields: { now, name: before.own.original.name, replacements: 0 } },
         })
-          && Equal.equals(
-            dateOf(after),
-            Opt.some({
-              maybeStored: Opt.some(before.own.original),
-              page: { maybeNow: Opt.some(now), isLocked: false },
-              maybeOrder: Opt.none(),
-              date: { _tag: 'Kept' },
-            }),
-          )
+          && Equal.equals(dateOf(after), { ...dateOf(before), page: { maybeNow: Opt.some(now), isLocked: false } })
       })
     })
 
@@ -251,7 +242,7 @@ describe('EditProduct update', () => {
       assertProperty([withFields, zoned], (before, now) => {
         const { state: after } = applyAll(program.update, [Msg.TimeChanged({ now })], before)
         return Equal.equals(Opt.map(fieldsOf(after), (fields) => fields.now), Opt.some(now))
-          && Equal.equals(Opt.map(dateOf(after), ({ page }) => page.maybeNow), Opt.some(Opt.some(now)))
+          && Equal.equals(dateOf(after).page.maybeNow, Opt.some(now))
       })
     })
   })
@@ -262,10 +253,7 @@ describe('EditProduct update', () => {
       fc.pre(!cannotArrive(msg, before))
       const result = program.update(msg)(before)
       const after = result === Tea.reject ? before : result.state
-      return Opt.match(dateOf(after), {
-        onNone: () => after.own.form._tag === 'Loading',
-        onSome: ({ page }) => Equal.equals(page, toldOf(after)),
-      })
+      return Equal.equals(dateOf(after).page, toldOf(after))
     })
   })
 
@@ -361,16 +349,16 @@ describe('EditProduct update', () => {
   })
 })
 
-// The root drops the page once it is left: it listens for as long as it is there.
-test('the page listens to the clock, the back button and the keyboard in every state, the date\'s setting while the date is there, and times its snackbar', () => {
+// The root drops the page once it is left: it listens for as long as it is there. The back button is the root's.
+test('the page listens to the clock and the keyboard in every state, its date to the setting of its order, and times its snackbar', () => {
   assertProperty([state], (s) => {
     const keys = program.subscriptions(s)
     const own = keys.filter((key) => typeof key === 'string')
     const ofDate = keys.filter((key) => typeof key !== 'string' && key._tag === 'Expiration')
     const ofSnackbar = keys.filter((key) => typeof key !== 'string' && key._tag === 'Snackbar')
     const timed = Opt.exists(snackbarOf(s).maybeStanding, ({ maybeUntil }) => Opt.isSome(maybeUntil))
-    return Equal.equals(own, ['clock', 'back-button', 'keyboard'])
-      && ofDate.length === (Opt.isSome(dateOf(s)) ? 1 : 0)
+    return Equal.equals(own, ['clock', 'keyboard'])
+      && ofDate.length === 1
       && ofSnackbar.length === (timed ? 1 : 0)
   })
 })
@@ -400,8 +388,7 @@ describe('the model', () => {
   // The stored date is drawn as digits in the order in use: the fields wait for it.
   test('draws the app bar alone while loading, and until the date\'s order is known', () => {
     assertProperty([state], (s) => {
-      const isWaiting = s.own.form._tag === 'Loading'
-        || Opt.exists(dateOf(s), ({ maybeOrder }) => Opt.isNone(maybeOrder))
+      const isWaiting = s.own.form._tag === 'Loading' || Opt.isNone(dateOf(s).maybeOrder)
       return Equal.equals(makeModel(s), { _tag: 'Loading', keyboardInset: s.own.keyboardInset, close: Msg.Closed() })
         === isWaiting
     })
@@ -415,7 +402,7 @@ describe('the model', () => {
     assertProperty([shown], (s) => {
       const model = makeModel(s)
       const fields = Opt.getOrThrow(fieldsOf(s))
-      const date = Opt.getOrThrow(dateOf(s))
+      const date = dateOf(s)
       return model._tag !== 'Loading' && model.name === fields.name && model.nameKey === fields.replacements
         && Equal.equals(model.expiration, Expiration.program.makeModel(date))
         && Equal.equals(
@@ -529,6 +516,6 @@ test('the arbitrary states cover every state, with a snackbar and without', () =
 test('the arbitrary messages cover every message of the page', () => {
   const tags = new Set(fc.sample(message, 1_000).map((msg) => msg._tag))
   expect([...tags].sort()).toEqual(
-    ['BackPressed', 'Closed', 'KeyboardMoved', 'NameCleared', 'NameTyped', 'SaveStarted', 'Saved', 'TimeChanged'],
+    ['Closed', 'KeyboardMoved', 'NameCleared', 'NameTyped', 'SaveStarted', 'Saved', 'TimeChanged'],
   )
 })

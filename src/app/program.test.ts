@@ -26,6 +26,7 @@ import {
   expirationShown,
   hear,
   hearNext,
+  instanceShown,
   listenedIn,
   loadEditPage,
   onHome,
@@ -50,7 +51,6 @@ import {
   typeName,
   type User,
   undoDeletion,
-  visitShown,
 } from './user.test_support.ts'
 import { view } from './view.tsx'
 
@@ -131,7 +131,7 @@ const addSaltAndMilk = Effect.fnUntraced(function*(user: User) {
 
 describe('Navigation', () => {
   test('starts on Home, with no page over it', () => {
-    expect(program.init.state.own).toEqual({ visits: 0, maybeVisit: Opt.none() })
+    expect(program.init.state.own).toEqual({ maybePage: Opt.none() })
     expect(program.makeModel(program.init.state).page._tag).toBe('Home')
   })
 
@@ -159,14 +159,15 @@ describe('Navigation', () => {
       yield* user.send(() => entry)
       const state = yield* user.state
       expect(yield* shown(user)).toBe('About')
-      expect(state.own.visits).toBe(1)
+      // Home, and About once.
+      expect(state.starts).toBe(2)
       expect(Opt.map(entry, (message) => program.update(message)(state) === Tea.reject)).toEqual(Opt.some(true))
       yield* user.runAll
     })))
 
   // React reuses an element of the same type in the same place: a page drawn in another's, or in an earlier visit's
   // of its own, would keep its native views, and the text of their fields.
-  test('each page is drawn in an element of its own, keyed by its name and its visit', () =>
+  test('each page is drawn in an element of its own, keyed by its name and its instance, which each visit has anew', () =>
     rehearsed(Effect.fnUntraced(function*(user) {
       const keysOf = (node: ReactNode): ReadonlyArray<string> =>
         typeof node === 'object' && node !== null && Symbol.iterator in node
@@ -181,11 +182,11 @@ describe('Navigation', () => {
       )
       expect(yield* drawn).toEqual(['Home'])
       yield* perform(user, openAbout)
-      const first = yield* visitShown(user)
+      const first = yield* instanceShown(user)
       expect(yield* drawn).toEqual([`About-${first}`])
       yield* back(user)
       yield* perform(user, openAbout)
-      const second = yield* visitShown(user)
+      const second = yield* instanceShown(user)
       expect(second).not.toBe(first)
       expect(yield* drawn).toEqual([`About-${second}`])
       yield* user.runAll
@@ -239,7 +240,7 @@ describe('Navigation', () => {
       yield* scan(user, '4006381333931')
       yield* hear(user, 'AddProducts › Lookup', {
         _tag: 'AddProducts',
-        id: yield* visitShown(user),
+        instance: yield* instanceShown(user),
         message: {
           _tag: 'LookedUp',
           barcode: '4006381333931',
@@ -262,7 +263,7 @@ describe('Navigation', () => {
       yield* scan(user, '4006381333931')
       yield* hear(user, 'AddProducts › Lookup', {
         _tag: 'AddProducts',
-        id: yield* visitShown(user),
+        instance: yield* instanceShown(user),
         message: { _tag: 'LookedUp', barcode: '4006381333931', outcome: { _tag: 'NotFound' } },
       })
       yield* hearNext(user, 'AddProducts › clock')
@@ -443,7 +444,7 @@ describe('Navigation', () => {
       expect(notice.notice).toBe('ProductGone')
       yield* hear(user, 'EditProduct › Snackbar › Standing', {
         _tag: 'EditProduct',
-        id: yield* visitShown(user),
+        instance: yield* instanceShown(user),
         message: { _tag: 'Snackbar', message: { _tag: 'Expired', id: notice.id } },
       })
       expect(yield* shown(user)).toBe('Home')
@@ -492,8 +493,8 @@ describe('Navigation', () => {
     })))
 })
 
-// Each page over Home is a visit of its own, by a number never used again: an answer, or a tap of a frame, for a
-// visit that is over reaches no later one.
+// Each visit of a page over Home is another instance of its program: an answer, or a tap of a frame, for a visit that
+// is over reaches no later one.
 describe('Visits', () => {
   // Found on 22 November 2026: the write's answer went to the page of the same name, and the date of the second
   // visit, not there yet, died of it.
@@ -566,7 +567,11 @@ describe('Visits', () => {
       yield* back(user)
       yield* perform(user, openAbout)
       const second = closeAbout(yield* user.model)
-      expect(Opt.map(first, ({ message }) => message)).toEqual(Opt.map(second, ({ message }) => message))
+      // The same message of About, for another instance.
+      expect(Opt.map(first, (tap) => ({ ...tap, instance: 0 }))).toEqual(
+        Opt.map(second, (tap) => ({ ...tap, instance: 0 })),
+      )
+      expect(first).not.toEqual(second)
       const state = yield* user.state
       expect(Opt.map(first, (message) => program.update(message)(state) === Tea.reject)).toEqual(Opt.some(true))
       expect(Opt.map(second, (message) => program.update(message)(state) === Tea.reject)).toEqual(Opt.some(false))
@@ -581,7 +586,7 @@ describe('Visits', () => {
       const close = closeAddProducts(yield* user.model)
       yield* user.send(() => close)
       const left = yield* user.state
-      expect(left.own).toEqual({ visits: 1, maybeVisit: Opt.none() })
+      expect(left.own).toEqual({ maybePage: Opt.none() })
       expect(Opt.map(close, (message) => program.update(message)(left) === Tea.reject)).toEqual(Opt.some(true))
       yield* user.runAll
       expect((yield* user.ignored).map(tagPath)).toEqual(['AddProducts › CameraChecked'])
@@ -629,13 +634,14 @@ describe('Days, in a zone far from UTC', () => {
 })
 
 describe('Subscriptions', () => {
-  /** Whether every key of the state is the page's, by its name. */
+  /** Whether every key of the state is the page's, by its name, but the root's own, the back button. */
   const listensTo = (state: State, page: Model['page']['_tag']) => {
-    const keys = listenedIn(state)
-    return keys.length > 0 && keys.every((key) => key.startsWith(`${page} › `))
+    const keys = listenedIn(state).filter((key) => key !== 'back-button')
+    return keys.every((key) => key.startsWith(`${page} › `))
   }
 
   test('Home listens while it is shown', () => {
+    expect(listenedIn(program.init.state).length).toBeGreaterThan(0)
     expect(listensTo(program.init.state, 'Home')).toBe(true)
   })
 
@@ -680,14 +686,11 @@ describe('Subscriptions', () => {
       expect(listenedIn(yield* user.state)).toEqual(keys)
     })))
 
-  // Otherwise the button is the platform's, which leaves the app. What matters here is that exactly the shown page
-  // observes it, when it should.
-  test('the back button is observed only while the shown page has something to close', () =>
+  // Otherwise the button is the platform's, which leaves the app. The root observes it for the page shown: over
+  // Home always, and on Home while it says that it has something to close.
+  test('the back button is observed only while a page is over Home, or Home has something to close', () =>
     rehearsed(Effect.fnUntraced(function*(user) {
-      const listensToBack = Effect.map(
-        user.state,
-        (state) => listenedIn(state).some((key) => key.endsWith(' › back-button')),
-      )
+      const listensToBack = Effect.map(user.state, (state) => listenedIn(state).includes('back-button'))
       expect(yield* listensToBack).toBe(false)
       yield* user.send(openMenu)
       expect(yield* listensToBack).toBe(true)
@@ -701,5 +704,25 @@ describe('Subscriptions', () => {
       yield* user.send(openAddProducts)
       expect(yield* listensToBack).toBe(true)
       yield* checkCamera(user)
+    })))
+
+  test('a press of the back button while nothing takes it is a defect: the button is not observed then', () => {
+    expect(listenedIn(program.init.state)).not.toContain('back-button')
+    expect(() => program.update({ _tag: 'BackPressed' })(program.init.state)).toThrow(Tea.InvariantDefect)
+  })
+
+  // What is on top closes first: the menu's scrim covers the list.
+  test('back on Home closes the menu first, then clears the selection, and then is the platform\'s', () =>
+    rehearsed(Effect.fnUntraced(function*(user) {
+      const listensToBack = Effect.map(user.state, (state) => listenedIn(state).includes('back-button'))
+      yield* addMilk(user)
+      yield* perform(user, [selectFirstProduct, openMenu])
+      yield* back(user)
+      const model = yield* user.model
+      expect(Opt.map(homeShown(model), ({ menu }) => menu._tag)).toEqual(Opt.some('Closed'))
+      expect(deletionShown(model)).toEqual(Opt.some('Possible'))
+      yield* back(user)
+      expect(deletionShown(yield* user.model)).toEqual(Opt.some('NothingSelected'))
+      expect(yield* listensToBack).toBe(false)
     })))
 })

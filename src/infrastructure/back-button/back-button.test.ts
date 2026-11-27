@@ -33,19 +33,20 @@ describe('observed', () => {
       expect(yield* Ref.get(releases)).toBe(1)
     })))
 
-  test('a press goes to the last observer only, and to the previous one once it stops', () =>
+  test('a press goes to every observer, and no longer to one that stopped', () =>
     Effect.runPromise(Effect.gen(function*() {
       const { presses, press } = yield* observed(Effect.void, Effect.void)
       const first = yield* observe(presses)
       const second = yield* observe(presses)
       press()
       yield* settle
-      expect(yield* first.heard).toBe(0)
+      expect(yield* first.heard).toBe(1)
       expect(yield* second.heard).toBe(1)
       yield* second.stop
       press()
       yield* settle
-      expect(yield* first.heard).toBe(1)
+      expect(yield* first.heard).toBe(2)
+      expect(yield* second.heard).toBe(1)
       yield* first.stop
     })))
 

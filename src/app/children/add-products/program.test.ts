@@ -50,7 +50,11 @@ const digits: ReadonlyArray<Digit> = ['0', '1', '2', '3', '4', '5', '6', '7', '8
 const typed = (value: string): Message => ({ _tag: 'NameTyped', value })
 
 /** A message of the date's view, as the page receives it. */
-const toDate = (message: Expiration.Message): Message => ({ _tag: 'Expiration', message })
+const toDate = (instance: number) => (message: Expiration.Message): Message => ({
+  _tag: 'Expiration',
+  instance,
+  message,
+})
 
 /** The name as the field shows it. */
 const nameOf = (s: Whole) => Opt.getOrElse(s.own.maybeName, () => '')
@@ -142,9 +146,11 @@ describe('AddProducts update', () => {
   test('the view sends what update accepts, all of it, and acts once when sent twice', () => {
     fc.assert(fc.property(state, fc.string(), anyDay, (before, inputValue, date) => {
       const model = makeModel(before)
-      const named = model._tag === 'Dating' && model.expiration.strip._tag === 'Naming'
-        ? model.expiration.strip.choices.map((choice) => choice.date)
+      const named = model._tag === 'Dating' && model.expiration.model.strip._tag === 'Naming'
+        ? model.expiration.model.strip.choices.map((choice) => choice.date)
         : []
+      // The view sends the date's messages by the instance it draws: a candidate names the one that is there.
+      const instance = Opt.match(before.children.Expiration, { onNone: () => 0, onSome: ({ instance }) => instance })
       const askable = [
         Msg.NameCleared(),
         Msg.ScanRequested(),
@@ -161,7 +167,7 @@ describe('AddProducts update', () => {
           // The days the digits name, and any other.
           ...[date, ...named].map((day) => ({ _tag: 'DateChosen', date: day } as const)),
           ...DateOrder.all.map((order) => ({ _tag: 'OrderPicked', order } as const)),
-        ].map(toDate),
+        ].map(toDate(instance)),
       ]
       expect(dispatchViolations(program.update, {
         state: before,
@@ -471,7 +477,8 @@ describe('AddProducts update', () => {
         const model = makeModel(after)
         return Equal.equals(Opt.map(dateOf(after), ({ page }) => page.isLocked), Opt.some(true))
           && Equal.equals(Opt.map(dateOf(after), ({ date }) => date), dateOf(before).pipe(Opt.map(({ date }) => date)))
-          && model._tag === 'Adding' && model.step._tag === 'Dating' && Opt.isNone(model.step.expiration.maybeKeys)
+          && model._tag === 'Adding' && model.step._tag === 'Dating'
+          && Opt.isNone(model.step.expiration.model.maybeKeys)
       })
     })
 
@@ -545,7 +552,7 @@ describe('AddProducts update', () => {
       })
     })
 
-    test('shows the date as the child draws it, exactly while the second step is shown', () => {
+    test('shows the date as the child draws it, with the number of its instance, exactly while the second step is shown', () => {
       assertProperty([state], (s) => {
         const model = makeModel(s)
         const shown = model._tag === 'Dating'
@@ -554,7 +561,13 @@ describe('AddProducts update', () => {
           ? Opt.some(model.step.expiration)
           : Opt.none()
         return showsDate(s) === Opt.isSome(dateOf(s))
-          && Equal.equals(shown, Opt.map(dateOf(s), Expiration.program.makeModel))
+          && Equal.equals(
+            shown,
+            Opt.map(s.children.Expiration, ({ instance, state }) => ({
+              instance,
+              model: Expiration.program.makeModel(state),
+            })),
+          )
       })
     })
 
@@ -712,22 +725,32 @@ describe('AddProducts update', () => {
     })
   })
 
-  test('BackPressed leaves the page, closes the scanner or the second step first, and is held while adding', () => {
+  test('the back button, which the root tells, leaves the page, closes the scanner or the second step first, and is held while adding', () => {
     assertProperty([state], (before) => {
       const { phase } = before.own
-      const { after, commands, events } = step(Msg.BackPressed(), before)
+      const { state: after, commands, events } = program.external({ _tag: 'BackPressed' })(before)
       const expected = phase._tag === 'Naming' || phase._tag === 'LookingUp'
         ? { own: before.own, events: [Ev.LeaveRequested()] }
         : phase._tag === 'Scanning' || phase._tag === 'Dating'
         ? { own: withOwn(before, { phase: { _tag: 'Naming' } }), events: [] }
         : { own: before.own, events: [] }
-      return Equal.equals(after.own, expected.own) && commands.length === 0 && Equal.equals(events, expected.events)
+      return Equal.equals(after.own, expected.own) && (commands ?? []).length === 0
+        && Equal.equals(events ?? [], expected.events)
+    })
+  })
+
+  // A tap of a frame drawn for an earlier visit of the second step names the date that was there.
+  test('a message of the date for another instance than the one that is there is rejected', () => {
+    assertProperty([dating], (before) => {
+      const { instance } = Opt.getOrThrow(before.children.Expiration)
+      return rejects(toDate(instance + 1)({ _tag: 'DigitTyped', digit: '1' }), before)
+        && rejects(toDate(instance + 1)({ _tag: 'DateCleared' }), before)
     })
   })
 })
 
-// The back button is observed in every state: while a product is being added, so that it does not leave the app.
-test('the page listens to the clock, the back button and the keyboard, to the camera while the scanner is open until it fails, to the lookup of the barcode it looks up, and to its children\'s: the snackbar, the fridge, and the date while it is shown', () => {
+// The back button is the root's, which tells the page each press.
+test('the page listens to the clock and the keyboard, to the camera while the scanner is open until it fails, to the lookup of the barcode it looks up, and to its children\'s: the snackbar, the fridge, and the date while it is shown', () => {
   assertProperty([state], (s) => {
     const keys = program.subscriptions(s)
     const has = (key: Tea.KeyOf<typeof program>) => keys.some((listed) => Equal.equals(listed, key))
@@ -745,7 +768,7 @@ test('the page listens to the clock, the back button and the keyboard, to the ca
       })
     const snackbar = snackbarOf(s)
     const fridge = Opt.getOrThrow(s.children.Fridge)
-    return has('clock') && has('back-button') && has('keyboard')
+    return has('clock') && has('keyboard')
       && has('scanner') === readsCamera(s)
       && Equal.equals(lookups, phase._tag === 'LookingUp' ? [{ _tag: 'Lookup', barcode: phase.barcode }] : [])
       && ofChild('Snackbar', Opt.some(snackbar), Snackbar.subscriptions(snackbar.state))

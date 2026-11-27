@@ -60,7 +60,6 @@ export const message: fc.Arbitrary<Message> = fc.oneof(
   fc.constant(Msg.MenuClosed()),
   fc.constant(Msg.InfoRequested()),
   fc.constant(Msg.AddRequested()),
-  fc.constant(Msg.BackPressed()),
   fc.constant(Msg.ScrollStarted()),
   reported,
   Products.message.map(fromProducts),

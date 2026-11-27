@@ -4,7 +4,6 @@ import * as Data from 'effect/Data'
 import * as Effect from 'effect/Effect'
 import * as Match from 'effect/Match'
 import * as Opt from 'effect/Option'
-import { type BackButton, pressesAs } from '#infrastructure/back-button/back-button.ts'
 import * as Licenses from '#infrastructure/licenses/licenses.ts'
 import { openLink } from '#infrastructure/links/links.ts'
 import { version } from '#package.json'
@@ -19,8 +18,8 @@ export type State = Readonly<{
 }>
 
 type Own = Data.TaggedEnum<{
-  /** The page's own back button, and the platform's, while the page is shown. */
-  BackPressed: object
+  /** The top app bar's back arrow. */
+  Closed: object
   /** The list scrolled, to `offset` pixels from its top. */
   Scrolled: { offset: number }
   /** A link of the page, which opens `url` on every press. */
@@ -41,7 +40,8 @@ export type Command = Data.TaggedEnum<{ LoadLicenses: object; OpenLink: { url: s
 
 const Command = Data.taggedEnum<Command>()
 
-const backButton: Tea.Subscription<Own, BackButton> = pressesAs(Own.BackPressed())
+/** The platform's back button, which the root tells the page shown. */
+export type External = Readonly<{ _tag: 'BackPressed' }>
 
 const loadLicenses = Effect.fn('LoadLicenses')(
   function*() {
@@ -110,7 +110,7 @@ const { make } = Tea.program<{
   message: Own
   command: Command
   event: Event
-  key: 'back-button'
+  external: External
 }>()
 
 export const program = make({
@@ -126,7 +126,8 @@ export const program = make({
         ? { state: { ...state, licenses: { _tag: 'Loaded', items: licenses } } }
         : Tea.defect('the licenses are loaded once'),
 
-    BackPressed: () => (state) => ({ state, events: [Event.LeaveRequested()] }),
+    // Each press asks the parent to leave, which removes the page on the first one.
+    Closed: () => (state) => ({ state, events: [Event.LeaveRequested()] }),
 
     // The page scrolls often, and only a change draws a frame: the very same state while it stays on the same side
     // of its top.
@@ -143,12 +144,10 @@ export const program = make({
     OpenLink: openLink,
   }),
 
-  subscriptions: () => ['back-button'],
-
-  listen: () => backButton,
+  external: () => (state) => ({ state, events: [Event.LeaveRequested()] }),
 
   makeModel: (state) => ({
-    back: Own.BackPressed(),
+    back: Own.Closed(),
     scrolled: { _tag: 'Scrolled' } as const,
     isAtTop: state.isAtTop,
     links: {

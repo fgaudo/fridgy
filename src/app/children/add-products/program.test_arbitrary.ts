@@ -88,13 +88,13 @@ const whole = (
   })
 
 /**
- * The date of a product to be, as the page told it its time and its lock: a product is made, and the step reached,
- * only once the clock has ticked.
+ * The date of a product to be, with the time its digits were typed around: a product is made, and the step reached,
+ * only once the clock has ticked. Whether the form is locked is the page's to tell: `stateOf` tells the date what
+ * the page's state gives.
  */
-const dateOf = (isLocked: boolean): fc.Arbitrary<readonly [DateTime.Zoned, Expiration.State]> =>
-  ExpirationArbitrary.state
-    .filter((date) => Opt.isNone(date.maybeStored) && Opt.isSome(date.page.maybeNow))
-    .map((date) => [Opt.getOrThrow(date.page.maybeNow), { ...date, page: { ...date.page, isLocked } }] as const)
+const dated: fc.Arbitrary<readonly [DateTime.Zoned, Expiration.State]> = ExpirationArbitrary.state
+  .filter((date) => Opt.isNone(date.maybeStored) && Opt.isSome(date.page.maybeNow))
+  .map((date) => [Opt.getOrThrow(date.page.maybeNow), date] as const)
 
 const ticked = (facts: World['facts'], now: DateTime.Zoned): World['facts'] => ({ ...facts, maybeNow: Opt.some(now) })
 
@@ -114,11 +114,11 @@ export const scanning = fc.tuple(world, fc.constantFrom<Camera>('Available', 'Un
   whole({ ...w, facts: { ...w.facts, camera } }, { _tag: 'Scanning' })
 )
 
-export const dating = fc.tuple(world, dateOf(false)).map(([w, [now, date]]) =>
+export const dating = fc.tuple(world, dated).map(([w, [now, date]]) =>
   whole({ ...w, facts: ticked(w.facts, now) }, { _tag: 'Dating' }, Opt.some(date))
 )
 
-export const submitting = fc.tuple(world, dateOf(true), product, fc.constantFrom<Step>('Naming', 'Dating')).map((
+export const submitting = fc.tuple(world, dated, product, fc.constantFrom<Step>('Naming', 'Dating')).map((
   [w, [now, date], product, from],
 ) =>
   whole(
@@ -132,7 +132,6 @@ export const state: fc.Arbitrary<Whole> = fc.oneof(naming, lookingUp, scanning, 
 
 /** The page's own messages, as they may arrive. */
 export const message: fc.Arbitrary<Message> = fc.oneof(
-  fc.constant(Msg.BackPressed()),
   fc.constant(Msg.ScanRequested()),
   fc.constant(Msg.ScanClosed()),
   fc.constant(Msg.DateRequested()),

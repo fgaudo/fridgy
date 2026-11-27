@@ -1,10 +1,12 @@
 // The root: Home, and at most one page over it. The only module that runs the pages' programs (the root view draws
-// their views). The back button is each page's: a page observes it while it has something to close, or asks to be
-// left; when no page observes it, the platform leaves the app.
+// their views). The back button is the root's, which spans the pages: observed while a page is over Home, or Home
+// says that it has something to close, and told to the page shown. When it is not observed, the platform leaves the
+// app.
 import * as Tea from '@fgaudo/effect-tea'
 import * as Data from 'effect/Data'
 import * as Match from 'effect/Match'
 import * as Opt from 'effect/Option'
+import { type BackButton, pressesAs } from '#infrastructure/back-button/back-button.ts'
 import * as About from './children/about/program.ts'
 import * as AddProducts from './children/add-products/program.ts'
 import * as EditProduct from './children/edit-product/program.ts'
@@ -19,67 +21,83 @@ export type Page = Data.TaggedEnum<{
 
 const Page = Data.taggedEnum<Page>()
 
-/** A page over Home, by the number of its visit: no later page has it. */
-export type Visit = Readonly<{ number: number; page: Page }>
-
 export type State = Readonly<{
-  /** How many pages were shown over Home so far: the number of the next visit. */
-  visits: number
   /** None while Home is shown. */
-  maybeVisit: Opt.Option<Visit>
+  maybePage: Opt.Option<Page>
 }>
 
-/** Only the page shown is drawn. A page over Home is drawn, and sent to, by the number of its visit. */
+type Own = Readonly<{ _tag: 'BackPressed' }>
+
+type Key = 'back-button'
+
+/**
+ * Only the page shown is drawn. A page over Home is another instance of its program at each visit: it is drawn, and
+ * sent to, by the instance's number, which no later visit has.
+ */
 export type Model = Readonly<{
   page: Data.TaggedEnum<{
     Home: { model: Home.Model }
-    AddProducts: { visit: number; model: AddProducts.Model }
-    EditProduct: { visit: number; model: EditProduct.Model }
-    About: { visit: number; model: About.Model }
+    AddProducts: { instance: number; model: AddProducts.Model }
+    EditProduct: { instance: number; model: EditProduct.Model }
+    About: { instance: number; model: About.Model }
   }>
 }>
 
 const PageModel = Data.taggedEnum<Model['page']>()
 
-const isHomeShown = (state: State) => Opt.isNone(state.maybeVisit)
+const isHomeShown = (state: State) => Opt.isNone(state.maybePage)
 
-/** The numbers of the visits of a page that are under way: its one visit while it is shown. */
-const visitsOf = (tag: Page['_tag']) => (state: State): ReadonlyArray<number> =>
-  Opt.match(state.maybeVisit, {
-    onNone: () => [],
-    onSome: ({ number, page }) => page._tag === tag ? [number] : [],
-  })
+const isShown = (tag: Page['_tag']) => (state: State) => Opt.exists(state.maybePage, (page) => page._tag === tag)
 
-/** Shows a page over Home, as a visit of its own. */
-const show = (state: State, page: Page): Tea.Step<State> => ({
-  state: { visits: state.visits + 1, maybeVisit: Opt.some({ number: state.visits, page }) },
-})
+/** Shows a page over Home. */
+const show = (page: Page): Tea.Step<State> => ({ state: { maybePage: Opt.some(page) } })
 
 /**
- * Leaves a page that asks to: by its close or back button, or by a save that completes. Only a visit under way
- * can ask: the library drops what is sent to one that is over.
+ * Leaves a page that asks to: by its close button, by the back button, or by a save that completes. Only the page
+ * shown can ask: the library drops what is sent to one that is gone.
  */
-const leave = () => (state: State): Tea.Step<State> => ({ state: { ...state, maybeVisit: Opt.none() } })
+const leave = () => (): Tea.Step<State> => ({ state: { maybePage: Opt.none() } })
 
-const { child, childById, withChildren } = Tea.program<{ state: State; model: Model }>()
+const backButton: Tea.Subscription<Own, BackButton> = pressesAs<Own>({ _tag: 'BackPressed' })
 
-export const program = withChildren({
+const { child, withChildren } = Tea.program<{ state: State; model: Model; message: Own; key: Key }>()
+
+const children = {
   // Always there. Under another page it keeps its state and hears its commands' answers, but listens to nothing:
   // the window and its scrolling belong to the page shown.
   Home: child(Home.program, { listening: isHomeShown }),
-  // A page over Home is a child by the number of its visit, which starts as the page is shown and goes as it is
-  // left. No number is used twice, so neither an answer nor a tap of a frame drawn for a visit reaches a later one.
-  AddProducts: childById(AddProducts.program, { ids: visitsOf('AddProducts') }),
-  EditProduct: childById(EditProduct.program, {
-    flags: (state) =>
-      Opt.match(state.maybeVisit, {
-        onNone: () => [],
-        onSome: ({ number, page }) => page._tag === 'EditProduct' ? [[number, page.flags] as const] : [],
-      }),
+  // A page over Home is there while it is shown: it starts as the page is shown and goes as it is left, so that each
+  // visit is another instance. An answer for a visit that is over is rejected, and so is a tap of a frame drawn for
+  // one, since the view's dispatch names the instance.
+  AddProducts: child(AddProducts.program, { there: isShown('AddProducts') }),
+  EditProduct: child(EditProduct.program, {
+    there: (state) =>
+      Opt.flatMap(state.maybePage, (page) => page._tag === 'EditProduct' ? Opt.some(page.flags) : Opt.none()),
   }),
-  About: childById(About.program, { ids: visitsOf('About') }),
-}).make({
-  init: { state: { visits: 0, maybeVisit: Opt.none() } },
+  About: child(About.program, { there: isShown('About') }),
+}
+
+type Tell = Tea.TellOf<typeof children>
+
+export const program = withChildren(children).make({
+  init: { state: { maybePage: Opt.none() } },
+  // A press goes to the page shown over Home, which closes what it has open, asks to be left or holds the press. On
+  // Home it goes to Home, which says while it takes one.
+  update: (_, children) => (state) =>
+    Opt.match(state.maybePage, {
+      onSome: (page): Tea.Step<State, never, never, Tell> => ({
+        state,
+        tell: [Match.valueTags(page, {
+          AddProducts: (): Tell => ({ _tag: 'AddProducts', message: { _tag: 'BackPressed' } }),
+          EditProduct: (): Tell => ({ _tag: 'EditProduct', message: { _tag: 'BackPressed' } }),
+          About: (): Tell => ({ _tag: 'About', message: { _tag: 'BackPressed' } }),
+        })],
+      }),
+      onNone: () =>
+        children.Home.output().takesBack
+          ? { state, tell: [{ _tag: 'Home', message: { _tag: 'BackPressed' } }] }
+          : Tea.defect('BackPressed with nothing to close: the button is observed only while something takes it'),
+    }),
   onEvent: {
     // Home's requests are honoured only while it is shown. Its view asks on every tap, so two taps of one frame,
     // or a tap from a frame drawn before a page covered Home, ask for what the user has already moved past.
@@ -87,24 +105,39 @@ export const program = withChildren({
       !isHomeShown(state)
         ? { state }
         : Match.valueTags(event, {
-          InfoRequested: () => show(state, Page.About()),
-          AddRequested: () => show(state, Page.AddProducts()),
-          EditRequested: ({ id, product }) => show(state, Page.EditProduct({ flags: { id, product } })),
+          InfoRequested: () => show(Page.About()),
+          AddRequested: () => show(Page.AddProducts()),
+          EditRequested: ({ id, product }) => show(Page.EditProduct({ flags: { id, product } })),
         }),
     AddProducts: leave,
     EditProduct: leave,
     About: leave,
   },
-  makeModel: (state, children) => ({
-    page: Opt.match(state.maybeVisit, {
-      onNone: () => PageModel.Home({ model: children.Home() }),
-      onSome: ({ number: visit, page }) =>
-        Match.valueTags(page, {
-          AddProducts: () => PageModel.AddProducts({ visit, model: children.AddProducts(visit) }),
-          EditProduct: () => PageModel.EditProduct({ visit, model: children.EditProduct(visit) }),
-          About: () => PageModel.About({ visit, model: children.About(visit) }),
-        }),
-    }),
+  // While no program takes the press, the button is not observed, and the platform leaves the app.
+  subscriptions: (state, children) => !isHomeShown(state) || children.Home.output().takesBack ? ['back-button'] : [],
+  listen: () => backButton,
+  // The page that is there, which the state lists one of at most.
+  makeModel: (_, children) => ({
+    page: Opt.getOrElse(
+      Opt.firstSomeOf<Model['page']>([
+        Opt.zipWith(
+          children.AddProducts.instance(),
+          children.AddProducts(),
+          (instance, model) => PageModel.AddProducts({ instance, model }),
+        ),
+        Opt.zipWith(
+          children.EditProduct.instance(),
+          children.EditProduct(),
+          (instance, model) => PageModel.EditProduct({ instance, model }),
+        ),
+        Opt.zipWith(
+          children.About.instance(),
+          children.About(),
+          (instance, model) => PageModel.About({ instance, model }),
+        ),
+      ]),
+      () => PageModel.Home({ model: children.Home() }),
+    ),
   }),
 })
 

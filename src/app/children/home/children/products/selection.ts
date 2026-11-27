@@ -10,7 +10,6 @@ import * as Match from 'effect/Match'
 import * as Opt from 'effect/Option'
 import type * as SnackbarProgram from '#app/programs/snackbar/program.ts'
 import * as Domain from '#domain/product.ts'
-import { type BackButton, pressesAs } from '#infrastructure/back-button/back-button.ts'
 import { ProductStore } from '#infrastructure/storage/products.ts'
 import * as NonEmptyHashSet from '#libs/collections/non-empty-hash-set.ts'
 import * as PositiveInteger from '#libs/numbers/positive-integer.ts'
@@ -54,9 +53,6 @@ export type Message = Data.TaggedEnum<{
   DeleteStarted: object
   /** The snackbar's action: the products deleted last are stored again. */
   UndoRequested: object
-  // From subscriptions.
-  /** The back button, heard only while something is selected: it clears the selection, or waits for its deletion. */
-  BackPressed: object
   // From commands.
   Deleted: object
   DeleteFailed: object
@@ -68,8 +64,6 @@ const Message = Data.taggedEnum<Message>()
 const Command = Data.taggedEnum<Command>()
 
 const Event = Data.taggedEnum<Event>()
-
-export type Key = 'back-button'
 
 /** How a row was selected or deselected. */
 export type Gesture = 'Tap' | 'LongPress'
@@ -152,12 +146,8 @@ export const productsOf = (items: ReadonlyArray<Product>, ids: HashSet.HashSet<D
   return HashSet.every(ids, isProduct) && Arr.isReadonlyArrayNonEmpty(products) ? Opt.some(products) : Opt.none()
 }
 
-// Observed only while the list shows a selection: otherwise the press is Home's, or the platform's.
-export const backButton: Tea.Subscription<Message, BackButton> = pressesAs(Message.BackPressed())
-
-const showsSelection = (state: State) => state.list._tag === 'Loaded' && state.selection._tag !== 'Idle'
-
-export const subscriptions = (state: State): ReadonlyArray<Key> => showsSelection(state) ? ['back-button'] : []
+/** Whether a press of the back button is the list's: while it shows a selection. */
+export const showsSelection = (state: State) => state.list._tag === 'Loaded' && state.selection._tag !== 'Idle'
 
 export const deleteProducts = Effect.fn('DeleteProducts')(
   function*({ ids }: Readonly<{ ids: NonEmptyHashSet.NonEmptyHashSet<Domain.ProductId> }>) {
@@ -227,15 +217,6 @@ export const update = Match.typeTags<Message, (state: State, children: Outputs) 
       ? { state: { ...state, selection: Selection.Idle() } }
       : Tea.reject,
 
-  // As Material's contextual action bar: the press clears the selection. It is held while the selection is being
-  // deleted, so that the app is not left in the middle of a write.
-  BackPressed: () => (state) =>
-    !showsSelection(state)
-      ? Tea.defect('BackPressed while no selection is shown: the button is observed only while one is')
-      : state.selection._tag === 'Selecting'
-      ? { state: { ...state, selection: Selection.Idle() } }
-      : { state },
-
   // The products are kept from the list as it is now: the storage's change may reach the page before the
   // deletion's completion, and then they are gone from it.
   DeleteStarted: () => (state) =>
@@ -297,6 +278,17 @@ export const update = Match.typeTags<Message, (state: State, children: Outputs) 
     tell: [tell(Notice.RestoreFailed())],
   }),
 })
+
+/**
+ * The back button, as Material's contextual action bar takes it: the press clears the selection. It is held while
+ * the selection is being deleted, so that the app is not left in the middle of a write.
+ */
+export const backPressed = (state: State): Step =>
+  !showsSelection(state)
+    ? Tea.defect('BackPressed while no selection is shown: Home tells the press only while the output says so')
+    : state.selection._tag === 'Selecting'
+    ? { state: { ...state, selection: Selection.Idle() } }
+    : { state }
 
 /** The selection keeps the products that still exist; a deletion in progress is left alone. */
 export const listChanged = (state: State): Step => {

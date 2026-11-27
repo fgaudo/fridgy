@@ -8,7 +8,6 @@ import * as Channel from 'effect/Channel'
 import * as DateTime from 'effect/DateTime'
 import * as Effect from 'effect/Effect'
 import * as Layer from 'effect/Layer'
-import * as Match from 'effect/Match'
 import * as Opt from 'effect/Option'
 import * as References from 'effect/References'
 import * as TestClock from 'effect/testing/TestClock'
@@ -35,9 +34,6 @@ import type * as Expiration from './programs/expiration/program.ts'
 /** The whole state of the app: the root's own, and the pages the library keeps. */
 export type State = Tea.StateOf<typeof program>
 
-/** A key of the app's subscriptions, as the root lists it. */
-type Key = Tea.KeyOf<typeof program>
-
 /** What the app's commands and subscriptions need: what the test's layer gives. */
 type Deps = Tea.CommandServicesOf<typeof program> | Tea.SubscriptionServicesOf<typeof program>
 
@@ -55,31 +51,31 @@ export type User = Rehearsal<
 export type Choice = (model: Model) => Opt.Option<Message>
 
 // The models hold each program's own messages: wrapped here as the view's `forwardTo` wraps them, a page over Home
-// by the number of its visit.
+// by the number of its instance.
 export const onHome = (pick: (model: Home.Model) => Opt.Option<Home.Message>): Choice => ({ page }) =>
   page._tag === 'Home' ? Opt.map(pick(page.model), (message) => ({ _tag: 'Home', message })) : Opt.none()
 
 const onAddProducts = (pick: (model: AddProducts.Model) => Opt.Option<AddProducts.Message>): Choice => ({ page }) =>
   page._tag === 'AddProducts'
-    ? Opt.map(pick(page.model), (message) => ({ _tag: 'AddProducts', id: page.visit, message }))
+    ? Opt.map(pick(page.model), (message) => ({ _tag: 'AddProducts', instance: page.instance, message }))
     : Opt.none()
 
 const onEditProduct = (pick: (model: EditProduct.Model) => Opt.Option<EditProduct.Message>): Choice => ({ page }) =>
   page._tag === 'EditProduct'
-    ? Opt.map(pick(page.model), (message) => ({ _tag: 'EditProduct', id: page.visit, message }))
+    ? Opt.map(pick(page.model), (message) => ({ _tag: 'EditProduct', instance: page.instance, message }))
     : Opt.none()
 
 const onAbout = (pick: (model: About.Model) => Opt.Option<About.Message>): Choice => ({ page }) =>
   page._tag === 'About'
-    ? Opt.map(pick(page.model), (message) => ({ _tag: 'About', id: page.visit, message }))
+    ? Opt.map(pick(page.model), (message) => ({ _tag: 'About', instance: page.instance, message }))
     : Opt.none()
 
-/** The number of the visit of the page shown over Home: the test fails on Home. */
-export const visitShown = (user: User) =>
+/** The number of the instance of the page shown over Home, which each visit has anew: the test fails on Home. */
+export const instanceShown = (user: User) =>
   Effect.flatMap(
     user.model,
     ({ page }) =>
-      page._tag === 'Home' ? Effect.die(new Error('Home is shown: no page is visited')) : Effect.succeed(page.visit),
+      page._tag === 'Home' ? Effect.die(new Error('Home is shown: no page is visited')) : Effect.succeed(page.instance),
   )
 
 /** A key by what it is, without its data: its tag, then those of what it wraps (`Home › Products › changes`). */
@@ -93,23 +89,13 @@ const keyPath = (key: unknown): string =>
 /** What the app listens to in a state, each key by what it is. */
 export const listenedIn = (state: State) => Arr.map(program.subscriptions(state), keyPath)
 
-/** The key that `path` names among those of the current state: the test fails when there is none. */
-const keyAt = (user: User, path: string): Effect.Effect<Key> =>
-  Effect.flatMap(
-    user.state,
-    (state) =>
-      Opt.match(Arr.findFirst(program.subscriptions(state), (key) => keyPath(key) === path), {
-        onNone: () => Effect.die(new Error(`No subscription under ${path}: ${listenedIn(state).join(', ')}`)),
-        onSome: Effect.succeed,
-      }),
-  )
-
+// A key is selected by its path among those of the current state: the test fails when none, or more than one, is
+// under it.
 /** The next message of the subscription that `path` names, heard as it sends it. */
-export const hearNext = (user: User, path: string) => Effect.flatMap(keyAt(user, path), user.hearNext)
+export const hearNext = (user: User, path: string) => user.hearNext((key) => keyPath(key) === path)
 
 /** `message`, as the subscription that `path` names would send it: the subscription does not run. */
-export const hear = (user: User, path: string, message: Message) =>
-  Effect.flatMap(keyAt(user, path), (key) => user.hear(key, message))
+export const hear = (user: User, path: string, message: Message) => user.hear((key) => keyPath(key) === path, message)
 
 export const openMenu = onHome(({ menu }) => menu._tag === 'Closed' ? Opt.some(menu.open) : Opt.none())
 
@@ -172,8 +158,8 @@ export const openScanner = onAddProducts((form) => form._tag === 'Naming' ? form
 /** Opens the scanner, which reads `barcode`: the page then looks it up. */
 export const scan = Effect.fnUntraced(function*(user: User, barcode: string) {
   yield* user.send(openScanner)
-  const id = yield* visitShown(user)
-  yield* hear(user, 'AddProducts › scanner', { _tag: 'AddProducts', id, message: { _tag: 'Scanned', barcode } })
+  const instance = yield* instanceShown(user)
+  yield* hear(user, 'AddProducts › scanner', { _tag: 'AddProducts', instance, message: { _tag: 'Scanned', barcode } })
 })
 
 /** The first step's "Cancel", while a scanned barcode is looked up. */
@@ -186,12 +172,18 @@ export const addProduct = onAddProducts((form) =>
   form._tag === 'Naming' || form._tag === 'Dating' ? form.maybeAdd : Opt.none()
 )
 
-/** The expiration date's controls, on either page that shows them: the page's child, wrapped as its view wraps it. */
+/**
+ * The expiration date's controls, on either page that shows them: the page's child, wrapped as its view wraps it, by
+ * the number of its instance where the date comes and goes within the page.
+ */
 const onExpiration = (pick: (model: Expiration.Model) => Opt.Option<Expiration.Message>): Choice => (model) =>
   model.page._tag === 'AddProducts'
     ? onAddProducts((form) =>
       form._tag === 'Dating'
-        ? Opt.map(pick(form.expiration), (message) => ({ _tag: 'Expiration', message }))
+        ? Opt.map(
+          pick(form.expiration.model),
+          (message) => ({ _tag: 'Expiration', instance: form.expiration.instance, message }),
+        )
         : Opt.none()
     )(model)
     : onEditProduct((form) =>
@@ -222,7 +214,7 @@ export const pickOrder = (picked: DateOrder) =>
 /** The expiration's model, on either page that shows it. */
 export const expirationShown = ({ page }: Model): Opt.Option<Expiration.Model> =>
   page._tag === 'AddProducts' && page.model._tag === 'Dating'
-    ? Opt.some(page.model.expiration)
+    ? Opt.some(page.model.expiration.model)
     : page._tag === 'EditProduct' && page.model._tag !== 'Loading'
     ? Opt.some(page.model.expiration)
     : Opt.none()
@@ -240,7 +232,6 @@ export const typeDay = Effect.fnUntraced(function*(user: User, day: Day.Day) {
 /** The page that edits a product shows its fields once it knows the time and the order of a date's digits. */
 export const loadEditPage = Effect.fnUntraced(function*(user: User) {
   yield* hearNext(user, 'EditProduct › clock')
-  // The date is there from the clock's first tick.
   yield* hearNext(user, 'EditProduct › Expiration › date-order')
 })
 
@@ -258,35 +249,11 @@ export const perform = Effect.fnUntraced(function*(user: User, choices: Readonly
   }
 })
 
-/** The press of the back button, as the program that observes it under `key` hears it. */
-const pressedUnder = (key: Key): Opt.Option<Message> =>
-  keyPath(key).endsWith(' › back-button')
-    ? Opt.some(Match.valueTags(key, {
-      Home: (): Message =>
-        keyPath(key) === 'Home › back-button'
-          ? { _tag: 'Home', message: { _tag: 'BackPressed' } }
-          : { _tag: 'Home', message: { _tag: 'Products', message: { _tag: 'BackPressed' } } },
-      AddProducts: ({ id }): Message => ({ _tag: 'AddProducts', id, message: { _tag: 'BackPressed' } }),
-      EditProduct: ({ id }): Message => ({ _tag: 'EditProduct', id, message: { _tag: 'BackPressed' } }),
-      About: ({ id }): Message => ({ _tag: 'About', id, message: { _tag: 'BackPressed' } }),
-    }))
-    : Opt.none()
-
-/** The back button, heard by the program that observes it; the test fails when none does. */
-export const back = Effect.fnUntraced(function*(user: User) {
-  const state = yield* user.state
-  const observers = Arr.getSomes(
-    Arr.map(program.subscriptions(state), (key) => Opt.map(pressedUnder(key), (pressed) => ({ key, pressed }))),
-  )
-  // On Home, the list observes the button while it shows a selection, and Home while its menu is open: the list is
-  // the last observer.
-  const observer = Opt.orElse(
-    Arr.findFirst(observers, ({ key }) => keyPath(key) === 'Home › Products › back-button'),
-    () => Arr.head(observers),
-  )
-  const { key, pressed } = Opt.getOrThrowWith(observer, () => new Error('No program observes the back button'))
-  yield* user.hear(key, pressed)
-})
+/**
+ * A press of the back button, as the root hears it: the test fails when the root does not observe the button, as
+ * while no program takes the press.
+ */
+export const back = (user: User) => hear(user, 'back-button', { _tag: 'BackPressed' })
 
 // The platform's back button is out of reach: it is heard through `back`.
 const backButton = Layer.succeed(BackButton, { presses: Channel.never })

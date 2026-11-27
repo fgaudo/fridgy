@@ -1,7 +1,7 @@
 import * as Tea from '@fgaudo/effect-tea'
 import * as Match from 'effect/Match'
 import * as Opt from 'effect/Option'
-import type { ReactNode } from 'react'
+import { Fragment, type ReactNode } from 'react'
 import { ActivityIndicator, View as Box, Pressable, ScrollView, StyleSheet, Text, TextInput } from 'react-native'
 import Animated, { FadeOut, Keyframe } from 'react-native-reanimated'
 import { SafeAreaView } from 'react-native-safe-area-context'
@@ -389,7 +389,13 @@ const dateStep = (shown: DateShown, activity: DateActivity, dispatch: Tea.Dispat
               <Text accessibilityRole='header' style={styles.headingName}>{shown.name}</Text>
             </ScrollView>
           </Box>
-          {Expiration.view(shown.expiration, Tea.forwardTo(dispatch, 'Expiration'))}
+          {/* By the instance of the date: a tap of a frame drawn for an earlier visit of the step is rejected. */}
+          <Fragment key={shown.expiration.instance}>
+            {Expiration.view(
+              shown.expiration.model,
+              Tea.forwardTo(dispatch, { _tag: 'Expiration', instance: shown.expiration.instance }),
+            )}
+          </Fragment>
         </ScrollView>
         <Box style={styles.dock}>
           {button(

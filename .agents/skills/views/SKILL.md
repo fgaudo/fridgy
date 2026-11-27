@@ -48,9 +48,9 @@ when nothing is named). The model holds exactly what the view draws: a field no 
   date's controls in a step of AddProducts), or its whole screen (the root draws the page shown). A child without
   a view (the snackbar) is drawn by its parent's view from its model, which the parent's model holds.
 - An element keyed by what it shows (a snackbar, by its `id`; a field, by `nameKey`) is drawn anew when that
-  changes. The root keys each page by its name and its visit: React reuses an element of the same type in the same
-  place, and a page drawn in another's, or in an earlier visit's, would keep its native views, and the text of
-  their fields.
+  changes. The root keys each page by its name and its instance, which each visit has anew: React reuses an element
+  of the same type in the same place, and a page drawn in another's, or in an earlier visit's, would keep its
+  native views, and the text of their fields. `AddProducts` keys its date by its instance likewise.
 - A page draws itself whole: a `SafeAreaView` with the surface's color, keeping clear of the system bars (the app
   is drawn edge to edge), and a frame inside it, from which an absolute position is measured (a menu, a snackbar):
   an absolute position ignores the padding of its parent.

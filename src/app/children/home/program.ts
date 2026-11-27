@@ -1,12 +1,12 @@
-// The page: its child (the products), and what is the page's own (the top app bar's menu, the back button, the
-// ways to the pages that add and edit products, and the scrolling, which the top app bar and the add button follow).
+// The page: its child (the products), and what is the page's own (the top app bar's menu, the ways to the pages that
+// add and edit products, and the scrolling, which the top app bar and the add button follow). A press of the back
+// button is Home's while it has something to close, which its output says.
 import * as Tea from '@fgaudo/effect-tea'
 import * as Data from 'effect/Data'
 import * as Equal from 'effect/Equal'
 import * as Match from 'effect/Match'
 import * as Opt from 'effect/Option'
 import type * as Product from '#domain/product.ts'
-import { type BackButton, pressesAs } from '#infrastructure/back-button/back-button.ts'
 import * as Products from './children/products/program.ts'
 
 /**
@@ -46,9 +46,6 @@ type Own = Data.TaggedEnum<{
   HeadlineLaidOut: { height: number }
   ListLaidOut: { height: number }
   ContentSized: { height: number }
-  // From subscriptions.
-  /** The back button, heard only while the menu is open, which it closes. */
-  BackPressed: object
 }>
 
 const Own = Data.taggedEnum<Own>()
@@ -62,7 +59,11 @@ export type Event = Data.TaggedEnum<{
 
 const Event = Data.taggedEnum<Event>()
 
-type Key = 'back-button'
+/** The platform's back button, which the root tells while the output says that a press is Home's. */
+export type External = Readonly<{ _tag: 'BackPressed' }>
+
+/** Whether a press of the back button is Home's: while its menu is open, or its list shows a selection. */
+export type Output = Readonly<{ takesBack: boolean }>
 
 export type Model = Readonly<{
   menu: Data.TaggedEnum<{
@@ -94,10 +95,6 @@ export type Model = Readonly<{
   products: Products.Model
 }>
 
-// Observed only while the menu is open: otherwise the button is the list's while it shows a selection, or the
-// platform's, which leaves the app.
-const backButton: Tea.Subscription<Own, BackButton> = pressesAs(Own.BackPressed())
-
 // Each step draws a frame: twenty are a fade, and leave the frames between them to the scroll.
 const steps = 20
 
@@ -122,7 +119,14 @@ const laidOut = (state: State, layout: Layout): State => {
   return { ...state, layout, collapse: Math.min(state.collapse, collapseAt(layout.content - layout.list, layout)) }
 }
 
-const { child, withChildren } = Tea.program<{ state: State; model: Model; message: Own; event: Event; key: Key }>()
+const { child, withChildren } = Tea.program<{
+  state: State
+  model: Model
+  message: Own
+  event: Event
+  external: External
+  output: Output
+}>()
 
 export const program = withChildren({
   // Always there: only its subscriptions are turned off, by Home's parent.
@@ -141,6 +145,14 @@ export const program = withChildren({
   onEvent: {
     Products: (event) => (state) => ({ state, events: [event] }),
   },
+  // What is on top closes first: the menu, then the list's selection.
+  external: (_, children) => (state) =>
+    state.isMenuOpen
+      ? { state: { ...state, isMenuOpen: false } }
+      : children.Products.output().takesBack
+      ? { state, tell: [{ _tag: 'Products', message: { _tag: 'BackPressed' } }] }
+      : Tea.defect('BackPressed with nothing to close: the root tells the press only while the output says so'),
+  output: (state, children) => ({ takesBack: state.isMenuOpen || children.Products.output().takesBack }),
   // The list reports its scroll and its layout at every event, and most change nothing: those keep the very same
   // state, so that no frame is drawn.
   update: (message) => (state) =>
@@ -166,13 +178,7 @@ export const program = withChildren({
       HeadlineLaidOut: ({ height }) => ({ state: laidOut(state, { ...state.layout, headline: height }) }),
       ListLaidOut: ({ height }) => ({ state: laidOut(state, { ...state.layout, list: height }) }),
       ContentSized: ({ height }) => ({ state: laidOut(state, { ...state.layout, content: height }) }),
-      BackPressed: () =>
-        state.isMenuOpen
-          ? { state: { ...state, isMenuOpen: false } }
-          : Tea.defect('BackPressed with the menu closed: the button is observed only while it is open'),
     }),
-  subscriptions: (state) => state.isMenuOpen ? ['back-button'] : [],
-  listen: Match.type<Key>().pipe(Match.when('back-button', () => backButton), Match.exhaustive),
   makeModel: (state, children) => ({
     menu: state.isMenuOpen
       ? { _tag: 'Open', close: Own.MenuClosed(), requestInfo: Own.InfoRequested() }

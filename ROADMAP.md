@@ -3,9 +3,10 @@
 What is to be done or decided now, and nothing else. A step done is removed, with the reason in the commit: what a
 later step needs to know of it is written on that step. The steps come from a review of the architecture that the
 owner asked for on 22 November 2026, from the move to effect-tea 0.9.0 on 26 November 2026, which closed the
-steps on the root and on the inputs, and what waited for that release, and from a review of the structure on that
-same day, for which the owner set every rule of the project aside. Steps 1 and 4 waited under "Any time" and
-"Waiting for the owner", until the owner took them up on that day too.
+steps on the root and on the inputs, and what waited for that release, from a review of the structure on that
+same day, for which the owner set every rule of the project aside, and from the move to effect-tea 0.10.0 on 27
+November 2026, which acted on what waited for the runtime. Steps 1 and 4 waited under "Any time" and "Waiting for
+the owner", until the owner took them up on 26 November 2026.
 
 That last review found one thing, which steps done acted on. The app has three boundaries where one thing
 is put in another's place. A program says what it asks of the world as data, its commands and the keys of its
@@ -75,16 +76,16 @@ are. The crash screen's detail is the cause's text, and is not translated.
 **Done when** `docs/localization.md` holds the decisions and the facts they rely on, checked; the steps that
 implement it are written here; the owner has read it.
 
-### 3. The app on effect-tea 0.9.0, seen on the emulator
+### 3. The app on effect-tea 0.10.0, seen on the emulator
 
 **Model and effort.** Opus 5.5, `medium`.
 
 **Depends on** step 1, which changes what it looks at. It comes last of the steps that change a view, as the
 owner decided on 26 November 2026: the views are seen once, as the steps before it leave them.
 
-**Why.** The move to 0.9.0 changed every program and every view, and was checked by the tests, the typecheck,
-Metro's bundle and Hermes' bytecode alone. No test sees what a view draws, nor what the platform does with it
-(`docs/testing.md`).
+**Why.** The moves to 0.9.0 and to 0.10.0 changed every program and every view, and were checked by the tests,
+the typecheck, Metro's bundle and Hermes' bytecode alone. No test sees what a view draws, nor what the platform
+does with it (`docs/testing.md`).
 
 **How.** As the `android-release` skill says, on a debug build and then a release. What changed, and what to look
 at:
@@ -96,13 +97,23 @@ at:
   just before "Add" and "Save".
 - **The date**, drawn by one view for both pages (`src/app/programs/expiration/view.tsx`): the segments, the
   field, the strip and the keypad lay out in each page's column as before. Its keys take nothing until the order
-  is read, a moment after the date is first shown: nothing should be seen of it.
+  is read, a moment after the date is first shown: nothing should be seen of it. On `EditProduct` the date is
+  there from the page's start, and reads the order while the page waits for the clock: the fields come at the
+  first tick. On `AddProducts` it is drawn under the number of its instance: the second step, dismissed and shown
+  again, starts with no digits, and a product added from it leaves none for the next.
 - **The fridge**, drawn by its own view (`src/app/children/add-products/children/fridge/view.tsx`), with no
   wrapper of its own in the name step's room: the flight of `docs/product-flight.md`.
 - **The snackbars** of the three pages, and "Undo". One stands from when it was told: Home's, hidden under a page
   past its time, is gone when Home is back.
-- **A page opened twice.** Each visit is drawn under a key of its own (`src/app/view.tsx`): the second shows
-  nothing of the first, its fields' text included.
+- **A page opened twice.** Each visit is another instance of the page, drawn under its number
+  (`src/app/view.tsx`): the second shows nothing of the first, its fields' text included.
+- **The back button**, which the root alone observes since 0.10.0, and tells to the page shown
+  (`src/app/program.ts`), where each program that had something to close observed it. On Home: it closes the menu,
+  clears the selection, is held while the selection is deleted, and with nothing open leaves the app. Over Home:
+  it closes the scanner and the second step of `AddProducts` first, leaves each page, and is held while a product
+  is added or saved. To look at closely: the button is held by the platform exactly while the root observes it
+  (`back-button.react-native.ts`), so a press right after a page opens, right after the last thing on Home closes,
+  and the first press after the app comes back from the background.
 - **The links**, About's and the attribution of a product found: each opens its page, through a command
   (`src/infrastructure/links/`).
 - **The root that draws.** The system theme changed while a page over Home is shown keeps that page
@@ -150,25 +161,30 @@ None of these waits for the steps above, nor holds them up.
 
 ## Waiting for effect-tea
 
-What the move to 0.9.0 found that the runtime could take up, and what each item would change here. An item becomes
-a step when a release takes it up, or goes when the runtime rejects it.
+What the moves to 0.9.0 and to 0.10.0 found that the runtime could take up, and what each item would change here.
+An item becomes a step when a release takes it up, or goes when the runtime rejects it. 0.10.0 took up four of
+the five items that the first move left, and the move to it acted on them: `OutputsOf` and `TellOf`, a child with
+flags that is always there, a view's dispatch that names the instance of its child, a parent's `subscriptions`
+given its children's outputs. It answered the fifth, a tool for what a step tells: what a parent tells shows in
+the child's state and commands (the guide, "Testing"), and `stateOf` tells each child as a start does.
 
-- **The types of what a parent's functions take and tell** (`Outputs`, `Tells`), which the package does not export.
-  `AddProducts`, `EditProduct` and `Products` each write `Tell` and their step's type by hand, to annotate a
-  handler, and `AddProducts` and `Products` what their concerns' `update` reads of the children (`Outputs`).
-- **A child that the parent's state says is there, and whose model is an `Option`.** `AddProducts` (the date, on
-  the second step) and `EditProduct` (the date, past `Loading`) unwrap it with a defect, or a filter, that no state
-  reaches.
-- **A testing tool for what a step tells.** The whole program's `update` shows the children's states after it, not
-  the `tell`: `Products`' test reads the snackbar's `Stamp` command to know how long a notice was told to last.
-  `stateOf` takes a child's state that the declaration's `tell` would not give: the arbitraries of `AddProducts`
-  and `EditProduct` keep the date's `page` in step with the page by hand.
-- **A view's message that names the instance it was drawn for.** The root gives each visit of a page a number, and
-  a child by id, for this alone. A child that comes and goes inside a page, as the date of `AddProducts`' second
-  step, has no such number: a tap of a frame drawn for an earlier one reaches the one that is there.
-- **The parent's `subscriptions`, given the children's outputs.** The back button is each program's that has
-  something to close, heard by the last observer (the `add-program` skill), where the guide keeps in the parent what spans the
-  children: a parent cannot list a key by what its children declare.
+- **One read of a child that may not be there.** Its model, its output and the number of its instance are three
+  `Option`s of one fact (`children.X()`, `children.X.output()`, `children.X.instance()`). The root joins two of
+  them for each page, and draws the page that is there. `AddProducts`, whose state says that the date is there on
+  the second step, joins them and unwraps the result with a defect that no state reaches (`dateShown`, in its
+  `program.ts`). A read that gives the three as one `Option`, or one that the library checks, as it checks an id of
+  `childById`, would leave `AddProducts` no defect to write.
+- **A message passed down a chain of children.** The press of the back button goes from the root to Home to
+  `Products`. Each level writes an `output` that joins its child's (`takesBack`), and an `external` that passes
+  the message on to the child that takes it. An external message is answered in every state, so each level also
+  writes, as a defect, that it is told only while its output says so (Home's `external`, `Selection.backPressed`).
+  To ask the runtime: whether a parent can say once to which child a message goes, from the outputs, and whether a
+  child told what its output did not ask for is the library's defect.
+- **The messages of a child drawn by its instance, in a test.** A test wraps them by hand with the number that the
+  model holds, in the `candidates` of `dispatchViolations` and in what a rehearsal hears (`toDate(instance)` in
+  `add-products/program.test.ts`, `onExpiration` in `src/app/user.test_support.ts`), and gives a number that no
+  instance has where the child is not there. A helper of `@fgaudo/effect-tea/testing` that wraps as `forwardTo`
+  does would say it once.
 
 ## Waiting for the owner
 
@@ -183,3 +199,7 @@ a step when a release takes it up, or goes when the runtime rejects it.
 - **What the move to 0.9.0 changed for the user**, each decided in passing and seen on no screen yet (step 3): the
   keypad of a date takes no key until the order of its digits is read; the disc of a product entering the fridge
   is colored by the day it was added on, where it followed the clock during its flight.
+- **What the move to 0.10.0 changed for the user**, decided in passing too: on Home, with the menu open over a
+  selection, the back button closes the menu first, then clears the selection, where the press went to whichever
+  of the two had opened last. The view opens the menu from the bar that a selection replaces, so no user reaches
+  that state today.

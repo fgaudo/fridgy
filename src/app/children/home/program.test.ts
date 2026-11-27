@@ -36,25 +36,26 @@ const changed = (change: (own: State) => State) => wholeOf(own.map(change))
 const productsOf = (state: Whole) => Opt.getOrThrow(state.children.Products).state.own
 
 /**
- * A message that cannot arrive in that state: a back heard with the menu closed, or by the list while it shows no
- * selection, a completion outside its deletion, the end of the rows' motion while none moves, a tick while no
- * product expires.
+ * A message that cannot arrive in that state: a completion outside its deletion, the end of the rows' motion while
+ * none moves, a tick while no product expires.
  */
 const cannotArrive = (msg: Message, before: Whole) => {
-  if (msg._tag === 'BackPressed') {
-    return !before.own.isMenuOpen
-  }
   if (msg._tag !== 'Products') {
     return false
   }
   const products = productsOf(before)
   const inner = msg.message
-  return (inner._tag === 'BackPressed' && (products.list._tag !== 'Loaded' || products.selection._tag === 'Idle'))
-    || ((inner._tag === 'Deleted' || inner._tag === 'DeleteFailed') && products.selection._tag !== 'Deleting')
+  return ((inner._tag === 'Deleted' || inner._tag === 'DeleteFailed') && products.selection._tag !== 'Deleting')
     || (inner._tag === 'RowsSettled'
       && (products.list._tag !== 'Loaded'
         || (HashSet.size(products.list.arrivals) === 0 && products.list.departures.length === 0)))
     || (inner._tag === 'TimeChanged' && !hasExpiringProduct(products))
+}
+
+/** Whether the list shows a selection: while it is loaded, and some products are selected or being deleted. */
+const showsSelection = (state: Whole) => {
+  const products = productsOf(state)
+  return products.list._tag === 'Loaded' && products.selection._tag !== 'Idle'
 }
 
 /** What the list reports of its layout and its scroll: the view fills each with what the list gives. */
@@ -242,21 +243,34 @@ describe('Home update', () => {
     })
   })
 
-  describe('BackPressed', () => {
-    test('closes the menu', () => {
+  // The root tells the press only while the output says that it is Home's. What is on top closes first.
+  describe('the back button, which the root tells', () => {
+    const pressed = (from: Whole) => program.external({ _tag: 'BackPressed' })(from)
+
+    test('closes the menu, and leaves the selection for the next press', () => {
       assertProperty([changed((own) => ({ ...own, isMenuOpen: true }))], (from) => {
-        const { after, commands, events } = step(Msg.BackPressed(), from)
-        return !after.own.isMenuOpen && onlyChanged(from.own, after.own, 'isMenuOpen') && commands.length === 0
-          && events.length === 0
+        const { state: after, commands, events } = pressed(from)
+        return !after.own.isMenuOpen && onlyChanged(from.own, after.own, 'isMenuOpen')
+          && Equal.equals(after.children, from.children)
+          && (commands ?? []).length === 0 && (events ?? []).length === 0
       })
     })
 
-    // The button is observed only while the menu is open, so a press with it closed is a bug.
-    test('is a defect while the menu is closed', () => {
+    test('with the menu closed, goes to the list while it shows a selection', () => {
       assertProperty([changed((own) => ({ ...own, isMenuOpen: false }))], (from) => {
-        expect(() => program.update(Msg.BackPressed())(from)).toThrow(Tea.InvariantDefect)
-        return true
+        fc.pre(showsSelection(from))
+        const { state: after } = pressed(from)
+        const told = Products.program.external({ _tag: 'BackPressed' })(Opt.getOrThrow(from.children.Products).state)
+        return after.own === from.own
+          && Equal.equals(Opt.map(after.children.Products, ({ state }) => state), Opt.some(told.state))
       })
+    })
+
+    test('is a defect while the menu is closed and the list shows no selection', () => {
+      fc.assert(fc.property(changed((own) => ({ ...own, isMenuOpen: false })), (from) => {
+        fc.pre(!showsSelection(from))
+        expect(() => pressed(from)).toThrow(Tea.InvariantDefect)
+      }))
     })
   })
 })
@@ -409,8 +423,12 @@ test('its child listens to the storage, and to the clock while a product expires
 })
 
 // Otherwise the button is the platform's, which leaves the app.
-test('the page observes the back button only while the menu is open', () => {
-  assertProperty([state], (s) => program.subscriptions(s).includes('back-button') === s.own.isMenuOpen)
+test('the output gives the back button to the page while its menu is open, or its list shows a selection', () => {
+  assertProperty([state], (s) => program.output(s).takesBack === (s.own.isMenuOpen || showsSelection(s)))
+})
+
+test('the page has no subscription of its own', () => {
+  assertProperty([state], (s) => program.subscriptions(s).every((key) => key._tag === 'Products'))
 })
 
 test('starts its child as the child starts, with its commands', () => {

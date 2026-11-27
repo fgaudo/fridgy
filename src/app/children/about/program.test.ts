@@ -41,7 +41,7 @@ const messagesOf = (model: Model, at: number): ReadonlyArray<Message> => [
 /** A message that may arrive in `before`: a load's answer only while it loads. */
 const arriving = (before: State): fc.Arbitrary<Message> =>
   fc.oneof(
-    fc.constant(Msg.BackPressed()),
+    fc.constant(Msg.Closed()),
     offset.map((at) => Msg.Scrolled({ offset: at })),
     fc.webUrl().map((url) => Msg.LinkPressed({ url })),
     ...(before.licenses._tag === 'Loading' ? [licenses.map((items) => Msg.LicensesLoaded({ licenses: items }))] : []),
@@ -70,8 +70,8 @@ describe('About update', () => {
       expect(dispatchViolations(program.update, {
         state: before,
         held: messagesOf(makeModel(before), at),
-        candidates: [Msg.BackPressed(), Msg.Scrolled({ offset: at })],
-        repeatable: (msg) => msg._tag === 'BackPressed' || msg._tag === 'LinkPressed',
+        candidates: [Msg.Closed(), Msg.Scrolled({ offset: at })],
+        repeatable: (msg) => msg._tag === 'Closed' || msg._tag === 'LinkPressed',
         inert: (msg, s) => msg._tag === 'Scrolled' && msg.offset <= 0 === s.isAtTop,
       })).toEqual([])
     }))
@@ -99,10 +99,18 @@ describe('About update', () => {
     }))
   })
 
-  test('BackPressed asks the parent to leave the page, and changes nothing', () => {
+  test('Closed asks the parent to leave the page, and changes nothing', () => {
     assertProperty([state], (before) => {
-      const { after, events } = step(Msg.BackPressed(), before)
+      const { after, events } = step(Msg.Closed(), before)
       return Equal.equals(after, before) && Equal.equals(events, [Ev.LeaveRequested()])
+    })
+  })
+
+  test('the back button, which the root tells, asks the parent to leave the page, and changes nothing', () => {
+    assertProperty([state], (before) => {
+      const told = program.external({ _tag: 'BackPressed' })(before)
+      return told.state === before && Equal.equals(told.events, [Ev.LeaveRequested()])
+        && (told.commands ?? []).length === 0
     })
   })
 
@@ -184,9 +192,8 @@ describe('About update', () => {
   })
 })
 
-// The page always has something to do on back: leave.
-test('the page observes the back button in every state, and nothing else', () => {
-  assertProperty([state], (s) => Equal.equals(program.subscriptions(s), ['back-button']))
+test('the page listens to nothing', () => {
+  assertProperty([state], (s) => program.subscriptions(s).length === 0)
 })
 
 test('arbitraries cover every variant of the state', () => {

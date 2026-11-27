@@ -10,6 +10,8 @@ import * as Snackbar from '#app/programs/snackbar/program.test_arbitrary.ts'
 import type * as SnackbarProgram from '#app/programs/snackbar/program.ts'
 import { id, arbitrary as product } from '#domain/product.test_arbitrary.ts'
 import type * as Product from '#domain/product.ts'
+import { arbitrary as dateOrder } from '#libs/dates/date-order.test_arbitrary.ts'
+import { arbitrary as maybe } from '#libs/option/option.test_arbitrary.ts'
 import { zoned } from '#libs/testing/date-time.test_arbitrary.ts'
 import type { Failure, Fields, Message, Outcome } from './program.ts'
 import { program } from './program.ts'
@@ -22,18 +24,18 @@ const Msg = Data.taggedEnum<Message>()
 /** How far the keyboard covers the page: down most often, otherwise as tall as a keyboard. */
 export const keyboardInset = fc.oneof({ arbitrary: fc.constant(0), weight: 3 }, fc.integer({ min: 120, max: 400 }))
 
-/** A date that the page started: from the stored product, told the time and whether the form is locked. */
+/** A date that the page started from the stored product, at the time its digits were typed around. */
 type Dated = Readonly<{ original: Product.Product; now: DateTime.Zoned; expiration: Expiration.State }>
 
-// The date's own arbitrary draws the stored product and the time, and digits typed around them.
-const dated = (isLocked: boolean): fc.Arbitrary<Dated> =>
-  expirationState
-    .filter((s) => Opt.isSome(s.maybeStored) && Opt.isSome(s.page.maybeNow))
-    .map((expiration) => ({
-      original: Opt.getOrThrow(expiration.maybeStored),
-      now: Opt.getOrThrow(expiration.page.maybeNow),
-      expiration: { ...expiration, page: { ...expiration.page, isLocked } },
-    }))
+// The date's own arbitrary draws the stored product and the time, and digits typed around them. Whether the form is
+// locked is the page's to tell: `stateOf` tells the date what the page's state gives.
+const dated: fc.Arbitrary<Dated> = expirationState
+  .filter((s) => Opt.isSome(s.maybeStored) && Opt.isSome(s.page.maybeNow))
+  .map((expiration) => ({
+    original: Opt.getOrThrow(expiration.maybeStored),
+    now: Opt.getOrThrow(expiration.page.maybeNow),
+    expiration,
+  }))
 
 // The name is often the stored one, at times with other spacing, empty, or anything typed.
 const fieldsOf = (original: Product.Product, now: DateTime.Zoned): fc.Arbitrary<Fields> =>
@@ -48,13 +50,23 @@ const failing: fc.Arbitrary<SnackbarProgram.State<Failure>> = Snackbar.state(
   fc.constantFrom<Failure>('SaveFailed', 'OrderNotKept'),
 )
 
-// Until the clock has told the time, nothing is there but the snackbar, which nothing has told yet.
-export const loading: fc.Arbitrary<Whole> = fc.tuple(id, product, keyboardInset).map(([id, original, keyboardInset]) =>
-  stateOf(program, { id, original, keyboardInset, form: { _tag: 'Loading' } })
+// Until the clock has told the time, the date is as it started, its order read or not yet, and nothing has told the
+// snackbar.
+export const loading: fc.Arbitrary<Whole> = fc.tuple(id, product, keyboardInset, maybe(dateOrder)).map((
+  [id, original, keyboardInset, maybeOrder],
+) =>
+  stateOf(program, { id, original, keyboardInset, form: { _tag: 'Loading' } }, {
+    Expiration: {
+      maybeStored: Opt.some(original),
+      page: { maybeNow: Opt.none(), isLocked: true },
+      maybeOrder,
+      date: { _tag: 'Kept' },
+    },
+  })
 )
 
 // Until the date's order is known, no field is drawn: the name is the stored one, and nothing failed yet.
-export const editing: fc.Arbitrary<Whole> = fc.tuple(dated(false), id, keyboardInset).chain((
+export const editing: fc.Arbitrary<Whole> = fc.tuple(dated, id, keyboardInset).chain((
   [{ original, now, expiration }, id, keyboardInset],
 ) =>
   Opt.isNone(expiration.maybeOrder)
@@ -75,7 +87,7 @@ export const editing: fc.Arbitrary<Whole> = fc.tuple(dated(false), id, keyboardI
 )
 
 // The form was drawn before it was submitted: the date's order is known.
-const submitted = dated(true).filter(({ expiration }) => Opt.isSome(expiration.maybeOrder))
+const submitted = dated.filter(({ expiration }) => Opt.isSome(expiration.maybeOrder))
 
 export const saving: fc.Arbitrary<Whole> = fc.tuple(submitted, id, keyboardInset, product).chain((
   [{ original, now, expiration }, id, keyboardInset, saved],
@@ -117,7 +129,6 @@ export const message: fc.Arbitrary<Message> = fc.oneof(
   fc.constant(Msg.SaveStarted()),
   fc.constant(Msg.Closed()),
   zoned.map((now) => Msg.TimeChanged({ now })),
-  fc.constant(Msg.BackPressed()),
   keyboardInset.map((inset) => Msg.KeyboardMoved({ inset })),
   outcome.map((outcome) => Msg.Saved({ outcome })),
 )

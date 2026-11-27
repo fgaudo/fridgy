@@ -119,9 +119,10 @@ and sharing it would take parameters that describe the caller.
 ## The program (`src/app/children/edit-product/`)
 
 A page of the root, started from flags: a program that declares `flags` has an `init` that is a function of
-them, and the root declares the page a child by the number of its visit, with the flags its `Page.EditProduct`
-carries from Home's event. Same shape as every program; its children are the date (`Expiration`, there once the
-clock has ticked) and the snackbar (`Snackbar`). Its own state is `{ id, original, keyboardInset, form }`, the
+them, and the root declares the page a child that is there while it is shown, with the flags its
+`Page.EditProduct` carries from Home's event. Same shape as every program; its children are the date
+(`Expiration`, always there, so that it reads the order of a date's digits while the page waits for the clock, and
+locked unless the form is edited) and the snackbar (`Snackbar`). Its own state is `{ id, original, keyboardInset, form }`, the
 form one union: `Loading | Editing | Saving | Gone`.
 
 - **The flags are the id and the product the row shows**, valid by construction. The page edits what the user
@@ -156,14 +157,15 @@ form one union: `Loading | Editing | Saving | Gone`.
   until the page goes: an order not kept is not told over it.
 - **Subscriptions**, always on while the page is there, which is while it is shown: the clock every 30 seconds,
   as Products' (only `today` is needed, for a date typed without a year; `add-products` ticks every second
-  because the creation date is taken from it, which this page never does); the back button, whose press leaves
-  the page, or is held while saving, so that the platform does not leave the app; the keyboard. The changes of
-  the date order's setting are the date's own subscription, and the snackbar's timer the snackbar's.
+  because the creation date is taken from it, which this page never does); the keyboard. The changes of the date
+  order's setting are the date's own subscription, and the snackbar's timer the snackbar's.
+- **The back button** is the root's, which tells the page each press (`external`): the press leaves the page, or
+  is held while saving, so that the platform does not leave the app.
 - **The view** is the app bar and the name field of `add-products`, the latter without the scanner's button and
   the supporting text, the date's view (`programs/expiration/view.tsx`), the snackbar and the button, with the
   button's label following what the date concludes (`withoutDate`) and the controls disabled while `Saving` and
   `Gone` (the close button stays in `Gone`). `Loading` draws the app bar alone. The root keys the page by its name
-  and its visit, rising and sinking as `AddProducts` does. No acknowledgement: the page leaves, and the list shows
+  and its instance, rising and sinking as `AddProducts` does. No acknowledgement: the page leaves, and the list shows
   the change.
 
 ## Home and its child

@@ -11,7 +11,6 @@ import * as Opt from 'effect/Option'
 import * as Expiration from '#app/programs/expiration/program.ts'
 import * as SnackbarProgram from '#app/programs/snackbar/program.ts'
 import * as Product from '#domain/product.ts'
-import { type BackButton, pressesAs } from '#infrastructure/back-button/back-button.ts'
 import { type Feedback, vibrate } from '#infrastructure/haptics/haptics.ts'
 import { insetsAs, type Keyboard } from '#infrastructure/keyboard/keyboard.ts'
 import { ProductStore } from '#infrastructure/storage/products.ts'
@@ -77,8 +76,6 @@ type Own = Data.TaggedEnum<{
   Closed: object
   // From subscriptions.
   TimeChanged: { now: DateTime.Zoned }
-  /** The platform's back button. */
-  BackPressed: object
   /** The keyboard has come up, changed height or gone down. */
   KeyboardMoved: { inset: number }
   // From commands.
@@ -101,7 +98,10 @@ export type Event = Data.TaggedEnum<{
 
 const Event = Data.taggedEnum<Event>()
 
-export type Key = 'clock' | 'back-button' | 'keyboard'
+/** The platform's back button, which the root tells the page shown. */
+export type External = Readonly<{ _tag: 'BackPressed' }>
+
+export type Key = 'clock' | 'keyboard'
 
 const Snackbar = SnackbarProgram.make<Failure>()
 
@@ -144,19 +144,6 @@ export type Model = Data.TaggedEnum<{
 
 const Model = Data.taggedEnum<Model>()
 
-type Told = Readonly<{ _tag: 'Snackbar'; message: SnackbarProgram.External<Failure> }>
-
-type Step = Tea.Step<State, Command, Event, Told>
-
-type Transition = Tea.Transition<State, Command, Event, Told>
-
-/** A failure told: its snackbar, which takes the place of the one standing, and a vibration. */
-const telling = (failure: Failure) => (state: State): Step => ({
-  state,
-  commands: [Command.Vibrate({ feedback: 'Reject' })],
-  tell: [{ _tag: 'Snackbar', message: { _tag: 'Told', notice: failure, lasting: 'Short' } }],
-})
-
 /** The form with its fields changed, in the case it is in. */
 const withFields = (
   form: Form & { _tag: 'Editing' | 'Saving' | 'Gone' },
@@ -184,9 +171,9 @@ const isSameExpiration = Opt.makeEquivalence((a: Day.Day, b: Day.Day) => a === b
 const maybeSaved = (
   state: State,
   fields: Fields,
-  maybeOutput: Opt.Option<Expiration.Output>,
+  output: Expiration.Output,
 ): Opt.Option<Product.Product> =>
-  Opt.flatMap(Opt.flatMap(maybeOutput, maybeExpirationOf), (maybeExpirationDate) =>
+  Opt.flatMap(maybeExpirationOf(output), (maybeExpirationDate) =>
     Opt.filter(
       Product.edit(state.original, { name: fields.name, maybeExpirationDate }, fields.now.zone),
       (product) =>
@@ -198,14 +185,10 @@ const maybeSaved = (
 // the zone. The product's own dates never come from the clock.
 const clock = every('30 seconds', (now) => Own.TimeChanged({ now }))
 
-// Observed as long as the page is there: while the product is being saved, the press is heard and held, so that the
-// platform does not leave the app.
-const backButton: Tea.Subscription<Own, BackButton> = pressesAs(Own.BackPressed())
-
 // Observed as long as the page is there: the keyboard covers the fields and the button docked under them.
 const keyboard: Tea.Subscription<Own, Keyboard> = insetsAs((inset) => Own.KeyboardMoved({ inset }))
 
-const keys: ReadonlyArray<Key> = ['clock', 'back-button', 'keyboard']
+const keys: ReadonlyArray<Key> = ['clock', 'keyboard']
 
 const save = Effect.fn('SaveProduct')(
   function*({ id, product }: Readonly<{ id: Product.ProductId; product: Product.Product }>) {
@@ -232,23 +215,37 @@ const { child, withChildren } = Tea.program<{
   message: Own
   command: Command
   event: Event
+  external: External
   flags: Flags
   key: Key
 }>()
 
-export const program = withChildren({
-  // There from the clock's first tick: the stored date is edited in the zone, and its days are offered from today.
-  // It takes no key while the product is saved, nor once it is gone.
+const children = {
+  // Always there, so that the order of a date's digits is read while the page waits for the clock. It takes a key
+  // only while the form is edited: the stored date is edited in the zone, and its days are offered from today.
   Expiration: child(Expiration.program, {
-    flags: (state) => state.form._tag === 'Loading' ? Opt.none() : Opt.some({ maybeStored: Opt.some(state.original) }),
+    flags: (state) => ({ maybeStored: Opt.some(state.original) }),
     tell: (state) => ({
       _tag: 'PageChanged',
       maybeNow: state.form._tag === 'Loading' ? Opt.none() : Opt.some(state.form.fields.now),
-      isLocked: state.form._tag === 'Saving' || state.form._tag === 'Gone',
+      isLocked: state.form._tag !== 'Editing',
     }),
   }),
   Snackbar: child(Snackbar),
-}).make({
+}
+
+type Step = Tea.Step<State, Command, Event, Tea.TellOf<typeof children>>
+
+type Transition = Tea.Transition<State, Command, Event, Tea.TellOf<typeof children>>
+
+/** A failure told: its snackbar, which takes the place of the one standing, and a vibration. */
+const telling = (failure: Failure) => (state: State): Step => ({
+  state,
+  commands: [Command.Vibrate({ feedback: 'Reject' })],
+  tell: [{ _tag: 'Snackbar', message: { _tag: 'Told', notice: failure, lasting: 'Short' } }],
+})
+
+export const program = withChildren(children).make({
   init: ({ id, product }) => ({ state: { id, original: product, keyboardInset: 0, form: Form.Loading() } }),
 
   update: (message, children) => (state) =>
@@ -299,9 +296,6 @@ export const program = withChildren({
 
       KeyboardMoved: ({ inset }): Step => ({ state: { ...state, keyboardInset: inset } }),
 
-      // The page is not left in the middle of a write: the press is held, so that the platform does not leave the app.
-      BackPressed: (): Step => state.form._tag === 'Saving' ? { state } : { state, events: [Event.LeaveRequested()] },
-
       // Once saved, the page asks to be left: Home's list shows the change. Once there is nothing to save to, the
       // page says so, and is left when its snackbar is.
       Saved: ({ outcome }): Step => {
@@ -321,6 +315,9 @@ export const program = withChildren({
       },
     }),
 
+  // The page is not left in the middle of a write: the press is held. Otherwise the changes are discarded.
+  external: () => (state) => state.form._tag === 'Saving' ? { state } : { state, events: [Event.LeaveRequested()] },
+
   onEvent: {
     // The order picked stays in use for this date either way: only the failure to keep it is told, unless the
     // product is gone, whose snackbar stands until the page goes.
@@ -334,30 +331,28 @@ export const program = withChildren({
     Vibrate: vibrate,
   }),
 
-  // The back button is observed in every state: while saving, so that a press is held.
   subscriptions: () => keys,
 
   listen: Match.type<Key>().pipe(
     Match.when('clock', () => clock),
-    Match.when('back-button', () => backButton),
     Match.when('keyboard', () => keyboard),
     Match.exhaustive,
   ),
 
   makeModel: (state, children) => {
     const { keyboardInset } = state
-    const maybeExpiration = Opt.filter(children.Expiration(), ({ order }) => order._tag === 'Known')
-    if (state.form._tag === 'Loading' || Opt.isNone(maybeExpiration)) {
+    const expiration = children.Expiration()
+    if (state.form._tag === 'Loading' || expiration.order._tag === 'Unknown') {
       return Model.Loading({ keyboardInset, close: Own.Closed() })
     }
-    const maybeOutput = children.Expiration.output()
+    const output = children.Expiration.output()
     const { fields } = state.form
     const shown = {
       keyboardInset,
       name: fields.name,
       nameKey: fields.replacements,
-      expiration: maybeExpiration.value,
-      withoutDate: Opt.exists(maybeOutput, ({ _tag }) => _tag === 'Never'),
+      expiration,
+      withoutDate: output._tag === 'Never',
       snackbar: children.Snackbar(),
     }
     return Match.valueTags(state.form, {
@@ -367,7 +362,7 @@ export const program = withChildren({
           close: Own.Closed(),
           nameTyped: { _tag: 'NameTyped' },
           maybeClearName: fields.name !== '' ? Opt.some(Own.NameCleared()) : Opt.none(),
-          maybeSave: Opt.map(maybeSaved(state, fields, maybeOutput), () => Own.SaveStarted()),
+          maybeSave: Opt.map(maybeSaved(state, fields, output), () => Own.SaveStarted()),
         }),
       Saving: () => Model.Saving(shown),
       Gone: () => Model.Gone({ ...shown, close: Own.Closed() }),

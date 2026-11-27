@@ -16,8 +16,9 @@ src/
 ├─ domain/               the entities and their rules (`Product`): imports nothing but libs/
 │
 ├─ app/                  the application (platform-agnostic)
-│  ├─ program.ts         public: the root Program: Home, and at most one page over it, a child by its visit
-│  ├─ view.tsx           public: the root view: the page shown, keyed by its name and its visit
+│  ├─ program.ts         public: the root Program: Home, at most one page over it, there while it is shown, and
+│  │                     the back button, told to the page shown
+│  ├─ view.tsx           public: the root view: the page shown, keyed by its name and its instance
 │  ├─ layer.ts           public: the only layer of app/, the stores; needs a `SqlClient`
 │  ├─ children/<child>/  a child Program (of the root: a page), of the same shape as the root, at any depth; of
 │  │  │                  app/, it imports only its own folder, and the infrastructure's services

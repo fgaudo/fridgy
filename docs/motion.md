@@ -40,7 +40,7 @@ until that page covers it, so the page never rises over nothing.
 3. **The root animates the pages; a page draws itself whole, as today.** The root wraps each page it draws in an
    `Animated.View` that fills the screen and carries the page's entering and exiting animations. Which page plays
    which motion is a matter of which page is shown: "page" is a role that the root's state keeps, so it is in the
-   root. A page's view stays unaware of the motion. The wrapper is keyed by the page's name and its visit.
+   root. A page's view stays unaware of the motion. The wrapper is keyed by the page's name and its instance.
 4. **Pages over Home are drawn in a layer above Home's.** The root draws two layers that fill the screen, Home's
    under the others'. A leaving element keeps its place in the native tree, under the element drawn in its place,
    whatever its `zIndex`: drawn as siblings, About left under Home, and its exit was never seen. In its own layer, a

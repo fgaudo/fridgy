@@ -10,7 +10,6 @@ import * as Opt from 'effect/Option'
 import * as Expiration from '#app/programs/expiration/program.ts'
 import * as SnackbarProgram from '#app/programs/snackbar/program.ts'
 import type * as Product from '#domain/product.ts'
-import { type BackButton, pressesAs } from '#infrastructure/back-button/back-button.ts'
 import { type Feedback, vibrate } from '#infrastructure/haptics/haptics.ts'
 import { insetsAs, type Keyboard } from '#infrastructure/keyboard/keyboard.ts'
 import { openLink } from '#infrastructure/links/links.ts'
@@ -64,8 +63,6 @@ type Page = Data.TaggedEnum<{
   Closed: object
   // From subscriptions.
   TimeChanged: { now: DateTime.Zoned }
-  /** The platform's back button, while the page is shown. */
-  BackPressed: object
   /** The keyboard has come up, changed height or gone down. */
   KeyboardMoved: { inset: number }
 }>
@@ -91,7 +88,10 @@ export type Event = Data.TaggedEnum<{
 
 const Event = Data.taggedEnum<Event>()
 
-type Key = 'clock' | 'back-button' | 'keyboard' | Scanner.Key | Name.Key
+/** The platform's back button, which the root tells the page shown. */
+export type External = Readonly<{ _tag: 'BackPressed' }>
+
+type Key = 'clock' | 'keyboard' | Scanner.Key | Name.Key
 
 /** The snackbar over the page: the failure told, drawn anew for each id. */
 export type SnackbarShown = SnackbarProgram.Model<Failure>
@@ -113,8 +113,11 @@ export type NameShown = Readonly<{
 /** The second step, over the first. */
 export type DateShown = Readonly<{
   name: string
-  /** The orders, the date's field, the strip under it and the keypad, which the child draws. */
-  expiration: Expiration.Model
+  /**
+   * The orders, the date's field, the strip under it and the keypad, which the child draws. Each visit of the step
+   * is another instance of the child: its view is drawn, and sent to, by the instance's number.
+   */
+  expiration: Readonly<{ instance: number; model: Expiration.Model }>
 }>
 
 export type Model = Data.TaggedEnum<{
@@ -183,27 +186,42 @@ export type Model = Data.TaggedEnum<{
     }>
 }>
 
-/** What a step of the page tells its children. */
-export type Tell =
-  | Readonly<{ _tag: 'Snackbar'; message: SnackbarProgram.External<Failure> }>
-  | Readonly<{ _tag: 'Fridge'; message: Fridge.External }>
-
-/** What `update` reads of its children, as the library gives it. */
-export type Outputs = Readonly<{ Expiration: Readonly<{ output: () => Opt.Option<Expiration.Output> }> }>
-
-export type Transition = Tea.Transition<State, Command, Event, Tell>
-
 const Snackbar = SnackbarProgram.make<Failure>()
 
 // Refreshed often, so that the creation date is close to when the user adds the product.
 const clock = every('1 second', (now) => Page.TimeChanged({ now }))
 
-// Observed as long as the page is shown: while a product is being added, the press is heard and held, so that
-// the platform does not leave the app.
-const backButton: Tea.Subscription<Page, BackButton> = pressesAs(Page.BackPressed())
-
 // Observed as long as the page is shown: the keyboard covers the step shown, whichever it is.
 const keyboard: Tea.Subscription<Page, Keyboard> = insetsAs((inset) => Page.KeyboardMoved({ inset }))
+
+const { child, withChildren } = Tea.program<{
+  state: State
+  model: Model
+  message: Own
+  command: Command
+  event: Event
+  external: External
+  key: Key
+}>()
+
+const children = {
+  Snackbar: child(Snackbar),
+  Fridge: child(Fridge.program),
+  // There while the second step is shown: a failed add gives the step back with its digits, and a product added, or
+  // the step dismissed, forgets them. The next visit of the step starts anew.
+  Expiration: child(Expiration.program, {
+    there: (state) => Submission.showsDate(state) ? Opt.some(Submission.newDate) : Opt.none(),
+    tell: (state) => ({ _tag: 'PageChanged', maybeNow: state.maybeNow, isLocked: state.phase._tag === 'Submitting' }),
+  }),
+}
+
+/** What a step of the page tells its children. */
+export type Tell = Tea.TellOf<typeof children>
+
+/** What the page's functions read of its children: what the date concludes, and the notice standing. */
+export type Outputs = Tea.OutputsOf<typeof children>
+
+export type Transition = Tea.Transition<State, Command, Event, Tell>
 
 const updatePage = Match.typeTags<Page, (state: State) => Transition>()({
   TimeChanged: ({ now }) => (state) => ({ state: { ...state, maybeNow: Opt.some(now) } }),
@@ -216,36 +234,9 @@ const updatePage = Match.typeTags<Page, (state: State) => Transition>()({
     state.phase._tag === 'Naming' || state.phase._tag === 'LookingUp'
       ? { state, events: [Event.LeaveRequested()] }
       : Tea.reject,
-
-  // Closes the scanner or the second step first, then leaves the page. The page is not left while a product is
-  // being added.
-  BackPressed: () => (state) =>
-    state.phase._tag === 'Naming' || state.phase._tag === 'LookingUp'
-      ? { state, events: [Event.LeaveRequested()] }
-      : state.phase._tag === 'Scanning' || state.phase._tag === 'Dating'
-      ? { state: { ...state, phase: { _tag: 'Naming' } } }
-      : { state },
 })
 
-const { child, withChildren } = Tea.program<{
-  state: State
-  model: Model
-  message: Own
-  command: Command
-  event: Event
-  key: Key
-}>()
-
-export const program = withChildren({
-  Snackbar: child(Snackbar),
-  Fridge: child(Fridge.program),
-  // There while the second step is shown: a failed add gives the step back with its digits, and a product added, or
-  // the step dismissed, forgets them. The next visit of the step starts anew.
-  Expiration: child(Expiration.program, {
-    flags: (state) => Submission.showsDate(state) ? Opt.some(Submission.newDate) : Opt.none(),
-    tell: (state) => ({ _tag: 'PageChanged', maybeNow: state.maybeNow, isLocked: state.phase._tag === 'Submitting' }),
-  }),
-}).make({
+export const program = withChildren(children).make({
   init: {
     state: {
       phase: { _tag: 'Naming' },
@@ -263,7 +254,6 @@ export const program = withChildren({
     switch (message._tag) {
       case 'Closed':
       case 'TimeChanged':
-      case 'BackPressed':
       case 'KeyboardMoved':
         return updatePage(message)(state)
       case 'NameTyped':
@@ -286,6 +276,15 @@ export const program = withChildren({
     }
   },
 
+  // The back button closes the scanner or the second step first, then leaves the page. The press is held while a
+  // product is being added: the page is not left in the middle of a write.
+  external: () => (state) =>
+    state.phase._tag === 'Naming' || state.phase._tag === 'LookingUp'
+      ? { state, events: [Event.LeaveRequested()] }
+      : state.phase._tag === 'Scanning' || state.phase._tag === 'Dating'
+      ? { state: { ...state, phase: { _tag: 'Naming' } } }
+      : { state },
+
   onEvent: {
     Expiration: () => Submission.orderNotKept,
     Snackbar: () => (state) => ({ state }),
@@ -300,7 +299,6 @@ export const program = withChildren({
 
   subscriptions: (state): ReadonlyArray<Key> => [
     'clock',
-    'back-button',
     'keyboard',
     ...Scanner.subscriptions(state),
     ...Name.subscriptions(state),
@@ -308,7 +306,6 @@ export const program = withChildren({
 
   listen: Match.type<Key>().pipe(
     Match.when('clock', () => clock),
-    Match.when('back-button', () => backButton),
     Match.when('keyboard', () => keyboard),
     Match.when('scanner', () => Scanner.scanner),
     Match.tag('Lookup', ({ barcode }) => Name.lookup(barcode)),
@@ -329,7 +326,7 @@ export const program = withChildren({
     const dateShown = (): DateShown => ({
       name,
       expiration: Opt.getOrElse(
-        children.Expiration(),
+        Opt.all({ instance: children.Expiration.instance(), model: children.Expiration() }),
         () => Tea.defect('The second step is shown, and its date is not there'),
       ),
     })

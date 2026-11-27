@@ -36,23 +36,20 @@ export type Event = Data.TaggedEnum<{
   EditRequested: { id: Domain.ProductId; product: Domain.Product }
 }>
 
-type Key = List.Key | Selection.Key | Clock.Key
+type Key = List.Key | Clock.Key
 
 export type Model = Readonly<{
   list: List.ListModel
   snackbar: Selection.SnackbarModel
 }>
 
+/** The platform's back button, which Home tells while the output says that a press is the list's. */
+export type External = Readonly<{ _tag: 'BackPressed' }>
+
+/** Whether a press of the back button is the list's: while it shows a selection, to clear or to hold the press for. */
+export type Output = Readonly<{ takesBack: boolean }>
+
 const Snackbar = SnackbarProgram.make<Selection.Notice>()
-
-export type Tell = Readonly<{ _tag: 'Snackbar'; message: SnackbarProgram.External<Selection.Notice> }>
-
-/** What `update` reads of its child, as the library gives it. */
-export type Outputs = Readonly<{ Snackbar: Readonly<{ output: () => Opt.Option<Selection.Notice> }> }>
-
-export type Step = Tea.Step<State, Command, Event, Tell>
-
-export type Transition = Tea.Transition<State, Command, Event, Tell>
 
 const { child, withChildren } = Tea.program<{
   state: State
@@ -60,10 +57,24 @@ const { child, withChildren } = Tea.program<{
   message: Own
   command: Command
   event: Event
+  external: External
+  output: Output
   key: Key
 }>()
 
-export const program = withChildren({ Snackbar: child(Snackbar) }).make({
+const children = { Snackbar: child(Snackbar) }
+
+/** What a step of the program tells its child. */
+export type Tell = Tea.TellOf<typeof children>
+
+/** What the program's functions read of its child: the notice standing. */
+export type Outputs = Tea.OutputsOf<typeof children>
+
+export type Step = Tea.Step<State, Command, Event, Tell>
+
+export type Transition = Tea.Transition<State, Command, Event, Tell>
+
+export const program = withChildren(children).make({
   init: {
     state: {
       maybeNow: Opt.none(),
@@ -83,7 +94,6 @@ export const program = withChildren({ Snackbar: child(Snackbar) }).make({
       case 'SelectionCleared':
       case 'DeleteStarted':
       case 'UndoRequested':
-      case 'BackPressed':
       case 'Deleted':
       case 'DeleteFailed':
       case 'RestoreFailed':
@@ -92,6 +102,10 @@ export const program = withChildren({ Snackbar: child(Snackbar) }).make({
         return Clock.update(message)(state)
     }
   },
+
+  external: () => Selection.backPressed,
+
+  output: (state) => ({ takesBack: Selection.showsSelection(state) }),
 
   // The snackbar's notice has stood its time: nothing is left to do.
   onEvent: { Snackbar: () => (state) => ({ state }) },
@@ -104,14 +118,12 @@ export const program = withChildren({ Snackbar: child(Snackbar) }).make({
 
   subscriptions: (state): ReadonlyArray<Key> => [
     ...List.subscriptions(state),
-    ...Selection.subscriptions(state),
     ...Clock.subscriptions(state),
   ],
 
   listen: Match.type<Key>().pipe(
     Match.when('changes', () => List.changes),
     Match.tag('Settling', () => List.settlingTimer),
-    Match.when('back-button', () => Selection.backButton),
     Match.when('clock', () => Clock.clock),
     Match.exhaustive,
   ),

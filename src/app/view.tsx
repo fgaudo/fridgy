@@ -30,9 +30,9 @@ const motions = {
 
 const styles = StyleSheet.create({ layer: StyleSheet.absoluteFill })
 
-// Keyed by the page's name and its visit: React reuses an element of the same type in the same place, and a page
-// drawn in another's, or in an earlier visit's of its own, would keep its native views, and the text of their
-// fields.
+// Keyed by the page's name and its instance, which each visit has anew: React reuses an element of the same type in
+// the same place, and a page drawn in another's, or in an earlier visit's of its own, would keep its native views,
+// and the text of their fields.
 const page = (name: keyof typeof motions, key: string, drawn: ReactNode) => {
   const { isOver, ...animations }: Motion = motions[name]
   const shown = (
@@ -55,18 +55,18 @@ const page = (name: keyof typeof motions, key: string, drawn: ReactNode) => {
 export const view: View<Model, Message> = (model, dispatch) =>
   Match.valueTags(model.page, {
     Home: ({ model }) => page('Home', 'Home', Home.view(model, Tea.forwardTo(dispatch, 'Home'))),
-    AddProducts: ({ visit, model }) =>
+    AddProducts: ({ instance, model }) =>
       page(
         'AddProducts',
-        `AddProducts-${visit}`,
-        AddProducts.view(model, Tea.forwardTo(dispatch, 'AddProducts', visit)),
+        `AddProducts-${instance}`,
+        AddProducts.view(model, Tea.forwardTo(dispatch, { _tag: 'AddProducts', instance })),
       ),
-    EditProduct: ({ visit, model }) =>
+    EditProduct: ({ instance, model }) =>
       page(
         'EditProduct',
-        `EditProduct-${visit}`,
-        EditProduct.view(model, Tea.forwardTo(dispatch, 'EditProduct', visit)),
+        `EditProduct-${instance}`,
+        EditProduct.view(model, Tea.forwardTo(dispatch, { _tag: 'EditProduct', instance })),
       ),
-    About: ({ visit, model }) =>
-      page('About', `About-${visit}`, About.view(model, Tea.forwardTo(dispatch, 'About', visit))),
+    About: ({ instance, model }) =>
+      page('About', `About-${instance}`, About.view(model, Tea.forwardTo(dispatch, { _tag: 'About', instance }))),
   })

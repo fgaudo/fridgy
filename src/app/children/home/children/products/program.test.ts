@@ -107,11 +107,10 @@ const toldIn = (after: Whole, commands: Commands) => {
 
 /**
  * A message that cannot arrive in that state: a completion while no deletion is in progress, the end of the rows'
- * motion while none moves, a tick while no product expires, a press of the back button while no selection is shown.
+ * motion while none moves, a tick while no product expires.
  */
 const cannotArrive = (msg: Message, { own }: Whole) =>
   ((msg._tag === 'Deleted' || msg._tag === 'DeleteFailed') && own.selection._tag !== 'Deleting')
-  || (msg._tag === 'BackPressed' && !showsSelection(own))
   || (msg._tag === 'RowsSettled' && !isSettling(own))
   || (msg._tag === 'TimeChanged' && !hasExpiringProduct(own))
 
@@ -331,16 +330,24 @@ describe('Products update', () => {
   })
 
   // As Material's contextual action bar; a deletion in progress holds the press, so that the app stays.
-  test('BackPressed empties the selection, and changes nothing while it is being deleted', () => {
+  test('the back button, which Home tells, empties the selection, and changes nothing while it is being deleted', () => {
     assertProperty([state], (before) => {
       fc.pre(showsSelection(before.own))
-      const { after, commands } = step(Msg.BackPressed(), before)
+      const { state: after, commands, events } = program.external({ _tag: 'BackPressed' })(before)
       return (before.own.selection._tag === 'Deleting'
         ? Equal.equals(after, before)
         : after.own.selection._tag === 'Idle' && onlyChanged(before.own, after.own, 'selection')
           && Equal.equals(after.children, before.children))
-        && commands.length === 0
+        && (commands ?? []).length === 0 && (events ?? []).length === 0
     })
+  })
+
+  // Home tells the press only while the output says that it is the list's.
+  test('the back button while no selection is shown is a defect', () => {
+    fc.assert(fc.property(state, (before) => {
+      fc.pre(!showsSelection(before.own))
+      expect(() => program.external({ _tag: 'BackPressed' })(before)).toThrow(Tea.InvariantDefect)
+    }))
   })
 
   describe('DeleteStarted', () => {
@@ -510,8 +517,8 @@ test('listens to the storage always, to the clock while a product shown expires,
 })
 
 // Otherwise the press is Home's, or the platform's, which leaves the app.
-test('observes the back button only while the list shows a selection', () => {
-  assertProperty([state], (s) => listens(s, 'back-button') === showsSelection(s.own))
+test('the output gives the back button to the list only while it shows a selection', () => {
+  assertProperty([state], (s) => program.output(s).takesBack === showsSelection(s.own))
 })
 
 // A row's look and action, a product's status and the snackbar are decided here, not in the view.

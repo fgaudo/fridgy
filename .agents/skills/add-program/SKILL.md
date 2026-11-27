@@ -42,10 +42,12 @@ Such a program is split into modules of its own folder, one per concern, as the 
 says. `add-products` (`name.ts`, with the lookup that replaces the name; `scanner.ts`; `submission.ts`) and
 `home/children/products` (`list.ts`, `selection.ts`, `clock.ts`) are the examples.
 
-- `program.ts` keeps the types the program is made from (`State`, `Command`, `Event`, `Model`, what it tells
-  its children and reads of them, the type of a step), its declaration, and an `update` whose `switch` gives each
-  message to the one concern that owns it. A concern too small to pay for a module stays in it: the page's own
-  messages of `add-products` (closing, the back button, the keyboard, the clock).
+- `program.ts` keeps the types the program is made from (`State`, `Command`, `Event`, `Model`, the type of a
+  step), its declaration, and an `update` whose `switch` gives each message to the one concern that owns it. A
+  parent declares its children apart from `withChildren` (`const children = { … }`), and exports what a concern's
+  functions take and tell, read from them: `type Outputs = Tea.OutputsOf<typeof children>` and
+  `type Tell = Tea.TellOf<typeof children>`, never written by hand. A concern too small to pay for a module stays
+  in it: the page's own messages of `add-products` (closing, the keyboard, the clock).
 - A concern's module holds its messages, its state's types, the effects of its commands, its subscriptions and
   the keys that list them, its `update`, typed with the program's `Command`, and the parts of the model it makes,
   all functions of the whole state. It makes the program's commands and events with
@@ -99,19 +101,22 @@ says. `add-products` (`name.ts`, with the lookup that replaces the name; `scanne
   a message. A service that every program uses the same way writes that use once, beside it: the subscriptions
   `pressesAs` (`back-button.ts`) and `insetsAs` (`keyboard.ts`), the commands `vibrate` (`haptics.ts`) and
   `openLink` (`links.ts`).
-- The back button (`BackButton`, `src/infrastructure/back-button`) is the program's that has something to do
-  with a press, only while it has: the subscription keyed `back-button`, in a page or in the child of a page that
-  holds what a press closes (Home's `Products`, its selection). It runs while there is something to close, or
-  always, when a press asks the parent to leave the page or must be held. A press goes to the last observer only,
-  as Android's own back dispatcher does; when no program observes it, the platform leaves the app. The root knows
-  nothing of it.
+- The back button (`BackButton`, `src/infrastructure/back-button`) spans the pages, so it is the root's: its one
+  subscription, keyed `back-button`, runs while a page is over Home, or while Home's `output` says that it has
+  something to close (`takesBack`), and otherwise the platform leaves the app. The root tells each press to the
+  page shown, as the external message `BackPressed`. A page over Home answers it in `external`, in every state: it
+  closes what it has open, asks to be left, or holds the press during a write. Home, and a child that holds what a
+  press closes (`Products`, its selection), say so in their `output`, which the parent reads in its own `output`
+  and in `external`, where it passes the press on: what is on top closes first (Home's menu, then the selection).
+  No program but the root subscribes to the button.
 - Effects only in commands and subscriptions: `update`, `makeModel` and the view are pure.
 
 ## Declaring a child
 
 A parent declares its children with `withChildren`, and the library keeps them: it starts and drops each, and
 routes its messages (`{ _tag: '<Child>', message }`), commands, subscriptions and models. `Home` declares one
-child; the root declares Home and its pages by id; `add-products` declares a child told from its state.
+child; the root declares Home and the pages that come and go over it; `add-products` declares a child told from
+its state.
 
 ```ts
 const { child, withChildren } = Tea.program<{ state: State; model: Model; message: Own; event: Event }>()
@@ -119,24 +124,33 @@ const { child, withChildren } = Tea.program<{ state: State; model: Model; messag
 export const program = withChildren({
   Products: child(Products.program), // always there
   Expiration: child(Expiration.program, {
-    flags: (state) => showsDate(state) ? Opt.some(newDate) : Opt.none(), // there while `Some`, started from it
+    there: (state) => showsDate(state) ? Opt.some(newDate) : Opt.none(), // there while `Some`, started from it
     tell: (state) => ({ _tag: 'PageChanged', … }), // what it was last told, from the parent's state
   }),
 }).make({
   init: { state: { … } }, // the parent's own state alone: the library starts the children
   onEvent: { Products: (event) => (state) => ({ state, events: [event] }) }, // the child's events, handled here
   update: (message, children) => (state) => …, // `children.Expiration.output()`: what the child concludes
+  subscriptions: (state, children) => …, // the parent's own keys, from its state and its children's outputs
   makeModel: (state, children) => ({ …, products: children.Products() }),
 })
 ```
 
 - A parent's functions get its own state alone. Whether a child is there is said by its declaration, from that
-  state: always, `there`, `flags` (other flags start it again) or `key` (another value starts it again) for a
-  child alone, `ids` or `flags` by id for children by id (`childById`, the root's pages); never by rejecting its
-  messages. `listening` says when its subscriptions run (Home's, only while it is shown).
-- Each start of a child is an instance: an answer for an instance that is gone is rejected by the library. A
-  message of a view names no instance, so where a tap of an old one must not reach a new one, ids are never
-  used again (the root's visits).
+  state: always (`child(program)`, or `flags` for a program with flags: other flags start it again; `EditProduct`'s
+  date), `there` (while it holds, or gives `Some` of the flags: the root's pages, `add-products`' date) or `key`
+  (another value starts it again) for a child alone, `ids` or `flags` by id for children by id (`childById`); never
+  by rejecting its messages. `listening` says when its subscriptions run (Home's, only while it is shown).
+- A child that is always there is read as it is (`children.Products()`), one that may not be as an `Option`. Where
+  the parent's state says that it is there, make the model from the `Option`, as the root does of its pages
+  (`makeModel` draws the page that is there, and Home otherwise), so that no state needs a defect; where the model
+  is decided by the state first (`add-products`' second step), the `None` no state reaches is a `Tea.defect`.
+- Each start of a child is an instance, with a number: an answer for an instance that is gone is rejected by the
+  library. A message of a view names an instance only where its dispatch is given one. A child that comes and goes
+  while its parent stays (the root's pages, `add-products`' date) is drawn by its instance: the parent's model
+  holds the number beside the child's model (`{ instance: children.About.instance(), model: children.About() }`,
+  both an `Option`), and its view gives it to the dispatch and to the key, so that a tap of
+  a frame drawn for an instance that is gone is rejected.
 - A child talks to its parent through events, and the parent reads what holds in it through its `output`
   (`children.<Child>.output()`, an `Option` for a child that may not be there), never a copy of it. What a child
   needs, it gets from its flags, its own commands and subscriptions. A fact of the parent's state that a child
@@ -147,8 +161,9 @@ export const program = withChildren({
 - An event the parent only passes up, it raises as its own:
   `onEvent: { Products: (event) => (state) => ({ state, events: [event] }) }`. Steps are combined with
   `Tea.andThen`, which keeps the commands, the events and what each tells.
-- The view gives each child's view `Tea.forwardTo(dispatch, '<Child>')` (with its id for a child by id), the
-  same function in every draw, and hands it the child's model whole: it never reads a child model's fields,
+- The view gives each child's view `Tea.forwardTo(dispatch, '<Child>')` (with its id for a child by id), or,
+  for a child that comes and goes, `Tea.forwardTo(dispatch, { _tag: '<Child>', instance })` under an element keyed
+  by the instance; the same function in every draw, and hands it the child's model whole: it never reads a child model's fields,
   except the model of a child without a view (the snackbar), which the parent's view draws. A child's model is
   the same object while its state is.
 
@@ -164,7 +179,8 @@ service a program starts to use that one of them lacks fails the typecheck.
 `program.test_arbitrary.ts` exports `state` (and `message`) generators that produce only valid values, built
 from the domain's `*.test_arbitrary.ts` files, never from `*Unsafe` constructors. A parent's whole state is made
 with `stateOf(program, own, states)`, from its own state and its children's arbitraries
-(`home/program.test_arbitrary.ts`). `program.test.ts` checks, with `assertProperty` and `outcomesOf`
+(`home/program.test_arbitrary.ts`). `stateOf` tells each child what the declaration's `tell` gives of the own
+state, so an arbitrary never keeps what a child was told in step by hand. `program.test.ts` checks, with `assertProperty` and `outcomesOf`
 (`#libs/testing/update.test_support.ts`):
 
 - `update` is total and deterministic;
@@ -179,6 +195,9 @@ with `stateOf(program, own, states)`, from its own state and its children's arbi
   defect (`toThrow(Tea.InvariantDefect)`), and the pairs of state and message it rules out are skipped;
 - what the program listens to in each state, from the keys `program.subscriptions(state)` lists, its children's
   among them as `{ _tag: '<Child>', instance, key }`;
+- what an external message does, `program.external(message)(state)`, and what the output says,
+  `program.output(state)`, where the program has them; a message of a child drawn by its instance is built with
+  the instance, as the view sends it, and one for another instance is rejected;
 - the arbitraries cover every variant of the state.
 
 A child whose view only draws pieces the parent places (Products) has its `update` tested in its own
@@ -205,17 +224,19 @@ root only, as for a child, its arbitraries from tests included.
 Home is always there, and at most one page is shown over it. Covered, Home keeps its state and receives its
 completions, but its subscriptions run only while it is shown (`listening`, in the root), and its requests to show
 a page are dropped: a tap of a frame already covered asks for what the user has moved past, and two taps in one
-frame would otherwise open a second page in the first one's place. A page over Home is a child by the number of
-its visit, and that number is never used again: a page left is gone with its state, and neither an answer nor a tap
-meant for a visit that is over reaches a later one. A page asks to be left with its event.
+frame would otherwise open a second page in the first one's place. A page over Home is a child that is there while
+the root's state shows it (`maybePage`), so each visit is another instance: a page left is gone with its state,
+and neither an answer nor a tap meant for a visit that is over reaches a later one. A page asks to be left with
+its event.
 
-Declare it in `src/app/program.ts` as a child by the number of its visit (`childById`, with `ids` or, for a page
-with flags, `flags`, from `visitsOf` and the root's `maybeVisit`), a case of `Page`, its event in `onEvent`
-(`leave`), its model in `makeModel` and its view, keyed by its visit, in `src/app/view.tsx`, and add how a user reaches it to `src/app/user.test_support.ts`, where the root's tests pick
-each message from the shown page's model (`rehearse`). A page is shown from Home's event, as `show(state, page)`,
-which starts a new visit. A page that cannot start the same way every time declares `flags` (`EditProduct`: the
-product tapped, and its id), carried by its case of `Page`; what it starts from comes in the event that asks for
-it, never from another program's state. The back button is the page's, as "`program.ts`" says.
+Declare it in `src/app/program.ts` as a child with `there` (`isShown('<Page>')`, or `Some` of its flags for a page
+with flags), a case of `Page`, its event in `onEvent` (`leave`), its case of the press in `update`, its model and
+its instance in `makeModel` and its view, keyed and sent to by its instance, in `src/app/view.tsx`, and add how a
+user reaches it to `src/app/user.test_support.ts`, where the root's tests pick each message from the shown page's
+model (`rehearse`). A page is shown from Home's event, as `show(page)`. A page that cannot start the same way
+every time declares `flags` (`EditProduct`: the product tapped, and its id), carried by its case of `Page`; what
+it starts from comes in the event that asks for it, never from another program's state. The page answers the back
+button in `external`, as "`program.ts`" says.
 
 ## Moving files
 
