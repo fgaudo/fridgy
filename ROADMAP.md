@@ -161,30 +161,23 @@ None of these waits for the steps above, nor holds them up.
 
 ## Waiting for effect-tea
 
-What the moves to 0.9.0 and to 0.10.0 found that the runtime could take up, and what each item would change here.
-An item becomes a step when a release takes it up, or goes when the runtime rejects it. 0.10.0 took up four of
-the five items that the first move left, and the move to it acted on them: `OutputsOf` and `TellOf`, a child with
-flags that is always there, a view's dispatch that names the instance of its child, a parent's `subscriptions`
-given its children's outputs. It answered the fifth, a tool for what a step tells: what a parent tells shows in
-the child's state and commands (the guide, "Testing"), and `stateOf` tells each child as a start does.
+Nothing waits. What the moves to 0.9.0 and to 0.10.0 found that the runtime could take up is closed: 0.10.0 took up
+four items of the first move, and the runtime answered the rest on 27 November 2026, none of which changes the
+app. An item found by a later move is written here, with what it would change; it becomes a step when a release
+takes it up, or goes when the runtime rejects it.
 
-- **One read of a child that may not be there.** Its model, its output and the number of its instance are three
-  `Option`s of one fact (`children.X()`, `children.X.output()`, `children.X.instance()`). The root joins two of
-  them for each page, and draws the page that is there. `AddProducts`, whose state says that the date is there on
-  the second step, joins them and unwraps the result with a defect that no state reaches (`dateShown`, in its
-  `program.ts`). A read that gives the three as one `Option`, or one that the library checks, as it checks an id of
-  `childById`, would leave `AddProducts` no defect to write.
-- **A message passed down a chain of children.** The press of the back button goes from the root to Home to
-  `Products`. Each level writes an `output` that joins its child's (`takesBack`), and an `external` that passes
-  the message on to the child that takes it. An external message is answered in every state, so each level also
-  writes, as a defect, that it is told only while its output says so (Home's `external`, `Selection.backPressed`).
-  To ask the runtime: whether a parent can say once to which child a message goes, from the outputs, and whether a
-  child told what its output did not ask for is the library's defect.
-- **The messages of a child drawn by its instance, in a test.** A test wraps them by hand with the number that the
-  model holds, in the `candidates` of `dispatchViolations` and in what a rehearsal hears (`toDate(instance)` in
-  `add-products/program.test.ts`, `onExpiration` in `src/app/user.test_support.ts`), and gives a number that no
-  instance has where the child is not there. A helper of `@fgaudo/effect-tea/testing` that wraps as `forwardTo`
-  does would say it once.
+The answers, so that they are not asked again:
+
+- **A child that may not be there is read as an `Option`**, and `Opt.all` of its model, its output and its
+  instance is the one read. Where the state says that it is there, the `None` is a defect of the program
+  (`dateShown` of `AddProducts`): a read that the library checked would compile, and die where the `Option` stops
+  the mistake.
+- **A message passed down a chain of children is the program's logic**: a condition that goes up as an output, and
+  a message that goes down in `tell`. A child answers an external message in every state. A `tell` of the step
+  that read the child's output reaches the child in that state, which is what the defects of Home's `external` and
+  of `Selection.backPressed` rest on.
+- **A test wraps a child's message with its instance by hand**: the compiler checks the literal, and the
+  `candidates` of a child that is not there are left out (the `add-program` skill, "Tests").
 
 ## Waiting for the owner
 

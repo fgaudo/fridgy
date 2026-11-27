@@ -209,9 +209,9 @@ describe('EditProduct update', () => {
 
   test('the back button, which the root tells, asks the parent to leave the page, and is held while saving', () => {
     assertProperty([state], (before) => {
-      const { state: after, commands, events } = program.external({ _tag: 'BackPressed' })(before)
-      return after === before && (commands ?? []).length === 0
-        && Equal.equals(events ?? [], before.own.form._tag === 'Saving' ? [] : [Ev.LeaveRequested()])
+      const { state: after, commands, events } = applyAll(program.external, [{ _tag: 'BackPressed' }], before)
+      return after === before && commands.length === 0
+        && Equal.equals(events, before.own.form._tag === 'Saving' ? [] : [Ev.LeaveRequested()])
     })
   })
 

@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 import * as Tea from '@fgaudo/effect-tea'
+import { applyAll } from '@fgaudo/effect-tea/testing'
 import * as Data from 'effect/Data'
 import * as DateTime from 'effect/DateTime'
 import * as Equal from 'effect/Equal'
@@ -333,12 +334,12 @@ describe('Products update', () => {
   test('the back button, which Home tells, empties the selection, and changes nothing while it is being deleted', () => {
     assertProperty([state], (before) => {
       fc.pre(showsSelection(before.own))
-      const { state: after, commands, events } = program.external({ _tag: 'BackPressed' })(before)
+      const { state: after, commands, events } = applyAll(program.external, [{ _tag: 'BackPressed' }], before)
       return (before.own.selection._tag === 'Deleting'
         ? Equal.equals(after, before)
         : after.own.selection._tag === 'Idle' && onlyChanged(before.own, after.own, 'selection')
           && Equal.equals(after.children, before.children))
-        && (commands ?? []).length === 0 && (events ?? []).length === 0
+        && commands.length === 0 && events.length === 0
     })
   })
 

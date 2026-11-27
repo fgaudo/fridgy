@@ -195,9 +195,12 @@ state, so an arbitrary never keeps what a child was told in step by hand. `progr
   defect (`toThrow(Tea.InvariantDefect)`), and the pairs of state and message it rules out are skipped;
 - what the program listens to in each state, from the keys `program.subscriptions(state)` lists, its children's
   among them as `{ _tag: '<Child>', instance, key }`;
-- what an external message does, `program.external(message)(state)`, and what the output says,
-  `program.output(state)`, where the program has them; a message of a child drawn by its instance is built with
-  the instance, as the view sends it, and one for another instance is rejected;
+- what an external message does, with `applyAll(program.external, [message], state)`, which gives the commands
+  and the events of the step as `applyAll` of `update` does, and what the output says, `program.output(state)`,
+  where the program has them;
+- a message of a child drawn by its instance is built with the instance, as the view sends it, and one for another
+  instance is rejected; the `candidates` of a child that is not there are left out, never given a number that no
+  instance has;
 - the arbitraries cover every variant of the state.
 
 A child whose view only draws pieces the parent places (Products) has its `update` tested in its own

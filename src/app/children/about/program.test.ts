@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 import * as Tea from '@fgaudo/effect-tea'
-import { dispatchViolations } from '@fgaudo/effect-tea/testing'
+import { applyAll, dispatchViolations } from '@fgaudo/effect-tea/testing'
 import * as Data from 'effect/Data'
 import * as Equal from 'effect/Equal'
 import * as Opt from 'effect/Option'
@@ -108,9 +108,8 @@ describe('About update', () => {
 
   test('the back button, which the root tells, asks the parent to leave the page, and changes nothing', () => {
     assertProperty([state], (before) => {
-      const told = program.external({ _tag: 'BackPressed' })(before)
-      return told.state === before && Equal.equals(told.events, [Ev.LeaveRequested()])
-        && (told.commands ?? []).length === 0
+      const { state: after, commands, events } = applyAll(program.external, [{ _tag: 'BackPressed' }], before)
+      return after === before && Equal.equals(events, [Ev.LeaveRequested()]) && commands.length === 0
     })
   })
 

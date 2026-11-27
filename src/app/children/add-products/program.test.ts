@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 import * as Tea from '@fgaudo/effect-tea'
-import { dispatchViolations } from '@fgaudo/effect-tea/testing'
+import { applyAll, dispatchViolations } from '@fgaudo/effect-tea/testing'
 import * as Channel from 'effect/Channel'
 import * as Data from 'effect/Data'
 import * as Effect from 'effect/Effect'
@@ -149,8 +149,9 @@ describe('AddProducts update', () => {
       const named = model._tag === 'Dating' && model.expiration.model.strip._tag === 'Naming'
         ? model.expiration.model.strip.choices.map((choice) => choice.date)
         : []
-      // The view sends the date's messages by the instance it draws: a candidate names the one that is there.
-      const instance = Opt.match(before.children.Expiration, { onNone: () => 0, onSome: ({ instance }) => instance })
+      // The view sends the date's messages by the instance it draws: a candidate names the one that is there, and
+      // there is none of a date that is not.
+      const toDateThere = Opt.map(before.children.Expiration, ({ instance }) => toDate(instance))
       const askable = [
         Msg.NameCleared(),
         Msg.ScanRequested(),
@@ -160,14 +161,18 @@ describe('AddProducts update', () => {
         Msg.Closed(),
         Msg.LookupCancelled(),
         Msg.Started(),
-        ...[
-          { _tag: 'DigitErased' } as const,
-          { _tag: 'DateCleared' } as const,
-          ...digits.map((digit) => ({ _tag: 'DigitTyped', digit } as const)),
-          // The days the digits name, and any other.
-          ...[date, ...named].map((day) => ({ _tag: 'DateChosen', date: day } as const)),
-          ...DateOrder.all.map((order) => ({ _tag: 'OrderPicked', order } as const)),
-        ].map(toDate(instance)),
+        ...Opt.match(toDateThere, {
+          onNone: () => [],
+          onSome: (toDateThere) =>
+            [
+              { _tag: 'DigitErased' } as const,
+              { _tag: 'DateCleared' } as const,
+              ...digits.map((digit) => ({ _tag: 'DigitTyped', digit } as const)),
+              // The days the digits name, and any other.
+              ...[date, ...named].map((day) => ({ _tag: 'DateChosen', date: day } as const)),
+              ...DateOrder.all.map((order) => ({ _tag: 'OrderPicked', order } as const)),
+            ].map(toDateThere),
+        }),
       ]
       expect(dispatchViolations(program.update, {
         state: before,
@@ -728,14 +733,13 @@ describe('AddProducts update', () => {
   test('the back button, which the root tells, leaves the page, closes the scanner or the second step first, and is held while adding', () => {
     assertProperty([state], (before) => {
       const { phase } = before.own
-      const { state: after, commands, events } = program.external({ _tag: 'BackPressed' })(before)
+      const { state: after, commands, events } = applyAll(program.external, [{ _tag: 'BackPressed' }], before)
       const expected = phase._tag === 'Naming' || phase._tag === 'LookingUp'
         ? { own: before.own, events: [Ev.LeaveRequested()] }
         : phase._tag === 'Scanning' || phase._tag === 'Dating'
         ? { own: withOwn(before, { phase: { _tag: 'Naming' } }), events: [] }
         : { own: before.own, events: [] }
-      return Equal.equals(after.own, expected.own) && (commands ?? []).length === 0
-        && Equal.equals(events ?? [], expected.events)
+      return Equal.equals(after.own, expected.own) && commands.length === 0 && Equal.equals(events, expected.events)
     })
   })
 

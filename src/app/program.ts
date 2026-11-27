@@ -62,7 +62,7 @@ const backButton: Tea.Subscription<Own, BackButton> = pressesAs<Own>({ _tag: 'Ba
 
 const { child, withChildren } = Tea.program<{ state: State; model: Model; message: Own; key: Key }>()
 
-const children = {
+export const program = withChildren({
   // Always there. Under another page it keeps its state and hears its commands' answers, but listens to nothing:
   // the window and its scrolling belong to the page shown.
   Home: child(Home.program, { listening: isHomeShown }),
@@ -75,24 +75,13 @@ const children = {
       Opt.flatMap(state.maybePage, (page) => page._tag === 'EditProduct' ? Opt.some(page.flags) : Opt.none()),
   }),
   About: child(About.program, { there: isShown('About') }),
-}
-
-type Tell = Tea.TellOf<typeof children>
-
-export const program = withChildren(children).make({
+}).make({
   init: { state: { maybePage: Opt.none() } },
   // A press goes to the page shown over Home, which closes what it has open, asks to be left or holds the press. On
   // Home it goes to Home, which says while it takes one.
   update: (_, children) => (state) =>
     Opt.match(state.maybePage, {
-      onSome: (page): Tea.Step<State, never, never, Tell> => ({
-        state,
-        tell: [Match.valueTags(page, {
-          AddProducts: (): Tell => ({ _tag: 'AddProducts', message: { _tag: 'BackPressed' } }),
-          EditProduct: (): Tell => ({ _tag: 'EditProduct', message: { _tag: 'BackPressed' } }),
-          About: (): Tell => ({ _tag: 'About', message: { _tag: 'BackPressed' } }),
-        })],
-      }),
+      onSome: (page) => ({ state, tell: [{ _tag: page._tag, message: { _tag: 'BackPressed' } }] }),
       onNone: () =>
         children.Home.output().takesBack
           ? { state, tell: [{ _tag: 'Home', message: { _tag: 'BackPressed' } }] }

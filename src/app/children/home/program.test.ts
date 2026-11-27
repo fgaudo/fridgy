@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 import * as Tea from '@fgaudo/effect-tea'
-import { dispatchViolations } from '@fgaudo/effect-tea/testing'
+import { applyAll, dispatchViolations } from '@fgaudo/effect-tea/testing'
 import * as Data from 'effect/Data'
 import * as Equal from 'effect/Equal'
 import * as HashSet from 'effect/HashSet'
@@ -245,14 +245,14 @@ describe('Home update', () => {
 
   // The root tells the press only while the output says that it is Home's. What is on top closes first.
   describe('the back button, which the root tells', () => {
-    const pressed = (from: Whole) => program.external({ _tag: 'BackPressed' })(from)
+    const pressed = (from: Whole) => applyAll(program.external, [{ _tag: 'BackPressed' }], from)
 
     test('closes the menu, and leaves the selection for the next press', () => {
       assertProperty([changed((own) => ({ ...own, isMenuOpen: true }))], (from) => {
         const { state: after, commands, events } = pressed(from)
         return !after.own.isMenuOpen && onlyChanged(from.own, after.own, 'isMenuOpen')
           && Equal.equals(after.children, from.children)
-          && (commands ?? []).length === 0 && (events ?? []).length === 0
+          && commands.length === 0 && events.length === 0
       })
     })
 
