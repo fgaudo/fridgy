@@ -194,7 +194,7 @@ const clock = every('1 second', (now) => Page.TimeChanged({ now }))
 // Observed as long as the page is shown: the keyboard covers the step shown, whichever it is.
 const keyboard: Tea.Subscription<Page, Keyboard> = insetsAs((inset) => Page.KeyboardMoved({ inset }))
 
-const { child, withChildren } = Tea.program<{
+const { withChildren } = Tea.program<{
   state: State
   model: Model
   message: Own
@@ -205,13 +205,17 @@ const { child, withChildren } = Tea.program<{
 }>()
 
 const children = {
-  Snackbar: child(Snackbar),
-  Fridge: child(Fridge.program),
+  Snackbar: Tea.child(Snackbar),
+  Fridge: Tea.child(Fridge.program),
   // There while the second step is shown: a failed add gives the step back with its digits, and a product added, or
   // the step dismissed, forgets them. The next visit of the step starts anew.
-  Expiration: child(Expiration.program, {
-    there: (state) => Submission.showsDate(state) ? Opt.some(Submission.newDate) : Opt.none(),
-    tell: (state) => ({ _tag: 'PageChanged', maybeNow: state.maybeNow, isLocked: state.phase._tag === 'Submitting' }),
+  Expiration: Tea.childWhen(Expiration.program, {
+    there: (state: State) => Submission.showsDate(state) ? Opt.some(Submission.newDate) : Opt.none(),
+    tell: (state: State) => ({
+      _tag: 'PageChanged',
+      maybeNow: state.maybeNow,
+      isLocked: state.phase._tag === 'Submitting',
+    }),
   }),
 }
 

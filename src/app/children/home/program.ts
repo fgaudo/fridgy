@@ -119,7 +119,7 @@ const laidOut = (state: State, layout: Layout): State => {
   return { ...state, layout, collapse: Math.min(state.collapse, collapseAt(layout.content - layout.list, layout)) }
 }
 
-const { child, withChildren } = Tea.program<{
+const { withChildren } = Tea.program<{
   state: State
   model: Model
   message: Own
@@ -130,7 +130,7 @@ const { child, withChildren } = Tea.program<{
 
 export const program = withChildren({
   // Always there: only its subscriptions are turned off, by Home's parent.
-  Products: child(Products.program),
+  Products: Tea.child(Products.program),
 }).make({
   init: {
     state: {

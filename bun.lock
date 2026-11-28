@@ -6,7 +6,7 @@
       "name": "fridgy",
       "dependencies": {
         "@effect/sql-sqlite-react-native": "4.1.6",
-        "@fgaudo/effect-tea": "^0.10.0",
+        "@fgaudo/effect-tea": "^0.11.0",
         "@op-engineering/op-sqlite": "18.2.5",
         "effect": "^4.1.6",
         "material-symbols": "^0.48.2",
@@ -344,7 +344,7 @@
 
     "@effect/wa-sqlite": ["@effect/wa-sqlite@0.1.2", "", {}, "sha512-2JvJ9BDkBOwfeY/gXsC0XwEKC0AwisP2W5ABJ6mx14QyXTK12MGDIybDlHieuZt1TEFSMiKfpg7yyqyRWRooJQ=="],
 
-    "@fgaudo/effect-tea": ["@fgaudo/effect-tea@0.10.0", "", { "peerDependencies": { "effect": "^4.1.6", "react": "^19.3.0", "snabbdom": "^3.6.4" }, "optionalPeers": ["react", "snabbdom"] }, "sha512-IKNWkl473nG++IvpGb7wVr8f5uz0Wk89cmibfpGQrNpW8RHNp61t6mCWjCWvxt8SKqIrWuj0gN3jyF/KYsNcdA=="],
+    "@fgaudo/effect-tea": ["@fgaudo/effect-tea@0.11.0", "", { "peerDependencies": { "effect": "^4.1.6", "react": "^19.3.0", "snabbdom": "^3.6.4" }, "optionalPeers": ["react", "snabbdom"] }, "sha512-uMDG+hIUnKvK12jIvt6cHtD21DbQGEhHjGjORx6dP1v6pdhKFImWEW5DOQciEo43z0vj6AwaPku0jLKrRFNKTg=="],
 
     "@hapi/hoek": ["@hapi/hoek@9.3.0", "", {}, "sha512-/c6rf4UJlmHlC9b5BaNvzAcFv7HZ2QHaV0D4/HNlBdvFnvQq8RI4kYdhyPCl7Xj+oWvTWQ8ujhqS53LIgAe6KQ=="],
 

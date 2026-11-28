@@ -60,21 +60,21 @@ const leave = () => (): Tea.Step<State> => ({ state: { maybePage: Opt.none() } }
 
 const backButton: Tea.Subscription<Own, BackButton> = pressesAs<Own>({ _tag: 'BackPressed' })
 
-const { child, withChildren } = Tea.program<{ state: State; model: Model; message: Own; key: Key }>()
+const { withChildren } = Tea.program<{ state: State; model: Model; message: Own; key: Key }>()
 
 export const program = withChildren({
   // Always there. Under another page it keeps its state and hears its commands' answers, but listens to nothing:
   // the window and its scrolling belong to the page shown.
-  Home: child(Home.program, { listening: isHomeShown }),
+  Home: Tea.child(Home.program, { listening: isHomeShown }),
   // A page over Home is there while it is shown: it starts as the page is shown and goes as it is left, so that each
   // visit is another instance. An answer for a visit that is over is rejected, and so is a tap of a frame drawn for
   // one, since the view's dispatch names the instance.
-  AddProducts: child(AddProducts.program, { there: isShown('AddProducts') }),
-  EditProduct: child(EditProduct.program, {
+  AddProducts: Tea.childWhen(AddProducts.program, { there: isShown('AddProducts') }),
+  EditProduct: Tea.childWhen(EditProduct.program, {
     there: (state) =>
       Opt.flatMap(state.maybePage, (page) => page._tag === 'EditProduct' ? Opt.some(page.flags) : Opt.none()),
   }),
-  About: child(About.program, { there: isShown('About') }),
+  About: Tea.childWhen(About.program, { there: isShown('About') }),
 }).make({
   init: { state: { maybePage: Opt.none() } },
   // A press goes to the page shown over Home, which closes what it has open, asks to be left or holds the press. On

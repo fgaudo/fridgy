@@ -5,7 +5,8 @@ later step needs to know of it is written on that step. The steps come from a re
 owner asked for on 22 November 2026, from the move to effect-tea 0.9.0 on 26 November 2026, which closed the
 steps on the root and on the inputs, and what waited for that release, from a review of the structure on that
 same day, for which the owner set every rule of the project aside, and from the move to effect-tea 0.10.0 on 27
-November 2026, which acted on what waited for the runtime. Steps 1 and 4 waited under "Any time" and "Waiting for
+November 2026, which acted on what waited for the runtime. The move to 0.11.0 on 28 November 2026 changed how a
+child is declared, and nothing that a view draws. Steps 1 and 4 waited under "Any time" and "Waiting for
 the owner", until the owner took them up on 26 November 2026.
 
 That last review found one thing, which steps done acted on. The app has three boundaries where one thing
@@ -175,7 +176,7 @@ The answers, so that they are not asked again:
 - **A message passed down a chain of children is the program's logic**: a condition that goes up as an output, and
   a message that goes down in `tell`. A child answers an external message in every state. A `tell` of the step
   that read the child's output reaches the child in that state, which is what the defects of Home's `external` and
-  of `Selection.backPressed` rest on.
+  of `Selection.backPressed` rest on. The guide promises it since 0.11.0 ("Rejections and defects").
 - **A test wraps a child's message with its instance by hand**: the compiler checks the literal, and the
   `candidates` of a child that is not there are left out (the `add-program` skill, "Tests").
 

@@ -51,7 +51,7 @@ export type Output = Readonly<{ takesBack: boolean }>
 
 const Snackbar = SnackbarProgram.make<Selection.Notice>()
 
-const { child, withChildren } = Tea.program<{
+const { withChildren } = Tea.program<{
   state: State
   model: Model
   message: Own
@@ -62,7 +62,7 @@ const { child, withChildren } = Tea.program<{
   key: Key
 }>()
 
-const children = { Snackbar: child(Snackbar) }
+const children = { Snackbar: Tea.child(Snackbar) }
 
 /** What a step of the program tells its child. */
 export type Tell = Tea.TellOf<typeof children>

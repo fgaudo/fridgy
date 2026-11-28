@@ -44,7 +44,8 @@ says. `add-products` (`name.ts`, with the lookup that replaces the name; `scanne
 
 - `program.ts` keeps the types the program is made from (`State`, `Command`, `Event`, `Model`, the type of a
   step), its declaration, and an `update` whose `switch` gives each message to the one concern that owns it. A
-  parent declares its children apart from `withChildren` (`const children = { … }`), and exports what a concern's
+  parent declares its children apart from `withChildren` (`const children = { … }`), where each option that takes
+  the parent's state annotates it (`(state: State) => …`), and exports what a concern's
   functions take and tell, read from them: `type Outputs = Tea.OutputsOf<typeof children>` and
   `type Tell = Tea.TellOf<typeof children>`, never written by hand. A concern too small to pay for a module stays
   in it: the page's own messages of `add-products` (closing, the keyboard, the clock).
@@ -119,11 +120,11 @@ child; the root declares Home and the pages that come and go over it; `add-produ
 its state.
 
 ```ts
-const { child, withChildren } = Tea.program<{ state: State; model: Model; message: Own; event: Event }>()
+const { withChildren } = Tea.program<{ state: State; model: Model; message: Own; event: Event }>()
 
 export const program = withChildren({
-  Products: child(Products.program), // always there
-  Expiration: child(Expiration.program, {
+  Products: Tea.child(Products.program), // always there
+  Expiration: Tea.childWhen(Expiration.program, {
     there: (state) => showsDate(state) ? Opt.some(newDate) : Opt.none(), // there while `Some`, started from it
     tell: (state) => ({ _tag: 'PageChanged', … }), // what it was last told, from the parent's state
   }),
@@ -137,9 +138,10 @@ export const program = withChildren({
 ```
 
 - A parent's functions get its own state alone. Whether a child is there is said by its declaration, from that
-  state: always (`child(program)`, or `flags` for a program with flags: other flags start it again; `EditProduct`'s
-  date), `there` (while it holds, or gives `Some` of the flags: the root's pages, `add-products`' date) or `key`
-  (another value starts it again) for a child alone, `ids` or `flags` by id for children by id (`childById`); never
+  state: always (`Tea.child(program)`, or `flags` for a program with flags: other flags start it again;
+  `EditProduct`'s date), `Tea.childWhen(program, { there })` (while it holds, or gives `Some` of the flags: the
+  root's pages, `add-products`' date) or `key` (another value starts it again) for a child alone, `ids` or `flags`
+  by id for children by id (`Tea.childById`, with `ids` or `flags` written before a `listening` that takes the id); never
   by rejecting its messages. `listening` says when its subscriptions run (Home's, only while it is shown).
 - A child that is always there is read as it is (`children.Products()`), one that may not be as an `Option`. Where
   the parent's state says that it is there, make the model from the `Option`, as the root does of its pages

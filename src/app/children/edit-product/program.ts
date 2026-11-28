@@ -209,7 +209,7 @@ const save = Effect.fn('SaveProduct')(
   Effect.withLogSpan('SaveProduct'),
 )
 
-const { child, withChildren } = Tea.program<{
+const { withChildren } = Tea.program<{
   state: State
   model: Model
   message: Own
@@ -223,15 +223,15 @@ const { child, withChildren } = Tea.program<{
 const children = {
   // Always there, so that the order of a date's digits is read while the page waits for the clock. It takes a key
   // only while the form is edited: the stored date is edited in the zone, and its days are offered from today.
-  Expiration: child(Expiration.program, {
-    flags: (state) => ({ maybeStored: Opt.some(state.original) }),
-    tell: (state) => ({
+  Expiration: Tea.child(Expiration.program, {
+    flags: (state: State) => ({ maybeStored: Opt.some(state.original) }),
+    tell: (state: State) => ({
       _tag: 'PageChanged',
       maybeNow: state.form._tag === 'Loading' ? Opt.none() : Opt.some(state.form.fields.now),
       isLocked: state.form._tag !== 'Editing',
     }),
   }),
-  Snackbar: child(Snackbar),
+  Snackbar: Tea.child(Snackbar),
 }
 
 type Step = Tea.Step<State, Command, Event, Tea.TellOf<typeof children>>
